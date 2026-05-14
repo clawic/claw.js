@@ -19,7 +19,31 @@ export type ClawPersistentSurfaceKind =
   | "fixture"
   | "persistentTemp"
   | "legacyPath"
-  | "externalReadOnlySource";
+  | "externalReadOnlySource"
+  | "apiRoute"
+  | "apiMethod"
+  | "apiParameter"
+  | "webhook"
+  | "webhookEvent"
+  | "eventTopic"
+  | "queueTopic"
+  | "jsonSchema"
+  | "jsonField"
+  | "enumValue"
+  | "errorCode"
+  | "cliCommand"
+  | "cliFlag"
+  | "cliOutputField"
+  | "protocol"
+  | "protocolFrame"
+  | "protocolField"
+  | "idNamespace"
+  | "idPrefix"
+  | "deepLink"
+  | "hostname"
+  | "port"
+  | "externalDependency"
+  | "externalMapping";
 
 export type ClawPersistentSurfaceOwner = "claw" | "clawix" | "external";
 export type ClawPersistentSurfaceStorageClass =
@@ -43,6 +67,9 @@ export type ClawPersistentSurfaceCanonicality =
   | "externalReadOnly";
 export type ClawPersistentSurfacePrivacy = "public" | "userData" | "secretReference" | "secretMaterial" | "externalReadOnly";
 export type ClawPersistentSurfaceLifecycle = "durable" | "rebuildable" | "ephemeral" | "legacy" | "external";
+export type ClawStableSurfaceClass = "persistent" | "api" | "protocol" | "event" | "schema" | "id" | "cli" | "config" | "external";
+export type ClawStableSurfaceStability = "v1" | "preV1Reset" | "internalCrossVersion" | "externalDependency";
+export type ClawStableSurfaceDirection = "inbound" | "outbound" | "bidirectional" | "local" | "generated";
 
 export interface ClawPersistentSurfaceSource {
   file: string;
@@ -70,6 +97,21 @@ export interface ClawPersistentSurfaceNode {
   source?: ClawPersistentSurfaceSource;
   envOverrides?: string[];
   databaseId?: string;
+  surfaceClass?: ClawStableSurfaceClass;
+  stability?: ClawStableSurfaceStability;
+  direction?: ClawStableSurfaceDirection;
+  version?: string | number;
+  value?: string;
+  method?: string;
+  route?: string;
+  schemaId?: string;
+  fieldPath?: string;
+  enumType?: string;
+  idPattern?: string;
+  externalProvider?: string;
+  replacement?: string;
+  introducedIn?: string;
+  deprecatedIn?: string;
   dataType?: string;
   nullable?: boolean;
   notes?: string;
@@ -80,6 +122,10 @@ export interface ClawPersistentSurfaceRegistry {
   version: number;
   nodes: ClawPersistentSurfaceNode[];
 }
+
+export type ClawStableSurfaceKind = ClawPersistentSurfaceKind;
+export type ClawStableSurfaceNode = ClawPersistentSurfaceNode;
+export type ClawStableSurfaceRegistry = ClawPersistentSurfaceRegistry;
 
 type SurfaceDefaults = Pick<
   ClawPersistentSurfaceNode,
@@ -127,7 +173,32 @@ export const clawPersistentSurface = {
   envOverride(input: SurfaceBuilderInput<"envOverride">): ClawPersistentSurfaceNode {
     return surfaceNode({ ...input, kind: "envOverride", privacy: input.privacy ?? "public" });
   },
+  contract(input: SurfaceBuilderInput<"apiRoute" | "apiMethod" | "apiParameter" | "webhook" | "webhookEvent" | "eventTopic" | "queueTopic" | "jsonSchema" | "jsonField" | "enumValue" | "errorCode" | "cliCommand" | "cliFlag" | "cliOutputField" | "protocol" | "protocolFrame" | "protocolField" | "idNamespace" | "idPrefix" | "deepLink" | "hostname" | "port" | "externalDependency" | "externalMapping"> & { kind: "apiRoute" | "apiMethod" | "apiParameter" | "webhook" | "webhookEvent" | "eventTopic" | "queueTopic" | "jsonSchema" | "jsonField" | "enumValue" | "errorCode" | "cliCommand" | "cliFlag" | "cliOutputField" | "protocol" | "protocolFrame" | "protocolField" | "idNamespace" | "idPrefix" | "deepLink" | "hostname" | "port" | "externalDependency" | "externalMapping" }): ClawPersistentSurfaceNode {
+    return surfaceNode({
+      ...input,
+      storageClass: input.storageClass ?? "external",
+      privacy: input.privacy ?? "public",
+      lifecycle: input.lifecycle ?? "durable",
+      surfaceClass: input.surfaceClass ?? stableSurfaceClassForKind(input.kind),
+      stability: input.stability ?? "v1",
+    });
+  },
 };
+
+export const clawStableSurface = clawPersistentSurface;
+
+function stableSurfaceClassForKind(kind: ClawPersistentSurfaceKind | undefined): ClawStableSurfaceClass {
+  if (!kind) return "persistent";
+  if (["apiRoute", "apiMethod", "apiParameter", "webhook", "webhookEvent"].includes(kind)) return "api";
+  if (["protocol", "protocolFrame", "protocolField"].includes(kind)) return "protocol";
+  if (["eventTopic", "queueTopic"].includes(kind)) return "event";
+  if (["jsonSchema", "jsonField", "enumValue", "errorCode"].includes(kind)) return "schema";
+  if (["idNamespace", "idPrefix"].includes(kind)) return "id";
+  if (["cliCommand", "cliFlag", "cliOutputField"].includes(kind)) return "cli";
+  if (["envOverride", "deepLink", "hostname", "port"].includes(kind)) return "config";
+  if (["externalDependency", "externalMapping", "externalReadOnlySource"].includes(kind)) return "external";
+  return "persistent";
+}
 
 export const clawixPortRange = { start: 24080, end: 24099 } as const;
 export const clawPortRange = { start: 24100, end: 24199 } as const;
@@ -260,9 +331,244 @@ const registrySource: ClawPersistentSurfaceSource = {
   language: "typescript",
 };
 
+const contractDefaults = {
+  storageClass: "external" as const,
+  canonicality: "canonical" as const,
+  privacy: "public" as const,
+  lifecycle: "durable" as const,
+  source: registrySource,
+};
+
+const cliCommands = [
+  "host",
+  "database",
+  "inspect",
+  "work",
+  "projects",
+  "tasks",
+  "notes",
+  "people",
+  "goals",
+  "inbox",
+  "approvals",
+  "sessions",
+  "skills",
+  "models",
+  "providers",
+  "auth",
+  "time",
+  "channels",
+  "telegram",
+  "notify",
+  "media",
+  "drive",
+  "design",
+  "apps",
+  "content",
+  "knowledge",
+  "profile",
+  "search",
+  "runtime",
+  "monitor",
+  "logs",
+  "doctor",
+  "mcp",
+  "open",
+] as const;
+
+const corePublicRoutes = [
+  ["claw.api.events", "GET", clawEventsPath, "Public framework event stream"],
+  ["claw.api.database.namespaces", "GET", "/v1/namespaces", "Database namespace list"],
+  ["claw.api.database.collections", "GET", "/v1/namespaces/{namespace}/collections", "Database collection list"],
+  ["claw.api.database.records", "GET", "/v1/namespaces/{namespace}/collections/{collection}/records", "Database record list"],
+  ["claw.api.webhooks.providerEvent", "POST", "/v1/webhooks/{provider}/{event}", "Provider webhook ingress"],
+  ["claw.api.integrations.callback", "GET", "/v1/integrations/{provider}/callback", "OAuth integration callback"],
+] as const;
+
+const stableJsonFields = [
+  ["claw.schema.common.field.schemaVersion", "schemaVersion", "Persisted/exported data version field"],
+  ["claw.schema.common.field.protocolVersion", "protocolVersion", "Wire protocol version field"],
+  ["claw.schema.common.field.sessionId", "sessionId", "Framework conversation identity"],
+  ["claw.schema.common.field.requestId", "requestId", "Request correlation identity"],
+  ["claw.schema.common.field.runtimeId", "runtimeId", "Runtime identity"],
+  ["claw.schema.common.field.agentId", "agentId", "Agent identity"],
+  ["claw.schema.common.field.providerId", "providerId", "Provider identity"],
+  ["claw.schema.common.field.modelId", "modelId", "Model identity"],
+  ["claw.schema.common.field.createdAt", "createdAt", "Creation instant"],
+  ["claw.schema.common.field.updatedAt", "updatedAt", "Update instant"],
+] as const;
+
+const stableIdNamespaces = [
+  ["claw.id.session", "sessionId", "Framework agent session identifiers"],
+  ["claw.id.thread.external", "threadId", "External runtime thread identifiers"],
+  ["claw.id.host", "hostId", "Signed host identifiers"],
+  ["claw.id.device", "deviceId", "Device identifiers"],
+  ["claw.id.installation", "installationId", "Installation identifiers"],
+  ["claw.id.record", "recordId", "Database record identifiers"],
+] as const;
+
 export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
   version: clawSurfaceRegistryVersion,
   nodes: [
+    clawPersistentSurface.root({
+      id: "claw.contracts",
+      name: "Claw stable compatibility surface",
+      path: "contracts",
+      storageClass: "external",
+      privacy: "public",
+      surfaceClass: "schema",
+      stability: "v1",
+      source: registrySource,
+      notes: "Root for names, fields, routes, protocols, CLI commands, IDs, and external mappings that must not drift after V1 without versioning.",
+    }),
+    ...[
+      ["claw.contracts.api", "API routes", "api"],
+      ["claw.contracts.protocol", "Wire protocols", "protocol"],
+      ["claw.contracts.events", "Events and queues", "event"],
+      ["claw.contracts.schemas", "Schemas and JSON fields", "schema"],
+      ["claw.contracts.ids", "Persistent IDs", "id"],
+      ["claw.contracts.cli", "CLI commands and flags", "cli"],
+      ["claw.contracts.external", "External dependencies and owned mappings", "external"],
+    ].map(([id, name, surfaceClass]) => clawPersistentSurface.root({
+      id,
+      name,
+      path: id.replace("claw.contracts.", "contracts/"),
+      parentId: "claw.contracts",
+      storageClass: "external",
+      privacy: "public",
+      surfaceClass: surfaceClass as ClawStableSurfaceClass,
+      stability: "v1",
+      source: registrySource,
+    })),
+    ...corePublicRoutes.map(([id, method, route, name]) => clawPersistentSurface.contract({
+      ...contractDefaults,
+      id,
+      kind: "apiRoute",
+      name,
+      route,
+      method,
+      value: `${method} ${route}`,
+      parentId: "claw.contracts.api",
+      direction: "inbound",
+    })),
+    clawPersistentSurface.contract({
+      ...contractDefaults,
+      id: "claw.protocol.hostCommand.v1",
+      kind: "protocol",
+      name: "Host command contract v1",
+      parentId: "claw.contracts.protocol",
+      value: "host-command-v1",
+      version: 1,
+      direction: "bidirectional",
+      notes: "Shared framework/signed-host command envelope. Breaking changes after V1 require a new protocol version.",
+    }),
+    ...["schemaVersion", "requestId", "domain", "resource", "action", "payload"].map((field) => clawPersistentSurface.contract({
+      ...contractDefaults,
+      id: `claw.protocol.hostCommand.v1.field.${field}`,
+      kind: "protocolField",
+      name: field,
+      key: field,
+      fieldPath: field,
+      parentId: "claw.protocol.hostCommand.v1",
+      schemaId: "host-command-v1",
+      surfaceClass: "protocol",
+      direction: "bidirectional",
+    })),
+    ...["workspace.initialized", "compat.refreshed", "telegram.webhook_configured", "models.default-set", "auth.login-started"].map((event) => clawPersistentSurface.contract({
+      ...contractDefaults,
+      id: `claw.event.${event.replace(/[^a-zA-Z0-9]+/g, ".")}`,
+      kind: "eventTopic",
+      name: event,
+      value: event,
+      parentId: "claw.contracts.events",
+      surfaceClass: "event",
+      direction: "generated",
+    })),
+    ...stableJsonFields.map(([id, field, name]) => clawPersistentSurface.contract({
+      ...contractDefaults,
+      id,
+      kind: "jsonField",
+      name,
+      key: field,
+      fieldPath: field,
+      parentId: "claw.contracts.schemas",
+      surfaceClass: "schema",
+      direction: "bidirectional",
+    })),
+    ...stableIdNamespaces.map(([id, field, name]) => clawPersistentSurface.contract({
+      ...contractDefaults,
+      id,
+      kind: "idNamespace",
+      name,
+      key: field,
+      value: field,
+      parentId: "claw.contracts.ids",
+      surfaceClass: "id",
+      direction: "bidirectional",
+    })),
+    ...Object.entries(clawDeepLinkSchemes).map(([name, scheme]) => clawPersistentSurface.contract({
+      ...contractDefaults,
+      id: `claw.deeplink.scheme.${name}`,
+      kind: "deepLink",
+      name: `${scheme}://`,
+      value: `${scheme}://`,
+      parentId: "claw.contracts.api",
+      surfaceClass: "config",
+      direction: "inbound",
+    })),
+    ...Object.entries(clawLocalHostnames).map(([name, hostname]) => clawPersistentSurface.contract({
+      ...contractDefaults,
+      id: `claw.hostname.${name}`,
+      kind: "hostname",
+      name: hostname,
+      value: hostname,
+      parentId: "claw.contracts.api",
+      surfaceClass: "config",
+      direction: "inbound",
+    })),
+    ...Object.entries({ ...clawCorePorts, ...clawAppPorts, clawixBridge: clawixBridgePort }).map(([name, port]) => clawPersistentSurface.contract({
+      ...contractDefaults,
+      id: `claw.port.${name}`,
+      kind: "port",
+      name,
+      value: String(port),
+      parentId: "claw.contracts.api",
+      surfaceClass: "config",
+      direction: "inbound",
+    })),
+    ...cliCommands.map((command) => clawPersistentSurface.contract({
+      ...contractDefaults,
+      id: `claw.cli.command.${command}`,
+      kind: "cliCommand",
+      name: command,
+      value: command,
+      parentId: "claw.contracts.cli",
+      surfaceClass: "cli",
+      direction: "inbound",
+    })),
+    ...["--json", "--dry-run", "--workspace", "--runtime", "--help"].map((flag) => clawPersistentSurface.contract({
+      ...contractDefaults,
+      id: `claw.cli.flag.${flag.slice(2)}`,
+      kind: "cliFlag",
+      name: flag,
+      value: flag,
+      parentId: "claw.contracts.cli",
+      surfaceClass: "cli",
+      direction: "inbound",
+    })),
+    ...["openai", "anthropic", "stripe", "telegram", "slack", "google", "microsoft"].map((provider) => clawPersistentSurface.contract({
+      ...contractDefaults,
+      id: `claw.external.${provider}`,
+      kind: "externalDependency",
+      owner: "external",
+      name: provider,
+      value: provider,
+      parentId: "claw.contracts.external",
+      surfaceClass: "external",
+      stability: "externalDependency",
+      direction: "outbound",
+      notes: "Register the dependency and Claw-owned mapping points; do not copy the full provider schema into the registry.",
+    })),
     clawPersistentSurface.root({
       id: "claw.global",
       name: "Claw global home",

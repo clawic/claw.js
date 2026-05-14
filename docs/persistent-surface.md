@@ -1,4 +1,4 @@
-# Claw persistent surface
+# Claw stable surface
 
 Generated from `claw inspect render --format markdown`. Do not edit by hand.
 Use `claw inspect --manifest <path>` or `CLAW_INSPECT_MANIFEST=path[,path...]` to fuse static manifests from other language builders during inspection.
@@ -7,6 +7,235 @@ Use `claw inspect --manifest <path>` or `CLAW_INSPECT_MANIFEST=path[,path...]` t
 
 ```mermaid
 flowchart TD
+  claw_contracts["Claw stable compatibility surface\nroot"]
+  claw_contracts_api["API routes\nroot"]
+  claw_contracts --> claw_contracts_api
+  claw_contracts_protocol["Wire protocols\nroot"]
+  claw_contracts --> claw_contracts_protocol
+  claw_contracts_events["Events and queues\nroot"]
+  claw_contracts --> claw_contracts_events
+  claw_contracts_schemas["Schemas and JSON fields\nroot"]
+  claw_contracts --> claw_contracts_schemas
+  claw_contracts_ids["Persistent IDs\nroot"]
+  claw_contracts --> claw_contracts_ids
+  claw_contracts_cli["CLI commands and flags\nroot"]
+  claw_contracts --> claw_contracts_cli
+  claw_contracts_external["External dependencies and owned mappings\nroot"]
+  claw_contracts --> claw_contracts_external
+  claw_api_events["Public framework event stream\napiRoute"]
+  claw_contracts_api --> claw_api_events
+  claw_api_database_namespaces["Database namespace list\napiRoute"]
+  claw_contracts_api --> claw_api_database_namespaces
+  claw_api_database_collections["Database collection list\napiRoute"]
+  claw_contracts_api --> claw_api_database_collections
+  claw_api_database_records["Database record list\napiRoute"]
+  claw_contracts_api --> claw_api_database_records
+  claw_api_webhooks_providerEvent["Provider webhook ingress\napiRoute"]
+  claw_contracts_api --> claw_api_webhooks_providerEvent
+  claw_api_integrations_callback["OAuth integration callback\napiRoute"]
+  claw_contracts_api --> claw_api_integrations_callback
+  claw_protocol_hostCommand_v1["Host command contract v1\nprotocol"]
+  claw_contracts_protocol --> claw_protocol_hostCommand_v1
+  claw_protocol_hostCommand_v1_field_schemaVersion["schemaVersion\nprotocolField"]
+  claw_protocol_hostCommand_v1 --> claw_protocol_hostCommand_v1_field_schemaVersion
+  claw_protocol_hostCommand_v1_field_requestId["requestId\nprotocolField"]
+  claw_protocol_hostCommand_v1 --> claw_protocol_hostCommand_v1_field_requestId
+  claw_protocol_hostCommand_v1_field_domain["domain\nprotocolField"]
+  claw_protocol_hostCommand_v1 --> claw_protocol_hostCommand_v1_field_domain
+  claw_protocol_hostCommand_v1_field_resource["resource\nprotocolField"]
+  claw_protocol_hostCommand_v1 --> claw_protocol_hostCommand_v1_field_resource
+  claw_protocol_hostCommand_v1_field_action["action\nprotocolField"]
+  claw_protocol_hostCommand_v1 --> claw_protocol_hostCommand_v1_field_action
+  claw_protocol_hostCommand_v1_field_payload["payload\nprotocolField"]
+  claw_protocol_hostCommand_v1 --> claw_protocol_hostCommand_v1_field_payload
+  claw_event_workspace_initialized["workspace.initialized\neventTopic"]
+  claw_contracts_events --> claw_event_workspace_initialized
+  claw_event_compat_refreshed["compat.refreshed\neventTopic"]
+  claw_contracts_events --> claw_event_compat_refreshed
+  claw_event_telegram_webhook_configured["telegram.webhook_configured\neventTopic"]
+  claw_contracts_events --> claw_event_telegram_webhook_configured
+  claw_event_models_default_set["models.default-set\neventTopic"]
+  claw_contracts_events --> claw_event_models_default_set
+  claw_event_auth_login_started["auth.login-started\neventTopic"]
+  claw_contracts_events --> claw_event_auth_login_started
+  claw_schema_common_field_schemaVersion["Persisted/exported data version field\njsonField"]
+  claw_contracts_schemas --> claw_schema_common_field_schemaVersion
+  claw_schema_common_field_protocolVersion["Wire protocol version field\njsonField"]
+  claw_contracts_schemas --> claw_schema_common_field_protocolVersion
+  claw_schema_common_field_sessionId["Framework conversation identity\njsonField"]
+  claw_contracts_schemas --> claw_schema_common_field_sessionId
+  claw_schema_common_field_requestId["Request correlation identity\njsonField"]
+  claw_contracts_schemas --> claw_schema_common_field_requestId
+  claw_schema_common_field_runtimeId["Runtime identity\njsonField"]
+  claw_contracts_schemas --> claw_schema_common_field_runtimeId
+  claw_schema_common_field_agentId["Agent identity\njsonField"]
+  claw_contracts_schemas --> claw_schema_common_field_agentId
+  claw_schema_common_field_providerId["Provider identity\njsonField"]
+  claw_contracts_schemas --> claw_schema_common_field_providerId
+  claw_schema_common_field_modelId["Model identity\njsonField"]
+  claw_contracts_schemas --> claw_schema_common_field_modelId
+  claw_schema_common_field_createdAt["Creation instant\njsonField"]
+  claw_contracts_schemas --> claw_schema_common_field_createdAt
+  claw_schema_common_field_updatedAt["Update instant\njsonField"]
+  claw_contracts_schemas --> claw_schema_common_field_updatedAt
+  claw_id_session["Framework agent session identifiers\nidNamespace"]
+  claw_contracts_ids --> claw_id_session
+  claw_id_thread_external["External runtime thread identifiers\nidNamespace"]
+  claw_contracts_ids --> claw_id_thread_external
+  claw_id_host["Signed host identifiers\nidNamespace"]
+  claw_contracts_ids --> claw_id_host
+  claw_id_device["Device identifiers\nidNamespace"]
+  claw_contracts_ids --> claw_id_device
+  claw_id_installation["Installation identifiers\nidNamespace"]
+  claw_contracts_ids --> claw_id_installation
+  claw_id_record["Database record identifiers\nidNamespace"]
+  claw_contracts_ids --> claw_id_record
+  claw_deeplink_scheme_host["clawix://\ndeepLink"]
+  claw_contracts_api --> claw_deeplink_scheme_host
+  claw_deeplink_scheme_frameworkReserved["claw://\ndeepLink"]
+  claw_contracts_api --> claw_deeplink_scheme_frameworkReserved
+  claw_hostname_showcase["showcase.claw.localhost\nhostname"]
+  claw_contracts_api --> claw_hostname_showcase
+  claw_hostname_agenda["agenda.claw.localhost\nhostname"]
+  claw_contracts_api --> claw_hostname_agenda
+  claw_hostname_board["board.claw.localhost\nhostname"]
+  claw_contracts_api --> claw_hostname_board
+  claw_hostname_channels["channels.claw.localhost\nhostname"]
+  claw_contracts_api --> claw_hostname_channels
+  claw_hostname_notify["notify.claw.localhost\nhostname"]
+  claw_contracts_api --> claw_hostname_notify
+  claw_port_runtime["runtime\nport"]
+  claw_contracts_api --> claw_port_runtime
+  claw_port_sessions["sessions\nport"]
+  claw_contracts_api --> claw_port_sessions
+  claw_port_database["database\nport"]
+  claw_contracts_api --> claw_port_database
+  claw_port_secrets["secrets\nport"]
+  claw_contracts_api --> claw_port_secrets
+  claw_port_drive["drive\nport"]
+  claw_contracts_api --> claw_port_drive
+  claw_port_memory["memory\nport"]
+  claw_contracts_api --> claw_port_memory
+  claw_port_search["search\nport"]
+  claw_contracts_api --> claw_port_search
+  claw_port_mcp["mcp\nport"]
+  claw_contracts_api --> claw_port_mcp
+  claw_port_mesh["mesh\nport"]
+  claw_contracts_api --> claw_port_mesh
+  claw_port_notify["notify\nport"]
+  claw_contracts_api --> claw_port_notify
+  claw_port_signals["signals\nport"]
+  claw_contracts_api --> claw_port_signals
+  claw_port_publishing["publishing\nport"]
+  claw_contracts_api --> claw_port_publishing
+  claw_port_remote["remote\nport"]
+  claw_contracts_api --> claw_port_remote
+  claw_port_remoteStatus["remoteStatus\nport"]
+  claw_contracts_api --> claw_port_remoteStatus
+  claw_port_monitor["monitor\nport"]
+  claw_contracts_api --> claw_port_monitor
+  claw_port_showcase["showcase\nport"]
+  claw_contracts_api --> claw_port_showcase
+  claw_port_agenda["agenda\nport"]
+  claw_contracts_api --> claw_port_agenda
+  claw_port_board["board\nport"]
+  claw_contracts_api --> claw_port_board
+  claw_port_channels["channels\nport"]
+  claw_contracts_api --> claw_port_channels
+  claw_port_clawixBridge["clawixBridge\nport"]
+  claw_contracts_api --> claw_port_clawixBridge
+  claw_cli_command_host["host\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_host
+  claw_cli_command_database["database\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_database
+  claw_cli_command_inspect["inspect\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_inspect
+  claw_cli_command_work["work\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_work
+  claw_cli_command_projects["projects\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_projects
+  claw_cli_command_tasks["tasks\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_tasks
+  claw_cli_command_notes["notes\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_notes
+  claw_cli_command_people["people\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_people
+  claw_cli_command_goals["goals\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_goals
+  claw_cli_command_inbox["inbox\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_inbox
+  claw_cli_command_approvals["approvals\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_approvals
+  claw_cli_command_sessions["sessions\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_sessions
+  claw_cli_command_skills["skills\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_skills
+  claw_cli_command_models["models\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_models
+  claw_cli_command_providers["providers\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_providers
+  claw_cli_command_auth["auth\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_auth
+  claw_cli_command_time["time\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_time
+  claw_cli_command_channels["channels\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_channels
+  claw_cli_command_telegram["telegram\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_telegram
+  claw_cli_command_notify["notify\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_notify
+  claw_cli_command_media["media\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_media
+  claw_cli_command_drive["drive\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_drive
+  claw_cli_command_design["design\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_design
+  claw_cli_command_apps["apps\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_apps
+  claw_cli_command_content["content\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_content
+  claw_cli_command_knowledge["knowledge\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_knowledge
+  claw_cli_command_profile["profile\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_profile
+  claw_cli_command_search["search\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_search
+  claw_cli_command_runtime["runtime\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_runtime
+  claw_cli_command_monitor["monitor\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_monitor
+  claw_cli_command_logs["logs\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_logs
+  claw_cli_command_doctor["doctor\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_doctor
+  claw_cli_command_mcp["mcp\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_mcp
+  claw_cli_command_open["open\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_open
+  claw_cli_flag_json["--json\ncliFlag"]
+  claw_contracts_cli --> claw_cli_flag_json
+  claw_cli_flag_dry_run["--dry-run\ncliFlag"]
+  claw_contracts_cli --> claw_cli_flag_dry_run
+  claw_cli_flag_workspace["--workspace\ncliFlag"]
+  claw_contracts_cli --> claw_cli_flag_workspace
+  claw_cli_flag_runtime["--runtime\ncliFlag"]
+  claw_contracts_cli --> claw_cli_flag_runtime
+  claw_cli_flag_help["--help\ncliFlag"]
+  claw_contracts_cli --> claw_cli_flag_help
+  claw_external_openai["openai\nexternalDependency"]
+  claw_contracts_external --> claw_external_openai
+  claw_external_anthropic["anthropic\nexternalDependency"]
+  claw_contracts_external --> claw_external_anthropic
+  claw_external_stripe["stripe\nexternalDependency"]
+  claw_contracts_external --> claw_external_stripe
+  claw_external_telegram["telegram\nexternalDependency"]
+  claw_contracts_external --> claw_external_telegram
+  claw_external_slack["slack\nexternalDependency"]
+  claw_contracts_external --> claw_external_slack
+  claw_external_google["google\nexternalDependency"]
+  claw_contracts_external --> claw_external_google
+  claw_external_microsoft["microsoft\nexternalDependency"]
+  claw_contracts_external --> claw_external_microsoft
   claw_global["Claw global home\nroot"]
   claw_workspace["Claw workspace state\nroot"]
   clawix_home["Clawix host home\nroot"]
@@ -328,166 +557,281 @@ flowchart TD
 
 ## Nodes
 
-| ID | Kind | Owner | Path / Key |
-| --- | --- | --- | --- |
-| `claw.global` | root | claw | `~/.claw` |
-| `claw.workspace` | root | claw | `.claw` |
-| `clawix.home` | root | clawix | `~/.clawix` |
-| `claw.database.core` | database | claw | `~/.claw/data/core.sqlite` |
-| `claw.database.legacy_productivity` | sidecar | claw | `.claw/data/productivity.sqlite` |
-| `claw.database.core.table.workspace_records` | table | claw | `` |
-| `claw.database.core.table.workspace_records.column.collection_name` | column | claw | `` |
-| `claw.database.core.table.workspace_records.column.record_id` | column | claw | `` |
-| `claw.database.core.table.workspace_records.column.payload_json` | column | claw | `` |
-| `claw.database.core.table.workspace_records.column.updated_at` | column | claw | `` |
-| `claw.database.core.table.workspace_records.column.archived_at` | column | claw | `` |
-| `claw.database.core.table.workspace_records.index.workspace_records_collection_updated_idx` | index | claw | `` |
-| `claw.database.core.table.workspace_meta` | table | claw | `` |
-| `claw.database.core.table.workspace_meta.column.meta_key` | column | claw | `` |
-| `claw.database.core.table.workspace_meta.column.meta_value` | column | claw | `` |
-| `claw.database.runtime` | sidecar | claw | `~/.claw/data/runtime.sqlite` |
-| `claw.database.sessions` | sidecar | claw | `~/.claw/data/sessions.sqlite` |
-| `claw.database.audio` | sidecar | claw | `~/.claw/data/audio.sqlite` |
-| `claw.database.search` | sidecar | claw | `~/.claw/data/search.sqlite` |
-| `claw.database.notify` | sidecar | claw | `~/.claw/data/notify.sqlite` |
-| `claw.database.feed` | sidecar | claw | `~/.claw/data/feed.sqlite` |
-| `claw.database.monitor` | sidecar | claw | `~/.claw/data/monitor.sqlite` |
-| `claw.workspace.manifest` | file | claw | `.claw/manifest.json` |
-| `claw.workspace.desiredState` | folder | claw | `.claw/state/desired` |
-| `claw.workspace.projections` | folder | claw | `.claw/projections` |
-| `claw.workspace.sessions` | folder | claw | `.claw/sessions` |
-| `claw.workspace.audit` | folder | claw | `.claw/audit` |
-| `claw.workspace.locks` | folder | claw | `.claw/locks` |
-| `claw.workspace.backups` | folder | claw | `.claw/backups` |
-| `claw.workspace.browser` | folder | claw | `.claw/browser` |
-| `claw.workspace.styles` | folder | claw | `.claw/styles` |
-| `claw.workspace.templates` | folder | claw | `.claw/templates` |
-| `claw.workspace.references` | folder | claw | `.claw/references` |
-| `claw.workspace.slides` | folder | claw | `.claw/slides` |
-| `claw.workspace.dashboard_database` | folder | claw | `.claw/dashboard-database` |
-| `claw.workspace.channel_run` | folder | claw | `.claw/run/channels` |
-| `claw.workspace.telegram_codex_bridge_state` | file | claw | `.claw/telegram-codex-bridge.json` |
-| `claw.workspace.channel_runs_state` | file | claw | `.claw/channel-runs.json` |
-| `claw.workspace.observedState` | folder | claw | `.claw/observed` |
-| `claw.workspace.projections` | folder | claw | `.claw/projections` |
-| `claw.workspace.sessions` | folder | claw | `.claw/sessions` |
-| `claw.workspace.audit` | folder | claw | `.claw/audit` |
-| `claw.workspace.backups` | folder | claw | `.claw/backups` |
-| `claw.workspace.locks` | folder | claw | `.claw/locks` |
-| `claw.workspace.intents` | folder | claw | `.claw/intents` |
-| `claw.workspace.compat` | folder | claw | `.claw/compat` |
-| `claw.workspace.documents` | folder | claw | `.claw/documents` |
-| `claw.workspace.data` | folder | claw | `.claw/data` |
-| `claw.workspace.generations_tmp` | persistentTemp | claw | `.claw/tmp/generations` |
-| `claw.global.config` | folder | claw | `~/.claw/config.yaml` |
-| `claw.global.data` | folder | claw | `~/.claw/data` |
-| `claw.global.state` | folder | claw | `~/.claw/state` |
-| `claw.global.cache` | folder | claw | `~/.claw/cache` |
-| `claw.global.logs` | folder | claw | `~/.claw/logs` |
-| `claw.global.run` | folder | claw | `~/.claw/run` |
-| `claw.global.tmp` | folder | claw | `~/.claw/tmp` |
-| `claw.global.skills` | folder | claw | `~/.claw/skills` |
-| `claw.global.library` | folder | claw | `~/.claw/library` |
-| `claw.global.rules` | folder | claw | `~/.claw/rules` |
-| `claw.global.image_library` | folder | claw | `~/.claw/image-library` |
-| `claw.global.runtime_home` | folder | claw | `~/.claw-runtime` |
-| `claw.global.demo_home` | folder | claw | `~/.claw-demo` |
-| `clawix.home.data` | folder | clawix | `~/.clawix/data` |
-| `clawix.home.state` | folder | clawix | `~/.clawix/state` |
-| `clawix.home.cache` | folder | clawix | `~/.clawix/cache` |
-| `clawix.home.logs` | folder | clawix | `~/.clawix/logs` |
-| `clawix.home.run` | folder | clawix | `~/.clawix/run` |
-| `clawix.home.tmp` | folder | clawix | `~/.clawix/tmp` |
-| `clawix.home.bridgeSocket` | socket | clawix | `~/.clawix/run/clawix-bridge.sock` |
-| `claw.external.codex` | externalReadOnlySource | external | `~/.codex` |
-| `claw.legacy.workspace.clawjs` | legacyPath | claw | `.clawjs` |
-| `claw.database.core.table.data_registry` | table | claw | `` |
-| `claw.database.core.table.app_state` | table | claw | `` |
-| `claw.database.core.table.app_projects` | table | claw | `` |
-| `claw.database.core.table.app_pinned_threads` | table | claw | `` |
-| `claw.database.core.table.app_session_titles` | table | claw | `` |
-| `claw.database.core.table.app_archives` | table | claw | `` |
-| `claw.database.core.table.app_sidebar_snapshots` | table | claw | `` |
-| `claw.database.core.table.app_terminal_tabs` | table | claw | `` |
-| `claw.database.core.table.signals_verticals` | table | claw | `` |
-| `claw.database.core.table.signals_variables` | table | claw | `` |
-| `claw.database.core.table.signals_sessions` | table | claw | `` |
-| `claw.database.core.table.signals_observations` | table | claw | `` |
-| `claw.database.core.table.knowledge_entities` | table | claw | `` |
-| `claw.database.core.table.knowledge_facts` | table | claw | `` |
-| `claw.database.core.table.pages` | table | claw | `` |
-| `claw.database.core.table.page_blocks` | table | claw | `` |
-| `claw.database.core.table.page_links` | table | claw | `` |
-| `claw.database.core.table.page_mentions` | table | claw | `` |
-| `claw.database.core.table.page_revisions` | table | claw | `` |
-| `claw.database.core.table.page_comments` | table | claw | `` |
-| `claw.database.core.table.profile_projection` | table | claw | `` |
-| `claw.database.core.table.notes_fts` | table | claw | `` |
-| `claw.database.core.table.productivity_items` | table | claw | `` |
-| `claw.database.core.table.business_records` | table | claw | `` |
-| `claw.database.core.table.content_items` | table | claw | `` |
-| `claw.database.core.table.social_posts` | table | claw | `` |
-| `claw.database.core.table.accounting_entries` | table | claw | `` |
-| `claw.database.core.table.accounting_lines` | table | claw | `` |
-| `claw.database.core.table.calendar_events` | table | claw | `` |
-| `claw.database.core.table.iot_config` | table | claw | `` |
-| `claw.database.core.table.finance_records` | table | claw | `` |
-| `claw.database.core.table.marketplace_choices` | table | claw | `` |
-| `claw.database.core.table.resources` | table | claw | `` |
-| `claw.database.core.table.agents` | table | claw | `` |
-| `claw.database.core.table.skills` | table | claw | `` |
-| `claw.database.core.table.skill_collections` | table | claw | `` |
-| `claw.database.core.table.connections` | table | claw | `` |
-| `claw.database.core.table.apps` | table | claw | `` |
-| `claw.database.core.table.design_resources` | table | claw | `` |
-| `claw.database.core.table.session_index` | table | claw | `` |
-| `claw.database.core.table.session_index_fts` | table | claw | `` |
-| `claw.database.core.index.data_registry_domain_idx` | index | claw | `` |
-| `claw.database.core.index.app_projects_path_idx` | index | claw | `` |
-| `claw.database.core.index.app_sidebar_snapshots_order_idx` | index | claw | `` |
-| `claw.database.core.index.signals_variables_vertical_idx` | index | claw | `` |
-| `claw.database.core.index.signals_observations_variable_time_idx` | index | claw | `` |
-| `claw.database.core.index.signals_observations_vertical_time_idx` | index | claw | `` |
-| `claw.database.core.index.knowledge_entities_type_idx` | index | claw | `` |
-| `claw.database.core.index.knowledge_facts_subject_idx` | index | claw | `` |
-| `claw.database.core.index.knowledge_facts_predicate_idx` | index | claw | `` |
-| `claw.database.core.index.pages_space_updated_idx` | index | claw | `` |
-| `claw.database.core.index.pages_surface_idx` | index | claw | `` |
-| `claw.database.core.index.pages_source_record_idx` | index | claw | `` |
-| `claw.database.core.index.page_blocks_page_order_idx` | index | claw | `` |
-| `claw.database.core.index.page_links_target_idx` | index | claw | `` |
-| `claw.database.core.index.page_mentions_target_idx` | index | claw | `` |
-| `claw.database.core.index.page_comments_page_idx` | index | claw | `` |
-| `claw.database.core.index.profile_projection_section_idx` | index | claw | `` |
-| `claw.database.core.index.productivity_items_kind_status_idx` | index | claw | `` |
-| `claw.database.core.index.business_records_kind_idx` | index | claw | `` |
-| `claw.database.core.index.content_items_status_idx` | index | claw | `` |
-| `claw.database.core.index.social_posts_status_idx` | index | claw | `` |
-| `claw.database.core.index.calendar_events_time_idx` | index | claw | `` |
-| `claw.database.core.index.finance_records_time_idx` | index | claw | `` |
-| `claw.database.core.index.marketplace_choices_kind_target_idx` | index | claw | `` |
-| `claw.database.core.index.iot_config_kind_idx` | index | claw | `` |
-| `claw.database.core.index.resources_domain_kind_idx` | index | claw | `` |
-| `claw.database.core.index.design_resources_kind_idx` | index | claw | `` |
-| `claw.database.core.index.session_index_source_updated_idx` | index | claw | `` |
-| `claw.database.sessions.table.conversation_sessions` | table | claw | `` |
-| `claw.database.sessions.table.conversation_messages` | table | claw | `` |
-| `claw.database.sessions.table.conversation_fts` | table | claw | `` |
-| `claw.database.sessions.index.conversation_sessions_source_updated_idx` | index | claw | `` |
-| `claw.database.sessions.index.conversation_messages_session_idx` | index | claw | `` |
-| `claw.database.audio.table.audio_items` | table | claw | `` |
-| `claw.database.audio.table.audio_fts` | table | claw | `` |
-| `claw.database.audio.index.audio_items_session_idx` | index | claw | `` |
-| `claw.database.drive.table.drive_items` | table | claw | `` |
-| `claw.database.drive.table.drive_fts` | table | claw | `` |
-| `claw.database.drive.index.drive_items_session_idx` | index | claw | `` |
-| `claw.database.drive.index.drive_items_parent_idx` | index | claw | `` |
-| `claw.database.search.table.search_documents` | table | claw | `` |
-| `claw.database.search.table.search_fts` | table | claw | `` |
-| `claw.database.search.index.search_documents_domain_idx` | index | claw | `` |
-| `claw.database.runtime.table.runtime_jobs` | table | claw | `` |
-| `claw.database.runtime.table.runtime_events` | table | claw | `` |
-| `claw.database.runtime.index.runtime_jobs_status_idx` | index | claw | `` |
-| `claw.database.runtime.index.runtime_events_job_idx` | index | claw | `` |
-| `claw.database.core.table.operational_events` | table | claw | `` |
-| `claw.database.core.index.operational_events_kind_idx` | index | claw | `` |
+| ID | Kind | Surface | Owner | Path / Key / Value |
+| --- | --- | --- | --- | --- |
+| `claw.contracts` | root | schema | claw | `contracts` |
+| `claw.contracts.api` | root | api | claw | `contracts/api` |
+| `claw.contracts.protocol` | root | protocol | claw | `contracts/protocol` |
+| `claw.contracts.events` | root | event | claw | `contracts/events` |
+| `claw.contracts.schemas` | root | schema | claw | `contracts/schemas` |
+| `claw.contracts.ids` | root | id | claw | `contracts/ids` |
+| `claw.contracts.cli` | root | cli | claw | `contracts/cli` |
+| `claw.contracts.external` | root | external | claw | `contracts/external` |
+| `claw.api.events` | apiRoute | api | claw | `/v1/events` |
+| `claw.api.database.namespaces` | apiRoute | api | claw | `/v1/namespaces` |
+| `claw.api.database.collections` | apiRoute | api | claw | `/v1/namespaces/{namespace}/collections` |
+| `claw.api.database.records` | apiRoute | api | claw | `/v1/namespaces/{namespace}/collections/{collection}/records` |
+| `claw.api.webhooks.providerEvent` | apiRoute | api | claw | `/v1/webhooks/{provider}/{event}` |
+| `claw.api.integrations.callback` | apiRoute | api | claw | `/v1/integrations/{provider}/callback` |
+| `claw.protocol.hostCommand.v1` | protocol | protocol | claw | `host-command-v1` |
+| `claw.protocol.hostCommand.v1.field.schemaVersion` | protocolField | protocol | claw | `schemaVersion` |
+| `claw.protocol.hostCommand.v1.field.requestId` | protocolField | protocol | claw | `requestId` |
+| `claw.protocol.hostCommand.v1.field.domain` | protocolField | protocol | claw | `domain` |
+| `claw.protocol.hostCommand.v1.field.resource` | protocolField | protocol | claw | `resource` |
+| `claw.protocol.hostCommand.v1.field.action` | protocolField | protocol | claw | `action` |
+| `claw.protocol.hostCommand.v1.field.payload` | protocolField | protocol | claw | `payload` |
+| `claw.event.workspace.initialized` | eventTopic | event | claw | `workspace.initialized` |
+| `claw.event.compat.refreshed` | eventTopic | event | claw | `compat.refreshed` |
+| `claw.event.telegram.webhook.configured` | eventTopic | event | claw | `telegram.webhook_configured` |
+| `claw.event.models.default.set` | eventTopic | event | claw | `models.default-set` |
+| `claw.event.auth.login.started` | eventTopic | event | claw | `auth.login-started` |
+| `claw.schema.common.field.schemaVersion` | jsonField | schema | claw | `schemaVersion` |
+| `claw.schema.common.field.protocolVersion` | jsonField | schema | claw | `protocolVersion` |
+| `claw.schema.common.field.sessionId` | jsonField | schema | claw | `sessionId` |
+| `claw.schema.common.field.requestId` | jsonField | schema | claw | `requestId` |
+| `claw.schema.common.field.runtimeId` | jsonField | schema | claw | `runtimeId` |
+| `claw.schema.common.field.agentId` | jsonField | schema | claw | `agentId` |
+| `claw.schema.common.field.providerId` | jsonField | schema | claw | `providerId` |
+| `claw.schema.common.field.modelId` | jsonField | schema | claw | `modelId` |
+| `claw.schema.common.field.createdAt` | jsonField | schema | claw | `createdAt` |
+| `claw.schema.common.field.updatedAt` | jsonField | schema | claw | `updatedAt` |
+| `claw.id.session` | idNamespace | id | claw | `sessionId` |
+| `claw.id.thread.external` | idNamespace | id | claw | `threadId` |
+| `claw.id.host` | idNamespace | id | claw | `hostId` |
+| `claw.id.device` | idNamespace | id | claw | `deviceId` |
+| `claw.id.installation` | idNamespace | id | claw | `installationId` |
+| `claw.id.record` | idNamespace | id | claw | `recordId` |
+| `claw.deeplink.scheme.host` | deepLink | config | claw | `clawix://` |
+| `claw.deeplink.scheme.frameworkReserved` | deepLink | config | claw | `claw://` |
+| `claw.hostname.showcase` | hostname | config | claw | `showcase.claw.localhost` |
+| `claw.hostname.agenda` | hostname | config | claw | `agenda.claw.localhost` |
+| `claw.hostname.board` | hostname | config | claw | `board.claw.localhost` |
+| `claw.hostname.channels` | hostname | config | claw | `channels.claw.localhost` |
+| `claw.hostname.notify` | hostname | config | claw | `notify.claw.localhost` |
+| `claw.port.runtime` | port | config | claw | `24100` |
+| `claw.port.sessions` | port | config | claw | `24101` |
+| `claw.port.database` | port | config | claw | `24102` |
+| `claw.port.secrets` | port | config | claw | `24103` |
+| `claw.port.drive` | port | config | claw | `24104` |
+| `claw.port.memory` | port | config | claw | `24105` |
+| `claw.port.search` | port | config | claw | `24106` |
+| `claw.port.mcp` | port | config | claw | `24107` |
+| `claw.port.mesh` | port | config | claw | `24108` |
+| `claw.port.notify` | port | config | claw | `24124` |
+| `claw.port.signals` | port | config | claw | `24110` |
+| `claw.port.publishing` | port | config | claw | `24111` |
+| `claw.port.remote` | port | config | claw | `24112` |
+| `claw.port.remoteStatus` | port | config | claw | `24113` |
+| `claw.port.monitor` | port | config | claw | `24114` |
+| `claw.port.showcase` | port | config | claw | `24120` |
+| `claw.port.agenda` | port | config | claw | `24121` |
+| `claw.port.board` | port | config | claw | `24122` |
+| `claw.port.channels` | port | config | claw | `24123` |
+| `claw.port.clawixBridge` | port | config | claw | `24080` |
+| `claw.cli.command.host` | cliCommand | cli | claw | `host` |
+| `claw.cli.command.database` | cliCommand | cli | claw | `database` |
+| `claw.cli.command.inspect` | cliCommand | cli | claw | `inspect` |
+| `claw.cli.command.work` | cliCommand | cli | claw | `work` |
+| `claw.cli.command.projects` | cliCommand | cli | claw | `projects` |
+| `claw.cli.command.tasks` | cliCommand | cli | claw | `tasks` |
+| `claw.cli.command.notes` | cliCommand | cli | claw | `notes` |
+| `claw.cli.command.people` | cliCommand | cli | claw | `people` |
+| `claw.cli.command.goals` | cliCommand | cli | claw | `goals` |
+| `claw.cli.command.inbox` | cliCommand | cli | claw | `inbox` |
+| `claw.cli.command.approvals` | cliCommand | cli | claw | `approvals` |
+| `claw.cli.command.sessions` | cliCommand | cli | claw | `sessions` |
+| `claw.cli.command.skills` | cliCommand | cli | claw | `skills` |
+| `claw.cli.command.models` | cliCommand | cli | claw | `models` |
+| `claw.cli.command.providers` | cliCommand | cli | claw | `providers` |
+| `claw.cli.command.auth` | cliCommand | cli | claw | `auth` |
+| `claw.cli.command.time` | cliCommand | cli | claw | `time` |
+| `claw.cli.command.channels` | cliCommand | cli | claw | `channels` |
+| `claw.cli.command.telegram` | cliCommand | cli | claw | `telegram` |
+| `claw.cli.command.notify` | cliCommand | cli | claw | `notify` |
+| `claw.cli.command.media` | cliCommand | cli | claw | `media` |
+| `claw.cli.command.drive` | cliCommand | cli | claw | `drive` |
+| `claw.cli.command.design` | cliCommand | cli | claw | `design` |
+| `claw.cli.command.apps` | cliCommand | cli | claw | `apps` |
+| `claw.cli.command.content` | cliCommand | cli | claw | `content` |
+| `claw.cli.command.knowledge` | cliCommand | cli | claw | `knowledge` |
+| `claw.cli.command.profile` | cliCommand | cli | claw | `profile` |
+| `claw.cli.command.search` | cliCommand | cli | claw | `search` |
+| `claw.cli.command.runtime` | cliCommand | cli | claw | `runtime` |
+| `claw.cli.command.monitor` | cliCommand | cli | claw | `monitor` |
+| `claw.cli.command.logs` | cliCommand | cli | claw | `logs` |
+| `claw.cli.command.doctor` | cliCommand | cli | claw | `doctor` |
+| `claw.cli.command.mcp` | cliCommand | cli | claw | `mcp` |
+| `claw.cli.command.open` | cliCommand | cli | claw | `open` |
+| `claw.cli.flag.json` | cliFlag | cli | claw | `--json` |
+| `claw.cli.flag.dry-run` | cliFlag | cli | claw | `--dry-run` |
+| `claw.cli.flag.workspace` | cliFlag | cli | claw | `--workspace` |
+| `claw.cli.flag.runtime` | cliFlag | cli | claw | `--runtime` |
+| `claw.cli.flag.help` | cliFlag | cli | claw | `--help` |
+| `claw.external.openai` | externalDependency | external | external | `openai` |
+| `claw.external.anthropic` | externalDependency | external | external | `anthropic` |
+| `claw.external.stripe` | externalDependency | external | external | `stripe` |
+| `claw.external.telegram` | externalDependency | external | external | `telegram` |
+| `claw.external.slack` | externalDependency | external | external | `slack` |
+| `claw.external.google` | externalDependency | external | external | `google` |
+| `claw.external.microsoft` | externalDependency | external | external | `microsoft` |
+| `claw.global` | root | persistent | claw | `~/.claw` |
+| `claw.workspace` | root | persistent | claw | `.claw` |
+| `clawix.home` | root | persistent | clawix | `~/.clawix` |
+| `claw.database.core` | database | persistent | claw | `~/.claw/data/core.sqlite` |
+| `claw.database.legacy_productivity` | sidecar | persistent | claw | `.claw/data/productivity.sqlite` |
+| `claw.database.core.table.workspace_records` | table | persistent | claw | `` |
+| `claw.database.core.table.workspace_records.column.collection_name` | column | persistent | claw | `` |
+| `claw.database.core.table.workspace_records.column.record_id` | column | persistent | claw | `` |
+| `claw.database.core.table.workspace_records.column.payload_json` | column | persistent | claw | `` |
+| `claw.database.core.table.workspace_records.column.updated_at` | column | persistent | claw | `` |
+| `claw.database.core.table.workspace_records.column.archived_at` | column | persistent | claw | `` |
+| `claw.database.core.table.workspace_records.index.workspace_records_collection_updated_idx` | index | persistent | claw | `` |
+| `claw.database.core.table.workspace_meta` | table | persistent | claw | `` |
+| `claw.database.core.table.workspace_meta.column.meta_key` | column | persistent | claw | `` |
+| `claw.database.core.table.workspace_meta.column.meta_value` | column | persistent | claw | `` |
+| `claw.database.runtime` | sidecar | persistent | claw | `~/.claw/data/runtime.sqlite` |
+| `claw.database.sessions` | sidecar | persistent | claw | `~/.claw/data/sessions.sqlite` |
+| `claw.database.audio` | sidecar | persistent | claw | `~/.claw/data/audio.sqlite` |
+| `claw.database.search` | sidecar | persistent | claw | `~/.claw/data/search.sqlite` |
+| `claw.database.notify` | sidecar | persistent | claw | `~/.claw/data/notify.sqlite` |
+| `claw.database.feed` | sidecar | persistent | claw | `~/.claw/data/feed.sqlite` |
+| `claw.database.monitor` | sidecar | persistent | claw | `~/.claw/data/monitor.sqlite` |
+| `claw.workspace.manifest` | file | persistent | claw | `.claw/manifest.json` |
+| `claw.workspace.desiredState` | folder | persistent | claw | `.claw/state/desired` |
+| `claw.workspace.projections` | folder | persistent | claw | `.claw/projections` |
+| `claw.workspace.sessions` | folder | persistent | claw | `.claw/sessions` |
+| `claw.workspace.audit` | folder | persistent | claw | `.claw/audit` |
+| `claw.workspace.locks` | folder | persistent | claw | `.claw/locks` |
+| `claw.workspace.backups` | folder | persistent | claw | `.claw/backups` |
+| `claw.workspace.browser` | folder | persistent | claw | `.claw/browser` |
+| `claw.workspace.styles` | folder | persistent | claw | `.claw/styles` |
+| `claw.workspace.templates` | folder | persistent | claw | `.claw/templates` |
+| `claw.workspace.references` | folder | persistent | claw | `.claw/references` |
+| `claw.workspace.slides` | folder | persistent | claw | `.claw/slides` |
+| `claw.workspace.dashboard_database` | folder | persistent | claw | `.claw/dashboard-database` |
+| `claw.workspace.channel_run` | folder | persistent | claw | `.claw/run/channels` |
+| `claw.workspace.telegram_codex_bridge_state` | file | persistent | claw | `.claw/telegram-codex-bridge.json` |
+| `claw.workspace.channel_runs_state` | file | persistent | claw | `.claw/channel-runs.json` |
+| `claw.workspace.observedState` | folder | persistent | claw | `.claw/observed` |
+| `claw.workspace.projections` | folder | persistent | claw | `.claw/projections` |
+| `claw.workspace.sessions` | folder | persistent | claw | `.claw/sessions` |
+| `claw.workspace.audit` | folder | persistent | claw | `.claw/audit` |
+| `claw.workspace.backups` | folder | persistent | claw | `.claw/backups` |
+| `claw.workspace.locks` | folder | persistent | claw | `.claw/locks` |
+| `claw.workspace.intents` | folder | persistent | claw | `.claw/intents` |
+| `claw.workspace.compat` | folder | persistent | claw | `.claw/compat` |
+| `claw.workspace.documents` | folder | persistent | claw | `.claw/documents` |
+| `claw.workspace.data` | folder | persistent | claw | `.claw/data` |
+| `claw.workspace.generations_tmp` | persistentTemp | persistent | claw | `.claw/tmp/generations` |
+| `claw.global.config` | folder | persistent | claw | `~/.claw/config.yaml` |
+| `claw.global.data` | folder | persistent | claw | `~/.claw/data` |
+| `claw.global.state` | folder | persistent | claw | `~/.claw/state` |
+| `claw.global.cache` | folder | persistent | claw | `~/.claw/cache` |
+| `claw.global.logs` | folder | persistent | claw | `~/.claw/logs` |
+| `claw.global.run` | folder | persistent | claw | `~/.claw/run` |
+| `claw.global.tmp` | folder | persistent | claw | `~/.claw/tmp` |
+| `claw.global.skills` | folder | persistent | claw | `~/.claw/skills` |
+| `claw.global.library` | folder | persistent | claw | `~/.claw/library` |
+| `claw.global.rules` | folder | persistent | claw | `~/.claw/rules` |
+| `claw.global.image_library` | folder | persistent | claw | `~/.claw/image-library` |
+| `claw.global.runtime_home` | folder | persistent | claw | `~/.claw-runtime` |
+| `claw.global.demo_home` | folder | persistent | claw | `~/.claw-demo` |
+| `clawix.home.data` | folder | persistent | clawix | `~/.clawix/data` |
+| `clawix.home.state` | folder | persistent | clawix | `~/.clawix/state` |
+| `clawix.home.cache` | folder | persistent | clawix | `~/.clawix/cache` |
+| `clawix.home.logs` | folder | persistent | clawix | `~/.clawix/logs` |
+| `clawix.home.run` | folder | persistent | clawix | `~/.clawix/run` |
+| `clawix.home.tmp` | folder | persistent | clawix | `~/.clawix/tmp` |
+| `clawix.home.bridgeSocket` | socket | persistent | clawix | `~/.clawix/run/clawix-bridge.sock` |
+| `claw.external.codex` | externalReadOnlySource | persistent | external | `~/.codex` |
+| `claw.legacy.workspace.clawjs` | legacyPath | persistent | claw | `.clawjs` |
+| `claw.database.core.table.data_registry` | table | persistent | claw | `` |
+| `claw.database.core.table.app_state` | table | persistent | claw | `` |
+| `claw.database.core.table.app_projects` | table | persistent | claw | `` |
+| `claw.database.core.table.app_pinned_threads` | table | persistent | claw | `` |
+| `claw.database.core.table.app_session_titles` | table | persistent | claw | `` |
+| `claw.database.core.table.app_archives` | table | persistent | claw | `` |
+| `claw.database.core.table.app_sidebar_snapshots` | table | persistent | claw | `` |
+| `claw.database.core.table.app_terminal_tabs` | table | persistent | claw | `` |
+| `claw.database.core.table.signals_verticals` | table | persistent | claw | `` |
+| `claw.database.core.table.signals_variables` | table | persistent | claw | `` |
+| `claw.database.core.table.signals_sessions` | table | persistent | claw | `` |
+| `claw.database.core.table.signals_observations` | table | persistent | claw | `` |
+| `claw.database.core.table.knowledge_entities` | table | persistent | claw | `` |
+| `claw.database.core.table.knowledge_facts` | table | persistent | claw | `` |
+| `claw.database.core.table.pages` | table | persistent | claw | `` |
+| `claw.database.core.table.page_blocks` | table | persistent | claw | `` |
+| `claw.database.core.table.page_links` | table | persistent | claw | `` |
+| `claw.database.core.table.page_mentions` | table | persistent | claw | `` |
+| `claw.database.core.table.page_revisions` | table | persistent | claw | `` |
+| `claw.database.core.table.page_comments` | table | persistent | claw | `` |
+| `claw.database.core.table.profile_projection` | table | persistent | claw | `` |
+| `claw.database.core.table.notes_fts` | table | persistent | claw | `` |
+| `claw.database.core.table.productivity_items` | table | persistent | claw | `` |
+| `claw.database.core.table.business_records` | table | persistent | claw | `` |
+| `claw.database.core.table.content_items` | table | persistent | claw | `` |
+| `claw.database.core.table.social_posts` | table | persistent | claw | `` |
+| `claw.database.core.table.accounting_entries` | table | persistent | claw | `` |
+| `claw.database.core.table.accounting_lines` | table | persistent | claw | `` |
+| `claw.database.core.table.calendar_events` | table | persistent | claw | `` |
+| `claw.database.core.table.iot_config` | table | persistent | claw | `` |
+| `claw.database.core.table.finance_records` | table | persistent | claw | `` |
+| `claw.database.core.table.marketplace_choices` | table | persistent | claw | `` |
+| `claw.database.core.table.resources` | table | persistent | claw | `` |
+| `claw.database.core.table.agents` | table | persistent | claw | `` |
+| `claw.database.core.table.skills` | table | persistent | claw | `` |
+| `claw.database.core.table.skill_collections` | table | persistent | claw | `` |
+| `claw.database.core.table.connections` | table | persistent | claw | `` |
+| `claw.database.core.table.apps` | table | persistent | claw | `` |
+| `claw.database.core.table.design_resources` | table | persistent | claw | `` |
+| `claw.database.core.table.session_index` | table | persistent | claw | `` |
+| `claw.database.core.table.session_index_fts` | table | persistent | claw | `` |
+| `claw.database.core.index.data_registry_domain_idx` | index | persistent | claw | `` |
+| `claw.database.core.index.app_projects_path_idx` | index | persistent | claw | `` |
+| `claw.database.core.index.app_sidebar_snapshots_order_idx` | index | persistent | claw | `` |
+| `claw.database.core.index.signals_variables_vertical_idx` | index | persistent | claw | `` |
+| `claw.database.core.index.signals_observations_variable_time_idx` | index | persistent | claw | `` |
+| `claw.database.core.index.signals_observations_vertical_time_idx` | index | persistent | claw | `` |
+| `claw.database.core.index.knowledge_entities_type_idx` | index | persistent | claw | `` |
+| `claw.database.core.index.knowledge_facts_subject_idx` | index | persistent | claw | `` |
+| `claw.database.core.index.knowledge_facts_predicate_idx` | index | persistent | claw | `` |
+| `claw.database.core.index.pages_space_updated_idx` | index | persistent | claw | `` |
+| `claw.database.core.index.pages_surface_idx` | index | persistent | claw | `` |
+| `claw.database.core.index.pages_source_record_idx` | index | persistent | claw | `` |
+| `claw.database.core.index.page_blocks_page_order_idx` | index | persistent | claw | `` |
+| `claw.database.core.index.page_links_target_idx` | index | persistent | claw | `` |
+| `claw.database.core.index.page_mentions_target_idx` | index | persistent | claw | `` |
+| `claw.database.core.index.page_comments_page_idx` | index | persistent | claw | `` |
+| `claw.database.core.index.profile_projection_section_idx` | index | persistent | claw | `` |
+| `claw.database.core.index.productivity_items_kind_status_idx` | index | persistent | claw | `` |
+| `claw.database.core.index.business_records_kind_idx` | index | persistent | claw | `` |
+| `claw.database.core.index.content_items_status_idx` | index | persistent | claw | `` |
+| `claw.database.core.index.social_posts_status_idx` | index | persistent | claw | `` |
+| `claw.database.core.index.calendar_events_time_idx` | index | persistent | claw | `` |
+| `claw.database.core.index.finance_records_time_idx` | index | persistent | claw | `` |
+| `claw.database.core.index.marketplace_choices_kind_target_idx` | index | persistent | claw | `` |
+| `claw.database.core.index.iot_config_kind_idx` | index | persistent | claw | `` |
+| `claw.database.core.index.resources_domain_kind_idx` | index | persistent | claw | `` |
+| `claw.database.core.index.design_resources_kind_idx` | index | persistent | claw | `` |
+| `claw.database.core.index.session_index_source_updated_idx` | index | persistent | claw | `` |
+| `claw.database.sessions.table.conversation_sessions` | table | persistent | claw | `` |
+| `claw.database.sessions.table.conversation_messages` | table | persistent | claw | `` |
+| `claw.database.sessions.table.conversation_fts` | table | persistent | claw | `` |
+| `claw.database.sessions.index.conversation_sessions_source_updated_idx` | index | persistent | claw | `` |
+| `claw.database.sessions.index.conversation_messages_session_idx` | index | persistent | claw | `` |
+| `claw.database.audio.table.audio_items` | table | persistent | claw | `` |
+| `claw.database.audio.table.audio_fts` | table | persistent | claw | `` |
+| `claw.database.audio.index.audio_items_session_idx` | index | persistent | claw | `` |
+| `claw.database.drive.table.drive_items` | table | persistent | claw | `` |
+| `claw.database.drive.table.drive_fts` | table | persistent | claw | `` |
+| `claw.database.drive.index.drive_items_session_idx` | index | persistent | claw | `` |
+| `claw.database.drive.index.drive_items_parent_idx` | index | persistent | claw | `` |
+| `claw.database.search.table.search_documents` | table | persistent | claw | `` |
+| `claw.database.search.table.search_fts` | table | persistent | claw | `` |
+| `claw.database.search.index.search_documents_domain_idx` | index | persistent | claw | `` |
+| `claw.database.runtime.table.runtime_jobs` | table | persistent | claw | `` |
+| `claw.database.runtime.table.runtime_events` | table | persistent | claw | `` |
+| `claw.database.runtime.index.runtime_jobs_status_idx` | index | persistent | claw | `` |
+| `claw.database.runtime.index.runtime_events_job_idx` | index | persistent | claw | `` |
+| `claw.database.core.table.operational_events` | table | persistent | claw | `` |
+| `claw.database.core.index.operational_events_kind_idx` | index | persistent | claw | `` |

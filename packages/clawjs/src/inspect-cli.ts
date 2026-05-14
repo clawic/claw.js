@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-import { clawPersistentSurfaceRegistry, findClawPersistentSurfaceNode, listClawPersistentSurfaceNodes, withSurfaceChildren } from "@clawjs/core";
+import { clawPersistentSurfaceRegistry, findClawPersistentSurfaceNode, withSurfaceChildren } from "@clawjs/core";
 import type { ClawPersistentSurfaceNode, ClawPersistentSurfaceRegistry } from "@clawjs/core";
 import { v1MainSchemaSurfaceNodes } from "./v1-data-surface.ts";
 
@@ -108,14 +108,14 @@ function inspectList(value: string | undefined, nodes = inspectNodes()): ClawPer
 
 function inspectText(nodes: ClawPersistentSurfaceNode[]): string {
   return nodes.map((node) => {
-    const locator = node.path ?? node.key ?? node.name;
-    return `${node.id}\t${node.kind}\t${node.owner}\t${locator}`;
+    const locator = node.path ?? node.route ?? node.key ?? node.value ?? node.name;
+    return `${node.id}\t${node.kind}\t${node.owner}\t${node.surfaceClass ?? "persistent"}\t${locator}`;
   }).join("\n");
 }
 
 function renderInspectMarkdown(nodes = inspectNodes()): string {
   const lines = [
-    "# Claw persistent surface",
+    "# Claw stable surface",
     "",
     "Generated from `claw inspect render --format markdown`. Do not edit by hand.",
     "Use `claw inspect --manifest <path>` or `CLAW_INSPECT_MANIFEST=path[,path...]` to fuse static manifests from other language builders during inspection.",
@@ -128,11 +128,11 @@ function renderInspectMarkdown(nodes = inspectNodes()): string {
     "",
     "## Nodes",
     "",
-    "| ID | Kind | Owner | Path / Key |",
-    "| --- | --- | --- | --- |",
+    "| ID | Kind | Surface | Owner | Path / Key / Value |",
+    "| --- | --- | --- | --- | --- |",
   ];
   for (const node of nodes) {
-    lines.push(`| \`${node.id}\` | ${node.kind} | ${node.owner} | \`${node.path ?? node.key ?? ""}\` |`);
+    lines.push(`| \`${node.id}\` | ${node.kind} | ${node.surfaceClass ?? "persistent"} | ${node.owner} | \`${node.path ?? node.route ?? node.key ?? node.value ?? ""}\` |`);
   }
   return `${lines.join("\n")}\n`;
 }
@@ -155,6 +155,8 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
   const [, command = "tree", target] = input.positionals;
   const registry = inspectRegistry(input);
   const nodes = withSurfaceChildren(registry.nodes);
+  const selectByKinds = (kinds: string[]) => nodes.filter((node) => kinds.includes(node.kind));
+  const selectBySurface = (surfaceClass: string) => nodes.filter((node) => node.surfaceClass === surfaceClass);
   if (command === "tree") {
     const payload = { version: registry.version, nodes };
     if (input.wantsJson) writeJson(input.context.stdout, payload);
@@ -196,6 +198,54 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     else input.context.stdout.write(`${inspectText(selected)}\n`);
     return CLI_EXIT_OK;
   }
+  if (command === "contracts" || command === "stable" || command === "compat") {
+    const selected = nodes.filter((node) => node.surfaceClass && node.surfaceClass !== "persistent");
+    if (input.wantsJson) writeJson(input.context.stdout, selected);
+    else input.context.stdout.write(`${inspectText(selected)}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (command === "apis") {
+    const selected = selectByKinds(["apiRoute", "apiMethod", "apiParameter", "webhook", "webhookEvent", "deepLink", "hostname", "port"]);
+    if (input.wantsJson) writeJson(input.context.stdout, selected);
+    else input.context.stdout.write(`${inspectText(selected)}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (command === "protocols") {
+    const selected = selectBySurface("protocol");
+    if (input.wantsJson) writeJson(input.context.stdout, selected);
+    else input.context.stdout.write(`${inspectText(selected)}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (command === "events") {
+    const selected = selectBySurface("event");
+    if (input.wantsJson) writeJson(input.context.stdout, selected);
+    else input.context.stdout.write(`${inspectText(selected)}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (command === "schemas") {
+    const selected = selectBySurface("schema");
+    if (input.wantsJson) writeJson(input.context.stdout, selected);
+    else input.context.stdout.write(`${inspectText(selected)}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (command === "ids") {
+    const selected = selectBySurface("id");
+    if (input.wantsJson) writeJson(input.context.stdout, selected);
+    else input.context.stdout.write(`${inspectText(selected)}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (command === "cli") {
+    const selected = selectBySurface("cli");
+    if (input.wantsJson) writeJson(input.context.stdout, selected);
+    else input.context.stdout.write(`${inspectText(selected)}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (command === "external") {
+    const selected = selectBySurface("external");
+    if (input.wantsJson) writeJson(input.context.stdout, selected);
+    else input.context.stdout.write(`${inspectText(selected)}\n`);
+    return CLI_EXIT_OK;
+  }
   if (command === "render") {
     const format = input.flags.format ?? "markdown";
     if (format === "mermaid") {
@@ -208,7 +258,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     }
     throw new InspectCliError("usage_error", `Unsupported inspect render format: ${format}`, CLI_EXIT_USAGE);
   }
-  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|database|storage|prefs|render`, CLI_EXIT_USAGE);
+  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|external|render`, CLI_EXIT_USAGE);
 }
 
 export async function runInspectCli(input: InspectCliInput): Promise<number> {

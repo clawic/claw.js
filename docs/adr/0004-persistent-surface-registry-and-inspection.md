@@ -1,25 +1,54 @@
-# ADR 0004: Persistent surface registry and inspection
+# ADR 0004: Stable surface registry and inspection
 
 ## Status
 
-Accepted.
+Accepted. Extended 2026-05-14 by conversation
+`019e25c1-b831-73f2-a717-5690b171d0d4`.
 
 ## Context
 
-Agents need a complete, navigable view of durable Claw data surfaces without relying on a manually maintained diagram. The inspected surface must cover database names, sidecar stores, workspace paths, host-owned operational paths, legacy read-only compatibility paths, external read-only sources, preference keys, and future table/field metadata. Generated Markdown and Mermaid views are useful, but they must be renderings of programmatic definitions rather than a second source of truth.
+Agents need a complete, navigable view of durable and compatibility-sensitive
+Claw data surfaces without relying on a manually maintained diagram. The
+inspected surface must cover database names, sidecar stores, workspace paths,
+host-owned operational paths, external read-only sources, preference keys, API
+routes, webhooks, events, queues, JSON fields, schemas, protocol frames, CLI
+commands/flags, error codes, enum wire values, ID namespaces, deep links,
+hostnames, ports, and future table/field metadata. Generated Markdown and
+Mermaid views are useful, but they must be renderings of programmatic
+definitions rather than a second source of truth.
 
 The user decision log for conversation `019e25c1-b831-73f2-a717-5690b171d0d4` requires strict enforcement:
 
-- The scope is all persistent surfaces, not only database schema.
+- The original scope is all persistent surfaces, not only database schema.
+- The extended scope is all owned and cross-version stable surfaces: any name,
+  string, field, route, identifier, event, queue, webhook, schema, CLI command,
+  or protocol value that leaves code and whose change can break compatibility.
 - The public interface is `claw inspect`.
 - The source of truth is code/builders, not hand-written CLI inventories.
 - The registry shape is typed builders.
 - The CLI reads a static definition that can be traversed recursively.
-- Policy is strict: new persistent names must be registered through the supported builders before they land. The goal is not complete while any durable surface remains outside the registry contract.
+- Policy is strict: new persistent or stable compatibility names must be
+  registered through the supported builders before they land. The goal is not
+  complete while any owned cross-version surface remains outside the registry
+  contract.
+- ClawJS and all Clawix targets are in scope. V1 has no users or accumulated
+  data, so accidental legacy or migration code discovered while implementing
+  this registry is removed rather than preserved unless a current non-legacy
+  reason exists.
+- After V1, breaking changes to registered surfaces require explicit versioning.
+- Third-party providers are registered as external dependencies plus
+  Claw-owned mappings. The registry does not copy entire provider schemas.
 
 ## Decision
 
-ClawJS owns a typed persistent surface registry in `@clawjs/core`. Persistent surfaces are registered with `clawPersistentSurface` builders and exported through `clawPersistentSurfaceRegistry`. The public `claw inspect` command is a read-only view over that registry.
+ClawJS owns a typed stable surface registry in `@clawjs/core`. Persistent
+surfaces remain registered with `clawPersistentSurface` builders, and stable
+compatibility surfaces use the same contract through `clawStableSurface` or the
+`contract` builder. `clawPersistentSurfaceRegistry` remains the exported
+manifest name for compatibility, but its nodes are now a superset: persistent
+surfaces plus API, protocol, schema, event, ID, CLI, config, and external
+mapping surfaces. The public `claw inspect` command is a read-only view over
+that registry.
 
 The first supported inspection commands are:
 
@@ -29,6 +58,14 @@ The first supported inspection commands are:
 - `claw inspect database`
 - `claw inspect storage`
 - `claw inspect prefs`
+- `claw inspect contracts`
+- `claw inspect apis`
+- `claw inspect protocols`
+- `claw inspect events`
+- `claw inspect schemas`
+- `claw inspect ids`
+- `claw inspect cli`
+- `claw inspect external`
 - `claw inspect render --format markdown|mermaid`
 
 The CLI reads the framework registry by default and can fuse additional static
@@ -44,7 +81,7 @@ canonicality, privacy, lifecycle, parent/children relationship, source
 location when available, environment overrides when applicable, warnings, and
 database/table/column/type metadata for schema surfaces.
 
-The supported node kinds are:
+The persistent node kinds are:
 
 - `root`
 - `database`
@@ -66,6 +103,33 @@ The supported node kinds are:
 - `legacyPath`
 - `externalReadOnlySource`
 
+The stable compatibility node kinds are:
+
+- `apiRoute`
+- `apiMethod`
+- `apiParameter`
+- `webhook`
+- `webhookEvent`
+- `eventTopic`
+- `queueTopic`
+- `jsonSchema`
+- `jsonField`
+- `enumValue`
+- `errorCode`
+- `cliCommand`
+- `cliFlag`
+- `cliOutputField`
+- `protocol`
+- `protocolFrame`
+- `protocolField`
+- `idNamespace`
+- `idPrefix`
+- `deepLink`
+- `hostname`
+- `port`
+- `externalDependency`
+- `externalMapping`
+
 ## Rules
 
 Any code that introduces a new durable path, database, collection/table,
@@ -76,17 +140,26 @@ external read-only source must register it through a typed builder in the
 persistent surface registry or a language-specific builder that feeds the same
 registry contract.
 
+Any code that introduces a new API route, webhook path or event, event topic,
+queue topic, JSON/schema field, schema id, enum wire value, error code,
+protocol frame/type/field, CLI command, CLI flag, CLI JSON output field,
+persistent ID namespace or prefix, deep link, local hostname, port, or
+Claw-owned external provider mapping must register it through the same stable
+surface contract before it lands.
+
 Manual lists are allowed only as generated output or as tests that assert registry coverage. They are not source of truth.
 
-Direct durable literals are forbidden in implementation code. In TypeScript and
+Direct durable and stable literals are forbidden in implementation code. In TypeScript and
 JavaScript this includes direct `path.join`/`join` construction of Claw homes,
 direct `new Database(...)` path creation, localStorage literals, DDL outside
-surface builders, and unregistered persistent file/status/cache names. In
+surface builders, direct `/v1/...` route literals, unregistered event/queue
+topic literals, and unregistered persistent file/status/cache names. In
 Swift this includes direct `DatabaseQueue(path:)`, direct
 `appendingPathComponent(...)` of durable Claw/Clawix/SQLite/status components,
 direct `@AppStorage` keys, direct `UserDefaults` keys or suite names, and
-project-specific preference wrappers with literal keys. Guards must fail on
-these patterns unless the code is the registry/builder itself.
+project-specific preference wrappers with literal keys, direct `/v1/...` route
+literals, and unregistered `CodingKeys`/wire field strings. Guards must fail
+on these patterns unless the code is the registry/builder itself.
 
 Temporary OS scratch paths are allowed only when they are clearly
 nonpersistent. Named fixtures, caches that survive restarts, and persistent
@@ -98,13 +171,15 @@ Clawix may expose host-owned operational surfaces, but ClawJS/Claw remains the f
 
 ## Consequences
 
-Agents can recursively inspect persistent framework and host surfaces using a single stable CLI.
+Agents can recursively inspect persistent and compatibility-sensitive framework
+and host surfaces using a single stable CLI.
 
-Enforcement blocks unregistered durable surfaces by scanning implementation
-code and requiring builder-backed declarations. Tests must prove that public
-inspection works, generated docs are current, external language manifests can
-be fused, and the registry includes the known canonical roots, databases,
-workspace paths, host paths, preference keys, legacy path, and Codex external
-source.
+Enforcement blocks unregistered durable and stable compatibility surfaces by
+scanning implementation code and requiring builder-backed declarations. Tests
+must prove that public inspection works, generated docs are current, external
+language manifests can be fused, and the registry includes the known canonical
+roots, databases, workspace paths, host paths, preference keys, API routes,
+protocols, events, schemas, CLI commands, IDs, external dependencies, and Codex
+external source.
 
 This ADR intentionally makes the generated diagram a view. If generated docs drift from `claw inspect`, the generated docs are wrong.

@@ -1844,6 +1844,12 @@ The docs check script validates that every current export from
     ClawPersistentSurfaceRegistry
     ClawPersistentSurfaceSource
     ClawPersistentSurfaceStorageClass
+    ClawStableSurfaceClass
+    ClawStableSurfaceDirection
+    ClawStableSurfaceKind
+    ClawStableSurfaceNode
+    ClawStableSurfaceRegistry
+    ClawStableSurfaceStability
     clawAppPorts
     clawCorePorts
     clawDataFiles
@@ -1857,6 +1863,7 @@ The docs check script validates that every current export from
     clawPortSubranges
     clawPersistentSurface
     clawPersistentSurfaceRegistry
+    clawStableSurface
     clawPrivateAppApiPrefix
     clawPublicApiPrefix
     clawServiceSocketName

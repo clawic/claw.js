@@ -15,7 +15,7 @@ const PUBLIC_CLI_SURFACE: CliSurfaceEntry[] = [
   { name: "host", kind: "canonical", summary: "Host registry, status, services, capabilities, permissions, logs, doctor, daemon lifecycle and domains.", usage: "host list|register|use|status|doctor|domains" },
   { name: "system", kind: "alias", target: "host", summary: "System capabilities alias.", usage: "system capabilities list|grant|revoke" },
   { name: "database", kind: "canonical", summary: "Local database admin surface.", usage: "database serve|login|namespace|collection|record|token|file" },
-  { name: "inspect", kind: "canonical", summary: "Read-only persistent surface inspection.", usage: "inspect tree|list|show|database|storage|prefs|render" },
+  { name: "inspect", kind: "canonical", summary: "Read-only stable surface inspection.", usage: "inspect tree|list|show|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|external|render" },
   { name: "db", kind: "alias", target: "database", summary: "Exact alias for local-first database CRUD.", usage: "db <collection> list|get|create|update|delete|schema" },
   { name: "collections", kind: "alias", target: "database", summary: "Database collections shortcut.", usage: "collections <collection> list|get|schema" },
   { name: "records", kind: "alias", target: "database", summary: "Database records shortcut.", usage: "records <collection> list|get|create|update|delete" },

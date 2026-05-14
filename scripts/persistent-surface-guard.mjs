@@ -5,6 +5,24 @@ const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 
 const rules = [
   {
+    id: "ts.direct-api-route",
+    extensions: [".ts", ".tsx", ".js", ".mjs"],
+    pattern: /(["'`])\/v\d+\/[A-Za-z0-9_/{}/.-]+\1/,
+    message: "stable API routes must be registered through stable surface builders",
+  },
+  {
+    id: "ts.direct-event-topic",
+    extensions: [".ts", ".tsx", ".js", ".mjs"],
+    pattern: /\b(?:event|topic|queue|eventType|type)\s*:\s*(["'`])[a-z][a-z0-9-]*\.[a-z0-9_.-]+\1/,
+    message: "event and queue topics must be registered through stable surface builders",
+  },
+  {
+    id: "ts.direct-schema-version-field",
+    extensions: [".ts", ".tsx", ".js", ".mjs"],
+    pattern: /(["'`])(?:schemaVersion|protocolVersion|sessionId|recordId|runtimeId|agentId)\1\s*:/,
+    message: "stable JSON fields must be registered through stable surface builders or typed schemas",
+  },
+  {
     id: "ts.direct-database-path",
     extensions: [".ts", ".tsx", ".js", ".mjs"],
     pattern: /new\s+Database\s*\([^;\n]*(?:path\.join|join)\s*\(/,
@@ -33,6 +51,18 @@ const rules = [
     extensions: [".swift"],
     pattern: /UserDefaults(?:\.standard)?\.(?:set|string|stringArray|bool|object|integer|double|data|dictionary|removeObject)\([^;\n]*forKey:\s*"[^"]+"/,
     message: "UserDefaults keys must be registered as preferenceKey surfaces",
+  },
+  {
+    id: "swift.direct-api-route",
+    extensions: [".swift"],
+    pattern: /"\/v\d+\/[A-Za-z0-9_/{}/.-]+"/,
+    message: "stable Swift API routes must be registered through stable surface builders",
+  },
+  {
+    id: "swift.direct-coding-key",
+    extensions: [".swift"],
+    pattern: /\bcase\s+[A-Za-z_][A-Za-z0-9_]*\s*=\s*"(?:schemaVersion|protocolVersion|sessionId|recordId|runtimeId|agentId|type)"/,
+    message: "wire CodingKeys must be registered through stable surface builders",
   },
   {
     id: "swift.user-defaults-suite-literal",
@@ -67,7 +97,7 @@ const rules = [
 ];
 
 function isBuilderFile(filePath, body) {
-  return /(?:clawPersistentSurface|ClawixPersistentSurface|PersistentSurfaceRegistry)/.test(body)
+  return /(?:clawPersistentSurface|clawStableSurface|ClawixPersistentSurface|PersistentSurfaceRegistry|StableSurfaceRegistry)/.test(body)
     || filePath.endsWith("persistent-surface-guard.mjs");
 }
 
@@ -145,11 +175,16 @@ function runSelfTest() {
   const builderSwift = path.join(tempRoot, "PersistentSurfaceRegistry.swift");
   fs.writeFileSync(badTs, [
     "const db = new Database(path.join(home, '.claw', 'data', 'core.sqlite'));",
+    "const route = '/v1/namespaces/{namespace}/collections';",
+    "const payload = { event: 'workspace.initialized' };",
+    "const record = { 'schemaVersion': 1 };",
     "localStorage.setItem('clawix.panel', 'open');",
     "db.exec('CREATE TABLE direct_table (id TEXT PRIMARY KEY)');",
   ].join("\n"));
   fs.writeFileSync(badSwift, [
     "@AppStorage(\"SidebarViewMode\") var mode = \"all\"",
+    "let route = \"/v1/mesh/jobs\"",
+    "enum Keys: String, CodingKey { case schemaVersion = \"schemaVersion\" }",
     "UserDefaults.standard.set(true, forKey: \"DictationEnabled\")",
     "let bridgeDefaults = UserDefaults(suiteName: \"clawix.bridge\")",
     "SidebarPrefs.store.set(true, forKey: \"TerminalPanelOpen\")",
@@ -160,7 +195,7 @@ function runSelfTest() {
 
   const findings = [...scanFile(badTs), ...scanFile(badSwift, "registeredKey"), ...scanFile(builderSwift)];
   const foundRules = new Set(findings.map((finding) => finding.rule));
-  for (const expected of ["ts.direct-database-path", "ts.local-storage-literal", "ts.ddl-literal", "swift.app-storage-literal", "swift.user-defaults-literal", "swift.user-defaults-suite-literal", "swift.sidebar-prefs-literal", "swift.unregistered-persistent-key", "swift.database-queue-path"]) {
+  for (const expected of ["ts.direct-api-route", "ts.direct-event-topic", "ts.direct-schema-version-field", "ts.direct-database-path", "ts.local-storage-literal", "ts.ddl-literal", "swift.direct-api-route", "swift.direct-coding-key", "swift.app-storage-literal", "swift.user-defaults-literal", "swift.user-defaults-suite-literal", "swift.sidebar-prefs-literal", "swift.unregistered-persistent-key", "swift.database-queue-path"]) {
     if (!foundRules.has(expected)) {
       throw new Error(`self-test did not trigger ${expected}`);
     }
