@@ -510,7 +510,16 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       storageClass: "workspace",
       source: registrySource,
     }),
-    ...["intents", "compat", "documents", "data"].map((name) => clawPersistentSurface.path({
+    clawPersistentSurface.path({
+      id: "claw.workspace.observedState",
+      kind: "folder",
+      name: "observed state",
+      path: ".claw/observed",
+      parentId: "claw.workspace",
+      storageClass: "workspace",
+      source: registrySource,
+    }),
+    ...["projections", "sessions", "audit", "backups", "locks", "intents", "compat", "documents", "data"].map((name) => clawPersistentSurface.path({
       id: `claw.workspace.${name}`,
       kind: "folder",
       name,
