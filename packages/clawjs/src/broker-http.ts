@@ -3,7 +3,11 @@ export type BrokerDeclaredField = { secretName: string; fieldName: string; place
 export function inferBrokerDeclaredFields(input: { url: string; headers?: Record<string, string>; body?: string }): BrokerDeclaredField[] {
   const template = /\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g;
   const declared = new Map<string, BrokerDeclaredField>();
-  const sources: Array<[string | undefined, BrokerDeclaredField["placement"]]> = [[input.url, "query"], [input.body, "body"], ...Object.values(input.headers ?? {}).map((value) => [value, "header"] as const)];
+  const sources: Array<[string | undefined, BrokerDeclaredField["placement"]]> = [
+    [input.url, "query"],
+    [input.body, "body"],
+    ...Object.values(input.headers ?? {}).map((value): [string, BrokerDeclaredField["placement"]] => [value, "header"]),
+  ];
   for (const [text, placement] of sources) {
     if (!text) continue;
     for (const match of text.matchAll(template)) {
