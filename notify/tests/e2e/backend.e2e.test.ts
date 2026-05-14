@@ -18,7 +18,7 @@ test("landing page keeps the short product name", async () => {
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /<title>Notify<\/title>/);
-  assert.match(html, /<h1>Notify<\/h1>/);
+  assert.match(html, /<span class="login-brand">Notify<\/span>/);
 });
 
 async function boot() {
