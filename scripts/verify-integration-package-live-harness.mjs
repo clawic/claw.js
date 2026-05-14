@@ -117,7 +117,7 @@ function runBrokerCommand(tarballPath, appDir) {
   }
 }
 
-function runDockerSmoke(tarballPath) {
+function runDockerSmoke(tarballPath, tarballs) {
   if (process.env.CLAWJS_PACKAGE_LIVE_DOCKER !== "1") {
     console.error("EXTERNAL PENDING package/docker lane: set CLAWJS_PACKAGE_LIVE_DOCKER=1 to run the containerized install check.");
     return;
@@ -134,7 +134,9 @@ function runDockerSmoke(tarballPath) {
     return;
   }
   const mountDir = path.dirname(tarballPath);
-  const tarballName = path.basename(tarballPath);
+  const installTarballs = tarballs
+    .map((entry) => `/candidate/${path.basename(entry)}`)
+    .join(" ");
   runVisible("docker", [
     "run",
     "--rm",
@@ -143,7 +145,7 @@ function runDockerSmoke(tarballPath) {
     "node:20-alpine",
     "sh",
     "-lc",
-    `mkdir /tmp/app && cd /tmp/app && npm init -y >/dev/null && npm install --ignore-scripts /candidate/${tarballName} >/dev/null && node -e "import('@clawjs/integrations').then((m)=>{ if (!m.TELEGRAM_OFFICIAL_API_MATRIX) process.exit(1); })"`,
+    `mkdir /tmp/app && cd /tmp/app && npm init -y >/dev/null && npm install --ignore-scripts ${installTarballs} >/dev/null && node -e "import('@clawjs/integrations').then((m)=>{ if (!m.TELEGRAM_OFFICIAL_API_MATRIX) process.exit(1); })"`,
   ]);
 }
 
@@ -166,7 +168,7 @@ try {
   }, null, 2));
   runVisible("npm", ["install", "--ignore-scripts", ...tarballs], { cwd: appDir });
   installedSmoke(appDir);
-  runDockerSmoke(tarballPath);
+  runDockerSmoke(tarballPath, tarballs);
   if (liveRequested) {
     runBrokerCommand(tarballPath, appDir);
   } else {
