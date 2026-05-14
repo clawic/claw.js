@@ -7,13 +7,13 @@
       "lines": 13917,
       "reason": "Existing public surface barrel or command surface; split by domain before expanding."
     },
-    "packages/clawjs-workspace/src/index.ts": {
-      "lines": 8287,
-      "reason": "Existing public surface barrel or command surface; split by domain before expanding."
-    },
     "packages/clawjs-node/src/create-claw.ts": {
       "lines": 7368,
       "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+    },
+    "packages/clawjs-workspace/src/index.ts": {
+      "lines": 6910,
+      "reason": "Existing workspace runtime implementation; contracts have been extracted and remaining runtime should split by domain before expanding."
     },
     "packages/clawjs/src/index.test.ts": {
       "lines": 6502,
@@ -114,6 +114,10 @@
     "notify/src/server/db.ts": {
       "lines": 1707,
       "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
+    },
+    "packages/clawjs-workspace/src/workspace-contracts.ts": {
+      "lines": 1625,
+      "reason": "Extracted public workspace contract surface; keep as capped exception and split by domain before expanding."
     },
     "relay/src/connector/runtime.ts": {
       "lines": 1613,
