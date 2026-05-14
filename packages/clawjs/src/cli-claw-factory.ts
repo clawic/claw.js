@@ -68,6 +68,12 @@ export async function createCliClaw(
     rules: {
       rootDir: flags["rules-dir"],
     },
+    guidance: {
+      rootDir: flags["guidance-dir"],
+    },
+    resources: {
+      rootDir: flags["resources-dir"],
+    },
     skills: {
       homeDir: flags["skills-home"],
       // Default OFF in CLI to avoid surprising user-home filesystem mutations.

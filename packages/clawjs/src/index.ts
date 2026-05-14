@@ -63,7 +63,7 @@ import { createCliClaw, createCliWorkspaceClaw } from "./cli-claw-factory.ts";
 import { parseRuleHints, parseRuleReferences } from "./cli-rule-utils.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 export { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
-import { cliErrorFromUnknown, writeCommandJsonError, writeCommandJsonOk, writeJsonLine } from "./cli-json.ts";
+import { cliErrorFromUnknown, setCliJsonMetaProvider, writeCommandJsonError, writeCommandJsonOk, writeJsonLine } from "./cli-json.ts"; import { installCliRuntimeMetaProvider } from "./cli-runtime-meta.ts";
 import { runOpenServerCommand } from "./cli-open-server.ts";
 import { collectFlagValues, extractPositionals, formatCliTable, joinedPositionals, parseCsvFlag, parseFlags, parseJsonFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
 import { inferAudioExtension, inferMimeTypeFromPath, parseContextBlock, parseInferenceMessages, pathSafeBasename, readJsonFile, resolveRuntimeAdapterId, timelineRange, type GenerationCliMediaKind } from "./cli-runtime-utils.ts";
@@ -77,7 +77,7 @@ import { runExtendedProductivityCli } from "./cli-productivity-extended-command.
 import { runCodeCli } from "./cli-code-command.ts";
 import { runPlanCli } from "./cli-plan-command.ts";
 import { runKnowledgeTailCli } from "./cli-knowledge-tail-command.ts";
-import { runCliDiscoverySearch } from "./cli-search-command.ts";
+import { runCliDiscoverySearch } from "./cli-search-command.ts"; import { runGuidanceResourcesCli } from "./cli-guidance-resources-command.ts";
 import { runPublicPortalShortcut, writeMissingSubcommandJsonHelp, writePublicPortalHelpOnly } from "./cli-public-portal-routes.ts";
 import { handleUnknownCliCommand } from "./cli-unknown-command.ts";
 import { channelListenerPaths, isProcessRunning, readListenerPid, readTail, waitForListenerPid } from "./cli-channel-listener.ts";
@@ -954,8 +954,9 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   const workspaceId = flags["workspace-id"] || pathSafeBasename(workspaceRoot);
   const agentId = flags["agent-id"] || workspaceId;
   const runtimeAdapterId = resolveRuntimeAdapterId(flags);
-  const runtimeAdapter = getRuntimeAdapter(runtimeAdapterId);
-  const mediaGroup = group === "image" || group === "audio" || group === "video" ? group : null;
+  const runtimeAdapter = getRuntimeAdapter(runtimeAdapterId); const mediaGroup = group === "image" || group === "audio" || group === "video" ? group : null;
+  await installCliRuntimeMetaProvider({ group, command, subcommand, argv, flags, cwd: context.cwd, workspaceRoot, appId, workspaceId, agentId, runtimeAdapterId });
+  const guidanceResourcesResult = await runGuidanceResourcesCli({ group, command, subcommand, positionals, flags, argv, context, wantsJson, runtimeAdapterId, workspaceRoot, appId, workspaceId, agentId }); if (guidanceResourcesResult !== null) return guidanceResourcesResult;
 
   if (group === "slides") {
     try {
@@ -1992,5 +1993,7 @@ export async function runCli(argv: string[], context: CliContext): Promise<numbe
       context.stderr.write(`${handled.message}\n`);
     }
     return handled.exitCode;
+  } finally {
+    setCliJsonMetaProvider(null);
   }
 }

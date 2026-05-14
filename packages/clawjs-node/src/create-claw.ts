@@ -399,6 +399,7 @@ import {
   type LibraryResolveInput,
 } from "./library/store.ts";
 import { createLocalRulesStore } from "./rules/store.ts";
+import { createLocalGuidanceStore } from "./guidance/store.ts"; import { createLocalResourceRegistryStore } from "./resources/store.ts";
 import {
   synthesize,
   listTtsProviders,
@@ -646,6 +647,8 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     env: options.rules?.env ?? runtimeEnv,
     filesystem,
   });
+  const guidanceStore = createLocalGuidanceStore({ rootDir: options.guidance?.rootDir, env: options.guidance?.env ?? runtimeEnv, filesystem });
+  const resourceRegistryStore = createLocalResourceRegistryStore({ rootDir: options.resources?.rootDir, env: options.resources?.env ?? runtimeEnv, filesystem });
   const soulStore = createSoulStore({
     workspaceDir,
     filesystem,
@@ -1868,6 +1871,8 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     ...createClawKnowledgeFacades({ soulStore, userStore, appendAuditEvent, logicalAgentId, eventBus, adapter, processHost, resolvedRuntimeOptions, writeCompatSnapshot, workspaceDir, filesystem, writeCapabilityReport, persistWorkspaceState, persistProviderState, persistSchedulerState, readSchedulers, persistMemoryState, readMemory, persistSkillsState, readSkills, persistChannelsState, readChannels, augmentRuntimeStatusWithPluginBridge, pluginBridgeStatus, pluginBridgePolicy, validateWorkspace, readCompatSnapshot, buildCompatDriftReport, readProviderAuth, listManagedFiles, listManagedBlockProblems, buildCombinedDoctorReport, readModelCatalog, readDefaultModel, patchIntent, applyIntent, readProviderCatalog, readAuthState, prepareAuthLogin, emitAuthLoginProgress, patchProviderIntent, refreshObservedDomain, emitAuthProgress, requiresExplicitProviderEnable, outcomeStore, options, judgmentStore, sessionStore, contextStore, commitmentStore, projectCommitmentReminder, prepareContextPack, rulesStore, learningStore, libraryStore, dataStore }),
     ...createClawCapabilityFacades({
       rulesStore,
+      guidanceStore,
+      resourceRegistryStore,
       logicalAgentId,
       readSkills,
       persistSkillsState,

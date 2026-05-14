@@ -11,6 +11,7 @@ export * from "./semantic.ts";
 export * from "./storage.ts";
 export * from "./surface-registry.ts";
 export * from "./catalog-coverage.ts";
+export * from "./cli-guidance.ts";
 export * from "./cli-command-registry.ts";
 export * from "./terminology.ts";
 export * from "./tts.ts";

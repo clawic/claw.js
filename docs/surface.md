@@ -11,6 +11,64 @@ The docs check script validates that every current export from
 `@clawjs/audio`, `@clawjs/sessions`, `@clawjs/user-model`, and
 `@clawjs/runtime` appear here.
 
+## Guidance And Resource Exports
+
+    ActorAssertion
+    ActorAssertionVerificationResult
+    ActorContext
+    ActorKind
+    ActorTrustSource
+    actorAssertionSchema
+    actorKindSchema
+    actorTrustSourceSchema
+    canonicalActorAssertionPayload
+    createLocalGuidanceStore
+    createLocalResourceRegistryStore
+    GuidanceHint
+    GuidanceInput
+    GuidanceMatchCondition
+    guidanceMatchConditionSchema
+    GuidanceMatchInput
+    GuidanceMatchResult
+    GuidanceRecord
+    guidanceRecordSchema
+    GuidanceRiskClass
+    guidanceRiskClassSchema
+    guidanceSeveritySchema
+    GuidanceSeverity
+    guidanceStateSchema
+    GuidanceState
+    guidanceStatusSchema
+    GuidanceStatus
+    GUIDANCE_STATE_FILE
+    GuidanceStoreOptions
+    LocalGuidanceStore
+    LocalResourceRegistryStore
+    normalizeGuidanceId
+    ResourceKind
+    resourceKindSchema
+    ResourceLocator
+    resourceLocatorSchema
+    ResourceReadResult
+    ResourceRecord
+    resourceRecordSchema
+    ResourceRegisterInput
+    ResourceRegistryState
+    resourceRegistryStateSchema
+    ResourceRegistryStoreOptions
+    RESOURCES_STATE_FILE
+    ResourceStatus
+    resourceStatusSchema
+    resolveGuidanceRoot
+    resolveResourceRegistryRoot
+    signActorAssertion
+    TrustedActorAssertionKey
+    unknownActor
+    UntrustedActorInput
+    untrustedActor
+    verifyActorAssertion
+    VerifyActorAssertionOptions
+
 ## @clawjs/audio Exports
 
     AttachTranscriptInput
@@ -234,6 +292,7 @@ The docs check script validates that every current export from
     callOpenClawGateway
     callTelegramApi
     CANONICAL_RUNTIME_FILES
+    canonicalActorAssertionPayload
     CAPABILITY_REPORT_FILE
     ChannelProcessorAction
     ChannelProcessorEvent
@@ -249,6 +308,7 @@ The docs check script validates that every current export from
     CHANNELS_STATE_FILE
     ChannelsRegistry
     Claw
+    CLAW_DIR
     CLAW_RUNTIME_PROVIDERS
     CLAW_RUNTIME_WORKSPACE_FILES
     clawAdapter
@@ -256,7 +316,6 @@ The docs check script validates that every current export from
     ClawEventBus
     ClawFactory
     ClawInstance
-    CLAW_DIR
     ClawRuntimeAppServer
     ClawRuntimeAppServerOptions
     ClawRuntimeAuthSource
@@ -371,7 +430,9 @@ The docs check script validates that every current export from
     CreateImageLibraryStoreOptions
     createJudgmentStore
     createLearningStore
+    createLocalGuidanceStore
     createLocalLibraryStore
+    createLocalResourceRegistryStore
     createLocalRulesStore
     createLocalStorageStore
     createMediaStore
@@ -399,10 +460,10 @@ The docs check script validates that every current export from
     DataDocumentHandle
     DEFAULT_CLAW_OPERATOR_CAPSULE
     DEFAULT_CLAW_OPERATOR_SKILL_ID
+    DEFAULT_CLAW_SECRETS_APP_PATH
     DEFAULT_DEMO_SCENARIO_ID
     DEFAULT_OPENAI_MODEL
     DEFAULT_RUNTIME_FILE_DESCRIPTORS
-    DEFAULT_CLAW_SECRETS_APP_PATH
     DEFAULT_SESSION_TITLE
     DEFAULT_SOUL_ID
     DEFAULT_USER_ID
@@ -494,6 +555,8 @@ The docs check script validates that every current export from
     getSkillSource
     getTtsCatalog
     GrantChannelBindingInput
+    GUIDANCE_STATE_FILE
+    GuidanceStoreOptions
     handleClawRuntimeJsonRpcMessage
     hasConfirmedOpenClawOAuthSubscription
     hasOpenClawProviderAuth
@@ -561,7 +624,9 @@ The docs check script validates that every current export from
     listTtsProviders
     loadAuthStore
     loadTemplatePack
+    LocalGuidanceStore
     LocalLibraryStore
+    LocalResourceRegistryStore
     LocalRulesStore
     LocalStorageStore
     LockHandle
@@ -591,6 +656,7 @@ The docs check script validates that every current export from
     normalizeCompatSnapshot
     normalizeContextChip
     normalizeDocumentRef
+    normalizeGuidanceId
     normalizeInstallRef
     normalizeLibraryId
     normalizeProviderAuth
@@ -733,6 +799,7 @@ The docs check script validates that every current export from
     resolveDemoScenarioId
     ResolvedSessionAsset
     resolveFileLockPath
+    resolveGuidanceRoot
     resolveIntentDomainPath
     resolveIntentsDir
     resolveLegacyDocumentRefs
@@ -749,6 +816,7 @@ The docs check script validates that every current export from
     resolveOpenClawContextWithCli
     resolveOpenClawOAuthProvider
     resolveProviderStatePath
+    resolveResourceRegistryRoot
     resolveRulesRoot
     resolveRuntimeFilePath
     resolveSchedulerStatePath
@@ -766,6 +834,9 @@ The docs check script validates that every current export from
     resolveWorkspaceFilePath
     resolveWorkspaceLockPath
     resolveWorkspaceStatePath
+    ResourceReadResult
+    ResourceRegistryStoreOptions
+    RESOURCES_STATE_FILE
     restartOpenClawGateway
     RULES_STATE_FILE
     RulesStoreOptions
@@ -828,6 +899,7 @@ The docs check script validates that every current export from
     SettingsValidationIssue
     SettingsValuesRecord
     setupOpenClawWorkspace
+    signActorAssertion
     SKILL_CONTEXT_CAPSULE_MAX_CHARS
     SKILLS_CONFIG_FILE
     SKILLS_DIR
@@ -928,6 +1000,7 @@ The docs check script validates that every current export from
     transcribe
     TranscriptEventInput
     TranscriptMessageInput
+    TrustedActorAssertionKey
     TtsCatalog
     TtsConfigFieldDescriptor
     TtsConfigFieldKey
@@ -938,6 +1011,9 @@ The docs check script validates that every current export from
     TtsSynthesizeInput
     TtsSynthesizeResult
     uninstallOpenClawRuntime
+    unknownActor
+    untrustedActor
+    UntrustedActorInput
     updateBindingSettings
     UpdateBindingSettingsOptions
     UpdateBindingSettingsResult
@@ -964,6 +1040,8 @@ The docs check script validates that every current export from
     UserWizardInput
     validateSettingsUpdate
     validateWorkspace
+    verifyActorAssertion
+    VerifyActorAssertionOptions
     VoiceNoteListInput
     VoiceNoteRecord
     VoiceNoteSource
@@ -1032,6 +1110,14 @@ The docs check script validates that every current export from
     actionReceiptSchema
     ActivityEntryRecord
     activityEntryRecordSchema
+    ActorAssertion
+    actorAssertionSchema
+    ActorAssertionVerificationResult
+    ActorContext
+    ActorKind
+    actorKindSchema
+    ActorTrustSource
+    actorTrustSourceSchema
     AgentRecord
     agentRecordSchema
     AGENTS_FAMILY
@@ -1076,8 +1162,8 @@ The docs check script validates that every current export from
     BUILTIN_FAMILIES
     BUILTIN_FAMILY_BY_COLLECTION
     BuiltinCatalogEvidenceTag
-    BuiltinCollectionDefinition
     BuiltinCollectionCatalogMetadata
+    BuiltinCollectionDefinition
     BuiltinFamilyDefinition
     BuiltinFieldDefinition
     BuiltinIndexDefinition
@@ -1085,9 +1171,6 @@ The docs check script validates that every current export from
     BuiltinRelationKind
     BuiltinRequiredFieldReason
     CALENDAR_FAMILY
-    CATALOG_COVERAGE_NEEDS
-    CATALOG_COVERAGE_SCENARIOS
-    CATALOG_COVERAGE_WAVES
     CapabilityDescriptor
     capabilityDescriptorSchema
     CapabilityName
@@ -1099,6 +1182,9 @@ The docs check script validates that every current export from
     CapacityRecord
     capacityRecordSchema
     CAREER_FAMILY
+    CATALOG_COVERAGE_NEEDS
+    CATALOG_COVERAGE_SCENARIOS
+    CATALOG_COVERAGE_WAVES
     CatalogCoverageMapping
     CatalogCoverageNeed
     CatalogCoverageRelationNeed
@@ -1117,6 +1203,11 @@ The docs check script validates that every current export from
     ChannelsStateSnapshot
     channelsStateSnapshotSchema
     ChannelTargetDescriptor
+    CLAW_CANONICAL_HIERARCHY
+    CLAW_CANONICAL_TERMS
+    CLAW_NON_SYNONYMS
+    clawApiPath
+    clawAppPorts
     ClawApproval
     clawApprovalFixtureV1
     clawApprovalSchema
@@ -1124,22 +1215,26 @@ The docs check script validates that every current export from
     ClawAuditEvent
     clawAuditEventFixtureV1
     clawAuditEventSchema
+    clawBrowserStorageKeys
     ClawCanonicalTerm
     ClawCanonicalTermKey
     ClawCapability
     clawCapabilitySchema
-    ClawCliCommandRegistry
+    clawChannelEvents
+    clawChatAppStorageKeys
     clawCliCommandRegistry
-    clawCliCommandRegistryVersion
+    ClawCliCommandRegistry
     ClawCliCommandRegistryEntry
+    clawCliCommandRegistryVersion
     clawCliCommandsByName
     ClawCliCommandSource
+    clawClientContextSchema
     ClawCliSearchResult
     ClawCliSecurityPolicy
     ClawCliSupportDeclaration
     ClawCliSupportState
     ClawCliSurfaceKind
-    clawClientContextSchema
+    clawCodexExternalEventSamples
     clawCommandErrorSchema
     ClawCommandRequest
     clawCommandRequestFixtureV1
@@ -1147,22 +1242,37 @@ The docs check script validates that every current export from
     ClawCommandResponse
     clawCommandResponseFixtureV1
     clawCommandResponseSchema
+    clawCommonJsonFields
     clawContractFixturesV1
     clawContractFixtureTimestamp
     clawContractSchemasV1
     clawContractVersionV1
+    clawCorePorts
+    clawDatabaseApiRoutePatterns
+    clawDatabaseApiRoutes
+    clawDatabaseRecordEvents
+    clawDataFiles
+    clawDeepLinkSchemes
+    clawDefaultBindAddress
     ClawDomain
     ClawDomainMigrationStatus
     ClawDomainOwnership
     clawDomainOwnershipEntriesV1
     clawDomainOwnershipMatrixV1
     clawDomainSchema
+    clawDriveApiRoutePatterns
+    clawDriveApiRoutes
     ClawError
     ClawErrorCode
+    clawEventsPath
+    clawExportExtensions
+    clawExternalWebhookEventSamples
+    clawGlobalHomeLayout
     ClawGrant
     clawGrantFixtureV1
     clawGrantSchema
     clawGrantStatusSchema
+    clawHostApiRoutes
     clawHostCapabilityFixturesV1
     ClawHostDescriptor
     clawHostDescriptorFixtureV1
@@ -1173,17 +1283,58 @@ The docs check script validates that every current export from
     clawHostRegistryFixtureV1
     clawHostRegistrySchema
     clawHostTransportSchema
-    CLAW_CANONICAL_HIERARCHY
-    CLAW_CANONICAL_TERMS
-    CLAW_NON_SYNONYMS
+    clawixBridgePort
+    clawixDeepLinkRoutes
+    clawixHomeLayout
+    clawixPortRange
     clawJsonSchemasV1
     ClawjsSkillsConfig
     clawjsSkillsConfigSchema
+    clawLocalHostnames
     ClawManifest
+    clawNotifyApiRoutes
+    clawNotifyEventTypes
+    clawPersistentSurface
+    ClawPersistentSurfaceCanonicality
+    ClawPersistentSurfaceKind
+    ClawPersistentSurfaceLifecycle
+    ClawPersistentSurfaceNode
+    ClawPersistentSurfaceOwner
+    ClawPersistentSurfacePrivacy
+    clawPersistentSurfaceRegistry
+    ClawPersistentSurfaceRegistry
+    ClawPersistentSurfaceSource
+    ClawPersistentSurfaceStorageClass
+    clawPortRange
+    clawPortSubranges
+    clawPrivateAppApiPrefix
+    clawPublicApiPrefix
+    clawRegisteredDdlSources
     clawRiskLevelSchema
+    clawSearchApiRoutes
+    clawServiceSocketName
+    clawServiceSocketPath
+    clawServiceWindowsPipe
+    clawSessionEvents
+    clawStableSurface
+    ClawStableSurfaceClass
+    ClawStableSurfaceDirection
+    ClawStableSurfaceKind
+    ClawStableSurfaceNode
+    ClawStableSurfaceRegistry
+    ClawStableSurfaceStability
+    clawStorageApiRoutes
     ClawStoragePlatform
     ClawStorageRootsInput
+    ClawSurfaceParityGap
+    ClawSurfaceParityStatus
+    ClawSurfaceParitySurface
+    clawSurfaceRegistryVersion
+    clawTemporalEvents
+    clawTimeApiRoutes
     clawValidationModeSchema
+    clawWorkspaceAuditEvents
+    clawWorkspaceLayout
     CodexPathOperation
     COLLABORATION_FAMILY
     CommentRecord
@@ -1284,6 +1435,7 @@ The docs check script validates that every current export from
     FileMutationMode
     FilesIntentState
     FINANCE_FAMILY
+    findClawPersistentSurfaceNode
     FITNESS_FAMILY
     FLOW_FAMILY
     FREELANCE_CONSUMER_FAMILY
@@ -1291,6 +1443,22 @@ The docs check script validates that every current export from
     getBuiltinCollection
     GoalRecord
     goalRecordSchema
+    GuidanceHint
+    GuidanceInput
+    GuidanceMatchCondition
+    guidanceMatchConditionSchema
+    GuidanceMatchInput
+    GuidanceMatchResult
+    GuidanceRecord
+    guidanceRecordSchema
+    GuidanceRiskClass
+    guidanceRiskClassSchema
+    GuidanceSeverity
+    guidanceSeveritySchema
+    GuidanceState
+    guidanceStateSchema
+    GuidanceStatus
+    guidanceStatusSchema
     HABITS_JOURNALING_FAMILY
     HandoffRecord
     handoffRecordSchema
@@ -1394,6 +1562,7 @@ The docs check script validates that every current export from
     listCatalogCoverageNeeds
     listClawCliAliases
     listClawCliCommands
+    listClawPersistentSurfaceNodes
     ListRecord
     listRecordSchema
     LUXURY_AND_COLLECTING_FAMILY
@@ -1526,7 +1695,19 @@ The docs check script validates that every current export from
     resolveClawGlobalDataDir
     resolveClawHostRegistryPath
     resolveClawHostStateDir
+    resolveClawPersistentSurfacePath
     resolveClawWorkspaceDir
+    ResourceKind
+    resourceKindSchema
+    ResourceLocator
+    resourceLocatorSchema
+    ResourceRecord
+    resourceRecordSchema
+    ResourceRegisterInput
+    ResourceRegistryState
+    resourceRegistryStateSchema
+    ResourceStatus
+    resourceStatusSchema
     ROMANCE_FAMILY
     RuleApplyWhen
     ruleApplyWhenSchema
@@ -1841,6 +2022,7 @@ The docs check script validates that every current export from
     whatsappStateSnapshotSchema
     WhatsAppTransportStatus
     whatsappTransportStatusSchema
+    withSurfaceChildren
     WORK_FAMILY
     WorkSessionRecord
     workSessionRecordSchema

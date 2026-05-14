@@ -50,6 +50,34 @@ Pre-V1 raw JSON responses that predate the registry are migration debt. New or
 materially changed stable commands must use the envelope and include command
 schema/version metadata.
 
+CLI responses can also include compact just-in-time guidance:
+
+```json
+{
+  "ok": true,
+  "data": {},
+  "meta": {
+    "actor": { "actorKind": "agent", "trustSource": "agent-runtime" },
+    "guidance": [
+      {
+        "id": "deployment-runbook",
+        "severity": "warning",
+        "capsule": "Use the deployment runbook before writing to this server.",
+        "reason": "command match",
+        "resourceIds": ["res_abc123"],
+        "commands": ["claw guidance show deployment-runbook"]
+      }
+    ]
+  }
+}
+```
+
+`--guidance compact|full|minimal|off` controls how much guidance metadata is
+returned. Humans default to minimal guidance; agents and automation default to
+compact guidance. Actor hints from flags or environment are treated as
+`untrusted`; verified actor assertions require a locally trusted host/runtime
+key.
+
 ## Project Flow
 
 ```bash
@@ -85,11 +113,33 @@ claw info --json
 | `--app-id`, `--workspace-id`, `--agent-id` | Override workspace identity. |
 | `--json` | Returns machine-readable output. |
 | `--dry-run` | Prints the plan instead of mutating when supported. |
+| `--guidance compact\|full\|minimal\|off` | Controls CLI just-in-time guidance metadata. |
+| `--actor-assertion` | Supplies a signed actor assertion for local verification. |
 | `--agent-dir`, `--home-dir`, `--config-path`, `--runtime-workspace`, `--auth-store` | Adapter path overrides. |
 | `--gateway-url`, `--gateway-token`, `--gateway-port`, `--gateway-config` | Gateway overrides. |
 | `--secrets-url`, `--secrets-token`, `--secrets-tenant-id`, `--secrets-sidecar` | Secrets connection overrides. |
 | `--template-pack` | Template pack used by `workspace init` or `files apply-template-pack`. |
 | `--library-dir` | Overrides the local library root. |
+
+## Guidance And Resources
+
+```bash
+claw guidance list
+claw guidance show deployment-runbook
+claw guidance create --title "Deployment runbook" --capsule "Read the runbook before deploys" --command "host services" --resource res_abc123
+claw guidance archive deployment-runbook
+
+claw resources register ~/Projects/example --kind project
+claw resources show res_abc123
+claw resources resolve res_abc123
+claw resources read res_abc123
+claw resources status res_abc123
+```
+
+`guidance` is not `rules`: rules compile into prompt context, while guidance
+returns compact hints about instructions that may be expanded on demand.
+`resources` stores only explicitly registered resources with opaque `res_*`
+ids and mutable locators.
 
 ## Host And Database
 

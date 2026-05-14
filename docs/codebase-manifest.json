@@ -36,11 +36,11 @@
     ]
   },
   "summary": {
-    "files": 2826,
-    "tests": 389,
+    "files": 2835,
+    "tests": 391,
     "entrypoints": 160,
     "languages": {
-      "typescript": 2628,
+      "typescript": 2637,
       "javascript": 108,
       "swift": 90
     }
@@ -21933,7 +21933,7 @@
       "test": false,
       "entrypoint": false,
       "imports": [
-        "./.next/types/routes.d.ts"
+        "./.next-e2e/types/routes.d.ts"
       ],
       "exports": [],
       "declarations": []
@@ -58288,7 +58288,7 @@
     {
       "path": "packages/clawjs-core/src/cli-command-registry.ts",
       "language": "typescript",
-      "lines": 339,
+      "lines": 341,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -58411,6 +58411,230 @@
         {
           "kind": "type",
           "name": "ClawCliSurfaceKind",
+          "exported": true
+        }
+      ]
+    },
+    {
+      "path": "packages/clawjs-core/src/cli-guidance.ts",
+      "language": "typescript",
+      "lines": 218,
+      "test": false,
+      "entrypoint": false,
+      "imports": [
+        "zod"
+      ],
+      "exports": [
+        "ActorAssertion",
+        "ActorAssertionVerificationResult",
+        "ActorContext",
+        "ActorKind",
+        "ActorTrustSource",
+        "GuidanceHint",
+        "GuidanceInput",
+        "GuidanceMatchCondition",
+        "GuidanceMatchInput",
+        "GuidanceMatchResult",
+        "GuidanceRecord",
+        "GuidanceRiskClass",
+        "GuidanceSeverity",
+        "GuidanceState",
+        "GuidanceStatus",
+        "ResourceKind",
+        "ResourceLocator",
+        "ResourceRecord",
+        "ResourceRegisterInput",
+        "ResourceRegistryState",
+        "ResourceStatus",
+        "actorAssertionSchema",
+        "actorKindSchema",
+        "actorTrustSourceSchema",
+        "guidanceMatchConditionSchema",
+        "guidanceRecordSchema",
+        "guidanceRiskClassSchema",
+        "guidanceSeveritySchema",
+        "guidanceStateSchema",
+        "guidanceStatusSchema",
+        "resourceKindSchema",
+        "resourceLocatorSchema",
+        "resourceRecordSchema",
+        "resourceRegistryStateSchema",
+        "resourceStatusSchema"
+      ],
+      "declarations": [
+        {
+          "kind": "const",
+          "name": "actorAssertionSchema",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "actorKindSchema",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "actorTrustSourceSchema",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "guidanceMatchConditionSchema",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "guidanceRecordSchema",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "guidanceRiskClassSchema",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "guidanceSeveritySchema",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "guidanceStateSchema",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "guidanceStatusSchema",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "resourceKindSchema",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "resourceLocatorSchema",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "resourceRecordSchema",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "resourceRegistryStateSchema",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "resourceStatusSchema",
+          "exported": true
+        },
+        {
+          "kind": "interface",
+          "name": "ActorAssertionVerificationResult",
+          "exported": true
+        },
+        {
+          "kind": "interface",
+          "name": "ActorContext",
+          "exported": true
+        },
+        {
+          "kind": "interface",
+          "name": "GuidanceHint",
+          "exported": true
+        },
+        {
+          "kind": "interface",
+          "name": "GuidanceInput",
+          "exported": true
+        },
+        {
+          "kind": "interface",
+          "name": "GuidanceMatchInput",
+          "exported": true
+        },
+        {
+          "kind": "interface",
+          "name": "GuidanceMatchResult",
+          "exported": true
+        },
+        {
+          "kind": "interface",
+          "name": "ResourceRegisterInput",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "ActorAssertion",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "ActorKind",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "ActorTrustSource",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "GuidanceMatchCondition",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "GuidanceRecord",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "GuidanceRiskClass",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "GuidanceSeverity",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "GuidanceState",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "GuidanceStatus",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "ResourceKind",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "ResourceLocator",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "ResourceRecord",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "ResourceRegistryState",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "ResourceStatus",
           "exported": true
         }
       ]
@@ -58821,7 +59045,7 @@
     {
       "path": "packages/clawjs-core/src/index.ts",
       "language": "typescript",
-      "lines": 20,
+      "lines": 21,
       "test": false,
       "entrypoint": true,
       "imports": [
@@ -58829,6 +59053,7 @@
         "./builtins/index.ts",
         "./catalog-coverage.ts",
         "./cli-command-registry.ts",
+        "./cli-guidance.ts",
         "./domain-ownership.ts",
         "./errors.ts",
         "./helpers.ts",
@@ -60642,7 +60867,7 @@
     {
       "path": "packages/clawjs-core/src/surface-registry.ts",
       "language": "typescript",
-      "lines": 1385,
+      "lines": 1388,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -73517,6 +73742,89 @@
       "declarations": []
     },
     {
+      "path": "packages/clawjs-node/src/actor/assertions.ts",
+      "language": "typescript",
+      "lines": 164,
+      "test": false,
+      "entrypoint": false,
+      "imports": [
+        "@clawjs/core",
+        "crypto"
+      ],
+      "exports": [
+        "TrustedActorAssertionKey",
+        "UntrustedActorInput",
+        "VerifyActorAssertionOptions",
+        "canonicalActorAssertionPayload",
+        "signActorAssertion",
+        "unknownActor",
+        "untrustedActor",
+        "verifyActorAssertion"
+      ],
+      "declarations": [
+        {
+          "kind": "function",
+          "name": "canonicalActorAssertionPayload",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "decodeBase64Url",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "encodeBase64Url",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "parseActorKind",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "parseAssertion",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "signActorAssertion",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "unknownActor",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "untrustedActor",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "verifyActorAssertion",
+          "exported": true
+        },
+        {
+          "kind": "interface",
+          "name": "TrustedActorAssertionKey",
+          "exported": true
+        },
+        {
+          "kind": "interface",
+          "name": "UntrustedActorInput",
+          "exported": true
+        },
+        {
+          "kind": "interface",
+          "name": "VerifyActorAssertionOptions",
+          "exported": true
+        }
+      ]
+    },
+    {
       "path": "packages/clawjs-node/src/apps/index.ts",
       "language": "typescript",
       "lines": 2,
@@ -76234,7 +76542,7 @@
     {
       "path": "packages/clawjs-node/src/create-claw-capability-facades.ts",
       "language": "typescript",
-      "lines": 376,
+      "lines": 397,
       "test": false,
       "entrypoint": false,
       "imports": [],
@@ -76464,7 +76772,7 @@
     {
       "path": "packages/clawjs-node/src/create-claw-instance.ts",
       "language": "typescript",
-      "lines": 1127,
+      "lines": 1143,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -76798,7 +77106,7 @@
     {
       "path": "packages/clawjs-node/src/create-claw-options.ts",
       "language": "typescript",
-      "lines": 221,
+      "lines": 229,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -77175,7 +77483,7 @@
     {
       "path": "packages/clawjs-node/src/create-claw.ts",
       "language": "typescript",
-      "lines": 1964,
+      "lines": 1969,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -77213,6 +77521,7 @@
         "./files/managed-blocks.ts",
         "./files/template-pack.ts",
         "./generations/store.ts",
+        "./guidance/store.ts",
         "./host/audit.ts",
         "./host/filesystem.ts",
         "./host/process.ts",
@@ -77228,6 +77537,7 @@
         "./observed/store.ts",
         "./orchestration.ts",
         "./outcomes/store.ts",
+        "./resources/store.ts",
         "./rules/store.ts",
         "./runtime/env.ts",
         "./runtime/index.ts",
@@ -78701,6 +79011,124 @@
       ]
     },
     {
+      "path": "packages/clawjs-node/src/guidance-resources-actor.test.ts",
+      "language": "typescript",
+      "lines": 90,
+      "test": true,
+      "entrypoint": false,
+      "imports": [
+        "./actor/assertions.ts",
+        "./guidance/store.ts",
+        "./resources/store.ts",
+        "node:assert/strict",
+        "node:crypto",
+        "node:fs",
+        "node:os",
+        "node:path",
+        "vitest"
+      ],
+      "exports": [],
+      "declarations": []
+    },
+    {
+      "path": "packages/clawjs-node/src/guidance/store.ts",
+      "language": "typescript",
+      "lines": 222,
+      "test": false,
+      "entrypoint": false,
+      "imports": [
+        "../host/filesystem.ts",
+        "../surface-paths.ts",
+        "@clawjs/core",
+        "path"
+      ],
+      "exports": [
+        "GUIDANCE_STATE_FILE",
+        "GuidanceStoreOptions",
+        "LocalGuidanceStore",
+        "createLocalGuidanceStore",
+        "normalizeGuidanceId",
+        "resolveGuidanceRoot"
+      ],
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "LocalGuidanceStore",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "GUIDANCE_STATE_FILE",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "containsAny",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "containsOne",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "createLocalGuidanceStore",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "expandHome",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "intersects",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "matchOne",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "matchRecord",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "normalizeGuidanceId",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "nowIso",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "prefixMatches",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "resolveGuidanceRoot",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "unique",
+          "exported": false
+        },
+        {
+          "kind": "interface",
+          "name": "GuidanceStoreOptions",
+          "exported": true
+        }
+      ]
+    },
+    {
       "path": "packages/clawjs-node/src/host/audit.test.ts",
       "language": "typescript",
       "lines": 108,
@@ -79292,10 +79720,11 @@
     {
       "path": "packages/clawjs-node/src/index.ts",
       "language": "typescript",
-      "lines": 78,
+      "lines": 81,
       "test": false,
       "entrypoint": true,
       "imports": [
+        "./actor/assertions.ts",
         "./auth/index.ts",
         "./bindings/render.ts",
         "./bindings/store.ts",
@@ -79319,6 +79748,7 @@
         "./files/managed-blocks.ts",
         "./files/template-pack.ts",
         "./generations/index.ts",
+        "./guidance/store.ts",
         "./host/index.ts",
         "./images/index.ts",
         "./inference/index.ts",
@@ -79333,6 +79763,7 @@
         "./observed/store.ts",
         "./orchestration.ts",
         "./outcomes/store.ts",
+        "./resources/store.ts",
         "./rules/store.ts",
         "./runtime/index.ts",
         "./secrets/index.ts",
@@ -80606,6 +81037,91 @@
         {
           "kind": "interface",
           "name": "OutcomeWriteContext",
+          "exported": true
+        }
+      ]
+    },
+    {
+      "path": "packages/clawjs-node/src/resources/store.ts",
+      "language": "typescript",
+      "lines": 208,
+      "test": false,
+      "entrypoint": false,
+      "imports": [
+        "../host/filesystem.ts",
+        "../surface-paths.ts",
+        "@clawjs/core",
+        "crypto",
+        "fs",
+        "path"
+      ],
+      "exports": [
+        "LocalResourceRegistryStore",
+        "RESOURCES_STATE_FILE",
+        "ResourceReadResult",
+        "ResourceRegistryStoreOptions",
+        "createLocalResourceRegistryStore",
+        "resolveResourceRegistryRoot"
+      ],
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "LocalResourceRegistryStore",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "RESOURCES_STATE_FILE",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "createLocalResourceRegistryStore",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "createResourceId",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "expandHome",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "fingerprintPath",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "inferResourceKind",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "nowIso",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "resolveResourceRegistryRoot",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "resolveResourceStatus",
+          "exported": false
+        },
+        {
+          "kind": "interface",
+          "name": "ResourceReadResult",
+          "exported": true
+        },
+        {
+          "kind": "interface",
+          "name": "ResourceRegistryStoreOptions",
           "exported": true
         }
       ]
@@ -94892,7 +95408,7 @@
     {
       "path": "packages/clawjs/src/cli-claw-factory.ts",
       "language": "typescript",
-      "lines": 151,
+      "lines": 157,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -95451,6 +95967,84 @@
       ]
     },
     {
+      "path": "packages/clawjs/src/cli-guidance-resources-command.ts",
+      "language": "typescript",
+      "lines": 248,
+      "test": false,
+      "entrypoint": false,
+      "imports": [
+        "./cli-claw-factory.ts",
+        "./cli-errors.ts",
+        "./cli-flag-parsers.ts",
+        "./cli-json.ts",
+        "./index.ts",
+        "@clawjs/core"
+      ],
+      "exports": [
+        "runGuidanceResourcesCli"
+      ],
+      "declarations": [
+        {
+          "kind": "function",
+          "name": "isResourceReadPayload",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "resolveResourceLocator",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "runGuidanceCli",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "runGuidanceResourcesCli",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "runResourcesCli",
+          "exported": false
+        },
+        {
+          "kind": "type",
+          "name": "GuidanceCliFacade",
+          "exported": false
+        },
+        {
+          "kind": "type",
+          "name": "GuidanceResourcesClaw",
+          "exported": false
+        },
+        {
+          "kind": "type",
+          "name": "ResourcesCliFacade",
+          "exported": false
+        }
+      ]
+    },
+    {
+      "path": "packages/clawjs/src/cli-guidance-resources.test.ts",
+      "language": "typescript",
+      "lines": 63,
+      "test": true,
+      "entrypoint": false,
+      "imports": [
+        "./cli-errors.ts",
+        "./index-test-utils.ts",
+        "node:assert/strict",
+        "node:fs",
+        "node:os",
+        "node:path",
+        "vitest"
+      ],
+      "exports": [],
+      "declarations": []
+    },
+    {
       "path": "packages/clawjs/src/cli-host-command.ts",
       "language": "typescript",
       "lines": 122,
@@ -95592,7 +96186,7 @@
     {
       "path": "packages/clawjs/src/cli-json.ts",
       "language": "typescript",
-      "lines": 103,
+      "lines": 118,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -95603,6 +96197,7 @@
       "exports": [
         "CliJsonMeta",
         "cliErrorFromUnknown",
+        "setCliJsonMetaProvider",
         "stringifyCliJson",
         "writeCliError",
         "writeCommandJsonError",
@@ -95624,6 +96219,16 @@
           "kind": "function",
           "name": "isHandledCliErrorLike",
           "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "resolveCliJsonMeta",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "setCliJsonMetaProvider",
+          "exported": true
         },
         {
           "kind": "function",
@@ -96632,6 +97237,80 @@
         {
           "kind": "function",
           "name": "runRulesLibrarySkillsCli",
+          "exported": true
+        }
+      ]
+    },
+    {
+      "path": "packages/clawjs/src/cli-runtime-meta.ts",
+      "language": "typescript",
+      "lines": 165,
+      "test": false,
+      "entrypoint": false,
+      "imports": [
+        "./cli-claw-factory.ts",
+        "./cli-json.ts",
+        "@clawjs/claw",
+        "@clawjs/core"
+      ],
+      "exports": [
+        "GuidanceMode",
+        "buildCliRuntimeMeta",
+        "filterHintsForMode",
+        "guidanceMatchInputForCli",
+        "installCliRuntimeMetaProvider",
+        "resolveCliActor",
+        "resolveGuidanceMode"
+      ],
+      "declarations": [
+        {
+          "kind": "function",
+          "name": "buildCliRuntimeMeta",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "filterHintsForMode",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "guidanceMatchInputForCli",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "hostFromUrl",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "installCliRuntimeMetaProvider",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "parseTrustedKeys",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "resolveCliActor",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "resolveGuidanceMode",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "splitCsv",
+          "exported": false
+        },
+        {
+          "kind": "type",
+          "name": "GuidanceMode",
           "exported": true
         }
       ]
@@ -98167,7 +98846,7 @@
     {
       "path": "packages/clawjs/src/index.ts",
       "language": "typescript",
-      "lines": 1997,
+      "lines": 2000,
       "test": false,
       "entrypoint": true,
       "imports": [
@@ -98183,6 +98862,7 @@
         "./cli-domains-config.ts",
         "./cli-errors.ts",
         "./cli-flag-parsers.ts",
+        "./cli-guidance-resources-command.ts",
         "./cli-host-command.ts",
         "./cli-host-forward.ts",
         "./cli-image-parsers.ts",
@@ -98203,6 +98883,7 @@
         "./cli-productivity-utils.ts",
         "./cli-public-portal-routes.ts",
         "./cli-rule-utils.ts",
+        "./cli-runtime-meta.ts",
         "./cli-runtime-utils.ts",
         "./cli-search-command.ts",
         "./cli-surface.ts",
@@ -111251,7 +111932,10 @@
         "forwardIotJson",
         "invokeProjectAssignment",
         "invokeWorkspace",
+        "isLoopbackHost",
+        "isSecureRequest",
         "normalizeUploadData",
+        "parseBearerToken",
         "parseProjectResourceRefs",
         "parseProjectSecretRefs",
         "parseServiceRelayToken",
@@ -111341,12 +112025,12 @@
         {
           "kind": "function",
           "name": "isLoopbackHost",
-          "exported": false
+          "exported": true
         },
         {
           "kind": "function",
           "name": "isSecureRequest",
-          "exported": false
+          "exported": true
         },
         {
           "kind": "function",
@@ -111356,7 +112040,7 @@
         {
           "kind": "function",
           "name": "parseBearerToken",
-          "exported": false
+          "exported": true
         },
         {
           "kind": "function",
@@ -111448,7 +112132,7 @@
     {
       "path": "relay/src/server/app.ts",
       "language": "typescript",
-      "lines": 1659,
+      "lines": 1668,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -112636,7 +113320,7 @@
     {
       "path": "relay/tests/e2e/relay.e2e.test.ts",
       "language": "typescript",
-      "lines": 1402,
+      "lines": 1416,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -112664,7 +113348,7 @@
     {
       "path": "relay/tests/e2e/service-gateway.e2e.test.ts",
       "language": "typescript",
-      "lines": 307,
+      "lines": 345,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -112684,6 +113368,11 @@
       ],
       "exports": [],
       "declarations": [
+        {
+          "kind": "function",
+          "name": "closeWebSocket",
+          "exported": false
+        },
         {
           "kind": "function",
           "name": "createEnrollment",
@@ -116483,7 +117172,7 @@
     {
       "path": "secrets/playwright.config.ts",
       "language": "typescript",
-      "lines": 42,
+      "lines": 45,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -116692,6 +117381,65 @@
         {
           "kind": "function",
           "name": "readBootstrapConfigFromStdin",
+          "exported": false
+        }
+      ]
+    },
+    {
+      "path": "secrets/src/bin/sidecar.ts",
+      "language": "typescript",
+      "lines": 184,
+      "test": false,
+      "entrypoint": false,
+      "imports": [
+        "@clawjs/core",
+        "node:child_process"
+      ],
+      "exports": [],
+      "declarations": [
+        {
+          "kind": "function",
+          "name": "api",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "argValue",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "argValues",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "consumeLease",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "discoverDeclaredFields",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "issueLease",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "main",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "printJson",
+          "exported": false
+        },
+        {
+          "kind": "type",
+          "name": "JsonRecord",
           "exported": false
         }
       ]
@@ -117374,7 +118122,7 @@
     {
       "path": "secrets/src/server/app.ts",
       "language": "typescript",
-      "lines": 1229,
+      "lines": 1264,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -119023,7 +119771,7 @@
     {
       "path": "secrets/tests/e2e/admin.spec.ts",
       "language": "typescript",
-      "lines": 46,
+      "lines": 49,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -119035,7 +119783,7 @@
     {
       "path": "secrets/tests/e2e/backend.e2e.test.ts",
       "language": "typescript",
-      "lines": 654,
+      "lines": 657,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -119066,7 +119814,7 @@
     {
       "path": "secrets/tests/e2e/helpers.ts",
       "language": "typescript",
-      "lines": 200,
+      "lines": 201,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -119128,7 +119876,7 @@
     {
       "path": "secrets/ui/src/App.js",
       "language": "javascript",
-      "lines": 282,
+      "lines": 308,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -119186,6 +119934,11 @@
         },
         {
           "kind": "function",
+          "name": "normalizeSecret",
+          "exported": false
+        },
+        {
+          "kind": "function",
           "name": "readStoredSession",
           "exported": false
         },
@@ -119209,7 +119962,7 @@
     {
       "path": "secrets/ui/src/App.tsx",
       "language": "typescript",
-      "lines": 644,
+      "lines": 674,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -119262,6 +120015,11 @@
         {
           "kind": "function",
           "name": "LoginScreen",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "normalizeSecret",
           "exported": false
         },
         {

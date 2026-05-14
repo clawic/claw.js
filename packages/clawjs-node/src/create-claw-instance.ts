@@ -519,6 +519,22 @@ export interface ClawInstance {
     archive: (id: string) => RuleRecord;
     compile: (input: RulesCompileInput) => RulesCompileResult;
   };
+  guidance: {
+    status: () => unknown;
+    list: (options?: { status?: "active" | "archived" }) => unknown[];
+    show: (id: string) => unknown | null;
+    create: (input: unknown) => unknown;
+    archive: (id: string) => unknown;
+    match: (input: unknown) => unknown;
+  };
+  resources: {
+    list: (options?: { status?: "active" | "missing" | "moved" | "stale"; kind?: string }) => unknown[];
+    register: (input: unknown) => unknown;
+    show: (id: string) => unknown | null;
+    resolve: (id: string) => unknown;
+    status: (id: string) => unknown;
+    read: (id: string, options?: { maxBytes?: number }) => unknown;
+  };
   skills: {
     /** @deprecated v1 skill descriptors. Use `listV2()` for the unified Skill model. */
     list: () => Promise<SkillDescriptor[]>;

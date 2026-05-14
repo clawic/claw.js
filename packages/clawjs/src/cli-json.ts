@@ -6,7 +6,22 @@ import { CliHandledError } from "./cli-errors.ts";
 export type CliJsonMeta = Record<string, unknown> & {
   schemaVersion?: number;
   canonicalCommand?: string | null;
+  actor?: unknown;
+  guidance?: unknown[];
 };
+
+let cliJsonMetaProvider: (() => CliJsonMeta) | null = null;
+
+export function setCliJsonMetaProvider(provider: (() => CliJsonMeta) | null): void {
+  cliJsonMetaProvider = provider;
+}
+
+function resolveCliJsonMeta(meta: CliJsonMeta = {}): CliJsonMeta {
+  return {
+    ...(cliJsonMetaProvider ? cliJsonMetaProvider() : {}),
+    ...meta,
+  };
+}
 
 export function writeJson(stream: NodeJS.WritableStream, payload: unknown): void {
   stream.write(`${stringifyCliJson(payload)}\n`);
@@ -24,7 +39,7 @@ export function writeJsonOk(stream: NodeJS.WritableStream, data: unknown, meta: 
   writeJson(stream, {
     ok: true,
     data,
-    meta,
+    meta: resolveCliJsonMeta(meta),
   });
 }
 
@@ -32,7 +47,7 @@ export function writeJsonOkLine(stream: NodeJS.WritableStream, data: unknown, me
   writeJsonLine(stream, {
     ok: true,
     data,
-    meta,
+    meta: resolveCliJsonMeta(meta),
   });
 }
 
@@ -78,7 +93,7 @@ export function writeJsonError(stream: NodeJS.WritableStream, error: unknown, me
       code: handled.code,
       message: handled.message,
     },
-    meta,
+    meta: resolveCliJsonMeta(meta),
   });
 }
 

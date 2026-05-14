@@ -741,6 +741,7 @@ const stableIdNamespaces = [
   ["claw.id.device", "deviceId", "Device identifiers"],
   ["claw.id.installation", "installationId", "Installation identifiers"],
   ["claw.id.record", "recordId", "Database record identifiers"],
+  ["claw.id.resource", "resourceId", "Opaque registered resource identifiers"],
 ] as const;
 
 const stableSurfaceRoots = [
@@ -967,7 +968,7 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       surfaceClass: "cli",
       direction: "inbound",
     })),
-    ...["--json", "--dry-run", "--workspace", "--runtime", "--help"].map((flag) => clawPersistentSurface.contract({
+    ...["--json", "--dry-run", "--workspace", "--runtime", "--help", "--guidance", "--actor-assertion"].map((flag) => clawPersistentSurface.contract({
       ...contractDefaults,
       id: `claw.cli.flag.${flag.slice(2)}`,
       kind: "cliFlag",
@@ -1278,6 +1279,8 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
     ...[
       ["library", "~/.claw/library"],
       ["rules", "~/.claw/rules"],
+      ["guidance", "~/.claw/guidance"],
+      ["resources", "~/.claw/resources"],
       ["image_library", "~/.claw/image-library"],
       ["runtime_home", "~/.claw-runtime"],
       ["demo_home", "~/.claw-demo"],

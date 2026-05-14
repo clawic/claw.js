@@ -2,6 +2,8 @@
 export function createClawCapabilityFacades(locals: Record<string, any>): Record<string, any> {
   const {
     rulesStore,
+    guidanceStore,
+    resourceRegistryStore,
     logicalAgentId,
     readSkills,
     persistSkillsState,
@@ -96,6 +98,25 @@ export function createClawCapabilityFacades(locals: Record<string, any>): Record
         ...input,
         agent: input.agent ?? logicalAgentId,
       }),
+    },
+    guidance: {
+      status: () => guidanceStore.status(),
+      list: (input = {}) => guidanceStore.list(input),
+      show: (id) => guidanceStore.get(id),
+      create: (input) => guidanceStore.create(input),
+      archive: (id) => guidanceStore.archive(id),
+      match: (input) => guidanceStore.match({
+        ...input,
+        agent: input.agent ?? logicalAgentId,
+      }),
+    },
+    resources: {
+      list: (input = {}) => resourceRegistryStore.list(input),
+      register: (input) => resourceRegistryStore.register(input),
+      show: (id) => resourceRegistryStore.get(id),
+      resolve: (id) => resourceRegistryStore.resolve(id),
+      status: (id) => resourceRegistryStore.status(id),
+      read: (id, input = {}) => resourceRegistryStore.read(id, input),
     },
     skills: {
       list: async () => {

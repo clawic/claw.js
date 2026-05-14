@@ -197,6 +197,8 @@ flowchart TD
   claw_contracts_ids --> claw_id_installation
   claw_id_record["Database record identifiers\nidNamespace"]
   claw_contracts_ids --> claw_id_record
+  claw_id_resource["Opaque registered resource identifiers\nidNamespace"]
+  claw_contracts_ids --> claw_id_resource
   claw_deeplink_scheme_host["clawix://\ndeepLink"]
   claw_contracts_api --> claw_deeplink_scheme_host
   claw_deeplink_scheme_frameworkReserved["claw://\ndeepLink"]
@@ -423,6 +425,10 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_code
   claw_cli_command_rules["rules\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_rules
+  claw_cli_command_guidance["guidance\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_guidance
+  claw_cli_command_resources["resources\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_resources
   claw_cli_command_library["library\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_library
   claw_cli_command_soul["soul\ncliCommand"]
@@ -455,6 +461,10 @@ flowchart TD
   claw_contracts_cli --> claw_cli_flag_runtime
   claw_cli_flag_help["--help\ncliFlag"]
   claw_contracts_cli --> claw_cli_flag_help
+  claw_cli_flag_guidance["--guidance\ncliFlag"]
+  claw_contracts_cli --> claw_cli_flag_guidance
+  claw_cli_flag_actor_assertion["--actor-assertion\ncliFlag"]
+  claw_contracts_cli --> claw_cli_flag_actor_assertion
   claw_external_openai["openai\nexternalDependency"]
   claw_contracts_external --> claw_external_openai
   claw_external_anthropic["anthropic\nexternalDependency"]
@@ -584,6 +594,10 @@ flowchart TD
   claw_global --> claw_global_library
   claw_global_rules["rules\nfolder"]
   claw_global --> claw_global_rules
+  claw_global_guidance["guidance\nfolder"]
+  claw_global --> claw_global_guidance
+  claw_global_resources["resources\nfolder"]
+  claw_global --> claw_global_resources
   claw_global_image_library["image_library\nfolder"]
   claw_global --> claw_global_image_library
   claw_global_runtime_home["runtime_home\nfolder"]
@@ -911,6 +925,7 @@ flowchart TD
 | `claw.id.device` | idNamespace | id | claw |  |  |  | `deviceId` |
 | `claw.id.installation` | idNamespace | id | claw |  |  |  | `installationId` |
 | `claw.id.record` | idNamespace | id | claw |  |  |  | `recordId` |
+| `claw.id.resource` | idNamespace | id | claw |  |  |  | `resourceId` |
 | `claw.deeplink.scheme.host` | deepLink | config | claw |  |  |  | `clawix://` |
 | `claw.deeplink.scheme.frameworkReserved` | deepLink | config | claw |  |  |  | `claw://` |
 | `claw.hostname.showcase` | hostname | config | claw |  |  |  | `showcase.claw.localhost` |
@@ -1024,6 +1039,8 @@ flowchart TD
 | `claw.cli.command.plan` | cliCommand | cli | claw |  |  |  | `plan` |
 | `claw.cli.command.code` | cliCommand | cli | claw |  |  |  | `code` |
 | `claw.cli.command.rules` | cliCommand | cli | claw |  |  |  | `rules` |
+| `claw.cli.command.guidance` | cliCommand | cli | claw |  |  |  | `guidance` |
+| `claw.cli.command.resources` | cliCommand | cli | claw |  |  |  | `resources` |
 | `claw.cli.command.library` | cliCommand | cli | claw |  |  |  | `library` |
 | `claw.cli.command.soul` | cliCommand | cli | claw |  |  |  | `soul` |
 | `claw.cli.command.erp` | cliCommand | cli | claw |  |  |  | `erp` |
@@ -1040,6 +1057,8 @@ flowchart TD
 | `claw.cli.flag.workspace` | cliFlag | cli | claw |  |  |  | `--workspace` |
 | `claw.cli.flag.runtime` | cliFlag | cli | claw |  |  |  | `--runtime` |
 | `claw.cli.flag.help` | cliFlag | cli | claw |  |  |  | `--help` |
+| `claw.cli.flag.guidance` | cliFlag | cli | claw |  |  |  | `--guidance` |
+| `claw.cli.flag.actor-assertion` | cliFlag | cli | claw |  |  |  | `--actor-assertion` |
 | `claw.external.openai` | externalDependency | external | external |  |  |  | `openai` |
 | `claw.external.anthropic` | externalDependency | external | external |  |  |  | `anthropic` |
 | `claw.external.stripe` | externalDependency | external | external |  |  |  | `stripe` |
@@ -1106,6 +1125,8 @@ flowchart TD
 | `claw.global.skills` | folder | persistent | claw |  |  |  | `~/.claw/skills` |
 | `claw.global.library` | folder | persistent | claw |  |  |  | `~/.claw/library` |
 | `claw.global.rules` | folder | persistent | claw |  |  |  | `~/.claw/rules` |
+| `claw.global.guidance` | folder | persistent | claw |  |  |  | `~/.claw/guidance` |
+| `claw.global.resources` | folder | persistent | claw |  |  |  | `~/.claw/resources` |
 | `claw.global.image_library` | folder | persistent | claw |  |  |  | `~/.claw/image-library` |
 | `claw.global.runtime_home` | folder | persistent | claw |  |  |  | `~/.claw-runtime` |
 | `claw.global.demo_home` | folder | persistent | claw |  |  |  | `~/.claw-demo` |
