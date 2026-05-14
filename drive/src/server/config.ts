@@ -1,6 +1,8 @@
 import path from "node:path";
 import os from "node:os";
 
+import { clawWorkspaceLayout } from "@clawjs/core";
+
 export type DriveConverterMode = "auto" | "mock";
 
 export interface DriveServiceConfig {
@@ -41,7 +43,7 @@ export function loadDriveConfig(overrides: Partial<DriveServiceConfig> = {}): Dr
 function defaultClawjsDataRoot(): string {
   if (process.env.CLAW_DATA_DIR) return expandHome(process.env.CLAW_DATA_DIR);
   if (process.env.CLAWIX_CLAW_DATA_DIR) return expandHome(process.env.CLAWIX_CLAW_DATA_DIR);
-  if (process.platform === "darwin") return path.join(os.homedir(), ".claw", "data");
+  if (process.platform === "darwin") return path.join(os.homedir(), clawWorkspaceLayout.data.replace(/^~\//, ""));
   if (process.platform === "win32") return path.join(process.env.APPDATA ?? path.join(os.homedir(), "AppData", "Roaming"), "Clawix", "clawjs");
   return path.join(process.env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"), "Clawix", "clawjs");
 }

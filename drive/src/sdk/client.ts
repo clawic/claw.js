@@ -1,5 +1,7 @@
 import fs from "node:fs";
 
+import { clawDriveApiRoutes } from "@clawjs/core";
+
 import type {
   DriveComment,
   DriveItem,
@@ -56,18 +58,18 @@ export class DriveApiClient {
   }
 
   async login(email: string, password: string): Promise<{ accessToken: string; email: string }> {
-    return await this.request("/v1/auth/admin/login", {
+    return await this.request(clawDriveApiRoutes.adminLogin, {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
   }
 
   async bootstrap(): Promise<{ counts: DriveViewCounts }> {
-    return await this.request("/v1/bootstrap");
+    return await this.request(clawDriveApiRoutes.bootstrap);
   }
 
   async listItems(input: { view?: DriveView; parentId?: string | null; query?: string } = {}): Promise<ListItemsResponse> {
-    const url = new URL("/v1/items", this.options.baseUrl);
+    const url = new URL(clawDriveApiRoutes.items, this.options.baseUrl);
     if (input.view) url.searchParams.set("view", input.view);
     if (input.parentId) url.searchParams.set("parentId", input.parentId);
     if (input.query) url.searchParams.set("q", input.query);
@@ -75,115 +77,115 @@ export class DriveApiClient {
   }
 
   async search(query: string): Promise<{ items: DriveItem[] }> {
-    const url = new URL("/v1/search", this.options.baseUrl);
+    const url = new URL(clawDriveApiRoutes.search, this.options.baseUrl);
     url.searchParams.set("q", query);
     return await this.request(url.pathname + url.search);
   }
 
   async getItem(itemId: string): Promise<DriveItemDetail> {
-    return await this.request(`/v1/items/${itemId}`);
+    return await this.request(clawDriveApiRoutes.item(itemId));
   }
 
   async createItem(input: { kind: "folder" | "doc" | "sheet" | "slide"; name?: string; parentId?: string | null }): Promise<DriveItemDetail> {
-    return await this.request("/v1/items", {
+    return await this.request(clawDriveApiRoutes.items, {
       method: "POST",
       body: JSON.stringify(input),
     });
   }
 
   async updateItem(itemId: string, patch: { name?: string; parentId?: string | null; starred?: boolean }): Promise<DriveItemDetail> {
-    return await this.request(`/v1/items/${itemId}`, {
+    return await this.request(clawDriveApiRoutes.item(itemId), {
       method: "PATCH",
       body: JSON.stringify(patch),
     });
   }
 
   async moveItem(itemId: string, parentId: string | null): Promise<DriveItemDetail> {
-    return await this.request(`/v1/items/${itemId}/move`, {
+    return await this.request(clawDriveApiRoutes.itemMove(itemId), {
       method: "POST",
       body: JSON.stringify({ parentId }),
     });
   }
 
   async copyItem(itemId: string, parentId?: string | null): Promise<DriveItemDetail> {
-    return await this.request(`/v1/items/${itemId}/copy`, {
+    return await this.request(clawDriveApiRoutes.itemCopy(itemId), {
       method: "POST",
       body: JSON.stringify({ parentId }),
     });
   }
 
   async saveContent(itemId: string, input: { baseRevisionId: string | null; content: DriveNativeContent; summary?: string | null }): Promise<DriveItemDetail> {
-    return await this.request(`/v1/items/${itemId}/content`, {
+    return await this.request(clawDriveApiRoutes.itemContent(itemId), {
       method: "POST",
       body: JSON.stringify(input),
     });
   }
 
   async markViewed(itemId: string): Promise<{ ok: boolean }> {
-    return await this.request(`/v1/items/${itemId}/view`, { method: "POST" });
+    return await this.request(clawDriveApiRoutes.itemView(itemId), { method: "POST" });
   }
 
   async trashItem(itemId: string): Promise<DriveItemDetail> {
-    return await this.request(`/v1/items/${itemId}/trash`, { method: "POST" });
+    return await this.request(clawDriveApiRoutes.itemTrash(itemId), { method: "POST" });
   }
 
   async restoreItem(itemId: string): Promise<DriveItemDetail> {
-    return await this.request(`/v1/items/${itemId}/restore`, { method: "POST" });
+    return await this.request(clawDriveApiRoutes.itemRestore(itemId), { method: "POST" });
   }
 
   async deleteItem(itemId: string): Promise<{ ok: boolean }> {
-    return await this.request(`/v1/items/${itemId}`, { method: "DELETE" });
+    return await this.request(clawDriveApiRoutes.item(itemId), { method: "DELETE" });
   }
 
   async listComments(itemId: string): Promise<{ items: DriveComment[] }> {
-    return await this.request(`/v1/items/${itemId}/comments`);
+    return await this.request(clawDriveApiRoutes.itemComments(itemId));
   }
 
   async addComment(itemId: string, body: string): Promise<DriveComment> {
-    return await this.request(`/v1/items/${itemId}/comments`, {
+    return await this.request(clawDriveApiRoutes.itemComments(itemId), {
       method: "POST",
       body: JSON.stringify({ body }),
     });
   }
 
   async listRevisions(itemId: string): Promise<{ items: DriveRevision[] }> {
-    return await this.request(`/v1/items/${itemId}/revisions`);
+    return await this.request(clawDriveApiRoutes.itemRevisions(itemId));
   }
 
   async restoreRevision(itemId: string, revisionId: string): Promise<DriveItemDetail> {
-    return await this.request(`/v1/items/${itemId}/revisions/${revisionId}/restore`, {
+    return await this.request(clawDriveApiRoutes.itemRevisionRestore(itemId, revisionId), {
       method: "POST",
     });
   }
 
   async listShares(itemId: string): Promise<{ items: DriveShareRecord[] }> {
-    return await this.request(`/v1/items/${itemId}/shares`);
+    return await this.request(clawDriveApiRoutes.itemShares(itemId));
   }
 
   async createShare(itemId: string, label: string): Promise<{ share: DriveShareRecord; token: string; url: string }> {
-    return await this.request(`/v1/items/${itemId}/shares`, {
+    return await this.request(clawDriveApiRoutes.itemShares(itemId), {
       method: "POST",
       body: JSON.stringify({ label }),
     });
   }
 
   async revokeShare(itemId: string, shareId: string): Promise<{ ok: boolean }> {
-    return await this.request(`/v1/items/${itemId}/shares/${shareId}/revoke`, { method: "POST" });
+    return await this.request(clawDriveApiRoutes.itemShareRevoke(itemId, shareId), { method: "POST" });
   }
 
   async listTokens(): Promise<{ items: DriveScopedTokenRecord[] }> {
-    return await this.request("/v1/tokens");
+    return await this.request(clawDriveApiRoutes.tokens);
   }
 
   async createToken(label: string, operations: DriveOperation[]): Promise<{ record: DriveScopedTokenRecord; token: string }> {
-    return await this.request("/v1/tokens", {
+    return await this.request(clawDriveApiRoutes.tokens, {
       method: "POST",
       body: JSON.stringify({ label, operations }),
     });
   }
 
   async revokeToken(tokenId: string): Promise<{ ok: boolean }> {
-    return await this.request(`/v1/tokens/${tokenId}/revoke`, { method: "POST" });
+    return await this.request(clawDriveApiRoutes.tokenRevoke(tokenId), { method: "POST" });
   }
 
   async uploadFile(input: { filePath: string; parentId?: string | null }): Promise<DriveItemDetail> {
@@ -191,14 +193,14 @@ export class DriveApiClient {
     if (input.parentId) form.set("parentId", input.parentId);
     const fileName = input.filePath.split("/").pop() || "upload.bin";
     form.set("file", new Blob([fs.readFileSync(input.filePath)]), fileName);
-    return await this.request("/v1/uploads", {
+    return await this.request(clawDriveApiRoutes.uploads, {
       method: "POST",
       body: form,
     });
   }
 
   async download(itemId: string): Promise<Buffer> {
-    const response = await fetch(new URL(`/v1/items/${itemId}/download`, this.options.baseUrl), {
+    const response = await fetch(new URL(clawDriveApiRoutes.itemDownload(itemId), this.options.baseUrl), {
       headers: this.options.token ? { authorization: `Bearer ${this.options.token}` } : {},
     });
     if (!response.ok) {
@@ -208,7 +210,9 @@ export class DriveApiClient {
   }
 
   async exportItem(itemId: string, format: string): Promise<Buffer> {
-    const response = await fetch(new URL(`/v1/items/${itemId}/export?format=${encodeURIComponent(format)}`, this.options.baseUrl), {
+    const exportUrl = new URL(clawDriveApiRoutes.itemExport(itemId), this.options.baseUrl);
+    exportUrl.searchParams.set("format", format);
+    const response = await fetch(exportUrl, {
       headers: this.options.token ? { authorization: `Bearer ${this.options.token}` } : {},
     });
     if (!response.ok) {

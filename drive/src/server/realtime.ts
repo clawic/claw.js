@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import websocket from "@fastify/websocket";
 import type { WebSocket } from "ws";
+import { clawDriveApiRoutePatterns, clawDriveApiRoutes } from "@clawjs/core";
 
 import type {
   DriveAuthService,
@@ -114,13 +115,13 @@ export async function registerRealtime(options: RegisterRealtimeOptions): Promis
   const { app, bus, resolvePrincipal } = options;
   await app.register(websocket);
 
-  app.get("/v1/realtime", { websocket: true }, async (socket, request) => {
+  app.get(clawDriveApiRoutePatterns.realtime, { websocket: true }, async (socket, request) => {
     // Authenticate via Authorization header or ?token= query.
     const header = request.headers.authorization;
     const tokenFromHeader = header?.toLowerCase().startsWith("bearer ")
       ? header.slice("bearer ".length).trim()
       : null;
-    const url = new URL(request.url ?? "/v1/realtime", "http://127.0.0.1");
+    const url = new URL(request.url ?? clawDriveApiRoutes.realtime, "http://127.0.0.1");
     const tokenFromQuery = url.searchParams.get("token");
     const token = tokenFromHeader ?? tokenFromQuery;
     if (!token) {
