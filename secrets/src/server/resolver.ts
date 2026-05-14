@@ -241,31 +241,6 @@ export class SecretsResolver {
     }
   }
 
-  revealAllFields(input: { secret: SecretRow; masterKey: LockableSecret }): Record<string, string> {
-    const version = this.secrets.getCurrentVersion(input.secret.id);
-    if (!version) throw new Error("Secret has no current version");
-    const fields = this.secrets.listFields(version.id);
-    const itemKey = unwrapItemKey(asUint8Array(input.secret.wrapped_item_key), input.secret.id, input.masterKey);
-    try {
-      const out: Record<string, string> = {};
-      for (const field of fields) {
-        if (field.is_secret === 1 && field.value_ciphertext) {
-          out[field.field_name] = openField(
-            asUint8Array(field.value_ciphertext),
-            itemKey,
-            input.secret.id,
-            field.field_name,
-          );
-        } else if (field.public_value !== null) {
-          out[field.field_name] = field.public_value;
-        }
-      }
-      return out;
-    } finally {
-      itemKey.zero();
-    }
-  }
-
   revealNotes(input: { secret: SecretRow; masterKey: LockableSecret }): string | null {
     const version = this.secrets.getCurrentVersion(input.secret.id);
     if (!version) return null;

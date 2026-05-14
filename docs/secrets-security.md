@@ -113,9 +113,10 @@ authorizes the exact action. The agent still receives references, status, and
 redacted results, not secret values. Costly, destructive, external, or
 system-level actions require fresh approval or a short bounded approval window.
 
-Any current direct connector secret resolver that turns `secretRefs` into a
-plaintext object for executor code is transitional and must be replaced or
-wrapped by broker-only execution before being treated as production-safe.
+Direct connector secret resolvers must reject `secretRefs` that would require
+plaintext execution outside the broker. Legacy plugin interfaces that still
+mention `resolvedFields` are compatibility declarations only; they must not be
+exposed as a public production execution path.
 
 ## Broker Request Contract
 
@@ -227,23 +228,35 @@ Changing a secret value creates a new encrypted version and invalidates policy
 state that depends on the old value when that dependency matters. Historical
 versions stay encrypted and must not be exposed through broad reads.
 
-## Current Implementation Gaps
+## Current Implementation Status And Gaps
 
-The existing codebase contains useful building blocks, but the following
-patterns must be treated as transitional until hardened:
+The current ClawJS baseline implements the required safe public path:
 
-- routes or helpers that reveal all fields internally for executor code;
-- governance paths that allow execution when host, placement, risk, or actor
-  context is missing;
-- connector runners that resolve `secretRefs` into plaintext maps;
-- compatibility sidecar flows that can look like generic process or browser
-  injection without signed-host policy;
-- setup, unlock, recovery, and password-rotation APIs until they are callable
-  only through the signed host or an equivalent host-bound authorization path;
-- audit payloads that include field names, internal labels, request details, or
-  other user-controlled strings without a minimal schema review;
-- dev-only seeded credentials or local defaults being mistaken for production
-  authentication.
+- generic action execution routes return `410 Gone`;
+- public CLI setup, unlock, recovery, and password rotation commands are
+  signed-host only and do not prompt for master passwords or recovery phrases;
+- reveal-field API calls require a signed-host token, a human user principal,
+  and fresh reauthentication;
+- broker HTTP calls require capability, risk tier, agent identity, declared
+  fields, host, placement, approval/VPN context, and strict governance;
+- connector runners reject `secretRefs` execution outside brokered flows;
+- broker and lease issuance increment usage, enforce max uses, and block
+  compromised, locked, trashed, expired, or policy-denied secrets;
+- audit events use minimal payloads and broker results are redacted.
+
+The following patterns remain transitional and must not be expanded:
+
+- legacy plugin executor/session/brand-sync TypeScript interfaces still carry
+  `resolvedFields` for compatibility; they are not a production-safe execution
+  boundary and new integrations must use broker handles;
+- compatibility sidecar process/browser flows require final physical
+  signed-host validation before they count as hostile-local-process proof;
+- signed-host authorization currently uses a configured host token in ClawJS
+  tests and local server flows; native Claw.app/Clawix identity, XPC/signature,
+  Keychain/Secure Enclave, and biometric validation remain host integration
+  obligations;
+- dev-only seeded credentials or local defaults must never be mistaken for
+  production authentication.
 
 Do not build new features on those patterns. Either replace them with the
 broker contract in this document or mark the route as compatibility-only,
@@ -271,3 +284,32 @@ leases, CLI, audit, backups, or host integration, verify every item below:
 - Rotation or compromise blocks new use and revokes active grants/leases.
 - Current transitional reveal, resolver, sidecar, or dev-auth paths are not
   expanded as if they were the final model.
+
+## Binding Decision Matrix
+
+This matrix records the decisions from the source audit conversation so future
+agents can verify changes without re-deriving the policy.
+
+| Decision | Requirement | Current status |
+| --- | --- | --- |
+| `local_threat_model` | Same-user local processes are hostile. | Implemented in policy; physical host/IPC validation remains `EXTERNAL PENDING`. |
+| `audit_output` | Produce and implement hardening, not only a report. | Implemented through broker, CLI, audit, lifecycle, and docs hardening. |
+| `audit_scope` | Cover Clawix, ClawJS, remote hosts, vault, broker, connectors, daemon, and third parties. | Partially implemented; ClawJS paths are covered, native host/remotes need physical validation. |
+| `secret_material_policy` | Human UI may reveal; agents/processes/plugins/connectors do not view plaintext. | Implemented for public CLI, broker, SDK tests, and connector runners; legacy plugin interfaces are compatibility-only. |
+| `approval_defaults` | Deny by default; risky actions need explicit approval or short windows. | Implemented in governance and broker risk handling. |
+| `connector_execution_model` | Connectors declare plan, host, placement, action, and risk; broker injects fields. | Implemented for broker requests and connector runner rejection outside broker. |
+| `plaintext_rule` | Plaintext exists only in human reveal UI or internal broker path. | Implemented for public surfaces; host-native reveal validation remains pending. |
+| `human_reveal_policy` | Sensitive reveal/copy requires fresh reauthentication. | ClawJS reveal API requires signed host and `reauthSatisfied`; native biometric/password proof is host-owned. |
+| `automation_secret_use` | Automation executes brokered actions without seeing values. | Implemented through `broker.http` with redacted result contract. |
+| `master_key_protection` | Portable password root plus Keychain/Secure Enclave/biometrics locally. | Password/recovery crypto exists; platform protection is host integration `EXTERNAL PENDING`. |
+| `secret_sync_model` | Future sync must be end-to-end encrypted. | Policy documented; no plaintext sync surface exists in V1. |
+| `plugin_trust_model` | Plugins/connectors are untrusted, declarative, scoped, and not all-fields plaintext. | Public execution disabled; legacy `resolvedFields` interfaces are deprecated compatibility declarations. |
+| `host_allowlist_policy` | Exact hosts by default; limited safe wildcards only. | Implemented in strict governance and tests. |
+| `risk_approval_policy` | Mandatory `read`, `write`, `destructive`, `cost`, `system` risk tiers. | Broker request requires `riskTier`; non-read tiers require approval. |
+| `rotation_policy` | Rotation/compromise revokes grants and leases and blocks new use. | Implemented for archive/compromise and governance blocks. |
+| `canonical_storage` | Canonical vault belongs to framework global `~/.claw`; hosts keep only host state. | Policy documented; final host storage audit remains part of Clawix validation. |
+| `audit_visibility` | Minimal audit; no fields, bodies, headers, public values, arbitrary payloads. | Implemented for current ClawJS audit events and smoke tests. |
+| `migration_priority` | V1 may break unsafe legacy compatibility. | Applied by disabling generic action execution and direct public CLI flows. |
+| `export_backup_policy` | Encrypted backup/export only with separate passphrase and strong reauth. | Encrypted backup is implemented and tested; native reauth proof is host-owned. |
+| `cli_secret_surface` | No CLI reveal or print-secret surface. | Implemented and tested. |
+| `failure_policy` | Missing host, placement, risk, agent, capability, or policy fails closed. | Implemented in strict broker/governance tests. |

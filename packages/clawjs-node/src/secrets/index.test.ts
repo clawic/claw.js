@@ -197,15 +197,11 @@ async function createFakeSecretsServer() {
       return;
     }
     if (url.pathname === "/v1/tenants/demo-tenant/secrets/slack_bot/actions/slack.authTest" && request.method === "POST") {
+      response.statusCode = 410;
       response.setHeader("content-type", "application/json");
       response.end(JSON.stringify({
-        action: { id: "slack.authTest", label: "Auth test", description: "Call Slack auth.test through the broker.", capability: "broker.http", method: "POST" },
-        result: {
-          status: 200,
-          headers: { "content-type": "application/json" },
-          ok: true,
-          bodyText: JSON.stringify({ authorization: "Bearer xoxb-secret-123" }),
-        },
+        error: "Generic action execution is disabled for secrets",
+        replacement: "Use broker.http with explicit declared fields.",
       }));
       return;
     }
@@ -307,7 +303,7 @@ test("secrets backend is used directly for list/types/capabilities/actions/lease
   }
 });
 
-test("secrets backend brokers generic HTTP and typed actions without exposing plaintext", async () => {
+test("secrets backend brokers generic HTTP and rejects typed action execution", async () => {
   const secrets = await createFakeSecretsServer();
   try {
     const runner = new NodeProcessHost();
@@ -334,10 +330,10 @@ test("secrets backend brokers generic HTTP and typed actions without exposing pl
     const genericPayload = JSON.parse(generic.bodyText) as { authorization: string };
     assert.equal(genericPayload.authorization, "Bearer xoxb-secret-123");
 
-    const typed = await runSecretAction(runner, { name: "slack_bot", actionId: "slack.authTest", env });
-    assert.equal(typed.action.id, "slack.authTest");
-    const typedPayload = JSON.parse(typed.result.bodyText) as { authorization: string };
-    assert.equal(typedPayload.authorization, "Bearer xoxb-secret-123");
+    await assert.rejects(
+      runSecretAction(runner, { name: "slack_bot", actionId: "slack.authTest", env }),
+      /Generic action execution is disabled for secrets/,
+    );
   } finally {
     await secrets.close();
   }

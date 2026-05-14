@@ -92,6 +92,27 @@ const created = await fetchJson(`${base}/v1/tenants/clawix-local/secrets`, {
 });
 if (created.ok && created.body.secret?.internalName === "github_main") ok("secret create with admin token"); else ko("secret create", created.body);
 
+const revealWithoutHost = await fetchJson(`${base}/v1/tenants/clawix-local/secrets/github_main/reveal-field`, {
+  method: "POST",
+  headers: authHeaders,
+  body: JSON.stringify({ field: "token", reauthSatisfied: true }),
+});
+if (revealWithoutHost.status === 403) ok("reveal requires signed host"); else ko("reveal requires signed host", revealWithoutHost.body);
+
+const revealWithoutReauth = await fetchJson(`${base}/v1/tenants/clawix-local/secrets/github_main/reveal-field`, {
+  method: "POST",
+  headers: { ...authHeaders, ...signedHostHeaders },
+  body: JSON.stringify({ field: "token" }),
+});
+if (revealWithoutReauth.status === 403) ok("reveal requires fresh reauth"); else ko("reveal requires fresh reauth", revealWithoutReauth.body);
+
+const revealWithReauth = await fetchJson(`${base}/v1/tenants/clawix-local/secrets/github_main/reveal-field`, {
+  method: "POST",
+  headers: { ...authHeaders, ...signedHostHeaders },
+  body: JSON.stringify({ field: "token", reauthSatisfied: true }),
+});
+if (revealWithReauth.ok && revealWithReauth.body.value?.value === "ghp_smoke_secret") ok("reveal allows signed host with reauth"); else ko("reveal allows signed host with reauth", revealWithReauth.body);
+
 const backupExport = await fetchJson(`${base}/v1/secrets/backup/export`, {
   method: "POST",
   headers: authHeaders,

@@ -90,8 +90,11 @@ Secrets-backed surfaces include:
 - `claw.secrets.capabilities(secretName)`
 - `claw.secrets.actions(secretName)`
 - `claw.secrets.brokerHttp(...)`
-- `claw.secrets.runAction(secretName, actionId)`
 - `claw.secrets.leases()`
+
+Typed action metadata may be listed, but generic typed action execution is
+disabled. Use `brokerHttp(...)` with explicit declared fields, risk tier, and
+placement instead of `runAction(...)`.
 
 ## Sidecar compatibility
 

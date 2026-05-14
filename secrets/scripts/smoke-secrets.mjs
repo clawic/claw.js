@@ -72,9 +72,9 @@ if (revealed.value === "ghp_super_secret_xxx") ok("reveal token roundtrip"); els
 const notes = resolver.revealNotes({ secret, masterKey: setup.masterKey });
 if (notes === "Use only for clawix repo") ok("reveal notes roundtrip"); else ko("reveal notes roundtrip");
 
-// Reveal all.
-const all = resolver.revealAllFields({ secret, masterKey: setup.masterKey });
-if (all.token === "ghp_super_secret_xxx" && all.username === "ivan") ok("reveal all fields"); else ko("reveal all fields");
+// Reveal public field through the same per-field path; broad plaintext dumps are not exposed.
+const publicField = resolver.revealField({ secret, fieldName: "username", masterKey: setup.masterKey });
+if (publicField.value === "ivan") ok("reveal public field roundtrip"); else ko("reveal public field roundtrip");
 
 const encryptedBackup = encryptBackup(db, "backup-passphrase");
 const encryptedBackupJson = JSON.stringify(encryptedBackup);

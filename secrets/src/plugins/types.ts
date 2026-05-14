@@ -59,7 +59,8 @@ export interface SecretTypeDeclaration {
 
 export interface ExecutorContext {
   secret: SecretRow;
-  resolvedFields: Record<string, string>; // field name → plaintext (already AAD-checked)
+  /** @deprecated Legacy plugin executors must not be exposed as a public execution path. Use broker handles. */
+  resolvedFields: Record<string, string>;
   itemKey: LockableSecret;
   args: Record<string, unknown>;
   abortSignal?: AbortSignal;
@@ -94,6 +95,7 @@ export interface SessionToken {
 
 export interface SessionStrategyContext {
   secret: SecretRow;
+  /** @deprecated Legacy session strategies must run only behind broker/session governance. */
   resolvedFields: Record<string, string>;
   cachedToken?: SessionToken;
 }
@@ -139,6 +141,7 @@ export interface PermissionModel {
 
 export interface BrandSyncContext {
   secret: SecretRow;
+  /** @deprecated Legacy brand syncs must not be exposed as a public execution path. */
   resolvedFields: Record<string, string>;
 }
 

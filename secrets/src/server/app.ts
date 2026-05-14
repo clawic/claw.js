@@ -185,14 +185,8 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
 
   function requireSignedHost(req: FastifyRequest, reply: FastifyReply): boolean {
     const token = req.headers["x-claw-signed-host-token"];
-    if (!config.signedHostToken) {
-      void reply.code(403).send({ error: "signed host token not configured" });
-      return false;
-    }
-    if (token !== config.signedHostToken) {
-      void reply.code(403).send({ error: "signed host authorization required" });
-      return false;
-    }
+    if (!config.signedHostToken) { void reply.code(403).send({ error: "signed host token not configured" }); return false; }
+    if (token !== config.signedHostToken) { void reply.code(403).send({ error: "signed host authorization required" }); return false; }
     return true;
   }
 
@@ -738,14 +732,16 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
   // ---------- Reveal field / notes ----------
 
   app.post("/v1/tenants/:tenantId/secrets/:name/reveal-field", async (req, reply) => {
+    if (!requireSignedHost(req, reply)) return;
     const actor = await requirePrincipalOrUser(req, reply);
     if (actor.kind !== "user") return reply.code(403).send({ error: "Human re-authenticated UI session required" });
     const keys = session.requireKeys();
     const { tenantId, name } = req.params as { tenantId: string; name: string };
     const row = resolver.secrets.getByInternalName(tenantId, name);
     if (!row) return reply.code(404).send({ error: "Not found" });
-    const body = (req.body ?? {}) as { field?: string; purpose?: string };
+    const body = (req.body ?? {}) as { field?: string; purpose?: string; reauthSatisfied?: boolean };
     if (!body.field) return reply.code(400).send({ error: "field required" });
+    if (body.reauthSatisfied !== true) return reply.code(403).send({ error: "fresh reauthentication required" });
     const decision = evaluateGovernance(row, { approvalSatisfied: true, vpnSatisfied: true });
     if (!decision.allowed) return reply.code(403).send({ error: "Blocked by governance", reasons: decision.reasons });
     const value = resolver.revealField({ secret: row, fieldName: body.field, masterKey: keys.masterKey });

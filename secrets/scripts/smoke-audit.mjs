@@ -50,7 +50,7 @@ const e3 = audit.append({
   tenantId: "clawix-local",
   meta: setup.meta,
   auditMacKey: setup.auditMacKey,
-  event: { kind: "uiCopy", source: "ui", secretId: null, payload: { field: "api_key" } },
+  event: { kind: "uiCopy", source: "ui", secretId: null, payload: {} },
 });
 if (e1.sequence === 0 && e2.sequence === 1 && e3.sequence === 2) ok("sequence increments"); else ko("sequence increments");
 
