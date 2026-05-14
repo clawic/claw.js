@@ -4,7 +4,7 @@
 import { ALL_CALENDARS_ID } from "@/lib/calendar-constants";
 import { ALL_EMAIL_ACCOUNTS_ID } from "@/lib/email-constants";
 import { AlertCircle, Check, Hash } from "lucide-react";
-import { IntegrationConfigModal, IntegrationRow, MultiSelectChips, SelectInput, SettingField, TextInput, Toggle, resolveSelectedCalendarIds, resolveSelectedEmailIds } from "./settings-components";
+import { IntegrationConfigModal, IntegrationRow, MultiSelectChips, SelectInput, SettingField, TagsInput, TextInput, Toggle, resolveSelectedCalendarIds, resolveSelectedEmailIds } from "./settings-components";
 
 export function SettingsIntegrationsTab(props: any) {
   const {
