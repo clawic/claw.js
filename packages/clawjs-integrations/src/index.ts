@@ -55,6 +55,10 @@ export {
   validateConnectorRuntimeOutput,
 } from "./runtime-output.js";
 export {
+  IntegrationQaCoverageMatrixError,
+  verifyOfficialApiCoverageMatrix,
+} from "./integration-qa-policy.js";
+export {
   createConnectorRuntimeFixtureFetch,
   loadConnectorRuntimeFixture,
   loadConnectorRuntimeFixtures,
@@ -139,6 +143,13 @@ export type {
   ConnectorRuntimeLoadedFixture,
   LoadConnectorRuntimeFixturesOptions,
 } from "./runtime-fixtures.js";
+export type {
+  IntegrationQaCoverageStatus,
+  IntegrationQaLiveLane,
+  OfficialApiCoverageEntry,
+  OfficialApiCoverageMatrix,
+  OfficialApiCoverageMatrixReport,
+} from "./integration-qa-policy.js";
 export { telegramAdapter } from "./telegram.js";
 export {
   buildTelegramOperationRequest,
