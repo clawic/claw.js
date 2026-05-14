@@ -628,6 +628,12 @@ const DISCORD_SOURCE_EVIDENCE = [
 
 const DISCORD_SOURCE_FIXTURE_NAMES = [
   "event",
+  "hello",
+  "ready",
+  "resumed",
+  "reconnect",
+  "invalid-session",
+  "rate-limited",
   "application-authorized",
   "application-deauthorized",
   "entitlement-create",

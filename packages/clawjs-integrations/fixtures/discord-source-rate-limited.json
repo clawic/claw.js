@@ -1,0 +1,5 @@
+{
+  "id": "rate-limited-sample",
+  "opcode": 8,
+  "retry_after": 5
+}

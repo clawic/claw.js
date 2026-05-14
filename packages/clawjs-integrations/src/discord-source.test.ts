@@ -15,6 +15,12 @@ import {
 
 const DISCORD_SOURCE_OPERATIONS = [
   source("discord.source.event", "Event"),
+  source("discord.source.hello", "Hello"),
+  source("discord.source.ready", "Ready"),
+  source("discord.source.resumed", "Resumed"),
+  source("discord.source.reconnect", "Reconnect"),
+  source("discord.source.invalid-session", "Invalid Session"),
+  source("discord.source.rate-limited", "Rate Limited"),
   source("discord.source.application-authorized", "Application Authorized", "timestamp"),
   source("discord.source.application-deauthorized", "Application Deauthorized", "timestamp"),
   source("discord.source.entitlement-create", "Entitlement Create", "timestamp"),

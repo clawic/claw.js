@@ -7,6 +7,12 @@ import type {
 
 export type DiscordSourceOperation =
   | "event"
+  | "hello"
+  | "ready"
+  | "resumed"
+  | "reconnect"
+  | "invalid-session"
+  | "rate-limited"
   | "application-authorized"
   | "application-deauthorized"
   | "entitlement-create"
@@ -95,6 +101,12 @@ export type DiscordSourceOperation =
 
 const DISCORD_SOURCE_OPERATIONS = new Set<DiscordSourceOperation>([
   "event",
+  "hello",
+  "ready",
+  "resumed",
+  "reconnect",
+  "invalid-session",
+  "rate-limited",
   "application-authorized",
   "application-deauthorized",
   "entitlement-create",

@@ -1,0 +1,11 @@
+{
+  "id": "ready-sample",
+  "version": 10,
+  "session_id": "session-sample",
+  "resume_gateway_url": "wss://gateway.example.invalid",
+  "user": {
+    "id": "user-sample",
+    "username": "sample"
+  },
+  "guilds": []
+}
