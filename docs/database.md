@@ -30,6 +30,11 @@ ClawJS now exposes database behavior through three related surfaces:
 - local file storage backed by SQLite metadata
 - a built-in admin console served from the same process
 
+Built-in collection growth follows the [Canonical Data Catalog](./canonical-data-catalog.md)
+standard and [ADR 0005](./adr/0005-canonical-data-catalog.md). ClawJS owns the
+canonical catalog; hosts and apps consume it instead of defining competing
+schema sources.
+
 ## Local workflow
 
 ```bash

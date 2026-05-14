@@ -33,10 +33,12 @@ const agentDocs = [
   "docs/decision-map.md",
   "docs/host-ownership.md",
   "docs/data-storage-boundary.md",
+  "docs/canonical-data-catalog.md",
   "docs/naming-style-guide.md",
   "docs/adr/0001-claw-framework-host-boundary.md",
   "docs/adr/0001-naming-and-stability-surfaces.md",
   "docs/adr/0003-source-file-boundaries.md",
+  "docs/adr/0005-canonical-data-catalog.md",
 ];
 
 for (const relativePath of agentDocs) {
@@ -67,14 +69,19 @@ requireSnippet("CLAUDE.md", "docs/host-ownership.md");
 requireSnippet("CLAUDE.md", "docs/data-storage-boundary.md");
 requireSnippet("CLAUDE.md", "docs/decision-map.md");
 requireSnippet("CLAUDE.md", "docs/naming-style-guide.md");
+requireSnippet("CLAUDE.md", "docs/canonical-data-catalog.md");
 requireSnippet("CLAUDE.md", "docs/adr/0001-claw-framework-host-boundary.md");
 requireSnippet("CLAUDE.md", "docs/adr/0001-naming-and-stability-surfaces.md");
+requireSnippet("CLAUDE.md", "docs/adr/0005-canonical-data-catalog.md");
 requireSnippet("AGENTS.md", "docs/decision-map.md");
+requireSnippet("AGENTS.md", "docs/canonical-data-catalog.md");
+requireSnippet("AGENTS.md", "docs/adr/0005-canonical-data-catalog.md");
 requireSnippet("AGENTS.md", "docs/adr/0003-source-file-boundaries.md");
 requireSnippet("CONTRIBUTING.md", "docs/decision-map.md");
 requireSnippet("RELEASING.md", "docs/decision-map.md");
 requireSnippet("docs/AGENTS.md", "decision-map.md");
 requireSnippet("docs/index.md", "Decision Map");
+requireSnippet("docs/index.md", "Canonical Data Catalog");
 requireSnippet("docs/repository-map.md", "Decision Map");
 
 for (const snippet of [
@@ -84,9 +91,38 @@ for (const snippet of [
   "Sensitive native permissions",
   "source file boundaries",
   "Changesets are release metadata",
+  "Built-in collections follow the canonical data catalog",
   "PENDING GUARDRAIL",
 ]) {
   requireSnippet("docs/decision-map.md", snippet);
+}
+
+for (const snippet of [
+  "human-recognizable structured entities",
+  "digitally validated workflows",
+  "Fields are optional by default",
+  "Every new relation field must declare what the relation means",
+  "Custom databases",
+]) {
+  requireSnippet("docs/canonical-data-catalog.md", snippet);
+}
+
+for (const snippet of [
+  "Status: Accepted",
+  "ClawJS owns canonical catalog definitions",
+  "Fields are optional by default",
+  "Relations are semantic",
+  "Existing built-ins are grandfathered",
+]) {
+  requireSnippet("docs/adr/0005-canonical-data-catalog.md", snippet);
+}
+
+for (const snippet of [
+  "Canonical data aims for broad human coverage",
+  "Canonical schemas are sparse by default",
+  "Relationships are first-class data",
+]) {
+  requireSnippet("CONSTITUTION.md", snippet);
 }
 
 for (const snippet of [

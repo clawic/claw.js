@@ -100,6 +100,7 @@ ClawJS writes new canonical workspace state under `.claw/` even when runtimes di
 ### Use services
 
 - [Database](/database) for local-first CRUD, the standalone service, scoped tokens, files, and realtime.
+- [Canonical Data Catalog](/canonical-data-catalog) for built-in collections, fields, aliases, and relationship semantics.
 - [Audio Service](/audio) for app-scoped audio blobs, transcripts, and local service APIs.
 - [Time Service](/time) for calendar, routines, deadlines, follow-ups, executions, and timeline views.
 - [Content Service](/content), [Notify](/notify), [IoT](/iot), [Secrets](/secrets), [Secrets Security Model](/secrets-security), [Drive](/drive), and [Execution](/execution) for standalone service surfaces.
@@ -117,5 +118,6 @@ ClawJS writes new canonical workspace state under `.claw/` even when runtimes di
 - [Repository Map](/repository-map) for root folder ownership and layout rules.
 - [Decision Map](/decision-map) for architecture, storage, validation, release,
   privacy, and naming decisions with their protecting checks.
+- [Canonical Data Catalog](/canonical-data-catalog) for schema and collection growth rules.
 - [Host Ownership](/host-ownership) for the ClawJS, `Claw.app`, and Clawix architecture boundary.
 - [Terminology](/terminology) for canonical product vocabulary.

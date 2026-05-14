@@ -86,6 +86,7 @@ export default defineConfig({
         text: "Services",
         items: [
           { text: "Database", link: "/database" },
+          { text: "Canonical Data Catalog", link: "/canonical-data-catalog" },
           { text: "Audio Service", link: "/audio" },
           { text: "Time Service", link: "/time" },
           { text: "Day", link: "/day" },
@@ -105,6 +106,7 @@ export default defineConfig({
           { text: "Plugin Authoring", link: "/plugins" },
           { text: "Template Packs and Bindings", link: "/template-packs-and-bindings" },
           { text: "Runtime Migration Notes", link: "/runtime-migration-notes" },
+          { text: "Canonical Data Catalog", link: "/canonical-data-catalog" },
           { text: "Chat Streaming Example", link: "/chat-streaming-example" },
           { text: "Onboarding Basic Example", link: "/onboarding-basic-example" },
           { text: "Provider and Channel Onboarding", link: "/provider-channel-onboarding-example" },
