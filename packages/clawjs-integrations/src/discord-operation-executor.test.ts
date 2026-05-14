@@ -1255,6 +1255,21 @@ describe("discord operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.create-reaction"), {
+      channelId: "123",
+      messageId: "456",
+      emoji: "wave:789",
+    }), {
+      method: "PUT",
+      endpoint: "channels/123/messages/456/reactions/wave%3A789/@me",
+      auth,
+      headers,
+      body: {},
+      responseSchema: {
+        type: "null",
+      },
+    });
+
     assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.delete-own-reaction"), {
       channelId: "123",
       messageId: "456",
@@ -1411,7 +1426,7 @@ describe("discord operation runtime", () => {
         request_to_speak_timestamp: "2026-05-13T11:00:00.000Z",
       },
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
@@ -1431,7 +1446,7 @@ describe("discord operation runtime", () => {
         suppress: true,
       },
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
@@ -1634,7 +1649,7 @@ describe("discord operation runtime", () => {
         status: "Planning",
       },
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
@@ -1659,7 +1674,7 @@ describe("discord operation runtime", () => {
         type: 0,
       },
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
@@ -1677,7 +1692,7 @@ describe("discord operation runtime", () => {
       },
       body: {},
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
@@ -1711,7 +1726,7 @@ describe("discord operation runtime", () => {
       headers,
       body: {},
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
@@ -2959,6 +2974,60 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["threads", "members", "has_more"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.join-thread"), {
+      channelId: "123",
+    }), {
+      method: "PUT",
+      endpoint: "channels/123/thread-members/@me",
+      auth,
+      headers,
+      body: {},
+      responseSchema: {
+        type: "null",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.leave-thread"), {
+      channelId: "123",
+    }), {
+      method: "DELETE",
+      endpoint: "channels/123/thread-members/@me",
+      auth,
+      headers,
+      body: {},
+      responseSchema: {
+        type: "null",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.add-thread-member"), {
+      channelId: "123",
+      userId: "456",
+    }), {
+      method: "PUT",
+      endpoint: "channels/123/thread-members/456",
+      auth,
+      headers,
+      body: {},
+      responseSchema: {
+        type: "null",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.remove-thread-member"), {
+      channelId: "123",
+      userId: "456",
+    }), {
+      method: "DELETE",
+      endpoint: "channels/123/thread-members/456",
+      auth,
+      headers,
+      body: {},
+      responseSchema: {
+        type: "null",
       },
     });
 

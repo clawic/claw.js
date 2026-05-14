@@ -1,3 +1,7 @@
 {
-  "id": "create-reaction-sample"
+  "runtimeResponse": {
+    "status": 204,
+    "body": "",
+    "bodyEncoding": "text"
+  }
 }

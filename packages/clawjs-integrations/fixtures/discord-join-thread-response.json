@@ -1,3 +1,7 @@
 {
-  "id": "join-thread-sample"
+  "runtimeResponse": {
+    "status": 204,
+    "body": "",
+    "bodyEncoding": "text"
+  }
 }
