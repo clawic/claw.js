@@ -125,7 +125,8 @@
     "test:device": "node ./scripts/test-lane.mjs device",
     "test:live": "node ./scripts/test-lane.mjs live",
     "test:release": "node ./scripts/test-lane.mjs release",
-    "test:coverage": "vitest run --config vitest.config.ts --coverage"
+    "test:coverage": "vitest run --config vitest.config.ts --coverage",
+    "publishing:test": "npm --prefix publishing run test"
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.7",

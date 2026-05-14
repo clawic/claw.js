@@ -9,7 +9,7 @@
     "build": "tsup src/bin/server.ts src/bin/cli.ts --format esm --target node20 --out-dir dist --clean",
     "start": "node dist/server.js",
     "cli": "node dist/cli.js",
-    "test": "tsx --test tests/unit/*.test.ts tests/e2e/*.test.ts",
+    "test": "vitest run --config vitest.config.ts && tsx --test tests/e2e/*.test.ts",
     "test:adapters": "tsx --test tests/e2e/adapters/*.test.ts"
   },
   "dependencies": {
