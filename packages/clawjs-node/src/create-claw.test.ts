@@ -1943,8 +1943,8 @@ test("createClaw instances keep separate workspaces and sessions isolated", asyn
   assert.equal(clawB.sessions.getSession(sessionA.sessionId), null);
   assert.equal(clawA.files.readWorkspaceFile("notes.md"), "workspace-a\n");
   assert.equal(clawB.files.readWorkspaceFile("notes.md"), "workspace-b\n");
-  assert.equal(fs.existsSync(path.join(workspaceA, ".claw", "sessions", `${sessionB.sessionId}.jsonl`)), false);
-  assert.equal(fs.existsSync(path.join(workspaceB, ".claw", "sessions", `${sessionA.sessionId}.jsonl`)), false);
+  assert.equal(fs.existsSync(resolveClawWorkspaceSurfacePath("claw.workspace.sessions", workspaceA, `${sessionB.sessionId}.jsonl`)), false);
+  assert.equal(fs.existsSync(resolveClawWorkspaceSurfacePath("claw.workspace.sessions", workspaceB, `${sessionA.sessionId}.jsonl`)), false);
 });
 
 test("createClaw instances can share a workspace and initialize it in parallel", async () => {
@@ -1991,8 +1991,8 @@ test("createClaw instances can share a workspace and initialize it in parallel",
   assert.equal(clawA.files.readWorkspaceFile("notes-b.md"), "workspace-b\n");
   assert.equal(clawB.files.readWorkspaceFile("notes-a.md"), "workspace-a\n");
   assert.equal(clawB.files.readWorkspaceFile("notes-b.md"), "workspace-b\n");
-  assert.equal(fs.existsSync(path.join(workspaceDir, ".claw", "sessions", `${sessionA.sessionId}.jsonl`)), true);
-  assert.equal(fs.existsSync(path.join(workspaceDir, ".claw", "sessions", `${sessionB.sessionId}.jsonl`)), true);
+  assert.equal(fs.existsSync(resolveClawWorkspaceSurfacePath("claw.workspace.sessions", workspaceDir, `${sessionA.sessionId}.jsonl`)), true);
+  assert.equal(fs.existsSync(resolveClawWorkspaceSurfacePath("claw.workspace.sessions", workspaceDir, `${sessionB.sessionId}.jsonl`)), true);
 });
 
 test("createClaw exposes workspace validation and binding persistence", async () => {

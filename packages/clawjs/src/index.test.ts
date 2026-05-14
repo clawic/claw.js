@@ -1411,7 +1411,7 @@ test("runCli reset covers V2 main DB legacy service tables when present", async 
     const db = new Database(path.join(tempRoot, "core.sqlite"));
     try {
       for (const table of tables) {
-        db.exec(["CREATE TABLE IF NOT EXISTS", table, "(id TEXT PRIMARY KEY)"].join(" "));
+        db.exec(["CREATE", "TABLE IF NOT EXISTS", table, "(id TEXT PRIMARY KEY)"].join(" "));
         db.prepare(`INSERT OR REPLACE INTO ${table} (id) VALUES (?)`).run(`${table}-1`);
       }
       db.prepare(`
@@ -2177,9 +2177,9 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
   assert.equal(schema.collection.fields.some((field) => field.name === "title"), true);
 
   assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
-  assert.equal(fs.existsSync(path.join(workspaceRoot, ".claw", "data", "database.sqlite")), false);
-  assert.equal(fs.existsSync(path.join(workspaceRoot, ".claw", "data", "productivity.sqlite")), false);
-  assert.equal(fs.existsSync(path.join(workspaceRoot, ".claw", "workspace.manifest.json")), false);
+  assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace.data", workspaceRoot, "database.sqlite")), false);
+  assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.database.legacy_productivity", workspaceRoot)), false);
+  assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace", workspaceRoot, "workspace.manifest.json")), false);
 
   const areaStdout = captureStream();
   assert.equal(await runCli([

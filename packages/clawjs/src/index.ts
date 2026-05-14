@@ -1,6 +1,5 @@
 import fs from "fs";
 import http from "http";
-import net from "net";
 import os from "os";
 import path from "path";
 import { spawn, spawnSync } from "child_process";
@@ -76,6 +75,7 @@ import { parseImageOperation, parseImageProvenance, parseImageType } from "./cli
 import { buildImageCommonInput, buildMediaListInput, buildMediaMetadata } from "./cli-media-utils.ts";
 import { OPEN_SURFACES, allOpenSurfaceHostnames, parseClawHostSurface, resolveOpenSurface, surfacePrimaryClawUrl, type OpenSurface, type OpenSurfaceState } from "./cli-open-surfaces.ts";
 import { openBrowser, openStateDir, openStatePath, readOpenState, repoRootFromCliPackage, writeOpenState } from "./cli-open-state.ts";
+import { portIsOpen, processIsAlive, waitForUrl, writeProgress } from "./cli-process-utils.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { collectFlagValues, parseCsvFlag, parseJsonFlag } from "./cli-flag-parsers.ts";
 import { inferAudioExtension, inferMimeTypeFromPath, parseInferenceMessages, pathSafeBasename, readJsonFile, resolveRuntimeAdapterId, timelineRange, type GenerationCliMediaKind } from "./cli-runtime-utils.ts";
@@ -659,51 +659,6 @@ function parseRuleReferences(value: string | undefined): Array<{ kind: string; r
       ...(label ? { label } : {}),
     };
   });
-}
-
-function writeProgress(stream: NodeJS.WritableStream, event: { phase: string; status: string; percent?: number; message?: string }): void {
-  const suffix = typeof event.percent === "number" ? ` ${event.percent}%` : "";
-  const message = event.message ? ` ${event.message}` : "";
-  stream.write(`${event.phase} ${event.status}${suffix}${message}\n`);
-}
-
-function processIsAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function portIsOpen(host: string, port: number): Promise<boolean> {
-  return await new Promise<boolean>((resolve) => {
-    const socket = net.createConnection({ host, port });
-    socket.setTimeout(500);
-    socket.once("connect", () => {
-      socket.destroy();
-      resolve(true);
-    });
-    socket.once("timeout", () => {
-      socket.destroy();
-      resolve(false);
-    });
-    socket.once("error", () => resolve(false));
-  });
-}
-
-async function waitForUrl(url: string, timeoutMs = 15_000): Promise<boolean> {
-  const startedAt = Date.now();
-  while (Date.now() - startedAt < timeoutMs) {
-    try {
-      const response = await fetch(url, { method: "GET" });
-      if (response.status < 500) return true;
-    } catch {
-      // Server is still starting.
-    }
-    await new Promise((resolve) => setTimeout(resolve, 150));
-  }
-  return false;
 }
 
 function buildOpenUsage(binName: string): string {

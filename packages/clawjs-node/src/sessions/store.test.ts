@@ -110,7 +110,7 @@ test("updateSessionTitle rewrites the transcript header", () => {
   const ok = store.updateSessionTitle(session.sessionId, "  updated title  ");
 
   assert.equal(ok, true);
-  const raw = fs.readFileSync(path.join(workspaceDir, ".claw", "sessions", `${session.sessionId}.jsonl`), "utf8");
+  const raw = fs.readFileSync(resolveClawWorkspaceSurfacePath("claw.workspace.sessions", workspaceDir, `${session.sessionId}.jsonl`), "utf8");
   assert.match(raw, /updated title/);
 });
 

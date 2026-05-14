@@ -4,6 +4,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 import { createWorkspaceClaw } from "./index.ts";
 
 function createWorkspaceDir(label: string): string {
@@ -171,16 +172,16 @@ test("createWorkspaceClaw manages tasks, notes, people, inbox, events, and badge
   assert.ok(rebuilt.embeddings >= 1);
 
   assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
-  assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "data", "productivity.sqlite")), false);
+  assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.legacy.workspace.clawjs", workspaceDir, "data", "productivity.sqlite")), false);
 });
 
 test("createWorkspaceClaw ignores pre-public legacy JSON productivity collections", { concurrency: false }, async (t) => {
   const workspaceDir = createWorkspaceDir("migration");
   const dataRoot = useIsolatedMainData(t, workspaceDir);
-  const legacyTasksDir = path.join(workspaceDir, ".clawjs", "data", "collections", "tasks");
-  const legacyGoalsDir = path.join(workspaceDir, ".clawjs", "data", "collections", "goals");
-  const legacyRemindersDir = path.join(workspaceDir, ".clawjs", "data", "collections", "reminders");
-  const legacyEventsDir = path.join(workspaceDir, ".clawjs", "data", "collections", "events");
+  const legacyTasksDir = resolveClawPersistentSurfacePath("claw.legacy.workspace_clawjs", workspaceDir, "data", "collections", "tasks");
+  const legacyGoalsDir = resolveClawPersistentSurfacePath("claw.legacy.workspace_clawjs", workspaceDir, "data", "collections", "goals");
+  const legacyRemindersDir = resolveClawPersistentSurfacePath("claw.legacy.workspace_clawjs", workspaceDir, "data", "collections", "reminders");
+  const legacyEventsDir = resolveClawPersistentSurfacePath("claw.legacy.workspace_clawjs", workspaceDir, "data", "collections", "events");
   fs.mkdirSync(legacyTasksDir, { recursive: true });
   fs.mkdirSync(legacyGoalsDir, { recursive: true });
   fs.mkdirSync(legacyRemindersDir, { recursive: true });
