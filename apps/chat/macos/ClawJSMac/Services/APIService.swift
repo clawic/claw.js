@@ -276,7 +276,7 @@ final class APIService {
             let status: String
         }
 
-        let response: RelayHealth = try await requestJSON(path: "/v1/health", token: token, config: config)
+        let response: RelayHealth = try await requestJSON(path: PersistentSurfaceKeys.apiPath("health"), token: token, config: config)
         return HealthResponse(
             status: response.status,
             relayUrl: config.baseURL,
@@ -306,7 +306,7 @@ final class APIService {
     }
 
     private func accessToken(for config: RelayConfig) async throws -> String {
-        var request = URLRequest(url: try makeURL("/v1/auth/login", config: config))
+        var request = URLRequest(url: try makeURL(PersistentSurfaceKeys.apiPath("auth/login"), config: config))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: [
@@ -369,10 +369,10 @@ final class APIService {
     private func relayConfig() -> RelayConfig {
         let defaults = UserDefaults.standard
         return RelayConfig(
-            baseURL: defaults.string(forKey: "relayBaseURL") ?? "http://127.0.0.1:4410",
-            tenantId: defaults.string(forKey: "relayTenantId") ?? "demo-tenant",
-            email: defaults.string(forKey: "relayEmail") ?? "user@relay.local",
-            password: defaults.string(forKey: "relayPassword") ?? "relay-user"
+            baseURL: defaults.string(forKey: PersistentSurfaceKeys.relayBaseURL) ?? "http://127.0.0.1:4410",
+            tenantId: defaults.string(forKey: PersistentSurfaceKeys.relayTenantId) ?? "demo-tenant",
+            email: defaults.string(forKey: PersistentSurfaceKeys.relayEmail) ?? "user@relay.local",
+            password: defaults.string(forKey: PersistentSurfaceKeys.relayPassword) ?? "relay-user"
         )
     }
 }

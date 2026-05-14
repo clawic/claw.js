@@ -554,7 +554,7 @@ final class ChatService: ObservableObject {
     // MARK: - Fallback
 
     private var configuredRelayURL: String {
-        UserDefaults.standard.string(forKey: "relayBaseURL") ?? "http://localhost:4410"
+        UserDefaults.standard.string(forKey: PersistentSurfaceKeys.relayBaseURL) ?? "http://localhost:4410"
     }
 
     private func fallbackReply(in conversationId: UUID) {

@@ -13,7 +13,7 @@ enum L10n {
     /// Returns the bundle for the currently selected language.
     /// Falls back to Bundle.main (system language) when no override is set.
     static var bundle: Bundle {
-        let language = UserDefaults.standard.string(forKey: "appLanguage") ?? ""
+        let language = UserDefaults.standard.string(forKey: PersistentSurfaceKeys.appLanguage) ?? ""
         guard !language.isEmpty,
               let path = Bundle.main.path(forResource: language, ofType: "lproj"),
               let b = Bundle(path: path) else {

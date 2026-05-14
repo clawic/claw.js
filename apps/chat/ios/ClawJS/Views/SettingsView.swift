@@ -2,16 +2,16 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var chatService: ChatService
-    @AppStorage("notificationsEnabled") private var notificationsEnabled = true
-    @AppStorage("soundEnabled") private var soundEnabled = true
-    @AppStorage("hapticEnabled") private var hapticEnabled = true
-    @AppStorage("selectedAppearance") private var selectedAppearance: AppearanceMode = .system
-    @AppStorage("appLanguage") private var appLanguage = ""
+    @AppStorage(PersistentSurfaceKeys.notificationsEnabled) private var notificationsEnabled = true
+    @AppStorage(PersistentSurfaceKeys.soundEnabled) private var soundEnabled = true
+    @AppStorage(PersistentSurfaceKeys.hapticEnabled) private var hapticEnabled = true
+    @AppStorage(PersistentSurfaceKeys.selectedAppearance) private var selectedAppearance: AppearanceMode = .system
+    @AppStorage(PersistentSurfaceKeys.appLanguage) private var appLanguage = ""
 
-    @AppStorage("relayBaseURL") private var relayBaseURL = "http://localhost:4410"
-    @AppStorage("relayTenantId") private var relayTenantId = "demo-tenant"
-    @AppStorage("relayEmail") private var relayEmail = "user@relay.local"
-    @AppStorage("relayPassword") private var relayPassword = "relay-user"
+    @AppStorage(PersistentSurfaceKeys.relayBaseURL) private var relayBaseURL = "http://localhost:4410"
+    @AppStorage(PersistentSurfaceKeys.relayTenantId) private var relayTenantId = "demo-tenant"
+    @AppStorage(PersistentSurfaceKeys.relayEmail) private var relayEmail = "user@relay.local"
+    @AppStorage(PersistentSurfaceKeys.relayPassword) private var relayPassword = "relay-user"
 
     @State private var showDeleteAlert = false
     @State private var showLanguagePicker = false

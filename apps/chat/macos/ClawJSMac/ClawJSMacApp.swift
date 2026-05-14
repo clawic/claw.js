@@ -4,13 +4,13 @@ import AppKit
 @main
 struct ClawJSMacApp: App {
     @StateObject private var chatService = ChatService()
-    @AppStorage("selectedAppearance") private var selectedAppearance: AppearanceMode = .system
-    @AppStorage("appLanguage") private var appLanguage = ""
+    @AppStorage(PersistentSurfaceKeys.selectedAppearance) private var selectedAppearance: AppearanceMode = .system
+    @AppStorage(PersistentSurfaceKeys.appLanguage) private var appLanguage = ""
 
     init() {
         // Clear any stale window state that might prevent window creation
-        UserDefaults.standard.removeObject(forKey: "NSWindow Frame main")
-        UserDefaults.standard.removeObject(forKey: "NSWindow Frame SwiftUI")
+        UserDefaults.standard.removeObject(forKey: PersistentSurfaceKeys.mainWindowFrame)
+        UserDefaults.standard.removeObject(forKey: PersistentSurfaceKeys.swiftUiWindowFrame)
     }
 
     var body: some Scene {

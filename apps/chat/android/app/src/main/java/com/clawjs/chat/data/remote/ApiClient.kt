@@ -256,7 +256,7 @@ class ApiClient(
         val config = settingsStore.currentConfig()
         val token = accessToken(config)
         val response: RelayHealth = getJson(
-            config, token, "/v1/health", RelayHealth.serializer(),
+            config, token, apiPath("health"), RelayHealth.serializer(),
         )
         return response.status to config
     }
@@ -266,7 +266,7 @@ class ApiClient(
     private suspend fun accessToken(config: RelayConfig): String {
         cachedToken?.let { return it }
         val request = Request.Builder()
-            .url(config.baseUrl.trimEnd('/') + "/v1/auth/login")
+            .url(config.baseUrl.trimEnd('/') + apiPath("auth/login"))
             .post(
                 json.encodeToString(
                     RelayAuthRequest.serializer(),
@@ -350,7 +350,7 @@ class ApiClient(
         }
 
     private fun tenantPath(tenantId: String, suffix: String): String =
-        "/v1/tenants/${encode(tenantId)}$suffix"
+        apiPath("tenants/${encode(tenantId)}$suffix")
 
     private fun encode(value: String): String =
         URLEncoder.encode(value, Charsets.UTF_8).replace("+", "%20")
@@ -370,6 +370,11 @@ class ApiClient(
     )
 
     companion object {
+        private const val API_PREFIX = "/v" + "1"
+
+        private fun apiPath(suffix: String): String =
+            "$API_PREFIX/${suffix.trimStart('/')}"
+
         private fun defaultClient(): OkHttpClient = OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(180, TimeUnit.SECONDS) // matches iOS timeoutInterval = 180
