@@ -1408,7 +1408,8 @@ test("runCli reset covers V2 main DB legacy service tables when present", async 
       "temporal_projections",
       "wiki_spaces",
     ];
-    const db = new Database(path.join(tempRoot, "core.sqlite"));
+    const primaryCorePath = path.join(tempRoot, "core.sqlite");
+    const db = new Database(primaryCorePath);
     try {
       for (const table of tables) {
         db.exec(["CREATE", "TABLE IF NOT EXISTS", table, "(id TEXT PRIMARY KEY)"].join(" "));
@@ -1477,7 +1478,8 @@ test("runCli reset clears V2 sidecar service tables when present", async () => {
         stderr: captureStream().stream,
         cwd,
       }), CLI_EXIT_OK);
-      const readonly = new Database(path.join(tempRoot, sidecar.filename), { readonly: true });
+      const readonlySidecarPath = path.join(tempRoot, sidecar.filename);
+      const readonly = new Database(readonlySidecarPath, { readonly: true });
       try {
         assert.equal((readonly.prepare(`SELECT COUNT(*) AS count FROM ${sidecar.table}`).get() as { count: number }).count, 0, sidecar.table);
       } finally {
