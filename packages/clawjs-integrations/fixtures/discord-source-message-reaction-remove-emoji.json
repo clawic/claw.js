@@ -1,0 +1,9 @@
+{
+  "id": "reaction-remove-emoji-sample",
+  "channel_id": "channel-sample",
+  "message_id": "message-sample",
+  "guild_id": "guild-sample",
+  "emoji": {
+    "name": "thumbsup"
+  }
+}

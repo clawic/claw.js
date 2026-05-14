@@ -1,0 +1,9 @@
+{
+  "id": "message-delete-bulk-sample",
+  "ids": [
+    "message-sample",
+    "message-other-sample"
+  ],
+  "channel_id": "channel-sample",
+  "guild_id": "guild-sample"
+}

@@ -25,6 +25,13 @@ export type DiscordSourceOperation =
   | "message-create"
   | "message-update"
   | "message-delete"
+  | "message-delete-bulk"
+  | "message-reaction-remove"
+  | "message-reaction-remove-all"
+  | "message-reaction-remove-emoji"
+  | "typing-start"
+  | "message-poll-vote-add"
+  | "message-poll-vote-remove"
   | "guild-audit-log-entry-create"
   | "auto-moderation-rule-create"
   | "auto-moderation-rule-update"
@@ -75,6 +82,13 @@ const DISCORD_SOURCE_OPERATIONS = new Set<DiscordSourceOperation>([
   "message-create",
   "message-update",
   "message-delete",
+  "message-delete-bulk",
+  "message-reaction-remove",
+  "message-reaction-remove-all",
+  "message-reaction-remove-emoji",
+  "typing-start",
+  "message-poll-vote-add",
+  "message-poll-vote-remove",
   "guild-audit-log-entry-create",
   "auto-moderation-rule-create",
   "auto-moderation-rule-update",

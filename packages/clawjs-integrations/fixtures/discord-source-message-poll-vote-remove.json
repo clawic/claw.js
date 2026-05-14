@@ -1,0 +1,8 @@
+{
+  "id": "poll-vote-remove-sample",
+  "user_id": "user-sample",
+  "channel_id": "channel-sample",
+  "message_id": "message-sample",
+  "guild_id": "guild-sample",
+  "answer_id": 1
+}

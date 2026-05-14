@@ -1,0 +1,6 @@
+{
+  "id": "reaction-remove-all-sample",
+  "channel_id": "channel-sample",
+  "message_id": "message-sample",
+  "guild_id": "guild-sample"
+}
