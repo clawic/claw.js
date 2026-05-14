@@ -64,4 +64,3 @@ export function buildDomainsPlist(flags: Record<string, string>): string {
     "",
   ].join("\n");
 }
-
