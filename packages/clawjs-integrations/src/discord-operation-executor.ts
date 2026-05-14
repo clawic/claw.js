@@ -773,7 +773,15 @@ export function buildDiscordOperationRequest(
     case "delete-webhook-message":
       return deletePlan(`webhooks/${webhookId(values)}/${pathSegment(requiredString(values.webhookToken, "webhookToken"))}/messages/${messageId(values)}`, [], headers, { type: "null" }, removeEmptyValues({ thread_id: optionalString(values.threadId) }));
     case "create-interaction-response":
-      return bodyPlan("POST", `interactions/${interactionId(values)}/${interactionToken(values)}/callback`, [], headers, interactionResponseBody(values), { type: "object", requiredPaths: ["interaction"] }, removeEmptyValues({ with_response: values.withResponse }));
+      return bodyPlan(
+        "POST",
+        `interactions/${interactionId(values)}/${interactionToken(values)}/callback`,
+        [],
+        headers,
+        interactionResponseBody(values),
+        values.withResponse === true ? { type: "object", requiredPaths: ["interaction"] } : { type: "null" },
+        removeEmptyValues({ with_response: values.withResponse }),
+      );
     case "get-original-interaction-response":
       return getPlan(`webhooks/${applicationId(values)}/${interactionToken(values)}/messages/@original`, [], headers, { type: "object", requiredPaths: ["id"] });
     case "edit-original-interaction-response":
