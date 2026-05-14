@@ -36,12 +36,12 @@
     ]
   },
   "summary": {
-    "files": 2823,
+    "files": 2824,
     "tests": 389,
     "entrypoints": 160,
     "languages": {
       "typescript": 2627,
-      "javascript": 106,
+      "javascript": 107,
       "swift": 90
     }
   },
@@ -115281,6 +115281,68 @@
         {
           "kind": "function",
           "name": "vitest",
+          "exported": false
+        }
+      ]
+    },
+    {
+      "path": "scripts/verify-cli-registry-router-parity.mjs",
+      "language": "javascript",
+      "lines": 183,
+      "test": false,
+      "entrypoint": false,
+      "imports": [
+        "../packages/clawjs-core/src/cli-command-registry.ts",
+        "../packages/clawjs/src/index.ts",
+        "node:fs",
+        "node:path",
+        "node:url"
+      ],
+      "exports": [],
+      "declarations": [
+        {
+          "kind": "function",
+          "name": "checkAliasRecords",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "checkHelpParity",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "checkReferences",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "checkRegistryShape",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "exists",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "hasRouterEvidence",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "listFiles",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "readRelative",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "symbolPattern",
           "exported": false
         }
       ]

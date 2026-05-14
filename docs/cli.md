@@ -25,6 +25,11 @@ portals, aliases, support states, security policy, docs, ADRs, tests, and
 implementation sources are registered in the ClawJS CLI command registry and
 then consumed by help, inspection, search, docs, and tests.
 
+`npm run test:policy` and `npm run test:docs` both run the CLI
+registry/router parity guard. The guard fails when a public command loses its
+registered docs, ADRs, tests, source symbol, alias uniqueness, router evidence,
+or registry-backed help output.
+
 New stable JSON responses use:
 
 ```json
