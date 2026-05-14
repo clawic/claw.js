@@ -572,7 +572,12 @@ export function buildDiscordOperationRequest(
         limit: optionalNumber(values.limit),
       }));
     case "add-guild-member":
-      return bodyPlan("PUT", `guilds/${guildId(values)}/members/${userId(values)}`, auth, headers, addGuildMemberBody(values), { type: "object", requiredPaths: ["user"] });
+      return bodyPlan("PUT", `guilds/${guildId(values)}/members/${userId(values)}`, auth, headers, addGuildMemberBody(values), {
+        oneOf: [
+          { type: "object", requiredPaths: ["user"] },
+          { type: "null" },
+        ],
+      });
     case "list-guild-members":
       return getPlan(`guilds/${guildId(values)}/members`, auth, headers, { type: "array" }, removeEmptyValues({
         after: optionalString(values.after),
