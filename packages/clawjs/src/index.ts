@@ -499,6 +499,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   const wantsHelp = argv.includes("--help") || argv.includes("-h");
   const writeRootJson = (payload: unknown, canonicalCommand = group === "db" ? "database" : group === "provider" ? "providers" : group === "style" ? "styles" : group === "template" ? "templates" : group === "ref" ? "references" : group === "image" ? "images" : group ?? "claw") => writeCommandJsonOk(context.stdout, canonicalCommand, payload, { invokedCommand: group ?? canonicalCommand, subcommand: command ?? null, ...(subcommand ? { operation: subcommand } : {}) });
   const writeRootJsonError = (error: unknown, canonicalCommand = group === "db" ? "database" : group === "provider" ? "providers" : group === "style" ? "styles" : group === "template" ? "templates" : group === "ref" ? "references" : group === "image" ? "images" : group ?? "claw", extraMeta: Record<string, unknown> = {}) => writeCommandJsonError(context.stdout, canonicalCommand, error, { invokedCommand: group ?? canonicalCommand, subcommand: command ?? null, ...(subcommand ? { operation: subcommand } : {}), ...extraMeta });
+  const writeRemovedJsonOrText = (canonicalCommand: string, message: string): number => { if (wantsJson) writeRootJsonError(new CliHandledError("removed_public_command", message, CLI_EXIT_USAGE), canonicalCommand); else context.stderr.write(`${message}\n`); return CLI_EXIT_USAGE; };
 
   const removedMessage = group ? removedPublicCommandMessage(group, binName) : null;
   if (removedMessage) {
@@ -508,18 +509,15 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   }
 
   if (group === "runtime" && command && REMOVED_RUNTIME_COMMANDS.has(command)) {
-    context.stderr.write(`\`${binName} runtime ${command}\` is not part of the public Claw CLI surface. Runtime is limited to adapters and setup.\n`);
-    return CLI_EXIT_USAGE;
+    return writeRemovedJsonOrText("runtime", `\`${binName} runtime ${command}\` is not part of the public Claw CLI surface. Runtime is limited to adapters and setup.`);
   }
 
   if ((group === "business" || group === "social") && command && REMOVED_V1_CRUD_COMMANDS.has(command)) {
-    context.stderr.write(`\`${binName} ${group} ${command}\` is legacy V1 CRUD and is not part of the public Claw CLI surface. Use the ${group} portal help to pick a supported route.\n`);
-    return CLI_EXIT_USAGE;
+    return writeRemovedJsonOrText(group, `\`${binName} ${group} ${command}\` is legacy V1 CRUD and is not part of the public Claw CLI surface. Use the ${group} portal help to pick a supported route.`);
   }
 
   if (group === "content" && command && REMOVED_V1_CRUD_COMMANDS.has(command)) {
-    context.stderr.write(`\`${binName} content ${command}\` is legacy V1 CRUD and is not part of the public Claw CLI surface. Use posts, campaigns, publications, or content service commands.\n`);
-    return CLI_EXIT_USAGE;
+    return writeRemovedJsonOrText("content", `\`${binName} content ${command}\` is legacy V1 CRUD and is not part of the public Claw CLI surface. Use posts, campaigns, publications, or content service commands.`);
   }
 
   if (wantsHelp || group === "help") {

@@ -124,6 +124,26 @@ test("runCli hard-blocks standalone user and memory legacy commands", async () =
   assert.equal(memoryPayload.meta.related.some((entry) => entry.canonicalCommand === "knowledge"), true);
 });
 
+test("runCli returns removed legacy namespace JSON in the common envelope", async () => {
+  for (const args of [
+    ["data", "doctor", "--json"],
+    ["app-state", "snapshot", "--json"],
+    ["runtime", "queue", "--json"],
+    ["content", "upsert", "--json"],
+    ["business", "upsert", "--json"],
+    ["social", "list", "--json"],
+    ["infra", "event", "--json"],
+    ["ops", "list", "--json"],
+  ]) {
+    const result = await runCliCapture(args, process.cwd());
+    assert.equal(result.code, CLI_EXIT_USAGE, args.join(" "));
+    const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string }; meta: { invokedCommand: string } };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "removed_public_command");
+    assert.equal(payload.meta.invokedCommand, args[0]);
+  }
+});
+
 test("runCli returns primary productivity JSON in the common envelope", { concurrency: false }, async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-productivity-json-"));
   useIsolatedMainData(t, workspaceRoot);
