@@ -623,7 +623,7 @@ describe("discord operation runtime", () => {
       headers,
       body: {},
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
@@ -1515,7 +1515,7 @@ describe("discord operation runtime", () => {
       headers,
       body: {},
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
@@ -1564,7 +1564,7 @@ describe("discord operation runtime", () => {
       headers,
       body: {},
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
@@ -1577,7 +1577,7 @@ describe("discord operation runtime", () => {
       headers,
       body: {},
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
@@ -1629,7 +1629,7 @@ describe("discord operation runtime", () => {
         replacement: "Please keep chat respectful.",
       },
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
@@ -2692,7 +2692,7 @@ describe("discord operation runtime", () => {
       headers,
       body: {},
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
@@ -2727,7 +2727,7 @@ describe("discord operation runtime", () => {
       headers,
       body: {},
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
@@ -4121,6 +4121,20 @@ describe("discord operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.delete-guild-scheduled-event"), {
+      guildId: "456",
+      guildScheduledEventId: "event-123",
+    }), {
+      method: "DELETE",
+      endpoint: "guilds/456/scheduled-events/event-123",
+      auth,
+      headers,
+      body: {},
+      responseSchema: {
+        type: "null",
+      },
+    });
+
     assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.list-guild-scheduled-event-users"), {
       guildId: "456",
       guildScheduledEventId: "event-123",
@@ -4193,6 +4207,23 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["id", "channel_id", "topic"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.delete-stage-instance"), {
+      channelId: "123",
+      auditLogReason: "close stage",
+    }), {
+      method: "DELETE",
+      endpoint: "stage-instances/123",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "close stage",
+      },
+      body: {},
+      responseSchema: {
+        type: "null",
       },
     });
   });

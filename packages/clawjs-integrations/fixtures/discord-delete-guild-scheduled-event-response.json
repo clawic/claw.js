@@ -1,5 +1,7 @@
 {
-  "id": "sample",
-  "guild_id": "sample",
-  "name": "sample"
+  "runtimeResponse": {
+    "status": 204,
+    "body": "",
+    "bodyEncoding": "text"
+  }
 }
