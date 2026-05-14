@@ -151,12 +151,14 @@ if (policyBlocked?.lane !== "unsupported_by_policy") {
 }
 
 const scenarioDoc = read("qa/scenarios/telegram-integration-qa-lab.md");
+const validationReport = read("qa/scenarios/telegram-integration-qa-lab-validation-report.md");
 for (const status of requiredReportStatuses) {
   const docs = [
     read("docs/testing.md"),
     read("docs/adr/0002-testing-architecture.md"),
     read("docs/integration-qa-lab.md"),
     scenarioDoc,
+    validationReport,
   ].join("\n");
   if (!docs.includes(status)) fail(`report status ${status} is not documented`);
 }
@@ -170,6 +172,26 @@ for (const phrase of [
   "policy-blocked",
 ]) {
   if (!scenarioDoc.includes(phrase)) fail(`Telegram QA scenario is missing phrase: ${phrase}`);
+}
+for (const phrase of [
+  "Decision Audit",
+  "Prompt-to-Artifact Checklist",
+  "official API completeness",
+  "brokered credential leases",
+  "OpenClaw",
+  "Hermes Agent",
+  "Docker daemon",
+  "Completion Judgment",
+]) {
+  if (!validationReport.includes(phrase)) fail(`Telegram QA validation report is missing phrase: ${phrase}`);
+}
+for (const phrase of [
+  "send-voice-message",
+  "TELEGRAM_OFFICIAL_BOT_API_VERSION=10.0",
+  "qa/quarantine.json",
+  "EXTERNAL PENDING",
+]) {
+  if (!validationReport.includes(phrase)) fail(`Telegram QA validation checklist is missing evidence: ${phrase}`);
 }
 
 if (process.exitCode) {
