@@ -37,6 +37,12 @@ The contract format is decision -> document -> validation.
 | Tests and examples must not send operative prompts, mutate production data, touch real services, or consume paid APIs unless explicitly approved. | Root `CLAUDE.md`, root `AGENTS.md`, [Getting Started](./getting-started.md), [Content](./content.md) | Use fixtures, mocks, local services, and dry-run paths. Mark unavailable real integrations as external validation pending. |
 | Public API, SDK, CLI, and Relay surfaces stay aligned. | [Interface Matrix](./interface-matrix.md), [Public Surface](./surface.md), `docs/surface-contract.json` | `npm run test:docs` runs `scripts/docs-surface-check.mjs` and `scripts/docs-alignment-check.mjs`. |
 
+## Source file boundaries
+
+| Decision | Canonical document | Guardrail or validation |
+| --- | --- | --- |
+| Hand-authored source files stay responsibility-scoped; new 1200+ line files require a split plan or baseline exception, and 2000+ line files must not grow except for extraction or explicit architecture approval. | [ADR 0003: source file boundaries](./adr/0003-source-file-boundaries.md), `docs/source-size-baseline.json` | `npm run test:docs` runs `scripts/source-size-check.mjs`; it warns at 800 lines, fails unbaselined 1200+ line files, and blocks growth above the recorded baseline. |
+
 ## Naming, release, privacy, and commits
 
 | Decision | Canonical document | Guardrail or validation |

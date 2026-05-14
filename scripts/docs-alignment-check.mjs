@@ -36,6 +36,7 @@ const agentDocs = [
   "docs/naming-style-guide.md",
   "docs/adr/0001-claw-framework-host-boundary.md",
   "docs/adr/0001-naming-and-stability-surfaces.md",
+  "docs/adr/0003-source-file-boundaries.md",
 ];
 
 for (const relativePath of agentDocs) {
@@ -69,6 +70,7 @@ requireSnippet("CLAUDE.md", "docs/naming-style-guide.md");
 requireSnippet("CLAUDE.md", "docs/adr/0001-claw-framework-host-boundary.md");
 requireSnippet("CLAUDE.md", "docs/adr/0001-naming-and-stability-surfaces.md");
 requireSnippet("AGENTS.md", "docs/decision-map.md");
+requireSnippet("AGENTS.md", "docs/adr/0003-source-file-boundaries.md");
 requireSnippet("CONTRIBUTING.md", "docs/decision-map.md");
 requireSnippet("RELEASING.md", "docs/decision-map.md");
 requireSnippet("docs/AGENTS.md", "decision-map.md");
@@ -80,10 +82,22 @@ for (const snippet of [
   "ClawJS/Claw owns framework contracts",
   "New workspace-local framework writes use `.claw/`",
   "Sensitive native permissions",
+  "source file boundaries",
   "Changesets are release metadata",
   "PENDING GUARDRAIL",
 ]) {
   requireSnippet("docs/decision-map.md", snippet);
+}
+
+for (const snippet of [
+  "Status: accepted",
+  "`1200-2000` lines",
+  "`>2000` lines",
+  "CLI entrypoints only parse global flags",
+  "scripts/source-size-check.mjs",
+  "docs/source-size-baseline.json",
+]) {
+  requireSnippet("docs/adr/0003-source-file-boundaries.md", snippet);
 }
 
 for (const snippet of [

@@ -12,11 +12,12 @@ This project is governed by `CONSTITUTION.md` at the repository root. It defines
 
 - Treat this file as the operational entrypoint for the repo.
 - Treat `AGENTS.md` as the canonical repository instruction file. If a tool such as Claude Code looks for `CLAUDE.md`, that file must redirect back here and remain aligned with this file.
-- Treat `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `RELEASING.md`, `docs/git-workflow.md`, `docs/decision-map.md`, `docs/host-ownership.md`, `docs/data-storage-boundary.md`, `docs/naming-style-guide.md`, `docs/adr/0001-claw-framework-host-boundary.md`, `docs/adr/0001-naming-and-stability-surfaces.md`, and `tests/e2e/README.md` as source-of-truth references for deeper detail.
+- Treat `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `RELEASING.md`, `docs/git-workflow.md`, `docs/decision-map.md`, `docs/host-ownership.md`, `docs/data-storage-boundary.md`, `docs/naming-style-guide.md`, `docs/adr/0001-claw-framework-host-boundary.md`, `docs/adr/0001-naming-and-stability-surfaces.md`, `docs/adr/0003-source-file-boundaries.md`, and `tests/e2e/README.md` as source-of-truth references for deeper detail.
 - Before changing framework, host, storage, CLI, Clawix integration, permissions, grants, approvals, audit, data placement, naming style, public packages, routes, ports, domains, protocols, or domain ownership, read `docs/host-ownership.md`, `docs/data-storage-boundary.md`, `docs/naming-style-guide.md`, and the ADRs.
 - For agent-specific operational knowledge, review `agents/wiki/README.md` and the relevant pages under `agents/wiki/` before changing behavior or debugging repeated issues.
 - For host-dependent OpenClaw work, read `agents/wiki/openclaw.md` before changing runtime detection, installation, auth, or onboarding flows.
 - If a change affects public behavior, docs, examples, templates, or package surface, update the relevant docs and tests in the same patch.
+- Before adding large CLI, SDK, runtime, service, schema, state, or UI surfaces, read `docs/adr/0003-source-file-boundaries.md`. New hand-authored files at 1200+ lines need a split plan or a baseline exception; files above 2000 lines must not grow except for mechanical extraction or explicit architecture approval.
 
 ## Repository Shape
 

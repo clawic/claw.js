@@ -1,0 +1,167 @@
+{
+  "version": 1,
+  "warningLines": 800,
+  "maxNewFileLines": 1200,
+  "files": {
+    "packages/clawjs/src/index.ts": {
+      "lines": 14144,
+      "reason": "Existing public surface barrel or command surface; split by domain before expanding."
+    },
+    "packages/clawjs-workspace/src/index.ts": {
+      "lines": 8287,
+      "reason": "Existing public surface barrel or command surface; split by domain before expanding."
+    },
+    "packages/clawjs-node/src/create-claw.ts": {
+      "lines": 7368,
+      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+    },
+    "packages/clawjs/src/index.test.ts": {
+      "lines": 6502,
+      "reason": "Existing broad test coverage; split by scenario before expanding."
+    },
+    "examples/showcase/src/lib/i18n/messages.ts": {
+      "lines": 6272,
+      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+    },
+    "examples/showcase/src/app/settings/page.tsx": {
+      "lines": 5172,
+      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
+    },
+    "packages/clawjs-integrations/src/discord-operation-executor.test.ts": {
+      "lines": 4360,
+      "reason": "Existing broad test coverage; split by scenario before expanding."
+    },
+    "relay/src/server/app.ts": {
+      "lines": 4139,
+      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+    },
+    "packages/clawjs/src/v1-data.ts": {
+      "lines": 3921,
+      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+    },
+    "packages/clawjs-core/src/types.ts": {
+      "lines": 3753,
+      "reason": "Existing canonical contract/schema surface; split codecs, fixtures, and docs before expanding."
+    },
+    "packages/clawjs-node/src/create-claw.test.ts": {
+      "lines": 3030,
+      "reason": "Existing broad test coverage; split by scenario before expanding."
+    },
+    "memory/src/service.ts": {
+      "lines": 2542,
+      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
+    },
+    "relay/tests/e2e/relay.e2e.test.ts": {
+      "lines": 2424,
+      "reason": "Existing broad test coverage; split by scenario before expanding."
+    },
+    "packages/clawjs-core/src/schemas.ts": {
+      "lines": 2379,
+      "reason": "Existing canonical contract/schema surface; split codecs, fixtures, and docs before expanding."
+    },
+    "examples/showcase/src/app/page.tsx": {
+      "lines": 2299,
+      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
+    },
+    "packages/clawjs-node/src/code/index.ts": {
+      "lines": 2299,
+      "reason": "Existing public surface barrel or command surface; split by domain before expanding."
+    },
+    "relay/src/server/db.ts": {
+      "lines": 2298,
+      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
+    },
+    "packages/clawjs-database/src/store.ts": {
+      "lines": 2123,
+      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
+    },
+    "packages/clawjs-integrations/src/discord-operation-executor.ts": {
+      "lines": 2056,
+      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+    },
+    "examples/showcase/src/lib/e2e.ts": {
+      "lines": 2041,
+      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+    },
+    "modules/erp/src/server/db.ts": {
+      "lines": 2038,
+      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
+    },
+    "examples/showcase/src/app/tasks/page.tsx": {
+      "lines": 2029,
+      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
+    },
+    "packages/clawjs-integrations/src/openapi-runtime.test.ts": {
+      "lines": 1850,
+      "reason": "Existing broad test coverage; split by scenario before expanding."
+    },
+    "scripts/verify-component-catalog.mjs": {
+      "lines": 1777,
+      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+    },
+    "examples/showcase/src/components/onboarding.tsx": {
+      "lines": 1768,
+      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
+    },
+    "packages/clawjs-integrations/src/runtime-coverage.test.ts": {
+      "lines": 1767,
+      "reason": "Existing broad test coverage; split by scenario before expanding."
+    },
+    "packages/clawjs-integrations/src/stripe-operation-executor.test.ts": {
+      "lines": 1738,
+      "reason": "Existing broad test coverage; split by scenario before expanding."
+    },
+    "notify/src/server/db.ts": {
+      "lines": 1707,
+      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
+    },
+    "relay/src/connector/runtime.ts": {
+      "lines": 1613,
+      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
+    },
+    "packages/clawjs-integrations/src/runtime-registry.ts": {
+      "lines": 1606,
+      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
+    },
+    "apps/host/Tests/CommanderE2ETests/CommanderE2ETests.swift": {
+      "lines": 1583,
+      "reason": "Existing broad test coverage; split by scenario before expanding."
+    },
+    "drive/src/server/db.ts": {
+      "lines": 1566,
+      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
+    },
+    "database/public/app.js": {
+      "lines": 1551,
+      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+    },
+    "packages/clawjs/src/slides.ts": {
+      "lines": 1486,
+      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+    },
+    "examples/showcase/src/app/api/tasks/route.ts": {
+      "lines": 1477,
+      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
+    },
+    "examples/showcase/src/app/calendar/page.tsx": {
+      "lines": 1428,
+      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
+    },
+    "content/src/server/db.ts": {
+      "lines": 1418,
+      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
+    },
+    "tests/e2e/telegram-codex-bridge.spec.ts": {
+      "lines": 1325,
+      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+    },
+    "examples/showcase/src/app/api/chat/route.ts": {
+      "lines": 1311,
+      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
+    },
+    "scripts/extract-component-catalog.mjs": {
+      "lines": 1233,
+      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+    }
+  }
+}

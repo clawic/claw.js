@@ -56,7 +56,7 @@
     "test": "node ./scripts/test-lane.mjs fast",
     "test:types": "tsc -p tsconfig.type-tests.json --noEmit",
     "test:ts": "tsc -p tsconfig.json --noEmit",
-    "test:docs": "node ./scripts/docs-surface-check.mjs && node ./scripts/docs-alignment-check.mjs && node ./scripts/naming-surface-guard.mjs",
+    "test:docs": "node ./scripts/docs-surface-check.mjs && node ./scripts/docs-alignment-check.mjs && node ./scripts/naming-surface-guard.mjs && node ./scripts/source-size-check.mjs",
     "test:pack": "node ./scripts/pack-smoke.mjs",
     "privacy:check": "node ./scripts/privacy-check.mjs",
     "privacy:test": "vitest run --config vitest.config.ts scripts/privacy-check.test.mjs",
