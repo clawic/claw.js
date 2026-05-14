@@ -30,11 +30,10 @@ import {
   secretsRecover,
   secretsSetup,
   secretsUnlock,
-  unwrapItemKey,
   type SecretsMetaSnapshot,
 } from "./crypto.ts";
 import { ARGON2_DEFAULT_PARAMS, calibrateArgon2 } from "./calibration.ts";
-import { asUint8Array, openDatabase, type SqliteDb } from "./db.ts";
+import { openDatabase, type SqliteDb } from "./db.ts";
 import {
   PluginRegistryStore,
   PrincipalStore,
@@ -50,8 +49,6 @@ import { SecretsSession } from "./session.ts";
 import { bootPluginRegistry } from "../plugins/loader.ts";
 import { redactString } from "../plugins/redaction.ts";
 import type { PluginRegistry } from "../plugins/registry.ts";
-import type { ExecutorContext } from "../plugins/types.ts";
-import { LockableSecret } from "./lockable-secret.ts";
 import { decryptBackup, encryptBackup, restoreLogicalBackup, CLAW_SECRETS_BACKUP_FORMAT } from "./backup.ts";
 
 const DEFAULT_TENANT_ID = "clawix-local";
@@ -178,14 +175,6 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     if (effect === "deny") return false;
     if (effect === "allow") return true;
     return subject.defaultAllow;
-  }
-
-  function firstSecretValue(fields: Record<string, string>, preferred?: string): string {
-    if (preferred && fields[preferred] !== undefined) return fields[preferred];
-    for (const key of ["token", "api_key", "password", "client_secret", "access_token"]) {
-      if (fields[key] !== undefined) return fields[key];
-    }
-    return Object.values(fields)[0] ?? "";
   }
 
   function isLocalNetworkHost(hostname: string): boolean {
@@ -592,7 +581,6 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
 
   app.post("/v1/tenants/:tenantId/secrets/:name/actions/:actionId", async (req, reply) => {
     const actor = await requirePrincipalOrUser(req, reply);
-    const keys = session.requireKeys();
     const { tenantId, name, actionId } = req.params as { tenantId: string; name: string; actionId: string };
     const row = resolver.secrets.getByInternalName(tenantId, name);
     if (!row) return reply.code(404).send({ error: "Not found" });
@@ -601,18 +589,11 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     if (!executor.capabilities.every((capability) => isCapabilityAllowed(actor, tenantId, name, capability))) {
       return reply.code(403).send({ error: "Action denied" });
     }
-    const body = (req.body ?? {}) as { args?: Record<string, unknown> };
-    const itemKey = unwrapItemKey(asUint8Array(row.wrapped_item_key), row.id, keys.masterKey);
-    const resolvedFields = resolver.revealAllFields({ secret: row, masterKey: keys.masterKey });
-    try {
-      const validation = executor.validate?.({ secret: row, resolvedFields, itemKey, args: body.args ?? {} } as ExecutorContext);
-      if (validation && validation.ok === false) return reply.code(422).send({ error: validation.reason });
-      const output = await executor.execute({ secret: row, resolvedFields, itemKey, args: body.args ?? {} } as ExecutorContext);
-      const redacted = executor.redact ? executor.redact(output, resolvedFields) : output;
-      return { action: { id: executor.id, label: executor.label, capability: executor.capabilities[0] ?? "broker.http" }, result: redacted };
-    } finally {
-      itemKey.zero();
-    }
+    return reply.code(410).send({
+      error: "Generic action execution is disabled for secrets",
+      action: { id: executor.id, label: executor.label, capability: executor.capabilities[0] ?? "broker.http" },
+      replacement: "Use a broker endpoint with explicit secret field placeholders and complete governance context.",
+    });
   });
 
   app.post("/v1/tenants/:tenantId/secrets", async (req, reply) => {
@@ -696,14 +677,15 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
   // ---------- Reveal field / notes ----------
 
   app.post("/v1/tenants/:tenantId/secrets/:name/reveal-field", async (req, reply) => {
-    await requirePrincipalOrUser(req, reply);
+    const actor = await requirePrincipalOrUser(req, reply);
+    if (actor.kind !== "user") return reply.code(403).send({ error: "Human re-authenticated UI session required" });
     const keys = session.requireKeys();
     const { tenantId, name } = req.params as { tenantId: string; name: string };
     const row = resolver.secrets.getByInternalName(tenantId, name);
     if (!row) return reply.code(404).send({ error: "Not found" });
     const body = (req.body ?? {}) as { field?: string; purpose?: string };
     if (!body.field) return reply.code(400).send({ error: "field required" });
-    const decision = evaluateGovernance(row, {});
+    const decision = evaluateGovernance(row, { approvalSatisfied: true, vpnSatisfied: true });
     if (!decision.allowed) return reply.code(403).send({ error: "Blocked by governance", reasons: decision.reasons });
     const value = resolver.revealField({ secret: row, fieldName: body.field, masterKey: keys.masterKey });
     resolver.secrets.bumpUsage(row.id);
@@ -711,7 +693,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
       tenantId,
       meta: metaStore.load(tenantId)!,
       auditMacKey: keys.auditMacKey,
-      event: { kind: body.purpose === "uiCopy" ? "uiCopy" : "uiReveal", source: "ui", secretId: row.id, payload: { field: body.field } },
+      event: { kind: body.purpose === "uiCopy" ? "uiCopy" : "uiReveal", source: "ui", secretId: row.id, payload: {} },
     });
     return { value };
   });
@@ -720,68 +702,16 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
 
   app.post("/v1/tenants/:tenantId/secrets/:name/execute/:executorId", async (req, reply) => {
     await requirePrincipalOrUser(req, reply);
-    const keys = session.requireKeys();
     const { tenantId, name, executorId } = req.params as { tenantId: string; name: string; executorId: string };
     const row = resolver.secrets.getByInternalName(tenantId, name);
     if (!row) return reply.code(404).send({ error: "Not found" });
     const executor = registry.getExecutor(executorId);
     if (!executor) return reply.code(404).send({ error: `Executor not registered: ${executorId}` });
-
-    const body = (req.body ?? {}) as { args?: Record<string, unknown>; ctx?: Record<string, unknown> };
-    const args = body.args ?? {};
-
-    // Resolve plaintext for governance + executor.
-    const itemKey = unwrapItemKey(asUint8Array(row.wrapped_item_key), row.id, keys.masterKey);
-    let resolvedFields: Record<string, string>;
-    try {
-      resolvedFields = resolver.revealAllFields({ secret: row, masterKey: keys.masterKey });
-    } catch (err) {
-      itemKey.zero();
-      return reply.code(500).send({ error: (err as Error).message });
-    }
-
-    // Governance enforcement.
-    const decision = evaluateGovernance(row, body.ctx ?? {});
-    if (!decision.allowed) {
-      itemKey.zero();
-      return reply.code(403).send({ error: "Blocked by governance", reasons: decision.reasons });
-    }
-
-    // Validate executor input.
-    const validation = executor.validate?.({ secret: row, resolvedFields, itemKey, args } as ExecutorContext);
-    if (validation && validation.ok === false) {
-      itemKey.zero();
-      return reply.code(422).send({ error: validation.reason });
-    }
-
-    let output;
-    try {
-      output = await executor.execute({ secret: row, resolvedFields, itemKey, args } as ExecutorContext);
-    } catch (err) {
-      itemKey.zero();
-      return reply.code(500).send({ error: (err as Error).message });
-    }
-    itemKey.zero();
-
-    // Universal redaction guard.
-    const redacted = executor.redact
-      ? executor.redact(output, resolvedFields)
-      : { ...output, body: output.body ? redactString(output.body, Object.values(resolvedFields)) : output.body };
-
-    resolver.secrets.bumpUsage(row.id);
-    audit.append({
-      tenantId,
-      meta: metaStore.load(tenantId)!,
-      auditMacKey: keys.auditMacKey,
-      event: {
-        kind: "proxyExec",
-        source: "proxy",
-        secretId: row.id,
-        success: redacted.ok,
-        payload: { executorId, status: redacted.status },
-      },
+    return reply.code(410).send({
+      error: "Generic executor plaintext resolution is disabled for secrets",
+      executorId: executor.id,
+      replacement: "Use /v1/tenants/:tenantId/broker/http or a capability broker that never returns plaintext.",
     });
-    return redacted;
   });
 
   app.post("/v1/tenants/:tenantId/broker/http", async (req, reply) => {
@@ -794,6 +724,9 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
       headers?: Record<string, string>;
       body?: string;
       timeoutMs?: number;
+      agent?: string;
+      approvalSatisfied?: boolean;
+      vpnSatisfied?: boolean;
     };
     if (!body.method || !body.url) return reply.code(400).send({ error: "method, url required" });
 
@@ -813,6 +746,9 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
       if (resolvedByToken.has(token)) continue;
       const secretName = match[1];
       const fieldName = match[2];
+      if (!fieldName) {
+        return reply.code(400).send({ error: "Secret placeholders must name an explicit field", secretName });
+      }
       if (!isCapabilityAllowed(actor, tenantId, secretName, "broker.http")) {
         return reply.code(403).send({ error: "broker.http denied", secretName });
       }
@@ -830,10 +766,13 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
         placements,
         insecureTransport: target.protocol === "http:",
         localNetwork: isLocalNetworkHost(target.hostname),
+        agent: body.agent ?? (actor.kind === "principal" ? actor.principal.id : undefined),
+        requireCompleteContext: true,
+        approvalSatisfied: body.approvalSatisfied === true,
+        vpnSatisfied: body.vpnSatisfied === true,
       });
       if (!decision.allowed) return reply.code(400).send({ error: "Blocked by governance", secretName, reasons: decision.reasons });
-      const fields = resolver.revealAllFields({ secret: row, masterKey: keys.masterKey });
-      const value = firstSecretValue(fields, fieldName);
+      const { value } = resolver.revealField({ secret: row, masterKey: keys.masterKey, fieldName });
       resolvedByToken.set(token, value);
       redactionValues.push(value);
     }
@@ -877,7 +816,6 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
 
   app.post("/v1/tenants/:tenantId/secrets/:name/sync", async (req, reply) => {
     await requirePrincipalOrUser(req, reply);
-    const keys = session.requireKeys();
     const { tenantId, name } = req.params as { tenantId: string; name: string };
     const row = resolver.secrets.getByInternalName(tenantId, name);
     if (!row) return reply.code(404).send({ error: "Not found" });
@@ -886,13 +824,10 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     if (!type?.brandSyncId) return reply.code(400).send({ error: "Type has no brand sync" });
     const sync = registry.getBrandSync(type.brandSyncId);
     if (!sync) return reply.code(404).send({ error: "Brand sync not registered" });
-
-    const resolvedFields = resolver.revealAllFields({ secret: row, masterKey: keys.masterKey });
-    const resources = await sync.sync({ secret: row, resolvedFields });
-    for (const r of resources) {
-      resolver.synced.upsert({ secretId: row.id, resourceType: r.resourceType, resourceId: r.resourceId, metadata: r.metadata });
-    }
-    return { syncedCount: resources.length, resources };
+    return reply.code(410).send({
+      error: "Brand sync plaintext resolution is disabled for secrets",
+      replacement: "Use a capability broker that syncs without exposing resolved fields to plugins.",
+    });
   });
 
   // ---------- Agent grants ----------
