@@ -41,6 +41,20 @@ test("runCli returns open list JSON in the common envelope", async () => {
   assert.equal(payload.data.dashboards.some((entry) => entry.surface === "database"), true);
 });
 
+test("runCli returns registry help JSON when a command needs a subcommand", async () => {
+  for (const command of ["database", "sessions", "search", "templates"]) {
+    const result = await runCliCapture([command, "--json"], process.cwd());
+    assert.equal(result.code, CLI_EXIT_OK, command);
+    const payload = JSON.parse(result.stdout) as { ok: boolean; data: { command: string; help: string }; meta: { canonicalCommand: string; invokedCommand: string } };
+    const canonical = command === "templates" ? "templates" : command;
+    assert.equal(payload.ok, true);
+    assert.equal(payload.data.command, canonical);
+    assert.equal(payload.data.help.includes(`claw ${canonical}`), true);
+    assert.equal(payload.meta.canonicalCommand, canonical);
+    assert.equal(payload.meta.invokedCommand, command === "templates" ? "template" : command);
+  }
+});
+
 test("runCli returns agents codex JSON in the common envelope", async () => {
   const result = await runCliCapture(["agents", "codex", "status", "--runtime", "demo", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK);

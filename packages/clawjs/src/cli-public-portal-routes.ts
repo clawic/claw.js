@@ -25,6 +25,30 @@ const MEDIA_PORTAL_CHILDREN = new Set([
   "styles",
   "references",
 ]);
+const JSON_HELP_REQUIRED_COMMANDS = new Set([
+  "audio",
+  "commitments",
+  "content",
+  "database",
+  "handoffs",
+  "knowledge",
+  "notes",
+  "notify",
+  "profile",
+  "references",
+  "runtime",
+  "search",
+  "sessions",
+  "skills",
+  "slides",
+  "styles",
+  "templates",
+]);
+const JSON_HELP_CANONICAL = new Map([
+  ["ref", "references"],
+  ["style", "styles"],
+  ["template", "templates"],
+]);
 
 export async function runPublicPortalShortcut(input: {
   group: string | undefined;
@@ -69,4 +93,19 @@ export function writePublicPortalHelpOnly(input: {
   }
   context.stderr.write(`${commandHelp ?? usage}\n`);
   return CLI_EXIT_USAGE;
+}
+
+export function writeMissingSubcommandJsonHelp(input: {
+  group: string | undefined;
+  command: string | undefined;
+  wantsJson: boolean;
+  context: CliContext;
+  binName: string;
+  usage: string;
+}): number | null {
+  const { group, command, wantsJson, context, binName, usage } = input;
+  const canonical = group ? JSON_HELP_CANONICAL.get(group) ?? group : undefined;
+  if (!wantsJson || !group || command || !canonical || !JSON_HELP_REQUIRED_COMMANDS.has(canonical)) return null;
+  writeCommandJsonOk(context.stdout, canonical, { command: canonical, help: buildCommandHelp(binName, canonical) ?? usage }, { invokedCommand: group, subcommand: null });
+  return CLI_EXIT_OK;
 }

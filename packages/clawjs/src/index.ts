@@ -78,7 +78,7 @@ import { runCodeCli } from "./cli-code-command.ts";
 import { runPlanCli } from "./cli-plan-command.ts";
 import { runKnowledgeTailCli } from "./cli-knowledge-tail-command.ts";
 import { runCliDiscoverySearch } from "./cli-search-command.ts";
-import { runPublicPortalShortcut, writePublicPortalHelpOnly } from "./cli-public-portal-routes.ts";
+import { runPublicPortalShortcut, writeMissingSubcommandJsonHelp, writePublicPortalHelpOnly } from "./cli-public-portal-routes.ts";
 import { handleUnknownCliCommand } from "./cli-unknown-command.ts";
 import { channelListenerPaths, isProcessRunning, readListenerPid, readTail, waitForListenerPid } from "./cli-channel-listener.ts";
 import {
@@ -530,6 +530,9 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     context.stdout.write(`${commandHelp ?? usage}\n`);
     return CLI_EXIT_OK;
   }
+
+  const missingSubcommandJsonExit = writeMissingSubcommandJsonHelp({ group, command, wantsJson, context, binName, usage });
+  if (missingSubcommandJsonExit !== null) return missingSubcommandJsonExit;
 
   if (group === "__open-server") {
     return await runOpenServerCommand({ positionals, flags, context });

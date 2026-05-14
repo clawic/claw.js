@@ -95062,7 +95062,7 @@
     {
       "path": "packages/clawjs/src/cli-discovery.test.ts",
       "language": "typescript",
-      "lines": 335,
+      "lines": 349,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -96511,7 +96511,7 @@
     {
       "path": "packages/clawjs/src/cli-public-portal-routes.ts",
       "language": "typescript",
-      "lines": 73,
+      "lines": 112,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -96522,12 +96522,18 @@
       ],
       "exports": [
         "runPublicPortalShortcut",
+        "writeMissingSubcommandJsonHelp",
         "writePublicPortalHelpOnly"
       ],
       "declarations": [
         {
           "kind": "function",
           "name": "runPublicPortalShortcut",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "writeMissingSubcommandJsonHelp",
           "exported": true
         },
         {
@@ -98133,7 +98139,7 @@
     {
       "path": "packages/clawjs/src/index.ts",
       "language": "typescript",
-      "lines": 1994,
+      "lines": 1997,
       "test": false,
       "entrypoint": true,
       "imports": [
