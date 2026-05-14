@@ -1152,7 +1152,7 @@ describe("discord operation runtime", () => {
       },
       body: {},
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
@@ -1172,7 +1172,7 @@ describe("discord operation runtime", () => {
         messages: ["456", "789"],
       },
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
@@ -1251,7 +1251,38 @@ describe("discord operation runtime", () => {
       },
       body: {},
       responseSchema: {
-        type: "object",
+        type: "null",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.delete-own-reaction"), {
+      channelId: "123",
+      messageId: "456",
+      emoji: "wave:789",
+    }), {
+      method: "DELETE",
+      endpoint: "channels/123/messages/456/reactions/wave%3A789/@me",
+      auth,
+      headers,
+      body: {},
+      responseSchema: {
+        type: "null",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.delete-user-reaction"), {
+      channelId: "123",
+      messageId: "456",
+      userId: "789",
+      emoji: "wave:789",
+    }), {
+      method: "DELETE",
+      endpoint: "channels/123/messages/456/reactions/wave%3A789/789",
+      auth,
+      headers,
+      body: {},
+      responseSchema: {
+        type: "null",
       },
     });
 
@@ -1265,7 +1296,7 @@ describe("discord operation runtime", () => {
       headers,
       body: {},
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
@@ -1280,7 +1311,7 @@ describe("discord operation runtime", () => {
       headers,
       body: {},
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 

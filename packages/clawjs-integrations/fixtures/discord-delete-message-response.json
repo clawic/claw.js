@@ -1,4 +1,7 @@
 {
-  "id": "delete-message-sample",
-  "channel_id": "sample"
+  "runtimeResponse": {
+    "status": 204,
+    "body": "",
+    "bodyEncoding": "text"
+  }
 }
