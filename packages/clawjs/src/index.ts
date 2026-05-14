@@ -60,7 +60,7 @@ import { HostClientError, sendHostCommand } from "./host-client.ts";
 import { CLI_USAGE, DEFAULT_CLI_BIN, PUBLIC_PORTAL_HELP_ONLY, REMOVED_RUNTIME_COMMANDS, REMOVED_V1_CRUD_COMMANDS, buildCliUsage, buildCommandHelp, normalizePublicCliArgv, removedPublicCommandMessage } from "./cli-surface.ts";
 import { inferBrokerDeclaredFields } from "./broker-http.ts";
 import { runInspectCli } from "./inspect-cli.ts";
-import { CLI_TEMPLATE_ROOT, CORE_PRODUCTIVITY_DB_COLLECTIONS, LOCAL_FIRST_PRODUCTIVITY_GROUPS, RUNTIME_ADAPTER_IDS } from "./cli-constants.ts";
+import { CLI_TEMPLATE_ROOT, CORE_PRODUCTIVITY_DB_COLLECTIONS, LOCAL_FIRST_PRODUCTIVITY_GROUPS } from "./cli-constants.ts";
 import { COMMITMENT_KINDS, COMMITMENT_STATUSES, CONTEXT_PURPOSES, CONTEXT_STATUSES, JUDGMENT_IMPACTS, JUDGMENT_STATUSES, LEARNING_KINDS, LEARNING_PROMOTION_TARGETS, LEARNING_SENTIMENTS, LEARNING_STATUSES, LEARNING_TARGETS, OUTCOME_RESULTS, OUTCOME_STATUSES } from "./cli-knowledge-constants.ts";
 import {
   LEGACY_TELEGRAM_CODEX_PROCESSOR_ID,
@@ -73,9 +73,10 @@ import {
   type TelegramTopicIconPreset,
 } from "./cli-telegram-codex-constants.ts";
 import { parseImageOperation, parseImageProvenance, parseImageType } from "./cli-image-parsers.ts";
-import { OPEN_SURFACES, OPEN_SURFACE_BY_NAME, type OpenSurface, type OpenSurfaceState } from "./cli-open-surfaces.ts";
+import { OPEN_SURFACES, allOpenSurfaceHostnames, parseClawHostSurface, resolveOpenSurface, surfacePrimaryClawUrl, type OpenSurface, type OpenSurfaceState } from "./cli-open-surfaces.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { collectFlagValues, parseCsvFlag, parseJsonFlag } from "./cli-flag-parsers.ts";
+import { inferAudioExtension, inferMimeTypeFromPath, parseInferenceMessages, pathSafeBasename, readJsonFile, resolveRuntimeAdapterId, timelineRange, type GenerationCliMediaKind } from "./cli-runtime-utils.ts";
 import { channelListenerPaths, isProcessRunning, readListenerPid, readTail, waitForListenerPid } from "./cli-channel-listener.ts";
 import {
   buildFallbackSemanticPlan,
@@ -125,7 +126,6 @@ type CliMediaClaw = ClawInstance & {
 const CLAW_DOMAINS_BEGIN = "# BEGIN CLAWJS DOMAINS";
 const CLAW_DOMAINS_END = "# END CLAWJS DOMAINS";
 const CLAW_DOMAINS_LABEL = "com.claw.domains";
-const CLAW_DOMAINS_INDEX_HOST = "dashboard.claw";
 const CLAW_DOMAINS_SERVICE_DIR = "/Library/Application Support/ClawJS/domains";
 
 interface ClawDomainsStatus {
@@ -137,26 +137,6 @@ interface ClawDomainsStatus {
   hostsFile: string;
   plistFile: string;
   proxyUrl: string;
-}
-
-function allOpenSurfaceHostnames(): string[] {
-  return Array.from(new Set([
-    CLAW_DOMAINS_INDEX_HOST,
-    ...OPEN_SURFACES.flatMap((surface) => [
-    `${surface.id}.claw`,
-    ...(surface.aliases ?? []).map((alias) => `${alias}.claw`),
-    ]),
-  ])).sort();
-}
-
-function surfacePrimaryClawUrl(surface: OpenSurface): string {
-  return `http://${surface.id}.claw`;
-}
-
-function parseClawHostSurface(hostHeader: string | undefined): OpenSurface | null {
-  const host = (hostHeader ?? "").split(":")[0]?.trim().toLowerCase();
-  if (!host?.endsWith(".claw")) return null;
-  return resolveOpenSurface(host.slice(0, -".claw".length));
 }
 
 function isClawDomainConfigured(flags: Record<string, string>): boolean {
@@ -790,24 +770,6 @@ function openSurfaceRows(flags: Record<string, string> = {}): Array<Record<strin
     url: useClawDomains ? surfacePrimaryClawUrl(surface) : `http://127.0.0.1:${surface.port}`,
     aliases: (surface.aliases ?? []).join(","),
   }));
-}
-
-function resolveOpenSurface(raw: string | undefined): OpenSurface | null {
-  if (!raw) return null;
-  return OPEN_SURFACE_BY_NAME.get(raw.trim().toLowerCase()) ?? null;
-}
-
-function openBrowser(url: string): void {
-  if (process.env.CI || !url.trim()) return;
-  if (process.platform === "darwin") {
-    spawn("open", [url], { stdio: "ignore", detached: true }).unref();
-    return;
-  }
-  if (process.platform === "win32") {
-    spawn("cmd", ["/c", "start", "", url], { stdio: "ignore", detached: true }).unref();
-    return;
-  }
-  spawn("xdg-open", [url], { stdio: "ignore", detached: true }).unref();
 }
 
 function ensureSurfaceBuild(surface: OpenSurface): void {
@@ -2209,93 +2171,6 @@ function mergeCoreDbInput(
   return action === "create"
     ? { payload }
     : { recordId: positionals[3] || flags.id, payload };
-}
-
-function pathSafeBasename(value: string): string {
-  const normalized = value.replace(/\/+$/, "");
-  const parts = normalized.split("/");
-  return parts[parts.length - 1] || "clawjs-workspace";
-}
-
-function readJsonFile<TValue>(filePath: string, label: string): TValue {
-  try {
-    return JSON.parse(fs.readFileSync(filePath, "utf8")) as TValue;
-  } catch (error) {
-    throw new CliHandledError("invalid_json", `Invalid ${label}: ${error instanceof Error ? error.message : "parse error"}`, CLI_EXIT_USAGE);
-  }
-}
-
-function timelineRange(mode: "day" | "week", startValue?: string): { start: string; end: string } {
-  const start = startValue ? new Date(startValue) : new Date();
-  if (!Number.isFinite(start.getTime())) {
-    throw new CliHandledError("usage_error", "Invalid --start value for timeline.", CLI_EXIT_USAGE);
-  }
-  start.setUTCHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setUTCDate(end.getUTCDate() + (mode === "week" ? 7 : 1));
-  end.setUTCMilliseconds(end.getUTCMilliseconds() - 1);
-  return { start: start.toISOString(), end: end.toISOString() };
-}
-
-function resolveRuntimeAdapterId(flags: Record<string, string>): RuntimeAdapterId {
-  const runtime = flags.runtime?.trim() || "openclaw";
-  if (!RUNTIME_ADAPTER_IDS.has(runtime)) {
-    throw new CliHandledError("invalid_enum", `Invalid --runtime "${runtime}". Allowed values: ${Array.from(RUNTIME_ADAPTER_IDS).join(", ")}.`, CLI_EXIT_USAGE);
-  }
-  return runtime as RuntimeAdapterId;
-}
-
-type GenerationCliMediaKind = "image" | "audio" | "video";
-
-function inferMimeTypeFromPath(filePath: string): string {
-  switch (path.extname(filePath).toLowerCase()) {
-    case ".txt":
-      return "text/plain";
-    case ".md":
-      return "text/markdown";
-    case ".json":
-      return "application/json";
-    case ".csv":
-      return "text/csv";
-    case ".pdf":
-      return "application/pdf";
-    case ".html":
-    case ".htm":
-      return "text/html";
-    case ".png":
-      return "image/png";
-    case ".pptx":
-      return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
-    case ".docx":
-      return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-    default:
-      return "application/octet-stream";
-  }
-}
-
-function inferAudioExtension(mimeType: string): string {
-  switch (mimeType) {
-    case "audio/mpeg":
-      return ".mp3";
-    case "audio/wav":
-      return ".wav";
-    default:
-      return ".bin";
-  }
-}
-
-function parseInferenceMessages(
-  flags: Record<string, string>,
-): Array<{ role: "user" | "system" | "assistant" | "tool"; content: string }> | null {
-  const parsed = parseJsonFlag<Array<{ role: "user" | "system" | "assistant" | "tool"; content: string }>>(flags["messages-json"], "--messages-json");
-  if (parsed?.length) {
-    return parsed;
-  }
-  const prompt = flags.prompt ?? flags.message ?? flags.text;
-  if (!prompt?.trim()) {
-    return null;
-  }
-  return [{ role: "user", content: prompt.trim() }];
 }
 
 type TelegramCodexReplyPolicy = "all" | "mention_or_reply" | "commands";

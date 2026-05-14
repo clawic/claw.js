@@ -26,6 +26,8 @@ export interface OpenSurfaceState {
   startedAt: string;
 }
 
+const CLAW_DOMAINS_INDEX_HOST = "dashboard.claw";
+
 export const OPEN_SURFACES: OpenSurface[] = [
   { id: "memory", label: "Memory", port: clawCorePorts.memory, kind: "memory", dir: "memory", buildCheck: "dist/cli.js" },
   { id: "storage", label: "Storage", port: 24140, kind: "internal-storage", dir: "storage/ui", buildCheck: "dist/index.html" },
@@ -54,3 +56,28 @@ export const OPEN_SURFACE_BY_NAME = new Map<string, OpenSurface>(
     ...(surface.aliases ?? []).map((alias) => [alias, surface] as const),
   ]),
 );
+
+export function allOpenSurfaceHostnames(): string[] {
+  return Array.from(new Set([
+    CLAW_DOMAINS_INDEX_HOST,
+    ...OPEN_SURFACES.flatMap((surface) => [
+      `${surface.id}.claw`,
+      ...(surface.aliases ?? []).map((alias) => `${alias}.claw`),
+    ]),
+  ])).sort();
+}
+
+export function surfacePrimaryClawUrl(surface: OpenSurface): string {
+  return `http://${surface.id}.claw`;
+}
+
+export function parseClawHostSurface(hostHeader: string | undefined): OpenSurface | null {
+  const host = (hostHeader ?? "").split(":")[0]?.trim().toLowerCase();
+  if (!host?.endsWith(".claw")) return null;
+  return resolveOpenSurface(host.slice(0, -".claw".length));
+}
+
+export function resolveOpenSurface(raw: string | undefined): OpenSurface | null {
+  if (!raw) return null;
+  return OPEN_SURFACE_BY_NAME.get(raw.trim().toLowerCase()) ?? null;
+}

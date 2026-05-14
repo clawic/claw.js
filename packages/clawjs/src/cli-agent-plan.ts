@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { randomBytes } from "crypto";
-import { semanticPlanSchema } from "@clawjs/core";
+import { resolveClawPersistentSurfacePath, semanticPlanSchema } from "@clawjs/core";
 import type { SemanticPlan } from "@clawjs/core";
 
 export type AgentPlanStatus = "draft" | "pending" | "approved" | "rejected" | "blocked" | "running" | "succeeded" | "failed" | "cancelled";
@@ -52,7 +52,7 @@ export function nowIso(): string {
 }
 
 export function planStatePath(workspaceRoot: string): string {
-  return path.join(workspaceRoot, ".claw", "data", "agent-plans.json");
+  return resolveClawPersistentSurfacePath("claw.workspace.data", workspaceRoot, "agent-plans.json");
 }
 
 export function readAgentPlanState(workspaceRoot: string): AgentPlanState {

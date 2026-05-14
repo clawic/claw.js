@@ -4,7 +4,6 @@ import path from "path";
 import { randomBytes } from "crypto";
 import { pathToFileURL } from "url";
 import { resolveClawPersistentSurfacePath } from "@clawjs/core";
-
 export const SLIDE_LAYOUTS = [
   "title",
   "section",
