@@ -1,7 +1,5 @@
-const ERP_TENANT_STORAGE_KEY = ERP_TENANT_STORAGE_KEY;
-const ERP_ENTITY_STORAGE_KEY = ERP_ENTITY_STORAGE_KEY;
 import { useState, useCallback, useEffect } from "react";
-import { api } from "../api/client";
+import { api, ERP_ENTITY_STORAGE_KEY, ERP_TENANT_STORAGE_KEY } from "../api/client";
 
 export function useAuth() {
   const [loggedIn, setLoggedIn] = useState(() => !!api.getToken());

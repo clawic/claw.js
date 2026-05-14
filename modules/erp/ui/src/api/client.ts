@@ -1,7 +1,8 @@
-const ERP_TOKEN_STORAGE_KEY = ERP_TOKEN_STORAGE_KEY;
-const ERP_TENANT_STORAGE_KEY = ERP_TENANT_STORAGE_KEY;
-const ERP_ENTITY_STORAGE_KEY = ERP_ENTITY_STORAGE_KEY;
 import { clawApiPath } from "@clawjs/core";
+
+export const ERP_TOKEN_STORAGE_KEY = "clawjs.erp.token";
+export const ERP_TENANT_STORAGE_KEY = "clawjs.erp.tenant";
+export const ERP_ENTITY_STORAGE_KEY = "clawjs.erp.entity";
 export interface ErrorEnvelope {
   code: string;
   message: string;
