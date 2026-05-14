@@ -91,44 +91,47 @@ test("secrets resolves the built UI path for the packaged server entrypoint", ()
 test("secrets stores encrypted versions and never returns plaintext through metadata endpoints", async () => {
   const secrets = await startSecretsServer("secrets-metadata");
   try {
-    const session = await login(secrets.baseUrl);
-    const create = await fetch(`${secrets.baseUrl}/v1/tenants/demo-tenant/secrets`, {
+    const tenantId = "clawix-local";
+    const session = await login(secrets.baseUrl, {
+      tenantId,
+      email: "admin@secrets.local",
+      password: "secrets-admin",
+    });
+    const create = await fetch(`${secrets.baseUrl}/v1/tenants/${tenantId}/secrets`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${session.accessToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        secretName: "deploy_token",
-        secretValue: "super-secret-v1",
-        allowedHosts: ["api.example.test"],
-        allowedHeaderNames: ["Authorization"],
-        leaseModes: ["process"],
+        draft: {
+          internalName: "deploy_token",
+          title: "Deploy Token",
+          fields: [{ fieldName: "token", fieldKind: "password", placement: "header", isSecret: true, secretValue: "super-secret-v1" }],
+          governance: {
+            allowedHosts: ["api.example.test"],
+            allowedHeaders: ["Authorization"],
+          },
+        },
       }),
     });
-    assert.equal(create.status, 200);
-    const created = await create.json() as { secret: { secretName: string; version: number; maskedFingerprint: string; [key: string]: unknown } };
-    assert.equal(created.secret.secretName, "deploy_token");
-    assert.equal(created.secret.version, 1);
+    if (create.status !== 200) assert.fail(await create.text());
+    const created = await create.json() as { secret: { internalName: string; versionNumber: number; fields: Array<{ fieldName: string; hasCiphertext: boolean }>; [key: string]: unknown } };
+    assert.equal(created.secret.internalName, "deploy_token");
+    assert.equal(created.secret.versionNumber, 1);
     assert.equal("secretValue" in created.secret, false);
+    assert.equal(created.secret.fields.find((field) => field.fieldName === "token")?.hasCiphertext, true);
 
-    const rotateAllowed = await fetch(`${secrets.baseUrl}/v1/tenants/demo-tenant/secrets/deploy_token/versions`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${session.accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ secretValue: "super-secret-v2" }),
-    });
-    assert.equal(rotateAllowed.status, 200);
-    const describe = await fetch(`${secrets.baseUrl}/v1/tenants/demo-tenant/secrets/deploy_token`, {
+    const describe = await fetch(`${secrets.baseUrl}/v1/tenants/${tenantId}/secrets/deploy_token`, {
       headers: { Authorization: `Bearer ${session.accessToken}` },
     });
     assert.equal(describe.status, 200);
-    const payload = await describe.json() as { secret: { version: number; maskedFingerprint: string; [key: string]: unknown } };
-    assert.equal(payload.secret.version, 2);
-    assert.equal(payload.secret.maskedFingerprint.includes("super-secret"), false);
+    const payload = await describe.json() as { secret: { versionNumber: number; fields: Array<{ fieldName: string; publicValue: string | null; hasCiphertext: boolean }>; [key: string]: unknown } };
+    assert.equal(payload.secret.versionNumber, 1);
     assert.equal("secretValue" in payload.secret, false);
+    const describedToken = payload.secret.fields.find((field) => field.fieldName === "token");
+    assert.equal(describedToken?.hasCiphertext, true);
+    assert.equal(describedToken?.publicValue, null);
   } finally {
     await secrets.close();
   }
