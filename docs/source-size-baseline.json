@@ -44,12 +44,12 @@
       "reason": "Remaining Claw SDK integration tests after helper and Telegram scenario split; add new scenario files instead of expanding broadly."
     },
     "memory/src/service.ts": {
-      "lines": 2542,
-      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
+      "lines": 1885,
+      "reason": "Memory service orchestration after note validation extraction; split persistence, indexing, and active memory helpers before expanding."
     },
     "relay/tests/e2e/relay.e2e.test.ts": {
-      "lines": 1397,
-      "reason": "Remaining relay E2E coverage after fake connector extraction; split additional scenario groups before expanding."
+      "lines": 1399,
+      "reason": "Relay E2E scenarios after fake connector utility extraction; split new scenario groups into separate tests before expanding."
     },
     "packages/clawjs-core/src/schemas.ts": {
       "lines": 2379,
@@ -60,28 +60,24 @@
       "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
     },
     "packages/clawjs-node/src/code/index.ts": {
-      "lines": 2299,
-      "reason": "Existing public surface barrel or command surface; split by domain before expanding."
+      "lines": 1703,
+      "reason": "Code ledger and global index implementation after public type extraction; keep type contracts in code-types before expanding."
     },
     "relay/src/server/db.ts": {
-      "lines": 2298,
-      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
-    },
-    "packages/clawjs-database/src/store.ts": {
-      "lines": 2123,
-      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
+      "lines": 1982,
+      "reason": "Relay database persistence class after schema and helper extraction; keep schema/migrations/helpers outside the class before expanding."
     },
     "packages/clawjs-integrations/src/discord-operation-executor.ts": {
       "lines": 1870,
       "reason": "Discord request planner switch after value helper extraction; split operation families before expanding."
     },
     "examples/showcase/src/lib/e2e.ts": {
-      "lines": 2041,
-      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+      "lines": 1953,
+      "reason": "Showcase E2E fixture runtime after type extraction; keep fixture types and large seed groups separate before expanding."
     },
     "modules/erp/src/server/db.ts": {
-      "lines": 2038,
-      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
+      "lines": 1934,
+      "reason": "ERP database store after SQL prefix/helper extraction; keep database helpers outside the store before expanding."
     },
     "examples/showcase/src/app/tasks/page.tsx": {
       "lines": 2029,
