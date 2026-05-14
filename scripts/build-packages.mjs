@@ -47,7 +47,7 @@ for (const packageDir of fs.readdirSync(path.join(rootDir, "packages"))) {
 
 for (const workspace of workspaces) {
   const args = ["run", "build", "--workspace", workspace];
-  if (!hasBuildTsconfig(workspace)) {
+  if (usesTsup(workspace) && !hasBuildTsconfig(workspace)) {
     args.push("--", "--tsconfig", writePackageTsconfig(workspace));
   }
   const result = spawnSync("npm", args, {
@@ -63,6 +63,11 @@ for (const workspace of workspaces) {
 function hasBuildTsconfig(workspace) {
   const entry = workspacePackages.get(workspace);
   return typeof entry?.manifest?.scripts?.build === "string" && entry.manifest.scripts.build.includes("--tsconfig");
+}
+
+function usesTsup(workspace) {
+  const entry = workspacePackages.get(workspace);
+  return typeof entry?.manifest?.scripts?.build === "string" && /\btsup\b/.test(entry.manifest.scripts.build);
 }
 
 function writePackageTsconfig(workspace) {
