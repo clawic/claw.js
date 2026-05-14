@@ -6,6 +6,8 @@
       "workspace extension public",
       "CLI project/scaffolding",
       "CLI local/runtime ops",
+      "Service API contract",
+      "MCP model surface",
       "Relay control plane",
       "Relay data plane",
       "adapter-specific"
@@ -16,6 +18,23 @@
       "local-only",
       "remote-only",
       "internal"
+    ],
+    "surfaceParityColumns": [
+      "Human UI",
+      "SDK",
+      "CLI",
+      "Service API",
+      "MCP",
+      "Relay",
+      "Persistence"
+    ],
+    "surfaceParityStatuses": [
+      "required",
+      "optional",
+      "local-only",
+      "remote-safe",
+      "blocked",
+      "not applicable"
     ]
   },
   "sdk": {

@@ -141,6 +141,11 @@ const requiredSnippets = [
   {
     file: path.join(rootDir, "docs", "interface-matrix.md"),
     snippets: [
+      "Surface Parity Matrix",
+      "Human UI",
+      "Service API",
+      "MCP",
+      "Persistence",
       "SDK core",
       "Relay control plane",
       "stable",
@@ -268,6 +273,16 @@ for (const tier of surfaceContract.taxonomy.tiers) {
 for (const marker of surfaceContract.taxonomy.visibility) {
   if (!interfaceMatrixRaw.includes(marker)) {
     violations.push(`docs/interface-matrix.md is missing visibility marker ${marker}`);
+  }
+}
+for (const column of surfaceContract.taxonomy.surfaceParityColumns ?? []) {
+  if (!interfaceMatrixRaw.includes(column)) {
+    violations.push(`docs/interface-matrix.md is missing surface parity column ${column}`);
+  }
+}
+for (const status of surfaceContract.taxonomy.surfaceParityStatuses ?? []) {
+  if (!interfaceMatrixRaw.includes(status)) {
+    violations.push(`docs/interface-matrix.md is missing surface parity status ${status}`);
   }
 }
 

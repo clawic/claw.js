@@ -1,22 +1,28 @@
 ---
 title: Interface Matrix
-description: Compare the ClawJS SDK, CLI, and Relay API surfaces side by side.
+description: Compare ClawJS human, SDK, CLI, service API, MCP, Relay, and persistence surfaces side by side.
 ---
 
 # Interface Matrix
 
-This page is the canonical comparison between the three main ways to use ClawJS:
+This page is the canonical comparison between the main ways to use ClawJS:
 
+- human UI surfaces such as Clawix
 - the SDK in application code
 - the `claw` CLI in a local shell
+- service APIs for cross-process and cross-language clients
+- MCP for model-native tools, resources, and prompts
 - the Relay HTTP API for remote clients
+- filesystem and SQLite persistence for durable portability
 
 Use this page when you need to answer questions like:
 
-- "Does this exist in the SDK, the CLI, the Relay API, or all three?"
+- "Does this exist for humans and for programs?"
+- "Does this exist in the UI, SDK, CLI, service API, MCP, Relay, or persistence?"
 - "Do these surfaces use the same names?"
 - "What is only available locally today?"
-- "What does the Relay expose publicly, and what stays SDK-only?"
+- "What does the Relay expose remotely, and what stays local-only?"
+- "Is a missing surface required, optional, blocked, or not applicable?"
 
 ## Surfaces
 
@@ -32,7 +38,10 @@ Use this page when you need to answer questions like:
 | Runtime package | `@clawjs/runtime` | Shared runtime loops for distillation, nudges, and user-model refresh. |
 | SDK workspace extension | `@clawjs/workspace` | Adds tasks, notes, people, inbox, events, search, and workspace index. |
 | CLI | `claw ...` | Local shell surface shipped by `@clawjs/cli`. |
-| Relay API | `relay/` HTTP `/v1` routes | Public remote API routed through the relay connector. |
+| Service API | HTTP/event/process routes | Cross-process, cross-language, native, web, and device contract. |
+| MCP | MCP tools, resources, prompts | Model-native surface for LLM hosts. |
+| Relay API | `relay/` HTTP `/v1` routes | Remote access and control plane that carries selected remote-safe APIs through the relay connector. |
+| Persistence | Filesystem and SQLite | Durable portability contract, not the preferred action API. |
 
 ## Surface Contract
 
@@ -48,6 +57,8 @@ an after-the-fact documentation exercise.
 | `workspace extension public` | Namespaces added by `@clawjs/workspace`. |
 | `CLI project/scaffolding` | Project creation and resource generation flows. |
 | `CLI local/runtime ops` | Local operator workflows over the same SDK primitives. |
+| `Service API contract` | HTTP, event, or process contract for local clients. |
+| `MCP model surface` | Tools, resources, and prompts exposed to LLM hosts. |
 | `Relay control plane` | Tenant, connector, pairing, auth, and admin routes. |
 | `Relay data plane` | Remote workspace and project resource routes. |
 | `adapter-specific` | Runtime-specific surfaces such as `claw.runtime.openclaw.*`. |
@@ -61,6 +72,38 @@ an after-the-fact documentation exercise.
 | `local-only` | Public in SDK or CLI, but not mirrored to Relay. |
 | `remote-only` | Public only through Relay. |
 | `internal` | Not part of the public contract. |
+
+### Surface Parity Status
+
+| Status | Meaning |
+| --- | --- |
+| `required` | Missing surface must be added before the capability is complete. |
+| `optional` | Useful but not required for v1 completeness. |
+| `local-only` | Valid locally and intentionally not exposed through Relay. |
+| `remote-safe` | Valid to expose through Relay or another remote service API. |
+| `blocked` | Blocked by security, physical dependency, provider limits, cost, or missing host support. |
+| `not applicable` | The surface does not make sense for this capability. |
+
+## Surface Parity Matrix
+
+New stable capabilities must be classified in this expanded shape. Older
+domain tables below remain the detailed inventory while they are migrated into
+the full parity format.
+
+| Capability family | Human UI | SDK | CLI | Service API | MCP | Relay | Persistence |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Runtime and workspace setup | Clawix setup/status surfaces | `claw.runtime.*`, `claw.workspace.*` | `claw runtime ...`, `claw workspace ...` | local host/daemon APIs when a client cannot link the SDK | `required` for model-host setup and inspection tools | `remote-safe` subset for status/install/setup | `.claw/manifest.json`, desired/observed state |
+| Sessions and chat | Clawix chat, history, composer, activity views | `claw.sessions.*` | `claw sessions ...` | sessions service routes | `required` for session resources and reply tools | `remote-safe` subset under `WS/sessions` | session store and transcript records |
+| Documents and media | Clawix attachment, preview, drive, and generated asset views | `claw.documents.*`, `claw.image.*`, `claw.audio.*`, `claw.video.*` | `claw documents ...`, `claw image ...`, media commands | document/media service routes | `required` for resource reads and safe creation tools | `remote-safe` subset for uploads, downloads, and reads | blob store, metadata tables, share records |
+| Skills and local library | Clawix skill/library selection and assignment UI | `claw.skills.*`, `claw.library.*` | `claw skills ...`, `claw library ...` | `optional` local service contract | MCP prompts/resources for model-host discovery | `local-only` unless explicitly synced | skill files, library records, assignments |
+| Integrations and channels | Clawix connection status, approval, and QA state | `claw.channels.*`, provider namespaces | provider CLI groups where implemented | integration service APIs | MCP tools/resources for provider actions and state | `blocked` until provider action is remote-safe | connection records, fixtures, audit, QA matrices |
+| Approvals, grants, and secrets | Host-owned approval and reveal UI | `claw.secrets.*`, policy/grant APIs | approval/grant/secret commands where safe | signed-host service contracts | `blocked` unless tool consent and secret leasing are explicit | `blocked` for sensitive material by default | encrypted vault sidecar, host audit, opaque references |
+| Inspection, diagnostics, validation | Clawix diagnostics and QA result views | `claw.doctor.*`, registry APIs | `claw inspect`, `claw doctor`, `claw diagnostics` | health and diagnostics routes | MCP resources/tools for model-readable diagnostics | `remote-safe` health/status subset | registry manifests, logs, QA reports |
+
+MCP uses the Model Context Protocol roles defined by the upstream
+specification: tools are model-invoked actions, resources expose context/data,
+and prompts are user-invoked workflow templates. ClawJS MCP surfaces should be
+adapters over SDK and service contracts, not parallel business logic.
 
 ## Naming Differences
 
