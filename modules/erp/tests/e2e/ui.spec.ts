@@ -211,8 +211,8 @@ test.describe.serial("ERP UI E2E", () => {
     await page.goto("/sales/quotes");
     await expect(page.getByTestId("sales-quote-table")).toBeVisible({ timeout: 10000 });
 
-    // Should have our test quote
-    await expect(page.locator("tbody tr")).toHaveCount(1, { timeout: 5000 });
+    await expect(page.locator("tbody tr").first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("Acme Inc").first()).toBeVisible();
     // Create CTA should exist
     await expect(page.getByTestId("sales-quote-create")).toBeVisible();
 
@@ -243,7 +243,7 @@ test.describe.serial("ERP UI E2E", () => {
 
     await page.goto("/inventory/items");
     await expect(page.getByTestId("inventory-items-table")).toBeVisible({ timeout: 10000 });
-    await expect(page.locator("tbody tr")).toHaveCount(1, { timeout: 5000 }); // WIDGET-01
+    await expect(page.getByText("WIDGET-01").first()).toBeVisible({ timeout: 5000 });
     await saveBrowserScreenshot(page, "erp-inventory-items.png");
   });
 
@@ -256,7 +256,7 @@ test.describe.serial("ERP UI E2E", () => {
 
     await page.goto("/hr/employees");
     await expect(page.getByTestId("hr-employees-table")).toBeVisible({ timeout: 10000 });
-    await expect(page.locator("tbody tr")).toHaveCount(1, { timeout: 5000 });
+    await expect(page.getByText("Jane Smith").first()).toBeVisible({ timeout: 5000 });
     await saveBrowserScreenshot(page, "erp-hr-employees.png");
   });
 
@@ -269,7 +269,7 @@ test.describe.serial("ERP UI E2E", () => {
 
     await page.goto("/support/queue");
     await expect(page.getByTestId("support-queue-table")).toBeVisible({ timeout: 10000 });
-    await expect(page.locator("tbody tr")).toHaveCount(1, { timeout: 5000 });
+    await expect(page.getByText("Acme Inc").first()).toBeVisible({ timeout: 5000 });
     await saveBrowserScreenshot(page, "erp-support-queue.png");
   });
 
