@@ -15,5 +15,5 @@
   "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
   "files": ["dist", "README.md", "LICENSE"],
   "scripts": { "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean --target node20" },
-  "dependencies": { "better-sqlite3": "^12.9.0", "fastify": "^5.6.1" }
+  "dependencies": { "@clawjs/core": "0.1.2", "better-sqlite3": "^12.9.0", "fastify": "^5.6.1" }
 }

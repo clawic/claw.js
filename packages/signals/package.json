@@ -41,6 +41,7 @@
     "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean --target node20"
   },
   "dependencies": {
+    "@clawjs/core": "0.1.2",
     "@clawjs/signals-core": "*",
     "better-sqlite3": "^12.9.0",
     "fastify": "^5.6.1"

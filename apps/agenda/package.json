@@ -15,6 +15,7 @@
   "dependencies": {
     "@clawjs/claw": "0.1.2",
     "@clawjs/cli": "0.1.2",
+    "@clawjs/core": "0.1.2",
     "@clawjs/workspace": "0.1.2"
   },
   "devDependencies": {
