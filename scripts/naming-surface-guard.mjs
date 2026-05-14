@@ -19,6 +19,12 @@ function requireSnippet(relativePath, snippet) {
   }
 }
 
+function requireSnippetInAny(relativePaths, snippet, label) {
+  if (!relativePaths.some((relativePath) => read(relativePath).includes(snippet))) {
+    fail(`${label} is missing required frozen surface: ${snippet}`);
+  }
+}
+
 function forbidSnippet(relativePath, snippet) {
   const text = read(relativePath);
   if (text.includes(snippet)) {
@@ -47,6 +53,7 @@ const canonicalSources = [
   "packages/clawjs-core/src/surface-registry.ts",
   "packages/clawjs-core/src/index.test.ts",
   "packages/clawjs/src/v1-data.ts",
+  "packages/clawjs/src/v1-data-core.ts",
   "packages/clawjs-workspace/src/sqlite-store.ts",
   "packages/clawjs-node/src/create-claw.ts",
   "packages/clawjs-node/src/context/store.ts",
@@ -197,12 +204,6 @@ for (const [relativePath, snippets] of Object.entries({
 	    "CLAW_MONITOR_PORT",
 	    "CLAW_MONITOR_DB_PATH",
 	  ],
-  "packages/clawjs/src/v1-data.ts": [
-    "CLAW_DATA_DIR",
-    "CLAW_HOME",
-    "CLAW_DB_PATH",
-    "core.sqlite",
-  ],
   "packages/clawjs-workspace/src/sqlite-store.ts": [
     "CLAW_DATA_DIR",
     "CLAW_HOME",
@@ -213,6 +214,18 @@ for (const [relativePath, snippets] of Object.entries({
   for (const snippet of snippets) {
     requireSnippet(relativePath, snippet);
   }
+}
+
+for (const snippet of [
+  "CLAW_DATA_DIR",
+  "CLAW_HOME",
+  "CLAW_DB_PATH",
+  "core.sqlite",
+]) {
+  requireSnippetInAny([
+    "packages/clawjs/src/v1-data.ts",
+    "packages/clawjs/src/v1-data-core.ts",
+  ], snippet, "packages/clawjs/src/v1-data.ts or packages/clawjs/src/v1-data-core.ts");
 }
 
 forbidSnippet("docs/adr/0001-naming-and-stability-surfaces.md", "\n- `signals`\n");
