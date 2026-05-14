@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import type {
   ContentBrand,
   ContentCampaign,
@@ -47,158 +48,158 @@ export class ContentApiClient {
   }
 
   async login(email: string, password: string) {
-    return await this.request<{ accessToken: string; admin: { id: string; email: string } }>("/v1/auth/admin/login", {
+    return await this.request<{ accessToken: string; admin: { id: string; email: string } }>(clawApiPath("auth/admin/login"), {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
   }
 
   async listBrands() {
-    return await this.request<{ brands: ContentBrand[] }>("/v1/brands");
+    return await this.request<{ brands: ContentBrand[] }>(clawApiPath("brands"));
   }
 
   async createBrand(input: Record<string, unknown>) {
-    return await this.request<{ brand: ContentBrand }>("/v1/brands", {
+    return await this.request<{ brand: ContentBrand }>(clawApiPath("brands"), {
       method: "POST",
       body: JSON.stringify(input),
     });
   }
 
   async listDestinations(query?: Record<string, string | undefined>) {
-    return await this.request<{ destinations: ContentDestination[] }>(appendQuery("/v1/destinations", query));
+    return await this.request<{ destinations: ContentDestination[] }>(appendQuery(clawApiPath("destinations"), query));
   }
 
   async createDestination(input: Record<string, unknown>) {
-    return await this.request<{ destination: ContentDestination }>("/v1/destinations", {
+    return await this.request<{ destination: ContentDestination }>(clawApiPath("destinations"), {
       method: "POST",
       body: JSON.stringify(input),
     });
   }
 
   async testDestination(destinationId: string) {
-    return await this.request<{ ok: boolean; destination: ContentDestination }>(`/v1/destinations/${encodeURIComponent(destinationId)}/test-connection`, {
+    return await this.request<{ ok: boolean; destination: ContentDestination }>(clawApiPath(`destinations/${encodeURIComponent(destinationId)}/test-connection`), {
       method: "POST",
     });
   }
 
   async listCampaigns(query?: Record<string, string | undefined>) {
-    return await this.request<{ campaigns: ContentCampaign[] }>(appendQuery("/v1/campaigns", query));
+    return await this.request<{ campaigns: ContentCampaign[] }>(appendQuery(clawApiPath("campaigns"), query));
   }
 
   async createCampaign(input: Record<string, unknown>) {
-    return await this.request<{ campaign: ContentCampaign }>("/v1/campaigns", {
+    return await this.request<{ campaign: ContentCampaign }>(clawApiPath("campaigns"), {
       method: "POST",
       body: JSON.stringify(input),
     });
   }
 
   async listEntries(query?: Record<string, string | undefined>) {
-    return await this.request<{ entries: ContentEntry[] }>(appendQuery("/v1/entries", query));
+    return await this.request<{ entries: ContentEntry[] }>(appendQuery(clawApiPath("entries"), query));
   }
 
   async createEntry(input: Record<string, unknown>) {
-    return await this.request<{ entry: ContentEntry }>("/v1/entries", {
+    return await this.request<{ entry: ContentEntry }>(clawApiPath("entries"), {
       method: "POST",
       body: JSON.stringify(input),
     });
   }
 
   async updateEntry(entryId: string, input: Record<string, unknown>) {
-    return await this.request<{ entry: ContentEntry }>(`/v1/entries/${encodeURIComponent(entryId)}`, {
+    return await this.request<{ entry: ContentEntry }>(clawApiPath(`entries/${encodeURIComponent(entryId)}`), {
       method: "PUT",
       body: JSON.stringify(input),
     });
   }
 
   async attachAsset(entryId: string, input: Record<string, unknown>) {
-    return await this.request<{ asset: Record<string, unknown> }>(`/v1/entries/${encodeURIComponent(entryId)}/assets`, {
+    return await this.request<{ asset: Record<string, unknown> }>(clawApiPath(`entries/${encodeURIComponent(entryId)}/assets`), {
       method: "POST",
       body: JSON.stringify(input),
     });
   }
 
   async generateVariants(entryId: string, input: Record<string, unknown>) {
-    return await this.request<{ variants: ContentVariant[] }>(`/v1/entries/${encodeURIComponent(entryId)}/variants:generate`, {
+    return await this.request<{ variants: ContentVariant[] }>(clawApiPath(`entries/${encodeURIComponent(entryId)}/variants:generate`), {
       method: "POST",
       body: JSON.stringify(input),
     });
   }
 
   async listVariants(query?: Record<string, string | undefined>) {
-    return await this.request<{ variants: ContentVariant[] }>(appendQuery("/v1/variants", query));
+    return await this.request<{ variants: ContentVariant[] }>(appendQuery(clawApiPath("variants"), query));
   }
 
   async createVariant(input: Record<string, unknown>) {
-    return await this.request<{ variant: ContentVariant }>("/v1/variants", {
+    return await this.request<{ variant: ContentVariant }>(clawApiPath("variants"), {
       method: "POST",
       body: JSON.stringify(input),
     });
   }
 
   async updateVariant(variantId: string, input: Record<string, unknown>) {
-    return await this.request<{ variant: ContentVariant }>(`/v1/variants/${encodeURIComponent(variantId)}`, {
+    return await this.request<{ variant: ContentVariant }>(clawApiPath(`variants/${encodeURIComponent(variantId)}`), {
       method: "PUT",
       body: JSON.stringify(input),
     });
   }
 
   async listApprovals(query?: Record<string, string | undefined>) {
-    return await this.request<{ approvals: ContentApprovalRequest[] }>(appendQuery("/v1/approvals", query));
+    return await this.request<{ approvals: ContentApprovalRequest[] }>(appendQuery(clawApiPath("approvals"), query));
   }
 
   async approve(approvalId: string, input: Record<string, unknown> = {}) {
-    return await this.request<{ approval: ContentApprovalRequest }>(`/v1/approvals/${encodeURIComponent(approvalId)}/approve`, {
+    return await this.request<{ approval: ContentApprovalRequest }>(clawApiPath(`approvals/${encodeURIComponent(approvalId)}/approve`), {
       method: "POST",
       body: JSON.stringify(input),
     });
   }
 
   async reject(approvalId: string, input: Record<string, unknown>) {
-    return await this.request<{ approval: ContentApprovalRequest }>(`/v1/approvals/${encodeURIComponent(approvalId)}/reject`, {
+    return await this.request<{ approval: ContentApprovalRequest }>(clawApiPath(`approvals/${encodeURIComponent(approvalId)}/reject`), {
       method: "POST",
       body: JSON.stringify(input),
     });
   }
 
   async listPlans(query?: Record<string, string | undefined>) {
-    return await this.request<{ plans: ContentPublishPlan[] }>(appendQuery("/v1/plans", query));
+    return await this.request<{ plans: ContentPublishPlan[] }>(appendQuery(clawApiPath("plans"), query));
   }
 
   async createPlan(input: Record<string, unknown>) {
-    return await this.request<{ plan: ContentPublishPlan; approval?: ContentApprovalRequest | null }>("/v1/plans", {
+    return await this.request<{ plan: ContentPublishPlan; approval?: ContentApprovalRequest | null }>(clawApiPath("plans"), {
       method: "POST",
       body: JSON.stringify(input),
     });
   }
 
   async runPlan(planId: string) {
-    return await this.request<{ plan: ContentPublishPlan; run: ContentPublicationRun }>(`/v1/plans/${encodeURIComponent(planId)}/run`, {
+    return await this.request<{ plan: ContentPublishPlan; run: ContentPublicationRun }>(clawApiPath(`plans/${encodeURIComponent(planId)}/run`), {
       method: "POST",
     });
   }
 
   async cancelPlan(planId: string) {
-    return await this.request<{ plan: ContentPublishPlan }>(`/v1/plans/${encodeURIComponent(planId)}/cancel`, {
+    return await this.request<{ plan: ContentPublishPlan }>(clawApiPath(`plans/${encodeURIComponent(planId)}/cancel`), {
       method: "POST",
     });
   }
 
   async listPublications(query?: Record<string, string | undefined>) {
-    return await this.request<{ runs: Array<ContentPublicationRun & { canRetry: boolean }> }>(appendQuery("/v1/publications", query));
+    return await this.request<{ runs: Array<ContentPublicationRun & { canRetry: boolean }> }>(appendQuery(clawApiPath("publications"), query));
   }
 
   async retryPublication(runId: string) {
-    return await this.request<{ plan: ContentPublishPlan; run: ContentPublicationRun }>(`/v1/publications/${encodeURIComponent(runId)}/retry`, {
+    return await this.request<{ plan: ContentPublishPlan; run: ContentPublicationRun }>(clawApiPath(`publications/${encodeURIComponent(runId)}/retry`), {
       method: "POST",
     });
   }
 
   async listTokens() {
-    return await this.request<{ tokens: ContentScopedTokenRecord[] }>("/v1/tokens");
+    return await this.request<{ tokens: ContentScopedTokenRecord[] }>(clawApiPath("tokens"));
   }
 
   async issueToken(input: { label: string; operations: ContentOperation[] }) {
-    return await this.request<{ token: string; record: ContentScopedTokenRecord }>("/v1/tokens", {
+    return await this.request<{ token: string; record: ContentScopedTokenRecord }>(clawApiPath("tokens"), {
       method: "POST",
       body: JSON.stringify(input),
     });

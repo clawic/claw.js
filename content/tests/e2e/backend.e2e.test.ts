@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 
@@ -43,19 +44,19 @@ test("content backend covers brands, destinations, approvals, scheduling, runs, 
   const server = await boot();
   const token = await login(server.baseUrl);
 
-  const brandResponse = await requestJson(server.baseUrl, token, "/v1/brands", {
+  const brandResponse = await requestJson(server.baseUrl, token, clawApiPath("brands"), {
     method: "POST",
     body: JSON.stringify({ name: "Acme", description: "Primary brand", voiceSummary: "Direct" }),
   });
   const brandId = (brandResponse.payload as { brand: { id: string } }).brand.id;
 
-  const campaignResponse = await requestJson(server.baseUrl, token, "/v1/campaigns", {
+  const campaignResponse = await requestJson(server.baseUrl, token, clawApiPath("campaigns"), {
     method: "POST",
     body: JSON.stringify({ brandId, name: "Spring Launch", status: "active" }),
   });
   const campaignId = (campaignResponse.payload as { campaign: { id: string } }).campaign.id;
 
-  const manualDestination = await requestJson(server.baseUrl, token, "/v1/destinations", {
+  const manualDestination = await requestJson(server.baseUrl, token, clawApiPath("destinations"), {
     method: "POST",
     body: JSON.stringify({
       brandId,
@@ -67,7 +68,7 @@ test("content backend covers brands, destinations, approvals, scheduling, runs, 
   });
   const manualDestinationId = (manualDestination.payload as { destination: { id: string } }).destination.id;
 
-  const autoDestination = await requestJson(server.baseUrl, token, "/v1/destinations", {
+  const autoDestination = await requestJson(server.baseUrl, token, clawApiPath("destinations"), {
     method: "POST",
     body: JSON.stringify({
       brandId,
@@ -79,7 +80,7 @@ test("content backend covers brands, destinations, approvals, scheduling, runs, 
   });
   const autoDestinationId = (autoDestination.payload as { destination: { id: string } }).destination.id;
 
-  const failingDestination = await requestJson(server.baseUrl, token, "/v1/destinations", {
+  const failingDestination = await requestJson(server.baseUrl, token, clawApiPath("destinations"), {
     method: "POST",
     body: JSON.stringify({
       brandId,
@@ -90,7 +91,7 @@ test("content backend covers brands, destinations, approvals, scheduling, runs, 
   });
   const failingDestinationId = (failingDestination.payload as { destination: { id: string } }).destination.id;
 
-  const entryResponse = await requestJson(server.baseUrl, token, "/v1/entries", {
+  const entryResponse = await requestJson(server.baseUrl, token, clawApiPath("entries"), {
     method: "POST",
     body: JSON.stringify({
       brandId,
@@ -105,7 +106,7 @@ test("content backend covers brands, destinations, approvals, scheduling, runs, 
   });
   const entryId = (entryResponse.payload as { entry: { id: string } }).entry.id;
 
-  await requestJson(server.baseUrl, token, `/v1/entries/${entryId}/assets`, {
+  await requestJson(server.baseUrl, token, clawApiPath(`entries/${entryId}/assets`), {
     method: "POST",
     body: JSON.stringify({
       driveItemId: "drive_hero_1",
@@ -115,13 +116,13 @@ test("content backend covers brands, destinations, approvals, scheduling, runs, 
     }),
   });
 
-  const generatedManual = await requestJson(server.baseUrl, token, `/v1/entries/${entryId}/variants:generate`, {
+  const generatedManual = await requestJson(server.baseUrl, token, clawApiPath(`entries/${entryId}/variants:generate`), {
     method: "POST",
     body: JSON.stringify({ destinationIds: [manualDestinationId] }),
   });
   const manualVariantId = (generatedManual.payload as { variants: Array<{ id: string }> }).variants[0]!.id;
 
-  const manualPlanResponse = await requestJson(server.baseUrl, token, "/v1/plans", {
+  const manualPlanResponse = await requestJson(server.baseUrl, token, clawApiPath("plans"), {
     method: "POST",
     body: JSON.stringify({
       variantId: manualVariantId,
@@ -136,76 +137,76 @@ test("content backend covers brands, destinations, approvals, scheduling, runs, 
   assert.equal(manualPlanPayload.approval?.status, "pending");
 
   const approvalId = manualPlanPayload.approval!.id;
-  const approved = await requestJson(server.baseUrl, token, `/v1/approvals/${approvalId}/approve`, {
+  const approved = await requestJson(server.baseUrl, token, clawApiPath(`approvals/${approvalId}/approve`), {
     method: "POST",
     body: JSON.stringify({ comment: "Looks good." }),
   });
   assert.equal((approved.payload as { approval: { status: string } }).approval.status, "approved");
 
-  const runManual = await requestJson(server.baseUrl, token, `/v1/plans/${manualPlanPayload.plan.id}/run`, {
+  const runManual = await requestJson(server.baseUrl, token, clawApiPath(`plans/${manualPlanPayload.plan.id}/run`), {
     method: "POST",
   });
   const manualRunPayload = runManual.payload as { run: { status: string; externalId: string } };
   assert.equal(manualRunPayload.run.status, "succeeded");
   assert.ok(manualRunPayload.run.externalId.startsWith("linkedin_post_"));
 
-  const rerunManual = await requestJson(server.baseUrl, token, `/v1/plans/${manualPlanPayload.plan.id}/run`, {
+  const rerunManual = await requestJson(server.baseUrl, token, clawApiPath(`plans/${manualPlanPayload.plan.id}/run`), {
     method: "POST",
   });
   assert.equal((rerunManual.payload as { run: { id: string } }).run.id, (runManual.payload as { run: { id: string } }).run.id);
 
-  const generatedAuto = await requestJson(server.baseUrl, token, `/v1/entries/${entryId}/variants:generate`, {
+  const generatedAuto = await requestJson(server.baseUrl, token, clawApiPath(`entries/${entryId}/variants:generate`), {
     method: "POST",
     body: JSON.stringify({ destinationIds: [autoDestinationId] }),
   });
   const autoVariantId = (generatedAuto.payload as { variants: Array<{ id: string }> }).variants[0]!.id;
-  const autoPlan = await requestJson(server.baseUrl, token, "/v1/plans", {
+  const autoPlan = await requestJson(server.baseUrl, token, clawApiPath("plans"), {
     method: "POST",
     body: JSON.stringify({ variantId: autoVariantId }),
   });
   assert.equal((autoPlan.payload as { approval: null }).approval, null);
-  const autoRun = await requestJson(server.baseUrl, token, `/v1/plans/${(autoPlan.payload as { plan: { id: string } }).plan.id}/run`, { method: "POST" });
+  const autoRun = await requestJson(server.baseUrl, token, clawApiPath(`plans/${(autoPlan.payload as { plan: { id: string } }).plan.id}/run`), { method: "POST" });
   assert.equal((autoRun.payload as { run: { status: string } }).run.status, "succeeded");
 
-  const generatedFailing = await requestJson(server.baseUrl, token, `/v1/entries/${entryId}/variants:generate`, {
+  const generatedFailing = await requestJson(server.baseUrl, token, clawApiPath(`entries/${entryId}/variants:generate`), {
     method: "POST",
     body: JSON.stringify({ destinationIds: [failingDestinationId] }),
   });
   const failingVariantId = (generatedFailing.payload as { variants: Array<{ id: string }> }).variants[0]!.id;
-  const failingPlan = await requestJson(server.baseUrl, token, "/v1/plans", {
+  const failingPlan = await requestJson(server.baseUrl, token, clawApiPath("plans"), {
     method: "POST",
     body: JSON.stringify({ variantId: failingVariantId }),
   });
   const failingPlanId = (failingPlan.payload as { plan: { id: string } }).plan.id;
-  const failingRun = await requestJson(server.baseUrl, token, `/v1/plans/${failingPlanId}/run`, { method: "POST" });
+  const failingRun = await requestJson(server.baseUrl, token, clawApiPath(`plans/${failingPlanId}/run`), { method: "POST" });
   assert.equal(failingRun.response.status, 500);
 
-  const publications = await requestJson(server.baseUrl, token, "/v1/publications");
+  const publications = await requestJson(server.baseUrl, token, clawApiPath("publications"));
   const failedRun = (publications.payload as { runs: Array<{ id: string; status: string }> }).runs.find((run) => run.status === "failed");
   assert.ok(failedRun);
 
-  await requestJson(server.baseUrl, token, `/v1/destinations/${failingDestinationId}`, {
+  await requestJson(server.baseUrl, token, clawApiPath(`destinations/${failingDestinationId}`), {
     method: "PUT",
     body: JSON.stringify({ secretRef: "{{bluesky_secret}}" }),
   });
-  const retried = await requestJson(server.baseUrl, token, `/v1/publications/${failedRun!.id}/retry`, { method: "POST" });
+  const retried = await requestJson(server.baseUrl, token, clawApiPath(`publications/${failedRun!.id}/retry`), { method: "POST" });
   assert.equal((retried.payload as { run: { status: string } }).run.status, "succeeded");
 
-  const dashboard = await requestJson(server.baseUrl, token, "/v1/app/dashboard");
+  const dashboard = await requestJson(server.baseUrl, token, clawApiPath("app/dashboard"));
   assert.ok(typeof (dashboard.payload as { metrics: { drafts: number } }).metrics.drafts === "number");
 
-  const calendar = await requestJson(server.baseUrl, token, "/v1/app/calendar");
+  const calendar = await requestJson(server.baseUrl, token, clawApiPath("app/calendar"));
   assert.ok(Array.isArray((calendar.payload as { items: unknown[] }).items));
 
-  const pipeline = await requestJson(server.baseUrl, token, "/v1/app/pipeline");
+  const pipeline = await requestJson(server.baseUrl, token, clawApiPath("app/pipeline"));
   assert.equal((pipeline.payload as { columns: unknown[] }).columns.length, 6);
 
-  const composer = await requestJson(server.baseUrl, token, `/v1/app/composer/${entryId}`);
+  const composer = await requestJson(server.baseUrl, token, clawApiPath(`app/composer/${entryId}`));
   assert.equal((composer.payload as { entry: { id: string } }).entry.id, entryId);
 
-  const formSchema = await requestJson(server.baseUrl, token, "/v1/app/forms/entry.create");
+  const formSchema = await requestJson(server.baseUrl, token, clawApiPath("app/forms/entry.create"));
   assert.equal((formSchema.payload as { id: string }).id, "entry.create");
 
-  const frontendContract = await requestJson(server.baseUrl, token, "/v1/app/frontend-contract");
+  const frontendContract = await requestJson(server.baseUrl, token, clawApiPath("app/frontend-contract"));
   assert.equal((frontendContract.payload as { version: string }).version, "1");
 });

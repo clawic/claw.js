@@ -1,3 +1,24 @@
+const STABLE_EVENT_TYPES = {
+  brandCreated: "brand.created",
+  brandUpdated: "brand.updated",
+  destinationCreated: "destination.created",
+  destinationUpdated: "destination.updated",
+  campaignCreated: "campaign.created",
+  campaignUpdated: "campaign.updated",
+  entryCreated: "entry.created",
+  entryUpdated: "entry.updated",
+  entryArchived: "entry.archived",
+  assetAttached: "asset.attached",
+  variantGenerated: "variant.generated",
+  variantCreated: "variant.created",
+  variantUpdated: "variant.updated",
+  approvalReviewed: "approval.reviewed",
+  approvalCreated: "approval.created",
+  planCreated: "plan.created",
+  planExecuted: "plan.executed",
+  planCancelled: "plan.cancelled",
+} as const;
+import { clawApiPath } from "@clawjs/core";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -67,9 +88,9 @@ function placeholderHtml(): string {
     "<div class='card' data-testid='content-placeholder-contracts'>",
     "<h2>Reserved frontend mount</h2>",
     "<ul>",
-    "<li><a href='/v1/app/frontend-contract'>Frontend contract</a></li>",
-    "<li><a href='/v1/app/screens'>Screen definitions</a></li>",
-    "<li><a href='/v1/app/forms/entry.create'>Entry form schema</a></li>",
+    `<li><a href='${clawApiPath("app/frontend-contract")}'>Frontend contract</a></li>`,
+    `<li><a href='${clawApiPath("app/screens")}'>Screen definitions</a></li>`,
+    `<li><a href='${clawApiPath("app/forms/entry.create")}'>Entry form schema</a></li>`,
     "<li><a href='/docs/frontend-checklist.md'>Frontend checklist</a></li>",
     "<li><a href='/docs/api-openapi.json'>OpenAPI</a></li>",
     "</ul>",
@@ -424,7 +445,7 @@ export function buildContentApp(options: BuildContentAppOptions = {}) {
   });
   app.register(async (wsApp) => {
     await wsApp.register(websocket);
-    wsApp.get("/v1/events/ws", { websocket: true }, async (socket) => {
+    wsApp.get(clawApiPath("events/ws"), { websocket: true }, async (socket) => {
       realtime.attachSocket(socket);
       socket.send(JSON.stringify({ type: "ready", at: new Date().toISOString() }));
     });
@@ -442,14 +463,14 @@ export function buildContentApp(options: BuildContentAppOptions = {}) {
     await reply.code(204).send();
   });
 
-  app.get("/v1/health", async () => ({
+  app.get(clawApiPath("health"), async () => ({
     ok: true,
     service: "content",
     host: config.host,
     port: config.port,
   }));
 
-  app.post("/v1/auth/admin/login", async (request, reply) => {
+  app.post(clawApiPath("auth/admin/login"), async (request, reply) => {
     const body = readBody(request);
     const admin = store.verifyAdmin(String(body.email ?? ""), String(body.password ?? ""));
     if (!admin) return await reply.code(401).send({ error: "Invalid email or password." });
@@ -457,70 +478,70 @@ export function buildContentApp(options: BuildContentAppOptions = {}) {
     return { accessToken, admin };
   });
 
-  app.get("/v1/brands", async (request, reply) => {
+  app.get(clawApiPath("brands"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "brands:list");
     if (!principal) return null;
     return { brands: store.listBrands() };
   });
 
-  app.post("/v1/brands", async (request, reply) => {
+  app.post(clawApiPath("brands"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "brands:create");
     if (!principal) return null;
     try {
       const brand = store.createBrand(readBody(request) as Record<string, never>);
-      emit({ type: "brand.created", payload: brand as unknown as Record<string, unknown>, at: new Date().toISOString() });
+      emit({ type: STABLE_EVENT_TYPES.brandCreated, payload: brand as unknown as Record<string, unknown>, at: new Date().toISOString() });
       return await reply.code(201).send({ brand });
     } catch (error) {
       routeError(reply, error);
     }
   });
 
-  app.put("/v1/brands/:brandId", async (request, reply) => {
+  app.put(clawApiPath("brands/:brandId"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "brands:update");
     if (!principal) return null;
     try {
       const params = request.params as { brandId: string };
       const brand = store.updateBrand(params.brandId, readBody(request) as Record<string, never>);
-      emit({ type: "brand.updated", payload: brand as unknown as Record<string, unknown>, at: new Date().toISOString() });
+      emit({ type: STABLE_EVENT_TYPES.brandUpdated, payload: brand as unknown as Record<string, unknown>, at: new Date().toISOString() });
       return { brand };
     } catch (error) {
       routeError(reply, error);
     }
   });
 
-  app.get("/v1/destinations", async (request, reply) => {
+  app.get(clawApiPath("destinations"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "destinations:list");
     if (!principal) return null;
     const query = request.query as { brandId?: string };
     return { destinations: store.listDestinations({ brandId: query.brandId }) };
   });
 
-  app.post("/v1/destinations", async (request, reply) => {
+  app.post(clawApiPath("destinations"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "destinations:create");
     if (!principal) return null;
     try {
       const destination = store.createDestination(readBody(request) as Record<string, never>);
-      emit({ type: "destination.created", payload: destination as unknown as Record<string, unknown>, at: new Date().toISOString() });
+      emit({ type: STABLE_EVENT_TYPES.destinationCreated, payload: destination as unknown as Record<string, unknown>, at: new Date().toISOString() });
       return await reply.code(201).send({ destination });
     } catch (error) {
       routeError(reply, error);
     }
   });
 
-  app.put("/v1/destinations/:destinationId", async (request, reply) => {
+  app.put(clawApiPath("destinations/:destinationId"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "destinations:update");
     if (!principal) return null;
     try {
       const params = request.params as { destinationId: string };
       const destination = store.updateDestination(params.destinationId, readBody(request) as Record<string, never>);
-      emit({ type: "destination.updated", payload: destination as unknown as Record<string, unknown>, at: new Date().toISOString() });
+      emit({ type: STABLE_EVENT_TYPES.destinationUpdated, payload: destination as unknown as Record<string, unknown>, at: new Date().toISOString() });
       return { destination };
     } catch (error) {
       routeError(reply, error);
     }
   });
 
-  app.post("/v1/destinations/:destinationId/test-connection", async (request, reply) => {
+  app.post(clawApiPath("destinations/:destinationId/test-connection"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "destinations:update");
     if (!principal) return null;
     try {
@@ -539,58 +560,58 @@ export function buildContentApp(options: BuildContentAppOptions = {}) {
     }
   });
 
-  app.get("/v1/campaigns", async (request, reply) => {
+  app.get(clawApiPath("campaigns"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "campaigns:list");
     if (!principal) return null;
     const query = request.query as { brandId?: string };
     return { campaigns: store.listCampaigns({ brandId: query.brandId }) };
   });
 
-  app.post("/v1/campaigns", async (request, reply) => {
+  app.post(clawApiPath("campaigns"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "campaigns:create");
     if (!principal) return null;
     try {
       const campaign = store.createCampaign(readBody(request) as Record<string, never>);
-      emit({ type: "campaign.created", payload: campaign as unknown as Record<string, unknown>, at: new Date().toISOString() });
+      emit({ type: STABLE_EVENT_TYPES.campaignCreated, payload: campaign as unknown as Record<string, unknown>, at: new Date().toISOString() });
       return await reply.code(201).send({ campaign });
     } catch (error) {
       routeError(reply, error);
     }
   });
 
-  app.put("/v1/campaigns/:campaignId", async (request, reply) => {
+  app.put(clawApiPath("campaigns/:campaignId"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "campaigns:update");
     if (!principal) return null;
     try {
       const params = request.params as { campaignId: string };
       const campaign = store.updateCampaign(params.campaignId, readBody(request) as Record<string, never>);
-      emit({ type: "campaign.updated", payload: campaign as unknown as Record<string, unknown>, at: new Date().toISOString() });
+      emit({ type: STABLE_EVENT_TYPES.campaignUpdated, payload: campaign as unknown as Record<string, unknown>, at: new Date().toISOString() });
       return { campaign };
     } catch (error) {
       routeError(reply, error);
     }
   });
 
-  app.get("/v1/entries", async (request, reply) => {
+  app.get(clawApiPath("entries"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "entries:list");
     if (!principal) return null;
     const query = request.query as { brandId?: string; campaignId?: string; status?: ContentPublicationRun["status"] };
     return { entries: store.listEntries(query as Record<string, never>) };
   });
 
-  app.post("/v1/entries", async (request, reply) => {
+  app.post(clawApiPath("entries"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "entries:create");
     if (!principal) return null;
     try {
       const entry = store.createEntry(readBody(request) as Record<string, never>);
-      emit({ type: "entry.created", payload: entry as unknown as Record<string, unknown>, at: new Date().toISOString() });
+      emit({ type: STABLE_EVENT_TYPES.entryCreated, payload: entry as unknown as Record<string, unknown>, at: new Date().toISOString() });
       return await reply.code(201).send({ entry });
     } catch (error) {
       routeError(reply, error);
     }
   });
 
-  app.get("/v1/entries/:entryId", async (request, reply) => {
+  app.get(clawApiPath("entries/:entryId"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "entries:read");
     if (!principal) return null;
     const params = request.params as { entryId: string };
@@ -604,40 +625,40 @@ export function buildContentApp(options: BuildContentAppOptions = {}) {
     };
   });
 
-  app.put("/v1/entries/:entryId", async (request, reply) => {
+  app.put(clawApiPath("entries/:entryId"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "entries:update");
     if (!principal) return null;
     try {
       const params = request.params as { entryId: string };
       const entry = store.updateEntry(params.entryId, readBody(request) as Record<string, never>);
-      emit({ type: "entry.updated", payload: entry as unknown as Record<string, unknown>, at: new Date().toISOString() });
+      emit({ type: STABLE_EVENT_TYPES.entryUpdated, payload: entry as unknown as Record<string, unknown>, at: new Date().toISOString() });
       return { entry };
     } catch (error) {
       routeError(reply, error);
     }
   });
 
-  app.post("/v1/entries/:entryId/archive", async (request, reply) => {
+  app.post(clawApiPath("entries/:entryId/archive"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "entries:archive");
     if (!principal) return null;
     try {
       const params = request.params as { entryId: string };
       const entry = store.archiveEntry(params.entryId);
-      emit({ type: "entry.archived", payload: entry as unknown as Record<string, unknown>, at: new Date().toISOString() });
+      emit({ type: STABLE_EVENT_TYPES.entryArchived, payload: entry as unknown as Record<string, unknown>, at: new Date().toISOString() });
       return { entry };
     } catch (error) {
       routeError(reply, error);
     }
   });
 
-  app.get("/v1/entries/:entryId/revisions", async (request, reply) => {
+  app.get(clawApiPath("entries/:entryId/revisions"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "entries:read");
     if (!principal) return null;
     const params = request.params as { entryId: string };
     return { revisions: store.listRevisions(params.entryId) };
   });
 
-  app.post("/v1/entries/:entryId/assets", async (request, reply) => {
+  app.post(clawApiPath("entries/:entryId/assets"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "entries:assets:write");
     if (!principal) return null;
     try {
@@ -649,14 +670,14 @@ export function buildContentApp(options: BuildContentAppOptions = {}) {
         name: String(readBody(request).name ?? "Asset"),
         altText: typeof readBody(request).altText === "string" ? String(readBody(request).altText) : null,
       });
-      emit({ type: "asset.attached", payload: asset as unknown as Record<string, unknown>, at: new Date().toISOString() });
+      emit({ type: STABLE_EVENT_TYPES.assetAttached, payload: asset as unknown as Record<string, unknown>, at: new Date().toISOString() });
       return await reply.code(201).send({ asset });
     } catch (error) {
       routeError(reply, error);
     }
   });
 
-  app.post("/v1/entries/:entryId/variants:generate", async (request, reply) => {
+  app.post(clawApiPath("entries/:entryId/variants:generate"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "variants:generate");
     if (!principal) return null;
     try {
@@ -679,53 +700,53 @@ export function buildContentApp(options: BuildContentAppOptions = {}) {
             ...generated,
           });
       });
-      emit({ type: "variant.generated", payload: { entryId: entry.id, count: variants.length }, at: new Date().toISOString() });
+      emit({ type: STABLE_EVENT_TYPES.variantGenerated, payload: { entryId: entry.id, count: variants.length }, at: new Date().toISOString() });
       return { variants };
     } catch (error) {
       routeError(reply, error);
     }
   });
 
-  app.get("/v1/variants", async (request, reply) => {
+  app.get(clawApiPath("variants"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "variants:list");
     if (!principal) return null;
     const query = request.query as { entryId?: string; destinationId?: string; status?: string };
     return { variants: store.listVariants(query as Record<string, never>) };
   });
 
-  app.post("/v1/variants", async (request, reply) => {
+  app.post(clawApiPath("variants"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "variants:create");
     if (!principal) return null;
     try {
       const variant = store.createVariant(readBody(request) as Record<string, never>);
-      emit({ type: "variant.created", payload: variant as unknown as Record<string, unknown>, at: new Date().toISOString() });
+      emit({ type: STABLE_EVENT_TYPES.variantCreated, payload: variant as unknown as Record<string, unknown>, at: new Date().toISOString() });
       return await reply.code(201).send({ variant });
     } catch (error) {
       routeError(reply, error);
     }
   });
 
-  app.put("/v1/variants/:variantId", async (request, reply) => {
+  app.put(clawApiPath("variants/:variantId"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "variants:update");
     if (!principal) return null;
     try {
       const params = request.params as { variantId: string };
       const variant = store.updateVariant(params.variantId, readBody(request) as Record<string, never>);
-      emit({ type: "variant.updated", payload: variant as unknown as Record<string, unknown>, at: new Date().toISOString() });
+      emit({ type: STABLE_EVENT_TYPES.variantUpdated, payload: variant as unknown as Record<string, unknown>, at: new Date().toISOString() });
       return { variant };
     } catch (error) {
       routeError(reply, error);
     }
   });
 
-  app.get("/v1/approvals", async (request, reply) => {
+  app.get(clawApiPath("approvals"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "approvals:list");
     if (!principal) return null;
     const query = request.query as { status?: string };
     return { approvals: store.listApprovals({ status: query.status as "pending" | "approved" | "rejected" | "expired" | "cancelled" | undefined }) };
   });
 
-  app.post("/v1/approvals/:approvalId/approve", async (request, reply) => {
+  app.post(clawApiPath("approvals/:approvalId/approve"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "approvals:review");
     if (!principal) return null;
     try {
@@ -741,14 +762,14 @@ export function buildContentApp(options: BuildContentAppOptions = {}) {
       }
       const variant = store.getVariant(approval.variantId);
       if (variant) store.updateVariant(variant.id, { status: "approved" });
-      emit({ type: "approval.reviewed", payload: approval as unknown as Record<string, unknown>, at: new Date().toISOString() });
+      emit({ type: STABLE_EVENT_TYPES.approvalReviewed, payload: approval as unknown as Record<string, unknown>, at: new Date().toISOString() });
       return { approval };
     } catch (error) {
       routeError(reply, error);
     }
   });
 
-  app.post("/v1/approvals/:approvalId/reject", async (request, reply) => {
+  app.post(clawApiPath("approvals/:approvalId/reject"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "approvals:review");
     if (!principal) return null;
     try {
@@ -762,14 +783,14 @@ export function buildContentApp(options: BuildContentAppOptions = {}) {
       });
       const plan = store.listPlans().find((item) => item.variantId === approval.variantId && item.status !== "succeeded");
       if (plan) store.updatePlan(plan.id, { status: "cancelled" });
-      emit({ type: "approval.reviewed", payload: approval as unknown as Record<string, unknown>, at: new Date().toISOString() });
+      emit({ type: STABLE_EVENT_TYPES.approvalReviewed, payload: approval as unknown as Record<string, unknown>, at: new Date().toISOString() });
       return { approval };
     } catch (error) {
       routeError(reply, error);
     }
   });
 
-  app.post("/v1/approvals/:approvalId/cancel", async (request, reply) => {
+  app.post(clawApiPath("approvals/:approvalId/cancel"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "approvals:review");
     if (!principal) return null;
     try {
@@ -778,21 +799,21 @@ export function buildContentApp(options: BuildContentAppOptions = {}) {
         status: "cancelled",
         reviewedBy: principal.kind === "admin" ? principal.email : "scoped-token",
       });
-      emit({ type: "approval.reviewed", payload: approval as unknown as Record<string, unknown>, at: new Date().toISOString() });
+      emit({ type: STABLE_EVENT_TYPES.approvalReviewed, payload: approval as unknown as Record<string, unknown>, at: new Date().toISOString() });
       return { approval };
     } catch (error) {
       routeError(reply, error);
     }
   });
 
-  app.get("/v1/plans", async (request, reply) => {
+  app.get(clawApiPath("plans"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "plans:list");
     if (!principal) return null;
     const query = request.query as { status?: string };
     return { plans: store.listPlans({ status: query.status as "queued" | "scheduled" | "running" | "succeeded" | "failed" | "cancelled" | undefined }) };
   });
 
-  app.post("/v1/plans", async (request, reply) => {
+  app.post(clawApiPath("plans"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "plans:create");
     if (!principal) return null;
     try {
@@ -841,52 +862,52 @@ export function buildContentApp(options: BuildContentAppOptions = {}) {
         });
         store.updateVariant(variant.id, { status: "draft" });
         store.updateEntry(entry.id, { status: "in_review" });
-        emit({ type: "approval.created", payload: approval as unknown as Record<string, unknown>, at: new Date().toISOString() });
+        emit({ type: STABLE_EVENT_TYPES.approvalCreated, payload: approval as unknown as Record<string, unknown>, at: new Date().toISOString() });
       } else {
         store.updateVariant(variant.id, { status: scheduledAt ? "scheduled" : "approved" });
         store.updateEntry(entry.id, { status: scheduledAt ? "scheduled" : "approved" });
       }
-      emit({ type: "plan.created", payload: finalPlan as unknown as Record<string, unknown>, at: new Date().toISOString() });
+      emit({ type: STABLE_EVENT_TYPES.planCreated, payload: finalPlan as unknown as Record<string, unknown>, at: new Date().toISOString() });
       return await reply.code(201).send({ plan: finalPlan, approval });
     } catch (error) {
       routeError(reply, error);
     }
   });
 
-  app.post("/v1/plans/:planId/run", async (request, reply) => {
+  app.post(clawApiPath("plans/:planId/run"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "plans:run");
     if (!principal) return null;
     try {
       const params = request.params as { planId: string };
       const result = await executePlan(store, params.planId);
-      emit({ type: "plan.executed", payload: { planId: params.planId, runId: result.run.id }, at: new Date().toISOString() });
+      emit({ type: STABLE_EVENT_TYPES.planExecuted, payload: { planId: params.planId, runId: result.run.id }, at: new Date().toISOString() });
       return result;
     } catch (error) {
       routeError(reply, error);
     }
   });
 
-  app.post("/v1/plans/:planId/cancel", async (request, reply) => {
+  app.post(clawApiPath("plans/:planId/cancel"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "plans:cancel");
     if (!principal) return null;
     try {
       const params = request.params as { planId: string };
       const plan = store.updatePlan(params.planId, { status: "cancelled" });
-      emit({ type: "plan.cancelled", payload: plan as unknown as Record<string, unknown>, at: new Date().toISOString() });
+      emit({ type: STABLE_EVENT_TYPES.planCancelled, payload: plan as unknown as Record<string, unknown>, at: new Date().toISOString() });
       return { plan };
     } catch (error) {
       routeError(reply, error);
     }
   });
 
-  app.get("/v1/publications", async (request, reply) => {
+  app.get(clawApiPath("publications"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "publications:list");
     if (!principal) return null;
     const runs = store.listRuns().map((run) => ({ ...run, canRetry: run.status === "failed" }));
     return { runs };
   });
 
-  app.get("/v1/publications/:runId", async (request, reply) => {
+  app.get(clawApiPath("publications/:runId"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "publications:list");
     if (!principal) return null;
     const params = request.params as { runId: string };
@@ -895,7 +916,7 @@ export function buildContentApp(options: BuildContentAppOptions = {}) {
     return { run, canRetry: run.status === "failed", plan: store.getPlan(run.planId) };
   });
 
-  app.post("/v1/publications/:runId/retry", async (request, reply) => {
+  app.post(clawApiPath("publications/:runId/retry"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "publications:retry");
     if (!principal) return null;
     try {
@@ -910,7 +931,7 @@ export function buildContentApp(options: BuildContentAppOptions = {}) {
     }
   });
 
-  app.post("/v1/scheduler/run", async (request, reply) => {
+  app.post(clawApiPath("scheduler/run"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "plans:run");
     if (!principal) return null;
     try {
@@ -925,13 +946,13 @@ export function buildContentApp(options: BuildContentAppOptions = {}) {
     }
   });
 
-  app.get("/v1/tokens", async (request, reply) => {
+  app.get(clawApiPath("tokens"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "tokens:issue");
     if (!principal) return null;
     return { tokens: store.listTokens() };
   });
 
-  app.post("/v1/tokens", async (request, reply) => {
+  app.post(clawApiPath("tokens"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "tokens:issue");
     if (!principal) return null;
     try {
@@ -946,7 +967,7 @@ export function buildContentApp(options: BuildContentAppOptions = {}) {
     }
   });
 
-  app.post("/v1/tokens/:tokenId/revoke", async (request, reply) => {
+  app.post(clawApiPath("tokens/:tokenId/revoke"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "tokens:revoke");
     if (!principal) return null;
     try {
@@ -958,19 +979,19 @@ export function buildContentApp(options: BuildContentAppOptions = {}) {
     }
   });
 
-  app.get("/v1/app/frontend-contract", async (_request) => frontendContract);
-  app.get("/v1/app/screens", async () => ({ screens: frontendContract.screens }));
-  app.get("/v1/app/dashboard", async () => buildDashboard(store));
-  app.get("/v1/app/calendar", async () => buildCalendar(store));
-  app.get("/v1/app/pipeline", async () => buildPipeline(store));
-  app.get("/v1/app/composer/:entryId", async (request) => {
+  app.get(clawApiPath("app/frontend-contract"), async (_request) => frontendContract);
+  app.get(clawApiPath("app/screens"), async () => ({ screens: frontendContract.screens }));
+  app.get(clawApiPath("app/dashboard"), async () => buildDashboard(store));
+  app.get(clawApiPath("app/calendar"), async () => buildCalendar(store));
+  app.get(clawApiPath("app/pipeline"), async () => buildPipeline(store));
+  app.get(clawApiPath("app/composer/:entryId"), async (request) => {
     const params = request.params as { entryId: string };
     return buildComposer(store, params.entryId);
   });
-  app.get("/v1/app/destinations", async () => buildDestinationsReadModel(store));
-  app.get("/v1/app/approvals", async () => buildApprovalsReadModel(store));
-  app.get("/v1/app/publications", async () => buildPublicationsReadModel(store));
-  app.get("/v1/app/forms/:formId", async (request, reply) => {
+  app.get(clawApiPath("app/destinations"), async () => buildDestinationsReadModel(store));
+  app.get(clawApiPath("app/approvals"), async () => buildApprovalsReadModel(store));
+  app.get(clawApiPath("app/publications"), async () => buildPublicationsReadModel(store));
+  app.get(clawApiPath("app/forms/:formId"), async (request, reply) => {
     const params = request.params as { formId: string };
     const form = staticFormSchemas[params.formId];
     if (!form) return await reply.code(404).send({ error: "form_not_found" });

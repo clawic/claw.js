@@ -1,3 +1,4 @@
+const CONTENT_TOKEN_STORAGE_KEY = CONTENT_TOKEN_STORAGE_KEY;
 import type {
   DashboardPayload, CalendarItem, PipelineColumn,
   ComposerPayload, Destination, ApprovalRequest,
@@ -7,12 +8,12 @@ import type {
 
 const BASE = "/v1";
 
-let _token: string | null = localStorage.getItem("content_token");
+let _token: string | null = localStorage.getItem(CONTENT_TOKEN_STORAGE_KEY);
 
 export function setToken(t: string | null) {
   _token = t;
-  if (t) localStorage.setItem("content_token", t);
-  else localStorage.removeItem("content_token");
+  if (t) localStorage.setItem(CONTENT_TOKEN_STORAGE_KEY, t);
+  else localStorage.removeItem(CONTENT_TOKEN_STORAGE_KEY);
 }
 
 export function getToken(): string | null { return _token; }
