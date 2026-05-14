@@ -46,6 +46,8 @@ binding product decisions are:
   execution.
 - Docker validation is opt-in and reports unavailable Docker infrastructure as
   `EXTERNAL PENDING`, not as a hidden pass.
+- `qa/scenarios/telegram-live-broker-runbook.md` defines the exact external
+  broker command contract required to turn Telegram live rows into `PASS`.
 
 ## Prompt-to-Artifact Checklist
 
@@ -64,16 +66,18 @@ binding product decisions are:
 | Do not ask for sensitive permissions from Node; respect signed host/secrets ownership. | ClawJS/Clawix host-boundary docs and ADRs keep approvals/secrets under the active signed host; Clawix scenario requires signed-host approval. | PASS |
 | Build offline, integration/e2e, live-brokered, package/Docker, and manual lanes. | `scripts/test-lane.mjs`, `test:qa-scenarios`, `test:package-live`, `test:live-brokered`, and the Telegram scenario define those lanes and statuses. | PASS |
 | Package/live must install the candidate before forwarding secrets. | `scripts/verify-integration-package-live-harness.mjs` builds, packs, installs in a temporary consumer, then gates broker execution. | PASS |
+| Broker live command must leave structured evidence. | `CLAW_LIVE_BROKER_COMMAND` receives `CLAWJS_LIVE_REPORT_PATH`; the harness validates provider, statuses, at least one `PASS`, and `credentialLeaseReleased=true`. | PASS |
 | Produce `PASS`, `FAIL`, `PARTIAL`, `EXTERNAL PENDING`, and `QUARANTINED` reports. | `telegram-live-smoke.ts`, `docs/integration-qa-lab.md`, `docs/testing.md`, and the scenario checker enforce the vocabulary. | PASS |
 | Audit and correct `send-voice-message`. | `telegram-send-voice-message-request.json` now calls `sendVoice` and sends `voice`; runtime coverage replay passes. | PASS |
 | Provide fixtures for implemented rows and fixture-only snapshot evidence. | `scripts/verify-integration-qa-scenarios.mjs` checks implemented request/source fixture files and `telegram-official-api-10.0-surface.json`. | PASS |
 | Include safe live smoke for `getMe`, polling, send/edit/delete, synthetic media, webhook, rate/error handling, and group authorization. | `TELEGRAM_LIVE_SMOKE_SCENARIOS`, `telegram-live-smoke.ts`, `TelegramBotApiError`, and source/operation tests cover automated, synthetic, or manual rows. | PARTIAL |
 | Gate admin, payment, Passport, destructive, uploaded-asset, game, and managed-bot flows. | Manual/policy sets in `telegram-official-api-matrix.ts` and smoke scenarios classify these as `manual_only` or `unsupported_by_policy`. | PASS |
 | Keep manual/external rows separate from bugs. | This report and `qa/scenarios/telegram-integration-qa-lab.md` list `EXTERNAL PENDING` prerequisites separately from failures. | PASS |
+| Provide a concrete operator runbook for the remaining live step. | `qa/scenarios/telegram-live-broker-runbook.md` defines inputs, safety rules, `CLAWJS_LIVE_REPORT_PATH`, commands, and completion criteria. | PASS |
 | Pass integrations, policy, package/live, privacy/redaction, docs, and QA scenario checks. | Validation Runs below list the executed gates. | PASS |
 | Ensure no quarantines are silently hiding failures. | `qa/quarantine.json` has no entries. | PASS |
 | Execute real brokered Telegram live smoke before claiming full live pass. | Requires an approved broker command, disposable bot token, chat/group, webhook endpoint, and operator approvals. | EXTERNAL PENDING |
-| Execute real Docker package/live validation before claiming Docker pass. | Requires a running Docker daemon. | EXTERNAL PENDING |
+| Execute real Docker package/live validation before claiming Docker pass. | `CLAWJS_PACKAGE_LIVE_DOCKER=1 npm run test:package-live` installs the candidate tarballs inside `node:20-alpine`. | PASS |
 
 ## Validation Runs
 
@@ -87,10 +91,19 @@ binding product decisions are:
   `EXTERNAL PENDING`.
 - `TELEGRAM_BOT_TOKEN=dummy npm run test:package-live`: PASS as a negative
   gate; the harness rejects the raw token and exits before live execution.
-- `CLAWJS_PACKAGE_LIVE_DOCKER=1 npm run test:package-live`: PARTIAL because
-  the Docker daemon was unavailable; the harness reported `EXTERNAL PENDING`.
+- `CLAWJS_PACKAGE_LIVE_DOCKER=1 npm run test:package-live`: PASS after the
+  Docker daemon became available and the container install was fixed to use local
+  `@clawjs/core`, `@clawjs/agents`, and `@clawjs/integrations` tarballs.
 - `npm run test:live-brokered` without `CLAW_TEST_LIVE=1`: PASS as a
   negative gate; the lane exits with code 2 and requires explicit opt-in.
+- `CLAW_TEST_LIVE=1 CLAW_LIVE_BROKER_COMMAND=true npm run test:package-live`:
+  PASS as a negative gate; a broker command that exits without writing
+  `CLAWJS_LIVE_REPORT_PATH` is rejected.
+- `CLAW_TEST_LIVE=1` with a simulated broker report: PASS; the package/live
+  harness accepts only a structured Telegram report with at least one `PASS`
+  row and `credentialLeaseReleased=true`.
+- `npx vitest run --config vitest.config.ts scripts/verify-integration-package-live-harness.test.mjs`:
+  PASS; the broker report contract is covered by unit tests.
 - `CLAW_TEST_LIVE=1 npm run test:live-brokered`: PARTIAL because no approved
   broker command or disposable Telegram state was available; the harness
   reported `EXTERNAL PENDING`.
@@ -116,7 +129,6 @@ operator approval, or infrastructure outside the hermetic repository:
 - Explicit approval and provider setup for payments, Passport, paid media,
   managed-bot token delegation, uploaded sticker assets, games, and destructive
   account/chat flows.
-- Running Docker daemon for the package/live container path.
 
 ## Completion Judgment
 
@@ -125,5 +137,5 @@ official surface accounting is total, unsafe gaps are classified, live
 execution is brokered by policy, and hermetic/package/privacy checks pass.
 
 The pilot remains `PARTIAL` rather than full live `PASS` until the external
-Telegram and Docker prerequisites above are provided and the brokered live
-smoke rows can be executed against disposable provider state.
+Telegram prerequisites above are provided and the brokered live smoke rows can
+be executed against disposable provider state.

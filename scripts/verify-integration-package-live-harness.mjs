@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const rootDir = process.cwd();
 const scratchDir = path.join(rootDir, ".tmp-integration-package-live");
@@ -93,6 +94,40 @@ function installedSmoke(appDir) {
   runVisible(process.execPath, [smokePath], { cwd: appDir });
 }
 
+export function validateLiveReport(reportPath) {
+  if (!fs.existsSync(reportPath)) {
+    throw new Error(`CLAW_LIVE_BROKER_COMMAND completed but did not write ${reportPath}.`);
+  }
+  const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
+  const allowedStatuses = new Set(["PASS", "PARTIAL", "FAIL", "EXTERNAL PENDING", "QUARANTINED"]);
+  if (report.provider !== "telegram_bot_api") {
+    throw new Error("live broker report provider must be telegram_bot_api.");
+  }
+  if (!allowedStatuses.has(report.status)) {
+    throw new Error(`live broker report has invalid status: ${report.status}`);
+  }
+  if (report.status === "FAIL" || report.status === "QUARANTINED") {
+    throw new Error(`live broker report returned ${report.status}.`);
+  }
+  if (report.credentialLeaseReleased !== true) {
+    throw new Error("live broker report must confirm credentialLeaseReleased=true.");
+  }
+  if (!Array.isArray(report.results) || report.results.length === 0) {
+    throw new Error("live broker report must contain result rows.");
+  }
+  if (!report.results.some((entry) => entry?.status === "PASS")) {
+    throw new Error("live broker report must include at least one PASS row.");
+  }
+  for (const entry of report.results) {
+    if (!entry?.id || !allowedStatuses.has(entry.status)) {
+      throw new Error("live broker report contains an invalid result row.");
+    }
+    if (entry.status === "FAIL" || entry.status === "QUARANTINED") {
+      throw new Error(`live broker result ${entry.id} returned ${entry.status}.`);
+    }
+  }
+}
+
 function runBrokerCommand(tarballPath, appDir) {
   const brokerCommand = process.env.CLAW_LIVE_BROKER_COMMAND;
   if (!brokerCommand) {
@@ -100,6 +135,7 @@ function runBrokerCommand(tarballPath, appDir) {
     return;
   }
   assertNoRawLiveSecrets();
+  const reportPath = path.join(appDir, "telegram-live-report.json");
   const result = spawnSync("bash", ["-lc", brokerCommand], {
     cwd: appDir,
     env: {
@@ -107,6 +143,7 @@ function runBrokerCommand(tarballPath, appDir) {
       CLAWJS_INTEGRATION_PACKAGE_READY: "1",
       CLAWJS_INTEGRATION_PACKAGE_DIR: appDir,
       CLAWJS_INTEGRATION_PACKAGE_TARBALL: tarballPath,
+      CLAWJS_LIVE_REPORT_PATH: reportPath,
       CLAWJS_LIVE_PROVIDER: "telegram_bot_api",
     },
     stdio: "inherit",
@@ -115,6 +152,7 @@ function runBrokerCommand(tarballPath, appDir) {
   if (result.status !== 0) {
     process.exit(result.status ?? 1);
   }
+  validateLiveReport(reportPath);
 }
 
 function runDockerSmoke(tarballPath, tarballs) {
@@ -149,32 +187,38 @@ function runDockerSmoke(tarballPath, tarballs) {
   ]);
 }
 
-removeScratch();
-fs.mkdirSync(scratchDir, { recursive: true });
-
-try {
-  assertNoRawLiveSecrets();
-  const tarballs = packageDirs.map((entry) => buildAndPackWorkspacePackage(entry));
-  const tarballPath = tarballs.find((entry) => path.basename(entry).startsWith("clawjs-integrations-"));
-  if (!tarballPath) {
-    throw new Error("failed to pack @clawjs/integrations candidate tarball.");
-  }
-  const appDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-integration-package-live."));
-  fs.writeFileSync(path.join(appDir, "package.json"), JSON.stringify({
-    name: "clawjs-integration-package-live",
-    version: "0.0.0",
-    private: true,
-    type: "module",
-  }, null, 2));
-  runVisible("npm", ["install", "--ignore-scripts", ...tarballs], { cwd: appDir });
-  installedSmoke(appDir);
-  runDockerSmoke(tarballPath, tarballs);
-  if (liveRequested) {
-    runBrokerCommand(tarballPath, appDir);
-  } else {
-    console.error("EXTERNAL PENDING package/live lane: set CLAW_TEST_LIVE=1 and CLAW_LIVE_BROKER_COMMAND for brokered live validation.");
-  }
-  console.log("integration package/live harness passed");
-} finally {
+function main() {
   removeScratch();
+  fs.mkdirSync(scratchDir, { recursive: true });
+
+  try {
+    assertNoRawLiveSecrets();
+    const tarballs = packageDirs.map((entry) => buildAndPackWorkspacePackage(entry));
+    const tarballPath = tarballs.find((entry) => path.basename(entry).startsWith("clawjs-integrations-"));
+    if (!tarballPath) {
+      throw new Error("failed to pack @clawjs/integrations candidate tarball.");
+    }
+    const appDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-integration-package-live."));
+    fs.writeFileSync(path.join(appDir, "package.json"), JSON.stringify({
+      name: "clawjs-integration-package-live",
+      version: "0.0.0",
+      private: true,
+      type: "module",
+    }, null, 2));
+    runVisible("npm", ["install", "--ignore-scripts", ...tarballs], { cwd: appDir });
+    installedSmoke(appDir);
+    runDockerSmoke(tarballPath, tarballs);
+    if (liveRequested) {
+      runBrokerCommand(tarballPath, appDir);
+    } else {
+      console.error("EXTERNAL PENDING package/live lane: set CLAW_TEST_LIVE=1 and CLAW_LIVE_BROKER_COMMAND for brokered live validation.");
+    }
+    console.log("integration package/live harness passed");
+  } finally {
+    removeScratch();
+  }
+}
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  main();
 }

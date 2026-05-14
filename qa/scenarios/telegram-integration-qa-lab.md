@@ -29,6 +29,8 @@ reporting.
 - Explicit operator approval before payments, paid media, public webhook
   delivery, destructive account/chat changes, uploaded sticker assets, games,
   Passport flows, or managed-bot token flows.
+- Follow `qa/scenarios/telegram-live-broker-runbook.md` for the exact
+  broker-command contract and report requirements.
 
 ## Steps
 

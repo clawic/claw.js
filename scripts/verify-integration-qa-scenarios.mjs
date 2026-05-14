@@ -153,6 +153,7 @@ if (policyBlocked?.lane !== "unsupported_by_policy") {
 
 const scenarioDoc = read("qa/scenarios/telegram-integration-qa-lab.md");
 const validationReport = read("qa/scenarios/telegram-integration-qa-lab-validation-report.md");
+const liveRunbook = read("qa/scenarios/telegram-live-broker-runbook.md");
 for (const status of requiredReportStatuses) {
   const docs = [
     read("docs/testing.md"),
@@ -160,6 +161,7 @@ for (const status of requiredReportStatuses) {
     read("docs/integration-qa-lab.md"),
     scenarioDoc,
     validationReport,
+    liveRunbook,
   ].join("\n");
   if (!docs.includes(status)) fail(`report status ${status} is not documented`);
 }
@@ -167,6 +169,7 @@ for (const phrase of [
   "official API",
   "update-field",
   "brokered credential lease",
+  "telegram-live-broker-runbook.md",
   "test:package-live",
   "EXTERNAL PENDING",
   "manual-only",
@@ -177,6 +180,7 @@ for (const phrase of [
 for (const phrase of [
   "Decision Audit",
   "Prompt-to-Artifact Checklist",
+  "CLAWJS_LIVE_REPORT_PATH",
   "official API completeness",
   "brokered credential leases",
   "OpenClaw",
@@ -185,6 +189,15 @@ for (const phrase of [
   "Completion Judgment",
 ]) {
   if (!validationReport.includes(phrase)) fail(`Telegram QA validation report is missing phrase: ${phrase}`);
+}
+for (const phrase of [
+  "CLAW_LIVE_BROKER_COMMAND",
+  "CLAWJS_LIVE_REPORT_PATH",
+  "TELEGRAM_BOT_TOKEN",
+  "credentialLeaseReleased",
+  "free_only",
+]) {
+  if (!liveRunbook.includes(phrase)) fail(`Telegram live broker runbook is missing phrase: ${phrase}`);
 }
 for (const phrase of [
   "send-voice-message",

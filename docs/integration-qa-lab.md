@@ -41,9 +41,13 @@ ordinary connector runtime is a policy failure.
 installs `@clawjs/integrations` into a temporary project, verifies the installed
 public exports, and only then allows an approved broker command through
 `CLAW_TEST_LIVE=1` and `CLAW_LIVE_BROKER_COMMAND`. Raw Telegram token
-environment variables are rejected by the harness. Docker validation is
-opt-in through `CLAWJS_PACKAGE_LIVE_DOCKER=1` and is reported as
-`EXTERNAL PENDING` when Docker is unavailable or not requested.
+environment variables are rejected by the harness. When a broker command is
+provided, the harness sets `CLAWJS_LIVE_REPORT_PATH` and requires the command
+to write a Telegram live report with provider `telegram_bot_api`, at least one
+`PASS` row, no `FAIL` or `QUARANTINED` rows, and
+`credentialLeaseReleased=true`. Docker validation is opt-in through
+`CLAWJS_PACKAGE_LIVE_DOCKER=1` and is reported as `EXTERNAL PENDING` when
+Docker is unavailable or not requested.
 
 Telegram's brokered smoke harness is exported as `runTelegramBrokeredLiveSmoke`.
 It covers read-only `getMe` and `getUpdates`, disposable send/edit/delete,
