@@ -97167,7 +97167,7 @@
     {
       "path": "packages/clawjs/src/cli-unknown-command.ts",
       "language": "typescript",
-      "lines": 38,
+      "lines": 35,
       "test": false,
       "entrypoint": false,
       "imports": [

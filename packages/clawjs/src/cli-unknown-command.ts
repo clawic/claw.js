@@ -1,6 +1,6 @@
 import type { CliContext } from "./index.ts";
-import { CLI_EXIT_USAGE } from "./cli-errors.ts";
-import { writeJson } from "./cli-json.ts";
+import { CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
+import { writeJsonError } from "./cli-json.ts";
 import { relatedCliMatches } from "./cli-surface.ts";
 
 export function handleUnknownCliCommand(input: {
@@ -15,18 +15,15 @@ export function handleUnknownCliCommand(input: {
   }
   const related = relatedCliMatches(input.group, { limit: 5 });
   if (input.wantsJson) {
-    writeJson(input.context.stdout, {
-      ok: false,
-      error: {
-        code: "unknown_command",
-        message: `Unknown Claw CLI command: ${input.group}`,
-      },
-      meta: {
+    writeJsonError(
+      input.context.stdout,
+      new CliHandledError("unknown_command", `Unknown Claw CLI command: ${input.group}`, CLI_EXIT_USAGE),
+      {
         schemaVersion: 1,
         canonicalCommand: null,
         related,
       },
-    });
+    );
     return CLI_EXIT_USAGE;
   }
   if (related.length > 0) {
