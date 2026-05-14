@@ -83,4 +83,3 @@ export function replaceDomainHostsBlock(current: string, nextBlock: string | nul
   if (!nextBlock) return without ? `${without}\n` : "";
   return `${without ? `${without}\n\n` : ""}${nextBlock}\n`;
 }
-
