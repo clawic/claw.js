@@ -63,6 +63,8 @@ export type DiscordSourceOperation =
   | "guild-scheduled-event-create"
   | "guild-scheduled-event-update"
   | "guild-scheduled-event-delete"
+  | "guild-scheduled-event-user-add"
+  | "guild-scheduled-event-user-remove"
   | "guild-soundboard-sound-create"
   | "guild-soundboard-sound-update"
   | "guild-soundboard-sound-delete"
@@ -139,6 +141,8 @@ const DISCORD_SOURCE_OPERATIONS = new Set<DiscordSourceOperation>([
   "guild-scheduled-event-create",
   "guild-scheduled-event-update",
   "guild-scheduled-event-delete",
+  "guild-scheduled-event-user-add",
+  "guild-scheduled-event-user-remove",
   "guild-soundboard-sound-create",
   "guild-soundboard-sound-update",
   "guild-soundboard-sound-delete",

@@ -71,6 +71,8 @@ const DISCORD_SOURCE_OPERATIONS = [
   source("discord.source.guild-scheduled-event-create", "Guild Scheduled Event Create"),
   source("discord.source.guild-scheduled-event-update", "Guild Scheduled Event Update"),
   source("discord.source.guild-scheduled-event-delete", "Guild Scheduled Event Delete"),
+  source("discord.source.guild-scheduled-event-user-add", "Guild Scheduled Event User Add"),
+  source("discord.source.guild-scheduled-event-user-remove", "Guild Scheduled Event User Remove"),
   source("discord.source.guild-soundboard-sound-create", "Guild Soundboard Sound Create"),
   source("discord.source.guild-soundboard-sound-update", "Guild Soundboard Sound Update"),
   source("discord.source.guild-soundboard-sound-delete", "Guild Soundboard Sound Delete"),

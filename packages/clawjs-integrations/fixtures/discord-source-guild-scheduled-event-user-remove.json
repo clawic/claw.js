@@ -1,0 +1,6 @@
+{
+  "id": "guild-scheduled-event-user-remove-sample",
+  "guild_scheduled_event_id": "scheduled-event-sample",
+  "user_id": "user-sample",
+  "guild_id": "guild-sample"
+}

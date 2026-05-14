@@ -684,6 +684,8 @@ const DISCORD_SOURCE_FIXTURE_NAMES = [
   "guild-scheduled-event-create",
   "guild-scheduled-event-update",
   "guild-scheduled-event-delete",
+  "guild-scheduled-event-user-add",
+  "guild-scheduled-event-user-remove",
   "guild-soundboard-sound-create",
   "guild-soundboard-sound-update",
   "guild-soundboard-sound-delete",
