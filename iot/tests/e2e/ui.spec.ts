@@ -8,13 +8,14 @@ test("iot console covers scenes, approvals, and timeline", async ({ page }) => {
   await expect(page.locator(".hero-brand img")).toHaveAttribute("src", "/brand/logo.png");
   await expect(page.locator('link[rel="icon"]').first()).toHaveAttribute("href", "/brand/favicon.ico");
 
-  await page.evaluate(async () => {
-    await fetch(clawApiPath("actions"), {
+  const actionsPath = clawApiPath("actions");
+  await page.evaluate(async (path) => {
+    await fetch(path, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ family: "lock", selector: "front door", action: "unlock" }),
     });
-  });
+  }, actionsPath);
   await page.reload();
 
   const approvalCard = page.locator("[data-testid^='iot-approval-']").first();
