@@ -16,4 +16,3 @@ export function pickCoreTitle(collectionName: string, payload: Record<string, un
   const value = payload[primary] ?? payload.title ?? payload.name ?? payload.displayName ?? fallback;
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
-
