@@ -753,7 +753,7 @@ export function buildDiscordOperationRequest(
     case "update-webhook":
       return bodyPlan("PATCH", `webhooks/${webhookId(values)}`, auth, auditHeaders(headers, values), webhookBody(values), { type: "object", requiredPaths: ["id"] });
     case "delete-webhook":
-      return deletePlan(`webhooks/${webhookId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
+      return deletePlan(`webhooks/${webhookId(values)}`, auth, auditHeaders(headers, values), { type: "null" });
     case "get-webhook-with-token":
       return getPlan(`webhooks/${webhookId(values)}/${webhookToken(values)}`, [], headers, { type: "object", requiredPaths: ["id"] });
     case "update-webhook-with-token":
