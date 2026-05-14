@@ -104,6 +104,18 @@ test("runCli returns rules JSON in the common envelope", async () => {
   assert.equal(payload.meta.subcommand, "compile");
 });
 
+test("runCli returns user JSON in the common envelope", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-user-json-"));
+  const result = await runCliCapture(["user", "list", "--workspace", workspaceRoot, "--runtime", "demo", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_OK);
+  const payload = JSON.parse(result.stdout) as { ok: boolean; data: { users: unknown[] }; meta: { canonicalCommand: string; invokedCommand: string; subcommand: string } };
+  assert.equal(payload.ok, true);
+  assert.equal(payload.meta.canonicalCommand, "user");
+  assert.equal(payload.meta.invokedCommand, "user");
+  assert.equal(payload.meta.subcommand, "list");
+  assert.equal(Array.isArray(payload.data.users), true);
+});
+
 test("runCli searches registered local docs and ADR contents", async () => {
   const result = await runCliCapture(["search", "Stable JSON output uses", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK);

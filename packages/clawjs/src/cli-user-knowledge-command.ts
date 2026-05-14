@@ -3,7 +3,7 @@ import type { RuntimeAdapterId, UserCompileProfile, UserDomainId, UserEntityType
 import type { CliContext } from "./index.ts";
 import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { joinedPositionals, parseCsvFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
-import { cliErrorFromUnknown, writeCliError, writeJson } from "./cli-json.ts";
+import { cliErrorFromUnknown, writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 import { createCliClaw } from "./cli-claw-factory.ts";
 import { parseSoulModulesFromSetFlags, parseUserFactValue, parseUserFieldsFromSetFlags, parseUserMetadataFlags } from "./cli-value-utils.ts";
 
@@ -23,6 +23,22 @@ export async function runUserKnowledgeCli(input: {
   runtimeAdapterId: RuntimeAdapterId;
 }): Promise<number | null> {
   const { group, command, subcommand, positionals, flags, argv, context, wantsJson, workspaceRoot, appId, workspaceId, agentId, runtimeAdapterId } = input;
+  const writeSurfaceJson = (payload: unknown) => {
+    const canonicalCommand = group === "soul" || group === "user" ? group : "user";
+    writeCommandJsonOk(context.stdout, canonicalCommand, payload, {
+      invokedCommand: group ?? canonicalCommand,
+      subcommand: command ?? null,
+      ...(subcommand ? { operation: subcommand } : {}),
+    });
+  };
+  const writeSurfaceJsonError = (error: unknown) => {
+    const canonicalCommand = group === "soul" || group === "user" ? group : "user";
+    writeCommandJsonError(context.stdout, canonicalCommand, error, {
+      invokedCommand: group ?? canonicalCommand,
+      subcommand: command ?? null,
+      ...(subcommand ? { operation: subcommand } : {}),
+    });
+  };
 if (group === "soul") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
   const targetSoulId = subcommand || flags.id;
@@ -38,14 +54,14 @@ if (group === "soul") {
         presetId: flags.preset || flags["preset-id"],
         ...(Object.keys(modules).length ? { modules } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, spec);
+      if (wantsJson) writeSurfaceJson(spec);
       else context.stdout.write(`initialized soul ${spec.id}\n`);
       return CLI_EXIT_OK;
     }
 
     if (command === "inspect") {
       const result = claw.soul.inspect(targetSoulId, flags.agent ? targetAgentId : undefined);
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeSurfaceJson(result);
       else context.stdout.write(`${targetSoulId ? result.resolved?.title ?? "not found" : `${result.state.specs.length} souls`}\n`);
       return targetSoulId && !result.resolved ? CLI_EXIT_FAILURE : CLI_EXIT_OK;
     }
@@ -53,7 +69,7 @@ if (group === "soul") {
     if (command === "validate") {
       const spec = targetSoulId ? claw.soul.resolve({ soulId: targetSoulId }) : claw.soul.resolve({ agentId: targetAgentId });
       const result = claw.soul.validate(spec);
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeSurfaceJson(result);
       else context.stdout.write(result.ok ? "valid\n" : `${result.issues.map((issue) => `${issue.path}: ${issue.message}`).join("\n")}\n`);
       return result.ok ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
     }
@@ -63,7 +79,7 @@ if (group === "soul") {
         ...(targetSoulId ? { soulId: targetSoulId } : {}),
         agentId: targetAgentId,
       });
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeSurfaceJson(result);
       else context.stdout.write(result.markdown);
       return CLI_EXIT_OK;
     }
@@ -73,7 +89,7 @@ if (group === "soul") {
         ...(targetSoulId ? { soulId: targetSoulId } : {}),
         agentId: targetAgentId,
       });
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeSurfaceJson(result);
       else context.stdout.write(`compiled ${result.soulId} to ${result.targetFile}\n`);
       return CLI_EXIT_OK;
     }
@@ -91,13 +107,15 @@ if (group === "soul") {
       const compiled = readBooleanFlag(argv, flags, "compile", false)
         ? claw.soul.compile({ agentId: targetAgentId })
         : null;
-      if (wantsJson) writeJson(context.stdout, { assignment, compiled });
+      if (wantsJson) writeSurfaceJson({ assignment, compiled });
       else context.stdout.write(`assigned ${assignment.soulId} to ${assignment.agentId}\n`);
       return CLI_EXIT_OK;
     }
   } catch (error) {
-    context.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
-    return CLI_EXIT_FAILURE;
+    const handled = cliErrorFromUnknown(error);
+    if (wantsJson) writeSurfaceJsonError(handled);
+    else context.stderr.write(`${handled.message}\n`);
+    return handled.exitCode;
   }
 
   context.stderr.write("Usage: claw soul init|validate|preview|compile|assign|inspect ...\n");
@@ -117,14 +135,14 @@ if (group === "user") {
         displayName: flags.name || flags["display-name"] || flags.title,
         ...(readBooleanFlag(argv, flags, "default", false) ? { isDefault: true } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, user);
+      if (wantsJson) writeSurfaceJson(user);
       else context.stdout.write(`initialized user ${user.id}\n`);
       return CLI_EXIT_OK;
     }
 
     if (command === "list") {
       const users = claw.user.list();
-      if (wantsJson) writeJson(context.stdout, { users });
+      if (wantsJson) writeSurfaceJson({ users });
       else context.stdout.write(`${users.map((user) => `${user.id} ${user.displayName}${user.isDefault ? " default" : ""}`).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -134,7 +152,7 @@ if (group === "user") {
       const result = command === "inspect"
         ? claw.user.inspect(id, flags.agent ? targetAgentId : undefined)
         : { user: id ? claw.user.get(id) : claw.user.resolve({ userId: targetUserId, agentId: flags.agent ? targetAgentId : undefined }) };
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeSurfaceJson(result);
       else if (command === "inspect") context.stdout.write(`${id ? (result as ReturnType<typeof claw.user.inspect>).resolved?.displayName ?? "not found" : `${(result as ReturnType<typeof claw.user.inspect>).state.specs.length} users`}\n`);
       else context.stdout.write(`${((result as { user: { id: string; displayName: string } | null }).user)?.id ?? "not found"}\n`);
       return CLI_EXIT_OK;
@@ -145,7 +163,7 @@ if (group === "user") {
       const packId = (positionals[3] || flags.id || flags.pack) as UserPackId | undefined;
       if (action === "list") {
         const packs = claw.user.packs(targetUserId);
-        if (wantsJson) writeJson(context.stdout, { packs });
+        if (wantsJson) writeSurfaceJson({ packs });
         else context.stdout.write(`${packs.map((pack) => `${pack.enabled ? "*" : "-"} ${pack.id} v${pack.schemaVersion}`).join("\n")}\n`);
         return CLI_EXIT_OK;
       }
@@ -156,7 +174,7 @@ if (group === "user") {
       const pack = action === "enable"
         ? claw.user.enablePack({ userId: targetUserId, id: packId })
         : claw.user.disablePack({ userId: targetUserId, id: packId });
-      if (wantsJson) writeJson(context.stdout, pack);
+      if (wantsJson) writeSurfaceJson(pack);
       else context.stdout.write(`${pack.enabled ? "enabled" : "disabled"} ${pack.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -166,14 +184,14 @@ if (group === "user") {
       const domainId = (positionals[3] || flags.id || flags.domain) as UserDomainId | undefined;
       if (action === "list") {
         const domains = claw.user.domains(targetUserId);
-        if (wantsJson) writeJson(context.stdout, { domains });
+        if (wantsJson) writeSurfaceJson({ domains });
         else context.stdout.write(`${domains.map((domain) => `${domain.enabled ? "*" : "-"} ${domain.id} ${domain.sensitivity}`).join("\n")}\n`);
         return CLI_EXIT_OK;
       }
       if (action === "inspect") {
         const domains = claw.user.domains(targetUserId);
         const domain = domainId ? domains.find((entry) => entry.id === domainId) : domains;
-        if (wantsJson) writeJson(context.stdout, domain);
+        if (wantsJson) writeSurfaceJson(domain);
         else context.stdout.write(`${Array.isArray(domain) ? domain.map((entry) => entry.id).join("\n") : domain ? `${domain.id} ${domain.pack}` : "not found"}\n`);
         return domain ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
       }
@@ -182,7 +200,7 @@ if (group === "user") {
         return CLI_EXIT_USAGE;
       }
       const domain = action === "enable" ? claw.user.enableDomain({ userId: targetUserId, id: domainId }) : claw.user.disableDomain({ userId: targetUserId, id: domainId });
-      if (wantsJson) writeJson(context.stdout, domain);
+      if (wantsJson) writeSurfaceJson(domain);
       else context.stdout.write(`${domain.enabled ? "enabled" : "disabled"} ${domain.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -201,7 +219,7 @@ if (group === "user") {
         fields: parseUserFieldsFromSetFlags(argv),
         ...metadata,
       });
-      if (wantsJson) writeJson(context.stdout, proposal);
+      if (wantsJson) writeSurfaceJson(proposal);
       else context.stdout.write(`proposed ${proposal.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -213,7 +231,7 @@ if (group === "user") {
           userId: targetUserId,
           ...(flags.type ? { type: flags.type as UserEntityType } : {}),
         });
-        if (wantsJson) writeJson(context.stdout, { entities });
+        if (wantsJson) writeSurfaceJson({ entities });
         else context.stdout.write(`${entities.map((entity) => `${entity.id} ${entity.type} ${entity.title}`).join("\n")}\n`);
         return CLI_EXIT_OK;
       }
@@ -224,7 +242,7 @@ if (group === "user") {
           return CLI_EXIT_USAGE;
         }
         const entity = claw.user.getEntity(entityId, targetUserId);
-        if (wantsJson) writeJson(context.stdout, entity);
+        if (wantsJson) writeSurfaceJson(entity);
         else context.stdout.write(`${entity?.id ?? "not found"}\n`);
         return entity ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
       }
@@ -242,7 +260,7 @@ if (group === "user") {
           fields: parseUserFieldsFromSetFlags(argv),
           ...metadata,
         });
-        if (wantsJson) writeJson(context.stdout, entity);
+        if (wantsJson) writeSurfaceJson(entity);
         else context.stdout.write(`added ${entity.type} ${entity.id}\n`);
         return CLI_EXIT_OK;
       }
@@ -265,7 +283,7 @@ if (group === "user") {
         to,
         ...metadata,
       });
-      if (wantsJson) writeJson(context.stdout, link);
+      if (wantsJson) writeSurfaceJson(link);
       else context.stdout.write(`linked ${link.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -281,7 +299,7 @@ if (group === "user") {
         ...(flags.date ? { date: flags.date } : {}),
         ...(flags.text ? { text: flags.text } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeSurfaceJson(result);
       else {
         const rows = [
           ...result.facts.map((fact) => `fact ${fact.facet}.${fact.key} ${JSON.stringify(fact.value)}`),
@@ -301,7 +319,7 @@ if (group === "user") {
       const proposalId = positionals[3] || flags.id;
       if (action === "list") {
         const proposals = claw.user.review.list({ userId: targetUserId, ...(flags.status ? { status: flags.status as "pending" | "verified" | "rejected" } : {}) });
-        if (wantsJson) writeJson(context.stdout, { proposals });
+        if (wantsJson) writeSurfaceJson({ proposals });
         else context.stdout.write(`${proposals.map((proposal) => `${proposal.status} ${proposal.id} ${proposal.title ?? proposal.path ?? proposal.recordType ?? proposal.kind}`).join("\n")}\n`);
         return CLI_EXIT_OK;
       }
@@ -311,19 +329,19 @@ if (group === "user") {
       }
       if (action === "show") {
         const proposal = claw.user.review.show(proposalId, targetUserId);
-        if (wantsJson) writeJson(context.stdout, proposal);
+        if (wantsJson) writeSurfaceJson(proposal);
         else context.stdout.write(`${proposal.status} ${proposal.id}\n`);
         return CLI_EXIT_OK;
       }
       if (action === "approve") {
         const proposal = claw.user.review.approve(proposalId, targetUserId);
-        if (wantsJson) writeJson(context.stdout, proposal);
+        if (wantsJson) writeSurfaceJson(proposal);
         else context.stdout.write(`approved ${proposal.id}\n`);
         return CLI_EXIT_OK;
       }
       if (action === "reject") {
         const proposal = claw.user.review.reject(proposalId, targetUserId, flags.reason || flags.notes);
-        if (wantsJson) writeJson(context.stdout, proposal);
+        if (wantsJson) writeSurfaceJson(proposal);
         else context.stdout.write(`rejected ${proposal.id}\n`);
         return CLI_EXIT_OK;
       }
@@ -342,7 +360,7 @@ if (group === "user") {
           ...(argv.includes("--set") ? { fields: parseUserFieldsFromSetFlags(argv) } : {}),
         };
         const proposal = claw.user.review.edit(proposalId, patch, targetUserId);
-        if (wantsJson) writeJson(context.stdout, proposal);
+        if (wantsJson) writeSurfaceJson(proposal);
         else context.stdout.write(`edited ${proposal.id}\n`);
         return CLI_EXIT_OK;
       }
@@ -353,7 +371,7 @@ if (group === "user") {
           return CLI_EXIT_USAGE;
         }
         const proposals = claw.user.review.approveMany(ids, targetUserId);
-        if (wantsJson) writeJson(context.stdout, { proposals });
+        if (wantsJson) writeSurfaceJson({ proposals });
         else context.stdout.write(`${proposals.map((proposal) => `approved ${proposal.id}`).join("\n")}\n`);
         return CLI_EXIT_OK;
       }
@@ -368,7 +386,7 @@ if (group === "user") {
         return CLI_EXIT_USAGE;
       }
       const result = claw.user.classify(text);
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeSurfaceJson(result);
       else context.stdout.write(`${result.target} ${result.confidence} ${result.reason}\n`);
       return CLI_EXIT_OK;
     }
@@ -381,7 +399,7 @@ if (group === "user") {
         return CLI_EXIT_USAGE;
       }
       const proposals = claw.user.extractMemory({ userId: targetUserId, source });
-      if (wantsJson) writeJson(context.stdout, { proposals });
+      if (wantsJson) writeSurfaceJson({ proposals });
       else context.stdout.write(`${proposals.map((proposal) => `proposed ${proposal.id}`).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -390,7 +408,7 @@ if (group === "user") {
       const action = subcommand || "propose";
       if (action === "propose") {
         const proposals = claw.user.merge.propose({ userId: targetUserId, ...(flags.source || flags.from ? { sourceId: flags.source || flags.from } : {}), ...(flags.target || flags.to ? { targetId: flags.target || flags.to } : {}) });
-        if (wantsJson) writeJson(context.stdout, { proposals });
+        if (wantsJson) writeSurfaceJson({ proposals });
         else context.stdout.write(`${proposals.map((proposal) => `merge ${proposal.id} ${proposal.sourceId} -> ${proposal.targetId}`).join("\n")}\n`);
         return CLI_EXIT_OK;
       }
@@ -400,7 +418,7 @@ if (group === "user") {
         return CLI_EXIT_USAGE;
       }
       const proposal = action === "approve" ? claw.user.merge.approve(mergeId, targetUserId) : claw.user.merge.reject(mergeId, targetUserId);
-      if (wantsJson) writeJson(context.stdout, proposal);
+      if (wantsJson) writeSurfaceJson(proposal);
       else context.stdout.write(`${proposal.status} ${proposal.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -418,7 +436,7 @@ if (group === "user") {
         value,
         ...metadata,
       });
-      if (wantsJson) writeJson(context.stdout, fact);
+      if (wantsJson) writeSurfaceJson(fact);
       else context.stdout.write(`set ${factPath}\n`);
       return CLI_EXIT_OK;
     }
@@ -437,7 +455,7 @@ if (group === "user") {
         fields: parseUserFieldsFromSetFlags(argv),
         ...metadata,
       });
-      if (wantsJson) writeJson(context.stdout, record);
+      if (wantsJson) writeSurfaceJson(record);
       else context.stdout.write(`added ${record.type} ${record.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -457,7 +475,7 @@ if (group === "user") {
         ...(flags["valid-from"] ? { validFrom: flags["valid-from"] } : {}),
         ...(flags.visibility ? { visibility: flags.visibility as "agent" | "public" | "private" } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeSurfaceJson(result);
       else context.stdout.write(`superseded ${id}\n`);
       return CLI_EXIT_OK;
     }
@@ -475,7 +493,7 @@ if (group === "user") {
         fields: parseUserFieldsFromSetFlags(argv),
         ...metadata,
       });
-      if (wantsJson) writeJson(context.stdout, proposal);
+      if (wantsJson) writeSurfaceJson(proposal);
       else context.stdout.write(`proposed ${proposal.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -487,7 +505,7 @@ if (group === "user") {
         return CLI_EXIT_USAGE;
       }
       const proposal = claw.user.verify(proposalId, targetUserId);
-      if (wantsJson) writeJson(context.stdout, proposal);
+      if (wantsJson) writeSurfaceJson(proposal);
       else context.stdout.write(`verified ${proposal.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -499,7 +517,7 @@ if (group === "user") {
         return CLI_EXIT_USAGE;
       }
       const result = claw.user.delete(id, targetUserId);
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeSurfaceJson(result);
       else context.stdout.write(`${result.deleted ? "deleted" : "not found"} ${result.id}\n`);
       return result.deleted ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
     }
@@ -507,7 +525,7 @@ if (group === "user") {
     if (command === "validate") {
       const spec = claw.user.resolve({ userId: subcommand || targetUserId, agentId: flags.agent ? targetAgentId : undefined });
       const result = claw.user.validate(spec);
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeSurfaceJson(result);
       else context.stdout.write(result.ok ? "valid\n" : `${result.issues.map((issue) => `${issue.path}: ${issue.message}`).join("\n")}\n`);
       return result.ok ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
     }
@@ -518,7 +536,7 @@ if (group === "user") {
         agentId: targetAgentId,
         ...(flags.profile ? { profile: flags.profile as UserCompileProfile } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeSurfaceJson(result);
       else context.stdout.write(result.markdown);
       return CLI_EXIT_OK;
     }
@@ -529,7 +547,7 @@ if (group === "user") {
         agentId: targetAgentId,
         ...(flags.profile ? { profile: flags.profile as UserCompileProfile } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeSurfaceJson(result);
       else context.stdout.write(`compiled ${result.userId} to ${result.targetFile}\n`);
       return CLI_EXIT_OK;
     }
@@ -544,13 +562,13 @@ if (group === "user") {
       const compiled = readBooleanFlag(argv, flags, "compile", false)
         ? claw.user.compile({ agentId: targetAgentId })
         : null;
-      if (wantsJson) writeJson(context.stdout, { assignment, compiled });
+      if (wantsJson) writeSurfaceJson({ assignment, compiled });
       else context.stdout.write(`assigned ${assignment.userId} to ${assignment.agentId}\n`);
       return CLI_EXIT_OK;
     }
   } catch (error) {
     const handled = cliErrorFromUnknown(error);
-    if (wantsJson) writeCliError(context.stdout, handled);
+    if (wantsJson) writeSurfaceJsonError(handled);
     else context.stderr.write(`${handled.message}\n`);
     return handled.exitCode;
   }
