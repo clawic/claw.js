@@ -435,9 +435,9 @@ export function buildDiscordOperationRequest(
     case "get-user-voice-state":
       return getPlan(`guilds/${guildId(values)}/voice-states/${userId(values)}`, auth, headers, { type: "object", requiredPaths: ["user_id", "session_id"] });
     case "modify-current-user-voice-state":
-      return bodyPlan("PATCH", `guilds/${guildId(values)}/voice-states/@me`, auth, headers, voiceStateBody(values, true), { type: "object" });
+      return bodyPlan("PATCH", `guilds/${guildId(values)}/voice-states/@me`, auth, headers, voiceStateBody(values, true), { type: "null" });
     case "modify-user-voice-state":
-      return bodyPlan("PATCH", `guilds/${guildId(values)}/voice-states/${userId(values)}`, auth, headers, voiceStateBody(values, false), { type: "object" });
+      return bodyPlan("PATCH", `guilds/${guildId(values)}/voice-states/${userId(values)}`, auth, headers, voiceStateBody(values, false), { type: "null" });
     case "create-lobby":
       return bodyPlan("POST", "lobbies", auth, headers, lobbyBody(values), { type: "object", requiredPaths: ["id", "application_id", "members"] });
     case "get-lobby":
@@ -471,17 +471,17 @@ export function buildDiscordOperationRequest(
     case "update-channel":
       return bodyPlan("PATCH", `channels/${channelId(values)}`, auth, auditHeaders(headers, values), channelBody(values, false), { type: "object", requiredPaths: ["id", "type"] });
     case "set-voice-channel-status":
-      return bodyPlan("PUT", `channels/${channelId(values)}/voice-status`, auth, auditHeaders(headers, values), voiceChannelStatusBody(values), { type: "object" });
+      return bodyPlan("PUT", `channels/${channelId(values)}/voice-status`, auth, auditHeaders(headers, values), voiceChannelStatusBody(values), { type: "null" });
     case "delete-channel":
       return deletePlan(`channels/${channelId(values)}`, auth, auditHeaders(headers, values), { type: "object", requiredPaths: ["id"] });
     case "edit-channel-permissions":
-      return bodyPlan("PUT", `channels/${channelId(values)}/permissions/${overwriteId(values)}`, auth, auditHeaders(headers, values), channelPermissionBody(values), { type: "object" });
+      return bodyPlan("PUT", `channels/${channelId(values)}/permissions/${overwriteId(values)}`, auth, auditHeaders(headers, values), channelPermissionBody(values), { type: "null" });
     case "delete-channel-permission":
-      return deletePlan(`channels/${channelId(values)}/permissions/${overwriteId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
+      return deletePlan(`channels/${channelId(values)}/permissions/${overwriteId(values)}`, auth, auditHeaders(headers, values), { type: "null" });
     case "follow-announcement-channel":
       return bodyPlan("POST", `channels/${channelId(values)}/followers`, auth, auditHeaders(headers, values), followAnnouncementChannelBody(values), { type: "object", requiredPaths: ["channel_id", "webhook_id"] });
     case "trigger-typing-indicator":
-      return bodyPlan("POST", `channels/${channelId(values)}/typing`, auth, headers, {}, { type: "object" });
+      return bodyPlan("POST", `channels/${channelId(values)}/typing`, auth, headers, {}, { type: "null" });
     case "group-dm-add-recipient":
       return bodyPlan("PUT", `channels/${channelId(values)}/recipients/${userId(values)}`, auth, headers, groupDmRecipientBody(values), { type: "object" });
     case "group-dm-remove-recipient":
@@ -519,7 +519,7 @@ export function buildDiscordOperationRequest(
     case "unpin-message":
       return deletePlan(`channels/${channelId(values)}/messages/pins/${messageId(values)}`, auth, auditHeaders(headers, values), { type: "null" });
     case "create-reaction":
-      return putPlan(`channels/${channelId(values)}/messages/${messageId(values)}/reactions/${pathSegment(requiredString(values.emoji, "emoji"))}/@me`, auth, headers, { type: "object" });
+      return putPlan(`channels/${channelId(values)}/messages/${messageId(values)}/reactions/${pathSegment(requiredString(values.emoji, "emoji"))}/@me`, auth, headers, { type: "null" });
     case "delete-own-reaction":
       return deletePlan(`channels/${channelId(values)}/messages/${messageId(values)}/reactions/${pathSegment(requiredString(values.emoji, "emoji"))}/@me`, auth, headers, { type: "null" });
     case "delete-user-reaction":
@@ -556,13 +556,13 @@ export function buildDiscordOperationRequest(
     case "list-joined-private-archived-threads":
       return getPlan(`channels/${channelId(values)}/users/@me/threads/archived/private`, auth, headers, { type: "object", requiredPaths: ["threads", "members", "has_more"] }, archivedThreadQuery(values));
     case "join-thread":
-      return putPlan(`channels/${channelId(values)}/thread-members/@me`, auth, headers, { type: "object" });
+      return putPlan(`channels/${channelId(values)}/thread-members/@me`, auth, headers, { type: "null" });
     case "leave-thread":
-      return deletePlan(`channels/${channelId(values)}/thread-members/@me`, auth, headers, { type: "object" });
+      return deletePlan(`channels/${channelId(values)}/thread-members/@me`, auth, headers, { type: "null" });
     case "add-thread-member":
-      return putPlan(`channels/${channelId(values)}/thread-members/${userId(values)}`, auth, headers, { type: "object" });
+      return putPlan(`channels/${channelId(values)}/thread-members/${userId(values)}`, auth, headers, { type: "null" });
     case "remove-thread-member":
-      return deletePlan(`channels/${channelId(values)}/thread-members/${userId(values)}`, auth, headers, { type: "object" });
+      return deletePlan(`channels/${channelId(values)}/thread-members/${userId(values)}`, auth, headers, { type: "null" });
     case "get-thread-member":
       return getPlan(`channels/${channelId(values)}/thread-members/${userId(values)}`, auth, headers, { type: "object", requiredPaths: ["id", "user_id"] }, removeEmptyValues({ with_member: values.withMember }));
     case "list-thread-members":
