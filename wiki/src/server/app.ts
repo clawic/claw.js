@@ -20,7 +20,10 @@ function resolvePublicRoot(): string {
   const candidates = [
     fileURLToPath(new URL("../../ui/dist", import.meta.url)),
     fileURLToPath(new URL("../ui/dist", import.meta.url)),
+    fileURLToPath(new URL("../../ui", import.meta.url)),
+    fileURLToPath(new URL("../ui", import.meta.url)),
     path.join(process.cwd(), "ui", "dist"),
+    path.join(process.cwd(), "ui"),
   ];
   return candidates.find((candidate) => fs.existsSync(candidate)) ?? candidates[0];
 }
