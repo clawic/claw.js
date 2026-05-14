@@ -30,6 +30,10 @@ registry/router parity guard. The guard fails when a public command loses its
 registered docs, ADRs, tests, source symbol, alias uniqueness, router evidence,
 or registry-backed help output.
 
+The same gates track pre-V1 raw JSON writer debt. New or expanded raw
+`writeJson` CLI responses fail policy; migrations to the common envelope must
+lower the tracked debt file count.
+
 New stable JSON responses use:
 
 ```json

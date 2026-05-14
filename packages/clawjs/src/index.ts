@@ -63,7 +63,7 @@ import { createCliClaw, createCliWorkspaceClaw } from "./cli-claw-factory.ts";
 import { parseRuleHints, parseRuleReferences } from "./cli-rule-utils.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 export { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
-import { cliErrorFromUnknown, writeCliError, writeJson, writeJsonLine } from "./cli-json.ts";
+import { cliErrorFromUnknown, writeCliError, writeCommandJsonOk, writeJson, writeJsonLine } from "./cli-json.ts";
 import { runOpenServerCommand } from "./cli-open-server.ts";
 import { collectFlagValues, extractPositionals, formatCliTable, joinedPositionals, parseCsvFlag, parseFlags, parseJsonFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
 import { inferAudioExtension, inferMimeTypeFromPath, parseContextBlock, parseInferenceMessages, pathSafeBasename, readJsonFile, resolveRuntimeAdapterId, timelineRange, type GenerationCliMediaKind } from "./cli-runtime-utils.ts";
@@ -174,7 +174,7 @@ async function runOpenCli(input: {
   const surfaceName = input.positionals[1];
   if (!surfaceName || surfaceName === "list") {
     if (input.wantsJson) {
-      writeJson(input.context.stdout, { dashboards: openSurfaceRows(isClawDomainConfigured(input.flags)) });
+      writeCommandJsonOk(input.context.stdout, "open", { dashboards: openSurfaceRows(isClawDomainConfigured(input.flags)) }, { subcommand: "list" });
     } else {
       input.context.stdout.write(`${formatCliTable(openSurfaceRows(isClawDomainConfigured(input.flags)))}\n`);
     }
@@ -206,7 +206,7 @@ async function runOpenCli(input: {
     if (await waitForUrl(state.targetUrl || state.url, 1_000)) {
       const outputUrl = useClawDomain ? surfacePrimaryClawUrl(surface) : state.url;
       if (!input.argv.includes("--no-browser") && !readBooleanFlag(input.argv, input.flags, "no-browser", false)) openBrowser(outputUrl);
-      if (input.wantsJson) writeJson(input.context.stdout, { ok: true, reused: true, surface: surface.id, url: outputUrl, pid: state.pid });
+      if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "open", { reused: true, surface: surface.id, url: outputUrl, pid: state.pid }, { subcommand: surface.id });
       else input.context.stdout.write(`${outputUrl}\n`);
       return CLI_EXIT_OK;
     }
@@ -254,7 +254,7 @@ async function runOpenCli(input: {
     ? `${url}?token=${encodeURIComponent(fs.readFileSync(path.join(openStateDir(), `storage-token-${host}-${port}.txt`), "utf8").trim())}&bucket=workspace`
     : url;
   if (!input.argv.includes("--no-browser") && !readBooleanFlag(input.argv, input.flags, "no-browser", false)) openBrowser(browserUrl);
-  if (input.wantsJson) writeJson(input.context.stdout, { ok: true, reused: false, surface: surface.id, url, pid: child.pid });
+  if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "open", { reused: false, surface: surface.id, url, pid: child.pid }, { subcommand: surface.id });
   else input.context.stdout.write(`${url}\n`);
   return CLI_EXIT_OK;
 }

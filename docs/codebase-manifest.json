@@ -36,12 +36,12 @@
     ]
   },
   "summary": {
-    "files": 2824,
+    "files": 2825,
     "tests": 389,
     "entrypoints": 160,
     "languages": {
       "typescript": 2627,
-      "javascript": 107,
+      "javascript": 108,
       "swift": 90
     }
   },
@@ -95049,7 +95049,7 @@
     {
       "path": "packages/clawjs/src/cli-discovery.test.ts",
       "language": "typescript",
-      "lines": 46,
+      "lines": 57,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -115293,6 +115293,31 @@
         {
           "kind": "function",
           "name": "vitest",
+          "exported": false
+        }
+      ]
+    },
+    {
+      "path": "scripts/verify-cli-json-envelope-debt.mjs",
+      "language": "javascript",
+      "lines": 57,
+      "test": false,
+      "entrypoint": false,
+      "imports": [
+        "node:fs",
+        "node:path",
+        "node:url"
+      ],
+      "exports": [],
+      "declarations": [
+        {
+          "kind": "function",
+          "name": "countRawJsonWriters",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "listFiles",
           "exported": false
         }
       ]
