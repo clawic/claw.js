@@ -267,7 +267,7 @@ export function buildDiscordOperationRequest(
     case "get-current-user-guild-member":
       return getPlan(`users/@me/guilds/${guildId(values)}/member`, bearerAuth, headers, { type: "object", requiredPaths: ["user", "roles"] });
     case "leave-guild":
-      return deletePlan(`users/@me/guilds/${guildId(values)}`, bearerAuth, headers, { type: "object" });
+      return deletePlan(`users/@me/guilds/${guildId(values)}`, bearerAuth, headers, { type: "null" });
     case "create-dm":
       return bodyPlan("POST", "users/@me/channels", auth, headers, directMessageBody(values), { type: "object", requiredPaths: ["id", "type"] });
     case "create-group-dm":
@@ -370,11 +370,11 @@ export function buildDiscordOperationRequest(
     case "get-entitlement":
       return getPlan(`applications/${applicationId(values)}/entitlements/${entitlementId(values)}`, auth, headers, { type: "object", requiredPaths: ["id", "sku_id", "application_id"] });
     case "consume-entitlement":
-      return bodyPlan("POST", `applications/${applicationId(values)}/entitlements/${entitlementId(values)}/consume`, auth, headers, {}, { type: "object" });
+      return bodyPlan("POST", `applications/${applicationId(values)}/entitlements/${entitlementId(values)}/consume`, auth, headers, {}, { type: "null" });
     case "create-test-entitlement":
       return bodyPlan("POST", `applications/${applicationId(values)}/entitlements`, auth, headers, testEntitlementBody(values), { type: "object", requiredPaths: ["id", "sku_id"] });
     case "delete-test-entitlement":
-      return deletePlan(`applications/${applicationId(values)}/entitlements/${entitlementId(values)}`, auth, headers, { type: "object" });
+      return deletePlan(`applications/${applicationId(values)}/entitlements/${entitlementId(values)}`, auth, headers, { type: "null" });
     case "list-skus":
       return getPlan(`applications/${applicationId(values)}/skus`, auth, headers, { type: "array" });
     case "list-sku-subscriptions":
@@ -445,7 +445,7 @@ export function buildDiscordOperationRequest(
     case "modify-lobby":
       return bodyPlan("PATCH", `lobbies/${lobbyId(values)}`, auth, headers, lobbyBody(values), { type: "object", requiredPaths: ["id", "application_id", "members"] });
     case "delete-lobby":
-      return deletePlan(`lobbies/${lobbyId(values)}`, auth, headers, { type: "object" });
+      return deletePlan(`lobbies/${lobbyId(values)}`, auth, headers, { type: "null" });
     case "add-lobby-member":
       return bodyPlan("PUT", `lobbies/${lobbyId(values)}/members/${userId(values)}`, auth, headers, lobbyMemberBody(values), { type: "object", requiredPaths: ["id"] });
     case "bulk-update-lobby-members":
@@ -459,15 +459,15 @@ export function buildDiscordOperationRequest(
         responseSchema: { type: "array" },
       };
     case "remove-lobby-member":
-      return deletePlan(`lobbies/${lobbyId(values)}/members/${userId(values)}`, auth, headers, { type: "object" });
+      return deletePlan(`lobbies/${lobbyId(values)}/members/${userId(values)}`, auth, headers, { type: "null" });
     case "leave-lobby":
-      return deletePlan(`lobbies/${lobbyId(values)}/members/@me`, bearerAuth, headers, { type: "object" });
+      return deletePlan(`lobbies/${lobbyId(values)}/members/@me`, bearerAuth, headers, { type: "null" });
     case "link-channel-to-lobby":
       return bodyPlan("PATCH", `lobbies/${lobbyId(values)}/channel-linking`, bearerAuth, headers, lobbyChannelLinkBody(values), { type: "object", requiredPaths: ["id", "application_id", "members", "linked_channel"] });
     case "unlink-channel-from-lobby":
       return bodyPlan("PATCH", `lobbies/${lobbyId(values)}/channel-linking`, bearerAuth, headers, {}, { type: "object", requiredPaths: ["id", "application_id", "members"] });
     case "update-lobby-message-moderation-metadata":
-      return bodyPlan("PUT", `lobbies/${lobbyId(values)}/messages/${messageId(values)}/moderation-metadata`, auth, headers, lobbyMessageModerationMetadataBody(values), { type: "object" });
+      return bodyPlan("PUT", `lobbies/${lobbyId(values)}/messages/${messageId(values)}/moderation-metadata`, auth, headers, lobbyMessageModerationMetadataBody(values), { type: "null" });
     case "update-channel":
       return bodyPlan("PATCH", `channels/${channelId(values)}`, auth, auditHeaders(headers, values), channelBody(values, false), { type: "object", requiredPaths: ["id", "type"] });
     case "set-voice-channel-status":
@@ -699,7 +699,7 @@ export function buildDiscordOperationRequest(
     case "update-guild-scheduled-event":
       return bodyPlan("PATCH", `guilds/${guildId(values)}/scheduled-events/${guildScheduledEventId(values)}`, auth, auditHeaders(headers, values), scheduledEventBody(values, false), { type: "object", requiredPaths: ["id", "guild_id", "name"] });
     case "delete-guild-scheduled-event":
-      return deletePlan(`guilds/${guildId(values)}/scheduled-events/${guildScheduledEventId(values)}`, auth, headers, { type: "object" });
+      return deletePlan(`guilds/${guildId(values)}/scheduled-events/${guildScheduledEventId(values)}`, auth, headers, { type: "null" });
     case "list-guild-scheduled-event-users":
       return getPlan(`guilds/${guildId(values)}/scheduled-events/${guildScheduledEventId(values)}/users`, auth, headers, { type: "array" }, removeEmptyValues({
         limit: optionalNumber(values.limit),
@@ -714,7 +714,7 @@ export function buildDiscordOperationRequest(
     case "update-stage-instance":
       return bodyPlan("PATCH", `stage-instances/${channelId(values)}`, auth, auditHeaders(headers, values), stageInstanceBody(values, false), { type: "object", requiredPaths: ["id", "channel_id", "topic"] });
     case "delete-stage-instance":
-      return deletePlan(`stage-instances/${channelId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
+      return deletePlan(`stage-instances/${channelId(values)}`, auth, auditHeaders(headers, values), { type: "null" });
     case "get-invite":
       return getPlan(`invites/${inviteCode(values)}`, auth, headers, { type: "object", requiredPaths: ["code"] }, removeEmptyValues({
         with_counts: values.withCounts,
