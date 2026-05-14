@@ -74,9 +74,9 @@ import {
 import { parseImageOperation, parseImageProvenance, parseImageType } from "./cli-image-parsers.ts";
 import { buildImageCommonInput, buildMediaListInput, buildMediaMetadata } from "./cli-media-utils.ts";
 import { OPEN_SURFACES, allOpenSurfaceHostnames, buildOpenUsage, openSurfaceRows, parseClawHostSurface, resolveOpenSurface, surfacePrimaryClawUrl, type OpenSurface, type OpenSurfaceState } from "./cli-open-surfaces.ts";
-import { openBrowser, openStateDir, openStatePath, readOpenState, repoRootFromCliPackage, writeOpenState } from "./cli-open-state.ts";
+import { currentCliEntryPath, openBrowser, openStateDir, openStatePath, readOpenState, repoRootFromCliPackage, writeOpenState } from "./cli-open-state.ts";
 import { portIsOpen, processIsAlive, waitForUrl, writeProgress } from "./cli-process-utils.ts";
-import { CLAW_DOMAINS_BEGIN, CLAW_DOMAINS_END, CLAW_DOMAINS_LABEL, buildDomainsPlist, buildDomainsProxyScript, domainHostsBlock, domainsHostsFile, domainsPlistPath, domainsProxyConfigPath, domainsProxyScriptPath, domainsServiceDir, parseSurfacePortOverrides, replaceDomainHostsBlock, surfaceTargetPort } from "./cli-domains-config.ts";
+import { CLAW_DOMAINS_BEGIN, CLAW_DOMAINS_END, CLAW_DOMAINS_LABEL, buildDomainsPlist, buildDomainsProxyScript, buildDomainsServiceConfig, domainHostsBlock, domainsInstallPlan, domainsProxyConfigPath, domainsProxyScriptPath, domainsServiceDir, parseSurfacePortOverrides, readDomainsStatus, replaceDomainHostsBlock, surfaceTargetPort } from "./cli-domains-config.ts";
 import { runPrivilegedScript } from "./cli-domains-privileges.ts";
 import { parseRuleHints, parseRuleReferences } from "./cli-rule-utils.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
@@ -125,17 +125,6 @@ type CliMediaClaw = ClawInstance & {
     };
   };
 };
-interface ClawDomainsStatus {
-  installed: boolean;
-  hostsConfigured: boolean;
-  proxyConfigured: boolean;
-  proxyReachable: boolean;
-  hosts: string[];
-  hostsFile: string;
-  plistFile: string;
-  proxyUrl: string;
-}
-
 function isClawDomainConfigured(flags: Record<string, string>): boolean {
   if (process.env.CLAW_DOMAINS_ACTIVE === "1") return true;
   if (process.env.CLAW_DOMAINS_ACTIVE === "0") return false;
@@ -146,63 +135,6 @@ function isClawDomainConfigured(flags: Record<string, string>): boolean {
   } catch {
     return false;
   }
-}
-
-function domainsInstallPlan(flags: Record<string, string>) {
-  const hostsFile = domainsHostsFile(flags);
-  const plistFile = domainsPlistPath(flags);
-  return {
-    hostsFile,
-    plistFile,
-    hosts: allOpenSurfaceHostnames(),
-    proxyUrl: `http://${flags.host || "127.0.0.1"}:${flags.port || "80"}`,
-    serviceLabel: CLAW_DOMAINS_LABEL,
-  };
-}
-
-function buildDomainsServiceConfig(flags: Record<string, string>, cwd: string): string {
-  const user = os.userInfo();
-  return `${JSON.stringify({
-    host: flags.host || "127.0.0.1",
-    port: Number(flags.port || "80"),
-    workspace: path.resolve(cwd, flags.workspace ?? "."),
-    repoRoot: repoRootFromCliPackage(),
-    cliEntryPath: currentCliEntryPath(),
-    nodePath: process.execPath,
-    username: user.username,
-    uid: typeof process.getuid === "function" ? process.getuid() : user.uid,
-    homeDir: user.homedir,
-    surfacePorts: parseSurfacePortOverrides(flags["surface-port"]),
-    surfaces: OPEN_SURFACES.map((surface) => ({
-      id: surface.id,
-      label: surface.label,
-      port: surface.port,
-      aliases: surface.aliases ?? [],
-    })),
-  }, null, 2)}\n`;
-}
-
-async function readDomainsStatus(flags: Record<string, string>): Promise<ClawDomainsStatus> {
-  const plan = domainsInstallPlan(flags);
-  let hostsConfigured = false;
-  try {
-    const content = fs.readFileSync(plan.hostsFile, "utf8");
-    hostsConfigured = content.includes(CLAW_DOMAINS_BEGIN) && content.includes(CLAW_DOMAINS_END);
-  } catch {
-    hostsConfigured = false;
-  }
-  const proxyConfigured = fs.existsSync(plan.plistFile);
-  const proxyReachable = await portIsOpen(flags.host || "127.0.0.1", Number(flags.port || "80"));
-  return {
-    installed: hostsConfigured && proxyConfigured,
-    hostsConfigured,
-    proxyConfigured,
-    proxyReachable,
-    hosts: plan.hosts,
-    hostsFile: plan.hostsFile,
-    plistFile: plan.plistFile,
-    proxyUrl: plan.proxyUrl,
-  };
 }
 
 async function proxyHttpResponse(input: {
@@ -666,7 +598,7 @@ async function runDomainsCli(input: {
   const command = input.positionals[1] || "status";
   const dryRun = input.argv.includes("--dry-run");
   if (command === "status") {
-    const status = await readDomainsStatus(input.flags);
+    const status = await readDomainsStatus(input.flags, portIsOpen);
     if (input.wantsJson) writeJson(input.context.stdout, status);
     else input.context.stdout.write(`installed=${status.installed} proxy=${status.proxyReachable ? "running" : "stopped"}\n`);
     return CLI_EXIT_OK;
@@ -675,7 +607,7 @@ async function runDomainsCli(input: {
   if (command === "install") {
     const plan = domainsInstallPlan(input.flags);
     const plist = buildDomainsPlist(input.flags);
-    const serviceConfig = buildDomainsServiceConfig(input.flags, input.context.cwd);
+    const serviceConfig = buildDomainsServiceConfig(input.flags, input.context.cwd, { repoRoot: repoRootFromCliPackage(), cliEntryPath: currentCliEntryPath(), nodePath: process.execPath, uid: typeof process.getuid === "function" ? process.getuid() : undefined });
     const proxyScript = buildDomainsProxyScript();
     if (dryRun) {
       if (input.wantsJson) writeJson(input.context.stdout, { ok: true, dryRun: true, action: "install", ...plan, hostsBlock: domainHostsBlock(), plist, serviceConfig });
@@ -1181,12 +1113,6 @@ function telegramCodexStatePath(workspaceRoot: string, flags: Record<string, str
 const CODEX_AGENT_ID = "codex";
 function shellQuote(value: string): string {
   return `'${value.replace(/'/g, "'\\''")}'`;
-}
-
-function currentCliEntryPath(): string {
-  const entry = fileURLToPath(import.meta.url);
-  const packagedBin = path.resolve(path.dirname(entry), "..", "bin", "claw.mjs");
-  return fs.existsSync(packagedBin) ? packagedBin : entry;
 }
 
 function maybeRerenderSlidesPdfMedia(media: unknown): string | null {

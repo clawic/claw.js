@@ -18,6 +18,12 @@ export function repoRootFromCliPackage(): string {
   return path.resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 }
 
+export function currentCliEntryPath(): string {
+  const entry = fileURLToPath(import.meta.url);
+  const packagedBin = path.resolve(path.dirname(entry), "..", "bin", "claw.mjs");
+  return fs.existsSync(packagedBin) ? packagedBin : entry;
+}
+
 export function readOpenState(filePath: string): OpenSurfaceState | null {
   try {
     return JSON.parse(fs.readFileSync(filePath, "utf8")) as OpenSurfaceState;
