@@ -11,7 +11,7 @@ public struct VaultClient: Sendable {
 
     public func login(tenantId: String, email: String, password: String) async throws -> VaultSession {
         try await request(
-            path: "/v1/auth/login",
+            path: PersistentSurfaceKeys.apiPath("auth/login"),
             method: "POST",
             jsonBody: [
                 "tenantId": tenantId,
@@ -23,13 +23,13 @@ public struct VaultClient: Sendable {
     }
 
     public func listSecretTypes() async throws -> [VaultSecretType] {
-        let payload: SecretTypesPayload = try await request(path: "/v1/secret-types", token: nil)
+        let payload: SecretTypesPayload = try await request(path: PersistentSurfaceKeys.apiPath("secret-types"), token: nil)
         return payload.types
     }
 
     public func listSecrets(session vaultSession: VaultSession) async throws -> [VaultSecret] {
         let payload: SecretsPayload = try await request(
-            path: "/v1/tenants/\(vaultSession.tenantId)/secrets",
+            path: PersistentSurfaceKeys.apiPath("tenants/\(vaultSession.tenantId)/secrets"),
             token: vaultSession.accessToken
         )
         return payload.secrets
@@ -71,7 +71,7 @@ public struct VaultClient: Sendable {
             "readOnly": AnyEncodable(input.readOnly),
         ]
         let payload: SecretPayload = try await request(
-            path: "/v1/tenants/\(vaultSession.tenantId)/secrets",
+            path: PersistentSurfaceKeys.apiPath("tenants/\(vaultSession.tenantId)/secrets"),
             method: "POST",
             jsonBody: payloadBody,
             token: vaultSession.accessToken
@@ -81,7 +81,7 @@ public struct VaultClient: Sendable {
 
     public func rotateSecret(session vaultSession: VaultSession, secretName: String, secretValue: String) async throws -> VaultSecret {
         let payload: SecretPayload = try await request(
-            path: "/v1/tenants/\(vaultSession.tenantId)/secrets/\(secretName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? secretName)/versions",
+            path: PersistentSurfaceKeys.apiPath("tenants/\(vaultSession.tenantId)/secrets/\(secretName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? secretName)/versions"),
             method: "POST",
             jsonBody: [
                 "secretValue": secretValue,
@@ -93,7 +93,7 @@ public struct VaultClient: Sendable {
 
     public func listPolicies(session vaultSession: VaultSession) async throws -> [VaultPolicy] {
         let payload: PoliciesPayload = try await request(
-            path: "/v1/tenants/\(vaultSession.tenantId)/policies",
+            path: PersistentSurfaceKeys.apiPath("tenants/\(vaultSession.tenantId)/policies"),
             token: vaultSession.accessToken
         )
         return payload.policies
@@ -108,7 +108,7 @@ public struct VaultClient: Sendable {
         effect: String
     ) async throws -> VaultPolicy {
         let payload: PolicyPayload = try await request(
-            path: "/v1/tenants/\(vaultSession.tenantId)/policies",
+            path: PersistentSurfaceKeys.apiPath("tenants/\(vaultSession.tenantId)/policies"),
             method: "POST",
             jsonBody: [
                 "subjectType": subjectType,
@@ -124,7 +124,7 @@ public struct VaultClient: Sendable {
 
     public func listPrincipals(session vaultSession: VaultSession) async throws -> [VaultPrincipal] {
         let payload: PrincipalsPayload = try await request(
-            path: "/v1/tenants/\(vaultSession.tenantId)/principals",
+            path: PersistentSurfaceKeys.apiPath("tenants/\(vaultSession.tenantId)/principals"),
             token: vaultSession.accessToken
         )
         return payload.principals
@@ -132,7 +132,7 @@ public struct VaultClient: Sendable {
 
     public func createPrincipal(session vaultSession: VaultSession, type: String, label: String) async throws -> VaultPrincipal {
         let payload: PrincipalPayload = try await request(
-            path: "/v1/tenants/\(vaultSession.tenantId)/principals",
+            path: PersistentSurfaceKeys.apiPath("tenants/\(vaultSession.tenantId)/principals"),
             method: "POST",
             jsonBody: [
                 "type": type,
@@ -145,7 +145,7 @@ public struct VaultClient: Sendable {
 
     public func listLeases(session vaultSession: VaultSession) async throws -> [VaultLease] {
         let payload: LeasesPayload = try await request(
-            path: "/v1/tenants/\(vaultSession.tenantId)/leases",
+            path: PersistentSurfaceKeys.apiPath("tenants/\(vaultSession.tenantId)/leases"),
             token: vaultSession.accessToken
         )
         return payload.leases
@@ -159,7 +159,7 @@ public struct VaultClient: Sendable {
         ttlSec: Int
     ) async throws -> VaultLease {
         let payload: LeasePayload = try await request(
-            path: "/v1/tenants/\(vaultSession.tenantId)/leases",
+            path: PersistentSurfaceKeys.apiPath("tenants/\(vaultSession.tenantId)/leases"),
             method: "POST",
             jsonBody: [
                 "secretName": AnyEncodable(secretName),
@@ -174,7 +174,7 @@ public struct VaultClient: Sendable {
 
     public func revokeLease(session vaultSession: VaultSession, leaseId: String) async throws {
         let _: EmptyPayload = try await request(
-            path: "/v1/tenants/\(vaultSession.tenantId)/leases/\(leaseId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? leaseId)/revoke",
+            path: PersistentSurfaceKeys.apiPath("tenants/\(vaultSession.tenantId)/leases/\(leaseId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? leaseId)/revoke"),
             method: "POST",
             jsonBody: Optional<[String: AnyEncodable]>.none,
             token: vaultSession.accessToken
@@ -183,7 +183,7 @@ public struct VaultClient: Sendable {
 
     public func listAudit(session vaultSession: VaultSession) async throws -> [VaultAuditEvent] {
         let payload: AuditPayload = try await request(
-            path: "/v1/tenants/\(vaultSession.tenantId)/audit",
+            path: PersistentSurfaceKeys.apiPath("tenants/\(vaultSession.tenantId)/audit"),
             token: vaultSession.accessToken
         )
         return payload.events
@@ -191,7 +191,7 @@ public struct VaultClient: Sendable {
 
     public func secretCapabilities(session vaultSession: VaultSession, secretName: String) async throws -> [VaultSecretCapability] {
         let payload: SecretCapabilitiesPayload = try await request(
-            path: "/v1/tenants/\(vaultSession.tenantId)/secrets/\(secretName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? secretName)/capabilities",
+            path: PersistentSurfaceKeys.apiPath("tenants/\(vaultSession.tenantId)/secrets/\(secretName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? secretName)/capabilities"),
             token: vaultSession.accessToken
         )
         return payload.capabilities
@@ -199,7 +199,7 @@ public struct VaultClient: Sendable {
 
     public func secretActions(session vaultSession: VaultSession, secretName: String) async throws -> [VaultSecretAction] {
         let payload: SecretActionsPayload = try await request(
-            path: "/v1/tenants/\(vaultSession.tenantId)/secrets/\(secretName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? secretName)/actions",
+            path: PersistentSurfaceKeys.apiPath("tenants/\(vaultSession.tenantId)/secrets/\(secretName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? secretName)/actions"),
             token: vaultSession.accessToken
         )
         return payload.actions

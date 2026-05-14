@@ -7,7 +7,7 @@ struct VaultMacKitTests {
     @Test("VaultClient logs in and decodes the session payload")
     func loginDecodesSession() async throws {
         let transport = StubTransport()
-        transport.enqueue(path: "/v1/auth/login", method: "POST", status: 200, body: """
+        transport.enqueue(path: PersistentSurfaceKeys.apiPath("auth/login"), method: "POST", status: 200, body: """
         {"accessToken":"token-123","tenantId":"demo-tenant","email":"admin@vault.local","role":"tenant_admin"}
         """)
         let client = VaultClient(baseURL: URL(string: "http://127.0.0.1:24112")!, session: transport.session)
@@ -22,7 +22,7 @@ struct VaultMacKitTests {
     @Test("VaultClient sends typed secret payloads including structured fields")
     func createSecretEncodesTypedPayload() async throws {
         let transport = StubTransport()
-        transport.enqueue(path: "/v1/tenants/demo-tenant/secrets", method: "POST", status: 201, body: """
+        transport.enqueue(path: PersistentSurfaceKeys.apiPath("tenants/demo-tenant/secrets"), method: "POST", status: 201, body: """
         {"secret":{"secretName":"revenuecat_primary","allowedHosts":[],"allowedHeaderNames":[],"allowInURL":false,"allowInRequestBody":false,"allowLocalNetwork":false,"readOnly":true,"exportable":false,"leaseModes":["process"],"maskedFingerprint":"sha256:demo","version":1,"updatedAt":"2026-04-14T00:00:00.000Z"}}
         """)
         let client = VaultClient(baseURL: URL(string: "http://127.0.0.1:24112")!, session: transport.session)
