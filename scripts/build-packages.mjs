@@ -122,7 +122,7 @@ function waitForWorkspaceTypes(workspace) {
   if (typePaths.length === 0) return;
 
   const previousSizes = new Map();
-  for (let attempt = 0; attempt < 20; attempt += 1) {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
     let stable = true;
     for (const typesPath of typePaths) {
       if (!fs.existsSync(typesPath)) {
