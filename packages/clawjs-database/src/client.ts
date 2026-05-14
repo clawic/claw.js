@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { clawDatabaseApiRoutes } from "@clawjs/core";
 
 type JsonValue = Record<string, unknown> | unknown[] | string | number | boolean | null;
 
@@ -31,95 +32,95 @@ export class DatabaseApiClient {
   }
 
   async login(email: string, password: string): Promise<JsonValue> {
-    return await this.request("/v1/auth/admin/login", {
+    return await this.request(clawDatabaseApiRoutes.adminLogin, {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
   }
 
   async listNamespaces(): Promise<JsonValue> {
-    return await this.request("/v1/namespaces");
+    return await this.request(clawDatabaseApiRoutes.namespaces);
   }
 
   async createNamespace(input: { id?: string; displayName: string }): Promise<JsonValue> {
-    return await this.request("/v1/namespaces", {
+    return await this.request(clawDatabaseApiRoutes.namespaces, {
       method: "POST",
       body: JSON.stringify(input),
     });
   }
 
   async listCollections(namespaceId: string): Promise<JsonValue> {
-    return await this.request(`/v1/namespaces/${namespaceId}/collections`);
+    return await this.request(clawDatabaseApiRoutes.namespaceCollections(namespaceId));
   }
 
   async getCollection(namespaceId: string, collectionName: string): Promise<JsonValue> {
-    return await this.request(`/v1/namespaces/${namespaceId}/collections/${collectionName}`);
+    return await this.request(clawDatabaseApiRoutes.collection(namespaceId, collectionName));
   }
 
   async createCollection(namespaceId: string, input: Record<string, unknown>): Promise<JsonValue> {
-    return await this.request(`/v1/namespaces/${namespaceId}/collections`, {
+    return await this.request(clawDatabaseApiRoutes.namespaceCollections(namespaceId), {
       method: "POST",
       body: JSON.stringify(input),
     });
   }
 
   async updateCollection(namespaceId: string, collectionName: string, input: Record<string, unknown>): Promise<JsonValue> {
-    return await this.request(`/v1/namespaces/${namespaceId}/collections/${collectionName}`, {
+    return await this.request(clawDatabaseApiRoutes.collection(namespaceId, collectionName), {
       method: "PATCH",
       body: JSON.stringify(input),
     });
   }
 
   async listRecords(namespaceId: string, collectionName: string, options: { filter?: string; sort?: string } = {}): Promise<JsonValue> {
-    const url = new URL(`/v1/namespaces/${namespaceId}/collections/${collectionName}/records`, this.options.baseUrl);
+    const url = new URL(clawDatabaseApiRoutes.records(namespaceId, collectionName), this.options.baseUrl);
     if (options.filter) url.searchParams.set("filter", options.filter);
     if (options.sort) url.searchParams.set("sort", options.sort);
     return await this.request(url.pathname + url.search);
   }
 
   async createRecord(namespaceId: string, collectionName: string, payload: Record<string, unknown>): Promise<JsonValue> {
-    return await this.request(`/v1/namespaces/${namespaceId}/collections/${collectionName}/records`, {
+    return await this.request(clawDatabaseApiRoutes.records(namespaceId, collectionName), {
       method: "POST",
       body: JSON.stringify(payload),
     });
   }
 
   async getRecord(namespaceId: string, collectionName: string, recordId: string): Promise<JsonValue> {
-    return await this.request(`/v1/namespaces/${namespaceId}/collections/${collectionName}/records/${recordId}`);
+    return await this.request(clawDatabaseApiRoutes.record(namespaceId, collectionName, recordId));
   }
 
   async updateRecord(namespaceId: string, collectionName: string, recordId: string, payload: Record<string, unknown>): Promise<JsonValue> {
-    return await this.request(`/v1/namespaces/${namespaceId}/collections/${collectionName}/records/${recordId}`, {
+    return await this.request(clawDatabaseApiRoutes.record(namespaceId, collectionName, recordId), {
       method: "PATCH",
       body: JSON.stringify(payload),
     });
   }
 
   async deleteRecord(namespaceId: string, collectionName: string, recordId: string): Promise<JsonValue> {
-    return await this.request(`/v1/namespaces/${namespaceId}/collections/${collectionName}/records/${recordId}`, {
+    return await this.request(clawDatabaseApiRoutes.record(namespaceId, collectionName, recordId), {
       method: "DELETE",
     });
   }
 
   async listTokens(namespaceId: string): Promise<JsonValue> {
-    return await this.request(`/v1/namespaces/${namespaceId}/tokens`);
+    return await this.request(clawDatabaseApiRoutes.namespaceTokens(namespaceId));
   }
 
   async createToken(namespaceId: string, input: Record<string, unknown>): Promise<JsonValue> {
-    return await this.request(`/v1/namespaces/${namespaceId}/tokens`, {
+    return await this.request(clawDatabaseApiRoutes.namespaceTokens(namespaceId), {
       method: "POST",
       body: JSON.stringify(input),
     });
   }
 
   async revokeToken(namespaceId: string, tokenId: string): Promise<JsonValue> {
-    return await this.request(`/v1/namespaces/${namespaceId}/tokens/${tokenId}/revoke`, {
+    return await this.request(clawDatabaseApiRoutes.revokeToken(namespaceId, tokenId), {
       method: "POST",
     });
   }
 
   async listFiles(namespaceId: string): Promise<JsonValue> {
-    return await this.request(`/v1/namespaces/${namespaceId}/files`);
+    return await this.request(clawDatabaseApiRoutes.namespaceFiles(namespaceId));
   }
 
   async uploadFile(input: {
@@ -133,14 +134,14 @@ export class DatabaseApiClient {
     if (input.collectionName) form.set("collectionName", input.collectionName);
     if (input.recordId) form.set("recordId", input.recordId);
     form.set("file", new Blob([fs.readFileSync(input.filePath)]), input.filePath.split("/").pop() || "upload.bin");
-    return await this.request("/v1/files", {
+    return await this.request(clawDatabaseApiRoutes.files, {
       method: "POST",
       body: form,
     });
   }
 
   async deleteFile(fileId: string): Promise<JsonValue> {
-    return await this.request(`/v1/files/${fileId}`, {
+    return await this.request(clawDatabaseApiRoutes.file(fileId), {
       method: "DELETE",
     });
   }

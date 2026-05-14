@@ -7,6 +7,7 @@ import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import websocket from "@fastify/websocket";
+import { clawDatabaseApiRoutePatterns } from "@clawjs/core";
 
 import { DatabaseAuthService, loadEphemeralAdminToken, type AuthPrincipal } from "./auth.ts";
 import { loadDatabaseConfig, type DatabaseServiceConfig } from "./config.ts";
@@ -226,7 +227,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
       },
     });
 
-    wsApp.get("/v1/realtime", { websocket: true }, async (socket, request) => {
+    wsApp.get(clawDatabaseApiRoutePatterns.realtime, { websocket: true }, async (socket, request) => {
       const principal = await resolvePrincipal(request as FastifyRequest, auth, store);
       if (!principal) {
         socket.close();
@@ -245,14 +246,14 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     await reply.code(204).send();
   });
 
-  app.get("/v1/health", async () => ({
+  app.get(clawDatabaseApiRoutePatterns.health, async () => ({
     ok: true,
     service: "database",
     host: config.host,
     port: config.port,
   }));
 
-  app.post("/v1/auth/admin/login", async (request, reply) => {
+  app.post(clawDatabaseApiRoutePatterns.adminLogin, async (request, reply) => {
     const body = readBody(request);
     const email = typeof body.email === "string" ? body.email : "";
     const password = typeof body.password === "string" ? body.password : "";
@@ -282,7 +283,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
   //
   // Always returns the same {accessToken, admin} shape on success so the
   // caller can treat first-run and steady-state identically.
-  app.post("/v1/auth/admin/bootstrap", async (request, reply) => {
+  app.post(clawDatabaseApiRoutePatterns.adminBootstrap, async (request, reply) => {
     const body = readBody(request);
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
     const password = typeof body.password === "string" ? body.password : "";
@@ -313,7 +314,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     };
   });
 
-  app.get("/v1/auth/me", async (request, reply) => {
+  app.get(clawDatabaseApiRoutePatterns.me, async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store);
     if (!principal) return null;
     return {
@@ -321,7 +322,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     };
   });
 
-  app.get("/v1/settings", async (request, reply) => {
+  app.get(clawDatabaseApiRoutePatterns.settings, async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, { adminOnly: true });
     if (!principal) return null;
     return {
@@ -333,7 +334,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     };
   });
 
-  app.get("/v1/namespaces", async (request, reply) => {
+  app.get(clawDatabaseApiRoutePatterns.namespaces, async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, { adminOnly: true });
     if (!principal) return null;
     return {
@@ -341,7 +342,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     };
   });
 
-  app.post("/v1/namespaces", async (request, reply) => {
+  app.post(clawDatabaseApiRoutePatterns.namespaces, async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, { adminOnly: true });
     if (!principal) return null;
     try {
@@ -359,7 +360,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
 
   // Idempotent ensure-namespace. Returns the existing one if it already
   // exists, otherwise creates it. Always seeds the built-in collections.
-  app.put("/v1/namespaces/:namespaceId", async (request, reply) => {
+  app.put(clawDatabaseApiRoutePatterns.namespace, async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, { adminOnly: true });
     if (!principal) return null;
     try {
@@ -379,7 +380,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     }
   });
 
-  app.get("/v1/namespaces/:namespaceId/collections", async (request, reply) => {
+  app.get(clawDatabaseApiRoutePatterns.namespaceCollections, async (request, reply) => {
     const params = request.params as { namespaceId: string };
     const principal = await requirePrincipal(request, reply, auth, store, {
       namespaceId: params.namespaceId,
@@ -391,7 +392,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     };
   });
 
-  app.post("/v1/namespaces/:namespaceId/collections", async (request, reply) => {
+  app.post(clawDatabaseApiRoutePatterns.namespaceCollections, async (request, reply) => {
     const params = request.params as { namespaceId: string };
     const principal = await requirePrincipal(request, reply, auth, store, {
       namespaceId: params.namespaceId,
@@ -412,7 +413,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     }
   });
 
-  app.get("/v1/namespaces/:namespaceId/collections/:collectionName", async (request, reply) => {
+  app.get(clawDatabaseApiRoutePatterns.collection, async (request, reply) => {
     const params = request.params as { namespaceId: string; collectionName: string };
     const principal = await requirePrincipal(request, reply, auth, store, {
       namespaceId: params.namespaceId,
@@ -427,7 +428,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     return collection;
   });
 
-  app.patch("/v1/namespaces/:namespaceId/collections/:collectionName", async (request, reply) => {
+  app.patch(clawDatabaseApiRoutePatterns.collection, async (request, reply) => {
     const params = request.params as { namespaceId: string; collectionName: string };
     const principal = await requirePrincipal(request, reply, auth, store, {
       namespaceId: params.namespaceId,
@@ -447,7 +448,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     }
   });
 
-  app.delete("/v1/namespaces/:namespaceId/collections/:collectionName", async (request, reply) => {
+  app.delete(clawDatabaseApiRoutePatterns.collection, async (request, reply) => {
     const params = request.params as { namespaceId: string; collectionName: string };
     const principal = await requirePrincipal(request, reply, auth, store, {
       namespaceId: params.namespaceId,
@@ -463,7 +464,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     }
   });
 
-  app.get("/v1/namespaces/:namespaceId/collections/:collectionName/records", async (request, reply) => {
+  app.get(clawDatabaseApiRoutePatterns.records, async (request, reply) => {
     const params = request.params as { namespaceId: string; collectionName: string };
     const principal = await requirePrincipal(request, reply, auth, store, {
       namespaceId: params.namespaceId,
@@ -483,7 +484,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     }
   });
 
-  app.post("/v1/namespaces/:namespaceId/collections/:collectionName/records", async (request, reply) => {
+  app.post(clawDatabaseApiRoutePatterns.records, async (request, reply) => {
     const params = request.params as { namespaceId: string; collectionName: string };
     const principal = await requirePrincipal(request, reply, auth, store, {
       namespaceId: params.namespaceId,
@@ -507,7 +508,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     }
   });
 
-  app.get("/v1/namespaces/:namespaceId/collections/:collectionName/records/:recordId", async (request, reply) => {
+  app.get(clawDatabaseApiRoutePatterns.record, async (request, reply) => {
     const params = request.params as { namespaceId: string; collectionName: string; recordId: string };
     const principal = await requirePrincipal(request, reply, auth, store, {
       namespaceId: params.namespaceId,
@@ -522,7 +523,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     return record;
   });
 
-  app.patch("/v1/namespaces/:namespaceId/collections/:collectionName/records/:recordId", async (request, reply) => {
+  app.patch(clawDatabaseApiRoutePatterns.record, async (request, reply) => {
     const params = request.params as { namespaceId: string; collectionName: string; recordId: string };
     const principal = await requirePrincipal(request, reply, auth, store, {
       namespaceId: params.namespaceId,
@@ -546,7 +547,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     }
   });
 
-  app.delete("/v1/namespaces/:namespaceId/collections/:collectionName/records/:recordId", async (request, reply) => {
+  app.delete(clawDatabaseApiRoutePatterns.record, async (request, reply) => {
     const params = request.params as { namespaceId: string; collectionName: string; recordId: string };
     const principal = await requirePrincipal(request, reply, auth, store, {
       namespaceId: params.namespaceId,
@@ -567,7 +568,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     return { ok };
   });
 
-  app.get("/v1/namespaces/:namespaceId/files", async (request, reply) => {
+  app.get(clawDatabaseApiRoutePatterns.namespaceFiles, async (request, reply) => {
     const params = request.params as { namespaceId: string };
     const principal = await requirePrincipal(request, reply, auth, store, {
       namespaceId: params.namespaceId,
@@ -579,7 +580,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     };
   });
 
-  app.post("/v1/files", async (request, reply) => {
+  app.post(clawDatabaseApiRoutePatterns.files, async (request, reply) => {
     try {
       const upload = await readUpload(request);
       const principal = await requirePrincipal(request, reply, auth, store, {
@@ -595,7 +596,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     }
   });
 
-  app.get("/v1/files/:fileId", async (request, reply) => {
+  app.get(clawDatabaseApiRoutePatterns.file, async (request, reply) => {
     const params = request.params as { fileId: string };
     const file = store.getFile(params.fileId);
     if (!file) {
@@ -612,7 +613,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     return reply.send(fs.createReadStream(file.storagePath));
   });
 
-  app.delete("/v1/files/:fileId", async (request, reply) => {
+  app.delete(clawDatabaseApiRoutePatterns.file, async (request, reply) => {
     const params = request.params as { fileId: string };
     const file = store.getFile(params.fileId);
     if (!file) {
@@ -629,7 +630,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     };
   });
 
-  app.get("/v1/namespaces/:namespaceId/tokens", async (request, reply) => {
+  app.get(clawDatabaseApiRoutePatterns.namespaceTokens, async (request, reply) => {
     const params = request.params as { namespaceId: string };
     const principal = await requirePrincipal(request, reply, auth, store, {
       namespaceId: params.namespaceId,
@@ -641,7 +642,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     };
   });
 
-  app.post("/v1/namespaces/:namespaceId/tokens", async (request, reply) => {
+  app.post(clawDatabaseApiRoutePatterns.namespaceTokens, async (request, reply) => {
     const params = request.params as { namespaceId: string };
     const principal = await requirePrincipal(request, reply, auth, store, {
       namespaceId: params.namespaceId,
@@ -662,7 +663,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     }
   });
 
-  app.post("/v1/namespaces/:namespaceId/tokens/:tokenId/revoke", async (request, reply) => {
+  app.post(clawDatabaseApiRoutePatterns.revokeToken, async (request, reply) => {
     const params = request.params as { namespaceId: string; tokenId: string };
     const principal = await requirePrincipal(request, reply, auth, store, {
       namespaceId: params.namespaceId,

@@ -30,6 +30,18 @@ flowchart TD
   claw_contracts_api --> claw_api_database_collections
   claw_api_database_records["Database record list\napiRoute"]
   claw_contracts_api --> claw_api_database_records
+  claw_api_database_adminLogin["Database admin login\napiRoute"]
+  claw_contracts_api --> claw_api_database_adminLogin
+  claw_api_database_realtime["Database realtime websocket\napiRoute"]
+  claw_contracts_api --> claw_api_database_realtime
+  claw_api_search_types["Search/index type list\napiRoute"]
+  claw_contracts_api --> claw_api_search_types
+  claw_api_search_entitiesUpsert["Search/index entity upsert\napiRoute"]
+  claw_contracts_api --> claw_api_search_entitiesUpsert
+  claw_api_search_searches["Search definition list\napiRoute"]
+  claw_contracts_api --> claw_api_search_searches
+  claw_api_search_monitors["Search monitor list\napiRoute"]
+  claw_contracts_api --> claw_api_search_monitors
   claw_api_webhooks_providerEvent["Provider webhook ingress\napiRoute"]
   claw_contracts_api --> claw_api_webhooks_providerEvent
   claw_api_integrations_callback["OAuth integration callback\napiRoute"]
@@ -571,6 +583,12 @@ flowchart TD
 | `claw.api.database.namespaces` | apiRoute | api | claw | `/v1/namespaces` |
 | `claw.api.database.collections` | apiRoute | api | claw | `/v1/namespaces/{namespace}/collections` |
 | `claw.api.database.records` | apiRoute | api | claw | `/v1/namespaces/{namespace}/collections/{collection}/records` |
+| `claw.api.database.adminLogin` | apiRoute | api | claw | `/v1/auth/admin/login` |
+| `claw.api.database.realtime` | apiRoute | api | claw | `/v1/realtime` |
+| `claw.api.search.types` | apiRoute | api | claw | `/v1/types` |
+| `claw.api.search.entitiesUpsert` | apiRoute | api | claw | `/v1/entities/upsert` |
+| `claw.api.search.searches` | apiRoute | api | claw | `/v1/searches` |
+| `claw.api.search.monitors` | apiRoute | api | claw | `/v1/monitors` |
 | `claw.api.webhooks.providerEvent` | apiRoute | api | claw | `/v1/webhooks/{provider}/{event}` |
 | `claw.api.integrations.callback` | apiRoute | api | claw | `/v1/integrations/{provider}/callback` |
 | `claw.protocol.hostCommand.v1` | protocol | protocol | claw | `host-command-v1` |

@@ -1,5 +1,6 @@
 import path from "node:path";
 import os from "node:os";
+import { clawDataFiles, clawGlobalHomeLayout } from "@clawjs/core";
 
 export interface IndexServiceConfig {
   host: string;
@@ -24,7 +25,7 @@ export function loadIndexConfig(overrides: Partial<IndexServiceConfig> = {}): In
   return {
     host: overrides.host ?? process.env.CLAW_SEARCH_HOST ?? "127.0.0.1",
     port: overrides.port ?? Number(process.env.CLAW_SEARCH_PORT ?? process.env.PORT ?? String(SEARCH_DEFAULT_PORT)),
-    dbPath: overrides.dbPath ?? process.env.CLAW_SEARCH_DB_PATH ?? path.join(dataDir, "search.sqlite"),
+    dbPath: overrides.dbPath ?? process.env.CLAW_SEARCH_DB_PATH ?? path.join(dataDir, clawDataFiles.searchDatabase),
     dataDir,
     jwtSecret: overrides.jwtSecret ?? process.env.CLAW_SEARCH_JWT_SECRET ?? "search-dev-secret-change-me",
     corsOrigins: overrides.corsOrigins ?? (process.env.CLAW_SEARCH_CORS_ORIGINS ?? "")
@@ -41,7 +42,7 @@ export function loadIndexConfig(overrides: Partial<IndexServiceConfig> = {}): In
 function defaultClawjsDataRoot(): string {
   const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
   if (explicit) return expandHome(explicit);
-  return path.join(expandHome(process.env.CLAW_HOME ?? path.join(os.homedir(), ".claw")), "data");
+  return path.join(expandHome(process.env.CLAW_HOME ?? clawGlobalHomeLayout.root), "data");
 }
 
 function expandHome(value: string): string {

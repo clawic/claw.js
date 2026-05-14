@@ -251,6 +251,90 @@ export const clawPublicApiPrefix = "/v1";
 export const clawPrivateAppApiPrefix = "/api";
 export const clawEventsPath = "/v1/events";
 
+export const clawDatabaseApiRoutes = {
+  realtime: "/v1/realtime",
+  health: "/v1/health",
+  adminLogin: "/v1/auth/admin/login",
+  namespaces: "/v1/namespaces",
+  namespaceCollections(namespaceId: string): string {
+    return `/v1/namespaces/${encodeURIComponent(namespaceId)}/collections`;
+  },
+  collection(namespaceId: string, collectionName: string): string {
+    return `/v1/namespaces/${encodeURIComponent(namespaceId)}/collections/${encodeURIComponent(collectionName)}`;
+  },
+  records(namespaceId: string, collectionName: string): string {
+    return `${this.collection(namespaceId, collectionName)}/records`;
+  },
+  record(namespaceId: string, collectionName: string, recordId: string): string {
+    return `${this.records(namespaceId, collectionName)}/${encodeURIComponent(recordId)}`;
+  },
+  namespaceTokens(namespaceId: string): string {
+    return `/v1/namespaces/${encodeURIComponent(namespaceId)}/tokens`;
+  },
+  revokeToken(namespaceId: string, tokenId: string): string {
+    return `${this.namespaceTokens(namespaceId)}/${encodeURIComponent(tokenId)}/revoke`;
+  },
+  namespaceFiles(namespaceId: string): string {
+    return `/v1/namespaces/${encodeURIComponent(namespaceId)}/files`;
+  },
+  files: "/v1/files",
+  file(fileId: string): string {
+    return `/v1/files/${encodeURIComponent(fileId)}`;
+  },
+} as const;
+
+export const clawDatabaseApiRoutePatterns = {
+  realtime: clawDatabaseApiRoutes.realtime,
+  health: clawDatabaseApiRoutes.health,
+  adminLogin: clawDatabaseApiRoutes.adminLogin,
+  adminBootstrap: "/v1/auth/admin/bootstrap",
+  me: "/v1/auth/me",
+  settings: "/v1/settings",
+  namespaces: clawDatabaseApiRoutes.namespaces,
+  namespace: "/v1/namespaces/:namespaceId",
+  namespaceCollections: "/v1/namespaces/:namespaceId/collections",
+  collection: "/v1/namespaces/:namespaceId/collections/:collectionName",
+  records: "/v1/namespaces/:namespaceId/collections/:collectionName/records",
+  record: "/v1/namespaces/:namespaceId/collections/:collectionName/records/:recordId",
+  namespaceFiles: "/v1/namespaces/:namespaceId/files",
+  files: clawDatabaseApiRoutes.files,
+  file: "/v1/files/:fileId",
+  namespaceTokens: "/v1/namespaces/:namespaceId/tokens",
+  revokeToken: "/v1/namespaces/:namespaceId/tokens/:tokenId/revoke",
+} as const;
+
+export const clawSearchApiRoutes = {
+  realtime: "/v1/realtime",
+  health: "/v1/health",
+  types: "/v1/types",
+  entitiesUpsert: "/v1/entities/upsert",
+  entity(id: string): string {
+    return `/v1/entities/${encodeURIComponent(id)}`;
+  },
+  entityHistory(id: string): string {
+    return `${this.entity(id)}/history`;
+  },
+  entitiesQuery: "/v1/entities/query",
+  entitiesSearch: "/v1/entities/search",
+  searches: "/v1/searches",
+  runSearch(id: string): string {
+    return `/v1/searches/${encodeURIComponent(id)}/run`;
+  },
+  monitors: "/v1/monitors",
+  fireMonitor(id: string): string {
+    return `/v1/monitors/${encodeURIComponent(id)}/fire`;
+  },
+  runs: "/v1/runs",
+  run(id: string): string {
+    return `/v1/runs/${encodeURIComponent(id)}`;
+  },
+  alerts: "/v1/alerts",
+  ackAlert(id: string): string {
+    return `/v1/alerts/${encodeURIComponent(id)}/ack`;
+  },
+  tagsApply: "/v1/tags/apply",
+} as const;
+
 export const clawDeepLinkSchemes = {
   host: "clawix",
   frameworkReserved: "claw",
@@ -378,9 +462,15 @@ const cliCommands = [
 
 const corePublicRoutes = [
   ["claw.api.events", "GET", clawEventsPath, "Public framework event stream"],
-  ["claw.api.database.namespaces", "GET", "/v1/namespaces", "Database namespace list"],
+  ["claw.api.database.namespaces", "GET", clawDatabaseApiRoutes.namespaces, "Database namespace list"],
   ["claw.api.database.collections", "GET", "/v1/namespaces/{namespace}/collections", "Database collection list"],
   ["claw.api.database.records", "GET", "/v1/namespaces/{namespace}/collections/{collection}/records", "Database record list"],
+  ["claw.api.database.adminLogin", "POST", clawDatabaseApiRoutes.adminLogin, "Database admin login"],
+  ["claw.api.database.realtime", "GET", clawDatabaseApiRoutes.realtime, "Database realtime websocket"],
+  ["claw.api.search.types", "GET", clawSearchApiRoutes.types, "Search/index type list"],
+  ["claw.api.search.entitiesUpsert", "POST", clawSearchApiRoutes.entitiesUpsert, "Search/index entity upsert"],
+  ["claw.api.search.searches", "GET", clawSearchApiRoutes.searches, "Search definition list"],
+  ["claw.api.search.monitors", "GET", clawSearchApiRoutes.monitors, "Search monitor list"],
   ["claw.api.webhooks.providerEvent", "POST", "/v1/webhooks/{provider}/{event}", "Provider webhook ingress"],
   ["claw.api.integrations.callback", "GET", "/v1/integrations/{provider}/callback", "OAuth integration callback"],
 ] as const;

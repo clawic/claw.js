@@ -1,3 +1,5 @@
+import { clawSearchApiRoutes } from "@clawjs/core";
+
 type JsonValue = Record<string, unknown> | unknown[] | string | number | boolean | null;
 
 export interface IndexCliOptions { baseUrl: string; token?: string; }
@@ -18,43 +20,43 @@ export class IndexApiClient {
     return payload;
   }
 
-  health() { return this.request("/v1/health"); }
-  listTypes() { return this.request("/v1/types"); }
+  health() { return this.request(clawSearchApiRoutes.health); }
+  listTypes() { return this.request(clawSearchApiRoutes.types); }
   declareType(payload: Record<string, unknown>) {
-    return this.request("/v1/types", { method: "POST", body: JSON.stringify(payload) });
+    return this.request(clawSearchApiRoutes.types, { method: "POST", body: JSON.stringify(payload) });
   }
   upsertEntity(payload: Record<string, unknown>) {
-    return this.request("/v1/entities/upsert", { method: "POST", body: JSON.stringify(payload) });
+    return this.request(clawSearchApiRoutes.entitiesUpsert, { method: "POST", body: JSON.stringify(payload) });
   }
-  getEntity(id: string) { return this.request(`/v1/entities/${id}`); }
+  getEntity(id: string) { return this.request(clawSearchApiRoutes.entity(id)); }
   getHistory(id: string, field: string) {
-    const url = new URL(`/v1/entities/${id}/history`, this.options.baseUrl);
+    const url = new URL(clawSearchApiRoutes.entityHistory(id), this.options.baseUrl);
     url.searchParams.set("field", field);
     return this.request(url.pathname + url.search);
   }
   queryEntities(payload: Record<string, unknown>) {
-    return this.request("/v1/entities/query", { method: "POST", body: JSON.stringify(payload) });
+    return this.request(clawSearchApiRoutes.entitiesQuery, { method: "POST", body: JSON.stringify(payload) });
   }
   searchEntities(payload: Record<string, unknown>) {
-    return this.request("/v1/entities/search", { method: "POST", body: JSON.stringify(payload) });
+    return this.request(clawSearchApiRoutes.entitiesSearch, { method: "POST", body: JSON.stringify(payload) });
   }
-  listSearches() { return this.request("/v1/searches"); }
+  listSearches() { return this.request(clawSearchApiRoutes.searches); }
   createSearch(payload: Record<string, unknown>) {
-    return this.request("/v1/searches", { method: "POST", body: JSON.stringify(payload) });
+    return this.request(clawSearchApiRoutes.searches, { method: "POST", body: JSON.stringify(payload) });
   }
   runSearch(id: string, payload: Record<string, unknown> = {}) {
-    return this.request(`/v1/searches/${id}/run`, { method: "POST", body: JSON.stringify(payload) });
+    return this.request(clawSearchApiRoutes.runSearch(id), { method: "POST", body: JSON.stringify(payload) });
   }
-  listMonitors() { return this.request("/v1/monitors"); }
+  listMonitors() { return this.request(clawSearchApiRoutes.monitors); }
   createMonitor(payload: Record<string, unknown>) {
-    return this.request("/v1/monitors", { method: "POST", body: JSON.stringify(payload) });
+    return this.request(clawSearchApiRoutes.monitors, { method: "POST", body: JSON.stringify(payload) });
   }
-  fireMonitor(id: string) { return this.request(`/v1/monitors/${id}/fire`, { method: "POST" }); }
-  listRuns() { return this.request("/v1/runs"); }
-  getRun(id: string) { return this.request(`/v1/runs/${id}`); }
-  listAlerts() { return this.request("/v1/alerts"); }
-  ackAlert(id: string) { return this.request(`/v1/alerts/${id}/ack`, { method: "POST" }); }
+  fireMonitor(id: string) { return this.request(clawSearchApiRoutes.fireMonitor(id), { method: "POST" }); }
+  listRuns() { return this.request(clawSearchApiRoutes.runs); }
+  getRun(id: string) { return this.request(clawSearchApiRoutes.run(id)); }
+  listAlerts() { return this.request(clawSearchApiRoutes.alerts); }
+  ackAlert(id: string) { return this.request(clawSearchApiRoutes.ackAlert(id), { method: "POST" }); }
   applyTag(payload: Record<string, unknown>) {
-    return this.request("/v1/tags/apply", { method: "POST", body: JSON.stringify(payload) });
+    return this.request(clawSearchApiRoutes.tagsApply, { method: "POST", body: JSON.stringify(payload) });
   }
 }

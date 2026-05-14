@@ -1852,6 +1852,8 @@ The docs check script validates that every current export from
     ClawStableSurfaceStability
     clawAppPorts
     clawCorePorts
+    clawDatabaseApiRoutePatterns
+    clawDatabaseApiRoutes
     clawDataFiles
     clawDeepLinkSchemes
     clawDefaultBindAddress
@@ -1869,6 +1871,7 @@ The docs check script validates that every current export from
     clawServiceSocketName
     clawServiceSocketPath
     clawServiceWindowsPipe
+    clawSearchApiRoutes
     clawSurfaceRegistryVersion
     clawWorkspaceLayout
     clawixBridgePort

@@ -156,6 +156,29 @@ test("runCli supports implicit db create, schema inspection, human output, and a
   assert.match(getStdout.getOutput(), /title: Comprar leche/);
   assert.match(getStdout.getOutput(), /status: todo/);
 
+  const collectionsStdout = captureStream();
+  assert.equal(await runCli(["collections", "tasks", "list", "--json"], {
+    stdout: collectionsStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.match(collectionsStdout.getOutput(), new RegExp(taskId));
+
+  const recordsStdout = captureStream();
+  assert.equal(await runCli(["records", "tasks", "get", taskId, "--json"], {
+    stdout: recordsStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.equal((JSON.parse(recordsStdout.getOutput()) as { id: string }).id, taskId);
+
+  const aliasStdout = captureStream();
+  assert.equal(await runCli(["tasks", "create", "Alias task"], {
+    stdout: aliasStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.match(aliasStdout.getOutput(), /\S+/);
   const emptyStdout = captureStream();
   assert.equal(await runCli(["db", "leads", "list"], {
     stdout: emptyStdout.stream,
@@ -184,29 +207,6 @@ test("runCli supports implicit db create, schema inspection, human output, and a
   assert.match(schemaStdout.getOutput(), /collection: leads/);
   assert.match(schemaStdout.getOutput(), /protected: yes/);
 
-  const collectionsStdout = captureStream();
-  assert.equal(await runCli(["collections", "tasks", "list", "--json"], {
-    stdout: collectionsStdout.stream,
-    stderr: captureStream().stream,
-    cwd: workspaceRoot,
-  }), CLI_EXIT_OK);
-  assert.match(collectionsStdout.getOutput(), new RegExp(taskId));
-
-  const recordsStdout = captureStream();
-  assert.equal(await runCli(["records", "tasks", "get", taskId, "--json"], {
-    stdout: recordsStdout.stream,
-    stderr: captureStream().stream,
-    cwd: workspaceRoot,
-  }), CLI_EXIT_OK);
-  assert.equal((JSON.parse(recordsStdout.getOutput()) as { id: string }).id, taskId);
-
-  const aliasStdout = captureStream();
-  assert.equal(await runCli(["tasks", "create", "Alias task"], {
-    stdout: aliasStdout.stream,
-    stderr: captureStream().stream,
-    cwd: fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-magic-db-alias-")),
-  }), CLI_EXIT_OK);
-  assert.match(aliasStdout.getOutput(), /\S+/);
 });
 
 test("runCli can scaffold a workspace-first project with the new command surface", async () => {

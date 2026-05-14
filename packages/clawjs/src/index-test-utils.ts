@@ -600,7 +600,8 @@ export function useIsolatedMainData(t: { after(fn: () => void): void }, workspac
     ["CLAW_DATA_DIR", process.env.CLAW_DATA_DIR],
     ["CLAWIX_CLAW_DATA_DIR", process.env.CLAWIX_CLAW_DATA_DIR],
     ["CLAW_DB_PATH", process.env.CLAW_DB_PATH],
-    ["CLAW_DB_PATH", process.env.CLAW_DB_PATH],
+    ["CLAW_DATABASE_DB_PATH", process.env.CLAW_DATABASE_DB_PATH],
+    ["CLAW_DATABASE_FILES_DIR", process.env.CLAW_DATABASE_FILES_DIR],
     ["DATABASE_DB_PATH", process.env.DATABASE_DB_PATH],
     ["DATABASE_FILES_DIR", process.env.DATABASE_FILES_DIR],
   ]);
@@ -608,7 +609,8 @@ export function useIsolatedMainData(t: { after(fn: () => void): void }, workspac
   process.env.CLAW_DATA_DIR = dataRoot;
   delete process.env.CLAWIX_CLAW_DATA_DIR;
   delete process.env.CLAW_DB_PATH;
-  delete process.env.CLAW_DB_PATH;
+  delete process.env.CLAW_DATABASE_DB_PATH;
+  delete process.env.CLAW_DATABASE_FILES_DIR;
   delete process.env.DATABASE_DB_PATH;
   delete process.env.DATABASE_FILES_DIR;
   t.after(() => {
