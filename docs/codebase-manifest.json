@@ -95447,7 +95447,7 @@
     {
       "path": "packages/clawjs/src/cli-host-forward.ts",
       "language": "typescript",
-      "lines": 165,
+      "lines": 188,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -95553,7 +95553,7 @@
     {
       "path": "packages/clawjs/src/cli-json.ts",
       "language": "typescript",
-      "lines": 99,
+      "lines": 103,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -95564,6 +95564,7 @@
       "exports": [
         "CliJsonMeta",
         "cliErrorFromUnknown",
+        "stringifyCliJson",
         "writeCliError",
         "writeCommandJsonError",
         "writeCommandJsonOk",
@@ -95584,6 +95585,11 @@
           "kind": "function",
           "name": "isHandledCliErrorLike",
           "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "stringifyCliJson",
+          "exported": true
         },
         {
           "kind": "function",
@@ -97717,7 +97723,7 @@
     {
       "path": "packages/clawjs/src/index-host.test.ts",
       "language": "typescript",
-      "lines": 172,
+      "lines": 181,
       "test": true,
       "entrypoint": false,
       "imports": [

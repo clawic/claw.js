@@ -120,6 +120,10 @@ test("direct domain CLI forwards v1 requests to the active host", async () => {
     const forwarded = await runCliCapture(["contacts", "list", "--claw-home", clawHome, "--json"], workspaceRoot);
     assert.equal(forwarded.code, CLI_EXIT_OK, forwarded.stderr);
     const response = JSON.parse(forwarded.stdout);
+    assert.equal(response.ok, true);
+    assert.equal(response.meta.canonicalCommand, "host");
+    assert.equal(response.meta.subcommand, "contacts contacts list");
+    assert.equal(response.meta.host.hostId, "test-host");
     assert.equal(response.data.received, "contacts.contacts.list");
     assert.equal((requests[0] as { domain: string }).domain, "contacts");
   } finally {
@@ -160,6 +164,11 @@ test("system capabilities CLI uses the active host contract", async () => {
 
     const result = await runCliCapture(["system", "capabilities", "list", "--claw-home", clawHome, "--json"], workspaceRoot);
     assert.equal(result.code, CLI_EXIT_OK, result.stderr);
+    const payload = JSON.parse(result.stdout);
+    assert.equal(payload.ok, true);
+    assert.equal(payload.meta.canonicalCommand, "host");
+    assert.equal(payload.meta.subcommand, "system capabilities list");
+    assert.deepEqual(payload.data, [{ id: "calendar.read" }]);
     assert.ok(requestPayload);
     const capturedRequest = requestPayload as { domain: string; resource: string; action: string };
     assert.equal(capturedRequest.domain, "system");

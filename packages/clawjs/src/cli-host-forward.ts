@@ -6,7 +6,7 @@ import type { ClawCommandResponse, ClawDomain } from "@clawjs/core";
 import { HostClientError, sendHostCommand } from "./host-client.ts";
 import { activeHost, readHostRegistry } from "./host-registry.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
-import { writeJson } from "./cli-json.ts";
+import { stringifyCliJson, writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 import { hostRegistryOptions } from "./cli-host-command.ts";
 import type { CliContext } from "./index.ts";
 
@@ -135,7 +135,13 @@ export async function runHostForwardCli(input: {
 
   try {
     const response = await sendHostCommand(host, request);
-    writeHostResponse(input.context, response, input.wantsJson);
+    writeHostResponse(input.context, response, input.wantsJson, {
+      subcommand: `${input.domain} ${input.resource} ${input.action}`,
+      domain: input.domain,
+      resource: input.resource,
+      action: input.action,
+      hostId: host.id,
+    });
     return response.ok ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
   } catch (error) {
     if (error instanceof HostClientError) {
@@ -145,9 +151,26 @@ export async function runHostForwardCli(input: {
   }
 }
 
-function writeHostResponse(context: CliContext, response: ClawCommandResponse, wantsJson: boolean): void {
+function writeHostResponse(context: CliContext, response: ClawCommandResponse, wantsJson: boolean, meta: Record<string, unknown>): void {
   if (wantsJson) {
-    writeJson(context.stdout, response);
+    if (response.ok) {
+      writeCommandJsonOk(context.stdout, "host", response.data ?? null, {
+        ...meta,
+        hostRequestId: response.requestId,
+        host: response.meta,
+      });
+    } else {
+      writeCommandJsonError(
+        context.stdout,
+        "host",
+        new CliHandledError(response.error?.code ?? "host_command_failed", response.error?.message ?? "Host command failed.", CLI_EXIT_FAILURE),
+        {
+          ...meta,
+          hostRequestId: response.requestId,
+          host: response.meta,
+        },
+      );
+    }
     return;
   }
   if (!response.ok) {
@@ -159,6 +182,6 @@ function writeHostResponse(context: CliContext, response: ClawCommandResponse, w
   } else if (typeof response.data === "string") {
     context.stdout.write(`${response.data}\n`);
   } else {
-    writeJson(context.stdout, response.data);
+    context.stdout.write(`${stringifyCliJson(response.data)}\n`);
   }
 }

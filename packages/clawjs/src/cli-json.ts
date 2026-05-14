@@ -9,11 +9,15 @@ export type CliJsonMeta = Record<string, unknown> & {
 };
 
 export function writeJson(stream: NodeJS.WritableStream, payload: unknown): void {
-  stream.write(`${JSON.stringify(redactSecrets(payload), null, 2)}\n`);
+  stream.write(`${stringifyCliJson(payload)}\n`);
 }
 
 export function writeJsonLine(stream: NodeJS.WritableStream, payload: unknown): void {
   stream.write(`${JSON.stringify(redactSecrets(payload))}\n`);
+}
+
+export function stringifyCliJson(payload: unknown): string {
+  return JSON.stringify(redactSecrets(payload), null, 2);
 }
 
 export function writeJsonOk(stream: NodeJS.WritableStream, data: unknown, meta: CliJsonMeta = {}): void {
