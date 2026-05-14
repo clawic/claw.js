@@ -21,7 +21,7 @@ async function createPrincipal(baseUrl: string, accessToken: string, input: { ty
     body: JSON.stringify(input),
   });
   assert.equal(response.status, 201);
-  return await response.json() as { principal: { id: string; token: string } };
+  return await response.json() as { principal: { id: string }; token: string };
 }
 
 async function createPolicy(baseUrl: string, accessToken: string, input: Record<string, unknown>, tenantId = "demo-tenant") {
@@ -585,7 +585,7 @@ test("secrets sidecar stays compatible with request/list/describe and supports p
     const env = {
       ...process.env,
       CLAW_SECRETS_BASE_URL: secrets.baseUrl,
-      CLAW_SECRETS_TOKEN: principal.principal.token,
+      CLAW_SECRETS_TOKEN: principal.token,
       CLAW_SECRETS_TENANT_ID: tenantId,
     };
     const list = await execFileAsync(process.execPath, [path.join(process.cwd(), "dist", "sidecar.js"), "list-secrets"], { env, encoding: "utf8" });
@@ -607,8 +607,8 @@ test("secrets sidecar stays compatible with request/list/describe and supports p
       "Authorization: Bearer {{telegram_support_bot_token.token}}",
     ], { env, encoding: "utf8" });
     const requestPayload = JSON.parse(requestOutput.stdout) as { authorization: string; queryToken: string };
-    assert.equal(requestPayload.authorization, "Bearer secret-browser-token");
-    assert.equal(requestPayload.queryToken, "secret-browser-token");
+    assert.equal(requestPayload.authorization, "Bearer [REDACTED]");
+    assert.equal(requestPayload.queryToken, "[REDACTED]");
 
     const scriptPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "secrets-sidecar-script-")), "stdin-reader.mjs");
     fs.writeFileSync(scriptPath, "process.stdin.on('data', (chunk) => process.stdout.write(String(chunk)));");

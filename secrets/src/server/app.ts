@@ -1092,6 +1092,32 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     return { leases: resolver.leases.list(tenantId).map((l) => resolver.describeLease(l)) };
   });
 
+  app.post(clawApiPath("tenants/:tenantId/leases/consume"), async (req, reply) => {
+    await requirePrincipalOrUser(req, reply);
+    const keys = session.requireKeys();
+    const { tenantId } = req.params as { tenantId: string };
+    const body = (req.body ?? {}) as { token?: string; mode?: "process" | "browser"; fieldName?: string };
+    if (!body.token) return reply.code(400).send({ error: "token required" });
+    try {
+      const lease = resolver.leases.consume(body.token);
+      if (lease.tenant_id !== tenantId) return reply.code(403).send({ error: "tenant mismatch" });
+      if (body.mode && lease.mode !== body.mode) return reply.code(400).send({ error: "lease mode mismatch" });
+      const row = resolver.secrets.get(lease.secret_id);
+      if (!row) return reply.code(404).send({ error: "Secret not found" });
+      const fields = resolver.describeSecret(row).fields;
+      const fieldNames = body.fieldName
+        ? [body.fieldName]
+        : fields.filter((field) => field.isSecret).map((field) => field.fieldName);
+      const values = Object.fromEntries(fieldNames.map((fieldName) => [
+        fieldName,
+        resolver.revealField({ secret: row, masterKey: keys.masterKey, fieldName }).value,
+      ]));
+      return { lease: resolver.describeLease(lease), secretName: row.internal_name, values };
+    } catch (error) {
+      return reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
   app.post(clawApiPath("tenants/:tenantId/leases/:id/revoke"), async (req, reply) => {
     await requirePrincipalOrUser(req, reply);
     const keys = session.requireKeys();
