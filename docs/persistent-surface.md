@@ -12,6 +12,8 @@ flowchart TD
   clawix_home["Clawix host home\nroot"]
   claw_database_core["Framework main database\ndatabase"]
   claw_global --> claw_database_core
+  claw_database_legacy_productivity["Legacy productivity workspace database\nsidecar"]
+  claw_workspace --> claw_database_legacy_productivity
   claw_database_core_table_workspace_records["workspace_records\ntable"]
   claw_database_core --> claw_database_core_table_workspace_records
   claw_database_core_table_workspace_records_column_collection_name["collection_name\ncolumn"]
@@ -112,6 +114,7 @@ flowchart TD
 | `claw.workspace` | root | claw | `.claw` |
 | `clawix.home` | root | clawix | `~/.clawix` |
 | `claw.database.core` | database | claw | `~/.claw/data/core.sqlite` |
+| `claw.database.legacy_productivity` | sidecar | claw | `.claw/data/productivity.sqlite` |
 | `claw.database.core.table.workspace_records` | table | claw | `` |
 | `claw.database.core.table.workspace_records.column.collection_name` | column | claw | `` |
 | `claw.database.core.table.workspace_records.column.record_id` | column | claw | `` |
