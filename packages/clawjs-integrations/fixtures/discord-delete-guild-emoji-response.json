@@ -1,11 +1,7 @@
 {
-  "id": "sample",
-  "name": "sample",
-  "roles": [
-    "sample"
-  ],
-  "require_colons": true,
-  "managed": false,
-  "animated": false,
-  "available": true
+  "runtimeResponse": {
+    "status": 204,
+    "body": "",
+    "bodyEncoding": "text"
+  }
 }

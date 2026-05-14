@@ -3051,7 +3051,7 @@ describe("discord operation runtime", () => {
       },
       body: {},
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
@@ -3067,6 +3067,20 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["items"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.delete-application-emoji"), {
+      applicationId: "app-123",
+      emojiId: "emoji-123",
+    }), {
+      method: "DELETE",
+      endpoint: "applications/app-123/emojis/emoji-123",
+      auth,
+      headers,
+      body: {},
+      responseSchema: {
+        type: "null",
       },
     });
 
