@@ -17,10 +17,12 @@ import { loadSignalsServiceConfig } from "../../signals/src/config.ts";
 import { loadUserModelConfig } from "../../clawjs-user-model/src/config.ts";
 import { loadVoiceConfig } from "../../clawjs-voice/src/config.ts";
 import { createSqliteWorkspaceCollectionStore } from "../../clawjs-workspace/src/sqlite-store.ts";
+import { V1_MAIN_SCHEMA_SQL } from "../../clawjs/src/v1-data-surface.ts";
 import { createCodeGlobalIndex } from "./code/index.ts";
 import { createContextStore } from "./context/store.ts";
 import { createAppsStore } from "./apps/store.ts";
 import { createLocalStorageStore } from "./storage/store.ts";
+import { resolveClawWorkspaceSurfacePath } from "./surface-paths.ts";
 import { loadConfig as loadPublishingConfig } from "../../../publishing/src/server/config.ts";
 import { loadContentConfig } from "../../../content/src/server/config.ts";
 import { loadDelegationPlaneConfig } from "../../../delegation/src/server/config.ts";
@@ -106,38 +108,9 @@ test("V2 workspace collections and context memory use the main DB", () => {
     assert.equal(collectionStore.dbPath(), path.join(root, "core.sqlite"));
     collectionStore.collection("tasks").put("task_1", { id: "task_1", title: "Ship main DB" });
 
-    const sqlite = new Database(path.join(root, "core.sqlite"));
-    sqlite.exec(`
-      CREATE TABLE IF NOT EXISTS knowledge_entities (
-        id TEXT PRIMARY KEY,
-        type TEXT NOT NULL,
-        label TEXT NOT NULL,
-        description TEXT,
-        properties_json TEXT NOT NULL DEFAULT '{}',
-        sensitivity TEXT NOT NULL DEFAULT 'normal',
-        source TEXT NOT NULL DEFAULT 'manual',
-        provenance_json TEXT NOT NULL DEFAULT '{}',
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS knowledge_facts (
-        id TEXT PRIMARY KEY,
-        subject_id TEXT,
-        predicate TEXT NOT NULL,
-        object_kind TEXT NOT NULL DEFAULT 'literal',
-        object_value_json TEXT NOT NULL,
-        confidence REAL,
-        scope_json TEXT NOT NULL DEFAULT '{}',
-        sensitivity TEXT NOT NULL DEFAULT 'normal',
-        source TEXT NOT NULL DEFAULT 'manual',
-        provenance_json TEXT NOT NULL DEFAULT '{}',
-        supersedes_id TEXT,
-        valid_from TEXT,
-        valid_to TEXT,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
-    `);
+    const coreDbPath = path.join(root, "core.sqlite");
+    const sqlite = new Database(coreDbPath);
+    sqlite.exec(V1_MAIN_SCHEMA_SQL);
     const now = new Date().toISOString();
     sqlite.prepare(`
       INSERT INTO knowledge_entities (id, type, label, created_at, updated_at)
@@ -169,7 +142,7 @@ test("V2 workspace collections and context memory use the main DB", () => {
 
     const apps = createAppsStore();
     const app = apps.create({ name: "V2 App", slug: "v2-app", indexHtml: "<!doctype html><title>V2</title>" });
-    const appsSqlite = new Database(path.join(root, "core.sqlite"));
+    const appsSqlite = new Database(coreDbPath);
     const row = appsSqlite.prepare("SELECT slug, root_path, manifest_json FROM apps WHERE id = ?").get(app.id) as { slug: string; root_path: string; manifest_json: string };
     assert.equal(row.slug, "v2-app");
     assert.equal(row.root_path, path.join(root, "apps", "v2-app"));
@@ -177,10 +150,10 @@ test("V2 workspace collections and context memory use the main DB", () => {
     appsSqlite.close();
     assert.equal(fs.existsSync(path.join(root, "apps", "v2-app", "index.html")), true);
 
-    assert.equal(fs.existsSync(path.join(workspaceDir, ".claw", "data", "database.sqlite")), false);
-    assert.equal(fs.existsSync(path.join(workspaceDir, ".claw", "data", "productivity.sqlite")), false);
-    assert.equal(fs.existsSync(path.join(workspaceDir, ".claw", "data", "storage.sqlite")), false);
-    assert.equal(fs.existsSync(path.join(workspaceDir, ".claw", "code", "code.sqlite")), false);
+    assert.equal(fs.existsSync(resolveClawWorkspaceSurfacePath("claw.workspace.data", workspaceDir, "database.sqlite")), false);
+    assert.equal(fs.existsSync(resolveClawWorkspaceSurfacePath("claw.database.legacy_productivity", workspaceDir)), false);
+    assert.equal(fs.existsSync(resolveClawWorkspaceSurfacePath("claw.workspace.data", workspaceDir, "storage.sqlite")), false);
+    assert.equal(fs.existsSync(resolveClawWorkspaceSurfacePath("claw.workspace", workspaceDir, "code", "code.sqlite")), false);
   });
 });
 

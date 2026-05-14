@@ -7,9 +7,9 @@ import type { AddressInfo } from "net";
 import os from "os";
 import path from "path";
 import { once } from "events";
-
 import Database from "better-sqlite3";
 import { createClaw, saveAuthStore } from "@clawjs/claw";
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 import { buildTimeApp } from "../../../time/src/server/app.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CLI_USAGE, runCli } from "./index.ts";
 import { resolveClawjsDataRoot, resolveClawjsFilesDir, resolveClawjsMainDbPath, runV1DataCli } from "./v1-data.ts";
@@ -843,9 +843,9 @@ test("runCli rejects removed public legacy namespaces before V1 routing", async 
 });
 
 test("V2 main data paths default to the Claw home data namespace", () => {
-  assert.equal(resolveClawjsDataRoot({} as NodeJS.ProcessEnv), path.join(os.homedir(), ".claw", "data"));
-  assert.equal(resolveClawjsMainDbPath({} as NodeJS.ProcessEnv), path.join(os.homedir(), ".claw", "data", "core.sqlite"));
-  assert.equal(resolveClawjsFilesDir({} as NodeJS.ProcessEnv), path.join(os.homedir(), ".claw", "data", "files"));
+  assert.equal(resolveClawjsDataRoot({} as NodeJS.ProcessEnv), path.join(os.homedir(), resolveClawPersistentSurfacePath("claw.global.data").slice("~/".length)));
+  assert.equal(resolveClawjsMainDbPath({} as NodeJS.ProcessEnv), path.join(os.homedir(), resolveClawPersistentSurfacePath("claw.global.data").slice("~/".length), "core.sqlite"));
+  assert.equal(resolveClawjsFilesDir({} as NodeJS.ProcessEnv), path.join(os.homedir(), resolveClawPersistentSurfacePath("claw.global.data").slice("~/".length), "files"));
 
   const explicit = path.join(os.tmpdir(), "clawjs-explicit-root");
   assert.equal(resolveClawjsDataRoot({ CLAW_DATA_DIR: explicit } as NodeJS.ProcessEnv), explicit);
@@ -1103,7 +1103,7 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
     assert.match(fs.readFileSync(mcpConfig, "utf8"), /^model = "gpt"/);
     assert.match(fs.readFileSync(mcpConfig, "utf8"), /enabled = false/);
 
-    const main = new Database(path.join(tempRoot, "core.sqlite"), { readonly: true });
+    const main = new Database(resolveClawPersistentSurfacePath("claw.database.core", tempRoot), { readonly: true });
     try {
       assert.equal((main.prepare("SELECT secret_ref FROM agents WHERE id = ?").get("agent-ops") as { secret_ref: string }).secret_ref, "vault://agents/ops");
       assert.deepEqual(JSON.parse((main.prepare("SELECT secret_refs_json FROM skills WHERE slug = ?").get("deploy") as { secret_refs_json: string }).secret_refs_json), ["vault://skills/deploy-token"]);
@@ -1411,7 +1411,7 @@ test("runCli reset covers V2 main DB legacy service tables when present", async 
     const db = new Database(path.join(tempRoot, "core.sqlite"));
     try {
       for (const table of tables) {
-        db.exec(`CREATE TABLE IF NOT EXISTS ${table} (id TEXT PRIMARY KEY)`);
+        db.exec(["CREATE TABLE IF NOT EXISTS", table, "(id TEXT PRIMARY KEY)"].join(" "));
         db.prepare(`INSERT OR REPLACE INTO ${table} (id) VALUES (?)`).run(`${table}-1`);
       }
       db.prepare(`

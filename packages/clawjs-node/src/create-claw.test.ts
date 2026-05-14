@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import fs from "fs";
 import os from "os";
 import path from "path";
-
 import { Claw, createClaw } from "./create-claw.ts";
+import { resolveClawWorkspaceSurfacePath } from "./surface-paths.ts";
 import { buildTimeApp } from "../../../time/src/server/app.ts";
 
 function createFakeSecretsProxy(): { proxyPath: string; statePath: string } {
@@ -1143,7 +1143,7 @@ test("createClaw embeds the time engine by default", async () => {
     assert.equal(signalled.items[0]?.status, "cancelled");
 
     assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
-    assert.equal(fs.existsSync(path.join(workspaceDir, ".claw", "data", "productivity.sqlite")), false);
+    assert.equal(fs.existsSync(resolveClawWorkspaceSurfacePath("claw.database.legacy_productivity", workspaceDir)), false);
   });
 });
 
