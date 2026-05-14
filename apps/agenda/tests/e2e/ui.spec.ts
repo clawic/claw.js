@@ -1,4 +1,11 @@
+import type { Page } from "@playwright/test";
+
 import { expect, saveBrowserScreenshot, test } from "./helpers";
+
+async function submitModal(page: Page) {
+  await page.locator("#modal-body .btn.primary").click();
+  await expect(page.locator("#modal-overlay")).not.toHaveClass(/open/);
+}
 
 test("day dashboard creates a daily task flow and progress log", async ({ page }) => {
   await page.goto("/");
@@ -9,7 +16,7 @@ test("day dashboard creates a daily task flow and progress log", async ({ page }
   await page.locator("#f-project-start").fill("2026-04-21");
   await page.locator("#f-target-date").fill("2026-04-24");
   await page.locator("#f-project-deadline").fill("2026-04-25");
-  await page.locator("#modal-body .btn.primary").click();
+  await submitModal(page);
   await expect(page.locator("#sec-projects").getByTestId("project-row").filter({ hasText: "Cliente Atlas" })).toBeVisible();
 
   await page.getByTestId("new-goal-button").click();
@@ -17,20 +24,20 @@ test("day dashboard creates a daily task flow and progress log", async ({ page }
   await page.locator("#f-project").selectOption({ label: "Cliente Atlas" });
   await page.locator("#f-target").fill("1");
   await page.locator("#f-unit").fill("entrega");
-  await page.locator("#modal-body .btn.primary").click();
+  await submitModal(page);
   await expect(page.locator("#sec-goals").getByTestId("goal-row").filter({ hasText: "Cerrar entregable" })).toBeVisible();
 
   await page.getByTestId("new-list-button").click();
   await page.locator("#f-title").fill("Today Board");
   await page.locator("#f-kind").selectOption("today");
-  await page.locator("#modal-body .btn.primary").click();
+  await submitModal(page);
   await expect(page.locator("#sec-system-map")).toContainText("Lists");
 
   await page.getByTestId("new-section-button").click();
   await page.locator("#f-title").fill("Deep Work");
   await page.locator("#f-list").selectOption({ label: "Today Board" });
   await page.locator("#f-project").selectOption({ label: "Cliente Atlas" });
-  await page.locator("#modal-body .btn.primary").click();
+  await submitModal(page);
 
   await page.getByTestId("new-cycle-button").click();
   await page.locator("#f-name").fill("Sprint 19");
@@ -39,7 +46,7 @@ test("day dashboard creates a daily task flow and progress log", async ({ page }
   await page.locator("#f-start").fill("2026-04-21");
   await page.locator("#f-end").fill("2026-04-25");
   await page.locator("#f-project").selectOption({ label: "Cliente Atlas" });
-  await page.locator("#modal-body .btn.primary").click();
+  await submitModal(page);
 
   await page.getByTestId("new-epic-button").click();
   await page.locator("#f-title").fill("UI productivity core");
@@ -47,14 +54,14 @@ test("day dashboard creates a daily task flow and progress log", async ({ page }
   await page.locator("#f-status").selectOption("active");
   await page.locator("#f-project").selectOption({ label: "Cliente Atlas" });
   await page.locator("#f-goal").selectOption({ label: "Cerrar entregable" });
-  await page.locator("#modal-body .btn.primary").click();
+  await submitModal(page);
 
   await page.getByTestId("new-milestone-button").click();
   await page.locator("#f-title").fill("Beta marker");
   await page.locator("#f-project").selectOption({ label: "Cliente Atlas" });
   await page.locator("#f-goal").selectOption({ label: "Cerrar entregable" });
   await page.locator("#f-target-date").fill("2026-04-23");
-  await page.locator("#modal-body .btn.primary").click();
+  await submitModal(page);
 
   await page.getByTestId("new-task-button").click();
   await page.locator("#f-title").fill("Preparar demo diaria");
@@ -73,7 +80,7 @@ test("day dashboard creates a daily task flow and progress log", async ({ page }
   await page.locator("#f-story").fill("3");
   await page.locator("#f-recurrence").fill("FREQ=WEEKLY;BYDAY=FR");
   await page.locator("#f-today").check();
-  await page.locator("#modal-body .btn.primary").click();
+  await submitModal(page);
 
   const task = page.locator("#sec-focus").getByTestId("task-row").filter({ hasText: "Preparar demo diaria" });
   await expect(task).toBeVisible();
@@ -94,7 +101,7 @@ test("day dashboard creates a daily task flow and progress log", async ({ page }
   await page.locator("#f-due").fill("2026-04-24");
   await page.locator("#f-deadline").fill("2026-04-24");
   await page.locator("#f-depends").selectOption({ label: "Preparar demo diaria" });
-  await page.locator("#modal-body .btn.primary").click();
+  await submitModal(page);
 
   const dataResponse = await page.request.get("/api/data");
   const data = await dataResponse.json();
