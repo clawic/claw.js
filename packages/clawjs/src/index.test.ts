@@ -1466,8 +1466,7 @@ test("runCli reset clears V2 sidecar service tables when present", async () => {
       { filename: "runtime.sqlite", domain: "runtime", table: "sandbox_runs" },
     ];
     for (const sidecar of sidecars) {
-      const writableSidecarPath = path.join(tempRoot, sidecar.filename);
-      const db = new Database(writableSidecarPath);
+      const db = new Database(path.join(tempRoot, sidecar.filename));
       try {
         db.exec(["CREATE", "TABLE IF NOT EXISTS", sidecar.table, "(id TEXT PRIMARY KEY)"].join(" "));
         db.prepare(`INSERT OR REPLACE INTO ${sidecar.table} (id) VALUES (?)`).run(`${sidecar.table}-1`);
