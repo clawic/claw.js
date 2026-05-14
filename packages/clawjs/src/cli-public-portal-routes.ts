@@ -67,7 +67,7 @@ export async function runPublicPortalShortcut(input: {
   command: string | undefined;
   subcommand: string | undefined;
   argv: string[];
-  flags: Record<string, unknown>;
+  flags: Record<string, string>;
   context: CliContext;
   runCli: RunCli;
 }): Promise<number | null> {
