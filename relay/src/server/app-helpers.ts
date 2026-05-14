@@ -23,7 +23,7 @@ export type ProjectAgentParams = {
   sessionId?: string;
 };
 
-function parseBearerToken(request: FastifyRequest): string | null {
+export function parseBearerToken(request: FastifyRequest): string | null {
   const header = request.headers.authorization;
   if (!header) return null;
   const [scheme, token] = header.split(" ");
@@ -86,7 +86,7 @@ function requestKey(request: FastifyRequest): string {
   return request.ip;
 }
 
-function isLoopbackHost(host: string): boolean {
+export function isLoopbackHost(host: string): boolean {
   if (host.includes("localhost") || host.includes("127.0.0.1")) return true;
   const bare = host.replace(/:\d+$/, "");
   return bare.startsWith("192.168.")
@@ -95,7 +95,7 @@ function isLoopbackHost(host: string): boolean {
     || /^100\.(6[4-9]|[78]\d|9\d|1[01]\d|12[0-7])\./.test(bare);
 }
 
-function isSecureRequest(request: FastifyRequest): boolean {
+export function isSecureRequest(request: FastifyRequest): boolean {
   const forwardedProto = request.headers["x-forwarded-proto"];
   if (typeof forwardedProto === "string") return forwardedProto.split(",")[0]?.trim() === "https";
   return (request.protocol ?? "").toLowerCase() === "https";
