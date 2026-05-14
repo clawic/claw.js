@@ -76,6 +76,70 @@ import type {
   TemporalItem,
 } from "@clawjs/core";
 import { createSqliteWorkspaceCollectionStore } from "./sqlite-store.ts";
+import { SURFACES, TOOL_DESCRIPTORS } from "./workspace-descriptors.ts";
+import {
+  nowIso,
+  uniqueStrings,
+  normalizeSearchText,
+  scoreKeyword,
+  cosineSimilarity,
+  toId,
+  removeUndefined,
+  assertRecord,
+  toCollectionId,
+  toSearchResult,
+  defaultSource,
+  clampNonNegativeNumber,
+  clampConfidence,
+  normalizeChecklist,
+  normalizeBlocks,
+  normalizeReminders,
+  normalizeMilestoneIds,
+  normalizeRecordIds,
+  isArchived,
+} from "./workspace-utils.ts";
+import {
+  isOverdue,
+  toTimestamp,
+  timelineOverlaps,
+  minIso,
+  maxIso,
+  temporalToEventRecord,
+  temporalStatusToProductivityStatus,
+  productivityStatusToTemporalStatus,
+  temporalToReminderRecord,
+  temporalToDeadlineRecord,
+} from "./workspace-temporal.ts";
+import {
+  summarizeSnippet,
+  messagePreview,
+  areaSearchText,
+  taskSearchText,
+  goalSearchText,
+  projectSearchText,
+  milestoneSearchText,
+  activitySearchText,
+  blockerSearchText,
+  artifactSearchText,
+  decisionSearchText,
+  workSessionSearchText,
+  assignmentSearchText,
+  handoffSearchText,
+  approvalSearchText,
+  capacitySearchText,
+  agentSearchText,
+  releaseSearchText,
+  incidentSearchText,
+  feedbackSearchText,
+  checkSearchText,
+  reminderSearchText,
+  deadlineSearchText,
+  noteSearchText,
+  personSearchText,
+  eventSearchText,
+  simpleRecordTitle,
+  simpleRecordSearchText,
+} from "./workspace-search-text.ts";
 
 import type {
   CreateAgentInput,
@@ -262,749 +326,12 @@ export type {
   WorkspaceSemanticSearchOptions,
 } from "./workspace-contracts.ts";
 
-const DEFAULT_SOURCE: WorkspaceEntitySource = { kind: "local" };
 const DEFAULT_CONTEXT_LIMIT = 6;
 const EMBEDDING_COLLECTION = "workspace_embeddings";
 const INDEX_COLLECTION = "workspace_indexes";
 const PRODUCTIVITY_SCHEMA_VERSION = 6;
 const PRODUCTIVITY_SCHEMA_HASH = "productivity-v6-human-productivity-core";
-const TOOL_DESCRIPTORS: WorkspaceToolDescriptor[] = [
-  { id: "areas.create", title: "Create area", description: "Create an area in the local workspace.", domain: "areas" },
-  { id: "areas.update", title: "Update area", description: "Update area state or ownership.", domain: "areas" },
-  { id: "areas.list", title: "List areas", description: "List areas in the local workspace.", domain: "areas" },
-  { id: "areas.search", title: "Search areas", description: "Search areas by name or description.", domain: "areas" },
-  { id: "tasks.create", title: "Create task", description: "Create a task in the local workspace.", domain: "tasks" },
-  { id: "tasks.update", title: "Update task", description: "Update task fields, assignees, dates, or labels.", domain: "tasks" },
-  { id: "tasks.list", title: "List tasks", description: "List tasks in the local workspace.", domain: "tasks" },
-  { id: "tasks.search", title: "Search tasks", description: "Search tasks by keyword or hybrid search.", domain: "tasks" },
-  { id: "tasks.complete", title: "Complete task", description: "Mark a task as done.", domain: "tasks" },
-  { id: "goals.create", title: "Create goal", description: "Create a goal in the local workspace.", domain: "goals" },
-  { id: "goals.update", title: "Update goal", description: "Update goal status, owner, or metrics.", domain: "goals" },
-  { id: "goals.list", title: "List goals", description: "List goals in the local workspace.", domain: "goals" },
-  { id: "goals.search", title: "Search goals", description: "Search goals by title, description, or metrics.", domain: "goals" },
-  { id: "projects.create", title: "Create project", description: "Create a project in the local workspace.", domain: "projects" },
-  { id: "projects.update", title: "Update project", description: "Update project state or ownership.", domain: "projects" },
-  { id: "projects.list", title: "List projects", description: "List projects in the local workspace.", domain: "projects" },
-  { id: "projects.search", title: "Search projects", description: "Search projects by name or description.", domain: "projects" },
-  { id: "milestones.create", title: "Create milestone", description: "Create a milestone in the local workspace.", domain: "milestones" },
-  { id: "milestones.update", title: "Update milestone", description: "Update milestone status or target date.", domain: "milestones" },
-  { id: "milestones.list", title: "List milestones", description: "List milestones in the local workspace.", domain: "milestones" },
-  { id: "milestones.search", title: "Search milestones", description: "Search milestones by title or description.", domain: "milestones" },
-  { id: "activity.list", title: "List activity", description: "List productivity activity entries.", domain: "activity" },
-  { id: "activity.search", title: "Search activity", description: "Search productivity activity entries.", domain: "activity" },
-  { id: "blockers.create", title: "Create blocker", description: "Create an explicit blocker linked to work.", domain: "blockers" },
-  { id: "blockers.update", title: "Update blocker", description: "Resolve or re-scope a blocker.", domain: "blockers" },
-  { id: "blockers.list", title: "List blockers", description: "List blockers in the local workspace.", domain: "blockers" },
-  { id: "artifacts.create", title: "Create artifact", description: "Attach evidence or output to work.", domain: "artifacts" },
-  { id: "artifacts.update", title: "Update artifact", description: "Update stored evidence metadata.", domain: "artifacts" },
-  { id: "artifacts.list", title: "List artifacts", description: "List captured work evidence.", domain: "artifacts" },
-  { id: "decisions.create", title: "Create decision", description: "Record an operational decision.", domain: "decisions" },
-  { id: "decisions.update", title: "Update decision", description: "Update decision state or rationale.", domain: "decisions" },
-  { id: "decisions.list", title: "List decisions", description: "List recorded decisions.", domain: "decisions" },
-  { id: "workSessions.create", title: "Start work session", description: "Start a focused work session.", domain: "work_sessions" },
-  { id: "workSessions.update", title: "Update work session", description: "Update or close a work session.", domain: "work_sessions" },
-  { id: "workSessions.list", title: "List work sessions", description: "List focused work sessions.", domain: "work_sessions" },
-  { id: "assignments.create", title: "Create assignment", description: "Assign work to an agent.", domain: "assignments" },
-  { id: "assignments.update", title: "Update assignment", description: "Accept, reject, or release an assignment.", domain: "assignments" },
-  { id: "assignments.list", title: "List assignments", description: "List agent assignments.", domain: "assignments" },
-  { id: "handoffs.create", title: "Create handoff", description: "Create a structured handoff between agents.", domain: "handoffs" },
-  { id: "handoffs.update", title: "Update handoff", description: "Accept, return, or complete a handoff.", domain: "handoffs" },
-  { id: "handoffs.list", title: "List handoffs", description: "List coordination handoffs.", domain: "handoffs" },
-  { id: "approvals.create", title: "Create approval", description: "Open an approval gate for sensitive work.", domain: "approvals" },
-  { id: "approvals.update", title: "Update approval", description: "Approve or reject a gated action.", domain: "approvals" },
-  { id: "approvals.list", title: "List approvals", description: "List approval requests.", domain: "approvals" },
-  { id: "capacity.create", title: "Create capacity snapshot", description: "Store an agent capacity baseline.", domain: "capacity" },
-  { id: "capacity.update", title: "Update capacity snapshot", description: "Update a capacity baseline or override.", domain: "capacity" },
-  { id: "capacity.list", title: "List capacity", description: "List team capacity snapshots.", domain: "capacity" },
-  { id: "agents.create", title: "Create agent", description: "Create an agent roster entry.", domain: "agents" },
-  { id: "agents.update", title: "Update agent", description: "Update agent status, autonomy, or policy.", domain: "agents" },
-  { id: "agents.list", title: "List agents", description: "List agent roster entries.", domain: "agents" },
-  { id: "releases.create", title: "Create release", description: "Create a release entry linked to work.", domain: "releases" },
-  { id: "releases.update", title: "Update release", description: "Update release status or risk.", domain: "releases" },
-  { id: "releases.list", title: "List releases", description: "List active and planned releases.", domain: "releases" },
-  { id: "incidents.create", title: "Create incident", description: "Capture an operational incident.", domain: "incidents" },
-  { id: "incidents.update", title: "Update incident", description: "Update incident state or severity.", domain: "incidents" },
-  { id: "incidents.list", title: "List incidents", description: "List operational incidents.", domain: "incidents" },
-  { id: "feedback.create", title: "Create feedback", description: "Capture external or internal feedback.", domain: "feedback" },
-  { id: "feedback.update", title: "Update feedback", description: "Triage feedback and link follow-up work.", domain: "feedback" },
-  { id: "feedback.list", title: "List feedback", description: "List feedback backlog items.", domain: "feedback" },
-  { id: "checks.create", title: "Create check", description: "Create an operational check.", domain: "checks" },
-  { id: "checks.update", title: "Update check", description: "Update check state or result.", domain: "checks" },
-  { id: "checks.list", title: "List checks", description: "List operational checks.", domain: "checks" },
-  { id: "reminders.create", title: "Create reminder", description: "Create a reminder in the local workspace.", domain: "reminders" },
-  { id: "reminders.update", title: "Update reminder", description: "Update reminder timing or status.", domain: "reminders" },
-  { id: "reminders.list", title: "List reminders", description: "List reminders in the local workspace.", domain: "reminders" },
-  { id: "reminders.pause", title: "Pause reminder", description: "Pause an active reminder.", domain: "reminders" },
-  { id: "reminders.resume", title: "Resume reminder", description: "Resume a paused reminder.", domain: "reminders" },
-  { id: "deadlines.create", title: "Create deadline", description: "Create a deadline in the local workspace.", domain: "deadlines" },
-  { id: "deadlines.update", title: "Update deadline", description: "Update deadline timing or status.", domain: "deadlines" },
-  { id: "deadlines.list", title: "List deadlines", description: "List deadlines in the local workspace.", domain: "deadlines" },
-  { id: "deadlines.pause", title: "Pause deadline", description: "Pause an active deadline.", domain: "deadlines" },
-  { id: "deadlines.resume", title: "Resume deadline", description: "Resume a paused deadline.", domain: "deadlines" },
-  { id: "notes.create", title: "Create note", description: "Create a note in the local workspace.", domain: "notes" },
-  { id: "notes.update", title: "Update note", description: "Update note content or metadata.", domain: "notes" },
-  { id: "notes.get", title: "Get note", description: "Read one note by id.", domain: "notes" },
-  { id: "notes.search", title: "Search notes", description: "Search notes by keyword or hybrid search.", domain: "notes" },
-  { id: "people.upsert", title: "Upsert person", description: "Create or update a contact/person record.", domain: "people" },
-  { id: "people.get", title: "Get person", description: "Read one person by id.", domain: "people" },
-  { id: "people.search", title: "Search people", description: "Search contacts and identities.", domain: "people" },
-  { id: "inbox.list", title: "List inbox threads", description: "List local inbox threads.", domain: "inbox" },
-  { id: "inbox.search", title: "Search inbox", description: "Search unified inbox threads.", domain: "inbox" },
-  { id: "inbox.readThread", title: "Read thread", description: "Read one inbox thread and its messages.", domain: "inbox" },
-  { id: "inbox.createDraft", title: "Create draft", description: "Create an outbound draft inside the inbox.", domain: "inbox" },
-  { id: "inbox.routeReply", title: "Route reply", description: "Create an outbound reply for a thread.", domain: "inbox" },
-  { id: "events.create", title: "Create event", description: "Create a calendar event with reminders.", domain: "events" },
-  { id: "events.update", title: "Update event", description: "Update an existing event.", domain: "events" },
-  { id: "events.list", title: "List events", description: "List events in the local workspace.", domain: "events" },
-  { id: "events.search", title: "Search events", description: "Search events by title, description, or location.", domain: "events" },
-  { id: "workspace.search.query", title: "Search workspace", description: "Search across tasks, notes, people, inbox, and events.", domain: "workspace" },
-];
 
-const SURFACES: WorkspaceSurfaceDescriptor[] = [
-  { id: "areas", title: "Areas", route: "/areas", icon: "layers", order: 8 },
-  { id: "tasks", title: "Tasks", route: "/tasks", icon: "check-square", badgeId: "tasks_due_today", order: 10 },
-  { id: "goals", title: "Goals", route: "/goals", icon: "target", order: 15 },
-  { id: "projects", title: "Projects", route: "/projects", icon: "folder-kanban", order: 18 },
-  { id: "milestones", title: "Milestones", route: "/milestones", icon: "flag", order: 19 },
-  { id: "blockers", title: "Blockers", route: "/tasks", icon: "octagon-alert", badgeId: "blockers_active", order: 19 },
-  { id: "decisions", title: "Decisions", route: "/tasks", icon: "git-branch-plus", badgeId: "decisions_pending", order: 19 },
-  { id: "assignments", title: "Assignments", route: "/tasks", icon: "user-plus", badgeId: "assignments_active", order: 19 },
-  { id: "handoffs", title: "Handoffs", route: "/tasks", icon: "repeat", badgeId: "handoffs_pending", order: 19 },
-  { id: "approvals", title: "Approvals", route: "/tasks", icon: "shield-check", badgeId: "approvals_pending", order: 19 },
-  { id: "capacity", title: "Capacity", route: "/tasks", icon: "gauge", badgeId: "capacity_overloaded", order: 19 },
-  { id: "agents", title: "Agents", route: "/tasks", icon: "bot", badgeId: "agents_gated", order: 19 },
-  { id: "releases", title: "Releases", route: "/tasks", icon: "rocket", badgeId: "releases_at_risk", order: 19 },
-  { id: "incidents", title: "Incidents", route: "/tasks", icon: "siren", badgeId: "incidents_open", order: 19 },
-  { id: "feedback", title: "Feedback", route: "/tasks", icon: "message-square", badgeId: "feedback_new", order: 19 },
-  { id: "checks", title: "Checks", route: "/tasks", icon: "clipboard-check", badgeId: "checks_failing", order: 19 },
-  { id: "notes", title: "Notes", route: "/notes", icon: "file-text", order: 20 },
-  { id: "people", title: "People", route: "/people", icon: "users", order: 30 },
-  { id: "inbox", title: "Inbox", route: "/inbox", icon: "inbox", badgeId: "inbox_unread", order: 40 },
-  { id: "events", title: "Events", route: "/events", icon: "calendar", badgeId: "events_upcoming", order: 50 },
-  { id: "reminders", title: "Reminders", route: "/reminders", icon: "bell", order: 55 },
-  { id: "deadlines", title: "Deadlines", route: "/deadlines", icon: "alarm-clock", order: 58 },
-];
-
-function nowIso(): string {
-  return new Date().toISOString();
-}
-
-function uniqueStrings(values: Array<string | undefined | null>): string[] {
-  return [...new Set(values.map((value) => value?.trim()).filter((value): value is string => Boolean(value)))];
-}
-
-function normalizeSearchText(value: string): string {
-  return value.toLowerCase().replace(/\s+/g, " ").trim();
-}
-
-function summarizeSnippet(value: string, maxLength = 180): string {
-  const normalized = value.replace(/\s+/g, " ").trim();
-  if (!normalized) return "";
-  return normalized.length <= maxLength ? normalized : `${normalized.slice(0, maxLength - 3).trim()}...`;
-}
-
-function scoreKeyword(text: string, query: string, base: number): number {
-  if (!text || !query) return 0;
-  const haystack = normalizeSearchText(text);
-  const needle = normalizeSearchText(query);
-  if (!haystack || !needle) return 0;
-  const occurrences = haystack.split(needle).length - 1;
-  if (occurrences <= 0) return 0;
-  return base + occurrences * 10;
-}
-
-function cosineSimilarity(left: number[], right: number[]): number {
-  if (left.length === 0 || left.length !== right.length) return 0;
-  let dot = 0;
-  let leftMagnitude = 0;
-  let rightMagnitude = 0;
-  for (let index = 0; index < left.length; index += 1) {
-    dot += left[index] * right[index];
-    leftMagnitude += left[index] * left[index];
-    rightMagnitude += right[index] * right[index];
-  }
-  if (leftMagnitude === 0 || rightMagnitude === 0) return 0;
-  return dot / (Math.sqrt(leftMagnitude) * Math.sqrt(rightMagnitude));
-}
-
-function toId(prefix: string, requestedId?: string): string {
-  const trimmed = requestedId?.trim();
-  return trimmed || `${prefix}-${randomUUID()}`;
-}
-
-function removeUndefined<TValue extends Record<string, unknown>>(value: TValue): TValue {
-  return Object.fromEntries(
-    Object.entries(value).filter(([, entry]) => entry !== undefined),
-  ) as TValue;
-}
-
-function assertRecord<TValue>(value: TValue | null, label: string, id: string): TValue {
-  if (!value) {
-    throw new Error(`${label} not found: ${id}`);
-  }
-  return value;
-}
-
-function toCollectionId(domain: WorkspaceDomain | "inbox_messages", id: string): string {
-  return `${domain.replace(/[^A-Za-z0-9._-]+/g, "-")}--${id}`;
-}
-
-function toSearchResult(
-  entry: WorkspaceIndexRecord,
-  score: number,
-  strategy: WorkspaceSearchResult["strategy"],
-  matchedFields: string[],
-): WorkspaceSearchResult {
-  return {
-    domain: entry.domain,
-    id: entry.entityId,
-    title: entry.title,
-    snippet: entry.snippet,
-    score,
-    strategy,
-    matchedFields,
-    links: entry.links,
-    updatedAt: entry.updatedAt,
-  };
-}
-
-function defaultSource(source?: WorkspaceEntitySource): WorkspaceEntitySource {
-  return source ? { ...source } : { ...DEFAULT_SOURCE };
-}
-
-function clampNonNegativeNumber(value: number | undefined): number | undefined {
-  if (value === undefined || Number.isNaN(value)) return undefined;
-  return Math.max(0, Math.trunc(value));
-}
-
-function clampConfidence(value: number | undefined): number | undefined {
-  if (value === undefined || Number.isNaN(value)) return undefined;
-  return Math.max(0, Math.min(1, value));
-}
-
-function normalizeChecklist(input: CreateTaskInput["checklist"] = []): TaskChecklistItem[] {
-  return input.map((item) => ({
-    id: toId("check", item.id),
-    text: item.text.trim(),
-    completed: item.completed ?? false,
-  })).filter((item) => item.text);
-}
-
-function normalizeBlocks(input: CreateNoteInput): NoteBlock[] {
-  const explicitBlocks = (input.blocks ?? []).map((block) => ({
-    id: toId("block", block.id),
-    type: block.type ?? "paragraph",
-    text: block.text,
-  }));
-  if (explicitBlocks.length > 0) return explicitBlocks;
-  const content = input.content?.trim();
-  return content ? [{ id: toId("block"), type: "paragraph", text: content }] : [];
-}
-
-function normalizeReminders(input: CreateEventInput["reminders"] = []): EventRecord["reminders"] {
-  return input.map((reminder) => ({
-    id: reminder.id?.trim() || toId("reminder"),
-    minutesBeforeStart: reminder.minutesBeforeStart,
-    ...(reminder.channel ? { channel: reminder.channel } : {}),
-  }));
-}
-
-function normalizeMilestoneIds(input: string[] = []): string[] {
-  return uniqueStrings(input);
-}
-
-function normalizeRecordIds(input: string[] = []): string[] {
-  return uniqueStrings(input);
-}
-
-function isOverdue(timestamp: string | undefined, now = nowIso()): boolean {
-  return Boolean(timestamp && timestamp < now);
-}
-
-function toTimestamp(value: string): number {
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function timelineOverlaps(start: string, end: string, rangeStart: string, rangeEnd: string): boolean {
-  return toTimestamp(start) <= toTimestamp(rangeEnd) && toTimestamp(end) >= toTimestamp(rangeStart);
-}
-
-function minIso(values: Array<string | undefined>): string | undefined {
-  const present = values.filter((value): value is string => Boolean(value));
-  return present.length ? present.sort((left, right) => left.localeCompare(right))[0] : undefined;
-}
-
-function maxIso(values: Array<string | undefined>): string | undefined {
-  const present = values.filter((value): value is string => Boolean(value));
-  return present.length ? present.sort((left, right) => right.localeCompare(left))[0] : undefined;
-}
-
-function temporalToEventRecord(item: {
-  id: string;
-  createdAt: string;
-  updatedAt: string;
-  title: string;
-  description?: string;
-  startsAt?: string;
-  endsAt?: string;
-  location?: string;
-  participants?: Array<{ personId?: string }>;
-  actions?: Array<{ id: string; target?: string }>;
-  projections?: Array<{ target: string; detail?: Record<string, unknown> }>;
-}): EventRecord {
-  const workspaceProjection = (item.projections ?? []).find((projection) => projection.target === "workspace_events");
-  const linkedTaskIds = Array.isArray(workspaceProjection?.detail?.linkedTaskIds)
-    ? workspaceProjection.detail.linkedTaskIds.filter((value): value is string => typeof value === "string")
-    : [];
-  const linkedNoteIds = Array.isArray(workspaceProjection?.detail?.linkedNoteIds)
-    ? workspaceProjection.detail.linkedNoteIds.filter((value): value is string => typeof value === "string")
-    : [];
-  return {
-    id: item.id,
-    createdAt: item.createdAt,
-    updatedAt: item.updatedAt,
-    source: { kind: "derived", externalId: item.id },
-    title: item.title,
-    ...(item.description ? { description: item.description } : {}),
-    startsAt: item.startsAt ?? item.updatedAt,
-    ...(item.endsAt ? { endsAt: item.endsAt } : {}),
-    ...(item.location ? { location: item.location } : {}),
-    attendeePersonIds: (item.participants ?? []).flatMap((participant) => participant.personId ? [participant.personId] : []),
-    linkedTaskIds,
-    linkedNoteIds,
-    reminders: (item.actions ?? []).map((action) => ({
-      id: action.id,
-      minutesBeforeStart: 0,
-      ...(action.target ? { channel: action.target } : {}),
-    })),
-  };
-}
-
-function temporalStatusToProductivityStatus(status: TemporalItem["status"]): ReminderRecord["status"] {
-  if (status === "completed") return "done";
-  return status;
-}
-
-function productivityStatusToTemporalStatus(
-  status?: ReminderRecord["status"] | DeadlineRecord["status"],
-  archivedAt?: string | null,
-): TemporalItem["status"] | undefined {
-  if (archivedAt) return "cancelled";
-  if (!status) return undefined;
-  if (status === "done") return "completed";
-  return status;
-}
-
-function temporalToReminderRecord(item: TemporalItem): ReminderRecord {
-  const notifyAction = item.actions.find((action) => action.kind === "notify");
-  return {
-    id: item.id,
-    createdAt: item.createdAt,
-    updatedAt: item.updatedAt,
-    source: { kind: "derived", externalId: item.id },
-    title: item.title,
-    ...(item.description ? { description: item.description } : {}),
-    status: temporalStatusToProductivityStatus(item.status),
-    triggerAt: item.nextRunAt ?? item.startsAt ?? item.updatedAt,
-    ...(item.anchorType ? { anchorType: item.anchorType as ReminderRecord["anchorType"] } : {}),
-    ...(item.anchorId ? { anchorId: item.anchorId } : {}),
-    ...(notifyAction?.target ? { channel: notifyAction.target } : {}),
-  };
-}
-
-function temporalToDeadlineRecord(item: TemporalItem): DeadlineRecord {
-  return {
-    id: item.id,
-    createdAt: item.createdAt,
-    updatedAt: item.updatedAt,
-    source: { kind: "derived", externalId: item.id },
-    title: item.title,
-    ...(item.description ? { description: item.description } : {}),
-    status: temporalStatusToProductivityStatus(item.status),
-    dueAt: item.dueAt ?? item.nextRunAt ?? item.updatedAt,
-    ...(item.anchorType ? { anchorType: item.anchorType as DeadlineRecord["anchorType"] } : {}),
-    ...(item.anchorId ? { anchorId: item.anchorId } : {}),
-  };
-}
-
-function messagePreview(value: string): string {
-  return summarizeSnippet(value, 140);
-}
-
-function areaSearchText(area: AreaRecord): string {
-  return [
-    area.name,
-    area.description,
-    area.status,
-  ].filter(Boolean).join(" ");
-}
-
-function taskSearchText(task: TaskRecord): string {
-  return [
-    task.title,
-    task.description,
-    task.status,
-    task.type,
-    task.priority,
-    task.areaId,
-    task.listId,
-    task.sectionId,
-    task.projectId,
-    task.goalId,
-    task.cycleId,
-    task.epicId,
-    task.assignedToAgentId,
-    task.reporterPersonId,
-    task.reviewerAgentId,
-    task.handoffTo,
-    task.approvedBy,
-    task.blockedReason,
-    task.waitingOn,
-    task.recurrenceRule,
-    ...task.labels,
-    ...task.commentIds,
-    ...task.attachmentIds,
-    ...task.assignmentIds,
-    ...task.handoffIds,
-    ...task.approvalIds,
-    ...task.checklist.map((item) => item.text),
-  ].filter(Boolean).join(" ");
-}
-
-function goalSearchText(goal: GoalRecord): string {
-  return [
-    goal.title,
-    goal.description,
-    goal.status,
-    goal.areaId,
-    goal.metricKey,
-    goal.metricLabel,
-    goal.unit,
-    goal.period,
-    goal.reviewCadence,
-  ].filter(Boolean).join(" ");
-}
-
-function projectSearchText(project: ProjectRecord): string {
-  return [
-    project.name,
-    project.description,
-    project.status,
-    project.statusCategory,
-    project.areaId,
-    project.kind,
-    project.goalId,
-    project.reviewCadence,
-    project.archiveReason,
-    project.templateId,
-  ].filter(Boolean).join(" ");
-}
-
-function milestoneSearchText(milestone: MilestoneRecord): string {
-  return [
-    milestone.title,
-    milestone.description,
-    milestone.status,
-    milestone.areaId,
-    milestone.projectId,
-    milestone.goalId,
-  ].filter(Boolean).join(" ");
-}
-
-function activitySearchText(activity: ActivityEntryRecord): string {
-  return [
-    activity.title,
-    activity.content,
-    activity.kind,
-    activity.entityType,
-    activity.entityId,
-    activity.areaId,
-    activity.projectId,
-    activity.goalId,
-    activity.taskId,
-    activity.threadId,
-  ].filter(Boolean).join(" ");
-}
-
-function blockerSearchText(blocker: BlockerRecord): string {
-  return [
-    blocker.title,
-    blocker.description,
-    blocker.status,
-    blocker.kind,
-    blocker.taskId,
-    blocker.projectId,
-    blocker.goalId,
-    blocker.ownerPersonId,
-    blocker.ownerAgentId,
-    ...blocker.dependencyTaskIds,
-  ].filter(Boolean).join(" ");
-}
-
-function artifactSearchText(artifact: ArtifactRecord): string {
-  return [
-    artifact.title,
-    artifact.kind,
-    artifact.summary,
-    artifact.content,
-    artifact.uri,
-    artifact.taskId,
-    artifact.projectId,
-    artifact.goalId,
-    artifact.threadId,
-    artifact.decisionId,
-  ].filter(Boolean).join(" ");
-}
-
-function decisionSearchText(decision: DecisionRecord): string {
-  return [
-    decision.title,
-    decision.summary,
-    decision.status,
-    decision.outcome,
-    decision.rationale,
-    decision.taskId,
-    decision.projectId,
-    decision.goalId,
-    ...decision.alternatives,
-  ].filter(Boolean).join(" ");
-}
-
-function workSessionSearchText(session: WorkSessionRecord): string {
-  return [
-    session.title,
-    session.status,
-    session.objective,
-    session.outcome,
-    session.ownerAgentId,
-    ...session.taskIds,
-    ...session.blockerIds,
-  ].filter(Boolean).join(" ");
-}
-
-function assignmentSearchText(assignment: AssignmentRecord): string {
-  return [
-    assignment.title,
-    assignment.status,
-    assignment.taskId,
-    assignment.projectId,
-    assignment.goalId,
-    assignment.assignedToAgentId,
-    assignment.assignedBy,
-    assignment.delegatedBy,
-    assignment.reviewerAgentId,
-    assignment.rationale,
-    assignment.rejectionReason,
-  ].filter(Boolean).join(" ");
-}
-
-function handoffSearchText(handoff: HandoffRecord): string {
-  return [
-    handoff.title,
-    handoff.status,
-    handoff.taskId,
-    handoff.projectId,
-    handoff.goalId,
-    handoff.fromAgentId,
-    handoff.toAgentId,
-    handoff.objective,
-    handoff.currentState,
-    handoff.contextSummary,
-    handoff.nextStep,
-    handoff.riskSummary,
-    ...handoff.artifactIds,
-    ...handoff.blockerIds,
-  ].filter(Boolean).join(" ");
-}
-
-function approvalSearchText(approval: ProductivityApprovalRecord): string {
-  return [
-    approval.title,
-    approval.status,
-    approval.kind,
-    approval.taskId,
-    approval.projectId,
-    approval.goalId,
-    approval.handoffId,
-    approval.requestedByAgentId,
-    approval.approverAgentId,
-    approval.policyReason,
-    approval.outcome,
-    ...approval.evidenceIds,
-    ...approval.decisionIds,
-  ].filter(Boolean).join(" ");
-}
-
-function capacitySearchText(capacity: CapacityRecord): string {
-  return [
-    capacity.title,
-    capacity.status,
-    capacity.agentId,
-    capacity.teamId,
-    capacity.role,
-    capacity.availability,
-    ...capacity.assignedTaskIds,
-    ...capacity.pendingApprovalIds,
-    ...capacity.pendingHandoffIds,
-  ].filter(Boolean).join(" ");
-}
-
-function agentSearchText(agent: AgentRecord): string {
-  return [
-    agent.name,
-    agent.status,
-    agent.role,
-    agent.teamId,
-    agent.shift,
-    agent.availability,
-    agent.autonomyLevel,
-    agent.policyGate,
-    agent.currentFocus,
-    ...agent.domains,
-    ...agent.permissions,
-    ...agent.linkedTaskIds,
-  ].filter(Boolean).join(" ");
-}
-
-function releaseSearchText(release: ReleaseRecord): string {
-  return [
-    release.title,
-    release.status,
-    release.projectId,
-    release.goalId,
-    release.ownerAgentId,
-    release.riskSummary,
-    ...release.linkedTaskIds,
-    ...release.incidentIds,
-    ...release.approvalIds,
-  ].filter(Boolean).join(" ");
-}
-
-function incidentSearchText(incident: IncidentRecord): string {
-  return [
-    incident.title,
-    incident.status,
-    incident.severity,
-    incident.projectId,
-    incident.goalId,
-    incident.taskId,
-    incident.releaseId,
-    incident.ownerAgentId,
-    incident.summary,
-    incident.customerImpact,
-    ...incident.blockerIds,
-    ...incident.feedbackIds,
-  ].filter(Boolean).join(" ");
-}
-
-function feedbackSearchText(feedback: FeedbackRecord): string {
-  return [
-    feedback.title,
-    feedback.status,
-    feedback.origin,
-    feedback.priority,
-    feedback.projectId,
-    feedback.goalId,
-    feedback.taskId,
-    feedback.incidentId,
-    feedback.ownerAgentId,
-    feedback.summary,
-    feedback.followUpTaskId,
-  ].filter(Boolean).join(" ");
-}
-
-function checkSearchText(check: OperationalCheckRecord): string {
-  return [
-    check.title,
-    check.status,
-    check.kind,
-    check.projectId,
-    check.goalId,
-    check.releaseId,
-    check.incidentId,
-    check.ownerAgentId,
-    check.cadence,
-    check.resultSummary,
-    check.playbook,
-  ].filter(Boolean).join(" ");
-}
-
-function reminderSearchText(reminder: ReminderRecord): string {
-  return [
-    reminder.title,
-    reminder.description,
-    reminder.status,
-    reminder.anchorType,
-    reminder.anchorId,
-    reminder.channel,
-  ].filter(Boolean).join(" ");
-}
-
-function deadlineSearchText(deadline: DeadlineRecord): string {
-  return [
-    deadline.title,
-    deadline.description,
-    deadline.status,
-    deadline.anchorType,
-    deadline.anchorId,
-  ].filter(Boolean).join(" ");
-}
-
-function noteSearchText(note: NoteRecord): string {
-  return [
-    note.title,
-    note.summary,
-    ...note.tags,
-    ...note.blocks.map((block) => block.text),
-  ].filter(Boolean).join(" ");
-}
-
-function personSearchText(person: PersonRecord): string {
-  return [
-    person.displayName,
-    person.role,
-    person.organization,
-    ...person.emails,
-    ...person.phones,
-    ...person.handles,
-    ...person.identities.map((identity) => `${identity.channel} ${identity.handle} ${identity.label ?? ""}`),
-  ].filter(Boolean).join(" ");
-}
-
-function eventSearchText(event: EventRecord): string {
-  return [
-    event.title,
-    event.description,
-    event.location,
-  ].filter(Boolean).join(" ");
-}
-
-function simpleRecordTitle(record: Record<string, unknown>): string {
-  return String(record.title ?? record.name ?? record.body ?? record.fieldId ?? record.id ?? "");
-}
-
-function simpleRecordSearchText(record: Record<string, unknown>): string {
-  return [
-    record.title,
-    record.name,
-    record.description,
-    record.body,
-    record.status,
-    record.kind,
-    record.entityType,
-    record.entityId,
-    record.rule,
-    record.query,
-    record.mimeType,
-    record.uri,
-    record.path,
-  ].filter((value) => typeof value === "string" || typeof value === "number" || typeof value === "boolean").join(" ");
-}
-
-function isArchived(record: { archivedAt?: string }, includeArchived = false): boolean {
-  return !includeArchived && Boolean(record.archivedAt);
-}
 
 async function createWorkspaceExtension(
   claw: ClawInstance,
