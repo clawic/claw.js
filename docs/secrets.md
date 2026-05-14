@@ -135,6 +135,8 @@ node secrets/dist/sidecar.js spawn-process \
 - The public CLI must not print or return plaintext secret values; it can list
   safe metadata, request brokered actions, open the signed host UI, and run
   diagnostics.
+- Master password, unlock, recovery phrase, and password rotation operations
+  are signed-host UI flows, not public CLI flows.
 - Host-bound `process` and `browser` flows require the local sidecar.
 - Host-bound sidecar flows are compatibility surfaces, not a bypass around
   broker policy, signed-host approval, host allowlists, or risk tiers.

@@ -79,6 +79,11 @@ function fmt(value) {
   return JSON.stringify(value, null, 2);
 }
 
+function signedHostOnly(command) {
+  console.error(`secrets ${command} requires the signed host UI; the public CLI must not handle master passwords or recovery phrases.`);
+  return 1;
+}
+
 function inferBrokerDeclaredFields(input) {
   const template = /\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g;
   const declared = new Map();
@@ -103,11 +108,7 @@ function inferBrokerDeclaredFields(input) {
 
 const HELP = `claw secrets <command>
 
-  secrets setup                              initialize the secrets (interactive password)
-  secrets unlock                             unlock with password
   secrets lock                               lock the in-memory keys
-  secrets recover                            recover via 24-word phrase
-  secrets change-password                    rotate password (issues new recovery phrase)
   secrets doctor                             health + integrity report
   secrets state                              show locked/unlocked state
 
@@ -147,26 +148,11 @@ Env: CLAW_SECRETS_BASE_URL (${DEFAULT_BASE}), CLAW_SECRETS_TENANT_ID (${DEFAULT_
 `;
 
 async function secretsSetup() {
-  const password = await prompt("Master password: ", true);
-  const confirm = await prompt("Confirm password: ", true);
-  if (password !== confirm) {
-    console.error("Passwords do not match.");
-    return 1;
-  }
-  const res = await fetchJson("/v1/secrets/setup", { method: "POST", body: JSON.stringify({ password }) });
-  if (!res.ok) { console.error(fmt(res.body)); return 1; }
-  console.log("Secrets initialized.");
-  console.log("\nRecovery phrase (write it down NOW, it is shown ONCE):\n");
-  console.log(`  ${res.body.recoveryPhrase}\n`);
-  return 0;
+  return signedHostOnly("setup");
 }
 
 async function secretsUnlock() {
-  const password = await prompt("Master password: ", true);
-  const res = await fetchJson("/v1/secrets/unlock", { method: "POST", body: JSON.stringify({ password }) });
-  if (!res.ok) { console.error(fmt(res.body)); return 1; }
-  console.log("Secrets unlocked.");
-  return 0;
+  return signedHostOnly("unlock");
 }
 
 async function secretsLock() {
@@ -176,22 +162,11 @@ async function secretsLock() {
 }
 
 async function secretsRecover() {
-  const phrase = await prompt("Recovery phrase (24 words): ");
-  const res = await fetchJson("/v1/secrets/recover", { method: "POST", body: JSON.stringify({ phrase }) });
-  if (!res.ok) { console.error(fmt(res.body)); return 1; }
-  console.log("Secrets unlocked via recovery phrase.");
-  return 0;
+  return signedHostOnly("recover");
 }
 
 async function secretsChangePassword() {
-  const oldPassword = await prompt("Current password: ", true);
-  const newPassword = await prompt("New password: ", true);
-  const res = await fetchJson("/v1/secrets/change-password", { method: "POST", body: JSON.stringify({ oldPassword, newPassword }) });
-  if (!res.ok) { console.error(fmt(res.body)); return 1; }
-  console.log("Password rotated.");
-  console.log("\nNew recovery phrase (write it down NOW):\n");
-  console.log(`  ${res.body.recoveryPhrase}\n`);
-  return 0;
+  return signedHostOnly("change-password");
 }
 
 async function secretsDoctor() {

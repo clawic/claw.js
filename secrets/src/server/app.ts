@@ -183,6 +183,19 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     return subject.defaultAllow;
   }
 
+  function requireSignedHost(req: FastifyRequest, reply: FastifyReply): boolean {
+    const token = req.headers["x-claw-signed-host-token"];
+    if (!config.signedHostToken) {
+      void reply.code(403).send({ error: "signed host token not configured" });
+      return false;
+    }
+    if (token !== config.signedHostToken) {
+      void reply.code(403).send({ error: "signed host authorization required" });
+      return false;
+    }
+    return true;
+  }
+
   function isLocalNetworkHost(hostname: string): boolean {
     return hostname === "localhost"
       || hostname === "127.0.0.1"
@@ -246,6 +259,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
   });
 
   app.post("/v1/secrets/setup", async (req, reply) => {
+    if (!requireSignedHost(req, reply)) return;
     if (metaStore.exists(DEFAULT_TENANT_ID)) {
       return reply.code(409).send({ error: "Secrets already initialized" });
     }
@@ -278,6 +292,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
   });
 
   app.post("/v1/secrets/unlock", async (req, reply) => {
+    if (!requireSignedHost(req, reply)) return;
     const meta = metaStore.load(DEFAULT_TENANT_ID);
     if (!meta) return reply.code(404).send({ error: "Secrets not initialized" });
     const body = (req.body ?? {}) as { password?: string };
@@ -330,6 +345,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
   });
 
   app.post("/v1/secrets/recover", async (req, reply) => {
+    if (!requireSignedHost(req, reply)) return;
     const meta = metaStore.load(DEFAULT_TENANT_ID);
     if (!meta) return reply.code(404).send({ error: "Secrets not initialized" });
     const body = (req.body ?? {}) as { phrase?: string };
@@ -350,6 +366,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
   });
 
   app.post("/v1/secrets/change-password", async (req, reply) => {
+    if (!requireSignedHost(req, reply)) return;
     const meta = metaStore.load(DEFAULT_TENANT_ID);
     if (!meta) return reply.code(404).send({ error: "Secrets not initialized" });
     const body = (req.body ?? {}) as { oldPassword?: string; newPassword?: string };

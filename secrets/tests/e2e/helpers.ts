@@ -18,6 +18,7 @@ export async function startSecretsServer(prefix = "secrets-e2e") {
       dbPath: path.join(rootDir, ".data", "vault.sqlite"),
       jwtSecret: "secrets-test-secret",
       adminToken: "secrets-admin",
+      signedHostToken: "secrets-test-signed-host",
       publicBaseUrl: "http://127.0.0.1:0",
       uiDistDir: path.join(process.cwd(), "ui", "dist"),
     },
@@ -27,7 +28,7 @@ export async function startSecretsServer(prefix = "secrets-e2e") {
   const baseUrl = `http://127.0.0.1:${port}`;
   const setup = await fetch(`${baseUrl}/v1/secrets/setup`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "x-claw-signed-host-token": "secrets-test-signed-host" },
     body: JSON.stringify({ password: "secrets-e2e-password" }),
   });
   if (!setup.ok && setup.status !== 409) throw new Error(await setup.text());

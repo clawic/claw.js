@@ -173,6 +173,10 @@ actions, open the signed host UI, and run diagnostics. It must not print or
 return plaintext secret values. There is no public `reveal`, `cat`, `print`,
 `dump`, `export plaintext`, or "show all fields" CLI surface.
 
+Master password, unlock, recovery phrase, and password rotation flows are
+signed-host UI flows. Public CLI commands must not prompt for those values or
+print recovery material.
+
 SDK and API helpers must follow the same rule. They may expose reference
 creation, metadata, policy setup, typed brokered actions, redacted results,
 doctor checks, encrypted import/export, and grant lifecycle. They must not
@@ -234,6 +238,8 @@ patterns must be treated as transitional until hardened:
 - connector runners that resolve `secretRefs` into plaintext maps;
 - compatibility sidecar flows that can look like generic process or browser
   injection without signed-host policy;
+- setup, unlock, recovery, and password-rotation APIs until they are callable
+  only through the signed host or an equivalent host-bound authorization path;
 - audit payloads that include field names, internal labels, request details, or
   other user-controlled strings without a minimal schema review;
 - dev-only seeded credentials or local defaults being mistaken for production

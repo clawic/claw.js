@@ -11,6 +11,7 @@ process.env.CLAW_SECRETS_DB_PATH = path.join(tmpDir, "vault.sqlite");
 process.env.CLAW_SECRETS_PORT = "0"; // ephemeral
 process.env.CLAW_SECRETS_HOST = "127.0.0.1";
 process.env.CLAW_SECRETS_ADMIN_TOKEN = "smoke-admin-token";
+process.env.CLAW_SECRETS_SIGNED_HOST_TOKEN = "smoke-signed-host-token";
 
 const { startSecretsServer } = await import("../src/server/app.ts");
 
@@ -19,6 +20,7 @@ const addr = app.server.address();
 const port = typeof addr === "object" && addr ? addr.port : config.port;
 const base = `http://127.0.0.1:${port}`;
 const authHeaders = { Authorization: "Bearer smoke-admin-token" };
+const signedHostHeaders = { "x-claw-signed-host-token": "smoke-signed-host-token" };
 
 let pass = 0; let fail = 0;
 function ok(name) { console.log(`  ✓ ${name}`); pass++; }
@@ -41,9 +43,16 @@ if (h.ok && h.body.service === "clawjs-secrets") ok("health"); else ko("health",
 const s0 = await fetchJson(`${base}/v1/secrets/state`);
 if (s0.ok && !s0.body.initialized && !s0.body.unlocked) ok("secrets state: uninitialized"); else ko("state", s0.body);
 
+const setupWithoutHost = await fetchJson(`${base}/v1/secrets/setup`, {
+  method: "POST",
+  body: JSON.stringify({ password: "master-pw" }),
+});
+if (setupWithoutHost.status === 403) ok("setup requires signed host"); else ko("setup requires signed host", setupWithoutHost.body);
+
 // Secrets setup.
 const setup = await fetchJson(`${base}/v1/secrets/setup`, {
   method: "POST",
+  headers: signedHostHeaders,
   body: JSON.stringify({ password: "master-pw" }),
 });
 if (setup.ok && setup.body.recoveryPhrase && setup.body.recoveryPhrase.split(" ").length === 24) ok("setup");
@@ -105,7 +114,7 @@ if (backupImport.ok && backupImport.body.imported?.secrets === 1 && backupImport
   ko("backup import", backupImport.body);
 }
 
-const unlockAfterImport = await fetchJson(`${base}/v1/secrets/unlock`, { method: "POST", body: JSON.stringify({ password: "master-pw" }) });
+const unlockAfterImport = await fetchJson(`${base}/v1/secrets/unlock`, { method: "POST", headers: signedHostHeaders, body: JSON.stringify({ password: "master-pw" }) });
 if (unlockAfterImport.ok) ok("unlock after backup import"); else ko("unlock after import", unlockAfterImport.body);
 
 // Lock.
@@ -113,22 +122,23 @@ const lockRes = await fetchJson(`${base}/v1/secrets/lock`, { method: "POST" });
 if (lockRes.ok) ok("lock"); else ko("lock", { status: lockRes.status, body: lockRes.body });
 
 // Re-unlock with wrong password.
-const u1 = await fetchJson(`${base}/v1/secrets/unlock`, { method: "POST", body: JSON.stringify({ password: "wrong" }) });
+const u1 = await fetchJson(`${base}/v1/secrets/unlock`, { method: "POST", headers: signedHostHeaders, body: JSON.stringify({ password: "wrong" }) });
 if (u1.status === 401) ok("unlock rejects wrong password"); else ko("expected 401");
 
 // Re-unlock with correct password.
-const u2 = await fetchJson(`${base}/v1/secrets/unlock`, { method: "POST", body: JSON.stringify({ password: "master-pw" }) });
+const u2 = await fetchJson(`${base}/v1/secrets/unlock`, { method: "POST", headers: signedHostHeaders, body: JSON.stringify({ password: "master-pw" }) });
 if (u2.ok) ok("unlock with correct password"); else ko("unlock");
 
 // Recover via phrase.
 const lock2 = await fetchJson(`${base}/v1/secrets/lock`, { method: "POST" });
 if (lock2.ok) ok("lock #2");
-const rec = await fetchJson(`${base}/v1/secrets/recover`, { method: "POST", body: JSON.stringify({ phrase: recoveryPhrase }) });
+const rec = await fetchJson(`${base}/v1/secrets/recover`, { method: "POST", headers: signedHostHeaders, body: JSON.stringify({ phrase: recoveryPhrase }) });
 if (rec.ok) ok("recover via phrase"); else ko("recover", rec.body);
 
 // Change password.
 const cp = await fetchJson(`${base}/v1/secrets/change-password`, {
   method: "POST",
+  headers: signedHostHeaders,
   body: JSON.stringify({ oldPassword: "master-pw", newPassword: "new-pw" }),
 });
 if (cp.ok && cp.body.recoveryPhrase) ok("change password"); else ko("change-password", cp.body);

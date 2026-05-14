@@ -9,6 +9,7 @@ const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "secrets-cli-"));
 process.env.CLAW_SECRETS_DATA_DIR = tmpDir;
 process.env.CLAW_SECRETS_DB_PATH = path.join(tmpDir, "vault.sqlite");
 process.env.CLAW_SECRETS_PORT = "0";
+process.env.CLAW_SECRETS_SIGNED_HOST_TOKEN = "smoke-signed-host-token";
 
 const { startSecretsServer } = await import("../src/server/app.ts");
 const { app, config } = await startSecretsServer({});
@@ -23,7 +24,7 @@ function ko(name, e) { console.error(`  ✗ ${name}: ${typeof e === "string" ? e
 // which is hard to drive in a smoke test).
 const setupRes = await fetch(`${process.env.CLAW_SECRETS_BASE}/v1/secrets/setup`, {
   method: "POST",
-  headers: { "Content-Type": "application/json" },
+  headers: { "Content-Type": "application/json", "x-claw-signed-host-token": "smoke-signed-host-token" },
   body: JSON.stringify({ password: "smoke-test-pw" }),
 });
 if (!setupRes.ok) { console.error("setup failed", await setupRes.text()); process.exit(1); }
