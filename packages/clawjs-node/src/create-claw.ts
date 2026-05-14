@@ -311,6 +311,7 @@ import {
   type SaveApiKeyResult,
 } from "./runtime/index.ts";
 import { withOpenClawCommandEnv, withOpenClawCommandRunner } from "./runtime/openclaw-command.ts";
+import { mergeProcessEnv } from "./runtime/env.ts";
 import {
   disableManagedOpenClawPlugins,
   doctorOpenClawPlugins,
@@ -1738,19 +1739,6 @@ function extractDocumentIdFromSourcePath(sourcePath?: string): string | null {
   const fileName = path.basename(trimmed);
   if (!fileName.endsWith(".md")) return null;
   return fileName.slice(0, -".md".length) || null;
-}
-
-function mergeProcessEnv(...envs: Array<Record<string, string | undefined> | undefined>): NodeJS.ProcessEnv {
-  const merged = {} as NodeJS.ProcessEnv;
-  for (const env of envs) {
-    if (!env) continue;
-    for (const [key, value] of Object.entries(env)) {
-      if (value !== undefined) {
-        merged[key] = value;
-      }
-    }
-  }
-  return merged;
 }
 
 export async function createClaw(options: CreateClawOptions): Promise<ClawInstance> {

@@ -6,11 +6,9 @@ export const localeMetadata = {
   de: { nativeLabel: "Deutsch", intl: "de-DE", speech: "de-DE" },
   pt: { nativeLabel: "Português", intl: "pt-PT", speech: "pt-PT" },
 } as const;
-
 export const locales = Object.keys(localeMetadata) as Array<keyof typeof localeMetadata>;
 export type Locale = (typeof locales)[number];
 export const defaultLocale: Locale = "en";
-
 const en = {
   common: {
     appName: "ClawJS",
@@ -1015,7 +1013,6 @@ const en = {
     skip: "Skip",
   },
 } as const;
-
 type MessageShape<T> =
   T extends string ? string
   : T extends number ? number
@@ -1024,13 +1021,10 @@ type MessageShape<T> =
   : T extends readonly (infer Item)[] ? readonly MessageShape<Item>[]
   : T extends object ? { [K in keyof T]: MessageShape<T[K]> }
   : T;
-
 export type Messages = MessageShape<typeof en>;
-
 function defineMessages(messages: Messages): Messages {
   return messages;
 }
-
 const es = defineMessages({
   common: {
     appName: "ClawJS",

@@ -1,3 +1,5 @@
+import { mergeProcessEnv } from "./env.ts";
+
 export interface OpenClawCommandOptions {
   binaryPath?: string;
   homeDir?: string;
@@ -32,19 +34,6 @@ export interface OpenClawCommandRunner {
 function readConfiguredValue(value: string | undefined | null): string | undefined {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
-}
-
-function mergeProcessEnv(...envs: Array<Record<string, string | undefined> | undefined>): NodeJS.ProcessEnv {
-  const merged = {} as NodeJS.ProcessEnv;
-  for (const env of envs) {
-    if (!env) continue;
-    for (const [key, value] of Object.entries(env)) {
-      if (value !== undefined) {
-        merged[key] = value;
-      }
-    }
-  }
-  return merged;
 }
 
 export function resolveOpenClawBinaryPath(options: OpenClawCommandOptions = {}): string {
