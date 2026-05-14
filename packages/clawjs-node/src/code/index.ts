@@ -5,13 +5,13 @@ import path from "path";
 import { randomBytes } from "crypto";
 import { spawnSync } from "child_process";
 import { CODE_LEDGER_SCHEMA_SQL, CODE_GLOBAL_INDEX_SCHEMA_SQL } from "./surface.ts";
-
 import Database from "better-sqlite3";
 
 import { resolveClawGlobalDataRoot } from "../surface-paths.ts";
 
 export type * from "./code-types.ts";
-import type { CodeChangeKind, CodeRisk, CodeIntentStatus, CodeCheckStatus, CodeReviewDecision, CodeHostProvider, CodeProjectStatus, CodeAgentStatus, CodeGateStatus, CodePolicyMode, CodeRepositoryRecord, CodeIntentRecord, CodeReservationRecord, CodeEvidenceRecord, CodeCheckRecord, CodeReviewRecord, CodeQueueRecord, CodeHostSyncRecord, CodeIntegrationPolicy, CodePolicyRecord, CodeDiffSummary, CodeGateRunRecord, CodeIntentDetail, CreateCodeLedgerOptions, CodeStartInput, CodeReserveInput, CodeEvidenceInput, CodeCheckRecordInput, CodeCheckRunInput, CodeReviewInput, CodeCommitResult, CodeIntegrateResult, CodeSyncGithubInput, CodeProjectRecord, CodeAgentRecord, CodeGlobalIntentRecord, CodeGlobalQueueRecord, CodeGlobalReservationRecord, CodeGlobalStatus, CreateCodeGlobalIndexOptions, AddCodeProjectInput, DiscoverCodeProjectsInput, RegisterCodeAgentInput, HeartbeatCodeAgentInput, CodeServeOptions, CodeServerHandle, SqliteCodeIntentRow, SqliteReservationRow, SqliteEvidenceRow, SqliteCheckRow, SqliteReviewRow, SqliteQueueRow, SqliteHostSyncRow, SqliteCodePolicyRow, SqliteGateRunRow, SqliteCodeProjectRow, SqliteCodeAgentRow } from "./code-types.ts";
+import type { CodeChangeKind, CodeRisk, CodeIntentStatus, CodeCheckStatus, CodeReviewDecision, CodeHostProvider, CodeProjectStatus, CodeAgentStatus, CodeGateStatus, CodePolicyMode, CodeRepositoryRecord, CodeIntentRecord, CodeReservationRecord, CodeEvidenceRecord, CodeCheckRecord, CodeReviewRecord, CodeQueueRecord, CodeHostSyncRecord, CodeIntegrationPolicy, CodePolicyRecord, CodeDiffSummary, CodeGateRunRecord, CodeIntentDetail, CreateCodeLedgerOptions, CodeStartInput, CodeReserveInput, CodeEvidenceInput, CodeCheckRecordInput, CodeCheckRunInput, CodeReviewInput, CodeCommitResult, CodeIntegrateResult, CodeSyncGithubInput, CodeProjectRecord, CodeAgentRecord, CodeGlobalIntentRecord, CodeGlobalQueueRecord, CodeGlobalReservationRecord, CodeGlobalStatus, CreateCodeGlobalIndexOptions, AddCodeProjectInput, DiscoverCodeProjectsInput, RegisterCodeAgentInput, HeartbeatCodeAgentInput, CodeServeOptions, CodeServerHandle } from "./code-types.ts";
+import type { SqliteCodeIntentRow, SqliteReservationRow, SqliteEvidenceRow, SqliteCheckRow, SqliteReviewRow, SqliteQueueRow, SqliteHostSyncRow, SqliteCodePolicyRow, SqliteGateRunRow, SqliteCodeProjectRow, SqliteCodeAgentRow } from "./code-sqlite-types.ts";
 
 const CHANGE_KINDS = new Set<CodeChangeKind>(["fix", "feat", "refactor", "docs", "test", "chore"]);
 const RISKS = new Set<CodeRisk>(["low", "medium", "high"]);
