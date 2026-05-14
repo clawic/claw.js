@@ -7,6 +7,8 @@ import { Writable } from "node:stream";
 import { test } from "vitest";
 import assert from "node:assert/strict";
 
+import { clawPublicApiPrefix } from "@clawjs/core";
+
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, runCli } from "./index.ts";
 import { runSecretsCli } from "../bin/secrets-commands.mjs";
 
@@ -24,7 +26,7 @@ function captureStream() {
 async function createFakeSecretsServer() {
   const server = http.createServer((request, response) => {
     const url = new URL(request.url || "/", "http://127.0.0.1");
-    if (url.pathname === "/v1/tenants/demo-tenant/broker/http" && request.method === "POST") {
+    if (url.pathname === `${clawPublicApiPrefix}/tenants/demo-tenant/broker/http` && request.method === "POST") {
       response.setHeader("content-type", "application/json");
       response.end(JSON.stringify({
         ok: true,

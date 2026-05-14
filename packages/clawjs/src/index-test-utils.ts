@@ -7,6 +7,8 @@ import os from "os";
 import path from "path";
 import { once } from "events";
 
+import { clawPublicApiPrefix } from "@clawjs/core";
+
 import { CLI_EXIT_USAGE, runCli } from "./index.ts";
 import { runV1DataCli } from "./v1-data.ts";
 
@@ -186,7 +188,7 @@ export async function startDelegationPlaneTestServer(workspaceRoot: string): Pro
 export async function createFakeSecretsCliServer() {
   const server = http.createServer((request, response) => {
     const url = new URL(request.url || "/", "http://127.0.0.1");
-    if (url.pathname === "/v1/secret-types") {
+    if (url.pathname === `${clawPublicApiPrefix}/secret-types`) {
       response.setHeader("content-type", "application/json");
       response.end(JSON.stringify({
         types: [{
@@ -208,7 +210,7 @@ export async function createFakeSecretsCliServer() {
       }));
       return;
     }
-    if (url.pathname === "/v1/tenants/demo-tenant/secrets") {
+    if (url.pathname === `${clawPublicApiPrefix}/tenants/demo-tenant/secrets`) {
       response.setHeader("content-type", "application/json");
       response.end(JSON.stringify({
         secrets: [{
@@ -227,7 +229,7 @@ export async function createFakeSecretsCliServer() {
       }));
       return;
     }
-    if (url.pathname === "/v1/tenants/demo-tenant/secrets/npm_token_main/capabilities") {
+    if (url.pathname === `${clawPublicApiPrefix}/tenants/demo-tenant/secrets/npm_token_main/capabilities`) {
       response.setHeader("content-type", "application/json");
       response.end(JSON.stringify({
         secret: { secretName: "npm_token_main", typeId: "npm.token" },

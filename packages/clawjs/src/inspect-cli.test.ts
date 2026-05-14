@@ -3,6 +3,7 @@ import os from "os";
 import path from "path";
 import { test } from "vitest";
 import assert from "node:assert/strict";
+import { clawEventsPath } from "@clawjs/core";
 
 import { runCli } from "./index.ts";
 import { CLI_EXIT_OK } from "./cli-errors.ts";
@@ -62,7 +63,7 @@ test("runCli exposes the generated stable surface inspection CLI", async () => {
 test("runCli filters stable compatibility surface categories", async () => {
   const apis = await runCliCapture(["inspect", "apis", "--json"], process.cwd());
   assert.equal(apis.code, CLI_EXIT_OK);
-  assert.equal(JSON.parse(apis.stdout).some((node: { id: string; route?: string }) => node.id === "claw.api.events" && node.route === "/v1/events"), true);
+  assert.equal(JSON.parse(apis.stdout).some((node: { id: string; route?: string }) => node.id === "claw.api.events" && node.route === clawEventsPath), true);
 
   const protocols = await runCliCapture(["inspect", "protocols", "--json"], process.cwd());
   assert.equal(protocols.code, CLI_EXIT_OK);

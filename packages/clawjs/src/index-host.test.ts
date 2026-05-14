@@ -6,6 +6,8 @@ import type { AddressInfo } from "net";
 import os from "os";
 import path from "path";
 
+import { clawHostApiRoutes } from "@clawjs/core";
+
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK } from "./index.ts";
 import { runCliCapture } from "./index-test-utils.ts";
 
@@ -64,7 +66,7 @@ test("direct domain CLI forwards v1 requests to the active host", async () => {
   const requests: unknown[] = [];
   const server = http.createServer((req, res) => {
     assert.equal(req.method, "POST");
-    assert.equal(req.url, "/v1/commands");
+    assert.equal(req.url, clawHostApiRoutes.commands);
     const chunks: Buffer[] = [];
     req.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
     req.on("end", () => {

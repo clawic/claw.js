@@ -5,6 +5,7 @@ import net from "net";
 
 import {
   clawCommandResponseSchema,
+  clawHostApiRoutes,
   type ClawCommandRequest,
   type ClawCommandResponse,
   type ClawHostDescriptor,
@@ -69,7 +70,7 @@ async function sendUnixSocketCommand(socketPath: string, request: ClawCommandReq
 async function sendHttpCommand(address: string, request: ClawCommandRequest): Promise<ClawCommandResponse> {
   const url = new URL(address);
   if (url.pathname === "/" || url.pathname === "") {
-    url.pathname = "/v1/commands";
+    url.pathname = clawHostApiRoutes.commands;
   }
   const client = url.protocol === "https:" ? https : http;
   const payload = JSON.stringify(request);

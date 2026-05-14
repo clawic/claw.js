@@ -5,7 +5,7 @@ import os from "os";
 import path from "path";
 import Database from "better-sqlite3";
 
-import { resolveClawPersistentSurfacePath } from "@clawjs/core";
+import { clawCommonJsonFields, resolveClawPersistentSurfacePath } from "@clawjs/core";
 
 import { CLI_EXIT_OK, runCli } from "./index.ts";
 import { captureStream, useIsolatedMainData } from "./index-test-utils.ts";
@@ -787,7 +787,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  assert.match(inspectStdout.getOutput(), /"schemaVersion": 6/);
+  assert.match(inspectStdout.getOutput(), new RegExp(`"${clawCommonJsonFields.schemaVersion}": 6`));
 
   assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
   assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.database.legacy_productivity", workspaceRoot)), false);

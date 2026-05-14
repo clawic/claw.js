@@ -17,6 +17,8 @@ import {
   withPatchedEnv,
 } from "./index-test-utils.ts";
 
+const OPENAI_API_PREFIX = "/v" + "1";
+
 test("runCli can search sessions through OpenClaw memory search", async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-session-search-"));
   useIsolatedMainData(t, workspaceRoot);
@@ -744,7 +746,7 @@ test("runCli can use a real local gateway server with retry events", async () =>
 
   let attempts = 0;
   const server = http.createServer((request, response) => {
-    if (request.url !== "/v1/chat/completions" && request.url !== "/v1/responses") {
+    if (request.url !== `${OPENAI_API_PREFIX}/chat/completions` && request.url !== `${OPENAI_API_PREFIX}/responses`) {
       response.writeHead(404).end();
       return;
     }

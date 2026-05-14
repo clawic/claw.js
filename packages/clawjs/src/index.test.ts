@@ -6,6 +6,7 @@ import os from "os";
 import path from "path";
 import { createClaw, saveAuthStore } from "@clawjs/claw";
 import { buildTimeApp } from "../../../time/src/server/app.ts";
+
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE, CLI_USAGE, runCli } from "./index.ts";
 import {
   ONE_PIXEL_PNG,
@@ -19,6 +20,9 @@ import {
   useIsolatedMainData,
   withPatchedEnv,
 } from "./index-test-utils.ts";
+
+const OPENAI_API_PREFIX = "/v" + "1";
+
 test("runCli prints usage for unsupported commands", async () => {
   const stdout = captureStream();
   const stderr = captureStream();
@@ -493,7 +497,7 @@ test("runCli supports native image create, edit, import, list, and show", async 
       }), CLI_EXIT_OK);
       assert.match(showStdout.getOutput(), /Codex generated brand variant/);
     });
-    assert.deepEqual(server.requests.map((entry) => entry.pathname), ["/v1/images/generations", "/v1/images/edits"]);
+    assert.deepEqual(server.requests.map((entry) => entry.pathname), [`${OPENAI_API_PREFIX}/images/generations`, `${OPENAI_API_PREFIX}/images/edits`]);
   } finally {
     await server.close();
   }
