@@ -1,5 +1,4 @@
-// Clawix-grade Secrets HTTP server. Exposes the full surface used by the
-// Clawix Mac UI client and the @clawjs/cli sidecar:
+// Clawix-grade Secrets HTTP server for the Mac UI client and @clawjs/cli sidecar:
 //
 //   - Secrets lifecycle: setup / unlock / lock / recover / change-password.
 //   - Doctor: health + capability map with status granular per area.
@@ -10,10 +9,7 @@
 //   - Brand sync.
 //   - Audit query + integrity verify.
 //
-// All sensitive operations require the secrets to be unlocked
-// (masterKey/auditMacKey held in process memory by SecretsSession). This
-// matches the Clawix Mac model: the daemon process owns the keys; the
-// UI talks HTTP to it.
+// Sensitive operations require unlocked keys held in process memory by SecretsSession.
 
 import path from "node:path";
 import fs from "node:fs";
