@@ -78,7 +78,7 @@ import { openBrowser, openStateDir, openStatePath, readOpenState, repoRootFromCl
 import { portIsOpen, processIsAlive, waitForUrl, writeProgress } from "./cli-process-utils.ts";
 import { parseRuleHints, parseRuleReferences } from "./cli-rule-utils.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
-import { collectFlagValues, parseCsvFlag, parseJsonFlag } from "./cli-flag-parsers.ts";
+import { collectFlagValues, joinedPositionals, parseCsvFlag, parseJsonFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
 import { inferAudioExtension, inferMimeTypeFromPath, parseInferenceMessages, pathSafeBasename, readJsonFile, resolveRuntimeAdapterId, timelineRange, type GenerationCliMediaKind } from "./cli-runtime-utils.ts";
 import { channelListenerPaths, isProcessRunning, readListenerPid, readTail, waitForListenerPid } from "./cli-channel-listener.ts";
 import {
@@ -1111,13 +1111,6 @@ function parseFlags(argv: string[]): Record<string, string> {
   return flags;
 }
 
-function readBooleanFlag(argv: string[], flags: Record<string, string>, name: string, fallback = false): boolean {
-  if (argv.includes(`--${name}`)) return true;
-  const value = flags[name];
-  if (value === undefined) return fallback;
-  return value === "true";
-}
-
 function extractPositionals(argv: string[]): string[] {
   const positionals: string[] = [];
   for (let index = 0; index < argv.length; index += 1) {
@@ -1133,11 +1126,6 @@ function extractPositionals(argv: string[]): string[] {
     }
   }
   return positionals;
-}
-
-function joinedPositionals(positionals: string[], startIndex: number): string | undefined {
-  const value = positionals.slice(startIndex).join(" ").trim();
-  return value || undefined;
 }
 
 function formatCliTable(rows: Array<Record<string, string>>): string {

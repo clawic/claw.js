@@ -36,3 +36,15 @@ export function collectFlagValues(argv: string[], name: string): string[] {
   }
   return values;
 }
+
+export function readBooleanFlag(argv: string[], flags: Record<string, string>, name: string, fallback = false): boolean {
+  if (argv.includes(`--${name}`)) return true;
+  const value = flags[name];
+  if (value === undefined) return fallback;
+  return value === "true";
+}
+
+export function joinedPositionals(positionals: string[], startIndex: number): string | undefined {
+  const value = positionals.slice(startIndex).join(" ").trim();
+  return value || undefined;
+}

@@ -115,7 +115,7 @@ test("resetWorkspace can fully clear managed state and repairWorkspace rebuilds 
 
 test("repairWorkspace restores missing workspace layout and normalizes compat snapshots", () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-workspace-repair-"));
-  const snapshotPath = path.join(workspaceDir, ".claw", "compat", "runtime-snapshot.json");
+  const snapshotPath = resolveClawWorkspaceSurfacePath("claw.workspace.compat", workspaceDir, "runtime-snapshot.json");
   fs.mkdirSync(path.dirname(snapshotPath), { recursive: true });
   fs.writeFileSync(snapshotPath, JSON.stringify({
     runtimeAdapter: "openclaw",
@@ -145,7 +145,7 @@ test("repairWorkspace restores missing workspace layout and normalizes compat sn
   assert.equal(result.compatSnapshotSourcePath, snapshotPath);
   assert.equal(fs.existsSync(resolveCompatSnapshotPath(workspaceDir)), true);
   assert.equal(readCompatSnapshot(workspaceDir)?.runtimeVersion, "1.2.3");
-  assert.equal(result.createdDirectories.includes(path.join(workspaceDir, ".claw", "sessions")), true);
+  assert.equal(result.createdDirectories.includes(resolveClawWorkspaceSurfacePath("claw.workspace.sessions", workspaceDir)), true);
 });
 
 test("workspace mutations respect the workspace lock", () => {

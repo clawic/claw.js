@@ -2297,8 +2297,8 @@ test("createClaw doctor report includes workspace diagnostics", async () => {
 
 test("createClaw doctor report surfaces compat snapshot drift", async () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-instance-doctor-drift-"));
-  fs.mkdirSync(path.join(workspaceDir, ".claw", "compat"), { recursive: true });
-  fs.writeFileSync(path.join(workspaceDir, ".claw", "compat", "runtime-snapshot.json"), JSON.stringify({
+  fs.mkdirSync(resolveClawWorkspaceSurfacePath("claw.workspace.compat", workspaceDir), { recursive: true });
+  fs.writeFileSync(resolveClawWorkspaceSurfacePath("claw.workspace.compat", workspaceDir, "runtime-snapshot.json"), JSON.stringify({
     schemaVersion: 1,
     runtimeAdapter: "openclaw",
     runtimeVersion: "0.9.0",

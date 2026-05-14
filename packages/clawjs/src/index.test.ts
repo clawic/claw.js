@@ -3378,9 +3378,9 @@ test("published CLI tarballs install with npm and manage local-first productivit
   assert.match(dbTask.stdout, /Created task \S+ "Magic fallback"/);
 
   assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
-  assert.equal(fs.existsSync(path.join(installRoot, ".claw", "data", "database.sqlite")), false);
-  assert.equal(fs.existsSync(path.join(installRoot, ".claw", "data", "productivity.sqlite")), false);
-  assert.equal(fs.existsSync(path.join(installRoot, ".claw", "workspace.manifest.json")), false);
+  assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace.data", installRoot, "database.sqlite")), false);
+  assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.database.legacy_productivity", installRoot)), false);
+  assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace", installRoot, "workspace.manifest.json")), false);
 });
 
 test("runCli ignores pre-public legacy workspace sqlite productivity data", { concurrency: false }, async (t) => {
@@ -3431,7 +3431,7 @@ test("runCli ignores pre-public legacy workspace sqlite productivity data", { co
   assert.doesNotMatch(listStdout.getOutput(), /Imported task/);
   assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
   assert.equal(fs.existsSync(legacyDbPath), true);
-  assert.equal(fs.existsSync(path.join(workspaceRoot, ".claw", "data", "productivity.sqlite")), true);
+  assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.database.legacy_productivity", workspaceRoot)), true);
 });
 
 test("runCli exposes explicit exit codes for success, degraded, failure, and usage states", async () => {
