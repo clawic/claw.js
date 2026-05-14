@@ -1942,6 +1942,8 @@ function SettingsContent() {
             config={config}
             updateConfig={updateConfig}
             imageBackends={imageBackends}
+            {...{ transcriptionEnabled, transcriptionStatus, transcriptionWhisperReady, showTranscriptionConfigModal, setShowTranscriptionConfigModal, refreshToolStatus }}
+            {...{ selectedTtsProviderId, selectedTtsProvider, ttsProviderLabel, ttsProviderOptions, ttsConfigMissingApiKey, showTtsConfigModal, setShowTtsConfigModal, renderTtsField }}
             showImageGenConfigModal={showImageGenConfigModal}
             setShowImageGenConfigModal={setShowImageGenConfigModal}
           />
