@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
 
     const config = getUserConfig();
     const claw = await getClaw();
-    const tts = claw.tts.normalizeConfig(config.tts);
+    const tts = claw.tts.normalizeConfig(config.tts) as NonNullable<typeof config.tts>;
 
     const result = await claw.tts.synthesize({
       text,
