@@ -1,9 +1,11 @@
 import fs from "fs";
 import path from "path";
 
-import { clawPersistentSurfaceRegistry, findClawPersistentSurfaceNode, listClawCliAliases, resolveClawCliCommand, searchClawCliRegistry, withSurfaceChildren } from "@clawjs/core";
+import { clawPersistentSurfaceRegistry, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommands, resolveClawCliCommand, searchClawCliRegistry, withSurfaceChildren } from "@clawjs/core";
 import type { ClawPersistentSurfaceNode, ClawPersistentSurfaceRegistry } from "@clawjs/core";
 import { v1MainSchemaSurfaceNodes } from "./v1-data-surface.ts";
+import { writeJsonError, writeJsonOk, type CliJsonMeta } from "./cli-json.ts";
+import { CliHandledError } from "./cli-errors.ts";
 
 interface CliContext {
   stdout: NodeJS.WritableStream;
@@ -24,14 +26,6 @@ class InspectCliError extends Error {
     this.code = code;
     this.exitCode = exitCode;
   }
-}
-
-function writeJson(stream: NodeJS.WritableStream, payload: unknown): void {
-  stream.write(`${JSON.stringify(payload, null, 2)}\n`);
-}
-
-function writeCliError(stream: NodeJS.WritableStream, error: InspectCliError): void {
-  writeJson(stream, { error: { code: error.code, message: error.message } });
 }
 
 function cliErrorFromUnknown(error: unknown): InspectCliError {
@@ -109,8 +103,24 @@ function inspectList(value: string | undefined, nodes = inspectNodes()): ClawPer
 function inspectText(nodes: ClawPersistentSurfaceNode[]): string {
   return nodes.map((node) => {
     const locator = node.path ?? node.route ?? node.key ?? node.value ?? node.name;
-    return `${node.id}\t${node.kind}\t${node.owner}\t${node.surfaceClass ?? "persistent"}\t${locator}`;
+    return `${node.id}\t${node.kind}\t${node.owner}\t${node.surfaceClass ?? "persistent"}\t${formatSurfaceParity(node)}\t${locator}`;
   }).join("\n");
+}
+
+function formatSurfaceParity(node: ClawPersistentSurfaceNode): string {
+  const human = node.humanSurfaces?.join("+") ?? "-";
+  const programmatic = node.programmaticSurfaces?.join("+") ?? "-";
+  const gaps = node.surfaceGaps?.map((gap) => `${gap.surface}:${gap.status}`).join(",") ?? "-";
+  return `human=${human};programmatic=${programmatic};gaps=${gaps}`;
+}
+
+function inspectJsonMeta(subcommand: string, extra: CliJsonMeta = {}): CliJsonMeta {
+  return {
+    schemaVersion: 1,
+    canonicalCommand: "inspect",
+    subcommand,
+    ...extra,
+  };
 }
 
 function renderInspectMarkdown(nodes = inspectNodes()): string {
@@ -129,11 +139,12 @@ function renderInspectMarkdown(nodes = inspectNodes()): string {
     "",
     "## Nodes",
     "",
-    "| ID | Kind | Surface | Owner | Path / Key / Value |",
-    "| --- | --- | --- | --- | --- |",
+    "| ID | Kind | Surface | Owner | Human | Programmatic | Gaps | Path / Key / Value |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- |",
   ];
   for (const node of nodes) {
-    lines.push(`| \`${node.id}\` | ${node.kind} | ${node.surfaceClass ?? "persistent"} | ${node.owner} | \`${node.path ?? node.route ?? node.key ?? node.value ?? ""}\` |`);
+    const gaps = node.surfaceGaps?.map((gap) => `${gap.surface}:${gap.status}`).join("<br>") ?? "";
+    lines.push(`| \`${node.id}\` | ${node.kind} | ${node.surfaceClass ?? "persistent"} | ${node.owner} | ${node.humanSurfaces?.join(", ") ?? ""} | ${node.programmaticSurfaces?.join(", ") ?? ""} | ${gaps} | \`${node.path ?? node.route ?? node.key ?? node.value ?? ""}\` |`);
   }
   return `${lines.join("\n")}\n`;
 }
@@ -160,7 +171,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
   const selectBySurface = (surfaceClass: string) => nodes.filter((node) => node.surfaceClass === surfaceClass);
   if (command === "tree") {
     const payload = { version: registry.version, nodes };
-    if (input.wantsJson) writeJson(input.context.stdout, payload);
+    if (input.wantsJson) writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command));
     else input.context.stdout.write(`${inspectText(payload.nodes)}\n`);
     return CLI_EXIT_OK;
   }
@@ -169,7 +180,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     if (listed.length === 0 && target && target !== "/") {
       throw new InspectCliError("inspect_not_found", `No persistent surface node found for ${target}.`, CLI_EXIT_USAGE);
     }
-    if (input.wantsJson) writeJson(input.context.stdout, listed);
+    if (input.wantsJson) writeJsonOk(input.context.stdout, listed, inspectJsonMeta(command));
     else input.context.stdout.write(`${inspectText(listed)}\n`);
     return CLI_EXIT_OK;
   }
@@ -177,76 +188,96 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     if (!target) throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect show <id-or-path> [--json]`, CLI_EXIT_USAGE);
     const node = inspectFind(target, nodes);
     if (!node) throw new InspectCliError("inspect_not_found", `No persistent surface node found for ${target}.`, CLI_EXIT_USAGE);
-    if (input.wantsJson) writeJson(input.context.stdout, node);
+    if (input.wantsJson) writeJsonOk(input.context.stdout, node, inspectJsonMeta(command));
     else input.context.stdout.write(`${inspectText([node])}\n`);
     return CLI_EXIT_OK;
   }
   if (command === "database") {
     const selected = nodes.filter((node) => node.kind === "database" || node.kind === "sidecar" || node.databaseId);
-    if (input.wantsJson) writeJson(input.context.stdout, selected);
+    if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
     else input.context.stdout.write(`${inspectText(selected)}\n`);
     return CLI_EXIT_OK;
   }
   if (command === "storage") {
     const selected = nodes.filter((node) => ["root", "folder", "file", "socket", "statusFile", "legacyPath", "externalReadOnlySource"].includes(node.kind));
-    if (input.wantsJson) writeJson(input.context.stdout, selected);
+    if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
     else input.context.stdout.write(`${inspectText(selected)}\n`);
     return CLI_EXIT_OK;
   }
   if (command === "prefs") {
     const selected = nodes.filter((node) => node.kind === "preferenceKey" || node.kind === "appStorageKey" || node.kind === "browserStorageKey");
-    if (input.wantsJson) writeJson(input.context.stdout, selected);
+    if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
     else input.context.stdout.write(`${inspectText(selected)}\n`);
     return CLI_EXIT_OK;
   }
   if (command === "contracts" || command === "stable" || command === "compat") {
     const selected = nodes.filter((node) => node.surfaceClass && node.surfaceClass !== "persistent");
-    if (input.wantsJson) writeJson(input.context.stdout, selected);
+    if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
     else input.context.stdout.write(`${inspectText(selected)}\n`);
     return CLI_EXIT_OK;
   }
   if (command === "apis") {
     const selected = selectByKinds(["apiRoute", "apiMethod", "apiParameter", "webhook", "webhookEvent", "deepLink", "hostname", "port"]);
-    if (input.wantsJson) writeJson(input.context.stdout, selected);
+    if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
     else input.context.stdout.write(`${inspectText(selected)}\n`);
     return CLI_EXIT_OK;
   }
   if (command === "protocols") {
     const selected = selectBySurface("protocol");
-    if (input.wantsJson) writeJson(input.context.stdout, selected);
+    if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
     else input.context.stdout.write(`${inspectText(selected)}\n`);
     return CLI_EXIT_OK;
   }
   if (command === "events") {
     const selected = selectBySurface("event");
-    if (input.wantsJson) writeJson(input.context.stdout, selected);
+    if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
     else input.context.stdout.write(`${inspectText(selected)}\n`);
     return CLI_EXIT_OK;
   }
   if (command === "schemas") {
     const selected = selectBySurface("schema");
-    if (input.wantsJson) writeJson(input.context.stdout, selected);
+    if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
     else input.context.stdout.write(`${inspectText(selected)}\n`);
     return CLI_EXIT_OK;
   }
   if (command === "ids") {
     const selected = selectBySurface("id");
-    if (input.wantsJson) writeJson(input.context.stdout, selected);
+    if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
     else input.context.stdout.write(`${inspectText(selected)}\n`);
     return CLI_EXIT_OK;
   }
   if (command === "cli") {
     const selected = selectBySurface("cli");
-    if (input.wantsJson) writeJson(input.context.stdout, selected);
+    if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
     else input.context.stdout.write(`${inspectText(selected)}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (command === "surfaces" || command === "surface-parity") {
+    const selected = nodes.filter((node) => node.humanSurfaces?.length || node.programmaticSurfaces?.length || node.surfaceGaps?.length);
+    if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
+    else input.context.stdout.write(`${inspectText(selected)}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (command === "commands") {
+    const includeAdvanced = "all" in input.flags || input.flags.all === "true";
+    const commands = listClawCliCommands({ includeAdvanced });
+    if (input.wantsJson) {
+      writeJsonOk(input.context.stdout, {
+        version: registry.version,
+        includeAdvanced,
+        commands,
+      }, inspectJsonMeta(command));
+    } else {
+      input.context.stdout.write(`${commands.map((entry) => `${entry.name}\t${entry.kind}\t${entry.support.state}\t${entry.securityPolicy}\t${entry.summary}`).join("\n")}\n`);
+    }
     return CLI_EXIT_OK;
   }
   if (command === "aliases") {
     const aliases = listClawCliAliases();
-    if (input.wantsJson) writeJson(input.context.stdout, {
+    if (input.wantsJson) writeJsonOk(input.context.stdout, {
       version: registry.version,
       aliases,
-    });
+    }, inspectJsonMeta(command));
     else input.context.stdout.write(`${aliases.map((alias) => `${alias.alias}\t${alias.canonicalName}\t${alias.source}`).join("\n")}\n`);
     return CLI_EXIT_OK;
   }
@@ -269,7 +300,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
         tests: cliCommand.tests,
         source: cliCommand.source,
       };
-      if (input.wantsJson) writeJson(input.context.stdout, payload);
+      if (input.wantsJson) writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command, { canonicalName: payload.canonicalName }));
       else {
         input.context.stdout.write([
           `${payload.name}\t${payload.kind}\t${payload.securityPolicy}`,
@@ -293,7 +324,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
         notes: node.notes,
         warnings: node.warnings ?? [],
       };
-      if (input.wantsJson) writeJson(input.context.stdout, payload);
+      if (input.wantsJson) writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command, { surfaceId: node.id }));
       else input.context.stdout.write(`${node.id}\t${node.kind}\t${node.source?.file ?? "source-unregistered"}\n${node.notes ?? ""}\n`);
       return CLI_EXIT_OK;
     }
@@ -302,7 +333,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
   }
   if (command === "external") {
     const selected = selectBySurface("external");
-    if (input.wantsJson) writeJson(input.context.stdout, selected);
+    if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
     else input.context.stdout.write(`${inspectText(selected)}\n`);
     return CLI_EXIT_OK;
   }
@@ -318,7 +349,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     }
     throw new InspectCliError("usage_error", `Unsupported inspect render format: ${format}`, CLI_EXIT_USAGE);
   }
-  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|why|aliases|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|external|render`, CLI_EXIT_USAGE);
+  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|why|commands|aliases|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
 }
 
 export async function runInspectCli(input: InspectCliInput): Promise<number> {
@@ -326,7 +357,7 @@ export async function runInspectCli(input: InspectCliInput): Promise<number> {
     return await runInspectCliUnsafe(input);
   } catch (error) {
     const handled = cliErrorFromUnknown(error);
-    if (input.wantsJson) writeCliError(input.context.stdout, handled);
+    if (input.wantsJson) writeJsonError(input.context.stdout, new CliHandledError(handled.code, handled.message, handled.exitCode), inspectJsonMeta(input.positionals[1] ?? "tree"));
     else input.context.stderr.write(`${handled.message}\n`);
     return handled.exitCode;
   }

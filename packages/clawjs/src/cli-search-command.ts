@@ -1,6 +1,6 @@
 import type { CliContext } from "./index.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK } from "./cli-errors.ts";
-import { writeJson } from "./cli-json.ts";
+import { writeJsonOk } from "./cli-json.ts";
 import { buildCommandHelp, searchCliDiscovery } from "./cli-surface.ts";
 
 export async function runCliDiscoverySearch(input: {
@@ -18,17 +18,13 @@ export async function runCliDiscoverySearch(input: {
   }
   const results = searchCliDiscovery(query, { limit: input.flags.limit ? Number(input.flags.limit) : 10 });
   if (input.wantsJson) {
-    writeJson(input.context.stdout, {
-      ok: true,
-      data: {
-        query,
-        results,
-      },
-      meta: {
-        schemaVersion: 1,
-        canonicalCommand: "search",
-        mode: "deterministic-local-discovery",
-      },
+    writeJsonOk(input.context.stdout, {
+      query,
+      results,
+    }, {
+      schemaVersion: 1,
+      canonicalCommand: "search",
+      mode: "deterministic-local-discovery",
     });
   } else {
     input.context.stdout.write(`${results.map((result) => `${result.type}\t${result.name}\t${result.canonicalName ?? ""}\t${result.summary}`).join("\n")}\n`);
