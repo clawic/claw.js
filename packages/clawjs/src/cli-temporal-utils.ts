@@ -59,7 +59,6 @@ export function parseWatchTarget(value: string): { anchorType: NonNullable<Tempo
     anchorId: anchorId.trim(),
   };
 }
-
 export function parseSimpleDurationMs(value: string | undefined): number | null {
   const match = value?.trim().match(/^(\d+)(ms|s|m|h|d)$/);
   if (!match) return null;
@@ -157,4 +156,3 @@ export function buildRoutineHeartbeat(argv: string[], flags: Record<string, stri
     ...(allowedCustomChecks.length > 0 ? { allowedCustomChecks } : {}),
   };
 }
-
