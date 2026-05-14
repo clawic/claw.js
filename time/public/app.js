@@ -26,6 +26,10 @@ function fmtDate(value) {
   return new Date(value).toLocaleString();
 }
 
+function isoHoursFromNow(hours) {
+  return new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+}
+
 function detailHtml(item) {
   if (!item) {
     return `<p class="placeholder">Select an item to inspect participants, schedule, actions, and projections.</p>`;
@@ -148,7 +152,7 @@ async function createFollowUp() {
         expression: "24h if no reply",
         anchorType: "thread",
         anchorId: "thread-ui",
-        anchorAt: "2026-04-09T08:00:00.000Z",
+        anchorAt: isoHoursFromNow(1),
       },
       actions: [{ kind: "notify", target: "notify" }],
     }),
