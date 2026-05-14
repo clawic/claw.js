@@ -325,7 +325,7 @@ export function buildDiscordOperationRequest(
     case "delete-guild-template":
       return deletePlan(`guilds/${guildId(values)}/templates/${templateCode(values)}`, auth, headers, { type: "object", requiredPaths: ["code", "name", "source_guild_id"] });
     case "send-soundboard-sound":
-      return bodyPlan("POST", `channels/${channelId(values)}/send-soundboard-sound`, auth, headers, sendSoundboardSoundBody(values), { type: "object" });
+      return bodyPlan("POST", `channels/${channelId(values)}/send-soundboard-sound`, auth, headers, sendSoundboardSoundBody(values), { type: "null" });
     case "list-default-soundboard-sounds":
       return getPlan("soundboard-default-sounds", auth, headers, { type: "array" });
     case "list-guild-soundboard-sounds":
