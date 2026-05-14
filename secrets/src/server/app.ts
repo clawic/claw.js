@@ -907,6 +907,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
         method: body.method,
         headers: outgoingHeaders,
         body: outgoingBody,
+        redirect: "manual",
         signal: controller.signal,
       });
       const responseHeaders: Record<string, string> = {};

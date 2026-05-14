@@ -2,6 +2,7 @@
 // brokered execute, audit query+integrity, lock, recover, change-password.
 
 import fs from "node:fs";
+import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 
@@ -131,6 +132,98 @@ const revealWithReauth = await fetchJson(`${base}/v1/tenants/clawix-local/secret
 });
 if (revealWithReauth.ok && revealWithReauth.body.value?.value === "ghp_smoke_secret") ok("reveal allows signed host with reauth"); else ko("reveal allows signed host with reauth", revealWithReauth.body);
 
+let redirectFollowed = false;
+const targetServer = http.createServer((req, res) => {
+  if (req.url === "/redirect") {
+    res.writeHead(302, { Location: "/echo" });
+    res.end();
+    return;
+  }
+  if (req.url === "/echo") {
+    redirectFollowed = true;
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify({ authorization: req.headers.authorization ?? null }));
+    return;
+  }
+  res.writeHead(404).end();
+});
+await new Promise((resolve) => targetServer.listen(0, "127.0.0.1", resolve));
+const targetPort = targetServer.address().port;
+
+async function brokerHttp(secretName, targetPath = "/echo") {
+  return fetchJson(`${base}/v1/tenants/clawix-local/broker/http`, {
+    method: "POST",
+    headers: authHeaders,
+    body: JSON.stringify({
+      method: "GET",
+      url: `http://127.0.0.1:${targetPort}${targetPath}`,
+      headers: { Authorization: `Bearer {{${secretName}.token}}` },
+      agent: "smoke-agent",
+      capability: "broker.http",
+      riskTier: "read",
+      declaredFields: [{ secretName, fieldName: "token", placement: "header" }],
+    }),
+  });
+}
+
+const brokerInsecureBlocked = await brokerHttp("github_main");
+if (brokerInsecureBlocked.status === 400 && brokerInsecureBlocked.body.reasons?.includes("insecure_transport_blocked")) {
+  ok("broker blocks insecure transport by default");
+} else {
+  ko("broker blocks insecure transport by default", brokerInsecureBlocked.body);
+}
+
+const localBlocked = await fetchJson(`${base}/v1/tenants/clawix-local/secrets`, {
+  method: "POST",
+  headers: authHeaders,
+  body: JSON.stringify({
+    draft: {
+      typeId: "github.pat",
+      internalName: "local_blocked",
+      title: "Local Blocked",
+      fields: [{ fieldName: "token", fieldKind: "password", placement: "header", isSecret: true, secretValue: "local_blocked_secret" }],
+      governance: { allowedHosts: [`127.0.0.1:${targetPort}`], allowedHeaders: ["Authorization"], allowInsecureTransport: true },
+    },
+  }),
+});
+if (!localBlocked.ok) ko("local blocked secret create", localBlocked.body);
+const brokerLocalBlocked = await brokerHttp("local_blocked");
+if (brokerLocalBlocked.status === 400 && brokerLocalBlocked.body.reasons?.includes("local_network_blocked")) {
+  ok("broker blocks local network by default");
+} else {
+  ko("broker blocks local network by default", brokerLocalBlocked.body);
+}
+
+const brokerAllowed = await fetchJson(`${base}/v1/tenants/clawix-local/secrets`, {
+  method: "POST",
+  headers: authHeaders,
+  body: JSON.stringify({
+    draft: {
+      typeId: "github.pat",
+      internalName: "broker_allowed",
+      title: "Broker Allowed",
+      fields: [{ fieldName: "token", fieldKind: "password", placement: "header", isSecret: true, secretValue: "broker_allowed_secret" }],
+      governance: { allowedHosts: [`127.0.0.1:${targetPort}`], allowedHeaders: ["Authorization"], allowInsecureTransport: true, allowLocalNetwork: true },
+    },
+  }),
+});
+if (!brokerAllowed.ok) ko("broker allowed secret create", brokerAllowed.body);
+const brokerOk = await brokerHttp("broker_allowed");
+if (brokerOk.ok && brokerOk.body.status === 200 && brokerOk.body.bodyText.includes("[REDACTED]") && !brokerOk.body.bodyText.includes("broker_allowed_secret")) {
+  ok("broker executes and redacts response");
+} else {
+  ko("broker executes and redacts response", brokerOk.body);
+}
+
+redirectFollowed = false;
+const brokerRedirect = await brokerHttp("broker_allowed", "/redirect");
+if (brokerRedirect.ok && brokerRedirect.body.status === 302 && redirectFollowed === false) {
+  ok("broker does not follow redirects with secrets");
+} else {
+  ko("broker does not follow redirects with secrets", { body: brokerRedirect.body, redirectFollowed });
+}
+await new Promise((resolve) => targetServer.close(resolve));
+
 const backupExport = await fetchJson(`${base}/v1/secrets/backup/export`, {
   method: "POST",
   headers: authHeaders,
@@ -147,7 +240,7 @@ const backupImport = await fetchJson(`${base}/v1/secrets/backup/import`, {
   headers: authHeaders,
   body: JSON.stringify({ passphrase: "backup-passphrase", backup: backupExport.body.backup }),
 });
-if (backupImport.ok && backupImport.body.imported?.secrets === 1 && backupImport.body.state?.unlocked === false) {
+if (backupImport.ok && backupImport.body.imported?.secrets === 3 && backupImport.body.state?.unlocked === false) {
   ok("backup import restores and locks");
 } else {
   ko("backup import", backupImport.body);
