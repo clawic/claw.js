@@ -57,9 +57,12 @@ keys.
 The current Secrets implementation already establishes the intended
 cryptographic baseline:
 
-- a master password unlocks a random vault master key instead of directly
-  encrypting every field;
+- a master password plus a generated 256-bit Secret Key unlocks a random vault
+  master key instead of directly encrypting every field;
 - password and recovery roots are derived with memory-hard KDF parameters;
+- only a Secret Key fingerprint is stored in vault metadata; the raw Secret Key
+  is shown once in the Emergency Kit and may be kept device-locally by the
+  signed host;
 - per-secret item keys encrypt fields, notes, and attachments with AEAD;
 - associated data binds ciphertext to the expected item, field, notes,
   attachment, audit, or wrapping context;
@@ -72,21 +75,37 @@ but broker policy, host identity, capability checks, audit minimization, and
 approval windows decide whether plaintext is ever produced for the wrong
 caller.
 
-Master password support is required as the portable root of trust. Platform
-features such as Keychain, Secure Enclave, and biometrics may strengthen local
-unlock or reauthentication, but they must not replace the portable
-password/recovery model.
+Master password plus Secret Key support is required as the portable root of
+trust. Platform features such as Keychain, Secure Enclave, and biometrics may
+strengthen local unlock or reauthentication, but they must not replace the
+portable Emergency Kit model.
 
 Clawix on macOS provides the current local platform layer. It stores a
 32-byte device-local Secrets platform KEK in the macOS Keychain with
 `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`, sends that KEK to the
 ClawJS Secrets sidecar only through anonymous bootstrap stdin, and never exposes
 it through process environment variables, disk token files, CLI prompts, or
-agent APIs. ClawJS persists `platformKeyWrap`, an AEAD wrap of the vault master
-key under that host KEK. A vault that has `platformKeyWrap` requires both the
-master password and the matching host KEK for password unlock. The recovery
-phrase remains the portable emergency path and rebinds the vault to the current
-host KEK after successful recovery.
+agent APIs. It also stores only the user Secret Key string in a separate
+device-local Keychain item; it must not store all vault secrets or decrypted
+field values in Keychain.
+
+ClawJS persists `platformKeyWrap`, an AEAD wrap of the vault master key under
+the host KEK. Password unlock requires master password + Secret Key and verifies
+the matching host KEK when the vault is host-bound. Local convenient unlock uses
+native biometric reauthentication in the signed host and the host KEK-backed
+`platformKeyWrap`; if biometrics are unavailable, unsupported, or fail, the
+password + Secret Key path remains the required fallback.
+
+Sensitive signed-host endpoints require a per-request host assertion issued
+through a native macOS XPC service bundled only for Secrets. Clawix generates a
+per-launch assertion key, bootstraps it to the Secrets sidecar only through
+anonymous stdin, and separately bootstraps the bundled XPC service in memory.
+The XPC service verifies the caller code-signing identifier against the
+enclosing Clawix bundle identifier before it will issue assertions over method,
+path, timestamp, and nonce. The server rejects expired assertions and rejects
+nonce/mac replays inside the accepted clock window. This is the macOS
+Secrets-only host assertion boundary; other ClawJS sidecars must not inherit it
+by default.
 
 ## Human Reveal
 
@@ -247,8 +266,8 @@ must be audited with minimal metadata.
 
 Backup encryption uses a passphrase or key independent from ordinary unlock
 state. Export files must not contain plaintext secret values, master keys,
-unwrapped item keys, active bearer tokens, active grant tokens, or reusable
-session material.
+unwrapped item keys, raw Secret Keys, active bearer tokens, active grant
+tokens, or reusable session material.
 
 Device-local master-key wraps are not backup material. Encrypted backups omit
 `platformKeyWrap` from `secrets_meta` so backup restore is portable across
@@ -257,8 +276,10 @@ host that provides a platform KEK rebinds the vault by writing a fresh
 host-local `platformKeyWrap`.
 
 Recovery material is secret material. It follows the same rules as vault
-passwords and private keys: never log it, never store it in non-vault records,
-and never expose it to agents or connectors.
+passwords, Secret Keys, and private keys: never log it, never store it in
+non-vault records, and never expose it to agents or connectors. Successful
+recovery must rotate the master password wrap, Secret Key, and recovery phrase;
+the previous Emergency Kit must stop working.
 
 ## Rotation And Compromise
 
@@ -291,14 +312,27 @@ The current ClawJS baseline implements the required safe public path:
 - Clawix bootstraps Secrets admin and signed-host tokens over an anonymous
   stdin channel instead of environment variables, so process environment
   inspection does not expose bearer material;
+- Clawix bootstraps a Secrets-only signed-host assertion key over the same
+  anonymous stdin channel and also embeds `ClawixSecretsXPC.xpc` in
+  `Contents/XPCServices`; sensitive lifecycle, backup, and reveal routes
+  require an HMAC assertion over method, path, timestamp, and nonce, and the
+  Mac app obtains that assertion from the XPC service rather than signing it in
+  generic UI code;
 - Clawix bootstraps Database, Drive, Index, Audio, Sessions, and Publishing
   per-session admin/shared tokens over anonymous stdin as well; those
   integrated local services must not receive bearer material through process
   environment variables or `.admin-token` disk files;
 - Clawix stores a device-local Secrets platform KEK in macOS Keychain and
   bootstraps it over the same anonymous stdin channel; ClawJS uses it to write
-  `platformKeyWrap`, so password unlock for a wrapped vault also requires the
+  `platformKeyWrap`, so password unlock for a wrapped vault also verifies the
   active host KEK while recovery remains portable;
+- Clawix stores only the raw Secret Key string in a separate
+  `ThisDeviceOnly` Keychain item, returns the Secret Key once in the Emergency
+  Kit, and uses password + Secret Key for normal unlock;
+- Clawix exposes a biometric local unlock path when macOS reports biometric
+  authentication is available; the backend local unlock route requires signed
+  host assertion plus fresh native reauthentication evidence and opens the
+  vault through `platformKeyWrap`;
 - loopback callers without bearer credentials cannot list secrets, and callers
   with only signed-host evidence but no bearer principal cannot reveal or
   export backups;
@@ -321,11 +355,17 @@ The current ClawJS baseline implements the required safe public path:
 - encrypted backups omit host-bound `platformKeyWrap` and rebind to the current
   host KEK after password unlock or recovery, preventing a backup made on one
   machine from becoming unusable on another because of a stale Keychain wrap.
+- encrypted backups omit raw Secret Key material, and setup/recovery/password
+  rotation all return a fresh Emergency Kit when the user must save new
+  recovery material.
 - Clawix's macOS validation script
   `macos/scripts/verify_sidecar_host.sh` verifies the installed app is strictly
-  codesigned, non-ad-hoc, has a TeamIdentifier, owns the expected local sidecar
-  listener process tree, and exposes no known token-bearing sidecar environment
-  variables.
+  codesigned, non-ad-hoc, has a TeamIdentifier, embeds a signed
+  Secrets-only XPC service pinned to the app bundle identifier, owns the
+  expected local sidecar listener process tree, and exposes no known
+  token-bearing sidecar environment variables.
+- The ClawJS gate `npm run secrets:security` runs the required docs, Secrets
+  unit/smoke/build/type checks, including assertion expiry and replay tests.
 
 The following patterns remain transitional and must not be expanded:
 
@@ -335,14 +375,16 @@ The following patterns remain transitional and must not be expanded:
 - compatibility sidecar process/browser flows must be validated with the
   signed-app sidecar verifier before they count as covered by the current
   macOS hostile-local-process model;
-- signed-host authorization currently uses a configured host token in ClawJS
-  tests and an in-memory host token in Clawix local server flows. The current
-  macOS host proof is signed app launch, sidecar ancestry, and no env/disk
-  bearer material; a cryptographic XPC/code-signature challenge remains future
-  hardening if the product requires that stronger property;
-- Clawix macOS has Keychain-backed platform KEK storage and LAContext
-  reauthentication for reveal/copy/backup, but Secure Enclave-backed key
-  material and iOS/remotes remain `EXTERNAL PENDING` if required;
+- signed-host authorization uses a configured host token in ClawJS server tests
+  and in-memory host token plus per-request XPC-issued host assertions in
+  Clawix local server flows. The current macOS host proof is signed app launch,
+  a bundled Secrets-only XPC service that pins caller code signature, sidecar
+  ancestry, stdin-only bootstrap, no env/disk bearer material, and
+  method/path/timestamp/nonce assertions for sensitive Secrets operations;
+- Clawix macOS has Keychain-backed platform KEK storage, device-local Secret
+  Key storage, LAContext reauthentication for reveal/copy/backup, and biometric
+  local unlock fallback to password-only unlock when biometrics are unavailable.
+  iOS/remotes remain outside the Mac + ClawJS V1 scope;
 - dev-only seeded credentials or local defaults must never be mistaken for
   production authentication.
 
@@ -382,14 +424,14 @@ agents can verify changes without re-deriving the policy.
 | --- | --- | --- |
 | `local_threat_model` | Same-user local processes are hostile. | Implemented in policy, loopback auth tests, no Secrets disk tokens, no token-bearing Secrets environment, stdin bootstrap for integrated Database/Drive/Index/Audio/Sessions/Publishing tokens, and Clawix signed-app sidecar ancestry validation. |
 | `audit_output` | Produce and implement hardening, not only a report. | Implemented through broker, CLI, audit, lifecycle, and docs hardening. |
-| `audit_scope` | Cover Clawix, ClawJS, remote hosts, vault, broker, connectors, daemon, and third parties. | Partially implemented; ClawJS paths are covered, native host/remotes need physical validation. |
+| `audit_scope` | Cover Clawix, ClawJS, remote hosts, vault, broker, connectors, daemon, and third parties. | Implemented for Mac + ClawJS V1; remote hosts and iOS/remotes are outside this closure and require separate physical validation. |
 | `secret_material_policy` | Human UI may reveal; agents/processes/plugins/connectors do not view plaintext. | Implemented for public CLI, broker, SDK tests, and connector runners; legacy plugin interfaces are compatibility-only. |
 | `approval_defaults` | Deny by default; risky actions need explicit approval or short windows. | Implemented in governance and broker risk handling. |
 | `connector_execution_model` | Connectors declare plan, host, placement, action, and risk; broker injects fields. | Implemented for broker requests and connector runner rejection outside broker. |
 | `plaintext_rule` | Plaintext exists only in human reveal UI or internal broker path. | Implemented for public surfaces and covered macOS signed-host validation. |
 | `human_reveal_policy` | Sensitive reveal/copy requires fresh reauthentication. | ClawJS reveal API requires signed host and `reauthSatisfied`; Clawix owns native LAContext reauth and signed-app sidecar validation. |
 | `automation_secret_use` | Automation executes brokered actions without seeing values. | Implemented through `broker.http` with redacted result contract. |
-| `master_key_protection` | Portable password root plus Keychain/Secure Enclave/biometrics locally. | Implemented for macOS Keychain platform KEK + password/recovery crypto + LAContext reauth; Secure Enclave-backed key material and future iOS/remotes remain `EXTERNAL PENDING` if required. |
+| `master_key_protection` | Portable password + Secret Key root plus Keychain/Secure Enclave/biometrics locally. | Implemented for macOS: password + Secret Key V1, Emergency Kit, device-local Secret Key Keychain item, platform KEK + `platformKeyWrap`, signed-host assertion, LAContext biometric local unlock, and password-only fallback when biometrics are unavailable. |
 | `secret_sync_model` | Future sync must be end-to-end encrypted. | Policy documented; no plaintext sync surface exists in V1. |
 | `plugin_trust_model` | Plugins/connectors are untrusted, declarative, scoped, and not all-fields plaintext. | Public execution and external plugin loading are disabled by default; legacy `resolvedFields` interfaces are deprecated compatibility declarations. |
 | `host_allowlist_policy` | Exact hosts by default; limited safe wildcards only. | Implemented in strict governance and tests. |
@@ -399,5 +441,8 @@ agents can verify changes without re-deriving the policy.
 | `audit_visibility` | Minimal audit; no fields, bodies, headers, public values, arbitrary payloads. | Implemented for current ClawJS audit events and smoke tests. |
 | `migration_priority` | V1 may break unsafe legacy compatibility. | Applied by disabling generic action execution and direct public CLI flows. |
 | `export_backup_policy` | Encrypted backup/export only with separate passphrase and strong reauth. | Implemented and tested: backend requires signed-host fresh reauth, Clawix export/import calls native reauth first, public CLI backup fails closed, smoke tests verify encrypted-only backup behavior, and backups omit host-bound `platformKeyWrap` for portability. |
+| `secret_key_policy` | Secret Key is required, human-formatted, stored only by the user/host Keychain, and never exported in backups. | Implemented and tested: setup returns `CSK1-...`, unlock requires password + Secret Key, backups omit raw Secret Key material, and Clawix stores only the Secret Key in a device-local Keychain item. |
+| `recovery_rotation_policy` | Recovery must regenerate password wrap, Secret Key, and recovery phrase, revoking the old Emergency Kit. | Implemented and tested in crypto/server smoke tests. |
+| `host_assertion_policy` | Sensitive Secrets operations require signed-host proof beyond loopback. | Implemented for Mac + ClawJS V1 with signed-host token plus XPC-issued HMAC host assertion over method/path/timestamp/nonce; Clawix bootstraps assertion material through memory/stdin, keeps it out of env/disk, and embeds `ClawixSecretsXPC.xpc` pinned to the Clawix bundle identifier. |
 | `cli_secret_surface` | No CLI reveal or print-secret surface. | Implemented and tested. |
 | `failure_policy` | Missing host, placement, risk, agent, capability, or policy fails closed. | Implemented in strict broker/governance tests. |

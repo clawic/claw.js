@@ -14,6 +14,9 @@ Never handle literal secret values.
 - Use `secretName` references in configs and library requirements.
 - Use brokered HTTP or typed actions for real calls; do not resolve
   `secretRefs` into plaintext for connector, plugin, CLI, or model code.
+- Do not ask for, print, store, or log master passwords, Secret Keys, recovery
+  phrases, Emergency Kits, backup passphrases, signed-host tokens, or host
+  assertion keys.
 - Prefer Secrets when configured; use sidecar compatibility only for
   `{{secretName}}` injection flows that still pass broker policy, signed-host
   approval, host allowlists, and risk checks.

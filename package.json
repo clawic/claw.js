@@ -105,6 +105,7 @@
     "delegation:test": "npm --prefix delegation run test",
     "delegation:test:e2e": "npm --prefix delegation run test:e2e",
     "secrets:test": "npm --prefix secrets run test",
+    "secrets:security": "npm run test:docs && npm --prefix secrets run test && npm --prefix secrets run build && npx tsc -p secrets/tsconfig.json --noEmit && (cd secrets && node_modules/.bin/tsx scripts/smoke-server.mjs && node_modules/.bin/tsx scripts/smoke-cli.mjs)",
     "secrets:test:e2e": "npm --prefix secrets run test:e2e",
     "bridge:test": "npm --prefix bridge run test",
     "wiki:test": "npm --prefix wiki run test",

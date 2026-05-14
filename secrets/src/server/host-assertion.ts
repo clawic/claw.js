@@ -5,6 +5,7 @@ import { fromBase64 } from "./crypto.ts";
 
 const ASSERTION_HEADER = "x-claw-secrets-host-assertion";
 const MAX_CLOCK_SKEW_MS = 60_000;
+const seenAssertions = new Map<string, number>();
 
 export function signHostAssertion(input: {
   keyBase64: string;
@@ -56,6 +57,13 @@ export function requireHostAssertion(
     void reply.code(403).send({ error: "signed host assertion mismatch" });
     return false;
   }
+  pruneSeenAssertions(Date.now());
+  const replayKey = `${timestampMs}:${nonce}:${mac}`;
+  if (seenAssertions.has(replayKey)) {
+    void reply.code(403).send({ error: "signed host assertion replayed" });
+    return false;
+  }
+  seenAssertions.set(replayKey, timestampMs + MAX_CLOCK_SKEW_MS);
   return true;
 }
 
@@ -75,4 +83,10 @@ function safeEqual(a: string, b: string): boolean {
 
 function randomNonce(): string {
   return randomBytes(16).toString("hex");
+}
+
+function pruneSeenAssertions(now: number): void {
+  for (const [key, expiresAt] of seenAssertions) {
+    if (expiresAt < now) seenAssertions.delete(key);
+  }
 }

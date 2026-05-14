@@ -71,6 +71,17 @@ The transport contract is the v1 host command contract. XPC is the final macOS
 transport. Unix socket and HTTP transports are allowed for development, tests,
 fixtures, and fallback behavior.
 
+Secrets has an additional Mac V1 boundary because it handles vault unlock and
+human reveal. The signed host bootstraps Secrets admin, signed-host, platform
+KEK, and host-assertion material through anonymous stdin only. Sensitive
+Secrets requests carry the signed-host token plus a per-request assertion
+issued by the bundled Secrets-only macOS XPC service over method, path,
+timestamp, and nonce. The XPC service verifies the caller code-signing
+identifier against the enclosing Clawix bundle identifier before issuing
+assertions. Password unlock uses password + Secret Key; local biometric unlock
+uses native LAContext reauthentication plus the host `platformKeyWrap`, with
+password unlock as fallback when biometrics are unavailable.
+
 Approvals, destructive grants, cost-bearing decisions, native secrets, and host
 audit logs live in the active host. Framework APIs define the request and policy
 shape; the signed host owns the native execution identity.

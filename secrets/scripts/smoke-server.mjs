@@ -70,14 +70,40 @@ const setupWithoutAssertion = await fetchJson(`${base}/v1/secrets/setup`, {
 });
 if (setupWithoutAssertion.status === 403) ok("setup requires signed host assertion"); else ko("setup requires signed host assertion", setupWithoutAssertion.body);
 
+const expiredSetupAssertion = signHostAssertion({
+  keyBase64: process.env.CLAW_SECRETS_HOST_ASSERTION_KEY_BASE64,
+  method: "POST",
+  path: "/v1/secrets/setup",
+  timestampMs: Date.now() - 120_000,
+});
+const setupWithExpiredAssertion = await fetchJson(`${base}/v1/secrets/setup`, {
+  method: "POST",
+  headers: { ...signedHostHeaders, "x-claw-secrets-host-assertion": expiredSetupAssertion },
+  body: JSON.stringify({ password: "master-pw" }),
+  hostAssertion: false,
+});
+if (setupWithExpiredAssertion.status === 403) ok("expired host assertion rejected"); else ko("expired host assertion rejected", setupWithExpiredAssertion.body);
+
 // Secrets setup.
+const setupAssertion = signHostAssertion({
+  keyBase64: process.env.CLAW_SECRETS_HOST_ASSERTION_KEY_BASE64,
+  method: "POST",
+  path: "/v1/secrets/setup",
+});
 const setup = await fetchJson(`${base}/v1/secrets/setup`, {
   method: "POST",
-  headers: signedHostHeaders,
+  headers: { ...signedHostHeaders, "x-claw-secrets-host-assertion": setupAssertion },
   body: JSON.stringify({ password: "master-pw" }),
 });
 if (setup.ok && setup.body.recoveryPhrase && setup.body.recoveryPhrase.split(" ").length === 24) ok("setup");
 else ko("setup", setup.body);
+const setupReplay = await fetchJson(`${base}/v1/secrets/setup`, {
+  method: "POST",
+  headers: { ...signedHostHeaders, "x-claw-secrets-host-assertion": setupAssertion },
+  body: JSON.stringify({ password: "master-pw" }),
+  hostAssertion: false,
+});
+if (setupReplay.status === 403) ok("host assertion cannot be replayed"); else ko("host assertion cannot be replayed", setupReplay.body);
 const recoveryPhrase = setup.body.recoveryPhrase;
 let currentPassword = "master-pw";
 let currentSecretKey = setup.body.secretKey;
