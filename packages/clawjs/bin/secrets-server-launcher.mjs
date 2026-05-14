@@ -47,7 +47,8 @@ async function readBootstrapConfigFromStdin() {
   const parsed = JSON.parse(raw);
   const adminToken = typeof parsed.adminToken === "string" && parsed.adminToken.length > 0 ? parsed.adminToken : undefined;
   const signedHostToken = typeof parsed.signedHostToken === "string" && parsed.signedHostToken.length > 0 ? parsed.signedHostToken : undefined;
-  return { ...(adminToken ? { adminToken } : {}), ...(signedHostToken ? { signedHostToken } : {}) };
+  const kekBase64 = typeof parsed.kekBase64 === "string" && parsed.kekBase64.length > 0 ? parsed.kekBase64 : undefined;
+  return { ...(adminToken ? { adminToken } : {}), ...(signedHostToken ? { signedHostToken } : {}), ...(kekBase64 ? { kekBase64 } : {}) };
 }
 
 function envForChildBootstrap() {
@@ -55,6 +56,7 @@ function envForChildBootstrap() {
   delete env.CLAW_SECRETS_ADMIN_TOKEN;
   delete env.CLAW_SECRETS_TOKEN;
   delete env.CLAW_SECRETS_SIGNED_HOST_TOKEN;
+  delete env.CLAW_SECRETS_KEK_BASE64;
   env.CLAW_SECRETS_BOOTSTRAP_STDIN = "1";
   return env;
 }
@@ -69,6 +71,7 @@ export async function runOpenSecrets(args) {
     delete process.env.CLAW_SECRETS_ADMIN_TOKEN;
     delete process.env.CLAW_SECRETS_TOKEN;
     delete process.env.CLAW_SECRETS_SIGNED_HOST_TOKEN;
+    delete process.env.CLAW_SECRETS_KEK_BASE64;
   }
 
   const flags = {};

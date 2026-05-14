@@ -309,6 +309,7 @@ interface SerializedMeta {
   recoveryWrap: string;
   auditMacKeyWrap: string;
   auditChainGenesis: string;
+  platformKeyWrap?: string;
 }
 
 export function serializeSecretsMeta(meta: SecretsMetaSnapshot): string {
@@ -327,6 +328,7 @@ export function serializeSecretsMeta(meta: SecretsMetaSnapshot): string {
     recoveryWrap: toBase64(meta.recoveryWrap),
     auditMacKeyWrap: toBase64(meta.auditMacKeyWrap),
     auditChainGenesis: toBase64(meta.auditChainGenesis),
+    ...(meta.platformKeyWrap ? { platformKeyWrap: toBase64(meta.platformKeyWrap) } : {}),
   };
   return JSON.stringify(obj);
 }
@@ -348,6 +350,7 @@ export function deserializeSecretsMeta(json: string): SecretsMetaSnapshot {
     recoveryWrap: fromBase64(obj.recoveryWrap),
     auditMacKeyWrap: fromBase64(obj.auditMacKeyWrap),
     auditChainGenesis: fromBase64(obj.auditChainGenesis),
+    ...(obj.platformKeyWrap ? { platformKeyWrap: fromBase64(obj.platformKeyWrap) } : {}),
   };
 }
 

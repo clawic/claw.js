@@ -6,6 +6,7 @@ import {
   secretsUnlock,
   secretsRecover,
   secretsChangePassword,
+  generateKey,
   generateItemKey,
   wrapItemKey,
   unwrapItemKey,
@@ -44,18 +45,20 @@ function ko(name, err) {
 }
 
 console.log("Secrets setup / unlock / recover / change-password");
+const platformKey = generateKey();
 const setup = secretsSetup("correct horse battery staple", {
   schemaVersion: 1,
   appVersion: "0.1.2",
   kdfParams: ARGON2_FAST_PARAMS,
   recoveryParams: ARGON2_FAST_PARAMS,
+  platformKey,
 });
 if (!setup.recoveryPhrase || setup.recoveryPhrase.split(" ").length !== 24) ko("24-word phrase"); else ok("24-word phrase");
 if (setup.masterKey.length !== 32) ko("masterKey 32B"); else ok("masterKey 32B");
 if (setup.auditMacKey.length !== 32) ko("auditMacKey 32B"); else ok("auditMacKey 32B");
 
 try {
-  const unlocked = secretsUnlock(setup.meta, "correct horse battery staple");
+  const unlocked = secretsUnlock(setup.meta, "correct horse battery staple", platformKey);
   if (unlocked.masterKey.length !== 32) throw new Error("wrong length");
   ok("unlock with correct password");
   unlocked.masterKey.zero();
@@ -63,7 +66,17 @@ try {
 } catch (e) { ko("unlock with correct password", e); }
 
 try {
-  secretsUnlock(setup.meta, "wrong password");
+  secretsUnlock(setup.meta, "correct horse battery staple");
+  ko("unlock without platform key (should throw)");
+} catch (e) { ok("unlock requires platform key when wrapped"); }
+
+try {
+  secretsUnlock(setup.meta, "correct horse battery staple", generateKey());
+  ko("unlock with wrong platform key (should throw)");
+} catch (e) { ok("unlock rejects wrong platform key"); }
+
+try {
+  secretsUnlock(setup.meta, "wrong password", platformKey);
   ko("unlock with wrong password (should throw)");
 } catch (e) { ok("unlock with wrong password rejects"); }
 
@@ -75,8 +88,8 @@ try {
 } catch (e) { ko("recover with phrase", e); }
 
 try {
-  const changed = secretsChangePassword(setup.meta, "correct horse battery staple", "new-master-pw");
-  const u = secretsUnlock(changed.newMeta, "new-master-pw");
+  const changed = secretsChangePassword(setup.meta, "correct horse battery staple", "new-master-pw", platformKey);
+  const u = secretsUnlock(changed.newMeta, "new-master-pw", platformKey);
   ok("change password preserves verifier");
   u.masterKey.zero();
   u.auditMacKey.zero();

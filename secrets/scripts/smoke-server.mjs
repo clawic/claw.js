@@ -13,8 +13,10 @@ process.env.CLAW_SECRETS_PORT = "0"; // ephemeral
 process.env.CLAW_SECRETS_HOST = "127.0.0.1";
 process.env.CLAW_SECRETS_ADMIN_TOKEN = "smoke-admin-token";
 process.env.CLAW_SECRETS_SIGNED_HOST_TOKEN = "smoke-signed-host-token";
+process.env.CLAW_SECRETS_KEK_BASE64 = Buffer.alloc(32, 7).toString("base64");
 
 const { startSecretsServer } = await import("../src/server/app.ts");
+const { decryptBackup } = await import("../src/server/backup.ts");
 
 const { app, config } = await startSecretsServer({});
 const addr = app.server.address();
@@ -270,6 +272,16 @@ if (backupExport.ok && backupExport.body.format === "clawix-secrets-backup-v1" &
   ok("backup export encrypted");
 } else {
   ko("backup export", backupExport.body);
+}
+
+try {
+  const logicalBackup = decryptBackup(backupExport.body.backup, "backup-passphrase");
+  const metaTable = logicalBackup.tables.find((table) => table.name === "secrets_meta");
+  const metaSnapshot = JSON.parse(metaTable?.rows?.[0]?.snapshot_json ?? "{}");
+  if (!("platformKeyWrap" in metaSnapshot)) ok("backup omits host-bound platform key wrap");
+  else ko("backup omits host-bound platform key wrap", metaSnapshot);
+} catch (err) {
+  ko("backup portability inspection", err.message);
 }
 
 const backupImportWithoutReauth = await fetchJson(`${base}/v1/secrets/backup/import`, {

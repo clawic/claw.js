@@ -30,6 +30,7 @@ import {
   secretsSetup,
   secretsUnlock,
   type SecretsMetaSnapshot,
+  withPlatformKeyWrap,
 } from "./crypto.ts";
 import { ARGON2_DEFAULT_PARAMS, calibrateArgon2 } from "./calibration.ts";
 import { openDatabase, type SqliteDb } from "./db.ts";
@@ -46,6 +47,7 @@ import { CLAW_SECRETS_CAPABILITIES } from "./capabilities.ts";
 import { evaluateGovernance, type RiskTier } from "./governance.ts";
 import { SecretsSession } from "./session.ts";
 import { requireFreshHostReauth } from "./host-reauth.ts";
+import { loadPlatformKey } from "./platform-key.ts";
 import { bootPluginRegistry } from "../plugins/loader.ts";
 import { redactString } from "../plugins/redaction.ts";
 import type { PluginRegistry } from "../plugins/registry.ts";
@@ -103,6 +105,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
   const audit = new AuditStore(db);
   const pluginsStore = new PluginRegistryStore(db);
   const session = new SecretsSession();
+  const platformKey = loadPlatformKey(config.kekBase64);
 
   // Ensure the default tenant exists.
   tenants.upsert(DEFAULT_TENANT_ID, "Clawix Local");
@@ -268,6 +271,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
       schemaVersion: 2,
       appVersion: body.appVersion ?? "0.1.2",
       kdfParams: params,
+      platformKey,
     });
     metaStore.save(DEFAULT_TENANT_ID, result.meta);
     session.setUnlocked({
@@ -296,18 +300,22 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     const body = (req.body ?? {}) as { password?: string };
     if (!body.password) return reply.code(400).send({ error: "password required" });
     try {
-      const { masterKey, auditMacKey } = secretsUnlock(meta, body.password);
+      const { masterKey, auditMacKey } = secretsUnlock(meta, body.password, platformKey);
+      const activeMeta = !meta.platformKeyWrap && platformKey
+        ? withPlatformKeyWrap(meta, masterKey, platformKey)
+        : meta;
+      if (activeMeta !== meta) metaStore.save(DEFAULT_TENANT_ID, activeMeta);
       session.setUnlocked({ tenantId: DEFAULT_TENANT_ID, masterKey, auditMacKey });
       audit.append({
         tenantId: DEFAULT_TENANT_ID,
-        meta,
+        meta: activeMeta,
         auditMacKey,
         event: { kind: "secretsUnlock", source: "system", success: true, payload: {} },
       });
       return { ok: true };
     } catch (err) {
       const tempKeys = (() => {
-        try { return secretsUnlock(meta, "_anonymous_"); } catch { return null; }
+        try { return secretsUnlock(meta, "_anonymous_", platformKey); } catch { return null; }
       })();
       if (tempKeys) {
         audit.append({
@@ -350,10 +358,14 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     if (!body.phrase) return reply.code(400).send({ error: "phrase required" });
     try {
       const { masterKey, auditMacKey } = secretsRecover(meta, body.phrase);
+      const activeMeta = platformKey
+        ? withPlatformKeyWrap(meta, masterKey, platformKey)
+        : meta;
+      if (activeMeta !== meta) metaStore.save(DEFAULT_TENANT_ID, activeMeta);
       session.setUnlocked({ tenantId: DEFAULT_TENANT_ID, masterKey, auditMacKey });
       audit.append({
         tenantId: DEFAULT_TENANT_ID,
-        meta,
+        meta: activeMeta,
         auditMacKey,
         event: { kind: "secretsRecoveryUsed", source: "system", success: true, payload: {} },
       });
@@ -370,10 +382,10 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     const body = (req.body ?? {}) as { oldPassword?: string; newPassword?: string };
     if (!body.oldPassword || !body.newPassword) return reply.code(400).send({ error: "oldPassword, newPassword required" });
     try {
-      const result = secretsChangePassword(meta, body.oldPassword, body.newPassword);
+      const result = secretsChangePassword(meta, body.oldPassword, body.newPassword, platformKey);
       metaStore.save(DEFAULT_TENANT_ID, result.newMeta);
       // Re-unlock with new password to refresh in-memory keys.
-      const unlocked = secretsUnlock(result.newMeta, body.newPassword);
+      const unlocked = secretsUnlock(result.newMeta, body.newPassword, platformKey);
       session.setUnlocked({
         tenantId: DEFAULT_TENANT_ID,
         masterKey: unlocked.masterKey,

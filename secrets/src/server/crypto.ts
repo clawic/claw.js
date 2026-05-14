@@ -151,6 +151,7 @@ export interface SecretsMetaSnapshot {
   // Audit chain key (separate from masterKey, invariant to password change)
   auditMacKeyWrap: Uint8Array; // AEAD-sealed auditMacKey with masterKey
   auditChainGenesis: Uint8Array; // 32 bytes random
+  platformKeyWrap?: Uint8Array; // Optional AEAD-sealed masterKey with host-provided local KEK.
 }
 
 export interface SecretsSetupOptions {
@@ -159,6 +160,7 @@ export interface SecretsSetupOptions {
   kdfParams: Argon2Params;
   recoveryParams?: Argon2Params;
   deviceId?: string;
+  platformKey?: Uint8Array;
 }
 
 export interface SecretsSetupResult {
@@ -171,6 +173,40 @@ export interface SecretsSetupResult {
 export interface SecretsUnlockResult {
   masterKey: LockableSecret;
   auditMacKey: LockableSecret;
+}
+
+function assertPlatformKey(platformKey: Uint8Array): void {
+  if (platformKey.length !== KEY_LENGTH) throw new Error(`Platform KEK must be ${KEY_LENGTH} bytes`);
+}
+
+export function wrapMasterKeyWithPlatformKey(masterKey: Uint8Array, platformKey: Uint8Array): Uint8Array {
+  assertPlatformKey(platformKey);
+  return aeadSeal(platformKey, masterKey, "secrets.master-key|platform-kek");
+}
+
+function verifyPlatformKeyWrap(meta: SecretsMetaSnapshot, masterKey: Uint8Array, platformKey?: Uint8Array): void {
+  if (!meta.platformKeyWrap) return;
+  if (!platformKey) throw new Error("Platform key required");
+  assertPlatformKey(platformKey);
+  const platformMasterKey = aeadOpen(platformKey, meta.platformKeyWrap, "secrets.master-key|platform-kek");
+  try {
+    if (!constantTimeEqual(platformMasterKey, masterKey)) {
+      throw new Error("Platform key verifier mismatch");
+    }
+  } finally {
+    platformMasterKey.fill(0);
+  }
+}
+
+export function withPlatformKeyWrap(
+  meta: SecretsMetaSnapshot,
+  masterKey: LockableSecret,
+  platformKey?: Uint8Array,
+): SecretsMetaSnapshot {
+  if (!platformKey) return meta;
+  assertPlatformKey(platformKey);
+  const platformKeyWrap = masterKey.withBytes((masterKeyBytes) => wrapMasterKeyWithPlatformKey(masterKeyBytes, platformKey));
+  return { ...meta, platformKeyWrap };
 }
 
 export function secretsSetup(masterPassword: string, opts: SecretsSetupOptions): SecretsSetupResult {
@@ -201,6 +237,7 @@ export function secretsSetup(masterPassword: string, opts: SecretsSetupOptions):
   const verifier = computeVerifier(masterKeyBytes);
   const recoveryWrap = aeadSeal(recoveryKey, masterKeyBytes, "secrets.master-key|recovery");
   const auditMacKeyWrap = aeadSeal(masterKeyBytes, auditMacKeyBytes, "secrets.audit-mac-key");
+  const platformKeyWrap = opts.platformKey ? wrapMasterKeyWithPlatformKey(masterKeyBytes, opts.platformKey) : undefined;
 
   // Zero out derived keys we no longer need.
   passwordKey.fill(0);
@@ -221,6 +258,7 @@ export function secretsSetup(masterPassword: string, opts: SecretsSetupOptions):
     recoveryWrap: combineWrap(_passwordWrap, recoveryWrap),
     auditMacKeyWrap,
     auditChainGenesis,
+    ...(platformKeyWrap ? { platformKeyWrap } : {}),
   };
 
   const masterKey = LockableSecret.fromBytes(masterKeyBytes);
@@ -254,7 +292,7 @@ function splitWrap(combined: Uint8Array): { passwordWrap: Uint8Array; recoveryWr
   return { passwordWrap, recoveryWrap };
 }
 
-export function secretsUnlock(meta: SecretsMetaSnapshot, password: string): SecretsUnlockResult {
+export function secretsUnlock(meta: SecretsMetaSnapshot, password: string, platformKey?: Uint8Array): SecretsUnlockResult {
   const passwordKey = deriveKey(password, meta.kdfSalt, meta.kdfParams);
   const { passwordWrap } = splitWrap(meta.recoveryWrap);
   let masterKeyBytes: Uint8Array;
@@ -269,6 +307,7 @@ export function secretsUnlock(meta: SecretsMetaSnapshot, password: string): Secr
     masterKeyBytes.fill(0);
     throw new Error("Secrets verifier mismatch");
   }
+  verifyPlatformKeyWrap(meta, masterKeyBytes, platformKey);
 
   const auditMacKeyBytes = aeadOpen(masterKeyBytes, meta.auditMacKeyWrap, "secrets.audit-mac-key");
   const masterKey = LockableSecret.fromBytes(masterKeyBytes);
@@ -316,10 +355,11 @@ export function secretsChangePassword(
   meta: SecretsMetaSnapshot,
   oldPassword: string,
   newPassword: string,
+  platformKey?: Uint8Array,
   newKdfParams?: Argon2Params,
   newRecoveryParams?: Argon2Params,
 ): SecretsChangePasswordResult {
-  const { masterKey, auditMacKey } = secretsUnlock(meta, oldPassword);
+  const { masterKey, auditMacKey } = secretsUnlock(meta, oldPassword, platformKey);
   try {
     const kdfParams = newKdfParams ?? meta.kdfParams;
     const recoveryParams = newRecoveryParams ?? meta.recoveryParams;
@@ -342,6 +382,7 @@ export function secretsChangePassword(
     const passwordWrap = aeadSeal(passwordKey, masterKeyBytes, "secrets.master-key|password");
     const recoveryWrap = aeadSeal(recoveryKey, masterKeyBytes, "secrets.master-key|recovery");
     const auditMacKeyWrap = aeadSeal(masterKeyBytes, auditMacKeyBytes, "secrets.audit-mac-key");
+    const platformKeyWrap = platformKey ? wrapMasterKeyWithPlatformKey(masterKeyBytes, platformKey) : meta.platformKeyWrap;
 
     passwordKey.fill(0);
     recoveryKey.fill(0);
@@ -357,6 +398,7 @@ export function secretsChangePassword(
       recoveryParams,
       recoveryWrap: combineWrap(passwordWrap, recoveryWrap),
       auditMacKeyWrap,
+      ...(platformKeyWrap ? { platformKeyWrap } : {}),
     };
 
     return { newMeta, newRecoveryPhrase };
