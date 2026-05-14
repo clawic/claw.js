@@ -1,3 +1,11 @@
+const STABLE_EVENT_TYPES = {
+  pageCreated: "page.created",
+  pageUpdated: "page.updated",
+  pageDeleted: "page.deleted",
+  commentCreated: "comment.created",
+  linkCreated: "link.created",
+} as const;
+import { clawApiPath } from "@clawjs/core";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -215,7 +223,7 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
       },
     });
 
-    wsApp.get("/v1/realtime", { websocket: true }, async (socket, request) => {
+    wsApp.get(clawApiPath("realtime"), { websocket: true }, async (socket, request) => {
       const principal = await resolvePrincipal(request as FastifyRequest, auth, store);
       if (!principal) {
         socket.close();
@@ -227,7 +235,7 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
 
   // ── Health ─────────────────────────────────────────────────────────────
 
-  app.get("/v1/health", async () => ({
+  app.get(clawApiPath("health"), async () => ({
     ok: true,
     service: "wiki",
     host: config.host,
@@ -236,7 +244,7 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
 
   // ── Auth ───────────────────────────────────────────────────────────────
 
-  app.post("/v1/auth/admin/login", async (request, reply) => {
+  app.post(clawApiPath("auth/admin/login"), async (request, reply) => {
     const body = readBody(request);
     const email = typeof body.email === "string" ? body.email : "";
     const password = typeof body.password === "string" ? body.password : "";
@@ -248,7 +256,7 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
     return { accessToken, admin: { id: admin.id, email: admin.email } };
   });
 
-  app.get("/v1/auth/me", async (request, reply) => {
+  app.get(clawApiPath("auth/me"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store);
     if (!principal) return null;
     return { principal };
@@ -256,13 +264,13 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
 
   // ── Spaces ─────────────────────────────────────────────────────────────
 
-  app.get("/v1/spaces", async (request, reply) => {
+  app.get(clawApiPath("spaces"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store);
     if (!principal) return null;
     return { items: store.listSpaces() };
   });
 
-  app.post("/v1/spaces", async (request, reply) => {
+  app.post(clawApiPath("spaces"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, { adminOnly: true });
     if (!principal) return null;
     try {
@@ -278,7 +286,7 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
     }
   });
 
-  app.get("/v1/spaces/:spaceId", async (request, reply) => {
+  app.get(clawApiPath("spaces/:spaceId"), async (request, reply) => {
     const spaceId = await resolveSpaceParam(request, reply);
     if (!spaceId) return null;
     const principal = await requirePrincipal(request, reply, auth, store, { spaceId });
@@ -286,7 +294,7 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
     return store.getSpace(spaceId);
   });
 
-  app.patch("/v1/spaces/:spaceId", async (request, reply) => {
+  app.patch(clawApiPath("spaces/:spaceId"), async (request, reply) => {
     const spaceId = await resolveSpaceParam(request, reply);
     if (!spaceId) return null;
     const principal = await requirePrincipal(request, reply, auth, store, { adminOnly: true });
@@ -303,7 +311,7 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
     }
   });
 
-  app.delete("/v1/spaces/:spaceId", async (request, reply) => {
+  app.delete(clawApiPath("spaces/:spaceId"), async (request, reply) => {
     const spaceId = await resolveSpaceParam(request, reply);
     if (!spaceId) return null;
     const principal = await requirePrincipal(request, reply, auth, store, { adminOnly: true });
@@ -313,7 +321,7 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
 
   // ── Pages ──────────────────────────────────────────────────────────────
 
-  app.get("/v1/spaces/:spaceId/pages", async (request, reply) => {
+  app.get(clawApiPath("spaces/:spaceId/pages"), async (request, reply) => {
     const spaceId = await resolveSpaceParam(request, reply);
     if (!spaceId) return null;
     const principal = await requirePrincipal(request, reply, auth, store, { spaceId, operation: "pages:list" });
@@ -327,7 +335,7 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
     });
   });
 
-  app.post("/v1/spaces/:spaceId/pages", async (request, reply) => {
+  app.post(clawApiPath("spaces/:spaceId/pages"), async (request, reply) => {
     const spaceId = await resolveSpaceParam(request, reply);
     if (!spaceId) return null;
     const principal = await requirePrincipal(request, reply, auth, store, { spaceId, operation: "pages:create" });
@@ -345,14 +353,14 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
         createdByUserId: typeof body.createdByUserId === "string" ? body.createdByUserId : undefined,
       });
       syncPageWikilinks(page.id, page.body, spaceId);
-      emitChange({ type: "page.created", spaceId, pageId: page.id, payload: page, at: new Date().toISOString() });
+      emitChange({ type: STABLE_EVENT_TYPES.pageCreated, spaceId, pageId: page.id, payload: page, at: new Date().toISOString() });
       return await reply.code(201).send(page);
     } catch (error) {
       return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
-  app.get("/v1/spaces/:spaceId/pages/:pageSlug", async (request, reply) => {
+  app.get(clawApiPath("spaces/:spaceId/pages/:pageSlug"), async (request, reply) => {
     const spaceId = await resolveSpaceParam(request, reply);
     if (!spaceId) return null;
     const { pageSlug } = request.params as { pageSlug: string };
@@ -363,7 +371,7 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
     return page;
   });
 
-  app.patch("/v1/spaces/:spaceId/pages/:pageSlug", async (request, reply) => {
+  app.patch(clawApiPath("spaces/:spaceId/pages/:pageSlug"), async (request, reply) => {
     const spaceId = await resolveSpaceParam(request, reply);
     if (!spaceId) return null;
     const { pageSlug } = request.params as { pageSlug: string };
@@ -383,14 +391,14 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
         editedByUserId: typeof body.editedByUserId === "string" ? body.editedByUserId : undefined,
       });
       syncPageWikilinks(page.id, page.body, spaceId);
-      emitChange({ type: "page.updated", spaceId, pageId: page.id, payload: page, at: new Date().toISOString() });
+      emitChange({ type: STABLE_EVENT_TYPES.pageUpdated, spaceId, pageId: page.id, payload: page, at: new Date().toISOString() });
       return page;
     } catch (error) {
       return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
-  app.delete("/v1/spaces/:spaceId/pages/:pageSlug", async (request, reply) => {
+  app.delete(clawApiPath("spaces/:spaceId/pages/:pageSlug"), async (request, reply) => {
     const spaceId = await resolveSpaceParam(request, reply);
     if (!spaceId) return null;
     const { pageSlug } = request.params as { pageSlug: string };
@@ -399,12 +407,12 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
     const page = store.getPage(spaceId, pageSlug);
     const ok = store.deletePage(spaceId, pageSlug);
     if (ok && page) {
-      emitChange({ type: "page.deleted", spaceId, pageId: page.id, at: new Date().toISOString() });
+      emitChange({ type: STABLE_EVENT_TYPES.pageDeleted, spaceId, pageId: page.id, at: new Date().toISOString() });
     }
     return { ok };
   });
 
-  app.get("/v1/spaces/:spaceId/pages/:pageSlug/tree", async (request, reply) => {
+  app.get(clawApiPath("spaces/:spaceId/pages/:pageSlug/tree"), async (request, reply) => {
     const spaceId = await resolveSpaceParam(request, reply);
     if (!spaceId) return null;
     const { pageSlug } = request.params as { pageSlug: string };
@@ -413,7 +421,7 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
     return { items: store.getPageTree(spaceId, pageSlug) };
   });
 
-  app.get("/v1/spaces/:spaceId/pages/:pageSlug/backlinks", async (request, reply) => {
+  app.get(clawApiPath("spaces/:spaceId/pages/:pageSlug/backlinks"), async (request, reply) => {
     const spaceId = await resolveSpaceParam(request, reply);
     if (!spaceId) return null;
     const { pageSlug } = request.params as { pageSlug: string };
@@ -428,7 +436,7 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
 
   // ── Revisions ──────────────────────────────────────────────────────────
 
-  app.get("/v1/spaces/:spaceId/pages/:pageSlug/revisions", async (request, reply) => {
+  app.get(clawApiPath("spaces/:spaceId/pages/:pageSlug/revisions"), async (request, reply) => {
     const spaceId = await resolveSpaceParam(request, reply);
     if (!spaceId) return null;
     const { pageSlug } = request.params as { pageSlug: string };
@@ -439,7 +447,7 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
     return { items: store.listRevisions(page.id) };
   });
 
-  app.get("/v1/spaces/:spaceId/pages/:pageSlug/revisions/:revisionNumber", async (request, reply) => {
+  app.get(clawApiPath("spaces/:spaceId/pages/:pageSlug/revisions/:revisionNumber"), async (request, reply) => {
     const spaceId = await resolveSpaceParam(request, reply);
     if (!spaceId) return null;
     const { pageSlug, revisionNumber } = request.params as { pageSlug: string; revisionNumber: string };
@@ -454,7 +462,7 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
 
   // ── Comments ───────────────────────────────────────────────────────────
 
-  app.get("/v1/spaces/:spaceId/pages/:pageSlug/comments", async (request, reply) => {
+  app.get(clawApiPath("spaces/:spaceId/pages/:pageSlug/comments"), async (request, reply) => {
     const spaceId = await resolveSpaceParam(request, reply);
     if (!spaceId) return null;
     const { pageSlug } = request.params as { pageSlug: string };
@@ -465,7 +473,7 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
     return { items: store.listComments(page.id) };
   });
 
-  app.post("/v1/spaces/:spaceId/pages/:pageSlug/comments", async (request, reply) => {
+  app.post(clawApiPath("spaces/:spaceId/pages/:pageSlug/comments"), async (request, reply) => {
     const spaceId = await resolveSpaceParam(request, reply);
     if (!spaceId) return null;
     const { pageSlug } = request.params as { pageSlug: string };
@@ -481,14 +489,14 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
         authorAgentId: typeof body.authorAgentId === "string" ? body.authorAgentId : undefined,
         authorUserId: typeof body.authorUserId === "string" ? body.authorUserId : undefined,
       });
-      emitChange({ type: "comment.created", spaceId, pageId: page.id, commentId: comment.id, payload: comment, at: new Date().toISOString() });
+      emitChange({ type: STABLE_EVENT_TYPES.commentCreated, spaceId, pageId: page.id, commentId: comment.id, payload: comment, at: new Date().toISOString() });
       return await reply.code(201).send(comment);
     } catch (error) {
       return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
-  app.patch("/v1/comments/:commentId", async (request, reply) => {
+  app.patch(clawApiPath("comments/:commentId"), async (request, reply) => {
     const { commentId } = request.params as { commentId: string };
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "comments:update" });
     if (!principal) return null;
@@ -500,14 +508,14 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
     }
   });
 
-  app.delete("/v1/comments/:commentId", async (request, reply) => {
+  app.delete(clawApiPath("comments/:commentId"), async (request, reply) => {
     const { commentId } = request.params as { commentId: string };
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "comments:delete" });
     if (!principal) return null;
     return { ok: store.deleteComment(commentId) };
   });
 
-  app.post("/v1/comments/:commentId/upvote", async (request, reply) => {
+  app.post(clawApiPath("comments/:commentId/upvote"), async (request, reply) => {
     const { commentId } = request.params as { commentId: string };
     const principal = await requirePrincipal(request, reply, auth, store);
     if (!principal) return null;
@@ -516,7 +524,7 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
 
   // ── Links ──────────────────────────────────────────────────────────────
 
-  app.get("/v1/spaces/:spaceId/pages/:pageSlug/links", async (request, reply) => {
+  app.get(clawApiPath("spaces/:spaceId/pages/:pageSlug/links"), async (request, reply) => {
     const spaceId = await resolveSpaceParam(request, reply);
     if (!spaceId) return null;
     const { pageSlug } = request.params as { pageSlug: string };
@@ -527,7 +535,7 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
     return { items: store.listPageLinks(page.id) };
   });
 
-  app.post("/v1/links", async (request, reply) => {
+  app.post(clawApiPath("links"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "links:create" });
     if (!principal) return null;
     try {
@@ -540,7 +548,7 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
       });
       const sourcePage = store.getPageById(link.sourcePageId);
       if (sourcePage) {
-        emitChange({ type: "link.created", spaceId: sourcePage.spaceId, linkId: link.id, payload: link, at: new Date().toISOString() });
+        emitChange({ type: STABLE_EVENT_TYPES.linkCreated, spaceId: sourcePage.spaceId, linkId: link.id, payload: link, at: new Date().toISOString() });
       }
       return await reply.code(201).send(link);
     } catch (error) {
@@ -548,14 +556,14 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
     }
   });
 
-  app.delete("/v1/links/:linkId", async (request, reply) => {
+  app.delete(clawApiPath("links/:linkId"), async (request, reply) => {
     const { linkId } = request.params as { linkId: string };
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "links:delete" });
     if (!principal) return null;
     return { ok: store.deleteLink(linkId) };
   });
 
-  app.get("/v1/links/graph", async (request, reply) => {
+  app.get(clawApiPath("links/graph"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store);
     if (!principal) return null;
     const pageId = queryString(request, "pageId");
@@ -566,7 +574,7 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
 
   // ── Search ─────────────────────────────────────────────────────────────
 
-  app.post("/v1/search", async (request, reply) => {
+  app.post(clawApiPath("search"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "search:query" });
     if (!principal) return null;
     const body = readBody(request);
@@ -583,7 +591,7 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
     };
   });
 
-  app.get("/v1/search/fts", async (request, reply) => {
+  app.get(clawApiPath("search/fts"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "search:query" });
     if (!principal) return null;
     const q = queryString(request, "q");
@@ -596,7 +604,7 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
     };
   });
 
-  app.get("/v1/search/graph", async (request, reply) => {
+  app.get(clawApiPath("search/graph"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "search:query" });
     if (!principal) return null;
     const pageId = queryString(request, "pageId");
@@ -611,7 +619,7 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
 
   // ── Import / Export ────────────────────────────────────────────────────
 
-  app.post("/v1/import", async (request, reply) => {
+  app.post(clawApiPath("import"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "pages:create" });
     if (!principal) return null;
     try {
@@ -638,7 +646,7 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
     }
   });
 
-  app.get("/v1/export", async (request, reply) => {
+  app.get(clawApiPath("export"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "pages:read" });
     if (!principal) return null;
     const spaceId = queryString(request, "spaceId");
@@ -656,7 +664,7 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
 
   // ── Tokens ─────────────────────────────────────────────────────────────
 
-  app.get("/v1/spaces/:spaceId/tokens", async (request, reply) => {
+  app.get(clawApiPath("spaces/:spaceId/tokens"), async (request, reply) => {
     const spaceId = await resolveSpaceParam(request, reply);
     if (!spaceId) return null;
     const principal = await requirePrincipal(request, reply, auth, store, { spaceId, operation: "tokens:issue" });
@@ -664,7 +672,7 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
     return { items: store.listScopedTokens(spaceId) };
   });
 
-  app.post("/v1/spaces/:spaceId/tokens", async (request, reply) => {
+  app.post(clawApiPath("spaces/:spaceId/tokens"), async (request, reply) => {
     const spaceId = await resolveSpaceParam(request, reply);
     if (!spaceId) return null;
     const principal = await requirePrincipal(request, reply, auth, store, { spaceId, operation: "tokens:issue" });
@@ -682,7 +690,7 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
     }
   });
 
-  app.post("/v1/spaces/:spaceId/tokens/:tokenId/revoke", async (request, reply) => {
+  app.post(clawApiPath("spaces/:spaceId/tokens/:tokenId/revoke"), async (request, reply) => {
     const spaceId = await resolveSpaceParam(request, reply);
     if (!spaceId) return null;
     const { tokenId } = request.params as { tokenId: string };
@@ -693,7 +701,7 @@ export function buildWikiApp(options: BuildWikiAppOptions = {}) {
 
   // ── Seed ─────────────────────────────────────────────────────────────
 
-  app.post("/v1/seed", async (_request, reply) => {
+  app.post(clawApiPath("seed"), async (_request, reply) => {
     // Idempotency: skip if already seeded
     const existing = store.listSpaces();
     if (existing.length > 0) {

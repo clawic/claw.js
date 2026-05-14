@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -112,7 +113,7 @@ test("admin login works", async () => {
 
 test("default space exists", async () => {
   const { authFetch } = await boot();
-  const res = await authFetch("/v1/spaces");
+  const res = await authFetch(clawApiPath("spaces"));
   assert.equal(res.status, 200);
   const body = await res.json() as { items: Array<{ slug: string }> };
   assert.ok(body.items.some((s) => s.slug === "main"));
@@ -123,7 +124,7 @@ test("page CRUD lifecycle", async () => {
   const spaceId = store.listSpaces()[0].id;
 
   // Create
-  const createRes = await authFetch(`/v1/spaces/${spaceId}/pages`, {
+  const createRes = await authFetch(clawApiPath(`spaces/${spaceId}/pages`), {
     method: "POST",
     body: JSON.stringify({
       title: "Authentication Flow",
@@ -138,11 +139,11 @@ test("page CRUD lifecycle", async () => {
   assert.deepEqual(page.tags, ["auth", "security"]);
 
   // Read
-  const getRes = await authFetch(`/v1/spaces/${spaceId}/pages/${page.slug}`);
+  const getRes = await authFetch(clawApiPath(`spaces/${spaceId}/pages/${page.slug}`));
   assert.equal(getRes.status, 200);
 
   // Update
-  const updateRes = await authFetch(`/v1/spaces/${spaceId}/pages/${page.slug}`, {
+  const updateRes = await authFetch(clawApiPath(`spaces/${spaceId}/pages/${page.slug}`), {
     method: "PATCH",
     body: JSON.stringify({
       body: "# Auth\n\nUpdated: OAuth 2.0 with PKCE and refresh tokens.",
@@ -152,19 +153,19 @@ test("page CRUD lifecycle", async () => {
   assert.equal(updateRes.status, 200);
 
   // List
-  const listRes = await authFetch(`/v1/spaces/${spaceId}/pages`);
+  const listRes = await authFetch(clawApiPath(`spaces/${spaceId}/pages`));
   assert.equal(listRes.status, 200);
   const list = await listRes.json() as { items: unknown[]; total: number };
   assert.ok(list.total >= 1);
 
   // Revisions
-  const revsRes = await authFetch(`/v1/spaces/${spaceId}/pages/${page.slug}/revisions`);
+  const revsRes = await authFetch(clawApiPath(`spaces/${spaceId}/pages/${page.slug}/revisions`));
   assert.equal(revsRes.status, 200);
   const revs = await revsRes.json() as { items: Array<{ revisionNumber: number }> };
   assert.ok(revs.items.length >= 2);
 
   // Delete
-  const delRes = await authFetch(`/v1/spaces/${spaceId}/pages/${page.slug}`, { method: "DELETE" });
+  const delRes = await authFetch(clawApiPath(`spaces/${spaceId}/pages/${page.slug}`), { method: "DELETE" });
   assert.equal(delRes.status, 200);
   const delBody = await delRes.json() as { ok: boolean };
   assert.equal(delBody.ok, true);
@@ -175,13 +176,13 @@ test("comments on a page", async () => {
   const spaceId = store.listSpaces()[0].id;
 
   // Create page
-  await authFetch(`/v1/spaces/${spaceId}/pages`, {
+  await authFetch(clawApiPath(`spaces/${spaceId}/pages`), {
     method: "POST",
     body: JSON.stringify({ title: "Test Page" }),
   });
 
   // Add comment
-  const commentRes = await authFetch(`/v1/spaces/${spaceId}/pages/test-page/comments`, {
+  const commentRes = await authFetch(clawApiPath(`spaces/${spaceId}/pages/test-page/comments`), {
     method: "POST",
     body: JSON.stringify({ body: "Great article!", authorAgentId: "wiki-agent" }),
   });
@@ -190,12 +191,12 @@ test("comments on a page", async () => {
   assert.equal(comment.body, "Great article!");
 
   // List comments
-  const listRes = await authFetch(`/v1/spaces/${spaceId}/pages/test-page/comments`);
+  const listRes = await authFetch(clawApiPath(`spaces/${spaceId}/pages/test-page/comments`));
   const comments = await listRes.json() as { items: unknown[] };
   assert.equal(comments.items.length, 1);
 
   // Upvote
-  const upvoteRes = await authFetch(`/v1/comments/${comment.id}/upvote`, { method: "POST" });
+  const upvoteRes = await authFetch(clawApiPath(`comments/${comment.id}/upvote`), { method: "POST" });
   assert.equal(upvoteRes.status, 200);
   const upvoted = await upvoteRes.json() as { upvotes: number };
   assert.equal(upvoted.upvotes, 1);
@@ -206,20 +207,20 @@ test("links and backlinks", async () => {
   const spaceId = store.listSpaces()[0].id;
 
   // Create two pages
-  const page1Res = await authFetch(`/v1/spaces/${spaceId}/pages`, {
+  const page1Res = await authFetch(clawApiPath(`spaces/${spaceId}/pages`), {
     method: "POST",
     body: JSON.stringify({ title: "Page Alpha" }),
   });
   const page1 = await page1Res.json() as { id: string; slug: string };
 
-  const page2Res = await authFetch(`/v1/spaces/${spaceId}/pages`, {
+  const page2Res = await authFetch(clawApiPath(`spaces/${spaceId}/pages`), {
     method: "POST",
     body: JSON.stringify({ title: "Page Beta" }),
   });
   const page2 = await page2Res.json() as { id: string; slug: string };
 
   // Create link
-  const linkRes = await authFetch("/v1/links", {
+  const linkRes = await authFetch(clawApiPath("links"), {
     method: "POST",
     body: JSON.stringify({
       sourcePageId: page1.id,
@@ -230,7 +231,7 @@ test("links and backlinks", async () => {
   assert.equal(linkRes.status, 201);
 
   // Check backlinks on page2
-  const backlinksRes = await authFetch(`/v1/spaces/${spaceId}/pages/${page2.slug}/backlinks`);
+  const backlinksRes = await authFetch(clawApiPath(`spaces/${spaceId}/pages/${page2.slug}/backlinks`));
   assert.equal(backlinksRes.status, 200);
   const backlinks = await backlinksRes.json() as { items: Array<{ id: string }>; links: unknown[] };
   assert.equal(backlinks.items.length, 1);
@@ -240,7 +241,7 @@ test("FTS search returns results", async () => {
   const { authFetch, store } = await boot();
   const spaceId = store.listSpaces()[0].id;
 
-  await authFetch(`/v1/spaces/${spaceId}/pages`, {
+  await authFetch(clawApiPath(`spaces/${spaceId}/pages`), {
     method: "POST",
     body: JSON.stringify({
       title: "OAuth Configuration",
@@ -248,7 +249,7 @@ test("FTS search returns results", async () => {
     }),
   });
 
-  const searchRes = await authFetch(`/v1/search/fts?q=OAuth+PKCE`);
+  const searchRes = await authFetch(clawApiPath(`search/fts?q=OAuth+PKCE`));
   assert.equal(searchRes.status, 200);
   const results = await searchRes.json() as { items: Array<{ page: { title: string } }> };
   assert.ok(results.items.length >= 1);
@@ -260,13 +261,13 @@ test("wikilinks auto-create link entries", async () => {
   const spaceId = store.listSpaces()[0].id;
 
   // Create target page first
-  await authFetch(`/v1/spaces/${spaceId}/pages`, {
+  await authFetch(clawApiPath(`spaces/${spaceId}/pages`), {
     method: "POST",
     body: JSON.stringify({ title: "Token Refresh", slug: "token-refresh" }),
   });
 
   // Create page that links to it
-  await authFetch(`/v1/spaces/${spaceId}/pages`, {
+  await authFetch(clawApiPath(`spaces/${spaceId}/pages`), {
     method: "POST",
     body: JSON.stringify({
       title: "Auth Overview",
@@ -275,7 +276,7 @@ test("wikilinks auto-create link entries", async () => {
   });
 
   // Check backlinks on token-refresh
-  const backlinksRes = await authFetch(`/v1/spaces/${spaceId}/pages/token-refresh/backlinks`);
+  const backlinksRes = await authFetch(clawApiPath(`spaces/${spaceId}/pages/token-refresh/backlinks`));
   const backlinks = await backlinksRes.json() as { items: Array<{ slug: string }>; links: Array<{ linkType: string }> };
   assert.ok(backlinks.items.length >= 1);
   assert.ok(backlinks.links.some((l) => l.linkType === "wikilink"));

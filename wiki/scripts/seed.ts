@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 /** Seed the wiki with demo data. Run: npx tsx scripts/seed.ts */
 
 const BASE = "http://127.0.0.1:4520";
@@ -175,7 +176,7 @@ async function main() {
   console.log("Creating pages...");
   const created: Record<string, string> = {}; // slug -> id
   for (const page of pages) {
-    const { status, data } = await post("/v1/spaces/main/pages", page);
+    const { status, data } = await post(clawApiPath("spaces/main/pages"), page);
     console.log(`  ${status === 201 ? "+" : status} ${page.title}`);
     if (data.id) created[page.slug] = data.id as string;
   }
@@ -193,7 +194,7 @@ async function main() {
   };
   for (const [child, parent] of Object.entries(parentMap)) {
     if (created[parent]) {
-      await patch(`/v1/spaces/main/pages/${child}`, { parentPageId: created[parent] });
+      await patch(clawApiPath(`spaces/main/pages/${child}`), { parentPageId: created[parent] });
       console.log(`  ${child} -> child of ${parent}`);
     }
   }
@@ -201,14 +202,14 @@ async function main() {
   // ── Extra revisions ───────────────────────────────────────────────────
 
   console.log("\nCreating revisions...");
-  await patch("/v1/spaces/main/pages/authentication-flow", {
+  await patch(clawApiPath("spaces/main/pages/authentication-flow"), {
     body: pages[0].body + "\n\n## Session Management\n\nSessions stored server-side in encrypted cookies. Default TTL: 24 hours.",
     changeSummary: "Added session management section",
     editedByAgentId: "wiki-agent",
   });
   console.log("  v2 Auth: session management");
 
-  await patch("/v1/spaces/main/pages/deploy-runbook", {
+  await patch(clawApiPath("spaces/main/pages/deploy-runbook"), {
     body: pages[6].body + "\n\n## Post-Deploy Verification\n\n1. Health endpoint returns 200\n2. Smoke tests pass\n3. Error rate stable for 10 minutes",
     changeSummary: "Added post-deploy verification",
     editedByAgentId: "review-agent",
@@ -228,7 +229,7 @@ async function main() {
   ];
   for (const [src, tgt, type, label] of linkPairs) {
     if (created[src] && created[tgt]) {
-      await post("/v1/links", { sourcePageId: created[src], targetPageId: created[tgt], linkType: type, label });
+      await post(clawApiPath("links"), { sourcePageId: created[src], targetPageId: created[tgt], linkType: type, label });
       console.log(`  ${src} --${type}--> ${tgt}`);
     }
   }
@@ -263,18 +264,18 @@ async function main() {
   ];
 
   for (const def of commentDefs) {
-    const { data } = await post(`/v1/spaces/main/pages/${def.slug}/comments`, { body: def.body, authorAgentId: def.agent });
+    const { data } = await post(clawApiPath(`spaces/main/pages/${def.slug}/comments`), { body: def.body, authorAgentId: def.agent });
     const commentId = data.id as string;
     console.log(`  + ${def.agent} on ${def.slug}`);
 
     // Upvote some comments
     if (def.agent === "review-agent") {
-      for (let i = 0; i < 3; i++) await post(`/v1/comments/${commentId}/upvote`, {});
+      for (let i = 0; i < 3; i++) await post(clawApiPath(`comments/${commentId}/upvote`), {});
     }
 
     if (def.replies) {
       for (const reply of def.replies) {
-        await post(`/v1/spaces/main/pages/${def.slug}/comments`, { body: reply.body, authorAgentId: reply.agent, parentCommentId: commentId });
+        await post(clawApiPath(`spaces/main/pages/${def.slug}/comments`), { body: reply.body, authorAgentId: reply.agent, parentCommentId: commentId });
         console.log(`    + ${reply.agent} (reply)`);
       }
     }
