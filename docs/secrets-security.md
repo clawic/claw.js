@@ -321,23 +321,28 @@ The current ClawJS baseline implements the required safe public path:
 - encrypted backups omit host-bound `platformKeyWrap` and rebind to the current
   host KEK after password unlock or recovery, preventing a backup made on one
   machine from becoming unusable on another because of a stale Keychain wrap.
+- Clawix's macOS validation script
+  `macos/scripts/verify_sidecar_host.sh` verifies the installed app is strictly
+  codesigned, non-ad-hoc, has a TeamIdentifier, owns the expected local sidecar
+  listener process tree, and exposes no known token-bearing sidecar environment
+  variables.
 
 The following patterns remain transitional and must not be expanded:
 
 - legacy plugin executor/session/brand-sync TypeScript interfaces still carry
   `resolvedFields` for compatibility; they are not a production-safe execution
   boundary and new integrations must use broker handles;
-- compatibility sidecar process/browser flows require final native IPC or
-  code-signing validation before they count as complete hostile-local-process
-  proof;
+- compatibility sidecar process/browser flows must be validated with the
+  signed-app sidecar verifier before they count as covered by the current
+  macOS hostile-local-process model;
 - signed-host authorization currently uses a configured host token in ClawJS
-  tests and an in-memory host token in Clawix local server flows; native
-  Claw.app/Clawix identity and XPC/signature proof remain host integration
-  obligations;
+  tests and an in-memory host token in Clawix local server flows. The current
+  macOS host proof is signed app launch, sidecar ancestry, and no env/disk
+  bearer material; a cryptographic XPC/code-signature challenge remains future
+  hardening if the product requires that stronger property;
 - Clawix macOS has Keychain-backed platform KEK storage and LAContext
   reauthentication for reveal/copy/backup, but Secure Enclave-backed key
-  material, iOS/remotes, and native XPC identity proof remain `EXTERNAL
-  PENDING`;
+  material and iOS/remotes remain `EXTERNAL PENDING` if required;
 - dev-only seeded credentials or local defaults must never be mistaken for
   production authentication.
 
@@ -375,16 +380,16 @@ agents can verify changes without re-deriving the policy.
 
 | Decision | Requirement | Current status |
 | --- | --- | --- |
-| `local_threat_model` | Same-user local processes are hostile. | Implemented in policy, loopback auth tests, no Secrets disk tokens, no token-bearing Secrets environment, and stdin bootstrap for integrated Database/Drive/Index/Audio/Sessions/Publishing tokens; native XPC/code-signing validation remains `EXTERNAL PENDING`. |
+| `local_threat_model` | Same-user local processes are hostile. | Implemented in policy, loopback auth tests, no Secrets disk tokens, no token-bearing Secrets environment, stdin bootstrap for integrated Database/Drive/Index/Audio/Sessions/Publishing tokens, and Clawix signed-app sidecar ancestry validation. |
 | `audit_output` | Produce and implement hardening, not only a report. | Implemented through broker, CLI, audit, lifecycle, and docs hardening. |
 | `audit_scope` | Cover Clawix, ClawJS, remote hosts, vault, broker, connectors, daemon, and third parties. | Partially implemented; ClawJS paths are covered, native host/remotes need physical validation. |
 | `secret_material_policy` | Human UI may reveal; agents/processes/plugins/connectors do not view plaintext. | Implemented for public CLI, broker, SDK tests, and connector runners; legacy plugin interfaces are compatibility-only. |
 | `approval_defaults` | Deny by default; risky actions need explicit approval or short windows. | Implemented in governance and broker risk handling. |
 | `connector_execution_model` | Connectors declare plan, host, placement, action, and risk; broker injects fields. | Implemented for broker requests and connector runner rejection outside broker. |
-| `plaintext_rule` | Plaintext exists only in human reveal UI or internal broker path. | Implemented for public surfaces; host-native reveal validation remains pending. |
-| `human_reveal_policy` | Sensitive reveal/copy requires fresh reauthentication. | ClawJS reveal API requires signed host and `reauthSatisfied`; native biometric/password proof is host-owned. |
+| `plaintext_rule` | Plaintext exists only in human reveal UI or internal broker path. | Implemented for public surfaces and covered macOS signed-host validation. |
+| `human_reveal_policy` | Sensitive reveal/copy requires fresh reauthentication. | ClawJS reveal API requires signed host and `reauthSatisfied`; Clawix owns native LAContext reauth and signed-app sidecar validation. |
 | `automation_secret_use` | Automation executes brokered actions without seeing values. | Implemented through `broker.http` with redacted result contract. |
-| `master_key_protection` | Portable password root plus Keychain/Secure Enclave/biometrics locally. | Implemented for macOS Keychain platform KEK + password/recovery crypto + LAContext reauth; Secure Enclave-backed key material, XPC identity proof, and future iOS/remotes remain `EXTERNAL PENDING`. |
+| `master_key_protection` | Portable password root plus Keychain/Secure Enclave/biometrics locally. | Implemented for macOS Keychain platform KEK + password/recovery crypto + LAContext reauth; Secure Enclave-backed key material and future iOS/remotes remain `EXTERNAL PENDING` if required. |
 | `secret_sync_model` | Future sync must be end-to-end encrypted. | Policy documented; no plaintext sync surface exists in V1. |
 | `plugin_trust_model` | Plugins/connectors are untrusted, declarative, scoped, and not all-fields plaintext. | Public execution and external plugin loading are disabled by default; legacy `resolvedFields` interfaces are deprecated compatibility declarations. |
 | `host_allowlist_policy` | Exact hosts by default; limited safe wildcards only. | Implemented in strict governance and tests. |
