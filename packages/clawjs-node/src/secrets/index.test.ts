@@ -322,7 +322,7 @@ test("secrets backend brokers generic HTTP and typed actions without exposing pl
       method: "POST",
       url: "http://127.0.0.1:9999/echo",
       headers: {
-        Authorization: "Bearer {{slack_bot}}",
+        Authorization: "Bearer {{slack_bot.token}}",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ hello: "world" }),

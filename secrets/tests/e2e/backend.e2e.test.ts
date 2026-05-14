@@ -251,7 +251,7 @@ test("secrets broker enforces deny precedence and host constraints", async () =>
         method: "POST",
         url: `${upstream.baseUrl}/echo`,
         headers: {
-          Authorization: "Bearer {{slack_bot}}",
+          Authorization: "Bearer {{slack_bot.token}}",
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ hello: "world" }),
@@ -279,7 +279,7 @@ test("secrets broker enforces deny precedence and host constraints", async () =>
         method: "GET",
         url: `${upstream.baseUrl}/echo`,
         headers: {
-          Authorization: "Bearer {{slack_bot}}",
+          Authorization: "Bearer {{slack_bot.token}}",
         },
       }),
     });
@@ -295,7 +295,7 @@ test("secrets broker enforces deny precedence and host constraints", async () =>
         method: "GET",
         url: "https://example.com/echo",
         headers: {
-          Authorization: "Bearer {{slack_bot}}",
+          Authorization: "Bearer {{slack_bot.token}}",
         },
       }),
     });
@@ -364,9 +364,9 @@ test("secrets sidecar stays compatible with request/list/describe and supports p
       "--method",
       "GET",
       "--url",
-      `${upstream.baseUrl}/echo?token={{telegram_support_bot_token}}`,
+      `${upstream.baseUrl}/echo?token={{telegram_support_bot_token.token}}`,
       "--header",
-      "Authorization: Bearer {{telegram_support_bot_token}}",
+      "Authorization: Bearer {{telegram_support_bot_token.token}}",
     ], { env, encoding: "utf8" });
     const requestPayload = JSON.parse(requestOutput.stdout) as { authorization: string; queryToken: string };
     assert.equal(requestPayload.authorization, "Bearer secret-browser-token");
