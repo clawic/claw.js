@@ -1740,6 +1740,19 @@ function extractDocumentIdFromSourcePath(sourcePath?: string): string | null {
   return fileName.slice(0, -".md".length) || null;
 }
 
+function mergeProcessEnv(...envs: Array<Record<string, string | undefined> | undefined>): NodeJS.ProcessEnv {
+  const merged = {} as NodeJS.ProcessEnv;
+  for (const env of envs) {
+    if (!env) continue;
+    for (const [key, value] of Object.entries(env)) {
+      if (value !== undefined) {
+        merged[key] = value;
+      }
+    }
+  }
+  return merged;
+}
+
 export async function createClaw(options: CreateClawOptions): Promise<ClawInstance> {
   const filesystem = new NodeFileSystemHost();
   const baseProcessHost = new NodeProcessHost();
@@ -1789,15 +1802,17 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         configPath: options.runtime.configPath,
       })
     : options.runtime.env;
-  const secretsEnv: NodeJS.ProcessEnv = {
-    ...(runtimeEnv ?? {}),
-    ...(options.secrets?.env ?? {}),
-    ...(options.secrets?.backend ? { CLAW_SECRETS_BACKEND: options.secrets.backend } : {}),
-    ...(options.secrets?.baseUrl ? { CLAW_SECRETS_BASE_URL: options.secrets.baseUrl } : {}),
-    ...(options.secrets?.credential ? { CLAW_SECRETS_TOKEN: options.secrets.credential } : {}),
-    ...(options.secrets?.tenantId ? { CLAW_SECRETS_TENANT_ID: options.secrets.tenantId } : {}),
-    ...(options.secrets?.sidecarPath ? { CLAW_SECRETS_SIDECAR_PATH: options.secrets.sidecarPath } : {}),
-  };
+  const secretsEnv = mergeProcessEnv(
+    runtimeEnv,
+    options.secrets?.env,
+    {
+      ...(options.secrets?.backend ? { CLAW_SECRETS_BACKEND: options.secrets.backend } : {}),
+      ...(options.secrets?.baseUrl ? { CLAW_SECRETS_BASE_URL: options.secrets.baseUrl } : {}),
+      ...(options.secrets?.credential ? { CLAW_SECRETS_TOKEN: options.secrets.credential } : {}),
+      ...(options.secrets?.tenantId ? { CLAW_SECRETS_TENANT_ID: options.secrets.tenantId } : {}),
+      ...(options.secrets?.sidecarPath ? { CLAW_SECRETS_SIDECAR_PATH: options.secrets.sidecarPath } : {}),
+    },
+  );
   const processHost = adapter.id === "openclaw"
     ? withOpenClawCommandRunner(baseProcessHost, {
         binaryPath: options.runtime.binaryPath,
@@ -1817,10 +1832,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
   });
   const imageStore = createImageLibraryStore({
     rootDir: options.images?.rootDir ?? workspaceDir,
-    env: {
-      ...(runtimeEnv ?? {}),
-      ...(options.images?.env ?? {}),
-    },
+    env: mergeProcessEnv(runtimeEnv, options.images?.env),
     scope: {
       project: options.workspace.appId,
       workspaceId: options.workspace.workspaceId,

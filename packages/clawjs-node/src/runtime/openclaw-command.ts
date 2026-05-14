@@ -34,6 +34,19 @@ function readConfiguredValue(value: string | undefined | null): string | undefin
   return trimmed ? trimmed : undefined;
 }
 
+function mergeProcessEnv(...envs: Array<Record<string, string | undefined> | undefined>): NodeJS.ProcessEnv {
+  const merged = {} as NodeJS.ProcessEnv;
+  for (const env of envs) {
+    if (!env) continue;
+    for (const [key, value] of Object.entries(env)) {
+      if (value !== undefined) {
+        merged[key] = value;
+      }
+    }
+  }
+  return merged;
+}
+
 export function resolveOpenClawBinaryPath(options: OpenClawCommandOptions = {}): string {
   return readConfiguredValue(options.binaryPath)
     ?? readConfiguredValue(options.env?.CLAW_OPENCLAW_PATH)
@@ -49,20 +62,14 @@ export function withOpenClawBinaryEnv(
   if (!resolvedBinaryPath) {
     return env;
   }
-  return {
-    ...(env ?? {}),
-    CLAW_OPENCLAW_PATH: resolvedBinaryPath,
-  };
+  return mergeProcessEnv(env, { CLAW_OPENCLAW_PATH: resolvedBinaryPath });
 }
 
 export function withOpenClawCommandEnv(
   env?: NodeJS.ProcessEnv,
   options: OpenClawCommandOptions = {},
 ): NodeJS.ProcessEnv | undefined {
-  const commandEnv = withOpenClawBinaryEnv({
-    ...process.env,
-    ...(env ?? {}),
-  }, options.binaryPath) ?? {};
+  const commandEnv = withOpenClawBinaryEnv(mergeProcessEnv(process.env, env), options.binaryPath) ?? ({} as NodeJS.ProcessEnv);
   const resolvedStateDir = readConfiguredValue(commandEnv.OPENCLAW_STATE_DIR) ?? readConfiguredValue(options.homeDir);
   const resolvedConfigPath = readConfiguredValue(commandEnv.OPENCLAW_CONFIG_PATH) ?? readConfiguredValue(options.configPath);
 
