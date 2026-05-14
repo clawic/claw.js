@@ -248,7 +248,7 @@ test("createWorkspaceClaw ignores pre-public legacy JSON productivity collection
   assert.equal(await claw.reminders.get("reminder-legacy"), null);
   assert.equal(await claw.events.get("event-legacy"), null);
   assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
-  assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "data", "productivity.sqlite")), false);
+  assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.legacy.workspace.clawjs", workspaceDir, "data", "productivity.sqlite")), false);
 });
 
 test("createWorkspaceClaw builds context blocks and augments session streaming", { concurrency: false }, async (t) => {

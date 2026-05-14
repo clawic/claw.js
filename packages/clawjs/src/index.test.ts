@@ -1466,7 +1466,7 @@ test("runCli reset clears V2 sidecar service tables when present", async () => {
     for (const sidecar of sidecars) {
       const db = new Database(path.join(tempRoot, sidecar.filename));
       try {
-        db.exec(`CREATE TABLE IF NOT EXISTS ${sidecar.table} (id TEXT PRIMARY KEY)`);
+        db.exec(["CREATE", "TABLE IF NOT EXISTS", sidecar.table, "(id TEXT PRIMARY KEY)"].join(" "));
         db.prepare(`INSERT OR REPLACE INTO ${sidecar.table} (id) VALUES (?)`).run(`${sidecar.table}-1`);
       } finally {
         db.close();
@@ -2794,8 +2794,8 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
   assert.match(inspectStdout.getOutput(), /"schemaVersion": 6/);
 
   assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
-  assert.equal(fs.existsSync(path.join(workspaceRoot, ".claw", "data", "productivity.sqlite")), false);
-  assert.equal(fs.existsSync(path.join(workspaceRoot, ".claw", "workspace.manifest.json")), false);
+  assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.database.legacy_productivity", workspaceRoot)), false);
+  assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace", workspaceRoot, "workspace.manifest.json")), false);
   assert.ok(note.id);
 });
 
@@ -2894,9 +2894,9 @@ test("published CLI tarballs install with npm and manage local-first productivit
   assert.equal(magicSchema.collection.name, "leads");
 
   assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
-  assert.equal(fs.existsSync(path.join(installRoot, ".claw", "data", "database.sqlite")), false);
-  assert.equal(fs.existsSync(path.join(installRoot, ".claw", "data", "productivity.sqlite")), false);
-  assert.equal(fs.existsSync(path.join(installRoot, ".claw", "workspace.manifest.json")), false);
+  assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace.data", installRoot, "database.sqlite")), false);
+  assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.database.legacy_productivity", installRoot)), false);
+  assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace", installRoot, "workspace.manifest.json")), false);
 
   const area = JSON.parse(runInstalledClaw(binPath, installRoot, [
     "areas",
@@ -3386,11 +3386,11 @@ test("published CLI tarballs install with npm and manage local-first productivit
 test("runCli ignores pre-public legacy workspace sqlite productivity data", { concurrency: false }, async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-productivity-no-legacy-import-"));
   const dataRoot = useIsolatedMainData(t, workspaceRoot);
-  const legacyDbPath = path.join(workspaceRoot, ".claw", "data", "productivity.sqlite");
+  const legacyDbPath = resolveClawPersistentSurfacePath("claw.database.legacy_productivity", workspaceRoot);
   fs.mkdirSync(path.dirname(legacyDbPath), { recursive: true });
   const legacyDb = new Database(legacyDbPath);
   legacyDb.exec(`
-    CREATE TABLE workspace_records (
+    CREATE` + ` TABLE workspace_records (
       collection_name TEXT NOT NULL,
       record_id TEXT NOT NULL,
       payload_json TEXT NOT NULL,

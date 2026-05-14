@@ -64,7 +64,7 @@ test("listManagedFiles and resetWorkspace only target ClawJS-managed paths", () 
 
   const resetResult = resetWorkspace(workspaceDir, { removeRuntimeFiles: true });
   assert.equal(resetResult.removedPaths.includes(soulPath), true);
-  assert.equal(resetResult.preservedPaths.includes(path.join(workspaceDir, ".claw", "compat")), false);
+  assert.equal(resetResult.preservedPaths.includes(resolveClawWorkspaceSurfacePath("claw.workspace.compat", workspaceDir)), false);
   assert.equal(fs.existsSync(soulPath), false);
   assert.equal(fs.existsSync(userNotesPath), true);
 });
@@ -78,8 +78,8 @@ test("resetWorkspace can fully clear managed state and repairWorkspace rebuilds 
     rootDir: workspaceDir,
   }, "openclaw");
 
-  const backupPath = path.join(workspaceDir, ".claw", "backups", "snapshot.txt");
-  const lockPath = path.join(workspaceDir, ".claw", "locks", "workspace.lock");
+  const backupPath = resolveClawWorkspaceSurfacePath("claw.workspace.backups", workspaceDir, "snapshot.txt");
+  const lockPath = resolveClawWorkspaceSurfacePath("claw.workspace.locks", workspaceDir, "workspace.lock");
   fs.mkdirSync(path.dirname(backupPath), { recursive: true });
   fs.mkdirSync(path.dirname(lockPath), { recursive: true });
   fs.writeFileSync(backupPath, "backup\n");
@@ -94,9 +94,9 @@ test("resetWorkspace can fully clear managed state and repairWorkspace rebuilds 
     removeLocks: true,
   });
 
-  assert.equal(resetResult.removedPaths.includes(path.join(workspaceDir, ".claw", "projections")), true);
-  assert.equal(resetResult.removedPaths.includes(path.join(workspaceDir, ".claw", "observed")), true);
-  assert.equal(resetResult.removedPaths.includes(path.join(workspaceDir, ".claw", "intents")), true);
+  assert.equal(resetResult.removedPaths.includes(resolveClawWorkspaceSurfacePath("claw.workspace.projections", workspaceDir)), true);
+  assert.equal(resetResult.removedPaths.includes(resolveClawWorkspaceSurfacePath("claw.workspace.observedState", workspaceDir)), true);
+  assert.equal(resetResult.removedPaths.includes(resolveClawWorkspaceSurfacePath("claw.workspace.intents", workspaceDir)), true);
   assert.equal(fs.existsSync(resolveRuntimeFilePath(workspaceDir, "SOUL.md")), false);
   assert.equal(fs.existsSync(backupPath), false);
   assert.equal(fs.existsSync(lockPath), false);

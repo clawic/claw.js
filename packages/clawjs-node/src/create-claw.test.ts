@@ -2065,8 +2065,8 @@ test("createClaw exposes intent, observed, and feature APIs for declarative mode
 
 test("createClaw can repair workspace layout and normalize compat snapshots", async () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-instance-repair-"));
-  fs.mkdirSync(path.join(workspaceDir, ".claw", "compat"), { recursive: true });
-  fs.writeFileSync(path.join(workspaceDir, ".claw", "compat", "runtime-snapshot.json"), JSON.stringify({
+  fs.mkdirSync(resolveClawWorkspaceSurfacePath("claw.workspace.compat", workspaceDir), { recursive: true });
+  fs.writeFileSync(resolveClawWorkspaceSurfacePath("claw.workspace.compat", workspaceDir, "runtime-snapshot.json"), JSON.stringify({
     runtimeAdapter: "openclaw",
     runtimeVersion: "1.2.3",
     probedAt: "2026-03-20T00:00:00.000Z",
@@ -2155,7 +2155,7 @@ test("createClaw emits domain events and supports auth key storage", async () =>
     "auth.progress",
   ]);
 
-  const auditLog = fs.readFileSync(path.join(workspaceDir, ".claw", "audit", "audit.jsonl"), "utf8");
+  const auditLog = fs.readFileSync(resolveClawWorkspaceSurfacePath("claw.workspace.audit", workspaceDir, "audit.jsonl"), "utf8");
   assert.equal(auditLog.includes("sk-ant-secret-12345678"), false);
 });
 
