@@ -96118,7 +96118,7 @@
     {
       "path": "packages/clawjs/src/cli-preview-share.ts",
       "language": "typescript",
-      "lines": 368,
+      "lines": 387,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -96168,6 +96168,11 @@
         },
         {
           "kind": "function",
+          "name": "previewShareData",
+          "exported": false
+        },
+        {
+          "kind": "function",
           "name": "resolveLanAdvertiseHost",
           "exported": false
         },
@@ -96195,6 +96200,16 @@
           "kind": "function",
           "name": "runTailscalePreviewShare",
           "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "writePreviewShareJson",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "writePreviewShareJsonLine",
+          "exported": false
         },
         {
           "kind": "interface",
@@ -120296,7 +120311,7 @@
     {
       "path": "tests/e2e/preview-share-cli.spec.ts",
       "language": "typescript",
-      "lines": 148,
+      "lines": 155,
       "test": true,
       "entrypoint": false,
       "imports": [

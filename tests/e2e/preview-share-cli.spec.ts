@@ -35,11 +35,18 @@ async function waitForJsonLine(child: ReturnType<typeof spawn>) {
     if (start === -1) continue;
     const candidate = stdout.slice(start).trim();
     try {
-      return JSON.parse(candidate) as {
-      shareUrl: string;
-      token: string;
-      provider?: { available?: boolean; command?: string[] };
+      const envelope = JSON.parse(candidate) as {
+        ok: boolean;
+        data: {
+          shareUrl: string;
+          token: string;
+          provider?: { available?: boolean; command?: string[] };
+        };
+        meta: { canonicalCommand?: string; subcommand?: string };
       };
+      expect(envelope.ok).toBe(true);
+      expect(envelope.meta).toMatchObject({ canonicalCommand: "preview", subcommand: "share" });
+      return envelope.data;
     } catch {
       // Pretty JSON output may arrive over multiple chunks.
     }

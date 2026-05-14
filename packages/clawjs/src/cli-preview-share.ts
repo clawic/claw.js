@@ -6,7 +6,7 @@ import { spawn, spawnSync } from "child_process";
 import { randomBytes } from "crypto";
 
 import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
-import { writeJson, writeJsonLine } from "./cli-json.ts";
+import { writeCommandJsonOk, writeCommandJsonOkLine } from "./cli-json.ts";
 import { probeHttpServer } from "./cli-process-utils.ts";
 import { parseSimpleDurationMs } from "./cli-temporal-utils.ts";
 
@@ -116,6 +116,25 @@ function buildLanPreviewSharePayload(input: {
   };
 }
 
+function previewShareData(payload: PreviewSharePayload): Omit<PreviewSharePayload, "ok"> {
+  const { ok: _ok, ...data } = payload;
+  return data;
+}
+
+function writePreviewShareJson(stdout: NodeJS.WritableStream, payload: PreviewSharePayload): void {
+  writeCommandJsonOk(stdout, "preview", previewShareData(payload), {
+    subcommand: "share",
+    mode: payload.mode,
+  });
+}
+
+function writePreviewShareJsonLine(stdout: NodeJS.WritableStream, payload: PreviewSharePayload): void {
+  writeCommandJsonOkLine(stdout, "preview", previewShareData(payload), {
+    subcommand: "share",
+    mode: payload.mode,
+  });
+}
+
 async function pipePreviewProxyResponse(input: {
   targetUrl: URL;
   request: http.IncomingMessage;
@@ -202,7 +221,7 @@ export async function runLanPreviewShare(input: {
   }
   if (input.dryRun) {
     const payload = buildLanPreviewSharePayload({ targetUrl: input.targetUrl, flags: input.flags, token, expiresAt, actualPort: listenPort || Number(input.targetUrl.port || "80") });
-    if (input.wantsJson) writeJson(input.stdout, payload);
+    if (input.wantsJson) writePreviewShareJson(input.stdout, payload);
     else input.stdout.write(`${payload.shareUrl}\n`);
     return CLI_EXIT_OK;
   }
@@ -226,7 +245,7 @@ export async function runLanPreviewShare(input: {
   const address = server.address();
   const actualPort = typeof address === "object" && address ? address.port : listenPort;
   const payload = buildLanPreviewSharePayload({ targetUrl: input.targetUrl, flags: input.flags, token, expiresAt, actualPort });
-  if (input.wantsJson) writeJsonLine(input.stdout, payload);
+  if (input.wantsJson) writePreviewShareJsonLine(input.stdout, payload);
   else input.stdout.write(`${payload.shareUrl}\n`);
 
   await new Promise<void>((resolve) => {
@@ -275,7 +294,7 @@ export function runTailscalePreviewShare(input: {
       throw new CliHandledError("provider_failed", result.stderr.trim() || "tailscale serve failed.");
     }
   }
-  if (input.wantsJson) writeJson(input.stdout, payload);
+  if (input.wantsJson) writePreviewShareJson(input.stdout, payload);
   else input.stdout.write(`${payload.shareUrl}\n`);
   return CLI_EXIT_OK;
 }
@@ -310,7 +329,7 @@ export async function runCloudflarePreviewShare(input: {
         ...(!cloudflaredBin && !mockUrl ? { message: "cloudflared is not installed or not on PATH." } : {}),
       },
     };
-    if (input.wantsJson) writeJson(input.stdout, payload);
+    if (input.wantsJson) writePreviewShareJson(input.stdout, payload);
     else input.stdout.write(`${payload.shareUrl}\n`);
     return CLI_EXIT_OK;
   }
@@ -339,7 +358,7 @@ export async function runCloudflarePreviewShare(input: {
       qrPayload: shareUrl,
       provider: { available: true, command: providerCommand },
     };
-    if (input.wantsJson) writeJsonLine(input.stdout, payload);
+    if (input.wantsJson) writePreviewShareJsonLine(input.stdout, payload);
     else input.stdout.write(`${payload.shareUrl}\n`);
   };
   child.stdout?.on("data", announce);

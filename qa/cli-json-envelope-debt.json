@@ -7,7 +7,6 @@
     "packages/clawjs/src/cli-code-command.ts": 31,
     "packages/clawjs/src/cli-file-session-document-command.ts": 20,
     "packages/clawjs/src/cli-media-generation-command.ts": 41,
-    "packages/clawjs/src/cli-preview-share.ts": 3,
     "packages/clawjs/src/cli-productivity-command.ts": 37,
     "packages/clawjs/src/cli-productivity-extended-command.ts": 93,
     "packages/clawjs/src/cli-productivity-primary-command.ts": 34,
