@@ -18,6 +18,10 @@ export interface ResolveContext {
   insecureTransport?: boolean;
   localNetwork?: boolean;
   agent?: string;
+  requireCompleteContext?: boolean;
+  approvalSatisfied?: boolean;
+  vpnSatisfied?: boolean;
+  writeIntent?: boolean;
 }
 
 export type GovernanceDenialReason =
@@ -32,6 +36,7 @@ export type GovernanceDenialReason =
   | "secret_locked"
   | "secret_read_only"
   | "secret_trashed"
+  | "missing_context"
   | "ttl_expired"
   | "max_uses_exhausted"
   | "approval_required"
@@ -42,6 +47,32 @@ export interface GovernanceDecision {
   reasons: GovernanceDenialReason[];
   needsApproval: boolean;
   needsVpn: boolean;
+}
+
+function normalizeHost(input: string): string {
+  const trimmed = input.trim().toLowerCase();
+  try {
+    return new URL(trimmed.includes("://") ? trimmed : `https://${trimmed}`).host;
+  } catch {
+    return trimmed.replace(/\/.*$/, "");
+  }
+}
+
+function hostnameOnly(input: string): string {
+  const host = normalizeHost(input);
+  if (host.startsWith("[") && host.includes("]")) return host.slice(1, host.indexOf("]"));
+  return host.split(":")[0] ?? host;
+}
+
+function hostMatches(allowedPattern: string, actualHost: string): boolean {
+  const allowed = normalizeHost(allowedPattern);
+  const actual = normalizeHost(actualHost);
+  if (allowed === actual) return true;
+
+  if (!allowed.startsWith("*.")) return false;
+  const suffix = allowed.slice(2);
+  const actualName = hostnameOnly(actual);
+  return actualName.endsWith(`.${suffix}`) && actualName !== suffix;
 }
 
 export function evaluateGovernance(secret: SecretRow, ctx: ResolveContext): GovernanceDecision {
@@ -59,10 +90,16 @@ export function evaluateGovernance(secret: SecretRow, ctx: ResolveContext): Gove
   if (secret.max_uses != null && secret.use_count >= secret.max_uses) {
     reasons.push("max_uses_exhausted");
   }
+  if (ctx.writeIntent === true && secret.read_only === 1) {
+    reasons.push("secret_read_only");
+  }
 
   // Host whitelist.
   const allowedHosts = parseJsonArray(secret.allowed_hosts_json);
-  if (ctx.host && allowedHosts.length > 0 && !allowedHosts.includes(ctx.host)) {
+  if (ctx.requireCompleteContext === true && allowedHosts.length > 0 && !ctx.host) {
+    reasons.push("missing_context");
+  }
+  if (ctx.host && allowedHosts.length > 0 && !allowedHosts.some((host) => hostMatches(host, ctx.host!))) {
     reasons.push("host_not_allowed");
   }
 
@@ -83,6 +120,9 @@ export function evaluateGovernance(secret: SecretRow, ctx: ResolveContext): Gove
   // - body: requires allow_in_body.
   // - env: requires allow_in_env.
   // - none: not injected, no flag required.
+  if (ctx.requireCompleteContext === true && !ctx.placements) {
+    reasons.push("missing_context");
+  }
   if (ctx.placements) {
     for (const placement of ctx.placements) {
       if (placement === "query" && secret.allow_in_url === 0) {
@@ -109,9 +149,11 @@ export function evaluateGovernance(secret: SecretRow, ctx: ResolveContext): Gove
   }
 
   // Allowed agents.
-  if (secret.allowed_agents_json && ctx.agent) {
-    const allowedAgents = parseJsonArray(secret.allowed_agents_json);
-    if (allowedAgents.length > 0 && !allowedAgents.includes(ctx.agent)) {
+  const allowedAgents = secret.allowed_agents_json ? parseJsonArray(secret.allowed_agents_json) : [];
+  if (allowedAgents.length > 0) {
+    if (ctx.requireCompleteContext === true && !ctx.agent) {
+      reasons.push("missing_context");
+    } else if (ctx.agent && !allowedAgents.includes(ctx.agent)) {
       reasons.push("agent_not_allowed");
     }
   }
@@ -119,6 +161,12 @@ export function evaluateGovernance(secret: SecretRow, ctx: ResolveContext): Gove
   const approvalMode = secret.approval_mode as ApprovalMode;
   const needsApproval = approvalMode === "every-use" || approvalMode === "window";
   const needsVpn = secret.requires_vpn === 1;
+  if (needsApproval && ctx.approvalSatisfied !== true) {
+    reasons.push("approval_required");
+  }
+  if (needsVpn && ctx.vpnSatisfied !== true) {
+    reasons.push("vpn_required");
+  }
 
   return {
     allowed: reasons.length === 0,
@@ -141,6 +189,7 @@ export function describeReason(reason: GovernanceDenialReason): string {
     case "secret_locked": return "Secret is locked";
     case "secret_read_only": return "Secret is read-only";
     case "secret_trashed": return "Secret is in trash";
+    case "missing_context": return "Required governance context is missing";
     case "ttl_expired": return "Secret has expired";
     case "max_uses_exhausted": return "Secret reached its max uses";
     case "approval_required": return "Approval window required";
