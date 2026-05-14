@@ -24,12 +24,12 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: 120_000,
     env: {
-      DATABASE_HOST: "127.0.0.1",
-      DATABASE_PORT: "4510",
-      DATABASE_DATA_DIR: path.join(outputRoot, "data"),
-      DATABASE_DB_PATH: path.join(outputRoot, "data", "core.sqlite"),
-      DATABASE_FILES_DIR: path.join(outputRoot, "data", "files"),
-      DATABASE_JWT_SECRET: "database-playwright-secret",
+      CLAW_DATABASE_HOST: "127.0.0.1",
+      CLAW_DATABASE_PORT: "4510",
+      CLAW_DATABASE_DATA_DIR: path.join(outputRoot, "data"),
+      CLAW_DATABASE_DB_PATH: path.join(outputRoot, "data", "core.sqlite"),
+      CLAW_DATABASE_FILES_DIR: path.join(outputRoot, "data", "files"),
+      CLAW_DATABASE_JWT_SECRET: "database-playwright-secret",
     },
   },
   projects: [

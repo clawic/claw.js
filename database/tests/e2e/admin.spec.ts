@@ -25,7 +25,7 @@ test("admin console covers namespace, collection, records, tokens, files, and re
 
   // Create a new collection through the schema drawer (same panel as PB).
   await page.locator("#new-collection-btn").click();
-  await page.locator("#schema-coll-name").fill("leads");
+  await page.locator("#schema-coll-name").fill("prospects");
   // Set fields via the hidden JSON editor (inside collapsed <details>)
   const fieldsJson = JSON.stringify([
     { name: "name", type: "text", required: true },
@@ -34,10 +34,13 @@ test("admin console covers namespace, collection, records, tokens, files, and re
   ], null, 2);
   await page.evaluate((json) => { document.getElementById("schema-editor").value = json; }, fieldsJson);
   await page.locator("#schema-save").click();
-  await expect(page.getByTestId("collection-leads")).toBeVisible();
-  await page.locator("#schema-drawer-close").click();
-  await page.getByTestId("collection-leads").click();
-  await expect(page.locator("#schema-title")).toHaveText("Leads");
+  await expect(page.getByTestId("collection-prospects")).toBeVisible();
+  const schemaDrawerClose = page.locator("#schema-drawer-close");
+  if (await schemaDrawerClose.isVisible()) {
+    await schemaDrawerClose.click();
+  }
+  await page.getByTestId("collection-prospects").click();
+  await expect(page.locator("#schema-title")).toHaveText("Prospects");
 
   // Create a record through the right-side drawer.
   await page.locator("#new-record-btn").click();
@@ -56,7 +59,7 @@ test("admin console covers namespace, collection, records, tokens, files, and re
   // Tokens view: issue a scoped token.
   await page.getByTestId("nav-tokens").click();
   await page.locator("#token-label").fill("sales-bot");
-  await page.locator("#token-collection").fill("leads");
+  await page.locator("#token-collection").fill("prospects");
   await page.getByTestId("token-form").getByRole("button", { name: "Issue token" }).click();
   await expect(page.locator("#token-output")).toContainText("\"token\"");
   await expect(page.getByTestId("token-card")).toContainText("sales-bot");
