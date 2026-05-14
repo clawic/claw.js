@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import type {
   ListRunsFilter,
   RunRecord,
@@ -48,24 +49,24 @@ export class SandboxApiClient {
   }
 
   health(): Promise<{ ok: boolean; service: string; enabledBackends: string[] }> {
-    return this.call("GET", "/v1/health");
+    return this.call("GET", clawApiPath("health"));
   }
 
   run(request: RunRequest): Promise<RunResult> {
-    return this.call("POST", "/v1/sandbox/run", request);
+    return this.call("POST", clawApiPath("sandbox/run"), request);
   }
 
   listRuns(filter: ListRunsFilter = {}): Promise<{ items: RunRecord[] }> {
-    return this.call("GET", `/v1/sandbox/runs${buildQuery({
+    return this.call("GET", clawApiPath(`sandbox/runs${buildQuery({
       backend: filter.backend,
       status: filter.status,
       host: filter.host,
       limit: filter.limit,
       offset: filter.offset,
-    })}`);
+    })}`));
   }
 
   getRun(id: string): Promise<RunRecord> {
-    return this.call("GET", `/v1/sandbox/runs/${encodeURIComponent(id)}`);
+    return this.call("GET", clawApiPath(`sandbox/runs/${encodeURIComponent(id)}`));
   }
 }

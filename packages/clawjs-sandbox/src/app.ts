@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import fs from "node:fs";
 
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
@@ -73,7 +74,7 @@ export function buildSandboxApp(options: BuildSandboxAppOptions = {}) {
     store.close();
   });
 
-  app.get("/v1/health", async () => ({
+  app.get(clawApiPath("health"), async () => ({
     ok: true,
     service: "sandbox",
     host: config.host,
@@ -81,7 +82,7 @@ export function buildSandboxApp(options: BuildSandboxAppOptions = {}) {
     enabledBackends: Object.keys(backends),
   }));
 
-  app.post("/v1/sandbox/run", async (request, reply) => {
+  app.post(clawApiPath("sandbox/run"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     try {
       const body = readBody(request);
@@ -116,7 +117,7 @@ export function buildSandboxApp(options: BuildSandboxAppOptions = {}) {
     }
   });
 
-  app.get("/v1/sandbox/runs", async (request, reply) => {
+  app.get(clawApiPath("sandbox/runs"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const query = readQuery(request);
     const filter: ListRunsFilter = {
@@ -129,7 +130,7 @@ export function buildSandboxApp(options: BuildSandboxAppOptions = {}) {
     return { items: store.listRuns(filter) };
   });
 
-  app.get("/v1/sandbox/runs/:id", async (request, reply) => {
+  app.get(clawApiPath("sandbox/runs/:id"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     const run = store.getRun(params.id);
