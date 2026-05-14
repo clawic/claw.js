@@ -5692,6 +5692,11 @@
               "optional": false
             },
             {
+              "name": "avatar",
+              "type": "string",
+              "optional": true
+            },
+            {
               "name": "auditLogReason",
               "type": "string",
               "optional": true
@@ -5733,6 +5738,16 @@
               "type": "string",
               "optional": true,
               "default": "sample"
+            },
+            {
+              "name": "avatar",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "targetChannelId",
+              "type": "string",
+              "optional": true
             },
             {
               "name": "auditLogReason",
@@ -5805,6 +5820,11 @@
               "type": "string",
               "optional": true,
               "default": "sample"
+            },
+            {
+              "name": "avatar",
+              "type": "string",
+              "optional": true
             }
           ],
           "authFieldNames": []
