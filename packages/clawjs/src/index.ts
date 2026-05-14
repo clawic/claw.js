@@ -952,8 +952,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   const workspaceRoot = flags.workspace || context.cwd;
   const appId = flags["app-id"] || "clawjs-app";
   const workspaceId = flags["workspace-id"] || pathSafeBasename(workspaceRoot);
-  const agentId = flags["agent-id"] || workspaceId;
-  const runtimeAdapterId = resolveRuntimeAdapterId(flags);
+  const agentId = flags["agent-id"] || workspaceId; const runtimeAdapterId = resolveRuntimeAdapterId(flags);
   const runtimeAdapter = getRuntimeAdapter(runtimeAdapterId); const mediaGroup = group === "image" || group === "audio" || group === "video" ? group : null;
   await installCliRuntimeMetaProvider({ group, command, subcommand, argv, flags, cwd: context.cwd, workspaceRoot, appId, workspaceId, agentId, runtimeAdapterId });
   const guidanceResourcesResult = await runGuidanceResourcesCli({ group, command, subcommand, positionals, flags, argv, context, wantsJson, runtimeAdapterId, workspaceRoot, appId, workspaceId, agentId }); if (guidanceResourcesResult !== null) return guidanceResourcesResult;

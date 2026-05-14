@@ -77483,7 +77483,7 @@
     {
       "path": "packages/clawjs-node/src/create-claw.ts",
       "language": "typescript",
-      "lines": 1969,
+      "lines": 1964,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -98846,7 +98846,7 @@
     {
       "path": "packages/clawjs/src/index.ts",
       "language": "typescript",
-      "lines": 2000,
+      "lines": 1999,
       "test": false,
       "entrypoint": true,
       "imports": [

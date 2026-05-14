@@ -642,13 +642,8 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     env: options.library?.env ?? runtimeEnv,
     filesystem,
   });
-  const rulesStore = createLocalRulesStore({
-    rootDir: options.rules?.rootDir,
-    env: options.rules?.env ?? runtimeEnv,
-    filesystem,
-  });
-  const guidanceStore = createLocalGuidanceStore({ rootDir: options.guidance?.rootDir, env: options.guidance?.env ?? runtimeEnv, filesystem });
-  const resourceRegistryStore = createLocalResourceRegistryStore({ rootDir: options.resources?.rootDir, env: options.resources?.env ?? runtimeEnv, filesystem });
+  const rulesStore = createLocalRulesStore({ rootDir: options.rules?.rootDir, env: options.rules?.env ?? runtimeEnv, filesystem });
+  const guidanceStore = createLocalGuidanceStore({ rootDir: options.guidance?.rootDir, env: options.guidance?.env ?? runtimeEnv, filesystem }); const resourceRegistryStore = createLocalResourceRegistryStore({ rootDir: options.resources?.rootDir, env: options.resources?.env ?? runtimeEnv, filesystem });
   const soulStore = createSoulStore({
     workspaceDir,
     filesystem,
