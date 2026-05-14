@@ -1,0 +1,12 @@
+{
+  "id": "permissions-sample",
+  "application_id": "application-sample",
+  "guild_id": "guild-sample",
+  "permissions": [
+    {
+      "id": "role-sample",
+      "type": 1,
+      "permission": true
+    }
+  ]
+}

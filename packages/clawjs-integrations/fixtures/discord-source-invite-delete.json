@@ -1,0 +1,6 @@
+{
+  "id": "invite-delete-sample",
+  "channel_id": "channel-sample",
+  "code": "invite-sample",
+  "guild_id": "guild-sample"
+}

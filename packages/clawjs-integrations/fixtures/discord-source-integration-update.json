@@ -1,0 +1,7 @@
+{
+  "id": "integration-sample",
+  "guild_id": "guild-sample",
+  "name": "sample updated",
+  "type": "discord",
+  "enabled": true
+}

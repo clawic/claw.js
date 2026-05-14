@@ -1,0 +1,15 @@
+{
+  "id": "invite-create-sample",
+  "channel_id": "channel-sample",
+  "code": "invite-sample",
+  "created_at": "2026-01-01T00:00:00.000000+00:00",
+  "guild_id": "guild-sample",
+  "inviter": {
+    "id": "user-sample",
+    "username": "sample"
+  },
+  "max_age": 3600,
+  "max_uses": 1,
+  "temporary": false,
+  "uses": 0
+}

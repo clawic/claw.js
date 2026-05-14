@@ -39,6 +39,13 @@ export type DiscordSourceOperation =
   | "guild-ban-add"
   | "guild-ban-remove"
   | "guild-integrations-update"
+  | "integration-create"
+  | "integration-update"
+  | "integration-delete"
+  | "webhooks-update"
+  | "invite-create"
+  | "invite-delete"
+  | "application-command-permissions-update"
   | "auto-moderation-rule-create"
   | "auto-moderation-rule-update"
   | "auto-moderation-rule-delete"
@@ -107,6 +114,13 @@ const DISCORD_SOURCE_OPERATIONS = new Set<DiscordSourceOperation>([
   "guild-ban-add",
   "guild-ban-remove",
   "guild-integrations-update",
+  "integration-create",
+  "integration-update",
+  "integration-delete",
+  "webhooks-update",
+  "invite-create",
+  "invite-delete",
+  "application-command-permissions-update",
   "auto-moderation-rule-create",
   "auto-moderation-rule-update",
   "auto-moderation-rule-delete",
