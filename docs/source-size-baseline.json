@@ -8,8 +8,8 @@
       "reason": "Public CLI routing after delegated domain, temporal, productivity, and knowledge-tail command extraction; keep under 2000 by splitting new domains into modules."
     },
     "packages/clawjs-node/src/create-claw.ts": {
-      "lines": 3310,
-      "reason": "Existing Claw runtime assembly after media/session, generation/image, skill/provider, channel runtime, content, and IoT extraction; keep shrinking via focused facades before expanding."
+      "lines": 1964,
+      "reason": "Claw runtime assembly after extracting runtime/workspace, intent, capability, session, data/watch, content/IoT, media/session, generation/image, skill/provider, and channel helpers; keep under 2000 by splitting new public facades before expanding."
     },
     "packages/clawjs/src/index.test.ts": {
       "lines": 1535,
