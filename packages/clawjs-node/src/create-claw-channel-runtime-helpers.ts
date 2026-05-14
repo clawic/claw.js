@@ -1,10 +1,12 @@
 // @ts-nocheck
 import fs from "fs";
+import path from "path";
 
 export function createClawChannelRuntimeHelpers(locals: Record<string, any>): Record<string, any> {
   const {
     invokeChannelProcessor,
     appendChannelSessionMessage,
+    filesystem,
     channelsRegistry,
     registerInboundTelegramMedia,
     registerOutboundChannelMedia,
@@ -16,6 +18,11 @@ export function createClawChannelRuntimeHelpers(locals: Record<string, any>): Re
     processHost,
     secretsEnv,
     syncTelegramAccount,
+    refreshChannelSnapshots,
+    eventBus,
+    readSttConfig,
+    callTelegramApi,
+    downloadTelegramFile,
     telegram,
     setTelegramAccountCommands,
     TELEGRAM_CODEX_BRIDGE_COMMANDS,
