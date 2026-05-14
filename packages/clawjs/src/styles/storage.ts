@@ -1,12 +1,13 @@
 import fs from "fs";
 import path from "path";
 import { randomBytes } from "crypto";
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 
 import { parseStyleMd, serializeStyleMd } from "./serializer.ts";
 import type { StyleManifest } from "./schema.ts";
 
 export function stylesRootDir(workspaceRoot: string): string {
-  return path.join(workspaceRoot, ".claw", "styles");
+  return resolveClawPersistentSurfacePath("claw.workspace.styles", workspaceRoot);
 }
 
 export function styleDir(workspaceRoot: string, styleId: string): string {

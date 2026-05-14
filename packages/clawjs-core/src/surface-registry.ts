@@ -115,6 +115,9 @@ export const clawPersistentSurface = {
   column(input: SurfaceBuilderInput<"column">): ClawPersistentSurfaceNode {
     return surfaceNode({ ...input, kind: "column" });
   },
+  index(input: SurfaceBuilderInput<"index">): ClawPersistentSurfaceNode {
+    return surfaceNode({ ...input, kind: "index" });
+  },
   path(input: Omit<SurfaceBuilderInput<"folder" | "file" | "socket" | "statusFile" | "cache" | "fixture" | "persistentTemp" | "legacyPath" | "externalReadOnlySource">, "kind"> & { kind: "folder" | "file" | "socket" | "statusFile" | "cache" | "fixture" | "persistentTemp" | "legacyPath" | "externalReadOnlySource" }): ClawPersistentSurfaceNode {
     return surfaceNode(input);
   },
@@ -293,6 +296,57 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       envOverrides: ["CLAW_DATABASE_DB_PATH", "CLAW_DB_PATH", "CLAW_DATA_DIR", "CLAW_HOME"],
     }),
     clawPersistentSurface.database({
+      id: "claw.database.legacy_productivity",
+      kind: "sidecar",
+      name: "Legacy productivity workspace database",
+      path: `${clawWorkspaceLayout.root}/data/productivity.sqlite`,
+      parentId: "claw.workspace",
+      storageClass: "workspace",
+      canonicality: "legacy",
+      source: registrySource,
+      warnings: ["Read only for migration into the canonical workspace store."],
+    }),
+    clawPersistentSurface.table({
+      id: "claw.database.core.table.workspace_records",
+      name: "workspace_records",
+      parentId: "claw.database.core",
+      databaseId: "claw.database.core",
+      source: registrySource,
+      notes: "JSON payload table backing local-first productivity collections.",
+    }),
+    ...["collection_name", "record_id", "payload_json", "updated_at", "archived_at"].map((name) => clawPersistentSurface.column({
+      id: `claw.database.core.table.workspace_records.column.${name}`,
+      name,
+      parentId: "claw.database.core.table.workspace_records",
+      databaseId: "claw.database.core",
+      dataType: "TEXT",
+      nullable: name === "updated_at" || name === "archived_at",
+      source: registrySource,
+    })),
+    clawPersistentSurface.index({
+      id: "claw.database.core.table.workspace_records.index.workspace_records_collection_updated_idx",
+      name: "workspace_records_collection_updated_idx",
+      parentId: "claw.database.core.table.workspace_records",
+      databaseId: "claw.database.core",
+      source: registrySource,
+    }),
+    clawPersistentSurface.table({
+      id: "claw.database.core.table.workspace_meta",
+      name: "workspace_meta",
+      parentId: "claw.database.core",
+      databaseId: "claw.database.core",
+      source: registrySource,
+    }),
+    ...["meta_key", "meta_value"].map((name) => clawPersistentSurface.column({
+      id: `claw.database.core.table.workspace_meta.column.${name}`,
+      name,
+      parentId: "claw.database.core.table.workspace_meta",
+      databaseId: "claw.database.core",
+      dataType: "TEXT",
+      nullable: false,
+      source: registrySource,
+    })),
+    clawPersistentSurface.database({
       id: "claw.database.runtime",
       kind: "sidecar",
       name: "Runtime sidecar database",
@@ -382,6 +436,33 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
         storageClass: "workspace",
         source: registrySource,
       })),
+    clawPersistentSurface.path({
+      id: "claw.workspace.styles",
+      kind: "folder",
+      name: "styles",
+      path: `${clawWorkspaceLayout.root}/styles`,
+      parentId: "claw.workspace",
+      storageClass: "workspace",
+      source: registrySource,
+    }),
+    clawPersistentSurface.path({
+      id: "claw.workspace.templates",
+      kind: "folder",
+      name: "templates",
+      path: `${clawWorkspaceLayout.root}/templates`,
+      parentId: "claw.workspace",
+      storageClass: "workspace",
+      source: registrySource,
+    }),
+    clawPersistentSurface.path({
+      id: "claw.workspace.references",
+      kind: "folder",
+      name: "references",
+      path: `${clawWorkspaceLayout.root}/references`,
+      parentId: "claw.workspace",
+      storageClass: "workspace",
+      source: registrySource,
+    }),
     ...Object.entries(clawGlobalHomeLayout)
       .filter(([name]) => name !== "root")
       .map(([name, surfacePath]) => clawPersistentSurface.path({
@@ -441,6 +522,13 @@ export function listClawPersistentSurfaceNodes(parentId?: string): ClawPersisten
 export function findClawPersistentSurfaceNode(idOrPath: string): ClawPersistentSurfaceNode | undefined {
   const nodes = withSurfaceChildren(clawPersistentSurfaceRegistry.nodes);
   return nodes.find((node) => node.id === idOrPath || node.path === idOrPath || `/${node.id.replace(/\./g, "/")}` === idOrPath);
+}
+
+export function resolveClawPersistentSurfacePath(idOrPath: string, rootDir = "", ...children: string[]): string {
+  const node = findClawPersistentSurfaceNode(idOrPath);
+  const surfacePath = node?.path ?? idOrPath;
+  const parts = [rootDir, surfacePath, ...children].filter(Boolean);
+  return parts.join("/").replace(/\/+/g, "/").replace(/\/$/, "");
 }
 
 export function withSurfaceChildren(nodes: ClawPersistentSurfaceNode[]): ClawPersistentSurfaceNode[] {

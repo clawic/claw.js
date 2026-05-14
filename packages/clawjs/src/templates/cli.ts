@@ -1,6 +1,8 @@
 import fs from "fs";
 import path from "path";
 
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
+
 import { builtinTemplateManifests } from "./builtins.ts";
 import {
   generateTemplateId,
@@ -149,7 +151,13 @@ export async function runTemplateCli(options: TemplateCliOptions): Promise<numbe
           outPath = path.join(dir, `${base}.${ext}`);
         }
       } else {
-        outPath = path.join(workspaceRoot, ".claw", "templates", template.id, "outputs", `${flags.style}-${flags.variant ?? "default"}.${ext}`);
+        outPath = resolveClawPersistentSurfacePath(
+          "claw.workspace.templates",
+          workspaceRoot,
+          template.id,
+          "outputs",
+          `${flags.style}-${flags.variant ?? "default"}.${ext}`,
+        );
       }
       const result = await renderTemplate({ template, style, data, variantId: flags.variant, outPath, format });
       results.push({ format: result.format, outputPath: result.outPath, renderer: result.renderer, width: result.width, height: result.height });

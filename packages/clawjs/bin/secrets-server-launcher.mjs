@@ -8,6 +8,7 @@ import path from "node:path";
 import fs from "node:fs";
 import os from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -31,7 +32,8 @@ function expandHome(value) {
 function defaultClawjsDataRoot(flags) {
   const explicit = flags["data-dir"] ?? process.env.CLAW_SECRETS_DATA_DIR ?? process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
   if (explicit) return path.resolve(expandHome(explicit));
-  return path.join(expandHome(process.env.CLAW_HOME ?? path.join(os.homedir(), ".claw")), "data");
+  if (process.env.CLAW_HOME) return path.join(expandHome(process.env.CLAW_HOME), "data");
+  return expandHome(resolveClawPersistentSurfacePath("claw.global.data"));
 }
 
 export async function runOpenSecrets(args) {

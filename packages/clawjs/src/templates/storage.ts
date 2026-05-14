@@ -1,12 +1,13 @@
 import fs from "fs";
 import path from "path";
 import { randomBytes } from "crypto";
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 
 import { parseTemplateMd, serializeTemplateMd } from "./serializer.ts";
 import { isTemplateCategory, type TemplateCategory, type TemplateManifest } from "./schema.ts";
 
 export function templatesRootDir(workspaceRoot: string): string {
-  return path.join(workspaceRoot, ".claw", "templates");
+  return resolveClawPersistentSurfacePath("claw.workspace.templates", workspaceRoot);
 }
 
 export function templateDir(workspaceRoot: string, templateId: string): string {

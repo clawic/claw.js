@@ -1870,4 +1870,5 @@ The docs check script validates that every current export from
     clawixPortRange
     findClawPersistentSurfaceNode
     listClawPersistentSurfaceNodes
+    resolveClawPersistentSurfacePath
     withSurfaceChildren

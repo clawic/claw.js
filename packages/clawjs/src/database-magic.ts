@@ -1,5 +1,4 @@
 import fs from "node:fs";
-import path from "node:path";
 
 import {
   DatabaseApiClient,
@@ -12,6 +11,7 @@ import {
 import {
   BUILTIN_COLLECTIONS_BY_ALIAS,
   BUILTIN_COLLECTIONS_BY_NAME,
+  resolveClawPersistentSurfacePath,
 } from "@clawjs/core";
 import { openMainDataStore } from "./v1-data.ts";
 
@@ -619,7 +619,10 @@ function migrateLegacyWorkspaceData(runtime: LocalDbRuntime, namespaceId: string
   const migrationKey = localMigrationKey(namespaceId);
   if (runtime.store.getMeta(migrationKey)) return;
 
-  const legacyPath = path.join(runtime.workspaceRoot, ".claw", "data", "productivity.sqlite");
+  const legacyPath = resolveClawPersistentSurfacePath(
+    "claw.database.legacy_productivity",
+    runtime.workspaceRoot,
+  );
   if (!fs.existsSync(legacyPath)) {
     runtime.store.setMeta(migrationKey, new Date().toISOString());
     return;

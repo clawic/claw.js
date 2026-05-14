@@ -2,6 +2,8 @@ import fs from "fs";
 import fsp from "fs/promises";
 import path from "path";
 
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
+
 import { createPackageName, createPascalCase, createTitle, type SupportedPackageManager } from "./scaffold.ts";
 
 export const PROJECT_CONFIG_FILE = "claw.project.json";
@@ -419,7 +421,7 @@ export async function addProjectIntegration(
 export async function collectProjectInfo(projectRoot: string): Promise<Record<string, unknown>> {
   const project = readProjectConfig(projectRoot);
   const packageJson = loadPackageJson(projectRoot);
-  const manifestPath = path.join(projectRoot, ".claw", "manifest.json");
+  const manifestPath = resolveClawPersistentSurfacePath("claw.workspace.manifest", projectRoot);
   const manifest = safeReadJson<Record<string, unknown>>(manifestPath);
   const nodeModulesPackage = safeReadJson<{ version?: string }>(path.join(projectRoot, "node_modules", "@clawjs", "claw", "package.json"));
   const rootPackage = safeReadJson<{ version?: string }>(path.join(projectRoot, "package.json"));

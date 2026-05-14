@@ -65,6 +65,7 @@ import {
   productivityApprovalRecordSchema,
   releaseRecordSchema,
   reminderRecordSchema,
+  resolveClawPersistentSurfacePath,
   resolveClawGlobalDataDir,
   resolveClawHostRegistryPath,
   resolveClawHostStateDir,
@@ -233,6 +234,7 @@ test("persistent surface registry exposes framework and host storage nodes", () 
   const workspaceChildren = listClawPersistentSurfaceNodes("claw.workspace");
   assert.equal(workspaceChildren.some((node) => node.id === "claw.workspace.manifest"), true);
   assert.equal(findClawPersistentSurfaceNode(".claw/manifest.json")?.id, "claw.workspace.manifest");
+  assert.equal(resolveClawPersistentSurfacePath("claw.workspace.styles", "/repo/app", "brand"), "/repo/app/.claw/styles/brand");
 
   const externalCodex = findClawPersistentSurfaceNode("claw.external.codex");
   assert.equal(externalCodex?.canonicality, "externalReadOnly");

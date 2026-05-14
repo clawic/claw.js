@@ -12,6 +12,26 @@ flowchart TD
   clawix_home["Clawix host home\nroot"]
   claw_database_core["Framework main database\ndatabase"]
   claw_global --> claw_database_core
+  claw_database_core_table_workspace_records["workspace_records\ntable"]
+  claw_database_core --> claw_database_core_table_workspace_records
+  claw_database_core_table_workspace_records_column_collection_name["collection_name\ncolumn"]
+  claw_database_core_table_workspace_records --> claw_database_core_table_workspace_records_column_collection_name
+  claw_database_core_table_workspace_records_column_record_id["record_id\ncolumn"]
+  claw_database_core_table_workspace_records --> claw_database_core_table_workspace_records_column_record_id
+  claw_database_core_table_workspace_records_column_payload_json["payload_json\ncolumn"]
+  claw_database_core_table_workspace_records --> claw_database_core_table_workspace_records_column_payload_json
+  claw_database_core_table_workspace_records_column_updated_at["updated_at\ncolumn"]
+  claw_database_core_table_workspace_records --> claw_database_core_table_workspace_records_column_updated_at
+  claw_database_core_table_workspace_records_column_archived_at["archived_at\ncolumn"]
+  claw_database_core_table_workspace_records --> claw_database_core_table_workspace_records_column_archived_at
+  claw_database_core_table_workspace_records_index_workspace_records_collection_updated_idx["workspace_records_collection_updated_idx\nindex"]
+  claw_database_core_table_workspace_records --> claw_database_core_table_workspace_records_index_workspace_records_collection_updated_idx
+  claw_database_core_table_workspace_meta["workspace_meta\ntable"]
+  claw_database_core --> claw_database_core_table_workspace_meta
+  claw_database_core_table_workspace_meta_column_meta_key["meta_key\ncolumn"]
+  claw_database_core_table_workspace_meta --> claw_database_core_table_workspace_meta_column_meta_key
+  claw_database_core_table_workspace_meta_column_meta_value["meta_value\ncolumn"]
+  claw_database_core_table_workspace_meta --> claw_database_core_table_workspace_meta_column_meta_value
   claw_database_runtime["Runtime sidecar database\nsidecar"]
   claw_global --> claw_database_runtime
   claw_database_sessions["Sessions sidecar database\nsidecar"]
@@ -44,6 +64,12 @@ flowchart TD
   claw_workspace --> claw_workspace_backups
   claw_workspace_browser["browser\nfolder"]
   claw_workspace --> claw_workspace_browser
+  claw_workspace_styles["styles\nfolder"]
+  claw_workspace --> claw_workspace_styles
+  claw_workspace_templates["templates\nfolder"]
+  claw_workspace --> claw_workspace_templates
+  claw_workspace_references["references\nfolder"]
+  claw_workspace --> claw_workspace_references
   claw_global_config["config\nfolder"]
   claw_global --> claw_global_config
   claw_global_data["data\nfolder"]
@@ -86,6 +112,16 @@ flowchart TD
 | `claw.workspace` | root | claw | `.claw` |
 | `clawix.home` | root | clawix | `~/.clawix` |
 | `claw.database.core` | database | claw | `~/.claw/data/core.sqlite` |
+| `claw.database.core.table.workspace_records` | table | claw | `` |
+| `claw.database.core.table.workspace_records.column.collection_name` | column | claw | `` |
+| `claw.database.core.table.workspace_records.column.record_id` | column | claw | `` |
+| `claw.database.core.table.workspace_records.column.payload_json` | column | claw | `` |
+| `claw.database.core.table.workspace_records.column.updated_at` | column | claw | `` |
+| `claw.database.core.table.workspace_records.column.archived_at` | column | claw | `` |
+| `claw.database.core.table.workspace_records.index.workspace_records_collection_updated_idx` | index | claw | `` |
+| `claw.database.core.table.workspace_meta` | table | claw | `` |
+| `claw.database.core.table.workspace_meta.column.meta_key` | column | claw | `` |
+| `claw.database.core.table.workspace_meta.column.meta_value` | column | claw | `` |
 | `claw.database.runtime` | sidecar | claw | `~/.claw/data/runtime.sqlite` |
 | `claw.database.sessions` | sidecar | claw | `~/.claw/data/sessions.sqlite` |
 | `claw.database.audio` | sidecar | claw | `~/.claw/data/audio.sqlite` |
@@ -102,6 +138,9 @@ flowchart TD
 | `claw.workspace.locks` | folder | claw | `.claw/locks` |
 | `claw.workspace.backups` | folder | claw | `.claw/backups` |
 | `claw.workspace.browser` | folder | claw | `.claw/browser` |
+| `claw.workspace.styles` | folder | claw | `.claw/styles` |
+| `claw.workspace.templates` | folder | claw | `.claw/templates` |
+| `claw.workspace.references` | folder | claw | `.claw/references` |
 | `claw.global.config` | folder | claw | `~/.claw/config.yaml` |
 | `claw.global.data` | folder | claw | `~/.claw/data` |
 | `claw.global.state` | folder | claw | `~/.claw/state` |

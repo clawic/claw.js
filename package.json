@@ -61,6 +61,7 @@
     "privacy:check": "node ./scripts/privacy-check.mjs",
     "privacy:test": "vitest run --config vitest.config.ts scripts/privacy-check.test.mjs",
     "test:policy": "node ./scripts/verify-testing-policy.mjs",
+    "test:persistent-surface-guard": "node ./scripts/persistent-surface-guard.mjs --self-test",
     "test:e2e": "npm run build:packages && rm -rf examples/showcase/.next && NEXT_DIST_DIR=.next-e2e npm --prefix examples/showcase run build && node ./scripts/run-e2e.mjs",
     "test:e2e:ci": "npm run build:packages && rm -rf examples/showcase/.next && NEXT_DIST_DIR=.next-e2e npm --prefix examples/showcase run build && CI=1 node ./scripts/run-e2e.mjs",
     "test:e2e:smoke-real": "npm run build:packages && rm -rf examples/showcase/.next && NEXT_DIST_DIR=.next-e2e npm --prefix examples/showcase run build && playwright test --grep @smoke-real",

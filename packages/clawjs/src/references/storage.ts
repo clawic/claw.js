@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { randomBytes } from "crypto";
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 
 import { REFERENCE_SCHEMA_VERSION, isReferenceType, type ReferenceManifest, type ReferenceType } from "./schema.ts";
 
@@ -8,7 +9,7 @@ const FRONTMATTER_OPEN = "---json";
 const FRONTMATTER_CLOSE = "---";
 
 export function referencesRootDir(workspaceRoot: string): string {
-  return path.join(workspaceRoot, ".claw", "references");
+  return resolveClawPersistentSurfacePath("claw.workspace.references", workspaceRoot);
 }
 
 export function referenceDir(workspaceRoot: string, referenceId: string): string {

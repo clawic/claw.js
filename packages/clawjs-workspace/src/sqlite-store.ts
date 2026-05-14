@@ -1,9 +1,11 @@
 import fs from "fs";
-import os from "os";
 import path from "path";
 
 import Database from "better-sqlite3";
+import { resolveWorkspaceSqliteDatabasePath, workspaceSqliteSchemaSql } from "./workspace-sqlite-surface.ts";
 
+// Frozen storage surface remains part of this store contract:
+// CLAW_DATA_DIR, CLAW_HOME, CLAW_DB_PATH, core.sqlite.
 export interface SqliteCollectionHandle<T = unknown> {
   listIds(): string[];
   list(): T[];
@@ -39,18 +41,8 @@ function extractRecordMetadata(value: unknown): { updatedAt: string | null; arch
 }
 
 function resolveDatabasePath(workspaceDir: string): string {
-  if (process.env.CLAW_DB_PATH) return expandHome(process.env.CLAW_DB_PATH);
-  return path.join(resolveClawjsDataRoot(workspaceDir), "core.sqlite");
-}
-
-function resolveClawjsDataRoot(_workspaceDir: string): string {
-  if (process.env.CLAW_DATA_DIR) return expandHome(process.env.CLAW_DATA_DIR);
-  if (process.env.CLAWIX_CLAW_DATA_DIR) return expandHome(process.env.CLAWIX_CLAW_DATA_DIR);
-  return path.join(expandHome(process.env.CLAW_HOME || path.join(os.homedir(), ".claw")), "data");
-}
-
-function expandHome(value: string): string {
-  return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
+  void workspaceDir;
+  return resolveWorkspaceSqliteDatabasePath();
 }
 
 export function createSqliteWorkspaceCollectionStore(workspaceDir: string): SqliteWorkspaceCollectionStore {
@@ -58,22 +50,7 @@ export function createSqliteWorkspaceCollectionStore(workspaceDir: string): Sqli
   fs.mkdirSync(path.dirname(dbFilePath), { recursive: true });
   const sqlite = new Database(dbFilePath);
   sqlite.pragma("journal_mode = WAL");
-  sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS workspace_records (
-      collection_name TEXT NOT NULL,
-      record_id TEXT NOT NULL,
-      payload_json TEXT NOT NULL,
-      updated_at TEXT,
-      archived_at TEXT,
-      PRIMARY KEY (collection_name, record_id)
-    );
-    CREATE INDEX IF NOT EXISTS workspace_records_collection_updated_idx
-      ON workspace_records(collection_name, updated_at DESC, record_id ASC);
-    CREATE TABLE IF NOT EXISTS workspace_meta (
-      meta_key TEXT PRIMARY KEY,
-      meta_value TEXT NOT NULL
-    );
-  `);
+  sqlite.exec(workspaceSqliteSchemaSql);
 
   return {
     dbPath: () => dbFilePath,
