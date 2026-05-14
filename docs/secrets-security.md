@@ -130,6 +130,11 @@ Brokered secret use must be explicit. A request needs at least:
 - use count, TTL, budget, and approval window where relevant;
 - expected redaction policy for responses and errors.
 
+Text responses may be returned only after broker-side redaction. Binary
+responses require an explicit binary-response opt-in from the caller and must
+be omitted if the byte stream contains any resolved secret value, because
+generic redaction cannot safely rewrite opaque bytes.
+
 Host allowlists are exact by default. Limited wildcard entries such as
 `*.example.com` may be allowed only when the policy records the reason and the
 matching code prevents ambiguous root-domain, suffix, redirect, or homograph
