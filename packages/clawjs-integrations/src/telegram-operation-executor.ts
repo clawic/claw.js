@@ -14,6 +14,36 @@ export interface TelegramRequestPlan {
   body: Record<string, IntegrationJson>;
 }
 
+export interface TelegramBotApiErrorParameters {
+  retryAfter?: number;
+  migrateToChatId?: number;
+}
+
+export class TelegramBotApiError extends Error {
+  readonly endpoint: string;
+  readonly status: number;
+  readonly description: string;
+  readonly parameters: TelegramBotApiErrorParameters;
+
+  constructor(input: {
+    endpoint: string;
+    status: number;
+    description: string;
+    parameters?: TelegramBotApiErrorParameters;
+  }) {
+    super(`Telegram ${input.endpoint} failed: ${input.status} ${input.description}`);
+    this.name = "TelegramBotApiError";
+    this.endpoint = input.endpoint;
+    this.status = input.status;
+    this.description = input.description;
+    this.parameters = input.parameters ?? {};
+  }
+
+  get retryAfter(): number | undefined {
+    return this.parameters.retryAfter;
+  }
+}
+
 type TelegramRequestFetch = typeof fetch;
 
 const BASE = "https://api.telegram.org/bot";
@@ -160,7 +190,12 @@ export async function sendTelegramRequest(input: {
   const payload = await parseTelegramResponse(response);
   if (!response.ok || payload.ok === false) {
     const description = typeof payload.description === "string" ? payload.description : response.statusText;
-    throw new Error(`Telegram ${input.endpoint} failed: ${response.status} ${description}`);
+    throw new TelegramBotApiError({
+      endpoint: input.endpoint,
+      status: response.status,
+      description,
+      parameters: telegramErrorParameters(payload.parameters),
+    });
   }
   return payload;
 }
@@ -274,4 +309,12 @@ async function parseTelegramResponse(response: Response): Promise<Record<string,
   } catch {
     return { description: text };
   }
+}
+
+function telegramErrorParameters(value: IntegrationJson | undefined): TelegramBotApiErrorParameters {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return {
+    ...(typeof value.retry_after === "number" ? { retryAfter: value.retry_after } : {}),
+    ...(typeof value.migrate_to_chat_id === "number" ? { migrateToChatId: value.migrate_to_chat_id } : {}),
+  };
 }

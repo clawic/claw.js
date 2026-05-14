@@ -7,11 +7,13 @@ import {
   loadConnectorRuntimeFixtures,
 } from "./runtime-fixtures.ts";
 import { runConnectorSource } from "./source-runner.ts";
+import { TelegramBotApiError } from "./telegram-operation-executor.ts";
 import {
   TELEGRAM_SOURCE_KINDS,
   telegramInboundMessageFromUpdate,
   telegramSourceEventsForUpdate,
 } from "./telegram-source.ts";
+import { executeTelegramSource } from "./telegram-source-executor.ts";
 
 describe("telegram source events", () => {
   it("keeps every exposed polling source kind supported", () => {
@@ -209,5 +211,52 @@ describe("telegram source events", () => {
       /requires a capability broker/,
     );
     assert.deepEqual(calls, []);
+  });
+
+  it("preserves Telegram rate-limit metadata on source polling errors", async () => {
+    await assert.rejects(
+      executeTelegramSource({
+        operation: {
+          id: "telegram_bot_api.source.new-updates",
+          appId: "telegram_bot_api",
+          kind: "source",
+          name: "New Updates",
+          fields: [],
+          authFieldNames: ["telegramBotApi"],
+        },
+        values: {},
+        secrets: { telegramBotApi: "leased-token" },
+        plan: {
+          status: "source_plan",
+          operationId: "telegram_bot_api.source.new-updates",
+          appId: "telegram_bot_api",
+          delivery: "polling",
+          missingFields: [],
+          missingSecrets: [],
+          invalidFields: [],
+          values: {},
+          secretRefs: { telegramBotApi: "secret://telegram" },
+          managedInterfaces: [],
+          hasHooks: false,
+          stateful: false,
+        },
+      }, {
+        fetchImpl: (async () => new Response(JSON.stringify({
+          ok: false,
+          description: "Too Many Requests: retry after 7",
+          parameters: { retry_after: 7 },
+        }), {
+          status: 429,
+          headers: { "content-type": "application/json" },
+        })) as typeof fetch,
+      }),
+      (error) => {
+        assert.ok(error instanceof TelegramBotApiError);
+        assert.equal(error.status, 429);
+        assert.equal(error.endpoint, "getUpdates");
+        assert.equal(error.retryAfter, 7);
+        return true;
+      },
+    );
   });
 });

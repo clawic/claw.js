@@ -11,7 +11,9 @@ import { telegramAdapter } from "./telegram.ts";
 import {
   buildTelegramOperationRequest,
   createTelegramOperationExecutor,
+  sendTelegramRequest,
   TELEGRAM_ACTION_SLUGS,
+  TelegramBotApiError,
 } from "./telegram-operation-executor.ts";
 import type { IntegrationJson } from "./types.ts";
 
@@ -403,6 +405,32 @@ describe("telegram operation executor", () => {
       /requires a capability broker/,
     );
     assert.deepEqual(calls, []);
+  });
+
+  it("preserves Telegram rate-limit metadata on Bot API errors", async () => {
+    await assert.rejects(
+      sendTelegramRequest({
+        token: "leased-token",
+        endpoint: "sendMessage",
+        body: { chat_id: "123", text: "hello" },
+        fetchImpl: (async () => new Response(JSON.stringify({
+          ok: false,
+          description: "Too Many Requests: retry after 12",
+          parameters: { retry_after: 12 },
+        }), {
+          status: 429,
+          headers: { "content-type": "application/json" },
+        })) as typeof fetch,
+      }),
+      (error) => {
+        assert.ok(error instanceof TelegramBotApiError);
+        assert.equal(error.status, 429);
+        assert.equal(error.endpoint, "sendMessage");
+        assert.equal(error.retryAfter, 12);
+        assert.match(error.message, /Too Many Requests/);
+        return true;
+      },
+    );
   });
 });
 

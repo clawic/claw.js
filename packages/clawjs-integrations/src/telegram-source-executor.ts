@@ -2,6 +2,7 @@ import type {
   ConnectorSourceExecutionContext,
   ConnectorSourceExecutor,
 } from "./source-runner.js";
+import { TelegramBotApiError } from "./telegram-operation-executor.ts";
 import {
   TELEGRAM_POLL_UPDATE_TYPES,
   telegramSourceEventsForUpdate,
@@ -82,9 +83,22 @@ async function fetchTelegramUpdates(input: {
   const payload = (await response.json()) as TelegramUpdatesResponse;
   if (!response.ok || payload.ok === false) {
     const description = typeof payload.description === "string" ? payload.description : response.statusText;
-    throw new Error(`Telegram getUpdates failed: ${response.status} ${description}`);
+    throw new TelegramBotApiError({
+      endpoint: "getUpdates",
+      status: response.status,
+      description,
+      parameters: telegramErrorParameters((payload as unknown as Record<string, IntegrationJson>).parameters),
+    });
   }
   return payload;
+}
+
+function telegramErrorParameters(value: IntegrationJson | undefined): { retryAfter?: number; migrateToChatId?: number } {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return {
+    ...(typeof value.retry_after === "number" ? { retryAfter: value.retry_after } : {}),
+    ...(typeof value.migrate_to_chat_id === "number" ? { migrateToChatId: value.migrate_to_chat_id } : {}),
+  };
 }
 
 function telegramSourceKind(operationId: string): TelegramSourceKind {
