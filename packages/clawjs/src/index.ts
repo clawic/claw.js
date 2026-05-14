@@ -23,10 +23,10 @@ import {
   redactSecrets,
 } from "@clawjs/claw";
 import { buildDatabaseApp } from "@clawjs/database";
-import type { ClawInstance, ImageOperation, ImageProvenance, ImageType, TelegramSendMediaInput, TelegramSendMessageInput, VoiceNoteStatus } from "@clawjs/claw";
+import type { ClawInstance, TelegramSendMediaInput, TelegramSendMessageInput, VoiceNoteStatus } from "@clawjs/claw";
 import { createWorkspaceClaw } from "@clawjs/workspace";
 import type { WorkspaceClawInstance } from "@clawjs/workspace";
-import { clawAppPorts, clawCommandRequestSchema, clawContractVersionV1, clawCorePorts, resolveClawPersistentSurfacePath, semanticPlanSchema } from "@clawjs/core";
+import { clawCommandRequestSchema, clawContractVersionV1, resolveClawPersistentSurfacePath, semanticPlanSchema } from "@clawjs/core";
 import type { ClawCommandResponse, ClawDomain, CommitmentKind, CommitmentStatus, ContextPackPurpose, ContextPackStatus, JudgmentImpact, JudgmentStatus, LearningEvidenceSentiment, LearningKind, LearningPromotionTarget, LearningStatus, LearningTarget, MediaDirection, MediaKind, MediaListInput, MediaOrigin, OutcomeResult, OutcomeStatus, RuntimeAdapterId, RulesCompileInput, SemanticPlan, SoulModule, SoulModuleKey, TemporalItem, UserCompileProfile, UserDomainId, UserEntityType, UserFactSensitivity, UserFactValue, UserPackId, UserRecordType } from "@clawjs/core";
 import { runEmbeddedDatabaseCli } from "./database-advanced.ts";
 import { runMagicDbCli } from "./database-magic.ts";
@@ -62,6 +62,18 @@ import { inferBrokerDeclaredFields } from "./broker-http.ts";
 import { runInspectCli } from "./inspect-cli.ts";
 import { CLI_TEMPLATE_ROOT, CORE_PRODUCTIVITY_DB_COLLECTIONS, LOCAL_FIRST_PRODUCTIVITY_GROUPS, RUNTIME_ADAPTER_IDS } from "./cli-constants.ts";
 import { COMMITMENT_KINDS, COMMITMENT_STATUSES, CONTEXT_PURPOSES, CONTEXT_STATUSES, JUDGMENT_IMPACTS, JUDGMENT_STATUSES, LEARNING_KINDS, LEARNING_PROMOTION_TARGETS, LEARNING_SENTIMENTS, LEARNING_STATUSES, LEARNING_TARGETS, OUTCOME_RESULTS, OUTCOME_STATUSES } from "./cli-knowledge-constants.ts";
+import {
+  LEGACY_TELEGRAM_CODEX_PROCESSOR_ID,
+  TELEGRAM_CODEX_ATTACHMENT_INSTRUCTIONS,
+  TELEGRAM_CODEX_BOT_COMMANDS,
+  TELEGRAM_CODEX_DEFAULT_INTERVAL_MS,
+  TELEGRAM_CODEX_DEFAULT_PROCESSOR_TIMEOUT_MS,
+  TELEGRAM_CODEX_DEFAULT_TIMEOUT_SECONDS,
+  TELEGRAM_TOPIC_ICON_PRESETS,
+  type TelegramTopicIconPreset,
+} from "./cli-telegram-codex-constants.ts";
+import { parseImageOperation, parseImageProvenance, parseImageType } from "./cli-image-parsers.ts";
+import { OPEN_SURFACES, OPEN_SURFACE_BY_NAME, type OpenSurface, type OpenSurfaceState } from "./cli-open-surfaces.ts";
 import { channelListenerPaths, isProcessRunning, readListenerPid, readTail, waitForListenerPid } from "./cli-channel-listener.ts";
 import {
   buildFallbackSemanticPlan,
@@ -120,61 +132,6 @@ class CliHandledError extends Error {
     this.exitCode = exitCode;
   }
 }
-
-type OpenSurfaceKind = "internal-database" | "internal-storage" | "cli-serve" | "server-script" | "memory" | "agenda" | "next";
-
-interface OpenSurface {
-  id: string;
-  label: string;
-  port: number;
-  aliases?: string[];
-  kind: OpenSurfaceKind;
-  dir?: string;
-  script?: string;
-  envHost?: string;
-  envPort?: string;
-  buildCheck?: string;
-}
-
-interface OpenSurfaceState {
-  surface: string;
-  pid: number;
-  host: string;
-  port: number;
-  url: string;
-  targetUrl?: string;
-  workspace: string;
-  startedAt: string;
-}
-
-const OPEN_SURFACES: OpenSurface[] = [
-  { id: "memory", label: "Memory", port: clawCorePorts.memory, kind: "memory", dir: "memory", buildCheck: "dist/cli.js" },
-  { id: "storage", label: "Storage", port: 24140, kind: "internal-storage", dir: "storage/ui", buildCheck: "dist/index.html" },
-  { id: "database", label: "Database", port: clawCorePorts.database, aliases: ["db"], kind: "internal-database" },
-  { id: "secrets", label: "Secrets", port: clawCorePorts.secrets, kind: "server-script", dir: "secrets", script: "dist/server.js", envHost: "CLAW_SECRETS_HOST", envPort: "CLAW_SECRETS_PORT", buildCheck: "dist/server.js" },
-  { id: "time", label: "Time", port: 24141, kind: "server-script", dir: "time", script: "dist/server.js", envHost: "CLAW_TIME_HOST", envPort: "CLAW_TIME_PORT", buildCheck: "dist/server.js" },
-  { id: "feed", label: "Feed", port: 24142, kind: "cli-serve", dir: "modules/feed", buildCheck: "dist/cli.js" },
-  { id: "relay", label: "Relay", port: 24143, kind: "server-script", dir: "relay", script: "dist/server.js", envHost: "CLAW_RELAY_HOST", envPort: "CLAW_RELAY_PORT", buildCheck: "dist/server.js" },
-  { id: "monitor", label: "Monitor", port: clawCorePorts.monitor, kind: "server-script", dir: "monitor", script: "dist/main.js", envHost: "CLAW_MONITOR_HOST", envPort: "CLAW_MONITOR_PORT", buildCheck: "dist/main.js" },
-  { id: "drive", label: "Drive", port: clawCorePorts.drive, kind: "cli-serve", dir: "drive", buildCheck: "dist/cli.js" },
-  { id: "wiki", label: "Wiki", port: 24144, kind: "cli-serve", dir: "wiki", buildCheck: "dist/cli.js" },
-  { id: "jobs", label: "Jobs", port: 24145, kind: "server-script", dir: "execution", script: "dist/server.js", envHost: "CLAW_JOBS_HOST", envPort: "CLAW_JOBS_PORT", buildCheck: "dist/server.js" },
-  { id: "delegation", label: "Delegation", port: 24146, aliases: ["delegation"], kind: "server-script", dir: "delegation", script: "dist/server.js", envHost: "CLAW_DELEGATION_HOST", envPort: "CLAW_DELEGATION_PORT", buildCheck: "dist/server.js" },
-  { id: "publishing", label: "Publishing", port: clawCorePorts.publishing, kind: "cli-serve", dir: "publishing", buildCheck: "dist/cli.js" },
-  { id: "erp", label: "ERP", port: 24147, kind: "cli-serve", dir: "modules/erp", buildCheck: "dist/cli.js" },
-  { id: "iot", label: "IoT", port: 24148, kind: "cli-serve", dir: "iot", buildCheck: "dist/cli.js" },
-  { id: "agenda", label: "Agenda", port: clawAppPorts.agenda, kind: "agenda", dir: "apps/agenda", buildCheck: "dist/serve-dashboard.js" },
-  { id: "board", label: "Board", port: clawAppPorts.board, kind: "next", dir: "apps/board", buildCheck: ".next" },
-  { id: "channels", label: "Channels", port: clawAppPorts.channels, kind: "next", dir: "apps/channels", buildCheck: ".next" },
-  { id: "user", label: "User", port: 24149, kind: "cli-serve", dir: "modules/user", buildCheck: "dist/cli.js" },
-];
-
-const OPEN_SURFACE_BY_NAME = new Map<string, OpenSurface>(
-  OPEN_SURFACES.flatMap((surface) => [
-    [surface.id, surface],
-    ...(surface.aliases ?? []).map((alias) => [alias, surface] as const),
-  ]),
-);
 
 const CLAW_DOMAINS_BEGIN = "# BEGIN CLAWJS DOMAINS";
 const CLAW_DOMAINS_END = "# END CLAWJS DOMAINS";
@@ -1149,7 +1106,7 @@ async function runOpenServerCommand(input: { positionals: string[]; flags: Recor
       config: {
         host,
         port,
-        dataDir: path.join(workspace, ".claw", "dashboard-database"),
+        dataDir: resolveClawPersistentSurfacePath("claw.workspace.dashboard_database", workspace),
       },
     });
     await app.listen({ host, port });
@@ -2475,38 +2432,10 @@ function normalizeTelegramCodexReplyPolicy(value?: string): TelegramCodexReplyPo
 }
 
 function telegramCodexStatePath(workspaceRoot: string, flags: Record<string, string>): string {
-  return path.resolve(flags["bridge-state"] || path.join(workspaceRoot, ".claw", "telegram-codex-bridge.json"));
+  return path.resolve(flags["bridge-state"] || resolveClawPersistentSurfacePath("claw.workspace.telegram_codex_bridge_state", workspaceRoot));
 }
 
 const CODEX_AGENT_ID = "codex";
-const LEGACY_TELEGRAM_CODEX_PROCESSOR_ID = "telegram-codex";
-const TELEGRAM_CODEX_DEFAULT_INTERVAL_MS = 2_000;
-const TELEGRAM_CODEX_DEFAULT_TIMEOUT_SECONDS = 10;
-const TELEGRAM_CODEX_DEFAULT_PROCESSOR_TIMEOUT_MS = 600_000;
-const TELEGRAM_CODEX_BOT_COMMANDS = [
-  { command: "new", description: "Start a fresh session" },
-  { command: "reset", description: "Reset this session" },
-  { command: "status", description: "Show session status" },
-  { command: "queue", description: "Show queued messages" },
-  { command: "stop", description: "Stop current run" },
-  { command: "continue", description: "Process queued messages" },
-  { command: "compact", description: "Compact session context" },
-  { command: "summary", description: "Show active summary" },
-  { command: "debug", description: "Show debug status" },
-];
-const TELEGRAM_TOPIC_ICON_PRESETS = {
-  general: { emoji: "💬", customEmojiId: "5417915203100613993" },
-  work: { emoji: "💼", customEmojiId: "5348227245599105972" },
-  code: { emoji: "💻", customEmojiId: "5350554349074391003" },
-  research: { emoji: "🔎", customEmojiId: "5309965701241379366" },
-  notes: { emoji: "📝", customEmojiId: "5373251851074415873" },
-  brainstorm: { emoji: "💡", customEmojiId: "5312536423851630001" },
-  done: { emoji: "✅", customEmojiId: "5237699328843200968" },
-  agent: { emoji: "🤖", customEmojiId: "5309832892262654231" },
-  thinking: { emoji: "🧠", customEmojiId: "5237889595894414384" },
-} as const;
-type TelegramTopicIconPreset = keyof typeof TELEGRAM_TOPIC_ICON_PRESETS;
-
 function shellQuote(value: string): string {
   return `'${value.replace(/'/g, "'\\''")}'`;
 }
@@ -2525,7 +2454,7 @@ function maybeRerenderSlidesPdfMedia(media: unknown): string | null {
   const workspaceRoot = media.slice(0, markerIndex);
   const [deckId] = media.slice(markerIndex + marker.length).split(path.sep);
   if (!workspaceRoot || !deckId) return null;
-  const manifestPath = path.join(workspaceRoot, ".claw", "slides", "decks", `${deckId}.json`);
+  const manifestPath = resolveClawPersistentSurfacePath("claw.workspace.slides", workspaceRoot, "decks", `${deckId}.json`);
   if (!fs.existsSync(manifestPath)) return null;
   let deck: { slides?: Array<{ image?: { src?: string } }>; outputs?: Array<Record<string, unknown>> };
   try {
@@ -2893,17 +2822,6 @@ function splitTelegramMessage(text: string, maxLength = 3900): string[] {
   if (remaining) chunks.push(remaining);
   return chunks;
 }
-
-const TELEGRAM_CODEX_ATTACHMENT_INSTRUCTIONS = [
-  "Telegram delivery supports photos, videos, audio, animations, and documents when you have a Telegram file_id, an HTTPS URL, or a local file path generated in the active workspace.",
-  "If the user asks you to send a photo or file, do not say this session cannot send attachments just because the reply is mediated through Telegram.",
-  "If the user asks for a presentation or slides, prefer the local `claw slides` CLI: create a deck, add slides with layouts, validate it, render a PDF first, and attach the rendered PDF path as a document. Render PPTX/HTML/PNG too only when the user asks for them or you need visual debugging.",
-  "Use this slide CLI syntax directly without exploratory help calls: `claw slides create \"Title\" --theme executive`; `claw slides add <deck> --layout title --heading \"...\" --subtitle \"...\"`; `claw slides add <deck> --layout title-bullets --heading \"...\" --bullet \"...\" --bullet \"...\"`; `claw slides add <deck> --layout image-left --heading \"...\" --body \"...\" --image ./path/to/image.svg`; `claw slides add <deck> --layout image-right --heading \"...\" --bullet \"...\" --image ./path/to/image.svg`; `claw slides add <deck> --layout full-bleed-image --heading \"...\" --subtitle \"...\" --image ./path/to/image.svg`; `claw slides add <deck> --layout comparison --heading \"...\" --left \"...\" --right \"...\"`; `claw slides add <deck> --layout metric-grid --heading \"...\" --metrics \"Label=Value\"`; `claw slides validate <deck>`; `claw slides render <deck> --format pdf`.",
-  "When building a deck, run `claw slides add` commands sequentially. Do not start multiple slide writes in parallel against the same deck.",
-  "Do not put literal `\\n` escape sequences into slide flags. Use repeated `--bullet` or `--step` flags for lists, and keep comparison text as short readable sentences.",
-  "For presentation requests, complete the deck and validate/render it before replying. Do not send progress updates as the final answer; the final Telegram action should attach the rendered PDF path as a document.",
-  "To attach media, include a final fenced block named clawjs-telegram-actions containing JSON: {\"actions\":[{\"type\":\"send_message\",\"mediaType\":\"photo|video|document|audio|animation\",\"media\":\"file_id_https_url_or_local_path\",\"text\":\"optional caption\"}]}.",
-].join(" ");
 
 type TelegramCodexMediaAction = {
   type: "send_message";
@@ -3446,45 +3364,6 @@ function buildImageCommonInput(flags: Record<string, string>) {
     topic: flags.topic,
     metadata: buildImageMetadata(flags),
   };
-}
-
-function parseImageOperation(value: string | undefined): ImageOperation | undefined {
-  if (value === "create" || value === "edit" || value === "import") {
-    return value;
-  }
-  return undefined;
-}
-
-function parseImageType(value: string | undefined): ImageType | undefined {
-  if (
-    value === "logo"
-    || value === "icon"
-    || value === "illustration"
-    || value === "photo"
-    || value === "mockup"
-    || value === "diagram"
-    || value === "texture"
-    || value === "screenshot"
-    || value === "avatar"
-    || value === "other"
-  ) {
-    return value;
-  }
-  return undefined;
-}
-
-function parseImageProvenance(value: string | undefined): ImageProvenance | undefined {
-  if (
-    value === "generated-by-system"
-    || value === "imported-codex"
-    || value === "imported-chatgpt"
-    || value === "imported-manual"
-    || value === "command-backend"
-    || value === "custom"
-  ) {
-    return value;
-  }
-  return undefined;
 }
 
 async function createCliClaw(
