@@ -45,6 +45,7 @@ import { CLAW_SECRETS_CAPABILITIES } from "./capabilities.ts";
 import { evaluateGovernance, type RiskTier } from "./governance.ts";
 import { SecretsSession } from "./session.ts";
 import { requireFreshHostReauth } from "./host-reauth.ts";
+import { requireHostAssertion } from "./host-assertion.ts";
 import { loadPlatformKey } from "./platform-key.ts";
 import { bootPluginRegistry } from "../plugins/loader.ts";
 import { redactString } from "../plugins/redaction.ts";
@@ -188,7 +189,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     const token = req.headers["x-claw-signed-host-token"];
     if (!config.signedHostToken) { void reply.code(403).send({ error: "signed host token not configured" }); return false; }
     if (token !== config.signedHostToken) { void reply.code(403).send({ error: "signed host authorization required" }); return false; }
-    return true;
+    return requireHostAssertion(req, reply, config.hostAssertionKeyBase64);
   }
 
   function includePublicValues(req: FastifyRequest, reply: FastifyReply): boolean {

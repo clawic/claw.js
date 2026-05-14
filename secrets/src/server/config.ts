@@ -14,6 +14,7 @@ export interface SecretsConfig {
   uiDistDir: string;
   adminToken?: string;
   signedHostToken?: string;
+  hostAssertionKeyBase64?: string;
   kekBase64?: string;
 }
 
@@ -31,6 +32,7 @@ export function loadSecretsConfig(input: Partial<SecretsConfig> = {}): SecretsCo
     ?? path.join(process.cwd(), "secrets", "ui", "dist");
   const adminToken = input.adminToken ?? process.env.CLAW_SECRETS_ADMIN_TOKEN ?? process.env.CLAW_SECRETS_TOKEN;
   const signedHostToken = input.signedHostToken ?? process.env.CLAW_SECRETS_SIGNED_HOST_TOKEN;
+  const hostAssertionKeyBase64 = input.hostAssertionKeyBase64 ?? process.env.CLAW_SECRETS_HOST_ASSERTION_KEY_BASE64;
   const kekBase64 = input.kekBase64 ?? process.env.CLAW_SECRETS_KEK_BASE64;
 
   fs.mkdirSync(dataDir, { recursive: true });
@@ -45,6 +47,7 @@ export function loadSecretsConfig(input: Partial<SecretsConfig> = {}): SecretsCo
     uiDistDir,
     ...(adminToken ? { adminToken } : {}),
     ...(signedHostToken ? { signedHostToken } : {}),
+    ...(hostAssertionKeyBase64 ? { hostAssertionKeyBase64 } : {}),
     ...(kekBase64 ? { kekBase64 } : {}),
   };
 }

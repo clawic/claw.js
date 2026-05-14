@@ -13,10 +13,12 @@ process.env.CLAW_SECRETS_PORT = "0"; // ephemeral
 process.env.CLAW_SECRETS_HOST = "127.0.0.1";
 process.env.CLAW_SECRETS_ADMIN_TOKEN = "smoke-admin-token";
 process.env.CLAW_SECRETS_SIGNED_HOST_TOKEN = "smoke-signed-host-token";
+process.env.CLAW_SECRETS_HOST_ASSERTION_KEY_BASE64 = Buffer.alloc(32, 9).toString("base64");
 process.env.CLAW_SECRETS_KEK_BASE64 = Buffer.alloc(32, 7).toString("base64");
 
 const { startSecretsServer } = await import("../src/server/app.ts");
 const { decryptBackup } = await import("../src/server/backup.ts");
+const { signHostAssertion } = await import("../src/server/host-assertion.ts");
 
 const { app, config } = await startSecretsServer({});
 const addr = app.server.address();
@@ -32,7 +34,15 @@ function ko(name, e) { console.error(`  ✗ ${name}: ${typeof e === "string" ? e
 async function fetchJson(url, init = {}) {
   const headers = { ...(init.headers ?? {}) };
   if (init.body !== undefined) headers["Content-Type"] = "application/json";
-  const res = await fetch(url, { ...init, headers });
+  if (headers["x-claw-signed-host-token"] && !headers["x-claw-secrets-host-assertion"] && init.hostAssertion !== false) {
+    headers["x-claw-secrets-host-assertion"] = signHostAssertion({
+      keyBase64: process.env.CLAW_SECRETS_HOST_ASSERTION_KEY_BASE64,
+      method: init.method ?? "GET",
+      path: new URL(url).pathname,
+    });
+  }
+  const { hostAssertion, ...fetchInit } = init;
+  const res = await fetch(url, { ...fetchInit, headers });
   let body;
   try { body = await res.json(); } catch { body = null; }
   return { status: res.status, ok: res.ok, body };
@@ -51,6 +61,14 @@ const setupWithoutHost = await fetchJson(`${base}/v1/secrets/setup`, {
   body: JSON.stringify({ password: "master-pw" }),
 });
 if (setupWithoutHost.status === 403) ok("setup requires signed host"); else ko("setup requires signed host", setupWithoutHost.body);
+
+const setupWithoutAssertion = await fetchJson(`${base}/v1/secrets/setup`, {
+  method: "POST",
+  headers: signedHostHeaders,
+  body: JSON.stringify({ password: "master-pw" }),
+  hostAssertion: false,
+});
+if (setupWithoutAssertion.status === 403) ok("setup requires signed host assertion"); else ko("setup requires signed host assertion", setupWithoutAssertion.body);
 
 // Secrets setup.
 const setup = await fetchJson(`${base}/v1/secrets/setup`, {

@@ -1,6 +1,6 @@
 import { startSecretsServer } from "../server/app.ts";
 
-async function readBootstrapConfigFromStdin(): Promise<{ adminToken?: string; signedHostToken?: string; kekBase64?: string }> {
+async function readBootstrapConfigFromStdin(): Promise<{ adminToken?: string; signedHostToken?: string; hostAssertionKeyBase64?: string; kekBase64?: string }> {
   if (process.env.CLAW_SECRETS_BOOTSTRAP_STDIN !== "1") return {};
   const chunks: Buffer[] = [];
   for await (const chunk of process.stdin) {
@@ -8,11 +8,17 @@ async function readBootstrapConfigFromStdin(): Promise<{ adminToken?: string; si
   }
   const raw = Buffer.concat(chunks).toString("utf8").trim();
   if (!raw) throw new Error("CLAW_SECRETS_BOOTSTRAP_STDIN was set but no bootstrap payload was received");
-  const parsed = JSON.parse(raw) as { adminToken?: unknown; signedHostToken?: unknown; kekBase64?: unknown };
+  const parsed = JSON.parse(raw) as { adminToken?: unknown; signedHostToken?: unknown; hostAssertionKeyBase64?: unknown; kekBase64?: unknown };
   const adminToken = typeof parsed.adminToken === "string" && parsed.adminToken.length > 0 ? parsed.adminToken : undefined;
   const signedHostToken = typeof parsed.signedHostToken === "string" && parsed.signedHostToken.length > 0 ? parsed.signedHostToken : undefined;
+  const hostAssertionKeyBase64 = typeof parsed.hostAssertionKeyBase64 === "string" && parsed.hostAssertionKeyBase64.length > 0 ? parsed.hostAssertionKeyBase64 : undefined;
   const kekBase64 = typeof parsed.kekBase64 === "string" && parsed.kekBase64.length > 0 ? parsed.kekBase64 : undefined;
-  return { ...(adminToken ? { adminToken } : {}), ...(signedHostToken ? { signedHostToken } : {}), ...(kekBase64 ? { kekBase64 } : {}) };
+  return {
+    ...(adminToken ? { adminToken } : {}),
+    ...(signedHostToken ? { signedHostToken } : {}),
+    ...(hostAssertionKeyBase64 ? { hostAssertionKeyBase64 } : {}),
+    ...(kekBase64 ? { kekBase64 } : {}),
+  };
 }
 
 const args = process.argv.slice(2);
@@ -36,7 +42,7 @@ if (flags.workspace && !process.env.CLAW_SECRETS_DATA_DIR && !process.env.CLAW_S
 if (flags["status-file"]) overrides.statusFile = flags["status-file"];
 
 const bootstrapConfig = await readBootstrapConfigFromStdin();
-if (bootstrapConfig.adminToken || bootstrapConfig.signedHostToken || bootstrapConfig.kekBase64) {
+if (bootstrapConfig.adminToken || bootstrapConfig.signedHostToken || bootstrapConfig.hostAssertionKeyBase64 || bootstrapConfig.kekBase64) {
   overrides.config = { ...(overrides.config ?? {}), ...bootstrapConfig };
 }
 
