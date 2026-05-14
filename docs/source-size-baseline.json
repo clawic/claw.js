@@ -9,7 +9,7 @@
     },
     "packages/clawjs-node/src/create-claw.ts": {
       "lines": 3304,
-      "reason": "Claw runtime assembly after media, generation, channel runtime, and skill/provider helper extraction; keep new runtime domains in focused modules."
+      "reason": "Existing Claw runtime assembly after media/session, generation/image, skill/provider, channel runtime, content, and IoT extraction; keep shrinking via focused facades before expanding."
     },
     "packages/clawjs/src/index.test.ts": {
       "lines": 1535,
