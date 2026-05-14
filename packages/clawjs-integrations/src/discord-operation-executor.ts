@@ -310,7 +310,7 @@ export function buildDiscordOperationRequest(
         headers: auditHeaders(headers, values),
         body: {},
         bodyValue: requiredJsonArray(values.positions, "positions"),
-        responseSchema: { type: "object" },
+        responseSchema: { type: "null" },
       };
     case "get-guild-template":
       return getPlan(`guilds/templates/${templateCode(values)}`, auth, headers, { type: "object", requiredPaths: ["code", "name", "source_guild_id"] });
