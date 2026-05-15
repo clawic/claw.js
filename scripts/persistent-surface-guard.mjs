@@ -139,7 +139,8 @@ const rules = [
 ];
 
 function isBuilderFile(filePath, body) {
-  return /(?:clawPersistentSurface|clawStableSurface|ClawixPersistentSurface|PersistentSurfaceRegistry|StableSurfaceRegistry)/.test(body)
+  return body.includes("@persistent-surface-wrapper")
+    || /(?:clawPersistentSurface|clawStableSurface|ClawixPersistentSurface|PersistentSurfaceRegistry|StableSurfaceRegistry)/.test(body)
     || filePath.endsWith("persistent-surface-guard.mjs");
 }
 
