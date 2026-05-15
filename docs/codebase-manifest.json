@@ -36,11 +36,11 @@
     ]
   },
   "summary": {
-    "files": 2839,
-    "tests": 393,
+    "files": 2840,
+    "tests": 394,
     "entrypoints": 160,
     "languages": {
-      "typescript": 2641,
+      "typescript": 2642,
       "javascript": 108,
       "swift": 90
     }
@@ -59154,6 +59154,20 @@
       ]
     },
     {
+      "path": "packages/clawjs-core/src/schemas-report.test.ts",
+      "language": "typescript",
+      "lines": 96,
+      "test": true,
+      "entrypoint": false,
+      "imports": [
+        "./schemas-report.ts",
+        "node:assert/strict",
+        "vitest"
+      ],
+      "exports": [],
+      "declarations": []
+    },
+    {
       "path": "packages/clawjs-core/src/schemas-report.ts",
       "language": "typescript",
       "lines": 163,
@@ -97704,7 +97718,7 @@
     {
       "path": "packages/clawjs/src/cli-report.test.ts",
       "language": "typescript",
-      "lines": 336,
+      "lines": 375,
       "test": true,
       "entrypoint": false,
       "imports": [

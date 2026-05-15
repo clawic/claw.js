@@ -126,6 +126,10 @@ test("report routes features, feedback, translations, and security to the approv
   const securityPayload = parsePayload<{ report: { destination: string; labels: string[] } }>(security.stdout);
   assert.equal(securityPayload.data.report.destination, "private_security_advisory");
   assert.equal(securityPayload.data.report.labels.includes("privacy:private-security"), true);
+
+  const forcedPublicSecurity = await runCliCapture(["report", "draft", "Forced public security", "--workspace", workspace, "--kind", "security", "--destination", "github_issue", "--impact", "credential exposure", "--json"], workspace);
+  const forcedSecurityPayload = parsePayload<{ report: { destination: string } }>(forcedPublicSecurity.stdout);
+  assert.equal(forcedSecurityPayload.data.report.destination, "private_security_advisory");
 });
 
 test("report dedupe recommends commenting on the canonical draft", async () => {
@@ -190,6 +194,41 @@ test("report templates expose the closed taxonomy and Discussion categories", as
   const payload = parsePayload<{ discussionCategories: string[]; labels: { routing: string[] } }>(result.stdout);
   assert.deepEqual(payload.data.discussionCategories, ["Ideas", "Feedback"]);
   assert.equal(payload.data.labels.routing.includes("route:security-advisory"), true);
+});
+
+test("report routes ClawJS and Clawix repositories explicitly", async () => {
+  const workspace = tempWorkspace();
+  const clawix = await runCliCapture([
+    "report",
+    "bug",
+    "Host approval panel fails",
+    "--workspace",
+    workspace,
+    "--repo",
+    "clawix",
+    "--component",
+    "host",
+    "--observed",
+    "Approval sheet does not open",
+    "--expected",
+    "Approval sheet opens",
+    "--repro",
+    "open Clawix approval sheet",
+    "--json",
+  ], workspace);
+  const created = parsePayload<{ report: { id: string; repository: string } }>(clawix.stdout);
+  assert.equal(created.data.report.repository, "clawix");
+
+  const submit = await runCliCapture(["report", "submit", created.data.report.id, "--workspace", workspace, "--confirm", "--dry-run", "--json"], workspace);
+  const payload = parsePayload<{ submissionPlan: { repository: string; values: { owner: string; repo: string } } }>(submit.stdout);
+  assert.equal(payload.data.submissionPlan.repository, "clawic/clawix");
+  assert.equal(payload.data.submissionPlan.values.owner, "clawic");
+  assert.equal(payload.data.submissionPlan.values.repo, "clawix");
+
+  const listed = await runCliCapture(["report", "status", "--workspace", workspace, "--repo", "clawix", "--json"], workspace);
+  const status = parsePayload<{ reports: Array<{ repository: string }> }>(listed.stdout);
+  assert.equal(status.data.reports.length, 1);
+  assert.equal(status.data.reports[0]?.repository, "clawix");
 });
 
 test("report submit dry-run plans Claw GitHub connector operations", async () => {
