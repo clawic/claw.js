@@ -1439,7 +1439,7 @@ export function usage(binName: string, group: string): string {
     case "design":
       return `Usage: ${binName} design list|upsert [--json]`;
     case "agents": return `Usage: ${binName} agents list|get|upsert|delete [--json]`;
-    case "skills": return `Usage: ${binName} skills list|upsert [--json]`;
+    case "skills": return `Usage: ${binName} skills list|get|upsert|delete [--json]`;
     case "personalities": return `Usage: ${binName} personalities list|get|upsert|delete [--json]`;
     case "skill-collections": return `Usage: ${binName} skill-collections list|get|upsert|delete [--json]`;
     case "connections": return `Usage: ${binName} connections list|get|upsert|delete [--json]`;

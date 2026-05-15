@@ -204,7 +204,7 @@ function shouldHandleV1DataCommand(group: string | undefined, command: string | 
     apps: new Set(["list", "upsert", "help"]),
     design: new Set(["list", "upsert", "help"]),
     agents: new Set(["list", "get", "upsert", "delete", "help"]),
-    skills: new Set(["upsert", "help"]),
+    skills: new Set(["list", "get", "upsert", "delete", "help"]),
     personalities: new Set(["list", "get", "upsert", "delete", "help"]),
     "skill-collections": new Set(["list", "get", "upsert", "delete", "help"]),
     connections: new Set(["list", "get", "upsert", "delete", "help"]),
@@ -1621,9 +1621,19 @@ function runDesignCommand(input: V1DataCliInput, store: DatabaseServiceStore): n
 function runSkillsCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
   const command = input.positionals[1];
   if (command === "list") {
-    const rows = store.sqlite.prepare("SELECT * FROM skills ORDER BY kind, name").all();
+    const kind = input.flags.kind;
+    const rows = kind
+      ? store.sqlite.prepare("SELECT * FROM skills WHERE kind = ? ORDER BY kind, name").all(kind)
+      : store.sqlite.prepare("SELECT * FROM skills ORDER BY kind, name").all();
     writeSuccess(input, { items: rows.map(normalizeDbRow) });
     return V1_DATA_EXIT_OK;
+  }
+  if (command === "get") {
+    const slug = input.flags.slug || input.positionals[2];
+    if (!slug) return usageError(input, "Usage: claw skills get SLUG [--json]");
+    const row = store.sqlite.prepare("SELECT * FROM skills WHERE slug = ?").get(slug);
+    writeSuccess(input, row ? normalizeDbRow(row) : null);
+    return row ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
   if (command === "upsert") {
     const slug = input.flags.slug || input.positionals[2];
@@ -1640,6 +1650,13 @@ function runSkillsCommand(input: V1DataCliInput, store: DatabaseServiceStore): n
         export_path = excluded.export_path, updated_at = excluded.updated_at
     `).run(input.flags.id || `skill-${slug}`, slug, input.flags.kind || "skill", name, body, input.flags.scope ? JSON.stringify(JSON.parse(input.flags.scope)) : "{}", JSON.stringify(secretRefs), input.flags.metadata ? JSON.stringify(JSON.parse(input.flags.metadata)) : "{}", input.flags["export-path"] || null, now, now);
     writeSuccess(input, { slug, name, secretRefs, updatedAt: now });
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "delete") {
+    const slug = input.flags.slug || input.positionals[2];
+    if (!slug) return usageError(input, "Usage: claw skills delete SLUG [--json]");
+    const changes = store.sqlite.prepare("DELETE FROM skills WHERE slug = ?").run(slug).changes;
+    writeSuccess(input, { slug, deleted: changes > 0 });
     return V1_DATA_EXIT_OK;
   }
   return usageError(input, usage(input.binName, "skills"));

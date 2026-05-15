@@ -240,6 +240,13 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
       cwd,
     }), CLI_EXIT_OK);
     assert.equal((parseCliData(skillStdout.getOutput()) as { secretRefs: unknown }).secretRefs, "[REDACTED]");
+    const skillGetStdout = captureStream();
+    assert.equal(await runCli(["skills", "get", "deploy", "--json"], {
+      stdout: skillGetStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    assert.equal((parseCliData(skillGetStdout.getOutput()) as { slug: string; body: string }).body, "Use deployment APIs by reference");
 
     const connectionStdout = captureStream();
     assert.equal(await runCli(["connections", "upsert", "github", "--provider", "github", "--label", "GitHub", "--secret-ref", "vault://connections/github", "--json"], {
@@ -397,6 +404,13 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
     } finally {
       main.close();
     }
+    const skillDeleteStdout = captureStream();
+    assert.equal(await runCli(["skills", "delete", "deploy", "--json"], {
+      stdout: skillDeleteStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    assert.equal((parseCliData(skillDeleteStdout.getOutput()) as { slug: string; deleted: boolean }).deleted, true);
     assert.equal(fs.existsSync(path.join(tempRoot, "home", "agents", "agent-ops", "agent.yaml")), true);
     assert.equal(fs.existsSync(path.join(tempRoot, "home", "personalities", "personality.review", "personality.yaml")), true);
     assert.equal(fs.existsSync(path.join(tempRoot, "home", "skill-collections", "collection.review", "collection.yaml")), true);
