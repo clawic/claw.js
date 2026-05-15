@@ -1542,17 +1542,6 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       source: registrySource,
       surfaceClass: "config",
     })),
-    clawPersistentSurface.path({
-      id: "claw.legacy.workspace.clawjs",
-      kind: "legacyPath",
-      name: "Legacy pre-public workspace root",
-      path: ".clawjs",
-      storageClass: "workspace",
-      canonicality: "legacyReadOnly",
-      lifecycle: "legacy",
-      source: registrySource,
-      warnings: ["New canonical workspace writes must use .claw/."],
-    }),
   ],
 };
 
