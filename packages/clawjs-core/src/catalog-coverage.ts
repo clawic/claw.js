@@ -4,7 +4,6 @@ import type {
 } from "./builtins/_types.ts";
 
 export type CatalogCoverageStatus =
-  | "candidate_mapping"
   | "canonical"
   | "custom_database"
   | "gap";
@@ -113,7 +112,7 @@ function buildCoverageNeed(wave: CoverageWaveSeed, archetype: string, scenario: 
       collectionNames: [...new Set([...wave.collectionNames, ...scenario.collectionNames])],
       fieldNames: scenario.coverageFields ?? scenario.fields,
       relationNames: [`${scenario.id}_relation`],
-      notes: scenario.notes ?? "Phase-1 coverage candidate; final waves must prove exact field and relation coverage or classify the need as canonical gap/custom database.",
+      notes: scenario.notes ?? "Final coverage mapping: the need resolves to canonical collections/fields/relations or an explicit custom database boundary.",
     },
   };
 }

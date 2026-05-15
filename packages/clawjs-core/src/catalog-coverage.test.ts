@@ -107,7 +107,7 @@ test("catalog coverage mappings point to existing canonical or custom collection
       need.coverage.status === "canonical" || need.coverage.status === "custom_database",
       `${need.id} uses non-final coverage status ${need.coverage.status}`,
     );
-    assert.ok(need.coverage.collectionNames.length > 0, `${need.id} has no candidate collections`);
+    assert.ok(need.coverage.collectionNames.length > 0, `${need.id} has no mapped collections`);
     for (const collectionName of need.coverage.collectionNames) {
       assert.ok(
         KNOWN_COLLECTION_NAMES.has(collectionName),
@@ -137,7 +137,7 @@ test("catalog coverage mappings name fields and relation semantics", () => {
   }
 });
 
-test("candidate coverage mappings include built-in relation examples for each required semantic kind", () => {
+test("canonical coverage mappings include built-in relation examples for each required semantic kind", () => {
   for (const need of CATALOG_COVERAGE_NEEDS) {
     if (need.coverage.status === "custom_database") continue;
 
