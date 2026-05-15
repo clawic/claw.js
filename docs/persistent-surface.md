@@ -730,6 +730,8 @@ flowchart TD
   claw_database_core --> claw_database_core_index_data_registry_domain_idx
   claw_database_core_index_app_projects_path_idx["app_projects_path_idx\nindex"]
   claw_database_core --> claw_database_core_index_app_projects_path_idx
+  claw_database_core_index_app_projects_resource_id_idx["app_projects_resource_id_idx\nindex"]
+  claw_database_core --> claw_database_core_index_app_projects_resource_id_idx
   claw_database_core_index_app_sidebar_snapshots_order_idx["app_sidebar_snapshots_order_idx\nindex"]
   claw_database_core --> claw_database_core_index_app_sidebar_snapshots_order_idx
   claw_database_core_index_signals_variables_vertical_idx["signals_variables_vertical_idx\nindex"]
@@ -1194,6 +1196,7 @@ flowchart TD
 | `claw.database.core.table.session_index_fts` | table | persistent | claw |  |  |  | `` |
 | `claw.database.core.index.data_registry_domain_idx` | index | persistent | claw |  |  |  | `` |
 | `claw.database.core.index.app_projects_path_idx` | index | persistent | claw |  |  |  | `` |
+| `claw.database.core.index.app_projects_resource_id_idx` | index | persistent | claw |  |  |  | `` |
 | `claw.database.core.index.app_sidebar_snapshots_order_idx` | index | persistent | claw |  |  |  | `` |
 | `claw.database.core.index.signals_variables_vertical_idx` | index | persistent | claw |  |  |  | `` |
 | `claw.database.core.index.signals_observations_variable_time_idx` | index | persistent | claw |  |  |  | `` |

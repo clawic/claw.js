@@ -30,6 +30,7 @@ import type {
 const SCHEMA_DDL = `
   CREATE TABLE IF NOT EXISTS projects (
     id                 TEXT PRIMARY KEY,
+    resource_id        TEXT,
     display_name       TEXT NOT NULL,
     path               TEXT NOT NULL UNIQUE,
     hidden             INTEGER NOT NULL DEFAULT 0,
@@ -39,6 +40,7 @@ const SCHEMA_DDL = `
     updated_at         INTEGER NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_projects_hidden_archived ON projects(hidden, archived, sort_rank, updated_at DESC);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_projects_resource_id ON projects(resource_id) WHERE resource_id IS NOT NULL;
 
   CREATE TABLE IF NOT EXISTS sessions (
     id                 TEXT PRIMARY KEY,
@@ -164,6 +166,7 @@ interface MessageRow {
 
 interface ProjectRow {
   id: string;
+  resource_id: string | null;
   display_name: string;
   path: string;
   hidden: number;
@@ -211,6 +214,7 @@ function displayNameFromPath(projectPath: string): string {
 function rowToProject(row: ProjectRow): ProjectRecord {
   return {
     id: row.id,
+    resourceId: row.resource_id,
     displayName: row.display_name,
     path: row.path,
     hidden: row.hidden === 1,
@@ -294,6 +298,8 @@ export class SessionsServiceStore {
     this.ensureColumn("sessions", "runtime_adapter", "TEXT");
     this.ensureColumn("sessions", "runtime_session_id", "TEXT");
     this.ensureColumn("sessions", "project_id", "TEXT REFERENCES projects(id) ON DELETE SET NULL");
+    this.ensureColumn("projects", "resource_id", "TEXT");
+    this.db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_projects_resource_id ON projects(resource_id) WHERE resource_id IS NOT NULL").run();
     this.ensureColumn("session_messages", "timeline", "TEXT");
     this.ensureColumn("session_messages", "streaming_state", "TEXT");
   }
@@ -307,15 +313,17 @@ export class SessionsServiceStore {
   createProject(input: CreateProjectInput): ProjectRecord {
     const normalizedPath = normalizeProjectPath(input.path);
     const now = input.createdAt ?? Date.now();
-    const id = input.id ?? stableProjectIdFromPath(normalizedPath);
+    const resourceId = input.resourceId?.trim() || null;
+    const id = input.id ?? resourceId ?? stableProjectIdFromPath(normalizedPath);
     const displayName = input.displayName?.trim() || displayNameFromPath(normalizedPath);
     this.db.prepare(`
       INSERT INTO projects (
-        id, display_name, path, hidden, archived, sort_rank, created_at, updated_at
+        id, resource_id, display_name, path, hidden, archived, sort_rank, created_at, updated_at
       ) VALUES (
-        @id, @display_name, @path, @hidden, @archived, @sort_rank, @created_at, @updated_at
+        @id, @resource_id, @display_name, @path, @hidden, @archived, @sort_rank, @created_at, @updated_at
       )
       ON CONFLICT(id) DO UPDATE SET
+        resource_id  = excluded.resource_id,
         display_name = excluded.display_name,
         path         = excluded.path,
         hidden       = excluded.hidden,
@@ -324,6 +332,7 @@ export class SessionsServiceStore {
         updated_at   = excluded.updated_at
     `).run({
       id,
+      resource_id: resourceId,
       display_name: displayName,
       path: normalizedPath,
       hidden: input.hidden ? 1 : 0,
@@ -348,6 +357,11 @@ export class SessionsServiceStore {
     return row ? rowToProject(row) : null;
   }
 
+  getProjectByResourceId(resourceId: string): ProjectRecord | null {
+    const row = this.db.prepare("SELECT * FROM projects WHERE resource_id = ?").get(resourceId) as ProjectRow | undefined;
+    return row ? rowToProject(row) : null;
+  }
+
   listProjects(filter: ListProjectsFilter = {}): ListProjectsResult {
     const conditions: string[] = [];
     const params: Record<string, unknown> = {};
@@ -368,10 +382,12 @@ export class SessionsServiceStore {
     if (!existing) return null;
     const nextPath = patch.path !== undefined ? normalizeProjectPath(patch.path) : existing.path;
     const nextName = patch.displayName !== undefined ? patch.displayName.trim() : existing.displayName;
+    const nextResourceId = patch.resourceId !== undefined ? patch.resourceId?.trim() || null : existing.resourceId;
     if (!nextName) throw new Error("updateProject: displayName cannot be empty");
     this.db.prepare(`
       UPDATE projects
-      SET display_name = @display_name,
+      SET resource_id = @resource_id,
+          display_name = @display_name,
           path = @path,
           hidden = @hidden,
           archived = @archived,
@@ -380,6 +396,7 @@ export class SessionsServiceStore {
       WHERE id = @id
     `).run({
       id,
+      resource_id: nextResourceId,
       display_name: nextName,
       path: nextPath,
       hidden: (patch.hidden ?? existing.hidden) ? 1 : 0,

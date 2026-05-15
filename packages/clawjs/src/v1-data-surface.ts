@@ -301,13 +301,9 @@ export const v1MainSchemaSurfaceNodes = [
     databaseId: v1MainDatabaseId,
     source: v1MainSchemaSource,
   }),
-  clawPersistentSurface.index({
-    id: `claw.database.core.index.app_projects_path_idx`,
-    name: "app_projects_path_idx",
-    parentId: v1MainDatabaseId,
-    databaseId: v1MainDatabaseId,
-    source: v1MainSchemaSource,
-  }),
+  ...["app_projects_path_idx", "app_projects_resource_id_idx"].map((name) => clawPersistentSurface.index({
+    id: `claw.database.core.index.${name}`, name, parentId: v1MainDatabaseId, databaseId: v1MainDatabaseId, source: v1MainSchemaSource,
+  })),
   clawPersistentSurface.index({
     id: `claw.database.core.index.app_sidebar_snapshots_order_idx`,
     name: "app_sidebar_snapshots_order_idx",
@@ -813,6 +809,7 @@ export const V1_MAIN_SCHEMA_SQL = String.raw`
     );
     CREATE TABLE IF NOT EXISTS app_projects (
       id TEXT PRIMARY KEY,
+      resource_id TEXT,
       name TEXT NOT NULL,
       path TEXT NOT NULL DEFAULT '',
       sort_order INTEGER,
@@ -822,6 +819,7 @@ export const V1_MAIN_SCHEMA_SQL = String.raw`
       updated_at TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS app_projects_path_idx ON app_projects(path);
+    CREATE INDEX IF NOT EXISTS app_projects_resource_id_idx ON app_projects(resource_id) WHERE resource_id IS NOT NULL;
     CREATE TABLE IF NOT EXISTS app_pinned_threads (
       thread_id TEXT PRIMARY KEY,
       sort_order INTEGER NOT NULL,

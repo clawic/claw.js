@@ -9,6 +9,7 @@ export type MessageStreamingState = "pending" | "streaming" | "complete" | "inte
 
 export interface ProjectRecord {
   id: string;
+  resourceId: string | null;
   displayName: string;
   path: string;
   hidden: boolean;
@@ -138,6 +139,7 @@ export interface AppendMessageInput {
 
 export interface CreateProjectInput {
   id?: string;
+  resourceId?: string | null;
   displayName?: string;
   path: string;
   hidden?: boolean;
@@ -147,6 +149,7 @@ export interface CreateProjectInput {
 }
 
 export interface UpdateProjectInput {
+  resourceId?: string | null;
   displayName?: string;
   path?: string;
   hidden?: boolean;

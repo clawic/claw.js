@@ -307,14 +307,14 @@ function runAppStateCommand(input: V1DataCliInput, store: DatabaseServiceStore):
       const now = nowIso();
       const name = input.flags.name || id;
       const projectPath = input.flags.path || "";
-      const sortOrder = input.flags["sort-order"] !== undefined ? Number(input.flags["sort-order"]) : null;
+      const resourceId = input.flags["resource-id"] || input.flags.resourceId || null, sortOrder = input.flags["sort-order"] !== undefined ? Number(input.flags["sort-order"]) : null;
       store.sqlite.prepare(`
-        INSERT INTO app_projects (id, name, path, sort_order, hidden, metadata_json, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO app_projects (id, resource_id, name, path, sort_order, hidden, metadata_json, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET name = excluded.name, path = excluded.path,
-          sort_order = COALESCE(excluded.sort_order, app_projects.sort_order),
+          resource_id = COALESCE(excluded.resource_id, app_projects.resource_id), sort_order = COALESCE(excluded.sort_order, app_projects.sort_order),
           hidden = excluded.hidden, metadata_json = excluded.metadata_json, updated_at = excluded.updated_at
-      `).run(id, name, projectPath, sortOrder, truthy(input.flags.hidden) ? 1 : 0, input.flags.metadata || "{}", now, now);
+      `).run(id, resourceId, name, projectPath, sortOrder, truthy(input.flags.hidden) ? 1 : 0, input.flags.metadata || "{}", now, now);
       writeSuccess(input, normalizeDbRow(store.sqlite.prepare("SELECT * FROM app_projects WHERE id = ?").get(id) as JsonRecord));
       return V1_DATA_EXIT_OK;
     }

@@ -47,6 +47,29 @@ test("V2 main data paths default to the Claw home data namespace", () => {
   );
 });
 
+test("app-state projects persist opaque resource ids alongside paths", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-app-state-resource-"));
+  let restoreEnv: (() => void) | undefined;
+  const dataRoot = useIsolatedMainData({ after: (fn) => { restoreEnv = fn; } }, workspaceRoot);
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-app-state-resource-cwd-"));
+  const stdout = captureStream();
+  assert.equal(await runInternalV1Cli(["app-state", "project", "upsert", "proj-local", "--resource-id", "res_projectxyz", "--name", "Project", "--path", cwd, "--json"], {
+    stdout: stdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+  const project = parseCliData(stdout.getOutput()) as { id: string; resourceId: string; path: string };
+  assert.equal(project.resourceId, "res_projectxyz");
+  const sqlite = new Database(path.join(dataRoot, "core.sqlite"));
+  try {
+    assert.deepEqual(sqlite.prepare("SELECT resource_id, path FROM app_projects WHERE id = ?").get("proj-local"), { resource_id: "res_projectxyz", path: cwd });
+  } finally {
+    sqlite.close();
+    restoreEnv?.();
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test("runCli manages V2 knowledge, notes, profile, business, and search domains in the main sqlite", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-data-"));
   await withPatchedEnv({

@@ -120,6 +120,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
       const body = readBody(request);
       const input: CreateProjectInput = {
         id: asString(body.id),
+        resourceId: asString(body.resourceId),
         displayName: asString(body.displayName),
         path: String(body.path ?? ""),
         hidden: asBool(body.hidden),
@@ -161,6 +162,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     const params = request.params as { id: string };
     const body = readBody(request);
     const patch: UpdateProjectInput = {
+      resourceId: typeof body.resourceId === "string" || body.resourceId === null ? body.resourceId : undefined,
       displayName: typeof body.displayName === "string" ? body.displayName : undefined,
       path: typeof body.path === "string" ? body.path : undefined,
       hidden: asBool(body.hidden),

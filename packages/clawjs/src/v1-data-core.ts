@@ -225,9 +225,9 @@ export function openMainDataStore(env: NodeJS.ProcessEnv = process.env): Databas
   ensureV1Collections(store);
   return store;
 }
-
 export function ensureV1MainSchema(sqlite: Database.Database): void {
   sqlite.exec(V1_MAIN_SCHEMA_SQL);
+  ensureColumn(sqlite, "app_projects", "resource_id", "TEXT");
   ensureColumn(sqlite, "signals_observations", "page_id", "TEXT");
   ensureColumn(sqlite, "agents", "secret_ref", "TEXT");
   ensureColumn(sqlite, "skills", "secret_refs_json", "TEXT NOT NULL DEFAULT '[]'");
