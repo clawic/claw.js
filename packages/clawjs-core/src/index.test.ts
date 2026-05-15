@@ -37,8 +37,11 @@ import {
   clawDomainOwnershipEntriesV1,
   clawDomainOwnershipMatrixV1,
   clawDomainSchema,
+  assertClawDomainSurfaceRegistryComplete,
   clawHostRegistrySchema,
   clawCliCommandRegistry,
+  clawDomainSurfaceRegistry,
+  clawDomainSurfaceRegistryVersion,
   clawJsonSchemasV1,
   agentRecordSchema,
   createCodexReadOnlySourceDescriptor,
@@ -50,10 +53,12 @@ import {
   eventRecordSchema,
   feedbackRecordSchema,
   findClawPersistentSurfaceNode,
+  findClawDomainSurfaceEntry,
   goalRecordSchema,
   handoffRecordSchema,
   incidentRecordSchema,
   listClawPersistentSurfaceNodes,
+  listClawDomainSurfaceEntries,
   linkedEntityRefSchema,
   segmentTextForTts,
   semanticPlanSchema,
@@ -296,6 +301,22 @@ test("resource registry exposes first-class resource kinds for closed domains", 
   for (const kind of requiredResourceKinds) {
     assert.equal(resourceKindSchema.safeParse(kind).success, true, `${kind} must be a v1 resource kind`);
   }
+});
+
+test("domain surface registry covers closed domain surfaces", () => {
+  assert.equal(clawDomainSurfaceRegistry.version, clawDomainSurfaceRegistryVersion);
+  assert.doesNotThrow(() => assertClawDomainSurfaceRegistryComplete());
+
+  const host = findClawDomainSurfaceEntry("host-boundary:signed-host");
+  assert.equal(host?.owner, "signed_host");
+  assert.equal(host?.status, "host_required");
+
+  const collections = listClawDomainSurfaceEntries({ kind: "collection" });
+  assert.equal(collections.some((entry) => entry.id === "collection:tasks"), true);
+  assert.equal(collections.every((entry) => entry.storageIds?.includes("claw.database.core")), true);
+
+  const signals = listClawDomainSurfaceEntries({ kind: "signal_vertical" });
+  assert.equal(signals.some((entry) => entry.modulePath === "modules/habits"), true);
 });
 
 test("persistent surface registry exposes framework and host storage nodes", () => {

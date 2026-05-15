@@ -1,5 +1,6 @@
 export * from "./agent_tools.ts";
 export * from "./domain-ownership.ts";
+export * from "./domain-surface-registry.ts";
 export * from "./errors.ts";
 export * from "./helpers.ts";
 export * from "./host-contracts.ts";
