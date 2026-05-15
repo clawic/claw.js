@@ -49,9 +49,9 @@ test("BIP-39: round-trip 32-byte entropy", () => {
 });
 
 test("BIP-39: mutating one word breaks the checksum", () => {
-  const mnemonic = generateMnemonic(32);
+  const mnemonic = entropyToMnemonicBip39(new Uint8Array(32));
   const tampered = mnemonic.split(" ");
-  tampered[0] = tampered[0] === "abandon" ? "ability" : "abandon";
+  tampered[23] = "abandon";
   assert.equal(validateMnemonic(tampered.join(" ")), false);
 });
 
