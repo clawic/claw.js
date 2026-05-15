@@ -1,0 +1,56 @@
+# Naming shape audit
+
+Status: initial report
+
+Date: 2026-05-15
+
+This is the living audit report for ADR 0013. The machine-readable source is
+`node scripts/naming-shape-check.mjs --json`; source-shape signals come from
+`node scripts/source-size-check.mjs --json`.
+
+## Current gate status
+
+- Critical naming failures: 0.
+- Naming warnings: 206.
+- Source-size warnings: 114.
+- Source-structure signals: 320.
+
+The current gate is intentionally critical-only. Warnings are cleanup inventory
+for staged rename/split work and must not be hidden by compressing code.
+
+## Largest current files
+
+- `packages/clawjs/src/index.ts` - 2001 lines.
+- `examples/showcase/src/app/settings/page.tsx` - 1996 lines.
+- `packages/clawjs-node/src/create-claw.test.ts` - 1994 lines.
+- `relay/src/server/db.ts` - 1982 lines.
+- `packages/clawjs-workspace/src/index.ts` - 1977 lines.
+- `packages/clawjs-node/src/create-claw.ts` - 1964 lines.
+- `examples/showcase/src/lib/e2e.ts` - 1953 lines.
+- `modules/erp/src/server/db.ts` - 1950 lines.
+- `memory/src/service.ts` - 1886 lines.
+- `examples/showcase/src/app/page.tsx` - 1876 lines.
+
+## Cleanup families
+
+- CLI/router and command handlers: keep `packages/clawjs/src/index.ts` from
+  growing by extracting command families before adding behavior.
+- Showcase UI/API: split settings, tasks, onboarding, locale, and route files
+  by tabs, adapters, fixtures, and server operations.
+- Runtime/workspace/session vocabulary: audit `threadId`, `chatId`, and
+  `sessionId` by contract boundary before renaming.
+- Integration/provider vocabulary: keep provider-native `chat` names only
+  where they mirror external APIs or fixtures.
+- Large database/server modules: split SQL builders, repositories, route
+  handlers, serializers, and fixtures by domain.
+- Broad symbols: review `Manager`, `Helper`, `Utils`, `Data`, and `Info` only
+  when a clearer domain + role name exists.
+
+## Validation snapshot
+
+- `npm run test:docs` passed after adding the new checks.
+- `node scripts/naming-shape-check.mjs` passed with warnings only.
+- `node scripts/source-size-check.mjs` passed with warnings/signals only.
+
+This report is not final completion evidence for the full goal. It is the
+baseline for the later broad cleanup and rename phases.
