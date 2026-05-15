@@ -7,7 +7,14 @@ website/public/demo-fixtures/
 examples/demo/node_modules/
 docs/.vitepress/cache/
 dist/
-.claude/
+.claude/*
+!.claude/skills/
+!.claude/skills/*/
+!.claude/skills/*/SKILL.md
+.codex/*
+!.codex/skills/
+!.codex/skills/*/
+!.codex/skills/*/SKILL.md
 examples/demo/.claude/
 .clawjs/
 .claw/.skills-v2.migrated

@@ -3,6 +3,7 @@ import path from "node:path";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const skillsDir = path.join(rootDir, "skills");
+const adapterRoots = [".codex/skills", ".claude/skills"];
 
 const requiredSkills = [
   "constitution-drift-audit",
@@ -73,6 +74,23 @@ for (const entry of fs.readdirSync(skillsDir, { withFileTypes: true })) {
     continue;
   }
   parseFrontmatter(fs.readFileSync(skillPath, "utf8"), path.relative(rootDir, skillPath));
+  for (const adapterRoot of adapterRoots) {
+    const adapterPath = path.join(rootDir, adapterRoot, entry.name, "SKILL.md");
+    const expectedTarget = `../../../skills/${entry.name}/SKILL.md`;
+    if (!fs.existsSync(adapterPath)) {
+      errors.push(`${adapterRoot}/${entry.name}/SKILL.md adapter is missing`);
+      continue;
+    }
+    const stat = fs.lstatSync(adapterPath);
+    if (!stat.isSymbolicLink()) {
+      errors.push(`${adapterRoot}/${entry.name}/SKILL.md must be a symlink to ${expectedTarget}`);
+      continue;
+    }
+    const target = fs.readlinkSync(adapterPath);
+    if (target !== expectedTarget) {
+      errors.push(`${adapterRoot}/${entry.name}/SKILL.md points to ${target}, expected ${expectedTarget}`);
+    }
+  }
 }
 
 if (errors.length > 0) {
