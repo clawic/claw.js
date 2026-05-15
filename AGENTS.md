@@ -1,78 +1,143 @@
 # AGENTS.md
 
-Instructions for humans and coding agents working in this repository.
+Compact operating entrypoint for humans and coding agents in this repository.
+Use this file as a router. Do not turn it into a long procedure manual.
 
-## Constitution (read this first)
+## Canon
 
-This project is governed by `CONSTITUTION.md` at the repository root. It defines mission, principles, red lines, and canonical vocabulary for ClawJS and the sister Clawix interface. When this file and the constitution disagree, the constitution wins. Any contributor or agent making non-trivial decisions about architecture, data, agents, UX, or integrations must have read it and apply it. The constitution file is identical to the one in the Clawix repository; keep them in sync when updating.
+- Highest authority: `CONSTITUTION.md`. Read it fully for major architecture,
+  product, data, agent, UX, security, or integration decisions. For smaller
+  changes, use the routed docs below and read only the relevant Constitution
+  sections when a tradeoff touches a principle.
+- Main router: `docs/decision-map.md`. It maps decision -> document ->
+  validation, and should be the first public document agents use to choose the
+  right source of truth.
+- Claude Code shim: `CLAUDE.md` must point back here and to the same canonical
+  docs. If `CLAUDE.md` and this file diverge, this file wins.
+- Public docs are product surface. Update docs, examples, generated manifests,
+  and tests with behavior changes.
 
-`STYLE.md` is the companion visual-language source for Clawix and ClawJS UI decisions. Read it before changing user-facing screens, chrome, visual components, or design tokens, and keep it aligned with the sister Clawix repository when updating shared product style.
+Read the relevant canonical docs before changing their surfaces:
 
-## Purpose
-
-- Treat this file as the operational entrypoint for the repo.
-- Treat `AGENTS.md` as the canonical repository instruction file. If a tool such as Claude Code looks for `CLAUDE.md`, that file must redirect back here and remain aligned with this file.
-- Treat `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `RELEASING.md`, `docs/git-workflow.md`, `docs/decision-map.md`, `docs/host-ownership.md`, `docs/data-storage-boundary.md`, `docs/canonical-data-catalog.md`, `docs/naming-style-guide.md`, `docs/adr/0001-claw-framework-host-boundary.md`, `docs/adr/0001-naming-and-stability-surfaces.md`, `docs/adr/0003-source-file-boundaries.md`, `docs/adr/0005-canonical-data-catalog.md`, and `tests/e2e/README.md` as source-of-truth references for deeper detail.
-- Before changing framework, host, storage, CLI, Clawix integration, permissions, grants, approvals, audit, data placement, naming style, public packages, routes, ports, domains, protocols, or domain ownership, read `docs/host-ownership.md`, `docs/data-storage-boundary.md`, `docs/naming-style-guide.md`, and the ADRs.
-- Before changing built-in collections, schemas, field names, aliases, relation fields, or canonical database catalog behavior, read `docs/canonical-data-catalog.md` and `docs/adr/0005-canonical-data-catalog.md`.
-- For agent-specific operational knowledge, review `agents/wiki/README.md` and the relevant pages under `agents/wiki/` before changing behavior or debugging repeated issues.
-- For host-dependent OpenClaw work, read `agents/wiki/openclaw.md` before changing runtime detection, installation, auth, or onboarding flows.
-- If a change affects public behavior, docs, examples, templates, or package surface, update the relevant docs and tests in the same patch.
-- Before adding large CLI, SDK, runtime, service, schema, state, or UI surfaces, read `docs/adr/0003-source-file-boundaries.md`. New hand-authored files at 1200+ lines need a split plan or a baseline exception; files above 2000 lines must not grow except for mechanical extraction or explicit architecture approval.
+- Framework and host ownership: `docs/host-ownership.md`,
+  `docs/adr/0001-claw-framework-host-boundary.md`
+- Storage and data placement: `docs/data-storage-boundary.md`
+- Naming and stable surfaces: `docs/naming-style-guide.md`,
+  `docs/adr/0001-naming-and-stability-surfaces.md`
+- Source file boundaries: `docs/adr/0003-source-file-boundaries.md`
+- Built-in collections and schemas: `docs/canonical-data-catalog.md`,
+  `docs/adr/0005-canonical-data-catalog.md`
+- Testing and validation: `docs/adr/0002-testing-architecture.md`,
+  `docs/adr/0006-integration-qa-lab.md`, `tests/e2e/README.md`
+- Stable surfaces and inspection: `docs/adr/0004-persistent-surface-registry-and-inspection.md`,
+  `docs/adr/0009-dual-human-programmatic-surfaces.md`
+- CLI and agent discovery: `docs/adr/0007-cli-agent-interface.md`,
+  `docs/adr/0010-cli-jit-guidance-actor-assertions-resource-registry.md`
+- Security and releases: `SECURITY.md`, `RELEASING.md`, `docs/git-workflow.md`
+- OpenClaw host-dependent debugging: `agents/wiki/openclaw.md`
 
 ## Repository Shape
 
-This is a Node.js monorepo for ClawJS, a local-first Agent OS with an SDK,
-CLI, runtime adapters, workspace tooling, horizontal services, capability
-modules, examples, and a docs website.
+ClawJS is the framework and public agent surface: contracts, schemas,
+fixtures, canonical storage, domain APIs, the public `claw` CLI, SDK, services,
+MCP, Relay, skills, and reusable agent assets. Clawix is the sister native
+human interface and embedded signed host.
 
-Important top-level areas:
+Important areas:
 
 - `packages/`: published packages and scaffolding tools.
-- `runtime/`, `relay/`, `database/`, `bridge/`, `browser/`, `storage/`,
-  `sessions/`, `memory/`, `secrets/`, `audio/`, `time/`, `notify/`, `drive/`,
-  `content/`, `iot/`, `wiki/`, `execution/`, `delegation/`, `publishing/`,
-  `mcp/`, and `monitor/`: horizontal Agent OS systems.
-- `modules/`: optional domain capability packs. Do not put personal or
-  domain-specific verticals back in the repository root.
-- `integrations/`: provider and channel services such as Slack, Telegram,
-  email, Teams, WhatsApp, SMS, and webhooks.
-- `examples/demo/`: Next.js demo app used by the browser E2E suite.
-- `examples/mock/`: local mock helpers for demo workflows.
-- `assets/`: shared brand assets and shared UI fonts for internal dashboards
-  and operational web UIs.
-- `website/`: docs-site runtime wrapper for local preview and production builds.
-- `docs/`: the single Markdown source for product, reference, and workflow documentation.
-- `tests/e2e/`: canonical Playwright end-to-end suite.
-- `scripts/`: repo automation such as docs and packaging checks.
+- `runtime/`, `relay/`, `database/`, `sessions/`, `memory/`, `secrets/`,
+  `audio/`, `time/`, `notify/`, `drive/`, `content/`, `iot/`, `wiki/`,
+  `execution/`, `delegation/`, `publishing/`, `mcp/`, `monitor/`: horizontal
+  Agent OS systems.
+- `modules/`: optional domain capability packs.
+- `integrations/`: provider and channel integrations.
+- `examples/`, `website/`, `docs/`, `tests/e2e/`, `scripts/`: examples,
+  documentation, E2E coverage, and repository automation.
+- `skills/`: just-in-time agent workflows. Keep procedures here rather than in
+  always-on instructions when a task has clear triggers and steps.
 
-Key published packages:
+## Agent Discovery
 
-- `@clawjs/claw`: official SDK.
-- `@clawjs/cli`: official CLI.
-- `@clawjs/core`: shared contracts and schemas.
-- `@clawjs/workspace`: local-first workspace layer.
-- `@clawjs/node`: compatibility wrapper.
-- `@clawjs/openclaw-plugin` and `@clawjs/openclaw-context-engine`: OpenClaw runtime packages.
-- `create-claw-app`, `create-claw-agent`, `create-claw-server`, `create-claw-plugin`: scaffolding packages.
-- `eslint-config-claw`: shared ESLint preset.
-
-## Environment And Setup
-
-- Use Node.js `20` or `22`. The root `package.json` requires Node `>=20`.
-- Use the root workspace as the command entrypoint unless a task clearly belongs inside `examples/demo/` or `website/`.
-- The repo is validated locally with `npm`. Do not add GitHub Actions workflows or other automatic GitHub checks unless the maintainer explicitly reverses that policy.
-
-Bootstrap the full repository:
+For non-trivial questions or plans about framework behavior, contracts,
+storage, CLI, schemas, permissions, grants, approvals, audit, data placement,
+naming, package surfaces, routes, ports, protocols, or Clawix integration,
+start with a `claw` discovery pass when the CLI is available:
 
 ```bash
-npm ci
-npm --prefix examples/demo ci
-npm --prefix website ci
-npx playwright install --with-deps chromium
+claw search <topic> --json
+claw inspect commands|why|database|schemas|storage|codebase --json
+claw collections list --json
+claw collections <collection> schema --json
+claw db <collection> list|query --json
 ```
 
-Useful root commands:
+Treat source files as evidence after the CLI/registry map. If `claw` is not
+available in the environment, say so and use direct docs/source reads.
+
+Before asking a technical question, check the relevant canon. If asking is
+still needed, explain the meaning, consequences, tradeoffs, and recommended
+default.
+
+## Skills
+
+Use the smallest durable mechanism:
+
+- `AGENTS.md`: always-on routing, safety rules, and red lines.
+- Docs/playbooks: durable reference and workflows that humans also read.
+- `skills/<id>/SKILL.md`: task procedures loaded just in time.
+- Local/private overlays: maintainer-specific paths, launchers, signing, and
+  personal automation. Do not publish those details here.
+
+Shared ClawJS/Clawix architecture skills live in `skills/` and are projected
+into Clawix for agents that only open that repository. Required workflow skills
+include:
+
+- Constitution and ADR alignment: `constitution-drift-audit`,
+  `architecture-drift-repair`, `adr-to-guardrail`,
+  `decision-map-maintenance`
+- Stable surfaces: `naming-surface-audit`, `surface-registry-alignment`,
+  `cli-agent-surface-work`, `source-file-boundary-refactor`
+- Data and storage: `canonical-catalog-expansion`,
+  `data-storage-boundary-review`
+- Host, security, and validation: `host-boundary-review`,
+  `secrets-boundary-review`, `integration-qa-lab`,
+  `host-dependent-validation`, `performance-investigation`
+- Collaboration hygiene: `public-hygiene-review`, `docs-alignment-update`,
+  `code-review-risk`, `commit-hygiene-public`
+
+Design artifact skills also live under `skills/`: `style-extract`,
+`style-apply`, `template-render`, `brand-guidelines`, `theme-factory`,
+`canvas-design`.
+
+Run `node ./scripts/skills-check.mjs` after adding or changing skills.
+
+## Invariants
+
+- `claw` is the single public CLI. Do not introduce new public `clawjs`,
+  `clawix`, or `commander` command surfaces.
+- `@clawjs/claw` is the official SDK; `@clawjs/node` is compatibility.
+- Framework global data belongs under `~/.claw/`; workspace framework data
+  belongs under `.claw/`; `.clawjs/` is a retired pre-public path.
+- User-facing structured framework records belong in `core.sqlite`; sidecars
+  require explicit technical reasons such as churn, blobs, search indexes,
+  sessions, logs, caches, or encrypted vault state.
+- Plaintext secrets never live in the main database, logs, fixtures, public
+  docs, screenshots, or generated artifacts.
+- Sensitive native permissions, approvals, grants, audit, LaunchAgents, Mach
+  services, and native execution belong to the active signed host, not Node.
+- `~/.codex` is an external read-only source by default. Mirror or index it
+  only; do not delete, move, overwrite, chmod broadly, or write into it without
+  explicit reversible opt-in.
+- Stable capabilities are complete only when their human and programmatic
+  surfaces are registered or their gaps are explicitly classified.
+- New hand-authored files at 1200+ lines require a split plan or baseline
+  exception; files above 2000 lines must not grow except for extraction or
+  explicit architecture approval.
+
+## Validation
+
+Use focused checks during iteration and broader lanes for closure:
 
 ```bash
 npm test
@@ -82,181 +147,52 @@ npm run build
 npm run test:docs
 npm run test:pack
 npm run test:e2e
-npm run test:e2e:ci
 npm run ci
 ```
 
-Useful focused commands:
+Validation safety:
+
+- Hermetic tests are required but not sufficient for host-dependent bugs.
+- Host-dependent paths include installation, OAuth/login, PATH/binary
+  resolution, local home filesystem state, runtime polling, localhost behavior,
+  and UI state driven by the local runtime.
+- Do not send real prompts, touch production data, call paid APIs, mutate real
+  services, or reveal secrets without explicit approval in the current thread.
+- Prefer fixtures, dry-run paths, interceptors, local backends, and mocks.
+- Mark missing physical/provider prerequisites as `EXTERNAL PENDING` and keep
+  them separate from defects.
+- Performance work starts with reproduction and instrumentation before
+  optimization.
+
+## Public Hygiene
+
+Public repositories must not contain maintainer-private paths, signing
+identities, bundle IDs, Team IDs, SKUs, release credentials, local launchers,
+private automation, private Q&A indexes, logs, caches, or screenshots.
+
+Run:
 
 ```bash
-npm run demo
-npm run demo:mock
-npm --prefix examples/demo run test
-npm --prefix website run build
+npm run privacy:check
+npm run test:docs
 ```
 
-## Testing And Quality Gates
+Classify hygiene findings as `safe_public`, `false_positive`,
+`needs_user_decision`, or `must_remove_before_publish`. Do not resolve
+uncertainty by publishing the private value.
 
-- Do not merge changes that leave `npm test`, `npm run test:types`, `npm run test:ts`, `npm run build`, `npm run test:docs`, `npm run test:pack`, or `npm run test:e2e:ci` failing.
-- `npm run ci` is the release gate. If you are preparing a release or changing packaging, run it.
-- Treat docs, templates, examples, and website output as product surface. Regressions there count as real regressions.
-- Prefer additive, well-scoped patches. Expand existing tests instead of creating parallel ad hoc validation paths.
+## Commits
 
-For E2E work:
+Public commit hygiene only:
 
-- The canonical browser suite lives in `tests/e2e/` and uses Playwright.
-- The blocking suite is hermetic and runs the demo against `next start`, not `next dev`.
-- If a change touches visible UI in the demo, add or update Playwright coverage and follow the artifact guidance in `tests/e2e/README.md`.
-- Reuse `tests/e2e/fixtures.ts` so console errors, page errors, failed requests, and unexpected `4xx` or `5xx` responses stay gated.
-- If a scenario depends on runtime or external services, add or extend hermetic fixture logic in `examples/demo/src/lib/e2e.ts` and the relevant test-only API routes.
+- Use Conventional Commits: `type(scope): description`.
+- Keep commits scoped by intention.
+- Do not sweep unrelated edits from a dirty tree.
+- Commit `.changeset/*.md` with the behavior it documents when published
+  package surface changes.
+- Push, publish, upload, tagging, and release actions require explicit
+  approval.
 
-Validation fidelity rules:
-
-- Hermetic Playwright coverage is required, but it is not sufficient for host-dependent bugs.
-- Host-dependent bugs include installation or uninstall flows, OAuth and login flows, PATH or binary resolution, filesystem state under the user home, local process management, SDK or CLI detection, and polling or UI state driven by the local runtime.
-- If the user reports a bug on a specific localhost mode such as `localhost:4300`, the fix must also be validated in that same mode before closing the task.
-- Do not claim a host-dependent bug is fixed if only the hermetic E2E passed. Treat that as partial validation until the real localhost or host-equivalent validation also passes.
-- If fixtures, interceptors, or `CLAW_E2E` short-circuit the real runtime behavior, that only validates the UI flow. It does not prove the real bug is fixed.
-- Final screenshots for host-dependent fixes must come from the same mode that was actually validated, not only from the hermetic test server.
-
-Never run real smoke coverage automatically:
-
-- `npm run test:e2e:smoke-real` is manual and opt-in only.
-- Do not point smoke tests at production by default.
-- Do not touch paid APIs, real user data, or production services without explicit user approval in the current thread.
-
-Prompt-based test safety:
-
-- When a test evaluates an AI prompt or asks a model to do something, keep the prompt non-operative by default. Ask for bounded informational or text-only output, not host actions.
-- Do not use prompts that imply inspecting the local machine, reading workspace files, executing commands, editing configuration, deleting data, or exploring the environment unless the test is explicitly about that capability and runs inside an isolated, approved harness.
-
-## Branches, Commits, And Pull Requests
-
-Long-lived branches:
-
-- `main`: always releasable. Normal source for releases.
-- `next`: integration branch for work ready for broader validation.
-- `release/0.x`: stabilization or hotfix branch for the supported `0.x` line.
-
-Create short-lived branches from the branch you intend to merge into:
-
-- `feat/<scope>`
-- `fix/<scope>`
-- `docs/<scope>`
-- `chore/<scope>`
-- `refactor/<scope>`
-
-Commit message format is mandatory:
-
-```text
-type(scope): description
-```
-
-Examples:
-
-- `feat(cli): add workspace inspect output`
-- `fix(e2e): stabilize demo settings reset flow`
-- `docs(repo): document release branch policy`
-
-Pull request rules:
-
-- Keep PRs scoped and reviewable.
-- Target `main` for releasable work, `next` for queued integration work, and `release/*` only for stabilization or hotfixes.
-- Prefer squash merges.
-- Treat `main`, `next`, and `release/*` as protected branches.
-- Run the relevant local validation before merge. GitHub must not run automatic CI or release checks for this repo.
-- If a PR changes a published package, generated template output, or public package surface, add a `.changeset/*.md` entry unless the change is docs-only, test-only, or internal-only.
-- Commit related changesets with the behavior they document. Do not split a `.changeset/*.md` file into a standalone commit merely because it is a changeset; split it only when it documents a distinct independently reviewable change, or when the related code/docs commit was already created by another process and the changeset is the only remaining pending artifact.
-- If a PR changes onboarding, installation, imports, CLI usage, support tiers, docs, or templates, update the related documentation in the same PR.
-- Keep release-prep changes explicit: changelog, docs, versioning, packaging, and validation should land together.
-
-## Release Notes
-
-- Published npm packages are versioned with Changesets in one shared lockstep version.
-- Do not hand-edit versions in published package manifests outside the release workflow.
-- Release PRs are generated from `.changeset/*.md` entries and must be merged into `main` before publishing `latest`.
-- Use prereleases from `next` with the npm dist-tag `next` only when you intentionally want a preview channel.
-- Do not publish if `npm run ci` fails.
-- Before release, run `npm run publish:dry-run`.
-- Create release tags as `v<semver>`.
-- Tag normal releases from `main`.
-- Tag patch-only emergency releases from `release/0.x` when you must avoid pulling in all queued `next` work.
-
-## Security And Secret Handling
-
-- Never commit plaintext credentials, API keys, or `.env` files with real secrets.
-- Prefer provider login flows, environment injection, or external secret stores over hardcoded credentials.
-- For any real secret access, use secure secret storage and avoid reading or printing raw secret values.
-- Do not log or print raw credentials. ClawJS masks some common secret fields, but callers still must avoid exposing secrets.
-- Do not open public issues for vulnerabilities that could expose credentials, workspace contents, or remote execution paths. Report them privately to maintainers first.
-- New framework workspace audit logs live under `.claw/audit/`. `.clawjs/audit/` is a retired pre-public path, not a compatibility target. If you change audit or logging behavior, review redaction and retention expectations.
-
-## Product And API Expectations
-
-- `@clawjs/claw` is the official SDK package.
-- `@clawjs/node` is a compatibility wrapper, not the primary surface.
-- `@clawjs/cli` is the official CLI package.
-- `claw` is the single public CLI surface. Do not introduce new public `clawjs`, `clawix`, or `commander` command surfaces. Pre-public accidental commands are retired rather than carried as public compatibility unless an ADR explicitly grants a temporary exception.
-- Framework global data belongs under `~/.claw/`, canonical workspace data under `.claw/`, and Clawix host-operational state under `~/.clawix/`. Host GUI-only state may use platform-native app data when it is not framework state.
-- User-facing structured framework records belong in `~/.claw/data/core.sqlite`. Do not introduce new canonical workspace databases like `productivity.sqlite`; use documented sidecars only for runtime, sessions, audio, drive/blob, search, notify, monitor, feed, and encrypted vault state.
-- Public and persistent naming must follow `docs/naming-style-guide.md` and `docs/adr/0001-naming-and-stability-surfaces.md`: JSON/API fields use `camelCase`, CLI flags use `kebab-case`, SQL and collections use `snake_case`, event names use `domain.action`, public package names use `@clawjs/<name>`, and accidental legacy names are removed cleanly before public adoption.
-- Sensitive native work must be executed by the active signed host (`Claw.app` or an embedded `ClawHostKit` host), not by Node permission prompts.
-- `~/.codex` is an external read-only source. Mirror or index it only; do not delete, move, overwrite, chmod broadly, or write into it without explicit reversible opt-in.
-- Adapter support level is part of the public contract. Do not document experimental adapters as production-ready unless support metadata and docs are updated together.
-- Capability maps must preserve the invariant: `supported=false` implies `status="unsupported"`, and `status="unsupported"` implies `supported=false`.
-
-## Agent Working Rules
-
-- For non-trivial questions or plans about framework behavior, start with a
-  `claw` discovery pass before relying on direct source reads. Use
-  `claw search <topic> --json`, then the relevant `claw inspect
-  commands|why|database|schemas|storage|codebase` command. For data model work,
-  use `claw collections list`, `claw collections <collection> schema`, and
-  `claw db <collection> list|query`; treat source files as evidence after the
-  CLI map. Do not perform writes, cost-bearing calls, secret access, native
-  permissions, or real service actions without explicit approval or dry-run
-  isolation.
-- Read before changing: inspect the affected package, tests, and docs before editing.
-- Prefer small, surgical patches over broad refactors unless the task explicitly asks for structural change.
-- Do not overwrite unrelated user changes in a dirty worktree.
-- Shared brand assets and shared UI fonts live in the repo-root `assets/` directory for internal dashboards and operational web UIs; treat `assets/logo.png`, `assets/favicon.ico`, `assets/fonts/source-sans-3/*`, and `assets/fonts/ubuntu-mono/*` as the source of truth there, but keep `website/` and chat/mobile clients on their own visual systems.
-- For every change, review the relevant docs, README files, examples, templates, and website content to confirm they still match the current behavior, APIs, and workflows; update them in the same patch whenever they are stale.
-- When you touch a package, verify whether corresponding docs, templates, smoke coverage, and repository surface checks also need updates.
-- When you add or rename public packages, commands, or scaffolding behavior, update docs and package-surface coverage.
-- If unsure about release or merge target, check `docs/git-workflow.md` and document any assumption you make.
-
-## Design System (Styles, Templates, References)
-
-ClawJS exposes a generalised design system surface used by any agent that needs to produce visual artifacts (presentations, cards, posters, social posts, one-pagers, CVs, invoices, certificates, menus, flyers, emails, business cards, web landings, brochures, reports).
-
-Three first-class resources live under `<workspace>/.claw/` for new canonical writes. `<workspace>/.clawjs/` is a retired pre-public path; do not add new readers or migrations for it unless an ADR explicitly grants a bounded removal exception.
-
-- `styles/<id>/STYLE.md` · a Style is the recipe (tokens for color, typography, spacing, radius, shadow, motion + brand voice + imagery rules + per-format overrides). 10 builtins ship out of the box (`editorial`, `studio`, `midnight`, `signal`, `paper`, `executive`, `product`, `mono`, `warm`, `claw`). Install them with `claw style install-builtins`.
-- `templates/<id>/TEMPLATE.md` · a Template is a parametrised skeleton (category + aspect + typed slots + variants + supported output formats). 30 builtins ship across 13 categories. Install with `claw template install-builtins`.
-- `references/<id>/REFERENCE.md` · a Reference is an inspiration or evidence item (web, pdf, image, video, screenshot, snippet). N:M against Styles. Link with `claw ref link <refId> --style <styleId>`.
-
-CLI surface:
-
-```
-claw style list|get|create|delete|export|import|install-builtins|builtins
-claw template list|get|create|delete|render|install-builtins|builtins
-claw ref list|get|add|delete|link
-```
-
-The canonical renderer is HTML (`packages/clawjs/src/templates/render/html.ts`). PDF and PNG are produced via Playwright; PPTX is produced via a minimal OpenXML packer; SVG wraps the HTML in `<foreignObject>`. A Node-only fallback PDF is used when Playwright is unavailable.
-
-Skills that consume this surface live under `skills/`: `style-extract`, `style-apply`, `template-render`, `brand-guidelines`, `theme-factory`, `canvas-design`. Each skill is a `SKILL.md` with frontmatter (`name`, `description`, `keywords`) plus imperative Markdown.
-
-The legacy `claw slides` command continues to work and remains the recommended path for multi-slide decks today. The new `claw template render --category presentation` renders single-slide pieces and shares the renderer pipeline. A future change will unify them; until then both coexist.
-
-## First Files To Read For Common Tasks
-
-- New contributor or new agent: `README.md`
-- Local workflow and merge expectations: `CONTRIBUTING.md`
-- Branch policy: `docs/git-workflow.md`
-- Release work: `RELEASING.md`
-- Security-sensitive work: `SECURITY.md`
-- E2E or demo changes: `tests/e2e/README.md`
-- Runtime and workspace behavior: `docs/setup.md`, `docs/support-matrix.md`, `docs/runtime-migration-notes.md`
-- Agent operational wiki: `agents/wiki/README.md`
-- OpenClaw host-dependent debugging: `agents/wiki/openclaw.md`
+Maintainer-private commit automation, timestamp planning, ledger workflows,
+Claude-context review, and personal push policy do not belong in this public
+repo.
