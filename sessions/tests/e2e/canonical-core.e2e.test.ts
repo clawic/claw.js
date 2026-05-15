@@ -139,7 +139,7 @@ test("messages retain timeline and work summary fields in history and search", a
   }
 });
 
-test("fake Codex turn appends working timeline and final assistant answer", async () => {
+test("fixture Codex turn appends working timeline and final assistant answer", async () => {
   const ctx = await spinUp();
   try {
     const project = await ctx.client.createProject({ path: path.join(ctx.tmpDir, "Runtime") });
@@ -147,7 +147,7 @@ test("fake Codex turn appends working timeline and final assistant answer", asyn
       prompt: "wire the sessions gateway",
       projectId: project.id,
       cwd: project.path,
-      fakeReply: "Gateway wired through local fixture.",
+      fixtureReply: "Gateway wired through local fixture.",
     });
 
     assert.equal(result.session?.status, "completed");

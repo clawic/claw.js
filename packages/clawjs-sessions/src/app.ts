@@ -362,7 +362,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
         title: asString(body.title),
         attachments: (body.attachments as unknown[] | null) ?? null,
         audioRef: (body.audioRef as StartTurnInput["audioRef"]) ?? null,
-        fakeReply: asString(body.fakeReply),
+        fixtureReply: asString(body.fixtureReply),
       };
       if (!input.prompt.trim()) return await reply.code(400).send({ error: "prompt is required" });
 
@@ -403,9 +403,9 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
       });
       publish({ type: clawSessionEvents.messageAppended, sessionId: session.id, messageId: assistantMessage.id, payload: assistantMessage });
 
-      const fakeReply = input.fakeReply ?? process.env.SESSIONS_FAKE_CODEX_REPLY;
+      const fixtureReply = input.fixtureReply ?? process.env.SESSIONS_FIXTURE_CODEX_REPLY;
       const realTurnsEnabled = process.env.SESSIONS_ENABLE_REAL_CODEX_TURNS === "1";
-      const finalText = fakeReply ?? (
+      const finalText = fixtureReply ?? (
         realTurnsEnabled
           ? "Codex runtime adapter is ready, but real app-server execution is not invoked by automated fixtures."
           : "Local Codex turn fixture completed. Enable SESSIONS_ENABLE_REAL_CODEX_TURNS=1 only after confirming real prompt execution."

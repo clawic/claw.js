@@ -178,7 +178,7 @@ export interface StartTurnInput {
   title?: string;
   attachments?: unknown[] | null;
   audioRef?: AppendMessageInput["audioRef"];
-  fakeReply?: string;
+  fixtureReply?: string;
 }
 
 export type SessionEventType =
