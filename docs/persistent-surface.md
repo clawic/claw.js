@@ -1441,7 +1441,6 @@ flowchart TD
   claw_contracts_schemas --> claw_chat_appStorage_mainWindowFrame
   claw_chat_appStorage_swiftUiWindowFrame["swiftUiWindowFrame\nappStorageKey"]
   claw_contracts_schemas --> claw_chat_appStorage_swiftUiWindowFrame
-  claw_legacy_workspace_clawjs["Legacy pre-public workspace root\nlegacyPath"]
   claw_database_core_table_data_registry["data_registry\ntable"]
   claw_database_core --> claw_database_core_table_data_registry
   claw_database_core_table_app_state["app_state\ntable"]
@@ -2349,7 +2348,6 @@ flowchart TD
 | `claw.chat.appStorage.relayPassword` | appStorageKey | config | claw |  |  |  | `relayPassword` |
 | `claw.chat.appStorage.mainWindowFrame` | appStorageKey | config | claw |  |  |  | `NSWindow Frame main` |
 | `claw.chat.appStorage.swiftUiWindowFrame` | appStorageKey | config | claw |  |  |  | `NSWindow Frame SwiftUI` |
-| `claw.legacy.workspace.clawjs` | legacyPath | persistent | claw |  |  |  | `.clawjs` |
 | `claw.database.core.table.data_registry` | table | persistent | claw |  |  |  | `` |
 | `claw.database.core.table.app_state` | table | persistent | claw |  |  |  | `` |
 | `claw.database.core.table.app_projects` | table | persistent | claw |  |  |  | `` |
