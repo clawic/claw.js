@@ -74,6 +74,7 @@ test("app-state projects persist opaque resource ids alongside paths", async () 
 test("runCli manages V2 knowledge, notes, profile, business, and search domains in the main sqlite", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-data-"));
   await withPatchedEnv({
+    CLAW_HOME: path.join(tempRoot, "home"),
     CLAW_DATA_DIR: tempRoot,
     CLAW_DB_PATH: undefined,
     CLAW_DB_PATH: undefined,
@@ -201,7 +202,29 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
       stderr: captureStream().stream,
       cwd,
     }), CLI_EXIT_OK);
-    assert.match((parseCliData(agentStdout.getOutput()) as { secretRef: string }).secretRef, /^\*+\/ops$/);
+    const agent = parseCliData(agentStdout.getOutput()) as { id: string; secretAllowlist: unknown };
+    assert.equal(agent.id, "agent-ops");
+    assert.equal(agent.secretAllowlist, "[REDACTED]");
+
+    const personalityStdout = captureStream();
+    assert.equal(await runCli(["personalities", "upsert", "personality.review", "--name", "Reviewer", "--prompt", "Review with concrete evidence", "--json"], {
+      stdout: personalityStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const personality = parseCliData(personalityStdout.getOutput()) as { id: string; promptMarkdown: string };
+    assert.equal(personality.id, "personality.review");
+    assert.equal(personality.promptMarkdown, "Review with concrete evidence");
+
+    const collectionStdout = captureStream();
+    assert.equal(await runCli(["skill-collections", "upsert", "collection.review", "--name", "Review", "--tags", "review,code", "--json"], {
+      stdout: collectionStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const collection = parseCliData(collectionStdout.getOutput()) as { id: string; includedTags: string[] };
+    assert.equal(collection.id, "collection.review");
+    assert.deepEqual(collection.includedTags, ["review", "code"]);
 
     const skillStdout = captureStream();
     assert.equal(await runCli(["skills", "upsert", "deploy", "--name", "Deploy", "--body", "Use deployment APIs by reference", "--secret-refs", "vault://skills/deploy-token", "--json"], {
@@ -358,6 +381,8 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
     const main = new Database(resolveClawjsMainDbPath({ CLAW_DATA_DIR: tempRoot } as NodeJS.ProcessEnv), { readonly: true });
     try {
       assert.equal((main.prepare("SELECT secret_ref FROM agents WHERE id = ?").get("agent-ops") as { secret_ref: string }).secret_ref, "vault://agents/ops");
+      assert.equal((main.prepare("SELECT prompt FROM personalities WHERE id = ?").get("personality.review") as { prompt: string }).prompt, "Review with concrete evidence");
+      assert.deepEqual(JSON.parse((main.prepare("SELECT metadata_json FROM skill_collections WHERE id = ?").get("collection.review") as { metadata_json: string }).metadata_json), { includedTags: ["review", "code"] });
       assert.deepEqual(JSON.parse((main.prepare("SELECT secret_refs_json FROM skills WHERE slug = ?").get("deploy") as { secret_refs_json: string }).secret_refs_json), ["vault://skills/deploy-token"]);
       assert.equal((main.prepare("SELECT secret_ref FROM connections WHERE id = ?").get("github") as { secret_ref: string }).secret_ref, "vault://connections/github");
       assert.equal((main.prepare("SELECT secret_ref FROM iot_config WHERE id = ?").get("thermostat") as { secret_ref: string }).secret_ref, "vault://iot/thermostat");
@@ -365,6 +390,10 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
     } finally {
       main.close();
     }
+    assert.equal(fs.existsSync(path.join(tempRoot, "home", "agents", "agent-ops", "agent.yaml")), true);
+    assert.equal(fs.existsSync(path.join(tempRoot, "home", "personalities", "personality.review", "personality.yaml")), true);
+    assert.equal(fs.existsSync(path.join(tempRoot, "home", "skill-collections", "collection.review", "collection.yaml")), true);
+    assert.equal(fs.existsSync(path.join(tempRoot, "home", "connections", "github", "connection.yaml")), true);
 
     assert.equal(await runInternalV1Cli(["search", "rebuild", "--json"], {
       stdout: captureStream().stream,

@@ -133,6 +133,18 @@ The technical `claw database ...` commands administer a running database
 service. If no service is running, use `claw collections list --json` for the
 agent-facing local catalog instead.
 
+Local agent records are managed through the agent-facing data commands. These
+commands write canonical files under `~/.claw/` and project searchable
+summaries into the main core database:
+
+```bash
+claw agents list --json
+claw agents upsert agent.ops --name "Ops Agent" --personalities personality.review --skills deploy --secret-ref vault://agents/ops --json
+claw personalities upsert personality.review --name Reviewer --prompt "Review with concrete evidence" --json
+claw skill-collections upsert collection.review --name Review --tags review,code --json
+claw connections upsert github --provider custom --label GitHub --secret-ref vault://connections/github --json
+```
+
 ## Global Flags
 
 | Flag | Description |

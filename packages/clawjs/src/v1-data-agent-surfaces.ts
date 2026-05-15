@@ -6,7 +6,7 @@ const v1AgentDataSchemaSource = {
   language: "typescript",
 } as const;
 
-export const v1AgentDataSurfaceNodes = ["provider_routing", "provider_settings", "snippets"].map((name) =>
+export const v1AgentDataSurfaceNodes = ["personalities", "provider_routing", "provider_settings", "snippets"].map((name) =>
   clawPersistentSurface.table({
     id: `claw.database.core.table.${name}`,
     name,
@@ -17,6 +17,15 @@ export const v1AgentDataSurfaceNodes = ["provider_routing", "provider_settings",
 );
 
 export const V1_AGENT_DATA_SCHEMA_SQL = String.raw`
+    CREATE TABLE IF NOT EXISTS personalities (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      prompt TEXT NOT NULL DEFAULT '',
+      version INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS provider_routing (
       id TEXT PRIMARY KEY,
       feature TEXT NOT NULL,

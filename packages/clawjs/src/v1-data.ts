@@ -5,6 +5,7 @@ import { randomUUID } from "crypto";
 
 import type Database from "better-sqlite3";
 import { DatabaseServiceStore } from "@clawjs/database";
+import { runAgentsCommand, runConnectionsCommand, runPersonalitiesCommand, runSkillCollectionsCommand } from "./v1-data-agent-entities.ts";
 import { runProviderRoutingCommand, runSnippetsCommand } from "./v1-data-agent-config.ts";
 export {
   V1_DATA_EXIT_FAILURE,
@@ -157,6 +158,8 @@ export async function runV1DataCli(input: V1DataCliInput): Promise<number | null
       case "agents":
         return runAgentsCommand(input, store);
       case "skills": return runSkillsCommand(input, store);
+      case "personalities": return runPersonalitiesCommand(input, store);
+      case "skill-collections": return runSkillCollectionsCommand(input, store);
       case "connections": return runConnectionsCommand(input, store);
       case "providers": return runProviderRoutingCommand(input, store);
       case "snippets": return runSnippetsCommand(input, store);
@@ -200,9 +203,11 @@ function shouldHandleV1DataCommand(group: string | undefined, command: string | 
     mcp: new Set(["list", "get", "upsert", "delete", "config-path", "help"]),
     apps: new Set(["list", "upsert", "help"]),
     design: new Set(["list", "upsert", "help"]),
-    agents: new Set(["list", "upsert", "help"]),
+    agents: new Set(["list", "get", "upsert", "delete", "help"]),
     skills: new Set(["upsert", "help"]),
-    connections: new Set(["list", "upsert", "help"]),
+    personalities: new Set(["list", "get", "upsert", "delete", "help"]),
+    "skill-collections": new Set(["list", "get", "upsert", "delete", "help"]),
+    connections: new Set(["list", "get", "upsert", "delete", "help"]),
     snippets: new Set(["list", "upsert", "delete", "help"]),
     sessions: new Set(["index", "list", "get", "search", "help"]),
   };
@@ -1613,31 +1618,6 @@ function runDesignCommand(input: V1DataCliInput, store: DatabaseServiceStore): n
   return usageError(input, usage(input.binName, "design"));
 }
 
-function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
-  const command = input.positionals[1];
-  if (command === "list") {
-    const rows = store.sqlite.prepare("SELECT * FROM agents ORDER BY builtin DESC, name").all();
-    writeSuccess(input, { items: rows.map(normalizeDbRow) });
-    return V1_DATA_EXIT_OK;
-  }
-  if (command === "upsert") {
-    const id = input.flags.id || input.positionals[2];
-    const name = input.flags.name || input.positionals.slice(3).join(" ") || id;
-    if (!id || !name) return usageError(input, "Usage: claw agents upsert ID --name NAME [--secret-ref REF]");
-    const now = nowIso();
-    store.sqlite.prepare(`
-      INSERT INTO agents (id, kind, name, runtime, model, builtin, secret_ref, config_json, export_path, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, name = excluded.name, runtime = excluded.runtime,
-        model = excluded.model, builtin = excluded.builtin, secret_ref = excluded.secret_ref, config_json = excluded.config_json,
-        export_path = excluded.export_path, updated_at = excluded.updated_at
-    `).run(id, input.flags.kind || "agent", name, input.flags.runtime || null, input.flags.model || null, truthy(input.flags.builtin) ? 1 : 0, input.flags["secret-ref"] || null, input.flags.config ? JSON.stringify(JSON.parse(input.flags.config)) : "{}", input.flags["export-path"] || null, now, now);
-    writeSuccess(input, { id, name, secretRef: input.flags["secret-ref"] || null, updatedAt: now });
-    return V1_DATA_EXIT_OK;
-  }
-  return usageError(input, usage(input.binName, "agents"));
-}
-
 function runSkillsCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
   const command = input.positionals[1];
   if (command === "list") {
@@ -1663,32 +1643,6 @@ function runSkillsCommand(input: V1DataCliInput, store: DatabaseServiceStore): n
     return V1_DATA_EXIT_OK;
   }
   return usageError(input, usage(input.binName, "skills"));
-}
-
-function runConnectionsCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
-  const command = input.positionals[1];
-  if (command === "list") {
-    const rows = store.sqlite.prepare("SELECT * FROM connections ORDER BY provider, label").all();
-    writeSuccess(input, { items: rows.map(normalizeDbRow) });
-    return V1_DATA_EXIT_OK;
-  }
-  if (command === "upsert") {
-    const id = input.flags.id || input.positionals[2];
-    const provider = input.flags.provider || input.positionals[3];
-    const label = input.flags.label || id;
-    if (!id || !provider || !label) return usageError(input, "Usage: claw connections upsert ID --provider PROVIDER --label LABEL --secret-ref REF");
-    const now = nowIso();
-    store.sqlite.prepare(`
-      INSERT INTO connections (id, provider, label, secret_ref, config_json, metadata_json, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET provider = excluded.provider, label = excluded.label,
-        secret_ref = excluded.secret_ref, config_json = excluded.config_json,
-        metadata_json = excluded.metadata_json, updated_at = excluded.updated_at
-    `).run(id, provider, label, input.flags["secret-ref"] || null, input.flags.config ? JSON.stringify(JSON.parse(input.flags.config)) : "{}", input.flags.metadata ? JSON.stringify(JSON.parse(input.flags.metadata)) : "{}", now, now);
-    writeSuccess(input, { id, provider, label, secretRef: input.flags["secret-ref"] || null, updatedAt: now });
-    return V1_DATA_EXIT_OK;
-  }
-  return usageError(input, usage(input.binName, "connections"));
 }
 
 function runSessionsIndexCommand(input: V1DataCliInput, store: DatabaseServiceStore): number | null {

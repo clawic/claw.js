@@ -1515,6 +1515,8 @@ flowchart TD
   claw_database_core --> claw_database_core_table_skill_collections
   claw_database_core_table_connections["connections\ntable"]
   claw_database_core --> claw_database_core_table_connections
+  claw_database_core_table_personalities["personalities\ntable"]
+  claw_database_core --> claw_database_core_table_personalities
   claw_database_core_table_provider_routing["provider_routing\ntable"]
   claw_database_core --> claw_database_core_table_provider_routing
   claw_database_core_table_provider_settings["provider_settings\ntable"]
@@ -2391,6 +2393,7 @@ flowchart TD
 | `claw.database.core.table.skills` | table | persistent | claw |  |  |  | `` |
 | `claw.database.core.table.skill_collections` | table | persistent | claw |  |  |  | `` |
 | `claw.database.core.table.connections` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.personalities` | table | persistent | claw |  |  |  | `` |
 | `claw.database.core.table.provider_routing` | table | persistent | claw |  |  |  | `` |
 | `claw.database.core.table.provider_settings` | table | persistent | claw |  |  |  | `` |
 | `claw.database.core.table.snippets` | table | persistent | claw |  |  |  | `` |
