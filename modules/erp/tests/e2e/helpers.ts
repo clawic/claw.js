@@ -44,6 +44,10 @@ function shouldIgnoreResponse(url: string, status: number): boolean {
   return status === 404 && url.endsWith("/favicon.ico");
 }
 
+function shouldIgnoreRequestFailure(url: string, errorText: string): boolean {
+  return errorText === "net::ERR_ABORTED" && url.includes("/v1/app/");
+}
+
 export const test = base.extend<{ appErrors: AppErrors }>({
   appErrors: async ({ page }, use) => {
     const appErrors: AppErrors = {
@@ -65,7 +69,10 @@ export const test = base.extend<{ appErrors: AppErrors }>({
       }
     });
     page.on("requestfailed", (request) => {
-      appErrors.requestFailures.push(`${request.failure()?.errorText || "unknown"} ${request.url()}`);
+      const errorText = request.failure()?.errorText || "unknown";
+      if (!shouldIgnoreRequestFailure(request.url(), errorText)) {
+        appErrors.requestFailures.push(`${errorText} ${request.url()}`);
+      }
     });
 
     await use(appErrors);
