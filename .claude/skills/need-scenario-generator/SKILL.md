@@ -1,0 +1,1 @@
+../../../skills/need-scenario-generator/SKILL.md

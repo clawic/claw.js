@@ -1,0 +1,1 @@
+../../../skills/need-coverage-auditor/SKILL.md
