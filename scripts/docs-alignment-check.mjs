@@ -35,10 +35,16 @@ const agentDocs = [
   "docs/data-storage-boundary.md",
   "docs/canonical-data-catalog.md",
   "docs/naming-style-guide.md",
+  "docs/agentic-naming-guide.md",
+  "docs/vocabulary.md",
+  "docs/vocabulary.registry.json",
+  "docs/naming-shape-audit.md",
   "docs/adr/0001-claw-framework-host-boundary.md",
   "docs/adr/0001-naming-and-stability-surfaces.md",
   "docs/adr/0003-source-file-boundaries.md",
+  "docs/adr/0013-agentic-naming-and-code-structure.md",
   "docs/adr/0005-canonical-data-catalog.md",
+  "scripts/naming-shape-check.mjs",
 ];
 
 for (const relativePath of agentDocs) {
@@ -69,6 +75,8 @@ requireSnippet("CLAUDE.md", "docs/host-ownership.md");
 requireSnippet("CLAUDE.md", "docs/data-storage-boundary.md");
 requireSnippet("CLAUDE.md", "docs/decision-map.md");
 requireSnippet("CLAUDE.md", "docs/naming-style-guide.md");
+requireSnippet("CLAUDE.md", "docs/agentic-naming-guide.md");
+requireSnippet("CLAUDE.md", "docs/vocabulary.md");
 requireSnippet("CLAUDE.md", "docs/canonical-data-catalog.md");
 requireSnippet("CLAUDE.md", "docs/adr/0001-claw-framework-host-boundary.md");
 requireSnippet("CLAUDE.md", "docs/adr/0001-naming-and-stability-surfaces.md");
@@ -77,6 +85,8 @@ requireSnippet("AGENTS.md", "docs/decision-map.md");
 requireSnippet("AGENTS.md", "docs/canonical-data-catalog.md");
 requireSnippet("AGENTS.md", "docs/adr/0005-canonical-data-catalog.md");
 requireSnippet("AGENTS.md", "docs/adr/0003-source-file-boundaries.md");
+requireSnippet("AGENTS.md", "docs/agentic-naming-guide.md");
+requireSnippet("AGENTS.md", "docs/vocabulary.md");
 requireSnippet("CONTRIBUTING.md", "docs/decision-map.md");
 requireSnippet("RELEASING.md", "docs/decision-map.md");
 requireSnippet("docs/AGENTS.md", "decision-map.md");
@@ -137,8 +147,19 @@ for (const snippet of [
   "CLI entrypoints only parse global flags",
   "scripts/source-size-check.mjs",
   "docs/source-size-baseline.json",
+  "compressed enum/union/list patterns",
 ]) {
   requireSnippet("docs/adr/0003-source-file-boundaries.md", snippet);
+}
+
+for (const snippet of [
+  "Status: accepted",
+  "ClawJS is the canonical source for shared vocabulary",
+  "docs/vocabulary.registry.json",
+  "scripts/naming-shape-check.mjs",
+  "`session` / `sessionId` is the canonical framework conversation identity",
+]) {
+  requireSnippet("docs/adr/0013-agentic-naming-and-code-structure.md", snippet);
 }
 
 for (const snippet of [
@@ -175,8 +196,35 @@ for (const snippet of [
   "| SQL tables/columns/indexes | `snake_case` |",
   "| Event names | `domain.action`, kebab segments |",
   "`sessionId` for framework conversation identity",
+  "docs/agentic-naming-guide.md",
 ]) {
   requireSnippet("docs/naming-style-guide.md", snippet);
+}
+
+for (const snippet of [
+  "TS/JS source",
+  "JSON/YAML owned by ClawJS",
+  "Types use domain + role",
+  "Functions use verb + object",
+]) {
+  requireSnippet("docs/agentic-naming-guide.md", snippet);
+}
+
+for (const snippet of [
+  "\"schemaVersion\": 1",
+  "\"owner\": \"clawjs\"",
+  "\"preferredTerm\": \"session\"",
+  "\"preferredTerm\": \"threadId\"",
+]) {
+  requireSnippet("docs/vocabulary.registry.json", snippet);
+}
+
+for (const snippet of [
+  "Status: initial report",
+  "Critical naming failures: 0",
+  "Cleanup families",
+]) {
+  requireSnippet("docs/naming-shape-audit.md", snippet);
 }
 
 for (const snippet of [
