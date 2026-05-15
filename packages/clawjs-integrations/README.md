@@ -10,7 +10,7 @@ const store = new AgentStoreFS();
 const manager = new IntegrationManager({
   store,
   async deliver({ agent, message }) {
-    // hand the prompt to the agent's RuntimeAdapter, persist a chat row, etc.
+    // hand the message to the agent's RuntimeAdapter, persist a session row, etc.
   },
 });
 await manager.startAll();

@@ -21,7 +21,7 @@ export interface IntegrationManagerOptions {
   store: AgentStoreFS;
   /** Invoked once for every inbound message that resolved to an agent.
    *  Implementations send the text into the agent's runtime
-   *  (typically `RuntimeAdapter.sendPrompt`) and persist a chat
+   *  (typically `RuntimeAdapter.sendMessage`) and persist a session
    *  transcript. The dispatcher catches and logs throws so a single
    *  bad delivery never kills the watcher loop. */
   deliver: (ctx: IntegrationDeliveryContext) => void | Promise<void>;
