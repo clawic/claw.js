@@ -1,6 +1,6 @@
 import type { Unit } from "./types.ts";
 
-export const COMMON_UNITS = {
+export const SHARED_UNITS = {
   count: { id: "count", label: "count", group: "abstract" },
   boolean: { id: "boolean", label: "yes/no", group: "abstract" },
   text: { id: "text", label: "text", group: "abstract" },
@@ -37,8 +37,8 @@ export const COMMON_UNITS = {
   photo: { id: "photo", label: "photo", group: "media" },
 } as const satisfies Record<string, Unit>;
 
-export type CommonUnitId = keyof typeof COMMON_UNITS;
+export type SharedUnitKey = keyof typeof SHARED_UNITS;
 
-export function unit(id: CommonUnitId): Unit {
-  return COMMON_UNITS[id];
+export function resolveSharedUnit(key: SharedUnitKey): Unit {
+  return SHARED_UNITS[key];
 }
