@@ -134,6 +134,7 @@ claw report translation "Spanish settings label is wrong" --locale es --observed
 claw report security "Private finding" --impact "..."
 claw report preview rep_...
 claw report submit rep_... --confirm --dry-run
+claw report submit rep_... --confirm --execute --host-approval-id approval_... --github-base-url http://127.0.0.1:8787/
 claw report triage --json
 ```
 
@@ -149,6 +150,10 @@ issues use `github.action.create-issue`, duplicates use
 `github.action.create-discussion`, and private security reports use
 `github.action.create-security-advisory-report`. PR-looking fixes stay as
 proposal-only plans and do not create pull requests from `claw report`.
+`submit --execute` is reserved for an approved connector call: it requires a
+signed-host approval id, a GitHub token supplied through the brokered secret
+field, and a local/test connector endpoint in V1. Real GitHub publication
+without that approved connector path remains `EXTERNAL PENDING`.
 
 `claw report triage` is the non-destructive automation surface. It may score,
 recommend labels, suggest canonical duplicate comments, and build queues, but it

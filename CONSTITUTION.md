@@ -194,6 +194,16 @@ translation burden: the user should not have to remember where each piece of
 context lives, repeat themselves across tools, or rebuild accumulated
 understanding when switching intelligence providers.
 
+**II.9 Organizational sovereignty is policy-shaped.** Claw supports
+individual users and organizations as first-class owners of shared state,
+devices, secrets, workflows, and agents. Teams, companies, departments, and
+managed groups can apply access in bulk through roles, groups, tags,
+projects, resource classes, and managed hosts, because enterprise work cannot
+be governed one checkbox at a time. Bulk policy never removes the right to
+inspect, narrow, override, or revoke access for a specific resource, secret,
+agent, action, person, or host. Organizational control is a policy layer over
+sovereignty, not a replacement for it.
+
 ### III. Openness
 
 **III.1 Open data, open local API, open source.** Three pillars. Data: open
@@ -243,6 +253,24 @@ toward an external party (email, message, public post, API call attributable
 to the user), the framework supports honest identification of the actor.
 The user picks the disclosure level per channel; defaults err toward
 transparency. Impersonation as a human is never default behavior.
+
+**IV.4 Authority is traceable through every action.** An agent never acts as
+ownerless intelligence. Every auditable action records the acting agent, the
+initiating human or organizational principal, the policy grant in force, the
+target resource, and the authority chain through any subagents,
+automations, workflows, or delegated runs. Agents have their own identity for
+inspection and accountability, but their authority is derived from explicit
+human or organizational authorization. If the system cannot explain who
+authorized an action and why it was allowed, the action is not governable.
+
+**IV.5 External reporting is consentful and structured.** When agents help a
+user send diagnostics, bug reports, feature demand, translation feedback, PR
+proposals, or security findings to GitHub or another external system, the
+framework must redact private local context, block low-quality and public
+security disclosures, show a human preview, require explicit approval, and use
+a traceable user-owned connector identity. Automation may classify, score,
+dedupe, label, and recommend, but it must not publish, close, lock, or suppress
+without human authorization.
 
 ### V. Architecture between human and agent
 
@@ -562,6 +590,14 @@ tools, workflows, budgets, audit, and accumulated state. An agent or AI
 capability may appear through chat, app UI, voice, project surface, feed,
 CLI, automation, or external channel without duplicating its durable state or
 becoming a separate silo.
+
+**VII.16 Delegation cannot launder authority.** Subagents, delegated runs,
+automations, and composed workflows cannot turn one permitted action into
+broader access. Delegation preserves scope, provenance, budgets, audit, and
+revocation. A subagent may use authority explicitly delegated to it or
+already granted to it, but it cannot inherit vague ambient power from the
+parent run. Every link in a delegation chain remains inspectable,
+attributable, and bounded by the policy grant that allowed it.
 
 ### VIII. Sub-apps and modularity
 
@@ -884,6 +920,9 @@ together; an amendment is incomplete until both repositories carry it.
 - **Agentic capital**: reusable capability accumulated by agent work:
   instructions, defaults, data, relationships, workflows, decisions,
   validations, and knowledge that make future work better.
+- **Authority chain**: the traceable chain linking an action to the agent
+  that performed it, the human or organizational principal that authorized
+  it, the policy grant that allowed it, and any delegations in between.
 - **Automation**: an agent-authored sequence of triggers, conditions, and
   actions that runs deterministically and is audited like any other agent
   activity. Can call inference as a step but is not itself an LLM loop.
@@ -946,12 +985,18 @@ together; an amendment is incomplete until both repositories carry it.
 - **Operable life**: the user's data, tools, devices, services,
   relationships, time, money, automations, physical context, and permissions
   as a unified action surface for agents.
+- **Organizational principal**: a team, company, department, role, service
+  account, or managed group that can own or authorize access under explicit
+  policy.
 - **Pairing**: the act of trusting a client device to talk to a host. The
   basis of multi-device today.
 - **Participant**: a device that joins the mesh without running an agent
   runtime and without a user-facing UI. Sensors, IoT controllers, headless
   utilities. Exposes data or capabilities; relies on hosts for
   orchestration.
+- **Policy grant**: a permission applied through a structured rule such as
+  role, group, tag, project, resource class, host, or action scope, still
+  subject to granular inspection, override, and revocation.
 - **Runtime**: the engine that executes agentic loops. Pluggable,
   swappable, multiple supported simultaneously.
 - **Skill**: a reusable unit of agent direction (a prompt, procedure,

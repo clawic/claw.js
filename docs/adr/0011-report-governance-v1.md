@@ -37,6 +37,12 @@ Non-destructive automation lives behind `claw report triage`: it may recommend
 labels, canonical duplicate comments, evidence tasks, and queue state. It may
 not close, lock, delete, or publish in V1.
 
+Live submission is connector-owned. `claw report submit --execute` requires the
+signed host approval id, brokered GitHub token material, and an approved
+connector endpoint. Tests may execute against a local fake GitHub endpoint; real
+GitHub publication remains `EXTERNAL PENDING` until the host approval and
+secret-broker path are physically available.
+
 ## Consequences
 
 Agents have one stable reporting contract instead of ad hoc GitHub prompts.

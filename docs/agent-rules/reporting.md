@@ -11,7 +11,10 @@ GitHub.
 3. Run `claw report dedupe <id>` before recommending publication.
 4. Show `claw report preview <id>` to the user.
 5. Publish only after explicit user confirmation through the Claw GitHub
-   connector. Use `--dry-run` first when validating.
+   connector. Use `--dry-run` first when validating. Use `--execute` only with
+   a signed-host approval id and a brokered GitHub token; local fake endpoints
+   are allowed for tests, while real publication without an approved connector
+   path is `EXTERNAL PENDING`.
 6. Use `claw report triage` for automation queues and recommendations. Treat
    its output as advisory until a human approves the external action.
 
