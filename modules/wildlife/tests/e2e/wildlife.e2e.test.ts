@@ -8,7 +8,7 @@ import { buildWildlifeApp, WildlifeClient } from "@clawjs/wildlife";
 
 test("wildlife CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wildlife-e2e-"));
-  const dbPath = path.join(tmpDir, "clawjs.sqlite");
+  const dbPath = path.join(tmpDir, "core.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildWildlifeApp({

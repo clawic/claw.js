@@ -205,7 +205,7 @@ test("namespace creation seeds protected built-ins and custom schemas keep index
 test("existing databases receive additive built-in upgrades without reset", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "database-migration-"));
   const dataDir = path.join(rootDir, ".data");
-  const dbPath = path.join(dataDir, "clawjs.sqlite");
+  const dbPath = path.join(dataDir, "core.sqlite");
   const filesDir = path.join(dataDir, "files");
 
   const store = new DatabaseServiceStore(dbPath, filesDir);

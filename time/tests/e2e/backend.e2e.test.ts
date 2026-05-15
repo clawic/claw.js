@@ -20,7 +20,7 @@ before(async () => {
       host: "127.0.0.1",
       port: 0,
       dataDir: path.join(tmpDir, "data"),
-      dbPath: path.join(tmpDir, "data", "clawjs.sqlite"),
+      dbPath: path.join(tmpDir, "data", "core.sqlite"),
       defaultTimeZone: "UTC",
       schedulerIntervalMs: 50,
     },

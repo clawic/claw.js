@@ -8,7 +8,7 @@ import { buildRelationshipsApp, RelationshipsClient } from "@clawjs/relationship
 
 test("relationships CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "relationships-e2e-"));
-  const dbPath = path.join(tmpDir, "clawjs.sqlite");
+  const dbPath = path.join(tmpDir, "core.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildRelationshipsApp({

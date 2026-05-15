@@ -8,7 +8,7 @@ import { buildBirthdaysApp, BirthdaysClient } from "@clawjs/birthdays";
 
 test("birthdays CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "birthdays-e2e-"));
-  const dbPath = path.join(tmpDir, "clawjs.sqlite");
+  const dbPath = path.join(tmpDir, "core.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildBirthdaysApp({

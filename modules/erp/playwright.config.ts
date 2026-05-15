@@ -27,7 +27,7 @@ export default defineConfig({
       ERP_HOST: "127.0.0.1",
       ERP_PORT: "4530",
       ERP_DATA_DIR: path.join(outputRoot, "data"),
-      ERP_DB_PATH: path.join(outputRoot, "data", "clawjs.sqlite"),
+      ERP_DB_PATH: path.join(outputRoot, "data", "core.sqlite"),
       ERP_JWT_SECRET: "erp-playwright-secret",
       ERP_ADMIN_EMAIL: "admin@erp.local",
       ERP_ADMIN_PASSWORD: "erp-admin",

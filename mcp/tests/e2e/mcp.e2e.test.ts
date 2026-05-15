@@ -26,11 +26,11 @@ function injectFetch(app: FastifyInstance): typeof fetch {
 async function spinUp() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "mcp-e2e-"));
   const externalServerApp = buildMCPApp({
-    config: { host: "127.0.0.1", port: 0, dataDir: path.join(tmpDir, "ext"), dbPath: path.join(tmpDir, "ext", "clawjs.sqlite"), sharedSecret: "external" },
+    config: { host: "127.0.0.1", port: 0, dataDir: path.join(tmpDir, "ext"), dbPath: path.join(tmpDir, "ext", "core.sqlite"), sharedSecret: "external" },
   }).app;
   const externalFetch = injectFetch(externalServerApp);
   const local = buildMCPApp({
-    config: { host: "127.0.0.1", port: 0, dataDir: path.join(tmpDir, "local"), dbPath: path.join(tmpDir, "local", "clawjs.sqlite"), sharedSecret: SECRET },
+    config: { host: "127.0.0.1", port: 0, dataDir: path.join(tmpDir, "local"), dbPath: path.join(tmpDir, "local", "core.sqlite"), sharedSecret: SECRET },
     protocolFetch: externalFetch,
   });
   const client = new MCPApiClient({ baseUrl: "http://mcp.test", token: SECRET, fetchImpl: injectFetch(local.app) });

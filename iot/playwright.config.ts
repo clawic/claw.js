@@ -27,7 +27,7 @@ export default defineConfig({
       IOT_HOST: "127.0.0.1",
       IOT_PORT: "4520",
       IOT_DATA_DIR: path.join(outputRoot, "data"),
-      IOT_DB_PATH: path.join(outputRoot, "data", "clawjs.sqlite"),
+      IOT_DB_PATH: path.join(outputRoot, "data", "core.sqlite"),
     },
   },
   projects: [

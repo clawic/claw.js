@@ -13,7 +13,7 @@ export async function startErpServer(prefix = "erp-e2e") {
       host: "127.0.0.1",
       port: 0,
       dataDir: path.join(rootDir, ".data"),
-      dbPath: path.join(rootDir, ".data", "clawjs.sqlite"),
+      dbPath: path.join(rootDir, ".data", "core.sqlite"),
       jwtSecret: "erp-test-secret",
       adminEmail: "admin@erp.local",
       adminPassword: "erp-admin",

@@ -13,7 +13,7 @@ export async function startDatabaseServer(prefix = "database-e2e") {
       host: "127.0.0.1",
       port: 0,
       dataDir: path.join(rootDir, ".data"),
-      dbPath: path.join(rootDir, ".data", "clawjs.sqlite"),
+      dbPath: path.join(rootDir, ".data", "core.sqlite"),
       filesDir: path.join(rootDir, ".data", "files"),
       jwtSecret: "database-test-secret",
     },

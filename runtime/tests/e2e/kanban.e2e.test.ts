@@ -50,7 +50,7 @@ async function spinUp(): Promise<KanbanTestContext> {
       host: "127.0.0.1",
       port: 0,
       dataDir: path.join(tmpDir, "user-model"),
-      dbPath: path.join(tmpDir, "user-model", "clawjs.sqlite"),
+      dbPath: path.join(tmpDir, "user-model", "core.sqlite"),
       sharedSecret: SECRET,
     },
   }).app;

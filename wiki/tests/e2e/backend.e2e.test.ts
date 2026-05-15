@@ -17,7 +17,7 @@ afterEach(async () => {
 
 async function boot() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wiki-test-"));
-  const dbPath = path.join(tmpDir, "clawjs.sqlite");
+  const dbPath = path.join(tmpDir, "core.sqlite");
   const port = 14520 + Math.floor(Math.random() * 1000);
 
   const { app, config, store } = buildWikiApp({

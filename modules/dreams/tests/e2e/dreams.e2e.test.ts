@@ -8,7 +8,7 @@ import { buildDreamsApp, DreamsClient } from "@clawjs/dreams";
 
 test("dreams CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "dreams-e2e-"));
-  const dbPath = path.join(tmpDir, "clawjs.sqlite");
+  const dbPath = path.join(tmpDir, "core.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildDreamsApp({

@@ -8,7 +8,7 @@ import { buildSkillsPracticeApp, SkillsPracticeClient } from "@clawjs/skills-pra
 
 test("skills-practice CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "skills-practice-e2e-"));
-  const dbPath = path.join(tmpDir, "clawjs.sqlite");
+  const dbPath = path.join(tmpDir, "core.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildSkillsPracticeApp({

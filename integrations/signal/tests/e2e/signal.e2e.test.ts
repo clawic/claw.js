@@ -26,7 +26,7 @@ function injectFetch(app: FastifyInstance): typeof fetch {
 
 async function spinUp() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "signal-e2e-"));
-  const built = buildSignalApp({ config: { host: "127.0.0.1", port: 0, dataDir: tmpDir, dbPath: path.join(tmpDir, "clawjs.sqlite"), sharedSecret: SECRET } });
+  const built = buildSignalApp({ config: { host: "127.0.0.1", port: 0, dataDir: tmpDir, dbPath: path.join(tmpDir, "core.sqlite"), sharedSecret: SECRET } });
   const client = new ChannelApiClient({ channel: "signal", baseUrl: "http://signal.test", token: SECRET, fetchImpl: injectFetch(built.app) });
   return { client, tmpDir, close: async () => { await built.app.close(); fs.rmSync(tmpDir, { recursive: true, force: true }); } };
 }

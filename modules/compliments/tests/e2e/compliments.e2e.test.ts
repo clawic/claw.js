@@ -8,7 +8,7 @@ import { buildComplimentsApp, ComplimentsClient } from "@clawjs/compliments";
 
 test("compliments CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "compliments-e2e-"));
-  const dbPath = path.join(tmpDir, "clawjs.sqlite");
+  const dbPath = path.join(tmpDir, "core.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildComplimentsApp({
