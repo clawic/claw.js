@@ -28,7 +28,7 @@ export function loadIotConfig(overrides: Partial<IotServiceConfig> = {}): IotSer
 }
 
 function defaultClawjsDataRoot(): string {
-  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
+  const explicit = process.env.CLAW_DATA_DIR;
   if (explicit) return expandHome(explicit);
   return expandHome(resolveClawPersistentSurfacePath("claw.global.data"));
 }

@@ -28,7 +28,7 @@ export function loadNotifyConfig(overrides: Partial<NotifyServiceConfig> = {}): 
 }
 
 function defaultClawjsDataRoot(): string {
-  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
+  const explicit = process.env.CLAW_DATA_DIR;
   if (explicit) return expandHome(explicit);
   if (process.env.CLAW_HOME) return path.join(expandHome(process.env.CLAW_HOME), "data");
   return expandHome(resolveClawPersistentSurfacePath("claw.global.data"));

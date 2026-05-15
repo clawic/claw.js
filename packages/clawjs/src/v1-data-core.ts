@@ -201,7 +201,7 @@ const SIGNALS_CATALOG_COLLECTION_INDEXES: IndexDefinition[] = [
 ];
 
 export function resolveClawjsDataRoot(env: NodeJS.ProcessEnv = process.env): string {
-  const explicitData = env.CLAW_DATA_DIR || env.CLAWIX_CLAW_DATA_DIR;
+  const explicitData = env.CLAW_DATA_DIR;
   if (explicitData) return path.resolve(expandHome(explicitData));
   const home = path.resolve(expandHome(env.CLAW_HOME || resolveClawPersistentSurfacePath("claw.global")));
   return path.join(home, "data");

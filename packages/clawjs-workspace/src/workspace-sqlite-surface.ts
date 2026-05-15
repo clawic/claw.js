@@ -17,9 +17,7 @@ export function expandHome(value: string): string {
 export function resolveWorkspaceSqliteDatabasePath(): string {
   if (process.env.CLAW_DB_PATH) return expandHome(process.env.CLAW_DB_PATH);
   if (process.env.CLAW_HOME) return path.join(expandHome(process.env.CLAW_HOME), "data", "core.sqlite");
-  const dataRoot = process.env.CLAW_DATA_DIR
-    ?? process.env.CLAWIX_CLAW_DATA_DIR
-    ?? resolveClawPersistentSurfacePath("claw.global.data");
+  const dataRoot = process.env.CLAW_DATA_DIR ?? resolveClawPersistentSurfacePath("claw.global.data");
   return path.join(expandHome(dataRoot), "core.sqlite");
 }
 

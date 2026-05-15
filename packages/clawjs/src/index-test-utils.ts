@@ -606,7 +606,6 @@ export async function withPatchedEnv<TValue>(
 export function useIsolatedMainData(t: { after(fn: () => void): void }, workspaceRoot: string): string {
   const previous = new Map([
     ["CLAW_DATA_DIR", process.env.CLAW_DATA_DIR],
-    ["CLAWIX_CLAW_DATA_DIR", process.env.CLAWIX_CLAW_DATA_DIR],
     ["CLAW_DB_PATH", process.env.CLAW_DB_PATH],
     ["CLAW_DATABASE_DB_PATH", process.env.CLAW_DATABASE_DB_PATH],
     ["CLAW_DATABASE_FILES_DIR", process.env.CLAW_DATABASE_FILES_DIR],
@@ -615,7 +614,6 @@ export function useIsolatedMainData(t: { after(fn: () => void): void }, workspac
   ]);
   const dataRoot = path.join(workspaceRoot, "claw-data");
   process.env.CLAW_DATA_DIR = dataRoot;
-  delete process.env.CLAWIX_CLAW_DATA_DIR;
   delete process.env.CLAW_DB_PATH;
   delete process.env.CLAW_DATABASE_DB_PATH;
   delete process.env.CLAW_DATABASE_FILES_DIR;

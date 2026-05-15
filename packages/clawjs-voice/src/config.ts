@@ -36,7 +36,7 @@ export function loadVoiceConfig(overrides: Partial<VoiceServiceConfig> = {}): Vo
 }
 
 function defaultClawjsDataRoot(): string {
-  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
+  const explicit = process.env.CLAW_DATA_DIR;
   if (explicit) return expandHome(explicit);
   return process.env.CLAW_HOME ? path.join(expandHome(process.env.CLAW_HOME), "data") : expandHome(clawGlobalHomeLayout.data);
 }

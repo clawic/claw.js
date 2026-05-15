@@ -42,7 +42,6 @@ export interface BridgeConfigEnv {
   CLAW_REMOTE_IROH_DISABLE?: string;
   CLAW_REMOTE_IROH_RELAY_URL?: string;
   CLAW_DATA_DIR?: string;
-  CLAWIX_CLAW_DATA_DIR?: string;
   APPDATA?: string;
   XDG_DATA_HOME?: string;
   HOME?: string;
@@ -95,7 +94,6 @@ export function loadConfig(
 
 function resolveClawjsDataRoot(env: BridgeConfigEnv, home: string): string {
   if (env.CLAW_DATA_DIR) return expandHome(env.CLAW_DATA_DIR, home);
-  if (env.CLAWIX_CLAW_DATA_DIR) return expandHome(env.CLAWIX_CLAW_DATA_DIR, home);
   return expandHome(resolveClawPersistentSurfacePath("claw.global.data"), home);
 }
 

@@ -31,7 +31,7 @@ function expandHome(value) {
 }
 
 function defaultClawjsDataRoot(flags) {
-  const explicit = flags["data-dir"] ?? process.env.CLAW_DRIVE_DATA_DIR ?? process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
+  const explicit = flags["data-dir"] ?? process.env.CLAW_DRIVE_DATA_DIR ?? process.env.CLAW_DATA_DIR;
   if (explicit) return path.resolve(expandHome(explicit));
   if (process.env.CLAW_HOME) return path.join(expandHome(process.env.CLAW_HOME), "data");
   return expandHome(resolveClawPersistentSurfacePath("claw.global.data"));

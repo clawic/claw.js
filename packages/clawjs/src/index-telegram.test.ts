@@ -274,7 +274,7 @@ test("runCli handles Telegram /new session reset without model latency", () => {
     CLAW_TEST_WORKSPACE: workspaceRoot,
     CLAW_DATA_DIR: path.join(workspaceRoot, "claw-data"),
   };
-  for (const key of ["CLAWIX_CLAW_DATA_DIR", "CLAW_DB_PATH", "CLAW_DB_PATH", "DATABASE_DB_PATH", "DATABASE_FILES_DIR"]) {
+  for (const key of ["CLAW_DB_PATH", "CLAW_DB_PATH", "DATABASE_DB_PATH", "DATABASE_FILES_DIR"]) {
     delete childEnv[key];
   }
   const result = spawnSync(process.execPath, ["--input-type=module", "-e", script], {

@@ -58,7 +58,7 @@ export class AgentStoreFS {
 
   constructor(opts: AgentStoreOptions = {}) {
     this.home =
-      opts.home ?? process.env.CLAW_HOME ?? process.env.CLAWIX_CLAW_HOME ?? expandHome(resolveClawPersistentSurfacePath("claw.global.root"));
+      opts.home ?? process.env.CLAW_HOME ?? expandHome(resolveClawPersistentSurfacePath("claw.global.root"));
     this.ensureDirs();
     this.ensureBuiltins();
   }

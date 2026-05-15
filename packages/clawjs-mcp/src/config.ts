@@ -24,7 +24,7 @@ export function loadMCPConfig(overrides: Partial<MCPServiceConfig> = {}): MCPSer
 }
 
 function defaultClawjsDataRoot(): string {
-  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
+  const explicit = process.env.CLAW_DATA_DIR;
   if (explicit) return expandHome(explicit);
   return process.env.CLAW_HOME ? path.join(expandHome(process.env.CLAW_HOME), "data") : expandHome(clawGlobalHomeLayout.data);
 }

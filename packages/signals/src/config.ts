@@ -59,7 +59,7 @@ export function loadSignalsServiceConfig(
 }
 
 function defaultClawjsDataRoot(): string {
-  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
+  const explicit = process.env.CLAW_DATA_DIR;
   if (explicit) return expandHome(explicit);
   const home = process.env.CLAW_HOME ? expandHome(process.env.CLAW_HOME) : expandHome(resolveClawPersistentSurfacePath("claw.global.root"));
   return path.join(home, "data");

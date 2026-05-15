@@ -36,7 +36,6 @@ test("V2 data configs route canonical domains to main DB and sidecars under the 
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-v2-config-"));
   withPatchedEnv({
     CLAW_DATA_DIR: root,
-    CLAWIX_CLAW_DATA_DIR: undefined,
     CLAW_DB_PATH: undefined,
     USER_MODEL_DATA_DIR: undefined,
     USER_MODEL_DB_PATH: undefined,
@@ -101,7 +100,6 @@ test("V2 workspace collections and context memory use the main DB", () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-v2-main-workspace-"));
   withPatchedEnv({
     CLAW_DATA_DIR: root,
-    CLAWIX_CLAW_DATA_DIR: undefined,
     CLAW_DB_PATH: undefined,
   }, () => {
     const collectionStore = createSqliteWorkspaceCollectionStore(workspaceDir);

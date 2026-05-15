@@ -28,7 +28,6 @@ export function loadWikiConfig(overrides: Partial<WikiServiceConfig> = {}): Wiki
 
 function defaultClawjsDataRoot(): string {
   if (process.env.CLAW_DATA_DIR) return expandHome(process.env.CLAW_DATA_DIR);
-  if (process.env.CLAWIX_CLAW_DATA_DIR) return expandHome(process.env.CLAWIX_CLAW_DATA_DIR);
   if (process.platform === "darwin") {
     return expandHome(resolveClawPersistentSurfacePath("claw.global.data"));
   }

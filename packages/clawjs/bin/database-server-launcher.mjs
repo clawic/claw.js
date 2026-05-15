@@ -83,7 +83,7 @@ export async function runOpenDatabase(args) {
   const defaultDataDir = process.env.CLAW_HOME
     ? path.join(process.env.CLAW_HOME, "data")
     : resolveClawPersistentSurfacePath("claw.global.data");
-  const dataDir = flags["data-dir"] ?? process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? defaultDataDir;
+  const dataDir = flags["data-dir"] ?? process.env.CLAW_DATA_DIR ?? defaultDataDir;
   const filesDir = flags["files-dir"] ?? path.join(dataDir, "files");
   const dbPath = flags["db-path"] ?? process.env.CLAW_DB_PATH ?? path.join(dataDir, "core.sqlite");
   const statusFile = flags["status-file"];

@@ -1,6 +1,6 @@
 # @clawjs/agents
 
-Agent identity, composition and lifecycle for ClawJS. The package is filesystem-first: agents, personalities, skill collections and connections live under `~/.claw/` (override with `CLAWIX_CLAW_HOME`) and `AgentStoreFS` is a thin reader / writer on top.
+Agent identity, composition and lifecycle for ClawJS. The package is filesystem-first: agents, personalities, skill collections and connections live under `~/.claw/` (override with `CLAW_HOME`) and `AgentStoreFS` is a thin reader / writer on top.
 
 ```ts
 import { AgentStoreFS, DEFAULT_CODEX_AGENT_ID, defaultAgent } from "@clawjs/agents";

@@ -5,7 +5,7 @@ import os from "os";
 import path from "path";
 import Database from "better-sqlite3";
 
-import { resolveClawPersistentSurfacePath } from "@clawjs/core";
+import { clawDataFiles, resolveClawPersistentSurfacePath } from "@clawjs/core";
 
 import { CLI_EXIT_OK, runCli } from "./index.ts";
 import { resolveClawjsDataRoot, resolveClawjsFilesDir, resolveClawjsMainDbPath } from "./v1-data.ts";
@@ -60,7 +60,8 @@ test("app-state projects persist opaque resource ids alongside paths", async () 
   }), CLI_EXIT_OK);
   const project = parseCliData(stdout.getOutput()) as { id: string; resourceId: string; path: string };
   assert.equal(project.resourceId, "res_projectxyz");
-  const sqlite = new Database(path.join(dataRoot, "core.sqlite"));
+  const sqlitePath = path.join(dataRoot, clawDataFiles.mainDatabase);
+  const sqlite = new Database(sqlitePath);
   try {
     assert.deepEqual(sqlite.prepare("SELECT resource_id, path FROM app_projects WHERE id = ?").get("proj-local"), { resource_id: "res_projectxyz", path: cwd });
   } finally {
@@ -74,7 +75,6 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-data-"));
   await withPatchedEnv({
     CLAW_DATA_DIR: tempRoot,
-    CLAWIX_CLAW_DATA_DIR: undefined,
     CLAW_DB_PATH: undefined,
     CLAW_DB_PATH: undefined,
     DATABASE_DB_PATH: undefined,
@@ -346,7 +346,6 @@ test("runCli indexes external Codex session artifacts without owning their raw b
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v1-sessions-"));
   await withPatchedEnv({
     CLAW_DATA_DIR: path.join(tempRoot, "data"),
-    CLAWIX_CLAW_DATA_DIR: undefined,
     CLAW_DB_PATH: undefined,
     CLAW_DB_PATH: undefined,
     DATABASE_DB_PATH: undefined,
@@ -419,7 +418,6 @@ test("runCli manages V2 conversation artifact sidecars for audio, drive, runtime
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-sidecars-"));
   await withPatchedEnv({
     CLAW_DATA_DIR: path.join(tempRoot, "data"),
-    CLAWIX_CLAW_DATA_DIR: undefined,
     CLAW_DB_PATH: undefined,
     CLAW_DB_PATH: undefined,
     DATABASE_DB_PATH: undefined,
@@ -581,7 +579,6 @@ test("runCli reset covers V2 main DB legacy service tables when present", async 
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-reset-"));
   await withPatchedEnv({
     CLAW_DATA_DIR: tempRoot,
-    CLAWIX_CLAW_DATA_DIR: undefined,
     CLAW_DB_PATH: undefined,
     CLAW_DB_PATH: undefined,
     DATABASE_DB_PATH: undefined,
@@ -649,7 +646,6 @@ test("runCli reset clears V2 sidecar service tables when present", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-sidecar-reset-"));
   await withPatchedEnv({
     CLAW_DATA_DIR: tempRoot,
-    CLAWIX_CLAW_DATA_DIR: undefined,
     CLAW_DB_PATH: undefined,
     CLAW_DB_PATH: undefined,
     DATABASE_DB_PATH: undefined,
@@ -695,7 +691,6 @@ test("runCli mirrors local memory into V2 knowledge and profile projection", asy
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-memory-"));
   await withPatchedEnv({
     CLAW_DATA_DIR: tempRoot,
-    CLAWIX_CLAW_DATA_DIR: undefined,
     CLAW_DB_PATH: undefined,
     CLAW_DB_PATH: undefined,
     DATABASE_DB_PATH: undefined,
