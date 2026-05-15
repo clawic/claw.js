@@ -6,7 +6,8 @@ test("images generation and deletion stay hermetic", async ({ page, request }) =
   await page.goto("/images");
   await expect(page.getByTestId("images-page")).toBeVisible({ timeout: 20_000 });
 
-  const initialCards = await page.getByTestId("image-card").count();
+  await expect(page.getByTestId("image-card")).toHaveCount(2);
+  const initialCards = 2;
   await page.getByTestId("images-prompt").fill("Generate a hermetic launch diagram.");
   await page.getByTestId("images-generate-button").click();
   await expect(page.getByTestId("image-card")).toHaveCount(initialCards + 1);
