@@ -11,7 +11,7 @@ This is the living audit report for ADR 0013. The machine-readable source is
 ## Current gate status
 
 - Critical naming failures: 0.
-- Naming warnings: 212.
+- Naming warnings: 209.
 - Source-size warnings: 116.
 - Source-structure signals: 320.
 
@@ -57,6 +57,8 @@ for staged rename/split work and must not be hidden by compressing code.
   `SHARED_UNITS`/`SharedUnitKey`/`resolveSharedUnit`.
 - Monitor mode API vocabulary: `MonitorModeInfo` is now
   `MonitorModeSnapshot` across the server and UI type surfaces.
+- Connector runtime rate-limit vocabulary: `ConnectorRuntimeRateLimitInfo`
+  and local `rateLimitInfo` helpers now use `RateLimitSnapshot`.
 - CLI/router and command handlers: keep `packages/clawjs/src/index.ts` from
   growing by extracting command families before adding behavior.
 - Showcase UI/API: split settings, tasks, onboarding, locale, and route files

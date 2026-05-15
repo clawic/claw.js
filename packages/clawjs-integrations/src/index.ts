@@ -165,7 +165,7 @@ export type {
   ConnectorRuntimeHttpInput,
   ConnectorRuntimeHttpOptions,
   ConnectorRuntimeHttpPaginationResult,
-  ConnectorRuntimeRateLimitInfo,
+  ConnectorRuntimeRateLimitSnapshot,
   ConnectorRuntimeHttpResponse,
 } from "./runtime-http.js";
 export type {

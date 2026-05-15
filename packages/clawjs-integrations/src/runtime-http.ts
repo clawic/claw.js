@@ -26,10 +26,10 @@ export interface ConnectorRuntimeHttpResponse {
   ok: boolean;
   headers: Record<string, string>;
   body: IntegrationJson;
-  rateLimit?: ConnectorRuntimeRateLimitInfo;
+  rateLimit?: ConnectorRuntimeRateLimitSnapshot;
 }
 
-export interface ConnectorRuntimeRateLimitInfo {
+export interface ConnectorRuntimeRateLimitSnapshot {
   limited: boolean;
   retryAfterMs?: number;
   limit?: number;
@@ -326,7 +326,7 @@ async function parseRuntimeHttpResponse(
     ok: response.ok,
     headers,
     body,
-    ...optionalRateLimitInfo(response),
+    ...optionalRateLimitSnapshot(response),
   };
 }
 
@@ -366,12 +366,14 @@ function retryDelayMs(response: ConnectorRuntimeHttpResponse, fallbackMs: number
   return fallbackMs ?? 1_000;
 }
 
-function optionalRateLimitInfo(response: Response): { rateLimit: ConnectorRuntimeRateLimitInfo } | Record<string, never> {
-  const info = rateLimitInfo(response);
-  return info ? { rateLimit: info } : {};
+function optionalRateLimitSnapshot(
+  response: Response,
+): { rateLimit: ConnectorRuntimeRateLimitSnapshot } | Record<string, never> {
+  const snapshot = rateLimitSnapshot(response);
+  return snapshot ? { rateLimit: snapshot } : {};
 }
 
-function rateLimitInfo(response: Response): ConnectorRuntimeRateLimitInfo | null {
+function rateLimitSnapshot(response: Response): ConnectorRuntimeRateLimitSnapshot | null {
   const retryAfter = retryAfterMs(response.headers.get("retry-after"));
   const resetAfter = resetAfterMs(response.headers);
   const resetAt = resetAtIso(response.headers, resetAfter);
