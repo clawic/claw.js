@@ -36,11 +36,11 @@
     ]
   },
   "summary": {
-    "files": 2835,
-    "tests": 391,
+    "files": 2836,
+    "tests": 392,
     "entrypoints": 160,
     "languages": {
-      "typescript": 2637,
+      "typescript": 2638,
       "javascript": 108,
       "swift": 90
     }
@@ -36678,7 +36678,7 @@
     {
       "path": "modules/erp/tests/e2e/helpers.ts",
       "language": "typescript",
-      "lines": 91,
+      "lines": 98,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -36704,6 +36704,11 @@
           "kind": "function",
           "name": "saveBrowserScreenshot",
           "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "shouldIgnoreRequestFailure",
+          "exported": false
         },
         {
           "kind": "function",
@@ -58206,7 +58211,7 @@
     {
       "path": "packages/clawjs-core/src/catalog-coverage.ts",
       "language": "typescript",
-      "lines": 134,
+      "lines": 133,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -91219,7 +91224,7 @@
     {
       "path": "packages/clawjs-sessions/src/app.ts",
       "language": "typescript",
-      "lines": 483,
+      "lines": 485,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -91394,9 +91399,26 @@
       "declarations": []
     },
     {
+      "path": "packages/clawjs-sessions/src/project-resource-id.test.ts",
+      "language": "typescript",
+      "lines": 37,
+      "test": true,
+      "entrypoint": false,
+      "imports": [
+        "./store.ts",
+        "node:assert/strict",
+        "node:fs",
+        "node:os",
+        "node:path",
+        "vitest"
+      ],
+      "exports": [],
+      "declarations": []
+    },
+    {
       "path": "packages/clawjs-sessions/src/store.ts",
       "language": "typescript",
-      "lines": 773,
+      "lines": 790,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -91482,7 +91504,7 @@
     {
       "path": "packages/clawjs-sessions/src/types.ts",
       "language": "typescript",
-      "lines": 228,
+      "lines": 231,
       "test": false,
       "entrypoint": false,
       "imports": [],
@@ -98512,7 +98534,7 @@
     {
       "path": "packages/clawjs/src/index-data.test.ts",
       "language": "typescript",
-      "lines": 735,
+      "lines": 758,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -102002,7 +102024,7 @@
     {
       "path": "packages/clawjs/src/v1-data-surface.ts",
       "language": "typescript",
-      "lines": 1315,
+      "lines": 1313,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -112132,7 +112154,7 @@
     {
       "path": "relay/src/server/app.ts",
       "language": "typescript",
-      "lines": 1668,
+      "lines": 1674,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -113320,7 +113342,7 @@
     {
       "path": "relay/tests/e2e/relay.e2e.test.ts",
       "language": "typescript",
-      "lines": 1416,
+      "lines": 1415,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -113348,7 +113370,7 @@
     {
       "path": "relay/tests/e2e/service-gateway.e2e.test.ts",
       "language": "typescript",
-      "lines": 345,
+      "lines": 353,
       "test": true,
       "entrypoint": false,
       "imports": [

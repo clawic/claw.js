@@ -28,7 +28,7 @@
       "reason": "Settings page shell after extracting persona, profile, advanced, OpenClaw, integrations, and tools tabs; route-level state/wiring only, split new tabs before expanding."
     },
     "relay/src/server/app.ts": {
-      "lines": 1659,
+      "lines": 1674,
       "reason": "Relay application assembly and remaining auth/service/admin/browser routes after helper, monitor, and workspace route extraction."
     },
     "packages/clawjs/src/v1-data.ts": {
@@ -52,7 +52,7 @@
       "reason": "Memory service orchestration after note validation extraction; split persistence, indexing, and active memory helpers before expanding."
     },
     "relay/tests/e2e/relay.e2e.test.ts": {
-      "lines": 1402,
+      "lines": 1416,
       "reason": "Relay E2E scenarios after fake connector utility extraction; split new scenario groups into separate tests before expanding."
     },
     "packages/clawjs-core/src/schemas.ts": {
@@ -168,7 +168,7 @@
       "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
     },
     "secrets/src/server/app.ts": {
-      "lines": 1229,
+      "lines": 1264,
       "reason": "Existing secrets server app after broker redirect handling; split routes, auth helpers, and response serializers before expanding."
     },
     "packages/clawjs/src/v1-data-core.ts": {
