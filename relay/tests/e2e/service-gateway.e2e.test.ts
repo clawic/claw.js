@@ -113,6 +113,7 @@ async function startServiceConnector(): Promise<WebSocket> {
     }],
   });
   const ack = new Promise<void>((resolve, reject) => {
+    const activeRequests = new Map<string, AbortController>();
     const timer = setTimeout(() => {
       reject(new Error("Timed out waiting for connector ack"));
     }, 5_000);
@@ -137,9 +138,14 @@ async function startServiceConnector(): Promise<WebSocket> {
         cleanup();
         resolve();
       }
-      if (message.type === "cancel") return;
+      if (message.type === "cancel") {
+        const controller = activeRequests.get(message.requestId);
+        if (controller) controller.abort("cancelled_by_client");
+        return;
+      }
       if (message.type !== "invoke") return;
       const controller = new AbortController();
+      activeRequests.set(message.requestId, controller);
       runtime.execute(
         message.operation,
         message.workspaceId,
@@ -157,6 +163,8 @@ async function startServiceConnector(): Promise<WebSocket> {
           code: "connector_operation_failed",
           message: error instanceof Error ? error.message : String(error),
         }));
+      }).finally(() => {
+        activeRequests.delete(message.requestId);
       });
     });
   });

@@ -318,6 +318,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     const channelId = randomUUID();
     const abort = new AbortController();
     let opened = false;
+    let closePromise: Promise<void> | null = null;
     const queued: Array<{ data: Buffer; isBinary: boolean }> = [];
     const flushQueue = async () => {
       if (!opened) return;
@@ -397,18 +398,23 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
       }).catch(() => {});
     });
     socket.once("close", () => {
-      abort.abort();
-      if (opened) {
-        void registry.invoke({
-          tenantId: typedRequest.params.tenantId,
-          connectorId: service.connectorId,
-          agentId: service.agentId,
-          operation: "service.websocket.close",
-          payload: { channelId },
-        }).catch(() => {});
-      }
+      closePromise = (async () => {
+        try {
+          if (!opened) return;
+          await registry.invoke({
+            tenantId: typedRequest.params.tenantId,
+            connectorId: service.connectorId,
+            agentId: service.agentId,
+            operation: "service.websocket.close",
+            payload: { channelId },
+          }).catch(() => {});
+        } finally {
+          abort.abort();
+        }
+      })();
     });
     await openPromise;
+    await closePromise;
   });
 
   registerMonitorRoutes({ app, auth, db, monitor });

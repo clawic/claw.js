@@ -1378,7 +1378,6 @@ describe("relay e2e", () => {
     socket.close();
     await new Promise((resolve) => socket.once("close", () => resolve(null)));
   });
-
   test("login rate limiting eventually rejects repeated bad credentials", async () => {
     const isolatedDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-relay-rate-limit-"));
     const isolated = await buildRelayApp({
