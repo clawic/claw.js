@@ -30,6 +30,14 @@ The V1 contract only evaluates whether a request is allowed. It does not call
 providers, spend budget, lease credentials, mutate external data, or bypass the
 host-owned approval path.
 
+`@clawjs/integrations` enforces the decision at the runner boundary.
+`runConnectorOperation` and `runConnectorSource` require `controlPlane` options
+for real execution (`dryRun: false`) before they create or call a runtime
+executor and before they ask the broker for a credential lease. The runner also
+blocks operations that are not `supported`, lack execution policy, lack audit
+metadata, lack credential scope for authenticated operations, or lack runtime
+evidence.
+
 ## Decisions
 
 `evaluateConnectorControlPlaneRequest` returns a decision with:

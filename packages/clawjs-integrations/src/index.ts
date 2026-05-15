@@ -19,6 +19,10 @@ export {
 export { IntegrationManager } from "./manager.js";
 export { runConnectorOperation } from "./operation-runner.js";
 export {
+  assertConnectorRuntimeControlPlane,
+  connectorRuntimeReadinessIssues,
+} from "./control-plane-runtime.js";
+export {
   ConnectorSourceScheduler,
   runConnectorSource,
   sourceSubscriptionFromPlan,
@@ -83,6 +87,9 @@ export type {
   IntegrationManagerOptions,
   IntegrationDeliveryContext,
 } from "./manager.js";
+export type {
+  ConnectorRuntimeControlPlaneOptions,
+} from "./control-plane-runtime.js";
 export type {
   ConnectorExecutionContext,
   ConnectorExecutor,

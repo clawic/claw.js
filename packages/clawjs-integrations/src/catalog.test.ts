@@ -426,6 +426,7 @@ describe("connector catalog", () => {
             throw new Error("executor must not receive plaintext secrets");
           },
         },
+        controlPlane: fixtureControlPlane(),
       }),
       /requires a capability broker/,
     );
@@ -511,7 +512,7 @@ describe("connector catalog", () => {
     });
   });
 
-  it("fails closed when source execution would require plaintext secrets", async () => {
+  it("fails closed when source execution is not ready for the control plane", async () => {
     await assert.rejects(
       runConnectorSource({
         catalog: fixtureCatalog(),
@@ -526,8 +527,9 @@ describe("connector catalog", () => {
             throw new Error("source executor must not receive plaintext secrets");
           },
         },
+        controlPlane: fixtureControlPlane(),
       }),
-      /requires a capability broker/,
+      /not ready for control plane execution: unsupported_operation, missing_execution_policy, missing_audit_policy/,
     );
   });
 
@@ -598,3 +600,32 @@ describe("connector catalog", () => {
     assert.deepEqual(scheduler.list(), []);
   });
 });
+
+function fixtureControlPlane() {
+  return {
+    capabilityId: "messages.send.text",
+    context: {
+      actorId: "agent_test",
+      purpose: "fixture connector execution",
+      requestId: "req_test",
+    },
+    policy: {
+      id: "fixture_policy",
+      enabled: true,
+      defaultEffect: "allow" as const,
+      requireContext: true,
+      blockUnsupported: true,
+      blockMissingCredentialBinding: true,
+      rules: [],
+      traceMode: "redacted" as const,
+    },
+    credentialBinding: {
+      id: "binding_chat_service",
+      providerId: "chat_service",
+      secretRef: "secret://bot",
+      credentialKind: "api_key" as const,
+      capabilityIds: ["messages.send.text"],
+      enabled: true,
+    },
+  };
+}

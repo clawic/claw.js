@@ -34,6 +34,7 @@ describe("connector credential lease broker", () => {
         ttlSeconds: 60,
         costPolicy: { mode: "free_only" },
       },
+      controlPlane: fixtureControlPlane(),
       executor: {
         async execute(ctx) {
           assert.deepEqual(ctx.secrets, { bot: "leased-token" });
@@ -71,6 +72,7 @@ describe("connector credential lease broker", () => {
         secretRefs: { bot: "secret://bot" },
       },
       credentialBroker: fixtureBroker(calls, (request) => fixtureLease(request, { bot: "leased-token" })),
+      controlPlane: fixtureControlPlane(),
       executor: {
         async start(ctx) {
           assert.deepEqual(ctx.secrets, { bot: "leased-token" });
@@ -104,6 +106,7 @@ describe("connector credential lease broker", () => {
           secretRefs: { bot: "secret://bot" },
         },
         credentialBroker: fixtureBroker(calls, (request) => fixtureLease(request, { bot: "leased-token" })),
+        controlPlane: fixtureControlPlane(),
         executor: {
           async execute() {
             throw new Error("provider failed");
@@ -129,6 +132,7 @@ describe("connector credential lease broker", () => {
           secretRefs: { bot: "secret://bot" },
         },
         credentialBroker: fixtureBroker(calls, (request) => fixtureLease(request, {})),
+        controlPlane: fixtureControlPlane(),
         executor: {
           async execute() {
             throw new Error("executor must not start");
@@ -156,6 +160,25 @@ function fixtureCatalog(): ConnectorCatalog {
           appId: "chat_service",
           kind: "action",
           name: "Send Message",
+          support: {
+            state: "supported",
+            reason: "Covered by fixture tests.",
+          },
+          executionPolicy: {
+            readOnly: false,
+            requiresAuth: true,
+            requiresHostApproval: false,
+            destructive: false,
+            costRisk: false,
+            dryRunSupported: true,
+            auditRequired: true,
+          },
+          runtime: {
+            hasRun: true,
+            hasHooks: false,
+            hasAdditionalProps: false,
+            hasMethods: false,
+          },
           fields: [
             { name: "channel", type: "string", optional: false },
             { name: "text", type: "string", optional: false },
@@ -167,6 +190,25 @@ function fixtureCatalog(): ConnectorCatalog {
           appId: "chat_service",
           kind: "source",
           name: "New Message",
+          support: {
+            state: "supported",
+            reason: "Covered by fixture tests.",
+          },
+          executionPolicy: {
+            readOnly: true,
+            requiresAuth: true,
+            requiresHostApproval: false,
+            destructive: false,
+            costRisk: false,
+            dryRunSupported: true,
+            auditRequired: true,
+          },
+          runtime: {
+            hasRun: false,
+            hasHooks: true,
+            hasAdditionalProps: false,
+            hasMethods: false,
+          },
           fields: [{ name: "channel", type: "string", optional: false }],
           authFieldNames: ["bot"],
           source: {
@@ -178,6 +220,35 @@ function fixtureCatalog(): ConnectorCatalog {
         },
       ],
     }],
+  };
+}
+
+function fixtureControlPlane() {
+  return {
+    capabilityId: "messages.send.text",
+    context: {
+      actorId: "agent_test",
+      purpose: "fixture connector execution",
+      requestId: "req_test",
+    },
+    policy: {
+      id: "fixture_policy",
+      enabled: true,
+      defaultEffect: "allow" as const,
+      requireContext: true,
+      blockUnsupported: true,
+      blockMissingCredentialBinding: true,
+      rules: [],
+      traceMode: "redacted" as const,
+    },
+    credentialBinding: {
+      id: "binding_chat_service",
+      providerId: "chat_service",
+      secretRef: "secret://bot",
+      credentialKind: "api_key" as const,
+      capabilityIds: ["messages.send.text"],
+      enabled: true,
+    },
   };
 }
 

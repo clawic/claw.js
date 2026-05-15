@@ -105,6 +105,7 @@ function checkRegistryShape(failures) {
 function checkAliasRecords(failures) {
   const seen = new Map();
   for (const record of listClawCliAliases()) {
+    if (record.source === "collection" && record.shadowedByCommand === record.alias) continue;
     const prior = seen.get(record.alias);
     if (prior && prior.canonicalName !== record.canonicalName) {
       failures.push(`alias ${record.alias} resolves to both ${prior.canonicalName} and ${record.canonicalName}`);

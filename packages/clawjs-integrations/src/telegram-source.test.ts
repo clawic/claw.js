@@ -208,7 +208,7 @@ describe("telegram source events", () => {
           },
         },
       }),
-      /requires a capability broker/,
+      /requires connector control plane approval/,
     );
     assert.deepEqual(calls, []);
   });

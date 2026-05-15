@@ -255,8 +255,8 @@ export function listClawCliAliases(): Array<{ alias: string; canonicalName: stri
     for (const alias of entry.aliases ?? []) aliases.push({ alias, canonicalName: entry.name, kind: "alias", source: "command" });
   }
   for (const [alias, canonicalName] of BUILTIN_COLLECTIONS_BY_ALIAS) {
-    if (clawCliCommandsByName.has(alias)) continue;
-    aliases.push({ alias, canonicalName, kind: "alias", source: "collection" });
+    const shadowedByCommand = clawCliCommandsByName.has(alias) ? alias : undefined;
+    aliases.push({ alias, canonicalName, kind: "alias", source: "collection", ...(shadowedByCommand ? { shadowedByCommand } : {}) });
   }
   return aliases.sort((a, b) => a.alias.localeCompare(b.alias));
 }

@@ -25,6 +25,10 @@ import {
   type ConnectorRuntimeExecutorOptions,
   type ConnectorRuntimeImplementation,
 } from "./runtime-registry.ts";
+import {
+  assertConnectorRuntimeControlPlane,
+  type ConnectorRuntimeControlPlaneOptions,
+} from "./control-plane-runtime.ts";
 import type {
   ConnectorCatalog,
   ConnectorFieldDefinition,
@@ -78,6 +82,10 @@ export interface ConnectorSourceRunResult {
   output: Record<string, IntegrationJson>;
   credentialLeaseId?: string;
   credentialLeaseReleased?: boolean;
+  controlPlaneDecision?: {
+    allowed: true;
+    auditTraceMode: string;
+  };
 }
 
 export type ConnectorSourceSubscriptionStatus = "ready" | "blocked" | "disabled";
@@ -119,6 +127,7 @@ export interface RunConnectorSourceOptions {
   leasePolicy?: ConnectorCredentialLeasePolicy;
   runtimeExecutorOptions?: ConnectorRuntimeExecutorOptions;
   runtimeRegistry?: readonly ConnectorRuntimeImplementation[];
+  controlPlane?: ConnectorRuntimeControlPlaneOptions;
 }
 
 export class ConnectorSourceScheduler {
@@ -215,6 +224,11 @@ export async function runConnectorSource(
   if (missingFields.length > 0 || missingSecrets.length > 0 || invalidFields.length > 0) {
     throw new Error(`Connector source is missing or invalid input: ${[...missingFields, ...missingSecrets, ...invalidFields].join(", ")}`);
   }
+  const controlPlaneDecision = assertConnectorRuntimeControlPlane({
+    app: found.app,
+    operation: found.operation,
+    controlPlane: options.controlPlane,
+  });
   if (found.operation.authFieldNames.length > 0 && !options.credentialBroker) {
     throw new Error("Connector source execution with secrets requires a capability broker; plaintext secret resolution is disabled.");
   }
@@ -235,6 +249,10 @@ export async function runConnectorSource(
       operationId: found.operation.id,
       appId: found.app.id,
       output,
+      controlPlaneDecision: {
+        allowed: true,
+        auditTraceMode: controlPlaneDecision.audit.traceMode,
+      },
     };
   }
 
@@ -277,6 +295,10 @@ export async function runConnectorSource(
       output,
       credentialLeaseId: lease.id,
       credentialLeaseReleased: released,
+      controlPlaneDecision: {
+        allowed: true,
+        auditTraceMode: controlPlaneDecision.audit.traceMode,
+      },
     };
   } finally {
     if (!released) {

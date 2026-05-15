@@ -46,6 +46,12 @@ The pipeline is:
 Host-owned approvals, credential brokers, raw trace opt-in, and real connector
 execution stay outside the core evaluator.
 
+`@clawjs/integrations` consumes the evaluator at the runtime boundary. Real
+operation and source execution fails closed unless the caller supplies a
+matching control-plane decision context. The runner checks readiness before any
+broker lease or runtime call: operation support, execution policy, audit
+metadata, authenticated credential scope, and runtime evidence must be present.
+
 ## Consequences
 
 Connector execution has a stable preflight contract. Agents can explain why a

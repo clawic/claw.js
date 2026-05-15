@@ -25,6 +25,10 @@ import {
   type ConnectorRuntimeExecutorOptions,
   type ConnectorRuntimeImplementation,
 } from "./runtime-registry.ts";
+import {
+  assertConnectorRuntimeControlPlane,
+  type ConnectorRuntimeControlPlaneOptions,
+} from "./control-plane-runtime.ts";
 import type {
   ConnectorCatalog,
   ConnectorOperationDefinition,
@@ -52,6 +56,7 @@ export interface RunConnectorOperationOptions {
   leasePolicy?: ConnectorCredentialLeasePolicy;
   runtimeExecutorOptions?: ConnectorRuntimeExecutorOptions;
   runtimeRegistry?: readonly ConnectorRuntimeImplementation[];
+  controlPlane?: ConnectorRuntimeControlPlaneOptions;
 }
 
 export interface ConnectorOperationDryRun {
@@ -74,6 +79,10 @@ export interface ConnectorOperationRunResult {
   output: Record<string, IntegrationJson>;
   credentialLeaseId?: string;
   credentialLeaseReleased?: boolean;
+  controlPlaneDecision?: {
+    allowed: true;
+    auditTraceMode: string;
+  };
 }
 
 export async function runConnectorOperation(
@@ -111,6 +120,11 @@ export async function runConnectorOperation(
   if (missingFields.length > 0 || missingSecrets.length > 0 || invalidFields.length > 0) {
     throw new Error(`Connector operation is missing or invalid input: ${[...missingFields, ...missingSecrets, ...invalidFields].join(", ")}`);
   }
+  const controlPlaneDecision = assertConnectorRuntimeControlPlane({
+    app: found.app,
+    operation: found.operation,
+    controlPlane: options.controlPlane,
+  });
   if (found.operation.authFieldNames.length > 0 && !options.credentialBroker) {
     throw new Error("Connector operation execution with secrets requires a capability broker; plaintext secret resolution is disabled.");
   }
@@ -130,6 +144,10 @@ export async function runConnectorOperation(
       operationId: found.operation.id,
       appId: found.app.id,
       output,
+      controlPlaneDecision: {
+        allowed: true,
+        auditTraceMode: controlPlaneDecision.audit.traceMode,
+      },
     };
   }
 
@@ -171,6 +189,10 @@ export async function runConnectorOperation(
       output,
       credentialLeaseId: lease.id,
       credentialLeaseReleased: released,
+      controlPlaneDecision: {
+        allowed: true,
+        auditTraceMode: controlPlaneDecision.audit.traceMode,
+      },
     };
   } finally {
     if (!released) {
