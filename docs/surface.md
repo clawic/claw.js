@@ -900,6 +900,7 @@ The docs check script validates that every current export from
     SettingsValuesRecord
     setupOpenClawWorkspace
     signActorAssertion
+    splitConnectorCapabilityId
     SKILL_CONTEXT_CAPSULE_MAX_CHARS
     SKILLS_CONFIG_FILE
     SKILLS_DIR
@@ -1391,8 +1392,33 @@ The docs check script validates that every current export from
     COMMUNITIES_SPIRITUALITY_FAMILY
     CompatSnapshot
     compatSnapshotSchema
+    connectorApprovalGrantMatches
+    ConnectorApprovalGrant
+    ConnectorAuditDeclaration
+    ConnectorBudget
+    ConnectorBudgetUnknownCostBehavior
+    ConnectorBudgetWindow
+    ConnectorCapability
+    connectorControlPlaneVersion
+    ConnectorControlPlaneDecision
+    ConnectorControlPlaneDecisionReason
     ConnectorDescriptor
     connectorDescriptorSchema
+    ConnectorExecutionPipelineStage
+    connectorExecutionPipeline
+    ConnectorExecutionRequest
+    ConnectorNetworkPolicy
+    ConnectorNetworkProof
+    ConnectorOperation
+    ConnectorPolicy
+    ConnectorPolicyEffect
+    ConnectorPolicyRule
+    ConnectorProvider
+    ConnectorRiskTier
+    ConnectorRuntimeKind
+    ConnectorSupportState
+    ConnectorTraceMode
+    ConnectorTrustTier
     ContextChip
     ContextPackBudget
     contextPackBudgetSchema
@@ -1414,9 +1440,11 @@ The docs check script validates that every current export from
     contextPackStatusSchema
     COOKING_FAMILY
     createCodexReadOnlySourceDescriptor
+    createConnectorCapability
     createManifest
     createTtsPlaybackPlan
     CREATIVITY_FAMILY
+    CredentialBinding
     CredentialSource
     CRM_FAMILY
     CUSTOMER_INTAKE_FAMILY
@@ -1442,6 +1470,7 @@ The docs check script validates that every current export from
     EffectiveAccessPolicy
     EffectPreview
     effectPreviewSchema
+    evaluateConnectorControlPlaneRequest
     EpicRecord
     epicRecordSchema
     EventRecord
@@ -1449,6 +1478,8 @@ The docs check script validates that every current export from
     EventReminder
     eventReminderSchema
     EVENTS_MEMORIES_FAMILY
+    ExternalPrincipal
+    ExternalPrincipalKind
     FAMILY_CARE_FAMILY
     FeatureOwnership
     featureOwnershipSchema
@@ -1516,6 +1547,7 @@ The docs check script validates that every current export from
     IoTStateSnapshot
     iotStateSnapshotSchema
     IoTThingKind
+    isConnectorCapabilityId
     isInsideCodexHome
     isStableClawCliCommand
     JudgmentContextRefs
@@ -1621,6 +1653,11 @@ The docs check script validates that every current export from
     ModelsIntentState
     ModelsObservedState
     ModelSummary
+    NEED_ROUTE_CAPABILITY_GRAPH
+    NEED_SCENARIO_GENERATION_MODES
+    NeedCapabilityEdge
+    NeedCapabilityGraph
+    NeedCapabilityNode
     NeedDimension
     NeedDimensionValue
     NEED_OPPORTUNITY_KINDS
@@ -1633,15 +1670,19 @@ The docs check script validates that every current export from
     NeedRoute
     NEED_ROUTE_DIMENSIONS
     NeedRouteEvaluation
+    NeedRouteGenerationPlan
     NeedRouteMaturityState
     NEED_ROUTE_MATURITY_STATES
     NEED_ROUTE_PILOT_PACKS
+    NeedScenarioGenerationMode
     dedupeNeedOpportunities
     evaluateNeedRoute
     evaluateNeedRoutes
     generateNeedRoutes
+    listNeedCapabilityGraph
     listNeedDimensions
     listNeedRoutePilotPacks
+    planNeedRouteGeneration
     RoutePilotPack
     scoreNeedOpportunity
     NoteBlock

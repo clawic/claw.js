@@ -1057,6 +1057,8 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_signals
   claw_cli_command_report["report\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_report
+  claw_cli_command_needs["needs\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_needs
   claw_cli_command_work["work\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_work
   claw_cli_command_projects["projects\ncliCommand"]
@@ -1340,6 +1342,10 @@ flowchart TD
   claw_workspace --> claw_workspace_reports
   claw_workspace_reports_governance_state["report governance state\nfile"]
   claw_workspace_reports --> claw_workspace_reports_governance_state
+  claw_workspace_need_routes["need-routes\nfolder"]
+  claw_workspace --> claw_workspace_need_routes
+  claw_workspace_need_routes_ledger["need route lab ledger\nfile"]
+  claw_workspace_need_routes --> claw_workspace_need_routes_ledger
   claw_workspace_slides["slides\nfolder"]
   claw_workspace --> claw_workspace_slides
   claw_workspace_dashboard_database["dashboard-database\nfolder"]
@@ -2164,6 +2170,7 @@ flowchart TD
 | `claw.cli.command.search` | cliCommand | cli | claw |  |  |  | `search` |
 | `claw.cli.command.signals` | cliCommand | cli | claw |  |  |  | `signals` |
 | `claw.cli.command.report` | cliCommand | cli | claw |  |  |  | `report` |
+| `claw.cli.command.needs` | cliCommand | cli | claw |  |  |  | `needs` |
 | `claw.cli.command.work` | cliCommand | cli | claw |  |  |  | `work` |
 | `claw.cli.command.projects` | cliCommand | cli | claw |  |  |  | `projects` |
 | `claw.cli.command.tasks` | cliCommand | cli | claw |  |  |  | `tasks` |
@@ -2307,6 +2314,8 @@ flowchart TD
 | `claw.workspace.references` | folder | persistent | claw |  |  |  | `.claw/references` |
 | `claw.workspace.reports` | folder | persistent | claw |  |  |  | `.claw/reports` |
 | `claw.workspace.reports.governance_state` | file | persistent | claw |  |  |  | `.claw/reports/report-governance.json` |
+| `claw.workspace.need_routes` | folder | persistent | claw |  |  |  | `.claw/need-routes` |
+| `claw.workspace.need_routes.ledger` | file | persistent | claw |  |  |  | `.claw/need-routes/need-route-lab.json` |
 | `claw.workspace.slides` | folder | persistent | claw |  |  |  | `.claw/slides` |
 | `claw.workspace.dashboard_database` | folder | persistent | claw |  |  |  | `.claw/dashboard-database` |
 | `claw.workspace.channel_run` | folder | persistent | claw |  |  |  | `.claw/run/channels` |
