@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const scriptRootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const cwd = process.cwd();
 const args = process.argv.slice(2);
 const ownerArgIndex = args.indexOf("--owner");
