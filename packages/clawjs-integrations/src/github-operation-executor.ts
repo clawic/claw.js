@@ -41,6 +41,7 @@ export const GITHUB_CORE_ACTION_SLUGS = [
   "create-issue",
   "update-issue",
   "create-discussion",
+  "search-discussions",
   "create-security-advisory-report",
   "lock-issue",
   "unlock-issue",
@@ -100,6 +101,7 @@ const DEPLOYMENT_ID_FIELD = integerField("deploymentId", { default: 1, min: 1 })
 const REVIEW_ID_FIELD = integerField("reviewId", { default: 1, min: 1 });
 const COMMENT_ID_FIELD = integerField("commentId", { default: 1, min: 1 });
 const GITHUB_CREATE_DISCUSSION_MUTATION = "mutation CreateDiscussion($repositoryId: ID!, $categoryId: ID!, $title: String!, $body: String!, $clientMutationId: String) { createDiscussion(input: { repositoryId: $repositoryId, categoryId: $categoryId, title: $title, body: $body, clientMutationId: $clientMutationId }) { discussion { id number title url } } }";
+const GITHUB_SEARCH_DISCUSSIONS_QUERY = "query SearchDiscussions($query: String!, $first: Int!) { search(query: $query, type: DISCUSSION, first: $first) { discussionCount nodes { ... on Discussion { id number title url createdAt updatedAt } } } }";
 
 export const GITHUB_EXTRA_ACTION_SPECS = [
   spec("list-commits", "GET", (values) => `${repoPath(values)}/commits`, [...REPO_FIELDS, SHA_FIELD, stringField("path", { optional: true, default: "README.md" }), stringField("author", { optional: true, default: "octocat" }), stringField("since", { optional: true, default: "2026-01-01T00:00:00Z" }), stringField("until", { optional: true, default: "2026-01-02T00:00:00Z" }), ...PAGING_FIELDS], { query: ["sha", "path", "author", "since", "until", "per_page", "page"], responseType: "array", paged: true }),
@@ -293,6 +295,14 @@ export function buildGitHubOperationRequest(
           clientMutationId: values.clientMutationId,
         }),
       }, ["data.createDiscussion.discussion.id", "data.createDiscussion.discussion.url"]);
+    case "search-discussions":
+      return postPlan("graphql", auth, headers, {
+        query: GITHUB_SEARCH_DISCUSSIONS_QUERY,
+        variables: {
+          query: requiredString(values.query, "query"),
+          first: Number(firstValue(values.first, values.perPage, values.per_page) ?? 5),
+        },
+      }, ["data.search.nodes"]);
     case "create-security-advisory-report":
       return postPlan(`${repoPath(values)}/security-advisories/reports`, auth, headers, removeEmptyValues({
         summary: requiredString(firstValue(values.summary, values.title), "summary"),

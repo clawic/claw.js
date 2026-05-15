@@ -46,6 +46,7 @@ const GITHUB_ACTIONS = [
   action("github.action.create-issue", "Create Issue", [...REPO_FIELDS, field("title", "string"), field("body", "string", true)]),
   action("github.action.update-issue", "Update Issue", [...ISSUE_FIELDS, field("title", "string", true, { default: "sample" })]),
   action("github.action.create-discussion", "Create Discussion", [field("repositoryId", "string"), field("categoryId", "string"), field("title", "string"), field("body", "string")]),
+  action("github.action.search-discussions", "Search Discussions", [...REPO_FIELDS, field("query", "string"), field("first", "integer", true, { default: 5 })]),
   action("github.action.create-security-advisory-report", "Create Security Advisory Report", [...REPO_FIELDS, field("summary", "string"), field("description", "string"), field("severity", "string", true, { default: "medium" }), field("vulnerabilities", "array", true, { default: [] }), field("cweIds", "array", true, { default: ["CWE-200"] })]),
   action("github.action.lock-issue", "Lock Issue", ISSUE_FIELDS),
   action("github.action.unlock-issue", "Unlock Issue", ISSUE_FIELDS),
@@ -198,6 +199,27 @@ describe("github operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["data.createDiscussion.discussion.id", "data.createDiscussion.discussion.url"],
+      },
+    });
+
+    assert.deepEqual(buildGitHubOperationRequest(operation("github.action.search-discussions"), {
+      query: "repo:octocat/Hello-World saved views",
+      first: 5,
+    }), {
+      method: "POST",
+      endpoint: "graphql",
+      auth,
+      headers,
+      body: {
+        query: "query SearchDiscussions($query: String!, $first: Int!) { search(query: $query, type: DISCUSSION, first: $first) { discussionCount nodes { ... on Discussion { id number title url createdAt updatedAt } } } }",
+        variables: {
+          query: "repo:octocat/Hello-World saved views",
+          first: 5,
+        },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["data.search.nodes"],
       },
     });
 
