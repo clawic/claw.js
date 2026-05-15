@@ -158,7 +158,6 @@ aliases for overlapping CRUD verbs:
 ```bash
 claw db task "Ship workspace productivity"
 claw db tasks list
-claw db leads create --set name=Ada --set website=https://ada.dev
 
 claw areas create "Personal Ops"
 claw lists create "Today" --kind today

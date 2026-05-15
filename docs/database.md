@@ -24,7 +24,7 @@ ClawJS now exposes database behavior through three related surfaces:
 - namespaces that behave like separate logical databases
 - built-in protected productivity collections for `people`, `tasks`, `goals`, `projects`, `events`, `reminders`, `deadlines`, `notes`, `inbox_threads`, and `inbox_messages`
 - additional protected product-domain collections used by the company cockpit, including `companies`, `portfolios`, `portfolio_items`, `goals`, `projects`, `issues`, `releases`, `operational_checks`, `operational_incidents`, `feedback_items`, `metric_snapshots`, and `import_batches`
-- schema-first custom collections with field validation and index metadata
+- schema-first custom collections with field validation and index metadata, created explicitly through the low-level database admin surface
 - scoped API tokens at `namespace + collection + operation` granularity
 - realtime record events over WebSocket
 - local file storage backed by SQLite metadata
@@ -62,12 +62,23 @@ For local-first data and productivity records, use `claw db ...`:
 ```bash
 claw db task "Ship database docs"
 claw db tasks list
-claw db leads create --set name=Ada --set website=https://ada.dev
-claw db leads schema
 ```
 
 Use `--namespace main`, `--url`, and `--token` when the same CRUD facade
 should target a running database service.
+
+`claw db <collection> create|update` never creates an unknown collection as a
+side effect. Custom collections are explicit administrative objects: create
+them first with `claw database collection create`, then use `claw db ...` for
+records.
+
+For custom collections against a running service:
+
+```bash
+claw database collection create --url http://127.0.0.1:24102 --token <token> --namespace main --name leads --fields '[{"name":"title","type":"text"},{"name":"metadata","type":"json"}]'
+claw db leads create --url http://127.0.0.1:24102 --token <token> --set name=Ada --set website=https://ada.dev
+claw db leads schema --url http://127.0.0.1:24102 --token <token>
+```
 
 The app ships its own CLI:
 

@@ -41,6 +41,31 @@ function parseClawJsonData<T>(stdout: string): T {
   return payload.data;
 }
 
+async function createProspectsCollection(input: { baseUrl: string; token: string }) {
+  await execFileAsync("node", [
+    databaseDistCli,
+    "collection",
+    "create",
+    "--url",
+    input.baseUrl,
+    "--token",
+    input.token,
+    "--namespace",
+    "main",
+    "--name",
+    "prospects",
+    "--fields",
+    JSON.stringify([
+      { name: "title", type: "text" },
+      { name: "description", type: "text" },
+      { name: "status", type: "text" },
+      { name: "tags", type: "json" },
+      { name: "metadata", type: "json" },
+    ]),
+    "--json",
+  ], { cwd: process.cwd() });
+}
+
 test("dedicated CLI and claw bridge hit the same database service", async () => {
   const server = await boot();
 
@@ -133,7 +158,7 @@ test("dedicated CLI and claw bridge hit the same database service", async () => 
   assert.equal(listedPayload.items[0]?.name, "Acme");
 });
 
-test("claw db uses the same remote database service for built-ins and magic custom collections", async () => {
+test("claw db uses the same remote database service for built-ins and explicit custom collections", async () => {
   const server = await boot();
 
   const login = await execFileAsync("node", [
@@ -167,6 +192,11 @@ test("claw db uses the same remote database service for built-ins and magic cust
   const createdTaskPayload = parseClawJsonData<{ id: string; title: string; status: string }>(createdTask.stdout);
   assert.equal(createdTaskPayload.title, "Ship CLI");
   assert.equal(createdTaskPayload.status, "todo");
+
+  await createProspectsCollection({
+    baseUrl: server.baseUrl,
+    token: loginPayload.accessToken,
+  });
 
   const createdLead = await execFileAsync("node", [
     clawBin,
@@ -228,7 +258,7 @@ test("claw db uses the same remote database service for built-ins and magic cust
   assert.equal(listedProspectsPayload.items[0]?.metadata?.website, "https://ada.dev");
 });
 
-test("claw db remote human mode shows local-first style guidance, implicit create, and schema", async () => {
+test("claw db remote human mode shows local-first style guidance, explicit custom create, and schema", async () => {
   const server = await boot();
 
   const login = await execFileAsync("node", [
@@ -260,6 +290,11 @@ test("claw db remote human mode shows local-first style guidance, implicit creat
   assert.match(createdTask.stderr, /Using remote database at/);
   assert.match(createdTask.stdout, /Created task \S+ "Ship CLI"/);
 
+  await createProspectsCollection({
+    baseUrl: server.baseUrl,
+    token: loginPayload.accessToken,
+  });
+
   const createdLead = await execFileAsync("node", [
     clawBin,
     "db",
@@ -273,7 +308,7 @@ test("claw db remote human mode shows local-first style guidance, implicit creat
   ], {
     cwd: path.resolve(process.cwd(), ".."),
   });
-  assert.match(createdLead.stderr, /Created collection "prospects"/);
+  assert.doesNotMatch(createdLead.stderr, /Created collection "prospects"/);
   assert.match(createdLead.stderr, /Mapped "name" to "title"/);
   assert.match(createdLead.stdout, /Created prospect \S+ "Ada"/);
 

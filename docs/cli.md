@@ -279,6 +279,7 @@ claw db <collection> delete record-123
 claw db <collection> query "blocked auth"
 claw db <collection> schema
 claw db tasks list
+claw database collection create --namespace main --name leads --fields '[{"name":"title","type":"text"},{"name":"metadata","type":"json"}]'
 claw db leads create --set name=Ada --set website=https://ada.dev
 claw db leads schema
 claw collections <collection> list

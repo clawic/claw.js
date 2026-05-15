@@ -70,12 +70,6 @@ const CUSTOM_COLLECTION_INDEXES: IndexDefinition[] = [
 interface DbRuntime {
   ensureNamespace(namespaceId: string): Promise<void>;
   getCollection(namespaceId: string, collectionName: string): Promise<CollectionDefinition | null>;
-  ensureCollection(namespaceId: string, input: {
-    name: string;
-    displayName?: string;
-    fields: FieldDefinition[];
-    indexes?: IndexDefinition[];
-  }): Promise<CollectionDefinition>;
   listRecords(namespaceId: string, collectionName: string): Promise<{ total: number; items: RecordEnvelope[] }>;
   getRecord(namespaceId: string, collectionName: string, recordId: string): Promise<RecordEnvelope | null>;
   createRecord(namespaceId: string, collectionName: string, payload: Record<string, unknown>): Promise<RecordEnvelope>;
@@ -104,15 +98,6 @@ class LocalDbRuntime implements DbRuntime {
 
   async getCollection(namespaceId: string, collectionName: string): Promise<CollectionDefinition | null> {
     return this.store.getCollection(namespaceId, collectionName);
-  }
-
-  async ensureCollection(namespaceId: string, input: {
-    name: string;
-    displayName?: string;
-    fields: FieldDefinition[];
-    indexes?: IndexDefinition[];
-  }): Promise<CollectionDefinition> {
-    return this.store.ensureCollection(namespaceId, input);
   }
 
   async listRecords(namespaceId: string, collectionName: string): Promise<{ total: number; items: RecordEnvelope[] }> {
@@ -154,17 +139,6 @@ class RemoteDbRuntime implements DbRuntime {
     } catch {
       return null;
     }
-  }
-
-  async ensureCollection(namespaceId: string, input: {
-    name: string;
-    displayName?: string;
-    fields: FieldDefinition[];
-    indexes?: IndexDefinition[];
-  }): Promise<CollectionDefinition> {
-    const current = await this.getCollection(namespaceId, input.name);
-    if (current) return current;
-    return await this.client.createCollection(namespaceId, input) as unknown as CollectionDefinition;
   }
 
   async listRecords(namespaceId: string, collectionName: string): Promise<{ total: number; items: RecordEnvelope[] }> {
@@ -366,6 +340,7 @@ function buildMagicDbUsage(binName = "claw"): string {
     "Examples:",
     `  ${binName} db task "Ship CLI"`,
     `  ${binName} db tasks list`,
+    `  ${binName} database collection create --namespace main --name leads --fields '[{"name":"title","type":"text"},{"name":"metadata","type":"json"}]'`,
     `  ${binName} db leads create --set name=Ada --set website=https://ada.dev`,
     `  ${binName} db leads list --url http://127.0.0.1:4510 --token <token>`,
     `  ${binName} db leads schema`,
@@ -789,6 +764,16 @@ function buildCreateHint(collectionName: string, binName = "claw"): string {
   return `Try: ${binName} db ${singular} "First ${singular}"`;
 }
 
+function buildExplicitCollectionHint(collectionName: string, binName = "claw"): string {
+  const template = defaultCustomCollection(collectionName);
+  const fields = JSON.stringify(template.fields);
+  const indexes = JSON.stringify(template.indexes);
+  return [
+    "Create the collection explicitly first:",
+    `${binName} database collection create --namespace main --name ${collectionName} --fields '${fields}' --indexes '${indexes}'`,
+  ].join(" ");
+}
+
 export async function runMagicDbCli(input: {
   argv: string[];
   positionals: string[];
@@ -834,12 +819,7 @@ export async function runMagicDbCli(input: {
     ? `Using remote database at ${baseUrl}`
     : "Using local database for this project");
 
-  let collection = await runtime.getCollection(namespaceId, collectionName);
-  let collectionCreated = false;
-  if (!collection && (action === "create" || action === "update")) {
-    collection = await runtime.ensureCollection(namespaceId, defaultCustomCollection(collectionName));
-    collectionCreated = !collection.builtin;
-  }
+  const collection = await runtime.getCollection(namespaceId, collectionName);
 
   if (action === "schema") {
     const schema = collection ?? buildCustomCollectionPreview(namespaceId, collectionName);
@@ -847,22 +827,24 @@ export async function runMagicDbCli(input: {
       writeDbJson(stdout, {
         exists: Boolean(collection),
         collection: schema,
-        autoCreateOnWrite: !schema.builtin,
+        autoCreateOnWrite: false,
+        explicitCreateRequired: !collection,
+        createHint: collection ? null : buildExplicitCollectionHint(collectionName, binName),
       }, dbJsonMeta(input, collectionName, action));
     } else {
-      stdout.write(`${renderSchemaDetail(schema, Boolean(collection))}\n`);
+      stdout.write(`${renderSchemaDetail(schema, Boolean(collection))}${collection ? "" : `\n${buildExplicitCollectionHint(collectionName, binName)}`}\n`);
     }
     return DB_EXIT_OK;
   }
 
   if (!collection && action === "list") {
     if (wantsJson) writeDbJson(stdout, [], dbJsonMeta(input, collectionName, action));
-    else stdout.write(`No ${collectionName} yet\n${buildCreateHint(collectionName, binName)}\n`);
+    else stdout.write(`Collection ${collectionName} does not exist.\n${buildExplicitCollectionHint(collectionName, binName)}\n`);
     return DB_EXIT_OK;
   }
 
   if (!collection) {
-    writeDbError(input, "not_found", `Collection ${collectionName} does not exist.`, DB_EXIT_FAILURE, dbJsonMeta(input, collectionName, action));
+    writeDbError(input, "not_found", `Collection ${collectionName} does not exist. ${buildExplicitCollectionHint(collectionName, binName)}`, DB_EXIT_FAILURE, dbJsonMeta(input, collectionName, action));
     return DB_EXIT_FAILURE;
   }
 
@@ -934,9 +916,6 @@ export async function runMagicDbCli(input: {
       : await runtime.updateRecord(namespaceId, collectionName, recordId!, payload);
     if (wantsJson) writeDbJson(stdout, record, dbJsonMeta(input, collectionName, action));
     else {
-      if (collectionCreated) {
-        writeHumanAdvisory(stderr, wantsJson, `Created collection "${collectionName}"`);
-      }
       const label = pickDisplayField(record, collectionName);
       if (action === "create") stdout.write(`Created ${singularCollectionLabel(collectionName)} ${record.id} "${label}"\n`);
       else stdout.write(`Updated ${singularCollectionLabel(collectionName)} ${record.id}\n`);
