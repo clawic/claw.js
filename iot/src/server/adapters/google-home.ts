@@ -33,8 +33,8 @@ import type {
 
 export const GOOGLE_HOME_ID = "google-home";
 
-interface GoogleHomeThingConfig {
-  /** Stable device id exposed to Google. Defaults to the thing id. */
+interface GoogleHomeDeviceConfig {
+  /** Stable device id exposed to Google. Defaults to the device id. */
   googleDeviceId: string;
   /** Google device type, e.g. action.devices.types.LIGHT. */
   type: string;
@@ -60,7 +60,7 @@ export interface GoogleHomeCredentials {
 
 interface GoogleHomeSession {
   credentials: GoogleHomeCredentials;
-  exportedThings: Map<string, GoogleHomeThingConfig>;
+  exportedThings: Map<string, GoogleHomeDeviceConfig>;
 }
 
 export interface GoogleHomeAdapterContext {
@@ -74,13 +74,13 @@ export interface GoogleHomeAdapterContext {
   readThingState: (thingId: string) => Record<string, unknown>;
 }
 
-function readThingConfig(metadata: Record<string, unknown> | undefined): GoogleHomeThingConfig | null {
+function readDeviceConfig(metadata: Record<string, unknown> | undefined): GoogleHomeDeviceConfig | null {
   const raw = metadata?.googleHome;
   if (!raw || typeof raw !== "object") return null;
-  const config = raw as Partial<GoogleHomeThingConfig>;
+  const config = raw as Partial<GoogleHomeDeviceConfig>;
   if (typeof config.googleDeviceId !== "string" || typeof config.type !== "string") return null;
   if (!Array.isArray(config.traits)) return null;
-  return config as GoogleHomeThingConfig;
+  return config as GoogleHomeDeviceConfig;
 }
 
 export class GoogleHomeAdapter implements ConnectorAdapter {
@@ -156,7 +156,7 @@ export class GoogleHomeAdapter implements ConnectorAdapter {
     const things = this.context.resolveThings();
     const devices = things
       .map((thing) => {
-        const config = readThingConfig(thing.metadata);
+        const config = readDeviceConfig(thing.metadata);
         if (!config) return null;
         return {
           id: config.googleDeviceId,
@@ -182,7 +182,7 @@ export class GoogleHomeAdapter implements ConnectorAdapter {
     for (const device of devices) {
       const thing = this.context
         .resolveThings()
-        .find((entry) => readThingConfig(entry.metadata)?.googleDeviceId === device.id);
+        .find((entry) => readDeviceConfig(entry.metadata)?.googleDeviceId === device.id);
       if (!thing) {
         state[device.id] = { online: false, status: "ERROR", errorCode: "deviceNotFound" };
         continue;
@@ -207,7 +207,7 @@ export class GoogleHomeAdapter implements ConnectorAdapter {
       for (const device of command.devices) {
         const thing = this.context
           .resolveThings()
-          .find((entry) => readThingConfig(entry.metadata)?.googleDeviceId === device.id);
+          .find((entry) => readDeviceConfig(entry.metadata)?.googleDeviceId === device.id);
         if (!thing) {
           results.push({ ids: [device.id], status: "ERROR" });
           continue;

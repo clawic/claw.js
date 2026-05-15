@@ -3,13 +3,13 @@
 // Covers two complementary use cases:
 //   1. Generic MQTT: a user already has an MQTT broker on their LAN
 //      and wants Clawix to publish on a topic when an action fires.
-//      Per-thing metadata declares the topic and payload templates.
+//      Per-device metadata declares the topic and payload templates.
 //   2. Zigbee2MQTT auto-detection: when the broker streams events on
 //      `zigbee2mqtt/bridge/devices`, the adapter mints DiscoveredDevices
 //      for every entry so the wizard can import a whole Zigbee mesh
 //      in one step.
 //
-// Configuration on the thing record:
+// Configuration on the device record:
 //
 //   metadata.mqtt = {
 //     "publishTopic": "zigbee2mqtt/lamp_living/set",
@@ -18,7 +18,7 @@
 //   }
 //
 // Broker connection details live on the connector record, not the
-// thing record, so a fleet of Zigbee devices share one connection.
+// device record, so a fleet of Zigbee devices share one connection.
 
 import type {
   ConnectorAdapter,
@@ -34,7 +34,7 @@ const optionalImport = new Function("specifier", "return import(specifier)") as 
   specifier: string,
 ) => Promise<unknown>;
 
-interface MqttThingConfig {
+interface MqttDeviceConfig {
   publishTopic: string;
   payloadTemplate?: unknown;
   subscribeTopic?: string;
@@ -74,12 +74,12 @@ function renderTemplate(template: unknown, desired: unknown): unknown {
   return template;
 }
 
-function readConfig(metadata: Record<string, unknown> | undefined): MqttThingConfig | null {
+function readConfig(metadata: Record<string, unknown> | undefined): MqttDeviceConfig | null {
   const raw = metadata?.mqtt;
   if (!raw || typeof raw !== "object") return null;
-  const config = raw as Partial<MqttThingConfig>;
+  const config = raw as Partial<MqttDeviceConfig>;
   if (typeof config.publishTopic !== "string" || !config.publishTopic) return null;
-  return config as MqttThingConfig;
+  return config as MqttDeviceConfig;
 }
 
 export class MqttAdapter implements ConnectorAdapter {

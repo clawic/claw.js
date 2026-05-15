@@ -11,7 +11,7 @@ This is the living audit report for ADR 0013. The machine-readable source is
 ## Current gate status
 
 - Critical naming failures: 0.
-- Naming warnings: 227.
+- Naming warnings: 220.
 - Source-size warnings: 114.
 - Source-structure signals: 320.
 
@@ -43,6 +43,11 @@ for staged rename/split work and must not be hidden by compressing code.
 - User module graph vocabulary: initial cleanup completed for the user explorer
   graph contract. Generic `GraphData`/`buildGraph` names were renamed to
   `UserRelationshipGraph`/`buildUserGraph`.
+- IoT adapter device vocabulary: initial cleanup completed for provider adapter
+  configuration types and readers. Alexa, Google Home, MQTT, and Tuya local
+  config symbols now use `DeviceConfig`/`readDeviceConfig`. Public IoT
+  contracts such as `/things`, `iot.things.*`, `ThingRecord`, and `thingId`
+  remain a separate contract rename family to coordinate with Clawix.
 - CLI/router and command handlers: keep `packages/clawjs/src/index.ts` from
   growing by extracting command families before adding behavior.
 - Showcase UI/API: split settings, tasks, onboarding, locale, and route files

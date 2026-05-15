@@ -24,7 +24,7 @@ import type {
 
 export const ALEXA_ID = "alexa";
 
-interface AlexaThingConfig {
+interface AlexaDeviceConfig {
   endpointId: string;
   /** Alexa capability interfaces, e.g. ["Alexa.PowerController",
    *  "Alexa.BrightnessController", "Alexa.EndpointHealth"]. */
@@ -58,12 +58,12 @@ export interface AlexaAdapterContext {
   readThingState: (thingId: string) => Record<string, unknown>;
 }
 
-function readThingConfig(metadata: Record<string, unknown> | undefined): AlexaThingConfig | null {
+function readDeviceConfig(metadata: Record<string, unknown> | undefined): AlexaDeviceConfig | null {
   const raw = metadata?.alexa;
   if (!raw || typeof raw !== "object") return null;
-  const config = raw as Partial<AlexaThingConfig>;
+  const config = raw as Partial<AlexaDeviceConfig>;
   if (typeof config.endpointId !== "string" || !Array.isArray(config.capabilities)) return null;
-  return config as AlexaThingConfig;
+  return config as AlexaDeviceConfig;
 }
 
 export class AlexaAdapter implements ConnectorAdapter {
@@ -119,7 +119,7 @@ export class AlexaAdapter implements ConnectorAdapter {
     const endpoints = this.context
       .resolveThings()
       .map((thing) => {
-        const config = readThingConfig(thing.metadata);
+        const config = readDeviceConfig(thing.metadata);
         if (!config) return null;
         return {
           endpointId: config.endpointId,
@@ -153,7 +153,7 @@ export class AlexaAdapter implements ConnectorAdapter {
     const endpointId = body.directive.endpoint!.endpointId!;
     const thing = this.context
       .resolveThings()
-      .find((entry) => readThingConfig(entry.metadata)?.endpointId === endpointId);
+      .find((entry) => readDeviceConfig(entry.metadata)?.endpointId === endpointId);
     if (!thing) {
       return alexaErrorResponse(body, "NO_SUCH_ENDPOINT");
     }

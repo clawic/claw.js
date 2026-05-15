@@ -34,9 +34,9 @@ import type {
 
 export const TUYA_ID = "tuya";
 
-/** Per-thing pointer to a Tuya cloud device. `code` is the dp code
+/** Per-device pointer to a Tuya cloud device. `code` is the dp code
  *  the Tuya schema declares for the capability we want to write. */
-interface TuyaThingConfig {
+interface TuyaDeviceConfig {
   deviceId: string;
   /** Tuya schema status / function code, e.g. `switch_1`, `bright_value`,
    *  `temp_value`, `colour_data`. */
@@ -58,12 +58,12 @@ interface TuyaSession {
   expiresAt: number;
 }
 
-function readThingConfig(metadata: Record<string, unknown> | undefined): TuyaThingConfig | null {
+function readDeviceConfig(metadata: Record<string, unknown> | undefined): TuyaDeviceConfig | null {
   const raw = metadata?.tuya;
   if (!raw || typeof raw !== "object") return null;
-  const config = raw as Partial<TuyaThingConfig>;
+  const config = raw as Partial<TuyaDeviceConfig>;
   if (typeof config.deviceId !== "string" || typeof config.code !== "string") return null;
-  return config as TuyaThingConfig;
+  return config as TuyaDeviceConfig;
 }
 
 /** SHA-256 of a request body, lowercase hex. Tuya signing requires
@@ -137,7 +137,7 @@ export class TuyaAdapter implements ConnectorAdapter {
 
   /** Pulls the current device list from the Tuya cloud. Each device
    *  surfaces as a DiscoveredDevice the wizard can promote into a
-   *  thing record. */
+   *  device record. */
   async syncDevices(): Promise<{ devices: DiscoveredDevice[] } | { error: string }> {
     if (!this.session) return { error: "Tuya not connected. Run iot.tuya.connect first." };
     await this.refreshIfNeeded();
@@ -179,7 +179,7 @@ export class TuyaAdapter implements ConnectorAdapter {
   }
 
   async dispatch(context: DispatchContext): Promise<DispatchResult> {
-    const config = readThingConfig(context.thing.metadata);
+    const config = readDeviceConfig(context.thing.metadata);
     if (!config) {
       throw new Error(`tuya: thing ${context.thing.id} is missing metadata.tuya configuration`);
     }
