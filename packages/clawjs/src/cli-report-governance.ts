@@ -1,6 +1,6 @@
 import path from "node:path";
 
-type ReportLike = {
+export type ReportLike = {
   id: string;
   kind: string;
   status: string;

@@ -7,6 +7,10 @@ import {
   mergeGlobalDedupe,
   parseCsv,
   reportBudgetState,
+  type ReportBudgetEvent,
+  type ReportBudgetOverride,
+  type ReportGovernanceStateLike,
+  type ReportLike,
 } from "./cli-report-governance.ts";
 import { readBooleanFlag } from "./cli-flag-parsers.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
@@ -17,23 +21,11 @@ type CliContext = {
   cwd: string;
 };
 
-type ReportLike = {
-  id: string;
-  repository: "clawjs" | "clawix";
-  title: string;
-  component?: string;
-  locale?: string;
-  createdByAgentId: string;
-  fingerprint: string;
-  globalDedupe?: unknown;
-  canonicalCandidates?: unknown[];
-};
-
-type StateLike = {
+type StateLike = ReportGovernanceStateLike & {
   updatedAt: string;
   reports: ReportLike[];
-  budgetEvents: unknown[];
-  budgetOverrides: unknown[];
+  budgetEvents: ReportBudgetEvent[];
+  budgetOverrides: ReportBudgetOverride[];
 };
 
 export async function refreshGlobalDedupe(report: ReportLike, flags: Record<string, string>, nowIso: () => string): Promise<void> {
@@ -56,8 +48,8 @@ export async function refreshGlobalDedupe(report: ReportLike, flags: Record<stri
   const query = buildGlobalDedupeQuery(report);
   const { buildGitHubOperationRequest, executeConnectorRuntimeRequestPlan } = await import("@clawjs/integrations");
   const operation = (id: string) => ({ id, appId: "github", kind: "action" as const, name: id, fields: [], authFieldNames: ["githubToken"] });
-  const issuePlan = buildGitHubOperationRequest(operation("github.action.search-issues"), { q: `${query} type:issue`, perPage: 5 } as Record<string, never>);
-  const discussionPlan = buildGitHubOperationRequest(operation("github.action.search-discussions"), { owner, repo, query, first: 5 } as Record<string, never>);
+  const issuePlan = buildGitHubOperationRequest(operation("github.action.search-issues"), { q: `${query} type:issue`, perPage: 5 } as unknown as Record<string, never>);
+  const discussionPlan = buildGitHubOperationRequest(operation("github.action.search-discussions"), { owner, repo, query, first: 5 } as unknown as Record<string, never>);
   const [issues, discussions] = await Promise.all([
     executeConnectorRuntimeRequestPlan({ baseUrl, plan: issuePlan, secrets: { githubToken } }),
     executeConnectorRuntimeRequestPlan({ baseUrl, plan: discussionPlan, secrets: { githubToken } }),
@@ -99,7 +91,7 @@ export async function runGitHubBootstrap(input: {
   const operation = { id: "github.action.create-label", appId: "github", kind: "action" as const, name: "github.action.create-label", fields: [], authFieldNames: ["githubToken"] };
   const results = [];
   for (const label of missingLabels) {
-    const requestPlan = buildGitHubOperationRequest(operation, { owner, repo, name: label, color: "ededed", description: "Claw report governance label" } as Record<string, never>);
+    const requestPlan = buildGitHubOperationRequest(operation, { owner, repo, name: label, color: "ededed", description: "Claw report governance label" } as unknown as Record<string, never>);
     results.push(await executeConnectorRuntimeRequestPlan({ baseUrl, plan: requestPlan, secrets: { githubToken } }));
   }
   input.state.updatedAt = input.nowIso();
@@ -132,7 +124,7 @@ export function runBudgetCommand(input: {
     return writeResult(input.context, input.wantsJson, "budget", { reset: true });
   }
   if (input.subcommand === "override") {
-    const repository = input.flags.repo === "clawix" ? "clawix" : "clawjs";
+    const repository: "clawjs" | "clawix" = input.flags.repo === "clawix" ? "clawix" : "clawjs";
     const override = {
       id: `budget_override_${Date.now().toString(36)}`,
       agentId: input.flags.agent ?? input.flags["agent-id"] ?? "agent",

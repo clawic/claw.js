@@ -411,7 +411,7 @@ function createReport(input: {
   const repository = input.flags.repo === "clawix" ? "clawix" : "clawjs";
   const attachments = parseAttachments(input.argv, input.flags);
   const destination = inferDestination(kind, input.flags, title, observed);
-  const evidence = buildEvidence(input.flags, redactor);
+  const evidence: ReportRecord["evidence"] = buildEvidence(input.flags, redactor);
   const base: Omit<ReportRecord, "quality" | "privacy" | "duplicateCandidates" | "labels" | "fingerprint"> = {
     schemaVersion: 1,
     id: input.flags.id ?? reportId(),
@@ -446,14 +446,15 @@ function createReport(input: {
   };
   const fingerprint = createFingerprint(input.state.fingerprintSalt, base);
   const privacy = reviewPrivacy({ redactedCount: redactor.count, kind, destination, attachments });
-  const report = {
+  const report: ReportRecord = {
     ...base,
     fingerprint,
     privacy,
-    quality: evaluateQuality({ ...base, fingerprint, privacy, labels: [], quality: emptyQuality(), duplicateCandidates: [] }),
+    quality: emptyQuality(),
     duplicateCandidates: [],
     labels: [],
   };
+  report.quality = evaluateQuality(report);
   report.duplicateCandidates = findDuplicateCandidates(report, input.state);
   report.prProposal = buildPrProposal(report, input.flags);
   report.retention = { policy: "manual_prune", exportRedactedByDefault: true, deleteRequiresConfirmation: true };
@@ -505,7 +506,7 @@ function inferDestination(kind: ReportKind, flags: Record<string, string>, title
 }
 
 function buildEvidence(flags: Record<string, string>, redactor: ReturnType<typeof createRedactor>): ReportRecord["evidence"] {
-  const evidence = parseCsvFlag(flags.evidence).map((value) => ({
+  const evidence: ReportRecord["evidence"] = parseCsvFlag(flags.evidence).map((value) => ({
     kind: "note" as const,
     label: "evidence",
     value: redactor.sanitize(value),
