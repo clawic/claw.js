@@ -11,7 +11,7 @@ This is the living audit report for ADR 0013. The machine-readable source is
 ## Current gate status
 
 - Critical naming failures: 0.
-- Naming warnings: 200.
+- Naming warnings: 231.
 - Source-size warnings: 114.
 - Source-structure signals: 320.
 
@@ -20,7 +20,7 @@ for staged rename/split work and must not be hidden by compressing code.
 
 ## Largest current files
 
-- `packages/clawjs/src/index.ts` - 2001 lines.
+- `packages/clawjs/src/index.ts` - 2002 lines.
 - `examples/showcase/src/app/settings/page.tsx` - 1996 lines.
 - `packages/clawjs-node/src/create-claw.test.ts` - 1994 lines.
 - `relay/src/server/db.ts` - 1982 lines.
@@ -49,6 +49,9 @@ for staged rename/split work and must not be hidden by compressing code.
   handlers, serializers, and fixtures by domain.
 - Broad symbols: review `Manager`, `Helper`, `Utils`, `Data`, and `Info` only
   when a clearer domain + role name exists.
+- Naming check scope: generated output and local variable-only broad terms are
+  excluded so warnings stay focused on source files, types, functions, exported
+  values, owned docs data roles, and unresolved context-vocabulary inventory.
 
 ## Validation snapshot
 

@@ -46,6 +46,25 @@ const conventionalDataFiles = new Set([
   "claw.project.json",
   "openclaw.plugin.json",
 ]);
+const ignoredDirectoryNames = new Set([
+  ".git",
+  ".build",
+  ".claude",
+  ".next",
+  ".next-e2e",
+  ".tmp",
+  "artifacts",
+  "build",
+  "coverage",
+  "dist",
+  "node_modules",
+  "playwright-report",
+  "test-results",
+]);
+const ignoredPathParts = [
+  "/output/playwright/",
+  "/Resources/web-dist/",
+];
 
 function read(relativePath) {
   return fs.readFileSync(path.join(rootDir, relativePath), "utf8");
@@ -59,12 +78,19 @@ function toPosix(relativePath) {
   return relativePath.split(path.sep).join("/");
 }
 
+function shouldIgnorePath(relativePath, entryName) {
+  if (ignoredDirectoryNames.has(entryName)) return true;
+  const wrapped = `/${relativePath}/`;
+  return ignoredPathParts.some((part) => wrapped.includes(part));
+}
+
 function walk(directory, out = []) {
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-    if ([".git", ".build", ".claude", "build", "node_modules", "dist", "coverage", "test-results"].includes(entry.name)) continue;
     const absolutePath = path.join(directory, entry.name);
+    const relativePath = toPosix(path.relative(rootDir, absolutePath));
+    if (shouldIgnorePath(relativePath, entry.name)) continue;
     if (entry.isDirectory()) walk(absolutePath, out);
-    else if (entry.isFile()) out.push(toPosix(path.relative(rootDir, absolutePath)));
+    else if (entry.isFile()) out.push(relativePath);
   }
   return out;
 }
@@ -106,12 +132,20 @@ function findBroadTerm(identifier) {
 
 function collectBroadSymbolWarnings(relativePath, text) {
   const warnings = [];
-  const declarationPattern = /\b(?:class|struct|enum|protocol|interface|typealias|type|function|func|const|let|var)\s+([A-Za-z_][A-Za-z0-9_]*)/g;
-  let match;
-  while ((match = declarationPattern.exec(text)) !== null) {
-    const identifier = match[1];
-    const term = findBroadTerm(identifier);
-    if (term) warnings.push({ path: relativePath, kind: "broad-symbol", term, symbol: identifier });
+  const declarationPatterns = [
+    /\b(?:class|struct|enum|protocol|interface|typealias|type|function|func)\s+([A-Za-z_][A-Za-z0-9_]*)/g,
+    /\bexport\s+(?:const|let|var)\s+([A-Za-z_][A-Za-z0-9_]*)/g,
+  ];
+  const seen = new Set();
+  for (const pattern of declarationPatterns) {
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+      const identifier = match[1];
+      if (seen.has(identifier)) continue;
+      seen.add(identifier);
+      const term = findBroadTerm(identifier);
+      if (term) warnings.push({ path: relativePath, kind: "broad-symbol", term, symbol: identifier });
+    }
   }
   return warnings;
 }
