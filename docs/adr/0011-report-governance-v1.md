@@ -43,6 +43,12 @@ connector endpoint. Tests may execute against a local fake GitHub endpoint; real
 GitHub publication remains `EXTERNAL PENDING` until the host approval and
 secret-broker path are physically available.
 
+V1 also includes the volume controls needed before first real users: connector
+search for global canonical Issues/Discussions, fine routing for broad
+translation and product feedback, governed GitHub repository bootstrap, manual
+retention commands, and local budgets per agent/repo. These controls are part of
+V1, not a later governance layer.
+
 ## Consequences
 
 Agents have one stable reporting contract instead of ad hoc GitHub prompts.

@@ -1,0 +1,17 @@
+{
+  "data": {
+    "search": {
+      "discussionCount": 1,
+      "nodes": [
+        {
+          "createdAt": "2026-01-01T00:00:00Z",
+          "id": "D_kwDOsample",
+          "number": 1,
+          "title": "sample",
+          "updatedAt": "2026-01-02T00:00:00Z",
+          "url": "https://github.com/sample/sample/discussions/1"
+        }
+      ]
+    }
+  }
+}

@@ -1692,18 +1692,23 @@ The docs check script validates that every current export from
     ReportDestination
     reportDestinationSchema
     reportDedupeCandidateSchema
+    reportBudgetStateSchema
+    reportCanonicalCandidateSchema
     reportApprovalSchema
     reportAttachmentSchema
     reportEvidenceKindSchema
     reportEvidenceSchema
     ReportGovernanceState
+    reportGlobalDedupeSchema
     reportGovernanceStateSchema
     ReportKind
     reportKindSchema
+    reportPrProposalSchema
     reportPrivacyReviewSchema
     reportQualityGateSchema
     ReportRecord
     reportRecordSchema
+    reportRetentionSchema
     reportSubmissionReceiptSchema
     ReportStatus
     reportStatusSchema

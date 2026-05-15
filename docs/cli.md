@@ -164,6 +164,10 @@ claw report security "Private finding" --impact "..."
 claw report preview rep_...
 claw report submit rep_... --confirm --dry-run
 claw report submit rep_... --confirm --execute --host-approval-id approval_... --github-base-url http://127.0.0.1:8787/
+claw report github bootstrap --dry-run
+claw report export rep_... --redacted --include-attachment trace.txt
+claw report prune --older-than 30d --status submitted,blocked --preview
+claw report budget status --json
 claw report triage --json
 ```
 
@@ -183,6 +187,22 @@ proposal-only plans and do not create pull requests from `claw report`.
 signed-host approval id, a GitHub token supplied through the brokered secret
 field, and a local/test connector endpoint in V1. Real GitHub publication
 without that approved connector path remains `EXTERNAL PENDING`.
+
+Before publication, `check` and `submit` can run global dedupe through the Claw
+GitHub connector. Strong matches become canonical comments; medium matches block
+publication until reviewed. Dedupe does not publish global stable machine IDs:
+local salted fingerprints remain local.
+
+`claw report github bootstrap` verifies the repository setup for labels,
+templates, `Ideas`/`Feedback` Discussions, and private security routing.
+`--apply --confirm` can apply safe supported changes such as missing labels
+through the connector; repo settings and manual GitHub capabilities remain
+`EXTERNAL PENDING` when they cannot be safely applied from the CLI.
+
+Report retention is manual. `export` emits a redacted package by default and
+includes only opted-in attachments named with `--include-attachment`; `delete`
+and `prune` require confirmation. Local budgets limit noisy agents by
+agent/repo window and duplicate cooldowns; human overrides are audited.
 
 `claw report triage` is the non-destructive automation surface. It may score,
 recommend labels, suggest canonical duplicate comments, and build queues, but it
@@ -424,6 +444,8 @@ claw search "system capabilities" --json
 claw search query "release branch" --json
 claw search rebuild --json
 claw inspect codebase --json
+node scripts/codebase-manifest.mjs --write
+(cd ../Clawix/clawix && node scripts/codebase-manifest.mjs --write)
 claw inspect codebase --codebase-manifest docs/codebase-manifest.json,../Clawix/clawix/docs/codebase-manifest.json --json
 claw inspect connectors --connector-catalog packages/clawjs-integrations/fixtures/started-provider-runtime-catalog.json --json
 claw inspect aliases --json

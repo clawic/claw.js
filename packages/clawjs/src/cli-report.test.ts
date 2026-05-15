@@ -7,7 +7,7 @@ import path from "node:path";
 
 import { test } from "vitest";
 
-import { CLI_EXIT_FAILURE, CLI_EXIT_OK } from "./index.ts";
+import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK } from "./index.ts";
 import { runCliCapture } from "./index-test-utils.ts";
 
 function tempWorkspace(): string {
@@ -29,7 +29,21 @@ async function startFakeGitHubServer(): Promise<{ url: string; requests: Array<{
     requests.push({ method: request.method ?? "GET", path: requestPath, body, authorization: request.headers.authorization ?? null });
     response.setHeader("content-type", "application/json");
     if (requestPath === "/graphql") {
+      if (String(body?.query ?? "").includes("SearchDiscussions")) {
+        response.end(JSON.stringify({ data: { search: { discussionCount: 1, nodes: [{ id: "D_search", number: 77, title: "Connector discussion", url: "https://github.com/clawic/clawjs/discussions/77" }] } } }));
+        return;
+      }
       response.end(JSON.stringify({ data: { createDiscussion: { discussion: { id: "D_test", number: 7, title: body?.variables?.title, url: "https://github.com/clawic/clawjs/discussions/7" } } } }));
+      return;
+    }
+    if (requestPath.startsWith("/search/issues")) {
+      const query = (new URL(`http://fake.local${requestPath}`).searchParams.get("q") ?? "").toLowerCase();
+      const items = query.includes("canonical issue")
+        ? [{ id: 123, number: 123, title: "Canonical issue duplicate", html_url: "https://github.com/clawic/clawjs/issues/123", state: "open" }]
+        : query.includes("medium candidate")
+          ? [{ id: 124, number: 124, title: "Medium candidate nearby", html_url: "https://github.com/clawic/clawjs/issues/124", state: "open" }]
+          : [];
+      response.end(JSON.stringify({ total_count: items.length, items }));
       return;
     }
     if (requestPath.endsWith("/security-advisories/reports")) {
@@ -42,6 +56,10 @@ async function startFakeGitHubServer(): Promise<{ url: string; requests: Array<{
     }
     if (requestPath.endsWith("/issues")) {
       response.end(JSON.stringify({ id: 9, number: 9, title: body?.title, html_url: "https://github.com/clawic/clawjs/issues/9" }));
+      return;
+    }
+    if (requestPath.endsWith("/labels")) {
+      response.end(JSON.stringify({ id: 11, name: body?.name, color: body?.color }));
       return;
     }
     response.statusCode = 404;
@@ -121,6 +139,10 @@ test("report routes features, feedback, translations, and security to the approv
   const translation = await runCliCapture(["report", "translation", "Spanish settings copy", "--workspace", workspace, "--locale", "es", "--observed", "Ajustes malo", "--expected", "Ajustes", "--json"], workspace);
   const translationPayload = parsePayload<{ report: { destination: string } }>(translation.stdout);
   assert.equal(translationPayload.data.report.destination, "github_issue");
+
+  const broadTranslation = await runCliCapture(["report", "translation", "Chinese entire language feels bad", "--workspace", workspace, "--locale", "zh-Hans", "--observed", "The whole language feels wrong", "--expected", "Native review", "--json"], workspace);
+  const broadTranslationPayload = parsePayload<{ report: { destination: string } }>(broadTranslation.stdout);
+  assert.equal(broadTranslationPayload.data.report.destination, "github_discussion_feedback");
 
   const security = await runCliCapture(["report", "security", "Token exposure", "--workspace", workspace, "--observed", "token in logs", "--impact", "Credentials could leak", "--json"], workspace);
   const securityPayload = parsePayload<{ report: { destination: string; labels: string[] } }>(security.stdout);
@@ -296,12 +318,116 @@ test("report submit dry-run maps Discussions, private security, duplicates, and 
   assert.equal(duplicatePayload.data.submissionPlan.connectorOperationId, "github.action.create-issue-comment");
   assert.equal(duplicatePayload.data.submissionPlan.values.issueNumber, "<canonical-issue-number-required>");
 
-  const proposal = await runCliCapture(["report", "draft", "Fix obvious typo", "--workspace", workspace, "--kind", "docs", "--destination", "pr_proposal", "--observed", "typo", "--expected", "fixed typo", "--repro", "read docs", "--json"], workspace);
-  const proposalCreated = parsePayload<{ report: { id: string } }>(proposal.stdout);
-  const proposalSubmit = await runCliCapture(["report", "submit", proposalCreated.data.report.id, "--workspace", workspace, "--confirm", "--dry-run", "--json"], workspace);
+  const proposalWorkspace = tempWorkspace();
+  const proposal = await runCliCapture(["report", "draft", "Fix obvious typo", "--workspace", proposalWorkspace, "--kind", "docs", "--destination", "pr_proposal", "--observed", "typo", "--expected", "fixed typo", "--repro", "read docs", "--json"], proposalWorkspace);
+  const proposalCreated = parsePayload<{ report: { id: string; prProposal: { opensPullRequest: boolean; patchPlan: string[] } } }>(proposal.stdout);
+  assert.equal(proposalCreated.data.report.prProposal.opensPullRequest, false);
+  assert.equal(proposalCreated.data.report.prProposal.patchPlan.length > 0, true);
+  const proposalSubmit = await runCliCapture(["report", "submit", proposalCreated.data.report.id, "--workspace", proposalWorkspace, "--confirm", "--dry-run", "--json"], proposalWorkspace);
   const proposalPayload = parsePayload<{ submissionPlan: { action: string; connectorOperationId: string } }>(proposalSubmit.stdout);
   assert.equal(proposalPayload.data.submissionPlan.action, "propose_pull_request_only");
   assert.equal(proposalPayload.data.submissionPlan.connectorOperationId, "proposal_only.no_github_mutation");
+});
+
+test("report check performs global dedupe search through the GitHub connector", async () => {
+  const workspace = tempWorkspace();
+  let fakeGitHub: Awaited<ReturnType<typeof startFakeGitHubServer>>;
+  try {
+    fakeGitHub = await startFakeGitHubServer();
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "EPERM") return;
+    throw error;
+  }
+  process.env.CLAW_REPORT_GITHUB_TOKEN = "offline-test-token";
+  try {
+    const strong = await runCliCapture(["report", "bug", "Canonical issue duplicate", "--workspace", workspace, "--observed", "fails", "--expected", "works", "--repro", "run command", "--json"], workspace);
+    const strongId = parsePayload<{ report: { id: string } }>(strong.stdout).data.report.id;
+    const checked = await runCliCapture(["report", "check", strongId, "--workspace", workspace, "--github-base-url", fakeGitHub.url, "--json"], workspace);
+    const payload = parsePayload<{ report: { globalDedupe: { recommendedAction: string }; canonicalCandidates: Array<{ source: string; number: number; strength: string }> } }>(checked.stdout);
+    assert.equal(payload.data.report.globalDedupe.recommendedAction, "comment_on_canonical");
+    assert.equal(payload.data.report.canonicalCandidates[0]?.source, "github_issue");
+    assert.equal(payload.data.report.canonicalCandidates[0]?.number, 123);
+
+    const medium = await runCliCapture(["report", "bug", "Medium candidate nearby extra", "--workspace", workspace, "--observed", "nearby problem", "--expected", "success", "--repro", "run command", "--json"], workspace);
+    const mediumId = parsePayload<{ report: { id: string } }>(medium.stdout).data.report.id;
+    const mediumSubmit = await runCliCapture(["report", "submit", mediumId, "--workspace", workspace, "--confirm", "--dry-run", "--github-base-url", fakeGitHub.url, "--json"], workspace);
+    assert.equal(mediumSubmit.code, CLI_EXIT_FAILURE);
+    assert.equal(JSON.parse(mediumSubmit.stdout).error.code, "global_dedupe_review_required");
+
+    const none = await runCliCapture(["report", "bug", "Unique report with no match", "--workspace", workspace, "--observed", "unique", "--expected", "works", "--repro", "run command", "--json"], workspace);
+    const noneId = parsePayload<{ report: { id: string } }>(none.stdout).data.report.id;
+    const noneCheck = await runCliCapture(["report", "check", noneId, "--workspace", workspace, "--github-base-url", fakeGitHub.url, "--json"], workspace);
+    const nonePayload = parsePayload<{ report: { globalDedupe: { recommendedAction: string }; canonicalCandidates: unknown[] } }>(noneCheck.stdout);
+    assert.equal(nonePayload.data.report.globalDedupe.recommendedAction, "create_new_thread");
+    assert.equal(nonePayload.data.report.canonicalCandidates.length, 0);
+  } finally {
+    delete process.env.CLAW_REPORT_GITHUB_TOKEN;
+    await fakeGitHub.close();
+  }
+});
+
+test("report github bootstrap plans and applies safe label setup only with confirmation", async () => {
+  const workspace = tempWorkspace();
+  const dryRun = await runCliCapture(["report", "github", "bootstrap", "--workspace", workspace, "--existing-labels", "source:agent", "--dry-run", "--json"], workspace);
+  const dryRunPayload = parsePayload<{ dryRun: boolean; plan: { missingLabels: string[]; externalPending: string[] } }>(dryRun.stdout);
+  assert.equal(dryRunPayload.data.dryRun, true);
+  assert.equal(dryRunPayload.data.plan.missingLabels.includes("type:bug"), true);
+  assert.equal(dryRunPayload.data.plan.externalPending.includes("discussion_category_creation"), true);
+
+  let fakeGitHub: Awaited<ReturnType<typeof startFakeGitHubServer>>;
+  try {
+    fakeGitHub = await startFakeGitHubServer();
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "EPERM") return;
+    throw error;
+  }
+  process.env.CLAW_REPORT_GITHUB_TOKEN = "offline-test-token";
+  try {
+    const applied = await runCliCapture(["report", "github", "bootstrap", "--workspace", workspace, "--apply", "--confirm", "--github-base-url", fakeGitHub.url, "--existing-labels", "source:agent,type:bug,type:crash,type:regression,type:feature,type:translation,type:docs,type:performance,type:ux-feedback,type:security,area:cli,area:host,area:storage,area:docs,area:ui,area:runtime,area:localization,area:unknown,platform:macos,platform:ios,platform:linux,platform:windows,platform:web,platform:unknown,severity:blocker,severity:high,severity:medium,severity:low,confidence:confirmed,confidence:probable,confidence:needs-info,state:draft,state:ready-for-review,state:external-pending,state:submitted,state:blocked,privacy:redacted,privacy:attachment-opt-in-required,privacy:private-security,route:issue,route:discussion-ideas,route:discussion-feedback,route:security-advisory,route:canonical-comment,route:pr-proposal,dedupe:canonical,dedupe:candidate", "--json"], workspace);
+    const payload = parsePayload<{ applied: boolean; appliedLabels: string[]; externalPending: string[] }>(applied.stdout);
+    assert.equal(payload.data.applied, true);
+    assert.deepEqual(payload.data.appliedLabels, ["source:human-reviewed", "dedupe:commented"]);
+    assert.equal(fakeGitHub.requests.filter((request) => request.path === "/repos/clawic/clawjs/labels").length, 2);
+  } finally {
+    delete process.env.CLAW_REPORT_GITHUB_TOKEN;
+    await fakeGitHub.close();
+  }
+});
+
+test("report retention commands export, preview prune, and require delete confirmation", async () => {
+  const workspace = tempWorkspace();
+  const draft = await runCliCapture(["report", "bug", "Retention bug", "--workspace", workspace, "--observed", "bad", "--expected", "good", "--repro", "run", "--attachment", "/Users/alice/private.log", "--allow-attachment", "private.log", "--json"], workspace);
+  const id = parsePayload<{ report: { id: string } }>(draft.stdout).data.report.id;
+  const exported = await runCliCapture(["report", "export", id, "--workspace", workspace, "--include-attachment", "private.log", "--json"], workspace);
+  const exportPayload = parsePayload<{ reports: Array<{ report: { attachments: Array<{ name: string }> }; omittedAttachments: string[] }> }>(exported.stdout);
+  assert.equal(exportPayload.data.reports[0]?.report.attachments[0]?.name, "private.log");
+
+  const unconfirmedDelete = await runCliCapture(["report", "delete", id, "--workspace", workspace, "--json"], workspace);
+  assert.equal(unconfirmedDelete.code, CLI_EXIT_DEGRADED);
+  const prune = await runCliCapture(["report", "prune", "--workspace", workspace, "--status", "ready_for_review", "--older-than", "0h", "--preview", "--json"], workspace);
+  const prunePayload = parsePayload<{ preview: boolean; candidates: Array<{ id: string }> }>(prune.stdout);
+  assert.equal(prunePayload.data.preview, true);
+  assert.equal(prunePayload.data.candidates.some((candidate) => candidate.id === id), true);
+});
+
+test("report budgets limit noisy agents and allow audited override", async () => {
+  const workspace = tempWorkspace();
+  for (let index = 0; index < 20; index += 1) {
+    const created = await runCliCapture(["report", "bug", `Budget bug ${index}`, "--workspace", workspace, "--agent-id", "agent_budget", "--observed", "bad", "--expected", "good", "--repro", String(index), "--json"], workspace);
+    assert.equal(created.code, CLI_EXIT_OK);
+  }
+  const blocked = await runCliCapture(["report", "bug", "Budget bug blocked", "--workspace", workspace, "--agent-id", "agent_budget", "--observed", "bad", "--expected", "good", "--repro", "blocked", "--json"], workspace);
+  assert.equal(blocked.code, CLI_EXIT_FAILURE);
+  assert.equal(JSON.parse(blocked.stdout).error.code, "report_budget_exceeded");
+
+  const override = await runCliCapture(["report", "budget", "override", "--workspace", workspace, "--agent-id", "agent_budget", "--reason", "human approved batch import", "--json"], workspace);
+  assert.equal(override.code, CLI_EXIT_OK);
+  const allowed = await runCliCapture(["report", "bug", "Budget bug override", "--workspace", workspace, "--agent-id", "agent_budget", "--observed", "bad", "--expected", "good", "--repro", "override", "--json"], workspace);
+  assert.equal(allowed.code, CLI_EXIT_OK);
+  const status = await runCliCapture(["report", "budget", "status", "--workspace", workspace, "--json"], workspace);
+  const statusPayload = parsePayload<{ activeOverrides: unknown[]; recentEvents: Array<{ action: string; reason?: string }> }>(status.stdout);
+  assert.equal(statusPayload.data.activeOverrides.length, 1);
+  assert.equal(statusPayload.data.recentEvents.some((event) => event.action === "override" && event.reason === "human approved batch import"), true);
 });
 
 test("report triage automation recommends without destructive authority", async () => {

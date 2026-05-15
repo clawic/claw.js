@@ -82,6 +82,64 @@ export const reportDedupeCandidateSchema = z.object({
   similarity: z.number().min(0).max(1),
 });
 
+export const reportCanonicalCandidateSchema = z.object({
+  source: z.enum(["github_issue", "github_discussion"]),
+  id: z.string().min(1),
+  number: z.number().int().min(1).optional(),
+  title: z.string().min(1),
+  url: z.string().min(1),
+  state: z.string().min(1).optional(),
+  similarity: z.number().min(0).max(1),
+  strength: z.enum(["strong", "medium", "weak"]),
+});
+
+export const reportGlobalDedupeSchema = z.object({
+  status: z.enum(["not_checked", "checked", "external_pending", "review_required"]),
+  checkedAt: z.string().min(1).optional(),
+  connector: z.literal("claw-github"),
+  query: z.string().min(1),
+  candidates: z.array(reportCanonicalCandidateSchema),
+  recommendedAction: z.enum(["create_new_thread", "comment_on_canonical", "review_candidates"]),
+  externalPending: z.array(z.string()),
+});
+
+export const reportBudgetStateSchema = z.object({
+  status: z.enum(["ok", "limited", "override_active"]),
+  agentId: z.string().min(1),
+  repository: z.enum(["clawjs", "clawix"]),
+  limits: z.object({
+    draftsPerDay: z.number().int().min(1),
+    publishPromptsPerHour: z.number().int().min(1),
+    dryRunSubmitsPerHour: z.number().int().min(1),
+    duplicateCooldownHours: z.number().int().min(1),
+  }),
+  usage: z.object({
+    draftsToday: z.number().int().min(0),
+    publishPromptsThisHour: z.number().int().min(0),
+    dryRunSubmitsThisHour: z.number().int().min(0),
+  }),
+  cooldownActive: z.boolean(),
+  blockers: z.array(z.string()),
+  overrideId: z.string().min(1).optional(),
+});
+
+export const reportRetentionSchema = z.object({
+  policy: z.literal("manual_prune"),
+  exportRedactedByDefault: z.literal(true),
+  deleteRequiresConfirmation: z.literal(true),
+  lastExportedAt: z.string().min(1).optional(),
+  deletedAt: z.string().min(1).optional(),
+});
+
+export const reportPrProposalSchema = z.object({
+  problem: z.string().min(1),
+  suspectedFiles: z.array(z.string()),
+  patchPlan: z.array(z.string()),
+  tests: z.array(z.string()),
+  risks: z.array(z.string()),
+  opensPullRequest: z.literal(false),
+});
+
 export const reportApprovalSchema = z.object({
   id: z.string().min(1),
   surface: z.enum(["cli_preview", "signed_host"]),
@@ -136,6 +194,11 @@ export const reportRecordSchema = z.object({
   quality: reportQualityGateSchema,
   privacy: reportPrivacyReviewSchema,
   duplicateCandidates: z.array(reportDedupeCandidateSchema),
+  canonicalCandidates: z.array(reportCanonicalCandidateSchema).optional(),
+  globalDedupe: reportGlobalDedupeSchema.optional(),
+  budgetState: reportBudgetStateSchema.optional(),
+  retention: reportRetentionSchema.optional(),
+  prProposal: reportPrProposalSchema.optional(),
   approvals: z.array(reportApprovalSchema),
   receipts: z.array(reportSubmissionReceiptSchema),
   validationPlan: reportValidationPlanSchema.optional(),
@@ -153,6 +216,23 @@ export const reportGovernanceStateSchema = z.object({
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
   reports: z.array(reportRecordSchema),
+  budgetEvents: z.array(z.object({
+    id: z.string().min(1),
+    action: z.enum(["draft", "publish_prompt", "dry_run_submit", "override"]),
+    reportId: z.string().min(1).optional(),
+    agentId: z.string().min(1),
+    repository: z.enum(["clawjs", "clawix"]),
+    fingerprint: z.string().min(1).optional(),
+    createdAt: z.string().min(1),
+    reason: z.string().min(1).optional(),
+  })).default([]),
+  budgetOverrides: z.array(z.object({
+    id: z.string().min(1),
+    agentId: z.string().min(1),
+    repository: z.enum(["clawjs", "clawix"]),
+    createdAt: z.string().min(1),
+    reason: z.string().min(1),
+  })).default([]),
 });
 
 export type ReportKind = z.infer<typeof reportKindSchema>;

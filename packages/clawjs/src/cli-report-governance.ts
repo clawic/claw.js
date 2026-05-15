@@ -250,7 +250,9 @@ export function reportBudgetState(state: ReportGovernanceStateLike, report: Pick
   if (action === "draft" && usage.draftsToday >= REPORT_BUDGET_LIMITS.draftsPerDay) blockers.push("drafts_per_day_exceeded");
   if (action === "publish_prompt" && usage.publishPromptsThisHour >= REPORT_BUDGET_LIMITS.publishPromptsPerHour) blockers.push("publish_prompts_per_hour_exceeded");
   if (action === "dry_run_submit" && usage.dryRunSubmitsThisHour >= REPORT_BUDGET_LIMITS.dryRunSubmitsPerHour) blockers.push("dry_run_submits_per_hour_exceeded");
-  if (action !== "draft" && cooldownActive) blockers.push("duplicate_cooldown_active");
+  const canonicalPath = Array.isArray((report as { duplicateCandidates?: unknown[] }).duplicateCandidates)
+    && ((report as { duplicateCandidates?: unknown[] }).duplicateCandidates?.length ?? 0) > 0;
+  if (action !== "draft" && cooldownActive && !canonicalPath) blockers.push("duplicate_cooldown_active");
   const override = overrides.find((entry) => entry.agentId === agentId && entry.repository === repository);
   return {
     status: override ? "override_active" : blockers.length > 0 ? "limited" : "ok",

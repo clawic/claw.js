@@ -8,7 +8,9 @@ GitHub.
 1. Draft the report locally with `claw report bug`, `feature`, `translation`,
    `security`, or `draft`.
 2. Run `claw report check <id>` when the draft is incomplete or edited.
-3. Run `claw report dedupe <id>` before recommending publication.
+3. Run `claw report dedupe <id>` and, when a GitHub connector is available,
+   `claw report check <id> --github-base-url ...` before recommending
+   publication.
 4. Show `claw report preview <id>` to the user.
 5. Publish only after explicit user confirmation through the Claw GitHub
    connector. Use `--dry-run` first when validating. Use `--execute` only with
@@ -26,6 +28,8 @@ GitHub.
 - Do not publish security findings publicly. Route them privately.
 - Do not create automatic pull requests. Only propose a PR path when the user
   explicitly asks.
+- Do not bypass local report budgets. If an agent hits a budget or duplicate
+  cooldown, ask for a human override instead of retrying.
 - Do not close, lock, or suppress reports automatically. Automation may label,
   dedupe, recommend, and comment on the canonical item.
 - If the report lacks enough actionable information, block publication with
@@ -45,5 +49,16 @@ GitHub.
 - Security findings route to private security advisory handling.
 - Duplicate reports should comment on the canonical item instead of creating
   a new issue.
+- Broad translation problems and visual/product feedback route to Discussions
+  `Feedback`; concrete translation fixes stay in Issues.
 - Automation may recommend labels, comments, duplicate routing, and evidence
   tasks. It must not close, lock, delete, or publish.
+
+## Maintenance
+
+- Use `claw report github bootstrap --dry-run` before opening a repo to agent
+  reports. Apply only safe connector-supported setup with `--apply --confirm`.
+- Use `claw report export`, `delete`, and `prune` for manual retention. Never
+  upload attachments unless they are explicitly opted in and named.
+- Use `claw report budget status` to inspect noisy agents. Overrides must carry
+  a human reason and are auditable.

@@ -1,0 +1,17 @@
+{
+  "method": "POST",
+  "url": "https://api.github.com/graphql",
+  "headers": {
+    "accept": "application/vnd.github+json",
+    "authorization": "Bearer offline-githubToken-secret",
+    "content-type": "application/json",
+    "x-github-api-version": "2026-03-10"
+  },
+  "body": {
+    "query": "query SearchDiscussions($query: String!, $first: Int!) { search(query: $query, type: DISCUSSION, first: $first) { discussionCount nodes { ... on Discussion { id number title url createdAt updatedAt } } } }",
+    "variables": {
+      "first": 5,
+      "query": "sample"
+    }
+  }
+}

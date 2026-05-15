@@ -8,14 +8,9 @@ import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { joinedPositionals, parseCsvFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
 import {
-  buildBootstrapPlan,
-  buildGlobalDedupeQuery,
   buildPrProposal,
-  candidatesFromGitHubSearch,
   exportReportPackage,
-  externalPendingGlobalDedupe,
   inferFineReportDestination,
-  mergeGlobalDedupe,
   parseCsv,
   pruneCandidates,
   recordBudgetEvent,
@@ -28,6 +23,7 @@ import {
   type ReportPrProposal,
   type ReportRetention,
 } from "./cli-report-governance.ts";
+import { budgetSummary, refreshGlobalDedupe, runBudgetCommand, runGitHubBootstrap } from "./cli-report-extra-commands.ts";
 import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 
 type CliContext = {
@@ -155,11 +151,11 @@ export async function runReportCli(input: {
     }
 
     if (command === "github" && subcommand === "bootstrap") {
-      return await runGitHubBootstrap({ state, flags, argv, context, wantsJson, save });
+      return await runGitHubBootstrap({ state, flags, argv, context, wantsJson, save, reportLabels: REPORT_LABELS, nowIso });
     }
 
     if (command === "budget") {
-      return runBudgetCommand({ state, subcommand, flags, argv, context, wantsJson, save });
+      return runBudgetCommand({ state, subcommand, flags, argv, context, wantsJson, save, nowIso });
     }
 
     if (command === "export") {
@@ -253,7 +249,7 @@ export async function runReportCli(input: {
     if (command === "check") {
       const report = findReport(subcommand ?? flags.id);
       const checked = refreshReport(report, state, flags);
-      await refreshGlobalDedupe(checked, flags);
+      await refreshGlobalDedupe(checked, flags, nowIso);
       Object.assign(report, checked, { updatedAt: nowIso() });
       state.updatedAt = report.updatedAt;
       save();
@@ -294,8 +290,8 @@ export async function runReportCli(input: {
       const report = findReport(subcommand ?? flags.id);
       const confirmed = readBooleanFlag(argv, flags, "confirm", false) || readBooleanFlag(argv, flags, "approved", false);
       const dryRun = readBooleanFlag(argv, flags, "dry-run", false);
-      await refreshGlobalDedupe(report, flags);
-      const budgetAction = confirmed && dryRun ? "dry_run_submit" : "publish_prompt";
+      await refreshGlobalDedupe(report, flags, nowIso);
+      const budgetAction = confirmed && dryRun && report.destination !== "pr_proposal" ? "dry_run_submit" : "publish_prompt";
       report.budgetState = reportBudgetState(state, report, budgetAction, nowIso());
       if (report.budgetState.status === "limited") {
         report.status = "blocked";
@@ -345,7 +341,7 @@ export async function runReportCli(input: {
       report.updatedAt = nowIso();
       report.approvals = approvedApprovals(report, flags);
       report.labels = buildLabels(report);
-      recordBudgetEvent(state, report, dryRun ? "dry_run_submit" : "publish_prompt", report.updatedAt);
+      recordBudgetEvent(state, report, budgetAction, report.updatedAt);
       const submissionPlan = buildSubmissionPlan(report, flags);
       const liveReceipt = !dryRun && readBooleanFlag(argv, flags, "execute", false)
         ? await executeReportSubmission(report, submissionPlan, flags)
@@ -1029,139 +1025,6 @@ function publicationIdentity(flags: Record<string, string>): Record<string, unkn
     tokenSecretField: "githubToken",
     broker: "claw-secret-broker",
     status: flags["github-user"] || flags.user ? "declared" : "required_before_live_submit",
-  };
-}
-
-async function refreshGlobalDedupe(report: ReportRecord, flags: Record<string, string>): Promise<void> {
-  const baseUrl = flags["github-base-url"];
-  if (!baseUrl) {
-    report.globalDedupe = externalPendingGlobalDedupe(report, "github_connector_search_not_configured");
-    return;
-  }
-  if (!isLocalHttpBaseUrl(baseUrl)) {
-    report.globalDedupe = externalPendingGlobalDedupe(report, "real_github_search_requires_explicit_external_validation");
-    return;
-  }
-  const tokenEnv = flags["github-token-env"] ?? "CLAW_REPORT_GITHUB_TOKEN";
-  const githubToken = process.env[tokenEnv];
-  if (!githubToken) {
-    report.globalDedupe = externalPendingGlobalDedupe(report, `missing_github_token_env:${tokenEnv}`);
-    return;
-  }
-  const [owner, repo] = report.repository === "clawix" ? ["clawic", "clawix"] : ["clawic", "clawjs"];
-  const query = buildGlobalDedupeQuery(report);
-  const { buildGitHubOperationRequest, executeConnectorRuntimeRequestPlan } = await import("@clawjs/integrations");
-  const operation = (id: string) => ({ id, appId: "github", kind: "action" as const, name: id, fields: [], authFieldNames: ["githubToken"] });
-  const issuePlan = buildGitHubOperationRequest(operation("github.action.search-issues"), { q: `${query} type:issue`, perPage: 5 } as Record<string, never>);
-  const discussionPlan = buildGitHubOperationRequest(operation("github.action.search-discussions"), { owner, repo, query, first: 5 } as Record<string, never>);
-  const [issues, discussions] = await Promise.all([
-    executeConnectorRuntimeRequestPlan({ baseUrl, plan: issuePlan, secrets: { githubToken } }),
-    executeConnectorRuntimeRequestPlan({ baseUrl, plan: discussionPlan, secrets: { githubToken } }),
-  ]);
-  const candidates = candidatesFromGitHubSearch(report, issues.body, discussions.body);
-  report.canonicalCandidates = candidates;
-  report.globalDedupe = mergeGlobalDedupe(report, candidates, nowIso());
-}
-
-async function runGitHubBootstrap(input: {
-  state: ReportGovernanceState;
-  flags: Record<string, string>;
-  argv: string[];
-  context: CliContext;
-  wantsJson: boolean;
-  save: () => void;
-}): Promise<number> {
-  const existingLabels = parseCsv(input.flags["existing-labels"]);
-  const plan = buildBootstrapPlan(existingLabels, REPORT_LABELS);
-  const apply = readBooleanFlag(input.argv, input.flags, "apply", false);
-  const confirmed = readBooleanFlag(input.argv, input.flags, "confirm", false);
-  if (!apply) return writeReportResult(input.context, input.wantsJson, "github.bootstrap", { dryRun: true, plan });
-  if (!confirmed) {
-    return writeReportResult(input.context, input.wantsJson, "github.bootstrap", {
-      applied: false,
-      confirmationRequired: true,
-      plan,
-    }, CLI_EXIT_DEGRADED);
-  }
-  const baseUrl = input.flags["github-base-url"];
-  const tokenEnv = input.flags["github-token-env"] ?? "CLAW_REPORT_GITHUB_TOKEN";
-  const githubToken = process.env[tokenEnv];
-  if (!baseUrl || !isLocalHttpBaseUrl(baseUrl) || !githubToken) {
-    return writeReportResult(input.context, input.wantsJson, "github.bootstrap", {
-      applied: false,
-      externalPending: ["github_label_apply_requires_local_test_connector_or_explicit_real_integration"],
-      plan,
-    }, CLI_EXIT_DEGRADED);
-  }
-  const [owner, repo] = input.flags.repo === "clawix" ? ["clawic", "clawix"] : ["clawic", "clawjs"];
-  const missingLabels = (plan as { missingLabels: string[] }).missingLabels;
-  const { buildGitHubOperationRequest, executeConnectorRuntimeRequestPlan } = await import("@clawjs/integrations");
-  const operation = { id: "github.action.create-label", appId: "github", kind: "action" as const, name: "github.action.create-label", fields: [], authFieldNames: ["githubToken"] };
-  const results = [];
-  for (const label of missingLabels) {
-    const requestPlan = buildGitHubOperationRequest(operation, { owner, repo, name: label, color: "ededed", description: "Claw report governance label" } as Record<string, never>);
-    results.push(await executeConnectorRuntimeRequestPlan({ baseUrl, plan: requestPlan, secrets: { githubToken } }));
-  }
-  input.state.updatedAt = nowIso();
-  input.save();
-  return writeReportResult(input.context, input.wantsJson, "github.bootstrap", {
-    applied: true,
-    appliedLabels: missingLabels,
-    externalPending: (plan as { externalPending: string[] }).externalPending,
-    results: results.map((result) => result.body),
-  });
-}
-
-function runBudgetCommand(input: {
-  state: ReportGovernanceState;
-  subcommand: string | undefined;
-  flags: Record<string, string>;
-  argv: string[];
-  context: CliContext;
-  wantsJson: boolean;
-  save: () => void;
-}): number {
-  const now = nowIso();
-  if (input.subcommand === "reset") {
-    if (!readBooleanFlag(input.argv, input.flags, "confirm", false)) {
-      return writeReportResult(input.context, input.wantsJson, "budget", { reset: false, confirmationRequired: true }, CLI_EXIT_DEGRADED);
-    }
-    input.state.budgetEvents = [];
-    input.state.budgetOverrides = [];
-    input.state.updatedAt = now;
-    input.save();
-    return writeReportResult(input.context, input.wantsJson, "budget", { reset: true });
-  }
-  if (input.subcommand === "override") {
-    const repository = input.flags.repo === "clawix" ? "clawix" : "clawjs";
-    const override = {
-      id: `budget_override_${Date.now().toString(36)}`,
-      agentId: input.flags.agent ?? input.flags["agent-id"] ?? "agent",
-      repository,
-      createdAt: now,
-      reason: input.flags.reason ?? "human_override",
-    };
-    input.state.budgetOverrides.unshift(override);
-    input.state.budgetEvents.unshift({ ...override, action: "override" as const });
-    input.state.updatedAt = now;
-    input.save();
-    return writeReportResult(input.context, input.wantsJson, "budget", { override });
-  }
-  return writeReportResult(input.context, input.wantsJson, "budget", budgetSummary(input.state, now));
-}
-
-function budgetSummary(state: ReportGovernanceState, now: string): Record<string, unknown> {
-  const reports = state.reports.slice(0, 10).map((report) => reportBudgetState(state, report, "publish_prompt", now));
-  return {
-    limits: reports[0]?.limits ?? {
-      draftsPerDay: 20,
-      publishPromptsPerHour: 5,
-      dryRunSubmitsPerHour: 3,
-      duplicateCooldownHours: 24,
-    },
-    activeOverrides: state.budgetOverrides,
-    recentEvents: state.budgetEvents.slice(0, 20),
-    sampledReports: reports,
   };
 }
 
