@@ -122,7 +122,7 @@ export function connectEvents(onEvent: (e: WsEvent) => void, onStatus: (s: "conn
 
   function connect() {
     const proto = location.protocol === "https:" ? "wss:" : "ws:";
-    ws = new WebSocket(`${proto}//${location.host}${BASE}/events/ws`);
+    ws = new WebSocket(`${proto}//${location.host}${BASE}/events`);
 
     ws.onopen = () => { attempts = 0; onStatus("connected"); };
     ws.onmessage = (ev) => {

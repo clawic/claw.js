@@ -449,7 +449,7 @@ export function buildContentApp(options: BuildContentAppOptions = {}) {
   });
   app.register(async (wsApp) => {
     await wsApp.register(websocket);
-    wsApp.get(clawApiPath("events/ws"), { websocket: true }, async (socket) => {
+    wsApp.get(clawApiPath("events"), { websocket: true }, async (socket) => {
       realtime.attachSocket(socket);
       socket.send(JSON.stringify({ type: "ready", at: new Date().toISOString() }));
     });

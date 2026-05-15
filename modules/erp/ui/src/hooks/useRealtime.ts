@@ -20,7 +20,7 @@ export function useRealtime(onEvent: (event: Record<string, unknown>) => void) {
     } catch { /* ignore */ }
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const ws = new WebSocket(`${protocol}//${window.location.host}/v1/events/ws`);
+    const ws = new WebSocket(`${protocol}//${window.location.host}${clawApiPath("events")}`);
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
