@@ -15,6 +15,7 @@ examples/demo/.claude/
 .claw/state/observed/
 .runtime/
 .memory/
+apps/chat/android/.gradle/
 .playwright-cli/
 .tmp/
 .tmp-*/
