@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "kind": "conceptual_module_manifest",
+  "id": "sleep",
+  "label": "Sleep",
+  "category": "body-health",
+  "categoryLabel": "Body & Health",
+  "status": "alpha",
+  "sensitive": false,
+  "description": "Sleep duration, stages, quality, naps",
+  "signalVertical": "sleep",
+  "catalog": {
+    "package": "@clawjs/signals",
+    "path": "catalogs/sleep.json",
+    "catalogSize": 10,
+    "hasSessions": true,
+    "healthkitMapping": true,
+    "iconHint": "moon"
+  },
+  "storage": {
+    "owner": "claw",
+    "tables": [
+      "signals_verticals",
+      "signals_variables",
+      "signals_sessions",
+      "signals_observations"
+    ]
+  },
+  "publicCli": [
+    "claw signals catalog",
+    "claw signals observe",
+    "claw signals list"
+  ],
+  "boundaries": {
+    "packageApi": false,
+    "serviceRuntime": false,
+    "standaloneCli": false
+  },
+  "sourceOfTruth": [
+    "tracking-registry.json",
+    "packages/clawjs-core/src/domain-surface-registry.ts"
+  ]
+}

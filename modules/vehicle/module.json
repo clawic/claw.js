@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "kind": "conceptual_module_manifest",
+  "id": "vehicle",
+  "label": "Vehicle",
+  "category": "possessions-identity",
+  "categoryLabel": "Possessions & Identity",
+  "status": "planned",
+  "sensitive": false,
+  "description": "Vehicle maintenance, fuel and inspections",
+  "signalVertical": "vehicle",
+  "catalog": {
+    "package": "@clawjs/signals",
+    "path": "catalogs/vehicle.json",
+    "catalogSize": 12,
+    "hasSessions": false,
+    "healthkitMapping": false,
+    "iconHint": "car"
+  },
+  "storage": {
+    "owner": "claw",
+    "tables": [
+      "signals_verticals",
+      "signals_variables",
+      "signals_sessions",
+      "signals_observations"
+    ]
+  },
+  "publicCli": [
+    "claw signals catalog",
+    "claw signals observe",
+    "claw signals list"
+  ],
+  "boundaries": {
+    "packageApi": false,
+    "serviceRuntime": false,
+    "standaloneCli": false
+  },
+  "sourceOfTruth": [
+    "tracking-registry.json",
+    "packages/clawjs-core/src/domain-surface-registry.ts"
+  ]
+}

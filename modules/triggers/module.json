@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "kind": "conceptual_module_manifest",
+  "id": "triggers",
+  "label": "Triggers",
+  "category": "mind-emotions",
+  "categoryLabel": "Mind & Emotions",
+  "status": "planned",
+  "sensitive": false,
+  "description": "Reactive triggers and the reactions they produced",
+  "signalVertical": "triggers",
+  "catalog": {
+    "package": "@clawjs/signals",
+    "path": "catalogs/triggers.json",
+    "catalogSize": 6,
+    "hasSessions": false,
+    "healthkitMapping": false,
+    "iconHint": "bolt"
+  },
+  "storage": {
+    "owner": "claw",
+    "tables": [
+      "signals_verticals",
+      "signals_variables",
+      "signals_sessions",
+      "signals_observations"
+    ]
+  },
+  "publicCli": [
+    "claw signals catalog",
+    "claw signals observe",
+    "claw signals list"
+  ],
+  "boundaries": {
+    "packageApi": false,
+    "serviceRuntime": false,
+    "standaloneCli": false
+  },
+  "sourceOfTruth": [
+    "tracking-registry.json",
+    "packages/clawjs-core/src/domain-surface-registry.ts"
+  ]
+}

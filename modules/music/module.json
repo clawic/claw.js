@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "kind": "conceptual_module_manifest",
+  "id": "music",
+  "label": "Music",
+  "category": "consumption-leisure",
+  "categoryLabel": "Consumption & Leisure",
+  "status": "planned",
+  "sensitive": false,
+  "description": "Music listening with optional artist/album breakdown",
+  "signalVertical": "music",
+  "catalog": {
+    "package": "@clawjs/signals",
+    "path": "catalogs/music.json",
+    "catalogSize": 8,
+    "hasSessions": false,
+    "healthkitMapping": false,
+    "iconHint": "music"
+  },
+  "storage": {
+    "owner": "claw",
+    "tables": [
+      "signals_verticals",
+      "signals_variables",
+      "signals_sessions",
+      "signals_observations"
+    ]
+  },
+  "publicCli": [
+    "claw signals catalog",
+    "claw signals observe",
+    "claw signals list"
+  ],
+  "boundaries": {
+    "packageApi": false,
+    "serviceRuntime": false,
+    "standaloneCli": false
+  },
+  "sourceOfTruth": [
+    "tracking-registry.json",
+    "packages/clawjs-core/src/domain-surface-registry.ts"
+  ]
+}

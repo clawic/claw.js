@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "kind": "conceptual_module_manifest",
+  "id": "thoughts-raw",
+  "label": "Thoughts",
+  "category": "mind-emotions",
+  "categoryLabel": "Mind & Emotions",
+  "status": "planned",
+  "sensitive": false,
+  "description": "Atomic raw thoughts and snippets",
+  "signalVertical": "thoughts-raw",
+  "catalog": {
+    "package": "@clawjs/signals",
+    "path": "catalogs/thoughts-raw.json",
+    "catalogSize": 4,
+    "hasSessions": false,
+    "healthkitMapping": false,
+    "iconHint": "spark"
+  },
+  "storage": {
+    "owner": "claw",
+    "tables": [
+      "signals_verticals",
+      "signals_variables",
+      "signals_sessions",
+      "signals_observations"
+    ]
+  },
+  "publicCli": [
+    "claw signals catalog",
+    "claw signals observe",
+    "claw signals list"
+  ],
+  "boundaries": {
+    "packageApi": false,
+    "serviceRuntime": false,
+    "standaloneCli": false
+  },
+  "sourceOfTruth": [
+    "tracking-registry.json",
+    "packages/clawjs-core/src/domain-surface-registry.ts"
+  ]
+}

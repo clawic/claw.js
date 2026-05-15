@@ -13,11 +13,8 @@ import {
 } from "../packages/clawjs-core/src/index.ts";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const args = new Set(process.argv.slice(2));
-const enforceModulePackages = args.has("--enforce-module-packages");
 
 const failures = [];
-const warnings = [];
 
 function relative(filePath) {
   return path.relative(rootDir, filePath) || ".";
@@ -78,6 +75,8 @@ for (const entry of clawDomainSurfaceRegistry.entries) {
   if (entry.kind === "module_manifest" && entry.status === "conceptual_manifest") {
     if (entry.packageNames?.length) failures.push(`${entry.id}: conceptual module manifests must not declare package APIs`);
     if (entry.cliCommands?.length) failures.push(`${entry.id}: conceptual module manifests must not declare CLI routes`);
+    if (!entry.modulePath) failures.push(`${entry.id}: missing modulePath`);
+    else if (!fs.existsSync(path.join(rootDir, entry.modulePath, "module.json"))) failures.push(`${entry.id}: missing ${entry.modulePath}/module.json`);
   }
 }
 
@@ -106,23 +105,14 @@ const modulePackageFiles = listFiles(path.join(rootDir, "modules"), (file) => pa
 for (const file of modulePackageFiles) {
   const moduleId = path.relative(path.join(rootDir, "modules"), path.dirname(file)).split(path.sep)[0];
   if (!conceptualModulePackageAllowlist.has(moduleId)) {
-    const message = `${relative(file)} is still a package wrapper for a conceptual module`;
-    if (enforceModulePackages) failures.push(message);
-    else warnings.push(message);
+    failures.push(`${relative(file)} is still a package wrapper for a conceptual module`);
   }
 }
 
 if (failures.length > 0) {
   console.error("Domain surface registry guard failed:");
   for (const failure of failures) console.error(`- ${failure}`);
-  if (warnings.length > 0) {
-    console.error("Warnings:");
-    for (const warning of warnings) console.error(`- ${warning}`);
-  }
   process.exit(1);
 }
 
 console.log(`Domain surface registry guard passed (${clawDomainSurfaceRegistry.entries.length} entries)`);
-if (warnings.length > 0) {
-  console.log(`Conceptual module package cleanup pending (${warnings.length} wrappers). Re-run with --enforce-module-packages after cleanup.`);
-}

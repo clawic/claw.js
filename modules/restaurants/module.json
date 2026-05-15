@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "kind": "conceptual_module_manifest",
+  "id": "restaurants",
+  "label": "Restaurants",
+  "category": "consumption-leisure",
+  "categoryLabel": "Consumption & Leisure",
+  "status": "planned",
+  "sensitive": false,
+  "description": "Restaurants and cafes visited with rating",
+  "signalVertical": "restaurants",
+  "catalog": {
+    "package": "@clawjs/signals",
+    "path": "catalogs/restaurants.json",
+    "catalogSize": 10,
+    "hasSessions": false,
+    "healthkitMapping": false,
+    "iconHint": "fork"
+  },
+  "storage": {
+    "owner": "claw",
+    "tables": [
+      "signals_verticals",
+      "signals_variables",
+      "signals_sessions",
+      "signals_observations"
+    ]
+  },
+  "publicCli": [
+    "claw signals catalog",
+    "claw signals observe",
+    "claw signals list"
+  ],
+  "boundaries": {
+    "packageApi": false,
+    "serviceRuntime": false,
+    "standaloneCli": false
+  },
+  "sourceOfTruth": [
+    "tracking-registry.json",
+    "packages/clawjs-core/src/domain-surface-registry.ts"
+  ]
+}

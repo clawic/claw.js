@@ -383,7 +383,7 @@ const moduleManifestEntries: ClawDomainSurfaceEntry[] = uniqueById([
     modulePath: `modules/${entry.id}`,
     relatedSignals: [entry.id],
     source: {
-      file: "tracking-registry.json",
+      file: `modules/${entry.id}/module.json`,
     },
     sensitive: entry.sensitive,
     notes: "Conceptual module folders are visible manifests for agents. They must not become independent package/server/CLI surfaces.",

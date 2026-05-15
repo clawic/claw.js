@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "kind": "conceptual_module_manifest",
+  "id": "recurring-problems",
+  "label": "Recurring problems",
+  "category": "mind-emotions",
+  "categoryLabel": "Mind & Emotions",
+  "status": "planned",
+  "sensitive": false,
+  "description": "Recurring pain points and patterns",
+  "signalVertical": "recurring-problems",
+  "catalog": {
+    "package": "@clawjs/signals",
+    "path": "catalogs/recurring-problems.json",
+    "catalogSize": 8,
+    "hasSessions": false,
+    "healthkitMapping": false,
+    "iconHint": "repeat"
+  },
+  "storage": {
+    "owner": "claw",
+    "tables": [
+      "signals_verticals",
+      "signals_variables",
+      "signals_sessions",
+      "signals_observations"
+    ]
+  },
+  "publicCli": [
+    "claw signals catalog",
+    "claw signals observe",
+    "claw signals list"
+  ],
+  "boundaries": {
+    "packageApi": false,
+    "serviceRuntime": false,
+    "standaloneCli": false
+  },
+  "sourceOfTruth": [
+    "tracking-registry.json",
+    "packages/clawjs-core/src/domain-surface-registry.ts"
+  ]
+}

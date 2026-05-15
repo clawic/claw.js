@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "kind": "conceptual_module_manifest",
+  "id": "reading-media",
+  "label": "Reading & media",
+  "category": "consumption-leisure",
+  "categoryLabel": "Consumption & Leisure",
+  "status": "planned",
+  "sensitive": false,
+  "description": "Books, articles, podcasts, movies, series",
+  "signalVertical": "reading-media",
+  "catalog": {
+    "package": "@clawjs/signals",
+    "path": "catalogs/reading-media.json",
+    "catalogSize": 12,
+    "hasSessions": false,
+    "healthkitMapping": false,
+    "iconHint": "book-open"
+  },
+  "storage": {
+    "owner": "claw",
+    "tables": [
+      "signals_verticals",
+      "signals_variables",
+      "signals_sessions",
+      "signals_observations"
+    ]
+  },
+  "publicCli": [
+    "claw signals catalog",
+    "claw signals observe",
+    "claw signals list"
+  ],
+  "boundaries": {
+    "packageApi": false,
+    "serviceRuntime": false,
+    "standaloneCli": false
+  },
+  "sourceOfTruth": [
+    "tracking-registry.json",
+    "packages/clawjs-core/src/domain-surface-registry.ts"
+  ]
+}

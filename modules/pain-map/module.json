@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "kind": "conceptual_module_manifest",
+  "id": "pain-map",
+  "label": "Pain map",
+  "category": "body-health",
+  "categoryLabel": "Body & Health",
+  "status": "planned",
+  "sensitive": true,
+  "description": "Anatomical pain regions with intensity over time",
+  "signalVertical": "pain-map",
+  "catalog": {
+    "package": "@clawjs/signals",
+    "path": "catalogs/pain-map.json",
+    "catalogSize": 24,
+    "hasSessions": false,
+    "healthkitMapping": false,
+    "iconHint": "body"
+  },
+  "storage": {
+    "owner": "claw",
+    "tables": [
+      "signals_verticals",
+      "signals_variables",
+      "signals_sessions",
+      "signals_observations"
+    ]
+  },
+  "publicCli": [
+    "claw signals catalog",
+    "claw signals observe",
+    "claw signals list"
+  ],
+  "boundaries": {
+    "packageApi": false,
+    "serviceRuntime": false,
+    "standaloneCli": false
+  },
+  "sourceOfTruth": [
+    "tracking-registry.json",
+    "packages/clawjs-core/src/domain-surface-registry.ts"
+  ]
+}

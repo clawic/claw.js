@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "kind": "conceptual_module_manifest",
+  "id": "career",
+  "label": "Career",
+  "category": "career-money",
+  "categoryLabel": "Career & Money",
+  "status": "planned",
+  "sensitive": false,
+  "description": "Career milestones, positions and salary growth",
+  "signalVertical": "career",
+  "catalog": {
+    "package": "@clawjs/signals",
+    "path": "catalogs/career.json",
+    "catalogSize": 10,
+    "hasSessions": false,
+    "healthkitMapping": false,
+    "iconHint": "briefcase"
+  },
+  "storage": {
+    "owner": "claw",
+    "tables": [
+      "signals_verticals",
+      "signals_variables",
+      "signals_sessions",
+      "signals_observations"
+    ]
+  },
+  "publicCli": [
+    "claw signals catalog",
+    "claw signals observe",
+    "claw signals list"
+  ],
+  "boundaries": {
+    "packageApi": false,
+    "serviceRuntime": false,
+    "standaloneCli": false
+  },
+  "sourceOfTruth": [
+    "tracking-registry.json",
+    "packages/clawjs-core/src/domain-surface-registry.ts"
+  ]
+}

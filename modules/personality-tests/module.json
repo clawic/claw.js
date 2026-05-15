@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "kind": "conceptual_module_manifest",
+  "id": "personality-tests",
+  "label": "Personality tests",
+  "category": "meta-reflection",
+  "categoryLabel": "Meta / Reflection",
+  "status": "planned",
+  "sensitive": false,
+  "description": "Personality test results over time",
+  "signalVertical": "personality-tests",
+  "catalog": {
+    "package": "@clawjs/signals",
+    "path": "catalogs/personality-tests.json",
+    "catalogSize": 12,
+    "hasSessions": false,
+    "healthkitMapping": false,
+    "iconHint": "compass"
+  },
+  "storage": {
+    "owner": "claw",
+    "tables": [
+      "signals_verticals",
+      "signals_variables",
+      "signals_sessions",
+      "signals_observations"
+    ]
+  },
+  "publicCli": [
+    "claw signals catalog",
+    "claw signals observe",
+    "claw signals list"
+  ],
+  "boundaries": {
+    "packageApi": false,
+    "serviceRuntime": false,
+    "standaloneCli": false
+  },
+  "sourceOfTruth": [
+    "tracking-registry.json",
+    "packages/clawjs-core/src/domain-surface-registry.ts"
+  ]
+}

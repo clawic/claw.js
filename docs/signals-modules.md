@@ -23,14 +23,18 @@ Money, Meta / Reflection).
 ## Repository layout
 
 The 80 personal domains are not public npm packages. Each vertical with id
-`signal-id` has a conceptual manifest under `modules/signal-id/` for agents
-and a catalog JSON exported by `@clawjs/signals`:
+`signal-id` has a conceptual manifest at `modules/signal-id/module.json` for
+agents and a catalog JSON exported by `@clawjs/signals`:
 
 ```text
 packages/signals/
 └── src/
     └── catalogs/
         └── signal-id.json  # curated system variables
+
+modules/
+└── signal-id/
+    └── module.json         # agent-facing manifest, not a package
 ```
 
 Two shared packages do the heavy lifting so the verticals stay inside
@@ -121,6 +125,10 @@ own public env prefixes.
 Signals is a single approved public domain. Hosts may expose selected
 catalogs through one signals service; vertical ids are path components,
 not independent npm packages or public service identities.
+
+`modules/signal-id/` must not contain `package.json`, `src/bin`,
+service tests, or vertical-specific CLI wrappers. Runtime behavior belongs to
+`@clawjs/signals`, `@clawjs/signals-core`, and the core `signals_*` tables.
 
 The public CLI surface is `claw signals catalog|seed-catalog|observe|list|delete`.
 Per-vertical CLI commands are not added unless a later ADR promotes an

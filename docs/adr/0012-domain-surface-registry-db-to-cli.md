@@ -87,8 +87,8 @@ audit.
   package wrappers are cleanup debt until replaced by pure manifests.
 - **Validation**: core tests cover collection, signal, module, service,
   storage, CLI, and ERP registry coverage. `scripts/domain-surface-registry-guard.mjs`
-  fails missing ownership and can be run with `--enforce-module-packages` once
-  conceptual package wrapper cleanup is complete.
+  fails missing ownership, missing conceptual `module.json` manifests, and
+  conceptual module package wrappers.
 
 ## Consequences
 

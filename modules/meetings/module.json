@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "kind": "conceptual_module_manifest",
+  "id": "meetings",
+  "label": "Meetings",
+  "category": "time-productivity",
+  "categoryLabel": "Time & Productivity",
+  "status": "planned",
+  "sensitive": false,
+  "description": "Meetings and conversations with attendees and outcomes",
+  "signalVertical": "meetings",
+  "catalog": {
+    "package": "@clawjs/signals",
+    "path": "catalogs/meetings.json",
+    "catalogSize": 8,
+    "hasSessions": true,
+    "healthkitMapping": false,
+    "iconHint": "users"
+  },
+  "storage": {
+    "owner": "claw",
+    "tables": [
+      "signals_verticals",
+      "signals_variables",
+      "signals_sessions",
+      "signals_observations"
+    ]
+  },
+  "publicCli": [
+    "claw signals catalog",
+    "claw signals observe",
+    "claw signals list"
+  ],
+  "boundaries": {
+    "packageApi": false,
+    "serviceRuntime": false,
+    "standaloneCli": false
+  },
+  "sourceOfTruth": [
+    "tracking-registry.json",
+    "packages/clawjs-core/src/domain-surface-registry.ts"
+  ]
+}

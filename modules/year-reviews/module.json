@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "kind": "conceptual_module_manifest",
+  "id": "year-reviews",
+  "label": "Year reviews",
+  "category": "meta-reflection",
+  "categoryLabel": "Meta / Reflection",
+  "status": "planned",
+  "sensitive": false,
+  "description": "Annual and quarterly retrospectives",
+  "signalVertical": "year-reviews",
+  "catalog": {
+    "package": "@clawjs/signals",
+    "path": "catalogs/year-reviews.json",
+    "catalogSize": 6,
+    "hasSessions": true,
+    "healthkitMapping": false,
+    "iconHint": "calendar-year"
+  },
+  "storage": {
+    "owner": "claw",
+    "tables": [
+      "signals_verticals",
+      "signals_variables",
+      "signals_sessions",
+      "signals_observations"
+    ]
+  },
+  "publicCli": [
+    "claw signals catalog",
+    "claw signals observe",
+    "claw signals list"
+  ],
+  "boundaries": {
+    "packageApi": false,
+    "serviceRuntime": false,
+    "standaloneCli": false
+  },
+  "sourceOfTruth": [
+    "tracking-registry.json",
+    "packages/clawjs-core/src/domain-surface-registry.ts"
+  ]
+}
