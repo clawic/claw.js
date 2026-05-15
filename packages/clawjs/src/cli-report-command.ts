@@ -7,6 +7,27 @@ import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { joinedPositionals, parseCsvFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
+import {
+  buildBootstrapPlan,
+  buildGlobalDedupeQuery,
+  buildPrProposal,
+  candidatesFromGitHubSearch,
+  exportReportPackage,
+  externalPendingGlobalDedupe,
+  inferFineReportDestination,
+  mergeGlobalDedupe,
+  parseCsv,
+  pruneCandidates,
+  recordBudgetEvent,
+  reportBudgetState,
+  type CanonicalCandidate,
+  type GlobalDedupeState,
+  type ReportBudgetEvent,
+  type ReportBudgetOverride,
+  type ReportBudgetState,
+  type ReportPrProposal,
+  type ReportRetention,
+} from "./cli-report-governance.ts";
 import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 
 type CliContext = {
@@ -55,6 +76,11 @@ type ReportRecord = {
   quality: ReportQuality;
   privacy: ReportPrivacy;
   duplicateCandidates: ReportDedupeCandidate[];
+  canonicalCandidates?: CanonicalCandidate[];
+  globalDedupe?: GlobalDedupeState;
+  budgetState?: ReportBudgetState;
+  retention?: ReportRetention;
+  prProposal?: ReportPrProposal;
   approvals: ReportApproval[];
   receipts: ReportSubmissionReceipt[];
   validationPlan?: ReportValidationPlan;
@@ -71,6 +97,8 @@ type ReportGovernanceState = {
   createdAt: string;
   updatedAt: string;
   reports: ReportRecord[];
+  budgetEvents: ReportBudgetEvent[];
+  budgetOverrides: ReportBudgetOverride[];
 };
 
 const REPORT_LABELS = {
@@ -126,6 +154,68 @@ export async function runReportCli(input: {
       });
     }
 
+    if (command === "github" && subcommand === "bootstrap") {
+      return await runGitHubBootstrap({ state, flags, argv, context, wantsJson, save });
+    }
+
+    if (command === "budget") {
+      return runBudgetCommand({ state, subcommand, flags, argv, context, wantsJson, save });
+    }
+
+    if (command === "export") {
+      const target = subcommand ?? flags.id;
+      const now = nowIso();
+      const includeAttachments = parseCsv(flags["include-attachment"] ?? flags["include-attachments"]);
+      const reports = target === "--all" || readBooleanFlag(argv, flags, "all", false)
+        ? state.reports
+        : [findReport(target)];
+      for (const report of reports) {
+        report.retention = { policy: "manual_prune", exportRedactedByDefault: true, deleteRequiresConfirmation: true, lastExportedAt: now };
+        report.updatedAt = now;
+      }
+      state.updatedAt = now;
+      save();
+      return writeReportResult(context, wantsJson, "export", {
+        exportedAt: now,
+        reports: reports.map((report) => exportReportPackage(report, includeAttachments, now)),
+      });
+    }
+
+    if (command === "delete") {
+      const report = findReport(subcommand ?? flags.id);
+      if (!readBooleanFlag(argv, flags, "confirm", false)) {
+        return writeReportResult(context, wantsJson, "delete", {
+          reportId: report.id,
+          deleteRequiresConfirmation: true,
+          command: `${binName} report delete ${report.id} --confirm`,
+        }, CLI_EXIT_DEGRADED);
+      }
+      state.reports = state.reports.filter((candidate) => candidate.id !== report.id);
+      state.updatedAt = nowIso();
+      save();
+      return writeReportResult(context, wantsJson, "delete", { deleted: true, reportId: report.id });
+    }
+
+    if (command === "prune") {
+      const now = nowIso();
+      const candidates = pruneCandidates(state.reports, flags, now);
+      const preview = readBooleanFlag(argv, flags, "preview", false);
+      const confirmed = readBooleanFlag(argv, flags, "confirm", false);
+      if (preview || !confirmed) {
+        return writeReportResult(context, wantsJson, "prune", {
+          deleted: false,
+          preview: true,
+          candidates: candidates.map((report) => ({ id: report.id, status: report.status, kind: report.kind, repository: report.repository, updatedAt: report.updatedAt })),
+          deleteRequiresConfirmation: true,
+        });
+      }
+      const ids = new Set(candidates.map((report) => report.id));
+      state.reports = state.reports.filter((report) => !ids.has(report.id));
+      state.updatedAt = now;
+      save();
+      return writeReportResult(context, wantsJson, "prune", { deleted: candidates.length, reportIds: [...ids] });
+    }
+
     if (command === "status" || command === "list") {
       const reports = state.reports
         .filter((report) => !flags.status || report.status === flags.status)
@@ -141,6 +231,7 @@ export async function runReportCli(input: {
         .map((report) => triageRecommendation(report));
       return writeReportResult(context, wantsJson, "triage", {
         queue: reports,
+        budget: budgetSummary(state, nowIso()),
         automationAuthority: "recommend_label_score_dedupe_only",
         prohibitedActions: ["close", "lock", "delete", "publish_without_human_approval"],
       });
@@ -148,6 +239,11 @@ export async function runReportCli(input: {
 
     if (["draft", "bug", "feature", "translation", "security"].includes(command)) {
       const report = createReport({ command, positionals, flags, argv, state, agentId });
+      report.budgetState = reportBudgetState(state, report, "draft", nowIso());
+      if (report.budgetState.status === "limited") {
+        throw new CliHandledError("report_budget_exceeded", `Report budget exceeded: ${report.budgetState.blockers.join(", ")}`, CLI_EXIT_FAILURE);
+      }
+      recordBudgetEvent(state, report, "draft", nowIso());
       state.reports.unshift(report);
       state.updatedAt = nowIso();
       save();
@@ -157,6 +253,7 @@ export async function runReportCli(input: {
     if (command === "check") {
       const report = findReport(subcommand ?? flags.id);
       const checked = refreshReport(report, state, flags);
+      await refreshGlobalDedupe(checked, flags);
       Object.assign(report, checked, { updatedAt: nowIso() });
       state.updatedAt = report.updatedAt;
       save();
@@ -197,6 +294,23 @@ export async function runReportCli(input: {
       const report = findReport(subcommand ?? flags.id);
       const confirmed = readBooleanFlag(argv, flags, "confirm", false) || readBooleanFlag(argv, flags, "approved", false);
       const dryRun = readBooleanFlag(argv, flags, "dry-run", false);
+      await refreshGlobalDedupe(report, flags);
+      const budgetAction = confirmed && dryRun ? "dry_run_submit" : "publish_prompt";
+      report.budgetState = reportBudgetState(state, report, budgetAction, nowIso());
+      if (report.budgetState.status === "limited") {
+        report.status = "blocked";
+        report.updatedAt = nowIso();
+        state.updatedAt = report.updatedAt;
+        save();
+        throw new CliHandledError("report_budget_exceeded", `Report budget exceeded: ${report.budgetState.blockers.join(", ")}`, CLI_EXIT_FAILURE);
+      }
+      if (report.globalDedupe?.recommendedAction === "review_candidates") {
+        report.status = "blocked";
+        report.updatedAt = nowIso();
+        state.updatedAt = report.updatedAt;
+        save();
+        throw new CliHandledError("global_dedupe_review_required", "Global dedupe found medium-confidence canonical candidates; review before publishing.", CLI_EXIT_FAILURE);
+      }
       if (!report.quality.ok) {
         report.status = "blocked";
         report.updatedAt = nowIso();
@@ -216,6 +330,7 @@ export async function runReportCli(input: {
         report.updatedAt = nowIso();
         report.approvals = requiredApprovals(report, flags);
         report.labels = buildLabels(report);
+        recordBudgetEvent(state, report, "publish_prompt", report.updatedAt);
         state.updatedAt = report.updatedAt;
         save();
         return writeReportResult(context, wantsJson, "submit", {
@@ -230,6 +345,7 @@ export async function runReportCli(input: {
       report.updatedAt = nowIso();
       report.approvals = approvedApprovals(report, flags);
       report.labels = buildLabels(report);
+      recordBudgetEvent(state, report, dryRun ? "dry_run_submit" : "publish_prompt", report.updatedAt);
       const submissionPlan = buildSubmissionPlan(report, flags);
       const liveReceipt = !dryRun && readBooleanFlag(argv, flags, "execute", false)
         ? await executeReportSubmission(report, submissionPlan, flags)
@@ -261,7 +377,7 @@ export async function runReportCli(input: {
       }, dryRun || liveReceipt ? CLI_EXIT_OK : CLI_EXIT_DEGRADED);
     }
 
-    context.stderr.write(`Usage: ${binName} report draft|bug|feature|translation|security|check|dedupe|preview|submit|status|triage|templates\n`);
+    context.stderr.write(`Usage: ${binName} report draft|bug|feature|translation|security|check|dedupe|preview|submit|status|triage|templates|github|export|delete|prune|budget\n`);
     return CLI_EXIT_USAGE;
   } catch (error) {
     if (wantsJson) writeCommandJsonError(context.stdout, "report", error);
@@ -298,7 +414,7 @@ function createReport(input: {
   const reproductionSteps = splitSteps(redactor.sanitize(input.flags.repro ?? input.flags.reproduction ?? input.flags.steps ?? ""));
   const repository = input.flags.repo === "clawix" ? "clawix" : "clawjs";
   const attachments = parseAttachments(input.argv, input.flags);
-  const destination = inferDestination(kind, input.flags);
+  const destination = inferDestination(kind, input.flags, title, observed);
   const evidence = buildEvidence(input.flags, redactor);
   const base: Omit<ReportRecord, "quality" | "privacy" | "duplicateCandidates" | "labels" | "fingerprint"> = {
     schemaVersion: 1,
@@ -343,6 +459,8 @@ function createReport(input: {
     labels: [],
   };
   report.duplicateCandidates = findDuplicateCandidates(report, input.state);
+  report.prProposal = buildPrProposal(report, input.flags);
+  report.retention = { policy: "manual_prune", exportRedactedByDefault: true, deleteRequiresConfirmation: true };
   report.validationPlan = buildValidationPlan(report);
   report.status = report.quality.ok ? "ready_for_review" : "draft";
   report.labels = buildLabels(report);
@@ -350,7 +468,7 @@ function createReport(input: {
 }
 
 function refreshReport(report: ReportRecord, state: ReportGovernanceState, flags: Record<string, string>): ReportRecord {
-  const destination = flags.destination ? inferDestination(report.kind, flags) : report.destination;
+  const destination = flags.destination ? inferDestination(report.kind, flags, report.title, report.observed) : report.destination;
   const refreshed = { ...report, destination };
   refreshed.privacy = reviewPrivacy({
     redactedCount: report.privacy.redactedCount,
@@ -360,6 +478,7 @@ function refreshReport(report: ReportRecord, state: ReportGovernanceState, flags
   });
   refreshed.quality = evaluateQuality(refreshed);
   refreshed.duplicateCandidates = findDuplicateCandidates(refreshed, state);
+  refreshed.prProposal = buildPrProposal(refreshed, flags);
   refreshed.validationPlan = buildValidationPlan(refreshed);
   refreshed.status = refreshed.quality.ok ? "ready_for_review" : "draft";
   refreshed.labels = buildLabels(refreshed);
@@ -377,11 +496,13 @@ function inferKind(command: string, flags: Record<string, string>): ReportKind {
     : "bug";
 }
 
-function inferDestination(kind: ReportKind, flags: Record<string, string>): ReportDestination {
+function inferDestination(kind: ReportKind, flags: Record<string, string>, title = "", observed?: string): ReportDestination {
   if (kind === "security") return "private_security_advisory";
   if (flags.destination && ["github_issue", "github_discussion_ideas", "github_discussion_feedback", "canonical_comment", "pr_proposal", "local_draft"].includes(flags.destination)) {
     return flags.destination as ReportDestination;
   }
+  const fine = inferFineReportDestination(kind, flags, title, observed);
+  if (fine && isReportDestination(fine)) return fine;
   if (kind === "feature") return "github_discussion_ideas";
   if (kind === "ux_feedback") return "github_discussion_feedback";
   return "github_issue";
@@ -642,6 +763,16 @@ function renderReportMarkdown(report: ReportRecord): string {
   if (report.impact) lines.push("## Impact", report.impact, "");
   if (report.locale) lines.push("## Locale", report.locale, "");
   if (report.evidence.length > 0) lines.push("## Evidence", ...report.evidence.map((item) => `- ${item.kind}: ${item.value}`), "");
+  if (report.globalDedupe) {
+    lines.push("## Global Dedupe", `- Status: ${report.globalDedupe.status}`, `- Recommended: ${report.globalDedupe.recommendedAction}`, "");
+  }
+  if (report.prProposal) {
+    lines.push("## PR Proposal", `- Opens PR automatically: ${report.prProposal.opensPullRequest}`, "");
+    if (report.prProposal.suspectedFiles.length > 0) lines.push("### Suspected Files", ...report.prProposal.suspectedFiles.map((file) => `- ${file}`), "");
+    lines.push("### Patch Plan", ...report.prProposal.patchPlan.map((step) => `- ${step}`), "");
+    lines.push("### Tests", ...report.prProposal.tests.map((step) => `- ${step}`), "");
+    lines.push("### Risks", ...report.prProposal.risks.map((risk) => `- ${risk}`), "");
+  }
   const optedIn = report.attachments.filter((attachment) => attachment.optIn);
   if (optedIn.length > 0) lines.push("## Attachments Approved By User", ...optedIn.map((attachment) => `- ${attachment.name} (${attachment.kind})`), "");
   lines.push("## Quality Gates", `- Score: ${report.quality.score}`, `- Blockers: ${report.quality.blockers.join(", ") || "none"}`, "");
@@ -656,7 +787,7 @@ function buildSubmissionPlan(report: ReportRecord, flags: Record<string, string>
     connector: "claw-github",
     connectorPackage: "@clawjs/integrations",
     connectorOperationId: connectorOperationFor(report),
-    action: report.duplicateCandidates.length > 0 ? "comment_on_canonical" : destinationAction(report.destination),
+    action: shouldCommentOnCanonical(report) ? "comment_on_canonical" : destinationAction(report.destination),
     labels: report.labels,
     values: connectorValuesFor(report, flags),
     markdown: renderReportMarkdown(report),
@@ -673,6 +804,9 @@ async function executeReportSubmission(
   }
   if (submissionPlan.connectorOperationId === "proposal_only.no_github_mutation") {
     throw new CliHandledError("pr_proposal_only", "PR proposal reports do not create GitHub pull requests from claw report.", CLI_EXIT_FAILURE);
+  }
+  if (String(submissionPlan.connectorOperationId).startsWith("external_pending.")) {
+    throw new CliHandledError("external_pending", `Live submission is EXTERNAL PENDING for ${String(submissionPlan.connectorOperationId)}.`, CLI_EXIT_DEGRADED);
   }
   const baseUrl = flags["github-base-url"];
   if (!baseUrl || !isLocalHttpBaseUrl(baseUrl)) {
@@ -730,8 +864,20 @@ function externalUrlFromResponse(value: unknown): string | null {
   return null;
 }
 
+function canonicalCandidate(report: ReportRecord): CanonicalCandidate | undefined {
+  return report.canonicalCandidates?.find((candidate) => candidate.strength === "strong")
+    ?? report.globalDedupe?.candidates.find((candidate) => candidate.strength === "strong");
+}
+
+function shouldCommentOnCanonical(report: ReportRecord): boolean {
+  return report.duplicateCandidates.length > 0 || Boolean(canonicalCandidate(report));
+}
+
 function connectorOperationFor(report: ReportRecord): string {
-  if (report.duplicateCandidates.length > 0) return "github.action.create-issue-comment";
+  if (shouldCommentOnCanonical(report)) {
+    const candidate = canonicalCandidate(report);
+    return candidate?.source === "github_discussion" ? "external_pending.github_discussion_comment" : "github.action.create-issue-comment";
+  }
   if (report.destination === "pr_proposal") return "proposal_only.no_github_mutation";
   if (report.destination === "github_issue") return "github.action.create-issue";
   if (report.destination === "github_discussion_ideas" || report.destination === "github_discussion_feedback") return "github.action.create-discussion";
@@ -757,6 +903,15 @@ function connectorValuesFor(report: ReportRecord, flags: Record<string, string> 
   }
   if (report.duplicateCandidates.length > 0) {
     values.issueNumber = flags["canonical-number"] ?? flags["issue-number"] ?? "<canonical-issue-number-required>";
+    values.body = renderReportMarkdown(report);
+  }
+  const canonical = canonicalCandidate(report);
+  if (canonical?.source === "github_issue") {
+    values.issueNumber = flags["canonical-number"] ?? canonical.number ?? "<canonical-issue-number-required>";
+    values.body = renderReportMarkdown(report);
+  }
+  if (canonical?.source === "github_discussion") {
+    values.canonicalDiscussionUrl = canonical.url;
     values.body = renderReportMarkdown(report);
   }
   if (report.destination === "github_discussion_ideas") values.category = "Ideas";
@@ -877,10 +1032,143 @@ function publicationIdentity(flags: Record<string, string>): Record<string, unkn
   };
 }
 
+async function refreshGlobalDedupe(report: ReportRecord, flags: Record<string, string>): Promise<void> {
+  const baseUrl = flags["github-base-url"];
+  if (!baseUrl) {
+    report.globalDedupe = externalPendingGlobalDedupe(report, "github_connector_search_not_configured");
+    return;
+  }
+  if (!isLocalHttpBaseUrl(baseUrl)) {
+    report.globalDedupe = externalPendingGlobalDedupe(report, "real_github_search_requires_explicit_external_validation");
+    return;
+  }
+  const tokenEnv = flags["github-token-env"] ?? "CLAW_REPORT_GITHUB_TOKEN";
+  const githubToken = process.env[tokenEnv];
+  if (!githubToken) {
+    report.globalDedupe = externalPendingGlobalDedupe(report, `missing_github_token_env:${tokenEnv}`);
+    return;
+  }
+  const [owner, repo] = report.repository === "clawix" ? ["clawic", "clawix"] : ["clawic", "clawjs"];
+  const query = buildGlobalDedupeQuery(report);
+  const { buildGitHubOperationRequest, executeConnectorRuntimeRequestPlan } = await import("@clawjs/integrations");
+  const operation = (id: string) => ({ id, appId: "github", kind: "action" as const, name: id, fields: [], authFieldNames: ["githubToken"] });
+  const issuePlan = buildGitHubOperationRequest(operation("github.action.search-issues"), { q: `${query} type:issue`, perPage: 5 } as Record<string, never>);
+  const discussionPlan = buildGitHubOperationRequest(operation("github.action.search-discussions"), { owner, repo, query, first: 5 } as Record<string, never>);
+  const [issues, discussions] = await Promise.all([
+    executeConnectorRuntimeRequestPlan({ baseUrl, plan: issuePlan, secrets: { githubToken } }),
+    executeConnectorRuntimeRequestPlan({ baseUrl, plan: discussionPlan, secrets: { githubToken } }),
+  ]);
+  const candidates = candidatesFromGitHubSearch(report, issues.body, discussions.body);
+  report.canonicalCandidates = candidates;
+  report.globalDedupe = mergeGlobalDedupe(report, candidates, nowIso());
+}
+
+async function runGitHubBootstrap(input: {
+  state: ReportGovernanceState;
+  flags: Record<string, string>;
+  argv: string[];
+  context: CliContext;
+  wantsJson: boolean;
+  save: () => void;
+}): Promise<number> {
+  const existingLabels = parseCsv(input.flags["existing-labels"]);
+  const plan = buildBootstrapPlan(existingLabels, REPORT_LABELS);
+  const apply = readBooleanFlag(input.argv, input.flags, "apply", false);
+  const confirmed = readBooleanFlag(input.argv, input.flags, "confirm", false);
+  if (!apply) return writeReportResult(input.context, input.wantsJson, "github.bootstrap", { dryRun: true, plan });
+  if (!confirmed) {
+    return writeReportResult(input.context, input.wantsJson, "github.bootstrap", {
+      applied: false,
+      confirmationRequired: true,
+      plan,
+    }, CLI_EXIT_DEGRADED);
+  }
+  const baseUrl = input.flags["github-base-url"];
+  const tokenEnv = input.flags["github-token-env"] ?? "CLAW_REPORT_GITHUB_TOKEN";
+  const githubToken = process.env[tokenEnv];
+  if (!baseUrl || !isLocalHttpBaseUrl(baseUrl) || !githubToken) {
+    return writeReportResult(input.context, input.wantsJson, "github.bootstrap", {
+      applied: false,
+      externalPending: ["github_label_apply_requires_local_test_connector_or_explicit_real_integration"],
+      plan,
+    }, CLI_EXIT_DEGRADED);
+  }
+  const [owner, repo] = input.flags.repo === "clawix" ? ["clawic", "clawix"] : ["clawic", "clawjs"];
+  const missingLabels = (plan as { missingLabels: string[] }).missingLabels;
+  const { buildGitHubOperationRequest, executeConnectorRuntimeRequestPlan } = await import("@clawjs/integrations");
+  const operation = { id: "github.action.create-label", appId: "github", kind: "action" as const, name: "github.action.create-label", fields: [], authFieldNames: ["githubToken"] };
+  const results = [];
+  for (const label of missingLabels) {
+    const requestPlan = buildGitHubOperationRequest(operation, { owner, repo, name: label, color: "ededed", description: "Claw report governance label" } as Record<string, never>);
+    results.push(await executeConnectorRuntimeRequestPlan({ baseUrl, plan: requestPlan, secrets: { githubToken } }));
+  }
+  input.state.updatedAt = nowIso();
+  input.save();
+  return writeReportResult(input.context, input.wantsJson, "github.bootstrap", {
+    applied: true,
+    appliedLabels: missingLabels,
+    externalPending: (plan as { externalPending: string[] }).externalPending,
+    results: results.map((result) => result.body),
+  });
+}
+
+function runBudgetCommand(input: {
+  state: ReportGovernanceState;
+  subcommand: string | undefined;
+  flags: Record<string, string>;
+  argv: string[];
+  context: CliContext;
+  wantsJson: boolean;
+  save: () => void;
+}): number {
+  const now = nowIso();
+  if (input.subcommand === "reset") {
+    if (!readBooleanFlag(input.argv, input.flags, "confirm", false)) {
+      return writeReportResult(input.context, input.wantsJson, "budget", { reset: false, confirmationRequired: true }, CLI_EXIT_DEGRADED);
+    }
+    input.state.budgetEvents = [];
+    input.state.budgetOverrides = [];
+    input.state.updatedAt = now;
+    input.save();
+    return writeReportResult(input.context, input.wantsJson, "budget", { reset: true });
+  }
+  if (input.subcommand === "override") {
+    const repository = input.flags.repo === "clawix" ? "clawix" : "clawjs";
+    const override = {
+      id: `budget_override_${Date.now().toString(36)}`,
+      agentId: input.flags.agent ?? input.flags["agent-id"] ?? "agent",
+      repository,
+      createdAt: now,
+      reason: input.flags.reason ?? "human_override",
+    };
+    input.state.budgetOverrides.unshift(override);
+    input.state.budgetEvents.unshift({ ...override, action: "override" as const });
+    input.state.updatedAt = now;
+    input.save();
+    return writeReportResult(input.context, input.wantsJson, "budget", { override });
+  }
+  return writeReportResult(input.context, input.wantsJson, "budget", budgetSummary(input.state, now));
+}
+
+function budgetSummary(state: ReportGovernanceState, now: string): Record<string, unknown> {
+  const reports = state.reports.slice(0, 10).map((report) => reportBudgetState(state, report, "publish_prompt", now));
+  return {
+    limits: reports[0]?.limits ?? {
+      draftsPerDay: 20,
+      publishPromptsPerHour: 5,
+      dryRunSubmitsPerHour: 3,
+      duplicateCooldownHours: 24,
+    },
+    activeOverrides: state.budgetOverrides,
+    recentEvents: state.budgetEvents.slice(0, 20),
+    sampledReports: reports,
+  };
+}
+
 function triageRecommendation(report: ReportRecord): Record<string, unknown> {
   const recommendedAction = !report.quality.ok
     ? "request_more_info"
-    : report.duplicateCandidates.length > 0
+    : shouldCommentOnCanonical(report)
       ? "comment_on_canonical"
       : report.destination === "github_discussion_ideas" || report.destination === "github_discussion_feedback"
         ? "route_to_canonical_discussion"
@@ -914,7 +1202,7 @@ function readReportState(workspaceRoot: string): ReportGovernanceState {
   const file = reportStatePath(workspaceRoot);
   if (!fs.existsSync(file)) {
     const now = nowIso();
-    return { schemaVersion: 1, fingerprintSalt: randomBytes(24).toString("hex"), createdAt: now, updatedAt: now, reports: [] };
+    return { schemaVersion: 1, fingerprintSalt: randomBytes(24).toString("hex"), createdAt: now, updatedAt: now, reports: [], budgetEvents: [], budgetOverrides: [] };
   }
   return normalizeReportState(JSON.parse(fs.readFileSync(file, "utf8")));
 }
@@ -946,6 +1234,8 @@ function normalizeReportState(value: unknown): ReportGovernanceState {
     createdAt: typeof state.createdAt === "string" ? state.createdAt : nowIso(),
     updatedAt: typeof state.updatedAt === "string" ? state.updatedAt : nowIso(),
     reports: Array.isArray(state.reports) ? state.reports.map((report) => normalizeReportRecord(report)) : [],
+    budgetEvents: Array.isArray(state.budgetEvents) ? state.budgetEvents : [],
+    budgetOverrides: Array.isArray(state.budgetOverrides) ? state.budgetOverrides : [],
   };
 }
 
@@ -970,6 +1260,11 @@ function normalizeReportRecord(value: unknown): ReportRecord {
     quality: report.quality ?? emptyQuality(),
     privacy: report.privacy ?? { ok: true, redactedCount: 0, blockedPublic: false, blockedReasons: [], attachmentOptInRequired: false },
     duplicateCandidates: Array.isArray(report.duplicateCandidates) ? report.duplicateCandidates : [],
+    ...(Array.isArray(report.canonicalCandidates) ? { canonicalCandidates: report.canonicalCandidates } : {}),
+    ...(report.globalDedupe ? { globalDedupe: report.globalDedupe } : {}),
+    ...(report.budgetState ? { budgetState: report.budgetState } : {}),
+    ...(report.retention ? { retention: report.retention } : { retention: { policy: "manual_prune", exportRedactedByDefault: true, deleteRequiresConfirmation: true } }),
+    ...(report.prProposal ? { prProposal: report.prProposal } : {}),
     approvals: Array.isArray(report.approvals) ? report.approvals : [],
     receipts: Array.isArray(report.receipts) ? report.receipts : [],
     ...(report.validationPlan ? { validationPlan: report.validationPlan } : {}),
@@ -993,7 +1288,7 @@ function isReportDestination(value: unknown): value is ReportDestination {
 }
 
 function writeUsage(context: CliContext, binName: string): void {
-  context.stdout.write(`Usage: ${binName} report draft|bug|feature|translation|security|check|dedupe|preview|submit|status|triage|templates\n`);
+  context.stdout.write(`Usage: ${binName} report draft|bug|feature|translation|security|check|dedupe|preview|submit|status|triage|templates|github|export|delete|prune|budget\n`);
 }
 
 function writeReportResult(context: CliContext, wantsJson: boolean, action: string, data: unknown, exitCode = CLI_EXIT_OK): number {
