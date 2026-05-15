@@ -1125,6 +1125,8 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_notify
   claw_cli_command_messages["messages\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_messages
+  claw_cli_command_connectors["connectors\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_connectors
   claw_cli_command_integrations["integrations\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_integrations
   claw_cli_command_media["media\ncliCommand"]
@@ -2204,6 +2206,7 @@ flowchart TD
 | `claw.cli.command.telegram` | cliCommand | cli | claw |  |  |  | `telegram` |
 | `claw.cli.command.notify` | cliCommand | cli | claw |  |  |  | `notify` |
 | `claw.cli.command.messages` | cliCommand | cli | claw |  |  |  | `messages` |
+| `claw.cli.command.connectors` | cliCommand | cli | claw |  |  |  | `connectors` |
 | `claw.cli.command.integrations` | cliCommand | cli | claw |  |  |  | `integrations` |
 | `claw.cli.command.media` | cliCommand | cli | claw |  |  |  | `media` |
 | `claw.cli.command.documents` | cliCommand | cli | claw |  |  |  | `documents` |
