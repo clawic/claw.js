@@ -9,7 +9,7 @@ export interface NotificationContext {
   projectId?: string;
   agentId?: string;
   workspaceId?: string;
-  threadId?: string;
+  sessionId?: string;
   automationId?: string;
   eventType?: string;
   severity?: string;

@@ -84,7 +84,7 @@ export interface NotifyNotification {
     projectId?: string;
     agentId?: string;
     workspaceId?: string;
-    threadId?: string;
+    sessionId?: string;
     automationId?: string;
     eventType?: string;
     severity?: string;

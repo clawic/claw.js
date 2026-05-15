@@ -104,7 +104,7 @@ function parseContext(value: unknown, tenantId: string): NotificationContext {
     ...(asString(body.projectId) ? { projectId: asString(body.projectId) } : {}),
     ...(asString(body.agentId) ? { agentId: asString(body.agentId) } : {}),
     ...(asString(body.workspaceId) ? { workspaceId: asString(body.workspaceId) } : {}),
-    ...(asString(body.threadId) ? { threadId: asString(body.threadId) } : {}),
+    ...(asString(body.sessionId) ? { sessionId: asString(body.sessionId) } : {}),
     ...(asString(body.automationId) ? { automationId: asString(body.automationId) } : {}),
     ...(asString(body.eventType) ? { eventType: asString(body.eventType) } : {}),
     ...(asString(body.severity) ? { severity: asString(body.severity) } : {}),
