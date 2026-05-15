@@ -8,6 +8,8 @@ import {
   dedupeNeedOpportunities,
   evaluateNeedRoutes,
   generateNeedRoutes,
+  planNeedRouteGeneration,
+  listNeedCapabilityGraph,
   listNeedRoutePilotPacks,
 } from "./index.ts";
 
@@ -63,13 +65,27 @@ test("need route lab starts with the four agreed pilot packs", () => {
   assert.equal(generateNeedRoutes({ pilotPackId: "iot_home" })[0]?.id, "route_new_light_control_surface");
 });
 
+test("need route lab models the capability graph and LLM lateral mode as dry-run only", () => {
+  const graph = listNeedCapabilityGraph();
+  assert.ok(graph.nodes.some((node) => node.id === "need.opportunities"));
+  assert.ok(graph.edges.some((edge) => edge.from === "need.opportunities" && edge.to === "need.report_bridge"));
+
+  const plan = planNeedRouteGeneration({ mode: "llm_lateral_dry_run", pilotPackId: "agent_workflow" });
+  assert.equal(plan.mode, "llm_lateral_dry_run");
+  assert.equal(plan.lateralExpansion.status, "dry_run_only");
+  assert.ok(plan.lateralExpansion.blockedRealActions.includes("no_provider_prompt"));
+});
+
 test("need route evaluations produce scored opportunities and external pending markers", () => {
   const evaluations = evaluateNeedRoutes(generateNeedRoutes());
   const opportunities = evaluations.flatMap((evaluation) => evaluation.opportunities);
   assert.equal(evaluations.length, 4);
+  assert.ok(evaluations.every((evaluation) => evaluation.capabilityGraph.nodes.length > 0));
   assert.ok(opportunities.some((opportunity) => opportunity.kind === "bug" && opportunity.id.endsWith(".collections_schema_inspectability")));
   assert.ok(opportunities.some((opportunity) => opportunity.externalPending && opportunity.affectedSurfaces.includes("iot")));
   assert.ok(opportunities.every((opportunity) => opportunity.score.total >= 0 && opportunity.score.total <= 10));
+  assert.ok(opportunities.every((opportunity) => typeof opportunity.score.constitutionalRisk === "number"));
+  assert.ok(opportunities.every((opportunity) => typeof opportunity.score.reuseLeverage === "number"));
 });
 
 test("need opportunity dedupe uses stable fingerprints across routes", () => {

@@ -12,13 +12,30 @@ test("runCli exposes need route lab dimensions through the public CLI", async ()
   assert.equal(result.code, CLI_EXIT_OK);
   const payload = parseCliData<{
     dimensions: Array<{ id: string; values: Array<{ id: string }> }>;
+    capabilityGraph: { nodes: Array<{ id: string }> };
+    generationModes: string[];
     maturityStates: string[];
     opportunityKinds: string[];
   }>(result.stdout);
   assert.ok(payload.dimensions.some((dimension) => dimension.id === "autonomy_preference"));
   assert.ok(payload.dimensions.some((dimension) => dimension.id === "validation_mode"));
+  assert.ok(payload.capabilityGraph.nodes.some((node) => node.id === "need.report_bridge"));
+  assert.ok(payload.generationModes.includes("llm_lateral_dry_run"));
   assert.ok(payload.maturityStates.includes("observed_gap"));
   assert.ok(payload.opportunityKinds.includes("security"));
+});
+
+test("runCli exposes LLM lateral generation as dry-run metadata without live provider calls", async () => {
+  const result = await runCliCapture(["needs", "generate", "--pilot", "agent_workflow", "--mode", "llm-lateral", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_OK);
+  const payload = parseCliData<{
+    generation: { mode: string; lateralExpansion: { status: string; blockedRealActions: string[] } };
+    routes: Array<{ id: string }>;
+  }>(result.stdout);
+  assert.equal(payload.generation.mode, "llm_lateral_dry_run");
+  assert.equal(payload.generation.lateralExpansion.status, "dry_run_only");
+  assert.ok(payload.generation.lateralExpansion.blockedRealActions.includes("no_paid_api"));
+  assert.equal(payload.routes.length, 1);
 });
 
 test("runCli evaluates need routes in dry-run mode and saves a canonical workspace ledger", async () => {

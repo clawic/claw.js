@@ -40,11 +40,20 @@ workflow, app-building/deploy, remote infrastructure, and IoT/home. These pilots
 exercise the main classes of expected growth without pretending to enumerate the
 whole space.
 
+Route generation is deterministic by default. V1 also exposes an
+`llm_lateral_dry_run` generation mode for lateral exploration, but that mode
+only returns normalized expansion metadata; it does not send prompts, call
+model providers, read secrets, spend money, or touch production data.
+
 Route evaluation is deterministic and local in V1. It produces scored
 opportunities with explicit kind, state, affected surfaces, evidence, external
-pending markers, relations, and stable fingerprints. The maturity model is the
-full funnel: `idea`, `observed_gap`, `candidate`, `accepted`, `planned`,
-`active`, `validating`, `shipped`, `parked`, and `rejected`.
+pending markers, relations, and stable fingerprints. Scoring is composite:
+severity, human scope, frequency, route blocker, constitutional risk, effort,
+reuse/leverage, and confidence. The maturity model is the full funnel: `idea`,
+`observed_gap`, `candidate`, `accepted`, `planned`, `active`, `validating`,
+`shipped`, `parked`, and `rejected`. Evaluations carry a capability graph so
+feature hierarchy is represented as relationships between dimensions, routes,
+validation, opportunities, storage, skills, UI contracts, and promotion packets.
 
 Opportunities are stored in the canonical workspace ledger
 `.claw/need-routes/need-route-lab.json`. Promotion is two-step:

@@ -14,6 +14,7 @@ or deployment targets.
 claw needs dimensions --json
 claw needs pilots --json
 claw needs generate --pilot agent_workflow --limit 4 --json
+claw needs generate --pilot agent_workflow --mode llm-lateral --json
 claw needs evaluate --pilot iot_home --dry-run --save --json
 claw needs opportunities list --json
 claw needs opportunities dedupe --json
@@ -30,6 +31,14 @@ Evaluations produce scored opportunities with evidence, affected surfaces,
 stable fingerprints, maturity state, kind, and explicit external pending
 markers. Saved evaluations live in the workspace at
 `.claw/need-routes/need-route-lab.json`.
+
+Generation is deterministic by default. `--mode llm-lateral` emits a normalized
+dry-run plan for LLM-assisted lateral exploration, but V1 does not send prompts
+or call model providers. Opportunity scoring is composite: severity, human
+scope, frequency, route blocker, constitutional risk, effort, reuse/leverage,
+and confidence. Evaluations also carry a capability graph linking dimensions,
+routes, validation, opportunities, the local ledger, role skills, UI contracts,
+and `claw report` promotion packets.
 
 Promotion is intentionally a draft packet in V1. `claw needs opportunities
 promote` returns a `claw report` plan for review; it does not publish reports,

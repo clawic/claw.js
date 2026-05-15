@@ -3,18 +3,22 @@ import path from "path";
 
 import {
   NEED_OPPORTUNITY_KINDS,
+  NEED_SCENARIO_GENERATION_MODES,
   NEED_ROUTE_MATURITY_STATES,
   dedupeNeedOpportunities,
   evaluateNeedRoutes,
   generateNeedRoutes,
+  listNeedCapabilityGraph,
   listNeedDimensions,
   listNeedRoutePilotPacks,
+  planNeedRouteGeneration,
   resolveClawPersistentSurfacePath,
 } from "@clawjs/core";
 import type {
   NeedOpportunity,
   NeedRoute,
   NeedRouteEvaluation,
+  NeedScenarioGenerationMode,
 } from "@clawjs/core";
 
 import { CliHandledError, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
@@ -51,6 +55,8 @@ export async function runNeedsCli(input: NeedsCliInput): Promise<number> {
   if (action === "dimensions") {
     return writeNeedsResult(input, {
       dimensions: listNeedDimensions(),
+      capabilityGraph: listNeedCapabilityGraph(),
+      generationModes: NEED_SCENARIO_GENERATION_MODES,
       maturityStates: NEED_ROUTE_MATURITY_STATES,
       opportunityKinds: NEED_OPPORTUNITY_KINDS,
     });
@@ -61,8 +67,13 @@ export async function runNeedsCli(input: NeedsCliInput): Promise<number> {
   }
 
   if (action === "generate") {
-    const routes = selectRoutes(input);
+    const generation = planNeedRouteGeneration({ pilotPackId: input.flags.pilot, limit: parseLimit(input), mode: parseGenerationMode(input) });
+    const routes = input.flags.route
+      ? generation.routes.filter((candidate) => candidate.id === input.flags.route)
+      : generation.routes;
+    if (input.flags.route && routes.length === 0) throw new CliHandledError("route_not_found", `No need route found for ${input.flags.route}.`, CLI_EXIT_USAGE);
     return writeNeedsResult(input, {
+      generation: { ...generation, routes },
       routes,
       save: maybeSaveEvaluations(input, routes, []),
     });
@@ -168,15 +179,26 @@ function writeNeedsResult(input: NeedsCliInput, data: unknown): number {
 
 function selectRoutes(input: NeedsCliInput): NeedRoute[] {
   const pilotPackId = input.flags.pilot;
-  const limit = input.flags.limit ? Number(input.flags.limit) : undefined;
+  const limit = parseLimit(input);
   if (input.flags.route) {
-    const route = generateNeedRoutes({ pilotPackId }).find((candidate) => candidate.id === input.flags.route);
+    const route = generateNeedRoutes({ pilotPackId, mode: parseGenerationMode(input) }).find((candidate) => candidate.id === input.flags.route);
     if (!route) throw new CliHandledError("route_not_found", `No need route found for ${input.flags.route}.`, CLI_EXIT_USAGE);
     return [route];
   }
-  const routes = generateNeedRoutes({ pilotPackId, limit });
+  const routes = generateNeedRoutes({ pilotPackId, limit, mode: parseGenerationMode(input) });
   if (pilotPackId && routes.length === 0) throw new CliHandledError("pilot_not_found", `No need pilot pack found for ${pilotPackId}.`, CLI_EXIT_USAGE);
   return routes;
+}
+
+function parseLimit(input: NeedsCliInput): number | undefined {
+  return input.flags.limit ? Number(input.flags.limit) : undefined;
+}
+
+function parseGenerationMode(input: NeedsCliInput): NeedScenarioGenerationMode {
+  const raw = input.flags.mode || input.flags.generation || "deterministic";
+  if (raw === "deterministic") return "deterministic";
+  if (raw === "llm-lateral" || raw === "llm_lateral_dry_run") return "llm_lateral_dry_run";
+  throw new CliHandledError("invalid_generation_mode", "Use --mode deterministic or --mode llm-lateral.", CLI_EXIT_USAGE);
 }
 
 function maybeSaveEvaluations(input: NeedsCliInput, routes: NeedRoute[], evaluations: NeedRouteEvaluation[]): { wrote: boolean; ledgerPath: string; reason?: string } {

@@ -232,6 +232,7 @@ production data.
 claw needs dimensions --json
 claw needs pilots --json
 claw needs generate --pilot agent_workflow --limit 4 --json
+claw needs generate --pilot agent_workflow --mode llm-lateral --json
 claw needs evaluate --pilot iot_home --dry-run --save --json
 claw needs opportunities list --json
 claw needs opportunities dedupe --json
@@ -244,11 +245,17 @@ data state, permission risk, deliverable, and validation mode. The initial pilot
 pack covers agent workflow, app-building/deploy, remote infrastructure, and
 IoT/home routes.
 
+Generation is deterministic by default. `--mode llm-lateral` emits a normalized
+dry-run expansion plan for lateral scenario work, but V1 does not send prompts
+or call model providers from `claw needs`.
+
 Saved evaluations live under `.claw/need-routes/need-route-lab.json`.
 Opportunities use the full maturity funnel from `idea` through `shipped`,
 `parked`, and `rejected`; kinds distinguish feature, subfeature, bug, refactor,
-test, docs, data, surface, validation, security, perf, and research. Promotion
-is a draft packet for `claw report` in V1 and remains approval-gated.
+test, docs, data, surface, validation, security, perf, and research. Scoring is
+composite: severity, human scope, frequency, route blocker, constitutional risk,
+effort, reuse/leverage, and confidence. Promotion is a draft packet for
+`claw report` in V1 and remains approval-gated.
 
 ## Guidance And Resources
 

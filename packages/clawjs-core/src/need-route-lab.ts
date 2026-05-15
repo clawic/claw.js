@@ -32,6 +32,8 @@ export type NeedOpportunityRelationKind =
   | "validates"
   | "documents";
 
+export type NeedScenarioGenerationMode = "deterministic" | "llm_lateral_dry_run";
+
 export interface NeedDimensionValue {
   id: string;
   label: string;
@@ -58,12 +60,33 @@ export interface NeedRoute {
 }
 
 export interface NeedOpportunityScore {
-  impact: number;
+  severity: number;
+  humanScope: number;
   frequency: number;
-  riskReduction: number;
-  leverage: number;
+  routeBlocker: number;
+  constitutionalRisk: number;
+  effort: number;
+  reuseLeverage: number;
   confidence: number;
   total: number;
+}
+
+export interface NeedCapabilityNode {
+  id: string;
+  label: string;
+  surface: "framework" | "cli" | "storage" | "ui" | "validation" | "governance" | "skills";
+}
+
+export interface NeedCapabilityEdge {
+  from: string;
+  to: string;
+  relation: "feeds" | "stores" | "evaluates" | "promotes" | "documents" | "validates";
+}
+
+export interface NeedCapabilityGraph {
+  schemaVersion: 1;
+  nodes: NeedCapabilityNode[];
+  edges: NeedCapabilityEdge[];
 }
 
 export interface NeedOpportunityRelation {
@@ -101,10 +124,23 @@ export interface NeedRouteEvaluation {
   schemaVersion: 1;
   route: NeedRoute;
   opportunities: NeedOpportunity[];
+  capabilityGraph: NeedCapabilityGraph;
   summary: {
     opportunityCount: number;
     externalPendingCount: number;
     topOpportunityIds: string[];
+  };
+}
+
+export interface NeedRouteGenerationPlan {
+  schemaVersion: 1;
+  mode: NeedScenarioGenerationMode;
+  routes: NeedRoute[];
+  lateralExpansion: {
+    status: "not_requested" | "dry_run_only";
+    reason: string;
+    normalizedInputs: string[];
+    blockedRealActions: string[];
   };
 }
 
@@ -145,6 +181,36 @@ export const NEED_OPPORTUNITY_KINDS: NeedOpportunityKind[] = [
   "perf",
   "research",
 ];
+
+export const NEED_SCENARIO_GENERATION_MODES: NeedScenarioGenerationMode[] = [
+  "deterministic",
+  "llm_lateral_dry_run",
+];
+
+export const NEED_ROUTE_CAPABILITY_GRAPH: NeedCapabilityGraph = {
+  schemaVersion: 1,
+  nodes: [
+    { id: "need.dimensions", label: "Composable dimensions", surface: "framework" },
+    { id: "need.routes", label: "Generated routes", surface: "framework" },
+    { id: "need.evaluation", label: "Dry-run route evaluation", surface: "validation" },
+    { id: "need.opportunities", label: "Scored opportunities", surface: "governance" },
+    { id: "need.ledger", label: "Local opportunity ledger", surface: "storage" },
+    { id: "need.cli", label: "claw needs CLI", surface: "cli" },
+    { id: "need.skills", label: "Role skill pack", surface: "skills" },
+    { id: "need.report_bridge", label: "Report promotion packet", surface: "governance" },
+    { id: "need.ui_contract", label: "UI/surface contract gaps", surface: "ui" },
+  ],
+  edges: [
+    { from: "need.dimensions", to: "need.routes", relation: "feeds" },
+    { from: "need.routes", to: "need.evaluation", relation: "evaluates" },
+    { from: "need.evaluation", to: "need.opportunities", relation: "feeds" },
+    { from: "need.opportunities", to: "need.ledger", relation: "stores" },
+    { from: "need.cli", to: "need.ledger", relation: "stores" },
+    { from: "need.skills", to: "need.opportunities", relation: "documents" },
+    { from: "need.opportunities", to: "need.report_bridge", relation: "promotes" },
+    { from: "need.evaluation", to: "need.ui_contract", relation: "validates" },
+  ],
+};
 
 export const NEED_ROUTE_DIMENSIONS: NeedDimension[] = [
   {
@@ -377,7 +443,15 @@ export function listNeedRoutePilotPacks(): RoutePilotPack[] {
   }));
 }
 
-export function generateNeedRoutes(options: { pilotPackId?: string; limit?: number } = {}): NeedRoute[] {
+export function listNeedCapabilityGraph(): NeedCapabilityGraph {
+  return {
+    schemaVersion: 1,
+    nodes: NEED_ROUTE_CAPABILITY_GRAPH.nodes.map((node) => ({ ...node })),
+    edges: NEED_ROUTE_CAPABILITY_GRAPH.edges.map((edge) => ({ ...edge })),
+  };
+}
+
+export function generateNeedRoutes(options: { pilotPackId?: string; limit?: number; mode?: NeedScenarioGenerationMode } = {}): NeedRoute[] {
   const packs = options.pilotPackId
     ? NEED_ROUTE_PILOT_PACKS.filter((pack) => pack.id === options.pilotPackId)
     : NEED_ROUTE_PILOT_PACKS;
@@ -391,6 +465,29 @@ export function generateNeedRoutes(options: { pilotPackId?: string; limit?: numb
   return typeof options.limit === "number" && options.limit >= 0 ? routes.slice(0, options.limit) : routes;
 }
 
+export function planNeedRouteGeneration(options: { pilotPackId?: string; limit?: number; mode?: NeedScenarioGenerationMode } = {}): NeedRouteGenerationPlan {
+  const mode = options.mode ?? "deterministic";
+  const routes = generateNeedRoutes(options);
+  return {
+    schemaVersion: 1,
+    mode,
+    routes,
+    lateralExpansion: mode === "llm_lateral_dry_run"
+      ? {
+        status: "dry_run_only",
+        reason: "LLM lateral generation is represented as a normalized dry-run expansion plan in V1; no prompt is sent and no provider is called.",
+        normalizedInputs: routes.map((route) => `${route.pilotPackId}:${route.id}:${Object.entries(route.dimensions).map(([key, value]) => `${key}=${value}`).join(",")}`),
+        blockedRealActions: ["no_provider_prompt", "no_paid_api", "no_secret_access", "no_production_data"],
+      }
+      : {
+        status: "not_requested",
+        reason: "Deterministic registry generation only.",
+        normalizedInputs: [],
+        blockedRealActions: ["no_provider_prompt", "no_paid_api", "no_secret_access", "no_production_data"],
+      },
+  };
+}
+
 export function evaluateNeedRoute(route: NeedRoute): NeedRouteEvaluation {
   const opportunities = buildRouteOpportunities(route);
   const deduped = dedupeNeedOpportunities(opportunities).unique;
@@ -398,6 +495,7 @@ export function evaluateNeedRoute(route: NeedRoute): NeedRouteEvaluation {
     schemaVersion: 1,
     route,
     opportunities: deduped,
+    capabilityGraph: listNeedCapabilityGraph(),
     summary: {
       opportunityCount: deduped.length,
       externalPendingCount: deduped.filter((opportunity) => opportunity.externalPending).length,
@@ -411,7 +509,17 @@ export function evaluateNeedRoutes(routes: NeedRoute[]): NeedRouteEvaluation[] {
 }
 
 export function scoreNeedOpportunity(input: Omit<NeedOpportunityScore, "total">): NeedOpportunityScore {
-  const total = Math.round((input.impact * 0.34 + input.frequency * 0.2 + input.riskReduction * 0.18 + input.leverage * 0.18 + input.confidence * 0.1) * 10) / 10;
+  const invertedEffort = 10 - input.effort;
+  const total = Math.round((
+    input.severity * 0.18
+    + input.humanScope * 0.14
+    + input.frequency * 0.14
+    + input.routeBlocker * 0.14
+    + input.constitutionalRisk * 0.12
+    + invertedEffort * 0.1
+    + input.reuseLeverage * 0.1
+    + input.confidence * 0.08
+  ) * 10) / 10;
   return { ...input, total };
 }
 
@@ -457,7 +565,7 @@ function buildRouteOpportunities(route: NeedRoute): NeedOpportunity[] {
       affectedSurfaces: ["claw.cli.needs", "clawix.ui", "docs/need-route-lab.md"],
       source: "deterministic_route_eval",
       externalPending: false,
-      score: { impact: 8, frequency: 8, riskReduction: 7, leverage: 8, confidence: 8 },
+      score: { severity: 8, humanScope: 8, frequency: 8, routeBlocker: 7, constitutionalRisk: 4, effort: 5, reuseLeverage: 8, confidence: 8 },
     });
   }
 
@@ -472,7 +580,7 @@ function buildRouteOpportunities(route: NeedRoute): NeedOpportunity[] {
       affectedSurfaces: ["claw.cli.needs", "claw.workspace.need_routes"],
       source: "deterministic_route_eval",
       externalPending: false,
-      score: { impact: 9, frequency: 7, riskReduction: 8, leverage: 8, confidence: 8 },
+      score: { severity: 9, humanScope: 8, frequency: 7, routeBlocker: 8, constitutionalRisk: 7, effort: 5, reuseLeverage: 8, confidence: 8 },
     });
   }
 
@@ -487,7 +595,7 @@ function buildRouteOpportunities(route: NeedRoute): NeedOpportunity[] {
       affectedSurfaces: ["skills/need-scenario-generator", "skills/need-coverage-auditor", "skills/need-opportunity-triager", "skills/need-publication-preparer"],
       source: "deterministic_route_eval",
       externalPending: false,
-      score: { impact: 7, frequency: 8, riskReduction: 5, leverage: 9, confidence: 9 },
+      score: { severity: 7, humanScope: 7, frequency: 8, routeBlocker: 5, constitutionalRisk: 3, effort: 3, reuseLeverage: 9, confidence: 9 },
     });
   }
 
@@ -502,7 +610,7 @@ function buildRouteOpportunities(route: NeedRoute): NeedOpportunity[] {
       affectedSurfaces: ["claw.cli.needs", "monitor", "preview", "browser"],
       source: "deterministic_route_eval",
       externalPending: true,
-      score: { impact: 8, frequency: 6, riskReduction: 9, leverage: 7, confidence: 7 },
+      score: { severity: 8, humanScope: 7, frequency: 6, routeBlocker: 9, constitutionalRisk: 8, effort: 6, reuseLeverage: 7, confidence: 7 },
     });
   }
 
@@ -517,7 +625,7 @@ function buildRouteOpportunities(route: NeedRoute): NeedOpportunity[] {
       affectedSurfaces: ["claw.cli.needs", "iot", "host permissions"],
       source: "deterministic_route_eval",
       externalPending: true,
-      score: { impact: 8, frequency: 5, riskReduction: 9, leverage: 8, confidence: 9 },
+      score: { severity: 8, humanScope: 7, frequency: 5, routeBlocker: 9, constitutionalRisk: 8, effort: 4, reuseLeverage: 8, confidence: 9 },
     });
   }
 
@@ -532,7 +640,7 @@ function buildRouteOpportunities(route: NeedRoute): NeedOpportunity[] {
       affectedSurfaces: ["claw.cli.needs", "claw inspect", "claw search", "claw.workspace.need_routes"],
       source: "deterministic_route_eval",
       externalPending: false,
-      score: { impact: 8, frequency: 9, riskReduction: 8, leverage: 8, confidence: 8 },
+      score: { severity: 8, humanScope: 8, frequency: 9, routeBlocker: 8, constitutionalRisk: 5, effort: 5, reuseLeverage: 8, confidence: 8 },
     });
   }
 
@@ -546,7 +654,7 @@ function buildRouteOpportunities(route: NeedRoute): NeedOpportunity[] {
     affectedSurfaces: ["collections", "database", "inspect", "claw.cli.needs"],
     source: "known_discovery_gap",
     externalPending: false,
-    score: { impact: 7, frequency: 6, riskReduction: 8, leverage: 7, confidence: 6 },
+    score: { severity: 7, humanScope: 7, frequency: 6, routeBlocker: 8, constitutionalRisk: 5, effort: 4, reuseLeverage: 7, confidence: 6 },
   });
 
   return items.map((item) => {
