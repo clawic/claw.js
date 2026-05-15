@@ -28,7 +28,7 @@ export interface UserBundle {
   rows: UserRowRef[];
 }
 
-export interface GraphData {
+export interface UserRelationshipGraph {
   nodes: Array<{
     id: string;
     label: string;
@@ -514,15 +514,15 @@ export class UserService {
     return { ok: true };
   }
 
-  buildGraph(userId?: string): GraphData {
+  buildUserGraph(userId?: string): UserRelationshipGraph {
     if (!userId) {
       return { nodes: [], edges: [] };
     }
     const bundle = this.getUserBundle(userId);
-    const nodes: GraphData["nodes"] = [];
-    const edges: GraphData["edges"] = [];
+    const nodes: UserRelationshipGraph["nodes"] = [];
+    const edges: UserRelationshipGraph["edges"] = [];
     const seen = new Set<string>();
-    const addNode = (node: GraphData["nodes"][number]) => {
+    const addNode = (node: UserRelationshipGraph["nodes"][number]) => {
       if (seen.has(node.id)) return;
       seen.add(node.id);
       nodes.push(node);

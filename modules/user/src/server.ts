@@ -73,7 +73,7 @@ export function startServer(service: UserService, host: string, port: number): h
 
       if (method === "GET" && pathname === "/api/graph") {
         const userId = url.searchParams.get("userId") ?? undefined;
-        sendJson(res, service.buildGraph(userId || undefined));
+        sendJson(res, service.buildUserGraph(userId || undefined));
         return;
       }
 

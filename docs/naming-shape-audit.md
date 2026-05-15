@@ -11,7 +11,7 @@ This is the living audit report for ADR 0013. The machine-readable source is
 ## Current gate status
 
 - Critical naming failures: 0.
-- Naming warnings: 228.
+- Naming warnings: 227.
 - Source-size warnings: 114.
 - Source-structure signals: 320.
 
@@ -40,6 +40,9 @@ for staged rename/split work and must not be hidden by compressing code.
 - Notify context vocabulary: initial cleanup completed for notification
   context fields. Internal `threadId` was renamed to `sessionId` across shared
   server types, API parsing, and the app-facing dashboard type.
+- User module graph vocabulary: initial cleanup completed for the user explorer
+  graph contract. Generic `GraphData`/`buildGraph` names were renamed to
+  `UserRelationshipGraph`/`buildUserGraph`.
 - CLI/router and command handlers: keep `packages/clawjs/src/index.ts` from
   growing by extracting command families before adding behavior.
 - Showcase UI/API: split settings, tasks, onboarding, locale, and route files
