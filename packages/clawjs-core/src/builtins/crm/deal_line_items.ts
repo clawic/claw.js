@@ -11,7 +11,7 @@ export const DEAL_LINE_ITEMS: BuiltinCollectionDefinition = {
     { name: "priceId", type: "relation", relation: { collectionName: "prices" } },
     { name: "quantity", type: "number" },
     { name: "discountPercent", type: "number" },
-    { name: "amountCents", type: "number" },
+    { name: "amountCents", type: "number", aliases: ["dealLineAmountCents"] },
     { name: "description", type: "text" },
     { name: "source", type: "json" },
     { name: "links", type: "json" },

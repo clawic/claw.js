@@ -6,11 +6,11 @@ export const HOME_INVENTORY_ITEMS: BuiltinCollectionDefinition = {
   family: "possessions",
   aliases: ["home_inventory_item","home_inventory_items","inventory"],
   fields: [
-    { name: "name", type: "text", required: true },
+    { name: "name", type: "text", required: true, aliases: ["itemName"] },
     { name: "room", type: "text" },
     { name: "category", type: "text" },
     { name: "quantity", type: "number" },
-    { name: "purchasePriceCents", type: "number" },
+    { name: "purchasePriceCents", type: "number", aliases: ["itemPurchasePriceCents"] },
     { name: "purchasedAt", type: "date" },
     { name: "serialNumber", type: "text" },
     { name: "image", type: "file" },

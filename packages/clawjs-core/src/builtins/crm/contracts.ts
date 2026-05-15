@@ -16,7 +16,7 @@ export const CONTRACTS: BuiltinCollectionDefinition = {
     { name: "termMonths", type: "number" },
     { name: "status", type: "select", options: ["draft","sent","signed","active","terminated","expired"] },
     { name: "signedAt", type: "date" },
-    { name: "pdfUrl", type: "text" },
+    { name: "pdfUrl", type: "text", aliases: ["contractPdfUrl"] },
     { name: "autoRenewal", type: "boolean" },
     { name: "source", type: "json" },
     { name: "links", type: "json" },

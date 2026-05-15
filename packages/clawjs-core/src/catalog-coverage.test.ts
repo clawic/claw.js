@@ -95,10 +95,10 @@ test("audited catalog expansion ledger locks the selected 120 archetype target",
     ["learning_assessment", "audited"],
     ["sports_booking_venues", "audited"],
     ["health_fitness_care", "audited"],
-    ["home_property_possessions", "mapping_seeded"],
-    ["work_hr_legal_ops", "mapping_seeded"],
-    ["crm_support_growth", "mapping_seeded"],
-    ["personal_memory_documents", "mapping_seeded"],
+    ["home_property_possessions", "audited"],
+    ["work_hr_legal_ops", "audited"],
+    ["crm_support_growth", "audited"],
+    ["personal_memory_documents", "audited"],
   ]);
 });
 
@@ -237,6 +237,27 @@ test("audited coverage mappings point to exact fields and relation fields", () =
       assert.equal(field?.type, "relation", `${need.id} maps ${mapping.collectionName}.${mapping.fieldName} but it is not a relation`);
       assert.equal(field?.relation?.collectionName, mapping.targetCollectionName, `${need.id} maps relation target incorrectly`);
       assert.equal(field?.relation?.kind, mapping.kind, `${need.id} maps relation semantic kind incorrectly`);
+    }
+  }
+});
+
+test("audited reviewed aliases are registered on canonical fields", () => {
+  for (const need of CATALOG_AUDITED_NEEDS) {
+    for (const mapping of need.fieldMappings) {
+      if (!mapping.aliasesReviewed?.length) continue;
+
+      const collection = KNOWN_COLLECTIONS.get(mapping.collectionName);
+      assert.ok(collection, `${need.id} maps alias on missing collection ${mapping.collectionName}`);
+      const field = collection?.fields.find((candidate) => candidate.name === mapping.fieldName);
+      assert.ok(field, `${need.id} maps alias on missing field ${mapping.collectionName}.${mapping.fieldName}`);
+
+      const fieldAliases = new Set(field?.aliases ?? []);
+      for (const alias of mapping.aliasesReviewed) {
+        assert.ok(
+          fieldAliases.has(alias),
+          `${need.id} reviewed alias ${alias} is not registered on ${mapping.collectionName}.${mapping.fieldName}`,
+        );
+      }
     }
   }
 });

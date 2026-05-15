@@ -6,7 +6,7 @@ export const JOURNAL_ENTRIES: BuiltinCollectionDefinition = {
   family: "habits_journaling",
   aliases: ["journal_entry","journal_entries","journal"],
   fields: [
-    { name: "title", type: "text", required: true },
+    { name: "title", type: "text", required: true, aliases: ["journalTitle"] },
     { name: "entryDate", type: "date", required: true },
     { name: "body", type: "text" },
     { name: "mood", type: "select", options: ["terrible","bad","neutral","good","great"] },

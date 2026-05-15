@@ -10,7 +10,7 @@ export const PAYROLL_RUNS: BuiltinCollectionDefinition = {
     { name: "periodStart", type: "date" },
     { name: "periodEnd", type: "date" },
     { name: "status", type: "select", options: ["draft","approved","paid","canceled"] },
-    { name: "totalAmountCents", type: "number" },
+    { name: "totalAmountCents", type: "number", aliases: ["payrollTotalCents"] },
     { name: "currency", type: "text" },
     { name: "paidAt", type: "date" },
     { name: "processedByActorId", type: "relation", relation: { collectionName: "actors" } },

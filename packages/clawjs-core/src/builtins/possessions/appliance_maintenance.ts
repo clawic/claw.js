@@ -10,7 +10,7 @@ export const APPLIANCE_MAINTENANCE: BuiltinCollectionDefinition = {
     { name: "performedAt", type: "date", required: true },
     { name: "title", type: "text", required: true },
     { name: "performedBy", type: "text" },
-    { name: "costCents", type: "number" },
+    { name: "costCents", type: "number", aliases: ["maintenanceCostCents"] },
     { name: "notes", type: "text" },
   ],
   indexes: [

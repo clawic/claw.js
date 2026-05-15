@@ -10,7 +10,7 @@ export const PROPERTY_INSPECTIONS: BuiltinCollectionDefinition = {
     { name: "inspectedAt", type: "date", required: true },
     { name: "inspectorName", type: "text" },
     { name: "findings", type: "json" },
-    { name: "estimatedRepairCostCents", type: "number" },
+    { name: "estimatedRepairCostCents", type: "number", aliases: ["repairEstimateCents"] },
     { name: "notes", type: "text" },
     { name: "report", type: "file" },
   ],

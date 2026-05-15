@@ -7,7 +7,7 @@ export const ACCOUNTS: BuiltinCollectionDefinition = {
   aliases: ["account","accounts"],
   fields: [
     { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
-    { name: "name", type: "text", required: true },
+    { name: "name", type: "text", required: true, aliases: ["accountName"] },
     { name: "domain", type: "text" },
     { name: "industry", type: "text" },
     { name: "employeeCount", type: "number" },

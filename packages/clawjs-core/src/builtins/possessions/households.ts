@@ -6,7 +6,7 @@ export const HOUSEHOLDS: BuiltinCollectionDefinition = {
   family: "possessions",
   aliases: ["household","households"],
   fields: [
-    { name: "name", type: "text", required: true },
+    { name: "name", type: "text", required: true, aliases: ["householdName"] },
     { name: "address", type: "text" },
     { name: "city", type: "text" },
     { name: "description", type: "text" },

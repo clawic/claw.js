@@ -13,7 +13,7 @@ export const PAY_STUBS: BuiltinCollectionDefinition = {
     { name: "deductions", type: "json" },
     { name: "taxes", type: "json" },
     { name: "period", type: "json" },
-    { name: "pdfUrl", type: "text" },
+    { name: "pdfUrl", type: "text", aliases: ["payStubPdfUrl"] },
     { name: "source", type: "json" },
     { name: "links", type: "json" },
     { name: "metadata", type: "json" },

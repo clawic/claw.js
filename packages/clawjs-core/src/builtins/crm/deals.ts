@@ -10,7 +10,7 @@ export const DEALS: BuiltinCollectionDefinition = {
     { name: "pipelineId", type: "relation", relation: { collectionName: "pipelines" } },
     { name: "stageId", type: "relation", relation: { collectionName: "pipeline_stages" } },
     { name: "title", type: "text", required: true },
-    { name: "valueCents", type: "number" },
+    { name: "valueCents", type: "number", aliases: ["dealValueCents"] },
     { name: "currency", type: "text" },
     { name: "closeDate", type: "date" },
     { name: "accountId", type: "relation", relation: { collectionName: "accounts" } },

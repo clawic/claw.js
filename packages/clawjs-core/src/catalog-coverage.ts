@@ -166,10 +166,10 @@ export const CATALOG_AUDITED_BATCHES: CatalogAuditedBatch[] = [
   { id: "learning_assessment", order: 2, domain: "learning, spaced repetition, courses, tutoring, credentialing, assessment", status: "audited" },
   { id: "sports_booking_venues", order: 3, domain: "sports, venue booking, coaching, classes, memberships, leagues", status: "audited" },
   { id: "health_fitness_care", order: 4, domain: "health, fitness, care coordination, mental health, labs, medication", status: "audited" },
-  { id: "home_property_possessions", order: 5, domain: "home, property, possessions, maintenance, warranties, utilities", status: "mapping_seeded" },
-  { id: "work_hr_legal_ops", order: 6, domain: "work, HR, legal, contracts, operations, payroll, recruiting", status: "mapping_seeded" },
-  { id: "crm_support_growth", order: 7, domain: "CRM, support, marketing, analytics, customer success, feedback", status: "mapping_seeded" },
-  { id: "personal_memory_documents", order: 8, domain: "personal memory, documents, goals, routines, preferences, archives", status: "mapping_seeded" },
+  { id: "home_property_possessions", order: 5, domain: "home, property, possessions, maintenance, warranties, utilities", status: "audited" },
+  { id: "work_hr_legal_ops", order: 6, domain: "work, HR, legal, contracts, operations, payroll, recruiting", status: "audited" },
+  { id: "crm_support_growth", order: 7, domain: "CRM, support, marketing, analytics, customer success, feedback", status: "audited" },
+  { id: "personal_memory_documents", order: 8, domain: "personal memory, documents, goals, routines, preferences, archives", status: "audited" },
 ];
 
 const CORE_COMMERCE_COLLECTIONS = [

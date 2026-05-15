@@ -8,7 +8,7 @@ export const EXAMS: BuiltinCollectionDefinition = {
   fields: [
     { name: "subjectId", type: "relation", required: true, relation: { collectionName: "subjects" } },
     { name: "title", type: "text", required: true },
-    { name: "scheduledAt", type: "date" },
+    { name: "scheduledAt", type: "date", aliases: ["examScheduledAt"] },
     { name: "durationMinutes", type: "number" },
     { name: "status", type: "select", options: ["upcoming","completed","graded","cancelled"] },
     { name: "score", type: "number" },
