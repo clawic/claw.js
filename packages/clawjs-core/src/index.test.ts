@@ -72,6 +72,7 @@ import {
   resolveClawHostRegistryPath,
   resolveClawHostStateDir,
   resolveClawWorkspaceDir,
+  resourceKindSchema,
   searchClawCliRegistry,
   taskRecordSchema,
   workSessionRecordSchema,
@@ -202,12 +203,48 @@ test("host contract fixtures and JSON schema exports cover the public v1 surface
 
 test("domain ownership matrix covers every v1 host domain", () => {
   const domains = new Set(clawDomainSchema.options);
+  const requiredClosedDomains = [
+    "agents",
+    "skills",
+    "skill_collections",
+    "connections",
+    "personalities",
+    "apps",
+    "design",
+    "audio",
+    "provider_routing",
+    "snippets",
+    "mcp",
+    "integrations",
+    "calendar",
+    "contacts",
+    "database",
+    "index",
+    "marketplace",
+    "iot",
+    "publishing",
+    "signals",
+    "health",
+    "travel",
+    "career",
+    "family",
+    "legal",
+    "finance",
+    "location",
+    "accounts",
+    "resource_registry",
+  ] as const;
 
   assert.equal(clawDomainOwnershipEntriesV1.length, domains.size);
   assert.deepEqual(
     Object.keys(clawDomainOwnershipMatrixV1).sort(),
     [...domains].sort(),
   );
+
+  for (const domain of requiredClosedDomains) {
+    assert.equal(domains.has(domain), true, `${domain} must be first-class in the v1 host domain enum`);
+    assert.equal(clawDomainOwnershipMatrixV1[domain].status, "contract_defined", `${domain} must be explicitly contract-defined`);
+  }
 
   for (const entry of clawDomainOwnershipEntriesV1) {
     assert.equal(entry.domain in clawDomainOwnershipMatrixV1, true);
@@ -224,6 +261,41 @@ test("domain ownership matrix covers every v1 host domain", () => {
   assert.deepEqual(clawDomainOwnershipMatrixV1.system.brokerRequired, true);
   assert.deepEqual(clawDomainOwnershipMatrixV1.sessions.requiredTests.includes("codex_read_only"), true);
   assert.deepEqual(clawDomainOwnershipMatrixV1.voice.destructivePolicy, "none");
+});
+
+test("resource registry exposes first-class resource kinds for closed domains", () => {
+  const requiredResourceKinds = [
+    "app",
+    "design",
+    "audio",
+    "provider",
+    "model",
+    "prompt",
+    "snippet",
+    "mcp-server",
+    "marketplace-listing",
+    "iot-device",
+    "publishing-artifact",
+    "signal-record",
+    "health-record",
+    "travel-record",
+    "career-record",
+    "family-record",
+    "legal-record",
+    "finance-record",
+    "location-record",
+    "account-record",
+    "calendar-event",
+    "contact",
+    "index",
+    "connection",
+    "personality",
+    "skill-collection",
+  ] as const;
+
+  for (const kind of requiredResourceKinds) {
+    assert.equal(resourceKindSchema.safeParse(kind).success, true, `${kind} must be a v1 resource kind`);
+  }
 });
 
 test("persistent surface registry exposes framework and host storage nodes", () => {
