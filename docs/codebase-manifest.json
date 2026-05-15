@@ -97704,7 +97704,7 @@
     {
       "path": "packages/clawjs/src/cli-report.test.ts",
       "language": "typescript",
-      "lines": 245,
+      "lines": 336,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -97712,6 +97712,8 @@
         "./index.ts",
         "node:assert/strict",
         "node:fs",
+        "node:http",
+        "node:net",
         "node:os",
         "node:path",
         "vitest"
@@ -97721,6 +97723,11 @@
         {
           "kind": "function",
           "name": "parsePayload",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "startFakeGitHubServer",
           "exported": false
         },
         {

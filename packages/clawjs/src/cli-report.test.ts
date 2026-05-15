@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import http from "node:http";
+import type { AddressInfo } from "node:net";
 import os from "node:os";
 import path from "node:path";
 
@@ -14,6 +16,50 @@ function tempWorkspace(): string {
 
 function parsePayload<T>(stdout: string): { ok: boolean; data: T; error?: { code: string }; meta: { canonicalCommand: string; action?: string } } {
   return JSON.parse(stdout);
+}
+
+async function startFakeGitHubServer(): Promise<{ url: string; requests: Array<{ method: string; path: string; body: unknown; authorization: string | null }>; close: () => Promise<void> }> {
+  const requests: Array<{ method: string; path: string; body: unknown; authorization: string | null }> = [];
+  const server = http.createServer(async (request, response) => {
+    const chunks: Buffer[] = [];
+    for await (const chunk of request) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    const rawBody = Buffer.concat(chunks).toString("utf8");
+    const body = rawBody ? JSON.parse(rawBody) : null;
+    const requestPath = request.url ?? "/";
+    requests.push({ method: request.method ?? "GET", path: requestPath, body, authorization: request.headers.authorization ?? null });
+    response.setHeader("content-type", "application/json");
+    if (requestPath === "/graphql") {
+      response.end(JSON.stringify({ data: { createDiscussion: { discussion: { id: "D_test", number: 7, title: body?.variables?.title, url: "https://github.com/clawic/clawjs/discussions/7" } } } }));
+      return;
+    }
+    if (requestPath.endsWith("/security-advisories/reports")) {
+      response.end(JSON.stringify({ ghsa_id: "GHSA-test-1234-5678", html_url: "https://github.com/clawic/clawjs/security/advisories/GHSA-test-1234-5678", state: "triage", summary: body?.summary }));
+      return;
+    }
+    if (requestPath.endsWith("/issues/42/comments")) {
+      response.end(JSON.stringify({ id: 10, body: body?.body, html_url: "https://github.com/clawic/clawjs/issues/42#issuecomment-10" }));
+      return;
+    }
+    if (requestPath.endsWith("/issues")) {
+      response.end(JSON.stringify({ id: 9, number: 9, title: body?.title, html_url: "https://github.com/clawic/clawjs/issues/9" }));
+      return;
+    }
+    response.statusCode = 404;
+    response.end(JSON.stringify({ message: "not found" }));
+  });
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      server.off("error", reject);
+      resolve();
+    });
+  });
+  const address = server.address() as AddressInfo;
+  return {
+    url: `http://127.0.0.1:${address.port}/`,
+    requests,
+    close: () => new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve())),
+  };
 }
 
 test("report bug creates a sanitized local draft with quality metadata", async () => {
@@ -241,4 +287,49 @@ test("report check exposes safe validation and EXTERNAL PENDING tasks", async ()
   assert.equal(payload.data.report.validationPlan.safeChecks.includes("connector_request_plan_dry_run"), true);
   assert.equal(payload.data.report.validationPlan.externalPending.includes("github_discussion_repository_and_category_node_ids"), true);
   assert.equal(payload.data.report.validationPlan.prohibitedChecks.includes("public_security_disclosure"), true);
+});
+
+test("report submit can execute approved connector calls against a fake GitHub server", async () => {
+  const workspace = tempWorkspace();
+  let fakeGitHub: Awaited<ReturnType<typeof startFakeGitHubServer>>;
+  try {
+    fakeGitHub = await startFakeGitHubServer();
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "EPERM") return;
+    throw error;
+  }
+  process.env.CLAW_REPORT_GITHUB_TOKEN = "offline-test-token";
+  try {
+    const bug = await runCliCapture(["report", "bug", "Connector issue", "--workspace", workspace, "--observed", "fails", "--expected", "works", "--repro", "run command", "--json"], workspace);
+    const bugId = parsePayload<{ report: { id: string } }>(bug.stdout).data.report.id;
+    const issueSubmit = await runCliCapture(["report", "submit", bugId, "--workspace", workspace, "--confirm", "--execute", "--github-base-url", fakeGitHub.url, "--host-approval-id", "approval_issue", "--github-user", "octocat", "--json"], workspace);
+    assert.equal(issueSubmit.code, CLI_EXIT_OK);
+    const issuePayload = parsePayload<{ receipt: { status: string; externalUrl: string }; report: { status: string } }>(issueSubmit.stdout);
+    assert.equal(issuePayload.data.receipt.status, "submitted");
+    assert.equal(issuePayload.data.report.status, "submitted");
+    assert.equal(issuePayload.data.receipt.externalUrl, "https://github.com/clawic/clawjs/issues/9");
+
+    const feature = await runCliCapture(["report", "feature", "Connector discussion", "--workspace", workspace, "--impact", "Votes", "--json"], workspace);
+    const featureId = parsePayload<{ report: { id: string } }>(feature.stdout).data.report.id;
+    await runCliCapture(["report", "submit", featureId, "--workspace", workspace, "--confirm", "--execute", "--github-base-url", fakeGitHub.url, "--host-approval-id", "approval_discussion", "--github-repository-id", "R_test", "--discussion-category-id", "DIC_test", "--json"], workspace);
+
+    const security = await runCliCapture(["report", "security", "Connector security", "--workspace", workspace, "--observed", "secret", "--impact", "critical leak", "--json"], workspace);
+    const securityId = parsePayload<{ report: { id: string } }>(security.stdout).data.report.id;
+    await runCliCapture(["report", "submit", securityId, "--workspace", workspace, "--confirm", "--execute", "--github-base-url", fakeGitHub.url, "--host-approval-id", "approval_security", "--json"], workspace);
+
+    const duplicateArgs = ["report", "bug", "Connector duplicate", "--workspace", workspace, "--observed", "same failure", "--expected", "success", "--repro", "same command", "--json"];
+    await runCliCapture(duplicateArgs, workspace);
+    const duplicate = await runCliCapture(duplicateArgs, workspace);
+    const duplicateId = parsePayload<{ report: { id: string } }>(duplicate.stdout).data.report.id;
+    await runCliCapture(["report", "submit", duplicateId, "--workspace", workspace, "--confirm", "--execute", "--github-base-url", fakeGitHub.url, "--host-approval-id", "approval_comment", "--canonical-number", "42", "--json"], workspace);
+
+    assert.equal(fakeGitHub.requests.some((request) => request.path === "/repos/clawic/clawjs/issues" && request.method === "POST"), true);
+    assert.equal(fakeGitHub.requests.some((request) => request.path === "/graphql" && request.method === "POST"), true);
+    assert.equal(fakeGitHub.requests.some((request) => request.path === "/repos/clawic/clawjs/security-advisories/reports" && request.method === "POST"), true);
+    assert.equal(fakeGitHub.requests.some((request) => request.path === "/repos/clawic/clawjs/issues/42/comments" && request.method === "POST"), true);
+    assert.equal(fakeGitHub.requests.every((request) => request.authorization === "Bearer offline-test-token"), true);
+  } finally {
+    delete process.env.CLAW_REPORT_GITHUB_TOKEN;
+    await fakeGitHub.close();
+  }
 });
