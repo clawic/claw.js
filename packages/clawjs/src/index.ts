@@ -65,6 +65,7 @@ import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHa
 export { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { cliErrorFromUnknown, setCliJsonMetaProvider, writeCommandJsonError, writeCommandJsonOk, writeJsonLine } from "./cli-json.ts"; import { installCliRuntimeMetaProvider } from "./cli-runtime-meta.ts";
 import { runOpenServerCommand } from "./cli-open-server.ts";
+import { runCollectionsCli } from "./cli-collections-command.ts";
 import { collectFlagValues, extractPositionals, formatCliTable, joinedPositionals, parseCsvFlag, parseFlags, parseJsonFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
 import { inferAudioExtension, inferMimeTypeFromPath, parseContextBlock, parseInferenceMessages, pathSafeBasename, readJsonFile, resolveRuntimeAdapterId, timelineRange, type GenerationCliMediaKind } from "./cli-runtime-utils.ts";
 import { runTemporalCli } from "./cli-temporal-command.ts";
@@ -543,7 +544,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   }
 
   if (group === "inspect") {
-    return await runInspectCli({ positionals, flags, context, wantsJson, binName });
+    return await runInspectCli({ argv, positionals, flags, context, wantsJson, binName });
   }
 
   if (group === "domains") {
@@ -573,9 +574,8 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     return await runSystemCapabilitiesCli({ positionals, flags, context, wantsJson, binName });
   }
 
-  if (group === "collections" || group === "records") {
-    return await runCliUnsafe(["db", ...argv.slice(1)], context);
-  }
+  if (group === "collections") return await runCollectionsCli({ argv, positionals, flags, context, wantsJson, runCli: runCliUnsafe });
+  if (group === "records") return await runCliUnsafe(["db", ...argv.slice(1)], context);
 
   const portalShortcutExit = await runPublicPortalShortcut({ group, command, subcommand, argv, flags, context, runCli: runCliUnsafe });
   if (portalShortcutExit !== null) return portalShortcutExit;

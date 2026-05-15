@@ -34,6 +34,7 @@ function cliErrorFromUnknown(error: unknown): InspectCliError {
     : new InspectCliError("internal_error", error instanceof Error ? error.message : String(error));
 }
 interface InspectCliInput {
+  argv?: string[];
   positionals: string[];
   flags: Record<string, string>;
   context: CliContext;
@@ -115,6 +116,82 @@ function readCodebaseManifest(input: InspectCliInput): unknown {
   }));
   if (manifests.length === 1) return manifests[0].manifest;
   return combineCodebaseManifests(manifests);
+}
+
+function codebaseSummaryFromFiles(files: Array<Record<string, unknown>>) {
+  const summary = {
+    files: files.length,
+    tests: 0,
+    entrypoints: 0,
+    languages: {
+      typescript: 0,
+      javascript: 0,
+      swift: 0,
+    },
+  };
+  for (const file of files) {
+    if (file.test === true) summary.tests += 1;
+    if (file.entrypoint === true) summary.entrypoints += 1;
+    if (file.language === "typescript") summary.languages.typescript += 1;
+    if (file.language === "javascript") summary.languages.javascript += 1;
+    if (file.language === "swift") summary.languages.swift += 1;
+  }
+  return summary;
+}
+
+function declarationMatchesSymbol(file: Record<string, unknown>, symbol: string): boolean {
+  const declarations = Array.isArray(file.declarations) ? file.declarations : [];
+  const exports = Array.isArray(file.exports) ? file.exports : [];
+  return declarations.some((entry) => typeof entry === "object" && entry !== null && (entry as { name?: unknown }).name === symbol)
+    || exports.includes(symbol);
+}
+
+function filterCodebaseManifest(manifest: unknown, input: InspectCliInput): unknown {
+  if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) return manifest;
+  const manifestObject = manifest as Record<string, unknown>;
+  const files = Array.isArray(manifestObject.files) ? manifestObject.files as Array<Record<string, unknown>> : [];
+  const wantsSummary = input.argv?.includes("--summary") || input.flags.summary === "true";
+  const pathPrefix = input.flags["path-prefix"];
+  const symbol = input.flags.symbol;
+  const language = input.flags.language;
+  const tests = input.flags.tests;
+  const limit = input.flags.limit ? Number(input.flags.limit) : undefined;
+  const hasFilters = !!(pathPrefix || symbol || language || tests !== undefined || Number.isFinite(limit));
+  if (!wantsSummary && !hasFilters) return manifest;
+
+  let filteredFiles = files;
+  if (pathPrefix) filteredFiles = filteredFiles.filter((file) => typeof file.path === "string" && file.path.startsWith(pathPrefix));
+  if (symbol) filteredFiles = filteredFiles.filter((file) => declarationMatchesSymbol(file, symbol));
+  if (language) filteredFiles = filteredFiles.filter((file) => file.language === language);
+  if (tests !== undefined) {
+    const wantsTests = tests === "true";
+    filteredFiles = filteredFiles.filter((file) => file.test === wantsTests);
+  }
+  const totalMatched = filteredFiles.length;
+  if (Number.isFinite(limit)) filteredFiles = filteredFiles.slice(0, Math.max(0, limit!));
+
+  const filter = {
+    ...(pathPrefix ? { pathPrefix } : {}),
+    ...(symbol ? { symbol } : {}),
+    ...(language ? { language } : {}),
+    ...(tests !== undefined ? { tests: tests === "true" } : {}),
+    ...(Number.isFinite(limit) ? { limit } : {}),
+    totalMatched,
+    returned: wantsSummary ? 0 : filteredFiles.length,
+  };
+  const base = {
+    ...manifestObject,
+    summary: hasFilters ? codebaseSummaryFromFiles(filteredFiles) : manifestObject.summary,
+    filter,
+  };
+  if (wantsSummary) {
+    const { files: _files, ...summaryOnly } = base;
+    return summaryOnly;
+  }
+  return {
+    ...base,
+    files: filteredFiles,
+  };
 }
 
 function combineCodebaseManifests(entries: Array<{ manifestPath: string; manifest: Record<string, unknown> }>): unknown {
@@ -464,7 +541,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     return CLI_EXIT_OK;
   }
   if (command === "codebase") {
-    const manifest = readCodebaseManifest(input);
+    const manifest = filterCodebaseManifest(readCodebaseManifest(input), input);
     if (input.wantsJson) writeJsonOk(input.context.stdout, manifest, inspectJsonMeta(command));
     else {
       const summary = (manifest as { summary?: { files?: number; tests?: number; entrypoints?: number } }).summary ?? {};

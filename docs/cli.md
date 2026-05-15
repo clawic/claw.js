@@ -104,6 +104,35 @@ claw add workspace default
 claw info --json
 ```
 
+## Agent Discovery
+
+Agents should use `claw` as the project map before treating source files as the
+primary source for non-trivial framework questions:
+
+```bash
+claw search "database" --json
+claw inspect commands --json
+claw inspect why database --json
+claw inspect database --json
+claw inspect schemas --json
+claw inspect storage --json
+claw inspect codebase --summary --json
+claw inspect codebase --path-prefix packages/clawjs/src/ --symbol runCli --language typescript --tests false --limit 20 --json
+```
+
+For data model work, use the local collection catalog and schema commands:
+
+```bash
+claw collections list --json
+claw collections tasks schema --json
+claw db tasks list --json
+claw db tasks query "blocked auth" --json
+```
+
+The technical `claw database ...` commands administer a running database
+service. If no service is running, use `claw collections list --json` for the
+agent-facing local catalog instead.
+
 ## Global Flags
 
 | Flag | Description |
@@ -204,6 +233,10 @@ claw database collection list
 claw database record list
 claw database token create
 claw database file list
+
+claw collections list
+claw collections <collection> schema
+claw collections <collection> list
 
 claw db task "Triage docs drift"
 claw db <collection> list

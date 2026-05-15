@@ -136,6 +136,46 @@ test("runCli exposes the generated codebase manifest through inspect", async () 
   assert.equal(payload.files.some((file) => file.path === "packages/clawjs/src/inspect-cli.ts" && file.declarations.some((entry) => entry.name === "runInspectCli")), true);
 });
 
+test("runCli can summarize and filter the codebase manifest through inspect", async () => {
+  const summary = await runCliCapture(["inspect", "codebase", "--summary", "--json"], process.cwd());
+  assert.equal(summary.code, CLI_EXIT_OK);
+  const summaryPayload = parseCliJson<{
+    summary: { files: number };
+    files?: unknown[];
+  }>(summary.stdout).data;
+  assert.equal(summaryPayload.summary.files > 0, true);
+  assert.equal("files" in summaryPayload, false);
+
+  const filtered = await runCliCapture([
+    "inspect",
+    "codebase",
+    "--path-prefix",
+    "packages/clawjs/src/",
+    "--symbol",
+    "runInspectCli",
+    "--language",
+    "typescript",
+    "--tests",
+    "false",
+    "--limit",
+    "5",
+    "--json",
+  ], process.cwd());
+  assert.equal(filtered.code, CLI_EXIT_OK);
+  const filteredPayload = parseCliJson<{
+    filter: { pathPrefix: string; symbol: string; language: string; tests: boolean; limit: number; totalMatched: number; returned: number };
+    files: Array<{ path: string; language: string; test: boolean; declarations: Array<{ name: string }> }>;
+  }>(filtered.stdout).data;
+  assert.equal(filteredPayload.filter.pathPrefix, "packages/clawjs/src/");
+  assert.equal(filteredPayload.filter.symbol, "runInspectCli");
+  assert.equal(filteredPayload.filter.language, "typescript");
+  assert.equal(filteredPayload.filter.tests, false);
+  assert.equal(filteredPayload.filter.limit, 5);
+  assert.equal(filteredPayload.files.length <= 5, true);
+  assert.equal(filteredPayload.files.some((file) => file.path === "packages/clawjs/src/inspect-cli.ts" && file.declarations.some((entry) => entry.name === "runInspectCli")), true);
+  assert.equal(filteredPayload.files.every((file) => file.path.startsWith("packages/clawjs/src/") && file.language === "typescript" && file.test === false), true);
+});
+
 test("runCli fuses multiple codebase manifests through inspect", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-inspect-codebase-"));
   const frameworkManifestPath = path.join(tempRoot, "clawjs-codebase.json");

@@ -1,5 +1,8 @@
 import { buildDatabaseApp, DatabaseApiClient } from "@clawjs/database";
 
+import { CliHandledError } from "./cli-errors.ts";
+import { writeCommandJsonError } from "./cli-json.ts";
+
 type Writable = NodeJS.WritableStream;
 
 function buildDatabaseAdvancedUsage(binName = "claw"): string {
@@ -178,7 +181,26 @@ export async function runEmbeddedDatabaseCli(input: {
     stderr.write("Unknown command.\n");
     return 64;
   } catch (error) {
-    stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    const originalMessage = error instanceof Error ? error.message : String(error);
+    const serviceHint = "The low-level `claw database ...` admin surface requires `claw database serve` or --url pointing at a running database service. For the local agent-facing catalog, use `claw collections list --json`.";
+    if (wantsJson) {
+      writeCommandJsonError(stdout, "database", new CliHandledError(
+        "database_service_unavailable",
+        `${originalMessage}. ${serviceHint}`,
+        1,
+      ), {
+        invokedCommand: "database",
+        subcommand: [group, command].filter(Boolean).join(".") || null,
+        hint: serviceHint,
+        suggestedCommands: [
+          "claw collections list --json",
+          "claw collections <collection> schema --json",
+          "claw database serve",
+        ],
+      });
+    } else {
+      stderr.write(`${originalMessage}\n${serviceHint}\n`);
+    }
     return 1;
   }
 }

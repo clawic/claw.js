@@ -211,6 +211,48 @@ test("runCli returns productivity database JSON in the common envelope", { concu
   assert.equal(queryPayload.data.some((item) => item.title === "Canonical query task"), true);
 });
 
+test("runCli exposes the local collection catalog for agents", async () => {
+  const result = await runCliCapture(["collections", "list", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_OK);
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    data: {
+      collections: Array<{ name: string; aliases: string[]; family: string; fieldCount: number; commands: { schema: string; list: string; query: string } }>;
+      total: number;
+      returned: number;
+    };
+    meta: { canonicalCommand: string; invokedCommand: string; subcommand: string };
+  };
+  assert.equal(payload.ok, true);
+  assert.equal(payload.meta.canonicalCommand, "database");
+  assert.equal(payload.meta.invokedCommand, "collections");
+  assert.equal(payload.meta.subcommand, "list");
+  assert.equal(payload.data.total >= payload.data.returned, true);
+  const tasks = payload.data.collections.find((collection) => collection.name === "tasks");
+  assert.ok(tasks);
+  assert.equal(tasks.aliases.includes("task"), true);
+  assert.equal(tasks.fieldCount > 0, true);
+  assert.equal(tasks.commands.schema, "claw collections tasks schema --json");
+  assert.equal(tasks.commands.list, "claw db tasks list --json");
+  assert.equal(tasks.commands.query, "claw db tasks query <text> --json");
+});
+
+test("runCli returns a useful JSON hint when the database admin service is unavailable", async () => {
+  const result = await runCliCapture(["database", "collection", "list", "--json", "--url", "http://127.0.0.1:9"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_FAILURE);
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: { code: string; message: string };
+    meta: { canonicalCommand: string; subcommand: string; hint: string; suggestedCommands: string[] };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "database_service_unavailable");
+  assert.equal(payload.meta.canonicalCommand, "database");
+  assert.equal(payload.meta.subcommand, "collection.list");
+  assert.match(payload.meta.hint, /claw collections list --json/);
+  assert.equal(payload.meta.suggestedCommands.includes("claw collections list --json"), true);
+});
+
 test("runCli routes unique built-in collection aliases through database CRUD", { concurrency: false }, async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-collection-alias-json-"));
   useIsolatedMainData(t, workspaceRoot);
