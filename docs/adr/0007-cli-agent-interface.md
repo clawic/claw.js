@@ -76,11 +76,22 @@ secret-bearing, or cost-bearing actions require the signed host broker,
 approval/grant policy, dry-run where appropriate, and audit.
 
 Codebase inspection is part of the CLI contract. Generated manifests cover the
-whole workspace by default. V1 deep AST coverage includes TypeScript,
-JavaScript, and Swift. Other languages start with file, entrypoint, package,
-module, and test inventory. Build outputs, caches, dependencies, private user
-data, secrets, artifacts, and external read-only sources are excluded from deep
-indexing. Manifests are stale-checked by relevant gates.
+whole workspace by default and can be summarized or filtered by path prefix,
+symbol, language, test status, and limit. V1 deep AST coverage includes
+TypeScript, JavaScript, and Swift. Other languages start with file,
+entrypoint, package, module, and test inventory. Build outputs, caches,
+dependencies, private user data, secrets, artifacts, and external read-only
+sources are excluded from deep indexing. Manifests are stale-checked by
+relevant gates.
+
+Agent discovery protocol: for non-trivial project questions or implementation
+plans, agents first ask `claw` for the map, then read source as evidence. The
+default sequence is `claw search <topic> --json`, `claw inspect why <command>
+--json` or the relevant `inspect` category, and for data work `claw
+collections list --json`, `claw collections <collection> schema --json`, and
+`claw db <collection> list|query --json`. The low-level `claw database ...`
+admin surface is for service-backed database administration; it is not the
+local collection catalog.
 
 ## Rules
 
@@ -88,6 +99,9 @@ indexing. Manifests are stale-checked by relevant gates.
 - Any stable framework collection, connector, schema, route, event, output
   field, flag, command, alias, storage fact, or codebase fact that agents need
   must be inspectable through CLI.
+- Agents use the CLI discovery protocol before treating direct source reads as
+  the primary map, except for trivial tasks, unavailable CLI, or facts
+  explicitly outside the framework contract.
 - Manual CLI inventories are allowed only as generated output or test fixtures
   that assert registry parity.
 - Pre-V1 accidental legacy commands are removed cleanly unless a successor ADR

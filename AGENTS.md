@@ -207,6 +207,15 @@ Pull request rules:
 
 ## Agent Working Rules
 
+- For non-trivial questions or plans about framework behavior, start with a
+  `claw` discovery pass before relying on direct source reads. Use
+  `claw search <topic> --json`, then the relevant `claw inspect
+  commands|why|database|schemas|storage|codebase` command. For data model work,
+  use `claw collections list`, `claw collections <collection> schema`, and
+  `claw db <collection> list|query`; treat source files as evidence after the
+  CLI map. Do not perform writes, cost-bearing calls, secret access, native
+  permissions, or real service actions without explicit approval or dry-run
+  isolation.
 - Read before changing: inspect the affected package, tests, and docs before editing.
 - Prefer small, surgical patches over broad refactors unless the task explicitly asks for structural change.
 - Do not overwrite unrelated user changes in a dirty worktree.
