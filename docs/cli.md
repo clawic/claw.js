@@ -503,7 +503,7 @@ These historical names are intentionally not part of the public CLI:
 
 - Standalone package bins other than `claw`: `memory`, `user`, `delegation`,
   `publishing`, and `clawix-relay`.
-- Top-level namespaces: `data`, `app-state`, `signals`, `memory`, `user`,
+- Top-level namespaces: `data`, `app-state`, `memory`, `user`,
   `ops`, `infra`, `workspace-search`, and `workspace-index`.
 - Top-level snapshot verbs: `export`, `import`, and `backup`.
 - V1 CRUD under `business` and `social`.

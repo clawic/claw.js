@@ -73,7 +73,7 @@ const SIGNALS_STORAGE_IDS = [
 
 const PRODUCTIVITY_COLLECTION_NAMES = new Set(PRODUCTIVITY_COLLECTION_DEFINITIONS.map((collection) => collection.name));
 
-const collectionEntries = uniqueById([
+const collectionEntries: ClawDomainSurfaceEntry[] = uniqueById([
   ...PRODUCTIVITY_COLLECTION_DEFINITIONS.map((collection): ClawDomainSurfaceEntry => ({
     id: `collection:${collection.name}`,
     kind: "collection",
@@ -141,7 +141,7 @@ const signalVerticalEntries = trackingRegistry.entries.map((entry): ClawDomainSu
   notes: "Signal vertical ids are stable v1 ids. Human-facing labels and aliases live in the registry and module manifest layer.",
 }));
 
-const conceptualFamilyEntries = uniqueById([
+const conceptualFamilyEntries: ClawDomainSurfaceEntry[] = uniqueById([
   ...BUILTIN_FAMILIES.map((family): ClawDomainSurfaceEntry => ({
     id: `family:${family.name}`,
     kind: "conceptual_family",
@@ -372,7 +372,7 @@ const signalStorageEntries = SIGNALS_STORAGE_IDS.map((id): ClawDomainSurfaceEntr
   notes: "Signals storage is owned by the signals vertical catalog and core database schema.",
 }));
 
-const moduleManifestEntries = uniqueById([
+const moduleManifestEntries: ClawDomainSurfaceEntry[] = uniqueById([
   ...trackingRegistry.entries.map((entry): ClawDomainSurfaceEntry => ({
     id: `module:${entry.id}`,
     kind: "module_manifest",

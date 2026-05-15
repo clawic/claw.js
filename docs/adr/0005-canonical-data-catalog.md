@@ -43,6 +43,9 @@ field optionality, relationship meaning, or migration safety.
   or custom-database boundary.
 - Custom databases stay first-class for niche, private, experimental, or
   unapproved entities.
+- Every canonical or registered-hidden collection must be represented in the
+  domain surface registry with storage ownership and CLI coverage from
+  database schema inspection through `claw db` CRUD/query.
 
 ## Consequences
 

@@ -1,17 +1,17 @@
 # ClawJS signals modules
 
 This document is the canonical guide to the `signals` catalog: how
-verticals are laid out, how to add a new vertical, what the HTTP surface
+verticals are laid out, how to add a new vertical, what the HTTP/CLI surface
 looks like, and how clients (Clawix Mac/iOS) talk to it.
 
 ## What is a "signals module"?
 
-A signals module is an isolated, daemon-hosted vertical that stores
-**observations** about a single domain of user data (sleep, mood,
-workouts, finance, etc.). Each module exposes the same uniform
-HTTP/JSON surface so that any client (Clawix Mac, Clawix iOS, an
-agent, the CLI) can read and write to it without learning a new API per
-vertical.
+A signals module is an agent-facing manifest for one stable signal vertical.
+It stores **observations** about a single domain of user data (sleep, mood,
+workouts, finance, etc.) through the shared signals primitive. A vertical does
+not create an independent npm package, server, CLI, or service boundary by
+default. Each vertical is discovered through the registry and uses the same
+shared HTTP/JSON and CLI surface so clients do not learn a new API per domain.
 
 The canonical list of verticals lives at the repo root in
 [`tracking-registry.json`](../tracking-registry.json). It currently
@@ -22,8 +22,9 @@ Money, Meta / Reflection).
 
 ## Repository layout
 
-The 80 personal domains are not public npm packages. Each vertical with
-id `signal-id` is a catalog JSON exported by `@clawjs/signals`:
+The 80 personal domains are not public npm packages. Each vertical with id
+`signal-id` has a conceptual manifest under `modules/signal-id/` for agents
+and a catalog JSON exported by `@clawjs/signals`:
 
 ```text
 packages/signals/
@@ -49,7 +50,7 @@ one approved public surface:
    `catalogPath: "catalogs/signal-id.json"`, and an initial `status` of
    `planned` (graduate to `alpha` / `stable` later).
 
-2. Run the scaffolder:
+2. Run the catalog scaffolder:
 
    ```bash
    node scripts/scaffold-signals-verticals.mjs
@@ -67,10 +68,8 @@ one approved public surface:
 4. Add or update shared `@clawjs/signals` tests when a catalog needs
    behavior beyond static catalog loading.
 
-5. Update Clawix Mac/iOS Life UI: nothing needs to change for verticals
-   that fit the generic 3-pane explorer. Verticals that need a custom
-   UX add a Swift screen file under `clawix/macos/Sources/Clawix/Life/`
-   and `clawix/ios/Sources/Clawix/Life/`.
+5. Update Clawix Mac/iOS UI only when a vertical needs a custom experience.
+   Generic verticals should remain registry-driven.
 
 ## HTTP surface
 
@@ -123,6 +122,10 @@ Signals is a single approved public domain. Hosts may expose selected
 catalogs through one signals service; vertical ids are path components,
 not independent npm packages or public service identities.
 
+The public CLI surface is `claw signals catalog|seed-catalog|observe|list|delete`.
+Per-vertical CLI commands are not added unless a later ADR promotes an
+aggregate or system with strong invariants.
+
 ## Catalog: system vs user variables
 
 A `CatalogEntry` has an `origin` field that is either `system` (curated
@@ -153,7 +156,7 @@ The Clawix Swift clients mirror these shapes in
 ## Migration: legacy `iot.sqlite` goals
 
 The legacy `iot.sqlite` collection `goals` is **deprecated** by the new
-`@clawjs/goals` vertical. See
+shared signals primitive. See
 [`docs/migrations/goals-to-signals.md`](migrations/goals-to-signals.md)
 for the one-time migration script and rollback procedure.
 
@@ -162,7 +165,7 @@ for the one-time migration script and rollback procedure.
 Per the existing RELEASING.md rules:
 
 1. Curate the catalog for the verticals graduating to `alpha`.
-2. Run `npm test -w signal-id` for each vertical you touched.
+2. Run the shared `@clawjs/signals` tests for catalog and store behavior.
 3. `npm run publish:dry-run` from the repo root.
 4. Real publish requires explicit user authorization (see the
    workspace-private `CLAUDE.md` for the approval gate). The user

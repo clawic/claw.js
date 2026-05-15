@@ -1273,6 +1273,17 @@ The docs check script validates that every current export from
     clawDomainOwnershipEntriesV1
     clawDomainOwnershipMatrixV1
     clawDomainSchema
+    ClawDomainSurfaceEntry
+    ClawDomainSurfaceKind
+    ClawDomainSurfaceOwner
+    ClawDomainSurfaceRegistry
+    ClawDomainSurfaceSource
+    ClawDomainSurfaceStatus
+    assertClawDomainSurfaceRegistryComplete
+    clawDomainSurfaceRegistry
+    clawDomainSurfaceRegistryVersion
+    findClawDomainSurfaceEntry
+    listClawDomainSurfaceEntries
     clawDriveApiRoutePatterns
     clawDriveApiRoutes
     ClawError

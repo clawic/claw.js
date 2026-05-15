@@ -128,6 +128,9 @@ same pattern appears in more than one family.
 - Additive optional fields are preferred. Renames, splits, merges, and
   structural changes require migration support and a pre-migration snapshot.
 - A new collection must be able to CRUD through the shared database smoke test.
+- A new collection must be registered in
+  `packages/clawjs-core/src/domain-surface-registry.ts` with storage ownership,
+  `claw collections <name> schema`, and `claw db <name>` CRUD/query coverage.
 - A batch that adds collections must update docs, aliases, tests, and relation
   semantics together.
 - Clawix and other hosts consume the catalog. They may render, filter, cache, or

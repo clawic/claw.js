@@ -4,7 +4,11 @@ This document defines the canonical ownership boundary for the ClawJS/Clawix
 refactor. Data placement is defined in `docs/data-storage-boundary.md`.
 The executable source of truth is
 `clawDomainOwnershipMatrixV1` in `packages/clawjs-core/src/domain-ownership.ts`;
-this page explains the rule in human terms.
+this page explains the rule in human terms. Domain routing from database
+storage to collections, signals, systems, services, packages, module manifests,
+CLI portals, aliases, and host boundaries is tracked by
+`clawDomainSurfaceRegistry` in
+`packages/clawjs-core/src/domain-surface-registry.ts`.
 
 ## Ownership rule
 

@@ -50,6 +50,7 @@ const JSON_HELP_REQUIRED_COMMANDS = new Set([
   "runtime",
   "search",
   "sessions",
+  "signals",
   "skills",
   "slides",
   "soul",

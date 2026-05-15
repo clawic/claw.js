@@ -1373,6 +1373,8 @@ export function average(values: number[]): number | null {
 }
 
 export function usage(binName: string, group: string): string {
+  const registryEntry = resolveClawCliCommand(group);
+  if (registryEntry) return [`Usage: ${binName} ${registryEntry.usage ?? `${group} [command] [options]`}`, "", `${registryEntry.kind}: ${registryEntry.summary}`, ...(registryEntry.target ? [`Routes to: ${registryEntry.target}`] : []), `Support: ${registryEntry.support.state} - ${registryEntry.support.reason}`, `Security: ${registryEntry.securityPolicy}`, "", `Run \`${binName} --help --all\` to see the full public surface.`].join("\n");
   switch (group) {
     case "data":
       return [
@@ -1384,8 +1386,6 @@ export function usage(binName: string, group: string): string {
       ].join("\n");
     case "app-state":
       return `Usage: ${binName} app-state get [KEY]|set KEY --value JSON|snapshot [--json]`;
-    case "signals":
-      return `Usage: ${binName} signals catalog|seed-catalog|observe|list|delete [--json]`;
     case "knowledge":
       return `Usage: ${binName} knowledge entity|fact|list|search|promote [--json]`;
     case "notes":

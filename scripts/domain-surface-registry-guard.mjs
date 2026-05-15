@@ -1,0 +1,128 @@
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import {
+  assertClawDomainSurfaceRegistryComplete,
+  clawCliCommandRegistry,
+  clawDomainOwnershipEntriesV1,
+  clawDomainSurfaceRegistry,
+  clawPersistentSurfaceRegistry,
+  findClawDomainSurfaceEntry,
+  listClawDomainSurfaceEntries,
+} from "../packages/clawjs-core/src/index.ts";
+
+const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const args = new Set(process.argv.slice(2));
+const enforceModulePackages = args.has("--enforce-module-packages");
+
+const failures = [];
+const warnings = [];
+
+function relative(filePath) {
+  return path.relative(rootDir, filePath) || ".";
+}
+
+function exists(relativePath) {
+  return fs.existsSync(path.join(rootDir, relativePath));
+}
+
+function listFiles(targetPath, predicate) {
+  if (!fs.existsSync(targetPath)) return [];
+  const stat = fs.statSync(targetPath);
+  if (stat.isFile()) return predicate(targetPath) ? [targetPath] : [];
+  return fs.readdirSync(targetPath, { withFileTypes: true }).flatMap((entry) => {
+    if (["node_modules", "dist", ".data", ".tmp", "artifacts", "test-results", "output"].includes(entry.name)) return [];
+    const next = path.join(targetPath, entry.name);
+    if (entry.isDirectory()) return listFiles(next, predicate);
+    return predicate(next) ? [next] : [];
+  });
+}
+
+try {
+  assertClawDomainSurfaceRegistryComplete();
+} catch (error) {
+  failures.push(error instanceof Error ? error.message : String(error));
+}
+
+const entriesById = new Map();
+for (const entry of clawDomainSurfaceRegistry.entries) {
+  if (entriesById.has(entry.id)) failures.push(`duplicate surface id: ${entry.id}`);
+  entriesById.set(entry.id, entry);
+
+  if (!entry.name?.trim()) failures.push(`${entry.id}: missing name`);
+  if (!entry.label?.trim()) failures.push(`${entry.id}: missing label`);
+  if (!entry.source?.file) failures.push(`${entry.id}: missing source file`);
+  else if (!exists(entry.source.file)) failures.push(`${entry.id}: source file does not exist: ${entry.source.file}`);
+
+  if (entry.kind === "collection") {
+    if (entry.status !== "registered_hidden") failures.push(`${entry.id}: collections must be registered_hidden until exposed through an approved command`);
+    if (!entry.storageIds?.includes("claw.database.core")) failures.push(`${entry.id}: missing core database ownership`);
+    if (!entry.cliCommands?.some((command) => command.startsWith(`claw db ${entry.name} `))) failures.push(`${entry.id}: missing claw db CRUD route`);
+    if (!entry.cliCommands?.some((command) => command.startsWith(`claw collections ${entry.name} `))) failures.push(`${entry.id}: missing claw collections schema route`);
+  }
+
+  if (entry.kind === "signal_vertical") {
+    for (const storageId of [
+      "claw.database.core.table.signals_verticals",
+      "claw.database.core.table.signals_variables",
+      "claw.database.core.table.signals_sessions",
+      "claw.database.core.table.signals_observations",
+    ]) {
+      if (!entry.storageIds?.includes(storageId)) failures.push(`${entry.id}: missing ${storageId}`);
+    }
+    if (!entry.cliCommands?.includes("claw signals observe")) failures.push(`${entry.id}: missing claw signals observe route`);
+    if (!findClawDomainSurfaceEntry(`module:${entry.name}`)) failures.push(`${entry.id}: missing module manifest`);
+  }
+
+  if (entry.kind === "module_manifest" && entry.status === "conceptual_manifest") {
+    if (entry.packageNames?.length) failures.push(`${entry.id}: conceptual module manifests must not declare package APIs`);
+    if (entry.cliCommands?.length) failures.push(`${entry.id}: conceptual module manifests must not declare CLI routes`);
+  }
+}
+
+for (const command of clawCliCommandRegistry.commands) {
+  if (!entriesById.has(`cli:${command.name}`)) failures.push(`missing CLI surface entry for ${command.name}`);
+}
+
+for (const domain of clawDomainOwnershipEntriesV1) {
+  if (!entriesById.has(`service:${domain.domain}`)) failures.push(`missing service runtime surface entry for ${domain.domain}`);
+}
+
+for (const node of clawPersistentSurfaceRegistry.nodes) {
+  if (["database", "sidecar", "table", "index"].includes(node.kind) && !entriesById.has(`storage:${node.id}`)) {
+    failures.push(`missing storage surface entry for ${node.id}`);
+  }
+}
+
+const conceptualModulePackageAllowlist = new Set([
+  "erp",
+  "feed",
+  "sandbox",
+  "user",
+  "user-model",
+]);
+const modulePackageFiles = listFiles(path.join(rootDir, "modules"), (file) => path.basename(file) === "package.json");
+for (const file of modulePackageFiles) {
+  const moduleId = path.relative(path.join(rootDir, "modules"), path.dirname(file)).split(path.sep)[0];
+  if (!conceptualModulePackageAllowlist.has(moduleId)) {
+    const message = `${relative(file)} is still a package wrapper for a conceptual module`;
+    if (enforceModulePackages) failures.push(message);
+    else warnings.push(message);
+  }
+}
+
+if (failures.length > 0) {
+  console.error("Domain surface registry guard failed:");
+  for (const failure of failures) console.error(`- ${failure}`);
+  if (warnings.length > 0) {
+    console.error("Warnings:");
+    for (const warning of warnings) console.error(`- ${warning}`);
+  }
+  process.exit(1);
+}
+
+console.log(`Domain surface registry guard passed (${clawDomainSurfaceRegistry.entries.length} entries)`);
+if (warnings.length > 0) {
+  console.log(`Conceptual module package cleanup pending (${warnings.length} wrappers). Re-run with --enforce-module-packages after cleanup.`);
+}

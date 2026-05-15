@@ -68,6 +68,13 @@ relations. `database` is the technical database surface; `db`, `collections`,
 `records`, and natural collection aliases are agent ergonomics over the same
 canonical catalog.
 
+The database-to-CLI route is guarded by the domain surface registry. Any stable
+collection, signal vertical, aggregate, system, runtime service, package API,
+module manifest, portal, alias, storage object, or host boundary that agents can
+discover must have an entry in `clawDomainSurfaceRegistry`. Conceptual
+families are discovery surfaces; they are not package or service boundaries
+unless the registry marks them as systems or runtime modules.
+
 Stable connectors expose an operational catalog, official external schema
 coverage, support state, auth requirements, risk flags, input/output schemas,
 fixtures, and execution policy. A provider without complete external schema
