@@ -71,7 +71,7 @@ test("call tool via prefixed name returns echoed content", async () => {
   try {
     const server = await ctx.client.registerServer({ name: "playground", transport: "http", endpoint: ctx.externalEndpoint });
     await ctx.client.refreshServer(server.id);
-    const result = await ctx.client.callTool("mcp_playground_clawjs_echo", { message: "hola mcp" });
+    const result = await ctx.client.callTool("mcp_playground_clawjs_echo", { message: "hola mcp" }, fixtureControlPlane(server.id));
     assert.equal(result.ok, true);
     assert.deepEqual(result.content, { echo: "hola mcp" });
     assert.ok(result.durationMs >= 0);
@@ -105,6 +105,35 @@ test("rpc tools/call against missing tool returns 404", async () => {
   try {
     const server = await ctx.client.registerServer({ name: "playground", transport: "http", endpoint: ctx.externalEndpoint });
     await ctx.client.refreshServer(server.id);
-    await assert.rejects(() => ctx.client.callTool("mcp_playground_does_not_exist", {}), /tool_not_found|404/);
+    await assert.rejects(() => ctx.client.callTool("mcp_playground_does_not_exist", {}, fixtureControlPlane(server.id)), /tool_not_found|404/);
   } finally { await ctx.close(); }
 });
+
+function fixtureControlPlane(serverId: string) {
+  return {
+    capabilityId: "mcp.tool.call",
+    now: "2026-05-15T12:00:00.000Z",
+    context: {
+      actorId: "agent_e2e",
+      purpose: "mcp e2e fixture",
+      requestId: "req_mcp_e2e",
+    },
+    policy: {
+      id: "fixture_policy",
+      enabled: true,
+      defaultEffect: "allow" as const,
+      requireContext: true,
+      blockUnsupported: true,
+      blockMissingCredentialBinding: true,
+      rules: [],
+      traceMode: "redacted" as const,
+    },
+    approvalGrant: {
+      id: "grant_mcp_e2e",
+      expiresAt: "2026-05-15T12:10:00.000Z",
+      providerIds: [`mcp:${serverId}`],
+      capabilityIds: ["mcp.tool.call"],
+      riskTiers: ["system" as const],
+    },
+  };
+}

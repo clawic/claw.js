@@ -36,7 +36,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean --target node20"
+    "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean --target node20",
+    "test": "cd ../.. && vitest run --config vitest.config.ts packages/clawjs-mcp/src/control-plane.test.ts"
   },
   "dependencies": {
     "@clawjs/core": "0.1.2",

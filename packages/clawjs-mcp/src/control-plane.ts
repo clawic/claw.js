@@ -1,0 +1,83 @@
+import {
+  evaluateConnectorControlPlaneRequest,
+  type ConnectorApprovalGrant,
+  type ConnectorBudget,
+  type ConnectorControlPlaneDecision,
+  type ConnectorExecutionRequest,
+  type ConnectorNetworkPolicy,
+  type ConnectorNetworkProof,
+  type ConnectorPolicy,
+  type ConnectorProvider,
+} from "@clawjs/core";
+
+import type { MCPServerRecord, MCPToolRecord } from "./types.ts";
+
+export interface MCPConnectorControlPlaneInput {
+  capabilityId?: string;
+  context: NonNullable<ConnectorExecutionRequest["context"]>;
+  policy: ConnectorPolicy;
+  provider?: ConnectorProvider;
+  budgets?: ConnectorBudget[];
+  networkPolicies?: ConnectorNetworkPolicy[];
+  networkProof?: ConnectorNetworkProof;
+  approvalGrant?: ConnectorApprovalGrant;
+  expectedCost?: number;
+  requestedHost?: string;
+  now?: string;
+  networkPolicyId?: string;
+}
+
+export function assertMCPToolControlPlane(input: {
+  server: MCPServerRecord;
+  tool: MCPToolRecord;
+  controlPlane?: MCPConnectorControlPlaneInput;
+}): ConnectorControlPlaneDecision {
+  const { server, tool, controlPlane } = input;
+  if (!controlPlane) {
+    throw new Error("MCP tool execution requires connector control plane approval.");
+  }
+  if (!server.enabled) {
+    throw new Error(`MCP server ${server.id} is disabled.`);
+  }
+  if (!tool.inputSchema) {
+    throw new Error(`MCP tool ${tool.prefixedName} is missing schema evidence.`);
+  }
+
+  const capabilityId = controlPlane.capabilityId ?? "mcp.tool.call";
+  const providerId = `mcp:${server.id}`;
+  const decision = evaluateConnectorControlPlaneRequest({
+    request: {
+      provider: controlPlane.provider ?? {
+        id: providerId,
+        displayName: server.name,
+        trustTier: "third_party",
+        enabled: server.enabled,
+      },
+      operation: {
+        id: `mcp.${server.name}.${tool.toolName}`,
+        providerId,
+        capabilityIds: [capabilityId],
+        runtimeKind: "mcp",
+        support: "supported",
+        riskTiers: ["system"],
+        credentialRequired: Boolean(server.envJson && Object.keys(server.envJson).length > 0),
+        requiresApproval: true,
+        networkPolicyId: controlPlane.networkPolicyId,
+      },
+      capabilityId,
+      context: controlPlane.context,
+      expectedCost: controlPlane.expectedCost,
+      requestedHost: controlPlane.requestedHost,
+      now: controlPlane.now,
+    },
+    policy: controlPlane.policy,
+    budgets: controlPlane.budgets,
+    networkPolicies: controlPlane.networkPolicies,
+    networkProof: controlPlane.networkProof,
+    approvalGrant: controlPlane.approvalGrant,
+  });
+  if (!decision.allowed) {
+    throw new Error(`MCP connector control plane denied execution: ${decision.reasons.map((reason) => reason.code).join(", ")}`);
+  }
+  return decision;
+}

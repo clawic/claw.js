@@ -75,7 +75,11 @@ async function main(): Promise<void> {
   if (group === "servers" && sub === "remove") { write(await client.removeServer(flags.id)); return; }
   if (group === "servers" && sub === "refresh") { write(await client.refreshServer(flags.id)); return; }
   if (group === "tools" && sub === "list") { write(await client.listTools(flags.server)); return; }
-  if (group === "tools" && sub === "call") { write(await client.callTool(flags.name, flags.args ? JSON.parse(flags.args) : {})); return; }
+  if (group === "tools" && sub === "call") {
+    if (!flags["control-plane"]) throw new Error("mcp tools call requires --control-plane JSON");
+    write(await client.callTool(flags.name, flags.args ? JSON.parse(flags.args) : {}, JSON.parse(flags["control-plane"])));
+    return;
+  }
   if (group === "exposed") { write(await client.exposed()); return; }
   process.stderr.write(`Unknown command: ${group} ${sub ?? ""}\n`);
   process.exit(64);

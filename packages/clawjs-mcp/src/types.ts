@@ -44,6 +44,7 @@ export interface MCPToolCallInput {
   prefixedName?: string;
   toolName?: string;
   args?: Record<string, unknown>;
+  controlPlane?: import("./control-plane.ts").MCPConnectorControlPlaneInput;
 }
 
 export interface MCPToolCallResult {

@@ -1,4 +1,5 @@
 import { clawApiPath } from "@clawjs/core";
+import type { MCPConnectorControlPlaneInput } from "./control-plane.ts";
 import type { MCPServerRecord, MCPToolCallResult } from "./types.ts";
 
 interface JsonRpcRequest {
@@ -141,8 +142,12 @@ export class MCPApiClient {
     return this.call("GET", clawApiPath(`mcp/tools${buildQuery({ server: serverId })}`));
   }
 
-  callTool(prefixedName: string, args: Record<string, unknown>): Promise<MCPToolCallResult> {
-    return this.call("POST", clawApiPath("mcp/tools/call"), { prefixedName, args });
+  callTool(
+    prefixedName: string,
+    args: Record<string, unknown>,
+    controlPlane: MCPConnectorControlPlaneInput,
+  ): Promise<MCPToolCallResult> {
+    return this.call("POST", clawApiPath("mcp/tools/call"), { prefixedName, args, controlPlane });
   }
 
   exposed(): Promise<{ items: Array<{ name: string; description: string; inputSchema: Record<string, unknown> }> }> {

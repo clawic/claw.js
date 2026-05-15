@@ -5,6 +5,7 @@ import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
 
 import { MCPProtocolClient } from "./client.ts";
 import { loadMCPConfig, type MCPServiceConfig } from "./config.ts";
+import { assertMCPToolControlPlane } from "./control-plane.ts";
 import { defaultExposedTools } from "./expose.ts";
 import { MCPServiceStore } from "./store.ts";
 import type {
@@ -128,6 +129,11 @@ export function buildMCPApp(options: BuildMCPAppOptions = {}) {
     if (!tool) return await reply.code(404).send({ error: "tool_not_found" });
     const server = store.getServer(tool.serverId);
     if (!server) return await reply.code(404).send({ error: "server_not_found" });
+    try {
+      assertMCPToolControlPlane({ server, tool, controlPlane: body.controlPlane });
+    } catch (error) {
+      return await reply.code(403).send({ error: error instanceof Error ? error.message : String(error) });
+    }
     const protocol = new MCPProtocolClient({ server, fetchImpl: options.protocolFetch });
     return await protocol.callTool(tool.toolName, body.args ?? {});
   });
