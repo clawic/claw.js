@@ -11,7 +11,7 @@ This is the living audit report for ADR 0013. The machine-readable source is
 ## Current gate status
 
 - Critical naming failures: 0.
-- Naming warnings: 217.
+- Naming warnings: 215.
 - Source-size warnings: 116.
 - Source-structure signals: 320.
 
@@ -51,6 +51,8 @@ for staged rename/split work and must not be hidden by compressing code.
 - Docs data-file role vocabulary: `surface-contract.json` is now
   `surface-contract.registry.json`, and company cockpit example payloads now
   use `*.fixture.json` role suffixes.
+- SSH client vocabulary: `SshSessionInfo` is now `SshConnectionSnapshot`, and
+  the ssh2 utility re-export is now `ssh2Utilities`.
 - CLI/router and command handlers: keep `packages/clawjs/src/index.ts` from
   growing by extracting command families before adding behavior.
 - Showcase UI/API: split settings, tasks, onboarding, locale, and route files

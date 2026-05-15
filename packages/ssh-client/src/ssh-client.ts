@@ -62,7 +62,7 @@ export interface SshExecResult {
   durationMs: number;
 }
 
-export interface SshSessionInfo {
+export interface SshConnectionSnapshot {
   hostId: string;
   username: string;
   remoteHost: string;
@@ -171,7 +171,7 @@ export class SshClient extends EventEmitter {
     );
   }
 
-  listSessions(): SshSessionInfo[] {
+  listSessions(): SshConnectionSnapshot[] {
     return Array.from(this.sessions.values()).map((s) => s.info());
   }
 
@@ -337,7 +337,7 @@ export class SshSession {
     return this._closed;
   }
 
-  info(): SshSessionInfo {
+  info(): SshConnectionSnapshot {
     return {
       hostId: this.hostId,
       username: this.username,
@@ -584,4 +584,4 @@ export interface SftpDirEntry {
   isDirectory: boolean;
 }
 
-export const sshUtils = ssh2Utils;
+export const ssh2Utilities = ssh2Utils;
