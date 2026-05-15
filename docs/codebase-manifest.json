@@ -59156,7 +59156,7 @@
     {
       "path": "packages/clawjs-core/src/schemas-report.ts",
       "language": "typescript",
-      "lines": 129,
+      "lines": 163,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -59168,6 +59168,7 @@
         "ReportKind",
         "ReportRecord",
         "ReportStatus",
+        "reportApprovalSchema",
         "reportAttachmentSchema",
         "reportDedupeCandidateSchema",
         "reportDestinationSchema",
@@ -59178,9 +59179,16 @@
         "reportPrivacyReviewSchema",
         "reportQualityGateSchema",
         "reportRecordSchema",
-        "reportStatusSchema"
+        "reportStatusSchema",
+        "reportSubmissionReceiptSchema",
+        "reportValidationPlanSchema"
       ],
       "declarations": [
+        {
+          "kind": "const",
+          "name": "reportApprovalSchema",
+          "exported": true
+        },
         {
           "kind": "const",
           "name": "reportAttachmentSchema",
@@ -59234,6 +59242,16 @@
         {
           "kind": "const",
           "name": "reportStatusSchema",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "reportSubmissionReceiptSchema",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "reportValidationPlanSchema",
           "exported": true
         },
         {
@@ -97322,7 +97340,7 @@
     {
       "path": "packages/clawjs/src/cli-report-command.ts",
       "language": "typescript",
-      "lines": 717,
+      "lines": 931,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -97341,6 +97359,16 @@
       "declarations": [
         {
           "kind": "function",
+          "name": "approvalSurface",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "approvedApprovals",
+          "exported": false
+        },
+        {
+          "kind": "function",
           "name": "buildEvidence",
           "exported": false
         },
@@ -97352,6 +97380,16 @@
         {
           "kind": "function",
           "name": "buildSubmissionPlan",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "buildValidationPlan",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "confidenceLabel",
           "exported": false
         },
         {
@@ -97481,6 +97519,16 @@
         },
         {
           "kind": "function",
+          "name": "platformLabel",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "publicationIdentity",
+          "exported": false
+        },
+        {
+          "kind": "function",
           "name": "readReportState",
           "exported": false
         },
@@ -97506,6 +97554,11 @@
         },
         {
           "kind": "function",
+          "name": "requiredApprovals",
+          "exported": false
+        },
+        {
+          "kind": "function",
           "name": "reviewPrivacy",
           "exported": false
         },
@@ -97526,7 +97579,22 @@
         },
         {
           "kind": "function",
+          "name": "severityLabel",
+          "exported": false
+        },
+        {
+          "kind": "function",
           "name": "splitSteps",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "suggestedTriageComment",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "triageRecommendation",
           "exported": false
         },
         {
@@ -97547,6 +97615,11 @@
         {
           "kind": "type",
           "name": "CliContext",
+          "exported": false
+        },
+        {
+          "kind": "type",
+          "name": "ReportApproval",
           "exported": false
         },
         {
@@ -97597,6 +97670,16 @@
         {
           "kind": "type",
           "name": "ReportStatus",
+          "exported": false
+        },
+        {
+          "kind": "type",
+          "name": "ReportSubmissionReceipt",
+          "exported": false
+        },
+        {
+          "kind": "type",
+          "name": "ReportValidationPlan",
           "exported": false
         }
       ]

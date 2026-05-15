@@ -134,6 +134,18 @@ export async function runReportCli(input: {
       return writeReportResult(context, wantsJson, "status", { reports });
     }
 
+    if (command === "triage") {
+      const reports = state.reports
+        .filter((report) => !flags.status || report.status === flags.status)
+        .filter((report) => !flags.repo || report.repository === flags.repo)
+        .map((report) => triageRecommendation(report));
+      return writeReportResult(context, wantsJson, "triage", {
+        queue: reports,
+        automationAuthority: "recommend_label_score_dedupe_only",
+        prohibitedActions: ["close", "lock", "delete", "publish_without_human_approval"],
+      });
+    }
+
     if (["draft", "bug", "feature", "translation", "security"].includes(command)) {
       const report = createReport({ command, positionals, flags, argv, state, agentId });
       state.reports.unshift(report);
@@ -202,17 +214,29 @@ export async function runReportCli(input: {
       if (!confirmed) {
         report.status = "ready_for_review";
         report.updatedAt = nowIso();
+        report.approvals = requiredApprovals(report, flags);
+        report.labels = buildLabels(report);
         state.updatedAt = report.updatedAt;
         save();
         return writeReportResult(context, wantsJson, "submit", {
           report,
           approvalRequired: true,
+          approvalSurface: approvalSurface(report, flags, false),
           command: `${binName} report preview ${report.id}`,
           next: `${binName} report submit ${report.id} --confirm --dry-run`,
         });
       }
       report.status = dryRun ? "ready_for_review" : "external_pending";
       report.updatedAt = nowIso();
+      report.approvals = approvedApprovals(report, flags);
+      report.labels = buildLabels(report);
+      report.receipts.unshift({
+        id: `receipt_${Date.now().toString(36)}_${randomBytes(3).toString("hex")}`,
+        connector: "claw-github",
+        connectorOperationId: connectorOperationFor(report),
+        status: dryRun ? "dry_run" : "external_pending",
+        createdAt: report.updatedAt,
+      });
       state.updatedAt = report.updatedAt;
       save();
       return writeReportResult(context, wantsJson, "submit", {
@@ -220,11 +244,13 @@ export async function runReportCli(input: {
         dryRun,
         connector: "claw-github",
         externalPending: !dryRun,
+        approvalSurface: approvalSurface(report, flags, true),
+        publicationIdentity: publicationIdentity(flags),
         submissionPlan: buildSubmissionPlan(report),
       }, dryRun ? CLI_EXIT_OK : CLI_EXIT_DEGRADED);
     }
 
-    context.stderr.write(`Usage: ${binName} report draft|bug|feature|translation|security|check|dedupe|preview|submit|status|templates\n`);
+    context.stderr.write(`Usage: ${binName} report draft|bug|feature|translation|security|check|dedupe|preview|submit|status|triage|templates\n`);
     return CLI_EXIT_USAGE;
   } catch (error) {
     if (wantsJson) writeCommandJsonError(context.stdout, "report", error);
@@ -306,9 +332,9 @@ function createReport(input: {
     labels: [],
   };
   report.duplicateCandidates = findDuplicateCandidates(report, input.state);
-  report.labels = buildLabels(report);
   report.validationPlan = buildValidationPlan(report);
   report.status = report.quality.ok ? "ready_for_review" : "draft";
+  report.labels = buildLabels(report);
   return normalizeReportRecord(report);
 }
 
@@ -323,9 +349,9 @@ function refreshReport(report: ReportRecord, state: ReportGovernanceState, flags
   });
   refreshed.quality = evaluateQuality(refreshed);
   refreshed.duplicateCandidates = findDuplicateCandidates(refreshed, state);
-  refreshed.labels = buildLabels(refreshed);
   refreshed.validationPlan = buildValidationPlan(refreshed);
   refreshed.status = refreshed.quality.ok ? "ready_for_review" : "draft";
+  refreshed.labels = buildLabels(refreshed);
   return refreshed;
 }
 
@@ -440,14 +466,41 @@ function reviewPrivacy(input: {
 function buildLabels(report: ReportRecord): string[] {
   const labels = new Set<string>(["source:agent", `type:${report.kind.replace("_", "-")}`]);
   labels.add(`route:${routeLabel(report.destination)}`);
-  labels.add(report.quality.ok ? "confidence:probable" : "confidence:needs-info");
+  labels.add(report.quality.ok ? confidenceLabel(report.confidence) : "confidence:needs-info");
+  labels.add(`state:${report.status.replaceAll("_", "-")}`);
+  labels.add(severityLabel(report));
   labels.add(report.privacy.redactedCount > 0 ? "privacy:redacted" : "privacy:reviewed");
   if (report.privacy.attachmentOptInRequired) labels.add("privacy:attachment-opt-in-required");
   if (report.destination === "private_security_advisory") labels.add("privacy:private-security");
   labels.add(`area:${normalizeLabelValue(report.component ?? "unknown")}`);
-  labels.add("platform:unknown");
+  labels.add(platformLabel(report.platform));
   labels.add(report.duplicateCandidates.length > 0 ? "dedupe:candidate" : "dedupe:canonical");
   return [...labels].sort();
+}
+
+function confidenceLabel(value: string | undefined): string {
+  const normalized = normalizeLabelValue(value ?? "probable");
+  if (normalized === "confirmed") return "confidence:confirmed";
+  if (normalized === "needs-info") return "confidence:needs-info";
+  return "confidence:probable";
+}
+
+function severityLabel(report: ReportRecord): string {
+  const text = `${report.impact ?? ""} ${report.frequency ?? ""}`.toLowerCase();
+  if (text.includes("blocker") || text.includes("critical") || text.includes("crash") || text.includes("security")) return "severity:blocker";
+  if (text.includes("high") || text.includes("many") || text.includes("data loss")) return "severity:high";
+  if (text.includes("low") || text.includes("minor")) return "severity:low";
+  return "severity:medium";
+}
+
+function platformLabel(value: string | undefined): string {
+  const normalized = normalizeLabelValue(value ?? "unknown");
+  if (normalized.includes("mac")) return "platform:macos";
+  if (normalized.includes("ios") || normalized.includes("iphone")) return "platform:ios";
+  if (normalized.includes("linux")) return "platform:linux";
+  if (normalized.includes("win")) return "platform:windows";
+  if (normalized.includes("web") || normalized.includes("browser")) return "platform:web";
+  return "platform:unknown";
 }
 
 function routeLabel(destination: ReportDestination): string {
@@ -515,8 +568,10 @@ function createRedactor() {
     [/AKIA[0-9A-Z]{16}/g, "<redacted-token>"],
     [/-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g, "<redacted-private-key>"],
     [/Authorization:\s*[^\n\r]+/gi, "Authorization: <redacted>"],
+    [/((?:API[_-]?KEY|TOKEN|SECRET|PASSWORD|SIGN[_-]?IDENTITY|TEAM[_-]?ID)=)[^\s\n\r]+/gi, "$1<redacted>"],
     [/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "<redacted-email>"],
     [/\/Users\/[^/\s]+/g, "/Users/<redacted>"],
+    [/https?:\/\/[^\s"'`]*(?:internal|corp|private|\.local|\.lan)[^\s"'`]*/gi, "<redacted-private-url>"],
     [/([?&](?:token|key|secret|auth|password)=)[^&\s]+/gi, "$1<redacted>"],
   ];
   if (hostname) replacements.push([new RegExp(escapeRegExp(hostname), "g"), "<redacted-hostname>"]);
@@ -651,6 +706,132 @@ function nextStepsFor(report: ReportRecord): string[] {
   return steps;
 }
 
+function buildValidationPlan(report: ReportRecord): ReportValidationPlan {
+  const safeChecks = [
+    "redaction_review",
+    "quality_gate",
+    "local_dedupe_fingerprint",
+    "connector_request_plan_dry_run",
+  ];
+  if (report.reproductionSteps.length > 0) safeChecks.push("reproduction_steps_review");
+  if (report.version || report.platform || report.commit) safeChecks.push("environment_capture");
+  const externalPending: string[] = [];
+  if (report.destination === "github_discussion_ideas" || report.destination === "github_discussion_feedback") {
+    externalPending.push("github_discussion_repository_and_category_node_ids");
+  }
+  if (report.destination === "private_security_advisory") {
+    externalPending.push("github_security_advisory_permission_and_private_intake");
+  }
+  if (report.attachments.some((attachment) => !attachment.optIn)) {
+    externalPending.push("attachment_human_opt_in");
+  }
+  const prohibitedChecks = [
+    "real_service_write_without_confirmation",
+    "paid_api_call_without_confirmation",
+    "production_data_mutation",
+    "public_security_disclosure",
+  ];
+  return { safeChecks, externalPending, prohibitedChecks };
+}
+
+function requiredApprovals(report: ReportRecord, flags: Record<string, string>): ReportApproval[] {
+  return [
+    {
+      id: `approval_cli_${report.id}`,
+      surface: "cli_preview",
+      status: "required",
+      actor: flags["github-user"] ?? flags.user ?? "user",
+      reason: "CLI preview must be reviewed before publication.",
+    },
+    {
+      id: `approval_host_${report.id}`,
+      surface: "signed_host",
+      status: flags["host-approval-id"] ? "approved" : "external_pending",
+      actor: flags["github-user"] ?? flags.user ?? "user",
+      ...(flags["host-approval-id"] ? { hostApprovalId: flags["host-approval-id"], approvedAt: nowIso() } : { reason: "Signed host approval is required when available." }),
+    },
+  ];
+}
+
+function approvedApprovals(report: ReportRecord, flags: Record<string, string>): ReportApproval[] {
+  const actor = flags["github-user"] ?? flags.user ?? "user";
+  const now = nowIso();
+  return [
+    {
+      id: `approval_cli_${report.id}`,
+      surface: "cli_preview",
+      status: "approved",
+      actor,
+      approvedAt: now,
+      reason: "User confirmed the CLI preview.",
+    },
+    {
+      id: `approval_host_${report.id}`,
+      surface: "signed_host",
+      status: flags["host-approval-id"] ? "approved" : "external_pending",
+      actor,
+      ...(flags["host-approval-id"] ? { hostApprovalId: flags["host-approval-id"], approvedAt: now } : { reason: "Host approval unavailable in local-only dry-run path." }),
+    },
+  ];
+}
+
+function approvalSurface(report: ReportRecord, flags: Record<string, string>, cliConfirmed: boolean): Record<string, unknown> {
+  return {
+    cliPreview: cliConfirmed ? "approved" : "required",
+    signedHost: flags["host-approval-id"] ? "approved" : "external_pending",
+    hostApprovalId: flags["host-approval-id"] ?? null,
+    audit: {
+      reportId: report.id,
+      actor: flags["github-user"] ?? flags.user ?? "user",
+      action: "github_report_submission",
+      dryRunOnlyUnlessConnectorExecutes: true,
+    },
+  };
+}
+
+function publicationIdentity(flags: Record<string, string>): Record<string, unknown> {
+  return {
+    mode: "user_github_account",
+    githubUser: flags["github-user"] ?? flags.user ?? null,
+    tokenSecretField: "githubToken",
+    broker: "claw-secret-broker",
+    status: flags["github-user"] || flags.user ? "declared" : "required_before_live_submit",
+  };
+}
+
+function triageRecommendation(report: ReportRecord): Record<string, unknown> {
+  const recommendedAction = !report.quality.ok
+    ? "request_more_info"
+    : report.duplicateCandidates.length > 0
+      ? "comment_on_canonical"
+      : report.destination === "github_discussion_ideas" || report.destination === "github_discussion_feedback"
+        ? "route_to_canonical_discussion"
+        : "ready_for_human_review";
+  return {
+    reportId: report.id,
+    title: report.title,
+    status: report.status,
+    destination: report.destination,
+    score: report.quality.score,
+    recommendedAction,
+    labelRecommendations: report.labels,
+    missing: report.quality.missing,
+    duplicateCandidates: report.duplicateCandidates,
+    suggestedComment: suggestedTriageComment(report, recommendedAction),
+    destructiveActionsAllowed: false,
+  };
+}
+
+function suggestedTriageComment(report: ReportRecord, recommendedAction: string): string {
+  if (recommendedAction === "request_more_info") {
+    return `Needs more evidence before publication: ${report.quality.missing.join(", ") || "unspecified"}.`;
+  }
+  if (recommendedAction === "comment_on_canonical") {
+    return `Likely duplicate of ${report.duplicateCandidates[0]?.reportId}; add this sanitized evidence to the canonical thread after approval.`;
+  }
+  return `Suggested labels: ${report.labels.join(", ")}.`;
+}
+
 function readReportState(workspaceRoot: string): ReportGovernanceState {
   const file = reportStatePath(workspaceRoot);
   if (!fs.existsSync(file)) {
@@ -711,6 +892,9 @@ function normalizeReportRecord(value: unknown): ReportRecord {
     quality: report.quality ?? emptyQuality(),
     privacy: report.privacy ?? { ok: true, redactedCount: 0, blockedPublic: false, blockedReasons: [], attachmentOptInRequired: false },
     duplicateCandidates: Array.isArray(report.duplicateCandidates) ? report.duplicateCandidates : [],
+    approvals: Array.isArray(report.approvals) ? report.approvals : [],
+    receipts: Array.isArray(report.receipts) ? report.receipts : [],
+    ...(report.validationPlan ? { validationPlan: report.validationPlan } : {}),
     createdByAgentId: String(report.createdByAgentId || "agent"),
     createdAt: String(report.createdAt || nowIso()),
     updatedAt: String(report.updatedAt || nowIso()),
@@ -731,7 +915,7 @@ function isReportDestination(value: unknown): value is ReportDestination {
 }
 
 function writeUsage(context: CliContext, binName: string): void {
-  context.stdout.write(`Usage: ${binName} report draft|bug|feature|translation|security|check|dedupe|preview|submit|status|templates\n`);
+  context.stdout.write(`Usage: ${binName} report draft|bug|feature|translation|security|check|dedupe|preview|submit|status|triage|templates\n`);
 }
 
 function writeReportResult(context: CliContext, wantsJson: boolean, action: string, data: unknown, exitCode = CLI_EXIT_OK): number {

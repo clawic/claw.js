@@ -134,6 +134,7 @@ claw report translation "Spanish settings label is wrong" --locale es --observed
 claw report security "Private finding" --impact "..."
 claw report preview rep_...
 claw report submit rep_... --confirm --dry-run
+claw report triage --json
 ```
 
 Reports stay under `.claw/reports/report-governance.json`. The stored content
@@ -141,7 +142,17 @@ is redacted, attachments require per-file opt-in, and local salted fingerprints
 are used only for dedupe. Low-evidence drafts are blocked with
 `NOT_ENOUGH_INFO`. Public security publication is blocked and routed to private
 security advisory handling. Real GitHub submission is owned by the Claw GitHub
-connector and remains human-approved.
+connector and remains human-approved, using the user's GitHub token via the
+secret broker. `submit --dry-run` emits the exact connector operation plan:
+issues use `github.action.create-issue`, duplicates use
+`github.action.create-issue-comment`, Discussions use
+`github.action.create-discussion`, and private security reports use
+`github.action.create-security-advisory-report`. PR-looking fixes stay as
+proposal-only plans and do not create pull requests from `claw report`.
+
+`claw report triage` is the non-destructive automation surface. It may score,
+recommend labels, suggest canonical duplicate comments, and build queues, but it
+does not close, lock, delete, or publish anything.
 
 ## Guidance And Resources
 

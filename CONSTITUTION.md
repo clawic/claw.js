@@ -118,6 +118,14 @@ embedded host, not the privileged only interface. If a capability exists only
 as UI, only as SDK/API, only as CLI, or only as MCP, it is incomplete until an
 explicit ADR classifies the gap as temporary, blocked, or not applicable.
 
+**I.7 AI capabilities are first-class without becoming agents.** Not every
+useful act of intelligence is an autonomous agent. Chat, media generation,
+transcription, search, analysis, transformation, direct commands, and other
+intelligence-powered capabilities can be used directly by humans, invoked by
+agents, or composed into workflows. They do not need to be modeled as
+autonomous agents to be first-class. They still obey the same constitutional
+rules for permissions, audit, state, portability, and user ownership.
+
 ### II. Sovereignty
 
 **II.1 Local-first by construction.** The user's data lives on the user's
@@ -324,6 +332,14 @@ sovereignty or the agent's usefulness, but they do not become the organizing
 authority. The same local layer that gives agents reach also gives the user
 stronger guardrails: per-agent permissions, audit, containment, and review
 over access to their world.
+
+**V.13 Control is a reversible continuum.** A piece of work may move between
+direct human operation, review, steering, bounded delegation, and autonomy
+without losing its context or durable state. More autonomy remains the
+trajectory of the system, but sovereignty requires the human to be able to
+take over, interrupt, inspect, edit, approve, continue manually, or return the
+work to an agent. Changing the control level is an ordinary operation, not a
+migration between separate worlds.
 
 ### VI. Data
 
@@ -535,6 +551,17 @@ permission. It requires coordination, optional hierarchy, delegation,
 supervision, substitution, retirement, and withdrawal of trust. The user
 should be able to understand which agents exist, what they do, what they
 own, what paths they use, what they may access, and what they produced.
+
+**VII.15 No single agent archetype owns the framework.** Fully autonomous
+agents are one agency mode, not the definition of the system. The framework
+must support simple assistants, prompt responders, media generators,
+copilots, bounded task agents, project agents, channel agents, automations,
+delegated subagents, and long-running autonomous agents. These modes share a
+common house when the user allows it: skills, data, memory, permissions,
+tools, workflows, budgets, audit, and accumulated state. An agent or AI
+capability may appear through chat, app UI, voice, project surface, feed,
+CLI, automation, or external channel without duplicating its durable state or
+becoming a separate silo.
 
 ### VIII. Sub-apps and modularity
 
@@ -845,6 +872,12 @@ together; an amendment is incomplete until both repositories carry it.
 - **Adapter**: an implementation of a generic interface for a specific
   provider. Swappable. The framework prefers adapters over hardcoded
   provider integrations.
+- **Agency mode**: the operating form through which intelligence is used or
+  delegated, from direct tool use through review, steering, bounded tasks,
+  workflows, channel agents, and full autonomy.
+- **AI capability**: an intelligence-powered capability that may be used
+  directly by a human, invoked by an agent, or composed into a workflow
+  without necessarily being an autonomous agent.
 - **Agent**: a composition of skills, secrets, connections, and
   instructions, executed by a runtime, acting on the user's behalf within
   granted permissions.
@@ -874,6 +907,8 @@ together; an amendment is incomplete until both repositories carry it.
 - **Concept**: a node within the knowledge graph that Notes supports. Has
   hierarchy, links, and queryable levels of detail (overview vs. exhaustive
   recall on the same node).
+- **Control continuum**: the reversible range between direct human
+  operation, review, steering, bounded delegation, and autonomous execution.
 - **Controlled extension**: a permissioned extension of the user's mesh
   toward another device, server, network, physical system, API, or service.
 - **Custom database**: a user-defined typed collection for niche entities

@@ -19,7 +19,8 @@ Claw exposes `claw report` as the canonical local workflow for agent-originated
 GitHub reports. V1 stores sanitized drafts in `.claw/reports`, uses local salted
 fingerprints for dedupe, renders a preview for human approval, and produces a
 submission plan for the Claw GitHub connector. Public security reports are
-blocked; security findings route to private security advisory handling.
+blocked; security findings route to private security advisory handling through
+`github.action.create-security-advisory-report`.
 
 The user owns the GitHub identity used for publication. Agents may draft,
 classify, redact, dedupe, preview, recommend labels, and propose PR intent, but
@@ -31,6 +32,10 @@ Low-evidence reports are blocked with `NOT_ENOUGH_INFO`. Safe targeted
 validation is allowed when it is local, dry-run, fixture-backed, or otherwise
 does not touch production data or paid APIs. Missing real integrations are
 reported as `EXTERNAL PENDING`, separate from reproducible failures.
+
+Non-destructive automation lives behind `claw report triage`: it may recommend
+labels, canonical duplicate comments, evidence tasks, and queue state. It may
+not close, lock, delete, or publish in V1.
 
 ## Consequences
 

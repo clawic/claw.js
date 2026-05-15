@@ -12,6 +12,8 @@ GitHub.
 4. Show `claw report preview <id>` to the user.
 5. Publish only after explicit user confirmation through the Claw GitHub
    connector. Use `--dry-run` first when validating.
+6. Use `claw report triage` for automation queues and recommendations. Treat
+   its output as advisory until a human approves the external action.
 
 ## Hard Rules
 
@@ -27,6 +29,8 @@ GitHub.
   `NOT_ENOUGH_INFO` and ask for the missing fields.
 - If validation needs a real external service, paid API, production data, or a
   physical integration that is not available, record `EXTERNAL PENDING`.
+- Publication must use the user's GitHub identity through the Claw connector
+  and secret broker. Do not shell out to `gh` by default.
 
 ## Routing
 
@@ -38,3 +42,5 @@ GitHub.
 - Security findings route to private security advisory handling.
 - Duplicate reports should comment on the canonical item instead of creating
   a new issue.
+- Automation may recommend labels, comments, duplicate routing, and evidence
+  tasks. It must not close, lock, delete, or publish.
