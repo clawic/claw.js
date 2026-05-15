@@ -3,7 +3,7 @@ import path from "node:path";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const surfaceContract = JSON.parse(
-  fs.readFileSync(path.join(rootDir, "docs", "surface-contract.json"), "utf8"),
+  fs.readFileSync(path.join(rootDir, "docs", "surface-contract.registry.json"), "utf8"),
 );
 
 const docRoots = [

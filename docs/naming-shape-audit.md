@@ -11,8 +11,8 @@ This is the living audit report for ADR 0013. The machine-readable source is
 ## Current gate status
 
 - Critical naming failures: 0.
-- Naming warnings: 220.
-- Source-size warnings: 114.
+- Naming warnings: 217.
+- Source-size warnings: 116.
 - Source-structure signals: 320.
 
 The current gate is intentionally critical-only. Warnings are cleanup inventory
@@ -48,6 +48,9 @@ for staged rename/split work and must not be hidden by compressing code.
   config symbols now use `DeviceConfig`/`readDeviceConfig`. Public IoT
   contracts such as `/things`, `iot.things.*`, `ThingRecord`, and `thingId`
   remain a separate contract rename family to coordinate with Clawix.
+- Docs data-file role vocabulary: `surface-contract.json` is now
+  `surface-contract.registry.json`, and company cockpit example payloads now
+  use `*.fixture.json` role suffixes.
 - CLI/router and command handlers: keep `packages/clawjs/src/index.ts` from
   growing by extracting command families before adding behavior.
 - Showcase UI/API: split settings, tasks, onboarding, locale, and route files

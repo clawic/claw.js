@@ -266,8 +266,8 @@ The storage layer still uses `companies`, but the UI language should treat each 
 
 ## Payload Examples
 
-- Full detail fixture: [docs/examples/company-cockpit-fixtures.example.json](./examples/company-cockpit-fixtures.example.json)
-- Detail payload example: [docs/examples/company-cockpit-detail.example.json](./examples/company-cockpit-detail.example.json)
+- Full detail fixture: [docs/examples/company-cockpit.fixture.json](./examples/company-cockpit.fixture.json)
+- Detail payload example: [docs/examples/company-cockpit-detail.fixture.json](./examples/company-cockpit-detail.fixture.json)
 
 ## Implementation Checklist For Frontend AI
 

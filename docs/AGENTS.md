@@ -19,8 +19,8 @@ Instructions for humans and coding agents working on ClawJS documentation.
 - Read the relevant docs before editing, then verify claims against the current implementation.
 - Inspect recent commits and local diffs when updating docs for code changes. Identify what behavior changed, then update the affected docs from that evidence.
 - Check public SDK APIs against package exports, types, and implementation before documenting names, signatures, namespaces, or examples.
-- Check CLI documentation against the CLI source and `surface-contract.json` before documenting commands, flags, or examples.
-- Keep public surface and interface docs aligned with `surface-contract.json` and generated package declarations.
+- Check CLI documentation against the CLI source and `surface-contract.registry.json` before documenting commands, flags, or examples.
+- Keep public surface and interface docs aligned with `surface-contract.registry.json` and generated package declarations.
 - When adding a public docs page, make it discoverable from `index.md` or the VitePress sidebar unless it is intentionally private or supporting material.
 - For architecture, storage, host, validation, naming, privacy, release, or
   changeset decisions, start from `decision-map.md` and update the canonical
