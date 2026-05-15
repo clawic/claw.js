@@ -1621,6 +1621,29 @@ The docs check script validates that every current export from
     ModelsIntentState
     ModelsObservedState
     ModelSummary
+    NeedDimension
+    NeedDimensionValue
+    NEED_OPPORTUNITY_KINDS
+    NeedOpportunity
+    NeedOpportunityDedupeResult
+    NeedOpportunityKind
+    NeedOpportunityRelation
+    NeedOpportunityRelationKind
+    NeedOpportunityScore
+    NeedRoute
+    NEED_ROUTE_DIMENSIONS
+    NeedRouteEvaluation
+    NeedRouteMaturityState
+    NEED_ROUTE_MATURITY_STATES
+    NEED_ROUTE_PILOT_PACKS
+    dedupeNeedOpportunities
+    evaluateNeedRoute
+    evaluateNeedRoutes
+    generateNeedRoutes
+    listNeedDimensions
+    listNeedRoutePilotPacks
+    RoutePilotPack
+    scoreNeedOpportunity
     NoteBlock
     noteBlockSchema
     NoteRecord
