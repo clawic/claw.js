@@ -265,10 +265,12 @@ test("runCli exposes connector catalog support and external schema coverage thro
     apps: [{
       id: "chat_service",
       name: "Chat Service",
+      authFieldNames: ["token"],
       operations: [{
         id: "chat_service.action.send-message",
         kind: "action",
         name: "Send Message",
+        authFieldNames: ["token"],
         support: {
           state: "supported",
           reason: "Covered by offline fixtures.",
@@ -290,6 +292,12 @@ test("runCli exposes connector catalog support and external schema coverage thro
           dryRunSupported: true,
           auditRequired: true,
         },
+        runtime: {
+          hasRun: true,
+          hasHooks: false,
+          hasAdditionalProps: false,
+          hasMethods: false,
+        },
       }],
     }],
   }), "utf8");
@@ -297,8 +305,9 @@ test("runCli exposes connector catalog support and external schema coverage thro
   const connectors = await runCliCapture(["inspect", "connectors", "--connector-catalog", catalogPath, "--json"], process.cwd());
   assert.equal(connectors.code, CLI_EXIT_OK);
   const payload = parseCliJson<{
-    summary: { apps: number; operations: number; supportedOperations: number; completeExternalSchemas: number; authRequiredOperations: number };
-    apps: Array<{ id: string; operations: Array<{ id: string; externalSchema: { status: string; hasInputSchema: boolean; hasOutputSchema: boolean } }> }>;
+    controlPlane: { publicSurface: string; legacyAlias: string; pipeline: string[]; blockByDefault: boolean };
+    summary: { apps: number; operations: number; supportedOperations: number; completeExternalSchemas: number; authRequiredOperations: number; controlPlaneReadyOperations: number };
+    apps: Array<{ id: string; operations: Array<{ id: string; externalSchema: { status: string; hasInputSchema: boolean; hasOutputSchema: boolean }; controlPlane: { state: string; issues: string[] } }> }>;
   }>(connectors.stdout).data;
   assert.deepEqual(payload.summary, {
     apps: 1,
@@ -308,10 +317,20 @@ test("runCli exposes connector catalog support and external schema coverage thro
     authRequiredOperations: 1,
     hostRequiredOperations: 0,
     costRiskOperations: 0,
+    controlPlaneReadyOperations: 1,
+    controlPlaneBlockedOperations: 0,
+    operationsMissingAuditPolicy: 0,
+    operationsMissingCredentialScope: 0,
+    operationsMissingRuntimeEvidence: 0,
   });
+  assert.equal(payload.controlPlane.publicSurface, "connectors");
+  assert.equal(payload.controlPlane.legacyAlias, "integrations");
+  assert.equal(payload.controlPlane.blockByDefault, true);
+  assert.equal(payload.controlPlane.pipeline.includes("credential_broker_lease"), true);
   assert.equal(payload.apps[0]?.operations[0]?.externalSchema.status, "complete");
   assert.equal(payload.apps[0]?.operations[0]?.externalSchema.hasInputSchema, true);
   assert.equal(payload.apps[0]?.operations[0]?.externalSchema.hasOutputSchema, true);
+  assert.equal(payload.apps[0]?.operations[0]?.controlPlane.state, "ready");
 });
 
 test("runCli fuses static inspect manifests from other language builders", async () => {

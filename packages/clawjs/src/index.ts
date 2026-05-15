@@ -281,6 +281,7 @@ const HOST_FORWARD_DOMAINS = new Set<ClawDomain>([
   "models",
   "services",
   "database",
+  "connectors",
   "integrations",
   "system",
   "secrets",

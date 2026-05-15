@@ -169,7 +169,8 @@ export const clawCliCommandRegistry: ClawCliCommandRegistry = {
     command({ name: "telegram", kind: "canonical", summary: "Telegram channel shortcut.", family: "channels", securityPolicy: "auth_required", docs: ["docs/cli.md", "docs/integration-qa-lab.md"], tests: ["packages/clawjs/src/index-telegram.test.ts", "tests/e2e/telegram-surface.spec.ts"] }),
     command({ name: "notify", kind: "canonical", summary: "Send and cancel notifications.", family: "channels", securityPolicy: "signed_host_broker" }),
     command({ name: "messages", kind: "canonical", summary: "Messages resource.", family: "channels", securityPolicy: "auth_required" }),
-    command({ name: "integrations", kind: "canonical", summary: "External integrations.", family: "channels", securityPolicy: "auth_required" }),
+    command({ name: "connectors", kind: "canonical", summary: "Strict third-party connector control plane.", usage: "connectors list|inspect|capabilities|policy|budgets|audit", family: "runtime", securityPolicy: "signed_host_broker", docs: ["docs/cli.md", "docs/connector-control-plane.md"], adrs: [...CLI_ADRS, "docs/adr/0015-connector-control-plane-v1.md"], tests: ["packages/clawjs-core/src/connector-control-plane.test.ts", "packages/clawjs/src/inspect-cli.test.ts"] }),
+    command({ name: "integrations", kind: "alias", target: "connectors", summary: "Legacy category alias delegated to connectors.", family: "runtime", securityPolicy: "auth_required", docs: ["docs/cli.md", "docs/connector-control-plane.md"], adrs: [...CLI_ADRS, "docs/adr/0015-connector-control-plane-v1.md"] }),
     command({ name: "media", kind: "canonical", summary: "Media umbrella.", family: "media", securityPolicy: "local_write" }),
     command({ name: "documents", kind: "canonical", summary: "Documents.", family: "media", securityPolicy: "local_write" }),
     command({ name: "files", kind: "canonical", summary: "Workspace files.", family: "media", securityPolicy: "local_write" }),
@@ -254,7 +255,8 @@ export function listClawCliAliases(): Array<{ alias: string; canonicalName: stri
     for (const alias of entry.aliases ?? []) aliases.push({ alias, canonicalName: entry.name, kind: "alias", source: "command" });
   }
   for (const [alias, canonicalName] of BUILTIN_COLLECTIONS_BY_ALIAS) {
-    aliases.push({ alias, canonicalName, kind: "alias", source: "collection", ...(clawCliCommandsByName.has(alias) ? { shadowedByCommand: alias } : {}) });
+    const shadowedByCommand = clawCliCommandsByName.has(alias) ? alias : undefined;
+    aliases.push({ alias, canonicalName, kind: "alias", source: "collection", ...(shadowedByCommand ? { shadowedByCommand } : {}) });
   }
   return aliases.sort((a, b) => a.alias.localeCompare(b.alias));
 }

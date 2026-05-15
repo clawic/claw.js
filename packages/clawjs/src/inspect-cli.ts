@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-import { clawPersistentSurfaceRegistry, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommands, resolveClawCliCommand, searchClawCliRegistry, withSurfaceChildren } from "@clawjs/core";
+import { clawPersistentSurfaceRegistry, connectorExecutionPipeline, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommands, resolveClawCliCommand, searchClawCliRegistry, withSurfaceChildren } from "@clawjs/core";
 import type { ClawPersistentSurfaceNode, ClawPersistentSurfaceRegistry } from "@clawjs/core";
 import { v1MainSchemaSurfaceNodes } from "./v1-data-surface.ts";
 import { writeJsonError, writeJsonOk, type CliJsonMeta } from "./cli-json.ts";
@@ -301,10 +301,12 @@ function summarizeConnectorCatalog(input: unknown, catalogPath: string): unknown
   }
   const catalog = input as { version?: unknown; apps?: unknown };
   const apps = Array.isArray(catalog.apps) ? catalog.apps.filter(isRecord).map((app) => {
+    const appAuthFieldNames = Array.isArray(app.authFieldNames) ? app.authFieldNames.filter((item) => typeof item === "string") : [];
     const operations = Array.isArray(app.operations) ? app.operations.filter(isRecord).map((operation) => ({
       id: typeof operation.id === "string" ? operation.id : "",
       kind: typeof operation.kind === "string" ? operation.kind : "",
       name: typeof operation.name === "string" ? operation.name : "",
+      authFieldNames: Array.isArray(operation.authFieldNames) ? operation.authFieldNames.filter((item) => typeof item === "string") : [],
       support: isRecord(operation.support) ? operation.support : null,
       externalSchema: isRecord(operation.externalSchema) ? {
         status: operation.externalSchema.status,
@@ -315,18 +317,31 @@ function summarizeConnectorCatalog(input: unknown, catalogPath: string): unknown
         evidence: Array.isArray(operation.externalSchema.evidence) ? operation.externalSchema.evidence.filter((item) => typeof item === "string") : [],
       } : null,
       executionPolicy: isRecord(operation.executionPolicy) ? operation.executionPolicy : null,
+      runtime: isRecord(operation.runtime) ? operation.runtime : null,
+    })).map((operation) => ({
+      ...operation,
+      controlPlane: summarizeConnectorControlPlaneOperation(operation, appAuthFieldNames),
     })) : [];
     return {
       id: typeof app.id === "string" ? app.id : "",
       name: typeof app.name === "string" ? app.name : "",
+      authFieldNames: appAuthFieldNames,
       support: isRecord(app.support) ? app.support : null,
       operations,
     };
   }) : [];
   const operations = apps.flatMap((app) => app.operations);
+  const blockedOperations = operations.filter((operation) => operation.controlPlane.state !== "ready");
   return {
     catalogPath,
     version: catalog.version,
+    controlPlane: {
+      version: 1,
+      publicSurface: "connectors",
+      legacyAlias: "integrations",
+      pipeline: connectorExecutionPipeline,
+      blockByDefault: true,
+    },
     apps,
     summary: {
       apps: apps.length,
@@ -336,7 +351,50 @@ function summarizeConnectorCatalog(input: unknown, catalogPath: string): unknown
       authRequiredOperations: operations.filter((operation) => operation.executionPolicy && (operation.executionPolicy as { requiresAuth?: unknown }).requiresAuth === true).length,
       hostRequiredOperations: operations.filter((operation) => operation.executionPolicy && (operation.executionPolicy as { requiresHostApproval?: unknown }).requiresHostApproval === true).length,
       costRiskOperations: operations.filter((operation) => operation.executionPolicy && (operation.executionPolicy as { costRisk?: unknown }).costRisk === true).length,
+      controlPlaneReadyOperations: operations.length - blockedOperations.length,
+      controlPlaneBlockedOperations: blockedOperations.length,
+      operationsMissingAuditPolicy: operations.filter((operation) => operation.controlPlane.issues.includes("missing_audit_policy")).length,
+      operationsMissingCredentialScope: operations.filter((operation) => operation.controlPlane.issues.includes("missing_credential_scope")).length,
+      operationsMissingRuntimeEvidence: operations.filter((operation) => operation.controlPlane.issues.includes("missing_runtime_evidence")).length,
     },
+  };
+}
+
+function summarizeConnectorControlPlaneOperation(
+  operation: {
+    id: string;
+    kind: string;
+    authFieldNames: string[];
+    support: Record<string, unknown> | null;
+    externalSchema: { status: unknown } | null;
+    executionPolicy: Record<string, unknown> | null;
+    runtime: Record<string, unknown> | null;
+  },
+  appAuthFieldNames: string[],
+): { state: "ready" | "blocked"; issues: string[] } {
+  const issues: string[] = [];
+  if (operation.support?.state !== "supported") {
+    issues.push("unsupported_operation");
+  }
+  if (operation.externalSchema?.status !== "complete") {
+    issues.push("incomplete_external_schema");
+  }
+  if (!operation.executionPolicy) {
+    issues.push("missing_execution_policy");
+  }
+  if (operation.executionPolicy?.auditRequired !== true) {
+    issues.push("missing_audit_policy");
+  }
+  if (operation.executionPolicy?.requiresAuth === true && operation.authFieldNames.length === 0 && appAuthFieldNames.length === 0) {
+    issues.push("missing_credential_scope");
+  }
+  const hasRuntimeEvidence = operation.runtime?.hasRun === true || operation.runtime?.hasHooks === true;
+  if (!hasRuntimeEvidence) {
+    issues.push("missing_runtime_evidence");
+  }
+  return {
+    state: issues.length === 0 ? "ready" : "blocked",
+    issues,
   };
 }
 
