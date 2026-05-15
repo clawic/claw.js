@@ -205,6 +205,13 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
     const agent = parseCliData(agentStdout.getOutput()) as { id: string; secretAllowlist: unknown };
     assert.equal(agent.id, "agent-ops");
     assert.equal(agent.secretAllowlist, "[REDACTED]");
+    const agentHostStdout = captureStream();
+    assert.equal(await runCli(["agents", "get", "agent-ops", "--for-host", "true", "--json"], {
+      stdout: agentHostStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    assert.deepEqual((parseCliData(agentHostStdout.getOutput()) as { secretAllowlist: string[] }).secretAllowlist, ["vault://agents/ops"]);
 
     const personalityStdout = captureStream();
     assert.equal(await runCli(["personalities", "upsert", "personality.review", "--name", "Reviewer", "--prompt", "Review with concrete evidence", "--json"], {

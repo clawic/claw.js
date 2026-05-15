@@ -10,6 +10,7 @@ import {
   truthy,
   usage,
   usageError,
+  writeUnredactedSuccess,
   writeSuccess,
 } from "./v1-data-core.ts";
 import type { JsonRecord, V1DataCliInput } from "./v1-data-core.ts";
@@ -20,14 +21,14 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
   if (command === "list") {
     const items = agentStore.listAgents();
     syncAgentsProjection(store, items);
-    writeSuccess(input, { items });
+    writeAgentEntitySuccess(input, { items });
     return V1_DATA_EXIT_OK;
   }
   if (command === "get") {
     const id = input.flags.id || input.positionals[2];
     if (!id) return usageError(input, "Usage: claw agents get AGENT_ID [--json]");
     const agent = agentStore.readAgent(id);
-    writeSuccess(input, agent);
+    writeAgentEntitySuccess(input, agent);
     return agent ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
   if (command === "upsert") {
@@ -35,7 +36,7 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
     if (!agent) return usageError(input, "Usage: claw agents upsert ID --name NAME [--record JSON] [--json]");
     agentStore.writeAgent(agent);
     syncAgentProjection(store, agent);
-    writeSuccess(input, agent);
+    writeAgentEntitySuccess(input, agent);
     return V1_DATA_EXIT_OK;
   }
   if (command === "delete") {
@@ -55,14 +56,14 @@ export function runPersonalitiesCommand(input: V1DataCliInput, store: DatabaseSe
   if (command === "list") {
     const items = agentStore.listPersonalities();
     syncPersonalitiesProjection(store, items);
-    writeSuccess(input, { items });
+    writeAgentEntitySuccess(input, { items });
     return V1_DATA_EXIT_OK;
   }
   if (command === "get") {
     const id = input.flags.id || input.positionals[2];
     if (!id) return usageError(input, "Usage: claw personalities get PERSONALITY_ID [--json]");
     const personality = agentStore.readPersonality(id);
-    writeSuccess(input, personality);
+    writeAgentEntitySuccess(input, personality);
     return personality ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
   if (command === "upsert") {
@@ -70,7 +71,7 @@ export function runPersonalitiesCommand(input: V1DataCliInput, store: DatabaseSe
     if (!personality) return usageError(input, "Usage: claw personalities upsert ID --name NAME [--prompt TEXT] [--json]");
     agentStore.writePersonality(personality);
     syncPersonalityProjection(store, personality);
-    writeSuccess(input, personality);
+    writeAgentEntitySuccess(input, personality);
     return V1_DATA_EXIT_OK;
   }
   if (command === "delete") {
@@ -90,14 +91,14 @@ export function runSkillCollectionsCommand(input: V1DataCliInput, store: Databas
   if (command === "list") {
     const items = agentStore.listCollections();
     syncCollectionsProjection(store, items);
-    writeSuccess(input, { items });
+    writeAgentEntitySuccess(input, { items });
     return V1_DATA_EXIT_OK;
   }
   if (command === "get") {
     const id = input.flags.id || input.positionals[2];
     if (!id) return usageError(input, "Usage: claw skill-collections get COLLECTION_ID [--json]");
     const collection = agentStore.readCollection(id);
-    writeSuccess(input, collection);
+    writeAgentEntitySuccess(input, collection);
     return collection ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
   if (command === "upsert") {
@@ -105,7 +106,7 @@ export function runSkillCollectionsCommand(input: V1DataCliInput, store: Databas
     if (!collection) return usageError(input, "Usage: claw skill-collections upsert ID --name NAME [--tags a,b] [--json]");
     agentStore.writeCollection(collection);
     syncCollectionProjection(store, collection);
-    writeSuccess(input, collection);
+    writeAgentEntitySuccess(input, collection);
     return V1_DATA_EXIT_OK;
   }
   if (command === "delete") {
@@ -125,14 +126,14 @@ export function runConnectionsCommand(input: V1DataCliInput, store: DatabaseServ
   if (command === "list") {
     const items = agentStore.listConnections();
     syncConnectionsProjection(store, items);
-    writeSuccess(input, { items });
+    writeAgentEntitySuccess(input, { items });
     return V1_DATA_EXIT_OK;
   }
   if (command === "get") {
     const id = input.flags.id || input.positionals[2];
     if (!id) return usageError(input, "Usage: claw connections get CONNECTION_ID [--json]");
     const connection = agentStore.readConnection(id);
-    writeSuccess(input, connection);
+    writeAgentEntitySuccess(input, connection);
     return connection ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
   if (command === "upsert") {
@@ -140,7 +141,7 @@ export function runConnectionsCommand(input: V1DataCliInput, store: DatabaseServ
     if (!connection) return usageError(input, "Usage: claw connections upsert ID --provider PROVIDER --label LABEL --secret-ref REF [--json]");
     agentStore.writeConnection(connection);
     syncConnectionProjection(store, connection);
-    writeSuccess(input, connection);
+    writeAgentEntitySuccess(input, connection);
     return V1_DATA_EXIT_OK;
   }
   if (command === "delete") {
@@ -158,6 +159,14 @@ function recordFlag<T>(input: V1DataCliInput): T | null {
   const raw = input.flags.record || input.flags.jsonRecord || input.flags["json-record"];
   if (!raw) return null;
   return parseMaybeJson(raw) as T;
+}
+
+function writeAgentEntitySuccess(input: V1DataCliInput, payload: unknown): void {
+  if (input.flags["for-host"] === "true") {
+    writeUnredactedSuccess(input, payload);
+    return;
+  }
+  writeSuccess(input, payload);
 }
 
 function agentFromInput(input: V1DataCliInput, agentStore: AgentStoreFS): Agent | null {
