@@ -97687,7 +97687,7 @@
     {
       "path": "packages/clawjs/src/cli-report.test.ts",
       "language": "typescript",
-      "lines": 210,
+      "lines": 245,
       "test": true,
       "entrypoint": false,
       "imports": [

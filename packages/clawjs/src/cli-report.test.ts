@@ -25,7 +25,7 @@ test("report bug creates a sanitized local draft with quality metadata", async (
     "--workspace",
     workspace,
     "--observed",
-    "Saw /Users/alice/project and ghp_123456789012345678901234567890123456",
+    "Saw /Users/alice/project and ghp_123456789012345678901234567890123456 at https://internal.example/token?secret=abc with TEAM_ID=ABCDE12345",
     "--expected",
     "No private path or token",
     "--repro",
@@ -40,7 +40,9 @@ test("report bug creates a sanitized local draft with quality metadata", async (
   assert.equal(payload.data.report.quality.ok, true);
   assert.equal(payload.data.report.observed.includes("/Users/alice"), false);
   assert.equal(payload.data.report.observed.includes("ghp_"), false);
-  assert.equal(payload.data.report.privacy.redactedCount >= 2, true);
+  assert.equal(payload.data.report.observed.includes("internal.example"), false);
+  assert.equal(payload.data.report.observed.includes("ABCDE12345"), false);
+  assert.equal(payload.data.report.privacy.redactedCount >= 4, true);
   assert.equal(payload.data.report.labels.includes("privacy:redacted"), true);
 });
 
@@ -162,9 +164,18 @@ test("report submit dry-run plans Claw GitHub connector operations", async () =>
   ], workspace);
   const created = parsePayload<{ report: { id: string } }>(draft.stdout);
 
-  const submit = await runCliCapture(["report", "submit", created.data.report.id, "--workspace", workspace, "--confirm", "--dry-run", "--json"], workspace);
+  const submit = await runCliCapture(["report", "submit", created.data.report.id, "--workspace", workspace, "--confirm", "--dry-run", "--github-user", "octocat", "--host-approval-id", "approval_123", "--json"], workspace);
   assert.equal(submit.code, CLI_EXIT_OK);
-  const payload = parsePayload<{ submissionPlan: { connector: string; connectorPackage: string; connectorOperationId: string; values: { title: string } } }>(submit.stdout);
+  const payload = parsePayload<{ publicationIdentity: { mode: string; githubUser: string; tokenSecretField: string }; approvalSurface: { cliPreview: string; signedHost: string; hostApprovalId: string }; report: { approvals: Array<{ surface: string; status: string }>; receipts: unknown[] }; submissionPlan: { connector: string; connectorPackage: string; connectorOperationId: string; values: { title: string } } }>(submit.stdout);
+  assert.equal(payload.data.publicationIdentity.mode, "user_github_account");
+  assert.equal(payload.data.publicationIdentity.githubUser, "octocat");
+  assert.equal(payload.data.publicationIdentity.tokenSecretField.endsWith("oken"), true);
+  assert.notEqual(payload.data.publicationIdentity.tokenSecretField, "githubToken");
+  assert.equal(payload.data.approvalSurface.cliPreview, "approved");
+  assert.equal(payload.data.approvalSurface.signedHost, "approved");
+  assert.equal(payload.data.approvalSurface.hostApprovalId, "approval_123");
+  assert.equal(payload.data.report.approvals.some((approval) => approval.surface === "signed_host" && approval.status === "approved"), true);
+  assert.equal(payload.data.report.receipts.length, 1);
   assert.equal(payload.data.submissionPlan.connector, "claw-github");
   assert.equal(payload.data.submissionPlan.connectorPackage, "@clawjs/integrations");
   assert.equal(payload.data.submissionPlan.connectorOperationId, "github.action.create-issue");
@@ -206,4 +217,28 @@ test("report submit dry-run maps Discussions, private security, duplicates, and 
   const proposalPayload = parsePayload<{ submissionPlan: { action: string; connectorOperationId: string } }>(proposalSubmit.stdout);
   assert.equal(proposalPayload.data.submissionPlan.action, "propose_pull_request_only");
   assert.equal(proposalPayload.data.submissionPlan.connectorOperationId, "proposal_only.no_github_mutation");
+});
+
+test("report triage automation recommends without destructive authority", async () => {
+  const workspace = tempWorkspace();
+  await runCliCapture(["report", "bug", "Needs evidence", "--workspace", workspace, "--json"], workspace);
+  const result = await runCliCapture(["report", "triage", "--workspace", workspace, "--json"], workspace);
+  const payload = parsePayload<{ queue: Array<{ recommendedAction: string; labelRecommendations: string[]; destructiveActionsAllowed: boolean }>; automationAuthority: string; prohibitedActions: string[] }>(result.stdout);
+  assert.equal(payload.data.automationAuthority, "recommend_label_score_dedupe_only");
+  assert.equal(payload.data.prohibitedActions.includes("close"), true);
+  assert.equal(payload.data.prohibitedActions.includes("lock"), true);
+  assert.equal(payload.data.queue[0]?.recommendedAction, "request_more_info");
+  assert.equal(payload.data.queue[0]?.labelRecommendations.includes("confidence:needs-info"), true);
+  assert.equal(payload.data.queue[0]?.destructiveActionsAllowed, false);
+});
+
+test("report check exposes safe validation and EXTERNAL PENDING tasks", async () => {
+  const workspace = tempWorkspace();
+  const feature = await runCliCapture(["report", "feature", "Discuss demand", "--workspace", workspace, "--impact", "Votes are needed", "--json"], workspace);
+  const created = parsePayload<{ report: { id: string } }>(feature.stdout);
+  const check = await runCliCapture(["report", "check", created.data.report.id, "--workspace", workspace, "--json"], workspace);
+  const payload = parsePayload<{ report: { validationPlan: { safeChecks: string[]; externalPending: string[]; prohibitedChecks: string[] } } }>(check.stdout);
+  assert.equal(payload.data.report.validationPlan.safeChecks.includes("connector_request_plan_dry_run"), true);
+  assert.equal(payload.data.report.validationPlan.externalPending.includes("github_discussion_repository_and_category_node_ids"), true);
+  assert.equal(payload.data.report.validationPlan.prohibitedChecks.includes("public_security_disclosure"), true);
 });
