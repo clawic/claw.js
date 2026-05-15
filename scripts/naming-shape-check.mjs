@@ -16,14 +16,15 @@ const requiredDocs = [
 
 const sourceExtensions = new Set([".swift", ".ts", ".tsx", ".js", ".mjs", ".cs", ".kt"]);
 const broadTerms = ["Thing", "Stuff", "Helper", "Helpers", "Util", "Utils", "Common", "Data", "Info", "Manager"];
-const allowedBroadSymbolContexts = [
-  "DatabaseManager",
-  "IoTManager",
-  "MarketplaceManager",
-  "SecretsManager",
-  "FileManager",
-  "PackageManager",
-  "WindowManager",
+// Ecosystem terms where the broad word is part of the precise domain phrase.
+const allowedBroadSymbolPhrases = [
+  ["Database", "Manager"],
+  ["IoT", "Manager"],
+  ["Marketplace", "Manager"],
+  ["Secrets", "Manager"],
+  ["File", "Manager"],
+  ["Package", "Manager"],
+  ["Window", "Manager"],
 ];
 const rootConventionalMarkdown = new Set([
   "AGENTS.md",
@@ -124,9 +125,18 @@ function splitIdentifier(identifier) {
     .filter(Boolean);
 }
 
+function hasAllowedBroadPhrase(tokens) {
+  return allowedBroadSymbolPhrases.some((phrase) => {
+    if (phrase.length > tokens.length) return false;
+    return tokens.some((_, index) => {
+      return phrase.every((term, offset) => tokens[index + offset] === term);
+    });
+  });
+}
+
 function findBroadTerm(identifier) {
-  if (allowedBroadSymbolContexts.includes(identifier)) return null;
   const tokens = splitIdentifier(identifier);
+  if (hasAllowedBroadPhrase(tokens)) return null;
   return broadTerms.find((term) => tokens.includes(term)) ?? null;
 }
 

@@ -11,8 +11,8 @@ This is the living audit report for ADR 0013. The machine-readable source is
 ## Current gate status
 
 - Critical naming failures: 0.
-- Naming warnings: 209.
-- Source-size warnings: 116.
+- Naming warnings: 197.
+- Source-size warnings: 117.
 - Source-structure signals: 320.
 
 The current gate is intentionally critical-only. Warnings are cleanup inventory
@@ -29,7 +29,7 @@ for staged rename/split work and must not be hidden by compressing code.
 - `examples/showcase/src/lib/e2e.ts` - 1953 lines.
 - `modules/erp/src/server/db.ts` - 1950 lines.
 - `memory/src/service.ts` - 1886 lines.
-- `examples/showcase/src/app/page.tsx` - 1876 lines.
+- `packages/clawjs-core/src/surface-registry.ts` - 1883 lines.
 
 ## Cleanup families
 
@@ -59,6 +59,9 @@ for staged rename/split work and must not be hidden by compressing code.
   `MonitorModeSnapshot` across the server and UI type surfaces.
 - Connector runtime rate-limit vocabulary: `ConnectorRuntimeRateLimitInfo`
   and local `rateLimitInfo` helpers now use `RateLimitSnapshot`.
+- Naming check false positives: `PackageManager`, `FileManager`,
+  `DatabaseManager`, and similar ecosystem/domain manager phrases are now
+  matched as phrases inside longer identifiers instead of only exact symbols.
 - CLI/router and command handlers: keep `packages/clawjs/src/index.ts` from
   growing by extracting command families before adding behavior.
 - Showcase UI/API: split settings, tasks, onboarding, locale, and route files
