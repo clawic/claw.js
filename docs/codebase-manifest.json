@@ -69321,12 +69321,13 @@
     {
       "path": "packages/clawjs-integrations/src/index.ts",
       "language": "typescript",
-      "lines": 255,
+      "lines": 258,
       "test": false,
       "entrypoint": true,
       "imports": [
         "./catalog.js",
         "./credential-lease-broker.js",
+        "./github-operation-executor.js",
         "./integration-qa-policy.js",
         "./manager.js",
         "./openapi-runtime.js",
@@ -69483,6 +69484,7 @@
         "buildConnectorOperationRuntimePlan",
         "buildConnectorRuntimeAudit",
         "buildConnectorRuntimeFetchRequest",
+        "buildGitHubOperationRequest",
         "buildOpenApiConnectorCatalog",
         "buildTelegramOperationRequest",
         "createConnectorOperationExecutor",
@@ -97340,7 +97342,7 @@
     {
       "path": "packages/clawjs/src/cli-report-command.ts",
       "language": "typescript",
-      "lines": 931,
+      "lines": 1009,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -97444,6 +97446,16 @@
         },
         {
           "kind": "function",
+          "name": "executeReportSubmission",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "externalUrlFromResponse",
+          "exported": false
+        },
+        {
+          "kind": "function",
           "name": "findDuplicateCandidates",
           "exported": false
         },
@@ -97465,6 +97477,11 @@
         {
           "kind": "function",
           "name": "inferKind",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "isLocalHttpBaseUrl",
           "exported": false
         },
         {

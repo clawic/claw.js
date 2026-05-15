@@ -230,12 +230,22 @@ export async function runReportCli(input: {
       report.updatedAt = nowIso();
       report.approvals = approvedApprovals(report, flags);
       report.labels = buildLabels(report);
+      const submissionPlan = buildSubmissionPlan(report, flags);
+      const liveReceipt = !dryRun && readBooleanFlag(argv, flags, "execute", false)
+        ? await executeReportSubmission(report, submissionPlan, flags)
+        : null;
+      if (liveReceipt) {
+        report.status = "submitted";
+        report.externalUrl = liveReceipt.externalUrl;
+        report.labels = buildLabels(report);
+      }
       report.receipts.unshift({
         id: `receipt_${Date.now().toString(36)}_${randomBytes(3).toString("hex")}`,
         connector: "claw-github",
-        connectorOperationId: connectorOperationFor(report),
-        status: dryRun ? "dry_run" : "external_pending",
+        connectorOperationId: String(submissionPlan.connectorOperationId),
+        status: liveReceipt ? "submitted" : dryRun ? "dry_run" : "external_pending",
         createdAt: report.updatedAt,
+        ...(liveReceipt?.externalUrl ? { externalUrl: liveReceipt.externalUrl } : {}),
       });
       state.updatedAt = report.updatedAt;
       save();
@@ -243,11 +253,12 @@ export async function runReportCli(input: {
         report,
         dryRun,
         connector: "claw-github",
-        externalPending: !dryRun,
+        externalPending: !dryRun && !liveReceipt,
         approvalSurface: approvalSurface(report, flags, true),
         publicationIdentity: publicationIdentity(flags),
-        submissionPlan: buildSubmissionPlan(report),
-      }, dryRun ? CLI_EXIT_OK : CLI_EXIT_DEGRADED);
+        submissionPlan,
+        ...(liveReceipt ? { receipt: liveReceipt } : {}),
+      }, dryRun || liveReceipt ? CLI_EXIT_OK : CLI_EXIT_DEGRADED);
     }
 
     context.stderr.write(`Usage: ${binName} report draft|bug|feature|translation|security|check|dedupe|preview|submit|status|triage|templates\n`);
@@ -638,7 +649,7 @@ function renderReportMarkdown(report: ReportRecord): string {
   return `${lines.join("\n").trim()}\n`;
 }
 
-function buildSubmissionPlan(report: ReportRecord): Record<string, unknown> {
+function buildSubmissionPlan(report: ReportRecord, flags: Record<string, string> = {}): Record<string, unknown> {
   return {
     repository: report.repository === "clawix" ? "clawic/clawix" : "clawic/clawjs",
     destination: report.destination,
@@ -647,9 +658,76 @@ function buildSubmissionPlan(report: ReportRecord): Record<string, unknown> {
     connectorOperationId: connectorOperationFor(report),
     action: report.duplicateCandidates.length > 0 ? "comment_on_canonical" : destinationAction(report.destination),
     labels: report.labels,
-    values: connectorValuesFor(report),
+    values: connectorValuesFor(report, flags),
     markdown: renderReportMarkdown(report),
   };
+}
+
+async function executeReportSubmission(
+  report: ReportRecord,
+  submissionPlan: Record<string, unknown>,
+  flags: Record<string, string>,
+): Promise<{ status: "submitted"; externalUrl?: string; response: unknown }> {
+  if (!flags["host-approval-id"]) {
+    throw new CliHandledError("host_approval_required", "Live report submission requires --host-approval-id from the signed host approval flow.", CLI_EXIT_FAILURE);
+  }
+  if (submissionPlan.connectorOperationId === "proposal_only.no_github_mutation") {
+    throw new CliHandledError("pr_proposal_only", "PR proposal reports do not create GitHub pull requests from claw report.", CLI_EXIT_FAILURE);
+  }
+  const baseUrl = flags["github-base-url"];
+  if (!baseUrl || !isLocalHttpBaseUrl(baseUrl)) {
+    throw new CliHandledError("external_pending", "Live GitHub submission is EXTERNAL PENDING unless --github-base-url points at a local fake/test server.", CLI_EXIT_DEGRADED);
+  }
+  const tokenEnv = flags["github-token-env"] ?? "CLAW_REPORT_GITHUB_TOKEN";
+  const githubToken = process.env[tokenEnv];
+  if (!githubToken) {
+    throw new CliHandledError("missing_github_token", `Missing GitHub token env var: ${tokenEnv}`, CLI_EXIT_FAILURE);
+  }
+  const connectorOperationId = String(submissionPlan.connectorOperationId);
+  const values = submissionPlan.values;
+  if (!values || typeof values !== "object" || Array.isArray(values)) {
+    throw new CliHandledError("invalid_submission_plan", "Submission plan is missing connector values.", CLI_EXIT_FAILURE);
+  }
+  const { buildGitHubOperationRequest, executeConnectorRuntimeRequestPlan } = await import("@clawjs/integrations");
+  const operation = {
+    id: connectorOperationId,
+    appId: "github",
+    kind: "action" as const,
+    name: connectorOperationId,
+    fields: [],
+    authFieldNames: ["githubToken"],
+  };
+  const requestPlan = buildGitHubOperationRequest(operation, values as Record<string, never>);
+  const response = await executeConnectorRuntimeRequestPlan({
+    baseUrl,
+    plan: requestPlan,
+    secrets: { githubToken },
+  });
+  return {
+    status: "submitted",
+    externalUrl: externalUrlFromResponse(response.body) ?? undefined,
+    response: response.body,
+  };
+}
+
+function isLocalHttpBaseUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (url.protocol === "http:" || url.protocol === "https:")
+      && ["127.0.0.1", "localhost", "::1"].includes(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function externalUrlFromResponse(value: unknown): string | null {
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  if (typeof record.html_url === "string") return record.html_url;
+  if (typeof record.url === "string") return record.url;
+  const discussion = (((record.data as Record<string, unknown> | undefined)?.createDiscussion as Record<string, unknown> | undefined)?.discussion) as Record<string, unknown> | undefined;
+  if (typeof discussion?.url === "string") return discussion.url;
+  return null;
 }
 
 function connectorOperationFor(report: ReportRecord): string {
@@ -661,7 +739,7 @@ function connectorOperationFor(report: ReportRecord): string {
   return "github.action.create-issue";
 }
 
-function connectorValuesFor(report: ReportRecord): Record<string, unknown> {
+function connectorValuesFor(report: ReportRecord, flags: Record<string, string> = {}): Record<string, unknown> {
   const [owner, repo] = report.repository === "clawix" ? ["clawic", "clawix"] : ["clawic", "clawjs"];
   const values: Record<string, unknown> = {
     owner,
@@ -678,14 +756,14 @@ function connectorValuesFor(report: ReportRecord): Record<string, unknown> {
     values.cweIds = ["CWE-200"];
   }
   if (report.duplicateCandidates.length > 0) {
-    values.issueNumber = "<canonical-issue-number-required>";
+    values.issueNumber = flags["canonical-number"] ?? flags["issue-number"] ?? "<canonical-issue-number-required>";
     values.body = renderReportMarkdown(report);
   }
   if (report.destination === "github_discussion_ideas") values.category = "Ideas";
   if (report.destination === "github_discussion_feedback") values.category = "Feedback";
   if (report.destination === "github_discussion_ideas" || report.destination === "github_discussion_feedback") {
-    values.repositoryId = "<github-repository-node-id-required>";
-    values.categoryId = "<github-discussion-category-node-id-required>";
+    values.repositoryId = flags["github-repository-id"] ?? "<github-repository-node-id-required>";
+    values.categoryId = flags["discussion-category-id"] ?? flags["github-discussion-category-id"] ?? "<github-discussion-category-node-id-required>";
   }
   return values;
 }

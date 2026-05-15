@@ -53,6 +53,9 @@ export {
   createOpenApiConnectorRuntimeImplementation,
 } from "./openapi-runtime.js";
 export {
+  buildGitHubOperationRequest,
+} from "./github-operation-executor.js";
+export {
   validateConnectorRuntimeOutput,
 } from "./runtime-output.js";
 export {

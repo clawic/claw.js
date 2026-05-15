@@ -49,6 +49,7 @@
     "@clawjs/claw": "0.1.2",
     "@clawjs/database": "0.1.2",
     "@clawjs/index": "0.1.2",
+    "@clawjs/integrations": "0.1.2",
     "@clawjs/sessions": "0.1.0",
     "@clawjs/workspace": "0.1.2",
     "better-sqlite3": "^12.9.0",
