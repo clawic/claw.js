@@ -1525,6 +1525,24 @@ flowchart TD
   claw_database_core --> claw_database_core_table_skill_collections
   claw_database_core_table_connections["connections\ntable"]
   claw_database_core --> claw_database_core_table_connections
+  claw_database_core_table_connector_providers["connector_providers\ntable"]
+  claw_database_core --> claw_database_core_table_connector_providers
+  claw_database_core_table_connector_external_principals["connector_external_principals\ntable"]
+  claw_database_core --> claw_database_core_table_connector_external_principals
+  claw_database_core_table_connector_credential_bindings["connector_credential_bindings\ntable"]
+  claw_database_core --> claw_database_core_table_connector_credential_bindings
+  claw_database_core_table_connector_capabilities["connector_capabilities\ntable"]
+  claw_database_core --> claw_database_core_table_connector_capabilities
+  claw_database_core_table_connector_operations["connector_operations\ntable"]
+  claw_database_core --> claw_database_core_table_connector_operations
+  claw_database_core_table_connector_policies["connector_policies\ntable"]
+  claw_database_core --> claw_database_core_table_connector_policies
+  claw_database_core_table_connector_budgets["connector_budgets\ntable"]
+  claw_database_core --> claw_database_core_table_connector_budgets
+  claw_database_core_table_connector_network_policies["connector_network_policies\ntable"]
+  claw_database_core --> claw_database_core_table_connector_network_policies
+  claw_database_core_table_connector_audit_events["connector_audit_events\ntable"]
+  claw_database_core --> claw_database_core_table_connector_audit_events
   claw_database_core_table_personalities["personalities\ntable"]
   claw_database_core --> claw_database_core_table_personalities
   claw_database_core_table_provider_routing["provider_routing\ntable"]
@@ -1549,6 +1567,24 @@ flowchart TD
   claw_database_core --> claw_database_core_index_app_projects_resource_id_idx
   claw_database_core_index_app_sidebar_snapshots_order_idx["app_sidebar_snapshots_order_idx\nindex"]
   claw_database_core --> claw_database_core_index_app_sidebar_snapshots_order_idx
+  claw_database_core_index_connector_external_principals_provider_idx["connector_external_principals_provider_idx\nindex"]
+  claw_database_core --> claw_database_core_index_connector_external_principals_provider_idx
+  claw_database_core_index_connector_credential_bindings_provider_idx["connector_credential_bindings_provider_idx\nindex"]
+  claw_database_core --> claw_database_core_index_connector_credential_bindings_provider_idx
+  claw_database_core_index_connector_capabilities_domain_idx["connector_capabilities_domain_idx\nindex"]
+  claw_database_core --> claw_database_core_index_connector_capabilities_domain_idx
+  claw_database_core_index_connector_operations_provider_idx["connector_operations_provider_idx\nindex"]
+  claw_database_core --> claw_database_core_index_connector_operations_provider_idx
+  claw_database_core_index_connector_operations_support_idx["connector_operations_support_idx\nindex"]
+  claw_database_core --> claw_database_core_index_connector_operations_support_idx
+  claw_database_core_index_connector_budgets_scope_idx["connector_budgets_scope_idx\nindex"]
+  claw_database_core --> claw_database_core_index_connector_budgets_scope_idx
+  claw_database_core_index_connector_network_policies_egress_idx["connector_network_policies_egress_idx\nindex"]
+  claw_database_core --> claw_database_core_index_connector_network_policies_egress_idx
+  claw_database_core_index_connector_audit_events_request_idx["connector_audit_events_request_idx\nindex"]
+  claw_database_core --> claw_database_core_index_connector_audit_events_request_idx
+  claw_database_core_index_connector_audit_events_provider_idx["connector_audit_events_provider_idx\nindex"]
+  claw_database_core --> claw_database_core_index_connector_audit_events_provider_idx
   claw_database_core_index_signals_variables_vertical_idx["signals_variables_vertical_idx\nindex"]
   claw_database_core --> claw_database_core_index_signals_variables_vertical_idx
   claw_database_core_index_signals_observations_variable_time_idx["signals_observations_variable_time_idx\nindex"]
@@ -1629,6 +1665,10 @@ flowchart TD
   claw_database_search --> claw_database_search_table_search_fts
   claw_database_search_index_search_documents_domain_idx["search_documents_domain_idx\nindex"]
   claw_database_search --> claw_database_search_index_search_documents_domain_idx
+  claw_database_vault_table_connector_raw_trace_refs["connector_raw_trace_refs\ntable"]
+  claw_database_vault --> claw_database_vault_table_connector_raw_trace_refs
+  claw_database_vault_index_connector_raw_trace_refs_audit_idx["connector_raw_trace_refs_audit_idx\nindex"]
+  claw_database_vault --> claw_database_vault_index_connector_raw_trace_refs_audit_idx
   claw_database_runtime_table_runtime_jobs["runtime_jobs\ntable"]
   claw_database_runtime --> claw_database_runtime_table_runtime_jobs
   claw_database_runtime_table_runtime_events["runtime_events\ntable"]
@@ -2408,6 +2448,15 @@ flowchart TD
 | `claw.database.core.table.skills` | table | persistent | claw |  |  |  | `` |
 | `claw.database.core.table.skill_collections` | table | persistent | claw |  |  |  | `` |
 | `claw.database.core.table.connections` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.connector_providers` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.connector_external_principals` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.connector_credential_bindings` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.connector_capabilities` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.connector_operations` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.connector_policies` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.connector_budgets` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.connector_network_policies` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.connector_audit_events` | table | persistent | claw |  |  |  | `` |
 | `claw.database.core.table.personalities` | table | persistent | claw |  |  |  | `` |
 | `claw.database.core.table.provider_routing` | table | persistent | claw |  |  |  | `` |
 | `claw.database.core.table.provider_settings` | table | persistent | claw |  |  |  | `` |
@@ -2420,6 +2469,15 @@ flowchart TD
 | `claw.database.core.index.app_projects_path_idx` | index | persistent | claw |  |  |  | `` |
 | `claw.database.core.index.app_projects_resource_id_idx` | index | persistent | claw |  |  |  | `` |
 | `claw.database.core.index.app_sidebar_snapshots_order_idx` | index | persistent | claw |  |  |  | `` |
+| `claw.database.core.index.connector_external_principals_provider_idx` | index | persistent | claw |  |  |  | `` |
+| `claw.database.core.index.connector_credential_bindings_provider_idx` | index | persistent | claw |  |  |  | `` |
+| `claw.database.core.index.connector_capabilities_domain_idx` | index | persistent | claw |  |  |  | `` |
+| `claw.database.core.index.connector_operations_provider_idx` | index | persistent | claw |  |  |  | `` |
+| `claw.database.core.index.connector_operations_support_idx` | index | persistent | claw |  |  |  | `` |
+| `claw.database.core.index.connector_budgets_scope_idx` | index | persistent | claw |  |  |  | `` |
+| `claw.database.core.index.connector_network_policies_egress_idx` | index | persistent | claw |  |  |  | `` |
+| `claw.database.core.index.connector_audit_events_request_idx` | index | persistent | claw |  |  |  | `` |
+| `claw.database.core.index.connector_audit_events_provider_idx` | index | persistent | claw |  |  |  | `` |
 | `claw.database.core.index.signals_variables_vertical_idx` | index | persistent | claw |  |  |  | `` |
 | `claw.database.core.index.signals_observations_variable_time_idx` | index | persistent | claw |  |  |  | `` |
 | `claw.database.core.index.signals_observations_vertical_time_idx` | index | persistent | claw |  |  |  | `` |
@@ -2460,6 +2518,8 @@ flowchart TD
 | `claw.database.search.table.search_documents` | table | persistent | claw |  |  |  | `` |
 | `claw.database.search.table.search_fts` | table | persistent | claw |  |  |  | `` |
 | `claw.database.search.index.search_documents_domain_idx` | index | persistent | claw |  |  |  | `` |
+| `claw.database.vault.table.connector_raw_trace_refs` | table | persistent | claw |  |  |  | `` |
+| `claw.database.vault.index.connector_raw_trace_refs_audit_idx` | index | persistent | claw |  |  |  | `` |
 | `claw.database.runtime.table.runtime_jobs` | table | persistent | claw |  |  |  | `` |
 | `claw.database.runtime.table.runtime_events` | table | persistent | claw |  |  |  | `` |
 | `claw.database.runtime.index.runtime_jobs_status_idx` | index | persistent | claw |  |  |  | `` |

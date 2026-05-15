@@ -49,6 +49,28 @@ risk, credential requirement, support state, and local evidence. Unsupported or
 evidence-free adapters cannot be planned, and execution requires the same
 control-plane decision used by API/SDK runtimes.
 
+## Storage
+
+The durable control-plane catalog lives in `core.sqlite` under the `connectors`
+logical domain:
+
+- `connector_providers`
+- `connector_external_principals`
+- `connector_credential_bindings`
+- `connector_capabilities`
+- `connector_operations`
+- `connector_policies`
+- `connector_budgets`
+- `connector_network_policies`
+- `connector_audit_events`
+
+Credential material is never stored in these tables. Credential bindings store
+only `secret_ref` pointers for the broker. Raw request/response traces are
+redacted by default; if a host explicitly enables raw trace capture, the main
+audit event stores only `raw_trace_ref`, and `vault.sqlite` stores
+`connector_raw_trace_refs` entries with encrypted payload references, key
+references, expiry, and metadata.
+
 ## Decisions
 
 `evaluateConnectorControlPlaneRequest` returns a decision with:

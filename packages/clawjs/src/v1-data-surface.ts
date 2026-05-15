@@ -6,6 +6,30 @@ const v1MainSchemaSource = {
   language: "typescript",
 } as const;
 
+const connectorControlPlaneMainTables = [
+  "connector_providers",
+  "connector_external_principals",
+  "connector_credential_bindings",
+  "connector_capabilities",
+  "connector_operations",
+  "connector_policies",
+  "connector_budgets",
+  "connector_network_policies",
+  "connector_audit_events",
+] as const;
+
+const connectorControlPlaneMainIndexes = [
+  "connector_external_principals_provider_idx",
+  "connector_credential_bindings_provider_idx",
+  "connector_capabilities_domain_idx",
+  "connector_operations_provider_idx",
+  "connector_operations_support_idx",
+  "connector_budgets_scope_idx",
+  "connector_network_policies_egress_idx",
+  "connector_audit_events_request_idx",
+  "connector_audit_events_provider_idx",
+] as const;
+
 export const v1MainSchemaSurfaceNodes = [
   clawPersistentSurface.table({
     id: `claw.database.core.table.data_registry`,
@@ -266,6 +290,13 @@ export const v1MainSchemaSurfaceNodes = [
     databaseId: v1MainDatabaseId,
     source: v1MainSchemaSource,
   }),
+  ...connectorControlPlaneMainTables.map((name) => clawPersistentSurface.table({
+    id: `claw.database.core.table.${name}`,
+    name,
+    parentId: v1MainDatabaseId,
+    databaseId: v1MainDatabaseId,
+    source: v1MainSchemaSource,
+  })),
   ...v1AgentDataSurfaceNodes,
   clawPersistentSurface.table({
     id: `claw.database.core.table.apps`,
@@ -312,6 +343,13 @@ export const v1MainSchemaSurfaceNodes = [
     databaseId: v1MainDatabaseId,
     source: v1MainSchemaSource,
   }),
+  ...connectorControlPlaneMainIndexes.map((name) => clawPersistentSurface.index({
+    id: `claw.database.core.index.${name}`,
+    name,
+    parentId: v1MainDatabaseId,
+    databaseId: v1MainDatabaseId,
+    source: v1MainSchemaSource,
+  })),
   clawPersistentSurface.index({
     id: `claw.database.core.index.signals_variables_vertical_idx`,
     name: "signals_variables_vertical_idx",
@@ -593,6 +631,20 @@ export const v1MainSchemaSurfaceNodes = [
     source: v1MainSchemaSource,
   }),
   clawPersistentSurface.table({
+    id: `claw.database.vault.table.connector_raw_trace_refs`,
+    name: "connector_raw_trace_refs",
+    parentId: "claw.database.vault",
+    databaseId: "claw.database.vault",
+    source: v1MainSchemaSource,
+  }),
+  clawPersistentSurface.index({
+    id: `claw.database.vault.index.connector_raw_trace_refs_audit_idx`,
+    name: "connector_raw_trace_refs_audit_idx",
+    parentId: "claw.database.vault",
+    databaseId: "claw.database.vault",
+    source: v1MainSchemaSource,
+  }),
+  clawPersistentSurface.table({
     id: `claw.database.runtime.table.runtime_jobs`,
     name: "runtime_jobs",
     parentId: "claw.database.runtime",
@@ -637,6 +689,21 @@ export const v1MainSchemaSurfaceNodes = [
 ];
 
 export const V1_SIDECAR_SCHEMA_SQL_BY_FILE = {
+  "vault.sqlite": String.raw`
+      CREATE TABLE IF NOT EXISTS connector_raw_trace_refs (
+        id TEXT PRIMARY KEY,
+        audit_event_id TEXT NOT NULL,
+        provider_id TEXT NOT NULL,
+        operation_id TEXT NOT NULL,
+        encrypted_payload_ref TEXT NOT NULL,
+        key_ref TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        metadata_json TEXT NOT NULL DEFAULT '{}',
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS connector_raw_trace_refs_audit_idx
+        ON connector_raw_trace_refs(audit_event_id, expires_at);
+    `,
   "sessions.sqlite": String.raw`
       CREATE TABLE IF NOT EXISTS conversation_sessions (
         session_id TEXT PRIMARY KEY,
@@ -1259,6 +1326,153 @@ export const V1_MAIN_SCHEMA_SQL = String.raw`
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS connector_providers (
+      id TEXT PRIMARY KEY,
+      display_name TEXT NOT NULL,
+      trust_tier TEXT NOT NULL DEFAULT 'external_saas',
+      enabled INTEGER NOT NULL DEFAULT 1,
+      metadata_json TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS connector_external_principals (
+      id TEXT PRIMARY KEY,
+      provider_id TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      display_name TEXT NOT NULL,
+      external_id TEXT,
+      parent_principal_id TEXT,
+      metadata_json TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (provider_id) REFERENCES connector_providers(id) ON DELETE CASCADE,
+      FOREIGN KEY (parent_principal_id) REFERENCES connector_external_principals(id) ON DELETE SET NULL
+    );
+    CREATE INDEX IF NOT EXISTS connector_external_principals_provider_idx
+      ON connector_external_principals(provider_id, kind);
+    CREATE TABLE IF NOT EXISTS connector_credential_bindings (
+      id TEXT PRIMARY KEY,
+      provider_id TEXT NOT NULL,
+      principal_id TEXT,
+      secret_ref TEXT NOT NULL,
+      credential_kind TEXT NOT NULL DEFAULT 'api_key',
+      scopes_json TEXT NOT NULL DEFAULT '[]',
+      capability_ids_json TEXT NOT NULL DEFAULT '[]',
+      operation_ids_json TEXT NOT NULL DEFAULT '[]',
+      enabled INTEGER NOT NULL DEFAULT 1,
+      metadata_json TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (provider_id) REFERENCES connector_providers(id) ON DELETE CASCADE,
+      FOREIGN KEY (principal_id) REFERENCES connector_external_principals(id) ON DELETE SET NULL
+    );
+    CREATE INDEX IF NOT EXISTS connector_credential_bindings_provider_idx
+      ON connector_credential_bindings(provider_id, principal_id, enabled);
+    CREATE TABLE IF NOT EXISTS connector_capabilities (
+      id TEXT PRIMARY KEY,
+      domain TEXT NOT NULL,
+      action TEXT NOT NULL,
+      facet TEXT NOT NULL DEFAULT 'default',
+      summary TEXT NOT NULL,
+      risk_tiers_json TEXT NOT NULL DEFAULT '[]',
+      data_classes_json TEXT NOT NULL DEFAULT '[]',
+      required_scopes_json TEXT NOT NULL DEFAULT '[]',
+      metadata_json TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS connector_capabilities_domain_idx
+      ON connector_capabilities(domain, action, facet);
+    CREATE TABLE IF NOT EXISTS connector_operations (
+      id TEXT PRIMARY KEY,
+      provider_id TEXT NOT NULL,
+      runtime_kind TEXT NOT NULL,
+      support TEXT NOT NULL DEFAULT 'external_pending',
+      native_name TEXT,
+      capability_ids_json TEXT NOT NULL DEFAULT '[]',
+      risk_tiers_json TEXT NOT NULL DEFAULT '[]',
+      credential_required INTEGER NOT NULL DEFAULT 1,
+      cost_risk TEXT NOT NULL DEFAULT 'unknown',
+      requires_approval INTEGER NOT NULL DEFAULT 1,
+      network_policy_id TEXT,
+      metadata_json TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (provider_id) REFERENCES connector_providers(id) ON DELETE CASCADE,
+      FOREIGN KEY (network_policy_id) REFERENCES connector_network_policies(id) ON DELETE SET NULL
+    );
+    CREATE INDEX IF NOT EXISTS connector_operations_provider_idx
+      ON connector_operations(provider_id, runtime_kind);
+    CREATE INDEX IF NOT EXISTS connector_operations_support_idx
+      ON connector_operations(support, provider_id);
+    CREATE TABLE IF NOT EXISTS connector_policies (
+      id TEXT PRIMARY KEY,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      default_effect TEXT NOT NULL DEFAULT 'deny',
+      require_context INTEGER NOT NULL DEFAULT 1,
+      block_unsupported INTEGER NOT NULL DEFAULT 1,
+      block_missing_credential_binding INTEGER NOT NULL DEFAULT 1,
+      trace_mode TEXT NOT NULL DEFAULT 'redacted',
+      rules_json TEXT NOT NULL DEFAULT '[]',
+      metadata_json TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS connector_budgets (
+      id TEXT PRIMARY KEY,
+      provider_id TEXT,
+      operation_id TEXT,
+      capability_id TEXT,
+      unit TEXT NOT NULL,
+      window TEXT NOT NULL,
+      limit_value REAL NOT NULL,
+      used_value REAL NOT NULL DEFAULT 0,
+      unknown_cost_behavior TEXT NOT NULL DEFAULT 'block',
+      metadata_json TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (provider_id) REFERENCES connector_providers(id) ON DELETE CASCADE,
+      FOREIGN KEY (operation_id) REFERENCES connector_operations(id) ON DELETE CASCADE,
+      FOREIGN KEY (capability_id) REFERENCES connector_capabilities(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS connector_budgets_scope_idx
+      ON connector_budgets(provider_id, operation_id, capability_id, unit, window);
+    CREATE TABLE IF NOT EXISTS connector_network_policies (
+      id TEXT PRIMARY KEY,
+      required INTEGER NOT NULL DEFAULT 0,
+      egress_profile_id TEXT,
+      vpn_profile_id TEXT,
+      proxy_profile_id TEXT,
+      allowed_hosts_json TEXT NOT NULL DEFAULT '[]',
+      metadata_json TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS connector_network_policies_egress_idx
+      ON connector_network_policies(egress_profile_id, vpn_profile_id, proxy_profile_id);
+    CREATE TABLE IF NOT EXISTS connector_audit_events (
+      id TEXT PRIMARY KEY,
+      request_id TEXT NOT NULL,
+      actor_id TEXT,
+      provider_id TEXT NOT NULL,
+      operation_id TEXT NOT NULL,
+      capability_id TEXT,
+      credential_binding_id TEXT,
+      decision TEXT NOT NULL,
+      reason_codes_json TEXT NOT NULL DEFAULT '[]',
+      trace_mode TEXT NOT NULL DEFAULT 'redacted',
+      raw_trace_ref TEXT,
+      metadata_json TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (provider_id) REFERENCES connector_providers(id) ON DELETE CASCADE,
+      FOREIGN KEY (operation_id) REFERENCES connector_operations(id) ON DELETE CASCADE,
+      FOREIGN KEY (capability_id) REFERENCES connector_capabilities(id) ON DELETE SET NULL,
+      FOREIGN KEY (credential_binding_id) REFERENCES connector_credential_bindings(id) ON DELETE SET NULL
+    );
+    CREATE INDEX IF NOT EXISTS connector_audit_events_request_idx
+      ON connector_audit_events(request_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS connector_audit_events_provider_idx
+      ON connector_audit_events(provider_id, operation_id, created_at DESC);
 ${V1_AGENT_DATA_SCHEMA_SQL}
 
     CREATE TABLE IF NOT EXISTS apps (

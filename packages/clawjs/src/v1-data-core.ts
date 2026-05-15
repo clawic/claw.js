@@ -60,6 +60,17 @@ const APP_STATE_DOMAIN_TABLES = [
 const SIGNALS_DOMAIN_TABLES = ["signals_verticals", "signals_variables", "signals_sessions", "signals_observations"];
 const RESOURCE_DOMAIN_TABLES = ["resources", "apps", "design_resources"];
 const AGENT_DOMAIN_TABLES = ["agents", "personalities", "skills", "skill_collections", "connections", "provider_routing", "provider_settings", "snippets", "channel_accounts", "channel_routing", "channel_messages"];
+const CONNECTOR_CONTROL_PLANE_DOMAIN_TABLES = [
+  "connector_audit_events",
+  "connector_budgets",
+  "connector_credential_bindings",
+  "connector_operations",
+  "connector_external_principals",
+  "connector_capabilities",
+  "connector_policies",
+  "connector_network_policies",
+  "connector_providers",
+];
 const SESSION_DOMAIN_TABLES = ["session_index"];
 const USER_MODEL_DOMAIN_TABLES = ["user_profile_items", "user_profile_meta", "user_profile_history"];
 const SIGNALS_RUNTIME_DOMAIN_TABLES = ["system_variables", "user_variables", "observations", "sessions", "healthkit_sync_state", "hidden_system_variables"];
@@ -286,7 +297,7 @@ export function doctorPayload(sqlite: Database.Database): JsonRecord {
       rawRuntime: "operational-sidecars",
     },
     logicalDomains: {
-      mainDb: ["knowledge", "notes", "profile", "user-model", "signals", "tasks", "productivity", "time", "business", "content", "social", "finance", "ledger", "calendar", "iot", "marketplace", "apps", "design", "agents", "skills", "connections"],
+      mainDb: ["knowledge", "notes", "profile", "user-model", "signals", "tasks", "productivity", "time", "business", "content", "social", "finance", "ledger", "calendar", "iot", "marketplace", "apps", "design", "agents", "skills", "connections", "connectors"],
       sidecars: ["secrets", "conversation-artifacts", "search", "runtime", "notify", "monitor", "infra", "ops"],
       externalSources: ["codex", "mcp"],
     },
@@ -384,7 +395,7 @@ export function resetDomain(sqlite: Database.Database, domain: string): JsonReco
   const normalized = domain.trim().toLowerCase();
   const sidecarOnlyDomains = new Set(["audio", "drive", "runtime", "notify", "monitor", "infra", "ops", "conversation-artifacts"]);
   const tables =
-    normalized === "all" ? [...APP_STATE_DOMAIN_TABLES, ...SIGNALS_DOMAIN_TABLES, ...SIGNALS_RUNTIME_DOMAIN_TABLES, ...KNOWLEDGE_DOMAIN_TABLES, ...WIKI_VIEW_TABLES, ...USER_MODEL_DOMAIN_TABLES, ...PRODUCTIVITY_DOMAIN_TABLES, ...BUSINESS_DOMAIN_TABLES, ...CALENDAR_DOMAIN_TABLES, ...IOT_DOMAIN_TABLES, ...MARKETPLACE_DOMAIN_TABLES, ...RESOURCE_DOMAIN_TABLES, ...AGENT_DOMAIN_TABLES, ...MCP_DOMAIN_TABLES, ...SESSION_DOMAIN_TABLES] :
+    normalized === "all" ? [...APP_STATE_DOMAIN_TABLES, ...SIGNALS_DOMAIN_TABLES, ...SIGNALS_RUNTIME_DOMAIN_TABLES, ...KNOWLEDGE_DOMAIN_TABLES, ...WIKI_VIEW_TABLES, ...USER_MODEL_DOMAIN_TABLES, ...PRODUCTIVITY_DOMAIN_TABLES, ...BUSINESS_DOMAIN_TABLES, ...CALENDAR_DOMAIN_TABLES, ...IOT_DOMAIN_TABLES, ...MARKETPLACE_DOMAIN_TABLES, ...RESOURCE_DOMAIN_TABLES, ...AGENT_DOMAIN_TABLES, ...CONNECTOR_CONTROL_PLANE_DOMAIN_TABLES, ...MCP_DOMAIN_TABLES, ...SESSION_DOMAIN_TABLES] :
     normalized === "app-state" ? APP_STATE_DOMAIN_TABLES :
     normalized === "signals" ? [...SIGNALS_DOMAIN_TABLES, ...SIGNALS_RUNTIME_DOMAIN_TABLES] :
     normalized === "knowledge" || normalized === "notes" ? KNOWLEDGE_DOMAIN_TABLES :
@@ -400,6 +411,7 @@ export function resetDomain(sqlite: Database.Database, domain: string): JsonReco
     normalized === "iot" ? IOT_DOMAIN_TABLES :
     normalized === "resources" || normalized === "apps" || normalized === "design" ? RESOURCE_DOMAIN_TABLES :
     normalized === "agents" || normalized === "skills" || normalized === "connections" ? AGENT_DOMAIN_TABLES :
+    normalized === "connectors" || normalized === "integrations" ? CONNECTOR_CONTROL_PLANE_DOMAIN_TABLES :
     normalized === "mcp" ? MCP_DOMAIN_TABLES :
     normalized === "sessions-index" || normalized === "sessions" ? SESSION_DOMAIN_TABLES :
     normalized === "search" ? ["notes_fts", "session_index_fts"] :
@@ -589,6 +601,10 @@ export function ensureV2Sidecars(): void {
 }
 
 export function ensureSidecarSchema(filename: string, sqlite: Database.Database): void {
+  if (filename === "vault.sqlite") {
+    sqlite.exec(V1_SIDECAR_SCHEMA_SQL_BY_FILE["vault.sqlite"]);
+    return;
+  }
   if (filename === "sessions.sqlite") {
     sqlite.exec(V1_SIDECAR_SCHEMA_SQL_BY_FILE["sessions.sqlite"]);
     return;
@@ -711,7 +727,7 @@ export function extractSessionMessages(file: string, sessionId: string): Array<{
 export function seedSidecarRegistry(sqlite: Database.Database): void {
   const root = resolveClawjsDataRoot();
   const sidecars: Array<{ domain: string; id: string; path: string; sensitive?: boolean; cache?: boolean; metadata?: JsonRecord }> = [
-    { domain: "secrets", id: "vault", path: path.join(root, "vault.sqlite"), sensitive: true, metadata: { reason: "auth-material" } },
+    { domain: "secrets", id: "vault", path: path.join(root, "vault.sqlite"), sensitive: true, metadata: { reason: "auth-material", connectorRawTraceRefs: "encrypted-ref-only" } },
     { domain: "conversation-artifacts", id: "sessions", path: path.join(root, "sessions.sqlite"), metadata: { logicalDomains: ["sessions"], owns: ["messages-index", "conversation-fts"] } },
     { domain: "conversation-artifacts", id: "audio", path: path.join(root, "audio.sqlite"), metadata: { logicalDomains: ["audio"], owns: ["transcripts", "audio-metadata"], blobs: "filesystem" } },
     { domain: "conversation-artifacts", id: "drive", path: path.join(root, "drive.sqlite"), metadata: { logicalDomains: ["drive"], owns: ["attachments", "assets"], blobs: path.join(root, "blobs") } },

@@ -41,6 +41,10 @@ The main database owns:
   metadata, apps/resources/design metadata, publishing/social, marketplace,
   home, technical IoT adapters, and other structured domain tables when the data
   is not a native secret and not a high-churn runtime log.
+- Connector control-plane catalog and policy state: providers, external
+  principals/accounts, credential bindings by `secret_ref`, capabilities,
+  operations, policies, budgets, network/VPN/proxy declarations, and redacted
+  audit events.
 
 Framework-visible app projections may be stored in the main database when they
 are part of the reusable framework contract. Host-only UI preferences still live
@@ -69,7 +73,9 @@ Canonical sidecars:
   valuable. `ops` and `infra` are not public top-level product surfaces unless a
   later ADR promotes them.
 - `vault.sqlite`: encrypted secret vault state only. Main database records may
-  keep `secret_ref` references, never plaintext secrets.
+  keep `secret_ref` references, never plaintext secrets. Connector raw trace
+  opt-in stores encrypted payload references here, not plaintext request or
+  response bodies.
 
 Sidecars are not a place to re-create canonical product data just because a
 service has its own package. If a service stores durable user-facing structured

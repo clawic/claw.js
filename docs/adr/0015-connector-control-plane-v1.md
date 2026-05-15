@@ -46,6 +46,13 @@ The pipeline is:
 Host-owned approvals, credential brokers, raw trace opt-in, and real connector
 execution stay outside the core evaluator.
 
+Durable catalog and policy state live in the `connectors` logical domain in
+`core.sqlite`: providers, external principals, credential bindings, capabilities,
+operations, policies, budgets, network policy declarations, and redacted audit
+events. The catalog stores secret references only. Raw trace opt-in stores only
+encrypted payload references in `vault.sqlite`, with the main audit event
+holding a `raw_trace_ref`.
+
 `@clawjs/integrations` consumes the evaluator at the runtime boundary. Real
 operation and source execution fails closed unless the caller supplies a
 matching control-plane decision context. The runner checks readiness before any
