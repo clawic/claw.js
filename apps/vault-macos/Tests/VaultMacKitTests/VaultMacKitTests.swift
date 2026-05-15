@@ -34,7 +34,7 @@ struct VaultMacKitTests {
             secretValue: "rc_secret_123",
             label: "RevenueCat",
             notes: "Primary key",
-            baseUrl: "http://127.0.0.1:7777",
+            baseUrl: "https://api.revenuecat.com",
             allowedHosts: "api.revenuecat.com",
             allowedHeaderNames: "Authorization,X-Platform",
             leaseModes: "process",
@@ -46,7 +46,7 @@ struct VaultMacKitTests {
 
         let body = try #require(transport.lastJSONBody)
         #expect(body["typeId"] as? String == "revenuecat.api_key")
-        #expect((body["structuredFields"] as? [String: String])?["baseUrl"] == "http://127.0.0.1:7777")
+        #expect((body["structuredFields"] as? [String: String])?["baseUrl"] == "https://api.revenuecat.com")
         #expect((body["allowedHeaderNames"] as? [String])?.count == 2)
     }
 }
