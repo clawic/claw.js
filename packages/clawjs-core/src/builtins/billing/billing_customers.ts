@@ -7,8 +7,11 @@ export const BILLING_CUSTOMERS: BuiltinCollectionDefinition = {
   aliases: ["billing_customer","billing_customers","buyer","buyers"],
   fields: [
     { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
-    { name: "email", type: "email" },
-    { name: "name", type: "text" },
+    { name: "email", type: "email", aliases: ["billingEmail", "buyerEmail"] },
+    { name: "name", type: "text", aliases: ["billingName", "buyerName"] },
+    { name: "taxId", type: "text" },
+    { name: "taxCountry", type: "text" },
+    { name: "taxExempt", type: "boolean" },
     { name: "taxIds", type: "json" },
     { name: "defaultPaymentMethodId", type: "relation", relation: { collectionName: "payment_methods" } },
     { name: "balanceCents", type: "number" },

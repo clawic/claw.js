@@ -1182,13 +1182,26 @@ The docs check script validates that every current export from
     CapacityRecord
     capacityRecordSchema
     CAREER_FAMILY
+    CATALOG_AUDITED_ARCHETYPES
+    CATALOG_AUDITED_BATCHES
+    CATALOG_AUDITED_NEEDS
     CATALOG_COVERAGE_NEEDS
     CATALOG_COVERAGE_SCENARIOS
     CATALOG_COVERAGE_WAVES
+    CatalogAuditBatchStatus
+    CatalogAuditConfidence
+    CatalogAuditStructuralChange
+    CatalogAuditedArchetype
+    CatalogAuditedBatch
+    CatalogAuditedBatchReport
+    CatalogAuditedFieldMapping
+    CatalogAuditedNeed
+    CatalogAuditedRelationMapping
     CatalogCoverageMapping
     CatalogCoverageNeed
     CatalogCoverageRelationNeed
     CatalogCoverageStatus
+    CatalogJsonAuditStatus
     ChannelAccountDescriptor
     ChannelAgentBinding
     ChannelCatalog
@@ -1559,6 +1572,7 @@ The docs check script validates that every current export from
     linkedEntityRefSchema
     listBuiltinCollections
     listBuiltinFamilies
+    listCatalogAuditedNeeds
     listCatalogCoverageNeeds
     listClawCliAliases
     listClawCliCommands
@@ -1923,6 +1937,7 @@ The docs check script validates that every current export from
     StreamChunk
     stripMarkdownForTts
     SubscriptionFilter
+    summarizeCatalogAuditedBatch
     summarizeReadiness
     SUPPORT_FAMILY
     TaskChecklistItem

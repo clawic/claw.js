@@ -3,11 +3,16 @@ import assert from "node:assert/strict";
 
 import {
   BUILTIN_COLLECTIONS_BY_NAME,
+  CATALOG_AUDITED_ARCHETYPES,
+  CATALOG_AUDITED_BATCHES,
+  CATALOG_AUDITED_NEEDS,
   CATALOG_COVERAGE_NEEDS,
   CATALOG_COVERAGE_SCENARIOS,
   CATALOG_COVERAGE_WAVES,
   PRODUCTIVITY_COLLECTION_DEFINITIONS,
+  listCatalogAuditedNeeds,
   listCatalogCoverageNeeds,
+  summarizeCatalogAuditedBatch,
 } from "./index.ts";
 import type {
   BuiltinCatalogEvidenceTag,
@@ -67,6 +72,26 @@ test("catalog coverage ledger seeds at least one thousand generic needs", () => 
   }
 });
 
+test("audited catalog expansion ledger locks the selected 120 archetype target", () => {
+  assert.deepEqual(CATALOG_AUDITED_BATCHES.map((batch) => batch.id), [
+    "commerce_billing_procurement",
+    "learning_assessment",
+    "sports_booking_venues",
+    "health_fitness_care",
+    "home_property_possessions",
+    "work_hr_legal_ops",
+    "crm_support_growth",
+    "personal_memory_documents",
+  ]);
+  assert.equal(CATALOG_AUDITED_ARCHETYPES.length, 120);
+  assert.equal(CATALOG_AUDITED_NEEDS.length, 1440);
+
+  for (const batch of CATALOG_AUDITED_BATCHES) {
+    assert.equal(CATALOG_AUDITED_ARCHETYPES.filter((archetype) => archetype.batch === batch.id).length, 15);
+    assert.equal(listCatalogAuditedNeeds({ batch: batch.id }).length, 180);
+  }
+});
+
 test("catalog coverage need ids are stable and unique", () => {
   const ids = new Set<string>();
   for (const need of CATALOG_COVERAGE_NEEDS) {
@@ -76,11 +101,35 @@ test("catalog coverage need ids are stable and unique", () => {
   }
 });
 
+test("audited catalog need ids and mappings are stable and final", () => {
+  const ids = new Set<string>();
+  for (const need of CATALOG_AUDITED_NEEDS) {
+    assert.match(need.id, /^[a-z0-9_]+\.[a-z0-9_]+$/);
+    assert.ok(!ids.has(need.id), `Duplicate audited coverage need id: ${need.id}`);
+    ids.add(need.id);
+    assert.ok(need.workflow.length > 0, `${need.id} has no workflow`);
+    assert.ok(need.humanValue.length > 0, `${need.id} has no human value`);
+    assert.ok(need.requiredEntities.length > 0, `${need.id} has no required entities`);
+    assert.ok(need.requiredFields.length > 0, `${need.id} has no required fields`);
+    assert.ok(need.fieldMappings.length > 0, `${need.id} has no field mappings`);
+    assert.ok(need.relationMappings.length > 0, `${need.id} has no relation mappings`);
+    assert.ok(need.coverage.confidence === "high" || need.coverage.confidence === "medium", `${need.id} has invalid confidence`);
+    assert.notEqual(need.coverage.status, "gap", `${need.id} closes with an unresolved gap`);
+  }
+});
+
 test("catalog coverage needs avoid branded provider vocabulary", () => {
   for (const need of CATALOG_COVERAGE_NEEDS) {
     const text = JSON.stringify(need).toLowerCase();
     for (const term of BANNED_BRAND_TERMS) {
       assert.ok(!text.includes(term), `Coverage need ${need.id} contains banned brand term ${term}`);
+    }
+  }
+
+  for (const need of CATALOG_AUDITED_NEEDS) {
+    const text = JSON.stringify(need).toLowerCase();
+    for (const term of BANNED_BRAND_TERMS) {
+      assert.ok(!text.includes(term), `Audited coverage need ${need.id} contains banned brand term ${term}`);
     }
   }
 });
@@ -97,6 +146,25 @@ test("catalog coverage needs use supported evidence and relation semantics", () 
       assert.ok(RELATION_KINDS.has(relation.kind), `${need.id} uses unknown relation kind ${relation.kind}`);
       assert.ok(relation.from.length > 0, `${need.id} relation ${relation.name} has no source entity`);
       assert.ok(relation.to.length > 0, `${need.id} relation ${relation.name} has no target entity`);
+    }
+  }
+
+  for (const archetype of CATALOG_AUDITED_ARCHETYPES) {
+    assert.ok(archetype.valueProposition.length > 0, `${archetype.id} has no value proposition`);
+    assert.ok(archetype.workflow.length > 0, `${archetype.id} has no workflow`);
+    assert.ok(archetype.collectionNames.length > 0, `${archetype.id} has no collection mappings`);
+    for (const tag of archetype.evidence) {
+      assert.ok(EVIDENCE_TAGS.has(tag), `${archetype.id} uses unknown evidence tag ${tag}`);
+    }
+  }
+
+  for (const need of CATALOG_AUDITED_NEEDS) {
+    assert.ok(need.evidence.length > 0, `${need.id} has no evidence tags`);
+    for (const tag of need.evidence) {
+      assert.ok(EVIDENCE_TAGS.has(tag), `${need.id} uses unknown evidence tag ${tag}`);
+    }
+    for (const relation of need.requiredRelationships) {
+      assert.ok(RELATION_KINDS.has(relation.kind), `${need.id} uses unknown relation kind ${relation.kind}`);
     }
   }
 });
@@ -134,6 +202,44 @@ test("catalog coverage mappings name fields and relation semantics", () => {
     for (const relationName of need.coverage.relationNames) {
       assert.match(relationName, /^[a-z0-9_]+$/, `${need.id} relation mapping ${relationName} is not snake_case`);
     }
+  }
+});
+
+test("audited coverage mappings point to exact fields and relation fields", () => {
+  for (const need of CATALOG_AUDITED_NEEDS) {
+    for (const collectionName of need.coverage.collectionNames) {
+      assert.ok(KNOWN_COLLECTION_NAMES.has(collectionName), `${need.id} maps to missing collection ${collectionName}`);
+    }
+
+    for (const mapping of need.fieldMappings) {
+      const collection = KNOWN_COLLECTIONS.get(mapping.collectionName);
+      assert.ok(collection, `${need.id} maps field on missing collection ${mapping.collectionName}`);
+      const field = collection?.fields.find((candidate) => candidate.name === mapping.fieldName);
+      assert.ok(field, `${need.id} maps missing field ${mapping.collectionName}.${mapping.fieldName}`);
+      assert.match(mapping.fieldName, /^[a-z][A-Za-z0-9]*$/, `${need.id} field ${mapping.fieldName} is not camelCase`);
+    }
+
+    for (const mapping of need.relationMappings) {
+      const collection = KNOWN_COLLECTIONS.get(mapping.collectionName);
+      assert.ok(collection, `${need.id} maps relation on missing collection ${mapping.collectionName}`);
+      const field = collection?.fields.find((candidate) => candidate.name === mapping.fieldName);
+      assert.ok(field, `${need.id} maps missing relation ${mapping.collectionName}.${mapping.fieldName}`);
+      assert.equal(field?.type, "relation", `${need.id} maps ${mapping.collectionName}.${mapping.fieldName} but it is not a relation`);
+      assert.equal(field?.relation?.collectionName, mapping.targetCollectionName, `${need.id} maps relation target incorrectly`);
+      assert.equal(field?.relation?.kind, mapping.kind, `${need.id} maps relation semantic kind incorrectly`);
+    }
+  }
+});
+
+test("audited batch reports expose progress and keep closure debt explicit", () => {
+  for (const batch of CATALOG_AUDITED_BATCHES) {
+    const report = summarizeCatalogAuditedBatch(batch.id);
+    assert.equal(report.archetypes, 15);
+    assert.equal(report.needs, 180);
+    assert.equal(report.gaps, 0);
+    assert.equal(report.customDatabaseBoundaries, 15);
+    assert.equal(report.additiveChanges, 30);
+    assert.equal(report.jsonAuditDebt, 0);
   }
 });
 

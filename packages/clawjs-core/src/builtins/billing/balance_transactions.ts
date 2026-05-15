@@ -7,10 +7,10 @@ export const BALANCE_TRANSACTIONS: BuiltinCollectionDefinition = {
   aliases: ["ledger","balance_transaction","balance_transactions"],
   fields: [
     { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
-    { name: "type", type: "select", required: true, options: ["charge","refund","payout","adjustment","transfer","dispute","fee","stripe_fee","application_fee"] },
-    { name: "amountCents", type: "number" },
+    { name: "type", type: "select", required: true, options: ["charge","refund","payout","adjustment","transfer","dispute","fee","processor_fee","application_fee"] },
+    { name: "amountCents", type: "number", aliases: ["balanceTransactionAmountCents"] },
     { name: "currency", type: "text" },
-    { name: "feeCents", type: "number" },
+    { name: "feeCents", type: "number", aliases: ["processingFeeCents"] },
     { name: "netCents", type: "number" },
     { name: "sourceKind", type: "text" },
     { name: "sourceId", type: "text" },

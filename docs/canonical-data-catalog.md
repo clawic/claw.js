@@ -104,6 +104,23 @@ same pattern appears in more than one family.
   `CATALOG_COVERAGE_NEEDS`. Candidate mappings are discovery evidence only;
   they are not final proof that the canonical fields and relations are
   complete.
+- Deep coverage is validated through the audited expansion ledger in
+  `CATALOG_AUDITED_ARCHETYPES` and `CATALOG_AUDITED_NEEDS`. The accepted target
+  is 120 generic product/workflow archetypes across commerce, learning,
+  sports/booking, health, home/property, work/legal/ops, CRM/support/growth,
+  and personal memory/documents.
+- Each audited archetype must declare its value proposition, workflow, evidence
+  tags, mapped collections, and exact structural needs. Each audited need must
+  map to real canonical fields and real relation fields with compatible
+  relation semantics, or explicitly close as `custom_database`.
+- Batch closure must report archetypes, needs, gaps, custom database
+  boundaries, additive changes, and JSON audit debt. A batch is not closed by
+  generic candidate mappings.
+- Field aliases are allowed only as scoped vocabulary variants for imports and
+  search. They must not collide with canonical fields in the same collection.
+- JSON fields remain acceptable for payloads whose schema is deliberately
+  governed elsewhere, such as external payload evidence or custom field values,
+  but common workflow dimensions should be promoted to typed optional fields.
 - Additive optional fields are preferred. Renames, splits, merges, and
   structural changes require migration support and a pre-migration snapshot.
 - A new collection must be able to CRUD through the shared database smoke test.

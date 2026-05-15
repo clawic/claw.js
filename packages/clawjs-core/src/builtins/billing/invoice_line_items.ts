@@ -8,7 +8,7 @@ export const INVOICE_LINE_ITEMS: BuiltinCollectionDefinition = {
   fields: [
     { name: "invoiceId", type: "relation", required: true, relation: { collectionName: "invoices" } },
     { name: "description", type: "text" },
-    { name: "amountCents", type: "number" },
+    { name: "amountCents", type: "number", aliases: ["invoiceLineAmountCents"] },
     { name: "quantity", type: "number" },
     { name: "priceId", type: "relation", relation: { collectionName: "prices" } },
     { name: "subscriptionItemId", type: "relation", relation: { collectionName: "subscription_items" } },

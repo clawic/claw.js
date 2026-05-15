@@ -136,3 +136,33 @@ test("catalog metadata is valid when present on any collection", () => {
     }
   }
 });
+
+test("field aliases are scoped, non-ambiguous, and do not replace canonical names", () => {
+  let aliasCount = 0;
+
+  for (const collection of BUILTIN_COLLECTIONS) {
+    const canonicalFieldNames = new Set(collection.fields.map((field) => field.name));
+    const aliasesInCollection = new Map<string, string>();
+
+    for (const field of collection.fields) {
+      for (const alias of field.aliases ?? []) {
+        aliasCount += 1;
+        assert.match(alias, /^[a-z][A-Za-z0-9]*$/, `${collection.name}.${field.name} alias ${alias} is not camelCase`);
+        assert.notEqual(alias, field.name, `${collection.name}.${field.name} repeats its canonical name as an alias`);
+        assert.equal(
+          canonicalFieldNames.has(alias),
+          false,
+          `${collection.name}.${field.name} alias ${alias} collides with a canonical field in the same collection`,
+        );
+        assert.equal(
+          aliasesInCollection.has(alias),
+          false,
+          `${collection.name}.${field.name} alias ${alias} also maps to ${aliasesInCollection.get(alias)}`,
+        );
+        aliasesInCollection.set(alias, field.name);
+      }
+    }
+  }
+
+  assert.ok(aliasCount > 0, "catalog should expose audited field aliases for known naming variants");
+});
