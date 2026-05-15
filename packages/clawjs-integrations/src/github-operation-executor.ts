@@ -40,6 +40,8 @@ export const GITHUB_CORE_ACTION_SLUGS = [
   "list-repository-issues",
   "create-issue",
   "update-issue",
+  "create-discussion",
+  "create-security-advisory-report",
   "lock-issue",
   "unlock-issue",
   "list-issue-comments",
@@ -97,6 +99,7 @@ const PULL_NUMBER_FIELD = integerField("pullNumber", { default: 1, min: 1 });
 const DEPLOYMENT_ID_FIELD = integerField("deploymentId", { default: 1, min: 1 });
 const REVIEW_ID_FIELD = integerField("reviewId", { default: 1, min: 1 });
 const COMMENT_ID_FIELD = integerField("commentId", { default: 1, min: 1 });
+const GITHUB_CREATE_DISCUSSION_MUTATION = "mutation CreateDiscussion($repositoryId: ID!, $categoryId: ID!, $title: String!, $body: String!, $clientMutationId: String) { createDiscussion(input: { repositoryId: $repositoryId, categoryId: $categoryId, title: $title, body: $body, clientMutationId: $clientMutationId }) { discussion { id number title url } } }";
 
 export const GITHUB_EXTRA_ACTION_SPECS = [
   spec("list-commits", "GET", (values) => `${repoPath(values)}/commits`, [...REPO_FIELDS, SHA_FIELD, stringField("path", { optional: true, default: "README.md" }), stringField("author", { optional: true, default: "octocat" }), stringField("since", { optional: true, default: "2026-01-01T00:00:00Z" }), stringField("until", { optional: true, default: "2026-01-02T00:00:00Z" }), ...PAGING_FIELDS], { query: ["sha", "path", "author", "since", "until", "per_page", "page"], responseType: "array", paged: true }),
@@ -279,6 +282,26 @@ export function buildGitHubOperationRequest(
         labels: values.labels,
         milestone: values.milestone,
       }), ["id", "number", "title"]);
+    case "create-discussion":
+      return postPlan("graphql", auth, headers, {
+        query: GITHUB_CREATE_DISCUSSION_MUTATION,
+        variables: removeEmptyValues({
+          repositoryId: requiredString(values.repositoryId, "repositoryId"),
+          categoryId: requiredString(values.categoryId, "categoryId"),
+          title: requiredString(values.title, "title"),
+          body: requiredString(values.body, "body"),
+          clientMutationId: values.clientMutationId,
+        }),
+      }, ["data.createDiscussion.discussion.id", "data.createDiscussion.discussion.url"]);
+    case "create-security-advisory-report":
+      return postPlan(`${repoPath(values)}/security-advisories/reports`, auth, headers, removeEmptyValues({
+        summary: requiredString(firstValue(values.summary, values.title), "summary"),
+        description: requiredString(firstValue(values.description, values.body), "description"),
+        severity: values.severity ?? "medium",
+        cve_id: firstValue(values.cveId, values.cve_id),
+        vulnerabilities: values.vulnerabilities ?? [],
+        cwe_ids: firstValue(values.cweIds, values.cwe_ids),
+      }), ["ghsa_id", "html_url", "state"]);
     case "update-issue":
       return patchPlan(`${repoPath(values)}/issues/${issueNumber(values)}`, auth, headers, removeEmptyValues({
         title: values.title,

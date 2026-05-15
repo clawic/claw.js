@@ -36,11 +36,11 @@
     ]
   },
   "summary": {
-    "files": 2836,
-    "tests": 392,
+    "files": 2839,
+    "tests": 393,
     "entrypoints": 160,
     "languages": {
-      "typescript": 2638,
+      "typescript": 2641,
       "javascript": 108,
       "swift": 90
     }
@@ -58293,7 +58293,7 @@
     {
       "path": "packages/clawjs-core/src/cli-command-registry.ts",
       "language": "typescript",
-      "lines": 341,
+      "lines": 342,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -59154,6 +59154,116 @@
       ]
     },
     {
+      "path": "packages/clawjs-core/src/schemas-report.ts",
+      "language": "typescript",
+      "lines": 129,
+      "test": false,
+      "entrypoint": false,
+      "imports": [
+        "zod"
+      ],
+      "exports": [
+        "ReportDestination",
+        "ReportGovernanceState",
+        "ReportKind",
+        "ReportRecord",
+        "ReportStatus",
+        "reportAttachmentSchema",
+        "reportDedupeCandidateSchema",
+        "reportDestinationSchema",
+        "reportEvidenceKindSchema",
+        "reportEvidenceSchema",
+        "reportGovernanceStateSchema",
+        "reportKindSchema",
+        "reportPrivacyReviewSchema",
+        "reportQualityGateSchema",
+        "reportRecordSchema",
+        "reportStatusSchema"
+      ],
+      "declarations": [
+        {
+          "kind": "const",
+          "name": "reportAttachmentSchema",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "reportDedupeCandidateSchema",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "reportDestinationSchema",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "reportEvidenceKindSchema",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "reportEvidenceSchema",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "reportGovernanceStateSchema",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "reportKindSchema",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "reportPrivacyReviewSchema",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "reportQualityGateSchema",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "reportRecordSchema",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "reportStatusSchema",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "ReportDestination",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "ReportGovernanceState",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "ReportKind",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "ReportRecord",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "ReportStatus",
+          "exported": true
+        }
+      ]
+    },
+    {
       "path": "packages/clawjs-core/src/schemas-workspace.ts",
       "language": "typescript",
       "lines": 883,
@@ -59534,6 +59644,7 @@
       "test": false,
       "entrypoint": false,
       "imports": [
+        "./schemas-report.ts",
         "./schemas-workspace.ts",
         "zod"
       ],
@@ -60872,7 +60983,7 @@
     {
       "path": "packages/clawjs-core/src/surface-registry.ts",
       "language": "typescript",
-      "lines": 1388,
+      "lines": 1408,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -67629,7 +67740,7 @@
     {
       "path": "packages/clawjs-integrations/src/github-operation-executor.test.ts",
       "language": "typescript",
-      "lines": 343,
+      "lines": 396,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -67671,7 +67782,7 @@
     {
       "path": "packages/clawjs-integrations/src/github-operation-executor.ts",
       "language": "typescript",
-      "lines": 759,
+      "lines": 782,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -97204,6 +97315,317 @@
         {
           "kind": "type",
           "name": "RunCli",
+          "exported": false
+        }
+      ]
+    },
+    {
+      "path": "packages/clawjs/src/cli-report-command.ts",
+      "language": "typescript",
+      "lines": 717,
+      "test": false,
+      "entrypoint": false,
+      "imports": [
+        "./cli-errors.ts",
+        "./cli-flag-parsers.ts",
+        "./cli-json.ts",
+        "@clawjs/core",
+        "node:crypto",
+        "node:fs",
+        "node:os",
+        "node:path"
+      ],
+      "exports": [
+        "runReportCli"
+      ],
+      "declarations": [
+        {
+          "kind": "function",
+          "name": "buildEvidence",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "buildLabels",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "buildSubmissionPlan",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "connectorOperationFor",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "connectorValuesFor",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "createFingerprint",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "createRedactor",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "createReport",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "defaultTitleFor",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "destinationAction",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "emptyQuality",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "escapeRegExp",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "evaluateQuality",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "findDuplicateCandidates",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "fingerprintSimilarity",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "inferAttachmentKind",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "inferDestination",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "inferKind",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "isReportDestination",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "isReportKind",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "isReportStatus",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "nextStepsFor",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "normalizeFingerprintText",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "normalizeLabelValue",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "normalizeReportRecord",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "normalizeReportState",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "nowIso",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "parseAttachments",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "readReportState",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "refreshReport",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "renderReportMarkdown",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "reportId",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "reportStatePath",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "reviewPrivacy",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "routeLabel",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "runReportCli",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "sanitizeOptional",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "splitSteps",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "writeReportResult",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "writeReportState",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "writeUsage",
+          "exported": false
+        },
+        {
+          "kind": "type",
+          "name": "CliContext",
+          "exported": false
+        },
+        {
+          "kind": "type",
+          "name": "ReportAttachment",
+          "exported": false
+        },
+        {
+          "kind": "type",
+          "name": "ReportDedupeCandidate",
+          "exported": false
+        },
+        {
+          "kind": "type",
+          "name": "ReportDestination",
+          "exported": false
+        },
+        {
+          "kind": "type",
+          "name": "ReportEvidence",
+          "exported": false
+        },
+        {
+          "kind": "type",
+          "name": "ReportGovernanceState",
+          "exported": false
+        },
+        {
+          "kind": "type",
+          "name": "ReportKind",
+          "exported": false
+        },
+        {
+          "kind": "type",
+          "name": "ReportPrivacy",
+          "exported": false
+        },
+        {
+          "kind": "type",
+          "name": "ReportQuality",
+          "exported": false
+        },
+        {
+          "kind": "type",
+          "name": "ReportRecord",
+          "exported": false
+        },
+        {
+          "kind": "type",
+          "name": "ReportStatus",
+          "exported": false
+        }
+      ]
+    },
+    {
+      "path": "packages/clawjs/src/cli-report.test.ts",
+      "language": "typescript",
+      "lines": 210,
+      "test": true,
+      "entrypoint": false,
+      "imports": [
+        "./index-test-utils.ts",
+        "./index.ts",
+        "node:assert/strict",
+        "node:fs",
+        "node:os",
+        "node:path",
+        "vitest"
+      ],
+      "exports": [],
+      "declarations": [
+        {
+          "kind": "function",
+          "name": "parsePayload",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "tempWorkspace",
           "exported": false
         }
       ]

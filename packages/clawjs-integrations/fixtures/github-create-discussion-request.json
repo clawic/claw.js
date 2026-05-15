@@ -1,0 +1,19 @@
+{
+  "method": "POST",
+  "url": "https://api.github.com/graphql",
+  "headers": {
+    "accept": "application/vnd.github+json",
+    "authorization": "Bearer offline-githubToken-secret",
+    "content-type": "application/json",
+    "x-github-api-version": "2026-03-10"
+  },
+  "body": {
+    "query": "mutation CreateDiscussion($repositoryId: ID!, $categoryId: ID!, $title: String!, $body: String!, $clientMutationId: String) { createDiscussion(input: { repositoryId: $repositoryId, categoryId: $categoryId, title: $title, body: $body, clientMutationId: $clientMutationId }) { discussion { id number title url } } }",
+    "variables": {
+      "body": "sample",
+      "categoryId": "sample",
+      "repositoryId": "sample",
+      "title": "sample"
+    }
+  }
+}

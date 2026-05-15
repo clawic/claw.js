@@ -1,0 +1,12 @@
+{
+  "data": {
+    "createDiscussion": {
+      "discussion": {
+        "id": "D_kwDOsample",
+        "number": 1,
+        "title": "sample",
+        "url": "https://github.com/sample/sample/discussions/1"
+      }
+    }
+  }
+}

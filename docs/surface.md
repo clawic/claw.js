@@ -1689,6 +1689,22 @@ The docs check script validates that every current export from
     releaseRecordSchema
     ReminderRecord
     reminderRecordSchema
+    ReportDestination
+    reportDestinationSchema
+    reportDedupeCandidateSchema
+    reportAttachmentSchema
+    reportEvidenceKindSchema
+    reportEvidenceSchema
+    ReportGovernanceState
+    reportGovernanceStateSchema
+    ReportKind
+    reportKindSchema
+    reportPrivacyReviewSchema
+    reportQualityGateSchema
+    ReportRecord
+    reportRecordSchema
+    ReportStatus
+    reportStatusSchema
     REPRODUCTIVE_INTIMATE_FAMILY
     resolveBuiltinCollectionName
     resolveClawCliCommand

@@ -45,6 +45,8 @@ const GITHUB_ACTIONS = [
   action("github.action.list-repository-issues", "List Repository Issues", [...REPO_FIELDS, field("state", "string", true, { default: "open" }), ...pagingFields()]),
   action("github.action.create-issue", "Create Issue", [...REPO_FIELDS, field("title", "string"), field("body", "string", true)]),
   action("github.action.update-issue", "Update Issue", [...ISSUE_FIELDS, field("title", "string", true, { default: "sample" })]),
+  action("github.action.create-discussion", "Create Discussion", [field("repositoryId", "string"), field("categoryId", "string"), field("title", "string"), field("body", "string")]),
+  action("github.action.create-security-advisory-report", "Create Security Advisory Report", [...REPO_FIELDS, field("summary", "string"), field("description", "string"), field("severity", "string", true, { default: "medium" }), field("vulnerabilities", "array", true, { default: [] }), field("cweIds", "array", true, { default: ["CWE-200"] })]),
   action("github.action.lock-issue", "Lock Issue", ISSUE_FIELDS),
   action("github.action.unlock-issue", "Unlock Issue", ISSUE_FIELDS),
   action("github.action.list-issue-comments", "List Issue Comments", [...ISSUE_FIELDS, ...pagingFields()]),
@@ -171,6 +173,57 @@ describe("github operation runtime", () => {
       },
       responseSchema: {
         type: "object",
+      },
+    });
+
+    assert.deepEqual(buildGitHubOperationRequest(operation("github.action.create-discussion"), {
+      repositoryId: "R_123",
+      categoryId: "DIC_456",
+      title: "Add reports",
+      body: "Discussion body",
+    }), {
+      method: "POST",
+      endpoint: "graphql",
+      auth,
+      headers,
+      body: {
+        query: "mutation CreateDiscussion($repositoryId: ID!, $categoryId: ID!, $title: String!, $body: String!, $clientMutationId: String) { createDiscussion(input: { repositoryId: $repositoryId, categoryId: $categoryId, title: $title, body: $body, clientMutationId: $clientMutationId }) { discussion { id number title url } } }",
+        variables: {
+          repositoryId: "R_123",
+          categoryId: "DIC_456",
+          title: "Add reports",
+          body: "Discussion body",
+        },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["data.createDiscussion.discussion.id", "data.createDiscussion.discussion.url"],
+      },
+    });
+
+    assert.deepEqual(buildGitHubOperationRequest(operation("github.action.create-security-advisory-report"), {
+      owner: "octocat",
+      repo: "Hello-World",
+      summary: "Token exposure",
+      description: "Private report",
+      severity: "medium",
+      cweIds: ["CWE-200"],
+      vulnerabilities: [],
+    }), {
+      method: "POST",
+      endpoint: "repos/octocat/Hello-World/security-advisories/reports",
+      auth,
+      headers,
+      body: {
+        summary: "Token exposure",
+        description: "Private report",
+        severity: "medium",
+        vulnerabilities: [],
+        cwe_ids: ["CWE-200"],
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["ghsa_id", "html_url", "state"],
       },
     });
 

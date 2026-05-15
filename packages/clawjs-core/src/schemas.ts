@@ -1401,8 +1401,8 @@ export const whatsappStateSnapshotSchema = z.object({
   canSendMessages: z.boolean(),
 });
 
+export * from "./schemas-report.ts";
 export * from "./schemas-workspace.ts";
-
 export const auditEventSchema = z.object({
   timestamp: z.string().min(1),
   event: z.string().min(1),

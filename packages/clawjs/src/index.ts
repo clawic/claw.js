@@ -956,7 +956,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   const runtimeAdapter = getRuntimeAdapter(runtimeAdapterId); const mediaGroup = group === "image" || group === "audio" || group === "video" ? group : null;
   await installCliRuntimeMetaProvider({ group, command, subcommand, argv, flags, cwd: context.cwd, workspaceRoot, appId, workspaceId, agentId, runtimeAdapterId });
   const guidanceResourcesResult = await runGuidanceResourcesCli({ group, command, subcommand, positionals, flags, argv, context, wantsJson, runtimeAdapterId, workspaceRoot, appId, workspaceId, agentId }); if (guidanceResourcesResult !== null) return guidanceResourcesResult;
-
+  if (group === "report") return await (await import("./cli-report-command.ts")).runReportCli({ positionals, flags, argv, context, wantsJson, binName, workspaceRoot, agentId });
   if (group === "slides") {
     try {
       return await runSlidesCli({

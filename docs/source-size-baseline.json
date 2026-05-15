@@ -40,8 +40,8 @@
       "reason": "Canonical type surface after workspace, human, and library/rules type extraction; split new contract domains into focused type modules before expanding."
     },
     "packages/clawjs-core/src/surface-registry.ts": {
-      "lines": 1401,
-      "reason": "Stable surface registry after cross-surface enforcement expansion for routes, events, app/browser storage keys, and registered DDL sources; split route families into focused modules before expanding further."
+      "lines": 1408,
+      "reason": "Stable surface registry after cross-surface enforcement expansion for routes, events, app/browser storage keys, report governance state, and registered DDL sources; split route families into focused modules before expanding further."
     },
     "packages/clawjs-node/src/create-claw.test.ts": {
       "lines": 1994,

@@ -121,6 +121,28 @@ claw info --json
 | `--template-pack` | Template pack used by `workspace init` or `files apply-template-pack`. |
 | `--library-dir` | Overrides the local library root. |
 
+## Report Governance
+
+`claw report` is the agent-facing workflow for safe GitHub reports. It creates
+sanitized local drafts, checks evidence quality, finds duplicate candidates,
+renders a user approval preview, and builds a connector submission plan.
+
+```bash
+claw report bug "CLI crashes when listing reports" --observed "..." --expected "..." --repro "..."
+claw report feature "Support a new workflow" --impact "..."
+claw report translation "Spanish settings label is wrong" --locale es --observed "..." --expected "..."
+claw report security "Private finding" --impact "..."
+claw report preview rep_...
+claw report submit rep_... --confirm --dry-run
+```
+
+Reports stay under `.claw/reports/report-governance.json`. The stored content
+is redacted, attachments require per-file opt-in, and local salted fingerprints
+are used only for dedupe. Low-evidence drafts are blocked with
+`NOT_ENOUGH_INFO`. Public security publication is blocked and routed to private
+security advisory handling. Real GitHub submission is owned by the Claw GitHub
+connector and remains human-approved.
+
 ## Guidance And Resources
 
 ```bash

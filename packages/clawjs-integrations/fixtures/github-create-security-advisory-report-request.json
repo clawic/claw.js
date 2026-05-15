@@ -1,0 +1,19 @@
+{
+  "method": "POST",
+  "url": "https://api.github.com/repos/sample/sample/security-advisories/reports",
+  "headers": {
+    "accept": "application/vnd.github+json",
+    "authorization": "Bearer offline-githubToken-secret",
+    "content-type": "application/json",
+    "x-github-api-version": "2026-03-10"
+  },
+  "body": {
+    "cwe_ids": [
+      "CWE-200"
+    ],
+    "description": "sample",
+    "severity": "medium",
+    "summary": "sample",
+    "vulnerabilities": []
+  }
+}

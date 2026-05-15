@@ -269,6 +269,8 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_inspect
   claw_cli_command_search["search\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_search
+  claw_cli_command_report["report\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_report
   claw_cli_command_work["work\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_work
   claw_cli_command_projects["projects\ncliCommand"]
@@ -542,6 +544,10 @@ flowchart TD
   claw_workspace --> claw_workspace_templates
   claw_workspace_references["references\nfolder"]
   claw_workspace --> claw_workspace_references
+  claw_workspace_reports["reports\nfolder"]
+  claw_workspace --> claw_workspace_reports
+  claw_workspace_reports_governance_state["report governance state\nfile"]
+  claw_workspace_reports --> claw_workspace_reports_governance_state
   claw_workspace_slides["slides\nfolder"]
   claw_workspace --> claw_workspace_slides
   claw_workspace_dashboard_database["dashboard-database\nfolder"]
@@ -963,6 +969,7 @@ flowchart TD
 | `claw.cli.command.records` | cliCommand | cli | claw |  |  |  | `records` |
 | `claw.cli.command.inspect` | cliCommand | cli | claw |  |  |  | `inspect` |
 | `claw.cli.command.search` | cliCommand | cli | claw |  |  |  | `search` |
+| `claw.cli.command.report` | cliCommand | cli | claw |  |  |  | `report` |
 | `claw.cli.command.work` | cliCommand | cli | claw |  |  |  | `work` |
 | `claw.cli.command.projects` | cliCommand | cli | claw |  |  |  | `projects` |
 | `claw.cli.command.tasks` | cliCommand | cli | claw |  |  |  | `tasks` |
@@ -1101,6 +1108,8 @@ flowchart TD
 | `claw.workspace.styles` | folder | persistent | claw |  |  |  | `.claw/styles` |
 | `claw.workspace.templates` | folder | persistent | claw |  |  |  | `.claw/templates` |
 | `claw.workspace.references` | folder | persistent | claw |  |  |  | `.claw/references` |
+| `claw.workspace.reports` | folder | persistent | claw |  |  |  | `.claw/reports` |
+| `claw.workspace.reports.governance_state` | file | persistent | claw |  |  |  | `.claw/reports/report-governance.json` |
 | `claw.workspace.slides` | folder | persistent | claw |  |  |  | `.claw/slides` |
 | `claw.workspace.dashboard_database` | folder | persistent | claw |  |  |  | `.claw/dashboard-database` |
 | `claw.workspace.channel_run` | folder | persistent | claw |  |  |  | `.claw/run/channels` |
