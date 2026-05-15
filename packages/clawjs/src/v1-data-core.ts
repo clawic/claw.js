@@ -59,7 +59,7 @@ const APP_STATE_DOMAIN_TABLES = [
 ];
 const SIGNALS_DOMAIN_TABLES = ["signals_verticals", "signals_variables", "signals_sessions", "signals_observations"];
 const RESOURCE_DOMAIN_TABLES = ["resources", "apps", "design_resources"];
-const AGENT_DOMAIN_TABLES = ["agents", "skills", "skill_collections", "connections", "channel_accounts", "channel_routing", "channel_messages"];
+const AGENT_DOMAIN_TABLES = ["agents", "skills", "skill_collections", "connections", "provider_routing", "provider_settings", "snippets", "channel_accounts", "channel_routing", "channel_messages"];
 const SESSION_DOMAIN_TABLES = ["session_index"];
 const USER_MODEL_DOMAIN_TABLES = ["user_profile_items", "user_profile_meta", "user_profile_history"];
 const SIGNALS_RUNTIME_DOMAIN_TABLES = ["system_variables", "user_variables", "observations", "sessions", "healthkit_sync_state", "hidden_system_variables"];
@@ -1442,10 +1442,10 @@ export function usage(binName: string, group: string): string {
       return `Usage: ${binName} agents list|upsert [--json]`;
     case "skills":
       return `Usage: ${binName} skills list|upsert [--json]`;
-    case "connections":
-      return `Usage: ${binName} connections list|upsert [--json]`;
-    case "sessions":
-      return `Usage: ${binName} sessions index|list|get|search [--json]`;
+    case "connections": return `Usage: ${binName} connections list|upsert [--json]`;
+    case "providers": return `Usage: ${binName} providers routing list|set|delete FEATURE --capability CAP --provider PROVIDER [--model MODEL] [--account-ref REF] [--json]\n       ${binName} providers settings list|set PROVIDER --enabled true|false [--json]`;
+    case "snippets": return `Usage: ${binName} snippets list|upsert|delete SLUG --title TITLE --body TEXT [--kind prompt|template|slash] [--json]`;
+    case "sessions": return `Usage: ${binName} sessions index|list|get|search [--json]`;
     default:
       return `Usage: ${binName} data doctor [--json]`;
   }

@@ -219,6 +219,58 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
     }), CLI_EXIT_OK);
     assert.match((parseCliData(connectionStdout.getOutput()) as { secretRef: string }).secretRef, /^\*+thub$/);
 
+    const routingStdout = captureStream();
+    assert.equal(await runCli(["providers", "routing", "set", "quickask", "--capability", "chat", "--provider", "provider_alpha", "--model", "generic-chat-large", "--account-ref", "vault://providers/provider_alpha/main", "--json"], {
+      stdout: routingStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const routing = parseCliData(routingStdout.getOutput()) as { feature: string; provider: string; accountRef: string };
+    assert.equal(routing.feature, "quickask");
+    assert.equal(routing.provider, "provider_alpha");
+    assert.equal(routing.accountRef, "vault://providers/provider_alpha/main");
+
+    const providerSettingsStdout = captureStream();
+    assert.equal(await runCli(["providers", "settings", "set", "provider_alpha", "--enabled", "false", "--json"], {
+      stdout: providerSettingsStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const providerSettings = parseCliData(providerSettingsStdout.getOutput()) as { provider: string; enabled: boolean };
+    assert.equal(providerSettings.provider, "provider_alpha");
+    assert.equal(providerSettings.enabled, false);
+
+    const snippetStdout = captureStream();
+    assert.equal(await runCli(["snippets", "upsert", "quickask-review", "--title", "QuickAsk Review", "--body", "Review the current selection", "--kind", "prompt", "--skill-refs", "skill:review", "--json"], {
+      stdout: snippetStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const snippet = parseCliData(snippetStdout.getOutput()) as { slug: string; kind: string; skillRefs: string[] };
+    assert.equal(snippet.slug, "quickask-review");
+    assert.equal(snippet.kind, "prompt");
+    assert.deepEqual(snippet.skillRefs, ["skill:review"]);
+
+    const snippetDeleteStdout = captureStream();
+    assert.equal(await runCli(["snippets", "delete", "quickask-review", "--json"], {
+      stdout: snippetDeleteStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const deletedSnippet = parseCliData(snippetDeleteStdout.getOutput()) as { slug: string; deleted: boolean };
+    assert.equal(deletedSnippet.slug, "quickask-review");
+    assert.equal(deletedSnippet.deleted, true);
+
+    const routingDeleteStdout = captureStream();
+    assert.equal(await runCli(["providers", "routing", "delete", "quickask", "--capability", "chat", "--json"], {
+      stdout: routingDeleteStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const deletedRouting = parseCliData(routingDeleteStdout.getOutput()) as { feature: string; deleted: boolean };
+    assert.equal(deletedRouting.feature, "quickask");
+    assert.equal(deletedRouting.deleted, true);
+
     const iotStdout = captureStream();
     assert.equal(await runCli(["iot", "config", "set", "thermostat", "--name", "Hall thermostat", "--kind", "climate", "--secret-ref", "vault://iot/thermostat", "--json"], {
       stdout: iotStdout.stream,

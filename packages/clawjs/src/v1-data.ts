@@ -5,7 +5,7 @@ import { randomUUID } from "crypto";
 
 import type Database from "better-sqlite3";
 import { DatabaseServiceStore } from "@clawjs/database";
-
+import { runProviderRoutingCommand, runSnippetsCommand } from "./v1-data-agent-config.ts";
 export {
   V1_DATA_EXIT_FAILURE,
   V1_DATA_EXIT_OK,
@@ -65,8 +65,7 @@ import {
 import type { JsonRecord, V1DataCliInput } from "./v1-data-core.ts"; // Public storage surface: CLAW_DATA_DIR, CLAW_HOME, CLAW_DB_PATH, core.sqlite.
 
 export async function runV1DataCli(input: V1DataCliInput): Promise<number | null> {
-  const group = input.positionals[0];
-  const command = input.positionals[1];
+  const [group, command] = input.positionals;
   if (!shouldHandleV1DataCommand(group, command, input.argv.includes("--help") || input.argv.includes("-h"))) {
     return null;
   }
@@ -157,12 +156,11 @@ export async function runV1DataCli(input: V1DataCliInput): Promise<number | null
         return runDesignCommand(input, store);
       case "agents":
         return runAgentsCommand(input, store);
-      case "skills":
-        return runSkillsCommand(input, store);
-      case "connections":
-        return runConnectionsCommand(input, store);
-      case "sessions":
-        return runSessionsIndexCommand(input, store);
+      case "skills": return runSkillsCommand(input, store);
+      case "connections": return runConnectionsCommand(input, store);
+      case "providers": return runProviderRoutingCommand(input, store);
+      case "snippets": return runSnippetsCommand(input, store);
+      case "sessions": return runSessionsIndexCommand(input, store);
       default:
         return null;
     }
@@ -175,6 +173,7 @@ export async function runV1DataCli(input: V1DataCliInput): Promise<number | null
 }
 
 function shouldHandleV1DataCommand(group: string | undefined, command: string | undefined, wantsHelp: boolean): group is string {
+  if (group === "providers") return command === "routing" || command === "settings";
   const commandsByGroup: Record<string, Set<string>> = {
     data: new Set(["doctor", "backup", "restore", "reset", "help"]),
     "app-state": new Set(["get", "set", "snapshot", "project", "pin", "title", "archive", "sidebar", "terminal", "help"]),
@@ -204,6 +203,7 @@ function shouldHandleV1DataCommand(group: string | undefined, command: string | 
     agents: new Set(["list", "upsert", "help"]),
     skills: new Set(["upsert", "help"]),
     connections: new Set(["list", "upsert", "help"]),
+    snippets: new Set(["list", "upsert", "delete", "help"]),
     sessions: new Set(["index", "list", "get", "search", "help"]),
   };
   if (!group || !(group in commandsByGroup)) return false;

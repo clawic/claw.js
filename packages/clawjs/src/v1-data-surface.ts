@@ -1,5 +1,5 @@
 import { clawPersistentSurface } from "@clawjs/core";
-
+import { V1_AGENT_DATA_SCHEMA_SQL, v1AgentDataSurfaceNodes } from "./v1-data-agent-surfaces.ts";
 const v1MainDatabaseId = "claw.database.core";
 const v1MainSchemaSource = {
   file: "packages/clawjs/src/v1-data-surface.ts",
@@ -266,6 +266,7 @@ export const v1MainSchemaSurfaceNodes = [
     databaseId: v1MainDatabaseId,
     source: v1MainSchemaSource,
   }),
+  ...v1AgentDataSurfaceNodes,
   clawPersistentSurface.table({
     id: `claw.database.core.table.apps`,
     name: "apps",
@@ -1258,6 +1259,7 @@ export const V1_MAIN_SCHEMA_SQL = String.raw`
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+${V1_AGENT_DATA_SCHEMA_SQL}
 
     CREATE TABLE IF NOT EXISTS apps (
       id TEXT PRIMARY KEY,
