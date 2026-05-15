@@ -1,5 +1,5 @@
 import { clawApiPath, clawNotifyEventTypes } from "@clawjs/core";
-import type { NotifyDashboardData, NotifyPreferences, NotifyQuietHours } from "./notify-types";
+import type { NotifyDashboardSnapshot, NotifyPreferences, NotifyQuietHours } from "./notify-types";
 
 interface NotifyServerConfig {
   baseUrl: string;
@@ -373,51 +373,51 @@ export async function bootstrapNotifyDemo() {
   return config;
 }
 
-export async function fetchNotifyDashboard(): Promise<NotifyDashboardData> {
+export async function fetchNotifyDashboard(): Promise<NotifyDashboardSnapshot> {
   const config = await bootstrapNotifyDemo();
   const adminToken = await loginAdmin(config);
   const [metrics, sourceApps, clientApps, devices, userPrefs, feed, notifications, deliveries, glances] = await Promise.all([
-    adminRequest<{ metrics: NotifyDashboardData["metrics"] }>(
+    adminRequest<{ metrics: NotifyDashboardSnapshot["metrics"] }>(
       config,
       adminToken,
       clawApiPath(`admin/metrics/summary?tenantId=${encodeURIComponent(config.tenantId)}`),
     ),
-    adminRequest<{ items: NotifyDashboardData["sourceApps"] }>(
+    adminRequest<{ items: NotifyDashboardSnapshot["sourceApps"] }>(
       config,
       adminToken,
       clawApiPath(`admin/source-apps?tenantId=${encodeURIComponent(config.tenantId)}`),
     ),
-    adminRequest<{ items: NotifyDashboardData["clientApps"] }>(
+    adminRequest<{ items: NotifyDashboardSnapshot["clientApps"] }>(
       config,
       adminToken,
       clawApiPath(`admin/client-apps?tenantId=${encodeURIComponent(config.tenantId)}`),
     ),
-    adminRequest<{ installations: NotifyDashboardData["installations"] }>(
+    adminRequest<{ installations: NotifyDashboardSnapshot["installations"] }>(
       config,
       adminToken,
       clawApiPath(`admin/users/${encodeURIComponent(config.userId)}/devices?tenantId=${encodeURIComponent(config.tenantId)}`),
     ),
-    adminRequest<{ preferences: NotifyDashboardData["preferences"]; subscriptions: NotifyDashboardData["subscriptions"] }>(
+    adminRequest<{ preferences: NotifyDashboardSnapshot["preferences"]; subscriptions: NotifyDashboardSnapshot["subscriptions"] }>(
       config,
       adminToken,
       clawApiPath(`admin/users/${encodeURIComponent(config.userId)}/preferences?tenantId=${encodeURIComponent(config.tenantId)}`),
     ),
-    adminRequest<{ items: NotifyDashboardData["feed"] }>(
+    adminRequest<{ items: NotifyDashboardSnapshot["feed"] }>(
       config,
       adminToken,
       clawApiPath(`admin/users/${encodeURIComponent(config.userId)}/feed?tenantId=${encodeURIComponent(config.tenantId)}&limit=30`),
     ),
-    adminRequest<{ items: NotifyDashboardData["notifications"] }>(
+    adminRequest<{ items: NotifyDashboardSnapshot["notifications"] }>(
       config,
       adminToken,
       clawApiPath(`admin/notifications?tenantId=${encodeURIComponent(config.tenantId)}&limit=30`),
     ),
-    adminRequest<{ items: NotifyDashboardData["deliveries"] }>(
+    adminRequest<{ items: NotifyDashboardSnapshot["deliveries"] }>(
       config,
       adminToken,
       clawApiPath(`admin/deliveries?tenantId=${encodeURIComponent(config.tenantId)}&limit=40`),
     ),
-    adminRequest<{ glances: NotifyDashboardData["glances"] }>(
+    adminRequest<{ glances: NotifyDashboardSnapshot["glances"] }>(
       config,
       adminToken,
       clawApiPath(`admin/users/${encodeURIComponent(config.userId)}/glances?tenantId=${encodeURIComponent(config.tenantId)}`),

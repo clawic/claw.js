@@ -19,7 +19,7 @@ import {
   Waves,
 } from "lucide-react";
 
-import type { NotifyDashboardData, NotifyFeedItem } from "@/lib/notify-types";
+import type { NotifyDashboardSnapshot, NotifyFeedItem } from "@/lib/notify-types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -51,6 +51,17 @@ function parseTimeString(value: string) {
 }
 
 type Section = "inbox" | "preferences" | "apps" | "operations" | "glances";
+
+interface ManualNotificationForm {
+  sourceAppId: string;
+  priority: string;
+  title: string;
+  body: string;
+  agentId: string;
+  eventType: string;
+  severity: string;
+  projectId: string;
+}
 
 const SECTIONS: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: "inbox", label: "Inbox", icon: Inbox },
@@ -156,7 +167,7 @@ function PriorityBadge({ priority }: { priority: string }) {
 /* ------------------------------------------------------------------ */
 
 export function NotifyDashboard() {
-  const [data, setData] = React.useState<NotifyDashboardData | null>(null);
+  const [data, setData] = React.useState<NotifyDashboardSnapshot | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [mutating, setMutating] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -186,7 +197,7 @@ export function NotifyDashboard() {
     platform: "ios",
     bundleId: "",
   });
-  const [manualNotificationForm, setManualNotificationForm] = React.useState({
+  const [manualNotificationForm, setManualNotificationForm] = React.useState<ManualNotificationForm>({
     sourceAppId: "ops-center",
     priority: "normal",
     title: "Manual notification",

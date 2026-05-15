@@ -162,7 +162,7 @@ export interface NotifyMetrics {
   failedDeliveries: number;
 }
 
-export interface NotifyDashboardData {
+export interface NotifyDashboardSnapshot {
   tenantId: string;
   userId: string;
   metrics: NotifyMetrics;
