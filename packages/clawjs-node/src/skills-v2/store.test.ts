@@ -46,22 +46,22 @@ test("skills-v2 store: activate / resolveActive respects scope hierarchy", () =>
   const store = createSkillsStore({ homeDir: home });
   store.create({ slug: "g1", kind: "procedure", description: "Global skill", body: "G1" });
   store.create({ slug: "p1", kind: "procedure", description: "Project skill", body: "P1" });
-  store.create({ slug: "c1", kind: "procedure", description: "Chat skill", body: "C1" });
+  store.create({ slug: "c1", kind: "procedure", description: "Session skill", body: "C1" });
 
   store.activate("g1", { kind: "global" });
   store.activate("p1", { kind: "project", projectIds: ["proj-a"] });
-  store.activate("c1", { kind: "chat", chatId: "chat-x" });
+  store.activate("c1", { kind: "session", sessionId: "session-x" });
 
   const noCtx = store.resolveActive();
   assert.deepEqual(noCtx.map((s) => s.slug), ["g1"]);
 
   const projOnly = store.resolveActive({ projectId: "proj-a" });
-  // chat > project > global ordering
+  // session > project > global ordering
   assert.deepEqual(projOnly.map((s) => s.slug).sort(), ["g1", "p1"].sort());
 
-  const chatCtx = store.resolveActive({ projectId: "proj-a", chatId: "chat-x" });
-  assert.equal(chatCtx[0].slug, "c1");
-  assert.equal(chatCtx.length, 3);
+  const sessionCtx = store.resolveActive({ projectId: "proj-a", sessionId: "session-x" });
+  assert.equal(sessionCtx[0].slug, "c1");
+  assert.equal(sessionCtx.length, 3);
 });
 
 test("skills-v2: instantiate + freeze produces inline body", () => {

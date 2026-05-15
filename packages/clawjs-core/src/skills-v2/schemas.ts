@@ -5,14 +5,14 @@
 import { z } from "zod";
 
 export const skillKindSchema = z.enum(["personality", "procedure", "snippet", "role"]);
-export const skillScopeKindSchema = z.enum(["global", "project", "tag", "chat"]);
+export const skillScopeKindSchema = z.enum(["global", "project", "tag", "session"]);
 export const skillSyncModeSchema = z.enum(["symlink", "copy"]);
 
 export const skillScopeSchema = z.object({
   kind: skillScopeKindSchema,
   projectIds: z.array(z.string().min(1)).optional(),
   tagFilters: z.array(z.string().min(1)).optional(),
-  chatId: z.string().min(1).optional(),
+  sessionId: z.string().min(1).optional(),
 });
 
 export const skillParamSchema = z.object({

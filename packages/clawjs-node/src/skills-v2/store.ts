@@ -522,7 +522,7 @@ export function createSkillsStore(options: SkillsStoreOptions = {}): SkillsStore
 
 function defaultPriority(kind: SkillScope["kind"]): number {
   switch (kind) {
-    case "chat": return 30;
+    case "session": return 30;
     case "project": return 20;
     case "tag": return 15;
     case "global":
@@ -532,7 +532,7 @@ function defaultPriority(kind: SkillScope["kind"]): number {
 
 function scopeOrder(kind: SkillScope["kind"]): number {
   switch (kind) {
-    case "chat": return 3;
+    case "session": return 3;
     case "project": return 2;
     case "tag": return 1;
     case "global":
@@ -543,7 +543,7 @@ function scopeOrder(kind: SkillScope["kind"]): number {
 function sameScope(a: SkillScope, b: SkillScope): boolean {
   if (a.kind !== b.kind) return false;
   if (a.kind === "project") return JSON.stringify(a.projectIds ?? []) === JSON.stringify(b.projectIds ?? []);
-  if (a.kind === "chat") return (a.chatId ?? "") === (b.chatId ?? "");
+  if (a.kind === "session") return (a.sessionId ?? "") === (b.sessionId ?? "");
   if (a.kind === "tag") return JSON.stringify(a.tagFilters ?? []) === JSON.stringify(b.tagFilters ?? []);
   return true;
 }
@@ -555,9 +555,9 @@ function assignmentMatches(a: SkillAssignment, ctx: SkillResolveContext): boolea
       if (!ctx.projectId) return false;
       return (a.scope.projectIds ?? []).includes(ctx.projectId);
     }
-    case "chat": {
-      if (!ctx.chatId) return false;
-      return (a.scope.chatId ?? "") === ctx.chatId;
+    case "session": {
+      if (!ctx.sessionId) return false;
+      return (a.scope.sessionId ?? "") === ctx.sessionId;
     }
     case "tag": {
       const want = new Set((ctx.tags ?? []).map((t) => t.toLowerCase()));

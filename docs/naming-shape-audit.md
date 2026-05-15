@@ -11,7 +11,7 @@ This is the living audit report for ADR 0013. The machine-readable source is
 ## Current gate status
 
 - Critical naming failures: 0.
-- Naming warnings: 206.
+- Naming warnings: 200.
 - Source-size warnings: 114.
 - Source-structure signals: 320.
 
@@ -33,6 +33,10 @@ for staged rename/split work and must not be hidden by compressing code.
 
 ## Cleanup families
 
+- Skills v2 scopes: initial cleanup completed for framework scope vocabulary.
+  `chat` scope and `chatId` were renamed to `session` and `sessionId` across
+  core schemas/types, Node store resolution, CLI parsing, and built-in skill
+  metadata.
 - CLI/router and command handlers: keep `packages/clawjs/src/index.ts` from
   growing by extracting command families before adding behavior.
 - Showcase UI/API: split settings, tasks, onboarding, locale, and route files
@@ -51,6 +55,11 @@ for staged rename/split work and must not be hidden by compressing code.
 - `npm run test:docs` passed after adding the new checks.
 - `node scripts/naming-shape-check.mjs` passed with warnings only.
 - `node scripts/source-size-check.mjs` passed with warnings/signals only.
+- `npm --prefix packages/clawjs-core run build` passed before skills v2 runtime
+  validation.
+- `npx vitest run --config vitest.config.ts packages/clawjs-node/src/skills-v2/store.test.ts`
+  passed.
+- `npm run test:types` passed.
 
 This report is not final completion evidence for the full goal. It is the
 baseline for the later broad cleanup and rename phases.

@@ -71,12 +71,12 @@ export function parseSoulModulesFromSetFlags(argv: string[]): Partial<Record<Sou
   return modules;
 }
 
-export function parseSkillScopeFlag(value: string): { kind: "global" | "project" | "tag" | "chat"; projectIds?: string[]; chatId?: string; tagFilters?: string[] } {
+export function parseSkillScopeFlag(value: string): { kind: "global" | "project" | "tag" | "session"; projectIds?: string[]; sessionId?: string; tagFilters?: string[] } {
   if (!value || value === "global") return { kind: "global" };
   const [kindRaw, ref] = value.split(":", 2);
-  const kind = kindRaw as "global" | "project" | "tag" | "chat";
+  const kind = kindRaw as "global" | "project" | "tag" | "session";
   if (kind === "project") return { kind, projectIds: ref ? ref.split(",").map((s) => s.trim()).filter(Boolean) : [] };
-  if (kind === "chat") return { kind, chatId: ref ?? "" };
+  if (kind === "session") return { kind, sessionId: ref ?? "" };
   if (kind === "tag") return { kind, tagFilters: ref ? ref.split(",").map((s) => s.trim()).filter(Boolean) : [] };
   return { kind: "global" };
 }

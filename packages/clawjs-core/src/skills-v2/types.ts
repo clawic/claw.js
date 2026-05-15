@@ -5,14 +5,14 @@
 import type { SoulModules } from "../types.ts";
 
 export type SkillKind = "personality" | "procedure" | "snippet" | "role";
-export type SkillScopeKind = "global" | "project" | "tag" | "chat";
+export type SkillScopeKind = "global" | "project" | "tag" | "session";
 export type SkillSyncMode = "symlink" | "copy";
 
 export interface SkillScope {
   kind: SkillScopeKind;
   projectIds?: string[];
   tagFilters?: string[];
-  chatId?: string;
+  sessionId?: string;
 }
 
 export interface SkillParam {
@@ -215,7 +215,7 @@ export interface SkillImportReport {
 
 export interface SkillResolveContext {
   projectId?: string;
-  chatId?: string;
+  sessionId?: string;
   tags?: string[];
 }
 

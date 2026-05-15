@@ -358,9 +358,9 @@ if (group === "skills" && command === "list") {
     else context.stdout.write(`${skills.map((entry) => `${entry.enabled ? "*" : "-"} ${entry.id}`).join("\n")}\n`);
     return skills.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
   }
-  const filter: { kinds?: ("personality" | "procedure" | "snippet" | "role")[]; scope?: "global" | "project" | "tag" | "chat"; tags?: string[]; builtin?: boolean } = {};
+  const filter: { kinds?: ("personality" | "procedure" | "snippet" | "role")[]; scope?: "global" | "project" | "tag" | "session"; tags?: string[]; builtin?: boolean } = {};
   if (flags.kind) filter.kinds = [flags.kind as "personality" | "procedure" | "snippet" | "role"];
-  if (flags.scope) filter.scope = flags.scope as "global" | "project" | "tag" | "chat";
+  if (flags.scope) filter.scope = flags.scope as "global" | "project" | "tag" | "session";
   if (flags.tag) filter.tags = String(flags.tag).split(",").map((t) => t.trim()).filter(Boolean);
   const skills = claw.skills.listV2(filter);
   if (wantsJson) writeSurfaceJson(skills);
@@ -433,7 +433,7 @@ if (group === "skills" && command === "deactivate" && subcommand) {
 if (group === "skills" && command === "compile") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const slugs = (flags.slugs ? flags.slugs.split(",") : positionals.slice(2)).map((s) => s.trim()).filter(Boolean);
-  const slugList = slugs.length > 0 ? slugs : claw.skills.resolveActive({ projectId: flags.project, chatId: flags.chat }).map((s) => s.slug);
+  const slugList = slugs.length > 0 ? slugs : claw.skills.resolveActive({ projectId: flags.project, sessionId: flags.session }).map((s) => s.slug);
   const text = claw.skills.compile(slugList);
   if (wantsJson) writeSurfaceJson({ slugs: slugList, prompt: text });
   else context.stdout.write(`${text}\n`);

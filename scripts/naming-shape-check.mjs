@@ -15,7 +15,7 @@ const requiredDocs = [
 ];
 
 const sourceExtensions = new Set([".swift", ".ts", ".tsx", ".js", ".mjs", ".cs", ".kt"]);
-const broadSymbolPattern = /\b(Thing|Stuff|Helper|Helpers|Util|Utils|Common|Data|Info|Manager)\b/g;
+const broadTerms = ["Thing", "Stuff", "Helper", "Helpers", "Util", "Utils", "Common", "Data", "Info", "Manager"];
 const allowedBroadSymbolContexts = [
   "DatabaseManager",
   "IoTManager",
@@ -34,10 +34,13 @@ const rootConventionalMarkdown = new Set([
   "README.md",
   "RELEASING.md",
   "SECURITY.md",
+  "TEMPLATE.md",
 ]);
 const conventionalDataFiles = new Set([
+  "codebase-manifest.json",
   "package.json",
   "package-lock.json",
+  "source-size-baseline.json",
   "tsconfig.json",
   "tsconfig.base.json",
   "claw.project.json",
@@ -87,6 +90,32 @@ function isExternalProviderPath(relativePath) {
     relativePath.includes("openai");
 }
 
+function splitIdentifier(identifier) {
+  return identifier
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+function findBroadTerm(identifier) {
+  if (allowedBroadSymbolContexts.includes(identifier)) return null;
+  const tokens = splitIdentifier(identifier);
+  return broadTerms.find((term) => tokens.includes(term)) ?? null;
+}
+
+function collectBroadSymbolWarnings(relativePath, text) {
+  const warnings = [];
+  const declarationPattern = /\b(?:class|struct|enum|protocol|interface|typealias|type|function|func|const|let|var)\s+([A-Za-z_][A-Za-z0-9_]*)/g;
+  let match;
+  while ((match = declarationPattern.exec(text)) !== null) {
+    const identifier = match[1];
+    const term = findBroadTerm(identifier);
+    if (term) warnings.push({ path: relativePath, kind: "broad-symbol", term, symbol: identifier });
+  }
+  return warnings;
+}
+
 const failures = [];
 const warnings = [];
 
@@ -122,16 +151,7 @@ for (const relativePath of walk(rootDir)) {
         }
       }
     }
-    let match;
-    while ((match = broadSymbolPattern.exec(text)) !== null) {
-      const start = Math.max(0, match.index - 32);
-      const end = Math.min(text.length, match.index + match[0].length + 32);
-      const context = text.slice(start, end);
-      if (!allowedBroadSymbolContexts.some((allowed) => context.includes(allowed))) {
-        warnings.push({ path: relativePath, kind: "broad-symbol", term: match[0] });
-        break;
-      }
-    }
+    warnings.push(...collectBroadSymbolWarnings(relativePath, text));
   }
 }
 

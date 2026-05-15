@@ -34,7 +34,7 @@ const BUILTIN_PROCEDURES: Array<{ slug: string; label: string; summary: string; 
   { slug: "web-scraper", label: "Web Scraper", summary: "Extract data from web pages with configurable selectors.", tags: ["web", "scraper", "extraction", "crawl"] },
   { slug: "notification-hub", label: "Notification Hub", summary: "Send notifications across multiple channels (email, Slack, SMS).", tags: ["notification", "alert", "slack", "email", "sms"] },
   { slug: "form-builder", label: "Form Builder", summary: "Create dynamic forms with validation and conditional fields.", tags: ["form", "builder", "validation", "input"] },
-  { slug: "chat-assistant", label: "Chat Assistant", summary: "Conversational assistant with memory and context awareness.", tags: ["chat", "assistant", "conversation", "memory"] },
+  { slug: "session-assistant", label: "Session Assistant", summary: "Conversational assistant with memory and context awareness.", tags: ["session", "assistant", "conversation", "memory"] },
 ];
 
 export function generateBuiltinSkills(store: SkillsStore, soulStore: SoulStore): BuiltinReport {
