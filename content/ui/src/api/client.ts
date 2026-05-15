@@ -1,4 +1,4 @@
-const CONTENT_TOKEN_STORAGE_KEY = CONTENT_TOKEN_STORAGE_KEY;
+const CONTENT_TOKEN_STORAGE_KEY = "claw-content-token";
 import type {
   DashboardPayload, CalendarItem, PipelineColumn,
   ComposerPayload, Destination, ApprovalRequest,

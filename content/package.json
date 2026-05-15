@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/bin/server.ts",
-    "build": "tsup src/bin/server.ts src/bin/cli.ts --format esm --target node20 --out-dir dist --clean",
+    "build": "npm --prefix ui run build && tsup src/bin/server.ts src/bin/cli.ts --format esm --target node20 --out-dir dist --clean",
     "start": "node dist/server.js",
     "cli": "node dist/cli.js",
     "test": "tsx --test tests/e2e/backend.e2e.test.ts tests/e2e/cli.e2e.test.ts tests/e2e/sdk.e2e.test.ts",
