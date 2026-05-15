@@ -7,7 +7,7 @@
 //
 //   1. Both nodes generate identity (BIP-39 mnemonic + RootKey + DeviceKey
 //      + RoleKey + handle).
-//   2. A pairs with B via the pairing link (handle + fingerprint round-trip).
+//   2. A pairs with B via the profile pairing payload (handle + fingerprint round-trip).
 //   3. A adds B to the `friends` group.
 //   4. A publishes a `post/v1` block with audience `friends`. B observes the
 //      block and projects it through the ACL.
@@ -26,7 +26,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 
 import { generateEd25519Keypair, issueCertificate } from "@clawjs/marketplace/identity";
 import { generateMnemonic, rootFromMnemonic } from "@clawjs/marketplace/recovery";
-import { buildHandle, encodePairingLink, decodePairingLink } from "@clawjs/marketplace/handles";
+import { buildHandle, encodePairingPayload, decodePairingPayload } from "@clawjs/marketplace/handles";
 import {
   canonicalizeIntent, signIntent,
 } from "@clawjs/marketplace/wire";
@@ -83,9 +83,9 @@ test("Plan E2E: full flow A↔B↔C across identity, profile, discovery, mailbox
     storeB.upsertProfile({ rootPubkey: B.root.publicKey, handle: B.handle });
     storeC.upsertProfile({ rootPubkey: C.root.publicKey, handle: C.handle });
 
-    // Step 2: A and B exchange pairing links.
-    const aLink = encodePairingLink({ handle: A.handle });
-    const decodedA = decodePairingLink(aLink);
+    // Step 2: A and B exchange profile pairing payloads.
+    const aPayload = encodePairingPayload({ handle: A.handle });
+    const decodedA = decodePairingPayload(aPayload);
     assert.deepEqual(Array.from(decodedA.handle.rootPubkey), Array.from(A.root.publicKey));
     storeB.upsertPeer({ handle: decodedA.handle, trustedLocally: true });
 

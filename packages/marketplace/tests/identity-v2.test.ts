@@ -13,7 +13,7 @@ import {
 } from "../src/recovery.ts";
 import {
   computeFingerprint, buildHandle, formatHandle, parseHandleText,
-  encodePairingLink, decodePairingLink, handleVerify,
+  encodePairingPayload, decodePairingPayload, handleVerify,
 } from "../src/handles.ts";
 
 // ---- BIP-39 known test vectors (Trezor) ----
@@ -150,31 +150,31 @@ test("Handle: invalid alias is rejected", () => {
   assert.throws(() => buildHandle({ alias: "-leading", rootPubkey: root.publicKey }), /invalid alias/);
 });
 
-test("Pairing link: round-trip preserves alias, fingerprint and rootPubkey", () => {
+test("Profile pairing payload: round-trip preserves alias, fingerprint and rootPubkey", () => {
   const root = rootFromMnemonic(generateMnemonic(32));
   const h = buildHandle({ alias: "alice", rootPubkey: root.publicKey });
-  const link = encodePairingLink({
+  const payload = encodePairingPayload({
     handle: h,
     hints: { irohNodeId: "abcdef0123456789", addrs: ["/ip4/192.168.1.10/udp/4242/quic"] },
   });
-  assert.match(link, /^clawix:\/\/pair\?v=1&d=/);
-  const back = decodePairingLink(link);
+  assert.match(payload, /^\{"v":1,"kind":"claw\.profile\.pairing","d":"/);
+  const back = decodePairingPayload(payload);
   assert.equal(back.handle.alias, "alice");
   assert.equal(back.handle.fingerprint, h.fingerprint);
   assert.deepEqual(Array.from(back.handle.rootPubkey), Array.from(root.publicKey));
   assert.equal(back.hints?.irohNodeId, "abcdef0123456789");
 });
 
-test("Pairing link: tampered rootPubkey is rejected by the decoder", () => {
+test("Profile pairing payload: tampered rootPubkey is rejected by the decoder", () => {
   const root = rootFromMnemonic(generateMnemonic(32));
   const h = buildHandle({ alias: "alice", rootPubkey: root.publicKey });
-  const link = encodePairingLink({ handle: h });
+  const payload = encodePairingPayload({ handle: h });
   // Flip a byte in the encoded payload by re-encoding with a different rootPubkey
   // but the original fingerprint — that's exactly the attack the decoder must catch.
   const evilRoot = rootFromMnemonic(generateMnemonic(32));
-  const evilLink = encodePairingLink({
+  const evilPayload = encodePairingPayload({
     handle: { alias: h.alias, fingerprint: h.fingerprint, rootPubkey: evilRoot.publicKey },
   });
-  assert.notEqual(link, evilLink);
-  assert.throws(() => decodePairingLink(evilLink), /does not match fingerprint/);
+  assert.notEqual(payload, evilPayload);
+  assert.throws(() => decodePairingPayload(evilPayload), /does not match fingerprint/);
 });

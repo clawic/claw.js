@@ -10,7 +10,7 @@
 //                    to. Authoritative — alias and fingerprint can be reissued,
 //                    rotated or re-paired, but the rootPubkey is the identity.
 //
-// Resolution: out-of-band (QR / `clawix://pair?...` link), local cache of
+// Resolution: out-of-band profile pairing payload, local cache of
 // previously-met peers, and gossip between peers that already trust each other.
 //
 // The fingerprint format is intentionally human-typable (base32, lowercase,
@@ -121,7 +121,7 @@ const HANDLE_TEXT_RE = /^@?([a-z0-9][a-z0-9_-]{0,31})\.([0-9a-z]{12})$/;
 /**
  * Parse a textual handle of the form `@alias.fingerprint`. Returns the parts
  * but NOT the underlying rootPubkey — that has to be looked up via the peer
- * directory or via a pairing link.
+ * directory or via a profile pairing payload.
  */
 export function parseHandleText(text: string): { alias: string; fingerprint: string } {
   const match = HANDLE_TEXT_RE.exec(text.trim().toLowerCase());
@@ -132,14 +132,16 @@ export function parseHandleText(text: string): { alias: string; fingerprint: str
   return { alias, fingerprint };
 }
 
-// ---- pairing link ----
+// ---- profile pairing payload ----
+
+const PAIRING_PAYLOAD_KIND = "claw.profile.pairing";
 
 /**
- * Self-contained pairing link. Encodes alias, fingerprint, and the raw
- * rootPubkey so a fresh peer can resolve the handle without prior trust. Used
- * in QR codes and `clawix://pair?...` links.
+ * Self-contained profile pairing payload. Encodes alias, fingerprint, and the
+ * raw rootPubkey so a fresh peer can resolve the handle without prior trust.
+ * Used in QR codes and copy/paste payloads, not Clawix deep links.
  */
-export interface PairingLink {
+export interface PairingPayload {
   handle: Handle;
   hints?: {
     irohNodeId?: string;        // optional reachability hint
@@ -147,10 +149,10 @@ export interface PairingLink {
     issuedAt?: number;
     expiresAt?: number;
   };
-  signature?: Uint8Array;       // optional signature by RootKey over the canonical link payload
+  signature?: Uint8Array;       // optional signature by RootKey over the canonical payload
 }
 
-export function encodePairingLink(link: PairingLink): string {
+export function encodePairingPayload(link: PairingPayload): string {
   const payload: Record<string, CborValue> = {
     alias: link.handle.alias,
     fingerprint: link.handle.fingerprint,
@@ -166,25 +168,38 @@ export function encodePairingLink(link: PairingLink): string {
   }
   if (link.signature) payload.signature = link.signature;
   const cbor = encodeCanonicalCbor(payload);
-  return "clawix://pair?v=1&d=" + base64Url(cbor);
+  return JSON.stringify({ v: 1, kind: PAIRING_PAYLOAD_KIND, d: base64Url(cbor) });
 }
 
-export function decodePairingLink(url: string): PairingLink {
-  const m = /^clawix:\/\/pair\?(?:.*&)?d=([A-Za-z0-9_-]+)(?:&.*)?$/.exec(url.trim());
-  if (!m) throw new Error("handles: pairing link must be clawix://pair?v=1&d=...");
-  const buf = fromBase64Url(m[1]);
+export function decodePairingPayload(text: string): PairingPayload {
+  let envelope: unknown;
+  try {
+    envelope = JSON.parse(text);
+  } catch {
+    throw new Error("handles: profile pairing payload must be JSON");
+  }
+  if (
+    !envelope ||
+    typeof envelope !== "object" ||
+    (envelope as { v?: unknown }).v !== 1 ||
+    (envelope as { kind?: unknown }).kind !== PAIRING_PAYLOAD_KIND ||
+    typeof (envelope as { d?: unknown }).d !== "string"
+  ) {
+    throw new Error("handles: profile pairing payload must be { v: 1, kind: claw.profile.pairing, d }");
+  }
+  const buf = fromBase64Url((envelope as { d: string }).d);
   const obj = decodeCanonicalCbor(buf) as Record<string, CborValue>;
   const alias = obj.alias as string;
   const fingerprint = obj.fingerprint as string;
   const rootPubkey = obj.root_pubkey as Uint8Array;
-  if (!isValidAlias(alias)) throw new Error("handles: bad alias in pairing link");
-  if (!isValidFingerprint(fingerprint)) throw new Error("handles: bad fingerprint in pairing link");
-  if (rootPubkey.length !== 32) throw new Error("handles: bad rootPubkey in pairing link");
+  if (!isValidAlias(alias)) throw new Error("handles: bad alias in profile pairing payload");
+  if (!isValidFingerprint(fingerprint)) throw new Error("handles: bad fingerprint in profile pairing payload");
+  if (rootPubkey.length !== 32) throw new Error("handles: bad rootPubkey in profile pairing payload");
   if (computeFingerprint(rootPubkey) !== fingerprint) {
-    throw new Error("handles: rootPubkey does not match fingerprint (link tampered)");
+    throw new Error("handles: rootPubkey does not match fingerprint (payload tampered)");
   }
   const handle: Handle = { alias, fingerprint, rootPubkey };
-  const link: PairingLink = { handle };
+  const link: PairingPayload = { handle };
   const hints = obj.hints as Record<string, CborValue> | undefined;
   if (hints) {
     link.hints = {
