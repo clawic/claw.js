@@ -35,6 +35,7 @@ examples/demo/.next-e2e/
 examples/demo/.next-mock/
 examples/demo/*.tsbuildinfo
 *.tsbuildinfo
+docs/codebase-manifest.json
 relay/dist/
 relay/node_modules/
 relay/relay-workspaces/
