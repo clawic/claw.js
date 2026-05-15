@@ -31,6 +31,15 @@ flowchart TD
   claw_contracts --> claw_contracts_formats
   claw_contracts_external["External dependencies and owned mappings\nroot"]
   claw_contracts --> claw_contracts_external
+  clawix_ui_chat["Clawix agent chat UI\nroot"]
+  clawix_companion_client["Companion client\nroot"]
+  clawix_bridge_local["Clawix local bridge\nroot"]
+  claw_daemon_local["Claw daemon\nroot"]
+  claw_runtime_agent["Agent runtime\nroot"]
+  claw_sessions["Sessions service\nroot"]
+  claw_remote_client["Remote client\nroot"]
+  claw_relay["Relay control plane\nroot"]
+  claw_relay_connector["Relay workspace connector\nroot"]
   claw_api_chatCompletions["/v1/chat/completions API route\napiRoute"]
   claw_contracts_api --> claw_api_chatCompletions
   claw_api_app["/v1/app/ API route\napiRoute"]
@@ -115,6 +124,10 @@ flowchart TD
   claw_contracts_api --> claw_api_webhooks_providerEvent
   claw_api_integrations_callback["OAuth integration callback\napiRoute"]
   claw_contracts_api --> claw_api_integrations_callback
+  claw_api_relay_remote["Remote Relay client channel\napiRoute"]
+  claw_contracts_api --> claw_api_relay_remote
+  claw_api_relay_connector["Relay workspace connector channel\napiRoute"]
+  claw_contracts_api --> claw_api_relay_connector
   claw_privateApi_attachments["/api/attachments private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_attachments
   claw_privateApi_authToken["/api/auth/token private API route\nprivateApiRoute"]
@@ -331,6 +344,8 @@ flowchart TD
   claw_contracts_api --> claw_privateApi_usage
   claw_protocol_hostCommand_v1["Host command contract v1\nprotocol"]
   claw_contracts_protocol --> claw_protocol_hostCommand_v1
+  clawix_protocol_bridge_v1["Clawix bridge protocol v1\nprotocol"]
+  claw_contracts_protocol --> clawix_protocol_bridge_v1
   claw_protocol_hostCommand_v1_field_schemaVersion["schemaVersion\nprotocolField"]
   claw_protocol_hostCommand_v1 --> claw_protocol_hostCommand_v1_field_schemaVersion
   claw_protocol_hostCommand_v1_field_requestId["requestId\nprotocolField"]
@@ -1681,7 +1696,48 @@ flowchart TD
   claw_database_core --> claw_database_core_table_operational_events
   claw_database_core_index_operational_events_kind_idx["operational_events_kind_idx\nindex"]
   claw_database_core --> claw_database_core_index_operational_events_kind_idx
+  clawix_ui_chat -- "consumes" --> clawix_bridge_local
+  clawix_bridge_local -- "brokers" --> claw_daemon_local
+  claw_daemon_local -- "brokers" --> claw_runtime_agent
+  claw_runtime_agent -- "owns" --> claw_sessions
+  claw_sessions -- "exposes" --> clawix_bridge_local
+  clawix_bridge_local -- "exposes" --> clawix_ui_chat
+  clawix_companion_client -- "consumes" --> clawix_bridge_local
+  clawix_bridge_local -- "exposes" --> clawix_companion_client
+  claw_remote_client -- "consumes" --> claw_relay
+  claw_relay -- "brokers" --> claw_relay_connector
+  claw_relay_connector -- "brokers" --> claw_workspace
+  claw_relay_connector -- "brokers" --> claw_runtime_agent
+  claw_sessions -- "exposes" --> claw_relay
+  claw_relay -- "exposes" --> claw_remote_client
 ```
+
+## Routes
+
+| ID | From | To | Visibility | Validation |
+| --- | --- | --- | --- | --- |
+| `chat.localDesktop` | `clawix.ui.chat` | `claw.sessions` | internal | Fixture + hermetic E2E for local desktop chat |
+| `chat.companionBridge` | `clawix.companion.client` | `claw.sessions` | public | Fixture + hermetic E2E for companion bridge traffic |
+| `chat.remoteRelay` | `claw.remote.client` | `claw.sessions` | external | Fixture + hermetic Relay E2E without production services |
+
+## Edges
+
+| ID | Type | From | To | Contract | Transport |
+| --- | --- | --- | --- | --- | --- |
+| `claw.edge.chat.ui.consumes.bridge` | consumes | `clawix.ui.chat` | `clawix.bridge.local` | `clawix.protocol.bridge.v1` | local bridge RPC |
+| `claw.edge.bridge.brokers.daemon` | brokers | `clawix.bridge.local` | `claw.daemon.local` | `claw.protocol.hostCommand.v1` | localhost/process bridge |
+| `claw.edge.daemon.brokers.runtime` | brokers | `claw.daemon.local` | `claw.runtime.agent` | `claw.protocol.hostCommand.v1` | framework runtime adapter |
+| `claw.edge.runtime.owns.sessions` | owns | `claw.runtime.agent` | `claw.sessions` | `claw.database.sessions` | sessions service/events |
+| `claw.edge.sessions.exposes.bridge` | exposes | `claw.sessions` | `clawix.bridge.local` | `claw.event.sessions.message.appended` | session event frames |
+| `claw.edge.bridge.exposes.ui` | exposes | `clawix.bridge.local` | `clawix.ui.chat` | `clawix.protocol.bridge.v1` | local bridge RPC |
+| `claw.edge.companion.consumes.bridge` | consumes | `clawix.companion.client` | `clawix.bridge.local` | `clawix.protocol.bridge.v1` | WebSocket localhost:24080 |
+| `claw.edge.bridge.exposes.companion` | exposes | `clawix.bridge.local` | `clawix.companion.client` | `clawix.protocol.bridge.v1` | WebSocket localhost:24080 |
+| `claw.edge.remote.consumes.relay` | consumes | `claw.remote.client` | `claw.relay` | `claw.api.relay.remote` | HTTPS/WebSocket Relay |
+| `claw.edge.relay.brokers.connector` | brokers | `claw.relay` | `claw.relay.connector` | `claw.api.relay.connector` | connector WebSocket |
+| `claw.edge.connector.brokers.workspace` | brokers | `claw.relay.connector` | `claw.workspace` | `claw.workspace.manifest` | workspace materialization |
+| `claw.edge.connector.brokers.runtime` | brokers | `claw.relay.connector` | `claw.runtime.agent` | `claw.protocol.hostCommand.v1` | local runtime adapter |
+| `claw.edge.sessions.exposes.relay` | exposes | `claw.sessions` | `claw.relay` | `claw.event.sessions.message.appended` | remote-safe session events |
+| `claw.edge.relay.exposes.remote` | exposes | `claw.relay` | `claw.remote.client` | `claw.api.relay.remote` | HTTPS/WebSocket Relay |
 
 ## Nodes
 
@@ -1699,6 +1755,15 @@ flowchart TD
 | `claw.contracts.native` | root | native | claw |  | humanUi, serviceApi | humanUi:optional | `contracts/native` |
 | `claw.contracts.formats` | root | format | claw |  | cli, persistence | humanUi:optional | `contracts/formats` |
 | `claw.contracts.external` | root | external | claw |  | sdk, serviceApi, mcp | humanUi:optional | `contracts/external` |
+| `clawix.ui.chat` | root | protocol | clawix | humanUi | serviceApi |  | `Clawix/chat` |
+| `clawix.companion.client` | root | protocol | clawix | humanUi | serviceApi |  | `Clawix/companion` |
+| `clawix.bridge.local` | root | protocol | clawix | humanUi | serviceApi |  | `clawix-bridge` |
+| `claw.daemon.local` | root | protocol | claw | humanUi | sdk, serviceApi, cli |  | `daemon` |
+| `claw.runtime.agent` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp |  | `runtime/agent` |
+| `claw.sessions` | root | protocol | claw | humanUi | sdk, cli, serviceApi, persistence |  | `sessions` |
+| `claw.remote.client` | root | protocol | external | humanUi | relay |  | `remote-client` |
+| `claw.relay` | root | protocol | claw | humanUi | relay, serviceApi |  | `relay` |
+| `claw.relay.connector` | root | protocol | claw | humanUi | relay, serviceApi |  | `relay/connector` |
 | `claw.api.chatCompletions` | apiRoute | api | claw |  |  |  | `/v1/chat/completions` |
 | `claw.api.app` | apiRoute | api | claw |  |  |  | `/v1/app/` |
 | `claw.api.connectorConnect` | apiRoute | api | claw |  |  |  | `/v1/connector/connect` |
@@ -1741,6 +1806,8 @@ flowchart TD
 | `claw.api.notify.notifications` | apiRoute | api | claw |  |  |  | `/v1/notifications` |
 | `claw.api.webhooks.providerEvent` | apiRoute | api | claw |  |  |  | `/v1/webhooks/{provider}/{event}` |
 | `claw.api.integrations.callback` | apiRoute | api | claw |  |  |  | `/v1/integrations/{provider}/callback` |
+| `claw.api.relay.remote` | apiRoute | api | claw |  |  |  | `/v1/relay/remote` |
+| `claw.api.relay.connector` | apiRoute | api | claw |  |  |  | `/v1/relay/connectors` |
 | `claw.privateApi.attachments` | privateApiRoute | api | claw |  |  |  | `/api/attachments` |
 | `claw.privateApi.authToken` | privateApiRoute | api | claw |  |  |  | `/api/auth/token` |
 | `claw.privateApi.capture` | privateApiRoute | api | claw |  |  |  | `/api/capture` |
@@ -1849,6 +1916,7 @@ flowchart TD
 | `claw.privateApi.ui` | privateApiRoute | api | claw |  |  |  | `/api/ui` |
 | `claw.privateApi.usage` | privateApiRoute | api | claw |  |  |  | `/api/usage` |
 | `claw.protocol.hostCommand.v1` | protocol | protocol | claw |  |  |  | `host-command-v1` |
+| `clawix.protocol.bridge.v1` | protocol | protocol | clawix |  |  |  | `clawix-bridge-v1` |
 | `claw.protocol.hostCommand.v1.field.schemaVersion` | protocolField | protocol | claw |  |  |  | `schemaVersion` |
 | `claw.protocol.hostCommand.v1.field.requestId` | protocolField | protocol | claw |  |  |  | `requestId` |
 | `claw.protocol.hostCommand.v1.field.domain` | protocolField | protocol | claw |  |  |  | `domain` |

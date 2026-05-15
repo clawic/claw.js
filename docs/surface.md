@@ -1285,6 +1285,9 @@ The docs check script validates that every current export from
     clawDomainSurfaceRegistryVersion
     findClawDomainSurfaceEntry
     listClawDomainSurfaceEntries
+    findClawSurfaceRoute
+    listClawSurfaceEdges
+    listClawSurfaceRoutes
     clawDriveApiRoutePatterns
     clawDriveApiRoutes
     ClawError
@@ -1330,6 +1333,11 @@ The docs check script validates that every current export from
     ClawPersistentSurfaceRegistry
     ClawPersistentSurfaceSource
     ClawPersistentSurfaceStorageClass
+    clawSurfaceGraphEdges
+    clawSurfaceGraphRoutes
+    ClawSurfaceConnectionVisibility
+    ClawSurfaceEdge
+    ClawSurfaceEdgeType
     clawPortRange
     clawPortSubranges
     clawPrivateAppApiPrefix
@@ -1354,6 +1362,8 @@ The docs check script validates that every current export from
     ClawSurfaceParityGap
     ClawSurfaceParityStatus
     ClawSurfaceParitySurface
+    ClawSurfaceRoute
+    ClawSurfaceRouteStep
     clawSurfaceRegistryVersion
     clawTemporalEvents
     clawTimeApiRoutes
@@ -2169,9 +2179,14 @@ The docs check script validates that every current export from
     ClawPersistentSurfaceRegistry
     ClawPersistentSurfaceSource
     ClawPersistentSurfaceStorageClass
+    ClawSurfaceConnectionVisibility
+    ClawSurfaceEdge
+    ClawSurfaceEdgeType
     ClawSurfaceParityGap
     ClawSurfaceParityStatus
     ClawSurfaceParitySurface
+    ClawSurfaceRoute
+    ClawSurfaceRouteStep
     ClawStableSurfaceClass
     ClawStableSurfaceDirection
     ClawStableSurfaceKind
@@ -2207,6 +2222,8 @@ The docs check script validates that every current export from
     clawRegisteredDdlSources
     clawPersistentSurface
     clawPersistentSurfaceRegistry
+    clawSurfaceGraphEdges
+    clawSurfaceGraphRoutes
     clawStableSurface
     clawPrivateAppApiPrefix
     clawPublicApiPrefix
@@ -2226,6 +2243,9 @@ The docs check script validates that every current export from
     clawixHomeLayout
     clawixPortRange
     findClawPersistentSurfaceNode
+    findClawSurfaceRoute
     listClawPersistentSurfaceNodes
+    listClawSurfaceEdges
+    listClawSurfaceRoutes
     resolveClawPersistentSurfacePath
     withSurfaceChildren

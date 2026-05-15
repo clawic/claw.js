@@ -52,9 +52,12 @@ test("runCli exposes the generated stable surface inspection CLI", async () => {
 
   const show = await runCliCapture(["inspect", "show", "/database/core", "--json"], process.cwd());
   assert.equal(show.code, CLI_EXIT_OK);
-  const coreDatabase = parseCliJson<{ id: string; path: string }>(show.stdout).data;
+  const coreDatabase = parseCliJson<{ id: string; path: string; incomingEdges?: unknown[]; outgoingEdges?: unknown[]; routes?: unknown[] }>(show.stdout).data;
   assert.equal(coreDatabase.id, "claw.database.core");
   assert.equal(coreDatabase.path, "~/.claw/data/core.sqlite");
+  assert.equal(Array.isArray(coreDatabase.incomingEdges), true);
+  assert.equal(Array.isArray(coreDatabase.outgoingEdges), true);
+  assert.equal(Array.isArray(coreDatabase.routes), true);
 
   const markdown = await runCliCapture(["inspect", "render", "--format", "markdown"], process.cwd());
   assert.equal(markdown.code, CLI_EXIT_OK);
@@ -67,6 +70,48 @@ test("runCli exposes the generated stable surface inspection CLI", async () => {
   assert.equal(mermaid.code, CLI_EXIT_OK);
   assert.match(mermaid.stdout, /^flowchart TD/);
   assert.match(mermaid.stdout, /claw_database_core/);
+  assert.match(mermaid.stdout, /claw_relay/);
+});
+
+test("runCli exposes surface graph routes and neighbors through inspect", async () => {
+  const relay = await runCliCapture(["inspect", "why", "relay", "--json"], process.cwd());
+  assert.equal(relay.code, CLI_EXIT_OK);
+  const relayWhy = parseCliJson<{ type: string; id: string; name: string }>(relay.stdout).data;
+  assert.equal(relayWhy.type, "surfaceNode");
+  assert.equal(relayWhy.id, "claw.relay");
+  assert.equal(relayWhy.name, "Relay control plane");
+
+  const show = await runCliCapture(["inspect", "show", "claw.relay", "--json"], process.cwd());
+  assert.equal(show.code, CLI_EXIT_OK);
+  const showPayload = parseCliJson<{
+    id: string;
+    incomingEdges: Array<{ id: string; type: string; fromId: string }>;
+    outgoingEdges: Array<{ id: string; type: string; toId: string }>;
+    routes: Array<{ id: string }>;
+  }>(show.stdout).data;
+  assert.equal(showPayload.id, "claw.relay");
+  assert.equal(showPayload.incomingEdges.some((edge) => edge.fromId === "claw.remote.client" && edge.type === "consumes"), true);
+  assert.equal(showPayload.outgoingEdges.some((edge) => edge.toId === "claw.relay.connector" && edge.type === "brokers"), true);
+  assert.equal(showPayload.routes.some((route) => route.id === "chat.remoteRelay"), true);
+
+  const routes = await runCliCapture(["inspect", "routes", "--json"], process.cwd());
+  assert.equal(routes.code, CLI_EXIT_OK);
+  const routeList = parseCliJson<Array<{ id: string; steps: Array<{ edgeType: string; fromId: string; toId: string }> }>>(routes.stdout).data;
+  assert.deepEqual(routeList.map((route) => route.id).sort(), ["chat.companionBridge", "chat.localDesktop", "chat.remoteRelay"]);
+  assert.equal(routeList.find((route) => route.id === "chat.localDesktop")?.steps.every((step) => ["owns", "consumes", "exposes", "brokers"].includes(step.edgeType)), true);
+
+  const route = await runCliCapture(["inspect", "route", "chat.remoteRelay", "--json"], process.cwd());
+  assert.equal(route.code, CLI_EXIT_OK);
+  const remoteRoute = parseCliJson<{ id: string; edges: Array<{ id: string; type: string }>; tests: string[] }>(route.stdout).data;
+  assert.equal(remoteRoute.id, "chat.remoteRelay");
+  assert.equal(remoteRoute.edges.some((edge) => edge.id === "claw.edge.relay.brokers.connector" && edge.type === "brokers"), true);
+  assert.equal(remoteRoute.tests.includes("packages/clawjs/src/inspect-cli.test.ts"), true);
+
+  const neighbors = await runCliCapture(["inspect", "neighbors", "clawix.bridge.local", "--json"], process.cwd());
+  assert.equal(neighbors.code, CLI_EXIT_OK);
+  const neighborPayload = parseCliJson<{ neighbors: Array<{ id: string }>; routes: Array<{ id: string }> }>(neighbors.stdout).data;
+  assert.equal(neighborPayload.neighbors.some((node) => node.id === "claw.daemon.local"), true);
+  assert.equal(neighborPayload.routes.some((entry) => entry.id === "chat.companionBridge"), true);
 });
 
 test("runCli filters stable compatibility surface categories", async () => {

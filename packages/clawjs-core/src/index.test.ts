@@ -50,9 +50,12 @@ import {
   eventRecordSchema,
   feedbackRecordSchema,
   findClawPersistentSurfaceNode,
+  findClawSurfaceRoute,
   goalRecordSchema,
   handoffRecordSchema,
   incidentRecordSchema,
+  listClawSurfaceEdges,
+  listClawSurfaceRoutes,
   listClawPersistentSurfaceNodes,
   linkedEntityRefSchema,
   segmentTextForTts,
@@ -317,6 +320,29 @@ test("persistent surface registry exposes framework and host storage nodes", () 
 
   const indexed = withSurfaceChildren(clawPersistentSurfaceRegistry.nodes);
   assert.deepEqual(indexed.find((node) => node.id === "claw.global")?.children?.includes("claw.database.core"), true);
+});
+
+test("surface graph registers critical chat routes and Relay", () => {
+  assert.equal(findClawPersistentSurfaceNode("claw.relay")?.name, "Relay control plane");
+  assert.equal(findClawPersistentSurfaceNode("clawix.bridge.local")?.path, "clawix-bridge");
+
+  const relayEdges = listClawSurfaceEdges("claw.relay");
+  assert.equal(relayEdges.some((edge) => edge.type === "brokers" && edge.toId === "claw.relay.connector"), true);
+  assert.equal(relayEdges.some((edge) => edge.type === "exposes" && edge.toId === "claw.remote.client"), true);
+
+  const routes = listClawSurfaceRoutes();
+  assert.deepEqual(routes.map((route) => route.id).sort(), ["chat.companionBridge", "chat.localDesktop", "chat.remoteRelay"]);
+  assert.equal(findClawSurfaceRoute("chat.remoteRelay")?.steps.some((step) => step.toId === "claw.relay"), true);
+
+  for (const route of routes) {
+    assert.equal(route.steps.length > 0, true, `${route.id} must declare explicit steps`);
+    assert.equal(route.tests?.includes("packages/clawjs/src/inspect-cli.test.ts"), true, `${route.id} must name an inspect test`);
+    for (const step of route.steps) {
+      assert.equal(Boolean(findClawPersistentSurfaceNode(step.fromId)), true, `${route.id} step source ${step.fromId} must exist`);
+      assert.equal(Boolean(findClawPersistentSurfaceNode(step.toId)), true, `${route.id} step target ${step.toId} must exist`);
+      assert.ok(["owns", "consumes", "exposes", "brokers"].includes(step.edgeType), `${route.id} has invalid edge type ${step.edgeType}`);
+    }
+  }
 });
 
 test("CLI command registry is the source for stable CLI surface nodes", () => {

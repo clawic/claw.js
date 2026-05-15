@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 
 import { clawPersistentSurfaceRegistry, connectorExecutionPipeline, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommands, resolveClawCliCommand, searchClawCliRegistry, withSurfaceChildren } from "@clawjs/core";
-import type { ClawPersistentSurfaceNode, ClawPersistentSurfaceRegistry } from "@clawjs/core";
+import type { ClawPersistentSurfaceNode, ClawPersistentSurfaceRegistry, ClawSurfaceEdge, ClawSurfaceRoute } from "@clawjs/core";
 import { v1MainSchemaSurfaceNodes } from "./v1-data-surface.ts";
 import { writeJsonError, writeJsonOk, type CliJsonMeta } from "./cli-json.ts";
 import { CliHandledError } from "./cli-errors.ts";
@@ -48,13 +48,19 @@ function inspectNodes(): ClawPersistentSurfaceNode[] {
 
 function inspectRegistry(input: InspectCliInput): ClawPersistentSurfaceRegistry {
   const nodes = [...clawPersistentSurfaceRegistry.nodes, ...v1MainSchemaSurfaceNodes];
+  const edges = [...(clawPersistentSurfaceRegistry.edges ?? [])];
+  const routes = [...(clawPersistentSurfaceRegistry.routes ?? [])];
   for (const manifestPath of manifestPaths(input.flags)) {
     const manifest = readManifest(manifestPath, input.context.cwd);
     nodes.push(...manifest.nodes);
+    edges.push(...(manifest.edges ?? []));
+    routes.push(...(manifest.routes ?? []));
   }
   return {
     version: clawPersistentSurfaceRegistry.version,
     nodes,
+    edges,
+    routes,
   };
 }
 
@@ -69,6 +75,12 @@ function readManifest(manifestPath: string, cwd: string): ClawPersistentSurfaceR
     const parsed = JSON.parse(fs.readFileSync(absolutePath, "utf8")) as ClawPersistentSurfaceRegistry;
     if (!Array.isArray(parsed.nodes)) {
       throw new Error("manifest does not contain a nodes array");
+    }
+    if (parsed.edges !== undefined && !Array.isArray(parsed.edges)) {
+      throw new Error("manifest edges must be an array when present");
+    }
+    if (parsed.routes !== undefined && !Array.isArray(parsed.routes)) {
+      throw new Error("manifest routes must be an array when present");
     }
     return parsed;
   } catch (error) {
@@ -437,6 +449,14 @@ function inspectText(nodes: ClawPersistentSurfaceNode[]): string {
   }).join("\n");
 }
 
+function inspectEdgeText(edges: ClawSurfaceEdge[]): string {
+  return edges.map((edge) => `${edge.id}\t${edge.type}\t${edge.fromId}\t${edge.toId}\t${edge.contractId ?? "-"}\t${edge.transport ?? "-"}`).join("\n");
+}
+
+function inspectRouteText(routes: ClawSurfaceRoute[]): string {
+  return routes.map((route) => `${route.id}\t${route.fromId}\t${route.toId}\t${route.visibility}\t${route.validation}`).join("\n");
+}
+
 function formatSurfaceParity(node: ClawPersistentSurfaceNode): string {
   const human = node.humanSurfaces?.join("+") ?? "-";
   const programmatic = node.programmaticSurfaces?.join("+") ?? "-";
@@ -454,6 +474,8 @@ function inspectJsonMeta(subcommand: string, extra: CliJsonMeta = {}): CliJsonMe
 }
 
 function renderInspectMarkdown(nodes = inspectNodes()): string {
+  const edges = clawPersistentSurfaceRegistry.edges ?? [];
+  const routes = clawPersistentSurfaceRegistry.routes ?? [];
   const lines = [
     "# Claw stable surface",
     "",
@@ -464,8 +486,20 @@ function renderInspectMarkdown(nodes = inspectNodes()): string {
     "## Tree",
     "",
     "```mermaid",
-    renderInspectMermaid(nodes),
+    renderInspectMermaid(nodes, edges),
     "```",
+    "",
+    "## Routes",
+    "",
+    "| ID | From | To | Visibility | Validation |",
+    "| --- | --- | --- | --- | --- |",
+    ...routes.map((route) => `| \`${route.id}\` | \`${route.fromId}\` | \`${route.toId}\` | ${route.visibility} | ${route.validation} |`),
+    "",
+    "## Edges",
+    "",
+    "| ID | Type | From | To | Contract | Transport |",
+    "| --- | --- | --- | --- | --- | --- |",
+    ...edges.map((edge) => `| \`${edge.id}\` | ${edge.type} | \`${edge.fromId}\` | \`${edge.toId}\` | \`${edge.contractId ?? ""}\` | ${edge.transport ?? ""} |`),
     "",
     "## Nodes",
     "",
@@ -479,12 +513,15 @@ function renderInspectMarkdown(nodes = inspectNodes()): string {
   return `${lines.join("\n")}\n`;
 }
 
-function renderInspectMermaid(nodes = inspectNodes()): string {
+function renderInspectMermaid(nodes = inspectNodes(), edges: ClawSurfaceEdge[] = clawPersistentSurfaceRegistry.edges ?? []): string {
   const lines = ["flowchart TD"];
   for (const node of nodes) {
     const label = `${node.name}\\n${node.kind}`;
     lines.push(`  ${mermaidId(node.id)}["${label.replace(/"/g, "'")}"]`);
     if (node.parentId) lines.push(`  ${mermaidId(node.parentId)} --> ${mermaidId(node.id)}`);
+  }
+  for (const edge of edges) {
+    lines.push(`  ${mermaidId(edge.fromId)} -- "${edge.type}" --> ${mermaidId(edge.toId)}`);
   }
   return lines.join("\n");
 }
@@ -497,6 +534,13 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
   const [, command = "tree", target] = input.positionals;
   const registry = inspectRegistry(input);
   const nodes = withSurfaceChildren(registry.nodes);
+  const edges = registry.edges ?? [];
+  const routes = registry.routes ?? [];
+  const edgesForNode = (nodeId: string) => ({
+    incomingEdges: edges.filter((edge) => edge.toId === nodeId),
+    outgoingEdges: edges.filter((edge) => edge.fromId === nodeId),
+  });
+  const routesForNode = (nodeId: string) => routes.filter((route) => route.fromId === nodeId || route.toId === nodeId || route.steps.some((step) => step.fromId === nodeId || step.toId === nodeId));
   const selectByKinds = (kinds: string[]) => nodes.filter((node) => kinds.includes(node.kind));
   const selectBySurface = (surfaceClass: string) => nodes.filter((node) => node.surfaceClass === surfaceClass);
   if (command === "tree") {
@@ -518,8 +562,45 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     if (!target) throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect show <id-or-path> [--json]`, CLI_EXIT_USAGE);
     const node = inspectFind(target, nodes);
     if (!node) throw new InspectCliError("inspect_not_found", `No persistent surface node found for ${target}.`, CLI_EXIT_USAGE);
-    if (input.wantsJson) writeJsonOk(input.context.stdout, node, inspectJsonMeta(command));
-    else input.context.stdout.write(`${inspectText([node])}\n`);
+    if (input.wantsJson) writeJsonOk(input.context.stdout, { ...node, ...edgesForNode(node.id), routes: routesForNode(node.id) }, inspectJsonMeta(command));
+    else {
+      const routeSummary = routesForNode(node.id).map((route) => route.id).join(", ") || "-";
+      input.context.stdout.write(`${inspectText([node])}\nroutes\t${routeSummary}\n`);
+    }
+    return CLI_EXIT_OK;
+  }
+  if (command === "neighbors") {
+    if (!target) throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect neighbors <id-or-path> [--json]`, CLI_EXIT_USAGE);
+    const node = inspectFind(target, nodes);
+    if (!node) throw new InspectCliError("inspect_not_found", `No persistent surface node found for ${target}.`, CLI_EXIT_USAGE);
+    const nodeEdges = edgesForNode(node.id);
+    const neighborIds = [...new Set([...nodeEdges.incomingEdges.map((edge) => edge.fromId), ...nodeEdges.outgoingEdges.map((edge) => edge.toId)])];
+    const neighbors = neighborIds.map((id) => nodes.find((candidate) => candidate.id === id)).filter((candidate): candidate is ClawPersistentSurfaceNode => Boolean(candidate));
+    const payload = { node, ...nodeEdges, neighbors, routes: routesForNode(node.id) };
+    if (input.wantsJson) writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command, { surfaceId: node.id }));
+    else input.context.stdout.write(`${inspectText(neighbors)}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (command === "routes") {
+    const selected = target ? routes.filter((route) => route.id === target || route.fromId === target || route.toId === target || route.steps.some((step) => step.fromId === target || step.toId === target)) : routes;
+    if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
+    else input.context.stdout.write(`${inspectRouteText(selected)}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (command === "route") {
+    if (!target) throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect route <route-id> [--json]`, CLI_EXIT_USAGE);
+    const route = routes.find((candidate) => candidate.id === target);
+    if (!route) throw new InspectCliError("inspect_not_found", `No surface route found for ${target}.`, CLI_EXIT_USAGE);
+    const routeEdges = route.steps.map((step) => step.edgeId ? edges.find((edge) => edge.id === step.edgeId) : undefined).filter((edge): edge is ClawSurfaceEdge => Boolean(edge));
+    const payload = { ...route, edges: routeEdges };
+    if (input.wantsJson) writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command, { routeId: route.id }));
+    else input.context.stdout.write(`${inspectRouteText([route])}\n${inspectEdgeText(routeEdges)}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (command === "edges") {
+    const selected = target ? edges.filter((edge) => edge.id === target || edge.fromId === target || edge.toId === target) : edges;
+    if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
+    else input.context.stdout.write(`${inspectEdgeText(selected)}\n`);
     return CLI_EXIT_OK;
   }
   if (command === "database") {
@@ -724,7 +805,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
   if (command === "render") {
     const format = input.flags.format ?? "markdown";
     if (format === "mermaid") {
-      input.context.stdout.write(`${renderInspectMermaid(nodes)}\n`);
+      input.context.stdout.write(`${renderInspectMermaid(nodes, edges)}\n`);
       return CLI_EXIT_OK;
     }
     if (format === "markdown") {
@@ -733,7 +814,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     }
     throw new InspectCliError("usage_error", `Unsupported inspect render format: ${format}`, CLI_EXIT_USAGE);
   }
-  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|why|commands|codebase|connectors|aliases|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
+  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|neighbors|routes|route|edges|why|commands|codebase|connectors|aliases|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
 }
 
 export async function runInspectCli(input: InspectCliInput): Promise<number> {

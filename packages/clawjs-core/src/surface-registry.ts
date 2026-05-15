@@ -93,6 +93,8 @@ export type ClawStableSurfaceStability = "v1" | "preV1Reset" | "internalCrossVer
 export type ClawStableSurfaceDirection = "inbound" | "outbound" | "bidirectional" | "local" | "generated";
 export type ClawSurfaceParitySurface = "humanUi" | "sdk" | "cli" | "serviceApi" | "mcp" | "relay" | "persistence";
 export type ClawSurfaceParityStatus = "required" | "optional" | "local-only" | "remote-safe" | "blocked" | "not applicable";
+export type ClawSurfaceEdgeType = "owns" | "consumes" | "exposes" | "brokers";
+export type ClawSurfaceConnectionVisibility = "internal" | "public" | "private" | "external";
 
 export interface ClawSurfaceParityGap {
   surface: ClawSurfaceParitySurface;
@@ -150,9 +152,57 @@ export interface ClawPersistentSurfaceNode {
   warnings?: string[];
 }
 
+export interface ClawSurfaceEdge {
+  id: string;
+  type: ClawSurfaceEdgeType;
+  fromId: string;
+  toId: string;
+  owner: ClawPersistentSurfaceOwner;
+  visibility: ClawSurfaceConnectionVisibility;
+  contractId?: string;
+  transport?: string;
+  validation?: string;
+  source?: ClawPersistentSurfaceSource;
+  notes?: string;
+}
+
+export interface ClawSurfaceRouteStep {
+  fromId: string;
+  toId: string;
+  edgeType: ClawSurfaceEdgeType;
+  edgeId?: string;
+  contractId?: string;
+  owner?: ClawPersistentSurfaceOwner;
+  visibility?: ClawSurfaceConnectionVisibility;
+  transport?: string;
+  validation?: string;
+  gaps?: string[];
+}
+
+export interface ClawSurfaceRoute {
+  id: string;
+  name: string;
+  summary: string;
+  fromId: string;
+  toId: string;
+  owner: ClawPersistentSurfaceOwner;
+  visibility: ClawSurfaceConnectionVisibility;
+  transport?: string;
+  validation: string;
+  steps: ClawSurfaceRouteStep[];
+  tests?: string[];
+  docs?: string[];
+  adrs?: string[];
+  gaps?: string[];
+  source?: ClawPersistentSurfaceSource;
+  notes?: string;
+}
+
 export interface ClawPersistentSurfaceRegistry {
   version: number;
   nodes: ClawPersistentSurfaceNode[];
+  edges?: ClawSurfaceEdge[];
+  routes?: ClawSurfaceRoute[];
 }
 
 export type ClawStableSurfaceKind = ClawPersistentSurfaceKind;
@@ -677,6 +727,7 @@ export function clawServiceWindowsPipe(service: string): string {
 }
 
 const registrySource: ClawPersistentSurfaceSource = { file: "packages/clawjs-core/src/surface-registry.ts", language: "typescript" };
+const surfaceRouteGraphSource: ClawPersistentSurfaceSource = { file: "packages/clawjs-core/src/surface-registry.ts", language: "typescript" };
 
 const contractDefaults = { storageClass: "external" as const, canonicality: "canonical" as const, privacy: "public" as const, lifecycle: "durable" as const, source: registrySource };
 
@@ -716,6 +767,8 @@ const corePublicRoutes = [
   ["claw.api.notify.notifications", "POST", clawNotifyApiRoutes.notifications, "Notification dispatch endpoint"],
   ["claw.api.webhooks.providerEvent", "POST", "/v1/webhooks/{provider}/{event}", "Provider webhook ingress"],
   ["claw.api.integrations.callback", "GET", "/v1/integrations/{provider}/callback", "OAuth integration callback"],
+  ["claw.api.relay.remote", "WS", "/v1/relay/remote", "Remote Relay client channel"],
+  ["claw.api.relay.connector", "WS", "/v1/relay/connectors", "Relay workspace connector channel"],
 ] as const;
 
 const corePrivateRouteValues = "/api/attachments /api/auth/token /api/capture /api/captures /api/chat/feedback /api/comments /api/config/profile /api/config/reset /api/config/workspace-files /api/connectors/catalog /api/context /api/custom-fields /api/cycles /api/discover/local /api/e2e/seed /api/epics /api/export /api/field-values /api/goals /api/graph /api/hot-topics/seed /api/images /api/instances /api/integrations/auth /api/integrations/enable /api/integrations/gateway /api/integrations/install /api/integrations/install-stream /api/integrations/reveal /api/integrations/slack/connect /api/integrations/slack/test /api/integrations/telegram/connect /api/integrations/telegram/test /api/integrations/uninstall /api/integrations/whatsapp/cleanup /api/integrations/whatsapp/connect /api/lists /api/memory/person /api/milestones /api/monitors /api/notes/ /api/notify/actions /api/people /api/projects /api/promote /api/recurrences /api/row /api/saved-views /api/search /api/sections /api/seed /api/sessions /api/setup /api/skills/install /api/skills/remove /api/skills/sources /api/sources/refresh /api/stats /api/telegram/account /api/templates /api/timeline /api/tools/conclude /api/tools/get/ /api/tools/search /api/tools/status /api/tts /api/tts/providers /api/users /api/activity /api/apps/{appId}/dashboard /api/apps/{appId}/assets /api/auth.test /api/chat/sessions /api/claw/status /api/companies /api/config /api/config/local /api/connectors/subscriptions /api/contacts /api/data /api/dm /api/e2e/reset /api/e2e/status /api/events /api/health /api/images/backends /api/inbox /api/inspect/preview /api/integrations/setup /api/integrations/status /api/integrations/whatsapp/chats /api/memory /api/notes /api/notify/dashboard /api/personas /api/plugins /api/routines /api/rules /api/schema /api/skills/list /api/sources /api/spaces /api/summary /api/tasks /api/tools/save /api/ui /api/usage".split(" ");
@@ -860,6 +913,197 @@ const stableSurfaceRoots = [
   ["claw.contracts.external", "External dependencies and owned mappings", "external", ["sdk", "serviceApi", "mcp"]],
 ] as const;
 
+const runtimeCriticalNodes = [
+  {
+    id: "clawix.ui.chat",
+    owner: "clawix",
+    name: "Clawix agent chat UI",
+    path: "Clawix/chat",
+    humanSurfaces: ["humanUi"],
+    programmaticSurfaces: ["serviceApi"],
+    notes: "Human entrypoint for local desktop agent chat. It must not own canonical runtime/session state.",
+  },
+  {
+    id: "clawix.companion.client",
+    owner: "clawix",
+    name: "Companion client",
+    path: "Clawix/companion",
+    humanSurfaces: ["humanUi"],
+    programmaticSurfaces: ["serviceApi"],
+    notes: "iPhone, Android, Web, and future companion clients that connect to the local bridge.",
+  },
+  {
+    id: "clawix.bridge.local",
+    owner: "clawix",
+    name: "Clawix local bridge",
+    path: "clawix-bridge",
+    humanSurfaces: ["humanUi"],
+    programmaticSurfaces: ["serviceApi"],
+    notes: "Signed-host bridge on port 24080. It brokers local and companion traffic to the daemon/runtime owner.",
+  },
+  {
+    id: "claw.daemon.local",
+    owner: "claw",
+    name: "Claw daemon",
+    path: "daemon",
+    humanSurfaces: ["humanUi"],
+    programmaticSurfaces: ["sdk", "serviceApi", "cli"],
+    notes: "Daemon-first owner of backend/runtime behavior when background bridge mode is active.",
+  },
+  {
+    id: "claw.runtime.agent",
+    owner: "claw",
+    name: "Agent runtime",
+    path: "runtime/agent",
+    humanSurfaces: ["humanUi"],
+    programmaticSurfaces: ["sdk", "cli", "serviceApi", "mcp"],
+    notes: "Framework runtime that executes agent turns and adapts providers without becoming host-owned.",
+  },
+  {
+    id: "claw.sessions",
+    owner: "claw",
+    name: "Sessions service",
+    path: "sessions",
+    humanSurfaces: ["humanUi"],
+    programmaticSurfaces: ["sdk", "cli", "serviceApi", "persistence"],
+    notes: "Canonical session and message persistence/event surface.",
+  },
+  {
+    id: "claw.remote.client",
+    owner: "external",
+    name: "Remote client",
+    path: "remote-client",
+    humanSurfaces: ["humanUi"],
+    programmaticSurfaces: ["relay"],
+    notes: "External browser/device/client using the remote-safe Relay subset.",
+  },
+  {
+    id: "claw.relay",
+    owner: "claw",
+    name: "Relay control plane",
+    path: "relay",
+    humanSurfaces: ["humanUi"],
+    programmaticSurfaces: ["relay", "serviceApi"],
+    notes: "Remote access and control plane. Relay is a critical surface, not the canonical local API.",
+  },
+  {
+    id: "claw.relay.connector",
+    owner: "claw",
+    name: "Relay workspace connector",
+    path: "relay/connector",
+    humanSurfaces: ["humanUi"],
+    programmaticSurfaces: ["relay", "serviceApi"],
+    notes: "Workspace-side connector that materializes remote assignments and tunnels remote-safe traffic.",
+  },
+] as const;
+
+export const clawSurfaceGraphEdges: ClawSurfaceEdge[] = [
+  { id: "claw.edge.chat.ui.consumes.bridge", type: "consumes", fromId: "clawix.ui.chat", toId: "clawix.bridge.local", owner: "clawix", visibility: "internal", contractId: "clawix.protocol.bridge.v1", transport: "local bridge RPC", validation: "macOS bridge daemon E2E fixture", source: surfaceRouteGraphSource },
+  { id: "claw.edge.bridge.brokers.daemon", type: "brokers", fromId: "clawix.bridge.local", toId: "claw.daemon.local", owner: "clawix", visibility: "internal", contractId: "claw.protocol.hostCommand.v1", transport: "localhost/process bridge", validation: "daemon bridge fixture", source: surfaceRouteGraphSource },
+  { id: "claw.edge.daemon.brokers.runtime", type: "brokers", fromId: "claw.daemon.local", toId: "claw.runtime.agent", owner: "claw", visibility: "internal", contractId: "claw.protocol.hostCommand.v1", transport: "framework runtime adapter", validation: "runtime fixture", source: surfaceRouteGraphSource },
+  { id: "claw.edge.runtime.owns.sessions", type: "owns", fromId: "claw.runtime.agent", toId: "claw.sessions", owner: "claw", visibility: "internal", contractId: "claw.database.sessions", transport: "sessions service/events", validation: "sessions fixture", source: surfaceRouteGraphSource },
+  { id: "claw.edge.sessions.exposes.bridge", type: "exposes", fromId: "claw.sessions", toId: "clawix.bridge.local", owner: "claw", visibility: "internal", contractId: "claw.event.sessions.message.appended", transport: "session event frames", validation: "bridge frame round-trip tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.bridge.exposes.ui", type: "exposes", fromId: "clawix.bridge.local", toId: "clawix.ui.chat", owner: "clawix", visibility: "internal", contractId: "clawix.protocol.bridge.v1", transport: "local bridge RPC", validation: "Clawix chat workflow fixture", source: surfaceRouteGraphSource },
+  { id: "claw.edge.companion.consumes.bridge", type: "consumes", fromId: "clawix.companion.client", toId: "clawix.bridge.local", owner: "clawix", visibility: "public", contractId: "clawix.protocol.bridge.v1", transport: "WebSocket localhost:24080", validation: "companion bridge fixture", source: surfaceRouteGraphSource },
+  { id: "claw.edge.bridge.exposes.companion", type: "exposes", fromId: "clawix.bridge.local", toId: "clawix.companion.client", owner: "clawix", visibility: "public", contractId: "clawix.protocol.bridge.v1", transport: "WebSocket localhost:24080", validation: "companion bridge frame round-trip", source: surfaceRouteGraphSource },
+  { id: "claw.edge.remote.consumes.relay", type: "consumes", fromId: "claw.remote.client", toId: "claw.relay", owner: "claw", visibility: "external", contractId: "claw.api.relay.remote", transport: "HTTPS/WebSocket Relay", validation: "relay E2E fixture", source: surfaceRouteGraphSource },
+  { id: "claw.edge.relay.brokers.connector", type: "brokers", fromId: "claw.relay", toId: "claw.relay.connector", owner: "claw", visibility: "external", contractId: "claw.api.relay.connector", transport: "connector WebSocket", validation: "relay connector E2E fixture", source: surfaceRouteGraphSource },
+  { id: "claw.edge.connector.brokers.workspace", type: "brokers", fromId: "claw.relay.connector", toId: "claw.workspace", owner: "claw", visibility: "internal", contractId: "claw.workspace.manifest", transport: "workspace materialization", validation: "relay workspace fixture", source: surfaceRouteGraphSource },
+  { id: "claw.edge.connector.brokers.runtime", type: "brokers", fromId: "claw.relay.connector", toId: "claw.runtime.agent", owner: "claw", visibility: "internal", contractId: "claw.protocol.hostCommand.v1", transport: "local runtime adapter", validation: "relay codex connector E2E", source: surfaceRouteGraphSource },
+  { id: "claw.edge.sessions.exposes.relay", type: "exposes", fromId: "claw.sessions", toId: "claw.relay", owner: "claw", visibility: "external", contractId: "claw.event.sessions.message.appended", transport: "remote-safe session events", validation: "relay E2E fixture", source: surfaceRouteGraphSource },
+  { id: "claw.edge.relay.exposes.remote", type: "exposes", fromId: "claw.relay", toId: "claw.remote.client", owner: "claw", visibility: "external", contractId: "claw.api.relay.remote", transport: "HTTPS/WebSocket Relay", validation: "relay E2E fixture", source: surfaceRouteGraphSource },
+];
+
+function routeStep(edgeId: string, gaps: string[] = []): ClawSurfaceRouteStep {
+  const edge = clawSurfaceGraphEdges.find((candidate) => candidate.id === edgeId);
+  if (!edge) throw new Error(`Missing surface route edge ${edgeId}`);
+  return {
+    edgeId: edge.id,
+    fromId: edge.fromId,
+    toId: edge.toId,
+    edgeType: edge.type,
+    contractId: edge.contractId,
+    owner: edge.owner,
+    visibility: edge.visibility,
+    transport: edge.transport,
+    validation: edge.validation,
+    ...(gaps.length ? { gaps } : {}),
+  };
+}
+
+export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
+  {
+    id: "chat.localDesktop",
+    name: "Local desktop agent chat",
+    summary: "Clawix macOS UI sends an agent turn through the local bridge/daemon into the framework runtime and sessions stream.",
+    fromId: "clawix.ui.chat",
+    toId: "claw.sessions",
+    owner: "claw",
+    visibility: "internal",
+    transport: "local bridge RPC plus framework runtime/session events",
+    validation: "Fixture + hermetic E2E for local desktop chat",
+    steps: [
+      routeStep("claw.edge.chat.ui.consumes.bridge"),
+      routeStep("claw.edge.bridge.brokers.daemon"),
+      routeStep("claw.edge.daemon.brokers.runtime"),
+      routeStep("claw.edge.runtime.owns.sessions"),
+      routeStep("claw.edge.sessions.exposes.bridge"),
+      routeStep("claw.edge.bridge.exposes.ui"),
+    ],
+    tests: ["packages/clawjs/src/inspect-cli.test.ts", "macos/Helpers/Bridged/Tests/e2e_bridge_daemon.py"],
+    docs: ["docs/adr/0012-surface-route-graph.md", "docs/host-ownership.md"],
+    adrs: ["docs/adr/0004-persistent-surface-registry-and-inspection.md", "docs/adr/0009-dual-human-programmatic-surfaces.md", "docs/adr/0012-surface-route-graph.md"],
+    source: surfaceRouteGraphSource,
+  },
+  {
+    id: "chat.companionBridge",
+    name: "Companion bridge chat",
+    summary: "Companion clients use pairing/auth and the bridge WebSocket on port 24080 before the same daemon/runtime/session path.",
+    fromId: "clawix.companion.client",
+    toId: "claw.sessions",
+    owner: "claw",
+    visibility: "public",
+    transport: "WebSocket localhost:24080 plus framework runtime/session events",
+    validation: "Fixture + hermetic E2E for companion bridge traffic",
+    steps: [
+      routeStep("claw.edge.companion.consumes.bridge"),
+      routeStep("claw.edge.bridge.brokers.daemon"),
+      routeStep("claw.edge.daemon.brokers.runtime"),
+      routeStep("claw.edge.runtime.owns.sessions"),
+      routeStep("claw.edge.sessions.exposes.bridge"),
+      routeStep("claw.edge.bridge.exposes.companion"),
+    ],
+    tests: ["packages/clawjs/src/inspect-cli.test.ts", "packages/ClawixCore/Tests/ClawixCoreTests/BridgeFrameRoundTripTests.swift"],
+    docs: ["docs/adr/0012-surface-route-graph.md", "docs/relay.md"],
+    adrs: ["docs/adr/0009-dual-human-programmatic-surfaces.md", "docs/adr/0012-surface-route-graph.md"],
+    source: surfaceRouteGraphSource,
+  },
+  {
+    id: "chat.remoteRelay",
+    name: "Remote Relay chat",
+    summary: "Remote clients use Relay auth/project-agent assignment and a workspace connector before local runtime execution and remote-safe session responses.",
+    fromId: "claw.remote.client",
+    toId: "claw.sessions",
+    owner: "claw",
+    visibility: "external",
+    transport: "Relay HTTPS/WebSocket plus workspace connector",
+    validation: "Fixture + hermetic Relay E2E without production services",
+    steps: [
+      routeStep("claw.edge.remote.consumes.relay"),
+      routeStep("claw.edge.relay.brokers.connector"),
+      routeStep("claw.edge.connector.brokers.workspace"),
+      routeStep("claw.edge.connector.brokers.runtime"),
+      routeStep("claw.edge.runtime.owns.sessions"),
+      routeStep("claw.edge.sessions.exposes.relay"),
+      routeStep("claw.edge.relay.exposes.remote"),
+    ],
+    tests: ["packages/clawjs/src/inspect-cli.test.ts", "relay/tests/e2e/relay.e2e.test.ts", "relay/tests/e2e/codex-connector.e2e.test.ts"],
+    docs: ["docs/adr/0012-surface-route-graph.md", "docs/relay.md"],
+    adrs: ["docs/adr/0009-dual-human-programmatic-surfaces.md", "docs/adr/0012-surface-route-graph.md"],
+    source: surfaceRouteGraphSource,
+  },
+];
+
 export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
   version: clawSurfaceRegistryVersion,
   nodes: [
@@ -888,6 +1132,22 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       programmaticSurfaces: [...programmaticSurfaces],
       surfaceGaps: [{ surface: "humanUi", status: "optional", reason: "Category nodes are inspected through generated docs and CLI output." }],
       source: registrySource,
+    })),
+    ...runtimeCriticalNodes.map((node) => clawPersistentSurface.root({
+      id: node.id,
+      owner: node.owner as ClawPersistentSurfaceOwner,
+      name: node.name,
+      path: node.path,
+      storageClass: "external",
+      canonicality: node.owner === "clawix" ? "hostOnly" : node.owner === "external" ? "externalReadOnly" : "canonical",
+      privacy: node.owner === "external" ? "externalReadOnly" : "public",
+      lifecycle: node.owner === "external" ? "external" : "durable",
+      surfaceClass: "protocol",
+      stability: node.owner === "external" ? "externalDependency" : "v1",
+      humanSurfaces: [...node.humanSurfaces] as ClawSurfaceParitySurface[],
+      programmaticSurfaces: [...node.programmaticSurfaces] as ClawSurfaceParitySurface[],
+      source: registrySource,
+      notes: node.notes,
     })),
     ...corePublicRoutes.map(([id, method, route, name]) => clawPersistentSurface.contract({
       ...contractDefaults,
@@ -922,6 +1182,18 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       version: 1,
       direction: "bidirectional",
       notes: "Shared framework/signed-host command envelope. Breaking changes after V1 require a new protocol version.",
+    }),
+    clawPersistentSurface.contract({
+      ...contractDefaults,
+      id: "clawix.protocol.bridge.v1",
+      kind: "protocol",
+      owner: "clawix",
+      name: "Clawix bridge protocol v1",
+      parentId: "claw.contracts.protocol",
+      value: "clawix-bridge-v1",
+      version: 1,
+      direction: "bidirectional",
+      notes: "Host bridge frame contract used by Clawix and companion clients. Framework routes may inspect it, but Clawix owns the signed-host implementation.",
     }),
     ...["schemaVersion", "requestId", "domain", "resource", "action", "payload"].map((field) => clawPersistentSurface.contract({
       ...contractDefaults,
@@ -1563,6 +1835,8 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       surfaceClass: "config",
     })),
   ],
+  edges: clawSurfaceGraphEdges,
+  routes: clawSurfaceGraphRoutes,
 };
 
 export function listClawPersistentSurfaceNodes(parentId?: string): ClawPersistentSurfaceNode[] {
@@ -1592,4 +1866,17 @@ export function withSurfaceChildren(nodes: ClawPersistentSurfaceNode[]): ClawPer
     ...node,
     ...(childMap.has(node.id) ? { children: childMap.get(node.id) } : {}),
   }));
+}
+
+export function listClawSurfaceEdges(nodeId?: string): ClawSurfaceEdge[] {
+  return nodeId ? clawSurfaceGraphEdges.filter((edge) => edge.fromId === nodeId || edge.toId === nodeId) : [...clawSurfaceGraphEdges];
+}
+
+export function listClawSurfaceRoutes(nodeId?: string): ClawSurfaceRoute[] {
+  if (!nodeId) return [...clawSurfaceGraphRoutes];
+  return clawSurfaceGraphRoutes.filter((route) => route.fromId === nodeId || route.toId === nodeId || route.steps.some((step) => step.fromId === nodeId || step.toId === nodeId));
+}
+
+export function findClawSurfaceRoute(routeId: string): ClawSurfaceRoute | undefined {
+  return clawSurfaceGraphRoutes.find((route) => route.id === routeId);
 }

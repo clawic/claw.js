@@ -32,7 +32,8 @@ Read the relevant canonical docs before changing their surfaces:
 - Testing and validation: `docs/adr/0002-testing-architecture.md`,
   `docs/adr/0006-integration-qa-lab.md`, `tests/e2e/README.md`
 - Stable surfaces and inspection: `docs/adr/0004-persistent-surface-registry-and-inspection.md`,
-  `docs/adr/0009-dual-human-programmatic-surfaces.md`
+  `docs/adr/0009-dual-human-programmatic-surfaces.md`,
+  `docs/adr/0012-surface-route-graph.md`
 - CLI and agent discovery: `docs/adr/0007-cli-agent-interface.md`,
   `docs/adr/0010-cli-jit-guidance-actor-assertions-resource-registry.md`
 - Security and releases: `SECURITY.md`, `RELEASING.md`, `docs/git-workflow.md`
@@ -99,7 +100,8 @@ include:
   `architecture-drift-repair`, `adr-to-guardrail`,
   `decision-map-maintenance`
 - Stable surfaces: `naming-surface-audit`, `surface-registry-alignment`,
-  `cli-agent-surface-work`, `source-file-boundary-refactor`
+  `surface-route-work`, `cli-agent-surface-work`,
+  `source-file-boundary-refactor`
 - Data and storage: `canonical-catalog-expansion`,
   `data-storage-boundary-review`
 - Host, security, and validation: `host-boundary-review`,
@@ -133,6 +135,8 @@ Run `node ./scripts/skills-check.mjs` after adding or changing skills.
   explicit reversible opt-in.
 - Stable capabilities are complete only when their human and programmatic
   surfaces are registered or their gaps are explicitly classified.
+- Runtime-critical work should start from `claw inspect show|neighbors|routes`
+  and treat the registry edge/route graph as the source for connected surfaces.
 - New hand-authored files at 1200+ lines need a split plan or baseline
   rationale; new 2000+ line files are blocked unless explicitly exempted.
   Emergency-debt files above 5000 lines must not grow except for extraction,
