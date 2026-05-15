@@ -31,37 +31,37 @@ flowchart TD
   claw_contracts --> claw_contracts_formats
   claw_contracts_external["External dependencies and owned mappings\nroot"]
   claw_contracts --> claw_contracts_external
-  claw_api_openai_chatCompletions["OpenAI-compatible chat completions endpoint\napiRoute"]
-  claw_contracts_api --> claw_api_openai_chatCompletions
-  claw_api_app_root["App route prefix\napiRoute"]
-  claw_contracts_api --> claw_api_app_root
-  claw_api_connector_connect["Connector connection endpoint\napiRoute"]
-  claw_contracts_api --> claw_api_connector_connect
-  claw_api_families["Family list endpoint\napiRoute"]
+  claw_api_chatCompletions["/v1/chat/completions API route\napiRoute"]
+  claw_contracts_api --> claw_api_chatCompletions
+  claw_api_app["/v1/app/ API route\napiRoute"]
+  claw_contracts_api --> claw_api_app
+  claw_api_connectorConnect["/v1/connector/connect API route\napiRoute"]
+  claw_contracts_api --> claw_api_connectorConnect
+  claw_api_families["/v1/families API route\napiRoute"]
   claw_contracts_api --> claw_api_families
-  claw_api_devices_me["Current user device list\napiRoute"]
-  claw_contracts_api --> claw_api_devices_me
-  claw_api_responses["Response creation endpoint\napiRoute"]
+  claw_api_meDevices["/v1/me/devices API route\napiRoute"]
+  claw_contracts_api --> claw_api_meDevices
+  claw_api_responses["/v1/responses API route\napiRoute"]
   claw_contracts_api --> claw_api_responses
-  claw_api_secrets_root["Secrets API root\napiRoute"]
-  claw_contracts_api --> claw_api_secrets_root
-  claw_api_secrets_setup["Secrets setup endpoint\napiRoute"]
-  claw_contracts_api --> claw_api_secrets_setup
-  claw_api_storage_root["Storage API root\napiRoute"]
-  claw_contracts_api --> claw_api_storage_root
-  claw_api_storage_objectFixture["Storage object fixture route\napiRoute"]
-  claw_contracts_api --> claw_api_storage_objectFixture
-  claw_api_storage_itemShareFixture["Storage item share fixture route\napiRoute"]
-  claw_contracts_api --> claw_api_storage_itemShareFixture
-  claw_api_storage_itemShareRevokeFixture["Storage item share revoke fixture route\napiRoute"]
-  claw_contracts_api --> claw_api_storage_itemShareRevokeFixture
-  claw_api_storage_sharesRoot["Storage shares root\napiRoute"]
-  claw_contracts_api --> claw_api_storage_sharesRoot
-  claw_api_system_status["System status endpoint\napiRoute"]
-  claw_contracts_api --> claw_api_system_status
-  claw_api_uploads["Upload endpoint\napiRoute"]
+  claw_api_secrets["/v1/secrets API route\napiRoute"]
+  claw_contracts_api --> claw_api_secrets
+  claw_api_secretsSetup["/v1/secrets/setup API route\napiRoute"]
+  claw_contracts_api --> claw_api_secretsSetup
+  claw_api_storage["/v1/storage API route\napiRoute"]
+  claw_contracts_api --> claw_api_storage
+  claw_api_storageObjectsWorkspaceAgentsAgentARemoteNoteTxt["/v1/storage/objects/workspace/agents/agent-a/remote/note.txt API route\napiRoute"]
+  claw_contracts_api --> claw_api_storageObjectsWorkspaceAgentsAgentARemoteNoteTxt
+  claw_api_itemsItem1Shares["/v1/items/item-1/shares API route\napiRoute"]
+  claw_contracts_api --> claw_api_itemsItem1Shares
+  claw_api_itemsItem1SharesShare1Revoke["/v1/items/item-1/shares/share-1/revoke API route\napiRoute"]
+  claw_contracts_api --> claw_api_itemsItem1SharesShare1Revoke
+  claw_api_storageShares["/v1/storage/shares API route\napiRoute"]
+  claw_contracts_api --> claw_api_storageShares
+  claw_api_systemStatus["/v1/system/status API route\napiRoute"]
+  claw_contracts_api --> claw_api_systemStatus
+  claw_api_uploads["/v1/uploads API route\napiRoute"]
   claw_contracts_api --> claw_api_uploads
-  claw_api_workspaces["Workspace list endpoint\napiRoute"]
+  claw_api_workspaces["/v1/workspaces API route\napiRoute"]
   claw_contracts_api --> claw_api_workspaces
   claw_api_events["Public framework event stream\napiRoute"]
   claw_contracts_api --> claw_api_events
@@ -115,219 +115,219 @@ flowchart TD
   claw_contracts_api --> claw_api_webhooks_providerEvent
   claw_api_integrations_callback["OAuth integration callback\napiRoute"]
   claw_contracts_api --> claw_api_integrations_callback
-  claw_privateApi_attachments["Private attachments endpoint\nprivateApiRoute"]
+  claw_privateApi_attachments["/api/attachments private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_attachments
-  claw_privateApi_auth_token["Private auth token endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_auth_token
-  claw_privateApi_capture["Private capture endpoint\nprivateApiRoute"]
+  claw_privateApi_authToken["/api/auth/token private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_authToken
+  claw_privateApi_capture["/api/capture private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_capture
-  claw_privateApi_captures["Private captures endpoint\nprivateApiRoute"]
+  claw_privateApi_captures["/api/captures private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_captures
-  claw_privateApi_chat_feedback["Private chat feedback endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_chat_feedback
-  claw_privateApi_comments["Private comments endpoint\nprivateApiRoute"]
+  claw_privateApi_chatFeedback["/api/chat/feedback private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_chatFeedback
+  claw_privateApi_comments["/api/comments private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_comments
-  claw_privateApi_config_profile["Private profile config endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_config_profile
-  claw_privateApi_config_reset["Private config reset endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_config_reset
-  claw_privateApi_config_workspaceFiles["Private workspace files config endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_config_workspaceFiles
-  claw_privateApi_connectors_catalog["Private connector catalog endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_connectors_catalog
-  claw_privateApi_context["Private context endpoint\nprivateApiRoute"]
+  claw_privateApi_configProfile["/api/config/profile private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_configProfile
+  claw_privateApi_configReset["/api/config/reset private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_configReset
+  claw_privateApi_configWorkspaceFiles["/api/config/workspace-files private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_configWorkspaceFiles
+  claw_privateApi_connectorsCatalog["/api/connectors/catalog private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_connectorsCatalog
+  claw_privateApi_context["/api/context private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_context
-  claw_privateApi_customFields["Private custom fields endpoint\nprivateApiRoute"]
+  claw_privateApi_customFields["/api/custom-fields private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_customFields
-  claw_privateApi_cycles["Private cycles endpoint\nprivateApiRoute"]
+  claw_privateApi_cycles["/api/cycles private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_cycles
-  claw_privateApi_discover_local["Private local discovery endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_discover_local
-  claw_privateApi_e2e_seed["Private E2E seed endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_e2e_seed
-  claw_privateApi_epics["Private epics endpoint\nprivateApiRoute"]
+  claw_privateApi_discoverLocal["/api/discover/local private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_discoverLocal
+  claw_privateApi_e2eSeed["/api/e2e/seed private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_e2eSeed
+  claw_privateApi_epics["/api/epics private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_epics
-  claw_privateApi_export["Private export endpoint\nprivateApiRoute"]
+  claw_privateApi_export["/api/export private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_export
-  claw_privateApi_fieldValues["Private field values endpoint\nprivateApiRoute"]
+  claw_privateApi_fieldValues["/api/field-values private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_fieldValues
-  claw_privateApi_goals["Private goals endpoint\nprivateApiRoute"]
+  claw_privateApi_goals["/api/goals private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_goals
-  claw_privateApi_graph["Private graph endpoint\nprivateApiRoute"]
+  claw_privateApi_graph["/api/graph private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_graph
-  claw_privateApi_hotTopics_seed["Private hot topics seed endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_hotTopics_seed
-  claw_privateApi_images["Private images endpoint\nprivateApiRoute"]
+  claw_privateApi_hotTopicsSeed["/api/hot-topics/seed private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_hotTopicsSeed
+  claw_privateApi_images["/api/images private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_images
-  claw_privateApi_instances["Private instances endpoint\nprivateApiRoute"]
+  claw_privateApi_instances["/api/instances private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_instances
-  claw_privateApi_integrations_auth["Private integrations auth endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_integrations_auth
-  claw_privateApi_integrations_enable["Private integrations enable endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_integrations_enable
-  claw_privateApi_integrations_gateway["Private integrations gateway endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_integrations_gateway
-  claw_privateApi_integrations_install["Private integrations install endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_integrations_install
-  claw_privateApi_integrations_installStream["Private integrations install stream endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_integrations_installStream
-  claw_privateApi_integrations_reveal["Private integrations reveal endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_integrations_reveal
-  claw_privateApi_integrations_slack_connect["Private Slack connect endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_integrations_slack_connect
-  claw_privateApi_integrations_slack_test["Private Slack test endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_integrations_slack_test
-  claw_privateApi_integrations_telegram_connect["Private Telegram connect endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_integrations_telegram_connect
-  claw_privateApi_integrations_telegram_test["Private Telegram test endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_integrations_telegram_test
-  claw_privateApi_integrations_uninstall["Private integrations uninstall endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_integrations_uninstall
-  claw_privateApi_integrations_whatsapp_cleanup["Private WhatsApp cleanup endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_integrations_whatsapp_cleanup
-  claw_privateApi_integrations_whatsapp_connect["Private WhatsApp connect endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_integrations_whatsapp_connect
-  claw_privateApi_lists["Private lists endpoint\nprivateApiRoute"]
+  claw_privateApi_integrationsAuth["/api/integrations/auth private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrationsAuth
+  claw_privateApi_integrationsEnable["/api/integrations/enable private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrationsEnable
+  claw_privateApi_integrationsGateway["/api/integrations/gateway private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrationsGateway
+  claw_privateApi_integrationsInstall["/api/integrations/install private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrationsInstall
+  claw_privateApi_integrationsInstallStream["/api/integrations/install-stream private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrationsInstallStream
+  claw_privateApi_integrationsReveal["/api/integrations/reveal private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrationsReveal
+  claw_privateApi_integrationsSlackConnect["/api/integrations/slack/connect private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrationsSlackConnect
+  claw_privateApi_integrationsSlackTest["/api/integrations/slack/test private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrationsSlackTest
+  claw_privateApi_integrationsTelegramConnect["/api/integrations/telegram/connect private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrationsTelegramConnect
+  claw_privateApi_integrationsTelegramTest["/api/integrations/telegram/test private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrationsTelegramTest
+  claw_privateApi_integrationsUninstall["/api/integrations/uninstall private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrationsUninstall
+  claw_privateApi_integrationsWhatsappCleanup["/api/integrations/whatsapp/cleanup private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrationsWhatsappCleanup
+  claw_privateApi_integrationsWhatsappConnect["/api/integrations/whatsapp/connect private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrationsWhatsappConnect
+  claw_privateApi_lists["/api/lists private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_lists
-  claw_privateApi_memory_person["Private memory person endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_memory_person
-  claw_privateApi_milestones["Private milestones endpoint\nprivateApiRoute"]
+  claw_privateApi_memoryPerson["/api/memory/person private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_memoryPerson
+  claw_privateApi_milestones["/api/milestones private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_milestones
-  claw_privateApi_monitors["Private monitors endpoint\nprivateApiRoute"]
+  claw_privateApi_monitors["/api/monitors private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_monitors
-  claw_privateApi_notesTrailingSlash["Private notes endpoint with trailing slash\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_notesTrailingSlash
-  claw_privateApi_notify_actions["Private notification actions endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_notify_actions
-  claw_privateApi_people["Private people endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_people
-  claw_privateApi_projects["Private projects endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_projects
-  claw_privateApi_promote["Private promote endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_promote
-  claw_privateApi_recurrences["Private recurrences endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_recurrences
-  claw_privateApi_row["Private row endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_row
-  claw_privateApi_savedViews["Private saved views endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_savedViews
-  claw_privateApi_search["Private search endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_search
-  claw_privateApi_sections["Private sections endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_sections
-  claw_privateApi_seed["Private seed endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_seed
-  claw_privateApi_sessions["Private sessions endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_sessions
-  claw_privateApi_setup["Private setup endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_setup
-  claw_privateApi_skills_install["Private skill install endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_skills_install
-  claw_privateApi_skills_remove["Private skill remove endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_skills_remove
-  claw_privateApi_skills_sources["Private skill sources endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_skills_sources
-  claw_privateApi_sources_refresh["Private source refresh endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_sources_refresh
-  claw_privateApi_stats["Private stats endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_stats
-  claw_privateApi_telegram_account["Private Telegram account endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_telegram_account
-  claw_privateApi_templates["Private templates endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_templates
-  claw_privateApi_timeline["Private timeline endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_timeline
-  claw_privateApi_tools_conclude["Private tool conclude endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_tools_conclude
-  claw_privateApi_tools_getPrefix["Private tool get prefix\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_tools_getPrefix
-  claw_privateApi_tools_search["Private tool search endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_tools_search
-  claw_privateApi_tools_status["Private tool status endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_tools_status
-  claw_privateApi_tts["Private text-to-speech endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_tts
-  claw_privateApi_tts_providers["Private text-to-speech provider endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_tts_providers
-  claw_privateApi_users["Private users endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_users
-  claw_privateApi_activity["Private activity feed\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_activity
-  claw_privateApi_apps_dashboard["Private app dashboard data\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_apps_dashboard
-  claw_privateApi_apps_assets["Private app asset data\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_apps_assets
-  claw_privateApi_authTest["Private auth test endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_authTest
-  claw_privateApi_chat_sessions["Private chat sessions endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_chat_sessions
-  claw_privateApi_claw_status["Private Claw status endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_claw_status
-  claw_privateApi_companies["Private companies endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_companies
-  claw_privateApi_config["Private config endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_config
-  claw_privateApi_config_local["Private local config endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_config_local
-  claw_privateApi_connectors_subscriptions["Private connector subscriptions endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_connectors_subscriptions
-  claw_privateApi_contacts["Private contacts endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_contacts
-  claw_privateApi_data["Private dashboard data endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_data
-  claw_privateApi_dm["Private direct messages endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_dm
-  claw_privateApi_e2e_reset["Private E2E reset endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_e2e_reset
-  claw_privateApi_e2e_status["Private E2E status endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_e2e_status
-  claw_privateApi_events["Private events endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_events
-  claw_privateApi_health["Private health endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_health
-  claw_privateApi_images_backends["Private image backend endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_images_backends
-  claw_privateApi_inbox["Private inbox endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_inbox
-  claw_privateApi_inspect_preview["Private inspect preview endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_inspect_preview
-  claw_privateApi_integrations_setup["Private integrations setup endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_integrations_setup
-  claw_privateApi_integrations_status["Private integrations status endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_integrations_status
-  claw_privateApi_integrations_whatsapp_chats["Private WhatsApp chats endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_integrations_whatsapp_chats
-  claw_privateApi_memory["Private memory endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_memory
-  claw_privateApi_notes["Private notes endpoint\nprivateApiRoute"]
+  claw_privateApi_notes["/api/notes/ private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_notes
-  claw_privateApi_notify_dashboard["Private notification dashboard endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_notify_dashboard
-  claw_privateApi_personas["Private personas endpoint\nprivateApiRoute"]
+  claw_privateApi_notifyActions["/api/notify/actions private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_notifyActions
+  claw_privateApi_people["/api/people private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_people
+  claw_privateApi_projects["/api/projects private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_projects
+  claw_privateApi_promote["/api/promote private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_promote
+  claw_privateApi_recurrences["/api/recurrences private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_recurrences
+  claw_privateApi_row["/api/row private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_row
+  claw_privateApi_savedViews["/api/saved-views private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_savedViews
+  claw_privateApi_search["/api/search private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_search
+  claw_privateApi_sections["/api/sections private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_sections
+  claw_privateApi_seed["/api/seed private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_seed
+  claw_privateApi_sessions["/api/sessions private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_sessions
+  claw_privateApi_setup["/api/setup private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_setup
+  claw_privateApi_skillsInstall["/api/skills/install private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_skillsInstall
+  claw_privateApi_skillsRemove["/api/skills/remove private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_skillsRemove
+  claw_privateApi_skillsSources["/api/skills/sources private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_skillsSources
+  claw_privateApi_sourcesRefresh["/api/sources/refresh private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_sourcesRefresh
+  claw_privateApi_stats["/api/stats private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_stats
+  claw_privateApi_telegramAccount["/api/telegram/account private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_telegramAccount
+  claw_privateApi_templates["/api/templates private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_templates
+  claw_privateApi_timeline["/api/timeline private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_timeline
+  claw_privateApi_toolsConclude["/api/tools/conclude private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_toolsConclude
+  claw_privateApi_toolsGet["/api/tools/get/ private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_toolsGet
+  claw_privateApi_toolsSearch["/api/tools/search private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_toolsSearch
+  claw_privateApi_toolsStatus["/api/tools/status private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_toolsStatus
+  claw_privateApi_tts["/api/tts private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_tts
+  claw_privateApi_ttsProviders["/api/tts/providers private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_ttsProviders
+  claw_privateApi_users["/api/users private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_users
+  claw_privateApi_activity["/api/activity private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_activity
+  claw_privateApi_appsAppIdDashboard["/api/apps/{appId}/dashboard private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_appsAppIdDashboard
+  claw_privateApi_appsAppIdAssets["/api/apps/{appId}/assets private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_appsAppIdAssets
+  claw_privateApi_authTest["/api/auth.test private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_authTest
+  claw_privateApi_chatSessions["/api/chat/sessions private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_chatSessions
+  claw_privateApi_clawStatus["/api/claw/status private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_clawStatus
+  claw_privateApi_companies["/api/companies private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_companies
+  claw_privateApi_config["/api/config private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_config
+  claw_privateApi_configLocal["/api/config/local private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_configLocal
+  claw_privateApi_connectorsSubscriptions["/api/connectors/subscriptions private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_connectorsSubscriptions
+  claw_privateApi_contacts["/api/contacts private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_contacts
+  claw_privateApi_data["/api/data private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_data
+  claw_privateApi_dm["/api/dm private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_dm
+  claw_privateApi_e2eReset["/api/e2e/reset private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_e2eReset
+  claw_privateApi_e2eStatus["/api/e2e/status private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_e2eStatus
+  claw_privateApi_events["/api/events private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_events
+  claw_privateApi_health["/api/health private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_health
+  claw_privateApi_imagesBackends["/api/images/backends private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_imagesBackends
+  claw_privateApi_inbox["/api/inbox private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_inbox
+  claw_privateApi_inspectPreview["/api/inspect/preview private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_inspectPreview
+  claw_privateApi_integrationsSetup["/api/integrations/setup private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrationsSetup
+  claw_privateApi_integrationsStatus["/api/integrations/status private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrationsStatus
+  claw_privateApi_integrationsWhatsappChats["/api/integrations/whatsapp/chats private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrationsWhatsappChats
+  claw_privateApi_memory["/api/memory private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_memory
+  claw_privateApi_notes["/api/notes private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_notes
+  claw_privateApi_notifyDashboard["/api/notify/dashboard private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_notifyDashboard
+  claw_privateApi_personas["/api/personas private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_personas
-  claw_privateApi_plugins["Private plugins endpoint\nprivateApiRoute"]
+  claw_privateApi_plugins["/api/plugins private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_plugins
-  claw_privateApi_routines["Private routines endpoint\nprivateApiRoute"]
+  claw_privateApi_routines["/api/routines private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_routines
-  claw_privateApi_rules["Private rules endpoint\nprivateApiRoute"]
+  claw_privateApi_rules["/api/rules private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_rules
-  claw_privateApi_schema["Private schema endpoint\nprivateApiRoute"]
+  claw_privateApi_schema["/api/schema private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_schema
-  claw_privateApi_skills_list["Private skill list endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_skills_list
-  claw_privateApi_sources["Private sources endpoint\nprivateApiRoute"]
+  claw_privateApi_skillsList["/api/skills/list private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_skillsList
+  claw_privateApi_sources["/api/sources private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_sources
-  claw_privateApi_spaces["Private spaces endpoint\nprivateApiRoute"]
+  claw_privateApi_spaces["/api/spaces private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_spaces
-  claw_privateApi_summary["Private summary endpoint\nprivateApiRoute"]
+  claw_privateApi_summary["/api/summary private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_summary
-  claw_privateApi_tasks["Private tasks endpoint\nprivateApiRoute"]
+  claw_privateApi_tasks["/api/tasks private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_tasks
-  claw_privateApi_tools_save["Private tool save endpoint\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_tools_save
-  claw_privateApi_ui["Private UI config endpoint\nprivateApiRoute"]
+  claw_privateApi_toolsSave["/api/tools/save private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_toolsSave
+  claw_privateApi_ui["/api/ui private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_ui
-  claw_privateApi_usage["Private usage endpoint\nprivateApiRoute"]
+  claw_privateApi_usage["/api/usage private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_usage
   claw_protocol_hostCommand_v1["Host command contract v1\nprotocol"]
   claw_contracts_protocol --> claw_protocol_hostCommand_v1
@@ -1642,20 +1642,20 @@ flowchart TD
 | `claw.contracts.native` | root | native | claw |  | humanUi, serviceApi | humanUi:optional | `contracts/native` |
 | `claw.contracts.formats` | root | format | claw |  | cli, persistence | humanUi:optional | `contracts/formats` |
 | `claw.contracts.external` | root | external | claw |  | sdk, serviceApi, mcp | humanUi:optional | `contracts/external` |
-| `claw.api.openai.chatCompletions` | apiRoute | api | claw |  |  |  | `/v1/chat/completions` |
-| `claw.api.app.root` | apiRoute | api | claw |  |  |  | `/v1/app/` |
-| `claw.api.connector.connect` | apiRoute | api | claw |  |  |  | `/v1/connector/connect` |
+| `claw.api.chatCompletions` | apiRoute | api | claw |  |  |  | `/v1/chat/completions` |
+| `claw.api.app` | apiRoute | api | claw |  |  |  | `/v1/app/` |
+| `claw.api.connectorConnect` | apiRoute | api | claw |  |  |  | `/v1/connector/connect` |
 | `claw.api.families` | apiRoute | api | claw |  |  |  | `/v1/families` |
-| `claw.api.devices.me` | apiRoute | api | claw |  |  |  | `/v1/me/devices` |
+| `claw.api.meDevices` | apiRoute | api | claw |  |  |  | `/v1/me/devices` |
 | `claw.api.responses` | apiRoute | api | claw |  |  |  | `/v1/responses` |
-| `claw.api.secrets.root` | apiRoute | api | claw |  |  |  | `/v1/secrets` |
-| `claw.api.secrets.setup` | apiRoute | api | claw |  |  |  | `/v1/secrets/setup` |
-| `claw.api.storage.root` | apiRoute | api | claw |  |  |  | `/v1/storage` |
-| `claw.api.storage.objectFixture` | apiRoute | api | claw |  |  |  | `/v1/storage/objects/workspace/agents/agent-a/remote/note.txt` |
-| `claw.api.storage.itemShareFixture` | apiRoute | api | claw |  |  |  | `/v1/items/item-1/shares` |
-| `claw.api.storage.itemShareRevokeFixture` | apiRoute | api | claw |  |  |  | `/v1/items/item-1/shares/share-1/revoke` |
-| `claw.api.storage.sharesRoot` | apiRoute | api | claw |  |  |  | `/v1/storage/shares` |
-| `claw.api.system.status` | apiRoute | api | claw |  |  |  | `/v1/system/status` |
+| `claw.api.secrets` | apiRoute | api | claw |  |  |  | `/v1/secrets` |
+| `claw.api.secretsSetup` | apiRoute | api | claw |  |  |  | `/v1/secrets/setup` |
+| `claw.api.storage` | apiRoute | api | claw |  |  |  | `/v1/storage` |
+| `claw.api.storageObjectsWorkspaceAgentsAgentARemoteNoteTxt` | apiRoute | api | claw |  |  |  | `/v1/storage/objects/workspace/agents/agent-a/remote/note.txt` |
+| `claw.api.itemsItem1Shares` | apiRoute | api | claw |  |  |  | `/v1/items/item-1/shares` |
+| `claw.api.itemsItem1SharesShare1Revoke` | apiRoute | api | claw |  |  |  | `/v1/items/item-1/shares/share-1/revoke` |
+| `claw.api.storageShares` | apiRoute | api | claw |  |  |  | `/v1/storage/shares` |
+| `claw.api.systemStatus` | apiRoute | api | claw |  |  |  | `/v1/system/status` |
 | `claw.api.uploads` | apiRoute | api | claw |  |  |  | `/v1/uploads` |
 | `claw.api.workspaces` | apiRoute | api | claw |  |  |  | `/v1/workspaces` |
 | `claw.api.events` | apiRoute | api | claw |  |  |  | `/v1/events` |
@@ -1685,47 +1685,47 @@ flowchart TD
 | `claw.api.webhooks.providerEvent` | apiRoute | api | claw |  |  |  | `/v1/webhooks/{provider}/{event}` |
 | `claw.api.integrations.callback` | apiRoute | api | claw |  |  |  | `/v1/integrations/{provider}/callback` |
 | `claw.privateApi.attachments` | privateApiRoute | api | claw |  |  |  | `/api/attachments` |
-| `claw.privateApi.auth.token` | privateApiRoute | api | claw |  |  |  | `/api/auth/token` |
+| `claw.privateApi.authToken` | privateApiRoute | api | claw |  |  |  | `/api/auth/token` |
 | `claw.privateApi.capture` | privateApiRoute | api | claw |  |  |  | `/api/capture` |
 | `claw.privateApi.captures` | privateApiRoute | api | claw |  |  |  | `/api/captures` |
-| `claw.privateApi.chat.feedback` | privateApiRoute | api | claw |  |  |  | `/api/chat/feedback` |
+| `claw.privateApi.chatFeedback` | privateApiRoute | api | claw |  |  |  | `/api/chat/feedback` |
 | `claw.privateApi.comments` | privateApiRoute | api | claw |  |  |  | `/api/comments` |
-| `claw.privateApi.config.profile` | privateApiRoute | api | claw |  |  |  | `/api/config/profile` |
-| `claw.privateApi.config.reset` | privateApiRoute | api | claw |  |  |  | `/api/config/reset` |
-| `claw.privateApi.config.workspaceFiles` | privateApiRoute | api | claw |  |  |  | `/api/config/workspace-files` |
-| `claw.privateApi.connectors.catalog` | privateApiRoute | api | claw |  |  |  | `/api/connectors/catalog` |
+| `claw.privateApi.configProfile` | privateApiRoute | api | claw |  |  |  | `/api/config/profile` |
+| `claw.privateApi.configReset` | privateApiRoute | api | claw |  |  |  | `/api/config/reset` |
+| `claw.privateApi.configWorkspaceFiles` | privateApiRoute | api | claw |  |  |  | `/api/config/workspace-files` |
+| `claw.privateApi.connectorsCatalog` | privateApiRoute | api | claw |  |  |  | `/api/connectors/catalog` |
 | `claw.privateApi.context` | privateApiRoute | api | claw |  |  |  | `/api/context` |
 | `claw.privateApi.customFields` | privateApiRoute | api | claw |  |  |  | `/api/custom-fields` |
 | `claw.privateApi.cycles` | privateApiRoute | api | claw |  |  |  | `/api/cycles` |
-| `claw.privateApi.discover.local` | privateApiRoute | api | claw |  |  |  | `/api/discover/local` |
-| `claw.privateApi.e2e.seed` | privateApiRoute | api | claw |  |  |  | `/api/e2e/seed` |
+| `claw.privateApi.discoverLocal` | privateApiRoute | api | claw |  |  |  | `/api/discover/local` |
+| `claw.privateApi.e2eSeed` | privateApiRoute | api | claw |  |  |  | `/api/e2e/seed` |
 | `claw.privateApi.epics` | privateApiRoute | api | claw |  |  |  | `/api/epics` |
 | `claw.privateApi.export` | privateApiRoute | api | claw |  |  |  | `/api/export` |
 | `claw.privateApi.fieldValues` | privateApiRoute | api | claw |  |  |  | `/api/field-values` |
 | `claw.privateApi.goals` | privateApiRoute | api | claw |  |  |  | `/api/goals` |
 | `claw.privateApi.graph` | privateApiRoute | api | claw |  |  |  | `/api/graph` |
-| `claw.privateApi.hotTopics.seed` | privateApiRoute | api | claw |  |  |  | `/api/hot-topics/seed` |
+| `claw.privateApi.hotTopicsSeed` | privateApiRoute | api | claw |  |  |  | `/api/hot-topics/seed` |
 | `claw.privateApi.images` | privateApiRoute | api | claw |  |  |  | `/api/images` |
 | `claw.privateApi.instances` | privateApiRoute | api | claw |  |  |  | `/api/instances` |
-| `claw.privateApi.integrations.auth` | privateApiRoute | api | claw |  |  |  | `/api/integrations/auth` |
-| `claw.privateApi.integrations.enable` | privateApiRoute | api | claw |  |  |  | `/api/integrations/enable` |
-| `claw.privateApi.integrations.gateway` | privateApiRoute | api | claw |  |  |  | `/api/integrations/gateway` |
-| `claw.privateApi.integrations.install` | privateApiRoute | api | claw |  |  |  | `/api/integrations/install` |
-| `claw.privateApi.integrations.installStream` | privateApiRoute | api | claw |  |  |  | `/api/integrations/install-stream` |
-| `claw.privateApi.integrations.reveal` | privateApiRoute | api | claw |  |  |  | `/api/integrations/reveal` |
-| `claw.privateApi.integrations.slack.connect` | privateApiRoute | api | claw |  |  |  | `/api/integrations/slack/connect` |
-| `claw.privateApi.integrations.slack.test` | privateApiRoute | api | claw |  |  |  | `/api/integrations/slack/test` |
-| `claw.privateApi.integrations.telegram.connect` | privateApiRoute | api | claw |  |  |  | `/api/integrations/telegram/connect` |
-| `claw.privateApi.integrations.telegram.test` | privateApiRoute | api | claw |  |  |  | `/api/integrations/telegram/test` |
-| `claw.privateApi.integrations.uninstall` | privateApiRoute | api | claw |  |  |  | `/api/integrations/uninstall` |
-| `claw.privateApi.integrations.whatsapp.cleanup` | privateApiRoute | api | claw |  |  |  | `/api/integrations/whatsapp/cleanup` |
-| `claw.privateApi.integrations.whatsapp.connect` | privateApiRoute | api | claw |  |  |  | `/api/integrations/whatsapp/connect` |
+| `claw.privateApi.integrationsAuth` | privateApiRoute | api | claw |  |  |  | `/api/integrations/auth` |
+| `claw.privateApi.integrationsEnable` | privateApiRoute | api | claw |  |  |  | `/api/integrations/enable` |
+| `claw.privateApi.integrationsGateway` | privateApiRoute | api | claw |  |  |  | `/api/integrations/gateway` |
+| `claw.privateApi.integrationsInstall` | privateApiRoute | api | claw |  |  |  | `/api/integrations/install` |
+| `claw.privateApi.integrationsInstallStream` | privateApiRoute | api | claw |  |  |  | `/api/integrations/install-stream` |
+| `claw.privateApi.integrationsReveal` | privateApiRoute | api | claw |  |  |  | `/api/integrations/reveal` |
+| `claw.privateApi.integrationsSlackConnect` | privateApiRoute | api | claw |  |  |  | `/api/integrations/slack/connect` |
+| `claw.privateApi.integrationsSlackTest` | privateApiRoute | api | claw |  |  |  | `/api/integrations/slack/test` |
+| `claw.privateApi.integrationsTelegramConnect` | privateApiRoute | api | claw |  |  |  | `/api/integrations/telegram/connect` |
+| `claw.privateApi.integrationsTelegramTest` | privateApiRoute | api | claw |  |  |  | `/api/integrations/telegram/test` |
+| `claw.privateApi.integrationsUninstall` | privateApiRoute | api | claw |  |  |  | `/api/integrations/uninstall` |
+| `claw.privateApi.integrationsWhatsappCleanup` | privateApiRoute | api | claw |  |  |  | `/api/integrations/whatsapp/cleanup` |
+| `claw.privateApi.integrationsWhatsappConnect` | privateApiRoute | api | claw |  |  |  | `/api/integrations/whatsapp/connect` |
 | `claw.privateApi.lists` | privateApiRoute | api | claw |  |  |  | `/api/lists` |
-| `claw.privateApi.memory.person` | privateApiRoute | api | claw |  |  |  | `/api/memory/person` |
+| `claw.privateApi.memoryPerson` | privateApiRoute | api | claw |  |  |  | `/api/memory/person` |
 | `claw.privateApi.milestones` | privateApiRoute | api | claw |  |  |  | `/api/milestones` |
 | `claw.privateApi.monitors` | privateApiRoute | api | claw |  |  |  | `/api/monitors` |
-| `claw.privateApi.notesTrailingSlash` | privateApiRoute | api | claw |  |  |  | `/api/notes/` |
-| `claw.privateApi.notify.actions` | privateApiRoute | api | claw |  |  |  | `/api/notify/actions` |
+| `claw.privateApi.notes` | privateApiRoute | api | claw |  |  |  | `/api/notes/` |
+| `claw.privateApi.notifyActions` | privateApiRoute | api | claw |  |  |  | `/api/notify/actions` |
 | `claw.privateApi.people` | privateApiRoute | api | claw |  |  |  | `/api/people` |
 | `claw.privateApi.projects` | privateApiRoute | api | claw |  |  |  | `/api/projects` |
 | `claw.privateApi.promote` | privateApiRoute | api | claw |  |  |  | `/api/promote` |
@@ -1737,58 +1737,58 @@ flowchart TD
 | `claw.privateApi.seed` | privateApiRoute | api | claw |  |  |  | `/api/seed` |
 | `claw.privateApi.sessions` | privateApiRoute | api | claw |  |  |  | `/api/sessions` |
 | `claw.privateApi.setup` | privateApiRoute | api | claw |  |  |  | `/api/setup` |
-| `claw.privateApi.skills.install` | privateApiRoute | api | claw |  |  |  | `/api/skills/install` |
-| `claw.privateApi.skills.remove` | privateApiRoute | api | claw |  |  |  | `/api/skills/remove` |
-| `claw.privateApi.skills.sources` | privateApiRoute | api | claw |  |  |  | `/api/skills/sources` |
-| `claw.privateApi.sources.refresh` | privateApiRoute | api | claw |  |  |  | `/api/sources/refresh` |
+| `claw.privateApi.skillsInstall` | privateApiRoute | api | claw |  |  |  | `/api/skills/install` |
+| `claw.privateApi.skillsRemove` | privateApiRoute | api | claw |  |  |  | `/api/skills/remove` |
+| `claw.privateApi.skillsSources` | privateApiRoute | api | claw |  |  |  | `/api/skills/sources` |
+| `claw.privateApi.sourcesRefresh` | privateApiRoute | api | claw |  |  |  | `/api/sources/refresh` |
 | `claw.privateApi.stats` | privateApiRoute | api | claw |  |  |  | `/api/stats` |
-| `claw.privateApi.telegram.account` | privateApiRoute | api | claw |  |  |  | `/api/telegram/account` |
+| `claw.privateApi.telegramAccount` | privateApiRoute | api | claw |  |  |  | `/api/telegram/account` |
 | `claw.privateApi.templates` | privateApiRoute | api | claw |  |  |  | `/api/templates` |
 | `claw.privateApi.timeline` | privateApiRoute | api | claw |  |  |  | `/api/timeline` |
-| `claw.privateApi.tools.conclude` | privateApiRoute | api | claw |  |  |  | `/api/tools/conclude` |
-| `claw.privateApi.tools.getPrefix` | privateApiRoute | api | claw |  |  |  | `/api/tools/get/` |
-| `claw.privateApi.tools.search` | privateApiRoute | api | claw |  |  |  | `/api/tools/search` |
-| `claw.privateApi.tools.status` | privateApiRoute | api | claw |  |  |  | `/api/tools/status` |
+| `claw.privateApi.toolsConclude` | privateApiRoute | api | claw |  |  |  | `/api/tools/conclude` |
+| `claw.privateApi.toolsGet` | privateApiRoute | api | claw |  |  |  | `/api/tools/get/` |
+| `claw.privateApi.toolsSearch` | privateApiRoute | api | claw |  |  |  | `/api/tools/search` |
+| `claw.privateApi.toolsStatus` | privateApiRoute | api | claw |  |  |  | `/api/tools/status` |
 | `claw.privateApi.tts` | privateApiRoute | api | claw |  |  |  | `/api/tts` |
-| `claw.privateApi.tts.providers` | privateApiRoute | api | claw |  |  |  | `/api/tts/providers` |
+| `claw.privateApi.ttsProviders` | privateApiRoute | api | claw |  |  |  | `/api/tts/providers` |
 | `claw.privateApi.users` | privateApiRoute | api | claw |  |  |  | `/api/users` |
 | `claw.privateApi.activity` | privateApiRoute | api | claw |  |  |  | `/api/activity` |
-| `claw.privateApi.apps.dashboard` | privateApiRoute | api | claw |  |  |  | `/api/apps/{appId}/dashboard` |
-| `claw.privateApi.apps.assets` | privateApiRoute | api | claw |  |  |  | `/api/apps/{appId}/assets` |
+| `claw.privateApi.appsAppIdDashboard` | privateApiRoute | api | claw |  |  |  | `/api/apps/{appId}/dashboard` |
+| `claw.privateApi.appsAppIdAssets` | privateApiRoute | api | claw |  |  |  | `/api/apps/{appId}/assets` |
 | `claw.privateApi.authTest` | privateApiRoute | api | claw |  |  |  | `/api/auth.test` |
-| `claw.privateApi.chat.sessions` | privateApiRoute | api | claw |  |  |  | `/api/chat/sessions` |
-| `claw.privateApi.claw.status` | privateApiRoute | api | claw |  |  |  | `/api/claw/status` |
+| `claw.privateApi.chatSessions` | privateApiRoute | api | claw |  |  |  | `/api/chat/sessions` |
+| `claw.privateApi.clawStatus` | privateApiRoute | api | claw |  |  |  | `/api/claw/status` |
 | `claw.privateApi.companies` | privateApiRoute | api | claw |  |  |  | `/api/companies` |
 | `claw.privateApi.config` | privateApiRoute | api | claw |  |  |  | `/api/config` |
-| `claw.privateApi.config.local` | privateApiRoute | api | claw |  |  |  | `/api/config/local` |
-| `claw.privateApi.connectors.subscriptions` | privateApiRoute | api | claw |  |  |  | `/api/connectors/subscriptions` |
+| `claw.privateApi.configLocal` | privateApiRoute | api | claw |  |  |  | `/api/config/local` |
+| `claw.privateApi.connectorsSubscriptions` | privateApiRoute | api | claw |  |  |  | `/api/connectors/subscriptions` |
 | `claw.privateApi.contacts` | privateApiRoute | api | claw |  |  |  | `/api/contacts` |
 | `claw.privateApi.data` | privateApiRoute | api | claw |  |  |  | `/api/data` |
 | `claw.privateApi.dm` | privateApiRoute | api | claw |  |  |  | `/api/dm` |
-| `claw.privateApi.e2e.reset` | privateApiRoute | api | claw |  |  |  | `/api/e2e/reset` |
-| `claw.privateApi.e2e.status` | privateApiRoute | api | claw |  |  |  | `/api/e2e/status` |
+| `claw.privateApi.e2eReset` | privateApiRoute | api | claw |  |  |  | `/api/e2e/reset` |
+| `claw.privateApi.e2eStatus` | privateApiRoute | api | claw |  |  |  | `/api/e2e/status` |
 | `claw.privateApi.events` | privateApiRoute | api | claw |  |  |  | `/api/events` |
 | `claw.privateApi.health` | privateApiRoute | api | claw |  |  |  | `/api/health` |
-| `claw.privateApi.images.backends` | privateApiRoute | api | claw |  |  |  | `/api/images/backends` |
+| `claw.privateApi.imagesBackends` | privateApiRoute | api | claw |  |  |  | `/api/images/backends` |
 | `claw.privateApi.inbox` | privateApiRoute | api | claw |  |  |  | `/api/inbox` |
-| `claw.privateApi.inspect.preview` | privateApiRoute | api | claw |  |  |  | `/api/inspect/preview` |
-| `claw.privateApi.integrations.setup` | privateApiRoute | api | claw |  |  |  | `/api/integrations/setup` |
-| `claw.privateApi.integrations.status` | privateApiRoute | api | claw |  |  |  | `/api/integrations/status` |
-| `claw.privateApi.integrations.whatsapp.chats` | privateApiRoute | api | claw |  |  |  | `/api/integrations/whatsapp/chats` |
+| `claw.privateApi.inspectPreview` | privateApiRoute | api | claw |  |  |  | `/api/inspect/preview` |
+| `claw.privateApi.integrationsSetup` | privateApiRoute | api | claw |  |  |  | `/api/integrations/setup` |
+| `claw.privateApi.integrationsStatus` | privateApiRoute | api | claw |  |  |  | `/api/integrations/status` |
+| `claw.privateApi.integrationsWhatsappChats` | privateApiRoute | api | claw |  |  |  | `/api/integrations/whatsapp/chats` |
 | `claw.privateApi.memory` | privateApiRoute | api | claw |  |  |  | `/api/memory` |
 | `claw.privateApi.notes` | privateApiRoute | api | claw |  |  |  | `/api/notes` |
-| `claw.privateApi.notify.dashboard` | privateApiRoute | api | claw |  |  |  | `/api/notify/dashboard` |
+| `claw.privateApi.notifyDashboard` | privateApiRoute | api | claw |  |  |  | `/api/notify/dashboard` |
 | `claw.privateApi.personas` | privateApiRoute | api | claw |  |  |  | `/api/personas` |
 | `claw.privateApi.plugins` | privateApiRoute | api | claw |  |  |  | `/api/plugins` |
 | `claw.privateApi.routines` | privateApiRoute | api | claw |  |  |  | `/api/routines` |
 | `claw.privateApi.rules` | privateApiRoute | api | claw |  |  |  | `/api/rules` |
 | `claw.privateApi.schema` | privateApiRoute | api | claw |  |  |  | `/api/schema` |
-| `claw.privateApi.skills.list` | privateApiRoute | api | claw |  |  |  | `/api/skills/list` |
+| `claw.privateApi.skillsList` | privateApiRoute | api | claw |  |  |  | `/api/skills/list` |
 | `claw.privateApi.sources` | privateApiRoute | api | claw |  |  |  | `/api/sources` |
 | `claw.privateApi.spaces` | privateApiRoute | api | claw |  |  |  | `/api/spaces` |
 | `claw.privateApi.summary` | privateApiRoute | api | claw |  |  |  | `/api/summary` |
 | `claw.privateApi.tasks` | privateApiRoute | api | claw |  |  |  | `/api/tasks` |
-| `claw.privateApi.tools.save` | privateApiRoute | api | claw |  |  |  | `/api/tools/save` |
+| `claw.privateApi.toolsSave` | privateApiRoute | api | claw |  |  |  | `/api/tools/save` |
 | `claw.privateApi.ui` | privateApiRoute | api | claw |  |  |  | `/api/ui` |
 | `claw.privateApi.usage` | privateApiRoute | api | claw |  |  |  | `/api/usage` |
 | `claw.protocol.hostCommand.v1` | protocol | protocol | claw |  |  |  | `host-command-v1` |
