@@ -90,7 +90,7 @@ export function mountOpenClaw(container) {
       { l: "Version", v: "0.14.2" },
       { l: "Model", v: "claude-sonnet-4-6", mono: true },
       { l: "Agent ID", v: "default (agt_claw_01)", mono: true },
-      { l: "Workspace", v: "~/.clawjs/workspaces/default", mono: true, copy: true },
+      { l: "Workspace", v: "~/.claw/workspaces/default", mono: true, copy: true },
     ].forEach(({ l, v, mono, copy }) => {
       const r = h("div", { className: `dp-meta__row ${copy ? "dp-meta__row--copy" : ""}` });
       r.append(h("span", { className: "dp-meta__label" }, l), h("span", { className: `dp-meta__val ${mono ? "dp-mono" : ""}` }, v));

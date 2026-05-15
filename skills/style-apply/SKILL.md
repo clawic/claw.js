@@ -6,7 +6,7 @@ keywords: [style, apply, render, template, brand]
 
 # style-apply
 
-Take an existing Style (`.clawjs/styles/<id>/`) and apply it to a Template instance, producing one or more outputs.
+Take an existing Style (`.claw/styles/<id>/`) and apply it to a Template instance, producing one or more outputs.
 
 ## Inputs
 

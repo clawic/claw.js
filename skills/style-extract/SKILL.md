@@ -6,7 +6,7 @@ keywords: [style, design, brand, extract, palette, tokens, reference]
 
 # style-extract
 
-Take an external reference (a URL, an image, a PDF) and turn it into a candidate `Style` in the workspace under `.clawjs/styles/<id>/STYLE.md`.
+Take an external reference (a URL, an image, a PDF) and turn it into a candidate `Style` in the workspace under `.claw/styles/<id>/STYLE.md`.
 
 ## Inputs
 

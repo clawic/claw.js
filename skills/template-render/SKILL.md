@@ -40,4 +40,4 @@ The standard recipe for producing a deliverable from a Template and a Style.
 
 - Never hard-code style values into the data. The Style is the source of truth for color and typography.
 - If the template declares `outputs` and the requested format is not in the list, fail with a clear error.
-- Generated outputs go under `.clawjs/templates/<templateId>/outputs/` unless `--out` is specified.
+- Generated outputs go under `.claw/templates/<templateId>/outputs/` unless `--out` is specified.
