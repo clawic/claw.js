@@ -65,7 +65,7 @@ integrations/  provider and channel services
 iot/           local-first IoT control plane
 memory/        typed local memory CLI/service
 mcp/           MCP service surface
-modules/       optional domain capability packs
+modules/       agent-facing domain manifests
 monitor/       health and runtime monitoring service
 notify/        notification delivery service
 packages/      published npm packages and scaffolds
