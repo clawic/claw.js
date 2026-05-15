@@ -27,7 +27,6 @@ the platform quickly.
 | `drive/` | Local-first drive and file collaboration service. |
 | `examples/` | Demos, mocks, fixtures, and starter showcases. |
 | `execution/` | Agent-authored code execution, workers, runs, artifacts, and deployment flow. |
-| `integrations/` | Provider and channel services such as Slack, Telegram, email, and webhooks. |
 | `iot/` | Local-first IoT control plane. |
 | `memory/` | Typed local memory CLI and service surface. |
 | `mcp/` | MCP service surface. |
@@ -62,9 +61,9 @@ the platform quickly.
   layers from `modules/`. The database-to-CLI route is recorded in
   `packages/clawjs-core/src/domain-surface-registry.ts`, and guarded by
   `scripts/domain-surface-registry-guard.mjs`.
-- Put provider and channel services under `integrations/`, including Slack,
-  Discord, Telegram, WhatsApp, SMS, email, Teams, Matrix, Signal, iMessage, and
-  webhooks.
+- Put provider and channel adapters under `packages/clawjs-integrations`.
+  Standalone provider service folders at repository root are retired in favor of
+  the connector control plane.
 - Put demos, mocks, fixtures, and starter showcases under `examples/`.
 - Keep published npm packages and scaffold packages under `packages/`; package
   names and public import paths are not tied to root-folder names.
@@ -87,6 +86,8 @@ The current layout intentionally replaces older root names:
 - The old social publishing workspace became `publishing/`.
 - `public/` became `assets/`.
 - `demo/` and `mock/` moved under `examples/`.
+- Standalone root `integrations/*` services were absorbed into
+  `packages/clawjs-integrations` and the connector control plane.
 
 Historical docs may mention old names only when describing migration history.
 New scripts, docs, tests, and examples should use the current layout.

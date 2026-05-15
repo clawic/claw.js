@@ -14,6 +14,7 @@ const tracked = execFileSync("git", ["ls-files"], { encoding: "utf8" })
 const errors = [];
 
 for (const file of tracked) {
+  if (!fs.existsSync(file)) continue;
   const text = fs.readFileSync(file, "utf8");
   checkConnectorRunnerCalls(file, text);
 }

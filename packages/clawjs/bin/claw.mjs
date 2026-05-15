@@ -8,7 +8,6 @@ import { runOpenSecrets } from "./secrets-server-launcher.mjs";
 import { runOpenDatabase } from "./database-server-launcher.mjs";
 import { runOpenMemory } from "./memory-server-launcher.mjs";
 import { runOpenDrive } from "./drive-server-launcher.mjs";
-import { runOpenTelegram } from "./telegram-server-launcher.mjs";
 import { runOpenAudio } from "./audio-server-launcher.mjs";
 import { runOpenIndex } from "./index-server-launcher.mjs";
 import { runOpenSessions } from "./sessions-server-launcher.mjs";
@@ -45,9 +44,6 @@ if (first === "open" && args[1] === "memory") {
 }
 if (first === "open" && args[1] === "drive") {
   process.exit(await runOpenDrive(args.slice(2)));
-}
-if (first === "open" && args[1] === "telegram") {
-  process.exit(await runOpenTelegram(args.slice(2)));
 }
 if (first === "open" && args[1] === "audio") {
   process.exit(await runOpenAudio(args.slice(2)));
