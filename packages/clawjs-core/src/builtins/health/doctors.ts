@@ -6,7 +6,7 @@ export const DOCTORS: BuiltinCollectionDefinition = {
   family: "health",
   aliases: ["doctor","doctors"],
   fields: [
-    { name: "name", type: "text", required: true },
+    { name: "name", type: "text", required: true, aliases: ["clinicianName"] },
     { name: "specialty", type: "text" },
     { name: "phone", type: "text" },
     { name: "email", type: "email" },

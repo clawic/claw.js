@@ -2,6 +2,7 @@ import type {
   BuiltinCatalogEvidenceTag,
   BuiltinRelationKind,
 } from "./builtins/_types.ts";
+import { AUDITED_NEED_TEMPLATE_OVERRIDES } from "./catalog-audited-overrides.ts";
 
 export type CatalogCoverageStatus =
   | "canonical"
@@ -37,7 +38,7 @@ export interface CatalogCoverageNeed {
   coverage: CatalogCoverageMapping;
 }
 
-export type CatalogAuditBatchStatus = "audited";
+export type CatalogAuditBatchStatus = "audited" | "mapping_seeded";
 
 export type CatalogAuditConfidence = "high" | "medium";
 
@@ -111,8 +112,11 @@ export interface CatalogAuditedNeed {
 
 export interface CatalogAuditedBatchReport {
   batch: string;
+  status: CatalogAuditBatchStatus;
   archetypes: number;
   needs: number;
+  domainMappedNeeds: number;
+  seededNeeds: number;
   gaps: number;
   customDatabaseBoundaries: number;
   additiveChanges: number;
@@ -162,10 +166,10 @@ export const CATALOG_AUDITED_BATCHES: CatalogAuditedBatch[] = [
   { id: "learning_assessment", order: 2, domain: "learning, spaced repetition, courses, tutoring, credentialing, assessment", status: "audited" },
   { id: "sports_booking_venues", order: 3, domain: "sports, venue booking, coaching, classes, memberships, leagues", status: "audited" },
   { id: "health_fitness_care", order: 4, domain: "health, fitness, care coordination, mental health, labs, medication", status: "audited" },
-  { id: "home_property_possessions", order: 5, domain: "home, property, possessions, maintenance, warranties, utilities", status: "audited" },
-  { id: "work_hr_legal_ops", order: 6, domain: "work, HR, legal, contracts, operations, payroll, recruiting", status: "audited" },
-  { id: "crm_support_growth", order: 7, domain: "CRM, support, marketing, analytics, customer success, feedback", status: "audited" },
-  { id: "personal_memory_documents", order: 8, domain: "personal memory, documents, goals, routines, preferences, archives", status: "audited" },
+  { id: "home_property_possessions", order: 5, domain: "home, property, possessions, maintenance, warranties, utilities", status: "mapping_seeded" },
+  { id: "work_hr_legal_ops", order: 6, domain: "work, HR, legal, contracts, operations, payroll, recruiting", status: "mapping_seeded" },
+  { id: "crm_support_growth", order: 7, domain: "CRM, support, marketing, analytics, customer success, feedback", status: "mapping_seeded" },
+  { id: "personal_memory_documents", order: 8, domain: "personal memory, documents, goals, routines, preferences, archives", status: "mapping_seeded" },
 ];
 
 const CORE_COMMERCE_COLLECTIONS = [
@@ -267,7 +271,7 @@ export const CATALOG_AUDITED_ARCHETYPES: CatalogAuditedArchetype[] = [
     archetype,
     valueProposition: `Coordinate ${archetype} workflows with people, places, slots, payments, membership, and performance records.`,
     workflow: "Model bookings, participants, venues, membership status, financial links, schedules, and measurable activity outcomes.",
-    collectionNames: ["bookings", "availability_slots", "booking_slots", "booking_meeting_types", "routine_workouts", "workouts", "personal_records", "races_registered", "race_results", "communities_membership", "team_memberships", "places_visited"],
+    collectionNames: ["bookings", "availability_slots", "booking_slots", "booking_meeting_types", "routine_workouts", "workouts", "workout_exercises", "personal_records", "races_registered", "race_results", "communities_membership", "team_memberships", "places_visited"],
     evidence: ["human_recognizable", "market_validated", "multi_domain_reuse"] as BuiltinCatalogEvidenceTag[],
   })),
   ...[
@@ -674,47 +678,63 @@ function buildCoverageNeed(wave: CoverageWaveSeed, archetype: string, scenario: 
   };
 }
 
+function resolveAuditedTemplate(archetype: CatalogAuditedArchetype, template: AuditedNeedTemplate): AuditedNeedTemplate {
+  const override = AUDITED_NEED_TEMPLATE_OVERRIDES[archetype.batch]?.[template.id];
+  if (!override) return template;
+
+  return {
+    ...template,
+    ...override,
+    id: template.id,
+    label: template.label,
+    humanValue: template.humanValue,
+    jsonAudit: override.jsonAudit ?? template.jsonAudit,
+    structuralChange: override.structuralChange ?? "existing",
+  };
+}
+
 function buildAuditedNeed(archetype: CatalogAuditedArchetype, template: AuditedNeedTemplate): CatalogAuditedNeed {
-  const coverageStatus = template.coverageStatus ?? "canonical";
+  const resolvedTemplate = resolveAuditedTemplate(archetype, template);
+  const coverageStatus = resolvedTemplate.coverageStatus ?? "canonical";
   const collectionNames = [
     ...new Set([
       ...archetype.collectionNames,
-      ...template.fieldMappings.map((mapping) => mapping.collectionName),
-      ...template.relationMappings.map((mapping) => mapping.collectionName),
+      ...resolvedTemplate.fieldMappings.map((mapping) => mapping.collectionName),
+      ...resolvedTemplate.relationMappings.map((mapping) => mapping.collectionName),
     ]),
   ];
-  const fieldNames = [...new Set(template.fieldMappings.map((mapping) => mapping.fieldName))];
-  const relationNames = [...new Set(template.relationMappings.map((mapping) => mapping.fieldName))];
+  const fieldNames = [...new Set(resolvedTemplate.fieldMappings.map((mapping) => mapping.fieldName))];
+  const relationNames = [...new Set(resolvedTemplate.relationMappings.map((mapping) => mapping.fieldName))];
 
   return {
-    id: `${archetype.id}.${template.id}`,
+    id: `${archetype.id}.${resolvedTemplate.id}`,
     batch: archetype.batch,
     domain: archetype.domain,
     archetypeId: archetype.id,
     archetype: archetype.archetype,
-    structuralNeed: template.label,
+    structuralNeed: resolvedTemplate.label,
     workflow: archetype.workflow,
-    humanValue: `${template.humanValue} for a ${archetype.archetype}`,
-    requiredEntities: [...new Set([...template.requiredEntities, "canonicalRecord"])],
-    requiredFields: template.fields,
-    requiredRelationships: template.relationMappings.map((mapping) => ({
-      name: `${template.id}_${mapping.kind}`,
+    humanValue: `${resolvedTemplate.humanValue} for a ${archetype.archetype}`,
+    requiredEntities: [...new Set([...resolvedTemplate.requiredEntities, "canonicalRecord"])],
+    requiredFields: resolvedTemplate.fields,
+    requiredRelationships: resolvedTemplate.relationMappings.map((mapping) => ({
+      name: `${resolvedTemplate.id}_${mapping.kind}`,
       kind: mapping.kind,
       from: mapping.collectionName,
       to: mapping.targetCollectionName,
     })),
     evidence: archetype.evidence,
-    fieldMappings: template.fieldMappings,
-    relationMappings: template.relationMappings,
-    jsonAudit: template.jsonAudit,
+    fieldMappings: resolvedTemplate.fieldMappings,
+    relationMappings: resolvedTemplate.relationMappings,
+    jsonAudit: resolvedTemplate.jsonAudit,
     coverage: {
       status: coverageStatus,
       collectionNames,
       fieldNames,
       relationNames,
       confidence: coverageStatus === "gap" ? "medium" : "high",
-      structuralChange: template.structuralChange ?? "existing",
-      notes: template.notes,
+      structuralChange: resolvedTemplate.structuralChange ?? "existing",
+      notes: resolvedTemplate.notes,
     },
   };
 }
@@ -748,14 +768,20 @@ export function listCatalogAuditedNeeds(options?: { batch?: string; status?: Cat
 export function summarizeCatalogAuditedBatch(batch: string): CatalogAuditedBatchReport {
   const needs = listCatalogAuditedNeeds({ batch });
   const archetypes = new Set(needs.map((need) => need.archetypeId));
+  const batchDefinition = CATALOG_AUDITED_BATCHES.find((candidate) => candidate.id === batch);
+  const status = batchDefinition?.status ?? "mapping_seeded";
+  const isAudited = status === "audited";
 
   return {
     batch,
+    status,
     archetypes: archetypes.size,
     needs: needs.length,
+    domainMappedNeeds: isAudited ? needs.length : 0,
+    seededNeeds: isAudited ? 0 : needs.length,
     gaps: needs.filter((need) => need.coverage.status === "gap").length,
-    customDatabaseBoundaries: needs.filter((need) => need.coverage.status === "custom_database").length,
-    additiveChanges: needs.filter((need) => need.coverage.structuralChange === "additive").length,
+    customDatabaseBoundaries: isAudited ? needs.filter((need) => need.coverage.status === "custom_database").length : 0,
+    additiveChanges: isAudited ? needs.filter((need) => need.coverage.structuralChange === "additive").length : 0,
     jsonAuditDebt: needs.filter((need) => need.jsonAudit.status === "audit_debt").length,
   };
 }

@@ -6,7 +6,7 @@ export const HEALTH_CONDITIONS: BuiltinCollectionDefinition = {
   family: "health",
   aliases: ["health_condition","health_conditions"],
   fields: [
-    { name: "name", type: "text", required: true },
+    { name: "name", type: "text", required: true, aliases: ["conditionName"] },
     { name: "description", type: "text" },
     { name: "diagnosedAt", type: "date" },
     { name: "status", type: "select", options: ["active","resolved","chronic","monitoring"] },

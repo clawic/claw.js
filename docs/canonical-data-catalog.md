@@ -116,6 +116,10 @@ same pattern appears in more than one family.
 - Batch closure must report archetypes, needs, gaps, custom database
   boundaries, additive changes, and JSON audit debt. A batch is not closed by
   generic candidate mappings.
+- Batch status is explicit: `mapping_seeded` means the target archetypes and
+  needs exist but still require domain-specific field and relation mappings;
+  `audited` means the batch mappings have been reviewed against real canonical
+  fields and relation semantics.
 - Field aliases are allowed only as scoped vocabulary variants for imports and
   search. They must not collide with canonical fields in the same collection.
 - JSON fields remain acceptable for payloads whose schema is deliberately

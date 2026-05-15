@@ -7,8 +7,8 @@ export const FLASHCARDS: BuiltinCollectionDefinition = {
   aliases: ["flashcard","flashcards"],
   fields: [
     { name: "deckId", type: "relation", required: true, relation: { collectionName: "flashcard_decks" } },
-    { name: "front", type: "text", required: true },
-    { name: "back", type: "text", required: true },
+    { name: "front", type: "text", required: true, aliases: ["prompt"] },
+    { name: "back", type: "text", required: true, aliases: ["answer"] },
     { name: "tags", type: "json" },
     { name: "difficulty", type: "number" },
     { name: "nextReviewAt", type: "date" },

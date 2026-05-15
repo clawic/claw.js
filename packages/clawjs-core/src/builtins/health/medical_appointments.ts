@@ -6,7 +6,7 @@ export const MEDICAL_APPOINTMENTS: BuiltinCollectionDefinition = {
   family: "health",
   aliases: ["medical_appointment","medical_appointments"],
   fields: [
-    { name: "scheduledAt", type: "date", required: true },
+    { name: "scheduledAt", type: "date", required: true, aliases: ["appointmentScheduledAt"] },
     { name: "doctorId", type: "relation", relation: { collectionName: "doctors" } },
     { name: "clinicId", type: "relation", relation: { collectionName: "clinics" } },
     { name: "reason", type: "text" },

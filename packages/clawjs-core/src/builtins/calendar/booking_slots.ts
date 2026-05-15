@@ -8,8 +8,8 @@ export const BOOKING_SLOTS: BuiltinCollectionDefinition = {
   fields: [
     { name: "meetingTypeId", type: "relation", required: true, relation: { collectionName: "booking_meeting_types" } },
     { name: "bookedByContactId", type: "relation", relation: { collectionName: "contacts" } },
-    { name: "bookedByEmail", type: "email" },
-    { name: "bookedByName", type: "text" },
+    { name: "bookedByEmail", type: "email", aliases: ["participantEmail"] },
+    { name: "bookedByName", type: "text", aliases: ["participantName"] },
     { name: "startTime", type: "date" },
     { name: "endTime", type: "date" },
     { name: "status", type: "select", options: ["confirmed","cancelled","no_show","completed","rescheduled"] },

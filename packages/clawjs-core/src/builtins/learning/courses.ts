@@ -6,8 +6,8 @@ export const COURSES: BuiltinCollectionDefinition = {
   family: "learning",
   aliases: ["course","courses"],
   fields: [
-    { name: "title", type: "text", required: true },
-    { name: "provider", type: "text" },
+    { name: "title", type: "text", required: true, aliases: ["courseTitle"] },
+    { name: "provider", type: "text", aliases: ["courseProvider"] },
     { name: "url", type: "url" },
     { name: "status", type: "select", options: ["enrolled","in_progress","completed","paused","abandoned"] },
     { name: "durationHours", type: "number" },

@@ -9,7 +9,7 @@ export const WORKOUT_EXERCISES: BuiltinCollectionDefinition = {
     { name: "workoutId", type: "relation", required: true, relation: { collectionName: "workouts" } },
     { name: "exerciseId", type: "relation", relation: { collectionName: "exercises" } },
     { name: "name", type: "text" },
-    { name: "position", type: "number" },
+    { name: "position", type: "number", aliases: ["exerciseOrder"] },
     { name: "sets", type: "number" },
     { name: "reps", type: "number" },
     { name: "weightKg", type: "number" },

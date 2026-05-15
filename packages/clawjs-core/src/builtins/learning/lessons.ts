@@ -7,8 +7,8 @@ export const LESSONS: BuiltinCollectionDefinition = {
   aliases: ["lesson","lessons"],
   fields: [
     { name: "courseId", type: "relation", required: true, relation: { collectionName: "courses" } },
-    { name: "title", type: "text", required: true },
-    { name: "position", type: "number" },
+    { name: "title", type: "text", required: true, aliases: ["lessonTitle"] },
+    { name: "position", type: "number", aliases: ["lessonOrder"] },
     { name: "durationMinutes", type: "number" },
     { name: "status", type: "select", options: ["pending","completed","skipped"] },
     { name: "notes", type: "text" },

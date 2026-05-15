@@ -9,7 +9,7 @@ export const PERSONAL_RECORDS: BuiltinCollectionDefinition = {
     { name: "exerciseId", type: "relation", relation: { collectionName: "exercises" } },
     { name: "exerciseName", type: "text" },
     { name: "metric", type: "select", options: ["weight","reps","distance","duration"] },
-    { name: "value", type: "number", required: true },
+    { name: "value", type: "number", required: true, aliases: ["recordValue"] },
     { name: "unit", type: "text" },
     { name: "achievedAt", type: "date", required: true },
     { name: "notes", type: "text" },

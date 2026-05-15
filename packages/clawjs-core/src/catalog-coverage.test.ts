@@ -90,6 +90,16 @@ test("audited catalog expansion ledger locks the selected 120 archetype target",
     assert.equal(CATALOG_AUDITED_ARCHETYPES.filter((archetype) => archetype.batch === batch.id).length, 15);
     assert.equal(listCatalogAuditedNeeds({ batch: batch.id }).length, 180);
   }
+  assert.deepEqual(CATALOG_AUDITED_BATCHES.map((batch) => [batch.id, batch.status]), [
+    ["commerce_billing_procurement", "audited"],
+    ["learning_assessment", "audited"],
+    ["sports_booking_venues", "audited"],
+    ["health_fitness_care", "audited"],
+    ["home_property_possessions", "mapping_seeded"],
+    ["work_hr_legal_ops", "mapping_seeded"],
+    ["crm_support_growth", "mapping_seeded"],
+    ["personal_memory_documents", "mapping_seeded"],
+  ]);
 });
 
 test("catalog coverage need ids are stable and unique", () => {
@@ -231,16 +241,60 @@ test("audited coverage mappings point to exact fields and relation fields", () =
   }
 });
 
+test("audited non-commerce batches use domain-specific mappings instead of commerce placeholders", () => {
+  const auditedNonCommerceArchetypes = new Map(
+    CATALOG_AUDITED_ARCHETYPES
+      .filter((archetype) => archetype.batch !== "commerce_billing_procurement")
+      .filter((archetype) => CATALOG_AUDITED_BATCHES.find((batch) => batch.id === archetype.batch)?.status === "audited")
+      .map((archetype) => [archetype.id, new Set(archetype.collectionNames)]),
+  );
+
+  for (const need of CATALOG_AUDITED_NEEDS.filter((candidate) => auditedNonCommerceArchetypes.has(candidate.archetypeId))) {
+    const allowedCollections = auditedNonCommerceArchetypes.get(need.archetypeId);
+    assert.ok(allowedCollections, `${need.id} has no matching audited archetype`);
+
+    const mappedCollections = [
+      ...need.fieldMappings.map((mapping) => mapping.collectionName),
+      ...need.relationMappings.map((mapping) => mapping.collectionName),
+    ];
+    assert.ok(
+      mappedCollections.some((collectionName) => allowedCollections?.has(collectionName)),
+      `${need.id} does not map to any collection declared by its learning archetype`,
+    );
+    assert.equal(
+      mappedCollections.some((collectionName) => ["orders", "invoices", "charges", "balance_transactions"].includes(collectionName)),
+      false,
+      `${need.id} still maps to a commerce placeholder collection outside the commerce batch`,
+    );
+  }
+});
+
 test("audited batch reports expose progress and keep closure debt explicit", () => {
   for (const batch of CATALOG_AUDITED_BATCHES) {
     const report = summarizeCatalogAuditedBatch(batch.id);
+    assert.equal(report.status, batch.status);
     assert.equal(report.archetypes, 15);
     assert.equal(report.needs, 180);
     assert.equal(report.gaps, 0);
-    assert.equal(report.customDatabaseBoundaries, 15);
-    assert.equal(report.additiveChanges, 30);
     assert.equal(report.jsonAuditDebt, 0);
+    if (batch.status === "audited") {
+      assert.equal(report.domainMappedNeeds, 180);
+      assert.equal(report.seededNeeds, 0);
+      assert.ok(report.customDatabaseBoundaries > 0);
+    } else {
+      assert.equal(report.domainMappedNeeds, 0);
+      assert.equal(report.seededNeeds, 180);
+      assert.equal(report.customDatabaseBoundaries, 0);
+      assert.equal(report.additiveChanges, 0);
+    }
   }
+  assert.equal(summarizeCatalogAuditedBatch("commerce_billing_procurement").additiveChanges, 30);
+  assert.equal(summarizeCatalogAuditedBatch("learning_assessment").additiveChanges, 0);
+  assert.equal(summarizeCatalogAuditedBatch("sports_booking_venues").additiveChanges, 0);
+  assert.equal(summarizeCatalogAuditedBatch("health_fitness_care").additiveChanges, 0);
+  assert.equal(summarizeCatalogAuditedBatch("learning_assessment").customDatabaseBoundaries, 15);
+  assert.equal(summarizeCatalogAuditedBatch("sports_booking_venues").customDatabaseBoundaries, 30);
+  assert.equal(summarizeCatalogAuditedBatch("health_fitness_care").customDatabaseBoundaries, 30);
 });
 
 test("canonical coverage mappings include built-in relation examples for each required semantic kind", () => {

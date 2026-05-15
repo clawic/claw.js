@@ -8,8 +8,8 @@ export const MEDICATION_DOSES: BuiltinCollectionDefinition = {
   fields: [
     { name: "medicationId", type: "relation", required: true, relation: { collectionName: "medications" } },
     { name: "takenAt", type: "date", required: true },
-    { name: "amount", type: "text" },
-    { name: "unit", type: "text" },
+    { name: "amount", type: "text", aliases: ["doseAmount"] },
+    { name: "unit", type: "text", aliases: ["doseUnit"] },
     { name: "skipped", type: "boolean" },
     { name: "notes", type: "text" },
   ],
