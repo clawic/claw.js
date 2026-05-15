@@ -1692,6 +1692,7 @@ The docs check script validates that every current export from
     ReportDestination
     reportDestinationSchema
     reportDedupeCandidateSchema
+    reportApprovalSchema
     reportAttachmentSchema
     reportEvidenceKindSchema
     reportEvidenceSchema
@@ -1703,8 +1704,10 @@ The docs check script validates that every current export from
     reportQualityGateSchema
     ReportRecord
     reportRecordSchema
+    reportSubmissionReceiptSchema
     ReportStatus
     reportStatusSchema
+    reportValidationPlanSchema
     REPRODUCTIVE_INTIMATE_FAMILY
     resolveBuiltinCollectionName
     resolveClawCliCommand
