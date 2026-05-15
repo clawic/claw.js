@@ -220,6 +220,36 @@ agent/repo window and duplicate cooldowns; human overrides are audited.
 recommend labels, suggest canonical duplicate comments, and build queues, but it
 does not close, lock, delete, or publish anything.
 
+## Need Route Lab
+
+`claw needs` is the framework-first lab for turning broad human needs into
+composable routes, dry-run evaluations, deduped opportunities, and reviewed
+promotion packets. It is deliberately local-first: generation and evaluation do
+not call providers, request native permissions, deploy infrastructure, or touch
+production data.
+
+```bash
+claw needs dimensions --json
+claw needs pilots --json
+claw needs generate --pilot agent_workflow --limit 4 --json
+claw needs evaluate --pilot iot_home --dry-run --save --json
+claw needs opportunities list --json
+claw needs opportunities dedupe --json
+claw needs opportunities promote route_new_light_control_surface.external_pending_protocol --to report --json
+```
+
+V1 models the agreed dimensions as versioned framework data: human intent,
+autonomy preference, domain, target surface, agent topology, infrastructure,
+data state, permission risk, deliverable, and validation mode. The initial pilot
+pack covers agent workflow, app-building/deploy, remote infrastructure, and
+IoT/home routes.
+
+Saved evaluations live under `.claw/need-routes/need-route-lab.json`.
+Opportunities use the full maturity funnel from `idea` through `shipped`,
+`parked`, and `rejected`; kinds distinguish feature, subfeature, bug, refactor,
+test, docs, data, surface, validation, security, perf, and research. Promotion
+is a draft packet for `claw report` in V1 and remains approval-gated.
+
 ## Guidance And Resources
 
 ```bash
