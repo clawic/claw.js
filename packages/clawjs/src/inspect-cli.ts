@@ -185,7 +185,12 @@ function filterCodebaseManifest(manifest: unknown, input: InspectCliInput): unkn
     filter,
   };
   if (wantsSummary) {
-    return base;
+    const { files: _files, ...manifestWithoutFiles } = manifestObject as typeof manifestObject & { files?: unknown };
+    return {
+      ...manifestWithoutFiles,
+      summary: hasFilters ? codebaseSummaryFromFiles(filteredFiles) : manifestObject.summary,
+      filter,
+    };
   }
   return {
     ...base,
