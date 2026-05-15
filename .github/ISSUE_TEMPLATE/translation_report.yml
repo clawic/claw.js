@@ -1,0 +1,36 @@
+name: Translation report
+description: Specific localization or copy defect.
+title: "translation: "
+labels: ["type:translation", "area:localization"]
+body:
+  - type: input
+    id: locale
+    attributes:
+      label: Locale
+      placeholder: es, zh-CN, fr
+    validations:
+      required: true
+  - type: textarea
+    id: current_text
+    attributes:
+      label: Current text
+    validations:
+      required: true
+  - type: textarea
+    id: suggested_text
+    attributes:
+      label: Suggested text
+    validations:
+      required: true
+  - type: textarea
+    id: location
+    attributes:
+      label: Where it appears
+      description: Use screen, command, doc page, or component names. Do not include private local paths.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Explain why the suggested wording is better.

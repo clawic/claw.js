@@ -1,0 +1,61 @@
+name: Agent report
+description: Structured report generated with claw report and reviewed by a human.
+title: "report: "
+labels: ["source:agent", "confidence:needs-info"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Paste the redacted `claw report preview <id>` output. Do not include raw logs, secrets, local usernames, full local paths, host names, private URLs, or attachments that were not explicitly approved.
+  - type: input
+    id: report_id
+    attributes:
+      label: Local report id
+      placeholder: rep_...
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - bug
+        - crash
+        - regression
+        - docs
+        - performance
+        - translation
+    validations:
+      required: true
+  - type: dropdown
+    id: repository
+    attributes:
+      label: Repository
+      options:
+        - clawjs
+        - clawix
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction or evidence
+      description: Include concrete local-safe steps, fixture output, test names, or EXTERNAL PENDING notes.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+  - type: textarea
+    id: privacy
+    attributes:
+      label: Privacy review
+      description: Confirm redactions, attachment opt-ins, and any blocked public material.
+      placeholder: "Redactions: none. Attachments: none."
+    validations:
+      required: true

@@ -1,0 +1,23 @@
+title: "feedback: "
+labels: ["type:ux-feedback", "route:discussion-feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for broad feedback that is not yet a concrete bug or implementation request.
+  - type: textarea
+    id: feedback
+    attributes:
+      label: Feedback
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Include the screen, CLI command, workflow, or docs area.
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence or examples
+      description: Do not include secrets, private local paths, host names, or unapproved attachments.

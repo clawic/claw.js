@@ -1,0 +1,25 @@
+title: "idea: "
+labels: ["type:feature", "route:discussion-ideas"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for broad product or workflow ideas. Concrete reproducible bugs belong in Issues.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or opportunity
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed direction
+  - type: textarea
+    id: impact
+    attributes:
+      label: Who benefits
+  - type: textarea
+    id: related
+    attributes:
+      label: Related reports or discussions
