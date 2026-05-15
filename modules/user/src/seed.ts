@@ -356,9 +356,9 @@ function seedMemory(workspace: string, userId: string, reports: SeedReport[]): v
 }
 
 function seedTelegram(workspace: string, userId: string, reports: SeedReport[]): void {
-  const file = resolveClawPersistentSurfacePath("claw.legacy.workspace.clawjs", workspace, "observed", "channels.json");
+  const file = resolveClawPersistentSurfacePath("claw.workspace.observedState", workspace, "channels.json");
   if (!fs.existsSync(file)) {
-    recordSkip(reports, "telegram", "accounts", ".clawjs/observed/channels.json not present");
+    recordSkip(reports, "telegram", "accounts", ".claw/observed/channels.json not present");
     return;
   }
   try {

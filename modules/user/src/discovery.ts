@@ -124,7 +124,7 @@ export function discoverSources(workspace: string): SourceLocation[] {
       id: "telegram",
       label: "Telegram",
       kind: "telegram",
-      candidates: [resolveClawPersistentSurfacePath("claw.legacy.workspace.clawjs", workspace, "observed", "channels.json")],
+      candidates: [resolveClawPersistentSurfacePath("claw.workspace.observedState", workspace, "channels.json")],
     },
   ];
 

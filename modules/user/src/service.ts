@@ -657,7 +657,7 @@ export class UserService {
     accounts: Array<{ accountId: string; label: string; raw: Record<string, unknown> }>;
     chats: Array<{ chatId: string; label: string; raw: Record<string, unknown> }>;
   } {
-    const file = resolveClawPersistentSurfacePath("claw.legacy.workspace.clawjs", this.workspace, "observed", "channels.json");
+    const file = resolveClawPersistentSurfacePath("claw.workspace.observedState", this.workspace, "channels.json");
     if (!fs.existsSync(file)) return { accounts: [], chats: [] };
     try {
       const raw = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
@@ -699,7 +699,7 @@ export class UserService {
   }
 
   updateTelegramAccount(accountId: string, updates: Record<string, unknown>): { ok: true } {
-    const file = resolveClawPersistentSurfacePath("claw.legacy.workspace.clawjs", this.workspace, "observed", "channels.json");
+    const file = resolveClawPersistentSurfacePath("claw.workspace.observedState", this.workspace, "channels.json");
     if (!fs.existsSync(file)) throw new Error("Telegram channels.json not found in workspace");
     const raw = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
     const accounts = Array.isArray(raw.accounts) ? raw.accounts : [];
