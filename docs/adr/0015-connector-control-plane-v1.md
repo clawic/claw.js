@@ -52,6 +52,12 @@ matching control-plane decision context. The runner checks readiness before any
 broker lease or runtime call: operation support, execution policy, audit
 metadata, authenticated credential scope, and runtime evidence must be present.
 
+MCP is a transport projection, not a separate trust boundary. MCP tool calls
+must be represented as connector operations and pass the same policy, approval,
+network, and audit checks before JSON-RPC invocation. External CLIs use
+declarative command adapters with `runtimeKind: "cli"`; unsupported or
+evidence-free adapters are not executable.
+
 ## Consequences
 
 Connector execution has a stable preflight contract. Agents can explain why a

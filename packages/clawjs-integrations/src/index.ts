@@ -23,6 +23,10 @@ export {
   connectorRuntimeReadinessIssues,
 } from "./control-plane-runtime.js";
 export {
+  assertConnectorCommandAdapterControlPlane,
+  buildConnectorCommandAdapterPlan,
+} from "./command-adapter.js";
+export {
   ConnectorSourceScheduler,
   runConnectorSource,
   sourceSubscriptionFromPlan,
@@ -90,6 +94,11 @@ export type {
 export type {
   ConnectorRuntimeControlPlaneOptions,
 } from "./control-plane-runtime.js";
+export type {
+  ConnectorCommandAdapterControlPlaneOptions,
+  ConnectorCommandAdapterDefinition,
+  ConnectorCommandAdapterPlan,
+} from "./command-adapter.js";
 export type {
   ConnectorExecutionContext,
   ConnectorExecutor,

@@ -46,9 +46,16 @@ const preview = await runConnectorOperation({
 });
 ```
 
-`runConnectorOperation` and `runConnectorSource` default to dry-run mode. Real execution requires `dryRun: false`, resolved secret refs, and either a registered runtime executor or an explicit executor override, so tests and UI previews cannot accidentally connect to a third-party API.
+`runConnectorOperation` and `runConnectorSource` default to dry-run mode. Real execution requires `dryRun: false`, connector control-plane approval, resolved secret refs, and either a registered runtime executor or an explicit executor override, so tests and UI previews cannot accidentally connect to a third-party API.
 When an operation has a registered native runtime, the dry-run result also includes the request/source plan that would be used for execution. The plan is built from input values and auth binding names only; secret refs are reported separately and never resolved in dry-run mode.
 Dry-runs also report invalid fields before execution, including invalid option values, numeric range violations, and basic type mismatches for common field types.
+
+External command-line tools must be declared as command adapters before use.
+`buildConnectorCommandAdapterPlan` exposes the command, arguments, provider,
+capabilities, risk, support, and evidence without executing a process.
+`assertConnectorCommandAdapterControlPlane` applies the same policy, grant,
+credential-binding, budget, network, and audit checks used by API and SDK
+runtimes before any host-owned process runner may execute the adapter.
 
 Telegram ships the first native executor for this surface:
 

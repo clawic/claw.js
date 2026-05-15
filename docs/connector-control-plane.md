@@ -38,6 +38,17 @@ blocks operations that are not `supported`, lack execution policy, lack audit
 metadata, lack credential scope for authenticated operations, or lack runtime
 evidence.
 
+MCP tools are projected as connector operations with `runtimeKind: "mcp"`.
+`@clawjs/mcp` rejects `mcp/tools/call` unless the request carries a matching
+control-plane approval, and disabled servers or tools without schema evidence
+block before the JSON-RPC tool call.
+
+External CLIs are projected as command adapters with `runtimeKind: "cli"`.
+Adapters are declarative plans: provider id, command, arguments, capabilities,
+risk, credential requirement, support state, and local evidence. Unsupported or
+evidence-free adapters cannot be planned, and execution requires the same
+control-plane decision used by API/SDK runtimes.
+
 ## Decisions
 
 `evaluateConnectorControlPlaneRequest` returns a decision with:
