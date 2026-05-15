@@ -24,9 +24,6 @@
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "bin": {
-    "clawjs-index-mcp": "./bin/clawjs-index-mcp.mjs"
-  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

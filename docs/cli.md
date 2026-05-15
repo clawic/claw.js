@@ -14,9 +14,9 @@ claw --help --all
 claw host --help
 ```
 
-The public package also keeps `create-claw-app`, `create-claw-agent`,
-`create-claw-server`, `create-claw-plugin`, and the technical
-`clawjs-index-mcp` entrypoint. It does not expose a public `clawjs` bin.
+The public package family also keeps `create-claw-app`, `create-claw-agent`,
+`create-claw-server`, and `create-claw-plugin`. It does not expose public
+`clawjs` bins.
 
 ## Registry And JSON Contract
 
