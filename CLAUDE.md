@@ -9,13 +9,17 @@ Read and follow:
 3. `docs/data-storage-boundary.md`
 4. `docs/decision-map.md`
 5. `docs/naming-style-guide.md`
-6. `docs/canonical-data-catalog.md` before changing built-in collections,
+6. `docs/agentic-naming-guide.md` and `docs/vocabulary.md` before adding or
+   renaming files, classes, functions, JSON/YAML, Markdown, or shared domain
+   terms
+7. `docs/canonical-data-catalog.md` before changing built-in collections,
    schemas, fields, aliases, or relation semantics
-7. `docs/adr/0001-claw-framework-host-boundary.md`
-8. `docs/adr/0001-naming-and-stability-surfaces.md`
-9. `docs/adr/0005-canonical-data-catalog.md` before changing catalog policy
-10. Any docs or wiki pages that `AGENTS.md` explicitly points to
-11. The task-specific docs, tests, and code in the area you are changing
+8. `docs/adr/0001-claw-framework-host-boundary.md`
+9. `docs/adr/0001-naming-and-stability-surfaces.md`
+10. `docs/adr/0013-agentic-naming-and-code-structure.md`
+11. `docs/adr/0005-canonical-data-catalog.md` before changing catalog policy
+12. Any docs or wiki pages that `AGENTS.md` explicitly points to
+13. The task-specific docs, tests, and code in the area you are changing
 
 Critical guardrail for prompt-based tests:
 

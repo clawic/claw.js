@@ -23,7 +23,9 @@ Read the relevant canonical docs before changing their surfaces:
   `docs/adr/0001-claw-framework-host-boundary.md`
 - Storage and data placement: `docs/data-storage-boundary.md`
 - Naming and stable surfaces: `docs/naming-style-guide.md`,
-  `docs/adr/0001-naming-and-stability-surfaces.md`
+  `docs/agentic-naming-guide.md`, `docs/vocabulary.md`,
+  `docs/adr/0001-naming-and-stability-surfaces.md`,
+  `docs/adr/0013-agentic-naming-and-code-structure.md`
 - Source file boundaries: `docs/adr/0003-source-file-boundaries.md`
 - Built-in collections and schemas: `docs/canonical-data-catalog.md`,
   `docs/adr/0005-canonical-data-catalog.md`
@@ -131,9 +133,10 @@ Run `node ./scripts/skills-check.mjs` after adding or changing skills.
   explicit reversible opt-in.
 - Stable capabilities are complete only when their human and programmatic
   surfaces are registered or their gaps are explicitly classified.
-- New hand-authored files at 1200+ lines require a split plan or baseline
-  exception; files above 2000 lines must not grow except for extraction or
-  explicit architecture approval.
+- New hand-authored files at 1200+ lines need a split plan or baseline
+  rationale; new 2000+ line files are blocked unless explicitly exempted.
+  Emergency-debt files above 5000 lines must not grow except for extraction,
+  deletion, or compatibility-preserving split work.
 
 ## Validation
 

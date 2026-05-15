@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "owner": "clawjs",
+  "description": "Canonical ClawJS vocabulary for framework, CLI, protocol, storage, docs, and agentic naming.",
+  "terms": [
+    {
+      "preferredTerm": "session",
+      "definition": "Canonical framework conversation identity and lifecycle.",
+      "scope": ["framework", "protocol", "storage", "cli", "docs"],
+      "allowedSurfaces": ["sessions APIs", "bridge protocol", "CLI output", "database records", "logs", "audit events"],
+      "contextOnlySynonyms": [
+        {
+          "term": "chat",
+          "contexts": ["UI copy", "UI-local code", "external provider APIs", "provider fixtures"],
+          "reason": "Chat is familiar in interfaces and provider APIs, but is not the stable framework contract word."
+        }
+      ],
+      "forbiddenSynonyms": [
+        {
+          "term": "chatId",
+          "severity": "critical",
+          "contexts": ["new framework protocol contracts", "new stable storage schemas", "new public CLI framework surfaces"],
+          "reason": "Use sessionId for framework conversation identity."
+        },
+        {
+          "term": "openChat",
+          "severity": "critical",
+          "contexts": ["new framework protocol commands"],
+          "reason": "Use session/open-session language for framework conversation operations."
+        }
+      ],
+      "externalExceptions": [
+        "Telegram Bot API chat_id and getChat-style method names",
+        "Slack chat.* API method names",
+        "OpenAI-compatible /v1/chat/completions routes",
+        "Ollama /api/chat route"
+      ],
+      "examples": {
+        "correct": ["sessionId", "openSession", "loadSessions"],
+        "incorrect": ["chatId as a framework session id", "openChat as a protocol command"]
+      }
+    },
+    {
+      "preferredTerm": "threadId",
+      "definition": "External runtime conversation/thread identifier, not the ClawJS canonical session identity.",
+      "scope": ["runtime adapters", "provider bridges", "external metadata"],
+      "allowedSurfaces": ["Codex runtime metadata", "provider adapter state", "reconciliation maps"],
+      "contextOnlySynonyms": [],
+      "forbiddenSynonyms": [
+        {
+          "term": "threadId",
+          "severity": "critical",
+          "contexts": ["new ClawJS primary session id fields"],
+          "reason": "Do not replace sessionId with an external runtime id."
+        }
+      ],
+      "externalExceptions": ["Provider-native thread identifiers"],
+      "examples": {
+        "correct": ["threadId stored beside sessionId for runtime reconciliation"],
+        "incorrect": ["threadId as the primary framework session key"]
+      }
+    },
+    {
+      "preferredTerm": "host",
+      "definition": "Signed native owner of sensitive capabilities and host-specific operational state.",
+      "scope": ["architecture", "permissions", "approvals", "native execution"],
+      "allowedSurfaces": ["host ownership docs", "permission docs", "bridge contracts"],
+      "contextOnlySynonyms": [],
+      "forbiddenSynonyms": [
+        {
+          "term": "node owner",
+          "severity": "critical",
+          "contexts": ["sensitive native permissions", "approvals", "grants", "secrets"],
+          "reason": "Sensitive native authority belongs to the signed host, not Node."
+        }
+      ],
+      "externalExceptions": [],
+      "examples": {
+        "correct": ["signed host", "hostId", "host approval"],
+        "incorrect": ["Node-owned native permission grant"]
+      }
+    },
+    {
+      "preferredTerm": "connector",
+      "definition": "User-configured integration bridge to an external account or service.",
+      "scope": ["integrations", "accounts", "provider setup"],
+      "allowedSurfaces": ["integration docs", "provider catalogs", "setup flows"],
+      "contextOnlySynonyms": [
+        {
+          "term": "integration",
+          "contexts": ["domain/package category"],
+          "reason": "Integration is the broader domain; connector is the configured bridge."
+        }
+      ],
+      "forbiddenSynonyms": [],
+      "externalExceptions": [],
+      "examples": {
+        "correct": ["connector account", "connector setup"],
+        "incorrect": ["plugin account for a provider credential"]
+      }
+    },
+    {
+      "preferredTerm": "capability",
+      "definition": "Stable ability exposed through human and programmatic surfaces.",
+      "scope": ["surface registry", "CLI", "MCP", "host/UI parity"],
+      "allowedSurfaces": ["surface registry", "CLI help", "MCP resources", "interface matrices"],
+      "contextOnlySynonyms": [],
+      "forbiddenSynonyms": [
+        {
+          "term": "feature-only",
+          "severity": "warning",
+          "contexts": ["stable capability docs"],
+          "reason": "Stable capabilities need both human and programmatic surface evidence."
+        }
+      ],
+      "externalExceptions": [],
+      "examples": {
+        "correct": ["registered capability", "capability parity"],
+        "incorrect": ["unregistered feature-only surface"]
+      }
+    }
+  ]
+}
