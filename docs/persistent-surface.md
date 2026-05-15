@@ -31,6 +31,38 @@ flowchart TD
   claw_contracts --> claw_contracts_formats
   claw_contracts_external["External dependencies and owned mappings\nroot"]
   claw_contracts --> claw_contracts_external
+  claw_api_openai_chatCompletions["OpenAI-compatible chat completions endpoint\napiRoute"]
+  claw_contracts_api --> claw_api_openai_chatCompletions
+  claw_api_app_root["App route prefix\napiRoute"]
+  claw_contracts_api --> claw_api_app_root
+  claw_api_connector_connect["Connector connection endpoint\napiRoute"]
+  claw_contracts_api --> claw_api_connector_connect
+  claw_api_families["Family list endpoint\napiRoute"]
+  claw_contracts_api --> claw_api_families
+  claw_api_devices_me["Current user device list\napiRoute"]
+  claw_contracts_api --> claw_api_devices_me
+  claw_api_responses["Response creation endpoint\napiRoute"]
+  claw_contracts_api --> claw_api_responses
+  claw_api_secrets_root["Secrets API root\napiRoute"]
+  claw_contracts_api --> claw_api_secrets_root
+  claw_api_secrets_setup["Secrets setup endpoint\napiRoute"]
+  claw_contracts_api --> claw_api_secrets_setup
+  claw_api_storage_root["Storage API root\napiRoute"]
+  claw_contracts_api --> claw_api_storage_root
+  claw_api_storage_objectFixture["Storage object fixture route\napiRoute"]
+  claw_contracts_api --> claw_api_storage_objectFixture
+  claw_api_storage_itemShareFixture["Storage item share fixture route\napiRoute"]
+  claw_contracts_api --> claw_api_storage_itemShareFixture
+  claw_api_storage_itemShareRevokeFixture["Storage item share revoke fixture route\napiRoute"]
+  claw_contracts_api --> claw_api_storage_itemShareRevokeFixture
+  claw_api_storage_sharesRoot["Storage shares root\napiRoute"]
+  claw_contracts_api --> claw_api_storage_sharesRoot
+  claw_api_system_status["System status endpoint\napiRoute"]
+  claw_contracts_api --> claw_api_system_status
+  claw_api_uploads["Upload endpoint\napiRoute"]
+  claw_contracts_api --> claw_api_uploads
+  claw_api_workspaces["Workspace list endpoint\napiRoute"]
+  claw_contracts_api --> claw_api_workspaces
   claw_api_events["Public framework event stream\napiRoute"]
   claw_contracts_api --> claw_api_events
   claw_api_host_commands["Host command endpoint\napiRoute"]
@@ -83,12 +115,220 @@ flowchart TD
   claw_contracts_api --> claw_api_webhooks_providerEvent
   claw_api_integrations_callback["OAuth integration callback\napiRoute"]
   claw_contracts_api --> claw_api_integrations_callback
+  claw_privateApi_attachments["Private attachments endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_attachments
+  claw_privateApi_auth_token["Private auth token endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_auth_token
+  claw_privateApi_capture["Private capture endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_capture
+  claw_privateApi_captures["Private captures endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_captures
+  claw_privateApi_chat_feedback["Private chat feedback endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_chat_feedback
+  claw_privateApi_comments["Private comments endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_comments
+  claw_privateApi_config_profile["Private profile config endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_config_profile
+  claw_privateApi_config_reset["Private config reset endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_config_reset
+  claw_privateApi_config_workspaceFiles["Private workspace files config endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_config_workspaceFiles
+  claw_privateApi_connectors_catalog["Private connector catalog endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_connectors_catalog
+  claw_privateApi_context["Private context endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_context
+  claw_privateApi_customFields["Private custom fields endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_customFields
+  claw_privateApi_cycles["Private cycles endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_cycles
+  claw_privateApi_discover_local["Private local discovery endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_discover_local
+  claw_privateApi_e2e_seed["Private E2E seed endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_e2e_seed
+  claw_privateApi_epics["Private epics endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_epics
+  claw_privateApi_export["Private export endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_export
+  claw_privateApi_fieldValues["Private field values endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_fieldValues
+  claw_privateApi_goals["Private goals endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_goals
+  claw_privateApi_graph["Private graph endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_graph
+  claw_privateApi_hotTopics_seed["Private hot topics seed endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_hotTopics_seed
+  claw_privateApi_images["Private images endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_images
+  claw_privateApi_instances["Private instances endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_instances
+  claw_privateApi_integrations_auth["Private integrations auth endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrations_auth
+  claw_privateApi_integrations_enable["Private integrations enable endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrations_enable
+  claw_privateApi_integrations_gateway["Private integrations gateway endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrations_gateway
+  claw_privateApi_integrations_install["Private integrations install endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrations_install
+  claw_privateApi_integrations_installStream["Private integrations install stream endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrations_installStream
+  claw_privateApi_integrations_reveal["Private integrations reveal endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrations_reveal
+  claw_privateApi_integrations_slack_connect["Private Slack connect endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrations_slack_connect
+  claw_privateApi_integrations_slack_test["Private Slack test endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrations_slack_test
+  claw_privateApi_integrations_telegram_connect["Private Telegram connect endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrations_telegram_connect
+  claw_privateApi_integrations_telegram_test["Private Telegram test endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrations_telegram_test
+  claw_privateApi_integrations_uninstall["Private integrations uninstall endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrations_uninstall
+  claw_privateApi_integrations_whatsapp_cleanup["Private WhatsApp cleanup endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrations_whatsapp_cleanup
+  claw_privateApi_integrations_whatsapp_connect["Private WhatsApp connect endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrations_whatsapp_connect
+  claw_privateApi_lists["Private lists endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_lists
+  claw_privateApi_memory_person["Private memory person endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_memory_person
+  claw_privateApi_milestones["Private milestones endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_milestones
+  claw_privateApi_monitors["Private monitors endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_monitors
+  claw_privateApi_notesTrailingSlash["Private notes endpoint with trailing slash\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_notesTrailingSlash
+  claw_privateApi_notify_actions["Private notification actions endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_notify_actions
+  claw_privateApi_people["Private people endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_people
+  claw_privateApi_projects["Private projects endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_projects
+  claw_privateApi_promote["Private promote endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_promote
+  claw_privateApi_recurrences["Private recurrences endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_recurrences
+  claw_privateApi_row["Private row endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_row
+  claw_privateApi_savedViews["Private saved views endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_savedViews
+  claw_privateApi_search["Private search endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_search
+  claw_privateApi_sections["Private sections endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_sections
+  claw_privateApi_seed["Private seed endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_seed
+  claw_privateApi_sessions["Private sessions endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_sessions
+  claw_privateApi_setup["Private setup endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_setup
+  claw_privateApi_skills_install["Private skill install endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_skills_install
+  claw_privateApi_skills_remove["Private skill remove endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_skills_remove
+  claw_privateApi_skills_sources["Private skill sources endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_skills_sources
+  claw_privateApi_sources_refresh["Private source refresh endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_sources_refresh
+  claw_privateApi_stats["Private stats endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_stats
+  claw_privateApi_telegram_account["Private Telegram account endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_telegram_account
+  claw_privateApi_templates["Private templates endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_templates
+  claw_privateApi_timeline["Private timeline endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_timeline
+  claw_privateApi_tools_conclude["Private tool conclude endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_tools_conclude
+  claw_privateApi_tools_getPrefix["Private tool get prefix\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_tools_getPrefix
+  claw_privateApi_tools_search["Private tool search endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_tools_search
+  claw_privateApi_tools_status["Private tool status endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_tools_status
+  claw_privateApi_tts["Private text-to-speech endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_tts
+  claw_privateApi_tts_providers["Private text-to-speech provider endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_tts_providers
+  claw_privateApi_users["Private users endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_users
+  claw_privateApi_activity["Private activity feed\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_activity
   claw_privateApi_apps_dashboard["Private app dashboard data\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_apps_dashboard
   claw_privateApi_apps_assets["Private app asset data\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_apps_assets
+  claw_privateApi_authTest["Private auth test endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_authTest
+  claw_privateApi_chat_sessions["Private chat sessions endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_chat_sessions
+  claw_privateApi_claw_status["Private Claw status endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_claw_status
+  claw_privateApi_companies["Private companies endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_companies
+  claw_privateApi_config["Private config endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_config
+  claw_privateApi_config_local["Private local config endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_config_local
+  claw_privateApi_connectors_subscriptions["Private connector subscriptions endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_connectors_subscriptions
+  claw_privateApi_contacts["Private contacts endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_contacts
+  claw_privateApi_data["Private dashboard data endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_data
+  claw_privateApi_dm["Private direct messages endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_dm
+  claw_privateApi_e2e_reset["Private E2E reset endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_e2e_reset
+  claw_privateApi_e2e_status["Private E2E status endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_e2e_status
+  claw_privateApi_events["Private events endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_events
+  claw_privateApi_health["Private health endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_health
+  claw_privateApi_images_backends["Private image backend endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_images_backends
+  claw_privateApi_inbox["Private inbox endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_inbox
   claw_privateApi_inspect_preview["Private inspect preview endpoint\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_inspect_preview
+  claw_privateApi_integrations_setup["Private integrations setup endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrations_setup
+  claw_privateApi_integrations_status["Private integrations status endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrations_status
+  claw_privateApi_integrations_whatsapp_chats["Private WhatsApp chats endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_integrations_whatsapp_chats
+  claw_privateApi_memory["Private memory endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_memory
+  claw_privateApi_notes["Private notes endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_notes
+  claw_privateApi_notify_dashboard["Private notification dashboard endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_notify_dashboard
+  claw_privateApi_personas["Private personas endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_personas
+  claw_privateApi_plugins["Private plugins endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_plugins
+  claw_privateApi_routines["Private routines endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_routines
+  claw_privateApi_rules["Private rules endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_rules
+  claw_privateApi_schema["Private schema endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_schema
+  claw_privateApi_skills_list["Private skill list endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_skills_list
+  claw_privateApi_sources["Private sources endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_sources
+  claw_privateApi_spaces["Private spaces endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_spaces
+  claw_privateApi_summary["Private summary endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_summary
+  claw_privateApi_tasks["Private tasks endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_tasks
+  claw_privateApi_tools_save["Private tool save endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_tools_save
+  claw_privateApi_ui["Private UI config endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_ui
+  claw_privateApi_usage["Private usage endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_usage
   claw_protocol_hostCommand_v1["Host command contract v1\nprotocol"]
   claw_contracts_protocol --> claw_protocol_hostCommand_v1
   claw_protocol_hostCommand_v1_field_schemaVersion["schemaVersion\nprotocolField"]
@@ -169,6 +409,8 @@ flowchart TD
   claw_contracts_events --> claw_event_notify_summary_ready
   claw_event_notify_manual_triggered["manual.triggered\neventTopic"]
   claw_contracts_events --> claw_event_notify_manual_triggered
+  claw_external_mapping_event_blueskyFeedPost["app.bsky.feed.post\nexternalMapping"]
+  claw_contracts_external --> claw_external_mapping_event_blueskyFeedPost
   claw_external_mapping_event_notionPageContentUpdated["page.content_updated\nexternalMapping"]
   claw_contracts_external --> claw_external_mapping_event_notionPageContentUpdated
   claw_external_mapping_event_stripeCheckoutSessionCompleted["checkout.session.completed\nexternalMapping"]
@@ -221,22 +463,440 @@ flowchart TD
   claw_contracts_ids --> claw_id_record
   claw_id_resource["Opaque registered resource identifiers\nidNamespace"]
   claw_contracts_ids --> claw_id_resource
-  claw_env_home["Framework global home override\nenvVar"]
-  claw_contracts_config --> claw_env_home
-  claw_env_dataDir["Framework data directory override\nenvVar"]
-  claw_contracts_config --> claw_env_dataDir
-  claw_env_dbPath["Framework main database override\nenvVar"]
-  claw_contracts_config --> claw_env_dbPath
-  claw_env_runtimePort["Runtime service port override\nenvVar"]
-  claw_contracts_config --> claw_env_runtimePort
-  claw_env_sessionsPort["Sessions service port override\nenvVar"]
-  claw_contracts_config --> claw_env_sessionsPort
-  claw_env_databasePort["Database service port override\nenvVar"]
+  claw_env_allowedOrigins["allowed origins environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_allowedOrigins
+  claw_env_audioBlobsDir["audio blobs dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_audioBlobsDir
+  claw_env_audioDataDir["audio data dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_audioDataDir
+  claw_env_audioHost["audio host environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_audioHost
+  claw_env_audioPort["audio port environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_audioPort
+  claw_env_audioSharedSecret["audio shared secret environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_audioSharedSecret
+  claw_env_bin["bin environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_bin
+  claw_env_calendarMock["calendar mock environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_calendarMock
+  claw_env_codexPath["codex path environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_codexPath
+  claw_env_codeHome["code home environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_codeHome
+  claw_env_companyFakeAgentRuns["company fake agent runs environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_companyFakeAgentRuns
+  claw_env_companyOpenclawAgentId["company openclaw agent id environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_companyOpenclawAgentId
+  claw_env_componentsSourceDir["components source dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_componentsSourceDir
+  claw_env_connectorCatalogPath["connector catalog path environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_connectorCatalogPath
+  claw_env_connectorSubscriptionsPath["connector subscriptions path environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_connectorSubscriptionsPath
+  claw_env_contentToken["content token environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_contentToken
+  claw_env_contentUrl["content url environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_contentUrl
+  claw_env_databaseAdminEmail["database admin email environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_databaseAdminEmail
+  claw_env_databaseAdminPassword["database admin password environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_databaseAdminPassword
+  claw_env_databaseCorsOrigins["database cors origins environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_databaseCorsOrigins
+  claw_env_databaseDataDir["database data dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_databaseDataDir
+  claw_env_databaseDir["database dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_databaseDir
+  claw_env_databaseFilesDir["database files dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_databaseFilesDir
+  claw_env_databaseHost["database host environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_databaseHost
+  claw_env_databaseJwtSecret["database jwt secret environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_databaseJwtSecret
+  claw_env_databaseNamespace["database namespace environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_databaseNamespace
+  claw_env_databasePort["database port environment variable\nenvVar"]
   claw_contracts_config --> claw_env_databasePort
-  claw_env_searchPort["Search service port override\nenvVar"]
-  claw_contracts_config --> claw_env_searchPort
-  claw_env_monitorPort["Monitor service port override\nenvVar"]
+  claw_env_databaseUrl["database url environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_databaseUrl
+  claw_env_dataDir["data dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_dataDir
+  claw_env_dayRoot["day root environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_dayRoot
+  claw_env_dbPath["db path environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_dbPath
+  claw_env_debugChatPerf["debug chat perf environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_debugChatPerf
+  claw_env_demoDataDir["demo data dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_demoDataDir
+  claw_env_deviceTestCommand["device test command environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_deviceTestCommand
+  claw_env_domainsActive["domains active environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_domainsActive
+  claw_env_domainShareUrl["domain share url environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_domainShareUrl
+  claw_env_driveBackend["drive backend environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_driveBackend
+  claw_env_driveBase["drive base environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_driveBase
+  claw_env_driveCloudflared["drive cloudflared environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_driveCloudflared
+  claw_env_driveConverterMode["drive converter mode environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_driveConverterMode
+  claw_env_driveCorsOrigins["drive cors origins environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_driveCorsOrigins
+  claw_env_driveDataDir["drive data dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_driveDataDir
+  claw_env_driveDbPath["drive db path environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_driveDbPath
+  claw_env_driveEmail["drive email environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_driveEmail
+  claw_env_driveEmbedSidecar["drive embed sidecar environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_driveEmbedSidecar
+  claw_env_driveHost["drive host environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_driveHost
+  claw_env_driveJwtSecret["drive jwt secret environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_driveJwtSecret
+  claw_env_driveOcrSidecar["drive ocr sidecar environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_driveOcrSidecar
+  claw_env_drivePassword["drive password environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_drivePassword
+  claw_env_drivePort["drive port environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_drivePort
+  claw_env_drivePublicBaseUrl["drive public base url environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_drivePublicBaseUrl
+  claw_env_driveStatusFile["drive status file environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_driveStatusFile
+  claw_env_driveToken["drive token environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_driveToken
+  claw_env_driveUiDistDir["drive ui dist dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_driveUiDistDir
+  claw_env_e2e["e2e environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_e2e
+  claw_env_e2eDisableExternalCalls["e2e disable external calls environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_e2eDisableExternalCalls
+  claw_env_e2eFixtureMode["e2e fixture mode environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_e2eFixtureMode
+  claw_env_e2eReuseServer["e2e reuse server environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_e2eReuseServer
+  claw_env_emailMock["email mock environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_emailMock
+  claw_env_erpDir["erp dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_erpDir
+  claw_env_filesDir["files dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_filesDir
+  claw_env_findCommandStrictPath["find command strict path environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_findCommandStrictPath
+  claw_env_guidanceDir["guidance dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_guidanceDir
+  claw_env_home["home environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_home
+  claw_env_hostAppBundle["host app bundle environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostAppBundle
+  claw_env_hostAppSupportName["host app support name environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostAppSupportName
+  claw_env_hostBinDir["host bin dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostBinDir
+  claw_env_hostBundleId["host bundle id environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostBundleId
+  claw_env_hostCliName["host cli name environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostCliName
+  claw_env_hostDaemonName["host daemon name environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostDaemonName
+  claw_env_hostDisableLegacySocketFallback["host disable legacy socket fallback environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostDisableLegacySocketFallback
+  claw_env_hostDisplayName["host display name environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostDisplayName
+  claw_env_hostHome["host home environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostHome
+  claw_env_hostId["host id environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostId
+  claw_env_hostLaunchAgentsDir["host launch agents dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostLaunchAgentsDir
+  claw_env_hostLaunchAgentLabel["host launch agent label environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostLaunchAgentLabel
+  claw_env_hostLogSubsystem["host log subsystem environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostLogSubsystem
+  claw_env_hostMachService["host mach service environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostMachService
+  claw_env_hostObsidianVault["host obsidian vault environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostObsidianVault
+  claw_env_hostPermissionName["host permission name environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostPermissionName
+  claw_env_hostPermissionRequestDryRun["host permission request dry run environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostPermissionRequestDryRun
+  claw_env_hostPermissionRequestLog["host permission request log environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostPermissionRequestLog
+  claw_env_hostRuntimeTransport["host runtime transport environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostRuntimeTransport
+  claw_env_hostSafe["host safe environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostSafe
+  claw_env_hostTestCalendar["host test calendar environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostTestCalendar
+  claw_env_hostTestCommand["host test command environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostTestCommand
+  claw_env_hostTestMailbox["host test mailbox environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostTestMailbox
+  claw_env_hostTestMode["host test mode environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostTestMode
+  claw_env_hostTestNotesFolder["host test notes folder environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostTestNotesFolder
+  claw_env_hostTestRemindersList["host test reminders list environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostTestRemindersList
+  claw_env_hostTestSafariWindow["host test safari window environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostTestSafariWindow
+  claw_env_hostTestThingsProject["host test things project environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostTestThingsProject
+  claw_env_hostValidationMode["host validation mode environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostValidationMode
+  claw_env_imageLibraryDir["image library dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_imageLibraryDir
+  claw_env_iotBaseUrl["iot base url environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_iotBaseUrl
+  claw_env_iotDir["iot dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_iotDir
+  claw_env_libraryDir["library dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_libraryDir
+  claw_env_liveBrokerCommand["live broker command environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_liveBrokerCommand
+  claw_env_localAdminBootstrapStdin["local admin bootstrap stdin environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_localAdminBootstrapStdin
+  claw_env_memoryBase["memory base environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_memoryBase
+  claw_env_memoryEditor["memory editor environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_memoryEditor
+  claw_env_memoryHost["memory host environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_memoryHost
+  claw_env_memoryPort["memory port environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_memoryPort
+  claw_env_memoryWorkspace["memory workspace environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_memoryWorkspace
+  claw_env_monitorCollectIntervalMs["monitor collect interval ms environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_monitorCollectIntervalMs
+  claw_env_monitorCorsOrigins["monitor cors origins environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_monitorCorsOrigins
+  claw_env_monitorHost["monitor host environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_monitorHost
+  claw_env_monitorLocalDiscoveryIntervalMs["monitor local discovery interval ms environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_monitorLocalDiscoveryIntervalMs
+  claw_env_monitorLocalScanPorts["monitor local scan ports environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_monitorLocalScanPorts
+  claw_env_monitorMode["monitor mode environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_monitorMode
+  claw_env_monitorPort["monitor port environment variable\nenvVar"]
   claw_contracts_config --> claw_env_monitorPort
+  claw_env_monitorRelayToken["monitor relay token environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_monitorRelayToken
+  claw_env_monitorRelayUrl["monitor relay url environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_monitorRelayUrl
+  claw_env_monitorRetentionDays["monitor retention days environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_monitorRetentionDays
+  claw_env_node["node environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_node
+  claw_env_openclawPath["openclaw path environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_openclawPath
+  claw_env_openWorkspace["open workspace environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_openWorkspace
+  claw_env_previewCloudflareUrl["preview cloudflare url environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_previewCloudflareUrl
+  claw_env_publishingCorsOrigins["publishing cors origins environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_publishingCorsOrigins
+  claw_env_publishingDataDir["publishing data dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_publishingDataDir
+  claw_env_publishingDbPath["publishing db path environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_publishingDbPath
+  claw_env_publishingDir["publishing dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_publishingDir
+  claw_env_publishingDriveUrl["publishing drive url environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_publishingDriveUrl
+  claw_env_publishingHealthProbeMs["publishing health probe ms environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_publishingHealthProbeMs
+  claw_env_publishingHost["publishing host environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_publishingHost
+  claw_env_publishingLogLevel["publishing log level environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_publishingLogLevel
+  claw_env_publishingPipelineEnabled["publishing pipeline enabled environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_publishingPipelineEnabled
+  claw_env_publishingPort["publishing port environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_publishingPort
+  claw_env_publishingPrintToken["publishing print token environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_publishingPrintToken
+  claw_env_publishingPublicBaseUrl["publishing public base url environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_publishingPublicBaseUrl
+  claw_env_publishingRecurrenceTickMs["publishing recurrence tick ms environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_publishingRecurrenceTickMs
+  claw_env_publishingSchedulerTickMs["publishing scheduler tick ms environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_publishingSchedulerTickMs
+  claw_env_publishingStatusFile["publishing status file environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_publishingStatusFile
+  claw_env_publishingToken["publishing token environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_publishingToken
+  claw_env_publishingTokenStore["publishing token store environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_publishingTokenStore
+  claw_env_publishingUrl["publishing url environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_publishingUrl
+  claw_env_publishingVaultUrl["publishing vault url environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_publishingVaultUrl
+  claw_env_publishingWorkerTickMs["publishing worker tick ms environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_publishingWorkerTickMs
+  claw_env_publishingWorkspace["publishing workspace environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_publishingWorkspace
+  claw_env_relayAccessToken["relay access token environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_relayAccessToken
+  claw_env_relayAgentId["relay agent id environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_relayAgentId
+  claw_env_relayTenantId["relay tenant id environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_relayTenantId
+  claw_env_relayUrl["relay url environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_relayUrl
+  claw_env_relayWorkspaceId["relay workspace id environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_relayWorkspaceId
+  claw_env_reportGithubToken["report github token environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_reportGithubToken
+  claw_env_resourcesDir["resources dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_resourcesDir
+  claw_env_rulesDir["rules dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_rulesDir
+  claw_env_runtimeHome["runtime home environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_runtimeHome
+  claw_env_runtimePort["runtime port environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_runtimePort
+  claw_env_runtimeSessionsUrl["runtime sessions url environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_runtimeSessionsUrl
+  claw_env_searchAdminToken["search admin token environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_searchAdminToken
+  claw_env_searchBase["search base environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_searchBase
+  claw_env_searchCodexBinary["search codex binary environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_searchCodexBinary
+  claw_env_searchCorsOrigins["search cors origins environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_searchCorsOrigins
+  claw_env_searchDataDir["search data dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_searchDataDir
+  claw_env_searchHost["search host environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_searchHost
+  claw_env_searchJwtSecret["search jwt secret environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_searchJwtSecret
+  claw_env_searchPort["search port environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_searchPort
+  claw_env_searchRunTimeoutMs["search run timeout ms environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_searchRunTimeoutMs
+  claw_env_searchSchedulerTickMs["search scheduler tick ms environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_searchSchedulerTickMs
+  claw_env_searchToken["search token environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_searchToken
+  claw_env_searchWorkerConcurrency["search worker concurrency environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_searchWorkerConcurrency
+  claw_env_secretsAdminToken["secrets admin token environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_secretsAdminToken
+  claw_env_secretsBackend["secrets backend environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_secretsBackend
+  claw_env_secretsBase["secrets base environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_secretsBase
+  claw_env_secretsBaseUrl["secrets base url environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_secretsBaseUrl
+  claw_env_secretsBootstrapStdin["secrets bootstrap stdin environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_secretsBootstrapStdin
+  claw_env_secretsCorsOrigins["secrets cors origins environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_secretsCorsOrigins
+  claw_env_secretsDataDir["secrets data dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_secretsDataDir
+  claw_env_secretsDbPath["secrets db path environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_secretsDbPath
+  claw_env_secretsEnableUnsafeExternalPlugins["secrets enable unsafe external plugins environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_secretsEnableUnsafeExternalPlugins
+  claw_env_secretsHost["secrets host environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_secretsHost
+  claw_env_secretsHostAssertionKeyBase64["secrets host assertion key base64 environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_secretsHostAssertionKeyBase64
+  claw_env_secretsJwtSecret["secrets jwt secret environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_secretsJwtSecret
+  claw_env_secretsKekBase64["secrets kek base64 environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_secretsKekBase64
+  claw_env_secretsPluginsDir["secrets plugins dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_secretsPluginsDir
+  claw_env_secretsPort["secrets port environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_secretsPort
+  claw_env_secretsProxyPath["secrets proxy path environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_secretsProxyPath
+  claw_env_secretsPublicBaseUrl["secrets public base url environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_secretsPublicBaseUrl
+  claw_env_secretsSidecarPath["secrets sidecar path environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_secretsSidecarPath
+  claw_env_secretsSignedHostToken["secrets signed host token environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_secretsSignedHostToken
+  claw_env_secretsTenant["secrets tenant environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_secretsTenant
+  claw_env_secretsTenantId["secrets tenant id environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_secretsTenantId
+  claw_env_secretsToken["secrets token environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_secretsToken
+  claw_env_secretsUiDistDir["secrets ui dist dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_secretsUiDistDir
+  claw_env_sessionsCodexDir["sessions codex dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_sessionsCodexDir
+  claw_env_sessionsDataDir["sessions data dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_sessionsDataDir
+  claw_env_sessionsDisableCodex["sessions disable codex environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_sessionsDisableCodex
+  claw_env_sessionsDisableHermes["sessions disable hermes environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_sessionsDisableHermes
+  claw_env_sessionsHermesDb["sessions hermes db environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_sessionsHermesDb
+  claw_env_sessionsHost["sessions host environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_sessionsHost
+  claw_env_sessionsPort["sessions port environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_sessionsPort
+  claw_env_sessionsSharedSecret["sessions shared secret environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_sessionsSharedSecret
+  claw_env_skillsAutoImport["skills auto import environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_skillsAutoImport
+  claw_env_slidesDisableBrowser["slides disable browser environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_slidesDisableBrowser
+  claw_env_telegramBackend["telegram backend environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_telegramBackend
+  claw_env_telegramDomainShareUrl["telegram domain share url environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_telegramDomainShareUrl
+  claw_env_telegramHost["telegram host environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_telegramHost
+  claw_env_telegramLogLevel["telegram log level environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_telegramLogLevel
+  claw_env_telegramPort["telegram port environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_telegramPort
+  claw_env_telegramWorkspace["telegram workspace environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_telegramWorkspace
+  claw_env_templateDisableBrowser["template disable browser environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_templateDisableBrowser
+  claw_env_testLive["test live environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_testLive
+  claw_env_testLivePackage["test live package environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_testLivePackage
+  claw_env_testWorkspace["test workspace environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_testWorkspace
+  claw_env_timeDataDir["time data dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_timeDataDir
+  claw_env_timeDbFile["time db file environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_timeDbFile
+  claw_env_timeDefaultTimezone["time default timezone environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_timeDefaultTimezone
+  claw_env_timeHost["time host environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_timeHost
+  claw_env_timeNotifySourceToken["time notify source token environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_timeNotifySourceToken
+  claw_env_timeNotifyUrl["time notify url environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_timeNotifyUrl
+  claw_env_timePort["time port environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_timePort
+  claw_env_timeSchedulerIntervalMs["time scheduler interval ms environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_timeSchedulerIntervalMs
+  claw_env_timeToken["time token environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_timeToken
+  claw_env_timeUrl["time url environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_timeUrl
+  claw_env_wacliPath["wacli path environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_wacliPath
+  claw_env_workspace["workspace environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_workspace
   claw_package_core["ClawJS core package\npackageName"]
   claw_contracts_packages --> claw_package_core
   claw_package_cli["Claw CLI package\npackageName"]
@@ -662,6 +1322,12 @@ flowchart TD
   claw_workspace --> claw_workspace_backups
   claw_workspace_browser["browser\nfolder"]
   claw_workspace --> claw_workspace_browser
+  claw_workspace_browserProfileCache["browserProfileCache\nfolder"]
+  claw_workspace --> claw_workspace_browserProfileCache
+  claw_workspace_demoCache["demoCache\nfolder"]
+  claw_workspace --> claw_workspace_demoCache
+  claw_workspace_e2eCache["e2eCache\nfolder"]
+  claw_workspace --> claw_workspace_e2eCache
   claw_workspace_styles["styles\nfolder"]
   claw_workspace --> claw_workspace_styles
   claw_workspace_templates["templates\nfolder"]
@@ -751,6 +1417,8 @@ flowchart TD
   claw_external_codex["Codex home\nexternalReadOnlySource"]
   claw_browserStorage_databaseTheme["databaseTheme\nbrowserStorageKey"]
   claw_contracts_schemas --> claw_browserStorage_databaseTheme
+  claw_browserStorage_showcaseTheme["showcaseTheme\nbrowserStorageKey"]
+  claw_contracts_schemas --> claw_browserStorage_showcaseTheme
   claw_chat_appStorage_selectedAppearance["selectedAppearance\nappStorageKey"]
   claw_contracts_schemas --> claw_chat_appStorage_selectedAppearance
   claw_chat_appStorage_appLanguage["appLanguage\nappStorageKey"]
@@ -974,6 +1642,22 @@ flowchart TD
 | `claw.contracts.native` | root | native | claw |  | humanUi, serviceApi | humanUi:optional | `contracts/native` |
 | `claw.contracts.formats` | root | format | claw |  | cli, persistence | humanUi:optional | `contracts/formats` |
 | `claw.contracts.external` | root | external | claw |  | sdk, serviceApi, mcp | humanUi:optional | `contracts/external` |
+| `claw.api.openai.chatCompletions` | apiRoute | api | claw |  |  |  | `/v1/chat/completions` |
+| `claw.api.app.root` | apiRoute | api | claw |  |  |  | `/v1/app/` |
+| `claw.api.connector.connect` | apiRoute | api | claw |  |  |  | `/v1/connector/connect` |
+| `claw.api.families` | apiRoute | api | claw |  |  |  | `/v1/families` |
+| `claw.api.devices.me` | apiRoute | api | claw |  |  |  | `/v1/me/devices` |
+| `claw.api.responses` | apiRoute | api | claw |  |  |  | `/v1/responses` |
+| `claw.api.secrets.root` | apiRoute | api | claw |  |  |  | `/v1/secrets` |
+| `claw.api.secrets.setup` | apiRoute | api | claw |  |  |  | `/v1/secrets/setup` |
+| `claw.api.storage.root` | apiRoute | api | claw |  |  |  | `/v1/storage` |
+| `claw.api.storage.objectFixture` | apiRoute | api | claw |  |  |  | `/v1/storage/objects/workspace/agents/agent-a/remote/note.txt` |
+| `claw.api.storage.itemShareFixture` | apiRoute | api | claw |  |  |  | `/v1/items/item-1/shares` |
+| `claw.api.storage.itemShareRevokeFixture` | apiRoute | api | claw |  |  |  | `/v1/items/item-1/shares/share-1/revoke` |
+| `claw.api.storage.sharesRoot` | apiRoute | api | claw |  |  |  | `/v1/storage/shares` |
+| `claw.api.system.status` | apiRoute | api | claw |  |  |  | `/v1/system/status` |
+| `claw.api.uploads` | apiRoute | api | claw |  |  |  | `/v1/uploads` |
+| `claw.api.workspaces` | apiRoute | api | claw |  |  |  | `/v1/workspaces` |
 | `claw.api.events` | apiRoute | api | claw |  |  |  | `/v1/events` |
 | `claw.api.host.commands` | apiRoute | api | claw |  |  |  | `/v1/commands` |
 | `claw.api.storage.ownerToken` | apiRoute | api | claw |  |  |  | `/v1/storage/owner-token` |
@@ -1000,9 +1684,113 @@ flowchart TD
 | `claw.api.notify.notifications` | apiRoute | api | claw |  |  |  | `/v1/notifications` |
 | `claw.api.webhooks.providerEvent` | apiRoute | api | claw |  |  |  | `/v1/webhooks/{provider}/{event}` |
 | `claw.api.integrations.callback` | apiRoute | api | claw |  |  |  | `/v1/integrations/{provider}/callback` |
+| `claw.privateApi.attachments` | privateApiRoute | api | claw |  |  |  | `/api/attachments` |
+| `claw.privateApi.auth.token` | privateApiRoute | api | claw |  |  |  | `/api/auth/token` |
+| `claw.privateApi.capture` | privateApiRoute | api | claw |  |  |  | `/api/capture` |
+| `claw.privateApi.captures` | privateApiRoute | api | claw |  |  |  | `/api/captures` |
+| `claw.privateApi.chat.feedback` | privateApiRoute | api | claw |  |  |  | `/api/chat/feedback` |
+| `claw.privateApi.comments` | privateApiRoute | api | claw |  |  |  | `/api/comments` |
+| `claw.privateApi.config.profile` | privateApiRoute | api | claw |  |  |  | `/api/config/profile` |
+| `claw.privateApi.config.reset` | privateApiRoute | api | claw |  |  |  | `/api/config/reset` |
+| `claw.privateApi.config.workspaceFiles` | privateApiRoute | api | claw |  |  |  | `/api/config/workspace-files` |
+| `claw.privateApi.connectors.catalog` | privateApiRoute | api | claw |  |  |  | `/api/connectors/catalog` |
+| `claw.privateApi.context` | privateApiRoute | api | claw |  |  |  | `/api/context` |
+| `claw.privateApi.customFields` | privateApiRoute | api | claw |  |  |  | `/api/custom-fields` |
+| `claw.privateApi.cycles` | privateApiRoute | api | claw |  |  |  | `/api/cycles` |
+| `claw.privateApi.discover.local` | privateApiRoute | api | claw |  |  |  | `/api/discover/local` |
+| `claw.privateApi.e2e.seed` | privateApiRoute | api | claw |  |  |  | `/api/e2e/seed` |
+| `claw.privateApi.epics` | privateApiRoute | api | claw |  |  |  | `/api/epics` |
+| `claw.privateApi.export` | privateApiRoute | api | claw |  |  |  | `/api/export` |
+| `claw.privateApi.fieldValues` | privateApiRoute | api | claw |  |  |  | `/api/field-values` |
+| `claw.privateApi.goals` | privateApiRoute | api | claw |  |  |  | `/api/goals` |
+| `claw.privateApi.graph` | privateApiRoute | api | claw |  |  |  | `/api/graph` |
+| `claw.privateApi.hotTopics.seed` | privateApiRoute | api | claw |  |  |  | `/api/hot-topics/seed` |
+| `claw.privateApi.images` | privateApiRoute | api | claw |  |  |  | `/api/images` |
+| `claw.privateApi.instances` | privateApiRoute | api | claw |  |  |  | `/api/instances` |
+| `claw.privateApi.integrations.auth` | privateApiRoute | api | claw |  |  |  | `/api/integrations/auth` |
+| `claw.privateApi.integrations.enable` | privateApiRoute | api | claw |  |  |  | `/api/integrations/enable` |
+| `claw.privateApi.integrations.gateway` | privateApiRoute | api | claw |  |  |  | `/api/integrations/gateway` |
+| `claw.privateApi.integrations.install` | privateApiRoute | api | claw |  |  |  | `/api/integrations/install` |
+| `claw.privateApi.integrations.installStream` | privateApiRoute | api | claw |  |  |  | `/api/integrations/install-stream` |
+| `claw.privateApi.integrations.reveal` | privateApiRoute | api | claw |  |  |  | `/api/integrations/reveal` |
+| `claw.privateApi.integrations.slack.connect` | privateApiRoute | api | claw |  |  |  | `/api/integrations/slack/connect` |
+| `claw.privateApi.integrations.slack.test` | privateApiRoute | api | claw |  |  |  | `/api/integrations/slack/test` |
+| `claw.privateApi.integrations.telegram.connect` | privateApiRoute | api | claw |  |  |  | `/api/integrations/telegram/connect` |
+| `claw.privateApi.integrations.telegram.test` | privateApiRoute | api | claw |  |  |  | `/api/integrations/telegram/test` |
+| `claw.privateApi.integrations.uninstall` | privateApiRoute | api | claw |  |  |  | `/api/integrations/uninstall` |
+| `claw.privateApi.integrations.whatsapp.cleanup` | privateApiRoute | api | claw |  |  |  | `/api/integrations/whatsapp/cleanup` |
+| `claw.privateApi.integrations.whatsapp.connect` | privateApiRoute | api | claw |  |  |  | `/api/integrations/whatsapp/connect` |
+| `claw.privateApi.lists` | privateApiRoute | api | claw |  |  |  | `/api/lists` |
+| `claw.privateApi.memory.person` | privateApiRoute | api | claw |  |  |  | `/api/memory/person` |
+| `claw.privateApi.milestones` | privateApiRoute | api | claw |  |  |  | `/api/milestones` |
+| `claw.privateApi.monitors` | privateApiRoute | api | claw |  |  |  | `/api/monitors` |
+| `claw.privateApi.notesTrailingSlash` | privateApiRoute | api | claw |  |  |  | `/api/notes/` |
+| `claw.privateApi.notify.actions` | privateApiRoute | api | claw |  |  |  | `/api/notify/actions` |
+| `claw.privateApi.people` | privateApiRoute | api | claw |  |  |  | `/api/people` |
+| `claw.privateApi.projects` | privateApiRoute | api | claw |  |  |  | `/api/projects` |
+| `claw.privateApi.promote` | privateApiRoute | api | claw |  |  |  | `/api/promote` |
+| `claw.privateApi.recurrences` | privateApiRoute | api | claw |  |  |  | `/api/recurrences` |
+| `claw.privateApi.row` | privateApiRoute | api | claw |  |  |  | `/api/row` |
+| `claw.privateApi.savedViews` | privateApiRoute | api | claw |  |  |  | `/api/saved-views` |
+| `claw.privateApi.search` | privateApiRoute | api | claw |  |  |  | `/api/search` |
+| `claw.privateApi.sections` | privateApiRoute | api | claw |  |  |  | `/api/sections` |
+| `claw.privateApi.seed` | privateApiRoute | api | claw |  |  |  | `/api/seed` |
+| `claw.privateApi.sessions` | privateApiRoute | api | claw |  |  |  | `/api/sessions` |
+| `claw.privateApi.setup` | privateApiRoute | api | claw |  |  |  | `/api/setup` |
+| `claw.privateApi.skills.install` | privateApiRoute | api | claw |  |  |  | `/api/skills/install` |
+| `claw.privateApi.skills.remove` | privateApiRoute | api | claw |  |  |  | `/api/skills/remove` |
+| `claw.privateApi.skills.sources` | privateApiRoute | api | claw |  |  |  | `/api/skills/sources` |
+| `claw.privateApi.sources.refresh` | privateApiRoute | api | claw |  |  |  | `/api/sources/refresh` |
+| `claw.privateApi.stats` | privateApiRoute | api | claw |  |  |  | `/api/stats` |
+| `claw.privateApi.telegram.account` | privateApiRoute | api | claw |  |  |  | `/api/telegram/account` |
+| `claw.privateApi.templates` | privateApiRoute | api | claw |  |  |  | `/api/templates` |
+| `claw.privateApi.timeline` | privateApiRoute | api | claw |  |  |  | `/api/timeline` |
+| `claw.privateApi.tools.conclude` | privateApiRoute | api | claw |  |  |  | `/api/tools/conclude` |
+| `claw.privateApi.tools.getPrefix` | privateApiRoute | api | claw |  |  |  | `/api/tools/get/` |
+| `claw.privateApi.tools.search` | privateApiRoute | api | claw |  |  |  | `/api/tools/search` |
+| `claw.privateApi.tools.status` | privateApiRoute | api | claw |  |  |  | `/api/tools/status` |
+| `claw.privateApi.tts` | privateApiRoute | api | claw |  |  |  | `/api/tts` |
+| `claw.privateApi.tts.providers` | privateApiRoute | api | claw |  |  |  | `/api/tts/providers` |
+| `claw.privateApi.users` | privateApiRoute | api | claw |  |  |  | `/api/users` |
+| `claw.privateApi.activity` | privateApiRoute | api | claw |  |  |  | `/api/activity` |
 | `claw.privateApi.apps.dashboard` | privateApiRoute | api | claw |  |  |  | `/api/apps/{appId}/dashboard` |
 | `claw.privateApi.apps.assets` | privateApiRoute | api | claw |  |  |  | `/api/apps/{appId}/assets` |
+| `claw.privateApi.authTest` | privateApiRoute | api | claw |  |  |  | `/api/auth.test` |
+| `claw.privateApi.chat.sessions` | privateApiRoute | api | claw |  |  |  | `/api/chat/sessions` |
+| `claw.privateApi.claw.status` | privateApiRoute | api | claw |  |  |  | `/api/claw/status` |
+| `claw.privateApi.companies` | privateApiRoute | api | claw |  |  |  | `/api/companies` |
+| `claw.privateApi.config` | privateApiRoute | api | claw |  |  |  | `/api/config` |
+| `claw.privateApi.config.local` | privateApiRoute | api | claw |  |  |  | `/api/config/local` |
+| `claw.privateApi.connectors.subscriptions` | privateApiRoute | api | claw |  |  |  | `/api/connectors/subscriptions` |
+| `claw.privateApi.contacts` | privateApiRoute | api | claw |  |  |  | `/api/contacts` |
+| `claw.privateApi.data` | privateApiRoute | api | claw |  |  |  | `/api/data` |
+| `claw.privateApi.dm` | privateApiRoute | api | claw |  |  |  | `/api/dm` |
+| `claw.privateApi.e2e.reset` | privateApiRoute | api | claw |  |  |  | `/api/e2e/reset` |
+| `claw.privateApi.e2e.status` | privateApiRoute | api | claw |  |  |  | `/api/e2e/status` |
+| `claw.privateApi.events` | privateApiRoute | api | claw |  |  |  | `/api/events` |
+| `claw.privateApi.health` | privateApiRoute | api | claw |  |  |  | `/api/health` |
+| `claw.privateApi.images.backends` | privateApiRoute | api | claw |  |  |  | `/api/images/backends` |
+| `claw.privateApi.inbox` | privateApiRoute | api | claw |  |  |  | `/api/inbox` |
 | `claw.privateApi.inspect.preview` | privateApiRoute | api | claw |  |  |  | `/api/inspect/preview` |
+| `claw.privateApi.integrations.setup` | privateApiRoute | api | claw |  |  |  | `/api/integrations/setup` |
+| `claw.privateApi.integrations.status` | privateApiRoute | api | claw |  |  |  | `/api/integrations/status` |
+| `claw.privateApi.integrations.whatsapp.chats` | privateApiRoute | api | claw |  |  |  | `/api/integrations/whatsapp/chats` |
+| `claw.privateApi.memory` | privateApiRoute | api | claw |  |  |  | `/api/memory` |
+| `claw.privateApi.notes` | privateApiRoute | api | claw |  |  |  | `/api/notes` |
+| `claw.privateApi.notify.dashboard` | privateApiRoute | api | claw |  |  |  | `/api/notify/dashboard` |
+| `claw.privateApi.personas` | privateApiRoute | api | claw |  |  |  | `/api/personas` |
+| `claw.privateApi.plugins` | privateApiRoute | api | claw |  |  |  | `/api/plugins` |
+| `claw.privateApi.routines` | privateApiRoute | api | claw |  |  |  | `/api/routines` |
+| `claw.privateApi.rules` | privateApiRoute | api | claw |  |  |  | `/api/rules` |
+| `claw.privateApi.schema` | privateApiRoute | api | claw |  |  |  | `/api/schema` |
+| `claw.privateApi.skills.list` | privateApiRoute | api | claw |  |  |  | `/api/skills/list` |
+| `claw.privateApi.sources` | privateApiRoute | api | claw |  |  |  | `/api/sources` |
+| `claw.privateApi.spaces` | privateApiRoute | api | claw |  |  |  | `/api/spaces` |
+| `claw.privateApi.summary` | privateApiRoute | api | claw |  |  |  | `/api/summary` |
+| `claw.privateApi.tasks` | privateApiRoute | api | claw |  |  |  | `/api/tasks` |
+| `claw.privateApi.tools.save` | privateApiRoute | api | claw |  |  |  | `/api/tools/save` |
+| `claw.privateApi.ui` | privateApiRoute | api | claw |  |  |  | `/api/ui` |
+| `claw.privateApi.usage` | privateApiRoute | api | claw |  |  |  | `/api/usage` |
 | `claw.protocol.hostCommand.v1` | protocol | protocol | claw |  |  |  | `host-command-v1` |
 | `claw.protocol.hostCommand.v1.field.schemaVersion` | protocolField | protocol | claw |  |  |  | `schemaVersion` |
 | `claw.protocol.hostCommand.v1.field.requestId` | protocolField | protocol | claw |  |  |  | `requestId` |
@@ -1043,6 +1831,7 @@ flowchart TD
 | `claw.event.notify.deployment.recovered` | eventTopic | event | claw |  |  |  | `deployment.recovered` |
 | `claw.event.notify.summary.ready` | eventTopic | event | claw |  |  |  | `summary.ready` |
 | `claw.event.notify.manual.triggered` | eventTopic | event | claw |  |  |  | `manual.triggered` |
+| `claw.external.mapping.event.blueskyFeedPost` | externalMapping | external | external |  |  |  | `app.bsky.feed.post` |
 | `claw.external.mapping.event.notionPageContentUpdated` | externalMapping | external | external |  |  |  | `page.content_updated` |
 | `claw.external.mapping.event.stripeCheckoutSessionCompleted` | externalMapping | external | external |  |  |  | `checkout.session.completed` |
 | `claw.external.mapping.event.threadStarted` | externalMapping | external | external |  |  |  | `thread.started` |
@@ -1069,14 +1858,223 @@ flowchart TD
 | `claw.id.installation` | idNamespace | id | claw |  |  |  | `installationId` |
 | `claw.id.record` | idNamespace | id | claw |  |  |  | `recordId` |
 | `claw.id.resource` | idNamespace | id | claw |  |  |  | `resourceId` |
-| `claw.env.home` | envVar | config | claw |  |  |  | `CLAW_HOME` |
-| `claw.env.dataDir` | envVar | config | claw |  |  |  | `CLAW_DATA_DIR` |
-| `claw.env.dbPath` | envVar | config | claw |  |  |  | `CLAW_DB_PATH` |
-| `claw.env.runtimePort` | envVar | config | claw |  |  |  | `CLAW_RUNTIME_PORT` |
-| `claw.env.sessionsPort` | envVar | config | claw |  |  |  | `CLAW_SESSIONS_PORT` |
+| `claw.env.allowedOrigins` | envVar | config | claw |  |  |  | `CLAW_ALLOWED_ORIGINS` |
+| `claw.env.audioBlobsDir` | envVar | config | claw |  |  |  | `CLAW_AUDIO_BLOBS_DIR` |
+| `claw.env.audioDataDir` | envVar | config | claw |  |  |  | `CLAW_AUDIO_DATA_DIR` |
+| `claw.env.audioHost` | envVar | config | claw |  |  |  | `CLAW_AUDIO_HOST` |
+| `claw.env.audioPort` | envVar | config | claw |  |  |  | `CLAW_AUDIO_PORT` |
+| `claw.env.audioSharedSecret` | envVar | config | claw |  |  |  | `CLAW_AUDIO_SHARED_SECRET` |
+| `claw.env.bin` | envVar | config | claw |  |  |  | `CLAW_BIN` |
+| `claw.env.calendarMock` | envVar | config | claw |  |  |  | `CLAW_CALENDAR_MOCK` |
+| `claw.env.codexPath` | envVar | config | claw |  |  |  | `CLAW_CODEX_PATH` |
+| `claw.env.codeHome` | envVar | config | claw |  |  |  | `CLAW_CODE_HOME` |
+| `claw.env.companyFakeAgentRuns` | envVar | config | claw |  |  |  | `CLAW_COMPANY_FAKE_AGENT_RUNS` |
+| `claw.env.companyOpenclawAgentId` | envVar | config | claw |  |  |  | `CLAW_COMPANY_OPENCLAW_AGENT_ID` |
+| `claw.env.componentsSourceDir` | envVar | config | claw |  |  |  | `CLAW_COMPONENTS_SOURCE_DIR` |
+| `claw.env.connectorCatalogPath` | envVar | config | claw |  |  |  | `CLAW_CONNECTOR_CATALOG_PATH` |
+| `claw.env.connectorSubscriptionsPath` | envVar | config | claw |  |  |  | `CLAW_CONNECTOR_SUBSCRIPTIONS_PATH` |
+| `claw.env.contentToken` | envVar | config | claw |  |  |  | `CLAW_CONTENT_TOKEN` |
+| `claw.env.contentUrl` | envVar | config | claw |  |  |  | `CLAW_CONTENT_URL` |
+| `claw.env.databaseAdminEmail` | envVar | config | claw |  |  |  | `CLAW_DATABASE_ADMIN_EMAIL` |
+| `claw.env.databaseAdminPassword` | envVar | config | claw |  |  |  | `CLAW_DATABASE_ADMIN_PASSWORD` |
+| `claw.env.databaseCorsOrigins` | envVar | config | claw |  |  |  | `CLAW_DATABASE_CORS_ORIGINS` |
+| `claw.env.databaseDataDir` | envVar | config | claw |  |  |  | `CLAW_DATABASE_DATA_DIR` |
+| `claw.env.databaseDir` | envVar | config | claw |  |  |  | `CLAW_DATABASE_DIR` |
+| `claw.env.databaseFilesDir` | envVar | config | claw |  |  |  | `CLAW_DATABASE_FILES_DIR` |
+| `claw.env.databaseHost` | envVar | config | claw |  |  |  | `CLAW_DATABASE_HOST` |
+| `claw.env.databaseJwtSecret` | envVar | config | claw |  |  |  | `CLAW_DATABASE_JWT_SECRET` |
+| `claw.env.databaseNamespace` | envVar | config | claw |  |  |  | `CLAW_DATABASE_NAMESPACE` |
 | `claw.env.databasePort` | envVar | config | claw |  |  |  | `CLAW_DATABASE_PORT` |
-| `claw.env.searchPort` | envVar | config | claw |  |  |  | `CLAW_SEARCH_PORT` |
+| `claw.env.databaseUrl` | envVar | config | claw |  |  |  | `CLAW_DATABASE_URL` |
+| `claw.env.dataDir` | envVar | config | claw |  |  |  | `CLAW_DATA_DIR` |
+| `claw.env.dayRoot` | envVar | config | claw |  |  |  | `CLAW_DAY_ROOT` |
+| `claw.env.dbPath` | envVar | config | claw |  |  |  | `CLAW_DB_PATH` |
+| `claw.env.debugChatPerf` | envVar | config | claw |  |  |  | `CLAW_DEBUG_CHAT_PERF` |
+| `claw.env.demoDataDir` | envVar | config | claw |  |  |  | `CLAW_DEMO_DATA_DIR` |
+| `claw.env.deviceTestCommand` | envVar | config | claw |  |  |  | `CLAW_DEVICE_TEST_COMMAND` |
+| `claw.env.domainsActive` | envVar | config | claw |  |  |  | `CLAW_DOMAINS_ACTIVE` |
+| `claw.env.domainShareUrl` | envVar | config | claw |  |  |  | `CLAW_DOMAIN_SHARE_URL` |
+| `claw.env.driveBackend` | envVar | config | claw |  |  |  | `CLAW_DRIVE_BACKEND` |
+| `claw.env.driveBase` | envVar | config | claw |  |  |  | `CLAW_DRIVE_BASE` |
+| `claw.env.driveCloudflared` | envVar | config | claw |  |  |  | `CLAW_DRIVE_CLOUDFLARED` |
+| `claw.env.driveConverterMode` | envVar | config | claw |  |  |  | `CLAW_DRIVE_CONVERTER_MODE` |
+| `claw.env.driveCorsOrigins` | envVar | config | claw |  |  |  | `CLAW_DRIVE_CORS_ORIGINS` |
+| `claw.env.driveDataDir` | envVar | config | claw |  |  |  | `CLAW_DRIVE_DATA_DIR` |
+| `claw.env.driveDbPath` | envVar | config | claw |  |  |  | `CLAW_DRIVE_DB_PATH` |
+| `claw.env.driveEmail` | envVar | config | claw |  |  |  | `CLAW_DRIVE_EMAIL` |
+| `claw.env.driveEmbedSidecar` | envVar | config | claw |  |  |  | `CLAW_DRIVE_EMBED_SIDECAR` |
+| `claw.env.driveHost` | envVar | config | claw |  |  |  | `CLAW_DRIVE_HOST` |
+| `claw.env.driveJwtSecret` | envVar | config | claw |  |  |  | `CLAW_DRIVE_JWT_SECRET` |
+| `claw.env.driveOcrSidecar` | envVar | config | claw |  |  |  | `CLAW_DRIVE_OCR_SIDECAR` |
+| `claw.env.drivePassword` | envVar | config | claw |  |  |  | `CLAW_DRIVE_PASSWORD` |
+| `claw.env.drivePort` | envVar | config | claw |  |  |  | `CLAW_DRIVE_PORT` |
+| `claw.env.drivePublicBaseUrl` | envVar | config | claw |  |  |  | `CLAW_DRIVE_PUBLIC_BASE_URL` |
+| `claw.env.driveStatusFile` | envVar | config | claw |  |  |  | `CLAW_DRIVE_STATUS_FILE` |
+| `claw.env.driveToken` | envVar | config | claw |  |  |  | `CLAW_DRIVE_TOKEN` |
+| `claw.env.driveUiDistDir` | envVar | config | claw |  |  |  | `CLAW_DRIVE_UI_DIST_DIR` |
+| `claw.env.e2e` | envVar | config | claw |  |  |  | `CLAW_E2E` |
+| `claw.env.e2eDisableExternalCalls` | envVar | config | claw |  |  |  | `CLAW_E2E_DISABLE_EXTERNAL_CALLS` |
+| `claw.env.e2eFixtureMode` | envVar | config | claw |  |  |  | `CLAW_E2E_FIXTURE_MODE` |
+| `claw.env.e2eReuseServer` | envVar | config | claw |  |  |  | `CLAW_E2E_REUSE_SERVER` |
+| `claw.env.emailMock` | envVar | config | claw |  |  |  | `CLAW_EMAIL_MOCK` |
+| `claw.env.erpDir` | envVar | config | claw |  |  |  | `CLAW_ERP_DIR` |
+| `claw.env.filesDir` | envVar | config | claw |  |  |  | `CLAW_FILES_DIR` |
+| `claw.env.findCommandStrictPath` | envVar | config | claw |  |  |  | `CLAW_FIND_COMMAND_STRICT_PATH` |
+| `claw.env.guidanceDir` | envVar | config | claw |  |  |  | `CLAW_GUIDANCE_DIR` |
+| `claw.env.home` | envVar | config | claw |  |  |  | `CLAW_HOME` |
+| `claw.env.hostAppBundle` | envVar | config | claw |  |  |  | `CLAW_HOST_APP_BUNDLE` |
+| `claw.env.hostAppSupportName` | envVar | config | claw |  |  |  | `CLAW_HOST_APP_SUPPORT_NAME` |
+| `claw.env.hostBinDir` | envVar | config | claw |  |  |  | `CLAW_HOST_BIN_DIR` |
+| `claw.env.hostBundleId` | envVar | config | claw |  |  |  | `CLAW_HOST_BUNDLE_ID` |
+| `claw.env.hostCliName` | envVar | config | claw |  |  |  | `CLAW_HOST_CLI_NAME` |
+| `claw.env.hostDaemonName` | envVar | config | claw |  |  |  | `CLAW_HOST_DAEMON_NAME` |
+| `claw.env.hostDisableLegacySocketFallback` | envVar | config | claw |  |  |  | `CLAW_HOST_DISABLE_LEGACY_SOCKET_FALLBACK` |
+| `claw.env.hostDisplayName` | envVar | config | claw |  |  |  | `CLAW_HOST_DISPLAY_NAME` |
+| `claw.env.hostHome` | envVar | config | claw |  |  |  | `CLAW_HOST_HOME` |
+| `claw.env.hostId` | envVar | config | claw |  |  |  | `CLAW_HOST_ID` |
+| `claw.env.hostLaunchAgentsDir` | envVar | config | claw |  |  |  | `CLAW_HOST_LAUNCH_AGENTS_DIR` |
+| `claw.env.hostLaunchAgentLabel` | envVar | config | claw |  |  |  | `CLAW_HOST_LAUNCH_AGENT_LABEL` |
+| `claw.env.hostLogSubsystem` | envVar | config | claw |  |  |  | `CLAW_HOST_LOG_SUBSYSTEM` |
+| `claw.env.hostMachService` | envVar | config | claw |  |  |  | `CLAW_HOST_MACH_SERVICE` |
+| `claw.env.hostObsidianVault` | envVar | config | claw |  |  |  | `CLAW_HOST_OBSIDIAN_VAULT` |
+| `claw.env.hostPermissionName` | envVar | config | claw |  |  |  | `CLAW_HOST_PERMISSION_NAME` |
+| `claw.env.hostPermissionRequestDryRun` | envVar | config | claw |  |  |  | `CLAW_HOST_PERMISSION_REQUEST_DRY_RUN` |
+| `claw.env.hostPermissionRequestLog` | envVar | config | claw |  |  |  | `CLAW_HOST_PERMISSION_REQUEST_LOG` |
+| `claw.env.hostRuntimeTransport` | envVar | config | claw |  |  |  | `CLAW_HOST_RUNTIME_TRANSPORT` |
+| `claw.env.hostSafe` | envVar | config | claw |  |  |  | `CLAW_HOST_SAFE` |
+| `claw.env.hostTestCalendar` | envVar | config | claw |  |  |  | `CLAW_HOST_TEST_CALENDAR` |
+| `claw.env.hostTestCommand` | envVar | config | claw |  |  |  | `CLAW_HOST_TEST_COMMAND` |
+| `claw.env.hostTestMailbox` | envVar | config | claw |  |  |  | `CLAW_HOST_TEST_MAILBOX` |
+| `claw.env.hostTestMode` | envVar | config | claw |  |  |  | `CLAW_HOST_TEST_MODE` |
+| `claw.env.hostTestNotesFolder` | envVar | config | claw |  |  |  | `CLAW_HOST_TEST_NOTES_FOLDER` |
+| `claw.env.hostTestRemindersList` | envVar | config | claw |  |  |  | `CLAW_HOST_TEST_REMINDERS_LIST` |
+| `claw.env.hostTestSafariWindow` | envVar | config | claw |  |  |  | `CLAW_HOST_TEST_SAFARI_WINDOW` |
+| `claw.env.hostTestThingsProject` | envVar | config | claw |  |  |  | `CLAW_HOST_TEST_THINGS_PROJECT` |
+| `claw.env.hostValidationMode` | envVar | config | claw |  |  |  | `CLAW_HOST_VALIDATION_MODE` |
+| `claw.env.imageLibraryDir` | envVar | config | claw |  |  |  | `CLAW_IMAGE_LIBRARY_DIR` |
+| `claw.env.iotBaseUrl` | envVar | config | claw |  |  |  | `CLAW_IOT_BASE_URL` |
+| `claw.env.iotDir` | envVar | config | claw |  |  |  | `CLAW_IOT_DIR` |
+| `claw.env.libraryDir` | envVar | config | claw |  |  |  | `CLAW_LIBRARY_DIR` |
+| `claw.env.liveBrokerCommand` | envVar | config | claw |  |  |  | `CLAW_LIVE_BROKER_COMMAND` |
+| `claw.env.localAdminBootstrapStdin` | envVar | config | claw |  |  |  | `CLAW_LOCAL_ADMIN_BOOTSTRAP_STDIN` |
+| `claw.env.memoryBase` | envVar | config | claw |  |  |  | `CLAW_MEMORY_BASE` |
+| `claw.env.memoryEditor` | envVar | config | claw |  |  |  | `CLAW_MEMORY_EDITOR` |
+| `claw.env.memoryHost` | envVar | config | claw |  |  |  | `CLAW_MEMORY_HOST` |
+| `claw.env.memoryPort` | envVar | config | claw |  |  |  | `CLAW_MEMORY_PORT` |
+| `claw.env.memoryWorkspace` | envVar | config | claw |  |  |  | `CLAW_MEMORY_WORKSPACE` |
+| `claw.env.monitorCollectIntervalMs` | envVar | config | claw |  |  |  | `CLAW_MONITOR_COLLECT_INTERVAL_MS` |
+| `claw.env.monitorCorsOrigins` | envVar | config | claw |  |  |  | `CLAW_MONITOR_CORS_ORIGINS` |
+| `claw.env.monitorHost` | envVar | config | claw |  |  |  | `CLAW_MONITOR_HOST` |
+| `claw.env.monitorLocalDiscoveryIntervalMs` | envVar | config | claw |  |  |  | `CLAW_MONITOR_LOCAL_DISCOVERY_INTERVAL_MS` |
+| `claw.env.monitorLocalScanPorts` | envVar | config | claw |  |  |  | `CLAW_MONITOR_LOCAL_SCAN_PORTS` |
+| `claw.env.monitorMode` | envVar | config | claw |  |  |  | `CLAW_MONITOR_MODE` |
 | `claw.env.monitorPort` | envVar | config | claw |  |  |  | `CLAW_MONITOR_PORT` |
+| `claw.env.monitorRelayToken` | envVar | config | claw |  |  |  | `CLAW_MONITOR_RELAY_TOKEN` |
+| `claw.env.monitorRelayUrl` | envVar | config | claw |  |  |  | `CLAW_MONITOR_RELAY_URL` |
+| `claw.env.monitorRetentionDays` | envVar | config | claw |  |  |  | `CLAW_MONITOR_RETENTION_DAYS` |
+| `claw.env.node` | envVar | config | claw |  |  |  | `CLAW_NODE` |
+| `claw.env.openclawPath` | envVar | config | claw |  |  |  | `CLAW_OPENCLAW_PATH` |
+| `claw.env.openWorkspace` | envVar | config | claw |  |  |  | `CLAW_OPEN_WORKSPACE` |
+| `claw.env.previewCloudflareUrl` | envVar | config | claw |  |  |  | `CLAW_PREVIEW_CLOUDFLARE_URL` |
+| `claw.env.publishingCorsOrigins` | envVar | config | claw |  |  |  | `CLAW_PUBLISHING_CORS_ORIGINS` |
+| `claw.env.publishingDataDir` | envVar | config | claw |  |  |  | `CLAW_PUBLISHING_DATA_DIR` |
+| `claw.env.publishingDbPath` | envVar | config | claw |  |  |  | `CLAW_PUBLISHING_DB_PATH` |
+| `claw.env.publishingDir` | envVar | config | claw |  |  |  | `CLAW_PUBLISHING_DIR` |
+| `claw.env.publishingDriveUrl` | envVar | config | claw |  |  |  | `CLAW_PUBLISHING_DRIVE_URL` |
+| `claw.env.publishingHealthProbeMs` | envVar | config | claw |  |  |  | `CLAW_PUBLISHING_HEALTH_PROBE_MS` |
+| `claw.env.publishingHost` | envVar | config | claw |  |  |  | `CLAW_PUBLISHING_HOST` |
+| `claw.env.publishingLogLevel` | envVar | config | claw |  |  |  | `CLAW_PUBLISHING_LOG_LEVEL` |
+| `claw.env.publishingPipelineEnabled` | envVar | config | claw |  |  |  | `CLAW_PUBLISHING_PIPELINE_ENABLED` |
+| `claw.env.publishingPort` | envVar | config | claw |  |  |  | `CLAW_PUBLISHING_PORT` |
+| `claw.env.publishingPrintToken` | envVar | config | claw |  |  |  | `CLAW_PUBLISHING_PRINT_TOKEN` |
+| `claw.env.publishingPublicBaseUrl` | envVar | config | claw |  |  |  | `CLAW_PUBLISHING_PUBLIC_BASE_URL` |
+| `claw.env.publishingRecurrenceTickMs` | envVar | config | claw |  |  |  | `CLAW_PUBLISHING_RECURRENCE_TICK_MS` |
+| `claw.env.publishingSchedulerTickMs` | envVar | config | claw |  |  |  | `CLAW_PUBLISHING_SCHEDULER_TICK_MS` |
+| `claw.env.publishingStatusFile` | envVar | config | claw |  |  |  | `CLAW_PUBLISHING_STATUS_FILE` |
+| `claw.env.publishingToken` | envVar | config | claw |  |  |  | `CLAW_PUBLISHING_TOKEN` |
+| `claw.env.publishingTokenStore` | envVar | config | claw |  |  |  | `CLAW_PUBLISHING_TOKEN_STORE` |
+| `claw.env.publishingUrl` | envVar | config | claw |  |  |  | `CLAW_PUBLISHING_URL` |
+| `claw.env.publishingVaultUrl` | envVar | config | claw |  |  |  | `CLAW_PUBLISHING_VAULT_URL` |
+| `claw.env.publishingWorkerTickMs` | envVar | config | claw |  |  |  | `CLAW_PUBLISHING_WORKER_TICK_MS` |
+| `claw.env.publishingWorkspace` | envVar | config | claw |  |  |  | `CLAW_PUBLISHING_WORKSPACE` |
+| `claw.env.relayAccessToken` | envVar | config | claw |  |  |  | `CLAW_RELAY_ACCESS_TOKEN` |
+| `claw.env.relayAgentId` | envVar | config | claw |  |  |  | `CLAW_RELAY_AGENT_ID` |
+| `claw.env.relayTenantId` | envVar | config | claw |  |  |  | `CLAW_RELAY_TENANT_ID` |
+| `claw.env.relayUrl` | envVar | config | claw |  |  |  | `CLAW_RELAY_URL` |
+| `claw.env.relayWorkspaceId` | envVar | config | claw |  |  |  | `CLAW_RELAY_WORKSPACE_ID` |
+| `claw.env.reportGithubToken` | envVar | config | claw |  |  |  | `CLAW_REPORT_GITHUB_TOKEN` |
+| `claw.env.resourcesDir` | envVar | config | claw |  |  |  | `CLAW_RESOURCES_DIR` |
+| `claw.env.rulesDir` | envVar | config | claw |  |  |  | `CLAW_RULES_DIR` |
+| `claw.env.runtimeHome` | envVar | config | claw |  |  |  | `CLAW_RUNTIME_HOME` |
+| `claw.env.runtimePort` | envVar | config | claw |  |  |  | `CLAW_RUNTIME_PORT` |
+| `claw.env.runtimeSessionsUrl` | envVar | config | claw |  |  |  | `CLAW_RUNTIME_SESSIONS_URL` |
+| `claw.env.searchAdminToken` | envVar | config | claw |  |  |  | `CLAW_SEARCH_ADMIN_TOKEN` |
+| `claw.env.searchBase` | envVar | config | claw |  |  |  | `CLAW_SEARCH_BASE` |
+| `claw.env.searchCodexBinary` | envVar | config | claw |  |  |  | `CLAW_SEARCH_CODEX_BINARY` |
+| `claw.env.searchCorsOrigins` | envVar | config | claw |  |  |  | `CLAW_SEARCH_CORS_ORIGINS` |
+| `claw.env.searchDataDir` | envVar | config | claw |  |  |  | `CLAW_SEARCH_DATA_DIR` |
+| `claw.env.searchHost` | envVar | config | claw |  |  |  | `CLAW_SEARCH_HOST` |
+| `claw.env.searchJwtSecret` | envVar | config | claw |  |  |  | `CLAW_SEARCH_JWT_SECRET` |
+| `claw.env.searchPort` | envVar | config | claw |  |  |  | `CLAW_SEARCH_PORT` |
+| `claw.env.searchRunTimeoutMs` | envVar | config | claw |  |  |  | `CLAW_SEARCH_RUN_TIMEOUT_MS` |
+| `claw.env.searchSchedulerTickMs` | envVar | config | claw |  |  |  | `CLAW_SEARCH_SCHEDULER_TICK_MS` |
+| `claw.env.searchToken` | envVar | config | claw |  |  |  | `CLAW_SEARCH_TOKEN` |
+| `claw.env.searchWorkerConcurrency` | envVar | config | claw |  |  |  | `CLAW_SEARCH_WORKER_CONCURRENCY` |
+| `claw.env.secretsAdminToken` | envVar | config | claw |  |  |  | `CLAW_SECRETS_ADMIN_TOKEN` |
+| `claw.env.secretsBackend` | envVar | config | claw |  |  |  | `CLAW_SECRETS_BACKEND` |
+| `claw.env.secretsBase` | envVar | config | claw |  |  |  | `CLAW_SECRETS_BASE` |
+| `claw.env.secretsBaseUrl` | envVar | config | claw |  |  |  | `CLAW_SECRETS_BASE_URL` |
+| `claw.env.secretsBootstrapStdin` | envVar | config | claw |  |  |  | `CLAW_SECRETS_BOOTSTRAP_STDIN` |
+| `claw.env.secretsCorsOrigins` | envVar | config | claw |  |  |  | `CLAW_SECRETS_CORS_ORIGINS` |
+| `claw.env.secretsDataDir` | envVar | config | claw |  |  |  | `CLAW_SECRETS_DATA_DIR` |
+| `claw.env.secretsDbPath` | envVar | config | claw |  |  |  | `CLAW_SECRETS_DB_PATH` |
+| `claw.env.secretsEnableUnsafeExternalPlugins` | envVar | config | claw |  |  |  | `CLAW_SECRETS_ENABLE_UNSAFE_EXTERNAL_PLUGINS` |
+| `claw.env.secretsHost` | envVar | config | claw |  |  |  | `CLAW_SECRETS_HOST` |
+| `claw.env.secretsHostAssertionKeyBase64` | envVar | config | claw |  |  |  | `CLAW_SECRETS_HOST_ASSERTION_KEY_BASE64` |
+| `claw.env.secretsJwtSecret` | envVar | config | claw |  |  |  | `CLAW_SECRETS_JWT_SECRET` |
+| `claw.env.secretsKekBase64` | envVar | config | claw |  |  |  | `CLAW_SECRETS_KEK_BASE64` |
+| `claw.env.secretsPluginsDir` | envVar | config | claw |  |  |  | `CLAW_SECRETS_PLUGINS_DIR` |
+| `claw.env.secretsPort` | envVar | config | claw |  |  |  | `CLAW_SECRETS_PORT` |
+| `claw.env.secretsProxyPath` | envVar | config | claw |  |  |  | `CLAW_SECRETS_PROXY_PATH` |
+| `claw.env.secretsPublicBaseUrl` | envVar | config | claw |  |  |  | `CLAW_SECRETS_PUBLIC_BASE_URL` |
+| `claw.env.secretsSidecarPath` | envVar | config | claw |  |  |  | `CLAW_SECRETS_SIDECAR_PATH` |
+| `claw.env.secretsSignedHostToken` | envVar | config | claw |  |  |  | `CLAW_SECRETS_SIGNED_HOST_TOKEN` |
+| `claw.env.secretsTenant` | envVar | config | claw |  |  |  | `CLAW_SECRETS_TENANT` |
+| `claw.env.secretsTenantId` | envVar | config | claw |  |  |  | `CLAW_SECRETS_TENANT_ID` |
+| `claw.env.secretsToken` | envVar | config | claw |  |  |  | `CLAW_SECRETS_TOKEN` |
+| `claw.env.secretsUiDistDir` | envVar | config | claw |  |  |  | `CLAW_SECRETS_UI_DIST_DIR` |
+| `claw.env.sessionsCodexDir` | envVar | config | claw |  |  |  | `CLAW_SESSIONS_CODEX_DIR` |
+| `claw.env.sessionsDataDir` | envVar | config | claw |  |  |  | `CLAW_SESSIONS_DATA_DIR` |
+| `claw.env.sessionsDisableCodex` | envVar | config | claw |  |  |  | `CLAW_SESSIONS_DISABLE_CODEX` |
+| `claw.env.sessionsDisableHermes` | envVar | config | claw |  |  |  | `CLAW_SESSIONS_DISABLE_HERMES` |
+| `claw.env.sessionsHermesDb` | envVar | config | claw |  |  |  | `CLAW_SESSIONS_HERMES_DB` |
+| `claw.env.sessionsHost` | envVar | config | claw |  |  |  | `CLAW_SESSIONS_HOST` |
+| `claw.env.sessionsPort` | envVar | config | claw |  |  |  | `CLAW_SESSIONS_PORT` |
+| `claw.env.sessionsSharedSecret` | envVar | config | claw |  |  |  | `CLAW_SESSIONS_SHARED_SECRET` |
+| `claw.env.skillsAutoImport` | envVar | config | claw |  |  |  | `CLAW_SKILLS_AUTO_IMPORT` |
+| `claw.env.slidesDisableBrowser` | envVar | config | claw |  |  |  | `CLAW_SLIDES_DISABLE_BROWSER` |
+| `claw.env.telegramBackend` | envVar | config | claw |  |  |  | `CLAW_TELEGRAM_BACKEND` |
+| `claw.env.telegramDomainShareUrl` | envVar | config | claw |  |  |  | `CLAW_TELEGRAM_DOMAIN_SHARE_URL` |
+| `claw.env.telegramHost` | envVar | config | claw |  |  |  | `CLAW_TELEGRAM_HOST` |
+| `claw.env.telegramLogLevel` | envVar | config | claw |  |  |  | `CLAW_TELEGRAM_LOG_LEVEL` |
+| `claw.env.telegramPort` | envVar | config | claw |  |  |  | `CLAW_TELEGRAM_PORT` |
+| `claw.env.telegramWorkspace` | envVar | config | claw |  |  |  | `CLAW_TELEGRAM_WORKSPACE` |
+| `claw.env.templateDisableBrowser` | envVar | config | claw |  |  |  | `CLAW_TEMPLATE_DISABLE_BROWSER` |
+| `claw.env.testLive` | envVar | config | claw |  |  |  | `CLAW_TEST_LIVE` |
+| `claw.env.testLivePackage` | envVar | config | claw |  |  |  | `CLAW_TEST_LIVE_PACKAGE` |
+| `claw.env.testWorkspace` | envVar | config | claw |  |  |  | `CLAW_TEST_WORKSPACE` |
+| `claw.env.timeDataDir` | envVar | config | claw |  |  |  | `CLAW_TIME_DATA_DIR` |
+| `claw.env.timeDbFile` | envVar | config | claw |  |  |  | `CLAW_TIME_DB_FILE` |
+| `claw.env.timeDefaultTimezone` | envVar | config | claw |  |  |  | `CLAW_TIME_DEFAULT_TIMEZONE` |
+| `claw.env.timeHost` | envVar | config | claw |  |  |  | `CLAW_TIME_HOST` |
+| `claw.env.timeNotifySourceToken` | envVar | config | claw |  |  |  | `CLAW_TIME_NOTIFY_SOURCE_TOKEN` |
+| `claw.env.timeNotifyUrl` | envVar | config | claw |  |  |  | `CLAW_TIME_NOTIFY_URL` |
+| `claw.env.timePort` | envVar | config | claw |  |  |  | `CLAW_TIME_PORT` |
+| `claw.env.timeSchedulerIntervalMs` | envVar | config | claw |  |  |  | `CLAW_TIME_SCHEDULER_INTERVAL_MS` |
+| `claw.env.timeToken` | envVar | config | claw |  |  |  | `CLAW_TIME_TOKEN` |
+| `claw.env.timeUrl` | envVar | config | claw |  |  |  | `CLAW_TIME_URL` |
+| `claw.env.wacliPath` | envVar | config | claw |  |  |  | `CLAW_WACLI_PATH` |
+| `claw.env.workspace` | envVar | config | claw |  |  |  | `CLAW_WORKSPACE` |
 | `claw.package.core` | packageName | package | claw |  |  |  | `@clawjs/core` |
 | `claw.package.cli` | packageName | package | claw |  |  |  | `@clawjs/cli` |
 | `claw.package.claw` | packageName | package | claw |  |  |  | `@clawjs/claw` |
@@ -1291,6 +2289,9 @@ flowchart TD
 | `claw.workspace.locks` | folder | persistent | claw |  |  |  | `.claw/locks` |
 | `claw.workspace.backups` | folder | persistent | claw |  |  |  | `.claw/backups` |
 | `claw.workspace.browser` | folder | persistent | claw |  |  |  | `.claw/browser` |
+| `claw.workspace.browserProfileCache` | folder | persistent | claw |  |  |  | `.claw-browser` |
+| `claw.workspace.demoCache` | folder | persistent | claw |  |  |  | `.claw-demo` |
+| `claw.workspace.e2eCache` | folder | persistent | claw |  |  |  | `.claw-e2e` |
 | `claw.workspace.styles` | folder | persistent | claw |  |  |  | `.claw/styles` |
 | `claw.workspace.templates` | folder | persistent | claw |  |  |  | `.claw/templates` |
 | `claw.workspace.references` | folder | persistent | claw |  |  |  | `.claw/references` |
@@ -1336,6 +2337,7 @@ flowchart TD
 | `clawix.home.bridgeSocket` | socket | persistent | clawix |  |  |  | `~/.clawix/run/clawix-bridge.sock` |
 | `claw.external.codex` | externalReadOnlySource | persistent | external |  |  |  | `~/.codex` |
 | `claw.browserStorage.databaseTheme` | browserStorageKey | config | claw |  |  |  | `claw-db-theme` |
+| `claw.browserStorage.showcaseTheme` | browserStorageKey | config | claw |  |  |  | `clawjs-theme` |
 | `claw.chat.appStorage.selectedAppearance` | appStorageKey | config | claw |  |  |  | `selectedAppearance` |
 | `claw.chat.appStorage.appLanguage` | appStorageKey | config | claw |  |  |  | `appLanguage` |
 | `claw.chat.appStorage.notificationsEnabled` | appStorageKey | config | claw |  |  |  | `notificationsEnabled` |

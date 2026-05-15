@@ -154,6 +154,49 @@ function lineNumber(body, index) {
   return body.slice(0, index).split("\n").length;
 }
 
+function quotedRegistryContains(registryBody, value) {
+  if (registryBody.includes(value)) return true;
+  const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`["'\`]${escaped}["'\`]`).test(registryBody);
+}
+
+function registeredRuleValue(rule, match, body, registryBody) {
+  if (!registryBody) return false;
+  const matched = match[0];
+  const quoted = [...matched.matchAll(/["'`]([^"'`]+)["'`]/g)].map((item) => item[1]);
+
+  if (rule.id.endsWith("direct-env-var")) {
+    const env = matched.match(/(?:CLAW|CLAWIX)_[A-Z0-9_]+/)?.[0];
+    return Boolean(env && quotedRegistryContains(registryBody, env));
+  }
+
+  if (rule.id.endsWith("direct-api-route") || rule.id.endsWith("direct-private-api-route")) {
+    const route = quoted.find((value) => /^\/(?:v\d+|api)\//.test(value));
+    return Boolean(route && quotedRegistryContains(registryBody, route));
+  }
+
+  if (rule.id === "ts.direct-event-topic") {
+    const topic = quoted.find((value) => /^[a-z][a-z0-9-]*\.[a-z0-9_.-]+$/.test(value));
+    return Boolean(topic && quotedRegistryContains(registryBody, topic));
+  }
+
+  if (rule.id === "ts.local-storage-literal") {
+    const value = quoted[0];
+    return Boolean(value && quotedRegistryContains(registryBody, value));
+  }
+
+  if (rule.id === "ts.direct-claw-path") {
+    const token = matched.match(/(?:\.claw(?:ix|js)?|~\/\.claw(?:ix)?|\.claw-[A-Za-z0-9_-]+)/)?.[0];
+    return Boolean(token && quotedRegistryContains(registryBody, token));
+  }
+
+  if (rule.id === "ts.ddl-literal") {
+    return isRegisteredDdlSource(match.inputPath ?? "", body, registryBody);
+  }
+
+  return false;
+}
+
 function enclosingSwiftType(body, index) {
   const prefix = body.slice(0, index);
   const matches = [...prefix.matchAll(/\b(?:enum|struct|class|actor)\s+([A-Za-z_][A-Za-z0-9_]*)/g)];
@@ -195,14 +238,18 @@ function scanFile(filePath, registryBody = "") {
   for (const rule of rules) {
     if (!rule.extensions.includes(ext)) continue;
     if (rule.id === "ts.ddl-literal" && isRegisteredDdlSource(filePath, body, registryBody)) continue;
-    const match = rule.pattern.exec(body);
-    if (!match) continue;
-    findings.push({
-      file: path.relative(rootDir, filePath),
-      line: lineNumber(body, match.index),
-      rule: rule.id,
-      message: rule.message,
-    });
+    const flags = rule.pattern.flags.includes("g") ? rule.pattern.flags : `${rule.pattern.flags}g`;
+    const pattern = new RegExp(rule.pattern.source, flags);
+    for (const match of body.matchAll(pattern)) {
+      match.inputPath = filePath;
+      if (registeredRuleValue(rule, match, body, registryBody)) continue;
+      findings.push({
+        file: path.relative(rootDir, filePath),
+        line: lineNumber(body, match.index),
+        rule: rule.id,
+        message: rule.message,
+      });
+    }
   }
   findings.push(...swiftRegisteredKeyFindings(filePath, body, registryBody));
   return findings;

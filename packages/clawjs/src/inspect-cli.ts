@@ -185,8 +185,7 @@ function filterCodebaseManifest(manifest: unknown, input: InspectCliInput): unkn
     filter,
   };
   if (wantsSummary) {
-    const { files: _files, ...summaryOnly } = base;
-    return summaryOnly;
+    return base;
   }
   return {
     ...base,

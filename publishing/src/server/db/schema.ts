@@ -1,3 +1,4 @@
+// @clawjs-persistent-surface-ddl-source
 // All CREATE TABLE statements live here. Schema-as-code, applied on every boot
 // (CREATE TABLE IF NOT EXISTS). Forward-only changes go through the migrations
 // table (publishing_migrations) for ordering.
