@@ -72,7 +72,7 @@ export const PairingPayloadSchema = z.object({
   port: z.number().int().min(1).max(65535),
   token: z.string().min(1),
   shortCode: z.string().min(1),
-  macName: z.string().min(1),
+  hostDisplayName: z.string().min(1),
   tailscaleHost: z.string().min(1).optional(),
   nodeId: z.string().min(1).optional(),
   signingPublicKey: z.string().min(1).optional(),

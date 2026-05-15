@@ -82,7 +82,7 @@ test("pairing payload encodes and decodes round-trip", () => {
     port: 24180,
     token: generateBearerToken(),
     shortCode: generateShortCode(),
-    macName: "Studio Mac",
+    hostDisplayName: "Studio Mac",
     tailscaleHost: "100.64.0.10",
     nodeId: "node-1",
     signingPublicKey: "sk-pub",
@@ -100,7 +100,14 @@ test("decodePairingPayload throws on invalid json", () => {
 test("decodePairingPayload throws on schema mismatch", () => {
   assert.throws(() =>
     decodePairingPayload(
-      JSON.stringify({ v: 1, host: "h", port: 99999, token: "t", shortCode: "s", macName: "m" }),
+      JSON.stringify({
+        v: 1,
+        host: "h",
+        port: 99999,
+        token: "t",
+        shortCode: "s",
+        hostDisplayName: "m",
+      }),
     ),
   );
 });
