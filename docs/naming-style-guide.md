@@ -37,6 +37,7 @@ If a public or persistent name is not covered here, stop and update
 | SQL tables/columns/indexes | `snake_case` | `board_issues`, `created_at` |
 | Collections | `snake_case` | `channels_messages`, `signal_observations` |
 | JSON enum values | `snake_case` | `in_progress`, `time_sensitive` |
+| Error codes | `snake_case` | `inspect_not_found`, `usage_error` |
 | Public human-editable IDs | lowercase ASCII `kebab-case` | `google-gemini`, `my-agent` |
 | Event names | `domain.action`, kebab segments | `models.default-set`, `auth.login-started` |
 | Env vars | uppercase snake with prefix | `CLAW_HOME`, `CLAW_RUNTIME_PORT` |
@@ -53,7 +54,9 @@ Events use `domain.action`.
 
 - Public framework env vars use `CLAW_*`.
 - Clawix host/app env vars use `CLAWIX_*`.
+- Clawix bridge env vars use `CLAWIX_BRIDGE_*`.
 - Service framework env vars use `CLAW_<SERVICE>_*`.
+- Do not introduce hybrid env vars such as `CLAWIX_CLAW_*`.
 - `CLAWJS_*` is internal build/package metadata only.
 - App/module-owned database objects carry a domain prefix:
   `board_*`, `channels_*`, `signal_*`, `publishing_*`.
@@ -109,11 +112,17 @@ Use `sessionId`, not stable `chatId`, in protocol contracts.
 - General exports use `.clawexport`.
 - Full backups use `.clawbackup`.
 - Encrypted secrets backups use `.clawsecrets`.
+- Import/export/backup/snapshot files that can be saved or imported must have a
+  registered file format, versioned schema, and fixtures.
+- Restart-surviving caches are registered as `cache` surfaces with rebuildable
+  lifecycle.
 
 ## Routes and protocols
 
 - Public APIs live under `/v1/...`.
 - Private UI APIs live under `/api/<app>/...`.
+- Private `/api/<app>/...` routes are stable owned surfaces and must be
+  registered like public `/v1/...` routes.
 - Public event streaming lives at `/v1/events`.
 - Do not introduce public `/ws`.
 - Webhooks use `/v1/webhooks/<provider>/<event>`.
@@ -124,6 +133,9 @@ Use `sessionId`, not stable `chatId`, in protocol contracts.
 ## Packages, apps, and domains
 
 - Real packages use `@clawjs/<name>`.
+- Private monorepo packages also use `@clawjs/<name>`.
+- Clawix-owned packages use `@clawix/<name>`, except the product/host CLI
+  package and binary `clawix`.
 - Package directories under `packages/` are semantic and do not repeat
   `clawjs-`.
 - Public app names are `showcase`, `agenda`, `board`, `channels`, and
@@ -133,6 +145,17 @@ Use `sessionId`, not stable `chatId`, in protocol contracts.
 - `relay` is infrastructure only.
 - `iot` is adapter/protocol implementation only.
 - Personal signal categories are catalog data, not public packages.
+
+## Native Identity And Providers
+
+- Register bundle IDs, Team IDs, signing identities, SKUs, entitlements, Mach
+  services, LaunchAgent labels, Bonjour services, sockets, and pipe names with
+  public placeholders or public service names only.
+- Real signing identities, Team IDs, release credentials, SKUs, and private
+  bundle identifiers never enter public repositories.
+- Provider integrations register Claw-owned provider IDs, action IDs, callback
+  paths, webhook mappings, and account keys. Do not copy full third-party
+  provider schemas into the registry.
 
 ## Logging and audit
 

@@ -12,10 +12,11 @@ Claw data surfaces without relying on a manually maintained diagram. The
 inspected surface must cover database names, sidecar stores, workspace paths,
 host-owned operational paths, external read-only sources, preference keys, API
 routes, webhooks, events, queues, JSON fields, schemas, protocol frames, CLI
-commands/flags, error codes, enum wire values, ID namespaces, deep links,
-hostnames, ports, and future table/field metadata. Generated Markdown and
-Mermaid views are useful, but they must be renderings of programmatic
-definitions rather than a second source of truth.
+commands/flags, package names, package bins, package exports, environment
+variables, native identities, file formats, error codes, enum wire values, ID
+namespaces, deep links, hostnames, ports, and future table/field metadata.
+Generated Markdown and Mermaid views are useful, but they must be renderings
+of programmatic definitions rather than a second source of truth.
 
 The user decision log for conversation `019e25c1-b831-73f2-a717-5690b171d0d4` requires strict enforcement:
 
@@ -99,6 +100,7 @@ The persistent node kinds are:
 - `preferenceKey`
 - `appStorageKey`
 - `browserStorageKey`
+- `envVar`
 - `envOverride`
 - `cache`
 - `fixture`
@@ -109,6 +111,7 @@ The persistent node kinds are:
 The stable compatibility node kinds are:
 
 - `apiRoute`
+- `privateApiRoute`
 - `apiMethod`
 - `apiParameter`
 - `webhook`
@@ -119,6 +122,11 @@ The stable compatibility node kinds are:
 - `jsonField`
 - `enumValue`
 - `errorCode`
+- `packageName`
+- `packageExport`
+- `packageBin`
+- `nativeIdentity`
+- `fileFormat`
 - `cliCommand`
 - `cliFlag`
 - `cliOutputField`
@@ -144,15 +152,17 @@ classifications from ADR 0009: `required`, `optional`, `local-only`,
 
 Any code that introduces a new durable path, database, collection/table,
 durable field, preference key, app storage key, browser storage key,
-environment override, persistent temp location, cache intended to survive app
+environment variable or override, persistent temp location, cache intended to survive app
 restarts, host operational state, fixture with stable naming, legacy path, or
 external read-only source must register it through a typed builder in the
 persistent surface registry or a language-specific builder that feeds the same
 registry contract.
 
-Any code that introduces a new API route, webhook path or event, event topic,
-queue topic, JSON/schema field, schema id, enum wire value, error code,
-protocol frame/type/field, CLI command, CLI flag, CLI JSON output field,
+Any code that introduces a new public API route, private `/api/<app>/...`
+route, webhook path or event, event topic, queue topic, JSON/schema field,
+schema id, enum wire value, error code, protocol frame/type/field, CLI
+command, CLI flag, CLI JSON output field, package name, package bin, package
+export, native bundle/service/signing identity placeholder, file format,
 persistent ID namespace or prefix, deep link, local hostname, port, or
 Claw-owned external provider mapping must register it through the same stable
 surface contract before it lands.
@@ -167,14 +177,15 @@ Manual lists are allowed only as generated output or as tests that assert regist
 Direct durable and stable literals are forbidden in implementation code. In TypeScript and
 JavaScript this includes direct `path.join`/`join` construction of Claw homes,
 direct `new Database(...)` path creation, localStorage literals, DDL outside
-surface builders, direct `/v1/...` route literals, unregistered event/queue
-topic literals, and unregistered persistent file/status/cache names. In
-Swift this includes direct `DatabaseQueue(path:)`, direct
+surface builders, direct `/v1/...` and `/api/...` route literals, owned env var
+literals, unregistered event/queue topic literals, and unregistered persistent
+file/status/cache names. In Swift this includes direct `DatabaseQueue(path:)`, direct
 `appendingPathComponent(...)` of durable Claw/Clawix/SQLite/status components,
 direct `@AppStorage` keys, direct `UserDefaults` keys or suite names, and
 project-specific preference wrappers with literal keys, direct `/v1/...` route
-literals, and unregistered `CodingKeys`/wire field strings. Guards must fail
-on these patterns unless the code is the registry/builder itself.
+literals, direct `/api/...` route literals, owned env var literals, and
+unregistered `CodingKeys`/wire field strings. Guards must fail on these
+patterns unless the code is the registry/builder itself.
 
 Temporary OS scratch paths are allowed only when they are clearly
 nonpersistent. Named fixtures, caches that survive restarts, and persistent

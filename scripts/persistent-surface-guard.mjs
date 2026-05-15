@@ -11,6 +11,18 @@ const rules = [
     message: "stable API routes must be registered through stable surface builders",
   },
   {
+    id: "ts.direct-private-api-route",
+    extensions: [".ts", ".tsx", ".js", ".mjs"],
+    pattern: /(["'`])\/api\/[A-Za-z0-9_/{}/.-]+\1/,
+    message: "stable private app/host API routes must be registered through stable surface builders",
+  },
+  {
+    id: "ts.direct-env-var",
+    extensions: [".ts", ".tsx", ".js", ".mjs"],
+    pattern: /process\.env\.(?:CLAW|CLAWIX)_[A-Z0-9_]+|process\.env\[\s*(["'`])(?:CLAW|CLAWIX)_[A-Z0-9_]+\1\s*\]/,
+    message: "owned environment variables must be registered as envVar surfaces",
+  },
+  {
     id: "ts.direct-event-topic",
     extensions: [".ts", ".tsx", ".js", ".mjs"],
     pattern: /\b(?:event|topic|queue|eventType|type)\s*:\s*(["'`])[a-z][a-z0-9-]*\.[a-z0-9_.-]+\1/,
@@ -55,8 +67,14 @@ const rules = [
   {
     id: "swift.direct-api-route",
     extensions: [".swift"],
-    pattern: /"\/v\d+\/[A-Za-z0-9_/{}/.-]+"/,
+    pattern: /"\/(?:v\d+|api)\/[A-Za-z0-9_/{}/.-]+"/,
     message: "stable Swift API routes must be registered through stable surface builders",
+  },
+  {
+    id: "swift.direct-env-var",
+    extensions: [".swift"],
+    pattern: /environment\[\s*"(?:CLAW|CLAWIX)_[A-Z0-9_]+"\s*\]|ProcessInfo\.processInfo\.environment\[\s*"(?:CLAW|CLAWIX)_[A-Z0-9_]+"\s*\]/,
+    message: "owned Swift environment variables must be registered as envVar surfaces",
   },
   {
     id: "swift.direct-coding-key",
@@ -97,7 +115,7 @@ const rules = [
   {
     id: "kotlin.direct-api-route",
     extensions: [".kt", ".kts", ".java"],
-    pattern: /"\/v\d+\/[A-Za-z0-9_/${}().-]+"/,
+    pattern: /"\/(?:v\d+|api)\/[A-Za-z0-9_/${}().-]+"/,
     message: "stable Kotlin/Java API routes must be registered through stable surface builders",
   },
   {
@@ -109,7 +127,7 @@ const rules = [
   {
     id: "csharp.direct-api-route",
     extensions: [".cs"],
-    pattern: /"\/v\d+\/[A-Za-z0-9_/${}().-]+"/,
+    pattern: /"\/(?:v\d+|api)\/[A-Za-z0-9_/${}().-]+"/,
     message: "stable C# API routes must be registered through stable surface builders",
   },
   {
@@ -193,7 +211,7 @@ function listFiles(targetPath) {
   const stat = fs.statSync(targetPath);
   if (stat.isFile()) return [targetPath];
   return fs.readdirSync(targetPath, { withFileTypes: true }).flatMap((entry) => {
-    if (["node_modules", "dist", ".git", ".build", "build", ".next", ".tmp", "coverage", "artifacts", "test-results", "playwright-report"].includes(entry.name)) return [];
+    if (["node_modules", "dist", ".git", ".build", "build", ".next", ".next-e2e", ".tmp", ".claude", ".tmp-pack-smoke", "coverage", "artifacts", "test-results", "playwright-report", "output"].includes(entry.name)) return [];
     const next = path.join(targetPath, entry.name);
     return entry.isDirectory() ? listFiles(next) : [next];
   });
@@ -209,6 +227,8 @@ function runSelfTest() {
   fs.writeFileSync(badTs, [
     "const db = new Database(path.join(home, '.claw', 'data', 'core.sqlite'));",
     "const route = '/v1/namespaces/{namespace}/collections';",
+    "const privateRoute = '/api/apps/{appId}/dashboard';",
+    "const home = process.env.CLAW_HOME;",
     "const payload = { event: 'workspace.initialized' };",
     "const record = { 'schemaVersion': 1 };",
     "localStorage.setItem('clawix.panel', 'open');",
@@ -217,6 +237,8 @@ function runSelfTest() {
   fs.writeFileSync(badSwift, [
     "@AppStorage(\"SidebarViewMode\") var mode = \"all\"",
     "let route = \"/v1/mesh/jobs\"",
+    "let privateRoute = \"/api/apps/dashboard\"",
+    "let env = ProcessInfo.processInfo.environment[\"CLAWIX_BRIDGE_PORT\"]",
     "enum Keys: String, CodingKey { case schemaVersion = \"schemaVersion\" }",
     "UserDefaults.standard.set(true, forKey: \"DictationEnabled\")",
     "let bridgeDefaults = UserDefaults(suiteName: \"clawix.bridge\")",
@@ -236,7 +258,7 @@ function runSelfTest() {
 
   const findings = [...scanFile(badTs), ...scanFile(badSwift, "registeredKey"), ...scanFile(badKt), ...scanFile(badCs), ...scanFile(builderSwift)];
   const foundRules = new Set(findings.map((finding) => finding.rule));
-  for (const expected of ["ts.direct-api-route", "ts.direct-event-topic", "ts.direct-schema-version-field", "ts.direct-database-path", "ts.local-storage-literal", "ts.ddl-literal", "swift.direct-api-route", "swift.direct-coding-key", "swift.app-storage-literal", "swift.user-defaults-literal", "swift.user-defaults-suite-literal", "swift.sidebar-prefs-literal", "swift.unregistered-persistent-key", "swift.database-queue-path", "kotlin.direct-api-route", "kotlin.direct-serial-name", "csharp.direct-api-route", "csharp.direct-json-property"]) {
+  for (const expected of ["ts.direct-api-route", "ts.direct-private-api-route", "ts.direct-env-var", "ts.direct-event-topic", "ts.direct-schema-version-field", "ts.direct-database-path", "ts.local-storage-literal", "ts.ddl-literal", "swift.direct-api-route", "swift.direct-env-var", "swift.direct-coding-key", "swift.app-storage-literal", "swift.user-defaults-literal", "swift.user-defaults-suite-literal", "swift.sidebar-prefs-literal", "swift.unregistered-persistent-key", "swift.database-queue-path", "kotlin.direct-api-route", "kotlin.direct-serial-name", "csharp.direct-api-route", "csharp.direct-json-property"]) {
     if (!foundRules.has(expected)) {
       throw new Error(`self-test did not trigger ${expected}`);
     }

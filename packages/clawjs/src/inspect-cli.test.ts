@@ -74,6 +74,27 @@ test("runCli filters stable compatibility surface categories", async () => {
   assert.equal(apis.code, CLI_EXIT_OK);
   assert.equal(parseCliJson<Array<{ id: string; route?: string }>>(apis.stdout).data.some((node) => node.id === "claw.api.events" && node.route === clawEventsPath), true);
 
+  const privateApis = await runCliCapture(["inspect", "private-apis", "--json"], process.cwd());
+  assert.equal(privateApis.code, CLI_EXIT_OK);
+  assert.equal(parseCliJson<Array<{ id: string; kind: string; route?: string }>>(privateApis.stdout).data.some((node) => node.kind === "privateApiRoute" && node.route === "/api/apps/{appId}/dashboard"), true);
+
+  const env = await runCliCapture(["inspect", "env", "--json"], process.cwd());
+  assert.equal(env.code, CLI_EXIT_OK);
+  assert.equal(parseCliJson<Array<{ id: string; value?: string }>>(env.stdout).data.some((node) => node.id === "claw.env.home" && node.value === "CLAW_HOME"), true);
+
+  const packages = await runCliCapture(["inspect", "packages", "--json"], process.cwd());
+  assert.equal(packages.code, CLI_EXIT_OK);
+  assert.equal(parseCliJson<Array<{ id: string; kind: string; value?: string }>>(packages.stdout).data.some((node) => node.kind === "packageName" && node.value === "@clawjs/core"), true);
+  assert.equal(parseCliJson<Array<{ id: string; kind: string; value?: string }>>(packages.stdout).data.some((node) => node.kind === "packageBin" && node.value === "claw"), true);
+
+  const native = await runCliCapture(["inspect", "native", "--json"], process.cwd());
+  assert.equal(native.code, CLI_EXIT_OK);
+  assert.equal(parseCliJson<Array<{ id: string; kind: string; value?: string }>>(native.stdout).data.some((node) => node.kind === "nativeIdentity" && node.id === "clawix.native.bridge.service" && node.value === "clawix-bridge"), true);
+
+  const formats = await runCliCapture(["inspect", "formats", "--json"], process.cwd());
+  assert.equal(formats.code, CLI_EXIT_OK);
+  assert.equal(parseCliJson<Array<{ id: string; kind: string; value?: string }>>(formats.stdout).data.some((node) => node.kind === "fileFormat" && node.value === ".clawbackup"), true);
+
   const protocols = await runCliCapture(["inspect", "protocols", "--json"], process.cwd());
   assert.equal(protocols.code, CLI_EXIT_OK);
   assert.equal(parseCliJson<Array<{ id: string; kind: string }>>(protocols.stdout).data.some((node) => node.id === "claw.protocol.hostCommand.v1" && node.kind === "protocol"), true);

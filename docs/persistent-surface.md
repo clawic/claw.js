@@ -21,6 +21,14 @@ flowchart TD
   claw_contracts --> claw_contracts_ids
   claw_contracts_cli["CLI commands and flags\nroot"]
   claw_contracts --> claw_contracts_cli
+  claw_contracts_config["Configuration and environment\nroot"]
+  claw_contracts --> claw_contracts_config
+  claw_contracts_packages["Packages, exports, and bins\nroot"]
+  claw_contracts --> claw_contracts_packages
+  claw_contracts_native["Native identities\nroot"]
+  claw_contracts --> claw_contracts_native
+  claw_contracts_formats["Import/export formats\nroot"]
+  claw_contracts --> claw_contracts_formats
   claw_contracts_external["External dependencies and owned mappings\nroot"]
   claw_contracts --> claw_contracts_external
   claw_api_events["Public framework event stream\napiRoute"]
@@ -75,6 +83,12 @@ flowchart TD
   claw_contracts_api --> claw_api_webhooks_providerEvent
   claw_api_integrations_callback["OAuth integration callback\napiRoute"]
   claw_contracts_api --> claw_api_integrations_callback
+  claw_privateApi_apps_dashboard["Private app dashboard data\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_apps_dashboard
+  claw_privateApi_apps_assets["Private app asset data\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_apps_assets
+  claw_privateApi_inspect_preview["Private inspect preview endpoint\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_inspect_preview
   claw_protocol_hostCommand_v1["Host command contract v1\nprotocol"]
   claw_contracts_protocol --> claw_protocol_hostCommand_v1
   claw_protocol_hostCommand_v1_field_schemaVersion["schemaVersion\nprotocolField"]
@@ -185,6 +199,14 @@ flowchart TD
   claw_contracts_schemas --> claw_schema_common_field_createdAt
   claw_schema_common_field_updatedAt["Update instant\njsonField"]
   claw_contracts_schemas --> claw_schema_common_field_updatedAt
+  claw_error_inspect_manifest_error["Inspect manifest read/parse failure\nerrorCode"]
+  claw_contracts_schemas --> claw_error_inspect_manifest_error
+  claw_error_inspect_codebase_manifest_error["Codebase manifest read/parse failure\nerrorCode"]
+  claw_contracts_schemas --> claw_error_inspect_codebase_manifest_error
+  claw_error_inspect_not_found["Inspect target not found\nerrorCode"]
+  claw_contracts_schemas --> claw_error_inspect_not_found
+  claw_error_usage_error["CLI usage error\nerrorCode"]
+  claw_contracts_schemas --> claw_error_usage_error
   claw_id_session["Framework agent session identifiers\nidNamespace"]
   claw_contracts_ids --> claw_id_session
   claw_id_thread_external["External runtime thread identifiers\nidNamespace"]
@@ -199,6 +221,108 @@ flowchart TD
   claw_contracts_ids --> claw_id_record
   claw_id_resource["Opaque registered resource identifiers\nidNamespace"]
   claw_contracts_ids --> claw_id_resource
+  claw_env_home["Framework global home override\nenvVar"]
+  claw_contracts_config --> claw_env_home
+  claw_env_dataDir["Framework data directory override\nenvVar"]
+  claw_contracts_config --> claw_env_dataDir
+  claw_env_dbPath["Framework main database override\nenvVar"]
+  claw_contracts_config --> claw_env_dbPath
+  claw_env_runtimePort["Runtime service port override\nenvVar"]
+  claw_contracts_config --> claw_env_runtimePort
+  claw_env_sessionsPort["Sessions service port override\nenvVar"]
+  claw_contracts_config --> claw_env_sessionsPort
+  claw_env_databasePort["Database service port override\nenvVar"]
+  claw_contracts_config --> claw_env_databasePort
+  claw_env_searchPort["Search service port override\nenvVar"]
+  claw_contracts_config --> claw_env_searchPort
+  claw_env_monitorPort["Monitor service port override\nenvVar"]
+  claw_contracts_config --> claw_env_monitorPort
+  claw_package_core["ClawJS core package\npackageName"]
+  claw_contracts_packages --> claw_package_core
+  claw_package_cli["Claw CLI package\npackageName"]
+  claw_contracts_packages --> claw_package_cli
+  claw_package_claw["Claw SDK package\npackageName"]
+  claw_contracts_packages --> claw_package_claw
+  claw_package_workspace["Workspace package\npackageName"]
+  claw_contracts_packages --> claw_package_workspace
+  claw_package_node["Node compatibility package\npackageName"]
+  claw_contracts_packages --> claw_package_node
+  claw_package_database["Database package\npackageName"]
+  claw_contracts_packages --> claw_package_database
+  claw_package_agents["Agents package\npackageName"]
+  claw_contracts_packages --> claw_package_agents
+  claw_package_integrations["Integrations package\npackageName"]
+  claw_contracts_packages --> claw_package_integrations
+  claw_package_marketplace["Marketplace package\npackageName"]
+  claw_contracts_packages --> claw_package_marketplace
+  claw_package_profile["Profile package\npackageName"]
+  claw_contracts_packages --> claw_package_profile
+  claw_package_audio["Audio package\npackageName"]
+  claw_contracts_packages --> claw_package_audio
+  claw_package_sessions["Sessions package\npackageName"]
+  claw_contracts_packages --> claw_package_sessions
+  claw_package_userModel["User model package\npackageName"]
+  claw_contracts_packages --> claw_package_userModel
+  claw_package_runtime["Runtime package\npackageName"]
+  claw_contracts_packages --> claw_package_runtime
+  claw_package_sandbox["Sandbox package\npackageName"]
+  claw_contracts_packages --> claw_package_sandbox
+  claw_package_mcp["MCP package\npackageName"]
+  claw_contracts_packages --> claw_package_mcp
+  claw_package_voice["Voice package\npackageName"]
+  claw_contracts_packages --> claw_package_voice
+  claw_package_channelBase["Channel base package\npackageName"]
+  claw_contracts_packages --> claw_package_channelBase
+  claw_package_mesh["Mesh package\npackageName"]
+  claw_contracts_packages --> claw_package_mesh
+  claw_package_signals["Signals package\npackageName"]
+  claw_contracts_packages --> claw_package_signals
+  claw_package_signalsCore["Signals core package\npackageName"]
+  claw_contracts_packages --> claw_package_signalsCore
+  claw_package_createApp["Create Claw app generator\npackageName"]
+  claw_contracts_packages --> claw_package_createApp
+  claw_package_createAgent["Create Claw agent generator\npackageName"]
+  claw_contracts_packages --> claw_package_createAgent
+  claw_package_createServer["Create Claw server generator\npackageName"]
+  claw_contracts_packages --> claw_package_createServer
+  claw_package_createPlugin["Create Claw plugin generator\npackageName"]
+  claw_contracts_packages --> claw_package_createPlugin
+  claw_package_eslintConfig["ESLint config package\npackageName"]
+  claw_contracts_packages --> claw_package_eslintConfig
+  claw_package_bin_claw["Public framework CLI\npackageBin"]
+  claw_contracts_packages --> claw_package_bin_claw
+  claw_package_bin_createClawApp["Create app generator CLI\npackageBin"]
+  claw_contracts_packages --> claw_package_bin_createClawApp
+  claw_package_bin_createClawAgent["Create agent generator CLI\npackageBin"]
+  claw_contracts_packages --> claw_package_bin_createClawAgent
+  claw_package_bin_createClawServer["Create server generator CLI\npackageBin"]
+  claw_contracts_packages --> claw_package_bin_createClawServer
+  claw_package_bin_createClawPlugin["Create plugin generator CLI\npackageBin"]
+  claw_contracts_packages --> claw_package_bin_createClawPlugin
+  claw_format_export["General Claw export archive\nfileFormat"]
+  claw_contracts_formats --> claw_format_export
+  claw_format_backup["Full restorable Claw backup archive\nfileFormat"]
+  claw_contracts_formats --> claw_format_backup
+  claw_format_secrets["Encrypted secrets backup archive\nfileFormat"]
+  claw_contracts_formats --> claw_format_secrets
+  claw_format_archiveManifest["Internal archive manifest file\nfileFormat"]
+  claw_contracts_formats --> claw_format_archiveManifest
+  claw_native_app_bundle["Public placeholder Claw.app bundle identifier\nnativeIdentity"]
+  claw_contracts_native --> claw_native_app_bundle
+  claw_native_host_launchAgent["Public placeholder Claw host LaunchAgent label\nnativeIdentity"]
+  claw_contracts_native --> claw_native_host_launchAgent
+  claw_native_host_machService["Public placeholder Claw host Mach service\nnativeIdentity"]
+  claw_contracts_native --> claw_native_host_machService
+  clawix_native_app_bundle["Public placeholder Clawix bundle identifier\nnativeIdentity"]
+  claw_contracts_native --> clawix_native_app_bundle
+  clawix_native_bridge_launchAgent["Clawix bridge LaunchAgent/service suite label\nnativeIdentity"]
+  claw_contracts_native --> clawix_native_bridge_launchAgent
+  clawix_native_bridge_service["Clawix bridge service name\nnativeIdentity"]
+  claw_contracts_native --> clawix_native_bridge_service
+  clawix_native_bridge_bonjour["Clawix bridge Bonjour service type\nnativeIdentity"]
+  claw_contracts_native --> clawix_native_bridge_bonjour
+  clawix_native_bridge_pipe["Clawix bridge Windows pipe\nnativeIdentity"]
+  claw_contracts_native --> clawix_native_bridge_pipe
   claw_deeplink_scheme_host["clawix://\ndeepLink"]
   claw_contracts_api --> claw_deeplink_scheme_host
   claw_deeplink_scheme_frameworkReserved["claw://\ndeepLink"]
@@ -845,6 +969,10 @@ flowchart TD
 | `claw.contracts.schemas` | root | schema | claw |  | sdk, serviceApi, persistence | humanUi:optional | `contracts/schemas` |
 | `claw.contracts.ids` | root | id | claw |  | sdk, serviceApi, persistence | humanUi:optional | `contracts/ids` |
 | `claw.contracts.cli` | root | cli | claw |  | cli | humanUi:optional | `contracts/cli` |
+| `claw.contracts.config` | root | config | claw |  | cli, serviceApi | humanUi:optional | `contracts/config` |
+| `claw.contracts.packages` | root | package | claw |  | sdk, cli | humanUi:optional | `contracts/packages` |
+| `claw.contracts.native` | root | native | claw |  | humanUi, serviceApi | humanUi:optional | `contracts/native` |
+| `claw.contracts.formats` | root | format | claw |  | cli, persistence | humanUi:optional | `contracts/formats` |
 | `claw.contracts.external` | root | external | claw |  | sdk, serviceApi, mcp | humanUi:optional | `contracts/external` |
 | `claw.api.events` | apiRoute | api | claw |  |  |  | `/v1/events` |
 | `claw.api.host.commands` | apiRoute | api | claw |  |  |  | `/v1/commands` |
@@ -872,6 +1000,9 @@ flowchart TD
 | `claw.api.notify.notifications` | apiRoute | api | claw |  |  |  | `/v1/notifications` |
 | `claw.api.webhooks.providerEvent` | apiRoute | api | claw |  |  |  | `/v1/webhooks/{provider}/{event}` |
 | `claw.api.integrations.callback` | apiRoute | api | claw |  |  |  | `/v1/integrations/{provider}/callback` |
+| `claw.privateApi.apps.dashboard` | privateApiRoute | api | claw |  |  |  | `/api/apps/{appId}/dashboard` |
+| `claw.privateApi.apps.assets` | privateApiRoute | api | claw |  |  |  | `/api/apps/{appId}/assets` |
+| `claw.privateApi.inspect.preview` | privateApiRoute | api | claw |  |  |  | `/api/inspect/preview` |
 | `claw.protocol.hostCommand.v1` | protocol | protocol | claw |  |  |  | `host-command-v1` |
 | `claw.protocol.hostCommand.v1.field.schemaVersion` | protocolField | protocol | claw |  |  |  | `schemaVersion` |
 | `claw.protocol.hostCommand.v1.field.requestId` | protocolField | protocol | claw |  |  |  | `requestId` |
@@ -927,6 +1058,10 @@ flowchart TD
 | `claw.schema.common.field.modelId` | jsonField | schema | claw |  |  |  | `modelId` |
 | `claw.schema.common.field.createdAt` | jsonField | schema | claw |  |  |  | `createdAt` |
 | `claw.schema.common.field.updatedAt` | jsonField | schema | claw |  |  |  | `updatedAt` |
+| `claw.error.inspect_manifest_error` | errorCode | schema | claw |  |  |  | `inspect_manifest_error` |
+| `claw.error.inspect_codebase_manifest_error` | errorCode | schema | claw |  |  |  | `inspect_codebase_manifest_error` |
+| `claw.error.inspect_not_found` | errorCode | schema | claw |  |  |  | `inspect_not_found` |
+| `claw.error.usage_error` | errorCode | schema | claw |  |  |  | `usage_error` |
 | `claw.id.session` | idNamespace | id | claw |  |  |  | `sessionId` |
 | `claw.id.thread.external` | idNamespace | id | claw |  |  |  | `threadId` |
 | `claw.id.host` | idNamespace | id | claw |  |  |  | `hostId` |
@@ -934,6 +1069,57 @@ flowchart TD
 | `claw.id.installation` | idNamespace | id | claw |  |  |  | `installationId` |
 | `claw.id.record` | idNamespace | id | claw |  |  |  | `recordId` |
 | `claw.id.resource` | idNamespace | id | claw |  |  |  | `resourceId` |
+| `claw.env.home` | envVar | config | claw |  |  |  | `CLAW_HOME` |
+| `claw.env.dataDir` | envVar | config | claw |  |  |  | `CLAW_DATA_DIR` |
+| `claw.env.dbPath` | envVar | config | claw |  |  |  | `CLAW_DB_PATH` |
+| `claw.env.runtimePort` | envVar | config | claw |  |  |  | `CLAW_RUNTIME_PORT` |
+| `claw.env.sessionsPort` | envVar | config | claw |  |  |  | `CLAW_SESSIONS_PORT` |
+| `claw.env.databasePort` | envVar | config | claw |  |  |  | `CLAW_DATABASE_PORT` |
+| `claw.env.searchPort` | envVar | config | claw |  |  |  | `CLAW_SEARCH_PORT` |
+| `claw.env.monitorPort` | envVar | config | claw |  |  |  | `CLAW_MONITOR_PORT` |
+| `claw.package.core` | packageName | package | claw |  |  |  | `@clawjs/core` |
+| `claw.package.cli` | packageName | package | claw |  |  |  | `@clawjs/cli` |
+| `claw.package.claw` | packageName | package | claw |  |  |  | `@clawjs/claw` |
+| `claw.package.workspace` | packageName | package | claw |  |  |  | `@clawjs/workspace` |
+| `claw.package.node` | packageName | package | claw |  |  |  | `@clawjs/node` |
+| `claw.package.database` | packageName | package | claw |  |  |  | `@clawjs/database` |
+| `claw.package.agents` | packageName | package | claw |  |  |  | `@clawjs/agents` |
+| `claw.package.integrations` | packageName | package | claw |  |  |  | `@clawjs/integrations` |
+| `claw.package.marketplace` | packageName | package | claw |  |  |  | `@clawjs/marketplace` |
+| `claw.package.profile` | packageName | package | claw |  |  |  | `@clawjs/profile` |
+| `claw.package.audio` | packageName | package | claw |  |  |  | `@clawjs/audio` |
+| `claw.package.sessions` | packageName | package | claw |  |  |  | `@clawjs/sessions` |
+| `claw.package.userModel` | packageName | package | claw |  |  |  | `@clawjs/user-model` |
+| `claw.package.runtime` | packageName | package | claw |  |  |  | `@clawjs/runtime` |
+| `claw.package.sandbox` | packageName | package | claw |  |  |  | `@clawjs/sandbox` |
+| `claw.package.mcp` | packageName | package | claw |  |  |  | `@clawjs/mcp` |
+| `claw.package.voice` | packageName | package | claw |  |  |  | `@clawjs/voice` |
+| `claw.package.channelBase` | packageName | package | claw |  |  |  | `@clawjs/channel-base` |
+| `claw.package.mesh` | packageName | package | claw |  |  |  | `@clawjs/mesh` |
+| `claw.package.signals` | packageName | package | claw |  |  |  | `@clawjs/signals` |
+| `claw.package.signalsCore` | packageName | package | claw |  |  |  | `@clawjs/signals-core` |
+| `claw.package.createApp` | packageName | package | claw |  |  |  | `create-claw-app` |
+| `claw.package.createAgent` | packageName | package | claw |  |  |  | `create-claw-agent` |
+| `claw.package.createServer` | packageName | package | claw |  |  |  | `create-claw-server` |
+| `claw.package.createPlugin` | packageName | package | claw |  |  |  | `create-claw-plugin` |
+| `claw.package.eslintConfig` | packageName | package | claw |  |  |  | `eslint-config-claw` |
+| `claw.package.bin.claw` | packageBin | package | claw |  |  |  | `claw` |
+| `claw.package.bin.createClawApp` | packageBin | package | claw |  |  |  | `create-claw-app` |
+| `claw.package.bin.createClawAgent` | packageBin | package | claw |  |  |  | `create-claw-agent` |
+| `claw.package.bin.createClawServer` | packageBin | package | claw |  |  |  | `create-claw-server` |
+| `claw.package.bin.createClawPlugin` | packageBin | package | claw |  |  |  | `create-claw-plugin` |
+| `claw.format.export` | fileFormat | format | claw |  |  |  | `.clawexport` |
+| `claw.format.backup` | fileFormat | format | claw |  |  |  | `.clawbackup` |
+| `claw.format.secrets` | fileFormat | format | claw |  |  |  | `.clawsecrets` |
+| `claw.format.archiveManifest` | fileFormat | format | claw |  |  |  | `manifest.json` |
+| `claw.native.app.bundle` | nativeIdentity | native | claw |  |  |  | `com.example.claw` |
+| `claw.native.host.launchAgent` | nativeIdentity | native | claw |  |  |  | `com.example.claw.host` |
+| `claw.native.host.machService` | nativeIdentity | native | claw |  |  |  | `com.example.claw.host.xpc` |
+| `clawix.native.app.bundle` | nativeIdentity | native | claw |  |  |  | `com.example.clawix` |
+| `clawix.native.bridge.launchAgent` | nativeIdentity | native | claw |  |  |  | `clawix.bridge` |
+| `clawix.native.bridge.service` | nativeIdentity | native | claw |  |  |  | `clawix-bridge` |
+| `clawix.native.bridge.bonjour` | nativeIdentity | native | claw |  |  |  | `_clawix-bridge._tcp` |
+| `clawix.native.bridge.pipe` | nativeIdentity | native | claw |  |  |  | `\\.\pipe\clawix-bridge` |
 | `claw.deeplink.scheme.host` | deepLink | config | claw |  |  |  | `clawix://` |
 | `claw.deeplink.scheme.frameworkReserved` | deepLink | config | claw |  |  |  | `claw://` |
 | `claw.hostname.showcase` | hostname | config | claw |  |  |  | `showcase.claw.localhost` |

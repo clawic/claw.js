@@ -27,6 +27,7 @@ updating this ADR or adding a successor ADR.
 - JSON/API/YAML/framework fields: `camelCase`.
 - CLI commands and flags: `kebab-case`.
 - Events use `domain.action`.
+- Error codes use `snake_case`.
 - `schemaVersion` versions persisted data.
 - `protocolVersion` versions wire protocols.
 
@@ -120,6 +121,10 @@ updating this ADR or adding a successor ADR.
 - Unscoped package names are allowed only for scaffolding and idiomatic config:
   `create-claw-app`, `create-claw-agent`, `create-claw-server`,
   `create-claw-plugin`, and `eslint-config-claw`.
+- Clawix-owned packages use `@clawix/*`, except the product/host CLI package
+  and binary named `clawix`.
+- Package names, package exports, and package bins are stable surfaces and must
+  be registered before V1.
 - Package directories under `packages/` use semantic names without a repeated
   `clawjs-` prefix, for example `packages/claw`, `packages/cli`,
   `packages/workspace`, `packages/core`, and `packages/marketplace`.
@@ -193,6 +198,12 @@ updating this ADR or adding a successor ADR.
 - Full restorable backups use `.clawbackup`.
 - Encrypted secrets backups use `.clawsecrets`.
 - Archive formats contain an internal `manifest.json`.
+- Import/export/backup/snapshot formats that can be saved or imported must
+  declare a versioned schema, registered extension/MIME when applicable, and
+  fixtures.
+- Caches that survive app restart are registered as rebuildable cache
+  surfaces; scratch directories that are strictly process-temporary are not
+  stable surfaces.
 
 ## Protocol, sessions, clients, and identity
 
@@ -204,6 +215,7 @@ updating this ADR or adding a successor ADR.
 - Bridge frame types use `session` language, not `chat` language, for example
   `openSession` and `sessionsSnapshot`.
 - Frame and event JSON `type` values use `lowerCamelCase`.
+- Stable error code values in CLI, APIs, and protocols use `snake_case`.
 - Deep links use:
   - `clawix://auth/callback/<provider>`
   - `clawix://pair/<token>`
@@ -221,6 +233,20 @@ updating this ADR or adding a successor ADR.
 - `deviceId` identifies a physical or logical device.
 - `installationId` identifies an app installation on a device.
 - `clientId` identifies a registered/revocable client or connection.
+
+## Environment, native identity, and provider mappings
+
+- Framework env vars use `CLAW_*`.
+- Clawix host/app env vars use `CLAWIX_*`.
+- Clawix bridge env vars use `CLAWIX_BRIDGE_*`.
+- Hybrid names such as `CLAWIX_CLAW_*` are not V1 surfaces.
+- Bundle IDs, Team IDs, signing identities, SKUs, entitlements, Mach services,
+  LaunchAgent labels, Bonjour services, socket names, and pipe names are stable
+  native identity surfaces. Public repositories register placeholders or public
+  service names only; real private values stay outside public repos.
+- Third-party integrations register Claw-owned provider IDs, action IDs,
+  callback paths, webhook mappings, and account keys. The registry does not
+  copy full third-party schemas.
 
 ## Stable vocabulary
 

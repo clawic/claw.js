@@ -108,7 +108,7 @@ function readOneCodebaseManifest(manifestPath: string, cwd: string): Record<stri
 function readCodebaseManifest(input: InspectCliInput): unknown {
   const manifestPaths = codebaseManifestPaths(input);
   if (manifestPaths.length === 0) {
-    throw new InspectCliError("inspect_codebase_manifest_error", "Could not find a codebase manifest. Generate docs/codebase-manifest.json or pass --codebase-manifest <path>.", CLI_EXIT_USAGE);
+    throw new InspectCliError("inspect_codebase_manifest_error", "Could not find a codebase manifest. Run `node scripts/codebase-manifest.mjs --write` to create the ignored local manifest, or pass --codebase-manifest <path>.", CLI_EXIT_USAGE);
   }
   const manifests = manifestPaths.map((manifestPath) => ({
     manifestPath,
@@ -485,7 +485,43 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     return CLI_EXIT_OK;
   }
   if (command === "apis") {
-    const selected = selectByKinds(["apiRoute", "apiMethod", "apiParameter", "webhook", "webhookEvent", "deepLink", "hostname", "port"]);
+    const selected = selectByKinds(["apiRoute", "privateApiRoute", "apiMethod", "apiParameter", "webhook", "webhookEvent", "deepLink", "hostname", "port"]);
+    if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
+    else input.context.stdout.write(`${inspectText(selected)}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (command === "private-apis") {
+    const selected = selectByKinds(["privateApiRoute"]);
+    if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
+    else input.context.stdout.write(`${inspectText(selected)}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (command === "env") {
+    const selected = selectByKinds(["envVar", "envOverride"]);
+    if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
+    else input.context.stdout.write(`${inspectText(selected)}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (command === "packages") {
+    const selected = selectBySurface("package");
+    if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
+    else input.context.stdout.write(`${inspectText(selected)}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (command === "native") {
+    const selected = selectBySurface("native");
+    if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
+    else input.context.stdout.write(`${inspectText(selected)}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (command === "formats") {
+    const selected = selectBySurface("format");
+    if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
+    else input.context.stdout.write(`${inspectText(selected)}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (command === "provider-mappings") {
+    const selected = selectByKinds(["externalDependency", "externalMapping"]);
     if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
     else input.context.stdout.write(`${inspectText(selected)}\n`);
     return CLI_EXIT_OK;

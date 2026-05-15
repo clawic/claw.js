@@ -16,6 +16,7 @@ export type ClawPersistentSurfaceKind =
   | "preferenceKey"
   | "appStorageKey"
   | "browserStorageKey"
+  | "envVar"
   | "envOverride"
   | "cache"
   | "fixture"
@@ -23,6 +24,7 @@ export type ClawPersistentSurfaceKind =
   | "legacyPath"
   | "externalReadOnlySource"
   | "apiRoute"
+  | "privateApiRoute"
   | "apiMethod"
   | "apiParameter"
   | "webhook"
@@ -33,6 +35,11 @@ export type ClawPersistentSurfaceKind =
   | "jsonField"
   | "enumValue"
   | "errorCode"
+  | "packageName"
+  | "packageExport"
+  | "packageBin"
+  | "nativeIdentity"
+  | "fileFormat"
   | "cliCommand"
   | "cliFlag"
   | "cliOutputField"
@@ -69,7 +76,19 @@ export type ClawPersistentSurfaceCanonicality =
   | "externalReadOnly";
 export type ClawPersistentSurfacePrivacy = "public" | "userData" | "secretReference" | "secretMaterial" | "externalReadOnly";
 export type ClawPersistentSurfaceLifecycle = "durable" | "rebuildable" | "ephemeral" | "legacy" | "external";
-export type ClawStableSurfaceClass = "persistent" | "api" | "protocol" | "event" | "schema" | "id" | "cli" | "config" | "external";
+export type ClawStableSurfaceClass =
+  | "persistent"
+  | "api"
+  | "protocol"
+  | "event"
+  | "schema"
+  | "id"
+  | "cli"
+  | "config"
+  | "package"
+  | "native"
+  | "format"
+  | "external";
 export type ClawStableSurfaceStability = "v1" | "preV1Reset" | "internalCrossVersion" | "externalDependency";
 export type ClawStableSurfaceDirection = "inbound" | "outbound" | "bidirectional" | "local" | "generated";
 export type ClawSurfaceParitySurface = "humanUi" | "sdk" | "cli" | "serviceApi" | "mcp" | "relay" | "persistence";
@@ -183,10 +202,13 @@ export const clawPersistentSurface = {
   preference(input: SurfaceBuilderInput<"preferenceKey" | "appStorageKey" | "browserStorageKey">): ClawPersistentSurfaceNode {
     return surfaceNode({ ...input, kind: input.kind ?? "preferenceKey" });
   },
-  envOverride(input: SurfaceBuilderInput<"envOverride">): ClawPersistentSurfaceNode {
-    return surfaceNode({ ...input, kind: "envOverride", privacy: input.privacy ?? "public" });
+  envVar(input: SurfaceBuilderInput<"envVar" | "envOverride">): ClawPersistentSurfaceNode {
+    return surfaceNode({ ...input, kind: input.kind ?? "envVar", privacy: input.privacy ?? "public", surfaceClass: input.surfaceClass ?? "config" });
   },
-  contract(input: SurfaceBuilderInput<"apiRoute" | "apiMethod" | "apiParameter" | "webhook" | "webhookEvent" | "eventTopic" | "queueTopic" | "jsonSchema" | "jsonField" | "enumValue" | "errorCode" | "cliCommand" | "cliFlag" | "cliOutputField" | "protocol" | "protocolFrame" | "protocolField" | "idNamespace" | "idPrefix" | "deepLink" | "hostname" | "port" | "externalDependency" | "externalMapping"> & { kind: "apiRoute" | "apiMethod" | "apiParameter" | "webhook" | "webhookEvent" | "eventTopic" | "queueTopic" | "jsonSchema" | "jsonField" | "enumValue" | "errorCode" | "cliCommand" | "cliFlag" | "cliOutputField" | "protocol" | "protocolFrame" | "protocolField" | "idNamespace" | "idPrefix" | "deepLink" | "hostname" | "port" | "externalDependency" | "externalMapping" }): ClawPersistentSurfaceNode {
+  envOverride(input: SurfaceBuilderInput<"envOverride">): ClawPersistentSurfaceNode {
+    return this.envVar({ ...input, kind: "envOverride" });
+  },
+  contract(input: SurfaceBuilderInput<"apiRoute" | "privateApiRoute" | "apiMethod" | "apiParameter" | "webhook" | "webhookEvent" | "eventTopic" | "queueTopic" | "jsonSchema" | "jsonField" | "enumValue" | "errorCode" | "packageName" | "packageExport" | "packageBin" | "nativeIdentity" | "fileFormat" | "cliCommand" | "cliFlag" | "cliOutputField" | "protocol" | "protocolFrame" | "protocolField" | "idNamespace" | "idPrefix" | "deepLink" | "hostname" | "port" | "externalDependency" | "externalMapping"> & { kind: "apiRoute" | "privateApiRoute" | "apiMethod" | "apiParameter" | "webhook" | "webhookEvent" | "eventTopic" | "queueTopic" | "jsonSchema" | "jsonField" | "enumValue" | "errorCode" | "packageName" | "packageExport" | "packageBin" | "nativeIdentity" | "fileFormat" | "cliCommand" | "cliFlag" | "cliOutputField" | "protocol" | "protocolFrame" | "protocolField" | "idNamespace" | "idPrefix" | "deepLink" | "hostname" | "port" | "externalDependency" | "externalMapping" }): ClawPersistentSurfaceNode {
     return surfaceNode({
       ...input,
       storageClass: input.storageClass ?? "external",
@@ -202,13 +224,16 @@ export const clawStableSurface = clawPersistentSurface;
 
 function stableSurfaceClassForKind(kind: ClawPersistentSurfaceKind | undefined): ClawStableSurfaceClass {
   if (!kind) return "persistent";
-  if (["apiRoute", "apiMethod", "apiParameter", "webhook", "webhookEvent"].includes(kind)) return "api";
+  if (["apiRoute", "privateApiRoute", "apiMethod", "apiParameter", "webhook", "webhookEvent"].includes(kind)) return "api";
   if (["protocol", "protocolFrame", "protocolField"].includes(kind)) return "protocol";
   if (["eventTopic", "queueTopic"].includes(kind)) return "event";
   if (["jsonSchema", "jsonField", "enumValue", "errorCode"].includes(kind)) return "schema";
   if (["idNamespace", "idPrefix"].includes(kind)) return "id";
   if (["cliCommand", "cliFlag", "cliOutputField"].includes(kind)) return "cli";
-  if (["envOverride", "deepLink", "hostname", "port"].includes(kind)) return "config";
+  if (["envVar", "envOverride", "deepLink", "hostname", "port"].includes(kind)) return "config";
+  if (["packageName", "packageExport", "packageBin"].includes(kind)) return "package";
+  if (kind === "nativeIdentity") return "native";
+  if (kind === "fileFormat") return "format";
   if (["externalDependency", "externalMapping", "externalReadOnlySource"].includes(kind)) return "external";
   return "persistent";
 }
@@ -690,6 +715,12 @@ const corePublicRoutes = [
   ["claw.api.integrations.callback", "GET", "/v1/integrations/{provider}/callback", "OAuth integration callback"],
 ] as const;
 
+const corePrivateRoutes = [
+  ["claw.privateApi.apps.dashboard", "GET", "/api/apps/{appId}/dashboard", "Private app dashboard data"],
+  ["claw.privateApi.apps.assets", "GET", "/api/apps/{appId}/assets", "Private app asset data"],
+  ["claw.privateApi.inspect.preview", "POST", "/api/inspect/preview", "Private inspect preview endpoint"],
+] as const;
+
 const stableJsonFields = [
   ["claw.schema.common.field.schemaVersion", clawCommonJsonFields.schemaVersion, "Persisted/exported data version field"],
   ["claw.schema.common.field.protocolVersion", clawCommonJsonFields.protocolVersion, "Wire protocol version field"],
@@ -701,6 +732,79 @@ const stableJsonFields = [
   ["claw.schema.common.field.modelId", clawCommonJsonFields.modelId, "Model identity"],
   ["claw.schema.common.field.createdAt", clawCommonJsonFields.createdAt, "Creation instant"],
   ["claw.schema.common.field.updatedAt", clawCommonJsonFields.updatedAt, "Update instant"],
+] as const;
+
+const stableErrorCodes = [
+  ["claw.error.inspect_manifest_error", "inspect_manifest_error", "Inspect manifest read/parse failure"],
+  ["claw.error.inspect_codebase_manifest_error", "inspect_codebase_manifest_error", "Codebase manifest read/parse failure"],
+  ["claw.error.inspect_not_found", "inspect_not_found", "Inspect target not found"],
+  ["claw.error.usage_error", "usage_error", "CLI usage error"],
+] as const;
+
+const stablePackageNames = [
+  ["claw.package.core", "@clawjs/core", "ClawJS core package"],
+  ["claw.package.cli", "@clawjs/cli", "Claw CLI package"],
+  ["claw.package.claw", "@clawjs/claw", "Claw SDK package"],
+  ["claw.package.workspace", "@clawjs/workspace", "Workspace package"],
+  ["claw.package.node", "@clawjs/node", "Node compatibility package"],
+  ["claw.package.database", "@clawjs/database", "Database package"],
+  ["claw.package.agents", "@clawjs/agents", "Agents package"],
+  ["claw.package.integrations", "@clawjs/integrations", "Integrations package"],
+  ["claw.package.marketplace", "@clawjs/marketplace", "Marketplace package"],
+  ["claw.package.profile", "@clawjs/profile", "Profile package"],
+  ["claw.package.audio", "@clawjs/audio", "Audio package"],
+  ["claw.package.sessions", "@clawjs/sessions", "Sessions package"],
+  ["claw.package.userModel", "@clawjs/user-model", "User model package"],
+  ["claw.package.runtime", "@clawjs/runtime", "Runtime package"],
+  ["claw.package.sandbox", "@clawjs/sandbox", "Sandbox package"],
+  ["claw.package.mcp", "@clawjs/mcp", "MCP package"],
+  ["claw.package.voice", "@clawjs/voice", "Voice package"],
+  ["claw.package.channelBase", "@clawjs/channel-base", "Channel base package"],
+  ["claw.package.mesh", "@clawjs/mesh", "Mesh package"],
+  ["claw.package.signals", "@clawjs/signals", "Signals package"],
+  ["claw.package.signalsCore", "@clawjs/signals-core", "Signals core package"],
+  ["claw.package.createApp", "create-claw-app", "Create Claw app generator"],
+  ["claw.package.createAgent", "create-claw-agent", "Create Claw agent generator"],
+  ["claw.package.createServer", "create-claw-server", "Create Claw server generator"],
+  ["claw.package.createPlugin", "create-claw-plugin", "Create Claw plugin generator"],
+  ["claw.package.eslintConfig", "eslint-config-claw", "ESLint config package"],
+] as const;
+
+const stablePackageBins = [
+  ["claw.package.bin.claw", "claw", "Public framework CLI"],
+  ["claw.package.bin.createClawApp", "create-claw-app", "Create app generator CLI"],
+  ["claw.package.bin.createClawAgent", "create-claw-agent", "Create agent generator CLI"],
+  ["claw.package.bin.createClawServer", "create-claw-server", "Create server generator CLI"],
+  ["claw.package.bin.createClawPlugin", "create-claw-plugin", "Create plugin generator CLI"],
+] as const;
+
+const stableEnvVars = [
+  ["claw.env.home", "CLAW_HOME", "Framework global home override"],
+  ["claw.env.dataDir", "CLAW_DATA_DIR", "Framework data directory override"],
+  ["claw.env.dbPath", "CLAW_DB_PATH", "Framework main database override"],
+  ["claw.env.runtimePort", "CLAW_RUNTIME_PORT", "Runtime service port override"],
+  ["claw.env.sessionsPort", "CLAW_SESSIONS_PORT", "Sessions service port override"],
+  ["claw.env.databasePort", "CLAW_DATABASE_PORT", "Database service port override"],
+  ["claw.env.searchPort", "CLAW_SEARCH_PORT", "Search service port override"],
+  ["claw.env.monitorPort", "CLAW_MONITOR_PORT", "Monitor service port override"],
+] as const;
+
+const stableFileFormats = [
+  ["claw.format.export", ".clawexport", "General Claw export archive"],
+  ["claw.format.backup", ".clawbackup", "Full restorable Claw backup archive"],
+  ["claw.format.secrets", ".clawsecrets", "Encrypted secrets backup archive"],
+  ["claw.format.archiveManifest", "manifest.json", "Internal archive manifest file"],
+] as const;
+
+const stableNativeIdentities = [
+  ["claw.native.app.bundle", "com.example.claw", "Public placeholder Claw.app bundle identifier"],
+  ["claw.native.host.launchAgent", "com.example.claw.host", "Public placeholder Claw host LaunchAgent label"],
+  ["claw.native.host.machService", "com.example.claw.host.xpc", "Public placeholder Claw host Mach service"],
+  ["clawix.native.app.bundle", "com.example.clawix", "Public placeholder Clawix bundle identifier"],
+  ["clawix.native.bridge.launchAgent", "clawix.bridge", "Clawix bridge LaunchAgent/service suite label"],
+  ["clawix.native.bridge.service", "clawix-bridge", "Clawix bridge service name"],
+  ["clawix.native.bridge.bonjour", "_clawix-bridge._tcp", "Clawix bridge Bonjour service type"],
+  ["clawix.native.bridge.pipe", String.raw`\\.\pipe\clawix-bridge`, "Clawix bridge Windows pipe"],
 ] as const;
 
 export const clawRegisteredDdlSources = [
@@ -751,6 +855,10 @@ const stableSurfaceRoots = [
   ["claw.contracts.schemas", "Schemas and JSON fields", "schema", ["sdk", "serviceApi", "persistence"]],
   ["claw.contracts.ids", "Persistent IDs", "id", ["sdk", "serviceApi", "persistence"]],
   ["claw.contracts.cli", "CLI commands and flags", "cli", ["cli"]],
+  ["claw.contracts.config", "Configuration and environment", "config", ["cli", "serviceApi"]],
+  ["claw.contracts.packages", "Packages, exports, and bins", "package", ["sdk", "cli"]],
+  ["claw.contracts.native", "Native identities", "native", ["humanUi", "serviceApi"]],
+  ["claw.contracts.formats", "Import/export formats", "format", ["cli", "persistence"]],
   ["claw.contracts.external", "External dependencies and owned mappings", "external", ["sdk", "serviceApi", "mcp"]],
 ] as const;
 
@@ -793,6 +901,18 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       value: `${method} ${route}`,
       parentId: "claw.contracts.api",
       direction: "inbound",
+    })),
+    ...corePrivateRoutes.map(([id, method, route, name]) => clawPersistentSurface.contract({
+      ...contractDefaults,
+      id,
+      kind: "privateApiRoute",
+      name,
+      route,
+      method,
+      value: `${method} ${route}`,
+      parentId: "claw.contracts.api",
+      direction: "inbound",
+      notes: "Private app/host UI route. It is still a stable owned surface and must be registered before V1.",
     })),
     clawPersistentSurface.contract({
       ...contractDefaults,
@@ -917,6 +1037,16 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       surfaceClass: "schema",
       direction: "bidirectional",
     })),
+    ...stableErrorCodes.map(([id, code, name]) => clawPersistentSurface.contract({
+      ...contractDefaults,
+      id,
+      kind: "errorCode",
+      name,
+      value: code,
+      parentId: "claw.contracts.schemas",
+      surfaceClass: "schema",
+      direction: "outbound",
+    })),
     ...stableIdNamespaces.map(([id, field, name]) => clawPersistentSurface.contract({
       ...contractDefaults,
       id,
@@ -927,6 +1057,57 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       parentId: "claw.contracts.ids",
       surfaceClass: "id",
       direction: "bidirectional",
+    })),
+    ...stableEnvVars.map(([id, value, name]) => clawPersistentSurface.envVar({
+      ...contractDefaults,
+      id,
+      kind: "envVar",
+      name,
+      value,
+      key: value,
+      parentId: "claw.contracts.config",
+      direction: "inbound",
+    })),
+    ...stablePackageNames.map(([id, value, name]) => clawPersistentSurface.contract({
+      ...contractDefaults,
+      id,
+      kind: "packageName",
+      name,
+      value,
+      parentId: "claw.contracts.packages",
+      surfaceClass: "package",
+      direction: "outbound",
+    })),
+    ...stablePackageBins.map(([id, value, name]) => clawPersistentSurface.contract({
+      ...contractDefaults,
+      id,
+      kind: "packageBin",
+      name,
+      value,
+      parentId: "claw.contracts.packages",
+      surfaceClass: "package",
+      direction: "outbound",
+    })),
+    ...stableFileFormats.map(([id, value, name]) => clawPersistentSurface.contract({
+      ...contractDefaults,
+      id,
+      kind: "fileFormat",
+      name,
+      value,
+      parentId: "claw.contracts.formats",
+      surfaceClass: "format",
+      direction: "bidirectional",
+    })),
+    ...stableNativeIdentities.map(([id, value, name]) => clawPersistentSurface.contract({
+      ...contractDefaults,
+      id,
+      kind: "nativeIdentity",
+      name,
+      value,
+      parentId: "claw.contracts.native",
+      surfaceClass: "native",
+      direction: "bidirectional",
+      notes: "Public repo value is a placeholder or public service name. Real signing identities, Team IDs, and release credentials stay outside the public repository.",
     })),
     ...Object.entries(clawDeepLinkSchemes).map(([name, scheme]) => clawPersistentSurface.contract({
       ...contractDefaults,
