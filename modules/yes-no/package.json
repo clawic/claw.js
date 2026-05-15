@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-yes-no",
+  "name": "@clawjs/yes-no",
   "version": "0.1.0",
   "private": true,
   "type": "module",

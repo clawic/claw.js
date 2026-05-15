@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-content-ui",
+  "name": "@clawjs/content-ui",
   "version": "0.1.0",
   "private": true,
   "type": "module",

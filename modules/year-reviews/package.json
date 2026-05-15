@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-year-reviews",
+  "name": "@clawjs/year-reviews",
   "version": "0.1.0",
   "private": true,
   "type": "module",

@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-triggers",
+  "name": "@clawjs/triggers",
   "version": "0.1.0",
   "private": true,
   "type": "module",

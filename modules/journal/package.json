@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-journal",
+  "name": "@clawjs/journal",
   "version": "0.1.0",
   "private": true,
   "type": "module",

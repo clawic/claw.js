@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-wildlife",
+  "name": "@clawjs/wildlife",
   "version": "0.1.0",
   "private": true,
   "type": "module",

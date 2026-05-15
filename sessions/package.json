@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-sessions",
+  "name": "@clawjs/sessions-service",
   "version": "0.1.0",
   "private": true,
   "type": "module",

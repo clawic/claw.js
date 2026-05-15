@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-mental-models",
+  "name": "@clawjs/mental-models",
   "version": "0.1.0",
   "private": true,
   "type": "module",

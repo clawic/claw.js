@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-events-attended",
+  "name": "@clawjs/events-attended",
   "version": "0.1.0",
   "private": true,
   "type": "module",

@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-screen-time",
+  "name": "@clawjs/screen-time",
   "version": "0.1.0",
   "private": true,
   "type": "module",

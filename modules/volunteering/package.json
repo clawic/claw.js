@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-volunteering",
+  "name": "@clawjs/volunteering",
   "version": "0.1.0",
   "private": true,
   "type": "module",

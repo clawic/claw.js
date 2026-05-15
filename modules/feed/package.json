@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-feed",
+  "name": "@clawjs/feed",
   "version": "0.1.0",
   "private": true,
   "type": "module",

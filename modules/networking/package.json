@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-networking",
+  "name": "@clawjs/networking",
   "version": "0.1.0",
   "private": true,
   "type": "module",

@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-predictions",
+  "name": "@clawjs/predictions",
   "version": "0.1.0",
   "private": true,
   "type": "module",

@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-monorepo",
+  "name": "@clawjs/monorepo",
   "version": "0.1.2",
   "private": true,
   "type": "module",
@@ -56,7 +56,7 @@
     "test": "node ./scripts/test-lane.mjs fast",
     "test:types": "tsc -p tsconfig.type-tests.json --noEmit",
     "test:ts": "tsc -p tsconfig.json --noEmit",
-    "test:docs": "node ./scripts/docs-surface-check.mjs && node ./scripts/docs-alignment-check.mjs && node ./scripts/naming-surface-guard.mjs && node --import tsx ./scripts/verify-cli-registry-router-parity.mjs && node ./scripts/verify-cli-json-envelope-debt.mjs && node ./scripts/persistent-surface-doc-check.mjs && node ./scripts/tracked-ignored-check.mjs && node ./scripts/codebase-manifest.mjs --check && node ./scripts/source-size-check.mjs",
+    "test:docs": "node ./scripts/docs-surface-check.mjs && node ./scripts/docs-alignment-check.mjs && node ./scripts/naming-surface-guard.mjs && node ./scripts/package-surface-guard.mjs --owner clawjs . && node --import tsx ./scripts/verify-cli-registry-router-parity.mjs && node ./scripts/verify-cli-json-envelope-debt.mjs && node ./scripts/persistent-surface-doc-check.mjs && node ./scripts/tracked-ignored-check.mjs && node ./scripts/codebase-manifest.mjs --check && node ./scripts/source-size-check.mjs",
     "test:pack": "node ./scripts/pack-smoke.mjs",
     "test:package-live": "node ./scripts/verify-integration-package-live-harness.mjs",
     "test:qa-scenarios": "node ./scripts/verify-integration-qa-scenarios.mjs",

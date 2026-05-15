@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-whatsapp",
+  "name": "@clawjs/whatsapp",
   "version": "0.1.0",
   "private": true,
   "type": "module",

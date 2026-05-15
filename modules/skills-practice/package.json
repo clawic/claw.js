@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-skills-practice",
+  "name": "@clawjs/skills-practice",
   "version": "0.1.0",
   "private": true,
   "type": "module",

@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-personality-tests",
+  "name": "@clawjs/personality-tests",
   "version": "0.1.0",
   "private": true,
   "type": "module",

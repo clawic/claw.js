@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-pain-map",
+  "name": "@clawjs/pain-map",
   "version": "0.1.0",
   "private": true,
   "type": "module",

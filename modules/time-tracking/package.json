@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-time-tracking",
+  "name": "@clawjs/time-tracking",
   "version": "0.1.0",
   "private": true,
   "type": "module",

@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-slack",
+  "name": "@clawjs/slack",
   "version": "0.1.0",
   "private": true,
   "type": "module",

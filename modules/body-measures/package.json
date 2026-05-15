@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-body-measures",
+  "name": "@clawjs/body-measures",
   "version": "0.1.0",
   "private": true,
   "type": "module",

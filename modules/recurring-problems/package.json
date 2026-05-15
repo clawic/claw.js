@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-recurring-problems",
+  "name": "@clawjs/recurring-problems",
   "version": "0.1.0",
   "private": true,
   "type": "module",

@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-bridge",
+  "name": "@clawjs/bridge",
   "version": "0.1.0",
   "private": true,
   "type": "module",

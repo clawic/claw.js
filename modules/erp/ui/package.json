@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-erp-ui",
+  "name": "@clawjs/erp-ui",
   "version": "0.1.0",
   "private": true,
   "type": "module",

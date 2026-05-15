@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-relay",
+  "name": "@clawjs/relay",
   "version": "0.1.0",
   "private": true,
   "type": "module",

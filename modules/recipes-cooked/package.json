@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-recipes-cooked",
+  "name": "@clawjs/recipes-cooked",
   "version": "0.1.0",
   "private": true,
   "type": "module",

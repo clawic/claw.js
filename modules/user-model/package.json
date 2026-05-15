@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-user-model",
+  "name": "@clawjs/user-model-module",
   "version": "0.1.0",
   "private": true,
   "type": "module",

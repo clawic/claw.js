@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-comm-stats",
+  "name": "@clawjs/comm-stats",
   "version": "0.1.0",
   "private": true,
   "type": "module",

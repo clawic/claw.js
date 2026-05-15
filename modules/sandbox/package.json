@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-sandbox",
+  "name": "@clawjs/sandbox-module",
   "version": "0.1.0",
   "private": true,
   "type": "module",

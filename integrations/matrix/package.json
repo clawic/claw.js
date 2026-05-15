@@ -1,5 +1,5 @@
 {
-  "name": "clawjs-matrix",
+  "name": "@clawjs/matrix",
   "version": "0.1.0",
   "private": true,
   "type": "module",

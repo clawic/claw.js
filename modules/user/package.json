@@ -1,5 +1,5 @@
 {
-  "name": "user",
+  "name": "@clawjs/user",
   "version": "0.1.0",
   "description": "Cross-service user explorer dashboard for ClawJS",
   "private": true,
