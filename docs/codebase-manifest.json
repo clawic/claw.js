@@ -36,11 +36,11 @@
     ]
   },
   "summary": {
-    "files": 2840,
+    "files": 2842,
     "tests": 394,
     "entrypoints": 160,
     "languages": {
-      "typescript": 2642,
+      "typescript": 2644,
       "javascript": 108,
       "swift": 90
     }
@@ -67814,7 +67814,7 @@
     {
       "path": "packages/clawjs-integrations/src/github-operation-executor.ts",
       "language": "typescript",
-      "lines": 782,
+      "lines": 792,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -95668,6 +95668,31 @@
       ]
     },
     {
+      "path": "packages/clawjs/src/cli-collections-command.ts",
+      "language": "typescript",
+      "lines": 75,
+      "test": false,
+      "entrypoint": false,
+      "imports": [
+        "./cli-constants.ts",
+        "./cli-errors.ts",
+        "./cli-flag-parsers.ts",
+        "./cli-json.ts",
+        "./index.ts",
+        "@clawjs/core"
+      ],
+      "exports": [
+        "runCollectionsCli"
+      ],
+      "declarations": [
+        {
+          "kind": "function",
+          "name": "runCollectionsCli",
+          "exported": true
+        }
+      ]
+    },
+    {
       "path": "packages/clawjs/src/cli-constants.ts",
       "language": "typescript",
       "lines": 104,
@@ -95773,7 +95798,7 @@
     {
       "path": "packages/clawjs/src/cli-discovery.test.ts",
       "language": "typescript",
-      "lines": 349,
+      "lines": 391,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -97356,13 +97381,14 @@
     {
       "path": "packages/clawjs/src/cli-report-command.ts",
       "language": "typescript",
-      "lines": 1009,
+      "lines": 1304,
       "test": false,
       "entrypoint": false,
       "imports": [
         "./cli-errors.ts",
         "./cli-flag-parsers.ts",
         "./cli-json.ts",
+        "./cli-report-governance.ts",
         "@clawjs/core",
         "node:crypto",
         "node:fs",
@@ -97385,6 +97411,11 @@
         },
         {
           "kind": "function",
+          "name": "budgetSummary",
+          "exported": false
+        },
+        {
+          "kind": "function",
           "name": "buildEvidence",
           "exported": false
         },
@@ -97401,6 +97432,11 @@
         {
           "kind": "function",
           "name": "buildValidationPlan",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "canonicalCandidate",
           "exported": false
         },
         {
@@ -97565,6 +97601,11 @@
         },
         {
           "kind": "function",
+          "name": "refreshGlobalDedupe",
+          "exported": false
+        },
+        {
+          "kind": "function",
           "name": "refreshReport",
           "exported": false
         },
@@ -97600,6 +97641,16 @@
         },
         {
           "kind": "function",
+          "name": "runBudgetCommand",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "runGitHubBootstrap",
+          "exported": false
+        },
+        {
+          "kind": "function",
           "name": "runReportCli",
           "exported": true
         },
@@ -97611,6 +97662,11 @@
         {
           "kind": "function",
           "name": "severityLabel",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "shouldCommentOnCanonical",
           "exported": false
         },
         {
@@ -97712,6 +97768,180 @@
           "kind": "type",
           "name": "ReportValidationPlan",
           "exported": false
+        }
+      ]
+    },
+    {
+      "path": "packages/clawjs/src/cli-report-governance.ts",
+      "language": "typescript",
+      "lines": 334,
+      "test": false,
+      "entrypoint": false,
+      "imports": [
+        "node:path"
+      ],
+      "exports": [
+        "CanonicalCandidate",
+        "GlobalDedupeState",
+        "REPORT_BUDGET_LIMITS",
+        "ReportBudgetEvent",
+        "ReportBudgetOverride",
+        "ReportBudgetState",
+        "ReportGovernanceStateLike",
+        "ReportPrProposal",
+        "ReportRetention",
+        "buildBootstrapPlan",
+        "buildGlobalDedupeQuery",
+        "buildPrProposal",
+        "candidatesFromGitHubSearch",
+        "exportReportPackage",
+        "externalPendingGlobalDedupe",
+        "inferFineReportDestination",
+        "isBroadSignal",
+        "mergeGlobalDedupe",
+        "normalizeSearchText",
+        "parseCsv",
+        "parseOlderThan",
+        "pruneCandidates",
+        "recordBudgetEvent",
+        "reportBudgetState",
+        "titleSimilarity"
+      ],
+      "declarations": [
+        {
+          "kind": "const",
+          "name": "REPORT_BUDGET_LIMITS",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "buildBootstrapPlan",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "buildGlobalDedupeQuery",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "buildPrProposal",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "candidateFromItem",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "candidatesFromGitHubSearch",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "exportReportPackage",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "externalPendingGlobalDedupe",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "inferFineReportDestination",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "isBroadSignal",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "mergeGlobalDedupe",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "normalizeSearchText",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "parseCsv",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "parseOlderThan",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "pruneCandidates",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "recordBudgetEvent",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "reportBudgetState",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "titleSimilarity",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "CanonicalCandidate",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "GlobalDedupeState",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "ReportBudgetEvent",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "ReportBudgetOverride",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "ReportBudgetState",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "ReportGovernanceStateLike",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "ReportLike",
+          "exported": false
+        },
+        {
+          "kind": "type",
+          "name": "ReportPrProposal",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "ReportRetention",
+          "exported": true
         }
       ]
     },
@@ -98645,10 +98875,12 @@
     {
       "path": "packages/clawjs/src/database-advanced.ts",
       "language": "typescript",
-      "lines": 202,
+      "lines": 224,
       "test": false,
       "entrypoint": false,
       "imports": [
+        "./cli-errors.ts",
+        "./cli-json.ts",
         "@clawjs/database"
       ],
       "exports": [
@@ -99421,6 +99653,7 @@
         "./cli-channel-listener.ts",
         "./cli-claw-factory.ts",
         "./cli-code-command.ts",
+        "./cli-collections-command.ts",
         "./cli-constants.ts",
         "./cli-delegated-domains.ts",
         "./cli-domains-command.ts",
@@ -99593,7 +99826,7 @@
     {
       "path": "packages/clawjs/src/inspect-cli.test.ts",
       "language": "typescript",
-      "lines": 334,
+      "lines": 374,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -99628,7 +99861,7 @@
     {
       "path": "packages/clawjs/src/inspect-cli.ts",
       "language": "typescript",
-      "lines": 574,
+      "lines": 651,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -99660,12 +99893,27 @@
         },
         {
           "kind": "function",
+          "name": "codebaseSummaryFromFiles",
+          "exported": false
+        },
+        {
+          "kind": "function",
           "name": "combineCodebaseManifests",
           "exported": false
         },
         {
           "kind": "function",
+          "name": "declarationMatchesSymbol",
+          "exported": false
+        },
+        {
+          "kind": "function",
           "name": "defaultCodebaseManifestPaths",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "filterCodebaseManifest",
           "exported": false
         },
         {
