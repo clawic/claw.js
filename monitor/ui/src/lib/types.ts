@@ -67,7 +67,7 @@ export interface LocalInstanceDetail extends LocalInstance {
   uptimePercent24h: number;
 }
 
-export interface MonitorModeInfo {
+export interface MonitorModeSnapshot {
   mode: MonitorMode;
   relayUrl: string | null;
   localInstanceCount: number;

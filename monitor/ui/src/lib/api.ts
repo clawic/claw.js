@@ -1,4 +1,4 @@
-import type { LocalInstance, LocalInstanceDetail, MonitorDetail, MonitorEntry, MonitorModeInfo, MonitorSummary } from "./types";
+import type { LocalInstance, LocalInstanceDetail, MonitorDetail, MonitorEntry, MonitorModeSnapshot, MonitorSummary } from "./types";
 
 const BASE = "";
 
@@ -34,7 +34,7 @@ export function runSetup(): Promise<{ created: number; monitors: string[] }> {
   return post("/api/setup");
 }
 
-export function fetchConfig(): Promise<MonitorModeInfo> {
+export function fetchConfig(): Promise<MonitorModeSnapshot> {
   return json("/api/config");
 }
 

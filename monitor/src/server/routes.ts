@@ -3,7 +3,7 @@ import type { MonitorDatabase } from "./db.ts";
 import type { HeartbeatCollector } from "./collector.ts";
 import type { LocalCollector } from "./local-collector.ts";
 import type { MonitorConfig } from "./config.ts";
-import type { MonitorGroup, MonitorModeInfo, MonitorSummary, MonitorType, MonitorConfig as MonitorCheckConfig } from "../shared/types.ts";
+import type { MonitorGroup, MonitorModeSnapshot, MonitorSummary, MonitorType, MonitorConfig as MonitorCheckConfig } from "../shared/types.ts";
 
 export function registerRoutes(
   app: FastifyInstance,
@@ -14,15 +14,15 @@ export function registerRoutes(
 ): void {
 
   /* -------------------------------------------------------
-     GET /api/config - monitor mode info
+     GET /api/config - monitor mode snapshot
      ------------------------------------------------------- */
   app.get("/api/config", async () => {
-    const info: MonitorModeInfo = {
+    const modeSnapshot: MonitorModeSnapshot = {
       mode: config.mode,
       relayUrl: config.mode !== "local" ? config.relayUrl : null,
       localInstanceCount: db.listInstances().length,
     };
-    return info;
+    return modeSnapshot;
   });
 
   /* -------------------------------------------------------

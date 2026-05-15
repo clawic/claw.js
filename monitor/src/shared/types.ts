@@ -88,7 +88,7 @@ export interface LocalInstanceSnapshot {
   lastSeenAt: number;
 }
 
-export interface MonitorModeInfo {
+export interface MonitorModeSnapshot {
   mode: "local" | "relay" | "hybrid";
   relayUrl: string | null;
   localInstanceCount: number;
