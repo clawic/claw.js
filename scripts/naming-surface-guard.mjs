@@ -182,6 +182,15 @@ for (const relativePath of [
 }
 
 for (const relativePath of [
+  "docs/signals-modules.md",
+]) {
+  forbidSnippet(relativePath, "goals-to-signals");
+  forbidSnippet(relativePath, "legacy_iot_goal");
+  forbidSnippet(relativePath, "iot.sqlite");
+  forbidSnippet(relativePath, "migrate-iot-goals");
+}
+
+for (const relativePath of [
   "docs/relay.md",
   "relay/tests/e2e/relay.e2e.test.ts",
   "relay/src/connector/runtime.ts",

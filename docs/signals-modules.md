@@ -161,13 +161,6 @@ aggregation. Supported value shapes:
 The Clawix Swift clients mirror these shapes in
 `LifeObservationValue`.
 
-## Migration: legacy `iot.sqlite` goals
-
-The legacy `iot.sqlite` collection `goals` is **deprecated** by the new
-shared signals primitive. See
-[`docs/migrations/goals-to-signals.md`](migrations/goals-to-signals.md)
-for the one-time migration script and rollback procedure.
-
 ## Release flow
 
 Per the existing RELEASING.md rules:
