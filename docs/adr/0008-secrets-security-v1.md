@@ -56,7 +56,7 @@ incomplete.
 
 ## Consequences
 
-- V1 may break pre-public development vaults; no legacy migration is required.
+- V1 may break pre-public development vaults; no pre-v1 migration is required.
 - iOS, remote hosts, and third-party physical validation are outside the Mac +
   ClawJS V1 closure, but must preserve the same E2E and no-plaintext-agent
   principles when implemented.

@@ -82,7 +82,11 @@ for (const relativePath of [
   forbidSnippet(relativePath, "unsafe legacy compatibility");
   forbidSnippet(relativePath, "Legacy `resolvedFields`");
   forbidSnippet(relativePath, "Legacy `auth.encrypted`");
+  forbidSnippet(relativePath, "legacy `auth.encrypted`");
   forbidSnippet(relativePath, "legacy connection auth");
+  forbidSnippet(relativePath, "legacy connection `auth.encrypted`");
+  forbidSnippet(relativePath, "legacy readers");
+  forbidSnippet(relativePath, "legacy migration");
   forbidSnippet(relativePath, "compatibility reader");
   forbidSnippet(relativePath, "legacy file");
 }
