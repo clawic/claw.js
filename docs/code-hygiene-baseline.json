@@ -17,5 +17,22 @@
     "duplicate_report_only",
     "enum_report_only"
   ],
-  "entries": []
+  "entries": [
+    {
+      "id": "clawjs-core-builtin-family-barrels-2026-05-17",
+      "category": "public_api",
+      "paths": [
+        "packages/clawjs-core/src/builtins/*/index.ts"
+      ],
+      "findingTypes": [
+        "owners",
+        "exports"
+      ],
+      "coveredFindings": 562,
+      "reason": "Built-in family barrels are the canonical public data catalog surface. They are referenced through the builtins registry, domain surface registry, docs, and package public exports; individual collection exports must not be removed solely because internal consumers import the family object.",
+      "ownerArea": "clawjs-core-builtins",
+      "reference": "docs/decision-map.md#built-in-collections-follow-the-canonical-data-catalog",
+      "expiresAt": "2026-08-15"
+    }
+  ]
 }

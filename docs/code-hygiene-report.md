@@ -4,7 +4,7 @@ Status: PARTIAL bootstrap.
 
 - Blocking findings: 0 recorded in bootstrap report.
 - Report-only findings: 349 in the latest local audit summary.
-- Baselined findings: 0.
+- Baselined findings: 1 baseline entry covering 562 ClawJS built-in family barrel findings.
 - Full cleanup campaign: pending.
 - Report-only audit command: `node scripts/code-hygiene-audit.mjs`.
 - Report-only Knip command: `node scripts/code-hygiene-knip.mjs`.

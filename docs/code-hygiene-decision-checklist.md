@@ -14,7 +14,7 @@ with concrete evidence.
 | `rollout_model` | Limpiar todo primero | blocked | Cleanup campaign is pending. |
 | `baseline_governance` | Motivo + caducidad | implemented | Baseline schema and checker require expiry metadata. |
 | `autofix_policy` | Solo sugerir cambios | documented | Audit/cleanup skills prohibit default destructive autofix. |
-| `export_policy` | API publica se conserva | documented | ADR 0016 public contract retention rule. |
+| `export_policy` | API publica se conserva | partially implemented | ADR 0016 public contract retention rule; ClawJS built-in family barrels are retained via expiring public-API baseline. |
 | `unused_files` | Entrypoints configurados primero | partially implemented | Knip config declares explicit entry/project scope and now includes tool configs, scripts, seeds, and public JS assets; full ClawJS file cleanup pending. |
 | `dependency_policy` | Normalizar por workspace | partially implemented | Removed clear unused ClawJS workspace dependencies (`chokidar`, profile `@noble/hashes`); unlisted findings remain report-only pending workspace calibration. |
 | `swift_tooling` | Periphery calibrado | partially implemented | Periphery 3.7.4 runner and report pair exist with Swift retention flags; local binary install remains `EXTERNAL PENDING`. |

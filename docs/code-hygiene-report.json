@@ -5,7 +5,7 @@
   "status": "bootstrap",
   "blockingFindings": 0,
   "reportOnlyFindings": 349,
-  "baselinedFindings": 0,
+  "baselinedFindings": 1,
   "lastAuditSummary": {
     "scannedFiles": 10020,
     "todoFindings": 222,
@@ -47,6 +47,7 @@
     "Use scripts/code-hygiene-audit.mjs for report-only TODO, duplicate asset, and unreferenced asset candidate findings.",
     "Use scripts/code-hygiene-periphery.mjs for report-only Swift package calibration once the pinned binary is available.",
     "Initial ClawJS dependency cleanup removed chokidar from sessions and @noble/hashes from profile.",
-    "Knip entrypoint calibration now includes tool configs, local scripts, seed files, and public JS assets."
+    "Knip entrypoint calibration now includes tool configs, local scripts, seed files, and public JS assets.",
+    "ClawJS built-in family barrel findings are covered by an expiring public-API baseline entry with 562 reviewed Knip findings."
   ]
 }
