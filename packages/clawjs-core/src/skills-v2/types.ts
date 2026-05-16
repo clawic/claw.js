@@ -39,7 +39,8 @@ export interface SkillCapsule {
 
 /**
  * Soul module data when kind === "personality". Mirrors SoulSpec.modules
- * but kept loose here to avoid coupling skills-v2 to legacy soul shape.
+ * but kept loose here so skill contracts are not coupled to one
+ * personality module shape.
  */
 export interface SkillSoulModules {
   presetId?: string;
@@ -106,7 +107,7 @@ export interface SkillClawjsMetadata {
   importedFrom?: string;
   // Composite skill children (kind: role) — list of slugs to compose.
   children?: string[];
-  // Projection target (legacy library compatibility): "soul" | "identity" | etc.
+  // Projection target for generated libraries: "soul" | "identity" | etc.
   projection?: string;
   // Authorship provenance. Defaults to "authored" when absent.
   // "distilled" means the skill was auto-created by runtime/ from a session.

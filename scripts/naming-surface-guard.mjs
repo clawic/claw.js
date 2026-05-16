@@ -173,12 +173,15 @@ for (const relativePath of [
   "packages/clawjs-node/src/create-claw-options.ts",
   "packages/clawjs-node/src/create-claw-instance.ts",
   "packages/clawjs-node/src/skills-v2/index.ts",
+  "packages/clawjs-core/src/skills-v2/types.ts",
   "docs/surface.md",
 ]) {
   forbidSnippet(relativePath, "migrateLegacyState");
   forbidSnippet(relativePath, "MigrateOptions");
   forbidSnippet(relativePath, ".skills-v2.migrated");
   forbidSnippet(relativePath, "souls.json / library / skills.json");
+  forbidSnippet(relativePath, "legacy soul shape");
+  forbidSnippet(relativePath, "legacy library compatibility");
 }
 
 for (const relativePath of [
