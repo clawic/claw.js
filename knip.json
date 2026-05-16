@@ -84,11 +84,91 @@
         "*.config.{ts,js,mjs,cjs}"
       ]
     },
-    "audio": {},
-    "audio/voice": {},
-    "bridge": {},
-    "content": {},
-    "content/ui": {},
+    "audio": {
+      "entry": [
+        "src/bin/*.{ts,js,mjs}",
+        "src/index.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}",
+        "tsup.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "audio/voice": {
+      "entry": [
+        "src/bin/*.{ts,js,mjs}",
+        "src/index.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}",
+        "tsup.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "bridge": {
+      "entry": [
+        "src/bin/*.{ts,js,mjs}",
+        "src/index.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}",
+        "tsup.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "content": {
+      "entry": [
+        "src/bin/*.{ts,js,mjs}",
+        "src/index.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}",
+        "tsup.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "content/ui": {
+      "entry": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "vite.config.{ts,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
     "database": {
       "entry": [
         "src/bin/*.{ts,js,mjs}",
@@ -102,32 +182,427 @@
         "*.config.{ts,js,mjs,cjs}"
       ]
     },
-    "delegation": {},
-    "drive": {},
-    "drive/ui": {},
-    "examples/showcase": {},
-    "execution": {},
-    "execution/ui": {},
-    "iot": {},
-    "iot/ui": {},
-    "mcp": {},
-    "memory": {},
-    "modules/*": {},
-    "modules/*/ui": {},
-    "monitor": {},
-    "monitor/ui": {},
-    "notify": {},
-    "publishing": {},
-    "relay": {},
-    "relay/ui": {},
-    "runtime": {},
-    "secrets": {},
-    "secrets/ui": {},
-    "sessions": {},
-    "storage/ui": {},
-    "time": {},
+    "delegation": {
+      "entry": [
+        "src/bin/*.{ts,js,mjs}",
+        "src/index.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}",
+        "tsup.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "drive": {
+      "entry": [
+        "src/bin/*.{ts,js,mjs}",
+        "src/index.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}",
+        "tsup.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "drive/ui": {
+      "entry": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "vite.config.{ts,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "examples/showcase": {
+      "entry": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "next.config.{ts,js,mjs}",
+        "postcss.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}",
+        "seed.{js,mjs,ts}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "execution": {
+      "entry": [
+        "src/bin/*.{ts,js,mjs}",
+        "src/index.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}",
+        "tsup.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "execution/ui": {
+      "entry": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "vite.config.{ts,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "iot": {
+      "entry": [
+        "src/bin/*.{ts,js,mjs}",
+        "src/index.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}",
+        "tsup.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "iot/ui": {
+      "entry": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "vite.config.{ts,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "mcp": {
+      "entry": [
+        "src/bin/*.{ts,js,mjs}",
+        "src/index.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}",
+        "tsup.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "memory": {
+      "entry": [
+        "src/bin/*.{ts,js,mjs}",
+        "src/index.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}",
+        "tsup.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "modules/*": {
+      "entry": [
+        "src/bin/*.{ts,js,mjs}",
+        "src/index.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}",
+        "tsup.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "modules/*/ui": {
+      "entry": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "vite.config.{ts,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "monitor": {
+      "entry": [
+        "src/bin/*.{ts,js,mjs}",
+        "src/index.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}",
+        "tsup.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "monitor/ui": {
+      "entry": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "vite.config.{ts,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "notify": {
+      "entry": [
+        "src/bin/*.{ts,js,mjs}",
+        "src/index.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}",
+        "tsup.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "publishing": {
+      "entry": [
+        "src/bin/*.{ts,js,mjs}",
+        "src/index.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}",
+        "tsup.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "relay": {
+      "entry": [
+        "src/bin/*.{ts,js,mjs}",
+        "src/index.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}",
+        "tsup.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "relay/ui": {
+      "entry": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "vite.config.{ts,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "runtime": {
+      "entry": [
+        "src/bin/*.{ts,js,mjs}",
+        "src/index.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}",
+        "tsup.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "secrets": {
+      "entry": [
+        "src/bin/*.{ts,js,mjs}",
+        "src/index.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}",
+        "tsup.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "secrets/ui": {
+      "entry": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "vite.config.{ts,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "sessions": {
+      "entry": [
+        "src/bin/*.{ts,js,mjs}",
+        "src/index.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}",
+        "tsup.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "storage/ui": {
+      "entry": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "vite.config.{ts,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "time": {
+      "entry": [
+        "src/bin/*.{ts,js,mjs}",
+        "src/index.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}",
+        "tsup.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
     "website": {},
-    "wiki": {},
-    "wiki/ui": {}
+    "wiki": {
+      "entry": [
+        "src/bin/*.{ts,js,mjs}",
+        "src/index.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}",
+        "tsup.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "scripts/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "wiki/ui": {
+      "entry": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "vite.config.{ts,js,mjs}",
+        "vitest.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    }
   }
 }

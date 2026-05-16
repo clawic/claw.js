@@ -10,7 +10,7 @@ Status: PARTIAL bootstrap.
 - Report-only Knip command: `node scripts/code-hygiene-knip.mjs`.
 - Report-only Periphery command: `node scripts/code-hygiene-periphery.mjs`.
 - Latest audit summary: 10,020 files scanned; 222 TODO/FIXME/HACK/XXX findings; 39 duplicate asset groups covering 187 files; 88 unreferenced asset candidates.
-- Latest Knip summary: 512 files with issues; 1,548 total findings after removing clear unused workspace dependencies, normalizing root VitePress/Vue/tsx ownership, calibrating the Vitest coverage provider, mapping top-level app/module workspaces to their own package manifests, dropping reviewed direct app/database dependencies now provided by actual imports, and baselining two reviewed dynamic runtime findings.
+- Latest Knip summary: 415 files with issues; 1,384 total findings after removing clear unused workspace dependencies, normalizing root VitePress/Vue/tsx ownership, calibrating the Vitest coverage provider, mapping top-level app/module workspaces to their own package manifests with explicit entry/project shapes, dropping reviewed direct app/database dependencies now provided by actual imports, and baselining two reviewed dynamic runtime findings.
 - Latest Periphery summary: external pending; 2 Swift packages discovered; Periphery 3.7.4 binary not installed on PATH.
 
 This report is the human-readable pair for `docs/code-hygiene-report.json`.

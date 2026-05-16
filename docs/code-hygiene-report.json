@@ -14,16 +14,16 @@
     "unreferencedAssetCandidates": 88
   },
   "knipSummary": {
-    "filesWithIssues": 512,
-    "totalIssues": 1548,
+    "filesWithIssues": 415,
+    "totalIssues": 1384,
     "issueTypes": {
-      "files": 233,
+      "files": 184,
       "owners": 190,
-      "dependencies": 21,
-      "devDependencies": 6,
-      "unlisted": 2,
-      "types": 265,
-      "exports": 823,
+      "dependencies": 24,
+      "devDependencies": 8,
+      "unlisted": 3,
+      "types": 210,
+      "exports": 757,
       "duplicates": 8
     }
   },
@@ -49,6 +49,6 @@
     "Knip entrypoint calibration now includes tool configs, local scripts, seed files, and public JS assets.",
     "ClawJS built-in family barrel findings plus two reviewed dynamic-runtime findings are covered by expiring baseline entries.",
     "Root dependency normalization moved VitePress/Vue ownership to website, declared direct root tsx usage, and calibrated the Vitest coverage provider dependency.",
-    "Knip workspace calibration now maps top-level app/module workspaces to their own package manifests, drops reviewed direct app/database dependencies now provided by actual imports, and baselines two reviewed dynamic runtime findings."
+    "Knip workspace calibration now maps top-level app/module workspaces to their own package manifests with explicit entry/project shapes, drops reviewed direct app/database dependencies now provided by actual imports, and baselines two reviewed dynamic runtime findings."
   ]
 }
