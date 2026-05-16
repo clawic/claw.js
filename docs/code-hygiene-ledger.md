@@ -27,7 +27,7 @@ Source session: private session, not published
 - Status: PARTIAL
 - Tool: Knip 6.14.0 through `scripts/code-hygiene-knip.mjs`.
 - Config: `knip.json`.
-- Latest summary: 2,981 files with issues; 4,190 total findings across files, devDependencies, binaries, unlisted, unresolved, exports, types, duplicates, and ownership metadata after removing `chokidar` from sessions and `@noble/hashes` from profile.
+- Latest summary: 2,884 files with issues; 4,133 total findings across files, devDependencies, binaries, unlisted, unresolved, exports, types, duplicates, and ownership metadata after removing `chokidar` from sessions, removing profile `@noble/hashes`, and calibrating tool/config/script/public asset entrypoints.
 - Mode: report-only; cleanup and baselining pending before blocking gate activation.
 
 ## 2026-05-17 - Periphery report-only setup

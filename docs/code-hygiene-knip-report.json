@@ -3,23 +3,185 @@
   "program": "code-hygiene",
   "tool": "knip",
   "toolVersion": "6.14.0",
-  "generatedAt": "2026-05-16T23:20:09.328Z",
+  "generatedAt": "2026-05-16T23:22:25.324Z",
   "mode": "report-only",
   "config": "knip.json",
   "cwd": ".",
   "summary": {
-    "filesWithIssues": 2981,
-    "totalIssues": 4190,
+    "filesWithIssues": 2884,
+    "totalIssues": 4133,
     "issueTypes": {
-      "files": 2455,
+      "files": 2305,
       "owners": 193,
       "binaries": 7,
       "devDependencies": 3,
       "unresolved": 1,
       "types": 201,
-      "unlisted": 566,
-      "exports": 756,
+      "unlisted": 665,
+      "exports": 750,
       "duplicates": 8
-    }
+    },
+    "topFiles": [
+      {
+        "file": "packages/clawjs-integrations/src/discord-operation-test-catalog.ts",
+        "totalIssues": 32,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 31
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/finance/index.ts",
+        "totalIssues": 24,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 23
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/reading_media/index.ts",
+        "totalIssues": 23,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 22
+        }
+      },
+      {
+        "file": "packages/clawjs/src/v1-data-core.ts",
+        "totalIssues": 23,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 22
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/billing/index.ts",
+        "totalIssues": 22,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 21
+        }
+      },
+      {
+        "file": "secrets/src/server/crypto.ts",
+        "totalIssues": 21,
+        "issueCounts": {
+          "exports": 18,
+          "unlisted": 3
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/analytics/index.ts",
+        "totalIssues": 20,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 19
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/fitness/index.ts",
+        "totalIssues": 20,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 19
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/health/index.ts",
+        "totalIssues": 20,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 19
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/cooking/index.ts",
+        "totalIssues": 19,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 18
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/crm/index.ts",
+        "totalIssues": 19,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 18
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/agents/index.ts",
+        "totalIssues": 17,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 16
+        }
+      },
+      {
+        "file": "packages/clawjs/src/slides.ts",
+        "totalIssues": 17,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 4,
+          "types": 12
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/identity/index.ts",
+        "totalIssues": 16,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 15
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/hr/index.ts",
+        "totalIssues": 14,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 13
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/luxury_and_collecting/index.ts",
+        "totalIssues": 14,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 13
+        }
+      },
+      {
+        "file": "execution/src/shared/protocol.ts",
+        "totalIssues": 13,
+        "issueCounts": {
+          "types": 13
+        }
+      },
+      {
+        "file": "packages/clawjs-database/src/store-helpers.ts",
+        "totalIssues": 13,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 12
+        }
+      },
+      {
+        "file": "packages/clawjs-node/src/time/logic.ts",
+        "totalIssues": 13,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 2,
+          "types": 10
+        }
+      },
+      {
+        "file": "relay/src/shared/protocol.ts",
+        "totalIssues": 13,
+        "issueCounts": {
+          "types": 13
+        }
+      }
+    ]
   }
 }

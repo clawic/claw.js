@@ -14,17 +14,17 @@
     "unreferencedAssetCandidates": 88
   },
   "knipSummary": {
-    "filesWithIssues": 2981,
-    "totalIssues": 4190,
+    "filesWithIssues": 2884,
+    "totalIssues": 4133,
     "issueTypes": {
-      "files": 2455,
+      "files": 2305,
       "owners": 193,
       "binaries": 7,
       "devDependencies": 3,
       "unresolved": 1,
       "types": 201,
-      "unlisted": 566,
-      "exports": 756,
+      "unlisted": 665,
+      "exports": 750,
       "duplicates": 8
     }
   },
@@ -46,6 +46,7 @@
     "Initial bootstrap report. Full cleanup campaign still required before goal completion.",
     "Use scripts/code-hygiene-audit.mjs for report-only TODO, duplicate asset, and unreferenced asset candidate findings.",
     "Use scripts/code-hygiene-periphery.mjs for report-only Swift package calibration once the pinned binary is available.",
-    "Initial ClawJS dependency cleanup removed chokidar from sessions and @noble/hashes from profile."
+    "Initial ClawJS dependency cleanup removed chokidar from sessions and @noble/hashes from profile.",
+    "Knip entrypoint calibration now includes tool configs, local scripts, seed files, and public JS assets."
   ]
 }
