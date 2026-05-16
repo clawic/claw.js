@@ -3,14 +3,14 @@ import assert from "node:assert/strict";
 import { setTimeout as delay } from "node:timers/promises";
 
 import {
-  TerminalManager,
-  type TerminalEventData,
-  type TerminalExitData,
+  TerminalProcessController,
+  type TerminalOutputEvent,
+  type TerminalExitEvent,
 } from "../src/terminal.ts";
 
-function collectExit(tm: TerminalManager, id: string): Promise<TerminalExitData> {
-  return new Promise<TerminalExitData>((resolve) => {
-    const onExit = (ev: TerminalExitData) => {
+function collectExit(tm: TerminalProcessController, id: string): Promise<TerminalExitEvent> {
+  return new Promise<TerminalExitEvent>((resolve) => {
+    const onExit = (ev: TerminalExitEvent) => {
       if (ev.id !== id) return;
       tm.off("exit", onExit);
       resolve(ev);
@@ -19,14 +19,14 @@ function collectExit(tm: TerminalManager, id: string): Promise<TerminalExitData>
   });
 }
 
-function collectStdout(tm: TerminalManager, id: string): Promise<string> {
+function collectStdout(tm: TerminalProcessController, id: string): Promise<string> {
   return new Promise<string>((resolve) => {
     const chunks: Buffer[] = [];
-    const onData = (ev: TerminalEventData) => {
+    const onData = (ev: TerminalOutputEvent) => {
       if (ev.id !== id || ev.channel !== "stdout") return;
       chunks.push(ev.data);
     };
-    const onExit = (ev: TerminalExitData) => {
+    const onExit = (ev: TerminalExitEvent) => {
       if (ev.id !== id) return;
       tm.off("data", onData);
       tm.off("exit", onExit);
@@ -38,7 +38,7 @@ function collectStdout(tm: TerminalManager, id: string): Promise<string> {
 }
 
 test("spawn /bin/echo emits stdout and exits 0", async () => {
-  const tm = new TerminalManager({ parentEnv: {} });
+  const tm = new TerminalProcessController({ parentEnv: {} });
   const proc = tm.spawn({ command: "/bin/echo", args: ["hola"] });
   assert.ok(proc.pid > 0);
   const text = await collectStdout(tm, proc.id);
@@ -46,7 +46,7 @@ test("spawn /bin/echo emits stdout and exits 0", async () => {
 });
 
 test("spawn /bin/cat with stdin writes and end-of-stdin closes the process", async () => {
-  const tm = new TerminalManager({ parentEnv: {} });
+  const tm = new TerminalProcessController({ parentEnv: {} });
   const proc = tm.spawn({ command: "/bin/cat" });
   tm.write(proc.id, "line one\n");
   tm.write(proc.id, "line two\n");
@@ -56,7 +56,7 @@ test("spawn /bin/cat with stdin writes and end-of-stdin closes the process", asy
 });
 
 test("kill terminates a long-running process", async () => {
-  const tm = new TerminalManager({ parentEnv: {} });
+  const tm = new TerminalProcessController({ parentEnv: {} });
   const proc = tm.spawn({ command: "/bin/sleep", args: ["5"] });
   await delay(20);
   const exitPromise = collectExit(tm, proc.id);
@@ -66,7 +66,7 @@ test("kill terminates a long-running process", async () => {
 });
 
 test("inheritSshAgent copies SSH_AUTH_SOCK from parentEnv when present", async () => {
-  const tm = new TerminalManager({
+  const tm = new TerminalProcessController({
     parentEnv: { PATH: "/usr/bin:/bin", SSH_AUTH_SOCK: "/tmp/agent.sock" },
   });
   const proc = tm.spawn({
@@ -79,7 +79,7 @@ test("inheritSshAgent copies SSH_AUTH_SOCK from parentEnv when present", async (
 });
 
 test("inheritSshAgent off does NOT pass SSH_AUTH_SOCK", async () => {
-  const tm = new TerminalManager({
+  const tm = new TerminalProcessController({
     parentEnv: { PATH: "/usr/bin:/bin", SSH_AUTH_SOCK: "/tmp/agent.sock" },
   });
   const proc = tm.spawn({ command: "/usr/bin/env" });
@@ -89,7 +89,7 @@ test("inheritSshAgent off does NOT pass SSH_AUTH_SOCK", async () => {
 });
 
 test("inheritEnv default lets PATH and HOME through", async () => {
-  const tm = new TerminalManager({
+  const tm = new TerminalProcessController({
     parentEnv: { PATH: "/usr/bin:/bin", HOME: "/home/user", SECRET: "no" },
   });
   const proc = tm.spawn({ command: "/usr/bin/env" });
@@ -100,7 +100,7 @@ test("inheritEnv default lets PATH and HOME through", async () => {
 });
 
 test("explicit env entries override inherited ones", async () => {
-  const tm = new TerminalManager({ parentEnv: { PATH: "/p" } });
+  const tm = new TerminalProcessController({ parentEnv: { PATH: "/p" } });
   const proc = tm.spawn({
     command: "/usr/bin/env",
     env: { CUSTOM: "yes" },
@@ -110,7 +110,7 @@ test("explicit env entries override inherited ones", async () => {
 });
 
 test("list and get reflect alive processes only", async () => {
-  const tm = new TerminalManager({ parentEnv: {} });
+  const tm = new TerminalProcessController({ parentEnv: {} });
   const a = tm.spawn({ command: "/bin/sleep", args: ["1"] });
   const b = tm.spawn({ command: "/bin/sleep", args: ["1"] });
   const exitA = collectExit(tm, a.id);
@@ -122,7 +122,7 @@ test("list and get reflect alive processes only", async () => {
 });
 
 test("closeAll terminates pending processes", async () => {
-  const tm = new TerminalManager({ parentEnv: {} });
+  const tm = new TerminalProcessController({ parentEnv: {} });
   tm.spawn({ command: "/bin/sleep", args: ["5"] });
   tm.spawn({ command: "/bin/sleep", args: ["5"] });
   await tm.closeAll(2_000);
@@ -130,7 +130,7 @@ test("closeAll terminates pending processes", async () => {
 });
 
 test("maxConcurrent throws when reached", async () => {
-  const tm = new TerminalManager({ parentEnv: {}, maxConcurrent: 1 });
+  const tm = new TerminalProcessController({ parentEnv: {}, maxConcurrent: 1 });
   const proc = tm.spawn({ command: "/bin/sleep", args: ["5"] });
   const exit = collectExit(tm, proc.id);
   assert.throws(() => tm.spawn({ command: "/bin/sleep", args: ["5"] }));

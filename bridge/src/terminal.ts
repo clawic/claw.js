@@ -21,20 +21,20 @@ export interface TerminalProcess {
   inheritedSshAgent: boolean;
 }
 
-export interface TerminalEventData {
+export interface TerminalOutputEvent {
   id: string;
   channel: "stdout" | "stderr";
   data: Buffer;
 }
 
-export interface TerminalExitData {
+export interface TerminalExitEvent {
   id: string;
   exitCode: number | null;
   signal: NodeJS.Signals | null;
   durationMs: number;
 }
 
-export interface TerminalManagerOptions {
+export interface TerminalProcessControllerOptions {
   parentEnv?: NodeJS.ProcessEnv;
   defaultInheritEnv?: string[];
   maxConcurrent?: number;
@@ -42,7 +42,7 @@ export interface TerminalManagerOptions {
 
 const DEFAULT_INHERIT_ENV = ["PATH", "HOME", "LANG", "LC_ALL", "USER", "SHELL"];
 
-export class TerminalManager extends EventEmitter {
+export class TerminalProcessController extends EventEmitter {
   private readonly processes = new Map<
     string,
     { meta: TerminalProcess; child: ChildProcessWithoutNullStreams; startedAtMs: number }
@@ -51,7 +51,7 @@ export class TerminalManager extends EventEmitter {
   private readonly defaultInheritEnv: string[];
   private readonly maxConcurrent: number;
 
-  constructor(options: TerminalManagerOptions = {}) {
+  constructor(options: TerminalProcessControllerOptions = {}) {
     super();
     this.parentEnv = options.parentEnv ?? process.env;
     this.defaultInheritEnv = options.defaultInheritEnv ?? DEFAULT_INHERIT_ENV;
@@ -68,7 +68,7 @@ export class TerminalManager extends EventEmitter {
 
   spawn(input: TerminalSpawnInput): TerminalProcess {
     if (this.processes.size >= this.maxConcurrent) {
-      throw new Error(`terminal manager: max concurrent processes reached (${this.maxConcurrent})`);
+      throw new Error(`terminal process controller: max concurrent processes reached (${this.maxConcurrent})`);
     }
     const id = randomUUID();
     const env = this.buildEnv(input);
@@ -92,10 +92,10 @@ export class TerminalManager extends EventEmitter {
     this.processes.set(id, { meta, child, startedAtMs });
 
     child.stdout?.on("data", (chunk: Buffer) => {
-      this.emit("data", { id, channel: "stdout", data: chunk } satisfies TerminalEventData);
+      this.emit("data", { id, channel: "stdout", data: chunk } satisfies TerminalOutputEvent);
     });
     child.stderr?.on("data", (chunk: Buffer) => {
-      this.emit("data", { id, channel: "stderr", data: chunk } satisfies TerminalEventData);
+      this.emit("data", { id, channel: "stderr", data: chunk } satisfies TerminalOutputEvent);
     });
     child.on("error", (err) => {
       this.emit("error", { id, error: err });
@@ -107,7 +107,7 @@ export class TerminalManager extends EventEmitter {
         exitCode: code,
         signal,
         durationMs: Date.now() - startedAtMs,
-      } satisfies TerminalExitData);
+      } satisfies TerminalExitEvent);
     });
     return meta;
   }

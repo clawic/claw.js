@@ -4,7 +4,7 @@ import {
   ComputerUse,
   type ModifierKey,
 } from "./computer-use.ts";
-import { TerminalManager, type TerminalProcess } from "./terminal.ts";
+import type { TerminalProcess, TerminalProcessController } from "./terminal.ts";
 
 export const ModifierSchema = z.enum([
   "command",
@@ -95,7 +95,7 @@ export interface TccAuditSink {
 
 export interface TccJobContext {
   computerUse?: ComputerUse;
-  terminal?: TerminalManager;
+  terminal?: TerminalProcessController;
   audit?: TccAuditSink;
   actorId?: string;
   /**

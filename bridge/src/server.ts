@@ -39,7 +39,7 @@ import { handleSshJob, type SshAuditSink } from "./ssh-job-handler.ts";
 import { createSshWsHandler } from "./ssh-ws-bridge.ts";
 import { handleTccJob, type TccAuditSink } from "./tcc-job-handler.ts";
 import { createTccWsHandler } from "./tcc-ws-bridge.ts";
-import type { TerminalManager } from "./terminal.ts";
+import type { TerminalProcessController } from "./terminal.ts";
 
 export interface BridgeRuntime {
   identity: NodeIdentity;
@@ -55,7 +55,7 @@ export interface BridgeRuntime {
   bonjour?: BonjourAnnouncer;
   codex?: CodexRuntime;
   computerUse?: ComputerUse;
-  terminal?: TerminalManager;
+  terminal?: TerminalProcessController;
   ssh?: SshClient;
   sshSecretStore?: SshSecretStore;
   irohNode?: IrohNode;
@@ -71,7 +71,7 @@ export interface BridgeRuntimeOptions {
   bonjourFactory?: () => BonjourAnnouncer;
   codex?: CodexRuntimeOptions;
   computerUse?: ComputerUse;
-  terminal?: TerminalManager;
+  terminal?: TerminalProcessController;
   ssh?: SshBridgeOptions;
 }
 
@@ -379,7 +379,7 @@ function computeCapabilities(
   base: string[],
   codex: CodexRuntime | undefined,
   computerUse: ComputerUse | undefined,
-  terminal: TerminalManager | undefined,
+  terminal: TerminalProcessController | undefined,
   ssh: SshClient | undefined,
 ): string[] {
   const caps = new Set(base);
@@ -418,7 +418,7 @@ function composeFrameHandlers(
 interface MeshJobHandlerDeps {
   codex?: CodexRuntime;
   computerUse?: ComputerUse;
-  terminal?: TerminalManager;
+  terminal?: TerminalProcessController;
   sshClient?: SshClient;
   auditStore: AuditStore;
 }

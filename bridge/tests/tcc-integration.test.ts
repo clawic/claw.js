@@ -11,7 +11,7 @@ import { RecorderExecutor } from "../src/command-executor.ts";
 import { ComputerUse } from "../src/computer-use.ts";
 import type { BridgeConfig } from "../src/config.ts";
 import { createBridgeRuntime } from "../src/server.ts";
-import { TerminalManager } from "../src/terminal.ts";
+import { TerminalProcessController } from "../src/terminal.ts";
 
 let portCursor = 22_000;
 function nextPortPair(): [number, number] {
@@ -23,7 +23,7 @@ function nextPortPair(): [number, number] {
 
 async function withRuntime(opts: {
   computerUse?: ComputerUse;
-  terminal?: TerminalManager;
+  terminal?: TerminalProcessController;
 }): Promise<{
   runtime: ReturnType<typeof createBridgeRuntime>;
   config: BridgeConfig;
@@ -117,7 +117,7 @@ function bindObserver(ws: WebSocket, requestId: string): {
 
 test("identity advertises tcc capabilities when surfaces are configured", async () => {
   const cu = await makeMacComputerUse({ hasCliclick: false });
-  const tm = new TerminalManager({ parentEnv: { PATH: "/bin" } });
+  const tm = new TerminalProcessController({ parentEnv: { PATH: "/bin" } });
   const h = await withRuntime({ computerUse: cu, terminal: tm });
   try {
     const res = await fetch(
@@ -162,7 +162,7 @@ test("WS request tcc.computer.screenshot returns base64 bytes", async () => {
 });
 
 test("WS request tcc.terminal.spawn streams stdout and exit events", async () => {
-  const tm = new TerminalManager({ parentEnv: { PATH: "/bin" } });
+  const tm = new TerminalProcessController({ parentEnv: { PATH: "/bin" } });
   const h = await withRuntime({ terminal: tm });
   const ws = await openWs(h.config.bridgePort, h.runtime.identity.bearerToken);
   try {

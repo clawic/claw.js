@@ -9,7 +9,7 @@ import {
   handleTccJob,
   type TccAuditSink,
 } from "../src/tcc-job-handler.ts";
-import { TerminalManager, type TerminalExitData } from "../src/terminal.ts";
+import { TerminalProcessController, type TerminalExitEvent } from "../src/terminal.ts";
 
 function makeAuditSink(): {
   records: { action: string; outcome: string; context?: Record<string, unknown> }[];
@@ -53,7 +53,7 @@ async function makeMacComputerUse(): Promise<{
 
 test("tcc.platform.capabilities returns both surfaces", async () => {
   const { cu } = await makeMacComputerUse();
-  const tm = new TerminalManager({ parentEnv: {} });
+  const tm = new TerminalProcessController({ parentEnv: {} });
   const out = await handleTccJob({ computerUse: cu, terminal: tm }, {
     method: "tcc.platform.capabilities",
   }, "j-1");
@@ -111,7 +111,7 @@ test("tcc.computer.click without computerUse returns ok:false", async () => {
 });
 
 test("tcc.terminal.spawn without inheritSshAgent audits proxyExec", async () => {
-  const tm = new TerminalManager({ parentEnv: { PATH: "/bin" } });
+  const tm = new TerminalProcessController({ parentEnv: { PATH: "/bin" } });
   const audit = makeAuditSink();
   const out = await handleTccJob(
     { terminal: tm, audit: audit.sink },
@@ -130,14 +130,14 @@ test("tcc.terminal.spawn without inheritSshAgent audits proxyExec", async () => 
   assert.ok(result.pid > 0);
   assert.equal(audit.records[0]!.action, "proxyExec");
   await new Promise<void>((resolve) =>
-    tm.once("exit", (ev: TerminalExitData) => {
+    tm.once("exit", (ev: TerminalExitEvent) => {
       if (ev.id === result.id) resolve();
     }),
   );
 });
 
 test("tcc.terminal.spawn with inheritSshAgent audits proxySsh", async () => {
-  const tm = new TerminalManager({
+  const tm = new TerminalProcessController({
     parentEnv: { PATH: "/bin", SSH_AUTH_SOCK: "/tmp/agent" },
   });
   const audit = makeAuditSink();
@@ -156,14 +156,14 @@ test("tcc.terminal.spawn with inheritSshAgent audits proxySsh", async () => {
   if (!out.ok) throw new Error("expected ok");
   const result = out.result as { id: string };
   await new Promise<void>((resolve) =>
-    tm.once("exit", (ev: TerminalExitData) => {
+    tm.once("exit", (ev: TerminalExitEvent) => {
       if (ev.id === result.id) resolve();
     }),
   );
 });
 
 test("tcc.terminal.kill terminates a tracked process", async () => {
-  const tm = new TerminalManager({ parentEnv: {} });
+  const tm = new TerminalProcessController({ parentEnv: {} });
   const spawnOut = await handleTccJob(
     { terminal: tm },
     {
@@ -177,8 +177,8 @@ test("tcc.terminal.kill terminates a tracked process", async () => {
   assert.equal(spawnOut.ok, true);
   if (!spawnOut.ok) throw new Error("expected ok");
   const id = (spawnOut.result as { id: string }).id;
-  const exitPromise = new Promise<TerminalExitData>((resolve) =>
-    tm.once("exit", (ev: TerminalExitData) => {
+  const exitPromise = new Promise<TerminalExitEvent>((resolve) =>
+    tm.once("exit", (ev: TerminalExitEvent) => {
       if (ev.id === id) resolve(ev);
     }),
   );

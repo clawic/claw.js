@@ -11,15 +11,15 @@ import {
 } from "./tcc-job-handler.ts";
 import type { ComputerUse } from "./computer-use.ts";
 import type {
-  TerminalEventData,
-  TerminalExitData,
-  TerminalManager,
+  TerminalOutputEvent,
+  TerminalExitEvent,
+  TerminalProcessController,
   TerminalProcess,
 } from "./terminal.ts";
 
 export interface TccWsHandlerDeps {
   computerUse?: ComputerUse;
-  terminal?: TerminalManager;
+  terminal?: TerminalProcessController;
   auditStore: AuditStore;
   streamTerminalEvents?: boolean;
 }
@@ -60,12 +60,12 @@ export function createTccWsHandler(
 }
 
 function attachStreaming(
-  terminal: TerminalManager,
+  terminal: TerminalProcessController,
   session: BridgeSession,
   proc: TerminalProcess,
   requestId?: string,
 ): void {
-  const onData = (ev: TerminalEventData): void => {
+  const onData = (ev: TerminalOutputEvent): void => {
     if (ev.id !== proc.id || session.closed) return;
     session.send({
       kind: "event",
@@ -79,7 +79,7 @@ function attachStreaming(
       },
     });
   };
-  const onExit = (ev: TerminalExitData): void => {
+  const onExit = (ev: TerminalExitEvent): void => {
     if (ev.id !== proc.id) return;
     if (!session.closed) {
       session.send({
