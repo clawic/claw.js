@@ -134,18 +134,20 @@ npx @clawjs/cli@latest --help
 - [Host ownership](docs/host-ownership.md)
 - [Support matrix](docs/support-matrix.md)
 
-## Experimental Status
+## V1 Support Boundary
 
 > [!WARNING]
-> ClawJS is currently experimental, pre-beta software. Expect breaking changes
-> to APIs, CLI behavior, config formats, workspace layout, and stored data
-> structures.
+> ClawJS surfaces are classified explicitly in the support and interface
+> matrices. Production use is limited to surfaces marked `stable` and
+> `production`; `dev-only` surfaces are for local development, fixtures, and
+> validation.
 >
-> Do not use ClawJS in production. Do not connect it to sensitive systems, real
-> user data, paid APIs, security-critical services, or important integrations.
+> Do not connect `dev-only` surfaces to sensitive systems, real user data, paid
+> APIs, security-critical services, or important integrations.
 >
-> Use it only for local evaluation and disposable test setups, ideally on an
-> isolated machine, VM, or sandboxed environment.
+> Pre-public compatibility is not preserved unless an ADR grants a bounded
+> exception; obsolete beta, experimental, or legacy paths are removed or hidden
+> during the v1 surface closure.
 
 ## Repository Development
 
