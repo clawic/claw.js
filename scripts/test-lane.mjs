@@ -46,6 +46,8 @@ function fast(args = []) {
   npmRun("privacy:check");
   npmRun("privacy:test");
   npmRun("test:policy");
+  npmRun("code-hygiene:check");
+  npmRun("code-hygiene:self-test");
   buildPackages();
   vitest(args);
   npmRun("test:types");

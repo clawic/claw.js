@@ -27,6 +27,8 @@ Read the relevant canonical docs before changing their surfaces:
   `docs/adr/0001-naming-and-stability-surfaces.md`,
   `docs/adr/0013-agentic-naming-and-code-structure.md`
 - Source file boundaries: `docs/adr/0003-source-file-boundaries.md`
+- Code hygiene and dead-code cleanup: `docs/adr/0016-code-hygiene-program.md`,
+  `docs/code-hygiene-decisions.json`
 - Built-in collections and schemas: `docs/canonical-data-catalog.md`,
   `docs/adr/0005-canonical-data-catalog.md`
 - Testing and validation: `docs/adr/0002-testing-architecture.md`,
@@ -108,7 +110,8 @@ include:
   `secrets-boundary-review`, `integration-qa-lab`,
   `host-dependent-validation`, `performance-investigation`
 - Collaboration hygiene: `public-hygiene-review`, `docs-alignment-update`,
-  `code-review-risk`, `commit-hygiene-public`
+  `code-review-risk`, `commit-hygiene-public`, `code-hygiene-audit`,
+  `code-hygiene-cleanup`
 
 Design artifact skills also live under `skills/`: `style-extract`,
 `style-apply`, `template-render`, `brand-guidelines`, `theme-factory`,
@@ -141,6 +144,10 @@ Run `node ./scripts/skills-check.mjs` after adding or changing skills.
   rationale; new 2000+ line files are blocked unless explicitly exempted.
   Emergency-debt files above 5000 lines must not grow except for extraction,
   deletion, or compatibility-preserving split work.
+- Code hygiene is a recurring ClawJS + Clawix program. Clear mechanical dead
+  code is removed after calibrated checks; public/canonical surfaces, enum
+  states, Swift dynamic-use candidates, and duplicates are classified through
+  the code hygiene baseline and report workflow.
 
 ## Validation
 
