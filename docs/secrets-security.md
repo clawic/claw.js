@@ -373,7 +373,7 @@ The following patterns remain transitional and must not be expanded:
 - pre-v1 plugin executor/session/brand-sync TypeScript interfaces still carry
   `resolvedFields`; they are not a production-safe execution
   boundary and new integrations must use broker handles;
-- compatibility sidecar process/browser flows must be validated with the
+- bounded sidecar process/browser flows must be validated with the
   signed-app sidecar verifier before they count as covered by the current
   macOS hostile-local-process model;
 - signed-host authorization uses a configured host token in ClawJS server tests

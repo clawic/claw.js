@@ -90,6 +90,8 @@ for (const relativePath of [
   forbidSnippet(relativePath, "legacy readers");
   forbidSnippet(relativePath, "legacy migration");
   forbidSnippet(relativePath, "sidecar compatibility");
+  forbidSnippet(relativePath, "Sidecar compatibility");
+  forbidSnippet(relativePath, "compatibility sidecar");
   forbidSnippet(relativePath, "compatibility reader");
   forbidSnippet(relativePath, "legacy file");
 }

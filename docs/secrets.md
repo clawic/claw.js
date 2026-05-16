@@ -30,7 +30,7 @@ Secrets v1 focuses on three paths:
 - typed principals for `service_principal` and `sidecar_principal`
 - explicit capability and action discovery per secret
 - audit events for secret mutation, broker execution, and lease lifecycle
-- a compatibility sidecar that preserves the existing `{{secretName}}` pattern
+- bounded sidecar injection for the existing `{{secretName}}` pattern
 - a built-in admin console served from the same process
 - a native macOS admin app under `apps/secrets-macos/`
 
@@ -96,9 +96,9 @@ Typed action metadata may be listed, but generic typed action execution is
 disabled. Use `brokerHttp(...)` with explicit declared fields, risk tier, and
 placement instead of `runAction(...)`.
 
-## Sidecar compatibility
+## Bounded sidecar injection
 
-The local sidecar preserves the current proxy-style workflow:
+The local sidecar provides a bounded host workflow:
 
 ```bash
 CLAW_SECRETS_BASE_URL=http://127.0.0.1:24103 \
@@ -141,7 +141,7 @@ node secrets/dist/sidecar.js spawn-process \
 - Master password, Secret Key, Emergency Kit, unlock, recovery phrase, and
   password rotation operations are signed-host UI flows, not public CLI flows.
 - Host-bound `process` and `browser` flows require the local sidecar.
-- Host-bound sidecar flows are compatibility surfaces, not a bypass around
+- Host-bound sidecar flows are bounded host surfaces, not a bypass around
   broker policy, signed-host approval, host allowlists, or risk tiers.
 - Secret deletion is not part of the current public API.
 - The current dev build seeds plaintext local users for operator login; the
