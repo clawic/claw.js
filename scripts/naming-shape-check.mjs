@@ -25,6 +25,8 @@ const allowedBroadSymbolPhrases = [
   ["File", "Manager"],
   ["Package", "Manager"],
   ["Window", "Manager"],
+  ["Data", "Url"],
+  ["Data", "Uri"],
 ];
 const rootConventionalMarkdown = new Set([
   "AGENTS.md",

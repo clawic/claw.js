@@ -11,7 +11,7 @@ This is the living audit report for ADR 0013. The machine-readable source is
 ## Current gate status
 
 - Critical naming failures: 0.
-- Naming warnings: 171.
+- Naming warnings: 167.
 - Source-size warnings: 118.
 - Source-structure signals: 320.
 
@@ -62,6 +62,8 @@ for staged rename/split work and must not be hidden by compressing code.
 - Naming check false positives: `PackageManager`, `FileManager`,
   `DatabaseManager`, and similar ecosystem/domain manager phrases are now
   matched as phrases inside longer identifiers instead of only exact symbols.
+- Naming check standards terms: `Data URL`/`Data URI` are treated as standard
+  web/API phrases rather than broad `Data` names.
 - Notify dashboard vocabulary: `NotifyDashboardData` is now
   `NotifyDashboardSnapshot`, with the dashboard form state explicitly typed so
   editable event names are not narrowed to the default literal.
