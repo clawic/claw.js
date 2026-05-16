@@ -17,7 +17,7 @@ The service exposes:
 
 - a Fastify HTTP API backed by SQLite
 - an internal scheduler with execution history
-- compatibility projections for workspace events and relay routines
+- v1 calendar and timeline views for workspace events and relay routines
 - a bundled UI with Calendar, Timeline, Automations, and Runs views
 
 ## CLI

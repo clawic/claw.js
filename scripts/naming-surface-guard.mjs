@@ -129,12 +129,15 @@ for (const relativePath of [
   "packages/clawjs-node/src/time/index.ts",
   "time/src/server/app.ts",
   "time/tests/e2e/backend.e2e.test.ts",
+  "docs/time.md",
 ]) {
   forbidSnippet(relativePath, "/v1/legacy/events");
   forbidSnippet(relativePath, "/v1/legacy/routines");
   forbidSnippet(relativePath, "legacyEvents");
   forbidSnippet(relativePath, "legacyRoutines");
+  forbidSnippet(relativePath, "compatibility projections");
 }
+requireSnippet("docs/time.md", "v1 calendar and timeline views");
 
 for (const relativePath of [
   "packages/clawjs-node/src/runtime/claw-runtime.ts",
