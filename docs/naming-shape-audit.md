@@ -11,7 +11,7 @@ This is the living audit report for ADR 0013. The machine-readable source is
 ## Current gate status
 
 - Critical naming failures: 0.
-- Naming warnings: 165.
+- Naming warnings: 162.
 - Source-size warnings: 118.
 - Source-structure signals: 320.
 

@@ -493,10 +493,10 @@ import type { ClawInstance } from "./create-claw-instance.ts";
 import { createClawKnowledgeFacades } from "./create-claw-knowledge-facades.ts";
 import { createClawChannelFacades } from "./create-claw-channel-facades.ts";
 import { createClawMediaSessionOperations } from "./create-claw-media-session-operations.ts";
-import { createClawGenerationImageHelpers } from "./create-claw-generation-image-helpers.ts";
-import { createClawSkillProviderHelpers } from "./create-claw-skill-provider-helpers.ts";
+import { createClawGenerationImageFacades } from "./create-claw-generation-image-facades.ts";
+import { createClawSkillProviderFacades } from "./create-claw-skill-provider-facades.ts";
 import { createClawChannelRuntimeOperations } from "./create-claw-channel-runtime-operations.ts";
-import { createClawIntentHelpers } from "./create-claw-intent-helpers.ts";
+import { createClawIntentFacades } from "./create-claw-intent-facades.ts";
 import { createClawRuntimeWorkspaceFacades } from "./create-claw-runtime-workspace-facades.ts";
 import { createClawContentIotFacades } from "./create-claw-content-iot-facades.ts";
 import { createClawCapabilityFacades } from "./create-claw-capability-facades.ts";
@@ -863,7 +863,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     readMemory,
     readSkills,
     readChannels,
-  } = createClawSkillProviderHelpers({
+  } = createClawSkillProviderFacades({
     workspaceDir,
     processHost,
     resolvedRuntimeOptions,
@@ -946,7 +946,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     listImageRecords,
     getImageRecord,
     removeImageRecord,
-  } = createClawGenerationImageHelpers({
+  } = createClawGenerationImageFacades({
     generationStore,
     imageStore,
     options,
@@ -1513,7 +1513,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     diffIntent,
     applyIntent,
     planIntent,
-  } = createClawIntentHelpers({
+  } = createClawIntentFacades({
     adapter,
     resolvedRuntimeOptions,
     resolvedLocations,

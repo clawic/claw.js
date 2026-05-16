@@ -2,7 +2,7 @@
 import fs from "fs";
 import path from "path";
 
-export function createClawSkillProviderHelpers(locals: Record<string, any>): Record<string, any> {
+export function createClawSkillProviderFacades(locals: Record<string, any>): Record<string, any> {
   const {
     workspaceDir,
     processHost,

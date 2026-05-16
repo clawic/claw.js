@@ -2,7 +2,7 @@
 import path from "path";
 import { OPENAI_BACKEND_ID } from "./images/store.ts";
 
-export function createClawGenerationImageHelpers(locals: Record<string, any>): Record<string, any> {
+export function createClawGenerationImageFacades(locals: Record<string, any>): Record<string, any> {
   const {
     generationStore,
     imageStore,

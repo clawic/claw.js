@@ -1,5 +1,5 @@
 // @ts-nocheck
-export function createClawIntentHelpers(locals: Record<string, any>): Record<string, any> {
+export function createClawIntentFacades(locals: Record<string, any>): Record<string, any> {
   const {
     adapter,
     resolvedRuntimeOptions,
