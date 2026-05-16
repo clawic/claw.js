@@ -70,6 +70,23 @@ for (const relativePath of ["README.md", ...listMarkdownFiles("docs")]) {
   forbidSnippet(relativePath, "~/Library/Application Support/Clawix/clawjs");
 }
 
+for (const relativePath of [
+  "docs/secrets.md",
+  "docs/secrets-security.md",
+  "docs/adr/0008-secrets-security-v1.md",
+]) {
+  forbidSnippet(relativePath, "legacy local proxy");
+  forbidSnippet(relativePath, "compatibility-only");
+  forbidSnippet(relativePath, "legacy plugin interfaces");
+  forbidSnippet(relativePath, "deprecated compatibility declarations");
+  forbidSnippet(relativePath, "unsafe legacy compatibility");
+  forbidSnippet(relativePath, "Legacy `resolvedFields`");
+  forbidSnippet(relativePath, "Legacy `auth.encrypted`");
+  forbidSnippet(relativePath, "legacy connection auth");
+  forbidSnippet(relativePath, "compatibility reader");
+  forbidSnippet(relativePath, "legacy file");
+}
+
 requireSnippet("CLAUDE.md", "AGENTS.md");
 requireSnippet("CLAUDE.md", "docs/host-ownership.md");
 requireSnippet("CLAUDE.md", "docs/data-storage-boundary.md");

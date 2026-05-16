@@ -49,9 +49,10 @@ the broker validates capability, host, placement, risk tier, approval/grant,
 TTL/max uses, and compromise/lock/trash state, then injects only the required
 field into the external call and returns redacted output.
 
-Legacy `resolvedFields` TypeScript declarations may remain as compatibility
-types, but production execution paths must not treat them as a safe boundary.
-New integrations use broker handles and fail closed when context is incomplete.
+Pre-v1 `resolvedFields` TypeScript declarations may remain as blocked
+declarations, but production execution paths must not treat them as a safe
+boundary. New integrations use broker handles and fail closed when context is
+incomplete.
 
 ## Consequences
 

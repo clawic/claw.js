@@ -82,7 +82,7 @@ issuance, active leases, and audit review.
 
 When `CLAW_SECRETS_BASE_URL`, `CLAW_SECRETS_TOKEN`, and `CLAW_SECRETS_TENANT_ID` are set,
 `claw.secrets` and `claw secrets ...` default to Secrets instead of the
-legacy local proxy.
+local development fallback.
 
 Secrets-backed surfaces include:
 

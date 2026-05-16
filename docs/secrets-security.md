@@ -149,8 +149,8 @@ redacted results, not secret values. Costly, destructive, external, or
 system-level actions require fresh approval or a short bounded approval window.
 
 Direct connector secret resolvers must reject `secretRefs` that would require
-plaintext execution outside the broker. Legacy plugin interfaces that still
-mention `resolvedFields` are compatibility declarations only; they must not be
+plaintext execution outside the broker. Pre-v1 plugin interfaces that still
+mention `resolvedFields` are blocked declarations only; they must not be
 exposed as a public production execution path.
 
 External plugin loading is disabled by default. Loading a plugin from a local
@@ -161,13 +161,13 @@ execution path.
 
 Connection credentials follow the same rule. Framework connection records may
 store opaque `secretRef` values, but they must not store reversible local auth
-files. Legacy `auth.encrypted` files are treated as unsafe compatibility
+files. Pre-v1 `auth.encrypted` files are treated as unsafe retired
 artifacts: readers ignore/remove them, and writers fail closed instead of
 creating new plaintext-equivalent storage.
 
-Hosts that previously owned legacy connection auth must migrate it one way
-into the encrypted Secrets vault. A compatibility reader may decrypt
-`auth.encrypted` only inside that migration path and must remove the legacy
+Hosts that previously owned connection auth must migrate it one way into the
+encrypted Secrets vault. A bounded migration reader may decrypt
+`auth.encrypted` only inside that migration path and must remove the retired
 file after a successful write. It must not return the plaintext token to UI,
 agents, connectors, logs, or general runtime code.
 
@@ -370,8 +370,8 @@ The current ClawJS baseline implements the required safe public path:
 
 The following patterns remain transitional and must not be expanded:
 
-- legacy plugin executor/session/brand-sync TypeScript interfaces still carry
-  `resolvedFields` for compatibility; they are not a production-safe execution
+- pre-v1 plugin executor/session/brand-sync TypeScript interfaces still carry
+  `resolvedFields`; they are not a production-safe execution
   boundary and new integrations must use broker handles;
 - compatibility sidecar process/browser flows must be validated with the
   signed-app sidecar verifier before they count as covered by the current
@@ -389,9 +389,9 @@ The following patterns remain transitional and must not be expanded:
 - dev-only seeded credentials or local defaults must never be mistaken for
   production authentication.
 
-Do not build new features on those patterns. Either replace them with the
-broker contract in this document or mark the route as compatibility-only,
-hidden, and blocked from production-sensitive use.
+Do not build new features on those patterns. Replace them with the broker
+contract in this document or keep the route hidden and blocked from
+production-sensitive use.
 
 ## Decision Checklist For Future Changes
 
@@ -426,7 +426,7 @@ agents can verify changes without re-deriving the policy.
 | `local_threat_model` | Same-user local processes are hostile. | Implemented in policy, loopback auth tests, no Secrets disk tokens, no token-bearing Secrets environment, stdin bootstrap for integrated Database/Drive/Index/Audio/Sessions/Publishing tokens, and Clawix signed-app sidecar ancestry validation. |
 | `audit_output` | Produce and implement hardening, not only a report. | Implemented through broker, CLI, audit, lifecycle, and docs hardening. |
 | `audit_scope` | Cover Clawix, ClawJS, remote hosts, vault, broker, connectors, daemon, and third parties. | Implemented for Mac + ClawJS V1; remote hosts and iOS/remotes are outside this closure and require separate physical validation. |
-| `secret_material_policy` | Human UI may reveal; agents/processes/plugins/connectors do not view plaintext. | Implemented for public CLI, broker, SDK tests, and connector runners; legacy plugin interfaces are compatibility-only. |
+| `secret_material_policy` | Human UI may reveal; agents/processes/plugins/connectors do not view plaintext. | Implemented for public CLI, broker, SDK tests, and connector runners; pre-v1 plugin interfaces are blocked from public production use. |
 | `approval_defaults` | Deny by default; risky actions need explicit approval or short windows. | Implemented in governance and broker risk handling. |
 | `connector_execution_model` | Connectors declare plan, host, placement, action, and risk; broker injects fields. | Implemented for broker requests and connector runner rejection outside broker. |
 | `plaintext_rule` | Plaintext exists only in human reveal UI or internal broker path. | Implemented for public surfaces and covered macOS signed-host validation. |
@@ -434,13 +434,13 @@ agents can verify changes without re-deriving the policy.
 | `automation_secret_use` | Automation executes brokered actions without seeing values. | Implemented through `broker.http` with redacted result contract. |
 | `master_key_protection` | Portable password + Secret Key root plus Keychain/Secure Enclave/biometrics locally. | Implemented for macOS: password + Secret Key V1, Emergency Kit, device-local Secret Key Keychain item, platform KEK + `platformKeyWrap`, signed-host assertion, LAContext biometric local unlock, and password-only fallback when biometrics are unavailable. |
 | `secret_sync_model` | Future sync must be end-to-end encrypted. | Policy documented; no plaintext sync surface exists in V1. |
-| `plugin_trust_model` | Plugins/connectors are untrusted, declarative, scoped, and not all-fields plaintext. | Public execution and external plugin loading are disabled by default; legacy `resolvedFields` interfaces are deprecated compatibility declarations. |
+| `plugin_trust_model` | Plugins/connectors are untrusted, declarative, scoped, and not all-fields plaintext. | Public execution and external plugin loading are disabled by default; pre-v1 `resolvedFields` interfaces are blocked declarations. |
 | `host_allowlist_policy` | Exact hosts by default; limited safe wildcards only. | Implemented in strict governance and tests. |
 | `risk_approval_policy` | Mandatory `read`, `write`, `destructive`, `cost`, `system` risk tiers. | Broker request requires `riskTier`; non-read tiers require approval. |
 | `rotation_policy` | Rotation/compromise revokes grants and leases and blocks new use. | Implemented for archive/compromise and governance blocks. |
 | `canonical_storage` | Canonical vault belongs to framework global `~/.claw`; hosts keep only host state. | Implemented for Clawix Secrets service data; connection credentials migrate into the encrypted Secrets vault and legacy readers no longer return plaintext. |
 | `audit_visibility` | Minimal audit; no fields, bodies, headers, public values, arbitrary payloads. | Implemented for current ClawJS audit events and smoke tests. |
-| `migration_priority` | V1 may break unsafe legacy compatibility. | Applied by disabling generic action execution and direct public CLI flows. |
+| `migration_priority` | V1 may break unsafe pre-public compatibility. | Applied by disabling generic action execution and direct public CLI flows. |
 | `export_backup_policy` | Encrypted backup/export only with separate passphrase and strong reauth. | Implemented and tested: backend requires signed-host fresh reauth, Clawix export/import calls native reauth first, public CLI backup fails closed, smoke tests verify encrypted-only backup behavior, and backups omit host-bound `platformKeyWrap` for portability. |
 | `secret_key_policy` | Secret Key is required, human-formatted, stored only by the user/host Keychain, and never exported in backups. | Implemented and tested: setup returns `CSK1-...`, unlock requires password + Secret Key, backups omit raw Secret Key material, and Clawix stores only the Secret Key in a device-local Keychain item. |
 | `recovery_rotation_policy` | Recovery must regenerate password wrap, Secret Key, and recovery phrase, revoking the old Emergency Kit. | Implemented and tested in crypto/server smoke tests. |
