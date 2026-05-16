@@ -154,7 +154,11 @@ for (const relativePath of [
 ]) {
   forbidSnippet(relativePath, "legacy mode");
   forbidSnippet(relativePath, "legacy routes");
+  forbidSnippet(relativePath, "legacy enrollment token");
+  forbidSnippet(relativePath, "legacy `GET` route");
   forbidSnippet(relativePath, "legacy workspace compatibility");
+  forbidSnippet(relativePath, "compatibility data under");
+  forbidSnippet(relativePath, "compatibility layer");
   forbidSnippet(relativePath, "text-only for compatibility");
 }
 

@@ -20,7 +20,7 @@ Use it when you need:
 The current v1 design is intentionally small:
 
 - JWT access tokens plus revocable refresh tokens for API clients
-- device-code pairing for remote connectors plus legacy enrollment tokens as fallback
+- device-code pairing for remote connectors plus fallback enrollment tokens
 - one active reverse connector session per `tenantId + connectorId`
 - explicit routing by `tenantId`, `connectorId`, `agentId`, and `workspaceId`
 - shared browser sessions per workspace backed by a persisted Chromium profile on the connector host
@@ -35,7 +35,7 @@ The current v1 design is intentionally small:
 The relay separates public control-plane concerns from remote workspace execution:
 
 1. A client authenticates against the relay over HTTPS.
-2. A remote connector starts a device-code pairing session or uses a legacy enrollment token.
+2. A remote connector starts a device-code pairing session or uses a fallback enrollment token.
 3. An authenticated relay user approves or denies that pairing.
 4. The connector exchanges the approved device code for a connector credential.
 5. The connector opens `/v1/connector/connect` over WebSocket and sends `hello`.
@@ -518,7 +518,7 @@ The relay forwards stream frames emitted by the connector and writes them as SSE
 
 After the connector call completes, the relay emits one final `complete` event with `{ ok: true }`.
 
-The legacy `GET` route accepts these query parameters:
+The `GET` stream route accepts these query parameters:
 
 - `message`
 - `systemPrompt`
@@ -580,13 +580,13 @@ For agent/workspace routes, the connector supports simple lazy workspace creatio
 
 The materialized workspace writes `projectId`, `logicalAgentId`, `runtimeAgentId`, and `materializationVersion` into the ClawJS manifest and workspace state snapshots so runtime setup and CLI sessions target the derived runtime agent id instead of the reusable logical agent id.
 
-For some resources it also keeps compatibility data under:
+For some resources it also keeps observed runtime fallback data under:
 
 ```text
 .claw/state/observed/relay-compat/
 ```
 
-That compatibility layer is currently used for relay-managed collections such as personas, plugins, routines, and hidden people state when the underlying runtime does not provide a native equivalent.
+That observed-state layer is currently used for relay-managed collections such as personas, plugins, routines, and hidden people state when the underlying runtime does not provide a native equivalent.
 
 ## Configuration
 
