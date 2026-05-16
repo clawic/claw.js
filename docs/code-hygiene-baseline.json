@@ -33,6 +33,36 @@
       "ownerArea": "clawjs-core-builtins",
       "reference": "docs/decision-map.md#built-in-collections-follow-the-canonical-data-catalog",
       "expiresAt": "2026-08-15"
+    },
+    {
+      "id": "clawjs-relay-browser-host-playwright-2026-05-17",
+      "category": "dynamic_runtime",
+      "paths": [
+        "browser/host/session-manager.ts"
+      ],
+      "findingTypes": [
+        "unlisted"
+      ],
+      "coveredFindings": 1,
+      "reason": "The shared browser host is a Relay-owned connector primitive stored in the root browser folder so Relay server, connector, and tests share one implementation. Relay owns the Playwright runtime dependency; moving or packaging the browser host is a separate ownership cleanup.",
+      "ownerArea": "relay-shared-browser",
+      "reference": "docs/relay.md#shared-browser",
+      "expiresAt": "2026-08-15"
+    },
+    {
+      "id": "clawjs-bridge-optional-iroh-runtime-2026-05-17",
+      "category": "dynamic_runtime",
+      "paths": [
+        "bridge/src/iroh-node.ts"
+      ],
+      "findingTypes": [
+        "unlisted"
+      ],
+      "coveredFindings": 1,
+      "reason": "Bridge loads the optional native Iroh transport dynamically and degrades to a stub when the native module is absent. The code must not force-install the native transport until the host/runtime transport packaging decision is made.",
+      "ownerArea": "bridge-runtime-transport",
+      "reference": "docs/repository-map.md#root-level-systems",
+      "expiresAt": "2026-08-15"
     }
   ]
 }

@@ -5,7 +5,7 @@
   "status": "bootstrap",
   "blockingFindings": 0,
   "reportOnlyFindings": 349,
-  "baselinedFindings": 1,
+  "baselinedFindings": 3,
   "lastAuditSummary": {
     "scannedFiles": 10020,
     "todoFindings": 222,
@@ -14,17 +14,16 @@
     "unreferencedAssetCandidates": 88
   },
   "knipSummary": {
-    "filesWithIssues": 528,
-    "totalIssues": 1629,
+    "filesWithIssues": 512,
+    "totalIssues": 1548,
     "issueTypes": {
       "files": 233,
-      "owners": 197,
-      "binaries": 21,
-      "dependencies": 64,
-      "devDependencies": 9,
-      "exports": 823,
+      "owners": 190,
+      "dependencies": 21,
+      "devDependencies": 6,
+      "unlisted": 2,
       "types": 265,
-      "unlisted": 9,
+      "exports": 823,
       "duplicates": 8
     }
   },
@@ -48,8 +47,8 @@
     "Use scripts/code-hygiene-periphery.mjs for report-only Swift package calibration once the pinned binary is available.",
     "Initial ClawJS dependency cleanup removed chokidar from sessions and @noble/hashes from profile.",
     "Knip entrypoint calibration now includes tool configs, local scripts, seed files, and public JS assets.",
-    "ClawJS built-in family barrel findings are covered by an expiring public-API baseline entry with 562 reviewed Knip findings.",
+    "ClawJS built-in family barrel findings plus two reviewed dynamic-runtime findings are covered by expiring baseline entries.",
     "Root dependency normalization moved VitePress/Vue ownership to website, declared direct root tsx usage, and calibrated the Vitest coverage provider dependency.",
-    "Knip workspace calibration now maps top-level app/module workspaces to their own package manifests and removes generated Secrets UI source outputs."
+    "Knip workspace calibration now maps top-level app/module workspaces to their own package manifests, drops reviewed direct app/database dependencies now provided by actual imports, and baselines two reviewed dynamic runtime findings."
   ]
 }

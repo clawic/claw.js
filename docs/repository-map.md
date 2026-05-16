@@ -18,8 +18,8 @@ the platform quickly.
 | `apps/` | Human-facing apps and host surfaces. |
 | `assets/` | Shared brand, icon, font, sponsor, and runtime image assets. |
 | `audio/` | Audio service, transcript catalog, blob storage, and voice service. |
-| `bridge/` | Local bridge service for host/runtime integration. |
-| `browser/` | Browser host and shared browser primitives. |
+| `bridge/` | Local bridge service for host/runtime integration, with optional native Iroh transport loaded dynamically when installed. |
+| `browser/` | Browser host and shared browser primitives owned by Relay's connector-hosted shared browser flow. |
 | `content/` | Content authoring and publishing control plane. |
 | `database/` | Namespace database service with schema, records, files, auth, and realtime. |
 | `delegation/` | Durable async agent delegation control plane. |

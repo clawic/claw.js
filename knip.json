@@ -39,7 +39,14 @@
   ],
   "ignoreDependencies": [
     "@types/node",
-    "@vitest/coverage-v8"
+    "@vitest/coverage-v8",
+    "tailwindcss"
+  ],
+  "ignoreBinaries": [
+    "vitest",
+    "tsx",
+    "playwright.config.ts",
+    "playwright.ui.config.ts"
   ],
   "playwright": false,
   "workspaces": {
