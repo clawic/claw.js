@@ -3,22 +3,22 @@
   "program": "code-hygiene",
   "tool": "knip",
   "toolVersion": "6.14.0",
-  "generatedAt": "2026-05-16T23:22:25.324Z",
+  "generatedAt": "2026-05-16T23:35:52.275Z",
   "mode": "report-only",
   "config": "knip.json",
   "cwd": ".",
   "summary": {
-    "filesWithIssues": 2884,
-    "totalIssues": 4133,
+    "filesWithIssues": 528,
+    "totalIssues": 1629,
     "issueTypes": {
-      "files": 2305,
-      "owners": 193,
-      "binaries": 7,
-      "devDependencies": 3,
-      "unresolved": 1,
-      "types": 201,
-      "unlisted": 665,
-      "exports": 750,
+      "files": 233,
+      "owners": 197,
+      "binaries": 21,
+      "dependencies": 64,
+      "devDependencies": 9,
+      "exports": 823,
+      "types": 265,
+      "unlisted": 9,
       "duplicates": 8
     },
     "topFiles": [
@@ -55,19 +55,27 @@
         }
       },
       {
+        "file": "secrets/src/server/crypto.ts",
+        "totalIssues": 23,
+        "issueCounts": {
+          "exports": 23
+        }
+      },
+      {
+        "file": "apps/board/package.json",
+        "totalIssues": 22,
+        "issueCounts": {
+          "binaries": 2,
+          "dependencies": 18,
+          "devDependencies": 2
+        }
+      },
+      {
         "file": "packages/clawjs-core/src/builtins/billing/index.ts",
         "totalIssues": 22,
         "issueCounts": {
           "owners": 1,
           "exports": 21
-        }
-      },
-      {
-        "file": "secrets/src/server/crypto.ts",
-        "totalIssues": 21,
-        "issueCounts": {
-          "exports": 18,
-          "unlisted": 3
         }
       },
       {
@@ -173,13 +181,6 @@
           "owners": 1,
           "exports": 2,
           "types": 10
-        }
-      },
-      {
-        "file": "relay/src/shared/protocol.ts",
-        "totalIssues": 13,
-        "issueCounts": {
-          "types": 13
         }
       }
     ]

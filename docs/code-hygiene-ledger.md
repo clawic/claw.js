@@ -27,7 +27,7 @@ Source session: private session, not published
 - Status: PARTIAL
 - Tool: Knip 6.14.0 through `scripts/code-hygiene-knip.mjs`.
 - Config: `knip.json`.
-- Latest summary: 2,884 files with issues; 4,133 total findings across files, devDependencies, binaries, unlisted, unresolved, exports, types, duplicates, and ownership metadata after removing `chokidar` from sessions, removing profile `@noble/hashes`, and calibrating tool/config/script/public asset entrypoints.
+- Latest summary: 528 files with issues; 1,629 total findings across files, owners, binaries, dependencies, devDependencies, exports, types, unlisted, and duplicates after removing `chokidar` from sessions, removing profile `@noble/hashes`, moving root VitePress/Vue ownership to `website`, declaring direct root `tsx` usage, calibrating the Vitest coverage provider, mapping top-level app/module workspaces to their own package manifests, removing generated Secrets UI source outputs, and calibrating tool/config/script/public asset entrypoints.
 - Baseline: `clawjs-core-builtin-family-barrels-2026-05-17` covers 562 reviewed public API findings in built-in family barrels until 2026-08-15.
 - Mode: report-only; cleanup and baselining pending before blocking gate activation.
 

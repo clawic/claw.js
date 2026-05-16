@@ -21,15 +21,106 @@
   "project": [
     "**/*.{js,mjs,cjs,ts,tsx}",
     "!**/{node_modules,dist,build,.next,.tmp,.data,output,artifacts,test-results,coverage,playwright-report}/**",
+    "!**/.claude/**",
+    "!**/.tmp-pack-smoke/**",
     "!docs/.vitepress/cache/**"
   ],
   "ignoreFiles": [
+    ".claude/**",
+    ".tmp-pack-smoke/**",
     "**/*.d.ts",
     "**/fixtures/**",
     "**/__fixtures__/**",
     "**/generated/**"
   ],
+  "ignoreWorkspaces": [
+    ".claude/**",
+    ".tmp-pack-smoke/**"
+  ],
   "ignoreDependencies": [
-    "@types/node"
-  ]
+    "@types/node",
+    "@vitest/coverage-v8"
+  ],
+  "playwright": false,
+  "workspaces": {
+    ".": {
+      "entry": [
+        "scripts/*.{js,mjs,ts}",
+        "**/scripts/**/*.{js,mjs,cjs,ts}",
+        "**/{vite,vitest,playwright,next,postcss,tsup,tsup.dist}.config.{ts,js,mjs,cjs}",
+        "**/seed.{js,mjs,cjs,ts}",
+        "**/public/**/*.{js,mjs,cjs}",
+        "examples/**/src/**/*.{ts,tsx,js,mjs}",
+        "website/**/*.{ts,tsx,js,mjs}"
+      ],
+      "project": [
+        "**/*.{js,mjs,cjs,ts,tsx}",
+        "!**/{node_modules,dist,build,.next,.tmp,.data,output,artifacts,test-results,coverage,playwright-report}/**",
+        "!**/.claude/**",
+        "!**/.tmp-pack-smoke/**",
+        "!docs/.vitepress/cache/**"
+      ]
+    },
+    "apps/*": {
+      "entry": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "next.config.{ts,js,mjs}",
+        "postcss.config.{ts,js,mjs}",
+        "playwright.config.{ts,js,mjs}",
+        "seed.{js,mjs,ts}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "audio": {},
+    "audio/voice": {},
+    "bridge": {},
+    "content": {},
+    "content/ui": {},
+    "database": {
+      "entry": [
+        "src/bin/*.{ts,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "playwright.config.{ts,js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,mjs}",
+        "tests/**/*.{ts,tsx,js,mjs}",
+        "*.{ts,js,mjs}",
+        "*.config.{ts,js,mjs,cjs}"
+      ]
+    },
+    "delegation": {},
+    "drive": {},
+    "drive/ui": {},
+    "examples/showcase": {},
+    "execution": {},
+    "execution/ui": {},
+    "iot": {},
+    "iot/ui": {},
+    "mcp": {},
+    "memory": {},
+    "modules/*": {},
+    "modules/*/ui": {},
+    "monitor": {},
+    "monitor/ui": {},
+    "notify": {},
+    "publishing": {},
+    "relay": {},
+    "relay/ui": {},
+    "runtime": {},
+    "secrets": {},
+    "secrets/ui": {},
+    "sessions": {},
+    "storage/ui": {},
+    "time": {},
+    "website": {},
+    "wiki": {},
+    "wiki/ui": {}
+  }
 }

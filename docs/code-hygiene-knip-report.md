@@ -5,20 +5,20 @@ Mode: report-only.
 - Tool version: 6.14.0
 - Config: knip.json
 - Working directory: .
-- Files with issues: 2884
-- Total issues: 4133
+- Files with issues: 528
+- Total issues: 1629
 
 ## Issue Types
 
-- binaries: 7
-- devDependencies: 3
+- binaries: 21
+- dependencies: 64
+- devDependencies: 9
 - duplicates: 8
-- exports: 750
-- files: 2305
-- owners: 193
-- types: 201
-- unlisted: 665
-- unresolved: 1
+- exports: 823
+- files: 233
+- owners: 197
+- types: 265
+- unlisted: 9
 
 ## Top Files
 
@@ -26,8 +26,9 @@ Mode: report-only.
 - packages/clawjs-core/src/builtins/finance/index.ts: 24 (owners:1, exports:23)
 - packages/clawjs-core/src/builtins/reading_media/index.ts: 23 (owners:1, exports:22)
 - packages/clawjs/src/v1-data-core.ts: 23 (owners:1, exports:22)
+- secrets/src/server/crypto.ts: 23 (exports:23)
+- apps/board/package.json: 22 (binaries:2, dependencies:18, devDependencies:2)
 - packages/clawjs-core/src/builtins/billing/index.ts: 22 (owners:1, exports:21)
-- secrets/src/server/crypto.ts: 21 (exports:18, unlisted:3)
 - packages/clawjs-core/src/builtins/analytics/index.ts: 20 (owners:1, exports:19)
 - packages/clawjs-core/src/builtins/fitness/index.ts: 20 (owners:1, exports:19)
 - packages/clawjs-core/src/builtins/health/index.ts: 20 (owners:1, exports:19)
@@ -41,6 +42,5 @@ Mode: report-only.
 - execution/src/shared/protocol.ts: 13 (types:13)
 - packages/clawjs-database/src/store-helpers.ts: 13 (owners:1, exports:12)
 - packages/clawjs-node/src/time/logic.ts: 13 (owners:1, exports:2, types:10)
-- relay/src/shared/protocol.ts: 13 (types:13)
 
 This report does not authorize automatic deletion; cleanup still requires category review.
