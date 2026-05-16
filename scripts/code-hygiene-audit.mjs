@@ -56,6 +56,8 @@ if (args.has("--self-test")) {
 const files = walk(rootDir);
 const todoFindings = scanTodos(files);
 const duplicateAssetGroups = scanDuplicateAssets(files);
+const sourceReferenceIndex = buildSourceReferenceIndex(files);
+const unreferencedAssetCandidates = scanUnreferencedAssets(files, sourceReferenceIndex);
 const report = {
   schemaVersion: 1,
   program: "code-hygiene",
@@ -66,10 +68,12 @@ const report = {
     todoFindings: todoFindings.length,
     duplicateAssetGroups: duplicateAssetGroups.length,
     duplicateAssetFiles: duplicateAssetGroups.reduce((total, group) => total + group.files.length, 0),
+    unreferencedAssetCandidates: unreferencedAssetCandidates.length,
   },
   findings: {
     todos: todoFindings.slice(0, 500),
     duplicateAssets: duplicateAssetGroups.slice(0, 200),
+    unreferencedAssets: unreferencedAssetCandidates.slice(0, 500),
   },
 };
 
@@ -139,6 +143,39 @@ function scanDuplicateAssets(files) {
   return [...hashes.values()].filter((group) => group.files.length > 1);
 }
 
+function buildSourceReferenceIndex(files) {
+  const chunks = [];
+  for (const relativePath of files) {
+    const extension = path.extname(relativePath);
+    if (!sourceExtensions.has(extension) || assetExtensions.has(extension.toLowerCase())) continue;
+    const text = safeReadText(relativePath);
+    if (text === null) continue;
+    chunks.push(relativePath.toLowerCase(), text.toLowerCase());
+  }
+  return chunks.join("\n");
+}
+
+function scanUnreferencedAssets(files, referenceIndex) {
+  const candidates = [];
+  for (const relativePath of files) {
+    const extension = path.extname(relativePath).toLowerCase();
+    if (!assetExtensions.has(extension)) continue;
+    const normalizedPath = relativePath.toLowerCase();
+    const fileName = path.basename(relativePath).toLowerCase();
+    const stem = fileName.slice(0, -extension.length);
+    const referenced = referenceIndex.includes(normalizedPath)
+      || referenceIndex.includes(fileName)
+      || (stem.length >= 8 && referenceIndex.includes(stem));
+    if (!referenced) {
+      candidates.push({
+        path: relativePath,
+        reason: "asset path, filename, and stable stem were not found in source references",
+      });
+    }
+  }
+  return candidates;
+}
+
 function safeReadText(relativePath) {
   try {
     return fs.readFileSync(path.join(rootDir, relativePath), "utf8");
@@ -157,6 +194,7 @@ function renderMarkdown(reportData) {
     `- TODO/FIXME/HACK/XXX findings: ${reportData.summary.todoFindings}`,
     `- Duplicate asset groups: ${reportData.summary.duplicateAssetGroups}`,
     `- Duplicate asset files: ${reportData.summary.duplicateAssetFiles}`,
+    `- Unreferenced asset candidates: ${reportData.summary.unreferencedAssetCandidates}`,
     "",
     "This audit is advisory until the cleanup campaign classifies or removes findings.",
     "",
@@ -175,6 +213,13 @@ function renderMarkdown(reportData) {
     }
     lines.push("");
   }
+  if (reportData.findings.unreferencedAssets.length > 0) {
+    lines.push("## Unreferenced Asset Candidates", "");
+    for (const finding of reportData.findings.unreferencedAssets.slice(0, 25)) {
+      lines.push(`- ${finding.path}`);
+    }
+    lines.push("");
+  }
   return `${lines.join("\n")}\n`;
 }
 
@@ -184,11 +229,16 @@ function runSelfTest() {
     fs.writeFileSync(path.join(tmp, "a.ts"), "// TODO(code-hygiene:test): classify this\n");
     fs.writeFileSync(path.join(tmp, "one.svg"), "<svg />\n");
     fs.writeFileSync(path.join(tmp, "two.svg"), "<svg />\n");
+    fs.writeFileSync(path.join(tmp, "referenced.png"), "png\n");
+    fs.writeFileSync(path.join(tmp, "unused.png"), "unused\n");
+    fs.appendFileSync(path.join(tmp, "a.ts"), "const icon = 'referenced.png';\n");
     const oldRoot = process.cwd();
     process.chdir(tmp);
-    const localFiles = ["a.ts", "one.svg", "two.svg"];
+    const localFiles = ["a.ts", "one.svg", "two.svg", "referenced.png", "unused.png"];
     const todos = scanTodosWithRoot(tmp, localFiles);
     const duplicates = scanDuplicateAssetsWithRoot(tmp, localFiles);
+    const sourceIndex = fs.readFileSync(path.join(tmp, "a.ts"), "utf8").toLowerCase();
+    const unreferenced = scanUnreferencedAssetsWithRoot(tmp, localFiles, sourceIndex);
     process.chdir(oldRoot);
     if (todos.length !== 1 || todos[0].category !== "code-hygiene:test") {
       throw new Error("self-test failed to classify TODO comments");
@@ -196,9 +246,30 @@ function runSelfTest() {
     if (duplicates.length !== 1 || duplicates[0].files.length !== 2) {
       throw new Error("self-test failed to detect duplicate assets");
     }
+    if (!unreferenced.some((finding) => finding.path === "unused.png")) {
+      throw new Error("self-test failed to detect unreferenced assets");
+    }
+    if (unreferenced.some((finding) => finding.path === "referenced.png")) {
+      throw new Error("self-test reported a referenced asset");
+    }
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
+}
+
+function scanUnreferencedAssetsWithRoot(testRoot, files, referenceIndex) {
+  return files.flatMap((relativePath) => {
+    const extension = path.extname(relativePath).toLowerCase();
+    if (!assetExtensions.has(extension)) return [];
+    const absolutePath = path.join(testRoot, relativePath);
+    if (!fs.existsSync(absolutePath)) return [];
+    const fileName = path.basename(relativePath).toLowerCase();
+    const stem = fileName.slice(0, -extension.length);
+    const referenced = referenceIndex.includes(relativePath.toLowerCase())
+      || referenceIndex.includes(fileName)
+      || (stem.length >= 8 && referenceIndex.includes(stem));
+    return referenced ? [] : [{ path: relativePath }];
+  });
 }
 
 function scanTodosWithRoot(testRoot, files) {
