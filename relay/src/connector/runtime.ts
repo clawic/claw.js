@@ -8,7 +8,7 @@ import type { RuntimeAdapterId, RuntimeProbeStatus } from "@clawjs/claw";
 import { extendClawWithWorkspace } from "@clawjs/workspace";
 import WebSocket from "ws";
 
-import { BrowserSessionManager } from "../../../browser/host/session-manager.ts";
+import { BrowserSessionController } from "../../../browser/host/session-manager.ts";
 import type { BrowserActor, BrowserInputCommand } from "../../../browser/shared/types.ts";
 import { WorkspaceCompatStore } from "./compat-store.ts";
 
@@ -254,7 +254,7 @@ function upsertManagedBlocks(filePath: string, title: string, blocks: Array<{ bl
 export class RelayConnectorRuntime {
   private readonly contexts = new Map<string, Promise<RuntimeContext>>();
   private readonly serviceSockets = new Map<string, WebSocket>();
-  private readonly browser: BrowserSessionManager;
+  private readonly browser: BrowserSessionController;
   private readonly runtimeEnv: NodeJS.ProcessEnv;
   private readonly runtimeBinaryPath: string | undefined;
 
@@ -264,7 +264,7 @@ export class RelayConnectorRuntime {
   ) {
     this.runtimeEnv = buildRuntimeEnv(options.runtimeAdapter, options.runtimeBinaryPath);
     this.runtimeBinaryPath = resolveRuntimeBinaryPath(options.runtimeAdapter, options.runtimeBinaryPath);
-    this.browser = new BrowserSessionManager({
+    this.browser = new BrowserSessionController({
       onState: (event) => this.emitEvent?.("browser.state", event as unknown as Record<string, unknown>),
       onFrame: (event) => this.emitEvent?.("browser.frame", event as unknown as Record<string, unknown>),
     });

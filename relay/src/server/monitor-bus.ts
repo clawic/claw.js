@@ -20,7 +20,7 @@ export interface MonitorEnvelope {
 
 export type MonitorListener = (envelope: MonitorEnvelope) => void;
 
-export interface MonitorClientInfo {
+export interface MonitorClientSnapshot {
   clientId: string;
   openedSessionId?: string;
   attachedAt: number;
@@ -30,7 +30,7 @@ const MAX_LISTENERS_PER_TENANT = 64;
 
 export class MonitorBus {
   private readonly emitter = new EventEmitter();
-  private readonly clientsByTenant = new Map<string, Map<string, MonitorClientInfo>>();
+  private readonly clientsByTenant = new Map<string, Map<string, MonitorClientSnapshot>>();
 
   constructor() {
     this.emitter.setMaxListeners(0);
@@ -53,7 +53,7 @@ export class MonitorBus {
     return this.emitter.listenerCount(tenantId);
   }
 
-  attachClient(tenantId: string, info: MonitorClientInfo): void {
+  attachClient(tenantId: string, info: MonitorClientSnapshot): void {
     let bucket = this.clientsByTenant.get(tenantId);
     if (!bucket) {
       bucket = new Map();
@@ -67,7 +67,7 @@ export class MonitorBus {
     const bucket = this.clientsByTenant.get(tenantId);
     const existing = bucket?.get(clientId);
     if (!existing) return;
-    const next: MonitorClientInfo = {
+    const next: MonitorClientSnapshot = {
       clientId,
       attachedAt: existing.attachedAt,
       ...(openedSessionId ? { openedSessionId } : {}),
@@ -88,7 +88,7 @@ export class MonitorBus {
     });
   }
 
-  listClients(tenantId: string): MonitorClientInfo[] {
+  listClients(tenantId: string): MonitorClientSnapshot[] {
     const bucket = this.clientsByTenant.get(tenantId);
     if (!bucket) return [];
     return Array.from(bucket.values());

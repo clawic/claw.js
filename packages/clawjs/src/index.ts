@@ -16,7 +16,7 @@ import { runDelegatedContentCli, runDelegatedDatabaseCli, runDelegatedErpCli, ru
 import { runChatCli, runProviderCli } from "./chat.ts";
 import {
   addProjectIntegration,
-  collectProjectInfo,
+  collectProjectSnapshot,
   generateProjectResource,
   locateProjectRoot,
   readProjectConfig,
@@ -1240,7 +1240,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
         installedSdkVersion: string | null;
         workspace: unknown;
       } = projectRoot
-        ? await collectProjectInfo(projectRoot) as {
+        ? await collectProjectSnapshot(projectRoot) as {
           projectRoot: string | null;
           project: unknown;
           packageJson: unknown;

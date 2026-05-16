@@ -26,7 +26,7 @@ export type ActiveSession = {
   endError?: string;
 };
 
-export type AgentInfo = {
+export type MonitorAgentSnapshot = {
   agentId: string;
   displayName?: string;
   status: "online" | "offline";
@@ -55,7 +55,7 @@ export type AttachedClient = {
 
 export type MonitorState = {
   sessions: Record<string, ActiveSession>;
-  agents: Record<string, AgentInfo>;
+  agents: Record<string, MonitorAgentSnapshot>;
   activity: ActivityRecord[];
   attachedClients: Record<string, AttachedClient>;
   selectedSessionId: string | null;
@@ -109,7 +109,7 @@ function reducer(state: MonitorState, action: Action): MonitorState {
 
     case "snapshot": {
       const p = action.payload ?? {};
-      const agents: Record<string, AgentInfo> = {};
+      const agents: Record<string, MonitorAgentSnapshot> = {};
       for (const a of p.agents ?? []) {
         if (a?.agentId) agents[a.agentId] = a;
       }

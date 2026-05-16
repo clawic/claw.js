@@ -418,7 +418,7 @@ export async function addProjectIntegration(
   return { created: entry, installedDependencies: [] };
 }
 
-export async function collectProjectInfo(projectRoot: string): Promise<Record<string, unknown>> {
+export async function collectProjectSnapshot(projectRoot: string): Promise<Record<string, unknown>> {
   const project = readProjectConfig(projectRoot);
   const packageJson = loadPackageJson(projectRoot);
   const manifestPath = resolveClawPersistentSurfacePath("claw.workspace.manifest", projectRoot);

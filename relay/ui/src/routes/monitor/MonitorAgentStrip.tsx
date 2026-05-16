@@ -1,6 +1,6 @@
-import type { AgentInfo } from "./useMonitorStream";
+import type { MonitorAgentSnapshot } from "./useMonitorStream";
 
-export function MonitorAgentStrip({ agents }: { agents: Record<string, AgentInfo> }) {
+export function MonitorAgentStrip({ agents }: { agents: Record<string, MonitorAgentSnapshot> }) {
   const list = Object.values(agents);
   if (list.length === 0) {
     return (

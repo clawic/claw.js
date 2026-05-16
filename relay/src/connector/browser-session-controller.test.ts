@@ -7,12 +7,12 @@ import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { test } from "vitest";
 
-import { BrowserSessionManager } from "../../../browser/host/session-manager.ts";
+import { BrowserSessionController } from "../../../browser/host/session-manager.ts";
 
-test("BrowserSessionManager reuses one persistent profile per workspace and emits frames", async () => {
+test("BrowserSessionController reuses one persistent profile per workspace and emits frames", async () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "relay-browser-workspace-"));
   const events: Array<{ type: "state" | "frame"; reason?: string }> = [];
-  const manager = new BrowserSessionManager({
+  const manager = new BrowserSessionController({
     idleTtlMs: 60_000,
     onState: (event) => events.push({ type: "state", reason: event.reason }),
     onFrame: () => events.push({ type: "frame" }),

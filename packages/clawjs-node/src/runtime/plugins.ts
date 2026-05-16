@@ -182,7 +182,7 @@ export async function listOpenClawPlugins(
   };
 }
 
-export async function getOpenClawPluginInfo(
+export async function readOpenClawPluginRecord(
   id: string,
   runner: CommandRunner,
   options: RuntimeAdapterOptions = DEFAULT_PLUGIN_OPTIONS,
