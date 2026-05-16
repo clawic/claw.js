@@ -104,6 +104,17 @@ for (const relativePath of [...canonicalDocs, ...canonicalSources]) {
 }
 
 for (const relativePath of [
+  "packages/clawjs/templates/plugin/src/index.ts",
+  "packages/clawjs/templates/plugin/plugin.json",
+  "packages/create-claw-plugin/template/src/index.ts",
+  "packages/create-claw-plugin/template/plugin.json",
+]) {
+  forbidSnippet(relativePath, 'supportLevel: "experimental"');
+  forbidSnippet(relativePath, '"supportLevel": "experimental"');
+  requireSnippet(relativePath, "dev-only");
+}
+
+for (const relativePath of [
   "publishing/src/server/config.ts",
   "publishing/src/bin/server.ts",
   "publishing/src/cli/parser.ts",

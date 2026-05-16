@@ -7,7 +7,7 @@
   "compatibility": {
     "runtimeAdapters": ["openclaw", "demo"],
     "requiresWorkspace": false,
-    "supportLevel": "experimental"
+    "supportLevel": "dev-only"
   },
   "hooks": [
     "beforeSessionStart",

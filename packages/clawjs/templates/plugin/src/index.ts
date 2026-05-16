@@ -30,7 +30,7 @@ export const pluginManifest: PluginManifest = {
   compatibility: {
     runtimeAdapters: ["openclaw", "demo"],
     requiresWorkspace: false,
-    supportLevel: "experimental",
+    supportLevel: "dev-only",
   },
 };
 
