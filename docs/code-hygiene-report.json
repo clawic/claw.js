@@ -14,14 +14,14 @@
     "unreferencedAssetCandidates": 88
   },
   "knipSummary": {
-    "filesWithIssues": 383,
-    "totalIssues": 1343,
+    "filesWithIssues": 382,
+    "totalIssues": 1311,
     "issueTypes": {
       "files": 169,
-      "owners": 190,
+      "owners": 189,
       "unlisted": 2,
       "types": 215,
-      "exports": 759,
+      "exports": 728,
       "duplicates": 8
     }
   },
@@ -48,6 +48,7 @@
     "ClawJS built-in family barrel findings plus two reviewed dynamic-runtime findings are covered by expiring baseline entries.",
     "Root dependency normalization moved VitePress/Vue ownership to website, declared direct root tsx usage, and calibrated the Vitest coverage provider dependency.",
     "Knip workspace calibration now maps top-level app/module workspaces to their own package manifests with explicit entry/project shapes, drops reviewed direct app/database dependencies now provided by actual imports, and baselines two reviewed dynamic runtime findings.",
-    "Workspace dependency cleanup removed reviewed unused direct dependencies from top-level app/module package manifests, updated their package locks, expanded report-only Knip entry ownership for memory/modules service entrypoints, and reduced dependency/devDependency findings to zero."
+    "Workspace dependency cleanup removed reviewed unused direct dependencies from top-level app/module package manifests, updated their package locks, expanded report-only Knip entry ownership for memory/modules service entrypoints, and reduced dependency/devDependency findings to zero.",
+    "Discord test catalog cleanup made file-local operation field constants private while preserving the test helpers imported across Discord request/executor tests."
   ]
 }

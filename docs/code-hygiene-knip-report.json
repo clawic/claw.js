@@ -3,30 +3,22 @@
   "program": "code-hygiene",
   "tool": "knip",
   "toolVersion": "6.14.0",
-  "generatedAt": "2026-05-16T23:54:55.114Z",
+  "generatedAt": "2026-05-16T23:58:31.510Z",
   "mode": "report-only",
   "config": "knip.json",
   "cwd": ".",
   "summary": {
-    "filesWithIssues": 383,
-    "totalIssues": 1343,
+    "filesWithIssues": 382,
+    "totalIssues": 1311,
     "issueTypes": {
       "files": 169,
-      "owners": 190,
+      "owners": 189,
       "unlisted": 2,
       "types": 215,
-      "exports": 759,
+      "exports": 728,
       "duplicates": 8
     },
     "topFiles": [
-      {
-        "file": "packages/clawjs-integrations/src/discord-operation-test-catalog.ts",
-        "totalIssues": 32,
-        "issueCounts": {
-          "owners": 1,
-          "exports": 31
-        }
-      },
       {
         "file": "packages/clawjs-core/src/builtins/finance/index.ts",
         "totalIssues": 24,
@@ -176,6 +168,14 @@
         "totalIssues": 13,
         "issueCounts": {
           "types": 13
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/support/index.ts",
+        "totalIssues": 12,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 11
         }
       }
     ]

@@ -3,32 +3,32 @@ import assert from "node:assert/strict";
 import { normalizeConnectorCatalog } from "./catalog.ts";
 
 export const GUILD_FIELD = field("guildId", "string");
-export const CHANNEL_FIELD = field("channelId", "string");
-export const OVERWRITE_FIELD = field("overwriteId", "string");
-export const MESSAGE_FIELD = field("messageId", "string");
-export const ANSWER_FIELD = field("answerId", "string");
-export const USER_FIELD = field("userId", "string");
-export const ROLE_FIELD = field("roleId", "string");
-export const INTEGRATION_FIELD = field("integrationId", "string");
+const CHANNEL_FIELD = field("channelId", "string");
+const OVERWRITE_FIELD = field("overwriteId", "string");
+const MESSAGE_FIELD = field("messageId", "string");
+const ANSWER_FIELD = field("answerId", "string");
+const USER_FIELD = field("userId", "string");
+const ROLE_FIELD = field("roleId", "string");
+const INTEGRATION_FIELD = field("integrationId", "string");
 export const WEBHOOK_FIELD = field("webhookId", "string");
 export const WEBHOOK_TOKEN_FIELD = field("webhookToken", "string");
-export const APPLICATION_FIELD = field("applicationId", "string");
-export const INTERACTION_FIELD = field("interactionId", "string");
-export const INTERACTION_TOKEN_FIELD = field("interactionToken", "string");
-export const INSTANCE_FIELD = field("instanceId", "string");
-export const COMMAND_FIELD = field("commandId", "string");
-export const ENTITLEMENT_FIELD = field("entitlementId", "string");
-export const SKU_FIELD = field("skuId", "string");
-export const SUBSCRIPTION_FIELD = field("subscriptionId", "string");
-export const TEMPLATE_CODE_FIELD = field("templateCode", "string");
-export const SOUNDBOARD_SOUND_FIELD = field("soundboardSoundId", "string");
-export const STICKER_FIELD = field("stickerId", "string");
-export const STICKER_PACK_FIELD = field("stickerPackId", "string");
-export const LOBBY_FIELD = field("lobbyId", "string");
-export const AUTO_MODERATION_RULE_FIELD = field("autoModerationRuleId", "string");
-export const AUTO_MODERATION_ACTIONS_FIELD = field("actions", "array", false, { default: [{ type: 1, metadata: { custom_message: "sample" } }] });
-export const AUTO_MODERATION_TRIGGER_METADATA_FIELD = field("triggerMetadata", "object", true, { default: { keyword_filter: ["sample"] } });
-export const APPLICATION_COMMAND_METADATA_FIELDS = [
+const APPLICATION_FIELD = field("applicationId", "string");
+const INTERACTION_FIELD = field("interactionId", "string");
+const INTERACTION_TOKEN_FIELD = field("interactionToken", "string");
+const INSTANCE_FIELD = field("instanceId", "string");
+const COMMAND_FIELD = field("commandId", "string");
+const ENTITLEMENT_FIELD = field("entitlementId", "string");
+const SKU_FIELD = field("skuId", "string");
+const SUBSCRIPTION_FIELD = field("subscriptionId", "string");
+const TEMPLATE_CODE_FIELD = field("templateCode", "string");
+const SOUNDBOARD_SOUND_FIELD = field("soundboardSoundId", "string");
+const STICKER_FIELD = field("stickerId", "string");
+const STICKER_PACK_FIELD = field("stickerPackId", "string");
+const LOBBY_FIELD = field("lobbyId", "string");
+const AUTO_MODERATION_RULE_FIELD = field("autoModerationRuleId", "string");
+const AUTO_MODERATION_ACTIONS_FIELD = field("actions", "array", false, { default: [{ type: 1, metadata: { custom_message: "sample" } }] });
+const AUTO_MODERATION_TRIGGER_METADATA_FIELD = field("triggerMetadata", "object", true, { default: { keyword_filter: ["sample"] } });
+const APPLICATION_COMMAND_METADATA_FIELDS = [
   field("nameLocalizations", "object", true, { default: null }),
   field("descriptionLocalizations", "object", true, { default: null }),
   field("defaultMemberPermissions", "string", true, { default: null }),
@@ -40,7 +40,7 @@ export const APPLICATION_COMMAND_METADATA_FIELDS = [
   field("nsfw", "boolean", true, { default: null }),
   field("handler", "integer", true, { default: null }),
 ];
-export const WEBHOOK_CREATE_MESSAGE_FIELDS = [
+const WEBHOOK_CREATE_MESSAGE_FIELDS = [
   field("content", "string"),
   field("username", "string", true, { default: null }),
   field("avatarUrl", "string", true, { default: null }),
@@ -55,7 +55,7 @@ export const WEBHOOK_CREATE_MESSAGE_FIELDS = [
   field("appliedTags", "array", true, { default: null }),
   field("poll", "object", true, { default: null }),
 ];
-export const WEBHOOK_EDIT_MESSAGE_FIELDS = [
+const WEBHOOK_EDIT_MESSAGE_FIELDS = [
   field("content", "string", true, { default: "sample" }),
   field("embeds", "array", true, { default: null }),
   field("allowedMentions", "object", true, { default: null }),
@@ -65,7 +65,7 @@ export const WEBHOOK_EDIT_MESSAGE_FIELDS = [
   field("flags", "integer", true, { default: null }),
   field("poll", "object", true, { default: null }),
 ];
-export const ROLE_CREATE_FIELDS = [
+const ROLE_CREATE_FIELDS = [
   field("name", "string", true, { default: "sample" }),
   field("permissions", "string", true, { default: "0" }),
   field("color", "integer", true, { default: 1 }),
@@ -76,7 +76,7 @@ export const ROLE_CREATE_FIELDS = [
   field("mentionable", "boolean", true, { default: false }),
   field("auditLogReason", "string", true),
 ];
-export const ROLE_UPDATE_FIELDS = [
+const ROLE_UPDATE_FIELDS = [
   field("name", "string", true, { default: null }),
   field("permissions", "string", true, { default: null }),
   field("color", "integer", true, { default: null }),
@@ -87,7 +87,7 @@ export const ROLE_UPDATE_FIELDS = [
   field("mentionable", "boolean", true, { default: null }),
   field("auditLogReason", "string", true),
 ];
-export const CHANNEL_CREATE_FIELDS = [
+const CHANNEL_CREATE_FIELDS = [
   GUILD_FIELD,
   field("name", "string"),
   field("type", "integer", true, { default: null }),
@@ -109,7 +109,7 @@ export const CHANNEL_CREATE_FIELDS = [
   field("defaultThreadRateLimitPerUser", "integer", true, { default: null }),
   field("auditLogReason", "string", true),
 ];
-export const CHANNEL_UPDATE_FIELDS = [
+const CHANNEL_UPDATE_FIELDS = [
   CHANNEL_FIELD,
   field("name", "string", true, { default: "sample" }),
   field("icon", "string", true, { default: null }),
@@ -499,7 +499,7 @@ export function field(name: string, type: string, optional = false, extras: {
   return { name, type, optional, ...extras };
 }
 
-export function pagingFields(): Field[] {
+function pagingFields(): Field[] {
   return [
     field("limit", "integer", true, { default: 1, min: 1, max: 100 }),
     field("after", "string", true),
