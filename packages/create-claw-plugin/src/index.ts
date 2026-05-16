@@ -113,7 +113,7 @@ export async function runCreateClawPlugin(argv: string[], context: CreateClawPlu
         `${parsed.packageManager} test`,
         `${parsed.packageManager} run plugin:check`,
       ],
-      completionNote: "The generated package is broader than a skill: it combines config, hooks, compatibility metadata, and bundled logic in one distributable plugin.",
+      completionNote: "The generated package is broader than a skill: it combines config, hooks, runtime support metadata, and bundled logic in one distributable plugin.",
     });
     return CREATE_CLAW_PLUGIN_EXIT_OK;
   } catch (error) {

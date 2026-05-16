@@ -447,7 +447,7 @@ function buildScaffoldCompletionNote(type: ClawProjectType): string {
     return "The generated package is intentionally narrow: one skill, one contract, one harness, ready to reuse across agents.";
   }
   if (type === "plugin") {
-    return "The generated package is broader than a skill: it combines config, hooks, compatibility metadata, and bundled logic in one distributable plugin.";
+    return "The generated package is broader than a skill: it combines config, hooks, runtime support metadata, and bundled logic in one distributable plugin.";
   }
   return "The generated project uses the demo adapter by default. Switch scripts and helpers to openclaw when you want a real runtime.";
 }

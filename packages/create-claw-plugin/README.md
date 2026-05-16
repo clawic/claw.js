@@ -10,7 +10,7 @@ npx create-claw-plugin jira-integration
 
 The generated package includes:
 
-- a `plugin.json` manifest with compatibility metadata
+- a `plugin.json` manifest with runtime support metadata
 - a config schema and validator
 - hook handlers for lifecycle-style events
 - one bundled skill to show plugin composition

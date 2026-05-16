@@ -185,7 +185,21 @@ for (const relativePath of [
   "packages/create-claw-plugin/README.md",
 ]) {
   forbidSnippet(relativePath, "compatibility wrapper");
+  forbidSnippet(relativePath, "compatibility metadata");
+  forbidSnippet(relativePath, "compatibility and packaged surfaces");
+  forbidSnippet(relativePath, "compatibility and packaged-surface metadata");
   requireSnippet(relativePath, "generator entrypoint");
+}
+
+for (const relativePath of [
+  "packages/clawjs/src/index.ts",
+  "packages/create-claw-plugin/src/index.ts",
+  "packages/create-claw-plugin/template/README.md",
+  "packages/clawjs/templates/plugin/README.md",
+]) {
+  forbidSnippet(relativePath, "compatibility metadata");
+  forbidSnippet(relativePath, "compatibility and packaged surfaces");
+  forbidSnippet(relativePath, "compatibility and packaged-surface metadata");
 }
 
 for (const relativePath of [

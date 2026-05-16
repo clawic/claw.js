@@ -6,7 +6,7 @@ description: Build distributable Claw plugins with manifests, config, hooks, bun
 # Plugin Authoring
 
 Use a plugin when you need a distributable integration package that
-combines configuration, hooks, compatibility metadata, and bundled logic.
+combines configuration, hooks, runtime support metadata, and bundled logic.
 Use a skill when you only need one reusable task primitive.
 
 ## Scaffold
@@ -55,7 +55,7 @@ references and brokered calls over plaintext credentials.
 ## Manifest and Lifecycle
 
 - Keep `plugin.json` aligned with the exported `pluginManifest`.
-- Put compatibility and packaged-surface metadata in the manifest, not
+- Put runtime support and packaged-surface metadata in the manifest, not
   in prose-only README notes.
 - Use `activatePlugin(rawConfig)` as the single entrypoint that validates
   config and returns hooks, skills, and metadata.
