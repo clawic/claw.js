@@ -116,8 +116,9 @@ test("i18n label values are non-empty strings for all providers", () => {
 
 /* ── Runtime adapter tests ── */
 
-const VISIBLE_ADAPTERS = listRuntimeAdapters().filter((a) => a.supportLevel !== "demo");
+const VISIBLE_ADAPTERS = listRuntimeAdapters();
 const EXPECTED_ADAPTER_IDS = [
+  "demo",
   "openclaw",
   "claw",
   "openclaude",
@@ -132,8 +133,8 @@ const EXPECTED_ADAPTER_IDS = [
   "hermes",
 ];
 
-test("SDK exposes 12 visible runtime adapters (excluding demo)", () => {
-  assert.equal(VISIBLE_ADAPTERS.length, 12, `Expected 12 visible adapters, got ${VISIBLE_ADAPTERS.length}`);
+test("SDK exposes 13 visible runtime adapters", () => {
+  assert.equal(VISIBLE_ADAPTERS.length, 13, `Expected 13 visible adapters, got ${VISIBLE_ADAPTERS.length}`);
   const ids = VISIBLE_ADAPTERS.map((a) => a.id).sort();
   const expected = [...EXPECTED_ADAPTER_IDS].sort();
   assert.deepEqual(ids, expected);
@@ -164,8 +165,12 @@ test("each adapter has required runtime metadata", () => {
     assert.ok(adapter.stability, `Adapter ${adapter.id} missing stability`);
     assert.ok(adapter.supportLevel, `Adapter ${adapter.id} missing supportLevel`);
     assert.ok(
-      ["stable", "experimental"].includes(adapter.stability),
+      ["stable", "dev-only"].includes(adapter.stability),
       `Adapter ${adapter.id} has unexpected stability: ${adapter.stability}`
+    );
+    assert.ok(
+      ["production", "dev-only"].includes(adapter.supportLevel),
+      `Adapter ${adapter.id} has unexpected supportLevel: ${adapter.supportLevel}`
     );
   }
 });

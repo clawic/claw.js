@@ -268,7 +268,7 @@ function buildDefaultIntegrationStatus(): IntegrationStatus {
         id: "openclaw",
         runtimeName: "OpenClaw",
         stability: "stable",
-        supportLevel: "official",
+        supportLevel: "production",
         cliAvailable: true,
         version: "0.0.0-e2e",
         recommended: true,

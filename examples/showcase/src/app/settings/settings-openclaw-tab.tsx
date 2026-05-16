@@ -62,7 +62,7 @@ export function SettingsOpenClawTab(props: any) {
         const isInstalled = isOpenClaw ? !!oc?.cliAvailable : adapter.cliAvailable;
         const isSelected = activeAdapterId === adapter.id;
         const isBusy = !!adapterBusy[adapter.id];
-        const statusLabel = adapter.recommended ? adapterMessages.recommended : adapterMessages.experimental;
+        const statusLabel = adapter.recommended ? adapterMessages.recommended : adapterMessages.devOnly;
         return (
           <div key={adapter.id} className={i < adapterList.length - 1 ? "border-b border-border" : ""}>
             {/* ── Row: click to select ── */}

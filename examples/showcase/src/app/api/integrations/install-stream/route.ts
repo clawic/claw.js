@@ -10,7 +10,7 @@ type InstallProgressEvent = {
 };
 
 const VALID_ADAPTER_IDS = new Set(
-  listRuntimeAdapters().filter((a) => a.supportLevel !== "demo").map((a) => a.id),
+  listRuntimeAdapters().map((a) => a.id),
 );
 
 export async function POST(req: NextRequest) {
