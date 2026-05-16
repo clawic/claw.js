@@ -70,7 +70,6 @@
   "dependencies": {
     "@clawjs/marketplace": "*",
     "@noble/curves": "^1.9.0",
-    "@noble/hashes": "^1.8.0",
     "better-sqlite3": "^12.9.0"
   }
 }
