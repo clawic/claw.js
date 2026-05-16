@@ -99,7 +99,7 @@ updating this ADR or adding a successor ADR.
   - `channels`: `24123`
   - `notify`: `24124`
 - `24150-24179` is reserved for integrations/channels.
-- `24180-24199` is reserved for labs/experimental surfaces.
+- `24180-24199` is reserved for labs/dev-only surfaces.
 - App hostnames use `<app>.claw.localhost`, for example
   `board.claw.localhost`.
 - Technical services may use `<service>.claw.localhost` only when exposing UI.
@@ -168,7 +168,7 @@ updating this ADR or adding a successor ADR.
 - `home` is the public automation/home domain; `iot` is technical adapters and
   protocol implementation.
 - `commander` is a retired legacy public name.
-- Experimental runtime codenames such as `zeroclaw`, `picoclaw`, `nanoclaw`,
+- Dev-only runtime codenames such as `zeroclaw`, `picoclaw`, `nanoclaw`,
   `ironclaw`, `nemoclaw`, and `nullclaw` are not public v1 surface.
 
 ## Data, databases, and identifiers

@@ -169,6 +169,17 @@ for (const relativePath of [
 }
 
 for (const relativePath of [
+  "docs/getting-started.md",
+  "docs/adr/0001-naming-and-stability-surfaces.md",
+]) {
+  forbidSnippet(relativePath, "Experimental adapters");
+  forbidSnippet(relativePath, "experimental adapters");
+  forbidSnippet(relativePath, "labs/experimental surfaces");
+  forbidSnippet(relativePath, "Experimental runtime codenames");
+  requireSnippet(relativePath, "dev-only");
+}
+
+for (const relativePath of [
   "docs/index.md",
   "packages/openclaw-context-engine/package.json",
   "packages/openclaw-context-engine/openclaw.plugin.json",

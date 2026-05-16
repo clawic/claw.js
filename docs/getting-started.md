@@ -101,7 +101,7 @@ claw --runtime openclaw doctor --workspace . --json
 ```
 
 Use [Support Matrix](/support-matrix) before selecting any adapter for
-production. Experimental adapters are useful for adapter development and
+production. dev-only adapters are useful for adapter development and
 exploration, but should not be presented as the default production path.
 
 ## Manual Workspace Creation
