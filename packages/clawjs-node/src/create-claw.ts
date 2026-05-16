@@ -341,7 +341,6 @@ import {
   compileSkills as compileSkillsV2,
   createSkillsStore,
   generateBuiltinSkills as generateSkillsV2Builtins,
-  migrateLegacyState as migrateSkillsV2LegacyState,
 } from "./skills-v2/index.ts";
 import { callTelegramApi, createTelegramService, downloadTelegramFile, type TelegramConnectBotInput, type TelegramSendMediaInput, type TelegramSendMessageInput, type TelegramStatusResult, type TelegramWebhookConfigInput, type TelegramSyncUpdatesOptions, type TelegramBanOrRestrictInput, type TelegramInviteLinkOptions } from "./telegram/index.ts";
 import { createChannelsRegistry, type GrantChannelBindingInput, type ReadChannelMessagesInput, type RegisterChannelProcessorInput, type RegisterChannelTargetInput, type RegisterTelegramBotAccountInput, type SendChannelMessageInput, type UpsertChannelListenerInput } from "./channels/index.ts";
@@ -656,18 +655,6 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
   });
   const skillsV2SyncEngine = new SkillsSyncEngine({ store: skillsV2Store, filesystem });
   const skillsV2Importer = new SkillsImporter({ store: skillsV2Store, filesystem });
-  // Auto-migrate any legacy state (souls.json / library / skills.json) on startup.
-  // Idempotent via .skills-v2.migrated marker.
-  try {
-    migrateSkillsV2LegacyState({
-      workspaceDir,
-      store: skillsV2Store,
-      filesystem,
-      renderSoulMarkdown: (spec) => soulStore.renderMarkdown(spec),
-    });
-  } catch {
-    // best-effort, do not block claw initialization
-  }
   // Auto-import external skills directories (silent on missing dirs).
   if (options.skills?.autoImport !== false) {
     void skillsV2Importer.importExternal().catch(() => undefined);

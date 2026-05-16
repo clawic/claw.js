@@ -16,8 +16,6 @@ export { SkillsImporter } from "./importer.ts";
 export type { ImporterOptions } from "./importer.ts";
 export { compileSkills } from "./compile.ts";
 export type { CompileOptions } from "./compile.ts";
-export { migrateLegacyState } from "./migrate.ts";
-export type { MigrateOptions } from "./migrate.ts";
 export { generateBuiltinSkills, BUILTIN_PROCEDURE_SKILLS } from "./builtins.ts";
 export { buildSkillMd, stringifyYaml } from "./yaml.ts";
 export { splitFrontmatter, parseYaml } from "./yaml-parse.ts";

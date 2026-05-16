@@ -644,8 +644,6 @@ The docs check script validates that every current export from
     MergeManagedBlocksOptions
     mergeRuntimeCapabilityMaps
     migrateCompatSnapshot
-    migrateLegacyState
-    MigrateOptions
     nanobotAdapter
     nanoclawAdapter
     nemoclawAdapter

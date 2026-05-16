@@ -169,6 +169,19 @@ for (const relativePath of [
 }
 
 for (const relativePath of [
+  "packages/clawjs-node/src/create-claw.ts",
+  "packages/clawjs-node/src/create-claw-options.ts",
+  "packages/clawjs-node/src/create-claw-instance.ts",
+  "packages/clawjs-node/src/skills-v2/index.ts",
+  "docs/surface.md",
+]) {
+  forbidSnippet(relativePath, "migrateLegacyState");
+  forbidSnippet(relativePath, "MigrateOptions");
+  forbidSnippet(relativePath, ".skills-v2.migrated");
+  forbidSnippet(relativePath, "souls.json / library / skills.json");
+}
+
+for (const relativePath of [
   "docs/relay.md",
   "relay/tests/e2e/relay.e2e.test.ts",
   "relay/src/connector/runtime.ts",
