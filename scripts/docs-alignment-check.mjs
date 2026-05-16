@@ -96,6 +96,10 @@ for (const relativePath of [
   forbidSnippet(relativePath, "legacy file");
 }
 
+if (fs.existsSync(path.join(rootDir, "docs/sessions-and-streaming.md"))) {
+  fail("docs/sessions-and-streaming.md must not ship as a compatibility alias; use docs/sessions.md");
+}
+
 requireSnippet("CLAUDE.md", "AGENTS.md");
 requireSnippet("CLAUDE.md", "docs/host-ownership.md");
 requireSnippet("CLAUDE.md", "docs/data-storage-boundary.md");
