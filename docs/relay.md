@@ -188,9 +188,9 @@ The preferred bootstrap is device-code pairing:
 4. The connector polls `POST /v1/connectors/device/poll`
 5. On approval the relay returns a connector credential scoped to one `tenantId + connectorId`
 
-Legacy enrollment tokens still exist as an admin fallback.
+Admin enrollment tokens remain available as a fallback.
 
-### 3. Legacy connector enrollment
+### 3. Admin connector enrollment
 
 ```bash
 curl -s http://127.0.0.1:4410/v1/admin/connectors/enrollments \
