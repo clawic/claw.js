@@ -18,9 +18,11 @@ function fail(message) {
 
 const decisions = readJson("docs/code-hygiene-decisions.json");
 const baseline = readJson("docs/code-hygiene-baseline.json");
+const tools = readJson("docs/code-hygiene-tools.json");
 const report = readJson("docs/code-hygiene-report.json");
 const reportMarkdown = readText("docs/code-hygiene-report.md");
 const ledger = readText("docs/code-hygiene-ledger.md");
+const decisionChecklist = readText("docs/code-hygiene-decision-checklist.md");
 
 if (decisions.schemaVersion !== 1) fail("code hygiene decisions schemaVersion must be 1");
 if (decisions.program !== "code-hygiene") fail("code hygiene decisions program must be code-hygiene");
@@ -47,16 +49,29 @@ for (const entry of baseline.entries ?? []) {
   if (!entry.expiresAt) fail("code hygiene baseline entry is missing expiresAt");
 }
 
+if (tools.schemaVersion !== 1) fail("code hygiene tools schemaVersion must be 1");
+if (tools.tools?.knip?.version !== "6.14.0") fail("code hygiene Knip version must be 6.14.0");
+if (!tools.tools?.periphery?.version) fail("code hygiene Periphery version must be documented");
+const packageCandidates = ["package.json", "web/package.json"];
+const hasKnipDependency = packageCandidates
+  .filter((relativePath) => fs.existsSync(path.join(rootDir, relativePath)))
+  .some((relativePath) => readJson(relativePath).devDependencies?.knip === "6.14.0");
+if (!hasKnipDependency) fail("Knip must be pinned as a dev dependency");
+
 if (report.schemaVersion !== 1) fail("code hygiene report schemaVersion must be 1");
 if (report.program !== "code-hygiene") fail("code hygiene report program must be code-hygiene");
 if (!report.generatedAt) fail("code hygiene report must include generatedAt");
 if (!reportMarkdown.includes("docs/code-hygiene-report.json")) fail("code hygiene Markdown report must link the JSON pair");
 if (!ledger.includes("private session, not published")) fail("code hygiene ledger must not publish private session paths");
+if (!decisionChecklist.includes("rollout_model")) fail("code hygiene decision checklist must include rollout_model");
+if (!decisionChecklist.includes("Cleanup campaign is pending")) fail("code hygiene decision checklist must record pending cleanup campaign");
 
 for (const relativePath of [
   "docs/adr/0016-code-hygiene-program.md",
   "docs/code-hygiene-decisions.json",
   "docs/code-hygiene-baseline.json",
+  "docs/code-hygiene-decision-checklist.md",
+  "docs/code-hygiene-tools.json",
   "docs/code-hygiene-ledger.md",
   "docs/code-hygiene-report.json",
   "docs/code-hygiene-report.md",
