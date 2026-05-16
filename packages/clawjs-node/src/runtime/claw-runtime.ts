@@ -45,7 +45,6 @@ export interface ClawRuntimeProviderConfig {
     id: string;
     label: string;
     default?: boolean;
-    legacy?: boolean;
     metadata?: ClawRuntimeModelMetadata;
   }>;
 }
@@ -94,8 +93,8 @@ export const CLAW_RUNTIME_PROVIDERS: ClawRuntimeProviderConfig[] = [
     models: [
       { id: "deepseek-v4-pro", label: "DeepSeek V4 Pro", default: true, metadata: { contextWindow: 1_000_000, supportsReasoning: true, supportsTools: true } },
       { id: "deepseek-v4-flash", label: "DeepSeek V4 Flash", metadata: { contextWindow: 1_000_000, supportsReasoning: true, supportsTools: true } },
-      { id: "deepseek-chat", label: "DeepSeek Chat (legacy alias)", legacy: true, metadata: { supportsTools: true } },
-      { id: "deepseek-reasoner", label: "DeepSeek Reasoner (legacy alias)", legacy: true, metadata: { supportsReasoning: true, supportsTools: true } },
+      { id: "deepseek-chat", label: "DeepSeek Chat", metadata: { supportsTools: true } },
+      { id: "deepseek-reasoner", label: "DeepSeek Reasoner", metadata: { supportsReasoning: true, supportsTools: true } },
     ],
   },
   {

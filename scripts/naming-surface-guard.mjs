@@ -137,6 +137,15 @@ for (const relativePath of [
 }
 
 for (const relativePath of [
+  "packages/clawjs-node/src/runtime/claw-runtime.ts",
+  "packages/clawjs-node/src/runtime/claw-runtime.test.ts",
+]) {
+  forbidSnippet(relativePath, "legacy alias");
+  forbidSnippet(relativePath, "legacy?: boolean");
+  forbidSnippet(relativePath, "legacy: true");
+}
+
+for (const relativePath of [
   "publishing/src/server/config.ts",
   "publishing/src/bin/server.ts",
   "publishing/src/cli/parser.ts",
