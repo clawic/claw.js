@@ -75,6 +75,7 @@ for (const relativePath of [
   "docs/code-hygiene-ledger.md",
   "docs/code-hygiene-report.json",
   "docs/code-hygiene-report.md",
+  "scripts/code-hygiene-audit.mjs",
   "skills/code-hygiene-audit/SKILL.md",
   "skills/code-hygiene-cleanup/SKILL.md",
 ]) {

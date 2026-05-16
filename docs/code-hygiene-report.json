@@ -4,10 +4,17 @@
   "generatedAt": "2026-05-17",
   "status": "bootstrap",
   "blockingFindings": 0,
-  "reportOnlyFindings": 0,
+  "reportOnlyFindings": 260,
   "baselinedFindings": 0,
+  "lastAuditSummary": {
+    "scannedFiles": 10020,
+    "todoFindings": 221,
+    "duplicateAssetGroups": 39,
+    "duplicateAssetFiles": 187
+  },
   "externalPending": [],
   "notes": [
-    "Initial bootstrap report. Full cleanup campaign still required before goal completion."
+    "Initial bootstrap report. Full cleanup campaign still required before goal completion.",
+    "Use scripts/code-hygiene-audit.mjs for report-only TODO and duplicate asset findings."
   ]
 }
