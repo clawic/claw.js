@@ -1,6 +1,6 @@
 import { maskCredential, type ChannelDescriptor, type SlackBotProfile, type SlackChannelSummary, type SlackStateSnapshot, type SlackTransportStatus } from "@clawjs/core";
 
-import type { WorkspaceDataStore } from "../data/store.ts";
+import type { WorkspaceStorage } from "../data/store.ts";
 import type { CommandRunner } from "../runtime/contracts.ts";
 import type { SessionStore } from "../sessions/store.ts";
 import { resolveSecretsCommandSpec } from "../secrets/command.ts";
@@ -39,7 +39,7 @@ export interface SlackService {
 
 export interface CreateSlackServiceOptions {
   workspaceDir: string;
-  dataStore: WorkspaceDataStore;
+  dataStore: WorkspaceStorage;
   sessionStore: SessionStore;
   runner: CommandRunner;
   env?: NodeJS.ProcessEnv;
@@ -236,11 +236,11 @@ function updateKnownChannels(snapshot: SlackStateSnapshot, channels: SlackChanne
 /*  Session / session mapping                                    */
 /* ------------------------------------------------------------------ */
 
-function readSessionMap(dataStore: WorkspaceDataStore): Record<string, string> {
+function readSessionMap(dataStore: WorkspaceStorage): Record<string, string> {
   return dataStore.document<Record<string, string>>(SLACK_SESSION_MAP_DOCUMENT).read() ?? {};
 }
 
-function writeSessionMap(dataStore: WorkspaceDataStore, value: Record<string, string>): void {
+function writeSessionMap(dataStore: WorkspaceStorage, value: Record<string, string>): void {
   dataStore.document<Record<string, string>>(SLACK_SESSION_MAP_DOCUMENT).write(value);
 }
 

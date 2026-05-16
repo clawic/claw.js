@@ -229,7 +229,7 @@ import { ChannelRunStore } from "./channel-runs/index.ts";
 import type { ChannelRunOptions, ChannelRunTarget, ChannelRunMessage } from "./channel-runs/index.ts";
 import { streamRuntimeSession, streamRuntimeSessionEvents, type SessionStreamEvent } from "./sessions/stream.ts";
 import { generateRuntimeSessionTitle } from "./sessions/title.ts";
-import { createWorkspaceDataStore, type WorkspaceDataStore } from "./data/store.ts";
+import { createWorkspaceStorage, type WorkspaceStorage } from "./data/store.ts";
 import { createDocumentStore, resolveLegacyDocumentRefs } from "./documents/store.ts";
 import { createMediaStore, type RegisterMediaInput } from "./media/store.ts";
 import {
@@ -560,7 +560,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
   const learningStore = createLearningStore({ workspaceDir, filesystem });
   const outcomeStore = createOutcomeStore({ workspaceDir, filesystem });
   const channelRunStore = new ChannelRunStore(workspaceDir, sessionStore, { filesystem });
-  const dataStore = createWorkspaceDataStore(workspaceDir, filesystem);
+  const dataStore = createWorkspaceStorage(workspaceDir, filesystem);
   const storageStore = createLocalStorageStore({
     workspaceDir,
     agentId: logicalAgentId,

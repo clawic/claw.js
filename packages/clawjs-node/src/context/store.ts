@@ -505,10 +505,10 @@ function parseJson(value: string): unknown {
 function resolveMainDbPath(): string {
   const explicit = process.env.CLAW_DB_PATH;
   if (explicit) return expandHome(explicit);
-  return path.join(resolveDataRoot(), "core.sqlite");
+  return path.join(resolveMainDatabaseRoot(), "core.sqlite");
 }
 
-function resolveDataRoot(): string {
+function resolveMainDatabaseRoot(): string {
   return resolveClawGlobalDataRoot();
 }
 

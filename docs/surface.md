@@ -454,10 +454,10 @@ The docs check script validates that every current export from
     createWhatsAppService
     CreateWhatsAppServiceOptions
     CreateWikiPageInput
-    createWorkspaceDataStore
-    DataAssetHandle
-    DataCollectionHandle
-    DataDocumentHandle
+    createWorkspaceStorage
+    WorkspaceAssetHandle
+    WorkspaceCollectionHandle
+    WorkspaceDocumentHandle
     DEFAULT_CLAW_OPERATOR_CAPSULE
     DEFAULT_CLAW_OPERATOR_SKILL_ID
     DEFAULT_CLAW_SECRETS_APP_PATH
@@ -1075,7 +1075,7 @@ The docs check script validates that every current export from
     withCodexCommandEnv
     WORKSPACE_STATE_FILE
     WorkspaceAuditLog
-    WorkspaceDataStore
+    WorkspaceStorage
     WorkspaceFileInspection
     WorkspaceFilePreview
     WorkspaceRepairResult

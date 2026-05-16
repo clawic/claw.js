@@ -14,7 +14,7 @@ import type {
   MediaStorageRef,
 } from "@clawjs/core";
 
-import type { WorkspaceDataStore } from "../data/store.ts";
+import type { WorkspaceStorage } from "../data/store.ts";
 import type { LocalStorageStore, StorageShare } from "../storage/store.ts";
 
 export interface RegisterMediaInput {
@@ -204,7 +204,7 @@ function shareExpired(share: MediaGalleryShare): boolean {
 }
 
 export function createMediaStore(options: {
-  dataStore: WorkspaceDataStore;
+  dataStore: WorkspaceStorage;
   storage: LocalStorageStore;
   workspaceId?: string;
   projectId?: string;

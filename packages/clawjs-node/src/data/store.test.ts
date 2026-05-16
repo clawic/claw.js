@@ -4,11 +4,11 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
-import { createWorkspaceDataStore } from "./store.ts";
+import { createWorkspaceStorage } from "./store.ts";
 
-test("workspace data store reads and writes documents", () => {
+test("workspace storage reads and writes documents", () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-data-docs-"));
-  const data = createWorkspaceDataStore(workspaceDir);
+  const data = createWorkspaceStorage(workspaceDir);
   const document = data.document<{ enabled: boolean }>("settings");
 
   assert.equal(document.exists(), false);
@@ -18,9 +18,9 @@ test("workspace data store reads and writes documents", () => {
   assert.deepEqual(document.read(), { enabled: true });
 });
 
-test("workspace data store supports collection CRUD and stable ordering", () => {
+test("workspace storage supports collection CRUD and stable ordering", () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-data-collection-"));
-  const data = createWorkspaceDataStore(workspaceDir);
+  const data = createWorkspaceStorage(workspaceDir);
   const collection = data.collection<{ title: string }>("notes");
 
   collection.put("b", { title: "Beta" });
@@ -36,9 +36,9 @@ test("workspace data store supports collection CRUD and stable ordering", () => 
   assert.equal(collection.get("a"), null);
 });
 
-test("workspace data store supports text and binary assets", () => {
+test("workspace storage supports text and binary assets", () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-data-assets-"));
-  const data = createWorkspaceDataStore(workspaceDir);
+  const data = createWorkspaceStorage(workspaceDir);
   const textAsset = data.asset("notes/context.txt");
   const binaryAsset = data.asset("avatars/user.bin");
 

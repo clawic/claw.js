@@ -766,7 +766,7 @@ asset.writeText("ready");
 
 const orchestration = await claw.orchestration.snapshot();
 ```
-The workspace data store is a simple file-backed storage layer for JSON
+The workspace storage API is a simple file-backed storage layer for JSON
 documents, keyed collections, and raw assets rooted under the current
 workspace.
 

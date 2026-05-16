@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 
 import type { RuntimeAdapterId } from "@clawjs/core";
 
-import { createWorkspaceDataStore, type WorkspaceDataStore } from "../data/store.ts";
+import { createWorkspaceStorage, type WorkspaceStorage } from "../data/store.ts";
 import { NodeFileSystemHost } from "../host/filesystem.ts";
 import { NodeProcessHost } from "../host/process.ts";
 import { resolveClawWorkspaceSurfacePath } from "../surface-paths.ts";
@@ -246,7 +246,7 @@ function buildAssetRelativePath(kind: GenerationKind, id: string, extension: str
 }
 
 function enrichAssetRecord(
-  dataStore: WorkspaceDataStore,
+  dataStore: WorkspaceStorage,
   filesystem: NodeFileSystemHost,
   storage: LocalStorageStore | undefined,
   relativePath: string | undefined,
@@ -302,7 +302,7 @@ function enrichAssetRecord(
 
 function hydrateRecord(
   record: PersistedGenerationRecord,
-  dataStore: WorkspaceDataStore,
+  dataStore: WorkspaceStorage,
   filesystem: NodeFileSystemHost,
   storage?: LocalStorageStore,
 ): GenerationRecord {
@@ -589,13 +589,13 @@ export function createGenerationStore(options: {
   runtimeAdapter: RuntimeAdapterId;
   filesystem?: NodeFileSystemHost;
   processHost?: NodeProcessHost;
-  dataStore?: WorkspaceDataStore;
+  dataStore?: WorkspaceStorage;
   storage?: LocalStorageStore;
   env?: NodeJS.ProcessEnv;
 }): GenerationStore {
   const filesystem = options.filesystem ?? new NodeFileSystemHost();
   const processHost = options.processHost ?? new NodeProcessHost();
-  const dataStore = options.dataStore ?? createWorkspaceDataStore(options.workspaceDir, filesystem);
+  const dataStore = options.dataStore ?? createWorkspaceStorage(options.workspaceDir, filesystem);
   const storage = options.storage;
   const runtimeEnv = normalizeEnv(options.env);
   const generationCollection = dataStore.collection<PersistedGenerationRecord>(GENERATIONS_COLLECTION);

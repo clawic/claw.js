@@ -6,7 +6,7 @@ import { resolveClawWorkspaceSurfacePath } from "../surface-paths.ts";
 
 type Decoder<T> = (value: unknown) => T;
 
-export interface DataDocumentHandle<T = unknown> {
+export interface WorkspaceDocumentHandle<T = unknown> {
   path(): string;
   exists(): boolean;
   read(): T | null;
@@ -15,7 +15,7 @@ export interface DataDocumentHandle<T = unknown> {
   remove(): void;
 }
 
-export interface DataCollectionHandle<T = unknown> {
+export interface WorkspaceCollectionHandle<T = unknown> {
   dir(): string;
   listIds(): string[];
   list(): T[];
@@ -26,7 +26,7 @@ export interface DataCollectionHandle<T = unknown> {
   remove(id: string): void;
 }
 
-export interface DataAssetHandle {
+export interface WorkspaceAssetHandle {
   path(): string;
   exists(): boolean;
   readText(): string | null;
@@ -36,11 +36,11 @@ export interface DataAssetHandle {
   remove(): void;
 }
 
-export interface WorkspaceDataStore {
+export interface WorkspaceStorage {
   rootDir(): string;
-  document<T = unknown>(name: string): DataDocumentHandle<T>;
-  collection<T = unknown>(name: string): DataCollectionHandle<T>;
-  asset(relativePath: string): DataAssetHandle;
+  document<T = unknown>(name: string): WorkspaceDocumentHandle<T>;
+  collection<T = unknown>(name: string): WorkspaceCollectionHandle<T>;
+  asset(relativePath: string): WorkspaceAssetHandle;
 }
 
 function assertSafeName(name: string, label: string): string {
@@ -80,29 +80,29 @@ function writeJsonFile(filesystem: NodeFileSystemHost, filePath: string, value: 
   });
 }
 
-function resolveDataRoot(workspaceDir: string): string {
+function resolveWorkspaceStorageRoot(workspaceDir: string): string {
   return resolveClawWorkspaceSurfacePath("claw.workspace.data", workspaceDir);
 }
 
 function resolveDocumentsDir(workspaceDir: string): string {
-  return path.join(resolveDataRoot(workspaceDir), "documents");
+  return path.join(resolveWorkspaceStorageRoot(workspaceDir), "documents");
 }
 
 function resolveCollectionsDir(workspaceDir: string): string {
-  return path.join(resolveDataRoot(workspaceDir), "collections");
+  return path.join(resolveWorkspaceStorageRoot(workspaceDir), "collections");
 }
 
 function resolveAssetsDir(workspaceDir: string): string {
-  return path.join(resolveDataRoot(workspaceDir), "assets");
+  return path.join(resolveWorkspaceStorageRoot(workspaceDir), "assets");
 }
 
-export function createWorkspaceDataStore(
+export function createWorkspaceStorage(
   workspaceDir: string,
   filesystem = new NodeFileSystemHost(),
-): WorkspaceDataStore {
+): WorkspaceStorage {
   return {
-    rootDir: () => resolveDataRoot(workspaceDir),
-    document: <T = unknown>(name: string): DataDocumentHandle<T> => {
+    rootDir: () => resolveWorkspaceStorageRoot(workspaceDir),
+    document: <T = unknown>(name: string): WorkspaceDocumentHandle<T> => {
       const safeName = assertSafeName(name, "document name");
       const filePath = path.join(resolveDocumentsDir(workspaceDir), `${safeName}.json`);
       return {
@@ -122,7 +122,7 @@ export function createWorkspaceDataStore(
         },
       };
     },
-    collection: <T = unknown>(name: string): DataCollectionHandle<T> => {
+    collection: <T = unknown>(name: string): WorkspaceCollectionHandle<T> => {
       const safeName = assertSafeName(name, "collection name");
       const dirPath = path.join(resolveCollectionsDir(workspaceDir), safeName);
       const resolveItemPath = (id: string) => path.join(dirPath, `${assertSafeName(id, "collection id")}.json`);

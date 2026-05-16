@@ -1,6 +1,6 @@
 import { maskCredential, type ChannelDescriptor, type TelegramBotProfile, type TelegramChatSummary, type TelegramCommand, type TelegramMemberSummary, type TelegramStateSnapshot, type TelegramTransportStatus, type TelegramUpdateEnvelope, type TelegramWebhookStatus } from "@clawjs/core";
 
-import type { WorkspaceDataStore } from "../data/store.ts";
+import type { WorkspaceStorage } from "../data/store.ts";
 import type { CommandRunner } from "../runtime/contracts.ts";
 import type { SessionStore } from "../sessions/store.ts";
 import { resolveSecretsBackend, resolveSecretsCommandSpec } from "../secrets/command.ts";
@@ -101,7 +101,7 @@ export interface TelegramService {
 
 export interface CreateTelegramServiceOptions {
   workspaceDir: string;
-  dataStore: WorkspaceDataStore;
+  dataStore: WorkspaceStorage;
   sessionStore: SessionStore;
   runner: CommandRunner;
   env?: NodeJS.ProcessEnv;
@@ -447,15 +447,15 @@ function extractUserText(update: JsonRecord): string | null {
   return null;
 }
 
-function readSessionMap(dataStore: WorkspaceDataStore): Record<string, string> {
+function readSessionMap(dataStore: WorkspaceStorage): Record<string, string> {
   return dataStore.document<Record<string, string>>(TELEGRAM_SESSION_MAP_DOCUMENT).read() ?? {};
 }
 
-function writeSessionMap(dataStore: WorkspaceDataStore, value: Record<string, string>): void {
+function writeSessionMap(dataStore: WorkspaceStorage, value: Record<string, string>): void {
   dataStore.document<Record<string, string>>(TELEGRAM_SESSION_MAP_DOCUMENT).write(value);
 }
 
-function rememberUpdate(dataStore: WorkspaceDataStore, envelope: TelegramUpdateEnvelope): void {
+function rememberUpdate(dataStore: WorkspaceStorage, envelope: TelegramUpdateEnvelope): void {
   dataStore.collection<TelegramUpdateEnvelope>(TELEGRAM_UPDATES_COLLECTION).put(String(envelope.updateId), {
     ...envelope,
     raw: undefined,
@@ -463,7 +463,7 @@ function rememberUpdate(dataStore: WorkspaceDataStore, envelope: TelegramUpdateE
 }
 
 function recordMessageInConversation(
-  dataStore: WorkspaceDataStore,
+  dataStore: WorkspaceStorage,
   sessionStore: SessionStore,
   envelope: TelegramUpdateEnvelope,
   chat: TelegramChatSummary | undefined,

@@ -2,7 +2,7 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 
-import type { WorkspaceDataStore } from "../data/store.ts";
+import type { WorkspaceStorage } from "../data/store.ts";
 import type { LocalStorageStore, StorageObject } from "../storage/store.ts";
 import type { SttProviderConfig, SttTranscribeResult } from "../stt/index.ts";
 
@@ -122,7 +122,7 @@ function storageUrl(object: StorageObject): string {
 }
 
 export function createVoiceNoteStore(options: {
-  dataStore: WorkspaceDataStore;
+  dataStore: WorkspaceStorage;
   storage: LocalStorageStore;
   transcribe: (input: SttProviderConfig & { filePath: string }) => Promise<SttTranscribeResult>;
 }): VoiceNoteStore {

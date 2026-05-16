@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { createHash, randomUUID } from "crypto";
 
-import { createWorkspaceDataStore, type WorkspaceDataStore } from "../data/store.ts";
+import { createWorkspaceStorage, type WorkspaceStorage } from "../data/store.ts";
 import { NodeFileSystemHost } from "../host/filesystem.ts";
 import { resolveClawGlobalSurfacePath } from "../surface-paths.ts";
 import type { SecretBrokerHttpInput, SecretBrokerHttpResult } from "../secrets/index.ts";
@@ -201,7 +201,7 @@ export interface ImageLibraryStore {
 export interface CreateImageLibraryStoreOptions {
   rootDir?: string;
   filesystem?: NodeFileSystemHost;
-  dataStore?: WorkspaceDataStore;
+  dataStore?: WorkspaceStorage;
   storage?: LocalStorageStore;
   env?: NodeJS.ProcessEnv;
   scope?: {
@@ -334,7 +334,7 @@ function buildAssetRelativePath(hash: string, extension: string): string {
 }
 
 function enrichAssetRecord(
-  dataStore: WorkspaceDataStore,
+  dataStore: WorkspaceStorage,
   filesystem: NodeFileSystemHost,
   storage: LocalStorageStore | undefined,
   record: PersistedImageRecord,
@@ -377,7 +377,7 @@ function enrichAssetRecord(
 }
 
 function hydrateRecord(
-  dataStore: WorkspaceDataStore,
+  dataStore: WorkspaceStorage,
   filesystem: NodeFileSystemHost,
   storage: LocalStorageStore | undefined,
   record: PersistedImageRecord,
@@ -486,7 +486,7 @@ export function createImageLibraryStore(options: CreateImageLibraryStoreOptions 
   const filesystem = options.filesystem ?? new NodeFileSystemHost();
   const env = { ...process.env, ...(options.env ?? {}) };
   const rootDir = options.rootDir ?? defaultImageLibraryRoot(env);
-  const dataStore = options.dataStore ?? createWorkspaceDataStore(rootDir, filesystem);
+  const dataStore = options.dataStore ?? createWorkspaceStorage(rootDir, filesystem);
   const storage = options.storage;
   const collection = dataStore.collection<PersistedImageRecord>(IMAGE_COLLECTION);
   const profileCollection = dataStore.collection<ImageProviderProfile>(PROFILE_COLLECTION);

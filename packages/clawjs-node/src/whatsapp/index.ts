@@ -1,6 +1,6 @@
 import { maskCredential, type ChannelDescriptor, type WhatsAppBotProfile, type WhatsAppStateSnapshot, type WhatsAppTransportStatus } from "@clawjs/core";
 
-import type { WorkspaceDataStore } from "../data/store.ts";
+import type { WorkspaceStorage } from "../data/store.ts";
 import type { CommandRunner } from "../runtime/contracts.ts";
 import type { SessionStore } from "../sessions/store.ts";
 import { resolveSecretsCommandSpec } from "../secrets/command.ts";
@@ -38,7 +38,7 @@ export interface WhatsAppService {
 
 export interface CreateWhatsAppServiceOptions {
   workspaceDir: string;
-  dataStore: WorkspaceDataStore;
+  dataStore: WorkspaceStorage;
   sessionStore: SessionStore;
   runner: CommandRunner;
   env?: NodeJS.ProcessEnv;
