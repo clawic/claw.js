@@ -31,6 +31,14 @@ flowchart TD
   claw_contracts --> claw_contracts_formats
   claw_contracts_external["External dependencies and owned mappings\nroot"]
   claw_contracts --> claw_contracts_external
+  claw_cli_public["Public claw CLI\nroot"]
+  claw_mcp_surface["MCP model-native surface\nroot"]
+  claw_storage_canonical["Canonical storage boundary\nroot"]
+  claw_host_signed["Active signed host\nroot"]
+  claw_host_permissions["Host permissions\nroot"]
+  claw_host_grants["Host grants\nroot"]
+  claw_host_approvals["Host approvals\nroot"]
+  claw_host_audit["Host audit\nroot"]
   clawix_ui_chat["Clawix agent chat UI\nroot"]
   clawix_companion_client["Companion client\nroot"]
   clawix_bridge_local["Clawix local bridge\nroot"]
@@ -1755,6 +1763,14 @@ flowchart TD
 | `claw.contracts.native` | root | native | claw |  | humanUi, serviceApi | humanUi:optional | `contracts/native` |
 | `claw.contracts.formats` | root | format | claw |  | cli, persistence | humanUi:optional | `contracts/formats` |
 | `claw.contracts.external` | root | external | claw |  | sdk, serviceApi, mcp | humanUi:optional | `contracts/external` |
+| `claw.cli.public` | root | protocol | claw | humanUi | cli |  | `claw` |
+| `claw.mcp.surface` | root | protocol | claw | humanUi | mcp, sdk, serviceApi |  | `mcp` |
+| `claw.storage.canonical` | root | protocol | claw | humanUi | sdk, cli, serviceApi, persistence |  | `storage` |
+| `claw.host.signed` | root | protocol | claw | humanUi | cli, serviceApi |  | `host` |
+| `claw.host.permissions` | root | protocol | claw | humanUi | cli, serviceApi |  | `host/permissions` |
+| `claw.host.grants` | root | protocol | claw | humanUi | cli, serviceApi |  | `host/grants` |
+| `claw.host.approvals` | root | protocol | claw | humanUi | cli, serviceApi |  | `host/approvals` |
+| `claw.host.audit` | root | protocol | claw | humanUi | cli, serviceApi, persistence |  | `host/audit` |
 | `clawix.ui.chat` | root | protocol | clawix | humanUi | serviceApi |  | `Clawix/chat` |
 | `clawix.companion.client` | root | protocol | clawix | humanUi | serviceApi |  | `Clawix/companion` |
 | `clawix.bridge.local` | root | protocol | clawix | humanUi | serviceApi |  | `clawix-bridge` |

@@ -323,6 +323,18 @@ test("persistent surface registry exposes framework and host storage nodes", () 
 });
 
 test("surface graph registers critical chat routes and Relay", () => {
+  for (const nodeId of [
+    "claw.cli.public",
+    "claw.mcp.surface",
+    "claw.storage.canonical",
+    "claw.host.signed",
+    "claw.host.permissions",
+    "claw.host.grants",
+    "claw.host.approvals",
+    "claw.host.audit",
+  ]) {
+    assert.equal(Boolean(findClawPersistentSurfaceNode(nodeId)), true, `${nodeId} must be covered by the surface graph first cut`);
+  }
   assert.equal(findClawPersistentSurfaceNode("claw.relay")?.name, "Relay control plane");
   assert.equal(findClawPersistentSurfaceNode("clawix.bridge.local")?.path, "clawix-bridge");
 
