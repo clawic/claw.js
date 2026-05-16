@@ -11,7 +11,7 @@ This is the living audit report for ADR 0013. The machine-readable source is
 ## Current gate status
 
 - Critical naming failures: 0.
-- Naming warnings: 186.
+- Naming warnings: 178.
 - Source-size warnings: 117.
 - Source-structure signals: 320.
 
@@ -69,6 +69,9 @@ for staged rename/split work and must not be hidden by compressing code.
   `DataDocumentHandle`, `DataCollectionHandle`, `DataAssetHandle`, and
   `createWorkspaceDataStore` are now named around workspace storage and
   workspace document/collection/asset handles.
+- Showcase bootstrap and adapter vocabulary: app bootstrap payload types now use
+  `Snapshot`, auth-provider records use `Status`, and runtime provider/channel
+  entries use `Descriptor`.
 - CLI/router and command handlers: keep `packages/clawjs/src/index.ts` from
   growing by extracting command families before adding behavior.
 - Showcase UI/API: split settings, tasks, onboarding, locale, and route files

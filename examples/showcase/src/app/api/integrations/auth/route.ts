@@ -31,7 +31,7 @@ import { launchInMacTerminal } from "@/lib/terminal-launch";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-interface ProviderAuthInfo {
+interface ProviderAuthStatus {
   provider: string;
   hasAuth: boolean;
   hasSubscription: boolean;
@@ -68,7 +68,7 @@ const NO_STORE_HEADERS = { "Cache-Control": "no-store, max-age=0" };
 let currentAuthPid: number | null = null;
 const OPENCLAW_ENV_PREFIXES = ["OPENCLAW_", "CLAW_"] as const;
 
-function emptyProvider(provider: string, providerIntents = {}): ProviderAuthInfo {
+function emptyProvider(provider: string, providerIntents = {}): ProviderAuthStatus {
   return {
     provider,
     hasAuth: false,

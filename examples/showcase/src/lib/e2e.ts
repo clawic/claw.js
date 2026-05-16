@@ -53,8 +53,8 @@ import {
   resolveOpenClawStateDir,
 } from "@/lib/openclaw-agent";
 
-export type { E2EAiAuthProviderInfo, E2EAiAuthStatus, E2ESkillDescriptor, E2ESkillSearchEntry, E2ESkillSourceDescriptor, E2EContact, E2EWorkspaceFile, E2EImageAsset, E2EImageRecord } from "./e2e-types";
-import type { E2EAiAuthProviderInfo, E2EAiAuthStatus, E2ESkillDescriptor, E2ESkillSearchEntry, E2ESkillSourceDescriptor, E2EContact, E2EWorkspaceFile, E2EImageAsset, E2EImageRecord } from "./e2e-types";
+export type { E2EAiAuthProviderStatus, E2EAiAuthStatus, E2ESkillDescriptor, E2ESkillSearchEntry, E2ESkillSourceDescriptor, E2EContact, E2EWorkspaceFile, E2EImageAsset, E2EImageRecord } from "./e2e-types";
+import type { E2EAiAuthProviderStatus, E2EAiAuthStatus, E2ESkillDescriptor, E2ESkillSearchEntry, E2ESkillSourceDescriptor, E2EContact, E2EWorkspaceFile, E2EImageAsset, E2EImageRecord } from "./e2e-types";
 
 const AUTH_DOC = "e2e-auth";
 const INTEGRATIONS_DOC = "e2e-integrations";
@@ -207,7 +207,7 @@ function nowPlus(minutes: number): number {
   return Date.now() + minutes * 60_000;
 }
 
-function defaultAuthProviders(): Record<string, E2EAiAuthProviderInfo> {
+function defaultAuthProviders(): Record<string, E2EAiAuthProviderStatus> {
   return Object.fromEntries(
     DEFAULT_PROVIDER_IDS.map((provider) => [
       provider,
@@ -1430,7 +1430,7 @@ export function buildE2EChatReply(_inputText: string): string {
 
 export function updateProviderAuth(
   provider: string,
-  updates: Partial<E2EAiAuthProviderInfo>,
+  updates: Partial<E2EAiAuthProviderStatus>,
   defaultModel?: string,
 ): E2EAiAuthStatus {
   const auth = getE2EAiAuthStatus();

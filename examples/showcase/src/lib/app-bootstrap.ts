@@ -187,7 +187,7 @@ export interface ChatBootstrapPayload {
   }>;
 }
 
-export interface AiAuthProviderInfo {
+export interface AiAuthProviderStatus {
   provider: string;
   hasAuth: boolean;
   hasSubscription: boolean;
@@ -201,10 +201,10 @@ export interface AiAuthProviderInfo {
 export interface AiAuthStatus {
   cliAvailable: boolean;
   defaultModel?: string;
-  providers: Record<string, AiAuthProviderInfo>;
+  providers: Record<string, AiAuthProviderStatus>;
 }
 
-export interface AppBootstrapData {
+export interface AppBootstrapSnapshot {
   config: UserConfig;
   localSettings: ClawJSLocalSettings;
   profileSections: ProfileSection[];
@@ -216,8 +216,8 @@ export interface AppBootstrapData {
   aiAuth: AiAuthStatus | null;
 }
 
-let bootstrapPromise: Promise<AppBootstrapData> | null = null;
-let cachedBootstrap: AppBootstrapData | null = null;
+let bootstrapPromise: Promise<AppBootstrapSnapshot> | null = null;
+let cachedBootstrap: AppBootstrapSnapshot | null = null;
 
 function sortSessions(sessions: SessionSummary[]): SessionSummary[] {
   return [...sessions].sort((a, b) => b.updatedAt - a.updatedAt);
@@ -231,16 +231,16 @@ async function fetchJson<T>(url: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export function getCachedAppBootstrap(): AppBootstrapData | null {
+export function getCachedAppBootstrap(): AppBootstrapSnapshot | null {
   return cachedBootstrap;
 }
 
-export function setCachedAppBootstrap(next: AppBootstrapData): AppBootstrapData {
+export function setCachedAppBootstrap(next: AppBootstrapSnapshot): AppBootstrapSnapshot {
   cachedBootstrap = next;
   return next;
 }
 
-export async function loadAppBootstrap(): Promise<AppBootstrapData> {
+export async function loadAppBootstrap(): Promise<AppBootstrapSnapshot> {
   if (cachedBootstrap) return cachedBootstrap;
   if (bootstrapPromise) return bootstrapPromise;
 

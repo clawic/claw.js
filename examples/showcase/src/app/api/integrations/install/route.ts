@@ -4,7 +4,7 @@ import { resolveCommand } from "@/lib/platform";
 import { installAdapter, getVisibleAdapters } from "@/lib/runtime-adapters";
 import { getE2EIntegrationStatus, isE2EEnabled, setE2EIntegrationStatus } from "@/lib/e2e";
 
-type PackageInfo = {
+type InstallPackageDescriptor = {
   method: "npm";
   npmPkg: string;
 } | {
@@ -12,11 +12,11 @@ type PackageInfo = {
   formula: string;
 };
 
-const ALLOWED_PACKAGES: Record<string, PackageInfo> = {
+const ALLOWED_PACKAGES: Record<string, InstallPackageDescriptor> = {
   wacli: { method: "brew", formula: "steipete/tap/wacli" },
 };
 
-async function runInstall(info: PackageInfo): Promise<{ success: boolean; output: string }> {
+async function runInstall(info: InstallPackageDescriptor): Promise<{ success: boolean; output: string }> {
   const cmd = await resolveCommand(info.method === "npm" ? "npm" : "brew");
   const args = info.method === "npm"
     ? ["install", "-g", info.npmPkg]

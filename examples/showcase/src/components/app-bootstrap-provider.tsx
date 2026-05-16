@@ -3,14 +3,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useLocale } from "@/components/locale-provider";
-import { getCachedAppBootstrap, loadAppBootstrap, setCachedAppBootstrap, type AppBootstrapData } from "@/lib/app-bootstrap";
+import { getCachedAppBootstrap, loadAppBootstrap, setCachedAppBootstrap, type AppBootstrapSnapshot } from "@/lib/app-bootstrap";
 import { OnboardingFlow } from "@/components/onboarding";
 
 interface AppBootstrapContextValue {
-  bootstrapData: AppBootstrapData | null;
+  bootstrapData: AppBootstrapSnapshot | null;
   ready: boolean;
   error: Error | null;
-  updateBootstrapData: (updater: (current: AppBootstrapData) => AppBootstrapData) => void;
+  updateBootstrapData: (updater: (current: AppBootstrapSnapshot) => AppBootstrapSnapshot) => void;
 }
 
 const AppBootstrapContext = createContext<AppBootstrapContextValue | null>(null);
@@ -19,7 +19,7 @@ export function AppBootstrapProvider({ children }: Readonly<{ children: React.Re
   const { messages } = useLocale();
   const pathname = usePathname();
   const isLegalPage = pathname.startsWith("/legal");
-  const [bootstrapData, setBootstrapData] = useState<AppBootstrapData | null>(() => getCachedAppBootstrap());
+  const [bootstrapData, setBootstrapData] = useState<AppBootstrapSnapshot | null>(() => getCachedAppBootstrap());
   const [error, setError] = useState<Error | null>(null);
 
   // Splash / loading state - skip splash for legal pages
@@ -80,7 +80,7 @@ export function AppBootstrapProvider({ children }: Readonly<{ children: React.Re
     }
   }, [dismissSplash, ready, showSplash]);
 
-  const updateBootstrapData = useCallback((updater: (current: AppBootstrapData) => AppBootstrapData) => {
+  const updateBootstrapData = useCallback((updater: (current: AppBootstrapSnapshot) => AppBootstrapSnapshot) => {
     setBootstrapData((current) => {
       if (!current) return current;
       return setCachedAppBootstrap(updater(current));

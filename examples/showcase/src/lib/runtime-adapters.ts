@@ -24,12 +24,12 @@ export interface AdapterCapability {
   probeMethod?: string;
 }
 
-export interface AdapterProviderInfo {
+export interface AdapterProviderDescriptor {
   id: string;
   label: string;
 }
 
-export interface AdapterChannelInfo {
+export interface AdapterChannelDescriptor {
   id: string;
   label: string;
   kind: string;
@@ -44,8 +44,8 @@ export interface AdapterStatusSummary {
   version: string | null;
   recommended?: boolean;
   capabilities: AdapterCapability[];
-  providers: AdapterProviderInfo[];
-  channels: AdapterChannelInfo[];
+  providers: AdapterProviderDescriptor[];
+  channels: AdapterChannelDescriptor[];
   workspaceFiles: string[];
   limitations: string[];
   hasScheduler: boolean;
@@ -94,8 +94,8 @@ export async function getAdapterStatus(adapterId: RuntimeAdapterId): Promise<Ada
         probeMethod: typeof v.diagnostics?.probeMethod === "string" ? v.diagnostics.probeMethod : undefined,
       }));
 
-    let providers: AdapterProviderInfo[] = [];
-    let channels: AdapterChannelInfo[] = [];
+    let providers: AdapterProviderDescriptor[] = [];
+    let channels: AdapterChannelDescriptor[] = [];
     if (status.cliAvailable) {
       try {
         const catalogs = await getRuntimeResourceCatalogs(adapter, runner, runtimeOptions);

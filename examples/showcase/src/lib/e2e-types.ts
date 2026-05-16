@@ -2,7 +2,7 @@ import type { TtsCatalog } from "@clawjs/claw";
 
 export type { TtsCatalog };
 
-export interface E2EAiAuthProviderInfo {
+export interface E2EAiAuthProviderStatus {
   provider: string;
   hasAuth: boolean;
   hasSubscription: boolean;
@@ -16,7 +16,7 @@ export interface E2EAiAuthProviderInfo {
 export interface E2EAiAuthStatus {
   cliAvailable: boolean;
   defaultModel?: string;
-  providers: Record<string, E2EAiAuthProviderInfo>;
+  providers: Record<string, E2EAiAuthProviderStatus>;
 }
 
 export interface E2ESkillDescriptor {
