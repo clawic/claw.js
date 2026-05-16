@@ -622,8 +622,8 @@ await claw.secrets.ensureTelegramBotReference({
 ```
 
 Use explicit Secrets settings when you want the SDK to treat Secrets as the
-canonical backend and still keep sidecar compatibility for
-`{{secretName}}` references:
+canonical backend and allow bounded sidecar injection for `{{secretName}}`
+references:
 
 ```ts
 const claw = await createClaw({

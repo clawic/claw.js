@@ -74,6 +74,8 @@ for (const relativePath of [
   "docs/secrets.md",
   "docs/secrets-security.md",
   "docs/adr/0008-secrets-security-v1.md",
+  "docs/agent-rules/secrets.md",
+  "docs/api.md",
 ]) {
   forbidSnippet(relativePath, "legacy local proxy");
   forbidSnippet(relativePath, "compatibility-only");
@@ -87,6 +89,7 @@ for (const relativePath of [
   forbidSnippet(relativePath, "legacy connection `auth.encrypted`");
   forbidSnippet(relativePath, "legacy readers");
   forbidSnippet(relativePath, "legacy migration");
+  forbidSnippet(relativePath, "sidecar compatibility");
   forbidSnippet(relativePath, "compatibility reader");
   forbidSnippet(relativePath, "legacy file");
 }

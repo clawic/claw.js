@@ -17,9 +17,9 @@ Never handle literal secret values.
 - Do not ask for, print, store, or log master passwords, Secret Keys, recovery
   phrases, Emergency Kits, backup passphrases, signed-host tokens, or host
   assertion keys.
-- Prefer Secrets when configured; use sidecar compatibility only for
-  `{{secretName}}` injection flows that still pass broker policy, signed-host
-  approval, host allowlists, and risk checks.
+- Prefer Secrets when configured; use bounded sidecar injection only for
+  `{{secretName}}` flows that still pass broker policy, signed-host approval,
+  host allowlists, and risk checks.
 - Missing principal, host, placement, risk, capability, approval, or policy
   context means stop and fail closed.
 - Stop and ask for setup only when no suitable secret reference exists.
