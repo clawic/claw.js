@@ -15,7 +15,7 @@ import {
 } from "../shared/types.ts";
 import { describeBrowserLocation } from "../shared/url.ts";
 
-interface BrowserSessionManagerOptions {
+interface BrowserSessionControllerOptions {
   idleTtlMs?: number;
   screenshotDebounceMs?: number;
   viewport?: BrowserViewport;
@@ -46,7 +46,7 @@ const DEFAULT_VIEWPORT: BrowserViewport = {
   height: 960,
 };
 
-export class BrowserSessionManager {
+export class BrowserSessionController {
   private readonly sessions = new Map<string, BrowserSession>();
   private readonly idleTtlMs: number;
   private readonly screenshotDebounceMs: number;
@@ -54,7 +54,7 @@ export class BrowserSessionManager {
   private readonly onState?: (event: BrowserStateEvent) => void;
   private readonly onFrame?: (event: BrowserFrameEvent) => void;
 
-  constructor(options: BrowserSessionManagerOptions = {}) {
+  constructor(options: BrowserSessionControllerOptions = {}) {
     this.idleTtlMs = options.idleTtlMs ?? 5 * 60_000;
     this.screenshotDebounceMs = options.screenshotDebounceMs ?? 200;
     this.viewport = options.viewport ?? DEFAULT_VIEWPORT;
