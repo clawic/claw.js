@@ -56,11 +56,55 @@ checkRequiredSource(
     "runtime adapters, but public policy language",
   ],
 );
+checkRequiredSource(
+  "docs/adr/0015-connector-control-plane-v1.md",
+  [
+    "`integrations` remains a",
+    "discovery alias",
+  ],
+);
+checkRequiredSource(
+  "packages/clawjs-core/src/cli-command-registry.ts",
+  [
+    "Discovery alias delegated to connectors.",
+  ],
+);
+checkRequiredSource(
+  "packages/clawjs/src/inspect-cli.ts",
+  [
+    "discoveryAlias: \"integrations\"",
+  ],
+);
 forbidSource(
   "docs/connector-control-plane.md",
   [
     "integrations remains a legacy",
     "legacy category alias",
+  ],
+);
+forbidSource(
+  "docs/adr/0015-connector-control-plane-v1.md",
+  [
+    "integrations remains a legacy",
+    "legacy category alias",
+  ],
+);
+forbidSource(
+  "packages/clawjs-core/src/cli-command-registry.ts",
+  [
+    "Legacy category alias",
+  ],
+);
+forbidSource(
+  "packages/clawjs/src/inspect-cli.ts",
+  [
+    "legacyAlias",
+  ],
+);
+forbidSource(
+  "packages/clawjs/src/inspect-cli.test.ts",
+  [
+    "legacyAlias",
   ],
 );
 

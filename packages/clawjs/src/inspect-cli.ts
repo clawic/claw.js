@@ -350,7 +350,7 @@ function summarizeConnectorCatalog(input: unknown, catalogPath: string): unknown
     controlPlane: {
       version: 1,
       publicSurface: "connectors",
-      legacyAlias: "integrations",
+      discoveryAlias: "integrations",
       pipeline: connectorExecutionPipeline,
       blockByDefault: true,
     },

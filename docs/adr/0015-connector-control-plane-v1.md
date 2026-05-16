@@ -21,7 +21,7 @@ decision.
 
 ClawJS exposes the connector control plane through `@clawjs/core` and registers
 `claw connectors` as the strict public CLI surface. `integrations` remains a
-legacy category alias for discovery, but new policy language uses connector.
+discovery alias, but new policy language uses connector.
 
 V1 evaluates requests locally. It returns an allow/deny decision, stable reason
 codes, the expected execution pipeline, and a redacted audit declaration. It

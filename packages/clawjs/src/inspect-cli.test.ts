@@ -350,7 +350,7 @@ test("runCli exposes connector catalog support and external schema coverage thro
   const connectors = await runCliCapture(["inspect", "connectors", "--connector-catalog", catalogPath, "--json"], process.cwd());
   assert.equal(connectors.code, CLI_EXIT_OK);
   const payload = parseCliJson<{
-    controlPlane: { publicSurface: string; legacyAlias: string; pipeline: string[]; blockByDefault: boolean };
+    controlPlane: { publicSurface: string; discoveryAlias: string; pipeline: string[]; blockByDefault: boolean };
     summary: { apps: number; operations: number; supportedOperations: number; completeExternalSchemas: number; authRequiredOperations: number; controlPlaneReadyOperations: number };
     apps: Array<{ id: string; operations: Array<{ id: string; externalSchema: { status: string; hasInputSchema: boolean; hasOutputSchema: boolean }; controlPlane: { state: string; issues: string[] } }> }>;
   }>(connectors.stdout).data;
@@ -369,7 +369,7 @@ test("runCli exposes connector catalog support and external schema coverage thro
     operationsMissingRuntimeEvidence: 0,
   });
   assert.equal(payload.controlPlane.publicSurface, "connectors");
-  assert.equal(payload.controlPlane.legacyAlias, "integrations");
+  assert.equal(payload.controlPlane.discoveryAlias, "integrations");
   assert.equal(payload.controlPlane.blockByDefault, true);
   assert.equal(payload.controlPlane.pipeline.includes("credential_broker_lease"), true);
   assert.equal(payload.apps[0]?.operations[0]?.externalSchema.status, "complete");
