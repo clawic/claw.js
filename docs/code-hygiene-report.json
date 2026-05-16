@@ -13,6 +13,22 @@
     "duplicateAssetFiles": 187,
     "unreferencedAssetCandidates": 88
   },
+  "knipSummary": {
+    "filesWithIssues": 2982,
+    "totalIssues": 4193,
+    "issueTypes": {
+      "files": 2455,
+      "owners": 194,
+      "dependencies": 2,
+      "binaries": 7,
+      "devDependencies": 3,
+      "unresolved": 1,
+      "types": 201,
+      "unlisted": 566,
+      "exports": 756,
+      "duplicates": 8
+    }
+  },
   "externalPending": [],
   "notes": [
     "Initial bootstrap report. Full cleanup campaign still required before goal completion.",

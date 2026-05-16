@@ -1,0 +1,31 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "packages/*/src/index.{ts,tsx,js,mjs}",
+    "packages/*/src/**/*.test.{ts,tsx,js,mjs}",
+    "packages/*/bin/*.{js,mjs}",
+    "apps/**/src/**/*.{ts,tsx,js,mjs}",
+    "modules/**/src/index.{ts,tsx,js,mjs}",
+    "modules/**/src/**/*.test.{ts,tsx,js,mjs}",
+    "scripts/*.{js,mjs,ts}",
+    "*/src/index.{ts,tsx,js,mjs}",
+    "*/src/**/*.test.{ts,tsx,js,mjs}",
+    "*/tests/**/*.{ts,tsx,js,mjs}",
+    "examples/**/src/**/*.{ts,tsx,js,mjs}",
+    "website/**/*.{ts,tsx,js,mjs}"
+  ],
+  "project": [
+    "**/*.{js,mjs,cjs,ts,tsx}",
+    "!**/{node_modules,dist,build,.next,.tmp,.data,output,artifacts,test-results,coverage,playwright-report}/**",
+    "!docs/.vitepress/cache/**"
+  ],
+  "ignoreFiles": [
+    "**/*.d.ts",
+    "**/fixtures/**",
+    "**/__fixtures__/**",
+    "**/generated/**"
+  ],
+  "ignoreDependencies": [
+    "@types/node"
+  ]
+}

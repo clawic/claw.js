@@ -21,3 +21,11 @@ Source session: private session, not published
 - Mode: report-only; no automatic removal and no blocking gate yet.
 - Latest summary: 10,020 files scanned; 222 TODO/FIXME/HACK/XXX findings; 39 duplicate asset groups covering 187 files; 88 unreferenced asset candidates.
 - Cleanup campaign: pending classification/removal by repo and category.
+
+## 2026-05-17 - Knip report-only calibration
+
+- Status: PARTIAL
+- Tool: Knip 6.14.0 through `scripts/code-hygiene-knip.mjs`.
+- Config: `knip.json`.
+- Latest summary: 2,982 files with issues; 4,193 total findings across files, dependencies, devDependencies, binaries, unlisted, unresolved, exports, types, duplicates, and ownership metadata.
+- Mode: report-only; cleanup and baselining pending before blocking gate activation.

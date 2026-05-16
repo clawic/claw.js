@@ -182,7 +182,7 @@ for (const relativePath of walk(rootDir)) {
   }
 
   if ((ext === ".json" || ext === ".yaml" || ext === ".yml") && relativePath.startsWith("docs/")) {
-    if (!conventionalDataFiles.has(name) && !/\.(registry|manifest|fixture|schema|baseline|matrix)\.(json|ya?ml)$/.test(name)) {
+    if (!conventionalDataFiles.has(name) && !/[-.](registry|manifest|fixture|schema|baseline|matrix|report)\.(json|ya?ml)$/.test(name)) {
       warnings.push({ path: relativePath, kind: "data-file-role", message: "Owned docs data files should carry a role suffix" });
     }
   }
