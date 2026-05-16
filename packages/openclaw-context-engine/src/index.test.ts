@@ -13,6 +13,8 @@ test("context engine package exposes native manifest and extension entry", () =>
 
   assert.equal(manifest.id, ENGINE_ID);
   assert.equal(manifest.kind, "context-engine");
+  assert.equal(manifest.supportLevel, "dev-only");
+  assert.equal(packageJson.description.includes("Experimental"), false);
   assert.deepEqual(packageJson.openclaw.extensions, ["./src/index.js"]);
 });
 
@@ -39,6 +41,7 @@ test("register exposes the context engine factory", async () => {
   const compacted = await engine.compact({});
 
   assert.equal(engine.info.id, ENGINE_ID);
+  assert.equal(plugin.supportLevel, "dev-only");
   assert.equal(assembled.systemPromptAddition, "Use ClawJS context.");
   assert.equal(compacted.ok, true);
   assert.equal(compacted.compacted, false);

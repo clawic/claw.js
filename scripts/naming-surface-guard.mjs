@@ -169,6 +169,18 @@ for (const relativePath of [
 }
 
 for (const relativePath of [
+  "docs/index.md",
+  "packages/openclaw-context-engine/package.json",
+  "packages/openclaw-context-engine/openclaw.plugin.json",
+  "packages/openclaw-context-engine/README.md",
+  "packages/openclaw-context-engine/src/index.js",
+]) {
+  forbidSnippet(relativePath, "Experimental");
+  forbidSnippet(relativePath, "experimental");
+  requireSnippet(relativePath, "dev-only");
+}
+
+for (const relativePath of [
   "publishing/src/server/config.ts",
   "publishing/src/bin/server.ts",
   "publishing/src/cli/parser.ts",

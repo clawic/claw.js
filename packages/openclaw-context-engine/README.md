@@ -1,6 +1,6 @@
 # @clawjs/openclaw-context-engine
 
-Experimental context engine plugin for OpenClaw and ClawJS.
+dev-only context engine plugin for OpenClaw and ClawJS.
 
 Install with OpenClaw:
 

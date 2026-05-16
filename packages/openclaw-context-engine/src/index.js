@@ -95,9 +95,10 @@ function createContextEngine(api) {
 const plugin = {
   id: ENGINE_ID,
   name: "ClawJS Context",
-  description: "Experimental context engine for ClawJS on OpenClaw.",
+  description: "Dev-only context engine for ClawJS on OpenClaw.",
   version: "0.1.0",
   kind: "context-engine",
+  supportLevel: "dev-only",
   configSchema: {
     validate(value) {
       if (!value || typeof value !== "object" || Array.isArray(value)) {

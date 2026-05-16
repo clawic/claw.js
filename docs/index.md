@@ -50,7 +50,7 @@ ClawJS gives you one place to solve the hard parts that show up across runtimes:
 | `@clawjs/ssh-client` | Audited SSH client for mesh hosts with TOFU known-host handling, exec, SFTP, and bridge installation helpers. |
 | `@clawjs/cli` | Official CLI with `claw` as the public binary for scaffolding, runtime management, workspace ops, productivity commands, sessions, media, and package-aware project generation. |
 | `@clawjs/openclaw-plugin` | OpenClaw bridge plugin for gateway RPC methods, observability hooks, and managed tooling. |
-| `@clawjs/openclaw-context-engine` | Experimental OpenClaw context engine package for runtime-side context selection. |
+| `@clawjs/openclaw-context-engine` | dev-only OpenClaw context engine package for runtime-side context selection. |
 | `create-claw-*` packages | Direct generator entrypoints using the same scaffolding engine as `claw new`. |
 | `eslint-config-claw` | Shared flat-config ESLint preset for ClawJS repositories. |
 
