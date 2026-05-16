@@ -151,6 +151,8 @@ for (const relativePath of [
 for (const relativePath of [
   "docs/relay.md",
   "relay/tests/e2e/relay.e2e.test.ts",
+  "relay/src/connector/runtime.ts",
+  "relay/src/connector/observed-store.ts",
 ]) {
   forbidSnippet(relativePath, "legacy mode");
   forbidSnippet(relativePath, "legacy routes");
@@ -159,6 +161,11 @@ for (const relativePath of [
   forbidSnippet(relativePath, "legacy workspace compatibility");
   forbidSnippet(relativePath, "compatibility data under");
   forbidSnippet(relativePath, "compatibility layer");
+  forbidSnippet(relativePath, "legacy?: boolean");
+  forbidSnippet(relativePath, "legacy: true");
+  forbidSnippet(relativePath, "Relay compatibility plugin catalog");
+  forbidSnippet(relativePath, "relay-compat");
+  forbidSnippet(relativePath, "WorkspaceCompatStore");
   forbidSnippet(relativePath, "text-only for compatibility");
 }
 

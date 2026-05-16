@@ -2,11 +2,11 @@ import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 import fs from "node:fs";
 import path from "node:path";
 
-export class WorkspaceCompatStore {
+export class WorkspaceObservedStore {
   private readonly rootDir: string;
 
   constructor(workspaceDir: string) {
-    this.rootDir = resolveClawPersistentSurfacePath("claw.workspace.root", workspaceDir, "relay-compat");
+    this.rootDir = resolveClawPersistentSurfacePath("claw.workspace.observedState", workspaceDir, "relay");
     fs.mkdirSync(this.rootDir, { recursive: true });
   }
 

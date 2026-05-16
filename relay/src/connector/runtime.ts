@@ -10,7 +10,7 @@ import WebSocket from "ws";
 
 import { BrowserSessionController } from "../../../browser/host/session-manager.ts";
 import type { BrowserActor, BrowserInputCommand } from "../../../browser/shared/types.ts";
-import { WorkspaceCompatStore } from "./compat-store.ts";
+import { WorkspaceObservedStore } from "./observed-store.ts";
 
 export interface RelayConnectorOptions {
   relayUrl: string;
@@ -48,7 +48,7 @@ interface RuntimeContext {
   claw: Awaited<ReturnType<typeof createClaw>>;
   workspaceClaw: Awaited<ReturnType<typeof extendClawWithWorkspace>>;
   workspaceDir: string;
-  compat: WorkspaceCompatStore;
+  observed: WorkspaceObservedStore;
   metadata: WorkspaceMaterialization;
 }
 
@@ -60,7 +60,7 @@ interface WorkspaceMaterialization {
   runtimeAgentId: string;
   materializationVersion: number;
   projectId?: string;
-  legacy?: boolean;
+  fallbackWorkspace?: boolean;
 }
 
 const DEFAULT_PERSONAS = [
@@ -83,7 +83,7 @@ const DEFAULT_PLUGINS = [
     id: "clawjs-tools",
     name: "clawjs-tools",
     version: "0.1.0",
-    description: "Relay compatibility plugin catalog.",
+    description: "Relay observed plugin catalog.",
     status: "active",
     config: {},
     installedAt: Date.now(),
@@ -105,7 +105,7 @@ function sanitizePathSegment(value: string): string {
     || "default";
 }
 
-function getLegacyWorkspaceDir(root: string, workspaceId: string): string {
+function getFallbackWorkspaceDir(root: string, workspaceId: string): string {
   return path.join(root, workspaceId);
 }
 
@@ -519,7 +519,7 @@ export class RelayConnectorRuntime {
       claw,
       workspaceClaw,
       workspaceDir: metadata.workspaceDir,
-      compat: new WorkspaceCompatStore(metadata.workspaceDir),
+      observed: new WorkspaceObservedStore(metadata.workspaceDir),
       metadata,
     };
   }
@@ -538,11 +538,11 @@ export class RelayConnectorRuntime {
     return {
       workspaceId,
       displayName: workspaceId,
-      workspaceDir: getLegacyWorkspaceDir(this.options.workspaceRoot, workspaceId),
+      workspaceDir: getFallbackWorkspaceDir(this.options.workspaceRoot, workspaceId),
       logicalAgentId: this.options.agentId,
       runtimeAgentId: this.options.agentId,
       materializationVersion: 1,
-      legacy: true,
+      fallbackWorkspace: true,
     };
   }
 
@@ -557,16 +557,16 @@ export class RelayConnectorRuntime {
     const materializationVersion = typeof payload?.materializationVersion === "number" ? payload.materializationVersion : 1;
 
     if (!projectId) {
-      const legacyDir = getLegacyWorkspaceDir(this.options.workspaceRoot, workspaceId);
-      ensureDir(legacyDir);
+      const fallbackDir = getFallbackWorkspaceDir(this.options.workspaceRoot, workspaceId);
+      ensureDir(fallbackDir);
       return {
         workspaceId,
         displayName: typeof payload?.displayName === "string" ? payload.displayName : workspaceId,
-        workspaceDir: legacyDir,
+        workspaceDir: fallbackDir,
         logicalAgentId,
         runtimeAgentId,
         materializationVersion,
-        legacy: true,
+        fallbackWorkspace: true,
       };
     }
 
@@ -805,10 +805,10 @@ export class RelayConnectorRuntime {
       return this.executeServiceWebSocketClose(payload);
     }
 
-    const { claw, workspaceClaw, compat } = await this.getContext(targetWorkspaceId);
+    const { claw, workspaceClaw, observed } = await this.getContext(targetWorkspaceId);
     const metadata = this.resolveWorkspaceMaterialization(targetWorkspaceId);
-    const compatRead = <T>(name: string, fallback: T[] = []) => compat.readCollection<T>(name, fallback);
-    const compatWrite = <T>(name: string, entries: T[]) => compat.writeCollection(name, entries);
+    const observedRead = <T>(name: string, fallback: T[] = []) => observed.readCollection<T>(name, fallback);
+    const observedWrite = <T>(name: string, entries: T[]) => observed.writeCollection(name, entries);
     const actor = this.readBrowserActor(payload?.actor);
 
     switch (operation) {
@@ -1217,7 +1217,7 @@ export class RelayConnectorRuntime {
         return { ok: true };
       }
       case "people.list": {
-        const hidden = new Set(compatRead<string>("people-hidden"));
+        const hidden = new Set(observedRead<string>("people-hidden"));
         const people = (await workspaceClaw.people.list({ limit: 100 })).filter((person: any) => !hidden.has(person.id));
         return { people };
       }
@@ -1226,9 +1226,9 @@ export class RelayConnectorRuntime {
       case "people.update":
         return { person: await workspaceClaw.people.upsert(payload as Record<string, unknown>) };
       case "people.delete": {
-        const hidden = new Set(compatRead<string>("people-hidden"));
+        const hidden = new Set(observedRead<string>("people-hidden"));
         hidden.add(String(payload?.id ?? ""));
-        compatWrite("people-hidden", [...hidden]);
+        observedWrite("people-hidden", [...hidden]);
         return { ok: true };
       }
       case "reminders.list":
@@ -1446,56 +1446,56 @@ export class RelayConnectorRuntime {
         return await claw.content.app.form(formId);
       }
       case "personas.list":
-        return { personas: compatRead("personas", DEFAULT_PERSONAS) };
+        return { personas: observedRead("personas", DEFAULT_PERSONAS) };
       case "personas.create": {
-        const personas = compatRead<any>("personas", DEFAULT_PERSONAS);
+        const personas = observedRead<any>("personas", DEFAULT_PERSONAS);
         const persona = { id: randomUUID(), createdAt: Date.now(), updatedAt: Date.now(), ...payload };
         personas.push(persona);
-        compatWrite("personas", personas);
+        observedWrite("personas", personas);
         return { persona };
       }
       case "personas.update": {
-        const personas = compatRead<any>("personas", DEFAULT_PERSONAS);
+        const personas = observedRead<any>("personas", DEFAULT_PERSONAS);
         const id = String(payload?.id ?? "");
         const index = personas.findIndex((entry: any) => entry.id === id);
         if (index === -1) throw new Error("Persona not found");
         personas[index] = { ...personas[index], ...payload, updatedAt: Date.now() };
-        compatWrite("personas", personas);
+        observedWrite("personas", personas);
         return { persona: personas[index] };
       }
       case "personas.delete": {
-        const personas = compatRead<any>("personas", DEFAULT_PERSONAS).filter((entry: any) => entry.id !== String(payload?.id ?? ""));
-        compatWrite("personas", personas);
+        const personas = observedRead<any>("personas", DEFAULT_PERSONAS).filter((entry: any) => entry.id !== String(payload?.id ?? ""));
+        observedWrite("personas", personas);
         return { ok: true };
       }
       case "plugins.list":
-        return { plugins: compatRead("plugins", DEFAULT_PLUGINS) };
+        return { plugins: observedRead("plugins", DEFAULT_PLUGINS) };
       case "plugins.create": {
-        const plugins = compatRead<any>("plugins", DEFAULT_PLUGINS);
+        const plugins = observedRead<any>("plugins", DEFAULT_PLUGINS);
         const plugin = { id: randomUUID(), installedAt: Date.now(), lastActivity: Date.now(), ...payload };
         plugins.push(plugin);
-        compatWrite("plugins", plugins);
+        observedWrite("plugins", plugins);
         return { plugin };
       }
       case "plugins.update": {
-        const plugins = compatRead<any>("plugins", DEFAULT_PLUGINS);
+        const plugins = observedRead<any>("plugins", DEFAULT_PLUGINS);
         const id = String(payload?.id ?? "");
         const index = plugins.findIndex((entry: any) => entry.id === id);
         if (index === -1) throw new Error("Plugin not found");
         plugins[index] = { ...plugins[index], ...payload, lastActivity: Date.now() };
-        compatWrite("plugins", plugins);
+        observedWrite("plugins", plugins);
         return { plugin: plugins[index] };
       }
       case "plugins.delete": {
-        const plugins = compatRead<any>("plugins", DEFAULT_PLUGINS).filter((entry: any) => entry.id !== String(payload?.id ?? ""));
-        compatWrite("plugins", plugins);
+        const plugins = observedRead<any>("plugins", DEFAULT_PLUGINS).filter((entry: any) => entry.id !== String(payload?.id ?? ""));
+        observedWrite("plugins", plugins);
         return { ok: true };
       }
       case "routines.list":
         if (claw.time.configured) {
           return await claw.time.legacyRoutines();
         }
-        return { routines: compatRead("routines"), executions: compatRead("routine-executions") };
+        return { routines: observedRead("routines"), executions: observedRead("routine-executions") };
       case "routines.create": {
         if (claw.time.configured) {
           const created = await claw.time.create({
@@ -1511,10 +1511,10 @@ export class RelayConnectorRuntime {
           });
           return { routine: created.item };
         }
-        const routines = compatRead<any>("routines");
+        const routines = observedRead<any>("routines");
         const routine = { id: randomUUID(), enabled: true, createdAt: Date.now(), updatedAt: Date.now(), ...payload };
         routines.push(routine);
-        compatWrite("routines", routines);
+        observedWrite("routines", routines);
         return { routine };
       }
       case "routines.update": {
@@ -1526,8 +1526,8 @@ export class RelayConnectorRuntime {
           const updated = await claw.time.update(id, payload as Record<string, unknown>);
           return { routine: updated.item };
         }
-        const routines = compatRead<any>("routines");
-        const executions = compatRead<any>("routine-executions");
+        const routines = observedRead<any>("routines");
+        const executions = observedRead<any>("routine-executions");
         const id = String(payload?.id ?? "");
         const index = routines.findIndex((entry: any) => entry.id === id);
         if (index === -1) throw new Error("Routine not found");
@@ -1541,11 +1541,11 @@ export class RelayConnectorRuntime {
             output: "Routine executed by relay connector.",
           };
           executions.push(execution);
-          compatWrite("routine-executions", executions);
+          observedWrite("routine-executions", executions);
           return { routine: routines[index], execution };
         }
         routines[index] = { ...routines[index], ...payload, updatedAt: Date.now() };
-        compatWrite("routines", routines);
+        observedWrite("routines", routines);
         return { routine: routines[index] };
       }
       case "routines.delete": {
@@ -1554,8 +1554,8 @@ export class RelayConnectorRuntime {
           await claw.time.delete(id);
           return { ok: true };
         }
-        compatWrite("routines", compatRead<any>("routines").filter((entry: any) => entry.id !== id));
-        compatWrite("routine-executions", compatRead<any>("routine-executions").filter((entry: any) => entry.routineId !== id));
+        observedWrite("routines", observedRead<any>("routines").filter((entry: any) => entry.id !== id));
+        observedWrite("routine-executions", observedRead<any>("routine-executions").filter((entry: any) => entry.routineId !== id));
         return { ok: true };
       }
       case "skills.list":

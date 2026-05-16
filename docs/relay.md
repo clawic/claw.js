@@ -583,7 +583,7 @@ The materialized workspace writes `projectId`, `logicalAgentId`, `runtimeAgentId
 For some resources it also keeps observed runtime fallback data under:
 
 ```text
-.claw/state/observed/relay-compat/
+.claw/observed/relay/
 ```
 
 That observed-state layer is currently used for relay-managed collections such as personas, plugins, routines, and hidden people state when the underlying runtime does not provide a native equivalent.
