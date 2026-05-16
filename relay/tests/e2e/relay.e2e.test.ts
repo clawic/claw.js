@@ -1041,7 +1041,7 @@ describe("relay e2e", () => {
     assert.equal(found, true);
   });
 
-  test("project assignments expose project-scoped routes and preserve legacy workspace compatibility", async () => {
+  test("project assignments expose project-scoped routes and default workspace routing", async () => {
     const userTokens = await login("user@relay.local", "relay-user");
     const adminTokens = await login("admin@relay.local", "relay-admin");
 

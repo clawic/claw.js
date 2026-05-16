@@ -220,7 +220,7 @@ npm --prefix relay run connector -- \
 On startup the connector either:
 
 1. completes the device-code pairing flow, or
-2. POSTs `/v1/connector/enroll` in legacy mode
+2. POSTs `/v1/connector/enroll` with an enrollment token
 
 Then it:
 
@@ -435,7 +435,7 @@ Note the exact search route: `sessions:search`. The current server does not expo
 
 `POST /sessions/:sessionId/messages`, `POST /sessions/:sessionId/reply`, and
 `POST /sessions/:sessionId/stream` accept `documentIds` in the JSON payload. The
-legacy `GET /sessions/:sessionId/stream` route remains text-only for compatibility.
+query-based `GET /sessions/:sessionId/stream` route is text-only.
 
 ### Documents
 
@@ -572,7 +572,7 @@ Current connector defaults:
 - workspace root: `./relay-workspaces`
 - runtime adapter: `openclaw` by default, or `codex` for a direct Codex connector
 
-For legacy routes, the connector still supports simple lazy workspace creation under the workspace root. For project assignments, it materializes:
+For agent/workspace routes, the connector supports simple lazy workspace creation under the workspace root. For project assignments, it materializes:
 
 - project base files
 - agent template files

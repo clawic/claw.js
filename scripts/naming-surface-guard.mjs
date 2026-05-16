@@ -146,6 +146,16 @@ for (const relativePath of [
 }
 
 for (const relativePath of [
+  "docs/relay.md",
+  "relay/tests/e2e/relay.e2e.test.ts",
+]) {
+  forbidSnippet(relativePath, "legacy mode");
+  forbidSnippet(relativePath, "legacy routes");
+  forbidSnippet(relativePath, "legacy workspace compatibility");
+  forbidSnippet(relativePath, "text-only for compatibility");
+}
+
+for (const relativePath of [
   "publishing/src/server/config.ts",
   "publishing/src/bin/server.ts",
   "publishing/src/cli/parser.ts",
