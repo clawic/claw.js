@@ -51,8 +51,8 @@ test("runCli prints help and exits successfully", async () => {
   assert.doesNotMatch(stdout.getOutput(), /data doctor\|backup\|restore\|reset/);
 });
 
-test("runCli rejects removed public legacy namespaces before V1 routing", async () => {
-  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-legacy-negative-"));
+test("runCli rejects removed public pre-v1 namespaces before V1 routing", async () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-prev1-negative-"));
   for (const args of [
     ["data", "doctor"],
     ["app-state", "snapshot"],

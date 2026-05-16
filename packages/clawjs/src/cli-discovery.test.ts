@@ -123,7 +123,7 @@ test("runCli returns rules JSON in the common envelope", async () => {
   assert.equal(payload.meta.subcommand, "compile");
 });
 
-test("runCli hard-blocks standalone user and memory legacy commands", async () => {
+test("runCli hard-blocks standalone user and memory pre-v1 commands", async () => {
   const user = await runCliCapture(["user", "list", "--json"], process.cwd());
   assert.equal(user.code, CLI_EXIT_USAGE);
   const userPayload = JSON.parse(user.stdout) as { ok: boolean; error: { code: string }; meta: { canonicalCommand: string; invokedCommand: string; related: Array<{ canonicalCommand?: string }> } };
@@ -143,7 +143,7 @@ test("runCli hard-blocks standalone user and memory legacy commands", async () =
   assert.equal(memoryPayload.meta.related.some((entry) => entry.canonicalCommand === "knowledge"), true);
 });
 
-test("runCli returns removed legacy namespace JSON in the common envelope", async () => {
+test("runCli returns removed pre-v1 namespace JSON in the common envelope", async () => {
   for (const args of [
     ["data", "doctor", "--json"],
     ["app-state", "snapshot", "--json"],

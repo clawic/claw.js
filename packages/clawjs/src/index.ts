@@ -517,11 +517,11 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   }
 
   if ((group === "business" || group === "social") && command && REMOVED_V1_CRUD_COMMANDS.has(command)) {
-    return writeRemovedJsonOrText(group, `\`${binName} ${group} ${command}\` is legacy V1 CRUD and is not part of the public Claw CLI surface. Use the ${group} portal help to pick a supported route.`);
+    return writeRemovedJsonOrText(group, `\`${binName} ${group} ${command}\` is removed pre-v1 CRUD and is not part of the public Claw CLI surface. Use the ${group} portal help to pick a supported route.`);
   }
 
   if (group === "content" && command && REMOVED_V1_CRUD_COMMANDS.has(command)) {
-    return writeRemovedJsonOrText("content", `\`${binName} content ${command}\` is legacy V1 CRUD and is not part of the public Claw CLI surface. Use posts, campaigns, publications, or content service commands.`);
+    return writeRemovedJsonOrText("content", `\`${binName} content ${command}\` is removed pre-v1 CRUD and is not part of the public Claw CLI surface. Use posts, campaigns, publications, or content service commands.`);
   }
 
   if (wantsHelp || group === "help") {
@@ -729,7 +729,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   if ((group === "business" || group === "social") && command && REMOVED_V1_CRUD_COMMANDS.has(command)) {
     throw new CliHandledError(
       "removed_public_command",
-      `\`${binName} ${group} ${command}\` was v1 CRUD and is not part of the public Claw CLI surface. Use \`${binName} ${group} --help\` for the portal.`,
+      `\`${binName} ${group} ${command}\` was removed pre-v1 CRUD and is not part of the public Claw CLI surface. Use \`${binName} ${group} --help\` for the portal.`,
       CLI_EXIT_USAGE,
     );
   }
@@ -737,7 +737,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   if (group === "content" && command && REMOVED_V1_CRUD_COMMANDS.has(command)) {
     throw new CliHandledError(
       "removed_public_command",
-      `\`${binName} content ${command}\` was v1 CRUD and is not part of the public Claw CLI surface. Use posts, campaigns, publications or the content service commands.`,
+      `\`${binName} content ${command}\` was removed pre-v1 CRUD and is not part of the public Claw CLI surface. Use posts, campaigns, publications or the content service commands.`,
       CLI_EXIT_USAGE,
     );
   }

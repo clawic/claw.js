@@ -180,6 +180,18 @@ for (const relativePath of [
 }
 
 for (const relativePath of [
+  "packages/clawjs/src/index.ts",
+  "packages/clawjs/src/index.test.ts",
+  "packages/clawjs/src/cli-discovery.test.ts",
+]) {
+  forbidSnippet(relativePath, "legacy V1 CRUD");
+  forbidSnippet(relativePath, "removed public legacy");
+  forbidSnippet(relativePath, "legacy namespaces");
+  forbidSnippet(relativePath, "legacy commands");
+  requireSnippet(relativePath, "pre-v1");
+}
+
+for (const relativePath of [
   "docs/index.md",
   "packages/openclaw-context-engine/package.json",
   "packages/openclaw-context-engine/openclaw.plugin.json",
