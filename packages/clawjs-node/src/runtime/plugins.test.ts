@@ -160,7 +160,7 @@ function createRuntimeOptions(): RuntimeAdapterOptions & { configPath: string } 
     },
     plugins: {
       slots: {
-        contextEngine: "legacy",
+        contextEngine: "runtime-default",
       },
     },
   }, { configPath });
@@ -237,7 +237,7 @@ test("ensureOpenClawPluginBridge installs, enables, selects context engine, and 
   assert.equal(runner.restartCount, 1);
 });
 
-test("disableManagedOpenClawPlugins falls back the selected context engine to legacy", async () => {
+test("disableManagedOpenClawPlugins clears the managed context engine selection", async () => {
   const runner = new FakePluginRunner();
   const options = createRuntimeOptions();
   const policy = resolveOpenClawPluginBridgePolicy("openclaw", {
@@ -250,6 +250,6 @@ test("disableManagedOpenClawPlugins falls back the selected context engine to le
 
   assert.equal(result.changed, true);
   assert.equal(result.actions.includes("disable:clawjs-context"), true);
-  assert.equal(result.actions.includes("select-context:legacy"), true);
-  assert.equal(config.plugins?.slots?.contextEngine, "legacy");
+  assert.equal(result.actions.includes("select-context:runtime-default"), true);
+  assert.equal(config.plugins?.slots?.contextEngine, undefined);
 });

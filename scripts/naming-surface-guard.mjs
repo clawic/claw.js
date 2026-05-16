@@ -142,10 +142,16 @@ requireSnippet("docs/time.md", "v1 calendar and timeline views");
 for (const relativePath of [
   "packages/clawjs-node/src/runtime/claw-runtime.ts",
   "packages/clawjs-node/src/runtime/claw-runtime.test.ts",
+  "packages/clawjs-node/src/runtime/plugins.ts",
+  "packages/clawjs-node/src/runtime/plugins.test.ts",
+  "packages/openclaw-plugin/src/index.js",
+  "packages/openclaw-plugin/src/index.test.ts",
 ]) {
   forbidSnippet(relativePath, "legacy alias");
   forbidSnippet(relativePath, "legacy?: boolean");
   forbidSnippet(relativePath, "legacy: true");
+  forbidSnippet(relativePath, "contextEngine: \"legacy\"");
+  forbidSnippet(relativePath, "select-context:legacy");
 }
 
 for (const relativePath of [

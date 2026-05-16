@@ -292,6 +292,25 @@ function setSelectedContextEngine(id: string, options: RuntimeAdapterOptions = D
   return id;
 }
 
+function clearSelectedContextEngine(options: RuntimeAdapterOptions = DEFAULT_PLUGIN_OPTIONS): void {
+  const config = readOpenClawRuntimeConfig({
+    configPath: options.gateway?.configPath ?? options.configPath,
+    env: options.env,
+  }) ?? {};
+  const slots = { ...config.plugins?.slots };
+  delete slots.contextEngine;
+  writeOpenClawRuntimeConfig({
+    ...config,
+    plugins: {
+      ...config.plugins,
+      slots,
+    },
+  }, {
+    configPath: options.gateway?.configPath ?? options.configPath,
+    env: options.env,
+  });
+}
+
 export async function getOpenClawPluginBridgeStatus(
   runner: CommandRunner,
   options: RuntimeAdapterOptions,
@@ -516,8 +535,8 @@ export async function disableManagedOpenClawPlugins(
       await disableOpenClawPlugin(CLAW_CONTEXT_PLUGIN_ID, runner, options);
       actions.push(`disable:${CLAW_CONTEXT_PLUGIN_ID}`);
       if (readSelectedContextEngine(options) === CLAW_CONTEXT_PLUGIN_ID) {
-        setSelectedContextEngine("legacy", options);
-        actions.push("select-context:legacy");
+        clearSelectedContextEngine(options);
+        actions.push("select-context:runtime-default");
       }
     }
     changed = true;

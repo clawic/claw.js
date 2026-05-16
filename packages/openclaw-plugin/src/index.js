@@ -51,7 +51,7 @@ function getPromptInjectionAllowed(api) {
 
 function getContextSelection(api) {
   const config = readMainConfig(api);
-  const selectedEngineId = config?.plugins?.slots?.contextEngine || "legacy";
+  const selectedEngineId = config?.plugins?.slots?.contextEngine || "runtime-default";
   const configured = !!config?.plugins?.entries?.["clawjs-context"];
   const enabled = config?.plugins?.entries?.["clawjs-context"]?.enabled !== false;
   return {

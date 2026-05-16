@@ -22,7 +22,7 @@ function createApi() {
         },
       },
       slots: {
-        contextEngine: "legacy",
+        contextEngine: "runtime-default",
       },
     },
   };
