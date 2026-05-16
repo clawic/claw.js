@@ -396,8 +396,8 @@ export function createSimpleRuntimeAdapter(spec: SimpleRuntimeAdapterSpec): Runt
   return {
     id: spec.id,
     runtimeName: spec.runtimeName,
-    stability: spec.stability ?? "experimental",
-    supportLevel: spec.supportLevel ?? "experimental",
+    stability: spec.stability ?? "dev-only",
+    supportLevel: spec.supportLevel ?? "dev-only",
     ...(spec.recommended ? { recommended: spec.recommended } : {}),
     workspaceFiles: spec.workspaceFiles,
     workspace: {

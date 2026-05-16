@@ -7,13 +7,16 @@ test("runtime adapters expose support metadata with one recommended production p
   const adapters = listRuntimeAdapters();
   const recommended = adapters.filter((adapter) => adapter.recommended);
   const recommendedProduction = recommended.filter((adapter) => adapter.supportLevel === "production");
+  const allowedStability = new Set(["stable", "dev-only"]);
+  const allowedSupportLevels = new Set(["production", "dev-only"]);
 
-  assert.ok(adapters.every((adapter) => typeof adapter.stability === "string"));
-  assert.ok(adapters.every((adapter) => typeof adapter.supportLevel === "string"));
+  assert.ok(adapters.every((adapter) => allowedStability.has(adapter.stability)));
+  assert.ok(adapters.every((adapter) => allowedSupportLevels.has(adapter.supportLevel)));
+  assert.equal(recommended.length, 1);
   assert.equal(recommendedProduction.length, 1);
   assert.equal(recommendedProduction[0]?.id, "openclaw");
   assert.equal(recommendedProduction[0]?.stability, "stable");
   assert.equal(recommendedProduction[0]?.supportLevel, "production");
-  assert.equal(adapters.some((adapter) => adapter.id === "codex" && adapter.stability === "experimental" && adapter.supportLevel === "experimental"), true);
-  assert.equal(adapters.some((adapter) => adapter.id === "claw" && adapter.recommended && adapter.supportLevel === "experimental"), true);
+  assert.equal(adapters.some((adapter) => adapter.id === "codex" && adapter.stability === "dev-only" && adapter.supportLevel === "dev-only"), true);
+  assert.equal(adapters.some((adapter) => adapter.id === "claw" && !adapter.recommended && adapter.stability === "stable" && adapter.supportLevel === "dev-only"), true);
 });

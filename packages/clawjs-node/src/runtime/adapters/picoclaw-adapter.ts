@@ -233,8 +233,8 @@ function listProviderAuth(models: ModelDescriptor[], locations: RuntimeLocations
 export const picoclawAdapter: RuntimeAdapter = {
   id: "picoclaw",
   runtimeName: "PicoClaw",
-  stability: "experimental",
-  supportLevel: "experimental",
+  stability: "dev-only",
+  supportLevel: "dev-only",
   workspaceFiles: PICOCLAW_WORKSPACE_FILES,
   describeFeatures() {
     return defaultManagedSessionFeatures({

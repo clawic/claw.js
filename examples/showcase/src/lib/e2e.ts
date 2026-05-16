@@ -307,11 +307,11 @@ function buildDefaultIntegrationStatus(): IntegrationStatus {
       {
         id: "claw",
         runtimeName: "Claw Runtime",
-        stability: "experimental",
-        supportLevel: "experimental",
+        stability: "stable",
+        supportLevel: "dev-only",
         cliAvailable: true,
         version: "0.1.0-e2e",
-        recommended: true,
+        recommended: false,
         capabilities: [
           { key: "auth", supported: true, status: "ready", strategy: "config", source: "fixture", probeMethod: "fixture" },
           { key: "models", supported: true, status: "ready", strategy: "config", source: "fixture", probeMethod: "fixture" },
@@ -344,8 +344,8 @@ function buildDefaultIntegrationStatus(): IntegrationStatus {
       {
         id: "codex",
         runtimeName: "Codex",
-        stability: "experimental",
-        supportLevel: "experimental",
+        stability: "dev-only",
+        supportLevel: "dev-only",
         cliAvailable: true,
         version: "0.122.0-e2e",
         recommended: false,
@@ -377,8 +377,8 @@ function buildDefaultIntegrationStatus(): IntegrationStatus {
       {
         id: "hermes",
         runtimeName: "Hermes Agent",
-        stability: "experimental",
-        supportLevel: "experimental",
+        stability: "dev-only",
+        supportLevel: "dev-only",
         cliAvailable: true,
         version: "0.9.0-e2e",
         recommended: false,
@@ -417,8 +417,8 @@ function buildDefaultIntegrationStatus(): IntegrationStatus {
       {
         id: "nanobot",
         runtimeName: "Nanobot",
-        stability: "experimental",
-        supportLevel: "experimental",
+        stability: "dev-only",
+        supportLevel: "dev-only",
         cliAvailable: true,
         version: "0.1.5-e2e",
         recommended: false,

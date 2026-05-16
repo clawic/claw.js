@@ -102,8 +102,8 @@ function listOpenClaudeSchedulers(): SchedulerDescriptor[] {
 export const openClaudeAdapter = createSimpleRuntimeAdapter({
   id: "openclaude",
   runtimeName: "OpenClaude",
-  stability: "experimental",
-  supportLevel: "experimental",
+  stability: "dev-only",
+  supportLevel: "dev-only",
   binary: "openclaude",
   workspaceFiles: OPENCLAUDE_WORKSPACE_FILES,
   homeDirName: ".openclaude",

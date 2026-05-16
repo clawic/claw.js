@@ -64,7 +64,7 @@ export interface AdapterStatusSummary {
 const runner = new NodeProcessHost();
 
 export function getVisibleAdapters() {
-  return listRuntimeAdapters().filter((a) => a.supportLevel !== "demo");
+  return listRuntimeAdapters();
 }
 
 export async function getAdapterStatus(adapterId: RuntimeAdapterId): Promise<AdapterStatusSummary> {

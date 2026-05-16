@@ -84,8 +84,8 @@ export type KnownRuntimeAdapterId =
   | "nemoclaw"
   | "hermes";
 export type RuntimeAdapterId = KnownRuntimeAdapterId | (string & {});
-export type RuntimeAdapterStability = "stable" | "experimental" | "demo";
-export type RuntimeAdapterSupportLevel = "production" | "experimental" | "demo";
+export type RuntimeAdapterStability = "stable" | "dev-only";
+export type RuntimeAdapterSupportLevel = "production" | "dev-only";
 export type RuntimeFileSeedPolicy = "seed_if_missing" | "never";
 export type RuntimeCapabilityKey =
   | "runtime"

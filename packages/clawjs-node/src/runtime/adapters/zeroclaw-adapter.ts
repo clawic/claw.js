@@ -192,8 +192,8 @@ function listProviderAuth(locations: RuntimeLocations, env: NodeJS.ProcessEnv): 
 export const zeroclawAdapter: RuntimeAdapter = {
   id: "zeroclaw",
   runtimeName: "ZeroClaw",
-  stability: "experimental",
-  supportLevel: "experimental",
+  stability: "dev-only",
+  supportLevel: "dev-only",
   workspaceFiles: ZEROCLAW_WORKSPACE_FILES,
   describeFeatures() {
     return defaultManagedSessionFeatures({

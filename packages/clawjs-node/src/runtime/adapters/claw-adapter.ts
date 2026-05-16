@@ -110,9 +110,8 @@ function emitNoopProgress(plan: RuntimeProgressPlan, onProgress?: RuntimeProgres
 export const clawAdapter: RuntimeAdapter = {
   id: "claw",
   runtimeName: "Claw Runtime",
-  stability: "experimental",
-  supportLevel: "experimental",
-  recommended: true,
+  stability: "stable",
+  supportLevel: "dev-only",
   workspaceFiles: CLAW_RUNTIME_WORKSPACE_FILES,
   describeFeatures() {
     return defaultManagedSessionFeatures({

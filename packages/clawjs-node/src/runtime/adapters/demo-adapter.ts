@@ -193,8 +193,8 @@ function getCapabilityMap() {
 export const demoAdapter: RuntimeAdapter = {
   id: "demo",
   runtimeName: "DemoClaw",
-  stability: "demo",
-  supportLevel: "demo",
+  stability: "dev-only",
+  supportLevel: "dev-only",
   workspaceFiles: DEMO_WORKSPACE_FILES,
   describeFeatures() {
     return defaultManagedSessionFeatures({

@@ -264,8 +264,8 @@ function buildNoopProgressPlan(operation: "setup", input: RuntimeSetupInput): Ru
 export const codexAdapter: RuntimeAdapter = {
   id: "codex",
   runtimeName: "Codex",
-  stability: "experimental",
-  supportLevel: "experimental",
+  stability: "dev-only",
+  supportLevel: "dev-only",
   workspaceFiles: CODEX_WORKSPACE_FILES,
   describeFeatures() {
     return defaultManagedSessionFeatures({
