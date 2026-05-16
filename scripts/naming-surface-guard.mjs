@@ -125,6 +125,18 @@ for (const relativePath of [
 }
 
 for (const relativePath of [
+  "packages/clawjs-core/src/surface-registry.ts",
+  "packages/clawjs-node/src/time/index.ts",
+  "time/src/server/app.ts",
+  "time/tests/e2e/backend.e2e.test.ts",
+]) {
+  forbidSnippet(relativePath, "/v1/legacy/events");
+  forbidSnippet(relativePath, "/v1/legacy/routines");
+  forbidSnippet(relativePath, "legacyEvents");
+  forbidSnippet(relativePath, "legacyRoutines");
+}
+
+for (const relativePath of [
   "publishing/src/server/config.ts",
   "publishing/src/bin/server.ts",
   "publishing/src/cli/parser.ts",

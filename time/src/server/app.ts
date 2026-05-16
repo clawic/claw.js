@@ -174,10 +174,6 @@ export function buildTimeApp(options: BuildTimeAppOptions = {}) {
 
   app.post(clawApiPath("scheduler/run"), async () => ({ executions: await engine.runSchedulerCycle() }));
 
-  app.get(clawApiPath("legacy/events"), async () => engine.legacyEvents());
-
-  app.get(clawApiPath("legacy/routines"), async () => engine.legacyRoutines());
-
   return {
     app,
     store,

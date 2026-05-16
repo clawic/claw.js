@@ -93,7 +93,7 @@ const same = await createClaw({
 | `claw.secrets` | `list`, `describe`, `types`, `capabilities`, `actions`, `brokerHttp`, `runAction`, `leases`, `doctorKeychain`, `ensureHttpReference`, `ensureTelegramBotReference` |
 | `claw.calendar` | calendar event CRUD, natural `at(...)`, and calendar views |
 | `claw.routines` | routine CRUD, natural `every(...)`, `enable`, `disable`, `run`, and `history` |
-| `claw.time` | legacy-compatible temporal item CRUD, pause/resume/run, execution history, calendar/timeline views, and anchor signals |
+| `claw.time` | temporal item CRUD, pause/resume/run, execution history, calendar/timeline views, and anchor signals |
 | `claw.iot` | inventory, state, actions, scenes, automations, approvals, and raw connector invocations |
 | `claw.content` | brands, destinations, campaigns, entries, variants, approvals, calendar, publish plans/runs, app read models, and scoped tokens |
 | `claw.notify` | notification send/cancel, receipts, feed sync, read/ack flows, push tokens, glances, and subscriptions |

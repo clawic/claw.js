@@ -31,8 +31,6 @@ export interface TimeServiceLike {
   calendarView: TimeClient["calendarView"];
   timelineView: TimeClient["timelineView"];
   signalAnchor: TimeClient["signalAnchor"];
-  legacyEvents: TimeClient["legacyEvents"];
-  legacyRoutines: TimeClient["legacyRoutines"];
 }
 
 export interface CreateTemporalItemInput {
@@ -173,13 +171,6 @@ export class TimeClient {
     });
   }
 
-  async legacyEvents() {
-    return await this.request<{ events: Array<Record<string, unknown>> }>(clawTimeApiRoutes.legacyEvents);
-  }
-
-  async legacyRoutines() {
-    return await this.request<{ routines: Array<Record<string, unknown>>; executions: Array<Record<string, unknown>> }>(clawTimeApiRoutes.legacyRoutines);
-  }
 }
 
 export { EmbeddedTimeEngine };

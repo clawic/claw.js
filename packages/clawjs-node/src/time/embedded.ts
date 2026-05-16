@@ -452,22 +452,6 @@ function eventProjection(item: TemporalItem) {
   };
 }
 
-function routineProjection(item: TemporalItem, executions: TemporalExecution[]) {
-  const latestExecution = executions.find((execution) => execution.itemId === item.id);
-  return {
-    id: item.id,
-    label: item.title,
-    description: item.description ?? "",
-    schedule: item.schedule.cron ?? item.schedule.rrule ?? item.schedule.startsAt ?? item.nextRunAt ?? "",
-    channel: item.actions[0]?.target ?? "workflow",
-    prompt: item.description ?? item.title,
-    enabled: item.status === "active",
-    createdAt: new Date(item.createdAt).getTime(),
-    updatedAt: new Date(item.updatedAt).getTime(),
-    lastRun: latestExecution?.completedAt ? new Date(latestExecution.completedAt).getTime() : undefined,
-  };
-}
-
 export class EmbeddedTimeEngine {
   readonly store: TimeServiceStore;
   readonly config: EmbeddedTimeEngineOptions;
@@ -901,25 +885,4 @@ export class EmbeddedTimeEngine {
     return { items: updated };
   }
 
-  async legacyEvents() {
-    const items = this.store.listItems().filter((item) => item.kind === "event");
-    return { events: items.map(eventProjection) };
-  }
-
-  async legacyRoutines() {
-    const items = this.store.listItems().filter((item) => item.kind === "routine");
-    const executions = this.store.listExecutions();
-    return {
-      routines: items.map((item) => routineProjection(item, executions)),
-      executions: executions.map((execution) => ({
-        id: execution.id,
-        routineId: execution.itemId,
-        status: execution.status === "succeeded" ? "success" : execution.status === "failed" ? "failure" : execution.status,
-        startedAt: execution.startedAt ? new Date(execution.startedAt).getTime() : new Date(execution.scheduledFor).getTime(),
-        completedAt: execution.completedAt ? new Date(execution.completedAt).getTime() : undefined,
-        output: execution.output,
-        error: execution.error,
-      })),
-    };
-  }
 }

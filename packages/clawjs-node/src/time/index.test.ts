@@ -7,7 +7,7 @@ import path from "node:path";
 import { buildTimeApp } from "../../../../time/src/server/app.ts";
 import { TimeClient } from "./index.ts";
 
-test("TimeClient can create items, read legacy projections, and cancel follow-ups", async () => {
+test("TimeClient can create items, read v1 views, and cancel follow-ups", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-time-client-"));
   const built = buildTimeApp({
     config: {
@@ -30,8 +30,8 @@ test("TimeClient can create items, read legacy projections, and cancel follow-up
     });
     assert.equal(created.item.kind, "routine");
 
-    const routines = await client.legacyRoutines();
-    assert.equal(routines.routines.length, 1);
+    const timeline = await client.timelineView();
+    assert.equal(timeline.items.some((item) => item.id === created.item.id), true);
 
     const followUp = await client.create({
       kind: "follow_up",

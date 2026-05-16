@@ -36,7 +36,7 @@ after(async () => {
   await state.stop?.();
 });
 
-test("time service stores items, projects legacy views, and cancels follow-ups", async () => {
+test("time service stores items, projects v1 views, and cancels follow-ups", async () => {
   const eventResponse = await fetch(`${state.baseUrl}/v1/items`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -79,13 +79,13 @@ test("time service stores items, projects legacy views, and cancels follow-ups",
   });
   const { item: followUp } = await followUpResponse.json() as { item: { id: string } };
 
-  const legacyEvents = await fetch(`${state.baseUrl}/v1/legacy/events`);
-  const legacyEventsPayload = await legacyEvents.json() as { events: Array<{ id: string }> };
-  assert.equal(legacyEventsPayload.events.some((entry) => entry.id === eventItem.id), true);
+  const calendar = await fetch(`${state.baseUrl}/v1/views/calendar?start=2026-04-01T00%3A00%3A00.000Z&end=2026-04-30T23%3A59%3A59.999Z`);
+  const calendarPayload = await calendar.json() as { entries: Array<{ id: string }> };
+  assert.equal(calendarPayload.entries.some((entry) => entry.id === eventItem.id), true);
 
-  const legacyRoutines = await fetch(`${state.baseUrl}/v1/legacy/routines`);
-  const legacyRoutinesPayload = await legacyRoutines.json() as { routines: Array<{ id: string }> };
-  assert.equal(legacyRoutinesPayload.routines.some((entry) => entry.id === routineItem.id), true);
+  const timeline = await fetch(`${state.baseUrl}/v1/views/timeline`);
+  const timelinePayload = await timeline.json() as { items: Array<{ id: string }> };
+  assert.equal(timelinePayload.items.some((entry) => entry.id === routineItem.id), true);
 
   const signalResponse = await fetch(`${state.baseUrl}/v1/signals`, {
     method: "POST",

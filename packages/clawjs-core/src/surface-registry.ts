@@ -480,8 +480,6 @@ export const clawTimeApiRoutes = {
   calendarView: "/v1/views/calendar",
   timelineView: "/v1/views/timeline",
   signals: "/v1/signals",
-  legacyEvents: "/v1/legacy/events",
-  legacyRoutines: "/v1/legacy/routines",
 } as const;
 
 export const clawNotifyApiRoutes = {
