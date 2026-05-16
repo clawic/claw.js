@@ -6,8 +6,9 @@ provider state, operation support, credential bindings, policy rules, budgets,
 network proof, approval grants, and audit requirements before any runtime is
 called.
 
-Use `connectors` for the strict control plane. `integrations` remains a legacy
-category alias that routes to connector concepts.
+Use `connectors` for the strict control plane. Integration packages provide
+runtime adapters, but public policy language and durable catalog records use
+connector terminology.
 
 ## Pipeline
 

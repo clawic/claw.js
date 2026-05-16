@@ -48,6 +48,21 @@ checkRequiredSource(
     "requires local evidence",
   ],
 );
+checkRequiredSource(
+  "docs/connector-control-plane.md",
+  [
+    "Use `connectors` for the strict control plane.",
+    "Integration packages provide",
+    "runtime adapters, but public policy language",
+  ],
+);
+forbidSource(
+  "docs/connector-control-plane.md",
+  [
+    "integrations remains a legacy",
+    "legacy category alias",
+  ],
+);
 
 if (errors.length > 0) {
   console.error(`Connector control-plane guard failed with ${errors.length} issue(s):`);
@@ -91,6 +106,16 @@ function checkRequiredSource(file, needles) {
   for (const needle of needles) {
     if (!text.includes(needle)) {
       errors.push(`${file}: missing ${JSON.stringify(needle)}`);
+    }
+  }
+}
+
+function forbidSource(file, needles) {
+  if (!fs.existsSync(file)) return;
+  const text = fs.readFileSync(file, "utf8");
+  for (const needle of needles) {
+    if (text.includes(needle)) {
+      errors.push(`${file}: contains forbidden ${JSON.stringify(needle)}`);
     }
   }
 }
