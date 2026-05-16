@@ -218,11 +218,12 @@ updating this ADR or adding a successor ADR.
 - Stable error code values in CLI, APIs, and protocols use `snake_case`.
 - Deep links use:
   - `clawix://auth/callback/<provider>`
-  - `clawix://pair/<token>`
   - `clawix://session/<sessionId>`
   - `clawix://settings/<section>`
+- Pairing QR codes use a JSON payload with `v`, `host`, `port`, `token`,
+  and related metadata; pair-token deep links are not stable v1 routes.
 - `claw://` is reserved for future framework-level links.
-- Client role is `clientKind`: `mobile`, `desktop`, `web`, or `daemon`.
+- Client role is `clientKind`: `companion` or `desktop`.
 - Diagnostic platform is a separate field: `ios`, `android`, `macos`, `linux`,
   `windows`, or `web`.
 - Runtime and agent fields are `runtimeId` and `agentId`.

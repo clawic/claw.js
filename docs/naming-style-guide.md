@@ -75,7 +75,8 @@ Use these exact words:
 
 - `sessionId` for framework conversation identity.
 - `threadId` only for external runtime identity.
-- `clientKind` for client role and `platform` for OS/platform.
+- `clientKind` for client role (`companion` or `desktop`) and `platform` for
+  OS/platform.
 - `hostId`, `deviceId`, `installationId`, and `clientId` as separate IDs.
 - `runtimeId`, `agentId`, `providerId`, `modelId`, and `account`.
 - `tasks`, `jobs`, `issues`, `routines`, and `automations` with the meanings
@@ -89,6 +90,8 @@ Use these exact words:
 - `drive`, `storage`, `secrets`, and `vault` only with their ADR meanings.
 
 Use `sessionId`, not stable `chatId`, in protocol contracts.
+Pairing QR codes use a JSON payload with `v`, `host`, `port`, `token`, and
+related metadata; pair-token deep links are not stable v1 routes.
 
 ## Statuses, timestamps, and deletion
 

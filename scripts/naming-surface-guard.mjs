@@ -115,6 +115,16 @@ for (const relativePath of [
 }
 
 for (const relativePath of [
+  "docs/adr/0001-naming-and-stability-surfaces.md",
+  "docs/naming-style-guide.md",
+]) {
+  forbidSnippet(relativePath, "clawix://pair/<token>");
+  forbidSnippet(relativePath, "`mobile`, `desktop`, `web`, or `daemon`");
+  requireSnippet(relativePath, "`companion` or `desktop`");
+  requireSnippet(relativePath, "Pairing QR codes use a JSON payload");
+}
+
+for (const relativePath of [
   "publishing/src/server/config.ts",
   "publishing/src/bin/server.ts",
   "publishing/src/cli/parser.ts",
