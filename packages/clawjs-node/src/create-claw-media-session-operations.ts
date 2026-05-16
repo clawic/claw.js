@@ -2,7 +2,7 @@
 import fs from "fs";
 import path from "path";
 
-export function createClawMediaSessionHelpers(locals: Record<string, any>): Record<string, any> {
+export function createClawMediaSessionOperations(locals: Record<string, any>): Record<string, any> {
   const {
     sessionStore,
     mediaStore,

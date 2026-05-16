@@ -492,10 +492,10 @@ import type { CreateClawOptions, ClawFactory, TemporalListFilters, TemporalNatur
 import type { ClawInstance } from "./create-claw-instance.ts";
 import { createClawKnowledgeFacades } from "./create-claw-knowledge-facades.ts";
 import { createClawChannelFacades } from "./create-claw-channel-facades.ts";
-import { createClawMediaSessionHelpers } from "./create-claw-media-session-helpers.ts";
+import { createClawMediaSessionOperations } from "./create-claw-media-session-operations.ts";
 import { createClawGenerationImageHelpers } from "./create-claw-generation-image-helpers.ts";
 import { createClawSkillProviderHelpers } from "./create-claw-skill-provider-helpers.ts";
-import { createClawChannelRuntimeHelpers } from "./create-claw-channel-runtime-helpers.ts";
+import { createClawChannelRuntimeOperations } from "./create-claw-channel-runtime-operations.ts";
 import { createClawIntentHelpers } from "./create-claw-intent-helpers.ts";
 import { createClawRuntimeWorkspaceFacades } from "./create-claw-runtime-workspace-facades.ts";
 import { createClawContentIotFacades } from "./create-claw-content-iot-facades.ts";
@@ -913,7 +913,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     searchDocuments,
     searchSessionsWithOpenClawMemory,
     searchSessions,
-  } = createClawMediaSessionHelpers({
+  } = createClawMediaSessionOperations({
     sessionStore,
     mediaStore,
     documentStore,
@@ -1565,7 +1565,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     ingestTelegramVoiceNote,
     ensureTelegramCodexBridgeCommands,
     runChannelListener,
-  } = createClawChannelRuntimeHelpers({
+  } = createClawChannelRuntimeOperations({
     invokeChannelProcessor,
     appendChannelSessionMessage,
     filesystem,

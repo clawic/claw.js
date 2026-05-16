@@ -11,7 +11,7 @@ This is the living audit report for ADR 0013. The machine-readable source is
 ## Current gate status
 
 - Critical naming failures: 0.
-- Naming warnings: 173.
+- Naming warnings: 171.
 - Source-size warnings: 118.
 - Source-structure signals: 320.
 
@@ -77,6 +77,9 @@ for staged rename/split work and must not be hidden by compressing code.
   named as a process controller plus output/exit events.
 - Browser session vocabulary: `BrowserSessionManager` and its options are now
   named as a `BrowserSessionController`.
+- Claw factory operation bundles: `createClawChannelRuntimeHelpers` and
+  `createClawMediaSessionHelpers` are now operation bundles with matching
+  `*-operations.ts` filenames.
 - CLI/router and command handlers: keep `packages/clawjs/src/index.ts` from
   growing by extracting command families before adding behavior.
 - Showcase UI/API: split settings, tasks, onboarding, locale, and route files

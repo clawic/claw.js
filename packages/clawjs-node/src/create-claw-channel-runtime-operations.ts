@@ -3,7 +3,7 @@ import { clawChannelEvents } from "@clawjs/core";
 import fs from "fs";
 import path from "path";
 
-export function createClawChannelRuntimeHelpers(locals: Record<string, any>): Record<string, any> {
+export function createClawChannelRuntimeOperations(locals: Record<string, any>): Record<string, any> {
   const {
     invokeChannelProcessor,
     appendChannelSessionMessage,
