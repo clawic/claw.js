@@ -2,7 +2,7 @@
 
 Bootstrap a minimal headless Node.js server wired for Claw.
 
-This package is kept as a compatibility wrapper. The primary documented flow is now `claw new server my-claw-server`.
+This package is a direct generator entrypoint. The primary documented flow is `claw new server my-claw-server`.
 
 ```bash
 npx create-claw-server my-claw-server

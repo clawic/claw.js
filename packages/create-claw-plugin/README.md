@@ -2,7 +2,7 @@
 
 Bootstrap a distributed TypeScript plugin package for Claw.
 
-This package is kept as a compatibility wrapper. The primary documented flow is now `claw new plugin jira-integration`.
+This package is a direct generator entrypoint. The primary documented flow is `claw new plugin jira-integration`.
 
 ```bash
 npx create-claw-plugin jira-integration

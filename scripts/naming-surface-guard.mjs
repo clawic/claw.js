@@ -156,6 +156,19 @@ for (const relativePath of [
 }
 
 for (const relativePath of [
+  "docs/getting-started.md",
+  "docs/index.md",
+  "docs/plugins.md",
+  "packages/create-claw-app/README.md",
+  "packages/create-claw-agent/README.md",
+  "packages/create-claw-server/README.md",
+  "packages/create-claw-plugin/README.md",
+]) {
+  forbidSnippet(relativePath, "compatibility wrapper");
+  requireSnippet(relativePath, "generator entrypoint");
+}
+
+for (const relativePath of [
   "publishing/src/server/config.ts",
   "publishing/src/bin/server.ts",
   "publishing/src/cli/parser.ts",

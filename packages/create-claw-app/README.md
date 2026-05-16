@@ -2,7 +2,7 @@
 
 Bootstrap a minimal Next.js app wired for Claw.
 
-This package is kept as a compatibility wrapper. The primary documented flow is now `claw new app my-claw-app`.
+This package is a direct generator entrypoint. The primary documented flow is `claw new app my-claw-app`.
 
 ```bash
 npx create-claw-app my-claw-app

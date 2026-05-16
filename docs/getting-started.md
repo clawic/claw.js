@@ -80,14 +80,14 @@ Generated skills are registered in the local personal library by default so
 they can be assigned to other agents later. Use `--no-library` when you want a
 one-off scaffold only.
 
-Compatibility note:
+Direct generator entrypoints:
 
 - `create-claw-app`
 - `create-claw-agent`
 - `create-claw-server`
 - `create-claw-plugin`
 
-still work, but they are compatibility wrappers around the same scaffolding engine.
+use the same scaffolding engine as `claw new`.
 
 ## Production Runtime Path
 

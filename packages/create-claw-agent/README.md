@@ -2,7 +2,7 @@
 
 Bootstrap a minimal agent-first repository wired for Claw.
 
-This package is kept as a compatibility wrapper. The primary documented flow is now `claw new agent my-agent`.
+This package is a direct generator entrypoint. The primary documented flow is `claw new agent my-agent`.
 
 ```bash
 npx create-claw-agent my-agent

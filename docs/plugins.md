@@ -17,7 +17,7 @@ cd jira-integration
 npm run plugin:check
 ```
 
-`create-claw-plugin` remains available as a compatibility wrapper, but
+`create-claw-plugin` remains available as a direct generator entrypoint, and
 `claw new plugin` is the primary flow.
 
 The generated package includes:
