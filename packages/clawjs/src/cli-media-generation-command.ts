@@ -10,7 +10,7 @@ import { writeCommandJsonOk } from "./cli-json.ts";
 import { createCliClaw } from "./cli-claw-factory.ts";
 import { parseRuleHints } from "./cli-rule-utils.ts";
 import { parseImageOperation, parseImageProvenance, parseImageType } from "./cli-image-parsers.ts";
-import { buildImageCommonInput, buildMediaListInput, buildMediaMetadata } from "./cli-media-utils.ts";
+import { buildImageSharedInput, buildMediaListInput, buildMediaMetadata } from "./cli-media-utils.ts";
 import { inferAudioExtension, inferMimeTypeFromPath, parseContextBlock, parseInferenceMessages, type GenerationCliMediaKind } from "./cli-runtime-utils.ts";
 
 type CliContext = { stdout: NodeJS.WritableStream; stderr: NodeJS.WritableStream; cwd: string };
@@ -539,7 +539,7 @@ if (group === "image" && command === "create") {
   const { media } = await getImageGenerationFacade();
   const record = await media.generate({
     prompt,
-    ...buildImageCommonInput(flags),
+    ...buildImageSharedInput(flags),
     backendId: flags.backend,
     command: flags.command,
     args: parseJsonFlag<string[]>(flags["args-json"], "--args-json"),
@@ -568,7 +568,7 @@ if (group === "image" && command === "edit") {
   const record = await media.edit({
     parentId,
     prompt,
-    ...buildImageCommonInput(flags),
+    ...buildImageSharedInput(flags),
     sourceImageIds: parseCsvFlag(flags["source-image-ids"]),
     backendId: flags.backend,
     command: flags.command,
@@ -597,7 +597,7 @@ if (group === "image" && command === "import") {
   const record = media.import({
     filePath,
     prompt: flags.prompt,
-    ...buildImageCommonInput(flags),
+    ...buildImageSharedInput(flags),
     provider: flags.provider,
     requestId: flags["request-id"],
     parentId: flags["parent-id"],
@@ -641,7 +641,7 @@ if (mediaGroup && command === "generate") {
     const { media } = await getImageGenerationFacade();
     const record = await media.generate({
       prompt,
-      ...buildImageCommonInput(flags),
+      ...buildImageSharedInput(flags),
       backendId: flags.backend,
       command: flags.command,
       args: parseJsonFlag<string[]>(flags["args-json"], "--args-json"),

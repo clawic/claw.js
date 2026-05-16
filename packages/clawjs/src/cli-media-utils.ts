@@ -57,7 +57,7 @@ function buildImageMetadata(flags: Record<string, string>): Record<string, unkno
   return buildMediaMetadata("image", flags, parseJsonFlag<Record<string, unknown>>(flags["metadata-json"], "--metadata-json"));
 }
 
-export function buildImageCommonInput(flags: Record<string, string>) {
+export function buildImageSharedInput(flags: Record<string, string>) {
   return {
     title: flags.title,
     model: flags.model,

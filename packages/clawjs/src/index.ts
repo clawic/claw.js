@@ -49,7 +49,7 @@ import {
   type TelegramTopicIconPreset,
 } from "./cli-telegram-codex-constants.ts";
 import { parseImageOperation, parseImageProvenance, parseImageType } from "./cli-image-parsers.ts";
-import { buildImageCommonInput, buildMediaListInput, buildMediaMetadata } from "./cli-media-utils.ts";
+import { buildImageSharedInput, buildMediaListInput, buildMediaMetadata } from "./cli-media-utils.ts";
 import { CODEX_AGENT_ID, normalizeTelegramCodexAccount, registerCodexAgentProcessor, resolveCodexRuntimeAdapterId, resolveTelegramCodexListenerOptions, runTelegramCodexProcessor } from "./cli-telegram-codex.ts";
 import { OPEN_SURFACES, buildOpenUsage, openSurfaceRows, resolveOpenSurface, surfacePrimaryClawUrl, type OpenSurface, type OpenSurfaceState } from "./cli-open-surfaces.ts";
 import { currentCliEntryPath, openBrowser, openStateDir, openStatePath, readOpenState, repoRootFromCliPackage, writeOpenState } from "./cli-open-state.ts";

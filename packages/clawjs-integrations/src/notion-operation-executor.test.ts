@@ -880,10 +880,10 @@ function assertRequest(
   values: Record<string, IntegrationJson>,
   expected: Record<string, unknown>,
 ): void {
-  assert.deepEqual(stripCommonPlanFields(buildNotionOperationRequest(operation(operationId), values)), expected);
+  assert.deepEqual(stripSharedPlanFields(buildNotionOperationRequest(operation(operationId), values)), expected);
 }
 
-function stripCommonPlanFields(plan: ReturnType<typeof buildNotionOperationRequest>): Record<string, unknown> {
+function stripSharedPlanFields(plan: ReturnType<typeof buildNotionOperationRequest>): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(plan).filter(([key, value]) => (
       !["auth", "headers", "responseSchema", "pagination"].includes(key)
