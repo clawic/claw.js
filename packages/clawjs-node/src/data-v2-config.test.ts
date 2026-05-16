@@ -149,7 +149,6 @@ test("V2 workspace collections and context memory use the main DB", () => {
     assert.equal(fs.existsSync(path.join(root, "apps", "v2-app", "index.html")), true);
 
     assert.equal(fs.existsSync(resolveClawWorkspaceSurfacePath("claw.workspace.data", workspaceDir, "database.sqlite")), false);
-    assert.equal(fs.existsSync(resolveClawWorkspaceSurfacePath("claw.database.legacy_productivity", workspaceDir)), false);
     assert.equal(fs.existsSync(resolveClawWorkspaceSurfacePath("claw.workspace.data", workspaceDir, "storage.sqlite")), false);
     assert.equal(fs.existsSync(resolveClawWorkspaceSurfacePath("claw.workspace", workspaceDir, "code", "code.sqlite")), false);
   });

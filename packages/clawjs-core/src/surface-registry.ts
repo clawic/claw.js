@@ -1544,18 +1544,6 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       notes: "User-facing structured records and framework metadata that belong in the canonical relational graph.",
       envOverrides: ["CLAW_DATABASE_DB_PATH", "CLAW_DB_PATH", "CLAW_DATA_DIR", "CLAW_HOME"],
     }),
-    clawPersistentSurface.database({
-      id: "claw.database.legacy_productivity",
-      kind: "sidecar",
-      name: "Legacy productivity workspace database",
-      path: `${clawWorkspaceLayout.root}/data/productivity.sqlite`,
-      parentId: "claw.workspace",
-      storageClass: "workspace",
-      canonicality: "legacyReadOnly",
-      lifecycle: "legacy",
-      source: registrySource,
-      warnings: ["Read only for migration into the canonical workspace store."],
-    }),
     clawPersistentSurface.table({
       id: "claw.database.core.table.workspace_records",
       name: "workspace_records",

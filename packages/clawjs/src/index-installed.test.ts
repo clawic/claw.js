@@ -111,7 +111,6 @@ test("published CLI tarballs install with npm and manage local-first productivit
 
   assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
   assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace.data", installRoot, "database.sqlite")), false);
-  assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.database.legacy_productivity", installRoot)), false);
   assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace", installRoot, "workspace.manifest.json")), false);
 
   const area = JSON.parse(runInstalledClaw(binPath, installRoot, [
@@ -595,6 +594,5 @@ test("published CLI tarballs install with npm and manage local-first productivit
 
   assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
   assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace.data", installRoot, "database.sqlite")), false);
-  assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.database.legacy_productivity", installRoot)), false);
   assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace", installRoot, "workspace.manifest.json")), false);
 });

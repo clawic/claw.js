@@ -403,7 +403,6 @@ test("createClaw embeds the time engine by default", async () => {
     assert.equal(signalled.items[0]?.status, "cancelled");
 
     assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
-    assert.equal(fs.existsSync(resolveClawWorkspaceSurfacePath("claw.database.legacy_productivity", workspaceDir)), false);
   });
 });
 

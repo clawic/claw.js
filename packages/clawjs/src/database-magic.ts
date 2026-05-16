@@ -1,5 +1,3 @@
-import fs from "node:fs";
-
 import {
   DatabaseApiClient,
   DatabaseServiceStore,
@@ -11,7 +9,6 @@ import {
 import {
   BUILTIN_COLLECTIONS_BY_ALIAS,
   BUILTIN_COLLECTIONS_BY_NAME,
-  resolveClawPersistentSurfacePath,
 } from "@clawjs/core";
 import { CliHandledError } from "./cli-errors.ts";
 import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
@@ -607,61 +604,6 @@ function pickDisplayField(record: RecordEnvelope, collectionName: string): strin
   return record.id;
 }
 
-function localMigrationKey(namespaceId: string): string {
-  return `legacy_productivity_imported_at:${namespaceId}`;
-}
-
-function migrateLegacyWorkspaceData(runtime: LocalDbRuntime, namespaceId: string): void {
-  const migrationKey = localMigrationKey(namespaceId);
-  if (runtime.store.getMeta(migrationKey)) return;
-
-  const legacyPath = resolveClawPersistentSurfacePath(
-    "claw.database.legacy_productivity",
-    runtime.workspaceRoot,
-  );
-  if (!fs.existsSync(legacyPath)) {
-    runtime.store.setMeta(migrationKey, new Date().toISOString());
-    return;
-  }
-
-  try {
-    runtime.store.sqlite.prepare("ATTACH DATABASE ? AS legacy_productivity").run(legacyPath);
-    const rows = runtime.store.sqlite.prepare(`
-      SELECT collection_name, record_id, payload_json
-      FROM legacy_productivity.workspace_records
-      WHERE collection_name IN (
-        'tasks', 'goals', 'projects', 'reminders', 'deadlines',
-        'notes', 'people', 'events', 'inbox_threads', 'inbox_messages'
-      )
-      ORDER BY collection_name ASC, record_id ASC
-    `).all() as Array<{ collection_name: string; record_id: string; payload_json: string }>;
-
-    for (const row of rows) {
-      const payload = JSON.parse(row.payload_json) as Record<string, unknown>;
-      const collection = runtime.store.getCollection(namespaceId, row.collection_name);
-      if (!collection) continue;
-      const normalized = normalizePayload(row.collection_name, collection, payload, "create").payload;
-      runtime.store.putRecord({
-        namespaceId,
-        collectionName: row.collection_name,
-        recordId: row.record_id,
-        payload: normalized,
-        createdAt: typeof payload.createdAt === "string" ? payload.createdAt : undefined,
-        updatedAt: typeof payload.updatedAt === "string" ? payload.updatedAt : undefined,
-      });
-    }
-  } catch {
-    // Ignore broken legacy stores and keep the new database authoritative.
-  } finally {
-    try {
-      runtime.store.sqlite.exec("DETACH DATABASE legacy_productivity");
-    } catch {
-      // noop
-    }
-    runtime.store.setMeta(migrationKey, new Date().toISOString());
-  }
-}
-
 async function createRuntime(workspaceRoot: string, flags: Record<string, string>, namespaceId: string): Promise<DbRuntimeBundle> {
   if (flags.url) {
     return {
@@ -672,7 +614,6 @@ async function createRuntime(workspaceRoot: string, flags: Record<string, string
   }
   const runtime = new LocalDbRuntime(workspaceRoot);
   await runtime.ensureNamespace(namespaceId);
-  migrateLegacyWorkspaceData(runtime, namespaceId);
   return {
     runtime,
     mode: "local",

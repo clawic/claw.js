@@ -155,6 +155,20 @@ for (const relativePath of [
 }
 
 for (const relativePath of [
+  "packages/clawjs/src/database-magic.ts",
+  "packages/clawjs/src/index-productivity.test.ts",
+  "packages/clawjs/src/index-installed.test.ts",
+  "packages/clawjs-core/src/surface-registry.ts",
+  "packages/clawjs-node/src/create-claw.test.ts",
+  "packages/clawjs-node/src/data-v2-config.test.ts",
+  "docs/persistent-surface.md",
+]) {
+  forbidSnippet(relativePath, "legacy_productivity");
+  forbidSnippet(relativePath, "legacy productivity");
+  forbidSnippet(relativePath, "Legacy productivity");
+}
+
+for (const relativePath of [
   "docs/relay.md",
   "relay/tests/e2e/relay.e2e.test.ts",
   "relay/src/connector/runtime.ts",

@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import fs from "fs";
 import os from "os";
 import path from "path";
-import Database from "better-sqlite3";
 
 import { clawCommonJsonFields, resolveClawPersistentSurfacePath } from "@clawjs/core";
 
@@ -179,7 +178,6 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
 
   assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
   assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace.data", workspaceRoot, "database.sqlite")), false);
-  assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.database.legacy_productivity", workspaceRoot)), false);
   assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace", workspaceRoot, "workspace.manifest.json")), false);
 
   const areaStdout = captureStream();
@@ -795,58 +793,6 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
   assert.match(inspectStdout.getOutput(), new RegExp(`"${clawCommonJsonFields.schemaVersion}": 6`));
 
   assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
-  assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.database.legacy_productivity", workspaceRoot)), false);
   assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace", workspaceRoot, "workspace.manifest.json")), false);
   assert.ok(note.id);
-});
-
-test("runCli ignores pre-public legacy workspace sqlite productivity data", { concurrency: false }, async (t) => {
-  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-productivity-no-legacy-import-"));
-  const dataRoot = useIsolatedMainData(t, workspaceRoot);
-  const legacyDbPath = resolveClawPersistentSurfacePath("claw.database.legacy_productivity", workspaceRoot);
-  fs.mkdirSync(path.dirname(legacyDbPath), { recursive: true });
-  const legacyDb = new Database(legacyDbPath);
-  legacyDb.exec(`
-    CREATE` + ` TABLE workspace_records (
-      collection_name TEXT NOT NULL,
-      record_id TEXT NOT NULL,
-      payload_json TEXT NOT NULL,
-      updated_at TEXT,
-      archived_at TEXT,
-      PRIMARY KEY (collection_name, record_id)
-    );
-  `);
-  legacyDb.prepare(`
-    INSERT INTO workspace_records (collection_name, record_id, payload_json, updated_at, archived_at)
-    VALUES (?, ?, ?, ?, ?)
-  `).run("tasks", "task-legacy", JSON.stringify({
-    id: "task-legacy",
-    createdAt: "2026-04-01T09:00:00.000Z",
-    updatedAt: "2026-04-01T09:00:00.000Z",
-    source: { kind: "local" },
-    title: "Imported task",
-    status: "todo",
-    priority: "medium",
-    labels: [],
-    watcherPersonIds: [],
-    childTaskIds: [],
-    dependsOnTaskIds: [],
-    checklist: [],
-  }), "2026-04-01T09:00:00.000Z", null);
-  legacyDb.close();
-
-  const listStdout = captureStream();
-  assert.equal(await runCli([
-    "tasks",
-    "list",
-    "--json",
-  ], {
-    stdout: listStdout.stream,
-    stderr: captureStream().stream,
-    cwd: workspaceRoot,
-  }), CLI_EXIT_OK);
-  assert.doesNotMatch(listStdout.getOutput(), /Imported task/);
-  assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
-  assert.equal(fs.existsSync(legacyDbPath), true);
-  assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.database.legacy_productivity", workspaceRoot)), true);
 });
