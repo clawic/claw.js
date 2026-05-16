@@ -7,7 +7,7 @@ import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
 import { resolveClawWorkspaceSurfacePath } from "../surface-paths.ts";
 
 export const COMPAT_SNAPSHOT_FILE = "runtime-snapshot.json";
-const LEGACY_SNAPSHOT_WRAPPER_KEYS = ["snapshot", "compat", "compatSnapshot", "payload", "data"] as const;
+const SNAPSHOT_WRAPPER_KEYS = ["snapshot", "compat", "compatSnapshot", "payload", "data"] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -137,8 +137,8 @@ function normalizeProbedAt(value: unknown): string {
   return new Date().toISOString();
 }
 
-function findLegacySnapshotPayload(value: Record<string, unknown>): Record<string, unknown> | null {
-  for (const key of LEGACY_SNAPSHOT_WRAPPER_KEYS) {
+function findWrappedSnapshotPayload(value: Record<string, unknown>): Record<string, unknown> | null {
+  for (const key of SNAPSHOT_WRAPPER_KEYS) {
     const candidate = value[key];
     if (isRecord(candidate)) {
       return candidate;
@@ -149,11 +149,11 @@ function findLegacySnapshotPayload(value: Record<string, unknown>): Record<strin
 }
 
 function normalizeCompatSnapshotRecord(value: Record<string, unknown>): CompatSnapshot | null {
-  const legacyPayload = findLegacySnapshotPayload(value);
-  if (legacyPayload) {
-    const normalizedLegacy = normalizeCompatSnapshotRecord(legacyPayload);
-    if (normalizedLegacy) {
-      return normalizedLegacy;
+  const wrappedPayload = findWrappedSnapshotPayload(value);
+  if (wrappedPayload) {
+    const normalizedWrapped = normalizeCompatSnapshotRecord(wrappedPayload);
+    if (normalizedWrapped) {
+      return normalizedWrapped;
     }
   }
 
@@ -215,13 +215,13 @@ export function migrateCompatSnapshot(workspaceDir: string, filesystem = new Nod
   const targetPath = resolveCompatSnapshotPath(workspaceDir);
   const currentSnapshot = readCompatSnapshot(workspaceDir, filesystem);
   if (currentSnapshot) {
-      const serialized = serializeCompatSnapshot(currentSnapshot);
-      const existing = filesystem.tryReadText(targetPath).replace(/\r\n/g, "\n");
-      if (existing !== serialized) {
-        filesystem.withLockRetry(resolveFileLockPath(targetPath), () => filesystem.writeTextAtomic(targetPath, serialized));
-        return {
-          snapshot: currentSnapshot,
-          sourcePath: targetPath,
+    const serialized = serializeCompatSnapshot(currentSnapshot);
+    const existing = filesystem.tryReadText(targetPath).replace(/\r\n/g, "\n");
+    if (existing !== serialized) {
+      filesystem.withLockRetry(resolveFileLockPath(targetPath), () => filesystem.writeTextAtomic(targetPath, serialized));
+      return {
+        snapshot: currentSnapshot,
+        sourcePath: targetPath,
         targetPath,
         migrated: true,
       };

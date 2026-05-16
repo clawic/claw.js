@@ -185,6 +185,17 @@ for (const relativePath of [
 }
 
 for (const relativePath of [
+  "packages/clawjs-node/src/compat/store.ts",
+  "packages/clawjs-node/src/compat/store.test.ts",
+]) {
+  forbidSnippet(relativePath, "LEGACY_SNAPSHOT_WRAPPER_KEYS");
+  forbidSnippet(relativePath, "findLegacySnapshotPayload");
+  forbidSnippet(relativePath, "legacyPayload");
+  forbidSnippet(relativePath, "normalizedLegacy");
+  forbidSnippet(relativePath, "legacyWrapper");
+}
+
+for (const relativePath of [
   "docs/signals-modules.md",
 ]) {
   forbidSnippet(relativePath, "goals-to-signals");

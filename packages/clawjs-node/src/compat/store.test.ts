@@ -100,7 +100,7 @@ test("compat snapshot migration normalizes current-path payloads", () => {
       gatewayCall: true,
     },
     diagnostics: {
-      legacy: true,
+      fixture: true,
     },
   }, null, 2));
 
@@ -132,7 +132,7 @@ test("compat snapshot migration repairs wrapper payloads and capability drift", 
           gatewayCall: "0",
         },
         diagnostics: {
-          legacyWrapper: true,
+          wrappedShape: true,
         },
       },
     },
@@ -150,7 +150,7 @@ test("compat snapshot migration repairs wrapper payloads and capability drift", 
     agentsList: true,
     gatewayCall: false,
   });
-  assert.equal(readCompatSnapshot(workspaceDir)?.diagnostics?.legacyWrapper, true);
+  assert.equal(readCompatSnapshot(workspaceDir)?.diagnostics?.wrappedShape, true);
   assert.equal(fs.existsSync(resolveCompatSnapshotPath(workspaceDir)), true);
 });
 
