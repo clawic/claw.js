@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@clawjs/user-model": "file:../packages/clawjs-user-model",
-    "better-sqlite3": "^12.9.0",
     "fastify": "^5.6.1"
   },
   "devDependencies": {

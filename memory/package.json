@@ -16,7 +16,6 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@clawjs/core": "0.1.2",
     "better-sqlite3": "^12.4.1",
     "commander": "^14.0.2",
     "yaml": "^2.8.3"

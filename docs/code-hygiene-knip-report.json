@@ -3,21 +3,19 @@
   "program": "code-hygiene",
   "tool": "knip",
   "toolVersion": "6.14.0",
-  "generatedAt": "2026-05-16T23:47:12.188Z",
+  "generatedAt": "2026-05-16T23:54:55.114Z",
   "mode": "report-only",
   "config": "knip.json",
   "cwd": ".",
   "summary": {
-    "filesWithIssues": 415,
-    "totalIssues": 1384,
+    "filesWithIssues": 383,
+    "totalIssues": 1343,
     "issueTypes": {
-      "files": 184,
+      "files": 169,
       "owners": 190,
-      "dependencies": 24,
-      "devDependencies": 8,
-      "unlisted": 3,
-      "types": 210,
-      "exports": 757,
+      "unlisted": 2,
+      "types": 215,
+      "exports": 759,
       "duplicates": 8
     },
     "topFiles": [

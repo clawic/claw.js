@@ -11,9 +11,7 @@
     "test": "tsx --test tests/e2e/backend.e2e.test.ts"
   },
   "dependencies": {
-    "@clawjs/audio": "file:../packages/clawjs-audio",
-    "better-sqlite3": "^12.9.0",
-    "fastify": "^5.6.1"
+    "@clawjs/audio": "file:../packages/clawjs-audio"
   },
   "devDependencies": {
     "@types/node": "^22.19.15",

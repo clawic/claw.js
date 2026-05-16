@@ -27,7 +27,7 @@ Source session: private session, not published
 - Status: PARTIAL
 - Tool: Knip 6.14.0 through `scripts/code-hygiene-knip.mjs`.
 - Config: `knip.json`.
-- Latest summary: 415 files with issues; 1,384 total findings across files, owners, dependencies, devDependencies, unlisted, types, exports, and duplicates after removing `chokidar` from sessions, removing profile `@noble/hashes`, moving root VitePress/Vue ownership to `website`, declaring direct root `tsx` usage, calibrating the Vitest coverage provider, mapping top-level app/module workspaces to their own package manifests with explicit entry/project shapes, dropping reviewed direct app/database dependencies now provided by actual imports, and calibrating tool/config/script/public asset entrypoints.
+- Latest summary: 383 files with issues; 1,343 total findings across files, owners, unlisted, types, exports, and duplicates after removing clear unused workspace dependencies, moving root VitePress/Vue ownership to `website`, declaring direct root `tsx` usage, calibrating the Vitest coverage provider, mapping top-level app/module workspaces to their own package manifests with explicit entry/project shapes, expanding memory/modules service entry ownership, and calibrating tool/config/script/public asset entrypoints. Dependency and devDependency findings are currently zero; the two remaining unlisted findings are reviewed dynamic runtime cases.
 - Baseline: `clawjs-core-builtin-family-barrels-2026-05-17`, `clawjs-relay-browser-host-playwright-2026-05-17`, and `clawjs-bridge-optional-iroh-runtime-2026-05-17` cover reviewed public API and dynamic-runtime findings until 2026-08-15.
 - Mode: report-only; cleanup and baselining pending before blocking gate activation.
 

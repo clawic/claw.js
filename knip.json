@@ -40,7 +40,10 @@
   "ignoreDependencies": [
     "@types/node",
     "@vitest/coverage-v8",
-    "tailwindcss"
+    "shadcn",
+    "tailwindcss",
+    "tw-animate-css",
+    "vue"
   ],
   "ignoreBinaries": [
     "vitest",
@@ -69,6 +72,9 @@
       ]
     },
     "apps/*": {
+      "ignoreDependencies": [
+        "tsx"
+      ],
       "entry": [
         "src/**/*.{ts,tsx,js,mjs}",
         "tests/**/*.{ts,tsx,js,mjs}",
@@ -183,6 +189,9 @@
       ]
     },
     "delegation": {
+      "ignoreDependencies": [
+        "tsx"
+      ],
       "entry": [
         "src/bin/*.{ts,js,mjs}",
         "src/index.{ts,tsx,js,mjs}",
@@ -330,7 +339,9 @@
     "memory": {
       "entry": [
         "src/bin/*.{ts,js,mjs}",
+        "src/cli.{ts,tsx,js,mjs}",
         "src/index.{ts,tsx,js,mjs}",
+        "src/service.{ts,tsx,js,mjs}",
         "tests/**/*.{ts,tsx,js,mjs}",
         "scripts/**/*.{ts,tsx,js,mjs}",
         "vitest.config.{ts,js,mjs}",
@@ -348,7 +359,11 @@
     "modules/*": {
       "entry": [
         "src/bin/*.{ts,js,mjs}",
+        "src/cli.{ts,tsx,js,mjs}",
+        "src/discovery.{ts,tsx,js,mjs}",
         "src/index.{ts,tsx,js,mjs}",
+        "src/seed.{ts,tsx,js,mjs}",
+        "src/service.{ts,tsx,js,mjs}",
         "tests/**/*.{ts,tsx,js,mjs}",
         "scripts/**/*.{ts,tsx,js,mjs}",
         "vitest.config.{ts,js,mjs}",
@@ -555,6 +570,10 @@
       ]
     },
     "time": {
+      "ignoreDependencies": [
+        "@types/better-sqlite3",
+        "better-sqlite3"
+      ],
       "entry": [
         "src/bin/*.{ts,js,mjs}",
         "src/index.{ts,tsx,js,mjs}",

@@ -14,7 +14,6 @@
     "@clawjs/runtime": "file:../packages/clawjs-runtime",
     "@clawjs/sessions": "file:../packages/clawjs-sessions",
     "@clawjs/user-model": "file:../packages/clawjs-user-model",
-    "better-sqlite3": "^12.9.0",
     "fastify": "^5.6.1"
   },
   "devDependencies": {

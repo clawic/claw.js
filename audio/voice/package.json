@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@clawjs/voice": "file:../packages/clawjs-voice",
-    "better-sqlite3": "^12.9.0",
     "fastify": "^5.6.1"
   },
   "devDependencies": {
