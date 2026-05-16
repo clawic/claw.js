@@ -122,7 +122,7 @@ run("node", ["--input-type=module", "-e", `
   }
   const integrations = await import("@clawjs/integrations");
   if (
-    typeof integrations.IntegrationManager !== "function"
+    typeof integrations.IntegrationConnectionController !== "function"
     || typeof integrations.telegramAdapter !== "object"
     || typeof integrations.normalizeConnectorCatalog !== "function"
     || typeof integrations.runConnectorOperation !== "function"

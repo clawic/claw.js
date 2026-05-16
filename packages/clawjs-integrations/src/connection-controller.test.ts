@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AgentStoreFS, Connection } from "@clawjs/agents";
-import { IntegrationManager } from "./manager.js";
+import { IntegrationConnectionController } from "./connection-controller.js";
 
 const connection: Connection = {
   id: "telegram-main",
@@ -23,22 +23,22 @@ function storeThatFailsOnPlaintextRead(): AgentStoreFS {
   } as unknown as AgentStoreFS;
 }
 
-describe("IntegrationManager", () => {
+describe("IntegrationConnectionController", () => {
   it("does not resolve plaintext auth when starting legacy watchers", async () => {
-    const manager = new IntegrationManager({
+    const controller = new IntegrationConnectionController({
       store: storeThatFailsOnPlaintextRead(),
       deliver: () => {},
     });
 
-    await expect(manager.startOne(connection.id)).resolves.toBe(false);
+    await expect(controller.startOne(connection.id)).resolves.toBe(false);
   });
 
   it("does not resolve plaintext auth for legacy outbound sends", async () => {
-    const manager = new IntegrationManager({
+    const controller = new IntegrationConnectionController({
       store: storeThatFailsOnPlaintextRead(),
       deliver: () => {},
     });
 
-    await expect(manager.send(connection.id, "chat", "hello")).resolves.toBe(false);
+    await expect(controller.send(connection.id, "chat", "hello")).resolves.toBe(false);
   });
 });

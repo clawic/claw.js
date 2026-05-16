@@ -1,7 +1,7 @@
 {
   "name": "@clawjs/integrations",
   "version": "0.1.2",
-  "description": "Connection manager + per-service watchers (Telegram, Slack, ...) for ClawJS. Reads ~/.claw/connections/ + agent integration bindings; routes inbound messages to the agent that should pick them up.",
+  "description": "Connection controller + per-service watchers (Telegram, Slack, ...) for ClawJS. Reads ~/.claw/connections/ + agent integration bindings; routes inbound messages to the agent that should pick them up.",
   "type": "module",
   "license": "MIT",
   "author": {

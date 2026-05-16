@@ -1,4 +1,4 @@
-// Connection manager. Owns one watcher per Connection record, starts /
+// Connection controller. Owns one watcher per Connection record, starts /
 // stops them in response to `start`/`stop` calls from the daemon, and
 // routes inbound messages to the agent identified by the matching
 // `AgentIntegrationBinding`. The actual prompt delivery is delegated
@@ -17,7 +17,7 @@ export interface IntegrationDeliveryContext {
   message: IntegrationInboundMessage;
 }
 
-export interface IntegrationManagerOptions {
+export interface IntegrationConnectionControllerOptions {
   store: AgentStoreFS;
   /** Invoked once for every inbound message that resolved to an agent.
    *  Implementations send the text into the agent's runtime
@@ -28,12 +28,12 @@ export interface IntegrationManagerOptions {
   adapters?: Partial<Record<Connection["service"], IntegrationAdapter>>;
 }
 
-export class IntegrationManager {
+export class IntegrationConnectionController {
   private readonly store: AgentStoreFS;
-  private readonly deliver: IntegrationManagerOptions["deliver"];
+  private readonly deliver: IntegrationConnectionControllerOptions["deliver"];
   private stops: Map<string, () => void> = new Map();
 
-  constructor(opts: IntegrationManagerOptions) {
+  constructor(opts: IntegrationConnectionControllerOptions) {
     this.store = opts.store;
     this.deliver = opts.deliver;
     void opts.adapters;
