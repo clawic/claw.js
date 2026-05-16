@@ -135,7 +135,7 @@ For `openclaw`, the default policy is capability-based:
 - document refs are materialized into OpenAI-style `input_file` and
   `input_image` parts when the payload supports them
 - `chat/completions` stays as a text-only fallback path for simple
-  compatibility and title-style flows
+  title-style flows
 - native OpenClaw session and chat operations are exposed separately
   under `claw.runtime.openclaw`
 

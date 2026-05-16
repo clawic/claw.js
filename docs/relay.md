@@ -74,12 +74,12 @@ The relay now distinguishes three layers:
 - `agent`: reusable role definition and connector identity
 - `assignment`: the concrete `projectId + agentId` runtime instance
 
-Relay v2 also distinguishes:
+Relay also distinguishes:
 
 - `device`: one authenticated mobile, web, or desktop client session
 - `connector`: one reverse WebSocket runtime process behind NAT
 
-The public product routes are project-scoped. The low-level workspace routes remain available for compatibility.
+The public product routes are project-scoped. The low-level workspace routes remain the v1 workspace-scoped surface.
 
 - `agent` in product terms is not the same thing as the runtime id used on disk or on the CLI
 - each assignment derives its own `workspaceId` and `runtimeAgentId`

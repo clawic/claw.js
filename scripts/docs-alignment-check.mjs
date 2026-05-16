@@ -100,6 +100,14 @@ if (fs.existsSync(path.join(rootDir, "docs/sessions-and-streaming.md"))) {
   fail("docs/sessions-and-streaming.md must not ship as a compatibility alias; use docs/sessions.md");
 }
 
+for (const [relativePath, snippets] of [
+  ["docs/api.md", ["available for compatibility"]],
+  ["docs/relay.md", ["available for compatibility", "Relay v2 also distinguishes"]],
+  ["docs/sessions.md", ["compatibility and title-style flows"]],
+]) {
+  for (const snippet of snippets) forbidSnippet(relativePath, snippet);
+}
+
 requireSnippet("CLAUDE.md", "AGENTS.md");
 requireSnippet("CLAUDE.md", "docs/host-ownership.md");
 requireSnippet("CLAUDE.md", "docs/data-storage-boundary.md");

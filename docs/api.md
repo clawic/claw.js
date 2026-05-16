@@ -228,7 +228,7 @@ const executions = await claw.routines.history();
 
 Use `claw.calendar`, `claw.routines`, `claw.reminders`, and `claw.watch`
 for public integrations. The lower-level `claw.time` namespace remains
-available for compatibility.
+the v1 service namespace for shared scheduling primitives.
 
 ## Content
 
