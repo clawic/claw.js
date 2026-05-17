@@ -65,6 +65,7 @@ import {
   nowIso,
   parseCsvOrJson,
   parseMaybeJson,
+  resolveClawjsDataRoot,
   truthy,
   usage,
   usageError,
@@ -72,6 +73,7 @@ import {
   writeSuccess,
 } from "./v1-data-core.ts";
 import type { JsonRecord, V1DataCliInput } from "./v1-data-core.ts";
+import { scheduleAgentsCatalogSearchEvent } from "./cli-search-events.ts";
 
 export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
   const command = input.positionals[1];
@@ -94,6 +96,7 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
     if (!agent) return usageError(input, "Usage: claw agents upsert ID --name NAME [--record JSON] [--json]");
     agentStore.writeAgent(agent);
     syncAgentProjection(store, agent);
+    scheduleAgentsCatalogSearchEvent({ operation: "upsert", kind: "agent", id: agent.id, dataDir: resolveClawjsDataRoot(), flags: input.flags });
     writeAgentEntitySuccess(input, agent);
     return V1_DATA_EXIT_OK;
   }
@@ -102,6 +105,7 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
     if (!id) return usageError(input, "Usage: claw agents delete AGENT_ID [--json]");
     agentStore.deleteAgent(id);
     const changes = store.sqlite.prepare("DELETE FROM agents WHERE id = ?").run(id).changes;
+    if (changes > 0) scheduleAgentsCatalogSearchEvent({ operation: "delete", kind: "agent", id, dataDir: resolveClawjsDataRoot(), flags: input.flags });
     writeSuccess(input, { id, deleted: changes > 0 });
     return V1_DATA_EXIT_OK;
   }
@@ -313,6 +317,7 @@ export function runPersonalitiesCommand(input: V1DataCliInput, store: DatabaseSe
     if (!personality) return usageError(input, "Usage: claw personalities upsert ID --name NAME [--prompt TEXT] [--json]");
     agentStore.writePersonality(personality);
     syncPersonalityProjection(store, personality);
+    scheduleAgentsCatalogSearchEvent({ operation: "upsert", kind: "personality", id: personality.id, dataDir: resolveClawjsDataRoot(), flags: input.flags });
     writeAgentEntitySuccess(input, personality);
     return V1_DATA_EXIT_OK;
   }
@@ -321,6 +326,7 @@ export function runPersonalitiesCommand(input: V1DataCliInput, store: DatabaseSe
     if (!id) return usageError(input, "Usage: claw personalities delete PERSONALITY_ID [--json]");
     agentStore.deletePersonality(id);
     const changes = store.sqlite.prepare("DELETE FROM personalities WHERE id = ?").run(id).changes;
+    if (changes > 0) scheduleAgentsCatalogSearchEvent({ operation: "delete", kind: "personality", id, dataDir: resolveClawjsDataRoot(), flags: input.flags });
     writeSuccess(input, { id, deleted: changes > 0 });
     return V1_DATA_EXIT_OK;
   }
@@ -348,6 +354,7 @@ export function runSkillCollectionsCommand(input: V1DataCliInput, store: Databas
     if (!collection) return usageError(input, "Usage: claw skill-collections upsert ID --name NAME [--tags a,b] [--json]");
     agentStore.writeCollection(collection);
     syncCollectionProjection(store, collection);
+    scheduleAgentsCatalogSearchEvent({ operation: "upsert", kind: "skill_collection", id: collection.id, dataDir: resolveClawjsDataRoot(), flags: input.flags });
     writeAgentEntitySuccess(input, collection);
     return V1_DATA_EXIT_OK;
   }
@@ -356,6 +363,7 @@ export function runSkillCollectionsCommand(input: V1DataCliInput, store: Databas
     if (!id) return usageError(input, "Usage: claw skill-collections delete COLLECTION_ID [--json]");
     agentStore.deleteCollection(id);
     const changes = store.sqlite.prepare("DELETE FROM skill_collections WHERE id = ?").run(id).changes;
+    if (changes > 0) scheduleAgentsCatalogSearchEvent({ operation: "delete", kind: "skill_collection", id, dataDir: resolveClawjsDataRoot(), flags: input.flags });
     writeSuccess(input, { id, deleted: changes > 0 });
     return V1_DATA_EXIT_OK;
   }
@@ -383,6 +391,7 @@ export function runConnectionsCommand(input: V1DataCliInput, store: DatabaseServ
     if (!connection) return usageError(input, "Usage: claw connections upsert ID --provider PROVIDER --label LABEL --secret-ref REF [--json]");
     agentStore.writeConnection(connection);
     syncConnectionProjection(store, connection);
+    scheduleAgentsCatalogSearchEvent({ operation: "upsert", kind: "connection", id: connection.id, dataDir: resolveClawjsDataRoot(), flags: input.flags });
     writeAgentEntitySuccess(input, connection);
     return V1_DATA_EXIT_OK;
   }
@@ -391,6 +400,7 @@ export function runConnectionsCommand(input: V1DataCliInput, store: DatabaseServ
     if (!id) return usageError(input, "Usage: claw connections delete CONNECTION_ID [--json]");
     agentStore.deleteConnection(id);
     const changes = store.sqlite.prepare("DELETE FROM connections WHERE id = ?").run(id).changes;
+    if (changes > 0) scheduleAgentsCatalogSearchEvent({ operation: "delete", kind: "connection", id, dataDir: resolveClawjsDataRoot(), flags: input.flags });
     writeSuccess(input, { id, deleted: changes > 0 });
     return V1_DATA_EXIT_OK;
   }

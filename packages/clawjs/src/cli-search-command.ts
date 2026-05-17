@@ -165,6 +165,12 @@ export async function runSearchQueryCli(input: {
     const shouldRefreshSkills = domains?.includes("skills") || sources?.includes("skills.registry");
     const shouldRefreshProviders = domains?.includes("providers") || sources?.includes("providers.routing");
     const shouldRefreshSnippets = domains?.includes("snippets") || sources?.includes("snippets.library");
+    const shouldRefreshAgents = domains?.includes("agents") || sources?.includes("agents.catalog");
+    const shouldRefreshMarketplace = domains?.includes("marketplace") || sources?.includes("marketplace.choices");
+    const shouldRefreshContent = domains?.includes("content") || sources?.includes("content.items");
+    const shouldRefreshBusiness = domains?.includes("business") || sources?.includes("business.records");
+    const shouldRefreshSocial = domains?.includes("social") || sources?.includes("social.posts");
+    const shouldRefreshIot = domains?.includes("iot") || sources?.includes("iot.config");
     const shouldRefreshConnectors = domains?.includes("connectors") || sources?.includes("connectors.catalog");
     const shouldRefreshMcp = domains?.includes("mcp") || sources?.includes("mcp.servers");
     const shouldRefreshApps = domains?.includes("apps") || sources?.includes("apps.catalog");
@@ -188,6 +194,12 @@ export async function runSearchQueryCli(input: {
     const indexedSkills = shouldRefreshSkills && sourceCanIndex(store, "skills.registry") ? ensureSkillsRegistrySourceIndexed(store, input.flags) : 0;
     const indexedProviders = shouldRefreshProviders && sourceCanIndex(store, "providers.routing") ? ensureProvidersRoutingSourceIndexed(store, input.flags) : 0;
     const indexedSnippets = shouldRefreshSnippets && sourceCanIndex(store, "snippets.library") ? ensureSnippetsLibrarySourceIndexed(store, input.flags) : 0;
+    const indexedAgents = shouldRefreshAgents && sourceCanIndex(store, "agents.catalog") ? ensureAgentsCatalogSourceIndexed(store, input.flags) : 0;
+    const indexedMarketplace = shouldRefreshMarketplace && sourceCanIndex(store, "marketplace.choices") ? ensureMarketplaceChoicesSourceIndexed(store, input.flags) : 0;
+    const indexedContent = shouldRefreshContent && sourceCanIndex(store, "content.items") ? ensureContentItemsSourceIndexed(store, input.flags) : 0;
+    const indexedBusiness = shouldRefreshBusiness && sourceCanIndex(store, "business.records") ? ensureBusinessRecordsSourceIndexed(store, input.flags) : 0;
+    const indexedSocial = shouldRefreshSocial && sourceCanIndex(store, "social.posts") ? ensureSocialPostsSourceIndexed(store, input.flags) : 0;
+    const indexedIot = shouldRefreshIot && sourceCanIndex(store, "iot.config") ? ensureIotConfigSourceIndexed(store, input.flags) : 0;
     const indexedConnectors = shouldRefreshConnectors && sourceCanIndex(store, "connectors.catalog") ? ensureConnectorsCatalogSourceIndexed(store, input.flags) : 0;
     const indexedMcp = shouldRefreshMcp && sourceCanIndex(store, "mcp.servers") ? ensureMcpServersSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedApps = shouldRefreshApps && sourceCanIndex(store, "apps.catalog") ? ensureAppsCatalogSourceIndexed(store, input.flags) : 0;
@@ -277,6 +289,12 @@ export async function runSearchQueryCli(input: {
         ...(shouldRefreshSkills ? { "skills.registry": indexedSkills } : {}),
         ...(shouldRefreshProviders ? { "providers.routing": indexedProviders } : {}),
         ...(shouldRefreshSnippets ? { "snippets.library": indexedSnippets } : {}),
+        ...(shouldRefreshAgents ? { "agents.catalog": indexedAgents } : {}),
+        ...(shouldRefreshMarketplace ? { "marketplace.choices": indexedMarketplace } : {}),
+        ...(shouldRefreshContent ? { "content.items": indexedContent } : {}),
+        ...(shouldRefreshBusiness ? { "business.records": indexedBusiness } : {}),
+        ...(shouldRefreshSocial ? { "social.posts": indexedSocial } : {}),
+        ...(shouldRefreshIot ? { "iot.config": indexedIot } : {}),
         ...(shouldRefreshConnectors ? { "connectors.catalog": indexedConnectors } : {}),
         ...(shouldRefreshMcp ? { "mcp.servers": indexedMcp } : {}),
         ...(shouldRefreshApps ? { "apps.catalog": indexedApps } : {}),
@@ -408,6 +426,12 @@ export async function runSearchRebuildCli(input: {
     const skillsIndexed = rebuildsSource("skills.registry") ? ensureSkillsRegistrySourceIndexed(store, input.flags) : 0;
     const providersIndexed = rebuildsSource("providers.routing") ? ensureProvidersRoutingSourceIndexed(store, input.flags) : 0;
     const snippetsIndexed = rebuildsSource("snippets.library") ? ensureSnippetsLibrarySourceIndexed(store, input.flags) : 0;
+    const agentsIndexed = rebuildsSource("agents.catalog") ? ensureAgentsCatalogSourceIndexed(store, input.flags) : 0;
+    const marketplaceIndexed = rebuildsSource("marketplace.choices") ? ensureMarketplaceChoicesSourceIndexed(store, input.flags) : 0;
+    const contentIndexed = rebuildsSource("content.items") ? ensureContentItemsSourceIndexed(store, input.flags) : 0;
+    const businessIndexed = rebuildsSource("business.records") ? ensureBusinessRecordsSourceIndexed(store, input.flags) : 0;
+    const socialIndexed = rebuildsSource("social.posts") ? ensureSocialPostsSourceIndexed(store, input.flags) : 0;
+    const iotIndexed = rebuildsSource("iot.config") ? ensureIotConfigSourceIndexed(store, input.flags) : 0;
     const connectorsIndexed = rebuildsSource("connectors.catalog") ? ensureConnectorsCatalogSourceIndexed(store, input.flags) : 0;
     const mcpIndexed = rebuildsSource("mcp.servers") ? ensureMcpServersSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const appsIndexed = rebuildsSource("apps.catalog") ? ensureAppsCatalogSourceIndexed(store, input.flags) : 0;
@@ -434,6 +458,12 @@ export async function runSearchRebuildCli(input: {
       ...(skillsIndexed > 0 ? ["skills.registry"] : []),
       ...(providersIndexed > 0 ? ["providers.routing"] : []),
       ...(snippetsIndexed > 0 ? ["snippets.library"] : []),
+      ...(agentsIndexed > 0 ? ["agents.catalog"] : []),
+      ...(marketplaceIndexed > 0 ? ["marketplace.choices"] : []),
+      ...(contentIndexed > 0 ? ["content.items"] : []),
+      ...(businessIndexed > 0 ? ["business.records"] : []),
+      ...(socialIndexed > 0 ? ["social.posts"] : []),
+      ...(iotIndexed > 0 ? ["iot.config"] : []),
       ...(connectorsIndexed > 0 ? ["connectors.catalog"] : []),
       ...(mcpIndexed > 0 ? ["mcp.servers"] : []),
       ...(appsIndexed > 0 ? ["apps.catalog"] : []),
@@ -453,7 +483,7 @@ export async function runSearchRebuildCli(input: {
       mode: selectedSources && selectedShards ? "shard_scoped" : selectedSources ? "scoped" : "full",
       selectedSources: selectedSources ?? null,
       selectedShards: selectedShards ?? null,
-      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + workIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + skillsIndexed + providersIndexed + snippetsIndexed + connectorsIndexed + mcpIndexed + appsIndexed + designIndexed + runtimeIndexed + localFilesIndexed + webIndexed + externalIndexed,
+      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + workIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + skillsIndexed + providersIndexed + snippetsIndexed + agentsIndexed + marketplaceIndexed + contentIndexed + businessIndexed + socialIndexed + iotIndexed + connectorsIndexed + mcpIndexed + appsIndexed + designIndexed + runtimeIndexed + localFilesIndexed + webIndexed + externalIndexed,
       embeddings: 0,
       profile: input.flags.profile === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
@@ -476,6 +506,12 @@ export async function runSearchRebuildCli(input: {
         "skills.registry": skillsIndexed,
         "providers.routing": providersIndexed,
         "snippets.library": snippetsIndexed,
+        "agents.catalog": agentsIndexed,
+        "marketplace.choices": marketplaceIndexed,
+        "content.items": contentIndexed,
+        "business.records": businessIndexed,
+        "social.posts": socialIndexed,
+        "iot.config": iotIndexed,
         "connectors.catalog": connectorsIndexed,
         "mcp.servers": mcpIndexed,
         "apps.catalog": appsIndexed,
@@ -1100,6 +1136,18 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
       return ensureProvidersRoutingSourceIndexed(store, flags);
     case "snippets.library":
       return ensureSnippetsLibrarySourceIndexed(store, flags);
+    case "agents.catalog":
+      return ensureAgentsCatalogSourceIndexed(store, flags);
+    case "marketplace.choices":
+      return ensureMarketplaceChoicesSourceIndexed(store, flags);
+    case "content.items":
+      return ensureContentItemsSourceIndexed(store, flags);
+    case "business.records":
+      return ensureBusinessRecordsSourceIndexed(store, flags);
+    case "social.posts":
+      return ensureSocialPostsSourceIndexed(store, flags);
+    case "iot.config":
+      return ensureIotConfigSourceIndexed(store, flags);
     case "connectors.catalog":
       return ensureConnectorsCatalogSourceIndexed(store, flags);
     case "mcp.servers":
@@ -1173,6 +1221,30 @@ function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flag
       const resourceId = resourceIdFromJobPayload(job, "slug") ?? job.resourceId;
       return resourceId ? ensureSnippetsLibraryResourceIndexed(store, flags, resourceId) : 0;
     }
+    case "agents.catalog": {
+      const resourceId = job.resourceId;
+      return resourceId ? ensureAgentsCatalogResourceIndexed(store, flags, resourceId) : 0;
+    }
+    case "marketplace.choices": {
+      const choiceId = resourceIdFromJobPayload(job, "choiceId") ?? job.resourceId;
+      return choiceId ? ensureMarketplaceChoiceResourceIndexed(store, flags, choiceId) : 0;
+    }
+    case "content.items": {
+      const itemId = resourceIdFromJobPayload(job, "itemId") ?? job.resourceId;
+      return itemId ? ensureContentItemResourceIndexed(store, flags, itemId) : 0;
+    }
+    case "business.records": {
+      const recordId = resourceIdFromJobPayload(job, "recordId") ?? job.resourceId;
+      return recordId ? ensureBusinessRecordResourceIndexed(store, flags, recordId) : 0;
+    }
+    case "social.posts": {
+      const postId = resourceIdFromJobPayload(job, "postId") ?? job.resourceId;
+      return postId ? ensureSocialPostResourceIndexed(store, flags, postId) : 0;
+    }
+    case "iot.config": {
+      const configId = resourceIdFromJobPayload(job, "configId") ?? job.resourceId;
+      return configId ? ensureIotConfigResourceIndexed(store, flags, configId) : 0;
+    }
     case "connectors.catalog": {
       const resourceId = resourceIdFromJobPayload(job, "operationId") ?? job.resourceId;
       return resourceId ? ensureConnectorCatalogResourceIndexed(store, flags, resourceId) : 0;
@@ -1220,6 +1292,17 @@ function parseProviderRoutingResourceId(resourceId: string): { feature: string; 
   const parts = resourceId.split(":");
   if (parts.length !== 3 || parts[0] !== "routing" || !parts[1] || !parts[2]) return null;
   return { feature: parts[1], capability: parts[2] };
+}
+
+function parseAgentCatalogResourceId(resourceId: string): { kind: "agent" | "personality" | "skill_collection" | "connection"; id: string } | null {
+  for (const kind of ["agent", "personality", "skill_collection", "connection"] as const) {
+    const prefix = `${kind}:`;
+    if (resourceId.startsWith(prefix)) {
+      const id = resourceId.slice(prefix.length);
+      return id ? { kind, id } : null;
+    }
+  }
+  return null;
 }
 
 function documentTargetFromJob(job: SearchIndexJob): { namespaceId: string; documentId: string; resourceId: string } | null {
@@ -2717,6 +2800,511 @@ function ensureSnippetsLibraryResourceIndexed(store: SearchStore, flags: Record<
       error: null,
       lastIndexedAt: new Date().toISOString(),
     });
+    return 1;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureAgentsCatalogSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) {
+    store.setSourceState("agents.catalog", "enabled", {
+      backlog: 0,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 0;
+  }
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "agents") || !hasTable(db, "personalities") || !hasTable(db, "skill_collections") || !hasTable(db, "connections")) {
+      store.setSourceState("agents.catalog", "degraded", {
+        backlog: 0,
+        error: "core database does not contain agent catalog tables",
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return 0;
+    }
+    const agents = db.prepare(`
+      SELECT id, kind, name, status, agency_mode, role, title, description, owner_kind, owner_id,
+        workspace_id, project_id, runtime, model, autonomy_profile, builtin, secret_ref,
+        config_json, export_path, retired_at, created_at, updated_at
+      FROM agents
+      ORDER BY updated_at DESC
+    `).all() as AgentCatalogAgentRow[];
+    const personalities = db.prepare(`
+      SELECT id, name, description, prompt, version, created_at, updated_at
+      FROM personalities
+      ORDER BY updated_at DESC
+    `).all() as AgentCatalogPersonalityRow[];
+    const collections = db.prepare(`
+      SELECT id, name, description, skills_json, metadata_json, export_path, created_at, updated_at
+      FROM skill_collections
+      ORDER BY updated_at DESC
+    `).all() as AgentCatalogSkillCollectionRow[];
+    const connections = db.prepare(`
+      SELECT id, provider, label, secret_ref, config_json, metadata_json, created_at, updated_at
+      FROM connections
+      ORDER BY updated_at DESC
+    `).all() as AgentCatalogConnectionRow[];
+    let indexed = 0;
+    for (const row of agents) {
+      store.upsertDocument(agentCatalogAgentSearchDocument(row));
+      indexed += 1;
+    }
+    for (const row of personalities) {
+      store.upsertDocument(agentCatalogPersonalitySearchDocument(row));
+      indexed += 1;
+    }
+    for (const row of collections) {
+      store.upsertDocument(agentCatalogSkillCollectionSearchDocument(row));
+      indexed += 1;
+    }
+    for (const row of connections) {
+      store.upsertDocument(agentCatalogConnectionSearchDocument(row));
+      indexed += 1;
+    }
+    store.setCursor({
+      source: "agents.catalog",
+      cursor: `agents:${indexed}`,
+      metadata: { store: "core.sqlite", collections: ["agents", "personalities", "skill_collections", "connections"] },
+    });
+    store.setSourceState("agents.catalog", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return indexed;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureAgentsCatalogResourceIndexed(store: SearchStore, flags: Record<string, string>, resourceId: string): number {
+  const parsed = parseAgentCatalogResourceId(resourceId);
+  if (!parsed) {
+    store.tombstone({ source: "agents.catalog", resourceId, reason: "unknown agent catalog resource during Search event refresh" });
+    return 1;
+  }
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) return 0;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (parsed.kind === "agent") {
+      if (!hasTable(db, "agents")) return 0;
+      const row = db.prepare(`
+        SELECT id, kind, name, status, agency_mode, role, title, description, owner_kind, owner_id,
+          workspace_id, project_id, runtime, model, autonomy_profile, builtin, secret_ref,
+          config_json, export_path, retired_at, created_at, updated_at
+        FROM agents
+        WHERE id = ?
+        LIMIT 1
+      `).get(parsed.id) as AgentCatalogAgentRow | undefined;
+      if (!row) {
+        store.tombstone({ source: "agents.catalog", resourceId, reason: "agent missing during Search event refresh" });
+        return 1;
+      }
+      store.upsertDocument(agentCatalogAgentSearchDocument(row));
+      store.setSourceState("agents.catalog", "enabled", { backlog: 0, error: null, lastIndexedAt: new Date().toISOString() });
+      return 1;
+    }
+    if (parsed.kind === "personality") {
+      if (!hasTable(db, "personalities")) return 0;
+      const row = db.prepare(`
+        SELECT id, name, description, prompt, version, created_at, updated_at
+        FROM personalities
+        WHERE id = ?
+        LIMIT 1
+      `).get(parsed.id) as AgentCatalogPersonalityRow | undefined;
+      if (!row) {
+        store.tombstone({ source: "agents.catalog", resourceId, reason: "personality missing during Search event refresh" });
+        return 1;
+      }
+      store.upsertDocument(agentCatalogPersonalitySearchDocument(row));
+      store.setSourceState("agents.catalog", "enabled", { backlog: 0, error: null, lastIndexedAt: new Date().toISOString() });
+      return 1;
+    }
+    if (parsed.kind === "skill_collection") {
+      if (!hasTable(db, "skill_collections")) return 0;
+      const row = db.prepare(`
+        SELECT id, name, description, skills_json, metadata_json, export_path, created_at, updated_at
+        FROM skill_collections
+        WHERE id = ?
+        LIMIT 1
+      `).get(parsed.id) as AgentCatalogSkillCollectionRow | undefined;
+      if (!row) {
+        store.tombstone({ source: "agents.catalog", resourceId, reason: "skill collection missing during Search event refresh" });
+        return 1;
+      }
+      store.upsertDocument(agentCatalogSkillCollectionSearchDocument(row));
+      store.setSourceState("agents.catalog", "enabled", { backlog: 0, error: null, lastIndexedAt: new Date().toISOString() });
+      return 1;
+    }
+    if (!hasTable(db, "connections")) return 0;
+    const row = db.prepare(`
+      SELECT id, provider, label, secret_ref, config_json, metadata_json, created_at, updated_at
+      FROM connections
+      WHERE id = ?
+      LIMIT 1
+    `).get(parsed.id) as AgentCatalogConnectionRow | undefined;
+    if (!row) {
+      store.tombstone({ source: "agents.catalog", resourceId, reason: "connection missing during Search event refresh" });
+      return 1;
+    }
+    store.upsertDocument(agentCatalogConnectionSearchDocument(row));
+    store.setSourceState("agents.catalog", "enabled", { backlog: 0, error: null, lastIndexedAt: new Date().toISOString() });
+    return 1;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureMarketplaceChoicesSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) {
+    store.setSourceState("marketplace.choices", "enabled", {
+      backlog: 0,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 0;
+  }
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "marketplace_choices")) {
+      store.setSourceState("marketplace.choices", "degraded", {
+        backlog: 0,
+        error: "core database does not contain marketplace choices",
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return 0;
+    }
+    const rows = db.prepare(`
+      SELECT id, kind, target, choice, status, rationale, metadata_json, created_at, updated_at
+      FROM marketplace_choices
+      ORDER BY updated_at DESC
+    `).all() as MarketplaceChoiceRow[];
+    for (const row of rows) store.upsertDocument(marketplaceChoiceSearchDocument(row));
+    store.setCursor({
+      source: "marketplace.choices",
+      cursor: `marketplace:${rows.length}`,
+      metadata: { store: "core.sqlite", collections: ["marketplace_choices"] },
+    });
+    store.setSourceState("marketplace.choices", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return rows.length;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureMarketplaceChoiceResourceIndexed(store: SearchStore, flags: Record<string, string>, choiceId: string): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) return 0;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "marketplace_choices")) return 0;
+    const row = db.prepare(`
+      SELECT id, kind, target, choice, status, rationale, metadata_json, created_at, updated_at
+      FROM marketplace_choices
+      WHERE id = ?
+      LIMIT 1
+    `).get(choiceId) as MarketplaceChoiceRow | undefined;
+    if (!row) {
+      store.tombstone({ source: "marketplace.choices", resourceId: choiceId, reason: "marketplace choice missing during Search event refresh" });
+      return 1;
+    }
+    store.upsertDocument(marketplaceChoiceSearchDocument(row));
+    store.setSourceState("marketplace.choices", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 1;
+  } finally {
+    db.close();
+  }
+}
+
+interface ContentItemRow {
+  id: string;
+  kind: string;
+  title: string;
+  status: string;
+  brand_id: string | null;
+  campaign_id: string | null;
+  page_id: string | null;
+  metadata_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface BusinessRecordRow {
+  id: string;
+  kind: string;
+  name: string;
+  status: string;
+  page_id: string | null;
+  metadata_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface SocialPostRow {
+  id: string;
+  title: string;
+  status: string;
+  channel_json: string;
+  scheduled_at: string | null;
+  published_at: string | null;
+  page_id: string | null;
+  metadata_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface IotConfigRow {
+  id: string;
+  kind: string;
+  name: string;
+  parent_id: string | null;
+  status: string;
+  config_json: string;
+  secret_ref: string | null;
+  enabled: number;
+  metadata_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
+function ensureContentItemsSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) {
+    store.setSourceState("content.items", "enabled", { backlog: 0, lastIndexedAt: new Date().toISOString() });
+    return 0;
+  }
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "content_items")) {
+      store.setSourceState("content.items", "degraded", {
+        backlog: 0,
+        error: "core database does not contain content items",
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return 0;
+    }
+    const rows = db.prepare(`
+      SELECT id, kind, title, status, brand_id, campaign_id, page_id, metadata_json, created_at, updated_at
+      FROM content_items
+      ORDER BY updated_at DESC
+    `).all() as ContentItemRow[];
+    for (const row of rows) store.upsertDocument(contentItemSearchDocument(row, pageBodyForSearch(db, row.page_id)));
+    store.setCursor({
+      source: "content.items",
+      cursor: `content:${rows.length}`,
+      metadata: { store: "core.sqlite", collections: ["content_items"] },
+    });
+    store.setSourceState("content.items", "enabled", { backlog: 0, error: null, lastIndexedAt: new Date().toISOString() });
+    return rows.length;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureContentItemResourceIndexed(store: SearchStore, flags: Record<string, string>, itemId: string): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) return 0;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "content_items")) return 0;
+    const row = db.prepare(`
+      SELECT id, kind, title, status, brand_id, campaign_id, page_id, metadata_json, created_at, updated_at
+      FROM content_items
+      WHERE id = ?
+      LIMIT 1
+    `).get(itemId) as ContentItemRow | undefined;
+    if (!row) {
+      store.tombstone({ source: "content.items", resourceId: itemId, reason: "content item missing during Search event refresh" });
+      return 1;
+    }
+    store.upsertDocument(contentItemSearchDocument(row, pageBodyForSearch(db, row.page_id)));
+    store.setSourceState("content.items", "enabled", { backlog: 0, error: null, lastIndexedAt: new Date().toISOString() });
+    return 1;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureBusinessRecordsSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) {
+    store.setSourceState("business.records", "enabled", { backlog: 0, lastIndexedAt: new Date().toISOString() });
+    return 0;
+  }
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "business_records")) {
+      store.setSourceState("business.records", "degraded", {
+        backlog: 0,
+        error: "core database does not contain business records",
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return 0;
+    }
+    const rows = db.prepare(`
+      SELECT id, kind, name, status, page_id, metadata_json, created_at, updated_at
+      FROM business_records
+      ORDER BY updated_at DESC
+    `).all() as BusinessRecordRow[];
+    for (const row of rows) store.upsertDocument(businessRecordSearchDocument(row, pageBodyForSearch(db, row.page_id)));
+    store.setCursor({
+      source: "business.records",
+      cursor: `business:${rows.length}`,
+      metadata: { store: "core.sqlite", collections: ["business_records"] },
+    });
+    store.setSourceState("business.records", "enabled", { backlog: 0, error: null, lastIndexedAt: new Date().toISOString() });
+    return rows.length;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureBusinessRecordResourceIndexed(store: SearchStore, flags: Record<string, string>, recordId: string): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) return 0;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "business_records")) return 0;
+    const row = db.prepare(`
+      SELECT id, kind, name, status, page_id, metadata_json, created_at, updated_at
+      FROM business_records
+      WHERE id = ?
+      LIMIT 1
+    `).get(recordId) as BusinessRecordRow | undefined;
+    if (!row) {
+      store.tombstone({ source: "business.records", resourceId: recordId, reason: "business record missing during Search event refresh" });
+      return 1;
+    }
+    store.upsertDocument(businessRecordSearchDocument(row, pageBodyForSearch(db, row.page_id)));
+    store.setSourceState("business.records", "enabled", { backlog: 0, error: null, lastIndexedAt: new Date().toISOString() });
+    return 1;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureSocialPostsSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) {
+    store.setSourceState("social.posts", "enabled", { backlog: 0, lastIndexedAt: new Date().toISOString() });
+    return 0;
+  }
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "social_posts")) {
+      store.setSourceState("social.posts", "degraded", {
+        backlog: 0,
+        error: "core database does not contain social posts",
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return 0;
+    }
+    const rows = db.prepare(`
+      SELECT id, title, status, channel_json, scheduled_at, published_at, page_id, metadata_json, created_at, updated_at
+      FROM social_posts
+      ORDER BY COALESCE(scheduled_at, updated_at) DESC
+    `).all() as SocialPostRow[];
+    for (const row of rows) store.upsertDocument(socialPostSearchDocument(row, pageBodyForSearch(db, row.page_id)));
+    store.setCursor({
+      source: "social.posts",
+      cursor: `social:${rows.length}`,
+      metadata: { store: "core.sqlite", collections: ["social_posts"] },
+    });
+    store.setSourceState("social.posts", "enabled", { backlog: 0, error: null, lastIndexedAt: new Date().toISOString() });
+    return rows.length;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureSocialPostResourceIndexed(store: SearchStore, flags: Record<string, string>, postId: string): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) return 0;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "social_posts")) return 0;
+    const row = db.prepare(`
+      SELECT id, title, status, channel_json, scheduled_at, published_at, page_id, metadata_json, created_at, updated_at
+      FROM social_posts
+      WHERE id = ?
+      LIMIT 1
+    `).get(postId) as SocialPostRow | undefined;
+    if (!row) {
+      store.tombstone({ source: "social.posts", resourceId: postId, reason: "social post missing during Search event refresh" });
+      return 1;
+    }
+    store.upsertDocument(socialPostSearchDocument(row, pageBodyForSearch(db, row.page_id)));
+    store.setSourceState("social.posts", "enabled", { backlog: 0, error: null, lastIndexedAt: new Date().toISOString() });
+    return 1;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureIotConfigSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) {
+    store.setSourceState("iot.config", "enabled", { backlog: 0, lastIndexedAt: new Date().toISOString() });
+    return 0;
+  }
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "iot_config")) {
+      store.setSourceState("iot.config", "degraded", {
+        backlog: 0,
+        error: "core database does not contain IoT config",
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return 0;
+    }
+    const rows = db.prepare(`
+      SELECT id, kind, name, parent_id, status, config_json, secret_ref, enabled, metadata_json, created_at, updated_at
+      FROM iot_config
+      ORDER BY kind, name
+    `).all() as IotConfigRow[];
+    for (const row of rows) store.upsertDocument(iotConfigSearchDocument(row));
+    store.setCursor({
+      source: "iot.config",
+      cursor: `iot:${rows.length}`,
+      metadata: { store: "core.sqlite", collections: ["iot_config"] },
+    });
+    store.setSourceState("iot.config", "enabled", { backlog: 0, error: null, lastIndexedAt: new Date().toISOString() });
+    return rows.length;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureIotConfigResourceIndexed(store: SearchStore, flags: Record<string, string>, configId: string): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) return 0;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "iot_config")) return 0;
+    const row = db.prepare(`
+      SELECT id, kind, name, parent_id, status, config_json, secret_ref, enabled, metadata_json, created_at, updated_at
+      FROM iot_config
+      WHERE id = ?
+      LIMIT 1
+    `).get(configId) as IotConfigRow | undefined;
+    if (!row) {
+      store.tombstone({ source: "iot.config", resourceId: configId, reason: "IoT config missing during Search event refresh" });
+      return 1;
+    }
+    store.upsertDocument(iotConfigSearchDocument(row));
+    store.setSourceState("iot.config", "enabled", { backlog: 0, error: null, lastIndexedAt: new Date().toISOString() });
     return 1;
   } finally {
     db.close();
@@ -5032,6 +5620,457 @@ function snippetLibrarySearchDocument(row: SnippetLibraryRow): SearchDocumentInp
   };
 }
 
+function agentCatalogAgentSearchDocument(row: AgentCatalogAgentRow): SearchDocumentInput {
+  const config = parseJsonRecord(row.config_json);
+  const body = [
+    row.name,
+    row.kind,
+    row.status,
+    row.agency_mode,
+    row.role,
+    row.title,
+    row.description,
+    row.owner_kind,
+    row.owner_id,
+    row.workspace_id,
+    row.project_id,
+    row.runtime,
+    row.model,
+    row.autonomy_profile,
+    row.export_path,
+  ].filter(Boolean).join("\n");
+  const resourceId = `agent:${row.id}`;
+  return {
+    id: `agents.catalog:${resourceId}`,
+    source: "agents.catalog",
+    domain: "agents",
+    type: "agent",
+    resourceId,
+    title: row.name || row.id,
+    subtitle: [row.role, row.runtime, row.model].filter(Boolean).join(" / "),
+    snippet: firstMeaningfulLine(row.description || row.title || row.role) ?? row.id,
+    body,
+    ...(row.export_path ? { path: row.export_path } : {}),
+    updatedAt: row.updated_at,
+    metadata: {
+      kind: "agent",
+      agentId: row.id,
+      status: row.status,
+      agencyMode: row.agency_mode,
+      role: row.role,
+      runtime: row.runtime ?? null,
+      model: row.model ?? null,
+      autonomyProfile: row.autonomy_profile,
+      builtin: row.builtin === 1,
+      hasProtectedRef: !!row.secret_ref,
+      configKey: Object.keys(config).sort(),
+      exportPath: row.export_path ?? null,
+      retired: !!row.retired_at,
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: {
+      fastPath: 1,
+      agent: 1,
+      active: row.status === "active" ? 0.2 : 0,
+      builtin: row.builtin === 1 ? 0.1 : 0,
+    },
+    actions: [
+      { id: "open", kind: "open", label: "Open agent", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy agent reference", requiresApproval: false },
+    ],
+  };
+}
+
+function agentCatalogPersonalitySearchDocument(row: AgentCatalogPersonalityRow): SearchDocumentInput {
+  const resourceId = `personality:${row.id}`;
+  const body = [row.name, row.description, row.prompt, `version ${row.version}`].filter(Boolean).join("\n");
+  return {
+    id: `agents.catalog:${resourceId}`,
+    source: "agents.catalog",
+    domain: "agents",
+    type: "personality",
+    resourceId,
+    title: row.name || row.id,
+    subtitle: `personality / v${row.version}`,
+    snippet: firstMeaningfulLine(row.description || row.prompt) ?? row.id,
+    body,
+    updatedAt: row.updated_at,
+    metadata: {
+      kind: "personality",
+      personalityId: row.id,
+      version: row.version,
+      hasProtectedRef: false,
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: {
+      fastPath: 1,
+      personality: 1,
+    },
+    fragments: row.prompt ? [{
+      id: `agents.catalog:${resourceId}:prompt`,
+      title: "prompt",
+      body: row.prompt,
+      snippet: row.prompt.slice(0, 180),
+      sortOrder: 0,
+      metadata: { kind: "prompt" },
+    }] : [],
+    actions: [
+      { id: "open", kind: "open", label: "Open personality", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy personality reference", requiresApproval: false },
+    ],
+  };
+}
+
+function agentCatalogSkillCollectionSearchDocument(row: AgentCatalogSkillCollectionRow): SearchDocumentInput {
+  const skills = parseJsonArray(row.skills_json).filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+  const metadata = parseJsonRecord(row.metadata_json);
+  const includedTags = Array.isArray(metadata.includedTags)
+    ? metadata.includedTags.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    : [];
+  const resourceId = `skill_collection:${row.id}`;
+  const body = [row.name, row.description, skills.join(" "), includedTags.join(" "), row.export_path].filter(Boolean).join("\n");
+  return {
+    id: `agents.catalog:${resourceId}`,
+    source: "agents.catalog",
+    domain: "agents",
+    type: "skill_collection",
+    resourceId,
+    title: row.name || row.id,
+    subtitle: includedTags.length ? `tags: ${includedTags.join(", ")}` : "skill collection",
+    snippet: firstMeaningfulLine(row.description ?? "") ?? (includedTags.join(", ") || row.id),
+    body,
+    ...(row.export_path ? { path: row.export_path } : {}),
+    updatedAt: row.updated_at,
+    metadata: {
+      kind: "skill_collection",
+      collectionId: row.id,
+      skillCount: skills.length,
+      includedTags,
+      metadataKey: Object.keys(metadata).sort(),
+      hasProtectedRef: false,
+      exportPath: row.export_path ?? null,
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: {
+      fastPath: 1,
+      skillCollection: 1,
+    },
+    actions: [
+      { id: "open", kind: "open", label: "Open skill collection", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy skill collection reference", requiresApproval: false },
+    ],
+  };
+}
+
+function agentCatalogConnectionSearchDocument(row: AgentCatalogConnectionRow): SearchDocumentInput {
+  const metadata = parseJsonRecord(row.metadata_json);
+  const scopes = Array.isArray(metadata.scopes)
+    ? metadata.scopes.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    : [];
+  const resourceId = `connection:${row.id}`;
+  const body = [
+    row.label,
+    row.provider,
+    scopes.join(" "),
+    typeof metadata.lastSyncAt === "string" ? metadata.lastSyncAt : undefined,
+  ].filter(Boolean).join("\n");
+  return {
+    id: `agents.catalog:${resourceId}`,
+    source: "agents.catalog",
+    domain: "agents",
+    type: "connection",
+    resourceId,
+    title: row.label || row.id,
+    subtitle: row.provider,
+    snippet: scopes.length ? scopes.join(", ") : row.provider,
+    body,
+    updatedAt: row.updated_at,
+    metadata: {
+      kind: "connection",
+      connectionId: row.id,
+      provider: row.provider,
+      scopes,
+      hasProtectedRef: !!row.secret_ref,
+      metadataKey: Object.keys(metadata).sort(),
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: {
+      fastPath: 1,
+      connection: 1,
+      hasProtectedRef: row.secret_ref ? 0.1 : 0,
+    },
+    actions: [
+      { id: "open", kind: "open", label: "Open connection", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy connection reference", requiresApproval: false },
+    ],
+  };
+}
+
+function marketplaceChoiceSearchDocument(row: MarketplaceChoiceRow): SearchDocumentInput {
+  const metadata = parseJsonRecord(row.metadata_json);
+  const metadataText = textFromStructuredContent(redactExternalCachePayload(metadata));
+  const body = [
+    row.kind,
+    row.target,
+    row.choice,
+    row.status,
+    row.rationale,
+    metadataText,
+  ].filter(Boolean).join("\n");
+  return {
+    id: `marketplace.choices:${row.id}`,
+    source: "marketplace.choices",
+    domain: "marketplace",
+    type: row.kind || "choice",
+    resourceId: row.id,
+    title: `${row.target}: ${row.choice}`,
+    subtitle: [row.kind, row.status].filter(Boolean).join(" / "),
+    snippet: firstMeaningfulLine(row.rationale || metadataText || "") ?? row.choice,
+    body,
+    updatedAt: row.updated_at,
+    metadata: {
+      kind: row.kind,
+      target: row.target,
+      choice: row.choice,
+      status: row.status,
+      metadataKey: Object.keys(metadata).sort(),
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: {
+      fastPath: 1,
+      marketplaceChoice: 1,
+      active: row.status === "active" ? 0.2 : 0,
+    },
+    fragments: row.rationale ? [{
+      id: `marketplace.choices:${row.id}:rationale`,
+      title: "rationale",
+      body: row.rationale,
+      snippet: row.rationale.slice(0, 180),
+      sortOrder: 0,
+      metadata: { kind: "rationale" },
+    }] : [],
+    actions: [
+      { id: "open", kind: "open", label: "Open marketplace choice", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy marketplace choice reference", requiresApproval: false },
+    ],
+  };
+}
+
+function contentItemSearchDocument(row: ContentItemRow, pageBody?: string): SearchDocumentInput {
+  const metadata = parseJsonRecord(row.metadata_json);
+  const metadataText = textFromStructuredContent(redactExternalCachePayload(metadata));
+  const body = [
+    row.title,
+    row.kind,
+    row.status,
+    row.brand_id,
+    row.campaign_id,
+    pageBody,
+    metadataText,
+  ].filter(Boolean).join("\n");
+  return {
+    id: `content.items:${row.id}`,
+    source: "content.items",
+    domain: "content",
+    type: row.kind || "entry",
+    resourceId: row.id,
+    title: row.title || row.id,
+    subtitle: [row.kind, row.status, row.brand_id, row.campaign_id].filter(Boolean).join(" / "),
+    snippet: firstMeaningfulLine(pageBody || metadataText || "") ?? row.status,
+    body,
+    updatedAt: row.updated_at,
+    metadata: {
+      kind: row.kind,
+      status: row.status,
+      brandId: row.brand_id ?? null,
+      campaignId: row.campaign_id ?? null,
+      pageId: row.page_id ?? null,
+      metadataKey: Object.keys(metadata).sort(),
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: {
+      fastPath: 1,
+      content: 1,
+      published: row.status === "published" ? 0.2 : 0,
+    },
+    fragments: pageBody ? [{
+      id: `content.items:${row.id}:page`,
+      title: "page",
+      body: pageBody,
+      snippet: pageBody.slice(0, 180),
+      sortOrder: 0,
+      metadata: { kind: "page", pageId: row.page_id },
+    }] : [],
+    actions: [
+      { id: "open", kind: "open", label: "Open content item", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy content reference", requiresApproval: false },
+    ],
+  };
+}
+
+function businessRecordSearchDocument(row: BusinessRecordRow, pageBody?: string): SearchDocumentInput {
+  const metadata = parseJsonRecord(row.metadata_json);
+  const metadataText = textFromStructuredContent(redactExternalCachePayload(metadata));
+  const body = [
+    row.name,
+    row.kind,
+    row.status,
+    pageBody,
+    metadataText,
+  ].filter(Boolean).join("\n");
+  return {
+    id: `business.records:${row.id}`,
+    source: "business.records",
+    domain: "business",
+    type: row.kind || "record",
+    resourceId: row.id,
+    title: row.name || row.id,
+    subtitle: [row.kind, row.status].filter(Boolean).join(" / "),
+    snippet: firstMeaningfulLine(pageBody || metadataText || "") ?? row.status,
+    body,
+    updatedAt: row.updated_at,
+    metadata: {
+      kind: row.kind,
+      status: row.status,
+      pageId: row.page_id ?? null,
+      metadataKey: Object.keys(metadata).sort(),
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: {
+      fastPath: 1,
+      businessRecord: 1,
+      active: row.status === "active" ? 0.2 : 0,
+    },
+    fragments: pageBody ? [{
+      id: `business.records:${row.id}:page`,
+      title: "page",
+      body: pageBody,
+      snippet: pageBody.slice(0, 180),
+      sortOrder: 0,
+      metadata: { kind: "page", pageId: row.page_id },
+    }] : [],
+    actions: [
+      { id: "open", kind: "open", label: "Open business record", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy business reference", requiresApproval: false },
+    ],
+  };
+}
+
+function socialPostSearchDocument(row: SocialPostRow, pageBody?: string): SearchDocumentInput {
+  const channel = parseJsonRecord(row.channel_json);
+  const metadata = parseJsonRecord(row.metadata_json);
+  const channelText = textFromStructuredContent(redactExternalCachePayload(channel));
+  const metadataText = textFromStructuredContent(redactExternalCachePayload(metadata));
+  const channelName = stringValue(channel.name) ?? stringValue(channel.id) ?? stringValue(channel.kind) ?? stringValue(channel.provider);
+  const body = [
+    row.title,
+    row.status,
+    channelName,
+    channelText,
+    row.scheduled_at,
+    row.published_at,
+    pageBody,
+    metadataText,
+  ].filter(Boolean).join("\n");
+  return {
+    id: `social.posts:${row.id}`,
+    source: "social.posts",
+    domain: "social",
+    type: row.published_at ? "publication" : row.status || "post",
+    resourceId: row.id,
+    title: row.title || row.id,
+    subtitle: [row.status, channelName, row.scheduled_at].filter(Boolean).join(" / "),
+    snippet: firstMeaningfulLine(pageBody || metadataText || channelText || "") ?? row.status,
+    body,
+    updatedAt: row.updated_at,
+    metadata: {
+      status: row.status,
+      channel: channelName ?? null,
+      scheduled: !!row.scheduled_at,
+      published: !!row.published_at,
+      scheduledAt: row.scheduled_at ?? null,
+      publishedAt: row.published_at ?? null,
+      pageId: row.page_id ?? null,
+      channelKey: Object.keys(channel).sort(),
+      metadataKey: Object.keys(metadata).sort(),
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: {
+      fastPath: 1,
+      socialPost: 1,
+      scheduled: row.scheduled_at ? 0.1 : 0,
+      published: row.published_at ? 0.2 : 0,
+    },
+    fragments: pageBody ? [{
+      id: `social.posts:${row.id}:page`,
+      title: "page",
+      body: pageBody,
+      snippet: pageBody.slice(0, 180),
+      sortOrder: 0,
+      metadata: { kind: "page", pageId: row.page_id },
+    }] : [],
+    actions: [
+      { id: "open", kind: "open", label: "Open social post", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy social post reference", requiresApproval: false },
+    ],
+  };
+}
+
+function iotConfigSearchDocument(row: IotConfigRow): SearchDocumentInput {
+  const config = redactExternalCachePayload(parseJsonRecord(row.config_json));
+  const metadata = redactExternalCachePayload(parseJsonRecord(row.metadata_json));
+  const configText = textFromStructuredContent(config);
+  const metadataText = textFromStructuredContent(metadata);
+  const body = [
+    row.name,
+    row.kind,
+    row.status,
+    row.parent_id,
+    configText,
+    metadataText,
+  ].filter(Boolean).join("\n");
+  return {
+    id: `iot.config:${row.id}`,
+    source: "iot.config",
+    domain: "iot",
+    type: row.kind || "config",
+    resourceId: row.id,
+    title: row.name || row.id,
+    subtitle: [row.kind, row.status, row.enabled === 1 ? "enabled" : "disabled"].filter(Boolean).join(" / "),
+    snippet: firstMeaningfulLine(metadataText || configText || "") ?? row.status,
+    body,
+    updatedAt: row.updated_at,
+    metadata: {
+      kind: row.kind,
+      status: row.status,
+      parentId: row.parent_id ?? null,
+      enabled: row.enabled === 1,
+      hasProtectedRef: !!row.secret_ref,
+      configKey: Object.keys(config).sort(),
+      metadataKey: Object.keys(metadata).sort(),
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: {
+      fastPath: 1,
+      iotConfig: 1,
+      enabled: row.enabled === 1 ? 0.2 : -0.1,
+      hasProtectedRef: row.secret_ref ? 0.1 : 0,
+    },
+    fragments: configText ? [{
+      id: `iot.config:${row.id}:config`,
+      title: "config",
+      body: configText,
+      snippet: configText.slice(0, 180),
+      sortOrder: 0,
+      metadata: { kind: "config" },
+    }] : [],
+    actions: [
+      { id: "open", kind: "open", label: "Open IoT config", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy IoT config reference", requiresApproval: false },
+    ],
+  };
+}
+
 function connectorCatalogSearchDocument(row: ConnectorOperationRow, capabilitiesById: Map<string, ConnectorCapabilityRow>): SearchDocumentInput | null {
   if (!row.id) return null;
   const capabilityIds = parseJsonArray(row.capability_ids_json).filter((value): value is string => typeof value === "string" && value.trim().length > 0);
@@ -5557,6 +6596,115 @@ interface SnippetLibraryRow {
   updated_at: string;
 }
 
+interface AgentCatalogAgentRow {
+  id: string;
+  kind: string;
+  name: string;
+  status: string;
+  agency_mode: string;
+  role: string;
+  title: string | null;
+  description: string | null;
+  owner_kind: string | null;
+  owner_id: string | null;
+  workspace_id: string | null;
+  project_id: string | null;
+  runtime: string | null;
+  model: string | null;
+  autonomy_profile: string;
+  builtin: number;
+  secret_ref: string | null;
+  config_json: string;
+  export_path: string | null;
+  retired_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface AgentCatalogPersonalityRow {
+  id: string;
+  name: string;
+  description: string | null;
+  prompt: string;
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface AgentCatalogSkillCollectionRow {
+  id: string;
+  name: string;
+  description: string | null;
+  skills_json: string;
+  metadata_json: string;
+  export_path: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface AgentCatalogConnectionRow {
+  id: string;
+  provider: string;
+  label: string;
+  secret_ref: string | null;
+  config_json: string;
+  metadata_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface MarketplaceChoiceRow {
+  id: string;
+  kind: string;
+  target: string;
+  choice: string;
+  status: string;
+  rationale: string | null;
+  metadata_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ContentItemRow {
+  id: string;
+  kind: string;
+  title: string;
+  status: string;
+  brand_id: string | null;
+  campaign_id: string | null;
+  page_id: string | null;
+  metadata_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface SocialPostRow {
+  id: string;
+  title: string;
+  status: string;
+  channel_json: string;
+  scheduled_at: string | null;
+  published_at: string | null;
+  page_id: string | null;
+  metadata_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface IotConfigRow {
+  id: string;
+  kind: string;
+  name: string;
+  parent_id: string | null;
+  status: string;
+  config_json: string;
+  secret_ref: string | null;
+  enabled: number;
+  metadata_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
 interface ConnectorOperationRow {
   id: string;
   provider_id: string;
@@ -5709,6 +6857,18 @@ function collectStructuredText(value: unknown, parts: string[], depth: number): 
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function pageBodyForSearch(db: Database.Database, pageId: string | null): string | undefined {
+  if (!pageId || !hasTable(db, "page_blocks")) return undefined;
+  const rows = db.prepare(`
+    SELECT text
+    FROM page_blocks
+    WHERE page_id = ?
+    ORDER BY sort_order, created_at
+  `).all(pageId) as Array<{ text: string }>;
+  const body = rows.map((row) => row.text).filter(Boolean).join("\n\n").trim();
+  return body || undefined;
 }
 
 function firstTextValue(payload: Record<string, unknown>): string | undefined {

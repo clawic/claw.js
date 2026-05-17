@@ -7,7 +7,7 @@ import type Database from "better-sqlite3";
 import { DatabaseServiceStore } from "@clawjs/database";
 import { runAgentsCommand, runConnectionsCommand, runPersonalitiesCommand, runSkillCollectionsCommand } from "./v1-data-agent-entities.ts";
 import { runProviderRoutingCommand, runSnippetsCommand } from "./v1-data-agent-config.ts";
-import { scheduleAppsCatalogSearchEvent, scheduleCalendarEventsSearchEvent, scheduleDesignResourcesSearchEvent, scheduleKnowledgeGraphSearchEvent, scheduleMcpServersSearchEvent, scheduleNotesPagesSearchEvent, scheduleRuntimeEventsSearchEvent, scheduleSignalsObservationsSearchEvent, scheduleSkillsRegistrySearchEvent } from "./cli-search-events.ts";
+import { scheduleAppsCatalogSearchEvent, scheduleBusinessRecordsSearchEvent, scheduleCalendarEventsSearchEvent, scheduleContentItemsSearchEvent, scheduleDesignResourcesSearchEvent, scheduleIotConfigSearchEvent, scheduleKnowledgeGraphSearchEvent, scheduleMarketplaceChoicesSearchEvent, scheduleMcpServersSearchEvent, scheduleNotesPagesSearchEvent, scheduleRuntimeEventsSearchEvent, scheduleSignalsObservationsSearchEvent, scheduleSkillsRegistrySearchEvent, scheduleSocialPostsSearchEvent } from "./cli-search-events.ts";
 export {
   openMainDataStore,
   resolveClawjsDataRoot,
@@ -1042,13 +1042,58 @@ function runProductivityCommand(input: V1DataCliInput, store: DatabaseServiceSto
 }
 
 function runBusinessCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
-  return runSimpleRecordCommand(input, store, {
-    table: "business_records",
-    defaultKind: "record",
-    idPrefix: "biz",
-    usageGroup: "business",
-    fields: ["id", "kind", "name", "status", "page_id", "metadata_json", "created_at", "updated_at"],
-  });
+  const command = input.positionals[1];
+  if (command === "upsert") {
+    const now = nowIso();
+    const id = input.flags.id || `biz-${randomUUID()}`;
+    const name = input.flags.name || input.flags.title || input.positionals.slice(2).join(" ") || id;
+    const pageId = input.flags.notes || input.flags.body
+      ? upsertPageWithBlocks(store.sqlite, {
+          id: input.flags["page-id"] || `page-${id}`,
+          title: `${name} notes`,
+          text: input.flags.notes || input.flags.body || "",
+          space: "business",
+          surface: "record_note",
+          sourceRecordDomain: "business_records",
+          sourceRecordId: id,
+        }).id
+      : input.flags["page-id"] || null;
+    store.sqlite.prepare(`
+      INSERT INTO business_records (id, kind, name, status, page_id, metadata_json, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, name = excluded.name, status = excluded.status,
+        page_id = excluded.page_id, metadata_json = excluded.metadata_json, updated_at = excluded.updated_at
+    `).run(id, input.flags.kind || "record", name, input.flags.status || "active", pageId, input.flags.metadata ? JSON.stringify(parseMaybeJson(input.flags.metadata)) : "{}", now, now);
+    scheduleBusinessRecordsSearchEvent({
+      operation: "upsert",
+      recordId: id,
+      dataDir: resolveClawjsDataRoot(),
+      flags: input.flags,
+    });
+    writeSuccess(input, normalizeDbRow(store.sqlite.prepare("SELECT * FROM business_records WHERE id = ?").get(id) as JsonRecord));
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "list") {
+    const rows = store.sqlite.prepare("SELECT * FROM business_records ORDER BY updated_at DESC LIMIT ?").all(Math.max(1, Number(input.flags.limit ?? 100)));
+    writeSuccess(input, { items: rows.map(normalizeDbRow) });
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "delete") {
+    const id = input.flags.id || input.positionals[2];
+    if (!id) return usageError(input, "Usage: claw business delete ID [--json]");
+    const changes = store.sqlite.prepare("DELETE FROM business_records WHERE id = ?").run(id).changes;
+    if (changes > 0) {
+      scheduleBusinessRecordsSearchEvent({
+        operation: "delete",
+        recordId: id,
+        dataDir: resolveClawjsDataRoot(),
+        flags: input.flags,
+      });
+    }
+    writeSuccess(input, { deleted: changes > 0, id });
+    return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
+  }
+  return runRecordGetDelete(input, store, "business_records", "business");
 }
 
 function runContentCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
@@ -1067,6 +1112,12 @@ function runContentCommand(input: V1DataCliInput, store: DatabaseServiceStore): 
         brand_id = excluded.brand_id, campaign_id = excluded.campaign_id, page_id = excluded.page_id,
         metadata_json = excluded.metadata_json, updated_at = excluded.updated_at
     `).run(id, input.flags.kind || "entry", title, input.flags.status || "draft", input.flags["brand-id"] || null, input.flags["campaign-id"] || null, pageId, input.flags.metadata ? JSON.stringify(parseMaybeJson(input.flags.metadata)) : "{}", now, now);
+    scheduleContentItemsSearchEvent({
+      operation: "upsert",
+      itemId: id,
+      dataDir: resolveClawjsDataRoot(),
+      flags: input.flags,
+    });
     writeSuccess(input, normalizeDbRow(store.sqlite.prepare("SELECT * FROM content_items WHERE id = ?").get(id) as JsonRecord));
     return V1_DATA_EXIT_OK;
   }
@@ -1074,6 +1125,21 @@ function runContentCommand(input: V1DataCliInput, store: DatabaseServiceStore): 
     const rows = store.sqlite.prepare("SELECT * FROM content_items ORDER BY updated_at DESC LIMIT ?").all(Math.max(1, Number(input.flags.limit ?? 100)));
     writeSuccess(input, { items: rows.map(normalizeDbRow), opsSidecars: ["publication-runs", "webhook-deliveries", "provider-logs"] });
     return V1_DATA_EXIT_OK;
+  }
+  if (command === "delete") {
+    const id = input.flags.id || input.positionals[2];
+    if (!id) return usageError(input, "Usage: claw content delete ID [--json]");
+    const changes = store.sqlite.prepare("DELETE FROM content_items WHERE id = ?").run(id).changes;
+    if (changes > 0) {
+      scheduleContentItemsSearchEvent({
+        operation: "delete",
+        itemId: id,
+        dataDir: resolveClawjsDataRoot(),
+        flags: input.flags,
+      });
+    }
+    writeSuccess(input, { deleted: changes > 0, id });
+    return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
   return runRecordGetDelete(input, store, "content_items", "content");
 }
@@ -1094,6 +1160,12 @@ function runSocialCommand(input: V1DataCliInput, store: DatabaseServiceStore): n
         scheduled_at = excluded.scheduled_at, published_at = excluded.published_at, page_id = excluded.page_id,
         metadata_json = excluded.metadata_json, updated_at = excluded.updated_at
     `).run(id, title, input.flags.status || "draft", input.flags.channel ? JSON.stringify(parseMaybeJson(input.flags.channel)) : "{}", input.flags["scheduled-at"] || null, input.flags["published-at"] || null, pageId, input.flags.metadata ? JSON.stringify(parseMaybeJson(input.flags.metadata)) : "{}", now, now);
+    scheduleSocialPostsSearchEvent({
+      operation: "upsert",
+      postId: id,
+      dataDir: resolveClawjsDataRoot(),
+      flags: input.flags,
+    });
     writeSuccess(input, normalizeDbRow(store.sqlite.prepare("SELECT * FROM social_posts WHERE id = ?").get(id) as JsonRecord));
     return V1_DATA_EXIT_OK;
   }
@@ -1101,6 +1173,21 @@ function runSocialCommand(input: V1DataCliInput, store: DatabaseServiceStore): n
     const rows = store.sqlite.prepare("SELECT * FROM social_posts ORDER BY COALESCE(scheduled_at, updated_at) DESC LIMIT ?").all(Math.max(1, Number(input.flags.limit ?? 100)));
     writeSuccess(input, { items: rows.map(normalizeDbRow), opsSidecars: ["queues", "webhook-deliveries", "raw-metrics"] });
     return V1_DATA_EXIT_OK;
+  }
+  if (command === "delete") {
+    const id = input.flags.id || input.positionals[2];
+    if (!id) return usageError(input, "Usage: claw social delete ID [--json]");
+    const changes = store.sqlite.prepare("DELETE FROM social_posts WHERE id = ?").run(id).changes;
+    if (changes > 0) {
+      scheduleSocialPostsSearchEvent({
+        operation: "delete",
+        postId: id,
+        dataDir: resolveClawjsDataRoot(),
+        flags: input.flags,
+      });
+    }
+    writeSuccess(input, { deleted: changes > 0, id });
+    return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
   return runRecordGetDelete(input, store, "social_posts", "social");
 }
@@ -1203,6 +1290,12 @@ function runIotConfigCommand(input: V1DataCliInput, store: DatabaseServiceStore)
       ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, name = excluded.name, config_json = excluded.config_json,
         secret_ref = excluded.secret_ref, enabled = excluded.enabled, updated_at = excluded.updated_at
     `).run(id, input.flags.kind || "device", name, input.flags.config ? JSON.stringify(parseMaybeJson(input.flags.config)) : "{}", input.flags["secret-ref"] || null, truthy(input.flags.enabled ?? "true") ? 1 : 0, now, now);
+    scheduleIotConfigSearchEvent({
+      operation: "upsert",
+      configId: id,
+      dataDir: resolveClawjsDataRoot(),
+      flags: input.flags,
+    });
     writeSuccess(input, normalizeDbRow(store.sqlite.prepare("SELECT * FROM iot_config WHERE id = ?").get(id) as JsonRecord));
     return V1_DATA_EXIT_OK;
   }
@@ -1210,6 +1303,21 @@ function runIotConfigCommand(input: V1DataCliInput, store: DatabaseServiceStore)
     const rows = store.sqlite.prepare("SELECT * FROM iot_config ORDER BY kind, name LIMIT ?").all(Math.max(1, Number(input.flags.limit ?? 100)));
     writeSuccess(input, { items: rows.map(normalizeDbRow) });
     return V1_DATA_EXIT_OK;
+  }
+  if (action === "delete") {
+    const id = input.flags.id || input.positionals[3];
+    if (!id) return usageError(input, "Usage: claw iot config delete ID [--json]");
+    const changes = store.sqlite.prepare("DELETE FROM iot_config WHERE id = ?").run(id).changes;
+    if (changes > 0) {
+      scheduleIotConfigSearchEvent({
+        operation: "delete",
+        configId: id,
+        dataDir: resolveClawjsDataRoot(),
+        flags: input.flags,
+      });
+    }
+    writeSuccess(input, { deleted: changes > 0, id });
+    return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
   return runRecordGetDelete({ ...input, positionals: ["iot", action, ...input.positionals.slice(3)] }, store, "iot_config", "iot config");
 }
@@ -1229,6 +1337,12 @@ function runMarketplaceCommand(input: V1DataCliInput, store: DatabaseServiceStor
         status = excluded.status, rationale = excluded.rationale, metadata_json = excluded.metadata_json,
         updated_at = excluded.updated_at
     `).run(id, input.flags.kind || "selection", target, choice, input.flags.status || "active", input.flags.rationale || null, input.flags.metadata ? JSON.stringify(parseMaybeJson(input.flags.metadata)) : "{}", now, now);
+    scheduleMarketplaceChoicesSearchEvent({
+      operation: "upsert",
+      id,
+      dataDir: resolveClawjsDataRoot(),
+      flags: input.flags,
+    });
     writeSuccess(input, normalizeDbRow(store.sqlite.prepare("SELECT * FROM marketplace_choices WHERE id = ?").get(id) as JsonRecord));
     return V1_DATA_EXIT_OK;
   }
@@ -1239,6 +1353,21 @@ function runMarketplaceCommand(input: V1DataCliInput, store: DatabaseServiceStor
       : store.sqlite.prepare("SELECT * FROM marketplace_choices ORDER BY updated_at DESC LIMIT ?").all(Math.max(1, Number(input.flags.limit ?? 100)));
     writeSuccess(input, { items: rows.map(normalizeDbRow) });
     return V1_DATA_EXIT_OK;
+  }
+  if (action === "delete") {
+    const id = input.flags.id || input.positionals[3];
+    if (!id) return usageError(input, "Usage: claw marketplace choice delete ID [--json]");
+    const changes = store.sqlite.prepare("DELETE FROM marketplace_choices WHERE id = ?").run(id).changes;
+    if (changes > 0) {
+      scheduleMarketplaceChoicesSearchEvent({
+        operation: "delete",
+        id,
+        dataDir: resolveClawjsDataRoot(),
+        flags: input.flags,
+      });
+    }
+    writeSuccess(input, { deleted: changes > 0, id });
+    return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
   return runRecordGetDelete({ ...input, positionals: ["marketplace", action, ...input.positionals.slice(3)] }, store, "marketplace_choices", "marketplace choice");
 }

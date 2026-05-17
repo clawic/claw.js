@@ -192,6 +192,128 @@ export function scheduleSnippetsLibrarySearchEvent(input: {
   });
 }
 
+export function scheduleAgentsCatalogSearchEvent(input: {
+  operation: "upsert" | "delete";
+  kind: "agent" | "personality" | "skill_collection" | "connection";
+  id: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  return scheduleSearchIndexEvent({
+    source: "agents.catalog",
+    operation: input.operation,
+    resourceId: `${input.kind}:${input.id}`,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      kind: input.kind,
+      id: input.id,
+    },
+  });
+}
+
+export function scheduleMarketplaceChoicesSearchEvent(input: {
+  operation: "upsert" | "delete";
+  id: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  return scheduleSearchIndexEvent({
+    source: "marketplace.choices",
+    operation: input.operation,
+    resourceId: input.id,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      choiceId: input.id,
+    },
+  });
+}
+
+export function scheduleContentItemsSearchEvent(input: {
+  operation: "upsert" | "delete";
+  itemId: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  return scheduleSearchIndexEvent({
+    source: "content.items",
+    operation: input.operation,
+    resourceId: input.itemId,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      itemId: input.itemId,
+    },
+  });
+}
+
+export function scheduleBusinessRecordsSearchEvent(input: {
+  operation: "upsert" | "delete";
+  recordId: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  return scheduleSearchIndexEvent({
+    source: "business.records",
+    operation: input.operation,
+    resourceId: input.recordId,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      recordId: input.recordId,
+    },
+  });
+}
+
+export function scheduleSocialPostsSearchEvent(input: {
+  operation: "upsert" | "delete";
+  postId: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  return scheduleSearchIndexEvent({
+    source: "social.posts",
+    operation: input.operation,
+    resourceId: input.postId,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      postId: input.postId,
+    },
+  });
+}
+
+export function scheduleIotConfigSearchEvent(input: {
+  operation: "upsert" | "delete";
+  configId: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  return scheduleSearchIndexEvent({
+    source: "iot.config",
+    operation: input.operation,
+    resourceId: input.configId,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      configId: input.configId,
+    },
+  });
+}
+
 export function scheduleNotesPagesSearchEvent(input: {
   operation: "upsert" | "delete";
   pageId: string;

@@ -75,6 +75,12 @@ backfill jobs.
 | `skills.registry` | `skills` | framework skill records projected from `core.sqlite` without secret refs | implemented initial adapter |
 | `providers.routing` | `providers` | provider routing rules and provider settings projected from `core.sqlite` without account refs | implemented initial adapter |
 | `snippets.library` | `snippets` | prompt/template/slash snippets projected from `core.sqlite` | implemented initial adapter |
+| `agents.catalog` | `agents` | agents, personalities, skill collections, and connections projected from `core.sqlite` without secret refs | implemented initial adapter |
+| `marketplace.choices` | `marketplace` | marketplace/provider choices projected from `core.sqlite` | implemented initial adapter |
+| `content.items` | `content` | content items and linked page text projected from `core.sqlite` | implemented initial adapter |
+| `business.records` | `business` | business records and linked page text projected from `core.sqlite` | implemented initial adapter |
+| `social.posts` | `social` | social posts, channel metadata, scheduling state, and linked page text projected from `core.sqlite` | implemented initial adapter |
+| `iot.config` | `iot` | IoT device/config records projected from `core.sqlite` without secret refs | implemented initial adapter |
 | `connectors.catalog` | `connectors` | connector control-plane operations projected from `core.sqlite` without credential bindings, secret refs, or raw traces | implemented initial adapter |
 | `mcp.servers` | `mcp` | MCP server configuration projected from local config with env/header values redacted | implemented initial adapter |
 | `apps.catalog` | `apps` | framework app records projected from `core.sqlite` | implemented initial adapter |
@@ -203,8 +209,9 @@ The local framework database and artifact write paths now emit those compacted
 events for `database.records`, `documents.blocks`, `notes.pages`,
 `knowledge.graph`, `signals.observations`, `calendar.events`,
 `finance.records`, `work.items`, `providers.routing`, `snippets.library`,
-`mcp.servers`, `apps.catalog`, `design.resources`, `runtime.events`,
-`generations.artifacts`, `images.derived`, `media.assets`, and
+`agents.catalog`, `mcp.servers`, `apps.catalog`, `design.resources`, `runtime.events`,
+`marketplace.choices`, `content.items`, `social.posts`, `iot.config`,
+`business.records`, `generations.artifacts`, `images.derived`, `media.assets`, and
 `skills.registry`: successful `db
 collection create|update`, `documents create|update`, `notes create|update`,
 `knowledge entity|fact`, `signals seed-catalog|observe`, `calendar
@@ -383,6 +390,35 @@ values; Search only exposes whether an account reference exists.
 slug, title, kind, shortcut, body, scope metadata, and skill references so
 prompt/template/slash-command sections can keep their own fast path.
 
+`agents.catalog` projects agent-facing framework entities from `core.sqlite`.
+It indexes agents, personalities, skill collections, and connections by their
+public labels, roles, runtimes, models, prompts, descriptions, tags, providers,
+and scopes. It deliberately excludes `secret_ref` values and raw connection
+config payloads; Search only exposes a `hasProtectedRef` facet for agents and
+connections.
+
+`marketplace.choices` projects local framework marketplace decisions from
+`core.sqlite`. It indexes target, choice, kind, status, rationale, and redacted
+metadata so provider/default selection views can search current choices without
+calling external marketplaces.
+
+`content.items` projects framework content records from `core.sqlite`. It
+indexes title, kind, status, brand/campaign ids, redacted metadata, and linked
+page block text when a content item owns an editable page.
+
+`business.records` projects local business records from `core.sqlite`. It
+indexes name, kind, status, redacted metadata, and linked page block text when
+the business record owns an editable note page.
+
+`social.posts` projects social publishing records from `core.sqlite`. It
+indexes title, status, redacted channel metadata, scheduling/publishing state,
+redacted metadata, and linked page block text without calling social providers.
+
+`iot.config` projects local IoT configuration records from `core.sqlite`. It
+indexes device/config names, kind, enabled/status state, parent id, and redacted
+config/metadata text. It deliberately does not index `secret_ref` values;
+Search only exposes a `hasProtectedRef` facet.
+
 `connectors.catalog` projects connector control-plane operations from
 `core.sqlite`. It indexes provider names, runtime/support state, operation ids,
 native operation names, cost/approval metadata, network policy references, and
@@ -435,7 +471,9 @@ usable without waiting for universal backfill.
 - Index `commands`, `sessions.chats`, `database.records`, `documents.blocks`,
   `notes.pages`, `knowledge.graph`, `images.derived`, `media.assets`,
   `generations.artifacts`, `skills.registry`, `providers.routing`,
-  `snippets.library`, and the first bounded `code.symbols` adapter.
+  `snippets.library`, `agents.catalog`, `marketplace.choices`, `content.items`,
+  `business.records`, `social.posts`, `iot.config`, and the first bounded
+  `code.symbols` adapter.
 - Keep Clawix Mac Search and `Command-G` conversations-only.
 
 ### Phase 2: framework domains
