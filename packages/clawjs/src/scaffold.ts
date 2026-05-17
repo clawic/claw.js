@@ -55,7 +55,7 @@ export function createPascalCase(value: string, fallback: string): string {
   return rendered || fallback;
 }
 
-export function ensureTargetDirectory(targetPath: string): void {
+function ensureTargetDirectory(targetPath: string): void {
   if (!fs.existsSync(targetPath)) {
     fs.mkdirSync(targetPath, { recursive: true });
     return;
@@ -72,7 +72,7 @@ export function ensureTargetDirectory(targetPath: string): void {
   }
 }
 
-export async function copyTemplateDirectory(
+async function copyTemplateDirectory(
   sourceDir: string,
   targetDir: string,
   replacements: Record<string, string>,
@@ -98,7 +98,7 @@ export async function copyTemplateDirectory(
   }
 }
 
-export async function runCommand(command: string, args: string[], options: { cwd: string }): Promise<void> {
+async function runCommand(command: string, args: string[], options: { cwd: string }): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     const child = spawn(command, args, {
       cwd: options.cwd,
@@ -117,7 +117,7 @@ export async function runCommand(command: string, args: string[], options: { cwd
   });
 }
 
-export function relativeStep(baseDir: string, targetDir: string): string | null {
+function relativeStep(baseDir: string, targetDir: string): string | null {
   if (baseDir === targetDir) return null;
   return path.relative(baseDir, targetDir) || null;
 }
