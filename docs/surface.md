@@ -1935,6 +1935,7 @@ The docs check script validates that every current export from
     policyRecordSchema
     POSSESSIONS_FAMILY
     PREGNANCY_EARLY_CHILDHOOD_FAMILY
+    PROCUREMENT_FAMILY
     PRODUCTIVITY_COLLECTION_DEFINITIONS
     ProductivityAgenda
     ProductivityAgendaItem

@@ -75,6 +75,8 @@ backfill jobs.
 | `skills.registry` | `skills` | framework skill records projected from `core.sqlite` without secret refs | implemented initial adapter |
 | `connectors.catalog` | `connectors` | connector control-plane operations projected from `core.sqlite` without credential bindings, secret refs, or raw traces | implemented initial adapter |
 | `mcp.servers` | `mcp` | MCP server configuration projected from local config with env/header values redacted | implemented initial adapter |
+| `apps.catalog` | `apps` | framework app records projected from `core.sqlite` | implemented initial adapter |
+| `design.resources` | `design` | design resources, templates, styles, and references projected from `core.sqlite` | implemented initial adapter |
 | `runtime.events` | `runtime` | runtime jobs/events and monitor/infra/ops operational sidecars projected into `search.sqlite` | implemented initial adapter |
 | `local.files` | `files` | bounded local file metadata and text-content projection | implemented opt-in adapter, `full`, off by default |
 | `native.system` | `native` | native app/system/contact adapters | EXTERNAL PENDING, `full`, off by default |
@@ -101,6 +103,8 @@ claw search query "analytics cards" --domains generations --filters metadata.sta
 claw search query "symbolName" --domains code --code-root /path/to/project --json
 claw search query "deployment APIs" --domains skills --filters metadata.requiresProtectedRefs=true --json
 claw search query "local docs server" --domains mcp --mcp-config /path/to/config.toml --json
+claw search query "canvas prototype" --domains apps --json
+claw search query "launch deck template" --domains design --json
 claw search query "worker failed" --domains runtime --filters metadata.level=error --json
 claw search query "system capabilities" --domains database --command-fallback empty --json
 claw search query "launch checklist" --actor agent:codex --agent-result-limit 5 --agent-source-limit 2 --json
@@ -194,17 +198,19 @@ unbounded duplicate backfill work.
 The local framework database and artifact write paths now emit those compacted
 events for `database.records`, `documents.blocks`, `notes.pages`,
 `knowledge.graph`, `signals.observations`, `calendar.events`,
-`finance.records`, `work.items`, `mcp.servers`, `runtime.events`,
+`finance.records`, `work.items`, `mcp.servers`, `apps.catalog`,
+`design.resources`, `runtime.events`,
 `generations.artifacts`, `images.derived`, `media.assets`, and
 `skills.registry`: successful `db
 collection create|update`, `documents create|update`, `notes create|update`,
 `knowledge entity|fact`, `signals seed-catalog|observe`, `calendar
 create|update`, canonical finance collection writes such as `transaction create|update`, `image
-create|edit|import`, MCP server upserts, monitor/infra/ops event writes, typed-media generation,
+create|edit|import`, MCP server upserts, app/design resource upserts,
+monitor/infra/ops event writes, typed-media generation,
 `generations create`, and `skills
 upsert` calls schedule hot upsert events; successful record, document, note,
 signal observation, calendar event, finance collection record, work item,
-MCP server, runtime/operational event, image, media, generation, or skill deletes
+MCP server, app/design resource, runtime/operational event, image, media, generation, or skill deletes
 schedule delete events where the source item is removed; and `document_blocks`
 changes schedule a hot upsert for the parent document so fragments refresh together. The event write is best effort because
 `search.sqlite` is a rebuildable sidecar; a temporary Search sidecar failure
