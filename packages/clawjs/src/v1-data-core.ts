@@ -256,11 +256,11 @@ export function resolveClawjsFilesDir(env: NodeJS.ProcessEnv = process.env): str
 
 export function openMainDataStore(env: NodeJS.ProcessEnv = process.env): DatabaseServiceStore {
   const store = new DatabaseServiceStore(resolveClawjsMainDbPath(env), resolveClawjsFilesDir(env));
-  ensureV1MainSchema(store.sqlite);
+  ensureV1MainSchema(store.sqlite, env);
   ensureV1Collections(store);
   return store;
 }
-export function ensureV1MainSchema(sqlite: Database.Database): void {
+export function ensureV1MainSchema(sqlite: Database.Database, env: NodeJS.ProcessEnv = process.env): void {
   sqlite.exec(V1_MAIN_SCHEMA_SQL);
   migrateAgentIncidentsV1Schema(sqlite);
   ensureColumn(sqlite, "app_projects", "resource_id", "TEXT");
@@ -308,7 +308,7 @@ export function ensureV1MainSchema(sqlite: Database.Database): void {
     VALUES (?, 'profile.id', ?, ?)
   `).run(PROFILE_ID, JSON.stringify(PROFILE_ID), nowIso());
   seedSidecarRegistry(sqlite);
-  ensureV2Sidecars();
+  ensureV2Sidecars(env);
 }
 
 function migrateAgentIncidentsV1Schema(sqlite: Database.Database): void {
@@ -750,8 +750,8 @@ function ensureColumn(sqlite: Database.Database, table: string, column: string, 
   sqlite.prepare(`ALTER TABLE ${quoteIdent(table)} ADD COLUMN ${quoteIdent(column)} ${definition}`).run();
 }
 
-export function openSidecar(filename: string): Database.Database {
-  const dbPath = path.join(resolveClawjsDataRoot(), filename);
+export function openSidecar(filename: string, env: NodeJS.ProcessEnv = process.env): Database.Database {
+  const dbPath = path.join(resolveClawjsDataRoot(env), filename);
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
   const sqlite = new BetterSqlite3(dbPath);
   sqlite.pragma("journal_mode = WAL");
@@ -759,10 +759,10 @@ export function openSidecar(filename: string): Database.Database {
   return sqlite;
 }
 
-function ensureV2Sidecars(): void {
+function ensureV2Sidecars(env: NodeJS.ProcessEnv = process.env): void {
   for (const filename of SIDECAR_FILENAMES) {
     if (filename === "vault.sqlite") continue;
-    const sqlite = openSidecar(filename);
+    const sqlite = openSidecar(filename, env);
     sqlite.close();
   }
 }
