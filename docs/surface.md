@@ -1131,6 +1131,9 @@ The docs check script validates that every current export from
     AgentAssignmentRouteResult
     AgentAuditEvent
     AgentAuditEventKind
+    AgentBlueprint
+    AgentBlueprintInput
+    AgentBlueprintStatus
     AgentBudgetDimension
     AgentBudgetEvaluationResult
     AgentBudgetExceededBehavior
@@ -1145,6 +1148,9 @@ The docs check script validates that every current export from
     AgentDelegationAccessInput
     AgentEffectiveAccessInput
     AgentEffectiveAccessResult
+    AgentEvaluation
+    AgentEvaluationInput
+    AgentEvaluationStatus
     AgentExternalDisclosure
     AgentExternalIdentityProfile
     AgentGrantEffect
@@ -1560,7 +1566,9 @@ The docs check script validates that every current export from
     effectPreviewSchema
     createAgentActivityFeed
     createAgentAuditEvent
+    createAgentBlueprint
     createAgentConfigRevision
+    createAgentEvaluation
     createAgentIncident
     createAgentSafePackageExport
     createAgentSafeSurfaceProjection

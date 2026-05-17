@@ -272,6 +272,8 @@ export interface AgentBudgetEvaluationResult {
 }
 
 export type AgentAuditEventKind =
+  | "blueprint"
+  | "evaluation"
   | "config_revision"
   | "assignment_route"
   | "access_evaluation"
@@ -411,6 +413,68 @@ export interface AgentActivityFeed {
   agentId: string;
   items: AgentActivityFeedItem[];
   redaction: "default" | "strict" | "custom";
+}
+
+export type AgentBlueprintStatus = "draft" | "active" | "archived";
+
+export interface AgentBlueprintInput {
+  id?: string;
+  name: string;
+  description?: string;
+  agencyMode: AgencyMode;
+  version?: string | number;
+  template: Record<string, unknown>;
+  requiredResourceGrants?: AgentResourceGrant[];
+  skillRefs?: string[];
+  modelTier?: "fast" | "balanced" | "smart" | "max";
+  status?: AgentBlueprintStatus;
+  createdAt?: string;
+  redaction?: "default" | "strict" | "custom";
+}
+
+export interface AgentBlueprint {
+  id: string;
+  name: string;
+  description?: string;
+  agencyMode: AgencyMode;
+  version: string;
+  template: Record<string, unknown>;
+  requiredResourceGrants: AgentResourceGrant[];
+  skillRefs: string[];
+  modelTier?: "fast" | "balanced" | "smart" | "max";
+  status: AgentBlueprintStatus;
+  createdAt: string;
+  safeExport: AgentSafePackageExport;
+  audit: AgentAuditEvent;
+}
+
+export type AgentEvaluationStatus = "planned" | "running" | "passed" | "failed" | "blocked";
+
+export interface AgentEvaluationInput {
+  agentId: string;
+  assignmentId?: string;
+  runId?: string;
+  evaluatorId?: string;
+  status: AgentEvaluationStatus;
+  score?: number;
+  criteria: Record<string, unknown>;
+  result?: Record<string, unknown>;
+  evaluatedAt?: string;
+  redaction?: "default" | "strict" | "custom";
+}
+
+export interface AgentEvaluation {
+  id: string;
+  agentId: string;
+  assignmentId?: string;
+  runId?: string;
+  evaluatorId?: string;
+  status: AgentEvaluationStatus;
+  score?: number;
+  criteria: Record<string, unknown>;
+  result: Record<string, unknown>;
+  evaluatedAt: string;
+  audit: AgentAuditEvent;
 }
 
 export interface AgentSafeExportInput {
@@ -827,6 +891,113 @@ export function createAgentActivityFeed(input: AgentActivityFeedInput): AgentAct
     agentId: input.agentId,
     items: limit ? items.slice(0, limit) : items,
     redaction,
+  };
+}
+
+export function createAgentBlueprint(input: AgentBlueprintInput): AgentBlueprint {
+  const redaction = input.redaction ?? "strict";
+  const createdAt = input.createdAt ?? new Date().toISOString();
+  const version = String(input.version ?? 1);
+  const id = input.id ?? `agent_blueprint_${stableHash([
+    input.name,
+    input.agencyMode,
+    version,
+    createdAt,
+  ].join("|"))}`;
+  const template = redactAgentBoundaryValue(input.template, redaction) as Record<string, unknown>;
+  const requiredResourceGrants = (input.requiredResourceGrants ?? []).map((grant) => redactAgentBoundaryValue(grant, redaction) as AgentResourceGrant);
+  const safeExport = createAgentSafePackageExport({
+    exportedAt: createdAt,
+    redaction,
+    agent: {
+      id,
+      name: input.name,
+      agencyMode: input.agencyMode,
+      ...(input.description ? { description: input.description } : {}),
+      ...(input.modelTier ? { modelTier: input.modelTier } : {}),
+      blueprintVersion: version,
+      template,
+    },
+    resourceGrants: requiredResourceGrants.map((grant) => ({ ...grant })),
+    blueprints: [{ id, name: input.name, agencyMode: input.agencyMode, version, template }],
+  });
+  const audit = createAgentAuditEvent({
+    kind: "blueprint",
+    agentId: id,
+    result: "recorded",
+    reason: "agent blueprint created",
+    redaction,
+    createdAt,
+    resourceType: "agent_blueprint",
+    resourceId: id,
+    metadata: {
+      agencyMode: input.agencyMode,
+      version,
+      skillRefs: input.skillRefs ?? [],
+      requiredResourceGrantCount: requiredResourceGrants.length,
+    },
+  });
+  return {
+    id,
+    name: input.name,
+    ...(input.description ? { description: input.description } : {}),
+    agencyMode: input.agencyMode,
+    version,
+    template,
+    requiredResourceGrants,
+    skillRefs: input.skillRefs ?? [],
+    ...(input.modelTier ? { modelTier: input.modelTier } : {}),
+    status: input.status ?? "draft",
+    createdAt,
+    safeExport,
+    audit,
+  };
+}
+
+export function createAgentEvaluation(input: AgentEvaluationInput): AgentEvaluation {
+  const redaction = input.redaction ?? "strict";
+  const evaluatedAt = input.evaluatedAt ?? new Date().toISOString();
+  const criteria = redactAgentBoundaryValue(input.criteria, redaction) as Record<string, unknown>;
+  const result = redactAgentBoundaryValue(input.result ?? {}, redaction) as Record<string, unknown>;
+  const id = `agent_evaluation_${stableHash([
+    input.agentId,
+    input.assignmentId ?? "",
+    input.runId ?? "",
+    input.evaluatorId ?? "",
+    input.status,
+    evaluatedAt,
+  ].join("|"))}`;
+  const audit = createAgentAuditEvent({
+    kind: "evaluation",
+    agentId: input.agentId,
+    assignmentId: input.assignmentId,
+    actorId: input.evaluatorId,
+    result: input.status === "passed" ? "allowed" : input.status === "failed" || input.status === "blocked" ? "blocked" : "recorded",
+    reason: `agent evaluation ${input.status}`,
+    redaction,
+    createdAt: evaluatedAt,
+    resourceType: "agent_evaluation",
+    resourceId: id,
+    metadata: {
+      runId: input.runId,
+      score: input.score,
+      status: input.status,
+      criteria,
+      result,
+    },
+  });
+  return {
+    id,
+    agentId: input.agentId,
+    ...(input.assignmentId ? { assignmentId: input.assignmentId } : {}),
+    ...(input.runId ? { runId: input.runId } : {}),
+    ...(input.evaluatorId ? { evaluatorId: input.evaluatorId } : {}),
+    status: input.status,
+    ...(input.score !== undefined ? { score: input.score } : {}),
+    criteria,
+    result,
+    evaluatedAt,
+    audit,
   };
 }
 

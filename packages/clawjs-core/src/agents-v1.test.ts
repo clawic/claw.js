@@ -5,6 +5,8 @@ import {
   createAgentAuditEvent,
   createAgentActivityFeed,
   createAgentConfigRevision,
+  createAgentBlueprint,
+  createAgentEvaluation,
   createAgentIncident,
   createAgentSafePackageExport,
   createAgentSafeSurfaceProjection,
@@ -437,6 +439,66 @@ test("Agents V1 activity feed projects human-readable redacted timeline", () => 
   assert.equal(feed.items[0]?.severity, "critical");
   assert.equal((feed.items[0]?.metadata as Record<string, unknown>).authorization, "[REDACTED]");
   assert.equal((feed.items[2]?.metadata.outcome as Record<string, unknown>).rawTracePath, "[REDACTED]");
+});
+
+test("Agents V1 blueprints produce redacted portable templates", () => {
+  const blueprint = createAgentBlueprint({
+    name: "Support blueprint",
+    agencyMode: "support",
+    version: 3,
+    modelTier: "balanced",
+    skillRefs: ["skill.support@1"],
+    createdAt: "2026-05-17T10:00:00.000Z",
+    template: {
+      role: "Support",
+      systemPrompt: "private",
+      secretAllowlist: ["vault://agents/support"],
+      localPath: "/Users/example/blueprint",
+    },
+    requiredResourceGrants: [{
+      id: "grant.support.read",
+      resourceType: "collection",
+      resourceId: "support_conversations",
+      action: "read",
+      scopeType: "customer",
+      scopeId: "*",
+    }],
+  });
+  assert.match(blueprint.id, /^agent_blueprint_/);
+  assert.equal(blueprint.version, "3");
+  assert.equal(blueprint.template.secretAllowlist, "[REDACTED]");
+  assert.equal(blueprint.template.localPath, "[REDACTED_LOCAL_PATH]");
+  assert.equal(blueprint.requiredResourceGrants[0]?.resourceType, "collection");
+  assert.equal(blueprint.safeExport.packageKind, "claw_agent_package");
+  assert.equal(blueprint.audit.kind, "blueprint");
+  assert.equal(blueprint.audit.resourceType, "agent_blueprint");
+});
+
+test("Agents V1 evaluations are redacted audit records", () => {
+  const evaluation = createAgentEvaluation({
+    agentId: "agent.support",
+    assignmentId: "assignment.web",
+    runId: "run_1",
+    evaluatorId: "actor.evaluator",
+    status: "failed",
+    score: 0.42,
+    evaluatedAt: "2026-05-17T10:00:00.000Z",
+    criteria: {
+      metric: "support_safety",
+      rawTracePath: "/Users/example/eval.log",
+    },
+    result: {
+      reason: "Unsafe disclosure",
+      authorization: "Bearer raw",
+    },
+  });
+  assert.match(evaluation.id, /^agent_evaluation_/);
+  assert.equal(evaluation.status, "failed");
+  assert.equal(evaluation.audit.kind, "evaluation");
+  assert.equal(evaluation.audit.result, "blocked");
+  assert.equal(evaluation.audit.resourceType, "agent_evaluation");
+  assert.equal(evaluation.criteria.rawTracePath, "[REDACTED]");
+  assert.equal(evaluation.result.authorization, "[REDACTED]");
 });
 
 test("Agents V1 safe surface projection exposes only bounded Relay/MCP/API fields", () => {
