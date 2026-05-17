@@ -55,6 +55,7 @@ const requiredFirstWaveSystems = [
   "iot",
   "construction",
   "eln",
+  "product",
 ];
 
 const requiredFoundationMappings = {
@@ -121,6 +122,10 @@ const requiredFixtureCoverage = [
   "public_case",
   "permit",
   "public_filing",
+  "product_spec",
+  "product_revision",
+  "product_requirement",
+  "product_bom",
   "thing",
   "iot_device",
   "sensor_reading",
@@ -217,6 +222,10 @@ const requiredPluralIntentPhrases = [
   ["claw public-cases list", "public_cases"],
   ["claw permits list", "permits"],
   ["claw public-filings list", "public_filings"],
+  ["claw product-specs list", "product_specs"],
+  ["claw product-revisions list", "product_revisions"],
+  ["claw product-requirements list", "product_requirements"],
+  ["claw product-boms list", "product_boms"],
   ["claw things list", "iot_things"],
   ["claw iot-devices list", "iot_devices"],
   ["claw sensor-readings list", "sensor_readings"],
@@ -354,6 +363,10 @@ for (const phrase of [
   "claw public-case public_case_123 filings add",
   "claw public-case public_case_123 permits add",
   "claw public-case public_case_123 timeline",
+  "claw product-spec product_spec_123 revisions add",
+  "claw product-spec product_spec_123 requirements add",
+  "claw product-spec product_spec_123 boms add",
+  "claw product-spec product_spec_123 timeline",
   "claw thing thing_123 devices add",
   "claw iot-device device_123 readings add",
   "claw iot-device device_123 commands add",
@@ -550,6 +563,9 @@ if (!semanticViews.some((entry) => entry.id === "control.timeline" && entry.syst
 }
 if (!semanticViews.some((entry) => entry.id === "public_case.timeline" && entry.systemId === "government")) {
   fail("semantic views must include public_case.timeline");
+}
+if (!semanticViews.some((entry) => entry.id === "product_spec.timeline" && entry.systemId === "product")) {
+  fail("semantic views must include product_spec.timeline");
 }
 if (!semanticViews.some((entry) => entry.id === "thing.timeline" && entry.systemId === "iot")) {
   fail("semantic views must include thing.timeline");

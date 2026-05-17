@@ -310,6 +310,7 @@ function materializedSemanticViewForIntent(
   if (semanticView.id === "shipment.timeline") return materializedShipmentTimeline(input, intent, semanticView);
   if (semanticView.id === "control.timeline") return materializedControlTimeline(input, intent, semanticView);
   if (semanticView.id === "public_case.timeline") return materializedPublicCaseTimeline(input, intent, semanticView);
+  if (semanticView.id === "product_spec.timeline") return materializedProductSpecTimeline(input, intent, semanticView);
   if (semanticView.id === "thing.timeline") return materializedThingTimeline(input, intent, semanticView);
   if (semanticView.id === "construction_project.timeline") return materializedConstructionProjectTimeline(input, intent, semanticView);
   return undefined;
@@ -1436,6 +1437,86 @@ function materializedPublicCaseTimeline(
   };
 }
 
+function materializedProductSpecTimeline(
+  input: DenseDataCliInput,
+  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
+) {
+  const productSpecId = input.positionals[1];
+  if (!productSpecId) return undefined;
+  const namespaceId = input.flags.namespace ?? "main";
+  const store = openDenseDataStore(input.workspaceRoot);
+  store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
+  const productSpec = store.getRecord(namespaceId, "product_specs", productSpecId);
+  if (!productSpec) return undefined;
+
+  const product = typeof productSpec.productCatalogId === "string" ? store.getRecord(namespaceId, "products_catalog", productSpec.productCatalogId) : undefined;
+  const company = typeof productSpec.companyId === "string" ? store.getRecord(namespaceId, "companies", productSpec.companyId) : undefined;
+  const owner = typeof productSpec.ownerEmployeeId === "string" ? store.getRecord(namespaceId, "employees", productSpec.ownerEmployeeId) : undefined;
+  const revisions = store.listRecords(namespaceId, "product_revisions", { filter: { productSpecId } }).items;
+  const requirements = store.listRecords(namespaceId, "product_requirements", { filter: { productSpecId } }).items;
+  const boms = store.listRecords(namespaceId, "product_boms", { filter: { productSpecId } }).items;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "product_specs", recordId: productSpecId } }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "product_specs", targetId: productSpecId } }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "product_specs", targetId: productSpecId } }).items;
+  const items = [
+    timelineItem(productSpec, "product_spec", productSpec.id, productSpec.title ?? productSpec.sku ?? productSpec.id, productSpec.createdAt, productSpec),
+    ...(product ? [timelineItem(product, "product", product.id, product.name ?? product.id, product.createdAt, product)] : []),
+    ...(company ? [timelineItem(company, "company", company.id, company.name ?? company.legalName ?? company.id, company.createdAt, company)] : []),
+    ...(owner ? [timelineItem(owner, "employee", owner.id, owner.displayName ?? owner.email ?? owner.id, owner.createdAt, owner)] : []),
+    ...revisions.map((record) => timelineItem(record, "product_revision", record.id, record.title ?? record.revision ?? record.id, record.releasedAt ?? record.approvedAt ?? record.createdAt, record)),
+    ...requirements.map((record) => timelineItem(record, "product_requirement", record.id, record.title ?? record.requirementType ?? record.id, record.createdAt, record)),
+    ...boms.map((record) => timelineItem(record, "product_bom", record.id, record.title ?? record.bomVersion ?? record.id, record.createdAt, record)),
+    ...evidence.map((record) => timelineItem(record, "evidence", record.id, record.label ?? record.id, record.capturedAt ?? record.createdAt, record)),
+    ...qualityGaps.map((record) => timelineItem(record, "quality_gap", record.id, record.label ?? record.id, record.createdAt, record)),
+    ...provenance.map((record) => timelineItem(record, "provenance", record.id, record.eventType ?? record.id, record.occurredAt ?? record.createdAt, record)),
+  ].sort((left, right) => String(left.occurredAt).localeCompare(String(right.occurredAt)));
+
+  return {
+    id: semanticView.id,
+    subject: { collectionName: "product_specs", id: productSpec.id, label: productSpec.title ?? productSpec.sku ?? productSpec.id },
+    product: product ? { id: product.id, label: product.name ?? product.id } : null,
+    company: company ? { id: company.id, label: company.name ?? company.legalName ?? company.id } : null,
+    owner: owner ? { id: owner.id, label: owner.displayName ?? owner.email ?? owner.id } : null,
+    summary: {
+      revisions: revisions.length,
+      releasedRevisions: revisions.filter((record) => record.status === "released").length,
+      requirements: requirements.length,
+      openRequirements: requirements.filter((record) => record.status !== "verified" && record.status !== "rejected" && record.status !== "superseded").length,
+      boms: boms.length,
+      releasedBoms: boms.filter((record) => record.status === "released").length,
+      evidenceSources: evidence.length,
+      qualityGaps: qualityGaps.length,
+      hasCatalogProduct: Boolean(product),
+      hasCompany: Boolean(company),
+    },
+    itemCount: items.length,
+    items,
+    records: {
+      productSpec,
+      product,
+      company,
+      owner,
+      revisions,
+      requirements,
+      boms,
+      evidence,
+      provenance,
+    },
+    gaps: qualityGaps.map((record) => ({
+      id: record.id,
+      label: record.label,
+      status: record.status,
+      gapKind: record.gapKind,
+      severity: record.severity,
+      evidenceSourceId: record.evidenceSourceId,
+    })),
+    sourceCollections: ["product_specs", "products_catalog", "companies", "employees", "product_revisions", "product_requirements", "product_boms", "evidence_sources", "quality_gaps", "provenance_events"],
+    partial: qualityGaps.length > 0,
+    intentStatus: intent.status,
+  };
+}
+
 function materializedThingTimeline(
   input: DenseDataCliInput,
   intent: ReturnType<typeof resolveClawDenseDataIntent>,
@@ -2344,6 +2425,21 @@ function denseDbFlags(flags: Record<string, string>, collectionName: string): Re
   if (collectionName === "public_filings" && flags.document && !flags["document-id"]) {
     nextFlags = { ...nextFlags, "document-id": flags.document };
   }
+  if (["product_specs", "product_revisions", "product_requirements", "product_boms"].includes(collectionName) && flags.product && !flags["product-catalog-id"]) {
+    nextFlags = { ...nextFlags, "product-catalog-id": flags.product };
+  }
+  if (collectionName === "product_specs" && flags.company && !flags["company-id"]) {
+    nextFlags = { ...nextFlags, "company-id": flags.company };
+  }
+  if (collectionName === "product_specs" && flags.owner && !flags["owner-employee-id"]) {
+    nextFlags = { ...nextFlags, "owner-employee-id": flags.owner };
+  }
+  if (["product_revisions", "product_requirements", "product_boms"].includes(collectionName) && flags["product-spec"] && !flags["product-spec-id"]) {
+    nextFlags = { ...nextFlags, "product-spec-id": flags["product-spec"] };
+  }
+  if (collectionName === "product_boms" && flags.component && !flags["component-product-catalog-id"]) {
+    nextFlags = { ...nextFlags, "component-product-catalog-id": flags.component };
+  }
   if (collectionName === "iot_things" && flags.company && !flags["company-id"]) {
     nextFlags = { ...nextFlags, "company-id": flags.company };
   }
@@ -2705,6 +2801,24 @@ function nestedDenseDbRoute(input: DenseDataCliInput): Parameters<typeof runMagi
       "public-filings": "public_filings",
       filing: "public_filings",
       filings: "public_filings",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "product-spec",
+    relationFlag: "product-spec-id",
+    relationField: "productSpecId",
+    collections: {
+      revision: "product_revisions",
+      revisions: "product_revisions",
+      "product-revision": "product_revisions",
+      "product-revisions": "product_revisions",
+      requirement: "product_requirements",
+      requirements: "product_requirements",
+      "product-requirement": "product_requirements",
+      "product-requirements": "product_requirements",
+      bom: "product_boms",
+      boms: "product_boms",
+      "product-bom": "product_boms",
+      "product-boms": "product_boms",
     },
   }) ?? nestedParentDbRoute(input, {
     parentCommand: "thing",

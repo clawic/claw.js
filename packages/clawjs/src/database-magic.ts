@@ -716,6 +716,22 @@ function applyDefaults(collectionName: string, payload: Record<string, unknown>,
       payload.status ??= "draft";
       payload.filingType ??= "unknown";
       break;
+    case "product_specs":
+      payload.status ??= "draft";
+      payload.lifecycleStage ??= "unknown";
+      break;
+    case "product_revisions":
+      payload.status ??= "draft";
+      payload.changeType ??= "unknown";
+      break;
+    case "product_requirements":
+      payload.status ??= "proposed";
+      payload.priority ??= "normal";
+      payload.requirementType ??= "unknown";
+      break;
+    case "product_boms":
+      payload.status ??= "draft";
+      break;
     case "iot_things":
       payload.status ??= "active";
       payload.kind ??= "unknown";
