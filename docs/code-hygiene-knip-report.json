@@ -3,18 +3,18 @@
   "program": "code-hygiene",
   "tool": "knip",
   "toolVersion": "6.14.0",
-  "generatedAt": "2026-05-17T01:14:24.615Z",
+  "generatedAt": "2026-05-17T01:20:59.795Z",
   "mode": "report-only",
   "config": "knip.json",
   "cwd": ".",
   "summary": {
-    "filesWithIssues": 198,
-    "totalIssues": 900,
+    "filesWithIssues": 197,
+    "totalIssues": 893,
     "issueTypes": {
       "unlisted": 2,
-      "types": 122,
-      "owners": 132,
-      "exports": 636,
+      "types": 121,
+      "owners": 131,
+      "exports": 631,
       "duplicates": 8
     },
     "topFiles": [

@@ -5,9 +5,9 @@ import type { CliJsonMeta } from "./cli-json.ts";
 import { setCliJsonMetaProvider } from "./cli-json.ts";
 import { createCliClaw } from "./cli-claw-factory.ts";
 
-export type GuidanceMode = "off" | "compact" | "full" | "minimal";
+type GuidanceMode = "off" | "compact" | "full" | "minimal";
 
-export function resolveCliActor(flags: Record<string, string>, env: NodeJS.ProcessEnv = process.env): ActorContext {
+function resolveCliActor(flags: Record<string, string>, env: NodeJS.ProcessEnv = process.env): ActorContext {
   const trustedKeys = parseTrustedKeys(flags["actor-trusted-keys"] || env.CLAW_ACTOR_TRUSTED_KEYS);
   if (flags["actor-trusted-key"]) {
     trustedKeys.push({
@@ -37,14 +37,14 @@ export function resolveCliActor(flags: Record<string, string>, env: NodeJS.Proce
   return unknownActor();
 }
 
-export function resolveGuidanceMode(flags: Record<string, string>, actor: ActorContext): GuidanceMode {
+function resolveGuidanceMode(flags: Record<string, string>, actor: ActorContext): GuidanceMode {
   const explicit = flags.guidance as GuidanceMode | undefined;
   if (explicit === "off" || explicit === "compact" || explicit === "full" || explicit === "minimal") return explicit;
   if (actor.actorKind === "human") return "minimal";
   return "compact";
 }
 
-export function buildCliRuntimeMeta(input: {
+function buildCliRuntimeMeta(input: {
   actor: ActorContext;
   guidanceMode: GuidanceMode;
   hints: GuidanceHint[];
@@ -103,7 +103,7 @@ export async function installCliRuntimeMetaProvider(input: {
   setCliJsonMetaProvider(() => buildCliRuntimeMeta({ actor, guidanceMode, hints, fullRecords }));
 }
 
-export function guidanceMatchInputForCli(input: {
+function guidanceMatchInputForCli(input: {
   group?: string;
   command?: string;
   subcommand?: string;
@@ -134,7 +134,7 @@ export function guidanceMatchInputForCli(input: {
   };
 }
 
-export function filterHintsForMode(hints: GuidanceHint[], mode: GuidanceMode): GuidanceHint[] {
+function filterHintsForMode(hints: GuidanceHint[], mode: GuidanceMode): GuidanceHint[] {
   if (mode === "off") return [];
   if (mode === "minimal") return hints.filter((hint) => hint.severity === "critical").slice(0, 1);
   return hints;
