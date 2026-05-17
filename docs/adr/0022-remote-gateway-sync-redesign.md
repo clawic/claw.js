@@ -103,6 +103,13 @@ from a plan: push/pull changes are `queued`, conflicts are `blocked`, and
 reconciliation advances cursors only after acknowledged changes or explicitly
 resolved conflicts.
 
+Inter-mesh collaboration uses three explicit primitives: `MeshInvitation`,
+`MeshResourceShare`, and `MeshRevocation`. Invitations scope allowed resources
+and actions before any share is created. Shares bind one invitation to a Sync
+manifest and remain no-write/proposed until signed Coordinator execution.
+Revocations cascade to Sync queue access and audit; they do not silently leave
+old shares usable.
+
 Secrets never synchronize as plaintext. Remote and sync flows may carry secret
 references and may request broker leases for a specific actor, action,
 resource, route, and expiry. The audit event records the lease; the payload
@@ -147,7 +154,7 @@ The public CLI exposes read-only and dry-run entrypoints:
 
 - `claw remote classify|check|routes|conformance`
 - `claw sync manifest|status|plan|run|conflicts`
-- `claw nodes list|pair|trust|revoke|heartbeat`
+- `claw nodes list|pair|trust|revoke|invite|share|heartbeat`
 - `claw gateway serve|project|conformance`
 
 Mutation commands such as node pairing, trust changes, gateway serving, and

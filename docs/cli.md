@@ -186,6 +186,9 @@ claw nodes list --json
 claw nodes pair --dry-run --json
 claw nodes trust --dry-run --json
 claw nodes revoke --dry-run --json
+claw nodes invite --issuer-mesh mesh.home --recipient-mesh mesh.server --allowed-resources skills:default --actions read,sync --json
+claw nodes share --issuer-mesh mesh.home --to-mesh mesh.server --resource-id skills:default --driver skills --actions read,sync --json
+claw nodes revoke --target-type share --target-id mesh_share_1 --json
 claw nodes heartbeat --json
 
 claw gateway serve --dry-run --json

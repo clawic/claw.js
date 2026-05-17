@@ -101,6 +101,9 @@ GET  /v1/nodes
 POST /v1/nodes/pair
 POST /v1/nodes/trust
 POST /v1/nodes/revoke
+POST /v1/mesh/invitations
+POST /v1/mesh/shares
+POST /v1/mesh/revocations
 ```
 
 The mutation-shaped node and sync endpoints are dry-run until signed
@@ -115,6 +118,13 @@ and `writes: false` when the Connector or node is unavailable. Sync plans can
 produce no-write queue entries: push/pull changes start as `queued`, conflicts
 start as `blocked`, and reconciliation advances the next cursor only after
 acknowledged changes or explicitly resolved conflicts.
+
+Inter-mesh collaboration is represented by `MeshInvitation`,
+`MeshResourceShare`, and `MeshRevocation` contracts. Invitations define the
+resource/action scope first. Shares bind that scope to a Sync manifest and
+forbid plaintext secrets. Revocations cascade to Sync queue access. The Relay
+routes expose these shapes as dry-run contracts until signed Coordinator
+execution can persist and audit the mutation.
 
 Gateway authorization is evaluated fail-closed through the shared
 `evaluateRemoteAccess` contract. Governed remote requests need active allow

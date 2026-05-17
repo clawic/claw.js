@@ -2483,8 +2483,19 @@ The docs check script validates that every current export from
     buildSyncPlan
     buildSyncQueueEntries
     createExampleSyncResourceManifest
+    createMeshInvitation
+    createMeshResourceShare
+    createMeshRevocation
     createSyncResourceManifest
     evaluateRemoteAccess
+    MeshInvitation
+    meshInvitationSchema
+    MeshResourceShare
+    meshResourceShareSchema
+    MeshRevocation
+    meshRevocationSchema
+    MeshShareAction
+    meshShareActionSchema
     NodeIdentity
     nodeIdentitySchema
     RemoteAccessDecision
