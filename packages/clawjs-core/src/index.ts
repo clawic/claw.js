@@ -9,6 +9,7 @@ export * from "./helpers.ts";
 export * from "./host-contracts.ts";
 export * from "./host-contract-fixtures.ts";
 export * from "./host-json-schemas.ts";
+export * from "./mac-control-plane.ts";
 export * from "./productivity.ts";
 export * from "./remote-sync.ts";
 export * from "./schemas.ts";
