@@ -3,6 +3,8 @@
   "program": "v1-surface-closure",
   "repo": "clawjs",
   "generatedAt": "2026-05-17",
+  "completionStatus": "local-validation-passed-with-external-pending",
+  "completionBlockers": [],
   "statusVocabulary": {
     "passed": "The command ran locally and returned exit code 0.",
     "external-pending": "The local harness exists, but a live, provider, Docker, paid, destructive, physical, or approved external prerequisite was intentionally not exercised.",
@@ -49,6 +51,7 @@
       "acceptanceCategoryIds": ["integrations-qa"],
       "command": "npm run test:package-live",
       "status": "external-pending",
+      "completionBlocking": false,
       "evidence": "Package/live harness passed locally and separately reported Docker and brokered live lanes as EXTERNAL PENDING.",
       "nextAction": "Set CLAWJS_PACKAGE_LIVE_DOCKER=1 for the container install lane, or set CLAW_TEST_LIVE=1 and CLAW_LIVE_BROKER_COMMAND for approved brokered provider validation."
     },

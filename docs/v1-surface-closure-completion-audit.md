@@ -74,5 +74,6 @@ Status vocabulary:
 | 37 | `external_pending_policy` | Separate external validation | verified | Matrix rows and QA docs mark live provider/device/payment checks as external pending instead of silent skips. |
 
 Current close condition: all listed decisions have public-safe implementation
-or explicit external-pending evidence, but the private source session must be
-re-read again immediately before any `update_goal(status=complete)` call.
+or explicit external-pending evidence. The validation ledger currently has no
+tooling blockers for this repo, but the private source session must be re-read
+again immediately before any `update_goal(status=complete)` call.
