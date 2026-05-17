@@ -40,7 +40,7 @@ export const WEBHOOK = [
   stringField("webhookId", { default: "achWebhook123" }),
 ] as const;
 
-export const RECORD_PAGE = [
+const RECORD_PAGE = [
   integerField("pageSize", { optional: true, default: 100, min: 1, max: 100 }),
   stringField("offset", { optional: true, default: "itrOffset123" }),
 ] as const;
@@ -153,7 +153,7 @@ export function stringField(name: string, options: { optional?: boolean; default
   return { name, type: "string", optional: options.optional ?? false, default: options.default };
 }
 
-export function integerField(name: string, options: { optional?: boolean; default: number; min?: number; max?: number }): AirtableField {
+function integerField(name: string, options: { optional?: boolean; default: number; min?: number; max?: number }): AirtableField {
   return { name, type: "integer", optional: options.optional ?? false, default: options.default, ...(options.min ? { min: options.min } : {}), ...(options.max ? { max: options.max } : {}) };
 }
 

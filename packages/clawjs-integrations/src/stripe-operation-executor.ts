@@ -22,7 +22,7 @@ export interface StripeGenericOperationSpec {
   requiredPaths?: string[];
 }
 
-export const STRIPE_CORE_ACTION_SLUGS = [
+const STRIPE_CORE_ACTION_SLUGS = [
   "list-customers",
   "get-customer",
   "create-customer",
@@ -488,7 +488,7 @@ export const STRIPE_ACTION_SLUGS = [
   ...STRIPE_EXTRA_ACTION_SPECS.map((item) => item.slug),
 ] as const;
 
-export type StripeRuntimeOperation = typeof STRIPE_ACTION_SLUGS[number];
+type StripeRuntimeOperation = typeof STRIPE_ACTION_SLUGS[number];
 
 const STRIPE_OPERATION_SET = new Set<string>(STRIPE_ACTION_SLUGS);
 const STRIPE_EXTRA_SPEC_BY_SLUG = new Map(STRIPE_EXTRA_ACTION_SPECS.map((item) => [item.slug, item]));

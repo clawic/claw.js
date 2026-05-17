@@ -14,13 +14,13 @@
     "unreferencedAssetCandidates": 88
   },
   "knipSummary": {
-    "filesWithIssues": 182,
-    "totalIssues": 816,
+    "filesWithIssues": 177,
+    "totalIssues": 799,
     "issueTypes": {
       "unlisted": 2,
-      "types": 90,
-      "owners": 122,
-      "exports": 594,
+      "types": 84,
+      "owners": 117,
+      "exports": 588,
       "duplicates": 8
     }
   },
@@ -77,6 +77,7 @@
     "Bridge platform cleanup removed unused platform predicate and TCC capability helper exports while preserving `detectPlatform`.",
     "Template surface cleanup stopped re-exporting unused builtin counters and CLI option types, and removed unused render DTO aliases while preserving `claw template` behavior.",
     "Private shared-type cleanup made unused publishing/content/drive/ERP helper aliases private or removed them while preserving imported record contracts.",
-    "V1 data cleanup removed duplicate exit-code/schema re-exports from the CLI wrapper while preserving the consumed data-root/storage helpers."
+    "V1 data cleanup removed duplicate exit-code/schema re-exports from the CLI wrapper while preserving the consumed data-root/storage helpers.",
+    "Integration runtime cleanup kept catalog helper metadata public through the package entrypoint and made provider-local Slack/GitHub/Stripe/Airtable helper constants private."
   ]
 }

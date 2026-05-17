@@ -7,8 +7,6 @@ import type {
   IntegrationJson,
 } from "./types.ts";
 
-export const SLACK_APP_ID = "slack";
-
 export type SlackField = ConnectorFieldDefinition;
 
 export interface SlackGenericOperationSpec {
@@ -22,7 +20,7 @@ export interface SlackGenericOperationSpec {
   cursorItemsPath?: string;
 }
 
-export const SLACK_CORE_ACTION_SLUGS = [
+const SLACK_CORE_ACTION_SLUGS = [
   "send-message",
   "update-message",
   "delete-message",
@@ -132,7 +130,7 @@ export const SLACK_ACTION_SLUGS = [
   ...SLACK_EXTRA_ACTION_SPECS.map((item) => item.slug),
 ] as const;
 
-export type SlackRuntimeOperation = typeof SLACK_ACTION_SLUGS[number];
+type SlackRuntimeOperation = typeof SLACK_ACTION_SLUGS[number];
 
 const SLACK_OPERATION_SET = new Set<string>(SLACK_ACTION_SLUGS);
 const SLACK_EXTRA_SPEC_BY_SLUG = new Map(SLACK_EXTRA_ACTION_SPECS.map((item) => [item.slug, item]));

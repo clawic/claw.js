@@ -21,7 +21,7 @@ interface GitHubGenericOperationSpec {
   paged?: boolean;
 }
 
-export const GITHUB_CORE_ACTION_SLUGS = [
+const GITHUB_CORE_ACTION_SLUGS = [
   "get-authenticated-user",
   "get-user",
   "list-user-repositories",
@@ -166,7 +166,7 @@ export const GITHUB_ACTION_SLUGS = [
   ...GITHUB_EXTRA_ACTION_SPECS.map((item) => item.slug),
 ] as const;
 
-export type GitHubRuntimeOperation = typeof GITHUB_ACTION_SLUGS[number];
+type GitHubRuntimeOperation = typeof GITHUB_ACTION_SLUGS[number];
 
 const GITHUB_OPERATION_SET = new Set<string>(GITHUB_ACTION_SLUGS);
 const GITHUB_EXTRA_SPEC_BY_SLUG = new Map(GITHUB_EXTRA_ACTION_SPECS.map((item) => [item.slug, item]));
