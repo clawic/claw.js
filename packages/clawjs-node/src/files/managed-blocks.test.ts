@@ -84,12 +84,12 @@ test("previewManagedBlockMutation reports the final block diff", () => {
 
 test("listManagedBlockProblems detects malformed and duplicate markers", () => {
   const content = [
-    "<!-- CLAWJS:tone:START -->",
+    "<!-- CLAW:tone:START -->",
     "kind",
-    "<!-- CLAWJS:tone:START -->",
+    "<!-- CLAW:tone:START -->",
     "extra",
-    "<!-- CLAWJS:tone:END -->",
-    "<!-- CLAWJS:persona:END -->",
+    "<!-- CLAW:tone:END -->",
+    "<!-- CLAW:persona:END -->",
   ].join("\n");
 
   const problems = listManagedBlockProblems(content);

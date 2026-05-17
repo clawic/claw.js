@@ -29,7 +29,7 @@ test("template packs can seed and manage workspace files", () => {
 
   const content = fs.readFileSync(path.join(workspaceDir, "SOUL.md"), "utf8");
   assert.match(content, /# Soul/);
-  assert.match(content, /CLAWJS:settings:START/);
+  assert.match(content, /CLAW:settings:START/);
 });
 
 test("template packs respect file locks for concurrent mutations", () => {

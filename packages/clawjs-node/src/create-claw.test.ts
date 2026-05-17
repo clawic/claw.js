@@ -248,9 +248,9 @@ test("createClaw exposes app discovery, managed block preservation, and secret r
   claw.files.writeWorkspaceFile("USER.md", [
     "# Profile",
     "",
-    "<!-- CLAWJS:profile:START -->",
+    "<!-- CLAW:profile:START -->",
     "managed-profile",
-    "<!-- CLAWJS:profile:END -->",
+    "<!-- CLAW:profile:END -->",
     "",
     "Visible text",
     "",
@@ -259,9 +259,9 @@ test("createClaw exposes app discovery, managed block preservation, and secret r
   claw.files.writeWorkspaceFilePreservingManagedBlocks("USER.md", [
     "# Profile",
     "",
-    "<!-- CLAWJS:profile:START -->",
+    "<!-- CLAW:profile:START -->",
     "user-overwrite-attempt",
-    "<!-- CLAWJS:profile:END -->",
+    "<!-- CLAW:profile:END -->",
     "",
     "Edited text",
     "",
@@ -1309,9 +1309,9 @@ test("createClaw doctor report surfaces malformed managed blocks", async () => {
 
   await claw.workspace.init();
   claw.files.writeWorkspaceFile("SOUL.md", [
-    "<!-- CLAWJS:tone:START -->",
+    "<!-- CLAW:tone:START -->",
     "kind",
-    "<!-- CLAWJS:tone:START -->",
+    "<!-- CLAW:tone:START -->",
   ].join("\n"));
 
   const report = await claw.doctor.run();
@@ -1372,8 +1372,8 @@ test("createClaw exposes richer workspace file helpers", async () => {
   assert.equal(preview.exists, true);
   assert.equal(preview.changed, true);
 
-  claw.files.writeWorkspaceFile("SOUL.md", "before\n\n<!-- CLAWJS:tone:START -->\nkind\n<!-- CLAWJS:tone:END -->\n");
-  assert.equal(claw.files.readWorkspaceFile("SOUL.md"), "before\n\n<!-- CLAWJS:tone:START -->\nkind\n<!-- CLAWJS:tone:END -->\n");
+  claw.files.writeWorkspaceFile("SOUL.md", "before\n\n<!-- CLAW:tone:START -->\nkind\n<!-- CLAW:tone:END -->\n");
+  assert.equal(claw.files.readWorkspaceFile("SOUL.md"), "before\n\n<!-- CLAW:tone:START -->\nkind\n<!-- CLAW:tone:END -->\n");
   assert.equal(claw.files.inspectWorkspaceFile("SOUL.md").managedBlocks.length, 1);
   assert.equal(claw.files.inspectManagedBlock("SOUL.md", "tone").innerContent, "kind");
 });

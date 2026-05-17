@@ -89,7 +89,7 @@ test("syncBinding supports every canonical runtime file and synthetic targets", 
 
     assert.equal(result.changed, true);
     const content = fs.readFileSync(path.join(workspaceDir, targetFile), "utf8");
-    assert.match(content, /CLAWJS:tone:START/);
+    assert.match(content, /CLAW:tone:START/);
     assert.match(content, new RegExp(`tone=${targetFile.toLowerCase().replace(".", "\\.")}`));
   }
 });

@@ -34,7 +34,7 @@ test("UserSpec CLI stores verified human facts and omits pending proposals", asy
   await execFileAsync(process.execPath, [clawBin(rootDir), "user", "compile", ...baseArgs], { cwd: rootDir });
   const firstCompiled = fs.readFileSync(path.join(workspaceDir, "USER.md"), "utf8");
   expect(firstCompiled).toContain("Manual user note.");
-  expect(firstCompiled).toContain("CLAWJS:user-spec:START");
+  expect(firstCompiled).toContain("CLAW:user-spec:START");
   expect(firstCompiled).toContain("Display Name: Test User");
   expect(firstCompiled).not.toContain("Pending City");
 

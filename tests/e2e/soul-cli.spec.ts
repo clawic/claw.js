@@ -33,7 +33,7 @@ test("SoulSpec CLI compiles structured souls into isolated workspace files", asy
 
   const firstCompiled = fs.readFileSync(path.join(workspaceDir, "SOUL.md"), "utf8");
   expect(firstCompiled).toContain("Manual soul note.");
-  expect(firstCompiled).toContain("CLAWJS:soul-spec:START");
+  expect(firstCompiled).toContain("CLAW:soul-spec:START");
   expect(firstCompiled).toContain("Communicate with high directness");
 
   await execFileAsync(process.execPath, [

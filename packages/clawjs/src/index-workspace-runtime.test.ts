@@ -644,7 +644,7 @@ test("runCli can write, read and inspect workspace files", async () => {
     "write",
     "--workspace", workspaceRoot,
     "--file", "SOUL.md",
-    "--value", "before\n\n<!-- CLAWJS:tone:START -->\nkind\n<!-- CLAWJS:tone:END -->\n",
+    "--value", "before\n\n<!-- CLAW:tone:START -->\nkind\n<!-- CLAW:tone:END -->\n",
     "--json",
   ], {
     stdout: writeStdout.stream,
@@ -667,7 +667,7 @@ test("runCli can write, read and inspect workspace files", async () => {
     cwd: process.cwd(),
   });
   assert.equal(readExitCode, CLI_EXIT_OK);
-  assert.match(readStdout.getOutput(), /CLAWJS:tone:START/);
+  assert.match(readStdout.getOutput(), /CLAW:tone:START/);
 
   const inspectStdout = captureStream();
   const inspectExitCode = await runCli([

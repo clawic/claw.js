@@ -33,7 +33,7 @@ export function syncBinding<TSettings>(options: SyncBindingOptions<TSettings>): 
     && options.binding.required === false
     && options.createMissingOptionalBlock !== true
     && before.trim()
-    && !before.includes(`<!-- CLAWJS:${options.binding.blockId}:START -->`)
+    && !before.includes(`<!-- CLAW:${options.binding.blockId}:START -->`)
   ) {
     return {
       filePath,

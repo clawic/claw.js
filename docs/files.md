@@ -70,7 +70,7 @@ The supported mutation modes are `seed_if_missing`, `replace_full`,
 ## Managed Blocks
 
 Managed blocks use the exact marker format
-`<!-- CLAWJS:block-id:START -->` and `<!-- CLAWJS:block-id:END -->`.
+`<!-- CLAW:block-id:START -->` and `<!-- CLAW:block-id:END -->`.
 
 ```ts
 import {

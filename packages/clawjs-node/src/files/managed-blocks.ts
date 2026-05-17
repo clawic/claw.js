@@ -48,8 +48,8 @@ export interface MergeManagedBlocksOptions {
 
 export function managedBlockMarkers(blockId: string): ManagedBlockMarkers {
   return {
-    start: `<!-- CLAWJS:${blockId}:START -->`,
-    end: `<!-- CLAWJS:${blockId}:END -->`,
+    start: `<!-- CLAW:${blockId}:START -->`,
+    end: `<!-- CLAW:${blockId}:END -->`,
   };
 }
 
@@ -114,7 +114,7 @@ function normalizeManagedBlockInnerContent(content: string): string {
 
 export function listManagedBlocks(content: string): ManagedBlockInspection[] {
   const blocks: ManagedBlockInspection[] = [];
-  const startPattern = /<!-- CLAWJS:([^:]+):START -->/g;
+  const startPattern = /<!-- CLAW:([^:]+):START -->/g;
   for (const match of content.matchAll(startPattern)) {
     const blockId = match[1];
     const startIndex = match.index ?? content.indexOf(match[0]);
@@ -131,8 +131,8 @@ export function listManagedBlocks(content: string): ManagedBlockInspection[] {
 
 export function listManagedBlockProblems(content: string): ManagedBlockProblem[] {
   const lines = content.replace(/\r\n/g, "\n");
-  const startMatches = [...lines.matchAll(/<!-- CLAWJS:([^:]+):START -->/g)];
-  const endMatches = [...lines.matchAll(/<!-- CLAWJS:([^:]+):END -->/g)];
+  const startMatches = [...lines.matchAll(/<!-- CLAW:([^:]+):START -->/g)];
+  const endMatches = [...lines.matchAll(/<!-- CLAW:([^:]+):END -->/g)];
   const blockIds = new Set([
     ...startMatches.map((match) => match[1]),
     ...endMatches.map((match) => match[1]),

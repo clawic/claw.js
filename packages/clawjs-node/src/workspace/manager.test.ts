@@ -185,18 +185,18 @@ test("workspace file helpers read, preview, write and inspect managed blocks", (
   const writeResult = writeWorkspaceFile(workspaceDir, relativePath, [
     "# Notes",
     "",
-    "<!-- CLAWJS:persona:START -->",
+    "<!-- CLAW:persona:START -->",
     "alpha",
-    "<!-- CLAWJS:persona:END -->",
+    "<!-- CLAW:persona:END -->",
     "",
   ].join("\n"));
   assert.equal(writeResult.changed, true);
   assert.equal(readWorkspaceFile(workspaceDir, relativePath), [
     "# Notes",
     "",
-    "<!-- CLAWJS:persona:START -->",
+    "<!-- CLAW:persona:START -->",
     "alpha",
-    "<!-- CLAWJS:persona:END -->",
+    "<!-- CLAW:persona:END -->",
     "",
   ].join("\n"));
 
@@ -219,9 +219,9 @@ test("writeWorkspaceFilePreservingManagedBlocks keeps original managed blocks in
   writeWorkspaceFile(workspaceDir, relativePath, [
     "# USER",
     "",
-    "<!-- CLAWJS:persona:START -->",
+    "<!-- CLAW:persona:START -->",
     "trusted",
-    "<!-- CLAWJS:persona:END -->",
+    "<!-- CLAW:persona:END -->",
     "",
     "free text",
     "",
@@ -230,9 +230,9 @@ test("writeWorkspaceFilePreservingManagedBlocks keeps original managed blocks in
   writeWorkspaceFilePreservingManagedBlocks(workspaceDir, relativePath, [
     "# USER",
     "",
-    "<!-- CLAWJS:persona:START -->",
+    "<!-- CLAW:persona:START -->",
     "overwritten",
-    "<!-- CLAWJS:persona:END -->",
+    "<!-- CLAW:persona:END -->",
     "",
     "updated free text",
     "",

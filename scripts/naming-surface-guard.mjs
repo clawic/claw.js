@@ -77,6 +77,10 @@ forbidSnippet("relay/tests/e2e/service-gateway.e2e.test.ts", "x-clawjs-relay-aut
 forbidSnippet("bridge/src/bin/start.ts", "clawjs-bridge");
 forbidSnippet("docs/watchers.md", "clawjs-123");
 forbidSnippet("relay/src/connector/runtime.ts", "clawjs-tools");
+forbidSnippet("packages/clawjs-node/src/files/managed-blocks.ts", "CLAWJS:");
+forbidSnippet("packages/clawjs-node/src/bindings/sync.ts", "CLAWJS:");
+forbidSnippet("docs/files.md", "CLAWJS:");
+forbidSnippet("docs/template-packs-and-bindings.md", "CLAWJS:");
 forbidSnippet("packages/clawjs-core/src/surface-registry.ts", "stable compatibility surface");
 forbidSnippet("packages/clawjs/src/inspect-cli.test.ts", "stable compatibility surface");
 forbidSnippet("docs/adr/0004-persistent-surface-registry-and-inspection.md", "stable compatibility");

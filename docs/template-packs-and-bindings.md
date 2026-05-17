@@ -113,9 +113,9 @@ await claw.files.writeSettingsSchema({
 Managed blocks are delimited with:
 
 ```md
-<!-- CLAWJS:persona:START -->
+<!-- CLAW:persona:START -->
 ...
-<!-- CLAWJS:persona:END -->
+<!-- CLAW:persona:END -->
 ```
 
 The helper APIs surface inspection and preview data so callers can detect malformed or duplicated block markers before syncing.
