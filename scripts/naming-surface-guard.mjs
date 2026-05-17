@@ -256,6 +256,8 @@ for (const relativePath of [
   forbidSnippet(relativePath, "compatibility layer");
   forbidSnippet(relativePath, "legacy?: boolean");
   forbidSnippet(relativePath, "legacy: true");
+  forbidSnippet(relativePath, "legacyEvents");
+  forbidSnippet(relativePath, "legacyRoutines");
   forbidSnippet(relativePath, "Relay compatibility plugin catalog");
   forbidSnippet(relativePath, "relay-compat");
   forbidSnippet(relativePath, "WorkspaceCompatStore");

@@ -1259,7 +1259,8 @@ export class RelayConnectorRuntime {
       }
       case "events.list":
         if (claw.time.configured) {
-          return await claw.time.legacyEvents();
+          const listed = await claw.time.list({ kind: "event" });
+          return { events: listed.items };
         }
         return { events: await workspaceClaw.events.list({ limit: 100 }) };
       case "events.create":
@@ -1493,7 +1494,8 @@ export class RelayConnectorRuntime {
       }
       case "routines.list":
         if (claw.time.configured) {
-          return await claw.time.legacyRoutines();
+          const listed = await claw.time.list({ kind: "routine" });
+          return { routines: listed.items, executions: [] };
         }
         return { routines: observedRead("routines"), executions: observedRead("routine-executions") };
       case "routines.create": {
