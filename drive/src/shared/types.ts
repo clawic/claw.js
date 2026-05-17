@@ -49,7 +49,7 @@ export interface DriveSheetContent {
   tabs: DriveSheetTab[];
 }
 
-export interface DriveSlide {
+interface DriveSlide {
   id: string;
   title: string;
   body: string;
@@ -192,9 +192,7 @@ export interface DriveAuditFilter {
   limit?: number;
 }
 
-export type DriveShareMode = "read" | "tailnet" | "public_tunnel" | "agent";
-
-export type DriveAgentCapabilityKind =
+type DriveAgentCapabilityKind =
   | "drive.item.read"
   | "drive.item.write"
   | "drive.item.delete"
@@ -280,12 +278,6 @@ export interface DriveEncryptedFolderRecord {
 }
 
 export type DriveMimeClass = "image" | "video" | "audio" | "doc" | "code" | "archive" | "other";
-
-export interface DriveSemanticSearchResult {
-  itemId: string;
-  score: number;
-  item: DriveItem;
-}
 
 // ---------------------------------------------------------------------------
 // Realtime wire format

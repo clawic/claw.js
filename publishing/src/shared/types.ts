@@ -19,14 +19,6 @@ export type PublishStatus =
   | "cancelled"
   | "deleted";
 
-export type AccountPublishState =
-  | "pending"
-  | "dispatched"
-  | "publishing"
-  | "published"
-  | "failed"
-  | "skipped";
-
 export type ChannelGroup =
   | "social"
   | "chat"
@@ -51,8 +43,6 @@ export type ChannelAuthKind =
   | "basic"
   | "webhook_signed"
   | "none";
-
-export type WorkspaceRole = "owner" | "admin" | "editor" | "member" | "guest";
 
 export type ContentKind =
   | "text"
@@ -105,7 +95,7 @@ export interface PostSpec {
   variants: PostVariantSpec[];
 }
 
-export interface OptionDescriptor {
+interface OptionDescriptor {
   kind: "string" | "number" | "boolean" | "enum" | "object" | "array";
   required?: boolean;
   enum?: string[];
@@ -113,7 +103,7 @@ export interface OptionDescriptor {
   description?: string;
 }
 
-export interface MediaCaps {
+interface MediaCaps {
   min: number;
   max: number;
   mimeTypes: string[];
@@ -166,7 +156,7 @@ export interface ChannelFamilyDescriptor {
   capabilitySchemaVersion?: number;
 }
 
-export interface ValidationIssue {
+interface ValidationIssue {
   code: string;
   message: string;
   blocking: boolean;

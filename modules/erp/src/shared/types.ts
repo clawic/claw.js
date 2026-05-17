@@ -1,4 +1,4 @@
-export type DocumentStatus =
+type DocumentStatus =
   | "draft"
   | "approved"
   | "confirmed"
@@ -7,9 +7,9 @@ export type DocumentStatus =
   | "reversed"
   | "cancelled";
 
-export type PeriodStatus = "open" | "closed";
-export type ApprovalStatus = "pending" | "approved" | "rejected" | "executed";
-export type JobStatus = "queued" | "running" | "completed" | "failed";
+type PeriodStatus = "open" | "closed";
+type ApprovalStatus = "pending" | "approved" | "rejected" | "executed";
+type JobStatus = "queued" | "running" | "completed" | "failed";
 
 export interface TenantRecord {
   id: string;

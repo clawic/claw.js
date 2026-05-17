@@ -39,11 +39,11 @@ export type ContentDestinationKind =
   | "mastodon_post";
 
 export type ContentPublishPolicy = "manual" | "autopublish" | "conditional";
-export type ContentEntryStatus = "draft" | "in_review" | "approved" | "scheduled" | "publishing" | "published" | "partially_published" | "failed" | "archived";
-export type ContentVariantStatus = "draft" | "ready" | "blocked" | "approved" | "scheduled" | "published" | "failed";
-export type ContentApprovalStatus = "pending" | "approved" | "rejected" | "expired" | "cancelled";
+type ContentEntryStatus = "draft" | "in_review" | "approved" | "scheduled" | "publishing" | "published" | "partially_published" | "failed" | "archived";
+type ContentVariantStatus = "draft" | "ready" | "blocked" | "approved" | "scheduled" | "published" | "failed";
+type ContentApprovalStatus = "pending" | "approved" | "rejected" | "expired" | "cancelled";
 export type ContentPlanStatus = "queued" | "scheduled" | "running" | "succeeded" | "failed" | "cancelled";
-export type ContentRunStatus = "running" | "succeeded" | "failed" | "cancelled";
+type ContentRunStatus = "running" | "succeeded" | "failed" | "cancelled";
 export type ContentType = "article" | "post" | "thread" | "announcement" | "campaign";
 export type ContentFormat = "markdown" | "rich_text" | "plain_text" | "json_blocks";
 export type ContentAssetKind = "image" | "video" | "document" | "audio";
