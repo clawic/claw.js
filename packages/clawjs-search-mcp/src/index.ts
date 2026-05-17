@@ -14,6 +14,8 @@ import {
   type SearchAuditEventType,
   type SearchProfileId,
   type SearchQueryInput,
+  type SearchQueryOutput,
+  type SearchResult,
   type SearchSourceState,
 } from "@clawjs/search";
 
@@ -247,6 +249,23 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
         return store.listMonitors().find((item) => item.id === id) ?? null;
       },
     },
+    {
+      name: "search.monitors.evaluate",
+      description: "Evaluate enabled Search monitors or one selected monitor.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          includeDisabled: { type: "boolean" },
+          limit: { type: "integer" },
+        },
+      },
+      handler: (p) => evaluateSearchMonitors(store, {
+        id: stringParam(p.id),
+        includeDisabled: typeof p.includeDisabled === "boolean" ? p.includeDisabled : false,
+        limit: numberParam(p.limit),
+      }),
+    },
     { name: "search.audit.list", description: "List Search audit events for actions and sensitive queries.", inputSchema: { type: "object", properties: { limit: { type: "integer" }, type: { type: "string", enum: ["action", "sensitive_query"] } } }, handler: (p) => store.listAuditEvents({ limit: numberParam(p.limit), type: searchAuditType(p.type) }) },
     { name: "search.jobs.list", description: "List local Search indexing jobs.", inputSchema: { type: "object", properties: { limit: { type: "integer" }, status: { type: "string", enum: ["queued", "leased", "done", "failed"] }, source: { type: "string" } } }, handler: (p) => store.listIndexJobs({ limit: numberParam(p.limit), status: searchJobStatus(p.status), source: stringParam(p.source) }) },
     {
@@ -355,6 +374,75 @@ function searchQueryFromParams(params: Record<string, unknown>): SearchQueryInpu
     surface: stringParam(params.surface),
     filters: recordParam(params.filters),
   };
+}
+
+function evaluateSearchMonitors(
+  store: SearchStore,
+  input: { id?: string; includeDisabled?: boolean; limit?: number } = {},
+): {
+  action: "evaluate";
+  items: Array<{
+    monitorId: string;
+    savedSearchId: string;
+    name?: string;
+    cadence?: string;
+    enabled: boolean;
+    query?: SearchQueryInput;
+    state: "ready" | "missing_saved_search";
+    resultCount: number;
+    partial: boolean;
+    omittedSources: SearchQueryOutput["omittedSources"];
+    results: SearchResult[];
+    evaluatedAt: string;
+  }>;
+  state: string;
+} {
+  const savedSearches = new Map(store.listSavedSearches().map((saved) => [saved.id, saved]));
+  const monitors = store.listMonitors().filter((monitor) => {
+    if (input.id) return monitor.id === input.id;
+    return input.includeDisabled || monitor.enabled;
+  });
+  const evaluatedAt = new Date().toISOString();
+  const items = monitors.map((monitor) => {
+    const saved = savedSearches.get(monitor.savedSearchId);
+    if (!saved) {
+      return {
+        monitorId: monitor.id,
+        savedSearchId: monitor.savedSearchId,
+        ...(monitor.name ? { name: monitor.name } : {}),
+        ...(monitor.cadence ? { cadence: monitor.cadence } : {}),
+        enabled: monitor.enabled,
+        state: "missing_saved_search" as const,
+        resultCount: 0,
+        partial: true,
+        omittedSources: [{
+          source: "saved_searches",
+          reason: "error" as const,
+          message: `Saved search '${monitor.savedSearchId}' was not found.`,
+        }],
+        results: [],
+        evaluatedAt,
+      };
+    }
+    const query = { ...saved.query, ...(input.limit === undefined ? {} : { limit: input.limit }) };
+    const output = store.query(query);
+    return {
+      monitorId: monitor.id,
+      savedSearchId: monitor.savedSearchId,
+      name: monitor.name ?? saved.name,
+      ...(monitor.cadence ? { cadence: monitor.cadence } : {}),
+      enabled: monitor.enabled,
+      query,
+      state: "ready" as const,
+      resultCount: output.results.length,
+      partial: output.partial,
+      omittedSources: output.omittedSources,
+      results: output.results,
+      evaluatedAt,
+    };
+  });
+  const state = items.length === 0 ? "empty" : items.some((item) => item.partial) ? "partial" : "ready";
+  return { action: "evaluate", items, state };
 }
 
 function searchProfile(value: unknown): SearchProfileId {
