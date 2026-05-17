@@ -15,7 +15,7 @@ import type {
   DriveViewCounts,
 } from "../shared/types.ts";
 
-export class DriveApiError extends Error {
+class DriveApiError extends Error {
   constructor(readonly status: number, readonly body: unknown) {
     super(
       (body as { message?: string; error?: string } | null)?.message

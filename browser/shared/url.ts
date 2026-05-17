@@ -8,7 +8,7 @@ function isPrivateIpv4(hostname: string): boolean {
     || /^172\.(1[6-9]|2\d|3[01])\./.test(hostname);
 }
 
-export function isLocalBrowserUrl(input: string): boolean {
+function isLocalBrowserUrl(input: string): boolean {
   try {
     const url = new URL(input);
     return url.hostname === "localhost" || isPrivateIpv4(url.hostname);

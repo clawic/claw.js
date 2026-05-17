@@ -68,19 +68,3 @@ export type BrowserInputCommand =
       type: "navigate";
       url: string;
     };
-
-export interface BrowserAuditEvent {
-  workspaceId: string;
-  action:
-    | "session.ensure"
-    | "viewer.join"
-    | "control.acquire"
-    | "control.release"
-    | "navigate"
-    | "input.click"
-    | "input.type"
-    | "input.key";
-  actor?: BrowserActor;
-  createdAt: string;
-  detail?: string;
-}

@@ -211,7 +211,3 @@ export function markServiceStopped() {
   state.service.stoppedAt = new Date().toISOString();
   state.service.stopCount += 1;
 }
-
-export function resolveSessionKeyForEvent(event, ctx) {
-  return resolveSessionKey(event, ctx);
-}

@@ -14,13 +14,13 @@
     "unreferencedAssetCandidates": 88
   },
   "knipSummary": {
-    "filesWithIssues": 71,
-    "totalIssues": 593,
+    "filesWithIssues": 66,
+    "totalIssues": 587,
     "issueTypes": {
       "unlisted": 2,
-      "types": 8,
-      "exports": 513,
-      "owners": 62,
+      "types": 6,
+      "exports": 510,
+      "owners": 61,
       "duplicates": 8
     }
   },
@@ -99,6 +99,7 @@
     "Content/database/execution cleanup made local form-field and worker option types private and narrowed the database CLI barrel while preserving service and worker behavior.",
     "ClawJS node cleanup made implementation-only runtime, OpenClaw, secrets, Telegram, rules, demo, and schema surface helpers private while preserving the package entrypoint and generated declaration build.",
     "Claw CLI cleanup removed or privatized implementation-only CLI/domain/open/reference/style/template/data helpers while preserving the published CLI entrypoint exports and generated declaration build.",
-    "Workspace/delegation/runtime cleanup made local SQLite and provider helpers private and removed the unused command delegation adapter while preserving deterministic delegation behavior."
+    "Workspace/delegation/runtime cleanup made local SQLite and provider helpers private and removed the unused command delegation adapter while preserving deterministic delegation behavior.",
+    "Drive/browser/relay/plugin cleanup made local error/location/envelope helpers private and removed unused browser audit and plugin session-key wrappers."
   ]
 }

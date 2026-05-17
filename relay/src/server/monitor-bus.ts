@@ -12,7 +12,7 @@ export type MonitorEventName =
   | "monitor.client.detach"
   | "monitor.heartbeat";
 
-export interface MonitorEnvelope {
+interface MonitorEnvelope {
   event: MonitorEventName;
   payload: Record<string, unknown>;
   ts: number;
