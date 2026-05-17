@@ -6,13 +6,13 @@ import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 
 import { createPackageName, createPascalCase, createTitle, type SupportedPackageManager } from "./scaffold.ts";
 
-export const PROJECT_CONFIG_FILE = "claw.project.json";
+const PROJECT_CONFIG_FILE = "claw.project.json";
 
 export type ClawProjectType = "app" | "agent" | "server" | "workspace" | "skill" | "plugin";
 export type ClawResourceType = "skill" | "plugin" | "provider" | "channel" | "command";
 export type ClawIntegrationType = "provider" | "channel" | "telegram" | "scheduler" | "memory" | "workspace";
 
-export interface ClawProjectResourceEntry {
+interface ClawProjectResourceEntry {
   id: string;
   path: string;
 }
@@ -78,11 +78,11 @@ function safeReadJson<TValue>(filePath: string): TValue | null {
   }
 }
 
-export function loadPackageJson(projectRoot: string): Record<string, unknown> | null {
+function loadPackageJson(projectRoot: string): Record<string, unknown> | null {
   return safeReadJson<Record<string, unknown>>(path.join(projectRoot, "package.json"));
 }
 
-export async function savePackageJson(projectRoot: string, packageJson: Record<string, unknown>): Promise<void> {
+async function savePackageJson(projectRoot: string, packageJson: Record<string, unknown>): Promise<void> {
   await writeJsonFile(path.join(projectRoot, "package.json"), packageJson);
 }
 
@@ -102,11 +102,11 @@ export function readProjectConfig(projectRoot: string): ClawProjectConfig | null
   return safeReadJson<ClawProjectConfig>(path.join(projectRoot, PROJECT_CONFIG_FILE));
 }
 
-export async function writeProjectConfig(projectRoot: string, config: ClawProjectConfig): Promise<void> {
+async function writeProjectConfig(projectRoot: string, config: ClawProjectConfig): Promise<void> {
   await writeJsonFile(path.join(projectRoot, PROJECT_CONFIG_FILE), config);
 }
 
-export function createProjectConfig(input: {
+function createProjectConfig(input: {
   type: ClawProjectType;
   slug: string;
   title: string;
