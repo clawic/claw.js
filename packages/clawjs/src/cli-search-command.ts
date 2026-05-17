@@ -125,6 +125,7 @@ export async function runSearchQueryCli(input: {
     const shouldRefreshDocuments = domains?.includes("documents") || sources?.includes("documents.blocks");
     const shouldRefreshNotes = domains?.includes("notes") || sources?.includes("notes.pages");
     const shouldRefreshKnowledge = domains?.includes("knowledge") || sources?.includes("knowledge.graph");
+    const shouldRefreshSignals = domains?.includes("signals") || sources?.includes("signals.observations");
     const shouldRefreshImages = domains?.includes("images") || sources?.includes("images.derived");
     const shouldRefreshMedia = domains?.includes("media") || sources?.includes("media.assets");
     const shouldRefreshGenerations = domains?.includes("generations") || sources?.includes("generations.artifacts");
@@ -139,6 +140,7 @@ export async function runSearchQueryCli(input: {
     const indexedDocuments = shouldRefreshDocuments && sourceCanIndex(store, "documents.blocks") ? ensureDocumentsBlocksSourceIndexed(store, input.flags) : 0;
     const indexedNotes = shouldRefreshNotes && sourceCanIndex(store, "notes.pages") ? ensureNotesPagesSourceIndexed(store, input.flags) : 0;
     const indexedKnowledge = shouldRefreshKnowledge && sourceCanIndex(store, "knowledge.graph") ? ensureKnowledgeGraphSourceIndexed(store, input.flags) : 0;
+    const indexedSignals = shouldRefreshSignals && sourceCanIndex(store, "signals.observations") ? ensureSignalsObservationsSourceIndexed(store, input.flags) : 0;
     const indexedImages = shouldRefreshImages && sourceCanIndex(store, "images.derived") ? ensureImagesDerivedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedMedia = shouldRefreshMedia && sourceCanIndex(store, "media.assets") ? ensureMediaAssetsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedGenerations = shouldRefreshGenerations && sourceCanIndex(store, "generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -219,6 +221,7 @@ export async function runSearchQueryCli(input: {
         ...(shouldRefreshDocuments ? { "documents.blocks": indexedDocuments } : {}),
         ...(shouldRefreshNotes ? { "notes.pages": indexedNotes } : {}),
         ...(shouldRefreshKnowledge ? { "knowledge.graph": indexedKnowledge } : {}),
+        ...(shouldRefreshSignals ? { "signals.observations": indexedSignals } : {}),
         ...(shouldRefreshImages ? { "images.derived": indexedImages } : {}),
         ...(shouldRefreshMedia ? { "media.assets": indexedMedia } : {}),
         ...(shouldRefreshGenerations ? { "generations.artifacts": indexedGenerations } : {}),
@@ -297,6 +300,7 @@ export async function runSearchRebuildCli(input: {
     const documentsIndexed = rebuildsSource("documents.blocks") ? ensureDocumentsBlocksSourceIndexed(store, input.flags) : 0;
     const notesIndexed = rebuildsSource("notes.pages") ? ensureNotesPagesSourceIndexed(store, input.flags) : 0;
     const knowledgeIndexed = rebuildsSource("knowledge.graph") ? ensureKnowledgeGraphSourceIndexed(store, input.flags) : 0;
+    const signalsIndexed = rebuildsSource("signals.observations") ? ensureSignalsObservationsSourceIndexed(store, input.flags) : 0;
     const imagesIndexed = rebuildsSource("images.derived") ? ensureImagesDerivedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const mediaIndexed = rebuildsSource("media.assets") ? ensureMediaAssetsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const generationsIndexed = rebuildsSource("generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -314,6 +318,7 @@ export async function runSearchRebuildCli(input: {
       ...(documentsIndexed > 0 ? ["documents.blocks"] : []),
       ...(notesIndexed > 0 ? ["notes.pages"] : []),
       ...(knowledgeIndexed > 0 ? ["knowledge.graph"] : []),
+      ...(signalsIndexed > 0 ? ["signals.observations"] : []),
       ...(imagesIndexed > 0 ? ["images.derived"] : []),
       ...(mediaIndexed > 0 ? ["media.assets"] : []),
       ...(generationsIndexed > 0 ? ["generations.artifacts"] : []),
@@ -334,7 +339,7 @@ export async function runSearchRebuildCli(input: {
       rebuilt: true,
       mode: selectedSources ? "scoped" : "full",
       selectedSources: selectedSources ?? null,
-      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + skillsIndexed + connectorsIndexed + runtimeIndexed + localFilesIndexed + webIndexed + externalIndexed,
+      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + skillsIndexed + connectorsIndexed + runtimeIndexed + localFilesIndexed + webIndexed + externalIndexed,
       embeddings: 0,
       profile: input.flags.profile === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
@@ -346,6 +351,7 @@ export async function runSearchRebuildCli(input: {
         "documents.blocks": documentsIndexed,
         "notes.pages": notesIndexed,
         "knowledge.graph": knowledgeIndexed,
+        "signals.observations": signalsIndexed,
         "images.derived": imagesIndexed,
         "media.assets": mediaIndexed,
         "generations.artifacts": generationsIndexed,
@@ -922,6 +928,8 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
       return ensureNotesPagesSourceIndexed(store, flags);
     case "knowledge.graph":
       return ensureKnowledgeGraphSourceIndexed(store, flags);
+    case "signals.observations":
+      return ensureSignalsObservationsSourceIndexed(store, flags);
     case "images.derived":
       return ensureImagesDerivedSourceIndexed(store, flags, cwd);
     case "media.assets":
@@ -960,6 +968,10 @@ function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flag
     case "knowledge.graph": {
       const resourceId = resourceIdFromJobPayload(job, "knowledgeResourceId") ?? job.resourceId;
       return resourceId ? ensureKnowledgeGraphResourceIndexed(store, flags, resourceId) : 0;
+    }
+    case "signals.observations": {
+      const resourceId = resourceIdFromJobPayload(job, "signalsResourceId") ?? job.resourceId;
+      return resourceId ? ensureSignalsObservationsResourceIndexed(store, flags, resourceId) : 0;
     }
     case "images.derived": {
       const resourceId = resourceIdFromJobPayload(job, "imageId") ?? job.resourceId;
@@ -1859,6 +1871,147 @@ function ensureKnowledgeGraphResourceIndexed(store: SearchStore, flags: Record<s
       store.upsertDocument(knowledgeFactSearchDocument(fact));
     }
     store.setSourceState("knowledge.graph", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 1;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureSignalsObservationsSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) {
+    store.setSourceState("signals.observations", "enabled", {
+      backlog: 0,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 0;
+  }
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "signals_verticals") || !hasTable(db, "signals_variables") || !hasTable(db, "signals_observations")) {
+      store.setSourceState("signals.observations", "degraded", {
+        backlog: 0,
+        error: "core database does not contain signals catalog/observations tables",
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return 0;
+    }
+    const verticals = db.prepare(`
+      SELECT id, label, category, description, status, sensitive, catalog_version, catalog_source, metadata_json, synced_at
+      FROM signals_verticals
+      ORDER BY label ASC
+    `).all() as SignalsVerticalRow[];
+    const variables = db.prepare(`
+      SELECT id, vertical_id, label, value_type, unit_json, category, sensitive, definition_json, updated_at
+      FROM signals_variables
+      ORDER BY updated_at DESC
+    `).all() as SignalsVariableRow[];
+    const observations = db.prepare(`
+      SELECT id, vertical_id, variable_id, value_json, unit_id, recorded_at, source_json, notes, page_id,
+        session_id, external_id, sensitive, created_at, updated_at
+      FROM signals_observations
+      ORDER BY recorded_at DESC
+    `).all() as SignalsObservationRow[];
+    const verticalsById = new Map(verticals.map((vertical) => [vertical.id, vertical]));
+    const variablesById = new Map(variables.map((variable) => [variable.id, variable]));
+    let indexed = 0;
+    for (const vertical of verticals) {
+      store.upsertDocument(signalVerticalSearchDocument(vertical));
+      indexed += 1;
+    }
+    for (const variable of variables) {
+      store.upsertDocument(signalVariableSearchDocument(variable, verticalsById.get(variable.vertical_id)));
+      indexed += 1;
+    }
+    for (const observation of observations) {
+      store.upsertDocument(signalObservationSearchDocument(observation, verticalsById.get(observation.vertical_id), variablesById.get(observation.variable_id)));
+      indexed += 1;
+    }
+    store.setCursor({
+      source: "signals.observations",
+      cursor: `items:${indexed}`,
+      metadata: { store: "core.sqlite", tables: ["signals_verticals", "signals_variables", "signals_observations"] },
+    });
+    store.setSourceState("signals.observations", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return indexed;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureSignalsObservationsResourceIndexed(store: SearchStore, flags: Record<string, string>, resourceId: string): number {
+  const target = parseSignalsObservationsResourceId(resourceId);
+  if (!target) return 0;
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) return 0;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "signals_verticals") || !hasTable(db, "signals_variables") || !hasTable(db, "signals_observations")) return 0;
+    if (target.kind === "vertical") {
+      const vertical = db.prepare(`
+        SELECT id, label, category, description, status, sensitive, catalog_version, catalog_source, metadata_json, synced_at
+        FROM signals_verticals
+        WHERE id = ?
+        LIMIT 1
+      `).get(target.id) as SignalsVerticalRow | undefined;
+      if (!vertical) {
+        store.tombstone({ source: "signals.observations", resourceId, reason: "signals vertical missing during Search event refresh" });
+        return 1;
+      }
+      store.upsertDocument(signalVerticalSearchDocument(vertical));
+    } else if (target.kind === "variable") {
+      const variable = db.prepare(`
+        SELECT id, vertical_id, label, value_type, unit_json, category, sensitive, definition_json, updated_at
+        FROM signals_variables
+        WHERE id = ?
+        LIMIT 1
+      `).get(target.id) as SignalsVariableRow | undefined;
+      if (!variable) {
+        store.tombstone({ source: "signals.observations", resourceId, reason: "signals variable missing during Search event refresh" });
+        return 1;
+      }
+      const vertical = db.prepare(`
+        SELECT id, label, category, description, status, sensitive, catalog_version, catalog_source, metadata_json, synced_at
+        FROM signals_verticals
+        WHERE id = ?
+        LIMIT 1
+      `).get(variable.vertical_id) as SignalsVerticalRow | undefined;
+      store.upsertDocument(signalVariableSearchDocument(variable, vertical));
+    } else {
+      const observation = db.prepare(`
+        SELECT id, vertical_id, variable_id, value_json, unit_id, recorded_at, source_json, notes, page_id,
+          session_id, external_id, sensitive, created_at, updated_at
+        FROM signals_observations
+        WHERE id = ?
+        LIMIT 1
+      `).get(target.id) as SignalsObservationRow | undefined;
+      if (!observation) {
+        store.tombstone({ source: "signals.observations", resourceId, reason: "signals observation missing during Search event refresh" });
+        return 1;
+      }
+      const vertical = db.prepare(`
+        SELECT id, label, category, description, status, sensitive, catalog_version, catalog_source, metadata_json, synced_at
+        FROM signals_verticals
+        WHERE id = ?
+        LIMIT 1
+      `).get(observation.vertical_id) as SignalsVerticalRow | undefined;
+      const variable = db.prepare(`
+        SELECT id, vertical_id, label, value_type, unit_json, category, sensitive, definition_json, updated_at
+        FROM signals_variables
+        WHERE id = ?
+        LIMIT 1
+      `).get(observation.variable_id) as SignalsVariableRow | undefined;
+      store.upsertDocument(signalObservationSearchDocument(observation, vertical, variable));
+    }
+    store.setSourceState("signals.observations", "enabled", {
       backlog: 0,
       error: null,
       lastIndexedAt: new Date().toISOString(),
@@ -3292,6 +3445,171 @@ function knowledgeFactSearchDocument(row: KnowledgeFactRow): SearchDocumentInput
   };
 }
 
+function signalVerticalSearchDocument(row: SignalsVerticalRow): SearchDocumentInput {
+  const metadata = parseJsonRecord(row.metadata_json);
+  const metadataText = textFromStructuredContent(metadata);
+  const sensitive = row.sensitive === 1;
+  const body = [row.label, row.category, row.description, row.status, row.catalog_version, row.catalog_source, metadataText].filter(Boolean).join("\n");
+  return {
+    id: `signals.observations:vertical:${row.id}`,
+    source: "signals.observations",
+    domain: "signals",
+    type: "vertical",
+    resourceId: `vertical:${row.id}`,
+    title: row.label || row.id,
+    subtitle: [row.category, row.status].filter(Boolean).join(" / "),
+    snippet: sensitive ? "[redacted]" : firstMeaningfulLine(row.description ?? metadataText ?? "") ?? row.label,
+    body,
+    updatedAt: row.synced_at,
+    metadata: {
+      kind: "vertical",
+      verticalId: row.id,
+      category: row.category,
+      status: row.status,
+      catalogVersion: row.catalog_version,
+      catalogSource: row.catalog_source,
+      sensitive,
+      metadataKeys: Object.keys(metadata).sort(),
+    },
+    permissions: { canOpen: true, canPreview: !sensitive, redacted: sensitive },
+    rankingHints: {
+      fastPath: 1,
+      signals: 1,
+      vertical: 1,
+    },
+    fragments: sensitive || !row.description ? [] : [{
+      id: `signals.observations:vertical:${row.id}:description`,
+      title: "description",
+      body: row.description,
+      snippet: row.description.slice(0, 180),
+      sortOrder: 0,
+    }],
+    actions: [
+      { id: "open", kind: "open", label: "Open signal vertical", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy signal reference", requiresApproval: false },
+    ],
+  };
+}
+
+function signalVariableSearchDocument(row: SignalsVariableRow, vertical?: SignalsVerticalRow): SearchDocumentInput {
+  const definition = parseJsonRecord(row.definition_json);
+  const unit = parseJsonValue(row.unit_json);
+  const unitText = signalUnitLabel(unit);
+  const definitionText = textFromStructuredContent(definition);
+  const sensitive = row.sensitive === 1 || vertical?.sensitive === 1;
+  const body = [row.label, row.id, vertical?.label, row.value_type, row.category, unitText, definitionText].filter(Boolean).join("\n");
+  return {
+    id: `signals.observations:variable:${row.id}`,
+    source: "signals.observations",
+    domain: "signals",
+    type: "variable",
+    resourceId: `variable:${row.id}`,
+    title: row.label || row.id,
+    subtitle: [vertical?.label ?? row.vertical_id, row.value_type].filter(Boolean).join(" / "),
+    snippet: sensitive ? "[redacted]" : firstMeaningfulLine(definitionText ?? "") ?? row.label,
+    body,
+    updatedAt: row.updated_at,
+    metadata: {
+      kind: "variable",
+      verticalId: row.vertical_id,
+      variableId: row.id,
+      valueType: row.value_type,
+      category: row.category,
+      unit: unitText,
+      sensitive,
+      definitionKeys: Object.keys(definition).sort(),
+    },
+    permissions: { canOpen: true, canPreview: !sensitive, redacted: sensitive },
+    rankingHints: {
+      fastPath: 1,
+      signals: 1,
+      variable: 1,
+    },
+    fragments: sensitive || !definitionText ? [] : [{
+      id: `signals.observations:variable:${row.id}:definition`,
+      title: "definition",
+      body: definitionText,
+      snippet: definitionText.slice(0, 180),
+      sortOrder: 0,
+    }],
+    actions: [
+      { id: "open", kind: "open", label: "Open signal variable", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy signal reference", requiresApproval: false },
+    ],
+  };
+}
+
+function signalObservationSearchDocument(row: SignalsObservationRow, vertical?: SignalsVerticalRow, variable?: SignalsVariableRow): SearchDocumentInput {
+  const value = parseJsonValue(row.value_json);
+  const source = parseJsonRecord(row.source_json);
+  const valueText = stringifySearchValue(value);
+  const sourceText = textFromStructuredContent(source);
+  const unit = row.unit_id || signalUnitLabel(parseJsonValue(variable?.unit_json));
+  const sensitive = row.sensitive === 1 || variable?.sensitive === 1 || vertical?.sensitive === 1;
+  const title = `${variable?.label ?? row.variable_id}: ${valueText.slice(0, 80)}`;
+  const body = [variable?.label, vertical?.label, row.variable_id, row.vertical_id, valueText, unit, row.recorded_at, row.notes, sourceText].filter(Boolean).join("\n");
+  return {
+    id: `signals.observations:observation:${row.id}`,
+    source: "signals.observations",
+    domain: "signals",
+    type: "observation",
+    resourceId: `observation:${row.id}`,
+    title,
+    subtitle: [vertical?.label ?? row.vertical_id, row.recorded_at].filter(Boolean).join(" / "),
+    snippet: sensitive ? "[redacted]" : firstMeaningfulLine([valueText, row.notes ?? ""].join("\n")) ?? title,
+    body,
+    updatedAt: row.updated_at,
+    metadata: {
+      kind: "observation",
+      observationId: row.id,
+      verticalId: row.vertical_id,
+      variableId: row.variable_id,
+      valueType: variable?.value_type,
+      unit,
+      recordedAt: row.recorded_at,
+      pageId: row.page_id,
+      sessionId: row.session_id,
+      externalId: row.external_id,
+      sensitive,
+      sourceKeys: Object.keys(source).sort(),
+    },
+    permissions: { canOpen: true, canPreview: !sensitive, redacted: sensitive },
+    rankingHints: {
+      fastPath: 1,
+      signals: 1,
+      observation: 1,
+      recent: Date.parse(row.recorded_at) > Date.now() - 1000 * 60 * 60 * 24 * 30 ? 0.2 : 0,
+    },
+    fragments: sensitive ? [] : [
+      {
+        id: `signals.observations:observation:${row.id}:value`,
+        title: "value",
+        body: valueText,
+        snippet: valueText.slice(0, 180),
+        sortOrder: 0,
+      },
+      ...(row.notes ? [{
+        id: `signals.observations:observation:${row.id}:notes`,
+        title: "notes",
+        body: row.notes,
+        snippet: row.notes.slice(0, 180),
+        sortOrder: 1,
+      }] : []),
+      ...(sourceText ? [{
+        id: `signals.observations:observation:${row.id}:source`,
+        title: "source",
+        body: sourceText,
+        snippet: sourceText.slice(0, 180),
+        sortOrder: 2,
+      }] : []),
+    ],
+    actions: [
+      { id: "open", kind: "open", label: "Open signal observation", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy signal reference", requiresApproval: false },
+    ],
+  };
+}
+
 function runtimeJobSearchDocument(row: RuntimeJobRow): SearchDocumentInput {
   const payload = parseJsonRecord(row.payload_json);
   const payloadText = textFromStructuredContent(payload) ?? (Object.keys(payload).length ? JSON.stringify(payload) : undefined);
@@ -3645,6 +3963,48 @@ interface KnowledgeFactRow {
   updated_at: string;
 }
 
+interface SignalsVerticalRow {
+  id: string;
+  label: string;
+  category: string | null;
+  description: string | null;
+  status: string;
+  sensitive: number;
+  catalog_version: string | null;
+  catalog_source: string;
+  metadata_json: string;
+  synced_at: string;
+}
+
+interface SignalsVariableRow {
+  id: string;
+  vertical_id: string;
+  label: string;
+  value_type: string;
+  unit_json: string | null;
+  category: string | null;
+  sensitive: number;
+  definition_json: string;
+  updated_at: string;
+}
+
+interface SignalsObservationRow {
+  id: string;
+  vertical_id: string;
+  variable_id: string;
+  value_json: string;
+  unit_id: string | null;
+  recorded_at: string;
+  source_json: string;
+  notes: string | null;
+  page_id: string | null;
+  session_id: string | null;
+  external_id: string | null;
+  sensitive: number;
+  created_at: string;
+  updated_at: string;
+}
+
 interface RuntimeJobRow {
   id: string;
   kind: string;
@@ -3902,6 +4262,25 @@ function parseKnowledgeGraphResourceId(resourceId: string): { kind: "entity" | "
   const kind = resourceId.slice(0, separator);
   if (kind !== "entity" && kind !== "fact") return null;
   return { kind, id: resourceId.slice(separator + 1) };
+}
+
+function parseSignalsObservationsResourceId(resourceId: string): { kind: "vertical" | "variable" | "observation"; id: string } | null {
+  const separator = resourceId.indexOf(":");
+  if (separator <= 0 || separator === resourceId.length - 1) return null;
+  const kind = resourceId.slice(0, separator);
+  if (kind !== "vertical" && kind !== "variable" && kind !== "observation") return null;
+  return { kind, id: resourceId.slice(separator + 1) };
+}
+
+function signalUnitLabel(value: unknown): string | undefined {
+  if (typeof value === "string" && value.trim()) return value.trim();
+  if (isPlainRecord(value)) {
+    return stringValue(value.id)
+      ?? stringValue(value.symbol)
+      ?? stringValue(value.label)
+      ?? stringValue(value.name);
+  }
+  return undefined;
 }
 
 function isSensitiveKnowledge(sensitivity: string): boolean {

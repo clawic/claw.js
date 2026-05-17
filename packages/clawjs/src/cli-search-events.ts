@@ -187,6 +187,30 @@ export function scheduleKnowledgeGraphSearchEvent(input: {
   });
 }
 
+export function scheduleSignalsObservationsSearchEvent(input: {
+  operation: "upsert" | "delete";
+  kind: "vertical" | "variable" | "observation";
+  id: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  const signalsResourceId = `${input.kind}:${input.id}`;
+  return scheduleSearchIndexEvent({
+    source: "signals.observations",
+    operation: input.operation,
+    resourceId: signalsResourceId,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      kind: input.kind,
+      signalsResourceId,
+      [`${input.kind}Id`]: input.id,
+    },
+  });
+}
+
 export function scheduleConnectorCatalogSearchEvent(input: {
   operation: "upsert" | "delete";
   operationId: string;

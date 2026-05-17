@@ -620,6 +620,19 @@ export function createBuiltinSearchSourceManifests(): SearchSourceManifest[] {
       ],
     }),
     createFrameworkSearchSourceManifest({
+      id: "signals.observations",
+      domain: "signals",
+      name: "Signals",
+      resultTypes: ["vertical", "variable", "observation"],
+      facets: [
+        { id: "kind", label: "Kind", type: "string" },
+        { id: "verticalId", label: "Vertical", type: "string" },
+        { id: "variableId", label: "Variable", type: "string" },
+        { id: "unit", label: "Unit", type: "string" },
+        { id: "sensitive", label: "Sensitive", type: "boolean" },
+      ],
+    }),
+    createFrameworkSearchSourceManifest({
       id: "images.derived",
       domain: "images",
       name: "Images",

@@ -7,7 +7,7 @@ import type Database from "better-sqlite3";
 import { DatabaseServiceStore } from "@clawjs/database";
 import { runAgentsCommand, runConnectionsCommand, runPersonalitiesCommand, runSkillCollectionsCommand } from "./v1-data-agent-entities.ts";
 import { runProviderRoutingCommand, runSnippetsCommand } from "./v1-data-agent-config.ts";
-import { scheduleKnowledgeGraphSearchEvent, scheduleNotesPagesSearchEvent, scheduleSkillsRegistrySearchEvent } from "./cli-search-events.ts";
+import { scheduleKnowledgeGraphSearchEvent, scheduleNotesPagesSearchEvent, scheduleSignalsObservationsSearchEvent, scheduleSkillsRegistrySearchEvent } from "./cli-search-events.ts";
 export {
   openMainDataStore,
   resolveClawjsDataRoot,
@@ -576,6 +576,24 @@ function runSignalsCommand(input: V1DataCliInput, store: DatabaseServiceStore): 
     });
     tx();
     upsertRegistry(store.sqlite, "signals", "catalog", verticalId, { sensitive: truthy(vertical.sensitive), metadata: { count: variables.length } });
+    scheduleSignalsObservationsSearchEvent({
+      operation: "upsert",
+      kind: "vertical",
+      id: verticalId,
+      dataDir: resolveClawjsDataRoot(),
+      flags: input.flags,
+    });
+    for (const entry of variables) {
+      const variableIdForSearch = stringValue(entry.id, "");
+      if (!variableIdForSearch) continue;
+      scheduleSignalsObservationsSearchEvent({
+        operation: "upsert",
+        kind: "variable",
+        id: variableIdForSearch,
+        dataDir: resolveClawjsDataRoot(),
+        flags: input.flags,
+      });
+    }
     writeSuccess(input, { verticalId, variables: variables.length, syncedAt: now });
     return V1_DATA_EXIT_OK;
   }
@@ -628,6 +646,13 @@ function runSignalsCommand(input: V1DataCliInput, store: DatabaseServiceStore): 
       now,
       now,
     );
+    scheduleSignalsObservationsSearchEvent({
+      operation: "upsert",
+      kind: "observation",
+      id,
+      dataDir: resolveClawjsDataRoot(),
+      flags: input.flags,
+    });
     writeSuccess(input, { id, verticalId, variableId, value, pageId, recordedAt: input.flags.at || input.flags["recorded-at"] || now });
     return V1_DATA_EXIT_OK;
   }
@@ -647,6 +672,15 @@ function runSignalsCommand(input: V1DataCliInput, store: DatabaseServiceStore): 
     const id = input.flags.id || input.positionals[2];
     if (!id) return usageError(input, "Usage: claw signals delete OBSERVATION_ID");
     const changes = store.sqlite.prepare("DELETE FROM signals_observations WHERE id = ?").run(id).changes;
+    if (changes > 0) {
+      scheduleSignalsObservationsSearchEvent({
+        operation: "delete",
+        kind: "observation",
+        id,
+        dataDir: resolveClawjsDataRoot(),
+        flags: input.flags,
+      });
+    }
     writeSuccess(input, { deleted: changes > 0, id });
     return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }

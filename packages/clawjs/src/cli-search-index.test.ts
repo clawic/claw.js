@@ -1765,6 +1765,155 @@ test("search rebuild indexes knowledge.graph from entities and facts", async () 
   });
 });
 
+test("search rebuild indexes signals.observations from signal catalog and observations", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-signals-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const catalogPath = path.join(workspaceRoot, "signals-catalog.json");
+    fs.writeFileSync(catalogPath, JSON.stringify({
+      vertical: {
+        label: "Product Signals",
+        category: "product",
+        description: "Product health measurements for scoped Search ranking.",
+        version: "2026.05",
+      },
+      variables: [
+        {
+          id: "signal.activation",
+          label: "Activation Rate",
+          valueType: "number",
+          unit: { id: "percent", symbol: "%" },
+          category: "growth",
+          definition: "Activation percentage from onboarding events.",
+        },
+      ],
+    }));
+
+    const seeded = await runCliCapture([
+      "signals",
+      "seed-catalog",
+      "--vertical",
+      "product",
+      "--file",
+      catalogPath,
+      "--data-dir",
+      dataRoot,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(seeded.code, CLI_EXIT_OK);
+
+    const observation = await runCliCapture([
+      "signals",
+      "observe",
+      "--variable",
+      "signal.activation",
+      "--value",
+      JSON.stringify({ value: 0.71, segment: "beta users" }),
+      "--unit",
+      "percent",
+      "--at",
+      "2026-05-17T10:15:00.000Z",
+      "--source",
+      JSON.stringify({ connector: "product-analytics", table: "activation_events" }),
+      "--data-dir",
+      dataRoot,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(observation.code, CLI_EXIT_OK);
+    const observationPayload = JSON.parse(observation.stdout) as { data: { id: string; variableId: string } };
+    assert.equal(observationPayload.data.variableId, "signal.activation");
+
+    const jobs = await runCliCapture(["search", "jobs", "--source", "signals.observations", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(jobs.code, CLI_EXIT_OK);
+    const jobsPayload = JSON.parse(jobs.stdout) as {
+      data: { items: Array<{ operation: string; resourceId: string; shard: string; payload: { kind?: string; signalsResourceId?: string; verticalId?: string; variableId?: string; observationId?: string } }> };
+    };
+    const verticalJob = jobsPayload.data.items.find((job) => job.resourceId === "vertical:product");
+    assert.equal(verticalJob?.operation, "upsert");
+    assert.equal(verticalJob?.shard, "hot");
+    assert.equal(verticalJob?.payload.kind, "vertical");
+    const variableJob = jobsPayload.data.items.find((job) => job.resourceId === "variable:signal.activation");
+    assert.equal(variableJob?.operation, "upsert");
+    assert.equal(variableJob?.payload.variableId, "signal.activation");
+    const observationJob = jobsPayload.data.items.find((job) => job.resourceId === `observation:${observationPayload.data.id}`);
+    assert.equal(observationJob?.operation, "upsert");
+    assert.equal(observationJob?.payload.observationId, observationPayload.data.id);
+
+    const rebuild = await runCliCapture(["search", "rebuild", "--source", "signals.observations", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(rebuild.code, CLI_EXIT_OK);
+    const rebuildPayload = JSON.parse(rebuild.stdout) as {
+      data: { sources: string[]; pendingSources: string[]; indexedBySource: { "signals.observations": number } };
+    };
+    assert.equal(rebuildPayload.data.sources.includes("signals.observations"), true);
+    assert.equal(rebuildPayload.data.pendingSources.includes("signals.observations"), false);
+    assert.equal(rebuildPayload.data.indexedBySource["signals.observations"], 3);
+
+    const query = await runCliCapture([
+      "search",
+      "query",
+      "beta users activation",
+      "--domains",
+      "signals",
+      "--filters",
+      JSON.stringify({ "metadata.kind": "observation", "metadata.variableId": "signal.activation", redacted: false }),
+      "--data-dir",
+      dataRoot,
+      "--json",
+      "--limit",
+      "5",
+      "--explain",
+      "true",
+    ], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: {
+        indexedFastPaths: { "signals.observations": number };
+        results: Array<{
+          source: string;
+          domain: string;
+          type: string;
+          title: string;
+          metadata?: { kind?: string; observationId?: string; verticalId?: string; variableId?: string; unit?: string; recordedAt?: string };
+          fragments?: Array<{ title?: string; snippet?: string }>;
+          actions?: Array<{ id: string; kind: string }>;
+          explanation?: { matchedBy?: string[] };
+        }>;
+        facets?: Array<{ id: string }>;
+      };
+    };
+    assert.equal(queryPayload.data.indexedFastPaths["signals.observations"], 3);
+    const result = queryPayload.data.results.find((entry) => entry.metadata?.observationId === observationPayload.data.id);
+    assert.equal(result?.source, "signals.observations");
+    assert.equal(result?.domain, "signals");
+    assert.equal(result?.type, "observation");
+    assert.equal(result?.metadata?.kind, "observation");
+    assert.equal(result?.metadata?.verticalId, "product");
+    assert.equal(result?.metadata?.variableId, "signal.activation");
+    assert.equal(result?.metadata?.unit, "percent");
+    assert.equal(result?.metadata?.recordedAt, "2026-05-17T10:15:00.000Z");
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "value" && fragment.snippet?.includes("beta users")), true);
+    assert.equal(result?.actions?.some((action) => action.id === "open" && action.kind === "open"), true);
+    assert.ok(result?.explanation?.matchedBy?.length);
+    assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "variableId"), true);
+
+    const deleted = await runCliCapture(["signals", "delete", observationPayload.data.id, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleted.code, CLI_EXIT_OK);
+    const deleteJobs = await runCliCapture(["search", "jobs", "--source", "signals.observations", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleteJobs.code, CLI_EXIT_OK);
+    const deleteJobsPayload = JSON.parse(deleteJobs.stdout) as {
+      data: { items: Array<{ operation: string; resourceId: string; payload: { observationId?: string } }> };
+    };
+    const deleteJob = deleteJobsPayload.data.items.find((job) => job.operation === "delete" && job.resourceId === `observation:${observationPayload.data.id}`);
+    assert.equal(deleteJob?.payload.observationId, observationPayload.data.id);
+  });
+});
+
 test("search rebuild indexes images.derived from image library records", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-images-"));
   const dataRoot = path.join(workspaceRoot, "data");
