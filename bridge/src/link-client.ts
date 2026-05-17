@@ -18,7 +18,8 @@ export const httpLinkClient: MeshLinkClient = async (
     clientDisplayName: selfIdentity.displayName,
     clientSigningPublicKey: toBase64Url(selfIdentity.signingPublicKey),
     clientAgreementPublicKey: toBase64Url(selfIdentity.agreementPublicKey),
-    clientKind: selfKind,
+    clientKind: selfKind === "ios" || selfKind === "ipad" ? "companion" : "desktop",
+    platform: selfKind,
   };
   const response = await fetch(url, {
     method: "POST",

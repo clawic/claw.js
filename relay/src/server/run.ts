@@ -1,8 +1,11 @@
 import { buildRelayApp } from "./app.ts";
-import { advertiseRelay } from "./discovery.ts";
+import { advertiseRelay, stopAdvertising } from "./discovery.ts";
 
 export async function startRelayServer() {
   const built = await buildRelayApp();
+  built.app.addHook("onClose", async () => {
+    stopAdvertising();
+  });
   await built.app.listen({
     host: built.config.host,
     port: built.config.port,

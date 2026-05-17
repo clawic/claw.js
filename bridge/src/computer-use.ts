@@ -8,7 +8,7 @@ export interface ComputerUseCapabilities {
   platform: ReturnType<typeof detectPlatform>;
 }
 
-export interface ScreenshotRegion {
+interface ScreenshotRegion {
   x: number;
   y: number;
   width: number;
