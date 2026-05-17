@@ -23,6 +23,7 @@ const requiredDocs = [
   "docs/adr/0024-mac-permission-broker-v1.md",
   "docs/decision-map.md",
   "docs/adr/0012-surface-route-graph.md",
+  "skills/mac-control-plane-work/SKILL.md",
 ];
 
 const requiredDecisionRows = [
@@ -142,6 +143,11 @@ for (const id of requiredDecisionRows) requireText("source decision audit", sour
 
 const decisionMatrix = readRequired("docs/mac-control-plane-decision-matrix.md");
 for (const id of requiredMatrixRows) requireText("decision matrix", decisionMatrix, id);
+
+const workflowSkill = readRequired("skills/mac-control-plane-work/SKILL.md");
+for (const snippet of ["Mac Action Broker", "Mac Permission Broker", "Related surfaces", "EXTERNAL PENDING"]) {
+  requireText("Mac workflow skill", workflowSkill, snippet);
+}
 
 const macDocs = readRequired("docs/mac-control-plane.md");
 for (const snippet of ["Related surfaces", "mac.directCliAction", "mac.permissionLifecycle", "claw permissions"]) {
