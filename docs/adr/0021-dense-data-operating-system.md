@@ -106,7 +106,10 @@ gaps` return structured registry coverage. Graduated centers execute through
 the shared database instead of a parallel domain store: `patient list`,
 `patient create`, `medication add --patient <id>`, `patient <id> medications
 list`, `patient <id> symptoms add`, `patient <id> symptoms list`, and
-`invoice list` all resolve to canonical core.sqlite collections. Dense routes
+ERP/CRM routes such as `company create`, `account create --company <id>`,
+`deal create --company <id>`, `invoice list`, and
+`invoice create --billing-customer <id>` all resolve to canonical core.sqlite
+collections. Dense routes
 that are known but not graduated still return a degraded response with an
 explicit `workflow_gap` until their canonical collections, schemas, relations,
 quality gaps, and DB smoke tests are connected.

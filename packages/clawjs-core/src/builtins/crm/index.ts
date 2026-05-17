@@ -1,5 +1,6 @@
 import type { BuiltinFamilyDefinition } from "../_types.ts";
 
+import { COMPANIES } from "./companies.ts";
 import { ACCOUNTS } from "./accounts.ts";
 import { CONTACTS } from "./contacts.ts";
 import { LEADS } from "./leads.ts";
@@ -24,6 +25,7 @@ export const CRM_FAMILY: BuiltinFamilyDefinition = {
   displayName: "Sales & CRM",
   description: "Contacts, accounts, leads, deals, pipelines, activities, meetings, quotes and contracts.",
   collections: [
+    COMPANIES,
     ACCOUNTS,
     CONTACTS,
     LEADS,
@@ -45,4 +47,4 @@ export const CRM_FAMILY: BuiltinFamilyDefinition = {
   ],
 };
 
-export { ACCOUNTS, CONTACTS, LEADS, PIPELINES, PIPELINE_STAGES, DEALS, DEAL_LINE_ITEMS, ACTIVITIES, MEETINGS, EMAIL_THREADS, EMAIL_MESSAGES, QUOTES, QUOTE_LINE_ITEMS, CONTRACTS, ASSETS, CAMPAIGNS, CAMPAIGN_MEMBERS, ASSOCIATIONS };
+export { COMPANIES, ACCOUNTS, CONTACTS, LEADS, PIPELINES, PIPELINE_STAGES, DEALS, DEAL_LINE_ITEMS, ACTIVITIES, MEETINGS, EMAIL_THREADS, EMAIL_MESSAGES, QUOTES, QUOTE_LINE_ITEMS, CONTRACTS, ASSETS, CAMPAIGNS, CAMPAIGN_MEMBERS, ASSOCIATIONS };

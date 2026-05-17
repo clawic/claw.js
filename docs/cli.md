@@ -152,6 +152,8 @@ claw agents surface-projection --record '{"surface":"relay","agent":{"id":"agent
 claw agents config-revision --record '{"agentId":"agent.ops","revision":2,"actorId":"actor.owner","reason":"Tighten MCP assignment","configSnapshot":{"name":"Ops","secretAllowlist":["vault://agents/ops"]}}' --json
 claw agents incident --record '{"agentId":"agent.ops","assignmentId":"assignment.relay","severity":"high","summary":"Unsafe route blocked","metadata":{"rawTraceRef":"trace:redacted"}}' --json
 claw agents activity-feed --record '{"agentId":"agent.ops","runs":[{"id":"run.1","status":"completed","startedAt":"2026-05-17T09:00:00.000Z"}],"incidents":[{"id":"incident.1","severity":"high","summary":"Unsafe route blocked","detectedAt":"2026-05-17T10:00:00.000Z"}],"limit":10}' --json
+claw agents blueprint --record '{"name":"Support blueprint","agencyMode":"support","template":{"role":"Support","secretAllowlist":["vault://agents/ops"]},"requiredResourceGrants":[{"resourceType":"collection","resourceId":"support_conversations","action":"read"}]}' --json
+claw agents evaluation --record '{"agentId":"agent.ops","assignmentId":"assignment.relay","status":"failed","score":0.25,"criteria":{"metric":"safety"},"result":{"reason":"Unsafe disclosure"}}' --json
 claw personalities upsert personality.review --name Reviewer --prompt "Review with concrete evidence" --json
 claw skill-collections upsert collection.review --name Review --tags review,code --json
 claw connections upsert github --provider custom --label GitHub --secret-ref vault://connections/github --json
@@ -187,6 +189,8 @@ governable agent changes and safety/runtime incidents without exposing raw
 secret references, authorization material, local traces, or private paths.
 `activity-feed` turns runs, sessions, evaluations, incidents, config revisions,
 assignments, and audit events into a redacted timeline for human consumption.
+`blueprint` creates redacted reusable templates separate from live agents, and
+`evaluation` records redacted performance/safety assessments with audit output.
 
 ## Global Flags
 
@@ -546,7 +550,11 @@ claw medication add --patient patient_123 --json
 claw patient patient_123 medications list --json
 claw patient patient_123 symptoms add "Headache" --severity 4 --json
 claw patient patient_123 symptoms list --json
+claw company create "Acme Corp" --json
+claw account create "Acme Account" --company company_123 --json
+claw deal create "Pilot" --company company_123 --account-id account_123 --json
 claw invoice list --json
+claw invoice create INV-001 --billing-customer billing_customer_123 --total-cents 9900 --json
 claw travel --help
 claw career --help
 claw family --help

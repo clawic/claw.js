@@ -105,6 +105,42 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(gapsPayload.meta.denseData, true);
   assert.equal(gapsPayload.data.coverage.executable, true);
   assert.equal(gapsPayload.data.registry.systems.some((system) => system.id === "health"), true);
+
+  const companyCreate = await runCliCapture(["company", "create", "Acme Corp", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(companyCreate.code, CLI_EXIT_OK);
+  const companyPayload = JSON.parse(companyCreate.stdout) as { data: { id: string; name: string }; meta: { collection: string; action: string } };
+  assert.equal(companyPayload.meta.collection, "companies");
+  assert.equal(companyPayload.meta.action, "create");
+  assert.equal(companyPayload.data.name, "Acme Corp");
+
+  const accountCreate = await runCliCapture(["account", "create", "Acme Account", "--company", companyPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(accountCreate.code, CLI_EXIT_OK);
+  const accountPayload = JSON.parse(accountCreate.stdout) as { data: { id: string; name: string; companyId: string }; meta: { collection: string; action: string } };
+  assert.equal(accountPayload.meta.collection, "accounts");
+  assert.equal(accountPayload.data.name, "Acme Account");
+  assert.equal(accountPayload.data.companyId, companyPayload.data.id);
+
+  const dealCreate = await runCliCapture(["deal", "create", "Pilot", "--company", companyPayload.data.id, "--account-id", accountPayload.data.id, "--value-cents", "2500", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(dealCreate.code, CLI_EXIT_OK);
+  const dealPayload = JSON.parse(dealCreate.stdout) as { data: { title: string; companyId: string; accountId: string; valueCents: number; status: string }; meta: { collection: string; action: string } };
+  assert.equal(dealPayload.meta.collection, "deals");
+  assert.equal(dealPayload.data.title, "Pilot");
+  assert.equal(dealPayload.data.companyId, companyPayload.data.id);
+  assert.equal(dealPayload.data.accountId, accountPayload.data.id);
+  assert.equal(dealPayload.data.valueCents, 2500);
+  assert.equal(dealPayload.data.status, "open");
+
+  const billingCustomer = await runCliCapture(["db", "billing_customer", "create", "Acme Billing", "--company-id", companyPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(billingCustomer.code, CLI_EXIT_OK);
+  const billingCustomerPayload = JSON.parse(billingCustomer.stdout) as { data: { id: string } };
+  const invoiceCreate = await runCliCapture(["invoice", "create", "INV-001", "--billing-customer", billingCustomerPayload.data.id, "--total-cents", "9900", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(invoiceCreate.code, CLI_EXIT_OK);
+  const invoicePayload = JSON.parse(invoiceCreate.stdout) as { data: { number: string; billingCustomerId: string; totalCents: number; status: string }; meta: { collection: string; action: string } };
+  assert.equal(invoicePayload.meta.collection, "invoices");
+  assert.equal(invoicePayload.data.number, "INV-001");
+  assert.equal(invoicePayload.data.billingCustomerId, billingCustomerPayload.data.id);
+  assert.equal(invoicePayload.data.totalCents, 9900);
+  assert.equal(invoicePayload.data.status, "draft");
 });
 
 test("runCli searches the registered CLI discovery surface", async () => {

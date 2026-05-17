@@ -106,8 +106,17 @@ function denseDbArgv(argv: string[], collectionName: string, dbAction: string): 
 }
 
 function denseDbFlags(flags: Record<string, string>, collectionName: string): Record<string, string> {
-  if (!["medications", "symptom_logs"].includes(collectionName) || !flags.patient || flags["patient-id"]) return flags;
-  return { ...flags, "patient-id": flags.patient };
+  let nextFlags = flags;
+  if (["medications", "symptom_logs"].includes(collectionName) && flags.patient && !flags["patient-id"]) {
+    nextFlags = { ...nextFlags, "patient-id": flags.patient };
+  }
+  if (["accounts", "deals", "billing_customers"].includes(collectionName) && flags.company && !flags["company-id"]) {
+    nextFlags = { ...nextFlags, "company-id": flags.company };
+  }
+  if (["invoices", "payment_intents"].includes(collectionName) && flags["billing-customer"] && !flags["billing-customer-id"]) {
+    nextFlags = { ...nextFlags, "billing-customer-id": flags["billing-customer"] };
+  }
+  return nextFlags;
 }
 
 function nestedPatientDbRoute(input: DenseDataCliInput): Parameters<typeof runMagicDbCli>[0] | null {

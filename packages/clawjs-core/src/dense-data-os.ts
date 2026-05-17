@@ -275,7 +275,7 @@ export const clawDenseDataOsRegistry: ClawDenseDataOsRegistry = {
       sensitivityDefault: "normal",
       sharedEngines: ["identity_role_profile", "evidence_provenance", "quality_gap", "relation_graph", "semantic_view", "intent_coverage", "finance_accounting", "workflow_state", "document_evidence"],
       centers: [
-        center("company", "Company", "company", "organization_profile", "Business organization center shared with CRM, billing, finance, procurement, and legal."),
+        center("company", "Company", "company", "organization_profile", "Business organization center shared with CRM, billing, finance, procurement, and legal.", undefined, "companies"),
         center("product", "Product", "product", undefined, "Catalog/product center shared across commerce, inventory, procurement, PIM, and billing."),
         center("invoice", "Invoice", "invoice", undefined, "Invoice center shared across ERP, accounting, billing, payments, documents, and reconciliation.", undefined, "invoices"),
         center("payment", "Payment", "payment", undefined, "Payment center for money movement, reconciliation, evidence, and accounting links.", undefined, "payment_intents"),
@@ -305,8 +305,8 @@ export const clawDenseDataOsRegistry: ClawDenseDataOsRegistry = {
       sensitivityDefault: "normal",
       sharedEngines: ["identity_role_profile", "evidence_provenance", "quality_gap", "relation_graph", "semantic_view", "intent_coverage", "workflow_state", "document_evidence"],
       centers: [
-        center("account", "Account", "account", "account_profile", "Customer/account organization role shared with company identity."),
-        center("deal", "Deal", "deal", undefined, "Sales opportunity center for pipeline, contacts, activities, quotes, and contracts."),
+        center("account", "Account", "account", "account_profile", "Customer/account organization role shared with company identity.", undefined, "accounts"),
+        center("deal", "Deal", "deal", undefined, "Sales opportunity center for pipeline, contacts, activities, quotes, and contracts.", undefined, "deals"),
       ],
       commandPatterns: ["claw crm overview|gaps|intents", "claw account list|get|create|update|query|schema", "claw deal list|get|create|update|query|schema"],
       operations: [operation("crm.account.overview", "Read CRM account overview", ["claw crm account <id> overview"], ["account", "contact", "deal", "activity"])],

@@ -363,6 +363,8 @@ function getPrimaryField(collectionName: string): string {
       return "name";
     case "symptom_logs":
       return "symptom";
+    case "invoices":
+      return "number";
   }
   const builtinDef = BUILTIN_COLLECTIONS_BY_NAME.get(collectionName);
   if (builtinDef) {
@@ -397,6 +399,15 @@ function applyDefaults(collectionName: string, payload: Record<string, unknown>,
       break;
     case "symptom_logs":
       payload.loggedAt ??= new Date().toISOString();
+      break;
+    case "deals":
+      payload.status ??= "open";
+      break;
+    case "invoices":
+      payload.status ??= "draft";
+      break;
+    case "payment_intents":
+      payload.status ??= "requires_payment_method";
       break;
     default:
       break;
