@@ -56,6 +56,7 @@ import {
   decisionRecordSchema,
   deadlineRecordSchema,
   eventRecordSchema,
+  evaluateRemoteAgentServiceAccess,
   evaluateRemoteAccess,
   feedbackRecordSchema,
   findClawPersistentSurfaceNode,
@@ -95,6 +96,7 @@ import {
   remoteAccessDecisionSchema,
   remoteAccessGrantSchema,
   remoteAccessRequestSchema,
+  remoteAgentServiceDecisionSchema,
   remoteSecretLeaseSchema,
   remoteSyncRequiredDecisionIds,
   remoteSyncRequiredRouteIds,
@@ -361,11 +363,20 @@ test("surface graph registers critical chat routes and Relay", () => {
     "claw.host.grants",
     "claw.host.approvals",
     "claw.host.audit",
+    "claw.mac.controlPlane",
+    "claw.mac.capabilityAtlas",
+    "claw.mac.permissionBroker",
+    "claw.mac.actionBroker",
   ]) {
     assert.equal(Boolean(findClawPersistentSurfaceNode(nodeId)), true, `${nodeId} must be covered by the surface graph first cut`);
   }
   assert.equal(findClawPersistentSurfaceNode("claw.relay")?.name, "Relay control plane");
   assert.equal(findClawPersistentSurfaceNode("clawix.bridge.local")?.path, "clawix-bridge");
+
+  const macEdges = listClawSurfaceEdges("claw.mac.controlPlane");
+  assert.equal(macEdges.some((edge) => edge.type === "consumes" && edge.toId === "claw.mac.capabilityAtlas"), true);
+  assert.equal(macEdges.some((edge) => edge.type === "brokers" && edge.toId === "claw.mac.permissionBroker"), true);
+  assert.equal(macEdges.some((edge) => edge.type === "brokers" && edge.toId === "claw.mac.actionBroker"), true);
 
   const relayEdges = listClawSurfaceEdges("claw.relay");
   assert.equal(relayEdges.some((edge) => edge.type === "brokers" && edge.toId === "claw.relay.connector"), true);
@@ -382,6 +393,8 @@ test("surface graph registers critical chat routes and Relay", () => {
     "cli.commandIntentResolution",
     "gateway.headlessAgentHost",
     "gateway.multiTenantAgentService",
+    "mac.directCliAction",
+    "mac.permissionLifecycle",
     "mesh.resourceShare",
     "remote.chatGateway",
     "remote.searchGateway",
@@ -394,6 +407,8 @@ test("surface graph registers critical chat routes and Relay", () => {
   assert.equal(findClawSurfaceRoute("chat.remoteRelay")?.steps.some((step) => step.toId === "claw.relay"), true);
   assert.equal(findClawSurfaceRoute("cli.commandIntentResolution")?.steps.some((step) => step.toId === "claw.workspace.command_intents.ledger"), true);
   assert.equal(findClawSurfaceRoute("agents.externalSupportAssignment")?.steps.some((step) => step.toId === "claw.support.inbox"), true);
+  assert.equal(findClawSurfaceRoute("mac.directCliAction")?.steps.some((step) => step.toId === "claw.host.audit"), true);
+  assert.equal(findClawPersistentSurfaceNode("claw.mac.actionReceipt.v1")?.kind, "jsonSchema");
 
   for (const route of routes) {
     assert.equal(route.steps.length > 0, true, `${route.id} must declare explicit steps`);
@@ -701,6 +716,72 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(meshRevocation.cascadeSyncQueues, true);
   assert.equal(meshRevocation.writes, false);
   assert.equal(meshRevocationSchema.safeParse(meshRevocation).success, true);
+
+  const serviceAssignment = {
+    schemaVersion: 1 as const,
+    tenantId: "tenant.acme",
+    agentId: "agent.support",
+    assignmentId: "assignment.service",
+    status: "active" as const,
+    routeIds: ["gateway.multiTenantAgentService"],
+    budgetId: "budget.service",
+    billingAccountId: "billing.acme",
+    isolationKey: "tenant.acme:assignment.service",
+    auditRequired: true as const,
+  };
+  const serviceBudget = {
+    budgetId: "budget.service",
+    tenantId: "tenant.acme",
+    billingAccountId: "billing.acme",
+    limitCents: 5000,
+    usedCents: 1200,
+    billingMeterId: "meter.agent-service",
+  };
+  const serviceAllowed = evaluateRemoteAgentServiceAccess({
+    request: {
+      tenantId: "tenant.acme",
+      agentId: "agent.support",
+      assignmentId: "assignment.service",
+      routeId: "gateway.multiTenantAgentService",
+      estimatedCostCents: 300,
+      now: "2026-05-17T10:10:00.000Z",
+    },
+    assignment: serviceAssignment,
+    budget: serviceBudget,
+  });
+  assert.equal(serviceAllowed.allowed, true);
+  assert.equal(serviceAllowed.audit.eventType, "remote.agent_service.evaluated");
+  assert.equal(serviceAllowed.writes, false);
+  assert.equal(remoteAgentServiceDecisionSchema.safeParse(serviceAllowed).success, true);
+  const serviceTenantDenied = evaluateRemoteAgentServiceAccess({
+    request: {
+      tenantId: "tenant.other",
+      agentId: "agent.support",
+      assignmentId: "assignment.service",
+      routeId: "gateway.multiTenantAgentService",
+      estimatedCostCents: 300,
+      now: "2026-05-17T10:11:00.000Z",
+    },
+    assignment: serviceAssignment,
+    budget: serviceBudget,
+  });
+  assert.equal(serviceTenantDenied.allowed, false);
+  assert.equal(serviceTenantDenied.reasons.includes("tenant: assignment belongs to a different tenant"), true);
+  assert.equal(serviceTenantDenied.reasons.includes("budget: tenant mismatch"), true);
+  const serviceBudgetDenied = evaluateRemoteAgentServiceAccess({
+    request: {
+      tenantId: "tenant.acme",
+      agentId: "agent.support",
+      assignmentId: "assignment.service",
+      routeId: "gateway.multiTenantAgentService",
+      estimatedCostCents: 4000,
+      now: "2026-05-17T10:12:00.000Z",
+    },
+    assignment: serviceAssignment,
+    budget: serviceBudget,
+  });
+  assert.equal(serviceBudgetDenied.allowed, false);
+  assert.equal(serviceBudgetDenied.reasons.includes("budget: estimated cost exceeds limit"), true);
 
   const conformance = buildRemoteConformanceReport({
     routeIds: remoteSyncRequiredRouteIds.map((routeId) => routeId),

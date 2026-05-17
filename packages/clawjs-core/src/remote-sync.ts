@@ -314,6 +314,56 @@ export const meshRevocationSchema = z.object({
   writes: z.literal(false),
 });
 
+export const remoteAgentServiceAssignmentSchema = z.object({
+  schemaVersion: z.literal(1),
+  tenantId: z.string().min(1),
+  agentId: z.string().min(1),
+  assignmentId: z.string().min(1),
+  status: z.enum(["active", "paused", "revoked"]),
+  routeIds: z.array(z.string().min(1)).min(1),
+  budgetId: z.string().min(1),
+  billingAccountId: z.string().min(1),
+  isolationKey: z.string().min(1),
+  auditRequired: z.literal(true),
+});
+
+export const remoteAgentServiceBudgetSchema = z.object({
+  budgetId: z.string().min(1),
+  tenantId: z.string().min(1),
+  billingAccountId: z.string().min(1),
+  limitCents: z.number().int().nonnegative(),
+  usedCents: z.number().int().nonnegative(),
+  billingMeterId: z.string().min(1),
+});
+
+export const remoteAgentServiceRequestSchema = z.object({
+  tenantId: z.string().min(1),
+  agentId: z.string().min(1),
+  assignmentId: z.string().min(1),
+  routeId: z.string().min(1),
+  estimatedCostCents: z.number().int().nonnegative().default(0),
+  now: z.string().datetime(),
+});
+
+export const remoteAgentServiceDecisionSchema = z.object({
+  allowed: z.boolean(),
+  reasons: z.array(z.string()),
+  tenantId: z.string().min(1),
+  agentId: z.string().min(1),
+  assignmentId: z.string().min(1),
+  billingAccountId: z.string().min(1).optional(),
+  isolationKey: z.string().min(1).optional(),
+  audit: z.object({
+    eventType: z.literal("remote.agent_service.evaluated"),
+    tenantId: z.string().min(1),
+    agentId: z.string().min(1),
+    assignmentId: z.string().min(1),
+    routeId: z.string().min(1),
+    decision: z.enum(["allow", "deny"]),
+  }),
+  writes: z.literal(false),
+});
+
 export type RemoteSurfaceClassification = z.infer<typeof remoteSurfaceClassificationSchema>;
 export type RemoteTrustMode = z.infer<typeof remoteTrustModeSchema>;
 export type RemoteActorKind = z.infer<typeof remoteActorKindSchema>;
@@ -342,6 +392,10 @@ export type MeshShareAction = z.infer<typeof meshShareActionSchema>;
 export type MeshInvitation = z.infer<typeof meshInvitationSchema>;
 export type MeshResourceShare = z.infer<typeof meshResourceShareSchema>;
 export type MeshRevocation = z.infer<typeof meshRevocationSchema>;
+export type RemoteAgentServiceAssignment = z.infer<typeof remoteAgentServiceAssignmentSchema>;
+export type RemoteAgentServiceBudget = z.infer<typeof remoteAgentServiceBudgetSchema>;
+export type RemoteAgentServiceRequest = z.infer<typeof remoteAgentServiceRequestSchema>;
+export type RemoteAgentServiceDecision = z.infer<typeof remoteAgentServiceDecisionSchema>;
 
 export const remoteSyncRequiredDecisionIds = [
   "relay_boundary",
@@ -802,6 +856,55 @@ export function createMeshRevocation(input: {
     revokedAt,
     cascadeSyncQueues: true,
     auditEventId: meshId("audit_mesh_revocation", [input.targetType, input.targetId, revokedAt]),
+    writes: false,
+  });
+}
+
+export function evaluateRemoteAgentServiceAccess(input: {
+  request: RemoteAgentServiceRequest;
+  assignment: RemoteAgentServiceAssignment;
+  budget?: RemoteAgentServiceBudget;
+}): RemoteAgentServiceDecision {
+  const request = remoteAgentServiceRequestSchema.parse(input.request);
+  const assignment = remoteAgentServiceAssignmentSchema.parse(input.assignment);
+  const budget = input.budget ? remoteAgentServiceBudgetSchema.parse(input.budget) : undefined;
+  const reasons: string[] = [];
+
+  if (assignment.tenantId !== request.tenantId) reasons.push("tenant: assignment belongs to a different tenant");
+  if (assignment.agentId !== request.agentId) reasons.push("agent: assignment belongs to a different agent");
+  if (assignment.assignmentId !== request.assignmentId) reasons.push("assignment: requested assignment does not match");
+  if (assignment.status !== "active") reasons.push(`assignment: status ${assignment.status} is not active`);
+  if (!assignment.routeIds.includes(request.routeId)) reasons.push("route: assignment does not allow requested Gateway route");
+  if (!assignment.isolationKey) reasons.push("isolation: tenant isolation key required");
+  if (assignment.auditRequired !== true) reasons.push("audit: service assignment must require audit");
+
+  if (!budget) {
+    reasons.push("budget: service assignment requires budget and billing account");
+  } else {
+    if (budget.tenantId !== request.tenantId) reasons.push("budget: tenant mismatch");
+    if (budget.budgetId !== assignment.budgetId) reasons.push("budget: assignment budget mismatch");
+    if (budget.billingAccountId !== assignment.billingAccountId) reasons.push("billing: assignment billing account mismatch");
+    if (!budget.billingMeterId) reasons.push("billing: meter id required");
+    if (budget.usedCents + request.estimatedCostCents > budget.limitCents) reasons.push("budget: estimated cost exceeds limit");
+  }
+
+  const allowed = reasons.length === 0;
+  return remoteAgentServiceDecisionSchema.parse({
+    allowed,
+    reasons,
+    tenantId: request.tenantId,
+    agentId: request.agentId,
+    assignmentId: request.assignmentId,
+    billingAccountId: assignment.billingAccountId,
+    isolationKey: assignment.isolationKey,
+    audit: {
+      eventType: "remote.agent_service.evaluated",
+      tenantId: request.tenantId,
+      agentId: request.agentId,
+      assignmentId: request.assignmentId,
+      routeId: request.routeId,
+      decision: allowed ? "allow" : "deny",
+    },
     writes: false,
   });
 }
