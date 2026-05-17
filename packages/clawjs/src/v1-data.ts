@@ -8,10 +8,6 @@ import { DatabaseServiceStore } from "@clawjs/database";
 import { runAgentsCommand, runConnectionsCommand, runPersonalitiesCommand, runSkillCollectionsCommand } from "./v1-data-agent-entities.ts";
 import { runProviderRoutingCommand, runSnippetsCommand } from "./v1-data-agent-config.ts";
 export {
-  V1_DATA_EXIT_FAILURE,
-  V1_DATA_EXIT_OK,
-  V1_DATA_EXIT_USAGE,
-  ensureV1MainSchema,
   openMainDataStore,
   resolveClawjsDataRoot,
   resolveClawjsFilesDir,

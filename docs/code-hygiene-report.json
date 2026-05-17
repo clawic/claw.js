@@ -14,13 +14,13 @@
     "unreferencedAssetCandidates": 88
   },
   "knipSummary": {
-    "filesWithIssues": 183,
-    "totalIssues": 821,
+    "filesWithIssues": 182,
+    "totalIssues": 816,
     "issueTypes": {
       "unlisted": 2,
       "types": 90,
-      "owners": 123,
-      "exports": 598,
+      "owners": 122,
+      "exports": 594,
       "duplicates": 8
     }
   },
@@ -76,6 +76,7 @@
     "Secrets plugin type cleanup made nested field, governance, context, action, resource, and sync helper interfaces private while preserving plugin manifest contracts.",
     "Bridge platform cleanup removed unused platform predicate and TCC capability helper exports while preserving `detectPlatform`.",
     "Template surface cleanup stopped re-exporting unused builtin counters and CLI option types, and removed unused render DTO aliases while preserving `claw template` behavior.",
-    "Private shared-type cleanup made unused publishing/content/drive/ERP helper aliases private or removed them while preserving imported record contracts."
+    "Private shared-type cleanup made unused publishing/content/drive/ERP helper aliases private or removed them while preserving imported record contracts.",
+    "V1 data cleanup removed duplicate exit-code/schema re-exports from the CLI wrapper while preserving the consumed data-root/storage helpers."
   ]
 }
