@@ -105,6 +105,19 @@ test("codex adapter exposes primary-agent-tool status, auth, and hybrid transpor
   }).parser, "codex-jsonl");
 });
 
+test("codex adapter treats Codex config as read-only", async () => {
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-codex-readonly-"));
+  const configPath = path.join(homeDir, "config.toml");
+  fs.writeFileSync(configPath, 'model = "gpt-5.3-codex"\n');
+  const runner = new FakeRunner({});
+
+  await assert.rejects(
+    () => codexAdapter.setDefaultModel("gpt-5.4", runner, { adapter: "codex", homeDir }),
+    /Codex config is an external read-only source/
+  );
+  assert.equal(fs.readFileSync(configPath, "utf8"), 'model = "gpt-5.3-codex"\n');
+});
+
 test("hermes adapter exposes structured capabilities, resources, and transport metadata", async () => {
   const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-hermes-"));
   fs.mkdirSync(path.join(homeDir, ".hermes", "memories"), { recursive: true });

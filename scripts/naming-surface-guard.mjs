@@ -345,6 +345,18 @@ for (const relativePath of [
   forbidSnippet(relativePath, "legacy v1 skill surface");
 }
 
+for (const snippet of [
+  "writeCodexDefaultModel",
+  "fs.writeFileSync(configPath",
+  "fs.mkdirSync(path.dirname(configPath)",
+]) {
+  forbidSnippet("packages/clawjs-node/src/runtime/adapters/codex-adapter.ts", snippet);
+}
+requireSnippet(
+  "packages/clawjs-node/src/runtime/adapters/codex-adapter.ts",
+  "Codex config is an external read-only source for ClawJS"
+);
+
 for (const relativePath of [
   "docs/index.md",
   "packages/openclaw-context-engine/package.json",

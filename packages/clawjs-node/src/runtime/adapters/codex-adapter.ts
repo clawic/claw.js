@@ -100,20 +100,6 @@ function readCodexDefaultModel(options: RuntimeAdapterOptions): string | null {
   }
 }
 
-function writeCodexDefaultModel(model: string, options: RuntimeAdapterOptions): void {
-  const configPath = resolveCodexLocations(options).configPath;
-  if (!configPath) return;
-  let config = "";
-  try {
-    config = fs.readFileSync(configPath, "utf8");
-  } catch {}
-  const next = /(?:^|\n)\s*model\s*=\s*["'][^"']+["']/.test(config)
-    ? config.replace(/(^|\n)(\s*)model\s*=\s*["'][^"']+["']/, `$1$2model = "${model}"`)
-    : `${config.trim() ? `${config.trimEnd()}\n` : ""}model = "${model}"\n`;
-  fs.mkdirSync(path.dirname(configPath), { recursive: true });
-  fs.writeFileSync(configPath, next);
-}
-
 function normalizeCodexVersion(stdout: string): string | null {
   const trimmed = stdout.trim();
   if (!trimmed) return null;
@@ -420,8 +406,10 @@ export const codexAdapter: RuntimeAdapter = {
     return { provider: "openai-codex", modelId, label: modelId };
   },
   async setDefaultModel(model, _runner, options) {
-    writeCodexDefaultModel(model, options);
-    return model;
+    const locations = resolveCodexLocations(options);
+    throw new Error(
+      `Codex config is an external read-only source for ClawJS; choose ${model} per session or update ${locations.configPath} with Codex.`
+    );
   },
   async getAuthState(runner, options): Promise<AuthState> {
     return {
