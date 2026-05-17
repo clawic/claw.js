@@ -10,7 +10,6 @@ const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const removedPublicCommands = new Set([
   "data",
   "app-state",
-  "life",
   "ops",
   "infra",
   "workspace-search",

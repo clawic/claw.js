@@ -149,7 +149,8 @@ updating this ADR or adding a successor ADR.
   - `day` becomes `agenda`.
   - `examples/showcase` becomes `showcase`.
   - `notify` remains `notify`.
-- `signals` replaces `life` as the technical and public domain.
+- `signals` is the canonical technical domain; `life` is an explicitly
+  approved CLI alias to the signals catalog, not a package/service boundary.
 - Personal signal domains such as health, sleep, finance, journal, workouts,
   emotions, and similar categories are versioned catalog data under
   `@clawjs/signals`, not individual public packages in v1.

@@ -612,7 +612,8 @@ for (const [relativePath, snippets] of Object.entries({
     "Events use `domain.action`",
 	    "`schemaVersion` versions persisted data",
 	    "`protocolVersion` versions wire protocols",
-	    "`signals` replaces `life` as the technical and public domain",
+	    "`signals` is the canonical technical domain",
+	    "`life` is an explicitly",
 	    'personal-domain packages outside the `signals` catalog',
 	  ],
 	  "docs/naming-style-guide.md": [
@@ -622,6 +623,7 @@ for (const [relativePath, snippets] of Object.entries({
 	    "Events use `domain.action`",
 	    "Use `sessionId`, not stable `chatId`",
 	    "`signals` is the approved public domain",
+	    "`life` is only",
 	  ],
   "packages/clawjs-core/src/storage.ts": [
     ".claw",

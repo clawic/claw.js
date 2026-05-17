@@ -381,6 +381,15 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
     assert.equal(contact.email, "demo@example.com");
     assert.equal(contact.firstName, "Demo");
 
+    const lifeCatalogStdout = captureStream();
+    assert.equal(await runCli(["life", "catalog", "--json"], {
+      stdout: lifeCatalogStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const lifeCatalog = parseCliData(lifeCatalogStdout.getOutput()) as { items: unknown[] };
+    assert.equal(Array.isArray(lifeCatalog.items), true);
+
     const appStdout = captureStream();
     assert.equal(await runCli(["apps", "upsert", "demo-app", "--name", "Demo App", "--path", "apps/demo-app", "--json"], {
       stdout: appStdout.stream,

@@ -45,7 +45,6 @@ export const CLI_USAGE = buildCliUsage();
 const REMOVED_PUBLIC_COMMANDS = new Map<string, string>([
   ["data", "Use `claw database ...` for technical database operations or `claw work export|import|backup ...` for productivity snapshots."],
   ["app-state", "App state is internal. Use `claw host ...`, `claw doctor`, or diagnostics surfaces instead."],
-  ["life", "Use real user-domain portals such as `health`, `travel`, `career`, `family`, `legal`, `finance`, `location`, or `accounts`."],
   ["memory", "Use `claw knowledge ...` or `claw knowledge memories ...`."],
   ["user", "Use `claw profile ...` or the profile domain portals such as `health`, `travel`, `career`, `family`, `legal`, `finance`, `location`, and `accounts`."],
   ["ops", "Use `claw logs`, `claw doctor`, `claw monitor`, or `claw host ...`."],

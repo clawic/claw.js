@@ -96,6 +96,7 @@ export async function runV1DataCli(input: V1DataCliInput): Promise<number | null
       case "app-state":
         return runAppStateCommand(input, store);
       case "signals":
+      case "life":
         return runSignalsCommand(input, store);
       case "knowledge":
         return runKnowledgeCommand(input, store);
@@ -177,6 +178,7 @@ function shouldHandleV1DataCommand(group: string | undefined, command: string | 
     data: new Set(["doctor", "backup", "restore", "reset", "help"]),
     "app-state": new Set(["get", "set", "snapshot", "project", "pin", "title", "archive", "sidebar", "terminal", "help"]),
     signals: new Set(["catalog", "seed-catalog", "observe", "list", "delete", "help"]),
+    life: new Set(["catalog", "seed-catalog", "observe", "list", "delete", "help"]),
     knowledge: new Set(["entity", "fact", "list", "search", "promote", "help"]),
     notes: new Set(["create", "list", "get", "update", "delete", "search", "export", "import", "link", "record-note", "help"]),
     wiki: new Set(["create", "list", "get", "update", "delete", "search", "export", "import", "link", "help"]),
@@ -647,7 +649,7 @@ function runSignalsCommand(input: V1DataCliInput, store: DatabaseServiceStore): 
     writeSuccess(input, { deleted: changes > 0, id });
     return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
-  return usageError(input, usage(input.binName, "signals"));
+  return usageError(input, usage(input.binName, input.positionals[0] || "signals"));
 }
 
 function runKnowledgeCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {

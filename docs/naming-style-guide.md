@@ -17,9 +17,10 @@ shape, and agent-oriented rename workflow, also read
 - Prefer explicit, boring names over abbreviations.
 - Do not introduce a second synonym for an existing stable concept.
 - Name the product/framework `ClawJS`; name the public CLI `claw`.
-- Do not expose public `clawjs`, `clawix`, `commander`, `mp`, `life`, or
-  `badger` surfaces. `signals` is the approved public domain for signal data
-  and catalog-backed personal, workspace, and device observations.
+- Do not expose public `clawjs`, `clawix`, `commander`, `mp`, or `badger`
+  surfaces. `signals` is the approved public domain for signal data and
+  catalog-backed personal, workspace, and device observations. `life` is only
+  the approved CLI alias to the signals catalog.
 - Treat package names, database names, table names, collection names, CLI
   commands, flags, routes, JSON fields, enum values, event names, env vars,
   sockets, service names, app IDs, hostnames, and deep links as stable
@@ -149,6 +150,7 @@ related metadata; pair-token deep links are not stable v1 routes.
   `notify`.
 - Public domain names are `signals`, `search`, `jobs`, `remote`,
   `marketplace`, `home`, `publishing`, `feed`, `wiki`, `monitor`, and `notify`.
+- The only public `life` name is the `claw life` alias to `signals`.
 - `relay` is infrastructure only.
 - `iot` is adapter/protocol implementation only.
 - Personal signal categories are catalog data, not public packages.

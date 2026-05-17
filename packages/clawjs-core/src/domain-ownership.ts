@@ -372,7 +372,7 @@ export const clawDomainOwnershipMatrixV1 = {
     requiredTests: hostCapabilityTests,
     minimumContract: {
       resourceTypes: ["signal_vertical", "signal_variable", "signal_session", "signal_observation", "life_projection"],
-      apiShape: ["claw signals catalog|seed-catalog|observe|list|delete", "claw db signals_* inspection routes"],
+      apiShape: ["claw signals catalog|seed-catalog|observe|list|delete", "claw life catalog|seed-catalog|observe|list|delete", "claw db signals_* inspection routes"],
       eventTopics: ["signals.observation.created", "signals.session.updated", "signals.vertical.seeded"],
       fixtures: ["tracking-registry.json", "packages/clawjs/src/signals-cli.test.ts"],
       matrixRows: ["docs/interface-matrix.md#signals", "clawix/docs/interface-matrix.md#Life verticals"],
