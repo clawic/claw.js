@@ -73,6 +73,8 @@ backfill jobs.
 | `generations.artifacts` | `generations` | generated artifact records projected into `search.sqlite` | implemented initial adapter |
 | `code.symbols` | `code` | bounded project file/symbol/docs projection into `search.sqlite` | implemented initial adapter |
 | `skills.registry` | `skills` | framework skill records projected from `core.sqlite` without secret refs | implemented initial adapter |
+| `providers.routing` | `providers` | provider routing rules and provider settings projected from `core.sqlite` without account refs | implemented initial adapter |
+| `snippets.library` | `snippets` | prompt/template/slash snippets projected from `core.sqlite` | implemented initial adapter |
 | `connectors.catalog` | `connectors` | connector control-plane operations projected from `core.sqlite` without credential bindings, secret refs, or raw traces | implemented initial adapter |
 | `mcp.servers` | `mcp` | MCP server configuration projected from local config with env/header values redacted | implemented initial adapter |
 | `apps.catalog` | `apps` | framework app records projected from `core.sqlite` | implemented initial adapter |
@@ -102,6 +104,8 @@ claw search query "requirements" --domains media --filters metadata.kind=documen
 claw search query "analytics cards" --domains generations --filters metadata.status=succeeded --json
 claw search query "symbolName" --domains code --code-root /path/to/project --json
 claw search query "deployment APIs" --domains skills --filters metadata.requiresProtectedRefs=true --json
+claw search query "quickask chat" --domains providers --filters metadata.hasAccountRef=true --json
+claw search query "review selection" --domains snippets --filters metadata.kind=prompt --json
 claw search query "local docs server" --domains mcp --mcp-config /path/to/config.toml --json
 claw search query "canvas prototype" --domains apps --json
 claw search query "launch deck template" --domains design --json
@@ -198,19 +202,20 @@ unbounded duplicate backfill work.
 The local framework database and artifact write paths now emit those compacted
 events for `database.records`, `documents.blocks`, `notes.pages`,
 `knowledge.graph`, `signals.observations`, `calendar.events`,
-`finance.records`, `work.items`, `mcp.servers`, `apps.catalog`,
-`design.resources`, `runtime.events`,
+`finance.records`, `work.items`, `providers.routing`, `snippets.library`,
+`mcp.servers`, `apps.catalog`, `design.resources`, `runtime.events`,
 `generations.artifacts`, `images.derived`, `media.assets`, and
 `skills.registry`: successful `db
 collection create|update`, `documents create|update`, `notes create|update`,
 `knowledge entity|fact`, `signals seed-catalog|observe`, `calendar
 create|update`, canonical finance collection writes such as `transaction create|update`, `image
-create|edit|import`, MCP server upserts, app/design resource upserts,
+create|edit|import`, provider routing/settings upserts, snippet upserts,
+MCP server upserts, app/design resource upserts,
 monitor/infra/ops event writes, typed-media generation,
 `generations create`, and `skills
 upsert` calls schedule hot upsert events; successful record, document, note,
 signal observation, calendar event, finance collection record, work item,
-MCP server, app/design resource, runtime/operational event, image, media, generation, or skill deletes
+provider route, snippet, MCP server, app/design resource, runtime/operational event, image, media, generation, or skill deletes
 schedule delete events where the source item is removed; and `document_blocks`
 changes schedule a hot upsert for the parent document so fragments refresh together. The event write is best effort because
 `search.sqlite` is a rebuildable sidecar; a temporary Search sidecar failure
@@ -369,6 +374,15 @@ does not index `secret_refs_json`; Search only exposes a
 `requiresProtectedRefs` facet so skill search stays useful without leaking local
 secret references.
 
+`providers.routing` projects provider routing rules and provider settings from
+`core.sqlite`. It indexes feature, capability, provider, model, enabled state,
+and redacted policy/metadata text. It deliberately does not index `account_ref`
+values; Search only exposes whether an account reference exists.
+
+`snippets.library` projects framework snippets from `core.sqlite`. It indexes
+slug, title, kind, shortcut, body, scope metadata, and skill references so
+prompt/template/slash-command sections can keep their own fast path.
+
 `connectors.catalog` projects connector control-plane operations from
 `core.sqlite`. It indexes provider names, runtime/support state, operation ids,
 native operation names, cost/approval metadata, network policy references, and
@@ -420,8 +434,8 @@ usable without waiting for universal backfill.
 - Build `SearchStore` over `search.sqlite`.
 - Index `commands`, `sessions.chats`, `database.records`, `documents.blocks`,
   `notes.pages`, `knowledge.graph`, `images.derived`, `media.assets`,
-  `generations.artifacts`, `skills.registry`, and the first bounded
-  `code.symbols` adapter.
+  `generations.artifacts`, `skills.registry`, `providers.routing`,
+  `snippets.library`, and the first bounded `code.symbols` adapter.
 - Keep Clawix Mac Search and `Command-G` conversations-only.
 
 ### Phase 2: framework domains
