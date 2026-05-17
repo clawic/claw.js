@@ -380,6 +380,16 @@ test("V2 main schema upgrades app project resource ids before indexing them", as
       assert.equal(incidentColumns.some((column) => column.name === "detected_at"), true);
       assert.equal(incidentColumns.find((column) => column.name === "severity")?.dflt_value, "'low'");
       assert.equal(incidentColumns.find((column) => column.name === "summary")?.notnull, 1);
+      const sessionColumns = sqlite.prepare("PRAGMA table_info(agent_sessions)").all() as Array<{ name: string; dflt_value: string | null; notnull: number }>;
+      assert.equal(sessionColumns.some((column) => column.name === "company_id"), true);
+      assert.equal(sessionColumns.some((column) => column.name === "initiator_actor_id"), true);
+      assert.equal(sessionColumns.some((column) => column.name === "linked_issue_id"), true);
+      assert.equal(sessionColumns.some((column) => column.name === "linked_task_id"), true);
+      assert.equal(sessionColumns.find((column) => column.name === "source_json")?.dflt_value, "'{}'");
+      assert.equal(sessionColumns.find((column) => column.name === "links_json")?.dflt_value, "'{}'");
+      const sessionIndexes = sqlite.prepare("PRAGMA index_list(agent_sessions)").all() as Array<{ name: string }>;
+      assert.equal(sessionIndexes.some((index) => index.name === "agent_sessions_company_idx"), true);
+      assert.equal(sessionIndexes.some((index) => index.name === "agent_sessions_status_idx"), true);
     } finally {
       sqlite.close();
       fs.rmSync(tempRoot, { recursive: true, force: true });
