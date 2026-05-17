@@ -34,13 +34,13 @@ import type { AlexaAdapter, AlexaCredentials } from "./adapters/alexa.ts";
  * gate at the client side. Kept in sync with `AgentToolRiskLevel` in
  * `@clawjs/core/agent_tools.ts` (canonical definition there).
  */
-export type ToolRiskLevel =
+type ToolRiskLevel =
   | "safe"
   | "reversible"
   | "sensitive"
   | "catastrophic";
 
-export interface ToolParametersSchema {
+interface ToolParametersSchema {
   type: "object";
   properties?: Record<string, unknown>;
   required?: string[];
@@ -48,7 +48,7 @@ export interface ToolParametersSchema {
   description?: string;
 }
 
-export interface ToolDescriptor {
+interface ToolDescriptor {
   id: string;
   title: string;
   description: string;
@@ -60,7 +60,7 @@ export interface ToolDescriptor {
   version?: string;
 }
 
-export interface ToolInvocationResult {
+interface ToolInvocationResult {
   ok: boolean;
   value?: unknown;
   error?: ToolInvocationError;
@@ -68,14 +68,14 @@ export interface ToolInvocationResult {
   durationMs?: number;
 }
 
-export interface ToolInvocationError {
+interface ToolInvocationError {
   code: string;
   message: string;
   detail?: Record<string, unknown>;
 }
 
 /** Runtime handler bound to a descriptor at registration time. */
-export type ToolHandler = (
+type ToolHandler = (
   args: Record<string, unknown>,
   context: ToolHandlerContext,
 ) => Promise<unknown>;
@@ -99,7 +99,7 @@ const REGISTRY = new Map<string, RegisteredTool>();
  * cannot silently override another feature's verb. Returns the
  * descriptor for chaining or logging.
  */
-export function registerTool(descriptor: ToolDescriptor, handler: ToolHandler): ToolDescriptor {
+function registerTool(descriptor: ToolDescriptor, handler: ToolHandler): ToolDescriptor {
   if (REGISTRY.has(descriptor.id)) {
     throw new Error(`Tool already registered: ${descriptor.id}`);
   }
@@ -107,13 +107,13 @@ export function registerTool(descriptor: ToolDescriptor, handler: ToolHandler): 
   return descriptor;
 }
 
-export function listTools(): ToolDescriptor[] {
+function listTools(): ToolDescriptor[] {
   return Array.from(REGISTRY.values())
     .map((entry) => entry.descriptor)
     .sort((a, b) => a.id.localeCompare(b.id));
 }
 
-export async function invokeTool(
+async function invokeTool(
   id: string,
   args: Record<string, unknown>,
   context: ToolHandlerContext,
