@@ -10,9 +10,7 @@ import {
   DEFAULT_SEARCH_BUDGETS,
   SEARCH_PROFILES,
   SearchStore,
-  createCommandSearchSourceManifest,
-  createFrameworkSearchSourceManifest,
-  createFullSearchSourceManifest,
+  createBuiltinSearchSourceManifests,
   type SearchAction,
   type SearchActionExecutionPlan,
   type SearchDocumentInput,
@@ -56,133 +54,7 @@ const WORKSPACE_SEARCH_DOMAINS = new Set([
   "events",
 ]);
 
-const BUILTIN_SEARCH_SOURCES: SearchSourceManifest[] = [
-  createFrameworkSearchSourceManifest({
-    id: "sessions.chats",
-    domain: "sessions",
-    name: "Chats",
-    resultTypes: ["chat", "message"],
-  }),
-  createFrameworkSearchSourceManifest({
-    id: "database.records",
-    domain: "database",
-    name: "Database records",
-    resultTypes: ["record", "fragment"],
-    facets: [
-      { id: "namespaceId", label: "Namespace", type: "string" },
-      { id: "collection", label: "Collection", type: "string" },
-      { id: "sensitive", label: "Sensitive", type: "boolean" },
-    ],
-  }),
-  createFrameworkSearchSourceManifest({
-    id: "documents.blocks",
-    domain: "documents",
-    name: "Documents",
-    resultTypes: ["document", "block"],
-    facets: [
-      { id: "namespaceId", label: "Namespace", type: "string" },
-      { id: "scopeKind", label: "Scope", type: "string" },
-      { id: "accessLevel", label: "Access", type: "string" },
-      { id: "blockType", label: "Block type", type: "string" },
-    ],
-  }),
-  createFrameworkSearchSourceManifest({
-    id: "images.derived",
-    domain: "images",
-    name: "Images",
-    resultTypes: ["image", "ocr", "label"],
-    facets: [
-      { id: "imageType", label: "Image type", type: "string" },
-      { id: "provenance", label: "Provenance", type: "string" },
-      { id: "operation", label: "Operation", type: "string" },
-      { id: "project", label: "Project", type: "string" },
-      { id: "tag", label: "Tag", type: "string" },
-    ],
-  }),
-  createFrameworkSearchSourceManifest({
-    id: "media.assets",
-    domain: "media",
-    name: "Media assets",
-    resultTypes: ["image", "audio", "video", "document", "animation", "asset"],
-    facets: [
-      { id: "kind", label: "Kind", type: "string" },
-      { id: "origin", label: "Origin", type: "string" },
-      { id: "direction", label: "Direction", type: "string" },
-      { id: "project", label: "Project", type: "string" },
-      { id: "provider", label: "Provider", type: "string" },
-    ],
-  }),
-  createFrameworkSearchSourceManifest({
-    id: "generations.artifacts",
-    domain: "generations",
-    name: "Generated artifacts",
-    resultTypes: ["generation", "artifact", "image", "audio", "video", "document"],
-    facets: [
-      { id: "kind", label: "Kind", type: "string" },
-      { id: "status", label: "Status", type: "string" },
-      { id: "backendId", label: "Backend", type: "string" },
-      { id: "backendSource", label: "Backend source", type: "string" },
-      { id: "model", label: "Model", type: "string" },
-    ],
-  }),
-  createFrameworkSearchSourceManifest({
-    id: "code.symbols",
-    domain: "code",
-    name: "Code",
-    resultTypes: ["project", "file", "symbol", "doc"],
-    facets: [
-      { id: "language", label: "Language", type: "string" },
-      { id: "extension", label: "Extension", type: "string" },
-      { id: "relativePath", label: "Path", type: "string" },
-    ],
-  }),
-  createFullSearchSourceManifest({
-    id: "local.files",
-    domain: "files",
-    name: "Local files",
-    resultTypes: ["file", "folder", "application"],
-    contentDepth: "metadata_content",
-    facets: [
-      { id: "kind", label: "Kind", type: "string" },
-      { id: "extension", label: "Extension", type: "string" },
-      { id: "root", label: "Root", type: "string" },
-    ],
-  }),
-  createFullSearchSourceManifest({
-    id: "native.system",
-    domain: "native",
-    name: "Native system",
-    resultTypes: ["application", "preference", "shortcut", "contact"],
-    facets: [
-      { id: "kind", label: "Kind", type: "string" },
-      { id: "permission", label: "Permission", type: "string" },
-    ],
-  }),
-  createFullSearchSourceManifest({
-    id: "web.ingested",
-    domain: "web",
-    name: "Web ingested",
-    resultTypes: ["page", "bookmark", "crawl"],
-    contentDepth: "derived_text",
-    facets: [
-      { id: "host", label: "Host", type: "string" },
-      { id: "crawlScope", label: "Crawl scope", type: "string" },
-    ],
-  }),
-  createFullSearchSourceManifest({
-    id: "external.cache",
-    domain: "external",
-    name: "External cache",
-    resultTypes: ["external_record", "provider_item", "thread"],
-    contentDepth: "metadata_content",
-    facets: [
-      { id: "provider", label: "Provider", type: "string" },
-      { id: "app", label: "App", type: "string" },
-      { id: "syncMode", label: "Sync mode", type: "string" },
-    ],
-  }),
-  createCommandSearchSourceManifest(),
-];
+const BUILTIN_SEARCH_SOURCES: SearchSourceManifest[] = createBuiltinSearchSourceManifests();
 
 export function isSearchAdminCommand(command: string | undefined): boolean {
   return !!command && SEARCH_ADMIN_COMMANDS.has(command);
