@@ -592,6 +592,139 @@ test("Agents V1 safe surface projection reports external route gaps fail-closed"
   ]);
 });
 
+test("Agents V1 hermetic route acceptance covers internal Mac, external support, and subagent delegation", () => {
+  const internalAssignment: AgentAssignmentRoute = {
+    id: "assignment.mac",
+    agentId: "agent.operator",
+    kind: "internal_mac_chat",
+    status: "active",
+    channel: "mac",
+    endpointRef: "clawix://workspace/main",
+    scopeType: "workspace",
+    scopeId: "workspace_1",
+  };
+  const internalRoute = evaluateAgentAssignmentRoute({
+    assignment: internalAssignment,
+    kind: "internal_mac_chat",
+    channel: "mac",
+    endpointRef: "clawix://workspace/main",
+    now: "2026-05-17T10:00:00.000Z",
+  });
+  assert.equal(internalRoute.allowed, true);
+  assert.deepEqual(internalRoute.reasons, []);
+
+  const externalAssignment: AgentAssignmentRoute = {
+    id: "assignment.web",
+    agentId: "agent.support",
+    kind: "external_web_chat",
+    status: "active",
+    channel: "chat",
+    endpointRef: "web://support-widget",
+    privacyPolicy: "hashed",
+    externalDisclosure: "transparent_agent",
+  };
+  const externalRoute = evaluateAgentAssignmentRoute({
+    assignment: externalAssignment,
+    kind: "external_web_chat",
+    channel: "chat",
+    endpointRef: "web://support-widget",
+    now: "2026-05-17T10:00:00.000Z",
+  });
+  assert.equal(externalRoute.allowed, true);
+
+  const identity = resolveAgentExternalIdentity({
+    provider: "web",
+    externalId: "visitor_42",
+    email: "customer@example.com",
+    customerId: "customer_1",
+    ip: "203.0.113.42",
+  });
+  const supportProjection = createAgentSupportInboxProjection({
+    sessionId: "session.support.1",
+    assignment: externalAssignment,
+    identity,
+    initialMessage: "Need help with billing",
+    now: "2026-05-17T10:00:00.000Z",
+  });
+  assert.equal(identity.boundary.scopeType, "customer");
+  assert.equal(supportProjection.conversation.customerId, "customer_1");
+  assert.equal(supportProjection.conversation.metadata.boundaryScopeId, "customer_1");
+  assert.equal("ip" in identity.telemetry, false);
+
+  const customerMemory = evaluateAgentMemoryAccess({
+    readScopes: [{ layer: "customer", scopeId: "customer_1", access: "read" }],
+    writeScopes: [{ layer: "session", scopeId: "session.support.1", access: "write" }],
+    writePolicy: "private_only",
+    crossUserBoundary: "explicit_grant_only",
+  }, {
+    operation: "read",
+    layer: "customer",
+    scopeId: "customer_1",
+    boundary: identity.boundary,
+  });
+  assert.equal(customerMemory.allowed, true);
+
+  const subagentAssignment: AgentAssignmentRoute = {
+    id: "assignment.subagent",
+    agentId: "agent.researcher",
+    kind: "subagent_delegation",
+    status: "active",
+    channel: "runtime",
+    endpointRef: "agent://researcher",
+    scopeType: "project",
+    scopeId: "project_1",
+  };
+  const subagentRoute = evaluateAgentAssignmentRoute({
+    assignment: subagentAssignment,
+    kind: "subagent_delegation",
+    channel: "runtime",
+    endpointRef: "agent://researcher",
+    now: "2026-05-17T10:00:00.000Z",
+  });
+  assert.equal(subagentRoute.allowed, true);
+
+  const projectRequest: AgentAccessRequest = {
+    resourceType: "collection",
+    resourceId: "project_notes",
+    action: "read",
+    scopeType: "project",
+    scopeId: "project_1",
+  };
+  const allowProject = (id: string): AgentResourceGrant => ({
+    id,
+    resourceType: "collection",
+    resourceId: "project_notes",
+    action: "read",
+    scopeType: "project",
+    scopeId: "project_1",
+    effect: "allow",
+  });
+  const delegation = evaluateAgentDelegationAccess({
+    parent: {
+      requested: projectRequest,
+      agentGrants: [allowProject("parent-agent")],
+      assignmentGrants: [allowProject("parent-assignment")],
+      executionProfileGrants: [allowProject("parent-execution")],
+      connectorGrants: [allowProject("parent-connector")],
+      hostGrants: [allowProject("parent-host")],
+      runScopeGrants: [allowProject("parent-run")],
+    },
+    child: {
+      requested: projectRequest,
+      agentGrants: [allowProject("child-agent")],
+      assignmentGrants: [allowProject("child-assignment")],
+      executionProfileGrants: [allowProject("child-execution")],
+      connectorGrants: [allowProject("child-connector")],
+      hostGrants: [allowProject("child-host")],
+      runScopeGrants: [allowProject("child-run")],
+    },
+  });
+  assert.equal(delegation.allowed, true);
+  assert.deepEqual(delegation.reasons, []);
+  assert.equal(delegation.matchedGrantIds.includes("parent-agent"), true);
+  assert.equal(delegation.matchedGrantIds.includes("child-agent"), true);
+});
+
 test("Agents V1 audit events redact metadata before recording", () => {
   const audit = createAgentAuditEvent({
     kind: "budget_evaluation",
