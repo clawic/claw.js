@@ -1,12 +1,16 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
-import { clawCliCommandRegistry, type ClawCliSearchResult } from "@clawjs/core";
+import { clawCliCommandRegistry, type ClawCliCommandRegistryEntry, type ClawCliSearchResult } from "@clawjs/core";
 import {
   DEFAULT_SEARCH_BUDGETS,
   SEARCH_PROFILES,
+  SearchStore,
   createCommandSearchSourceManifest,
   createFrameworkSearchSourceManifest,
+  type SearchAction,
+  type SearchDocumentInput,
   type SearchSourceManifest,
 } from "@clawjs/search";
 
@@ -14,6 +18,7 @@ import type { CliContext } from "./index.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { writeCommandJsonOk, writeJsonOk } from "./cli-json.ts";
 import { buildCommandHelp, searchCliDiscovery } from "./cli-surface.ts";
+import { resolveClawjsDataRoot } from "./v1-data.ts";
 
 const SEARCH_ADMIN_COMMANDS = new Set(["sources", "status", "profiles", "saved", "monitors", "actions", "explain"]);
 
@@ -53,6 +58,79 @@ const BUILTIN_SEARCH_SOURCES: SearchSourceManifest[] = [
 
 export function isSearchAdminCommand(command: string | undefined): boolean {
   return !!command && SEARCH_ADMIN_COMMANDS.has(command);
+}
+
+export async function runSearchQueryCli(input: {
+  positionals: string[];
+  flags: Record<string, string>;
+  context: CliContext;
+  wantsJson: boolean;
+  binName: string;
+}): Promise<number> {
+  const query = input.positionals.slice(2).join(" ") || input.flags.query;
+  if (!query) {
+    input.context.stderr.write(`Usage: ${input.binName} search query <query> [--domains tasks,notes,...] [--json]\n`);
+    return CLI_EXIT_USAGE;
+  }
+  const store = openCliSearchStore(input.flags);
+  try {
+    registerBuiltinSources(store);
+    const indexedCommands = ensureCommandSourceIndexed(store);
+    const results = store.query({
+      query,
+      profile: input.flags.profile === "full" ? "full" : "framework",
+      domains: parseListFlag(input.flags.domains),
+      sources: parseListFlag(input.flags.sources ?? input.flags.source),
+      limit: input.flags.limit ? Number(input.flags.limit) : undefined,
+      explain: input.flags.explain === "true" || input.flags.explain === "1",
+      surface: input.flags.surface,
+      actor: input.flags.actor,
+    });
+    const data = {
+      ...results,
+      storage: searchStorageMetadata(input.flags),
+      indexedFastPaths: { commands: indexedCommands },
+    };
+    if (input.wantsJson) {
+      writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "query" });
+    } else {
+      input.context.stdout.write(`${results.results.map((result) => `${result.domain}\t${result.score.toFixed(1)}\t${result.id}\t${result.title}`).join("\n")}\n`);
+    }
+    return results.results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+  } finally {
+    store.close();
+  }
+}
+
+export async function runSearchRebuildCli(input: {
+  flags: Record<string, string>;
+  context: CliContext;
+  wantsJson: boolean;
+}): Promise<number> {
+  const store = openCliSearchStore(input.flags);
+  try {
+    store.reset();
+    registerBuiltinSources(store);
+    const reindexed = ensureCommandSourceIndexed(store);
+    const pendingSources = BUILTIN_SEARCH_SOURCES
+      .filter((source) => source.id !== "commands")
+      .map((source) => source.id);
+    const data = {
+      rebuilt: true,
+      reindexed,
+      embeddings: 0,
+      profile: input.flags.profile === "full" ? "full" : "framework",
+      storage: searchStorageMetadata(input.flags),
+      sources: ["commands"],
+      pendingSources,
+      note: "Framework domain sources are registered; each domain keeps its own fast path until its adapter is wired.",
+    };
+    if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "rebuild" });
+    else input.context.stdout.write(`reindexed=${data.reindexed} embeddings=0 index=search.sqlite\n`);
+    return CLI_EXIT_OK;
+  } finally {
+    store.close();
+  }
 }
 
 export async function runCliDiscoverySearch(input: {
@@ -119,23 +197,24 @@ export async function runSearchAdminCli(input: {
   }
 
   if (command === "status") {
-    const sources = BUILTIN_SEARCH_SOURCES.map((source) => ({
-      source: source.id,
-      domain: source.domain,
-      state: source.indexing.defaultState === "on" ? "enabled" : "disabled",
-      backlog: 0,
-      fastPath: source.capabilities.fastPath,
-    }));
+    const store = openCliSearchStore(input.flags);
+    let sources: Array<{ source: string; domain: string; state: string; backlog: number; fastPath: boolean; lastIndexedAt?: string; error?: string }>;
+    try {
+      registerBuiltinSources(store);
+      const manifestById = new Map(BUILTIN_SEARCH_SOURCES.map((source) => [source.id, source]));
+      sources = store.sourceStatus().map((status) => ({
+        ...status,
+        fastPath: manifestById.get(status.source)?.capabilities.fastPath ?? false,
+      }));
+    } finally {
+      store.close();
+    }
     const data = {
       state: "ready",
       profile,
       budgets: DEFAULT_SEARCH_BUDGETS,
       sources,
-      storage: {
-        canonical: "core.sqlite",
-        index: "search.sqlite",
-        indexRebuildable: true,
-      },
+      storage: searchStorageMetadata(input.flags),
     };
     if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "status" });
     else input.context.stdout.write(`state=${data.state} profile=${profile} sources=${sources.length} index=search.sqlite\n`);
@@ -150,7 +229,43 @@ export async function runSearchAdminCli(input: {
 
   if (command === "saved" || command === "monitors") {
     const action = input.positionals[2] ?? "list";
-    const data = { action, items: [], state: "empty", note: `${command} are first-class Search resources; storage lands with the Search service schema.` };
+    const store = openCliSearchStore(input.flags);
+    let data: { action: string; item?: unknown; items: unknown[]; state: string };
+    try {
+      registerBuiltinSources(store);
+      if (command === "saved" && (action === "create" || action === "upsert")) {
+        const id = input.positionals[3] ?? input.flags.id;
+        const query = input.flags.query ?? input.positionals.slice(4).join(" ");
+        if (!id || !query) {
+          input.context.stderr.write(`Usage: ${input.binName} search saved create <id> --query <query> [--name <name>] [--json]\n`);
+          return CLI_EXIT_USAGE;
+        }
+        const item = { id, name: input.flags.name ?? id, query: { query, profile } };
+        store.saveSearch(item);
+        data = { action, item, items: store.listSavedSearches(), state: "ready" };
+      } else if (command === "monitors" && (action === "create" || action === "upsert")) {
+        const id = input.positionals[3] ?? input.flags.id;
+        const savedSearchId = input.flags["saved-search"] ?? input.flags["saved-search-id"] ?? input.positionals[4];
+        if (!id || !savedSearchId) {
+          input.context.stderr.write(`Usage: ${input.binName} search monitors create <id> --saved-search <saved-search-id> [--name <name>] [--json]\n`);
+          return CLI_EXIT_USAGE;
+        }
+        const item = {
+          id,
+          savedSearchId,
+          name: input.flags.name,
+          enabled: input.flags.enabled === undefined ? true : input.flags.enabled !== "false",
+          cadence: input.flags.cadence,
+        };
+        store.saveMonitor(item);
+        data = { action, item, items: store.listMonitors(), state: "ready" };
+      } else {
+        const items = command === "saved" ? store.listSavedSearches() : store.listMonitors();
+        data = { action, items, state: items.length ? "ready" : "empty" };
+      }
+    } finally {
+      store.close();
+    }
     if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: command });
     else input.context.stdout.write(`${command}: ${data.state}\n`);
     return CLI_EXIT_OK;
@@ -158,9 +273,17 @@ export async function runSearchAdminCli(input: {
 
   if (command === "actions") {
     const resultId = input.positionals[2] ?? input.flags["result-id"];
+    const store = openCliSearchStore(input.flags);
+    let indexedActions: SearchAction[] | null = resultId ? [] : null;
+    try {
+      registerBuiltinSources(store);
+      indexedActions = resultId ? store.actionsForResult(resultId) : null;
+    } finally {
+      store.close();
+    }
     const data = {
       resultId: resultId ?? null,
-      actions: resultId ? [] : [
+      actions: resultId ? indexedActions : [
         { id: "open", kind: "open", label: "Open", requiresApproval: false },
         { id: "copy", kind: "copy", label: "Copy reference", requiresApproval: false },
       ],
@@ -194,6 +317,139 @@ export async function runSearchAdminCli(input: {
 
   input.context.stderr.write(`${buildCommandHelp(input.binName, "search") ?? input.usage}\n`);
   return CLI_EXIT_USAGE;
+}
+
+function openCliSearchStore(flags: Record<string, string>): SearchStore {
+  const dbPath = resolveSearchDbPath(flags);
+  try {
+    return new SearchStore(dbPath);
+  } catch (error) {
+    if (hasExplicitSearchStorage(flags)) throw error;
+    return new SearchStore(path.join(os.tmpdir(), "claw-search.sqlite"));
+  }
+}
+
+function resolveSearchDbPath(flags: Record<string, string>): string {
+  if (flags["search-db-path"]) return path.resolve(flags["search-db-path"]);
+  if (process.env.CLAW_SEARCH_DB_PATH) return path.resolve(process.env.CLAW_SEARCH_DB_PATH);
+  const env = flags["data-dir"] ? { ...process.env, CLAW_DATA_DIR: flags["data-dir"] } : process.env;
+  return path.join(resolveClawjsDataRoot(env), "search.sqlite");
+}
+
+function hasExplicitSearchStorage(flags: Record<string, string>): boolean {
+  return !!(flags["search-db-path"] || flags["data-dir"] || process.env.CLAW_SEARCH_DB_PATH || process.env.CLAW_DATA_DIR || process.env.CLAW_HOME);
+}
+
+function searchStorageMetadata(flags: Record<string, string>): { canonical: string; index: string; indexRebuildable: true } {
+  return {
+    canonical: "core.sqlite",
+    index: "search.sqlite",
+    indexRebuildable: true,
+  };
+}
+
+function registerBuiltinSources(store: SearchStore): void {
+  for (const source of BUILTIN_SEARCH_SOURCES) {
+    store.registerSource(source);
+  }
+}
+
+function ensureCommandSourceIndexed(store: SearchStore): number {
+  let reindexed = 0;
+  for (const command of clawCliCommandRegistry.commands) {
+    store.upsertDocument(commandSearchDocument(command));
+    reindexed += 1;
+  }
+  store.setCursor({
+    source: "commands",
+    cursor: `registry:${clawCliCommandRegistry.version}:${clawCliCommandRegistry.commands.length}`,
+    metadata: { version: clawCliCommandRegistry.version },
+  });
+  return reindexed;
+}
+
+function commandSearchDocument(command: ClawCliCommandRegistryEntry): SearchDocumentInput {
+  const canonicalName = command.target ?? command.name;
+  const references = [...command.docs, ...command.adrs, ...command.tests, command.source.file];
+  const aliases = command.aliases ?? [];
+  const title = command.name;
+  const subtitle = command.kind === "alias" ? `Alias for ${canonicalName}` : command.kind;
+  const snippet = command.summary;
+  const usage = command.usage ? `Usage: ${command.usage}` : "";
+  const body = [
+    command.name,
+    canonicalName,
+    command.kind,
+    command.summary,
+    usage,
+    aliases.length ? `Aliases: ${aliases.join(", ")}` : "",
+    command.family ? `Family: ${command.family}` : "",
+    command.support.reason,
+    command.support.scenario,
+    references.join("\n"),
+  ].filter(Boolean).join("\n");
+  return {
+    id: `commands:${command.name}`,
+    source: "commands",
+    domain: "commands",
+    type: "command",
+    title,
+    subtitle,
+    snippet,
+    body,
+    resourceId: command.name,
+    path: command.source.file,
+    metadata: {
+      canonicalName,
+      kind: command.kind,
+      aliases,
+      family: command.family ?? null,
+      schemaVersion: command.schemaVersion,
+      support: command.support,
+      securityPolicy: command.securityPolicy,
+      docs: command.docs,
+      adrs: command.adrs,
+      tests: command.tests,
+    },
+    rankingHints: {
+      fastPath: 1,
+      command: 1,
+      advanced: command.advanced ? -0.1 : 0,
+    },
+    fragments: [
+      ...command.docs.map((doc, index) => ({
+        id: `commands:${command.name}:doc:${index}`,
+        title: "Documentation",
+        body: doc,
+        sortOrder: index,
+        metadata: { kind: "doc", path: doc },
+      })),
+      ...command.adrs.map((adr, index) => ({
+        id: `commands:${command.name}:adr:${index}`,
+        title: "ADR",
+        body: adr,
+        sortOrder: 100 + index,
+        metadata: { kind: "adr", path: adr },
+      })),
+      ...command.tests.map((test, index) => ({
+        id: `commands:${command.name}:test:${index}`,
+        title: "Test",
+        body: test,
+        sortOrder: 200 + index,
+        metadata: { kind: "test", path: test },
+      })),
+    ],
+    actions: [
+      { id: "help", kind: "run", label: `Show ${command.name} help`, requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy command reference", requiresApproval: false },
+    ],
+  };
+}
+
+function parseListFlag(value: string | undefined): string[] | undefined {
+  if (!value) return undefined;
+  const entries = value.split(",").map((entry) => entry.trim()).filter(Boolean);
+  return entries.length ? entries : undefined;
 }
 
 function searchRegisteredLocalFiles(query: string, cwd: string): ClawCliSearchResult[] {

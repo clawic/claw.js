@@ -78,7 +78,7 @@ import { runExtendedProductivityCli } from "./cli-productivity-extended-command.
 import { runCodeCli } from "./cli-code-command.ts";
 import { runPlanCli } from "./cli-plan-command.ts";
 import { runKnowledgeTailCli } from "./cli-knowledge-tail-command.ts";
-import { isSearchAdminCommand, runCliDiscoverySearch, runSearchAdminCli } from "./cli-search-command.ts"; import { runGuidanceResourcesCli } from "./cli-guidance-resources-command.ts";
+import { isSearchAdminCommand, runCliDiscoverySearch, runSearchAdminCli, runSearchQueryCli, runSearchRebuildCli } from "./cli-search-command.ts"; import { runGuidanceResourcesCli } from "./cli-guidance-resources-command.ts";
 import { runNeedsCli } from "./cli-needs-command.ts";
 import { runCommandsCli } from "./cli-commands-command.ts";
 import { runPublicPortalShortcut, writeMissingSubcommandJsonHelp, writePublicPortalHelpOnly } from "./cli-public-portal-routes.ts";
@@ -668,47 +668,10 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     return await runCliDiscoverySearch({ positionals, flags, context, wantsJson, binName, usage });
   }
   if (group === "search" && command === "query") {
-    const query = subcommand || flags.query;
-    if (!query) {
-      context.stderr.write(`Usage: ${binName} search query <query> [--domains tasks,notes,...]\n`);
-      return CLI_EXIT_USAGE;
-    }
-    const searchWorkspaceRoot = flags.workspace || context.cwd;
-    const claw = await createCliWorkspaceClaw(
-      resolveRuntimeAdapterId(flags),
-      flags,
-      searchWorkspaceRoot,
-      flags["app-id"] || "clawjs-app",
-      flags["workspace-id"] || pathSafeBasename(searchWorkspaceRoot),
-      flags["agent-id"] || flags["workspace-id"] || pathSafeBasename(searchWorkspaceRoot),
-      context.cwd,
-    );
-    const results = await claw.search.query({
-      query,
-      domains: parseCsvFlag(flags.domains) as Array<"areas" | "tasks" | "goals" | "projects" | "milestones" | "activity" | "blockers" | "artifacts" | "decisions" | "work_sessions" | "assignments" | "handoffs" | "approvals" | "capacity" | "reminders" | "deadlines" | "notes" | "people" | "inbox" | "events">,
-      strategy: flags.strategy as "auto" | "keyword" | "semantic" | "hybrid" | undefined,
-      ...(flags.limit ? { limit: Number(flags.limit) } : {}),
-      includeArchived: readBooleanFlag(argv, flags, "include-archived", false),
-    });
-    if (wantsJson) writeRootJson(results);
-    else context.stdout.write(`${results.map((result) => `${result.domain} ${result.score.toFixed(1)} ${result.id} ${result.title}`).join("\n")}\n`);
-    return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+    return await runSearchQueryCli({ positionals, flags, context, wantsJson, binName });
   }
   if (group === "search" && command === "rebuild") {
-    const searchWorkspaceRoot = flags.workspace || context.cwd;
-    const claw = await createCliWorkspaceClaw(
-      resolveRuntimeAdapterId(flags),
-      flags,
-      searchWorkspaceRoot,
-      flags["app-id"] || "clawjs-app",
-      flags["workspace-id"] || pathSafeBasename(searchWorkspaceRoot),
-      flags["agent-id"] || flags["workspace-id"] || pathSafeBasename(searchWorkspaceRoot),
-      context.cwd,
-    );
-    const result = await claw.workspaceIndex.rebuild();
-    if (wantsJson) writeRootJson(result);
-    else context.stdout.write(`reindexed=${result.reindexed} embeddings=${result.embeddings}\n`);
-    return CLI_EXIT_OK;
+    return await runSearchRebuildCli({ flags, context, wantsJson });
   }
   {
     const v1DataExitCode = await runV1DataCli({

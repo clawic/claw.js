@@ -90,6 +90,12 @@ export class SearchStore {
     this.seedProfiles();
   }
 
+  reset(): void {
+    this.db.exec(SEARCH_RESET_SQL);
+    this.db.exec(SEARCH_SCHEMA_SQL);
+    this.seedProfiles();
+  }
+
   close(): void {
     this.db.close();
   }
@@ -369,6 +375,11 @@ export class SearchStore {
     }));
   }
 
+  actionsForResult(resultId: string): SearchAction[] {
+    return (this.db.prepare("SELECT action_json FROM search_actions WHERE document_id = ? ORDER BY action_id ASC").all(resultId) as Array<{ action_json: string }>)
+      .map((action) => parseJson<SearchAction>(action.action_json));
+  }
+
   private seedProfiles(): void {
     const insert = this.db.prepare(`
       INSERT INTO search_profiles (id, label, default_enabled)
@@ -614,4 +625,19 @@ CREATE VIRTUAL TABLE IF NOT EXISTS search_fts USING fts5(
   path,
   tokenize='unicode61'
 );
+`;
+
+const SEARCH_RESET_SQL = String.raw`
+DROP TABLE IF EXISTS search_fts;
+DROP TABLE IF EXISTS search_ranking_cache;
+DROP TABLE IF EXISTS search_vectors;
+DROP TABLE IF EXISTS search_monitors;
+DROP TABLE IF EXISTS saved_searches;
+DROP TABLE IF EXISTS search_tombstones;
+DROP TABLE IF EXISTS search_cursors;
+DROP TABLE IF EXISTS search_actions;
+DROP TABLE IF EXISTS search_fragments;
+DROP TABLE IF EXISTS search_documents;
+DROP TABLE IF EXISTS search_sources;
+DROP TABLE IF EXISTS search_profiles;
 `;
