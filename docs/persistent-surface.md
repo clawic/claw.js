@@ -2075,44 +2075,44 @@ flowchart TD
 
 | ID | Kind | Surface | Owner | Human | Programmatic | Gaps | Path / Key / Value |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `claw.contracts` | root | schema | claw | humanUi | cli, persistence |  | `contracts` |
-| `claw.contracts.api` | root | api | claw |  | serviceApi | humanUi:optional | `contracts/api` |
-| `claw.contracts.protocol` | root | protocol | claw |  | serviceApi | humanUi:optional | `contracts/protocol` |
-| `claw.contracts.events` | root | event | claw |  | serviceApi | humanUi:optional | `contracts/events` |
-| `claw.contracts.schemas` | root | schema | claw |  | sdk, serviceApi, persistence | humanUi:optional | `contracts/schemas` |
-| `claw.contracts.ids` | root | id | claw |  | sdk, serviceApi, persistence | humanUi:optional | `contracts/ids` |
-| `claw.contracts.cli` | root | cli | claw |  | cli | humanUi:optional | `contracts/cli` |
-| `claw.contracts.config` | root | config | claw |  | cli, serviceApi | humanUi:optional | `contracts/config` |
-| `claw.contracts.packages` | root | package | claw |  | sdk, cli | humanUi:optional | `contracts/packages` |
-| `claw.contracts.native` | root | native | claw |  | humanUi, serviceApi | humanUi:optional | `contracts/native` |
-| `claw.contracts.formats` | root | format | claw |  | cli, persistence | humanUi:optional | `contracts/formats` |
-| `claw.contracts.external` | root | external | claw |  | sdk, serviceApi, mcp | humanUi:optional | `contracts/external` |
-| `claw.cli.public` | root | protocol | claw | humanUi | cli |  | `claw` |
-| `claw.cli.commandIntentRegistry` | root | protocol | claw | humanUi | cli, persistence |  | `claw/commands` |
-| `claw.mcp.surface` | root | protocol | claw | humanUi | mcp, sdk, serviceApi |  | `mcp` |
+| `claw.contracts` | root | schema | claw | humanUi | cli, persistence | relay:local-only | `contracts` |
+| `claw.contracts.api` | root | api | claw |  | serviceApi | humanUi:optional<br>relay:local-only | `contracts/api` |
+| `claw.contracts.protocol` | root | protocol | claw |  | serviceApi | humanUi:optional<br>relay:local-only | `contracts/protocol` |
+| `claw.contracts.events` | root | event | claw |  | serviceApi | humanUi:optional<br>relay:local-only | `contracts/events` |
+| `claw.contracts.schemas` | root | schema | claw |  | sdk, serviceApi, persistence | humanUi:optional<br>relay:local-only | `contracts/schemas` |
+| `claw.contracts.ids` | root | id | claw |  | sdk, serviceApi, persistence | humanUi:optional<br>relay:local-only | `contracts/ids` |
+| `claw.contracts.cli` | root | cli | claw |  | cli | humanUi:optional<br>relay:local-only | `contracts/cli` |
+| `claw.contracts.config` | root | config | claw |  | cli, serviceApi | humanUi:optional<br>relay:local-only | `contracts/config` |
+| `claw.contracts.packages` | root | package | claw |  | sdk, cli | humanUi:optional<br>relay:local-only | `contracts/packages` |
+| `claw.contracts.native` | root | native | claw |  | humanUi, serviceApi | humanUi:optional<br>relay:local-only | `contracts/native` |
+| `claw.contracts.formats` | root | format | claw |  | cli, persistence | humanUi:optional<br>relay:local-only | `contracts/formats` |
+| `claw.contracts.external` | root | external | claw |  | sdk, serviceApi, mcp | humanUi:optional<br>relay:local-only | `contracts/external` |
+| `claw.cli.public` | root | protocol | claw | humanUi | cli | relay:local-only | `claw` |
+| `claw.cli.commandIntentRegistry` | root | protocol | claw | humanUi | cli, persistence | relay:local-only | `claw/commands` |
+| `claw.mcp.surface` | root | protocol | claw | humanUi | mcp, sdk, serviceApi | relay:local-only | `mcp` |
 | `claw.agents` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp, relay, persistence |  | `agents` |
 | `claw.agents.assignments` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp, relay, persistence |  | `agents/assignments` |
-| `claw.agents.resourceGrants` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp, persistence |  | `agents/resource-grants` |
-| `claw.agents.executionProfiles` | root | protocol | claw | humanUi | sdk, cli, serviceApi, persistence |  | `agents/execution-profiles` |
-| `claw.agents.memoryPolicies` | root | protocol | claw | humanUi | sdk, cli, serviceApi, persistence |  | `agents/memory-policies` |
-| `claw.agents.runs` | root | protocol | claw | humanUi | sdk, cli, serviceApi, persistence |  | `agents/runs` |
-| `claw.support.inbox` | root | protocol | claw | humanUi | sdk, cli, serviceApi, persistence |  | `support/inbox` |
-| `claw.storage.canonical` | root | protocol | claw | humanUi | sdk, cli, serviceApi, persistence |  | `storage` |
-| `claw.host.signed` | root | protocol | claw | humanUi | cli, serviceApi |  | `host` |
-| `claw.host.permissions` | root | protocol | claw | humanUi | cli, serviceApi |  | `host/permissions` |
-| `claw.host.grants` | root | protocol | claw | humanUi | cli, serviceApi |  | `host/grants` |
-| `claw.host.approvals` | root | protocol | claw | humanUi | cli, serviceApi |  | `host/approvals` |
-| `claw.host.audit` | root | protocol | claw | humanUi | cli, serviceApi, persistence |  | `host/audit` |
-| `claw.mac.controlPlane` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp |  | `mac` |
-| `claw.mac.capabilityAtlas` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp, persistence |  | `mac/atlas` |
-| `claw.mac.permissionBroker` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp, persistence |  | `permissions` |
-| `claw.mac.actionBroker` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp |  | `mac/action-broker` |
-| `clawix.ui.chat` | root | protocol | clawix | humanUi | serviceApi |  | `Clawix/chat` |
-| `clawix.companion.client` | root | protocol | clawix | humanUi | serviceApi |  | `Clawix/companion` |
-| `clawix.bridge.local` | root | protocol | clawix | humanUi | serviceApi |  | `clawix-bridge` |
-| `claw.daemon.local` | root | protocol | claw | humanUi | sdk, serviceApi, cli |  | `daemon` |
-| `claw.runtime.agent` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp |  | `runtime/agent` |
-| `claw.sessions` | root | protocol | claw | humanUi | sdk, cli, serviceApi, persistence |  | `sessions` |
+| `claw.agents.resourceGrants` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp, persistence | relay:local-only | `agents/resource-grants` |
+| `claw.agents.executionProfiles` | root | protocol | claw | humanUi | sdk, cli, serviceApi, persistence | relay:local-only | `agents/execution-profiles` |
+| `claw.agents.memoryPolicies` | root | protocol | claw | humanUi | sdk, cli, serviceApi, persistence | relay:local-only | `agents/memory-policies` |
+| `claw.agents.runs` | root | protocol | claw | humanUi | sdk, cli, serviceApi, persistence | relay:local-only | `agents/runs` |
+| `claw.support.inbox` | root | protocol | claw | humanUi | sdk, cli, serviceApi, persistence | relay:local-only | `support/inbox` |
+| `claw.storage.canonical` | root | protocol | claw | humanUi | sdk, cli, serviceApi, persistence | relay:local-only | `storage` |
+| `claw.host.signed` | root | protocol | claw | humanUi | cli, serviceApi | relay:local-only | `host` |
+| `claw.host.permissions` | root | protocol | claw | humanUi | cli, serviceApi | relay:local-only | `host/permissions` |
+| `claw.host.grants` | root | protocol | claw | humanUi | cli, serviceApi | relay:local-only | `host/grants` |
+| `claw.host.approvals` | root | protocol | claw | humanUi | cli, serviceApi | relay:local-only | `host/approvals` |
+| `claw.host.audit` | root | protocol | claw | humanUi | cli, serviceApi, persistence | relay:local-only | `host/audit` |
+| `claw.mac.controlPlane` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp | relay:local-only | `mac` |
+| `claw.mac.capabilityAtlas` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp, persistence | relay:local-only | `mac/atlas` |
+| `claw.mac.permissionBroker` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp, persistence | relay:local-only | `permissions` |
+| `claw.mac.actionBroker` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp | relay:local-only | `mac/action-broker` |
+| `clawix.ui.chat` | root | protocol | clawix | humanUi | serviceApi | relay:local-only | `Clawix/chat` |
+| `clawix.companion.client` | root | protocol | clawix | humanUi | serviceApi | relay:local-only | `Clawix/companion` |
+| `clawix.bridge.local` | root | protocol | clawix | humanUi | serviceApi | relay:local-only | `clawix-bridge` |
+| `claw.daemon.local` | root | protocol | claw | humanUi | sdk, serviceApi, cli | relay:local-only | `daemon` |
+| `claw.runtime.agent` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp | relay:local-only | `runtime/agent` |
+| `claw.sessions` | root | protocol | claw | humanUi | sdk, cli, serviceApi, persistence | relay:local-only | `sessions` |
 | `claw.remote.client` | root | protocol | external | humanUi | relay |  | `remote-client` |
 | `claw.relay` | root | protocol | claw | humanUi | relay, serviceApi |  | `relay` |
 | `claw.relay.connector` | root | protocol | claw | humanUi | relay, serviceApi |  | `relay/connector` |
