@@ -38,10 +38,12 @@ system registry in `packages/clawjs-core/src/dense-data-os.ts` and
 Dense domains are areas where specialized software usually exists because the
 data is relational, regulated, evidence-heavy, or operationally dense. The
 first-wave systems are Health/EHR, Research/CTMS, Biology, Labs/LIMS, Legal,
-ERP, CRM, Finance/Accounting, Education/LMS, Manufacturing/MES, and
-Operations/ITSM. The roadmap keeps HR/HRIS, SCM, WMS, TMS, procurement, GRC,
-real estate, insurance, government, construction, IoT, CMS, PIM/PLM, pharma,
-CMMS, and ELN visible before they graduate into deeper packs.
+ERP, CRM, Finance/Accounting, Education/LMS, HR/HRIS, Manufacturing/MES,
+Operations/ITSM, Real Estate/PropTech, Insurance, Maintenance/CMMS,
+Procurement, Warehouse/WMS, Supply Chain/SCM, Transport/TMS, Compliance/GRC,
+Government/Gov, Construction, IoT, ELN, Content/CMS, Product/PIM/PLM, and
+Pharma/GxP. The roadmap remains available for additional dense software
+categories before they graduate into deeper packs.
 
 Dense systems are visible packs and orchestrators over shared canonical
 collections. They do not own duplicate identity, notes, documents, signals,
