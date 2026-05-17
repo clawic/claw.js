@@ -9,6 +9,7 @@ import {
   createMeshRevocation,
   createRemoteAgentServiceExecutionReceipt,
   createRemoteCompatibilityAdapterReceipt,
+  createRemoteGatewayAuditReceipt,
   createSyncResourceManifest,
   evaluateRemoteAgentServiceAccess,
   remoteSyncRequiredRouteIds,
@@ -269,6 +270,25 @@ function remoteAgentServiceBudgetFromInput(input: Record<string, unknown>, assig
   };
 }
 
+function gatewayAuditReceiptFromInput(input: Record<string, unknown>) {
+  const sourceEventType = input.sourceEventType === "remote.agent_service.evaluated" || input.sourceEventType === "gateway.agent_service.execution"
+    ? input.sourceEventType
+    : "remote.access.evaluated";
+  return createRemoteGatewayAuditReceipt({
+    sourceEventType,
+    routeId: stringValue(input.routeId ?? input["route-id"], "remote.chatGateway"),
+    actor: meshActorFromInput(input),
+    resourceType: stringValue(input.resourceType ?? input["resource-type"], "session"),
+    ...(typeof input.resourceId === "string" || typeof input["resource-id"] === "string"
+      ? { resourceId: stringValue(input.resourceId ?? input["resource-id"], "session.default") }
+      : {}),
+    action: stringValue(input.action, "read"),
+    decision: input.decision === "deny" ? "deny" : "allow",
+    createdAt: stringValue(input.createdAt ?? input.now, "2026-05-17T10:13:00.000Z"),
+    signedHostAuditPersisted: input.signedHostAuditPersisted === true || input["host-audit-persisted"] === true,
+  });
+}
+
 export function registerRemoteSyncRoutes(app: FastifyInstance): void {
   app.get(clawApiPath("remote/classifications"), async () => remoteClassificationsPayload());
 
@@ -357,6 +377,12 @@ export function registerRemoteSyncRoutes(app: FastifyInstance): void {
       writes: false,
     };
   });
+
+  app.post(clawApiPath("gateway/audit/receipts"), async (request) => ({
+    status: "dry_run_external_pending",
+    receipt: gatewayAuditReceiptFromInput(readBody(request)),
+    writes: false,
+  }));
 
   app.get(clawApiPath("sync/manifests"), async (request) => {
     const query = request.query as Record<string, unknown>;

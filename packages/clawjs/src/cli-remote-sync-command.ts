@@ -11,6 +11,7 @@ import {
   createRemoteAgentServiceExecutionReceipt,
   createRemoteClientCacheSnapshot,
   createRemoteCompatibilityAdapterReceipt,
+  createRemoteGatewayAuditReceipt,
   createRemoteSecretProviderReceipt,
   createSyncResourceManifest,
   createTransportHandshakeReceipt,
@@ -684,6 +685,38 @@ export async function runGatewayCli(input: RemoteSyncCliInput): Promise<number> 
     }
     return writeOutput(input, "gateway", decision, `agent-service: ${decision.allowed ? "allow" : "deny"}`, command);
   }
+  if (command === "audit") {
+    const usage = "gateway audit --state-dir <dir> --record true --route-id <route-id> --resource-type <type> --action <action> --coordinator-private-key-file <pem> --coordinator-public-key-file <pem>";
+    const store = requireStateStore(input, usage);
+    if (typeof store === "number") return store;
+    const signer = requireCoordinatorSigner(input, usage);
+    if (typeof signer === "number") return signer;
+    const routeId = input.flags["route-id"];
+    const resourceType = input.flags["resource-type"];
+    const action = input.flags.action;
+    if (!routeId || !resourceType || !action) return missing(input, usage);
+    const now = input.flags.now ?? new Date().toISOString();
+    const receipt = createRemoteGatewayAuditReceipt({
+      sourceEventType: input.flags["source-event-type"] === "remote.agent_service.evaluated" || input.flags["source-event-type"] === "gateway.agent_service.execution"
+        ? input.flags["source-event-type"]
+        : "remote.access.evaluated",
+      routeId,
+      actor: actorContextFromFlags(input),
+      resourceType,
+      ...(input.flags["resource-id"] ? { resourceId: input.flags["resource-id"] } : {}),
+      action,
+      decision: input.flags.decision === "deny" ? "deny" : "allow",
+      createdAt: now,
+      signedHostAuditPersisted: input.flags["host-audit-persisted"] === "true",
+    });
+    const state = store.recordRemoteGatewayAuditReceipt(receipt, { now, signer });
+    return writeOutput(input, "gateway", {
+      status: "signed_gateway_audit_receipt_recorded",
+      writes: false,
+      receipt: state.receipt,
+      state,
+    }, "audit: signed_gateway_audit_receipt_recorded", command);
+  }
   if (command === "secret-lease" || command === "secret-provider") {
     const usage = `gateway ${command} --state-dir <dir> --secret-ref <ref> --resource-id <id> --coordinator-private-key-file <pem> --coordinator-public-key-file <pem> [--action <action>] [--ttl-seconds <seconds>]`;
     const store = requireStateStore(input, usage);
@@ -735,7 +768,7 @@ export async function runGatewayCli(input: RemoteSyncCliInput): Promise<number> 
     }
     return writeOutput(input, "gateway", { status: "signed_secret_lease_issued", writes: false, ...state }, "secret-lease: signed_secret_lease_issued", command);
   }
-  return missing(input, "gateway serve|project|conformance|agent-service|secret-lease|secret-provider");
+  return missing(input, "gateway serve|project|conformance|agent-service|audit|secret-lease|secret-provider");
 }
 
 export function remoteSyncExitForPayload(payload: { status?: string; missingRoutes?: unknown[] }): number {

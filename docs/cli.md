@@ -211,6 +211,7 @@ claw gateway project --state-dir .claw/remote-sync --record true --gateway-node 
 claw gateway conformance --json
 claw gateway agent-service --tenant-id tenant.acme --agent-id agent.support --assignment-id assignment.service --estimated-cost-cents 300 --json
 claw gateway agent-service --tenant-id tenant.acme --agent-id agent.support --assignment-id assignment.service --estimated-cost-cents 300 --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
+claw gateway audit --route-id remote.chatGateway --resource-type session --resource-id session.demo --action read --actor-kind human --actor-id user.remote --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 claw gateway secret-lease --state-dir .claw/remote-sync --secret-ref vault://agents/support --resource-id skills:default --agent-id agent.support --assignment-id assignment.service --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 claw gateway secret-provider --state-dir .claw/remote-sync --secret-ref vault://agents/support --resource-id skills:default --provider-id provider.1password --credential-binding-id credential.support --agent-id agent.support --assignment-id assignment.service --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 ```
@@ -254,6 +255,12 @@ receipt binds tenant, agent, assignment, route, budget, billing account, meter,
 isolation key, and audit id; without approved runtime/billing execution it
 marks `agent_runtime_execution` and `billing_meter_persistence` as
 `external_pending`.
+`gateway audit --record true` records a signed `RemoteGatewayAuditReceipt`
+that bridges a Gateway authorization/runtime event to
+`hostAuditStore: signed_host_audit`. It binds actor, route, resource, action,
+and allow/deny decision, but keeps `signed_host_audit_persistence` as
+`external_pending` until a signed host audit store physically persists the
+event.
 `gateway secret-lease` records a signed, expiring lease for a secret reference,
 never reads or returns the secret value, and rejects plaintext-return flags.
 `gateway secret-provider` adds a signed provider receipt bound to a broker

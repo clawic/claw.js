@@ -154,6 +154,11 @@ required broker-lease grant. Plaintext secret access is always denied, even
 when other grants match. Every evaluation emits an audit decision with actor,
 node, route, resource, action, trust mode, classification, and allow/deny
 outcome.
+`RemoteGatewayAuditReceipt` is the signed local host-audit bridge for those
+decisions and Gateway runtime events. The receipt binds actor, route, resource,
+action, allow/deny decision, and `hostAuditStore: signed_host_audit`. It remains
+no-write and marks `signed_host_audit_persistence` as external pending until a
+signed host audit store physically persists the event.
 
 ## Enforcement
 
@@ -187,7 +192,7 @@ entrypoints:
 - `claw remote compat`
 - `claw sync manifest|status|plan|run|reconcile|conflicts`
 - `claw nodes list|pair|trust|revoke|invite|share|heartbeat`
-- `claw gateway serve|project|conformance`
+- `claw gateway serve|project|conformance|audit`
 
 Mutation commands such as node pairing, trust changes, gateway serving, and
 real sync execution must remain dry-run or signed-host/Coordinator-gated until

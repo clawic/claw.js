@@ -109,6 +109,7 @@ POST /v1/mesh/invitations/accept
 POST /v1/mesh/shares
 POST /v1/mesh/revocations
 POST /v1/gateway/agent-service/evaluate
+POST /v1/gateway/audit/receipts
 ```
 
 The mutation-shaped Relay endpoints are dry-run until signed Coordinator/host
@@ -187,6 +188,13 @@ denied remotely until reclassified. Secret references require a broker-lease
 grant and plaintext secret access is always rejected. The decision emits audit
 metadata for the actor, node, route, resource, action, trust mode,
 classification, and allow/deny outcome.
+`RemoteGatewayAuditReceipt` is the signed local bridge from those decisions to
+the host audit boundary. `claw gateway audit --record true` and
+`/v1/gateway/audit/receipts` bind the actor, route, resource, action, decision,
+and `hostAuditStore: signed_host_audit` without claiming that the physical host
+audit store has already persisted the event. Until an approved signed-host run
+proves that persistence, the receipt keeps
+`signed_host_audit_persistence` as `EXTERNAL PENDING` and `writes: false`.
 
 ## Data Ownership
 

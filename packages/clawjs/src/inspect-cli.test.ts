@@ -481,6 +481,24 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.equal(recordedAgentServicePayload.receipt.writes, false);
   assert.equal(recordedAgentServicePayload.state.durable, true);
   assert.equal(recordedAgentServicePayload.state.coordinatorSignature?.verified, true);
+
+  const gatewayAudit = await runCliCapture(["gateway", "audit", "--route-id", "remote.chatGateway", "--resource-type", "session", "--resource-id", "session.demo", "--action", "read", "--actor-kind", "human", "--actor-id", "user.remote", "--state-dir", stateDir, "--record", "true", ...coordinatorSigningFlags, "--json"], process.cwd());
+  assert.equal(gatewayAudit.code, CLI_EXIT_OK);
+  const gatewayAuditPayload = parseCliJson<{
+    status: string;
+    writes: boolean;
+    receipt: { routeId: string; hostAuditStore: string; signedHostAuditPersisted: boolean; externalPending: string[]; writes: boolean };
+    state: { durable: boolean; coordinatorSignature?: { verified: boolean } };
+  }>(gatewayAudit.stdout).data;
+  assert.equal(gatewayAuditPayload.status, "signed_gateway_audit_receipt_recorded");
+  assert.equal(gatewayAuditPayload.writes, false);
+  assert.equal(gatewayAuditPayload.receipt.routeId, "remote.chatGateway");
+  assert.equal(gatewayAuditPayload.receipt.hostAuditStore, "signed_host_audit");
+  assert.equal(gatewayAuditPayload.receipt.signedHostAuditPersisted, false);
+  assert.equal(gatewayAuditPayload.receipt.externalPending.includes("signed_host_audit_persistence"), true);
+  assert.equal(gatewayAuditPayload.receipt.writes, false);
+  assert.equal(gatewayAuditPayload.state.durable, true);
+  assert.equal(gatewayAuditPayload.state.coordinatorSignature?.verified, true);
 });
 
 test("runCli exposes an agent inspection fiche", async () => {

@@ -122,6 +122,33 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(agentServiceExecutionPayload.receipt.writes, false);
     assert.equal(agentServiceExecutionPayload.writes, false);
 
+    const gatewayAudit = await built.app.inject({
+      method: "POST",
+      url: "/v1/gateway/audit/receipts",
+      headers: { "content-type": "application/json" },
+      payload: {
+        routeId: "remote.chatGateway",
+        actorKind: "human",
+        actorId: "user.remote",
+        resourceType: "session",
+        resourceId: "session.demo",
+        action: "read",
+      },
+    });
+    assert.equal(gatewayAudit.statusCode, 200);
+    const gatewayAuditPayload = gatewayAudit.json() as {
+      status: string;
+      receipt: { routeId: string; hostAuditStore: string; signedHostAuditPersisted: boolean; externalPending: string[]; writes: boolean };
+      writes: boolean;
+    };
+    assert.equal(gatewayAuditPayload.status, "dry_run_external_pending");
+    assert.equal(gatewayAuditPayload.receipt.routeId, "remote.chatGateway");
+    assert.equal(gatewayAuditPayload.receipt.hostAuditStore, "signed_host_audit");
+    assert.equal(gatewayAuditPayload.receipt.signedHostAuditPersisted, false);
+    assert.equal(gatewayAuditPayload.receipt.externalPending.includes("signed_host_audit_persistence"), true);
+    assert.equal(gatewayAuditPayload.receipt.writes, false);
+    assert.equal(gatewayAuditPayload.writes, false);
+
     const manifests = await built.app.inject({ method: "GET", url: "/v1/sync/manifests?driver=skills" });
     assert.equal(manifests.statusCode, 200);
     const manifestsPayload = manifests.json() as { manifests: Array<{ driver: string; secretPolicy: { plaintextReplication: boolean } }> };

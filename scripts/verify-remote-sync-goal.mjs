@@ -15,6 +15,7 @@ import {
   createMeshRevocation,
   createRemoteAgentServiceExecutionReceipt,
   createRemoteCompatibilityAdapterReceipt,
+  createRemoteGatewayAuditReceipt,
   createSyncResourceManifest,
   evaluateRemoteAgentServiceAccess,
   evaluateRemoteAccess,
@@ -30,6 +31,7 @@ import {
   remoteAgentServiceDecisionSchema,
   remoteAgentServiceExecutionReceiptSchema,
   remoteCompatibilityAdapterReceiptSchema,
+  remoteGatewayAuditReceiptSchema,
   remoteSecretLeaseSchema,
   remoteSyncRequiredDecisionIds,
   remoteSyncRequiredRouteIds,
@@ -72,6 +74,7 @@ const requiredServiceApiRoutes = [
   "gateway/conformance",
   "gateway/agent-service/evaluate",
   "gateway/agent-service/executions",
+  "gateway/audit/receipts",
   "sync/manifests",
   "sync/changes",
   "sync/plan",
@@ -105,6 +108,8 @@ const requiredDocSnippets = [
   "multi-tenant agent service",
   "remote.agent_service.evaluated",
   "/v1/gateway/agent-service/evaluate",
+  "/v1/gateway/audit/receipts",
+  "RemoteGatewayAuditReceipt",
   "mesh.resourceShare",
   "MeshInvitation",
   "MeshInvitationAcceptance",
@@ -608,6 +613,21 @@ if (remoteAccessDenied.allowed) fail("remote access evaluator must fail closed f
 if (!remoteAccessDenied.reasons.includes("remote_classification: blocked is not remote-safe")) {
   fail("remote access evaluator must explain blocked remote classifications");
 }
+const gatewayAuditReceipt = createRemoteGatewayAuditReceipt({
+  sourceEventType: remoteAccessAllowed.audit.eventType,
+  routeId: remoteAccessAllowed.audit.routeId,
+  actor: remoteAccessRequest.actor,
+  resourceType: remoteAccessAllowed.audit.resourceType,
+  resourceId: remoteAccessAllowed.audit.resourceId,
+  action: remoteAccessAllowed.audit.action,
+  decision: remoteAccessAllowed.allowed,
+  createdAt: remoteAccessRequest.now,
+});
+if (!remoteGatewayAuditReceiptSchema.safeParse(gatewayAuditReceipt).success) fail("Gateway audit receipt contract must validate");
+if (gatewayAuditReceipt.hostAuditStore !== "signed_host_audit") fail("Gateway audit receipts must target signed host audit store");
+if (gatewayAuditReceipt.signedHostAuditPersisted !== false) fail("Gateway audit receipts must not claim host persistence without physical validation");
+if (!gatewayAuditReceipt.externalPending.includes("signed_host_audit_persistence")) fail("Gateway audit receipts must mark signed host audit persistence external pending");
+if (gatewayAuditReceipt.writes !== false) fail("Gateway audit receipts must be no-write contracts");
 
 const packageJson = JSON.parse(readRequired("package.json"));
 if (packageJson.scripts?.["test:remote-sync-goal"] !== "node --import tsx ./scripts/verify-remote-sync-goal.mjs") {
