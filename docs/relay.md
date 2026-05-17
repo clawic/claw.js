@@ -162,8 +162,12 @@ The multi-tenant agent service path is evaluated through the same Gateway
 contract. A request must match tenant, agent, assignment, route, budget,
 billing account, tenant isolation key, and audit requirement before it is
 allowed. The evaluator returns `remote.agent_service.evaluated` audit metadata
-and `writes: false`; real hosted execution remains signed-host/Coordinator
-gated.
+and `writes: false`.
+`RemoteAgentServiceExecutionReceipt` records the signed local runtime/billing
+projection for an allowed service decision. It binds the assignment and budget
+to the billing meter and isolation key, but real runtime execution and billing
+meter persistence remain `EXTERNAL PENDING` until a signed host/Coordinator run
+proves them.
 Gateway deployment itself is also represented in the signed local ledger:
 `claw gateway serve --record true` records a self-hosted projection and
 `claw gateway project --record true` records a hosted projection. Both use

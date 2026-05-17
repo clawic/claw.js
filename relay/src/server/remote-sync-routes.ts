@@ -6,6 +6,7 @@ import {
   createMeshInvitation,
   createMeshResourceShare,
   createMeshRevocation,
+  createRemoteAgentServiceExecutionReceipt,
   createRemoteCompatibilityAdapterReceipt,
   createSyncResourceManifest,
   evaluateRemoteAgentServiceAccess,
@@ -310,6 +311,39 @@ export function registerRemoteSyncRoutes(app: FastifyInstance): void {
       assignment,
       budget,
     });
+  });
+
+  app.post(clawApiPath("gateway/agent-service/executions"), async (request) => {
+    const body = readBody(request);
+    const assignment = remoteAgentServiceAssignmentFromInput(body);
+    const budget = remoteAgentServiceBudgetFromInput(body, assignment);
+    const agentRequest = {
+      tenantId: stringValue(body.tenantId ?? body["tenant-id"], assignment.tenantId),
+      agentId: stringValue(body.agentId ?? body["agent-id"], assignment.agentId),
+      assignmentId: stringValue(body.assignmentId ?? body["assignment-id"], assignment.assignmentId),
+      routeId: stringValue(body.routeId ?? body["route-id"], "gateway.multiTenantAgentService"),
+      estimatedCostCents: numberValue(body.estimatedCostCents ?? body["estimated-cost-cents"], 0),
+      now: stringValue(body.now, "2026-05-17T10:10:00.000Z"),
+    };
+    const decision = evaluateRemoteAgentServiceAccess({
+      request: agentRequest,
+      assignment,
+      budget,
+    });
+    return {
+      status: "dry_run_external_pending",
+      decision,
+      receipt: createRemoteAgentServiceExecutionReceipt({
+        request: agentRequest,
+        assignment,
+        budget,
+        decision,
+        createdAt: agentRequest.now,
+        runtimeExecutionVerified: body.runtimeExecutionVerified === true,
+        billingMeterPersisted: body.billingMeterPersisted === true,
+      }),
+      writes: false,
+    };
   });
 
   app.get(clawApiPath("sync/manifests"), async (request) => {

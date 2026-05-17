@@ -12,6 +12,7 @@ import {
   createMeshInvitation,
   createMeshResourceShare,
   createMeshRevocation,
+  createRemoteAgentServiceExecutionReceipt,
   createRemoteCompatibilityAdapterReceipt,
   createSyncResourceManifest,
   evaluateRemoteAgentServiceAccess,
@@ -25,6 +26,7 @@ import {
   remoteAccessRequestSchema,
   remoteActorContextSchema,
   remoteAgentServiceDecisionSchema,
+  remoteAgentServiceExecutionReceiptSchema,
   remoteCompatibilityAdapterReceiptSchema,
   remoteSecretLeaseSchema,
   remoteSyncRequiredDecisionIds,
@@ -67,6 +69,7 @@ const requiredServiceApiRoutes = [
   "remote/compatibility/adapters",
   "gateway/conformance",
   "gateway/agent-service/evaluate",
+  "gateway/agent-service/executions",
   "sync/manifests",
   "sync/changes",
   "sync/plan",
@@ -472,6 +475,24 @@ if (!serviceAllowed.allowed) fail(`multi-tenant agent service evaluator must all
 if (serviceAllowed.audit.eventType !== "remote.agent_service.evaluated") fail("multi-tenant agent service evaluator must emit audit metadata");
 if (serviceAllowed.writes !== false) fail("multi-tenant agent service evaluator must be no-write");
 if (!remoteAgentServiceDecisionSchema.safeParse(serviceAllowed).success) fail("multi-tenant agent service decision contract must validate");
+const serviceExecutionReceipt = createRemoteAgentServiceExecutionReceipt({
+  request: {
+    tenantId: "tenant.acme",
+    agentId: "agent.support",
+    assignmentId: "assignment.service",
+    routeId: "gateway.multiTenantAgentService",
+    estimatedCostCents: 300,
+    now: "2026-05-17T10:10:00.000Z",
+  },
+  assignment: serviceAssignment,
+  budget: serviceBudget,
+  decision: serviceAllowed,
+});
+if (!remoteAgentServiceExecutionReceiptSchema.safeParse(serviceExecutionReceipt).success) fail("multi-tenant agent service execution receipt contract must validate");
+if (serviceExecutionReceipt.status !== "signed_pending_runtime") fail("multi-tenant agent service receipt must stay signed pending runtime without physical execution");
+if (!serviceExecutionReceipt.externalPending.includes("agent_runtime_execution")) fail("multi-tenant agent service receipt must mark runtime execution external pending");
+if (!serviceExecutionReceipt.externalPending.includes("billing_meter_persistence")) fail("multi-tenant agent service receipt must mark billing meter persistence external pending");
+if (serviceExecutionReceipt.writes !== false) fail("multi-tenant agent service execution receipt must be no-write");
 const serviceTenantDenied = evaluateRemoteAgentServiceAccess({
   request: {
     tenantId: "tenant.other",

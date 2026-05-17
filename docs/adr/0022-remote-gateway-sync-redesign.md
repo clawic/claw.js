@@ -128,6 +128,11 @@ request only when tenant, agent, assignment, route, budget, billing account,
 isolation key, and audit requirement all match. Budget overruns, tenant
 mismatch, inactive assignments, missing billing meters, or route drift deny the
 request with `writes: false`.
+`RemoteAgentServiceExecutionReceipt` is the signed local projection for
+runtime and billing: it records the allowed decision, budget, billing meter,
+isolation key, audit id, and explicit `agent_runtime_execution` /
+`billing_meter_persistence` pending flags until a real signed-host run proves
+execution and meter persistence.
 
 Secrets never synchronize as plaintext. Remote and sync flows may carry secret
 references and may request broker leases for a specific actor, action,

@@ -441,6 +441,28 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.match(agentServicePayload.isolationKey, /^\*+vice$/);
   assert.equal(agentServicePayload.audit.eventType, "remote.agent_service.evaluated");
   assert.equal(agentServicePayload.writes, false);
+
+  const recordedAgentService = await runCliCapture(["gateway", "agent-service", "--tenant-id", "tenant.acme", "--agent-id", "agent.support", "--assignment-id", "assignment.service", "--estimated-cost-cents", "300", "--state-dir", stateDir, "--record", "true", ...coordinatorSigningFlags, "--json"], process.cwd());
+  assert.equal(recordedAgentService.code, CLI_EXIT_OK);
+  const recordedAgentServicePayload = parseCliJson<{
+    status: string;
+    writes: boolean;
+    decision: { allowed: boolean; writes: boolean };
+    receipt: { status: string; runtimeExecutionVerified: boolean; billingMeterPersisted: boolean; externalPending: string[]; writes: boolean };
+    state: { durable: boolean; coordinatorSignature?: { verified: boolean } };
+  }>(recordedAgentService.stdout).data;
+  assert.equal(recordedAgentServicePayload.status, "signed_agent_service_receipt_recorded");
+  assert.equal(recordedAgentServicePayload.writes, false);
+  assert.equal(recordedAgentServicePayload.decision.allowed, true);
+  assert.equal(recordedAgentServicePayload.decision.writes, false);
+  assert.equal(recordedAgentServicePayload.receipt.status, "signed_pending_runtime");
+  assert.equal(recordedAgentServicePayload.receipt.runtimeExecutionVerified, false);
+  assert.equal(recordedAgentServicePayload.receipt.billingMeterPersisted, false);
+  assert.equal(recordedAgentServicePayload.receipt.externalPending.includes("agent_runtime_execution"), true);
+  assert.equal(recordedAgentServicePayload.receipt.externalPending.includes("billing_meter_persistence"), true);
+  assert.equal(recordedAgentServicePayload.receipt.writes, false);
+  assert.equal(recordedAgentServicePayload.state.durable, true);
+  assert.equal(recordedAgentServicePayload.state.coordinatorSignature?.verified, true);
 });
 
 test("runCli exposes an agent inspection fiche", async () => {

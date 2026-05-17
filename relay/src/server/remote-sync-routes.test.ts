@@ -93,6 +93,35 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(agentServicePayload.audit.eventType, "remote.agent_service.evaluated");
     assert.equal(agentServicePayload.writes, false);
 
+    const agentServiceExecution = await built.app.inject({
+      method: "POST",
+      url: "/v1/gateway/agent-service/executions",
+      headers: { "content-type": "application/json" },
+      payload: {
+        tenantId: "tenant.acme",
+        agentId: "agent.support",
+        assignmentId: "assignment.service",
+        estimatedCostCents: 300,
+      },
+    });
+    assert.equal(agentServiceExecution.statusCode, 200);
+    const agentServiceExecutionPayload = agentServiceExecution.json() as {
+      status: string;
+      decision: { allowed: boolean; writes: boolean };
+      receipt: { status: string; runtimeExecutionVerified: boolean; billingMeterPersisted: boolean; externalPending: string[]; writes: boolean };
+      writes: boolean;
+    };
+    assert.equal(agentServiceExecutionPayload.status, "dry_run_external_pending");
+    assert.equal(agentServiceExecutionPayload.decision.allowed, true);
+    assert.equal(agentServiceExecutionPayload.decision.writes, false);
+    assert.equal(agentServiceExecutionPayload.receipt.status, "signed_pending_runtime");
+    assert.equal(agentServiceExecutionPayload.receipt.runtimeExecutionVerified, false);
+    assert.equal(agentServiceExecutionPayload.receipt.billingMeterPersisted, false);
+    assert.equal(agentServiceExecutionPayload.receipt.externalPending.includes("agent_runtime_execution"), true);
+    assert.equal(agentServiceExecutionPayload.receipt.externalPending.includes("billing_meter_persistence"), true);
+    assert.equal(agentServiceExecutionPayload.receipt.writes, false);
+    assert.equal(agentServiceExecutionPayload.writes, false);
+
     const manifests = await built.app.inject({ method: "GET", url: "/v1/sync/manifests?driver=skills" });
     assert.equal(manifests.statusCode, 200);
     const manifestsPayload = manifests.json() as { manifests: Array<{ driver: string; secretPolicy: { plaintextReplication: boolean } }> };

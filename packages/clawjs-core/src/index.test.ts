@@ -49,6 +49,7 @@ import {
   createMeshInvitation,
   createMeshResourceShare,
   createMeshRevocation,
+  createRemoteAgentServiceExecutionReceipt,
   createRemoteCompatibilityAdapterReceipt,
   createSyncResourceManifest,
   createTtsPlaybackPlan,
@@ -98,6 +99,7 @@ import {
   remoteAccessGrantSchema,
   remoteAccessRequestSchema,
   remoteAgentServiceDecisionSchema,
+  remoteAgentServiceExecutionReceiptSchema,
   remoteCompatibilityAdapterReceiptSchema,
   remoteSecretLeaseSchema,
   remoteSyncRequiredDecisionIds,
@@ -766,6 +768,26 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(serviceAllowed.audit.eventType, "remote.agent_service.evaluated");
   assert.equal(serviceAllowed.writes, false);
   assert.equal(remoteAgentServiceDecisionSchema.safeParse(serviceAllowed).success, true);
+  const serviceExecutionReceipt = createRemoteAgentServiceExecutionReceipt({
+    request: {
+      tenantId: "tenant.acme",
+      agentId: "agent.support",
+      assignmentId: "assignment.service",
+      routeId: "gateway.multiTenantAgentService",
+      estimatedCostCents: 300,
+      now: "2026-05-17T10:10:00.000Z",
+    },
+    assignment: serviceAssignment,
+    budget: serviceBudget,
+    decision: serviceAllowed,
+  });
+  assert.equal(remoteAgentServiceExecutionReceiptSchema.safeParse(serviceExecutionReceipt).success, true);
+  assert.equal(serviceExecutionReceipt.status, "signed_pending_runtime");
+  assert.equal(serviceExecutionReceipt.runtimeExecutionVerified, false);
+  assert.equal(serviceExecutionReceipt.billingMeterPersisted, false);
+  assert.equal(serviceExecutionReceipt.externalPending.includes("agent_runtime_execution"), true);
+  assert.equal(serviceExecutionReceipt.externalPending.includes("billing_meter_persistence"), true);
+  assert.equal(serviceExecutionReceipt.writes, false);
   const serviceTenantDenied = evaluateRemoteAgentServiceAccess({
     request: {
       tenantId: "tenant.other",
