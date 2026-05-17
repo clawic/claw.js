@@ -2611,6 +2611,24 @@ test("runCli seeds the dense-data acceptance fixture into the shared database", 
   assert.equal(patientPayload.data.displayName, "Ada Patient");
   assert.deepEqual(patientPayload.data.qualityGaps, ["fixture_gap_missing_dob"]);
 
+  for (const [relationId, fromEntityId, toEntityKind, toEntityId] of [
+    ["fixture_relation_person_patient", "fixture_person_ada", "patients", "fixture_patient_ada"],
+    ["fixture_relation_person_participant", "fixture_person_ada", "participants", "fixture_participant_subject_001"],
+    ["fixture_relation_person_learner", "fixture_person_ada", "learners", "fixture_learner_ada"],
+    ["fixture_relation_person_employee", "fixture_person_ada", "employees", "fixture_employee_ada"],
+    ["fixture_relation_person_legal_client", "fixture_person_smith", "legal_clients", "fixture_legal_client_smith"],
+  ] as const) {
+    const relationGet = await runCliCapture(["relation", "get", relationId, "--workspace", workspaceRoot, "--json"], process.cwd());
+    assert.equal(relationGet.code, CLI_EXIT_OK, relationGet.stderr || relationGet.stdout);
+    const relationPayload = JSON.parse(relationGet.stdout) as { data: { fromEntityKind: string; fromEntityId: string; toEntityKind: string; toEntityId: string; type: string }; meta: { collection: string } };
+    assert.equal(relationPayload.meta.collection, "entity_relations");
+    assert.equal(relationPayload.data.fromEntityKind, "people");
+    assert.equal(relationPayload.data.fromEntityId, fromEntityId);
+    assert.equal(relationPayload.data.toEntityKind, toEntityKind);
+    assert.equal(relationPayload.data.toEntityId, toEntityId);
+    assert.equal(relationPayload.data.type, "same_as");
+  }
+
   const qualityGapGet = await runCliCapture(["quality-gap", "get", "fixture_gap_missing_dob", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(qualityGapGet.code, CLI_EXIT_OK);
   const qualityGapPayload = JSON.parse(qualityGapGet.stdout) as { data: { targetCollection: string; targetId: string; evidenceSourceId: string } };
