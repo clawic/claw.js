@@ -240,7 +240,7 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   }>(agentService.stdout).data;
   assert.equal(agentServicePayload.allowed, true);
   assert.equal(agentServicePayload.billingAccountId, "billing.demo");
-  assert.equal(agentServicePayload.isolationKey, "tenant.acme:assignment.service");
+  assert.match(agentServicePayload.isolationKey, /^\*+vice$/);
   assert.equal(agentServicePayload.audit.eventType, "remote.agent_service.evaluated");
   assert.equal(agentServicePayload.writes, false);
 });
