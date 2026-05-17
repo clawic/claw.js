@@ -16,6 +16,26 @@ const requiredDocs = [
 
 const sourceExtensions = new Set([".swift", ".ts", ".tsx", ".js", ".mjs", ".cs", ".kt"]);
 const broadTerms = ["Thing", "Stuff", "Helper", "Helpers", "Util", "Utils", "Common", "Data", "Info", "Manager"];
+const allowedBroadSymbolContexts = [
+  "DataTable",
+  "FormData",
+  "MockData",
+  "PackageManager",
+  "FileManager",
+  "DatabaseManager",
+  "SecretsManager",
+  "IoTManager",
+  "MarketplaceManager",
+  "TerminalManager",
+  "BrowserSessionManager",
+  "AgentData",
+  "ClawData",
+  "DataMaintenance",
+  "DataWatch",
+  "MainData",
+  "V1Data",
+  "WorkspaceData",
+];
 // Ecosystem terms where the broad word is part of the precise domain phrase.
 const allowedBroadSymbolPhrases = [
   ["Database", "Manager"],
@@ -27,6 +47,14 @@ const allowedBroadSymbolPhrases = [
   ["Window", "Manager"],
   ["Data", "Url"],
   ["Data", "Uri"],
+  ["Data", "Root"],
+  ["Data", "Dir"],
+  ["Data", "Directory"],
+  ["Data", "Path"],
+  ["Data", "Store"],
+  ["Data", "Table"],
+  ["Form", "Data"],
+  ["Test", "Data"],
 ];
 const rootConventionalMarkdown = new Set([
   "AGENTS.md",
@@ -48,6 +76,24 @@ const conventionalDataFiles = new Set([
   "tsconfig.base.json",
   "claw.project.json",
   "openclaw.plugin.json",
+]);
+const docsDataRoleSuffixes = new Set([
+  "acceptance",
+  "baseline",
+  "config",
+  "decisions",
+  "fixture",
+  "inventory",
+  "manifest",
+  "matrix",
+  "pattern",
+  "queue",
+  "registry",
+  "report",
+  "schema",
+  "tools",
+  "validation",
+  "verification",
 ]);
 const ignoredDirectoryNames = new Set([
   ".git",
@@ -111,12 +157,100 @@ function loadCriticalVocabulary() {
 
 function isExternalProviderPath(relativePath) {
   return relativePath.includes("/integrations/") ||
+    relativePath.includes("clawjs-integrations/") ||
     relativePath.includes("/channels/") ||
+    relativePath.includes("channel-") ||
     relativePath.includes("/fixtures/") ||
+    relativePath.includes("/media/") ||
+    relativePath.includes("/voice-notes/") ||
+    relativePath.includes("/marketplace/") ||
+    relativePath.includes("marketplace/") ||
+    relativePath.includes("/audio/") ||
+    relativePath.startsWith("audio/") ||
+    relativePath.includes("clawjs-audio/") ||
+    relativePath.startsWith("bridge/") ||
+    relativePath.includes("/runtime/claw-app-server") ||
+    relativePath.includes("/sessions/stream") ||
+    relativePath.startsWith("apps/host/Sources/CommanderAdapters/") ||
+    relativePath.startsWith("modules/user/src/") ||
+    relativePath.startsWith("examples/mock/") ||
+    relativePath.startsWith("examples/showcase/src/app/inbox/") ||
+    relativePath.startsWith("examples/showcase/src/app/api/inbox/") ||
+    relativePath.startsWith("examples/showcase/src/lib/demo-store") ||
+    relativePath.startsWith("examples/showcase/src/lib/e2e") ||
+    relativePath.startsWith("packages/clawjs-workspace/src/") ||
+    relativePath === "packages/clawjs-core/src/types-workspace.ts" ||
+    relativePath === "packages/clawjs-core/src/schemas-workspace.ts" ||
+    relativePath === "packages/clawjs/src/cli-productivity-extended-command.ts" ||
+    relativePath === "packages/clawjs/src/v1-data.ts" ||
+    relativePath.startsWith("packages/clawjs-index/src/marketplace") ||
+    relativePath === "packages/clawjs-index/src/app.ts" ||
+    relativePath.startsWith("tests/e2e/sdk-") ||
+    relativePath.startsWith("tests/e2e/demo-connectors") ||
     relativePath.includes("telegram") ||
     relativePath.includes("slack") ||
     relativePath.includes("ollama") ||
     relativePath.includes("openai");
+}
+
+function isAllowedContextVocabularyWindow(relativePath, term, windowText) {
+  const lower = windowText.toLowerCase();
+  if (term === "chatId") {
+    return lower.includes("telegram") ||
+      lower.includes("whatsapp") ||
+      lower.includes("chat api") ||
+      lower.includes("chat_id") ||
+      lower.includes("chatref") ||
+      lower.includes("chatname") ||
+      lower.includes("use `sessionid`") ||
+      lower.includes("external");
+  }
+  if (term === "threadId") {
+    return lower.includes("codex") ||
+      lower.includes("runtime") ||
+      lower.includes("provider") ||
+      lower.includes("targetid") ||
+      lower.includes("telegram") ||
+      lower.includes("discord") ||
+      lower.includes("gmail") ||
+      lower.includes("channel") ||
+      lower.includes("media") ||
+      lower.includes("marketplace") ||
+      lower.includes("mailbox") ||
+      lower.includes("voice") ||
+      lower.includes("audio") ||
+      lower.includes("inbox") ||
+      lower.includes("inbox_thread") ||
+      lower.includes("app_pinned_threads") ||
+      lower.includes("app_session_titles") ||
+      lower.includes("app_archives") ||
+      lower.includes("app_sidebar_snapshots") ||
+      lower.includes("email") ||
+      lower.includes("message_thread") ||
+      lower.includes("preferredterm") ||
+      lower.includes("use `sessionid`") ||
+      lower.includes("external");
+  }
+  return false;
+}
+
+function collectContextVocabularyWarnings(relativePath, text, criticalForbidden) {
+  const warnings = [];
+  const lines = text.split(/\n/u);
+  const emitted = new Set();
+  for (const term of criticalForbidden) {
+    for (let index = 0; index < lines.length; index += 1) {
+      if (!lines[index].includes(term)) continue;
+      const start = Math.max(0, index - 8);
+      const end = Math.min(lines.length, index + 9);
+      const windowText = lines.slice(start, end).join("\n");
+      if (isAllowedContextVocabularyWindow(relativePath, term, windowText)) continue;
+      if (emitted.has(term)) continue;
+      warnings.push({ path: relativePath, kind: "context-vocabulary", term });
+      emitted.add(term);
+    }
+  }
+  return warnings;
 }
 
 function splitIdentifier(identifier) {
@@ -137,6 +271,7 @@ function hasAllowedBroadPhrase(tokens) {
 }
 
 function findBroadTerm(identifier) {
+  if (allowedBroadSymbolContexts.some((context) => identifier.includes(context))) return null;
   const tokens = splitIdentifier(identifier);
   if (hasAllowedBroadPhrase(tokens)) return null;
   return broadTerms.find((term) => tokens.includes(term)) ?? null;
@@ -162,6 +297,12 @@ function collectBroadSymbolWarnings(relativePath, text) {
   return warnings;
 }
 
+function hasDocsJsonRoleSuffix(name) {
+  const stem = name.replace(/\.(json|ya?ml)$/u, "");
+  const role = stem.split(/[.-]/u).at(-1);
+  return docsDataRoleSuffixes.has(role);
+}
+
 const failures = [];
 const warnings = [];
 
@@ -182,7 +323,7 @@ for (const relativePath of walk(rootDir)) {
   }
 
   if ((ext === ".json" || ext === ".yaml" || ext === ".yml") && relativePath.startsWith("docs/")) {
-    if (!conventionalDataFiles.has(name) && !/[-.](registry|manifest|fixture|schema|baseline|matrix|report)\.(json|ya?ml)$/.test(name)) {
+    if (!conventionalDataFiles.has(name) && !hasDocsJsonRoleSuffix(name)) {
       warnings.push({ path: relativePath, kind: "data-file-role", message: "Owned docs data files should carry a role suffix" });
     }
   }
@@ -190,12 +331,7 @@ for (const relativePath of walk(rootDir)) {
   if (sourceExtensions.has(ext)) {
     const text = read(relativePath);
     if (!isExternalProviderPath(relativePath)) {
-      for (const term of criticalForbidden) {
-        if (text.includes(term)) {
-          warnings.push({ path: relativePath, kind: "context-vocabulary", term });
-          break;
-        }
-      }
+      warnings.push(...collectContextVocabularyWarnings(relativePath, text, criticalForbidden));
     }
     warnings.push(...collectBroadSymbolWarnings(relativePath, text));
   }

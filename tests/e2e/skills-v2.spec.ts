@@ -34,7 +34,7 @@ function freshEnv(prefix: string): RunOptions {
   return { home, workspace };
 }
 
-function parseCliData<T>(stdout: string): T {
+function parseCliJsonPayload<T>(stdout: string): T {
   const envelope = JSON.parse(stdout) as { ok: boolean; data: T };
   expect(envelope.ok).toBe(true);
   return envelope.data;
@@ -56,11 +56,11 @@ test("skills-v2 CLI: create, list, view, activate, compile, sync to mock target,
   ]);
 
   const list = await run(env, ["skills", "list", "--json"]);
-  const parsed = parseCliData<Array<{ slug: string; kind: string }>>(list.stdout);
+  const parsed = parseCliJsonPayload<Array<{ slug: string; kind: string }>>(list.stdout);
   expect(parsed.find((s) => s.slug === "cold-email")?.kind).toBe("procedure");
 
   const view = await run(env, ["skills", "view", "cold-email", "--json"]);
-  const spec = parseCliData<{ body: string; description: string }>(view.stdout);
+  const spec = parseCliJsonPayload<{ body: string; description: string }>(view.stdout);
   expect(spec.description).toContain("cold sales email");
   expect(spec.body).toContain("Single CTA");
 
@@ -75,7 +75,7 @@ test("skills-v2 CLI: create, list, view, activate, compile, sync to mock target,
   fs.writeFileSync(configPath, `skills:\n  sync_targets:\n    - id: test-target\n      home: ${externalTarget}\n      mode: symlink\n`);
 
   const syncResult = await run(env, ["skills", "sync", "--target", "test-target", "--json"]);
-  const report = parseCliData<{ synced: Array<{ slug: string }>; warnings: string[] }>(syncResult.stdout);
+  const report = parseCliJsonPayload<{ synced: Array<{ slug: string }>; warnings: string[] }>(syncResult.stdout);
   expect(report.synced.find((s) => s.slug === "cold-email")).toBeDefined();
 
   const linkPath = path.join(externalTarget, "cold-email");
@@ -106,7 +106,7 @@ test("skills-v2 CLI: instantiate template, freeze instance produces inline body"
     "--save-as", "my-cold-email",
     "--json",
   ]);
-  const instance = parseCliData<{ slug: string; body: string }>(inst.stdout);
+  const instance = parseCliJsonPayload<{ slug: string; body: string }>(inst.stdout);
   expect(instance.slug).toBe("my-cold-email");
 
   const compileBefore = await run(env, ["skills", "compile", "my-cold-email"]);
@@ -115,7 +115,7 @@ test("skills-v2 CLI: instantiate template, freeze instance produces inline body"
   // Freeze and verify body is inline.
   await run(env, ["skills", "freeze", "my-cold-email"]);
   const viewFrozen = await run(env, ["skills", "view", "my-cold-email", "--json"]);
-  const frozen = parseCliData<{ body: string; frontmatter: { metadata: { clawjs: { instance: { frozen: boolean } } } } }>(viewFrozen.stdout);
+  const frozen = parseCliJsonPayload<{ body: string; frontmatter: { metadata: { clawjs: { instance: { frozen: boolean } } } } }>(viewFrozen.stdout);
   expect(frozen.body).toContain("Write formal email of length short for SaaS.");
   expect(frozen.frontmatter.metadata.clawjs.instance.frozen).toBe(true);
 });

@@ -1,6 +1,6 @@
 import path from "node:path";
 import os from "node:os";
-import { clawDataFiles, clawGlobalHomeLayout } from "@clawjs/core";
+import { clawStorageFiles, clawGlobalHomeLayout } from "@clawjs/core";
 
 export interface IndexServiceConfig {
   host: string;
@@ -25,7 +25,7 @@ export function loadIndexConfig(overrides: Partial<IndexServiceConfig> = {}): In
   return {
     host: overrides.host ?? process.env.CLAW_SEARCH_HOST ?? "127.0.0.1",
     port: overrides.port ?? Number(process.env.CLAW_SEARCH_PORT ?? process.env.PORT ?? String(SEARCH_DEFAULT_PORT)),
-    dbPath: overrides.dbPath ?? process.env.CLAW_SEARCH_DB_PATH ?? path.join(dataDir, clawDataFiles.searchDatabase),
+    dbPath: overrides.dbPath ?? process.env.CLAW_SEARCH_DB_PATH ?? path.join(dataDir, clawStorageFiles.searchDatabase),
     dataDir,
     jwtSecret: overrides.jwtSecret ?? process.env.CLAW_SEARCH_JWT_SECRET ?? "search-dev-secret-change-me",
     corsOrigins: overrides.corsOrigins ?? (process.env.CLAW_SEARCH_CORS_ORIGINS ?? "")

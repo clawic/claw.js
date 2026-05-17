@@ -16,7 +16,7 @@ import { clawApiPath } from "@clawjs/core";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 
 import type {
-  CreateThingInput,
+  CreateDeviceInput,
   IoTActionRequest,
   IotServiceStore,
 } from "./db.ts";
@@ -373,7 +373,7 @@ export function registerIotTools(): void {
       parameters: {
         type: "object",
         properties: {
-          kind: { type: "string", description: "Optional ThingKind to focus the scan." },
+          kind: { type: "string", description: "Optional DeviceKind to focus the scan." },
           timeoutMs: { type: "number", description: "Max scan duration. Default 8000." },
         },
         additionalProperties: false,
@@ -450,7 +450,7 @@ export function registerIotTools(): void {
     async (args, { store, discovery }) => {
       const homeId = optionalString(args, "homeId");
       const fingerprint = optionalString(args, "fingerprint");
-      let input: CreateThingInput;
+      let input: CreateDeviceInput;
       if (fingerprint) {
         const discovered = discovery.get(fingerprint);
         if (!discovered) {
@@ -521,7 +521,7 @@ export function registerIotTools(): void {
           homeId: { type: "string" },
           selector: { type: "string", description: "Free-text match against id, label, alias, or targetRef." },
           area: { type: "string", description: "Restrict to one area." },
-          family: { type: "string", description: "Restrict to one ThingKind." },
+          family: { type: "string", description: "Restrict to one DeviceKind." },
           capability: { type: "string", description: "Capability key to write." },
           action: {
             type: "string",
@@ -810,7 +810,7 @@ export function registerIotTools(): void {
         properties: {
           thingId: { type: "string" },
           label: { type: "string", description: "Label as it appears in Apple Home." },
-          kind: { type: "string", description: "ThingKind hint so the adapter picks the right HAP Service." },
+          kind: { type: "string", description: "DeviceKind hint so the adapter picks the right HAP Service." },
         },
         required: ["thingId", "label", "kind"],
         additionalProperties: false,

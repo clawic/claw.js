@@ -16,7 +16,7 @@ const STABLE_EVENT_TYPES = {
 // during the current scan window. `iot.discovery.list` returns the
 // snapshot; `iot.discovery.start` opens the window and broadcasts
 // `iot.discovery.found` SSE events as devices arrive; `iot.things.add`
-// reads the snapshot to lift a device into a permanent ThingRecord.
+// reads the snapshot to lift a device into a permanent DeviceRecord.
 
 import type { AdapterRegistry } from "./adapters/registry.ts";
 import type {

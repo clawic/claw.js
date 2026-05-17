@@ -14,7 +14,7 @@ import {
   forwardIotJson,
   invokeProjectAssignment,
   invokeWorkspace,
-  normalizeUploadData,
+  normalizeUploadText,
   readRequestBody,
   requireClaims,
   requireProjectAssignmentAccess,
@@ -1061,7 +1061,7 @@ export function registerWorkspaceRoutes(input: {
     );
     if (!begin) return;
     const uploadId = typeof begin.uploadId === "string" ? begin.uploadId : "";
-    const chunk = normalizeUploadData(body.data);
+    const chunk = normalizeUploadText(body.data);
     const chunkResult = await invokeWorkspace(
       request as FastifyRequest<{ Params: WorkspaceParams }>,
       reply,
@@ -1106,7 +1106,7 @@ export function registerWorkspaceRoutes(input: {
     );
     if (!begin) return;
     const uploadId = typeof begin.uploadId === "string" ? begin.uploadId : "";
-    const chunk = normalizeUploadData(body.data);
+    const chunk = normalizeUploadText(body.data);
     const chunkResult = await invokeProjectAssignment(
       request as FastifyRequest<{ Params: ProjectAgentParams }>,
       reply,

@@ -1259,7 +1259,7 @@ The docs check script validates that every current export from
     ClawCommandResponse
     clawCommandResponseFixtureV1
     clawCommandResponseSchema
-    clawCommonJsonFields
+    clawSharedJsonFields
     clawContractFixturesV1
     clawContractFixtureTimestamp
     clawContractSchemasV1
@@ -1268,7 +1268,7 @@ The docs check script validates that every current export from
     clawDatabaseApiRoutePatterns
     clawDatabaseApiRoutes
     clawDatabaseRecordEvents
-    clawDataFiles
+    clawStorageFiles
     clawDeepLinkSchemes
     clawDefaultBindAddress
     ClawDomain
@@ -1561,7 +1561,7 @@ The docs check script validates that every current export from
     IoTRiskLevel
     IoTStateSnapshot
     iotStateSnapshotSchema
-    IoTThingKind
+    IoTDeviceKind
     isConnectorCapabilityId
     isInsideCodexHome
     isStableClawCliCommand
@@ -1879,7 +1879,7 @@ The docs check script validates that every current export from
     runtimeFeatureDescriptorSchema
     RuntimeFileDescriptor
     RuntimeFileSeedPolicy
-    RuntimeInfo
+    RuntimeDescriptor
     RuntimeIntentState
     RuntimeLocations
     RuntimeObservedState
@@ -2090,7 +2090,7 @@ The docs check script validates that every current export from
     TemporalRuntimeState
     TemporalSchedule
     temporalScheduleSchema
-    ThingDescriptor
+    IoTDeviceDescriptor
     thingDescriptorSchema
     toClawError
     TRAVEL_FAMILY
@@ -2209,13 +2209,13 @@ The docs check script validates that every current export from
     clawBrowserStorageKeys
     clawChannelEvents
     clawChatAppStorageKeys
-    clawCommonJsonFields
+    clawSharedJsonFields
     clawCodexExternalEventSamples
     clawCorePorts
     clawDatabaseRecordEvents
     clawDatabaseApiRoutePatterns
     clawDatabaseApiRoutes
-    clawDataFiles
+    clawStorageFiles
     clawDeepLinkSchemes
     clawDefaultBindAddress
     clawDriveApiRoutePatterns

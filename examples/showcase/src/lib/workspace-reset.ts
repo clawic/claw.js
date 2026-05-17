@@ -214,7 +214,7 @@ function secureDeleteFile(filePath: string): void {
 /**
  * Remove the ClawJS agent directory (auth-profiles.json, models.json, etc.).
  */
-export function resetOpenClawAgentData(): void {
+export function resetOpenClawAgentWorkspace(): void {
   secureDeleteDir(resolveClawJSAgentDir());
 }
 

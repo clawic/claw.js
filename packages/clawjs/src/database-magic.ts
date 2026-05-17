@@ -527,7 +527,7 @@ function buildCustomCollectionPreview(namespaceId: string, name: string): Collec
   };
 }
 
-function mergeInputData(
+function mergeInputPayload(
   collectionName: string,
   action: "create" | "update",
   positionals: string[],
@@ -834,7 +834,7 @@ export async function runMagicDbCli(input: {
   }
 
   try {
-    const { recordId, payload: rawPayload } = mergeInputData(collectionName, action, positionals, flags, argv);
+    const { recordId, payload: rawPayload } = mergeInputPayload(collectionName, action, positionals, flags, argv);
     const { payload, warnings } = normalizePayload(collectionName, collection, rawPayload, action);
     if (!wantsJson) writeWarnings(stderr, warnings);
     const record = action === "create"

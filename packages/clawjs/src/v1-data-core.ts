@@ -308,7 +308,7 @@ export function doctorPayload(sqlite: Database.Database): JsonRecord {
   };
 }
 
-export function backupData(outDir: string): JsonRecord {
+export function backupDataStore(outDir: string): JsonRecord {
   fs.mkdirSync(outDir, { recursive: true });
   const dbPath = resolveClawjsMainDbPath();
   const copied: string[] = [];
@@ -358,7 +358,7 @@ export function backupData(outDir: string): JsonRecord {
   return { outDir, manifestPath, copied };
 }
 
-export function restoreData(fromDir: string): JsonRecord {
+export function restoreDataStore(fromDir: string): JsonRecord {
   const src = path.join(fromDir, "core.sqlite");
   if (!fs.existsSync(src)) throw new Error(`Missing backup DB at ${src}`);
   const dest = resolveClawjsMainDbPath();

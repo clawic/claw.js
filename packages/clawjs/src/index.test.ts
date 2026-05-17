@@ -15,9 +15,9 @@ import {
   createFakeOpenClawImageSkillEnv,
   createFakeOpenClawToolchain,
   createFakeSecretsCliServer,
-  parseCliData,
+  parseCliJsonPayload,
   runCliCapture,
-  useIsolatedMainData,
+  useIsolatedClawDataRoot,
   withPatchedEnv,
 } from "./index-test-utils.ts";
 
@@ -88,7 +88,7 @@ test("runCli exposes Search source registry, profiles, status and explain admin 
     stderr: captureStream().stream,
     cwd,
   }), CLI_EXIT_OK);
-  const sources = parseCliData<{ sources: Array<{ id: string; domain: string; fastPath: boolean }> }>(sourcesStdout.getOutput());
+  const sources = parseCliJsonPayload<{ sources: Array<{ id: string; domain: string; fastPath: boolean }> }>(sourcesStdout.getOutput());
   assert.equal(sources.sources.some((source) => source.id === "sessions.chats" && source.fastPath), true);
   assert.equal(sources.sources.some((source) => source.id === "commands"), true);
 
@@ -98,7 +98,7 @@ test("runCli exposes Search source registry, profiles, status and explain admin 
     stderr: captureStream().stream,
     cwd,
   }), CLI_EXIT_OK);
-  const profiles = parseCliData<{ profiles: Array<{ id: string; defaultEnabled: boolean }> }>(profilesStdout.getOutput());
+  const profiles = parseCliJsonPayload<{ profiles: Array<{ id: string; defaultEnabled: boolean }> }>(profilesStdout.getOutput());
   assert.deepEqual(profiles.profiles.map((profile) => profile.id), ["framework", "full"]);
   assert.equal(profiles.profiles.find((profile) => profile.id === "framework")?.defaultEnabled, true);
 
@@ -108,7 +108,7 @@ test("runCli exposes Search source registry, profiles, status and explain admin 
     stderr: captureStream().stream,
     cwd,
   }), CLI_EXIT_OK);
-  const status = parseCliData<{ storage: { canonical: string; index: string }; budgets: { hotMs: number; globalFirstBatchMs: number } }>(statusStdout.getOutput());
+  const status = parseCliJsonPayload<{ storage: { canonical: string; index: string }; budgets: { hotMs: number; globalFirstBatchMs: number } }>(statusStdout.getOutput());
   assert.deepEqual(status.storage, { canonical: "core.sqlite", index: "search.sqlite", indexRebuildable: true });
   assert.equal(status.budgets.hotMs, 50);
   assert.equal(status.budgets.globalFirstBatchMs, 200);
@@ -119,7 +119,7 @@ test("runCli exposes Search source registry, profiles, status and explain admin 
     stderr: captureStream().stream,
     cwd,
   }), CLI_EXIT_OK);
-  const explain = parseCliData<{ query: string; partialResults: string }>(explainStdout.getOutput());
+  const explain = parseCliJsonPayload<{ query: string; partialResults: string }>(explainStdout.getOutput());
   assert.equal(explain.query, "alpha");
   assert.match(explain.partialResults, /omitted/);
 });
@@ -173,7 +173,7 @@ test("runCli keeps public help short and gates the advanced surface behind --all
 
 test("runCli supports implicit db create, schema inspection, human output, and alias parity", async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-magic-db-"));
-  useIsolatedMainData(t, workspaceRoot);
+  useIsolatedClawDataRoot(t, workspaceRoot);
 
   const createStdout = captureStream();
   const createStderr = captureStream();
@@ -218,7 +218,7 @@ test("runCli supports implicit db create, schema inspection, human output, and a
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  assert.equal(parseCliData<{ id: string }>(recordsStdout.getOutput()).id, taskId);
+  assert.equal(parseCliJsonPayload<{ id: string }>(recordsStdout.getOutput()).id, taskId);
 
   const updateStdout = captureStream();
   assert.equal(await runCli(["db", "tasks", "update", taskId, "--set", "priority=urgent", "--set", "estimateMinutes=15", "--json"], {
@@ -226,7 +226,7 @@ test("runCli supports implicit db create, schema inspection, human output, and a
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const updatedTask = parseCliData<{ priority?: string; estimateMinutes?: number }>(updateStdout.getOutput());
+  const updatedTask = parseCliJsonPayload<{ priority?: string; estimateMinutes?: number }>(updateStdout.getOutput());
   assert.equal(updatedTask.priority, "urgent");
   assert.equal(updatedTask.estimateMinutes, 15);
 
@@ -236,7 +236,7 @@ test("runCli supports implicit db create, schema inspection, human output, and a
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  assert.equal(parseCliData<Array<{ id: string }>>(queryStdout.getOutput()).some((item) => item.id === taskId), true);
+  assert.equal(parseCliJsonPayload<Array<{ id: string }>>(queryStdout.getOutput()).some((item) => item.id === taskId), true);
 
   const invalidFieldStdout = captureStream();
   assert.equal(await runCli(["db", "tasks", "update", taskId, "--set", "priority=never", "--json"], {
@@ -290,7 +290,7 @@ test("runCli supports implicit db create, schema inspection, human output, and a
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const taskSchema = parseCliData<{ collection: { fields: Array<{ name: string; type: string; options?: string[] }> } }>(taskSchemaStdout.getOutput());
+  const taskSchema = parseCliJsonPayload<{ collection: { fields: Array<{ name: string; type: string; options?: string[] }> } }>(taskSchemaStdout.getOutput());
   assert.equal(taskSchema.collection.fields.some((field) => field.name === "priority" && field.options?.includes("urgent")), true);
   assert.equal(taskSchema.collection.fields.some((field) => field.name === "estimateMinutes" && field.type === "number"), true);
 
@@ -321,7 +321,7 @@ test("runCli can scaffold a workspace-first project with the new command surface
 
 test("runCli can manage command-backed generations end to end", async (t) => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-generations-"));
-  useIsolatedMainData(t, workspaceDir);
+  useIsolatedClawDataRoot(t, workspaceDir);
   const scriptPath = createFakeGenerationScript();
 
   const registerStdout = captureStream();
@@ -357,7 +357,7 @@ test("runCli can manage command-backed generations end to end", async (t) => {
     stderr: captureStream().stream,
     cwd: workspaceDir,
   }), CLI_EXIT_OK);
-  const created = parseCliData<{ id: string; output?: { filePath?: string } }>(createStdout.getOutput());
+  const created = parseCliJsonPayload<{ id: string; output?: { filePath?: string } }>(createStdout.getOutput());
   assert.match(created.id, /^gen-/);
   assert.equal(fs.existsSync(created.output?.filePath || ""), true);
 
@@ -441,7 +441,7 @@ test("runCli can create and list images through the image alias and an auto-dete
       cwd: workspaceDir,
     }), CLI_EXIT_OK);
 
-    const created = parseCliData<{ backendId: string; output?: { filePath?: string } }>(createStdout.getOutput());
+    const created = parseCliJsonPayload<{ backendId: string; output?: { filePath?: string } }>(createStdout.getOutput());
     assert.equal(created.backendId, "openclaw-skill:openai-image-gen");
     assert.equal(fs.existsSync(created.output?.filePath || ""), true);
     assert.match(fs.readFileSync(created.output?.filePath || "", "utf8"), /cli-openclaw:gpt-image-1.5/);
@@ -488,7 +488,7 @@ test("runCli supports native image create, edit, import, list, and show", async 
         stderr: createStderr.stream,
         cwd: workspaceDir,
       }), CLI_EXIT_OK, `${createStdout.getOutput()}\n${createStderr.getOutput()}`);
-      const created = parseCliData<{ id: string; operation: string; imageType: string }>(createStdout.getOutput());
+      const created = parseCliJsonPayload<{ id: string; operation: string; imageType: string }>(createStdout.getOutput());
       assert.equal(created.operation, "create");
       assert.equal(created.imageType, "logo");
 
@@ -508,7 +508,7 @@ test("runCli supports native image create, edit, import, list, and show", async 
         stderr: captureStream().stream,
         cwd: workspaceDir,
       }), CLI_EXIT_OK);
-      const edited = parseCliData<{ id: string; parentId: string; editDepth: number }>(editStdout.getOutput());
+      const edited = parseCliJsonPayload<{ id: string; parentId: string; editDepth: number }>(editStdout.getOutput());
       assert.equal(edited.parentId, created.id);
       assert.equal(edited.editDepth, 1);
 
@@ -531,7 +531,7 @@ test("runCli supports native image create, edit, import, list, and show", async 
         stderr: captureStream().stream,
         cwd: workspaceDir,
       }), CLI_EXIT_OK);
-      const imported = parseCliData<{ id: string; provenance: string; parentId: string }>(importStdout.getOutput());
+      const imported = parseCliJsonPayload<{ id: string; provenance: string; parentId: string }>(importStdout.getOutput());
       assert.equal(imported.provenance, "imported-codex");
       assert.equal(imported.parentId, edited.id);
 
@@ -787,7 +787,7 @@ test("runCli can upload, search, read, and download documents", async () => {
   });
 
   assert.equal(uploadExitCode, CLI_EXIT_OK);
-  const uploaded = parseCliData<{ documentId: string; name: string }>(uploadStdout.getOutput());
+  const uploaded = parseCliJsonPayload<{ documentId: string; name: string }>(uploadStdout.getOutput());
   assert.match(uploaded.documentId, /^[0-9a-f-]{36}$/);
   assert.equal(uploaded.name, "brief.txt");
 
@@ -940,7 +940,7 @@ test("runCli can manage TTS config and synthesize audio", async () => {
 
 test("runCli stores and transcribes voice notes locally", async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-voice-notes-"));
-  useIsolatedMainData(t, workspaceRoot);
+  useIsolatedClawDataRoot(t, workspaceRoot);
   const audioPath = path.join(workspaceRoot, "note.ogg");
   const whisperPath = path.join(workspaceRoot, "fake-whisper");
   const ffmpegPath = path.join(workspaceRoot, "fake-ffmpeg");
@@ -979,7 +979,7 @@ if (outIndex !== -1) fs.writeFileSync(args[outIndex + 1] + ".txt", "hola desde n
     cwd: process.cwd(),
   });
   assert.equal(addExitCode, CLI_EXIT_OK);
-  const note = parseCliData<{ id: string; status: string }>(addStdout.getOutput());
+  const note = parseCliJsonPayload<{ id: string; status: string }>(addStdout.getOutput());
   assert.equal(note.status, "stored");
 
   const transcribeStdout = captureStream();
@@ -1168,7 +1168,7 @@ test("runCli supports temporal domain commands and schedule shortcut", async () 
     });
 
     assert.equal(calendarExitCode, CLI_EXIT_OK);
-    const calendarCreated = parseCliData<{ item: { id: string; kind: string; title: string } }>(calendarStdout.getOutput());
+    const calendarCreated = parseCliJsonPayload<{ item: { id: string; kind: string; title: string } }>(calendarStdout.getOutput());
     assert.equal(calendarCreated.item.kind, "event");
 
     const calendarListStdout = captureStream();
@@ -1217,7 +1217,7 @@ test("runCli supports temporal domain commands and schedule shortcut", async () 
       cwd: process.cwd(),
     });
     assert.equal(everyExitCode, CLI_EXIT_OK);
-    const routineCreated = parseCliData<{ item: { id: string; kind: string } }>(everyStdout.getOutput());
+    const routineCreated = parseCliJsonPayload<{ item: { id: string; kind: string } }>(everyStdout.getOutput());
     assert.equal(routineCreated.item.kind, "routine");
 
     const runStdout = captureStream();
@@ -1337,7 +1337,7 @@ test("runCli manages local styles, templates, and references", async () => {
     ...context,
     stdout: styleOut.stream,
   }), CLI_EXIT_OK);
-  const stylePayload = parseCliData<{ installed: string[]; skipped: string[] }>(styleOut.getOutput());
+  const stylePayload = parseCliJsonPayload<{ installed: string[]; skipped: string[] }>(styleOut.getOutput());
   assert.equal(stylePayload.installed.includes("claw"), true);
   assert.equal(stylePayload.skipped.length, 0);
 
@@ -1346,7 +1346,7 @@ test("runCli manages local styles, templates, and references", async () => {
     ...context,
     stdout: templateOut.stream,
   }), CLI_EXIT_OK);
-  const templatePayload = parseCliData<{ template: { id: string; category: string; defaultStyleId: string } }>(templateOut.getOutput());
+  const templatePayload = parseCliJsonPayload<{ template: { id: string; category: string; defaultStyleId: string } }>(templateOut.getOutput());
   assert.equal(templatePayload.template.category, "one-pager");
   assert.equal(templatePayload.template.defaultStyleId, "claw");
 
@@ -1357,7 +1357,7 @@ test("runCli manages local styles, templates, and references", async () => {
     ...context,
     stdout: refOut.stream,
   }), CLI_EXIT_OK);
-  const refPayload = parseCliData<{ reference: { id: string; asset: string; tags: string[] } }>(refOut.getOutput());
+  const refPayload = parseCliJsonPayload<{ reference: { id: string; asset: string; tags: string[] } }>(refOut.getOutput());
   assert.equal(refPayload.reference.asset, "sample.txt");
   assert.deepEqual(refPayload.reference.tags, ["brand", "test"]);
 
@@ -1366,7 +1366,7 @@ test("runCli manages local styles, templates, and references", async () => {
     ...context,
     stdout: linkedOut.stream,
   }), CLI_EXIT_OK);
-  const linkedPayload = parseCliData<{ styleIds: string[] }>(linkedOut.getOutput());
+  const linkedPayload = parseCliJsonPayload<{ styleIds: string[] }>(linkedOut.getOutput());
   assert.deepEqual(linkedPayload.styleIds, ["claw"]);
 
   const listOut = captureStream();
@@ -1374,7 +1374,7 @@ test("runCli manages local styles, templates, and references", async () => {
     ...context,
     stdout: listOut.stream,
   }), CLI_EXIT_OK);
-  const listPayload = parseCliData<{ templates: Array<{ id: string }> }>(listOut.getOutput());
+  const listPayload = parseCliJsonPayload<{ templates: Array<{ id: string }> }>(listOut.getOutput());
   assert.deepEqual(listPayload.templates.map((entry) => entry.id), [templatePayload.template.id]);
 
   const renderOut = captureStream();
@@ -1382,7 +1382,7 @@ test("runCli manages local styles, templates, and references", async () => {
     ...context,
     stdout: renderOut.stream,
   }), CLI_EXIT_OK);
-  const renderPayload = parseCliData<{ results: Array<{ format: string; outputPath: string }> }>(renderOut.getOutput());
+  const renderPayload = parseCliJsonPayload<{ results: Array<{ format: string; outputPath: string }> }>(renderOut.getOutput());
   assert.equal(renderPayload.results[0]?.format, "html");
   assert.equal(fs.existsSync(renderPayload.results[0]?.outputPath ?? ""), true);
 
@@ -1477,7 +1477,7 @@ test("runCli supports heartbeat routines with deterministic gates", async () => 
       cwd: process.cwd(),
     });
     assert.equal(skipExitCode, CLI_EXIT_OK);
-    const skipRoutine = parseCliData<{ item: { id: string; heartbeat?: { when: string[] } } }>(skipStdout.getOutput());
+    const skipRoutine = parseCliJsonPayload<{ item: { id: string; heartbeat?: { when: string[] } } }>(skipStdout.getOutput());
     assert.deepEqual(skipRoutine.item.heartbeat?.when, ["workspace.tasks:new"]);
 
     const policyStdout = captureStream();
@@ -1503,7 +1503,7 @@ test("runCli supports heartbeat routines with deterministic gates", async () => 
       cwd: process.cwd(),
     });
     assert.equal(policyExitCode, CLI_EXIT_OK);
-    const policyRoutine = parseCliData<{ item: { schedule?: { staggerMs?: number }; heartbeat?: { target?: string; cooldownMs?: number; maxWakesPerWindow?: { count?: number; windowMs?: number }; activeHours?: { timezone?: string }; staggerMs?: number } } }>(policyStdout.getOutput());
+    const policyRoutine = parseCliJsonPayload<{ item: { schedule?: { staggerMs?: number }; heartbeat?: { target?: string; cooldownMs?: number; maxWakesPerWindow?: { count?: number; windowMs?: number }; activeHours?: { timezone?: string }; staggerMs?: number } } }>(policyStdout.getOutput());
     assert.equal(policyRoutine.item.schedule?.staggerMs, 30_000);
     assert.equal(policyRoutine.item.heartbeat?.target, "main");
     assert.equal(policyRoutine.item.heartbeat?.cooldownMs, 30_000);
@@ -1529,7 +1529,7 @@ test("runCli supports heartbeat routines with deterministic gates", async () => 
       cwd: process.cwd(),
     });
     assert.equal(skipGetExitCode, CLI_EXIT_OK);
-    const skipped = parseCliData<{ item: { heartbeat?: { state?: { skipCount?: number; lastSkipReason?: string } } } }>(skipGetStdout.getOutput());
+    const skipped = parseCliJsonPayload<{ item: { heartbeat?: { state?: { skipCount?: number; lastSkipReason?: string } } } }>(skipGetStdout.getOutput());
     assert.equal(skipped.item.heartbeat?.state?.skipCount, 1);
     assert.equal(skipped.item.heartbeat?.state?.lastSkipReason, "no heartbeat matches");
 
@@ -1575,7 +1575,7 @@ test("runCli supports heartbeat routines with deterministic gates", async () => 
       cwd: process.cwd(),
     });
     assert.equal(stopExitCode, CLI_EXIT_OK);
-    const stopRoutine = parseCliData<{ item: { id: string } }>(stopStdout.getOutput());
+    const stopRoutine = parseCliJsonPayload<{ item: { id: string } }>(stopStdout.getOutput());
     forceDue(stopRoutine.item.id);
     assert.deepEqual(await built.engine.runSchedulerCycle(), []);
     const stopped = built.store.getItem(stopRoutine.item.id);
@@ -1600,7 +1600,7 @@ test("runCli supports heartbeat routines with deterministic gates", async () => 
       cwd: process.cwd(),
     });
     assert.equal(customExitCode, CLI_EXIT_OK);
-    const customRoutine = parseCliData<{ item: { id: string; heartbeat?: { allowedCustomChecks?: string[] } } }>(customStdout.getOutput());
+    const customRoutine = parseCliJsonPayload<{ item: { id: string; heartbeat?: { allowedCustomChecks?: string[] } } }>(customStdout.getOutput());
     assert.deepEqual(customRoutine.item.heartbeat?.allowedCustomChecks, ["ready-check"]);
 
     const listStdout = captureStream();

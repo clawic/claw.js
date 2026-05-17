@@ -11,7 +11,7 @@
 //
 // The registry is intentionally untyped beyond the `ConnectorAdapter`
 // interface; adapter-specific configuration (URLs, vendor credentials,
-// MQTT topics) lives on `ThingRecord.metadata` and is the adapter's
+// MQTT topics) lives on `DeviceRecord.metadata` and is the adapter's
 // problem to validate.
 
 import type {

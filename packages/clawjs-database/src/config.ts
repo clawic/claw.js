@@ -1,6 +1,6 @@
 import path from "node:path";
 import os from "node:os";
-import { clawDataFiles, clawGlobalHomeLayout } from "@clawjs/core";
+import { clawStorageFiles, clawGlobalHomeLayout } from "@clawjs/core";
 
 export interface DatabaseServiceConfig {
   host: string;
@@ -17,7 +17,7 @@ export function loadDatabaseConfig(overrides: Partial<DatabaseServiceConfig> = {
   return {
     host: overrides.host ?? process.env.CLAW_DATABASE_HOST ?? "127.0.0.1",
     port: overrides.port ?? Number(process.env.CLAW_DATABASE_PORT ?? process.env.PORT ?? "24102"),
-    dbPath: overrides.dbPath ?? process.env.CLAW_DATABASE_DB_PATH ?? process.env.CLAW_DB_PATH ?? path.join(dataDir, clawDataFiles.mainDatabase),
+    dbPath: overrides.dbPath ?? process.env.CLAW_DATABASE_DB_PATH ?? process.env.CLAW_DB_PATH ?? path.join(dataDir, clawStorageFiles.mainDatabase),
     dataDir,
     filesDir: overrides.filesDir ?? process.env.CLAW_DATABASE_FILES_DIR ?? process.env.CLAW_FILES_DIR ?? process.env.CLAW_FILES_DIR ?? path.join(dataDir, "files"),
     jwtSecret: overrides.jwtSecret ?? process.env.CLAW_DATABASE_JWT_SECRET ?? "database-dev-secret-change-me",

@@ -21,7 +21,7 @@ import {
   clawCorePorts,
   clawContractFixturesV1,
   clawContractVersionV1,
-  clawDataFiles,
+  clawStorageFiles,
   clawEventsPath,
   clawExportExtensions,
   clawGlobalHomeLayout,
@@ -462,7 +462,7 @@ test("surface registry freezes ports, paths, sockets, hostnames, and data files"
   assert.equal(clawApiPath("/sessions"), "/v1/sessions");
   assert.equal(clawApiPath("sessions/export"), "/v1/sessions/export");
   assert.equal(clawEventsPath, "/v1/events");
-  assert.equal(clawDataFiles.mainDatabase, "core.sqlite");
+  assert.equal(clawStorageFiles.mainDatabase, "core.sqlite");
   assert.equal(clawWorkspaceLayout.manifest, ".claw/manifest.json");
   assert.equal(clawWorkspaceLayout.browser, ".claw/browser");
   assert.equal(clawGlobalHomeLayout.config, "~/.claw/config.yaml");

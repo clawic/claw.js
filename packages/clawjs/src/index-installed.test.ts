@@ -12,13 +12,13 @@ import {
   runCommand,
   runInstalledClaw,
   runInstalledClawProcess,
-  useIsolatedMainData,
+  useIsolatedClawDataRoot,
 } from "./index-test-utils.ts";
 
 test("published CLI tarballs install with npm and manage local-first productivity zero-config from the real binary", { concurrency: false }, async (t) => {
   const packDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-packages-"));
   const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-installed-"));
-  const dataRoot = useIsolatedMainData(t, installRoot);
+  const dataRoot = useIsolatedClawDataRoot(t, installRoot);
   const packageRoots = {
     core: path.resolve(process.cwd(), "packages/clawjs-core"),
     claw: path.resolve(process.cwd(), "packages/clawjs-node"),

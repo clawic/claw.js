@@ -5,12 +5,12 @@ import { test } from "vitest";
 import assert from "node:assert/strict";
 
 import { CLI_EXIT_OK, runCli } from "./index.ts";
-import { captureStream, parseCliData, runCliCapture } from "./index-test-utils.ts";
+import { captureStream, parseCliJsonPayload, runCliCapture } from "./index-test-utils.ts";
 
 test("runCli exposes need route lab dimensions through the public CLI", async () => {
   const result = await runCliCapture(["needs", "dimensions", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK);
-  const payload = parseCliData<{
+  const payload = parseCliJsonPayload<{
     dimensions: Array<{ id: string; values: Array<{ id: string }> }>;
     capabilityGraph: { nodes: Array<{ id: string }> };
     generationModes: string[];
@@ -28,7 +28,7 @@ test("runCli exposes need route lab dimensions through the public CLI", async ()
 test("runCli exposes LLM lateral generation as dry-run metadata without live provider calls", async () => {
   const result = await runCliCapture(["needs", "generate", "--pilot", "agent_workflow", "--mode", "llm-lateral", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK);
-  const payload = parseCliData<{
+  const payload = parseCliJsonPayload<{
     generation: { mode: string; lateralExpansion: { status: string; blockedRealActions: string[] } };
     routes: Array<{ id: string }>;
   }>(result.stdout);
@@ -42,7 +42,7 @@ test("runCli evaluates need routes in dry-run mode and saves a canonical workspa
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-needs-cli-"));
   const result = await runCliCapture(["needs", "evaluate", "--pilot", "iot_home", "--dry-run", "--save", "--json"], workspaceRoot);
   assert.equal(result.code, CLI_EXIT_OK);
-  const payload = parseCliData<{
+  const payload = parseCliJsonPayload<{
     evaluations: Array<{ route: { id: string }; opportunities: Array<{ externalPending: boolean }> }>;
     opportunities: { unique: Array<{ id: string; externalPending: boolean }> };
     save: { wrote: boolean; ledgerPath: string };
@@ -60,13 +60,13 @@ test("runCli dedupes and promotes need opportunities without executing external 
 
   const list = await runCliCapture(["needs", "opportunities", "list", "--json"], workspaceRoot);
   assert.equal(list.code, CLI_EXIT_OK);
-  const listPayload = parseCliData<{ opportunities: Array<{ id: string; title: string }> }>(list.stdout);
+  const listPayload = parseCliJsonPayload<{ opportunities: Array<{ id: string; title: string }> }>(list.stdout);
   const schemaGap = listPayload.opportunities.find((opportunity) => opportunity.title === "Track collection schema inspectability failures");
   assert.ok(schemaGap);
 
   const promote = await runCliCapture(["needs", "opportunities", "promote", schemaGap.id, "--json"], workspaceRoot);
   assert.equal(promote.code, CLI_EXIT_OK);
-  const promotePayload = parseCliData<{
+  const promotePayload = parseCliJsonPayload<{
     promotion: { commandPlan: string[]; reportDraft: { title: string } };
     destructiveActionsAllowed: boolean;
     requiresApproval: boolean;
@@ -87,7 +87,7 @@ test("runCli includes needs in help and inspect command discovery", async () => 
     stderr: captureStream().stream,
     cwd: process.cwd(),
   }), CLI_EXIT_OK);
-  const why = parseCliData<{ name: string; docs: string[]; adrs: string[]; source: { file: string } }>(stdout.getOutput());
+  const why = parseCliJsonPayload<{ name: string; docs: string[]; adrs: string[]; source: { file: string } }>(stdout.getOutput());
   assert.equal(why.name, "needs");
   assert.ok(why.docs.includes("docs/need-route-lab.md"));
   assert.ok(why.adrs.includes("docs/adr/0014-need-route-lab-v1.md"));

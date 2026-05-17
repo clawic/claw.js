@@ -76,7 +76,7 @@ private final class StubTransport: NSObject {
 
     fileprivate func response(for request: URLRequest) throws -> (HTTPURLResponse, Data) {
         requests.append(request)
-        if let body = request.httpBody ?? request.httpBodyStream?.readAllData() {
+        if let body = request.httpBody ?? request.httpBodyStream?.readHttpBodyBytes() {
             lastJSONBody = try JSONSerialization.jsonObject(with: body) as? [String: Any]
         }
         guard let next = queue.first else {
@@ -91,7 +91,7 @@ private final class StubTransport: NSObject {
 }
 
 private extension InputStream {
-    func readAllData() -> Data {
+    func readHttpBodyBytes() -> Data {
         open()
         defer { close() }
         var data = Data()

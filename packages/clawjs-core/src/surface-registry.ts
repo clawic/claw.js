@@ -343,7 +343,7 @@ export function clawApiPath(path = ""): string {
   return suffix ? `${clawPublicApiPrefix}/${suffix}` : clawPublicApiPrefix;
 }
 
-export const clawCommonJsonFields = {
+export const clawSharedJsonFields = {
   schemaVersion: "schemaVersion",
   protocolVersion: "protocolVersion",
   sessionId: "sessionId",
@@ -657,7 +657,7 @@ export const clawixDeepLinkRoutes = {
   settings: "settings",
 } as const;
 
-export const clawDataFiles = {
+export const clawStorageFiles = {
   mainDatabase: "core.sqlite",
   sessionsDatabase: "sessions.sqlite",
   driveDatabase: "drive.sqlite",
@@ -773,16 +773,16 @@ const corePrivateRouteValues = "/api/attachments /api/auth/token /api/capture /a
 const corePrivateRoutes = corePrivateRouteValues.map((route) => [`claw.privateApi.${stableRouteSurfaceKey(route)}`, "GET", route, `${route} private API route`] as const);
 
 const stableJsonFields = [
-  ["claw.schema.common.field.schemaVersion", clawCommonJsonFields.schemaVersion, "Persisted/exported data version field"],
-  ["claw.schema.common.field.protocolVersion", clawCommonJsonFields.protocolVersion, "Wire protocol version field"],
-  ["claw.schema.common.field.sessionId", clawCommonJsonFields.sessionId, "Framework conversation identity"],
-  ["claw.schema.common.field.requestId", clawCommonJsonFields.requestId, "Request correlation identity"],
-  ["claw.schema.common.field.runtimeId", clawCommonJsonFields.runtimeId, "Runtime identity"],
-  ["claw.schema.common.field.agentId", clawCommonJsonFields.agentId, "Agent identity"],
-  ["claw.schema.common.field.providerId", clawCommonJsonFields.providerId, "Provider identity"],
-  ["claw.schema.common.field.modelId", clawCommonJsonFields.modelId, "Model identity"],
-  ["claw.schema.common.field.createdAt", clawCommonJsonFields.createdAt, "Creation instant"],
-  ["claw.schema.common.field.updatedAt", clawCommonJsonFields.updatedAt, "Update instant"],
+  ["claw.schema.common.field.schemaVersion", clawSharedJsonFields.schemaVersion, "Persisted/exported data version field"],
+  ["claw.schema.common.field.protocolVersion", clawSharedJsonFields.protocolVersion, "Wire protocol version field"],
+  ["claw.schema.common.field.sessionId", clawSharedJsonFields.sessionId, "Framework conversation identity"],
+  ["claw.schema.common.field.requestId", clawSharedJsonFields.requestId, "Request correlation identity"],
+  ["claw.schema.common.field.runtimeId", clawSharedJsonFields.runtimeId, "Runtime identity"],
+  ["claw.schema.common.field.agentId", clawSharedJsonFields.agentId, "Agent identity"],
+  ["claw.schema.common.field.providerId", clawSharedJsonFields.providerId, "Provider identity"],
+  ["claw.schema.common.field.modelId", clawSharedJsonFields.modelId, "Model identity"],
+  ["claw.schema.common.field.createdAt", clawSharedJsonFields.createdAt, "Creation instant"],
+  ["claw.schema.common.field.updatedAt", clawSharedJsonFields.updatedAt, "Update instant"],
 ] as const;
 
 const stableErrorCodes = [
@@ -1582,7 +1582,7 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
     clawPersistentSurface.database({
       id: "claw.database.core",
       name: "Framework main database",
-      path: `${clawGlobalHomeLayout.data}/${clawDataFiles.mainDatabase}`,
+      path: `${clawGlobalHomeLayout.data}/${clawStorageFiles.mainDatabase}`,
       parentId: "claw.global",
       source: registrySource,
       notes: "User-facing structured records and framework metadata that belong in the canonical relational graph.",
@@ -1642,7 +1642,7 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       id: "claw.database.sessions",
       kind: "sidecar",
       name: "Sessions sidecar database",
-      path: `${clawGlobalHomeLayout.data}/${clawDataFiles.sessionsDatabase}`,
+      path: `${clawGlobalHomeLayout.data}/${clawStorageFiles.sessionsDatabase}`,
       parentId: "claw.global",
       storageClass: "sidecar",
       source: registrySource,
@@ -1662,7 +1662,7 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       id: "claw.database.search",
       kind: "sidecar",
       name: "Search sidecar database",
-      path: `${clawGlobalHomeLayout.data}/${clawDataFiles.searchDatabase}`,
+      path: `${clawGlobalHomeLayout.data}/${clawStorageFiles.searchDatabase}`,
       parentId: "claw.global",
       storageClass: "sidecar",
       source: registrySource,

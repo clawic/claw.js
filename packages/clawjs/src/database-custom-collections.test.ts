@@ -5,11 +5,11 @@ import os from "node:os";
 import path from "node:path";
 
 import { CLI_EXIT_FAILURE, CLI_EXIT_OK } from "./index.ts";
-import { parseCliData, runCliCapture, useIsolatedMainData } from "./index-test-utils.ts";
+import { parseCliJsonPayload, runCliCapture, useIsolatedClawDataRoot } from "./index-test-utils.ts";
 
 test("db refuses to create unknown custom collections implicitly", { concurrency: false }, async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-db-custom-explicit-"));
-  useIsolatedMainData(t, workspaceRoot);
+  useIsolatedClawDataRoot(t, workspaceRoot);
 
   const create = await runCliCapture([
     "db",
@@ -39,7 +39,7 @@ test("db refuses to create unknown custom collections implicitly", { concurrency
   ], process.cwd());
 
   assert.equal(schema.code, CLI_EXIT_OK);
-  const schemaPayload = parseCliData<{
+  const schemaPayload = parseCliJsonPayload<{
     exists: boolean;
     autoCreateOnWrite: boolean;
     explicitCreateRequired: boolean;

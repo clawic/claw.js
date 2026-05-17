@@ -1,7 +1,7 @@
 import { execFile } from "child_process";
 import { NextRequest, NextResponse } from "next/server";
 
-import { resetClawJSWorkspace, resetOpenClawAgentData, removeClawJSFromOpenClawConfig, ALL_RESET_OPTIONS, type ResetOptions } from "@/lib/workspace-reset";
+import { resetClawJSWorkspace, resetOpenClawAgentWorkspace, removeClawJSFromOpenClawConfig, ALL_RESET_OPTIONS, type ResetOptions } from "@/lib/workspace-reset";
 import { invalidateOpenClawAvailabilityCache } from "@/app/api/chat/route";
 import { isE2EEnabled, resetE2EState, seedE2EState } from "@/lib/e2e";
 import { getClawJSLocalSettings, saveClawJSLocalSettings } from "@/lib/local-settings";
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     // Disable OpenClaw workspace (not uninstall)
     if (options.openClawWorkspace) {
       try {
-        resetOpenClawAgentData();
+        resetOpenClawAgentWorkspace();
         removeClawJSFromOpenClawConfig();
         invalidateOpenClawAvailabilityCache();
       } catch { /* best effort */ }
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     // Uninstall OpenClaw globally via the runtime adapter and verify it is gone.
     if (options.openClawUninstall) {
       try {
-        resetOpenClawAgentData();
+        resetOpenClawAgentWorkspace();
         removeClawJSFromOpenClawConfig();
         invalidateOpenClawAvailabilityCache();
       } catch { /* best effort */ }

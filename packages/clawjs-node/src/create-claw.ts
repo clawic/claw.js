@@ -63,7 +63,7 @@ import type {
   TemporalRunLogEntry,
   HomeDescriptor,
   AreaDescriptor,
-  ThingDescriptor,
+  IoTDeviceDescriptor,
   IoTStateSnapshot,
   IoTActionRequest,
   IoTActionResult,

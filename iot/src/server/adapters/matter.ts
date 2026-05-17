@@ -92,7 +92,7 @@ export class MatterAdapter implements ConnectorAdapter {
 
   /** Public entry for the wizard's `commission` action. Returns the
    *  freshly-paired node id so the caller can wire it onto a
-   *  ThingRecord via `iot.things.add` + `metadata.matter`. */
+   *  DeviceRecord via `iot.things.add` + `metadata.matter`. */
   async commission(input: { pairingCode: string; label?: string }): Promise<{
     nodeId: string;
     fabricLabel: string;
@@ -125,7 +125,7 @@ export class MatterAdapter implements ConnectorAdapter {
     }
     // Cluster routing. Matter capability mapping lives close to the
     // SPI so swapping the underlying SDK does not change the wire
-    // contract for ThingRecord.metadata.
+    // contract for DeviceRecord.metadata.
     switch (context.capability) {
       case "power":
         // OnOff cluster, command On/Off.

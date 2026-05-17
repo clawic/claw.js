@@ -240,7 +240,7 @@ export function buildNotionOperationRequest(
           description: richText(values.description),
           icon: values.icon,
           cover: values.cover,
-          initial_data_source: initialDataSource(values),
+          initial_data_source: initialNotionSource(values),
         }),
         responseSchema: {
           type: "object",
@@ -746,8 +746,8 @@ function optionalDatabaseParent(values: Record<string, IntegrationJson>): Integr
   return databaseId ? { database_id: databaseId } : undefined;
 }
 
-function initialDataSource(values: Record<string, IntegrationJson>): IntegrationJson {
-  return values.initialDataSource ?? values.initial_data_source ?? removeEmptyValues({
+function initialNotionSource(values: Record<string, IntegrationJson>): IntegrationJson {
+  return values.initialNotionSource ?? values.initial_data_source ?? removeEmptyValues({
     title: richText(values.dataSourceTitle ?? values.title),
     properties: requiredJson(values.properties, "properties"),
   });

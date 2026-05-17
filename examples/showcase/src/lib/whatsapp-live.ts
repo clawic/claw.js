@@ -208,7 +208,7 @@ function resolveLiveWindow(anchorDate: string, scope: LiveScope, availableDates:
 
 // ---- Core data function ----
 
-export function getLiveData(targetDate?: string, requestedScope?: LiveScope | string): {
+export function getLiveWhatsappSnapshot(targetDate?: string, requestedScope?: LiveScope | string): {
   contacts: LiveContact[];
   stats: LivePeriodStats | null;
   observations: LiveObservation[];

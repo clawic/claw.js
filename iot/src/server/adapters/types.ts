@@ -4,14 +4,14 @@
 // devices: HTTP REST endpoints, the local Philips Hue bridge, MQTT
 // topics, Matter commissioning, cloud bridges, etc. The IoT service
 // hosts a registry of adapters and routes every action through the
-// adapter whose id matches `ThingRecord.connectorId`.
+// adapter whose id matches `DeviceRecord.connectorId`.
 //
 // The interface is intentionally small. Adapters that publish state
 // proactively implement `subscribe`; adapters that can be polled
 // implement `pollState`; adapters that discover new hardware implement
 // `discover`. Mock adapters can implement none of the optional hooks.
 
-import type { ThingRecord } from "../db.ts";
+import type { DeviceRecord } from "../db.ts";
 
 /** Severity grade attached to discovered devices and dispatch operations.
  *  Mirrors the daemon's local RiskLevel; the tools registry maps it onto
@@ -32,7 +32,7 @@ interface AdapterCapability {
 
 /** A device an adapter found during discovery, not yet added to the
  *  store. Adding it is an explicit user action that turns it into a
- *  ThingRecord. */
+ *  DeviceRecord. */
 export interface DiscoveredDevice {
   /** Stable handle across discovery runs (MAC, UUID, etc.). */
   fingerprint: string;
@@ -40,8 +40,8 @@ export interface DiscoveredDevice {
   connectorId: string;
   /** Suggested human label. */
   label: string;
-  /** Suggested IoTThingKind. */
-  kind: ThingRecord["kind"];
+  /** Suggested IoTDeviceKind. */
+  kind: DeviceRecord["kind"];
   /** Connector-specific addressing string (IP, topic, vendor id). */
   targetRef: string;
   /** Optional risk hint for the future thing record. */
@@ -58,7 +58,7 @@ export interface DiscoveredDevice {
  *  resolution; adapters receive the resolved thing record plus the
  *  desired value for one capability. */
 export interface DispatchContext {
-  thing: ThingRecord;
+  thing: DeviceRecord;
   capability: string;
   desiredValue: unknown;
   /** Original action verb (`on`, `off`, `set`, ...) in case the adapter
@@ -88,7 +88,7 @@ export interface DiscoveryOptions {
   timeoutMs?: number;
   /** Filter by kind. Adapters that cannot enumerate the requested kind
    *  return without yielding. */
-  kind?: ThingRecord["kind"];
+  kind?: DeviceRecord["kind"];
 }
 
 /** The plugin contract. Mandatory: id, label, dispatch. Optional:
@@ -109,18 +109,18 @@ export interface ConnectorAdapter {
 
   /** Read current state for one thing, e.g. to refresh after a
    *  network outage. */
-  pollState?(thing: ThingRecord): Promise<Record<string, unknown>>;
+  pollState?(thing: DeviceRecord): Promise<Record<string, unknown>>;
 
   /** Subscribe to push events from the device. Returns an unsubscribe
    *  function. Adapters without push support omit this hook. */
   subscribe?(
-    thing: ThingRecord,
+    thing: DeviceRecord,
     onUpdate: (capability: string, observedValue: unknown) => void,
   ): () => void;
 
   /** Lifecycle hook called when a thing is added to the store. */
-  attach?(thing: ThingRecord): Promise<void>;
+  attach?(thing: DeviceRecord): Promise<void>;
 
   /** Lifecycle hook called when a thing is removed. */
-  detach?(thing: ThingRecord): Promise<void>;
+  detach?(thing: DeviceRecord): Promise<void>;
 }

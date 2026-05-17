@@ -69,7 +69,7 @@ final class ChatService: ObservableObject {
             self?.reconnect()
         }
 
-        loadRemoteData()
+        loadRemoteBootstrap()
     }
 
     deinit {
@@ -101,7 +101,7 @@ final class ChatService: ObservableObject {
 
     // MARK: - Remote Loading
 
-    private func loadRemoteData() {
+    private func loadRemoteBootstrap() {
         Task {
             do {
                 let bootstrap = try await api.bootstrap()
@@ -536,7 +536,7 @@ final class ChatService: ObservableObject {
         agentProjects.removeAll()
         conversations.removeAll()
         isConnected = false
-        loadRemoteData()
+        loadRemoteBootstrap()
     }
 
     private func scheduleReconnect() {
@@ -547,7 +547,7 @@ final class ChatService: ObservableObject {
         reconnectTask = Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
             guard let self, !Task.isCancelled, !self.isConnected else { return }
-            self.loadRemoteData()
+            self.loadRemoteBootstrap()
         }
     }
 

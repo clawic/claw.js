@@ -13,7 +13,7 @@ import {
   ensureClawJSOpenClawAgent,
   getClawJSOpenClawStatus,
 } from "@/lib/openclaw-agent";
-import { getLiveData } from "@/lib/whatsapp-live";
+import { getLiveWhatsappSnapshot } from "@/lib/whatsapp-live";
 import { getUserConfig, loadContextFileContent } from "@/lib/user-config";
 import { localeMetadata } from "@/lib/i18n/messages";
 import { buildProfileMemoryPrompt, syncGeneratedProfile } from "@/lib/profile-context";

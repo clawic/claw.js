@@ -62,7 +62,7 @@ function snapshotThumb(data: Record<string, unknown>): string | null {
 }
 
 interface ChangedField { path: string; before: unknown; after: unknown; }
-function diffData(previous: Record<string, unknown>, next: Record<string, unknown>): ChangedField[] {
+function diffRecordPayload(previous: Record<string, unknown>, next: Record<string, unknown>): ChangedField[] {
   const out: ChangedField[] = [];
   const keys = new Set([...Object.keys(previous), ...Object.keys(next)]);
   for (const key of keys) {
@@ -241,7 +241,7 @@ export class IndexStore {
     if (existing) {
       const prev = entityFromRow(existing);
       entityId = prev.id;
-      changes = diffData(prev.data, input.data);
+      changes = diffRecordPayload(prev.data, input.data);
       const merged = { ...prev.data, ...input.data };
       this.db.prepare(`UPDATE entities SET data_json = ?, last_seen_at = ?, observation_count = observation_count + 1, source_url = COALESCE(?, source_url), title = COALESCE(?, title), thumbnail_url = COALESCE(?, thumbnail_url) WHERE id = ?`).run(JSON.stringify(merged), observedAt, sourceUrl, title, thumb, entityId);
     } else {

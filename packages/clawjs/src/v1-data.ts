@@ -16,7 +16,7 @@ export {
 import {
   V1_DATA_EXIT_FAILURE,
   V1_DATA_EXIT_OK,
-  backupData,
+  backupDataStore,
   doctorPayload,
   ensureSignalsVariable,
   ensureSignalsVertical,
@@ -41,7 +41,7 @@ import {
   refreshProfileProjection,
   resolveClawjsDataRoot,
   resetDomain,
-  restoreData,
+  restoreDataStore,
   runRecordGetDelete,
   runSimpleRecordCommand,
   runSidecarArtifactCommand,
@@ -78,7 +78,7 @@ export async function runV1DataCli(input: V1DataCliInput): Promise<number | null
     const from = input.flags.from || input.flags.input;
     if (!from) return usageError(input, "Usage: claw data restore --from DIR [--json]");
     try {
-      const restored = restoreData(path.resolve(input.cwd, expandHome(from)));
+      const restored = restoreDataStore(path.resolve(input.cwd, expandHome(from)));
       writeSuccess(input, restored);
       return V1_DATA_EXIT_OK;
     } catch (error) {
@@ -92,7 +92,7 @@ export async function runV1DataCli(input: V1DataCliInput): Promise<number | null
     store = openMainDataStore();
     switch (group) {
       case "data":
-        return runDataCommand(input, store);
+        return runDataMaintenanceCommand(input, store);
       case "app-state":
         return runAppStateCommand(input, store);
       case "signals":
@@ -214,7 +214,7 @@ function shouldHandleV1DataCommand(group: string | undefined, command: string | 
   return commandsByGroup[group].has(command);
 }
 
-function runDataCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
+function runDataMaintenanceCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
   const command = input.positionals[1];
   if (command === "doctor") {
     const payload = doctorPayload(store.sqlite);
@@ -224,7 +224,7 @@ function runDataCommand(input: V1DataCliInput, store: DatabaseServiceStore): num
   if (command === "backup") {
     const out = input.flags.out || input.flags.to;
     if (!out) return usageError(input, "Usage: claw data backup --out DIR [--json]");
-    const backup = backupData(path.resolve(input.cwd, expandHome(out)));
+    const backup = backupDataStore(path.resolve(input.cwd, expandHome(out)));
     writeSuccess(input, backup);
     return V1_DATA_EXIT_OK;
   }

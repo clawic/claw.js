@@ -47,7 +47,7 @@ import {
   invokeWorkspace,
   isLoopbackHost,
   isSecureRequest,
-  normalizeUploadData,
+  normalizeUploadText,
   parseBearerToken,
   parseProjectResourceRefs,
   parseProjectSecretRefs,

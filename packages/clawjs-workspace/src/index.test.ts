@@ -11,7 +11,7 @@ function createWorkspaceDir(label: string): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), `clawjs-workspace-${label}-`));
 }
 
-function useIsolatedMainData(t: { after(fn: () => void): void }, workspaceDir: string): string {
+function useIsolatedClawDataRoot(t: { after(fn: () => void): void }, workspaceDir: string): string {
   const previous = process.env.CLAW_DATA_DIR;
   const dataRoot = path.join(workspaceDir, "claw-data");
   process.env.CLAW_DATA_DIR = dataRoot;
@@ -37,7 +37,7 @@ function daysFromNow(days: number, hour = 9, minute = 0): string {
 
 test("createWorkspaceClaw manages tasks, notes, people, inbox, events, and badges locally", { concurrency: false }, async (t) => {
   const workspaceDir = createWorkspaceDir("crud");
-  const dataRoot = useIsolatedMainData(t, workspaceDir);
+  const dataRoot = useIsolatedClawDataRoot(t, workspaceDir);
   const claw = await createWorkspaceClaw({
     runtime: { adapter: "demo" },
     workspace: {
@@ -176,7 +176,7 @@ test("createWorkspaceClaw manages tasks, notes, people, inbox, events, and badge
 
 test("createWorkspaceClaw builds context blocks and augments session streaming", { concurrency: false }, async (t) => {
   const workspaceDir = createWorkspaceDir("context");
-  useIsolatedMainData(t, workspaceDir);
+  useIsolatedClawDataRoot(t, workspaceDir);
   const claw = await createWorkspaceClaw({
     runtime: {
       adapter: "openclaw",

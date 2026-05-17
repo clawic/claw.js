@@ -8,7 +8,7 @@ import Database from "better-sqlite3";
 import type { IotEventEnvelope } from "./realtime.ts";
 
 type RiskLevel = "safe" | "caution" | "restricted";
-type ThingKind =
+type DeviceKind =
   | "light"
   | "switch"
   | "climate"
@@ -58,13 +58,13 @@ export interface CapabilityRecord {
   observedAt: string;
 }
 
-export interface ThingRecord {
+export interface DeviceRecord {
   id: string;
   homeId: string;
   areaId?: string;
   label: string;
   aliases: string[];
-  kind: ThingKind;
+  kind: DeviceKind;
   risk: RiskLevel;
   connectorId: string;
   targetRef: string;
@@ -104,7 +104,7 @@ export interface IoTActionRequest {
   homeId?: string;
   selector?: string;
   area?: string;
-  family?: ThingKind | "scene" | "automation";
+  family?: DeviceKind | "scene" | "automation";
   capability?: string;
   action: "on" | "off" | "toggle" | "set" | "open" | "close" | "lock" | "unlock" | "arm" | "disarm" | "start" | "stop" | "pause" | "resume" | "activate";
   value?: unknown;
@@ -116,7 +116,7 @@ export interface PolicyEvaluation {
   decision: "allow" | "approval_required" | "deny" | "ambiguous";
   riskLevel: RiskLevel;
   reasons: string[];
-  candidates?: Array<{ id: string; label: string; kind: ThingKind }>;
+  candidates?: Array<{ id: string; label: string; kind: DeviceKind }>;
   resolvedTargetIds?: string[];
 }
 
@@ -126,10 +126,10 @@ export interface IoTActionResult {
   decision: PolicyEvaluation["decision"];
   reasons: string[];
   updatedAt: string;
-  targets: Array<{ id: string; label: string; kind: ThingKind; areaId?: string }>;
+  targets: Array<{ id: string; label: string; kind: DeviceKind; areaId?: string }>;
   capabilityUpdates: Array<{ thingId: string; capability: string; observedValue: unknown; desiredValue: unknown }>;
   approvalId?: string;
-  candidates?: Array<{ id: string; label: string; kind: ThingKind }>;
+  candidates?: Array<{ id: string; label: string; kind: DeviceKind }>;
 }
 
 function parseJson<T>(value: string | null | undefined, fallback: T): T {
@@ -162,14 +162,14 @@ export interface ActionExecutedNotice {
   home: HomeRecord;
   request: IoTActionRequest;
   capabilityKey: string;
-  targets: ThingRecord[];
+  targets: DeviceRecord[];
   capabilityUpdates: Array<{ thingId: string; capability: string; observedValue: unknown; desiredValue: unknown }>;
   actor: string;
 }
 
-export interface CreateThingInput {
+export interface CreateDeviceInput {
   label: string;
-  kind: ThingKind;
+  kind: DeviceKind;
   connectorId: string;
   targetRef: string;
   areaId?: string;
@@ -273,7 +273,7 @@ export class IotServiceStore {
     }));
   }
 
-  listThings(homeId?: string, options: { kind?: string; query?: string; area?: string } = {}): ThingRecord[] {
+  listThings(homeId?: string, options: { kind?: string; query?: string; area?: string } = {}): DeviceRecord[] {
     const resolved = this.resolveHome(homeId);
     const areas = this.listAreas(resolved.id);
     const areaMap = new Map(areas.map((area) => [area.id, area]));
@@ -291,13 +291,13 @@ export class IotServiceStore {
         ...(record.area_id ? { areaId: String(record.area_id) } : {}),
         label: String(record.label),
         aliases: parseJson<string[]>(record.aliases_json as string | undefined, []),
-        kind: String(record.kind) as ThingKind,
+        kind: String(record.kind) as DeviceKind,
         risk: String(record.risk) as RiskLevel,
         connectorId: String(record.connector_id),
         targetRef: String(record.target_ref),
         metadata: parseJson<Record<string, unknown> | undefined>(record.metadata_json as string | undefined, undefined),
         capabilities: this.listCapabilitiesForThing(String(record.id)),
-      } satisfies ThingRecord;
+      } satisfies DeviceRecord;
     });
     return things.filter((thing) => {
       if (options.kind && thing.kind !== options.kind) return false;
@@ -314,7 +314,7 @@ export class IotServiceStore {
     });
   }
 
-  getThing(homeId: string | undefined, thingId: string): ThingRecord | null {
+  getThing(homeId: string | undefined, thingId: string): DeviceRecord | null {
     return this.listThings(homeId).find((thing) => thing.id === thingId) ?? null;
   }
 
@@ -691,9 +691,9 @@ export class IotServiceStore {
   }
 
   /** Insert a new thing record plus its initial capabilities. Returns
-   *  the persisted ThingRecord so callers can immediately publish it
+   *  the persisted DeviceRecord so callers can immediately publish it
    *  on the realtime stream. */
-  createThing(homeId: string | undefined, input: CreateThingInput): ThingRecord {
+  createThing(homeId: string | undefined, input: CreateDeviceInput): DeviceRecord {
     const home = this.resolveHome(homeId);
     const id = `thing_${randomUUID().slice(0, 8)}`;
     const createdAt = nowIso();
@@ -772,8 +772,8 @@ export class IotServiceStore {
   }
 
   private resolveTargets(homeId: string, request: IoTActionRequest): {
-    targets: ThingRecord[];
-    candidates?: Array<{ id: string; label: string; kind: ThingKind }>;
+    targets: DeviceRecord[];
+    candidates?: Array<{ id: string; label: string; kind: DeviceKind }>;
   } {
     const things = this.listThings(homeId, {
       ...(request.family ? { kind: request.family } : {}),
@@ -800,7 +800,7 @@ export class IotServiceStore {
     return { targets: things };
   }
 
-  private resolveCapabilityKey(request: IoTActionRequest, targets: ThingRecord[]): string {
+  private resolveCapabilityKey(request: IoTActionRequest, targets: DeviceRecord[]): string {
     if (request.capability?.trim()) return request.capability.trim();
     const family = request.family ?? targets[0]?.kind;
     if (family === "climate" && request.action === "set") return "targetTemperature";

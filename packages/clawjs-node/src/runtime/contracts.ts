@@ -20,7 +20,7 @@ import type {
   RuntimeFeatureDescriptor,
   RuntimeCapabilityMap,
   RuntimeFileDescriptor,
-  RuntimeInfo,
+  RuntimeDescriptor,
   RuntimeLocations,
   RuntimeWorkspaceContract,
   SchedulerCatalog,
@@ -31,7 +31,7 @@ import type {
 
 import type { ExecResult } from "../host/process.ts";
 
-export interface RuntimeProbeStatus extends RuntimeInfo {
+export interface RuntimeProbeStatus extends RuntimeDescriptor {
   installed?: boolean;
   cliAvailable: boolean;
   gatewayAvailable: boolean;

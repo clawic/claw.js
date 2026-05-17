@@ -5,11 +5,11 @@ import path from "node:path";
 import { test } from "vitest";
 
 import { CLI_EXIT_OK } from "./cli-errors.ts";
-import { runCliCapture, useIsolatedMainData } from "./index-test-utils.ts";
+import { runCliCapture, useIsolatedClawDataRoot } from "./index-test-utils.ts";
 
 test("guidance and resources commands expose compact JIT metadata", async (t) => {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-guidance-"));
-  useIsolatedMainData(t, cwd);
+  useIsolatedClawDataRoot(t, cwd);
   const guidanceDir = path.join(cwd, "guidance");
   const resourcesDir = path.join(cwd, "resources");
   const filePath = path.join(cwd, "instructions.md");

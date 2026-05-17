@@ -13,7 +13,7 @@ import {
   createFakeOpenClawToolchain,
   createFakeSkillSourceToolchain,
   listen,
-  useIsolatedMainData,
+  useIsolatedClawDataRoot,
   withPatchedEnv,
 } from "./index-test-utils.ts";
 
@@ -21,7 +21,7 @@ const OPENAI_API_PREFIX = "/v" + "1";
 
 test("runCli can search sessions through OpenClaw memory search", async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-session-search-"));
-  useIsolatedMainData(t, workspaceRoot);
+  useIsolatedClawDataRoot(t, workspaceRoot);
   const { binDir } = createFakeOpenClawToolchain();
   const claw = await createClaw({
     runtime: { adapter: "openclaw" },
@@ -72,7 +72,7 @@ test("runCli can search sessions through OpenClaw memory search", async (t) => {
 
 test("runCli knowledge memories lifecycle is local-first and agent-friendly", async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-memory-local-"));
-  useIsolatedMainData(t, workspaceRoot);
+  useIsolatedClawDataRoot(t, workspaceRoot);
 
   const helpStdout = captureStream();
   assert.equal(await runCli(["knowledge", "memories", "--help"], {
@@ -269,7 +269,7 @@ test("runCli rules compiles scoped active rules and ignores pending rules", asyn
 test("runCli knowledge memories search keeps workspaces and runtime source separate", async (t) => {
   const workspaceA = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-memory-a-"));
   const workspaceB = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-memory-b-"));
-  useIsolatedMainData(t, workspaceA);
+  useIsolatedClawDataRoot(t, workspaceA);
   const { binDir, openclawLog } = createFakeOpenClawToolchain();
 
   await runCli(["knowledge", "memories", "save", "Workspace alpha prefers tabs", "--workspace", workspaceA, "--json"], {
@@ -349,7 +349,7 @@ test("runCli knowledge memories search keeps workspaces and runtime source separ
 
 test("runCli knowledge memories JSON errors are parseable and db memory search is not a create alias", async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-memory-errors-"));
-  useIsolatedMainData(t, workspaceRoot);
+  useIsolatedClawDataRoot(t, workspaceRoot);
 
   const missingQueryStdout = captureStream();
   assert.equal(await runCli(["knowledge", "memories", "search", "--workspace", workspaceRoot, "--json"], {
@@ -398,7 +398,7 @@ test("runCli knowledge memories JSON errors are parseable and db memory search i
 
 test("runCli runtime knowledge memories search returns ok for empty results when explicitly requested", async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-memory-search-"));
-  useIsolatedMainData(t, workspaceRoot);
+  useIsolatedClawDataRoot(t, workspaceRoot);
   const { binDir, openclawLog } = createFakeOpenClawToolchain();
 
   await withPatchedEnv({

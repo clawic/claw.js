@@ -192,7 +192,7 @@ export async function readRequestBody(request: FastifyRequest): Promise<Record<s
   return (await request.body ?? {}) as Record<string, unknown>;
 }
 
-export function normalizeUploadData(value: unknown): string {
+export function normalizeUploadText(value: unknown): string {
   if (typeof value !== "string") return "";
   const trimmed = value.trim();
   if (!trimmed) return "";

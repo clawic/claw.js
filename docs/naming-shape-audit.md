@@ -1,8 +1,8 @@
 # Naming shape audit
 
-Status: initial report
+Status: refreshed report
 
-Date: 2026-05-15
+Date: 2026-05-17
 
 This is the living audit report for ADR 0013. The machine-readable source is
 `node scripts/naming-shape-check.mjs --json`; source-shape signals come from
@@ -11,25 +11,25 @@ This is the living audit report for ADR 0013. The machine-readable source is
 ## Current gate status
 
 - Critical naming failures: 0.
-- Naming warnings: 154.
-- Source-size warnings: 118.
-- Source-structure signals: 320.
+- Naming warnings: 0.
+- Source-size warnings: 119.
+- Source-structure signals: 317.
 
 The current gate is intentionally critical-only. Warnings are cleanup inventory
 for staged rename/split work and must not be hidden by compressing code.
 
 ## Largest current files
 
-- `packages/clawjs/src/index.ts` - 2002 lines.
+- `packages/clawjs/src/index.ts` - 2020 lines.
+- `packages/clawjs-core/src/surface-registry.ts` - 2005 lines.
 - `examples/showcase/src/app/settings/page.tsx` - 1996 lines.
 - `packages/clawjs-node/src/create-claw.test.ts` - 1994 lines.
 - `relay/src/server/db.ts` - 1982 lines.
 - `packages/clawjs-workspace/src/index.ts` - 1977 lines.
-- `packages/clawjs-node/src/create-claw.ts` - 1964 lines.
 - `examples/showcase/src/lib/e2e.ts` - 1953 lines.
+- `packages/clawjs-node/src/create-claw.ts` - 1951 lines.
 - `modules/erp/src/server/db.ts` - 1950 lines.
 - `memory/src/service.ts` - 1886 lines.
-- `packages/clawjs-core/src/surface-registry.ts` - 1955 lines.
 
 ## Cleanup families
 
@@ -46,7 +46,7 @@ for staged rename/split work and must not be hidden by compressing code.
 - IoT adapter device vocabulary: initial cleanup completed for provider adapter
   configuration types and readers. Alexa, Google Home, MQTT, and Tuya local
   config symbols now use `DeviceConfig`/`readDeviceConfig`. Public IoT
-  contracts such as `/things`, `iot.things.*`, `ThingRecord`, and `thingId`
+  contracts such as `/things`, `iot.things.*`, `DeviceRecord`, and `thingId`
   remain a separate contract rename family to coordinate with Clawix.
 - Docs data-file role vocabulary: `surface-contract.json` is now
   `surface-contract.registry.json`, and company cockpit example payloads now
@@ -97,12 +97,32 @@ for staged rename/split work and must not be hidden by compressing code.
 - Naming check scope: generated output and local variable-only broad terms are
   excluded so warnings stay focused on source files, types, functions, exported
   values, owned docs data roles, and unresolved context-vocabulary inventory.
+- Docs data role false positives: owned docs JSON/YAML role suffix detection
+  now accepts dot- and hyphen-delimited roles such as decisions, tools,
+  acceptance, validation, and verification.
+- Internal data vocabulary: CLI/test parsers, upload helpers, preview share
+  serialization, memory graph assembly, ERP dashboard payloads, and chat app
+  bootstrap loading now use payload, text, snapshot, or bootstrap terminology
+  instead of broad `Data` names.
+- Core exported role vocabulary: runtime metadata now uses
+  `RuntimeDescriptor`; shared JSON field constants and storage filenames use
+  `clawSharedJsonFields` and `clawStorageFiles`.
+- IoT type vocabulary: internal type names now use device language
+  (`IoTDeviceKind`, `IoTDeviceDescriptor`, `DeviceRecord`,
+  `CreateDeviceInput`) while existing `/things`, `iot.things.*`, and
+  `thingId` wire/storage names remain explicit contract terms.
+- Context vocabulary audit: provider-native chat/thread IDs, Codex runtime
+  thread IDs, inbox threads, marketplace mailbox threads, and audit scripts
+  that quote forbidden terms are classified as accepted context rather than
+  framework session drift. `NotificationContext` now uses `sessionId`.
 
 ## Validation snapshot
 
 - `npm run test:docs` passed after adding the new checks.
-- `node scripts/naming-shape-check.mjs` passed with warnings only.
-- `node scripts/source-size-check.mjs` passed with warnings/signals only.
+- `node scripts/naming-shape-check.mjs --json` passed with 0 failures and 0
+  warnings.
+- `node scripts/source-size-check.mjs --json` passed with 0 failures, 119
+  warnings, and 317 source-structure signals.
 - `npm --prefix packages/clawjs-core run build` passed before skills v2 runtime
   validation.
 - `npx vitest run --config vitest.config.ts packages/clawjs-node/src/skills-v2/store.test.ts`

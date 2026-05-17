@@ -135,7 +135,7 @@ export interface RuntimeCapabilitySupport {
 export type RuntimeCapabilityMap = Record<RuntimeCapabilityKey, RuntimeCapabilitySupport> &
   Record<string, RuntimeCapabilitySupport>;
 
-export interface RuntimeInfo {
+export interface RuntimeDescriptor {
   adapter: RuntimeAdapterId;
   runtimeName: string;
   version: string | null;
@@ -218,7 +218,7 @@ export interface NotificationContext {
   projectId?: string;
   agentId?: string;
   workspaceId?: string;
-  threadId?: string;
+  sessionId?: string;
   automationId?: string;
   eventType?: string;
   severity?: string;
@@ -753,7 +753,7 @@ export interface PluginCatalog {
 // ── IoT types ────────────────────────────────────────────────────────
 
 export type IoTRiskLevel = "safe" | "caution" | "restricted";
-export type IoTThingKind =
+export type IoTDeviceKind =
   | "light"
   | "switch"
   | "climate"
@@ -803,13 +803,13 @@ export interface CapabilityDescriptor {
   observedAt: string;
 }
 
-export interface ThingDescriptor {
+export interface IoTDeviceDescriptor {
   id: string;
   homeId: string;
   areaId?: string;
   label: string;
   aliases?: string[];
-  kind: IoTThingKind;
+  kind: IoTDeviceKind;
   risk: IoTRiskLevel;
   connectorId: string;
   targetRef: string;
@@ -821,7 +821,7 @@ export interface IoTActionRequest {
   homeId?: string;
   selector?: string;
   area?: string;
-  family?: IoTThingKind | "scene" | "automation";
+  family?: IoTDeviceKind | "scene" | "automation";
   capability?: string;
   action: "on" | "off" | "toggle" | "set" | "open" | "close" | "lock" | "unlock" | "arm" | "disarm" | "start" | "stop" | "pause" | "resume" | "activate";
   value?: unknown;
@@ -838,7 +838,7 @@ export interface IoTActionResult {
   targets: Array<{
     id: string;
     label: string;
-    kind: IoTThingKind;
+    kind: IoTDeviceKind;
     areaId?: string;
   }>;
   capabilityUpdates: Array<{
@@ -851,7 +851,7 @@ export interface IoTActionResult {
   candidates?: Array<{
     id: string;
     label: string;
-    kind: IoTThingKind;
+    kind: IoTDeviceKind;
   }>;
 }
 
@@ -862,7 +862,7 @@ export interface IoTPolicyEvaluation {
   candidates?: Array<{
     id: string;
     label: string;
-    kind: IoTThingKind;
+    kind: IoTDeviceKind;
   }>;
   resolvedTargetIds?: string[];
 }
@@ -917,7 +917,7 @@ export interface IoTStateSnapshot {
   home: HomeDescriptor;
   areas: AreaDescriptor[];
   connectors: ConnectorDescriptor[];
-  things: ThingDescriptor[];
+  things: IoTDeviceDescriptor[];
   updatedAt: string;
 }
 

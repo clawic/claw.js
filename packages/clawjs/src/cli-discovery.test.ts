@@ -5,7 +5,7 @@ import os from "os";
 import path from "path";
 
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, runCli } from "./index.ts";
-import { runCliCapture, useIsolatedMainData } from "./index-test-utils.ts";
+import { runCliCapture, useIsolatedClawDataRoot } from "./index-test-utils.ts";
 
 test("runCli returns structured related matches for unknown JSON commands", async () => {
   const result = await runCliCapture(["peopel", "--json"], process.cwd());
@@ -180,7 +180,7 @@ test("runCli returns removed pre-v1 namespace JSON in the common envelope", asyn
 
 test("runCli returns primary productivity JSON in the common envelope", { concurrency: false }, async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-productivity-json-"));
-  useIsolatedMainData(t, workspaceRoot);
+  useIsolatedClawDataRoot(t, workspaceRoot);
   const result = await runCliCapture(["tasks", "list", "--workspace", workspaceRoot, "--runtime", "demo", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK);
   const payload = JSON.parse(result.stdout) as { ok: boolean; data: unknown[]; meta: { canonicalCommand: string; invokedCommand: string; subcommand: string } };
@@ -193,7 +193,7 @@ test("runCli returns primary productivity JSON in the common envelope", { concur
 
 test("runCli returns productivity database JSON in the common envelope", { concurrency: false }, async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-db-json-"));
-  useIsolatedMainData(t, workspaceRoot);
+  useIsolatedClawDataRoot(t, workspaceRoot);
   const result = await runCliCapture(["db", "tasks", "schema", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK);
   const payload = JSON.parse(result.stdout) as { ok: boolean; data: { collection: { name: string } }; meta: { canonicalCommand: string; invokedCommand: string; collection: string; subcommand: string } };
@@ -270,7 +270,7 @@ test("runCli returns a useful JSON hint when the database admin service is unava
 
 test("runCli routes unique built-in collection aliases through database CRUD", { concurrency: false }, async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-collection-alias-json-"));
-  useIsolatedMainData(t, workspaceRoot);
+  useIsolatedClawDataRoot(t, workspaceRoot);
   const result = await runCliCapture(["lead", "list", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK);
   const payload = JSON.parse(result.stdout) as { ok: boolean; meta: { canonicalCommand: string; collection: string; subcommand: string } };
@@ -282,7 +282,7 @@ test("runCli routes unique built-in collection aliases through database CRUD", {
 
 test("runCli returns advanced productivity JSON in the common envelope", { concurrency: false }, async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-outcomes-json-"));
-  useIsolatedMainData(t, workspaceRoot);
+  useIsolatedClawDataRoot(t, workspaceRoot);
   const result = await runCliCapture(["outcomes", "list", "--workspace", workspaceRoot, "--runtime", "demo", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK);
   const payload = JSON.parse(result.stdout) as { ok: boolean; data: { outcomes: unknown[] }; meta: { canonicalCommand: string; invokedCommand: string; subcommand: string } };
@@ -295,7 +295,7 @@ test("runCli returns advanced productivity JSON in the common envelope", { concu
 
 test("runCli returns media generation JSON in the common envelope", { concurrency: false }, async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-media-json-"));
-  useIsolatedMainData(t, workspaceRoot);
+  useIsolatedClawDataRoot(t, workspaceRoot);
   const result = await runCliCapture(["image", "list", "--workspace", workspaceRoot, "--runtime", "demo", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_DEGRADED);
   const payload = JSON.parse(result.stdout) as { ok: boolean; data: unknown[]; meta: { canonicalCommand: string; invokedCommand: string; subcommand: string } };
@@ -308,7 +308,7 @@ test("runCli returns media generation JSON in the common envelope", { concurrenc
 
 test("runCli routes media portal children to canonical media commands", { concurrency: false }, async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-media-portal-json-"));
-  useIsolatedMainData(t, workspaceRoot);
+  useIsolatedClawDataRoot(t, workspaceRoot);
   const result = await runCliCapture(["media", "images", "list", "--workspace", workspaceRoot, "--runtime", "demo", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_DEGRADED);
   const payload = JSON.parse(result.stdout) as { ok: boolean; data: unknown[]; meta: { canonicalCommand: string; invokedCommand: string; subcommand: string } };
@@ -321,7 +321,7 @@ test("runCli routes media portal children to canonical media commands", { concur
 
 test("runCli returns channel JSON in the common envelope", { concurrency: false }, async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-channels-json-"));
-  useIsolatedMainData(t, workspaceRoot);
+  useIsolatedClawDataRoot(t, workspaceRoot);
   const result = await runCliCapture(["channels", "list", "--workspace", workspaceRoot, "--runtime", "demo", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK);
   const payload = JSON.parse(result.stdout) as { ok: boolean; data: unknown[]; meta: { canonicalCommand: string; invokedCommand: string; subcommand: string } };
@@ -334,7 +334,7 @@ test("runCli returns channel JSON in the common envelope", { concurrency: false 
 
 test("runCli returns extended productivity JSON in the common envelope", { concurrency: false }, async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-extended-productivity-json-"));
-  useIsolatedMainData(t, workspaceRoot);
+  useIsolatedClawDataRoot(t, workspaceRoot);
   const result = await runCliCapture(["blockers", "list", "--workspace", workspaceRoot, "--runtime", "demo", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK);
   const payload = JSON.parse(result.stdout) as { ok: boolean; data: unknown[]; meta: { canonicalCommand: string; invokedCommand: string; subcommand: string } };

@@ -918,7 +918,7 @@ final class CommanderE2ETests: XCTestCase {
         XCTAssertEqual(trash.data?.objectValue?["trashed"]?.boolValue, true)
     }
 
-    func testCalendarReadPathIsWiredWithoutMutatingUserData() throws {
+    func testCalendarReadPathIsWiredWithoutMutatingUserRecords() throws {
         let context = try TestContext(testMode: false)
         defer { context.cleanup() }
 

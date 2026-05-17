@@ -27,7 +27,7 @@ export function captureStream() {
   };
 }
 
-export function parseCliData<T>(text: string): T {
+export function parseCliJsonPayload<T>(text: string): T {
   const payload = JSON.parse(text) as T | { data: T };
   return typeof payload === "object" && payload !== null && "data" in payload ? payload.data : payload;
 }
@@ -603,7 +603,7 @@ export async function withPatchedEnv<TValue>(
   }
 }
 
-export function useIsolatedMainData(t: { after(fn: () => void): void }, workspaceRoot: string): string {
+export function useIsolatedClawDataRoot(t: { after(fn: () => void): void }, workspaceRoot: string): string {
   const previous = new Map([
     ["CLAW_DATA_DIR", process.env.CLAW_DATA_DIR],
     ["CLAW_DB_PATH", process.env.CLAW_DB_PATH],

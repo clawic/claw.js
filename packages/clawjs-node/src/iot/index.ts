@@ -11,7 +11,7 @@ import type {
   IoTStateSnapshot,
   RawIoTInvocation,
   SceneRecord,
-  ThingDescriptor,
+  IoTDeviceDescriptor,
 } from "@clawjs/core";
 
 export interface IotClientOptions {
@@ -63,7 +63,7 @@ export class IotClient {
     return payload.areas;
   }
 
-  async listThings(options: { homeId?: string; kind?: string; query?: string; area?: string } = {}): Promise<ThingDescriptor[]> {
+  async listThings(options: { homeId?: string; kind?: string; query?: string; area?: string } = {}): Promise<IoTDeviceDescriptor[]> {
     const url = new URL(
       options.homeId ? clawApiPath(`homes/${options.homeId}/things`) : clawApiPath("things"),
       this.baseUrl,
@@ -71,16 +71,16 @@ export class IotClient {
     if (options.kind) url.searchParams.set("kind", options.kind);
     if (options.query) url.searchParams.set("q", options.query);
     if (options.area) url.searchParams.set("area", options.area);
-    const payload = await this.request<{ things: ThingDescriptor[] }>(url.pathname + url.search);
+    const payload = await this.request<{ things: IoTDeviceDescriptor[] }>(url.pathname + url.search);
     return payload.things;
   }
 
-  async getThing(thingId: string, homeId?: string): Promise<ThingDescriptor | null> {
+  async getThing(thingId: string, homeId?: string): Promise<IoTDeviceDescriptor | null> {
     const things = await this.listThings({ homeId });
     return things.find((thing) => thing.id === thingId) ?? null;
   }
 
-  async searchThings(query: string, options: { homeId?: string; kind?: string; area?: string } = {}): Promise<ThingDescriptor[]> {
+  async searchThings(query: string, options: { homeId?: string; kind?: string; area?: string } = {}): Promise<IoTDeviceDescriptor[]> {
     return await this.listThings({
       ...options,
       query,

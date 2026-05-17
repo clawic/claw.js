@@ -116,20 +116,20 @@ function buildLanPreviewSharePayload(input: {
   };
 }
 
-function previewShareData(payload: PreviewSharePayload): Omit<PreviewSharePayload, "ok"> {
+function previewSharePayloadBody(payload: PreviewSharePayload): Omit<PreviewSharePayload, "ok"> {
   const { ok: _ok, ...data } = payload;
   return data;
 }
 
 function writePreviewShareJson(stdout: NodeJS.WritableStream, payload: PreviewSharePayload): void {
-  writeCommandJsonOk(stdout, "preview", previewShareData(payload), {
+  writeCommandJsonOk(stdout, "preview", previewSharePayloadBody(payload), {
     subcommand: "share",
     mode: payload.mode,
   });
 }
 
 function writePreviewShareJsonLine(stdout: NodeJS.WritableStream, payload: PreviewSharePayload): void {
-  writeCommandJsonOkLine(stdout, "preview", previewShareData(payload), {
+  writeCommandJsonOkLine(stdout, "preview", previewSharePayloadBody(payload), {
     subcommand: "share",
     mode: payload.mode,
   });

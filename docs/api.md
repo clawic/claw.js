@@ -803,7 +803,7 @@ for await (const event of claw.watch.eventsIterator("*")) {
 ## Contracts
 
 The main runtime contracts come from `@clawjs/core`. The most important
-ones are `RuntimeInfo`, `RuntimeCapabilityMap`, `ProviderDescriptor`,
+ones are `RuntimeDescriptor`, `RuntimeCapabilityMap`, `ProviderDescriptor`,
 `ModelDescriptor`, `AuthState`, `SchedulerDescriptor`,
 `MemoryDescriptor`, `SkillDescriptor`, `ChannelDescriptor`, `Message`,
 `SessionRecord`, `TemplatePack`, and `BindingDefinition`.

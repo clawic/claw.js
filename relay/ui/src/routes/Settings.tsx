@@ -69,7 +69,7 @@ export function SettingsPage() {
         <EnrollmentCard tenantId={tenantId} />
         <CreateWorkspaceCard tenantId={tenantId} />
         <RuntimeCard tenantId={tenantId} />
-        <DeleteDataCard tenantId={tenantId} />
+        <DeleteWorkspaceDataCard tenantId={tenantId} />
       </PageBody>
     </>
   );
@@ -740,7 +740,7 @@ const DELETE_LABELS: Record<keyof DeleteFlags, string> = {
   agents: "All agents (connectors)",
 };
 
-function DeleteDataCard({ tenantId }: { tenantId: string }) {
+function DeleteWorkspaceDataCard({ tenantId }: { tenantId: string }) {
   const navigate = useNavigate();
   const [flags, setFlags] = useState<DeleteFlags>({
     conversations: false,

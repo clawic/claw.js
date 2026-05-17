@@ -112,7 +112,7 @@ class ApiClient {
     return this.get(clawApiPath(`app/meta?${params}`));
   }
 
-  async dashboard(): Promise<DashboardData> {
+  async dashboard(): Promise<DashboardSnapshot> {
     const { tenantId, legalEntityId } = this.getContext();
     return this.get(clawApiPath(`app/dashboard?tenantId=${tenantId}&legalEntityId=${legalEntityId}`));
   }
@@ -359,7 +359,7 @@ export interface AppMeta {
   badges: { approvals: number };
 }
 
-export interface DashboardData {
+export interface DashboardSnapshot {
   header: { tenantId: string; legalEntityId: string };
   metrics: {
     cashCents: number;

@@ -266,7 +266,7 @@ for (const snippet of [
 }
 
 for (const snippet of [
-  "Status: initial report",
+  "Status: refreshed report",
   "Critical naming failures: 0",
   "Cleanup families",
 ]) {

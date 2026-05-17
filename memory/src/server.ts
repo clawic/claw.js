@@ -28,7 +28,7 @@ type GraphEdge = {
   metadata: Record<string, unknown>;
 };
 
-function buildGraphData(
+function buildMemoryGraphSnapshot(
   notes: ParsedNote[],
   schema: LoadedSchema,
   service: MemoryService
@@ -426,7 +426,7 @@ export function startServer(
 
       if (pathname === "/api/graph") {
         const validation = service.validate();
-        const graph = buildGraphData(validation.notes, validation.schema, service);
+        const graph = buildMemoryGraphSnapshot(validation.notes, validation.schema, service);
         sendJson(res, graph);
         return;
       }

@@ -4,7 +4,7 @@
 // user can describe in configuration: ESPHome, Shelly, Tasmota, custom
 // firmware, garage controllers, anything that can be hit with a URL.
 //
-// Configuration is stored on `ThingRecord.metadata.httpAdapter` and
+// Configuration is stored on `DeviceRecord.metadata.httpAdapter` and
 // describes per-capability mappings: which URL to hit, which HTTP
 // verb, how to render the desired value into the payload, and how to
 // parse the response into an observed value. Example metadata blob:

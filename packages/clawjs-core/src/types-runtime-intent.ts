@@ -4,7 +4,7 @@ import type {
   DefaultModelRef,
   ModelCatalog,
   RuntimeAdapterId,
-  RuntimeInfo,
+  RuntimeDescriptor,
   RuntimeLocations,
 } from "./types.ts";
 
@@ -127,7 +127,7 @@ export interface SpeechIntentState {
 export interface RuntimeObservedState {
   schemaVersion: number;
   updatedAt: string;
-  runtime: RuntimeInfo & {
+  runtime: RuntimeDescriptor & {
     installed?: boolean;
     cliAvailable?: boolean;
     gatewayAvailable?: boolean;

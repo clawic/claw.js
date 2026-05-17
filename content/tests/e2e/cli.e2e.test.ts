@@ -32,7 +32,7 @@ async function boot() {
   return server;
 }
 
-function parseClawJsonData<T>(stdout: string): T {
+function parseClawJsonPayload<T>(stdout: string): T {
   const payload = JSON.parse(stdout) as { ok?: boolean; data?: T };
   assert.equal(payload.ok, true);
   assert.ok(payload.data);
@@ -143,7 +143,7 @@ test("dedicated CLI and claw bridge hit the same content service", async () => {
       CLAW_PUBLISHING_DIR: process.cwd(),
     },
   });
-  const planId = parseClawJsonData<{ plan: { id: string } }>(plan.stdout).plan.id;
+  const planId = parseClawJsonPayload<{ plan: { id: string } }>(plan.stdout).plan.id;
 
   const run = await execFileAsync("node", [
     clawBin,
@@ -164,5 +164,5 @@ test("dedicated CLI and claw bridge hit the same content service", async () => {
       CLAW_PUBLISHING_DIR: process.cwd(),
     },
   });
-  assert.equal(parseClawJsonData<{ run: { status: string } }>(run.stdout).run.status, "succeeded");
+  assert.equal(parseClawJsonPayload<{ run: { status: string } }>(run.stdout).run.status, "succeeded");
 });

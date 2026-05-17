@@ -50,7 +50,7 @@ final class ChatService: ObservableObject {
         self.projects = MockData.projects
         self.topics = []
         self.conversations = []
-        loadRemoteData()
+        loadRemoteBootstrap()
     }
 
     private func localAgentId(for remoteId: String) -> UUID {
@@ -75,7 +75,7 @@ final class ChatService: ObservableObject {
 
     // MARK: - Remote Loading
 
-    private func loadRemoteData() {
+    private func loadRemoteBootstrap() {
         Task {
             do {
                 let bootstrap = try await api.bootstrap()
