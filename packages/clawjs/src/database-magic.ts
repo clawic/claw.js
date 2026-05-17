@@ -700,6 +700,22 @@ function applyDefaults(collectionName: string, payload: Record<string, unknown>,
       payload.severity ??= "medium";
       payload.identifiedAt ??= new Date().toISOString();
       break;
+    case "agencies":
+      payload.status ??= "active";
+      payload.level ??= "unknown";
+      break;
+    case "public_cases":
+      payload.status ??= "draft";
+      payload.caseType ??= "unknown";
+      payload.openedAt ??= new Date().toISOString();
+      break;
+    case "permits":
+      payload.status ??= "draft";
+      break;
+    case "public_filings":
+      payload.status ??= "draft";
+      payload.filingType ??= "unknown";
+      break;
     case "iot_things":
       payload.status ??= "active";
       payload.kind ??= "unknown";

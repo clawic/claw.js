@@ -1,0 +1,41 @@
+import type { BuiltinCollectionDefinition } from "../_types.ts";
+
+export const PUBLIC_FILINGS: BuiltinCollectionDefinition = {
+  name: "public_filings",
+  displayName: "Public Filings",
+  family: "government",
+  aliases: ["public-filing", "public-filings", "public_filing", "public_filings", "government-filing", "government-filings"],
+  catalog: {
+    purpose: "Public filing center for submissions, responses, public records, linked documents, evidence, and gaps.",
+    evidence: ["human_recognizable", "market_validated", "multi_domain_reuse", "agent_useful"],
+    relationGuidance: "Use publicCaseId for the administrative case and documentId when the filing content is stored as a document.",
+    notes: "This represents public/administrative filings; content publishing entries and legal evidence remain separate collections.",
+  },
+  fields: [
+    { name: "title", type: "text", required: true, requiredReason: "identity", aliases: ["name", "summary"] },
+    { name: "agencyId", type: "relation", relation: { collectionName: "agencies" } },
+    { name: "publicCaseId", type: "relation", relation: { collectionName: "public_cases" } },
+    { name: "documentId", type: "relation", relation: { collectionName: "documents" } },
+    { name: "filingNumber", type: "text", aliases: ["reference"] },
+    { name: "filingType", type: "select", options: ["application", "notice", "response", "appeal", "renewal", "record_request", "other", "unknown"] },
+    { name: "status", type: "select", options: ["draft", "submitted", "accepted", "rejected", "responded", "withdrawn", "unknown"] },
+    { name: "submittedAt", type: "date" },
+    { name: "responseDueAt", type: "date" },
+    { name: "responseReceivedAt", type: "date" },
+    { name: "summary", type: "markdown" },
+    { name: "source", type: "json" },
+    { name: "links", type: "json" },
+    { name: "evidence", type: "json" },
+    { name: "qualityGaps", type: "json" },
+    { name: "metadata", type: "json" },
+    { name: "archivedAt", type: "date" },
+  ],
+  indexes: [
+    { name: "public_filings_title_idx", fields: ["title"] },
+    { name: "public_filings_agency_idx", fields: ["agencyId"] },
+    { name: "public_filings_public_case_idx", fields: ["publicCaseId"] },
+    { name: "public_filings_document_idx", fields: ["documentId"] },
+    { name: "public_filings_number_idx", fields: ["filingNumber"] },
+    { name: "public_filings_status_idx", fields: ["status"] },
+  ],
+};

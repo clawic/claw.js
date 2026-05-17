@@ -75,9 +75,11 @@ test("dense data OS generates auditable intent and semantic view entries", () =>
   assert.ok(intents.some((entry) => entry.phrase === "claw encounter list" && entry.status === "covered" && entry.collectionName === "encounters"));
   assert.ok(intents.some((entry) => entry.phrase === "claw health gaps" && entry.status === "covered"));
   assert.ok(intents.some((entry) => entry.phrase === "claw lab-notebook list" && entry.status === "covered" && entry.collectionName === "lab_notebooks"));
+  assert.ok(intents.some((entry) => entry.phrase === "claw public-case list" && entry.status === "covered" && entry.collectionName === "public_cases"));
   assert.ok(semanticViews.some((entry) => entry.id === "patient.timeline" && entry.systemId === "health"));
   assert.ok(semanticViews.some((entry) => entry.id === "invoice.list" && entry.systemId === "erp"));
   assert.ok(semanticViews.some((entry) => entry.id === "lab_notebook.timeline" && entry.systemId === "eln"));
+  assert.ok(semanticViews.some((entry) => entry.id === "public_case.timeline" && entry.systemId === "government"));
 });
 
 test("dense data OS acceptance fixture covers required first-wave records and gaps", () => {
@@ -132,6 +134,10 @@ test("dense data OS acceptance fixture covers required first-wave records and ga
     "control",
     "control_assessment",
     "compliance_finding",
+    "agency",
+    "public_case",
+    "permit",
+    "public_filing",
     "thing",
     "iot_device",
     "sensor_reading",
@@ -196,6 +202,7 @@ test("dense data OS first wave covers the agreed high-density systems", () => {
     "supply_chain",
     "transport",
     "compliance",
+    "government",
     "construction",
     "iot",
     "eln",
@@ -221,12 +228,14 @@ test("dense data OS keeps common names and professional acronyms as first-class 
   assert.equal(findClawDenseDataSystem("mes")?.id, "manufacturing");
   assert.equal(findClawDenseDataSystem("itsm")?.id, "ops");
   assert.equal(findClawDenseDataSystem("proptech")?.id, "real_estate");
+  assert.equal(findClawDenseDataSystem("gov")?.id, "government");
   assert.equal(findClawDenseDataSystem("purchasing")?.id, "procurement");
   assert.equal(findClawDenseDataSystem("wms")?.id, "warehouse");
   assert.equal(findClawDenseDataSystem("tms")?.id, "transport");
   assert.equal(findClawDenseDataSystem("freight")?.id, "transport");
   assert.equal(findClawDenseDataSystem("scm")?.id, "supply_chain");
   assert.equal(findClawDenseDataSystem("grc")?.id, "compliance");
+  assert.equal(findClawDenseDataSystem("gov")?.id, "government");
   assert.equal(findClawDenseDataSystem("eln")?.id, "eln");
 });
 
@@ -314,6 +323,14 @@ test("dense data OS centers have direct human CLI nouns and plural aliases", () 
   assert.ok(compliance?.centers.some((center) => center.commandNoun === "control-assessment" && center.collectionName === "control_assessments"));
   assert.ok(compliance?.centers.some((center) => center.commandNoun === "compliance-finding" && center.commandAliases.includes("findings") && center.collectionName === "compliance_findings"));
   assert.ok(compliance?.commandPatterns.includes("claw control <id> timeline"));
+
+  const government = findClawDenseDataSystem("government");
+  assert.ok(government?.centers.some((center) => center.commandNoun === "agency" && center.commandAliases.includes("agencies") && center.collectionName === "agencies"));
+  assert.ok(government?.centers.some((center) => center.commandNoun === "public-case" && center.commandAliases.includes("public-cases") && center.collectionName === "public_cases"));
+  assert.ok(government?.centers.some((center) => center.commandNoun === "permit" && center.commandAliases.includes("permits") && center.collectionName === "permits"));
+  assert.ok(government?.centers.some((center) => center.commandNoun === "public-filing" && center.commandAliases.includes("public-filings") && center.collectionName === "public_filings"));
+  assert.ok(government?.commandPatterns.includes("claw public-case <id> timeline"));
+  assert.equal(government?.centers.some((center) => center.commandNoun === "case"), false);
 
   const iot = findClawDenseDataSystem("iot");
   assert.ok(iot?.centers.some((center) => center.commandNoun === "thing" && center.commandAliases.includes("things") && center.collectionName === "iot_things"));
@@ -436,6 +453,15 @@ test("dense data OS resolves direct CLI intent phrases without executing them", 
   assert.equal(constructionProjectList.system?.id, "construction");
   assert.equal(constructionProjectList.center?.collectionName, "construction_projects");
 
+  const publicCaseList = resolveClawDenseDataIntent("claw public-case list");
+  assert.equal(publicCaseList.status, "covered");
+  assert.equal(publicCaseList.system?.id, "government");
+  assert.equal(publicCaseList.center?.collectionName, "public_cases");
+
+  const govOverview = resolveClawDenseDataIntent("claw gov overview");
+  assert.equal(govOverview.status, "covered");
+  assert.equal(govOverview.system?.id, "government");
+
   const shipmentList = resolveClawDenseDataIntent("claw shipment list");
   assert.equal(shipmentList.status, "covered");
   assert.equal(shipmentList.system?.id, "transport");
@@ -520,6 +546,10 @@ test("dense data OS graduated centers point at canonical built-in collections wi
     "compliance.obligation": "compliance_obligations",
     "compliance.control_assessment": "control_assessments",
     "compliance.compliance_finding": "compliance_findings",
+    "government.agency": "agencies",
+    "government.public_case": "public_cases",
+    "government.permit": "permits",
+    "government.public_filing": "public_filings",
     "iot.thing": "iot_things",
     "iot.iot_device": "iot_devices",
     "iot.sensor_reading": "sensor_readings",
@@ -586,7 +616,6 @@ test("dense data OS generates covered singular and plural intents for every grad
 test("dense data OS roadmap keeps the wider catalog visible before pack graduation", () => {
   const roadmapIds = new Set(listClawDenseDataSystems({ wave: "roadmap" }).map((system) => system.id));
   for (const id of [
-    "government",
     "content",
     "product",
     "pharma",

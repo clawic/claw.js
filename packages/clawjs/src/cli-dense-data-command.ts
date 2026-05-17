@@ -309,6 +309,7 @@ function materializedSemanticViewForIntent(
   if (semanticView.id === "supply_plan.timeline") return materializedSupplyPlanTimeline(input, intent, semanticView);
   if (semanticView.id === "shipment.timeline") return materializedShipmentTimeline(input, intent, semanticView);
   if (semanticView.id === "control.timeline") return materializedControlTimeline(input, intent, semanticView);
+  if (semanticView.id === "public_case.timeline") return materializedPublicCaseTimeline(input, intent, semanticView);
   if (semanticView.id === "thing.timeline") return materializedThingTimeline(input, intent, semanticView);
   if (semanticView.id === "construction_project.timeline") return materializedConstructionProjectTimeline(input, intent, semanticView);
   return undefined;
@@ -1361,6 +1362,80 @@ function materializedControlTimeline(
   };
 }
 
+function materializedPublicCaseTimeline(
+  input: DenseDataCliInput,
+  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
+) {
+  const publicCaseId = input.positionals[1];
+  if (!publicCaseId) return undefined;
+  const namespaceId = input.flags.namespace ?? "main";
+  const store = openDenseDataStore(input.workspaceRoot);
+  store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
+  const publicCase = store.getRecord(namespaceId, "public_cases", publicCaseId);
+  if (!publicCase) return undefined;
+
+  const agency = typeof publicCase.agencyId === "string" ? store.getRecord(namespaceId, "agencies", publicCase.agencyId) : undefined;
+  const company = typeof publicCase.companyId === "string" ? store.getRecord(namespaceId, "companies", publicCase.companyId) : undefined;
+  const person = typeof publicCase.personId === "string" ? store.getRecord(namespaceId, "people", publicCase.personId) : undefined;
+  const permits = store.listRecords(namespaceId, "permits", { filter: { publicCaseId } }).items;
+  const filings = store.listRecords(namespaceId, "public_filings", { filter: { publicCaseId } }).items;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "public_cases", recordId: publicCaseId } }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "public_cases", targetId: publicCaseId } }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "public_cases", targetId: publicCaseId } }).items;
+  const items = [
+    timelineItem(publicCase, "public_case", publicCase.id, publicCase.title ?? publicCase.caseNumber ?? publicCase.id, publicCase.openedAt ?? publicCase.submittedAt ?? publicCase.createdAt, publicCase),
+    ...(agency ? [timelineItem(agency, "agency", agency.id, agency.name ?? agency.id, agency.createdAt, agency)] : []),
+    ...(company ? [timelineItem(company, "company", company.id, company.name ?? company.legalName ?? company.id, company.createdAt, company)] : []),
+    ...(person ? [timelineItem(person, "person", person.id, personLabel(person), person.createdAt, person)] : []),
+    ...permits.map((record) => timelineItem(record, "permit", record.id, record.title ?? record.permitNumber ?? record.id, record.issuedAt ?? record.effectiveAt ?? record.createdAt, record)),
+    ...filings.map((record) => timelineItem(record, "public_filing", record.id, record.title ?? record.filingNumber ?? record.id, record.submittedAt ?? record.createdAt, record)),
+    ...evidence.map((record) => timelineItem(record, "evidence", record.id, record.label ?? record.id, record.capturedAt ?? record.createdAt, record)),
+    ...qualityGaps.map((record) => timelineItem(record, "quality_gap", record.id, record.label ?? record.id, record.createdAt, record)),
+    ...provenance.map((record) => timelineItem(record, "provenance", record.id, record.eventType ?? record.id, record.occurredAt ?? record.createdAt, record)),
+  ].sort((left, right) => String(left.occurredAt).localeCompare(String(right.occurredAt)));
+
+  return {
+    id: semanticView.id,
+    subject: { collectionName: "public_cases", id: publicCase.id, label: publicCase.title ?? publicCase.caseNumber ?? publicCase.id },
+    agency: agency ? { id: agency.id, label: agency.name ?? agency.id } : null,
+    company: company ? { id: company.id, label: company.name ?? company.legalName ?? company.id } : null,
+    person: person ? { id: person.id, label: personLabel(person) } : null,
+    summary: {
+      permits: permits.length,
+      filings: filings.length,
+      evidenceSources: evidence.length,
+      qualityGaps: qualityGaps.length,
+      hasAgency: Boolean(agency),
+      hasCompany: Boolean(company),
+      hasPerson: Boolean(person),
+    },
+    itemCount: items.length,
+    items,
+    records: {
+      publicCase,
+      agency,
+      company,
+      person,
+      permits,
+      filings,
+      evidence,
+      provenance,
+    },
+    gaps: qualityGaps.map((record) => ({
+      id: record.id,
+      label: record.label,
+      status: record.status,
+      gapKind: record.gapKind,
+      severity: record.severity,
+      evidenceSourceId: record.evidenceSourceId,
+    })),
+    sourceCollections: ["public_cases", "agencies", "companies", "people", "permits", "public_filings", "evidence_sources", "quality_gaps", "provenance_events"],
+    partial: qualityGaps.length > 0,
+    intentStatus: intent.status,
+  };
+}
+
 function materializedThingTimeline(
   input: DenseDataCliInput,
   intent: ReturnType<typeof resolveClawDenseDataIntent>,
@@ -2254,6 +2329,21 @@ function denseDbFlags(flags: Record<string, string>, collectionName: string): Re
   if (collectionName === "compliance_findings" && flags.obligation && !flags["obligation-id"]) {
     nextFlags = { ...nextFlags, "obligation-id": flags.obligation };
   }
+  if (["public_cases", "permits", "public_filings"].includes(collectionName) && flags.agency && !flags["agency-id"]) {
+    nextFlags = { ...nextFlags, "agency-id": flags.agency };
+  }
+  if (["public_cases", "permits"].includes(collectionName) && flags.company && !flags["company-id"]) {
+    nextFlags = { ...nextFlags, "company-id": flags.company };
+  }
+  if (collectionName === "public_cases" && flags.person && !flags["person-id"]) {
+    nextFlags = { ...nextFlags, "person-id": flags.person };
+  }
+  if (["permits", "public_filings"].includes(collectionName) && flags["public-case"] && !flags["public-case-id"]) {
+    nextFlags = { ...nextFlags, "public-case-id": flags["public-case"] };
+  }
+  if (collectionName === "public_filings" && flags.document && !flags["document-id"]) {
+    nextFlags = { ...nextFlags, "document-id": flags.document };
+  }
   if (collectionName === "iot_things" && flags.company && !flags["company-id"]) {
     nextFlags = { ...nextFlags, "company-id": flags.company };
   }
@@ -2587,6 +2677,34 @@ function nestedDenseDbRoute(input: DenseDataCliInput): Parameters<typeof runMagi
       "compliance-controls": "compliance_controls",
       finding: "compliance_findings",
       findings: "compliance_findings",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "agency",
+    relationFlag: "agency-id",
+    relationField: "agencyId",
+    collections: {
+      "public-case": "public_cases",
+      "public-cases": "public_cases",
+      "government-case": "public_cases",
+      "government-cases": "public_cases",
+      permit: "permits",
+      permits: "permits",
+      "public-filing": "public_filings",
+      "public-filings": "public_filings",
+      filing: "public_filings",
+      filings: "public_filings",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "public-case",
+    relationFlag: "public-case-id",
+    relationField: "publicCaseId",
+    collections: {
+      permit: "permits",
+      permits: "permits",
+      "public-filing": "public_filings",
+      "public-filings": "public_filings",
+      filing: "public_filings",
+      filings: "public_filings",
     },
   }) ?? nestedParentDbRoute(input, {
     parentCommand: "thing",

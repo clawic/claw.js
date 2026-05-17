@@ -1,0 +1,42 @@
+import type { BuiltinCollectionDefinition } from "../_types.ts";
+
+export const PUBLIC_CASES: BuiltinCollectionDefinition = {
+  name: "public_cases",
+  displayName: "Public Cases",
+  family: "government",
+  aliases: ["public-case", "public-cases", "public_case", "public_cases", "government-case", "government-cases"],
+  catalog: {
+    purpose: "Administrative or regulatory case center for agency interactions, filings, permits, dates, evidence, and gaps.",
+    evidence: ["human_recognizable", "market_validated", "multi_domain_reuse", "agent_useful"],
+    relationGuidance: "Use agencyId for the authority and companyId/personId for the subject when known; related permits and filings carry publicCaseId.",
+    notes: "Named public_cases to avoid colliding with legal_cases and the top-level legal `case` route.",
+  },
+  fields: [
+    { name: "title", type: "text", required: true, requiredReason: "identity", aliases: ["summary", "subject"] },
+    { name: "agencyId", type: "relation", relation: { collectionName: "agencies" } },
+    { name: "companyId", type: "relation", relation: { collectionName: "companies" } },
+    { name: "personId", type: "relation", relation: { collectionName: "people" } },
+    { name: "caseNumber", type: "text", aliases: ["reference", "docketNumber"] },
+    { name: "caseType", type: "select", options: ["permit", "benefit", "tax", "inspection", "regulatory", "public_request", "other", "unknown"] },
+    { name: "status", type: "select", options: ["draft", "submitted", "in_review", "approved", "denied", "closed", "appealed", "unknown"] },
+    { name: "openedAt", type: "date" },
+    { name: "submittedAt", type: "date" },
+    { name: "dueAt", type: "date" },
+    { name: "closedAt", type: "date" },
+    { name: "summary", type: "markdown" },
+    { name: "source", type: "json" },
+    { name: "links", type: "json" },
+    { name: "evidence", type: "json" },
+    { name: "qualityGaps", type: "json" },
+    { name: "metadata", type: "json" },
+    { name: "archivedAt", type: "date" },
+  ],
+  indexes: [
+    { name: "public_cases_title_idx", fields: ["title"] },
+    { name: "public_cases_agency_idx", fields: ["agencyId"] },
+    { name: "public_cases_company_idx", fields: ["companyId"] },
+    { name: "public_cases_person_idx", fields: ["personId"] },
+    { name: "public_cases_number_idx", fields: ["caseNumber"] },
+    { name: "public_cases_status_idx", fields: ["status"] },
+  ],
+};

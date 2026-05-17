@@ -1,0 +1,41 @@
+import type { BuiltinCollectionDefinition } from "../_types.ts";
+
+export const PERMITS: BuiltinCollectionDefinition = {
+  name: "permits",
+  displayName: "Permits",
+  family: "government",
+  aliases: ["permit", "permits", "license-permit", "license-permits"],
+  catalog: {
+    purpose: "Permit or license center for agency approvals, conditions, renewal windows, evidence, and gaps.",
+    evidence: ["human_recognizable", "market_validated", "multi_domain_reuse", "agent_useful"],
+    relationGuidance: "Use publicCaseId when the permit belongs to an administrative case; use agencyId for the issuing authority.",
+    notes: "Permits represent public approvals and licenses; regulated legal disputes remain legal cases.",
+  },
+  fields: [
+    { name: "title", type: "text", required: true, requiredReason: "identity", aliases: ["name", "permitName"] },
+    { name: "agencyId", type: "relation", relation: { collectionName: "agencies" } },
+    { name: "publicCaseId", type: "relation", relation: { collectionName: "public_cases" } },
+    { name: "companyId", type: "relation", relation: { collectionName: "companies" } },
+    { name: "permitNumber", type: "text", aliases: ["licenseNumber", "reference"] },
+    { name: "permitType", type: "text" },
+    { name: "status", type: "select", options: ["draft", "submitted", "active", "expired", "suspended", "revoked", "closed", "unknown"] },
+    { name: "issuedAt", type: "date" },
+    { name: "effectiveAt", type: "date" },
+    { name: "expiresAt", type: "date" },
+    { name: "conditions", type: "markdown" },
+    { name: "source", type: "json" },
+    { name: "links", type: "json" },
+    { name: "evidence", type: "json" },
+    { name: "qualityGaps", type: "json" },
+    { name: "metadata", type: "json" },
+    { name: "archivedAt", type: "date" },
+  ],
+  indexes: [
+    { name: "permits_title_idx", fields: ["title"] },
+    { name: "permits_agency_idx", fields: ["agencyId"] },
+    { name: "permits_public_case_idx", fields: ["publicCaseId"] },
+    { name: "permits_company_idx", fields: ["companyId"] },
+    { name: "permits_number_idx", fields: ["permitNumber"] },
+    { name: "permits_status_idx", fields: ["status"] },
+  ],
+};
