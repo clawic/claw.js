@@ -112,7 +112,7 @@ test("decodePairingPayload throws on schema mismatch", () => {
   );
 });
 
-test("PairingAcceptRequestSchema accepts a typical iOS pair request", () => {
+test("PairingAcceptRequestSchema separates client role from platform", () => {
   const parsed = PairingAcceptRequestSchema.parse({
     v: 1,
     token: "token-x",
@@ -120,7 +120,22 @@ test("PairingAcceptRequestSchema accepts a typical iOS pair request", () => {
     clientDisplayName: "iPhone",
     clientSigningPublicKey: "ios-sk",
     clientAgreementPublicKey: "ios-ak",
-    clientKind: "ios",
+    clientKind: "companion",
+    platform: "ios",
   });
-  assert.equal(parsed.clientKind, "ios");
+  assert.equal(parsed.clientKind, "companion");
+  assert.equal(parsed.platform, "ios");
+  const platformAsKind = "ios";
+  assert.throws(() =>
+    PairingAcceptRequestSchema.parse({
+      v: 1,
+      token: "token-x",
+      clientNodeId: "ios-client-1",
+      clientDisplayName: "iPhone",
+      clientSigningPublicKey: "ios-sk",
+      clientAgreementPublicKey: "ios-ak",
+      clientKind: platformAsKind,
+      platform: "ios",
+    }),
+  );
 });

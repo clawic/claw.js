@@ -225,7 +225,8 @@ test("POST /v1/mesh/pair rejects bad token", async () => {
       clientDisplayName: "iPhone",
       clientSigningPublicKey: "sk",
       clientAgreementPublicKey: "ak",
-      clientKind: "ios",
+      clientKind: "companion",
+      platform: "ios",
     },
   });
   assert.equal(res.statusCode, 403);
@@ -244,7 +245,8 @@ test("POST /v1/mesh/pair persists peer and returns host identity on success", as
       clientDisplayName: "iPhone",
       clientSigningPublicKey: "ios-sk",
       clientAgreementPublicKey: "ios-ak",
-      clientKind: "ios",
+      clientKind: "companion",
+      platform: "ios",
     },
   });
   assert.equal(res.statusCode, 200);
@@ -254,6 +256,7 @@ test("POST /v1/mesh/pair persists peer and returns host identity on success", as
   const peer = hostStore.get("ios-1");
   assert.ok(peer);
   assert.equal(peer!.kind, "ios");
+  assert.equal(peer!.metadata.clientKind, "companion");
   assert.equal(peer!.signingPublicKey, "ios-sk");
   assert.equal(auditStore.count("meshPair"), 1);
   await app.close();

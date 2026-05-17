@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { HOST_KINDS } from "./models.ts";
 import {
   bytesEqualConstantTime,
   randomBytes,
@@ -190,15 +191,8 @@ export const PairingAcceptRequestSchema = z.object({
   clientDisplayName: z.string().min(1),
   clientSigningPublicKey: z.string().min(1),
   clientAgreementPublicKey: z.string().min(1),
-  clientKind: z.enum([
-    "mac",
-    "ios",
-    "ipad",
-    "linuxServer",
-    "linuxDesktop",
-    "windowsPC",
-    "sbc",
-  ]),
+  clientKind: z.enum(["companion", "desktop"]),
+  platform: z.enum(HOST_KINDS),
 });
 
 export type PairingAcceptRequest = z.infer<typeof PairingAcceptRequestSchema>;

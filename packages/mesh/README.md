@@ -77,6 +77,25 @@ back in the response. It lives only inside `SshSecretStore`'s SQLite table.
 
 Audit: `meshLink` with `outcome=success` and `context={op:"host-upsert"}`.
 
+### `POST /v1/mesh/pair`
+
+Accepts a pairing request from a remote peer. `clientKind` is the v1 client
+role (`companion` or `desktop`); `platform` carries the OS/device category used
+for peer inventory and diagnostics.
+
+```json
+{
+  "v": 1,
+  "token": "pairing-token",
+  "clientNodeId": "ios-client-1",
+  "clientDisplayName": "iPhone",
+  "clientSigningPublicKey": "base64url-signing-key",
+  "clientAgreementPublicKey": "base64url-agreement-key",
+  "clientKind": "companion",
+  "platform": "ios"
+}
+```
+
 ### Adding a server from a Mac client
 
 The Clawix Swift app should:

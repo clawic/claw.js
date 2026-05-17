@@ -278,14 +278,14 @@ export const meshServerPlugin = (deps: MeshServerDeps): FastifyPluginAsync =>
       }
       deps.hostStore.upsert({
         id: parsed.data.clientNodeId,
-        kind: parsed.data.clientKind,
+        kind: parsed.data.platform,
         displayName: parsed.data.clientDisplayName,
         signingPublicKey: parsed.data.clientSigningPublicKey,
         agreementPublicKey: parsed.data.clientAgreementPublicKey,
         endpoints: [],
         permissionProfile: "scoped",
         capabilities: ["pair"],
-        metadata: { tags: ["paired"] },
+        metadata: { tags: ["paired"], clientKind: parsed.data.clientKind },
       });
       audit("meshPair", "success", {
         actor: parsed.data.clientNodeId,

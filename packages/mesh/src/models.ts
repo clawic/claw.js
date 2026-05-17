@@ -62,6 +62,7 @@ export type HostSSHConfig = z.infer<typeof HostSSHConfigSchema>;
 
 export const HostMetadataSchema = z.object({
   tags: z.array(z.string()).default([]),
+  clientKind: z.enum(["companion", "desktop"]).optional(),
   provider: z.string().min(1).optional(),
   region: z.string().min(1).optional(),
   dnsRecords: z.array(z.string()).optional(),

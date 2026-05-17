@@ -245,6 +245,20 @@ for (const relativePath of [
 }
 
 for (const relativePath of [
+  "packages/mesh/src/pairing.ts",
+  "packages/mesh/src/pairing.test.ts",
+  "packages/mesh/src/mesh-server.test.ts",
+]) {
+  forbidSnippet(relativePath, "clientKind: \"ios\"");
+  forbidSnippet(relativePath, "clientKind: \"mac\"");
+  forbidSnippet(relativePath, "clientKind: \"ipad\"");
+  forbidSnippet(relativePath, "clientKind: \"linuxServer\"");
+  forbidSnippet(relativePath, "clientKind: \"linuxDesktop\"");
+  forbidSnippet(relativePath, "clientKind: \"windowsPC\"");
+  forbidSnippet(relativePath, "clientKind: \"sbc\"");
+}
+
+for (const relativePath of [
   "docs/relay.md",
   "relay/tests/e2e/relay.e2e.test.ts",
   "relay/src/connector/runtime.ts",
