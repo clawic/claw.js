@@ -11,7 +11,9 @@ import {
   meshRevocationSchema,
   nodeTrustDecisionSchema,
   remoteActorContextSchema,
+  remoteClientCacheSnapshotSchema,
   remoteSecretLeaseSchema,
+  remoteSecretProviderReceiptSchema,
   remoteTransportHandshakeReceiptSchema,
   syncCursorSchema,
   syncQueueEntrySchema,
@@ -22,7 +24,9 @@ import {
   type MeshRevocation,
   type NodeTrustDecision,
   type RemoteActorContext,
+  type RemoteClientCacheSnapshot,
   type RemoteSecretLease,
+  type RemoteSecretProviderReceipt,
   type RemoteTransportHandshakeReceipt,
   type SyncCursor,
   type SyncPlanResult,
@@ -33,7 +37,7 @@ import {
 
 export type RemoteSyncStateAuditEvent = {
   eventId: string;
-  eventType: "sync.manifest.recorded" | "sync.queue.enqueued" | "sync.queue.reconciled" | "mesh.invitation.recorded" | "mesh.share.recorded" | "mesh.revocation.recorded" | "secret.lease.issued" | "transport.handshake.recorded" | "node.trust.recorded" | "gateway.deployment.recorded";
+  eventType: "sync.manifest.recorded" | "sync.queue.enqueued" | "sync.queue.reconciled" | "sync.cache.recorded" | "mesh.invitation.recorded" | "mesh.share.recorded" | "mesh.revocation.recorded" | "secret.lease.issued" | "secret.provider.recorded" | "transport.handshake.recorded" | "node.trust.recorded" | "gateway.deployment.recorded";
   targetId: string;
   createdAt: string;
   coordinatorSignatureId?: string;
@@ -64,6 +68,9 @@ export type RemoteSyncState = {
   manifests: Record<string, SyncResourceManifest>;
   queues: Record<string, SyncQueueEntry[]>;
   cursors: Record<string, SyncCursor>;
+  remoteCache: {
+    snapshots: Record<string, RemoteClientCacheSnapshot>;
+  };
   mesh: {
     invitations: Record<string, MeshInvitation>;
     shares: Record<string, MeshResourceShare>;
@@ -74,6 +81,7 @@ export type RemoteSyncState = {
   };
   secretBroker: {
     leases: Record<string, RemoteSecretLease>;
+    providerReceipts: Record<string, RemoteSecretProviderReceipt>;
   };
   transport: {
     handshakes: Record<string, RemoteTransportHandshakeReceipt>;
@@ -100,6 +108,9 @@ function emptyState(): RemoteSyncState {
     manifests: {},
     queues: {},
     cursors: {},
+    remoteCache: {
+      snapshots: {},
+    },
     mesh: {
       invitations: {},
       shares: {},
@@ -110,6 +121,7 @@ function emptyState(): RemoteSyncState {
     },
     secretBroker: {
       leases: {},
+      providerReceipts: {},
     },
     transport: {
       handshakes: {},
@@ -246,6 +258,16 @@ function parseState(raw: unknown): RemoteSyncState {
     }
   }
 
+  const remoteCache = input.remoteCache;
+  if (remoteCache && typeof remoteCache === "object" && !Array.isArray(remoteCache)) {
+    const snapshots = (remoteCache as Record<string, unknown>).snapshots;
+    if (snapshots && typeof snapshots === "object" && !Array.isArray(snapshots)) {
+      for (const [cacheEntryId, snapshotInput] of Object.entries(snapshots)) {
+        state.remoteCache.snapshots[cacheEntryId] = remoteClientCacheSnapshotSchema.parse(snapshotInput);
+      }
+    }
+  }
+
   const mesh = input.mesh;
   if (mesh && typeof mesh === "object" && !Array.isArray(mesh)) {
     const meshObject = mesh as Record<string, unknown>;
@@ -282,10 +304,17 @@ function parseState(raw: unknown): RemoteSyncState {
 
   const secretBroker = input.secretBroker;
   if (secretBroker && typeof secretBroker === "object" && !Array.isArray(secretBroker)) {
-    const leases = (secretBroker as Record<string, unknown>).leases;
+    const secretBrokerObject = secretBroker as Record<string, unknown>;
+    const leases = secretBrokerObject.leases;
     if (leases && typeof leases === "object" && !Array.isArray(leases)) {
       for (const [leaseId, leaseInput] of Object.entries(leases)) {
         state.secretBroker.leases[leaseId] = remoteSecretLeaseSchema.parse(leaseInput);
+      }
+    }
+    const providerReceipts = secretBrokerObject.providerReceipts;
+    if (providerReceipts && typeof providerReceipts === "object" && !Array.isArray(providerReceipts)) {
+      for (const [receiptId, receiptInput] of Object.entries(providerReceipts)) {
+        state.secretBroker.providerReceipts[receiptId] = remoteSecretProviderReceiptSchema.parse(receiptInput);
       }
     }
   }
@@ -416,6 +445,17 @@ export class RemoteSyncStateStore {
     return { reconciliation, statePath: this.statePath, durable: true, ...(coordinatorSignature ? { coordinatorSignature } : {}) };
   }
 
+  recordRemoteCacheSnapshot(snapshotInput: RemoteClientCacheSnapshot, input: { now?: string; signer?: RemoteSyncCoordinatorSigner } = {}): RemoteSyncStateWriteResult<{ snapshot: RemoteClientCacheSnapshot }> {
+    const snapshot = remoteClientCacheSnapshotSchema.parse(snapshotInput);
+    const now = input.now ?? snapshot.cachedAt;
+    const state = this.read();
+    state.remoteCache.snapshots[snapshot.cacheEntryId] = snapshot;
+    state.updatedAt = now;
+    const coordinatorSignature = appendAudit(state, "sync.cache.recorded", snapshot.cacheEntryId, now, snapshot, input.signer);
+    this.write(state);
+    return { snapshot, statePath: this.statePath, durable: true, ...(coordinatorSignature ? { coordinatorSignature } : {}) };
+  }
+
   recordInvitation(invitationInput: MeshInvitation, input: { now?: string; signer?: RemoteSyncCoordinatorSigner } = {}): RemoteSyncStateWriteResult<{ invitation: MeshInvitation }> {
     const invitation = meshInvitationSchema.parse(invitationInput);
     const now = input.now ?? invitation.createdAt;
@@ -540,6 +580,17 @@ export class RemoteSyncStateStore {
     const coordinatorSignature = appendAudit(state, "secret.lease.issued", `${input.resourceId}:${input.secretRef}`, now, lease, input.signer);
     this.write(state);
     return { lease, statePath: this.statePath, durable: true, coordinatorSignature };
+  }
+
+  recordSecretProviderReceipt(receiptInput: RemoteSecretProviderReceipt, input: { now?: string; signer: RemoteSyncCoordinatorSigner }): RemoteSyncStateWriteResult<{ receipt: RemoteSecretProviderReceipt }> {
+    const receipt = remoteSecretProviderReceiptSchema.parse(receiptInput);
+    const now = input.now ?? receipt.createdAt;
+    const state = this.read();
+    state.secretBroker.providerReceipts[receipt.receiptId] = receipt;
+    state.updatedAt = now;
+    const coordinatorSignature = appendAudit(state, "secret.provider.recorded", receipt.receiptId, now, receipt, input.signer);
+    this.write(state);
+    return { receipt, statePath: this.statePath, durable: true, coordinatorSignature };
   }
 
   verifyCoordinatorSignatures(): { signatureCount: number; valid: number; invalid: number } {

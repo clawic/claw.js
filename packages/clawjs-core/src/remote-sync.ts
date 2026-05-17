@@ -56,6 +56,25 @@ export const syncCachePolicySchema = z.object({
   storesAuthoritativeState: z.literal(false),
 });
 
+export const remoteClientCacheSnapshotSchema = z.object({
+  schemaVersion: z.literal(1),
+  cacheEntryId: z.string().min(1),
+  resourceId: z.string().min(1),
+  objectRef: z.string().min(1),
+  nodeId: z.string().min(1),
+  clientId: z.string().min(1),
+  contentHash: z.string().min(1),
+  encrypted: z.literal(true),
+  ttlSeconds: z.number().int().positive(),
+  cachedAt: z.string().datetime(),
+  expiresAt: z.string().datetime(),
+  storesSecrets: z.literal(false),
+  storesAuthoritativeState: z.literal(false),
+  plaintextIncluded: z.literal(false),
+  auditEventId: z.string().min(1),
+  writes: z.literal(false),
+});
+
 export const nodeIdentitySchema = z.object({
   nodeId: z.string().min(1),
   displayName: z.string().min(1),
@@ -187,6 +206,24 @@ export const remoteSecretLeaseSchema = z.object({
   expiresAt: z.string().datetime(),
   plaintextReturned: z.literal(false),
   auditEventId: z.string().min(1),
+});
+
+export const remoteSecretProviderReceiptSchema = z.object({
+  schemaVersion: z.literal(1),
+  receiptId: z.string().min(1),
+  leaseId: z.string().min(1),
+  secretRef: z.string().min(1),
+  providerId: z.string().min(1),
+  credentialBindingId: z.string().min(1),
+  operationId: z.string().min(1),
+  actor: remoteActorContextSchema,
+  resourceId: z.string().min(1),
+  providerAccessVerified: z.boolean(),
+  plaintextReturned: z.literal(false),
+  externalPending: z.array(z.enum(["provider_secret_retrieval"])),
+  createdAt: z.string().datetime(),
+  auditEventId: z.string().min(1),
+  writes: z.literal(false),
 });
 
 export const remoteAccessGrantPlaneSchema = z.enum([
@@ -428,6 +465,7 @@ export type SyncAuthority = z.infer<typeof syncAuthoritySchema>;
 export type SyncDriver = z.infer<typeof syncDriverSchema>;
 export type SyncConflictPolicy = z.infer<typeof syncConflictPolicySchema>;
 export type SyncCachePolicy = z.infer<typeof syncCachePolicySchema>;
+export type RemoteClientCacheSnapshot = z.infer<typeof remoteClientCacheSnapshotSchema>;
 export type NodeIdentity = z.infer<typeof nodeIdentitySchema>;
 export type RemoteActorContext = z.infer<typeof remoteActorContextSchema>;
 export type SyncResourceManifest = z.infer<typeof syncResourceManifestSchema>;
@@ -440,6 +478,7 @@ export type SyncPlanResult = z.infer<typeof syncPlanResultSchema>;
 export type SyncQueueEntry = z.infer<typeof syncQueueEntrySchema>;
 export type SyncReconciliationResult = z.infer<typeof syncReconciliationResultSchema>;
 export type RemoteSecretLease = z.infer<typeof remoteSecretLeaseSchema>;
+export type RemoteSecretProviderReceipt = z.infer<typeof remoteSecretProviderReceiptSchema>;
 export type RemoteAccessGrantPlane = z.infer<typeof remoteAccessGrantPlaneSchema>;
 export type RemoteAccessGrant = z.infer<typeof remoteAccessGrantSchema>;
 export type RemoteAccessRequest = z.infer<typeof remoteAccessRequestSchema>;
@@ -574,6 +613,43 @@ export function createSyncResourceManifest(input: {
   });
 }
 
+export function createRemoteClientCacheSnapshot(input: {
+  manifest: SyncResourceManifest;
+  objectRef: string;
+  nodeId: string;
+  clientId: string;
+  contentHash: string;
+  cachedAt?: string;
+  ttlSeconds?: number;
+}): RemoteClientCacheSnapshot {
+  const manifest = syncResourceManifestSchema.parse(input.manifest);
+  const cachedAt = input.cachedAt ?? new Date().toISOString();
+  const ttlSeconds = input.ttlSeconds ?? manifest.cachePolicy.ttlSeconds;
+  return remoteClientCacheSnapshotSchema.parse({
+    schemaVersion: 1,
+    cacheEntryId: remoteClientCacheEntryId([
+      manifest.resourceId,
+      input.objectRef,
+      input.clientId,
+      input.contentHash,
+    ]),
+    resourceId: manifest.resourceId,
+    objectRef: input.objectRef,
+    nodeId: input.nodeId,
+    clientId: input.clientId,
+    contentHash: input.contentHash,
+    encrypted: true,
+    ttlSeconds,
+    cachedAt,
+    expiresAt: new Date(Date.parse(cachedAt) + ttlSeconds * 1000).toISOString(),
+    storesSecrets: false,
+    storesAuthoritativeState: false,
+    plaintextIncluded: false,
+    auditEventId: remoteClientCacheEntryId(["audit", manifest.resourceId, input.objectRef, input.clientId, cachedAt]),
+    writes: false,
+  });
+}
+
 function syncChangeId(parts: string[]): string {
   return `sync_change_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
 }
@@ -600,6 +676,14 @@ function nodeTrustDecisionId(parts: string[]): string {
 
 function gatewayDeploymentId(parts: string[]): string {
   return `gateway_deployment_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
+}
+
+function secretProviderReceiptId(parts: string[]): string {
+  return `secret_provider_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
+}
+
+function remoteClientCacheEntryId(parts: string[]): string {
+  return `remote_cache_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
 }
 
 function newestSnapshot(left: SyncObjectSnapshot, right: SyncObjectSnapshot): SyncObjectSnapshot {
@@ -954,6 +1038,41 @@ export function createGatewayDeploymentManifest(input: {
     externalPending: physicalDeploymentVerified ? [] : [deploymentKind === "hosted" ? "hosted_deployment" : "self_hosted_deployment"],
     createdAt,
     auditEventId: gatewayDeploymentId(["audit", deploymentKind, input.gatewayNodeId, createdAt]),
+    writes: false,
+  });
+}
+
+export function createRemoteSecretProviderReceipt(input: {
+  lease: RemoteSecretLease;
+  providerId: string;
+  credentialBindingId: string;
+  operationId?: string;
+  createdAt?: string;
+  providerAccessVerified?: boolean;
+}): RemoteSecretProviderReceipt {
+  const lease = remoteSecretLeaseSchema.parse(input.lease);
+  const createdAt = input.createdAt ?? new Date().toISOString();
+  const providerAccessVerified = input.providerAccessVerified ?? false;
+  return remoteSecretProviderReceiptSchema.parse({
+    schemaVersion: 1,
+    receiptId: secretProviderReceiptId([
+      lease.leaseId,
+      input.providerId,
+      input.credentialBindingId,
+      createdAt,
+    ]),
+    leaseId: lease.leaseId,
+    secretRef: lease.secretRef,
+    providerId: input.providerId,
+    credentialBindingId: input.credentialBindingId,
+    operationId: input.operationId ?? "secret.retrieve",
+    actor: lease.actor,
+    resourceId: lease.resourceId,
+    providerAccessVerified,
+    plaintextReturned: false,
+    externalPending: providerAccessVerified ? [] : ["provider_secret_retrieval"],
+    createdAt,
+    auditEventId: secretProviderReceiptId(["audit", lease.leaseId, input.providerId, createdAt]),
     writes: false,
   });
 }

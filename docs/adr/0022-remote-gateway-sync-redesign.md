@@ -104,6 +104,9 @@ owner node, residency, conflict policy, cache policy, allowed peers, routes,
 and secret policy. Supported driver classes include skills, memory/user-model,
 sessions, drive/files, blobs, SQLite full or partial resources, sidecars,
 search indexes, agent config, and workspace state.
+Client cache material is represented by `RemoteClientCacheSnapshot`: a signed,
+encrypted, TTL-bound metadata record that stores content hashes only. It cannot
+carry plaintext, secrets, or authoritative state.
 
 Offline behavior is split by intent. Interactive remote commands fail fast
 with `failed_fast`, `enqueued: false`, and `writes: false` when the Connector,
@@ -130,6 +133,10 @@ Secrets never synchronize as plaintext. Remote and sync flows may carry secret
 references and may request broker leases for a specific actor, action,
 resource, route, and expiry. The audit event records the lease; the payload
 does not return plaintext to the caller.
+Provider-backed retrieval is a separate signed receipt. `RemoteSecretProviderReceipt`
+binds the lease to a provider id, credential binding, operation id, actor, and
+resource while keeping `plaintextReturned: false`. Without an approved live
+provider run it remains `provider_secret_retrieval` external pending.
 
 Remote access is fail-closed. A governed Gateway request is allowed only when
 the requested capability is `remote-safe`, actor transport and trust mode match

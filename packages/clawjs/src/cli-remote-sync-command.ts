@@ -7,6 +7,8 @@ import {
   createMeshResourceShare,
   createMeshRevocation,
   createNodeTrustDecision,
+  createRemoteClientCacheSnapshot,
+  createRemoteSecretProviderReceipt,
   createSyncResourceManifest,
   createTransportHandshakeReceipt,
   evaluateRemoteAgentServiceAccess,
@@ -438,7 +440,22 @@ export async function runSyncCli(input: RemoteSyncCliInput): Promise<number> {
     const payload = { conflicts: plan.conflicts, defaultPolicy: "detect_and_elevate", silentOverwriteAllowed: false };
     return writeOutput(input, "sync", payload, `conflicts=${plan.conflicts.length} defaultPolicy=detect_and_elevate`, command);
   }
-  return missing(input, "sync manifest|status|plan|run|reconcile|conflicts");
+  if (command === "cache") {
+    const manifest = manifestFromFlags(input);
+    const snapshot = createRemoteClientCacheSnapshot({
+      manifest,
+      objectRef: input.flags["object-ref"] ?? "skill.review",
+      nodeId: input.flags["owner-node"] ?? input.flags["node-id"] ?? "local",
+      clientId: input.flags["client-id"] ?? "mobile.local",
+      contentHash: input.flags["content-hash"] ?? input.flags.hash ?? "hash-cache",
+      cachedAt: input.flags.now,
+      ttlSeconds: numberFlag(input.flags["ttl-seconds"], manifest.cachePolicy.ttlSeconds),
+    });
+    const store = stateStoreFromFlags(input);
+    const state = store && wantsDurableRecord(input) ? store.recordRemoteCacheSnapshot(snapshot, { now: input.flags.now, signer: coordinatorSignerFromFlags(input) }) : undefined;
+    return writeOutput(input, "sync", { snapshot, status: state?.coordinatorSignature ? "signed_cache_snapshot_recorded" : state ? "cache_snapshot_recorded" : "dry_run_only", writes: false, ...(state ? { state } : {}) }, `cache: ${state ? "recorded" : "dry_run_only"}`, command);
+  }
+  return missing(input, "sync manifest|status|plan|run|reconcile|conflicts|cache");
 }
 
 export async function runNodesCli(input: RemoteSyncCliInput): Promise<number> {
@@ -568,8 +585,8 @@ export async function runGatewayCli(input: RemoteSyncCliInput): Promise<number> 
     });
     return writeOutput(input, "gateway", decision, `agent-service: ${decision.allowed ? "allow" : "deny"}`, command);
   }
-  if (command === "secret-lease") {
-    const usage = "gateway secret-lease --state-dir <dir> --secret-ref <ref> --resource-id <id> --coordinator-private-key-file <pem> --coordinator-public-key-file <pem> [--action <action>] [--ttl-seconds <seconds>]";
+  if (command === "secret-lease" || command === "secret-provider") {
+    const usage = `gateway ${command} --state-dir <dir> --secret-ref <ref> --resource-id <id> --coordinator-private-key-file <pem> --coordinator-public-key-file <pem> [--action <action>] [--ttl-seconds <seconds>]`;
     const store = requireStateStore(input, usage);
     if (typeof store === "number") return store;
     const signer = requireCoordinatorSigner(input, usage);
@@ -593,9 +610,33 @@ export async function runGatewayCli(input: RemoteSyncCliInput): Promise<number> 
       now,
       signer,
     });
+    if (command === "secret-provider") {
+      const providerId = input.flags["provider-id"];
+      const credentialBindingId = input.flags["credential-binding-id"];
+      if (!providerId || !credentialBindingId) return missing(input, `${usage} --provider-id <id> --credential-binding-id <id>`);
+      const receipt = createRemoteSecretProviderReceipt({
+        lease: state.lease,
+        providerId,
+        credentialBindingId,
+        operationId: input.flags["operation-id"],
+        createdAt: now,
+        providerAccessVerified: input.flags["provider-verified"] === "true",
+      });
+      const providerState = store.recordSecretProviderReceipt(receipt, { now, signer });
+      return writeOutput(input, "gateway", {
+        status: "signed_secret_provider_receipt_recorded",
+        writes: false,
+        lease: state.lease,
+        receipt: providerState.receipt,
+        state: {
+          lease: state,
+          providerReceipt: providerState,
+        },
+      }, "secret-provider: signed_secret_provider_receipt_recorded", command);
+    }
     return writeOutput(input, "gateway", { status: "signed_secret_lease_issued", writes: false, ...state }, "secret-lease: signed_secret_lease_issued", command);
   }
-  return missing(input, "gateway serve|project|conformance|agent-service|secret-lease");
+  return missing(input, "gateway serve|project|conformance|agent-service|secret-lease|secret-provider");
 }
 
 export function remoteSyncExitForPayload(payload: { status?: string; missingRoutes?: unknown[] }): number {

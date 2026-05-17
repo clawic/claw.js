@@ -251,6 +251,43 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.equal(secretLeasePayload.lease.actor.assignmentId, "assignment.service");
   assert.equal(secretLeasePayload.coordinatorSignature.verified, true);
 
+  const secretProvider = await runCliCapture(["gateway", "secret-provider", "--state-dir", stateDir, "--secret-ref", "vault://agents/support", "--resource-id", "skills:default", "--provider-id", "provider.1password", "--credential-binding-id", "credential.support", "--agent-id", "agent.support", "--assignment-id", "assignment.service", ...coordinatorSigningFlags, "--json"], process.cwd());
+  assert.equal(secretProvider.code, CLI_EXIT_OK);
+  const secretProviderPayload = parseCliJson<{
+    status: string;
+    writes: boolean;
+    receipt: { providerId: string; credentialBindingId: string; providerAccessVerified: boolean; plaintextReturned: string | boolean; externalPending: string[]; writes: boolean };
+    state: { providerReceipt: { coordinatorSignature?: { verified: boolean } } };
+  }>(secretProvider.stdout).data;
+  assert.equal(secretProviderPayload.status, "signed_secret_provider_receipt_recorded");
+  assert.equal(secretProviderPayload.writes, false);
+  assert.equal(secretProviderPayload.receipt.providerId, "provider.1password");
+  assert.equal(secretProviderPayload.receipt.credentialBindingId, "credential.support");
+  assert.equal(secretProviderPayload.receipt.providerAccessVerified, false);
+  assert.notEqual(secretProviderPayload.receipt.plaintextReturned, true);
+  assert.equal(secretProviderPayload.receipt.externalPending.includes("provider_secret_retrieval"), true);
+  assert.equal(secretProviderPayload.receipt.writes, false);
+  assert.equal(secretProviderPayload.state.providerReceipt.coordinatorSignature?.verified, true);
+
+  const remoteCache = await runCliCapture(["sync", "cache", "--resource-id", "skills:default", "--driver", "skills", "--object-ref", "skill.review", "--client-id", "iphone.local", "--content-hash", "hash-cache", "--ttl-seconds", "600", "--state-dir", stateDir, "--record", "true", ...coordinatorSigningFlags, "--json"], process.cwd());
+  assert.equal(remoteCache.code, CLI_EXIT_OK);
+  const remoteCachePayload = parseCliJson<{
+    status: string;
+    writes: boolean;
+    snapshot: { encrypted: boolean; ttlSeconds: number; storesSecrets: string | boolean; storesAuthoritativeState: boolean; plaintextIncluded: boolean; writes: boolean };
+    state: { durable: boolean; coordinatorSignature?: { verified: boolean } };
+  }>(remoteCache.stdout).data;
+  assert.equal(remoteCachePayload.status, "signed_cache_snapshot_recorded");
+  assert.equal(remoteCachePayload.writes, false);
+  assert.equal(remoteCachePayload.snapshot.encrypted, true);
+  assert.equal(remoteCachePayload.snapshot.ttlSeconds, 600);
+  assert.notEqual(remoteCachePayload.snapshot.storesSecrets, true);
+  assert.equal(remoteCachePayload.snapshot.storesAuthoritativeState, false);
+  assert.equal(remoteCachePayload.snapshot.plaintextIncluded, false);
+  assert.equal(remoteCachePayload.snapshot.writes, false);
+  assert.equal(remoteCachePayload.state.durable, true);
+  assert.equal(remoteCachePayload.state.coordinatorSignature?.verified, true);
+
   const conflicts = await runCliCapture(["sync", "conflicts", "--local-hash", "hash-a", "--peer-hash", "hash-b", "--json"], process.cwd());
   assert.equal(conflicts.code, CLI_EXIT_OK);
   const conflictsPayload = parseCliJson<{ conflicts: Array<{ status: string }>; silentOverwriteAllowed: boolean }>(conflicts.stdout).data;

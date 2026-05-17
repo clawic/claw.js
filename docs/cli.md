@@ -186,6 +186,7 @@ claw sync run --resource-id skills:default --driver skills --peer-snapshot-json 
 claw sync reconcile --resource-id skills:default --driver skills --state-dir .claw/remote-sync --ack-change-ids sync_change_... --json
 claw sync manifest --resource-id skills:default --driver skills --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 claw sync conflicts --json
+claw sync cache --resource-id skills:default --driver skills --object-ref skill.review --client-id iphone.local --content-hash hash-cache --ttl-seconds 600 --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 
 claw nodes list --json
 claw nodes pair --dry-run --json
@@ -208,6 +209,7 @@ claw gateway project --state-dir .claw/remote-sync --record true --gateway-node 
 claw gateway conformance --json
 claw gateway agent-service --tenant-id tenant.acme --agent-id agent.support --assignment-id assignment.service --estimated-cost-cents 300 --json
 claw gateway secret-lease --state-dir .claw/remote-sync --secret-ref vault://agents/support --resource-id skills:default --agent-id agent.support --assignment-id assignment.service --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
+claw gateway secret-provider --state-dir .claw/remote-sync --secret-ref vault://agents/support --resource-id skills:default --provider-id provider.1password --credential-binding-id credential.support --agent-id agent.support --assignment-id assignment.service --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 ```
 
 `remote-safe` means the capability has a route, owner, policy, and tests.
@@ -219,6 +221,9 @@ authority unless each record is signed with Coordinator keys. The
 an Ed25519 signature that `claw sync status --state-dir ...` verifies and
 counts. Pairing, trust changes, real gateway serving, and physical sync
 execution still stay signed-host or Coordinator gated.
+`sync cache --record true` records a signed client cache snapshot with
+`encrypted: true`, a TTL, no plaintext payload, no secrets, and no
+authoritative state. It is cache metadata only, not a host write.
 `nodes heartbeat --record true` stores a signed transport-handshake receipt for
 the Iroh v1 adapter contract. It verifies the local Coordinator ledger shape
 and still marks real multi-device transport and device trust acceptance as
@@ -233,6 +238,10 @@ route contract and parity flag; real process binding or hosted rollout remains
 `external_pending` until physical deployment validation is run.
 `gateway secret-lease` records a signed, expiring lease for a secret reference,
 never reads or returns the secret value, and rejects plaintext-return flags.
+`gateway secret-provider` adds a signed provider receipt bound to a broker
+lease, provider id, credential binding, actor, and resource. It still never
+returns plaintext; without an approved live provider run it records
+`provider_secret_retrieval` as `external_pending`.
 
 Local agent records are managed through the agent-facing data commands. These
 commands write canonical files under `~/.claw/` and project searchable

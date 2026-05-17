@@ -81,6 +81,9 @@ authority class, owner node, residency, driver, conflict policy, cache policy,
 allowed peers, routes, and secret policy. Drivers cover skills,
 memory/user-model, sessions, drive/files, blobs, SQLite full or partial
 resources, sidecars, search indexes, agent config, and workspace state.
+Client caches are metadata snapshots, not authority. `RemoteClientCacheSnapshot`
+records encrypted TTL-bound cache entries with content hashes only, no
+plaintext, no secrets, and no authoritative state.
 
 Secrets cross remote and sync paths only as references plus audited broker
 leases. Plaintext secret replication is invalid.
@@ -128,6 +131,11 @@ physical device acceptance is proven; deny and revoke decisions stay audited
 no-write records.
 The local Gateway secret broker path issues only signed, expiring leases for
 secret references; it never reads or returns plaintext secret material.
+The provider retrieval step is represented separately by a signed
+`RemoteSecretProviderReceipt`, created by `claw gateway secret-provider`. The
+receipt binds a broker lease to provider and credential binding metadata, but
+keeps plaintext unavailable and marks real provider retrieval as
+`EXTERNAL PENDING` unless an approved provider run verifies it.
 
 Offline behavior is intentionally different for command execution and Sync.
 Remote interactive commands fail fast with `failed_fast`, `enqueued: false`,
