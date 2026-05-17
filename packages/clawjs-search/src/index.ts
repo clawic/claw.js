@@ -535,6 +535,17 @@ export function createBuiltinSearchSourceManifests(): SearchSourceManifest[] {
         { id: "relativePath", label: "Path", type: "string" },
       ],
     }),
+    createFrameworkSearchSourceManifest({
+      id: "skills.registry",
+      domain: "skills",
+      name: "Skills",
+      resultTypes: ["skill", "procedure", "instruction", "bundle"],
+      facets: [
+        { id: "kind", label: "Kind", type: "string" },
+        { id: "scopeKind", label: "Scope", type: "string" },
+        { id: "hasSecretRefs", label: "Requires secrets", type: "boolean" },
+      ],
+    }),
     createFullSearchSourceManifest({
       id: "local.files",
       domain: "files",

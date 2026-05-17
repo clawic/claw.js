@@ -122,16 +122,18 @@ export async function runDenseDataCli(input: DenseDataCliInput): Promise<number 
 
   const semanticView = semanticViewForIntent(intent);
   if (semanticView) {
+    const materializedView = materializedSemanticViewForIntent(input, intent, semanticView);
+    const recordsMaterialized = Boolean(materializedView);
     const payload = {
       intent,
       semanticView,
       coverage: {
         routeKnown: true,
         executable: true,
-        databaseConnected: false,
-        recordsMaterialized: false,
+        databaseConnected: recordsMaterialized,
+        recordsMaterialized,
         store: "core.sqlite",
-        implementationStatus: "semantic_view_contract",
+        implementationStatus: recordsMaterialized ? "materialized_semantic_view" : "semantic_view_contract",
       },
       view: {
         id: semanticView.id,
@@ -141,7 +143,12 @@ export async function runDenseDataCli(input: DenseDataCliInput): Promise<number 
         outputShape: semanticView.outputShape,
         createsOrReads: intent.operation?.createsOrReads ?? [],
       },
-      gap: null,
+      materializedView,
+      gap: recordsMaterialized ? null : {
+        status: "data_gap",
+        reason: "Semantic view contract is known, but no materialized records were available for this route.",
+        nextStep: "Seed or create the subject record and related evidence/gap records before treating this semantic view as complete.",
+      },
       registry: denseRegistryPayload(intent.system?.id, group, action),
     };
     if (input.wantsJson) {
@@ -253,6 +260,80 @@ function runDenseFixtureCli(input: DenseDataCliInput, action: string): number | 
 function semanticViewForIntent(intent: ReturnType<typeof resolveClawDenseDataIntent>) {
   if (!intent.system || !intent.operation) return undefined;
   return listClawDenseDataSemanticViewEntries().find((entry) => entry.systemId === intent.system?.id && entry.operationId === intent.operation?.id);
+}
+
+function materializedSemanticViewForIntent(
+  input: DenseDataCliInput,
+  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
+) {
+  if (semanticView.id !== "patient.timeline") return undefined;
+  const patientId = input.positionals[1];
+  if (!patientId) return undefined;
+
+  const namespaceId = input.flags.namespace ?? "main";
+  const store = openDenseDataStore(input.workspaceRoot);
+  store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
+  const patient = store.getRecord(namespaceId, "patients", patientId);
+  if (!patient) return undefined;
+
+  const medications = store.listRecords(namespaceId, "medications", { filter: { patientId } }).items;
+  const symptoms = store.listRecords(namespaceId, "symptom_logs", { filter: { patientId } }).items;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "patients", recordId: patientId } }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "patients", targetId: patientId } }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "patients", targetId: patientId } }).items;
+  const items = [
+    timelineItem(patient, "patient", patient.id, patient.displayName ?? patient.id, patient.createdAt, patient),
+    ...medications.map((record) => timelineItem(record, "medication", record.id, record.name ?? record.id, record.startedAt ?? record.createdAt, record)),
+    ...symptoms.map((record) => timelineItem(record, "symptom", record.id, record.symptom ?? record.id, record.loggedAt ?? record.createdAt, record)),
+    ...evidence.map((record) => timelineItem(record, "evidence", record.id, record.label ?? record.id, record.capturedAt ?? record.createdAt, record)),
+    ...qualityGaps.map((record) => timelineItem(record, "quality_gap", record.id, record.label ?? record.id, record.createdAt, record)),
+    ...provenance.map((record) => timelineItem(record, "provenance", record.id, record.eventType ?? record.id, record.occurredAt ?? record.createdAt, record)),
+  ].sort((left, right) => String(left.occurredAt).localeCompare(String(right.occurredAt)));
+
+  return {
+    id: semanticView.id,
+    subject: { collectionName: "patients", id: patient.id, label: patient.displayName ?? patient.id },
+    itemCount: items.length,
+    items,
+    gaps: qualityGaps.map((record) => ({
+      id: record.id,
+      label: record.label,
+      status: record.status,
+      gapKind: record.gapKind,
+      severity: record.severity,
+      evidenceSourceId: record.evidenceSourceId,
+    })),
+    sourceCollections: ["patients", "medications", "symptom_logs", "evidence_sources", "quality_gaps", "provenance_events"],
+    partial: qualityGaps.length > 0,
+    intentStatus: intent.status,
+  };
+}
+
+function openDenseDataStore(workspaceRoot: string) {
+  const dataDir = path.join(workspaceRoot, ".claw", "data");
+  fs.mkdirSync(dataDir, { recursive: true });
+  return openMainDataStore({
+    ...process.env,
+    CLAW_DATA_DIR: dataDir,
+  });
+}
+
+function timelineItem(
+  record: Record<string, unknown>,
+  kind: string,
+  recordId: unknown,
+  label: unknown,
+  occurredAt: unknown,
+  data: Record<string, unknown>,
+) {
+  return {
+    kind,
+    recordId,
+    label,
+    occurredAt: typeof occurredAt === "string" ? occurredAt : null,
+    data,
+  };
 }
 
 function collectionForDenseRoute(command: string | undefined, centerCollectionName: string | undefined): string | undefined {

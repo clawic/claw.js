@@ -105,6 +105,7 @@ export async function runSearchQueryCli(input: {
     const shouldRefreshMedia = domains?.includes("media") || sources?.includes("media.assets");
     const shouldRefreshGenerations = domains?.includes("generations") || sources?.includes("generations.artifacts");
     const shouldRefreshCode = domains?.includes("code") || sources?.includes("code.symbols");
+    const shouldRefreshSkills = domains?.includes("skills") || sources?.includes("skills.registry");
     const shouldRefreshLocalFiles = domains?.includes("files") || sources?.includes("local.files");
     const shouldRefreshWeb = domains?.includes("web") || sources?.includes("web.ingested");
     const shouldRefreshExternal = domains?.includes("external") || sources?.includes("external.cache");
@@ -114,6 +115,7 @@ export async function runSearchQueryCli(input: {
     const indexedMedia = shouldRefreshMedia && sourceCanIndex(store, "media.assets") ? ensureMediaAssetsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedGenerations = shouldRefreshGenerations && sourceCanIndex(store, "generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedCode = shouldRefreshCode && sourceCanIndex(store, "code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const indexedSkills = shouldRefreshSkills && sourceCanIndex(store, "skills.registry") ? ensureSkillsRegistrySourceIndexed(store, input.flags) : 0;
     const indexedLocalFiles = shouldRefreshLocalFiles && sourceCanIndex(store, "local.files") ? ensureLocalFilesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedWeb = shouldRefreshWeb && sourceCanIndex(store, "web.ingested") ? ensureWebIngestedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedExternal = shouldRefreshExternal && sourceCanIndex(store, "external.cache") ? ensureExternalCacheSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -166,6 +168,7 @@ export async function runSearchQueryCli(input: {
         ...(shouldRefreshMedia ? { "media.assets": indexedMedia } : {}),
         ...(shouldRefreshGenerations ? { "generations.artifacts": indexedGenerations } : {}),
         ...(shouldRefreshCode ? { "code.symbols": indexedCode } : {}),
+        ...(shouldRefreshSkills ? { "skills.registry": indexedSkills } : {}),
         ...(shouldRefreshLocalFiles ? { "local.files": indexedLocalFiles } : {}),
         ...(shouldRefreshWeb ? { "web.ingested": indexedWeb } : {}),
         ...(shouldRefreshExternal ? { "external.cache": indexedExternal } : {}),
@@ -239,6 +242,7 @@ export async function runSearchRebuildCli(input: {
     const mediaIndexed = rebuildsSource("media.assets") ? ensureMediaAssetsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const generationsIndexed = rebuildsSource("generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const codeIndexed = rebuildsSource("code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const skillsIndexed = rebuildsSource("skills.registry") ? ensureSkillsRegistrySourceIndexed(store, input.flags) : 0;
     const localFilesIndexed = rebuildsSource("local.files") ? ensureLocalFilesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const webIndexed = rebuildsSource("web.ingested") ? ensureWebIngestedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const externalIndexed = rebuildsSource("external.cache") ? ensureExternalCacheSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -251,6 +255,7 @@ export async function runSearchRebuildCli(input: {
       ...(mediaIndexed > 0 ? ["media.assets"] : []),
       ...(generationsIndexed > 0 ? ["generations.artifacts"] : []),
       ...(codeIndexed > 0 ? ["code.symbols"] : []),
+      ...(skillsIndexed > 0 ? ["skills.registry"] : []),
       ...(localFilesIndexed > 0 ? ["local.files"] : []),
       ...(webIndexed > 0 ? ["web.ingested"] : []),
       ...(externalIndexed > 0 ? ["external.cache"] : []),
@@ -278,6 +283,7 @@ export async function runSearchRebuildCli(input: {
         "media.assets": mediaIndexed,
         "generations.artifacts": generationsIndexed,
         "code.symbols": codeIndexed,
+        "skills.registry": skillsIndexed,
         "local.files": localFilesIndexed,
         "web.ingested": webIndexed,
         "external.cache": externalIndexed,
@@ -817,6 +823,8 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
       return ensureGenerationsArtifactsSourceIndexed(store, flags, cwd);
     case "code.symbols":
       return ensureCodeSymbolsSourceIndexed(store, flags, cwd);
+    case "skills.registry":
+      return ensureSkillsRegistrySourceIndexed(store, flags);
     case "local.files":
       return ensureLocalFilesSourceIndexed(store, flags, cwd);
     case "web.ingested":
@@ -845,6 +853,10 @@ function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flag
     case "generations.artifacts": {
       const resourceId = resourceIdFromJobPayload(job, "generationId") ?? job.resourceId;
       return resourceId ? ensureGenerationArtifactResourceIndexed(store, flags, cwd, resourceId) : 0;
+    }
+    case "skills.registry": {
+      const resourceId = resourceIdFromJobPayload(job, "slug") ?? job.resourceId;
+      return resourceId ? ensureSkillsRegistryResourceIndexed(store, flags, resourceId) : 0;
     }
     default:
       return null;

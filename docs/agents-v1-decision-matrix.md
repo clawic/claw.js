@@ -71,7 +71,7 @@ a later user decision.
 | 43 | `action_severity` | implemented | `evaluateAgentActionSeverity`, SDK `agents.actionSeverity`, and `claw agents action-severity` classify actions into `info`/`low`/`medium`/`high`/`critical` and return approval, connector, budget, and host gates. |
 | 44 | `connector_integration` | implemented | MCP/control-plane tests require connector approval plus Agents V1 MCP assignment/access policy. |
 | 45 | `autonomy_axis` | partial | Agent records expose autonomy policy fields; full policy-profile registry and UI are incomplete. |
-| 46 | `supervision_model` | partial | Org graph supports managers/supervisors; limited-authority supervisor enforcement needs more policy tests. |
+| 46 | `supervision_model` | implemented | `evaluateAgentSupervisorAuthority`, SDK `agents.supervisorCheck`, and `claw agents supervisor-check` limit supervisors by manager relationship, delegated action, risk ceiling, and scope. |
 | 47 | `agent_evaluation` | implemented | `agent_evaluations`, `createAgentEvaluation`, CLI, SDK facade, and tests exist. |
 | 48 | `agent_config_versioning` | implemented | `agent_config_revisions`, redacted revision helper, CLI, and tests exist. |
 | 49 | `agent_templates` | implemented | `agent_blueprints` and `createAgentBlueprint` are separate from live agents. |

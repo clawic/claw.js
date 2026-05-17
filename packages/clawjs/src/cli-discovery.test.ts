@@ -72,7 +72,7 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
 
   const qualityGapCreate = await runCliCapture(["quality-gap", "create", "Missing date of birth", "--target-collection", "patients", "--target-id", createdPatient.data.id, "--gap-kind", "missing", "--evidence-source-id", evidenceSourcePayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(qualityGapCreate.code, CLI_EXIT_OK);
-  const qualityGapPayload = JSON.parse(qualityGapCreate.stdout) as { data: { label: string; targetCollection: string; targetId: string; gapKind: string; status: string; evidenceSourceId: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  const qualityGapPayload = JSON.parse(qualityGapCreate.stdout) as { data: { id: string; label: string; targetCollection: string; targetId: string; gapKind: string; status: string; evidenceSourceId: string }; meta: { collection: string; action: string; invokedCommand: string } };
   assert.equal(qualityGapPayload.meta.invokedCommand, "quality-gap");
   assert.equal(qualityGapPayload.meta.collection, "quality_gaps");
   assert.equal(qualityGapPayload.data.label, "Missing date of birth");
@@ -134,20 +134,28 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
       coverage: { executable: boolean; implementationStatus: string; recordsMaterialized: boolean };
       semanticView: { id: string; systemId: string; commandPattern: string };
       view: { operationId: string; requiredInputs: string[]; createsOrReads: string[] };
+      materializedView: { subject: { id: string; label: string }; itemCount: number; partial: boolean; items: Array<{ kind: string; recordId: string; label: string }>; gaps: Array<{ id: string; gapKind: string }> };
     };
     meta: { denseData: boolean; semanticView: boolean };
   };
   assert.equal(patientTimelinePayload.meta.denseData, true);
   assert.equal(patientTimelinePayload.meta.semanticView, true);
   assert.equal(patientTimelinePayload.data.coverage.executable, true);
-  assert.equal(patientTimelinePayload.data.coverage.implementationStatus, "semantic_view_contract");
-  assert.equal(patientTimelinePayload.data.coverage.recordsMaterialized, false);
+  assert.equal(patientTimelinePayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(patientTimelinePayload.data.coverage.recordsMaterialized, true);
   assert.equal(patientTimelinePayload.data.semanticView.id, "patient.timeline");
   assert.equal(patientTimelinePayload.data.semanticView.systemId, "health");
   assert.equal(patientTimelinePayload.data.semanticView.commandPattern, "claw patient <id> timeline");
   assert.equal(patientTimelinePayload.data.view.operationId, "patient.timeline");
   assert.deepEqual(patientTimelinePayload.data.view.requiredInputs, ["patient_id"]);
   assert.equal(patientTimelinePayload.data.view.createsOrReads.includes("timeline_view"), true);
+  assert.equal(patientTimelinePayload.data.materializedView.subject.id, createdPatient.data.id);
+  assert.equal(patientTimelinePayload.data.materializedView.subject.label, "Ada Patient");
+  assert.equal(patientTimelinePayload.data.materializedView.itemCount >= 5, true);
+  assert.equal(patientTimelinePayload.data.materializedView.partial, true);
+  assert.equal(patientTimelinePayload.data.materializedView.items.some((item) => item.kind === "medication" && item.label === "Atorvastatin"), true);
+  assert.equal(patientTimelinePayload.data.materializedView.items.some((item) => item.kind === "symptom" && item.label === "Headache"), true);
+  assert.equal(patientTimelinePayload.data.materializedView.gaps.some((gap) => gap.id === qualityGapPayload.data.id && gap.gapKind === "missing"), true);
 
   const companyCreate = await runCliCapture(["company", "create", "Acme Corp", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(companyCreate.code, CLI_EXIT_OK);
@@ -374,6 +382,17 @@ test("runCli seeds the dense-data acceptance fixture into the shared database", 
   assert.equal(qualityGapPayload.data.targetCollection, "patients");
   assert.equal(qualityGapPayload.data.targetId, "fixture_patient_ada");
   assert.equal(qualityGapPayload.data.evidenceSourceId, "fixture_evidence_intake_note");
+
+  const timeline = await runCliCapture(["patient", "fixture_patient_ada", "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(timeline.code, CLI_EXIT_OK);
+  const timelinePayload = JSON.parse(timeline.stdout) as { data: { coverage: { implementationStatus: string; recordsMaterialized: boolean }; materializedView: { itemCount: number; partial: boolean; items: Array<{ kind: string; recordId: string }>; gaps: Array<{ id: string }> } } };
+  assert.equal(timelinePayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(timelinePayload.data.coverage.recordsMaterialized, true);
+  assert.equal(timelinePayload.data.materializedView.partial, true);
+  assert.equal(timelinePayload.data.materializedView.itemCount >= 4, true);
+  assert.equal(timelinePayload.data.materializedView.items.some((item) => item.kind === "patient" && item.recordId === "fixture_patient_ada"), true);
+  assert.equal(timelinePayload.data.materializedView.items.some((item) => item.kind === "quality_gap" && item.recordId === "fixture_gap_missing_dob"), true);
+  assert.equal(timelinePayload.data.materializedView.gaps.some((gap) => gap.id === "fixture_gap_missing_dob"), true);
 });
 
 test("runCli searches the registered CLI discovery surface", async () => {

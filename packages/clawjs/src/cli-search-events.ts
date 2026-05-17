@@ -123,6 +123,26 @@ export function scheduleMediaAssetSearchEvent(input: {
   });
 }
 
+export function scheduleSkillsRegistrySearchEvent(input: {
+  operation: "upsert" | "delete";
+  slug: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  return scheduleSearchIndexEvent({
+    source: "skills.registry",
+    operation: input.operation,
+    resourceId: input.slug,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      slug: input.slug,
+    },
+  });
+}
+
 export function scheduleSearchIndexEvent(input: {
   source: string;
   operation: "upsert" | "delete";

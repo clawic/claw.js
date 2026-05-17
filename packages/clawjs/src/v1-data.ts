@@ -7,6 +7,7 @@ import type Database from "better-sqlite3";
 import { DatabaseServiceStore } from "@clawjs/database";
 import { runAgentsCommand, runConnectionsCommand, runPersonalitiesCommand, runSkillCollectionsCommand } from "./v1-data-agent-entities.ts";
 import { runProviderRoutingCommand, runSnippetsCommand } from "./v1-data-agent-config.ts";
+import { scheduleSkillsRegistrySearchEvent } from "./cli-search-events.ts";
 export {
   openMainDataStore,
   resolveClawjsDataRoot,
@@ -1647,6 +1648,12 @@ function runSkillsCommand(input: V1DataCliInput, store: DatabaseServiceStore): n
         scope_json = excluded.scope_json, secret_refs_json = excluded.secret_refs_json, metadata_json = excluded.metadata_json,
         export_path = excluded.export_path, updated_at = excluded.updated_at
     `).run(input.flags.id || `skill-${slug}`, slug, input.flags.kind || "skill", name, body, input.flags.scope ? JSON.stringify(JSON.parse(input.flags.scope)) : "{}", JSON.stringify(secretRefs), input.flags.metadata ? JSON.stringify(JSON.parse(input.flags.metadata)) : "{}", input.flags["export-path"] || null, now, now);
+    scheduleSkillsRegistrySearchEvent({
+      operation: "upsert",
+      slug,
+      dataDir: resolveClawjsDataRoot(),
+      flags: input.flags,
+    });
     writeSuccess(input, { slug, name, secretRefs, updatedAt: now });
     return V1_DATA_EXIT_OK;
   }
@@ -1654,6 +1661,14 @@ function runSkillsCommand(input: V1DataCliInput, store: DatabaseServiceStore): n
     const slug = input.flags.slug || input.positionals[2];
     if (!slug) return usageError(input, "Usage: claw skills delete SLUG [--json]");
     const changes = store.sqlite.prepare("DELETE FROM skills WHERE slug = ?").run(slug).changes;
+    if (changes > 0) {
+      scheduleSkillsRegistrySearchEvent({
+        operation: "delete",
+        slug,
+        dataDir: resolveClawjsDataRoot(),
+        flags: input.flags,
+      });
+    }
     writeSuccess(input, { slug, deleted: changes > 0 });
     return V1_DATA_EXIT_OK;
   }

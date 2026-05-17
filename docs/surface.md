@@ -1189,6 +1189,10 @@ The docs check script validates that every current export from
     AgentServiceApiRequest
     AgentServiceApiResponse
     AgentSkillBinding
+    AgentSupervisorAction
+    AgentSupervisorAuthorityInput
+    AgentSupervisorAuthorityLevel
+    AgentSupervisorAuthorityResult
     AgentSupportInboxProjection
     AgentSupportInboxProjectionInput
     AGENTS_FAMILY
@@ -1604,6 +1608,7 @@ The docs check script validates that every current export from
     evaluateAgentDelegationAccess
     evaluateAgentEffectiveAccess
     evaluateAgentMemoryAccess
+    evaluateAgentSupervisorAuthority
     evaluateConnectorControlPlaneRequest
     EpicRecord
     epicRecordSchema

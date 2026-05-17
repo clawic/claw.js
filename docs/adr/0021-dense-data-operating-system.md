@@ -162,11 +162,13 @@ evidence, provenance, and partial-data quality gaps.
 stable fixture IDs, so the acceptance set is executable through normal DB and
 human noun commands rather than remaining an inspect-only artifact.
 
-Semantic-view routes such as `claw patient <id> timeline` now return a stable
-view contract tied to the registry. They expose the operation, required inputs,
-output shape, and touched data classes without pretending that a full
-materialized clinical timeline exists before the relevant pack has real data
-and provider validation.
+Semantic-view routes start as stable view contracts tied to the registry and
+graduate to materialized views when local data is available. `claw patient <id>
+timeline` now reads `patients`, `medications`, `symptom_logs`,
+`evidence_sources`, `quality_gaps`, and `provenance_events` from local
+`core.sqlite`, returns `implementationStatus: "materialized_semantic_view"`,
+and marks the view partial when quality gaps remain. This keeps the view useful
+without pretending that external clinical/provider validation has happened.
 
 The registry also carries explicit `external_pending` requirements for real
 EHR/FHIR exchange, lab instrument ingestion, CTMS synchronization, payment
