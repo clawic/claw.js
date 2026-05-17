@@ -44,6 +44,7 @@ const JSON_HELP_REQUIRED_COMMANDS = new Set([
   "plan",
   "profile",
   "references",
+  "remote",
   "rules",
   "runtime",
   "search",
@@ -53,7 +54,10 @@ const JSON_HELP_REQUIRED_COMMANDS = new Set([
   "slides",
   "soul",
   "styles",
+  "sync",
   "templates",
+  "nodes",
+  "gateway",
 ]);
 const JSON_HELP_CANONICAL = new Map([
   ["ref", "references"],

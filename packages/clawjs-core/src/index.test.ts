@@ -51,6 +51,7 @@ import {
   feedbackRecordSchema,
   findClawPersistentSurfaceNode,
   findClawSurfaceRoute,
+  createExampleSyncResourceManifest,
   goalRecordSchema,
   handoffRecordSchema,
   incidentRecordSchema,
@@ -63,6 +64,7 @@ import {
   manifestSchema,
   milestoneRecordSchema,
   maskCredential,
+  nodeIdentitySchema,
   noteRecordSchema,
   operationalCheckRecordSchema,
   personIdentitySchema,
@@ -76,7 +78,12 @@ import {
   resolveClawHostStateDir,
   resolveClawWorkspaceDir,
   resourceKindSchema,
+  remoteActorContextSchema,
+  remoteSecretLeaseSchema,
+  remoteSyncRequiredDecisionIds,
+  remoteSyncRequiredRouteIds,
   searchClawCliRegistry,
+  syncConflictSchema,
   taskRecordSchema,
   workSessionRecordSchema,
   stripMarkdownForTts,
@@ -355,6 +362,16 @@ test("surface graph registers critical chat routes and Relay", () => {
     "chat.localDesktop",
     "chat.remoteRelay",
     "cli.commandIntentResolution",
+    "gateway.headlessAgentHost",
+    "gateway.multiTenantAgentService",
+    "mesh.resourceShare",
+    "remote.chatGateway",
+    "remote.searchGateway",
+    "remote.secretBrokeredOperation",
+    "sync.driveFiles",
+    "sync.memoryUserModel",
+    "sync.skills",
+    "sync.sqliteResources",
   ]);
   assert.equal(findClawSurfaceRoute("chat.remoteRelay")?.steps.some((step) => step.toId === "claw.relay"), true);
   assert.equal(findClawSurfaceRoute("cli.commandIntentResolution")?.steps.some((step) => step.toId === "claw.workspace.command_intents.ledger"), true);
@@ -369,6 +386,87 @@ test("surface graph registers critical chat routes and Relay", () => {
       assert.ok(["owns", "consumes", "exposes", "brokers"].includes(step.edgeType), `${route.id} has invalid edge type ${step.edgeType}`);
     }
   }
+});
+
+test("remote gateway sync contracts register required layers, routes, and safe defaults", () => {
+  for (const nodeId of [
+    "claw.coordinator",
+    "claw.gateway",
+    "claw.connector",
+    "claw.sync",
+    "claw.transport.iroh",
+    "claw.headlessHost",
+    "claw.remoteCache",
+    "claw.remote.classification",
+  ]) {
+    assert.equal(Boolean(findClawPersistentSurfaceNode(nodeId)), true, `${nodeId} must be registered`);
+  }
+
+  for (const routeId of remoteSyncRequiredRouteIds) {
+    const route = findClawSurfaceRoute(routeId);
+    assert.equal(Boolean(route), true, `${routeId} must be registered`);
+    assert.equal(route?.adrs?.includes("docs/adr/0022-remote-gateway-sync-redesign.md"), true, `${routeId} must cite ADR 0022`);
+  }
+
+  const manifest = createExampleSyncResourceManifest({
+    resourceId: "skills:default",
+    kind: "skills",
+    ownerNodeId: "node.mac",
+    driver: "skills",
+    routeIds: ["sync.skills"],
+  });
+  assert.equal(manifest.conflictPolicy, "detect_and_elevate");
+  assert.equal(manifest.cachePolicy.encrypted, true);
+  assert.equal(manifest.cachePolicy.storesSecrets, false);
+  assert.equal(manifest.secretPolicy.plaintextReplication, false);
+
+  assert.equal(remoteActorContextSchema.safeParse({
+    actorKind: "agent",
+    actorId: "agent.ops",
+    assignmentId: "assignment.web",
+    nodeId: "node.server",
+    transport: "iroh",
+    trustMode: "governed_gateway",
+  }).success, true);
+
+  assert.equal(nodeIdentitySchema.safeParse({
+    nodeId: "node.server",
+    displayName: "Server",
+    hostKind: "headless_server",
+    trustLevel: "fully_owned",
+    trustModes: ["sovereign_e2e_tunnel", "governed_gateway"],
+    publicKeyRef: "key:server",
+  }).success, true);
+
+  assert.equal(remoteSecretLeaseSchema.safeParse({
+    leaseId: "lease.1",
+    secretRef: "vault://agents/ops",
+    actor: {
+      actorKind: "agent",
+      actorId: "agent.ops",
+      assignmentId: "assignment.web",
+      nodeId: "node.server",
+      transport: "gateway",
+      trustMode: "governed_gateway",
+    },
+    action: "connector.invoke",
+    resourceId: "support_conversations",
+    expiresAt: "2026-05-17T10:00:00.000Z",
+    plaintextReturned: false,
+    auditEventId: "audit.lease",
+  }).success, true);
+
+  assert.equal(syncConflictSchema.safeParse({
+    conflictId: "conflict.1",
+    resourceId: "skills:default",
+    objectRef: "skill.review",
+    policy: "detect_and_elevate",
+    status: "open",
+    detectedAt: "2026-05-17T10:00:00.000Z",
+    changeIds: ["change.a", "change.b"],
+  }).success, true);
+
+  assert.equal(remoteSyncRequiredDecisionIds.includes("sync_lateral_domains"), true);
 });
 
 test("CLI command registry is the source for stable CLI surface nodes", () => {

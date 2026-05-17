@@ -186,6 +186,45 @@
       "reviewDate": "2026-08-17"
     },
     {
+      "id": "remote-gateway-sync-redesign",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0022-remote-gateway-sync-redesign.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/decision-map.md",
+        "docs/relay.md",
+        "docs/interface-matrix.md",
+        "skills/surface-route-work/SKILL.md"
+      ],
+      "discoveryTerms": [
+        "Coordinator Gateway Connector Sync",
+        "remote gateway sync",
+        "Iroh transport adapter",
+        "remote surface classification"
+      ],
+      "searchQueries": [
+        {
+          "query": "remote gateway sync",
+          "expectPath": "docs/adr/0022-remote-gateway-sync-redesign.md"
+        },
+        {
+          "query": "Coordinator Gateway Connector Sync",
+          "expectPath": "docs/adr/0022-remote-gateway-sync-redesign.md"
+        }
+      ],
+      "inspect": [
+        {
+          "command": "claw inspect routes --json",
+          "expectRoute": "remote.chatGateway"
+        }
+      ],
+      "guard": "scripts/surface-route-graph-guard.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-17"
+    },
+    {
       "id": "dense-data-operating-system",
       "kind": "adr",
       "owner": "claw",

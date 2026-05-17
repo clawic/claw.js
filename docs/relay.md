@@ -17,6 +17,23 @@ Use it when you need:
 - a narrow public API in front of remote workspaces
 - centralized auth, tenant routing, and connector lifecycle control
 
+The current v1 implementation is now treated as a compatibility deployment of
+the broader remote architecture described by
+[ADR 0022: Remote Gateway and Sync Redesign](/adr/0022-remote-gateway-sync-redesign).
+New remote work uses four named layers:
+
+- `Coordinator`: node identity, pairing, preauth, magic links, heartbeat,
+  discovery, rendezvous, signaling, and Iroh relay metadata.
+- `Gateway`: remote projection of registered local SDK/service/CLI contracts;
+  it does not invent a separate mobile-only or Relay-only business API.
+- `Connector`: host-side link into runtime, storage, services, policies, and
+  audit.
+- `Sync`: resource-authority manifests, changelogs, cursors, conflict
+  elevation, physical sync drivers, encrypted client cache policy, and audit.
+
+Relay routes remain valid as compatibility adapters while clients migrate.
+They must not become a second source of truth for business capabilities.
+
 The current v1 design is intentionally small:
 
 - JWT access tokens plus revocable refresh tokens for API clients
@@ -43,6 +60,30 @@ The relay separates public control-plane concerns from remote workspace executio
 7. Client API requests are routed to that active connector and answered synchronously.
 
 The relay does not queue work for offline agents. If no active connector exists for the requested `tenantId + agentId`, the request fails immediately.
+
+## Remote Parity And Sync Contract
+
+Every stable local capability must be classified as `remote-safe`,
+`local-only`, `blocked`, or `pending`. `remote-safe` capabilities need a
+registered route, owner, policy, and tests. `local-only`, `blocked`, and
+`pending` entries need an explicit reason.
+
+The remote contract supports two trust modes:
+
+- sovereign E2E/tunnel-only, where the server transports or coordinates but
+  cannot read payloads, decide domain routing, or persist source-of-truth data
+- governed Gateway, where a host or service exposes approved registered APIs
+  under the same grants, approvals, budgets, assignments, secrets broker, and
+  audit model as local execution
+
+Sync is a framework layer, not Relay storage. A sync resource declares an
+authority class, owner node, residency, driver, conflict policy, cache policy,
+allowed peers, routes, and secret policy. Drivers cover skills,
+memory/user-model, sessions, drive/files, blobs, SQLite full or partial
+resources, sidecars, search indexes, agent config, and workspace state.
+
+Secrets cross remote and sync paths only as references plus audited broker
+leases. Plaintext secret replication is invalid.
 
 ## Data Ownership
 

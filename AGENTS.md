@@ -41,6 +41,9 @@ Read the relevant canonical docs before changing their surfaces:
 - Stable surfaces and inspection: `docs/adr/0004-persistent-surface-registry-and-inspection.md`,
   `docs/adr/0009-dual-human-programmatic-surfaces.md`,
   `docs/adr/0012-surface-route-graph.md`
+- Remote access, Gateway, Connector, Sync, Iroh, and node trust:
+  `docs/relay.md`, `docs/interface-matrix.md`,
+  `docs/adr/0022-remote-gateway-sync-redesign.md`
 - CLI and agent discovery: `docs/adr/0007-cli-agent-interface.md`,
   `docs/adr/0010-cli-jit-guidance-actor-assertions-resource-registry.md`,
   `docs/adr/0017-discoverability-and-meta-code-routing.md`

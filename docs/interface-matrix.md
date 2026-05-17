@@ -82,6 +82,7 @@ an after-the-fact documentation exercise.
 | `local-only` | Valid locally and intentionally not exposed through Relay. |
 | `remote-safe` | Valid to expose through Relay or another remote service API. |
 | `blocked` | Blocked by security, physical dependency, provider limits, cost, or missing host support. |
+| `pending` | Required closure work that has not yet reached route, policy, and test parity. |
 | `not applicable` | The surface does not make sense for this capability. |
 
 ## Surface Parity Matrix
@@ -101,6 +102,7 @@ the full parity format.
 | Integrations and channels | Clawix connection status, approval, and QA state | `claw.channels.*`, provider namespaces | provider CLI groups where implemented | integration service APIs | MCP tools/resources for provider actions and state | `blocked` until provider action is remote-safe | connection records, fixtures, audit, QA matrices |
 | Approvals, grants, and secrets | Host-owned approval and reveal UI | `claw.secrets.*`, policy/grant APIs | approval/grant/secret commands where safe | signed-host service contracts | `blocked` unless tool consent and secret leasing are explicit | `blocked` for sensitive material by default | encrypted vault sidecar, host audit, opaque references |
 | Inspection, diagnostics, validation | Clawix diagnostics and QA result views | `claw.doctor.*`, registry APIs | `claw inspect`, `claw doctor`, `claw diagnostics` | health and diagnostics routes | MCP resources/tools for model-readable diagnostics | `remote-safe` health/status subset | registry manifests, logs, QA reports |
+| Remote access, Gateway, and Sync | Clawix pairing, node, share, and sync status views | remote/sync contracts and manifests | `claw remote ...`, `claw sync ...`, `claw nodes ...`, `claw gateway ...` | Coordinator, Gateway, Connector, and Sync service contracts from [ADR 0022](./adr/0022-remote-gateway-sync-redesign.md) | MCP resources for route/conformance inspection | `remote-safe` when classified with route, policy, owner, and tests | sync manifests, changelogs, cursors, encrypted client cache |
 
 MCP uses the Model Context Protocol roles defined by the upstream
 specification: tools are model-invoked actions, resources expose context/data,

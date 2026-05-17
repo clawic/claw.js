@@ -82,6 +82,7 @@ import { isSearchAdminCommand, runCliDiscoverySearch, runSearchAdminCli, runSear
 import { runNeedsCli } from "./cli-needs-command.ts";
 import { runCommandsCli } from "./cli-commands-command.ts";
 import { runDenseDataCli } from "./cli-dense-data-command.ts";
+import { runGatewayCli, runNodesCli, runRemoteCli, runSyncCli } from "./cli-remote-sync-command.ts";
 import { runPublicPortalShortcut, writeMissingSubcommandJsonHelp, writePublicPortalHelpOnly } from "./cli-public-portal-routes.ts";
 import { handleUnknownCliCommand } from "./cli-unknown-command.ts";
 import { channelListenerPaths, isProcessRunning, readListenerPid, readTail, waitForListenerPid } from "./cli-channel-listener.ts";
@@ -588,6 +589,10 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   if (group === "records") return await runCliUnsafe(["db", ...argv.slice(1)], context);
   if (group === "needs") return await runNeedsCli({ positionals, flags, argv, context, wantsJson, binName, workspaceRoot: flags.workspace || context.cwd });
   if (group === "commands") return await runCommandsCli({ positionals, flags, argv, context, wantsJson, binName, workspaceRoot: flags.workspace || context.cwd });
+  if (group === "remote") return await runRemoteCli({ positionals, flags, context, wantsJson, binName });
+  if (group === "sync") return await runSyncCli({ positionals, flags, context, wantsJson, binName });
+  if (group === "nodes") return await runNodesCli({ positionals, flags, context, wantsJson, binName });
+  if (group === "gateway") return await runGatewayCli({ positionals, flags, context, wantsJson, binName });
 
   const portalShortcutExit = await runPublicPortalShortcut({ group, command, subcommand, argv, flags, context, runCli: runCliUnsafe });
   if (portalShortcutExit !== null) return portalShortcutExit;

@@ -108,6 +108,16 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
     "chat.localDesktop",
     "chat.remoteRelay",
     "cli.commandIntentResolution",
+    "gateway.headlessAgentHost",
+    "gateway.multiTenantAgentService",
+    "mesh.resourceShare",
+    "remote.chatGateway",
+    "remote.searchGateway",
+    "remote.secretBrokeredOperation",
+    "sync.driveFiles",
+    "sync.memoryUserModel",
+    "sync.skills",
+    "sync.sqliteResources",
   ]);
   assert.equal(routeList.find((route) => route.id === "chat.localDesktop")?.steps.every((step) => ["owns", "consumes", "exposes", "brokers"].includes(step.edgeType)), true);
   assert.equal(routeList.find((route) => route.id === "agents.externalSupportAssignment")?.steps.some((step) => step.toId === "claw.support.inbox"), true);
@@ -132,6 +142,39 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   const neighborPayload = parseCliJson<{ neighbors: Array<{ id: string }>; routes: Array<{ id: string }> }>(neighbors.stdout).data;
   assert.equal(neighborPayload.neighbors.some((node) => node.id === "claw.daemon.local"), true);
   assert.equal(neighborPayload.routes.some((entry) => entry.id === "chat.companionBridge"), true);
+
+  const gatewayRoute = await runCliCapture(["inspect", "route", "remote.searchGateway", "--json"], process.cwd());
+  assert.equal(gatewayRoute.code, CLI_EXIT_OK);
+  const gatewayRoutePayload = parseCliJson<{ id: string; edges: Array<{ id: string }>; adrs: string[] }>(gatewayRoute.stdout).data;
+  assert.equal(gatewayRoutePayload.id, "remote.searchGateway");
+  assert.equal(gatewayRoutePayload.edges.some((edge) => edge.id === "claw.edge.connector.brokers.search"), true);
+  assert.equal(gatewayRoutePayload.adrs.includes("docs/adr/0022-remote-gateway-sync-redesign.md"), true);
+});
+
+test("runCli exposes remote, sync, nodes, and gateway baseline commands", async () => {
+  const remote = await runCliCapture(["remote", "conformance", "--json"], process.cwd());
+  assert.equal(remote.code, CLI_EXIT_OK);
+  const remotePayload = parseCliJson<{ status: string; requiredRoutes: Array<{ routeId: string; registered: boolean }>; decisions: Array<{ decisionId: string }> }>(remote.stdout).data;
+  assert.equal(remotePayload.status, "baseline_registered");
+  assert.equal(remotePayload.requiredRoutes.every((entry) => entry.registered), true);
+  assert.equal(remotePayload.decisions.some((entry) => entry.decisionId === "remote_surface_parity"), true);
+
+  const sync = await runCliCapture(["sync", "manifest", "--resource-id", "skills:default", "--kind", "skills", "--driver", "skills", "--json"], process.cwd());
+  assert.equal(sync.code, CLI_EXIT_OK);
+  const syncPayload = parseCliJson<{ manifest: { driver: string; conflictPolicy: string; secretPolicy: string } }>(sync.stdout).data;
+  assert.equal(syncPayload.manifest.driver, "skills");
+  assert.equal(syncPayload.manifest.conflictPolicy, "detect_and_elevate");
+  assert.equal(syncPayload.manifest.secretPolicy, "[REDACTED]");
+
+  const nodes = await runCliCapture(["nodes", "list", "--json"], process.cwd());
+  assert.equal(nodes.code, CLI_EXIT_OK);
+  const nodesPayload = parseCliJson<{ nodes: Array<{ id: string }> }>(nodes.stdout).data;
+  assert.equal(nodesPayload.nodes.some((node) => node.id === "claw.coordinator"), true);
+
+  const gateway = await runCliCapture(["gateway", "conformance", "--json"], process.cwd());
+  assert.equal(gateway.code, CLI_EXIT_OK);
+  const gatewayPayload = parseCliJson<{ hostedSelfHostedParity: string }>(gateway.stdout).data;
+  assert.equal(gatewayPayload.hostedSelfHostedParity, "required");
 });
 
 test("runCli exposes an agent inspection fiche", async () => {

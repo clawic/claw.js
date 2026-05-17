@@ -20,6 +20,13 @@ const requiredNodeIds = [
   "claw.remote.client",
   "claw.relay",
   "claw.relay.connector",
+  "claw.coordinator",
+  "claw.gateway",
+  "claw.connector",
+  "claw.sync",
+  "claw.transport.iroh",
+  "claw.headlessHost",
+  "claw.remoteCache",
   "claw.workspace",
 ];
 
@@ -27,12 +34,25 @@ const requiredRouteIds = [
   "chat.localDesktop",
   "chat.companionBridge",
   "chat.remoteRelay",
+  "remote.chatGateway",
+  "remote.searchGateway",
+  "remote.secretBrokeredOperation",
+  "sync.skills",
+  "sync.memoryUserModel",
+  "sync.driveFiles",
+  "sync.sqliteResources",
+  "gateway.headlessAgentHost",
+  "gateway.multiTenantAgentService",
+  "mesh.resourceShare",
 ];
 
 const requiredContractIds = [
   "clawix.protocol.bridge.v1",
   "claw.api.relay.remote",
   "claw.api.relay.connector",
+  "claw.api.remote.classifications",
+  "claw.api.sync.manifests",
+  "claw.api.gateway.conformance",
   "claw.protocol.hostCommand.v1",
 ];
 

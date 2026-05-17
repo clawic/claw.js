@@ -23,6 +23,8 @@ Read and follow:
 14. `docs/adr/0017-discoverability-and-meta-code-routing.md` and
     `docs/discoverability.registry.json` before adding durable ADRs, skills,
     guardrails, harnesses, docs routers, or route work
+15. `docs/adr/0022-remote-gateway-sync-redesign.md` before changing remote
+    Gateway, Connector, Sync, Iroh, node trust, or remote parity surfaces
 
 Critical guardrail for prompt-based tests:
 

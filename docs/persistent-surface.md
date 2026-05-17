@@ -56,6 +56,20 @@ flowchart TD
   claw_remote_client["Remote client\nroot"]
   claw_relay["Relay control plane\nroot"]
   claw_relay_connector["Relay workspace connector\nroot"]
+  claw_coordinator["Coordinator\nroot"]
+  claw_gateway["Gateway\nroot"]
+  claw_connector["Connector\nroot"]
+  claw_sync["Sync\nroot"]
+  claw_transport_iroh["Iroh transport adapter\nroot"]
+  claw_headlessHost["Headless host\nroot"]
+  claw_remoteCache["Encrypted remote client cache\nroot"]
+  claw_remote_classification["Remote surface classification\nroot"]
+  claw_search["Root Search\nroot"]
+  claw_secrets_broker["Secrets broker\nroot"]
+  claw_drive_files["Drive and files\nroot"]
+  claw_memory_userModel["Memory and user model\nroot"]
+  claw_skills_library["Skills and library\nroot"]
+  claw_mesh_share["Inter-mesh sharing primitives\nroot"]
   claw_api_chatCompletions["/v1/chat/completions API route\napiRoute"]
   claw_contracts_api --> claw_api_chatCompletions
   claw_api_app["/v1/app/ API route\napiRoute"]
@@ -144,6 +158,18 @@ flowchart TD
   claw_contracts_api --> claw_api_relay_remote
   claw_api_relay_connector["Relay workspace connector channel\napiRoute"]
   claw_contracts_api --> claw_api_relay_connector
+  claw_api_remote_classifications["Remote surface classification contract\napiRoute"]
+  claw_contracts_api --> claw_api_remote_classifications
+  claw_api_remote_conformance["Remote conformance report contract\napiRoute"]
+  claw_contracts_api --> claw_api_remote_conformance
+  claw_api_sync_manifests["Sync resource manifest contract\napiRoute"]
+  claw_contracts_api --> claw_api_sync_manifests
+  claw_api_sync_changes["Sync changelog and cursor contract\napiRoute"]
+  claw_contracts_api --> claw_api_sync_changes
+  claw_api_nodes["Node identity and trust contract\napiRoute"]
+  claw_contracts_api --> claw_api_nodes
+  claw_api_gateway_conformance["Gateway hosted/self-hosted conformance contract\napiRoute"]
+  claw_contracts_api --> claw_api_gateway_conformance
   claw_privateApi_attachments["/api/attachments private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_attachments
   claw_privateApi_authToken["/api/auth/token private API route\nprivateApiRoute"]
@@ -1084,6 +1110,14 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_contacts
   claw_cli_command_inspect["inspect\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_inspect
+  claw_cli_command_remote["remote\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_remote
+  claw_cli_command_sync["sync\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_sync
+  claw_cli_command_nodes["nodes\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_nodes
+  claw_cli_command_gateway["gateway\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_gateway
   claw_cli_command_dense_fixtures["dense-fixtures\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_dense_fixtures
   claw_cli_command_dense_fixture["dense-fixture\ncliCommand"]
@@ -1817,6 +1851,22 @@ flowchart TD
   claw_relay_connector -- "brokers" --> claw_runtime_agent
   claw_sessions -- "exposes" --> claw_relay
   claw_relay -- "exposes" --> claw_remote_client
+  claw_remote_client -- "consumes" --> claw_coordinator
+  claw_coordinator -- "brokers" --> claw_gateway
+  claw_gateway -- "brokers" --> claw_connector
+  claw_connector -- "brokers" --> claw_runtime_agent
+  claw_connector -- "brokers" --> claw_search
+  claw_connector -- "brokers" --> claw_secrets_broker
+  claw_connector -- "brokers" --> claw_sync
+  claw_sync -- "owns" --> claw_skills_library
+  claw_sync -- "owns" --> claw_memory_userModel
+  claw_sync -- "owns" --> claw_drive_files
+  claw_sync -- "owns" --> claw_database_core
+  claw_sync -- "owns" --> claw_remoteCache
+  claw_gateway -- "exposes" --> claw_headlessHost
+  claw_headlessHost -- "brokers" --> claw_agents_assignments
+  claw_coordinator -- "consumes" --> claw_transport_iroh
+  claw_mesh_share -- "brokers" --> claw_sync
 ```
 
 ## Routes
@@ -1830,6 +1880,16 @@ flowchart TD
 | `agents.mcpApiAssignment` | `claw.mcp.surface` | `claw.runtime.agent` | public | Inspect route and Agents V1 policy tests |
 | `chat.companionBridge` | `clawix.companion.client` | `claw.sessions` | public | Fixture + hermetic E2E for companion bridge traffic |
 | `chat.remoteRelay` | `claw.remote.client` | `claw.sessions` | external | Fixture + hermetic Relay E2E without production services |
+| `remote.chatGateway` | `claw.remote.client` | `claw.sessions` | external | Remote conformance, inspect, and hermetic chat tests |
+| `remote.searchGateway` | `claw.remote.client` | `claw.search` | external | Remote search conformance tests |
+| `remote.secretBrokeredOperation` | `claw.remote.client` | `claw.secrets.broker` | external | Secret ref rejection and broker lease acceptance tests |
+| `sync.skills` | `claw.sync` | `claw.skills.library` | public | Skills two-host sync tests |
+| `sync.memoryUserModel` | `claw.sync` | `claw.memory.userModel` | public | Memory/user-model sync tests |
+| `sync.driveFiles` | `claw.sync` | `claw.drive.files` | public | Drive/file/blob sync tests |
+| `sync.sqliteResources` | `claw.sync` | `claw.database.core` | public | SQLite manifest and conflict tests |
+| `gateway.headlessAgentHost` | `claw.gateway` | `claw.headlessHost` | public | Headless host conformance tests |
+| `gateway.multiTenantAgentService` | `claw.headlessHost` | `claw.agents.assignments` | public | Multi-tenant assignment isolation tests |
+| `mesh.resourceShare` | `claw.mesh.share` | `claw.sync` | external | Inter-mesh sharing primitive tests |
 
 ## Edges
 
@@ -1864,6 +1924,22 @@ flowchart TD
 | `claw.edge.connector.brokers.runtime` | brokers | `claw.relay.connector` | `claw.runtime.agent` | `claw.protocol.hostCommand.v1` | local runtime adapter |
 | `claw.edge.sessions.exposes.relay` | exposes | `claw.sessions` | `claw.relay` | `claw.event.sessions.message.appended` | remote-safe session events |
 | `claw.edge.relay.exposes.remote` | exposes | `claw.relay` | `claw.remote.client` | `claw.api.relay.remote` | HTTPS/WebSocket Relay |
+| `claw.edge.remote.consumes.coordinator` | consumes | `claw.remote.client` | `claw.coordinator` | `claw.api.nodes` | HTTPS/WebSocket/Iroh rendezvous metadata |
+| `claw.edge.coordinator.brokers.gateway` | brokers | `claw.coordinator` | `claw.gateway` | `claw.api.remote.conformance` | governed gateway admission |
+| `claw.edge.gateway.brokers.connector` | brokers | `claw.gateway` | `claw.connector` | `claw.api.remote.classifications` | projected registered API contract |
+| `claw.edge.connector.brokers.runtime.v2` | brokers | `claw.connector` | `claw.runtime.agent` | `claw.protocol.hostCommand.v1` | host-side runtime adapter |
+| `claw.edge.connector.brokers.search` | brokers | `claw.connector` | `claw.search` | `claw.api.search.searches` | remote-safe projected search route |
+| `claw.edge.connector.brokers.secrets` | brokers | `claw.connector` | `claw.secrets.broker` | `claw.api.secrets` | secret refs plus brokered lease |
+| `claw.edge.connector.brokers.sync` | brokers | `claw.connector` | `claw.sync` | `claw.api.sync.manifests` | sync manifest/changelog/cursor route |
+| `claw.edge.sync.owns.skills` | owns | `claw.sync` | `claw.skills.library` | `claw.api.sync.manifests` | skills sync driver |
+| `claw.edge.sync.owns.memory` | owns | `claw.sync` | `claw.memory.userModel` | `claw.api.sync.manifests` | memory/user-model sync driver |
+| `claw.edge.sync.owns.driveFiles` | owns | `claw.sync` | `claw.drive.files` | `claw.api.sync.manifests` | drive/files/blobs sync drivers |
+| `claw.edge.sync.owns.sqlite` | owns | `claw.sync` | `claw.database.core` | `claw.api.sync.changes` | SQLite full/partial table manifests |
+| `claw.edge.sync.owns.remoteCache` | owns | `claw.sync` | `claw.remoteCache` | `claw.api.sync.manifests` | encrypted TTL cache and outbound queue |
+| `claw.edge.gateway.exposes.headlessHost` | exposes | `claw.gateway` | `claw.headlessHost` | `claw.api.gateway.conformance` | headless service projection |
+| `claw.edge.headlessHost.brokers.assignments` | brokers | `claw.headlessHost` | `claw.agents.assignments` | `claw.agent_assignment.external.v1` | multi-tenant governed assignment routing |
+| `claw.edge.coordinator.consumes.iroh` | consumes | `claw.coordinator` | `claw.transport.iroh` | `claw.api.nodes` | Iroh adapter for P2P/rendezvous/relay fallback |
+| `claw.edge.meshShare.brokers.sync` | brokers | `claw.mesh.share` | `claw.sync` | `claw.api.sync.manifests` | invite/share/revoke primitives |
 
 ## Nodes
 
@@ -1906,6 +1982,20 @@ flowchart TD
 | `claw.remote.client` | root | protocol | external | humanUi | relay |  | `remote-client` |
 | `claw.relay` | root | protocol | claw | humanUi | relay, serviceApi |  | `relay` |
 | `claw.relay.connector` | root | protocol | claw | humanUi | relay, serviceApi |  | `relay/connector` |
+| `claw.coordinator` | root | protocol | claw | humanUi | sdk, cli, serviceApi, relay |  | `remote/coordinator` |
+| `claw.gateway` | root | protocol | claw | humanUi | sdk, cli, serviceApi, relay |  | `remote/gateway` |
+| `claw.connector` | root | protocol | claw | humanUi | sdk, cli, serviceApi, relay |  | `remote/connector` |
+| `claw.sync` | root | protocol | claw | humanUi | sdk, cli, serviceApi, persistence, relay |  | `sync` |
+| `claw.transport.iroh` | root | protocol | claw | humanUi | sdk, cli, serviceApi, relay |  | `remote/transports/iroh` |
+| `claw.headlessHost` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp, relay, persistence |  | `host/headless` |
+| `claw.remoteCache` | root | protocol | claw | humanUi | sdk, serviceApi, persistence, relay |  | `remote/cache` |
+| `claw.remote.classification` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp, relay |  | `remote/classification` |
+| `claw.search` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp, relay, persistence |  | `search` |
+| `claw.secrets.broker` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp, relay |  | `secrets/broker` |
+| `claw.drive.files` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp, relay, persistence |  | `drive/files` |
+| `claw.memory.userModel` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp, relay, persistence |  | `memory/user-model` |
+| `claw.skills.library` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp, relay, persistence |  | `skills/library` |
+| `claw.mesh.share` | root | protocol | claw | humanUi | sdk, cli, serviceApi, relay |  | `mesh/share` |
 | `claw.api.chatCompletions` | apiRoute | api | claw |  |  |  | `/v1/chat/completions` |
 | `claw.api.app` | apiRoute | api | claw |  |  |  | `/v1/app/` |
 | `claw.api.connectorConnect` | apiRoute | api | claw |  |  |  | `/v1/connector/connect` |
@@ -1950,6 +2040,12 @@ flowchart TD
 | `claw.api.integrations.callback` | apiRoute | api | claw |  |  |  | `/v1/integrations/{provider}/callback` |
 | `claw.api.relay.remote` | apiRoute | api | claw |  |  |  | `/v1/relay/remote` |
 | `claw.api.relay.connector` | apiRoute | api | claw |  |  |  | `/v1/relay/connectors` |
+| `claw.api.remote.classifications` | apiRoute | api | claw |  |  |  | `/v1/remote/classifications` |
+| `claw.api.remote.conformance` | apiRoute | api | claw |  |  |  | `/v1/remote/conformance` |
+| `claw.api.sync.manifests` | apiRoute | api | claw |  |  |  | `/v1/sync/manifests` |
+| `claw.api.sync.changes` | apiRoute | api | claw |  |  |  | `/v1/sync/changes` |
+| `claw.api.nodes` | apiRoute | api | claw |  |  |  | `/v1/nodes` |
+| `claw.api.gateway.conformance` | apiRoute | api | claw |  |  |  | `/v1/gateway/conformance` |
 | `claw.privateApi.attachments` | privateApiRoute | api | claw |  |  |  | `/api/attachments` |
 | `claw.privateApi.authToken` | privateApiRoute | api | claw |  |  |  | `/api/auth/token` |
 | `claw.privateApi.capture` | privateApiRoute | api | claw |  |  |  | `/api/capture` |
@@ -2420,6 +2516,10 @@ flowchart TD
 | `claw.cli.command.records` | cliCommand | cli | claw |  |  |  | `records` |
 | `claw.cli.command.contacts` | cliCommand | cli | claw |  |  |  | `contacts` |
 | `claw.cli.command.inspect` | cliCommand | cli | claw |  |  |  | `inspect` |
+| `claw.cli.command.remote` | cliCommand | cli | claw |  |  |  | `remote` |
+| `claw.cli.command.sync` | cliCommand | cli | claw |  |  |  | `sync` |
+| `claw.cli.command.nodes` | cliCommand | cli | claw |  |  |  | `nodes` |
+| `claw.cli.command.gateway` | cliCommand | cli | claw |  |  |  | `gateway` |
 | `claw.cli.command.dense-fixtures` | cliCommand | cli | claw |  |  |  | `dense-fixtures` |
 | `claw.cli.command.dense-fixture` | cliCommand | cli | claw |  |  |  | `dense-fixture` |
 | `claw.cli.command.search` | cliCommand | cli | claw |  |  |  | `search` |

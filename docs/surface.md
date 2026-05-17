@@ -2423,6 +2423,40 @@ The docs check script validates that every current export from
     clawSurfaceGraphRoutes
     clawStableSurface
     clawPrivateAppApiPrefix
+
+## Remote Gateway And Sync Exports
+
+    createExampleSyncResourceManifest
+    NodeIdentity
+    nodeIdentitySchema
+    RemoteActorContext
+    remoteActorContextSchema
+    RemoteActorKind
+    remoteActorKindSchema
+    RemoteSecretLease
+    remoteSecretLeaseSchema
+    RemoteSurfaceClassification
+    remoteSurfaceClassificationSchema
+    remoteSyncRequiredDecisionIds
+    remoteSyncRequiredRouteIds
+    RemoteTrustMode
+    remoteTrustModeSchema
+    SyncAuthority
+    syncAuthoritySchema
+    SyncCachePolicy
+    syncCachePolicySchema
+    SyncChange
+    syncChangeSchema
+    SyncConflict
+    syncConflictSchema
+    SyncConflictPolicy
+    syncConflictPolicySchema
+    SyncCursor
+    syncCursorSchema
+    SyncDriver
+    syncDriverSchema
+    SyncResourceManifest
+    syncResourceManifestSchema
     clawPublicApiPrefix
     clawServiceSocketName
     clawServiceSocketPath

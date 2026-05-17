@@ -139,6 +139,40 @@ The technical `claw database ...` commands administer a running database
 service. If no service is running, use `claw collections list --json` for the
 agent-facing local catalog instead.
 
+## Remote Gateway And Sync
+
+Remote access uses the Coordinator/Gateway/Connector/Sync architecture from
+ADR 0022. These commands are the public inspection and dry-run surface for
+remote parity, node trust, sync manifests, and hosted/self-hosted conformance:
+
+```bash
+claw remote classify --json
+claw remote check --json
+claw remote routes --json
+claw remote conformance --json
+
+claw sync manifest --resource-id skills:default --kind skills --driver skills --json
+claw sync status --json
+claw sync plan --json
+claw sync run --json
+claw sync conflicts --json
+
+claw nodes list --json
+claw nodes pair --dry-run --json
+claw nodes trust --dry-run --json
+claw nodes revoke --dry-run --json
+claw nodes heartbeat --json
+
+claw gateway serve --dry-run --json
+claw gateway project --dry-run --json
+claw gateway conformance --json
+```
+
+`remote-safe` means the capability has a route, owner, policy, and tests.
+`local-only`, `blocked`, and `pending` are explicit states, not silent gaps.
+Pairing, trust changes, real gateway serving, and real sync execution stay
+signed-host or Coordinator gated.
+
 Local agent records are managed through the agent-facing data commands. These
 commands write canonical files under `~/.claw/` and project searchable
 summaries into the main core database:

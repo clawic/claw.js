@@ -10,6 +10,7 @@ export * from "./host-contracts.ts";
 export * from "./host-contract-fixtures.ts";
 export * from "./host-json-schemas.ts";
 export * from "./productivity.ts";
+export * from "./remote-sync.ts";
 export * from "./schemas.ts";
 export * from "./semantic.ts";
 export * from "./storage.ts";
