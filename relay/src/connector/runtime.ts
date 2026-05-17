@@ -80,8 +80,8 @@ const DEFAULT_PERSONAS = [
 
 const DEFAULT_PLUGINS = [
   {
-    id: "clawjs-tools",
-    name: "clawjs-tools",
+    id: "claw-tools",
+    name: "claw-tools",
     version: "0.1.0",
     description: "Relay observed plugin catalog.",
     status: "active",
