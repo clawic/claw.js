@@ -9,6 +9,7 @@ import { clawDataFiles, resolveClawPersistentSurfacePath } from "@clawjs/core";
 
 import { CLI_EXIT_OK, runCli } from "./index.ts";
 import { resolveClawjsDataRoot, resolveClawjsFilesDir, resolveClawjsMainDbPath } from "./v1-data.ts";
+import { writeMcpServers } from "./v1-data-core.ts";
 import { captureStream, runInternalV1Cli, useIsolatedMainData, withPatchedEnv } from "./index-test-utils.ts";
 
 function parseCliData<T>(output: string): T {
@@ -45,6 +46,16 @@ test("V2 main data paths default to the Claw home data namespace", () => {
     } as NodeJS.ProcessEnv),
     path.join(os.tmpdir(), "custom-core.sqlite"),
   );
+});
+
+test("mcp config writes refuse Codex-owned config paths", () => {
+  const codexConfig = path.join(os.homedir(), ".codex", `clawjs-test-${Date.now()}-${Math.random().toString(36).slice(2)}.toml`);
+  assert.equal(fs.existsSync(codexConfig), false);
+  assert.throws(
+    () => writeMcpServers(codexConfig, [{ id: "browser", command: "npx" }]),
+    /Refusing write operation inside ~\/\.codex/,
+  );
+  assert.equal(fs.existsSync(codexConfig), false);
 });
 
 test("app-state projects persist opaque resource ids alongside paths", async () => {

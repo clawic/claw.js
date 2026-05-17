@@ -356,6 +356,10 @@ requireSnippet(
   "packages/clawjs-node/src/runtime/adapters/codex-adapter.ts",
   "Codex config is an external read-only source for ClawJS"
 );
+requireSnippet(
+  "packages/clawjs/src/v1-data-core.ts",
+  'assertCodexReadOnlyPath({ homeDir: os.homedir(), path: configPath, operation: "write" })'
+);
 
 for (const relativePath of [
   "docs/index.md",

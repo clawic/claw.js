@@ -1254,9 +1254,7 @@ function tableExists(sqlite: Database.Database, table: string): boolean {
 
 export function readMcpServers(configPath: string): Array<JsonRecord & { id: string }> {
   if (!fs.existsSync(configPath)) return [];
-  if (path.resolve(configPath).startsWith(path.join(os.homedir(), ".codex"))) {
-    assertCodexReadOnlyPath({ homeDir: os.homedir(), path: configPath, operation: "read" });
-  }
+  assertCodexReadOnlyPath({ homeDir: os.homedir(), path: configPath, operation: "read" });
   const raw = fs.readFileSync(configPath, "utf8");
   const servers: Array<JsonRecord & { id: string }> = [];
   const lines = raw.split(/\r?\n/);
@@ -1291,6 +1289,7 @@ export function readMcpServers(configPath: string): Array<JsonRecord & { id: str
 }
 
 export function writeMcpServers(configPath: string, servers: Array<JsonRecord & { id: string }>): void {
+  assertCodexReadOnlyPath({ homeDir: os.homedir(), path: configPath, operation: "write" });
   const raw = fs.existsSync(configPath) ? fs.readFileSync(configPath, "utf8") : "";
   const preserved = stripMcpServerBlocks(raw).trimEnd();
   const rendered = servers.map(renderMcpServer).filter(Boolean).join("\n\n");
