@@ -66,6 +66,10 @@ Search V1.1 is built from these layers:
   upsert, delete, backfill, and rebuild work. Jobs use bounded leases,
   priorities, schedules, and retries so background indexing can progress
   without blocking section fast paths.
+- **Semantic candidates**: local embedding vectors can be stored beside Search
+  documents and combined with lexical matches through semantic or hybrid query
+  strategies. Model choice and embedding generation remain adapter-owned; the
+  sidecar only stores vectors and applies deterministic similarity scoring.
 - **Actions and permissions**: results can expose actions, but execution remains
   brokered by grants/approvals. Sensitive previews are redacted before they
   reach generic Search output.

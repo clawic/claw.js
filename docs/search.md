@@ -108,6 +108,12 @@ schedule, payload, and retry metadata. Workers claim bounded leases so heavy
 backfill can run progressively without blocking a UI section that is only
 searching its own already-hot data.
 
+Adapters can also attach local embedding vectors to Search documents.
+`SearchQueryInput.strategy` supports lexical, semantic, and hybrid scoring when
+the caller provides an embedding model and vector. Embedding generation remains
+adapter-owned; Root Search stores vectors and applies deterministic cosine
+similarity scoring alongside the existing ranking hints and context boosts.
+
 Queries support structured filters through `SearchQueryInput.filters` and the
 CLI `--filters` flag. Filters may target built-in fields such as `domain`,
 `source`, `shard`, `type`, `resourceId`, `path`, `canPreview`, and `redacted`,

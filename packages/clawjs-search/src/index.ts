@@ -17,6 +17,8 @@ export type SearchSourceProfile = "framework" | "full";
 
 export type SearchMatchKind = "exact" | "prefix" | "fuzzy" | "fts" | "semantic";
 
+export type SearchQueryStrategy = "lexical" | "semantic" | "hybrid";
+
 export type SearchActionKind = "open" | "copy" | "run" | "rebuild" | "custom";
 
 export type SearchActionRisk = "read" | "write" | "destructive" | "cost" | "system";
@@ -148,6 +150,7 @@ export interface SearchResultExplanation {
   rankingHints?: Record<string, number>;
   scoreBreakdown?: {
     lexical: number;
+    semantic?: number;
     base: number;
     hints: number;
     frecency: number;
@@ -168,6 +171,11 @@ export interface SearchQueryInput {
   limit?: number;
   explain?: boolean;
   filters?: Record<string, unknown>;
+  strategy?: SearchQueryStrategy;
+  embedding?: {
+    model: string;
+    vector: number[];
+  };
 }
 
 export interface SearchQueryOutput {

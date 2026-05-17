@@ -115,6 +115,22 @@ export interface SearchIndexJob {
   error?: string;
 }
 
+export interface SearchVectorInput {
+  documentId: string;
+  fragmentId?: string;
+  model: string;
+  embedding: number[];
+  updatedAt?: string;
+}
+
+export interface SearchVectorRecord {
+  documentId: string;
+  fragmentId?: string;
+  model: string;
+  embedding: number[];
+  updatedAt: string;
+}
+
 export type SearchAuditEventType = "sensitive_query" | "action";
 
 export interface SearchAuditEventInput {
@@ -344,44 +360,32 @@ export class SearchStore {
     const limit = Math.max(1, input.limit ?? 20);
     const candidateLimit = Math.min(200, Math.max(limit * 4, limit));
     const profile = input.profile ?? "framework";
+    const strategy = input.strategy ?? (input.embedding ? "hybrid" : "lexical");
     const match = ftsQuery(input.query);
-    const clauses = ["d.deleted_at IS NULL"];
-    const params: unknown[] = [];
-    if (match) {
-      clauses.push("search_fts MATCH ?");
-      params.push(match);
-    }
-    if (input.domains?.length) {
-      clauses.push(`d.domain IN (${input.domains.map(() => "?").join(", ")})`);
-      params.push(...input.domains);
-    }
-    if (input.sources?.length) {
-      clauses.push(`d.source IN (${input.sources.map(() => "?").join(", ")})`);
-      params.push(...input.sources);
-    }
-    if (input.shards?.length) {
-      clauses.push(`d.shard IN (${input.shards.map(() => "?").join(", ")})`);
-      params.push(...input.shards);
-    }
-    applySearchFilters(clauses, params, input.filters);
-    if (profile !== "full") {
-      clauses.push("s.profile = 'framework'");
-    }
-    clauses.push("s.state NOT IN ('disabled', 'paused', 'excluded')");
     const omittedSources = this.omittedSourcesForInput(input, profile);
     const facets = this.facetsForInput(input, profile);
-    params.push(candidateLimit);
-    const rows = this.db.prepare(`
-      SELECT d.*, 0 AS rank
-      FROM search_fts
-      JOIN search_documents d ON d.id = search_fts.doc_id
-      JOIN search_sources s ON s.id = d.source
-      WHERE ${clauses.join(" AND ")}
-      GROUP BY d.id
-      ORDER BY rank ASC, d.updated_at DESC
-      LIMIT ?
-    `).all(...params) as SearchDocumentRow[];
-    const results = rows
+    const rows = new Map<string, SearchDocumentRow>();
+    if (strategy !== "semantic" || !input.embedding) {
+      const { clauses, params } = buildDocumentClauses(input, profile, match);
+      const lexicalRows = this.db.prepare(`
+        SELECT d.*, 0 AS rank, NULL AS semantic_score
+        FROM search_fts
+        JOIN search_documents d ON d.id = search_fts.doc_id
+        JOIN search_sources s ON s.id = d.source
+        WHERE ${clauses.join(" AND ")}
+        GROUP BY d.id
+        ORDER BY rank ASC, d.updated_at DESC
+        LIMIT ?
+      `).all(...params, candidateLimit) as SearchDocumentRow[];
+      for (const row of lexicalRows) rows.set(row.id, row);
+    }
+    if (input.embedding && strategy !== "lexical") {
+      for (const row of this.semanticRows(input, profile, input.embedding, candidateLimit)) {
+        const existing = rows.get(row.id);
+        rows.set(row.id, existing ? mergeSearchRows(existing, row) : row);
+      }
+    }
+    const results = [...rows.values()]
       .map((row) => this.resultFromRow(row, input))
       .sort((left, right) => right.score - left.score || (right.updatedAt ?? "").localeCompare(left.updatedAt ?? ""))
       .slice(0, limit);
@@ -394,6 +398,30 @@ export class SearchStore {
       omittedSources,
       elapsedMs: Date.now() - startedAt,
     };
+  }
+
+  upsertVector(input: SearchVectorInput): SearchVectorRecord {
+    const updatedAt = input.updatedAt ?? new Date().toISOString();
+    const embedding = normalizeEmbedding(input.embedding);
+    const fragmentId = input.fragmentId ?? "";
+    this.db.prepare(`
+      INSERT INTO search_vectors (document_id, fragment_id, model, embedding_json, updated_at)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(document_id, fragment_id, model) DO UPDATE SET
+        embedding_json = excluded.embedding_json,
+        updated_at = excluded.updated_at
+    `).run(input.documentId, fragmentId, input.model, JSON.stringify(embedding), updatedAt);
+    return { documentId: input.documentId, ...(input.fragmentId ? { fragmentId: input.fragmentId } : {}), model: input.model, embedding, updatedAt };
+  }
+
+  listVectors(documentId: string): SearchVectorRecord[] {
+    const rows = this.db.prepare(`
+      SELECT document_id, fragment_id, model, embedding_json, updated_at
+      FROM search_vectors
+      WHERE document_id = ?
+      ORDER BY model ASC, fragment_id ASC
+    `).all(documentId) as SearchVectorRow[];
+    return rows.map(searchVectorFromRow);
   }
 
   createAdapterRegistry(): ReturnType<typeof createSearchRegistry> {
@@ -773,6 +801,36 @@ export class SearchStore {
     return [...facets.values()];
   }
 
+  private semanticRows(input: SearchQueryInput, profile: SearchProfileId, embedding: NonNullable<SearchQueryInput["embedding"]>, limit: number): SearchDocumentRow[] {
+    const queryVector = normalizeEmbedding(embedding.vector);
+    const { clauses, params } = buildDocumentClauses(input, profile);
+    const rows = this.db.prepare(`
+      SELECT d.*, 0 AS rank, v.embedding_json
+      FROM search_vectors v
+      JOIN search_documents d ON d.id = v.document_id
+      JOIN search_sources s ON s.id = d.source
+      WHERE v.model = ? AND ${clauses.join(" AND ")}
+      ORDER BY d.updated_at DESC
+      LIMIT ?
+    `).all(embedding.model, ...params, Math.max(limit * 4, limit)) as Array<SearchDocumentRow & { embedding_json: string }>;
+    const byDocument = new Map<string, SearchDocumentRow>();
+    for (const row of rows) {
+      const similarity = cosineSimilarity(queryVector, parseJson<number[]>(row.embedding_json));
+      if (similarity <= 0) continue;
+      const semanticScore = similarity * 100;
+      const candidate: SearchDocumentRow = {
+        ...row,
+        rank: Math.max(0, 100 - semanticScore),
+        semantic_score: semanticScore,
+      };
+      const existing = byDocument.get(row.id);
+      if (!existing || (candidate.semantic_score ?? 0) > (existing.semantic_score ?? 0)) byDocument.set(row.id, candidate);
+    }
+    return [...byDocument.values()]
+      .sort((left, right) => (right.semantic_score ?? 0) - (left.semantic_score ?? 0) || (right.updated_at ?? "").localeCompare(left.updated_at ?? ""))
+      .slice(0, limit);
+  }
+
   private resultFromRow(row: SearchDocumentRow, input: SearchQueryInput): SearchResult {
     const fragmentsWithMatch = (this.db.prepare(`
       SELECT id, title, snippet, body FROM search_fragments
@@ -796,7 +854,11 @@ export class SearchStore {
     const lexical = scoreLexicalMatch(input.query, `${row.title} ${row.subtitle ?? ""} ${row.snippet ?? ""} ${row.body}`);
     const rankingHints = parseJson<Record<string, number>>(row.ranking_json);
     const metadata = parseJson(row.metadata_json);
-    const score = centralSearchScore({ lexicalScore: lexical.score, rowRank: row.rank ?? 0, rankingHints, metadata, input });
+    const score = centralSearchScore({ lexicalScore: lexical.score, semanticScore: row.semantic_score ?? 0, rowRank: row.rank ?? 0, rankingHints, metadata, input });
+    const matchedBy = lexical.matchedBy.length
+      ? lexical.matchedBy
+      : (fragmentsWithMatch.find((entry) => entry.match.matchedBy.length)?.match.matchedBy ?? []);
+    if ((row.semantic_score ?? 0) > 0 && !matchedBy.includes("semantic")) matchedBy.push("semantic");
     return {
       id: row.id,
       source: row.source,
@@ -819,7 +881,7 @@ export class SearchStore {
           sourceScore: lexical.score,
           rankingHints,
           scoreBreakdown: score.breakdown,
-          matchedBy: lexical.matchedBy.length ? lexical.matchedBy : (fragmentsWithMatch.find((entry) => entry.match.matchedBy.length)?.match.matchedBy ?? []),
+          matchedBy,
         },
       } : {}),
     };
@@ -843,6 +905,7 @@ interface SearchDocumentRow {
   permissions_json: string;
   ranking_json: string;
   rank?: number;
+  semantic_score?: number | null;
 }
 
 interface SearchFragmentRow {
@@ -875,6 +938,14 @@ interface SearchIndexJobRow {
   updated_at: string;
   leased_until: string | null;
   error: string | null;
+}
+
+interface SearchVectorRow {
+  document_id: string;
+  fragment_id: string;
+  model: string;
+  embedding_json: string;
+  updated_at: string;
 }
 
 interface SavedSearchRow {
@@ -939,6 +1010,72 @@ function searchIndexJobFromRow(row: SearchIndexJobRow): SearchIndexJob {
     ...(row.leased_until ? { leasedUntil: row.leased_until } : {}),
     ...(row.error ? { error: row.error } : {}),
   };
+}
+
+function searchVectorFromRow(row: SearchVectorRow): SearchVectorRecord {
+  return {
+    documentId: row.document_id,
+    ...(row.fragment_id ? { fragmentId: row.fragment_id } : {}),
+    model: row.model,
+    embedding: parseJson<number[]>(row.embedding_json),
+    updatedAt: row.updated_at,
+  };
+}
+
+function buildDocumentClauses(input: SearchQueryInput, profile: SearchProfileId, match?: string): { clauses: string[]; params: unknown[] } {
+  const clauses = ["d.deleted_at IS NULL"];
+  const params: unknown[] = [];
+  if (match) {
+    clauses.push("search_fts MATCH ?");
+    params.push(match);
+  }
+  if (input.domains?.length) {
+    clauses.push(`d.domain IN (${input.domains.map(() => "?").join(", ")})`);
+    params.push(...input.domains);
+  }
+  if (input.sources?.length) {
+    clauses.push(`d.source IN (${input.sources.map(() => "?").join(", ")})`);
+    params.push(...input.sources);
+  }
+  if (input.shards?.length) {
+    clauses.push(`d.shard IN (${input.shards.map(() => "?").join(", ")})`);
+    params.push(...input.shards);
+  }
+  applySearchFilters(clauses, params, input.filters);
+  if (profile !== "full") clauses.push("s.profile = 'framework'");
+  clauses.push("s.state NOT IN ('disabled', 'paused', 'excluded')");
+  return { clauses, params };
+}
+
+function mergeSearchRows(left: SearchDocumentRow, right: SearchDocumentRow): SearchDocumentRow {
+  return {
+    ...left,
+    rank: Math.min(left.rank ?? Number.MAX_SAFE_INTEGER, right.rank ?? Number.MAX_SAFE_INTEGER),
+    semantic_score: Math.max(left.semantic_score ?? 0, right.semantic_score ?? 0),
+  };
+}
+
+function normalizeEmbedding(embedding: number[]): number[] {
+  if (!embedding.length) throw new Error("Search vector embedding must not be empty");
+  if (!embedding.every((value) => Number.isFinite(value))) throw new Error("Search vector embedding must contain only finite numbers");
+  return embedding;
+}
+
+function cosineSimilarity(left: number[], right: number[]): number {
+  const length = Math.min(left.length, right.length);
+  if (!length) return 0;
+  let dot = 0;
+  let leftMagnitude = 0;
+  let rightMagnitude = 0;
+  for (let index = 0; index < length; index += 1) {
+    const leftValue = left[index] ?? 0;
+    const rightValue = right[index] ?? 0;
+    dot += leftValue * rightValue;
+    leftMagnitude += leftValue * leftValue;
+    rightMagnitude += rightValue * rightValue;
+  }
+  if (!leftMagnitude || !rightMagnitude) return 0;
+  return dot / (Math.sqrt(leftMagnitude) * Math.sqrt(rightMagnitude));
 }
 
 function isRebuildableSearchSchemaMismatch(error: unknown): boolean {
@@ -1036,12 +1173,14 @@ function truncateUtf8(value: string, maxBytes: number): string {
 
 function centralSearchScore(input: {
   lexicalScore: number;
+  semanticScore: number;
   rowRank: number;
   rankingHints: Record<string, unknown>;
   metadata: Record<string, unknown>;
   input: SearchQueryInput;
 }): { total: number; breakdown: NonNullable<SearchResult["explanation"]>["scoreBreakdown"] } {
   const base = Math.max(1, 100 - Math.max(0, input.rowRank)) + input.lexicalScore / 100;
+  const semanticBoost = boundedNumber(input.semanticScore, 0, 100) / 4;
   const hintBoost = boundedNumber(input.rankingHints.priority, 0, 10)
     + boundedNumber(input.rankingHints.hot, 0, 5)
     + boundedNumber(input.rankingHints.fastPath, 0, 2);
@@ -1051,9 +1190,10 @@ function centralSearchScore(input: {
   const scopeBoost = scopeFilterBoost(input.input.filters, input.metadata, input.rankingHints);
   const context = actorBoost + surfaceBoost + scopeBoost;
   return {
-    total: base + hintBoost + frecencyBoost + context,
+    total: base + semanticBoost + hintBoost + frecencyBoost + context,
     breakdown: {
       lexical: input.lexicalScore,
+      semantic: semanticBoost,
       base,
       hints: hintBoost,
       frecency: frecencyBoost,

@@ -319,6 +319,104 @@ test("SearchStore leases indexing jobs by source and shard for controlled backfi
   }
 });
 
+test("SearchStore supports local semantic vector retrieval when an embedding is supplied", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-vectors-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "documents.blocks",
+      domain: "documents",
+      name: "Documents",
+      resultTypes: ["document"],
+    }));
+    store.upsertDocument({
+      id: "documents.blocks:alpha",
+      source: "documents.blocks",
+      domain: "documents",
+      type: "document",
+      title: "Design rationale",
+      body: "Architecture notes about quiet interfaces.",
+    });
+    store.upsertDocument({
+      id: "documents.blocks:beta",
+      source: "documents.blocks",
+      domain: "documents",
+      type: "document",
+      title: "Release notes",
+      body: "Changelog for packaging.",
+    });
+    store.upsertVector({ documentId: "documents.blocks:alpha", model: "local-test", embedding: [0.95, 0.05] });
+    store.upsertVector({ documentId: "documents.blocks:beta", model: "local-test", embedding: [0.1, 0.9] });
+
+    assert.equal(store.listVectors("documents.blocks:alpha").at(0)?.model, "local-test");
+    const semantic = store.query({
+      query: "unrelated words",
+      domains: ["documents"],
+      strategy: "semantic",
+      embedding: { model: "local-test", vector: [1, 0] },
+      explain: true,
+    });
+    assert.equal(semantic.results[0]?.id, "documents.blocks:alpha");
+    assert.equal(semantic.results[0]?.explanation?.matchedBy?.includes("semantic"), true);
+    assert.ok((semantic.results[0]?.explanation?.scoreBreakdown?.semantic ?? 0) > 0);
+
+    const noEmbedding = store.query({ query: "unrelated words", domains: ["documents"], strategy: "semantic" });
+    assert.equal(noEmbedding.results.length, 0);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("SearchStore scores semantic vector matches", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-vectors-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "notes.blocks",
+      domain: "notes",
+      name: "Notes",
+      resultTypes: ["note"],
+    }));
+    store.upsertDocument({
+      id: "notes.blocks:one",
+      source: "notes.blocks",
+      domain: "notes",
+      type: "note",
+      title: "Semantic Search",
+      body: "local vector ranking",
+      updatedAt: "2026-05-17T12:00:00.000Z",
+    });
+    store.upsertDocument({
+      id: "notes.blocks:two",
+      source: "notes.blocks",
+      domain: "notes",
+      type: "note",
+      title: "Lexical Search",
+      body: "keyword only",
+      updatedAt: "2026-05-17T12:01:00.000Z",
+    });
+
+    store.upsertVector({ documentId: "notes.blocks:one", model: "text-embedding-test", embedding: [1, 0, 0], updatedAt: "2026-05-17T12:00:01.000Z" });
+    store.upsertVector({ documentId: "notes.blocks:two", model: "text-embedding-test", embedding: [0, 1, 0], updatedAt: "2026-05-17T12:01:01.000Z" });
+
+    assert.deepEqual(store.listVectors("notes.blocks:one").map((vector) => vector.embedding), [[1, 0, 0]]);
+    const output = store.query({
+      query: "unmatched",
+      domains: ["notes"],
+      strategy: "semantic",
+      embedding: { model: "text-embedding-test", vector: [0.9, 0.1, 0] },
+      explain: true,
+    });
+    assert.deepEqual(output.results.map((result) => result.id), ["notes.blocks:one", "notes.blocks:two"]);
+    assert.equal(output.results[0]?.explanation?.matchedBy.includes("semantic"), true);
+    assert.ok((output.results[0]?.explanation?.scoreBreakdown?.semantic ?? 0) > (output.results[1]?.explanation?.scoreBreakdown?.semantic ?? 0));
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("SearchStore central ranking uses frecency, actor, surface and scope hints", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-ranking-"));
   const store = new SearchStore(path.join(dir, "search.sqlite"));
