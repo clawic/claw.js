@@ -86,6 +86,20 @@ const requiredExternalPending = [
   ["ops", "provider"],
 ];
 
+const requiredExistingAuditSurfaces = [
+  "Notes, pages, page blocks, comments, mentions, and record notes",
+  "Knowledge entities and facts",
+  "Knowledge graph relations",
+  "Associations and custom fields",
+  "Signals and observations",
+  "Attachments, files, documents, and raw imports",
+  "CRM companies, accounts, contacts, leads, deals, activities, and assets",
+  "Billing customers, invoices, payments, subscriptions, prices, and ledger-like records",
+  "ERP",
+  "Infra, observability, monitor, and ops",
+  "Identity, actors, roles, and teams",
+];
+
 const failures = [];
 
 function fail(message) {
@@ -124,6 +138,7 @@ for (const [relativePath, text] of docTexts) {
 
 const sourceAudit = docTexts.get("docs/dense-data-source-decision-audit.md") ?? "";
 const decisionMatrix = docTexts.get("docs/dense-data-decision-matrix.md") ?? "";
+const existingCatalogAudit = docTexts.get("docs/dense-data-existing-catalog-audit.md") ?? "";
 
 requireText("source audit", sourceAudit, sourceConversationId);
 requireText("source audit", sourceAudit, sourcePlanId);
@@ -158,6 +173,28 @@ for (const phrase of [
 }
 if (!docCorpus.includes("EXTERNAL PENDING") && !docCorpus.includes("external_pending")) {
   fail("dense public docs must document EXTERNAL PENDING or external_pending");
+}
+
+for (const surface of requiredExistingAuditSurfaces) {
+  const row = existingCatalogAudit.split("\n").find((line) => line.startsWith(`| ${surface} |`));
+  if (!row) {
+    fail(`existing catalog audit missing surface row: ${surface}`);
+    continue;
+  }
+  const cells = row.split("|").map((cell) => cell.trim());
+  if (cells.length < 6 || !cells[2] || !cells[3] || !cells[4]) {
+    fail(`existing catalog audit row must include decision, owner, and follow-up gate: ${surface}`);
+  }
+}
+for (const requiredPhrase of [
+  "entity_relations",
+  "evidence_sources",
+  "provenance_events",
+  "quality_gaps",
+  "core",
+  "sidecars",
+]) {
+  requireText("existing catalog audit", existingCatalogAudit, requiredPhrase);
 }
 
 try {

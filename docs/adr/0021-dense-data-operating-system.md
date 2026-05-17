@@ -92,8 +92,9 @@ The first guardrails are `packages/clawjs-core/src/dense-data-os.test.ts` and
 intent status vocabulary, first-wave coverage, acronym aliases, direct center
 command nouns, patient medication routes without a health prefix, ERP as an
 orchestrator rather than a supercollection, roadmap visibility, registry
-completeness, privacy-safe public docs, one-by-one source decision rows, and
-the acceptance fixture/external-pending ledger.
+completeness, privacy-safe public docs, one-by-one source decision rows, the
+existing-surface anti-duplication audit, and the acceptance
+fixture/external-pending ledger.
 
 The dense systems are also projected into
 `packages/clawjs-core/src/domain-surface-registry.ts` as `dense-system:*`
