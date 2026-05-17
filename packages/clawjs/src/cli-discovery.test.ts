@@ -148,6 +148,32 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(patientLabsPayload.meta.action, "list");
   assert.equal(patientLabsPayload.data.some((record) => record.id === patientLabPayload.data.id && record.patientId === createdPatient.data.id), true);
 
+  const patientEncounterCreate = await runCliCapture(["patient", createdPatient.data.id, "encounter", "add", "Intake visit", "--encounter-type", "visit", "--started-at", "2026-05-17T00:00:00.000Z", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(patientEncounterCreate.code, CLI_EXIT_OK, patientEncounterCreate.stderr || patientEncounterCreate.stdout);
+  const patientEncounterPayload = JSON.parse(patientEncounterCreate.stdout) as { data: { id: string; title: string; patientId: string; encounterType: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(patientEncounterPayload.meta.invokedCommand, "patient");
+  assert.equal(patientEncounterPayload.meta.collection, "encounters");
+  assert.equal(patientEncounterPayload.meta.action, "create");
+  assert.equal(patientEncounterPayload.data.title, "Intake visit");
+  assert.equal(patientEncounterPayload.data.patientId, createdPatient.data.id);
+  assert.equal(patientEncounterPayload.data.encounterType, "visit");
+  assert.equal(patientEncounterPayload.data.status, "planned");
+
+  const patientEncounters = await runCliCapture(["patient", createdPatient.data.id, "encounters", "list", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(patientEncounters.code, CLI_EXIT_OK);
+  const patientEncountersPayload = JSON.parse(patientEncounters.stdout) as { data: Array<{ id: string; title: string; patientId: string }>; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(patientEncountersPayload.meta.invokedCommand, "patient");
+  assert.equal(patientEncountersPayload.meta.collection, "encounters");
+  assert.equal(patientEncountersPayload.meta.action, "list");
+  assert.equal(patientEncountersPayload.data.some((record) => record.id === patientEncounterPayload.data.id && record.patientId === createdPatient.data.id), true);
+
+  const directEncounterCreate = await runCliCapture(["encounter", "add", "--patient", createdPatient.data.id, "--title", "Follow-up visit", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(directEncounterCreate.code, CLI_EXIT_OK, directEncounterCreate.stderr || directEncounterCreate.stdout);
+  const directEncounterPayload = JSON.parse(directEncounterCreate.stdout) as { data: { title: string; patientId: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(directEncounterPayload.meta.invokedCommand, "encounter");
+  assert.equal(directEncounterPayload.meta.collection, "encounters");
+  assert.equal(directEncounterPayload.data.patientId, createdPatient.data.id);
+
   const directLabCreate = await runCliCapture(["lab", "add", "--patient", createdPatient.data.id, "--title", "Metabolic panel", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(directLabCreate.code, CLI_EXIT_OK, directLabCreate.stderr || directLabCreate.stdout);
   const directLabPayload = JSON.parse(directLabCreate.stdout) as { data: { title: string; patientId: string }; meta: { collection: string; action: string; invokedCommand: string } };
@@ -186,8 +212,9 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(patientTimelinePayload.data.view.createsOrReads.includes("timeline_view"), true);
   assert.equal(patientTimelinePayload.data.materializedView.subject.id, createdPatient.data.id);
   assert.equal(patientTimelinePayload.data.materializedView.subject.label, "Ada Patient");
-  assert.equal(patientTimelinePayload.data.materializedView.itemCount >= 7, true);
+  assert.equal(patientTimelinePayload.data.materializedView.itemCount >= 9, true);
   assert.equal(patientTimelinePayload.data.materializedView.partial, true);
+  assert.equal(patientTimelinePayload.data.materializedView.items.some((item) => item.kind === "encounter" && item.label === "Intake visit"), true);
   assert.equal(patientTimelinePayload.data.materializedView.items.some((item) => item.kind === "medication" && item.label === "Atorvastatin"), true);
   assert.equal(patientTimelinePayload.data.materializedView.items.some((item) => item.kind === "symptom" && item.label === "Headache"), true);
   assert.equal(patientTimelinePayload.data.materializedView.items.some((item) => item.kind === "lab_result" && item.label === "CBC panel"), true);
@@ -199,6 +226,69 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(companyPayload.meta.collection, "companies");
   assert.equal(companyPayload.meta.action, "create");
   assert.equal(companyPayload.data.name, "Acme Corp");
+
+  const employeeCreate = await runCliCapture(["employee", "create", "Ada Employee", "--company", companyPayload.data.id, "--job-title", "Operations Lead", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(employeeCreate.code, CLI_EXIT_OK, employeeCreate.stderr || employeeCreate.stdout);
+  const employeePayload = JSON.parse(employeeCreate.stdout) as { data: { id: string; displayName: string; companyId: string; jobTitle: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(employeePayload.meta.invokedCommand, "employee");
+  assert.equal(employeePayload.meta.collection, "employees");
+  assert.equal(employeePayload.meta.action, "create");
+  assert.equal(employeePayload.data.displayName, "Ada Employee");
+  assert.equal(employeePayload.data.companyId, companyPayload.data.id);
+  assert.equal(employeePayload.data.status, "active");
+
+  const employeeTimeOffCreate = await runCliCapture(["employee", employeePayload.data.id, "time-off", "add", "--kind", "vacation", "--start-date", "2026-06-01T00:00:00.000Z", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(employeeTimeOffCreate.code, CLI_EXIT_OK, employeeTimeOffCreate.stderr || employeeTimeOffCreate.stdout);
+  const employeeTimeOffPayload = JSON.parse(employeeTimeOffCreate.stdout) as { data: { employeeId: string; kind: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(employeeTimeOffPayload.meta.invokedCommand, "employee");
+  assert.equal(employeeTimeOffPayload.meta.collection, "time_off_requests");
+  assert.equal(employeeTimeOffPayload.meta.action, "create");
+  assert.equal(employeeTimeOffPayload.data.employeeId, employeePayload.data.id);
+  assert.equal(employeeTimeOffPayload.data.kind, "vacation");
+  assert.equal(employeeTimeOffPayload.data.status, "pending");
+
+  const employeeReviewCreate = await runCliCapture(["employee", employeePayload.data.id, "reviews", "add", "--cycle-name", "2026 Q2", "--rating", "strong", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(employeeReviewCreate.code, CLI_EXIT_OK, employeeReviewCreate.stderr || employeeReviewCreate.stdout);
+  const employeeReviewPayload = JSON.parse(employeeReviewCreate.stdout) as { data: { employeeId: string; cycleName: string; rating: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(employeeReviewPayload.meta.invokedCommand, "employee");
+  assert.equal(employeeReviewPayload.meta.collection, "performance_reviews");
+  assert.equal(employeeReviewPayload.data.employeeId, employeePayload.data.id);
+  assert.equal(employeeReviewPayload.data.cycleName, "2026 Q2");
+  assert.equal(employeeReviewPayload.data.status, "draft");
+
+  const directTimeOffCreate = await runCliCapture(["time-off", "add", "--employee", employeePayload.data.id, "--kind", "sick", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(directTimeOffCreate.code, CLI_EXIT_OK, directTimeOffCreate.stderr || directTimeOffCreate.stdout);
+  const directTimeOffPayload = JSON.parse(directTimeOffCreate.stdout) as { data: { employeeId: string; kind: string }; meta: { collection: string; invokedCommand: string } };
+  assert.equal(directTimeOffPayload.meta.invokedCommand, "time-off");
+  assert.equal(directTimeOffPayload.meta.collection, "time_off_requests");
+  assert.equal(directTimeOffPayload.data.employeeId, employeePayload.data.id);
+  assert.equal(directTimeOffPayload.data.kind, "sick");
+
+  const employeeTimeline = await runCliCapture(["employee", employeePayload.data.id, "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(employeeTimeline.code, CLI_EXIT_OK, employeeTimeline.stderr || employeeTimeline.stdout);
+  const employeeTimelinePayload = JSON.parse(employeeTimeline.stdout) as {
+    data: {
+      coverage: { implementationStatus: string; recordsMaterialized: boolean };
+      semanticView: { id: string; systemId: string };
+      materializedView: {
+        subject: { id: string; label: string };
+        summary: { timeOffRequests: number; performanceReviews: number };
+        itemCount: number;
+        items: Array<{ kind: string; label: string }>;
+      };
+    };
+  };
+  assert.equal(employeeTimelinePayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(employeeTimelinePayload.data.coverage.recordsMaterialized, true);
+  assert.equal(employeeTimelinePayload.data.semanticView.id, "employee.timeline");
+  assert.equal(employeeTimelinePayload.data.semanticView.systemId, "hr");
+  assert.equal(employeeTimelinePayload.data.materializedView.subject.id, employeePayload.data.id);
+  assert.equal(employeeTimelinePayload.data.materializedView.subject.label, "Ada Employee");
+  assert.equal(employeeTimelinePayload.data.materializedView.summary.timeOffRequests, 2);
+  assert.equal(employeeTimelinePayload.data.materializedView.summary.performanceReviews, 1);
+  assert.equal(employeeTimelinePayload.data.materializedView.itemCount >= 4, true);
+  assert.equal(employeeTimelinePayload.data.materializedView.items.some((item) => item.kind === "time_off_request" && item.label === "vacation"), true);
+  assert.equal(employeeTimelinePayload.data.materializedView.items.some((item) => item.kind === "performance_review" && item.label === "2026 Q2"), true);
 
   const accountCreate = await runCliCapture(["account", "create", "Acme Account", "--company", companyPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(accountCreate.code, CLI_EXIT_OK);
@@ -393,6 +483,33 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(caseEvidenceListPayload.data.length, 1);
   assert.equal(caseEvidenceListPayload.data[0]?.caseId, legalCasePayload.data.id);
 
+  const caseClientCreate = await runCliCapture(["case", legalCasePayload.data.id, "client", "add", "Smith Client", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(caseClientCreate.code, CLI_EXIT_OK, caseClientCreate.stderr || caseClientCreate.stdout);
+  const caseClientPayload = JSON.parse(caseClientCreate.stdout) as { data: { id: string; displayName: string; caseId: string; role: string; status: string; conflictStatus: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(caseClientPayload.meta.invokedCommand, "case");
+  assert.equal(caseClientPayload.meta.collection, "legal_clients");
+  assert.equal(caseClientPayload.meta.action, "create");
+  assert.equal(caseClientPayload.data.displayName, "Smith Client");
+  assert.equal(caseClientPayload.data.caseId, legalCasePayload.data.id);
+  assert.equal(caseClientPayload.data.role, "client");
+  assert.equal(caseClientPayload.data.status, "active");
+  assert.equal(caseClientPayload.data.conflictStatus, "unknown");
+
+  const caseClientsList = await runCliCapture(["case", legalCasePayload.data.id, "clients", "list", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(caseClientsList.code, CLI_EXIT_OK);
+  const caseClientsPayload = JSON.parse(caseClientsList.stdout) as { data: Array<{ id: string; displayName: string; caseId: string }>; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(caseClientsPayload.meta.invokedCommand, "case");
+  assert.equal(caseClientsPayload.meta.collection, "legal_clients");
+  assert.equal(caseClientsPayload.meta.action, "list");
+  assert.equal(caseClientsPayload.data.some((record) => record.id === caseClientPayload.data.id && record.caseId === legalCasePayload.data.id), true);
+
+  const directLegalClientCreate = await runCliCapture(["legal-client", "add", "--case", legalCasePayload.data.id, "--display-name", "Direct Legal Client", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(directLegalClientCreate.code, CLI_EXIT_OK, directLegalClientCreate.stderr || directLegalClientCreate.stdout);
+  const directLegalClientPayload = JSON.parse(directLegalClientCreate.stdout) as { data: { displayName: string; caseId: string }; meta: { collection: string; invokedCommand: string } };
+  assert.equal(directLegalClientPayload.meta.invokedCommand, "legal-client");
+  assert.equal(directLegalClientPayload.meta.collection, "legal_clients");
+  assert.equal(directLegalClientPayload.data.caseId, legalCasePayload.data.id);
+
   const legalEvidenceSourceCreate = await runCliCapture(["evidence-source", "create", "Contract file", "--kind", "file", "--collection-name", "legal_cases", "--record-id", legalCasePayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(legalEvidenceSourceCreate.code, CLI_EXIT_OK);
   const legalEvidenceSourcePayload = JSON.parse(legalEvidenceSourceCreate.stdout) as { data: { id: string; label: string; collectionName: string; recordId: string } };
@@ -421,8 +538,9 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(caseTimelinePayload.data.semanticView.systemId, "legal");
   assert.equal(caseTimelinePayload.data.materializedView.subject.id, legalCasePayload.data.id);
   assert.equal(caseTimelinePayload.data.materializedView.subject.label, "Smith v Jones");
-  assert.equal(caseTimelinePayload.data.materializedView.itemCount >= 4, true);
+  assert.equal(caseTimelinePayload.data.materializedView.itemCount >= 6, true);
   assert.equal(caseTimelinePayload.data.materializedView.partial, true);
+  assert.equal(caseTimelinePayload.data.materializedView.items.some((item) => item.kind === "legal_client" && item.label === "Smith Client"), true);
   assert.equal(caseTimelinePayload.data.materializedView.items.some((item) => item.kind === "case_evidence" && item.label === "Signed contract"), true);
   assert.equal(caseTimelinePayload.data.materializedView.items.some((item) => item.kind === "evidence" && item.recordId === legalEvidenceSourcePayload.data.id), true);
   assert.equal(caseTimelinePayload.data.materializedView.gaps.some((gap) => gap.id === legalGapPayload.data.id && gap.gapKind === "unverified"), true);
@@ -1050,6 +1168,7 @@ test("runCli seeds the dense-data acceptance fixture into the shared database", 
   assert.equal(seedPayload.data.fixtureSetId, "dense-data-acceptance-v1");
   assert.equal(seedPayload.data.store, "core.sqlite");
   assert.equal(seedPayload.data.seeded.some((record) => record.id === "fixture_patient_ada" && record.collectionName === "patients" && record.covers.includes("patient")), true);
+  assert.equal(seedPayload.data.seeded.some((record) => record.id === "fixture_encounter_intake" && record.collectionName === "encounters" && record.covers.includes("encounter")), true);
   assert.equal(seedPayload.data.seeded.some((record) => record.id === "fixture_gap_missing_dob" && record.collectionName === "quality_gaps" && record.covers.includes("partial_data_gap")), true);
   assert.equal(seedPayload.data.seeded.some((record) => record.id === "fixture_domain_system_health" && record.collectionName === "domain_systems" && record.covers.includes("domain_system")), true);
   assert.equal(seedPayload.data.seeded.some((record) => record.id === "fixture_domain_profile_health_patient" && record.collectionName === "domain_profiles" && record.covers.includes("domain_profile")), true);
@@ -1097,6 +1216,7 @@ test("runCli seeds the dense-data acceptance fixture into the shared database", 
   assert.equal(timelinePayload.data.materializedView.partial, true);
   assert.equal(timelinePayload.data.materializedView.itemCount >= 4, true);
   assert.equal(timelinePayload.data.materializedView.items.some((item) => item.kind === "patient" && item.recordId === "fixture_patient_ada"), true);
+  assert.equal(timelinePayload.data.materializedView.items.some((item) => item.kind === "encounter" && item.recordId === "fixture_encounter_intake"), true);
   assert.equal(timelinePayload.data.materializedView.items.some((item) => item.kind === "quality_gap" && item.recordId === "fixture_gap_missing_dob"), true);
   assert.equal(timelinePayload.data.materializedView.gaps.some((gap) => gap.id === "fixture_gap_missing_dob"), true);
 

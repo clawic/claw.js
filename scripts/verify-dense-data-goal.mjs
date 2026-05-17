@@ -40,8 +40,10 @@ const requiredFirstWaveSystems = [
   "crm",
   "finance",
   "education",
+  "hr",
   "manufacturing",
   "ops",
+  "real_estate",
 ];
 
 const requiredFoundationMappings = {
@@ -68,10 +70,19 @@ const requiredFoundationMappings = {
 
 const requiredFixtureCoverage = [
   "patient",
+  "encounter",
   "lab_result",
   "study",
   "sample",
   "legal_case",
+  "legal_client",
+  "employee",
+  "time_off",
+  "performance_review",
+  "property",
+  "property_visit",
+  "property_offer",
+  "property_inspection",
   "invoice",
   "invoice_company",
   "incident",
@@ -124,11 +135,15 @@ const requiredExistingAuditSurfaces = [
 
 const requiredPluralIntentPhrases = [
   ["claw patients list", "patients"],
+  ["claw encounters list", "encounters"],
   ["claw companies list", "companies"],
   ["claw products list", "products_catalog"],
   ["claw assays list", "assays"],
   ["claw assets list", "assets"],
   ["claw courses list", "courses"],
+  ["claw legal-clients list", "legal_clients"],
+  ["claw employees list", "employees"],
+  ["claw properties list", "property_listings"],
 ];
 
 const failures = [];
@@ -196,6 +211,9 @@ for (const phrase of [
   "dense-fixtures",
   "claw dense-fixtures seed",
   "claw patient patient_123 timeline",
+  "claw patient patient_123 encounter add",
+  "claw patient patient_123 encounters list",
+  "claw encounter add --patient patient_123",
   "claw patient patient_123 lab add",
   "claw patient patient_123 labs list",
   "claw lab add --patient patient_123",
@@ -204,12 +222,25 @@ for (const phrase of [
   "claw assays list",
   "claw product list",
   "claw study study_123 timeline",
+  "claw case case_123 client add",
+  "claw case case_123 clients list",
+  "claw legal-client add --case case_123",
   "claw case case_123 timeline",
   "claw service service_123 timeline",
   "claw sample sample_123 timeline",
   "claw experiment experiment_123 timeline",
   "claw learner learner_123 timeline",
   "claw course course_123 timeline",
+  "claw employee create",
+  "claw employee employee_123 time-off add",
+  "claw employee employee_123 reviews list",
+  "claw time-off add --employee employee_123",
+  "claw employee employee_123 timeline",
+  "claw property create",
+  "claw property property_123 visits list",
+  "claw property property_123 offer add",
+  "claw property-offer add --property property_123",
+  "claw property property_123 timeline",
   "claw company company_123 timeline",
   "claw asset asset_123 timeline",
   "claw work-order work_order_123 timeline",
@@ -299,8 +330,8 @@ const semanticViews = listClawDenseDataSemanticViewEntries();
 if (!intents.some((entry) => entry.phrase === "claw patient list" && entry.status === "covered" && entry.collectionName === "patients")) {
   fail("generated intents must cover claw patient list against patients");
 }
-if (!intents.some((entry) => entry.phrase === "claw encounter list" && entry.status === "workflow_gap")) {
-  fail("generated intents must keep claw encounter list as an explicit workflow_gap");
+if (!intents.some((entry) => entry.phrase === "claw encounter list" && entry.status === "covered" && entry.collectionName === "encounters")) {
+  fail("generated intents must cover claw encounter list against encounters");
 }
 if (!intents.some((entry) => entry.phrase === "claw health gaps" && entry.status === "covered")) {
   fail("generated intents must cover claw health gaps");
@@ -364,6 +395,12 @@ if (!semanticViews.some((entry) => entry.id === "learner.timeline" && entry.syst
 }
 if (!semanticViews.some((entry) => entry.id === "course.timeline" && entry.systemId === "education")) {
   fail("semantic views must include course.timeline");
+}
+if (!semanticViews.some((entry) => entry.id === "employee.timeline" && entry.systemId === "hr")) {
+  fail("semantic views must include employee.timeline");
+}
+if (!semanticViews.some((entry) => entry.id === "property.timeline" && entry.systemId === "real_estate")) {
+  fail("semantic views must include property.timeline");
 }
 if (!semanticViews.some((entry) => entry.id === "work_order.timeline" && entry.systemId === "manufacturing")) {
   fail("semantic views must include work_order.timeline");

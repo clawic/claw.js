@@ -512,6 +512,10 @@ function applyDefaults(collectionName: string, payload: Record<string, unknown>,
     case "people":
       payload.kind ??= "human";
       break;
+    case "encounters":
+      payload.status ??= "planned";
+      payload.encounterType ??= "visit";
+      break;
     case "symptom_logs":
       payload.loggedAt ??= new Date().toISOString();
       break;
@@ -529,6 +533,11 @@ function applyDefaults(collectionName: string, payload: Record<string, unknown>,
       break;
     case "legal_cases":
       payload.status ??= "open";
+      break;
+    case "legal_clients":
+      payload.status ??= "active";
+      payload.role ??= "client";
+      payload.conflictStatus ??= "unknown";
       break;
     case "services":
       payload.status ??= "active";
@@ -561,6 +570,32 @@ function applyDefaults(collectionName: string, payload: Record<string, unknown>,
       break;
     case "courses":
       payload.status ??= "enrolled";
+      break;
+    case "employees":
+      payload.status ??= "active";
+      break;
+    case "time_off_requests":
+      payload.status ??= "pending";
+      payload.kind ??= "vacation";
+      break;
+    case "performance_reviews":
+      payload.status ??= "draft";
+      break;
+    case "payroll_runs":
+      payload.status ??= "draft";
+      break;
+    case "property_listings":
+      payload.status ??= "draft";
+      break;
+    case "property_visits":
+      payload.visitedAt ??= new Date().toISOString();
+      break;
+    case "property_offers":
+      payload.status ??= "pending";
+      payload.offeredAt ??= new Date().toISOString();
+      break;
+    case "property_inspections":
+      payload.inspectedAt ??= new Date().toISOString();
       break;
     case "assets":
       payload.status ??= "active";

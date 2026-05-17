@@ -411,7 +411,7 @@ test("runCli exposes CLI aliases and decision sources through inspect", async ()
   assert.equal(denseIntents.code, CLI_EXIT_OK);
   const denseIntentPayload = parseCliJson<{ intents: Array<{ phrase: string; status: string; collectionName?: string }> }>(denseIntents.stdout).data;
   assert.equal(denseIntentPayload.intents.some((entry) => entry.phrase === "claw patient list" && entry.status === "covered" && entry.collectionName === "patients"), true);
-  assert.equal(denseIntentPayload.intents.some((entry) => entry.phrase === "claw encounter list" && entry.status === "workflow_gap"), true);
+  assert.equal(denseIntentPayload.intents.some((entry) => entry.phrase === "claw encounter list" && entry.status === "covered" && entry.collectionName === "encounters"), true);
 
   const denseViews = await runCliCapture(["inspect", "dense-views", "--json"], process.cwd());
   assert.equal(denseViews.code, CLI_EXIT_OK);

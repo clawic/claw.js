@@ -35,11 +35,10 @@ The registry is the first executable canon for this model. It defines:
   instruments/responses, timeline, document evidence, finance/accounting, and
   workflow state
 - a first wave of visible dense systems: Health/EHR, Research/CTMS, Biology,
-  Labs/LIMS, Legal, ERP, CRM, Finance/Accounting, Education/LMS,
-  Manufacturing/MES, and Operations/ITSM
-- a roadmap taxonomy for HR/HRIS, SCM, WMS, TMS, procurement, GRC, real
-  estate, insurance, government, construction, IoT, CMS, PIM/PLM, pharma,
-  CMMS, and ELN
+  Labs/LIMS, Legal, ERP, CRM, Finance/Accounting, Education/LMS, HR/HRIS,
+  Manufacturing/MES, Operations/ITSM, and Real Estate/PropTech
+- a roadmap taxonomy for SCM, WMS, TMS, procurement, GRC, insurance,
+  government, construction, IoT, CMS, PIM/PLM, pharma, CMMS, and ELN
 - a non-executing dense intent resolver that can classify direct phrases such
   as `claw patient list`, `claw patients list`, `claw invoice list`, or `claw
   medication add --patient <id>` as covered, partial, blocked, or gaps before
@@ -113,8 +112,10 @@ keeping the actual storage under shared core database ownership.
 phrases before the unknown-command path. Inspection actions such as `health
 gaps` return structured registry coverage. Graduated centers execute through
 the shared database instead of a parallel domain store: `patient list`,
-`patient create`, `medication add --patient <id>`, `patient <id> medications
-list`, `patient <id> symptoms add`, `patient <id> symptoms list`, and
+`patient create`, `encounter add --patient <id>`,
+`patient <id> encounter add`, `patient <id> encounters list`,
+`medication add --patient <id>`, `patient <id> medications list`,
+`patient <id> symptoms add`, `patient <id> symptoms list`, and
 ERP/CRM routes such as `company create`, `company <id> timeline`,
 `account create --company <id>`,
 `deal create --company <id>`, `product list`, `product create --company <id>`,
@@ -167,9 +168,10 @@ acceptance fixture without executing unknown behavior. These commands are the
 scale gate for "CLI intention completeness": every generated entry must resolve
 to a covered command, explicit workflow/data gap, blocked state, external
 pending state, or custom pack. The fixture covers patient, study, sample, legal
-case, invoice/company, incident/service, learner/course relations and lessons,
-company and manufacturing asset/work-order relations, evidence, provenance, and
-partial-data quality gaps. It also materializes the registry layer itself:
+case, legal client, invoice/company, incident/service, learner/course relations and lessons,
+company and manufacturing asset/work-order relations, clinical encounters,
+evidence, provenance, and partial-data quality gaps. It also materializes the
+registry layer itself:
 `domain_systems`, `domain_packs`, `domain_roles`, `domain_profiles`,
 `canonical_operations`, `semantic_views`, generated `domain_intents`, and
 `external_pending` quality-gap records.
@@ -179,14 +181,14 @@ human noun commands rather than remaining an inspect-only artifact.
 
 Semantic-view routes start as stable view contracts tied to the registry and
 graduate to materialized views when local data is available. `claw patient <id>
-timeline` now reads `patients`, `medications`, `symptom_logs`, `lab_results`,
-`evidence_sources`, `quality_gaps`, and `provenance_events` from local
+timeline` now reads `patients`, `encounters`, `medications`, `symptom_logs`,
+`lab_results`, `evidence_sources`, `quality_gaps`, and `provenance_events` from local
 `core.sqlite`, returns `implementationStatus: "materialized_semantic_view"`,
 and marks the view partial when quality gaps remain. This keeps the view useful
 without pretending that external clinical/provider validation has happened.
 The same pattern now applies to `claw case <id> timeline`, which materializes
-`legal_cases`, `case_evidence`, `evidence_sources`, `quality_gaps`, and
-`provenance_events` into a legal case timeline while keeping legal
+`legal_cases`, `legal_clients`, `case_evidence`, `evidence_sources`,
+`quality_gaps`, and `provenance_events` into a legal case timeline while keeping legal
 decisioning/advice outside the local acceptance claim.
 `claw service <id> timeline` also materializes `services`, `incidents`,
 `evidence_sources`, `quality_gaps`, and `provenance_events` so ops/ITSM can
@@ -207,6 +209,14 @@ It also materializes `claw course <id> timeline` from `courses`, `lessons`,
 `study_sessions`, related learners via `entity_relations`, evidence, provenance,
 and quality gaps so course-centric LMS workflows are not forced through the
 learner view.
+HR/HRIS uses `claw employee <id> timeline` to materialize `employees`,
+`time_off_requests`, `performance_reviews`, `pay_stubs`,
+`benefits_enrollments`, `one_on_ones`, evidence, provenance, and quality gaps
+without creating a second people graph.
+Real Estate/PropTech uses `claw property <id> timeline` to materialize existing
+`property_listings`, `property_visits`, `property_offers`,
+`property_inspections`, evidence, provenance, and quality gaps without adding a
+second property model.
 Manufacturing uses `claw work-order <id> timeline` to materialize
 `work_orders`, evidence, quality gaps, and provenance as the MES slice grows
 toward material, operation, labor, equipment, and quality event records.

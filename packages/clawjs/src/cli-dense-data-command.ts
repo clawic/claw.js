@@ -297,7 +297,9 @@ function materializedSemanticViewForIntent(
   if (semanticView.id === "finance.entity.overview") return materializedFinanceEntityOverview(input, intent, semanticView);
   if (semanticView.id === "learner.timeline") return materializedLearnerTimeline(input, intent, semanticView);
   if (semanticView.id === "course.timeline") return materializedCourseTimeline(input, intent, semanticView);
+  if (semanticView.id === "employee.timeline") return materializedEmployeeTimeline(input, intent, semanticView);
   if (semanticView.id === "asset.timeline") return materializedAssetTimeline(input, intent, semanticView);
+  if (semanticView.id === "property.timeline") return materializedPropertyTimeline(input, intent, semanticView);
   return undefined;
 }
 
@@ -314,6 +316,7 @@ function materializedPatientTimeline(
   const patient = store.getRecord(namespaceId, "patients", patientId);
   if (!patient) return undefined;
 
+  const encounters = store.listRecords(namespaceId, "encounters", { filter: { patientId } }).items;
   const medications = store.listRecords(namespaceId, "medications", { filter: { patientId } }).items;
   const symptoms = store.listRecords(namespaceId, "symptom_logs", { filter: { patientId } }).items;
   const labResults = store.listRecords(namespaceId, "lab_results", { filter: { patientId } }).items;
@@ -322,6 +325,7 @@ function materializedPatientTimeline(
   const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "patients", targetId: patientId } }).items;
   const items = [
     timelineItem(patient, "patient", patient.id, patient.displayName ?? patient.id, patient.createdAt, patient),
+    ...encounters.map((record) => timelineItem(record, "encounter", record.id, record.title ?? record.encounterType ?? record.id, record.startedAt ?? record.createdAt, record)),
     ...medications.map((record) => timelineItem(record, "medication", record.id, record.name ?? record.id, record.startedAt ?? record.createdAt, record)),
     ...symptoms.map((record) => timelineItem(record, "symptom", record.id, record.symptom ?? record.id, record.loggedAt ?? record.createdAt, record)),
     ...labResults.map((record) => timelineItem(record, "lab_result", record.id, record.title ?? record.lab ?? record.id, record.reportedAt ?? record.collectedAt ?? record.createdAt, record)),
@@ -343,7 +347,7 @@ function materializedPatientTimeline(
       severity: record.severity,
       evidenceSourceId: record.evidenceSourceId,
     })),
-    sourceCollections: ["patients", "medications", "symptom_logs", "lab_results", "evidence_sources", "quality_gaps", "provenance_events"],
+    sourceCollections: ["patients", "encounters", "medications", "symptom_logs", "lab_results", "evidence_sources", "quality_gaps", "provenance_events"],
     partial: qualityGaps.length > 0,
     intentStatus: intent.status,
   };
@@ -362,12 +366,14 @@ function materializedCaseTimeline(
   const legalCase = store.getRecord(namespaceId, "legal_cases", caseId);
   if (!legalCase) return undefined;
 
+  const clients = store.listRecords(namespaceId, "legal_clients", { filter: { caseId } }).items;
   const evidenceItems = store.listRecords(namespaceId, "case_evidence", { filter: { caseId } }).items;
   const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "legal_cases", recordId: caseId } }).items;
   const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "legal_cases", targetId: caseId } }).items;
   const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "legal_cases", targetId: caseId } }).items;
   const items = [
     timelineItem(legalCase, "case", legalCase.id, legalCase.title ?? legalCase.id, legalCase.openedAt ?? legalCase.createdAt, legalCase),
+    ...clients.map((record) => timelineItem(record, "legal_client", record.id, record.displayName ?? record.id, record.openedAt ?? record.createdAt, record)),
     ...evidenceItems.map((record) => timelineItem(record, "case_evidence", record.id, record.title ?? record.id, record.observedAt ?? record.createdAt, record)),
     ...evidence.map((record) => timelineItem(record, "evidence", record.id, record.label ?? record.id, record.capturedAt ?? record.createdAt, record)),
     ...qualityGaps.map((record) => timelineItem(record, "quality_gap", record.id, record.label ?? record.id, record.createdAt, record)),
@@ -387,7 +393,7 @@ function materializedCaseTimeline(
       severity: record.severity,
       evidenceSourceId: record.evidenceSourceId,
     })),
-    sourceCollections: ["legal_cases", "case_evidence", "evidence_sources", "quality_gaps", "provenance_events"],
+    sourceCollections: ["legal_cases", "legal_clients", "case_evidence", "evidence_sources", "quality_gaps", "provenance_events"],
     partial: qualityGaps.length > 0,
     intentStatus: intent.status,
   };
@@ -690,6 +696,69 @@ function materializedAssetTimeline(
   };
 }
 
+function materializedPropertyTimeline(
+  input: DenseDataCliInput,
+  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
+) {
+  const propertyId = input.positionals[1];
+  if (!propertyId) return undefined;
+  const namespaceId = input.flags.namespace ?? "main";
+  const store = openDenseDataStore(input.workspaceRoot);
+  store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
+  const property = store.getRecord(namespaceId, "property_listings", propertyId);
+  if (!property) return undefined;
+
+  const visits = store.listRecords(namespaceId, "property_visits", { filter: { propertyListingId: propertyId } }).items;
+  const offers = store.listRecords(namespaceId, "property_offers", { filter: { propertyListingId: propertyId } }).items;
+  const inspections = store.listRecords(namespaceId, "property_inspections", { filter: { propertyListingId: propertyId } }).items;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "property_listings", recordId: propertyId } }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "property_listings", targetId: propertyId } }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "property_listings", targetId: propertyId } }).items;
+  const items = [
+    timelineItem(property, "property", property.id, property.title ?? property.address ?? property.id, property.createdAt, property),
+    ...visits.map((record) => timelineItem(record, "property_visit", record.id, record.visitorName ?? record.id, record.visitedAt ?? record.createdAt, record)),
+    ...offers.map((record) => timelineItem(record, "property_offer", record.id, record.buyerName ?? record.amountCents ?? record.id, record.offeredAt ?? record.createdAt, record)),
+    ...inspections.map((record) => timelineItem(record, "property_inspection", record.id, record.inspectorName ?? record.id, record.inspectedAt ?? record.createdAt, record)),
+    ...evidence.map((record) => timelineItem(record, "evidence", record.id, record.label ?? record.id, record.capturedAt ?? record.createdAt, record)),
+    ...qualityGaps.map((record) => timelineItem(record, "quality_gap", record.id, record.label ?? record.id, record.createdAt, record)),
+    ...provenance.map((record) => timelineItem(record, "provenance", record.id, record.eventType ?? record.id, record.occurredAt ?? record.createdAt, record)),
+  ].sort((left, right) => String(left.occurredAt).localeCompare(String(right.occurredAt)));
+
+  return {
+    id: semanticView.id,
+    subject: { collectionName: "property_listings", id: property.id, label: property.title ?? property.address ?? property.id },
+    summary: {
+      visits: visits.length,
+      offers: offers.length,
+      inspections: inspections.length,
+      evidenceSources: evidence.length,
+      qualityGaps: qualityGaps.length,
+    },
+    itemCount: items.length,
+    items,
+    records: {
+      property,
+      visits,
+      offers,
+      inspections,
+      evidence,
+      provenance,
+    },
+    gaps: qualityGaps.map((record) => ({
+      id: record.id,
+      label: record.label,
+      status: record.status,
+      gapKind: record.gapKind,
+      severity: record.severity,
+      evidenceSourceId: record.evidenceSourceId,
+    })),
+    sourceCollections: ["property_listings", "property_visits", "property_offers", "property_inspections", "evidence_sources", "quality_gaps", "provenance_events"],
+    partial: qualityGaps.length > 0,
+    intentStatus: intent.status,
+  };
+}
+
 function materializedLearnerTimeline(
   input: DenseDataCliInput,
   intent: ReturnType<typeof resolveClawDenseDataIntent>,
@@ -831,6 +900,79 @@ function materializedCourseTimeline(
       evidenceSourceId: record.evidenceSourceId,
     })),
     sourceCollections: ["courses", "lessons", "study_sessions", "learners", "entity_relations", "evidence_sources", "quality_gaps", "provenance_events"],
+    partial: qualityGaps.length > 0,
+    intentStatus: intent.status,
+  };
+}
+
+function materializedEmployeeTimeline(
+  input: DenseDataCliInput,
+  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
+) {
+  const employeeId = input.positionals[1];
+  if (!employeeId) return undefined;
+  const namespaceId = input.flags.namespace ?? "main";
+  const store = openDenseDataStore(input.workspaceRoot);
+  store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
+  const employee = store.getRecord(namespaceId, "employees", employeeId);
+  if (!employee) return undefined;
+
+  const timeOffRequests = store.listRecords(namespaceId, "time_off_requests", { filter: { employeeId } }).items;
+  const performanceReviews = store.listRecords(namespaceId, "performance_reviews", { filter: { employeeId } }).items;
+  const payStubs = store.listRecords(namespaceId, "pay_stubs", { filter: { employeeId } }).items;
+  const benefits = store.listRecords(namespaceId, "benefits_enrollments", { filter: { employeeId } }).items;
+  const managedOneOnOnes = store.listRecords(namespaceId, "one_on_ones", { filter: { managerEmployeeId: employeeId } }).items;
+  const reportOneOnOnes = store.listRecords(namespaceId, "one_on_ones", { filter: { reportEmployeeId: employeeId } }).items;
+  const oneOnOnes = uniqueRecordsById([...managedOneOnOnes, ...reportOneOnOnes]);
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "employees", recordId: employeeId } }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "employees", targetId: employeeId } }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "employees", targetId: employeeId } }).items;
+  const items = [
+    timelineItem(employee, "employee", employee.id, employee.displayName ?? employee.email ?? employee.id, employee.hireDate ?? employee.createdAt, employee),
+    ...timeOffRequests.map((record) => timelineItem(record, "time_off_request", record.id, record.kind ?? record.id, record.startDate ?? record.createdAt, record)),
+    ...performanceReviews.map((record) => timelineItem(record, "performance_review", record.id, record.cycleName ?? record.rating ?? record.id, record.completedAt ?? record.createdAt, record)),
+    ...payStubs.map((record) => timelineItem(record, "pay_stub", record.id, record.period ?? record.payrollRunId ?? record.id, record.createdAt, record)),
+    ...benefits.map((record) => timelineItem(record, "benefits_enrollment", record.id, record.planId ?? record.id, record.enrolledAt ?? record.effectiveAt ?? record.createdAt, record)),
+    ...oneOnOnes.map((record) => timelineItem(record, "one_on_one", record.id, record.notes ?? record.id, record.completedAt ?? record.scheduledAt ?? record.createdAt, record)),
+    ...evidence.map((record) => timelineItem(record, "evidence", record.id, record.label ?? record.id, record.capturedAt ?? record.createdAt, record)),
+    ...qualityGaps.map((record) => timelineItem(record, "quality_gap", record.id, record.label ?? record.id, record.createdAt, record)),
+    ...provenance.map((record) => timelineItem(record, "provenance", record.id, record.eventType ?? record.id, record.occurredAt ?? record.createdAt, record)),
+  ].sort((left, right) => String(left.occurredAt).localeCompare(String(right.occurredAt)));
+
+  return {
+    id: semanticView.id,
+    subject: { collectionName: "employees", id: employee.id, label: employee.displayName ?? employee.email ?? employee.id },
+    summary: {
+      timeOffRequests: timeOffRequests.length,
+      performanceReviews: performanceReviews.length,
+      payStubs: payStubs.length,
+      benefits: benefits.length,
+      oneOnOnes: oneOnOnes.length,
+      evidenceSources: evidence.length,
+      qualityGaps: qualityGaps.length,
+    },
+    itemCount: items.length,
+    items,
+    records: {
+      employee,
+      timeOffRequests,
+      performanceReviews,
+      payStubs,
+      benefits,
+      oneOnOnes,
+      evidence,
+      provenance,
+    },
+    gaps: qualityGaps.map((record) => ({
+      id: record.id,
+      label: record.label,
+      status: record.status,
+      gapKind: record.gapKind,
+      severity: record.severity,
+      evidenceSourceId: record.evidenceSourceId,
+    })),
+    sourceCollections: ["employees", "time_off_requests", "performance_reviews", "pay_stubs", "benefits_enrollments", "one_on_ones", "evidence_sources", "quality_gaps", "provenance_events"],
     partial: qualityGaps.length > 0,
     intentStatus: intent.status,
   };
@@ -1213,10 +1355,10 @@ function denseDbArgv(argv: string[], collectionName: string, dbAction: string): 
 
 function denseDbFlags(flags: Record<string, string>, collectionName: string): Record<string, string> {
   let nextFlags = flags;
-  if (["medications", "symptom_logs", "lab_results"].includes(collectionName) && flags.patient && !flags["patient-id"]) {
+  if (["encounters", "medications", "symptom_logs", "lab_results"].includes(collectionName) && flags.patient && !flags["patient-id"]) {
     nextFlags = { ...nextFlags, "patient-id": flags.patient };
   }
-  if (["accounts", "deals", "billing_customers", "legal_cases", "services", "work_orders", "assets", "products_catalog"].includes(collectionName) && flags.company && !flags["company-id"]) {
+  if (["accounts", "deals", "billing_customers", "legal_cases", "legal_clients", "services", "work_orders", "assets", "products_catalog", "employees", "payroll_runs", "praise", "okrs"].includes(collectionName) && flags.company && !flags["company-id"]) {
     nextFlags = { ...nextFlags, "company-id": flags.company };
   }
   if (collectionName === "assets" && flags.product && !flags["product-catalog-id"]) {
@@ -1230,6 +1372,18 @@ function denseDbFlags(flags: Record<string, string>, collectionName: string): Re
   }
   if (collectionName === "case_evidence" && flags.case && !flags["case-id"]) {
     nextFlags = { ...nextFlags, "case-id": flags.case };
+  }
+  if (collectionName === "legal_clients" && flags.case && !flags["case-id"]) {
+    nextFlags = { ...nextFlags, "case-id": flags.case };
+  }
+  if (collectionName === "legal_clients" && flags.person && !flags["person-id"]) {
+    nextFlags = { ...nextFlags, "person-id": flags.person };
+  }
+  if (["time_off_requests", "performance_reviews", "pay_stubs", "benefits_enrollments"].includes(collectionName) && flags.employee && !flags["employee-id"]) {
+    nextFlags = { ...nextFlags, "employee-id": flags.employee };
+  }
+  if (["property_visits", "property_offers", "property_inspections"].includes(collectionName) && flags.property && !flags["property-listing-id"]) {
+    nextFlags = { ...nextFlags, "property-listing-id": flags.property };
   }
   if (collectionName === "transactions" && flags.account && !flags["account-id"]) {
     nextFlags = { ...nextFlags, "account-id": flags.account };
@@ -1263,6 +1417,10 @@ function nestedDenseDbRoute(input: DenseDataCliInput): Parameters<typeof runMagi
     collections: {
       medication: "medications",
       medications: "medications",
+      encounter: "encounters",
+      encounters: "encounters",
+      visit: "encounters",
+      visits: "encounters",
       symptom: "symptom_logs",
       symptoms: "symptom_logs",
       lab: "lab_results",
@@ -1276,6 +1434,10 @@ function nestedDenseDbRoute(input: DenseDataCliInput): Parameters<typeof runMagi
     relationField: "caseId",
     collections: {
       evidence: "case_evidence",
+      client: "legal_clients",
+      clients: "legal_clients",
+      "legal-client": "legal_clients",
+      "legal-clients": "legal_clients",
     },
   }) ?? nestedParentDbRoute(input, {
     parentCommand: "service",
@@ -1324,6 +1486,39 @@ function nestedDenseDbRoute(input: DenseDataCliInput): Parameters<typeof runMagi
       "study-sessions": "study_sessions",
       session: "study_sessions",
       sessions: "study_sessions",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "employee",
+    relationFlag: "employee-id",
+    relationField: "employeeId",
+    collections: {
+      "time-off": "time_off_requests",
+      "time-offs": "time_off_requests",
+      pto: "time_off_requests",
+      review: "performance_reviews",
+      reviews: "performance_reviews",
+      "performance-review": "performance_reviews",
+      "performance-reviews": "performance_reviews",
+      benefit: "benefits_enrollments",
+      benefits: "benefits_enrollments",
+      "pay-stub": "pay_stubs",
+      "pay-stubs": "pay_stubs",
+      paystub: "pay_stubs",
+      paystubs: "pay_stubs",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "property",
+    relationFlag: "property-listing-id",
+    relationField: "propertyListingId",
+    collections: {
+      visit: "property_visits",
+      visits: "property_visits",
+      viewing: "property_visits",
+      viewings: "property_visits",
+      offer: "property_offers",
+      offers: "property_offers",
+      inspection: "property_inspections",
+      inspections: "property_inspections",
     },
   }) ?? nestedParentDbRoute(input, {
     parentCommand: "sample",

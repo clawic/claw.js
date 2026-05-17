@@ -639,6 +639,9 @@ claw health --help
 claw health gaps --json
 claw patient list --json
 claw patient schema --json
+claw encounter add --patient patient_123 --title "Intake visit" --json
+claw patient patient_123 encounter add "Follow-up visit" --encounter-type follow_up --json
+claw patient patient_123 encounters list --json
 claw medication add --patient patient_123 --json
 claw patient patient_123 medications list --json
 claw patients list --json
@@ -659,6 +662,9 @@ claw invoice list --json
 claw invoice create INV-001 --billing-customer billing_customer_123 --total-cents 9900 --json
 claw payment create --billing-customer billing_customer_123 --invoice-id invoice_123 --amount-cents 9900 --json
 claw case create "Smith v Jones" --json
+claw case case_123 client add "Smith Client" --json
+claw case case_123 clients list --json
+claw legal-client add --case case_123 --display-name "Direct Legal Client" --json
 claw case case_123 evidence add "Signed contract" --json
 claw case case_123 evidence list --json
 claw case case_123 timeline --json
@@ -681,6 +687,16 @@ claw course course_123 lessons add "Cell basics" --json
 claw course course_123 lessons list --json
 claw course course_123 timeline --json
 claw learner learner_123 timeline --json
+claw employee create "Ada Employee" --company company_123 --json
+claw employee employee_123 time-off add --kind vacation --json
+claw employee employee_123 reviews list --json
+claw time-off add --employee employee_123 --kind sick --json
+claw employee employee_123 timeline --json
+claw property create "Main Street Loft" --city Madrid --json
+claw property property_123 visits list --json
+claw property property_123 offer add --buyer-name "Ada Buyer" --amount-cents 250000 --json
+claw property-offer add --property property_123 --buyer-name "Direct Buyer" --json
+claw property property_123 timeline --json
 claw product list --json
 claw products list --json
 claw product create "Hydraulic Press" --company company_123 --json

@@ -71,7 +71,7 @@ test("dense data OS generates auditable intent and semantic view entries", () =>
 
   assert.equal(intentIds.size, intents.length, "generated dense intent ids must be unique");
   assert.ok(intents.some((entry) => entry.phrase === "claw patient list" && entry.status === "covered" && entry.collectionName === "patients"));
-  assert.ok(intents.some((entry) => entry.phrase === "claw encounter list" && entry.status === "workflow_gap"));
+  assert.ok(intents.some((entry) => entry.phrase === "claw encounter list" && entry.status === "covered" && entry.collectionName === "encounters"));
   assert.ok(intents.some((entry) => entry.phrase === "claw health gaps" && entry.status === "covered"));
   assert.ok(semanticViews.some((entry) => entry.id === "patient.timeline" && entry.systemId === "health"));
   assert.ok(semanticViews.some((entry) => entry.id === "invoice.list" && entry.systemId === "erp"));
@@ -93,10 +93,19 @@ test("dense data OS acceptance fixture covers required first-wave records and ga
   }
   for (const requiredCoverage of [
     "patient",
+    "encounter",
     "lab_result",
     "study",
     "sample",
     "legal_case",
+    "legal_client",
+    "employee",
+    "time_off",
+    "performance_review",
+    "property",
+    "property_visit",
+    "property_offer",
+    "property_inspection",
     "invoice",
     "invoice_company",
     "incident",
@@ -138,8 +147,10 @@ test("dense data OS first wave covers the agreed high-density systems", () => {
     "crm",
     "finance",
     "education",
+    "hr",
     "manufacturing",
     "ops",
+    "real_estate",
   ]);
 
   for (const system of listClawDenseDataSystems({ wave: "first_wave" })) {
@@ -158,8 +169,10 @@ test("dense data OS keeps common names and professional acronyms as first-class 
   assert.equal(findClawDenseDataSystem("lims")?.id, "labs");
   assert.equal(findClawDenseDataSystem("accounting")?.id, "finance");
   assert.equal(findClawDenseDataSystem("lms")?.id, "education");
+  assert.equal(findClawDenseDataSystem("hris")?.id, "hr");
   assert.equal(findClawDenseDataSystem("mes")?.id, "manufacturing");
   assert.equal(findClawDenseDataSystem("itsm")?.id, "ops");
+  assert.equal(findClawDenseDataSystem("proptech")?.id, "real_estate");
 });
 
 test("dense data OS centers have direct human CLI nouns and plural aliases", () => {
@@ -173,6 +186,7 @@ test("dense data OS centers have direct human CLI nouns and plural aliases", () 
 
   const health = findClawDenseDataSystem("health");
   assert.ok(health?.centers.some((center) => center.commandNoun === "patient" && center.commandAliases.includes("patients") && center.collectionName === "patients"));
+  assert.ok(health?.centers.some((center) => center.commandNoun === "encounter" && center.commandAliases.includes("encounters") && center.collectionName === "encounters"));
   assert.ok(health?.commandPatterns.includes("claw patient list|get|create|update|delete|query|schema"));
 
   const labs = findClawDenseDataSystem("labs");
@@ -181,6 +195,20 @@ test("dense data OS centers have direct human CLI nouns and plural aliases", () 
   const erp = findClawDenseDataSystem("erp");
   assert.ok(erp?.centers.some((center) => center.commandNoun === "invoice" && center.commandAliases.includes("invoices") && center.collectionName === "invoices"));
   assert.ok(erp?.commandPatterns.includes("claw invoice list|get|create|update|delete|query|schema"));
+
+  const legal = findClawDenseDataSystem("legal");
+  assert.ok(legal?.centers.some((center) => center.commandNoun === "legal-client" && center.commandAliases.includes("legal-clients") && center.collectionName === "legal_clients"));
+  assert.ok(legal?.commandPatterns.includes("claw legal-client list|get|create|update|delete|query|schema"));
+
+  const hr = findClawDenseDataSystem("hr");
+  assert.ok(hr?.centers.some((center) => center.commandNoun === "employee" && center.collectionName === "employees"));
+  assert.ok(hr?.centers.some((center) => center.commandNoun === "time-off" && center.commandAliases.includes("pto") && center.collectionName === "time_off_requests"));
+  assert.ok(hr?.commandPatterns.includes("claw employee <id> timeline"));
+
+  const realEstate = findClawDenseDataSystem("real-estate");
+  assert.ok(realEstate?.centers.some((center) => center.commandNoun === "property" && center.commandAliases.includes("properties") && center.collectionName === "property_listings"));
+  assert.ok(realEstate?.centers.some((center) => center.commandNoun === "property-offer" && center.collectionName === "property_offers"));
+  assert.ok(realEstate?.commandPatterns.includes("claw property <id> timeline"));
 });
 
 test("dense data OS models patient medication routes without forcing a health prefix", () => {
@@ -190,6 +218,10 @@ test("dense data OS models patient medication routes without forcing a health pr
   const medication = health.operations.find((operation) => operation.id === "patient.medication.add");
   assert.ok(medication);
   assert.deepEqual(medication.routes, ["claw patient <id> medication add", "claw medication add --patient <id>"]);
+  const encounter = health.operations.find((operation) => operation.id === "patient.encounter.add");
+  assert.ok(encounter);
+  assert.deepEqual(encounter.routes, ["claw patient <id> encounter add", "claw encounter add --patient <id>"]);
+  assert.ok(health.commandPatterns.includes("claw patient <id> encounters list|add"));
   assert.ok(health.commandPatterns.includes("claw patient <id> medications list|add"));
   assert.ok(health.commandPatterns.includes("claw medication add --patient <id>"));
 });
@@ -220,10 +252,30 @@ test("dense data OS resolves direct CLI intent phrases without executing them", 
   assert.equal(productOverview.system?.id, "product");
   assert.equal(productOverview.center, undefined);
 
+  const encounterList = resolveClawDenseDataIntent("claw encounter list");
+  assert.equal(encounterList.status, "covered");
+  assert.equal(encounterList.system?.id, "health");
+  assert.equal(encounterList.center?.collectionName, "encounters");
+
   const invoiceList = resolveClawDenseDataIntent("claw invoice list");
   assert.equal(invoiceList.status, "covered");
   assert.equal(invoiceList.system?.id, "erp");
   assert.equal(invoiceList.operation?.id, "invoice.list");
+
+  const legalClientList = resolveClawDenseDataIntent("claw legal-client list");
+  assert.equal(legalClientList.status, "covered");
+  assert.equal(legalClientList.system?.id, "legal");
+  assert.equal(legalClientList.center?.collectionName, "legal_clients");
+
+  const employeeList = resolveClawDenseDataIntent("claw employee list");
+  assert.equal(employeeList.status, "covered");
+  assert.equal(employeeList.system?.id, "hr");
+  assert.equal(employeeList.center?.collectionName, "employees");
+
+  const propertyList = resolveClawDenseDataIntent("claw property list");
+  assert.equal(propertyList.status, "covered");
+  assert.equal(propertyList.system?.id, "real_estate");
+  assert.equal(propertyList.center?.collectionName, "property_listings");
 
   const medicationAdd = resolveClawDenseDataIntent("claw medication add --patient p_123");
   assert.equal(medicationAdd.status, "partial");
@@ -249,6 +301,7 @@ test("dense data OS graduated centers point at canonical built-in collections wi
   ]);
   const expectedCollections: Record<string, string> = {
     "health.patient": "patients",
+    "health.encounter": "encounters",
     "health.medication": "medications",
     "health.symptom": "symptom_logs",
     "health.lab_result": "lab_results",
@@ -259,6 +312,15 @@ test("dense data OS graduated centers point at canonical built-in collections wi
     "labs.sample": "samples",
     "labs.assay": "assays",
     "legal.case": "legal_cases",
+    "legal.legal_client": "legal_clients",
+    "hr.employee": "employees",
+    "hr.time_off": "time_off_requests",
+    "hr.performance_review": "performance_reviews",
+    "hr.payroll": "payroll_runs",
+    "real_estate.property": "property_listings",
+    "real_estate.property_visit": "property_visits",
+    "real_estate.property_offer": "property_offers",
+    "real_estate.property_inspection": "property_inspections",
     "erp.company": "companies",
     "erp.product": "products_catalog",
     "erp.invoice": "invoices",
@@ -313,13 +375,11 @@ test("dense data OS generates covered singular and plural intents for every grad
 test("dense data OS roadmap keeps the wider catalog visible before pack graduation", () => {
   const roadmapIds = new Set(listClawDenseDataSystems({ wave: "roadmap" }).map((system) => system.id));
   for (const id of [
-    "hr",
     "supply_chain",
     "warehouse",
     "transport",
     "procurement",
     "compliance",
-    "real_estate",
     "insurance",
     "government",
     "construction",

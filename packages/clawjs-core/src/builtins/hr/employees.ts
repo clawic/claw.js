@@ -8,6 +8,7 @@ export const EMPLOYEES: BuiltinCollectionDefinition = {
   fields: [
     { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
     { name: "actorId", type: "relation", relation: { collectionName: "actors" } },
+    { name: "displayName", type: "text", aliases: ["name", "employeeName"] },
     { name: "firstName", type: "text" },
     { name: "lastName", type: "text" },
     { name: "email", type: "email", aliases: ["workEmail"] },
