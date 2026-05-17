@@ -104,6 +104,7 @@ export async function runSearchQueryCli(input: {
     const shouldRefreshCode = domains?.includes("code") || sources?.includes("code.symbols");
     const shouldRefreshLocalFiles = domains?.includes("files") || sources?.includes("local.files");
     const shouldRefreshWeb = domains?.includes("web") || sources?.includes("web.ingested");
+    const shouldRefreshExternal = domains?.includes("external") || sources?.includes("external.cache");
     const indexedDatabase = shouldRefreshDatabase && sourceCanIndex(store, "database.records") ? ensureDatabaseRecordsSourceIndexed(store, input.flags) : 0;
     const indexedDocuments = shouldRefreshDocuments && sourceCanIndex(store, "documents.blocks") ? ensureDocumentsBlocksSourceIndexed(store, input.flags) : 0;
     const indexedImages = shouldRefreshImages && sourceCanIndex(store, "images.derived") ? ensureImagesDerivedSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -112,6 +113,7 @@ export async function runSearchQueryCli(input: {
     const indexedCode = shouldRefreshCode && sourceCanIndex(store, "code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedLocalFiles = shouldRefreshLocalFiles && sourceCanIndex(store, "local.files") ? ensureLocalFilesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedWeb = shouldRefreshWeb && sourceCanIndex(store, "web.ingested") ? ensureWebIngestedSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const indexedExternal = shouldRefreshExternal && sourceCanIndex(store, "external.cache") ? ensureExternalCacheSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const filters = parseSearchFiltersFlag(input.flags.filters ?? input.flags.filter);
     const strategy = parseSearchStrategyFlag(input.flags.strategy);
     const embedding = parseSearchEmbeddingFlag(input.flags.embedding ?? input.flags["embedding-json"], input.flags["embedding-model"] ?? input.flags.model);
@@ -163,6 +165,7 @@ export async function runSearchQueryCli(input: {
         ...(shouldRefreshCode ? { "code.symbols": indexedCode } : {}),
         ...(shouldRefreshLocalFiles ? { "local.files": indexedLocalFiles } : {}),
         ...(shouldRefreshWeb ? { "web.ingested": indexedWeb } : {}),
+        ...(shouldRefreshExternal ? { "external.cache": indexedExternal } : {}),
       },
     };
     if (input.wantsJson) {
@@ -235,6 +238,7 @@ export async function runSearchRebuildCli(input: {
     const codeIndexed = rebuildsSource("code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const localFilesIndexed = rebuildsSource("local.files") ? ensureLocalFilesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const webIndexed = rebuildsSource("web.ingested") ? ensureWebIngestedSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const externalIndexed = rebuildsSource("external.cache") ? ensureExternalCacheSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedSourceIds = new Set([
       ...(commandsIndexed > 0 ? ["commands"] : []),
       ...(sessionsIndexed > 0 ? ["sessions.chats"] : []),
@@ -246,6 +250,7 @@ export async function runSearchRebuildCli(input: {
       ...(codeIndexed > 0 ? ["code.symbols"] : []),
       ...(localFilesIndexed > 0 ? ["local.files"] : []),
       ...(webIndexed > 0 ? ["web.ingested"] : []),
+      ...(externalIndexed > 0 ? ["external.cache"] : []),
     ]);
     const pendingScope = selectedSources ?? BUILTIN_SEARCH_SOURCES.map((source) => source.id);
     const pendingSources = BUILTIN_SEARCH_SOURCES
@@ -256,7 +261,7 @@ export async function runSearchRebuildCli(input: {
       rebuilt: true,
       mode: selectedSources ? "scoped" : "full",
       selectedSources: selectedSources ?? null,
-      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + documentsIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + localFilesIndexed + webIndexed,
+      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + documentsIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + localFilesIndexed + webIndexed + externalIndexed,
       embeddings: 0,
       profile: input.flags.profile === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
@@ -272,6 +277,7 @@ export async function runSearchRebuildCli(input: {
         "code.symbols": codeIndexed,
         "local.files": localFilesIndexed,
         "web.ingested": webIndexed,
+        "external.cache": externalIndexed,
       },
       pendingSources,
       note: "Framework domain sources keep independent fast paths; heavyweight extractors remain async or explicit.",
@@ -786,6 +792,8 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
       return ensureLocalFilesSourceIndexed(store, flags, cwd);
     case "web.ingested":
       return ensureWebIngestedSourceIndexed(store, flags, cwd);
+    case "external.cache":
+      return ensureExternalCacheSourceIndexed(store, flags, cwd);
     default:
       throw new Error(`Search service cannot index source: ${job.source}`);
   }

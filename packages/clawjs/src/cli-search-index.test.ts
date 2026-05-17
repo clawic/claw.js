@@ -248,6 +248,74 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(webServiceRunPayload.data.worker?.items[0]?.status, "done");
     assert.equal(webServiceRunPayload.data.worker?.items[0]?.indexed, 2);
 
+    const externalRoot = path.join(workspaceRoot, "external-cache");
+    fs.mkdirSync(externalRoot, { recursive: true });
+    fs.writeFileSync(path.join(externalRoot, "slack-thread.json"), JSON.stringify({
+      provider: "slack",
+      app: "team-chat",
+      externalId: "thread-123",
+      type: "thread",
+      title: "Release thread",
+      summary: "Launch checklist discussion",
+      text: "The team discussed semantic search ingestion from external provider caches.",
+      syncMode: "manual",
+      updatedAt: "2026-05-17T11:00:00.000Z",
+      apiToken: "should-not-be-indexed",
+    }));
+    fs.writeFileSync(path.join(externalRoot, "notes.txt"), "Provider export fallback mentions external cache invoices.");
+
+    const externalDefaultQuery = await runCliCapture(["search", "query", "provider caches", "--domains", "external", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(externalDefaultQuery.code, CLI_EXIT_DEGRADED);
+    const externalDefaultPayload = JSON.parse(externalDefaultQuery.stdout) as {
+      data: { results: unknown[]; omittedSources: Array<{ source: string; reason: string }> };
+    };
+    assert.deepEqual(externalDefaultPayload.data.results, []);
+    assert.equal(externalDefaultPayload.data.omittedSources.some((source) => source.source === "external.cache" && source.reason === "profile"), true);
+
+    const enableExternal = await runCliCapture(["search", "sources", "enable", "external.cache", "--profile", "full", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(enableExternal.code, CLI_EXIT_OK);
+
+    const externalRebuild = await runCliCapture(["search", "rebuild", "--source", "external.cache", "--profile", "full", "--external-root", externalRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(externalRebuild.code, CLI_EXIT_OK);
+    const externalRebuildPayload = JSON.parse(externalRebuild.stdout) as {
+      data: { sources: string[]; indexedBySource: { "external.cache": number }; pendingSources: string[] };
+    };
+    assert.equal(externalRebuildPayload.data.sources.includes("external.cache"), true);
+    assert.equal(externalRebuildPayload.data.indexedBySource["external.cache"], 2);
+    assert.equal(externalRebuildPayload.data.pendingSources.includes("external.cache"), false);
+
+    const externalQuery = await runCliCapture(["search", "query", "semantic search ingestion", "--domains", "external", "--profile", "full", "--external-root", externalRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(externalQuery.code, CLI_EXIT_OK);
+    const externalQueryPayload = JSON.parse(externalQuery.stdout) as {
+      data: {
+        indexedFastPaths: { "external.cache": number };
+        results: Array<{ source: string; domain: string; type: string; title: string; body?: string; metadata?: { provider?: string; app?: string; syncMode?: string; externalId?: string }; actions?: Array<{ id: string; kind: string }> }>;
+      };
+    };
+    assert.equal(externalQueryPayload.data.indexedFastPaths["external.cache"], 2);
+    const externalResult = externalQueryPayload.data.results.find((result) => result.title === "Release thread");
+    assert.equal(externalResult?.source, "external.cache");
+    assert.equal(externalResult?.domain, "external");
+    assert.equal(externalResult?.type, "thread");
+    assert.equal(externalResult?.metadata?.provider, "slack");
+    assert.equal(externalResult?.metadata?.app, "team-chat");
+    assert.equal(externalResult?.metadata?.syncMode, "manual");
+    assert.equal(externalResult?.metadata?.externalId, "thread-123");
+    assert.equal(externalResult?.actions?.some((action) => action.id === "open" && action.kind === "open"), true);
+    assert.equal(JSON.stringify(externalQueryPayload.data.results).includes("should-not-be-indexed"), false);
+
+    const externalServiceJob = await runCliCapture(["search", "jobs", "enqueue", "rebuild", "--source", "external.cache", "--id", "job:service:external", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(externalServiceJob.code, CLI_EXIT_OK);
+    const externalServiceRun = await runCliCapture(["search", "service", "run-once", "--source", "external.cache", "--external-root", externalRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(externalServiceRun.code, CLI_EXIT_OK);
+    const externalServiceRunPayload = JSON.parse(externalServiceRun.stdout) as {
+      data: { worker?: { items: Array<{ id: string; source: string; status: string; indexed?: number }> } };
+    };
+    assert.equal(externalServiceRunPayload.data.worker?.items[0]?.id, "job:service:external");
+    assert.equal(externalServiceRunPayload.data.worker?.items[0]?.source, "external.cache");
+    assert.equal(externalServiceRunPayload.data.worker?.items[0]?.status, "done");
+    assert.equal(externalServiceRunPayload.data.worker?.items[0]?.indexed, 2);
+
     const sensitiveQuery = await runCliCapture(["search", "query", "secret token", "--data-dir", dataRoot, "--json", "--actor", "agent:codex", "--surface", "cli"], workspaceRoot);
     assert.equal(sensitiveQuery.code, CLI_EXIT_DEGRADED);
     const sensitiveAudit = await runCliCapture(["search", "audit", "--type", "sensitive_query", "--data-dir", dataRoot, "--json"], workspaceRoot);

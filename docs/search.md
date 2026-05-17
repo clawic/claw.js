@@ -59,7 +59,7 @@ backfill jobs.
 | `local.files` | `files` | bounded local file metadata and text-content projection | implemented opt-in adapter, `full`, off by default |
 | `native.system` | `native` | native app/system/contact adapters | EXTERNAL PENDING, `full`, off by default |
 | `web.ingested` | `web` | bounded explicit web cache ingestion | implemented opt-in adapter, `full`, off by default |
-| `external.cache` | `external` | provider reference + local cache adapters | EXTERNAL PENDING, `full`, off by default |
+| `external.cache` | `external` | bounded local provider cache ingestion | implemented opt-in adapter, `full`, off by default |
 
 ## CLI
 
@@ -80,6 +80,9 @@ claw search query "invoice" --domains files --profile full --file-root /path/to/
 claw search sources enable web.ingested --profile full --json
 claw search rebuild --source web.ingested --profile full --web-root /path/to/web-cache --json
 claw search query "release notes" --domains web --profile full --web-root /path/to/web-cache --json
+claw search sources enable external.cache --profile full --json
+claw search rebuild --source external.cache --profile full --external-root /path/to/provider-cache --json
+claw search query "provider thread" --domains external --profile full --external-root /path/to/provider-cache --json
 claw search query "diagram" --domains images --shards hot --json
 claw search query "related concept" --domains documents --strategy hybrid --embedding-model local --embedding '[0.1,0.2,0.3]' --json
 claw search sources --json
@@ -217,6 +220,13 @@ Markdown, and JSON records with fields such as `url`, `title`, `description`,
 `text`, `html`, `crawlScope`, and `updatedAt`. `--web-limit`,
 `--web-max-depth`, and `--web-max-bytes` cap ingestion, and the adapter also
 participates in Search service `run-once` jobs.
+
+`external.cache` follows the same local-only rule for provider exports. It
+indexes JSON, JSONL, Markdown, and text files under `--external-root` only after
+the full-profile source is explicitly enabled. JSON records can declare
+`provider`, `app`, `externalId`, `type`, `title`, `summary`, `text`, `syncMode`,
+and `updatedAt`; fallback JSON text is redacted for secret-like keys before it
+is indexed. Search never calls provider APIs from this adapter.
 
 `documents.blocks` projects framework document records from `core.sqlite`.
 Documents are returned as scoped section results, while document blocks are

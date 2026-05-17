@@ -56,10 +56,10 @@ Search V1.1 is built from these layers:
   sources. More framework domains are added source by source; global Search must
   never replace a section-specific fast path.
 - **Profiles**: `framework` is default. `full` is opt-in and is where native,
-  external, web, or broad local sources can be enabled later. `local.files` and
-  `web.ingested` have bounded, explicit local adapters but remain disabled by
-  default; `native.system` and `external.cache` are registered as disabled
-  `full` manifests until host/provider adapters provide real ingestion.
+  external, web, or broad local sources can be enabled later. `local.files`,
+  `web.ingested`, and `external.cache` have bounded, explicit local adapters but
+  remain disabled by default; `native.system` is registered as a disabled `full`
+  manifest until host adapters provide real ingestion.
 - **Ranking**: SearchStore owns final ranking for indexed results. It reranks a
   bounded candidate batch with lexical score, source hints, frecency,
   actor/surface context, and scope-like metadata matches, and exposes compact
