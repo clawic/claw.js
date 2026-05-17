@@ -47,6 +47,7 @@ const clawjsAllowedBins = new Set([
   "create-claw-agent",
   "create-claw-server",
   "create-claw-plugin",
+  "clawjs-index-mcp",
 ]);
 const clawixAllowedUnscopedPackages = new Set(["clawix"]);
 const clawixAllowedBins = new Set(["clawix"]);

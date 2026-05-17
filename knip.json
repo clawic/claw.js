@@ -20,7 +20,7 @@
     "*/src/**/*.test.{ts,tsx,js,mjs}",
     "*/tests/**/*.{ts,tsx,js,mjs}",
     "examples/**/src/**/*.{ts,tsx,js,mjs}",
-    "website/**/*.{ts,tsx,js,mjs}"
+    "website/**/*.{css,html,ts,tsx,js,mjs}"
   ],
   "project": [
     "**/*.{js,mjs,cjs,ts,tsx}",
@@ -35,11 +35,19 @@
     "**/*.d.ts",
     "**/fixtures/**",
     "**/__fixtures__/**",
-    "**/generated/**"
+    "**/generated/**",
+    "**/src/test/**",
+    "packages/*/template/**",
+    "packages/clawjs/templates/**",
+    "packages/clawjs-database/public/**",
+    "website/src/**/*.css"
   ],
   "ignoreWorkspaces": [
     ".claude/**",
     ".tmp-pack-smoke/**"
+  ],
+  "ignoreUnresolved": [
+    "../../vault/src/server/app"
   ],
   "ignoreDependencies": [
     "@types/node",
@@ -47,6 +55,7 @@
     "shadcn",
     "tailwindcss",
     "tw-animate-css",
+    "vitepress",
     "vue"
   ],
   "ignoreBinaries": [
@@ -69,7 +78,7 @@
         "packages/*/template/**/*.{css,ts,tsx,js,mjs,cjs}",
         "packages/clawjs/templates/**/*.{css,ts,tsx,js,mjs,cjs}",
         "examples/**/src/**/*.{ts,tsx,js,mjs}",
-        "website/**/*.{ts,tsx,js,mjs}"
+        "website/**/*.{css,html,ts,tsx,js,mjs}"
       ],
       "project": [
         "**/*.{js,mjs,cjs,ts,tsx}",
@@ -142,6 +151,7 @@
         "scripts/**/*.{ts,tsx,js,mjs}",
         "vitest.config.{ts,js,mjs}",
         "playwright.config.{ts,js,mjs}",
+        "tsup.dist.config.{ts,js,mjs}",
         "tsup.config.{ts,js,mjs}"
       ],
       "project": [
