@@ -2,12 +2,16 @@ import { test } from "vitest";
 import assert from "node:assert/strict";
 
 import {
+  createAgentAuditEvent,
+  createAgentSafePackageExport,
   createAgentSupportInboxProjection,
+  evaluateAgentBudget,
   evaluateAgentDelegationAccess,
   evaluateAgentEffectiveAccess,
   evaluateAgentAssignmentRoute,
   evaluateAgentMemoryAccess,
   createAgentPermissionEscalationRequest,
+  redactAgentBoundaryValue,
   resolveAgentExternalIdentity,
   type AgentAccessRequest,
   type AgentAssignmentRoute,
@@ -250,4 +254,91 @@ test("Agents V1 memory policy blocks cross-customer reads without explicit grant
     explicitGrant: true,
   });
   assert.equal(allowed.allowed, true);
+});
+
+test("Agents V1 budget evaluation pauses only affected scope when a scoped limit is exceeded", () => {
+  const result = evaluateAgentBudget({
+    exceededBehavior: "pause_affected_scope",
+    limits: [{ dimension: "money", limit: 100, used: 95, scopeType: "assignment", scopeId: "assignment.web" }],
+  }, {
+    dimension: "money",
+    cost: 10,
+    scopeType: "assignment",
+    scopeId: "assignment.web",
+  });
+  assert.equal(result.allowed, false);
+  assert.equal(result.exceededBehavior, "pause_affected_scope");
+  assert.deepEqual(result.reasons, ["budget: money limit exceeded"]);
+});
+
+test("Agents V1 external paid actions require both budget and connector gate", () => {
+  const blocked = evaluateAgentBudget({
+    exceededBehavior: "deny_action",
+    limits: [{ dimension: "external_actions", limit: 5, used: 1 }],
+  }, {
+    dimension: "external_actions",
+    cost: 1,
+    externalPaidAction: true,
+    connectorGateAllowed: false,
+  });
+  assert.equal(blocked.allowed, false);
+  assert.equal(blocked.reasons.includes("budget: external paid action requires connector gate"), true);
+
+  const allowed = evaluateAgentBudget({
+    exceededBehavior: "deny_action",
+    limits: [{ dimension: "external_actions", limit: 5, used: 1 }],
+  }, {
+    dimension: "external_actions",
+    cost: 1,
+    externalPaidAction: true,
+    connectorGateAllowed: true,
+  });
+  assert.equal(allowed.allowed, true);
+});
+
+test("Agents V1 redaction removes raw secrets and private local paths at boundaries", () => {
+  const redacted = redactAgentBoundaryValue({
+    name: "Support",
+    secretAllowlist: ["vault://agents/support"],
+    configPath: "/Users/example/private/config.json",
+    nested: { apiToken: "raw-token" },
+  }) as Record<string, unknown>;
+  assert.equal(redacted.name, "Support");
+  assert.equal(redacted.secretAllowlist, "[REDACTED]");
+  assert.equal(redacted.configPath, "[REDACTED_LOCAL_PATH]");
+  assert.deepEqual(redacted.nested, { apiToken: "[REDACTED]" });
+});
+
+test("Agents V1 safe package export omits secrets and records audit metadata", () => {
+  const exported = createAgentSafePackageExport({
+    exportedAt: "2026-05-17T10:00:00.000Z",
+    agent: {
+      id: "agent.support",
+      name: "Support",
+      secretAllowlist: ["vault://agents/support"],
+      localPath: "/Users/example/agent",
+    },
+    assignments: [{ id: "assignment.web", endpointRef: "web:support" }],
+    resourceGrants: [{ id: "grant", resourceType: "collection", action: "read" }],
+  });
+  assert.equal(exported.schemaVersion, 1);
+  assert.equal(exported.packageKind, "claw_agent_package");
+  assert.equal(exported.agent.secretAllowlist, "[REDACTED]");
+  assert.equal(exported.agent.localPath, "[REDACTED_LOCAL_PATH]");
+  assert.equal(exported.audit.kind, "safe_export");
+  assert.equal(exported.audit.agentId, "agent.support");
+});
+
+test("Agents V1 audit events redact metadata before recording", () => {
+  const audit = createAgentAuditEvent({
+    kind: "budget_evaluation",
+    agentId: "agent.support",
+    assignmentId: "assignment.web",
+    result: "denied",
+    reason: "budget exceeded",
+    createdAt: "2026-05-17T10:00:00.000Z",
+    metadata: { token: "raw", path: "/Users/example/file" },
+  });
+  assert.match(audit.id, /^agent_audit_/);
+  assert.deepEqual(audit.metadata, { token: "[REDACTED]", path: "[REDACTED_LOCAL_PATH]" });
 });

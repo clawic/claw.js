@@ -238,6 +238,93 @@ export interface AgentMemoryAccessResult {
   matchedScope?: AgentMemoryScope;
 }
 
+export type AgentBudgetDimension = "money" | "tokens" | "time_ms" | "runs" | "external_actions";
+export type AgentBudgetExceededBehavior = "pause_affected_scope" | "pause_agent" | "require_approval" | "deny_action";
+
+export interface AgentBudgetLimit {
+  dimension: AgentBudgetDimension;
+  limit: number;
+  used?: number;
+  scopeType?: string;
+  scopeId?: string;
+}
+
+export interface AgentBudgetPolicy {
+  id?: string;
+  exceededBehavior: AgentBudgetExceededBehavior;
+  limits: AgentBudgetLimit[];
+}
+
+export interface AgentBudgetRequest {
+  dimension: AgentBudgetDimension;
+  cost: number;
+  scopeType?: string;
+  scopeId?: string;
+  externalPaidAction?: boolean;
+  connectorGateAllowed?: boolean;
+}
+
+export interface AgentBudgetEvaluationResult {
+  allowed: boolean;
+  reasons: string[];
+  exceededBehavior: AgentBudgetExceededBehavior;
+  matchedLimit?: AgentBudgetLimit;
+}
+
+export type AgentAuditEventKind =
+  | "config_revision"
+  | "assignment_route"
+  | "access_evaluation"
+  | "memory_evaluation"
+  | "budget_evaluation"
+  | "safe_export"
+  | "incident"
+  | "permission_escalation";
+
+export interface AgentAuditEvent {
+  id: string;
+  kind: AgentAuditEventKind;
+  agentId: string;
+  assignmentId?: string;
+  actorId?: string;
+  result: "allowed" | "denied" | "blocked" | "recorded";
+  reason?: string;
+  resourceType?: string;
+  resourceId?: string;
+  redaction: "default" | "strict" | "custom";
+  createdAt: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface AgentSafeExportInput {
+  agent: Record<string, unknown>;
+  assignments?: Array<Record<string, unknown>>;
+  executionProfiles?: Array<Record<string, unknown>>;
+  resourceGrants?: Array<Record<string, unknown>>;
+  memoryPolicies?: Array<Record<string, unknown>>;
+  budgets?: Array<Record<string, unknown>>;
+  blueprints?: Array<Record<string, unknown>>;
+  configRevisions?: Array<Record<string, unknown>>;
+  redaction?: "default" | "strict" | "custom";
+  exportedAt?: string;
+}
+
+export interface AgentSafePackageExport {
+  schemaVersion: 1;
+  packageKind: "claw_agent_package";
+  exportedAt: string;
+  redaction: "default" | "strict" | "custom";
+  agent: Record<string, unknown>;
+  assignments: Array<Record<string, unknown>>;
+  executionProfiles: Array<Record<string, unknown>>;
+  resourceGrants: Array<Record<string, unknown>>;
+  memoryPolicies: Array<Record<string, unknown>>;
+  budgets: Array<Record<string, unknown>>;
+  blueprints: Array<Record<string, unknown>>;
+  configRevisions: Array<Record<string, unknown>>;
+  audit: AgentAuditEvent;
+}
+
 const PLANES = [
   ["agent", "agentGrants"],
   ["assignment", "assignmentGrants"],
@@ -409,6 +496,95 @@ export function evaluateAgentMemoryAccess(policy: AgentMemoryPolicy, request: Ag
   };
 }
 
+export function evaluateAgentBudget(policy: AgentBudgetPolicy, request: AgentBudgetRequest): AgentBudgetEvaluationResult {
+  const reasons: string[] = [];
+  if (!Number.isFinite(request.cost) || request.cost < 0) reasons.push("budget: invalid cost");
+  if (request.externalPaidAction && request.connectorGateAllowed !== true) reasons.push("budget: external paid action requires connector gate");
+  const matchedLimit = policy.limits.find((limit) => budgetLimitMatches(limit, request));
+  if (!matchedLimit) {
+    reasons.push(`budget: no ${request.dimension} limit`);
+  } else if ((matchedLimit.used ?? 0) + request.cost > matchedLimit.limit) {
+    reasons.push(`budget: ${request.dimension} limit exceeded`);
+  }
+  return {
+    allowed: reasons.length === 0,
+    reasons,
+    exceededBehavior: policy.exceededBehavior,
+    ...(matchedLimit ? { matchedLimit } : {}),
+  };
+}
+
+export function redactAgentBoundaryValue(value: unknown, redaction: "default" | "strict" | "custom" = "default"): unknown {
+  if (Array.isArray(value)) return value.map((entry) => redactAgentBoundaryValue(entry, redaction));
+  if (!value || typeof value !== "object") return typeof value === "string" && isLocalPrivatePath(value) ? "[REDACTED_LOCAL_PATH]" : value;
+  const out: Record<string, unknown> = {};
+  for (const [key, nestedValue] of Object.entries(value as Record<string, unknown>)) {
+    if (isSensitiveAgentKey(key)) {
+      out[key] = "[REDACTED]";
+    } else if (typeof nestedValue === "string" && (isLocalPrivatePath(nestedValue) || (redaction === "strict" && nestedValue.startsWith("vault://")))) {
+      out[key] = nestedValue.startsWith("vault://") ? "[REDACTED_SECRET_REF]" : "[REDACTED_LOCAL_PATH]";
+    } else {
+      out[key] = redactAgentBoundaryValue(nestedValue, redaction);
+    }
+  }
+  return out;
+}
+
+export function createAgentAuditEvent(input: Omit<AgentAuditEvent, "id" | "createdAt" | "metadata" | "redaction"> & {
+  id?: string;
+  createdAt?: string;
+  metadata?: Record<string, unknown>;
+  redaction?: "default" | "strict" | "custom";
+}): AgentAuditEvent {
+  const createdAt = input.createdAt ?? new Date().toISOString();
+  const metadata = redactAgentBoundaryValue(input.metadata ?? {}, input.redaction ?? "default") as Record<string, unknown>;
+  const id = input.id ?? `agent_audit_${stableHash([
+    input.kind,
+    input.agentId,
+    input.assignmentId ?? "",
+    input.actorId ?? "",
+    input.result,
+    createdAt,
+  ].join("|"))}`;
+  return {
+    ...input,
+    id,
+    createdAt,
+    redaction: input.redaction ?? "default",
+    metadata,
+  };
+}
+
+export function createAgentSafePackageExport(input: AgentSafeExportInput): AgentSafePackageExport {
+  const redaction = input.redaction ?? "strict";
+  const exportedAt = input.exportedAt ?? new Date().toISOString();
+  const agent = redactAgentBoundaryValue(input.agent, redaction) as Record<string, unknown>;
+  const agentId = typeof input.agent.id === "string" ? input.agent.id : "agent.unknown";
+  return {
+    schemaVersion: 1,
+    packageKind: "claw_agent_package",
+    exportedAt,
+    redaction,
+    agent,
+    assignments: redactArray(input.assignments, redaction),
+    executionProfiles: redactArray(input.executionProfiles, redaction),
+    resourceGrants: redactArray(input.resourceGrants, redaction),
+    memoryPolicies: redactArray(input.memoryPolicies, redaction),
+    budgets: redactArray(input.budgets, redaction),
+    blueprints: redactArray(input.blueprints, redaction),
+    configRevisions: redactArray(input.configRevisions, redaction),
+    audit: createAgentAuditEvent({
+      kind: "safe_export",
+      agentId,
+      result: "recorded",
+      reason: "safe package export",
+      redaction,
+      createdAt: exportedAt,
+      metadata: { packageKind: "claw_agent_package" },
+    }),
+  };
+}
+
 function grantMatches(request: AgentAccessRequest, grant: AgentResourceGrant, now: Date): boolean {
   if (grant.expiresAt && new Date(grant.expiresAt).getTime() <= now.getTime()) return false;
   return matches(request.resourceType, grant.resourceType)
@@ -430,6 +606,24 @@ function matchesOptional(value: string | undefined, pattern: string | undefined)
 function normalizeTime(value: string | Date | undefined): Date {
   if (!value) return new Date();
   return value instanceof Date ? value : new Date(value);
+}
+
+function budgetLimitMatches(limit: AgentBudgetLimit, request: AgentBudgetRequest): boolean {
+  return limit.dimension === request.dimension
+    && matchesOptional(request.scopeType, limit.scopeType)
+    && matchesOptional(request.scopeId, limit.scopeId);
+}
+
+function redactArray(records: Array<Record<string, unknown>> | undefined, redaction: "default" | "strict" | "custom"): Array<Record<string, unknown>> {
+  return (records ?? []).map((record) => redactAgentBoundaryValue(record, redaction) as Record<string, unknown>);
+}
+
+function isSensitiveAgentKey(key: string): boolean {
+  return /(secret|password|token|credential|privateKey|apiKey|rawTrace|authorization)/i.test(key);
+}
+
+function isLocalPrivatePath(value: string): boolean {
+  return value.startsWith("/") || value.startsWith("~/") || value.includes("/Users/") || value.includes("\\Users\\");
 }
 
 function memoryScopeMatches(scope: AgentMemoryScope, request: AgentMemoryAccessRequest): boolean {
