@@ -32,7 +32,7 @@ import type { ChannelRunOptions, ChannelRunTarget, ChannelRunMessage } from "./c
 import type { streamRuntimeSession, streamRuntimeSessionEvents, SessionStreamEvent } from "./sessions/stream.ts";
 import type { generateRuntimeSessionTitle } from "./sessions/title.ts";
 import type { WorkspaceStorage } from "./data/store.ts";
-import type { createDocumentStore, resolveLegacyDocumentRefs } from "./documents/store.ts";
+import type { createDocumentStore } from "./documents/store.ts";
 import type { createMediaStore, RegisterMediaInput } from "./media/store.ts";
 import type { createDriveStorageShareAdapter, createLocalStorageStore, StorageDriveIndexAdapter, LocalStorageStore, StorageGetResult, StorageGrant, StorageListInput, StorageObject, StoragePutInput, StorageRef, StorageScopedToken, StorageShare, } from "./storage/index.ts";
 import type { generateRuntimeText, GenerateTextInput, GenerateTextResult } from "./inference/generate-text.ts";

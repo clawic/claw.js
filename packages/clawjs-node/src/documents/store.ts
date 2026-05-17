@@ -627,13 +627,13 @@ export function createDocumentStore(
   };
 }
 
-export function resolveLegacyDocumentRefs(messageId: string, attachments: Array<{ name: string; mimeType: string; data?: string }>): DocumentRef[] {
+export function resolveAttachmentDocumentRefs(messageId: string, attachments: Array<{ name: string; mimeType: string; data?: string }>): DocumentRef[] {
   return attachments.map((attachment, index) => {
     const payload = typeof attachment.data === "string" && attachment.data.trim()
       ? attachment.data.trim()
       : `${messageId}:${attachment.name}:${index}`;
     return {
-      documentId: `legacy-${messageId}-${index}`,
+      documentId: `attachment-${messageId}-${index}`,
       name: attachment.name,
       mimeType: attachment.mimeType,
       sizeBytes: Buffer.byteLength(payload, "utf8"),

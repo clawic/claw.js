@@ -230,7 +230,7 @@ import type { ChannelRunOptions, ChannelRunTarget, ChannelRunMessage } from "./c
 import { streamRuntimeSession, streamRuntimeSessionEvents, type SessionStreamEvent } from "./sessions/stream.ts";
 import { generateRuntimeSessionTitle } from "./sessions/title.ts";
 import { createWorkspaceStorage, type WorkspaceStorage } from "./data/store.ts";
-import { createDocumentStore, resolveLegacyDocumentRefs } from "./documents/store.ts";
+import { createDocumentStore } from "./documents/store.ts";
 import { createMediaStore, type RegisterMediaInput } from "./media/store.ts";
 import {
   createDriveStorageShareAdapter,

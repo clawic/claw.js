@@ -1,6 +1,7 @@
 // @ts-nocheck
 import fs from "fs";
 import path from "path";
+import { resolveAttachmentDocumentRefs } from "./documents/store.ts";
 
 export function createClawMediaSessionOperations(locals: Record<string, any>): Record<string, any> {
   const {
@@ -317,7 +318,7 @@ export function createClawMediaSessionOperations(locals: Record<string, any>): R
     }
 
     const uploadedDocuments: DocumentRef[] = [];
-    const legacyAttachments: Attachment[] = [];
+    const attachmentRefs: Attachment[] = [];
 
     for (const attachment of attachments) {
       if (typeof attachment.data === "string" && attachment.data.trim()) {
@@ -341,17 +342,17 @@ export function createClawMediaSessionOperations(locals: Record<string, any>): R
         });
         continue;
       }
-      legacyAttachments.push(attachment);
+      attachmentRefs.push(attachment);
     }
 
-    const legacyDocuments = legacyAttachments.length > 0
-      ? resolveLegacyDocumentRefs(message.id ?? `legacy-${sessionId}`, legacyAttachments)
+    const attachmentDocuments = attachmentRefs.length > 0
+      ? resolveAttachmentDocumentRefs(message.id ?? `attachment-${sessionId}`, attachmentRefs)
       : [];
 
     return {
       ...message,
-      ...(legacyAttachments.length > 0 ? { attachments: legacyAttachments } : {}),
-      documents: [...directDocuments, ...uploadedDocuments, ...legacyDocuments],
+      ...(attachmentRefs.length > 0 ? { attachments: attachmentRefs } : {}),
+      documents: [...directDocuments, ...uploadedDocuments, ...attachmentDocuments],
     };
   }
 

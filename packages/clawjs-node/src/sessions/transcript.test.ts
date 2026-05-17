@@ -17,23 +17,23 @@ test("normalizeTranscriptMessage keeps attachments and chips", () => {
   assert.equal(message?.contextChips?.[0]?.label, "Focus");
 });
 
-test("normalizeTranscriptMessage keeps explicit documents and synthesizes legacy refs from attachments", () => {
+test("normalizeTranscriptMessage keeps explicit documents and synthesizes attachment refs from attachments", () => {
   const explicit = normalizeTranscriptMessage({
     id: "msg-explicit",
     role: "user",
     content: "hello",
     documents: [{ documentId: "document-1", name: "brief.txt", mimeType: "text/plain", sizeBytes: 42 }],
   });
-  const legacy = normalizeTranscriptMessage({
-    id: "msg-legacy",
+  const attachmentBacked = normalizeTranscriptMessage({
+    id: "msg-attachment",
     role: "user",
     content: "",
     attachments: [{ name: "file.txt", mimeType: "text/plain" }],
   });
 
   assert.equal(explicit?.documents?.[0]?.documentId, "document-1");
-  assert.match(legacy?.documents?.[0]?.documentId ?? "", /^legacy-.+-0$/);
-  assert.equal(legacy?.documents?.[0]?.name, "file.txt");
+  assert.match(attachmentBacked?.documents?.[0]?.documentId ?? "", /^attachment-.+-0$/);
+  assert.equal(attachmentBacked?.documents?.[0]?.name, "file.txt");
 });
 
 test("normalizeTranscriptEvents deduplicates adjacent duplicate messages", () => {

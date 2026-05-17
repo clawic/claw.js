@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import type { Attachment, ContextChip, DocumentRef, Message, SessionRecord } from "@clawjs/core";
 
 import type { TranscriptEventInput, TranscriptMessageInput } from "./types.ts";
-import { resolveLegacyDocumentRefs } from "../documents/store.ts";
+import { resolveAttachmentDocumentRefs } from "../documents/store.ts";
 
 export const SESSION_FILE_EXTENSION = ".jsonl";
 export const DEFAULT_SESSION_TITLE = "New session";
@@ -161,7 +161,7 @@ export function normalizeTranscriptMessage(input: TranscriptMessageInput | unkno
   };
 
   if (!documents && attachments?.length) {
-    message.documents = resolveLegacyDocumentRefs(message.id, attachments);
+    message.documents = resolveAttachmentDocumentRefs(message.id, attachments);
   }
 
   return message;
