@@ -1394,6 +1394,7 @@ The docs check script validates that every current export from
     DATA_FOUNDATION_FAMILY
     findClawDenseDataSystem
     listClawDenseDataAcceptanceFixtureRecords
+    listClawDenseDataRegistryFixtureRecords
     listClawDenseDataIntentEntries
     listClawDenseDataSemanticViewEntries
     listClawDenseDataSystems
@@ -2426,7 +2427,10 @@ The docs check script validates that every current export from
 
 ## Remote Gateway And Sync Exports
 
+    buildRemoteConformanceReport
+    buildSyncPlan
     createExampleSyncResourceManifest
+    createSyncResourceManifest
     NodeIdentity
     nodeIdentitySchema
     RemoteActorContext
@@ -2441,6 +2445,7 @@ The docs check script validates that every current export from
     remoteSyncRequiredRouteIds
     RemoteTrustMode
     remoteTrustModeSchema
+    routeIdForSyncDriver
     SyncAuthority
     syncAuthoritySchema
     SyncCachePolicy
@@ -2455,6 +2460,12 @@ The docs check script validates that every current export from
     syncCursorSchema
     SyncDriver
     syncDriverSchema
+    SyncObjectSnapshot
+    syncObjectSnapshotSchema
+    SyncPlanAction
+    syncPlanActionSchema
+    SyncPlanResult
+    syncPlanResultSchema
     SyncResourceManifest
     syncResourceManifestSchema
     clawPublicApiPrefix
