@@ -5,7 +5,7 @@
   "label": "Compliments",
   "category": "meta-reflection",
   "categoryLabel": "Meta / Reflection",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Compliments received from others",
   "signalVertical": "compliments",

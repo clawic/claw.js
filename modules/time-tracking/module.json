@@ -5,7 +5,7 @@
   "label": "Time tracking",
   "category": "time-productivity",
   "categoryLabel": "Time & Productivity",
-  "status": "alpha",
+  "status": "stable",
   "sensitive": false,
   "description": "Manual pomodoros and focus sessions",
   "signalVertical": "time-tracking",

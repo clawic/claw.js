@@ -5,7 +5,7 @@
   "label": "Goals",
   "category": "meta-reflection",
   "categoryLabel": "Meta / Reflection",
-  "status": "alpha",
+  "status": "stable",
   "sensitive": false,
   "description": "Long-term aspirations and milestones (replaces iot.sqlite goals)",
   "signalVertical": "goals",

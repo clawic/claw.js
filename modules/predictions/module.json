@@ -5,7 +5,7 @@
   "label": "Predictions",
   "category": "meta-reflection",
   "categoryLabel": "Meta / Reflection",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Predictions with confidence for calibration scoring",
   "signalVertical": "predictions",

@@ -5,7 +5,7 @@
   "label": "Body measurements",
   "category": "body-health",
   "categoryLabel": "Body & Health",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Weight, body fat, circumferences and progress photos",
   "signalVertical": "body-measures",

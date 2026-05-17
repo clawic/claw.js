@@ -5,7 +5,7 @@
   "label": "Recipes cooked",
   "category": "creative-output",
   "categoryLabel": "Creative output",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Recipes prepared with rating and variations",
   "signalVertical": "recipes-cooked",

@@ -5,7 +5,7 @@
   "label": "Sleep",
   "category": "body-health",
   "categoryLabel": "Body & Health",
-  "status": "alpha",
+  "status": "stable",
   "sensitive": false,
   "description": "Sleep duration, stages, quality, naps",
   "signalVertical": "sleep",

@@ -5,7 +5,7 @@
   "label": "Conflicts",
   "category": "relations-social",
   "categoryLabel": "Relations & Social",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": true,
   "description": "Conflicts and resolutions with people",
   "signalVertical": "conflicts",

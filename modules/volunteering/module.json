@@ -5,7 +5,7 @@
   "label": "Volunteering",
   "category": "relations-social",
   "categoryLabel": "Relations & Social",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Volunteering hours and service tasks",
   "signalVertical": "volunteering",

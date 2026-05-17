@@ -5,7 +5,7 @@
   "label": "Gifts",
   "category": "possessions-identity",
   "categoryLabel": "Possessions & Identity",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Gifts given and received",
   "signalVertical": "gifts",

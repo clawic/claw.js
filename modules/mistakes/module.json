@@ -5,7 +5,7 @@
   "label": "Mistakes",
   "category": "mind-emotions",
   "categoryLabel": "Mind & Emotions",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Mistakes and failures log",
   "signalVertical": "mistakes",

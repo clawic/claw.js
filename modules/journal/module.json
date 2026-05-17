@@ -5,7 +5,7 @@
   "label": "Journal",
   "category": "mind-emotions",
   "categoryLabel": "Mind & Emotions",
-  "status": "alpha",
+  "status": "stable",
   "sensitive": false,
   "description": "Long-form reflections with prompts",
   "signalVertical": "journal",

@@ -5,7 +5,7 @@
   "label": "Travel",
   "category": "world-places",
   "categoryLabel": "World & Places",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Countries and cities visited with notes",
   "signalVertical": "travel",

@@ -358,6 +358,27 @@ for (const relativePath of [
 }
 
 for (const relativePath of [
+  "packages/signals-core/src/types.ts",
+  "docs/signals-modules.md",
+  "packages/clawjs/src/v1-data.ts",
+  "packages/clawjs/src/v1-data-core.ts",
+  "packages/clawjs/src/v1-data-surface.ts",
+  "tracking-registry.json",
+]) {
+  forbidSnippet(relativePath, "planned");
+  forbidSnippet(relativePath, "alpha");
+  forbidSnippet(relativePath, "deprecated");
+}
+for (const entry of fs.readdirSync(path.join(rootDir, "modules"), { withFileTypes: true })) {
+  if (!entry.isDirectory()) continue;
+  const relativePath = `modules/${entry.name}/module.json`;
+  if (!fs.existsSync(path.join(rootDir, relativePath))) continue;
+  forbidSnippet(relativePath, "\"status\": \"planned\"");
+  forbidSnippet(relativePath, "\"status\": \"alpha\"");
+  forbidSnippet(relativePath, "\"status\": \"deprecated\"");
+}
+
+for (const relativePath of [
   "publishing/src/server/config.ts",
   "publishing/src/bin/server.ts",
   "publishing/src/cli/parser.ts",

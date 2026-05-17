@@ -5,7 +5,7 @@
   "label": "Restaurants",
   "category": "consumption-leisure",
   "categoryLabel": "Consumption & Leisure",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Restaurants and cafes visited with rating",
   "signalVertical": "restaurants",

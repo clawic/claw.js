@@ -5,7 +5,7 @@
   "label": "Donations",
   "category": "relations-social",
   "categoryLabel": "Relations & Social",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Donations and charitable giving",
   "signalVertical": "donations",

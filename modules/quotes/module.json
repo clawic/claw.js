@@ -5,7 +5,7 @@
   "label": "Quotes",
   "category": "meta-reflection",
   "categoryLabel": "Meta / Reflection",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Quotes and citations from books, people, sources",
   "signalVertical": "quotes",

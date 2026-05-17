@@ -5,7 +5,7 @@
   "label": "Bookmarks",
   "category": "consumption-leisure",
   "categoryLabel": "Consumption & Leisure",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Links saved for later",
   "signalVertical": "bookmarks",

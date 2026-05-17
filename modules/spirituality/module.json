@@ -5,7 +5,7 @@
   "label": "Spirituality",
   "category": "meta-reflection",
   "categoryLabel": "Meta / Reflection",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Meditation, prayer and contemplative practices",
   "signalVertical": "spirituality",

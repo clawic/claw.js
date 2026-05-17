@@ -5,7 +5,7 @@
   "label": "Sex",
   "category": "body-health",
   "categoryLabel": "Body & Health",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": true,
   "description": "Sexual activity and contraception events",
   "signalVertical": "sex",

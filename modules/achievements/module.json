@@ -5,7 +5,7 @@
   "label": "Achievements",
   "category": "meta-reflection",
   "categoryLabel": "Meta / Reflection",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Achievements and wins for retrospectives",
   "signalVertical": "achievements",

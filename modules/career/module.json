@@ -5,7 +5,7 @@
   "label": "Career",
   "category": "career-money",
   "categoryLabel": "Career & Money",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Career milestones, positions and salary growth",
   "signalVertical": "career",

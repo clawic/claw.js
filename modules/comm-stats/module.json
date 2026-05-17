@@ -5,7 +5,7 @@
   "label": "Communications",
   "category": "relations-social",
   "categoryLabel": "Relations & Social",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": true,
   "description": "Calls and messages frequency per person",
   "signalVertical": "comm-stats",

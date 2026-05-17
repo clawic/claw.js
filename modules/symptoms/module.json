@@ -5,7 +5,7 @@
   "label": "Symptoms",
   "category": "body-health",
   "categoryLabel": "Body & Health",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": true,
   "description": "Symptoms and medications log",
   "signalVertical": "symptoms",

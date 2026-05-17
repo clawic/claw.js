@@ -5,7 +5,7 @@
   "label": "Birthdays",
   "category": "relations-social",
   "categoryLabel": "Relations & Social",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Birthdays and important recurring dates",
   "signalVertical": "birthdays",

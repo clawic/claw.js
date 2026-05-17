@@ -5,7 +5,7 @@
   "label": "Relationships",
   "category": "relations-social",
   "categoryLabel": "Relations & Social",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Qualitative personal CRM",
   "signalVertical": "relationships",

@@ -5,7 +5,7 @@
   "label": "Pain map",
   "category": "body-health",
   "categoryLabel": "Body & Health",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": true,
   "description": "Anatomical pain regions with intensity over time",
   "signalVertical": "pain-map",

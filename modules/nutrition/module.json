@@ -5,7 +5,7 @@
   "label": "Nutrition",
   "category": "body-health",
   "categoryLabel": "Body & Health",
-  "status": "alpha",
+  "status": "stable",
   "sensitive": false,
   "description": "Macros and foods consumed",
   "signalVertical": "nutrition",

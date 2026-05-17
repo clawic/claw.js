@@ -5,7 +5,7 @@
   "label": "Yes/No log",
   "category": "meta-reflection",
   "categoryLabel": "Meta / Reflection",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Yes/No commitments and their outcomes",
   "signalVertical": "yes-no",

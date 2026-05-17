@@ -5,7 +5,7 @@
   "label": "Hydration",
   "category": "body-health",
   "categoryLabel": "Body & Health",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Water intake",
   "signalVertical": "hydration",

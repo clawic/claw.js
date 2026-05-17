@@ -932,7 +932,7 @@ export const V1_MAIN_SCHEMA_SQL = String.raw`
       label TEXT NOT NULL,
       category TEXT,
       description TEXT,
-      status TEXT NOT NULL DEFAULT 'alpha',
+      status TEXT NOT NULL DEFAULT 'dev_only',
       sensitive INTEGER NOT NULL DEFAULT 0,
       catalog_version TEXT,
       catalog_source TEXT NOT NULL DEFAULT 'repo',

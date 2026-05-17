@@ -53,7 +53,7 @@
       "hasSessions": false,
       "healthkitMapping": true,
       "sensitive": true,
-      "status": "alpha",
+      "status": "stable",
       "iconHint": "heart",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/health.json"
@@ -67,7 +67,7 @@
       "hasSessions": true,
       "healthkitMapping": true,
       "sensitive": false,
-      "status": "alpha",
+      "status": "stable",
       "iconHint": "moon",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/sleep.json"
@@ -81,7 +81,7 @@
       "hasSessions": false,
       "healthkitMapping": true,
       "sensitive": false,
-      "status": "alpha",
+      "status": "stable",
       "iconHint": "apple",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/nutrition.json"
@@ -95,7 +95,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": true,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "flask",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/substances.json"
@@ -109,7 +109,7 @@
       "hasSessions": false,
       "healthkitMapping": true,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "droplet",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/hydration.json"
@@ -123,7 +123,7 @@
       "hasSessions": false,
       "healthkitMapping": true,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "ruler",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/body-measures.json"
@@ -137,7 +137,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": true,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "body",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/pain-map.json"
@@ -151,7 +151,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "stretch",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/stretching.json"
@@ -165,7 +165,7 @@
       "hasSessions": false,
       "healthkitMapping": true,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "screen",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/screen-time.json"
@@ -179,7 +179,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "scissors",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/beauty.json"
@@ -193,7 +193,7 @@
       "hasSessions": false,
       "healthkitMapping": true,
       "sensitive": true,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "cycle",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/cycle.json"
@@ -207,7 +207,7 @@
       "hasSessions": false,
       "healthkitMapping": true,
       "sensitive": true,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "heart-private",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/sex.json"
@@ -221,7 +221,7 @@
       "hasSessions": false,
       "healthkitMapping": true,
       "sensitive": true,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "pill",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/symptoms.json"
@@ -235,7 +235,7 @@
       "hasSessions": true,
       "healthkitMapping": true,
       "sensitive": false,
-      "status": "alpha",
+      "status": "stable",
       "iconHint": "dumbbell",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/workouts.json"
@@ -249,7 +249,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "alpha",
+      "status": "stable",
       "iconHint": "smile",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/emotions.json"
@@ -263,7 +263,7 @@
       "hasSessions": true,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "alpha",
+      "status": "stable",
       "iconHint": "book",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/journal.json"
@@ -277,7 +277,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "cloud-moon",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/dreams.json"
@@ -291,7 +291,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "spark",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/thoughts-raw.json"
@@ -305,7 +305,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "stars",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/memorable-moments.json"
@@ -319,7 +319,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "repeat",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/recurring-problems.json"
@@ -333,7 +333,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "bolt",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/triggers.json"
@@ -347,7 +347,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "x",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/mistakes.json"
@@ -361,7 +361,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "speech",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/critiques.json"
@@ -375,7 +375,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "alpha",
+      "status": "stable",
       "iconHint": "check",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/habits.json"
@@ -389,7 +389,7 @@
       "hasSessions": true,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "alpha",
+      "status": "stable",
       "iconHint": "timer",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/time-tracking.json"
@@ -403,7 +403,7 @@
       "hasSessions": true,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "users",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/meetings.json"
@@ -417,7 +417,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "pen",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/writing.json"
@@ -431,7 +431,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "camera",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/photography.json"
@@ -445,7 +445,7 @@
       "hasSessions": true,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "chef",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/recipes-cooked.json"
@@ -459,7 +459,7 @@
       "hasSessions": true,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "target",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/skills-practice.json"
@@ -473,7 +473,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "book-open",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/reading-media.json"
@@ -487,7 +487,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "music",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/music.json"
@@ -501,7 +501,7 @@
       "hasSessions": true,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "gamepad",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/games.json"
@@ -515,7 +515,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "bookmark",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/bookmarks.json"
@@ -529,7 +529,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "fork",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/restaurants.json"
@@ -543,7 +543,7 @@
       "hasSessions": true,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "calendar-event",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/events-attended.json"
@@ -557,7 +557,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "people",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/relationships.json"
@@ -571,7 +571,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "gift",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/birthdays.json"
@@ -585,7 +585,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": true,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "swords",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/conflicts.json"
@@ -599,7 +599,7 @@
       "hasSessions": true,
       "healthkitMapping": false,
       "sensitive": true,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "heart",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/dating.json"
@@ -613,7 +613,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "link",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/networking.json"
@@ -627,7 +627,7 @@
       "hasSessions": true,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "academic",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/mentorship.json"
@@ -641,7 +641,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "hand-coins",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/donations.json"
@@ -655,7 +655,7 @@
       "hasSessions": true,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "hands",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/volunteering.json"
@@ -669,7 +669,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": true,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "phone",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/comm-stats.json"
@@ -683,7 +683,7 @@
       "hasSessions": true,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "plane",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/travel.json"
@@ -697,7 +697,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": true,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "location",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/gps-log.json"
@@ -711,7 +711,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "cloud",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/weather.json"
@@ -725,7 +725,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "leaf",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/wildlife.json"
@@ -739,7 +739,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "stars",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/sky.json"
@@ -753,7 +753,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "shirt",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/outfits.json"
@@ -767,7 +767,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "box",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/possessions.json"
@@ -781,7 +781,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "gift",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/gifts.json"
@@ -795,7 +795,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "credit",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/subscriptions.json"
@@ -809,7 +809,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "paw",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/pets.json"
@@ -823,7 +823,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "house",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/home.json"
@@ -837,7 +837,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "plant",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/plants.json"
@@ -851,7 +851,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "car",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/vehicle.json"
@@ -865,7 +865,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "briefcase",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/career.json"
@@ -879,7 +879,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": true,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "trending-up",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/income.json"
@@ -893,7 +893,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": true,
-      "status": "alpha",
+      "status": "stable",
       "iconHint": "wallet",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/finance.json"
@@ -907,7 +907,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "brain",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/cognition.json"
@@ -921,7 +921,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "alpha",
+      "status": "stable",
       "iconHint": "flag",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/goals.json"
@@ -935,7 +935,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "star",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/wishlist.json"
@@ -949,7 +949,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "trophy",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/achievements.json"
@@ -963,7 +963,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "lightbulb",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/lessons.json"
@@ -977,7 +977,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "puzzle",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/mental-models.json"
@@ -991,7 +991,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "fingerprint",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/identity-values.json"
@@ -1005,7 +1005,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "thought",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/beliefs.json"
@@ -1019,7 +1019,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "compass",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/personality-tests.json"
@@ -1033,7 +1033,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "flame",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/hot-takes.json"
@@ -1047,7 +1047,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "handshake",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/promises.json"
@@ -1061,7 +1061,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "scale",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/yes-no.json"
@@ -1075,7 +1075,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "chart",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/predictions.json"
@@ -1089,7 +1089,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "split",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/decisions.json"
@@ -1103,7 +1103,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "quote",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/quotes.json"
@@ -1117,7 +1117,7 @@
       "hasSessions": true,
       "healthkitMapping": true,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "lotus",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/spirituality.json"
@@ -1131,7 +1131,7 @@
       "hasSessions": true,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "graduation",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/learning.json"
@@ -1145,7 +1145,7 @@
       "hasSessions": true,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "calendar-year",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/year-reviews.json"
@@ -1159,7 +1159,7 @@
       "hasSessions": false,
       "healthkitMapping": false,
       "sensitive": false,
-      "status": "planned",
+      "status": "dev_only",
       "iconHint": "heart-hand",
       "catalogPackage": "@clawjs/signals",
       "catalogPath": "catalogs/compliments.json"

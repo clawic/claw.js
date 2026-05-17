@@ -5,7 +5,7 @@
   "label": "Identity & values",
   "category": "meta-reflection",
   "categoryLabel": "Meta / Reflection",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Identity statements and values with periodic check-ins",
   "signalVertical": "identity-values",

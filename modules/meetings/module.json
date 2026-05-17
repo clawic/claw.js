@@ -5,7 +5,7 @@
   "label": "Meetings",
   "category": "time-productivity",
   "categoryLabel": "Time & Productivity",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Meetings and conversations with attendees and outcomes",
   "signalVertical": "meetings",

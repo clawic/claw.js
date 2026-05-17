@@ -5,7 +5,7 @@
   "label": "Mentorship",
   "category": "relations-social",
   "categoryLabel": "Relations & Social",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Mentorship and teaching sessions with mentees",
   "signalVertical": "mentorship",

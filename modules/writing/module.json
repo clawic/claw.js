@@ -5,7 +5,7 @@
   "label": "Writing",
   "category": "creative-output",
   "categoryLabel": "Creative output",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Word counts, posts and drafts",
   "signalVertical": "writing",

@@ -545,7 +545,7 @@ function runSignalsCommand(input: V1DataCliInput, store: DatabaseServiceStore): 
       stringValue(vertical.label, verticalId),
       stringValue(vertical.category, null),
       stringValue(vertical.description, null),
-      stringValue(vertical.status, "alpha"),
+      stringValue(vertical.status, "dev_only"),
       truthy(vertical.sensitive) ? 1 : 0,
       stringValue(vertical.version, null),
       JSON.stringify(vertical),

@@ -5,7 +5,7 @@
   "label": "Beliefs",
   "category": "meta-reflection",
   "categoryLabel": "Meta / Reflection",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Beliefs with calibrated confidence",
   "signalVertical": "beliefs",

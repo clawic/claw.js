@@ -5,7 +5,7 @@
   "label": "Finance",
   "category": "career-money",
   "categoryLabel": "Career & Money",
-  "status": "alpha",
+  "status": "stable",
   "sensitive": true,
   "description": "Transactions, budgets, savings, accounts, net worth",
   "signalVertical": "finance",

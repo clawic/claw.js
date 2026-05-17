@@ -51,8 +51,8 @@ one approved public surface:
 
 1. Declare it in `tracking-registry.json` with a unique `id`, the
    category it belongs to, `catalogPackage: "@clawjs/signals"`,
-   `catalogPath: "catalogs/signal-id.json"`, and an initial `status` of
-   `planned` (graduate to `alpha` / `stable` later).
+   `catalogPath: "catalogs/signal-id.json"`, and an explicit `status` of
+   `dev_only`, `stable`, or `removed`.
 
 2. Run the catalog scaffolder:
 
@@ -165,7 +165,8 @@ The Clawix Swift clients mirror these shapes in
 
 Per the existing RELEASING.md rules:
 
-1. Curate the catalog for the verticals graduating to `alpha`.
+1. Curate the catalog for the verticals being promoted from `dev_only` to
+   `stable`.
 2. Run the shared `@clawjs/signals` tests for catalog and store behavior.
 3. `npm run publish:dry-run` from the repo root.
 4. Real publish requires explicit user authorization (see the

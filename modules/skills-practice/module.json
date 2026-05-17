@@ -5,7 +5,7 @@
   "label": "Skills practice",
   "category": "creative-output",
   "categoryLabel": "Creative output",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Deliberate practice hours per skill",
   "signalVertical": "skills-practice",

@@ -5,7 +5,7 @@
   "label": "Sky",
   "category": "world-places",
   "categoryLabel": "World & Places",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Astronomy observations: planets, moons, phenomena",
   "signalVertical": "sky",

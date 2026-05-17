@@ -5,7 +5,7 @@
   "label": "Cycle",
   "category": "body-health",
   "categoryLabel": "Body & Health",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": true,
   "description": "Menstruation, ovulation, fertility, symptoms",
   "signalVertical": "cycle",

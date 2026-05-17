@@ -5,7 +5,7 @@
   "label": "GPS log",
   "category": "world-places",
   "categoryLabel": "World & Places",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": true,
   "description": "Background location samples (opt-in)",
   "signalVertical": "gps-log",

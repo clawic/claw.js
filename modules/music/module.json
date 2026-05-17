@@ -5,7 +5,7 @@
   "label": "Music",
   "category": "consumption-leisure",
   "categoryLabel": "Consumption & Leisure",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Music listening with optional artist/album breakdown",
   "signalVertical": "music",

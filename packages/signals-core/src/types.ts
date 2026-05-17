@@ -103,13 +103,12 @@ export interface Session {
   updatedAt: number;
 }
 
-export type RegistryStatus = "planned" | "alpha" | "stable" | "deprecated";
+export type RegistryStatus = "stable" | "dev_only" | "removed";
 
 export const REGISTRY_STATUSES: readonly RegistryStatus[] = [
-  "planned",
-  "alpha",
   "stable",
-  "deprecated",
+  "dev_only",
+  "removed",
 ];
 
 export type RegistryCategory =

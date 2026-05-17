@@ -5,7 +5,7 @@
   "label": "Workouts",
   "category": "body-health",
   "categoryLabel": "Body & Health",
-  "status": "alpha",
+  "status": "stable",
   "sensitive": false,
   "description": "Workouts with parent sessions and child observations",
   "signalVertical": "workouts",

@@ -1361,7 +1361,7 @@ export function ensureSignalsVertical(sqlite: Database.Database, verticalId: str
   const now = nowIso();
   sqlite.prepare(`
     INSERT OR IGNORE INTO signals_verticals (id, label, status, metadata_json, synced_at)
-    VALUES (?, ?, 'alpha', '{}', ?)
+    VALUES (?, ?, 'dev_only', '{}', ?)
   `).run(verticalId, verticalId, now);
 }
 

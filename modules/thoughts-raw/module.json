@@ -5,7 +5,7 @@
   "label": "Thoughts",
   "category": "mind-emotions",
   "categoryLabel": "Mind & Emotions",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Atomic raw thoughts and snippets",
   "signalVertical": "thoughts-raw",

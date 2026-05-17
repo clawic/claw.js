@@ -5,7 +5,7 @@
   "label": "Income",
   "category": "career-money",
   "categoryLabel": "Career & Money",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": true,
   "description": "Income streams and side hustles",
   "signalVertical": "income",

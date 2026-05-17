@@ -5,7 +5,7 @@
   "label": "Learning",
   "category": "meta-reflection",
   "categoryLabel": "Meta / Reflection",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Formal study hours and courses",
   "signalVertical": "learning",

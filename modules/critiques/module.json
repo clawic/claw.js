@@ -5,7 +5,7 @@
   "label": "Critiques received",
   "category": "mind-emotions",
   "categoryLabel": "Mind & Emotions",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Critiques received from others",
   "signalVertical": "critiques",

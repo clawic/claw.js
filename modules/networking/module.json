@@ -5,7 +5,7 @@
   "label": "Networking",
   "category": "relations-social",
   "categoryLabel": "Relations & Social",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Introductions made and follow-ups",
   "signalVertical": "networking",

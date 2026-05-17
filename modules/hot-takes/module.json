@@ -5,7 +5,7 @@
   "label": "Hot takes",
   "category": "meta-reflection",
   "categoryLabel": "Meta / Reflection",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Strong opinions with confidence",
   "signalVertical": "hot-takes",

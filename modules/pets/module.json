@@ -5,7 +5,7 @@
   "label": "Pets",
   "category": "possessions-identity",
   "categoryLabel": "Possessions & Identity",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Pets and animal care events",
   "signalVertical": "pets",

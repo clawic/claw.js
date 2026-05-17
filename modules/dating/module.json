@@ -5,7 +5,7 @@
   "label": "Dating",
   "category": "relations-social",
   "categoryLabel": "Relations & Social",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": true,
   "description": "Dating history with people and outcomes",
   "signalVertical": "dating",

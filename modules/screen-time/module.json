@@ -5,7 +5,7 @@
   "label": "Screen time",
   "category": "body-health",
   "categoryLabel": "Body & Health",
-  "status": "planned",
+  "status": "dev_only",
   "sensitive": false,
   "description": "Daily and per-app screen time",
   "signalVertical": "screen-time",

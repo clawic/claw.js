@@ -5,7 +5,7 @@
   "label": "Habits",
   "category": "time-productivity",
   "categoryLabel": "Time & Productivity",
-  "status": "alpha",
+  "status": "stable",
   "sensitive": false,
   "description": "Daily habits, streaks and targets",
   "signalVertical": "habits",
