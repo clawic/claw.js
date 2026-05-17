@@ -732,6 +732,23 @@ function applyDefaults(collectionName: string, payload: Record<string, unknown>,
     case "product_boms":
       payload.status ??= "draft";
       break;
+    case "drug_products":
+      payload.status ??= "draft";
+      payload.regulatoryStatus ??= "unknown";
+      break;
+    case "batch_records":
+      payload.status ??= "planned";
+      break;
+    case "lot_releases":
+      payload.status ??= "draft";
+      payload.disposition ??= "unknown";
+      break;
+    case "adverse_events":
+      payload.status ??= "draft";
+      payload.seriousness ??= "unknown";
+      payload.severity ??= "unknown";
+      payload.reportedAt ??= new Date().toISOString();
+      break;
     case "iot_things":
       payload.status ??= "active";
       payload.kind ??= "unknown";

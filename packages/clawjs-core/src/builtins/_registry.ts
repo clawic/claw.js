@@ -49,6 +49,7 @@ import { SUPPLY_CHAIN_FAMILY } from "./supply_chain/index.ts";
 import { COMPLIANCE_FAMILY } from "./compliance/index.ts";
 import { GOVERNMENT_FAMILY } from "./government/index.ts";
 import { PRODUCT_FAMILY } from "./product/index.ts";
+import { PHARMA_FAMILY } from "./pharma/index.ts";
 import { IOT_FAMILY } from "./iot/index.ts";
 import { CONSTRUCTION_FAMILY } from "./construction/index.ts";
 import { ELN_FAMILY } from "./eln/index.ts";
@@ -124,6 +125,7 @@ const RAW_BUILTIN_FAMILIES: BuiltinFamilyDefinition[] = [
   COMPLIANCE_FAMILY,
   GOVERNMENT_FAMILY,
   PRODUCT_FAMILY,
+  PHARMA_FAMILY,
   IOT_FAMILY,
   CONSTRUCTION_FAMILY,
   ELN_FAMILY,

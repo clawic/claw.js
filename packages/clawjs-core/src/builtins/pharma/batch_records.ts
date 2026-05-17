@@ -1,0 +1,41 @@
+import type { BuiltinCollectionDefinition } from "../_types.ts";
+
+export const BATCH_RECORDS: BuiltinCollectionDefinition = {
+  name: "batch_records",
+  displayName: "Batch Records",
+  family: "pharma",
+  aliases: ["batch-record", "batch-records", "batch_record", "batch_records", "manufacturing-batch", "manufacturing-batches"],
+  catalog: {
+    purpose: "Pharma batch record center for manufacturing lot, quantity, site, process state, evidence, and gaps.",
+    evidence: ["human_recognizable", "market_validated", "multi_domain_reuse", "agent_useful"],
+    relationGuidance: "Use drugProductId for the regulated drug product and workOrderId when the batch is linked to MES execution.",
+    notes: "Batch records represent regulated manufacturing execution; generic work orders and inventory lots remain separate canonical records.",
+  },
+  fields: [
+    { name: "title", type: "text", required: true, requiredReason: "identity", aliases: ["name", "batchName"] },
+    { name: "drugProductId", type: "relation", relation: { collectionName: "drug_products" } },
+    { name: "workOrderId", type: "relation", relation: { collectionName: "work_orders" } },
+    { name: "companyId", type: "relation", relation: { collectionName: "companies" } },
+    { name: "batchNumber", type: "text", aliases: ["lotNumber"] },
+    { name: "site", type: "text" },
+    { name: "status", type: "select", options: ["planned", "in_process", "completed", "deviated", "released", "rejected", "cancelled", "unknown"] },
+    { name: "startedAt", type: "date" },
+    { name: "completedAt", type: "date" },
+    { name: "quantityProduced", type: "number", min: 0 },
+    { name: "unit", type: "text" },
+    { name: "source", type: "json" },
+    { name: "links", type: "json" },
+    { name: "evidence", type: "json" },
+    { name: "qualityGaps", type: "json" },
+    { name: "metadata", type: "json" },
+    { name: "archivedAt", type: "date" },
+  ],
+  indexes: [
+    { name: "batch_records_title_idx", fields: ["title"] },
+    { name: "batch_records_drug_product_idx", fields: ["drugProductId"] },
+    { name: "batch_records_work_order_idx", fields: ["workOrderId"] },
+    { name: "batch_records_company_idx", fields: ["companyId"] },
+    { name: "batch_records_number_idx", fields: ["batchNumber"] },
+    { name: "batch_records_status_idx", fields: ["status"] },
+  ],
+};

@@ -1,0 +1,41 @@
+import type { BuiltinCollectionDefinition } from "../_types.ts";
+
+export const ADVERSE_EVENTS: BuiltinCollectionDefinition = {
+  name: "adverse_events",
+  displayName: "Adverse Events",
+  family: "pharma",
+  aliases: ["adverse-event", "adverse-events", "adverse_event", "adverse_events", "safety-event", "safety-events"],
+  catalog: {
+    purpose: "Pharmacovigilance adverse event center for product safety signals, seriousness, patient/study links, evidence, and gaps.",
+    evidence: ["human_recognizable", "market_validated", "multi_domain_reuse", "agent_useful"],
+    relationGuidance: "Use drugProductId for suspected product, patientId for clinical identity when authorized, and studyId for trial context when known.",
+    notes: "Adverse events are safety reports and signals; they do not replace clinical encounters, symptoms, or regulated report submission workflows.",
+  },
+  fields: [
+    { name: "title", type: "text", required: true, requiredReason: "identity", aliases: ["summary", "eventName"] },
+    { name: "drugProductId", type: "relation", relation: { collectionName: "drug_products" } },
+    { name: "patientId", type: "relation", relation: { collectionName: "patients" } },
+    { name: "studyId", type: "relation", relation: { collectionName: "studies" } },
+    { name: "eventTerm", type: "text", aliases: ["meddraTerm"] },
+    { name: "seriousness", type: "select", options: ["non_serious", "serious", "life_threatening", "fatal", "unknown"] },
+    { name: "severity", type: "select", options: ["mild", "moderate", "severe", "unknown"] },
+    { name: "status", type: "select", options: ["draft", "triaged", "reported", "closed", "invalid", "unknown"] },
+    { name: "occurredAt", type: "date" },
+    { name: "reportedAt", type: "date" },
+    { name: "narrative", type: "markdown" },
+    { name: "source", type: "json" },
+    { name: "links", type: "json" },
+    { name: "evidence", type: "json" },
+    { name: "qualityGaps", type: "json" },
+    { name: "metadata", type: "json" },
+    { name: "archivedAt", type: "date" },
+  ],
+  indexes: [
+    { name: "adverse_events_title_idx", fields: ["title"] },
+    { name: "adverse_events_drug_product_idx", fields: ["drugProductId"] },
+    { name: "adverse_events_patient_idx", fields: ["patientId"] },
+    { name: "adverse_events_study_idx", fields: ["studyId"] },
+    { name: "adverse_events_status_idx", fields: ["status"] },
+    { name: "adverse_events_seriousness_idx", fields: ["seriousness"] },
+  ],
+};

@@ -68,6 +68,7 @@ export { SUPPLY_CHAIN_FAMILY } from "./supply_chain/index.ts";
 export { COMPLIANCE_FAMILY } from "./compliance/index.ts";
 export { GOVERNMENT_FAMILY } from "./government/index.ts";
 export { PRODUCT_FAMILY } from "./product/index.ts";
+export { PHARMA_FAMILY } from "./pharma/index.ts";
 export { IOT_FAMILY } from "./iot/index.ts";
 export { CONSTRUCTION_FAMILY } from "./construction/index.ts";
 export { ELN_FAMILY } from "./eln/index.ts";

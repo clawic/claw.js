@@ -1,0 +1,41 @@
+import type { BuiltinCollectionDefinition } from "../_types.ts";
+
+export const DRUG_PRODUCTS: BuiltinCollectionDefinition = {
+  name: "drug_products",
+  displayName: "Drug Products",
+  family: "pharma",
+  aliases: ["drug-product", "drug-products", "drug_product", "drug_products", "pharma-product", "pharma-products"],
+  catalog: {
+    purpose: "Pharmaceutical product center for dosage form, strength, regulatory identity, lifecycle status, evidence, and gaps.",
+    evidence: ["human_recognizable", "market_validated", "multi_domain_reuse", "agent_useful"],
+    relationGuidance: "Use productCatalogId for the canonical catalog product and productSpecId for the PIM/PLM lifecycle specification when known.",
+    notes: "Drug products are regulated pharmaceutical records; the direct `product` route remains products_catalog and patient medications remain clinical exposure records.",
+  },
+  fields: [
+    { name: "title", type: "text", required: true, requiredReason: "identity", aliases: ["name", "brandName"] },
+    { name: "productCatalogId", type: "relation", relation: { collectionName: "products_catalog" } },
+    { name: "productSpecId", type: "relation", relation: { collectionName: "product_specs" } },
+    { name: "companyId", type: "relation", relation: { collectionName: "companies" } },
+    { name: "activeIngredient", type: "text" },
+    { name: "dosageForm", type: "text" },
+    { name: "strength", type: "text" },
+    { name: "regulatoryStatus", type: "select", options: ["development", "clinical_trial", "approved", "suspended", "withdrawn", "unknown"] },
+    { name: "status", type: "select", options: ["draft", "active", "inactive", "retired", "unknown"] },
+    { name: "marketAuthorizationNumber", type: "text", aliases: ["authorizationNumber", "applicationNumber"] },
+    { name: "description", type: "markdown" },
+    { name: "source", type: "json" },
+    { name: "links", type: "json" },
+    { name: "evidence", type: "json" },
+    { name: "qualityGaps", type: "json" },
+    { name: "metadata", type: "json" },
+    { name: "archivedAt", type: "date" },
+  ],
+  indexes: [
+    { name: "drug_products_title_idx", fields: ["title"] },
+    { name: "drug_products_product_idx", fields: ["productCatalogId"] },
+    { name: "drug_products_spec_idx", fields: ["productSpecId"] },
+    { name: "drug_products_company_idx", fields: ["companyId"] },
+    { name: "drug_products_authorization_idx", fields: ["marketAuthorizationNumber"] },
+    { name: "drug_products_status_idx", fields: ["status"] },
+  ],
+};

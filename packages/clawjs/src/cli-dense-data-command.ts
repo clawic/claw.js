@@ -311,6 +311,7 @@ function materializedSemanticViewForIntent(
   if (semanticView.id === "control.timeline") return materializedControlTimeline(input, intent, semanticView);
   if (semanticView.id === "public_case.timeline") return materializedPublicCaseTimeline(input, intent, semanticView);
   if (semanticView.id === "product_spec.timeline") return materializedProductSpecTimeline(input, intent, semanticView);
+  if (semanticView.id === "drug_product.timeline") return materializedDrugProductTimeline(input, intent, semanticView);
   if (semanticView.id === "thing.timeline") return materializedThingTimeline(input, intent, semanticView);
   if (semanticView.id === "construction_project.timeline") return materializedConstructionProjectTimeline(input, intent, semanticView);
   return undefined;
@@ -1517,6 +1518,102 @@ function materializedProductSpecTimeline(
   };
 }
 
+function materializedDrugProductTimeline(
+  input: DenseDataCliInput,
+  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
+) {
+  const drugProductId = input.positionals[1];
+  if (!drugProductId) return undefined;
+  const namespaceId = input.flags.namespace ?? "main";
+  const store = openDenseDataStore(input.workspaceRoot);
+  store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
+  const drugProduct = store.getRecord(namespaceId, "drug_products", drugProductId);
+  if (!drugProduct) return undefined;
+
+  const product = typeof drugProduct.productCatalogId === "string" ? store.getRecord(namespaceId, "products_catalog", drugProduct.productCatalogId) : undefined;
+  const productSpec = typeof drugProduct.productSpecId === "string" ? store.getRecord(namespaceId, "product_specs", drugProduct.productSpecId) : undefined;
+  const company = typeof drugProduct.companyId === "string" ? store.getRecord(namespaceId, "companies", drugProduct.companyId) : undefined;
+  const batches = store.listRecords(namespaceId, "batch_records", { filter: { drugProductId } }).items;
+  const lotReleases = store.listRecords(namespaceId, "lot_releases", { filter: { drugProductId } }).items;
+  const adverseEvents = store.listRecords(namespaceId, "adverse_events", { filter: { drugProductId } }).items;
+  const patientIds = new Set<string>(adverseEvents.map((record) => record.patientId).filter((value): value is string => typeof value === "string"));
+  const studyIds = new Set<string>(adverseEvents.map((record) => record.studyId).filter((value): value is string => typeof value === "string"));
+  const patients = [...patientIds].flatMap((patientId) => {
+    const record = store.getRecord(namespaceId, "patients", patientId);
+    return record ? [record] : [];
+  });
+  const studies = [...studyIds].flatMap((studyId) => {
+    const record = store.getRecord(namespaceId, "studies", studyId);
+    return record ? [record] : [];
+  });
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "drug_products", recordId: drugProductId } }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "drug_products", targetId: drugProductId } }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "drug_products", targetId: drugProductId } }).items;
+  const items = [
+    timelineItem(drugProduct, "drug_product", drugProduct.id, drugProduct.title ?? drugProduct.marketAuthorizationNumber ?? drugProduct.id, drugProduct.createdAt, drugProduct),
+    ...(product ? [timelineItem(product, "product", product.id, product.name ?? product.id, product.createdAt, product)] : []),
+    ...(productSpec ? [timelineItem(productSpec, "product_spec", productSpec.id, productSpec.title ?? productSpec.id, productSpec.createdAt, productSpec)] : []),
+    ...(company ? [timelineItem(company, "company", company.id, company.name ?? company.legalName ?? company.id, company.createdAt, company)] : []),
+    ...batches.map((record) => timelineItem(record, "batch_record", record.id, record.title ?? record.batchNumber ?? record.id, record.startedAt ?? record.createdAt, record)),
+    ...lotReleases.map((record) => timelineItem(record, "lot_release", record.id, record.title ?? record.certificateNumber ?? record.id, record.releasedAt ?? record.createdAt, record)),
+    ...adverseEvents.map((record) => timelineItem(record, "adverse_event", record.id, record.title ?? record.eventTerm ?? record.id, record.occurredAt ?? record.reportedAt ?? record.createdAt, record)),
+    ...patients.map((record) => timelineItem(record, "patient", record.id, record.displayName ?? record.id, record.createdAt, record)),
+    ...studies.map((record) => timelineItem(record, "study", record.id, record.title ?? record.id, record.startedAt ?? record.createdAt, record)),
+    ...evidence.map((record) => timelineItem(record, "evidence", record.id, record.label ?? record.id, record.capturedAt ?? record.createdAt, record)),
+    ...qualityGaps.map((record) => timelineItem(record, "quality_gap", record.id, record.label ?? record.id, record.createdAt, record)),
+    ...provenance.map((record) => timelineItem(record, "provenance", record.id, record.eventType ?? record.id, record.occurredAt ?? record.createdAt, record)),
+  ].sort((left, right) => String(left.occurredAt).localeCompare(String(right.occurredAt)));
+
+  return {
+    id: semanticView.id,
+    subject: { collectionName: "drug_products", id: drugProduct.id, label: drugProduct.title ?? drugProduct.marketAuthorizationNumber ?? drugProduct.id },
+    product: product ? { id: product.id, label: product.name ?? product.id } : null,
+    productSpec: productSpec ? { id: productSpec.id, label: productSpec.title ?? productSpec.id } : null,
+    company: company ? { id: company.id, label: company.name ?? company.legalName ?? company.id } : null,
+    summary: {
+      batches: batches.length,
+      completedBatches: batches.filter((record) => record.status === "completed" || record.status === "released").length,
+      lotReleases: lotReleases.length,
+      releasedLots: lotReleases.filter((record) => record.status === "released" || record.disposition === "release").length,
+      adverseEvents: adverseEvents.length,
+      seriousAdverseEvents: adverseEvents.filter((record) => record.seriousness === "serious" || record.seriousness === "life_threatening" || record.seriousness === "fatal").length,
+      patients: patients.length,
+      studies: studies.length,
+      evidenceSources: evidence.length,
+      qualityGaps: qualityGaps.length,
+      hasCatalogProduct: Boolean(product),
+      hasProductSpec: Boolean(productSpec),
+    },
+    itemCount: items.length,
+    items,
+    records: {
+      drugProduct,
+      product,
+      productSpec,
+      company,
+      batches,
+      lotReleases,
+      adverseEvents,
+      patients,
+      studies,
+      evidence,
+      provenance,
+    },
+    gaps: qualityGaps.map((record) => ({
+      id: record.id,
+      label: record.label,
+      status: record.status,
+      gapKind: record.gapKind,
+      severity: record.severity,
+      evidenceSourceId: record.evidenceSourceId,
+    })),
+    sourceCollections: ["drug_products", "products_catalog", "product_specs", "companies", "batch_records", "lot_releases", "adverse_events", "patients", "studies", "evidence_sources", "quality_gaps", "provenance_events"],
+    partial: qualityGaps.length > 0,
+    intentStatus: intent.status,
+  };
+}
+
 function materializedThingTimeline(
   input: DenseDataCliInput,
   intent: ReturnType<typeof resolveClawDenseDataIntent>,
@@ -2440,6 +2537,33 @@ function denseDbFlags(flags: Record<string, string>, collectionName: string): Re
   if (collectionName === "product_boms" && flags.component && !flags["component-product-catalog-id"]) {
     nextFlags = { ...nextFlags, "component-product-catalog-id": flags.component };
   }
+  if (["drug_products", "batch_records"].includes(collectionName) && flags.company && !flags["company-id"]) {
+    nextFlags = { ...nextFlags, "company-id": flags.company };
+  }
+  if (collectionName === "drug_products" && flags.product && !flags["product-catalog-id"]) {
+    nextFlags = { ...nextFlags, "product-catalog-id": flags.product };
+  }
+  if (collectionName === "drug_products" && flags["product-spec"] && !flags["product-spec-id"]) {
+    nextFlags = { ...nextFlags, "product-spec-id": flags["product-spec"] };
+  }
+  if (["batch_records", "lot_releases", "adverse_events"].includes(collectionName) && flags["drug-product"] && !flags["drug-product-id"]) {
+    nextFlags = { ...nextFlags, "drug-product-id": flags["drug-product"] };
+  }
+  if (collectionName === "batch_records" && flags["work-order"] && !flags["work-order-id"]) {
+    nextFlags = { ...nextFlags, "work-order-id": flags["work-order"] };
+  }
+  if (collectionName === "lot_releases" && flags.batch && !flags["batch-record-id"]) {
+    nextFlags = { ...nextFlags, "batch-record-id": flags.batch };
+  }
+  if (collectionName === "lot_releases" && flags.releaser && !flags["released-by-employee-id"]) {
+    nextFlags = { ...nextFlags, "released-by-employee-id": flags.releaser };
+  }
+  if (collectionName === "adverse_events" && flags.patient && !flags["patient-id"]) {
+    nextFlags = { ...nextFlags, "patient-id": flags.patient };
+  }
+  if (collectionName === "adverse_events" && flags.study && !flags["study-id"]) {
+    nextFlags = { ...nextFlags, "study-id": flags.study };
+  }
   if (collectionName === "iot_things" && flags.company && !flags["company-id"]) {
     nextFlags = { ...nextFlags, "company-id": flags.company };
   }
@@ -2819,6 +2943,24 @@ function nestedDenseDbRoute(input: DenseDataCliInput): Parameters<typeof runMagi
       boms: "product_boms",
       "product-bom": "product_boms",
       "product-boms": "product_boms",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "drug-product",
+    relationFlag: "drug-product-id",
+    relationField: "drugProductId",
+    collections: {
+      batch: "batch_records",
+      batches: "batch_records",
+      "batch-record": "batch_records",
+      "batch-records": "batch_records",
+      "lot-release": "lot_releases",
+      "lot-releases": "lot_releases",
+      release: "lot_releases",
+      releases: "lot_releases",
+      "adverse-event": "adverse_events",
+      "adverse-events": "adverse_events",
+      "safety-event": "adverse_events",
+      "safety-events": "adverse_events",
     },
   }) ?? nestedParentDbRoute(input, {
     parentCommand: "thing",
