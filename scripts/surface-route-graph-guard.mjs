@@ -11,6 +11,10 @@ const requiredNodeIds = [
   "claw.host.grants",
   "claw.host.approvals",
   "claw.host.audit",
+  "claw.mac.controlPlane",
+  "claw.mac.capabilityAtlas",
+  "claw.mac.permissionBroker",
+  "claw.mac.actionBroker",
   "clawix.ui.chat",
   "clawix.companion.client",
   "clawix.bridge.local",
@@ -43,6 +47,8 @@ const requiredRouteIds = [
   "sync.sqliteResources",
   "gateway.headlessAgentHost",
   "gateway.multiTenantAgentService",
+  "mac.directCliAction",
+  "mac.permissionLifecycle",
   "mesh.resourceShare",
 ];
 
@@ -54,6 +60,9 @@ const requiredContractIds = [
   "claw.api.sync.manifests",
   "claw.api.gateway.conformance",
   "claw.protocol.hostCommand.v1",
+  "claw.mac.actionPlan.v1",
+  "claw.mac.actionReceipt.v1",
+  "claw.mac.permissionState.v1",
 ];
 
 const requiredTransportTokens = ["24080"];

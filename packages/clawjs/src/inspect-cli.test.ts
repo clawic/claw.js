@@ -110,6 +110,8 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
     "cli.commandIntentResolution",
     "gateway.headlessAgentHost",
     "gateway.multiTenantAgentService",
+    "mac.directCliAction",
+    "mac.permissionLifecycle",
     "mesh.resourceShare",
     "remote.chatGateway",
     "remote.searchGateway",
@@ -122,6 +124,7 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   assert.equal(routeList.find((route) => route.id === "chat.localDesktop")?.steps.every((step) => ["owns", "consumes", "exposes", "brokers"].includes(step.edgeType)), true);
   assert.equal(routeList.find((route) => route.id === "agents.externalSupportAssignment")?.steps.some((step) => step.toId === "claw.support.inbox"), true);
   assert.equal(routeList.find((route) => route.id === "cli.commandIntentResolution")?.steps.every((step) => ["owns", "consumes", "exposes", "brokers"].includes(step.edgeType)), true);
+  assert.equal(routeList.find((route) => route.id === "mac.directCliAction")?.steps.some((step) => step.toId === "claw.mac.actionBroker"), true);
 
   const route = await runCliCapture(["inspect", "route", "chat.remoteRelay", "--json"], process.cwd());
   assert.equal(route.code, CLI_EXIT_OK);
@@ -225,6 +228,21 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.equal(gateway.code, CLI_EXIT_OK);
   const gatewayPayload = parseCliJson<{ hostedSelfHostedParity: string }>(gateway.stdout).data;
   assert.equal(gatewayPayload.hostedSelfHostedParity, "required");
+
+  const agentService = await runCliCapture(["gateway", "agent-service", "--tenant-id", "tenant.acme", "--agent-id", "agent.support", "--assignment-id", "assignment.service", "--estimated-cost-cents", "300", "--json"], process.cwd());
+  assert.equal(agentService.code, CLI_EXIT_OK);
+  const agentServicePayload = parseCliJson<{
+    allowed: boolean;
+    billingAccountId: string;
+    isolationKey: string;
+    audit: { eventType: string; decision: string };
+    writes: boolean;
+  }>(agentService.stdout).data;
+  assert.equal(agentServicePayload.allowed, true);
+  assert.equal(agentServicePayload.billingAccountId, "billing.demo");
+  assert.equal(agentServicePayload.isolationKey, "tenant.acme:assignment.service");
+  assert.equal(agentServicePayload.audit.eventType, "remote.agent_service.evaluated");
+  assert.equal(agentServicePayload.writes, false);
 });
 
 test("runCli exposes an agent inspection fiche", async () => {

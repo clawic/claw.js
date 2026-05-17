@@ -47,6 +47,10 @@ flowchart TD
   claw_host_grants["Host grants\nroot"]
   claw_host_approvals["Host approvals\nroot"]
   claw_host_audit["Host audit\nroot"]
+  claw_mac_controlPlane["Mac Control Plane\nroot"]
+  claw_mac_capabilityAtlas["Mac capability atlas\nroot"]
+  claw_mac_permissionBroker["Mac Permission Broker\nroot"]
+  claw_mac_actionBroker["Mac Action Broker\nroot"]
   clawix_ui_chat["Clawix agent chat UI\nroot"]
   clawix_companion_client["Companion client\nroot"]
   clawix_bridge_local["Clawix local bridge\nroot"]
@@ -180,8 +184,16 @@ flowchart TD
   claw_contracts_api --> claw_api_nodes_trust
   claw_api_nodes_revoke["Node revocation dry-run contract\napiRoute"]
   claw_contracts_api --> claw_api_nodes_revoke
+  claw_api_mesh_invitations["Inter-mesh invitation dry-run contract\napiRoute"]
+  claw_contracts_api --> claw_api_mesh_invitations
+  claw_api_mesh_shares["Inter-mesh scoped resource share dry-run contract\napiRoute"]
+  claw_contracts_api --> claw_api_mesh_shares
+  claw_api_mesh_revocations["Inter-mesh share/invitation revocation dry-run contract\napiRoute"]
+  claw_contracts_api --> claw_api_mesh_revocations
   claw_api_gateway_conformance["Gateway hosted/self-hosted conformance contract\napiRoute"]
   claw_contracts_api --> claw_api_gateway_conformance
+  claw_api_gateway_agentServiceEvaluate["Gateway multi-tenant agent service evaluation contract\napiRoute"]
+  claw_contracts_api --> claw_api_gateway_agentServiceEvaluate
   claw_privateApi_attachments["/api/attachments private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_attachments
   claw_privateApi_authToken["/api/auth/token private API route\nprivateApiRoute"]
@@ -1110,6 +1122,78 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_host
   claw_cli_command_system["system\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_system
+  claw_cli_command_mac["mac\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_mac
+  claw_cli_command_permissions["permissions\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_permissions
+  claw_cli_command_wifi["wifi\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_wifi
+  claw_cli_command_window["window\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_window
+  claw_cli_command_shortcut["shortcut\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_shortcut
+  claw_cli_command_app["app\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_app
+  claw_cli_command_process["process\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_process
+  claw_cli_command_network["network\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_network
+  claw_cli_command_vpn["vpn\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_vpn
+  claw_cli_command_proxy["proxy\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_proxy
+  claw_cli_command_firewall["firewall\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_firewall
+  claw_cli_command_bluetooth["bluetooth\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_bluetooth
+  claw_cli_command_display["display\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_display
+  claw_cli_command_screen["screen\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_screen
+  claw_cli_command_input["input\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_input
+  claw_cli_command_keyboard["keyboard\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_keyboard
+  claw_cli_command_mouse["mouse\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_mouse
+  claw_cli_command_trackpad["trackpad\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_trackpad
+  claw_cli_command_clipboard["clipboard\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_clipboard
+  claw_cli_command_focus["focus\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_focus
+  claw_cli_command_notification["notification\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_notification
+  claw_cli_command_power["power\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_power
+  claw_cli_command_battery["battery\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_battery
+  claw_cli_command_camera["camera\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_camera
+  claw_cli_command_microphone["microphone\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_microphone
+  claw_cli_command_speech["speech\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_speech
+  claw_cli_command_printer["printer\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_printer
+  claw_cli_command_usb["usb\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_usb
+  claw_cli_command_disk["disk\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_disk
+  claw_cli_command_privacy["privacy\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_privacy
+  claw_cli_command_security["security\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_security
+  claw_cli_command_automation["automation\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_automation
+  claw_cli_command_accessibility["accessibility\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_accessibility
+  claw_cli_command_dock["dock\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_dock
+  claw_cli_command_finder["finder\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_finder
+  claw_cli_command_desktop["desktop\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_desktop
   claw_cli_command_database["database\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_database
   claw_cli_command_db["db\ncliCommand"]
@@ -1346,6 +1430,16 @@ flowchart TD
   claw_contracts_protocol --> claw_agent_assignment_external_v1
   claw_mcp_agents_v1["MCP Agents V1 assignment contract\nprotocol"]
   claw_contracts_protocol --> claw_mcp_agents_v1
+  claw_mac_actionRequest_v1["Mac action request contract\njsonSchema"]
+  claw_contracts_schemas --> claw_mac_actionRequest_v1
+  claw_mac_actionPlan_v1["Mac action plan contract\njsonSchema"]
+  claw_contracts_schemas --> claw_mac_actionPlan_v1
+  claw_mac_actionReceipt_v1["Mac action receipt contract\njsonSchema"]
+  claw_contracts_schemas --> claw_mac_actionReceipt_v1
+  claw_mac_permissionState_v1["Mac permission state contract\njsonSchema"]
+  claw_contracts_schemas --> claw_mac_permissionState_v1
+  claw_mac_policyGrant_v1["Mac policy grant contract\njsonSchema"]
+  claw_contracts_schemas --> claw_mac_policyGrant_v1
   claw_schema_commandIntents_v1["CLI command intent schema v1\njsonSchema"]
   claw_contracts_schemas --> claw_schema_commandIntents_v1
   claw_cli_flag_json["--json\ncliFlag"]
@@ -1847,6 +1941,16 @@ flowchart TD
   claw_runtime_agent -- "owns" --> claw_agents_runs
   claw_agents_assignments -- "exposes" --> claw_support_inbox
   claw_mcp_surface -- "consumes" --> claw_agents_assignments
+  claw_cli_command_mac -- "exposes" --> claw_mac_controlPlane
+  claw_cli_command_wifi -- "exposes" --> claw_mac_controlPlane
+  claw_cli_command_permissions -- "exposes" --> claw_mac_permissionBroker
+  claw_mac_controlPlane -- "consumes" --> claw_mac_capabilityAtlas
+  claw_mac_controlPlane -- "brokers" --> claw_mac_permissionBroker
+  claw_mac_permissionBroker -- "brokers" --> claw_host_permissions
+  claw_mac_permissionBroker -- "owns" --> claw_host_audit
+  claw_mac_controlPlane -- "brokers" --> claw_mac_actionBroker
+  claw_mac_actionBroker -- "brokers" --> claw_host_signed
+  claw_mac_actionBroker -- "owns" --> claw_host_audit
   clawix_ui_chat -- "consumes" --> claw_agents_assignments
   claw_relay -- "brokers" --> claw_agents_assignments
   clawix_ui_chat -- "consumes" --> clawix_bridge_local
@@ -1886,6 +1990,8 @@ flowchart TD
 | ID | From | To | Visibility | Validation |
 | --- | --- | --- | --- | --- |
 | `cli.commandIntentResolution` | `claw.cli.command.commands` | `claw.cli.command.report` | public | Fixture tests for resolve, record, list, opportunities, promote, unknown fallback metadata, and inspect command-intents. |
+| `mac.directCliAction` | `claw.cli.command.wifi` | `claw.host.audit` | public | Mac CLI direct-root tests, atlas tests, host permission guard, and inspect route tests |
+| `mac.permissionLifecycle` | `claw.cli.command.permissions` | `claw.host.audit` | public | Mac permission tests, host permission guard, and inspect route tests |
 | `chat.localDesktop` | `clawix.ui.chat` | `claw.sessions` | internal | Fixture + hermetic E2E for local desktop chat |
 | `agents.internalMacAssignment` | `clawix.ui.chat` | `claw.sessions` | internal | Fixture + hermetic E2E for internal Mac assignment |
 | `agents.externalSupportAssignment` | `claw.remote.client` | `claw.support.inbox` | external | Fake external support assignment fixture |
@@ -1920,6 +2026,16 @@ flowchart TD
 | `claw.edge.runtime.owns.agentRuns` | owns | `claw.runtime.agent` | `claw.agents.runs` | `claw.database.core.table.agent_runs` | core.sqlite |
 | `claw.edge.assignments.exposes.supportInbox` | exposes | `claw.agents.assignments` | `claw.support.inbox` | `claw.database.support` | support/inbox projection |
 | `claw.edge.mcp.consumes.assignments` | consumes | `claw.mcp.surface` | `claw.agents.assignments` | `claw.mcp.agents.v1` | MCP tool/resource policy gate |
+| `claw.edge.mac.cli.exposes.controlPlane` | exposes | `claw.cli.command.mac` | `claw.mac.controlPlane` | `claw.mac.actionPlan.v1` | local CLI plan/coverage/doctor portal |
+| `claw.edge.mac.directWifi.exposes.controlPlane` | exposes | `claw.cli.command.wifi` | `claw.mac.controlPlane` | `claw.mac.actionRequest.v1` | direct intuitive CLI root |
+| `claw.edge.mac.permissionsCli.exposes.permissionBroker` | exposes | `claw.cli.command.permissions` | `claw.mac.permissionBroker` | `claw.mac.permissionState.v1` | central permission CLI root |
+| `claw.edge.mac.control.consumes.atlas` | consumes | `claw.mac.controlPlane` | `claw.mac.capabilityAtlas` | `claw.mac.actionRequest.v1` | typed capability registry lookup |
+| `claw.edge.mac.control.brokers.permission` | brokers | `claw.mac.controlPlane` | `claw.mac.permissionBroker` | `claw.mac.permissionState.v1` | plan-first permission preflight |
+| `claw.edge.mac.permission.brokers.hostPermissions` | brokers | `claw.mac.permissionBroker` | `claw.host.permissions` | `claw.mac.permissionState.v1` | signed-host OS permission state check/request guidance |
+| `claw.edge.mac.permission.owns.audit` | owns | `claw.mac.permissionBroker` | `claw.host.audit` | `claw.mac.permissionState.v1` | redacted permission lifecycle audit |
+| `claw.edge.mac.control.brokers.action` | brokers | `claw.mac.controlPlane` | `claw.mac.actionBroker` | `claw.mac.actionPlan.v1` | policy-gated action plan handoff |
+| `claw.edge.mac.action.brokers.host` | brokers | `claw.mac.actionBroker` | `claw.host.signed` | `claw.mac.actionReceipt.v1` | active signed-host native execution |
+| `claw.edge.mac.action.owns.audit` | owns | `claw.mac.actionBroker` | `claw.host.audit` | `claw.mac.actionReceipt.v1` | redacted action receipt and durable audit event |
 | `claw.edge.chat.ui.consumes.assignment` | consumes | `clawix.ui.chat` | `claw.agents.assignments` | `claw.agent_assignment.internal_mac.v1` | local assignment selection |
 | `claw.edge.relay.brokers.assignments` | brokers | `claw.relay` | `claw.agents.assignments` | `claw.agent_assignment.external.v1` | remote-safe assignment selection |
 | `claw.edge.chat.ui.consumes.bridge` | consumes | `clawix.ui.chat` | `clawix.bridge.local` | `clawix.protocol.bridge.v1` | local bridge RPC |
@@ -1949,9 +2065,9 @@ flowchart TD
 | `claw.edge.sync.owns.sqlite` | owns | `claw.sync` | `claw.database.core` | `claw.api.sync.changes` | SQLite full/partial table manifests |
 | `claw.edge.sync.owns.remoteCache` | owns | `claw.sync` | `claw.remoteCache` | `claw.api.sync.manifests` | encrypted TTL cache and outbound queue |
 | `claw.edge.gateway.exposes.headlessHost` | exposes | `claw.gateway` | `claw.headlessHost` | `claw.api.gateway.conformance` | headless service projection |
-| `claw.edge.headlessHost.brokers.assignments` | brokers | `claw.headlessHost` | `claw.agents.assignments` | `claw.agent_assignment.external.v1` | multi-tenant governed assignment routing |
+| `claw.edge.headlessHost.brokers.assignments` | brokers | `claw.headlessHost` | `claw.agents.assignments` | `claw.api.gateway.agentServiceEvaluate` | multi-tenant governed assignment routing |
 | `claw.edge.coordinator.consumes.iroh` | consumes | `claw.coordinator` | `claw.transport.iroh` | `claw.api.nodes` | Iroh adapter for P2P/rendezvous/relay fallback |
-| `claw.edge.meshShare.brokers.sync` | brokers | `claw.mesh.share` | `claw.sync` | `claw.api.sync.manifests` | invite/share/revoke primitives |
+| `claw.edge.meshShare.brokers.sync` | brokers | `claw.mesh.share` | `claw.sync` | `claw.api.mesh.shares` | invite/share/revoke primitives |
 
 ## Nodes
 
@@ -1985,6 +2101,10 @@ flowchart TD
 | `claw.host.grants` | root | protocol | claw | humanUi | cli, serviceApi |  | `host/grants` |
 | `claw.host.approvals` | root | protocol | claw | humanUi | cli, serviceApi |  | `host/approvals` |
 | `claw.host.audit` | root | protocol | claw | humanUi | cli, serviceApi, persistence |  | `host/audit` |
+| `claw.mac.controlPlane` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp |  | `mac` |
+| `claw.mac.capabilityAtlas` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp, persistence |  | `mac/atlas` |
+| `claw.mac.permissionBroker` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp, persistence |  | `permissions` |
+| `claw.mac.actionBroker` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp |  | `mac/action-broker` |
 | `clawix.ui.chat` | root | protocol | clawix | humanUi | serviceApi |  | `Clawix/chat` |
 | `clawix.companion.client` | root | protocol | clawix | humanUi | serviceApi |  | `Clawix/companion` |
 | `clawix.bridge.local` | root | protocol | clawix | humanUi | serviceApi |  | `clawix-bridge` |
@@ -2063,7 +2183,11 @@ flowchart TD
 | `claw.api.nodes.pair` | apiRoute | api | claw |  |  |  | `/v1/nodes/pair` |
 | `claw.api.nodes.trust` | apiRoute | api | claw |  |  |  | `/v1/nodes/trust` |
 | `claw.api.nodes.revoke` | apiRoute | api | claw |  |  |  | `/v1/nodes/revoke` |
+| `claw.api.mesh.invitations` | apiRoute | api | claw |  |  |  | `/v1/mesh/invitations` |
+| `claw.api.mesh.shares` | apiRoute | api | claw |  |  |  | `/v1/mesh/shares` |
+| `claw.api.mesh.revocations` | apiRoute | api | claw |  |  |  | `/v1/mesh/revocations` |
 | `claw.api.gateway.conformance` | apiRoute | api | claw |  |  |  | `/v1/gateway/conformance` |
+| `claw.api.gateway.agentServiceEvaluate` | apiRoute | api | claw |  |  |  | `/v1/gateway/agent-service/evaluate` |
 | `claw.privateApi.attachments` | privateApiRoute | api | claw |  |  |  | `/api/attachments` |
 | `claw.privateApi.authToken` | privateApiRoute | api | claw |  |  |  | `/api/auth/token` |
 | `claw.privateApi.capture` | privateApiRoute | api | claw |  |  |  | `/api/capture` |
@@ -2528,6 +2652,42 @@ flowchart TD
 | `claw.port.clawixBridge` | port | config | claw |  |  |  | `24080` |
 | `claw.cli.command.host` | cliCommand | cli | claw |  |  |  | `host` |
 | `claw.cli.command.system` | cliCommand | cli | claw |  |  |  | `system` |
+| `claw.cli.command.mac` | cliCommand | cli | claw |  |  |  | `mac` |
+| `claw.cli.command.permissions` | cliCommand | cli | claw |  |  |  | `permissions` |
+| `claw.cli.command.wifi` | cliCommand | cli | claw |  |  |  | `wifi` |
+| `claw.cli.command.window` | cliCommand | cli | claw |  |  |  | `window` |
+| `claw.cli.command.shortcut` | cliCommand | cli | claw |  |  |  | `shortcut` |
+| `claw.cli.command.app` | cliCommand | cli | claw |  |  |  | `app` |
+| `claw.cli.command.process` | cliCommand | cli | claw |  |  |  | `process` |
+| `claw.cli.command.network` | cliCommand | cli | claw |  |  |  | `network` |
+| `claw.cli.command.vpn` | cliCommand | cli | claw |  |  |  | `vpn` |
+| `claw.cli.command.proxy` | cliCommand | cli | claw |  |  |  | `proxy` |
+| `claw.cli.command.firewall` | cliCommand | cli | claw |  |  |  | `firewall` |
+| `claw.cli.command.bluetooth` | cliCommand | cli | claw |  |  |  | `bluetooth` |
+| `claw.cli.command.display` | cliCommand | cli | claw |  |  |  | `display` |
+| `claw.cli.command.screen` | cliCommand | cli | claw |  |  |  | `screen` |
+| `claw.cli.command.input` | cliCommand | cli | claw |  |  |  | `input` |
+| `claw.cli.command.keyboard` | cliCommand | cli | claw |  |  |  | `keyboard` |
+| `claw.cli.command.mouse` | cliCommand | cli | claw |  |  |  | `mouse` |
+| `claw.cli.command.trackpad` | cliCommand | cli | claw |  |  |  | `trackpad` |
+| `claw.cli.command.clipboard` | cliCommand | cli | claw |  |  |  | `clipboard` |
+| `claw.cli.command.focus` | cliCommand | cli | claw |  |  |  | `focus` |
+| `claw.cli.command.notification` | cliCommand | cli | claw |  |  |  | `notification` |
+| `claw.cli.command.power` | cliCommand | cli | claw |  |  |  | `power` |
+| `claw.cli.command.battery` | cliCommand | cli | claw |  |  |  | `battery` |
+| `claw.cli.command.camera` | cliCommand | cli | claw |  |  |  | `camera` |
+| `claw.cli.command.microphone` | cliCommand | cli | claw |  |  |  | `microphone` |
+| `claw.cli.command.speech` | cliCommand | cli | claw |  |  |  | `speech` |
+| `claw.cli.command.printer` | cliCommand | cli | claw |  |  |  | `printer` |
+| `claw.cli.command.usb` | cliCommand | cli | claw |  |  |  | `usb` |
+| `claw.cli.command.disk` | cliCommand | cli | claw |  |  |  | `disk` |
+| `claw.cli.command.privacy` | cliCommand | cli | claw |  |  |  | `privacy` |
+| `claw.cli.command.security` | cliCommand | cli | claw |  |  |  | `security` |
+| `claw.cli.command.automation` | cliCommand | cli | claw |  |  |  | `automation` |
+| `claw.cli.command.accessibility` | cliCommand | cli | claw |  |  |  | `accessibility` |
+| `claw.cli.command.dock` | cliCommand | cli | claw |  |  |  | `dock` |
+| `claw.cli.command.finder` | cliCommand | cli | claw |  |  |  | `finder` |
+| `claw.cli.command.desktop` | cliCommand | cli | claw |  |  |  | `desktop` |
 | `claw.cli.command.database` | cliCommand | cli | claw |  |  |  | `database` |
 | `claw.cli.command.db` | cliCommand | cli | claw |  |  |  | `db` |
 | `claw.cli.command.collections` | cliCommand | cli | claw |  |  |  | `collections` |
@@ -2646,6 +2806,11 @@ flowchart TD
 | `claw.agent_assignment.internal_mac.v1` | protocol | protocol | claw |  |  |  | `claw.agent_assignment.internal_mac.v1` |
 | `claw.agent_assignment.external.v1` | protocol | protocol | claw |  |  |  | `claw.agent_assignment.external.v1` |
 | `claw.mcp.agents.v1` | protocol | protocol | claw |  |  |  | `claw.mcp.agents.v1` |
+| `claw.mac.actionRequest.v1` | jsonSchema | schema | claw |  |  |  | `claw.mac.actionRequest.v1` |
+| `claw.mac.actionPlan.v1` | jsonSchema | schema | claw |  |  |  | `claw.mac.actionPlan.v1` |
+| `claw.mac.actionReceipt.v1` | jsonSchema | schema | claw |  |  |  | `claw.mac.actionReceipt.v1` |
+| `claw.mac.permissionState.v1` | jsonSchema | schema | claw |  |  |  | `claw.mac.permissionState.v1` |
+| `claw.mac.policyGrant.v1` | jsonSchema | schema | claw |  |  |  | `claw.mac.policyGrant.v1` |
 | `claw.schema.commandIntents.v1` | jsonSchema | schema | claw |  |  |  | `claw.cli.commandIntents.v1` |
 | `claw.cli.flag.json` | cliFlag | cli | claw |  |  |  | `--json` |
 | `claw.cli.flag.dry-run` | cliFlag | cli | claw |  |  |  | `--dry-run` |

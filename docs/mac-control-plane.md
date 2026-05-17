@@ -7,6 +7,8 @@ same atlas, policy, permission, audit, and signed-host broker contracts.
 
 The architecture decision is [ADR 0023: Mac Control Plane V1](./adr/0023-mac-control-plane-v1.md).
 The permission decision is [ADR 0024: Mac Permission Broker V1](./adr/0024-mac-permission-broker-v1.md).
+Source decisions are tracked in [Mac Control Plane Source Decision Audit](./mac-control-plane-source-decision-audit.md)
+and [Mac Control Plane Decision Matrix](./mac-control-plane-decision-matrix.md).
 
 ## Public Shape
 
@@ -57,3 +59,17 @@ Each capability records its stable id, family, action, platforms, source,
 confidence, backend, OS permissions, risk tier, coverage state, CLI usage,
 related surfaces, UI pack, and validation references. The atlas starts
 macOS 14+ and must be audited for each macOS major release.
+
+## Route Graph
+
+The stable surface graph registers the first Mac routes explicitly:
+
+- `mac.directCliAction`: direct roots such as `claw wifi connect` resolve
+  through `claw.mac.controlPlane`, `claw.mac.capabilityAtlas`,
+  `claw.mac.permissionBroker`, `claw.mac.actionBroker`, `claw.host.signed`,
+  and `claw.host.audit`.
+- `mac.permissionLifecycle`: `claw permissions` resolves through
+  `claw.mac.permissionBroker`, `claw.host.permissions`, and `claw.host.audit`.
+
+These routes are inspectable through `claw inspect routes` and enforced by the
+surface route graph guard.

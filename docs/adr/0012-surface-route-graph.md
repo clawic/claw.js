@@ -61,6 +61,11 @@ The first required routes are:
 - `chat.remoteRelay`: remote client -> Relay HTTPS/WebSocket -> workspace
   connector -> materialized workspace -> runtime -> remote-safe session
   response.
+- `mac.directCliAction`: an intuitive local root such as `claw wifi connect`
+  resolves through the Mac atlas, central permission broker, signed-host action
+  broker, and redacted audit receipt.
+- `mac.permissionLifecycle`: `claw permissions` centralizes OS permission
+  state, framework grants, just-in-time request plans, and lifecycle audit.
 
 Relay is registered as a first-class critical node. It is not promoted to the
 canonical local API; it remains the remote-safe control plane described by ADR
