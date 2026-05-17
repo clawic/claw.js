@@ -3,16 +3,16 @@
   "program": "code-hygiene",
   "tool": "knip",
   "toolVersion": "6.14.0",
-  "generatedAt": "2026-05-17T00:41:46.288Z",
+  "generatedAt": "2026-05-17T00:47:28.657Z",
   "mode": "report-only",
   "config": "knip.json",
   "cwd": ".",
   "summary": {
-    "filesWithIssues": 206,
-    "totalIssues": 982,
+    "filesWithIssues": 204,
+    "totalIssues": 957,
     "issueTypes": {
       "unlisted": 2,
-      "types": 184,
+      "types": 159,
       "owners": 134,
       "exports": 654,
       "duplicates": 8
@@ -115,13 +115,6 @@
         }
       },
       {
-        "file": "execution/src/shared/protocol.ts",
-        "totalIssues": 13,
-        "issueCounts": {
-          "types": 13
-        }
-      },
-      {
         "file": "secrets/src/shared/types.ts",
         "totalIssues": 13,
         "issueCounts": {
@@ -145,13 +138,6 @@
         }
       },
       {
-        "file": "relay/src/shared/protocol.ts",
-        "totalIssues": 12,
-        "issueCounts": {
-          "types": 12
-        }
-      },
-      {
         "file": "packages/clawjs-core/src/builtins/career/index.ts",
         "totalIssues": 11,
         "issueCounts": {
@@ -169,6 +155,22 @@
       },
       {
         "file": "packages/clawjs-core/src/builtins/learning/index.ts",
+        "totalIssues": 11,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 10
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/mental_health_recovery/index.ts",
+        "totalIssues": 11,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 10
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/observability/index.ts",
         "totalIssues": 11,
         "issueCounts": {
           "owners": 1,

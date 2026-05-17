@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import type { DeploymentKind, RuntimeLanguage, RunStatus } from "./types.ts";
 
-export interface WorkerHelloPayload {
+interface WorkerHelloPayload {
   tenantId: string;
   workerId: string;
   label: string;
@@ -48,13 +48,13 @@ export interface WorkerArtifactPayload {
   deployableKind?: DeploymentKind | null;
 }
 
-export interface NotebookCellOutput {
+interface NotebookCellOutput {
   id: string;
   status: "succeeded" | "failed" | "stale";
   output: string;
 }
 
-export interface WorkerCompletePayload {
+interface WorkerCompletePayload {
   runId: string;
   status: RunStatus;
   exitCode: number;
@@ -66,23 +66,23 @@ export interface WorkerCompletePayload {
   };
 }
 
-export interface WorkerLogPayload {
+interface WorkerLogPayload {
   runId: string;
   stream: "stdout" | "stderr" | "system";
   line: string;
 }
 
-export interface WorkerClaimPayload {
+interface WorkerClaimPayload {
   tenantId: string;
   workerId: string;
 }
 
-export interface WorkerTerminalPayload {
+interface WorkerTerminalPayload {
   runId: string;
   data: string;
 }
 
-export interface WorkerEnvelopeBase {
+interface WorkerEnvelopeBase {
   type: "hello" | "heartbeat" | "claimRun" | "invoke" | "streamLogs" | "completeRun" | "terminalData" | "deploymentStatus" | "ack" | "error";
   requestId?: string;
 }
@@ -92,12 +92,12 @@ export interface WorkerHelloEnvelope extends WorkerEnvelopeBase {
   payload: WorkerHelloPayload;
 }
 
-export interface WorkerHeartbeatEnvelope extends WorkerEnvelopeBase {
+interface WorkerHeartbeatEnvelope extends WorkerEnvelopeBase {
   type: "heartbeat";
   payload: { workerId: string; timestamp: number };
 }
 
-export interface WorkerClaimEnvelope extends WorkerEnvelopeBase {
+interface WorkerClaimEnvelope extends WorkerEnvelopeBase {
   type: "claimRun";
   payload: WorkerClaimPayload;
 }
@@ -120,19 +120,19 @@ export interface WorkerCompleteEnvelope extends WorkerEnvelopeBase {
   payload: WorkerCompletePayload;
 }
 
-export interface WorkerTerminalEnvelope extends WorkerEnvelopeBase {
+interface WorkerTerminalEnvelope extends WorkerEnvelopeBase {
   type: "terminalData";
   requestId: string;
   payload: WorkerTerminalPayload;
 }
 
-export interface WorkerAckEnvelope extends WorkerEnvelopeBase {
+interface WorkerAckEnvelope extends WorkerEnvelopeBase {
   type: "ack";
   requestId?: string;
   payload?: Record<string, unknown>;
 }
 
-export interface WorkerErrorEnvelope extends WorkerEnvelopeBase {
+interface WorkerErrorEnvelope extends WorkerEnvelopeBase {
   type: "error";
   requestId?: string;
   code: string;
@@ -149,7 +149,7 @@ export type WorkerInboundEnvelope =
   | WorkerAckEnvelope
   | WorkerErrorEnvelope;
 
-export type WorkerOutboundEnvelope = WorkerInvokeEnvelope | WorkerAckEnvelope | WorkerErrorEnvelope;
+type WorkerOutboundEnvelope = WorkerInvokeEnvelope | WorkerAckEnvelope | WorkerErrorEnvelope;
 
 export function generateOpaqueToken(prefix: string): { tokenId: string; token: string; secret: string } {
   const tokenId = randomUUID();

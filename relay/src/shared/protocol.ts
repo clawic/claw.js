@@ -18,7 +18,7 @@ export interface ConnectorServiceDescriptor {
   status?: "online" | "offline" | "degraded";
 }
 
-export interface ConnectorHelloPayload {
+interface ConnectorHelloPayload {
   tenantId: string;
   connectorId: string;
   agentId: string;
@@ -39,7 +39,7 @@ export interface ConnectorHelloPayload {
   };
 }
 
-export interface ConnectorEnvelopeBase {
+interface ConnectorEnvelopeBase {
   type: "hello" | "heartbeat" | "invoke" | "stream" | "result" | "error" | "event" | "ack" | "cancel";
   requestId?: string;
   subscriptionId?: string;
@@ -62,7 +62,7 @@ export interface StreamEnvelope extends ConnectorEnvelopeBase {
   payload: Record<string, unknown>;
 }
 
-export interface ResultEnvelope extends ConnectorEnvelopeBase {
+interface ResultEnvelope extends ConnectorEnvelopeBase {
   type: "result";
   requestId: string;
   payload: Record<string, unknown>;
@@ -76,19 +76,19 @@ export interface ErrorEnvelope extends ConnectorEnvelopeBase {
   details?: Record<string, unknown>;
 }
 
-export interface AckEnvelope extends ConnectorEnvelopeBase {
+interface AckEnvelope extends ConnectorEnvelopeBase {
   type: "ack";
   requestId?: string;
   payload?: Record<string, unknown>;
 }
 
-export interface EventEnvelope extends ConnectorEnvelopeBase {
+interface EventEnvelope extends ConnectorEnvelopeBase {
   type: "event";
   event: string;
   payload: Record<string, unknown>;
 }
 
-export interface HeartbeatEnvelope extends ConnectorEnvelopeBase {
+interface HeartbeatEnvelope extends ConnectorEnvelopeBase {
   type: "heartbeat";
   payload?: { timestamp: number };
 }
@@ -156,31 +156,31 @@ export interface ActivityRecord {
   createdAt: number;
 }
 
-export interface ConnectorBrowserEnsurePayload {
+interface ConnectorBrowserEnsurePayload {
   initialUrl?: string;
 }
 
-export interface ConnectorBrowserControlPayload {
+interface ConnectorBrowserControlPayload {
   actor: BrowserActor;
 }
 
-export interface ConnectorBrowserNavigatePayload {
+interface ConnectorBrowserNavigatePayload {
   actor: BrowserActor;
   url: string;
 }
 
-export interface ConnectorBrowserInputPayload {
+interface ConnectorBrowserInputPayload {
   actor: BrowserActor;
   command: BrowserInputCommand;
 }
 
-export interface ConnectorBrowserStatePayload {
+interface ConnectorBrowserStatePayload {
   workspaceId: string;
   session: BrowserSessionSnapshot;
   reason: string;
 }
 
-export interface ConnectorBrowserFramePayload extends BrowserFrameEvent {}
+interface ConnectorBrowserFramePayload extends BrowserFrameEvent {}
 
 export interface UsageRecord {
   id: string;
