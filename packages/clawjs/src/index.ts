@@ -680,7 +680,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     return await runSearchQueryCli({ positionals, flags, context, wantsJson, binName });
   }
   if (group === "search" && command === "rebuild") {
-    return await runSearchRebuildCli({ flags, context, wantsJson });
+    return await runSearchRebuildCli({ flags, argv, context, wantsJson });
   }
   {
     const v1DataExitCode = await runV1DataCli({
