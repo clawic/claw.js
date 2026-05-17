@@ -142,6 +142,12 @@ or source metadata via `metadata.<field>`. `SearchQueryInput.shards` and CLI
 filters. Query responses include the selected sources' declared facets so UI
 sections can build scoped filter controls from manifests.
 
+Result ACL is enforced before ranking output is returned. Indexed documents can
+declare `permissions.allowedActors`, `permissions.allowedAgents`, and
+`permissions.requiredScopes`; Search hides those results unless the query actor
+and scope filters satisfy the document policy. This keeps agent-specific or
+scope-specific records out of broad Root Search while preserving public results.
+
 Ranking is centralized in `@clawjs/search`. The store reranks a bounded
 candidate batch with lexical score, source ranking hints, local frecency,
 `actor`, `surface`, and scope-like metadata filters before returning the final

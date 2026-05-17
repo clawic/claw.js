@@ -140,6 +140,9 @@ export interface SearchResult {
     canOpen?: boolean;
     canPreview?: boolean;
     redacted?: boolean;
+    allowedActors?: string[];
+    allowedAgents?: string[];
+    requiredScopes?: string[];
   };
   explanation?: SearchResultExplanation;
   metadata?: Record<string, unknown>;

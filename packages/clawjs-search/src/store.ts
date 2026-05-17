@@ -407,6 +407,7 @@ export class SearchStore {
       }
     }
     const results = [...rows.values()]
+      .filter((row) => searchAclAllows(row.permissions_json, input))
       .map((row) => this.resultFromRow(row, input))
       .sort((left, right) => right.score - left.score || (right.updatedAt ?? "").localeCompare(left.updatedAt ?? ""))
       .slice(0, limit);
@@ -1101,6 +1102,56 @@ function buildDocumentClauses(input: SearchQueryInput, profile: SearchProfileId,
   return { clauses, params };
 }
 
+function searchAclAllows(permissionsJson: string, input: SearchQueryInput): boolean {
+  const permissions = parseJson<NonNullable<SearchResult["permissions"]>>(permissionsJson);
+  const actor = input.actor?.trim();
+  if (!stringListAllows(permissions.allowedActors, actor)) return false;
+  if (!stringListAllows(permissions.allowedAgents, actor)) return false;
+  const requiredScopes = normalizedStringList(permissions.requiredScopes);
+  if (requiredScopes.length) {
+    const queryScopes = searchQueryScopes(input);
+    if (!requiredScopes.every((scope) => queryScopes.includes(scope))) return false;
+  }
+  return true;
+}
+
+function stringListAllows(values: string[] | undefined, value: string | undefined): boolean {
+  const list = normalizedStringList(values);
+  if (!list.length) return true;
+  return Boolean(value && list.includes(value));
+}
+
+function searchQueryScopes(input: SearchQueryInput): string[] {
+  const filters = input.filters ?? {};
+  return normalizedStringList([
+    ...valueToStringList(filters.aclScope),
+    ...valueToStringList(filters.aclScopes),
+    ...valueToStringList(filters.scope),
+    ...valueToStringList(filters.scopes),
+    ...valueToStringList(filters["metadata.scope"]),
+    ...valueToStringList(filters["metadata.scopeId"]),
+    ...valueToStringList(filters.scopeId),
+  ]);
+}
+
+function valueToStringList(value: unknown): string[] {
+  if (Array.isArray(value)) return value.flatMap(valueToStringList);
+  if (typeof value === "object" && value !== null) {
+    const record = value as Record<string, unknown>;
+    return [
+      ...valueToStringList(record.scope),
+      ...valueToStringList(record.scopeId),
+      ...valueToStringList(record.id),
+    ];
+  }
+  return typeof value === "string" && value.trim() ? [value.trim()] : [];
+}
+
+function normalizedStringList(values: unknown): string[] {
+  if (!Array.isArray(values)) return [];
+  return [...new Set(values.filter((value): value is string => typeof value === "string" && value.trim().length > 0).map((value) => value.trim()))];
+}
+
 function mergeSearchRows(left: SearchDocumentRow, right: SearchDocumentRow): SearchDocumentRow {
   return {
     ...left,
@@ -1170,6 +1221,12 @@ function applySearchFilters(clauses: string[], params: unknown[], filters: Recor
       case "resourceId":
       case "resource_id":
         addInClause(clauses, params, "d.resource_id", value);
+        break;
+      case "scope":
+      case "scopes":
+      case "scopeId":
+      case "aclScope":
+      case "aclScopes":
         break;
       case "path":
         addInClause(clauses, params, "d.path", value);

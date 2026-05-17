@@ -527,6 +527,70 @@ test("SearchStore central ranking uses frecency, actor, surface and scope hints"
   }
 });
 
+test("SearchStore filters results by actor and required search scopes", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-acl-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "work.tasks",
+      domain: "work",
+      name: "Work tasks",
+      resultTypes: ["task"],
+    }));
+    store.upsertDocument({
+      id: "work.tasks:public",
+      source: "work.tasks",
+      domain: "work",
+      type: "task",
+      title: "Launch checklist public",
+      body: "Launch checklist for the public workspace.",
+    });
+    store.upsertDocument({
+      id: "work.tasks:agent",
+      source: "work.tasks",
+      domain: "work",
+      type: "task",
+      title: "Launch checklist private",
+      body: "Launch checklist for codex agent only.",
+      permissions: { allowedAgents: ["agent:codex"] },
+    });
+    store.upsertDocument({
+      id: "work.tasks:scoped",
+      source: "work.tasks",
+      domain: "work",
+      type: "task",
+      title: "Launch checklist project alpha",
+      body: "Launch checklist for project alpha.",
+      permissions: { allowedActors: ["agent:codex"], requiredScopes: ["project-alpha"] },
+    });
+
+    assert.deepEqual(
+      store.query({ query: "launch checklist", domains: ["work"] }).results.map((result) => result.id),
+      ["work.tasks:public"],
+    );
+    assert.deepEqual(
+      store.query({ query: "launch checklist", domains: ["work"], actor: "agent:other" }).results.map((result) => result.id),
+      ["work.tasks:public"],
+    );
+    assert.deepEqual(
+      store.query({ query: "launch checklist", domains: ["work"], actor: "agent:codex" }).results.map((result) => result.id).sort(),
+      ["work.tasks:agent", "work.tasks:public"],
+    );
+    assert.deepEqual(
+      store.query({
+        query: "launch checklist",
+        domains: ["work"],
+        actor: "agent:codex",
+        filters: { scope: "project-alpha" },
+      }).results.map((result) => result.id).sort(),
+      ["work.tasks:agent", "work.tasks:public", "work.tasks:scoped"],
+    );
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("SearchStore caches ranked query output and invalidates on index changes", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-ranking-cache-"));
   const store = new SearchStore(path.join(dir, "search.sqlite"));
@@ -570,6 +634,45 @@ test("SearchStore caches ranked query output and invalidates on index changes", 
 
     store.setSourceState("commands", "paused");
     assert.equal(store.rankingCacheStats().entries, 0);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("SearchStore filters result ACLs by actor and scope", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-acl-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "documents.blocks",
+      domain: "documents",
+      name: "Documents",
+      resultTypes: ["document"],
+    }));
+    store.upsertDocument({
+      id: "documents.blocks:restricted",
+      source: "documents.blocks",
+      domain: "documents",
+      type: "document",
+      title: "Restricted launch notes",
+      body: "Search ACL launch notes",
+      permissions: {
+        canOpen: true,
+        canPreview: true,
+        redacted: false,
+        allowedActors: ["agent:codex"],
+        requiredScopes: ["project-alpha"],
+      },
+    });
+
+    assert.equal(store.query({ query: "launch", domains: ["documents"] }).results.length, 0);
+    assert.equal(store.query({ query: "launch", domains: ["documents"], actor: "agent:other", filters: { scopeId: "project-alpha" } }).results.length, 0);
+    assert.equal(store.query({ query: "launch", domains: ["documents"], actor: "agent:codex", filters: { scopeId: "project-beta" } }).results.length, 0);
+    assert.deepEqual(
+      store.query({ query: "launch", domains: ["documents"], actor: "agent:codex", filters: { scopeId: "project-alpha" } }).results.map((result) => result.id),
+      ["documents.blocks:restricted"],
+    );
   } finally {
     store.close();
     fs.rmSync(dir, { recursive: true, force: true });
