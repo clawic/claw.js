@@ -1379,6 +1379,8 @@ The docs check script validates that every current export from
     ClawDenseDataExistingSurfaceIntegration
     ClawDenseDataExternalPendingRequirement
     ClawDenseDataFixtureRecord
+    ClawDenseDataGapRegistryEntry
+    ClawDenseDataGapRegistrySource
     ClawDenseDataIntentEntry
     ClawDenseDataIntentResolution
     ClawDenseDataIntentStatus
@@ -1396,6 +1398,7 @@ The docs check script validates that every current export from
     DATA_FOUNDATION_FAMILY
     findClawDenseDataSystem
     listClawDenseDataAcceptanceFixtureRecords
+    listClawDenseDataGapRegistryEntries
     listClawDenseDataRegistryFixtureRecords
     listClawDenseDataIntentEntries
     listClawDenseDataSemanticViewEntries
@@ -2536,6 +2539,7 @@ The docs check script validates that every current export from
     createRemoteSurfaceClassificationReceipt
     createSyncDriverApplicationReceipt
     createSyncResourceManifest
+    createSyncAuthorityHandoffReceipt
     createTransportHandshakeReceipt
     evaluateRemoteAgentServiceAccess
     evaluateRemoteAccess
@@ -2612,6 +2616,8 @@ The docs check script validates that every current export from
     reconcileSyncQueue
     routeIdForSyncDriver
     SyncAuthority
+    SyncAuthorityHandoffReceipt
+    syncAuthorityHandoffReceiptSchema
     syncAuthoritySchema
     SyncCachePolicy
     syncCachePolicySchema

@@ -142,6 +142,7 @@ claw inspect agent agent.ops --json
 claw inspect storage --json
 claw inspect command-intents --json
 claw inspect dense-data --json
+claw inspect dense-gaps --json
 claw inspect dense-intents --json
 claw inspect dense-views --json
 claw inspect dense-fixtures --json

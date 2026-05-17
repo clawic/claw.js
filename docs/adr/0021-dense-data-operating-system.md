@@ -169,13 +169,14 @@ The [Dense Data Source Decision Audit](../dense-data-source-decision-audit.md)
 enumerates the unique decision-bearing user turns that must be satisfied before
 the private goal can close.
 
-`claw inspect dense-data`, `claw inspect dense-intents`,
-`claw inspect dense-views`, and `claw inspect dense-fixtures` expose the dense
-registry, generated intent coverage, semantic-view catalog, and synthetic
-acceptance fixture without executing unknown behavior. These commands are the
-scale gate for "CLI intention completeness": every generated entry must resolve
-to a covered command, explicit workflow/data gap, blocked state, external
-pending state, or custom pack. The fixture covers patient, study, sample, legal
+`claw inspect dense-data`, `claw inspect dense-gaps`, `claw inspect
+dense-intents`, `claw inspect dense-views`, and `claw inspect dense-fixtures`
+expose the dense registry, derived gap registry, generated intent coverage,
+semantic-view catalog, and synthetic acceptance fixture without executing
+unknown behavior. These commands are the scale gate for "CLI intention
+completeness": every generated entry must resolve to a covered command,
+explicit workflow/data gap, blocked state, external pending state, or custom
+pack. The fixture covers patient, study, sample, legal
 case, legal client, invoice/company, incident/service, learner/course relations and lessons,
 company and manufacturing asset/work-order relations, clinical encounters,
 evidence, provenance, and partial-data quality gaps. It also materializes the

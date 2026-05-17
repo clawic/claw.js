@@ -4,7 +4,7 @@ import path from "path";
 
 import Database from "better-sqlite3";
 import { AgentStoreFS, type Agent } from "@clawjs/agents";
-import { CLAW_CLI_COMMAND_INTENT_STATUSES, clawDenseDataAcceptanceFixture, clawDenseDataOsRegistry, clawPersistentSurfaceRegistry, connectorExecutionPipeline, createAgentControlPanel, createAgentPrivacyLifecyclePlan, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, listClawDenseDataIntentEntries, listClawDenseDataSemanticViewEntries, resolveClawCliCommand, resolveClawPersistentSurfacePath, searchClawCliRegistry, withSurfaceChildren } from "@clawjs/core";
+import { CLAW_CLI_COMMAND_INTENT_STATUSES, clawDenseDataAcceptanceFixture, clawDenseDataOsRegistry, clawPersistentSurfaceRegistry, connectorExecutionPipeline, createAgentControlPanel, createAgentPrivacyLifecyclePlan, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, listClawDenseDataGapRegistryEntries, listClawDenseDataIntentEntries, listClawDenseDataSemanticViewEntries, resolveClawCliCommand, resolveClawPersistentSurfacePath, searchClawCliRegistry, withSurfaceChildren } from "@clawjs/core";
 import type { AgentAuditEvent, ClawPersistentSurfaceNode, ClawPersistentSurfaceRegistry, ClawSurfaceEdge, ClawSurfaceRoute } from "@clawjs/core";
 import { v1MainSchemaSurfaceNodes } from "./v1-data-surface.ts";
 import { normalizeDbRow, resolveClawjsMainDbPath, type JsonRecord } from "./v1-data-core.ts";
@@ -988,11 +988,23 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     const payload = {
       schemaVersion: 1,
       registry: clawDenseDataOsRegistry,
+      gapCount: listClawDenseDataGapRegistryEntries().length,
       intentCount: listClawDenseDataIntentEntries().length,
       semanticViewCount: listClawDenseDataSemanticViewEntries().length,
     };
     if (input.wantsJson) writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command));
     else input.context.stdout.write(`${clawDenseDataOsRegistry.systems.map((system) => `${system.id}\t${system.wave}\t${system.canonicalCommand}`).join("\n")}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (command === "dense-gaps") {
+    const gaps = listClawDenseDataGapRegistryEntries();
+    const payload = {
+      schemaVersion: 1,
+      statuses: clawDenseDataOsRegistry.intentStatuses,
+      gaps,
+    };
+    if (input.wantsJson) writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command));
+    else input.context.stdout.write(`${gaps.map((entry) => `${entry.id}\t${entry.status}\t${entry.source}\t${entry.phrase ?? entry.requirementId ?? entry.command ?? "policy"}`).join("\n")}\n`);
     return CLI_EXIT_OK;
   }
   if (command === "dense-intents") {
@@ -1116,7 +1128,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     }
     throw new InspectCliError("usage_error", `Unsupported inspect render format: ${format}`, CLI_EXIT_USAGE);
   }
-  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|neighbors|routes|route|agent|edges|why|commands|command-intents|dense-data|dense-intents|dense-views|dense-fixtures|codebase|connectors|aliases|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
+  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|neighbors|routes|route|agent|edges|why|commands|command-intents|dense-data|dense-gaps|dense-intents|dense-views|dense-fixtures|codebase|connectors|aliases|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
 }
 
 export async function runInspectCli(input: InspectCliInput): Promise<number> {

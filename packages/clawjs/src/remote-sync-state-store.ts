@@ -20,6 +20,7 @@ import {
   remoteSecretProviderReceiptSchema,
   remoteSurfaceClassificationReceiptSchema,
   remoteTransportHandshakeReceiptSchema,
+  syncAuthorityHandoffReceiptSchema,
   syncDriverApplicationReceiptSchema,
   syncCursorSchema,
   syncQueueEntrySchema,
@@ -39,6 +40,7 @@ import {
   type RemoteSecretProviderReceipt,
   type RemoteSurfaceClassificationReceipt,
   type RemoteTransportHandshakeReceipt,
+  type SyncAuthorityHandoffReceipt,
   type SyncCursor,
   type SyncDriverApplicationReceipt,
   type SyncPlanResult,
@@ -49,7 +51,7 @@ import {
 
 export type RemoteSyncStateAuditEvent = {
   eventId: string;
-  eventType: "sync.manifest.recorded" | "sync.queue.enqueued" | "sync.queue.reconciled" | "sync.driver_application.recorded" | "sync.cache.recorded" | "remote.classification.recorded" | "remote.compat.recorded" | "mesh.invitation.recorded" | "mesh.invitation.accepted" | "mesh.share.recorded" | "mesh.revocation.recorded" | "secret.lease.issued" | "secret.provider.recorded" | "transport.handshake.recorded" | "node.trust.recorded" | "gateway.deployment.recorded" | "gateway.agent_service.recorded" | "gateway.audit.recorded";
+  eventType: "sync.manifest.recorded" | "sync.queue.enqueued" | "sync.queue.reconciled" | "sync.driver_application.recorded" | "sync.authority_handoff.recorded" | "sync.cache.recorded" | "remote.classification.recorded" | "remote.compat.recorded" | "mesh.invitation.recorded" | "mesh.invitation.accepted" | "mesh.share.recorded" | "mesh.revocation.recorded" | "secret.lease.issued" | "secret.provider.recorded" | "transport.handshake.recorded" | "node.trust.recorded" | "gateway.deployment.recorded" | "gateway.agent_service.recorded" | "gateway.audit.recorded";
   targetId: string;
   createdAt: string;
   coordinatorSignatureId?: string;
@@ -81,6 +83,7 @@ export type RemoteSyncState = {
   queues: Record<string, SyncQueueEntry[]>;
   cursors: Record<string, SyncCursor>;
   applications: Record<string, SyncDriverApplicationReceipt>;
+  authorityHandoffs: Record<string, SyncAuthorityHandoffReceipt>;
   remoteCache: {
     snapshots: Record<string, RemoteClientCacheSnapshot>;
   };
@@ -131,6 +134,7 @@ function emptyState(): RemoteSyncState {
     queues: {},
     cursors: {},
     applications: {},
+    authorityHandoffs: {},
     remoteCache: {
       snapshots: {},
     },
@@ -294,6 +298,13 @@ function parseState(raw: unknown): RemoteSyncState {
   if (applications && typeof applications === "object" && !Array.isArray(applications)) {
     for (const [receiptId, receiptInput] of Object.entries(applications)) {
       state.applications[receiptId] = syncDriverApplicationReceiptSchema.parse(receiptInput);
+    }
+  }
+
+  const authorityHandoffs = input.authorityHandoffs;
+  if (authorityHandoffs && typeof authorityHandoffs === "object" && !Array.isArray(authorityHandoffs)) {
+    for (const [receiptId, receiptInput] of Object.entries(authorityHandoffs)) {
+      state.authorityHandoffs[receiptId] = syncAuthorityHandoffReceiptSchema.parse(receiptInput);
     }
   }
 
@@ -530,6 +541,17 @@ export class RemoteSyncStateStore {
     state.applications[receipt.receiptId] = receipt;
     state.updatedAt = now;
     const coordinatorSignature = appendAudit(state, "sync.driver_application.recorded", receipt.receiptId, now, receipt, input.signer);
+    this.write(state);
+    return { receipt, statePath: this.statePath, durable: true, coordinatorSignature };
+  }
+
+  recordSyncAuthorityHandoffReceipt(receiptInput: SyncAuthorityHandoffReceipt, input: { now?: string; signer: RemoteSyncCoordinatorSigner }): RemoteSyncStateWriteResult<{ receipt: SyncAuthorityHandoffReceipt }> {
+    const receipt = syncAuthorityHandoffReceiptSchema.parse(receiptInput);
+    const now = input.now ?? receipt.createdAt;
+    const state = this.read();
+    state.authorityHandoffs[receipt.receiptId] = receipt;
+    state.updatedAt = now;
+    const coordinatorSignature = appendAudit(state, "sync.authority_handoff.recorded", receipt.receiptId, now, receipt, input.signer);
     this.write(state);
     return { receipt, statePath: this.statePath, durable: true, coordinatorSignature };
   }

@@ -770,14 +770,22 @@ test("runCli exposes CLI aliases and decision sources through inspect", async ()
 
   const denseData = await runCliCapture(["inspect", "dense-data", "--json"], process.cwd());
   assert.equal(denseData.code, CLI_EXIT_OK);
-  const denseDataPayload = parseCliJson<{ registry: { foundationCollections: Record<string, string>; systems: Array<{ id: string }>; externalPendingRequirements: Array<{ systemId: string; status: string }>; existingSurfaceIntegrations: Array<{ id: string; disposition: string; canonicalOwner: string }> }; intentCount: number; semanticViewCount: number }>(denseData.stdout).data;
+  const denseDataPayload = parseCliJson<{ registry: { foundationCollections: Record<string, string>; systems: Array<{ id: string }>; externalPendingRequirements: Array<{ systemId: string; status: string }>; existingSurfaceIntegrations: Array<{ id: string; disposition: string; canonicalOwner: string }> }; gapCount: number; intentCount: number; semanticViewCount: number }>(denseData.stdout).data;
   assert.equal(denseDataPayload.registry.foundationCollections.quality_gaps, "quality_gaps");
   assert.equal(denseDataPayload.registry.systems.some((entry) => entry.id === "health"), true);
   assert.equal(denseDataPayload.registry.externalPendingRequirements.some((entry) => entry.systemId === "labs" && entry.status === "external_pending"), true);
   assert.equal(denseDataPayload.registry.existingSurfaceIntegrations.some((entry) => entry.id === "knowledge_graph_relations" && entry.canonicalOwner.includes("entity_relations")), true);
   assert.equal(denseDataPayload.registry.existingSurfaceIntegrations.some((entry) => entry.id === "infra_observability_monitor_ops" && entry.disposition === "split"), true);
+  assert.ok(denseDataPayload.gapCount > 0);
   assert.ok(denseDataPayload.intentCount > 0);
   assert.ok(denseDataPayload.semanticViewCount > 0);
+
+  const denseGaps = await runCliCapture(["inspect", "dense-gaps", "--json"], process.cwd());
+  assert.equal(denseGaps.code, CLI_EXIT_OK);
+  const denseGapPayload = parseCliJson<{ gaps: Array<{ id: string; source: string; status: string; phrase?: string; requirementId?: string; command?: string }> }>(denseGaps.stdout).data;
+  assert.equal(denseGapPayload.gaps.some((entry) => entry.source === "intent" && entry.status === "workflow_gap" && entry.phrase === "claw utility-account list"), true);
+  assert.equal(denseGapPayload.gaps.some((entry) => entry.source === "external_pending" && entry.status === "external_pending" && entry.requirementId === "external_pending_health_ehr_export"), true);
+  assert.equal(denseGapPayload.gaps.some((entry) => entry.source === "policy" && entry.status === "blocked" && entry.command === "purge"), true);
 
   const denseIntents = await runCliCapture(["inspect", "dense-intents", "--json"], process.cwd());
   assert.equal(denseIntents.code, CLI_EXIT_OK);

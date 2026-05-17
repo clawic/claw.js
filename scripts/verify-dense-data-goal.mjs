@@ -8,6 +8,7 @@ import {
   BUILTIN_COLLECTIONS_BY_NAME,
   clawDenseDataAcceptanceFixture,
   clawDenseDataOsRegistry,
+  listClawDenseDataGapRegistryEntries,
   listClawDenseDataIntentEntries,
   listClawDenseDataSemanticViewEntries,
   resolveClawCliCommandIntent,
@@ -354,6 +355,7 @@ for (let index = 1; index <= 11; index += 1) {
 
 for (const phrase of [
   "claw inspect dense-data",
+  "dense-gaps",
   "dense-intents",
   "dense-views",
   "dense-fixtures",
@@ -566,6 +568,7 @@ for (const systemId of requiredRoadmapSystems) {
 }
 
 const intents = listClawDenseDataIntentEntries();
+const denseGaps = listClawDenseDataGapRegistryEntries();
 const semanticViews = listClawDenseDataSemanticViewEntries();
 
 if (!intents.some((entry) => entry.phrase === "claw patient list" && entry.status === "covered" && entry.collectionName === "patients")) {
@@ -576,6 +579,18 @@ if (!intents.some((entry) => entry.phrase === "claw encounter list" && entry.sta
 }
 if (!intents.some((entry) => entry.phrase === "claw health gaps" && entry.status === "covered")) {
   fail("generated intents must cover claw health gaps");
+}
+for (const status of ["partial", "workflow_gap", "data_gap", "external_pending", "blocked"]) {
+  if (!denseGaps.some((entry) => entry.status === status)) fail(`dense gap registry must include ${status}`);
+}
+if (!denseGaps.some((entry) => entry.source === "intent" && entry.status === "workflow_gap" && entry.phrase === "claw utility-account list")) {
+  fail("dense gap registry must expose roadmap workflow gaps");
+}
+if (!denseGaps.some((entry) => entry.source === "external_pending" && entry.requirementId === "external_pending_health_ehr_export")) {
+  fail("dense gap registry must expose external pending requirements");
+}
+if (!denseGaps.some((entry) => entry.source === "policy" && entry.status === "blocked" && entry.command === "purge")) {
+  fail("dense gap registry must expose restricted purge policy");
 }
 const collectionAliasIntent = resolveClawCliCommandIntent({ phrase: "lead list" });
 if (collectionAliasIntent.status !== "covered" || collectionAliasIntent.intent.mappedCommand !== "db leads list") {
