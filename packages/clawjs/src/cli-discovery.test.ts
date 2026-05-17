@@ -4,6 +4,8 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
+import { clawDenseDataOsRegistry } from "@clawjs/core";
+
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, runCli } from "./index.ts";
 import { runCliCapture, useIsolatedClawDataRoot } from "./index-test-utils.ts";
 
@@ -2528,6 +2530,47 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(labNotebookTimelinePayload.data.materializedView.records.evidence.some((record) => record.id === labNotebookEvidenceSourcePayload.data.id), true);
   assert.equal(labNotebookTimelinePayload.data.materializedView.gaps.some((gap) => gap.id === labNotebookGapPayload.data.id && gap.gapKind === "external_pending"), true);
 
+});
+
+test("runCli exposes every graduated dense-data noun and alias as a top-level shared-data route", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-dense-top-level-"));
+  const checkedRoutes = new Set<string>();
+
+  for (const system of clawDenseDataOsRegistry.systems) {
+    for (const center of system.centers) {
+      if (!center.collectionName) continue;
+
+      for (const command of [center.commandNoun, ...center.commandAliases]) {
+        const routeKey = `${command}:${center.collectionName}`;
+        if (checkedRoutes.has(routeKey)) continue;
+        checkedRoutes.add(routeKey);
+
+        const result = await runCliCapture([command, "list", "--workspace", workspaceRoot, "--json"], process.cwd());
+        assert.equal(result.code, CLI_EXIT_OK, `${command} list should execute against ${center.collectionName}: ${result.stderr || result.stdout}`);
+        const payload = JSON.parse(result.stdout) as {
+          ok: boolean;
+          data: unknown[] | { coverage?: { executable?: boolean; implementationStatus?: string }; semanticView?: { id: string } };
+          meta: { canonicalCommand: string; collection?: string; action?: string; denseData?: boolean; semanticView?: boolean };
+        };
+        assert.equal(payload.ok, true, `${command} list must return ok`);
+        if (payload.meta.canonicalCommand === "database") {
+          assert.equal(payload.meta.canonicalCommand, "database", `${command} list must route through the shared database`);
+          assert.equal(payload.meta.collection, center.collectionName, `${command} list must use ${center.collectionName}`);
+          assert.equal(payload.meta.action, "list", `${command} list must execute list`);
+          assert.ok(Array.isArray(payload.data), `${command} list must return a record array`);
+        } else {
+          const denseData = payload.data as { coverage?: { executable?: boolean; implementationStatus?: string }; semanticView?: { id: string } };
+          assert.equal(payload.meta.denseData, true, `${command} list without direct DB meta must be a dense-data semantic route`);
+          assert.equal(payload.meta.semanticView, true, `${command} list without direct DB meta must expose a semantic view`);
+          assert.equal(denseData.coverage?.executable, true, `${command} list semantic route must be executable`);
+          assert.match(denseData.coverage?.implementationStatus ?? "", /^(materialized_semantic_view|semantic_view_contract)$/);
+          assert.ok(denseData.semanticView?.id, `${command} list semantic route must identify the view`);
+        }
+      }
+    }
+  }
+
+  assert.ok(checkedRoutes.size >= 100, "dense-data top-level route coverage must include every graduated noun and alias");
 });
 
 test("runCli seeds the dense-data acceptance fixture into the shared database", async () => {
