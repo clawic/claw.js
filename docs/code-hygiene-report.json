@@ -14,13 +14,13 @@
     "unreferencedAssetCandidates": 88
   },
   "knipSummary": {
-    "filesWithIssues": 200,
-    "totalIssues": 916,
+    "filesWithIssues": 199,
+    "totalIssues": 908,
     "issueTypes": {
       "unlisted": 2,
-      "types": 127,
-      "owners": 134,
-      "exports": 645,
+      "types": 123,
+      "owners": 133,
+      "exports": 642,
       "duplicates": 8
     }
   },
@@ -63,6 +63,7 @@
     "Secrets shared type cleanup kept exported only the role/principal types imported by auth and made the unused local DTO descriptors private.",
     "Execution shared type cleanup made local status aliases and unused helper DTOs private while preserving imported records and protocol types.",
     "IoT tool registry cleanup made local descriptor and invocation helpers private while keeping server route registration exported.",
-    "Publishing schema cleanup made nested Zod schema helpers private and removed unused inferred type aliases while preserving route-imported validators."
+    "Publishing schema cleanup made nested Zod schema helpers private and removed unused inferred type aliases while preserving route-imported validators.",
+    "Apps store cleanup made local record/input helpers private and removed an unused root-dir helper while preserving `createAppsStore`."
   ]
 }

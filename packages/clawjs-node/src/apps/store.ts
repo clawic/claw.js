@@ -17,19 +17,19 @@ import { APPS_STORE_SCHEMA_SQL } from "./surface.ts";
 
 import { resolveClawGlobalDataRoot } from "../surface-paths.ts";
 
-export interface AppPermissions {
+interface AppPermissions {
   internet: boolean;
   callAgent: boolean;
   allowedTools: string[];
 }
 
-export const DEFAULT_PERMISSIONS: AppPermissions = {
+const DEFAULT_PERMISSIONS: AppPermissions = {
   internet: false,
   callAgent: true,
   allowedTools: [],
 };
 
-export interface AppRecord {
+interface AppRecord {
   id: string;
   slug: string;
   name: string;
@@ -46,7 +46,7 @@ export interface AppRecord {
   createdByChatId: string | null;
 }
 
-export interface CreateAppInput {
+interface CreateAppInput {
   name: string;
   slug?: string;
   description?: string;
@@ -60,7 +60,7 @@ export interface CreateAppInput {
   indexHtml?: string;
 }
 
-export interface WriteFileInput {
+interface WriteFileInput {
   appId?: string;
   slug?: string;
   /** Relative path within the app folder. "/" or "" defaults to index.html. */
@@ -315,10 +315,6 @@ export function createAppsStore(options: CreateAppsStoreOptions = {}): AppsStore
 
 // Helpers ----------------------------------------------------------------
 
-export function defaultRootDir(): string {
-  return path.join(defaultDataRoot(), "apps");
-}
-
 function defaultDataRoot(): string {
   return resolveClawGlobalDataRoot();
 }
@@ -397,7 +393,7 @@ function ensureAppsSchema(sqlite: Database.Database): void {
   sqlite.exec(APPS_STORE_SCHEMA_SQL);
 }
 
-export function normalizeSlug(raw: string): string {
+function normalizeSlug(raw: string): string {
   const lowered = raw.toLowerCase();
   let result = "";
   let lastWasDash = false;
