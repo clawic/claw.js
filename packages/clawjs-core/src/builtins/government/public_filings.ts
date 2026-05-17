@@ -12,7 +12,7 @@ export const PUBLIC_FILINGS: BuiltinCollectionDefinition = {
     notes: "This represents public/administrative filings; content publishing entries and legal evidence remain separate collections.",
   },
   fields: [
-    { name: "title", type: "text", required: true, requiredReason: "identity", aliases: ["name", "summary"] },
+    { name: "title", type: "text", required: true, requiredReason: "identity", aliases: ["name"] },
     { name: "agencyId", type: "relation", relation: { collectionName: "agencies" } },
     { name: "publicCaseId", type: "relation", relation: { collectionName: "public_cases" } },
     { name: "documentId", type: "relation", relation: { collectionName: "documents" } },

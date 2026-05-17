@@ -1529,6 +1529,7 @@ The docs check script validates that every current export from
     commentRecordSchema
     COMMERCE_FAMILY
     COMPLIANCE_FAMILY
+    CONTENT_FAMILY
     CommitmentAddInput
     CommitmentCaptureInput
     CommitmentCaptureResult

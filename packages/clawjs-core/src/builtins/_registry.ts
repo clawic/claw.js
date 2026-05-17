@@ -21,6 +21,7 @@ import { ANALYTICS_FAMILY } from "./analytics/index.ts";
 import { OBSERVABILITY_FAMILY } from "./observability/index.ts";
 import { INFRA_FAMILY } from "./infra/index.ts";
 import { MARKETING_FAMILY } from "./marketing/index.ts";
+import { CONTENT_FAMILY } from "./content/index.ts";
 import { AGENTS_FAMILY } from "./agents/index.ts";
 import { HR_FAMILY } from "./hr/index.ts";
 import { CALENDAR_FAMILY } from "./calendar/index.ts";
@@ -97,6 +98,7 @@ const RAW_BUILTIN_FAMILIES: BuiltinFamilyDefinition[] = [
   OBSERVABILITY_FAMILY,
   INFRA_FAMILY,
   MARKETING_FAMILY,
+  CONTENT_FAMILY,
   AGENTS_FAMILY,
   HR_FAMILY,
   CALENDAR_FAMILY,

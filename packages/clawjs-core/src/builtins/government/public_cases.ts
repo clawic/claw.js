@@ -12,7 +12,7 @@ export const PUBLIC_CASES: BuiltinCollectionDefinition = {
     notes: "Named public_cases to avoid colliding with legal_cases and the top-level legal `case` route.",
   },
   fields: [
-    { name: "title", type: "text", required: true, requiredReason: "identity", aliases: ["summary", "subject"] },
+    { name: "title", type: "text", required: true, requiredReason: "identity", aliases: ["subject"] },
     { name: "agencyId", type: "relation", relation: { collectionName: "agencies" } },
     { name: "companyId", type: "relation", relation: { collectionName: "companies" } },
     { name: "personId", type: "relation", relation: { collectionName: "people" } },

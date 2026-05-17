@@ -40,6 +40,7 @@ export { ANALYTICS_FAMILY } from "./analytics/index.ts";
 export { OBSERVABILITY_FAMILY } from "./observability/index.ts";
 export { INFRA_FAMILY } from "./infra/index.ts";
 export { MARKETING_FAMILY } from "./marketing/index.ts";
+export { CONTENT_FAMILY } from "./content/index.ts";
 export { AGENTS_FAMILY } from "./agents/index.ts";
 export { HR_FAMILY } from "./hr/index.ts";
 export { CALENDAR_FAMILY } from "./calendar/index.ts";

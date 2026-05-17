@@ -312,6 +312,7 @@ function materializedSemanticViewForIntent(
   if (semanticView.id === "public_case.timeline") return materializedPublicCaseTimeline(input, intent, semanticView);
   if (semanticView.id === "product_spec.timeline") return materializedProductSpecTimeline(input, intent, semanticView);
   if (semanticView.id === "drug_product.timeline") return materializedDrugProductTimeline(input, intent, semanticView);
+  if (semanticView.id === "content_entry.timeline") return materializedContentEntryTimeline(input, intent, semanticView);
   if (semanticView.id === "thing.timeline") return materializedThingTimeline(input, intent, semanticView);
   if (semanticView.id === "construction_project.timeline") return materializedConstructionProjectTimeline(input, intent, semanticView);
   return undefined;
@@ -1614,6 +1615,107 @@ function materializedDrugProductTimeline(
   };
 }
 
+function materializedContentEntryTimeline(
+  input: DenseDataCliInput,
+  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
+) {
+  const contentEntryId = input.positionals[1];
+  if (!contentEntryId) return undefined;
+  const namespaceId = input.flags.namespace ?? "main";
+  const store = openDenseDataStore(input.workspaceRoot);
+  store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
+  const entry = store.getRecord(namespaceId, "content_entries", contentEntryId);
+  if (!entry) return undefined;
+
+  const brand = typeof entry.contentBrandId === "string" ? store.getRecord(namespaceId, "content_brands", entry.contentBrandId) : undefined;
+  const campaign = typeof entry.contentCampaignId === "string" ? store.getRecord(namespaceId, "content_campaigns", entry.contentCampaignId) : undefined;
+  const document = typeof entry.documentId === "string" ? store.getRecord(namespaceId, "documents", entry.documentId) : undefined;
+  const owner = typeof entry.ownerActorId === "string" ? store.getRecord(namespaceId, "actors", entry.ownerActorId) : undefined;
+  const author = typeof entry.authorActorId === "string" ? store.getRecord(namespaceId, "actors", entry.authorActorId) : undefined;
+  const revisions = store.listRecords(namespaceId, "content_revisions", { filter: { contentEntryId } }).items;
+  const variants = store.listRecords(namespaceId, "content_variants", { filter: { contentEntryId } }).items;
+  const approvals = store.listRecords(namespaceId, "content_approvals", { filter: { contentEntryId } }).items;
+  const publications = store.listRecords(namespaceId, "content_publications", { filter: { contentEntryId } }).items;
+  const destinationIds = new Set<string>([
+    ...variants.map((record) => record.contentDestinationId),
+    ...approvals.map((record) => record.contentDestinationId),
+    ...publications.map((record) => record.contentDestinationId),
+  ].filter((value): value is string => typeof value === "string"));
+  const destinations = [...destinationIds].flatMap((destinationId) => {
+    const record = store.getRecord(namespaceId, "content_destinations", destinationId);
+    return record ? [record] : [];
+  });
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "content_entries", recordId: contentEntryId } }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "content_entries", targetId: contentEntryId } }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "content_entries", targetId: contentEntryId } }).items;
+  const items = [
+    timelineItem(entry, "content_entry", entry.id, entry.title ?? entry.slug ?? entry.id, entry.createdAt, entry),
+    ...(brand ? [timelineItem(brand, "content_brand", brand.id, brand.name ?? brand.slug ?? brand.id, brand.createdAt, brand)] : []),
+    ...(campaign ? [timelineItem(campaign, "content_campaign", campaign.id, campaign.name ?? campaign.slug ?? campaign.id, campaign.startsAt ?? campaign.createdAt, campaign)] : []),
+    ...(document ? [timelineItem(document, "document", document.id, document.title ?? document.id, document.createdAt, document)] : []),
+    ...(owner ? [timelineItem(owner, "owner_actor", owner.id, owner.displayName ?? owner.name ?? owner.id, owner.createdAt, owner)] : []),
+    ...(author ? [timelineItem(author, "author_actor", author.id, author.displayName ?? author.name ?? author.id, author.createdAt, author)] : []),
+    ...destinations.map((record) => timelineItem(record, "content_destination", record.id, record.name ?? record.id, record.lastCheckedAt ?? record.createdAt, record)),
+    ...revisions.map((record) => timelineItem(record, "content_revision", record.id, record.title ?? `Revision ${record.revisionNumber ?? record.id}`, record.createdAt, record)),
+    ...variants.map((record) => timelineItem(record, "content_variant", record.id, record.title ?? record.format ?? record.id, record.createdAt, record)),
+    ...approvals.map((record) => timelineItem(record, "content_approval", record.id, record.status ?? record.id, record.reviewedAt ?? record.requestedAt ?? record.createdAt, record)),
+    ...publications.map((record) => timelineItem(record, "content_publication", record.id, record.externalUrl ?? record.status ?? record.id, record.publishedAt ?? record.scheduledAt ?? record.createdAt, record)),
+    ...evidence.map((record) => timelineItem(record, "evidence", record.id, record.label ?? record.id, record.capturedAt ?? record.createdAt, record)),
+    ...qualityGaps.map((record) => timelineItem(record, "quality_gap", record.id, record.label ?? record.id, record.createdAt, record)),
+    ...provenance.map((record) => timelineItem(record, "provenance", record.id, record.eventType ?? record.id, record.occurredAt ?? record.createdAt, record)),
+  ].sort((left, right) => String(left.occurredAt).localeCompare(String(right.occurredAt)));
+
+  return {
+    id: semanticView.id,
+    subject: { collectionName: "content_entries", id: entry.id, label: entry.title ?? entry.slug ?? entry.id },
+    brand: brand ? { id: brand.id, label: brand.name ?? brand.slug ?? brand.id } : null,
+    campaign: campaign ? { id: campaign.id, label: campaign.name ?? campaign.slug ?? campaign.id } : null,
+    document: document ? { id: document.id, label: document.title ?? document.id } : null,
+    summary: {
+      revisions: revisions.length,
+      variants: variants.length,
+      approvals: approvals.length,
+      approvedApprovals: approvals.filter((record) => record.status === "approved").length,
+      publications: publications.length,
+      publishedPublications: publications.filter((record) => record.status === "published").length,
+      destinations: destinations.length,
+      evidenceSources: evidence.length,
+      qualityGaps: qualityGaps.length,
+      hasBrand: Boolean(brand),
+      hasCampaign: Boolean(campaign),
+    },
+    itemCount: items.length,
+    items,
+    records: {
+      entry,
+      brand,
+      campaign,
+      document,
+      owner,
+      author,
+      destinations,
+      revisions,
+      variants,
+      approvals,
+      publications,
+      evidence,
+      provenance,
+    },
+    gaps: qualityGaps.map((record) => ({
+      id: record.id,
+      label: record.label,
+      status: record.status,
+      gapKind: record.gapKind,
+      severity: record.severity,
+      evidenceSourceId: record.evidenceSourceId,
+    })),
+    sourceCollections: ["content_entries", "content_brands", "content_campaigns", "content_destinations", "content_revisions", "content_variants", "content_approvals", "content_publications", "documents", "actors", "evidence_sources", "quality_gaps", "provenance_events"],
+    partial: qualityGaps.length > 0,
+    intentStatus: intent.status,
+  };
+}
+
 function materializedThingTimeline(
   input: DenseDataCliInput,
   intent: ReturnType<typeof resolveClawDenseDataIntent>,
@@ -2564,6 +2666,39 @@ function denseDbFlags(flags: Record<string, string>, collectionName: string): Re
   if (collectionName === "adverse_events" && flags.study && !flags["study-id"]) {
     nextFlags = { ...nextFlags, "study-id": flags.study };
   }
+  if (collectionName === "content_brands" && flags.company && !flags["company-id"]) {
+    nextFlags = { ...nextFlags, "company-id": flags.company };
+  }
+  if (["content_destinations", "content_campaigns", "content_entries"].includes(collectionName) && flags.brand && !flags["content-brand-id"]) {
+    nextFlags = { ...nextFlags, "content-brand-id": flags.brand };
+  }
+  if (collectionName === "content_entries" && flags.campaign && !flags["content-campaign-id"]) {
+    nextFlags = { ...nextFlags, "content-campaign-id": flags.campaign };
+  }
+  if (collectionName === "content_entries" && flags.document && !flags["document-id"]) {
+    nextFlags = { ...nextFlags, "document-id": flags.document };
+  }
+  if (collectionName === "content_entries" && flags.owner && !flags["owner-actor-id"]) {
+    nextFlags = { ...nextFlags, "owner-actor-id": flags.owner };
+  }
+  if (collectionName === "content_entries" && flags.author && !flags["author-actor-id"]) {
+    nextFlags = { ...nextFlags, "author-actor-id": flags.author };
+  }
+  if (["content_revisions", "content_variants", "content_approvals", "content_publications"].includes(collectionName) && flags["content-entry"] && !flags["content-entry-id"]) {
+    nextFlags = { ...nextFlags, "content-entry-id": flags["content-entry"] };
+  }
+  if (["content_variants", "content_approvals", "content_publications"].includes(collectionName) && flags.destination && !flags["content-destination-id"]) {
+    nextFlags = { ...nextFlags, "content-destination-id": flags.destination };
+  }
+  if (["content_approvals", "content_publications"].includes(collectionName) && flags.variant && !flags["content-variant-id"]) {
+    nextFlags = { ...nextFlags, "content-variant-id": flags.variant };
+  }
+  if (collectionName === "content_approvals" && flags.requester && !flags["requested-by-actor-id"]) {
+    nextFlags = { ...nextFlags, "requested-by-actor-id": flags.requester };
+  }
+  if (collectionName === "content_approvals" && flags.reviewer && !flags["reviewed-by-actor-id"]) {
+    nextFlags = { ...nextFlags, "reviewed-by-actor-id": flags.reviewer };
+  }
   if (collectionName === "iot_things" && flags.company && !flags["company-id"]) {
     nextFlags = { ...nextFlags, "company-id": flags.company };
   }
@@ -2961,6 +3096,21 @@ function nestedDenseDbRoute(input: DenseDataCliInput): Parameters<typeof runMagi
       "adverse-events": "adverse_events",
       "safety-event": "adverse_events",
       "safety-events": "adverse_events",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "content-entry",
+    relationFlag: "content-entry-id",
+    relationField: "contentEntryId",
+    collections: {
+      revision: "content_revisions",
+      revisions: "content_revisions",
+      variant: "content_variants",
+      variants: "content_variants",
+      approval: "content_approvals",
+      approvals: "content_approvals",
+      publication: "content_publications",
+      publications: "content_publications",
+      publish: "content_publications",
     },
   }) ?? nestedParentDbRoute(input, {
     parentCommand: "thing",

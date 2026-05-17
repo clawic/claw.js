@@ -749,6 +749,39 @@ function applyDefaults(collectionName: string, payload: Record<string, unknown>,
       payload.severity ??= "unknown";
       payload.reportedAt ??= new Date().toISOString();
       break;
+    case "content_brands":
+      payload.status ??= "draft";
+      payload.defaultLocale ??= "en-US";
+      break;
+    case "content_destinations":
+      payload.status ??= "draft";
+      payload.kind ??= "other";
+      payload.publishPolicy ??= "manual";
+      break;
+    case "content_campaigns":
+      payload.status ??= "planning";
+      break;
+    case "content_entries":
+      payload.status ??= "draft";
+      payload.contentType ??= "other";
+      payload.canonicalFormat ??= "markdown";
+      payload.currentRevisionNumber ??= 1;
+      break;
+    case "content_revisions":
+      payload.createdAt ??= new Date().toISOString();
+      break;
+    case "content_variants":
+      payload.status ??= "draft";
+      payload.format ??= "markdown";
+      break;
+    case "content_approvals":
+      payload.status ??= "requested";
+      payload.requestedAt ??= new Date().toISOString();
+      break;
+    case "content_publications":
+      payload.status ??= "planned";
+      payload.attemptNumber ??= 0;
+      break;
     case "iot_things":
       payload.status ??= "active";
       payload.kind ??= "unknown";

@@ -1,0 +1,40 @@
+import type { BuiltinCollectionDefinition } from "../_types.ts";
+
+export const CONTENT_ENTRIES: BuiltinCollectionDefinition = {
+  name: "content_entries",
+  displayName: "Content Entries",
+  family: "content",
+  aliases: ["content-entry", "content-entries", "content_entry", "content_entries", "cms-entry", "cms-entries"],
+  catalog: {
+    purpose: "CMS entry center for canonical content, workflow state, brand/campaign context, revisions, variants, approvals, publications, evidence, and gaps.",
+    evidence: ["human_recognizable", "market_validated", "multi_domain_reuse", "agent_useful"],
+    relationGuidance: "Link contentBrandId, contentCampaignId, authorActorId, and ownerActorId when known; revisions, variants, approvals, and publications point back to entries.",
+    notes: "Entries are local structured content records. Existing notes, documents, files, and delegated content service records remain evidence or execution surfaces.",
+  },
+  fields: [
+    { name: "title", type: "text", required: true, requiredReason: "identity", aliases: ["name"] },
+    { name: "contentBrandId", type: "relation", relation: { collectionName: "content_brands" } },
+    { name: "contentCampaignId", type: "relation", relation: { collectionName: "content_campaigns" } },
+    { name: "documentId", type: "relation", relation: { collectionName: "documents" } },
+    { name: "slug", type: "text" },
+    { name: "contentType", type: "select", options: ["article", "post", "newsletter", "landing_page", "help_article", "script", "ad", "other"] },
+    { name: "canonicalFormat", type: "select", options: ["markdown", "html", "plain_text", "structured", "other"] },
+    { name: "status", type: "select", options: ["draft", "in_review", "approved", "scheduled", "published", "archived", "unknown"] },
+    { name: "summary", type: "markdown" },
+    { name: "canonicalBody", type: "markdown" },
+    { name: "ownerActorId", type: "relation", relation: { collectionName: "actors" } },
+    { name: "authorActorId", type: "relation", relation: { collectionName: "actors" } },
+    { name: "currentRevisionNumber", type: "number" },
+    { name: "source", type: "json" },
+    { name: "links", type: "json" },
+    { name: "metadata", type: "json" },
+    { name: "archivedAt", type: "date" },
+  ],
+  indexes: [
+    { name: "content_entries_title_idx", fields: ["title"] },
+    { name: "content_entries_brand_idx", fields: ["contentBrandId"] },
+    { name: "content_entries_campaign_idx", fields: ["contentCampaignId"] },
+    { name: "content_entries_document_idx", fields: ["documentId"] },
+    { name: "content_entries_status_idx", fields: ["status"] },
+  ],
+};

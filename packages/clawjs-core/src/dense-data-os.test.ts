@@ -219,6 +219,7 @@ test("dense data OS first wave covers the agreed high-density systems", () => {
     "construction",
     "iot",
     "eln",
+    "content",
     "product",
     "pharma",
   ]);
@@ -677,11 +678,8 @@ test("dense data OS generates covered singular and plural intents for every grad
 
 test("dense data OS roadmap keeps the wider catalog visible before pack graduation", () => {
   const roadmapIds = new Set(listClawDenseDataSystems({ wave: "roadmap" }).map((system) => system.id));
-  for (const id of [
-    "content",
-  ]) {
-    assert.equal(roadmapIds.has(id), true, `${id} must stay visible in the roadmap taxonomy`);
-  }
+  assert.equal(roadmapIds.has("content"), false, "content must be graduated from roadmap to first-wave dense data");
+  assert.equal(findClawDenseDataSystem("content")?.wave, "first_wave", "content must be graduated from roadmap to first-wave dense data");
   assert.equal(findClawDenseDataSystem("product")?.wave, "first_wave", "product must be graduated from roadmap to first-wave dense data");
   assert.equal(findClawDenseDataSystem("pharma")?.wave, "first_wave", "pharma must be graduated from roadmap to first-wave dense data");
 });
