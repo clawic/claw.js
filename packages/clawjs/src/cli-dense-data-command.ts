@@ -291,6 +291,7 @@ function materializedSemanticViewForIntent(
   if (semanticView.id === "study.timeline") return materializedStudyTimeline(input, intent, semanticView);
   if (semanticView.id === "sample.timeline") return materializedSampleTimeline(input, intent, semanticView);
   if (semanticView.id === "experiment.timeline") return materializedExperimentTimeline(input, intent, semanticView);
+  if (semanticView.id === "lab_notebook.timeline") return materializedLabNotebookTimeline(input, intent, semanticView);
   if (semanticView.id === "work_order.timeline") return materializedWorkOrderTimeline(input, intent, semanticView);
   if (semanticView.id === "company.timeline") return materializedCompanyTimeline(input, intent, semanticView);
   if (semanticView.id === "erp.company.overview") return materializedErpCompanyOverview(input, intent, semanticView);
@@ -585,6 +586,91 @@ function materializedExperimentTimeline(
     })),
     sourceCollections: ["biology_experiments", "samples", "assays", "evidence_sources", "quality_gaps", "provenance_events"],
     sampleIds: [...sampleIds],
+    partial: qualityGaps.length > 0,
+    intentStatus: intent.status,
+  };
+}
+
+function materializedLabNotebookTimeline(
+  input: DenseDataCliInput,
+  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
+) {
+  const notebookId = input.positionals[1];
+  if (!notebookId) return undefined;
+  const namespaceId = input.flags.namespace ?? "main";
+  const store = openDenseDataStore(input.workspaceRoot);
+  store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
+  const notebook = store.getRecord(namespaceId, "lab_notebooks", notebookId);
+  if (!notebook) return undefined;
+
+  const entries = store.listRecords(namespaceId, "notebook_entries", { filter: { notebookId } }).items;
+  const protocolRuns = store.listRecords(namespaceId, "protocol_runs", { filter: { notebookId } }).items;
+  const observations = store.listRecords(namespaceId, "experiment_observations", { filter: { notebookId } }).items;
+  const study = typeof notebook.studyId === "string" ? store.getRecord(namespaceId, "studies", notebook.studyId) : undefined;
+  const experiment = typeof notebook.biologyExperimentId === "string" ? store.getRecord(namespaceId, "biology_experiments", notebook.biologyExperimentId) : undefined;
+  const samples = uniqueRecordsById([
+    ...entries.flatMap((record) => typeof record.sampleId === "string" ? [store.getRecord(namespaceId, "samples", record.sampleId)] : []),
+    ...protocolRuns.flatMap((record) => typeof record.sampleId === "string" ? [store.getRecord(namespaceId, "samples", record.sampleId)] : []),
+    ...observations.flatMap((record) => typeof record.sampleId === "string" ? [store.getRecord(namespaceId, "samples", record.sampleId)] : []),
+  ].filter((record): record is Record<string, unknown> => Boolean(record)));
+  const assays = uniqueRecordsById([
+    ...entries.flatMap((record) => typeof record.assayId === "string" ? [store.getRecord(namespaceId, "assays", record.assayId)] : []),
+    ...protocolRuns.flatMap((record) => typeof record.assayId === "string" ? [store.getRecord(namespaceId, "assays", record.assayId)] : []),
+    ...observations.flatMap((record) => typeof record.assayId === "string" ? [store.getRecord(namespaceId, "assays", record.assayId)] : []),
+  ].filter((record): record is Record<string, unknown> => Boolean(record)));
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "lab_notebooks", recordId: notebookId } }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "lab_notebooks", targetId: notebookId } }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "lab_notebooks", targetId: notebookId } }).items;
+  const items = [
+    timelineItem(notebook, "lab_notebook", notebook.id, notebook.title ?? notebook.id, notebook.openedAt ?? notebook.createdAt, notebook),
+    ...(study ? [timelineItem(study, "study", study.id, study.title ?? study.id, study.startedAt ?? study.createdAt, study)] : []),
+    ...(experiment ? [timelineItem(experiment, "experiment", experiment.id, experiment.title ?? experiment.id, experiment.startedAt ?? experiment.createdAt, experiment)] : []),
+    ...entries.map((record) => timelineItem(record, "notebook_entry", record.id, record.title ?? record.entryType ?? record.id, record.authoredAt ?? record.createdAt, record)),
+    ...protocolRuns.map((record) => timelineItem(record, "protocol_run", record.id, record.title ?? record.protocolName ?? record.id, record.startedAt ?? record.createdAt, record)),
+    ...observations.map((record) => timelineItem(record, "experiment_observation", record.id, record.title ?? record.observationType ?? record.id, record.observedAt ?? record.createdAt, record)),
+    ...samples.map((record) => timelineItem(record, "sample", record.id, record.label ?? record.id, record.collectedAt ?? record.createdAt, record)),
+    ...assays.map((record) => timelineItem(record, "assay", record.id, record.name ?? record.id, record.performedAt ?? record.createdAt, record)),
+    ...evidence.map((record) => timelineItem(record, "evidence", record.id, record.label ?? record.id, record.capturedAt ?? record.createdAt, record)),
+    ...qualityGaps.map((record) => timelineItem(record, "quality_gap", record.id, record.label ?? record.id, record.createdAt, record)),
+    ...provenance.map((record) => timelineItem(record, "provenance", record.id, record.eventType ?? record.id, record.occurredAt ?? record.createdAt, record)),
+  ].sort((left, right) => String(left.occurredAt).localeCompare(String(right.occurredAt)));
+
+  return {
+    id: semanticView.id,
+    subject: { collectionName: "lab_notebooks", id: notebook.id, label: notebook.title ?? notebook.id },
+    summary: {
+      entries: entries.length,
+      protocolRuns: protocolRuns.length,
+      observations: observations.length,
+      samples: samples.length,
+      assays: assays.length,
+      evidenceSources: evidence.length,
+      qualityGaps: qualityGaps.length,
+    },
+    itemCount: items.length,
+    items,
+    records: {
+      notebook,
+      study,
+      experiment,
+      entries,
+      protocolRuns,
+      observations,
+      samples,
+      assays,
+      evidence,
+      provenance,
+    },
+    gaps: qualityGaps.map((record) => ({
+      id: record.id,
+      label: record.label,
+      status: record.status,
+      gapKind: record.gapKind,
+      severity: record.severity,
+      evidenceSourceId: record.evidenceSourceId,
+    })),
+    sourceCollections: ["lab_notebooks", "notebook_entries", "protocol_runs", "experiment_observations", "studies", "biology_experiments", "samples", "assays", "evidence_sources", "quality_gaps", "provenance_events"],
     partial: qualityGaps.length > 0,
     intentStatus: intent.status,
   };
@@ -2121,6 +2207,39 @@ function denseDbFlags(flags: Record<string, string>, collectionName: string): Re
   if (collectionName === "biology_experiments" && flags.organism && !flags["organism-id"]) {
     nextFlags = { ...nextFlags, "organism-id": flags.organism };
   }
+  if (collectionName === "lab_notebooks" && flags.study && !flags["study-id"]) {
+    nextFlags = { ...nextFlags, "study-id": flags.study };
+  }
+  if (collectionName === "lab_notebooks" && flags.experiment && !flags["biology-experiment-id"]) {
+    nextFlags = { ...nextFlags, "biology-experiment-id": flags.experiment };
+  }
+  if (collectionName === "lab_notebooks" && flags.company && !flags["company-id"]) {
+    nextFlags = { ...nextFlags, "company-id": flags.company };
+  }
+  if (collectionName === "lab_notebooks" && flags.owner && !flags["owner-employee-id"]) {
+    nextFlags = { ...nextFlags, "owner-employee-id": flags.owner };
+  }
+  if (["notebook_entries", "protocol_runs", "experiment_observations"].includes(collectionName) && flags["lab-notebook"] && !flags["notebook-id"]) {
+    nextFlags = { ...nextFlags, "notebook-id": flags["lab-notebook"] };
+  }
+  if (["notebook_entries", "protocol_runs"].includes(collectionName) && flags.study && !flags["study-id"]) {
+    nextFlags = { ...nextFlags, "study-id": flags.study };
+  }
+  if (["notebook_entries", "protocol_runs", "experiment_observations"].includes(collectionName) && flags.experiment && !flags["biology-experiment-id"]) {
+    nextFlags = { ...nextFlags, "biology-experiment-id": flags.experiment };
+  }
+  if (["notebook_entries", "protocol_runs", "experiment_observations"].includes(collectionName) && flags.sample && !flags["sample-id"]) {
+    nextFlags = { ...nextFlags, "sample-id": flags.sample };
+  }
+  if (["notebook_entries", "protocol_runs", "experiment_observations"].includes(collectionName) && flags.assay && !flags["assay-id"]) {
+    nextFlags = { ...nextFlags, "assay-id": flags.assay };
+  }
+  if (collectionName === "experiment_observations" && flags.entry && !flags["entry-id"]) {
+    nextFlags = { ...nextFlags, "entry-id": flags.entry };
+  }
+  if (collectionName === "experiment_observations" && flags["protocol-run"] && !flags["protocol-run-id"]) {
+    nextFlags = { ...nextFlags, "protocol-run-id": flags["protocol-run"] };
+  }
   if (collectionName === "samples" && flags.experiment && !flags["biology-experiment-id"]) {
     nextFlags = { ...nextFlags, "biology-experiment-id": flags.experiment };
   }
@@ -2389,6 +2508,36 @@ function nestedDenseDbRoute(input: DenseDataCliInput): Parameters<typeof runMagi
       "change-orders": "construction_change_orders",
       "construction-change-order": "construction_change_orders",
       "construction-change-orders": "construction_change_orders",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "lab-notebook",
+    relationFlag: "notebook-id",
+    relationField: "notebookId",
+    collections: {
+      entry: "notebook_entries",
+      entries: "notebook_entries",
+      "notebook-entry": "notebook_entries",
+      "notebook-entries": "notebook_entries",
+      "eln-entry": "notebook_entries",
+      "eln-entries": "notebook_entries",
+      "protocol-run": "protocol_runs",
+      "protocol-runs": "protocol_runs",
+      run: "protocol_runs",
+      runs: "protocol_runs",
+      observation: "experiment_observations",
+      observations: "experiment_observations",
+      "experiment-observation": "experiment_observations",
+      "experiment-observations": "experiment_observations",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "protocol-run",
+    relationFlag: "protocol-run-id",
+    relationField: "protocolRunId",
+    collections: {
+      observation: "experiment_observations",
+      observations: "experiment_observations",
+      "experiment-observation": "experiment_observations",
+      "experiment-observations": "experiment_observations",
     },
   }) ?? nestedParentDbRoute(input, {
     parentCommand: "iot-device",

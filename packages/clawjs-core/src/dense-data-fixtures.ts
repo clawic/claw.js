@@ -210,7 +210,7 @@ export const clawDenseDataAcceptanceFixture: ClawDenseDataAcceptanceFixture = {
       id: "fixture_biology_experiment_dose_response",
       collectionName: "biology_experiments",
       label: "Dose response",
-      covers: ["experiment", "biology", "eln"],
+      covers: ["experiment", "biology"],
       data: { title: "Dose response", organismId: "fixture_organism_mouse_a", status: "planned" },
     },
     {
@@ -226,6 +226,34 @@ export const clawDenseDataAcceptanceFixture: ClawDenseDataAcceptanceFixture = {
       label: "Marker assay",
       covers: ["assay", "biology", "experiment_assay"],
       data: { name: "Marker assay", sampleId: "fixture_sample_exp_1", status: "ordered" },
+    },
+    {
+      id: "fixture_lab_notebook_trial_a",
+      collectionName: "lab_notebooks",
+      label: "Trial A notebook",
+      covers: ["lab_notebook", "eln", "lab_notebook_timeline", "document_evidence"],
+      data: { title: "Trial A notebook", studyId: "fixture_study_trial_a", biologyExperimentId: "fixture_biology_experiment_dose_response", companyId: "fixture_company_acme", ownerEmployeeId: "fixture_employee_ada", status: "active", openedAt: "2026-05-17T00:00:00.000Z" },
+    },
+    {
+      id: "fixture_notebook_entry_trial_a",
+      collectionName: "notebook_entries",
+      label: "Day 1 setup",
+      covers: ["notebook_entry", "eln", "lab_notebook_timeline"],
+      data: { title: "Day 1 setup", notebookId: "fixture_lab_notebook_trial_a", studyId: "fixture_study_trial_a", biologyExperimentId: "fixture_biology_experiment_dose_response", sampleId: "fixture_sample_exp_1", assayId: "fixture_assay_marker", entryType: "note", status: "signed", authoredAt: "2026-05-17T01:00:00.000Z", body: "Setup completed for dose response run." },
+    },
+    {
+      id: "fixture_protocol_run_trial_a",
+      collectionName: "protocol_runs",
+      label: "Dose response protocol run",
+      covers: ["protocol_run", "eln", "lab_notebook_timeline", "instrument_response"],
+      data: { title: "Dose response protocol run", notebookId: "fixture_lab_notebook_trial_a", studyId: "fixture_study_trial_a", biologyExperimentId: "fixture_biology_experiment_dose_response", sampleId: "fixture_sample_exp_1", assayId: "fixture_assay_marker", protocolName: "Dose response", protocolVersion: "v1", status: "completed", startedAt: "2026-05-17T02:00:00.000Z", endedAt: "2026-05-17T03:00:00.000Z", parameters: { concentration: "low" } },
+    },
+    {
+      id: "fixture_experiment_observation_trial_a",
+      collectionName: "experiment_observations",
+      label: "Marker intensity",
+      covers: ["experiment_observation", "eln", "lab_notebook_timeline", "partial_data"],
+      data: { title: "Marker intensity", notebookId: "fixture_lab_notebook_trial_a", entryId: "fixture_notebook_entry_trial_a", protocolRunId: "fixture_protocol_run_trial_a", biologyExperimentId: "fixture_biology_experiment_dose_response", sampleId: "fixture_sample_exp_1", assayId: "fixture_assay_marker", observationType: "measurement", value: { intensity: 0.72 }, quality: "good", status: "recorded", observedAt: "2026-05-17T03:15:00.000Z" },
     },
     {
       id: "fixture_legal_case_smith",

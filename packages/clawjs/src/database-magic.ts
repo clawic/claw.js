@@ -562,6 +562,23 @@ function applyDefaults(collectionName: string, payload: Record<string, unknown>,
     case "biology_experiments":
       payload.status ??= "planned";
       break;
+    case "lab_notebooks":
+      payload.status ??= "active";
+      payload.openedAt ??= new Date().toISOString();
+      break;
+    case "notebook_entries":
+      payload.status ??= "draft";
+      payload.entryType ??= "note";
+      payload.authoredAt ??= new Date().toISOString();
+      break;
+    case "protocol_runs":
+      payload.status ??= "planned";
+      break;
+    case "experiment_observations":
+      payload.status ??= "recorded";
+      payload.quality ??= "unknown";
+      payload.observedAt ??= new Date().toISOString();
+      break;
     case "assays":
       payload.status ??= "ordered";
       break;
