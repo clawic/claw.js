@@ -333,6 +333,7 @@ export class SearchStore {
     const tx = this.db.transaction((documents: SearchDocumentInput[]) => {
       const touchedSources = new Map<string, string>();
       const limitsBySource = new Map<string, SearchSourceIndexingLimits>();
+      const existingDocumentIds = existingSearchDocumentIds(this.db, documents.map((document) => document.id));
       for (const input of documents) {
         const updatedAt = input.updatedAt ?? new Date().toISOString();
         const shard = input.shard ?? "default";
@@ -361,9 +362,11 @@ export class SearchStore {
           JSON.stringify(input.permissions ?? {}),
           JSON.stringify(input.rankingHints ?? {}),
         );
-        deleteFragments.run(input.id);
-        deleteActions.run(input.id);
-        deleteFts.run(input.id);
+        if (existingDocumentIds.has(input.id)) {
+          deleteFragments.run(input.id);
+          deleteActions.run(input.id);
+          deleteFts.run(input.id);
+        }
         insertDocumentFts.run(input.id, input.source, shard, input.domain, input.type, input.title, [input.subtitle, input.snippet, body].filter(Boolean).join("\n"), input.path ?? "");
         for (const [index, fragment] of fragments.entries()) {
           insertFragment.run(
@@ -1064,6 +1067,19 @@ interface SearchAuditEventRow {
 function parseJson<T = Record<string, unknown>>(value: string | null | undefined): T {
   if (!value) return {} as T;
   return JSON.parse(value) as T;
+}
+
+function existingSearchDocumentIds(db: Database.Database, ids: string[]): Set<string> {
+  const uniqueIds = [...new Set(ids)];
+  const existing = new Set<string>();
+  for (let index = 0; index < uniqueIds.length; index += 900) {
+    const chunk = uniqueIds.slice(index, index + 900);
+    if (!chunk.length) continue;
+    const placeholders = chunk.map(() => "?").join(",");
+    const rows = db.prepare(`SELECT id FROM search_documents WHERE id IN (${placeholders})`).all(...chunk) as Array<{ id: string }>;
+    for (const row of rows) existing.add(row.id);
+  }
+  return existing;
 }
 
 function searchCursorFromRow(row: SearchCursorRow): SearchSourceCursor {
