@@ -147,6 +147,13 @@ leased, done, or failed jobs. Repeated `schedule` calls for the same changed
 resource compact into one queued job so noisy local events do not create
 unbounded duplicate backfill work.
 
+The local framework database write path now emits those compacted events for
+`database.records`: successful `db <collection> create|update` schedules a hot
+upsert event, and successful `db <collection> delete` schedules a hot delete
+event. The event write is best effort because `search.sqlite` is a rebuildable
+sidecar; a temporary Search sidecar failure must not fail the canonical record
+write.
+
 `claw search service` is the local lifecycle surface for Search. Embedded mode
 is available from the CLI and records `search-service.json` beside
 `search.sqlite`; `start`, `stop`, `restart`, and `status` manage that local
@@ -308,8 +315,8 @@ usable without waiting for universal backfill.
   UI-level search.
 - Require each domain to have a source manifest, fast path, permissions, actions,
   and focused tests.
-- Add event-driven updates and backfill cursors so rebuild is not the only
-  freshness path.
+- Extend event-driven updates beyond `database.records` and keep advancing
+  backfill cursors so rebuild is not the only freshness path.
 
 ### Phase 3: Root Search and optional external sources
 

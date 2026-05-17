@@ -702,6 +702,19 @@ test("search rebuild indexes database.records from core.sqlite", async () => {
     const createPayload = JSON.parse(create.stdout) as { data: { id: string } };
     assert.ok(createPayload.data.id);
 
+    const createdJobs = await runCliCapture(["search", "jobs", "--source", "database.records", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(createdJobs.code, CLI_EXIT_OK);
+    const createdJobsPayload = JSON.parse(createdJobs.stdout) as {
+      data: { items: Array<{ id: string; source: string; operation: string; resourceId: string; shard: string; payload: { eventDriven?: boolean; collection?: string; recordId?: string } }> };
+    };
+    const createdJob = createdJobsPayload.data.items.find((job) => job.resourceId === `main:contacts:${createPayload.data.id}`);
+    assert.equal(createdJob?.source, "database.records");
+    assert.equal(createdJob?.operation, "upsert");
+    assert.equal(createdJob?.shard, "hot");
+    assert.equal(createdJob?.payload.eventDriven, true);
+    assert.equal(createdJob?.payload.collection, "contacts");
+    assert.equal(createdJob?.payload.recordId, createPayload.data.id);
+
     const sensitive = await runCliCapture([
       "db",
       "contacts",
@@ -809,6 +822,18 @@ test("search rebuild indexes database.records from core.sqlite", async () => {
     assert.equal(sensitiveResult?.permissions?.canPreview, false);
     assert.equal(sensitiveResult?.permissions?.redacted, true);
     assert.deepEqual(sensitiveResult?.fragments ?? [], []);
+
+    const deleted = await runCliCapture(["db", "contacts", "delete", createPayload.data.id, "--json"], workspaceRoot);
+    assert.equal(deleted.code, CLI_EXIT_OK);
+    const deletedJobs = await runCliCapture(["search", "jobs", "--source", "database.records", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deletedJobs.code, CLI_EXIT_OK);
+    const deletedJobsPayload = JSON.parse(deletedJobs.stdout) as {
+      data: { items: Array<{ operation: string; priority: number; resourceId: string; payload: { eventDriven?: boolean; recordId?: string } }> };
+    };
+    const deletedJob = deletedJobsPayload.data.items.find((job) => job.resourceId === `main:contacts:${createPayload.data.id}` && job.operation === "delete");
+    assert.equal(deletedJob?.priority, 80);
+    assert.equal(deletedJob?.payload.eventDriven, true);
+    assert.equal(deletedJob?.payload.recordId, createPayload.data.id);
   });
 });
 

@@ -14,6 +14,7 @@ import fs from "fs";
 import path from "path";
 import { CliHandledError } from "./cli-errors.ts";
 import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
+import { scheduleDatabaseRecordSearchEvent } from "./cli-search-events.ts";
 import { openMainDataStore } from "./v1-data.ts";
 
 const DB_EXIT_OK = 0;
@@ -88,7 +89,7 @@ class LocalDbRuntime implements DbRuntime {
 
   constructor(workspaceRoot: string) {
     this.workspaceRoot = workspaceRoot;
-    const dataDir = path.join(workspaceRoot, ".claw", "data");
+    const dataDir = localDatabaseDataDir(workspaceRoot);
     fs.mkdirSync(dataDir, { recursive: true });
     const previousDataDir = process.env.CLAW_DATA_DIR;
     process.env.CLAW_DATA_DIR = dataDir;
@@ -130,6 +131,10 @@ class LocalDbRuntime implements DbRuntime {
   async deleteRecord(namespaceId: string, collectionName: string, recordId: string): Promise<boolean> {
     return this.store.deleteRecord(namespaceId, collectionName, recordId);
   }
+}
+
+function localDatabaseDataDir(workspaceRoot: string): string {
+  return path.join(workspaceRoot, ".claw", "data");
 }
 
 class RemoteDbRuntime implements DbRuntime {
@@ -937,6 +942,16 @@ export async function runMagicDbCli(input: {
       writeDbError(input, "not_found", `${collectionName} record not found: ${recordId}`, DB_EXIT_FAILURE, dbJsonMeta(input, collectionName, action));
       return DB_EXIT_FAILURE;
     }
+    if (mode === "local") {
+      scheduleDatabaseRecordSearchEvent({
+        operation: "delete",
+        namespaceId,
+        collectionName,
+        recordId,
+        dataDir: localDatabaseDataDir(workspaceRoot),
+        flags,
+      });
+    }
     if (wantsJson) writeDbJson(stdout, { deleted: true, id: recordId }, dbJsonMeta(input, collectionName, action));
     else stdout.write(`Deleted ${singularCollectionLabel(collectionName)} ${recordId}\n`);
     return DB_EXIT_OK;
@@ -949,6 +964,16 @@ export async function runMagicDbCli(input: {
     const record = action === "create"
       ? await runtime.createRecord(namespaceId, collectionName, payload)
       : await runtime.updateRecord(namespaceId, collectionName, recordId!, payload);
+    if (mode === "local") {
+      scheduleDatabaseRecordSearchEvent({
+        operation: "upsert",
+        namespaceId,
+        collectionName,
+        recordId: record.id,
+        dataDir: localDatabaseDataDir(workspaceRoot),
+        flags,
+      });
+    }
     if (wantsJson) writeDbJson(stdout, record, dbJsonMeta(input, collectionName, action));
     else {
       const label = pickDisplayField(record, collectionName);
