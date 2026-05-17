@@ -14,13 +14,13 @@
     "unreferencedAssetCandidates": 88
   },
   "knipSummary": {
-    "filesWithIssues": 193,
-    "totalIssues": 869,
+    "filesWithIssues": 192,
+    "totalIssues": 864,
     "issueTypes": {
       "unlisted": 2,
       "types": 119,
-      "owners": 127,
-      "exports": 613,
+      "owners": 126,
+      "exports": 609,
       "duplicates": 8
     }
   },
@@ -71,6 +71,7 @@
     "Chat CLI cleanup made local context and exit-code helpers private while preserving chat/provider CLI entrypoints.",
     "Report governance cleanup made local budget, search, similarity, and age parser helpers private while preserving exported governance functions.",
     "Audio catalog cleanup renamed the local legacy import helper to catalog terminology and removed legacy transcript provider metadata.",
-    "Memory CLI cleanup made local exit-code and usage helpers private while preserving the `runMemoryCli` entrypoint."
+    "Memory CLI cleanup made local exit-code and usage helpers private while preserving the `runMemoryCli` entrypoint.",
+    "References storage cleanup made local path and Markdown serialization helpers private while preserving generated reference IDs and CLI storage flows."
   ]
 }

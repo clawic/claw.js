@@ -8,7 +8,7 @@ import { REFERENCE_SCHEMA_VERSION, isReferenceType, type ReferenceManifest, type
 const FRONTMATTER_OPEN = "---json";
 const FRONTMATTER_CLOSE = "---";
 
-export function referencesRootDir(workspaceRoot: string): string {
+function referencesRootDir(workspaceRoot: string): string {
   return resolveClawPersistentSurfacePath("claw.workspace.references", workspaceRoot);
 }
 
@@ -16,7 +16,7 @@ export function referenceDir(workspaceRoot: string, referenceId: string): string
   return path.join(referencesRootDir(workspaceRoot), referenceId);
 }
 
-export function referenceManifestPath(workspaceRoot: string, referenceId: string): string {
+function referenceManifestPath(workspaceRoot: string, referenceId: string): string {
   return path.join(referenceDir(workspaceRoot, referenceId), "REFERENCE.md");
 }
 
@@ -30,7 +30,7 @@ export function generateReferenceId(type: ReferenceType, name?: string): string 
   return `${type}.${slug}-${suffix}`;
 }
 
-export function serializeReferenceMd(manifest: ReferenceManifest, bodyMd: string = ""): string {
+function serializeReferenceMd(manifest: ReferenceManifest, bodyMd: string = ""): string {
   const head: Record<string, unknown> = { ...manifest };
   for (const key of Object.keys(head)) if (head[key] === undefined) delete head[key];
   const frontmatter = `${FRONTMATTER_OPEN}\n${JSON.stringify(head, null, 2)}\n${FRONTMATTER_CLOSE}`;
@@ -38,7 +38,7 @@ export function serializeReferenceMd(manifest: ReferenceManifest, bodyMd: string
   return `${frontmatter}\n\n${body}\n`;
 }
 
-export function parseReferenceMd(content: string): ReferenceManifest {
+function parseReferenceMd(content: string): ReferenceManifest {
   const trimmed = content.replace(/^﻿/, "");
   if (!trimmed.startsWith(FRONTMATTER_OPEN)) throw new Error(`REFERENCE.md must begin with '${FRONTMATTER_OPEN}'`);
   const afterOpen = trimmed.slice(FRONTMATTER_OPEN.length);
