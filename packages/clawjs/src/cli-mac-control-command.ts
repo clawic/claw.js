@@ -36,7 +36,7 @@ export async function runMacControlCli(input: {
 
   if (group === "mac") return runMacPortal(input, command, target);
   if (group === "permissions") return runMacPermissions(input, command, target);
-  return runMacFamily(input, group, command);
+  return runMacFamily(input, group, command, input.positionals.slice(2));
 }
 
 function runMacPortal(input: {
@@ -146,7 +146,7 @@ function runMacFamily(input: {
   context: CliContext;
   wantsJson: boolean;
   binName: string;
-}, group: string, command: string | undefined): number {
+}, group: string, command: string | undefined, targetPositionals: string[] = []): number {
   const capabilities = listMacAtlasCapabilities({ family: group });
   const action = command ?? "coverage";
   if (action === "coverage" || action === "list" && capabilities.length === 0) {
@@ -170,7 +170,7 @@ function runMacFamily(input: {
   }
 
   if (input.argv.includes("--dry-run") || input.flags["dry-run"] === "true" || input.flags.dryRun === "true") {
-    return writePayload(input, group, buildDryRunPlan(capability));
+    return writePayload(input, group, buildDryRunPlan(capability, input.flags, targetPositionals));
   }
 
   return writePayload(input, group, {
@@ -182,13 +182,15 @@ function runMacFamily(input: {
   });
 }
 
-function buildDryRunPlan(capability: NonNullable<ReturnType<typeof findMacAtlasCapability>>) {
+function buildDryRunPlan(capability: NonNullable<ReturnType<typeof findMacAtlasCapability>>, flags: Record<string, string> = {}, targetPositionals: string[] = []) {
+  const requestShape = buildRequestShape(capability, flags, targetPositionals);
   const request = macActionRequestSchema.parse({
     schemaVersion: clawContractVersionV1,
     requestId: `cli.${capability.id}`,
     capabilityId: capability.id,
     actor: { kind: "owner_cli", id: "local-cli", role: "owner" },
     host: { hostId: "active-signed-host", bundleId: "signed-host-required", appVariant: "cli-dry-run" },
+    ...requestShape,
     dryRun: true,
   });
   const plan = buildMacActionPlan({ request, capability });
@@ -200,11 +202,60 @@ function buildDryRunPlan(capability: NonNullable<ReturnType<typeof findMacAtlasC
     coverageState: plan.coverageState,
     willMutate: plan.willMutate,
     permissions: plan.permissionRequirements.map((permission) => permission.permissionId),
+    blockedReasons: plan.blockedReasons,
     revert: plan.rollback.level,
     relatedSurfaces: plan.relatedSurfaces,
     approvalRequired: plan.requiredApprovals.length > 0,
     execution: "signed_host_broker",
   };
+}
+
+function buildRequestShape(
+  capability: NonNullable<ReturnType<typeof findMacAtlasCapability>>,
+  flags: Record<string, string>,
+  targetPositionals: string[],
+): { target?: { kind: string; name?: string; selector?: Record<string, unknown> }; arguments?: Record<string, unknown> } {
+  const args: Record<string, unknown> = {};
+  const positionalTarget = targetPositionals.join(" ").trim() || undefined;
+  const secretRef = flags["secret-ref"] ?? flags.secretRef ?? flags.secret;
+  const device = flags.device ?? flags.interface;
+  if (device) args.device = device;
+
+  if (capability.id === "mac.wifi.connect") {
+    const ssid = flags.ssid ?? positionalTarget;
+    if (ssid) args.ssid = ssid;
+    if (secretRef) args.secretRef = secretRef;
+    if (flags.password) args.password = flags.password;
+    return {
+      target: ssid ? { kind: "wifi_network", name: ssid, selector: { ssid } } : undefined,
+      arguments: args,
+    };
+  }
+
+  if (capability.family === "shortcut" && (capability.action === "show" || capability.action === "run")) {
+    const name = flags.name ?? positionalTarget;
+    if (name) args.name = name;
+    if (flags.input) args.input = flags.input;
+    if (flags.output) args.output = flags.output;
+    return {
+      target: name ? { kind: "shortcut", name, selector: { name } } : undefined,
+      arguments: args,
+    };
+  }
+
+  if (capability.family === "window") {
+    const selector: Record<string, unknown> = {};
+    if (flags.id) selector.id = flags.id;
+    if (flags.app) selector.app = flags.app;
+    if (flags.title) selector.title = flags.title;
+    if (flags.focused === "true" || flags.focused === "") selector.focused = true;
+    return {
+      target: Object.keys(selector).length > 0 ? { kind: "window", selector } : undefined,
+      arguments: args,
+    };
+  }
+
+  return Object.keys(args).length > 0 ? { arguments: args } : {};
 }
 
 function summarizeCoverage(capabilities: typeof MAC_CAPABILITY_ATLAS) {

@@ -646,10 +646,10 @@ export const MAC_CAPABILITY_ATLAS: MacAtlasCapability[] = [
     summary: "Disconnect Wi-Fi with continuity breaker and rollback timer when possible.",
     portableFamily: "network.wifi.disconnect",
     platforms: ["darwin"],
-    coverageState: "executable",
+    coverageState: "planned",
     sourceConfidence: "official",
     sources: [{ label: "networksetup", localPath: "/usr/sbin/networksetup" }],
-    backend: { strategy: "networksetup", executablePath: "/usr/sbin/networksetup" },
+    backend: { strategy: "networksetup", executablePath: "/usr/sbin/networksetup", notes: "Planned until the signed host has a continuity-safe CoreWLAN disconnect implementation." },
     permissions: wifiPermissions,
     risk: "critical",
     mutatesState: true,
@@ -706,10 +706,15 @@ export const MAC_CAPABILITY_ATLAS: MacAtlasCapability[] = [
     summary: `Governed local window ${action} action through Accessibility.`,
     portableFamily: `desktop.window.${action}`,
     platforms: ["darwin"],
-    coverageState: "executable",
+    coverageState: ["list", "close", "minimize"].includes(action) ? "executable" : "planned",
     sourceConfidence: "official",
     sources: [{ label: "AXUIElement", url: appleAx }],
-    backend: { strategy: action === "list" ? "cgwindow_observation" : "accessibility_ax", notes: "AX is primary for control; CGWindow is observation only." },
+    backend: {
+      strategy: action === "list" ? "cgwindow_observation" : "accessibility_ax",
+      notes: ["list", "close", "minimize"].includes(action)
+        ? "AX is primary for control; CGWindow is observation only."
+        : "Atlas entry only until the signed host implements this AX action.",
+    },
     permissions: action === "list" ? screenPermissions : windowPermissions,
     risk: action === "list" ? "read" : action === "close" ? "medium" : "low",
     mutatesState: action !== "list",
@@ -858,8 +863,13 @@ export function buildMacActionPlan(input: BuildMacActionPlanInput): MacActionPla
   });
   const approvalRequired = ["medium", "high", "critical"].includes(capability.risk);
   const executable = capability.coverageState === "executable" || capability.coverageState === "host_validated";
+  const plaintextWifiPassword =
+    capability.id === "mac.wifi.connect" &&
+    typeof input.request.arguments.password === "string" &&
+    input.request.arguments.password.length > 0;
   const blockedReasons = [
     ...(!executable ? [`coverage_state:${capability.coverageState}`] : []),
+    ...(plaintextWifiPassword ? ["secret_blocked:plaintext_wifi_password"] : []),
     ...permissionRequirements
       .filter((permission) => permission.currentOsState === "denied" || permission.currentOsState === "restricted" || permission.currentFrameworkGrant === "denied")
       .map((permission) => `permission_blocked:${permission.permissionId}`),
@@ -1091,13 +1101,9 @@ export function assertMacControlPlaneRegistryComplete(): void {
     "mac.wifi.status",
     "mac.wifi.list",
     "mac.wifi.connect",
-    "mac.wifi.disconnect",
     "mac.wifi.power.on",
     "mac.wifi.power.off",
     "mac.window.list",
-    "mac.window.focus",
-    "mac.window.move",
-    "mac.window.resize",
     "mac.window.close",
     "mac.window.minimize",
     "mac.shortcut.list",
