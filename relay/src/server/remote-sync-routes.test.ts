@@ -41,6 +41,31 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(gatewayPayload.gateway.contract, "registered_local_contract_projection");
     assert.equal(gatewayPayload.gateway.hostedSelfHostedParity, "required");
 
+    const agentService = await built.app.inject({
+      method: "POST",
+      url: "/v1/gateway/agent-service/evaluate",
+      headers: { "content-type": "application/json" },
+      payload: {
+        tenantId: "tenant.acme",
+        agentId: "agent.support",
+        assignmentId: "assignment.service",
+        estimatedCostCents: 300,
+      },
+    });
+    assert.equal(agentService.statusCode, 200);
+    const agentServicePayload = agentService.json() as {
+      allowed: boolean;
+      billingAccountId: string;
+      isolationKey: string;
+      audit: { eventType: string; decision: string };
+      writes: boolean;
+    };
+    assert.equal(agentServicePayload.allowed, true);
+    assert.equal(agentServicePayload.billingAccountId, "billing.demo");
+    assert.equal(agentServicePayload.isolationKey, "tenant.acme:assignment.service");
+    assert.equal(agentServicePayload.audit.eventType, "remote.agent_service.evaluated");
+    assert.equal(agentServicePayload.writes, false);
+
     const manifests = await built.app.inject({ method: "GET", url: "/v1/sync/manifests?driver=skills" });
     assert.equal(manifests.statusCode, 200);
     const manifestsPayload = manifests.json() as { manifests: Array<{ driver: string; secretPolicy: { plaintextReplication: boolean } }> };

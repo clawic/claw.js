@@ -6,6 +6,7 @@ import {
   createMeshResourceShare,
   createMeshRevocation,
   createSyncResourceManifest,
+  evaluateRemoteAgentServiceAccess,
   remoteSyncRequiredDecisionIds,
   remoteSyncRequiredRouteIds,
   syncObjectSnapshotSchema,
@@ -203,6 +204,40 @@ function meshShareFromFlags(input: RemoteSyncCliInput) {
   });
 }
 
+function numberFlag(value: string | undefined, fallback: number): number {
+  if (value && Number.isFinite(Number(value))) return Number(value);
+  return fallback;
+}
+
+function agentServiceAssignmentFromFlags(input: RemoteSyncCliInput) {
+  const tenantId = input.flags["tenant-id"] ?? "tenant.demo";
+  const agentId = input.flags["agent-id"] ?? "agent.service";
+  const assignmentId = input.flags["assignment-id"] ?? "assignment.service";
+  return {
+    schemaVersion: 1 as const,
+    tenantId,
+    agentId,
+    assignmentId,
+    status: input.flags["assignment-status"] === "paused" || input.flags["assignment-status"] === "revoked" ? input.flags["assignment-status"] : "active" as const,
+    routeIds: listFlag(input.flags["route-ids"], ["gateway.multiTenantAgentService"]),
+    budgetId: input.flags["budget-id"] ?? "budget.service",
+    billingAccountId: input.flags["billing-account"] ?? "billing.demo",
+    isolationKey: input.flags["isolation-key"] ?? `${tenantId}:${assignmentId}`,
+    auditRequired: true as const,
+  };
+}
+
+function agentServiceBudgetFromFlags(input: RemoteSyncCliInput, assignment: ReturnType<typeof agentServiceAssignmentFromFlags>) {
+  return {
+    budgetId: input.flags["budget-id"] ?? assignment.budgetId,
+    tenantId: input.flags["budget-tenant-id"] ?? assignment.tenantId,
+    billingAccountId: input.flags["billing-account"] ?? assignment.billingAccountId,
+    limitCents: numberFlag(input.flags["limit-cents"], 5000),
+    usedCents: numberFlag(input.flags["used-cents"], 0),
+    billingMeterId: input.flags["billing-meter"] ?? "meter.agent-service",
+  };
+}
+
 export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
   const command = input.positionals[1];
   if (command === "classify") {
@@ -307,7 +342,24 @@ export async function runGatewayCli(input: RemoteSyncCliInput): Promise<number> 
     const payload = { operation: command, status: "dry_run_only", writes: false, conformanceRequired: true };
     return writeOutput(input, "gateway", payload, `${command}: dry_run_only conformanceRequired=true`, command);
   }
-  return missing(input, "gateway serve|project|conformance");
+  if (command === "agent-service") {
+    const assignment = agentServiceAssignmentFromFlags(input);
+    const budget = agentServiceBudgetFromFlags(input, assignment);
+    const decision = evaluateRemoteAgentServiceAccess({
+      request: {
+        tenantId: input.flags["tenant-id"] ?? assignment.tenantId,
+        agentId: input.flags["agent-id"] ?? assignment.agentId,
+        assignmentId: input.flags["assignment-id"] ?? assignment.assignmentId,
+        routeId: input.flags["route-id"] ?? "gateway.multiTenantAgentService",
+        estimatedCostCents: numberFlag(input.flags["estimated-cost-cents"], 0),
+        now: input.flags.now ?? "2026-05-17T10:10:00.000Z",
+      },
+      assignment,
+      budget,
+    });
+    return writeOutput(input, "gateway", decision, `agent-service: ${decision.allowed ? "allow" : "deny"}`, command);
+  }
+  return missing(input, "gateway serve|project|conformance|agent-service");
 }
 
 export function remoteSyncExitForPayload(payload: { status?: string; missingRoutes?: unknown[] }): number {

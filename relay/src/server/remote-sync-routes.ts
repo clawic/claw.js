@@ -7,6 +7,7 @@ import {
   createMeshResourceShare,
   createMeshRevocation,
   createSyncResourceManifest,
+  evaluateRemoteAgentServiceAccess,
   remoteSyncRequiredRouteIds,
   syncDriverSchema,
   syncObjectSnapshotSchema,
@@ -207,6 +208,36 @@ function meshShareFromInput(input: Record<string, unknown>) {
   });
 }
 
+function remoteAgentServiceAssignmentFromInput(input: Record<string, unknown>) {
+  const tenantId = stringValue(input.tenantId ?? input["tenant-id"], "tenant.demo");
+  const agentId = stringValue(input.agentId ?? input["agent-id"], "agent.service");
+  const assignmentId = stringValue(input.assignmentId ?? input["assignment-id"], "assignment.service");
+  const routeIds = arrayOfStrings(input.routeIds ?? input["route-ids"], ["gateway.multiTenantAgentService"]);
+  return {
+    schemaVersion: 1 as const,
+    tenantId,
+    agentId,
+    assignmentId,
+    status: input.assignmentStatus === "paused" || input.assignmentStatus === "revoked" ? input.assignmentStatus : "active" as const,
+    routeIds,
+    budgetId: stringValue(input.budgetId ?? input["budget-id"], "budget.service"),
+    billingAccountId: stringValue(input.billingAccountId ?? input["billing-account"], "billing.demo"),
+    isolationKey: stringValue(input.isolationKey ?? input["isolation-key"], `${tenantId}:${assignmentId}`),
+    auditRequired: true as const,
+  };
+}
+
+function remoteAgentServiceBudgetFromInput(input: Record<string, unknown>, assignment: ReturnType<typeof remoteAgentServiceAssignmentFromInput>) {
+  return {
+    budgetId: stringValue(input.budgetId ?? input["budget-id"], assignment.budgetId),
+    tenantId: stringValue(input.budgetTenantId ?? input["budget-tenant-id"], assignment.tenantId),
+    billingAccountId: stringValue(input.billingAccountId ?? input["billing-account"], assignment.billingAccountId),
+    limitCents: numberValue(input.limitCents ?? input["limit-cents"], 5000),
+    usedCents: numberValue(input.usedCents ?? input["used-cents"], 0),
+    billingMeterId: stringValue(input.billingMeterId ?? input["billing-meter"], "meter.agent-service"),
+  };
+}
+
 export function registerRemoteSyncRoutes(app: FastifyInstance): void {
   app.get(clawApiPath("remote/classifications"), async () => remoteClassificationsPayload());
 
@@ -220,6 +251,24 @@ export function registerRemoteSyncRoutes(app: FastifyInstance): void {
       hostedSelfHostedParity: "required",
     },
   }));
+
+  app.post(clawApiPath("gateway/agent-service/evaluate"), async (request) => {
+    const body = readBody(request);
+    const assignment = remoteAgentServiceAssignmentFromInput(body);
+    const budget = remoteAgentServiceBudgetFromInput(body, assignment);
+    return evaluateRemoteAgentServiceAccess({
+      request: {
+        tenantId: stringValue(body.tenantId ?? body["tenant-id"], assignment.tenantId),
+        agentId: stringValue(body.agentId ?? body["agent-id"], assignment.agentId),
+        assignmentId: stringValue(body.assignmentId ?? body["assignment-id"], assignment.assignmentId),
+        routeId: stringValue(body.routeId ?? body["route-id"], "gateway.multiTenantAgentService"),
+        estimatedCostCents: numberValue(body.estimatedCostCents ?? body["estimated-cost-cents"], 0),
+        now: stringValue(body.now, "2026-05-17T10:10:00.000Z"),
+      },
+      assignment,
+      budget,
+    });
+  });
 
   app.get(clawApiPath("sync/manifests"), async (request) => {
     const query = request.query as Record<string, unknown>;
