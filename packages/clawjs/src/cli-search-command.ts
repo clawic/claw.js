@@ -1288,6 +1288,13 @@ function financeRecordTargetFromResourceId(resourceId: string): { namespaceId: s
   return { namespaceId: parts[0], collectionName: parts[1], recordId: parts[2] };
 }
 
+function financeRecordTableIdFromResourceId(resourceId: string): string | null {
+  const prefix = "finance_records:";
+  if (!resourceId.startsWith(prefix)) return null;
+  const id = resourceId.slice(prefix.length);
+  return id || null;
+}
+
 function parseProviderRoutingResourceId(resourceId: string): { feature: string; capability: string } | null {
   const parts = resourceId.split(":");
   if (parts.length !== 3 || parts[0] !== "routing" || !parts[1] || !parts[2]) return null;
@@ -2484,30 +2491,43 @@ function ensureFinanceRecordsSourceIndexed(store: SearchStore, flags: Record<str
   }
   const db = new Database(dbPath, { readonly: true, fileMustExist: true });
   try {
-    if (!hasTable(db, "records")) {
+    if (!hasTable(db, "records") && !hasTable(db, "finance_records")) {
       store.setSourceState("finance.records", "degraded", {
         backlog: 0,
-        error: "core database does not contain records",
+        error: "core database does not contain finance records",
         lastIndexedAt: new Date().toISOString(),
       });
       return 0;
     }
-    const placeholders = FINANCE_SEARCH_COLLECTIONS.map(() => "?").join(", ");
-    const rows = db.prepare(`
-      SELECT namespace_id, collection_name, id, data_json, created_at, updated_at
-      FROM records
-      WHERE collection_name IN (${placeholders})
-      ORDER BY updated_at DESC
-    `).all(...FINANCE_SEARCH_COLLECTIONS) as DatabaseRecordRow[];
     let indexed = 0;
-    for (const row of rows) {
-      store.upsertDocument(financeRecordSearchDocument(row));
-      indexed += 1;
+    if (hasTable(db, "records")) {
+      const placeholders = FINANCE_SEARCH_COLLECTIONS.map(() => "?").join(", ");
+      const rows = db.prepare(`
+        SELECT namespace_id, collection_name, id, data_json, created_at, updated_at
+        FROM records
+        WHERE collection_name IN (${placeholders})
+        ORDER BY updated_at DESC
+      `).all(...FINANCE_SEARCH_COLLECTIONS) as DatabaseRecordRow[];
+      for (const row of rows) {
+        store.upsertDocument(financeRecordSearchDocument(row));
+        indexed += 1;
+      }
+    }
+    if (hasTable(db, "finance_records")) {
+      const rows = db.prepare(`
+        SELECT id, kind, account_id, amount, currency, occurred_at, merchant, category, page_id, metadata_json, created_at, updated_at
+        FROM finance_records
+        ORDER BY occurred_at DESC, updated_at DESC
+      `).all() as FinanceRecordTableRow[];
+      for (const row of rows) {
+        store.upsertDocument(financeRecordTableSearchDocument(row, pageBodyForSearch(db, row.page_id)));
+        indexed += 1;
+      }
     }
     store.setCursor({
       source: "finance.records",
       cursor: `records:${indexed}`,
-      metadata: { store: "core.sqlite", collections: FINANCE_SEARCH_COLLECTIONS },
+      metadata: { store: "core.sqlite", collections: [...FINANCE_SEARCH_COLLECTIONS, "finance_records"] },
     });
     store.setSourceState("finance.records", "enabled", {
       backlog: 0,
@@ -2521,6 +2541,8 @@ function ensureFinanceRecordsSourceIndexed(store: SearchStore, flags: Record<str
 }
 
 function ensureFinanceRecordResourceIndexed(store: SearchStore, flags: Record<string, string>, recordId: string): number {
+  const tableRecordId = financeRecordTableIdFromResourceId(recordId);
+  if (tableRecordId) return ensureFinanceRecordTableResourceIndexed(store, flags, tableRecordId, recordId);
   const target = financeRecordTargetFromResourceId(recordId);
   if (!target || !FINANCE_SEARCH_COLLECTIONS.includes(target.collectionName as typeof FINANCE_SEARCH_COLLECTIONS[number])) return 0;
   const dbPath = resolveMainDbPath(flags);
@@ -2539,6 +2561,34 @@ function ensureFinanceRecordResourceIndexed(store: SearchStore, flags: Record<st
       return 1;
     }
     store.upsertDocument(financeRecordSearchDocument(row));
+    store.setSourceState("finance.records", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 1;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureFinanceRecordTableResourceIndexed(store: SearchStore, flags: Record<string, string>, tableRecordId: string, resourceId: string): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) return 0;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "finance_records")) return 0;
+    const row = db.prepare(`
+      SELECT id, kind, account_id, amount, currency, occurred_at, merchant, category, page_id, metadata_json, created_at, updated_at
+      FROM finance_records
+      WHERE id = ?
+      LIMIT 1
+    `).get(tableRecordId) as FinanceRecordTableRow | undefined;
+    if (!row) {
+      store.tombstone({ source: "finance.records", resourceId, reason: "finance table record missing during Search event refresh" });
+      return 1;
+    }
+    store.upsertDocument(financeRecordTableSearchDocument(row, pageBodyForSearch(db, row.page_id)));
     store.setSourceState("finance.records", "enabled", {
       backlog: 0,
       error: null,
@@ -5277,6 +5327,57 @@ function financeRecordSearchDocument(row: DatabaseRecordRow): SearchDocumentInpu
   };
 }
 
+function financeRecordTableSearchDocument(row: FinanceRecordTableRow, pageBody?: string): SearchDocumentInput {
+  const metadata = parseJsonRecord(row.metadata_json);
+  const metadataText = textFromStructuredContent(redactExternalCachePayload(metadata));
+  const body = [
+    row.kind,
+    row.account_id,
+    row.currency,
+    row.occurred_at,
+    row.merchant,
+    row.category,
+    row.amount,
+    pageBody,
+    metadataText,
+  ].filter((value) => value !== null && value !== undefined && String(value).trim()).join("\n");
+  return {
+    id: `finance.records:finance_records:${row.id}`,
+    source: "finance.records",
+    domain: "finance",
+    type: row.kind || "finance_record",
+    resourceId: `finance_records:${row.id}`,
+    title: `${row.kind || "finance"} ${row.id}`,
+    subtitle: [row.currency, row.occurred_at].filter(Boolean).join(" / "),
+    snippet: "[redacted]",
+    body,
+    updatedAt: row.updated_at,
+    metadata: {
+      recordId: row.id,
+      table: "finance_records",
+      kind: row.kind,
+      accountId: row.account_id ?? null,
+      currency: row.currency,
+      category: row.category ?? null,
+      occurredAt: row.occurred_at,
+      sensitive: true,
+      metadataKeys: Object.keys(metadata).sort(),
+      hasLinkedPage: !!row.page_id,
+    },
+    permissions: { canOpen: true, canPreview: false, redacted: true },
+    rankingHints: {
+      fastPath: 1,
+      finance: 1,
+      transaction: row.kind === "transaction" ? 0.2 : 0,
+    },
+    fragments: [],
+    actions: [
+      { id: "open", kind: "open", label: "Open finance record", requiresApproval: true, risk: "read", grant: "search.finance.open" },
+      { id: "copy-reference", kind: "copy", label: "Copy finance reference", requiresApproval: false },
+    ],
+  };
+}
+
 function runtimeJobSearchDocument(row: RuntimeJobRow): SearchDocumentInput {
   const payload = parseJsonRecord(row.payload_json);
   const payloadText = textFromStructuredContent(payload) ?? (Object.keys(payload).length ? JSON.stringify(payload) : undefined);
@@ -6368,6 +6469,21 @@ interface DatabaseRecordRow {
   updated_at: string;
 }
 
+interface FinanceRecordTableRow {
+  id: string;
+  kind: string;
+  account_id: string | null;
+  amount: number | null;
+  currency: string | null;
+  occurred_at: string | null;
+  merchant: string | null;
+  category: string | null;
+  page_id: string | null;
+  metadata_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
 interface NotesPageRow {
   id: string;
   title: string;
@@ -6481,6 +6597,21 @@ interface CalendarEventRow {
   calendar_id: string | null;
   source: string;
   external_id: string | null;
+  page_id: string | null;
+  metadata_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface FinanceRecordTableRow {
+  id: string;
+  kind: string;
+  account_id: string | null;
+  amount: number;
+  currency: string;
+  occurred_at: string;
+  merchant: string | null;
+  category: string | null;
   page_id: string | null;
   metadata_json: string;
   created_at: string;

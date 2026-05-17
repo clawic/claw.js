@@ -7,7 +7,7 @@ import type Database from "better-sqlite3";
 import { DatabaseServiceStore } from "@clawjs/database";
 import { runAgentsCommand, runConnectionsCommand, runPersonalitiesCommand, runSkillCollectionsCommand } from "./v1-data-agent-entities.ts";
 import { runProviderRoutingCommand, runSnippetsCommand } from "./v1-data-agent-config.ts";
-import { scheduleAppsCatalogSearchEvent, scheduleBusinessRecordsSearchEvent, scheduleCalendarEventsSearchEvent, scheduleContentItemsSearchEvent, scheduleDesignResourcesSearchEvent, scheduleIotConfigSearchEvent, scheduleKnowledgeGraphSearchEvent, scheduleMarketplaceChoicesSearchEvent, scheduleMcpServersSearchEvent, scheduleNotesPagesSearchEvent, scheduleRuntimeEventsSearchEvent, scheduleSignalsObservationsSearchEvent, scheduleSkillsRegistrySearchEvent, scheduleSocialPostsSearchEvent } from "./cli-search-events.ts";
+import { scheduleAppsCatalogSearchEvent, scheduleBusinessRecordsSearchEvent, scheduleCalendarEventsSearchEvent, scheduleContentItemsSearchEvent, scheduleDesignResourcesSearchEvent, scheduleFinanceRecordTableSearchEvent, scheduleIotConfigSearchEvent, scheduleKnowledgeGraphSearchEvent, scheduleMarketplaceChoicesSearchEvent, scheduleMcpServersSearchEvent, scheduleNotesPagesSearchEvent, scheduleRuntimeEventsSearchEvent, scheduleSignalsObservationsSearchEvent, scheduleSkillsRegistrySearchEvent, scheduleSocialPostsSearchEvent } from "./cli-search-events.ts";
 export {
   openMainDataStore,
   resolveClawjsDataRoot,
@@ -1219,6 +1219,12 @@ function runFinanceCommand(input: V1DataCliInput, store: DatabaseServiceStore): 
         merchant = excluded.merchant, category = excluded.category, page_id = excluded.page_id,
         metadata_json = excluded.metadata_json, updated_at = excluded.updated_at
     `).run(id, input.flags.kind || "transaction", input.flags["account-id"] || null, Number(amount), input.flags.currency || "USD", input.flags.at || input.flags["occurred-at"] || now, input.flags.merchant || null, input.flags.category || null, pageId, input.flags.metadata ? JSON.stringify(parseMaybeJson(input.flags.metadata)) : "{}", now, now);
+    scheduleFinanceRecordTableSearchEvent({
+      operation: "upsert",
+      recordId: id,
+      dataDir: resolveClawjsDataRoot(),
+      flags: input.flags,
+    });
     writeSuccess(input, normalizeDbRow(store.sqlite.prepare("SELECT * FROM finance_records WHERE id = ?").get(id) as JsonRecord));
     return V1_DATA_EXIT_OK;
   }
@@ -1226,6 +1232,21 @@ function runFinanceCommand(input: V1DataCliInput, store: DatabaseServiceStore): 
     const rows = store.sqlite.prepare("SELECT * FROM finance_records ORDER BY occurred_at DESC LIMIT ?").all(Math.max(1, Number(input.flags.limit ?? 100)));
     writeSuccess(input, { items: rows.map(normalizeDbRow) });
     return V1_DATA_EXIT_OK;
+  }
+  if (command === "delete") {
+    const id = input.flags.id || input.positionals[2];
+    if (!id) return usageError(input, "Usage: claw finance delete ID [--json]");
+    const changes = store.sqlite.prepare("DELETE FROM finance_records WHERE id = ?").run(id).changes;
+    if (changes > 0) {
+      scheduleFinanceRecordTableSearchEvent({
+        operation: "delete",
+        recordId: id,
+        dataDir: resolveClawjsDataRoot(),
+        flags: input.flags,
+      });
+    }
+    writeSuccess(input, { deleted: changes > 0, id });
+    return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
   return runRecordGetDelete(input, store, "finance_records", "finance");
 }

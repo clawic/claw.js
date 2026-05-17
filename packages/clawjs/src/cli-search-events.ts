@@ -426,6 +426,27 @@ export function scheduleFinanceRecordsSearchEvent(input: {
   });
 }
 
+export function scheduleFinanceRecordTableSearchEvent(input: {
+  operation: "upsert" | "delete";
+  recordId: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  return scheduleSearchIndexEvent({
+    source: "finance.records",
+    operation: input.operation,
+    resourceId: `finance_records:${input.recordId}`,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      table: "finance_records",
+      recordId: input.recordId,
+    },
+  });
+}
+
 export function scheduleWorkItemsSearchEvent(input: {
   operation: "upsert" | "delete";
   namespaceId: string;
