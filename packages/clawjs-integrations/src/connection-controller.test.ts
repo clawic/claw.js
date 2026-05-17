@@ -24,7 +24,7 @@ function storeThatFailsOnPlaintextRead(): AgentStoreFS {
 }
 
 describe("IntegrationConnectionController", () => {
-  it("does not resolve plaintext auth when starting legacy watchers", async () => {
+  it("does not resolve plaintext auth when starting connector listeners", async () => {
     const controller = new IntegrationConnectionController({
       store: storeThatFailsOnPlaintextRead(),
       deliver: () => {},
@@ -33,7 +33,7 @@ describe("IntegrationConnectionController", () => {
     await expect(controller.startOne(connection.id)).resolves.toBe(false);
   });
 
-  it("does not resolve plaintext auth for legacy outbound sends", async () => {
+  it("does not resolve plaintext auth for connector outbound sends", async () => {
     const controller = new IntegrationConnectionController({
       store: storeThatFailsOnPlaintextRead(),
       deliver: () => {},

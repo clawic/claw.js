@@ -111,7 +111,7 @@ local collection catalog.
   explicitly outside the framework contract.
 - Manual CLI inventories are allowed only as generated output or test fixtures
   that assert registry parity.
-- Pre-V1 accidental legacy commands are removed cleanly unless a successor ADR
+- Pre-v1 accidental command aliases are removed cleanly unless a successor ADR
   grants a bounded exception.
 - Post-V1 breaking CLI behavior is versioned per command schema/version, not
   only through package semver.

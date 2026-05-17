@@ -117,7 +117,7 @@ test("Gossip: InMemoryGossip delivers announced intents to observers", async () 
   assert.equal(seen, 1);
 });
 
-test("InMemoryDht still works (legacy implementation)", async () => {
+test("InMemoryDht supports local intent publish/query", async () => {
   const dht = new InMemoryDht();
   const { intent } = makeIntent();
   await dht.publish(intent);

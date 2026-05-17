@@ -301,6 +301,12 @@ for (const relativePath of [
   requireSnippet(relativePath, "pre-v1");
 }
 
+forbidSnippet("docs/adr/0007-cli-agent-interface.md", "Pre-V1 accidental legacy commands");
+forbidSnippet("packages/marketplace/tests/discovery.test.ts", "legacy implementation");
+forbidSnippet("packages/clawjs-integrations/src/connection-controller.test.ts", "legacy watchers");
+forbidSnippet("packages/clawjs-integrations/src/connection-controller.test.ts", "legacy outbound sends");
+forbidSnippet("packages/clawjs-node/src/runtime/claw-runtime.test.ts", "pre-v1 legacy model");
+
 forbidSnippet("packages/clawjs/src/index-data.test.ts", "legacy service tables");
 
 for (const relativePath of [
