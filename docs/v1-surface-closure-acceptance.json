@@ -10,7 +10,15 @@
       "id": "bridge-swift",
       "title": "Swift host bridge contract",
       "status": "verified",
-      "decisionIds": ["bridge_contract_v1", "bridge_source_of_truth", "bridge_v1_frame_scope"],
+      "decisionIds": [
+        "bridge_contract_v1",
+        "bridge_version_field",
+        "bridge_source_of_truth",
+        "bridge_v1_frame_scope",
+        "send_frame_name",
+        "chat_session_vocabulary",
+        "client_kind_values"
+      ],
       "evidence": ["docs/interface-matrix.md", "packages/clawjs-core/src/surface-registry.ts", "docs/v1-surface-closure-completion-audit.md"],
       "validationCommands": ["node scripts/v1-surface-closure-audit-check.mjs"],
       "notes": "ClawJS owns the framework contract; Clawix owns the Swift host implementation and mirrors this acceptance category."
@@ -51,9 +59,42 @@
       "id": "storage-boundary",
       "title": "Framework, host, vault, cache, and workspace storage boundary",
       "status": "verified",
-      "decisionIds": ["framework_store_ownership", "storage_bucket_policy", "secrets_boundary", "provider_config_owner"],
+      "decisionIds": [
+        "framework_store_ownership",
+        "storage_bucket_policy",
+        "apps_design_storage",
+        "audio_dictation_storage",
+        "agent_skill_storage_format",
+        "project_identity_storage",
+        "quickask_prompts_storage",
+        "secrets_boundary",
+        "provider_config_owner"
+      ],
       "evidence": ["docs/data-storage-boundary.md", "docs/persistent-surface.md", "scripts/persistent-surface-guard.mjs"],
       "validationCommands": ["node scripts/persistent-surface-doc-check.mjs", "node scripts/persistent-surface-guard.mjs"]
+    },
+    {
+      "id": "framework-owned-artifacts",
+      "title": "Framework-owned reusable artifacts",
+      "status": "verified",
+      "decisionIds": [
+        "framework_store_ownership",
+        "apps_design_storage",
+        "audio_dictation_storage",
+        "agent_skill_storage_format",
+        "project_identity_storage",
+        "quickask_prompts_storage"
+      ],
+      "evidence": ["docs/interface-matrix.md", "docs/data-storage-boundary.md", "docs/persistent-surface.md"],
+      "validationCommands": ["node scripts/docs-alignment-check.mjs", "node scripts/persistent-surface-doc-check.mjs"]
+    },
+    {
+      "id": "host-tools-policy",
+      "title": "Host tool policy, approvals, audit, and local capabilities",
+      "status": "verified",
+      "decisionIds": ["agent_tools_policy", "local_models_storage", "secrets_boundary", "external_pending_policy"],
+      "evidence": ["docs/host-ownership.md", "docs/interface-matrix.md", "docs/data-storage-boundary.md"],
+      "validationCommands": ["node scripts/docs-alignment-check.mjs", "node scripts/v1-surface-closure-audit-check.mjs"]
     },
     {
       "id": "provider-routing",
@@ -93,7 +134,7 @@
       "id": "docs-alignment",
       "title": "Docs, naming, route graph, and surface alignment",
       "status": "verified",
-      "decisionIds": ["surface_parity_gate", "migration_policy_no_users", "experimental_surface_policy"],
+      "decisionIds": ["surface_parity_gate", "migration_policy_no_users", "experimental_surface_policy", "experimental_correction"],
       "evidence": ["scripts/docs-alignment-check.mjs", "scripts/docs-surface-check.mjs", "scripts/surface-route-graph-guard.mjs"],
       "validationCommands": ["node scripts/docs-alignment-check.mjs", "node scripts/docs-surface-check.mjs", "node --import tsx scripts/surface-route-graph-guard.mjs"]
     },
