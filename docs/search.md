@@ -293,6 +293,12 @@ Preview redaction is enforced in the store as well. If a result declares
 match the indexed text for authorized discovery, but returned snippets are
 `[redacted]` and fragments are omitted.
 
+Saved searches preserve structured query controls. `claw search saved create`
+accepts the same domain/source/shard filters, strategy, local embedding,
+structured filters, limit, explain mode, actor/surface context, and agent budget
+flags as `claw search query`; monitor evaluation runs that stored query and can
+override the result limit for a single run.
+
 Ranking is centralized in `@clawjs/search`. The store reranks a bounded
 candidate batch with lexical score, source ranking hints, local frecency,
 `actor`, `surface`, and scope-like metadata filters before returning the final
