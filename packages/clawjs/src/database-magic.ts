@@ -14,7 +14,7 @@ import fs from "fs";
 import path from "path";
 import { CliHandledError } from "./cli-errors.ts";
 import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
-import { scheduleDatabaseRecordSearchEvent, scheduleDocumentBlocksSearchEvent, scheduleFinanceRecordsSearchEvent, scheduleWorkItemsSearchEvent } from "./cli-search-events.ts";
+import { scheduleDatabaseRecordSearchEvent, scheduleDocumentBlocksSearchEvent, scheduleElnRecordsSearchEvent, scheduleFinanceRecordsSearchEvent, scheduleWorkItemsSearchEvent } from "./cli-search-events.ts";
 import { openMainDataStore } from "./v1-data.ts";
 
 const DB_EXIT_OK = 0;
@@ -31,6 +31,13 @@ const FINANCE_SEARCH_COLLECTIONS = new Set([
   "payment_intents",
   "accounting_entries",
   "accounting_lines",
+]);
+
+const ELN_SEARCH_COLLECTIONS = new Set([
+  "lab_notebooks",
+  "notebook_entries",
+  "protocol_runs",
+  "experiment_observations",
 ]);
 
 const WORK_SEARCH_COLLECTIONS = new Set([
@@ -185,6 +192,16 @@ function scheduleLocalSearchEventsForRecord(input: {
   });
   if (FINANCE_SEARCH_COLLECTIONS.has(input.collectionName)) {
     scheduleFinanceRecordsSearchEvent({
+      operation: input.operation,
+      namespaceId: input.namespaceId,
+      collectionName: input.collectionName,
+      recordId,
+      dataDir: input.dataDir,
+      flags: input.flags,
+    });
+  }
+  if (ELN_SEARCH_COLLECTIONS.has(input.collectionName)) {
+    scheduleElnRecordsSearchEvent({
       operation: input.operation,
       namespaceId: input.namespaceId,
       collectionName: input.collectionName,

@@ -1242,7 +1242,7 @@ test("database writes enqueue work.items refresh jobs", async () => {
       "status=todo",
       "--json",
     ], workspaceRoot);
-    assert.equal(created.code, CLI_EXIT_OK);
+    assert.equal(created.code, CLI_EXIT_OK, created.stderr || created.stdout);
     const createdPayload = JSON.parse(created.stdout) as { data: { id: string } };
 
     const jobs = await runCliCapture(["search", "jobs", "--source", "work.items", "--data-dir", dataRoot, "--json"], workspaceRoot);
@@ -3432,6 +3432,124 @@ test("search service indexes local finance_records with redacted previews", asyn
     const deleteJob = deleteJobsPayload.data.items.find((job) => job.operation === "delete" && job.resourceId === "finance_records:finance.local.invoice");
     assert.equal(deleteJob?.payload.table, "finance_records");
     assert.equal(deleteJob?.payload.recordId, "finance.local.invoice");
+  });
+});
+
+test("search service indexes ELN records from dense database writes", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-eln-"));
+  const dataRoot = path.join(workspaceRoot, ".claw", "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const created = await runCliCapture([
+      "db",
+      "lab_notebooks",
+      "create",
+      "--data",
+      JSON.stringify({
+        id: "eln.notebook.search",
+        title: "Dose Response Notebook",
+        status: "active",
+        studyId: "study-search",
+        biologyExperimentId: "experiment-search",
+        purpose: "ELN evidence for marker dose response search",
+      }),
+      "--json",
+    ], workspaceRoot);
+    assert.equal(created.code, CLI_EXIT_OK);
+    const createdPayload = JSON.parse(created.stdout) as { data: { id: string } };
+
+    const databaseJobs = await runCliCapture(["search", "jobs", "--source", "database.records", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(databaseJobs.code, CLI_EXIT_OK);
+    assert.notEqual(JSON.parse(databaseJobs.stdout).data.items.length, 0, created.stdout);
+
+    const jobs = await runCliCapture(["search", "jobs", "--source", "eln.records", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(jobs.code, CLI_EXIT_OK);
+    const jobsPayload = JSON.parse(jobs.stdout) as {
+      data: { items: Array<{ operation: string; resourceId: string; shard: string; payload: { namespaceId?: string; collection?: string; recordId?: string } }> };
+    };
+    const recordJob = jobsPayload.data.items.find((job) => job.resourceId === `main:lab_notebooks:${createdPayload.data.id}`);
+    assert.equal(recordJob?.operation, "upsert", JSON.stringify({ eln: jobsPayload.data.items, database: JSON.parse(databaseJobs.stdout).data.items }));
+    assert.equal(recordJob?.shard, "hot");
+    assert.equal(recordJob?.payload.namespaceId, "main");
+    assert.equal(recordJob?.payload.collection, "lab_notebooks");
+    assert.equal(recordJob?.payload.recordId, createdPayload.data.id);
+
+    const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "eln.records", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(serviceRun.code, CLI_EXIT_OK);
+    const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.source, "eln.records");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.operation, "upsert");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
+
+    const query = await runCliCapture([
+      "search",
+      "query",
+      "marker dose response",
+      "--domains",
+      "eln",
+      "--filters",
+      JSON.stringify({ "metadata.collection": "lab_notebooks" }),
+      "--data-dir",
+      dataRoot,
+      "--json",
+      "--limit",
+      "5",
+      "--explain",
+      "true",
+    ], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: {
+        indexedFastPaths: { "eln.records": number };
+        results: Array<{
+          source: string;
+          domain: string;
+          type: string;
+          title: string;
+          snippet?: string;
+          metadata?: { recordId?: string; collection?: string; status?: string; studyId?: string; experimentId?: string; sensitive?: boolean };
+          fragments?: Array<{ title?: string; snippet?: string }>;
+          permissions?: { redacted?: boolean; canPreview?: boolean };
+          actions?: Array<{ id: string; kind: string }>;
+          explanation?: { matchedBy?: string[] };
+        }>;
+      };
+    };
+    assert.equal(queryPayload.data.indexedFastPaths["eln.records"], 1);
+    const result = queryPayload.data.results.find((entry) => entry.metadata?.recordId === createdPayload.data.id);
+    assert.equal(result?.source, "eln.records");
+    assert.equal(result?.domain, "eln");
+    assert.equal(result?.type, "lab_notebook");
+    assert.equal(result?.title, "Dose Response Notebook");
+    assert.equal(result?.metadata?.collection, "lab_notebooks");
+    assert.equal(result?.metadata?.status, "active");
+    assert.equal(result?.metadata?.studyId, "study-search");
+    assert.equal(result?.metadata?.experimentId, "experiment-search");
+    assert.equal(result?.metadata?.sensitive, false);
+    assert.equal(result?.permissions?.redacted, false);
+    assert.equal(result?.permissions?.canPreview, true);
+    assert.equal(result?.snippet?.includes("Dose Response") || result?.fragments?.some((fragment) => fragment.snippet?.includes("Dose Response")), true);
+    assert.equal(result?.actions?.some((action) => action.id === "open" && action.kind === "open"), true);
+    assert.ok(result?.explanation?.matchedBy?.length);
+
+    const deleted = await runCliCapture(["db", "lab_notebooks", "delete", createdPayload.data.id, "--json"], workspaceRoot);
+    assert.equal(deleted.code, CLI_EXIT_OK);
+    const deleteJobs = await runCliCapture(["search", "jobs", "--source", "eln.records", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleteJobs.code, CLI_EXIT_OK);
+    const deleteJobsPayload = JSON.parse(deleteJobs.stdout) as {
+      data: { items: Array<{ operation: string; resourceId: string; payload: { collection?: string; recordId?: string } }> };
+    };
+    const deleteJob = deleteJobsPayload.data.items.find((job) => job.operation === "delete" && job.resourceId === `main:lab_notebooks:${createdPayload.data.id}`);
+    assert.equal(deleteJob?.payload.collection, "lab_notebooks");
+    assert.equal(deleteJob?.payload.recordId, createdPayload.data.id);
   });
 });
 

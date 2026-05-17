@@ -68,6 +68,7 @@ backfill jobs.
 | `signals.observations` | `signals` | `core.sqlite` signal verticals, variables, and observations projected into `search.sqlite` | implemented initial adapter |
 | `calendar.events` | `calendar` | `core.sqlite` calendar events projected into `search.sqlite` | implemented initial adapter |
 | `finance.records` | `finance` | `core.sqlite` dense-data finance collections and local `finance_records` projected into `search.sqlite` with redacted previews | implemented initial adapter |
+| `eln.records` | `eln` | `core.sqlite` ELN notebooks, entries, protocol runs, and observations projected into `search.sqlite` | implemented initial adapter |
 | `images.derived` | `images` | image library, image media metadata, and stored OCR/vision-derived text projected into `search.sqlite` | implemented initial adapter |
 | `media.assets` | `media` | workspace media records projected into `search.sqlite` | implemented initial adapter |
 | `generations.artifacts` | `generations` | generated artifact records projected into `search.sqlite` | implemented initial adapter |
@@ -208,7 +209,7 @@ unbounded duplicate backfill work.
 The local framework database and artifact write paths now emit those compacted
 events for `database.records`, `documents.blocks`, `notes.pages`,
 `knowledge.graph`, `signals.observations`, `calendar.events`,
-`finance.records`, `work.items`, `providers.routing`, `snippets.library`,
+`finance.records`, `eln.records`, `work.items`, `providers.routing`, `snippets.library`,
 `agents.catalog`, `mcp.servers`, `apps.catalog`, `design.resources`, `runtime.events`,
 `marketplace.choices`, `content.items`, `social.posts`, `iot.config`,
 `business.records`, `generations.artifacts`, `images.derived`, `media.assets`, and
@@ -222,6 +223,7 @@ monitor/infra/ops event writes, typed-media generation,
 `generations create`, and `skills
 upsert` calls schedule hot upsert events; successful record, document, note,
 signal observation, calendar event, finance collection record, work item,
+ELN record,
 provider route, snippet, MCP server, app/design resource, runtime/operational event, image, media, generation, or skill deletes
 schedule delete events where the source item is removed; and `document_blocks`
 changes schedule a hot upsert for the parent document so fragments refresh together. The event write is best effort because
