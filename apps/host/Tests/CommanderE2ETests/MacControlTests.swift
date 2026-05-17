@@ -217,6 +217,93 @@ final class MacControlTests: XCTestCase {
         ])
     }
 
+    func testHostBridgePlansMacActionFromRequestJson() throws {
+        let request = try wireRequestJSON(
+            requestId: "macreq_host_plan",
+            capabilityId: "mac.shortcut.run",
+            actorKind: "owner_cli",
+            arguments: ["name": "Daily Plan"],
+            dryRun: true
+        )
+
+        let response = try MacControlHostBridge.response(
+            resource: "mac",
+            action: "plan",
+            arguments: ["request-json": String(decoding: request, as: UTF8.self)],
+            environment: temporaryStateEnvironment()
+        )
+
+        XCTAssertTrue(response.ok)
+        XCTAssertEqual(response.requestId, "macreq_host_plan")
+        XCTAssertEqual(response.meta.adapter, "mac-control")
+        XCTAssertEqual(response.meta.source, .localCLI)
+        XCTAssertEqual(response.meta.capabilityId, "mac.shortcut.run")
+        XCTAssertEqual(response.data?.objectValue?["capabilityId"]?.stringValue, "mac.shortcut.run")
+        XCTAssertEqual(response.data?.objectValue?["risk"]?.stringValue, "high")
+    }
+
+    func testHostBridgeExecutesThroughInjectedRunnerAndWritesAudit() throws {
+        let runner = RecordingMacControlRunner()
+        let environment = temporaryStateEnvironment()
+        let request = try wireRequestJSON(
+            requestId: "macreq_host_execute",
+            capabilityId: "mac.shortcut.run",
+            actorKind: "owner_cli",
+            arguments: ["name": "Daily Plan"],
+            approved: true
+        )
+
+        let response = try MacControlHostBridge.response(
+            resource: "mac",
+            action: "execute",
+            arguments: ["request-json": String(decoding: request, as: UTF8.self)],
+            environment: environment,
+            runner: runner
+        )
+
+        XCTAssertTrue(response.ok)
+        XCTAssertEqual(response.requestId, "macreq_host_execute")
+        XCTAssertEqual(response.data?.objectValue?["decision"]?.stringValue, "allow")
+        XCTAssertEqual(response.data?.objectValue?["receipt"]?.objectValue?["result"]?.stringValue, "ok")
+        XCTAssertEqual(runner.processCalls, [
+            RecordingMacControlRunner.ProcessCall(executable: "/usr/bin/shortcuts", arguments: ["run", "Daily Plan"]),
+        ])
+
+        let auditURL = try StatePaths.ensureStateDirectory(environment: environment)
+            .appendingPathComponent(MacControlPolicy.auditFilename)
+        let events = try readAuditEvents(auditURL)
+        XCTAssertEqual(events.first?.action, "mac.shortcut.run")
+        XCTAssertEqual(events.first?.outcome, "approved")
+    }
+
+    func testHostBridgeExposesPermissionsAndDurableAudit() throws {
+        let environment = temporaryStateEnvironment()
+        let permissions = try MacControlHostBridge.response(
+            resource: "mac",
+            action: "permissions",
+            arguments: [:],
+            environment: environment
+        )
+
+        XCTAssertTrue(permissions.ok)
+        XCTAssertEqual(permissions.meta.adapter, "mac-permission-broker")
+        XCTAssertEqual(
+            permissions.data?.objectValue?["permissions"]?.arrayValue?.count,
+            MacControlPermissionID.allCases.count
+        )
+
+        let audit = try MacControlHostBridge.response(
+            resource: "mac",
+            action: "audit",
+            arguments: [:],
+            environment: environment
+        )
+        XCTAssertTrue(audit.ok)
+        XCTAssertEqual(audit.meta.adapter, "mac-control-audit")
+        XCTAssertEqual(audit.data?.objectValue?["events"]?.arrayValue, [])
+        XCTAssertNotNil(audit.data?.objectValue?["auditPath"]?.stringValue)
+    }
+
     private func makeDefaults() throws -> UserDefaults {
         let suite = "MacControlTests-\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
@@ -235,6 +322,14 @@ final class MacControlTests: XCTestCase {
         let decoder = JSONDecoder()
         let lines = String(decoding: data, as: UTF8.self).split(separator: "\n")
         return try lines.map { try decoder.decode(MacControlPolicy.AuditEvent.self, from: Data($0.utf8)) }
+    }
+
+    private func temporaryStateEnvironment() -> [String: String] {
+        var environment = ProcessInfo.processInfo.environment
+        environment["CLAW_HOST_HOME"] = FileManager.default.temporaryDirectory
+            .appendingPathComponent("mac-control-host-bridge-tests-\(UUID().uuidString)")
+            .path
+        return environment
     }
 
     private func wireRequestJSON(

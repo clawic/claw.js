@@ -51,6 +51,17 @@ struct CommanderCLI {
                 return
             }
 
+            if parsed.domain == .system && parsed.resource == "mac" {
+                let response = try MacControlHostBridge.response(
+                    resource: parsed.resource,
+                    action: parsed.action,
+                    arguments: parsed.arguments,
+                    environment: environment
+                )
+                try printJSON(response)
+                exit(response.ok ? 0 : 1)
+            }
+
             let response = try await route(parsed: parsed, environment: environment)
             try printJSON(response)
             exit(response.ok ? 0 : 1)
