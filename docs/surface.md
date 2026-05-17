@@ -1733,6 +1733,7 @@ The docs check script validates that every current export from
     ListRecord
     listRecordSchema
     LUXURY_AND_COLLECTING_FAMILY
+    LEGAL_FAMILY
     manifestSchema
     MARKETING_FAMILY
     MARKETPLACE_PRODUCTS_FAMILY
@@ -1806,6 +1807,7 @@ The docs check script validates that every current export from
     NotificationPriority
     NotificationReceiptPolicy
     OBSERVABILITY_FAMILY
+    OPS_FAMILY
     ObservedDomain
     observedDomainSchema
     OperationalCheckRecord

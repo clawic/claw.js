@@ -794,12 +794,13 @@ export const PRODUCTIVITY_COLLECTION_DEFINITIONS: ProductivityCollectionDefiniti
   {
     name: "incidents",
     displayName: "Incidents",
-    coreFieldNames: ["title", "status", "severity"],
+    coreFieldNames: ["title", "status", "severity", "serviceId"],
     fields: withWorkspaceMetadataFields([
       { name: "title", type: "text", required: true },
       { name: "status", type: "select", required: true, options: ["open", "investigating", "mitigating", "resolved", "closed"] },
       { name: "severity", type: "select", required: true, options: ["sev1", "sev2", "sev3", "sev4"] },
       { name: "projectId", type: "relation", relation: { collectionName: "projects" } },
+      { name: "serviceId", type: "relation", relation: { collectionName: "services" } },
       { name: "goalId", type: "relation", relation: { collectionName: "goals" } },
       { name: "taskId", type: "relation", relation: { collectionName: "tasks" } },
       { name: "releaseId", type: "relation", relation: { collectionName: "releases" } },
@@ -815,6 +816,7 @@ export const PRODUCTIVITY_COLLECTION_DEFINITIONS: ProductivityCollectionDefiniti
     indexes: [
       { name: "incidents_status_idx", fields: ["status"] },
       { name: "incidents_severity_idx", fields: ["severity"] },
+      { name: "incidents_service_idx", fields: ["serviceId"] },
       { name: "incidents_release_idx", fields: ["releaseId"] },
     ],
   },
