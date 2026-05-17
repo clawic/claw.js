@@ -14,7 +14,7 @@ export interface SecretsClaims {
   email: string;
 }
 
-export interface SecretsActor {
+interface SecretsActor {
   actorType: SecretsUserRole | SecretsPrincipalType;
   actorId: string;
   tenantId: string;

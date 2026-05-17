@@ -33,7 +33,6 @@ import {
 import { AgentGrantStore } from "./agent-grants.ts";
 import { LeaseStore } from "./leases.ts";
 import {
-  describeReason,
   evaluateGovernance,
   type GovernanceDenialReason,
   type ResolveContext,
@@ -42,7 +41,7 @@ import type { ClawSecretsCapability } from "./capabilities.ts";
 
 // ---------- Public DTOs (over the wire) ----------
 
-export interface DescribedField {
+interface DescribedField {
   fieldName: string;
   fieldKind: string;
   placement: string;
@@ -112,7 +111,7 @@ export interface RevealedField {
   value: string;
 }
 
-export interface ResolutionOutput {
+interface ResolutionOutput {
   values: Record<string, string>; // fieldName → plaintext
   redactionLabels: Record<string, string>;
   decision: { allowed: boolean; reasons: GovernanceDenialReason[]; needsApproval: boolean; needsVpn: boolean };
@@ -301,5 +300,3 @@ export class SecretsResolver {
     };
   }
 }
-
-export { describeReason };

@@ -25,7 +25,6 @@ import {
   type SecretFieldRow,
   type SecretNotesRow,
   type SecretRow,
-  type SecretSessionCacheRow,
   type SecretSyncedResourceRow,
   type SecretVersionRow,
   type TenantRow,
@@ -907,36 +906,6 @@ export class PolicyStore {
     if (rows.length === 0) return undefined;
     if (rows.some((r) => r.effect === "deny")) return "deny";
     return "allow";
-  }
-}
-
-// ---------- Session cache store ----------
-
-export class SessionCacheStore {
-  constructor(private readonly db: SqliteDb) {}
-
-  upsert(input: {
-    secretId: string;
-    cacheKey: string;
-    wrappedToken: Uint8Array;
-    expiresAt: string;
-  }): void {
-    this.db
-      .prepare(
-        "INSERT INTO secret_session_cache (secret_id, cache_key, wrapped_token, expires_at, refreshed_at) VALUES (?, ?, ?, ?, ?) " +
-          "ON CONFLICT(secret_id, cache_key) DO UPDATE SET wrapped_token = excluded.wrapped_token, expires_at = excluded.expires_at, refreshed_at = excluded.refreshed_at",
-      )
-      .run(input.secretId, input.cacheKey, asBuffer(input.wrappedToken), input.expiresAt, nowIso());
-  }
-
-  get(secretId: string, cacheKey: string): SecretSessionCacheRow | undefined {
-    return this.db
-      .prepare("SELECT * FROM secret_session_cache WHERE secret_id = ? AND cache_key = ?")
-      .get(secretId, cacheKey) as SecretSessionCacheRow | undefined;
-  }
-
-  drop(secretId: string, cacheKey: string): void {
-    this.db.prepare("DELETE FROM secret_session_cache WHERE secret_id = ? AND cache_key = ?").run(secretId, cacheKey);
   }
 }
 
