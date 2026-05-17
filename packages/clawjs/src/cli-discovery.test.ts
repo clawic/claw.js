@@ -31,31 +31,43 @@ test("runCli returns command-intent metadata for future unknown JSON phrases", a
   assert.equal(payload.meta.commandIntent.intent.reportTarget, "github_discussions_ideas");
 });
 
-test("runCli routes dense-data direct nouns as known non-executing surfaces", async () => {
-  const patientList = await runCliCapture(["patient", "list", "--json"], process.cwd());
-  assert.equal(patientList.code, CLI_EXIT_DEGRADED);
+test("runCli routes graduated dense-data direct nouns through the shared database", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-dense-db-"));
+
+  const patientCreate = await runCliCapture(["patient", "create", "Ada Patient", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(patientCreate.code, CLI_EXIT_OK);
+  const createdPatient = JSON.parse(patientCreate.stdout) as {
+    ok: boolean;
+    data: { id: string; displayName: string };
+    meta: { canonicalCommand: string; invokedCommand: string; collection: string; action: string };
+  };
+  assert.equal(createdPatient.ok, true);
+  assert.equal(createdPatient.data.displayName, "Ada Patient");
+  assert.equal(createdPatient.meta.canonicalCommand, "database");
+  assert.equal(createdPatient.meta.invokedCommand, "patient");
+  assert.equal(createdPatient.meta.collection, "patients");
+  assert.equal(createdPatient.meta.action, "create");
+
+  const patientList = await runCliCapture(["patient", "list", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(patientList.code, CLI_EXIT_OK);
   const patientPayload = JSON.parse(patientList.stdout) as {
     ok: boolean;
-    data: {
-      intent: { status: string; execute: boolean; system: { id: string }; center: { commandNoun: string } };
-      coverage: { routeKnown: boolean; executable: boolean; databaseConnected: boolean; implementationStatus: string };
-      gap: { status: string };
-    };
-    meta: { canonicalCommand: string; invokedCommand: string; denseData: boolean };
+    data: Array<{ id: string; displayName: string }>;
+    meta: { canonicalCommand: string; invokedCommand: string; collection: string; action: string };
   };
   assert.equal(patientPayload.ok, true);
-  assert.equal(patientPayload.meta.canonicalCommand, "patient");
+  assert.equal(patientPayload.meta.canonicalCommand, "database");
   assert.equal(patientPayload.meta.invokedCommand, "patient");
-  assert.equal(patientPayload.meta.denseData, true);
-  assert.equal(patientPayload.data.intent.status, "covered");
-  assert.equal(patientPayload.data.intent.execute, false);
-  assert.equal(patientPayload.data.intent.system.id, "health");
-  assert.equal(patientPayload.data.intent.center.commandNoun, "patient");
-  assert.equal(patientPayload.data.coverage.routeKnown, true);
-  assert.equal(patientPayload.data.coverage.executable, false);
-  assert.equal(patientPayload.data.coverage.databaseConnected, false);
-  assert.equal(patientPayload.data.coverage.implementationStatus, "db_adapter_pending");
-  assert.equal(patientPayload.data.gap.status, "workflow_gap");
+  assert.equal(patientPayload.meta.collection, "patients");
+  assert.equal(patientPayload.data.some((record) => record.displayName === "Ada Patient"), true);
+
+  const medicationCreate = await runCliCapture(["medication", "add", "--patient", createdPatient.data.id, "--name", "Atorvastatin", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(medicationCreate.code, CLI_EXIT_OK);
+  const medicationPayload = JSON.parse(medicationCreate.stdout) as { data: { name: string; patientId: string }; meta: { collection: string; action: string } };
+  assert.equal(medicationPayload.meta.collection, "medications");
+  assert.equal(medicationPayload.meta.action, "create");
+  assert.equal(medicationPayload.data.name, "Atorvastatin");
+  assert.equal(medicationPayload.data.patientId, createdPatient.data.id);
 
   const healthGaps = await runCliCapture(["health", "gaps", "--json"], process.cwd());
   assert.equal(healthGaps.code, CLI_EXIT_OK);

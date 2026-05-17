@@ -75,11 +75,11 @@ test("dense data OS centers have direct human CLI nouns and plural aliases", () 
   }
 
   const health = findClawDenseDataSystem("health");
-  assert.ok(health?.centers.some((center) => center.commandNoun === "patient" && center.commandAliases.includes("patients")));
+  assert.ok(health?.centers.some((center) => center.commandNoun === "patient" && center.commandAliases.includes("patients") && center.collectionName === "patients"));
   assert.ok(health?.commandPatterns.includes("claw patient list|get|create|update|delete|query|schema"));
 
   const erp = findClawDenseDataSystem("erp");
-  assert.ok(erp?.centers.some((center) => center.commandNoun === "invoice" && center.commandAliases.includes("invoices")));
+  assert.ok(erp?.centers.some((center) => center.commandNoun === "invoice" && center.commandAliases.includes("invoices") && center.collectionName === "invoices"));
   assert.ok(erp?.commandPatterns.includes("claw invoice list|get|create|update|delete|query|schema"));
 });
 
