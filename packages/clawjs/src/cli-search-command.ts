@@ -125,6 +125,7 @@ export async function runSearchQueryCli(input: {
     const filters = parseSearchFiltersFlag(input.flags.filters ?? input.flags.filter);
     const strategy = parseSearchStrategyFlag(input.flags.strategy);
     const embedding = parseSearchEmbeddingFlag(input.flags.embedding ?? input.flags["embedding-json"], input.flags["embedding-model"] ?? input.flags.model);
+    const agentBudget = parseSearchAgentBudget(input.flags);
     const limit = input.flags.limit ? boundedNumberFlag(input.flags.limit, 20, 1, 1000) : undefined;
     const results = store.query({
       query,
@@ -134,6 +135,7 @@ export async function runSearchQueryCli(input: {
       shards,
       filters,
       strategy,
+      agentBudget,
       embedding,
       limit,
       explain: input.flags.explain === "true" || input.flags.explain === "1",
@@ -150,6 +152,7 @@ export async function runSearchQueryCli(input: {
       shards,
       filters,
       strategy,
+      agentBudget,
       embedding,
       explain: input.flags.explain === "true" || input.flags.explain === "1",
       surface: input.flags.surface,
@@ -180,6 +183,7 @@ export async function runSearchQueryCli(input: {
       ...outputResults,
       strategy: strategy ?? "lexical",
       embeddingModel: embedding?.model,
+      agentBudget: agentBudget ?? null,
       commandFallback: commandFallback.report,
       storage: searchStorageMetadata(input.flags),
       indexedFastPaths: {
@@ -1099,6 +1103,7 @@ function commandFallbackForSearchQuery(store: SearchStore, input: {
   shards?: string[];
   filters?: Record<string, unknown>;
   strategy?: SearchQueryInput["strategy"];
+  agentBudget?: SearchQueryInput["agentBudget"];
   embedding?: SearchQueryInput["embedding"];
   explain?: boolean;
   surface?: string;
@@ -1138,6 +1143,7 @@ function commandFallbackForSearchQuery(store: SearchStore, input: {
     shards: input.shards,
     filters: input.filters,
     strategy: input.strategy,
+    agentBudget: input.agentBudget,
     embedding: input.embedding,
     limit,
     explain: input.explain,
@@ -3205,6 +3211,25 @@ function parseSearchFiltersFlag(value: string | undefined): Record<string, unkno
 
 function parseSearchStrategyFlag(value: string | undefined): "lexical" | "semantic" | "hybrid" | undefined {
   return value === "semantic" || value === "hybrid" || value === "lexical" ? value : undefined;
+}
+
+function parseSearchAgentBudget(flags: Record<string, string>): SearchQueryInput["agentBudget"] | undefined {
+  const maxResults = parseOptionalBoundedInteger(flags["agent-result-limit"] ?? flags["agent-results-limit"], 1, 1000);
+  const maxResultsPerSource = parseOptionalBoundedInteger(flags["agent-source-limit"] ?? flags["agent-results-per-source"], 1, 1000);
+  const maxResultsPerDomain = parseOptionalBoundedInteger(flags["agent-domain-limit"] ?? flags["agent-results-per-domain"], 1, 1000);
+  if (maxResults === undefined && maxResultsPerSource === undefined && maxResultsPerDomain === undefined) return undefined;
+  return {
+    ...(maxResults === undefined ? {} : { maxResults }),
+    ...(maxResultsPerSource === undefined ? {} : { maxResultsPerSource }),
+    ...(maxResultsPerDomain === undefined ? {} : { maxResultsPerDomain }),
+  };
+}
+
+function parseOptionalBoundedInteger(value: string | undefined, min: number, max: number): number | undefined {
+  if (!value) return undefined;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return undefined;
+  return Math.min(max, Math.max(min, Math.floor(parsed)));
 }
 
 function parseSearchIndexJobOperation(value: string | undefined): "upsert" | "delete" | "backfill" | "rebuild" | undefined {

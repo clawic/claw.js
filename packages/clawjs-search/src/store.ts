@@ -9,6 +9,7 @@ import {
   createSearchRegistry,
   scoreLexicalMatch,
   type SearchAction,
+  type SearchAgentResultBudget,
   type SearchFacetDeclaration,
   type SearchProfileId,
   type SearchQueryInput,
@@ -417,8 +418,9 @@ export class SearchStore {
     const cacheKey = searchRankingCacheKey(queryInput);
     const cached = this.rankingCacheGet(cacheKey);
     if (cached) return { ...cached, elapsedMs: Date.now() - startedAt };
-    const limit = Math.max(1, queryInput.limit ?? 20);
-    const candidateLimit = Math.min(200, Math.max(limit * 4, limit));
+    const requestedLimit = Math.max(1, queryInput.limit ?? 20);
+    const outputLimit = effectiveResultLimit(requestedLimit, queryInput.agentBudget);
+    const candidateLimit = Math.min(200, Math.max(requestedLimit * 4, requestedLimit));
     const profile = queryInput.profile ?? "framework";
     const strategy = queryInput.strategy ?? (queryInput.embedding ? "hybrid" : "lexical");
     const match = ftsQuery(queryInput.query);
@@ -449,7 +451,8 @@ export class SearchStore {
       .filter((row) => searchAclAllows(row.permissions_json, queryInput))
       .map((row) => this.resultFromRow(row, queryInput))
       .sort((left, right) => right.score - left.score || (right.updatedAt ?? "").localeCompare(left.updatedAt ?? ""))
-      .slice(0, limit);
+      .filter(agentBudgetResultFilter(queryInput.agentBudget))
+      .slice(0, outputLimit);
     const output: SearchQueryOutput = {
       query: queryInput.query,
       profile,
@@ -1529,6 +1532,37 @@ function boundedNumber(value: unknown, min: number, max: number): number {
   return typeof value === "number" && Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : 0;
 }
 
+function effectiveResultLimit(limit: number, budget: SearchAgentResultBudget | undefined): number {
+  const maxResults = boundedPositiveInteger(budget?.maxResults);
+  return maxResults === undefined ? limit : Math.min(limit, maxResults);
+}
+
+function agentBudgetResultFilter(budget: SearchAgentResultBudget | undefined): (result: SearchResult) => boolean {
+  const maxPerSource = boundedPositiveInteger(budget?.maxResultsPerSource);
+  const maxPerDomain = boundedPositiveInteger(budget?.maxResultsPerDomain);
+  if (maxPerSource === undefined && maxPerDomain === undefined) return () => true;
+  const bySource = new Map<string, number>();
+  const byDomain = new Map<string, number>();
+  return (result) => {
+    const sourceCount = bySource.get(result.source) ?? 0;
+    const domainCount = byDomain.get(result.domain) ?? 0;
+    if (maxPerSource !== undefined && sourceCount >= maxPerSource) return false;
+    if (maxPerDomain !== undefined && domainCount >= maxPerDomain) return false;
+    if (maxPerSource !== undefined) {
+      bySource.set(result.source, sourceCount + 1);
+    }
+    if (maxPerDomain !== undefined) {
+      byDomain.set(result.domain, domainCount + 1);
+    }
+    return true;
+  };
+}
+
+function boundedPositiveInteger(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
+  return Math.max(1, Math.floor(value));
+}
+
 function searchRankingCacheKey(input: SearchQueryInput): string {
   return createHash("sha256").update(stableJson({
     query: input.query,
@@ -1541,6 +1575,7 @@ function searchRankingCacheKey(input: SearchQueryInput): string {
     limit: input.limit ?? 20,
     explain: input.explain === true,
     filters: normalizeCacheValue(input.filters ?? {}),
+    agentBudget: normalizeCacheValue(input.agentBudget ?? {}),
     strategy: input.strategy ?? (input.embedding ? "hybrid" : "lexical"),
     embedding: input.embedding ? {
       model: input.embedding.model,

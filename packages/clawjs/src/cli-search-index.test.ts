@@ -84,6 +84,12 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     const defaultShardPayload = JSON.parse(defaultShardQuery.stdout) as { data: { results: Array<{ source: string; title: string; shard?: string }> } };
     assert.equal(defaultShardPayload.data.results.some((result) => result.source === "commands" && result.title === "system" && result.shard === undefined), true);
 
+    const budgetedQuery = await runCliCapture(["search", "query", "search", "--domains", "commands", "--data-dir", dataRoot, "--json", "--limit", "5", "--agent-result-limit", "1"], workspaceRoot);
+    assert.equal(budgetedQuery.code, CLI_EXIT_OK);
+    const budgetedPayload = JSON.parse(budgetedQuery.stdout) as { data: { agentBudget: { maxResults: number }; results: unknown[] } };
+    assert.equal(budgetedPayload.data.agentBudget.maxResults, 1);
+    assert.equal(budgetedPayload.data.results.length, 1);
+
     const enqueueJob = await runCliCapture(["search", "jobs", "enqueue", "backfill", "--source", "commands", "--id", "job:commands", "--shard", "default", "--resource-id", "commands", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(enqueueJob.code, CLI_EXIT_OK);
     const enqueuePayload = JSON.parse(enqueueJob.stdout) as { data: { item?: { id: string; operation: string; shard: string }; items: Array<{ id: string }> } };

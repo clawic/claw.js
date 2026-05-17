@@ -175,10 +175,17 @@ export interface SearchQueryInput {
   explain?: boolean;
   filters?: Record<string, unknown>;
   strategy?: SearchQueryStrategy;
+  agentBudget?: SearchAgentResultBudget;
   embedding?: {
     model: string;
     vector: number[];
   };
+}
+
+export interface SearchAgentResultBudget {
+  maxResults?: number;
+  maxResultsPerSource?: number;
+  maxResultsPerDomain?: number;
 }
 
 export interface SearchQueryOutput {

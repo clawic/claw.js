@@ -77,6 +77,7 @@ claw search query "analytics cards" --domains generations --filters metadata.sta
 claw search query "symbolName" --domains code --code-root /path/to/project --json
 claw search query "deployment APIs" --domains skills --filters metadata.requiresProtectedRefs=true --json
 claw search query "system capabilities" --domains database --command-fallback empty --json
+claw search query "launch checklist" --actor agent:codex --agent-result-limit 5 --agent-source-limit 2 --json
 claw search sources enable local.files --profile full --json
 claw search rebuild --source local.files --profile full --file-root /path/to/folder --json
 claw search query "invoice" --domains files --profile full --file-root /path/to/folder --json
@@ -204,6 +205,10 @@ declare `permissions.allowedActors`, `permissions.allowedAgents`, and
 `permissions.requiredScopes`; Search hides those results unless the query actor
 and scope filters satisfy the document policy. This keeps agent-specific or
 scope-specific records out of broad Root Search while preserving public results.
+Agent callers can also attach `SearchQueryInput.agentBudget` or use
+`--agent-result-limit`, `--agent-source-limit`, and `--agent-domain-limit` to cap
+their returned result budget after ACL and ranking, including per-source and
+per-domain caps for broad searches.
 Preview redaction is enforced in the store as well. If a result declares
 `permissions.redacted` or disables `permissions.canPreview`, Search can still
 match the indexed text for authorized discovery, but returned snippets are
@@ -216,9 +221,10 @@ limit. `--explain` includes a compact score breakdown for debugging.
 
 Ranked query output is cached in `search_ranking_cache` by normalized query,
 profile, domain/source/shard filters, actor, surface, explain mode, strategy,
-filters, and embedding hash. The cache is rebuildable and is invalidated when
-sources, documents, vectors, tombstones, or source state change, so repeated
-Root Search queries get a fast path without moving ranking into source adapters.
+filters, agent budget, and embedding hash. The cache is rebuildable and is
+invalidated when sources, documents, vectors, tombstones, or source state change,
+so repeated Root Search queries get a fast path without moving ranking into
+source adapters.
 
 Semantic retrieval is opt-in per query and per source capability. Search stores
 local vectors in `search.sqlite` and can run `semantic` or `hybrid` ranking when

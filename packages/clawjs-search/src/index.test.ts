@@ -780,6 +780,66 @@ test("SearchStore filters results by actor and required search scopes", () => {
   }
 });
 
+test("SearchStore applies agent result budgets after ACL and ranking", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-agent-budget-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "work.tasks",
+      domain: "work",
+      name: "Work tasks",
+      resultTypes: ["task"],
+    }));
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "work.notes",
+      domain: "work",
+      name: "Work notes",
+      resultTypes: ["note"],
+    }));
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "knowledge.refs",
+      domain: "knowledge",
+      name: "Knowledge refs",
+      resultTypes: ["reference"],
+    }));
+    for (const item of [
+      { id: "work.tasks:one", source: "work.tasks", domain: "work", title: "Budget result task one", updatedAt: "2026-05-17T12:05:00.000Z" },
+      { id: "work.tasks:two", source: "work.tasks", domain: "work", title: "Budget result task two", updatedAt: "2026-05-17T12:04:00.000Z" },
+      { id: "work.notes:one", source: "work.notes", domain: "work", title: "Budget result note one", updatedAt: "2026-05-17T12:03:00.000Z" },
+      { id: "knowledge.refs:one", source: "knowledge.refs", domain: "knowledge", title: "Budget result reference one", updatedAt: "2026-05-17T12:02:00.000Z" },
+      { id: "knowledge.refs:two", source: "knowledge.refs", domain: "knowledge", title: "Budget result reference two", updatedAt: "2026-05-17T12:01:00.000Z" },
+    ]) {
+      store.upsertDocument({
+        ...item,
+        type: "record",
+        body: "Budget result item for agent search limits.",
+      });
+    }
+
+    const budgeted = store.query({
+      query: "budget result",
+      limit: 10,
+      agentBudget: {
+        maxResults: 3,
+        maxResultsPerSource: 1,
+        maxResultsPerDomain: 2,
+      },
+    });
+
+    assert.deepEqual(budgeted.results.map((result) => result.id), [
+      "work.tasks:one",
+      "work.notes:one",
+      "knowledge.refs:one",
+    ]);
+
+    const unbudgeted = store.query({ query: "budget result", limit: 10 });
+    assert.equal(unbudgeted.results.length, 5);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("SearchStore caches ranked query output and invalidates on index changes", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-ranking-cache-"));
   const store = new SearchStore(path.join(dir, "search.sqlite"));
