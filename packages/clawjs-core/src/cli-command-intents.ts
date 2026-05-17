@@ -1,5 +1,6 @@
 import { resolveClawCliCommand, searchClawCliRegistry } from "./cli-command-registry.ts";
 import type { ClawCliCommandRegistryEntry, ClawCliSearchResult } from "./cli-command-registry.ts";
+import { resolveBuiltinCollectionName } from "./builtins/index.ts";
 import { resolveClawDenseDataIntent } from "./dense-data-os.ts";
 import type { ClawDenseDataIntentResolution, ClawDenseDataIntentStatus } from "./dense-data-os.ts";
 import { scoreNeedOpportunity } from "./need-route-lab.ts";
@@ -154,6 +155,8 @@ const registryEntries: ClawCliCommandIntentEntry[] = [
   }),
 ];
 
+const COLLECTION_INTENT_ACTIONS = new Set(["list", "get", "create", "update", "delete", "query", "schema"]);
+
 function intent(
   id: string,
   phrase: string,
@@ -248,8 +251,11 @@ export function resolveClawCliCommandIntent(input: {
   const firstToken = normalizedPhrase.split(" ")[0] ?? "";
   const command = firstToken ? resolveClawCliCommand(firstToken) : undefined;
   if (command) return resolutionFromCommand(input.phrase, normalizedPhrase, command, related);
+  const collectionResolution = resolutionFromCollectionAlias(input.phrase, normalizedPhrase, related);
   const denseDataIntent = resolveClawDenseDataIntent(input.phrase);
+  if (collectionResolution && (denseDataIntent.status === "data_gap" || denseDataIntent.status === "external_pending")) return collectionResolution;
   if (denseDataIntent.status !== "data_gap") return resolutionFromDenseDataIntent(input.phrase, normalizedPhrase, denseDataIntent, related);
+  if (collectionResolution) return collectionResolution;
   return resolutionFromRelated(input.phrase, normalizedPhrase, related);
 }
 
@@ -323,6 +329,27 @@ function resolutionFromDenseDataIntent(query: string, normalizedPhrase: string, 
     reportTarget: status === "covered" || status === "candidate_alias" ? "none" : status === "blocked" ? "github_discussions_feedback" : "github_discussions_ideas",
   });
   return { schemaVersion: 1, query, normalizedPhrase, status, intent: entry, related, nextSteps: entry.nextSteps, execute: false };
+}
+
+function resolutionFromCollectionAlias(query: string, normalizedPhrase: string, related: ClawCliSearchResult[]): ClawCliCommandIntentResolution | undefined {
+  const tokens = normalizedPhrase.split(" ").filter(Boolean);
+  const alias = tokens[0];
+  if (!alias) return undefined;
+  const collectionName = resolveBuiltinCollectionName(alias);
+  if (!collectionName) return undefined;
+  const rawAction = tokens[1];
+  const action = rawAction ?? "list";
+  if (!COLLECTION_INTENT_ACTIONS.has(action)) return undefined;
+  const mappedCommand = `db ${collectionName} ${action}`;
+  const entry = intent(`cmd_intent_collection_${collectionName}_${alias}_${action}`.replace(/[^a-z0-9_]+/g, "_"), query, `Resolve audited collection command ${alias} ${action} through the local database.`, "covered", {
+    mappedCommand,
+    relatedCommands: ["database", "db", collectionName, alias],
+    risk: action === "list" || action === "get" || action === "query" || action === "schema" ? ["local_read"] : ["local_read", "local_write"],
+    evidence: [`First token is an audited built-in collection alias for \`${collectionName}\`.`, `mappedCommand=claw ${mappedCommand}`],
+    nextSteps: [`Run \`claw ${alias} ${action} --json\` or \`claw db ${collectionName} ${action} --json\`.`],
+    reportTarget: "none",
+  });
+  return { schemaVersion: 1, query, normalizedPhrase, status: entry.status, intent: entry, related, nextSteps: entry.nextSteps, execute: false };
 }
 
 function resolutionFromRelated(query: string, normalizedPhrase: string, related: ClawCliSearchResult[]): ClawCliCommandIntentResolution {

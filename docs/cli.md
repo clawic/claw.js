@@ -398,6 +398,7 @@ unknown behavior.
 
 ```bash
 claw commands resolve "house buy" --json
+claw commands resolve "lead list" --json
 claw commands record --phrase "archive client dashboard" --purpose "Save a client dashboard snapshot for later review" --json
 claw commands list --status gap --json
 claw commands opportunities --json
@@ -410,6 +411,11 @@ workspace records are written only when requested to
 `.claw/command-intents/command-intents.json`; `phrase` and `purpose` are
 required. Raw local phrases can stay in the ledger, while promotion uses
 `claw report` redaction and approval gates.
+
+Audited built-in collection aliases are part of the resolver. For example,
+`lead list` resolves as covered and maps to `db leads list`, so the natural
+top-level collection phrase and the explicit database route stay tied to the
+same canonical collection.
 
 Unknown command JSON includes `meta.commandIntent`. Human unknown-command output
 stays brief and points to `claw commands resolve`. Candidate aliases are

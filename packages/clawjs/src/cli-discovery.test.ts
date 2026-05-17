@@ -1571,6 +1571,38 @@ test("runCli returns extended productivity JSON in the common envelope", { concu
   assert.deepEqual(payload.data, []);
 });
 
+test("runCli routes audited built-in collection aliases as top-level database commands", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-collection-alias-db-"));
+  const companyCreate = await runCliCapture(["company", "create", "Alias Corp", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(companyCreate.code, CLI_EXIT_OK, companyCreate.stderr || companyCreate.stdout);
+  const companyPayload = JSON.parse(companyCreate.stdout) as { data: { id: string } };
+
+  const leadCreate = await runCliCapture(["lead", "create", "Ada Lead", "--company-id", companyPayload.data.id, "--email", "ada@example.test", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(leadCreate.code, CLI_EXIT_OK, leadCreate.stderr || leadCreate.stdout);
+  const leadPayload = JSON.parse(leadCreate.stdout) as { data: { id: string; title: string; companyId: string; email: string }; meta: { canonicalCommand: string; invokedCommand: string; collection: string; action: string } };
+  assert.equal(leadPayload.meta.canonicalCommand, "database");
+  assert.equal(leadPayload.meta.invokedCommand, "lead");
+  assert.equal(leadPayload.meta.collection, "leads");
+  assert.equal(leadPayload.meta.action, "create");
+  assert.equal(leadPayload.data.title, "Ada Lead");
+  assert.equal(leadPayload.data.companyId, companyPayload.data.id);
+
+  const leadsList = await runCliCapture(["leads", "list", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(leadsList.code, CLI_EXIT_OK);
+  const leadsPayload = JSON.parse(leadsList.stdout) as { data: Array<{ id: string; title: string }>; meta: { collection: string; action: string } };
+  assert.equal(leadsPayload.meta.collection, "leads");
+  assert.equal(leadsPayload.meta.action, "list");
+  assert.equal(leadsPayload.data.some((record) => record.id === leadPayload.data.id && record.title === "Ada Lead"), true);
+
+  const transportList = await runCliCapture(["transport", "list", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(transportList.code, CLI_EXIT_OK);
+  const transportPayload = JSON.parse(transportList.stdout) as { data: unknown[]; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(transportPayload.meta.invokedCommand, "transport");
+  assert.equal(transportPayload.meta.collection, "transports_booked");
+  assert.equal(transportPayload.meta.action, "list");
+  assert.deepEqual(transportPayload.data, []);
+});
+
 test("runCli exposes help-only portals through JSON", async () => {
   for (const command of ["logs", "monitor"]) {
     const result = await runCliCapture([command, "--json"], process.cwd());

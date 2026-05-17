@@ -25,6 +25,21 @@ test("commands resolve returns the canonical future fixture without execution", 
   assert.equal(payload.data.resolution.intent.reportTarget, "github_discussions_ideas");
 });
 
+test("commands resolve reports audited collection aliases as covered top-level database routes", async () => {
+  const result = await runCliCapture(["commands", "resolve", "lead", "list", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_OK);
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    data: { resolution: { status: string; execute: boolean; intent: { mappedCommand: string; relatedCommands: string[]; evidence: string[] } } };
+  };
+  assert.equal(payload.ok, true);
+  assert.equal(payload.data.resolution.status, "covered");
+  assert.equal(payload.data.resolution.execute, false);
+  assert.equal(payload.data.resolution.intent.mappedCommand, "db leads list");
+  assert.equal(payload.data.resolution.intent.relatedCommands.includes("leads"), true);
+  assert.equal(payload.data.resolution.intent.evidence.some((entry) => entry.includes("built-in collection alias")), true);
+});
+
 test("commands record writes only the explicit workspace ledger", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-command-intents-"));
   const record = await runCliCapture([

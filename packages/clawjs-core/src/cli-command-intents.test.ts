@@ -60,6 +60,28 @@ test("CLI command intent resolution understands dense-data direct nouns without 
   assert.equal(invoiceList.intent.evidence.some((entry) => entry.includes("operation=invoice.list")), true);
 });
 
+test("CLI command intent resolution covers audited collection aliases as top-level commands", () => {
+  const leadList = resolveClawCliCommandIntent({ phrase: "claw lead list" });
+  assert.equal(leadList.status, "covered");
+  assert.equal(leadList.execute, false);
+  assert.equal(leadList.intent.mappedCommand, "db leads list");
+  assert.equal(leadList.intent.relatedCommands.includes("leads"), true);
+  assert.equal(leadList.intent.evidence.some((entry) => entry.includes("built-in collection alias")), true);
+
+  const supportTicketCreate = resolveClawCliCommandIntent({ phrase: "ticket create" });
+  assert.equal(supportTicketCreate.status, "covered");
+  assert.equal(supportTicketCreate.intent.mappedCommand, "db support_tickets create");
+  assert.equal(supportTicketCreate.intent.risk.includes("local_write"), true);
+
+  const transportList = resolveClawCliCommandIntent({ phrase: "transport list" });
+  assert.equal(transportList.status, "covered");
+  assert.equal(transportList.intent.mappedCommand, "db transports_booked list");
+  assert.equal(transportList.intent.evidence.some((entry) => entry.includes("transports_booked")), true);
+
+  const leadUnknownAction = resolveClawCliCommandIntent({ phrase: "lead merge" });
+  assert.notEqual(leadUnknownAction.status, "covered");
+});
+
 test("CLI command intents produce Need-compatible opportunities for unresolved demand", () => {
   const future = resolveClawCliCommandIntent({ phrase: "house buy" }).intent;
   const opportunity = commandIntentToNeedOpportunity(future);

@@ -1967,7 +1967,19 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   }
 
   const collectionAlias = group ? resolveBuiltinCollectionName(group) : undefined;
-  if (collectionAlias) return await runCliUnsafe(["db", collectionAlias, ...(command ? argv.slice(1) : ["list", ...argv.slice(1)])], context);
+  if (collectionAlias) {
+    const dbAction = command || "list";
+    return await runMagicDbCli({
+      argv: [group, dbAction, ...argv.slice(command ? 2 : 1)],
+      positionals: [group, collectionAlias, dbAction, ...positionals.slice(command ? 2 : 1)],
+      flags,
+      workspaceRoot: flags.workspace || context.cwd,
+      stdout: context.stdout,
+      stderr: context.stderr,
+      wantsJson,
+      binName,
+    });
+  }
 
   return handleUnknownCliCommand({ group, positionals, context, wantsJson, usage });
 }
