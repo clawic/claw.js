@@ -2443,11 +2443,13 @@ The docs check script validates that every current export from
     findMacAtlasCapability
     listMacAtlasCapabilities
     listMacCommandRoots
+    listMacProgrammaticSurfaces
     listMacRelatedSurfaces
     MAC_CAPABILITY_ATLAS
     MAC_CONTROL_COMMAND_ROOTS
     MAC_PERMISSION_CATALOG
     MAC_PERMISSION_PACKS
+    MAC_PROGRAMMATIC_SURFACES
     MacActionAuditEvent
     macActionAuditEventSchema
     MacActionBrokerDecision
@@ -2483,6 +2485,12 @@ The docs check script validates that every current export from
     macPermissionStateSchema
     MacPolicyGrant
     macPolicyGrantSchema
+    MacProgrammaticLifecycleAction
+    macProgrammaticLifecycleActionSchema
+    MacProgrammaticSurface
+    macProgrammaticSurfaceKindSchema
+    MacProgrammaticSurfaceKind
+    macProgrammaticSurfaceSchema
     macRequiredApprovalSchema
     macRevertLevelSchema
     MacRiskTier

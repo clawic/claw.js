@@ -26,6 +26,8 @@ export const macRevertLevelSchema = z.enum(["guaranteed", "best_effort", "none"]
 export const macActionResultSchema = z.enum(["planned", "ok", "denied", "blocked", "error", "reverted"]);
 export const macApprovalStatusSchema = z.enum(["pending", "approved", "rejected", "expired", "revoked"]);
 export const macActionBrokerDecisionSchema = z.enum(["dry_run", "allow", "approval_required", "blocked"]);
+export const macProgrammaticSurfaceKindSchema = z.enum(["mcp_tool", "api_route", "sdk_method"]);
+export const macProgrammaticLifecycleActionSchema = z.enum(["plan", "execute", "revert", "audit", "permissions"]);
 
 export const macActorSchema = z.object({
   kind: macActorKindSchema,
@@ -264,6 +266,24 @@ export const macAtlasCapabilitySchema = z.object({
   testRefs: z.array(z.string().min(1)).default([]),
 });
 
+export const macProgrammaticSurfaceSchema = z.object({
+  schemaVersion: z.literal(clawContractVersionV1),
+  id: z.string().regex(/^mac\.surface\.[a-z0-9_-]+(\.[a-z0-9_-]+)+$/),
+  kind: macProgrammaticSurfaceKindSchema,
+  name: z.string().min(1),
+  transport: z.enum(["mcp", "http", "sdk"]),
+  lifecycleAction: macProgrammaticLifecycleActionSchema,
+  summary: z.string().min(1),
+  inputSchemaId: z.string().min(1),
+  outputSchemaId: z.string().min(1),
+  mutatesNativeState: z.boolean(),
+  requiresSignedHost: z.boolean(),
+  requiresApproval: z.boolean(),
+  route: z.string().min(1).optional(),
+  relatedCli: z.array(z.string().min(1)).default([]),
+  testRefs: z.array(z.string().min(1)).default([]),
+});
+
 export type MacRiskTier = z.infer<typeof macRiskTierSchema>;
 export type MacCoverageState = z.infer<typeof macCoverageStateSchema>;
 export type MacActionBrokerDecision = z.infer<typeof macActionBrokerDecisionSchema>;
@@ -278,6 +298,9 @@ export type MacPolicyGrant = z.infer<typeof macPolicyGrantSchema>;
 export type MacApprovalRequest = z.infer<typeof macApprovalRequestSchema>;
 export type MacRoleAssignment = z.infer<typeof macRoleAssignmentSchema>;
 export type MacAtlasCapability = z.infer<typeof macAtlasCapabilitySchema>;
+export type MacProgrammaticSurface = z.infer<typeof macProgrammaticSurfaceSchema>;
+export type MacProgrammaticSurfaceKind = z.infer<typeof macProgrammaticSurfaceKindSchema>;
+export type MacProgrammaticLifecycleAction = z.infer<typeof macProgrammaticLifecycleActionSchema>;
 
 export interface BuildMacActionPlanInput {
   request: MacActionRequest;
@@ -410,6 +433,133 @@ export const MAC_PERMISSION_CATALOG: MacPermissionCatalogEntry[] = [
   { id: "mac.permission.files_desktop_documents_downloads", label: "Protected Folders", pack: "files", osName: "Files and Folders", canPrompt: false, manualOnly: true, source: "official" },
   { id: "mac.permission.full_disk_access", label: "Full Disk Access", pack: "files", osName: "Full Disk Access", canPrompt: false, manualOnly: true, source: "official" },
   { id: "mac.permission.bluetooth", label: "Bluetooth", pack: "privacy", osName: "Bluetooth", tccService: "kTCCServiceBluetoothAlways", usageDescriptionKeys: ["NSBluetoothAlwaysUsageDescription"], canPrompt: true, source: "official" },
+];
+
+function programmaticSurface(input: Omit<z.input<typeof macProgrammaticSurfaceSchema>, "schemaVersion">): MacProgrammaticSurface {
+  return macProgrammaticSurfaceSchema.parse({ schemaVersion: clawContractVersionV1, ...input });
+}
+
+const macProgrammaticSurfaceTests = ["packages/clawjs-core/src/mac-control-plane.test.ts"];
+
+export const MAC_PROGRAMMATIC_SURFACES: MacProgrammaticSurface[] = [
+  programmaticSurface({
+    id: "mac.surface.mcp.plan",
+    kind: "mcp_tool",
+    name: "mac.plan",
+    transport: "mcp",
+    lifecycleAction: "plan",
+    summary: "Build a Mac action plan from an action request without native execution.",
+    inputSchemaId: "macActionRequestSchema",
+    outputSchemaId: "macActionPlanSchema",
+    mutatesNativeState: false,
+    requiresSignedHost: false,
+    requiresApproval: false,
+    relatedCli: ["claw mac plan", "claw wifi connect --dry-run"],
+    testRefs: macProgrammaticSurfaceTests,
+  }),
+  programmaticSurface({
+    id: "mac.surface.mcp.execute",
+    kind: "mcp_tool",
+    name: "mac.execute",
+    transport: "mcp",
+    lifecycleAction: "execute",
+    summary: "Evaluate broker policy and hand an approved action plan to the active signed host.",
+    inputSchemaId: "macActionPlanSchema",
+    outputSchemaId: "macActionBrokerEvaluationSchema",
+    mutatesNativeState: true,
+    requiresSignedHost: true,
+    requiresApproval: true,
+    relatedCli: ["claw mac plan", "claw approvals"],
+    testRefs: macProgrammaticSurfaceTests,
+  }),
+  programmaticSurface({
+    id: "mac.surface.mcp.revert",
+    kind: "mcp_tool",
+    name: "mac.revert",
+    transport: "mcp",
+    lifecycleAction: "revert",
+    summary: "Plan and route a revert for a previous Mac action receipt.",
+    inputSchemaId: "macActionReceiptSchema",
+    outputSchemaId: "macActionPlanSchema",
+    mutatesNativeState: true,
+    requiresSignedHost: true,
+    requiresApproval: true,
+    relatedCli: ["claw mac revert"],
+    testRefs: macProgrammaticSurfaceTests,
+  }),
+  programmaticSurface({
+    id: "mac.surface.mcp.audit",
+    kind: "mcp_tool",
+    name: "mac.audit",
+    transport: "mcp",
+    lifecycleAction: "audit",
+    summary: "Read redacted Mac action receipts and audit events.",
+    inputSchemaId: "macActionAuditQuerySchema",
+    outputSchemaId: "macActionAuditEventSchema",
+    mutatesNativeState: false,
+    requiresSignedHost: false,
+    requiresApproval: false,
+    relatedCli: ["claw mac audit"],
+    testRefs: macProgrammaticSurfaceTests,
+  }),
+  programmaticSurface({
+    id: "mac.surface.mcp.permissions",
+    kind: "mcp_tool",
+    name: "mac.permissions",
+    transport: "mcp",
+    lifecycleAction: "permissions",
+    summary: "Read permission state or create just-in-time permission request plans through the central broker.",
+    inputSchemaId: "macPermissionStateSchema",
+    outputSchemaId: "macPermissionStateSchema",
+    mutatesNativeState: false,
+    requiresSignedHost: true,
+    requiresApproval: false,
+    relatedCli: ["claw permissions check", "claw permissions request"],
+    testRefs: macProgrammaticSurfaceTests,
+  }),
+  ...[
+    ["plan", "/v1/mac/plan", "macActionRequestSchema", "macActionPlanSchema", false, false, false],
+    ["execute", "/v1/mac/execute", "macActionPlanSchema", "macActionBrokerEvaluationSchema", true, true, true],
+    ["revert", "/v1/mac/revert", "macActionReceiptSchema", "macActionPlanSchema", true, true, true],
+    ["audit", "/v1/mac/audit", "macActionAuditQuerySchema", "macActionAuditEventSchema", false, false, false],
+    ["permissions", "/v1/mac/permissions", "macPermissionStateSchema", "macPermissionStateSchema", false, true, false],
+  ].map(([action, route, inputSchemaId, outputSchemaId, mutatesNativeState, requiresSignedHost, requiresApproval]) => programmaticSurface({
+    id: `mac.surface.api.${action}`,
+    kind: "api_route",
+    name: route as string,
+    transport: "http",
+    lifecycleAction: action as z.infer<typeof macProgrammaticLifecycleActionSchema>,
+    summary: `HTTP ${route} projection of the Mac ${action} contract.`,
+    inputSchemaId: inputSchemaId as string,
+    outputSchemaId: outputSchemaId as string,
+    mutatesNativeState: mutatesNativeState as boolean,
+    requiresSignedHost: requiresSignedHost as boolean,
+    requiresApproval: requiresApproval as boolean,
+    route: route as string,
+    relatedCli: action === "permissions" ? ["claw permissions"] : [`claw mac ${action}`],
+    testRefs: macProgrammaticSurfaceTests,
+  })),
+  ...[
+    ["plan", "claw.mac.plan", "macActionRequestSchema", "macActionPlanSchema", false, false, false],
+    ["execute", "claw.mac.execute", "macActionPlanSchema", "macActionBrokerEvaluationSchema", true, true, true],
+    ["revert", "claw.mac.revert", "macActionReceiptSchema", "macActionPlanSchema", true, true, true],
+    ["audit", "claw.mac.audit", "macActionAuditQuerySchema", "macActionAuditEventSchema", false, false, false],
+    ["permissions", "claw.mac.permissions", "macPermissionStateSchema", "macPermissionStateSchema", false, true, false],
+  ].map(([action, name, inputSchemaId, outputSchemaId, mutatesNativeState, requiresSignedHost, requiresApproval]) => programmaticSurface({
+    id: `mac.surface.sdk.${action}`,
+    kind: "sdk_method",
+    name: name as string,
+    transport: "sdk",
+    lifecycleAction: action as z.infer<typeof macProgrammaticLifecycleActionSchema>,
+    summary: `SDK projection of the Mac ${action} contract.`,
+    inputSchemaId: inputSchemaId as string,
+    outputSchemaId: outputSchemaId as string,
+    mutatesNativeState: mutatesNativeState as boolean,
+    requiresSignedHost: requiresSignedHost as boolean,
+    requiresApproval: requiresApproval as boolean,
+    relatedCli: action === "permissions" ? ["claw permissions"] : [`claw mac ${action}`],
+    testRefs: macProgrammaticSurfaceTests,
+  })),
 ];
 
 const appleProtectedResources = "https://developer.apple.com/documentation/bundleresources/protected-resources";
@@ -657,6 +807,7 @@ export const clawMacControlPlaneRegistry = {
   permissionPacks: MAC_PERMISSION_PACKS,
   permissionCatalog: MAC_PERMISSION_CATALOG,
   capabilities: MAC_CAPABILITY_ATLAS,
+  programmaticSurfaces: MAC_PROGRAMMATIC_SURFACES,
   policyDefaults: {
     precedence: "most_restrictive_wins",
     defaultAgentAccess: "safe_read_only",
@@ -681,6 +832,13 @@ export function listMacAtlasCapabilities(options: { family?: string; coverageSta
 
 export function findMacAtlasCapability(id: string): MacAtlasCapability | undefined {
   return MAC_CAPABILITY_ATLAS.find((capability) => capability.id === id);
+}
+
+export function listMacProgrammaticSurfaces(options: { kind?: MacProgrammaticSurfaceKind; lifecycleAction?: MacProgrammaticLifecycleAction } = {}): MacProgrammaticSurface[] {
+  return MAC_PROGRAMMATIC_SURFACES.filter((surface) =>
+    (!options.kind || surface.kind === options.kind) &&
+    (!options.lifecycleAction || surface.lifecycleAction === options.lifecycleAction)
+  );
 }
 
 export function buildMacActionPlan(input: BuildMacActionPlanInput): MacActionPlan {
@@ -957,5 +1115,15 @@ export function assertMacControlPlaneRegistryComplete(): void {
   const roots = new Set(MAC_CONTROL_COMMAND_ROOTS.map((entry) => entry.root));
   for (const root of ["mac", "permissions", "wifi", "window", "shortcut", "app", "audio", "notification"]) {
     if (!roots.has(root)) throw new Error(`Missing Mac command root: ${root}`);
+  }
+
+  const surfaceNames = new Set(MAC_PROGRAMMATIC_SURFACES.map((entry) => entry.name));
+  for (const name of ["mac.plan", "mac.execute", "mac.revert", "mac.audit", "mac.permissions", "/v1/mac/plan", "/v1/mac/execute", "claw.mac.plan", "claw.mac.execute"]) {
+    if (!surfaceNames.has(name)) throw new Error(`Missing Mac programmatic surface: ${name}`);
+  }
+  for (const surface of MAC_PROGRAMMATIC_SURFACES) {
+    macProgrammaticSurfaceSchema.parse(surface);
+    if (surface.mutatesNativeState && !surface.requiresSignedHost) throw new Error(`Mutating Mac surface must require signed host: ${surface.name}`);
+    if (surface.lifecycleAction === "execute" && !surface.requiresApproval) throw new Error(`Mac execute surface must require approval: ${surface.name}`);
   }
 }

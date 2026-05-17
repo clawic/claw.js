@@ -6,6 +6,7 @@ import {
   MAC_CONTROL_COMMAND_ROOTS,
   MAC_PERMISSION_CATALOG,
   MAC_PERMISSION_PACKS,
+  MAC_PROGRAMMATIC_SURFACES,
   assertMacControlPlaneRegistryComplete,
   buildMacActionPlan,
   buildMacActionReceipt,
@@ -14,6 +15,7 @@ import {
   clawMacControlPlaneRegistry,
   findMacAtlasCapability,
   listMacRelatedSurfaces,
+  listMacProgrammaticSurfaces,
   macActionPlanSchema,
   macActionReceiptSchema,
   macActionRequestSchema,
@@ -76,6 +78,47 @@ test("Mac permissions are centralized into intent packs", () => {
   assert.deepEqual(microphone?.usageDescriptionKeys, ["NSMicrophoneUsageDescription"]);
   const accessibility = MAC_PERMISSION_CATALOG.find((entry) => entry.id === "mac.permission.accessibility");
   assert.equal(accessibility?.manualOnly, true);
+});
+
+test("Mac MCP, API and SDK surfaces share the same broker contract names", () => {
+  const names = new Set(MAC_PROGRAMMATIC_SURFACES.map((surface) => surface.name));
+  for (const name of [
+    "mac.plan",
+    "mac.execute",
+    "mac.revert",
+    "mac.audit",
+    "mac.permissions",
+    "/v1/mac/plan",
+    "/v1/mac/execute",
+    "/v1/mac/revert",
+    "/v1/mac/audit",
+    "/v1/mac/permissions",
+    "claw.mac.plan",
+    "claw.mac.execute",
+    "claw.mac.revert",
+    "claw.mac.audit",
+    "claw.mac.permissions",
+  ]) {
+    assert.ok(names.has(name), `missing programmatic surface ${name}`);
+  }
+
+  const mcpExecute = MAC_PROGRAMMATIC_SURFACES.find((surface) => surface.name === "mac.execute");
+  assert.equal(mcpExecute?.kind, "mcp_tool");
+  assert.equal(mcpExecute?.inputSchemaId, "macActionPlanSchema");
+  assert.equal(mcpExecute?.outputSchemaId, "macActionBrokerEvaluationSchema");
+  assert.equal(mcpExecute?.mutatesNativeState, true);
+  assert.equal(mcpExecute?.requiresSignedHost, true);
+  assert.equal(mcpExecute?.requiresApproval, true);
+
+  const apiPlan = MAC_PROGRAMMATIC_SURFACES.find((surface) => surface.name === "/v1/mac/plan");
+  assert.equal(apiPlan?.kind, "api_route");
+  assert.equal(apiPlan?.mutatesNativeState, false);
+  assert.equal(apiPlan?.requiresApproval, false);
+  assert.deepEqual(
+    listMacProgrammaticSurfaces({ kind: "mcp_tool" }).map((surface) => surface.name),
+    ["mac.plan", "mac.execute", "mac.revert", "mac.audit", "mac.permissions"],
+  );
+  assert.equal(listMacProgrammaticSurfaces({ lifecycleAction: "execute" }).every((surface) => surface.requiresSignedHost), true);
 });
 
 test("Mac V1 executable slice is fully declared", () => {
