@@ -191,6 +191,9 @@ Relay, MCP, service API, external channel, and internal UI views use the same
 safe surface projection contract so public surfaces only see bounded identity,
 assignment, budget, memory, and resource summaries instead of raw prompts,
 secret material, local paths, private endpoints, or runtime environment data.
+MCP tool calls are double-gated: connector control-plane approval is required,
+and the request must also carry an Agents V1 `mcp_api` assignment policy that
+passes route and effective-access checks before the MCP protocol is invoked.
 `config-revision` and `incident` create redacted, auditable records for
 governable agent changes and safety/runtime incidents without exposing raw
 secret references, authorization material, local traces, or private paths.

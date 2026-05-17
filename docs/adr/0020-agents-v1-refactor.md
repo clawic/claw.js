@@ -63,6 +63,8 @@ The first implementation slice is model plus gates:
   `claw agents evaluation`
 - `createClaw().agents` SDK facade with the same Agents V1 policy gates and
   redacted package/surface helpers
+- MCP tool calls require both connector control-plane approval and an Agents V1
+  `mcp_api` assignment/access policy before protocol invocation
 - `@clawjs/core` policy evaluators and `claw agents` gates for effective
   access, grant expiry, delegation checks, assignment routing, external
   identity, support projection, flexible memory scopes, multidimensional
