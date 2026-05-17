@@ -35,9 +35,9 @@ export async function runDenseDataCli(input: DenseDataCliInput): Promise<number 
 
   const intent = resolveClawDenseDataIntent(phrase);
   if (intent.status === "data_gap") return null;
-  const nestedPatientRoute = nestedPatientDbRoute(input);
-  if (nestedPatientRoute) {
-    return await runMagicDbCli(nestedPatientRoute);
+  const nestedRoute = nestedDenseDbRoute(input);
+  if (nestedRoute) {
+    return await runMagicDbCli(nestedRoute);
   }
   const collectionName = collectionForDenseRoute(input.positionals[0], intent.center?.collectionName);
   const dbAction = action === "add" ? "create" : action;
@@ -110,34 +110,74 @@ function denseDbFlags(flags: Record<string, string>, collectionName: string): Re
   if (["medications", "symptom_logs"].includes(collectionName) && flags.patient && !flags["patient-id"]) {
     nextFlags = { ...nextFlags, "patient-id": flags.patient };
   }
-  if (["accounts", "deals", "billing_customers"].includes(collectionName) && flags.company && !flags["company-id"]) {
+  if (["accounts", "deals", "billing_customers", "legal_cases", "services"].includes(collectionName) && flags.company && !flags["company-id"]) {
     nextFlags = { ...nextFlags, "company-id": flags.company };
   }
   if (["invoices", "payment_intents"].includes(collectionName) && flags["billing-customer"] && !flags["billing-customer-id"]) {
     nextFlags = { ...nextFlags, "billing-customer-id": flags["billing-customer"] };
   }
+  if (collectionName === "incidents" && flags.service && !flags["service-id"]) {
+    nextFlags = { ...nextFlags, "service-id": flags.service };
+  }
+  if (collectionName === "case_evidence" && flags.case && !flags["case-id"]) {
+    nextFlags = { ...nextFlags, "case-id": flags.case };
+  }
   return nextFlags;
 }
 
-function nestedPatientDbRoute(input: DenseDataCliInput): Parameters<typeof runMagicDbCli>[0] | null {
-  if (input.positionals[0] !== "patient") return null;
+function nestedDenseDbRoute(input: DenseDataCliInput): Parameters<typeof runMagicDbCli>[0] | null {
+  return nestedParentDbRoute(input, {
+    parentCommand: "patient",
+    relationFlag: "patient-id",
+    relationField: "patientId",
+    collections: {
+      medication: "medications",
+      medications: "medications",
+      symptom: "symptom_logs",
+      symptoms: "symptom_logs",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "case",
+    relationFlag: "case-id",
+    relationField: "caseId",
+    collections: {
+      evidence: "case_evidence",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "service",
+    relationFlag: "service-id",
+    relationField: "serviceId",
+    collections: {
+      incident: "incidents",
+      incidents: "incidents",
+    },
+  });
+}
+
+function nestedParentDbRoute(input: DenseDataCliInput, config: {
+  parentCommand: string;
+  relationFlag: string;
+  relationField: string;
+  collections: Record<string, string>;
+}): Parameters<typeof runMagicDbCli>[0] | null {
+  if (input.positionals[0] !== config.parentCommand) return null;
   const patientId = input.positionals[1];
   const noun = input.positionals[2];
   const action = input.positionals[3];
   if (!patientId || !noun || !action) return null;
 
-  const collectionName = nestedPatientCollection(noun);
+  const collectionName = config.collections[noun];
   if (!collectionName) return null;
   const dbAction = action === "add" ? "create" : action;
   if (!CRUD_ACTIONS.has(action) || dbAction === "purge") return null;
 
   const flags = dbAction === "create"
-    ? { ...input.flags, "patient-id": input.flags["patient-id"] ?? patientId }
-    : { ...input.flags, filter: input.flags.filter ?? JSON.stringify({ patientId }) };
+    ? { ...input.flags, [config.relationFlag]: input.flags[config.relationFlag] ?? patientId }
+    : { ...input.flags, filter: input.flags.filter ?? JSON.stringify({ [config.relationField]: patientId }) };
 
   return {
     argv: input.argv,
-    positionals: ["patient", collectionName, dbAction, ...input.positionals.slice(4)],
+    positionals: [config.parentCommand, collectionName, dbAction, ...input.positionals.slice(4)],
     flags,
     workspaceRoot: input.workspaceRoot,
     stdout: input.context.stdout,
@@ -145,19 +185,6 @@ function nestedPatientDbRoute(input: DenseDataCliInput): Parameters<typeof runMa
     wantsJson: input.wantsJson,
     binName: input.binName,
   };
-}
-
-function nestedPatientCollection(noun: string): string | null {
-  switch (noun) {
-    case "medication":
-    case "medications":
-      return "medications";
-    case "symptom":
-    case "symptoms":
-      return "symptom_logs";
-    default:
-      return null;
-  }
 }
 
 function isDenseDataCommandGroup(group: string): boolean {

@@ -255,7 +255,7 @@ export const clawDenseDataOsRegistry: ClawDenseDataOsRegistry = {
       sensitivityDefault: "high",
       sharedEngines: ["identity_role_profile", "evidence_provenance", "quality_gap", "relation_graph", "semantic_view", "intent_coverage", "timeline", "document_evidence", "workflow_state"],
       centers: [
-        center("case", "Case", "case", undefined, "Legal matter/case center for parties, evidence, deadlines, filings, facts, and documents."),
+        center("case", "Case", "case", undefined, "Legal matter/case center for parties, evidence, deadlines, filings, facts, and documents.", ["cases", "matter", "matters"], "legal_cases"),
         center("legal_client", "Legal Client", "legal-client", "legal_client_profile", "Domain role over shared identity or organization."),
       ],
       commandPatterns: ["claw case list|get|create|update|delete|query|schema", "claw case <id> evidence list|add", "claw case <id> timeline", "claw legal overview|gaps|intents"],
@@ -373,8 +373,8 @@ export const clawDenseDataOsRegistry: ClawDenseDataOsRegistry = {
       sensitivityDefault: "normal",
       sharedEngines: ["evidence_provenance", "quality_gap", "relation_graph", "semantic_view", "intent_coverage", "workflow_state", "timeline", "document_evidence"],
       centers: [
-        center("service", "Service", "service", undefined, "Operational service center for incidents, changes, checks, dependencies, and SLOs."),
-        center("incident", "Incident", "incident", undefined, "Operational incident center for events, evidence, actions, status, and postmortems."),
+        center("service", "Service", "service", undefined, "Operational service center for incidents, changes, checks, dependencies, and SLOs.", undefined, "services"),
+        center("incident", "Incident", "incident", undefined, "Operational incident center for events, evidence, actions, status, and postmortems.", undefined, "incidents"),
       ],
       commandPatterns: ["claw ops overview|gaps|intents", "claw itsm overview|gaps|intents", "claw incident list|get|create|update|query|schema", "claw service <id> timeline"],
       operations: [operation("service.timeline", "Read service timeline", ["claw service <id> timeline"], ["service", "incident", "deployment", "slo", "check"])],

@@ -141,6 +141,54 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(invoicePayload.data.billingCustomerId, billingCustomerPayload.data.id);
   assert.equal(invoicePayload.data.totalCents, 9900);
   assert.equal(invoicePayload.data.status, "draft");
+
+  const legalCaseCreate = await runCliCapture(["case", "create", "Smith v Jones", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(legalCaseCreate.code, CLI_EXIT_OK);
+  const legalCasePayload = JSON.parse(legalCaseCreate.stdout) as { data: { id: string; title: string; status: string }; meta: { collection: string; action: string } };
+  assert.equal(legalCasePayload.meta.collection, "legal_cases");
+  assert.equal(legalCasePayload.data.title, "Smith v Jones");
+  assert.equal(legalCasePayload.data.status, "open");
+
+  const caseEvidenceCreate = await runCliCapture(["case", legalCasePayload.data.id, "evidence", "add", "Signed contract", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(caseEvidenceCreate.code, CLI_EXIT_OK);
+  const caseEvidencePayload = JSON.parse(caseEvidenceCreate.stdout) as { data: { title: string; caseId: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(caseEvidencePayload.meta.invokedCommand, "case");
+  assert.equal(caseEvidencePayload.meta.collection, "case_evidence");
+  assert.equal(caseEvidencePayload.data.title, "Signed contract");
+  assert.equal(caseEvidencePayload.data.caseId, legalCasePayload.data.id);
+
+  const caseEvidenceList = await runCliCapture(["case", legalCasePayload.data.id, "evidence", "list", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(caseEvidenceList.code, CLI_EXIT_OK);
+  const caseEvidenceListPayload = JSON.parse(caseEvidenceList.stdout) as { data: Array<{ title: string; caseId: string }>; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(caseEvidenceListPayload.meta.invokedCommand, "case");
+  assert.equal(caseEvidenceListPayload.meta.collection, "case_evidence");
+  assert.equal(caseEvidenceListPayload.data.length, 1);
+  assert.equal(caseEvidenceListPayload.data[0]?.caseId, legalCasePayload.data.id);
+
+  const serviceCreate = await runCliCapture(["service", "create", "API", "--company", companyPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(serviceCreate.code, CLI_EXIT_OK);
+  const servicePayload = JSON.parse(serviceCreate.stdout) as { data: { id: string; name: string; companyId: string; status: string }; meta: { collection: string; action: string } };
+  assert.equal(servicePayload.meta.collection, "services");
+  assert.equal(servicePayload.data.name, "API");
+  assert.equal(servicePayload.data.companyId, companyPayload.data.id);
+  assert.equal(servicePayload.data.status, "active");
+
+  const incidentCreate = await runCliCapture(["incident", "create", "Outage", "--service", servicePayload.data.id, "--severity", "high", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(incidentCreate.code, CLI_EXIT_OK);
+  const incidentPayload = JSON.parse(incidentCreate.stdout) as { data: { title: string; serviceId: string; severity: string; status: string }; meta: { collection: string; action: string } };
+  assert.equal(incidentPayload.meta.collection, "incidents");
+  assert.equal(incidentPayload.data.title, "Outage");
+  assert.equal(incidentPayload.data.serviceId, servicePayload.data.id);
+  assert.equal(incidentPayload.data.severity, "high");
+  assert.equal(incidentPayload.data.status, "open");
+
+  const serviceIncidents = await runCliCapture(["service", servicePayload.data.id, "incidents", "list", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(serviceIncidents.code, CLI_EXIT_OK);
+  const serviceIncidentsPayload = JSON.parse(serviceIncidents.stdout) as { data: Array<{ title: string; serviceId: string }>; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(serviceIncidentsPayload.meta.invokedCommand, "service");
+  assert.equal(serviceIncidentsPayload.meta.collection, "incidents");
+  assert.equal(serviceIncidentsPayload.data.length, 1);
+  assert.equal(serviceIncidentsPayload.data[0]?.serviceId, servicePayload.data.id);
 });
 
 test("runCli searches the registered CLI discovery surface", async () => {

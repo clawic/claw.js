@@ -32,6 +32,8 @@ export { AUDIT_FAMILY } from "./audit/index.ts";
 export { INTEGRATIONS_FAMILY } from "./integrations/index.ts";
 export { BILLING_FAMILY } from "./billing/index.ts";
 export { CRM_FAMILY } from "./crm/index.ts";
+export { LEGAL_FAMILY } from "./legal/index.ts";
+export { OPS_FAMILY } from "./ops/index.ts";
 export { SUPPORT_FAMILY } from "./support/index.ts";
 export { ANALYTICS_FAMILY } from "./analytics/index.ts";
 export { OBSERVABILITY_FAMILY } from "./observability/index.ts";

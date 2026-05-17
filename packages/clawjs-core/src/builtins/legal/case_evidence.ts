@@ -12,7 +12,7 @@ export const CASE_EVIDENCE: BuiltinCollectionDefinition = {
     notes: "This collection records evidence metadata; raw documents remain in document/file collections or sidecar file storage.",
   },
   fields: [
-    { name: "caseId", type: "relation", required: true, requiredReason: "relation", relation: { collectionName: "legal_cases" }, aliases: ["case", "matterId"] },
+    { name: "caseId", type: "relation", required: true, requiredReason: "relation_integrity", relation: { collectionName: "legal_cases" }, aliases: ["case", "matterId"] },
     { name: "title", type: "text", required: true, requiredReason: "identity", aliases: ["name"] },
     { name: "kind", type: "text" },
     { name: "documentId", type: "relation", relation: { collectionName: "documents" } },

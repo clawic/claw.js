@@ -409,6 +409,15 @@ function applyDefaults(collectionName: string, payload: Record<string, unknown>,
     case "payment_intents":
       payload.status ??= "requires_payment_method";
       break;
+    case "legal_cases":
+      payload.status ??= "open";
+      break;
+    case "services":
+      payload.status ??= "active";
+      break;
+    case "incidents":
+      payload.status ??= "open";
+      break;
     default:
       break;
   }

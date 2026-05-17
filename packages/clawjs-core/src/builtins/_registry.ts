@@ -13,6 +13,8 @@ import { AUDIT_FAMILY } from "./audit/index.ts";
 import { INTEGRATIONS_FAMILY } from "./integrations/index.ts";
 import { BILLING_FAMILY } from "./billing/index.ts";
 import { CRM_FAMILY } from "./crm/index.ts";
+import { LEGAL_FAMILY } from "./legal/index.ts";
+import { OPS_FAMILY } from "./ops/index.ts";
 import { SUPPORT_FAMILY } from "./support/index.ts";
 import { ANALYTICS_FAMILY } from "./analytics/index.ts";
 import { OBSERVABILITY_FAMILY } from "./observability/index.ts";
@@ -70,6 +72,8 @@ const RAW_BUILTIN_FAMILIES: BuiltinFamilyDefinition[] = [
   INTEGRATIONS_FAMILY,
   BILLING_FAMILY,
   CRM_FAMILY,
+  LEGAL_FAMILY,
+  OPS_FAMILY,
   SUPPORT_FAMILY,
   ANALYTICS_FAMILY,
   OBSERVABILITY_FAMILY,
