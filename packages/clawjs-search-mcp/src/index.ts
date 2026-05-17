@@ -307,6 +307,34 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
       inputSchema: { type: "object", required: ["source", "operation"], properties: { id: { type: "string" }, source: { type: "string" }, shard: { type: "string" }, operation: { type: "string", enum: ["upsert", "delete", "backfill", "rebuild"] }, resourceId: { type: "string" }, priority: { type: "integer" }, scheduledAt: { type: "string" }, payload: { type: "object" } } },
       handler: (p) => store.enqueueIndexJob({ id: stringParam(p.id), source: requiredString(p, "source"), shard: stringParam(p.shard), operation: requiredSearchJobOperation(p.operation), resourceId: stringParam(p.resourceId), priority: numberParam(p.priority), scheduledAt: stringParam(p.scheduledAt), payload: recordParam(p.payload) }),
     },
+    {
+      name: "search.jobs.schedule",
+      description: "Schedule compacted event-driven Search indexing work for one changed resource.",
+      inputSchema: {
+        type: "object",
+        required: ["source", "operation", "resourceId"],
+        properties: {
+          source: { type: "string" },
+          shard: { type: "string" },
+          operation: { type: "string", enum: ["upsert", "delete"] },
+          resourceId: { type: "string" },
+          priority: { type: "integer" },
+          scheduledAt: { type: "string" },
+          observedAt: { type: "string" },
+          payload: { type: "object" },
+        },
+      },
+      handler: (p) => store.scheduleIndexEvent({
+        source: requiredString(p, "source"),
+        shard: stringParam(p.shard),
+        operation: requiredSearchEventOperation(p.operation),
+        resourceId: requiredString(p, "resourceId"),
+        priority: numberParam(p.priority),
+        scheduledAt: stringParam(p.scheduledAt),
+        observedAt: stringParam(p.observedAt),
+        payload: recordParam(p.payload),
+      }),
+    },
     { name: "search.jobs.claim", description: "Claim Search indexing jobs with bounded leases.", inputSchema: { type: "object", properties: { limit: { type: "integer" }, now: { type: "string" }, leaseMs: { type: "integer" }, sources: { type: "array", items: { type: "string" } }, shards: { type: "array", items: { type: "string" } } } }, handler: (p) => store.claimIndexJobs({ limit: numberParam(p.limit), now: stringParam(p.now), leaseMs: numberParam(p.leaseMs), sources: stringArrayParam(p.sources), shards: stringArrayParam(p.shards) }) },
     { name: "search.jobs.complete", description: "Mark a Search indexing job done.", inputSchema: { type: "object", required: ["id"], properties: { id: { type: "string" } } }, handler: (p) => store.completeIndexJob(requiredString(p, "id")) },
     { name: "search.jobs.fail", description: "Fail or retry a Search indexing job.", inputSchema: { type: "object", required: ["id", "error"], properties: { id: { type: "string" }, error: { type: "string" }, retry: { type: "boolean" }, scheduledAt: { type: "string" } } }, handler: (p) => store.failIndexJob(requiredString(p, "id"), { error: requiredString(p, "error"), retry: typeof p.retry === "boolean" ? p.retry : false, scheduledAt: stringParam(p.scheduledAt) }) },
@@ -530,6 +558,11 @@ function requiredSearchSourceState(value: unknown): SearchSourceState {
 function requiredSearchJobOperation(value: unknown): "upsert" | "delete" | "backfill" | "rebuild" {
   if (value === "upsert" || value === "delete" || value === "backfill" || value === "rebuild") return value;
   throw new Error("operation is required");
+}
+
+function requiredSearchEventOperation(value: unknown): "upsert" | "delete" {
+  if (value === "upsert" || value === "delete") return value;
+  throw new Error("operation must be upsert or delete");
 }
 
 function requiredString(params: Record<string, unknown>, key: string): string {

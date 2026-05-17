@@ -472,7 +472,8 @@ the `claw-search-mcp` binary. Its tool surface includes query, source/status,
 source-state control, profiles, entrypoints, aliases, explain, action
 listing/execution with brokered host-approval plans, saved searches, monitor
 evaluation, monitor management, shard catalog inspection, audit, and
-indexing-job tools.
+indexing-job tools, including compacted event scheduling through
+`search.jobs.schedule`.
 
 The showcase app exposes `/search-index` as the Search Index admin surface. It
 shows framework and full-profile sources separately, keeps optional native/web/

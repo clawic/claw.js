@@ -18,6 +18,12 @@ test("Search MCP exposes profile, entrypoint, and explain tools", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-mcp-tools-"));
   const store = new SearchStore(path.join(dir, "search.sqlite"));
   try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "documents.blocks",
+      domain: "documents",
+      name: "Documents",
+      resultTypes: ["document"],
+    }));
     const tools = createSearchMcpTools(store);
     const toolNames = new Set(tools.map((tool) => tool.name));
 
@@ -39,6 +45,7 @@ test("Search MCP exposes profile, entrypoint, and explain tools", () => {
       "search.monitors.evaluate",
       "search.audit.list",
       "search.jobs.list",
+      "search.jobs.schedule",
     ]) {
       assert.equal(toolNames.has(name), true, `${name} should be exposed`);
     }
@@ -245,6 +252,58 @@ test("Search MCP derives local embeddings for semantic queries", () => {
       localEmbedding: true,
     }) as { results: Array<{ id: string }> };
     assert.equal(shorthand.results[0]?.id, "documents.blocks:beta");
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("Search MCP schedules compacted event-driven indexing jobs", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-mcp-jobs-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "documents.blocks",
+      domain: "documents",
+      name: "Documents",
+      resultTypes: ["document"],
+    }));
+    const tools = createSearchMcpTools(store);
+    const scheduleTool = tools.find((tool) => tool.name === "search.jobs.schedule");
+    assert.ok(scheduleTool);
+    const first = scheduleTool.handler({
+      source: "documents.blocks",
+      operation: "upsert",
+      resourceId: "doc-alpha",
+      observedAt: "2026-05-17T10:00:00.000Z",
+      payload: { revision: 1 },
+    }) as { id: string; source: string; shard: string; operation: string; resourceId?: string; priority: number; payload?: Record<string, unknown> };
+    const second = scheduleTool.handler({
+      source: "documents.blocks",
+      operation: "upsert",
+      resourceId: "doc-alpha",
+      observedAt: "2026-05-17T10:00:01.000Z",
+      payload: { revision: 2 },
+    }) as { id: string; payload?: Record<string, unknown> };
+    const deletion = scheduleTool.handler({
+      source: "documents.blocks",
+      operation: "delete",
+      resourceId: "doc-alpha",
+      observedAt: "2026-05-17T10:00:02.000Z",
+    }) as { id: string; operation: string; priority: number };
+
+    assert.equal(first.id, second.id);
+    assert.equal(first.source, "documents.blocks");
+    assert.equal(first.shard, "hot");
+    assert.equal(first.operation, "upsert");
+    assert.equal(first.resourceId, "doc-alpha");
+    assert.equal(first.priority, 60);
+    assert.equal(second.payload?.revision, 2);
+    assert.equal(second.payload?.eventDriven, true);
+    assert.equal(deletion.id, "event:documents.blocks:hot:delete:doc-alpha");
+    assert.equal(deletion.operation, "delete");
+    assert.equal(deletion.priority, 80);
+    assert.throws(() => scheduleTool.handler({ source: "documents.blocks", operation: "rebuild", resourceId: "doc-alpha" }), /operation must be upsert or delete/);
   } finally {
     store.close();
     fs.rmSync(dir, { recursive: true, force: true });
