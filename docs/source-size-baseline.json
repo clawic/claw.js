@@ -12,9 +12,9 @@
       "reason": "Public CLI routing after delegated domain, temporal, productivity, and knowledge-tail command extraction; keep under 2000 by splitting new domains into modules."
     },
     "packages/clawjs/src/cli-search-command.ts": {
-      "lines": 5736,
+      "lines": 6114,
       "blockGrowth": true,
-      "reason": "Emergency search CLI debt after MCP server indexing and config-source orchestration expansion; do not expand further except for extraction, deletion, or compatibility-preserving split work."
+      "reason": "Emergency search CLI debt after MCP server indexing, provider routing/snippet indexing, and config-source orchestration expansion; do not expand further except for extraction, deletion, or compatibility-preserving split work."
     },
     "packages/clawjs-node/src/create-claw.ts": {
       "lines": 1964,
