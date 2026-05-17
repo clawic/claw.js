@@ -236,9 +236,10 @@ asking Root Search to scan unrelated domains.
 
 `images.derived` projects local image-library records and image media metadata.
 The initial adapter indexes prompts, revised prompts, tags, collections, type,
-provider/model, provenance, and output metadata. OCR and vision labels remain a
-derived-text layer for later extractors; this adapter provides the fast metadata
-path for image-section search first.
+provider/model, provenance, output metadata, and any stored OCR text, captions,
+alt text, vision labels, or detected object labels already present on the
+framework record. It does not call vision/OCR providers; extractor scheduling
+remains source-owned.
 
 `media.assets` projects workspace media records for documents, images, audio,
 video, animations, and other persisted assets. It indexes names, source text,

@@ -91,6 +91,7 @@ function imageRecordSearchDocument(record: Record<string, unknown>, imageRoot: s
   const outputRelativePath = stringField(record, "outputRelativePath");
   const tags = stringArrayField(record, "tags");
   const collections = stringArrayField(record, "collections");
+  const derivedText = imageDerivedTextFields(record);
   const pathValue = outputRelativePath ? path.join(imageRoot, ".claw", "data", "assets", outputRelativePath) : undefined;
   const body = [
     title,
@@ -107,6 +108,11 @@ function imageRecordSearchDocument(record: Record<string, unknown>, imageRoot: s
     stringField(record, "backendLabel"),
     ...tags,
     ...collections,
+    derivedText.ocrText,
+    derivedText.altText,
+    derivedText.caption,
+    ...derivedText.labels,
+    ...derivedText.objects,
     textFromStructuredContent(record.metadata),
   ].filter(Boolean).join("\n");
   return {
@@ -140,6 +146,11 @@ function imageRecordSearchDocument(record: Record<string, unknown>, imageRoot: s
       outputWidth: numberField(record, "outputWidth"),
       outputHeight: numberField(record, "outputHeight"),
       outputSize: numberField(record, "outputSize"),
+      ocrTextIndexed: !!derivedText.ocrText,
+      visionLabel: derivedText.labels,
+      visionObject: derivedText.objects,
+      altText: derivedText.altText ?? null,
+      caption: derivedText.caption ?? null,
     },
     permissions: { canOpen: true, canPreview: true, redacted: false },
     rankingHints: {
@@ -164,6 +175,30 @@ function imageRecordSearchDocument(record: Record<string, unknown>, imageRoot: s
         sortOrder: 1,
         metadata: { kind: "revisedPrompt" },
       }] : []),
+      ...(derivedText.ocrText ? [{
+        id: `images.derived:image:${id}:ocr`,
+        title: "ocr text",
+        body: derivedText.ocrText,
+        snippet: derivedText.ocrText.slice(0, 180),
+        sortOrder: 2,
+        metadata: { kind: "ocrText" },
+      }] : []),
+      ...(derivedText.caption ? [{
+        id: `images.derived:image:${id}:caption`,
+        title: "caption",
+        body: derivedText.caption,
+        snippet: derivedText.caption.slice(0, 180),
+        sortOrder: 3,
+        metadata: { kind: "caption" },
+      }] : []),
+      ...(derivedText.labels.length ? [{
+        id: `images.derived:image:${id}:vision-labels`,
+        title: "vision labels",
+        body: derivedText.labels.join("\n"),
+        snippet: derivedText.labels.join(", ").slice(0, 180),
+        sortOrder: 4,
+        metadata: { kind: "visionLabels" },
+      }] : []),
     ],
     actions: [
       { id: "open", kind: "open", label: "Open image", requiresApproval: true, risk: "read", grant: "search.images.open" },
@@ -180,6 +215,7 @@ function imageMediaSearchDocument(record: Record<string, unknown>, workspaceRoot
   const external = isPlainRecord(record.external) ? record.external : {};
   const storage = isPlainRecord(record.storage) ? record.storage : {};
   const storageKey = stringField(storage, "key");
+  const derivedText = imageDerivedTextFields(record);
   const body = [
     name,
     stringField(record, "mimeType"),
@@ -190,6 +226,11 @@ function imageMediaSearchDocument(record: Record<string, unknown>, workspaceRoot
     stringField(record, "agentId"),
     stringField(record, "sessionId"),
     stringField(external, "value"),
+    derivedText.ocrText,
+    derivedText.altText,
+    derivedText.caption,
+    ...derivedText.labels,
+    ...derivedText.objects,
     textFromStructuredContent(record.metadata),
   ].filter(Boolean).join("\n");
   return {
@@ -218,9 +259,40 @@ function imageMediaSearchDocument(record: Record<string, unknown>, workspaceRoot
       sizeBytes: numberField(record, "sizeBytes"),
       sourceType: stringField(record, "sourceType") ?? null,
       sourceId: stringField(record, "sourceId") ?? null,
+      ocrTextIndexed: !!derivedText.ocrText,
+      visionLabel: derivedText.labels,
+      visionObject: derivedText.objects,
+      altText: derivedText.altText ?? null,
+      caption: derivedText.caption ?? null,
     },
     permissions: { canOpen: true, canPreview: true, redacted: false },
     rankingHints: { fastPath: 1, image: 0.8, media: 1 },
+    fragments: [
+      ...(sourceText ? [{
+        id: `images.derived:media:${mediaId}:source-text`,
+        title: "source text",
+        body: sourceText,
+        snippet: sourceText.slice(0, 180),
+        sortOrder: 0,
+        metadata: { kind: "sourceText" },
+      }] : []),
+      ...(derivedText.ocrText ? [{
+        id: `images.derived:media:${mediaId}:ocr`,
+        title: "ocr text",
+        body: derivedText.ocrText,
+        snippet: derivedText.ocrText.slice(0, 180),
+        sortOrder: 1,
+        metadata: { kind: "ocrText" },
+      }] : []),
+      ...(derivedText.labels.length ? [{
+        id: `images.derived:media:${mediaId}:vision-labels`,
+        title: "vision labels",
+        body: derivedText.labels.join("\n"),
+        snippet: derivedText.labels.join(", ").slice(0, 180),
+        sortOrder: 2,
+        metadata: { kind: "visionLabels" },
+      }] : []),
+    ],
     actions: [
       { id: "open", kind: "open", label: "Open image media", requiresApproval: true, risk: "read", grant: "search.images.open" },
       { id: "copy-reference", kind: "copy", label: "Copy media reference", requiresApproval: false },
@@ -308,6 +380,44 @@ function mediaAssetSearchDocument(record: Record<string, unknown>, workspaceRoot
   };
 }
 
+function imageDerivedTextFields(record: Record<string, unknown>): {
+  ocrText?: string;
+  altText?: string;
+  caption?: string;
+  labels: string[];
+  objects: string[];
+} {
+  const metadata = isPlainRecord(record.metadata) ? record.metadata : {};
+  const vision = isPlainRecord(record.vision) ? record.vision : isPlainRecord(metadata.vision) ? metadata.vision : {};
+  const ocr = isPlainRecord(record.ocr) ? record.ocr : isPlainRecord(metadata.ocr) ? metadata.ocr : {};
+  const ocrText = firstStringField([record, metadata, ocr, vision], ["ocrText", "detectedText", "recognizedText", "text"]);
+  const altText = firstStringField([record, metadata, vision], ["altText", "alt", "accessibilityLabel"]);
+  const caption = firstStringField([record, metadata, vision], ["caption", "description", "summary"]);
+  const labels = uniqueStrings([
+    ...stringListFromValue(record.labels),
+    ...stringListFromValue(record.visionLabels),
+    ...stringListFromValue(metadata.labels),
+    ...stringListFromValue(metadata.visionLabels),
+    ...stringListFromValue(vision.labels),
+    ...stringListFromValue(vision.tags),
+  ]);
+  const objects = uniqueStrings([
+    ...stringListFromValue(record.objects),
+    ...stringListFromValue(record.detectedObjects),
+    ...stringListFromValue(metadata.objects),
+    ...stringListFromValue(metadata.detectedObjects),
+    ...stringListFromValue(vision.objects),
+    ...stringListFromValue(vision.detectedObjects),
+  ]);
+  return {
+    ...(ocrText ? { ocrText } : {}),
+    ...(altText ? { altText } : {}),
+    ...(caption ? { caption } : {}),
+    labels,
+    objects,
+  };
+}
+
 function textFromStructuredContent(value: unknown): string | undefined {
   const parts: string[] = [];
   collectStructuredText(value, parts, 0);
@@ -352,6 +462,31 @@ function numberField(record: Record<string, unknown>, key: string): number | nul
 function stringArrayField(record: Record<string, unknown>, key: string): string[] {
   const value = record[key];
   return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0).map((entry) => entry.trim()) : [];
+}
+
+function firstStringField(records: Array<Record<string, unknown>>, keys: string[]): string | undefined {
+  for (const record of records) {
+    for (const key of keys) {
+      const value = stringField(record, key);
+      if (value) return value;
+    }
+  }
+  return undefined;
+}
+
+function stringListFromValue(value: unknown): string[] {
+  if (typeof value === "string" && value.trim()) return [value.trim()];
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    if (typeof entry === "string" && entry.trim()) return [entry.trim()];
+    if (!isPlainRecord(entry)) return [];
+    const value = firstStringField([entry], ["name", "label", "text", "title", "class"]);
+    return value ? [value] : [];
+  });
+}
+
+function uniqueStrings(values: string[]): string[] {
+  return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
 }
 
 function isImageMediaRecord(record: Record<string, unknown>): boolean {

@@ -926,6 +926,21 @@ test("search rebuild indexes images.derived from image library records", async (
     const importedPayload = JSON.parse(imported.stdout) as { data: { id: string; title: string } };
     assert.ok(importedPayload.data.id);
     assert.equal(importedPayload.data.title, "Launch Badge");
+    const imageRecordDir = path.join(workspaceRoot, ".claw", "data", "collections", "images");
+    const imageRecordFile = fs.readdirSync(imageRecordDir)
+      .map((entry) => path.join(imageRecordDir, entry))
+      .find((entry) => entry.endsWith(".json") && (JSON.parse(fs.readFileSync(entry, "utf8")) as { id?: string }).id === importedPayload.data.id);
+    assert.ok(imageRecordFile);
+    const imageRecord = JSON.parse(fs.readFileSync(imageRecordFile, "utf8")) as Record<string, unknown>;
+    fs.writeFileSync(imageRecordFile, JSON.stringify({
+      ...imageRecord,
+      ocrText: "LAUNCH SYSTEM MARK",
+      visionLabels: ["product mark", "blue badge"],
+      vision: {
+        caption: "Blue launch badge on a clean product surface",
+        objects: [{ name: "badge" }, { label: "wordmark" }],
+      },
+    }, null, 2));
 
     const rebuild = await runCliCapture(["search", "rebuild", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(rebuild.code, CLI_EXIT_OK);
@@ -967,7 +982,7 @@ test("search rebuild indexes images.derived from image library records", async (
           domain: string;
           type: string;
           title: string;
-          metadata?: { imageType?: string; provenance?: string; tag?: string[] };
+          metadata?: { imageType?: string; provenance?: string; tag?: string[]; ocrTextIndexed?: boolean; visionLabel?: string[]; visionObject?: string[]; caption?: string };
           actions?: Array<{ id: string; kind: string; requiresApproval?: boolean; grant?: string }>;
           fragments?: Array<{ title?: string; snippet?: string }>;
           explanation?: { matchedBy?: string[] };
@@ -983,8 +998,14 @@ test("search rebuild indexes images.derived from image library records", async (
     assert.equal(result?.metadata?.imageType, "logo");
     assert.equal(result?.metadata?.provenance, "imported-manual");
     assert.deepEqual(result?.metadata?.tag, ["launch", "badge"]);
+    assert.equal(result?.metadata?.ocrTextIndexed, true);
+    assert.deepEqual(result?.metadata?.visionLabel, ["product mark", "blue badge"]);
+    assert.deepEqual(result?.metadata?.visionObject, ["badge", "wordmark"]);
+    assert.equal(result?.metadata?.caption, "Blue launch badge on a clean product surface");
     assert.equal(result?.actions?.some((action) => action.id === "open" && action.requiresApproval === true && action.grant === "search.images.open"), true);
     assert.equal(result?.fragments?.some((fragment) => fragment.title === "prompt" && fragment.snippet?.includes("product mark")), true);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "ocr text" && fragment.snippet?.includes("LAUNCH SYSTEM MARK")), true);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "vision labels" && fragment.snippet?.includes("blue badge")), true);
     assert.ok(result?.explanation?.matchedBy?.length);
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "imageType"), true);
   });
