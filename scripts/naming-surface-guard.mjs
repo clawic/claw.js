@@ -341,10 +341,13 @@ for (const relativePath of [
   "packages/clawjs-node/src/generations/store.ts",
   "packages/clawjs-node/src/images/store.ts",
   "packages/clawjs-node/src/skills/sources.ts",
+  "packages/clawjs-audio/src/store.ts",
 ]) {
   forbidSnippet(relativePath, "legacy workspace assets");
   forbidSnippet(relativePath, "legacy image assets");
   forbidSnippet(relativePath, "legacy v1 skill surface");
+  forbidSnippet(relativePath, "insertLegacyAsset");
+  forbidSnippet(relativePath, "unknown_legacy");
 }
 
 for (const snippet of [

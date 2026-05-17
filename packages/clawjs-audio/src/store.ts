@@ -318,7 +318,7 @@ export class AudioServiceStore {
     return info.changes > 0;
   }
 
-  insertLegacyAsset(input: {
+  insertCatalogAsset(input: {
     id: string;
     kind: AudioKind;
     appId: string;
@@ -367,7 +367,7 @@ export class AudioServiceStore {
           id: randomUUID(),
           audio_id: input.id,
           text: input.transcriptText,
-          provider: input.transcriptProvider ?? "unknown_legacy",
+          provider: input.transcriptProvider ?? "unknown",
           created_at: input.createdAt,
         });
       }
