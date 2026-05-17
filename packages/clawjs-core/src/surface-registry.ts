@@ -1346,6 +1346,15 @@ const runtimeCriticalNodes = [
   },
 ] as const;
 
+function relayClassificationGap(programmaticSurfaces: readonly ClawSurfaceParitySurface[]): ClawSurfaceParityGap[] {
+  if (programmaticSurfaces.includes("relay")) return [];
+  return [{
+    surface: "relay",
+    status: "local-only",
+    reason: "No direct remote exposure. Remote access must go through an explicitly classified Gateway/Connector/Sync route.",
+  }];
+}
+
 export const clawSurfaceGraphEdges: ClawSurfaceEdge[] = [
   { id: "claw.edge.commands.consumes.intentSchema", type: "consumes", fromId: "claw.cli.command.commands", toId: "claw.schema.commandIntents.v1", owner: "claw", visibility: "public", contractId: "claw.schema.commandIntents.v1", transport: "local deterministic registry", validation: "CLI command-intent fixture tests", source: surfaceRouteGraphSource },
   { id: "claw.edge.commands.owns.intentLedger", type: "owns", fromId: "claw.cli.command.commands", toId: "claw.workspace.command_intents.ledger", owner: "claw", visibility: "private", contractId: "claw.workspace.command_intents.ledger", transport: "workspace JSON ledger", validation: "CLI command-intent record/list tests", source: surfaceRouteGraphSource },
@@ -1825,6 +1834,7 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       stability: "v1",
       humanSurfaces: ["humanUi"],
       programmaticSurfaces: ["cli", "persistence"],
+      surfaceGaps: relayClassificationGap(["cli", "persistence"]),
       source: registrySource,
       notes: "Root for names, fields, routes, protocols, CLI commands, IDs, and external mappings that must not drift after V1 without versioning.",
     }),
@@ -1838,7 +1848,10 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       surfaceClass: surfaceClass as ClawStableSurfaceClass,
       stability: "v1",
       programmaticSurfaces: [...programmaticSurfaces],
-      surfaceGaps: [{ surface: "humanUi", status: "optional", reason: "Category nodes are inspected through generated docs and CLI output." }],
+      surfaceGaps: [
+        { surface: "humanUi", status: "optional", reason: "Category nodes are inspected through generated docs and CLI output." },
+        ...relayClassificationGap(programmaticSurfaces),
+      ],
       source: registrySource,
     })),
     ...runtimeCriticalNodes.map((node) => clawPersistentSurface.root({
@@ -1854,6 +1867,7 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       stability: node.owner === "external" ? "externalDependency" : "v1",
       humanSurfaces: [...node.humanSurfaces] as ClawSurfaceParitySurface[],
       programmaticSurfaces: [...node.programmaticSurfaces] as ClawSurfaceParitySurface[],
+      surfaceGaps: relayClassificationGap(node.programmaticSurfaces),
       source: registrySource,
       notes: node.notes,
     })),

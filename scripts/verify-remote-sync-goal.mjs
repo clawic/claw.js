@@ -225,6 +225,13 @@ for (const nodeId of requiredNodes) {
   if (!findClawPersistentSurfaceNode(nodeId)) fail(`missing required surface node ${nodeId}`);
 }
 
+for (const node of clawPersistentSurfaceRegistry.nodes) {
+  const hasStableSurface = Boolean(node.humanSurfaces?.length || node.programmaticSurfaces?.length);
+  if (!hasStableSurface) continue;
+  const hasRelayClassification = node.programmaticSurfaces?.includes("relay") || node.surfaceGaps?.some((gap) => gap.surface === "relay");
+  if (!hasRelayClassification) fail(`${node.id} must classify relay exposure as remote-safe, local-only, blocked, or pending`);
+}
+
 for (const routeId of remoteSyncRequiredRouteIds) {
   const route = findClawSurfaceRoute(routeId);
   if (!route) {
