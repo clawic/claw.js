@@ -121,8 +121,3 @@ export interface CombinedSearchResult {
   snippet?: string;
   depth?: number;
 }
-
-export interface AccessPolicy {
-  spaceId: string | null;
-  operations: WikiOperation[];
-}

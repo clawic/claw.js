@@ -14,13 +14,13 @@
     "unreferencedAssetCandidates": 88
   },
   "knipSummary": {
-    "filesWithIssues": 134,
-    "totalIssues": 706,
+    "filesWithIssues": 132,
+    "totalIssues": 702,
     "issueTypes": {
       "unlisted": 2,
-      "types": 35,
+      "types": 32,
       "owners": 93,
-      "exports": 568,
+      "exports": 567,
       "duplicates": 8
     }
   },
@@ -88,6 +88,7 @@
     "ERP cleanup removed unused frontend contract list/filter helper interfaces and made form-field, event-type, SQL table, and rewrite helpers private inside the private ERP module.",
     "Integrations provider cleanup made provider-local runtime/source operation aliases private, removed redundant runner type re-exports, and kept public connector and Telegram event contracts available through the package entrypoint.",
     "Publishing cleanup made CLI parser/token helpers, default port, prefixed database class, AppServices, and raw ULID helper private while preserving exported command context, database alias, and prefixed ID APIs.",
-    "Secrets cleanup made resolver field/output DTOs and actor helpers private, removed an unused governance re-export, and deleted the unreferenced session cache store class while keeping schema/backup compatibility."
+    "Secrets cleanup made resolver field/output DTOs and actor helpers private, removed an unused governance re-export, and deleted the unreferenced session cache store class while keeping schema/backup compatibility.",
+    "Wiki cleanup made admin JWT claim helpers private and removed unused token/access-policy helper surfaces while preserving auth principal and wiki operation contracts."
   ]
 }

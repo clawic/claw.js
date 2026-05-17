@@ -4,17 +4,10 @@ import { SignJWT, jwtVerify } from "jose";
 
 import type { WikiOperation } from "../shared/types.ts";
 
-export interface AdminClaims {
+interface AdminClaims {
   kind: "admin";
   sub: string;
   email: string;
-}
-
-export interface TokenClaims {
-  kind: "token";
-  tokenId: string;
-  spaceId: string | null;
-  operations: WikiOperation[];
 }
 
 export type AuthPrincipal =
@@ -60,8 +53,4 @@ export class WikiAuthService {
 
 export function hashSecret(value: string): string {
   return createHash("sha256").update(value).digest("hex");
-}
-
-export function generateOpaqueToken(prefix: string): string {
-  return `${prefix}_${Math.random().toString(36).slice(2, 10)}${Math.random().toString(36).slice(2, 10)}`;
 }
