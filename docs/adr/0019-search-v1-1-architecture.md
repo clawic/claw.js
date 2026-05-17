@@ -39,7 +39,9 @@ Search V1.1 is built from these layers:
 - **Filters and facets**: sources declare facets in their manifests. Query input
   carries structured filters for built-in result fields, permissions, and source
   metadata so section-level search can stay narrow without invoking a broad
-  global scan.
+  global scan. Root Search also accepts simple inline filter tokens such as
+  `domain:`, `source:`, `shard:`, `type:`, and `scope:` and normalizes them
+  before FTS.
 - **Result ACL**: indexed documents can declare allowed actors, allowed agents,
   and required scopes. The store filters those rows before returning results, so
   agent-scoped records do not leak into Root Search while public records remain

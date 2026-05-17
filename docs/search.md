@@ -142,6 +142,12 @@ or source metadata via `metadata.<field>`. `SearchQueryInput.shards` and CLI
 filters. Query responses include the selected sources' declared facets so UI
 sections can build scoped filter controls from manifests.
 
+The store also normalizes basic inline query filters before FTS runs:
+`domain:`, `source:`, `shard:`, `type:`, and `scope:` tokens are stripped from
+the lexical query and merged into the structured query input. This keeps Root
+Search usable from a single text box while preserving the same fast-path
+constraints as explicit filters.
+
 Result ACL is enforced before ranking output is returned. Indexed documents can
 declare `permissions.allowedActors`, `permissions.allowedAgents`, and
 `permissions.requiredScopes`; Search hides those results unless the query actor

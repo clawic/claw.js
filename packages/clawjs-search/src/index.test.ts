@@ -86,6 +86,55 @@ test("SearchStore does not mark default framework queries partial because full s
   }
 });
 
+test("SearchStore parses inline domain, source, shard, type and scope filters", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-inline-filters-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "documents.blocks",
+      domain: "documents",
+      name: "Documents",
+      resultTypes: ["document"],
+    }));
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "work.tasks",
+      domain: "work",
+      name: "Work tasks",
+      resultTypes: ["task"],
+    }));
+    store.upsertDocument({
+      id: "documents.blocks:alpha",
+      source: "documents.blocks",
+      shard: "hot",
+      domain: "documents",
+      type: "document",
+      title: "Launch notes",
+      body: "Launch checklist for project alpha.",
+      permissions: { requiredScopes: ["project-alpha"] },
+    });
+    store.upsertDocument({
+      id: "work.tasks:alpha",
+      source: "work.tasks",
+      shard: "hot",
+      domain: "work",
+      type: "task",
+      title: "Launch notes",
+      body: "Launch checklist for project alpha.",
+    });
+
+    const output = store.query({
+      query: "launch domain:documents source:documents.blocks shard:hot type:document scope:project-alpha",
+    });
+
+    assert.deepEqual(output.results.map((result) => result.id), ["documents.blocks:alpha"]);
+    assert.equal(output.query, "launch");
+    assert.deepEqual(store.query({ query: "launch domain:work type:document" }).results, []);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("registry federates sources with strict source timeouts", async () => {
   const registry = createRootSearchFederator({ budgets: { sourceTimeoutMs: 5 } });
   const manifest = createFrameworkSearchSourceManifest({

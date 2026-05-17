@@ -375,19 +375,20 @@ export class SearchStore {
 
   query(input: SearchQueryInput): SearchQueryOutput {
     const startedAt = Date.now();
-    const cacheKey = searchRankingCacheKey(input);
+    const queryInput = normalizeInlineSearchQuery(input);
+    const cacheKey = searchRankingCacheKey(queryInput);
     const cached = this.rankingCacheGet(cacheKey);
     if (cached) return { ...cached, elapsedMs: Date.now() - startedAt };
-    const limit = Math.max(1, input.limit ?? 20);
+    const limit = Math.max(1, queryInput.limit ?? 20);
     const candidateLimit = Math.min(200, Math.max(limit * 4, limit));
-    const profile = input.profile ?? "framework";
-    const strategy = input.strategy ?? (input.embedding ? "hybrid" : "lexical");
-    const match = ftsQuery(input.query);
-    const omittedSources = this.omittedSourcesForInput(input, profile);
-    const facets = this.facetsForInput(input, profile);
+    const profile = queryInput.profile ?? "framework";
+    const strategy = queryInput.strategy ?? (queryInput.embedding ? "hybrid" : "lexical");
+    const match = ftsQuery(queryInput.query);
+    const omittedSources = this.omittedSourcesForInput(queryInput, profile);
+    const facets = this.facetsForInput(queryInput, profile);
     const rows = new Map<string, SearchDocumentRow>();
-    if (strategy !== "semantic" || !input.embedding) {
-      const { clauses, params } = buildDocumentClauses(input, profile, match);
+    if (strategy !== "semantic" || !queryInput.embedding) {
+      const { clauses, params } = buildDocumentClauses(queryInput, profile, match);
       const lexicalRows = this.db.prepare(`
         SELECT d.*, 0 AS rank, NULL AS semantic_score
         FROM search_fts
@@ -400,19 +401,19 @@ export class SearchStore {
       `).all(...params, candidateLimit) as SearchDocumentRow[];
       for (const row of lexicalRows) rows.set(row.id, row);
     }
-    if (input.embedding && strategy !== "lexical") {
-      for (const row of this.semanticRows(input, profile, input.embedding, candidateLimit)) {
+    if (queryInput.embedding && strategy !== "lexical") {
+      for (const row of this.semanticRows(queryInput, profile, queryInput.embedding, candidateLimit)) {
         const existing = rows.get(row.id);
         rows.set(row.id, existing ? mergeSearchRows(existing, row) : row);
       }
     }
     const results = [...rows.values()]
-      .filter((row) => searchAclAllows(row.permissions_json, input))
-      .map((row) => this.resultFromRow(row, input))
+      .filter((row) => searchAclAllows(row.permissions_json, queryInput))
+      .map((row) => this.resultFromRow(row, queryInput))
       .sort((left, right) => right.score - left.score || (right.updatedAt ?? "").localeCompare(left.updatedAt ?? ""))
       .slice(0, limit);
     const output: SearchQueryOutput = {
-      query: input.query,
+      query: queryInput.query,
       profile,
       results,
       ...(facets.length ? { facets } : {}),
@@ -1195,6 +1196,88 @@ function ftsQuery(query: string): string {
     .map((term) => term.replace(/[^\p{L}\p{N}_-]/gu, ""))
     .filter(Boolean);
   return terms.map((term) => `"${term}"*`).join(" ");
+}
+
+function normalizeInlineSearchQuery(input: SearchQueryInput): SearchQueryInput {
+  const parsed = parseInlineSearchFilters(input.query);
+  if (!parsed.changed) return input;
+  const filters = { ...(input.filters ?? {}) };
+  for (const [key, values] of Object.entries(parsed.filters)) {
+    filters[key] = mergeInlineFilterValue(filters[key], values);
+  }
+  return {
+    ...input,
+    query: parsed.query,
+    ...(parsed.domains.length ? { domains: uniqueStrings([...(input.domains ?? []), ...parsed.domains]) } : {}),
+    ...(parsed.sources.length ? { sources: uniqueStrings([...(input.sources ?? []), ...parsed.sources]) } : {}),
+    ...(parsed.shards.length ? { shards: uniqueStrings([...(input.shards ?? []), ...parsed.shards]) } : {}),
+    ...(Object.keys(filters).length ? { filters } : {}),
+  };
+}
+
+function parseInlineSearchFilters(query: string): {
+  changed: boolean;
+  query: string;
+  domains: string[];
+  sources: string[];
+  shards: string[];
+  filters: Record<string, string[]>;
+} {
+  const domains: string[] = [];
+  const sources: string[] = [];
+  const shards: string[] = [];
+  const filters: Record<string, string[]> = {};
+  let changed = false;
+  const text = query.replace(/(?:^|\s)(domain|domains|source|sources|shard|shards|type|types|scope|scopes):(?:"([^"]+)"|'([^']+)'|([^\s]+))/gi, (_token, rawKey: string, quoted: string | undefined, singleQuoted: string | undefined, bare: string | undefined) => {
+    const key = rawKey.toLowerCase();
+    const value = (quoted ?? singleQuoted ?? bare ?? "").trim();
+    if (!value) return " ";
+    changed = true;
+    switch (key) {
+      case "domain":
+      case "domains":
+        domains.push(value);
+        break;
+      case "source":
+      case "sources":
+        sources.push(value);
+        break;
+      case "shard":
+      case "shards":
+        shards.push(value);
+        break;
+      case "type":
+      case "types":
+        pushInlineFilter(filters, "type", value);
+        break;
+      case "scope":
+      case "scopes":
+        pushInlineFilter(filters, "scope", value);
+        break;
+    }
+    return " ";
+  }).replace(/\s+/g, " ").trim();
+  return {
+    changed,
+    query: changed ? text : query,
+    domains: uniqueStrings(domains),
+    sources: uniqueStrings(sources),
+    shards: uniqueStrings(shards),
+    filters,
+  };
+}
+
+function pushInlineFilter(filters: Record<string, string[]>, key: string, value: string): void {
+  filters[key] = uniqueStrings([...(filters[key] ?? []), value]);
+}
+
+function mergeInlineFilterValue(current: unknown, values: string[]): string | string[] {
+  const merged = uniqueStrings([...valueToStringList(current), ...values]);
+  return merged.length === 1 ? merged[0] ?? "" : merged;
+}
+
+function uniqueStrings(values: string[]): string[] {
+  return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
 }
 
 function applySearchFilters(clauses: string[], params: unknown[], filters: Record<string, unknown> | undefined): void {
