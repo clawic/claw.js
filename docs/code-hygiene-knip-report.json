@@ -3,18 +3,18 @@
   "program": "code-hygiene",
   "tool": "knip",
   "toolVersion": "6.14.0",
-  "generatedAt": "2026-05-17T00:13:48.415Z",
+  "generatedAt": "2026-05-17T00:21:03.544Z",
   "mode": "report-only",
   "config": "knip.json",
   "cwd": ".",
   "summary": {
     "filesWithIssues": 211,
-    "totalIssues": 1062,
+    "totalIssues": 1041,
     "issueTypes": {
       "unlisted": 2,
       "types": 215,
       "owners": 139,
-      "exports": 698,
+      "exports": 677,
       "duplicates": 8
     },
     "topFiles": [
@@ -28,14 +28,6 @@
       },
       {
         "file": "packages/clawjs-core/src/builtins/reading_media/index.ts",
-        "totalIssues": 23,
-        "issueCounts": {
-          "owners": 1,
-          "exports": 22
-        }
-      },
-      {
-        "file": "packages/clawjs/src/v1-data-core.ts",
         "totalIssues": 23,
         "issueCounts": {
           "owners": 1,
@@ -177,6 +169,13 @@
           "owners": 1,
           "exports": 2,
           "types": 9
+        }
+      },
+      {
+        "file": "relay/src/shared/protocol.ts",
+        "totalIssues": 12,
+        "issueCounts": {
+          "types": 12
         }
       }
     ]

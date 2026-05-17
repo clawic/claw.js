@@ -253,7 +253,7 @@ export function ensureV1MainSchema(sqlite: Database.Database): void {
   ensureV2Sidecars();
 }
 
-export function ensureV1Collections(store: DatabaseServiceStore): void {
+function ensureV1Collections(store: DatabaseServiceStore): void {
   store.ensureNamespace({ id: "main", displayName: "Main" });
   store.ensureCollection("main", {
     name: "signals_catalog",
@@ -500,7 +500,7 @@ export function indexSessionRoots(sqlite: Database.Database, roots: string[], so
   return files.length;
 }
 
-export function findSessionArtifacts(root: string): string[] {
+function findSessionArtifacts(root: string): string[] {
   if (!fs.existsSync(root)) return [];
   const out: string[] = [];
   const stack = [root];
@@ -522,7 +522,7 @@ export function findSessionArtifacts(root: string): string[] {
   return out;
 }
 
-export function summarizeSessionArtifact(file: string, stat: fs.Stats): {
+function summarizeSessionArtifact(file: string, stat: fs.Stats): {
   sessionId: string;
   title: string;
   cwd: string | null;
@@ -577,7 +577,7 @@ export function summarizeSessionArtifact(file: string, stat: fs.Stats): {
   }
 }
 
-export function ensureColumn(sqlite: Database.Database, table: string, column: string, definition: string): void {
+function ensureColumn(sqlite: Database.Database, table: string, column: string, definition: string): void {
   const columns = sqlite.prepare(`PRAGMA table_info(${quoteIdent(table)})`).all() as Array<{ name: string }>;
   if (columns.some((entry) => entry.name === column)) return;
   sqlite.prepare(`ALTER TABLE ${quoteIdent(table)} ADD COLUMN ${quoteIdent(column)} ${definition}`).run();
@@ -592,7 +592,7 @@ export function openSidecar(filename: string): Database.Database {
   return sqlite;
 }
 
-export function ensureV2Sidecars(): void {
+function ensureV2Sidecars(): void {
   for (const filename of SIDECAR_FILENAMES) {
     if (filename === "vault.sqlite") continue;
     const sqlite = openSidecar(filename);
@@ -600,7 +600,7 @@ export function ensureV2Sidecars(): void {
   }
 }
 
-export function ensureSidecarSchema(filename: string, sqlite: Database.Database): void {
+function ensureSidecarSchema(filename: string, sqlite: Database.Database): void {
   if (filename === "vault.sqlite") {
     sqlite.exec(V1_SIDECAR_SCHEMA_SQL_BY_FILE["vault.sqlite"]);
     return;
@@ -628,7 +628,7 @@ export function ensureSidecarSchema(filename: string, sqlite: Database.Database)
   sqlite.exec(V1_SIDECAR_SCHEMA_SQL_BY_FILE.default);
 }
 
-export function indexSessionSidecar(files: string[], source: string, indexedAt: string): void {
+function indexSessionSidecar(files: string[], source: string, indexedAt: string): void {
   const sqlite = openSidecar("sessions.sqlite");
   const upsertSession = sqlite.prepare(`
     INSERT INTO conversation_sessions (session_id, source, artifact_path, mtime_ms, size_bytes, title, cwd, created_at, updated_at, archived, pinned, snippet, metadata_json, indexed_at)
@@ -682,7 +682,7 @@ export function indexSessionSidecar(files: string[], source: string, indexedAt: 
   }
 }
 
-export function extractSessionMessages(file: string, sessionId: string): Array<{ id: string; role: string; text: string; turnIndex: number; createdAt: string | null; metadata: JsonRecord }> {
+function extractSessionMessages(file: string, sessionId: string): Array<{ id: string; role: string; text: string; turnIndex: number; createdAt: string | null; metadata: JsonRecord }> {
   const maxBytes = 2 * 1024 * 1024;
   const fd = fs.openSync(file, "r");
   try {
@@ -724,7 +724,7 @@ export function extractSessionMessages(file: string, sessionId: string): Array<{
   }
 }
 
-export function seedSidecarRegistry(sqlite: Database.Database): void {
+function seedSidecarRegistry(sqlite: Database.Database): void {
   const root = resolveClawjsDataRoot();
   const sidecars: Array<{ domain: string; id: string; path: string; sensitive?: boolean; cache?: boolean; metadata?: JsonRecord }> = [
     { domain: "secrets", id: "vault", path: path.join(root, "vault.sqlite"), sensitive: true, metadata: { reason: "auth-material", connectorRawTraceRefs: "encrypted-ref-only" } },
@@ -808,7 +808,7 @@ export function upsertPageWithBlocks(sqlite: Database.Database, input: PageUpser
   return readPage(sqlite, id) ?? { id };
 }
 
-export function textToBlocks(text: string, pageId: string, now: string): Array<{ id: string; sortOrder: number; kind: string; text: string; content: JsonRecord }> {
+function textToBlocks(text: string, pageId: string, now: string): Array<{ id: string; sortOrder: number; kind: string; text: string; content: JsonRecord }> {
   const chunks = text.trim() ? text.trim().split(/\n{2,}/) : [""];
   return chunks.map((chunk, index) => {
     const trimmed = chunk.trim();
@@ -1163,7 +1163,7 @@ export function runSidecarArtifactCommand(input: V1DataCliInput, filename: strin
   }
 }
 
-export function resetSidecarDomain(domain: string, deleted: Record<string, number>): void {
+function resetSidecarDomain(domain: string, deleted: Record<string, number>): void {
   const clear = (filename: string, tables: string[]) => {
     const sqlite = openSidecar(filename);
     try {
@@ -1247,7 +1247,7 @@ export function resetSidecarDomain(domain: string, deleted: Record<string, numbe
   }
 }
 
-export function tableExists(sqlite: Database.Database, table: string): boolean {
+function tableExists(sqlite: Database.Database, table: string): boolean {
   const row = sqlite.prepare("SELECT name FROM sqlite_master WHERE type IN ('table', 'view') AND name = ?").get(table) as { name: string } | undefined;
   return !!row;
 }
@@ -1299,7 +1299,7 @@ export function writeMcpServers(configPath: string, servers: Array<JsonRecord & 
   fs.writeFileSync(configPath, `${body}${body ? "\n" : ""}`);
 }
 
-export function stripMcpServerBlocks(raw: string): string {
+function stripMcpServerBlocks(raw: string): string {
   const lines = raw.split(/\r?\n/);
   const kept: string[] = [];
   let skipping = false;
@@ -1313,7 +1313,7 @@ export function stripMcpServerBlocks(raw: string): string {
   return kept.join("\n");
 }
 
-export function renderMcpServer(server: JsonRecord & { id: string }): string {
+function renderMcpServer(server: JsonRecord & { id: string }): string {
   const id = server.id;
   const root: string[] = [`[mcp_servers.${id}]`];
   if (typeof server.command === "string") root.push(`command = ${tomlString(server.command)}`);
@@ -1342,11 +1342,11 @@ export function renderMcpServer(server: JsonRecord & { id: string }): string {
   return root.join("\n");
 }
 
-export function tomlString(value: string): string {
+function tomlString(value: string): string {
   return JSON.stringify(value);
 }
 
-export function parseTomlScalar(value: string): unknown {
+function parseTomlScalar(value: string): unknown {
   if (value.startsWith("\"") && value.endsWith("\"")) return value.slice(1, -1);
   if (value.startsWith("[") && value.endsWith("]")) {
     return value.slice(1, -1).split(",").map((entry) => entry.trim().replace(/^"|"$/g, "")).filter(Boolean);
@@ -1383,7 +1383,7 @@ export function upsertRegistry(sqlite: Database.Database, domain: string, kind: 
   `).run(domain, kind, id, input.sensitive ? 1 : 0, input.path ?? null, input.secretRef ?? null, JSON.stringify(input.metadata ?? {}), now, now);
 }
 
-export function average(values: number[]): number | null {
+function average(values: number[]): number | null {
   if (values.length === 0) return null;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
@@ -1533,7 +1533,7 @@ export function normalizeDbRow(row: unknown): unknown {
   return out;
 }
 
-export function toCamel(value: string): string {
+function toCamel(value: string): string {
   return value.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
 }
 
@@ -1549,7 +1549,7 @@ export function expandHome(value: string): string {
   return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
 }
 
-export function quoteIdent(value: string): string {
+function quoteIdent(value: string): string {
   return `"${value.replace(/"/g, '""')}"`;
 }
 
@@ -1561,7 +1561,7 @@ export function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
-export function truncate(value: string, max: number): string {
+function truncate(value: string, max: number): string {
   const normalized = value.replace(/\s+/g, " ").trim();
   if (normalized.length <= max) return normalized;
   return `${normalized.slice(0, max - 3).trim()}...`;
@@ -1591,7 +1591,7 @@ export function guessContentType(filePath: string): string | null {
   return map[ext] ?? null;
 }
 
-export function extractTextContent(value: unknown): string {
+function extractTextContent(value: unknown): string {
   if (typeof value === "string") return value;
   if (!Array.isArray(value)) return "";
   return value.map((entry) => {
