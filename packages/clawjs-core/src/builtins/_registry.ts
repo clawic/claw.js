@@ -45,6 +45,10 @@ import { EDUCATION_SCHOOL_FAMILY } from "./education_school/index.ts";
 import { CAREER_FAMILY } from "./career/index.ts";
 import { PROCUREMENT_FAMILY } from "./procurement/index.ts";
 import { WAREHOUSE_FAMILY } from "./warehouse/index.ts";
+import { SUPPLY_CHAIN_FAMILY } from "./supply_chain/index.ts";
+import { COMPLIANCE_FAMILY } from "./compliance/index.ts";
+import { IOT_FAMILY } from "./iot/index.ts";
+import { CONSTRUCTION_FAMILY } from "./construction/index.ts";
 import { TRAVEL_FAMILY } from "./travel/index.ts";
 import { RELATIONSHIPS_FAMILY } from "./relationships/index.ts";
 import { FAMILY_CARE_FAMILY } from "./family_care/index.ts";
@@ -112,6 +116,10 @@ const RAW_BUILTIN_FAMILIES: BuiltinFamilyDefinition[] = [
   CAREER_FAMILY,
   PROCUREMENT_FAMILY,
   WAREHOUSE_FAMILY,
+  SUPPLY_CHAIN_FAMILY,
+  COMPLIANCE_FAMILY,
+  IOT_FAMILY,
+  CONSTRUCTION_FAMILY,
   TRAVEL_FAMILY,
   RELATIONSHIPS_FAMILY,
   FAMILY_CARE_FAMILY,

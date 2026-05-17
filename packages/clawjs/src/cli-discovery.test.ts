@@ -658,6 +658,257 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(warehouseTimelinePayload.data.materializedView.itemCount >= 6, true);
   assert.equal(warehouseTimelinePayload.data.materializedView.items.some((item) => item.kind === "inventory_item" && item.label === "Press stock"), true);
 
+  const supplyPlanCreate = await runCliCapture(["supply-plan", "create", "Q2 supply plan", "--company", companyPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(supplyPlanCreate.code, CLI_EXIT_OK, supplyPlanCreate.stderr || supplyPlanCreate.stdout);
+  const supplyPlanPayload = JSON.parse(supplyPlanCreate.stdout) as { data: { id: string; title: string; companyId: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(supplyPlanPayload.meta.invokedCommand, "supply-plan");
+  assert.equal(supplyPlanPayload.meta.collection, "supply_plans");
+  assert.equal(supplyPlanPayload.meta.action, "create");
+  assert.equal(supplyPlanPayload.data.title, "Q2 supply plan");
+  assert.equal(supplyPlanPayload.data.companyId, companyPayload.data.id);
+  assert.equal(supplyPlanPayload.data.status, "draft");
+
+  const supplyPlanItemCreate = await runCliCapture(["supply-plan", supplyPlanPayload.data.id, "items", "add", "Press shortage", "--product", erpProductPayload.data.id, "--supplier", supplierPayload.data.id, "--purchase-order", purchaseOrderPayload.data.id, "--warehouse", warehousePayload.data.id, "--inventory-item", inventoryItemPayload.data.id, "--quantity-required", "5", "--quantity-available", "3", "--quantity-gap", "2", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(supplyPlanItemCreate.code, CLI_EXIT_OK, supplyPlanItemCreate.stderr || supplyPlanItemCreate.stdout);
+  const supplyPlanItemPayload = JSON.parse(supplyPlanItemCreate.stdout) as { data: { id: string; title: string; supplyPlanId: string; productCatalogId: string; supplierId: string; purchaseOrderId: string; warehouseId: string; inventoryItemId: string; quantityRequired: number; quantityAvailable: number; quantityGap: number; status: string; priority: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(supplyPlanItemPayload.meta.invokedCommand, "supply-plan");
+  assert.equal(supplyPlanItemPayload.meta.collection, "supply_plan_items");
+  assert.equal(supplyPlanItemPayload.meta.action, "create");
+  assert.equal(supplyPlanItemPayload.data.title, "Press shortage");
+  assert.equal(supplyPlanItemPayload.data.supplyPlanId, supplyPlanPayload.data.id);
+  assert.equal(supplyPlanItemPayload.data.productCatalogId, erpProductPayload.data.id);
+  assert.equal(supplyPlanItemPayload.data.supplierId, supplierPayload.data.id);
+  assert.equal(supplyPlanItemPayload.data.purchaseOrderId, purchaseOrderPayload.data.id);
+  assert.equal(supplyPlanItemPayload.data.warehouseId, warehousePayload.data.id);
+  assert.equal(supplyPlanItemPayload.data.inventoryItemId, inventoryItemPayload.data.id);
+  assert.equal(supplyPlanItemPayload.data.quantityRequired, 5);
+  assert.equal(supplyPlanItemPayload.data.quantityAvailable, 3);
+  assert.equal(supplyPlanItemPayload.data.quantityGap, 2);
+  assert.equal(supplyPlanItemPayload.data.status, "planned");
+  assert.equal(supplyPlanItemPayload.data.priority, "normal");
+
+  const supplyRiskCreate = await runCliCapture(["supply-plan", supplyPlanPayload.data.id, "risks", "add", "Supplier lead-time risk", "--supplier", supplierPayload.data.id, "--purchase-order", purchaseOrderPayload.data.id, "--warehouse", warehousePayload.data.id, "--inventory-item", inventoryItemPayload.data.id, "--risk-type", "lead_time", "--severity", "high", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(supplyRiskCreate.code, CLI_EXIT_OK, supplyRiskCreate.stderr || supplyRiskCreate.stdout);
+  const supplyRiskPayload = JSON.parse(supplyRiskCreate.stdout) as { data: { id: string; title: string; supplyPlanId: string; supplierId: string; purchaseOrderId: string; warehouseId: string; inventoryItemId: string; riskType: string; severity: string; status: string; identifiedAt: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(supplyRiskPayload.meta.invokedCommand, "supply-plan");
+  assert.equal(supplyRiskPayload.meta.collection, "supply_risks");
+  assert.equal(supplyRiskPayload.meta.action, "create");
+  assert.equal(supplyRiskPayload.data.title, "Supplier lead-time risk");
+  assert.equal(supplyRiskPayload.data.supplyPlanId, supplyPlanPayload.data.id);
+  assert.equal(supplyRiskPayload.data.supplierId, supplierPayload.data.id);
+  assert.equal(supplyRiskPayload.data.purchaseOrderId, purchaseOrderPayload.data.id);
+  assert.equal(supplyRiskPayload.data.warehouseId, warehousePayload.data.id);
+  assert.equal(supplyRiskPayload.data.inventoryItemId, inventoryItemPayload.data.id);
+  assert.equal(supplyRiskPayload.data.riskType, "lead_time");
+  assert.equal(supplyRiskPayload.data.severity, "high");
+  assert.equal(supplyRiskPayload.data.status, "open");
+  assert.equal(typeof supplyRiskPayload.data.identifiedAt, "string");
+
+  const directSupplyRiskCreate = await runCliCapture(["supply-risk", "add", "--supply-plan", supplyPlanPayload.data.id, "--supplier", supplierPayload.data.id, "Direct supplier risk", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(directSupplyRiskCreate.code, CLI_EXIT_OK, directSupplyRiskCreate.stderr || directSupplyRiskCreate.stdout);
+  const directSupplyRiskPayload = JSON.parse(directSupplyRiskCreate.stdout) as { data: { title: string; supplyPlanId: string; supplierId: string }; meta: { collection: string; invokedCommand: string } };
+  assert.equal(directSupplyRiskPayload.meta.invokedCommand, "supply-risk");
+  assert.equal(directSupplyRiskPayload.meta.collection, "supply_risks");
+  assert.equal(directSupplyRiskPayload.data.title, "Direct supplier risk");
+  assert.equal(directSupplyRiskPayload.data.supplyPlanId, supplyPlanPayload.data.id);
+  assert.equal(directSupplyRiskPayload.data.supplierId, supplierPayload.data.id);
+
+  const supplyPlanTimeline = await runCliCapture(["supply-plan", supplyPlanPayload.data.id, "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(supplyPlanTimeline.code, CLI_EXIT_OK, supplyPlanTimeline.stderr || supplyPlanTimeline.stdout);
+  const supplyPlanTimelinePayload = JSON.parse(supplyPlanTimeline.stdout) as {
+    data: {
+      coverage: { implementationStatus: string; recordsMaterialized: boolean };
+      semanticView: { id: string; systemId: string };
+      materializedView: {
+        subject: { id: string; label: string };
+        company: { id: string; label: string } | null;
+        summary: { items: number; risks: number; suppliers: number; purchaseOrders: number; warehouses: number; inventoryItems: number; products: number; quantityRequired: number; quantityAvailable: number; quantityGap: number };
+        itemCount: number;
+        items: Array<{ kind: string; label: string }>;
+      };
+    };
+  };
+  assert.equal(supplyPlanTimelinePayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(supplyPlanTimelinePayload.data.coverage.recordsMaterialized, true);
+  assert.equal(supplyPlanTimelinePayload.data.semanticView.id, "supply_plan.timeline");
+  assert.equal(supplyPlanTimelinePayload.data.semanticView.systemId, "supply_chain");
+  assert.equal(supplyPlanTimelinePayload.data.materializedView.subject.id, supplyPlanPayload.data.id);
+  assert.equal(supplyPlanTimelinePayload.data.materializedView.subject.label, "Q2 supply plan");
+  assert.equal(supplyPlanTimelinePayload.data.materializedView.company?.id, companyPayload.data.id);
+  assert.equal(supplyPlanTimelinePayload.data.materializedView.summary.items, 1);
+  assert.equal(supplyPlanTimelinePayload.data.materializedView.summary.risks, 2);
+  assert.equal(supplyPlanTimelinePayload.data.materializedView.summary.suppliers, 1);
+  assert.equal(supplyPlanTimelinePayload.data.materializedView.summary.purchaseOrders, 1);
+  assert.equal(supplyPlanTimelinePayload.data.materializedView.summary.warehouses, 1);
+  assert.equal(supplyPlanTimelinePayload.data.materializedView.summary.inventoryItems, 1);
+  assert.equal(supplyPlanTimelinePayload.data.materializedView.summary.products, 1);
+  assert.equal(supplyPlanTimelinePayload.data.materializedView.summary.quantityRequired, 5);
+  assert.equal(supplyPlanTimelinePayload.data.materializedView.summary.quantityAvailable, 3);
+  assert.equal(supplyPlanTimelinePayload.data.materializedView.summary.quantityGap, 2);
+  assert.equal(supplyPlanTimelinePayload.data.materializedView.itemCount >= 9, true);
+  assert.equal(supplyPlanTimelinePayload.data.materializedView.items.some((item) => item.kind === "supply_plan_item" && item.label === "Press shortage"), true);
+
+  const obligationCreate = await runCliCapture(["obligation", "create", "SOC 2 access review", "--company", companyPayload.data.id, "--authority", "SOC 2", "--reference", "CC6.2", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(obligationCreate.code, CLI_EXIT_OK, obligationCreate.stderr || obligationCreate.stdout);
+  const obligationPayload = JSON.parse(obligationCreate.stdout) as { data: { id: string; title: string; companyId: string; authority: string; reference: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(obligationPayload.meta.invokedCommand, "obligation");
+  assert.equal(obligationPayload.meta.collection, "compliance_obligations");
+  assert.equal(obligationPayload.meta.action, "create");
+  assert.equal(obligationPayload.data.title, "SOC 2 access review");
+  assert.equal(obligationPayload.data.companyId, companyPayload.data.id);
+  assert.equal(obligationPayload.data.status, "under_review");
+
+  const controlCreate = await runCliCapture(["control", "create", "Quarterly access review", "--company", companyPayload.data.id, "--obligation", obligationPayload.data.id, "--owner", employeePayload.data.id, "--control-key", "AC-REV-001", "--framework", "SOC 2", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(controlCreate.code, CLI_EXIT_OK, controlCreate.stderr || controlCreate.stdout);
+  const controlPayload = JSON.parse(controlCreate.stdout) as { data: { id: string; title: string; companyId: string; obligationId: string; ownerEmployeeId: string; controlKey: string; framework: string; status: string; controlType: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(controlPayload.meta.invokedCommand, "control");
+  assert.equal(controlPayload.meta.collection, "compliance_controls");
+  assert.equal(controlPayload.meta.action, "create");
+  assert.equal(controlPayload.data.title, "Quarterly access review");
+  assert.equal(controlPayload.data.companyId, companyPayload.data.id);
+  assert.equal(controlPayload.data.obligationId, obligationPayload.data.id);
+  assert.equal(controlPayload.data.ownerEmployeeId, employeePayload.data.id);
+  assert.equal(controlPayload.data.status, "draft");
+  assert.equal(controlPayload.data.controlType, "governance");
+
+  const assessmentCreate = await runCliCapture(["control", controlPayload.data.id, "assessments", "add", "Q2 test", "--obligation", obligationPayload.data.id, "--result", "partial", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(assessmentCreate.code, CLI_EXIT_OK, assessmentCreate.stderr || assessmentCreate.stdout);
+  const assessmentPayload = JSON.parse(assessmentCreate.stdout) as { data: { id: string; title: string; controlId: string; obligationId: string; result: string; status: string; assessedAt: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(assessmentPayload.meta.invokedCommand, "control");
+  assert.equal(assessmentPayload.meta.collection, "control_assessments");
+  assert.equal(assessmentPayload.meta.action, "create");
+  assert.equal(assessmentPayload.data.title, "Q2 test");
+  assert.equal(assessmentPayload.data.controlId, controlPayload.data.id);
+  assert.equal(assessmentPayload.data.obligationId, obligationPayload.data.id);
+  assert.equal(assessmentPayload.data.result, "partial");
+  assert.equal(assessmentPayload.data.status, "planned");
+  assert.equal(typeof assessmentPayload.data.assessedAt, "string");
+
+  const findingCreate = await runCliCapture(["control", controlPayload.data.id, "findings", "add", "Missing reviewer sign-off", "--assessment", assessmentPayload.data.id, "--obligation", obligationPayload.data.id, "--severity", "high", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(findingCreate.code, CLI_EXIT_OK, findingCreate.stderr || findingCreate.stdout);
+  const findingPayload = JSON.parse(findingCreate.stdout) as { data: { id: string; title: string; controlId: string; assessmentId: string; obligationId: string; severity: string; status: string; identifiedAt: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(findingPayload.meta.invokedCommand, "control");
+  assert.equal(findingPayload.meta.collection, "compliance_findings");
+  assert.equal(findingPayload.meta.action, "create");
+  assert.equal(findingPayload.data.title, "Missing reviewer sign-off");
+  assert.equal(findingPayload.data.controlId, controlPayload.data.id);
+  assert.equal(findingPayload.data.assessmentId, assessmentPayload.data.id);
+  assert.equal(findingPayload.data.obligationId, obligationPayload.data.id);
+  assert.equal(findingPayload.data.severity, "high");
+  assert.equal(findingPayload.data.status, "open");
+  assert.equal(typeof findingPayload.data.identifiedAt, "string");
+
+  const controlTimeline = await runCliCapture(["control", controlPayload.data.id, "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(controlTimeline.code, CLI_EXIT_OK, controlTimeline.stderr || controlTimeline.stdout);
+  const controlTimelinePayload = JSON.parse(controlTimeline.stdout) as {
+    data: {
+      coverage: { implementationStatus: string; recordsMaterialized: boolean };
+      semanticView: { id: string; systemId: string };
+      materializedView: {
+        subject: { id: string; label: string };
+        company: { id: string; label: string } | null;
+        obligation: { id: string; label: string } | null;
+        summary: { assessments: number; findings: number; openFindings: number; passedAssessments: number; failedAssessments: number };
+        itemCount: number;
+        items: Array<{ kind: string; label: string }>;
+      };
+    };
+  };
+  assert.equal(controlTimelinePayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(controlTimelinePayload.data.coverage.recordsMaterialized, true);
+  assert.equal(controlTimelinePayload.data.semanticView.id, "control.timeline");
+  assert.equal(controlTimelinePayload.data.semanticView.systemId, "compliance");
+  assert.equal(controlTimelinePayload.data.materializedView.subject.id, controlPayload.data.id);
+  assert.equal(controlTimelinePayload.data.materializedView.subject.label, "Quarterly access review");
+  assert.equal(controlTimelinePayload.data.materializedView.company?.id, companyPayload.data.id);
+  assert.equal(controlTimelinePayload.data.materializedView.obligation?.id, obligationPayload.data.id);
+  assert.equal(controlTimelinePayload.data.materializedView.summary.assessments, 1);
+  assert.equal(controlTimelinePayload.data.materializedView.summary.findings, 1);
+  assert.equal(controlTimelinePayload.data.materializedView.summary.openFindings, 1);
+  assert.equal(controlTimelinePayload.data.materializedView.summary.passedAssessments, 0);
+  assert.equal(controlTimelinePayload.data.materializedView.summary.failedAssessments, 0);
+  assert.equal(controlTimelinePayload.data.materializedView.itemCount >= 5, true);
+  assert.equal(controlTimelinePayload.data.materializedView.items.some((item) => item.kind === "compliance_finding" && item.label === "Missing reviewer sign-off"), true);
+
+  const thingCreate = await runCliCapture(["thing", "create", "Press IoT thing", "--company", companyPayload.data.id, "--kind", "controller", "--external-id", "thing-001", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(thingCreate.code, CLI_EXIT_OK, thingCreate.stderr || thingCreate.stdout);
+  const thingPayload = JSON.parse(thingCreate.stdout) as { data: { id: string; name: string; companyId: string; kind: string; status: string; externalId: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(thingPayload.meta.invokedCommand, "thing");
+  assert.equal(thingPayload.meta.collection, "iot_things");
+  assert.equal(thingPayload.meta.action, "create");
+  assert.equal(thingPayload.data.name, "Press IoT thing");
+  assert.equal(thingPayload.data.companyId, companyPayload.data.id);
+  assert.equal(thingPayload.data.kind, "controller");
+  assert.equal(thingPayload.data.status, "active");
+
+  const iotDeviceCreate = await runCliCapture(["thing", thingPayload.data.id, "devices", "add", "Press vibration sensor", "--protocol", "mqtt", "--device-type", "sensor", "--status", "online", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(iotDeviceCreate.code, CLI_EXIT_OK, iotDeviceCreate.stderr || iotDeviceCreate.stdout);
+  const iotDevicePayload = JSON.parse(iotDeviceCreate.stdout) as { data: { id: string; name: string; thingId: string; protocol: string; deviceType: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(iotDevicePayload.meta.invokedCommand, "thing");
+  assert.equal(iotDevicePayload.meta.collection, "iot_devices");
+  assert.equal(iotDevicePayload.meta.action, "create");
+  assert.equal(iotDevicePayload.data.name, "Press vibration sensor");
+  assert.equal(iotDevicePayload.data.thingId, thingPayload.data.id);
+  assert.equal(iotDevicePayload.data.protocol, "mqtt");
+  assert.equal(iotDevicePayload.data.deviceType, "sensor");
+  assert.equal(iotDevicePayload.data.status, "online");
+
+  const sensorReadingCreate = await runCliCapture(["iot-device", iotDevicePayload.data.id, "readings", "add", "vibration", "--thing", thingPayload.data.id, "--value", "0.42", "--quality", "good", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(sensorReadingCreate.code, CLI_EXIT_OK, sensorReadingCreate.stderr || sensorReadingCreate.stdout);
+  const sensorReadingPayload = JSON.parse(sensorReadingCreate.stdout) as { data: { id: string; metric: string; deviceId: string; thingId: string; value: number; quality: string; observedAt: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(sensorReadingPayload.meta.invokedCommand, "iot-device");
+  assert.equal(sensorReadingPayload.meta.collection, "sensor_readings");
+  assert.equal(sensorReadingPayload.meta.action, "create");
+  assert.equal(sensorReadingPayload.data.metric, "vibration");
+  assert.equal(sensorReadingPayload.data.deviceId, iotDevicePayload.data.id);
+  assert.equal(sensorReadingPayload.data.thingId, thingPayload.data.id);
+  assert.equal(sensorReadingPayload.data.value, 0.42);
+  assert.equal(sensorReadingPayload.data.quality, "good");
+  assert.equal(typeof sensorReadingPayload.data.observedAt, "string");
+
+  const deviceCommandCreate = await runCliCapture(["iot-device", iotDevicePayload.data.id, "commands", "add", "Restart gateway", "--thing", thingPayload.data.id, "--command-type", "restart", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(deviceCommandCreate.code, CLI_EXIT_OK, deviceCommandCreate.stderr || deviceCommandCreate.stdout);
+  const deviceCommandPayload = JSON.parse(deviceCommandCreate.stdout) as { data: { id: string; title: string; deviceId: string; thingId: string; commandType: string; status: string; requestedAt: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(deviceCommandPayload.meta.invokedCommand, "iot-device");
+  assert.equal(deviceCommandPayload.meta.collection, "device_commands");
+  assert.equal(deviceCommandPayload.meta.action, "create");
+  assert.equal(deviceCommandPayload.data.title, "Restart gateway");
+  assert.equal(deviceCommandPayload.data.deviceId, iotDevicePayload.data.id);
+  assert.equal(deviceCommandPayload.data.thingId, thingPayload.data.id);
+  assert.equal(deviceCommandPayload.data.commandType, "restart");
+  assert.equal(deviceCommandPayload.data.status, "draft");
+  assert.equal(typeof deviceCommandPayload.data.requestedAt, "string");
+
+  const thingTimeline = await runCliCapture(["thing", thingPayload.data.id, "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(thingTimeline.code, CLI_EXIT_OK, thingTimeline.stderr || thingTimeline.stdout);
+  const thingTimelinePayload = JSON.parse(thingTimeline.stdout) as {
+    data: {
+      coverage: { implementationStatus: string; recordsMaterialized: boolean };
+      semanticView: { id: string; systemId: string };
+      materializedView: {
+        subject: { id: string; label: string };
+        company: { id: string; label: string } | null;
+        summary: { devices: number; onlineDevices: number; readings: number; commands: number; pendingCommands: number };
+        itemCount: number;
+        items: Array<{ kind: string; label: string }>;
+      };
+    };
+  };
+  assert.equal(thingTimelinePayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(thingTimelinePayload.data.coverage.recordsMaterialized, true);
+  assert.equal(thingTimelinePayload.data.semanticView.id, "thing.timeline");
+  assert.equal(thingTimelinePayload.data.semanticView.systemId, "iot");
+  assert.equal(thingTimelinePayload.data.materializedView.subject.id, thingPayload.data.id);
+  assert.equal(thingTimelinePayload.data.materializedView.subject.label, "Press IoT thing");
+  assert.equal(thingTimelinePayload.data.materializedView.company?.id, companyPayload.data.id);
+  assert.equal(thingTimelinePayload.data.materializedView.summary.devices, 1);
+  assert.equal(thingTimelinePayload.data.materializedView.summary.onlineDevices, 1);
+  assert.equal(thingTimelinePayload.data.materializedView.summary.readings, 1);
+  assert.equal(thingTimelinePayload.data.materializedView.summary.commands, 1);
+  assert.equal(thingTimelinePayload.data.materializedView.summary.pendingCommands, 1);
+  assert.equal(thingTimelinePayload.data.materializedView.itemCount >= 5, true);
+  assert.equal(thingTimelinePayload.data.materializedView.items.some((item) => item.kind === "sensor_reading" && item.label === "vibration"), true);
+
   const contactCreate = await runCliCapture(["db", "contact", "create", "--set", `companyId=${companyPayload.data.id}`, "--set", `accountId=${accountPayload.data.id}`, "--set", "firstName=Ada", "--set", "lastName=Buyer", "--set", "email=ada@example.test", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(contactCreate.code, CLI_EXIT_OK, contactCreate.stderr || contactCreate.stdout);
   const contactPayload = JSON.parse(contactCreate.stdout) as { data: { id: string; companyId: string; accountId: string; firstName: string; lastName: string; email: string }; meta: { collection: string; action: string } };

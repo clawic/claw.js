@@ -48,6 +48,9 @@ const requiredFirstWaveSystems = [
   "maintenance",
   "procurement",
   "warehouse",
+  "supply_chain",
+  "compliance",
+  "iot",
 ];
 
 const requiredFoundationMappings = {
@@ -99,6 +102,17 @@ const requiredFixtureCoverage = [
   "warehouse",
   "inventory_item",
   "stock_movement",
+  "supply_plan",
+  "supply_plan_item",
+  "supply_risk",
+  "compliance_obligation",
+  "control",
+  "control_assessment",
+  "compliance_finding",
+  "thing",
+  "iot_device",
+  "sensor_reading",
+  "device_command",
   "invoice",
   "invoice_company",
   "incident",
@@ -133,6 +147,7 @@ const requiredExternalPending = [
   ["research", "provider"],
   ["erp", "cost_bearing"],
   ["ops", "provider"],
+  ["iot", "physical_device"],
 ];
 
 const requiredExistingAuditSurfaces = [
@@ -166,6 +181,17 @@ const requiredPluralIntentPhrases = [
   ["claw purchase-orders list", "purchase_orders"],
   ["claw warehouses list", "warehouses"],
   ["claw inventory-items list", "inventory_items"],
+  ["claw supply-plans list", "supply_plans"],
+  ["claw supply-plan-items list", "supply_plan_items"],
+  ["claw supply-risks list", "supply_risks"],
+  ["claw controls list", "compliance_controls"],
+  ["claw obligations list", "compliance_obligations"],
+  ["claw control-assessments list", "control_assessments"],
+  ["claw compliance-findings list", "compliance_findings"],
+  ["claw things list", "iot_things"],
+  ["claw iot-devices list", "iot_devices"],
+  ["claw sensor-readings list", "sensor_readings"],
+  ["claw device-commands list", "device_commands"],
 ];
 
 const failures = [];
@@ -277,6 +303,16 @@ for (const phrase of [
   "claw warehouse warehouse_123 inventory-items add",
   "claw inventory-item inventory_item_123 stock-movements add",
   "claw warehouse warehouse_123 timeline",
+  "claw supply-plan supply_plan_123 items add",
+  "claw supply-plan supply_plan_123 risks add",
+  "claw supply-plan supply_plan_123 timeline",
+  "claw control control_123 assessments add",
+  "claw control control_123 findings add",
+  "claw control control_123 timeline",
+  "claw thing thing_123 devices add",
+  "claw iot-device device_123 readings add",
+  "claw iot-device device_123 commands add",
+  "claw thing thing_123 timeline",
   "claw company company_123 timeline",
   "claw asset asset_123 timeline",
   "claw work-order work_order_123 timeline",
@@ -449,6 +485,15 @@ if (!semanticViews.some((entry) => entry.id === "purchase_order.timeline" && ent
 }
 if (!semanticViews.some((entry) => entry.id === "warehouse.timeline" && entry.systemId === "warehouse")) {
   fail("semantic views must include warehouse.timeline");
+}
+if (!semanticViews.some((entry) => entry.id === "supply_plan.timeline" && entry.systemId === "supply_chain")) {
+  fail("semantic views must include supply_plan.timeline");
+}
+if (!semanticViews.some((entry) => entry.id === "control.timeline" && entry.systemId === "compliance")) {
+  fail("semantic views must include control.timeline");
+}
+if (!semanticViews.some((entry) => entry.id === "thing.timeline" && entry.systemId === "iot")) {
+  fail("semantic views must include thing.timeline");
 }
 if (!semanticViews.some((entry) => entry.id === "work_order.timeline" && entry.systemId === "manufacturing")) {
   fail("semantic views must include work_order.timeline");

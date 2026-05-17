@@ -622,6 +622,52 @@ function applyDefaults(collectionName: string, payload: Record<string, unknown>,
       payload.movementType ??= "adjusted";
       payload.occurredAt ??= new Date().toISOString();
       break;
+    case "supply_plans":
+      payload.status ??= "draft";
+      break;
+    case "supply_plan_items":
+      payload.status ??= "planned";
+      payload.priority ??= "normal";
+      break;
+    case "supply_risks":
+      payload.status ??= "open";
+      payload.severity ??= "medium";
+      payload.identifiedAt ??= new Date().toISOString();
+      break;
+    case "compliance_controls":
+      payload.status ??= "draft";
+      payload.controlType ??= "governance";
+      break;
+    case "compliance_obligations":
+      payload.status ??= "under_review";
+      break;
+    case "control_assessments":
+      payload.status ??= "planned";
+      payload.result ??= "not_tested";
+      payload.assessedAt ??= new Date().toISOString();
+      break;
+    case "compliance_findings":
+      payload.status ??= "open";
+      payload.severity ??= "medium";
+      payload.identifiedAt ??= new Date().toISOString();
+      break;
+    case "iot_things":
+      payload.status ??= "active";
+      payload.kind ??= "unknown";
+      break;
+    case "iot_devices":
+      payload.status ??= "unknown";
+      payload.protocol ??= "unknown";
+      break;
+    case "sensor_readings":
+      payload.quality ??= "unknown";
+      payload.observedAt ??= new Date().toISOString();
+      break;
+    case "device_commands":
+      payload.status ??= "draft";
+      payload.commandType ??= "custom";
+      payload.requestedAt ??= new Date().toISOString();
+      break;
     case "assets":
       payload.status ??= "active";
       break;

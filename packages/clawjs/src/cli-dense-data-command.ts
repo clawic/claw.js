@@ -304,6 +304,10 @@ function materializedSemanticViewForIntent(
   if (semanticView.id === "vehicle.timeline") return materializedVehicleTimeline(input, intent, semanticView);
   if (semanticView.id === "purchase_order.timeline") return materializedPurchaseOrderTimeline(input, intent, semanticView);
   if (semanticView.id === "warehouse.timeline") return materializedWarehouseTimeline(input, intent, semanticView);
+  if (semanticView.id === "supply_plan.timeline") return materializedSupplyPlanTimeline(input, intent, semanticView);
+  if (semanticView.id === "control.timeline") return materializedControlTimeline(input, intent, semanticView);
+  if (semanticView.id === "thing.timeline") return materializedThingTimeline(input, intent, semanticView);
+  if (semanticView.id === "construction_project.timeline") return materializedConstructionProjectTimeline(input, intent, semanticView);
   return undefined;
 }
 
@@ -1013,6 +1017,348 @@ function materializedWarehouseTimeline(
   };
 }
 
+function materializedSupplyPlanTimeline(
+  input: DenseDataCliInput,
+  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
+) {
+  const supplyPlanId = input.positionals[1];
+  if (!supplyPlanId) return undefined;
+  const namespaceId = input.flags.namespace ?? "main";
+  const store = openDenseDataStore(input.workspaceRoot);
+  store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
+  const supplyPlan = store.getRecord(namespaceId, "supply_plans", supplyPlanId);
+  if (!supplyPlan) return undefined;
+
+  const company = typeof supplyPlan.companyId === "string" ? store.getRecord(namespaceId, "companies", supplyPlan.companyId) : undefined;
+  const items = store.listRecords(namespaceId, "supply_plan_items", { filter: { supplyPlanId } }).items;
+  const risks = store.listRecords(namespaceId, "supply_risks", { filter: { supplyPlanId } }).items;
+  const supplierIds = new Set<string>([
+    ...items.map((record) => record.supplierId),
+    ...risks.map((record) => record.supplierId),
+  ].filter((value): value is string => typeof value === "string"));
+  const purchaseOrderIds = new Set<string>([
+    ...items.map((record) => record.purchaseOrderId),
+    ...risks.map((record) => record.purchaseOrderId),
+  ].filter((value): value is string => typeof value === "string"));
+  const warehouseIds = new Set<string>([
+    ...items.map((record) => record.warehouseId),
+    ...risks.map((record) => record.warehouseId),
+  ].filter((value): value is string => typeof value === "string"));
+  const inventoryItemIds = new Set<string>([
+    ...items.map((record) => record.inventoryItemId),
+    ...risks.map((record) => record.inventoryItemId),
+  ].filter((value): value is string => typeof value === "string"));
+  const productIds = new Set<string>(items.map((record) => record.productCatalogId).filter((value): value is string => typeof value === "string"));
+  const suppliers = [...supplierIds].flatMap((supplierId) => {
+    const record = store.getRecord(namespaceId, "suppliers", supplierId);
+    return record ? [record] : [];
+  });
+  const purchaseOrders = [...purchaseOrderIds].flatMap((purchaseOrderId) => {
+    const record = store.getRecord(namespaceId, "purchase_orders", purchaseOrderId);
+    return record ? [record] : [];
+  });
+  const warehouses = [...warehouseIds].flatMap((warehouseId) => {
+    const record = store.getRecord(namespaceId, "warehouses", warehouseId);
+    return record ? [record] : [];
+  });
+  const inventoryItems = [...inventoryItemIds].flatMap((inventoryItemId) => {
+    const record = store.getRecord(namespaceId, "inventory_items", inventoryItemId);
+    return record ? [record] : [];
+  });
+  const products = [...productIds].flatMap((productId) => {
+    const record = store.getRecord(namespaceId, "products_catalog", productId);
+    return record ? [record] : [];
+  });
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "supply_plans", recordId: supplyPlanId } }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "supply_plans", targetId: supplyPlanId } }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "supply_plans", targetId: supplyPlanId } }).items;
+  const timelineItems = [
+    timelineItem(supplyPlan, "supply_plan", supplyPlan.id, supplyPlan.title ?? supplyPlan.id, supplyPlan.horizonStartAt ?? supplyPlan.createdAt, supplyPlan),
+    ...(company ? [timelineItem(company, "company", company.id, company.name ?? company.legalName ?? company.id, company.createdAt, company)] : []),
+    ...items.map((record) => timelineItem(record, "supply_plan_item", record.id, record.title ?? record.id, record.neededBy ?? record.createdAt, record)),
+    ...risks.map((record) => timelineItem(record, "supply_risk", record.id, record.title ?? record.riskType ?? record.id, record.identifiedAt ?? record.createdAt, record)),
+    ...suppliers.map((record) => timelineItem(record, "supplier", record.id, record.name ?? record.id, record.createdAt, record)),
+    ...purchaseOrders.map((record) => timelineItem(record, "purchase_order", record.id, record.number ?? record.id, record.orderedAt ?? record.createdAt, record)),
+    ...warehouses.map((record) => timelineItem(record, "warehouse", record.id, record.name ?? record.code ?? record.id, record.createdAt, record)),
+    ...inventoryItems.map((record) => timelineItem(record, "inventory_item", record.id, record.name ?? record.sku ?? record.id, record.createdAt, record)),
+    ...products.map((record) => timelineItem(record, "product", record.id, record.name ?? record.id, record.createdAt, record)),
+    ...evidence.map((record) => timelineItem(record, "evidence", record.id, record.label ?? record.id, record.capturedAt ?? record.createdAt, record)),
+    ...qualityGaps.map((record) => timelineItem(record, "quality_gap", record.id, record.label ?? record.id, record.createdAt, record)),
+    ...provenance.map((record) => timelineItem(record, "provenance", record.id, record.eventType ?? record.id, record.occurredAt ?? record.createdAt, record)),
+  ].sort((left, right) => String(left.occurredAt).localeCompare(String(right.occurredAt)));
+
+  return {
+    id: semanticView.id,
+    subject: { collectionName: "supply_plans", id: supplyPlan.id, label: supplyPlan.title ?? supplyPlan.id },
+    company: company ? { id: company.id, label: company.name ?? company.legalName ?? company.id } : null,
+    summary: {
+      items: items.length,
+      risks: risks.length,
+      openRisks: risks.filter((record) => record.status !== "resolved" && record.status !== "accepted").length,
+      suppliers: suppliers.length,
+      purchaseOrders: purchaseOrders.length,
+      warehouses: warehouses.length,
+      inventoryItems: inventoryItems.length,
+      products: products.length,
+      quantityRequired: sumNumericField(items, "quantityRequired"),
+      quantityAvailable: sumNumericField(items, "quantityAvailable"),
+      quantityGap: sumNumericField(items, "quantityGap"),
+      evidenceSources: evidence.length,
+      qualityGaps: qualityGaps.length,
+    },
+    itemCount: timelineItems.length,
+    items: timelineItems,
+    records: {
+      supplyPlan,
+      company,
+      items,
+      risks,
+      suppliers,
+      purchaseOrders,
+      warehouses,
+      inventoryItems,
+      products,
+      evidence,
+      provenance,
+    },
+    gaps: qualityGaps.map((record) => ({
+      id: record.id,
+      label: record.label,
+      status: record.status,
+      gapKind: record.gapKind,
+      severity: record.severity,
+      evidenceSourceId: record.evidenceSourceId,
+    })),
+    sourceCollections: ["supply_plans", "supply_plan_items", "supply_risks", "companies", "suppliers", "purchase_orders", "warehouses", "inventory_items", "products_catalog", "evidence_sources", "quality_gaps", "provenance_events"],
+    partial: qualityGaps.length > 0,
+    intentStatus: intent.status,
+  };
+}
+
+function materializedControlTimeline(
+  input: DenseDataCliInput,
+  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
+) {
+  const controlId = input.positionals[1];
+  if (!controlId) return undefined;
+  const namespaceId = input.flags.namespace ?? "main";
+  const store = openDenseDataStore(input.workspaceRoot);
+  store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
+  const control = store.getRecord(namespaceId, "compliance_controls", controlId);
+  if (!control) return undefined;
+
+  const company = typeof control.companyId === "string" ? store.getRecord(namespaceId, "companies", control.companyId) : undefined;
+  const obligation = typeof control.obligationId === "string" ? store.getRecord(namespaceId, "compliance_obligations", control.obligationId) : undefined;
+  const assessments = store.listRecords(namespaceId, "control_assessments", { filter: { controlId } }).items;
+  const findings = store.listRecords(namespaceId, "compliance_findings", { filter: { controlId } }).items;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "compliance_controls", recordId: controlId } }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "compliance_controls", targetId: controlId } }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "compliance_controls", targetId: controlId } }).items;
+  const items = [
+    timelineItem(control, "control", control.id, control.title ?? control.controlKey ?? control.id, control.createdAt, control),
+    ...(company ? [timelineItem(company, "company", company.id, company.name ?? company.legalName ?? company.id, company.createdAt, company)] : []),
+    ...(obligation ? [timelineItem(obligation, "obligation", obligation.id, obligation.title ?? obligation.reference ?? obligation.id, obligation.effectiveAt ?? obligation.createdAt, obligation)] : []),
+    ...assessments.map((record) => timelineItem(record, "control_assessment", record.id, record.title ?? record.result ?? record.id, record.assessedAt ?? record.createdAt, record)),
+    ...findings.map((record) => timelineItem(record, "compliance_finding", record.id, record.title ?? record.severity ?? record.id, record.identifiedAt ?? record.createdAt, record)),
+    ...evidence.map((record) => timelineItem(record, "evidence", record.id, record.label ?? record.id, record.capturedAt ?? record.createdAt, record)),
+    ...qualityGaps.map((record) => timelineItem(record, "quality_gap", record.id, record.label ?? record.id, record.createdAt, record)),
+    ...provenance.map((record) => timelineItem(record, "provenance", record.id, record.eventType ?? record.id, record.occurredAt ?? record.createdAt, record)),
+  ].sort((left, right) => String(left.occurredAt).localeCompare(String(right.occurredAt)));
+
+  return {
+    id: semanticView.id,
+    subject: { collectionName: "compliance_controls", id: control.id, label: control.title ?? control.controlKey ?? control.id },
+    company: company ? { id: company.id, label: company.name ?? company.legalName ?? company.id } : null,
+    obligation: obligation ? { id: obligation.id, label: obligation.title ?? obligation.reference ?? obligation.id } : null,
+    summary: {
+      assessments: assessments.length,
+      passedAssessments: assessments.filter((record) => record.result === "pass").length,
+      failedAssessments: assessments.filter((record) => record.result === "fail").length,
+      findings: findings.length,
+      openFindings: findings.filter((record) => record.status !== "closed" && record.status !== "accepted").length,
+      evidenceSources: evidence.length,
+      qualityGaps: qualityGaps.length,
+    },
+    itemCount: items.length,
+    items,
+    records: {
+      control,
+      company,
+      obligation,
+      assessments,
+      findings,
+      evidence,
+      provenance,
+    },
+    gaps: qualityGaps.map((record) => ({
+      id: record.id,
+      label: record.label,
+      status: record.status,
+      gapKind: record.gapKind,
+      severity: record.severity,
+      evidenceSourceId: record.evidenceSourceId,
+    })),
+    sourceCollections: ["compliance_controls", "compliance_obligations", "control_assessments", "compliance_findings", "companies", "evidence_sources", "quality_gaps", "provenance_events"],
+    partial: qualityGaps.length > 0,
+    intentStatus: intent.status,
+  };
+}
+
+function materializedThingTimeline(
+  input: DenseDataCliInput,
+  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
+) {
+  const thingId = input.positionals[1];
+  if (!thingId) return undefined;
+  const namespaceId = input.flags.namespace ?? "main";
+  const store = openDenseDataStore(input.workspaceRoot);
+  store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
+  const thing = store.getRecord(namespaceId, "iot_things", thingId);
+  if (!thing) return undefined;
+
+  const company = typeof thing.companyId === "string" ? store.getRecord(namespaceId, "companies", thing.companyId) : undefined;
+  const asset = typeof thing.assetId === "string" ? store.getRecord(namespaceId, "assets", thing.assetId) : undefined;
+  const devices = store.listRecords(namespaceId, "iot_devices", { filter: { thingId } }).items;
+  const deviceIds = new Set(devices.map((record) => record.id));
+  const readingsByThing = store.listRecords(namespaceId, "sensor_readings", { filter: { thingId } }).items;
+  const readingsByDevice = devices.flatMap((record) => store.listRecords(namespaceId, "sensor_readings", { filter: { deviceId: record.id } }).items);
+  const readings = uniqueRecordsById([...readingsByThing, ...readingsByDevice]);
+  const commandsByThing = store.listRecords(namespaceId, "device_commands", { filter: { thingId } }).items;
+  const commandsByDevice = devices.flatMap((record) => store.listRecords(namespaceId, "device_commands", { filter: { deviceId: record.id } }).items);
+  const commands = uniqueRecordsById([...commandsByThing, ...commandsByDevice]);
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "iot_things", recordId: thingId } }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "iot_things", targetId: thingId } }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "iot_things", targetId: thingId } }).items;
+  const items = [
+    timelineItem(thing, "thing", thing.id, thing.name ?? thing.id, thing.createdAt, thing),
+    ...(company ? [timelineItem(company, "company", company.id, company.name ?? company.legalName ?? company.id, company.createdAt, company)] : []),
+    ...(asset ? [timelineItem(asset, "asset", asset.id, asset.serialNumber ?? asset.name ?? asset.id, asset.createdAt, asset)] : []),
+    ...devices.map((record) => timelineItem(record, "iot_device", record.id, record.name ?? record.id, record.lastSeenAt ?? record.createdAt, record)),
+    ...readings.map((record) => timelineItem(record, "sensor_reading", record.id, record.metric ?? record.id, record.observedAt ?? record.createdAt, record)),
+    ...commands.map((record) => timelineItem(record, "device_command", record.id, record.title ?? record.commandType ?? record.id, record.executedAt ?? record.requestedAt ?? record.createdAt, record)),
+    ...evidence.map((record) => timelineItem(record, "evidence", record.id, record.label ?? record.id, record.capturedAt ?? record.createdAt, record)),
+    ...qualityGaps.map((record) => timelineItem(record, "quality_gap", record.id, record.label ?? record.id, record.createdAt, record)),
+    ...provenance.map((record) => timelineItem(record, "provenance", record.id, record.eventType ?? record.id, record.occurredAt ?? record.createdAt, record)),
+  ].sort((left, right) => String(left.occurredAt).localeCompare(String(right.occurredAt)));
+
+  return {
+    id: semanticView.id,
+    subject: { collectionName: "iot_things", id: thing.id, label: thing.name ?? thing.id },
+    company: company ? { id: company.id, label: company.name ?? company.legalName ?? company.id } : null,
+    asset: asset ? { id: asset.id, label: asset.serialNumber ?? asset.name ?? asset.id } : null,
+    summary: {
+      devices: devices.length,
+      onlineDevices: devices.filter((record) => record.status === "online").length,
+      readings: readings.length,
+      commands: commands.length,
+      pendingCommands: commands.filter((record) => record.status === "pending_approval" || record.status === "draft").length,
+      deviceIds: [...deviceIds],
+      evidenceSources: evidence.length,
+      qualityGaps: qualityGaps.length,
+    },
+    itemCount: items.length,
+    items,
+    records: {
+      thing,
+      company,
+      asset,
+      devices,
+      readings,
+      commands,
+      evidence,
+      provenance,
+    },
+    gaps: qualityGaps.map((record) => ({
+      id: record.id,
+      label: record.label,
+      status: record.status,
+      gapKind: record.gapKind,
+      severity: record.severity,
+      evidenceSourceId: record.evidenceSourceId,
+    })),
+    sourceCollections: ["iot_things", "iot_devices", "sensor_readings", "device_commands", "companies", "assets", "evidence_sources", "quality_gaps", "provenance_events"],
+    partial: qualityGaps.length > 0,
+    intentStatus: intent.status,
+  };
+}
+
+function materializedConstructionProjectTimeline(
+  input: DenseDataCliInput,
+  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
+) {
+  const projectId = input.positionals[1];
+  if (!projectId) return undefined;
+  const namespaceId = input.flags.namespace ?? "main";
+  const store = openDenseDataStore(input.workspaceRoot);
+  store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
+  const project = store.getRecord(namespaceId, "construction_projects", projectId);
+  if (!project) return undefined;
+
+  const company = typeof project.companyId === "string" ? store.getRecord(namespaceId, "companies", project.companyId) : undefined;
+  const customerCompany = typeof project.customerCompanyId === "string" ? store.getRecord(namespaceId, "companies", project.customerCompanyId) : undefined;
+  const sites = store.listRecords(namespaceId, "construction_sites", { filter: { projectId } }).items;
+  const rfis = store.listRecords(namespaceId, "construction_rfis", { filter: { projectId } }).items;
+  const changeOrders = store.listRecords(namespaceId, "construction_change_orders", { filter: { projectId } }).items;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "construction_projects", recordId: projectId } }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "construction_projects", targetId: projectId } }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "construction_projects", targetId: projectId } }).items;
+  const items = [
+    timelineItem(project, "construction_project", project.id, project.title ?? project.id, project.startAt ?? project.createdAt, project),
+    ...(company ? [timelineItem(company, "company", company.id, company.name ?? company.legalName ?? company.id, company.createdAt, company)] : []),
+    ...(customerCompany ? [timelineItem(customerCompany, "customer_company", customerCompany.id, customerCompany.name ?? customerCompany.legalName ?? customerCompany.id, customerCompany.createdAt, customerCompany)] : []),
+    ...sites.map((record) => timelineItem(record, "construction_site", record.id, record.name ?? record.id, record.createdAt, record)),
+    ...rfis.map((record) => timelineItem(record, "construction_rfi", record.id, record.title ?? record.number ?? record.id, record.answeredAt ?? record.requestedAt ?? record.createdAt, record)),
+    ...changeOrders.map((record) => timelineItem(record, "construction_change_order", record.id, record.title ?? record.number ?? record.id, record.approvedAt ?? record.submittedAt ?? record.createdAt, record)),
+    ...evidence.map((record) => timelineItem(record, "evidence", record.id, record.label ?? record.id, record.capturedAt ?? record.createdAt, record)),
+    ...qualityGaps.map((record) => timelineItem(record, "quality_gap", record.id, record.label ?? record.id, record.createdAt, record)),
+    ...provenance.map((record) => timelineItem(record, "provenance", record.id, record.eventType ?? record.id, record.occurredAt ?? record.createdAt, record)),
+  ].sort((left, right) => String(left.occurredAt).localeCompare(String(right.occurredAt)));
+
+  return {
+    id: semanticView.id,
+    subject: { collectionName: "construction_projects", id: project.id, label: project.title ?? project.id },
+    company: company ? { id: company.id, label: company.name ?? company.legalName ?? company.id } : null,
+    customerCompany: customerCompany ? { id: customerCompany.id, label: customerCompany.name ?? customerCompany.legalName ?? customerCompany.id } : null,
+    summary: {
+      sites: sites.length,
+      rfis: rfis.length,
+      openRfis: rfis.filter((record) => record.status !== "answered" && record.status !== "closed").length,
+      changeOrders: changeOrders.length,
+      approvedChangeOrders: changeOrders.filter((record) => record.status === "approved").length,
+      changeOrderAmountCents: sumNumericField(changeOrders, "amountCents"),
+      evidenceSources: evidence.length,
+      qualityGaps: qualityGaps.length,
+    },
+    itemCount: items.length,
+    items,
+    records: {
+      project,
+      company,
+      customerCompany,
+      sites,
+      rfis,
+      changeOrders,
+      evidence,
+      provenance,
+    },
+    gaps: qualityGaps.map((record) => ({
+      id: record.id,
+      label: record.label,
+      status: record.status,
+      gapKind: record.gapKind,
+      severity: record.severity,
+      evidenceSourceId: record.evidenceSourceId,
+    })),
+    sourceCollections: ["construction_projects", "construction_sites", "construction_rfis", "construction_change_orders", "companies", "evidence_sources", "quality_gaps", "provenance_events"],
+    partial: qualityGaps.length > 0,
+    intentStatus: intent.status,
+  };
+}
+
 function materializedLearnerTimeline(
   input: DenseDataCliInput,
   intent: ReturnType<typeof resolveClawDenseDataIntent>,
@@ -1672,6 +2018,96 @@ function denseDbFlags(flags: Record<string, string>, collectionName: string): Re
   if (collectionName === "stock_movements" && flags.warehouse && !flags["warehouse-id"]) {
     nextFlags = { ...nextFlags, "warehouse-id": flags.warehouse };
   }
+  if (collectionName === "supply_plans" && flags.company && !flags["company-id"]) {
+    nextFlags = { ...nextFlags, "company-id": flags.company };
+  }
+  if (collectionName === "supply_plan_items" && flags["supply-plan"] && !flags["supply-plan-id"]) {
+    nextFlags = { ...nextFlags, "supply-plan-id": flags["supply-plan"] };
+  }
+  if (collectionName === "supply_plan_items" && flags.product && !flags["product-catalog-id"]) {
+    nextFlags = { ...nextFlags, "product-catalog-id": flags.product };
+  }
+  if (collectionName === "supply_plan_items" && flags.supplier && !flags["supplier-id"]) {
+    nextFlags = { ...nextFlags, "supplier-id": flags.supplier };
+  }
+  if (collectionName === "supply_plan_items" && flags["purchase-order"] && !flags["purchase-order-id"]) {
+    nextFlags = { ...nextFlags, "purchase-order-id": flags["purchase-order"] };
+  }
+  if (collectionName === "supply_plan_items" && flags.warehouse && !flags["warehouse-id"]) {
+    nextFlags = { ...nextFlags, "warehouse-id": flags.warehouse };
+  }
+  if (collectionName === "supply_plan_items" && flags["inventory-item"] && !flags["inventory-item-id"]) {
+    nextFlags = { ...nextFlags, "inventory-item-id": flags["inventory-item"] };
+  }
+  if (collectionName === "supply_risks" && flags["supply-plan"] && !flags["supply-plan-id"]) {
+    nextFlags = { ...nextFlags, "supply-plan-id": flags["supply-plan"] };
+  }
+  if (collectionName === "supply_risks" && flags.supplier && !flags["supplier-id"]) {
+    nextFlags = { ...nextFlags, "supplier-id": flags.supplier };
+  }
+  if (collectionName === "supply_risks" && flags["purchase-order"] && !flags["purchase-order-id"]) {
+    nextFlags = { ...nextFlags, "purchase-order-id": flags["purchase-order"] };
+  }
+  if (collectionName === "supply_risks" && flags.warehouse && !flags["warehouse-id"]) {
+    nextFlags = { ...nextFlags, "warehouse-id": flags.warehouse };
+  }
+  if (collectionName === "supply_risks" && flags["inventory-item"] && !flags["inventory-item-id"]) {
+    nextFlags = { ...nextFlags, "inventory-item-id": flags["inventory-item"] };
+  }
+  if (["compliance_controls", "compliance_obligations"].includes(collectionName) && flags.company && !flags["company-id"]) {
+    nextFlags = { ...nextFlags, "company-id": flags.company };
+  }
+  if (collectionName === "compliance_controls" && flags.obligation && !flags["obligation-id"]) {
+    nextFlags = { ...nextFlags, "obligation-id": flags.obligation };
+  }
+  if (collectionName === "compliance_controls" && flags.owner && !flags["owner-employee-id"]) {
+    nextFlags = { ...nextFlags, "owner-employee-id": flags.owner };
+  }
+  if (collectionName === "control_assessments" && flags.control && !flags["control-id"]) {
+    nextFlags = { ...nextFlags, "control-id": flags.control };
+  }
+  if (collectionName === "control_assessments" && flags.obligation && !flags["obligation-id"]) {
+    nextFlags = { ...nextFlags, "obligation-id": flags.obligation };
+  }
+  if (collectionName === "compliance_findings" && flags.control && !flags["control-id"]) {
+    nextFlags = { ...nextFlags, "control-id": flags.control };
+  }
+  if (collectionName === "compliance_findings" && flags.assessment && !flags["assessment-id"]) {
+    nextFlags = { ...nextFlags, "assessment-id": flags.assessment };
+  }
+  if (collectionName === "compliance_findings" && flags.obligation && !flags["obligation-id"]) {
+    nextFlags = { ...nextFlags, "obligation-id": flags.obligation };
+  }
+  if (collectionName === "iot_things" && flags.company && !flags["company-id"]) {
+    nextFlags = { ...nextFlags, "company-id": flags.company };
+  }
+  if (collectionName === "iot_things" && flags.asset && !flags["asset-id"]) {
+    nextFlags = { ...nextFlags, "asset-id": flags.asset };
+  }
+  if (collectionName === "iot_devices" && flags.thing && !flags["thing-id"]) {
+    nextFlags = { ...nextFlags, "thing-id": flags.thing };
+  }
+  if (["sensor_readings", "device_commands"].includes(collectionName) && flags.thing && !flags["thing-id"]) {
+    nextFlags = { ...nextFlags, "thing-id": flags.thing };
+  }
+  if (["sensor_readings", "device_commands"].includes(collectionName) && flags.device && !flags["device-id"]) {
+    nextFlags = { ...nextFlags, "device-id": flags.device };
+  }
+  if (collectionName === "construction_projects" && flags.company && !flags["company-id"]) {
+    nextFlags = { ...nextFlags, "company-id": flags.company };
+  }
+  if (collectionName === "construction_projects" && flags.customer && !flags["customer-company-id"]) {
+    nextFlags = { ...nextFlags, "customer-company-id": flags.customer };
+  }
+  if (["construction_sites", "construction_rfis", "construction_change_orders"].includes(collectionName) && flags["construction-project"] && !flags["project-id"]) {
+    nextFlags = { ...nextFlags, "project-id": flags["construction-project"] };
+  }
+  if (["construction_rfis", "construction_change_orders"].includes(collectionName) && flags.site && !flags["site-id"]) {
+    nextFlags = { ...nextFlags, "site-id": flags.site };
+  }
+  if (collectionName === "construction_change_orders" && flags.rfi && !flags["related-rfi-id"]) {
+    nextFlags = { ...nextFlags, "related-rfi-id": flags.rfi };
+  }
   if (collectionName === "transactions" && flags.account && !flags["account-id"]) {
     nextFlags = { ...nextFlags, "account-id": flags.account };
   }
@@ -1836,6 +2272,10 @@ function nestedDenseDbRoute(input: DenseDataCliInput): Parameters<typeof runMagi
       "purchase-orders": "purchase_orders",
       po: "purchase_orders",
       pos: "purchase_orders",
+      "supply-risk": "supply_risks",
+      "supply-risks": "supply_risks",
+      risk: "supply_risks",
+      risks: "supply_risks",
     },
   }) ?? nestedParentDbRoute(input, {
     parentCommand: "purchase-order",
@@ -1872,6 +2312,96 @@ function nestedDenseDbRoute(input: DenseDataCliInput): Parameters<typeof runMagi
       movements: "stock_movements",
       "inventory-movement": "stock_movements",
       "inventory-movements": "stock_movements",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "supply-plan",
+    relationFlag: "supply-plan-id",
+    relationField: "supplyPlanId",
+    collections: {
+      item: "supply_plan_items",
+      items: "supply_plan_items",
+      "supply-plan-item": "supply_plan_items",
+      "supply-plan-items": "supply_plan_items",
+      risk: "supply_risks",
+      risks: "supply_risks",
+      "supply-risk": "supply_risks",
+      "supply-risks": "supply_risks",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "control",
+    relationFlag: "control-id",
+    relationField: "controlId",
+    collections: {
+      assessment: "control_assessments",
+      assessments: "control_assessments",
+      "control-assessment": "control_assessments",
+      "control-assessments": "control_assessments",
+      finding: "compliance_findings",
+      findings: "compliance_findings",
+      "compliance-finding": "compliance_findings",
+      "compliance-findings": "compliance_findings",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "obligation",
+    relationFlag: "obligation-id",
+    relationField: "obligationId",
+    collections: {
+      control: "compliance_controls",
+      controls: "compliance_controls",
+      "compliance-control": "compliance_controls",
+      "compliance-controls": "compliance_controls",
+      finding: "compliance_findings",
+      findings: "compliance_findings",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "thing",
+    relationFlag: "thing-id",
+    relationField: "thingId",
+    collections: {
+      device: "iot_devices",
+      devices: "iot_devices",
+      "iot-device": "iot_devices",
+      "iot-devices": "iot_devices",
+      reading: "sensor_readings",
+      readings: "sensor_readings",
+      "sensor-reading": "sensor_readings",
+      "sensor-readings": "sensor_readings",
+      command: "device_commands",
+      commands: "device_commands",
+      "device-command": "device_commands",
+      "device-commands": "device_commands",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "construction-project",
+    relationFlag: "construction-project-id",
+    relationField: "projectId",
+    collections: {
+      site: "construction_sites",
+      sites: "construction_sites",
+      "construction-site": "construction_sites",
+      "construction-sites": "construction_sites",
+      rfi: "construction_rfis",
+      rfis: "construction_rfis",
+      "construction-rfi": "construction_rfis",
+      "construction-rfis": "construction_rfis",
+      "change-order": "construction_change_orders",
+      "change-orders": "construction_change_orders",
+      "construction-change-order": "construction_change_orders",
+      "construction-change-orders": "construction_change_orders",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "iot-device",
+    relationFlag: "device-id",
+    relationField: "deviceId",
+    collections: {
+      reading: "sensor_readings",
+      readings: "sensor_readings",
+      "sensor-reading": "sensor_readings",
+      "sensor-readings": "sensor_readings",
+      command: "device_commands",
+      commands: "device_commands",
+      "device-command": "device_commands",
+      "device-commands": "device_commands",
     },
   }) ?? nestedParentDbRoute(input, {
     parentCommand: "sample",

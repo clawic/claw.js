@@ -37,9 +37,10 @@ The registry is the first executable canon for this model. It defines:
 - a first wave of visible dense systems: Health/EHR, Research/CTMS, Biology,
   Labs/LIMS, Legal, ERP, CRM, Finance/Accounting, Education/LMS, HR/HRIS,
   Manufacturing/MES, Operations/ITSM, Real Estate/PropTech, Insurance, and
-  Maintenance/CMMS, Procurement, and Warehouse/WMS
-- a roadmap taxonomy for SCM, TMS, GRC, government,
-  construction, IoT, CMS, PIM/PLM, pharma, and ELN
+  Maintenance/CMMS, Procurement, Warehouse/WMS, Supply Chain/SCM, and
+  Compliance/GRC, and IoT
+- a roadmap taxonomy for TMS, government,
+  construction, CMS, PIM/PLM, pharma, and ELN
 - a non-executing dense intent resolver that can classify direct phrases such
   as `claw patient list`, `claw patients list`, `claw invoice list`, or `claw
   medication add --patient <id>` as covered, partial, blocked, or gaps before
@@ -241,6 +242,23 @@ Warehouse/WMS uses `claw warehouse <id> timeline` to materialize `warehouses`,
 `inventory_items`, `stock_movements`, product catalog references, evidence,
 provenance, and quality gaps without conflating WMS inventory, procurement
 commitments, transport shipments, household inventory, or accounting entries.
+Supply Chain/SCM uses `claw supply-plan <id> timeline` to materialize
+`supply_plans`, `supply_plan_items`, `supply_risks`, suppliers,
+`purchase_orders`, warehouses, `inventory_items`, product catalog references,
+evidence, provenance, and quality gaps. SCM remains an orchestration pack over
+procurement and warehouse data rather than a duplicated supplier, stock, or
+accounting database.
+Compliance/GRC uses `claw control <id> timeline` to materialize
+`compliance_controls`, `compliance_obligations`, `control_assessments`,
+`compliance_findings`, company anchors, evidence, provenance, and quality gaps.
+It deliberately stays separate from runtime agents `policy_gates`, generic
+project health audit records, and the universal `quality_gaps` primitive.
+IoT uses `claw thing <id> timeline` to materialize `iot_things`,
+`iot_devices`, `sensor_readings`, `device_commands`, company/asset anchors,
+evidence, provenance, and quality gaps. It extends the existing `iot config`
+and `iot serve` portal without replacing connector setup; real device control
+and physical telemetry are tracked as EXTERNAL PENDING unless validated against
+actual hardware or a certified simulator.
 ERP now has a materialized company overview through `claw erp company <id>
 overview`: it reads the shared company anchor plus CRM accounts/deals, billing
 customers, invoices, payment intents, services, work orders, evidence,

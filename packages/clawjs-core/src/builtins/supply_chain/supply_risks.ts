@@ -1,0 +1,41 @@
+import type { BuiltinCollectionDefinition } from "../_types.ts";
+
+export const SUPPLY_RISKS: BuiltinCollectionDefinition = {
+  name: "supply_risks",
+  displayName: "Supply Risks",
+  family: "supply_chain",
+  aliases: ["supply-risk", "supply-risks", "supply_risk", "supply_risks", "supplier-risk", "supplier-risks"],
+  catalog: {
+    purpose: "Supply-chain risk center for supplier, purchase order, inventory, warehouse, quality, timing, evidence, and mitigation state.",
+    evidence: ["human_recognizable", "market_validated", "multi_domain_reuse", "agent_useful"],
+    relationGuidance: "Link the risk to a supplyPlanId when planning context exists, and to supplier/purchase order/warehouse/inventory records for concrete evidence.",
+    notes: "Risks capture uncertainty and mitigation; they do not replace quality gaps, which remain the generic data-quality primitive.",
+  },
+  fields: [
+    { name: "title", type: "text", required: true, requiredReason: "identity", aliases: ["name", "summary"] },
+    { name: "supplyPlanId", type: "relation", relation: { collectionName: "supply_plans" } },
+    { name: "supplierId", type: "relation", relation: { collectionName: "suppliers" } },
+    { name: "purchaseOrderId", type: "relation", relation: { collectionName: "purchase_orders" } },
+    { name: "warehouseId", type: "relation", relation: { collectionName: "warehouses" } },
+    { name: "inventoryItemId", type: "relation", relation: { collectionName: "inventory_items" } },
+    { name: "riskType", type: "select", options: ["supplier", "lead_time", "inventory", "quality", "logistics", "demand", "compliance", "unknown"] },
+    { name: "severity", type: "select", options: ["low", "medium", "high", "critical", "unknown"] },
+    { name: "status", type: "select", options: ["open", "monitoring", "mitigating", "resolved", "accepted", "unknown"] },
+    { name: "identifiedAt", type: "date" },
+    { name: "mitigation", type: "markdown" },
+    { name: "source", type: "json" },
+    { name: "links", type: "json" },
+    { name: "evidence", type: "json" },
+    { name: "qualityGaps", type: "json" },
+    { name: "metadata", type: "json" },
+    { name: "archivedAt", type: "date" },
+  ],
+  indexes: [
+    { name: "supply_risks_plan_idx", fields: ["supplyPlanId"] },
+    { name: "supply_risks_supplier_idx", fields: ["supplierId"] },
+    { name: "supply_risks_purchase_order_idx", fields: ["purchaseOrderId"] },
+    { name: "supply_risks_warehouse_idx", fields: ["warehouseId"] },
+    { name: "supply_risks_status_idx", fields: ["status"] },
+    { name: "supply_risks_severity_idx", fields: ["severity"] },
+  ],
+};

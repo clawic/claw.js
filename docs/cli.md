@@ -738,6 +738,16 @@ claw purchase-order purchase_order_123 timeline --json
 claw warehouse warehouse_123 inventory-items add "Press frame" --json
 claw inventory-item inventory_item_123 stock-movements add --quantity 10 --json
 claw warehouse warehouse_123 timeline --json
+claw supply-plan supply_plan_123 items add "Press shortage" --supplier supplier_123 --purchase-order purchase_order_123 --warehouse warehouse_123 --inventory-item inventory_item_123 --json
+claw supply-plan supply_plan_123 risks add "Supplier lead-time risk" --supplier supplier_123 --json
+claw supply-plan supply_plan_123 timeline --json
+claw control control_123 assessments add "Q2 access review" --json
+claw control control_123 findings add "Missing reviewer sign-off" --json
+claw control control_123 timeline --json
+claw thing thing_123 devices add "Press vibration sensor" --json
+claw iot-device device_123 readings add vibration --value 0.42 --json
+claw iot-device device_123 commands add "Restart gateway" --json
+claw thing thing_123 timeline --json
 claw product list --json
 claw products list --json
 claw product create "Hydraulic Press" --company company_123 --json

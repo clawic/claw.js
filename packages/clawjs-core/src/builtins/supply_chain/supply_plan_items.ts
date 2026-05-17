@@ -1,0 +1,43 @@
+import type { BuiltinCollectionDefinition } from "../_types.ts";
+
+export const SUPPLY_PLAN_ITEMS: BuiltinCollectionDefinition = {
+  name: "supply_plan_items",
+  displayName: "Supply Plan Items",
+  family: "supply_chain",
+  aliases: ["supply-plan-item", "supply-plan-items", "supply_plan_item", "supply_plan_items", "replenishment-item", "replenishment-items"],
+  catalog: {
+    purpose: "Supply-plan line center for product demand, supplier/procurement links, warehouse stock position, quantities, and timing gaps.",
+    evidence: ["human_recognizable", "market_validated", "multi_domain_reuse", "agent_useful"],
+    relationGuidance: "Every item belongs to a supply plan; link productCatalogId, supplierId, purchaseOrderId, warehouseId, and inventoryItemId when those canonical records are known.",
+    notes: "This item forecasts and coordinates supply; it does not replace purchase order line items or inventory movements.",
+  },
+  fields: [
+    { name: "title", type: "text", required: true, requiredReason: "identity", aliases: ["description", "name"] },
+    { name: "supplyPlanId", type: "relation", required: true, requiredReason: "relation_integrity", relation: { collectionName: "supply_plans" } },
+    { name: "productCatalogId", type: "relation", relation: { collectionName: "products_catalog" } },
+    { name: "supplierId", type: "relation", relation: { collectionName: "suppliers" } },
+    { name: "purchaseOrderId", type: "relation", relation: { collectionName: "purchase_orders" } },
+    { name: "warehouseId", type: "relation", relation: { collectionName: "warehouses" } },
+    { name: "inventoryItemId", type: "relation", relation: { collectionName: "inventory_items" } },
+    { name: "neededBy", type: "date" },
+    { name: "quantityRequired", type: "number", min: 0 },
+    { name: "quantityAvailable", type: "number", min: 0 },
+    { name: "quantityGap", type: "number" },
+    { name: "priority", type: "select", options: ["low", "normal", "high", "critical", "unknown"] },
+    { name: "status", type: "select", options: ["planned", "covered", "short", "late", "blocked", "cancelled", "unknown"] },
+    { name: "source", type: "json" },
+    { name: "links", type: "json" },
+    { name: "evidence", type: "json" },
+    { name: "qualityGaps", type: "json" },
+    { name: "metadata", type: "json" },
+    { name: "archivedAt", type: "date" },
+  ],
+  indexes: [
+    { name: "supply_plan_items_plan_idx", fields: ["supplyPlanId"] },
+    { name: "supply_plan_items_product_idx", fields: ["productCatalogId"] },
+    { name: "supply_plan_items_supplier_idx", fields: ["supplierId"] },
+    { name: "supply_plan_items_purchase_order_idx", fields: ["purchaseOrderId"] },
+    { name: "supply_plan_items_warehouse_idx", fields: ["warehouseId"] },
+    { name: "supply_plan_items_status_idx", fields: ["status"] },
+  ],
+};
