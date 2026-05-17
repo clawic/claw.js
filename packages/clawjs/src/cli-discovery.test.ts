@@ -2591,6 +2591,9 @@ test("runCli seeds the dense-data acceptance fixture into the shared database", 
   assert.equal(seedPayload.data.fixtureSetId, "dense-data-acceptance-v1");
   assert.equal(seedPayload.data.store, "core.sqlite");
   assert.equal(seedPayload.data.seeded.some((record) => record.id === "fixture_patient_ada" && record.collectionName === "patients" && record.covers.includes("patient")), true);
+  assert.equal(seedPayload.data.seeded.some((record) => record.id === "fixture_person_ada" && record.collectionName === "people" && record.covers.includes("shared_identity")), true);
+  assert.equal(seedPayload.data.seeded.some((record) => record.id === "fixture_relation_person_patient" && record.collectionName === "entity_relations" && record.covers.includes("no_duplicate_identity")), true);
+  assert.equal(seedPayload.data.seeded.some((record) => record.id === "fixture_relation_person_employee" && record.collectionName === "entity_relations" && record.covers.includes("employee_person_link")), true);
   assert.equal(seedPayload.data.seeded.some((record) => record.id === "fixture_encounter_intake" && record.collectionName === "encounters" && record.covers.includes("encounter")), true);
   assert.equal(seedPayload.data.seeded.some((record) => record.id === "fixture_gap_missing_dob" && record.collectionName === "quality_gaps" && record.covers.includes("partial_data_gap")), true);
   assert.equal(seedPayload.data.seeded.some((record) => record.id === "fixture_domain_system_health" && record.collectionName === "domain_systems" && record.covers.includes("domain_system")), true);
@@ -2600,10 +2603,11 @@ test("runCli seeds the dense-data acceptance fixture into the shared database", 
 
   const patientGet = await runCliCapture(["patient", "get", "fixture_patient_ada", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(patientGet.code, CLI_EXIT_OK);
-  const patientPayload = JSON.parse(patientGet.stdout) as { data: { id: string; displayName: string; qualityGaps: string[] }; meta: { collection: string; action: string } };
+  const patientPayload = JSON.parse(patientGet.stdout) as { data: { id: string; personId: string; displayName: string; qualityGaps: string[] }; meta: { collection: string; action: string } };
   assert.equal(patientPayload.meta.collection, "patients");
   assert.equal(patientPayload.meta.action, "get");
   assert.equal(patientPayload.data.id, "fixture_patient_ada");
+  assert.equal(patientPayload.data.personId, "fixture_person_ada");
   assert.equal(patientPayload.data.displayName, "Ada Patient");
   assert.deepEqual(patientPayload.data.qualityGaps, ["fixture_gap_missing_dob"]);
 
@@ -2630,6 +2634,22 @@ test("runCli seeds the dense-data acceptance fixture into the shared database", 
   assert.equal(domainProfilePayload.data.domainSystemKey, "health");
   assert.equal(domainProfilePayload.data.domainRoleKey, "health.patient");
   assert.equal(domainProfilePayload.data.profileKind, "patient_profile");
+
+  const legalProfileGet = await runCliCapture(["domain-profile", "get", "fixture_domain_profile_legal_legal_client", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(legalProfileGet.code, CLI_EXIT_OK);
+  const legalProfilePayload = JSON.parse(legalProfileGet.stdout) as { data: { entityKind: string; entityId: string; profileKind: string; fields: { personId: string } } };
+  assert.equal(legalProfilePayload.data.entityKind, "legal_clients");
+  assert.equal(legalProfilePayload.data.entityId, "fixture_legal_client_smith");
+  assert.equal(legalProfilePayload.data.profileKind, "legal_client_profile");
+  assert.equal(legalProfilePayload.data.fields.personId, "fixture_person_smith");
+
+  const employeeProfileGet = await runCliCapture(["domain-profile", "get", "fixture_domain_profile_hr_employee", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(employeeProfileGet.code, CLI_EXIT_OK);
+  const employeeProfilePayload = JSON.parse(employeeProfileGet.stdout) as { data: { entityKind: string; entityId: string; profileKind: string; fields: { sharedPersonId: string } } };
+  assert.equal(employeeProfilePayload.data.entityKind, "employees");
+  assert.equal(employeeProfilePayload.data.entityId, "fixture_employee_ada");
+  assert.equal(employeeProfilePayload.data.profileKind, "employee_profile");
+  assert.equal(employeeProfilePayload.data.fields.sharedPersonId, "fixture_person_ada");
 
   const timeline = await runCliCapture(["patient", "fixture_patient_ada", "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(timeline.code, CLI_EXIT_OK);
@@ -2750,7 +2770,7 @@ test("runCli seeds the dense-data acceptance fixture into the shared database", 
   assert.equal(learnerTimelinePayload.data.coverage.recordsMaterialized, true);
   assert.equal(learnerTimelinePayload.data.semanticView.id, "learner.timeline");
   assert.equal(learnerTimelinePayload.data.materializedView.summary.courses, 1);
-  assert.equal(learnerTimelinePayload.data.materializedView.summary.relations, 1);
+  assert.equal(learnerTimelinePayload.data.materializedView.summary.relations, 2);
   assert.equal(learnerTimelinePayload.data.materializedView.summary.evidenceSources, 1);
   assert.equal(learnerTimelinePayload.data.materializedView.summary.qualityGaps, 1);
   assert.equal(learnerTimelinePayload.data.materializedView.partial, true);
@@ -2758,6 +2778,7 @@ test("runCli seeds the dense-data acceptance fixture into the shared database", 
   assert.equal(learnerTimelinePayload.data.materializedView.items.some((item) => item.kind === "learner" && item.recordId === "fixture_learner_ada"), true);
   assert.equal(learnerTimelinePayload.data.materializedView.items.some((item) => item.kind === "course" && item.recordId === "fixture_course_intro_biology"), true);
   assert.equal(learnerTimelinePayload.data.materializedView.items.some((item) => item.kind === "relation" && item.recordId === "fixture_relation_learner_course"), true);
+  assert.equal(learnerTimelinePayload.data.materializedView.items.some((item) => item.kind === "relation" && item.recordId === "fixture_relation_person_learner"), true);
   assert.equal(learnerTimelinePayload.data.materializedView.records.courses.some((record) => record.id === "fixture_course_intro_biology"), true);
   assert.equal(learnerTimelinePayload.data.materializedView.records.relations.some((record) => record.id === "fixture_relation_learner_course"), true);
   assert.equal(learnerTimelinePayload.data.materializedView.records.evidence.some((record) => record.id === "fixture_evidence_learner_record"), true);
