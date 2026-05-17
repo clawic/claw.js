@@ -436,9 +436,27 @@ claw apps --help
 
 ```bash
 claw content serve
-claw content posts list
-claw content campaigns list
-claw content publications list
+claw content brand list
+claw content brand create
+claw content destination list
+claw content destination create
+claw content destination test
+claw content campaign list
+claw content campaign create
+claw content entry list
+claw content entry create
+claw content entry update
+claw content entry attach-asset
+claw content entry generate-variants
+claw content approval list
+claw content approval approve
+claw content approval reject
+claw content publish plan-list
+claw content publish plan-create
+claw content publish run
+claw content publish cancel
+claw content publish runs
+claw content publish retry
 claw business --help
 claw social --help
 

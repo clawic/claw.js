@@ -223,12 +223,19 @@ const aggregateEntries: ClawDomainSurfaceEntry[] = [
     owner: "claw",
     status: "canonical",
     storageIds: [CORE_DB_ID],
-    cliCommands: ["claw content posts|campaigns|publications", "claw posts list"],
+    cliCommands: [
+      "claw content brand list|create",
+      "claw content destination list|create|test",
+      "claw content campaign list|create",
+      "claw content entry list|create|update|attach-asset|generate-variants",
+      "claw content approval list|approve|reject",
+      "claw content publish plan-list|plan-create|run|cancel|runs|retry",
+    ],
     packageNames: ["@clawjs/core"],
     source: {
       file: "packages/clawjs-core/src/cli-command-registry.ts",
     },
-    relatedCollections: ["newsletter_posts", "campaigns", "publications"],
+    relatedCollections: ["brands", "destinations", "campaigns", "entries", "approvals", "publications"],
   },
   {
     id: "aggregate:media-production",

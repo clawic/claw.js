@@ -884,9 +884,27 @@
         "commands": [
           "serve",
           "login",
-          "posts list",
-          "campaigns list",
-          "publications list"
+          "brand list",
+          "brand create",
+          "destination list",
+          "destination create",
+          "destination test",
+          "campaign list",
+          "campaign create",
+          "entry list",
+          "entry create",
+          "entry update",
+          "entry attach-asset",
+          "entry generate-variants",
+          "approval list",
+          "approval approve",
+          "approval reject",
+          "publish plan-list",
+          "publish plan-create",
+          "publish run",
+          "publish cancel",
+          "publish runs",
+          "publish retry"
         ]
       },
       {

@@ -106,6 +106,26 @@ for (const domain of clawV1ClosureMinimumContractDomains) {
   }
 }
 
+const contentPublishing = entriesById.get("aggregate:content-publishing");
+if (!contentPublishing) {
+  failures.push("missing aggregate:content-publishing surface entry");
+} else {
+  const cliCommands = contentPublishing.cliCommands ?? [];
+  for (const command of [
+    "claw content brand list|create",
+    "claw content destination list|create|test",
+    "claw content campaign list|create",
+    "claw content entry list|create|update|attach-asset|generate-variants",
+    "claw content approval list|approve|reject",
+    "claw content publish plan-list|plan-create|run|cancel|runs|retry",
+  ]) {
+    if (!cliCommands.includes(command)) failures.push(`aggregate:content-publishing missing v1 CLI route ${command}`);
+  }
+  for (const stale of ["claw content posts|campaigns|publications", "claw posts list"]) {
+    if (cliCommands.includes(stale)) failures.push(`aggregate:content-publishing keeps stale CLI route ${stale}`);
+  }
+}
+
 for (const node of clawPersistentSurfaceRegistry.nodes) {
   if (["database", "sidecar", "table", "index"].includes(node.kind) && !entriesById.has(`storage:${node.id}`)) {
     failures.push(`missing storage surface entry for ${node.id}`);

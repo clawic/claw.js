@@ -73,6 +73,14 @@ test("domain surface registry maps database, services, modules and CLI ownership
   assert.equal(erp?.status, "runtime_service");
   assert.equal(erp?.modulePath, "modules/erp");
   assert.ok(erp?.invariants?.some((invariant) => invariant.includes("ERP workflows may coordinate")));
+
+  const contentPublishing = findClawDomainSurfaceEntry("aggregate:content-publishing");
+  assert.ok(contentPublishing?.cliCommands?.includes("claw content brand list|create"));
+  assert.ok(contentPublishing?.cliCommands?.includes("claw content destination list|create|test"));
+  assert.ok(contentPublishing?.cliCommands?.includes("claw content entry list|create|update|attach-asset|generate-variants"));
+  assert.ok(contentPublishing?.cliCommands?.includes("claw content approval list|approve|reject"));
+  assert.ok(contentPublishing?.cliCommands?.includes("claw content publish plan-list|plan-create|run|cancel|runs|retry"));
+  assert.equal(contentPublishing?.cliCommands?.some((command) => command.includes("posts|campaigns|publications")), false);
 });
 
 test("v1 closure domains declare minimum resource API event fixture and validation contracts", () => {
