@@ -75,7 +75,7 @@ export interface BridgeRuntimeOptions {
   ssh?: SshBridgeOptions;
 }
 
-export interface SshBridgeOptions {
+interface SshBridgeOptions {
   enabled: boolean;
   readyTimeoutMs?: number;
   idleEvictionMs?: number;
@@ -516,5 +516,3 @@ async function handleCoordinatorSignaling(
     }
   }
 }
-
-export type { BridgeFrame, BridgeSession };
