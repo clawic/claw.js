@@ -332,6 +332,24 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.equal(recordedInvitationPayload.status, "recorded_proposal");
   assert.equal(recordedInvitationPayload.state.durable, true);
 
+  const acceptedInvitation = await runCliCapture(["nodes", "accept", "--issuer-mesh", "mesh.home", "--recipient-mesh", "mesh.server", "--allowed-resources", "skills:default", "--actions", "read,sync", "--state-dir", stateDir, "--record", "true", ...coordinatorSigningFlags, "--json"], process.cwd());
+  assert.equal(acceptedInvitation.code, CLI_EXIT_OK);
+  const acceptedInvitationPayload = parseCliJson<{
+    status: string;
+    physicalPeerTrust: string;
+    acceptance: { status: string; physicalPeerTrustVerified: boolean; externalPending: string[]; writes: boolean };
+    state: { durable: boolean; coordinatorSignature?: { verified: boolean } };
+  }>(acceptedInvitation.stdout).data;
+  assert.equal(acceptedInvitationPayload.status, "signed_invitation_acceptance_recorded");
+  assert.equal(acceptedInvitationPayload.physicalPeerTrust, "external_pending");
+  assert.equal(acceptedInvitationPayload.acceptance.status, "signed_pending_peer_trust");
+  assert.equal(acceptedInvitationPayload.acceptance.physicalPeerTrustVerified, false);
+  assert.equal(acceptedInvitationPayload.acceptance.externalPending.includes("physical_peer_trust"), true);
+  assert.equal(acceptedInvitationPayload.acceptance.externalPending.includes("device_trust_acceptance"), true);
+  assert.equal(acceptedInvitationPayload.acceptance.writes, false);
+  assert.equal(acceptedInvitationPayload.state.durable, true);
+  assert.equal(acceptedInvitationPayload.state.coordinatorSignature?.verified, true);
+
   const heartbeat = await runCliCapture(["nodes", "heartbeat", "--state-dir", stateDir, "--record", "true", "--transport", "iroh", "--owner-node", "mac.home", "--peer-node", "vps.server", "--coordinator-node", "coord.home", ...coordinatorSigningFlags, "--json"], process.cwd());
   assert.equal(heartbeat.code, CLI_EXIT_OK);
   const heartbeatPayload = parseCliJson<{
