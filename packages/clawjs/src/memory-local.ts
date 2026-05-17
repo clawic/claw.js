@@ -9,9 +9,9 @@ import { CliHandledError } from "./cli-errors.ts";
 import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 import type Database from "better-sqlite3";
 
-export const MEMORY_EXIT_OK = 0;
-export const MEMORY_EXIT_FAILURE = 1;
-export const MEMORY_EXIT_USAGE = 64;
+const MEMORY_EXIT_OK = 0;
+const MEMORY_EXIT_FAILURE = 1;
+const MEMORY_EXIT_USAGE = 64;
 
 type Writable = NodeJS.WritableStream;
 type MemoryKind = "semantic" | "episodic" | "procedural" | "archival";
@@ -107,7 +107,7 @@ const MEMORY_INDEXES: IndexDefinition[] = [
   { name: "memory_hash_idx", fields: ["normalizedHash"] },
 ];
 
-export function buildMemoryUsage(binName = "claw"): string {
+function buildMemoryUsage(binName = "claw"): string {
   return [
     "Knowledge memory commands:",
     `  ${binName} knowledge memories capabilities [--json]`,

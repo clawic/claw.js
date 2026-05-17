@@ -14,13 +14,13 @@
     "unreferencedAssetCandidates": 88
   },
   "knipSummary": {
-    "filesWithIssues": 194,
-    "totalIssues": 874,
+    "filesWithIssues": 193,
+    "totalIssues": 869,
     "issueTypes": {
       "unlisted": 2,
       "types": 119,
-      "owners": 128,
-      "exports": 617,
+      "owners": 127,
+      "exports": 613,
       "duplicates": 8
     }
   },
@@ -70,6 +70,7 @@
     "Project scaffold cleanup made local project file, package JSON, config writer, config factory, and resource-entry helpers private while preserving CLI project generate/add/info flows.",
     "Chat CLI cleanup made local context and exit-code helpers private while preserving chat/provider CLI entrypoints.",
     "Report governance cleanup made local budget, search, similarity, and age parser helpers private while preserving exported governance functions.",
-    "Audio catalog cleanup renamed the local legacy import helper to catalog terminology and removed legacy transcript provider metadata."
+    "Audio catalog cleanup renamed the local legacy import helper to catalog terminology and removed legacy transcript provider metadata.",
+    "Memory CLI cleanup made local exit-code and usage helpers private while preserving the `runMemoryCli` entrypoint."
   ]
 }
