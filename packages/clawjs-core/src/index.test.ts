@@ -523,6 +523,27 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(plan.actions.some((action) => action.action === "conflict" && action.reason === "diverged_snapshots_detect_and_elevate"), true);
   assert.equal(plan.conflicts[0]?.status, "open");
   assert.equal(plan.nextCursor?.cursor.includes("skill.review"), true);
+  const conflictQueue = buildSyncQueueEntries(plan, { queuedAt: "2026-05-17T10:01:00.000Z" });
+  assert.equal(conflictQueue.length, 1);
+  assert.equal(conflictQueue[0]?.status, "blocked");
+  assert.equal(conflictQueue[0]?.direction, "conflict");
+  assert.equal(conflictQueue[0]?.writes, false);
+  const blockedReconciliation = reconcileSyncQueue({
+    manifest: plan.manifest,
+    queue: conflictQueue,
+    now: "2026-05-17T10:02:00.000Z",
+  });
+  assert.equal(blockedReconciliation.writes, false);
+  assert.deepEqual(blockedReconciliation.blockedConflictIds, [plan.conflicts[0]?.conflictId]);
+  assert.equal(blockedReconciliation.nextCursor, undefined);
+  const resolvedReconciliation = reconcileSyncQueue({
+    manifest: plan.manifest,
+    queue: conflictQueue,
+    resolvedConflictIds: [plan.conflicts[0]?.conflictId ?? ""],
+    now: "2026-05-17T10:03:00.000Z",
+  });
+  assert.equal(resolvedReconciliation.queue[0]?.status, "resolved");
+  assert.equal(resolvedReconciliation.nextCursor?.cursor.includes("skill.review"), true);
 
   const matchingPlan = buildSyncPlan({
     manifest: plan.manifest,
@@ -590,6 +611,33 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(pushPlan.actions[0]?.action, "push");
   assert.equal(pushPlan.changes[0]?.objectRef, "skill.local-only");
   assert.equal(pushPlan.nextCursor?.cursor.includes("hash-local"), true);
+  const pushQueue = buildSyncQueueEntries(pushPlan, { queuedAt: "2026-05-17T10:04:00.000Z" });
+  assert.equal(pushQueue[0]?.status, "queued");
+  assert.equal(pushQueue[0]?.changeId, pushPlan.changes[0]?.changeId);
+  const appliedReconciliation = reconcileSyncQueue({
+    manifest: pushPlan.manifest,
+    queue: pushQueue,
+    acknowledgedChangeIds: [pushPlan.changes[0]?.changeId ?? ""],
+    now: "2026-05-17T10:05:00.000Z",
+  });
+  assert.deepEqual(appliedReconciliation.appliedChangeIds, [pushPlan.changes[0]?.changeId]);
+  assert.equal(appliedReconciliation.queue[0]?.status, "applied");
+  assert.equal(appliedReconciliation.nextCursor?.cursor.includes("hash-local"), true);
+
+  const offlineCommand = buildRemoteOfflineCommandResult({
+    routeId: "remote.chatGateway",
+    actor: {
+      actorKind: "human",
+      actorId: "user.local",
+      nodeId: "node.mac",
+      transport: "gateway",
+      trustMode: "governed_gateway",
+    },
+    evaluatedAt: "2026-05-17T10:06:00.000Z",
+  });
+  assert.equal(offlineCommand.status, "failed_fast");
+  assert.equal(offlineCommand.enqueued, false);
+  assert.equal(offlineCommand.writes, false);
 
   const conformance = buildRemoteConformanceReport({
     routeIds: remoteSyncRequiredRouteIds.map((routeId) => routeId),

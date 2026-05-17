@@ -109,6 +109,13 @@ transport behavior. They still return the canonical contract shape, including
 `writes: false`, conflict status, cursors, hosted/self-hosted conformance, and
 secret-reference-only sync policy.
 
+Offline behavior is intentionally different for command execution and Sync.
+Remote interactive commands fail fast with `failed_fast`, `enqueued: false`,
+and `writes: false` when the Connector or node is unavailable. Sync plans can
+produce no-write queue entries: push/pull changes start as `queued`, conflicts
+start as `blocked`, and reconciliation advances the next cursor only after
+acknowledged changes or explicitly resolved conflicts.
+
 Gateway authorization is evaluated fail-closed through the shared
 `evaluateRemoteAccess` contract. Governed remote requests need active allow
 grants across agent, assignment, execution profile, connector, host, run scope,

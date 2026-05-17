@@ -4,7 +4,9 @@ import { fileURLToPath } from "node:url";
 
 import {
   buildRemoteConformanceReport,
+  buildRemoteOfflineCommandResult,
   buildSyncPlan,
+  buildSyncQueueEntries,
   clawCliCommandRegistry,
   clawPersistentSurfaceRegistry,
   createSyncResourceManifest,
@@ -17,6 +19,7 @@ import {
   remoteSecretLeaseSchema,
   remoteSyncRequiredDecisionIds,
   remoteSyncRequiredRouteIds,
+  reconcileSyncQueue,
   routeIdForSyncDriver,
   syncDriverSchema,
 } from "../packages/clawjs-core/src/index.ts";
@@ -251,6 +254,25 @@ if (conflictPlan.writes !== false) fail("sync planning must be dry-run and write
 if (!conflictPlan.actions.some((action) => action.action === "conflict")) fail("diverged snapshots must produce a conflict action");
 if (conflictPlan.conflicts[0]?.status !== "open") fail("default conflict status must be open");
 if (!conflictPlan.nextCursor?.cursor.includes("skill.review")) fail("sync conflict plan must produce a reconciliation cursor");
+const conflictQueue = buildSyncQueueEntries(conflictPlan, { queuedAt: "2026-05-17T10:01:00.000Z" });
+if (conflictQueue[0]?.status !== "blocked") fail("sync conflicts must enter the offline queue as blocked");
+if (conflictQueue[0]?.writes !== false) fail("sync queue entries must be no-write contracts");
+const blockedQueue = reconcileSyncQueue({
+  manifest,
+  queue: conflictQueue,
+  now: "2026-05-17T10:02:00.000Z",
+});
+if (blockedQueue.writes !== false) fail("sync reconciliation must be dry-run/write false");
+if (!blockedQueue.blockedConflictIds.includes(conflictPlan.conflicts[0]?.conflictId)) fail("sync reconciliation must keep unresolved conflicts blocked");
+if (blockedQueue.nextCursor) fail("sync reconciliation must not advance cursor while conflicts remain blocked");
+const resolvedQueue = reconcileSyncQueue({
+  manifest,
+  queue: conflictQueue,
+  resolvedConflictIds: [conflictPlan.conflicts[0]?.conflictId ?? ""],
+  now: "2026-05-17T10:03:00.000Z",
+});
+if (resolvedQueue.queue[0]?.status !== "resolved") fail("sync reconciliation must record resolved conflicts explicitly");
+if (!resolvedQueue.nextCursor?.cursor.includes("skill.review")) fail("sync reconciliation must expose next cursor after terminal queue state");
 
 const matchingPlan = buildSyncPlan({
   manifest,
@@ -277,6 +299,48 @@ const matchingPlan = buildSyncPlan({
 });
 if (matchingPlan.actions[0]?.action !== "noop") fail("matching snapshots must produce noop");
 if (matchingPlan.conflicts.length !== 0) fail("matching snapshots must not produce conflicts");
+
+const pushPlan = buildSyncPlan({
+  manifest,
+  actor,
+  localNodeId: "node.mac",
+  peerNodeId: "node.server",
+  localSnapshots: [{
+    resourceId: "skills:default",
+    objectRef: "skill.local-only",
+    nodeId: "node.mac",
+    contentHash: "hash-local",
+    updatedAt: "2026-05-17T09:10:00.000Z",
+    deleted: false,
+  }],
+  peerSnapshots: [],
+  now: "2026-05-17T10:00:00.000Z",
+});
+const pushQueue = buildSyncQueueEntries(pushPlan, { queuedAt: "2026-05-17T10:04:00.000Z" });
+if (pushQueue[0]?.status !== "queued") fail("sync push changes must enter the offline queue as queued");
+const appliedQueue = reconcileSyncQueue({
+  manifest,
+  queue: pushQueue,
+  acknowledgedChangeIds: [pushPlan.changes[0]?.changeId ?? ""],
+  now: "2026-05-17T10:05:00.000Z",
+});
+if (appliedQueue.queue[0]?.status !== "applied") fail("sync reconciliation must mark acknowledged changes applied");
+if (!appliedQueue.nextCursor?.cursor.includes("hash-local")) fail("sync reconciliation must advance cursor after acknowledged queued changes");
+
+const offlineCommand = buildRemoteOfflineCommandResult({
+  routeId: "remote.chatGateway",
+  actor: {
+    actorKind: "human",
+    actorId: "user.local",
+    nodeId: "node.mac",
+    transport: "gateway",
+    trustMode: "governed_gateway",
+  },
+  evaluatedAt: "2026-05-17T10:06:00.000Z",
+});
+if (offlineCommand.status !== "failed_fast") fail("offline remote commands must fail fast");
+if (offlineCommand.enqueued !== false) fail("offline remote commands must not be queued as sync work");
+if (offlineCommand.writes !== false) fail("offline remote command failure must not write");
 
 const lease = remoteSecretLeaseSchema.parse({
   leaseId: "lease.1",

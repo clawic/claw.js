@@ -96,6 +96,13 @@ and secret policy. Supported driver classes include skills, memory/user-model,
 sessions, drive/files, blobs, SQLite full or partial resources, sidecars,
 search indexes, agent config, and workspace state.
 
+Offline behavior is split by intent. Interactive remote commands fail fast
+with `failed_fast`, `enqueued: false`, and `writes: false` when the Connector,
+node, or transport is unavailable. Sync work may create no-write queue entries
+from a plan: push/pull changes are `queued`, conflicts are `blocked`, and
+reconciliation advances cursors only after acknowledged changes or explicitly
+resolved conflicts.
+
 Secrets never synchronize as plaintext. Remote and sync flows may carry secret
 references and may request broker leases for a specific actor, action,
 resource, route, and expiry. The audit event records the lease; the payload
