@@ -37,8 +37,8 @@ The registry is the first executable canon for this model. It defines:
 - a first wave of visible dense systems: Health/EHR, Research/CTMS, Biology,
   Labs/LIMS, Legal, ERP, CRM, Finance/Accounting, Education/LMS, HR/HRIS,
   Manufacturing/MES, Operations/ITSM, Real Estate/PropTech, Insurance, and
-  Maintenance/CMMS
-- a roadmap taxonomy for SCM, WMS, TMS, procurement, GRC, government,
+  Maintenance/CMMS, and Procurement
+- a roadmap taxonomy for SCM, WMS, TMS, GRC, government,
   construction, IoT, CMS, PIM/PLM, pharma, and ELN
 - a non-executing dense intent resolver that can classify direct phrases such
   as `claw patient list`, `claw patients list`, `claw invoice list`, or `claw
@@ -233,6 +233,10 @@ Maintenance/CMMS uses `claw vehicle <id> timeline` to materialize `vehicles`,
 `vehicle_maintenance`, `vehicle_insurance_policies`, evidence, provenance, and
 quality gaps, while appliance service records stay in `appliance_maintenance`
 linked to `appliances`.
+Procurement uses `claw purchase-order <id> timeline` to materialize
+`purchase_orders`, suppliers, company anchors, `purchase_order_line_items`,
+evidence, provenance, and quality gaps without folding supplier identity,
+inventory receipt, accounting, or payment execution into one supercollection.
 ERP now has a materialized company overview through `claw erp company <id>
 overview`: it reads the shared company anchor plus CRM accounts/deals, billing
 customers, invoices, payment intents, services, work orders, evidence,

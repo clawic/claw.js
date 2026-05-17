@@ -303,6 +303,7 @@ function materializedSemanticViewForIntent(
   if (semanticView.id === "insurance_policy.timeline") return materializedInsurancePolicyTimeline(input, intent, semanticView);
   if (semanticView.id === "vehicle.timeline") return materializedVehicleTimeline(input, intent, semanticView);
   if (semanticView.id === "purchase_order.timeline") return materializedPurchaseOrderTimeline(input, intent, semanticView);
+  if (semanticView.id === "warehouse.timeline") return materializedWarehouseTimeline(input, intent, semanticView);
   return undefined;
 }
 
@@ -940,6 +941,78 @@ function materializedPurchaseOrderTimeline(
   };
 }
 
+function materializedWarehouseTimeline(
+  input: DenseDataCliInput,
+  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
+) {
+  const warehouseId = input.positionals[1];
+  if (!warehouseId) return undefined;
+  const namespaceId = input.flags.namespace ?? "main";
+  const store = openDenseDataStore(input.workspaceRoot);
+  store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
+  const warehouse = store.getRecord(namespaceId, "warehouses", warehouseId);
+  if (!warehouse) return undefined;
+
+  const company = typeof warehouse.companyId === "string" ? store.getRecord(namespaceId, "companies", warehouse.companyId) : undefined;
+  const inventoryItems = store.listRecords(namespaceId, "inventory_items", { filter: { warehouseId } }).items;
+  const stockMovements = store.listRecords(namespaceId, "stock_movements", { filter: { warehouseId } }).items;
+  const productIds = new Set(inventoryItems.map((record) => record.productCatalogId).filter((value): value is string => typeof value === "string"));
+  const products = [...productIds].flatMap((productId) => {
+    const product = store.getRecord(namespaceId, "products_catalog", productId);
+    return product ? [product] : [];
+  });
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "warehouses", recordId: warehouseId } }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "warehouses", targetId: warehouseId } }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "warehouses", targetId: warehouseId } }).items;
+  const items = [
+    timelineItem(warehouse, "warehouse", warehouse.id, warehouse.name ?? warehouse.code ?? warehouse.id, warehouse.createdAt, warehouse),
+    ...(company ? [timelineItem(company, "company", company.id, company.name ?? company.legalName ?? company.id, company.createdAt, company)] : []),
+    ...inventoryItems.map((record) => timelineItem(record, "inventory_item", record.id, record.name ?? record.sku ?? record.id, record.createdAt, record)),
+    ...stockMovements.map((record) => timelineItem(record, "stock_movement", record.id, record.title ?? record.movementType ?? record.id, record.occurredAt ?? record.createdAt, record)),
+    ...products.map((record) => timelineItem(record, "product", record.id, record.name ?? record.id, record.createdAt, record)),
+    ...evidence.map((record) => timelineItem(record, "evidence", record.id, record.label ?? record.id, record.capturedAt ?? record.createdAt, record)),
+    ...qualityGaps.map((record) => timelineItem(record, "quality_gap", record.id, record.label ?? record.id, record.createdAt, record)),
+    ...provenance.map((record) => timelineItem(record, "provenance", record.id, record.eventType ?? record.id, record.occurredAt ?? record.createdAt, record)),
+  ].sort((left, right) => String(left.occurredAt).localeCompare(String(right.occurredAt)));
+
+  return {
+    id: semanticView.id,
+    subject: { collectionName: "warehouses", id: warehouse.id, label: warehouse.name ?? warehouse.code ?? warehouse.id },
+    company: company ? { id: company.id, label: company.name ?? company.legalName ?? company.id } : null,
+    summary: {
+      inventoryItems: inventoryItems.length,
+      stockMovements: stockMovements.length,
+      products: products.length,
+      quantityOnHand: sumNumericField(inventoryItems, "quantityOnHand"),
+      evidenceSources: evidence.length,
+      qualityGaps: qualityGaps.length,
+    },
+    itemCount: items.length,
+    items,
+    records: {
+      warehouse,
+      company,
+      inventoryItems,
+      stockMovements,
+      products,
+      evidence,
+      provenance,
+    },
+    gaps: qualityGaps.map((record) => ({
+      id: record.id,
+      label: record.label,
+      status: record.status,
+      gapKind: record.gapKind,
+      severity: record.severity,
+      evidenceSourceId: record.evidenceSourceId,
+    })),
+    sourceCollections: ["warehouses", "companies", "inventory_items", "stock_movements", "products_catalog", "evidence_sources", "quality_gaps", "provenance_events"],
+    partial: qualityGaps.length > 0,
+    intentStatus: intent.status,
+  };
+}
+
 function materializedLearnerTimeline(
   input: DenseDataCliInput,
   intent: ReturnType<typeof resolveClawDenseDataIntent>,
@@ -1539,7 +1612,7 @@ function denseDbFlags(flags: Record<string, string>, collectionName: string): Re
   if (["encounters", "medications", "symptom_logs", "lab_results"].includes(collectionName) && flags.patient && !flags["patient-id"]) {
     nextFlags = { ...nextFlags, "patient-id": flags.patient };
   }
-  if (["accounts", "deals", "billing_customers", "legal_cases", "legal_clients", "services", "work_orders", "assets", "products_catalog", "employees", "payroll_runs", "praise", "okrs", "suppliers"].includes(collectionName) && flags.company && !flags["company-id"]) {
+  if (["accounts", "deals", "billing_customers", "legal_cases", "legal_clients", "services", "work_orders", "assets", "products_catalog", "employees", "payroll_runs", "praise", "okrs", "suppliers", "warehouses"].includes(collectionName) && flags.company && !flags["company-id"]) {
     nextFlags = { ...nextFlags, "company-id": flags.company };
   }
   if (collectionName === "assets" && flags.product && !flags["product-catalog-id"]) {
@@ -1586,6 +1659,18 @@ function denseDbFlags(flags: Record<string, string>, collectionName: string): Re
   }
   if (collectionName === "purchase_order_line_items" && flags.product && !flags["product-catalog-id"]) {
     nextFlags = { ...nextFlags, "product-catalog-id": flags.product };
+  }
+  if (collectionName === "inventory_items" && flags.warehouse && !flags["warehouse-id"]) {
+    nextFlags = { ...nextFlags, "warehouse-id": flags.warehouse };
+  }
+  if (collectionName === "inventory_items" && flags.product && !flags["product-catalog-id"]) {
+    nextFlags = { ...nextFlags, "product-catalog-id": flags.product };
+  }
+  if (collectionName === "stock_movements" && flags["inventory-item"] && !flags["inventory-item-id"]) {
+    nextFlags = { ...nextFlags, "inventory-item-id": flags["inventory-item"] };
+  }
+  if (collectionName === "stock_movements" && flags.warehouse && !flags["warehouse-id"]) {
+    nextFlags = { ...nextFlags, "warehouse-id": flags.warehouse };
   }
   if (collectionName === "transactions" && flags.account && !flags["account-id"]) {
     nextFlags = { ...nextFlags, "account-id": flags.account };
@@ -1763,6 +1848,30 @@ function nestedDenseDbRoute(input: DenseDataCliInput): Parameters<typeof runMagi
       "purchase-order-line-items": "purchase_order_line_items",
       "po-line": "purchase_order_line_items",
       "po-lines": "purchase_order_line_items",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "warehouse",
+    relationFlag: "warehouse-id",
+    relationField: "warehouseId",
+    collections: {
+      "inventory-item": "inventory_items",
+      "inventory-items": "inventory_items",
+      "stock-item": "inventory_items",
+      "stock-items": "inventory_items",
+      inventory: "inventory_items",
+      stock: "inventory_items",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "inventory-item",
+    relationFlag: "inventory-item-id",
+    relationField: "inventoryItemId",
+    collections: {
+      "stock-movement": "stock_movements",
+      "stock-movements": "stock_movements",
+      movement: "stock_movements",
+      movements: "stock_movements",
+      "inventory-movement": "stock_movements",
+      "inventory-movements": "stock_movements",
     },
   }) ?? nestedParentDbRoute(input, {
     parentCommand: "sample",

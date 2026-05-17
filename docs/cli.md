@@ -732,6 +732,9 @@ claw vehicle-maintenance add --vehicle vehicle_123 "Direct service" --json
 claw appliance appliance_123 maintenance add "Washer service" --json
 claw appliance-maintenance add --appliance appliance_123 "Direct washer service" --json
 claw vehicle vehicle_123 timeline --json
+claw supplier supplier_123 purchase-orders add PO-001 --json
+claw purchase-order purchase_order_123 line-items add "Press frame" --json
+claw purchase-order purchase_order_123 timeline --json
 claw product list --json
 claw products list --json
 claw product create "Hydraulic Press" --company company_123 --json

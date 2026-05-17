@@ -63,6 +63,7 @@ export { BOOKMARKS_MISC_FAMILY } from "./bookmarks_misc/index.ts";
 export { EDUCATION_SCHOOL_FAMILY } from "./education_school/index.ts";
 export { CAREER_FAMILY } from "./career/index.ts";
 export { PROCUREMENT_FAMILY } from "./procurement/index.ts";
+export { WAREHOUSE_FAMILY } from "./warehouse/index.ts";
 export { TRAVEL_FAMILY } from "./travel/index.ts";
 export { RELATIONSHIPS_FAMILY } from "./relationships/index.ts";
 export { FAMILY_CARE_FAMILY } from "./family_care/index.ts";
