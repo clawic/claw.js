@@ -76,6 +76,7 @@ for (const relativePath of [
   "docs/adr/0008-secrets-security-v1.md",
   "docs/agent-rules/secrets.md",
   "docs/api.md",
+  "docs/data-storage-boundary.md",
 ]) {
   forbidSnippet(relativePath, "legacy local proxy");
   forbidSnippet(relativePath, "compatibility-only");
@@ -94,6 +95,7 @@ for (const relativePath of [
   forbidSnippet(relativePath, "compatibility sidecar");
   forbidSnippet(relativePath, "compatibility reader");
   forbidSnippet(relativePath, "legacy file");
+  forbidSnippet(relativePath, "workspace legacy folder");
 }
 
 if (fs.existsSync(path.join(rootDir, "docs/sessions-and-streaming.md"))) {
