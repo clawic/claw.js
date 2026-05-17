@@ -6,6 +6,7 @@ import {
   buildSyncQueueEntries,
   gatewayDeploymentManifestSchema,
   reconcileSyncQueue,
+  meshInvitationAcceptanceSchema,
   meshInvitationSchema,
   meshResourceShareSchema,
   meshRevocationSchema,
@@ -22,6 +23,7 @@ import {
   syncResourceManifestSchema,
   type GatewayDeploymentManifest,
   type MeshInvitation,
+  type MeshInvitationAcceptance,
   type MeshResourceShare,
   type MeshRevocation,
   type NodeTrustDecision,
@@ -41,7 +43,7 @@ import {
 
 export type RemoteSyncStateAuditEvent = {
   eventId: string;
-  eventType: "sync.manifest.recorded" | "sync.queue.enqueued" | "sync.queue.reconciled" | "sync.cache.recorded" | "remote.compat.recorded" | "mesh.invitation.recorded" | "mesh.share.recorded" | "mesh.revocation.recorded" | "secret.lease.issued" | "secret.provider.recorded" | "transport.handshake.recorded" | "node.trust.recorded" | "gateway.deployment.recorded" | "gateway.agent_service.recorded";
+  eventType: "sync.manifest.recorded" | "sync.queue.enqueued" | "sync.queue.reconciled" | "sync.cache.recorded" | "remote.compat.recorded" | "mesh.invitation.recorded" | "mesh.invitation.accepted" | "mesh.share.recorded" | "mesh.revocation.recorded" | "secret.lease.issued" | "secret.provider.recorded" | "transport.handshake.recorded" | "node.trust.recorded" | "gateway.deployment.recorded" | "gateway.agent_service.recorded";
   targetId: string;
   createdAt: string;
   coordinatorSignatureId?: string;
@@ -80,6 +82,7 @@ export type RemoteSyncState = {
   };
   mesh: {
     invitations: Record<string, MeshInvitation>;
+    acceptances: Record<string, MeshInvitationAcceptance>;
     shares: Record<string, MeshResourceShare>;
     revocations: Record<string, MeshRevocation>;
   };
@@ -124,6 +127,7 @@ function emptyState(): RemoteSyncState {
     },
     mesh: {
       invitations: {},
+      acceptances: {},
       shares: {},
       revocations: {},
     },
@@ -297,6 +301,12 @@ function parseState(raw: unknown): RemoteSyncState {
     if (invitations && typeof invitations === "object" && !Array.isArray(invitations)) {
       for (const [invitationId, invitation] of Object.entries(invitations)) {
         state.mesh.invitations[invitationId] = meshInvitationSchema.parse(invitation);
+      }
+    }
+    const acceptances = meshObject.acceptances;
+    if (acceptances && typeof acceptances === "object" && !Array.isArray(acceptances)) {
+      for (const [acceptanceId, acceptance] of Object.entries(acceptances)) {
+        state.mesh.acceptances[acceptanceId] = meshInvitationAcceptanceSchema.parse(acceptance);
       }
     }
     const shares = meshObject.shares;
@@ -505,6 +515,17 @@ export class RemoteSyncStateStore {
     const coordinatorSignature = appendAudit(state, "mesh.invitation.recorded", invitation.invitationId, now, invitation, input.signer);
     this.write(state);
     return { invitation, statePath: this.statePath, durable: true, ...(coordinatorSignature ? { coordinatorSignature } : {}) };
+  }
+
+  recordInvitationAcceptance(acceptanceInput: MeshInvitationAcceptance, input: { now?: string; signer: RemoteSyncCoordinatorSigner }): RemoteSyncStateWriteResult<{ acceptance: MeshInvitationAcceptance }> {
+    const acceptance = meshInvitationAcceptanceSchema.parse(acceptanceInput);
+    const now = input.now ?? acceptance.acceptedAt;
+    const state = this.read();
+    state.mesh.acceptances[acceptance.acceptanceId] = acceptance;
+    state.updatedAt = now;
+    const coordinatorSignature = appendAudit(state, "mesh.invitation.accepted", acceptance.acceptanceId, now, acceptance, input.signer);
+    this.write(state);
+    return { acceptance, statePath: this.statePath, durable: true, coordinatorSignature };
   }
 
   recordShare(shareInput: MeshResourceShare, input: { now?: string; signer?: RemoteSyncCoordinatorSigner } = {}): RemoteSyncStateWriteResult<{ share: MeshResourceShare }> {

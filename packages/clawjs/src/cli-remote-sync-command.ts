@@ -4,6 +4,7 @@ import {
   clawPersistentSurfaceRegistry,
   createGatewayDeploymentManifest,
   createMeshInvitation,
+  createMeshInvitationAcceptance,
   createMeshResourceShare,
   createMeshRevocation,
   createNodeTrustDecision,
@@ -283,6 +284,23 @@ function meshShareFromFlags(input: RemoteSyncCliInput) {
     secretRefs: listFlag(input.flags["secret-refs"], []),
     createdAt: input.flags.now ?? "2026-05-17T10:08:00.000Z",
     expiresAt: input.flags["expires-at"] ?? "2026-05-18T10:08:00.000Z",
+  });
+}
+
+function meshInvitationAcceptanceFromFlags(input: RemoteSyncCliInput) {
+  const invitation = meshInvitationFromFlags(input);
+  return createMeshInvitationAcceptance({
+    invitation,
+    accepterMeshId: input.flags["accepter-mesh"] ?? input.flags["recipient-mesh"] ?? "mesh.peer",
+    actor: {
+      actorKind: "human",
+      actorId: input.flags["actor-id"] ?? "user.local",
+      nodeId: input.flags["owner-node"] ?? input.flags["node-id"] ?? "local",
+      transport: input.flags.transport ?? "gateway",
+      trustMode: "governed_gateway",
+    },
+    acceptedAt: input.flags.now ?? "2026-05-17T10:07:30.000Z",
+    physicalPeerTrustVerified: input.flags["physical-peer-trust"] === "true",
   });
 }
 
@@ -575,6 +593,25 @@ export async function runNodesCli(input: RemoteSyncCliInput): Promise<number> {
     const status = state?.coordinatorSignature ? "signed_recorded_proposal" : state ? "recorded_proposal" : "dry_run_only";
     return writeOutput(input, "nodes", { invitation, status, writes: false, ...(state ? { state } : {}) }, `invite: ${status}`, command);
   }
+  if (command === "accept") {
+    const acceptance = meshInvitationAcceptanceFromFlags(input);
+    const usage = "nodes accept --state-dir <dir> --record true --coordinator-private-key-file <pem> --coordinator-public-key-file <pem> [--issuer-mesh <id>] [--recipient-mesh <id>] [--allowed-resources <ids>]";
+    const store = stateStoreFromFlags(input);
+    if (wantsDurableRecord(input) && !store) return missing(input, usage);
+    const signer = wantsDurableRecord(input) ? requireCoordinatorSigner(input, usage) : undefined;
+    if (typeof signer === "number") return signer;
+    const state = store && wantsDurableRecord(input) && signer
+      ? store.recordInvitationAcceptance(acceptance, { now: input.flags.now, signer })
+      : undefined;
+    const status = state?.coordinatorSignature ? "signed_invitation_acceptance_recorded" : "dry_run_external_pending";
+    return writeOutput(input, "nodes", {
+      acceptance,
+      status,
+      writes: false,
+      physicalPeerTrust: acceptance.physicalPeerTrustVerified ? "verified" : "external_pending",
+      ...(state ? { state } : {}),
+    }, `accept: ${status}`, command);
+  }
   if (command === "share") {
     const share = meshShareFromFlags(input);
     const store = stateStoreFromFlags(input);
@@ -582,7 +619,7 @@ export async function runNodesCli(input: RemoteSyncCliInput): Promise<number> {
     const status = state?.coordinatorSignature ? "signed_recorded_proposal" : state ? "recorded_proposal" : "dry_run_only";
     return writeOutput(input, "nodes", { share, status, writes: false, ...(state ? { state } : {}) }, `share: ${status}`, command);
   }
-  return missing(input, "nodes list|pair|trust|revoke|invite|share|heartbeat");
+  return missing(input, "nodes list|pair|trust|revoke|invite|accept|share|heartbeat");
 }
 
 export async function runGatewayCli(input: RemoteSyncCliInput): Promise<number> {

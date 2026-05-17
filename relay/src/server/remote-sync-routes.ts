@@ -4,6 +4,7 @@ import {
   clawApiPath,
   clawPersistentSurfaceRegistry,
   createMeshInvitation,
+  createMeshInvitationAcceptance,
   createMeshResourceShare,
   createMeshRevocation,
   createRemoteAgentServiceExecutionReceipt,
@@ -227,6 +228,17 @@ function meshShareFromInput(input: Record<string, unknown>) {
   });
 }
 
+function meshInvitationAcceptanceFromInput(input: Record<string, unknown>) {
+  const invitation = meshInvitationFromInput(input);
+  return createMeshInvitationAcceptance({
+    invitation,
+    accepterMeshId: stringValue(input.accepterMeshId ?? input["accepter-mesh"] ?? input.recipientMeshId ?? input["recipient-mesh"], "mesh.peer"),
+    actor: meshActorFromInput(input),
+    acceptedAt: stringValue(input.acceptedAt ?? input.now, "2026-05-17T10:07:30.000Z"),
+    physicalPeerTrustVerified: input.physicalPeerTrustVerified === true,
+  });
+}
+
 function remoteAgentServiceAssignmentFromInput(input: Record<string, unknown>) {
   const tenantId = stringValue(input.tenantId ?? input["tenant-id"], "tenant.demo");
   const agentId = stringValue(input.agentId ?? input["agent-id"], "agent.service");
@@ -395,6 +407,11 @@ export function registerRemoteSyncRoutes(app: FastifyInstance): void {
   app.post(clawApiPath("mesh/invitations"), async (request) => ({
     invitation: meshInvitationFromInput(readBody(request)),
     status: "dry_run_only",
+    writes: false,
+  }));
+  app.post(clawApiPath("mesh/invitations/accept"), async (request) => ({
+    acceptance: meshInvitationAcceptanceFromInput(readBody(request)),
+    status: "dry_run_external_pending",
     writes: false,
   }));
   app.post(clawApiPath("mesh/shares"), async (request) => ({

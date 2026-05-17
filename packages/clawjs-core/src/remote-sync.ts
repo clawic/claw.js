@@ -399,6 +399,26 @@ export const meshInvitationSchema = z.object({
   writes: z.literal(false),
 });
 
+export const meshInvitationAcceptanceSchema = z.object({
+  schemaVersion: z.literal(1),
+  acceptanceId: z.string().min(1),
+  invitationId: z.string().min(1),
+  issuerMeshId: z.string().min(1),
+  accepterMeshId: z.string().min(1),
+  coordinatorNodeId: z.string().min(1),
+  actor: remoteActorContextSchema,
+  trustMode: remoteTrustModeSchema,
+  transport: z.string().min(1),
+  acceptedResourceIds: z.array(z.string().min(1)).min(1),
+  acceptedActions: z.array(meshShareActionSchema).min(1),
+  status: z.enum(["signed_pending_peer_trust", "active", "blocked"]),
+  physicalPeerTrustVerified: z.boolean(),
+  externalPending: z.array(z.enum(["physical_peer_trust", "device_trust_acceptance"])),
+  acceptedAt: z.string().datetime(),
+  auditEventId: z.string().min(1),
+  writes: z.literal(false),
+});
+
 export const meshResourceShareSchema = z.object({
   schemaVersion: z.literal(1),
   shareId: z.string().min(1),
@@ -537,6 +557,7 @@ export type NodeTrustDecision = z.infer<typeof nodeTrustDecisionSchema>;
 export type GatewayDeploymentManifest = z.infer<typeof gatewayDeploymentManifestSchema>;
 export type MeshShareAction = z.infer<typeof meshShareActionSchema>;
 export type MeshInvitation = z.infer<typeof meshInvitationSchema>;
+export type MeshInvitationAcceptance = z.infer<typeof meshInvitationAcceptanceSchema>;
 export type MeshResourceShare = z.infer<typeof meshResourceShareSchema>;
 export type MeshRevocation = z.infer<typeof meshRevocationSchema>;
 export type RemoteAgentServiceAssignment = z.infer<typeof remoteAgentServiceAssignmentSchema>;
@@ -1195,6 +1216,45 @@ export function createMeshInvitation(input: {
     allowedActions: input.allowedActions,
     createdAt,
     expiresAt: input.expiresAt,
+    writes: false,
+  });
+}
+
+export function createMeshInvitationAcceptance(input: {
+  invitation: MeshInvitation;
+  accepterMeshId?: string;
+  actor: RemoteActorContext;
+  acceptedAt?: string;
+  physicalPeerTrustVerified?: boolean;
+}): MeshInvitationAcceptance {
+  const invitation = meshInvitationSchema.parse(input.invitation);
+  const actor = remoteActorContextSchema.parse(input.actor);
+  const acceptedAt = input.acceptedAt ?? new Date().toISOString();
+  const physicalPeerTrustVerified = input.physicalPeerTrustVerified ?? false;
+  const status = invitation.status === "pending" || invitation.status === "accepted"
+    ? physicalPeerTrustVerified ? "active" : "signed_pending_peer_trust"
+    : "blocked";
+  return meshInvitationAcceptanceSchema.parse({
+    schemaVersion: 1,
+    acceptanceId: meshId("mesh_invitation_acceptance", [
+      invitation.invitationId,
+      input.accepterMeshId ?? invitation.recipientMeshId ?? actor.nodeId,
+      acceptedAt,
+    ]),
+    invitationId: invitation.invitationId,
+    issuerMeshId: invitation.issuerMeshId,
+    accepterMeshId: input.accepterMeshId ?? invitation.recipientMeshId ?? actor.nodeId,
+    coordinatorNodeId: invitation.coordinatorNodeId,
+    actor,
+    trustMode: invitation.trustMode,
+    transport: invitation.transport,
+    acceptedResourceIds: invitation.allowedResourceIds,
+    acceptedActions: invitation.allowedActions,
+    status,
+    physicalPeerTrustVerified,
+    externalPending: status === "signed_pending_peer_trust" ? ["physical_peer_trust", "device_trust_acceptance"] : [],
+    acceptedAt,
+    auditEventId: meshId("audit_mesh_invitation_acceptance", [invitation.invitationId, acceptedAt]),
     writes: false,
   });
 }
