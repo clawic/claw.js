@@ -329,11 +329,11 @@ export class SearchStore {
     `);
     const insertAction = this.db.prepare("INSERT INTO search_actions (document_id, action_id, action_json) VALUES (?, ?, ?)");
     const updateSource = this.db.prepare("UPDATE search_sources SET last_indexed_at = ?, updated_at = ? WHERE id = ?");
-    const clearCache = this.db.prepare("DELETE FROM search_ranking_cache");
     const tx = this.db.transaction((documents: SearchDocumentInput[]) => {
       const touchedSources = new Map<string, string>();
       const limitsBySource = new Map<string, SearchSourceIndexingLimits>();
       const existingDocumentIds = existingSearchDocumentIds(this.db, documents.map((document) => document.id));
+      const touchedCacheScopes: SearchTouchedCacheScopes = { sources: new Set(), domains: new Set(), shards: new Set() };
       for (const input of documents) {
         const updatedAt = input.updatedAt ?? new Date().toISOString();
         const shard = input.shard ?? "default";
@@ -387,11 +387,14 @@ export class SearchStore {
           insertAction.run(input.id, action.id, JSON.stringify(action));
         }
         touchedSources.set(input.source, updatedAt);
+        touchedCacheScopes.sources.add(input.source);
+        touchedCacheScopes.domains.add(input.domain);
+        touchedCacheScopes.shards.add(shard);
       }
       for (const [source, updatedAt] of touchedSources) {
         updateSource.run(updatedAt, updatedAt, source);
       }
-      clearCache.run();
+      this.clearRankingCacheForScopes(touchedCacheScopes);
     });
     tx(inputs);
     return inputs.length;
@@ -445,7 +448,7 @@ export class SearchStore {
       omittedSources,
       elapsedMs: Date.now() - startedAt,
     };
-    this.rankingCacheSet(cacheKey, output);
+    this.rankingCacheSet(cacheKey, queryInput, output);
     return output;
   }
 
@@ -509,6 +512,15 @@ export class SearchStore {
 
   clearRankingCache(): void {
     this.db.prepare("DELETE FROM search_ranking_cache").run();
+  }
+
+  clearRankingCacheForScopes(touched: SearchTouchedCacheScopes): void {
+    const rows = this.db.prepare("SELECT cache_key, query_json FROM search_ranking_cache").all() as Array<{ cache_key: string; query_json: string | null }>;
+    const deleteCache = this.db.prepare("DELETE FROM search_ranking_cache WHERE cache_key = ?");
+    for (const row of rows) {
+      const scope = parseJson<SearchRankingCacheScope>(row.query_json);
+      if (rankingCacheScopeIntersects(scope, touched)) deleteCache.run(row.cache_key);
+    }
   }
 
   rankingCacheStats(): SearchRankingCacheStats {
@@ -788,6 +800,7 @@ export class SearchStore {
         || !this.tableHasColumn("search_documents", "shard")
         || !this.tableHasColumn("search_fragments", "shard")
         || !this.tableHasColumn("search_fts", "shard")
+        || !this.tableHasColumn("search_ranking_cache", "query_json")
       ) {
         this.db.exec(SEARCH_RESET_SQL);
         this.db.exec(SEARCH_SCHEMA_SQL);
@@ -959,13 +972,19 @@ export class SearchStore {
     return row ? parseJson<SearchQueryOutput>(row.result_json) : null;
   }
 
-  private rankingCacheSet(cacheKey: string, output: SearchQueryOutput): void {
+  private rankingCacheSet(cacheKey: string, input: SearchQueryInput, output: SearchQueryOutput): void {
     this.db.prepare(`
-      INSERT INTO search_ranking_cache (cache_key, result_json, updated_at)
-      VALUES (?, ?, ?)
-      ON CONFLICT(cache_key) DO UPDATE SET result_json = excluded.result_json, updated_at = excluded.updated_at
-    `).run(cacheKey, JSON.stringify({ ...output, elapsedMs: 0 }), new Date().toISOString());
+      INSERT INTO search_ranking_cache (cache_key, query_json, result_json, updated_at)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(cache_key) DO UPDATE SET query_json = excluded.query_json, result_json = excluded.result_json, updated_at = excluded.updated_at
+    `).run(cacheKey, JSON.stringify(searchRankingCacheScope(input)), JSON.stringify({ ...output, elapsedMs: 0 }), new Date().toISOString());
   }
+}
+
+interface SearchTouchedCacheScopes {
+  sources: Set<string>;
+  domains: Set<string>;
+  shards: Set<string>;
 }
 
 interface SearchDocumentRow {
@@ -1487,6 +1506,27 @@ function searchRankingCacheKey(input: SearchQueryInput): string {
   })).digest("hex");
 }
 
+interface SearchRankingCacheScope {
+  domains: string[];
+  sources: string[];
+  shards: string[];
+}
+
+function searchRankingCacheScope(input: SearchQueryInput): SearchRankingCacheScope {
+  return {
+    domains: sortedStrings(input.domains),
+    sources: sortedStrings(input.sources),
+    shards: sortedStrings(input.shards),
+  };
+}
+
+function rankingCacheScopeIntersects(scope: SearchRankingCacheScope, touched: SearchTouchedCacheScopes): boolean {
+  if (scope.sources.length && !scope.sources.some((source) => touched.sources.has(source))) return false;
+  if (scope.domains.length && !scope.domains.some((domain) => touched.domains.has(domain))) return false;
+  if (scope.shards.length && !scope.shards.some((shard) => touched.shards.has(shard))) return false;
+  return true;
+}
+
 function sortedStrings(values: string[] | undefined): string[] {
   return [...new Set(values ?? [])].sort();
 }
@@ -1659,6 +1699,7 @@ CREATE TABLE IF NOT EXISTS search_vectors (
 
 CREATE TABLE IF NOT EXISTS search_ranking_cache (
   cache_key TEXT PRIMARY KEY,
+  query_json TEXT NOT NULL DEFAULT '{}',
   result_json TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
