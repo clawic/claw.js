@@ -51,7 +51,7 @@ export function nowIso(): string {
   return new Date().toISOString();
 }
 
-export function planStatePath(workspaceRoot: string): string {
+function planStatePath(workspaceRoot: string): string {
   return resolveClawPersistentSurfacePath("claw.workspace.data", workspaceRoot, "agent-plans.json");
 }
 
@@ -79,14 +79,14 @@ export function planId(): string {
   return `plan_${randomBytes(8).toString("hex")}`;
 }
 
-export function riskRank(risk: string | undefined): number {
+function riskRank(risk: string | undefined): number {
   if (risk === "high") return 3;
   if (risk === "medium") return 2;
   if (risk === "low") return 1;
   return 0;
 }
 
-export function maxSemanticPlanRisk(plan: SemanticPlan): "low" | "medium" | "high" {
+function maxSemanticPlanRisk(plan: SemanticPlan): "low" | "medium" | "high" {
   const risks = [
     ...plan.actions.map((action) => action.risk),
     ...plan.effects.map((effect) => effect.risk),
@@ -97,12 +97,12 @@ export function maxSemanticPlanRisk(plan: SemanticPlan): "low" | "medium" | "hig
   return "low";
 }
 
-export function planRequiresHumanApproval(plan: SemanticPlan): boolean {
+function planRequiresHumanApproval(plan: SemanticPlan): boolean {
   return plan.actions.some((action) => action.requiresHumanApproval)
     || plan.permissions.some((permission) => permission.requiresHumanApproval);
 }
 
-export function conditionValues(plan: SemanticPlan, key: string, record: Pick<AgentPlanRecord, "creatorAgentId" | "tags">): string[] {
+function conditionValues(plan: SemanticPlan, key: string, record: Pick<AgentPlanRecord, "creatorAgentId" | "tags">): string[] {
   if (key === "actions.type") return plan.actions.map((action) => action.type);
   if (key === "effects.kind") return plan.effects.map((effect) => effect.kind);
   if (key === "permissions.capability") return plan.permissions.map((permission) => permission.capability);
@@ -112,7 +112,7 @@ export function conditionValues(plan: SemanticPlan, key: string, record: Pick<Ag
   return [];
 }
 
-export function planMatchesPolicy(rule: AgentPlanPolicyRule, plan: SemanticPlan, record: Pick<AgentPlanRecord, "creatorAgentId" | "tags">): boolean {
+function planMatchesPolicy(rule: AgentPlanPolicyRule, plan: SemanticPlan, record: Pick<AgentPlanRecord, "creatorAgentId" | "tags">): boolean {
   for (const [key, rawExpected] of Object.entries(rule.when)) {
     if (key === "maxRisk") {
       if (riskRank(maxSemanticPlanRisk(plan)) > riskRank(String(rawExpected))) return false;
@@ -129,7 +129,7 @@ export function planMatchesPolicy(rule: AgentPlanPolicyRule, plan: SemanticPlan,
   return true;
 }
 
-export function defaultPlanDecision(plan: SemanticPlan): { decision: AgentPlanDecision; reason: string; approver?: string } {
+function defaultPlanDecision(plan: SemanticPlan): { decision: AgentPlanDecision; reason: string; approver?: string } {
   const maxRisk = maxSemanticPlanRisk(plan);
   if (maxRisk === "high" || planRequiresHumanApproval(plan)) {
     return { decision: "require_approval", approver: "human_owner", reason: "High risk or explicit approval requirement." };
