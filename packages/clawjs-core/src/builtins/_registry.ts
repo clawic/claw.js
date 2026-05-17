@@ -49,6 +49,7 @@ import { SUPPLY_CHAIN_FAMILY } from "./supply_chain/index.ts";
 import { COMPLIANCE_FAMILY } from "./compliance/index.ts";
 import { IOT_FAMILY } from "./iot/index.ts";
 import { CONSTRUCTION_FAMILY } from "./construction/index.ts";
+import { ELN_FAMILY } from "./eln/index.ts";
 import { TRAVEL_FAMILY } from "./travel/index.ts";
 import { RELATIONSHIPS_FAMILY } from "./relationships/index.ts";
 import { FAMILY_CARE_FAMILY } from "./family_care/index.ts";
@@ -120,6 +121,7 @@ const RAW_BUILTIN_FAMILIES: BuiltinFamilyDefinition[] = [
   COMPLIANCE_FAMILY,
   IOT_FAMILY,
   CONSTRUCTION_FAMILY,
+  ELN_FAMILY,
   TRAVEL_FAMILY,
   RELATIONSHIPS_FAMILY,
   FAMILY_CARE_FAMILY,

@@ -1,0 +1,43 @@
+import type { BuiltinCollectionDefinition } from "../_types.ts";
+
+export const PROTOCOL_RUNS: BuiltinCollectionDefinition = {
+  name: "protocol_runs",
+  displayName: "Protocol Runs",
+  family: "eln",
+  aliases: ["protocol-run", "protocol-runs", "protocol_run", "protocol_runs", "eln-protocol-run", "eln-protocol-runs"],
+  catalog: {
+    purpose: "ELN protocol execution center for protocol identity, parameters, timing, deviations, linked samples/assays, evidence, and gaps.",
+    evidence: ["human_recognizable", "market_validated", "multi_domain_reuse", "agent_useful"],
+    relationGuidance: "Link protocol runs to the notebook first, then to biology experiment, study, sample, and assay records as applicable.",
+    notes: "This records a run of a protocol; reusable protocol definitions can remain in biology_experiments.protocol or external document evidence until a dedicated protocol catalog graduates.",
+  },
+  fields: [
+    { name: "title", type: "text", required: true, requiredReason: "identity", aliases: ["name", "runName"] },
+    { name: "notebookId", type: "relation", relation: { collectionName: "lab_notebooks" } },
+    { name: "biologyExperimentId", type: "relation", relation: { collectionName: "biology_experiments" } },
+    { name: "studyId", type: "relation", relation: { collectionName: "studies" } },
+    { name: "sampleId", type: "relation", relation: { collectionName: "samples" } },
+    { name: "assayId", type: "relation", relation: { collectionName: "assays" } },
+    { name: "protocolName", type: "text" },
+    { name: "protocolVersion", type: "text" },
+    { name: "status", type: "select", options: ["planned", "running", "completed", "failed", "cancelled", "unknown"] },
+    { name: "startedAt", type: "date" },
+    { name: "endedAt", type: "date" },
+    { name: "parameters", type: "json" },
+    { name: "deviations", type: "json" },
+    { name: "source", type: "json" },
+    { name: "links", type: "json" },
+    { name: "evidence", type: "json" },
+    { name: "qualityGaps", type: "json" },
+    { name: "metadata", type: "json" },
+    { name: "archivedAt", type: "date" },
+  ],
+  indexes: [
+    { name: "protocol_runs_notebook_idx", fields: ["notebookId"] },
+    { name: "protocol_runs_experiment_idx", fields: ["biologyExperimentId"] },
+    { name: "protocol_runs_sample_idx", fields: ["sampleId"] },
+    { name: "protocol_runs_assay_idx", fields: ["assayId"] },
+    { name: "protocol_runs_status_idx", fields: ["status"] },
+    { name: "protocol_runs_started_idx", fields: ["startedAt"] },
+  ],
+};

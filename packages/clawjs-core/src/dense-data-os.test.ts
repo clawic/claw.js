@@ -187,6 +187,7 @@ test("dense data OS first wave covers the agreed high-density systems", () => {
     "compliance",
     "construction",
     "iot",
+    "eln",
   ]);
 
   for (const system of listClawDenseDataSystems({ wave: "first_wave" })) {
@@ -536,7 +537,6 @@ test("dense data OS roadmap keeps the wider catalog visible before pack graduati
     "content",
     "product",
     "pharma",
-    "eln",
   ]) {
     assert.equal(roadmapIds.has(id), true, `${id} must stay visible in the roadmap taxonomy`);
   }

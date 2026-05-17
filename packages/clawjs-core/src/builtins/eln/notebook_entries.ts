@@ -1,0 +1,41 @@
+import type { BuiltinCollectionDefinition } from "../_types.ts";
+
+export const NOTEBOOK_ENTRIES: BuiltinCollectionDefinition = {
+  name: "notebook_entries",
+  displayName: "Notebook Entries",
+  family: "eln",
+  aliases: ["notebook-entry", "notebook-entries", "notebook_entry", "notebook_entries", "eln-entry", "eln-entries"],
+  catalog: {
+    purpose: "ELN entry center for signed notes, observations, protocol steps, deviations, decisions, structured data, evidence, and gaps.",
+    evidence: ["human_recognizable", "market_validated", "multi_domain_reuse", "agent_useful"],
+    relationGuidance: "Every entry belongs to a lab notebook and may also point to study, biology experiment, sample, or assay records when the entry concerns those canonical objects.",
+    notes: "Use entries for authored notebook content; use protocol_runs for executable procedure instances and experiment_observations for typed measurements or observations.",
+  },
+  fields: [
+    { name: "title", type: "text", required: true, requiredReason: "identity", aliases: ["subject", "name"] },
+    { name: "notebookId", type: "relation", required: true, requiredReason: "relation_integrity", relation: { collectionName: "lab_notebooks" } },
+    { name: "studyId", type: "relation", relation: { collectionName: "studies" } },
+    { name: "biologyExperimentId", type: "relation", relation: { collectionName: "biology_experiments" } },
+    { name: "sampleId", type: "relation", relation: { collectionName: "samples" } },
+    { name: "assayId", type: "relation", relation: { collectionName: "assays" } },
+    { name: "entryType", type: "select", options: ["note", "observation", "protocol_step", "result", "deviation", "decision", "other"] },
+    { name: "status", type: "select", options: ["draft", "signed", "amended", "void", "unknown"] },
+    { name: "authoredAt", type: "date" },
+    { name: "body", type: "markdown" },
+    { name: "data", type: "json" },
+    { name: "source", type: "json" },
+    { name: "links", type: "json" },
+    { name: "evidence", type: "json" },
+    { name: "qualityGaps", type: "json" },
+    { name: "metadata", type: "json" },
+    { name: "archivedAt", type: "date" },
+  ],
+  indexes: [
+    { name: "notebook_entries_notebook_idx", fields: ["notebookId"] },
+    { name: "notebook_entries_experiment_idx", fields: ["biologyExperimentId"] },
+    { name: "notebook_entries_sample_idx", fields: ["sampleId"] },
+    { name: "notebook_entries_assay_idx", fields: ["assayId"] },
+    { name: "notebook_entries_type_idx", fields: ["entryType"] },
+    { name: "notebook_entries_authored_idx", fields: ["authoredAt"] },
+  ],
+};
