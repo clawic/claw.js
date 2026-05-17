@@ -124,6 +124,10 @@ test("dense data OS acceptance fixture covers required first-wave records and ga
     "supply_plan",
     "supply_plan_item",
     "supply_risk",
+    "carrier",
+    "shipment",
+    "shipment_leg",
+    "freight_rate",
     "compliance_obligation",
     "control",
     "control_assessment",
@@ -190,6 +194,7 @@ test("dense data OS first wave covers the agreed high-density systems", () => {
     "procurement",
     "warehouse",
     "supply_chain",
+    "transport",
     "compliance",
     "construction",
     "iot",
@@ -218,6 +223,8 @@ test("dense data OS keeps common names and professional acronyms as first-class 
   assert.equal(findClawDenseDataSystem("proptech")?.id, "real_estate");
   assert.equal(findClawDenseDataSystem("purchasing")?.id, "procurement");
   assert.equal(findClawDenseDataSystem("wms")?.id, "warehouse");
+  assert.equal(findClawDenseDataSystem("tms")?.id, "transport");
+  assert.equal(findClawDenseDataSystem("freight")?.id, "transport");
   assert.equal(findClawDenseDataSystem("scm")?.id, "supply_chain");
   assert.equal(findClawDenseDataSystem("grc")?.id, "compliance");
   assert.equal(findClawDenseDataSystem("eln")?.id, "eln");
@@ -292,6 +299,14 @@ test("dense data OS centers have direct human CLI nouns and plural aliases", () 
   assert.ok(supplyChain?.centers.some((center) => center.commandNoun === "supply-plan-item" && center.collectionName === "supply_plan_items"));
   assert.ok(supplyChain?.centers.some((center) => center.commandNoun === "supply-risk" && center.commandAliases.includes("supplier-risks") && center.collectionName === "supply_risks"));
   assert.ok(supplyChain?.commandPatterns.includes("claw supply-plan <id> timeline"));
+
+  const transport = findClawDenseDataSystem("transport");
+  assert.equal(transport?.canonicalCommand, "tms");
+  assert.ok(transport?.centers.some((center) => center.commandNoun === "carrier" && center.commandAliases.includes("carriers") && center.collectionName === "carriers"));
+  assert.ok(transport?.centers.some((center) => center.commandNoun === "shipment" && center.commandAliases.includes("shipments") && center.collectionName === "shipments"));
+  assert.ok(transport?.centers.some((center) => center.commandNoun === "shipment-leg" && center.collectionName === "shipment_legs"));
+  assert.ok(transport?.centers.some((center) => center.commandNoun === "freight-rate" && center.commandAliases.includes("freight-rates") && center.collectionName === "freight_rates"));
+  assert.ok(transport?.commandPatterns.includes("claw shipment <id> timeline"));
 
   const compliance = findClawDenseDataSystem("compliance");
   assert.ok(compliance?.centers.some((center) => center.commandNoun === "control" && center.commandAliases.includes("controls") && center.collectionName === "compliance_controls"));
@@ -421,6 +436,18 @@ test("dense data OS resolves direct CLI intent phrases without executing them", 
   assert.equal(constructionProjectList.system?.id, "construction");
   assert.equal(constructionProjectList.center?.collectionName, "construction_projects");
 
+  const shipmentList = resolveClawDenseDataIntent("claw shipment list");
+  assert.equal(shipmentList.status, "covered");
+  assert.equal(shipmentList.system?.id, "transport");
+  assert.equal(shipmentList.center?.collectionName, "shipments");
+
+  const tmsOverview = resolveClawDenseDataIntent("claw tms overview");
+  assert.equal(tmsOverview.status, "covered");
+  assert.equal(tmsOverview.system?.id, "transport");
+
+  const travelTransportList = resolveClawDenseDataIntent("claw transport list");
+  assert.notEqual(travelTransportList.system?.id, "transport");
+
   const labNotebookList = resolveClawDenseDataIntent("claw lab-notebook list");
   assert.equal(labNotebookList.status, "covered");
   assert.equal(labNotebookList.system?.id, "eln");
@@ -485,6 +512,10 @@ test("dense data OS graduated centers point at canonical built-in collections wi
     "supply_chain.supply_plan": "supply_plans",
     "supply_chain.supply_plan_item": "supply_plan_items",
     "supply_chain.supply_risk": "supply_risks",
+    "transport.carrier": "carriers",
+    "transport.shipment": "shipments",
+    "transport.shipment_leg": "shipment_legs",
+    "transport.freight_rate": "freight_rates",
     "compliance.control": "compliance_controls",
     "compliance.obligation": "compliance_obligations",
     "compliance.control_assessment": "control_assessments",
@@ -555,7 +586,6 @@ test("dense data OS generates covered singular and plural intents for every grad
 test("dense data OS roadmap keeps the wider catalog visible before pack graduation", () => {
   const roadmapIds = new Set(listClawDenseDataSystems({ wave: "roadmap" }).map((system) => system.id));
   for (const id of [
-    "transport",
     "government",
     "content",
     "product",

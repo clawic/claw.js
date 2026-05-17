@@ -1052,6 +1052,12 @@ export function findClawDenseDataSystem(idOrCommand: string): ClawDenseDataSyste
   );
 }
 
+function findClawDenseDataSystemCommand(command: string): ClawDenseDataSystem | undefined {
+  return clawDenseDataOsRegistry.systems.find(
+    (system) => system.canonicalCommand === command || system.aliases.includes(command),
+  );
+}
+
 function denseIntentId(systemId: string, command: string, action: string): string {
   return `dense_intent_${systemId}_${slugForDenseIntent(command)}_${slugForDenseIntent(action)}`;
 }
@@ -1104,7 +1110,7 @@ export function resolveClawDenseDataIntent(phrase: string): ClawDenseDataIntentR
     }
   }
 
-  const system = findClawDenseDataSystem(tokens[0] ?? "");
+  const system = findClawDenseDataSystemCommand(tokens[0] ?? "");
   if (system) {
     return denseDataIntentResolution(phrase, normalizedPhrase, system.wave === "first_wave" ? "partial" : "external_pending", [`Matched dense-data system ${system.id}, but no specific route pattern matched.`], nextStepsFor(system, tokens), { system });
   }
@@ -1164,7 +1170,7 @@ export function assertClawDenseDataOsRegistryComplete(): void {
     if (!requirement.validationNeeded.trim()) failures.push(`${requirement.id}: missing validation needed`);
   }
 
-  const requiredFirstWave = ["health", "research", "biology", "labs", "legal", "erp", "crm", "finance", "education", "manufacturing", "ops", "eln"];
+  const requiredFirstWave = ["health", "research", "biology", "labs", "legal", "erp", "crm", "finance", "education", "manufacturing", "ops", "transport", "eln"];
   for (const id of requiredFirstWave) {
     const system = findClawDenseDataSystem(id);
     if (!system) {

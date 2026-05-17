@@ -37,9 +37,9 @@ The registry is the first executable canon for this model. It defines:
 - a first wave of visible dense systems: Health/EHR, Research/CTMS, Biology,
   Labs/LIMS, Legal, ERP, CRM, Finance/Accounting, Education/LMS, HR/HRIS,
   Manufacturing/MES, Operations/ITSM, Real Estate/PropTech, Insurance, and
-  Maintenance/CMMS, Procurement, Warehouse/WMS, Supply Chain/SCM,
+  Maintenance/CMMS, Procurement, Warehouse/WMS, Supply Chain/SCM, Transport/TMS,
   Compliance/GRC, IoT, Construction, and Electronic Lab Notebook/ELN
-- a roadmap taxonomy for TMS, government,
+- a roadmap taxonomy for government,
   CMS, PIM/PLM, and pharma
 - a non-executing dense intent resolver that can classify direct phrases such
   as `claw patient list`, `claw patients list`, `claw invoice list`, or `claw
@@ -248,6 +248,12 @@ Supply Chain/SCM uses `claw supply-plan <id> timeline` to materialize
 evidence, provenance, and quality gaps. SCM remains an orchestration pack over
 procurement and warehouse data rather than a duplicated supplier, stock, or
 accounting database.
+Transport/TMS uses `claw shipment <id> timeline` to materialize `shipments`,
+`shipment_legs`, `carriers`, purchase orders, warehouses, evidence, provenance,
+and quality gaps. The portal command is `tms` rather than `transport` because
+`transport` remains an audited travel collection alias for personal travel
+bookings; direct professional nouns such as `carrier`, `shipment`,
+`shipment-leg`, and `freight-rate` write canonical TMS records.
 Compliance/GRC uses `claw control <id> timeline` to materialize
 `compliance_controls`, `compliance_obligations`, `control_assessments`,
 `compliance_findings`, company anchors, evidence, provenance, and quality gaps.

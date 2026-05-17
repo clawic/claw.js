@@ -49,6 +49,7 @@ const requiredFirstWaveSystems = [
   "procurement",
   "warehouse",
   "supply_chain",
+  "transport",
   "compliance",
   "iot",
   "construction",
@@ -107,6 +108,10 @@ const requiredFixtureCoverage = [
   "supply_plan",
   "supply_plan_item",
   "supply_risk",
+  "carrier",
+  "shipment",
+  "shipment_leg",
+  "freight_rate",
   "compliance_obligation",
   "control",
   "control_assessment",
@@ -195,6 +200,10 @@ const requiredPluralIntentPhrases = [
   ["claw supply-plans list", "supply_plans"],
   ["claw supply-plan-items list", "supply_plan_items"],
   ["claw supply-risks list", "supply_risks"],
+  ["claw carriers list", "carriers"],
+  ["claw shipments list", "shipments"],
+  ["claw shipment-legs list", "shipment_legs"],
+  ["claw freight-rates list", "freight_rates"],
   ["claw controls list", "compliance_controls"],
   ["claw obligations list", "compliance_obligations"],
   ["claw control-assessments list", "control_assessments"],
@@ -325,6 +334,10 @@ for (const phrase of [
   "claw supply-plan supply_plan_123 items add",
   "claw supply-plan supply_plan_123 risks add",
   "claw supply-plan supply_plan_123 timeline",
+  "claw carrier carrier_123 shipments add",
+  "claw carrier carrier_123 freight-rates add",
+  "claw shipment shipment_123 legs add",
+  "claw shipment shipment_123 timeline",
   "claw control control_123 assessments add",
   "claw control control_123 findings add",
   "claw control control_123 timeline",
@@ -515,6 +528,9 @@ if (!semanticViews.some((entry) => entry.id === "warehouse.timeline" && entry.sy
 }
 if (!semanticViews.some((entry) => entry.id === "supply_plan.timeline" && entry.systemId === "supply_chain")) {
   fail("semantic views must include supply_plan.timeline");
+}
+if (!semanticViews.some((entry) => entry.id === "shipment.timeline" && entry.systemId === "transport")) {
+  fail("semantic views must include shipment.timeline");
 }
 if (!semanticViews.some((entry) => entry.id === "control.timeline" && entry.systemId === "compliance")) {
   fail("semantic views must include control.timeline");

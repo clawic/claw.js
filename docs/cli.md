@@ -782,6 +782,11 @@ claw warehouse warehouse_123 timeline --json
 claw supply-plan supply_plan_123 items add "Press shortage" --supplier supplier_123 --purchase-order purchase_order_123 --warehouse warehouse_123 --inventory-item inventory_item_123 --json
 claw supply-plan supply_plan_123 risks add "Supplier lead-time risk" --supplier supplier_123 --json
 claw supply-plan supply_plan_123 timeline --json
+claw carrier create "Fast Freight" --company company_123 --json
+claw carrier carrier_123 shipments add "PO-001 inbound shipment" --purchase-order purchase_order_123 --warehouse warehouse_123 --json
+claw carrier carrier_123 freight-rates add "Fast Freight LTL" --amount-cents 15000 --currency USD --json
+claw shipment shipment_123 legs add "Origin to warehouse" --carrier carrier_123 --json
+claw shipment shipment_123 timeline --json
 claw control control_123 assessments add "Q2 access review" --json
 claw control control_123 findings add "Missing reviewer sign-off" --json
 claw control control_123 timeline --json
