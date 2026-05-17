@@ -93,4 +93,4 @@ export const recommended: object[] = [
   clawTypeScriptConfig,
 ];
 
-export default recommended;
+export default [...recommended];

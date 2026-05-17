@@ -110,4 +110,6 @@ export function runSearchMcpServer(opts: { baseUrl: string; token?: string }) {
   });
 }
 
-export default runSearchMcpServer;
+export default function runDefaultSearchMcpServer(opts: Parameters<typeof runSearchMcpServer>[0]): void {
+  runSearchMcpServer(opts);
+}

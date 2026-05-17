@@ -14,13 +14,13 @@
     "unreferencedAssetCandidates": 0
   },
   "knipSummary": {
-    "filesWithIssues": 61,
-    "totalIssues": 575,
+    "filesWithIssues": 59,
+    "totalIssues": 571,
     "issueTypes": {
       "unlisted": 2,
       "exports": 509,
-      "owners": 58,
-      "duplicates": 6
+      "owners": 56,
+      "duplicates": 4
     }
   },
   "peripherySummary": {
@@ -104,6 +104,7 @@
     "Bridge Iroh cleanup made the remote endpoint descriptor private while preserving the exported node and stream bridge contract.",
     "ClawJS node state cleanup removed the unused Telegram state filename alias while preserving the public Telegram state path resolver.",
     "Built-in catalog type cleanup made field-kind and collection-rule helper aliases private while preserving exported catalog definition interfaces.",
-    "Session title cleanup replaced the legacy title alias with a compatibility wrapper while preserving both title-generation entrypoints."
+    "Session title cleanup replaced the legacy title alias with a compatibility wrapper while preserving both title-generation entrypoints.",
+    "Package default-export cleanup replaced duplicate aliases in search MCP and ESLint config packages with compatibility-preserving default surfaces."
   ]
 }
