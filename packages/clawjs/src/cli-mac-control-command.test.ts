@@ -85,8 +85,28 @@ test("Mac permissions root exposes central permission catalog and request plans"
 });
 
 test("Mac control help shows related surfaces in normal help", async () => {
-  const notificationHelp = await runCliCapture(["notification", "--help"], process.cwd());
-  assert.equal(notificationHelp.code, CLI_EXIT_OK);
-  assert.match(notificationHelp.stdout, /Related surfaces:/);
-  assert.match(notificationHelp.stdout, /claw notify/);
+  const cases: Array<[string, string[]]> = [
+    ["app", ["claw apps"]],
+    ["apps", ["claw app"]],
+    ["audio", ["claw mac coverage audio"]],
+    ["notification", ["claw notify"]],
+    ["notify", ["claw notification"]],
+    ["calendar", ["claw permissions show calendar"]],
+    ["contacts", ["claw permissions show contacts"]],
+    ["reminders", ["claw permissions show reminders"]],
+    ["files", ["claw permissions show files"]],
+    ["location", ["claw permissions show location"]],
+    ["microphone", ["claw stt", "claw tts"]],
+    ["speech", ["claw stt", "claw tts"]],
+    ["stt", ["claw speech", "claw microphone"]],
+    ["tts", ["claw speech", "claw microphone"]],
+    ["voice-notes", ["claw microphone", "claw speech"]],
+  ];
+
+  for (const [command, relatedSurfaces] of cases) {
+    const help = await runCliCapture([command, "--help"], process.cwd());
+    assert.equal(help.code, CLI_EXIT_OK, command);
+    assert.match(help.stdout, /Related surfaces:/, command);
+    for (const related of relatedSurfaces) assert.match(help.stdout, new RegExp(related.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), command);
+  }
 });

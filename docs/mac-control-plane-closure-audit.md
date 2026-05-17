@@ -37,7 +37,7 @@ are the free-form user corrections recorded in
 | MCQ-014 | partial | Permission state schemas and catalog entries capture status, requestability, and owner metadata. Remaining blocker: full durable requested-before/revocation lifecycle evidence is not closed. |
 | MCQ-015 | partial | Static guardrails, route graph nodes, legacy audit, and allowlist constrain native bypasses. Remaining blocker: final closure must re-run the source-session reread and native usage checks after all remaining implementation work. |
 | MCQ-016 | implemented | The execution rule is recorded: ask only material forks and otherwise proceed with the recommended implementation path. |
-| MCQ-017 | partial | Related surfaces are shown for the first Mac command collisions and are covered by CLI tests. Remaining blocker: full golden help coverage for every collision discovered by the broader CLI audit is not complete. |
+| MCQ-017 | implemented | Related surfaces are shown in normal help for the agreed Mac-adjacent collision set: `app`/`apps`, `audio`, `notification`/`notify`, `calendar`, `contacts`, `reminders`, `files`, `location`, `microphone`, `speech`, `stt`, `tts`, and `voice-notes`. Evidence: registry contracts, CLI help tests, `docs/cli.md`, and `docs/mac-control-plane.md`. |
 | MCQ-018 | blocked | The goal is active and cannot close until all rows above are implemented, verified, or explicitly accepted as `EXTERNAL PENDING`. |
 
 ## Hard Blockers

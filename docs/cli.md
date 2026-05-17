@@ -98,8 +98,10 @@ Mac Permission Broker.
 
 Commands with semantic collisions show `Related surfaces` in normal help. For
 example, `claw app --help` points to the `apps` catalog, `notification` points
-to `notify`, and `audio` points to media audio artifacts when that collision is
-active.
+to `notify`, `audio` points to Mac system-audio coverage, `calendar`,
+`contacts`, `reminders`, `files`, and `location` point to central
+`permissions`, and `stt`/`tts`/`voice-notes` point back to Mac speech and
+microphone control.
 
 ## Project Flow
 

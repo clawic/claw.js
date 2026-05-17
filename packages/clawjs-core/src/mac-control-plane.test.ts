@@ -23,6 +23,7 @@ import {
   macPermissionStateSchema,
   macPolicyGrantSchema,
   macRoleAssignmentSchema,
+  resolveClawCliCommand,
 } from "./index.ts";
 
 test("Mac control plane registry captures the binding V1 governance defaults", () => {
@@ -52,6 +53,28 @@ test("Mac command roots are direct, singular and conflict-aware", () => {
   assert.equal(roots.get("app")?.relatedSurfaces?.includes("claw apps"), true);
   assert.deepEqual(listMacRelatedSurfaces("audio"), ["claw media audio"]);
   assert.deepEqual(listMacRelatedSurfaces("notification"), ["claw notify"]);
+  assert.deepEqual(listMacRelatedSurfaces("microphone"), ["claw stt", "claw tts"]);
+  assert.deepEqual(listMacRelatedSurfaces("speech"), ["claw stt", "claw tts"]);
+});
+
+test("Public CLI help registry is conflict-aware for Mac-adjacent data and AI roots", () => {
+  const expectedRelatedSurfaces = new Map([
+    ["apps", ["claw app"]],
+    ["audio", ["claw mac coverage audio"]],
+    ["notify", ["claw notification"]],
+    ["calendar", ["claw permissions show calendar"]],
+    ["contacts", ["claw permissions show contacts"]],
+    ["reminders", ["claw permissions show reminders"]],
+    ["files", ["claw permissions show files"]],
+    ["location", ["claw permissions show location"]],
+    ["stt", ["claw speech", "claw microphone"]],
+    ["tts", ["claw speech", "claw microphone"]],
+    ["voice-notes", ["claw microphone", "claw speech"]],
+  ]);
+
+  for (const [command, relatedSurfaces] of expectedRelatedSurfaces) {
+    assert.deepEqual(resolveClawCliCommand(command)?.relatedSurfaces, relatedSurfaces, `related surfaces for ${command}`);
+  }
 });
 
 test("Mac permissions are centralized into intent packs", () => {

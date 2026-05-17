@@ -25,7 +25,10 @@ Native legacy debt is tracked in
   framework grants, request plans, audit, doctor, and coverage.
 - Commands that collide with older or adjacent meanings show `Related
   surfaces` in normal help. For example, `app` points to `apps`, `audio` points
-  to `media audio`, and `notification` points to `notify`.
+  to Mac system-audio coverage, `notification` points to `notify`, data roots
+  such as `calendar`, `contacts`, `reminders`, `files`, and `location` point
+  to central TCC permission help, and `stt`/`tts`/`voice-notes` point back to
+  Mac speech and microphone control.
 
 ## Governance Invariants
 
