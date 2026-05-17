@@ -387,7 +387,7 @@ test("Agents V1 safe surface projection exposes only bounded Relay/MCP/API field
   assert.equal("secretToken" in projection.resourceAccess.grants[0], false);
   assert.equal("rawTracePath" in projection.memory.policies[0], false);
   assert.equal("billingToken" in projection.budgets[0], false);
-  assert.equal(projection.resourceAccess.secretLeaseAllowed, true);
+  assert.equal(projection.resourceAccess.brokeredLeaseAllowed, true);
   assert.deepEqual(projection.risks, ["secret_lease_requires_brokered_runtime_only"]);
   assert.deepEqual(projection.gaps, []);
   assert.equal(projection.audit.reason, "safe surface projection");

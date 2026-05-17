@@ -57,7 +57,8 @@ The first implementation slice is model plus gates:
 - built-in collection schemas and core.sqlite tables for Agents V1 entities
 - `claw agents schema`, `claw agents evaluate-access`, `claw agents
   route-check`, `claw agents resolve-external-identity`, and `claw agents
-  project-support-inbox`, and `claw agents memory-check`
+  project-support-inbox`, `claw agents memory-check`, and `claw agents
+  surface-projection`
 - `@clawjs/core` policy evaluators for effective access, grant expiry,
   assignment routing, external identity, support projection, flexible memory
   scopes, multidimensional budgets, redacted audit events, safe package export,

@@ -349,7 +349,7 @@ export interface AgentSafeSurfaceProjection {
   executionProfiles: Array<Record<string, unknown>>;
   resourceAccess: {
     grants: Array<Record<string, unknown>>;
-    secretLeaseAllowed: boolean;
+    brokeredLeaseAllowed: boolean;
   };
   memory: {
     policies: Array<Record<string, unknown>>;
@@ -642,7 +642,7 @@ export function createAgentSafeSurfaceProjection(input: AgentSafeSurfaceProjecti
     executionProfiles,
     resourceAccess: {
       grants: resourceGrants,
-      secretLeaseAllowed: resourceGrants.some((grant) => grant.action === "lease_secret" || grant.action === "*"),
+      brokeredLeaseAllowed: resourceGrants.some((grant) => grant.action === "lease_secret" || grant.action === "*"),
     },
     memory: {
       policies: memoryPolicies,

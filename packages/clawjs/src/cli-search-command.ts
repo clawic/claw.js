@@ -15,6 +15,7 @@ import {
   type SearchActionExecutionPlan,
   type SearchDocumentInput,
   type SearchIndexJob,
+  type SearchProfileId,
   type SearchResult,
   type SearchSourceManifest,
   type SearchSourceState,
@@ -333,7 +334,7 @@ export async function runSearchAdminCli(input: {
   usage: string;
 }): Promise<number> {
   const command = input.positionals[1];
-  const profile = input.flags.profile === "full" ? "full" : "framework";
+  const profile: SearchProfileId = input.flags.profile === "full" ? "full" : "framework";
   if (command === "sources") {
     const action = input.positionals[2] ?? "list";
     const store = openCliSearchStore(input.flags);
@@ -583,12 +584,13 @@ export async function runSearchAdminCli(input: {
     } finally {
       store.close();
     }
+    const actions = resultId ? (indexedActions ?? []) : [
+      { id: "open", kind: "open", label: "Open", requiresApproval: false },
+      { id: "copy", kind: "copy", label: "Copy reference", requiresApproval: false },
+    ];
     const data = {
       resultId: resultId ?? null,
-      actions: resultId ? indexedActions : [
-        { id: "open", kind: "open", label: "Open", requiresApproval: false },
-        { id: "copy", kind: "copy", label: "Copy reference", requiresApproval: false },
-      ],
+      actions,
       brokered: true,
       grantSystem: "host grants/approvals",
     };

@@ -1,6 +1,7 @@
 import { AgentStoreFS, defaultAgent, type Agent, type Connection, type Personality, type SkillCollection } from "@clawjs/agents";
 import {
   createAgentSupportInboxProjection,
+  createAgentSafeSurfaceProjection,
   evaluateAgentAssignmentRoute,
   evaluateAgentEffectiveAccess,
   evaluateAgentMemoryAccess,
@@ -10,6 +11,7 @@ import {
   type AgentExternalIdentityProfile,
   type AgentMemoryAccessRequest,
   type AgentMemoryPolicy,
+  type AgentSafeSurfaceProjectionInput,
   type AgentSupportInboxProjectionInput,
 } from "@clawjs/core";
 import type { DatabaseServiceStore } from "@clawjs/database";
@@ -80,7 +82,7 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
       rootConcept: "agent",
       placementConcept: "agent_assignment",
       defaultPosture: "empty_sandbox_respond_only",
-      gates: ["evaluate-access", "route-check", "resolve-external-identity", "project-support-inbox", "memory-check"],
+      gates: ["evaluate-access", "route-check", "resolve-external-identity", "project-support-inbox", "memory-check", "surface-projection"],
     });
     return V1_DATA_EXIT_OK;
   }
@@ -112,6 +114,12 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
     const record = recordFlag<{ policy: AgentMemoryPolicy; request: AgentMemoryAccessRequest }>(input);
     if (!record) return usageError(input, "Usage: claw agents memory-check --record JSON [--json]");
     writeSuccess(input, evaluateAgentMemoryAccess(record.policy, record.request));
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "surface-projection") {
+    const record = recordFlag<AgentSafeSurfaceProjectionInput>(input);
+    if (!record) return usageError(input, "Usage: claw agents surface-projection --record JSON [--json]");
+    writeSuccess(input, createAgentSafeSurfaceProjection(record));
     return V1_DATA_EXIT_OK;
   }
   return usageError(input, usage(input.binName, "agents"));
