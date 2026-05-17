@@ -64,7 +64,7 @@ export interface OpenClawPluginBridgePolicy {
   enableContextEngine: boolean;
 }
 
-export interface OpenClawManagedPluginState {
+interface OpenClawManagedPluginState {
   id: string;
   packageSpec: string;
   installed: boolean;
@@ -182,7 +182,7 @@ export async function listOpenClawPlugins(
   };
 }
 
-export async function readOpenClawPluginRecord(
+async function readOpenClawPluginRecord(
   id: string,
   runner: CommandRunner,
   options: RuntimeAdapterOptions = DEFAULT_PLUGIN_OPTIONS,
@@ -218,7 +218,7 @@ export async function doctorOpenClawPlugins(
   return { ok, output, issues };
 }
 
-export async function installOpenClawPlugin(
+async function installOpenClawPlugin(
   spec: string,
   runner: CommandRunner,
   options: RuntimeAdapterOptions = DEFAULT_PLUGIN_OPTIONS,
@@ -226,7 +226,7 @@ export async function installOpenClawPlugin(
   await execOpenClawPluginCommand(runner, ["plugins", "install", spec], options);
 }
 
-export async function enableOpenClawPlugin(
+async function enableOpenClawPlugin(
   id: string,
   runner: CommandRunner,
   options: RuntimeAdapterOptions = DEFAULT_PLUGIN_OPTIONS,
@@ -234,7 +234,7 @@ export async function enableOpenClawPlugin(
   await execOpenClawPluginCommand(runner, ["plugins", "enable", id], options);
 }
 
-export async function disableOpenClawPlugin(
+async function disableOpenClawPlugin(
   id: string,
   runner: CommandRunner,
   options: RuntimeAdapterOptions = DEFAULT_PLUGIN_OPTIONS,
@@ -242,7 +242,7 @@ export async function disableOpenClawPlugin(
   await execOpenClawPluginCommand(runner, ["plugins", "disable", id], options);
 }
 
-export async function updateOpenClawPlugin(
+async function updateOpenClawPlugin(
   id: string,
   runner: CommandRunner,
   options: RuntimeAdapterOptions = DEFAULT_PLUGIN_OPTIONS,
@@ -250,7 +250,7 @@ export async function updateOpenClawPlugin(
   await execOpenClawPluginCommand(runner, ["plugins", "update", id], options);
 }
 
-export async function probeOpenClawPluginSupport(
+async function probeOpenClawPluginSupport(
   runner: CommandRunner,
   options: RuntimeAdapterOptions = DEFAULT_PLUGIN_OPTIONS,
 ): Promise<boolean> {
