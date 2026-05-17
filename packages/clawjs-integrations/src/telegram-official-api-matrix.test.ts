@@ -25,7 +25,6 @@ describe("Telegram official Bot API coverage matrix", () => {
     assert.equal(report.fixtureOnly, 97);
     assert.equal(report.manualOnly, 51);
     assert.equal(report.unsupportedByPolicy, 4);
-    assert.equal(report.deprecated, 0);
   });
 
   it("keeps implemented action rows aligned with the Telegram executor", () => {

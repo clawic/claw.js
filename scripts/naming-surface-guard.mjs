@@ -325,6 +325,15 @@ forbidSnippet("docs/interface-matrix.md", "claw.skills.list()");
 forbidSnippet("docs/interface-matrix.md", "claw.skills.sync()");
 forbidSnippet("packages/clawjs/src/v1-data.ts", "skills: new Set([\"list\"");
 forbidSnippet("packages/clawjs/src/v1-data-core.ts", "skills list|get|upsert|delete");
+for (const relativePath of [
+  "packages/clawjs-integrations/src/integration-qa-policy.ts",
+  "packages/clawjs-integrations/src/telegram-official-api-matrix.test.ts",
+  "docs/integration-qa-lab.md",
+  "docs/adr/0006-integration-qa-lab.md",
+  "scripts/verify-integration-qa-scenarios.mjs",
+]) {
+  forbidSnippet(relativePath, "deprecated");
+}
 
 for (const relativePath of [
   "packages/clawjs-node/src/generations/store.ts",

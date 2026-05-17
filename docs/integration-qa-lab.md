@@ -13,7 +13,7 @@ Each connector profile must include:
   events, sources, and provider-specific delivery modes.
 - Coverage matrix: every official surface is classified as `implemented`,
   `fixture_only`, `live_smoke`, `manual_only`, `unsupported_by_policy`, or
-  `deprecated`.
+  a newly added status documented by ADR before use.
 - Fixture harness: request plans, response parsing, source extraction,
   pagination, idempotency, error payloads, and rate-limit metadata.
 - Operational catalog: each action/source declares support state

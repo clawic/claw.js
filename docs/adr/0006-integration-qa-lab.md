@@ -35,8 +35,7 @@ can be described as complete. The profile is framework-owned and contains:
    date, and every official method/event/source that is relevant to the
    connector.
 2. A coverage matrix that classifies each official surface as `implemented`,
-   `fixture_only`, `live_smoke`, `manual_only`, `unsupported_by_policy`, or
-   `deprecated`.
+   `fixture_only`, `live_smoke`, `manual_only`, or `unsupported_by_policy`.
 3. Hermetic fixture tests for request planning, response parsing, event/source
    extraction, error handling, pagination, idempotency, and rate-limit metadata.
 4. A live lane that is disabled by default and can only run with an explicit

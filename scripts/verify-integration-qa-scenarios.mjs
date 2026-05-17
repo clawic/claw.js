@@ -10,7 +10,6 @@ const allowedStatuses = new Set([
   "live_smoke",
   "manual_only",
   "unsupported_by_policy",
-  "deprecated",
 ]);
 const requiredReportStatuses = [
   "PASS",

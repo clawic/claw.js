@@ -3,8 +3,7 @@ export type IntegrationQaCoverageStatus =
   | "fixture_only"
   | "live_smoke"
   | "manual_only"
-  | "unsupported_by_policy"
-  | "deprecated";
+  | "unsupported_by_policy";
 
 export type IntegrationQaLiveLane =
   | "none"
@@ -42,7 +41,6 @@ export interface OfficialApiCoverageMatrixReport {
   liveSmoke: number;
   manualOnly: number;
   unsupportedByPolicy: number;
-  deprecated: number;
 }
 
 export class IntegrationQaCoverageMatrixError extends Error {
@@ -58,7 +56,6 @@ const COVERAGE_STATUSES = new Set<IntegrationQaCoverageStatus>([
   "live_smoke",
   "manual_only",
   "unsupported_by_policy",
-  "deprecated",
 ]);
 
 const LIVE_LANES = new Set<IntegrationQaLiveLane>([
@@ -143,6 +140,5 @@ export function verifyOfficialApiCoverageMatrix(
     liveSmoke: matrix.entries.filter((entry) => entry.status === "live_smoke").length,
     manualOnly: matrix.entries.filter((entry) => entry.status === "manual_only").length,
     unsupportedByPolicy: matrix.entries.filter((entry) => entry.status === "unsupported_by_policy").length,
-    deprecated: matrix.entries.filter((entry) => entry.status === "deprecated").length,
   };
 }
