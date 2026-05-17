@@ -19,6 +19,7 @@ const sourceConversationId = "019e366f-8e14-7e51-8817-9820d2914dc4";
 const requiredDocs = [
   "docs/mac-control-plane.md",
   "docs/mac-control-plane-source-decision-audit.md",
+  "docs/mac-control-plane-closure-audit.md",
   "docs/mac-control-plane-decision-matrix.md",
   "docs/mac-native-legacy-audit.md",
   "docs/mac-native-usage-allowlist.json",
@@ -164,6 +165,26 @@ for (const id of requiredDecisionRows) requireText("source decision audit", sour
 for (const snippet of ["Structured Prompt Review", "83 `request_user_input` prompts", "not counted as user-selected answers"]) {
   requireNormalizedText("source decision audit prompt review", sourceAudit, snippet);
 }
+
+const closureAudit = readRequired("docs/mac-control-plane-closure-audit.md");
+for (const snippet of [
+  sourceConversationId,
+  "active_goal_not_complete",
+  "SIGNED-001",
+  "AUDIT-001",
+  "VALIDATION-001",
+  "CSSMERR_TP_CERT_REVOKED",
+  "Structured Prompt Review",
+  "83 `request_user_input` prompts",
+  "not counted as user-selected answers",
+  "Claw.app",
+  "Clawix embedded",
+  "global inbox",
+  "MacControlGlobalInboxProjector",
+]) {
+  requireNormalizedText("closure audit", closureAudit, snippet);
+}
+for (const id of requiredDecisionRows) requireText("closure audit", closureAudit, id);
 
 const decisionMatrix = readRequired("docs/mac-control-plane-decision-matrix.md");
 for (const id of requiredMatrixRows) requireText("decision matrix", decisionMatrix, id);
