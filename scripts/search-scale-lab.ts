@@ -15,14 +15,41 @@ type LabOptions = {
   items: number;
   queries: number;
   dbPath?: string;
+  reportPath?: string;
   keep: boolean;
   json: boolean;
+  diskCheck: boolean;
 };
 
 type Metric = {
   name: string;
   valueMs: number;
   budgetMs?: number;
+  pass?: boolean;
+};
+
+type ScaleLabReport = {
+  ok: boolean;
+  items: number;
+  queries: number;
+  dbPath: string;
+  budgets: typeof DEFAULT_SEARCH_BUDGETS;
+  metrics: Metric[];
+  diskPreflight: DiskPreflight;
+  reason?: string;
+  scaleTargets: {
+    oneMillion: string;
+    tenMillion: string;
+  };
+};
+
+type DiskPreflight = {
+  checked: boolean;
+  path: string;
+  availableBytes?: number;
+  estimatedRequiredBytes?: number;
+  estimatedBytesPerItem?: number;
+  fixedOverheadBytes?: number;
   pass?: boolean;
 };
 
@@ -33,6 +60,26 @@ const dbPath = options.dbPath ? path.resolve(options.dbPath) : path.join(tempDir
 fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
 const metrics: Metric[] = [];
+const diskPreflight = buildDiskPreflight(path.dirname(dbPath), options);
+if (diskPreflight.checked && diskPreflight.pass === false) {
+  const report: ScaleLabReport = {
+    ok: false,
+    reason: "insufficient_disk",
+    items: options.items,
+    queries: options.queries,
+    dbPath,
+    budgets: DEFAULT_SEARCH_BUDGETS,
+    metrics,
+    diskPreflight,
+    scaleTargets: {
+      oneMillion: "run with --items 1000000",
+      tenMillion: "run with --items 10000000",
+    },
+  };
+  writeReport(report, options);
+  if (!options.keep && tempDir) fs.rmSync(tempDir, { recursive: true, force: true });
+  process.exit(1);
+}
 const store = new SearchStore(dbPath);
 const interleavedQueryDurations: number[] = [];
 
@@ -177,21 +224,14 @@ try {
     dbPath,
     budgets: DEFAULT_SEARCH_BUDGETS,
     metrics,
+    diskPreflight,
     scaleTargets: {
       oneMillion: "run with --items 1000000",
       tenMillion: "run with --items 10000000",
     },
   };
 
-  if (options.json) {
-    process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
-  } else {
-    process.stdout.write(`Search scale lab items=${report.items} db=${report.dbPath}\n`);
-    for (const metric of metrics) {
-      const budget = metric.budgetMs === undefined ? "" : ` budget=${metric.budgetMs.toFixed(2)}ms pass=${String(metric.pass)}`;
-      process.stdout.write(`${metric.name}=${metric.valueMs.toFixed(2)}ms${budget}\n`);
-    }
-  }
+  writeReport(report, options);
 
   if (!report.ok) process.exitCode = 1;
 } finally {
@@ -200,16 +240,18 @@ try {
 }
 
 function parseArgs(args: string[]): LabOptions {
-  const options: LabOptions = { items: 10_000, queries: 20, keep: false, json: false };
+  const options: LabOptions = { items: 10_000, queries: 20, keep: false, json: false, diskCheck: true };
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
     if (arg === "--items") options.items = Number(readValue(args, ++i, arg));
     else if (arg === "--queries") options.queries = Number(readValue(args, ++i, arg));
     else if (arg === "--db") options.dbPath = readValue(args, ++i, arg);
+    else if (arg === "--report") options.reportPath = readValue(args, ++i, arg);
     else if (arg === "--keep") options.keep = true;
     else if (arg === "--json") options.json = true;
+    else if (arg === "--no-disk-check") options.diskCheck = false;
     else if (arg === "--help") {
-      process.stdout.write("Usage: npm run search:scale-lab -- [--items 10000] [--queries 20] [--db path] [--keep] [--json]\n");
+      process.stdout.write("Usage: npm run search:scale-lab -- [--items 10000] [--queries 20] [--db path] [--report path] [--keep] [--json] [--no-disk-check]\n");
       process.exit(0);
     } else {
       throw new Error(`Unknown argument: ${arg}`);
@@ -218,6 +260,52 @@ function parseArgs(args: string[]): LabOptions {
   if (!Number.isInteger(options.items) || options.items <= 0) throw new Error("--items must be a positive integer");
   if (!Number.isInteger(options.queries) || options.queries <= 0) throw new Error("--queries must be a positive integer");
   return options;
+}
+
+function buildDiskPreflight(directory: string, options: LabOptions): DiskPreflight {
+  if (!options.diskCheck) return { checked: false, path: directory };
+  const estimatedBytesPerItem = 1536;
+  const fixedOverheadBytes = 512 * 1024 * 1024;
+  const estimatedRequiredBytes = options.items * estimatedBytesPerItem + fixedOverheadBytes;
+  const stat = fs.statfsSync(directory);
+  const availableBytes = Number(stat.bavail) * Number(stat.bsize);
+  return {
+    checked: true,
+    path: directory,
+    availableBytes,
+    estimatedRequiredBytes,
+    estimatedBytesPerItem,
+    fixedOverheadBytes,
+    pass: availableBytes >= estimatedRequiredBytes,
+  };
+}
+
+function writeReport(report: ScaleLabReport, options: LabOptions): void {
+  const json = `${JSON.stringify(report, null, 2)}\n`;
+  if (options.reportPath) {
+    fs.mkdirSync(path.dirname(path.resolve(options.reportPath)), { recursive: true });
+    fs.writeFileSync(options.reportPath, json);
+  }
+  if (options.json) {
+    process.stdout.write(json);
+    return;
+  }
+  process.stdout.write(`Search scale lab items=${report.items} db=${report.dbPath} ok=${String(report.ok)}\n`);
+  if (report.reason) process.stdout.write(`reason=${report.reason}\n`);
+  if (report.diskPreflight.checked) {
+    process.stdout.write(`disk_available=${formatBytes(report.diskPreflight.availableBytes ?? 0)} disk_required=${formatBytes(report.diskPreflight.estimatedRequiredBytes ?? 0)} disk_pass=${String(report.diskPreflight.pass)}\n`);
+  }
+  for (const metric of report.metrics) {
+    const budget = metric.budgetMs === undefined ? "" : ` budget=${metric.budgetMs.toFixed(2)}ms pass=${String(metric.pass)}`;
+    process.stdout.write(`${metric.name}=${metric.valueMs.toFixed(2)}ms${budget}\n`);
+  }
+}
+
+function formatBytes(bytes: number): string {
+  const gib = bytes / (1024 ** 3);
+  if (gib >= 1) return `${gib.toFixed(2)}GiB`;
+  const mib = bytes / (1024 ** 2);
+  return `${mib.toFixed(2)}MiB`;
 }
 
 function readValue(args: string[], index: number, flag: string): string {

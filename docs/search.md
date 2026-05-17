@@ -52,7 +52,7 @@ backfill jobs.
 | `sessions.chats` | `sessions` | `sessions.sqlite` projected into `search.sqlite` | implemented |
 | `database.records` | `database` | `core.sqlite` records projected into `search.sqlite` | implemented |
 | `documents.blocks` | `documents` | `core.sqlite` documents and document blocks projected into `search.sqlite` | implemented initial adapter |
-| `images.derived` | `images` | image library and image media metadata projected into `search.sqlite` | implemented initial adapter |
+| `images.derived` | `images` | image library, image media metadata, and stored OCR/vision-derived text projected into `search.sqlite` | implemented initial adapter |
 | `media.assets` | `media` | workspace media records projected into `search.sqlite` | implemented initial adapter |
 | `generations.artifacts` | `generations` | generated artifact records projected into `search.sqlite` | implemented initial adapter |
 | `code.symbols` | `code` | bounded project file/symbol/docs projection into `search.sqlite` | implemented initial adapter |
@@ -320,6 +320,8 @@ usable without waiting for universal backfill.
 
 - Add hot/cold shards, ranking cache, source throttling, batch ingestion, and
   large-scale labs for 1M and 10M items.
+- Preserve scoped hot-shard ranking cache while unrelated cold backfill runs,
+  so section-specific searches do not wait for universal indexing.
 - Enforce performance gates: hot searches target 50 ms; Root Search first batch
   targets 200 ms; slow sources time out instead of blocking.
 - Keep sensitive previews redacted and action execution brokered by grants and
@@ -339,4 +341,5 @@ Required validation for Search work:
 - `npm run search:scale-lab -- --items 1000000 --json` and
   `npm run search:scale-lab -- --items 10000000 --json` before claiming scale
   completion. The default lab run is intentionally smaller so normal validation
-  does not index millions of synthetic rows.
+  does not index millions of synthetic rows. The lab performs a disk preflight
+  before large runs and can archive JSON evidence with `--report <path>`.
