@@ -2178,9 +2178,11 @@ function materializedInvoiceList(
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
 
   const invoices = store.listRecords(namespaceId, "invoices").items;
-  const billingCustomers = uniqueRecordsById(invoices
-    .map((record) => typeof record.billingCustomerId === "string" ? store.getRecord(namespaceId, "billing_customers", record.billingCustomerId) : undefined)
-    .filter((record): record is Record<string, unknown> => Boolean(record)));
+  const billingCustomers = uniqueRecordsById(invoices.flatMap((record): Array<Record<string, unknown>> => {
+    if (typeof record.billingCustomerId !== "string") return [];
+    const billingCustomer = store.getRecord(namespaceId, "billing_customers", record.billingCustomerId);
+    return billingCustomer ? [billingCustomer as Record<string, unknown>] : [];
+  }));
   const billingCustomerIds = new Set(billingCustomers.map((record) => record.id));
   const paymentsByInvoice = invoices.flatMap((record) => store.listRecords(namespaceId, "payment_intents", { filter: { invoiceId: record.id } }).items);
   const paymentsByCustomer = billingCustomers.flatMap((record) => store.listRecords(namespaceId, "payment_intents", { filter: { billingCustomerId: record.id } }).items);
