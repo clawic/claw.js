@@ -4,7 +4,7 @@ Status: ACTIVE.
 
 - Blocking findings: 0 after initial cleanup.
 - Report-only findings: 24 in the latest local audit summary.
-- Baselined findings: 3 baseline entries covering reviewed ClawJS built-in family barrel and dynamic-runtime findings.
+- Baselined findings: 4 baseline entries covering reviewed ClawJS built-in family barrel, dynamic-runtime findings, and the memory server dynamic entrypoint.
 - Initial cleanup completed: actionable TODO/FIXME/HACK/XXX findings and unreferenced asset candidates are zero; remaining duplicate assets are report-only.
 - Report-only audit command: `node scripts/code-hygiene-audit.mjs`.
 - Report-only Knip command: `node scripts/code-hygiene-knip.mjs`.

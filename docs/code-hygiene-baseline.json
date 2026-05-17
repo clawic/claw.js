@@ -63,6 +63,21 @@
       "ownerArea": "bridge-runtime-transport",
       "reference": "docs/repository-map.md#root-level-systems",
       "expiresAt": "2026-08-15"
+    },
+    {
+      "id": "clawjs-memory-server-dynamic-entrypoint-2026-05-17",
+      "category": "external_entrypoint",
+      "paths": [
+        "memory/src/server.ts"
+      ],
+      "findingTypes": [
+        "exports"
+      ],
+      "coveredFindings": 1,
+      "reason": "The Claw CLI memory launcher dynamically loads the memory service and requires the exported startMemoryServer entrypoint across bundled, packed, and development layouts.",
+      "ownerArea": "memory-service-launch",
+      "reference": "docs/repository-map.md#root-level-systems",
+      "expiresAt": "2026-08-15"
     }
   ]
 }

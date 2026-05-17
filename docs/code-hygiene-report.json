@@ -5,7 +5,7 @@
   "status": "active",
   "blockingFindings": 0,
   "reportOnlyFindings": 24,
-  "baselinedFindings": 3,
+  "baselinedFindings": 4,
   "lastAuditSummary": {
     "scannedFiles": 6931,
     "todoFindings": 0,
@@ -106,6 +106,7 @@
     "Built-in catalog type cleanup made field-kind and collection-rule helper aliases private while preserving exported catalog definition interfaces.",
     "Session title cleanup replaced the legacy title alias with a compatibility wrapper while preserving both title-generation entrypoints.",
     "Package default-export cleanup replaced duplicate aliases in search MCP and ESLint config packages with compatibility-preserving default surfaces.",
-    "Session stream cleanup replaced OpenClaw compatibility aliases with wrappers while preserving Runtime and OpenClaw streaming entrypoints."
+    "Session stream cleanup replaced OpenClaw compatibility aliases with wrappers while preserving Runtime and OpenClaw streaming entrypoints.",
+    "Memory server dynamic entrypoint is baselined with expiry because the Claw CLI launcher imports startMemoryServer dynamically across bundled, packed, and development layouts."
   ]
 }
