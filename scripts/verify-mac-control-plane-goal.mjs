@@ -161,6 +161,9 @@ for (const doc of requiredDocs) readRequired(doc);
 const sourceAudit = readRequired("docs/mac-control-plane-source-decision-audit.md");
 requireText("source decision audit", sourceAudit, sourceConversationId);
 for (const id of requiredDecisionRows) requireText("source decision audit", sourceAudit, id);
+for (const snippet of ["Structured Prompt Review", "83 `request_user_input` prompts", "not counted as user-selected answers"]) {
+  requireText("source decision audit prompt review", sourceAudit, snippet);
+}
 
 const decisionMatrix = readRequired("docs/mac-control-plane-decision-matrix.md");
 for (const id of requiredMatrixRows) requireText("decision matrix", decisionMatrix, id);

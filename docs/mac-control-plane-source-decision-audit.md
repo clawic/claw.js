@@ -8,10 +8,29 @@ decision rows.
 
 This audit is binding for final goal closure. Before the goal can be marked
 complete, each row must be re-read against the source session and marked
-implemented, documented, tested, or explicitly blocked with evidence. No
-`request_user_input` decision rows were found in the source session at the time
-this audit was created; if later compaction or hidden state reveals any, add
-them here before closure.
+implemented, documented, tested, or explicitly blocked with evidence.
+
+The source session contains 83 `request_user_input` prompts. They were not
+completed as selected UI answers: the user interrupted the question flow,
+continued with free-form corrections, later said to continue asking, and then
+explicitly corrected the process to ask only material forks. Those prompt ids
+are reviewed below as proposed decision branches, but they are not counted as
+user-selected answers. The binding choices are the free-form user corrections
+and the explicit goal instruction rows in the main audit table.
+
+## Structured Prompt Review
+
+These `request_user_input` prompt groups existed in the source session and must
+be re-checked at final close. Because no selected-answer payload exists for
+them, each group is either represented by a free-form binding row below or kept
+as non-binding proposed scope.
+
+| Lines | Prompt ids | Final disposition |
+| --- | --- | --- |
+| 164-188 | `scope_model`, `coverage_meaning`, `cli_naming`, `api_source_policy`, `permission_principal`, `risk_model`, `action_shape`, `rollback_policy`, `audit_detail`, `v1_closure`, `first_slice`, `commander_policy`, `atlas_source`, `cli_shape`, `approval_flow` | Not answered via UI; superseded by MCQ-001..MCQ-008 and later CLI semantics corrections. |
+| 213-243 | `namespace_strategy`, `noun_style`, `verb_style`, `target_resolution`, `wifi_semantics`, `window_close_semantics`, `wifi_v1_verbs`, `window_v1_verbs`, `shortcut_v1_verbs`, `direct_roots_policy`, `command_spelling`, `human_cli_policy`, `unimplemented_roots_behavior`, `mac_portal_role`, `capability_status_taxonomy`, `capability_id_namespace`, `execution_flags`, `portable_mapping` | Not answered via UI; binding decisions are MCQ-010, MCQ-011, MCQ-017, and the goal summary. |
+| 275-396 | `wifi_password_policy`, `shortcuts_io_policy`, `window_permission_policy`, `mac_permissions_node`, `permission_scope`, `permission_enforcement`, `permission_request_timing`, `permission_preflight_behavior`, `permission_history`, `mac_permission_taxonomy`, `permission_states`, `permissions_ui`, `mac_command_broker`, `native_call_allowlist`, `permission_action_routes`, `permission_catalog_coverage`, `manual_permission_policy`, `usage_description_policy`, `permission_prompt_copy`, `permission_revocation`, `permission_host_identity`, `permissions_cli_shape`, `permission_request_command_behavior`, `permissions_audit_surface`, `permissions_cli_commands`, `permission_policy_editing`, `permission_guard_scope`, `permission_policy_granularity`, `permission_packs`, `permission_defaults`, `permission_registry_location`, `plist_generation`, `existing_permission_migration`, `mac_control_package`, `permission_state_storage`, `mac_audit_storage`, `policy_write_authority`, `agent_permission_escalation`, `grant_duration_defaults`, `network_breaker_policy`, `critical_revert_timer`, `remote_mac_actions`, `remote_breaker_override`, `local_presence_signal`, `revert_failure_policy` | Not answered via UI; binding decisions are MCQ-005..MCQ-007 and MCQ-012..MCQ-015 plus the goal summary. |
+| 401-758 | Remaining implementation, governance, API, UI, validation, collision, role, schema, delivery, and final-plan prompt ids | Not answered via UI; used only as planning scaffolding. Binding decisions are represented in MCQ-001..MCQ-018 and must be verified against implementation evidence before closure. |
 
 | ID | Source user turn | Decision or correction | Evidence now | Status before final close |
 | --- | --- | --- | --- | --- |
