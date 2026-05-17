@@ -8,13 +8,19 @@ import {
 } from "@clawjs/core";
 
 import type { MCPExposedTool } from "./types.ts";
+import type { MacSignedHostBridge } from "./mac-signed-host-bridge.ts";
 
 /**
  * Default ClawJS surface exposed as MCP tools. Real implementations would route to
  * sessions/, memory/, user-model/, kanban/, etc. APIs. Tests and consumers can pass
  * their own list of tools via buildMCPApp options.
  */
-export function defaultExposedTools(): MCPExposedTool[] {
+export interface DefaultExposedToolsOptions {
+  macSignedHostBridge?: MacSignedHostBridge | null;
+}
+
+export function defaultExposedTools(options: DefaultExposedToolsOptions = {}): MCPExposedTool[] {
+  const macSignedHostBridge = options.macSignedHostBridge ?? null;
   return [
     {
       name: "clawjs_ping",
@@ -52,16 +58,20 @@ export function defaultExposedTools(): MCPExposedTool[] {
       name: "mac.permissions",
       description: "Lists central Mac permission packs and atomic permission ids.",
       inputSchema: { type: "object", properties: {}, additionalProperties: false },
-      handler: async () => ({
-        packs: MAC_PERMISSION_PACKS,
-        permissions: MAC_PERMISSION_CATALOG,
-      }),
+      handler: async () => macSignedHostBridge
+        ? macSignedHostBridge.permissions()
+        : ({
+            packs: MAC_PERMISSION_PACKS,
+            permissions: MAC_PERMISSION_CATALOG,
+          }),
     },
     {
       name: "mac.audit",
       description: "Reports where Mac action audit is available.",
       inputSchema: { type: "object", properties: {}, additionalProperties: false },
-      handler: async () => ({ status: "host_required", reason: "Mac action audit lives in the signed host operational store." }),
+      handler: async () => macSignedHostBridge
+        ? macSignedHostBridge.audit()
+        : ({ status: "host_required", reason: "Mac action audit lives in the signed host operational store." }),
     },
     {
       name: "mac.execute",
@@ -76,6 +86,7 @@ export function defaultExposedTools(): MCPExposedTool[] {
       handler: async (args) => {
         const request = macActionRequestSchema.parse(args.request ?? args);
         const plan = buildMacActionPlan({ request });
+        if (macSignedHostBridge) return macSignedHostBridge.execute(request);
         return {
           status: "signed_host_required",
           plan,
@@ -92,11 +103,13 @@ export function defaultExposedTools(): MCPExposedTool[] {
         required: ["receiptId"],
         additionalProperties: false,
       },
-      handler: async (args) => ({
-        status: "plan_required",
-        receiptId: args.receiptId,
-        revertContract: "Revert always plans first and only executes after explicit confirmation in the signed host.",
-      }),
+      handler: async (args) => macSignedHostBridge
+        ? macSignedHostBridge.revert(String(args.receiptId))
+        : ({
+            status: "plan_required",
+            receiptId: args.receiptId,
+            revertContract: "Revert always plans first and only executes after explicit confirmation in the signed host.",
+          }),
     },
     {
       name: "mac.coverage",

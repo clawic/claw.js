@@ -15,6 +15,7 @@ import { MCPProtocolClient } from "./client.ts";
 import { loadMCPConfig, type MCPServiceConfig } from "./config.ts";
 import { assertMCPToolControlPlane } from "./control-plane.ts";
 import { defaultExposedTools } from "./expose.ts";
+import { createMacSignedHostBridge, type MacSignedHostBridge } from "./mac-signed-host-bridge.ts";
 import { MCPServiceStore } from "./store.ts";
 import type {
   MCPExposedTool,
@@ -26,6 +27,7 @@ export interface BuildMCPAppOptions {
   config?: Partial<MCPServiceConfig>;
   exposedTools?: MCPExposedTool[];
   protocolFetch?: typeof fetch;
+  macSignedHostBridge?: MacSignedHostBridge | null;
 }
 
 function parseBearer(request: FastifyRequest): string | null {
@@ -66,12 +68,30 @@ function macCoveragePayload(family?: string) {
   };
 }
 
+async function sendMacHostBridgeResult(reply: FastifyReply, promise: Promise<unknown>) {
+  try {
+    const result = await promise;
+    if (result && typeof result === "object" && "ok" in result && (result as { ok?: unknown }).ok === false) {
+      return await reply.code(409).send(result);
+    }
+    return result;
+  } catch (error) {
+    return await reply.code(502).send({
+      status: "signed_host_unavailable",
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 export function buildMCPApp(options: BuildMCPAppOptions = {}) {
   const config = loadMCPConfig(options.config);
   fs.mkdirSync(config.dataDir, { recursive: true });
   const app = Fastify({ logger: false, bodyLimit: 4 * 1024 * 1024 });
   const store = new MCPServiceStore(config.dbPath);
-  const exposed: MCPExposedTool[] = options.exposedTools ?? defaultExposedTools();
+  const macSignedHostBridge = options.macSignedHostBridge === undefined
+    ? createMacSignedHostBridge(config.liveBrokerCommand)
+    : options.macSignedHostBridge;
+  const exposed: MCPExposedTool[] = options.exposedTools ?? defaultExposedTools({ macSignedHostBridge });
   const exposedByName = new Map(exposed.map((tool) => [tool.name, tool]));
 
   app.addHook("onClose", async () => { store.close(); });
@@ -101,6 +121,7 @@ export function buildMCPApp(options: BuildMCPAppOptions = {}) {
     try {
       const actionRequest = macActionRequestSchema.parse(body.request ?? body);
       const plan = buildMacActionPlan({ request: actionRequest });
+      if (macSignedHostBridge) return await sendMacHostBridgeResult(reply, macSignedHostBridge.execute(actionRequest));
       return await reply.code(409).send({
         status: "signed_host_required",
         plan,
@@ -116,6 +137,7 @@ export function buildMCPApp(options: BuildMCPAppOptions = {}) {
     const body = readBody(request);
     const receiptId = asString(body.receiptId);
     if (!receiptId?.startsWith("macact_")) return await reply.code(400).send({ error: "receiptId macact_<id> is required" });
+    if (macSignedHostBridge) return await sendMacHostBridgeResult(reply, macSignedHostBridge.revert(receiptId));
     return await reply.code(409).send({
       status: "signed_host_required",
       receiptId,
@@ -125,11 +147,13 @@ export function buildMCPApp(options: BuildMCPAppOptions = {}) {
 
   app.get(clawApiPath("mac/audit"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
+    if (macSignedHostBridge) return await sendMacHostBridgeResult(reply, macSignedHostBridge.audit());
     return await reply.code(409).send({ status: "host_required", reason: "Mac action audit lives in the signed host operational store." });
   });
 
   app.get(clawApiPath("mac/permissions"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
+    if (macSignedHostBridge) return await sendMacHostBridgeResult(reply, macSignedHostBridge.permissions());
     return {
       packs: MAC_PERMISSION_PACKS,
       permissions: MAC_PERMISSION_CATALOG,

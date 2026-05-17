@@ -9,6 +9,7 @@ export interface MCPServiceConfig {
   dataDir: string;
   sharedSecret: string;
   exposePort: number;
+  liveBrokerCommand: string | null;
 }
 
 export function loadMCPConfig(overrides: Partial<MCPServiceConfig> = {}): MCPServiceConfig {
@@ -20,6 +21,7 @@ export function loadMCPConfig(overrides: Partial<MCPServiceConfig> = {}): MCPSer
     dataDir,
     sharedSecret: overrides.sharedSecret ?? process.env.MCP_SHARED_SECRET ?? "mcp-dev-secret-change-me",
     exposePort: overrides.exposePort ?? Number(process.env.MCP_EXPOSE_PORT ?? "9090"),
+    liveBrokerCommand: overrides.liveBrokerCommand ?? process.env.CLAW_LIVE_BROKER_COMMAND ?? null,
   };
 }
 

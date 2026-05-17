@@ -4,6 +4,7 @@ import path from "node:path";
 import { describe, it } from "vitest";
 
 import { buildMCPApp } from "./app.ts";
+import type { MacSignedHostBridge } from "./mac-signed-host-bridge.ts";
 
 describe("MCP connector control plane", () => {
   it("exposes Mac Control HTTP planning routes without native execution", async () => {
@@ -79,6 +80,79 @@ describe("MCP connector control plane", () => {
       });
       assert.equal(execute.statusCode, 200);
       assert.equal(execute.json().result.content.status, "signed_host_required");
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("routes Mac execute, audit and permissions through the configured signed host bridge", async () => {
+    const calls: string[] = [];
+    const bridge: MacSignedHostBridge = {
+      execute: async (request) => {
+        calls.push(`execute:${request.requestId}`);
+        return { ok: true, requestId: request.requestId, data: { decision: "dry_run" }, meta: { source: "local_cli" } };
+      },
+      revert: async (receiptId) => {
+        calls.push(`revert:${receiptId}`);
+        return { ok: false, data: { receiptId, status: "plan_required" } };
+      },
+      audit: async () => {
+        calls.push("audit");
+        return { ok: true, data: { events: [] }, meta: { source: "local_cli" } };
+      },
+      permissions: async () => {
+        calls.push("permissions");
+        return { ok: true, data: { permissions: [{ id: "mac.permission.microphone", status: "not_determined" }] }, meta: { source: "local_cli" } };
+      },
+    };
+    const { app, config } = buildFixtureApp(undefined, bridge);
+    try {
+      const execute = await app.inject({
+        method: "POST",
+        url: "/v1/mac/execute",
+        headers: { authorization: `Bearer ${config.sharedSecret}` },
+        payload: fixtureMacActionRequest(),
+      });
+      assert.equal(execute.statusCode, 200);
+      assert.equal(execute.json().ok, true);
+      assert.equal(execute.json().requestId, "req.mcp.mac.1");
+      assert.equal(execute.json().meta.source, "local_cli");
+
+      const audit = await app.inject({
+        method: "GET",
+        url: "/v1/mac/audit",
+        headers: { authorization: `Bearer ${config.sharedSecret}` },
+      });
+      assert.equal(audit.statusCode, 200);
+      assert.deepEqual(audit.json().data.events, []);
+
+      const permissions = await app.inject({
+        method: "GET",
+        url: "/v1/mac/permissions",
+        headers: { authorization: `Bearer ${config.sharedSecret}` },
+      });
+      assert.equal(permissions.statusCode, 200);
+      assert.equal(permissions.json().data.permissions[0].id, "mac.permission.microphone");
+
+      const mcpExecute = await app.inject({
+        method: "POST",
+        url: "/v1/mcp/expose/rpc",
+        payload: {
+          jsonrpc: "2.0",
+          id: 4,
+          method: "tools/call",
+          params: { name: "mac.execute", arguments: fixtureMacActionRequest() },
+        },
+      });
+      assert.equal(mcpExecute.statusCode, 200);
+      assert.equal(mcpExecute.json().result.content.ok, true);
+
+      assert.deepEqual(calls, [
+        "execute:req.mcp.mac.1",
+        "audit",
+        "permissions",
+        "execute:req.mcp.mac.1",
+      ]);
     } finally {
       await app.close();
     }
@@ -248,12 +322,13 @@ function fixtureMacActionRequest() {
   };
 }
 
-function buildFixtureApp(onToolCall?: () => void) {
+function buildFixtureApp(onToolCall?: () => void, macSignedHostBridge?: MacSignedHostBridge) {
   return buildMCPApp({
     config: {
       dataDir: path.join(os.tmpdir(), `clawjs-mcp-control-plane-${Date.now()}-${Math.random()}`),
       sharedSecret: "test-secret",
     },
+    macSignedHostBridge,
     protocolFetch: async (_input, init) => {
       const request = JSON.parse(String(init?.body ?? "{}")) as { id: string | number; method: string; params?: { arguments?: { text?: string } } };
       if (request.method === "initialize") {
