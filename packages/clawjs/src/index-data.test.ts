@@ -136,7 +136,11 @@ test("runCli exposes Agents V1 safe surface projection gate", async () => {
     assert.equal("endpointRef" in surfaceProjection.assignments[0], false);
     assert.equal("apiToken" in surfaceProjection.resourceAccess.grants[0], false);
     assert.equal(surfaceProjection.resourceAccess.brokeredLeaseAllowed, true);
-    assert.deepEqual(surfaceProjection.gaps, ["active_assignment_missing", "budget_policy_missing"]);
+    assert.deepEqual(surfaceProjection.gaps, [
+      "active_assignment_missing",
+      "raw_telemetry_retention_policy_missing",
+      "budget_policy_missing",
+    ]);
     assert.deepEqual(surfaceProjection.risks, [
       "secret_lease_requires_brokered_runtime_only",
       "raw_telemetry_retention_requires_policy_review",
@@ -720,6 +724,28 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
     assert.equal(routeResult.allowed, false);
     assert.deepEqual(routeResult.reasons, ["assignment: status paused"]);
     assert.equal(routeResult.disclosureRequired, true);
+
+    const rawTelemetryRouteStdout = captureStream();
+    assert.equal(await runCli(["agents", "route-check", "--record", JSON.stringify({
+      assignment: {
+        id: "assignment.web",
+        agentId: "agent-ops",
+        kind: "external_web_chat",
+        status: "active",
+        channel: "chat",
+        privacyPolicy: "raw_with_retention",
+        externalDisclosure: "transparent_agent",
+      },
+      kind: "external_web_chat",
+      channel: "chat",
+    }), "--json"], {
+      stdout: rawTelemetryRouteStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const rawTelemetryRouteResult = parseCliJsonPayload(rawTelemetryRouteStdout.getOutput()) as { allowed: boolean; reasons: string[] };
+    assert.equal(rawTelemetryRouteResult.allowed, false);
+    assert.deepEqual(rawTelemetryRouteResult.reasons, ["assignment: raw telemetry retention requires telemetryRetentionDays"]);
 
     const identityStdout = captureStream();
     assert.equal(await runCli(["agents", "resolve-external-identity", "--record", JSON.stringify({

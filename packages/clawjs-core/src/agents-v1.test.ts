@@ -191,6 +191,36 @@ test("Agents V1 external routes fail closed without an active matching assignmen
   assert.equal(result.disclosureRequired, true);
 });
 
+test("Agents V1 raw visitor telemetry requires explicit retention on assignments", () => {
+  const assignment: AgentAssignmentRoute = {
+    id: "assignment.web",
+    agentId: "agent.support",
+    kind: "external_web_chat",
+    status: "active",
+    channel: "chat",
+    endpointRef: "web:support",
+    privacyPolicy: "raw_with_retention",
+    externalDisclosure: "transparent_agent",
+  };
+  const result = evaluateAgentAssignmentRoute({
+    assignment,
+    kind: "external_web_chat",
+    channel: "chat",
+    endpointRef: "web:support",
+  });
+  assert.equal(result.allowed, false);
+  assert.deepEqual(result.reasons, ["assignment: raw telemetry retention requires telemetryRetentionDays"]);
+
+  const allowed = evaluateAgentAssignmentRoute({
+    assignment: { ...assignment, telemetryRetentionDays: 30 },
+    kind: "external_web_chat",
+    channel: "chat",
+    endpointRef: "web:support",
+  });
+  assert.equal(allowed.allowed, true);
+  assert.deepEqual(allowed.reasons, []);
+});
+
 test("Agents V1 external identity projects strong identifiers to contacts and hashes telemetry by default", () => {
   const identity = resolveAgentExternalIdentity({
     provider: "telegram",
@@ -680,7 +710,11 @@ test("Agents V1 safe surface projection reports external route gaps fail-closed"
       writePolicy: "shared_with_review",
     }],
   });
-  assert.deepEqual(projection.gaps, ["active_assignment_missing", "budget_policy_missing"]);
+  assert.deepEqual(projection.gaps, [
+    "active_assignment_missing",
+    "raw_telemetry_retention_policy_missing",
+    "budget_policy_missing",
+  ]);
   assert.deepEqual(projection.risks, [
     "raw_telemetry_retention_requires_policy_review",
     "external_disclosure_uses_custom_wording",

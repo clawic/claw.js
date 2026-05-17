@@ -172,9 +172,11 @@ connector policy, host policy, and run scope.
 External channels must pass `route-check` before runtime dispatch. External
 identity resolution creates a stable `external_user`/`actor` boundary, hashes
 visitor telemetry by default, and projects to contacts only when there is a
-strong identifier such as email, phone, or verified provider id. Support-facing
-assignments use `project-support-inbox` to create the product conversation
-record separately from the runtime session trace.
+strong identifier such as email, phone, or verified provider id. Assignments
+using `raw_with_retention` must set a positive `telemetryRetentionDays`; safe
+surface projections report `raw_telemetry_retention_policy_missing` otherwise.
+Support-facing assignments use `project-support-inbox` to create the product
+conversation record separately from the runtime session trace.
 Memory policies are checked with `memory-check`; this is the gate for flexible
 read/write combinations such as read-only global memory plus private writes,
 team/project/customer scopes, and explicit-grant-only cross-customer access.

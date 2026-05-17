@@ -134,6 +134,7 @@ export interface AgentAssignmentRoute {
   channel?: string;
   endpointRef?: string;
   privacyPolicy?: AgentAssignmentPrivacyPolicy;
+  telemetryRetentionDays?: number;
   externalDisclosure?: AgentExternalDisclosure;
   startsAt?: string;
   expiresAt?: string;
@@ -634,6 +635,9 @@ export function evaluateAgentAssignmentRoute(input: AgentAssignmentRouteRequest)
     if (assignment.kind !== input.kind) reasons.push(`assignment: kind ${assignment.kind} does not match ${input.kind}`);
     if (input.channel && assignment.channel && assignment.channel !== input.channel) reasons.push(`assignment: channel ${assignment.channel} does not match ${input.channel}`);
     if (input.endpointRef && assignment.endpointRef && assignment.endpointRef !== input.endpointRef) reasons.push("assignment: endpoint mismatch");
+    if (assignment.privacyPolicy === "raw_with_retention" && !hasValidTelemetryRetention(assignment)) {
+      reasons.push("assignment: raw telemetry retention requires telemetryRetentionDays");
+    }
     if (assignment.startsAt && new Date(assignment.startsAt).getTime() > now.getTime()) reasons.push("assignment: not started");
     if (assignment.expiresAt && new Date(assignment.expiresAt).getTime() <= now.getTime()) reasons.push("assignment: expired");
   }
@@ -1272,6 +1276,7 @@ function pickAssignmentSurfaceFields(assignment: Record<string, unknown>, surfac
     "status",
     "channel",
     "privacyPolicy",
+    "telemetryRetentionDays",
     "externalDisclosure",
     "scopeType",
     "scopeId",
@@ -1372,8 +1377,15 @@ function agentSurfaceGaps(surface: AgentSafeSurfaceKind, assignments: Array<Reco
   if (assignments.length === 0) gaps.add("assignment_missing");
   if (surface !== "internal_ui" && !assignments.some((assignment) => assignment.status === "active")) gaps.add("active_assignment_missing");
   if (!assignments.some((assignment) => assignmentKindAllowedForSurface(surface, assignment.kind))) gaps.add("surface_assignment_kind_missing");
+  if (assignments.some((assignment) => assignment.privacyPolicy === "raw_with_retention" && !hasValidTelemetryRetention(assignment))) gaps.add("raw_telemetry_retention_policy_missing");
   if (surface !== "internal_ui" && budgets.length === 0) gaps.add("budget_policy_missing");
   return [...gaps];
+}
+
+function hasValidTelemetryRetention(assignment: { telemetryRetentionDays?: unknown }): boolean {
+  return typeof assignment.telemetryRetentionDays === "number"
+    && Number.isFinite(assignment.telemetryRetentionDays)
+    && assignment.telemetryRetentionDays > 0;
 }
 
 function assignmentKindAllowedForSurface(surface: AgentSafeSurfaceKind, kind: unknown): boolean {

@@ -47,7 +47,8 @@ Assignments cover internal Mac chat, external web/Telegram/WhatsApp/email,
 support inboxes, workflows, automations, subagent delegation, MCP/API, Relay,
 and custom channels. External-facing defaults are respond-only, transparent as
 an agent/AI, and GDPR-grade local-first with per-assignment visitor telemetry
-policy.
+policy. `raw_with_retention` telemetry is invalid without an explicit positive
+`telemetryRetentionDays` policy on the assignment.
 
 Effective access is fail-closed and is the intersection of agent grants,
 assignment grants, execution profile sandbox, connector control plane, host
