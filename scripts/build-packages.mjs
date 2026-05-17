@@ -6,6 +6,7 @@ const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 
 const workspaces = [
   "@clawjs/core",
+  "@clawjs/search",
   "@clawjs/claw",
   "@clawjs/node",
   "@clawjs/sessions",
@@ -22,7 +23,6 @@ const workspaces = [
   "@clawjs/database",
   "@clawjs/agents",
   "@clawjs/integrations",
-  "@clawjs/index",
   "@clawjs/runtime",
   "@clawjs/ssh-client",
   "@clawjs/cli",

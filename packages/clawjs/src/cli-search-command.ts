@@ -2,11 +2,58 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { clawCliCommandRegistry, type ClawCliSearchResult } from "@clawjs/core";
+import {
+  DEFAULT_SEARCH_BUDGETS,
+  SEARCH_PROFILES,
+  createCommandSearchSourceManifest,
+  createFrameworkSearchSourceManifest,
+  type SearchSourceManifest,
+} from "@clawjs/search";
 
 import type { CliContext } from "./index.ts";
-import { CLI_EXIT_DEGRADED, CLI_EXIT_OK } from "./cli-errors.ts";
-import { writeJsonOk } from "./cli-json.ts";
+import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
+import { writeCommandJsonOk, writeJsonOk } from "./cli-json.ts";
 import { buildCommandHelp, searchCliDiscovery } from "./cli-surface.ts";
+
+const SEARCH_ADMIN_COMMANDS = new Set(["sources", "status", "profiles", "saved", "monitors", "actions", "explain"]);
+
+const BUILTIN_SEARCH_SOURCES: SearchSourceManifest[] = [
+  createFrameworkSearchSourceManifest({
+    id: "sessions.chats",
+    domain: "sessions",
+    name: "Chats",
+    resultTypes: ["chat", "message"],
+  }),
+  createFrameworkSearchSourceManifest({
+    id: "database.records",
+    domain: "database",
+    name: "Database records",
+    resultTypes: ["record", "fragment"],
+  }),
+  createFrameworkSearchSourceManifest({
+    id: "documents.blocks",
+    domain: "documents",
+    name: "Documents",
+    resultTypes: ["document", "block"],
+  }),
+  createFrameworkSearchSourceManifest({
+    id: "images.derived",
+    domain: "images",
+    name: "Images",
+    resultTypes: ["image", "ocr", "label"],
+  }),
+  createFrameworkSearchSourceManifest({
+    id: "code.symbols",
+    domain: "code",
+    name: "Code",
+    resultTypes: ["project", "file", "symbol", "doc"],
+  }),
+  createCommandSearchSourceManifest(),
+];
+
+export function isSearchAdminCommand(command: string | undefined): boolean {
+  return !!command && SEARCH_ADMIN_COMMANDS.has(command);
+}
 
 export async function runCliDiscoverySearch(input: {
   positionals: string[];
@@ -39,6 +86,114 @@ export async function runCliDiscoverySearch(input: {
     input.context.stdout.write(`${results.map((result) => `${result.type}\t${result.name}\t${result.canonicalName ?? ""}\t${result.summary}`).join("\n")}\n`);
   }
   return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+}
+
+export async function runSearchAdminCli(input: {
+  positionals: string[];
+  flags: Record<string, string>;
+  context: CliContext;
+  wantsJson: boolean;
+  binName: string;
+  usage: string;
+}): Promise<number> {
+  const command = input.positionals[1];
+  const profile = input.flags.profile === "full" ? "full" : "framework";
+  if (command === "sources") {
+    const sources = BUILTIN_SEARCH_SOURCES
+      .filter((source) => profile === "full" || source.profile === "framework")
+      .map((source) => ({
+        id: source.id,
+        domain: source.domain,
+        name: source.name,
+        profile: source.profile,
+        defaultState: source.indexing.defaultState,
+        fastPath: source.capabilities.fastPath,
+        resultTypes: source.resultTypes,
+      }));
+    if (input.wantsJson) {
+      writeCommandJsonOk(input.context.stdout, "search", { sources, profile }, { subcommand: "sources" });
+    } else {
+      input.context.stdout.write(`${sources.map((source) => `${source.id}\t${source.domain}\t${source.defaultState}\t${source.name}`).join("\n")}\n`);
+    }
+    return CLI_EXIT_OK;
+  }
+
+  if (command === "status") {
+    const sources = BUILTIN_SEARCH_SOURCES.map((source) => ({
+      source: source.id,
+      domain: source.domain,
+      state: source.indexing.defaultState === "on" ? "enabled" : "disabled",
+      backlog: 0,
+      fastPath: source.capabilities.fastPath,
+    }));
+    const data = {
+      state: "ready",
+      profile,
+      budgets: DEFAULT_SEARCH_BUDGETS,
+      sources,
+      storage: {
+        canonical: "core.sqlite",
+        index: "search.sqlite",
+        indexRebuildable: true,
+      },
+    };
+    if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "status" });
+    else input.context.stdout.write(`state=${data.state} profile=${profile} sources=${sources.length} index=search.sqlite\n`);
+    return CLI_EXIT_OK;
+  }
+
+  if (command === "profiles") {
+    if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", { profiles: SEARCH_PROFILES }, { subcommand: "profiles" });
+    else input.context.stdout.write(`${SEARCH_PROFILES.map((entry) => `${entry.id}\t${entry.defaultEnabled ? "default" : "opt-in"}\t${entry.label}`).join("\n")}\n`);
+    return CLI_EXIT_OK;
+  }
+
+  if (command === "saved" || command === "monitors") {
+    const action = input.positionals[2] ?? "list";
+    const data = { action, items: [], state: "empty", note: `${command} are first-class Search resources; storage lands with the Search service schema.` };
+    if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: command });
+    else input.context.stdout.write(`${command}: ${data.state}\n`);
+    return CLI_EXIT_OK;
+  }
+
+  if (command === "actions") {
+    const resultId = input.positionals[2] ?? input.flags["result-id"];
+    const data = {
+      resultId: resultId ?? null,
+      actions: resultId ? [] : [
+        { id: "open", kind: "open", label: "Open", requiresApproval: false },
+        { id: "copy", kind: "copy", label: "Copy reference", requiresApproval: false },
+      ],
+      brokered: true,
+      grantSystem: "host grants/approvals",
+    };
+    if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "actions" });
+    else input.context.stdout.write(`${data.actions.map((action) => `${action.id}\t${action.kind}\t${action.label}`).join("\n")}\n`);
+    return CLI_EXIT_OK;
+  }
+
+  if (command === "explain") {
+    const query = input.positionals.slice(2).join(" ") || input.flags.query;
+    if (!query) {
+      input.context.stderr.write(`Usage: ${input.binName} search explain <query> [--json]\n`);
+      return CLI_EXIT_USAGE;
+    }
+    const data = {
+      query,
+      profile,
+      budgets: DEFAULT_SEARCH_BUDGETS,
+      matching: ["exact", "prefix", "fuzzy", "fts"],
+      semantic: "optional per source",
+      partialResults: "slow sources are omitted instead of blocking fast paths",
+      ranking: ["central score", "source hints", "local frecency", "scope", "actor", "surface"],
+    };
+    if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "explain" });
+    else input.context.stdout.write(`query=${query} sourceTimeoutMs=${DEFAULT_SEARCH_BUDGETS.sourceTimeoutMs} partialResults=omit-slow-sources\n`);
+    return CLI_EXIT_OK;
+  }
+
+  input.context.stderr.write(`${buildCommandHelp(input.binName, "search") ?? input.usage}\n`);
+  return CLI_EXIT_USAGE;
 }
 
 function searchRegisteredLocalFiles(query: string, cwd: string): ClawCliSearchResult[] {

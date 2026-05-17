@@ -78,7 +78,7 @@ import { runExtendedProductivityCli } from "./cli-productivity-extended-command.
 import { runCodeCli } from "./cli-code-command.ts";
 import { runPlanCli } from "./cli-plan-command.ts";
 import { runKnowledgeTailCli } from "./cli-knowledge-tail-command.ts";
-import { runCliDiscoverySearch } from "./cli-search-command.ts"; import { runGuidanceResourcesCli } from "./cli-guidance-resources-command.ts";
+import { isSearchAdminCommand, runCliDiscoverySearch, runSearchAdminCli } from "./cli-search-command.ts"; import { runGuidanceResourcesCli } from "./cli-guidance-resources-command.ts";
 import { runNeedsCli } from "./cli-needs-command.ts";
 import { runCommandsCli } from "./cli-commands-command.ts";
 import { runPublicPortalShortcut, writeMissingSubcommandJsonHelp, writePublicPortalHelpOnly } from "./cli-public-portal-routes.ts";
@@ -660,6 +660,9 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   }
   if (group === "code") {
     return await runCodeCli({ positionals, flags, argv, context, wantsJson, binName });
+  }
+  if (group === "search" && isSearchAdminCommand(command)) {
+    return await runSearchAdminCli({ positionals, flags, context, wantsJson, binName, usage });
   }
   if (group === "search" && command !== "query" && command !== "rebuild") {
     return await runCliDiscoverySearch({ positionals, flags, context, wantsJson, binName, usage });

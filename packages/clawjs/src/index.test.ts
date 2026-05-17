@@ -79,6 +79,51 @@ test("runCli rejects removed public pre-v1 namespaces before V1 routing", async 
   }
 });
 
+test("runCli exposes Search source registry, profiles, status and explain admin commands", async () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-search-cli-"));
+
+  const sourcesStdout = captureStream();
+  assert.equal(await runCli(["search", "sources", "--json"], {
+    stdout: sourcesStdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+  const sources = parseCliData<{ sources: Array<{ id: string; domain: string; fastPath: boolean }> }>(sourcesStdout.getOutput());
+  assert.equal(sources.sources.some((source) => source.id === "sessions.chats" && source.fastPath), true);
+  assert.equal(sources.sources.some((source) => source.id === "commands"), true);
+
+  const profilesStdout = captureStream();
+  assert.equal(await runCli(["search", "profiles", "--json"], {
+    stdout: profilesStdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+  const profiles = parseCliData<{ profiles: Array<{ id: string; defaultEnabled: boolean }> }>(profilesStdout.getOutput());
+  assert.deepEqual(profiles.profiles.map((profile) => profile.id), ["framework", "full"]);
+  assert.equal(profiles.profiles.find((profile) => profile.id === "framework")?.defaultEnabled, true);
+
+  const statusStdout = captureStream();
+  assert.equal(await runCli(["search", "status", "--json"], {
+    stdout: statusStdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+  const status = parseCliData<{ storage: { canonical: string; index: string }; budgets: { hotMs: number; globalFirstBatchMs: number } }>(statusStdout.getOutput());
+  assert.deepEqual(status.storage, { canonical: "core.sqlite", index: "search.sqlite", indexRebuildable: true });
+  assert.equal(status.budgets.hotMs, 50);
+  assert.equal(status.budgets.globalFirstBatchMs, 200);
+
+  const explainStdout = captureStream();
+  assert.equal(await runCli(["search", "explain", "alpha", "--json"], {
+    stdout: explainStdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+  const explain = parseCliData<{ query: string; partialResults: string }>(explainStdout.getOutput());
+  assert.equal(explain.query, "alpha");
+  assert.match(explain.partialResults, /omitted/);
+});
+
 test("runCli prints db-specific help and database admin help", async () => {
   const dbStdout = captureStream();
   assert.equal(await runCli(["db", "--help"], {

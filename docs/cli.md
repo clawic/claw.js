@@ -542,6 +542,13 @@ claw workspace repair
 claw search people
 claw search "system capabilities" --json
 claw search query "release branch" --json
+claw search sources --json
+claw search status --json
+claw search profiles --json
+claw search saved list --json
+claw search monitors list --json
+claw search actions --json
+claw search explain "release branch" --json
 claw search rebuild --json
 claw inspect codebase --json
 node scripts/codebase-manifest.mjs --write
