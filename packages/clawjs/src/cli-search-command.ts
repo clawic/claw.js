@@ -4909,8 +4909,8 @@ function elnRecordSearchDocument(row: DatabaseRecordRow): SearchDocumentInput | 
   const safePayload = redactExternalCachePayload(payload);
   const title = titleForDatabaseRecord(row, payload);
   const fields = searchableRecordFields(safePayload);
-  const body = fields.map(([key, value]) => `${key}: ${stringifySearchValue(value)}`).join("\n");
-  const snippet = sensitive ? "[redacted]" : firstTextValue(payload) ?? body.slice(0, 180);
+  const body = [title, ...fields.map(([key, value]) => `${key}: ${stringifySearchValue(value)}`)].join("\n");
+  const snippet = sensitive ? "[redacted]" : firstTextValue(payload) ?? title;
   const type = elnRecordResultType(row.collection_name);
   return {
     id: `eln.records:${row.namespace_id}:${row.collection_name}:${row.id}`,
@@ -6771,21 +6771,6 @@ interface CalendarEventRow {
   calendar_id: string | null;
   source: string;
   external_id: string | null;
-  page_id: string | null;
-  metadata_json: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface FinanceRecordTableRow {
-  id: string;
-  kind: string;
-  account_id: string | null;
-  amount: number;
-  currency: string;
-  occurred_at: string;
-  merchant: string | null;
-  category: string | null;
   page_id: string | null;
   metadata_json: string;
   created_at: string;
