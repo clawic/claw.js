@@ -8,7 +8,7 @@ export const EVALUATIONS: BuiltinCollectionDefinition = {
   fields: [
     { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
     { name: "evalDatasetId", type: "relation", relation: { collectionName: "eval_datasets" } },
-    { name: "agentId", type: "relation", relation: { collectionName: "company_agents" } },
+    { name: "agentId", type: "relation", relation: { collectionName: "agents" } },
     { name: "skillId", type: "relation", relation: { collectionName: "agent_skills" } },
     { name: "metric", type: "select", required: true, options: ["accuracy","latency","cost","safety","tool_use_correctness","hallucination_rate","completeness","consistency","human_preference","rouge","bleu","custom"] },
     { name: "score", type: "number" },

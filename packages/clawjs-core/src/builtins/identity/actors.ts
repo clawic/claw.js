@@ -9,7 +9,7 @@ export const ACTORS: BuiltinCollectionDefinition = {
     { name: "companyId", type: "relation", relation: { collectionName: "companies" } },
     { name: "kind", type: "select", required: true, options: ["human","agent","external"] },
     { name: "humanPersonId", type: "relation", relation: { collectionName: "people" } },
-    { name: "agentId", type: "relation", relation: { collectionName: "company_agents" } },
+    { name: "agentId", type: "relation", relation: { collectionName: "agents" } },
     { name: "externalUserId", type: "relation", relation: { collectionName: "external_users" } },
     { name: "displayName", type: "text", required: true },
     { name: "avatarUrl", type: "text" },

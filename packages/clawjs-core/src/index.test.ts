@@ -347,9 +347,18 @@ test("surface graph registers critical chat routes and Relay", () => {
   assert.equal(relayEdges.some((edge) => edge.type === "exposes" && edge.toId === "claw.remote.client"), true);
 
   const routes = listClawSurfaceRoutes();
-  assert.deepEqual(routes.map((route) => route.id).sort(), ["chat.companionBridge", "chat.localDesktop", "chat.remoteRelay", "cli.commandIntentResolution"]);
+  assert.deepEqual(routes.map((route) => route.id).sort(), [
+    "agents.externalSupportAssignment",
+    "agents.internalMacAssignment",
+    "agents.mcpApiAssignment",
+    "chat.companionBridge",
+    "chat.localDesktop",
+    "chat.remoteRelay",
+    "cli.commandIntentResolution",
+  ]);
   assert.equal(findClawSurfaceRoute("chat.remoteRelay")?.steps.some((step) => step.toId === "claw.relay"), true);
   assert.equal(findClawSurfaceRoute("cli.commandIntentResolution")?.steps.some((step) => step.toId === "claw.workspace.command_intents.ledger"), true);
+  assert.equal(findClawSurfaceRoute("agents.externalSupportAssignment")?.steps.some((step) => step.toId === "claw.support.inbox"), true);
 
   for (const route of routes) {
     assert.equal(route.steps.length > 0, true, `${route.id} must declare explicit steps`);
@@ -983,7 +992,6 @@ test("productivity collection definitions expose the unified local and remote co
     "handoffs",
     "approvals",
     "capacity",
-    "agents",
     "releases",
     "incidents",
     "feedback",
@@ -1000,7 +1008,6 @@ test("productivity collection definitions expose the unified local and remote co
     "handoffs",
     "approvals",
     "capacity",
-    "agents",
     "releases",
     "incidents",
     "feedback",
@@ -1031,9 +1038,6 @@ test("productivity collection definitions expose the unified local and remote co
 
   const approvalFields = PRODUCTIVITY_COLLECTION_DEFINITIONS.find((definition) => definition.name === "approvals")?.fields ?? [];
   assert.equal(approvalFields.some((field) => field.name === "policyReason"), true);
-
-  const agentFields = PRODUCTIVITY_COLLECTION_DEFINITIONS.find((definition) => definition.name === "agents")?.fields ?? [];
-  assert.equal(agentFields.some((field) => field.name === "autonomyLevel"), true);
 
   const releaseFields = PRODUCTIVITY_COLLECTION_DEFINITIONS.find((definition) => definition.name === "releases")?.fields ?? [];
   assert.equal(releaseFields.some((field) => field.name === "incidentIds"), true);

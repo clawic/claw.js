@@ -6,7 +6,7 @@ export const MEMORY_BLOCKS: BuiltinCollectionDefinition = {
   family: "agents",
   aliases: ["memory","memories","memory_block","memory_blocks"],
   fields: [
-    { name: "agentId", type: "relation", required: true, relation: { collectionName: "company_agents" } },
+    { name: "agentId", type: "relation", required: true, relation: { collectionName: "agents" } },
     { name: "companyId", type: "relation", relation: { collectionName: "companies" } },
     { name: "memoryIndexId", type: "relation", relation: { collectionName: "memory_indices" } },
     { name: "kind", type: "select", required: true, options: ["short_term","long_term","episodic","semantic","procedural","working"] },

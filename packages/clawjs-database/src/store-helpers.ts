@@ -445,14 +445,16 @@ export function validateRecordRules(collection: CollectionDefinition, payload: R
   }
 }
 
-export function builtInCollections(): Array<{
+type BuiltInCollectionSeed = {
   name: string;
   displayName: string;
   coreFieldNames: string[];
   fields: FieldDefinition[];
   indexes: IndexDefinition[];
-}> {
-  return [
+};
+
+export function builtInCollections(): BuiltInCollectionSeed[] {
+  return uniqueBuiltInCollections([
     ...PRODUCTIVITY_COLLECTION_DEFINITIONS.map((definition) => ({
       name: definition.name,
       displayName: definition.displayName,
@@ -1162,7 +1164,15 @@ export function builtInCollections(): Array<{
       ],
       indexes: [{ name: "hub_notifications_recipient_idx", fields: ["recipientId"] }],
     },
-  ];
+  ]);
+}
+
+function uniqueBuiltInCollections(collections: BuiltInCollectionSeed[]): BuiltInCollectionSeed[] {
+  const byName = new Map<string, BuiltInCollectionSeed>();
+  for (const collection of collections) {
+    if (!byName.has(collection.name)) byName.set(collection.name, collection);
+  }
+  return [...byName.values()];
 }
 
 export function mergeBuiltinFields(current: FieldDefinition[], next: FieldDefinition[]): FieldDefinition[] {

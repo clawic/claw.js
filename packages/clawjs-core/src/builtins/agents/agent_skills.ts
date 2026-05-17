@@ -6,8 +6,11 @@ export const AGENT_SKILLS: BuiltinCollectionDefinition = {
   family: "agents",
   aliases: ["skill","skills","agent_skill","agent_skills"],
   fields: [
-    { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
-    { name: "agentId", type: "relation", relation: { collectionName: "company_agents" } },
+    { name: "companyId", type: "relation", relation: { collectionName: "companies" } },
+    { name: "agentId", type: "relation", relation: { collectionName: "agents" } },
+    { name: "skillRef", type: "text" },
+    { name: "version", type: "text" },
+    { name: "requiredResourceGrantsJson", type: "json" },
     { name: "name", type: "text", required: true },
     { name: "description", type: "text" },
     { name: "instructions", type: "text" },

@@ -1116,8 +1116,23 @@ The docs check script validates that every current export from
     actorKindSchema
     ActorTrustSource
     actorTrustSourceSchema
+    AGENCY_MODES
+    AgencyMode
+    AgentAccessRequest
+    AGENT_ASSIGNMENT_KINDS
+    AgentAssignmentKind
+    AGENT_ASSIGNMENT_STATUSES
+    AgentAssignmentStatus
+    AgentDelegationAccessInput
+    AgentEffectiveAccessInput
+    AgentEffectiveAccessResult
+    AgentGrantEffect
+    AgentPermissionEscalationRequest
     AgentRecord
     agentRecordSchema
+    AGENT_RESOURCE_ACTIONS
+    AgentResourceAction
+    AgentResourceGrant
     AGENTS_FAMILY
     AgentToolCatalog
     AgentToolDescriptor
@@ -1455,6 +1470,7 @@ The docs check script validates that every current export from
     contextPackStatusSchema
     COOKING_FAMILY
     createCodexReadOnlySourceDescriptor
+    createAgentPermissionEscalationRequest
     createConnectorCapability
     createManifest
     createTtsPlaybackPlan
@@ -1485,6 +1501,8 @@ The docs check script validates that every current export from
     EffectiveAccessPolicy
     EffectPreview
     effectPreviewSchema
+    evaluateAgentDelegationAccess
+    evaluateAgentEffectiveAccess
     evaluateConnectorControlPlaneRequest
     EpicRecord
     epicRecordSchema

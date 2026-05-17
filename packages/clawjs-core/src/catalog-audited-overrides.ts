@@ -996,7 +996,7 @@ export const AUDITED_NEED_TEMPLATE_OVERRIDES: Record<string, Record<string, Audi
         { collectionName: "memory_blocks", fieldName: "agentId" },
         { collectionName: "memory_blocks", fieldName: "companyId" },
       ],
-      relationMappings: [{ collectionName: "memory_blocks", fieldName: "agentId", targetCollectionName: "company_agents", kind: "ownership" }],
+      relationMappings: [{ collectionName: "memory_blocks", fieldName: "agentId", targetCollectionName: "agents", kind: "ownership" }],
       jsonAudit: { status: "typed_fields_available", notes: "Personal ownership maps to goal owner fields and agent memory ownership relations." },
       notes: "Personal actors are the person, profile, agent, and optional household/workspace context.",
     },

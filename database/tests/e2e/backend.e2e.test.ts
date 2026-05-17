@@ -221,7 +221,7 @@ test("existing databases receive additive built-in upgrades without reset", asyn
       { name: "status", type: "select", required: true, options: ["active", "paused", "done"] },
       { name: "description", type: "text" },
       { name: "parentId", type: "relation", relation: { collectionName: "goals" } },
-      { name: "ownerAgentId", type: "relation", relation: { collectionName: "company_agents" } },
+      { name: "ownerAgentId", type: "relation", relation: { collectionName: "agents" } },
     ]),
     JSON.stringify([{ name: "goals_company_idx", fields: ["companyId"] }]),
     JSON.stringify(["companyId", "title", "status"]),
