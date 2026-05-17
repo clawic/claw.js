@@ -143,6 +143,26 @@ export function scheduleSkillsRegistrySearchEvent(input: {
   });
 }
 
+export function scheduleNotesPagesSearchEvent(input: {
+  operation: "upsert" | "delete";
+  pageId: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  return scheduleSearchIndexEvent({
+    source: "notes.pages",
+    operation: input.operation,
+    resourceId: input.pageId,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      pageId: input.pageId,
+    },
+  });
+}
+
 export function scheduleConnectorCatalogSearchEvent(input: {
   operation: "upsert" | "delete";
   operationId: string;

@@ -1444,6 +1444,18 @@ test("search rebuild indexes notes.pages from pages and blocks", async () => {
     const createdPayload = JSON.parse(created.stdout) as { data: { id: string; title: string } };
     assert.ok(createdPayload.data.id);
 
+    const jobs = await runCliCapture(["search", "jobs", "--source", "notes.pages", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(jobs.code, CLI_EXIT_OK);
+    const jobsPayload = JSON.parse(jobs.stdout) as {
+      data: { items: Array<{ source: string; operation: string; resourceId: string; shard: string; payload: { eventDriven?: boolean; pageId?: string } }> };
+    };
+    const noteJob = jobsPayload.data.items.find((job) => job.resourceId === createdPayload.data.id);
+    assert.equal(noteJob?.source, "notes.pages");
+    assert.equal(noteJob?.operation, "upsert");
+    assert.equal(noteJob?.shard, "hot");
+    assert.equal(noteJob?.payload.eventDriven, true);
+    assert.equal(noteJob?.payload.pageId, createdPayload.data.id);
+
     const rebuild = await runCliCapture(["search", "rebuild", "--source", "notes.pages", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(rebuild.code, CLI_EXIT_OK);
     const rebuildPayload = JSON.parse(rebuild.stdout) as {
@@ -1500,6 +1512,16 @@ test("search rebuild indexes notes.pages from pages and blocks", async () => {
     assert.equal(result?.actions?.some((action) => action.id === "open" && action.kind === "open"), true);
     assert.ok(result?.explanation?.matchedBy?.length);
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "space"), true);
+
+    const deleted = await runCliCapture(["notes", "delete", createdPayload.data.id, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleted.code, CLI_EXIT_OK);
+    const deleteJobs = await runCliCapture(["search", "jobs", "--source", "notes.pages", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleteJobs.code, CLI_EXIT_OK);
+    const deleteJobsPayload = JSON.parse(deleteJobs.stdout) as {
+      data: { items: Array<{ operation: string; resourceId: string; payload: { pageId?: string } }> };
+    };
+    const deleteJob = deleteJobsPayload.data.items.find((job) => job.operation === "delete" && job.resourceId === createdPayload.data.id);
+    assert.equal(deleteJob?.payload.pageId, createdPayload.data.id);
   });
 });
 

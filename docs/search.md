@@ -165,14 +165,15 @@ resource compact into one queued job so noisy local events do not create
 unbounded duplicate backfill work.
 
 The local framework database and artifact write paths now emit those compacted
-events for `database.records`, `documents.blocks`, `generations.artifacts`,
-`images.derived`, `media.assets`, and `skills.registry`: successful
-`db collection create|update`, `documents create|update`, `image
+events for `database.records`, `documents.blocks`, `notes.pages`,
+`generations.artifacts`, `images.derived`, `media.assets`, and
+`skills.registry`: successful `db collection create|update`, `documents
+create|update`, `notes create|update`, `image
 create|edit|import`, typed-media generation, `generations create`, and `skills
-upsert` calls schedule hot upsert events; successful record, document, image,
-media, generation, or skill deletes schedule delete events where the source item
-is removed; and `document_blocks` changes schedule a hot upsert for the parent
-document so fragments refresh together. The event write is best effort because
+upsert` calls schedule hot upsert events; successful record, document, note,
+image, media, generation, or skill deletes schedule delete events where the
+source item is removed; and `document_blocks` changes schedule a hot upsert for
+the parent document so fragments refresh together. The event write is best effort because
 `search.sqlite` is a rebuildable sidecar; a temporary Search sidecar failure
 must not fail the canonical record or artifact write.
 

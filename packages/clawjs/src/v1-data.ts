@@ -7,7 +7,7 @@ import type Database from "better-sqlite3";
 import { DatabaseServiceStore } from "@clawjs/database";
 import { runAgentsCommand, runConnectionsCommand, runPersonalitiesCommand, runSkillCollectionsCommand } from "./v1-data-agent-entities.ts";
 import { runProviderRoutingCommand, runSnippetsCommand } from "./v1-data-agent-config.ts";
-import { scheduleSkillsRegistrySearchEvent } from "./cli-search-events.ts";
+import { scheduleNotesPagesSearchEvent, scheduleSkillsRegistrySearchEvent } from "./cli-search-events.ts";
 export {
   openMainDataStore,
   resolveClawjsDataRoot,
@@ -756,6 +756,12 @@ function runNotesCommand(input: V1DataCliInput, store: DatabaseServiceStore): nu
       authorId: input.flags["author-id"] || null,
       properties: input.flags.properties ? parseMaybeJson(input.flags.properties) as JsonRecord : {},
     });
+    scheduleNotesPagesSearchEvent({
+      operation: "upsert",
+      pageId: result.id,
+      dataDir: resolveClawjsDataRoot(),
+      flags: input.flags,
+    });
     writeSuccess(input, result);
     return V1_DATA_EXIT_OK;
   }
@@ -840,6 +846,12 @@ function runNotesCommand(input: V1DataCliInput, store: DatabaseServiceStore): nu
       sourceRecordId: stringValue(existing?.sourceRecordId, null),
       properties: isRecord(existing?.properties) ? existing.properties : {},
     });
+    scheduleNotesPagesSearchEvent({
+      operation: "upsert",
+      pageId: result.id,
+      dataDir: resolveClawjsDataRoot(),
+      flags: input.flags,
+    });
     writeSuccess(input, result);
     return V1_DATA_EXIT_OK;
   }
@@ -861,6 +873,14 @@ function runNotesCommand(input: V1DataCliInput, store: DatabaseServiceStore): nu
     if (!id) return usageError(input, "Usage: claw notes delete PAGE_ID");
     const now = nowIso();
     const changes = store.sqlite.prepare("UPDATE pages SET archived_at = ?, updated_at = ? WHERE id = ?").run(now, now, id).changes;
+    if (changes > 0) {
+      scheduleNotesPagesSearchEvent({
+        operation: "delete",
+        pageId: id,
+        dataDir: resolveClawjsDataRoot(),
+        flags: input.flags,
+      });
+    }
     writeSuccess(input, { deleted: changes > 0, id });
     return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
