@@ -41,7 +41,9 @@ test("Search MCP exposes profile, entrypoint, and explain tools", () => {
       "search.actions.list",
       "search.actions.execute",
       "search.saved.list",
+      "search.saved.create",
       "search.monitors.list",
+      "search.monitors.create",
       "search.monitors.evaluate",
       "search.audit.list",
       "search.jobs.list",
@@ -140,6 +142,68 @@ test("Search MCP exposes profile, entrypoint, and explain tools", () => {
 
     store.saveSearch({ id: "saved-search", name: "Search command", query: { query: "search", domains: ["commands"] } });
     store.saveMonitor({ id: "monitor-search", savedSearchId: "saved-search", name: "Search monitor", cadence: "hourly" });
+    const savedCreateTool = tools.find((tool) => tool.name === "search.saved.create");
+    assert.ok(savedCreateTool);
+    const savedSemantic = savedCreateTool.handler({
+      id: "saved-semantic",
+      name: "Semantic command",
+      query: "search help",
+      domains: ["commands"],
+      sources: ["commands"],
+      shards: ["hot"],
+      strategy: "hybrid",
+      localEmbedding: true,
+      limit: 2,
+      filters: { type: "command" },
+      explain: true,
+      actor: "agent:test",
+      surface: "mcp",
+    }) as {
+      id: string;
+      name: string;
+      query: {
+        query: string;
+        domains?: string[];
+        sources?: string[];
+        shards?: string[];
+        strategy?: string;
+        embedding?: { model: string; vector: number[] };
+        filters?: Record<string, unknown>;
+        limit?: number;
+        explain?: boolean;
+        actor?: string;
+        surface?: string;
+      };
+    };
+    assert.equal(savedSemantic.id, "saved-semantic");
+    assert.equal(savedSemantic.name, "Semantic command");
+    assert.deepEqual(savedSemantic.query.domains, ["commands"]);
+    assert.deepEqual(savedSemantic.query.sources, ["commands"]);
+    assert.deepEqual(savedSemantic.query.shards, ["hot"]);
+    assert.equal(savedSemantic.query.strategy, "hybrid");
+    assert.equal(savedSemantic.query.embedding?.model, LOCAL_TEXT_EMBEDDING_MODEL);
+    assert.equal(savedSemantic.query.embedding?.vector.length, LOCAL_TEXT_EMBEDDING_DIMENSIONS);
+    assert.deepEqual(savedSemantic.query.filters, { type: "command" });
+    assert.equal(savedSemantic.query.limit, 2);
+    assert.equal(savedSemantic.query.explain, true);
+    assert.equal(savedSemantic.query.actor, "agent:test");
+    assert.equal(savedSemantic.query.surface, "mcp");
+
+    const monitorsCreateTool = tools.find((tool) => tool.name === "search.monitors.create");
+    assert.ok(monitorsCreateTool);
+    const createdMonitor = monitorsCreateTool.handler({
+      id: "monitor-semantic",
+      savedSearchId: "saved-semantic",
+      name: "Semantic monitor",
+      cadence: "daily",
+      enabled: false,
+    }) as { id: string; savedSearchId: string; name?: string; cadence?: string; enabled: boolean };
+    assert.equal(createdMonitor.id, "monitor-semantic");
+    assert.equal(createdMonitor.savedSearchId, "saved-semantic");
+    assert.equal(createdMonitor.name, "Semantic monitor");
+    assert.equal(createdMonitor.cadence, "daily");
+    assert.equal(createdMonitor.enabled, false);
+
     const evaluateTool = tools.find((tool) => tool.name === "search.monitors.evaluate");
     const evaluated = evaluateTool?.handler({ id: "monitor-search", limit: 1 }) as {
       state: string;

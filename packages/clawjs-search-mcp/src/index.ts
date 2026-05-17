@@ -262,10 +262,38 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
     {
       name: "search.saved.create",
       description: "Create or update a saved search.",
-      inputSchema: { type: "object", required: ["id", "query"], properties: { id: { type: "string" }, name: { type: "string" }, query: { type: "string" }, profile: { type: "string", enum: ["framework", "full"] } } },
+      inputSchema: {
+        type: "object",
+        required: ["id", "query"],
+        properties: {
+          id: { type: "string" },
+          name: { type: "string" },
+          query: { type: "string" },
+          domains: { type: "array", items: { type: "string" } },
+          sources: { type: "array", items: { type: "string" } },
+          shards: { type: "array", items: { type: "string" } },
+          strategy: { type: "string", enum: ["lexical", "semantic", "hybrid"] },
+          embeddingModel: { type: "string" },
+          localEmbedding: { type: "boolean" },
+          embedding: {
+            type: "object",
+            required: ["model", "vector"],
+            properties: {
+              model: { type: "string" },
+              vector: { type: "array", items: { type: "number" } },
+            },
+          },
+          profile: { type: "string", enum: ["framework", "full"] },
+          limit: { type: "integer" },
+          filters: { type: "object" },
+          explain: { type: "boolean" },
+          actor: { type: "string" },
+          surface: { type: "string" },
+        },
+      },
       handler: (p) => {
         const id = requiredString(p, "id");
-        store.saveSearch({ id, name: stringParam(p.name) ?? id, query: { query: requiredString(p, "query"), profile: searchProfile(p.profile) } });
+        store.saveSearch({ id, name: stringParam(p.name) ?? id, query: searchQueryFromParams(p) });
         return store.listSavedSearches().find((item) => item.id === id) ?? null;
       },
     },

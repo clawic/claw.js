@@ -475,7 +475,10 @@ source-state control, profiles, entrypoints, aliases, explain, action
 listing/execution with brokered host-approval plans, saved searches, monitor
 evaluation, monitor management, shard catalog inspection, audit, and
 indexing-job tools, including compacted event scheduling through
-`search.jobs.schedule`.
+`search.jobs.schedule`. MCP `search.saved.create` accepts the same structured
+query controls as `search.query`, so saved searches and monitors can preserve
+domain/source/shard filters, strategy, limits, actor/surface context, and local
+embedding settings.
 
 The showcase app exposes `/search-index` as the Search Index admin surface. It
 shows framework and full-profile sources separately, keeps optional native/web/
