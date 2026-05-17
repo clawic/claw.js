@@ -800,7 +800,7 @@ The docs check script validates that every current export from
     resolveGuidanceRoot
     resolveIntentDomainPath
     resolveIntentsDir
-    resolveLegacyDocumentRefs
+    resolveAttachmentDocumentRefs
     resolveLibraryRoot
     resolveManifestPath
     resolveMemoryHitLabel

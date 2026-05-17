@@ -5,15 +5,15 @@ Mode: report-only.
 - Tool version: 6.14.0
 - Config: knip.json
 - Working directory: .
-- Files with issues: 203
-- Total issues: 944
+- Files with issues: 202
+- Total issues: 934
 
 ## Issue Types
 
 - duplicates: 8
 - exports: 654
 - owners: 134
-- types: 146
+- types: 136
 - unlisted: 2
 
 ## Top Files
@@ -37,6 +37,6 @@ Mode: report-only.
 - packages/clawjs-core/src/builtins/learning/index.ts: 11 (owners:1, exports:10)
 - packages/clawjs-core/src/builtins/mental_health_recovery/index.ts: 11 (owners:1, exports:10)
 - packages/clawjs-core/src/builtins/observability/index.ts: 11 (owners:1, exports:10)
-- execution/src/shared/types.ts: 10 (types:10)
+- packages/clawjs-core/src/builtins/education_school/index.ts: 10 (owners:1, exports:9)
 
 This report does not authorize automatic deletion; cleanup still requires category review.

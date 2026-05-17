@@ -1,12 +1,12 @@
-export type Role = "admin" | "user";
-export type AssetKind = "script" | "notebook";
+type Role = "admin" | "user";
+type AssetKind = "script" | "notebook";
 export type RuntimeLanguage = "node" | "python";
 export type RunStatus = "queued" | "claimed" | "running" | "succeeded" | "failed" | "cancelled";
-export type ChangeRequestStatus = "open" | "approved" | "rejected" | "merged";
-export type ReviewStatus = "pending" | "approved" | "rejected";
+type ChangeRequestStatus = "open" | "approved" | "rejected" | "merged";
+type ReviewStatus = "pending" | "approved" | "rejected";
 export type DeploymentKind = "static" | "node-web";
-export type DeploymentStatus = "draft" | "ready" | "live" | "failed" | "rolled_back";
-export type EnvironmentName = "preview" | "staging" | "production";
+type DeploymentStatus = "draft" | "ready" | "live" | "failed" | "rolled_back";
+type EnvironmentName = "preview" | "staging" | "production";
 
 export interface AuthClaims {
   sub: string;
@@ -22,7 +22,7 @@ export interface TokenPair {
   expiresInSec: number;
 }
 
-export interface TenantMembership {
+interface TenantMembership {
   userId: string;
   tenantId: string;
   role: Role;
@@ -50,7 +50,7 @@ export interface RepositoryRecord {
   updatedAt: number;
 }
 
-export interface NotebookCell {
+interface NotebookCell {
   id: string;
   runtime: RuntimeLanguage;
   label: string;
@@ -236,11 +236,11 @@ export interface DeploymentCertificateRecord {
   updatedAt: number;
 }
 
-export interface CreateNotebookInput {
+interface CreateNotebookInput {
   cells: NotebookCell[];
 }
 
-export interface WorkerSummary {
+interface WorkerSummary {
   workerId: string;
   label: string;
   runtimes: RuntimeLanguage[];

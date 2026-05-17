@@ -14,11 +14,11 @@
     "unreferencedAssetCandidates": 88
   },
   "knipSummary": {
-    "filesWithIssues": 203,
-    "totalIssues": 944,
+    "filesWithIssues": 202,
+    "totalIssues": 934,
     "issueTypes": {
       "unlisted": 2,
-      "types": 146,
+      "types": 136,
       "owners": 134,
       "exports": 654,
       "duplicates": 8
@@ -60,6 +60,7 @@
     "Agent plan cleanup made local risk/policy evaluation helpers private while keeping the plan CLI and delegation graph test surface unchanged.",
     "Time logic cleanup made local temporal helper aliases and parsing helpers private while keeping exported temporal input/status contracts unchanged.",
     "Execution and Relay protocol cleanup made nested payload/envelope helpers private where only the union or public request/response envelopes are externally consumed.",
-    "Secrets shared type cleanup kept exported only the role/principal types imported by auth and made the unused local DTO descriptors private."
+    "Secrets shared type cleanup kept exported only the role/principal types imported by auth and made the unused local DTO descriptors private.",
+    "Execution shared type cleanup made local status aliases and unused helper DTOs private while preserving imported records and protocol types."
   ]
 }
