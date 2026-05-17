@@ -4,7 +4,15 @@ import path from "node:path";
 import { createInterface } from "node:readline";
 import { Writable } from "node:stream";
 
-import { SearchStore, type SearchAuditEventType, type SearchProfileId, type SearchQueryInput } from "@clawjs/search";
+import {
+  DEFAULT_SEARCH_BUDGETS,
+  SEARCH_PROFILES,
+  SearchStore,
+  listSearchEntrypointContracts,
+  type SearchAuditEventType,
+  type SearchProfileId,
+  type SearchQueryInput,
+} from "@clawjs/search";
 
 interface JsonRpcRequest {
   jsonrpc: "2.0";
@@ -20,7 +28,7 @@ interface JsonRpcResponse {
   error?: { code: number; message: string; data?: unknown };
 }
 
-interface ToolDef {
+export interface SearchMcpToolDef {
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;
@@ -32,7 +40,7 @@ export interface SearchMcpServerOptions {
   dataDir?: string;
 }
 
-function buildTools(store: SearchStore): ToolDef[] {
+export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
   return [
     {
       name: "search.query",
@@ -66,6 +74,37 @@ function buildTools(store: SearchStore): ToolDef[] {
     },
     { name: "search.sources.list", description: "List Search source manifests.", inputSchema: { type: "object", properties: { profile: { type: "string", enum: ["framework", "full"] } } }, handler: (p) => store.listSources(searchProfile(p.profile)) },
     { name: "search.status", description: "List Search source status rows.", inputSchema: { type: "object", properties: {} }, handler: () => store.sourceStatus() },
+    { name: "search.profiles.list", description: "List Search profiles and default enablement.", inputSchema: { type: "object", properties: {} }, handler: () => ({ profiles: SEARCH_PROFILES }) },
+    {
+      name: "search.entrypoints.list",
+      description: "List Root Search, Search Index, and chat search entrypoint contracts.",
+      inputSchema: { type: "object", properties: {} },
+      handler: () => {
+        const entrypoints = listSearchEntrypointContracts().map((entrypoint) => {
+          const { hotkey, ...publicEntrypoint } = entrypoint;
+          return { ...publicEntrypoint, shortcut: hotkey };
+        });
+        return {
+          entrypoints,
+          rootSearchShortcutState: entrypoints.find((entrypoint) => entrypoint.id === "root-search")?.shortcut.state ?? "external_pending",
+          chatSearchIsolation: entrypoints.find((entrypoint) => entrypoint.id === "chat-search")?.queryScope === "conversations_only",
+        };
+      },
+    },
+    {
+      name: "search.explain",
+      description: "Explain Search query planning, matching, ranking, and timeout policy.",
+      inputSchema: { type: "object", required: ["query"], properties: { query: { type: "string" }, profile: { type: "string", enum: ["framework", "full"] } } },
+      handler: (p) => ({
+        query: requiredString(p, "query"),
+        profile: searchProfile(p.profile),
+        budgets: DEFAULT_SEARCH_BUDGETS,
+        matching: ["exact", "prefix", "fuzzy", "fts"],
+        semantic: "optional per source with caller-supplied local embeddings",
+        partialResults: "slow sources are omitted instead of blocking fast paths",
+        ranking: ["central score", "source hints", "local frecency", "scope", "actor", "surface"],
+      }),
+    },
     { name: "search.actions.list", description: "List actions attached to one Search result.", inputSchema: { type: "object", required: ["resultId"], properties: { resultId: { type: "string" } } }, handler: (p) => store.actionsForResult(requiredString(p, "resultId")) },
     { name: "search.saved.list", description: "List saved searches.", inputSchema: { type: "object", properties: {} }, handler: () => store.listSavedSearches() },
     {
@@ -111,7 +150,7 @@ function send(out: Writable, message: JsonRpcResponse | JsonRpcRequest): void {
 
 export function runSearchMcpServer(opts: SearchMcpServerOptions = {}) {
   const store = new SearchStore(resolveSearchDbPath(opts));
-  const tools = buildTools(store);
+  const tools = createSearchMcpTools(store);
   const toolMap = new Map(tools.map((tool) => [tool.name, tool] as const));
 
   const respond = (id: JsonRpcRequest["id"], result?: unknown, error?: JsonRpcResponse["error"]) => {
