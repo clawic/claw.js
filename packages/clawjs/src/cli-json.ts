@@ -23,7 +23,7 @@ function resolveCliJsonMeta(meta: CliJsonMeta = {}): CliJsonMeta {
   };
 }
 
-export function writeJson(stream: NodeJS.WritableStream, payload: unknown): void {
+function writeJson(stream: NodeJS.WritableStream, payload: unknown): void {
   stream.write(`${stringifyCliJson(payload)}\n`);
 }
 
@@ -43,7 +43,7 @@ export function writeJsonOk(stream: NodeJS.WritableStream, data: unknown, meta: 
   });
 }
 
-export function writeJsonOkLine(stream: NodeJS.WritableStream, data: unknown, meta: CliJsonMeta = {}): void {
+function writeJsonOkLine(stream: NodeJS.WritableStream, data: unknown, meta: CliJsonMeta = {}): void {
   writeJsonLine(stream, {
     ok: true,
     data,
@@ -104,10 +104,6 @@ function isHandledCliErrorLike(error: unknown): error is { code: string; message
     && typeof (error as { code?: unknown }).code === "string"
     && "message" in error
     && typeof (error as { message?: unknown }).message === "string";
-}
-
-export function writeCliError(stream: NodeJS.WritableStream, error: unknown): void {
-  writeJsonError(stream, error);
 }
 
 export function cliErrorFromUnknown(error: unknown): CliHandledError {
