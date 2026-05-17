@@ -12,9 +12,9 @@
       "reason": "Public CLI routing after delegated domain, temporal, productivity, and knowledge-tail command extraction; keep under 2000 by splitting new domains into modules."
     },
     "packages/clawjs/src/cli-search-command.ts": {
-      "lines": 6114,
+      "lines": 7580,
       "blockGrowth": true,
-      "reason": "Emergency search CLI debt after MCP server indexing, provider routing/snippet indexing, and config-source orchestration expansion; do not expand further except for extraction, deletion, or compatibility-preserving split work."
+      "reason": "Emergency search CLI debt after dense-source indexing and entrypoint contract expansion; immediate follow-up should extract source adapters, event refresh, and admin subcommands, and future growth is blocked except for extraction, deletion, or compatibility-preserving split work."
     },
     "packages/clawjs-node/src/create-claw.ts": {
       "lines": 1964,
@@ -31,6 +31,10 @@
     "packages/clawjs/src/cli-discovery.test.ts": {
       "lines": 2055,
       "reason": "Broad CLI discovery integration coverage after dense-domain direct noun graduation; split new domain route scenarios into focused test files before expanding further."
+    },
+    "packages/clawjs/src/cli-dense-data-command.ts": {
+      "lines": 2758,
+      "reason": "Dense-data CLI router after first-wave timeline and nested route graduation; split materialized timeline builders and route mapping tables before adding more dense domains."
     },
     "packages/clawjs-search/src/store.ts": {
       "lines": 2185,
