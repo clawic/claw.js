@@ -1,11 +1,14 @@
-import { defineConfig } from "vitepress";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
+const configDir = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(configDir, "../..");
 const SITE_URL = "https://clawjs.ai";
 const DOCS_URL = "https://docs.clawjs.ai";
 const DEMO_URL = "https://demo.clawjs.ai";
 const GITHUB_URL = "https://github.com/clawic/clawjs";
 
-export default defineConfig({
+export default {
   title: "ClawJS",
   description: "The public ClawJS docs site, sourced from Markdown in docs/.",
   cleanUrls: true,
@@ -15,6 +18,22 @@ export default defineConfig({
     define: {
       __SITE_URL__: JSON.stringify(SITE_URL),
       __DOCS_URL__: JSON.stringify(DOCS_URL),
+    },
+    resolve: {
+      alias: [
+        {
+          find: "estree-walker",
+          replacement: path.join(repoRoot, "website/node_modules/estree-walker/dist/umd/estree-walker.js"),
+        },
+        {
+          find: "vue/server-renderer",
+          replacement: path.join(repoRoot, "website/node_modules/vue/server-renderer/index.mjs"),
+        },
+        {
+          find: /^vue$/,
+          replacement: path.join(repoRoot, "website/node_modules/vue/dist/vue.runtime.esm-bundler.js"),
+        },
+      ],
     },
   },
   head: [
@@ -132,4 +151,4 @@ export default defineConfig({
       copyright: "ClawJS",
     },
   },
-});
+};
