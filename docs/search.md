@@ -27,8 +27,8 @@ Search V1.1 has four layers:
    disabled sources are omitted.
 4. **Search store**: `search.sqlite` is rebuildable and stores FTS documents,
    fragments, actions, cursors, tombstones, saved searches, monitors, ranking
-   cache, and optional vectors. Canonical records and configuration stay in
-   `core.sqlite`.
+   cache, and optional vectors. Canonical records stay in `core.sqlite`; source
+   control configuration is mirrored there in `search_source_config`.
 
 The physical engine boundary is explicit. `@clawjs/search` exports a
 `SearchEngineDescriptor` contract plus `SEARCH_SQLITE_ENGINE` as the default
@@ -175,10 +175,11 @@ Add `--enqueue` to queue the same rebuild scope in `search.sqlite` instead of
 running it inline; `search service run-once` or the signed host worker claims
 those jobs and applies the source or source/shard reset under worker budgets.
 
-Source controls are persisted in `search.sqlite`. Disabled, paused, and excluded
-sources are skipped by `search query` lazy indexing and by `search rebuild`, and
-Root Search reports omitted sources as partial metadata instead of blocking fast
-paths.
+Source controls are applied to `search.sqlite` and mirrored to canonical
+`core.sqlite` configuration in `search_source_config`. Disabled, paused, and
+excluded sources are skipped by `search query` lazy indexing and by
+`search rebuild`, survive a rebuildable `search.sqlite` reset, and Root Search
+reports omitted sources as partial metadata instead of blocking fast paths.
 
 Search documents and sync cursors are tracked per source and shard. The default
 shard preserves the simple source contract; hot/cold or extractor-specific
