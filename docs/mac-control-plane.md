@@ -9,6 +9,8 @@ The architecture decision is [ADR 0023: Mac Control Plane V1](./adr/0023-mac-con
 The permission decision is [ADR 0024: Mac Permission Broker V1](./adr/0024-mac-permission-broker-v1.md).
 Source decisions are tracked in [Mac Control Plane Source Decision Audit](./mac-control-plane-source-decision-audit.md)
 and [Mac Control Plane Decision Matrix](./mac-control-plane-decision-matrix.md).
+Agents working on this surface should use
+[`mac-control-plane-work`](../skills/mac-control-plane-work/SKILL.md).
 
 ## Public Shape
 

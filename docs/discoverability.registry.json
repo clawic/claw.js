@@ -266,7 +266,8 @@
         "CLAUDE.md",
         "docs/decision-map.md",
         "docs/cli.md",
-        "docs/mac-control-plane.md"
+        "docs/mac-control-plane.md",
+        "skills/mac-control-plane-work/SKILL.md"
       ],
       "discoveryTerms": [
         "Mac Control Plane",
@@ -305,7 +306,8 @@
         "CLAUDE.md",
         "docs/decision-map.md",
         "docs/cli.md",
-        "docs/mac-control-plane.md"
+        "docs/mac-control-plane.md",
+        "skills/mac-control-plane-work/SKILL.md"
       ],
       "discoveryTerms": [
         "Mac Permission Broker",
@@ -330,6 +332,31 @@
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-17"
+    },
+    {
+      "id": "mac-control-plane-work",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/mac-control-plane-work/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "docs/mac-control-plane.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "mac control plane work",
+        "Mac Action Broker workflow",
+        "Mac Permission Broker workflow"
+      ],
+      "searchQueries": [
+        {
+          "query": "mac control plane work",
+          "expectPath": "skills/mac-control-plane-work/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-17"
     },

@@ -116,7 +116,7 @@ include:
 - Data and storage: `canonical-catalog-expansion`,
   `data-storage-boundary-review`
 - Host, security, and validation: `host-boundary-review`,
-  `secrets-boundary-review`, `integration-qa-lab`,
+  `mac-control-plane-work`, `secrets-boundary-review`, `integration-qa-lab`,
   `host-dependent-validation`, `performance-investigation`
 - Collaboration hygiene: `public-hygiene-review`, `docs-alignment-update`,
   `code-review-risk`, `commit-hygiene-public`, `code-hygiene-audit`,

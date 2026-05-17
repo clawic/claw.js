@@ -18,6 +18,7 @@ const requiredSkills = [
   "canonical-catalog-expansion",
   "data-storage-boundary-review",
   "host-boundary-review",
+  "mac-control-plane-work",
   "secrets-boundary-review",
   "integration-qa-lab",
   "host-dependent-validation",
