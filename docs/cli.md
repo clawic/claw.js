@@ -726,6 +726,11 @@ claw property property_123 timeline --json
 claw insurance-policy create "Home policy" --provider "Example Mutual" --json
 claw insurance-policy insurance_policy_123 timeline --json
 claw vehicle-insurance-policy add --vehicle vehicle_123 --provider "Example Mutual" --json
+claw vehicle vehicle_123 maintenance add "Annual service" --json
+claw vehicle-maintenance add --vehicle vehicle_123 "Direct service" --json
+claw appliance appliance_123 maintenance add "Washer service" --json
+claw appliance-maintenance add --appliance appliance_123 "Direct washer service" --json
+claw vehicle vehicle_123 timeline --json
 claw product list --json
 claw products list --json
 claw product create "Hydraulic Press" --company company_123 --json

@@ -109,6 +109,9 @@ test("dense data OS acceptance fixture covers required first-wave records and ga
     "insurance_policy",
     "vehicle",
     "vehicle_insurance_policy",
+    "vehicle_maintenance",
+    "appliance",
+    "appliance_maintenance",
     "invoice",
     "invoice_company",
     "incident",
@@ -155,6 +158,7 @@ test("dense data OS first wave covers the agreed high-density systems", () => {
     "ops",
     "real_estate",
     "insurance",
+    "maintenance",
   ]);
 
   for (const system of listClawDenseDataSystems({ wave: "first_wave" })) {
@@ -218,6 +222,11 @@ test("dense data OS centers have direct human CLI nouns and plural aliases", () 
   assert.ok(insurance?.centers.some((center) => center.commandNoun === "insurance-policy" && center.commandAliases.includes("insurance-policies") && center.collectionName === "insurance_policies"));
   assert.ok(insurance?.centers.some((center) => center.commandNoun === "vehicle-insurance-policy" && center.collectionName === "vehicle_insurance_policies"));
   assert.ok(insurance?.commandPatterns.includes("claw insurance-policy <id> timeline"));
+
+  const maintenance = findClawDenseDataSystem("maintenance");
+  assert.ok(maintenance?.centers.some((center) => center.commandNoun === "vehicle" && center.commandAliases.includes("vehicles") && center.collectionName === "vehicles"));
+  assert.ok(maintenance?.centers.some((center) => center.commandNoun === "vehicle-maintenance" && center.collectionName === "vehicle_maintenance"));
+  assert.ok(maintenance?.commandPatterns.includes("claw vehicle <id> timeline"));
 });
 
 test("dense data OS models patient medication routes without forcing a health prefix", () => {
@@ -291,6 +300,11 @@ test("dense data OS resolves direct CLI intent phrases without executing them", 
   assert.equal(insurancePolicyList.system?.id, "insurance");
   assert.equal(insurancePolicyList.center?.collectionName, "insurance_policies");
 
+  const vehicleList = resolveClawDenseDataIntent("claw vehicle list");
+  assert.equal(vehicleList.status, "covered");
+  assert.equal(vehicleList.system?.id, "maintenance");
+  assert.equal(vehicleList.center?.collectionName, "vehicles");
+
   const medicationAdd = resolveClawDenseDataIntent("claw medication add --patient p_123");
   assert.equal(medicationAdd.status, "partial");
   assert.equal(medicationAdd.system?.id, "health");
@@ -337,6 +351,10 @@ test("dense data OS graduated centers point at canonical built-in collections wi
     "real_estate.property_inspection": "property_inspections",
     "insurance.insurance_policy": "insurance_policies",
     "insurance.vehicle_insurance_policy": "vehicle_insurance_policies",
+    "maintenance.vehicle": "vehicles",
+    "maintenance.vehicle_maintenance": "vehicle_maintenance",
+    "maintenance.appliance": "appliances",
+    "maintenance.appliance_maintenance": "appliance_maintenance",
     "erp.company": "companies",
     "erp.product": "products_catalog",
     "erp.invoice": "invoices",
@@ -402,7 +420,6 @@ test("dense data OS roadmap keeps the wider catalog visible before pack graduati
     "content",
     "product",
     "pharma",
-    "maintenance",
     "eln",
   ]) {
     assert.equal(roadmapIds.has(id), true, `${id} must stay visible in the roadmap taxonomy`);

@@ -45,6 +45,7 @@ const requiredFirstWaveSystems = [
   "ops",
   "real_estate",
   "insurance",
+  "maintenance",
 ];
 
 const requiredFoundationMappings = {
@@ -87,6 +88,9 @@ const requiredFixtureCoverage = [
   "insurance_policy",
   "vehicle",
   "vehicle_insurance_policy",
+  "vehicle_maintenance",
+  "appliance",
+  "appliance_maintenance",
   "invoice",
   "invoice_company",
   "incident",
@@ -149,6 +153,7 @@ const requiredPluralIntentPhrases = [
   ["claw employees list", "employees"],
   ["claw properties list", "property_listings"],
   ["claw insurance-policies list", "insurance_policies"],
+  ["claw vehicles list", "vehicles"],
 ];
 
 const failures = [];
@@ -249,6 +254,11 @@ for (const phrase of [
   "claw insurance-policy create",
   "claw insurance-policy insurance_policy_123 timeline",
   "claw vehicle-insurance-policy add --vehicle vehicle_123",
+  "claw vehicle vehicle_123 maintenance add",
+  "claw vehicle-maintenance add --vehicle vehicle_123",
+  "claw appliance appliance_123 maintenance add",
+  "claw appliance-maintenance add --appliance appliance_123",
+  "claw vehicle vehicle_123 timeline",
   "claw company company_123 timeline",
   "claw asset asset_123 timeline",
   "claw work-order work_order_123 timeline",
@@ -412,6 +422,9 @@ if (!semanticViews.some((entry) => entry.id === "property.timeline" && entry.sys
 }
 if (!semanticViews.some((entry) => entry.id === "insurance_policy.timeline" && entry.systemId === "insurance")) {
   fail("semantic views must include insurance_policy.timeline");
+}
+if (!semanticViews.some((entry) => entry.id === "vehicle.timeline" && entry.systemId === "maintenance")) {
+  fail("semantic views must include vehicle.timeline");
 }
 if (!semanticViews.some((entry) => entry.id === "work_order.timeline" && entry.systemId === "manufacturing")) {
   fail("semantic views must include work_order.timeline");
