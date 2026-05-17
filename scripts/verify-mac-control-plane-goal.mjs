@@ -136,6 +136,24 @@ const requiredRoutes = [
   "mac.permissionLifecycle",
 ];
 
+const requiredRelatedSurfaceHelp = new Map([
+  ["app", ["claw apps"]],
+  ["apps", ["claw app"]],
+  ["audio", ["claw mac coverage audio"]],
+  ["notification", ["claw notify"]],
+  ["notify", ["claw notification"]],
+  ["calendar", ["claw permissions show calendar"]],
+  ["contacts", ["claw permissions show contacts"]],
+  ["reminders", ["claw permissions show reminders"]],
+  ["files", ["claw permissions show files"]],
+  ["location", ["claw permissions show location"]],
+  ["microphone", ["claw stt", "claw tts"]],
+  ["speech", ["claw stt", "claw tts"]],
+  ["stt", ["claw speech", "claw microphone"]],
+  ["tts", ["claw speech", "claw microphone"]],
+  ["voice-notes", ["claw microphone", "claw speech"]],
+]);
+
 function readRequired(relativePath) {
   const fullPath = path.join(rootDir, relativePath);
   if (!fs.existsSync(fullPath)) fail(`missing required file ${relativePath}`);
@@ -195,7 +213,7 @@ for (const snippet of ["Mac Action Broker", "Mac Permission Broker", "Related su
 }
 
 const macDocs = readRequired("docs/mac-control-plane.md");
-for (const snippet of ["Related surfaces", "mac.directCliAction", "mac.permissionLifecycle", "claw permissions", "MAC_PROGRAMMATIC_SURFACES", "mac.execute", "/v1/mac/execute", "claw.mac.execute", "docs/mac-native-legacy-audit.md"]) {
+for (const snippet of ["Related surfaces", "mac.directCliAction", "mac.permissionLifecycle", "claw permissions", "MAC_PROGRAMMATIC_SURFACES", "mac.execute", "/v1/mac/execute", "claw.mac.execute", "docs/mac-native-legacy-audit.md", "stt", "tts", "voice-notes"]) {
   requireNormalizedText("Mac Control Plane docs", macDocs, snippet);
 }
 
@@ -240,6 +258,14 @@ const roots = new Set(MAC_CONTROL_COMMAND_ROOTS.map((entry) => entry.root));
 for (const root of requiredRoots) {
   if (!roots.has(root)) fail(`missing Mac command root ${root}`);
   if (!resolveClawCliCommand(root)) fail(`missing CLI registry command ${root}`);
+}
+
+for (const [command, relatedSurfaces] of requiredRelatedSurfaceHelp) {
+  const entry = resolveClawCliCommand(command);
+  if (!entry) fail(`missing CLI registry command ${command}`);
+  for (const related of relatedSurfaces) {
+    if (!entry.relatedSurfaces?.includes(related)) fail(`missing related surface ${related} on ${command}`);
+  }
 }
 
 const executable = new Set(MAC_CAPABILITY_ATLAS
