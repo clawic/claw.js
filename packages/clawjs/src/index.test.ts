@@ -1093,7 +1093,7 @@ test("runCli browser commands target relay browser routes", async () => {
   }
 });
 
-test("runCli supports temporal domain commands and hidden legacy aliases", async () => {
+test("runCli supports temporal domain commands and schedule shortcut", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-time-"));
   const built = buildTimeApp({
     config: {
@@ -1263,22 +1263,22 @@ test("runCli supports temporal domain commands and hidden legacy aliases", async
     assert.equal(listExitCode, CLI_EXIT_OK);
     assert.match(listStdout.getOutput(), /review PRs/);
 
-    const legacyScheduleStdout = captureStream();
-    const legacyScheduleExitCode = await runCli([
+    const scheduleStdout = captureStream();
+    const scheduleExitCode = await runCli([
       "schedule",
       "every",
       "3h",
-      "legacy deployment check",
+      "scheduled deployment check",
       "--time-url", timeUrl,
       "--workspace", tmpDir,
       "--json",
     ], {
-      stdout: legacyScheduleStdout.stream,
+      stdout: scheduleStdout.stream,
       stderr: captureStream().stream,
       cwd: process.cwd(),
     });
-    assert.equal(legacyScheduleExitCode, CLI_EXIT_OK);
-    assert.match(legacyScheduleStdout.getOutput(), /"kind": "routine"/);
+    assert.equal(scheduleExitCode, CLI_EXIT_OK);
+    assert.match(scheduleStdout.getOutput(), /"kind": "routine"/);
   } finally {
     await built.app.close();
   }

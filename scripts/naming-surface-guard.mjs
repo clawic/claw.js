@@ -270,6 +270,7 @@ for (const relativePath of [
   "packages/clawjs/src/index.test.ts",
   "packages/clawjs/src/cli-discovery.test.ts",
 ]) {
+  forbidSnippet(relativePath, "hidden legacy aliases");
   forbidSnippet(relativePath, "legacy V1 CRUD");
   forbidSnippet(relativePath, "removed public legacy");
   forbidSnippet(relativePath, "legacy namespaces");
