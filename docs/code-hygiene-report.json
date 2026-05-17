@@ -14,13 +14,13 @@
     "unreferencedAssetCandidates": 88
   },
   "knipSummary": {
-    "filesWithIssues": 210,
-    "totalIssues": 1024,
+    "filesWithIssues": 208,
+    "totalIssues": 1003,
     "issueTypes": {
       "unlisted": 2,
-      "types": 203,
-      "owners": 138,
-      "exports": 673,
+      "types": 194,
+      "owners": 136,
+      "exports": 663,
       "duplicates": 8
     }
   },
@@ -55,6 +55,7 @@
     "Dead-file cleanup removed reviewed one-line server stubs, retired CLI bin shims, stale generated configs, and unreferenced helper modules while keeping package surface bins explicitly allowlisted.",
     "Database store-helper cleanup made clearly internal parser, normalizer, regex, and constraint helpers private while keeping the database package contract unchanged.",
     "V1 data core cleanup made session indexing, sidecar schema, TOML rendering, SQL identifier, and text utility helpers private while preserving the v1 data package re-export contract.",
-    "Slides cleanup made manifest helper types, layout/theme constants, and local validation helpers private while preserving the `claw slides` command contract."
+    "Slides cleanup made manifest helper types, layout/theme constants, and local validation helpers private while preserving the `claw slides` command contract.",
+    "Database magic and style schema cleanup removed retired productivity alias helpers and made style-only structural types private while preserving CLI style/template behavior."
   ]
 }

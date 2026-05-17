@@ -1,6 +1,6 @@
 export const STYLE_SCHEMA_VERSION = 1;
 
-export type StyleColorTokens = {
+type StyleColorTokens = {
   bg: string;
   surface: string;
   "surface-2"?: string;
@@ -16,14 +16,14 @@ export type StyleColorTokens = {
   [key: string]: string | undefined;
 };
 
-export interface StyleTypographyStack {
+interface StyleTypographyStack {
   family: string;
   fallback?: string;
   weight?: number;
   source?: "system" | "google" | "local";
 }
 
-export interface StyleTypographyScale {
+interface StyleTypographyScale {
   xs: number;
   sm: number;
   md: number;
@@ -57,7 +57,7 @@ export interface StyleRadiusTokens {
   squircle?: number;
 }
 
-export interface StyleShadowToken {
+interface StyleShadowToken {
   offsetX: number;
   offsetY: number;
   blur: number;
@@ -85,14 +85,14 @@ export interface StyleTokens {
   motion: StyleMotionTokens;
 }
 
-export interface StyleLogoVariant {
+interface StyleLogoVariant {
   variant: "mark" | "wordmark" | "lockup";
   theme: "light" | "dark";
   format: "svg" | "png";
   path: string;
 }
 
-export interface StyleBrand {
+interface StyleBrand {
   logos?: StyleLogoVariant[];
   voice?: string;
   do_dont?: string;
@@ -102,7 +102,7 @@ export interface StyleBrand {
   naming?: string;
 }
 
-export interface StyleImagery {
+interface StyleImagery {
   photography?: string;
   illustration?: string;
   iconography?: string;
@@ -111,7 +111,7 @@ export interface StyleImagery {
   references?: string[];
 }
 
-export type StyleFormat =
+type StyleFormat =
   | "web"
   | "slides"
   | "pdf"
@@ -120,7 +120,7 @@ export type StyleFormat =
   | "email"
   | "motion";
 
-export type StyleOverrides = Partial<Record<StyleFormat, Record<string, unknown>>>;
+type StyleOverrides = Partial<Record<StyleFormat, Record<string, unknown>>>;
 
 export interface StyleManifest {
   schemaVersion: 1;
@@ -137,18 +137,4 @@ export interface StyleManifest {
   createdAt: string;
   updatedAt: string;
   builtin?: boolean;
-}
-
-export const STYLE_FORMATS: StyleFormat[] = [
-  "web",
-  "slides",
-  "pdf",
-  "doc",
-  "social",
-  "email",
-  "motion",
-];
-
-export function isStyleFormat(value: string): value is StyleFormat {
-  return (STYLE_FORMATS as string[]).includes(value);
 }

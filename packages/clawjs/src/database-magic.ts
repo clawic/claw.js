@@ -14,10 +14,10 @@ import { CliHandledError } from "./cli-errors.ts";
 import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 import { openMainDataStore } from "./v1-data.ts";
 
-export const DB_EXIT_OK = 0;
-export const DB_EXIT_FAILURE = 1;
-export const DB_EXIT_DEGRADED = 2;
-export const DB_EXIT_USAGE = 64;
+const DB_EXIT_OK = 0;
+const DB_EXIT_FAILURE = 1;
+const DB_EXIT_DEGRADED = 2;
+const DB_EXIT_USAGE = 64;
 
 type Writable = NodeJS.WritableStream;
 type DbAction = "list" | "get" | "create" | "update" | "delete" | "schema" | "query";
@@ -228,21 +228,6 @@ function parseSetFlags(argv: string[]): Record<string, unknown> {
     index += 1;
   }
   return values;
-}
-
-function extractPositionals(argv: string[]): string[] {
-  const positionals: string[] = [];
-  for (let index = 0; index < argv.length; index += 1) {
-    const token = argv[index];
-    if (!token?.startsWith("--")) {
-      positionals.push(token);
-      continue;
-    }
-    if (token.includes("=")) continue;
-    const next = argv[index + 1];
-    if (next && !next.startsWith("--")) index += 1;
-  }
-  return positionals;
 }
 
 function parseLooseValue(rawValue: string): unknown {
@@ -867,98 +852,4 @@ export async function runMagicDbCli(input: {
     writeDbError(input, message.includes("JSON") ? "invalid_json" : "internal_error", message, DB_EXIT_FAILURE, dbJsonMeta(input, collectionName, action));
     return DB_EXIT_FAILURE;
   }
-}
-
-function translateProductivityArgs(group: string, command: string, subcommand: string | undefined, flags: Record<string, string>, argv: string[]): string[] | null {
-  switch (group) {
-    case "tasks":
-      if (command === "complete") {
-        const id = subcommand || flags.id;
-        return id ? ["db", "tasks", "update", id, "--set", "status=done"] : null;
-      }
-      break;
-    case "reminders":
-    case "deadlines":
-      if (command === "pause" || command === "resume") {
-        const id = subcommand || flags.id;
-        const status = command === "pause" ? "paused" : "active";
-        return id ? ["db", group, "update", id, "--set", `status=${status}`] : null;
-      }
-      break;
-    case "people":
-      if (command === "upsert") {
-        return subcommand ? ["db", "people", "create", subcommand] : ["db", "people", "create"];
-      }
-      break;
-    default:
-      break;
-  }
-
-  if (!["list", "get", "create", "update", "delete"].includes(command)) return null;
-  const args = ["db", group, command];
-  if (subcommand) args.push(subcommand);
-
-  for (const [flag, value] of Object.entries(flags)) {
-    if (flag === "json") continue;
-    if (flag === "workspace" || flag === "workspace-id" || flag === "agent-id" || flag === "app-id") continue;
-    args.push(`--${flag}`, value);
-  }
-
-  for (let index = 0; index < argv.length; index += 1) {
-    if (argv[index] !== "--set") continue;
-    const pair = argv[index + 1];
-    if (!pair) continue;
-    args.push("--set", pair);
-    index += 1;
-  }
-  return args;
-}
-
-export async function runProductivityDbAlias(input: {
-  group: string;
-  command: string;
-  subcommand?: string;
-  argv: string[];
-  flags: Record<string, string>;
-  workspaceRoot: string;
-  stdout: Writable;
-  stderr: Writable;
-  wantsJson: boolean;
-}): Promise<number | null> {
-  const translated = translateProductivityArgs(input.group, input.command, input.subcommand, input.flags, input.argv);
-  if (!translated) return null;
-  return await runMagicDbCli({
-    argv: translated,
-    positionals: extractPositionals(translated),
-    flags: input.flags,
-    workspaceRoot: input.workspaceRoot,
-    stdout: input.stdout,
-    stderr: input.stderr,
-    wantsJson: input.wantsJson,
-    binName: "claw",
-  });
-}
-
-export function isProductivityDbAliasGroup(group: string): boolean {
-  return [
-    "tasks",
-    "goals",
-    "projects",
-    "reminders",
-    "deadlines",
-    "notes",
-    "people",
-    "events",
-  ].includes(group);
-}
-
-export function productivityDbAliasSupports(group: string, command: string): boolean {
-  if (group === "tasks" && command === "complete") return true;
-  if ((group === "reminders" || group === "deadlines") && (command === "pause" || command === "resume")) return true;
-  if (group === "people" && command === "upsert") return true;
-  return ["list", "get", "create", "update", "delete"].includes(command);
-}
-
-export function isDbMagicIncludeArchived(argv: string[], flags: Record<string, string>): boolean {
-  return readBooleanFlag(argv, flags, "include-archived", false);
 }
