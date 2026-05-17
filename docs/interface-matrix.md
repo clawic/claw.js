@@ -138,7 +138,7 @@ The Relay also exposes equivalent project-scoped routes under:
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Database service lifecycle | Clawix database/workbench status | `DatabaseApiClient` | `claw database serve|login` | database service app and auth routes | diagnostics resources only | `local-only` | host-local service paths and audit |
 | Namespace and collection admin | Clawix database browser | `DatabaseApiClient` schema APIs | `claw database namespace|collection` | database schema routes | schema resources | `local-only` | framework schema registry |
-| Record CRUD and query | Clawix database browser and workbench | `DatabaseApiClient` record APIs | `claw database record`, `claw db <collection> list|get|create|update|delete|schema|query` | database record/query routes | collection resources and safe query tools | `local-only` until remote data policy is approved | `core.sqlite` collection records |
+| Record CRUD and query | Clawix database browser and workbench | `DatabaseApiClient` record APIs | `claw database record`, `claw db {collection} list|get|create|update|delete|schema|query` | database record/query routes | collection resources and safe query tools | `local-only` until remote data policy is approved | `core.sqlite` collection records |
 | File, token, and backup policy | Clawix approval/status views | `DatabaseApiClient` scoped token/file APIs | `claw database token|file` | database token/file routes | diagnostics resources only | `blocked` for remote mutation without host policy | scoped token refs, backup/import/export metadata |
 
 ### Index Search
