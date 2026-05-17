@@ -379,6 +379,8 @@ test("CLI command registry is the source for stable CLI surface nodes", () => {
   assert.equal(clawCliCommandRegistry.commands.find((entry) => entry.name === "calendar")?.securityPolicy, "local_write");
   assert.equal(clawCliCommandRegistry.commands.find((entry) => entry.name === "calendar")?.usage, "calendar create|list|get|update|delete");
   assert.equal(clawCliCommandRegistry.commands.find((entry) => entry.name === "calendar")?.source?.symbol, "runV1DataCli");
+  assert.equal(clawCliCommandRegistry.commands.find((entry) => entry.name === "content")?.usage, "content brand|destination|campaign|entry|approval|publish");
+  assert.equal(clawCliCommandRegistry.commands.find((entry) => entry.name === "content")?.source?.symbol, "runDelegatedContentCli");
   assert.equal(clawCliCommandRegistry.commands.find((entry) => entry.name === "images")?.support.state, "cost_risk");
 
   const cliNodes = clawPersistentSurfaceRegistry.nodes.filter((node) => node.kind === "cliCommand").map((node) => node.value).sort();

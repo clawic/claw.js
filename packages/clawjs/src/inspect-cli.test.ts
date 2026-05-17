@@ -175,6 +175,7 @@ test("runCli exposes CLI aliases and decision sources through inspect", async ()
   assert.equal(commandPayload.commands.some((entry) => entry.name === "snippets" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
   assert.equal(commandPayload.commands.some((entry) => entry.name === "audio" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
   assert.equal(commandPayload.commands.some((entry) => entry.name === "calendar" && entry.support.state === "supported" && entry.securityPolicy === "local_write" && entry.usage === "calendar create|list|get|update|delete" && entry.source?.symbol === "runV1DataCli"), true);
+  assert.equal(commandPayload.commands.some((entry) => entry.name === "content" && entry.support.state === "supported" && entry.securityPolicy === "local_write" && entry.usage === "content brand|destination|campaign|entry|approval|publish" && entry.source?.symbol === "runDelegatedContentCli"), true);
   assert.equal(commandPayload.commands.some((entry) => entry.name === "images" && entry.support.state === "cost_risk"), true);
 
   const aliases = await runCliCapture(["inspect", "aliases", "--json"], process.cwd());
