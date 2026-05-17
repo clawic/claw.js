@@ -67,6 +67,7 @@ Search V1.1 is built from these layers:
 - `claw search monitors`
 - `claw search actions`
 - `claw search actions execute <result-id> <action-id>`
+- `claw search audit`
 - `claw search profiles`
 - `claw search explain`
 
@@ -78,6 +79,11 @@ switches scope.
 Scoped rebuilds clear only the selected source's derived rows before refreshing
 it. A generation, media, code, or document backfill must not wipe conversations,
 commands, or any other section-specific fast path.
+
+Search audit events are derived index metadata stored in `search.sqlite`.
+Sensitive queries and action execution attempts are recorded with compact
+context so admin/debug surfaces can inspect risky search usage without mutating
+canonical application records.
 
 ## Consequences
 

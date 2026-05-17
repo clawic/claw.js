@@ -78,6 +78,8 @@ claw search monitors create monitor-recent --saved-search recent --json
 claw search actions <result-id> --json
 claw search actions execute <result-id> <action-id> --dry-run --json
 claw search actions execute <result-id> <action-id> --host-approval-id <id> --json
+claw search audit --json
+claw search audit --type action --limit 20 --json
 claw search profiles --json
 claw search explain "text" --json
 ```
@@ -134,6 +136,12 @@ required but no `--host-approval-id` is provided, and returns a brokered receipt
 when the signed host supplies an approval id. The CLI does not perform native UI
 or provider side effects directly.
 
+Search writes audit events into `search.sqlite` for action execution attempts
+and sensitive queries. A query is audited when it asks for sensitive material
+or returns redacted results. Action audit entries include source, domain, result
+id, action id, risk, grant, approval status, and compact metadata. `claw search
+audit` lists those derived records for admin/debug surfaces.
+
 ## Implementation Plan
 
 ### Phase 1: Core and chats fast path
@@ -182,7 +190,7 @@ Required validation for Search work:
   redaction, actions, permissions, tombstones, cursors, rebuild, and timeout
   behavior;
 - CLI integration tests for `query`, `sources`, `status`, `rebuild`, `saved`,
-  `monitors`, `actions`, `profiles`, and `explain`;
+  `monitors`, `actions`, `audit`, `profiles`, and `explain`;
 - Clawix Search/`Command-G` conversations-only regression tests;
 - performance tests for 50 ms hot path and 200 ms Root Search first batch;
 - `npm run search:scale-lab -- --items 1000000 --json` and

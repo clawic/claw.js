@@ -75,6 +75,19 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(systemResult?.actions?.some((action) => action.id === "help" && action.kind === "run"), true);
     assert.ok(systemResult?.explanation?.matchedBy?.length);
 
+    const sensitiveQuery = await runCliCapture(["search", "query", "secret token", "--data-dir", dataRoot, "--json", "--actor", "agent:codex", "--surface", "cli"], workspaceRoot);
+    assert.equal(sensitiveQuery.code, CLI_EXIT_DEGRADED);
+    const sensitiveAudit = await runCliCapture(["search", "audit", "--type", "sensitive_query", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(sensitiveAudit.code, CLI_EXIT_OK);
+    const sensitiveAuditPayload = JSON.parse(sensitiveAudit.stdout) as {
+      data: { items: Array<{ type: string; query?: string; actor?: string; surface?: string; reason?: string }> };
+    };
+    assert.equal(sensitiveAuditPayload.data.items[0]?.type, "sensitive_query");
+    assert.equal(sensitiveAuditPayload.data.items[0]?.query, "secret token");
+    assert.equal(sensitiveAuditPayload.data.items[0]?.actor, "agent:codex");
+    assert.equal(sensitiveAuditPayload.data.items[0]?.surface, "cli");
+    assert.equal(sensitiveAuditPayload.data.items[0]?.reason, "sensitive_query_or_redacted_result");
+
     const actions = await runCliCapture(["search", "actions", "commands:system", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(actions.code, CLI_EXIT_OK);
     const actionsPayload = JSON.parse(actions.stdout) as {
@@ -126,6 +139,18 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(actionBlockedPayload.meta.brokeredPlan?.status, "blocked");
     assert.equal(actionBlockedPayload.meta.brokeredPlan?.reasons.includes("host_approval_required"), true);
 
+    const actionAudit = await runCliCapture(["search", "audit", "--type", "action", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(actionAudit.code, CLI_EXIT_OK);
+    const actionAuditPayload = JSON.parse(actionAudit.stdout) as {
+      data: { items: Array<{ type: string; resultId?: string; actionId?: string; status?: string; grant?: string; risk?: string }> };
+    };
+    assert.equal(actionAuditPayload.data.items[0]?.type, "action");
+    assert.equal(actionAuditPayload.data.items[0]?.resultId, "commands:system");
+    assert.equal(actionAuditPayload.data.items[0]?.actionId, "help");
+    assert.equal(actionAuditPayload.data.items[0]?.status, "blocked");
+    assert.equal(actionAuditPayload.data.items[0]?.grant, "search.commands.run");
+    assert.equal(actionAuditPayload.data.items[0]?.risk, "system");
+
     const actionBrokered = await runCliCapture(["search", "actions", "execute", "commands:system", "help", "--host-approval-id", "approval_search_help", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(actionBrokered.code, CLI_EXIT_OK);
     const actionBrokeredPayload = JSON.parse(actionBrokered.stdout) as {
@@ -134,6 +159,28 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(actionBrokeredPayload.data.plan.status, "brokered");
     assert.equal(actionBrokeredPayload.data.plan.hostApprovalId, "approval_search_help");
     assert.equal(actionBrokeredPayload.data.plan.broker.sideEffects, "host_brokered");
+
+    const privateTokenQuery = await runCliCapture(["search", "query", "private token", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(privateTokenQuery.code, CLI_EXIT_DEGRADED);
+
+    const audit = await runCliCapture(["search", "audit", "--data-dir", dataRoot, "--json", "--limit", "10"], workspaceRoot);
+    assert.equal(audit.code, CLI_EXIT_OK);
+    const auditPayload = JSON.parse(audit.stdout) as {
+      data: {
+        items: Array<{
+          type: string;
+          query?: string;
+          resultId?: string;
+          actionId?: string;
+          status?: string;
+          risk?: string;
+          grant?: string;
+          metadata?: { hostApprovalId?: string };
+        }>;
+      };
+    };
+    assert.equal(auditPayload.data.items.some((item) => item.type === "sensitive_query" && item.query === "private token"), true);
+    assert.equal(auditPayload.data.items.some((item) => item.type === "action" && item.resultId === "commands:system" && item.actionId === "help" && item.status === "brokered" && item.risk === "system" && item.grant === "search.commands.run" && item.metadata?.hostApprovalId === "approval_search_help"), true);
 
     const status = await runCliCapture(["search", "status", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(status.code, CLI_EXIT_OK);

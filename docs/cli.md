@@ -548,6 +548,7 @@ claw search profiles --json
 claw search saved list --json
 claw search monitors list --json
 claw search actions --json
+claw search audit --json
 claw search explain "release branch" --json
 claw search rebuild --json
 claw inspect codebase --json

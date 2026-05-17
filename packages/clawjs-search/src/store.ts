@@ -79,6 +79,30 @@ export interface SearchTombstone {
   reason?: string;
 }
 
+export type SearchAuditEventType = "sensitive_query" | "action";
+
+export interface SearchAuditEventInput {
+  type: SearchAuditEventType;
+  actor?: string;
+  surface?: string;
+  query?: string;
+  source?: string;
+  domain?: string;
+  resultId?: string;
+  actionId?: string;
+  status?: string;
+  risk?: string;
+  grant?: string;
+  reason?: string;
+  metadata?: Record<string, unknown>;
+  createdAt?: string;
+}
+
+export interface SearchAuditEvent extends SearchAuditEventInput {
+  id: string;
+  createdAt: string;
+}
+
 export class SearchStore {
   readonly db: Database.Database;
 
@@ -409,6 +433,68 @@ export class SearchStore {
     }));
   }
 
+  recordAuditEvent(input: SearchAuditEventInput): SearchAuditEvent {
+    const createdAt = input.createdAt ?? new Date().toISOString();
+    const id = `audit:${createdAt}:${Math.random().toString(36).slice(2, 10)}`;
+    this.db.prepare(`
+      INSERT INTO search_audit_events (
+        id, type, actor, surface, query, source, domain, result_id, action_id,
+        status, risk, grant_id, reason, metadata_json, created_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      id,
+      input.type,
+      input.actor ?? null,
+      input.surface ?? null,
+      input.query ?? null,
+      input.source ?? null,
+      input.domain ?? null,
+      input.resultId ?? null,
+      input.actionId ?? null,
+      input.status ?? null,
+      input.risk ?? null,
+      input.grant ?? null,
+      input.reason ?? null,
+      JSON.stringify(input.metadata ?? {}),
+      createdAt,
+    );
+    return { ...input, id, createdAt };
+  }
+
+  listAuditEvents(input: { limit?: number; type?: SearchAuditEventType } = {}): SearchAuditEvent[] {
+    const limit = Math.max(1, Math.min(200, input.limit ?? 50));
+    const rows = input.type
+      ? this.db.prepare(`
+        SELECT * FROM search_audit_events
+        WHERE type = ?
+        ORDER BY created_at DESC, id DESC
+        LIMIT ?
+      `).all(input.type, limit) as SearchAuditEventRow[]
+      : this.db.prepare(`
+        SELECT * FROM search_audit_events
+        ORDER BY created_at DESC, id DESC
+        LIMIT ?
+      `).all(limit) as SearchAuditEventRow[];
+    return rows.map((row) => ({
+      id: row.id,
+      type: row.type,
+      ...(row.actor ? { actor: row.actor } : {}),
+      ...(row.surface ? { surface: row.surface } : {}),
+      ...(row.query ? { query: row.query } : {}),
+      ...(row.source ? { source: row.source } : {}),
+      ...(row.domain ? { domain: row.domain } : {}),
+      ...(row.result_id ? { resultId: row.result_id } : {}),
+      ...(row.action_id ? { actionId: row.action_id } : {}),
+      ...(row.status ? { status: row.status } : {}),
+      ...(row.risk ? { risk: row.risk } : {}),
+      ...(row.grant_id ? { grant: row.grant_id } : {}),
+      ...(row.reason ? { reason: row.reason } : {}),
+      metadata: parseJson(row.metadata_json),
+      createdAt: row.created_at,
+    }));
+  }
+
   actionsForResult(resultId: string): SearchAction[] {
     return (this.db.prepare("SELECT action_json FROM search_actions WHERE document_id = ? ORDER BY action_id ASC").all(resultId) as Array<{ action_json: string }>)
       .map((action) => parseJson<SearchAction>(action.action_json));
@@ -592,6 +678,24 @@ interface SearchMonitorRow {
   updated_at: string;
 }
 
+interface SearchAuditEventRow {
+  id: string;
+  type: SearchAuditEventType;
+  actor: string | null;
+  surface: string | null;
+  query: string | null;
+  source: string | null;
+  domain: string | null;
+  result_id: string | null;
+  action_id: string | null;
+  status: string | null;
+  risk: string | null;
+  grant_id: string | null;
+  reason: string | null;
+  metadata_json: string;
+  created_at: string;
+}
+
 function parseJson<T = Record<string, unknown>>(value: string | null | undefined): T {
   if (!value) return {} as T;
   return JSON.parse(value) as T;
@@ -771,6 +875,26 @@ CREATE TABLE IF NOT EXISTS search_monitors (
 );
 CREATE INDEX IF NOT EXISTS search_monitors_saved_search_idx ON search_monitors(saved_search_id, enabled);
 
+CREATE TABLE IF NOT EXISTS search_audit_events (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL,
+  actor TEXT,
+  surface TEXT,
+  query TEXT,
+  source TEXT,
+  domain TEXT,
+  result_id TEXT,
+  action_id TEXT,
+  status TEXT,
+  risk TEXT,
+  grant_id TEXT,
+  reason TEXT,
+  metadata_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS search_audit_events_type_idx ON search_audit_events(type, created_at DESC);
+CREATE INDEX IF NOT EXISTS search_audit_events_actor_idx ON search_audit_events(actor, created_at DESC);
+
 CREATE TABLE IF NOT EXISTS search_vectors (
   document_id TEXT NOT NULL REFERENCES search_documents(id) ON DELETE CASCADE,
   fragment_id TEXT,
@@ -803,6 +927,7 @@ const SEARCH_RESET_SQL = String.raw`
 DROP TABLE IF EXISTS search_fts;
 DROP TABLE IF EXISTS search_ranking_cache;
 DROP TABLE IF EXISTS search_vectors;
+DROP TABLE IF EXISTS search_audit_events;
 DROP TABLE IF EXISTS search_monitors;
 DROP TABLE IF EXISTS saved_searches;
 DROP TABLE IF EXISTS search_tombstones;

@@ -31,7 +31,7 @@ import { ensureImagesDerivedSourceIndexed, ensureMediaAssetsSourceIndexed } from
 import { pathSafeBasename, resolveRuntimeAdapterId } from "./cli-runtime-utils.ts";
 import { resolveClawjsDataRoot, resolveClawjsMainDbPath } from "./v1-data.ts";
 
-const SEARCH_ADMIN_COMMANDS = new Set(["sources", "status", "profiles", "saved", "monitors", "actions", "explain"]);
+const SEARCH_ADMIN_COMMANDS = new Set(["sources", "status", "profiles", "saved", "monitors", "actions", "audit", "explain"]);
 const WORKSPACE_SEARCH_DOMAINS = new Set([
   "areas",
   "tasks",
@@ -175,17 +175,34 @@ export async function runSearchQueryCli(input: {
     const indexedMedia = shouldRefreshMedia && sourceCanIndex(store, "media.assets") ? ensureMediaAssetsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedGenerations = shouldRefreshGenerations && sourceCanIndex(store, "generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedCode = shouldRefreshCode && sourceCanIndex(store, "code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const filters = parseSearchFiltersFlag(input.flags.filters ?? input.flags.filter);
     const results = store.query({
       query,
       profile: input.flags.profile === "full" ? "full" : "framework",
       domains,
       sources,
-      filters: parseSearchFiltersFlag(input.flags.filters ?? input.flags.filter),
+      filters,
       limit: input.flags.limit ? Number(input.flags.limit) : undefined,
       explain: input.flags.explain === "true" || input.flags.explain === "1",
       surface: input.flags.surface,
       actor: input.flags.actor,
     });
+    if (searchQueryRequiresAudit(query, results.results, filters)) {
+      store.recordAuditEvent({
+        type: "sensitive_query",
+        actor: input.flags.actor,
+        surface: input.flags.surface,
+        query,
+        reason: "sensitive_query_or_redacted_result",
+        metadata: {
+          profile: input.flags.profile === "full" ? "full" : "framework",
+          domains: domains ?? [],
+          sources: sources ?? [],
+          resultCount: results.results.length,
+          redactedResultCount: results.results.filter((result) => result.permissions?.redacted).length,
+        },
+      });
+    }
     const data = {
       ...results,
       storage: searchStorageMetadata(input.flags),
@@ -491,6 +508,24 @@ export async function runSearchAdminCli(input: {
     return CLI_EXIT_OK;
   }
 
+  if (command === "audit") {
+    const store = openCliSearchStore(input.flags);
+    let items: ReturnType<SearchStore["listAuditEvents"]>;
+    try {
+      registerBuiltinSources(store);
+      items = store.listAuditEvents({
+        limit: input.flags.limit ? Number(input.flags.limit) : undefined,
+        type: input.flags.type === "action" || input.flags.type === "sensitive_query" ? input.flags.type : undefined,
+      });
+    } finally {
+      store.close();
+    }
+    const data = { items, state: items.length ? "ready" : "empty" };
+    if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "audit" });
+    else input.context.stdout.write(`${items.map((item) => `${item.createdAt}\t${item.type}\t${item.source ?? ""}\t${item.resultId ?? ""}\t${item.status ?? ""}`).join("\n")}\n`);
+    return CLI_EXIT_OK;
+  }
+
   if (command === "actions") {
     if (input.positionals[2] === "execute") {
       return runSearchActionExecuteCli(input);
@@ -557,47 +592,69 @@ function runSearchActionExecuteCli(input: {
     return CLI_EXIT_USAGE;
   }
 
+  const dryRun = readBooleanFlag(input.argv, input.flags, "dry-run", false);
+  const hostApprovalId = input.flags["host-approval-id"] || input.flags["approval-id"];
   const store = openCliSearchStore(input.flags);
-  let result: SearchResult | null;
-  let actions: SearchAction[];
+  let plan: SearchActionExecutionPlan | undefined;
   try {
     registerBuiltinSources(store);
-    result = store.resultForId(resultId);
-    actions = store.actionsForResult(resultId);
+    const result = store.resultForId(resultId);
+    const action = store.actionsForResult(resultId).find((candidate) => candidate.id === actionId);
+    if (!result || !action) {
+      store.recordAuditEvent({
+        type: "action",
+        actor: input.flags.actor,
+        surface: input.flags.surface,
+        resultId,
+        actionId,
+        status: "not_found",
+        reason: "search_action_not_found",
+      });
+      const error = new CliHandledError("search_action_not_found", `Search action not found: ${resultId} ${actionId}`, CLI_EXIT_FAILURE);
+      if (input.wantsJson) writeCommandJsonError(input.context.stdout, "search", error, { subcommand: "actions.execute" });
+      else input.context.stderr.write(`${error.message}\n`);
+      return error.exitCode;
+    }
+
+    plan = searchActionExecutionPlan({
+      result,
+      action,
+      dryRun,
+      hostApprovalId,
+      actor: input.flags.actor,
+      surface: input.flags.surface,
+    });
+    store.recordAuditEvent({
+      type: "action",
+      actor: input.flags.actor,
+      surface: input.flags.surface,
+      source: result.source,
+      domain: result.domain,
+      resultId,
+      actionId,
+      status: plan.status,
+      risk: plan.risk,
+      grant: plan.grant,
+      reason: plan.reasons.join(","),
+      metadata: { dryRun, requiresApproval: plan.requiresApproval, hostApprovalId: hostApprovalId ?? null },
+    });
+    if (!dryRun && plan.requiresApproval && !hostApprovalId) {
+      const error = new CliHandledError("host_approval_required", "Search action execution requires --host-approval-id from the signed host approval flow, or --dry-run for a brokered preview.", CLI_EXIT_FAILURE);
+      if (input.wantsJson) {
+        writeCommandJsonError(input.context.stdout, "search", error, {
+          subcommand: "actions.execute",
+          brokeredPlan: plan,
+        });
+      } else {
+        input.context.stderr.write(`${error.message}\n`);
+      }
+      return error.exitCode;
+    }
   } finally {
     store.close();
   }
-  const action = actions.find((candidate) => candidate.id === actionId);
-  if (!result || !action) {
-    const error = new CliHandledError("search_action_not_found", `Search action not found: ${resultId} ${actionId}`, CLI_EXIT_FAILURE);
-    if (input.wantsJson) writeCommandJsonError(input.context.stdout, "search", error, { subcommand: "actions.execute" });
-    else input.context.stderr.write(`${error.message}\n`);
-    return error.exitCode;
-  }
 
-  const dryRun = readBooleanFlag(input.argv, input.flags, "dry-run", false);
-  const hostApprovalId = input.flags["host-approval-id"] || input.flags["approval-id"];
-  const plan = searchActionExecutionPlan({
-    result,
-    action,
-    dryRun,
-    hostApprovalId,
-    actor: input.flags.actor,
-    surface: input.flags.surface,
-  });
-  if (!dryRun && plan.requiresApproval && !hostApprovalId) {
-    const error = new CliHandledError("host_approval_required", "Search action execution requires --host-approval-id from the signed host approval flow, or --dry-run for a brokered preview.", CLI_EXIT_FAILURE);
-    if (input.wantsJson) {
-      writeCommandJsonError(input.context.stdout, "search", error, {
-        subcommand: "actions.execute",
-        brokeredPlan: plan,
-      });
-    } else {
-      input.context.stderr.write(`${error.message}\n`);
-    }
-    return error.exitCode;
-  }
-
+  if (!plan) return CLI_EXIT_FAILURE;
   if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", { plan }, { subcommand: "actions.execute" });
   else input.context.stdout.write(`${plan.status}\t${plan.resultId}\t${plan.actionId}\t${plan.grant}\n`);
   return CLI_EXIT_OK;
@@ -1546,6 +1603,12 @@ function parseSearchFiltersFlag(value: string | undefined): Record<string, unkno
     filters[key] = parseFilterValue(text);
   }
   return Object.keys(filters).length ? filters : undefined;
+}
+
+function searchQueryRequiresAudit(query: string, results: SearchResult[], filters: Record<string, unknown> | undefined): boolean {
+  if (results.some((result) => result.permissions?.redacted)) return true;
+  if (filters?.redacted === true || filters?.canPreview === false) return true;
+  return /\b(secret|private|restricted|sensitive|token|password|credential)\b/i.test(query);
 }
 
 function parseFilterValue(value: string): unknown {

@@ -87,7 +87,7 @@ test("lexical scoring distinguishes exact, prefix, fts and fuzzy matches", () =>
   assert.equal(DEFAULT_SEARCH_BUDGETS.globalFirstBatchMs, 200);
 });
 
-test("SearchStore persists sources, fragments, FTS documents, actions, cursors, tombstones, saved searches and monitors", () => {
+test("SearchStore persists sources, fragments, FTS documents, actions, cursors, tombstones, saved searches, monitors and audit events", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-store-"));
   const store = new SearchStore(path.join(dir, "search.sqlite"));
   try {
@@ -159,6 +159,43 @@ test("SearchStore persists sources, fragments, FTS documents, actions, cursors, 
     assert.equal(store.listSavedSearches().at(0)?.name, "Chats about Search");
     store.saveMonitor({ id: "monitor_1", savedSearchId: "saved_1", name: "Search monitor", cadence: "hourly" });
     assert.equal(store.listMonitors().at(0)?.enabled, true);
+
+    const sensitiveQuery = store.recordAuditEvent({
+      type: "sensitive_query",
+      actor: "agent:codex",
+      surface: "cli",
+      query: "secret token",
+      source: "sessions.chats",
+      domain: "sessions",
+      reason: "redacted preview",
+      metadata: { resultCount: 1 },
+      createdAt: "2026-05-17T10:02:00.000Z",
+    });
+    store.recordAuditEvent({
+      type: "action",
+      actor: "agent:codex",
+      surface: "cli",
+      resultId: "sessions:chat_1",
+      actionId: "open",
+      status: "planned",
+      risk: "read",
+      grant: "search.result.open",
+      createdAt: "2026-05-17T10:03:00.000Z",
+    });
+    assert.equal(sensitiveQuery.id.startsWith("audit:2026-05-17T10:02:00.000Z:"), true);
+    assert.deepEqual(store.listAuditEvents({ type: "sensitive_query" }).at(0), {
+      id: sensitiveQuery.id,
+      type: "sensitive_query",
+      actor: "agent:codex",
+      surface: "cli",
+      query: "secret token",
+      source: "sessions.chats",
+      domain: "sessions",
+      reason: "redacted preview",
+      metadata: { resultCount: 1 },
+      createdAt: "2026-05-17T10:02:00.000Z",
+    });
+    assert.equal(store.listAuditEvents().at(0)?.type, "action");
 
     const tombstone = store.tombstone({ source: "sessions.chats", resourceId: "chat_1", reason: "deleted upstream" });
     assert.equal(tombstone.source, "sessions.chats");
