@@ -4,7 +4,7 @@ export const INVENTORY_ITEMS: BuiltinCollectionDefinition = {
   name: "inventory_items",
   displayName: "Inventory Items",
   family: "warehouse",
-  aliases: ["inventory-item", "inventory-items", "stock-item", "stock-items", "warehouse-inventory", "warehouse-stock"],
+  aliases: ["inventory_items", "inventory-item", "inventory-items", "stock-item", "stock-items", "warehouse-inventory", "warehouse-stock"],
   catalog: {
     purpose: "Stock position center for product/service inventory in a warehouse, quantities, status, evidence, and gaps.",
     evidence: ["human_recognizable", "market_validated", "multi_domain_reuse", "agent_useful"],

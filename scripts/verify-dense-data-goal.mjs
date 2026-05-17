@@ -47,6 +47,7 @@ const requiredFirstWaveSystems = [
   "insurance",
   "maintenance",
   "procurement",
+  "warehouse",
 ];
 
 const requiredFoundationMappings = {
@@ -95,6 +96,9 @@ const requiredFixtureCoverage = [
   "supplier",
   "purchase_order",
   "purchase_order_line_item",
+  "warehouse",
+  "inventory_item",
+  "stock_movement",
   "invoice",
   "invoice_company",
   "incident",
@@ -160,6 +164,8 @@ const requiredPluralIntentPhrases = [
   ["claw vehicles list", "vehicles"],
   ["claw suppliers list", "suppliers"],
   ["claw purchase-orders list", "purchase_orders"],
+  ["claw warehouses list", "warehouses"],
+  ["claw inventory-items list", "inventory_items"],
 ];
 
 const failures = [];
@@ -268,6 +274,9 @@ for (const phrase of [
   "claw supplier supplier_123 purchase-orders add",
   "claw purchase-order purchase_order_123 line-items add",
   "claw purchase-order purchase_order_123 timeline",
+  "claw warehouse warehouse_123 inventory-items add",
+  "claw inventory-item inventory_item_123 stock-movements add",
+  "claw warehouse warehouse_123 timeline",
   "claw company company_123 timeline",
   "claw asset asset_123 timeline",
   "claw work-order work_order_123 timeline",
@@ -437,6 +446,9 @@ if (!semanticViews.some((entry) => entry.id === "vehicle.timeline" && entry.syst
 }
 if (!semanticViews.some((entry) => entry.id === "purchase_order.timeline" && entry.systemId === "procurement")) {
   fail("semantic views must include purchase_order.timeline");
+}
+if (!semanticViews.some((entry) => entry.id === "warehouse.timeline" && entry.systemId === "warehouse")) {
+  fail("semantic views must include warehouse.timeline");
 }
 if (!semanticViews.some((entry) => entry.id === "work_order.timeline" && entry.systemId === "manufacturing")) {
   fail("semantic views must include work_order.timeline");

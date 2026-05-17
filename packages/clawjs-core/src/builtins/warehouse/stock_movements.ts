@@ -4,7 +4,7 @@ export const STOCK_MOVEMENTS: BuiltinCollectionDefinition = {
   name: "stock_movements",
   displayName: "Stock Movements",
   family: "warehouse",
-  aliases: ["stock-movement", "stock-movements", "inventory-movement", "inventory-movements"],
+  aliases: ["stock_movements", "stock-movement", "stock-movements", "inventory-movement", "inventory-movements"],
   catalog: {
     purpose: "Inventory movement center for receipts, issues, adjustments, transfers, counts, returns, evidence, and gaps.",
     evidence: ["human_recognizable", "market_validated", "multi_domain_reuse", "agent_useful"],
