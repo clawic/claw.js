@@ -7,7 +7,7 @@ import type Database from "better-sqlite3";
 import { DatabaseServiceStore } from "@clawjs/database";
 import { runAgentsCommand, runConnectionsCommand, runPersonalitiesCommand, runSkillCollectionsCommand } from "./v1-data-agent-entities.ts";
 import { runProviderRoutingCommand, runSnippetsCommand } from "./v1-data-agent-config.ts";
-import { scheduleCalendarEventsSearchEvent, scheduleKnowledgeGraphSearchEvent, scheduleMcpServersSearchEvent, scheduleNotesPagesSearchEvent, scheduleRuntimeEventsSearchEvent, scheduleSignalsObservationsSearchEvent, scheduleSkillsRegistrySearchEvent } from "./cli-search-events.ts";
+import { scheduleAppsCatalogSearchEvent, scheduleCalendarEventsSearchEvent, scheduleDesignResourcesSearchEvent, scheduleKnowledgeGraphSearchEvent, scheduleMcpServersSearchEvent, scheduleNotesPagesSearchEvent, scheduleRuntimeEventsSearchEvent, scheduleSignalsObservationsSearchEvent, scheduleSkillsRegistrySearchEvent } from "./cli-search-events.ts";
 export {
   openMainDataStore,
   resolveClawjsDataRoot,
@@ -1767,6 +1767,12 @@ function runAppsCommand(input: V1DataCliInput, store: DatabaseServiceStore): num
       now,
       now,
     );
+    scheduleAppsCatalogSearchEvent({
+      operation: "upsert",
+      appId: input.flags.id || `app-${slug}`,
+      dataDir: resolveClawjsDataRoot(),
+      flags: input.flags,
+    });
     writeSuccess(input, { slug, name, rootPath: path.resolve(input.cwd, expandHome(rootPath)), updatedAt: now });
     return V1_DATA_EXIT_OK;
   }
@@ -1795,6 +1801,12 @@ function runDesignCommand(input: V1DataCliInput, store: DatabaseServiceStore): n
       ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, name = excluded.name, root_path = excluded.root_path,
         manifest_json = excluded.manifest_json, builtin = excluded.builtin, updated_at = excluded.updated_at
     `).run(id, kind, name, input.flags.path ? path.resolve(input.cwd, expandHome(input.flags.path)) : null, input.flags.manifest ? JSON.stringify(JSON.parse(input.flags.manifest)) : "{}", truthy(input.flags.builtin) ? 1 : 0, now, now);
+    scheduleDesignResourcesSearchEvent({
+      operation: "upsert",
+      resourceId: id,
+      dataDir: resolveClawjsDataRoot(),
+      flags: input.flags,
+    });
     writeSuccess(input, { id, kind, name, updatedAt: now });
     return V1_DATA_EXIT_OK;
   }

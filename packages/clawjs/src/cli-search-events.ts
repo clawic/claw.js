@@ -321,6 +321,46 @@ export function scheduleMcpServersSearchEvent(input: {
   });
 }
 
+export function scheduleAppsCatalogSearchEvent(input: {
+  operation: "upsert" | "delete";
+  appId: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  return scheduleSearchIndexEvent({
+    source: "apps.catalog",
+    operation: input.operation,
+    resourceId: input.appId,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      appId: input.appId,
+    },
+  });
+}
+
+export function scheduleDesignResourcesSearchEvent(input: {
+  operation: "upsert" | "delete";
+  resourceId: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  return scheduleSearchIndexEvent({
+    source: "design.resources",
+    operation: input.operation,
+    resourceId: input.resourceId,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      resourceId: input.resourceId,
+    },
+  });
+}
+
 export function scheduleRuntimeEventsSearchEvent(input: {
   operation: "upsert" | "delete";
   kind: "job" | "event" | "operational";

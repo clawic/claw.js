@@ -165,6 +165,8 @@ export async function runSearchQueryCli(input: {
     const shouldRefreshSkills = domains?.includes("skills") || sources?.includes("skills.registry");
     const shouldRefreshConnectors = domains?.includes("connectors") || sources?.includes("connectors.catalog");
     const shouldRefreshMcp = domains?.includes("mcp") || sources?.includes("mcp.servers");
+    const shouldRefreshApps = domains?.includes("apps") || sources?.includes("apps.catalog");
+    const shouldRefreshDesign = domains?.includes("design") || sources?.includes("design.resources");
     const shouldRefreshRuntime = domains?.includes("runtime") || sources?.includes("runtime.events");
     const shouldRefreshLocalFiles = domains?.includes("files") || sources?.includes("local.files");
     const shouldRefreshWeb = domains?.includes("web") || sources?.includes("web.ingested");
@@ -184,6 +186,8 @@ export async function runSearchQueryCli(input: {
     const indexedSkills = shouldRefreshSkills && sourceCanIndex(store, "skills.registry") ? ensureSkillsRegistrySourceIndexed(store, input.flags) : 0;
     const indexedConnectors = shouldRefreshConnectors && sourceCanIndex(store, "connectors.catalog") ? ensureConnectorsCatalogSourceIndexed(store, input.flags) : 0;
     const indexedMcp = shouldRefreshMcp && sourceCanIndex(store, "mcp.servers") ? ensureMcpServersSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const indexedApps = shouldRefreshApps && sourceCanIndex(store, "apps.catalog") ? ensureAppsCatalogSourceIndexed(store, input.flags) : 0;
+    const indexedDesign = shouldRefreshDesign && sourceCanIndex(store, "design.resources") ? ensureDesignResourcesSourceIndexed(store, input.flags) : 0;
     const indexedRuntime = shouldRefreshRuntime && sourceCanIndex(store, "runtime.events") ? ensureRuntimeEventsSourceIndexed(store, input.flags) : 0;
     const indexedLocalFiles = shouldRefreshLocalFiles && sourceCanIndex(store, "local.files") ? ensureLocalFilesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedWeb = shouldRefreshWeb && sourceCanIndex(store, "web.ingested") ? ensureWebIngestedSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -269,6 +273,8 @@ export async function runSearchQueryCli(input: {
         ...(shouldRefreshSkills ? { "skills.registry": indexedSkills } : {}),
         ...(shouldRefreshConnectors ? { "connectors.catalog": indexedConnectors } : {}),
         ...(shouldRefreshMcp ? { "mcp.servers": indexedMcp } : {}),
+        ...(shouldRefreshApps ? { "apps.catalog": indexedApps } : {}),
+        ...(shouldRefreshDesign ? { "design.resources": indexedDesign } : {}),
         ...(shouldRefreshRuntime ? { "runtime.events": indexedRuntime } : {}),
         ...(shouldRefreshLocalFiles ? { "local.files": indexedLocalFiles } : {}),
         ...(shouldRefreshWeb ? { "web.ingested": indexedWeb } : {}),
@@ -396,6 +402,8 @@ export async function runSearchRebuildCli(input: {
     const skillsIndexed = rebuildsSource("skills.registry") ? ensureSkillsRegistrySourceIndexed(store, input.flags) : 0;
     const connectorsIndexed = rebuildsSource("connectors.catalog") ? ensureConnectorsCatalogSourceIndexed(store, input.flags) : 0;
     const mcpIndexed = rebuildsSource("mcp.servers") ? ensureMcpServersSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const appsIndexed = rebuildsSource("apps.catalog") ? ensureAppsCatalogSourceIndexed(store, input.flags) : 0;
+    const designIndexed = rebuildsSource("design.resources") ? ensureDesignResourcesSourceIndexed(store, input.flags) : 0;
     const runtimeIndexed = rebuildsSource("runtime.events") ? ensureRuntimeEventsSourceIndexed(store, input.flags) : 0;
     const localFilesIndexed = rebuildsSource("local.files") ? ensureLocalFilesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const webIndexed = rebuildsSource("web.ingested") ? ensureWebIngestedSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -418,6 +426,8 @@ export async function runSearchRebuildCli(input: {
       ...(skillsIndexed > 0 ? ["skills.registry"] : []),
       ...(connectorsIndexed > 0 ? ["connectors.catalog"] : []),
       ...(mcpIndexed > 0 ? ["mcp.servers"] : []),
+      ...(appsIndexed > 0 ? ["apps.catalog"] : []),
+      ...(designIndexed > 0 ? ["design.resources"] : []),
       ...(runtimeIndexed > 0 ? ["runtime.events"] : []),
       ...(localFilesIndexed > 0 ? ["local.files"] : []),
       ...(webIndexed > 0 ? ["web.ingested"] : []),
@@ -433,7 +443,7 @@ export async function runSearchRebuildCli(input: {
       mode: selectedSources && selectedShards ? "shard_scoped" : selectedSources ? "scoped" : "full",
       selectedSources: selectedSources ?? null,
       selectedShards: selectedShards ?? null,
-      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + workIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + skillsIndexed + connectorsIndexed + mcpIndexed + runtimeIndexed + localFilesIndexed + webIndexed + externalIndexed,
+      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + workIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + skillsIndexed + connectorsIndexed + mcpIndexed + appsIndexed + designIndexed + runtimeIndexed + localFilesIndexed + webIndexed + externalIndexed,
       embeddings: 0,
       profile: input.flags.profile === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
@@ -456,6 +466,8 @@ export async function runSearchRebuildCli(input: {
         "skills.registry": skillsIndexed,
         "connectors.catalog": connectorsIndexed,
         "mcp.servers": mcpIndexed,
+        "apps.catalog": appsIndexed,
+        "design.resources": designIndexed,
         "runtime.events": runtimeIndexed,
         "local.files": localFilesIndexed,
         "web.ingested": webIndexed,
@@ -1076,6 +1088,10 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
       return ensureConnectorsCatalogSourceIndexed(store, flags);
     case "mcp.servers":
       return ensureMcpServersSourceIndexed(store, flags, cwd);
+    case "apps.catalog":
+      return ensureAppsCatalogSourceIndexed(store, flags);
+    case "design.resources":
+      return ensureDesignResourcesSourceIndexed(store, flags);
     case "runtime.events":
       return ensureRuntimeEventsSourceIndexed(store, flags);
     case "local.files":
@@ -1140,6 +1156,14 @@ function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flag
     case "mcp.servers": {
       const serverId = resourceIdFromJobPayload(job, "serverId") ?? job.resourceId;
       return serverId ? ensureMcpServerResourceIndexed(store, flags, serverId, cwd, resourceIdFromJobPayload(job, "configPath")) : 0;
+    }
+    case "apps.catalog": {
+      const appId = resourceIdFromJobPayload(job, "appId") ?? job.resourceId;
+      return appId ? ensureAppCatalogResourceIndexed(store, flags, appId) : 0;
+    }
+    case "design.resources": {
+      const resourceId = resourceIdFromJobPayload(job, "resourceId") ?? job.resourceId;
+      return resourceId ? ensureDesignResourceIndexed(store, flags, resourceId) : 0;
     }
     case "runtime.events": {
       const resourceId = resourceIdFromJobPayload(job, "runtimeResourceId") ?? job.resourceId;

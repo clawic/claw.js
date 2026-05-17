@@ -767,6 +767,27 @@ export function createBuiltinSearchSourceManifests(): SearchSourceManifest[] {
       ],
     }),
     createFrameworkSearchSourceManifest({
+      id: "apps.catalog",
+      domain: "apps",
+      name: "Apps",
+      resultTypes: ["app", "application", "workspace_app"],
+      facets: [
+        { id: "slug", label: "Slug", type: "string" },
+        { id: "pinned", label: "Pinned", type: "boolean" },
+        { id: "createdByChatId", label: "Created by chat", type: "string" },
+      ],
+    }),
+    createFrameworkSearchSourceManifest({
+      id: "design.resources",
+      domain: "design",
+      name: "Design resources",
+      resultTypes: ["resource", "template", "style", "reference", "asset"],
+      facets: [
+        { id: "kind", label: "Kind", type: "string" },
+        { id: "builtin", label: "Built in", type: "boolean" },
+      ],
+    }),
+    createFrameworkSearchSourceManifest({
       id: "runtime.events",
       domain: "runtime",
       name: "Runtime events",
