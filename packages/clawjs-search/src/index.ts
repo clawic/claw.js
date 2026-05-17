@@ -8,6 +8,7 @@ export type SearchSourceState =
   | "enabled"
   | "disabled"
   | "paused"
+  | "excluded"
   | "backfilling"
   | "degraded"
   | "error";
@@ -168,6 +169,14 @@ export interface SearchRegistry {
   query(input: SearchQueryInput): Promise<SearchQueryOutput>;
 }
 
+export interface RootSearchFederator extends SearchRegistry {
+  readonly budgets: SearchBudgets;
+}
+
+export interface RootSearchFederatorOptions {
+  budgets?: Partial<SearchBudgets>;
+}
+
 export const SEARCH_PROFILES: Array<{ id: SearchProfileId; label: string; defaultEnabled: boolean }> = [
   { id: "framework", label: "Framework", defaultEnabled: true },
   { id: "full", label: "Full", defaultEnabled: false },
@@ -184,11 +193,12 @@ export function defineSearchSource(manifest: SearchSourceManifest): SearchSource
   return manifest;
 }
 
-export function createSearchRegistry(options: { budgets?: Partial<SearchBudgets> } = {}): SearchRegistry {
+export function createRootSearchFederator(options: RootSearchFederatorOptions = {}): RootSearchFederator {
   const budgets = { ...DEFAULT_SEARCH_BUDGETS, ...options.budgets };
   const sources = new Map<string, SearchSourceAdapter>();
 
   return {
+    budgets,
     register(source) {
       validateSearchSourceManifest(source.manifest);
       if (sources.has(source.manifest.id)) {
@@ -258,6 +268,10 @@ export function createSearchRegistry(options: { budgets?: Partial<SearchBudgets>
       };
     },
   };
+}
+
+export function createSearchRegistry(options: RootSearchFederatorOptions = {}): SearchRegistry {
+  return createRootSearchFederator(options);
 }
 
 export function createFrameworkSearchSourceManifest(input: {

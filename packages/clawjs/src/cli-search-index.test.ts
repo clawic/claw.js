@@ -4,7 +4,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
-import { CLI_EXIT_OK } from "./index.ts";
+import { CLI_EXIT_DEGRADED, CLI_EXIT_OK } from "./index.ts";
 import { runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
 
 test("search rebuild and query use the Search sidecar without workspace state", async () => {
@@ -17,7 +17,7 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     DATABASE_DB_PATH: undefined,
     CLAW_SEARCH_DB_PATH: undefined,
   }, async () => {
-    const rebuild = await runCliCapture(["search", "rebuild", "--json"], workspaceRoot);
+    const rebuild = await runCliCapture(["search", "rebuild", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(rebuild.code, CLI_EXIT_OK);
     const rebuildPayload = JSON.parse(rebuild.stdout) as {
       ok: boolean;
@@ -42,7 +42,7 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(rebuildPayload.data.pendingSources.includes("sessions.chats"), true);
     assert.ok(rebuildPayload.data.reindexed > 0);
 
-    const query = await runCliCapture(["search", "query", "system capabilities", "--json", "--limit", "5", "--explain", "true"], workspaceRoot);
+    const query = await runCliCapture(["search", "query", "system capabilities", "--data-dir", dataRoot, "--json", "--limit", "5", "--explain", "true"], workspaceRoot);
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       ok: boolean;
@@ -75,7 +75,7 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(systemResult?.actions?.some((action) => action.id === "help" && action.kind === "run"), true);
     assert.ok(systemResult?.explanation?.matchedBy?.length);
 
-    const actions = await runCliCapture(["search", "actions", "commands:system", "--json"], workspaceRoot);
+    const actions = await runCliCapture(["search", "actions", "commands:system", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(actions.code, CLI_EXIT_OK);
     const actionsPayload = JSON.parse(actions.stdout) as {
       data: {
@@ -88,7 +88,7 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(actionsPayload.data.actions.some((action) => action.id === "help"), true);
     assert.equal(actionsPayload.data.brokered, true);
 
-    const status = await runCliCapture(["search", "status", "--json"], workspaceRoot);
+    const status = await runCliCapture(["search", "status", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(status.code, CLI_EXIT_OK);
     const statusPayload = JSON.parse(status.stdout) as {
       data: {
@@ -102,7 +102,7 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(commandStatus?.fastPath, true);
     assert.ok(commandStatus?.lastIndexedAt);
 
-    const saved = await runCliCapture(["search", "saved", "create", "recent-system", "--query", "system capabilities", "--name", "Recent system", "--json"], workspaceRoot);
+    const saved = await runCliCapture(["search", "saved", "create", "recent-system", "--query", "system capabilities", "--name", "Recent system", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(saved.code, CLI_EXIT_OK);
     const savedPayload = JSON.parse(saved.stdout) as {
       data: { item: { id: string; name: string; query: { query: string } }; items: Array<{ id: string }> };
@@ -112,7 +112,7 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(savedPayload.data.item.query.query, "system capabilities");
     assert.equal(savedPayload.data.items.some((item) => item.id === "recent-system"), true);
 
-    const monitor = await runCliCapture(["search", "monitors", "create", "monitor-system", "--saved-search", "recent-system", "--cadence", "hourly", "--json"], workspaceRoot);
+    const monitor = await runCliCapture(["search", "monitors", "create", "monitor-system", "--saved-search", "recent-system", "--cadence", "hourly", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(monitor.code, CLI_EXIT_OK);
     const monitorPayload = JSON.parse(monitor.stdout) as {
       data: { item: { id: string; savedSearchId: string; cadence: string }; items: Array<{ id: string; enabled: boolean }> };
@@ -121,6 +121,37 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(monitorPayload.data.item.savedSearchId, "recent-system");
     assert.equal(monitorPayload.data.item.cadence, "hourly");
     assert.equal(monitorPayload.data.items.some((item) => item.id === "monitor-system" && item.enabled), true);
+
+    const paused = await runCliCapture(["search", "sources", "pause", "commands", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(paused.code, CLI_EXIT_OK);
+    const pausedPayload = JSON.parse(paused.stdout) as {
+      data: { source: string; state: string; sources: Array<{ id: string; state: string }> };
+    };
+    assert.equal(pausedPayload.data.source, "commands");
+    assert.equal(pausedPayload.data.state, "paused");
+    assert.equal(pausedPayload.data.sources.find((source) => source.id === "commands")?.state, "paused");
+
+    const pausedQuery = await runCliCapture(["search", "query", "system capabilities", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(pausedQuery.code, CLI_EXIT_DEGRADED);
+    const pausedQueryPayload = JSON.parse(pausedQuery.stdout) as {
+      data: { results: unknown[]; partial: boolean; omittedSources: Array<{ source: string; reason: string; message?: string }> };
+    };
+    assert.deepEqual(pausedQueryPayload.data.results, []);
+    assert.equal(pausedQueryPayload.data.partial, true);
+    assert.equal(pausedQueryPayload.data.omittedSources.some((source) => source.source === "commands" && source.reason === "disabled" && source.message?.includes("paused")), true);
+
+    const pausedRebuild = await runCliCapture(["search", "rebuild", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(pausedRebuild.code, CLI_EXIT_OK);
+    const pausedRebuildPayload = JSON.parse(pausedRebuild.stdout) as {
+      data: { indexedBySource: { commands: number }; sources: string[] };
+    };
+    assert.equal(pausedRebuildPayload.data.indexedBySource.commands, 0);
+    assert.equal(pausedRebuildPayload.data.sources.includes("commands"), false);
+
+    const resumed = await runCliCapture(["search", "sources", "resume", "commands", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(resumed.code, CLI_EXIT_OK);
+    const resumedPayload = JSON.parse(resumed.stdout) as { data: { state: string } };
+    assert.equal(resumedPayload.data.state, "enabled");
   });
 });
 
@@ -136,6 +167,7 @@ test("search rebuild indexes sessions.chats from the sessions sidecar", async ()
     CLAW_SESSIONS_DB_PATH: undefined,
   }, async () => {
     const sessionsRoot = path.join(workspaceRoot, "codex-sessions");
+    const sessionsDbPath = path.join(dataRoot, "sessions.sqlite");
     fs.mkdirSync(sessionsRoot, { recursive: true });
     const sessionId = "22222222-3333-4444-8555-666666666666";
     fs.writeFileSync(path.join(sessionsRoot, `rollout-${sessionId}.jsonl`), [
@@ -144,10 +176,10 @@ test("search rebuild indexes sessions.chats from the sessions sidecar", async ()
       "",
     ].join("\n"));
 
-    const index = await runCliCapture(["sessions", "index", "--root", sessionsRoot, "--json"], workspaceRoot);
+    const index = await runCliCapture(["sessions", "index", "--root", sessionsRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(index.code, CLI_EXIT_OK);
 
-    const rebuild = await runCliCapture(["search", "rebuild", "--json"], workspaceRoot);
+    const rebuild = await runCliCapture(["search", "rebuild", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json"], workspaceRoot);
     assert.equal(rebuild.code, CLI_EXIT_OK);
     const rebuildPayload = JSON.parse(rebuild.stdout) as {
       data: {
@@ -160,7 +192,7 @@ test("search rebuild indexes sessions.chats from the sessions sidecar", async ()
     assert.equal(rebuildPayload.data.pendingSources.includes("sessions.chats"), false);
     assert.equal(rebuildPayload.data.indexedBySource["sessions.chats"], 1);
 
-    const query = await runCliCapture(["search", "query", "large rollout", "--domains", "sessions", "--json", "--limit", "5"], workspaceRoot);
+    const query = await runCliCapture(["search", "query", "large rollout", "--domains", "sessions", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
@@ -183,7 +215,7 @@ test("search rebuild indexes sessions.chats from the sessions sidecar", async ()
     assert.equal(sessionResult?.actions?.some((action) => action.id === "open" && action.kind === "open"), true);
     assert.equal(sessionResult?.fragments?.some((fragment) => fragment.snippet?.includes("keep chat search fast")), true);
 
-    const status = await runCliCapture(["search", "status", "--json"], workspaceRoot);
+    const status = await runCliCapture(["search", "status", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(status.code, CLI_EXIT_OK);
     const statusPayload = JSON.parse(status.stdout) as {
       data: { sources: Array<{ source: string; state: string; lastIndexedAt?: string }> };
@@ -239,7 +271,7 @@ test("search rebuild indexes database.records from core.sqlite", async () => {
     ], workspaceRoot);
     assert.equal(sensitive.code, CLI_EXIT_OK);
 
-    const rebuild = await runCliCapture(["search", "rebuild", "--json"], workspaceRoot);
+    const rebuild = await runCliCapture(["search", "rebuild", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(rebuild.code, CLI_EXIT_OK);
     const rebuildPayload = JSON.parse(rebuild.stdout) as {
       data: {
@@ -252,7 +284,7 @@ test("search rebuild indexes database.records from core.sqlite", async () => {
     assert.equal(rebuildPayload.data.pendingSources.includes("database.records"), false);
     assert.equal(rebuildPayload.data.indexedBySource["database.records"], 2);
 
-    const query = await runCliCapture(["search", "query", "Analytical engine", "--domains", "database", "--json", "--limit", "5", "--explain", "true"], workspaceRoot);
+    const query = await runCliCapture(["search", "query", "Analytical engine", "--domains", "database", "--data-dir", dataRoot, "--json", "--limit", "5", "--explain", "true"], workspaceRoot);
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
@@ -279,7 +311,7 @@ test("search rebuild indexes database.records from core.sqlite", async () => {
     assert.equal(record?.fragments?.some((fragment) => fragment.title === "notes" && fragment.snippet?.includes("Analytical engine")), true);
     assert.ok(record?.explanation?.matchedBy?.length);
 
-    const redacted = await runCliCapture(["search", "query", "Restricted launch", "--domains", "database", "--json", "--limit", "5"], workspaceRoot);
+    const redacted = await runCliCapture(["search", "query", "Restricted launch", "--domains", "database", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(redacted.code, CLI_EXIT_OK);
     const redactedPayload = JSON.parse(redacted.stdout) as {
       data: { results: Array<{ title: string; snippet?: string; permissions?: { canPreview?: boolean; redacted?: boolean }; fragments?: unknown[] }> };

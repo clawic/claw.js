@@ -58,6 +58,9 @@ The public CLI surface is:
 claw search query "text" --json
 claw search query "text" --domains sessions --json
 claw search sources --json
+claw search sources pause commands --json
+claw search sources exclude code.symbols --json
+claw search sources resume commands --json
 claw search status --json
 claw search rebuild --json
 claw search saved create recent --query "text" --json
@@ -69,6 +72,11 @@ claw search explain "text" --json
 
 `search rebuild` may reset `search.sqlite`. It must not mutate canonical
 records, raw session artifacts, or external sources.
+
+Source controls are persisted in `search.sqlite`. Disabled, paused, and excluded
+sources are skipped by `search query` lazy indexing and by `search rebuild`, and
+Root Search reports omitted sources as partial metadata instead of blocking fast
+paths.
 
 ## Implementation Plan
 

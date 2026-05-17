@@ -14,6 +14,7 @@ import {
   type SearchAction,
   type SearchDocumentInput,
   type SearchSourceManifest,
+  type SearchSourceState,
 } from "@clawjs/search";
 
 import type { CliContext } from "./index.ts";
@@ -105,10 +106,10 @@ export async function runSearchQueryCli(input: {
   const store = openCliSearchStore(input.flags);
   try {
     registerBuiltinSources(store);
-    const indexedCommands = ensureCommandSourceIndexed(store);
+    const indexedCommands = sourceCanIndex(store, "commands") ? ensureCommandSourceIndexed(store) : 0;
     const sources = parseListFlag(input.flags.sources ?? input.flags.source);
     const shouldRefreshDatabase = domains?.includes("database") || sources?.includes("database.records");
-    const indexedDatabase = shouldRefreshDatabase ? ensureDatabaseRecordsSourceIndexed(store, input.flags) : 0;
+    const indexedDatabase = shouldRefreshDatabase && sourceCanIndex(store, "database.records") ? ensureDatabaseRecordsSourceIndexed(store, input.flags) : 0;
     const results = store.query({
       query,
       profile: input.flags.profile === "full" ? "full" : "framework",
@@ -172,15 +173,20 @@ export async function runSearchRebuildCli(input: {
 }): Promise<number> {
   const store = openCliSearchStore(input.flags);
   try {
-    store.reset();
     registerBuiltinSources(store);
-    const commandsIndexed = ensureCommandSourceIndexed(store);
-    const sessionsIndexed = ensureSessionsChatsSourceIndexed(store, input.flags);
-    const databaseIndexed = ensureDatabaseRecordsSourceIndexed(store, input.flags);
+    const preservedStates = new Map(store.sourceStatus().map((status) => [status.source, status.state]));
+    store.reset();
+    registerBuiltinSources(store, preservedStates);
+    const commandsIndexed = sourceCanIndex(store, "commands") ? ensureCommandSourceIndexed(store) : 0;
+    const sessionsIndexed = sourceCanIndex(store, "sessions.chats") ? ensureSessionsChatsSourceIndexed(store, input.flags) : 0;
+    const databaseIndexed = sourceCanIndex(store, "database.records") ? ensureDatabaseRecordsSourceIndexed(store, input.flags) : 0;
+    const indexedSourceIds = new Set([
+      ...(commandsIndexed > 0 ? ["commands"] : []),
+      ...(sessionsIndexed > 0 ? ["sessions.chats"] : []),
+      ...(databaseIndexed > 0 ? ["database.records"] : []),
+    ]);
     const pendingSources = BUILTIN_SEARCH_SOURCES
-      .filter((source) => source.id !== "commands"
-        && !(source.id === "sessions.chats" && sessionsIndexed > 0)
-        && !(source.id === "database.records" && databaseIndexed > 0))
+      .filter((source) => !indexedSourceIds.has(source.id) && sourceCanIndex(store, source.id))
       .map((source) => source.id);
     const data = {
       rebuilt: true,
@@ -188,11 +194,7 @@ export async function runSearchRebuildCli(input: {
       embeddings: 0,
       profile: input.flags.profile === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
-      sources: [
-        "commands",
-        ...(sessionsIndexed > 0 ? ["sessions.chats"] : []),
-        ...(databaseIndexed > 0 ? ["database.records"] : []),
-      ],
+      sources: Array.from(indexedSourceIds),
       indexedBySource: {
         commands: commandsIndexed,
         "sessions.chats": sessionsIndexed,
@@ -253,21 +255,61 @@ export async function runSearchAdminCli(input: {
   const command = input.positionals[1];
   const profile = input.flags.profile === "full" ? "full" : "framework";
   if (command === "sources") {
-    const sources = BUILTIN_SEARCH_SOURCES
-      .filter((source) => profile === "full" || source.profile === "framework")
-      .map((source) => ({
-        id: source.id,
-        domain: source.domain,
-        name: source.name,
-        profile: source.profile,
-        defaultState: source.indexing.defaultState,
-        fastPath: source.capabilities.fastPath,
-        resultTypes: source.resultTypes,
-      }));
+    const action = input.positionals[2] ?? "list";
+    const store = openCliSearchStore(input.flags);
+    const sourceId = input.positionals[3] ?? input.flags.source;
+    let data: {
+      action: string;
+      source?: string;
+      state?: SearchSourceState;
+      profile: string;
+      sources: Array<{
+        id: string;
+        domain: string;
+        name: string;
+        profile: string;
+        defaultState: string;
+        state: string;
+        fastPath: boolean;
+        resultTypes: string[];
+      }>;
+    };
+    try {
+      registerBuiltinSources(store);
+      if (["enable", "disable", "pause", "exclude", "resume"].includes(action)) {
+        if (!sourceId) {
+          input.context.stderr.write(`Usage: ${input.binName} search sources ${action} <source-id> [--json]\n`);
+          return CLI_EXIT_USAGE;
+        }
+        const state = sourceStateForAction(action);
+        store.setSourceState(sourceId, state, { error: null });
+      }
+      const statusById = new Map(store.sourceStatus().map((status) => [status.source, status]));
+      const sources = BUILTIN_SEARCH_SOURCES
+        .filter((source) => profile === "full" || source.profile === "framework")
+        .map((source) => ({
+          id: source.id,
+          domain: source.domain,
+          name: source.name,
+          profile: source.profile,
+          defaultState: source.indexing.defaultState,
+          state: statusById.get(source.id)?.state ?? (source.indexing.defaultState === "on" ? "enabled" : "disabled"),
+          fastPath: source.capabilities.fastPath,
+          resultTypes: source.resultTypes,
+        }));
+      data = {
+        action,
+        ...(sourceId ? { source: sourceId, state: statusById.get(sourceId)?.state } : {}),
+        profile,
+        sources,
+      };
+    } finally {
+      store.close();
+    }
     if (input.wantsJson) {
-      writeCommandJsonOk(input.context.stdout, "search", { sources, profile }, { subcommand: "sources" });
+      writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "sources" });
     } else {
-      input.context.stdout.write(`${sources.map((source) => `${source.id}\t${source.domain}\t${source.defaultState}\t${source.name}`).join("\n")}\n`);
+      input.context.stdout.write(`${data.sources.map((source) => `${source.id}\t${source.domain}\t${source.state}\t${source.name}`).join("\n")}\n`);
     }
     return CLI_EXIT_OK;
   }
@@ -425,10 +467,23 @@ function searchStorageMetadata(flags: Record<string, string>): { canonical: stri
   };
 }
 
-function registerBuiltinSources(store: SearchStore): void {
+function registerBuiltinSources(store: SearchStore, states: Map<string, SearchSourceState> = new Map()): void {
   for (const source of BUILTIN_SEARCH_SOURCES) {
-    store.registerSource(source);
+    const state = states.get(source.id);
+    store.registerSource(source, state ? { state } : {});
   }
+}
+
+function sourceCanIndex(store: SearchStore, source: string): boolean {
+  return !["disabled", "paused", "excluded"].includes(store.sourceState(source) ?? "enabled");
+}
+
+function sourceStateForAction(action: string): SearchSourceState {
+  if (action === "enable" || action === "resume") return "enabled";
+  if (action === "disable") return "disabled";
+  if (action === "pause") return "paused";
+  if (action === "exclude") return "excluded";
+  return "enabled";
 }
 
 function ensureCommandSourceIndexed(store: SearchStore): number {

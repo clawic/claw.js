@@ -53,6 +53,7 @@ Search V1.1 is built from these layers:
 
 - `claw search query`
 - `claw search sources`
+- `claw search sources pause|exclude|resume <source-id>`
 - `claw search status`
 - `claw search rebuild`
 - `claw search saved`
@@ -71,7 +72,9 @@ switches scope.
 Search can grow to many sources without one global query becoming the only
 execution path. Narrow views can query their source directly or pass domain/source
 filters. Slow sources are omitted with partial metadata instead of blocking fast
-sources. Rebuilds can reset `search.sqlite` because it is not canonical storage.
+sources. Disabled, paused, and excluded sources are persisted as source state and
+are skipped by query-time lazy indexing and rebuilds. Rebuilds can reset
+`search.sqlite` because it is not canonical storage.
 
 The first complete acceptance slice is not "all possible sources"; it is a
 usable framework Root Search with multiple fast sources, CLI/admin controls,

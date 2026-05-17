@@ -102,6 +102,7 @@ export class SearchStore {
 
   registerSource(manifest: SearchSourceManifest, options: { state?: SearchSourceState; backlog?: number; error?: string | null } = {}): void {
     const now = new Date().toISOString();
+    const existing = this.db.prepare("SELECT state, backlog, error FROM search_sources WHERE id = ?").get(manifest.id) as { state: SearchSourceState; backlog: number; error: string | null } | undefined;
     this.db.prepare(`
       INSERT INTO search_sources (id, domain, name, version, profile, manifest_json, state, backlog, error, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -111,9 +112,9 @@ export class SearchStore {
         version = excluded.version,
         profile = excluded.profile,
         manifest_json = excluded.manifest_json,
-        state = excluded.state,
-        backlog = excluded.backlog,
-        error = excluded.error,
+        state = CASE WHEN ? THEN excluded.state ELSE search_sources.state END,
+        backlog = CASE WHEN ? THEN excluded.backlog ELSE search_sources.backlog END,
+        error = CASE WHEN ? THEN excluded.error ELSE search_sources.error END,
         updated_at = excluded.updated_at
     `).run(
       manifest.id,
@@ -122,10 +123,13 @@ export class SearchStore {
       manifest.version,
       manifest.profile,
       JSON.stringify(manifest),
-      options.state ?? (manifest.indexing.defaultState === "on" ? "enabled" : "disabled"),
-      options.backlog ?? 0,
-      options.error ?? null,
+      options.state ?? existing?.state ?? (manifest.indexing.defaultState === "on" ? "enabled" : "disabled"),
+      options.backlog ?? existing?.backlog ?? 0,
+      options.error ?? existing?.error ?? null,
       now,
+      options.state ? 1 : 0,
+      options.backlog !== undefined ? 1 : 0,
+      options.error !== undefined ? 1 : 0,
     );
   }
 
@@ -159,6 +163,11 @@ export class SearchStore {
       SET state = ?, backlog = COALESCE(?, backlog), error = ?, last_indexed_at = COALESCE(?, last_indexed_at), updated_at = ?
       WHERE id = ?
     `).run(state, input.backlog ?? null, input.error ?? null, input.lastIndexedAt ?? null, new Date().toISOString(), source);
+  }
+
+  sourceState(source: string): SearchSourceState | null {
+    const row = this.db.prepare("SELECT state FROM search_sources WHERE id = ?").get(source) as { state: SearchSourceState } | undefined;
+    return row?.state ?? null;
   }
 
   upsertDocument(input: SearchDocumentInput): void {
@@ -261,6 +270,8 @@ export class SearchStore {
     if (profile !== "full") {
       clauses.push("s.profile = 'framework'");
     }
+    clauses.push("s.state NOT IN ('disabled', 'paused', 'excluded')");
+    const omittedSources = this.omittedSourcesForInput(input, profile);
     params.push(limit);
     const rows = this.db.prepare(`
       SELECT d.*, 0 AS rank
@@ -277,8 +288,8 @@ export class SearchStore {
       query: input.query,
       profile,
       results,
-      partial: false,
-      omittedSources: [],
+      partial: omittedSources.length > 0,
+      omittedSources,
       elapsedMs: Date.now() - startedAt,
     };
   }
@@ -397,6 +408,29 @@ export class SearchStore {
       this.db.exec(SEARCH_RESET_SQL);
       this.db.exec(SEARCH_SCHEMA_SQL);
     }
+  }
+
+  private omittedSourcesForInput(input: SearchQueryInput, profile: SearchProfileId): SearchQueryOutput["omittedSources"] {
+    const selectedClauses: string[] = [];
+    const params: unknown[] = [];
+    if (input.sources?.length) {
+      selectedClauses.push(`id IN (${input.sources.map(() => "?").join(", ")})`);
+      params.push(...input.sources);
+    }
+    if (input.domains?.length) {
+      selectedClauses.push(`domain IN (${input.domains.map(() => "?").join(", ")})`);
+      params.push(...input.domains);
+    }
+    const omissionClauses = ["state IN ('disabled', 'paused', 'excluded')"];
+    if (profile !== "full") omissionClauses.push("profile != 'framework'");
+    const rows = this.db.prepare(`
+      SELECT id, state, profile FROM search_sources
+      WHERE ${selectedClauses.length ? `${selectedClauses.join(" AND ")} AND ` : ""}(${omissionClauses.join(" OR ")})
+      ORDER BY domain ASC, id ASC
+    `).all(...params) as Array<{ id: string; state: SearchSourceState; profile: string }>;
+    return rows.map((row) => row.profile !== "framework" && profile !== "full"
+      ? { source: row.id, reason: "profile" as const, message: "source is only available in the full profile" }
+      : { source: row.id, reason: "disabled" as const, message: `source is ${row.state}` });
   }
 
   private resultFromRow(row: SearchDocumentRow, input: SearchQueryInput): SearchResult {
