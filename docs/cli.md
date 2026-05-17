@@ -141,11 +141,20 @@ summaries into the main core database:
 ```bash
 claw agents list --json
 claw agents upsert agent.ops --name "Ops Agent" --personalities personality.review --skills deploy --secret-ref vault://agents/ops --json
+claw agents schema --json
+claw agents evaluate-access --record '{"requested":{"resourceType":"contact","action":"read"},"agentGrants":[],"assignmentGrants":[],"executionProfileGrants":[],"connectorGrants":[],"hostGrants":[],"runScopeGrants":[]}' --json
 claw personalities upsert personality.review --name Reviewer --prompt "Review with concrete evidence" --json
 claw skill-collections upsert collection.review --name Review --tags review,code --json
 claw connections upsert github --provider custom --label GitHub --secret-ref vault://connections/github --json
 claw snippets upsert quickask-review --title "QuickAsk Review" --body "Review the current selection" --kind prompt --json
 ```
+
+Agents V1 ([ADR 0020](./adr/0020-agents-v1-refactor.md)) treats `agents` as the durable employee/resource composition and
+`agent_assignments` as the places where an agent acts: Mac chat, web chat,
+Telegram, support inbox, workflow, automation, subagent, MCP/API, Relay, or a
+custom channel. New agents start with an empty sandbox. Effective access is the
+intersection of agent grants, assignment grants, execution profile sandbox,
+connector policy, host policy, and run scope.
 
 ## Global Flags
 

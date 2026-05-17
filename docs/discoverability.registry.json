@@ -148,6 +148,44 @@
       "reviewDate": "2026-08-17"
     },
     {
+      "id": "agents-v1-refactor",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0020-agents-v1-refactor.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/decision-map.md",
+        "docs/cli.md",
+        "skills/surface-route-work/SKILL.md"
+      ],
+      "discoveryTerms": [
+        "Agents V1",
+        "agent assignments",
+        "agent resource grants",
+        "effective agent access"
+      ],
+      "searchQueries": [
+        {
+          "query": "Agents V1",
+          "expectPath": "docs/adr/0020-agents-v1-refactor.md"
+        },
+        {
+          "query": "agent assignments",
+          "expectPath": "docs/adr/0020-agents-v1-refactor.md"
+        }
+      ],
+      "inspect": [
+        {
+          "command": "claw inspect routes --json",
+          "expectRoute": "agents.internalMacAssignment"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-17"
+    },
+    {
       "id": "docs-alignment-routing",
       "kind": "guardrail",
       "owner": "claw",

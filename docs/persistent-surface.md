@@ -34,6 +34,13 @@ flowchart TD
   claw_cli_public["Public claw CLI\nroot"]
   claw_cli_commandIntentRegistry["CLI command intent registry\nroot"]
   claw_mcp_surface["MCP model-native surface\nroot"]
+  claw_agents["Agents V1 domain\nroot"]
+  claw_agents_assignments["Agent assignments\nroot"]
+  claw_agents_resourceGrants["Agent resource grants\nroot"]
+  claw_agents_executionProfiles["Agent execution profiles\nroot"]
+  claw_agents_memoryPolicies["Agent memory policies\nroot"]
+  claw_agents_runs["Agent runs\nroot"]
+  claw_support_inbox["Support inbox projection\nroot"]
   claw_storage_canonical["Canonical storage boundary\nroot"]
   claw_host_signed["Active signed host\nroot"]
   claw_host_permissions["Host permissions\nroot"]
@@ -1279,6 +1286,16 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_browser
   claw_cli_command_compat["compat\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_compat
+  claw_cli_agents_v1["Agents V1 CLI contract\nprotocol"]
+  claw_contracts_protocol --> claw_cli_agents_v1
+  claw_agent_assignment_runtime_v1["Agent assignment runtime handoff contract\nprotocol"]
+  claw_contracts_protocol --> claw_agent_assignment_runtime_v1
+  claw_agent_assignment_internal_mac_v1["Internal Mac agent assignment contract\nprotocol"]
+  claw_contracts_protocol --> claw_agent_assignment_internal_mac_v1
+  claw_agent_assignment_external_v1["External agent assignment contract\nprotocol"]
+  claw_contracts_protocol --> claw_agent_assignment_external_v1
+  claw_mcp_agents_v1["MCP Agents V1 assignment contract\nprotocol"]
+  claw_contracts_protocol --> claw_mcp_agents_v1
   claw_schema_commandIntents_v1["CLI command intent schema v1\njsonSchema"]
   claw_contracts_schemas --> claw_schema_commandIntents_v1
   claw_cli_flag_json["--json\ncliFlag"]
@@ -1314,8 +1331,30 @@ flowchart TD
   clawix_home["Clawix host home\nroot"]
   claw_database_core["Framework main database\ndatabase"]
   claw_global --> claw_database_core
+  claw_database_support["Support inbox projection database\nsidecar"]
+  claw_global --> claw_database_support
   claw_database_core_table_workspace_records["workspace_records\ntable"]
   claw_database_core --> claw_database_core_table_workspace_records
+  claw_database_core_table_agent_assignments["agent_assignments\ntable"]
+  claw_database_core --> claw_database_core_table_agent_assignments
+  claw_database_core_table_agent_execution_profiles["agent_execution_profiles\ntable"]
+  claw_database_core --> claw_database_core_table_agent_execution_profiles
+  claw_database_core_table_agent_resource_grants["agent_resource_grants\ntable"]
+  claw_database_core --> claw_database_core_table_agent_resource_grants
+  claw_database_core_table_agent_memory_policies["agent_memory_policies\ntable"]
+  claw_database_core --> claw_database_core_table_agent_memory_policies
+  claw_database_core_table_agent_budgets["agent_budgets\ntable"]
+  claw_database_core --> claw_database_core_table_agent_budgets
+  claw_database_core_table_agent_config_revisions["agent_config_revisions\ntable"]
+  claw_database_core --> claw_database_core_table_agent_config_revisions
+  claw_database_core_table_agent_evaluations["agent_evaluations\ntable"]
+  claw_database_core --> claw_database_core_table_agent_evaluations
+  claw_database_core_table_agent_incidents["agent_incidents\ntable"]
+  claw_database_core --> claw_database_core_table_agent_incidents
+  claw_database_core_table_agent_blueprints["agent_blueprints\ntable"]
+  claw_database_core --> claw_database_core_table_agent_blueprints
+  claw_database_core_table_agent_runs["agent_runs\ntable"]
+  claw_database_core --> claw_database_core_table_agent_runs
   claw_database_core_table_workspace_records_column_collection_name["collection_name\ncolumn"]
   claw_database_core_table_workspace_records --> claw_database_core_table_workspace_records_column_collection_name
   claw_database_core_table_workspace_records_column_record_id["record_id\ncolumn"]
@@ -1585,6 +1624,30 @@ flowchart TD
   claw_database_core --> claw_database_core_table_connector_audit_events
   claw_database_core_table_personalities["personalities\ntable"]
   claw_database_core --> claw_database_core_table_personalities
+  claw_database_core_table_agent_assignments["agent_assignments\ntable"]
+  claw_database_core --> claw_database_core_table_agent_assignments
+  claw_database_core_table_agent_execution_profiles["agent_execution_profiles\ntable"]
+  claw_database_core --> claw_database_core_table_agent_execution_profiles
+  claw_database_core_table_agent_resource_grants["agent_resource_grants\ntable"]
+  claw_database_core --> claw_database_core_table_agent_resource_grants
+  claw_database_core_table_agent_memory_policies["agent_memory_policies\ntable"]
+  claw_database_core --> claw_database_core_table_agent_memory_policies
+  claw_database_core_table_agent_budgets["agent_budgets\ntable"]
+  claw_database_core --> claw_database_core_table_agent_budgets
+  claw_database_core_table_agent_config_revisions["agent_config_revisions\ntable"]
+  claw_database_core --> claw_database_core_table_agent_config_revisions
+  claw_database_core_table_agent_evaluations["agent_evaluations\ntable"]
+  claw_database_core --> claw_database_core_table_agent_evaluations
+  claw_database_core_table_agent_incidents["agent_incidents\ntable"]
+  claw_database_core --> claw_database_core_table_agent_incidents
+  claw_database_core_table_agent_blueprints["agent_blueprints\ntable"]
+  claw_database_core --> claw_database_core_table_agent_blueprints
+  claw_database_core_table_agent_runs["agent_runs\ntable"]
+  claw_database_core --> claw_database_core_table_agent_runs
+  claw_database_core_table_agent_sessions["agent_sessions\ntable"]
+  claw_database_core --> claw_database_core_table_agent_sessions
+  claw_database_core_table_agent_session_activities["agent_session_activities\ntable"]
+  claw_database_core --> claw_database_core_table_agent_session_activities
   claw_database_core_table_provider_routing["provider_routing\ntable"]
   claw_database_core --> claw_database_core_table_provider_routing
   claw_database_core_table_provider_settings["provider_settings\ntable"]
@@ -1725,6 +1788,17 @@ flowchart TD
   claw_cli_command_commands -- "owns" --> claw_workspace_command_intents_ledger
   claw_cli_command_commands -- "brokers" --> claw_cli_command_needs
   claw_cli_command_commands -- "brokers" --> claw_cli_command_report
+  claw_cli_command_agents -- "exposes" --> claw_agents
+  claw_agents -- "owns" --> claw_agents_assignments
+  claw_agents -- "owns" --> claw_agents_resourceGrants
+  claw_agents -- "owns" --> claw_agents_executionProfiles
+  claw_agents -- "owns" --> claw_agents_memoryPolicies
+  claw_agents_assignments -- "brokers" --> claw_runtime_agent
+  claw_runtime_agent -- "owns" --> claw_agents_runs
+  claw_agents_assignments -- "exposes" --> claw_support_inbox
+  claw_mcp_surface -- "consumes" --> claw_agents_assignments
+  clawix_ui_chat -- "consumes" --> claw_agents_assignments
+  claw_relay -- "brokers" --> claw_agents_assignments
   clawix_ui_chat -- "consumes" --> clawix_bridge_local
   clawix_bridge_local -- "brokers" --> claw_daemon_local
   claw_daemon_local -- "brokers" --> claw_runtime_agent
@@ -1747,6 +1821,9 @@ flowchart TD
 | --- | --- | --- | --- | --- |
 | `cli.commandIntentResolution` | `claw.cli.command.commands` | `claw.cli.command.report` | public | Fixture tests for resolve, record, list, opportunities, promote, unknown fallback metadata, and inspect command-intents. |
 | `chat.localDesktop` | `clawix.ui.chat` | `claw.sessions` | internal | Fixture + hermetic E2E for local desktop chat |
+| `agents.internalMacAssignment` | `clawix.ui.chat` | `claw.sessions` | internal | Fixture + hermetic E2E for internal Mac assignment |
+| `agents.externalSupportAssignment` | `claw.remote.client` | `claw.support.inbox` | external | Fake external support assignment fixture |
+| `agents.mcpApiAssignment` | `claw.mcp.surface` | `claw.runtime.agent` | public | Inspect route and Agents V1 policy tests |
 | `chat.companionBridge` | `clawix.companion.client` | `claw.sessions` | public | Fixture + hermetic E2E for companion bridge traffic |
 | `chat.remoteRelay` | `claw.remote.client` | `claw.sessions` | external | Fixture + hermetic Relay E2E without production services |
 
@@ -1758,6 +1835,17 @@ flowchart TD
 | `claw.edge.commands.owns.intentLedger` | owns | `claw.cli.command.commands` | `claw.workspace.command_intents.ledger` | `claw.workspace.command_intents.ledger` | workspace JSON ledger |
 | `claw.edge.commands.brokers.needs` | brokers | `claw.cli.command.commands` | `claw.cli.command.needs` | `claw.cli.command.needs` | NeedOpportunity-compatible projection |
 | `claw.edge.commands.brokers.report` | brokers | `claw.cli.command.commands` | `claw.cli.command.report` | `claw.cli.command.report` | approval-gated report promotion packet |
+| `claw.edge.agents.cli.exposes.domain` | exposes | `claw.cli.command.agents` | `claw.agents` | `claw.cli.agents.v1` | local CLI + core.sqlite projection |
+| `claw.edge.agents.owns.assignments` | owns | `claw.agents` | `claw.agents.assignments` | `claw.database.core.table.agent_assignments` | core.sqlite |
+| `claw.edge.agents.owns.resourceGrants` | owns | `claw.agents` | `claw.agents.resourceGrants` | `claw.database.core.table.agent_resource_grants` | core.sqlite |
+| `claw.edge.agents.owns.executionProfiles` | owns | `claw.agents` | `claw.agents.executionProfiles` | `claw.database.core.table.agent_execution_profiles` | core.sqlite |
+| `claw.edge.agents.owns.memoryPolicies` | owns | `claw.agents` | `claw.agents.memoryPolicies` | `claw.database.core.table.agent_memory_policies` | core.sqlite |
+| `claw.edge.assignments.brokers.runtime` | brokers | `claw.agents.assignments` | `claw.runtime.agent` | `claw.agent_assignment.runtime.v1` | policy-gated runtime request |
+| `claw.edge.runtime.owns.agentRuns` | owns | `claw.runtime.agent` | `claw.agents.runs` | `claw.database.core.table.agent_runs` | core.sqlite |
+| `claw.edge.assignments.exposes.supportInbox` | exposes | `claw.agents.assignments` | `claw.support.inbox` | `claw.database.support` | support/inbox projection |
+| `claw.edge.mcp.consumes.assignments` | consumes | `claw.mcp.surface` | `claw.agents.assignments` | `claw.mcp.agents.v1` | MCP tool/resource policy gate |
+| `claw.edge.chat.ui.consumes.assignment` | consumes | `clawix.ui.chat` | `claw.agents.assignments` | `claw.agent_assignment.internal_mac.v1` | local assignment selection |
+| `claw.edge.relay.brokers.assignments` | brokers | `claw.relay` | `claw.agents.assignments` | `claw.agent_assignment.external.v1` | remote-safe assignment selection |
 | `claw.edge.chat.ui.consumes.bridge` | consumes | `clawix.ui.chat` | `clawix.bridge.local` | `clawix.protocol.bridge.v1` | local bridge RPC |
 | `claw.edge.bridge.brokers.daemon` | brokers | `clawix.bridge.local` | `claw.daemon.local` | `claw.protocol.hostCommand.v1` | localhost/process bridge |
 | `claw.edge.daemon.brokers.runtime` | brokers | `claw.daemon.local` | `claw.runtime.agent` | `claw.protocol.hostCommand.v1` | framework runtime adapter |
@@ -1792,6 +1880,13 @@ flowchart TD
 | `claw.cli.public` | root | protocol | claw | humanUi | cli |  | `claw` |
 | `claw.cli.commandIntentRegistry` | root | protocol | claw | humanUi | cli, persistence |  | `claw/commands` |
 | `claw.mcp.surface` | root | protocol | claw | humanUi | mcp, sdk, serviceApi |  | `mcp` |
+| `claw.agents` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp, relay, persistence |  | `agents` |
+| `claw.agents.assignments` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp, relay, persistence |  | `agents/assignments` |
+| `claw.agents.resourceGrants` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp, persistence |  | `agents/resource-grants` |
+| `claw.agents.executionProfiles` | root | protocol | claw | humanUi | sdk, cli, serviceApi, persistence |  | `agents/execution-profiles` |
+| `claw.agents.memoryPolicies` | root | protocol | claw | humanUi | sdk, cli, serviceApi, persistence |  | `agents/memory-policies` |
+| `claw.agents.runs` | root | protocol | claw | humanUi | sdk, cli, serviceApi, persistence |  | `agents/runs` |
+| `claw.support.inbox` | root | protocol | claw | humanUi | sdk, cli, serviceApi, persistence |  | `support/inbox` |
 | `claw.storage.canonical` | root | protocol | claw | humanUi | sdk, cli, serviceApi, persistence |  | `storage` |
 | `claw.host.signed` | root | protocol | claw | humanUi | cli, serviceApi |  | `host` |
 | `claw.host.permissions` | root | protocol | claw | humanUi | cli, serviceApi |  | `host/permissions` |
@@ -2422,6 +2517,11 @@ flowchart TD
 | `claw.cli.command.preview` | cliCommand | cli | claw |  |  |  | `preview` |
 | `claw.cli.command.browser` | cliCommand | cli | claw |  |  |  | `browser` |
 | `claw.cli.command.compat` | cliCommand | cli | claw |  |  |  | `compat` |
+| `claw.cli.agents.v1` | protocol | protocol | claw |  |  |  | `claw.cli.agents.v1` |
+| `claw.agent_assignment.runtime.v1` | protocol | protocol | claw |  |  |  | `claw.agent_assignment.runtime.v1` |
+| `claw.agent_assignment.internal_mac.v1` | protocol | protocol | claw |  |  |  | `claw.agent_assignment.internal_mac.v1` |
+| `claw.agent_assignment.external.v1` | protocol | protocol | claw |  |  |  | `claw.agent_assignment.external.v1` |
+| `claw.mcp.agents.v1` | protocol | protocol | claw |  |  |  | `claw.mcp.agents.v1` |
 | `claw.schema.commandIntents.v1` | jsonSchema | schema | claw |  |  |  | `claw.cli.commandIntents.v1` |
 | `claw.cli.flag.json` | cliFlag | cli | claw |  |  |  | `--json` |
 | `claw.cli.flag.dry-run` | cliFlag | cli | claw |  |  |  | `--dry-run` |
@@ -2441,7 +2541,18 @@ flowchart TD
 | `claw.workspace` | root | persistent | claw |  |  |  | `.claw` |
 | `clawix.home` | root | persistent | clawix |  |  |  | `~/.clawix` |
 | `claw.database.core` | database | persistent | claw |  |  |  | `~/.claw/data/core.sqlite` |
+| `claw.database.support` | sidecar | persistent | claw |  |  |  | `~/.claw/data/support.sqlite` |
 | `claw.database.core.table.workspace_records` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.agent_assignments` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.agent_execution_profiles` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.agent_resource_grants` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.agent_memory_policies` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.agent_budgets` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.agent_config_revisions` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.agent_evaluations` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.agent_incidents` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.agent_blueprints` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.agent_runs` | table | persistent | claw |  |  |  | `` |
 | `claw.database.core.table.workspace_records.column.collection_name` | column | persistent | claw |  |  |  | `` |
 | `claw.database.core.table.workspace_records.column.record_id` | column | persistent | claw |  |  |  | `` |
 | `claw.database.core.table.workspace_records.column.payload_json` | column | persistent | claw |  |  |  | `` |
@@ -2577,6 +2688,18 @@ flowchart TD
 | `claw.database.core.table.connector_network_policies` | table | persistent | claw |  |  |  | `` |
 | `claw.database.core.table.connector_audit_events` | table | persistent | claw |  |  |  | `` |
 | `claw.database.core.table.personalities` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.agent_assignments` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.agent_execution_profiles` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.agent_resource_grants` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.agent_memory_policies` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.agent_budgets` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.agent_config_revisions` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.agent_evaluations` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.agent_incidents` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.agent_blueprints` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.agent_runs` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.agent_sessions` | table | persistent | claw |  |  |  | `` |
+| `claw.database.core.table.agent_session_activities` | table | persistent | claw |  |  |  | `` |
 | `claw.database.core.table.provider_routing` | table | persistent | claw |  |  |  | `` |
 | `claw.database.core.table.provider_settings` | table | persistent | claw |  |  |  | `` |
 | `claw.database.core.table.snippets` | table | persistent | claw |  |  |  | `` |

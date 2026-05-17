@@ -59,7 +59,31 @@ const APP_STATE_DOMAIN_TABLES = [
 ];
 const SIGNALS_DOMAIN_TABLES = ["signals_verticals", "signals_variables", "signals_sessions", "signals_observations"];
 const RESOURCE_DOMAIN_TABLES = ["resources", "apps", "design_resources"];
-const AGENT_DOMAIN_TABLES = ["agents", "personalities", "skills", "skill_collections", "connections", "provider_routing", "provider_settings", "snippets", "channel_accounts", "channel_routing", "channel_messages"];
+const AGENT_DOMAIN_TABLES = [
+  "agents",
+  "personalities",
+  "skills",
+  "skill_collections",
+  "connections",
+  "agent_assignments",
+  "agent_execution_profiles",
+  "agent_resource_grants",
+  "agent_memory_policies",
+  "agent_budgets",
+  "agent_config_revisions",
+  "agent_evaluations",
+  "agent_incidents",
+  "agent_blueprints",
+  "agent_runs",
+  "agent_sessions",
+  "agent_session_activities",
+  "provider_routing",
+  "provider_settings",
+  "snippets",
+  "channel_accounts",
+  "channel_routing",
+  "channel_messages",
+];
 const CONNECTOR_CONTROL_PLANE_DOMAIN_TABLES = [
   "connector_audit_events",
   "connector_budgets",
@@ -242,6 +266,21 @@ export function ensureV1MainSchema(sqlite: Database.Database): void {
   sqlite.prepare("CREATE INDEX IF NOT EXISTS app_projects_resource_id_idx ON app_projects(resource_id) WHERE resource_id IS NOT NULL").run();
   ensureColumn(sqlite, "signals_observations", "page_id", "TEXT");
   ensureColumn(sqlite, "agents", "secret_ref", "TEXT");
+  ensureColumn(sqlite, "agents", "status", "TEXT NOT NULL DEFAULT 'active'");
+  ensureColumn(sqlite, "agents", "agency_mode", "TEXT NOT NULL DEFAULT 'assistant'");
+  ensureColumn(sqlite, "agents", "role", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn(sqlite, "agents", "title", "TEXT");
+  ensureColumn(sqlite, "agents", "description", "TEXT");
+  ensureColumn(sqlite, "agents", "owner_kind", "TEXT");
+  ensureColumn(sqlite, "agents", "owner_id", "TEXT");
+  ensureColumn(sqlite, "agents", "workspace_id", "TEXT");
+  ensureColumn(sqlite, "agents", "project_id", "TEXT");
+  ensureColumn(sqlite, "agents", "autonomy_profile", "TEXT NOT NULL DEFAULT 'respond_only'");
+  ensureColumn(sqlite, "agents", "default_execution_profile_id", "TEXT");
+  ensureColumn(sqlite, "agents", "default_memory_policy_id", "TEXT");
+  ensureColumn(sqlite, "agents", "default_budget_id", "TEXT");
+  ensureColumn(sqlite, "agents", "retired_at", "TEXT");
+  ensureColumn(sqlite, "agents", "retirement_snapshot_ref", "TEXT");
   ensureColumn(sqlite, "skills", "secret_refs_json", "TEXT NOT NULL DEFAULT '[]'");
   ensureColumn(sqlite, "iot_config", "config_json", "TEXT NOT NULL DEFAULT '{}'");
   ensureColumn(sqlite, "iot_config", "secret_ref", "TEXT");
@@ -1454,7 +1493,7 @@ export function usage(binName: string, group: string): string {
       return `Usage: ${binName} apps list|upsert [--json]`;
     case "design":
       return `Usage: ${binName} design list|upsert [--json]`;
-    case "agents": return `Usage: ${binName} agents list|get|upsert|delete [--json]`;
+    case "agents": return `Usage: ${binName} agents list|get|upsert|delete|schema|evaluate-access [--json]`;
     case "skills": return `Usage: ${binName} skills get|upsert|delete [--json]`;
     case "personalities": return `Usage: ${binName} personalities list|get|upsert|delete [--json]`;
     case "skill-collections": return `Usage: ${binName} skill-collections list|get|upsert|delete [--json]`;

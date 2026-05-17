@@ -97,8 +97,17 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   const routes = await runCliCapture(["inspect", "routes", "--json"], process.cwd());
   assert.equal(routes.code, CLI_EXIT_OK);
   const routeList = parseCliJson<Array<{ id: string; steps: Array<{ edgeType: string; fromId: string; toId: string }> }>>(routes.stdout).data;
-  assert.deepEqual(routeList.map((route) => route.id).sort(), ["chat.companionBridge", "chat.localDesktop", "chat.remoteRelay", "cli.commandIntentResolution"]);
+  assert.deepEqual(routeList.map((route) => route.id).sort(), [
+    "agents.externalSupportAssignment",
+    "agents.internalMacAssignment",
+    "agents.mcpApiAssignment",
+    "chat.companionBridge",
+    "chat.localDesktop",
+    "chat.remoteRelay",
+    "cli.commandIntentResolution",
+  ]);
   assert.equal(routeList.find((route) => route.id === "chat.localDesktop")?.steps.every((step) => ["owns", "consumes", "exposes", "brokers"].includes(step.edgeType)), true);
+  assert.equal(routeList.find((route) => route.id === "agents.externalSupportAssignment")?.steps.some((step) => step.toId === "claw.support.inbox"), true);
   assert.equal(routeList.find((route) => route.id === "cli.commandIntentResolution")?.steps.every((step) => ["owns", "consumes", "exposes", "brokers"].includes(step.edgeType)), true);
 
   const route = await runCliCapture(["inspect", "route", "chat.remoteRelay", "--json"], process.cwd());

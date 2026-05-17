@@ -1,4 +1,5 @@
 import { AgentStoreFS, defaultAgent, type Agent, type Connection, type Personality, type SkillCollection } from "@clawjs/agents";
+import { evaluateAgentEffectiveAccess, type AgentEffectiveAccessInput } from "@clawjs/core";
 import type { DatabaseServiceStore } from "@clawjs/database";
 
 import {
@@ -45,6 +46,35 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
     agentStore.deleteAgent(id);
     const changes = store.sqlite.prepare("DELETE FROM agents WHERE id = ?").run(id).changes;
     writeSuccess(input, { id, deleted: changes > 0 });
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "schema") {
+    writeSuccess(input, {
+      model: "agents_v1",
+      canonicalCollection: "agents",
+      subentities: [
+        "agent_assignments",
+        "agent_execution_profiles",
+        "agent_resource_grants",
+        "agent_memory_policies",
+        "agent_budgets",
+        "agent_config_revisions",
+        "agent_evaluations",
+        "agent_incidents",
+        "agent_blueprints",
+        "agent_runs",
+        "agent_sessions",
+      ],
+      rootConcept: "agent",
+      placementConcept: "agent_assignment",
+      defaultPosture: "empty_sandbox_respond_only",
+    });
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "evaluate-access") {
+    const record = recordFlag<AgentEffectiveAccessInput>(input);
+    if (!record) return usageError(input, "Usage: claw agents evaluate-access --record JSON [--json]");
+    writeSuccess(input, evaluateAgentEffectiveAccess(record));
     return V1_DATA_EXIT_OK;
   }
   return usageError(input, usage(input.binName, "agents"));
@@ -254,26 +284,67 @@ function syncAgentsProjection(store: DatabaseServiceStore, agents: Agent[]) {
 }
 
 function syncAgentProjection(store: DatabaseServiceStore, agent: Agent) {
+  const metadata = agent as Agent & Record<string, unknown>;
   store.sqlite.prepare(`
-    INSERT INTO agents (id, kind, name, runtime, model, builtin, secret_ref, config_json, export_path, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO agents (
+      id, kind, name, status, agency_mode, role, title, description, owner_kind,
+      owner_id, workspace_id, project_id, runtime, model, autonomy_profile,
+      default_execution_profile_id, default_memory_policy_id, default_budget_id,
+      builtin, secret_ref, config_json, export_path, retired_at,
+      retirement_snapshot_ref, created_at, updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, name = excluded.name,
-      runtime = excluded.runtime, model = excluded.model, builtin = excluded.builtin,
+      status = excluded.status, agency_mode = excluded.agency_mode, role = excluded.role,
+      title = excluded.title, description = excluded.description, owner_kind = excluded.owner_kind,
+      owner_id = excluded.owner_id, workspace_id = excluded.workspace_id, project_id = excluded.project_id,
+      runtime = excluded.runtime, model = excluded.model, autonomy_profile = excluded.autonomy_profile,
+      default_execution_profile_id = excluded.default_execution_profile_id,
+      default_memory_policy_id = excluded.default_memory_policy_id,
+      default_budget_id = excluded.default_budget_id, builtin = excluded.builtin,
       secret_ref = excluded.secret_ref, config_json = excluded.config_json,
-      export_path = excluded.export_path, updated_at = excluded.updated_at
+      export_path = excluded.export_path, retired_at = excluded.retired_at,
+      retirement_snapshot_ref = excluded.retirement_snapshot_ref, updated_at = excluded.updated_at
   `).run(
     agent.id,
     "agent",
     agent.name,
+    stringValue(metadata.status, "active"),
+    stringValue(metadata.agencyMode, "assistant"),
+    agent.role,
+    stringValue(metadata.title),
+    stringValue(metadata.description),
+    stringValue(metadata.ownerKind),
+    stringValue(metadata.ownerId),
+    firstString(metadata.workspaceId, agent.projectIds[0]),
+    firstString(metadata.projectId, agent.projectIds[0]),
     agent.runtime,
     agent.model,
+    agent.autonomyLevel === "observe" ? "respond_only" : agent.autonomyLevel,
+    stringValue(metadata.defaultExecutionProfileId),
+    stringValue(metadata.defaultMemoryPolicyId),
+    stringValue(metadata.defaultBudgetId),
     agent.isBuiltin ? 1 : 0,
     agent.secretAllowlist[0] ?? null,
     JSON.stringify(agent),
     `agents/${agent.id}`,
+    stringValue(metadata.retiredAt),
+    stringValue(metadata.retirementSnapshotRef),
     agent.createdAt,
     agent.updatedAt,
   );
+}
+
+function stringValue(value: unknown, fallback: string | null = null): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : fallback;
+}
+
+function firstString(...values: unknown[]): string | null {
+  for (const value of values) {
+    const normalized = stringValue(value);
+    if (normalized) return normalized;
+  }
+  return null;
 }
 
 function syncPersonalitiesProjection(store: DatabaseServiceStore, personalities: Personality[]) {

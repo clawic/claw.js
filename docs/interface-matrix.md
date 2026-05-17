@@ -31,7 +31,7 @@ Use this page when you need to answer questions like:
 | SDK | `@clawjs/claw` | Base runtime-facing surface. |
 | Database package | `@clawjs/database` | Shared database service app, store, API client, auth, and realtime hub. |
 | Audio package | `@clawjs/audio` | Shared audio asset store, transcript catalog, API client, and service app. |
-| Agents package | `@clawjs/agents` | Filesystem-first agent identity, personality, skill collection, connection, and audit records. |
+| Agents package | `@clawjs/agents` + `@clawjs/core` Agents V1 | Filesystem-first identity plus canonical agent, assignment, grant, memory, budget, run, evaluation, incident, and blueprint contracts. |
 | Integrations package | `@clawjs/integrations` | Connection watchers and routing for inbound channel messages. |
 | Sessions package | `@clawjs/sessions` | Shared session mirror store, FTS search, and native runtime import adapters. |
 | User model package | `@clawjs/user-model` | Shared user profile store, snapshots, and service app. |

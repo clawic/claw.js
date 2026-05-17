@@ -253,6 +253,35 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
     }), CLI_EXIT_OK);
     assert.deepEqual((parseCliJsonPayload(agentHostStdout.getOutput()) as { secretAllowlist: string[] }).secretAllowlist, ["vault://agents/ops"]);
 
+    const agentsSchemaStdout = captureStream();
+    assert.equal(await runCli(["agents", "schema", "--json"], {
+      stdout: agentsSchemaStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const agentsSchema = parseCliJsonPayload(agentsSchemaStdout.getOutput()) as { canonicalCollection: string; subentities: string[]; defaultPosture: string };
+    assert.equal(agentsSchema.canonicalCollection, "agents");
+    assert.equal(agentsSchema.subentities.includes("agent_assignments"), true);
+    assert.equal(agentsSchema.subentities.includes("agent_resource_grants"), true);
+    assert.equal(agentsSchema.defaultPosture, "empty_sandbox_respond_only");
+
+    const accessStdout = captureStream();
+    const accessRecord = {
+      requested: { resourceType: "contact", action: "read", scopeType: "customer", scopeId: "customer_1" },
+      agentGrants: [{ id: "agent", resourceType: "contact", action: "read", scopeType: "customer", scopeId: "customer_1" }],
+      assignmentGrants: [{ id: "assignment", resourceType: "contact", action: "read", scopeType: "customer", scopeId: "customer_1" }],
+      executionProfileGrants: [{ id: "execution", resourceType: "contact", action: "read", scopeType: "customer", scopeId: "customer_1" }],
+      connectorGrants: [{ id: "connector", resourceType: "contact", action: "read", scopeType: "customer", scopeId: "customer_1" }],
+      hostGrants: [{ id: "host", resourceType: "contact", action: "read", scopeType: "customer", scopeId: "customer_1" }],
+      runScopeGrants: [{ id: "run", resourceType: "contact", action: "read", scopeType: "customer", scopeId: "customer_1" }],
+    };
+    assert.equal(await runCli(["agents", "evaluate-access", "--record", JSON.stringify(accessRecord), "--json"], {
+      stdout: accessStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    assert.equal((parseCliJsonPayload(accessStdout.getOutput()) as { allowed: boolean }).allowed, true);
+
     const personalityStdout = captureStream();
     assert.equal(await runCli(["personalities", "upsert", "personality.review", "--name", "Reviewer", "--prompt", "Review with concrete evidence", "--json"], {
       stdout: personalityStdout.stream,
@@ -492,7 +521,13 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
 
     const main = new Database(resolveClawjsMainDbPath({ CLAW_DATA_DIR: tempRoot } as NodeJS.ProcessEnv), { readonly: true });
     try {
-      assert.equal((main.prepare("SELECT secret_ref FROM agents WHERE id = ?").get("agent-ops") as { secret_ref: string }).secret_ref, "vault://agents/ops");
+      const agentRow = main.prepare("SELECT secret_ref, agency_mode, autonomy_profile FROM agents WHERE id = ?").get("agent-ops") as { secret_ref: string; agency_mode: string; autonomy_profile: string };
+      assert.equal(agentRow.secret_ref, "vault://agents/ops");
+      assert.equal(agentRow.agency_mode, "assistant");
+      assert.equal(agentRow.autonomy_profile, "act_limited");
+      const agentTables = main.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'agent_%' ORDER BY name").all() as Array<{ name: string }>;
+      assert.equal(agentTables.some((row) => row.name === "agent_assignments"), true);
+      assert.equal(agentTables.some((row) => row.name === "agent_resource_grants"), true);
       assert.equal((main.prepare("SELECT prompt FROM personalities WHERE id = ?").get("personality.review") as { prompt: string }).prompt, "Review with concrete evidence");
       assert.deepEqual(JSON.parse((main.prepare("SELECT metadata_json FROM skill_collections WHERE id = ?").get("collection.review") as { metadata_json: string }).metadata_json), { includedTags: ["review", "code"] });
       assert.deepEqual(JSON.parse((main.prepare("SELECT secret_refs_json FROM skills WHERE slug = ?").get("deploy") as { secret_refs_json: string }).secret_refs_json), ["vault://skills/deploy-token"]);
