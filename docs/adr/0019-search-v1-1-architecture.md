@@ -86,6 +86,8 @@ Search V1.1 is built from these layers:
 - `claw search status`
 - `claw search rebuild`
 - `claw search rebuild --source <source-id>`
+- `claw search jobs`
+- `claw search jobs enqueue|claim|complete|fail`
 - `claw search saved`
 - `claw search monitors`
 - `claw search actions`

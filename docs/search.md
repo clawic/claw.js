@@ -71,12 +71,15 @@ claw search sources --json
 claw search sources pause commands --json
 claw search sources exclude code.symbols --json
 claw search sources resume commands --json
-claw search jobs enqueue backfill --source documents.blocks --shard cold --json
-claw search jobs claim --source documents.blocks --shards cold --json
 claw search status --json
 claw search rebuild --json
 claw search rebuild --source generations.artifacts --json
 claw search rebuild --code-root /path/to/project --code-limit 500 --json
+claw search jobs list --status queued --json
+claw search jobs enqueue backfill --source documents.blocks --shard cold --priority 5 --json
+claw search jobs claim --sources documents.blocks --shards cold --limit 10 --json
+claw search jobs complete <job-id> --json
+claw search jobs fail <job-id> --error "temporary extractor throttle" --retry --json
 claw search saved create recent --query "text" --json
 claw search monitors create monitor-recent --saved-search recent --json
 claw search actions <result-id> --json

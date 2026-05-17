@@ -90,6 +90,16 @@ function buildTools(store: SearchStore): ToolDef[] {
       },
     },
     { name: "search.audit.list", description: "List Search audit events for actions and sensitive queries.", inputSchema: { type: "object", properties: { limit: { type: "integer" }, type: { type: "string", enum: ["action", "sensitive_query"] } } }, handler: (p) => store.listAuditEvents({ limit: numberParam(p.limit), type: searchAuditType(p.type) }) },
+    { name: "search.jobs.list", description: "List local Search indexing jobs.", inputSchema: { type: "object", properties: { limit: { type: "integer" }, status: { type: "string", enum: ["queued", "leased", "done", "failed"] }, source: { type: "string" } } }, handler: (p) => store.listIndexJobs({ limit: numberParam(p.limit), status: searchJobStatus(p.status), source: stringParam(p.source) }) },
+    {
+      name: "search.jobs.enqueue",
+      description: "Enqueue source/shard Search indexing work.",
+      inputSchema: { type: "object", required: ["source", "operation"], properties: { id: { type: "string" }, source: { type: "string" }, shard: { type: "string" }, operation: { type: "string", enum: ["upsert", "delete", "backfill", "rebuild"] }, resourceId: { type: "string" }, priority: { type: "integer" }, scheduledAt: { type: "string" }, payload: { type: "object" } } },
+      handler: (p) => store.enqueueIndexJob({ id: stringParam(p.id), source: requiredString(p, "source"), shard: stringParam(p.shard), operation: requiredSearchJobOperation(p.operation), resourceId: stringParam(p.resourceId), priority: numberParam(p.priority), scheduledAt: stringParam(p.scheduledAt), payload: recordParam(p.payload) }),
+    },
+    { name: "search.jobs.claim", description: "Claim Search indexing jobs with bounded leases.", inputSchema: { type: "object", properties: { limit: { type: "integer" }, now: { type: "string" }, leaseMs: { type: "integer" }, sources: { type: "array", items: { type: "string" } }, shards: { type: "array", items: { type: "string" } } } }, handler: (p) => store.claimIndexJobs({ limit: numberParam(p.limit), now: stringParam(p.now), leaseMs: numberParam(p.leaseMs), sources: stringArrayParam(p.sources), shards: stringArrayParam(p.shards) }) },
+    { name: "search.jobs.complete", description: "Mark a Search indexing job done.", inputSchema: { type: "object", required: ["id"], properties: { id: { type: "string" } } }, handler: (p) => store.completeIndexJob(requiredString(p, "id")) },
+    { name: "search.jobs.fail", description: "Fail or retry a Search indexing job.", inputSchema: { type: "object", required: ["id", "error"], properties: { id: { type: "string" }, error: { type: "string" }, retry: { type: "boolean" }, scheduledAt: { type: "string" } } }, handler: (p) => store.failIndexJob(requiredString(p, "id"), { error: requiredString(p, "error"), retry: typeof p.retry === "boolean" ? p.retry : false, scheduledAt: stringParam(p.scheduledAt) }) },
   ];
 }
 
@@ -207,6 +217,15 @@ function searchEmbedding(value: unknown): SearchQueryInput["embedding"] {
 
 function searchAuditType(value: unknown): SearchAuditEventType | undefined {
   return value === "action" || value === "sensitive_query" ? value : undefined;
+}
+
+function searchJobStatus(value: unknown): "queued" | "leased" | "done" | "failed" | undefined {
+  return value === "queued" || value === "leased" || value === "done" || value === "failed" ? value : undefined;
+}
+
+function requiredSearchJobOperation(value: unknown): "upsert" | "delete" | "backfill" | "rebuild" {
+  if (value === "upsert" || value === "delete" || value === "backfill" || value === "rebuild") return value;
+  throw new Error("operation is required");
 }
 
 function requiredString(params: Record<string, unknown>, key: string): string {

@@ -122,7 +122,8 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     const completedJob = await runCliCapture(["search", "jobs", "complete", "job:commands:backfill", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(completedJob.code, CLI_EXIT_OK);
     const completedJobPayload = JSON.parse(completedJob.stdout) as { data: { item: { id: string; status: string } } };
-    assert.deepEqual(completedJobPayload.data.item, { id: "job:commands:backfill", status: "done" });
+    assert.equal(completedJobPayload.data.item.id, "job:commands:backfill");
+    assert.equal(completedJobPayload.data.item.status, "done");
 
     const sensitiveQuery = await runCliCapture(["search", "query", "secret token", "--data-dir", dataRoot, "--json", "--actor", "agent:codex", "--surface", "cli"], workspaceRoot);
     assert.equal(sensitiveQuery.code, CLI_EXIT_DEGRADED);
