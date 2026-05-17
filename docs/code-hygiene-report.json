@@ -5,7 +5,7 @@
   "status": "active",
   "blockingFindings": 0,
   "reportOnlyFindings": 24,
-  "baselinedFindings": 4,
+  "baselinedFindings": 5,
   "lastAuditSummary": {
     "scannedFiles": 6931,
     "todoFindings": 0,
@@ -107,6 +107,7 @@
     "Session title cleanup replaced the legacy title alias with a compatibility wrapper while preserving both title-generation entrypoints.",
     "Package default-export cleanup replaced duplicate aliases in search MCP and ESLint config packages with compatibility-preserving default surfaces.",
     "Session stream cleanup replaced OpenClaw compatibility aliases with wrappers while preserving Runtime and OpenClaw streaming entrypoints.",
-    "Memory server dynamic entrypoint is baselined with expiry because the Claw CLI launcher imports startMemoryServer dynamically across bundled, packed, and development layouts."
+    "Memory server dynamic entrypoint is baselined with expiry because the Claw CLI launcher imports startMemoryServer dynamically across bundled, packed, and development layouts.",
+    "Stable surface builder alias is baselined with expiry because ADR 0004 documents clawStableSurface as a public stable-contract alias for persistent surface builders."
   ]
 }

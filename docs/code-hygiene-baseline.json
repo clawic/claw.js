@@ -78,6 +78,22 @@
       "ownerArea": "memory-service-launch",
       "reference": "docs/repository-map.md#root-level-systems",
       "expiresAt": "2026-08-15"
+    },
+    {
+      "id": "clawjs-core-stable-surface-alias-2026-05-17",
+      "category": "public_api",
+      "paths": [
+        "packages/clawjs-core/src/surface-registry.ts"
+      ],
+      "findingTypes": [
+        "owners",
+        "duplicates"
+      ],
+      "coveredFindings": 2,
+      "reason": "clawStableSurface is the documented stable contract alias for the persistent surface builders; ADR 0004 allows stable contract surfaces to use this public alias while sharing the same implementation.",
+      "ownerArea": "clawjs-core-surface-registry",
+      "reference": "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+      "expiresAt": "2026-08-15"
     }
   ]
 }
