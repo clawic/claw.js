@@ -99,6 +99,17 @@ export interface SearchIndexJobInput {
   createdAt?: string;
 }
 
+export interface SearchIndexEventInput {
+  source: string;
+  resourceId: string;
+  operation: Extract<SearchIndexJobOperation, "upsert" | "delete">;
+  shard?: string;
+  payload?: Record<string, unknown>;
+  priority?: number;
+  scheduledAt?: string;
+  observedAt?: string;
+}
+
 export interface SearchIndexJob {
   id: string;
   source: string;
@@ -580,6 +591,26 @@ export class SearchStore {
         updated_at = excluded.updated_at
     `).run(id, input.source, shard, input.operation, input.resourceId ?? null, JSON.stringify(input.payload ?? {}), priority, scheduledAt, now, now);
     return this.indexJob(id) as SearchIndexJob;
+  }
+
+  scheduleIndexEvent(input: SearchIndexEventInput): SearchIndexJob {
+    const shard = input.shard ?? "hot";
+    const observedAt = input.observedAt ?? new Date().toISOString();
+    return this.enqueueIndexJob({
+      id: `event:${input.source}:${shard}:${input.operation}:${stableJobIdPart(input.resourceId)}`,
+      source: input.source,
+      shard,
+      operation: input.operation,
+      resourceId: input.resourceId,
+      payload: {
+        eventDriven: true,
+        observedAt,
+        ...(input.payload ?? {}),
+      },
+      priority: input.priority ?? (input.operation === "delete" ? 80 : 60),
+      scheduledAt: input.scheduledAt ?? observedAt,
+      createdAt: observedAt,
+    });
   }
 
   claimIndexJobs(input: { limit?: number; now?: string; leaseMs?: number; sources?: string[]; shards?: string[] } = {}): SearchIndexJob[] {
@@ -1127,6 +1158,13 @@ function searchIndexJobFromRow(row: SearchIndexJobRow): SearchIndexJob {
     ...(row.leased_until ? { leasedUntil: row.leased_until } : {}),
     ...(row.error ? { error: row.error } : {}),
   };
+}
+
+function stableJobIdPart(value: string): string {
+  const safe = value.replace(/[^A-Za-z0-9_.:-]+/g, "_").replace(/^_+|_+$/g, "");
+  if (safe === value && safe.length > 0 && safe.length <= 120) return safe;
+  const hash = createHash("sha256").update(value).digest("hex").slice(0, 16);
+  return `${safe.slice(0, 100) || "resource"}-${hash}`;
 }
 
 function searchVectorFromRow(row: SearchVectorRow): SearchVectorRecord {

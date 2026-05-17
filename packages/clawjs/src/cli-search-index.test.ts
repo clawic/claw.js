@@ -88,7 +88,40 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(enqueuePayload.data.item?.shard, "default");
     assert.equal(enqueuePayload.data.items.some((item) => item.id === "job:commands"), true);
 
-    const claimJob = await runCliCapture(["search", "jobs", "claim", "--source", "commands", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    const scheduledEvent = await runCliCapture([
+      "search",
+      "jobs",
+      "schedule",
+      "upsert",
+      "--source",
+      "commands",
+      "--resource-id",
+      "system",
+      "--payload",
+      JSON.stringify({ reason: "registry_changed" }),
+      "--observed-at",
+      "2026-05-17T10:00:00.000Z",
+      "--scheduled-at",
+      "2026-05-18T10:00:00.000Z",
+      "--data-dir",
+      dataRoot,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(scheduledEvent.code, CLI_EXIT_OK);
+    const scheduledEventPayload = JSON.parse(scheduledEvent.stdout) as {
+      data: { item: { id: string; source: string; shard: string; operation: string; resourceId: string; priority: number; payload: { eventDriven?: boolean; reason?: string; observedAt?: string } } };
+    };
+    assert.equal(scheduledEventPayload.data.item.id, "event:commands:hot:upsert:system");
+    assert.equal(scheduledEventPayload.data.item.source, "commands");
+    assert.equal(scheduledEventPayload.data.item.shard, "hot");
+    assert.equal(scheduledEventPayload.data.item.operation, "upsert");
+    assert.equal(scheduledEventPayload.data.item.resourceId, "system");
+    assert.equal(scheduledEventPayload.data.item.priority, 60);
+    assert.equal(scheduledEventPayload.data.item.payload.eventDriven, true);
+    assert.equal(scheduledEventPayload.data.item.payload.reason, "registry_changed");
+    assert.equal(scheduledEventPayload.data.item.payload.observedAt, "2026-05-17T10:00:00.000Z");
+
+    const claimJob = await runCliCapture(["search", "jobs", "claim", "--source", "commands", "--shard", "default", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(claimJob.code, CLI_EXIT_OK);
     const claimPayload = JSON.parse(claimJob.stdout) as { data: { items: Array<{ id: string; status: string }> } };
     assert.deepEqual(claimPayload.data.items.map((item) => [item.id, item.status]), [["job:commands", "leased"]]);
@@ -102,7 +135,7 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(hybridPayload.data.embeddingModel, "local-test");
     assert.equal(hybridPayload.data.results.some((result) => result.source === "commands" && result.title === "system"), true);
 
-    const enqueuedJob = await runCliCapture(["search", "jobs", "enqueue", "backfill", "--source", "commands", "--id", "job:commands:backfill", "--shard", "hot", "--priority", "9", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    const enqueuedJob = await runCliCapture(["search", "jobs", "enqueue", "backfill", "--source", "commands", "--id", "job:commands:backfill", "--shard", "hot", "--priority", "90", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(enqueuedJob.code, CLI_EXIT_OK);
     const enqueuedJobPayload = JSON.parse(enqueuedJob.stdout) as { data: { item: { id: string; source: string; shard: string; operation: string; status: string; priority: number } } };
     assert.deepEqual({
@@ -112,7 +145,7 @@ test("search rebuild and query use the Search sidecar without workspace state", 
       operation: enqueuedJobPayload.data.item.operation,
       status: enqueuedJobPayload.data.item.status,
       priority: enqueuedJobPayload.data.item.priority,
-    }, { id: "job:commands:backfill", source: "commands", shard: "hot", operation: "backfill", status: "queued", priority: 9 });
+    }, { id: "job:commands:backfill", source: "commands", shard: "hot", operation: "backfill", status: "queued", priority: 90 });
 
     const claimedJob = await runCliCapture(["search", "jobs", "claim", "--shards", "hot", "--limit", "1", "--lease-ms", "1000", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(claimedJob.code, CLI_EXIT_OK);

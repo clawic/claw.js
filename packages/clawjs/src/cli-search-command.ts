@@ -529,6 +529,25 @@ export async function runSearchAdminCli(input: {
           scheduledAt: input.flags["scheduled-at"],
         });
         data = { action, item, items: store.listIndexJobs({ source, limit: input.flags.limit ? Number(input.flags.limit) : undefined }), state: "ready" };
+      } else if (action === "schedule" || action === "event") {
+        const source = input.flags.source ?? input.positionals[4];
+        const operation = parseSearchIndexJobOperation(input.flags.operation ?? input.flags.op ?? input.positionals[3]);
+        const resourceId = input.flags["resource-id"] ?? input.flags.resource ?? input.positionals[5];
+        if (!source || (operation !== "upsert" && operation !== "delete") || !resourceId) {
+          input.context.stderr.write(`Usage: ${input.binName} search jobs schedule <upsert|delete> --source <source-id> --resource-id <id> [--shard <shard>] [--json]\n`);
+          return CLI_EXIT_USAGE;
+        }
+        const item = store.scheduleIndexEvent({
+          source,
+          shard: input.flags.shard ?? "hot",
+          operation,
+          resourceId,
+          payload: parseSearchJobPayloadFlag(input.flags.payload),
+          priority: input.flags.priority ? Number(input.flags.priority) : undefined,
+          scheduledAt: input.flags["scheduled-at"],
+          observedAt: input.flags["observed-at"],
+        });
+        data = { action, item, items: store.listIndexJobs({ source, limit: input.flags.limit ? Number(input.flags.limit) : undefined }), state: "ready" };
       } else if (action === "claim") {
         const items = store.claimIndexJobs({
           limit: input.flags.limit ? Number(input.flags.limit) : undefined,

@@ -509,6 +509,62 @@ test("SearchStore leases indexing jobs by source and shard for controlled backfi
   }
 });
 
+test("SearchStore schedules event-driven index jobs idempotently by source shard and resource", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-index-events-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "documents.blocks",
+      domain: "documents",
+      name: "Documents",
+      resultTypes: ["document"],
+    }));
+    const first = store.scheduleIndexEvent({
+      source: "documents.blocks",
+      resourceId: "doc-alpha",
+      operation: "upsert",
+      payload: { revision: 1 },
+      observedAt: "2026-05-17T10:00:00.000Z",
+    });
+    const second = store.scheduleIndexEvent({
+      source: "documents.blocks",
+      resourceId: "doc-alpha",
+      operation: "upsert",
+      payload: { revision: 2 },
+      observedAt: "2026-05-17T10:00:01.000Z",
+    });
+    const deletion = store.scheduleIndexEvent({
+      source: "documents.blocks",
+      shard: "hot",
+      resourceId: "doc-alpha",
+      operation: "delete",
+      observedAt: "2026-05-17T10:00:02.000Z",
+    });
+    const pathLike = store.scheduleIndexEvent({
+      source: "documents.blocks",
+      resourceId: "folder/doc alpha",
+      operation: "upsert",
+      observedAt: "2026-05-17T10:00:03.000Z",
+    });
+
+    assert.equal(first.id, second.id);
+    assert.equal(second.status, "queued");
+    assert.equal(second.attempts, 0);
+    assert.equal(second.shard, "hot");
+    assert.equal(second.priority, 60);
+    assert.equal(second.payload.eventDriven, true);
+    assert.equal(second.payload.revision, 2);
+    assert.equal(second.payload.observedAt, "2026-05-17T10:00:01.000Z");
+    assert.equal(deletion.operation, "delete");
+    assert.equal(deletion.priority, 80);
+    assert.match(pathLike.id, /^event:documents\.blocks:hot:upsert:folder_doc_alpha-[a-f0-9]{16}$/);
+    assert.deepEqual(store.listIndexJobs({ source: "documents.blocks" }).map((job) => job.id), [deletion.id, second.id, pathLike.id]);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("SearchStore supports local semantic vector retrieval when an embedding is supplied", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-vectors-"));
   const store = new SearchStore(path.join(dir, "search.sqlite"));

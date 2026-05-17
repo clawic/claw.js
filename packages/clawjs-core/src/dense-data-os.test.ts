@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   assertClawDenseDataOsRegistryComplete,
   BUILTIN_COLLECTIONS_BY_NAME,
+  PRODUCTIVITY_COLLECTION_DEFINITIONS,
   clawDenseDataIntentStatuses,
   clawDenseDataOsRegistry,
   findClawDenseDataSystem,
@@ -129,6 +130,10 @@ test("dense data OS keeps ERP as an orchestrator over shared collections, not a 
 });
 
 test("dense data OS graduated centers point at canonical built-in collections without duplicate systems", () => {
+  const canonicalCollectionNames = new Set([
+    ...BUILTIN_COLLECTIONS_BY_NAME.keys(),
+    ...PRODUCTIVITY_COLLECTION_DEFINITIONS.map((collection) => collection.name),
+  ]);
   const expectedCollections: Record<string, string> = {
     "health.patient": "patients",
     "health.medication": "medications",
@@ -158,7 +163,7 @@ test("dense data OS graduated centers point at canonical built-in collections wi
     const [systemId, centerId] = key.split(".");
     const center = findClawDenseDataSystem(systemId)?.centers.find((entry) => entry.id === centerId);
     assert.equal(center?.collectionName, collectionName, `${key} must point at ${collectionName}`);
-    assert.ok(BUILTIN_COLLECTIONS_BY_NAME.has(collectionName), `${collectionName} must be a built-in collection`);
+    assert.ok(canonicalCollectionNames.has(collectionName), `${collectionName} must be a canonical collection`);
   }
 
   const analyticsExperiment = BUILTIN_COLLECTIONS_BY_NAME.get("experiments");

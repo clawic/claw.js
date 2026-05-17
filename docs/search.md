@@ -102,6 +102,7 @@ claw search jobs enqueue backfill --source documents.blocks --shard cold --prior
 claw search jobs claim --sources documents.blocks --shards cold --limit 10 --json
 claw search jobs complete <job-id> --json
 claw search jobs fail <job-id> --error "temporary extractor throttle" --retry --json
+claw search jobs schedule upsert --source documents.blocks --resource-id doc_123 --json
 claw search saved create recent --query "text" --json
 claw search monitors create monitor-recent --saved-search recent --json
 claw search monitors run monitor-recent --limit 10 --json
@@ -138,9 +139,13 @@ backfill can run progressively without blocking a UI section that is only
 searching its own already-hot data.
 
 The CLI exposes that local queue through `claw search jobs`. Use `enqueue` to
-schedule upsert, delete, backfill, or rebuild work; `claim` to lease available
-jobs for a worker; `complete` and `fail --retry` to settle attempts; and the
-default list view to inspect queued, leased, done, or failed jobs.
+schedule explicit upsert, delete, backfill, or rebuild work; `schedule` for
+event-driven upsert/delete notifications keyed by source, shard, operation, and
+resource id; `claim` to lease available jobs for a worker; `complete` and
+`fail --retry` to settle attempts; and the default list view to inspect queued,
+leased, done, or failed jobs. Repeated `schedule` calls for the same changed
+resource compact into one queued job so noisy local events do not create
+unbounded duplicate backfill work.
 
 `claw search service` is the local lifecycle surface for Search. Embedded mode
 is available from the CLI and records `search-service.json` beside
