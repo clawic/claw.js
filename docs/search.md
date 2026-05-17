@@ -175,6 +175,10 @@ declare `permissions.allowedActors`, `permissions.allowedAgents`, and
 `permissions.requiredScopes`; Search hides those results unless the query actor
 and scope filters satisfy the document policy. This keeps agent-specific or
 scope-specific records out of broad Root Search while preserving public results.
+Preview redaction is enforced in the store as well. If a result declares
+`permissions.redacted` or disables `permissions.canPreview`, Search can still
+match the indexed text for authorized discovery, but returned snippets are
+`[redacted]` and fragments are omitted.
 
 Ranking is centralized in `@clawjs/search`. The store reranks a bounded
 candidate batch with lexical score, source ranking hints, local frecency,

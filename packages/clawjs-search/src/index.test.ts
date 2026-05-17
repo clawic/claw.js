@@ -812,6 +812,47 @@ test("SearchStore filters result ACLs by actor and scope", () => {
   }
 });
 
+test("SearchStore redacts previews and fragments for any redacted result", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-redacted-preview-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "documents.blocks",
+      domain: "documents",
+      name: "Documents",
+      resultTypes: ["document"],
+    }));
+    store.upsertDocument({
+      id: "documents.blocks:redacted",
+      source: "documents.blocks",
+      domain: "documents",
+      type: "document",
+      title: "Restricted launch notes",
+      body: "Hidden launch details should remain searchable but never previewed.",
+      snippet: "Hidden launch details",
+      permissions: { canPreview: false, redacted: true },
+      fragments: [{
+        id: "documents.blocks:redacted:fragment",
+        title: "secret fragment",
+        body: "Hidden launch fragment content",
+        snippet: "Hidden launch fragment",
+      }],
+    });
+
+    const output = store.query({ query: "hidden launch", domains: ["documents"], explain: true });
+    assert.equal(output.results.length, 1);
+    assert.equal(output.results[0]?.id, "documents.blocks:redacted");
+    assert.equal(output.results[0]?.snippet, "[redacted]");
+    assert.deepEqual(output.results[0]?.fragments ?? [], []);
+    assert.equal(output.results[0]?.permissions?.canPreview, false);
+    assert.equal(output.results[0]?.permissions?.redacted, true);
+    assert.ok(output.results[0]?.explanation?.matchedBy?.length);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("SearchStore enforces per-source document and fragment limits before indexing", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-limits-"));
   const store = new SearchStore(path.join(dir, "search.sqlite"));
