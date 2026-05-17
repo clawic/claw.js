@@ -29,6 +29,42 @@ export interface SearchBudgets {
   sourceTimeoutMs: number;
 }
 
+export type SearchEngineId = "sqlite" | (string & {});
+
+export interface SearchEngineDescriptor {
+  id: SearchEngineId;
+  label: string;
+  version: number;
+  storage: {
+    kind: "sidecar" | "external";
+    defaultFileName?: string;
+    rebuildable: boolean;
+    ownsCanonicalData: boolean;
+    shardModel: "logical" | "physical" | "external";
+  };
+  capabilities: {
+    fts: boolean;
+    fragments: boolean;
+    actions: boolean;
+    sourceControls: boolean;
+    cursors: boolean;
+    tombstones: boolean;
+    jobQueue: boolean;
+    savedSearches: boolean;
+    monitors: boolean;
+    audit: boolean;
+    vectors: boolean;
+    rankingCache: boolean;
+    transactions: boolean;
+  };
+  query: {
+    strategies: SearchQueryStrategy[];
+    filters: boolean;
+    acl: boolean;
+    agentBudgets: boolean;
+  };
+}
+
 export interface SearchSourceCapabilities {
   fastPath: boolean;
   fragments: boolean;
@@ -273,6 +309,47 @@ export const DEFAULT_SEARCH_BUDGETS: SearchBudgets = {
   globalFirstBatchMs: 200,
   sourceTimeoutMs: 75,
 };
+
+export const DEFAULT_SEARCH_ENGINE_ID = "sqlite";
+
+export const SEARCH_SQLITE_ENGINE = defineSearchEngine({
+  id: DEFAULT_SEARCH_ENGINE_ID,
+  label: "SQLite Search sidecar",
+  version: 1,
+  storage: {
+    kind: "sidecar",
+    defaultFileName: "search.sqlite",
+    rebuildable: true,
+    ownsCanonicalData: false,
+    shardModel: "logical",
+  },
+  capabilities: {
+    fts: true,
+    fragments: true,
+    actions: true,
+    sourceControls: true,
+    cursors: true,
+    tombstones: true,
+    jobQueue: true,
+    savedSearches: true,
+    monitors: true,
+    audit: true,
+    vectors: true,
+    rankingCache: true,
+    transactions: true,
+  },
+  query: {
+    strategies: ["lexical", "semantic", "hybrid"],
+    filters: true,
+    acl: true,
+    agentBudgets: true,
+  },
+});
+
+export function defineSearchEngine(descriptor: SearchEngineDescriptor): SearchEngineDescriptor {
+  validateSearchEngineDescriptor(descriptor);
+  return descriptor;
+}
 
 export function defineSearchSource(manifest: SearchSourceManifest): SearchSourceManifest {
   validateSearchSourceManifest(manifest);
@@ -661,6 +738,17 @@ function validateSearchSourceManifest(manifest: SearchSourceManifest): void {
   }
   if (manifest.permissions.default !== "opt_in") {
     throw new Error(`search source ${manifest.id} must be opt-in by default`);
+  }
+}
+
+function validateSearchEngineDescriptor(descriptor: SearchEngineDescriptor): void {
+  if (!descriptor.id.trim()) throw new Error("search engine id is required");
+  if (!descriptor.label.trim()) throw new Error(`search engine ${descriptor.id} label is required`);
+  if (descriptor.version < 1 || !Number.isInteger(descriptor.version)) {
+    throw new Error(`search engine ${descriptor.id} version must be a positive integer`);
+  }
+  if (descriptor.storage.kind === "sidecar" && !descriptor.storage.defaultFileName?.trim()) {
+    throw new Error(`search engine ${descriptor.id} sidecar storage requires a default file name`);
   }
 }
 

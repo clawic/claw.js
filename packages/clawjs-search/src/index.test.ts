@@ -6,13 +6,81 @@ import { test } from "vitest";
 
 import {
   DEFAULT_SEARCH_BUDGETS,
+  DEFAULT_SEARCH_ENGINE_ID,
+  SEARCH_SQLITE_ENGINE,
   SearchStore,
   createFrameworkSearchSourceManifest,
   createFullSearchSourceManifest,
   createRootSearchFederator,
   createSearchRegistry,
+  defineSearchEngine,
   scoreLexicalMatch,
 } from "./index.ts";
+
+test("Search exposes SQLite as the default rebuildable engine boundary", () => {
+  assert.equal(DEFAULT_SEARCH_ENGINE_ID, "sqlite");
+  assert.equal(SEARCH_SQLITE_ENGINE.id, "sqlite");
+  assert.equal(SEARCH_SQLITE_ENGINE.storage.kind, "sidecar");
+  assert.equal(SEARCH_SQLITE_ENGINE.storage.defaultFileName, "search.sqlite");
+  assert.equal(SEARCH_SQLITE_ENGINE.storage.rebuildable, true);
+  assert.equal(SEARCH_SQLITE_ENGINE.storage.ownsCanonicalData, false);
+  assert.equal(SEARCH_SQLITE_ENGINE.storage.shardModel, "logical");
+  assert.equal(SEARCH_SQLITE_ENGINE.capabilities.fts, true);
+  assert.equal(SEARCH_SQLITE_ENGINE.capabilities.jobQueue, true);
+  assert.equal(SEARCH_SQLITE_ENGINE.capabilities.vectors, true);
+  assert.equal(SEARCH_SQLITE_ENGINE.capabilities.rankingCache, true);
+  assert.deepEqual(SEARCH_SQLITE_ENGINE.query.strategies, ["lexical", "semantic", "hybrid"]);
+});
+
+test("SearchStore reports the default Search engine descriptor", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-engine-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    assert.equal(store.engine.id, "sqlite");
+    assert.deepEqual(store.engineDescriptor(), SEARCH_SQLITE_ENGINE);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("custom Search engine descriptors must identify storage boundaries", () => {
+  assert.throws(
+    () => defineSearchEngine({
+      id: "missing-file",
+      label: "Missing file",
+      version: 1,
+      storage: {
+        kind: "sidecar",
+        rebuildable: true,
+        ownsCanonicalData: false,
+        shardModel: "logical",
+      },
+      capabilities: {
+        fts: true,
+        fragments: true,
+        actions: true,
+        sourceControls: true,
+        cursors: true,
+        tombstones: true,
+        jobQueue: true,
+        savedSearches: true,
+        monitors: true,
+        audit: true,
+        vectors: false,
+        rankingCache: true,
+        transactions: true,
+      },
+      query: {
+        strategies: ["lexical"],
+        filters: true,
+        acl: true,
+        agentBudgets: true,
+      },
+    }),
+    /sidecar storage requires a default file name/,
+  );
+});
 
 test("framework sources are opt-in and require fast paths", () => {
   const manifest = createFrameworkSearchSourceManifest({

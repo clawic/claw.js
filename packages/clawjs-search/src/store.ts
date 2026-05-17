@@ -5,11 +5,13 @@ import { createHash } from "node:crypto";
 import Database from "better-sqlite3";
 
 import {
+  SEARCH_SQLITE_ENGINE,
   SEARCH_PROFILES,
   createSearchRegistry,
   scoreLexicalMatch,
   type SearchAction,
   type SearchAgentResultBudget,
+  type SearchEngineDescriptor,
   type SearchFacetDeclaration,
   type SearchInteraction,
   type SearchInteractionInput,
@@ -177,6 +179,7 @@ export interface SearchRankingCacheStats {
 
 export class SearchStore {
   readonly db: Database.Database;
+  readonly engine = SEARCH_SQLITE_ENGINE;
 
   constructor(dbPath: string) {
     fs.mkdirSync(path.dirname(dbPath), { recursive: true });
@@ -214,6 +217,10 @@ export class SearchStore {
 
   close(): void {
     this.db.close();
+  }
+
+  engineDescriptor(): SearchEngineDescriptor {
+    return this.engine;
   }
 
   registerSource(manifest: SearchSourceManifest, options: { state?: SearchSourceState; backlog?: number; error?: string | null } = {}): void {

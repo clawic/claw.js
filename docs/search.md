@@ -29,6 +29,15 @@ Search V1.1 has four layers:
    cache, and optional vectors. Canonical records and configuration stay in
    `core.sqlite`.
 
+The physical engine boundary is explicit. `@clawjs/search` exports a
+`SearchEngineDescriptor` contract plus `SEARCH_SQLITE_ENGINE` as the default
+engine. SQLite is currently the only implemented engine: it is a rebuildable
+sidecar, owns no canonical data, provides logical shard boundaries inside
+`search.sqlite`, and declares its supported FTS, vector, cursor, tombstone, job
+queue, audit, saved-search, monitor, and ranking-cache capabilities. Future
+engines must enter through the same descriptor contract instead of changing
+source manifests or UI section fast paths.
+
 ## Profiles
 
 `framework` is the default profile. It includes framework-owned sources and must
