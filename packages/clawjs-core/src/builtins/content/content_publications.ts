@@ -12,6 +12,7 @@ export const CONTENT_PUBLICATIONS: BuiltinCollectionDefinition = {
     notes: "Local publication records describe intent and receipts; actual provider delivery is EXTERNAL PENDING unless a validated connector executed it.",
   },
   fields: [
+    { name: "title", type: "text", aliases: ["name"] },
     { name: "contentEntryId", type: "relation", required: true, requiredReason: "relation_integrity", relation: { collectionName: "content_entries" } },
     { name: "contentVariantId", type: "relation", relation: { collectionName: "content_variants" } },
     { name: "contentDestinationId", type: "relation", relation: { collectionName: "content_destinations" } },
@@ -28,6 +29,7 @@ export const CONTENT_PUBLICATIONS: BuiltinCollectionDefinition = {
     { name: "archivedAt", type: "date" },
   ],
   indexes: [
+    { name: "content_publications_title_idx", fields: ["title"] },
     { name: "content_publications_entry_idx", fields: ["contentEntryId"] },
     { name: "content_publications_variant_idx", fields: ["contentVariantId"] },
     { name: "content_publications_destination_idx", fields: ["contentDestinationId"] },

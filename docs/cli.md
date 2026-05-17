@@ -846,6 +846,15 @@ claw drug-product drug_product_123 batches add "Batch B-001" --company company_1
 claw drug-product drug_product_123 lot-releases add "Lot release B-001" --batch batch_record_123 --json
 claw drug-product drug_product_123 adverse-events add "Headache safety event" --patient patient_123 --study study_123 --json
 claw drug-product drug_product_123 timeline --json
+claw content-brand create "Acme Editorial" --company company_123 --json
+claw content-destination create "Acme Blog" --brand content_brand_123 --json
+claw content-campaign create "Launch Campaign" --brand content_brand_123 --json
+claw content-entry create "Launch note" --brand content_brand_123 --campaign content_campaign_123 --json
+claw content-entry content_entry_123 revisions add "Launch note revision 1" --json
+claw content-entry content_entry_123 variants add "Blog variant" --destination content_destination_123 --json
+claw content-entry content_entry_123 approvals add --variant content_variant_123 --destination content_destination_123 --json
+claw content-entry content_entry_123 publications add --variant content_variant_123 --destination content_destination_123 --json
+claw content-entry content_entry_123 timeline --json
 claw asset create --company company_123 --account-id account_123 --product product_123 --serial-number PRESS-001 --json
 claw asset asset_123 work-orders add "Batch 42" --company company_123 --json
 claw asset asset_123 work-orders list --json

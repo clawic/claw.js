@@ -55,6 +55,7 @@ const requiredFirstWaveSystems = [
   "iot",
   "construction",
   "eln",
+  "content",
   "product",
   "pharma",
 ];
@@ -131,6 +132,14 @@ const requiredFixtureCoverage = [
   "batch_record",
   "lot_release",
   "adverse_event",
+  "content_brand",
+  "content_destination",
+  "content_campaign",
+  "content_entry",
+  "content_revision",
+  "content_variant",
+  "content_approval",
+  "content_publication",
   "thing",
   "iot_device",
   "sensor_reading",
@@ -180,6 +189,7 @@ const requiredExternalPending = [
   ["iot", "physical_device"],
   ["eln", "regulated_export"],
   ["pharma", "regulated_export"],
+  ["content", "provider"],
 ];
 
 const requiredExistingAuditSurfaces = [
@@ -236,6 +246,14 @@ const requiredPluralIntentPhrases = [
   ["claw batch-records list", "batch_records"],
   ["claw lot-releases list", "lot_releases"],
   ["claw adverse-events list", "adverse_events"],
+  ["claw content-brands list", "content_brands"],
+  ["claw content-destinations list", "content_destinations"],
+  ["claw content-campaigns list", "content_campaigns"],
+  ["claw content-entries list", "content_entries"],
+  ["claw content-revisions list", "content_revisions"],
+  ["claw content-variants list", "content_variants"],
+  ["claw content-approvals list", "content_approvals"],
+  ["claw content-publications list", "content_publications"],
   ["claw things list", "iot_things"],
   ["claw iot-devices list", "iot_devices"],
   ["claw sensor-readings list", "sensor_readings"],
@@ -381,6 +399,11 @@ for (const phrase of [
   "claw drug-product drug_product_123 lot-releases add",
   "claw drug-product drug_product_123 adverse-events add",
   "claw drug-product drug_product_123 timeline",
+  "claw content-entry content_entry_123 revisions add",
+  "claw content-entry content_entry_123 variants add",
+  "claw content-entry content_entry_123 approvals add",
+  "claw content-entry content_entry_123 publications add",
+  "claw content-entry content_entry_123 timeline",
   "claw thing thing_123 devices add",
   "claw iot-device device_123 readings add",
   "claw iot-device device_123 commands add",
@@ -583,6 +606,9 @@ if (!semanticViews.some((entry) => entry.id === "product_spec.timeline" && entry
 }
 if (!semanticViews.some((entry) => entry.id === "drug_product.timeline" && entry.systemId === "pharma")) {
   fail("semantic views must include drug_product.timeline");
+}
+if (!semanticViews.some((entry) => entry.id === "content_entry.timeline" && entry.systemId === "content")) {
+  fail("semantic views must include content_entry.timeline");
 }
 if (!semanticViews.some((entry) => entry.id === "thing.timeline" && entry.systemId === "iot")) {
   fail("semantic views must include thing.timeline");

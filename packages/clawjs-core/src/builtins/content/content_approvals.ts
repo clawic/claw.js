@@ -11,6 +11,7 @@ export const CONTENT_APPROVALS: BuiltinCollectionDefinition = {
     relationGuidance: "Link the approval to contentEntryId, contentVariantId, and contentDestinationId when the review is channel-specific.",
   },
   fields: [
+    { name: "title", type: "text", aliases: ["name"] },
     { name: "contentEntryId", type: "relation", required: true, requiredReason: "relation_integrity", relation: { collectionName: "content_entries" } },
     { name: "contentVariantId", type: "relation", relation: { collectionName: "content_variants" } },
     { name: "contentDestinationId", type: "relation", relation: { collectionName: "content_destinations" } },
@@ -25,6 +26,7 @@ export const CONTENT_APPROVALS: BuiltinCollectionDefinition = {
     { name: "metadata", type: "json" },
   ],
   indexes: [
+    { name: "content_approvals_title_idx", fields: ["title"] },
     { name: "content_approvals_entry_idx", fields: ["contentEntryId"] },
     { name: "content_approvals_variant_idx", fields: ["contentVariantId"] },
     { name: "content_approvals_destination_idx", fields: ["contentDestinationId"] },
