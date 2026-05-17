@@ -1216,6 +1216,12 @@ function financeRecordTargetFromResourceId(resourceId: string): { namespaceId: s
   return { namespaceId: parts[0], collectionName: parts[1], recordId: parts[2] };
 }
 
+function parseProviderRoutingResourceId(resourceId: string): { feature: string; capability: string } | null {
+  const parts = resourceId.split(":");
+  if (parts.length !== 3 || parts[0] !== "routing" || !parts[1] || !parts[2]) return null;
+  return { feature: parts[1], capability: parts[2] };
+}
+
 function documentTargetFromJob(job: SearchIndexJob): { namespaceId: string; documentId: string; resourceId: string } | null {
   const namespaceId = resourceIdFromJobPayload(job, "namespaceId");
   const documentId = resourceIdFromJobPayload(job, "documentId");
@@ -4691,6 +4697,165 @@ function skillRegistrySearchDocument(row: SkillRegistryRow): SearchDocumentInput
   };
 }
 
+function providerRoutingSearchDocument(row: ProviderRoutingRow): SearchDocumentInput {
+  const policy = parseJsonRecord(row.policy_json);
+  const metadata = parseJsonRecord(row.metadata_json);
+  const policyText = textFromStructuredContent(redactExternalCachePayload(policy));
+  const metadataText = textFromStructuredContent(redactExternalCachePayload(metadata));
+  const resourceId = `routing:${row.feature}:${row.capability}`;
+  const body = [
+    row.feature,
+    row.capability,
+    row.provider,
+    row.model,
+    policyText,
+    metadataText,
+  ].filter(Boolean).join("\n");
+  return {
+    id: `providers.routing:${resourceId}`,
+    source: "providers.routing",
+    domain: "providers",
+    type: "routing_rule",
+    resourceId,
+    title: `${row.feature} ${row.capability}`,
+    subtitle: [row.provider, row.model].filter(Boolean).join(" / "),
+    snippet: [row.provider, row.model].filter(Boolean).join(" / ") || row.capability,
+    body,
+    updatedAt: row.updated_at,
+    metadata: {
+      kind: "routing",
+      routeId: row.id,
+      feature: row.feature,
+      capability: row.capability,
+      provider: row.provider,
+      model: row.model ?? null,
+      hasAccountRef: !!row.account_ref,
+      policyKey: Object.keys(policy).sort(),
+      metadataKey: Object.keys(metadata).sort(),
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: {
+      fastPath: 1,
+      providerRouting: 1,
+      hasAccountRef: row.account_ref ? 0.1 : 0,
+    },
+    fragments: policyText ? [{
+      id: `providers.routing:${resourceId}:policy`,
+      title: "policy",
+      body: policyText,
+      snippet: policyText.slice(0, 180),
+      sortOrder: 0,
+      metadata: { kind: "policy" },
+    }] : [],
+    actions: [
+      { id: "open", kind: "open", label: "Open provider route", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy provider route reference", requiresApproval: false },
+    ],
+  };
+}
+
+function providerSettingSearchDocument(row: ProviderSettingRow): SearchDocumentInput {
+  const policy = parseJsonRecord(row.policy_json);
+  const metadata = parseJsonRecord(row.metadata_json);
+  const policyText = textFromStructuredContent(redactExternalCachePayload(policy));
+  const metadataText = textFromStructuredContent(redactExternalCachePayload(metadata));
+  const resourceId = `setting:${row.provider}`;
+  const body = [
+    row.provider,
+    row.enabled === 1 ? "enabled" : "disabled",
+    policyText,
+    metadataText,
+  ].filter(Boolean).join("\n");
+  return {
+    id: `providers.routing:${resourceId}`,
+    source: "providers.routing",
+    domain: "providers",
+    type: "provider_setting",
+    resourceId,
+    title: row.provider,
+    subtitle: row.enabled === 1 ? "enabled" : "disabled",
+    snippet: firstMeaningfulLine(policyText || metadataText || "") ?? (row.enabled === 1 ? "enabled" : "disabled"),
+    body,
+    updatedAt: row.updated_at,
+    metadata: {
+      kind: "setting",
+      settingId: row.id,
+      provider: row.provider,
+      enabled: row.enabled === 1,
+      policyKey: Object.keys(policy).sort(),
+      metadataKey: Object.keys(metadata).sort(),
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: {
+      fastPath: 1,
+      providerSetting: 1,
+      enabled: row.enabled === 1 ? 0.2 : -0.1,
+    },
+    actions: [
+      { id: "open", kind: "open", label: "Open provider setting", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy provider setting reference", requiresApproval: false },
+    ],
+  };
+}
+
+function snippetLibrarySearchDocument(row: SnippetLibraryRow): SearchDocumentInput {
+  const scope = parseJsonRecord(row.scope_json);
+  const metadata = parseJsonRecord(row.metadata_json);
+  const skillRefs = parseJsonArray(row.skill_refs_json).filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+  const metadataText = textFromStructuredContent(redactExternalCachePayload(metadata));
+  const scopeText = textFromStructuredContent(redactExternalCachePayload(scope));
+  const scopeKind = typeof scope.kind === "string" ? scope.kind : undefined;
+  const body = [
+    row.title,
+    row.slug,
+    row.kind,
+    row.shortcut,
+    row.body,
+    skillRefs.join(" "),
+    scopeText,
+    metadataText,
+  ].filter(Boolean).join("\n");
+  return {
+    id: `snippets.library:${row.slug}`,
+    source: "snippets.library",
+    domain: "snippets",
+    type: row.kind || "snippet",
+    resourceId: row.slug,
+    title: row.title || row.slug,
+    subtitle: [row.kind, row.shortcut, scopeKind].filter(Boolean).join(" / "),
+    snippet: firstMeaningfulLine(row.body) ?? row.shortcut ?? row.slug,
+    body,
+    updatedAt: row.updated_at,
+    metadata: {
+      snippetId: row.id,
+      slug: row.slug,
+      kind: row.kind,
+      shortcut: row.shortcut ?? null,
+      scopeKind: scopeKind ?? null,
+      skillRef: skillRefs,
+      metadataKey: Object.keys(metadata).sort(),
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: {
+      fastPath: 1,
+      snippet: 1,
+      shortcut: row.shortcut ? 0.3 : 0,
+    },
+    fragments: row.body ? [{
+      id: `snippets.library:${row.slug}:body`,
+      title: "body",
+      body: row.body,
+      snippet: row.body.slice(0, 180),
+      sortOrder: 0,
+      metadata: { kind: "body" },
+    }] : [],
+    actions: [
+      { id: "open", kind: "open", label: "Open snippet", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy snippet reference", requiresApproval: false },
+    ],
+  };
+}
+
 function connectorCatalogSearchDocument(row: ConnectorOperationRow, capabilitiesById: Map<string, ConnectorCapabilityRow>): SearchDocumentInput | null {
   if (!row.id) return null;
   const capabilityIds = parseJsonArray(row.capability_ids_json).filter((value): value is string => typeof value === "string" && value.trim().length > 0);
@@ -5175,6 +5340,43 @@ interface SkillRegistryRow {
   secret_refs_json: string;
   metadata_json: string;
   export_path: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ProviderRoutingRow {
+  id: string;
+  feature: string;
+  capability: string;
+  provider: string;
+  model: string | null;
+  account_ref: string | null;
+  policy_json: string;
+  metadata_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ProviderSettingRow {
+  id: string;
+  provider: string;
+  enabled: number;
+  policy_json: string;
+  metadata_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface SnippetLibraryRow {
+  id: string;
+  slug: string;
+  kind: string;
+  title: string;
+  body: string;
+  shortcut: string | null;
+  scope_json: string;
+  skill_refs_json: string;
+  metadata_json: string;
   created_at: string;
   updated_at: string;
 }

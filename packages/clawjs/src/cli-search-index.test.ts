@@ -1336,6 +1336,144 @@ test("search rebuild indexes skills.registry from core.sqlite without secret ref
   });
 });
 
+test("providers and snippets writes enqueue and index framework configuration fast paths", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-providers-snippets-"));
+  const dataRoot = path.join(workspaceRoot, ".claw", "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const providerRoute = await runCliCapture([
+      "providers",
+      "routing",
+      "set",
+      "quickask",
+      "--capability",
+      "chat",
+      "--provider",
+      "provider_alpha",
+      "--model",
+      "generic-chat-large",
+      "--account-ref",
+      "vault://providers/provider_alpha/main",
+      "--policy",
+      JSON.stringify({ maxCost: "low", approval: "auto" }),
+      "--json",
+    ], workspaceRoot);
+    assert.equal(providerRoute.code, CLI_EXIT_OK);
+
+    const providerSetting = await runCliCapture([
+      "providers",
+      "settings",
+      "set",
+      "provider_alpha",
+      "--enabled",
+      "true",
+      "--policy",
+      JSON.stringify({ region: "local" }),
+      "--json",
+    ], workspaceRoot);
+    assert.equal(providerSetting.code, CLI_EXIT_OK);
+
+    const snippet = await runCliCapture([
+      "snippets",
+      "upsert",
+      "quickask-review",
+      "--title",
+      "QuickAsk Review",
+      "--body",
+      "Review the current selection before sending the provider request",
+      "--kind",
+      "prompt",
+      "--shortcut",
+      "qa-review",
+      "--skill-refs",
+      "skill:review",
+      "--json",
+    ], workspaceRoot);
+    assert.equal(snippet.code, CLI_EXIT_OK);
+
+    const providerJobs = await runCliCapture(["search", "jobs", "--source", "providers.routing", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(providerJobs.code, CLI_EXIT_OK);
+    const providerJobsPayload = JSON.parse(providerJobs.stdout) as {
+      data: { items: Array<{ source: string; operation: string; resourceId: string; payload: { eventDriven?: boolean; kind?: string; provider?: string; feature?: string; capability?: string } }> };
+    };
+    const routeJob = providerJobsPayload.data.items.find((job) => job.resourceId === "routing:quickask:chat");
+    assert.equal(routeJob?.source, "providers.routing");
+    assert.equal(routeJob?.operation, "upsert");
+    assert.equal(routeJob?.payload.eventDriven, true);
+    assert.equal(routeJob?.payload.feature, "quickask");
+    const settingJob = providerJobsPayload.data.items.find((job) => job.resourceId === "setting:provider_alpha");
+    assert.equal(settingJob?.payload.kind, "setting");
+    assert.equal(settingJob?.payload.provider, "provider_alpha");
+
+    const snippetJobs = await runCliCapture(["search", "jobs", "--source", "snippets.library", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(snippetJobs.code, CLI_EXIT_OK);
+    const snippetJobsPayload = JSON.parse(snippetJobs.stdout) as {
+      data: { items: Array<{ source: string; operation: string; resourceId: string; payload: { eventDriven?: boolean; slug?: string } }> };
+    };
+    const snippetJob = snippetJobsPayload.data.items.find((job) => job.resourceId === "quickask-review");
+    assert.equal(snippetJob?.source, "snippets.library");
+    assert.equal(snippetJob?.operation, "upsert");
+    assert.equal(snippetJob?.payload.eventDriven, true);
+    assert.equal(snippetJob?.payload.slug, "quickask-review");
+
+    const providerRun = await runCliCapture(["search", "service", "run-once", "--source", "providers.routing", "--data-dir", dataRoot, "--json", "--limit", "2"], workspaceRoot);
+    assert.equal(providerRun.code, CLI_EXIT_OK);
+    const snippetRun = await runCliCapture(["search", "service", "run-once", "--source", "snippets.library", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(snippetRun.code, CLI_EXIT_OK);
+
+    const providerQuery = await runCliCapture(["search", "query", "quickask generic-chat-large", "--domains", "providers", "--filters", "metadata.hasAccountRef=true", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(providerQuery.code, CLI_EXIT_OK);
+    const providerQueryPayload = JSON.parse(providerQuery.stdout) as {
+      data: {
+        indexedFastPaths: { "providers.routing": number };
+        results: Array<{ source: string; domain: string; type: string; title: string; metadata?: { provider?: string; hasAccountRef?: boolean } }>;
+      };
+    };
+    assert.equal(providerQueryPayload.data.indexedFastPaths["providers.routing"], 2);
+    const providerResult = providerQueryPayload.data.results.find((entry) => entry.type === "routing_rule");
+    assert.equal(providerResult?.source, "providers.routing");
+    assert.equal(providerResult?.domain, "providers");
+    assert.equal(providerResult?.metadata?.provider, "provider_alpha");
+    assert.equal(providerResult?.metadata?.hasAccountRef, true);
+    assert.equal(JSON.stringify(providerQueryPayload.data.results).includes("vault://providers/provider_alpha/main"), false);
+
+    const snippetQuery = await runCliCapture(["search", "query", "current selection", "--domains", "snippets", "--filters", "metadata.kind=prompt", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(snippetQuery.code, CLI_EXIT_OK);
+    const snippetQueryPayload = JSON.parse(snippetQuery.stdout) as {
+      data: {
+        indexedFastPaths: { "snippets.library": number };
+        results: Array<{ source: string; domain: string; type: string; title: string; metadata?: { shortcut?: string; skillRef?: string[] }; fragments?: Array<{ snippet?: string }> }>;
+      };
+    };
+    assert.equal(snippetQueryPayload.data.indexedFastPaths["snippets.library"], 1);
+    const snippetResult = snippetQueryPayload.data.results.find((entry) => entry.title === "QuickAsk Review");
+    assert.equal(snippetResult?.source, "snippets.library");
+    assert.equal(snippetResult?.domain, "snippets");
+    assert.equal(snippetResult?.type, "prompt");
+    assert.equal(snippetResult?.metadata?.shortcut, "qa-review");
+    assert.deepEqual(snippetResult?.metadata?.skillRef, ["skill:review"]);
+    assert.equal(snippetResult?.fragments?.some((fragment) => fragment.snippet?.includes("current selection")), true);
+
+    const deletedSnippet = await runCliCapture(["snippets", "delete", "quickask-review", "--json"], workspaceRoot);
+    assert.equal(deletedSnippet.code, CLI_EXIT_OK);
+    const deletedRoute = await runCliCapture(["providers", "routing", "delete", "quickask", "--capability", "chat", "--json"], workspaceRoot);
+    assert.equal(deletedRoute.code, CLI_EXIT_OK);
+    const deleteJobs = await runCliCapture(["search", "jobs", "--source", "snippets.library", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleteJobs.code, CLI_EXIT_OK);
+    const deleteJobsPayload = JSON.parse(deleteJobs.stdout) as {
+      data: { items: Array<{ operation: string; resourceId: string; payload: { eventDriven?: boolean; slug?: string } }> };
+    };
+    const deleteJob = deleteJobsPayload.data.items.find((job) => job.resourceId === "quickask-review" && job.operation === "delete");
+    assert.equal(deleteJob?.payload.eventDriven, true);
+    assert.equal(deleteJob?.payload.slug, "quickask-review");
+  });
+});
+
 test("search rebuild indexes connectors.catalog from control-plane operations without secrets", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-connectors-"));
   const dataRoot = path.join(workspaceRoot, ".claw", "data");
