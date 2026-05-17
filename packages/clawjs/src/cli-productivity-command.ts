@@ -14,6 +14,7 @@ import type {
   OutcomeStatus,
   RuntimeAdapterId,
 } from "@clawjs/core";
+import path from "node:path";
 
 import type { CliContext } from "./index.ts";
 import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
@@ -23,6 +24,26 @@ import { COMMITMENT_KINDS, COMMITMENT_STATUSES, CONTEXT_PURPOSES, CONTEXT_STATUS
 import { createCliClaw, createCliWorkspaceClaw } from "./cli-claw-factory.ts";
 import { coreProductivityCollection, getCoreProductivitySchema, mergeCoreDbInput, pickCoreTitle, singularCoreCollection, validateCoreDbPayload } from "./cli-productivity-utils.ts";
 import { resolveRuntimeAdapterId } from "./cli-runtime-utils.ts";
+import { scheduleWorkItemsSearchEvent } from "./cli-search-events.ts";
+
+const CORE_WORK_SEARCH_COLLECTIONS = new Set([
+  "tasks",
+  "projects",
+  "goals",
+  "people",
+  "inbox_threads",
+  "inbox_messages",
+  "events",
+  "reminders",
+  "deadlines",
+  "blockers",
+  "decisions",
+  "assignments",
+  "handoffs",
+  "approvals",
+  "work_sessions",
+  "artifacts",
+]);
 
 function writeProductivityDbJson(
   stdout: NodeJS.WritableStream,
@@ -160,11 +181,13 @@ export async function runCoreProductivityDbCli(input: {
     if (force) {
       const removed = await api.remove(id);
       if (!removed) throw new CliHandledError("not_found", `${collectionName} record not found: ${id}`);
+      scheduleCoreWorkSearchEventIfNeeded({ operation: "delete", collectionName, recordId: id, workspaceRoot, flags });
       if (wantsJson) writeProductivityDbJson(stdout, canonicalCommand, positionals, collectionName, action, { ok: true, deleted: true, archived: false });
       else stdout.write("ok\n");
       return CLI_EXIT_OK;
     }
     const archived = await api.archive(id);
+    scheduleCoreWorkSearchEventIfNeeded({ operation: "delete", collectionName, recordId: id, workspaceRoot, flags });
     if (wantsJson) writeProductivityDbJson(stdout, canonicalCommand, positionals, collectionName, action, { ok: true, deleted: false, archived: true, record: archived });
     else stdout.write(`${archived.id}\n`);
     return CLI_EXIT_OK;
@@ -200,12 +223,35 @@ export async function runCoreProductivityDbCli(input: {
     result = await api.update(recordId, payload);
   }
 
+  const resultRecordId = typeof (result as { id?: unknown }).id === "string" ? (result as { id: string }).id : recordId;
+  if (resultRecordId) {
+    scheduleCoreWorkSearchEventIfNeeded({ operation: "upsert", collectionName, recordId: resultRecordId, workspaceRoot, flags });
+  }
+
   if (wantsJson) writeProductivityDbJson(stdout, canonicalCommand, positionals, collectionName, action, result);
   else {
     const record = result as { id?: string; title?: string; name?: string; displayName?: string };
     stdout.write(`${action === "create" ? "Created" : "Updated"} ${singularCoreCollection(collectionName)} ${record.id ?? ""} "${record.title ?? record.name ?? record.displayName ?? ""}"\n`);
   }
   return CLI_EXIT_OK;
+}
+
+function scheduleCoreWorkSearchEventIfNeeded(input: {
+  operation: "upsert" | "delete";
+  collectionName: string;
+  recordId: string;
+  workspaceRoot: string;
+  flags: Record<string, string>;
+}): void {
+  if (!CORE_WORK_SEARCH_COLLECTIONS.has(input.collectionName)) return;
+  scheduleWorkItemsSearchEvent({
+    operation: input.operation,
+    namespaceId: input.flags.namespace ?? "main",
+    collectionName: input.collectionName,
+    recordId: input.recordId,
+    dataDir: input.flags["data-dir"] ?? process.env.CLAW_DATA_DIR ?? path.join(input.workspaceRoot, ".claw", "data"),
+    flags: input.flags,
+  });
 }
 
 export async function archiveOrRemoveProductivityRecord(

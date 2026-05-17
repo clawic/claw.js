@@ -1218,6 +1218,43 @@ test("search rebuild indexes work.items from productivity records", async () => 
   });
 });
 
+test("database writes enqueue work.items refresh jobs", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-work-events-"));
+  const dataRoot = path.join(workspaceRoot, ".claw", "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const created = await runCliCapture([
+      "db",
+      "tasks",
+      "create",
+      "Emit work search event",
+      "--set",
+      "status=todo",
+      "--json",
+    ], workspaceRoot);
+    assert.equal(created.code, CLI_EXIT_OK);
+    const createdPayload = JSON.parse(created.stdout) as { data: { id: string } };
+
+    const jobs = await runCliCapture(["search", "jobs", "--source", "work.items", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(jobs.code, CLI_EXIT_OK);
+    const jobsPayload = JSON.parse(jobs.stdout) as {
+      data: { items: Array<{ source: string; operation: string; resourceId: string; shard: string; payload: { eventDriven?: boolean; collection?: string; recordId?: string } }> };
+    };
+    const job = jobsPayload.data.items.find((item) => item.resourceId === `main:tasks:${createdPayload.data.id}`);
+    assert.equal(job?.source, "work.items");
+    assert.equal(job?.operation, "upsert");
+    assert.equal(job?.shard, "hot");
+    assert.equal(job?.payload.eventDriven, true);
+    assert.equal(job?.payload.collection, "tasks");
+    assert.equal(job?.payload.recordId, createdPayload.data.id);
+  });
+});
+
 test("search rebuild indexes skills.registry from core.sqlite without secret refs", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-skills-"));
   const dataRoot = path.join(workspaceRoot, ".claw", "data");

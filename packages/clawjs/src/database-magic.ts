@@ -14,7 +14,7 @@ import fs from "fs";
 import path from "path";
 import { CliHandledError } from "./cli-errors.ts";
 import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
-import { scheduleDatabaseRecordSearchEvent, scheduleDocumentBlocksSearchEvent, scheduleFinanceRecordsSearchEvent } from "./cli-search-events.ts";
+import { scheduleDatabaseRecordSearchEvent, scheduleDocumentBlocksSearchEvent, scheduleFinanceRecordsSearchEvent, scheduleWorkItemsSearchEvent } from "./cli-search-events.ts";
 import { openMainDataStore } from "./v1-data.ts";
 
 const DB_EXIT_OK = 0;
@@ -31,6 +31,25 @@ const FINANCE_SEARCH_COLLECTIONS = new Set([
   "payment_intents",
   "accounting_entries",
   "accounting_lines",
+]);
+
+const WORK_SEARCH_COLLECTIONS = new Set([
+  "tasks",
+  "projects",
+  "goals",
+  "people",
+  "inbox_threads",
+  "inbox_messages",
+  "events",
+  "reminders",
+  "deadlines",
+  "blockers",
+  "decisions",
+  "assignments",
+  "handoffs",
+  "approvals",
+  "work_sessions",
+  "artifacts",
 ]);
 type DbAction = "list" | "get" | "create" | "update" | "delete" | "schema" | "query";
 
@@ -166,6 +185,16 @@ function scheduleLocalSearchEventsForRecord(input: {
   });
   if (FINANCE_SEARCH_COLLECTIONS.has(input.collectionName)) {
     scheduleFinanceRecordsSearchEvent({
+      operation: input.operation,
+      namespaceId: input.namespaceId,
+      collectionName: input.collectionName,
+      recordId,
+      dataDir: input.dataDir,
+      flags: input.flags,
+    });
+  }
+  if (WORK_SEARCH_COLLECTIONS.has(input.collectionName)) {
+    scheduleWorkItemsSearchEvent({
       operation: input.operation,
       namespaceId: input.namespaceId,
       collectionName: input.collectionName,

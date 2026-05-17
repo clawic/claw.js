@@ -191,7 +191,7 @@ unbounded duplicate backfill work.
 The local framework database and artifact write paths now emit those compacted
 events for `database.records`, `documents.blocks`, `notes.pages`,
 `knowledge.graph`, `signals.observations`, `calendar.events`,
-`finance.records`,
+`finance.records`, `work.items`,
 `generations.artifacts`, `images.derived`, `media.assets`, and
 `skills.registry`: successful `db
 collection create|update`, `documents create|update`, `notes create|update`,
@@ -199,7 +199,7 @@ collection create|update`, `documents create|update`, `notes create|update`,
 create|update`, canonical finance collection writes such as `transaction create|update`, `image
 create|edit|import`, typed-media generation, `generations create`, and `skills
 upsert` calls schedule hot upsert events; successful record, document, note,
-signal observation, calendar event, finance collection record, image, media, generation, or skill deletes
+signal observation, calendar event, finance collection record, work item, image, media, generation, or skill deletes
 schedule delete events where the source item is removed; and `document_blocks`
 changes schedule a hot upsert for the parent document so fragments refresh together. The event write is best effort because
 `search.sqlite` is a rebuildable sidecar; a temporary Search sidecar failure
