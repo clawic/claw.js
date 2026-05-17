@@ -17,6 +17,24 @@ test("redactSecrets masks sensitive keys recursively", () => {
   assert.equal(redacted.safe, "value");
 });
 
+test("redactSecrets preserves public catalog keys while still masking secret-looking values", () => {
+  const redacted = redactSecrets({
+    key: "health",
+    domainSystemKey: "health",
+    domainRoleKey: "health.patient",
+    operationKey: "patient.timeline",
+    apiKey: "sk-12345678",
+    unsafe: { key: "secret-token-12345678" },
+  });
+
+  assert.equal(redacted.key, "health");
+  assert.equal(redacted.domainSystemKey, "health");
+  assert.equal(redacted.domainRoleKey, "health.patient");
+  assert.equal(redacted.operationKey, "patient.timeline");
+  assert.equal(redacted.apiKey, "*******5678");
+  assert.equal((redacted.unsafe as { key: string }).key.includes("secret-token"), false);
+});
+
 test("redactSecrets masks inline secrets inside error and message strings", () => {
   const redacted = redactSecrets({
     error: "Gateway HTTP 401: Authorization: Bearer secret-token-12345678",

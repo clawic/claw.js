@@ -15,6 +15,9 @@ export interface StructuredLogSink {
 
 const SENSITIVE_KEY_PATTERN = /(key|token|secret|authorization|apiKey)/i;
 const SAFE_SECRET_METADATA_KEYS = new Set(["missingSecrets", "requiredSecrets"]);
+const SAFE_PUBLIC_CATALOG_KEY_FIELDS = new Set(["key", "domainSystemKey", "domainRoleKey", "operationKey", "profileKind", "canonicalCommand", "mappedCommand", "collectionName"]);
+const SAFE_PUBLIC_CATALOG_VALUE_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,160}$/;
+const UNSAFE_PUBLIC_CATALOG_VALUE_PATTERN = /(secret|token|password|credential|authorization|bearer|sk-)/i;
 const INLINE_SECRET_PATTERNS: RegExp[] = [
   /\bBearer\s+([A-Za-z0-9._-]{6,})/gi,
   /\b(sk-[A-Za-z0-9._-]{6,})\b/g,
@@ -50,13 +53,21 @@ export function redactSecrets<TValue>(value: TValue): TValue {
     return Object.fromEntries(
       Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
         key,
-          SENSITIVE_KEY_PATTERN.test(key) && !SAFE_SECRET_METADATA_KEYS.has(key)
+          SENSITIVE_KEY_PATTERN.test(key) && !SAFE_SECRET_METADATA_KEYS.has(key) && !isSafePublicCatalogKey(key, entry)
           ? (typeof entry === "string" ? redactString(entry) : "[REDACTED]")
           : redactSecrets(entry),
       ]),
     ) as TValue;
   }
   return value;
+}
+
+function isSafePublicCatalogKey(key: string, value: unknown): boolean {
+  return typeof value === "string"
+    && SAFE_PUBLIC_CATALOG_KEY_FIELDS.has(key)
+    && SAFE_PUBLIC_CATALOG_VALUE_PATTERN.test(value)
+    && !UNSAFE_PUBLIC_CATALOG_VALUE_PATTERN.test(value)
+    && redactSensitiveText(value) === value;
 }
 
 export class MemoryStructuredLogSink implements StructuredLogSink {
