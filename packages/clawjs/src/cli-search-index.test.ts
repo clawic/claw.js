@@ -80,6 +80,15 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     const defaultShardPayload = JSON.parse(defaultShardQuery.stdout) as { data: { results: Array<{ source: string; title: string; shard?: string }> } };
     assert.equal(defaultShardPayload.data.results.some((result) => result.source === "commands" && result.title === "system" && result.shard === undefined), true);
 
+    const hybridQuery = await runCliCapture(["search", "query", "system capabilities", "--data-dir", dataRoot, "--json", "--limit", "5", "--strategy", "hybrid", "--embedding-model", "local-test", "--embedding", "[1,0,0]"], workspaceRoot);
+    assert.equal(hybridQuery.code, CLI_EXIT_OK);
+    const hybridPayload = JSON.parse(hybridQuery.stdout) as {
+      data: { strategy?: string; embeddingModel?: string; results: Array<{ source: string; title: string }> };
+    };
+    assert.equal(hybridPayload.data.strategy, "hybrid");
+    assert.equal(hybridPayload.data.embeddingModel, "local-test");
+    assert.equal(hybridPayload.data.results.some((result) => result.source === "commands" && result.title === "system"), true);
+
     const sensitiveQuery = await runCliCapture(["search", "query", "secret token", "--data-dir", dataRoot, "--json", "--actor", "agent:codex", "--surface", "cli"], workspaceRoot);
     assert.equal(sensitiveQuery.code, CLI_EXIT_DEGRADED);
     const sensitiveAudit = await runCliCapture(["search", "audit", "--type", "sensitive_query", "--data-dir", dataRoot, "--json"], workspaceRoot);

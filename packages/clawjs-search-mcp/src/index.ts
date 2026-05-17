@@ -45,6 +45,15 @@ function buildTools(store: SearchStore): ToolDef[] {
           domains: { type: "array", items: { type: "string" } },
           sources: { type: "array", items: { type: "string" } },
           shards: { type: "array", items: { type: "string" } },
+          strategy: { type: "string", enum: ["lexical", "semantic", "hybrid"] },
+          embedding: {
+            type: "object",
+            required: ["model", "vector"],
+            properties: {
+              model: { type: "string" },
+              vector: { type: "array", items: { type: "number" } },
+            },
+          },
           profile: { type: "string", enum: ["framework", "full"] },
           limit: { type: "integer" },
           filters: { type: "object" },
@@ -169,6 +178,8 @@ function searchQueryFromParams(params: Record<string, unknown>): SearchQueryInpu
     domains: stringArrayParam(params.domains),
     sources: stringArrayParam(params.sources),
     shards: stringArrayParam(params.shards),
+    strategy: searchStrategy(params.strategy),
+    embedding: searchEmbedding(params.embedding),
     profile: searchProfile(params.profile),
     limit: numberParam(params.limit),
     explain: typeof params.explain === "boolean" ? params.explain : undefined,
@@ -180,6 +191,18 @@ function searchQueryFromParams(params: Record<string, unknown>): SearchQueryInpu
 
 function searchProfile(value: unknown): SearchProfileId {
   return value === "full" ? "full" : "framework";
+}
+
+function searchStrategy(value: unknown): SearchQueryInput["strategy"] {
+  return value === "semantic" || value === "hybrid" || value === "lexical" ? value : undefined;
+}
+
+function searchEmbedding(value: unknown): SearchQueryInput["embedding"] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const record = value as { model?: unknown; vector?: unknown };
+  if (typeof record.model !== "string" || !Array.isArray(record.vector)) return undefined;
+  const vector = record.vector.filter((entry): entry is number => typeof entry === "number" && Number.isFinite(entry));
+  return vector.length === record.vector.length && vector.length ? { model: record.model, vector } : undefined;
 }
 
 function searchAuditType(value: unknown): SearchAuditEventType | undefined {

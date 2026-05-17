@@ -151,7 +151,7 @@ export async function runSearchQueryCli(input: {
 }): Promise<number> {
   const query = input.positionals.slice(2).join(" ") || input.flags.query;
   if (!query) {
-    input.context.stderr.write(`Usage: ${input.binName} search query <query> [--domains tasks,notes,...] [--shards hot,cold] [--json]\n`);
+    input.context.stderr.write(`Usage: ${input.binName} search query <query> [--domains tasks,notes,...] [--shards hot,cold] [--strategy lexical|semantic|hybrid] [--json]\n`);
     return CLI_EXIT_USAGE;
   }
   const domains = parseListFlag(input.flags.domains);
@@ -177,6 +177,8 @@ export async function runSearchQueryCli(input: {
     const indexedGenerations = shouldRefreshGenerations && sourceCanIndex(store, "generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedCode = shouldRefreshCode && sourceCanIndex(store, "code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const filters = parseSearchFiltersFlag(input.flags.filters ?? input.flags.filter);
+    const strategy = parseSearchStrategyFlag(input.flags.strategy);
+    const embedding = parseSearchEmbeddingFlag(input.flags.embedding ?? input.flags["embedding-json"], input.flags["embedding-model"] ?? input.flags.model);
     const results = store.query({
       query,
       profile: input.flags.profile === "full" ? "full" : "framework",
@@ -184,6 +186,8 @@ export async function runSearchQueryCli(input: {
       sources,
       shards,
       filters,
+      strategy,
+      embedding,
       limit: input.flags.limit ? Number(input.flags.limit) : undefined,
       explain: input.flags.explain === "true" || input.flags.explain === "1",
       surface: input.flags.surface,
@@ -201,6 +205,8 @@ export async function runSearchQueryCli(input: {
           domains: domains ?? [],
           sources: sources ?? [],
           shards: shards ?? [],
+          strategy: input.flags.strategy ?? "lexical",
+          embeddingModel: embedding?.model,
           resultCount: results.results.length,
           redactedResultCount: results.results.filter((result) => result.permissions?.redacted).length,
         },
@@ -208,6 +214,8 @@ export async function runSearchQueryCli(input: {
     }
     const data = {
       ...results,
+      strategy: strategy ?? "lexical",
+      embeddingModel: embedding?.model,
       storage: searchStorageMetadata(input.flags),
       indexedFastPaths: {
         commands: indexedCommands,
@@ -567,7 +575,7 @@ export async function runSearchAdminCli(input: {
       profile,
       budgets: DEFAULT_SEARCH_BUDGETS,
       matching: ["exact", "prefix", "fuzzy", "fts"],
-      semantic: "optional per source",
+      semantic: "optional per source with caller-supplied local embeddings",
       partialResults: "slow sources are omitted instead of blocking fast paths",
       ranking: ["central score", "source hints", "local frecency", "scope", "actor", "surface"],
     };
@@ -1606,6 +1614,22 @@ function parseSearchFiltersFlag(value: string | undefined): Record<string, unkno
     filters[key] = parseFilterValue(text);
   }
   return Object.keys(filters).length ? filters : undefined;
+}
+
+function parseSearchStrategyFlag(value: string | undefined): "lexical" | "semantic" | "hybrid" | undefined {
+  return value === "semantic" || value === "hybrid" || value === "lexical" ? value : undefined;
+}
+
+function parseSearchEmbeddingFlag(value: string | undefined, model: string | undefined): { model: string; vector: number[] } | undefined {
+  if (!value) return undefined;
+  const parsed = JSON.parse(value) as unknown;
+  if (!Array.isArray(parsed)) throw new Error("--embedding must be a JSON number array");
+  const vector = parsed.map((entry) => {
+    if (typeof entry !== "number" || !Number.isFinite(entry)) throw new Error("--embedding must be a JSON number array");
+    return entry;
+  });
+  if (!vector.length) throw new Error("--embedding must not be empty");
+  return { model: model ?? "local", vector };
 }
 
 function searchQueryRequiresAudit(query: string, results: SearchResult[], filters: Record<string, unknown> | undefined): boolean {

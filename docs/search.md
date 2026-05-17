@@ -66,6 +66,7 @@ claw search query "requirements" --domains media --filters metadata.kind=documen
 claw search query "analytics cards" --domains generations --filters metadata.status=succeeded --json
 claw search query "symbolName" --domains code --code-root /path/to/project --json
 claw search query "diagram" --domains images --shards hot --json
+claw search query "related concept" --domains documents --strategy hybrid --embedding-model local --embedding '[0.1,0.2,0.3]' --json
 claw search sources --json
 claw search sources pause commands --json
 claw search sources exclude code.symbols --json
@@ -126,6 +127,12 @@ Ranking is centralized in `@clawjs/search`. The store reranks a bounded
 candidate batch with lexical score, source ranking hints, local frecency,
 `actor`, `surface`, and scope-like metadata filters before returning the final
 limit. `--explain` includes a compact score breakdown for debugging.
+
+Semantic retrieval is opt-in per query and per source capability. Search stores
+local vectors in `search.sqlite` and can run `semantic` or `hybrid` ranking when
+the caller supplies a local embedding vector and model. Search does not call
+external embedding providers from the sidecar; embedding generation remains a
+source/extractor responsibility and can be throttled as background work.
 
 Each source manifest declares indexing limits. `SearchStore` enforces body,
 fragment-count, and per-fragment byte budgets before writing to FTS, so a large
