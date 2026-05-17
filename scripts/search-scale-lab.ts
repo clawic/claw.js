@@ -49,19 +49,52 @@ try {
   const ingestBatchSize = 5000;
   let ingestBatch: Parameters<SearchStore["upsertDocuments"]>[0] = [];
   const hotQuery = "hotneedle42";
+  const hotSeedItems = Math.max(100, Math.min(5000, Math.floor(options.items / 1000)));
   const flushBatch = () => {
     if (ingestBatch.length === 0) return;
     store.upsertDocuments(ingestBatch);
     ingestBatch = [];
   };
+  for (let i = 0; i < hotSeedItems; i += 1) {
+    ingestBatch.push({
+      id: `lab.items:hot:${i}`,
+      source: "lab.items",
+      shard: "hot",
+      domain: "lab",
+      type: "lab-item",
+      resourceId: `hot-item-${i}`,
+      title: `Hot scale item ${i} ${hotQuery}`,
+      subtitle: "hot bucket",
+      snippet: "Synthetic Search scale hot row",
+      body: `framework search scale lab exact ${hotQuery} hot shard item ${i}`,
+      updatedAt: new Date(1_800_000_000_000 + i).toISOString(),
+      rankingHints: { frecency: 1 },
+      fragments: [
+        {
+          id: `lab.items:hot:${i}:fragment`,
+          title: `Hot fragment ${i}`,
+          body: `fragment body ${hotQuery} hot cursor watermark`,
+        },
+      ],
+    });
+  }
+  flushBatch();
+  const warmHotStarted = performance.now();
+  const warmHotOutput = store.query({ query: hotQuery, domains: ["lab"], shards: ["hot"], limit: 10 });
+  if (warmHotOutput.results.length === 0) throw new Error("scale lab hot seed query returned no results");
+  metrics.push({
+    name: "hot_seed_first_query",
+    valueMs: performance.now() - warmHotStarted,
+    budgetMs: DEFAULT_SEARCH_BUDGETS.hotMs,
+    pass: performance.now() - warmHotStarted <= DEFAULT_SEARCH_BUDGETS.hotMs,
+  });
   for (let i = 0; i < options.items; i += 1) {
     const bucket = i % 1000;
-    const hot = bucket === 42;
-    const token = hot ? hotQuery : `coldneedle${bucket}`;
+    const token = `coldneedle${bucket}`;
     ingestBatch.push({
       id: `lab.items:${i}`,
       source: "lab.items",
-      shard: hot ? "hot" : "cold",
+      shard: "cold",
       domain: "lab",
       type: "lab-item",
       resourceId: `item-${i}`,
@@ -70,7 +103,7 @@ try {
       snippet: `Synthetic Search scale row ${bucket}`,
       body: `framework search scale lab exact ${token} hot shard cold shard item ${i}`,
       updatedAt: new Date(1_800_000_000_000 + i).toISOString(),
-      rankingHints: { frecency: hot ? 1 : 0.1 },
+      rankingHints: { frecency: 0.1 },
       fragments: [
         {
           id: `lab.items:${i}:fragment`,

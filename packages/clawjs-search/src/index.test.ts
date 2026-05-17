@@ -121,6 +121,55 @@ test("SearchStore bulk upserts documents in one cache-invalidating transaction",
   }
 });
 
+test("SearchStore keeps shard-scoped ranking cache through unrelated cold backfill", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-cache-scopes-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "scale.items",
+      domain: "scale",
+      name: "Scale items",
+      resultTypes: ["item"],
+    }));
+    store.upsertDocument({
+      id: "scale.items:hot",
+      source: "scale.items",
+      shard: "hot",
+      domain: "scale",
+      type: "item",
+      title: "Hot result hotneedle42",
+      body: "hotneedle42",
+    });
+    assert.equal(store.query({ query: "hotneedle42", domains: ["scale"], shards: ["hot"], limit: 5 }).results.length, 1);
+    assert.equal(store.rankingCacheStats().entries, 1);
+
+    store.upsertDocuments(Array.from({ length: 10 }, (_, index) => ({
+      id: `scale.items:cold:${index}`,
+      source: "scale.items",
+      shard: "cold",
+      domain: "scale",
+      type: "item",
+      title: `Cold result ${index}`,
+      body: `coldneedle${index}`,
+    })));
+    assert.equal(store.rankingCacheStats().entries, 1);
+
+    store.upsertDocument({
+      id: "scale.items:hot",
+      source: "scale.items",
+      shard: "hot",
+      domain: "scale",
+      type: "item",
+      title: "Updated hot result hotneedle42",
+      body: "hotneedle42 updated",
+    });
+    assert.equal(store.rankingCacheStats().entries, 0);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("SearchStore parses inline domain, source, shard, type and scope filters", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-inline-filters-"));
   const store = new SearchStore(path.join(dir, "search.sqlite"));

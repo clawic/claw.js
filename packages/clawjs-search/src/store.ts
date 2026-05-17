@@ -1521,9 +1521,12 @@ function searchRankingCacheScope(input: SearchQueryInput): SearchRankingCacheSco
 }
 
 function rankingCacheScopeIntersects(scope: SearchRankingCacheScope, touched: SearchTouchedCacheScopes): boolean {
-  if (scope.sources.length && !scope.sources.some((source) => touched.sources.has(source))) return false;
-  if (scope.domains.length && !scope.domains.some((domain) => touched.domains.has(domain))) return false;
-  if (scope.shards.length && !scope.shards.some((shard) => touched.shards.has(shard))) return false;
+  const sources = Array.isArray(scope.sources) ? scope.sources : [];
+  const domains = Array.isArray(scope.domains) ? scope.domains : [];
+  const shards = Array.isArray(scope.shards) ? scope.shards : [];
+  if (sources.length && !sources.some((source) => touched.sources.has(source))) return false;
+  if (domains.length && !domains.some((domain) => touched.domains.has(domain))) return false;
+  if (shards.length && !shards.some((shard) => touched.shards.has(shard))) return false;
   return true;
 }
 
