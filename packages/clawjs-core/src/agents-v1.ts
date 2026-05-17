@@ -325,6 +325,41 @@ export interface AgentSafePackageExport {
   audit: AgentAuditEvent;
 }
 
+export type AgentSafeSurfaceKind = "internal_ui" | "external_channel" | "mcp_api" | "relay" | "service_api";
+
+export interface AgentSafeSurfaceProjectionInput {
+  surface: AgentSafeSurfaceKind;
+  agent: Record<string, unknown>;
+  assignments?: Array<Record<string, unknown>>;
+  executionProfiles?: Array<Record<string, unknown>>;
+  resourceGrants?: Array<Record<string, unknown>>;
+  memoryPolicies?: Array<Record<string, unknown>>;
+  budgets?: Array<Record<string, unknown>>;
+  redaction?: "default" | "strict" | "custom";
+  projectedAt?: string;
+}
+
+export interface AgentSafeSurfaceProjection {
+  schemaVersion: 1;
+  projectionKind: "claw_agent_safe_surface";
+  surface: AgentSafeSurfaceKind;
+  projectedAt: string;
+  agent: Record<string, unknown>;
+  assignments: Array<Record<string, unknown>>;
+  executionProfiles: Array<Record<string, unknown>>;
+  resourceAccess: {
+    grants: Array<Record<string, unknown>>;
+    secretLeaseAllowed: boolean;
+  };
+  memory: {
+    policies: Array<Record<string, unknown>>;
+  };
+  budgets: Array<Record<string, unknown>>;
+  risks: string[];
+  gaps: string[];
+  audit: AgentAuditEvent;
+}
+
 const PLANES = [
   ["agent", "agentGrants"],
   ["assignment", "assignmentGrants"],
@@ -585,6 +620,52 @@ export function createAgentSafePackageExport(input: AgentSafeExportInput): Agent
   };
 }
 
+export function createAgentSafeSurfaceProjection(input: AgentSafeSurfaceProjectionInput): AgentSafeSurfaceProjection {
+  const redaction = input.redaction ?? "strict";
+  const projectedAt = input.projectedAt ?? new Date().toISOString();
+  const agent = pickAgentSurfaceFields(input.agent, redaction);
+  const assignments = (input.assignments ?? []).map((assignment) => pickAssignmentSurfaceFields(assignment, input.surface, redaction));
+  const executionProfiles = (input.executionProfiles ?? []).map((profile) => pickExecutionProfileSurfaceFields(profile, redaction));
+  const resourceGrants = (input.resourceGrants ?? []).map((grant) => pickResourceGrantSurfaceFields(grant, redaction));
+  const memoryPolicies = (input.memoryPolicies ?? []).map((policy) => pickMemoryPolicySurfaceFields(policy, redaction));
+  const budgets = (input.budgets ?? []).map((budget) => pickBudgetSurfaceFields(budget, redaction));
+  const risks = agentSurfaceRisks(input.surface, assignments, resourceGrants, input.memoryPolicies ?? []);
+  const gaps = agentSurfaceGaps(input.surface, assignments, budgets);
+  const agentId = typeof input.agent.id === "string" ? input.agent.id : "agent.unknown";
+  return {
+    schemaVersion: 1,
+    projectionKind: "claw_agent_safe_surface",
+    surface: input.surface,
+    projectedAt,
+    agent,
+    assignments,
+    executionProfiles,
+    resourceAccess: {
+      grants: resourceGrants,
+      secretLeaseAllowed: resourceGrants.some((grant) => grant.action === "lease_secret" || grant.action === "*"),
+    },
+    memory: {
+      policies: memoryPolicies,
+    },
+    budgets,
+    risks,
+    gaps,
+    audit: createAgentAuditEvent({
+      kind: "safe_export",
+      agentId,
+      result: "recorded",
+      reason: "safe surface projection",
+      redaction,
+      createdAt: projectedAt,
+      metadata: {
+        projectionKind: "claw_agent_safe_surface",
+        surface: input.surface,
+        assignmentCount: assignments.length,
+      },
+    }),
+  };
+}
+
 function grantMatches(request: AgentAccessRequest, grant: AgentResourceGrant, now: Date): boolean {
   if (grant.expiresAt && new Date(grant.expiresAt).getTime() <= now.getTime()) return false;
   return matches(request.resourceType, grant.resourceType)
@@ -616,6 +697,135 @@ function budgetLimitMatches(limit: AgentBudgetLimit, request: AgentBudgetRequest
 
 function redactArray(records: Array<Record<string, unknown>> | undefined, redaction: "default" | "strict" | "custom"): Array<Record<string, unknown>> {
   return (records ?? []).map((record) => redactAgentBoundaryValue(record, redaction) as Record<string, unknown>);
+}
+
+function pickAgentSurfaceFields(agent: Record<string, unknown>, redaction: "default" | "strict" | "custom"): Record<string, unknown> {
+  return pickRedacted(agent, redaction, [
+    "id",
+    "name",
+    "displayName",
+    "logo",
+    "avatar",
+    "description",
+    "role",
+    "agencyMode",
+    "status",
+    "ownerId",
+    "teamId",
+    "workspaceId",
+    "version",
+  ]);
+}
+
+function pickAssignmentSurfaceFields(assignment: Record<string, unknown>, surface: AgentSafeSurfaceKind, redaction: "default" | "strict" | "custom"): Record<string, unknown> {
+  const out = pickRedacted(assignment, redaction, [
+    "id",
+    "agentId",
+    "kind",
+    "status",
+    "channel",
+    "privacyPolicy",
+    "externalDisclosure",
+    "scopeType",
+    "scopeId",
+    "startsAt",
+    "expiresAt",
+  ]);
+  if (surface === "internal_ui" && typeof assignment.endpointRef === "string") out.hasEndpointRef = true;
+  return out;
+}
+
+function pickExecutionProfileSurfaceFields(profile: Record<string, unknown>, redaction: "default" | "strict" | "custom"): Record<string, unknown> {
+  return pickRedacted(profile, redaction, [
+    "id",
+    "agentId",
+    "assignmentId",
+    "runtimeKind",
+    "runtimeAdapter",
+    "modelTier",
+    "speedTier",
+    "sandboxProfile",
+    "networkPolicy",
+    "maxConcurrency",
+    "status",
+  ]);
+}
+
+function pickResourceGrantSurfaceFields(grant: Record<string, unknown>, redaction: "default" | "strict" | "custom"): Record<string, unknown> {
+  return pickRedacted(grant, redaction, [
+    "id",
+    "agentId",
+    "assignmentId",
+    "resourceType",
+    "resourceId",
+    "action",
+    "scopeType",
+    "scopeId",
+    "effect",
+    "expiresAt",
+  ]);
+}
+
+function pickMemoryPolicySurfaceFields(policy: Record<string, unknown>, redaction: "default" | "strict" | "custom"): Record<string, unknown> {
+  return pickRedacted(policy, redaction, [
+    "id",
+    "agentId",
+    "assignmentId",
+    "readScopes",
+    "writeScopes",
+    "writePolicy",
+    "crossUserBoundary",
+    "retentionPolicy",
+  ]);
+}
+
+function pickBudgetSurfaceFields(budget: Record<string, unknown>, redaction: "default" | "strict" | "custom"): Record<string, unknown> {
+  return pickRedacted(budget, redaction, [
+    "id",
+    "agentId",
+    "assignmentId",
+    "exceededBehavior",
+    "limits",
+    "status",
+  ]);
+}
+
+function pickRedacted(record: Record<string, unknown>, redaction: "default" | "strict" | "custom", keys: string[]): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of keys) {
+    if (record[key] !== undefined) out[key] = redactAgentBoundaryValue(record[key], redaction);
+  }
+  return out;
+}
+
+function agentSurfaceRisks(
+  surface: AgentSafeSurfaceKind,
+  assignments: Array<Record<string, unknown>>,
+  resourceGrants: Array<Record<string, unknown>>,
+  rawMemoryPolicies: Array<Record<string, unknown>>,
+): string[] {
+  const risks = new Set<string>();
+  if (surface !== "internal_ui" && resourceGrants.some((grant) => grant.action === "lease_secret" || grant.action === "*")) {
+    risks.add("secret_lease_requires_brokered_runtime_only");
+  }
+  if (assignments.some((assignment) => assignment.privacyPolicy === "raw_with_retention")) {
+    risks.add("raw_telemetry_retention_requires_policy_review");
+  }
+  if (assignments.some((assignment) => assignment.externalDisclosure !== undefined && assignment.externalDisclosure !== "transparent_agent")) {
+    risks.add("external_disclosure_uses_custom_wording");
+  }
+  if (rawMemoryPolicies.some((policy) => policy.crossUserBoundary !== undefined && policy.crossUserBoundary !== "explicit_grant_only")) {
+    risks.add("memory_cross_user_boundary_not_explicit_grant_only");
+  }
+  return [...risks];
+}
+
+function agentSurfaceGaps(surface: AgentSafeSurfaceKind, assignments: Array<Record<string, unknown>>, budgets: Array<Record<string, unknown>>): string[] {
+  const gaps = new Set<string>();
+  if (assignments.length === 0) gaps.add("assignment_missing");
+  if (surface !== "internal_ui" && !assignments.some((assignment) => assignment.status === "active")) gaps.add("active_assignment_missing");
+  if (surface !== "internal_ui" && budgets.length === 0) gaps.add("budget_policy_missing");
+  return [...gaps];
 }
 
 function isSensitiveAgentKey(key: string): boolean {

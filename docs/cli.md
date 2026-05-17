@@ -174,6 +174,10 @@ The SDK also exposes the same Agents V1 policy layer for multidimensional
 budgets, redacted audit events, and safe `claw_agent_package` export. Package
 exports redact secret fields and private local paths by construction; raw
 secrets remain in the vault and are not included in portable agent config.
+Relay, MCP, service API, external channel, and internal UI views use the same
+safe surface projection contract so public surfaces only see bounded identity,
+assignment, budget, memory, and resource summaries instead of raw prompts,
+secret material, local paths, private endpoints, or runtime environment data.
 
 ## Global Flags
 

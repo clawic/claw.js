@@ -1158,6 +1158,9 @@ The docs check script validates that every current export from
     AgentResourceGrant
     AgentSafeExportInput
     AgentSafePackageExport
+    AgentSafeSurfaceKind
+    AgentSafeSurfaceProjection
+    AgentSafeSurfaceProjectionInput
     AgentSupportInboxProjection
     AgentSupportInboxProjectionInput
     AGENTS_FAMILY
@@ -1293,6 +1296,22 @@ The docs check script validates that every current export from
     ClawCliSupportDeclaration
     ClawCliSupportState
     ClawCliSurfaceKind
+    assertClawDenseDataOsRegistryComplete
+    ClawDenseDataCenter
+    ClawDenseDataIntentResolution
+    ClawDenseDataIntentStatus
+    ClawDenseDataOperation
+    ClawDenseDataOsRegistry
+    ClawDenseDataSemanticView
+    ClawDenseDataSensitivityDefault
+    ClawDenseDataStoragePolicy
+    ClawDenseDataSystem
+    ClawDenseDataWave
+    clawDenseDataIntentStatuses
+    clawDenseDataOsRegistry
+    findClawDenseDataSystem
+    listClawDenseDataSystems
+    resolveClawDenseDataIntent
     clawCodexExternalEventSamples
     clawCommandErrorSchema
     ClawCommandRequest
@@ -1530,6 +1549,7 @@ The docs check script validates that every current export from
     effectPreviewSchema
     createAgentAuditEvent
     createAgentSafePackageExport
+    createAgentSafeSurfaceProjection
     createAgentSupportInboxProjection
     evaluateAgentAssignmentRoute
     evaluateAgentBudget

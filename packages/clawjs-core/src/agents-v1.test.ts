@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   createAgentAuditEvent,
   createAgentSafePackageExport,
+  createAgentSafeSurfaceProjection,
   createAgentSupportInboxProjection,
   evaluateAgentBudget,
   evaluateAgentDelegationAccess,
@@ -327,6 +328,97 @@ test("Agents V1 safe package export omits secrets and records audit metadata", (
   assert.equal(exported.agent.localPath, "[REDACTED_LOCAL_PATH]");
   assert.equal(exported.audit.kind, "safe_export");
   assert.equal(exported.audit.agentId, "agent.support");
+});
+
+test("Agents V1 safe surface projection exposes only bounded Relay/MCP/API fields", () => {
+  const projection = createAgentSafeSurfaceProjection({
+    surface: "relay",
+    projectedAt: "2026-05-17T10:00:00.000Z",
+    agent: {
+      id: "agent.support",
+      name: "Support",
+      role: "Support lead",
+      systemPrompt: "private",
+      secretAllowlist: ["vault://agents/support"],
+      localPath: "/Users/example/agent",
+    },
+    assignments: [{
+      id: "assignment.relay",
+      agentId: "agent.support",
+      kind: "relay",
+      status: "active",
+      channel: "relay",
+      endpointRef: "relay://private-endpoint",
+      privacyPolicy: "hashed",
+      externalDisclosure: "transparent_agent",
+    }],
+    executionProfiles: [{
+      id: "profile.relay",
+      runtimeKind: "api",
+      sandboxProfile: "network-limited",
+      env: { OPENAI_API_KEY: "raw" },
+    }],
+    resourceGrants: [{
+      id: "grant.secret",
+      resourceType: "secret",
+      resourceId: "vault://agents/support",
+      action: "lease_secret",
+      secretToken: "raw-token",
+    }],
+    memoryPolicies: [{
+      id: "memory.relay",
+      readScopes: [{ layer: "customer", access: "read" }],
+      writePolicy: "private_only",
+      rawTracePath: "/Users/example/memory.log",
+    }],
+    budgets: [{
+      id: "budget.relay",
+      exceededBehavior: "deny_action",
+      limits: [{ dimension: "external_actions", limit: 5, used: 1 }],
+      billingToken: "raw",
+    }],
+  });
+  assert.equal(projection.projectionKind, "claw_agent_safe_surface");
+  assert.equal(projection.surface, "relay");
+  assert.deepEqual(projection.agent, { id: "agent.support", name: "Support", role: "Support lead" });
+  assert.equal("endpointRef" in projection.assignments[0], false);
+  assert.equal("systemPrompt" in projection.agent, false);
+  assert.equal("env" in projection.executionProfiles[0], false);
+  assert.equal("secretToken" in projection.resourceAccess.grants[0], false);
+  assert.equal("rawTracePath" in projection.memory.policies[0], false);
+  assert.equal("billingToken" in projection.budgets[0], false);
+  assert.equal(projection.resourceAccess.secretLeaseAllowed, true);
+  assert.deepEqual(projection.risks, ["secret_lease_requires_brokered_runtime_only"]);
+  assert.deepEqual(projection.gaps, []);
+  assert.equal(projection.audit.reason, "safe surface projection");
+});
+
+test("Agents V1 safe surface projection reports external route gaps fail-closed", () => {
+  const projection = createAgentSafeSurfaceProjection({
+    surface: "mcp_api",
+    projectedAt: "2026-05-17T10:00:00.000Z",
+    agent: { id: "agent.support", name: "Support" },
+    assignments: [{
+      id: "assignment.mcp",
+      agentId: "agent.support",
+      kind: "mcp_api",
+      status: "paused",
+      channel: "mcp",
+      privacyPolicy: "raw_with_retention",
+      externalDisclosure: "custom_agent_wording",
+    }],
+    memoryPolicies: [{
+      id: "memory.mcp",
+      crossUserBoundary: "tenant_context",
+      writePolicy: "shared_with_review",
+    }],
+  });
+  assert.deepEqual(projection.gaps, ["active_assignment_missing", "budget_policy_missing"]);
+  assert.deepEqual(projection.risks, [
+    "raw_telemetry_retention_requires_policy_review",
+    "external_disclosure_uses_custom_wording",
+    "memory_cross_user_boundary_not_explicit_grant_only",
+  ]);
 });
 
 test("Agents V1 audit events redact metadata before recording", () => {
