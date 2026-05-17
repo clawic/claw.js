@@ -26,6 +26,27 @@ export function ensureGenerationsArtifactsSourceIndexed(store: SearchStore, flag
   return indexed;
 }
 
+export function ensureGenerationArtifactResourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string, generationId: string): number {
+  const workspaceRoot = path.resolve(flags.workspace ?? cwd);
+  const record = readWorkspaceCollectionRecord(workspaceRoot, "generations", generationId);
+  if (!record) {
+    store.tombstone({ source: "generations.artifacts", resourceId: generationId, reason: "generation artifact missing during Search event refresh" });
+    return 1;
+  }
+  const document = generationArtifactSearchDocument(record, workspaceRoot);
+  if (!document) {
+    store.tombstone({ source: "generations.artifacts", resourceId: generationId, reason: "generation artifact skipped during Search event refresh" });
+    return 1;
+  }
+  store.upsertDocument(document);
+  store.setSourceState("generations.artifacts", "enabled", {
+    backlog: 0,
+    error: null,
+    lastIndexedAt: new Date().toISOString(),
+  });
+  return 1;
+}
+
 function generationArtifactSearchDocument(record: Record<string, unknown>, workspaceRoot: string): SearchDocumentInput | null {
   const id = stringField(record, "id");
   if (!id) return null;
@@ -105,6 +126,16 @@ function generationArtifactSearchDocument(record: Record<string, unknown>, works
       { id: "copy-reference", kind: "copy", label: "Copy generation reference", requiresApproval: false },
     ],
   };
+}
+
+function readWorkspaceCollectionRecord(root: string, collection: string, id: string): Record<string, unknown> | null {
+  const filePath = path.join(root, ".claw", "data", "collections", collection, `${id}.json`);
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, "utf8")) as unknown;
+    return isPlainRecord(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
 }
 
 function readWorkspaceCollectionRecords(root: string, collection: string): Array<Record<string, unknown>> {

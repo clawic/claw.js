@@ -29,8 +29,8 @@ import { createCliWorkspaceClaw } from "./cli-claw-factory.ts";
 import { readBooleanFlag } from "./cli-flag-parsers.ts";
 import { writeCommandJsonError, writeCommandJsonOk, writeJsonOk } from "./cli-json.ts";
 import { buildCommandHelp, searchCliDiscovery } from "./cli-surface.ts";
-import { ensureGenerationsArtifactsSourceIndexed } from "./cli-search-generations-source.ts";
-import { ensureImagesDerivedSourceIndexed, ensureMediaAssetsSourceIndexed } from "./cli-search-image-media-sources.ts";
+import { ensureGenerationArtifactResourceIndexed, ensureGenerationsArtifactsSourceIndexed } from "./cli-search-generations-source.ts";
+import { ensureImageDerivedResourceIndexed, ensureImagesDerivedSourceIndexed, ensureMediaAssetResourceIndexed, ensureMediaAssetsSourceIndexed } from "./cli-search-image-media-sources.ts";
 import { pathSafeBasename, resolveRuntimeAdapterId } from "./cli-runtime-utils.ts";
 import { resolveClawjsDataRoot, resolveClawjsMainDbPath } from "./v1-data.ts";
 
@@ -796,6 +796,10 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
     store.tombstone({ source: job.source, resourceId: job.resourceId, reason: "search service delete job" });
     return 1;
   }
+  if (job.operation === "upsert" && job.resourceId) {
+    const indexed = runSearchResourceIndexJob(store, job, flags, cwd);
+    if (indexed !== null) return indexed;
+  }
   switch (job.source) {
     case "commands":
       return ensureCommandSourceIndexed(store);
@@ -821,6 +825,29 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
       return ensureExternalCacheSourceIndexed(store, flags, cwd);
     default:
       throw new Error(`Search service cannot index source: ${job.source}`);
+  }
+}
+
+function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flags: Record<string, string>, cwd: string): number | null {
+  switch (job.source) {
+    case "database.records":
+      return ensureDatabaseRecordResourceIndexed(store, flags, job);
+    case "documents.blocks":
+      return ensureDocumentBlocksResourceIndexed(store, flags, job);
+    case "images.derived": {
+      const resourceId = resourceIdFromJobPayload(job, "imageId") ?? job.resourceId;
+      return resourceId ? ensureImageDerivedResourceIndexed(store, flags, cwd, resourceId) : 0;
+    }
+    case "media.assets": {
+      const resourceId = resourceIdFromJobPayload(job, "mediaId") ?? job.resourceId;
+      return resourceId ? ensureMediaAssetResourceIndexed(store, flags, cwd, resourceId) : 0;
+    }
+    case "generations.artifacts": {
+      const resourceId = resourceIdFromJobPayload(job, "generationId") ?? job.resourceId;
+      return resourceId ? ensureGenerationArtifactResourceIndexed(store, flags, cwd, resourceId) : 0;
+    }
+    default:
+      return null;
   }
 }
 
@@ -1234,6 +1261,41 @@ function ensureDatabaseRecordsSourceIndexed(store: SearchStore, flags: Record<st
   }
 }
 
+function ensureDatabaseRecordResourceIndexed(store: SearchStore, flags: Record<string, string>, job: SearchIndexJob): number {
+  const target = databaseRecordTargetFromJob(job);
+  if (!target) return 0;
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) return 0;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "records")) return 0;
+    const row = db.prepare(`
+      SELECT namespace_id, collection_name, id, data_json, created_at, updated_at
+      FROM records
+      WHERE namespace_id = ? AND collection_name = ? AND id = ?
+      LIMIT 1
+    `).get(target.namespaceId, target.collectionName, target.recordId) as DatabaseRecordRow | undefined;
+    if (!row) {
+      store.tombstone({ source: "database.records", resourceId: target.resourceId, reason: "database record missing during Search event refresh" });
+      return 1;
+    }
+    const document = databaseRecordSearchDocument(row);
+    if (!document) {
+      store.tombstone({ source: "database.records", resourceId: target.resourceId, reason: "database record skipped during Search event refresh" });
+      return 1;
+    }
+    store.upsertDocument(document);
+    store.setSourceState("database.records", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 1;
+  } finally {
+    db.close();
+  }
+}
+
 function ensureDocumentsBlocksSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
   const dbPath = resolveMainDbPath(flags);
   if (!fs.existsSync(dbPath)) {
@@ -1289,6 +1351,51 @@ function ensureDocumentsBlocksSourceIndexed(store: SearchStore, flags: Record<st
       lastIndexedAt: new Date().toISOString(),
     });
     return indexed;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureDocumentBlocksResourceIndexed(store: SearchStore, flags: Record<string, string>, job: SearchIndexJob): number {
+  const target = documentTargetFromJob(job);
+  if (!target) return 0;
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) return 0;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "records")) return 0;
+    const document = db.prepare(`
+      SELECT namespace_id, collection_name, id, data_json, created_at, updated_at
+      FROM records
+      WHERE namespace_id = ? AND collection_name = 'documents' AND id = ?
+      LIMIT 1
+    `).get(target.namespaceId, target.documentId) as DatabaseRecordRow | undefined;
+    if (!document) {
+      store.tombstone({ source: "documents.blocks", resourceId: target.resourceId, reason: "document missing during Search event refresh" });
+      return 1;
+    }
+    const blockRows = db.prepare(`
+      SELECT namespace_id, collection_name, id, data_json, created_at, updated_at
+      FROM records
+      WHERE namespace_id = ? AND collection_name = 'document_blocks'
+      ORDER BY updated_at DESC
+    `).all(target.namespaceId) as DatabaseRecordRow[];
+    const blocks = blockRows.filter((block) => {
+      const payload = parseJsonRecord(block.data_json);
+      return payload.documentId === target.documentId;
+    });
+    const searchDocument = documentBlocksSearchDocument(document, blocks);
+    if (!searchDocument) {
+      store.tombstone({ source: "documents.blocks", resourceId: target.resourceId, reason: "document skipped during Search event refresh" });
+      return 1;
+    }
+    store.upsertDocument(searchDocument);
+    store.setSourceState("documents.blocks", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 1;
   } finally {
     db.close();
   }

@@ -37,6 +37,39 @@ export function ensureImagesDerivedSourceIndexed(store: SearchStore, flags: Reco
   return indexed;
 }
 
+export function ensureImageDerivedResourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string, resourceId: string): number {
+  const workspaceRoot = path.resolve(flags.workspace ?? cwd);
+  const imageRoot = path.resolve(flags["image-library"] ?? flags["image-library-root"] ?? workspaceRoot);
+  const imageRecord = readWorkspaceCollectionRecord(imageRoot, "images", resourceId);
+  if (imageRecord) {
+    const document = imageRecordSearchDocument(imageRecord, imageRoot);
+    if (document) {
+      store.upsertDocument(document);
+      store.setSourceState("images.derived", "enabled", {
+        backlog: 0,
+        error: null,
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return 1;
+    }
+  }
+  const mediaRecord = readWorkspaceCollectionRecord(workspaceRoot, "media", resourceId);
+  if (mediaRecord && isImageMediaRecord(mediaRecord)) {
+    const document = imageMediaSearchDocument(mediaRecord, workspaceRoot);
+    if (document) {
+      store.upsertDocument(document);
+      store.setSourceState("images.derived", "enabled", {
+        backlog: 0,
+        error: null,
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return 1;
+    }
+  }
+  store.tombstone({ source: "images.derived", resourceId, reason: "image resource missing during Search event refresh" });
+  return 1;
+}
+
 export function ensureMediaAssetsSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {
   const workspaceRoot = path.resolve(flags.workspace ?? cwd);
   const mediaRecords = readWorkspaceCollectionRecords(workspaceRoot, "media");
@@ -58,6 +91,37 @@ export function ensureMediaAssetsSourceIndexed(store: SearchStore, flags: Record
     lastIndexedAt: new Date().toISOString(),
   });
   return indexed;
+}
+
+export function ensureMediaAssetResourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string, mediaId: string): number {
+  const workspaceRoot = path.resolve(flags.workspace ?? cwd);
+  const record = readWorkspaceCollectionRecord(workspaceRoot, "media", mediaId);
+  if (!record) {
+    store.tombstone({ source: "media.assets", resourceId: mediaId, reason: "media asset missing during Search event refresh" });
+    return 1;
+  }
+  const document = mediaAssetSearchDocument(record, workspaceRoot);
+  if (!document) {
+    store.tombstone({ source: "media.assets", resourceId: mediaId, reason: "media asset skipped during Search event refresh" });
+    return 1;
+  }
+  store.upsertDocument(document);
+  store.setSourceState("media.assets", "enabled", {
+    backlog: 0,
+    error: null,
+    lastIndexedAt: new Date().toISOString(),
+  });
+  return 1;
+}
+
+function readWorkspaceCollectionRecord(root: string, collection: string, id: string): Record<string, unknown> | null {
+  const filePath = path.join(root, ".claw", "data", "collections", collection, `${id}.json`);
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, "utf8")) as unknown;
+    return isPlainRecord(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
 }
 
 function readWorkspaceCollectionRecords(root: string, collection: string): Array<Record<string, unknown>> {
