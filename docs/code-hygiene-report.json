@@ -14,13 +14,13 @@
     "unreferencedAssetCandidates": 88
   },
   "knipSummary": {
-    "filesWithIssues": 196,
-    "totalIssues": 886,
+    "filesWithIssues": 194,
+    "totalIssues": 874,
     "issueTypes": {
       "unlisted": 2,
-      "types": 120,
-      "owners": 130,
-      "exports": 626,
+      "types": 119,
+      "owners": 128,
+      "exports": 617,
       "duplicates": 8
     }
   },
@@ -67,6 +67,9 @@
     "Apps store cleanup made local record/input helpers private and removed an unused root-dir helper while preserving `createAppsStore`.",
     "Runtime plugin bridge cleanup made low-level OpenClaw plugin command helpers private while preserving the public bridge facades.",
     "CLI runtime metadata cleanup made actor/guidance helper exports private while preserving the CLI metadata provider entrypoint.",
-    "Project scaffold cleanup made local project file, package JSON, config writer, config factory, and resource-entry helpers private while preserving CLI project generate/add/info flows."
+    "Project scaffold cleanup made local project file, package JSON, config writer, config factory, and resource-entry helpers private while preserving CLI project generate/add/info flows.",
+    "Chat CLI cleanup made local context and exit-code helpers private while preserving chat/provider CLI entrypoints.",
+    "Report governance cleanup made local budget, search, similarity, and age parser helpers private while preserving exported governance functions.",
+    "Audio catalog cleanup renamed the local legacy import helper to catalog terminology and removed legacy transcript provider metadata."
   ]
 }

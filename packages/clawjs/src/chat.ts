@@ -21,7 +21,7 @@ import {
 } from "@clawjs/claw";
 import { writeCommandJsonOk } from "./cli-json.ts";
 
-export interface ChatCliContext {
+interface ChatCliContext {
   stdout: NodeJS.WritableStream;
   stderr: NodeJS.WritableStream;
   cwd: string;
@@ -36,10 +36,10 @@ export interface ChatCliInput {
   context: ChatCliContext;
 }
 
-export const CHAT_EXIT_OK = 0;
-export const CHAT_EXIT_FAILURE = 1;
-export const CHAT_EXIT_DEGRADED = 2;
-export const CHAT_EXIT_USAGE = 64;
+const CHAT_EXIT_OK = 0;
+const CHAT_EXIT_FAILURE = 1;
+const CHAT_EXIT_DEGRADED = 2;
+const CHAT_EXIT_USAGE = 64;
 
 type ChatRole = "user" | "assistant";
 

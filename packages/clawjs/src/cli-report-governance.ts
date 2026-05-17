@@ -110,7 +110,7 @@ export type ReportGovernanceStateLike = {
   reports: ReportLike[];
 };
 
-export const REPORT_BUDGET_LIMITS = {
+const REPORT_BUDGET_LIMITS = {
   draftsPerDay: 20,
   publishPromptsPerHour: 5,
   dryRunSubmitsPerHour: 3,
@@ -127,7 +127,7 @@ export function inferFineReportDestination(kind: string, flags: Record<string, s
   return null;
 }
 
-export function isBroadSignal(value: string): boolean {
+function isBroadSignal(value: string): boolean {
   const text = value.toLowerCase();
   return [
     "entire language",
@@ -219,7 +219,7 @@ function candidateFromItem(report: ReportLike, item: unknown, source: CanonicalC
   };
 }
 
-export function titleSimilarity(left: string, right: string): number {
+function titleSimilarity(left: string, right: string): number {
   const leftTokens = new Set(normalizeSearchText(left).split(" ").filter(Boolean));
   const rightTokens = new Set(normalizeSearchText(right).split(" ").filter(Boolean));
   if (leftTokens.size === 0 || rightTokens.size === 0) return 0;
@@ -227,7 +227,7 @@ export function titleSimilarity(left: string, right: string): number {
   return overlap / Math.max(leftTokens.size, rightTokens.size);
 }
 
-export function normalizeSearchText(value: string): string {
+function normalizeSearchText(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").split(" ").filter((part) => part.length > 2).join(" ");
 }
 
@@ -308,7 +308,7 @@ export function exportReportPackage(report: ReportLike, includeAttachments: stri
   };
 }
 
-export function parseOlderThan(value: string | undefined): number | null {
+function parseOlderThan(value: string | undefined): number | null {
   if (!value) return null;
   const match = value.match(/^(\d+)(d|h)$/);
   if (!match) return null;
