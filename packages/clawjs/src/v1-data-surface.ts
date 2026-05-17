@@ -887,7 +887,6 @@ export const V1_MAIN_SCHEMA_SQL = String.raw`
       updated_at TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS app_projects_path_idx ON app_projects(path);
-    CREATE INDEX IF NOT EXISTS app_projects_resource_id_idx ON app_projects(resource_id) WHERE resource_id IS NOT NULL;
     CREATE TABLE IF NOT EXISTS app_pinned_threads (
       thread_id TEXT PRIMARY KEY,
       sort_order INTEGER NOT NULL,

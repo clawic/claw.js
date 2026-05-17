@@ -12,249 +12,95 @@ function clawBin(rootDir: string): string {
   return path.join(rootDir, "packages", "clawjs", "bin", "claw.mjs");
 }
 
-test("UserSpec CLI stores verified human facts and omits pending proposals", async ({ page }) => {
-  const rootDir = process.cwd();
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-user-"));
-  const workspaceDir = path.join(tempRoot, "workspace");
-  const baseArgs = ["--workspace", workspaceDir, "--json"];
-  fs.mkdirSync(workspaceDir, { recursive: true });
-  fs.writeFileSync(path.join(workspaceDir, "USER.md"), "Manual user note.\n");
-
-  await execFileAsync(process.execPath, [
-    clawBin(rootDir), "user", "init", "--name", "Test User", ...baseArgs,
-  ], { cwd: rootDir });
-  await execFileAsync(process.execPath, [
-    clawBin(rootDir), "user", "set", "identity.displayName", "Test User", ...baseArgs,
-  ], { cwd: rootDir });
-  const pending = await execFileAsync(process.execPath, [
-    clawBin(rootDir), "user", "propose", "residence.city", "Pending City", "--source", "conversation", ...baseArgs,
-  ], { cwd: rootDir });
-  const pendingPayload = JSON.parse(pending.stdout) as { id: string };
-
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "compile", ...baseArgs], { cwd: rootDir });
-  const firstCompiled = fs.readFileSync(path.join(workspaceDir, "USER.md"), "utf8");
-  expect(firstCompiled).toContain("Manual user note.");
-  expect(firstCompiled).toContain("CLAW:user-spec:START");
-  expect(firstCompiled).toContain("Display Name: Test User");
-  expect(firstCompiled).not.toContain("Pending City");
-
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "verify", pendingPayload.id, ...baseArgs], { cwd: rootDir });
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "compile", ...baseArgs], { cwd: rootDir });
-  const verifiedCompiled = fs.readFileSync(path.join(workspaceDir, "USER.md"), "utf8");
-  expect(verifiedCompiled).toContain("City: Pending City");
-
-  await page.setContent(`<main><h1>UserSpec CLI</h1><pre>${verifiedCompiled.replace(/[<>&]/g, "")}</pre></main>`);
-  await saveArtifactScreenshot(page, "user-cli-compiled.png");
-});
-
-test("UserSpec CLI resolves default users, multi-user profiles, and agent assignments", async () => {
-  const rootDir = process.cwd();
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-user-multi-"));
-  const workspaceDir = path.join(tempRoot, "workspace");
-  const baseArgs = ["--workspace", workspaceDir, "--json"];
-
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "init", "--name", "Default Human", ...baseArgs], { cwd: rootDir });
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "init", "parent", "--name", "Parent Human", ...baseArgs], { cwd: rootDir });
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "set", "identity.role", "default operator", ...baseArgs], { cwd: rootDir });
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "set", "identity.role", "family admin", "--user", "parent", ...baseArgs], { cwd: rootDir });
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "assign", "parent", "--agent", "family-agent", ...baseArgs], { cwd: rootDir });
-
-  const fallback = await execFileAsync(process.execPath, [clawBin(rootDir), "user", "preview", ...baseArgs], { cwd: rootDir });
-  expect(fallback.stdout).toContain("Default Human");
-  expect(fallback.stdout).toContain("default operator");
-
-  const assigned = await execFileAsync(process.execPath, [clawBin(rootDir), "user", "preview", "--agent", "family-agent", ...baseArgs], { cwd: rootDir });
-  expect(assigned.stdout).toContain("Parent Human");
-  expect(assigned.stdout).toContain("family admin");
-});
-
-test("UserSpec CLI rejects behavior preferences that belong in rules", async () => {
-  const rootDir = process.cwd();
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-user-boundaries-"));
-  const workspaceDir = path.join(tempRoot, "workspace");
-
-  await expect(execFileAsync(process.execPath, [
-    clawBin(rootDir), "user", "set", "communication.verbosity", "concise", "--workspace", workspaceDir, "--json",
-  ], { cwd: rootDir }))
-    .rejects
-    .toMatchObject({
-      stdout: expect.stringContaining("Behavior preferences belong in rules"),
+async function runClaw(rootDir: string, args: string[], options: { env?: NodeJS.ProcessEnv; reject?: boolean } = {}) {
+  try {
+    return await execFileAsync(process.execPath, [clawBin(rootDir), ...args], {
+      cwd: rootDir,
+      env: { ...process.env, ...options.env },
+      maxBuffer: 10 * 1024 * 1024,
     });
+  } catch (error) {
+    if (options.reject === false && error && typeof error === "object" && "stdout" in error && "stderr" in error) {
+      return error as { stdout: string; stderr: string };
+    }
+    throw error;
+  }
+}
+
+function parseJson<T>(stdout: string): T {
+  return JSON.parse(stdout) as T;
+}
+
+test("profile CLI projects verified user knowledge through the public v1 surface", async ({ page }) => {
+  const rootDir = process.cwd();
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-profile-"));
+  const workspaceDir = path.join(tempRoot, "workspace");
+  const env = {
+    CLAW_DATA_DIR: path.join(tempRoot, "data"),
+    CLAW_DB_PATH: path.join(tempRoot, "data", "core.sqlite"),
+  };
+  fs.mkdirSync(workspaceDir, { recursive: true });
+
+  await runClaw(rootDir, [
+    "knowledge", "fact",
+    "--predicate", "prefers_response_style",
+    "--value", "direct",
+    "--confidence", "0.9",
+    "--workspace", workspaceDir,
+    "--json",
+  ], { env });
+
+  const refreshed = parseJson<{ ok: boolean; data: { sections: number; facts: number }; meta: { canonicalCommand: string } }>((await runClaw(rootDir, [
+    "profile", "refresh",
+    "--workspace", workspaceDir,
+    "--json",
+  ], { env })).stdout);
+  expect(refreshed.ok).toBe(true);
+  expect(refreshed.meta.canonicalCommand).toBe("profile");
+  expect(refreshed.data).toMatchObject({ sections: 1, facts: 1 });
+
+  const profile = parseJson<{ ok: boolean; data: { items: Array<{ section: string; contentText: string }> }; meta: { canonicalCommand: string; subcommand: string } }>((await runClaw(rootDir, [
+    "profile", "get",
+    "--workspace", workspaceDir,
+    "--json",
+  ], { env })).stdout);
+  expect(profile.ok).toBe(true);
+  expect(profile.meta).toMatchObject({ canonicalCommand: "profile", subcommand: "get" });
+  expect(profile.data.items).toEqual([
+    expect.objectContaining({ section: "prefers_response_style", contentText: "direct" }),
+  ]);
+
+  const filtered = parseJson<{ ok: boolean; data: { items: Array<{ section: string; contentText: string }> } }>((await runClaw(rootDir, [
+    "profile", "list",
+    "prefers_response_style",
+    "--workspace", workspaceDir,
+    "--json",
+  ], { env })).stdout);
+  expect(filtered.ok).toBe(true);
+  expect(filtered.data.items).toHaveLength(1);
+  expect(filtered.data.items[0]).toMatchObject({ section: "prefers_response_style", contentText: "direct" });
+
+  await page.setContent(`<main><h1>Profile CLI</h1><pre>${filtered.data.items[0]!.contentText}</pre></main>`);
+  await saveArtifactScreenshot(page, "profile-cli-projection.png");
 });
 
-test("UserSpec CLI expands humans with packs, guided proposals, entities, links, query, and delete", async () => {
+test("user CLI remains removed from the public surface and points to profile", async () => {
   const rootDir = process.cwd();
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-user-expanded-"));
-  const workspaceDir = path.join(tempRoot, "workspace");
-  const baseArgs = ["--workspace", workspaceDir, "--json"];
-
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "init", "--name", "Expanded User", ...baseArgs], { cwd: rootDir });
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "pack", "enable", "professional", ...baseArgs], { cwd: rootDir });
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "pack", "enable", "practical", ...baseArgs], { cwd: rootDir });
-
-  const wizard = await execFileAsync(process.execPath, [
-    clawBin(rootDir), "user", "wizard", "professional", "--title", "Example Launch", "--set", "role=lead", ...baseArgs,
-  ], { cwd: rootDir });
-  const wizardPayload = JSON.parse(wizard.stdout) as { id: string; status: string; source: string };
-  expect(wizardPayload.status).toBe("pending");
-  expect(wizardPayload.source).toBe("wizard:professional");
-
-  const organization = await execFileAsync(process.execPath, [
-    clawBin(rootDir), "user", "entity", "add", "organization", "--title", "Example Org", "--set", "url=example.local", ...baseArgs,
-  ], { cwd: rootDir });
-  const person = await execFileAsync(process.execPath, [
-    clawBin(rootDir), "user", "entity", "add", "person", "--title", "Example Collaborator", ...baseArgs,
-  ], { cwd: rootDir });
-  const organizationPayload = JSON.parse(organization.stdout) as { id: string };
-  const personPayload = JSON.parse(person.stdout) as { id: string };
-
-  await execFileAsync(process.execPath, [
-    clawBin(rootDir), "user", "link", personPayload.id, "works_with", organizationPayload.id, ...baseArgs,
-  ], { cwd: rootDir });
-
-  const queryBeforeVerify = await execFileAsync(process.execPath, [
-    clawBin(rootDir), "user", "query", "--domain", "professional", "--status", "pending", ...baseArgs,
-  ], { cwd: rootDir });
-  const queryBeforeVerifyPayload = JSON.parse(queryBeforeVerify.stdout) as { proposals: Array<{ id: string }> };
-  expect(queryBeforeVerifyPayload.proposals.map((entry) => entry.id)).toContain(wizardPayload.id);
-
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "verify", wizardPayload.id, ...baseArgs], { cwd: rootDir });
-  const queryAfterVerify = await execFileAsync(process.execPath, [
-    clawBin(rootDir), "user", "query", "--domain", "professional", "--text", "Example Launch", ...baseArgs,
-  ], { cwd: rootDir });
-  const queryAfterVerifyPayload = JSON.parse(queryAfterVerify.stdout) as { records: Array<{ title: string }> };
-  expect(queryAfterVerifyPayload.records.map((entry) => entry.title)).toContain("Example Launch");
-
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "compile", ...baseArgs], { cwd: rootDir });
-  const compiled = fs.readFileSync(path.join(workspaceDir, "USER.md"), "utf8");
-  expect(compiled).toContain("Enabled User Domains");
-  expect(compiled).toContain("Example Launch");
-  expect(compiled).toContain("Linked Entities");
-
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "delete", organizationPayload.id, ...baseArgs], { cwd: rootDir });
-  const entityList = await execFileAsync(process.execPath, [clawBin(rootDir), "user", "entity", "list", ...baseArgs], { cwd: rootDir });
-  expect(entityList.stdout).not.toContain(organizationPayload.id);
-  const linkList = await execFileAsync(process.execPath, [clawBin(rootDir), "user", "query", "--type", "works_with", ...baseArgs], { cwd: rootDir });
-  const linkListPayload = JSON.parse(linkList.stdout) as { links: unknown[] };
-  expect(linkListPayload.links).toHaveLength(0);
-});
-
-test("UserSpec CLI keeps sensitive wellbeing data opt-in and out of compile unless explicitly public", async () => {
-  const rootDir = process.cwd();
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-user-sensitive-"));
-  const workspaceDir = path.join(tempRoot, "workspace");
-  const baseArgs = ["--workspace", workspaceDir, "--json"];
-
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "init", "--name", "Private User", ...baseArgs], { cwd: rootDir });
-  await expect(execFileAsync(process.execPath, [
-    clawBin(rootDir), "user", "set", "health.sleep", "light", ...baseArgs,
-  ], { cwd: rootDir })).rejects.toMatchObject({
-    stdout: expect.stringContaining("requires enabled user domain"),
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-user-removed-"));
+  const result = await runClaw(rootDir, [
+    "user", "list",
+    "--workspace", path.join(tempRoot, "workspace"),
+    "--json",
+  ], {
+    env: {
+      CLAW_DATA_DIR: path.join(tempRoot, "data"),
+      CLAW_DB_PATH: path.join(tempRoot, "data", "core.sqlite"),
+    },
+    reject: false,
   });
-
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "pack", "enable", "wellbeing", ...baseArgs], { cwd: rootDir });
-  await execFileAsync(process.execPath, [
-    clawBin(rootDir), "user", "set", "health.sleep", "light", "--source", "manual", ...baseArgs,
-  ], { cwd: rootDir });
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "compile", ...baseArgs], { cwd: rootDir });
-  const privateCompiled = fs.readFileSync(path.join(workspaceDir, "USER.md"), "utf8");
-  expect(privateCompiled).not.toContain("Sleep: light");
-
-  await execFileAsync(process.execPath, [
-    clawBin(rootDir), "user", "set", "health.sleep", "light", "--source", "manual", "--visibility", "public", ...baseArgs,
-  ], { cwd: rootDir });
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "compile", "--profile", "wellbeing", ...baseArgs], { cwd: rootDir });
-  const publicCompiled = fs.readFileSync(path.join(workspaceDir, "USER.md"), "utf8");
-  expect(publicCompiled).toContain("Sleep: light");
-
-  const memoryProposal = await execFileAsync(process.execPath, [
-    clawBin(rootDir), "user", "propose", "health.energy", "low", "--source", "memory", "--visibility", "public", ...baseArgs,
-  ], { cwd: rootDir });
-  const memoryProposalPayload = JSON.parse(memoryProposal.stdout) as { id: string };
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "compile", ...baseArgs], { cwd: rootDir });
-  const proposedCompiled = fs.readFileSync(path.join(workspaceDir, "USER.md"), "utf8");
-  expect(proposedCompiled).not.toContain("Energy: low");
-  expect(proposedCompiled).toContain("Pending proposed facts are intentionally omitted");
-
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "delete", memoryProposalPayload.id, ...baseArgs], { cwd: rootDir });
-  const pending = await execFileAsync(process.execPath, [clawBin(rootDir), "user", "query", "--status", "pending", ...baseArgs], { cwd: rootDir });
-  const pendingPayload = JSON.parse(pending.stdout) as { proposals: unknown[] };
-  expect(pendingPayload.proposals).toHaveLength(0);
-});
-
-test("UserSpec CLI matures user knowledge with domains, review, profiles, supersede, and tombstones", async () => {
-  const rootDir = process.cwd();
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-user-mature-"));
-  const workspaceDir = path.join(tempRoot, "workspace");
-  const baseArgs = ["--workspace", workspaceDir, "--json"];
-
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "init", "--name", "Mature User", ...baseArgs], { cwd: rootDir });
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "domains", "enable", "career.projects", ...baseArgs], { cwd: rootDir });
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "domains", "enable", "health.sleep", ...baseArgs], { cwd: rootDir });
-
-  const classified = await execFileAsync(process.execPath, [
-    clawBin(rootDir), "user", "classify", "Trabajo en un proyecto de lanzamiento", ...baseArgs,
-  ], { cwd: rootDir });
-  expect(JSON.parse(classified.stdout)).toMatchObject({ target: "user", domain: "career.employment" });
-
-  const extracted = await execFileAsync(process.execPath, [
-    clawBin(rootDir), "user", "extract", "memory", "--source", "Trabajo en un proyecto de lanzamiento", ...baseArgs,
-  ], { cwd: rootDir });
-  const extractedPayload = JSON.parse(extracted.stdout) as { proposals: Array<{ id: string }> };
-  expect(extractedPayload.proposals).toHaveLength(1);
-
-  const reviewed = await execFileAsync(process.execPath, [clawBin(rootDir), "user", "review", "list", ...baseArgs], { cwd: rootDir });
-  expect(JSON.parse(reviewed.stdout).proposals.map((entry: { id: string }) => entry.id)).toContain(extractedPayload.proposals[0]!.id);
-
-  const edited = await execFileAsync(process.execPath, [
-    clawBin(rootDir), "user", "review", "edit", extractedPayload.proposals[0]!.id, "--title", "Launch Project", "--record-type", "project", "--domain", "career.projects", "--set", "role=lead", ...baseArgs,
-  ], { cwd: rootDir });
-  expect(JSON.parse(edited.stdout)).toMatchObject({ title: "Launch Project", domain: "career.projects" });
-
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "review", "approve", extractedPayload.proposals[0]!.id, ...baseArgs], { cwd: rootDir });
-  const workPreview = await execFileAsync(process.execPath, [clawBin(rootDir), "user", "preview", "--profile", "work", ...baseArgs], { cwd: rootDir });
-  expect(workPreview.stdout).toContain("Launch Project");
-
-  const health = await execFileAsync(process.execPath, [
-    clawBin(rootDir), "user", "set", "health.sleep", "light", "--domain", "health.sleep", "--visibility", "public", ...baseArgs,
-  ], { cwd: rootDir });
-  const healthPayload = JSON.parse(health.stdout) as { id: string };
-  const generalPreview = await execFileAsync(process.execPath, [clawBin(rootDir), "user", "preview", "--profile", "general", ...baseArgs], { cwd: rootDir });
-  expect(generalPreview.stdout).not.toContain("Sleep: light");
-  const wellbeingPreview = await execFileAsync(process.execPath, [clawBin(rootDir), "user", "preview", "--profile", "wellbeing", ...baseArgs], { cwd: rootDir });
-  expect(wellbeingPreview.stdout).toContain("Sleep: light");
-
-  const superseded = await execFileAsync(process.execPath, [clawBin(rootDir), "user", "supersede", healthPayload.id, "--value", "deep", ...baseArgs], { cwd: rootDir });
-  expect(JSON.parse(superseded.stdout)).toMatchObject({ value: "deep" });
-  const queryArchived = await execFileAsync(process.execPath, [clawBin(rootDir), "user", "query", "--status", "archived", ...baseArgs], { cwd: rootDir });
-  expect(JSON.parse(queryArchived.stdout).facts).toHaveLength(1);
-
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "domains", "enable", "accounts.public", ...baseArgs], { cwd: rootDir });
-  const account = await execFileAsync(process.execPath, [
-    clawBin(rootDir), "user", "entity", "add", "account", "--title", "Example Account", "--set", "url=example.local", ...baseArgs,
-  ], { cwd: rootDir });
-  const accountId = (JSON.parse(account.stdout) as { id: string }).id;
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "delete", accountId, ...baseArgs], { cwd: rootDir });
-  const inspected = await execFileAsync(process.execPath, [clawBin(rootDir), "user", "inspect", ...baseArgs], { cwd: rootDir });
-  expect(JSON.parse(inspected.stdout).state.specs[0].tombstones).toEqual(expect.arrayContaining([expect.objectContaining({ id: accountId, kind: "entity" })]));
-});
-
-test("UserSpec CLI suggests and applies human-approved entity merges", async () => {
-  const rootDir = process.cwd();
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-user-merge-"));
-  const workspaceDir = path.join(tempRoot, "workspace");
-  const baseArgs = ["--workspace", workspaceDir, "--json"];
-
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "init", "--name", "Merge User", ...baseArgs], { cwd: rootDir });
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "domains", "enable", "career.employment", ...baseArgs], { cwd: rootDir });
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "entity", "add", "organization", "--title", "Example Org", "--set", "url=example.local", ...baseArgs], { cwd: rootDir });
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "entity", "add", "organization", "--title", "Example Org", "--set", "note=duplicate", ...baseArgs], { cwd: rootDir });
-
-  const proposed = await execFileAsync(process.execPath, [clawBin(rootDir), "user", "merge", "propose", ...baseArgs], { cwd: rootDir });
-  const proposedPayload = JSON.parse(proposed.stdout) as { proposals: Array<{ id: string }> };
-  expect(proposedPayload.proposals).toHaveLength(1);
-
-  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "merge", "approve", proposedPayload.proposals[0]!.id, ...baseArgs], { cwd: rootDir });
-  const entities = await execFileAsync(process.execPath, [clawBin(rootDir), "user", "entity", "list", ...baseArgs], { cwd: rootDir });
-  expect(JSON.parse(entities.stdout).entities).toHaveLength(1);
+  const payload = parseJson<{ ok: boolean; error: { code: string }; meta: { canonicalCommand: string; related: Array<{ canonicalCommand?: string }> } }>(result.stdout);
+  expect(payload.ok).toBe(false);
+  expect(payload.error.code).toBe("removed_public_command");
+  expect(payload.meta.canonicalCommand).toBe("user");
+  expect(payload.meta.related.some((entry) => entry.canonicalCommand === "profile")).toBe(true);
 });

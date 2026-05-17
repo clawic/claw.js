@@ -239,6 +239,7 @@ export function openMainDataStore(env: NodeJS.ProcessEnv = process.env): Databas
 export function ensureV1MainSchema(sqlite: Database.Database): void {
   sqlite.exec(V1_MAIN_SCHEMA_SQL);
   ensureColumn(sqlite, "app_projects", "resource_id", "TEXT");
+  sqlite.prepare("CREATE INDEX IF NOT EXISTS app_projects_resource_id_idx ON app_projects(resource_id) WHERE resource_id IS NOT NULL").run();
   ensureColumn(sqlite, "signals_observations", "page_id", "TEXT");
   ensureColumn(sqlite, "agents", "secret_ref", "TEXT");
   ensureColumn(sqlite, "skills", "secret_refs_json", "TEXT NOT NULL DEFAULT '[]'");

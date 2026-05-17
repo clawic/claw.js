@@ -81,6 +81,8 @@ forbidSnippet("packages/clawjs-node/src/files/managed-blocks.ts", "CLAWJS:");
 forbidSnippet("packages/clawjs-node/src/bindings/sync.ts", "CLAWJS:");
 forbidSnippet("docs/files.md", "CLAWJS:");
 forbidSnippet("docs/template-packs-and-bindings.md", "CLAWJS:");
+forbidSnippet("tests/e2e/user-cli.spec.ts", "UserSpec CLI");
+forbidSnippet("tests/e2e/user-cli.spec.ts", "\"user\", \"init\"");
 forbidSnippet("packages/clawjs-core/src/surface-registry.ts", "stable compatibility surface");
 forbidSnippet("packages/clawjs/src/inspect-cli.test.ts", "stable compatibility surface");
 forbidSnippet("docs/adr/0004-persistent-surface-registry-and-inspection.md", "stable compatibility");

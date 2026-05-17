@@ -9,7 +9,7 @@ import { clawDataFiles, resolveClawPersistentSurfacePath } from "@clawjs/core";
 
 import { CLI_EXIT_OK, runCli } from "./index.ts";
 import { resolveClawjsDataRoot, resolveClawjsFilesDir, resolveClawjsMainDbPath } from "./v1-data.ts";
-import { writeMcpServers } from "./v1-data-core.ts";
+import { ensureV1MainSchema, writeMcpServers } from "./v1-data-core.ts";
 import { captureStream, runInternalV1Cli, useIsolatedMainData, withPatchedEnv } from "./index-test-utils.ts";
 
 function parseCliData<T>(output: string): T {
@@ -80,6 +80,35 @@ test("app-state projects persist opaque resource ids alongside paths", async () 
     restoreEnv?.();
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
+});
+
+test("V2 main schema upgrades app project resource ids before indexing them", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-schema-upgrade-"));
+  await withPatchedEnv({ CLAW_DATA_DIR: tempRoot }, async () => {
+    const sqlite = new Database(":memory:");
+    try {
+      sqlite.exec(`
+        CREATE TABLE app_projects (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          path TEXT NOT NULL DEFAULT '',
+          sort_order INTEGER,
+          hidden INTEGER NOT NULL DEFAULT 0,
+          metadata_json TEXT NOT NULL DEFAULT '{}',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+      `);
+      ensureV1MainSchema(sqlite);
+      const columns = sqlite.prepare("PRAGMA table_info(app_projects)").all() as Array<{ name: string }>;
+      assert.equal(columns.some((column) => column.name === "resource_id"), true);
+      const indexes = sqlite.prepare("PRAGMA index_list(app_projects)").all() as Array<{ name: string }>;
+      assert.equal(indexes.some((index) => index.name === "app_projects_resource_id_idx"), true);
+    } finally {
+      sqlite.close();
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
 });
 
 test("runCli manages V2 knowledge, notes, profile, business, and search domains in the main sqlite", async () => {
