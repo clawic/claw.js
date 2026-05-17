@@ -784,17 +784,20 @@ function buildRemoteInspectPayload(nodes: ClawPersistentSurfaceNode[], routes: C
   return {
     schemaVersion: 1,
     conformance: buildRemoteConformanceReport({ routeIds, nodeIds }),
-    classifications: remoteNodes.map((node) => ({
-      id: node.id,
-      name: node.name,
-      owner: node.owner,
-      classification: node.programmaticSurfaces?.includes("relay")
-        ? "remote-safe"
-        : node.surfaceGaps?.find((gap) => gap.surface === "relay")?.status ?? "pending",
-      routeIds: routes.filter((route) => route.fromId === node.id || route.toId === node.id || route.steps.some((step) => step.fromId === node.id || step.toId === node.id)).map((route) => route.id),
-      gaps: node.surfaceGaps?.filter((gap) => gap.surface === "relay") ?? [],
-      tests: node.source?.tests ?? [],
-    })),
+    classifications: remoteNodes.map((node) => {
+      const nodeRoutes = routes.filter((route) => route.fromId === node.id || route.toId === node.id || route.steps.some((step) => step.fromId === node.id || step.toId === node.id));
+      return {
+        id: node.id,
+        name: node.name,
+        owner: node.owner,
+        classification: node.programmaticSurfaces?.includes("relay")
+          ? "remote-safe"
+          : node.surfaceGaps?.find((gap) => gap.surface === "relay")?.status ?? "pending",
+        routeIds: nodeRoutes.map((route) => route.id),
+        gaps: node.surfaceGaps?.filter((gap) => gap.surface === "relay") ?? [],
+        tests: [...new Set(nodeRoutes.flatMap((route) => route.tests ?? []))].sort(),
+      };
+    }),
     sync: {
       authorityClasses: ["primary", "replica", "cache", "mirror", "joint"],
       drivers: [...syncDriverSchema.options],
