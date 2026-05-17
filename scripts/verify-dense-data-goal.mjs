@@ -56,6 +56,7 @@ const requiredFirstWaveSystems = [
   "construction",
   "eln",
   "product",
+  "pharma",
 ];
 
 const requiredFoundationMappings = {
@@ -126,6 +127,10 @@ const requiredFixtureCoverage = [
   "product_revision",
   "product_requirement",
   "product_bom",
+  "drug_product",
+  "batch_record",
+  "lot_release",
+  "adverse_event",
   "thing",
   "iot_device",
   "sensor_reading",
@@ -174,6 +179,7 @@ const requiredExternalPending = [
   ["ops", "provider"],
   ["iot", "physical_device"],
   ["eln", "regulated_export"],
+  ["pharma", "regulated_export"],
 ];
 
 const requiredExistingAuditSurfaces = [
@@ -226,6 +232,10 @@ const requiredPluralIntentPhrases = [
   ["claw product-revisions list", "product_revisions"],
   ["claw product-requirements list", "product_requirements"],
   ["claw product-boms list", "product_boms"],
+  ["claw drug-products list", "drug_products"],
+  ["claw batch-records list", "batch_records"],
+  ["claw lot-releases list", "lot_releases"],
+  ["claw adverse-events list", "adverse_events"],
   ["claw things list", "iot_things"],
   ["claw iot-devices list", "iot_devices"],
   ["claw sensor-readings list", "sensor_readings"],
@@ -367,6 +377,10 @@ for (const phrase of [
   "claw product-spec product_spec_123 requirements add",
   "claw product-spec product_spec_123 boms add",
   "claw product-spec product_spec_123 timeline",
+  "claw drug-product drug_product_123 batches add",
+  "claw drug-product drug_product_123 lot-releases add",
+  "claw drug-product drug_product_123 adverse-events add",
+  "claw drug-product drug_product_123 timeline",
   "claw thing thing_123 devices add",
   "claw iot-device device_123 readings add",
   "claw iot-device device_123 commands add",
@@ -566,6 +580,9 @@ if (!semanticViews.some((entry) => entry.id === "public_case.timeline" && entry.
 }
 if (!semanticViews.some((entry) => entry.id === "product_spec.timeline" && entry.systemId === "product")) {
   fail("semantic views must include product_spec.timeline");
+}
+if (!semanticViews.some((entry) => entry.id === "drug_product.timeline" && entry.systemId === "pharma")) {
+  fail("semantic views must include drug_product.timeline");
 }
 if (!semanticViews.some((entry) => entry.id === "thing.timeline" && entry.systemId === "iot")) {
   fail("semantic views must include thing.timeline");

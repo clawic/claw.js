@@ -836,6 +836,11 @@ claw product-spec product_spec_123 revisions add "Revision A" --product product_
 claw product-spec product_spec_123 requirements add "Emergency stop response" --product product_123 --json
 claw product-spec product_spec_123 boms add "Press frame BOM" --product product_123 --component product_123 --json
 claw product-spec product_spec_123 timeline --json
+claw drug-product create "Example Therapy" --product product_123 --product-spec product_spec_123 --company company_123 --json
+claw drug-product drug_product_123 batches add "Batch B-001" --company company_123 --json
+claw drug-product drug_product_123 lot-releases add "Lot release B-001" --batch batch_record_123 --json
+claw drug-product drug_product_123 adverse-events add "Headache safety event" --patient patient_123 --study study_123 --json
+claw drug-product drug_product_123 timeline --json
 claw asset create --company company_123 --account-id account_123 --product product_123 --serial-number PRESS-001 --json
 claw asset asset_123 work-orders add "Batch 42" --company company_123 --json
 claw asset asset_123 work-orders list --json
