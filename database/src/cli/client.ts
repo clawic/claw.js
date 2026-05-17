@@ -1,1 +1,1 @@
-export { DatabaseApiClient, type DatabaseCliOptions } from "@clawjs/database";
+export { DatabaseApiClient } from "@clawjs/database";

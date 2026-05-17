@@ -17,7 +17,7 @@ export interface AppScreenDefinition {
   testIds: string[];
 }
 
-export interface AppFormField {
+interface AppFormField {
   key: string;
   label: string;
   component: string;

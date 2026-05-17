@@ -10,7 +10,7 @@ import type {
 } from "../shared/protocol.ts";
 import { executeRun } from "./runtime.ts";
 
-export interface ExecutionWorkerOptions {
+interface ExecutionWorkerOptions {
   baseUrl: string;
   tenantId: string;
   workerId: string;
