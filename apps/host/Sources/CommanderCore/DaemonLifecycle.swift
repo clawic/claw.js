@@ -9,7 +9,7 @@ public enum DaemonLauncher {
             try startAppRuntime(environment: environment)
             return
         }
-        try startLegacySocketDaemon(environment: environment)
+        try startSocketDaemon(environment: environment)
     }
 
     public static func waitUntilAvailable(environment: [String: String] = ProcessInfo.processInfo.environment, timeout: TimeInterval = 3.0) -> Bool {
@@ -74,12 +74,12 @@ public enum DaemonLauncher {
         throw CommanderError.notFound("Unable to locate \(daemonName) binary")
     }
 
-    private static func startLegacySocketDaemon(environment: [String: String]) throws {
+    private static func startSocketDaemon(environment: [String: String]) throws {
         let daemonBinary = try daemonBinaryPath(environment: environment)
         let process = Process()
         process.executableURL = URL(fileURLWithPath: daemonBinary)
         process.arguments = ["serve"]
-        process.environment = environment.merging(["CLAW_HOST_RUNTIME_TRANSPORT": RuntimeInstaller.legacySocketRuntimeTransport]) { _, new in new }
+        process.environment = environment.merging(["CLAW_HOST_RUNTIME_TRANSPORT": RuntimeInstaller.socketRuntimeTransport]) { _, new in new }
         process.standardInput = nil
         process.standardOutput = nil
         process.standardError = nil

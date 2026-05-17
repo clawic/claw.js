@@ -11,7 +11,7 @@ public struct InstallStatus: Codable, Equatable, Sendable {
     public var hostAppRunning: Bool
     public var hostBundlePath: String
     public var appRegisteredAtLogin: Bool
-    public var legacySocketFallbackEnabled: Bool
+    public var socketFallbackEnabled: Bool
 
     public init(
         cliInstalled: Bool,
@@ -24,7 +24,7 @@ public struct InstallStatus: Codable, Equatable, Sendable {
         hostAppRunning: Bool,
         hostBundlePath: String,
         appRegisteredAtLogin: Bool,
-        legacySocketFallbackEnabled: Bool
+        socketFallbackEnabled: Bool
     ) {
         self.cliInstalled = cliInstalled
         self.cliPath = cliPath
@@ -36,13 +36,13 @@ public struct InstallStatus: Codable, Equatable, Sendable {
         self.hostAppRunning = hostAppRunning
         self.hostBundlePath = hostBundlePath
         self.appRegisteredAtLogin = appRegisteredAtLogin
-        self.legacySocketFallbackEnabled = legacySocketFallbackEnabled
+        self.socketFallbackEnabled = socketFallbackEnabled
     }
 }
 
 public enum RuntimeInstaller {
     public static let appOwnedRuntimeTransport = "app_xpc"
-    public static let legacySocketRuntimeTransport = "unix_socket"
+    public static let socketRuntimeTransport = "unix_socket"
 
     public static func launchAgentLabel(environment: [String: String] = ProcessInfo.processInfo.environment) -> String {
         HostConfiguration.current(environment: environment).launchAgentLabel
@@ -99,25 +99,25 @@ public enum RuntimeInstaller {
             hostAppRunning: hostAppRunning,
             hostBundlePath: hostBundlePath,
             appRegisteredAtLogin: FileManager.default.fileExists(atPath: launchAgentURL.path),
-            legacySocketFallbackEnabled: legacySocketFallbackEnabled(environment: environment)
+            socketFallbackEnabled: socketFallbackEnabled(environment: environment)
         )
     }
 
     public static func preferredRuntimeTransport(environment: [String: String] = ProcessInfo.processInfo.environment) -> String {
-        if environment["CLAW_HOST_RUNTIME_TRANSPORT"] == legacySocketRuntimeTransport {
-            return legacySocketRuntimeTransport
+        if environment["CLAW_HOST_RUNTIME_TRANSPORT"] == socketRuntimeTransport {
+            return socketRuntimeTransport
         }
         if ExecutionEnvironment.isTestMode(environment) {
-            return legacySocketRuntimeTransport
+            return socketRuntimeTransport
         }
         if appBundlePath(environment: environment) != nil {
             return appOwnedRuntimeTransport
         }
-        return legacySocketRuntimeTransport
+        return socketRuntimeTransport
     }
 
-    public static func legacySocketFallbackEnabled(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
-        environment["CLAW_HOST_DISABLE_LEGACY_SOCKET_FALLBACK"] != "1"
+    public static func socketFallbackEnabled(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
+        environment["CLAW_HOST_DISABLE_SOCKET_FALLBACK"] != "1"
     }
 
     public static func appBundlePath(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
@@ -245,7 +245,7 @@ public enum RuntimeInstaller {
                 <key>CLAW_HOST_HOME</key>
                 <string>\(statePath)</string>
                 <key>CLAW_HOST_RUNTIME_TRANSPORT</key>
-                <string>\(appExecutablePath(environment: environment) == nil ? legacySocketRuntimeTransport : appOwnedRuntimeTransport)</string>
+                <string>\(appExecutablePath(environment: environment) == nil ? socketRuntimeTransport : appOwnedRuntimeTransport)</string>
                 <key>CLAW_HOST_APP_BUNDLE</key>
                 <string>\(appBundlePath(environment: environment) ?? "")</string>
             </dict>

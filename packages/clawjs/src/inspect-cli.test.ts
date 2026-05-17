@@ -126,6 +126,8 @@ test("runCli filters stable contract surface categories", async () => {
   const env = await runCliCapture(["inspect", "env", "--json"], process.cwd());
   assert.equal(env.code, CLI_EXIT_OK);
   assert.equal(parseCliJson<Array<{ id: string; value?: string }>>(env.stdout).data.some((node) => node.id === "claw.env.home" && node.value === "CLAW_HOME"), true);
+  assert.equal(parseCliJson<Array<{ id: string; value?: string }>>(env.stdout).data.some((node) => node.id === "claw.env.hostDisableSocketFallback" && node.value === "CLAW_HOST_DISABLE_SOCKET_FALLBACK"), true);
+  assert.equal(parseCliJson<Array<{ id: string; value?: string }>>(env.stdout).data.some((node) => node.id === "claw.env.hostDisableLegacySocketFallback"), false);
 
   const packages = await runCliCapture(["inspect", "packages", "--json"], process.cwd());
   assert.equal(packages.code, CLI_EXIT_OK);

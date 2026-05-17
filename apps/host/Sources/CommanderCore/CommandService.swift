@@ -323,7 +323,7 @@ public actor CommandService {
                     "host_app_running": .bool(status.hostAppRunning),
                     "host_bundle_path": .string(status.hostBundlePath),
                     "app_registered_at_login": .bool(status.appRegisteredAtLogin),
-                    "legacy_socket_fallback_enabled": .bool(status.legacySocketFallbackEnabled),
+                    "socket_fallback_enabled": .bool(status.socketFallbackEnabled),
                 ]),
                 adapter: "system",
                 source: .filesystem
@@ -358,7 +358,7 @@ public actor CommandService {
                     "host_app_running": .bool(status.hostAppRunning),
                     "host_bundle_path": .string(status.hostBundlePath),
                     "app_registered_at_login": .bool(status.appRegisteredAtLogin),
-                    "legacy_socket_fallback_enabled": .bool(status.legacySocketFallbackEnabled),
+                    "socket_fallback_enabled": .bool(status.socketFallbackEnabled),
                     "implemented_domains": .array(descriptorList.filter(\.isImplemented).map { .string($0.domain.rawValue) }),
                     "missing_os_permissions": .array(capabilities.filter { $0.requiresOSPermission && $0.osPermissionState != OSPermissionState.authorized.rawValue }.map { .string($0.id) }),
                     "capabilities": .object([
@@ -422,7 +422,7 @@ public actor CommandService {
     }
 
     private func runtimeTransport() -> String {
-        environment["CLAW_HOST_RUNTIME_TRANSPORT"] ?? RuntimeInstaller.legacySocketRuntimeTransport
+        environment["CLAW_HOST_RUNTIME_TRANSPORT"] ?? RuntimeInstaller.socketRuntimeTransport
     }
 
     private func sanitize(arguments: [String: String]) -> [String: String] {

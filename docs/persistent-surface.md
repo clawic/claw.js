@@ -626,8 +626,8 @@ flowchart TD
   claw_contracts_config --> claw_env_hostCliName
   claw_env_hostDaemonName["host daemon name environment variable\nenvVar"]
   claw_contracts_config --> claw_env_hostDaemonName
-  claw_env_hostDisableLegacySocketFallback["host disable legacy socket fallback environment variable\nenvVar"]
-  claw_contracts_config --> claw_env_hostDisableLegacySocketFallback
+  claw_env_hostDisableSocketFallback["host disable socket fallback environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostDisableSocketFallback
   claw_env_hostDisplayName["host display name environment variable\nenvVar"]
   claw_contracts_config --> claw_env_hostDisplayName
   claw_env_hostHome["host home environment variable\nenvVar"]
@@ -2067,7 +2067,7 @@ flowchart TD
 | `claw.env.hostBundleId` | envVar | config | claw |  |  |  | `CLAW_HOST_BUNDLE_ID` |
 | `claw.env.hostCliName` | envVar | config | claw |  |  |  | `CLAW_HOST_CLI_NAME` |
 | `claw.env.hostDaemonName` | envVar | config | claw |  |  |  | `CLAW_HOST_DAEMON_NAME` |
-| `claw.env.hostDisableLegacySocketFallback` | envVar | config | claw |  |  |  | `CLAW_HOST_DISABLE_LEGACY_SOCKET_FALLBACK` |
+| `claw.env.hostDisableSocketFallback` | envVar | config | claw |  |  |  | `CLAW_HOST_DISABLE_SOCKET_FALLBACK` |
 | `claw.env.hostDisplayName` | envVar | config | claw |  |  |  | `CLAW_HOST_DISPLAY_NAME` |
 | `claw.env.hostHome` | envVar | config | claw |  |  |  | `CLAW_HOST_HOME` |
 | `claw.env.hostId` | envVar | config | claw |  |  |  | `CLAW_HOST_ID` |

@@ -230,11 +230,11 @@ final class DashboardModel: ObservableObject {
             launchAgentLoaded: object["launch_agent_loaded"]?.boolValue ?? false,
             launchAgentPath: object["launch_agent_path"]?.stringValue ?? "",
             launchAgentLabel: object["launch_agent_label"]?.stringValue ?? "",
-            runtimeTransport: object["runtime_transport"]?.stringValue ?? RuntimeInstaller.legacySocketRuntimeTransport,
+            runtimeTransport: object["runtime_transport"]?.stringValue ?? RuntimeInstaller.socketRuntimeTransport,
             hostAppRunning: object["host_app_running"]?.boolValue ?? false,
             hostBundlePath: object["host_bundle_path"]?.stringValue ?? "",
             appRegisteredAtLogin: object["app_registered_at_login"]?.boolValue ?? false,
-            legacySocketFallbackEnabled: object["legacy_socket_fallback_enabled"]?.boolValue ?? true
+            socketFallbackEnabled: object["socket_fallback_enabled"]?.boolValue ?? true
         )
     }
 
@@ -361,7 +361,7 @@ struct DashboardView: View {
             VStack(alignment: .leading, spacing: 12) {
                 statusRow("CLI", model.installStatus?.cliInstalled == true ? "Instalado" : "Pendiente")
                 statusRow("CLI path", model.installStatus?.cliPath ?? "No disponible")
-                statusRow("Runtime", model.installStatus?.runtimeTransport ?? RuntimeInstaller.legacySocketRuntimeTransport)
+                statusRow("Runtime", model.installStatus?.runtimeTransport ?? RuntimeInstaller.socketRuntimeTransport)
                 statusRow("Host app", model.installStatus?.hostAppRunning == true ? "Activo" : "Parado")
                 statusRow("Host bundle", model.installStatus?.hostBundlePath.isEmpty == false ? (model.installStatus?.hostBundlePath ?? "") : "No disponible")
                 statusRow("Login registration", model.installStatus?.appRegisteredAtLogin == true ? "Registrado" : "Pendiente")

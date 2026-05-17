@@ -116,7 +116,7 @@ final class CommanderE2ETests: XCTestCase {
         XCTAssertNotNil(doctor.data?.objectValue?["adapter_health"]?.objectValue?["finder"]?.objectValue?["availability"]?.stringValue)
         XCTAssertNotNil(doctor.data?.objectValue?["host_app_running"]?.boolValue)
         XCTAssertNotNil(doctor.data?.objectValue?["host_bundle_path"]?.stringValue)
-        XCTAssertNotNil(doctor.data?.objectValue?["legacy_socket_fallback_enabled"]?.boolValue)
+        XCTAssertNotNil(doctor.data?.objectValue?["socket_fallback_enabled"]?.boolValue)
 
         let domains = try context.runCLI(["system", "domains", "list", "--json"])
         XCTAssertTrue(domains.ok)
@@ -1356,7 +1356,7 @@ private struct TestContext {
             "CLAW_HOST_HOME": tmp.appendingPathComponent("state").path,
             "CLAW_HOST_BIN_DIR": binDir.path,
             "CLAW_HOST_LAUNCH_AGENTS_DIR": launchAgentsDir.path,
-            "CLAW_HOST_RUNTIME_TRANSPORT": RuntimeInstaller.legacySocketRuntimeTransport,
+            "CLAW_HOST_RUNTIME_TRANSPORT": RuntimeInstaller.socketRuntimeTransport,
             "PATH": ProcessInfo.processInfo.environment["PATH"] ?? "",
         ]
         if testMode {

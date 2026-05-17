@@ -445,6 +445,10 @@ test("surface registry freezes ports, paths, sockets, hostnames, and data files"
   assert.equal(clawServiceSocketPath("runtime"), "~/.claw/run/claw-runtime.sock");
   assert.equal(clawServiceWindowsPipe("runtime"), String.raw`\\.\pipe\claw-runtime`);
   assert.equal(clawExportExtensions.backup, ".clawbackup");
+
+  const socketFallbackEnv = findClawPersistentSurfaceNode("claw.env.hostDisableSocketFallback");
+  assert.equal(socketFallbackEnv?.value, "CLAW_HOST_DISABLE_SOCKET_FALLBACK");
+  assert.equal(findClawPersistentSurfaceNode("claw.env.hostDisableLegacySocketFallback"), undefined);
 });
 
 test("semantic plan schema validates agent-native action previews", () => {

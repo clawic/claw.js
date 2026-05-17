@@ -41,6 +41,22 @@ forbidSnippet("packages/clawjs/src/inspect-cli.test.ts", "stable compatibility s
 forbidSnippet("docs/adr/0004-persistent-surface-registry-and-inspection.md", "stable compatibility");
 forbidSnippet("docs/decision-map.md", "stable compatibility");
 
+for (const relativePath of [
+  "apps/host/Sources/CommanderCore/RuntimeInstall.swift",
+  "apps/host/Sources/CommanderCore/DaemonLifecycle.swift",
+  "apps/host/Sources/CommanderCore/CommandService.swift",
+  "apps/host/Sources/CommanderApp/DashboardView.swift",
+  "apps/host/Sources/ClawHostDaemon/main.swift",
+  "apps/host/Tests/CommanderE2ETests/CommanderE2ETests.swift",
+  "packages/clawjs-core/src/surface-registry.ts",
+]) {
+  forbidSnippet(relativePath, "legacySocket");
+  forbidSnippet(relativePath, "LegacySocket");
+  forbidSnippet(relativePath, "legacy_socket");
+  forbidSnippet(relativePath, "legacy socket");
+  forbidSnippet(relativePath, "CLAW_HOST_DISABLE_LEGACY_SOCKET_FALLBACK");
+}
+
 const canonicalDocs = [
   "AGENTS.md",
   "CLAUDE.md",
