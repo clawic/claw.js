@@ -7,11 +7,11 @@ export interface PasswordVerificationResult {
   upgradedHash?: string;
 }
 
-export function hashLegacySecret(value: string): string {
+function hashLegacySecret(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
-export async function hashPassword(password: string): Promise<string> {
+async function hashPassword(password: string): Promise<string> {
   return await argon2.hash(password, {
     type: argon2id,
     memoryCost: 65_536,

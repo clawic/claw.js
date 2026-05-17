@@ -2,7 +2,7 @@ import { clawPersistentSurface } from "@clawjs/core";
 
 const source = { file: "monitor/src/server/surface.ts", language: "typescript" } as const;
 
-export const schemaSurfaceNodes = [
+const schemaSurfaceNodes = [
   clawPersistentSurface.table({ id: `claw.database.monitor.table.monitors`, name: "monitors", parentId: "claw.database.monitor", databaseId: "claw.database.monitor", source }),
   clawPersistentSurface.table({ id: `claw.database.monitor.table.heartbeats`, name: "heartbeats", parentId: "claw.database.monitor", databaseId: "claw.database.monitor", source }),
   clawPersistentSurface.table({ id: `claw.database.monitor.table.incidents`, name: "incidents", parentId: "claw.database.monitor", databaseId: "claw.database.monitor", source }),

@@ -3,7 +3,7 @@ import os from "node:os";
 
 import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 
-export type MonitorMode = "local" | "relay" | "hybrid";
+type MonitorMode = "local" | "relay" | "hybrid";
 
 export interface MonitorConfig {
   host: string;
@@ -24,7 +24,7 @@ export interface MonitorConfig {
   corsOrigins: string[];
 }
 
-export const MONITOR_DEFAULT_PORT = 24114;
+const MONITOR_DEFAULT_PORT = 24114;
 
 export function loadMonitorConfig(overrides: Partial<MonitorConfig> = {}): MonitorConfig {
   const cors = process.env.CLAW_MONITOR_CORS_ORIGINS?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
