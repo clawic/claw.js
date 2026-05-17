@@ -98,6 +98,15 @@ const requiredFoundationMappings = {
 };
 
 const requiredFixtureCoverage = [
+  "person",
+  "shared_identity",
+  "identity_base",
+  "no_duplicate_identity",
+  "patient_person_link",
+  "participant_person_link",
+  "legal_client_person_link",
+  "learner_person_link",
+  "employee_person_link",
   "patient",
   "encounter",
   "lab_result",
@@ -803,16 +812,41 @@ for (const coverage of requiredFixtureCoverage) {
 }
 
 for (const [id, collectionName] of [
+  ["fixture_person_ada", "people"],
+  ["fixture_person_smith", "people"],
+  ["fixture_relation_person_patient", "entity_relations"],
+  ["fixture_relation_person_participant", "entity_relations"],
+  ["fixture_relation_person_learner", "entity_relations"],
+  ["fixture_relation_person_employee", "entity_relations"],
+  ["fixture_relation_person_legal_client", "entity_relations"],
   ["fixture_domain_system_health", "domain_systems"],
   ["fixture_domain_pack_health_core", "domain_packs"],
   ["fixture_domain_role_health_patient", "domain_roles"],
   ["fixture_domain_profile_health_patient", "domain_profiles"],
+  ["fixture_domain_profile_legal_legal_client", "domain_profiles"],
+  ["fixture_domain_profile_hr_employee", "domain_profiles"],
+  ["fixture_domain_profile_education_learner", "domain_profiles"],
+  ["fixture_domain_profile_crm_account", "domain_profiles"],
   ["fixture_canonical_operation_health_patient_timeline", "canonical_operations"],
   ["fixture_semantic_view_health_patient_timeline", "semantic_views"],
 ]) {
   if (!clawDenseDataAcceptanceFixture.records.some((record) => record.id === id && record.collectionName === collectionName)) {
     fail(`acceptance fixture missing dense registry record ${id} in ${collectionName}`);
   }
+}
+const sharedIdentityRelations = clawDenseDataAcceptanceFixture.records.filter((record) => record.collectionName === "entity_relations" && record.covers.includes("shared_identity"));
+for (const [targetKind, targetId] of [
+  ["patients", "fixture_patient_ada"],
+  ["participants", "fixture_participant_subject_001"],
+  ["learners", "fixture_learner_ada"],
+  ["employees", "fixture_employee_ada"],
+]) {
+  if (!sharedIdentityRelations.some((record) => record.data.fromEntityKind === "people" && record.data.fromEntityId === "fixture_person_ada" && record.data.toEntityKind === targetKind && record.data.toEntityId === targetId && record.data.type === "same_as")) {
+    fail(`acceptance fixture must link fixture_person_ada to ${targetKind}/${targetId}`);
+  }
+}
+if (!sharedIdentityRelations.some((record) => record.data.fromEntityId === "fixture_person_smith" && record.data.toEntityKind === "legal_clients" && record.data.toEntityId === "fixture_legal_client_smith" && record.data.type === "same_as")) {
+  fail("acceptance fixture must link fixture_person_smith to legal client identity");
 }
 if (!clawDenseDataAcceptanceFixture.records.some((record) => record.collectionName === "domain_intents" && record.covers.includes("intent_coverage"))) {
   fail("acceptance fixture must materialize generated domain intents");
