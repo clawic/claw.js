@@ -1,7 +1,6 @@
 // Launcher for `claw open index`. Mirrors `database-server-launcher.mjs`.
-// Boots the bundled @clawjs/index server with deterministic flags so the
-// Clawix Mac supervisor can spawn it with --port / --workspace /
-// --status-file and read back the status file to know we are ready.
+// Technical compatibility launcher for the retired Index server. Public Search
+// entrypoints use `claw search ...` and the `@clawjs/search` package.
 
 import path from "node:path";
 import fs from "node:fs";
@@ -13,12 +12,6 @@ import { readLocalAdminBootstrap } from "./local-admin-bootstrap.mjs";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 async function loadBuildIndexApp() {
-  try {
-    const mod = await import("@clawjs/index");
-    if (mod && typeof mod.buildIndexApp === "function") return mod.buildIndexApp;
-  } catch {
-    /* fall through */
-  }
   const candidates = [
     path.join(HERE, "../../clawjs-index/dist/index.js"),
     path.join(HERE, "../../clawjs-index/src/index.ts"),
