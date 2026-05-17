@@ -235,7 +235,7 @@ The Relay also exposes equivalent project-scoped routes under:
 | Direct text inference | `claw.inference.generateText()` | `claw inference generate-text` | `-` |
 | TTS synthesize | `claw.tts.synthesize()` | `claw tts synthesize` | `-` |
 | TTS config / providers / catalog | `claw.tts.config()`, `setConfig()`, `providers()`, `catalog()` | `claw tts config`, `set-config`, `providers`, `catalog` | `-` |
-| Audio asset service | `@clawjs/audio` API client | `audio list|get|delete`, `audio serve` | standalone Audio service routes |
+| Audio asset service | `@clawjs/audio` API client | `claw audio index|transcript|artifact list|get|delete`; `audio serve` | standalone Audio service routes |
 | Apps catalog | app/resource registry APIs | `claw apps list|upsert` | `-` |
 | Design resource registry | design/resource registry APIs | `claw design list|upsert` | `-` |
 | Non-stream reply helper | `-` | `-` | `POST WS/sessions/:sessionId/reply` |
@@ -312,7 +312,7 @@ These methods come from the `@clawjs/workspace` extension, not from the base
 | Image list | `claw.image.list()` | `claw image list` | `GET WS/images` |
 | Image read | `claw.image.get()` | `claw image show` / `claw image read` | `GET WS/images/:imageId` |
 | Image delete | `claw.image.remove()` | `claw image delete` | `DELETE WS/images/:imageId` |
-| Audio generate / list / read / delete | `claw.audio.*` | `claw audio ...` | `-` |
+| Audio catalog / transcript / generated records | `claw.audio.*` | `claw audio index|transcript|artifact list|get|delete` | `-` |
 | Video generate / list / read / delete | `claw.video.*` | `claw video ...` | `-` |
 
 ### Channels and Local Integration Helpers

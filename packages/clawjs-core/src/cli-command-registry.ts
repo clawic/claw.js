@@ -180,7 +180,7 @@ export const clawCliCommandRegistry: ClawCliCommandRegistry = {
     command({ name: "documents", kind: "canonical", summary: "Documents.", family: "media", securityPolicy: "local_write" }),
     command({ name: "files", kind: "canonical", summary: "Workspace files.", family: "media", securityPolicy: "local_write" }),
     command({ name: "images", kind: "canonical", summary: "Image generation and media.", target: "image", aliases: ["image"], family: "media", securityPolicy: "external_cost_risk" }),
-    command({ name: "audio", kind: "canonical", summary: "Audio media.", family: "media", securityPolicy: "external_cost_risk" }),
+    command({ name: "audio", kind: "canonical", summary: "Framework audio catalog, transcripts and generated audio records.", usage: "audio index|transcript|artifact list|get|delete", family: "media", securityPolicy: "local_write", tests: ["packages/clawjs/src/index-data.test.ts", "packages/clawjs/src/inspect-cli.test.ts"], source: { file: "packages/clawjs/src/v1-data.ts", symbol: "runV1DataCli" } }),
     command({ name: "video", kind: "canonical", summary: "Video media.", family: "media", securityPolicy: "external_cost_risk" }),
     command({ name: "slides", kind: "canonical", summary: "Slide decks.", family: "media", securityPolicy: "local_write" }),
     command({ name: "generations", kind: "canonical", summary: "Generated media records.", family: "media", securityPolicy: "local_write" }),

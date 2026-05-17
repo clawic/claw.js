@@ -160,6 +160,7 @@ const requiredSnippets = [
       "documents upload",
       "inference generate-text",
       "tts synthesize",
+      "claw audio index|transcript|artifact list|get|delete",
       "claw apps list|upsert",
       "claw design list|upsert",
     ],
