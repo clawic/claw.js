@@ -1098,7 +1098,7 @@ test("search rebuild indexes database.records from core.sqlite", async () => {
     assert.deepEqual(sensitiveResult?.fragments ?? [], []);
 
     const deleted = await runCliCapture(["db", "contacts", "delete", createPayload.data.id, "--json"], workspaceRoot);
-    assert.equal(deleted.code, CLI_EXIT_OK);
+    assert.equal(deleted.code, CLI_EXIT_OK, deleted.stderr || deleted.stdout);
     const deletedJobs = await runCliCapture(["search", "jobs", "--source", "database.records", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(deletedJobs.code, CLI_EXIT_OK);
     const deletedJobsPayload = JSON.parse(deletedJobs.stdout) as {
@@ -1323,7 +1323,7 @@ test("search rebuild indexes skills.registry from core.sqlite without secret ref
     assert.equal(result?.fragments?.some((fragment) => fragment.snippet?.includes("deployment APIs")), true);
 
     const deleted = await runCliCapture(["skills", "delete", "deploy", "--json"], workspaceRoot);
-    assert.equal(deleted.code, CLI_EXIT_OK);
+    assert.equal(deleted.code, CLI_EXIT_OK, deleted.stderr || deleted.stdout);
     const deleteJobs = await runCliCapture(["search", "jobs", "--source", "skills.registry", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(deleteJobs.code, CLI_EXIT_OK);
     const deleteJobsPayload = JSON.parse(deleteJobs.stdout) as {
@@ -3309,6 +3309,118 @@ test("search rebuild indexes finance.records with redacted previews", async () =
     };
     const deleteJob = deleteJobsPayload.data.items.find((job) => job.operation === "delete" && job.resourceId === `main:transactions:${createdPayload.data.id}`);
     assert.equal(deleteJob?.payload.recordId, createdPayload.data.id);
+  });
+});
+
+test("search service indexes local finance_records with redacted previews", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-finance-local-"));
+  const dataRoot = path.join(workspaceRoot, ".claw", "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const created = await runCliCapture([
+      "finance",
+      "upsert",
+      "--id",
+      "finance.local.invoice",
+      "--amount",
+      "88.50",
+      "--currency",
+      "USD",
+      "--kind",
+      "invoice",
+      "--account-id",
+      "acct-local",
+      "--merchant",
+      "Launch Vendor",
+      "--category",
+      "ops",
+      "--notes",
+      "Sensitive launch invoice evidence",
+      "--data-dir",
+      dataRoot,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(created.code, CLI_EXIT_OK);
+
+    const jobs = await runCliCapture(["search", "jobs", "--source", "finance.records", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(jobs.code, CLI_EXIT_OK);
+    const jobsPayload = JSON.parse(jobs.stdout) as {
+      data: { items: Array<{ operation: string; resourceId: string; shard: string; payload: { table?: string; recordId?: string } }> };
+    };
+    const recordJob = jobsPayload.data.items.find((job) => job.resourceId === "finance_records:finance.local.invoice");
+    assert.equal(recordJob?.operation, "upsert");
+    assert.equal(recordJob?.shard, "hot");
+    assert.equal(recordJob?.payload.table, "finance_records");
+    assert.equal(recordJob?.payload.recordId, "finance.local.invoice");
+
+    const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "finance.records", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(serviceRun.code, CLI_EXIT_OK);
+    const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.source, "finance.records");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.operation, "upsert");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
+
+    const query = await runCliCapture([
+      "search",
+      "query",
+      "sensitive launch invoice evidence",
+      "--domains",
+      "finance",
+      "--filters",
+      JSON.stringify({ "metadata.table": "finance_records", redacted: true }),
+      "--data-dir",
+      dataRoot,
+      "--json",
+      "--limit",
+      "5",
+      "--explain",
+      "true",
+    ], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: {
+        indexedFastPaths: { "finance.records": number };
+        results: Array<{
+          source: string;
+          domain: string;
+          type: string;
+          title: string;
+          snippet?: string;
+          metadata?: { recordId?: string; table?: string; kind?: string; accountId?: string; currency?: string; category?: string; sensitive?: boolean; hasLinkedPage?: boolean };
+          fragments?: Array<{ title?: string; snippet?: string }>;
+          permissions?: { redacted?: boolean; canPreview?: boolean };
+          actions?: Array<{ id: string; kind: string; requiresApproval?: boolean }>;
+          explanation?: { matchedBy?: string[] };
+        }>;
+      };
+    };
+    assert.equal(queryPayload.data.indexedFastPaths["finance.records"], 1);
+    const result = queryPayload.data.results.find((entry) => entry.metadata?.recordId === "finance.local.invoice");
+    assert.equal(result?.source, "finance.records");
+    assert.equal(result?.domain, "finance");
+    assert.equal(result?.type, "invoice");
+    assert.equal(result?.snippet, "[redacted]");
+    assert.equal(result?.permissions?.redacted, true);
+    assert.equal(result?.permissions?.canPreview, false);
+    assert.deepEqual(result?.fragments ?? [], []);
+    assert.equal(result?.metadata?.table, "finance_records");
+    assert.equal(result?.metadata?.accountId, "acct-local");
+    assert.equal(result?.metadata?.currency, "USD");
+    assert.equal(result?.metadata?.category, "ops");
+    assert.equal(result?.metadata?.sensitive, true);
+    assert.equal(result?.metadata?.hasLinkedPage, true);
+    assert.equal(result?.actions?.some((action) => action.id === "open" && action.kind === "open" && action.requiresApproval === true), true);
+    assert.ok(result?.explanation?.matchedBy?.length);
+    assert.equal(JSON.stringify(result).includes("Sensitive launch invoice evidence"), false);
+    assert.equal(JSON.stringify(result).includes("88.5"), false);
   });
 });
 
