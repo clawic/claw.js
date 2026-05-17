@@ -693,6 +693,6 @@ export function telegramInviteLinkParams(chatId: string | number, options: Teleg
   };
 }
 
-export function targetKindFromChat(chat: TelegramChatSummary): ChannelTargetDescriptor["kind"] {
+function targetKindFromChat(chat: TelegramChatSummary): ChannelTargetDescriptor["kind"] {
   return chat.type === "private" ? "dm" : chat.type;
 }

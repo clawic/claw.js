@@ -135,7 +135,7 @@ function resolvePackageManagerPath(binary: string, env: NodeJS.ProcessEnv = proc
   return binary;
 }
 
-export function deriveGlobalPrefixFromPackageManagerBinary(binaryPath: string): string | null {
+function deriveGlobalPrefixFromPackageManagerBinary(binaryPath: string): string | null {
   const trimmed = binaryPath.trim();
   if (!trimmed.includes("/") && !trimmed.includes("\\")) {
     return null;

@@ -8,7 +8,7 @@ import type {
   SkillDescriptor,
 } from "@clawjs/core";
 
-export interface DemoScenarioAuthSeed {
+interface DemoScenarioAuthSeed {
   hasAuth?: boolean;
   hasSubscription?: boolean;
   hasApiKey?: boolean;

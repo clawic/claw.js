@@ -32,7 +32,7 @@ export function buildProgressStep(
   };
 }
 
-export function emitRuntimeProgress(
+function emitRuntimeProgress(
   sink: RuntimeProgressSink | undefined,
   event: Omit<RuntimeProgressEvent, "timestamp">,
 ): void {
@@ -173,7 +173,7 @@ export function buildRuntimeCompatReport(input: Omit<RuntimeCompatReport, "capab
   };
 }
 
-export function buildRuntimeFeatureDescriptor(
+function buildRuntimeFeatureDescriptor(
   featureId: string,
   ownership: FeatureOwnership,
   supported: boolean,

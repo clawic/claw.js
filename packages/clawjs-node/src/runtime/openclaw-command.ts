@@ -43,7 +43,7 @@ export function resolveOpenClawBinaryPath(options: OpenClawCommandOptions = {}):
     ?? "openclaw";
 }
 
-export function withOpenClawBinaryEnv(
+function withOpenClawBinaryEnv(
   env?: NodeJS.ProcessEnv,
   binaryPath?: string,
 ): NodeJS.ProcessEnv | undefined {

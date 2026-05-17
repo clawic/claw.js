@@ -1,7 +1,7 @@
 import type { RuleRecord, RuleScope } from "@clawjs/core";
 
-export const BUILTIN_CLAW_RULE_SOURCE = "builtin:clawjs-agent-rules";
-export const BUILTIN_CLAW_SCOPE_ID = "clawjs";
+const BUILTIN_CLAW_RULE_SOURCE = "builtin:clawjs-agent-rules";
+const BUILTIN_CLAW_SCOPE_ID = "clawjs";
 
 const BUILTIN_TIMESTAMP = "2026-04-27T00:00:00.000Z";
 

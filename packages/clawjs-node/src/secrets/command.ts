@@ -1,7 +1,7 @@
 import os from "os";
 import path from "path";
 
-export const DEFAULT_SECRETS_PROXY_PATH = path.join(os.homedir(), "bin", "secrets-proxy");
+const DEFAULT_SECRETS_PROXY_PATH = path.join(os.homedir(), "bin", "secrets-proxy");
 
 export interface SecretsCommandSpec {
   command: string;
@@ -59,4 +59,4 @@ export function resolveSecretsCommandSpec(env?: NodeJS.ProcessEnv): SecretsComma
   };
 }
 
-export { resolveSecretsBackend, resolveSecretsProxyPath };
+export { resolveSecretsBackend };
