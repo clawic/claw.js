@@ -269,7 +269,7 @@ public struct MacControlProcessRunner: MacControlCommandRunning {
         switch action {
         case "corewlan.disconnect":
             let device = arguments.first?.isEmpty == false ? arguments[0] : "en0"
-            guard let interface = CWInterface.interface(withName: device) else {
+            guard let interface = CWWiFiClient.shared().interface(withName: device) else {
                 throw MacControlError.commandFailed("Wi-Fi interface \(device) was not found.")
             }
             interface.disassociate()
