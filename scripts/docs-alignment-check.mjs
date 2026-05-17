@@ -146,7 +146,8 @@ for (const snippet of [
   "source file boundaries",
   "Changesets are release metadata",
   "Built-in collections follow the canonical data catalog",
-  "PENDING GUARDRAIL",
+  "scripts/verify-host-permission-contract.mjs",
+  "No known pending guardrails",
 ]) {
   requireSnippet("docs/decision-map.md", snippet);
 }

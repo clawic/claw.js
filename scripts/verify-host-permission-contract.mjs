@@ -1,0 +1,165 @@
+#!/usr/bin/env node
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+
+const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
+
+const implementationRoots = [
+  "apps",
+  "audio",
+  "bridge",
+  "content",
+  "database",
+  "delegation",
+  "drive",
+  "execution",
+  "integrations",
+  "iot",
+  "mcp",
+  "memory",
+  "modules",
+  "monitor",
+  "notify",
+  "packages",
+  "publishing",
+  "relay",
+  "runtime",
+  "secrets",
+  "sessions",
+  "storage",
+  "time",
+  "wiki",
+];
+
+const sourceExtensions = new Set([".cjs", ".cts", ".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"]);
+const skippedDirs = new Set([
+  ".data",
+  ".next",
+  ".tmp",
+  "artifacts",
+  "coverage",
+  "dist",
+  "fixtures",
+  "node_modules",
+  "output",
+  "test-results",
+  "tests",
+  "__fixtures__",
+  "__tests__",
+]);
+
+const allowedNodeBrokerFiles = new Set([
+  "bridge/src/computer-use.ts",
+  "bridge/src/server.ts",
+  "bridge/src/tcc-job-handler.ts",
+]);
+
+const sensitiveNativePermissionPatterns = [
+  { name: "TCC computer method", pattern: /\btcc\.computer\./ },
+  { name: "macOS screenshot permission command", pattern: /["'`]screencapture["'`]/ },
+  { name: "macOS accessibility input helper", pattern: /["'`]cliclick["'`]/ },
+  { name: "macOS System Events automation", pattern: /\bSystem Events\b/ },
+];
+
+function read(relativePath) {
+  return fs.readFileSync(path.join(rootDir, relativePath), "utf8");
+}
+
+function listFiles(relativeDir, output = []) {
+  const absoluteDir = path.join(rootDir, relativeDir);
+  if (!fs.existsSync(absoluteDir)) return output;
+  for (const entry of fs.readdirSync(absoluteDir, { withFileTypes: true })) {
+    if (skippedDirs.has(entry.name)) continue;
+    const relativePath = path.join(relativeDir, entry.name);
+    if (entry.isDirectory()) {
+      listFiles(relativePath, output);
+    } else if (entry.isFile()) {
+      output.push(relativePath);
+    }
+  }
+  return output;
+}
+
+function shouldScan(relativePath) {
+  if (!sourceExtensions.has(path.extname(relativePath))) return false;
+  const basename = path.basename(relativePath);
+  return !/\.(?:test|spec)\.[cm]?[jt]sx?$/.test(basename);
+}
+
+function nativePermissionViolations(relativePath, text) {
+  if (allowedNodeBrokerFiles.has(relativePath)) return [];
+  const matches = [];
+  for (const { name, pattern } of sensitiveNativePermissionPatterns) {
+    if (pattern.test(text)) matches.push(name);
+  }
+  return matches;
+}
+
+function requireSnippet(errors, relativePath, snippet) {
+  if (!read(relativePath).includes(snippet)) {
+    errors.push(`${relativePath} is missing required snippet: ${snippet}`);
+  }
+}
+
+function validate() {
+  const errors = [];
+  for (const root of implementationRoots) {
+    for (const relativePath of listFiles(root)) {
+      if (!shouldScan(relativePath)) continue;
+      const violations = nativePermissionViolations(relativePath, read(relativePath));
+      if (violations.length > 0) {
+        errors.push(`${relativePath} directly references host-owned native permission surface: ${violations.join(", ")}`);
+      }
+    }
+  }
+
+  requireSnippet(errors, "bridge/src/tcc-job-handler.ts", "export interface TccAuditSink");
+  requireSnippet(errors, "bridge/src/tcc-job-handler.ts", "auditOk(ctx, input, jobId)");
+  requireSnippet(errors, "bridge/src/tcc-job-handler.ts", "auditFail(ctx, input, jobId, message)");
+  requireSnippet(errors, "bridge/src/tcc-job-handler.ts", 'input.method.startsWith("tcc.computer.")');
+  requireSnippet(errors, "bridge/src/server.ts", "audit: auditSink");
+  requireSnippet(errors, "bridge/src/server.ts", "actorId: senderId");
+  requireSnippet(errors, "packages/clawjs-core/src/surface-registry.ts", "never Node-only code");
+  requireSnippet(errors, "docs/decision-map.md", "scripts/verify-host-permission-contract.mjs");
+
+  return errors;
+}
+
+function runSelfTest() {
+  assert.deepEqual(
+    nativePermissionViolations("packages/clawjs/src/direct.ts", 'spawn("screencapture")'),
+    ["macOS screenshot permission command"],
+  );
+  assert.deepEqual(
+    nativePermissionViolations("packages/clawjs/src/direct.ts", 'const method = "tcc.computer.screenshot";'),
+    ["TCC computer method"],
+  );
+  assert.deepEqual(
+    nativePermissionViolations("packages/clawjs/src/direct.ts", 'const script = "tell application \\"System Events\\"";'),
+    ["macOS System Events automation"],
+  );
+  assert.deepEqual(
+    nativePermissionViolations("packages/clawjs-node/src/host/process.ts", 'command: "osascript"; "Terminal"'),
+    [],
+  );
+  assert.deepEqual(
+    nativePermissionViolations("bridge/src/computer-use.ts", 'command: "screencapture"; "System Events"'),
+    [],
+  );
+}
+
+if (process.argv.includes("--self-test")) {
+  runSelfTest();
+  console.log("Host permission contract guard self-test passed");
+  process.exit(0);
+}
+
+const errors = validate();
+if (errors.length > 0) {
+  console.error("Host permission contract guard failed:");
+  for (const error of errors) console.error(`- ${error}`);
+  process.exit(1);
+}
+
+console.log("Host permission contract guard passed");
