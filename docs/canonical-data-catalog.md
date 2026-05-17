@@ -139,6 +139,11 @@ same pattern appears in more than one family.
   is 120 generic product/workflow archetypes across commerce, learning,
   sports/booking, health, home/property, work/legal/ops, CRM/support/growth,
   and personal memory/documents.
+- Dense-domain surfaces that could otherwise become parallel systems are
+  guarded by [Dense Data Existing Catalog Audit](./dense-data-existing-catalog-audit.md)
+  and `clawDenseDataOsRegistry.existingSurfaceIntegrations`, which require a
+  disposition, canonical owner, shared primitive set, dense-system references,
+  and follow-up gate before a pack can close.
 - Each audited archetype must declare its value proposition, workflow, evidence
   tags, mapped collections, and exact structural needs. Each audited need must
   map to real canonical fields and real relation fields with compatible
