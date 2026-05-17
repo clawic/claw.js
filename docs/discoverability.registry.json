@@ -1,0 +1,151 @@
+{
+  "version": 1,
+  "distanceBudget": 2,
+  "description": "Machine-readable discovery routes for durable ClawJS/Clawix meta-code. Routers route, ADR/docs decide, skills/playbooks execute, and checks enforce.",
+  "artifacts": [
+    {
+      "id": "discoverability-contract",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0017-discoverability-and-meta-code-routing.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/decision-map.md",
+        "skills/adr-to-guardrail/SKILL.md",
+        "skills/docs-alignment-update/SKILL.md",
+        "skills/decision-map-maintenance/SKILL.md"
+      ],
+      "discoveryTerms": [
+        "discoverability",
+        "meta-code routing",
+        "discovery route"
+      ],
+      "searchQueries": [
+        {
+          "query": "discoverability",
+          "expectPath": "docs/adr/0017-discoverability-and-meta-code-routing.md"
+        },
+        {
+          "query": "meta-code routing",
+          "expectPath": "docs/adr/0017-discoverability-and-meta-code-routing.md"
+        }
+      ],
+      "inspect": [
+        {
+          "command": "claw inspect why search --json",
+          "expectPath": "docs/adr/0017-discoverability-and-meta-code-routing.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-17"
+    },
+    {
+      "id": "surface-route-graph",
+      "kind": "surface-route",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0012-surface-route-graph.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/decision-map.md",
+        "skills/surface-route-work/SKILL.md"
+      ],
+      "discoveryTerms": [
+        "surface route graph",
+        "route-first",
+        "surface-first"
+      ],
+      "searchQueries": [
+        {
+          "query": "surface route graph",
+          "expectPath": "docs/adr/0012-surface-route-graph.md"
+        }
+      ],
+      "inspect": [
+        {
+          "command": "claw inspect routes --json",
+          "expectRoute": "chat.localDesktop"
+        }
+      ],
+      "guard": "scripts/surface-route-graph-guard.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-17"
+    },
+    {
+      "id": "docs-alignment-routing",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "skills/docs-alignment-update/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/decision-map.md",
+        "skills/adr-to-guardrail/SKILL.md"
+      ],
+      "discoveryTerms": [
+        "docs alignment",
+        "documentation routing",
+        "decision map"
+      ],
+      "searchQueries": [
+        {
+          "query": "docs alignment",
+          "expectPath": "skills/docs-alignment-update/SKILL.md"
+        }
+      ],
+      "guard": "scripts/docs-alignment-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-17"
+    },
+    {
+      "id": "decision-map-maintenance",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/decision-map-maintenance/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "decision map maintenance",
+        "decision-map routing"
+      ],
+      "searchQueries": [
+        {
+          "query": "decision map maintenance",
+          "expectPath": "skills/decision-map-maintenance/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-17"
+    },
+    {
+      "id": "comment-policy",
+      "kind": "code-comment-policy",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0017-discoverability-and-meta-code-routing.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "comments non-canonical",
+        "decision-like comments"
+      ],
+      "searchQueries": [
+        {
+          "query": "comments non-canonical",
+          "expectPath": "docs/adr/0017-discoverability-and-meta-code-routing.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-17"
+    }
+  ]
+}

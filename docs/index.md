@@ -118,6 +118,9 @@ ClawJS writes new canonical workspace state under `.claw/` even when runtimes di
 - [Repository Map](/repository-map) for root folder ownership and layout rules.
 - [Decision Map](/decision-map) for architecture, storage, validation, release,
   privacy, and naming decisions with their protecting checks.
+- [ADR 0017](/adr/0017-discoverability-and-meta-code-routing) for the
+  discoverability contract that keeps ADRs, skills, guards, harnesses, and
+  route work reachable by agents.
 - [Canonical Data Catalog](/canonical-data-catalog) for schema and collection growth rules.
 - [Host Ownership](/host-ownership) for the ClawJS, `Claw.app`, and Clawix architecture boundary.
 - [Terminology](/terminology) for canonical product vocabulary.

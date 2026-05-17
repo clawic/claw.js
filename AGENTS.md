@@ -12,6 +12,11 @@ Use this file as a router. Do not turn it into a long procedure manual.
 - Main router: `docs/decision-map.md`. It maps decision -> document ->
   validation, and should be the first public document agents use to choose the
   right source of truth.
+- Discovery contract: `docs/adr/0017-discoverability-and-meta-code-routing.md`
+  and `docs/discoverability.registry.json`. New durable ADRs, skills,
+  guardrails, harnesses, docs routers, and route work must be reachable from
+  `AGENTS.md`/`CLAUDE.md`, the relevant skill, and `claw search`/`claw inspect`
+  within two hops, or be recorded as expiring baseline debt.
 - Claude Code shim: `CLAUDE.md` must point back here and to the same canonical
   docs. If `CLAUDE.md` and this file diverge, this file wins.
 - Public docs are product surface. Update docs, examples, generated manifests,
@@ -37,7 +42,8 @@ Read the relevant canonical docs before changing their surfaces:
   `docs/adr/0009-dual-human-programmatic-surfaces.md`,
   `docs/adr/0012-surface-route-graph.md`
 - CLI and agent discovery: `docs/adr/0007-cli-agent-interface.md`,
-  `docs/adr/0010-cli-jit-guidance-actor-assertions-resource-registry.md`
+  `docs/adr/0010-cli-jit-guidance-actor-assertions-resource-registry.md`,
+  `docs/adr/0017-discoverability-and-meta-code-routing.md`
 - Security and releases: `SECURITY.md`, `RELEASING.md`, `docs/git-workflow.md`
 - OpenClaw host-dependent debugging: `agents/wiki/openclaw.md`
 

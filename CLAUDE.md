@@ -20,6 +20,9 @@ Read and follow:
 11. `docs/adr/0005-canonical-data-catalog.md` before changing catalog policy
 12. Any docs or wiki pages that `AGENTS.md` explicitly points to
 13. The task-specific docs, tests, and code in the area you are changing
+14. `docs/adr/0017-discoverability-and-meta-code-routing.md` and
+    `docs/discoverability.registry.json` before adding durable ADRs, skills,
+    guardrails, harnesses, docs routers, or route work
 
 Critical guardrail for prompt-based tests:
 
