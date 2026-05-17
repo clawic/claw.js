@@ -211,6 +211,26 @@ export function scheduleSignalsObservationsSearchEvent(input: {
   });
 }
 
+export function scheduleCalendarEventsSearchEvent(input: {
+  operation: "upsert" | "delete";
+  eventId: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  return scheduleSearchIndexEvent({
+    source: "calendar.events",
+    operation: input.operation,
+    resourceId: input.eventId,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      eventId: input.eventId,
+    },
+  });
+}
+
 export function scheduleConnectorCatalogSearchEvent(input: {
   operation: "upsert" | "delete";
   operationId: string;

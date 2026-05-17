@@ -633,6 +633,17 @@ export function createBuiltinSearchSourceManifests(): SearchSourceManifest[] {
       ],
     }),
     createFrameworkSearchSourceManifest({
+      id: "calendar.events",
+      domain: "calendar",
+      name: "Calendar events",
+      resultTypes: ["event"],
+      facets: [
+        { id: "calendarId", label: "Calendar", type: "string" },
+        { id: "source", label: "Source", type: "string" },
+        { id: "hasPage", label: "Has page", type: "boolean" },
+      ],
+    }),
+    createFrameworkSearchSourceManifest({
       id: "images.derived",
       domain: "images",
       name: "Images",

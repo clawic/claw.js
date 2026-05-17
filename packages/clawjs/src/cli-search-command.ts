@@ -126,6 +126,7 @@ export async function runSearchQueryCli(input: {
     const shouldRefreshNotes = domains?.includes("notes") || sources?.includes("notes.pages");
     const shouldRefreshKnowledge = domains?.includes("knowledge") || sources?.includes("knowledge.graph");
     const shouldRefreshSignals = domains?.includes("signals") || sources?.includes("signals.observations");
+    const shouldRefreshCalendar = domains?.includes("calendar") || sources?.includes("calendar.events");
     const shouldRefreshImages = domains?.includes("images") || sources?.includes("images.derived");
     const shouldRefreshMedia = domains?.includes("media") || sources?.includes("media.assets");
     const shouldRefreshGenerations = domains?.includes("generations") || sources?.includes("generations.artifacts");
@@ -141,6 +142,7 @@ export async function runSearchQueryCli(input: {
     const indexedNotes = shouldRefreshNotes && sourceCanIndex(store, "notes.pages") ? ensureNotesPagesSourceIndexed(store, input.flags) : 0;
     const indexedKnowledge = shouldRefreshKnowledge && sourceCanIndex(store, "knowledge.graph") ? ensureKnowledgeGraphSourceIndexed(store, input.flags) : 0;
     const indexedSignals = shouldRefreshSignals && sourceCanIndex(store, "signals.observations") ? ensureSignalsObservationsSourceIndexed(store, input.flags) : 0;
+    const indexedCalendar = shouldRefreshCalendar && sourceCanIndex(store, "calendar.events") ? ensureCalendarEventsSourceIndexed(store, input.flags) : 0;
     const indexedImages = shouldRefreshImages && sourceCanIndex(store, "images.derived") ? ensureImagesDerivedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedMedia = shouldRefreshMedia && sourceCanIndex(store, "media.assets") ? ensureMediaAssetsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedGenerations = shouldRefreshGenerations && sourceCanIndex(store, "generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -222,6 +224,7 @@ export async function runSearchQueryCli(input: {
         ...(shouldRefreshNotes ? { "notes.pages": indexedNotes } : {}),
         ...(shouldRefreshKnowledge ? { "knowledge.graph": indexedKnowledge } : {}),
         ...(shouldRefreshSignals ? { "signals.observations": indexedSignals } : {}),
+        ...(shouldRefreshCalendar ? { "calendar.events": indexedCalendar } : {}),
         ...(shouldRefreshImages ? { "images.derived": indexedImages } : {}),
         ...(shouldRefreshMedia ? { "media.assets": indexedMedia } : {}),
         ...(shouldRefreshGenerations ? { "generations.artifacts": indexedGenerations } : {}),
@@ -301,6 +304,7 @@ export async function runSearchRebuildCli(input: {
     const notesIndexed = rebuildsSource("notes.pages") ? ensureNotesPagesSourceIndexed(store, input.flags) : 0;
     const knowledgeIndexed = rebuildsSource("knowledge.graph") ? ensureKnowledgeGraphSourceIndexed(store, input.flags) : 0;
     const signalsIndexed = rebuildsSource("signals.observations") ? ensureSignalsObservationsSourceIndexed(store, input.flags) : 0;
+    const calendarIndexed = rebuildsSource("calendar.events") ? ensureCalendarEventsSourceIndexed(store, input.flags) : 0;
     const imagesIndexed = rebuildsSource("images.derived") ? ensureImagesDerivedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const mediaIndexed = rebuildsSource("media.assets") ? ensureMediaAssetsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const generationsIndexed = rebuildsSource("generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -319,6 +323,7 @@ export async function runSearchRebuildCli(input: {
       ...(notesIndexed > 0 ? ["notes.pages"] : []),
       ...(knowledgeIndexed > 0 ? ["knowledge.graph"] : []),
       ...(signalsIndexed > 0 ? ["signals.observations"] : []),
+      ...(calendarIndexed > 0 ? ["calendar.events"] : []),
       ...(imagesIndexed > 0 ? ["images.derived"] : []),
       ...(mediaIndexed > 0 ? ["media.assets"] : []),
       ...(generationsIndexed > 0 ? ["generations.artifacts"] : []),
@@ -339,7 +344,7 @@ export async function runSearchRebuildCli(input: {
       rebuilt: true,
       mode: selectedSources ? "scoped" : "full",
       selectedSources: selectedSources ?? null,
-      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + skillsIndexed + connectorsIndexed + runtimeIndexed + localFilesIndexed + webIndexed + externalIndexed,
+      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + skillsIndexed + connectorsIndexed + runtimeIndexed + localFilesIndexed + webIndexed + externalIndexed,
       embeddings: 0,
       profile: input.flags.profile === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
@@ -352,6 +357,7 @@ export async function runSearchRebuildCli(input: {
         "notes.pages": notesIndexed,
         "knowledge.graph": knowledgeIndexed,
         "signals.observations": signalsIndexed,
+        "calendar.events": calendarIndexed,
         "images.derived": imagesIndexed,
         "media.assets": mediaIndexed,
         "generations.artifacts": generationsIndexed,
@@ -930,6 +936,8 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
       return ensureKnowledgeGraphSourceIndexed(store, flags);
     case "signals.observations":
       return ensureSignalsObservationsSourceIndexed(store, flags);
+    case "calendar.events":
+      return ensureCalendarEventsSourceIndexed(store, flags);
     case "images.derived":
       return ensureImagesDerivedSourceIndexed(store, flags, cwd);
     case "media.assets":
@@ -972,6 +980,10 @@ function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flag
     case "signals.observations": {
       const resourceId = resourceIdFromJobPayload(job, "signalsResourceId") ?? job.resourceId;
       return resourceId ? ensureSignalsObservationsResourceIndexed(store, flags, resourceId) : 0;
+    }
+    case "calendar.events": {
+      const resourceId = resourceIdFromJobPayload(job, "eventId") ?? job.resourceId;
+      return resourceId ? ensureCalendarEventResourceIndexed(store, flags, resourceId) : 0;
     }
     case "images.derived": {
       const resourceId = resourceIdFromJobPayload(job, "imageId") ?? job.resourceId;
@@ -2012,6 +2024,79 @@ function ensureSignalsObservationsResourceIndexed(store: SearchStore, flags: Rec
       store.upsertDocument(signalObservationSearchDocument(observation, vertical, variable));
     }
     store.setSourceState("signals.observations", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 1;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureCalendarEventsSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) {
+    store.setSourceState("calendar.events", "enabled", {
+      backlog: 0,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 0;
+  }
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "calendar_events")) {
+      store.setSourceState("calendar.events", "degraded", {
+        backlog: 0,
+        error: "core database does not contain calendar_events",
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return 0;
+    }
+    const rows = db.prepare(`
+      SELECT id, title, starts_at, ends_at, calendar_id, source, external_id, page_id, metadata_json, created_at, updated_at
+      FROM calendar_events
+      ORDER BY starts_at ASC
+    `).all() as CalendarEventRow[];
+    let indexed = 0;
+    for (const row of rows) {
+      store.upsertDocument(calendarEventSearchDocument(row));
+      indexed += 1;
+    }
+    store.setCursor({
+      source: "calendar.events",
+      cursor: `events:${indexed}`,
+      metadata: { store: "core.sqlite", tables: ["calendar_events"] },
+    });
+    store.setSourceState("calendar.events", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return indexed;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureCalendarEventResourceIndexed(store: SearchStore, flags: Record<string, string>, eventId: string): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) return 0;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "calendar_events")) return 0;
+    const row = db.prepare(`
+      SELECT id, title, starts_at, ends_at, calendar_id, source, external_id, page_id, metadata_json, created_at, updated_at
+      FROM calendar_events
+      WHERE id = ?
+      LIMIT 1
+    `).get(eventId) as CalendarEventRow | undefined;
+    if (!row) {
+      store.tombstone({ source: "calendar.events", resourceId: eventId, reason: "calendar event missing during Search event refresh" });
+      return 1;
+    }
+    store.upsertDocument(calendarEventSearchDocument(row));
+    store.setSourceState("calendar.events", "enabled", {
       backlog: 0,
       error: null,
       lastIndexedAt: new Date().toISOString(),
@@ -3610,6 +3695,52 @@ function signalObservationSearchDocument(row: SignalsObservationRow, vertical?: 
   };
 }
 
+function calendarEventSearchDocument(row: CalendarEventRow): SearchDocumentInput {
+  const metadata = parseJsonRecord(row.metadata_json);
+  const metadataText = textFromStructuredContent(metadata) ?? (Object.keys(metadata).length ? JSON.stringify(metadata) : undefined);
+  const body = [row.title, row.starts_at, row.ends_at, row.calendar_id, row.source, row.external_id, metadataText].filter(Boolean).join("\n");
+  return {
+    id: `calendar.events:${row.id}`,
+    source: "calendar.events",
+    domain: "calendar",
+    type: "event",
+    resourceId: row.id,
+    title: row.title || row.id,
+    subtitle: [row.starts_at, row.calendar_id].filter(Boolean).join(" / "),
+    snippet: firstMeaningfulLine(metadataText ?? "") ?? row.starts_at,
+    body,
+    updatedAt: row.updated_at,
+    metadata: {
+      eventId: row.id,
+      calendarId: row.calendar_id,
+      startsAt: row.starts_at,
+      endsAt: row.ends_at,
+      source: row.source,
+      externalId: row.external_id,
+      pageId: row.page_id,
+      hasPage: Boolean(row.page_id),
+      metadataKeys: Object.keys(metadata).sort(),
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: {
+      fastPath: 1,
+      calendar: 1,
+      upcoming: Date.parse(row.starts_at) >= Date.now() ? 0.2 : 0,
+    },
+    fragments: metadataText ? [{
+      id: `calendar.events:${row.id}:metadata`,
+      title: "metadata",
+      body: metadataText,
+      snippet: metadataText.slice(0, 180),
+      sortOrder: 0,
+    }] : [],
+    actions: [
+      { id: "open", kind: "open", label: "Open calendar event", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy event reference", requiresApproval: false },
+    ],
+  };
+}
+
 function runtimeJobSearchDocument(row: RuntimeJobRow): SearchDocumentInput {
   const payload = parseJsonRecord(row.payload_json);
   const payloadText = textFromStructuredContent(payload) ?? (Object.keys(payload).length ? JSON.stringify(payload) : undefined);
@@ -4001,6 +4132,20 @@ interface SignalsObservationRow {
   session_id: string | null;
   external_id: string | null;
   sensitive: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface CalendarEventRow {
+  id: string;
+  title: string;
+  starts_at: string;
+  ends_at: string | null;
+  calendar_id: string | null;
+  source: string;
+  external_id: string | null;
+  page_id: string | null;
+  metadata_json: string;
   created_at: string;
   updated_at: string;
 }

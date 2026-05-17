@@ -1914,6 +1914,117 @@ test("search rebuild indexes signals.observations from signal catalog and observ
   });
 });
 
+test("search rebuild indexes calendar.events from core.sqlite", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-calendar-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const created = await runCliCapture([
+      "calendar",
+      "create",
+      "--id",
+      "event-search-review",
+      "--title",
+      "Search Architecture Review",
+      "--starts-at",
+      "2026-05-19T09:00:00.000Z",
+      "--ends-at",
+      "2026-05-19T10:00:00.000Z",
+      "--calendar-id",
+      "framework",
+      "--metadata",
+      JSON.stringify({ agenda: "Review fast path budgets and Search source coverage." }),
+      "--data-dir",
+      dataRoot,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(created.code, CLI_EXIT_OK);
+
+    const jobs = await runCliCapture(["search", "jobs", "--source", "calendar.events", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(jobs.code, CLI_EXIT_OK);
+    const jobsPayload = JSON.parse(jobs.stdout) as {
+      data: { items: Array<{ operation: string; resourceId: string; shard: string; payload: { eventId?: string } }> };
+    };
+    const eventJob = jobsPayload.data.items.find((job) => job.resourceId === "event-search-review");
+    assert.equal(eventJob?.operation, "upsert");
+    assert.equal(eventJob?.shard, "hot");
+    assert.equal(eventJob?.payload.eventId, "event-search-review");
+
+    const rebuild = await runCliCapture(["search", "rebuild", "--source", "calendar.events", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(rebuild.code, CLI_EXIT_OK);
+    const rebuildPayload = JSON.parse(rebuild.stdout) as {
+      data: { sources: string[]; pendingSources: string[]; indexedBySource: { "calendar.events": number } };
+    };
+    assert.equal(rebuildPayload.data.sources.includes("calendar.events"), true);
+    assert.equal(rebuildPayload.data.pendingSources.includes("calendar.events"), false);
+    assert.equal(rebuildPayload.data.indexedBySource["calendar.events"], 1);
+
+    const query = await runCliCapture([
+      "search",
+      "query",
+      "architecture review",
+      "--domains",
+      "calendar",
+      "--filters",
+      JSON.stringify({ "metadata.calendarId": "framework" }),
+      "--data-dir",
+      dataRoot,
+      "--json",
+      "--limit",
+      "5",
+      "--explain",
+      "true",
+    ], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: {
+        indexedFastPaths: { "calendar.events": number };
+        results: Array<{
+          source: string;
+          domain: string;
+          type: string;
+          title: string;
+          metadata?: { eventId?: string; calendarId?: string; startsAt?: string; endsAt?: string; source?: string; hasPage?: boolean };
+          fragments?: Array<{ title?: string; snippet?: string }>;
+          actions?: Array<{ id: string; kind: string }>;
+          explanation?: { matchedBy?: string[] };
+        }>;
+        facets?: Array<{ id: string }>;
+      };
+    };
+    assert.equal(queryPayload.data.indexedFastPaths["calendar.events"], 1);
+    const result = queryPayload.data.results.find((entry) => entry.metadata?.eventId === "event-search-review");
+    assert.equal(result?.source, "calendar.events");
+    assert.equal(result?.domain, "calendar");
+    assert.equal(result?.type, "event");
+    assert.equal(result?.title, "Search Architecture Review");
+    assert.equal(result?.metadata?.calendarId, "framework");
+    assert.equal(result?.metadata?.startsAt, "2026-05-19T09:00:00.000Z");
+    assert.equal(result?.metadata?.endsAt, "2026-05-19T10:00:00.000Z");
+    assert.equal(result?.metadata?.source, "clawjs");
+    assert.equal(result?.metadata?.hasPage, false);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "metadata" && fragment.snippet?.includes("fast path budgets")), true);
+    assert.equal(result?.actions?.some((action) => action.id === "open" && action.kind === "open"), true);
+    assert.ok(result?.explanation?.matchedBy?.length);
+    assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "calendarId"), true);
+
+    const deleted = await runCliCapture(["calendar", "delete", "event-search-review", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleted.code, CLI_EXIT_OK);
+    const deleteJobs = await runCliCapture(["search", "jobs", "--source", "calendar.events", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleteJobs.code, CLI_EXIT_OK);
+    const deleteJobsPayload = JSON.parse(deleteJobs.stdout) as {
+      data: { items: Array<{ operation: string; resourceId: string; payload: { eventId?: string } }> };
+    };
+    const deleteJob = deleteJobsPayload.data.items.find((job) => job.operation === "delete" && job.resourceId === "event-search-review");
+    assert.equal(deleteJob?.payload.eventId, "event-search-review");
+  });
+});
+
 test("search rebuild indexes images.derived from image library records", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-images-"));
   const dataRoot = path.join(workspaceRoot, "data");

@@ -7,7 +7,7 @@ import type Database from "better-sqlite3";
 import { DatabaseServiceStore } from "@clawjs/database";
 import { runAgentsCommand, runConnectionsCommand, runPersonalitiesCommand, runSkillCollectionsCommand } from "./v1-data-agent-entities.ts";
 import { runProviderRoutingCommand, runSnippetsCommand } from "./v1-data-agent-config.ts";
-import { scheduleKnowledgeGraphSearchEvent, scheduleNotesPagesSearchEvent, scheduleSignalsObservationsSearchEvent, scheduleSkillsRegistrySearchEvent } from "./cli-search-events.ts";
+import { scheduleCalendarEventsSearchEvent, scheduleKnowledgeGraphSearchEvent, scheduleNotesPagesSearchEvent, scheduleSignalsObservationsSearchEvent, scheduleSkillsRegistrySearchEvent } from "./cli-search-events.ts";
 export {
   openMainDataStore,
   resolveClawjsDataRoot,
@@ -188,6 +188,7 @@ function shouldHandleV1DataCommand(group: string | undefined, command: string | 
     content: new Set(["upsert", "list", "get", "delete", "help"]),
     social: new Set(["upsert", "list", "get", "delete", "help"]),
     finance: new Set(["upsert", "list", "get", "delete", "help"]),
+    calendar: new Set(["create", "update", "list", "get", "delete", "help"]),
     iot: new Set(["config", "help"]),
     marketplace: new Set(["choice", "choices", "help"]),
     ledger: new Set(["entry", "line", "list", "get", "delete", "help"]),
@@ -1155,6 +1156,12 @@ function runCalendarCommand(input: V1DataCliInput, store: DatabaseServiceStore):
         calendar_id = excluded.calendar_id, source = excluded.source, external_id = excluded.external_id,
         page_id = excluded.page_id, metadata_json = excluded.metadata_json, updated_at = excluded.updated_at
     `).run(id, title, startsAt, input.flags.end || input.flags["ends-at"] || null, input.flags["calendar-id"] || null, input.flags.source || "clawjs", input.flags["external-id"] || null, input.flags["page-id"] || null, input.flags.metadata ? JSON.stringify(parseMaybeJson(input.flags.metadata)) : "{}", now, now);
+    scheduleCalendarEventsSearchEvent({
+      operation: "upsert",
+      eventId: id,
+      dataDir: resolveClawjsDataRoot(),
+      flags: input.flags,
+    });
     writeSuccess(input, normalizeDbRow(store.sqlite.prepare("SELECT * FROM calendar_events WHERE id = ?").get(id) as JsonRecord));
     return V1_DATA_EXIT_OK;
   }
@@ -1162,6 +1169,21 @@ function runCalendarCommand(input: V1DataCliInput, store: DatabaseServiceStore):
     const rows = store.sqlite.prepare("SELECT * FROM calendar_events ORDER BY starts_at ASC LIMIT ?").all(Math.max(1, Number(input.flags.limit ?? 100)));
     writeSuccess(input, { items: rows.map(normalizeDbRow) });
     return V1_DATA_EXIT_OK;
+  }
+  if (command === "delete") {
+    const id = input.flags.id || input.positionals[2];
+    if (!id) return usageError(input, "Usage: claw calendar delete ID [--json]");
+    const changes = store.sqlite.prepare("DELETE FROM calendar_events WHERE id = ?").run(id).changes;
+    if (changes > 0) {
+      scheduleCalendarEventsSearchEvent({
+        operation: "delete",
+        eventId: id,
+        dataDir: resolveClawjsDataRoot(),
+        flags: input.flags,
+      });
+    }
+    writeSuccess(input, { deleted: changes > 0, id });
+    return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
   return runRecordGetDelete(input, store, "calendar_events", "calendar");
 }
