@@ -11,6 +11,18 @@ import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from
 import { captureStream, createFakeGenerationScript, runCliCapture, runInternalV1Cli, withPatchedEnv } from "./index-test-utils.ts";
 import { ensureV1MainSchema, resolveClawjsMainDbPath } from "./v1-data-core.ts";
 
+test("Search MCP package publishes only the public Search binary", () => {
+  const packageJson = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "packages/clawjs-search-mcp/package.json"), "utf8")) as {
+    bin?: Record<string, string>;
+    dependencies?: Record<string, string>;
+  };
+
+  assert.deepEqual(packageJson.bin, { "claw-search-mcp": "bin/claw-search-mcp.mjs" });
+  assert.equal(packageJson.dependencies?.["@clawjs/search"], "0.1.2");
+  assert.equal(fs.existsSync(path.resolve(process.cwd(), "packages/clawjs-search-mcp/bin/claw-search-mcp.mjs")), true);
+  assert.equal(fs.existsSync(path.resolve(process.cwd(), "packages/clawjs-search-mcp/bin", ["clawjs", "index", "mcp"].join("-") + ".mjs")), false);
+});
+
 test("search rebuild and query use the Search sidecar without workspace state", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-cli-"));
   const dataRoot = path.join(workspaceRoot, "data");
@@ -511,17 +523,17 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(entrypoints.code, CLI_EXIT_OK);
     const entrypointsPayload = JSON.parse(entrypoints.stdout) as {
       data: {
-        rootSearchHotkeyState: string;
+        rootSearchShortcutState: string;
         chatSearchIsolation: boolean;
-        entrypoints: Array<{ id: string; route?: string; queryScope: string; hotkey: { bindingId: string; state: string; reservedChord?: string } }>;
+        entrypoints: Array<{ id: string; route?: string; queryScope: string; shortcut: { bindingId: string; state: string; reservedChord?: string } }>;
       };
     };
-    assert.equal(entrypointsPayload.data.rootSearchHotkeyState, "external_pending");
+    assert.equal(entrypointsPayload.data.rootSearchShortcutState, "external_pending");
     assert.equal(entrypointsPayload.data.chatSearchIsolation, true);
     assert.equal(entrypointsPayload.data.entrypoints.find((entrypoint) => entrypoint.id === "root-search")?.route, "/search");
-    assert.equal(entrypointsPayload.data.entrypoints.find((entrypoint) => entrypoint.id === "root-search")?.hotkey.bindingId, "search.root.global");
+    assert.equal(entrypointsPayload.data.entrypoints.find((entrypoint) => entrypoint.id === "root-search")?.shortcut.bindingId, "search.root.global");
     assert.equal(entrypointsPayload.data.entrypoints.find((entrypoint) => entrypoint.id === "chat-search")?.queryScope, "conversations_only");
-    assert.equal(entrypointsPayload.data.entrypoints.find((entrypoint) => entrypoint.id === "chat-search")?.hotkey.reservedChord, "Command-G");
+    assert.equal(entrypointsPayload.data.entrypoints.find((entrypoint) => entrypoint.id === "chat-search")?.shortcut.reservedChord, "Command-G");
 
     const serviceStart = await runCliCapture(["search", "service", "start", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(serviceStart.code, CLI_EXIT_OK);

@@ -690,14 +690,17 @@ export async function runSearchAdminCli(input: {
   }
 
   if (command === "entrypoints") {
-    const entrypoints = listSearchEntrypointContracts();
+    const entrypoints = listSearchEntrypointContracts().map((entrypoint) => {
+      const { hotkey, ...publicEntrypoint } = entrypoint;
+      return { ...publicEntrypoint, shortcut: hotkey };
+    });
     const data = {
       entrypoints,
-      rootSearchHotkeyState: entrypoints.find((entrypoint) => entrypoint.id === "root-search")?.hotkey.state ?? "external_pending",
+      rootSearchShortcutState: entrypoints.find((entrypoint) => entrypoint.id === "root-search")?.shortcut.state ?? "external_pending",
       chatSearchIsolation: entrypoints.find((entrypoint) => entrypoint.id === "chat-search")?.queryScope === "conversations_only",
     };
     if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "entrypoints" });
-    else input.context.stdout.write(`${entrypoints.map((entrypoint) => `${entrypoint.id}\t${entrypoint.scope}\t${entrypoint.hotkey.state}\t${entrypoint.label}`).join("\n")}\n`);
+    else input.context.stdout.write(`${entrypoints.map((entrypoint) => `${entrypoint.id}\t${entrypoint.scope}\t${entrypoint.shortcut.state}\t${entrypoint.label}`).join("\n")}\n`);
     return CLI_EXIT_OK;
   }
 
