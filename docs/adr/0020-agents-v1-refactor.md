@@ -69,8 +69,9 @@ The first implementation slice is model plus gates:
 
 - built-in collection schemas and core.sqlite tables for Agents V1 entities
 - `claw agents schema`, `claw agents evaluate-access`, `claw agents
-  route-check`, `claw agents resolve-external-identity`, and `claw agents
-  project-support-inbox`, `claw agents memory-check`, `claw agents
+  supervisor-check`, `claw agents route-check`, `claw agents
+  resolve-external-identity`, and `claw agents project-support-inbox`,
+  `claw agents memory-check`, `claw agents
   budget-check`, `claw agents action-severity`, and `claw agents
   surface-projection`, `claw agents config-revision`, and `claw agents
   incident`, `claw agents activity-feed`, `claw agents blueprint`, `claw
@@ -81,7 +82,8 @@ The first implementation slice is model plus gates:
 - MCP tool calls require both connector control-plane approval and an Agents V1
   `mcp_api` assignment/access policy before protocol invocation
 - `@clawjs/core` policy evaluators and `claw agents` gates for effective
-  access, grant expiry, delegation checks, assignment routing, external
+  access, grant expiry, delegation checks, limited supervisor authority,
+  assignment routing, external
   identity, support projection, flexible memory scopes, multidimensional
   budgets, action severity classification, redacted audit events, safe package export, safe surface projections
   for Relay/MCP/API/UI, redacted config revisions, first-class incidents,

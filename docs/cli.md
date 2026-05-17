@@ -149,6 +149,7 @@ claw agents upsert agent.ops --name "Ops Agent" --personalities personality.revi
 claw agents schema --json
 claw agents evaluate-access --record '{"requested":{"resourceType":"contact","action":"read"},"agentGrants":[],"assignmentGrants":[],"executionProfileGrants":[],"connectorGrants":[],"hostGrants":[],"runScopeGrants":[]}' --json
 claw agents delegation-check --record '{"parent":{"requested":{"resourceType":"collection","resourceId":"project_notes","action":"read"},"agentGrants":[{"resourceType":"collection","resourceId":"project_notes","action":"read"}],"assignmentGrants":[{"resourceType":"collection","resourceId":"project_notes","action":"read"}],"executionProfileGrants":[{"resourceType":"collection","resourceId":"project_notes","action":"read"}],"connectorGrants":[{"resourceType":"collection","resourceId":"project_notes","action":"read"}],"hostGrants":[{"resourceType":"collection","resourceId":"project_notes","action":"read"}],"runScopeGrants":[{"resourceType":"collection","resourceId":"project_notes","action":"read"}]},"child":{"requested":{"resourceType":"collection","resourceId":"project_notes","action":"read"},"agentGrants":[{"resourceType":"collection","resourceId":"project_notes","action":"read"}],"assignmentGrants":[{"resourceType":"collection","resourceId":"project_notes","action":"read"}],"executionProfileGrants":[{"resourceType":"collection","resourceId":"project_notes","action":"read"}],"connectorGrants":[{"resourceType":"collection","resourceId":"project_notes","action":"read"}],"hostGrants":[{"resourceType":"collection","resourceId":"project_notes","action":"read"}],"runScopeGrants":[{"resourceType":"collection","resourceId":"project_notes","action":"read"}]}}' --json
+claw agents supervisor-check --record '{"supervisor":{"id":"agent.manager","authorityLevel":"approve_low_risk","scopeType":"team","scopeId":"support"},"targetAgent":{"id":"agent.ops","managerAgentId":"agent.manager","teamId":"support"},"request":{"action":"pause_assignment","risk":"low","scopeType":"team","scopeId":"support"}}' --json
 claw agents route-check --record '{"assignment":{"id":"assignment.web","agentId":"agent.ops","kind":"external_web_chat","status":"active","channel":"chat"},"kind":"external_web_chat","channel":"chat"}' --json
 claw agents resolve-external-identity --record '{"provider":"web","externalId":"visitor-1","email":"visitor@example.com","privacyPolicy":"hashed"}' --json
 claw agents project-support-inbox --record '{"sessionId":"session-1","assignment":{"id":"assignment.web","agentId":"agent.ops","kind":"external_web_chat","status":"active","channel":"chat"},"identity":{"externalUserId":"external_user_1","actorId":"actor_external_1","contactProjection":"create_or_update","boundary":{"scopeType":"external_user","scopeId":"external_user_1"},"telemetry":{}},"initialMessage":"Need help"}' --json
@@ -188,8 +189,10 @@ read/write combinations such as read-only global memory plus private writes,
 team/project/customer scopes, and explicit-grant-only cross-customer access.
 Delegation is checked with `delegation-check`; both parent and child must pass
 the same effective access intersection, so subagents cannot launder grants
-through a weaker parent. Budgets are checked with `budget-check`; external paid
-actions require both a budget allowance and connector gate before dispatch.
+through a weaker parent. `supervisor-check` limits managers/supervisors by
+reporting relationship, delegated action, maximum risk, and scope before they
+can approve or change another agent. Budgets are checked with `budget-check`;
+external paid actions require both a budget allowance and connector gate before dispatch.
 `action-severity` classifies proposed actions as `info`, `low`, `medium`,
 `high`, or `critical` and returns the approval, connector, budget, and host
 gates required before dispatch.
