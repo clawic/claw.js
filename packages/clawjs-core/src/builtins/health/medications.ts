@@ -6,6 +6,7 @@ export const MEDICATIONS: BuiltinCollectionDefinition = {
   family: "health",
   aliases: ["medication","medications"],
   fields: [
+    { name: "patientId", type: "relation", relation: { collectionName: "patients" }, aliases: ["patient", "patientRef"] },
     { name: "name", type: "text", required: true },
     { name: "activeIngredient", type: "text" },
     { name: "dosage", type: "text" },
@@ -17,6 +18,7 @@ export const MEDICATIONS: BuiltinCollectionDefinition = {
     { name: "notes", type: "text" },
   ],
   indexes: [
+    { name: "medications_patient_idx", fields: ["patientId"] },
     { name: "medications_name_idx", fields: ["name"] },
     { name: "medications_active_idx", fields: ["active"] },
   ],

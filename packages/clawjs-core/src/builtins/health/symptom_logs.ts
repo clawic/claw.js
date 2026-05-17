@@ -4,7 +4,7 @@ export const SYMPTOM_LOGS: BuiltinCollectionDefinition = {
   name: "symptom_logs",
   displayName: "Symptom Logs",
   family: "health",
-  aliases: ["symptom_log","symptom_logs","symptoms"],
+  aliases: ["symptom","symptom_log","symptom_logs","symptoms"],
   fields: [
     { name: "loggedAt", type: "date", required: true },
     { name: "symptom", type: "text", required: true },

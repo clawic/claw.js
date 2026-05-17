@@ -19,6 +19,7 @@ export interface ClawDenseDataCenter {
   label: string;
   commandNoun: string;
   commandAliases: string[];
+  collectionName?: string;
   profileKind?: string;
   notes: string;
 }
@@ -156,10 +157,10 @@ export const clawDenseDataOsRegistry: ClawDenseDataOsRegistry = {
       sensitivityDefault: "high",
       sharedEngines: ["identity_role_profile", "evidence_provenance", "quality_gap", "relation_graph", "semantic_view", "intent_coverage", "vocabulary_unit", "instrument_response", "timeline", "document_evidence"],
       centers: [
-        center("patient", "Patient", "patient", "patient_profile", "Human-facing clinical center; backed by minimal shared identity plus patient role/profile."),
+        center("patient", "Patient", "patient", "patient_profile", "Human-facing clinical center; backed by minimal shared identity plus patient role/profile.", undefined, "patients"),
         center("encounter", "Encounter", "encounter", undefined, "Clinical visit/contact center for appointments, procedures, documents, observations, and follow-up."),
-        center("medication", "Medication", "medication", undefined, "Medication center for active/historical drug exposure, orders, doses, and evidence links."),
-        center("symptom", "Symptom", "symptom", undefined, "Symptom center for reported problems, observations, severity, timing, provenance, and quality gaps."),
+        center("medication", "Medication", "medication", undefined, "Medication center for active/historical drug exposure, orders, doses, and evidence links.", undefined, "medications"),
+        center("symptom", "Symptom", "symptom", undefined, "Symptom center for reported problems, observations, severity, timing, provenance, and quality gaps.", ["symptoms"], "symptom_logs"),
       ],
       commandPatterns: [
         "claw patient list|get|create|update|delete|query|schema",
@@ -276,8 +277,8 @@ export const clawDenseDataOsRegistry: ClawDenseDataOsRegistry = {
       centers: [
         center("company", "Company", "company", "organization_profile", "Business organization center shared with CRM, billing, finance, procurement, and legal."),
         center("product", "Product", "product", undefined, "Catalog/product center shared across commerce, inventory, procurement, PIM, and billing."),
-        center("invoice", "Invoice", "invoice", undefined, "Invoice center shared across ERP, accounting, billing, payments, documents, and reconciliation."),
-        center("payment", "Payment", "payment", undefined, "Payment center for money movement, reconciliation, evidence, and accounting links."),
+        center("invoice", "Invoice", "invoice", undefined, "Invoice center shared across ERP, accounting, billing, payments, documents, and reconciliation.", undefined, "invoices"),
+        center("payment", "Payment", "payment", undefined, "Payment center for money movement, reconciliation, evidence, and accounting links.", undefined, "payment_intents"),
       ],
       commandPatterns: [
         "claw erp overview|gaps|intents",
@@ -620,8 +621,8 @@ function nextStepsFor(system: ClawDenseDataSystem, tokens: string[]): string[] {
   return ["Route through the dense-data registry, shared core database, relations, evidence, provenance, and quality-gap engines."];
 }
 
-function center(id: string, label: string, commandNoun: string, profileKind: string | undefined, notes: string, commandAliases: string[] = [pluralizeCommandNoun(commandNoun)]): ClawDenseDataCenter {
-  return { id, label, commandNoun, commandAliases, profileKind, notes };
+function center(id: string, label: string, commandNoun: string, profileKind: string | undefined, notes: string, commandAliases: string[] = [pluralizeCommandNoun(commandNoun)], collectionName?: string): ClawDenseDataCenter {
+  return { id, label, commandNoun, commandAliases, collectionName, profileKind, notes };
 }
 
 function operation(id: string, label: string, routes: string[], createsOrReads: string[]): ClawDenseDataOperation {
