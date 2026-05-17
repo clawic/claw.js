@@ -132,7 +132,7 @@ test("slides cli creates, validates, renders, shares, and downloads a deck witho
     "--format", "pdf",
     "--json",
   ])).stdout);
-  expect(shared.share.url).toContain("clawjs://media-gallery/");
+  expect(shared.share.url).toContain("claw://media-gallery/");
 
   const shareList = (await runCli(rootDir, ["media", "share", "list", "--workspace", workspaceDir])).stdout;
   expect(shareList).toContain(shared.share.url);

@@ -68,6 +68,9 @@ forbidSnippet("packages/clawjs/src/cli-domains-privileges.ts", "clawjs-domains")
 forbidSnippet("packages/clawjs/src/index.ts", "clawjs-domains");
 forbidSnippet("tests/e2e/open-cli.spec.ts", "clawjs-domains");
 forbidSnippet("tests/e2e/open-cli.spec.ts", "/Library/Application Support/ClawJS/domains");
+forbidSnippet("packages/clawjs-node/src/media/store.ts", "clawjs://media-gallery");
+forbidSnippet("tests/e2e/slides-cli.spec.ts", "clawjs://media-gallery");
+forbidSnippet("tests/e2e/sdk-storage.spec.ts", "clawjs://media-gallery");
 forbidSnippet("packages/clawjs-core/src/surface-registry.ts", "stable compatibility surface");
 forbidSnippet("packages/clawjs/src/inspect-cli.test.ts", "stable compatibility surface");
 forbidSnippet("docs/adr/0004-persistent-surface-registry-and-inspection.md", "stable compatibility");

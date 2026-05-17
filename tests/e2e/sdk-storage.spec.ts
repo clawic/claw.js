@@ -359,7 +359,7 @@ httpStore.close();
     expect(payload.documentMediaHit).toBeTruthy();
     expect(payload.voiceMediaHit).toBeTruthy();
     expect(payload.voiceMediaText).toContain("voice transcript storage requirements");
-    expect(payload.galleryShareUrl).toContain("clawjs://media-gallery/");
+    expect(payload.galleryShareUrl).toContain("claw://media-gallery/");
     expect(payload.galleryShareCount).toBeGreaterThanOrEqual(1);
     expect(payload.revokedGallery).toBeTruthy();
     expect(payload.revokedGalleryMissing).toBeTruthy();

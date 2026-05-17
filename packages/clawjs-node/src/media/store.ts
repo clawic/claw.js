@@ -378,7 +378,7 @@ export function createMediaStore(options: {
       const share: MediaGalleryShare = {
         id,
         label: input.label?.trim() || "Media gallery",
-        url: `clawjs://media-gallery/${id}`,
+        url: `claw://media-gallery/${id}`,
         filters: input.filters ?? {},
         createdAt,
         expiresAt: normalizeExpiresAt(input),
