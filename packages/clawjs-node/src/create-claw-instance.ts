@@ -532,15 +532,15 @@ export interface ClawInstance {
     read: (id: string, options?: { maxBytes?: number }) => unknown;
   };
   skills: {
-    /** @deprecated v1 skill descriptors. Use `listV2()` for the unified Skill model. */
+    /** List runtime-visible skill descriptors reported by the active adapter. */
     list: () => Promise<SkillDescriptor[]>;
-    /** @deprecated v1 sync via runtime adapter. Use `syncV2()` for the unified sync engine. */
+    /** Sync runtime-visible skills through the active adapter. */
     sync: () => Promise<SkillDescriptor[]>;
-    /** @deprecated v1 source adapters. */
+    /** List configured external skill sources. */
     sources: () => Promise<SkillSourceDescriptor[]>;
-    /** @deprecated v1 search via source adapters. Use `searchV2()` for central skill search. */
+    /** Search external skill sources. */
     search: (query: string, options?: { source?: string; limit?: number }) => Promise<SkillSearchResult>;
-    /** @deprecated v1 install via source adapters. */
+    /** Install a skill from an external source. */
     install: (ref: string, options?: { source?: string }) => Promise<SkillInstallResult & { syncedSkills?: SkillDescriptor[] }>;
 
     // ───── Skills v2 (unified SKILL.md / agentskills.io) ──────────────────

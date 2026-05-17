@@ -1,8 +1,6 @@
 /**
- * @deprecated Skill source adapters (workspace, clawhub, clawic, skills.sh)
- * are retired source adapters kept only inside the @clawjs/node compatibility
- * package. The unified skills-v2 model (`@clawjs/claw` skills-v2 module plus
- * the agentskills.io standard) is the stable v1 surface.
+ * Skill source adapters are the v1 import/search bridge from external skill
+ * catalogs into the unified SKILL.md model.
  */
 import fs from "fs";
 import path from "path";
@@ -205,10 +203,8 @@ function resolveWorkspaceSkillPath(workspaceDir: string, slug: string): string |
 // Provides a searchable catalog that works without any external CLI.
 //
 // Single source of truth lives in `skills-v2/builtins.ts`
-// (`BUILTIN_PROCEDURE_SKILLS`); this legacy adapter re-exports it as
-// `BUILTIN_CATALOG` to keep the v1 skill-source surface unchanged
-// while removing the duplicated 20-entry array. Any future edit to
-// the procedure built-ins happens in skills-v2/builtins.ts only.
+// (`BUILTIN_PROCEDURE_SKILLS`); this catalog view keeps source search
+// aligned with the unified built-in procedure definitions.
 const BUILTIN_CATALOG = BUILTIN_PROCEDURE_SKILLS;
 
 function searchBuiltinCatalog(query: string, limit?: number): SkillCatalogEntry[] {

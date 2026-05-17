@@ -209,11 +209,14 @@ for (const relativePath of [
 for (const relativePath of [
   "packages/clawjs-node/src/soul/store.ts",
   "packages/clawjs-node/src/create-claw-instance.ts",
+  "packages/clawjs-node/src/library/store.ts",
+  "packages/clawjs-node/src/skills/sources.ts",
 ]) {
   forbidSnippet(relativePath, "migrateLegacySpec");
   forbidSnippet(relativePath, "LegacySpec");
   forbidSnippet(relativePath, "LegacyModule");
   forbidSnippet(relativePath, "compatibility shim");
+  forbidSnippet(relativePath, "@deprecated");
 }
 
 for (const relativePath of [

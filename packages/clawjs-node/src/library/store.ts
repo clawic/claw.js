@@ -250,11 +250,8 @@ export function libraryProjectionTargetFile(target: LibraryInstructionProjection
 }
 
 /**
- * @deprecated LocalLibraryStore is a compatibility shim. Skills, instructions,
- * and bundles are unified under skills-v2 (kind: procedure | snippet | role).
- * Capsules → `metadata.claw.capsule`. Projections → resolved at compile time.
- * Bundles → composite skills with kind=role and `metadata.claw.children`.
- * Use `claw.skills.create / compile / activate` for new code.
+ * LocalLibraryStore is the v1 local library for reusable skills, instructions,
+ * bundles, capsules, assignments, and projection targets.
  */
 export class LocalLibraryStore {
   readonly rootDir: string;
