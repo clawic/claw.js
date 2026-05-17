@@ -56,6 +56,8 @@ for (const relativePath of [
   forbidSnippet(relativePath, "legacy socket");
   forbidSnippet(relativePath, "CLAW_HOST_DISABLE_LEGACY_SOCKET_FALLBACK");
 }
+forbidSnippet("apps/host/Sources/CommanderApp/DashboardView.swift", "LaunchAgent (legacy)");
+forbidSnippet("apps/host/Sources/CommanderApp/DashboardView.swift", "LaunchAgent loaded (legacy)");
 
 const canonicalDocs = [
   "AGENTS.md",
