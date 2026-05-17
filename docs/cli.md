@@ -78,6 +78,29 @@ compact guidance. Actor hints from flags or environment are treated as
 `untrusted`; verified actor assertions require a locally trusted host/runtime
 key.
 
+## Mac Control Plane
+
+Local macOS control is a first-class CLI surface governed by the [Mac Control
+Plane](./mac-control-plane.md), [ADR 0023](./adr/0023-mac-control-plane-v1.md),
+and [ADR 0024](./adr/0024-mac-permission-broker-v1.md). Everyday commands use
+direct roots such as `claw wifi`, `claw window`, `claw shortcut`, `claw app`,
+`claw bluetooth`, and `claw vpn`; users and agents should not need an ordinary
+`mac` prefix to act on the current Mac. `claw mac` is the control-plane portal
+for atlas, coverage, doctor, audit, planning, permission overview, and revert.
+`claw permissions` is the central root for OS permission state and framework
+grants.
+
+The Mac Control Plane is plan-first and signed-host brokered. CLI surfaces may
+be visible while a family is atlas-only; they report coverage, gaps, or dry-run
+plans until execution is complete. Sensitive native calls, TCC permission
+requests, receipts, rollback, and audit belong behind the Mac Action Broker and
+Mac Permission Broker.
+
+Commands with semantic collisions show `Related surfaces` in normal help. For
+example, `claw app --help` points to the `apps` catalog, `notification` points
+to `notify`, and `audio` points to media audio artifacts when that collision is
+active.
+
 ## Project Flow
 
 ```bash

@@ -83,6 +83,7 @@ import { runNeedsCli } from "./cli-needs-command.ts";
 import { runCommandsCli } from "./cli-commands-command.ts";
 import { runDenseDataCli } from "./cli-dense-data-command.ts";
 import { runGatewayCli, runNodesCli, runRemoteCli, runSyncCli } from "./cli-remote-sync-command.ts";
+import { isMacControlCliRoot, runMacControlCli } from "./cli-mac-control-command.ts";
 import { runPublicPortalShortcut, writeMissingSubcommandJsonHelp, writePublicPortalHelpOnly } from "./cli-public-portal-routes.ts";
 import { handleUnknownCliCommand } from "./cli-unknown-command.ts";
 import { channelListenerPaths, isProcessRunning, readListenerPid, readTail, waitForListenerPid } from "./cli-channel-listener.ts";
@@ -593,6 +594,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   if (group === "sync") return await runSyncCli({ positionals, flags, context, wantsJson, binName });
   if (group === "nodes") return await runNodesCli({ positionals, flags, context, wantsJson, binName });
   if (group === "gateway") return await runGatewayCli({ positionals, flags, context, wantsJson, binName });
+  if (isMacControlCliRoot(group)) return await runMacControlCli({ argv, positionals, flags, context, wantsJson, binName });
 
   const portalShortcutExit = await runPublicPortalShortcut({ group, command, subcommand, argv, flags, context, runCli: runCliUnsafe });
   if (portalShortcutExit !== null) return portalShortcutExit;

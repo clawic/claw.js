@@ -2425,10 +2425,63 @@ The docs check script validates that every current export from
     clawStableSurface
     clawPrivateAppApiPrefix
 
+## Mac Control Plane Exports
+
+    assertMacControlPlaneRegistryComplete
+    clawMacControlPlaneRegistry
+    clawMacControlPlaneRegistryVersion
+    findMacAtlasCapability
+    listMacAtlasCapabilities
+    listMacCommandRoots
+    listMacRelatedSurfaces
+    MAC_CAPABILITY_ATLAS
+    MAC_CONTROL_COMMAND_ROOTS
+    MAC_PERMISSION_CATALOG
+    MAC_PERMISSION_PACKS
+    MacActionPlan
+    macActionPlanSchema
+    MacActionReceipt
+    macActionReceiptSchema
+    MacActionRequest
+    macActionRequestSchema
+    macActionResultSchema
+    macActionTargetSchema
+    macActorKindSchema
+    macActorSchema
+    MacApprovalRequest
+    macApprovalRequestSchema
+    macApprovalStatusSchema
+    MacAtlasCapability
+    macAtlasCapabilitySchema
+    MacControlCommandRoot
+    MacCoverageState
+    macCoverageStateSchema
+    macFrameworkGrantStateSchema
+    macHostIdentitySchema
+    MacPermissionCatalogEntry
+    macPermissionOsStateSchema
+    MacPermissionPack
+    macPermissionRequirementSchema
+    MacPermissionState
+    macPermissionStateSchema
+    MacPolicyGrant
+    macPolicyGrantSchema
+    macRequiredApprovalSchema
+    macRevertLevelSchema
+    MacRiskTier
+    macRiskTierSchema
+    MacRoleAssignment
+    macRoleAssignmentSchema
+    macRoleSchema
+    macRollbackPlanSchema
+    macSourceConfidenceSchema
+
 ## Remote Gateway And Sync Exports
 
     buildRemoteConformanceReport
+    buildRemoteOfflineCommandResult
     buildSyncPlan
+    buildSyncQueueEntries
     createExampleSyncResourceManifest
     createSyncResourceManifest
     evaluateRemoteAccess
@@ -2446,6 +2499,8 @@ The docs check script validates that every current export from
     remoteActorContextSchema
     RemoteActorKind
     remoteActorKindSchema
+    RemoteOfflineCommandResult
+    remoteOfflineCommandResultSchema
     RemoteSecretLease
     remoteSecretLeaseSchema
     RemoteSurfaceClassification
@@ -2454,6 +2509,7 @@ The docs check script validates that every current export from
     remoteSyncRequiredRouteIds
     RemoteTrustMode
     remoteTrustModeSchema
+    reconcileSyncQueue
     routeIdForSyncDriver
     SyncAuthority
     syncAuthoritySchema
@@ -2475,6 +2531,10 @@ The docs check script validates that every current export from
     syncPlanActionSchema
     SyncPlanResult
     syncPlanResultSchema
+    SyncQueueEntry
+    syncQueueEntrySchema
+    SyncReconciliationResult
+    syncReconciliationResultSchema
     SyncResourceManifest
     syncResourceManifestSchema
     clawPublicApiPrefix

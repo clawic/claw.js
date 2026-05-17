@@ -1,4 +1,5 @@
 import { BUILTIN_COLLECTIONS_BY_ALIAS } from "./builtins/index.ts";
+import { MAC_CONTROL_COMMAND_ROOTS, type MacControlCommandRoot } from "./mac-control-plane.ts";
 
 export const clawCliCommandRegistryVersion = 1;
 
@@ -49,6 +50,7 @@ export interface ClawCliCommandRegistryEntry {
   adrs: string[];
   tests: string[];
   source: ClawCliCommandSource;
+  relatedSurfaces?: string[];
 }
 
 export interface ClawCliCommandRegistry {
@@ -72,6 +74,10 @@ const DEFAULT_SOURCE: ClawCliCommandSource = {
   file: "packages/clawjs/src/index.ts",
   symbol: "runCli",
 };
+const MAC_CONTROL_DOCS = ["docs/cli.md", "docs/mac-control-plane.md"];
+const MAC_CONTROL_ADRS = [...CLI_ADRS, "docs/adr/0023-mac-control-plane-v1.md", "docs/adr/0024-mac-permission-broker-v1.md"];
+const MAC_CONTROL_TESTS = ["packages/clawjs-core/src/mac-control-plane.test.ts", "packages/clawjs/src/cli-mac-control-command.test.ts"];
+const EXISTING_MAC_COLLISION_ROOTS = new Set(["audio"]);
 
 function defaultSupportForPolicy(name: string, securityPolicy: ClawCliSecurityPolicy): ClawCliSupportDeclaration {
   if (securityPolicy === "signed_host_broker") {
@@ -124,11 +130,33 @@ function command(input: Omit<ClawCliCommandRegistryEntry, "schemaVersion" | "jso
   };
 }
 
+function macControlCommand(root: MacControlCommandRoot): ClawCliCommandRegistryEntry {
+  const usage = root.root === "mac"
+    ? "mac atlas|coverage|doctor|audit|plan|revert|permissions"
+    : root.root === "permissions"
+      ? "permissions list|show|check|request|audit|doctor|explain|coverage"
+      : `${root.root} status|list|plan|coverage [--dry-run]`;
+  return command({
+    name: root.root,
+    kind: "canonical",
+    summary: root.summary,
+    usage,
+    family: "mac-control",
+    securityPolicy: "signed_host_broker",
+    docs: MAC_CONTROL_DOCS,
+    adrs: MAC_CONTROL_ADRS,
+    tests: MAC_CONTROL_TESTS,
+    source: { file: "packages/clawjs/src/cli-mac-control-command.ts", symbol: "runMacControlCli" },
+    relatedSurfaces: root.relatedSurfaces,
+  });
+}
+
 export const clawCliCommandRegistry: ClawCliCommandRegistry = {
   version: clawCliCommandRegistryVersion,
   commands: [
     command({ name: "host", kind: "canonical", summary: "Host registry, status, services, capabilities, permissions, logs, doctor, daemon lifecycle and domains.", usage: "host list|register|use|status|doctor|domains", securityPolicy: "signed_host_broker", source: { file: "packages/clawjs/src/cli-host-command.ts", symbol: "runHostCli" } }),
     command({ name: "system", kind: "alias", target: "host", summary: "System capabilities alias.", usage: "system capabilities list|grant|revoke", securityPolicy: "signed_host_broker", source: { file: "packages/clawjs/src/cli-host-forward.ts", symbol: "runSystemCapabilitiesCli" } }),
+    ...MAC_CONTROL_COMMAND_ROOTS.filter((root) => !EXISTING_MAC_COLLISION_ROOTS.has(root.root)).map(macControlCommand),
     command({ name: "database", kind: "canonical", summary: "Local database admin surface.", usage: "database serve|login|namespace|collection|record|token|file", securityPolicy: "local_write", source: { file: "packages/clawjs/src/cli-delegated-domains.ts", symbol: "runDelegatedDatabaseCli" } }),
     command({ name: "db", kind: "alias", target: "database", summary: "Exact alias for local-first database CRUD.", usage: "db <collection> list|get|create|update|delete|schema|query", securityPolicy: "local_write", source: { file: "packages/clawjs/src/cli-productivity-command.ts", symbol: "runCoreProductivityDbCli" } }),
     command({ name: "collections", kind: "alias", target: "database", summary: "Database collections shortcut.", usage: "collections list|<collection> list|get|schema", securityPolicy: "local_write" }),

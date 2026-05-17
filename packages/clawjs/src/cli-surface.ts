@@ -100,6 +100,7 @@ export function buildCommandHelp(binName: string, group: string): string | null 
     "",
     `${entry.kind}: ${entry.summary}`,
     ...(entry.target ? [`Routes to: ${entry.target}`] : []),
+    ...((entry.relatedSurfaces?.length ?? 0) > 0 ? ["", "Related surfaces:", ...entry.relatedSurfaces!.map((surface) => `  ${surface}`)] : []),
     `Support: ${entry.support.state} - ${entry.support.reason}`,
     `Security: ${entry.securityPolicy}`,
     "",
