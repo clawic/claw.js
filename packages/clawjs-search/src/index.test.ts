@@ -544,6 +544,8 @@ test("SearchStore can isolate hot and cold document shards without changing defa
       ["cold", "empty", 0, 0],
       ["hot", "active", 1, 1],
     ]);
+    assert.deepEqual(store.query({ query: "diagram", domains: ["images"], shards: ["cold"] }).results, []);
+    assert.equal(store.rankingCacheStats().entries, 1);
   } finally {
     store.close();
     fs.rmSync(dir, { recursive: true, force: true });

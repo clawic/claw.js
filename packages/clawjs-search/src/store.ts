@@ -462,9 +462,26 @@ export class SearchStore {
     const match = ftsQuery(queryInput.query);
     const omittedSources = this.omittedSourcesForInput(queryInput, profile);
     const facets = this.facetsForInput(queryInput, profile);
+    const shardPlan = this.shardQueryPlan(queryInput, profile);
+    if (shardPlan.catalogCovered && shardPlan.activeShards.length === 0) {
+      const output: SearchQueryOutput = {
+        query: queryInput.query,
+        profile,
+        results: [],
+        ...(facets.length ? { facets } : {}),
+        partial: omittedSources.length > 0,
+        omittedSources,
+        elapsedMs: Date.now() - startedAt,
+      };
+      this.rankingCacheSet(cacheKey, queryInput, output);
+      return output;
+    }
+    const plannedQueryInput = shardPlan.catalogCovered && shardPlan.activeShards.length > 0
+      ? { ...queryInput, shards: shardPlan.activeShards }
+      : queryInput;
     const rows = new Map<string, SearchDocumentRow>();
-    if (strategy !== "semantic" || !queryInput.embedding) {
-      const { clauses, params } = buildDocumentClauses(queryInput, profile, match);
+    if (strategy !== "semantic" || !plannedQueryInput.embedding) {
+      const { clauses, params } = buildDocumentClauses(plannedQueryInput, profile, match);
       const lexicalRows = this.db.prepare(`
         SELECT d.*, 0 AS rank, NULL AS semantic_score
         FROM search_fts
@@ -477,17 +494,17 @@ export class SearchStore {
       `).all(...params, candidateLimit) as SearchDocumentRow[];
       for (const row of lexicalRows) rows.set(row.id, row);
     }
-    if (queryInput.embedding && strategy !== "lexical") {
-      for (const row of this.semanticRows(queryInput, profile, queryInput.embedding, candidateLimit)) {
+    if (plannedQueryInput.embedding && strategy !== "lexical") {
+      for (const row of this.semanticRows(plannedQueryInput, profile, plannedQueryInput.embedding, candidateLimit)) {
         const existing = rows.get(row.id);
         rows.set(row.id, existing ? mergeSearchRows(existing, row) : row);
       }
     }
     const results = [...rows.values()]
-      .filter((row) => searchAclAllows(row.permissions_json, queryInput))
-      .map((row) => this.resultFromRow(row, queryInput))
+      .filter((row) => searchAclAllows(row.permissions_json, plannedQueryInput))
+      .map((row) => this.resultFromRow(row, plannedQueryInput))
       .sort((left, right) => right.score - left.score || (right.updatedAt ?? "").localeCompare(left.updatedAt ?? ""))
-      .filter(agentBudgetResultFilter(queryInput.agentBudget))
+      .filter(agentBudgetResultFilter(plannedQueryInput.agentBudget))
       .slice(0, outputLimit);
     const output: SearchQueryOutput = {
       query: queryInput.query,
@@ -1063,6 +1080,45 @@ export class SearchStore {
       }
     }
     return [...facets.values()];
+  }
+
+  private shardQueryPlan(input: SearchQueryInput, profile: SearchProfileId): { catalogCovered: boolean; activeShards: string[] } {
+    if (!input.shards?.length) return { catalogCovered: false, activeShards: [] };
+    const coverageClauses: string[] = ["shard IN (" + input.shards.map(() => "?").join(", ") + ")"];
+    const activeClauses: string[] = [...coverageClauses, "state = 'active'", "document_count > 0"];
+    const params: unknown[] = [...input.shards];
+    const activeParams: unknown[] = [...params];
+    if (input.sources?.length) {
+      const clause = `source IN (${input.sources.map(() => "?").join(", ")})`;
+      coverageClauses.push(clause);
+      activeClauses.push(clause);
+      params.push(...input.sources);
+      activeParams.push(...input.sources);
+    }
+    if (input.domains?.length) {
+      const clause = `domain IN (${input.domains.map(() => "?").join(", ")})`;
+      coverageClauses.push(clause);
+      activeClauses.push(clause);
+      params.push(...input.domains);
+      activeParams.push(...input.domains);
+    }
+    if (profile !== "full") {
+      coverageClauses.push("source IN (SELECT id FROM search_sources WHERE profile = 'framework')");
+      activeClauses.push("source IN (SELECT id FROM search_sources WHERE profile = 'framework')");
+    }
+    const coverage = this.db.prepare(`
+      SELECT COUNT(*) AS count
+      FROM search_shards
+      WHERE ${coverageClauses.join(" AND ")}
+    `).get(...params) as { count: number };
+    if (coverage.count === 0) return { catalogCovered: false, activeShards: [] };
+    const rows = this.db.prepare(`
+      SELECT DISTINCT shard
+      FROM search_shards
+      WHERE ${activeClauses.join(" AND ")}
+      ORDER BY shard ASC
+    `).all(...activeParams) as Array<{ shard: string }>;
+    return { catalogCovered: true, activeShards: rows.map((row) => row.shard) };
   }
 
   private semanticRows(input: SearchQueryInput, profile: SearchProfileId, embedding: NonNullable<SearchQueryInput["embedding"]>, limit: number): SearchDocumentRow[] {

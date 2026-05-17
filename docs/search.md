@@ -157,9 +157,10 @@ shard preserves the simple source contract; hot/cold or extractor-specific
 shards can be indexed and queried independently during backfill and event-driven
 indexing. `search.sqlite` now also maintains a physical `search_shards` catalog
 table with per-source/per-shard document and fragment counts so hosts can
-inspect shard health without scanning every document. Query data still lives in
-the shared document and FTS tables; per-shard FTS partitions remain future scale
-hardening.
+inspect shard health without scanning every document. Shard-scoped queries use
+that catalog to skip empty requested shards before touching FTS when the catalog
+has coverage for the requested scope. Query data still lives in the shared
+document and FTS tables; per-shard FTS partitions remain future scale hardening.
 
 `search.sqlite` also owns a local indexing job queue. Sources can enqueue
 upsert, delete, backfill, or rebuild work with source, shard, priority,
