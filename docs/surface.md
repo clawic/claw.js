@@ -1133,6 +1133,14 @@ The docs check script validates that every current export from
     AgentExternalDisclosure
     AgentExternalIdentityProfile
     AgentGrantEffect
+    AgentMemoryAccessRequest
+    AgentMemoryAccessResult
+    AgentMemoryLayer
+    AgentMemoryOperation
+    AgentMemoryPolicy
+    AgentMemoryScope
+    AgentMemoryScopeAccess
+    AgentMemoryWritePolicy
     AgentPermissionEscalationRequest
     AgentResolvedExternalIdentity
     AgentRecord
@@ -1514,6 +1522,7 @@ The docs check script validates that every current export from
     evaluateAgentAssignmentRoute
     evaluateAgentDelegationAccess
     evaluateAgentEffectiveAccess
+    evaluateAgentMemoryAccess
     evaluateConnectorControlPlaneRequest
     EpicRecord
     epicRecordSchema

@@ -146,6 +146,7 @@ claw agents evaluate-access --record '{"requested":{"resourceType":"contact","ac
 claw agents route-check --record '{"assignment":{"id":"assignment.web","agentId":"agent.ops","kind":"external_web_chat","status":"active","channel":"chat"},"kind":"external_web_chat","channel":"chat"}' --json
 claw agents resolve-external-identity --record '{"provider":"web","externalId":"visitor-1","email":"visitor@example.com","privacyPolicy":"hashed"}' --json
 claw agents project-support-inbox --record '{"sessionId":"session-1","assignment":{"id":"assignment.web","agentId":"agent.ops","kind":"external_web_chat","status":"active","channel":"chat"},"identity":{"externalUserId":"external_user_1","actorId":"actor_external_1","contactProjection":"create_or_update","boundary":{"scopeType":"external_user","scopeId":"external_user_1"},"telemetry":{}},"initialMessage":"Need help"}' --json
+claw agents memory-check --record '{"policy":{"readScopes":[{"layer":"global","access":"read"}],"writeScopes":[{"layer":"agent_private","access":"write"}],"writePolicy":"private_only"},"request":{"operation":"write","layer":"agent_private"}}' --json
 claw personalities upsert personality.review --name Reviewer --prompt "Review with concrete evidence" --json
 claw skill-collections upsert collection.review --name Review --tags review,code --json
 claw connections upsert github --provider custom --label GitHub --secret-ref vault://connections/github --json
@@ -165,6 +166,9 @@ visitor telemetry by default, and projects to contacts only when there is a
 strong identifier such as email, phone, or verified provider id. Support-facing
 assignments use `project-support-inbox` to create the product conversation
 record separately from the runtime session trace.
+Memory policies are checked with `memory-check`; this is the gate for flexible
+read/write combinations such as read-only global memory plus private writes,
+team/project/customer scopes, and explicit-grant-only cross-customer access.
 
 ## Global Flags
 

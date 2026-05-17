@@ -346,6 +346,29 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
     assert.equal(supportProjection.conversation.metadata.sessionId, "session_1");
     assert.equal(supportProjection.message.direction, "inbound");
 
+    const memoryStdout = captureStream();
+    assert.equal(await runCli(["agents", "memory-check", "--record", JSON.stringify({
+      policy: {
+        readScopes: [{ layer: "customer", scopeId: "customer_2", access: "read" }],
+        writeScopes: [],
+        writePolicy: "none",
+        crossUserBoundary: "explicit_grant_only",
+      },
+      request: {
+        operation: "read",
+        layer: "customer",
+        scopeId: "customer_2",
+        boundary: { scopeType: "customer", scopeId: "customer_1" },
+      },
+    }), "--json"], {
+      stdout: memoryStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const memoryResult = parseCliJsonPayload(memoryStdout.getOutput()) as { allowed: boolean; reasons: string[] };
+    assert.equal(memoryResult.allowed, false);
+    assert.deepEqual(memoryResult.reasons, ["memory: cross-boundary access requires explicit grant"]);
+
     const personalityStdout = captureStream();
     assert.equal(await runCli(["personalities", "upsert", "personality.review", "--name", "Reviewer", "--prompt", "Review with concrete evidence", "--json"], {
       stdout: personalityStdout.stream,

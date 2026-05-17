@@ -6,6 +6,7 @@ import {
   evaluateAgentDelegationAccess,
   evaluateAgentEffectiveAccess,
   evaluateAgentAssignmentRoute,
+  evaluateAgentMemoryAccess,
   createAgentPermissionEscalationRequest,
   resolveAgentExternalIdentity,
   type AgentAccessRequest,
@@ -190,4 +191,63 @@ test("Agents V1 support projection preserves customer boundary and session linka
   assert.equal(projection.conversation.metadata.boundaryScopeId, "customer_1");
   assert.equal(projection.message.direction, "inbound");
   assert.equal(projection.message.channel, "chat");
+});
+
+test("Agents V1 memory policy supports read-only global memory plus private writes", () => {
+  const globalRead = evaluateAgentMemoryAccess({
+    readScopes: [{ layer: "global", access: "read" }],
+    writeScopes: [{ layer: "agent_private", access: "write" }],
+    writePolicy: "private_only",
+  }, {
+    operation: "read",
+    layer: "global",
+  });
+  assert.equal(globalRead.allowed, true);
+
+  const globalWrite = evaluateAgentMemoryAccess({
+    readScopes: [{ layer: "global", access: "read" }],
+    writeScopes: [{ layer: "agent_private", access: "write" }],
+    writePolicy: "private_only",
+  }, {
+    operation: "write",
+    layer: "global",
+  });
+  assert.equal(globalWrite.allowed, false);
+  assert.deepEqual(globalWrite.reasons, ["memory: no write scope", "memory: write policy private_only blocks global"]);
+
+  const privateWrite = evaluateAgentMemoryAccess({
+    readScopes: [{ layer: "global", access: "read" }],
+    writeScopes: [{ layer: "agent_private", access: "write" }],
+    writePolicy: "private_only",
+  }, {
+    operation: "write",
+    layer: "agent_private",
+  });
+  assert.equal(privateWrite.allowed, true);
+});
+
+test("Agents V1 memory policy blocks cross-customer reads without explicit grant", () => {
+  const policy = {
+    readScopes: [{ layer: "customer" as const, scopeId: "customer_2", access: "read" as const }],
+    writeScopes: [],
+    writePolicy: "none" as const,
+    crossUserBoundary: "explicit_grant_only" as const,
+  };
+  const denied = evaluateAgentMemoryAccess(policy, {
+    operation: "read",
+    layer: "customer",
+    scopeId: "customer_2",
+    boundary: { scopeType: "customer", scopeId: "customer_1" },
+  });
+  assert.equal(denied.allowed, false);
+  assert.deepEqual(denied.reasons, ["memory: cross-boundary access requires explicit grant"]);
+
+  const allowed = evaluateAgentMemoryAccess(policy, {
+    operation: "read",
+    layer: "customer",
+    scopeId: "customer_2",
+    boundary: { scopeType: "customer", scopeId: "customer_1" },
+    explicitGrant: true,
+  });
+  assert.equal(allowed.allowed, true);
 });

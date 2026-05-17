@@ -202,6 +202,42 @@ export interface AgentSupportInboxProjection {
   };
 }
 
+export type AgentMemoryLayer = "agent_private" | "team" | "global" | "customer" | "project" | "session";
+export type AgentMemoryOperation = "read" | "write";
+export type AgentMemoryScopeAccess = AgentMemoryOperation | "read_write";
+export type AgentMemoryWritePolicy = "none" | "private_only" | "scoped" | "shared_with_review" | "global_allowed";
+
+export interface AgentMemoryScope {
+  layer: AgentMemoryLayer;
+  scopeId?: string;
+  access: AgentMemoryScopeAccess;
+}
+
+export interface AgentMemoryPolicy {
+  id?: string;
+  readScopes?: AgentMemoryScope[];
+  writeScopes?: AgentMemoryScope[];
+  writePolicy: AgentMemoryWritePolicy;
+  crossUserBoundary?: "tenant_context" | "explicit_grant_only";
+}
+
+export interface AgentMemoryAccessRequest {
+  operation: AgentMemoryOperation;
+  layer: AgentMemoryLayer;
+  scopeId?: string;
+  boundary?: {
+    scopeType: "customer" | "external_user" | "project" | "workspace" | "team" | "agent";
+    scopeId: string;
+  };
+  explicitGrant?: boolean;
+}
+
+export interface AgentMemoryAccessResult {
+  allowed: boolean;
+  reasons: string[];
+  matchedScope?: AgentMemoryScope;
+}
+
 const PLANES = [
   ["agent", "agentGrants"],
   ["assignment", "assignmentGrants"],
@@ -351,6 +387,28 @@ export function createAgentSupportInboxProjection(input: AgentSupportInboxProjec
   };
 }
 
+export function evaluateAgentMemoryAccess(policy: AgentMemoryPolicy, request: AgentMemoryAccessRequest): AgentMemoryAccessResult {
+  const reasons: string[] = [];
+  const scopes = request.operation === "read" ? policy.readScopes ?? [] : policy.writeScopes ?? [];
+  const matchedScope = scopes.find((scope) => memoryScopeMatches(scope, request));
+  if (!matchedScope) reasons.push(`memory: no ${request.operation} scope`);
+  if (request.operation === "write") {
+    if (policy.writePolicy === "none") reasons.push("memory: writes disabled");
+    if (policy.writePolicy === "private_only" && request.layer !== "agent_private" && request.layer !== "session") {
+      reasons.push(`memory: write policy private_only blocks ${request.layer}`);
+    }
+    if (policy.writePolicy === "shared_with_review" && request.layer !== "agent_private" && request.layer !== "session" && !request.explicitGrant) {
+      reasons.push("memory: shared writes require explicit grant or review");
+    }
+  }
+  if (!memoryBoundaryAllowed(policy, request)) reasons.push("memory: cross-boundary access requires explicit grant");
+  return {
+    allowed: reasons.length === 0,
+    reasons,
+    ...(matchedScope ? { matchedScope } : {}),
+  };
+}
+
 function grantMatches(request: AgentAccessRequest, grant: AgentResourceGrant, now: Date): boolean {
   if (grant.expiresAt && new Date(grant.expiresAt).getTime() <= now.getTime()) return false;
   return matches(request.resourceType, grant.resourceType)
@@ -372,6 +430,21 @@ function matchesOptional(value: string | undefined, pattern: string | undefined)
 function normalizeTime(value: string | Date | undefined): Date {
   if (!value) return new Date();
   return value instanceof Date ? value : new Date(value);
+}
+
+function memoryScopeMatches(scope: AgentMemoryScope, request: AgentMemoryAccessRequest): boolean {
+  const accessMatches = scope.access === request.operation || scope.access === "read_write";
+  const layerMatches = scope.layer === request.layer;
+  const scopeMatches = !scope.scopeId || scope.scopeId === request.scopeId;
+  return accessMatches && layerMatches && scopeMatches;
+}
+
+function memoryBoundaryAllowed(policy: AgentMemoryPolicy, request: AgentMemoryAccessRequest): boolean {
+  if (policy.crossUserBoundary !== "explicit_grant_only") return true;
+  if (!request.boundary) return true;
+  if (request.layer !== "customer" && request.layer !== "session") return true;
+  if (!request.scopeId || request.scopeId === request.boundary.scopeId) return true;
+  return request.explicitGrant === true;
 }
 
 function externalTelemetry(profile: AgentExternalIdentityProfile, policy: AgentAssignmentPrivacyPolicy): Record<string, string> {

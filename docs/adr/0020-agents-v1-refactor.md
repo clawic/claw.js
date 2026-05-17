@@ -57,10 +57,10 @@ The first implementation slice is model plus gates:
 - built-in collection schemas and core.sqlite tables for Agents V1 entities
 - `claw agents schema`, `claw agents evaluate-access`, `claw agents
   route-check`, `claw agents resolve-external-identity`, and `claw agents
-  project-support-inbox`
+  project-support-inbox`, and `claw agents memory-check`
 - `@clawjs/core` policy evaluators for effective access, grant expiry,
-  assignment routing, external identity, support projection, formal escalation
-  requests, and delegation no-laundering
+  assignment routing, external identity, support projection, flexible memory
+  scopes, formal escalation requests, and delegation no-laundering
 - route graph coverage for internal Mac assignments, external support
   assignments, MCP/API assignments, runtime runs, sessions, grants, memory
   policies, and support/inbox projection

@@ -3,10 +3,13 @@ import {
   createAgentSupportInboxProjection,
   evaluateAgentAssignmentRoute,
   evaluateAgentEffectiveAccess,
+  evaluateAgentMemoryAccess,
   resolveAgentExternalIdentity,
   type AgentAssignmentRouteRequest,
   type AgentEffectiveAccessInput,
   type AgentExternalIdentityProfile,
+  type AgentMemoryAccessRequest,
+  type AgentMemoryPolicy,
   type AgentSupportInboxProjectionInput,
 } from "@clawjs/core";
 import type { DatabaseServiceStore } from "@clawjs/database";
@@ -77,7 +80,7 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
       rootConcept: "agent",
       placementConcept: "agent_assignment",
       defaultPosture: "empty_sandbox_respond_only",
-      gates: ["evaluate-access", "route-check", "resolve-external-identity", "project-support-inbox"],
+      gates: ["evaluate-access", "route-check", "resolve-external-identity", "project-support-inbox", "memory-check"],
     });
     return V1_DATA_EXIT_OK;
   }
@@ -103,6 +106,12 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
     const record = recordFlag<AgentSupportInboxProjectionInput>(input);
     if (!record) return usageError(input, "Usage: claw agents project-support-inbox --record JSON [--json]");
     writeSuccess(input, createAgentSupportInboxProjection(record));
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "memory-check") {
+    const record = recordFlag<{ policy: AgentMemoryPolicy; request: AgentMemoryAccessRequest }>(input);
+    if (!record) return usageError(input, "Usage: claw agents memory-check --record JSON [--json]");
+    writeSuccess(input, evaluateAgentMemoryAccess(record.policy, record.request));
     return V1_DATA_EXIT_OK;
   }
   return usageError(input, usage(input.binName, "agents"));
