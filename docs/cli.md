@@ -165,8 +165,9 @@ agent-facing local catalog instead.
 ## Remote Gateway And Sync
 
 Remote access uses the Coordinator/Gateway/Connector/Sync architecture from
-ADR 0022. These commands are the public inspection and dry-run surface for
-remote parity, node trust, sync manifests, and hosted/self-hosted conformance:
+ADR 0022. These commands are the public inspection, dry-run, and opt-in local
+state surface for remote parity, node trust, sync manifests, and
+hosted/self-hosted conformance:
 
 ```bash
 claw remote classify --json
@@ -180,6 +181,10 @@ claw sync plan --json
 claw sync plan --resource-id skills:default --driver skills --local-hash hash-a --peer-hash hash-b --json
 claw sync plan --local-snapshot-json '{"resourceId":"skills:default","objectRef":"skill.review","nodeId":"local","contentHash":"hash-a","updatedAt":"2026-05-17T09:00:00.000Z"}' --peer-snapshot-json '{"resourceId":"skills:default","objectRef":"skill.review","nodeId":"peer","contentHash":"hash-b","updatedAt":"2026-05-17T09:05:00.000Z"}' --json
 claw sync run --json
+claw sync manifest --resource-id skills:default --driver skills --state-dir .claw/remote-sync --record true --json
+claw sync run --resource-id skills:default --driver skills --peer-snapshot-json '[]' --state-dir .claw/remote-sync --queue true --json
+claw sync reconcile --resource-id skills:default --driver skills --state-dir .claw/remote-sync --ack-change-ids sync_change_... --json
+claw sync manifest --resource-id skills:default --driver skills --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 claw sync conflicts --json
 
 claw nodes list --json
@@ -189,18 +194,29 @@ claw nodes revoke --dry-run --json
 claw nodes invite --issuer-mesh mesh.home --recipient-mesh mesh.server --allowed-resources skills:default --actions read,sync --json
 claw nodes share --issuer-mesh mesh.home --to-mesh mesh.server --resource-id skills:default --driver skills --actions read,sync --json
 claw nodes revoke --target-type share --target-id mesh_share_1 --json
+claw nodes invite --issuer-mesh mesh.home --recipient-mesh mesh.server --allowed-resources skills:default --actions read,sync --state-dir .claw/remote-sync --record true --json
+claw nodes share --issuer-mesh mesh.home --to-mesh mesh.server --resource-id skills:default --driver skills --actions read,sync --state-dir .claw/remote-sync --record true --json
+claw nodes revoke --target-type share --target-id mesh_share_1 --state-dir .claw/remote-sync --record true --json
 claw nodes heartbeat --json
 
 claw gateway serve --dry-run --json
 claw gateway project --dry-run --json
 claw gateway conformance --json
 claw gateway agent-service --tenant-id tenant.acme --agent-id agent.support --assignment-id assignment.service --estimated-cost-cents 300 --json
+claw gateway secret-lease --state-dir .claw/remote-sync --secret-ref vault://agents/support --resource-id skills:default --agent-id agent.support --assignment-id assignment.service --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 ```
 
 `remote-safe` means the capability has a route, owner, policy, and tests.
 `local-only`, `blocked`, and `pending` are explicit states, not silent gaps.
-Pairing, trust changes, real gateway serving, and real sync execution stay
-signed-host or Coordinator gated.
+`--state-dir` records manifests, sync queues, reconciliation results, and
+mesh proposals/revocations in a local durable ledger. That ledger is not trust
+authority unless each record is signed with Coordinator keys. The
+`--coordinator-private-key-file` and `--coordinator-public-key-file` flags add
+an Ed25519 signature that `claw sync status --state-dir ...` verifies and
+counts. Pairing, trust changes, real gateway serving, and physical sync
+execution still stay signed-host or Coordinator gated.
+`gateway secret-lease` records a signed, expiring lease for a secret reference,
+never reads or returns the secret value, and rejects plaintext-return flags.
 
 Local agent records are managed through the agent-facing data commands. These
 commands write canonical files under `~/.claw/` and project searchable

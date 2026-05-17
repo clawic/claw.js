@@ -1,6 +1,7 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
+import crypto from "crypto";
 import Database from "better-sqlite3";
 import { test } from "vitest";
 import assert from "node:assert/strict";
@@ -191,6 +192,65 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.equal(matchingPlanPayload.actions[0]?.action, "noop");
   assert.equal(matchingPlanPayload.conflicts.length, 0);
 
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-remote-sync-state-"));
+  const { privateKey, publicKey } = crypto.generateKeyPairSync("ed25519");
+  const coordinatorPrivateKeyFile = path.join(stateDir, "coordinator-private.pem");
+  const coordinatorPublicKeyFile = path.join(stateDir, "coordinator-public.pem");
+  fs.writeFileSync(coordinatorPrivateKeyFile, privateKey.export({ type: "pkcs8", format: "pem" }), "utf8");
+  fs.writeFileSync(coordinatorPublicKeyFile, publicKey.export({ type: "spki", format: "pem" }), "utf8");
+  const coordinatorSigningFlags = ["--coordinator-private-key-file", coordinatorPrivateKeyFile, "--coordinator-public-key-file", coordinatorPublicKeyFile, "--coordinator-key-id", "coordinator.test"];
+
+  const recordedManifest = await runCliCapture(["sync", "manifest", "--resource-id", "skills:default", "--driver", "skills", "--state-dir", stateDir, "--record", "true", ...coordinatorSigningFlags, "--json"], process.cwd());
+  assert.equal(recordedManifest.code, CLI_EXIT_OK);
+  const recordedManifestPayload = parseCliJson<{ state: { durable: boolean; statePath: string; coordinatorSignature?: { verified: boolean } } }>(recordedManifest.stdout).data;
+  assert.equal(recordedManifestPayload.state.durable, true);
+  assert.equal(recordedManifestPayload.state.coordinatorSignature?.verified, true);
+  assert.equal(fs.existsSync(recordedManifestPayload.state.statePath), true);
+
+  const queuedSync = await runCliCapture(["sync", "run", "--resource-id", "skills:default", "--driver", "skills", "--peer-snapshot-json", "[]", "--state-dir", stateDir, "--queue", "true", ...coordinatorSigningFlags, "--json"], process.cwd());
+  assert.equal(queuedSync.code, CLI_EXIT_OK);
+  const queuedSyncPayload = parseCliJson<{ mode: string; state: { durable: boolean; coordinatorSignature?: { verified: boolean }; entries: Array<{ status: string; changeId: string; writes: boolean }> } }>(queuedSync.stdout).data;
+  assert.equal(queuedSyncPayload.mode, "queued");
+  assert.equal(queuedSyncPayload.state.durable, true);
+  assert.equal(queuedSyncPayload.state.coordinatorSignature?.verified, true);
+  assert.equal(queuedSyncPayload.state.entries[0]?.status, "queued");
+  assert.equal(queuedSyncPayload.state.entries[0]?.writes, false);
+  const queuedChangeId = queuedSyncPayload.state.entries[0]?.changeId;
+  assert.ok(queuedChangeId);
+
+  const reconciledSync = await runCliCapture(["sync", "reconcile", "--resource-id", "skills:default", "--driver", "skills", "--state-dir", stateDir, "--ack-change-ids", queuedChangeId, ...coordinatorSigningFlags, "--json"], process.cwd());
+  assert.equal(reconciledSync.code, CLI_EXIT_OK);
+  const reconciledSyncPayload = parseCliJson<{ reconciliation: { queue: Array<{ status: string }> }; durable: boolean }>(reconciledSync.stdout).data;
+  assert.equal(reconciledSyncPayload.durable, true);
+  assert.equal(reconciledSyncPayload.reconciliation.queue[0]?.status, "applied");
+
+  const syncStatus = await runCliCapture(["sync", "status", "--state-dir", stateDir, "--json"], process.cwd());
+  assert.equal(syncStatus.code, CLI_EXIT_OK);
+  const syncStatusPayload = parseCliJson<{ state: { durable: boolean; manifests: number; queueEntries: number; auditEvents: number; coordinatorSignatures: number; verifiedCoordinatorSignatures: number; invalidCoordinatorSignatures: number } }>(syncStatus.stdout).data;
+  assert.equal(syncStatusPayload.state.durable, true);
+  assert.equal(syncStatusPayload.state.manifests >= 1, true);
+  assert.equal(syncStatusPayload.state.queueEntries, 1);
+  assert.equal(syncStatusPayload.state.auditEvents >= 3, true);
+  assert.equal(syncStatusPayload.state.coordinatorSignatures, 3);
+  assert.equal(syncStatusPayload.state.verifiedCoordinatorSignatures, 3);
+  assert.equal(syncStatusPayload.state.invalidCoordinatorSignatures, 0);
+
+  const secretLease = await runCliCapture(["gateway", "secret-lease", "--state-dir", stateDir, "--secret-ref", "vault://agents/support", "--resource-id", "skills:default", "--agent-id", "agent.support", "--assignment-id", "assignment.service", ...coordinatorSigningFlags, "--json"], process.cwd());
+  assert.equal(secretLease.code, CLI_EXIT_OK);
+  const secretLeasePayload = parseCliJson<{
+    status: string;
+    writes: boolean;
+    lease: { secretRef: string; plaintextReturned: string | boolean; actor: { assignmentId?: string } };
+    coordinatorSignature: { verified: boolean };
+  }>(secretLease.stdout).data;
+  assert.equal(secretLeasePayload.status, "signed_secret_lease_issued");
+  assert.equal(secretLeasePayload.writes, false);
+  assert.notEqual(secretLeasePayload.lease.secretRef, "vault://agents/support");
+  assert.equal(secretLeasePayload.lease.secretRef.includes("vault://"), false);
+  assert.notEqual(secretLeasePayload.lease.plaintextReturned, true);
+  assert.equal(secretLeasePayload.lease.actor.assignmentId, "assignment.service");
+  assert.equal(secretLeasePayload.coordinatorSignature.verified, true);
+
   const conflicts = await runCliCapture(["sync", "conflicts", "--local-hash", "hash-a", "--peer-hash", "hash-b", "--json"], process.cwd());
   assert.equal(conflicts.code, CLI_EXIT_OK);
   const conflictsPayload = parseCliJson<{ conflicts: Array<{ status: string }>; silentOverwriteAllowed: boolean }>(conflicts.stdout).data;
@@ -209,6 +269,12 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.equal(invitationPayload.invitation.allowedResourceIds[0], "skills:default");
   assert.equal(invitationPayload.writes, false);
 
+  const recordedInvitation = await runCliCapture(["nodes", "invite", "--issuer-mesh", "mesh.home", "--recipient-mesh", "mesh.server", "--allowed-resources", "skills:default", "--actions", "read,sync", "--state-dir", stateDir, "--record", "true", "--json"], process.cwd());
+  assert.equal(recordedInvitation.code, CLI_EXIT_OK);
+  const recordedInvitationPayload = parseCliJson<{ status: string; state: { durable: boolean; invitation: { invitationId: string } } }>(recordedInvitation.stdout).data;
+  assert.equal(recordedInvitationPayload.status, "recorded_proposal");
+  assert.equal(recordedInvitationPayload.state.durable, true);
+
   const share = await runCliCapture(["nodes", "share", "--issuer-mesh", "mesh.home", "--to-mesh", "mesh.server", "--resource-id", "skills:default", "--driver", "skills", "--actions", "read,sync", "--json"], process.cwd());
   assert.equal(share.code, CLI_EXIT_OK);
   const sharePayload = parseCliJson<{ share: { status: string; resourceId: string; plaintextSecrets: string; writes: boolean }; writes: boolean }>(share.stdout).data;
@@ -217,12 +283,25 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.equal(sharePayload.share.plaintextSecrets, "[REDACTED]");
   assert.equal(sharePayload.writes, false);
 
+  const recordedShare = await runCliCapture(["nodes", "share", "--issuer-mesh", "mesh.home", "--to-mesh", "mesh.server", "--resource-id", "skills:default", "--driver", "skills", "--actions", "read,sync", "--state-dir", stateDir, "--record", "true", "--json"], process.cwd());
+  assert.equal(recordedShare.code, CLI_EXIT_OK);
+  const recordedSharePayload = parseCliJson<{ status: string; state: { durable: boolean; share: { shareId: string } } }>(recordedShare.stdout).data;
+  assert.equal(recordedSharePayload.status, "recorded_proposal");
+  assert.equal(recordedSharePayload.state.durable, true);
+
   const meshRevoke = await runCliCapture(["nodes", "revoke", "--target-type", "share", "--target-id", "mesh_share_1", "--json"], process.cwd());
   assert.equal(meshRevoke.code, CLI_EXIT_OK);
   const meshRevokePayload = parseCliJson<{ revocation: { targetType: string; cascadeSyncQueues: boolean; writes: boolean }; writes: boolean }>(meshRevoke.stdout).data;
   assert.equal(meshRevokePayload.revocation.targetType, "share");
   assert.equal(meshRevokePayload.revocation.cascadeSyncQueues, true);
   assert.equal(meshRevokePayload.writes, false);
+
+  const recordedRevoke = await runCliCapture(["nodes", "revoke", "--target-type", "share", "--target-id", recordedSharePayload.state.share.shareId, "--state-dir", stateDir, "--record", "true", "--json"], process.cwd());
+  assert.equal(recordedRevoke.code, CLI_EXIT_OK);
+  const recordedRevokePayload = parseCliJson<{ status: string; state: { durable: boolean; revocation: { targetType: string }; cascadedQueueEntries: unknown[] } }>(recordedRevoke.stdout).data;
+  assert.equal(recordedRevokePayload.status, "recorded_revocation");
+  assert.equal(recordedRevokePayload.state.durable, true);
+  assert.equal(recordedRevokePayload.state.revocation.targetType, "share");
 
   const gateway = await runCliCapture(["gateway", "conformance", "--json"], process.cwd());
   assert.equal(gateway.code, CLI_EXIT_OK);

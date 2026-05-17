@@ -107,18 +107,28 @@ POST /v1/mesh/revocations
 POST /v1/gateway/agent-service/evaluate
 ```
 
-The mutation-shaped node and sync endpoints are dry-run until signed
-Coordinator/host execution can prove policy, audit, rollback, and physical
-transport behavior. They still return the canonical contract shape, including
-`writes: false`, conflict status, cursors, hosted/self-hosted conformance, and
-secret-reference-only sync policy.
+The mutation-shaped Relay endpoints are dry-run until signed Coordinator/host
+execution can prove policy, audit, rollback, and physical transport behavior.
+They still return the canonical contract shape, including `writes: false`,
+conflict status, cursors, hosted/self-hosted conformance, and
+secret-reference-only sync policy. The CLI also has an opt-in local
+`--state-dir` ledger for durable manifests, queue entries, acknowledgements,
+mesh proposals, and revocations; that ledger records intent and reconciliation
+state without becoming node-trust authority. When the CLI is given
+`--coordinator-private-key-file` and `--coordinator-public-key-file`, ledger
+records are signed with Ed25519 and later verified in `claw sync status`;
+unsigned records remain local proposals only.
+The local Gateway secret broker path issues only signed, expiring leases for
+secret references; it never reads or returns plaintext secret material.
 
 Offline behavior is intentionally different for command execution and Sync.
 Remote interactive commands fail fast with `failed_fast`, `enqueued: false`,
 and `writes: false` when the Connector or node is unavailable. Sync plans can
 produce no-write queue entries: push/pull changes start as `queued`, conflicts
 start as `blocked`, and reconciliation advances the next cursor only after
-acknowledged changes or explicitly resolved conflicts.
+acknowledged changes or explicitly resolved conflicts. With `claw sync run
+--state-dir <dir> --queue true`, those no-write queue entries are persisted
+locally and can later be reconciled with `claw sync reconcile`.
 
 Inter-mesh collaboration is represented by `MeshInvitation`,
 `MeshResourceShare`, and `MeshRevocation` contracts. Invitations define the

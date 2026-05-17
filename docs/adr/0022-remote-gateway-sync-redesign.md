@@ -157,16 +157,26 @@ The required routes are:
 - `gateway.multiTenantAgentService`
 - `mesh.resourceShare`
 
-The public CLI exposes read-only and dry-run entrypoints:
+The public CLI exposes read-only, dry-run, and opt-in local durable ledger
+entrypoints:
 
 - `claw remote classify|check|routes|conformance`
-- `claw sync manifest|status|plan|run|conflicts`
+- `claw sync manifest|status|plan|run|reconcile|conflicts`
 - `claw nodes list|pair|trust|revoke|invite|share|heartbeat`
 - `claw gateway serve|project|conformance`
 
 Mutation commands such as node pairing, trust changes, gateway serving, and
 real sync execution must remain dry-run or signed-host/Coordinator-gated until
-their implementation can prove policy, audit, and rollback.
+their implementation can prove policy, audit, and rollback. `claw sync` and
+`claw nodes` may persist local `--state-dir` ledger records for manifests,
+no-write queue entries, acknowledgements, mesh proposals, and revocations; this
+ledger is durable reconciliation state, not a trust mutation authority. When
+Coordinator key files are supplied, the ledger stores Ed25519 signatures and
+verification status for those records; unsigned records remain proposals only.
+`claw gateway secret-lease` is the local broker operation for secret references:
+it requires a signed Coordinator ledger, stores only the reference/actor/action
+lease metadata, sets `plaintextReturned: false`, and refuses plaintext-return
+flags.
 
 ## Consequences
 

@@ -14,9 +14,11 @@ import {
   type SyncDriver,
   type SyncObjectSnapshot,
 } from "@clawjs/core";
+import fs from "fs";
 
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
+import { RemoteSyncStateStore, type RemoteSyncCoordinatorSigner } from "./remote-sync-state-store.ts";
 
 type CliContext = {
   stdout: NodeJS.WritableStream;
@@ -67,6 +69,62 @@ function writeOutput(input: RemoteSyncCliInput, command: string, data: unknown, 
     input.context.stdout.write(`${text}\n`);
   }
   return CLI_EXIT_OK;
+}
+
+function stateStoreFromFlags(input: RemoteSyncCliInput): RemoteSyncStateStore | null {
+  const stateDir = input.flags["state-dir"] ?? input.flags["remote-state-dir"];
+  return stateDir ? new RemoteSyncStateStore({ stateDir }) : null;
+}
+
+function wantsDurableRecord(input: RemoteSyncCliInput): boolean {
+  return input.flags.record === "true" || input.flags.durable === "true";
+}
+
+function wantsDurableQueue(input: RemoteSyncCliInput): boolean {
+  return input.flags.queue === "true" || input.flags["record-queue"] === "true";
+}
+
+function coordinatorSignerFromFlags(input: RemoteSyncCliInput): RemoteSyncCoordinatorSigner | undefined {
+  const privateKeyFile = input.flags["coordinator-private-key-file"];
+  const publicKeyFile = input.flags["coordinator-public-key-file"];
+  if (!privateKeyFile && !publicKeyFile) return undefined;
+  if (!privateKeyFile || !publicKeyFile) {
+    throw new Error("Coordinator signing requires both --coordinator-private-key-file and --coordinator-public-key-file.");
+  }
+  return {
+    keyId: input.flags["coordinator-key-id"] ?? "coordinator.local",
+    privateKeyPem: fs.readFileSync(privateKeyFile, "utf8"),
+    publicKeyPem: fs.readFileSync(publicKeyFile, "utf8"),
+  };
+}
+
+function requireStateStore(input: RemoteSyncCliInput, usage: string): RemoteSyncStateStore | number {
+  const store = stateStoreFromFlags(input);
+  if (!store) return missing(input, usage);
+  return store;
+}
+
+function requireCoordinatorSigner(input: RemoteSyncCliInput, usage: string): RemoteSyncCoordinatorSigner | number {
+  const signer = coordinatorSignerFromFlags(input);
+  if (!signer) return missing(input, usage);
+  return signer;
+}
+
+function actorContextFromFlags(input: RemoteSyncCliInput) {
+  const actorKind = input.flags["actor-kind"];
+  const parsedActorKind: "human" | "device" | "agent" | "service" | "organization" = actorKind === "human" || actorKind === "device" || actorKind === "service" || actorKind === "organization" ? actorKind : "agent";
+  return {
+    actorKind: parsedActorKind,
+    actorId: input.flags["actor-id"] ?? input.flags["agent-id"] ?? "agent.remote",
+    ...(input.flags["device-id"] ? { deviceId: input.flags["device-id"] } : {}),
+    ...(input.flags["organization-id"] ? { organizationId: input.flags["organization-id"] } : {}),
+    ...(input.flags["agent-id"] ? { agentId: input.flags["agent-id"] } : {}),
+    ...(input.flags["assignment-id"] ? { assignmentId: input.flags["assignment-id"] } : {}),
+    ...(input.flags["run-id"] ? { runId: input.flags["run-id"] } : {}),
+    nodeId: input.flags["owner-node"] ?? input.flags["node-id"] ?? "local",
+    transport: input.flags.transport ?? "gateway",
+    trustMode: input.flags["trust-mode"] === "sovereign_e2e_tunnel" ? "sovereign_e2e_tunnel" as const : "governed_gateway" as const,
+  };
 }
 
 function missing(input: RemoteSyncCliInput, usage: string): number {
@@ -275,23 +333,62 @@ export async function runSyncCli(input: RemoteSyncCliInput): Promise<number> {
   const command = input.positionals[1];
   if (command === "manifest") {
     const manifest = manifestFromFlags(input);
-    return writeOutput(input, "sync", { manifest }, JSON.stringify(manifest, null, 2), command);
+    const store = stateStoreFromFlags(input);
+    const state = store && wantsDurableRecord(input) ? store.recordManifest(manifest, { now: input.flags.now, signer: coordinatorSignerFromFlags(input) }) : undefined;
+    return writeOutput(input, "sync", { manifest, ...(state ? { state } : {}) }, JSON.stringify(manifest, null, 2), command);
   }
   if (command === "status") {
-    const payload = { status: "baseline_registered", resources: remoteSyncRequiredRouteIds.filter((routeId) => routeId.startsWith("sync.")), conflictDefault: "detect_and_elevate" };
+    const store = stateStoreFromFlags(input);
+    const stored = store?.read();
+    const queueEntries = stored ? Object.values(stored.queues).flat() : [];
+    const signatureStatus = store?.verifyCoordinatorSignatures();
+    const payload = {
+      status: "baseline_registered",
+      resources: remoteSyncRequiredRouteIds.filter((routeId) => routeId.startsWith("sync.")),
+      conflictDefault: "detect_and_elevate",
+      ...(stored && store ? {
+        state: {
+          statePath: store.statePath,
+          durable: true,
+          manifests: Object.keys(stored.manifests).length,
+          queueEntries: queueEntries.length,
+          blockedQueueEntries: queueEntries.filter((entry) => entry.status === "blocked").length,
+          auditEvents: stored.audit.length,
+          coordinatorSignatures: signatureStatus?.signatureCount ?? 0,
+          verifiedCoordinatorSignatures: signatureStatus?.valid ?? 0,
+          invalidCoordinatorSignatures: signatureStatus?.invalid ?? 0,
+        },
+      } : {}),
+    };
     return writeOutput(input, "sync", payload, `${payload.status} resources=${payload.resources.length}`, command);
   }
   if (command === "plan" || command === "run") {
     const plan = planFromFlags(input);
-    const payload = { mode: command === "run" ? "dry_run" : "plan", ...plan };
+    const store = stateStoreFromFlags(input);
+    const state = command === "run" && store && wantsDurableQueue(input)
+      ? store.enqueuePlan(plan, { now: input.flags.now, signer: coordinatorSignerFromFlags(input) })
+      : undefined;
+    const payload = { mode: command === "run" ? (state ? "queued" : "dry_run") : "plan", ...plan, ...(state ? { state } : {}) };
     return writeOutput(input, "sync", payload, `${payload.mode} actions=${plan.actions.length} conflicts=${plan.conflicts.length}`, command);
+  }
+  if (command === "reconcile") {
+    const store = stateStoreFromFlags(input);
+    if (!store) return missing(input, "sync reconcile --state-dir <dir> [--ack-change-ids <ids>] [--resolved-conflict-ids <ids>]");
+    const manifest = manifestFromFlags(input);
+    const state = store.reconcile(manifest, {
+      acknowledgedChangeIds: listFlag(input.flags["ack-change-ids"] ?? input.flags.acks, []),
+      resolvedConflictIds: listFlag(input.flags["resolved-conflict-ids"] ?? input.flags.resolved, []),
+      now: input.flags.now,
+      signer: coordinatorSignerFromFlags(input),
+    });
+    return writeOutput(input, "sync", state, `reconciled queue=${state.reconciliation.queue.length}`, command);
   }
   if (command === "conflicts") {
     const plan = planFromFlags(input);
     const payload = { conflicts: plan.conflicts, defaultPolicy: "detect_and_elevate", silentOverwriteAllowed: false };
     return writeOutput(input, "sync", payload, `conflicts=${plan.conflicts.length} defaultPolicy=detect_and_elevate`, command);
   }
-  return missing(input, "sync manifest|status|plan|run|conflicts");
+  return missing(input, "sync manifest|status|plan|run|reconcile|conflicts");
 }
 
 export async function runNodesCli(input: RemoteSyncCliInput): Promise<number> {
@@ -302,35 +399,46 @@ export async function runNodesCli(input: RemoteSyncCliInput): Promise<number> {
   }
   if (command === "pair" || command === "trust" || command === "revoke" || command === "heartbeat") {
     if (command === "revoke" && input.flags["target-id"]) {
+      const revocation = createMeshRevocation({
+        targetType: input.flags["target-type"] === "invitation" || input.flags["target-type"] === "node_trust" ? input.flags["target-type"] : "share",
+        targetId: input.flags["target-id"],
+        actor: {
+          actorKind: "human",
+          actorId: input.flags["actor-id"] ?? "user.local",
+          nodeId: input.flags["owner-node"] ?? "local",
+          transport: input.flags.transport ?? "gateway",
+          trustMode: "governed_gateway",
+        },
+        reason: input.flags.reason ?? "owner_revoked",
+        revokedAt: input.flags.now ?? "2026-05-17T10:09:00.000Z",
+      });
+      const store = stateStoreFromFlags(input);
+      const state = store && wantsDurableRecord(input) ? store.recordRevocation(revocation, { now: input.flags.now, signer: coordinatorSignerFromFlags(input) }) : undefined;
+      const status = state?.coordinatorSignature ? "signed_recorded_revocation" : state ? "recorded_revocation" : "dry_run_only";
       const payload = {
-        revocation: createMeshRevocation({
-          targetType: input.flags["target-type"] === "invitation" || input.flags["target-type"] === "node_trust" ? input.flags["target-type"] : "share",
-          targetId: input.flags["target-id"],
-          actor: {
-            actorKind: "human",
-            actorId: input.flags["actor-id"] ?? "user.local",
-            nodeId: input.flags["owner-node"] ?? "local",
-            transport: input.flags.transport ?? "gateway",
-            trustMode: "governed_gateway",
-          },
-          reason: input.flags.reason ?? "owner_revoked",
-          revokedAt: input.flags.now ?? "2026-05-17T10:09:00.000Z",
-        }),
-        status: "dry_run_only",
+        revocation,
+        status,
         writes: false,
+        ...(state ? { state } : {}),
       };
-      return writeOutput(input, "nodes", payload, "revoke: dry_run_only mesh revocation", command);
+      return writeOutput(input, "nodes", payload, `revoke: ${status}`, command);
     }
     const payload = { operation: command, status: "dry_run_only", writes: false, reason: "Pairing/trust mutations require explicit signed-host or Coordinator implementation." };
     return writeOutput(input, "nodes", payload, `${command}: dry_run_only`, command);
   }
   if (command === "invite") {
     const invitation = meshInvitationFromFlags(input);
-    return writeOutput(input, "nodes", { invitation, status: "dry_run_only", writes: false }, "invite: dry_run_only", command);
+    const store = stateStoreFromFlags(input);
+    const state = store && wantsDurableRecord(input) ? store.recordInvitation(invitation, { now: input.flags.now, signer: coordinatorSignerFromFlags(input) }) : undefined;
+    const status = state?.coordinatorSignature ? "signed_recorded_proposal" : state ? "recorded_proposal" : "dry_run_only";
+    return writeOutput(input, "nodes", { invitation, status, writes: false, ...(state ? { state } : {}) }, `invite: ${status}`, command);
   }
   if (command === "share") {
     const share = meshShareFromFlags(input);
-    return writeOutput(input, "nodes", { share, status: "dry_run_only", writes: false }, "share: dry_run_only", command);
+    const store = stateStoreFromFlags(input);
+    const state = store && wantsDurableRecord(input) ? store.recordShare(share, { now: input.flags.now, signer: coordinatorSignerFromFlags(input) }) : undefined;
+    const status = state?.coordinatorSignature ? "signed_recorded_proposal" : state ? "recorded_proposal" : "dry_run_only";
+    return writeOutput(input, "nodes", { share, status, writes: false, ...(state ? { state } : {}) }, `share: ${status}`, command);
   }
   return missing(input, "nodes list|pair|trust|revoke|invite|share|heartbeat");
 }
@@ -362,7 +470,34 @@ export async function runGatewayCli(input: RemoteSyncCliInput): Promise<number> 
     });
     return writeOutput(input, "gateway", decision, `agent-service: ${decision.allowed ? "allow" : "deny"}`, command);
   }
-  return missing(input, "gateway serve|project|conformance|agent-service");
+  if (command === "secret-lease") {
+    const usage = "gateway secret-lease --state-dir <dir> --secret-ref <ref> --resource-id <id> --coordinator-private-key-file <pem> --coordinator-public-key-file <pem> [--action <action>] [--ttl-seconds <seconds>]";
+    const store = requireStateStore(input, usage);
+    if (typeof store === "number") return store;
+    const signer = requireCoordinatorSigner(input, usage);
+    if (typeof signer === "number") return signer;
+    if (input.flags.plaintext === "true" || input.flags["return-plaintext"] === "true") {
+      input.context.stderr.write("Secret leases never return plaintext.\n");
+      return CLI_EXIT_USAGE;
+    }
+    const secretRef = input.flags["secret-ref"] ?? input.flags.secret;
+    const resourceId = input.flags["resource-id"];
+    if (!secretRef || !resourceId) return missing(input, usage);
+    const ttlSeconds = numberFlag(input.flags["ttl-seconds"], 900);
+    const now = input.flags.now ?? new Date().toISOString();
+    const expiresAt = input.flags["expires-at"] ?? new Date(Date.parse(now) + ttlSeconds * 1000).toISOString();
+    const state = store.issueSecretLease({
+      secretRef,
+      actor: actorContextFromFlags(input),
+      action: input.flags.action ?? "lease_secret",
+      resourceId,
+      expiresAt,
+      now,
+      signer,
+    });
+    return writeOutput(input, "gateway", { status: "signed_secret_lease_issued", writes: false, ...state }, "secret-lease: signed_secret_lease_issued", command);
+  }
+  return missing(input, "gateway serve|project|conformance|agent-service|secret-lease");
 }
 
 export function remoteSyncExitForPayload(payload: { status?: string; missingRoutes?: unknown[] }): number {
