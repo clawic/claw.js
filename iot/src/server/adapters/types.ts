@@ -16,11 +16,11 @@ import type { ThingRecord } from "../db.ts";
 /** Severity grade attached to discovered devices and dispatch operations.
  *  Mirrors the daemon's local RiskLevel; the tools registry maps it onto
  *  AgentToolRiskLevel before reaching the agent. */
-export type AdapterRiskLevel = "safe" | "caution" | "restricted";
+type AdapterRiskLevel = "safe" | "caution" | "restricted";
 
 /** A capability the device announces it can answer for, e.g. "power",
  *  "brightness", "color". Mirrors the SQLite capabilities schema. */
-export interface AdapterCapability {
+interface AdapterCapability {
   key: string;
   label?: string;
   valueType?: "bool" | "number" | "string" | "color" | "enum";

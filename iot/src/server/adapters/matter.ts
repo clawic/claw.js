@@ -26,7 +26,7 @@ import type {
   DispatchResult,
 } from "./types.ts";
 
-export const MATTER_ID = "matter";
+const MATTER_ID = "matter";
 
 const optionalImport = new Function("specifier", "return import(specifier)") as (
   specifier: string,

@@ -31,7 +31,7 @@ import type {
   DispatchResult,
 } from "./types.ts";
 
-export const GOOGLE_HOME_ID = "google-home";
+const GOOGLE_HOME_ID = "google-home";
 
 interface GoogleHomeDeviceConfig {
   /** Stable device id exposed to Google. Defaults to the device id. */

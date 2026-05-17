@@ -28,7 +28,7 @@ import type {
   DispatchResult,
 } from "./types.ts";
 
-export const MQTT_ID = "mqtt";
+const MQTT_ID = "mqtt";
 
 const optionalImport = new Function("specifier", "return import(specifier)") as (
   specifier: string,

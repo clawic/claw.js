@@ -40,7 +40,7 @@ import type {
   DispatchResult,
 } from "./types.ts";
 
-export const GENERIC_HTTP_ID = "generic-http";
+const GENERIC_HTTP_ID = "generic-http";
 
 interface CapabilityHook {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";

@@ -14,13 +14,13 @@
     "unreferencedAssetCandidates": 88
   },
   "knipSummary": {
-    "filesWithIssues": 123,
-    "totalIssues": 692,
+    "filesWithIssues": 113,
+    "totalIssues": 681,
     "issueTypes": {
       "unlisted": 2,
-      "types": 28,
+      "types": 26,
       "owners": 93,
-      "exports": 561,
+      "exports": 552,
       "duplicates": 8
     }
   },
@@ -91,6 +91,7 @@
     "Secrets cleanup made resolver field/output DTOs and actor helpers private, removed an unused governance re-export, and deleted the unreferenced session cache store class while keeping schema/backup compatibility.",
     "Wiki cleanup made admin JWT claim helpers private and removed unused token/access-policy helper surfaces while preserving auth principal and wiki operation contracts.",
     "Secrets server cleanup made remaining local app/backup/database helpers private, removed stale capability/governance helpers, and deleted the unused session-cache row DTO after the store removal.",
-    "Notify cleanup made admin JWT claims, subscription matching, schema surface node construction, and local delivery-state alias private while preserving exported notification contracts through the core surface."
+    "Notify cleanup made admin JWT claims, subscription matching, schema surface node construction, and local delivery-state alias private while preserving exported notification contracts through the core surface.",
+    "IoT adapter cleanup made provider id constants and local discovery helper types private while preserving adapter classes and runtime connector behavior."
   ]
 }

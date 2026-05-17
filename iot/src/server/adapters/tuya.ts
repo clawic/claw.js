@@ -32,7 +32,7 @@ import type {
   DispatchResult,
 } from "./types.ts";
 
-export const TUYA_ID = "tuya";
+const TUYA_ID = "tuya";
 
 /** Per-device pointer to a Tuya cloud device. `code` is the dp code
  *  the Tuya schema declares for the capability we want to write. */

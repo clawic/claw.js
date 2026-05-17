@@ -23,7 +23,7 @@ import type {
   DispatchResult,
 } from "./types.ts";
 
-export const HOMEKIT_ID = "homekit";
+const HOMEKIT_ID = "homekit";
 
 const optionalImport = new Function("specifier", "return import(specifier)") as (
   specifier: string,

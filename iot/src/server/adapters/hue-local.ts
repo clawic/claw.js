@@ -28,7 +28,7 @@ import type {
   DispatchResult,
 } from "./types.ts";
 
-export const HUE_LOCAL_ID = "hue-local";
+const HUE_LOCAL_ID = "hue-local";
 
 interface HueConfig {
   bridgeIp: string;

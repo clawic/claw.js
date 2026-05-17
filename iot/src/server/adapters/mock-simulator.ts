@@ -15,7 +15,7 @@ import type {
   DispatchResult,
 } from "./types.ts";
 
-export const MOCK_SIMULATOR_ID = "mock-simulator";
+const MOCK_SIMULATOR_ID = "mock-simulator";
 
 export class MockSimulatorAdapter implements ConnectorAdapter {
   readonly id = MOCK_SIMULATOR_ID;

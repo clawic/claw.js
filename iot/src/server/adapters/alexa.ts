@@ -22,7 +22,7 @@ import type {
   DispatchResult,
 } from "./types.ts";
 
-export const ALEXA_ID = "alexa";
+const ALEXA_ID = "alexa";
 
 interface AlexaDeviceConfig {
   endpointId: string;
