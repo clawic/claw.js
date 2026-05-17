@@ -213,12 +213,15 @@ function agentServiceAssignmentFromFlags(input: RemoteSyncCliInput) {
   const tenantId = input.flags["tenant-id"] ?? "tenant.demo";
   const agentId = input.flags["agent-id"] ?? "agent.service";
   const assignmentId = input.flags["assignment-id"] ?? "assignment.service";
+  const status: "active" | "paused" | "revoked" = input.flags["assignment-status"] === "paused" || input.flags["assignment-status"] === "revoked"
+    ? input.flags["assignment-status"]
+    : "active";
   return {
     schemaVersion: 1 as const,
     tenantId,
     agentId,
     assignmentId,
-    status: input.flags["assignment-status"] === "paused" || input.flags["assignment-status"] === "revoked" ? input.flags["assignment-status"] : "active" as const,
+    status,
     routeIds: listFlag(input.flags["route-ids"], ["gateway.multiTenantAgentService"]),
     budgetId: input.flags["budget-id"] ?? "budget.service",
     billingAccountId: input.flags["billing-account"] ?? "billing.demo",
