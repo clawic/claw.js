@@ -1,5 +1,7 @@
 import { AgentStoreFS, defaultAgent, type Agent, type Connection, type Personality, type SkillCollection } from "@clawjs/agents";
 import {
+  createAgentConfigRevision,
+  createAgentIncident,
   createAgentSupportInboxProjection,
   createAgentSafeSurfaceProjection,
   evaluateAgentAssignmentRoute,
@@ -9,6 +11,8 @@ import {
   type AgentAssignmentRouteRequest,
   type AgentEffectiveAccessInput,
   type AgentExternalIdentityProfile,
+  type AgentConfigRevisionInput,
+  type AgentIncidentInput,
   type AgentMemoryAccessRequest,
   type AgentMemoryPolicy,
   type AgentSafeSurfaceProjectionInput,
@@ -82,7 +86,7 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
       rootConcept: "agent",
       placementConcept: "agent_assignment",
       defaultPosture: "empty_sandbox_respond_only",
-      gates: ["evaluate-access", "route-check", "resolve-external-identity", "project-support-inbox", "memory-check", "surface-projection"],
+      gates: ["evaluate-access", "route-check", "resolve-external-identity", "project-support-inbox", "memory-check", "surface-projection", "config-revision", "incident"],
     });
     return V1_DATA_EXIT_OK;
   }
@@ -120,6 +124,18 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
     const record = recordFlag<AgentSafeSurfaceProjectionInput>(input);
     if (!record) return usageError(input, "Usage: claw agents surface-projection --record JSON [--json]");
     writeSuccess(input, createAgentSafeSurfaceProjection(record));
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "config-revision") {
+    const record = recordFlag<AgentConfigRevisionInput>(input);
+    if (!record) return usageError(input, "Usage: claw agents config-revision --record JSON [--json]");
+    writeSuccess(input, createAgentConfigRevision(record));
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "incident") {
+    const record = recordFlag<AgentIncidentInput>(input);
+    if (!record) return usageError(input, "Usage: claw agents incident --record JSON [--json]");
+    writeSuccess(input, createAgentIncident(record));
     return V1_DATA_EXIT_OK;
   }
   return usageError(input, usage(input.binName, "agents"));

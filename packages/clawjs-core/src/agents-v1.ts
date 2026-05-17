@@ -296,6 +296,77 @@ export interface AgentAuditEvent {
   metadata: Record<string, unknown>;
 }
 
+export type AgentConfigRevisionStatus = "draft" | "active" | "superseded" | "rolled_back";
+
+export interface AgentConfigRevisionInput {
+  agentId: string;
+  revision?: string | number;
+  status?: AgentConfigRevisionStatus;
+  actorId?: string;
+  reason: string;
+  summary?: string;
+  previousRevisionId?: string;
+  configSnapshot: Record<string, unknown>;
+  changedFields?: Array<Record<string, unknown>>;
+  createdAt?: string;
+  redaction?: "default" | "strict" | "custom";
+}
+
+export interface AgentConfigRevision {
+  id: string;
+  agentId: string;
+  revision: string;
+  status: AgentConfigRevisionStatus;
+  actorId?: string;
+  reason: string;
+  summary?: string;
+  previousRevisionId?: string;
+  configSnapshot: Record<string, unknown>;
+  changedFields: Array<Record<string, unknown>>;
+  createdAt: string;
+  audit: AgentAuditEvent;
+}
+
+export type AgentIncidentSeverity = "info" | "low" | "medium" | "high" | "critical";
+export type AgentIncidentStatus = "open" | "mitigating" | "resolved" | "archived";
+
+export interface AgentIncidentInput {
+  agentId: string;
+  assignmentId?: string;
+  runId?: string;
+  sessionId?: string;
+  actorId?: string;
+  severity: AgentIncidentSeverity;
+  status?: AgentIncidentStatus;
+  summary: string;
+  description?: string;
+  scopeType?: string;
+  scopeId?: string;
+  detectedAt?: string;
+  resolvedAt?: string;
+  metadata?: Record<string, unknown>;
+  redaction?: "default" | "strict" | "custom";
+}
+
+export interface AgentIncident {
+  id: string;
+  agentId: string;
+  assignmentId?: string;
+  runId?: string;
+  sessionId?: string;
+  actorId?: string;
+  severity: AgentIncidentSeverity;
+  status: AgentIncidentStatus;
+  summary: string;
+  description?: string;
+  scopeType?: string;
+  scopeId?: string;
+  detectedAt: string;
+  resolvedAt?: string;
+  metadata: Record<string, unknown>;
+  audit: AgentAuditEvent;
+}
+
 export interface AgentSafeExportInput {
   agent: Record<string, unknown>;
   assignments?: Array<Record<string, unknown>>;
@@ -587,6 +658,107 @@ export function createAgentAuditEvent(input: Omit<AgentAuditEvent, "id" | "creat
     createdAt,
     redaction: input.redaction ?? "default",
     metadata,
+  };
+}
+
+export function createAgentConfigRevision(input: AgentConfigRevisionInput): AgentConfigRevision {
+  const redaction = input.redaction ?? "strict";
+  const createdAt = input.createdAt ?? new Date().toISOString();
+  const revision = String(input.revision ?? createdAt);
+  const id = `agent_config_revision_${stableHash([
+    input.agentId,
+    revision,
+    input.actorId ?? "",
+    input.reason,
+    createdAt,
+  ].join("|"))}`;
+  const configSnapshot = redactAgentBoundaryValue(input.configSnapshot, redaction) as Record<string, unknown>;
+  const changedFields = redactArray(input.changedFields, redaction);
+  const audit = createAgentAuditEvent({
+    kind: "config_revision",
+    agentId: input.agentId,
+    actorId: input.actorId,
+    result: "recorded",
+    reason: input.reason,
+    redaction,
+    createdAt,
+    resourceType: "agent_config_revision",
+    resourceId: id,
+    metadata: {
+      revision,
+      status: input.status ?? "active",
+      previousRevisionId: input.previousRevisionId,
+      changedFields,
+    },
+  });
+  return {
+    id,
+    agentId: input.agentId,
+    revision,
+    status: input.status ?? "active",
+    ...(input.actorId ? { actorId: input.actorId } : {}),
+    reason: input.reason,
+    ...(input.summary ? { summary: input.summary } : {}),
+    ...(input.previousRevisionId ? { previousRevisionId: input.previousRevisionId } : {}),
+    configSnapshot,
+    changedFields,
+    createdAt,
+    audit,
+  };
+}
+
+export function createAgentIncident(input: AgentIncidentInput): AgentIncident {
+  const redaction = input.redaction ?? "strict";
+  const detectedAt = input.detectedAt ?? new Date().toISOString();
+  const status = input.status ?? "open";
+  const id = `agent_incident_${stableHash([
+    input.agentId,
+    input.assignmentId ?? "",
+    input.runId ?? "",
+    input.sessionId ?? "",
+    input.severity,
+    input.summary,
+    detectedAt,
+  ].join("|"))}`;
+  const metadata = redactAgentBoundaryValue(input.metadata ?? {}, redaction) as Record<string, unknown>;
+  const audit = createAgentAuditEvent({
+    kind: "incident",
+    agentId: input.agentId,
+    assignmentId: input.assignmentId,
+    actorId: input.actorId,
+    result: status === "resolved" || status === "archived" ? "recorded" : "blocked",
+    reason: input.summary,
+    redaction,
+    createdAt: detectedAt,
+    resourceType: "agent_incident",
+    resourceId: id,
+    metadata: {
+      severity: input.severity,
+      status,
+      runId: input.runId,
+      sessionId: input.sessionId,
+      scopeType: input.scopeType,
+      scopeId: input.scopeId,
+      metadata,
+    },
+  });
+  return {
+    id,
+    agentId: input.agentId,
+    ...(input.assignmentId ? { assignmentId: input.assignmentId } : {}),
+    ...(input.runId ? { runId: input.runId } : {}),
+    ...(input.sessionId ? { sessionId: input.sessionId } : {}),
+    ...(input.actorId ? { actorId: input.actorId } : {}),
+    severity: input.severity,
+    status,
+    summary: input.summary,
+    ...(input.description ? { description: input.description } : {}),
+    ...(input.scopeType ? { scopeType: input.scopeType } : {}),
+    ...(input.scopeId ? { scopeId: input.scopeId } : {}),
+    detectedAt,
+    ...(input.resolvedAt ? { resolvedAt: input.resolvedAt } : {}),
+    metadata,
+    audit,
   };
 }
 

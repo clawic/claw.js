@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 
 import {
   createAgentAuditEvent,
+  createAgentConfigRevision,
+  createAgentIncident,
   createAgentSafePackageExport,
   createAgentSafeSurfaceProjection,
   createAgentSupportInboxProjection,
@@ -328,6 +330,68 @@ test("Agents V1 safe package export omits secrets and records audit metadata", (
   assert.equal(exported.agent.localPath, "[REDACTED_LOCAL_PATH]");
   assert.equal(exported.audit.kind, "safe_export");
   assert.equal(exported.audit.agentId, "agent.support");
+});
+
+test("Agents V1 config revisions redact snapshots and record audit", () => {
+  const revision = createAgentConfigRevision({
+    agentId: "agent.support",
+    revision: 7,
+    actorId: "actor.owner",
+    reason: "Restrict support assignment",
+    summary: "Reduced channel scope",
+    previousRevisionId: "agent_config_revision_previous",
+    createdAt: "2026-05-17T10:00:00.000Z",
+    configSnapshot: {
+      name: "Support",
+      systemPrompt: "private instruction",
+      secretAllowlist: ["vault://agents/support"],
+      localPath: "/Users/example/agent",
+    },
+    changedFields: [{ field: "assignments.telegram", fromValue: "active", toValue: "paused", apiToken: "raw" }],
+  });
+  assert.match(revision.id, /^agent_config_revision_/);
+  assert.equal(revision.revision, "7");
+  assert.equal(revision.status, "active");
+  assert.equal(revision.configSnapshot.name, "Support");
+  assert.equal(revision.configSnapshot.secretAllowlist, "[REDACTED]");
+  assert.equal(revision.configSnapshot.localPath, "[REDACTED_LOCAL_PATH]");
+  assert.deepEqual(revision.changedFields[0], { field: "assignments.telegram", fromValue: "active", toValue: "paused", apiToken: "[REDACTED]" });
+  assert.equal(revision.audit.kind, "config_revision");
+  assert.equal(revision.audit.resourceType, "agent_config_revision");
+  assert.equal(revision.audit.metadata.previousRevisionId, "agent_config_revision_previous");
+});
+
+test("Agents V1 incidents are first-class redacted audit records", () => {
+  const incident = createAgentIncident({
+    agentId: "agent.support",
+    assignmentId: "assignment.web",
+    runId: "run_1",
+    sessionId: "session_1",
+    actorId: "actor.monitor",
+    severity: "critical",
+    summary: "Cross-customer memory read blocked",
+    description: "Policy denied access before response.",
+    scopeType: "customer",
+    scopeId: "customer_1",
+    detectedAt: "2026-05-17T10:00:00.000Z",
+    metadata: {
+      attemptedCustomerId: "customer_2",
+      rawTracePath: "/Users/example/traces/run.log",
+      authorization: "Bearer raw",
+    },
+  });
+  assert.match(incident.id, /^agent_incident_/);
+  assert.equal(incident.status, "open");
+  assert.equal(incident.severity, "critical");
+  assert.deepEqual(incident.metadata, {
+    attemptedCustomerId: "customer_2",
+    rawTracePath: "[REDACTED]",
+    authorization: "[REDACTED]",
+  });
+  assert.equal(incident.audit.kind, "incident");
+  assert.equal(incident.audit.result, "blocked");
+  assert.equal(incident.audit.resourceType, "agent_incident");
+  assert.equal((incident.audit.metadata.metadata as Record<string, unknown>).authorization, "[REDACTED]");
 });
 
 test("Agents V1 safe surface projection exposes only bounded Relay/MCP/API fields", () => {
