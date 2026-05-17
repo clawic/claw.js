@@ -1,14 +1,17 @@
 import {
   clawDenseDataOsRegistry,
   findClawDenseDataSystem,
+  resolveBuiltinCollectionName,
   resolveClawDenseDataIntent,
 } from "@clawjs/core";
 
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK } from "./cli-errors.ts";
 import { formatCliTable } from "./cli-flag-parsers.ts";
 import { writeJsonOk } from "./cli-json.ts";
+import { runMagicDbCli } from "./database-magic.ts";
 
 interface DenseDataCliInput {
+  argv: string[];
   positionals: string[];
   flags: Record<string, string>;
   context: {
@@ -17,9 +20,11 @@ interface DenseDataCliInput {
   };
   wantsJson: boolean;
   binName: string;
+  workspaceRoot: string;
 }
 
 const INSPECTION_ACTIONS = new Set(["overview", "gaps", "intents", "schema"]);
+const CRUD_ACTIONS = new Set(["list", "get", "create", "update", "delete", "query", "schema", "add"]);
 
 export async function runDenseDataCli(input: DenseDataCliInput): Promise<number | null> {
   const phrase = input.positionals.join(" ");
@@ -30,8 +35,23 @@ export async function runDenseDataCli(input: DenseDataCliInput): Promise<number 
 
   const intent = resolveClawDenseDataIntent(phrase);
   if (intent.status === "data_gap") return null;
+  const collectionName = collectionForDenseRoute(input.positionals[0], intent.center?.collectionName);
+  const dbAction = action === "add" ? "create" : action;
+  if (collectionName && CRUD_ACTIONS.has(action) && dbAction !== "purge") {
+    return await runMagicDbCli({
+      argv: denseDbArgv(input.argv, collectionName, dbAction),
+      positionals: [input.positionals[0] ?? "dense", collectionName, dbAction, ...input.positionals.slice(2)],
+      flags: denseDbFlags(input.flags, collectionName),
+      workspaceRoot: input.workspaceRoot,
+      stdout: input.context.stdout,
+      stderr: input.context.stderr,
+      wantsJson: input.wantsJson,
+      binName: input.binName,
+    });
+  }
 
   const inspectionAction = INSPECTION_ACTIONS.has(action);
+  if (!inspectionAction && !CRUD_ACTIONS.has(action) && !intent.operation) return null;
   const payload = {
     intent,
     coverage: {
@@ -67,6 +87,23 @@ export async function runDenseDataCli(input: DenseDataCliInput): Promise<number 
   }
 
   return inspectionAction ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+}
+
+function collectionForDenseRoute(command: string | undefined, centerCollectionName: string | undefined): string | undefined {
+  if (centerCollectionName) return centerCollectionName;
+  if (!command) return undefined;
+  return resolveBuiltinCollectionName(command);
+}
+
+function denseDbArgv(argv: string[], collectionName: string, dbAction: string): string[] {
+  const firstFlagIndex = argv.findIndex((token) => token.startsWith("--"));
+  const tailFlags = firstFlagIndex >= 0 ? argv.slice(firstFlagIndex) : [];
+  return ["db", collectionName, dbAction, ...tailFlags];
+}
+
+function denseDbFlags(flags: Record<string, string>, collectionName: string): Record<string, string> {
+  if (collectionName !== "medications" || !flags.patient || flags["patient-id"]) return flags;
+  return { ...flags, "patient-id": flags.patient };
 }
 
 function isDenseDataCommandGroup(group: string): boolean {

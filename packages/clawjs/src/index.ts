@@ -589,11 +589,11 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   if (group === "needs") return await runNeedsCli({ positionals, flags, argv, context, wantsJson, binName, workspaceRoot: flags.workspace || context.cwd });
   if (group === "commands") return await runCommandsCli({ positionals, flags, argv, context, wantsJson, binName, workspaceRoot: flags.workspace || context.cwd });
 
-  const denseDataExit = await runDenseDataCli({ positionals, flags, context, wantsJson, binName });
-  if (denseDataExit !== null) return denseDataExit;
-
   const portalShortcutExit = await runPublicPortalShortcut({ group, command, subcommand, argv, flags, context, runCli: runCliUnsafe });
   if (portalShortcutExit !== null) return portalShortcutExit;
+
+  const denseDataShortcutExit = await runDenseDataCli({ argv, positionals, flags, context, wantsJson, binName, workspaceRoot: flags.workspace || context.cwd });
+  if (denseDataShortcutExit !== null) return denseDataShortcutExit;
 
   if (group === "diagnostics") {
     return await runCliUnsafe(["doctor", ...argv.slice(1)], context);
