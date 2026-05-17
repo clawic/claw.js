@@ -45,9 +45,9 @@ framework section with its own fast path.
 | `commands` | `commands` | command registry projected into `search.sqlite` | implemented |
 | `sessions.chats` | `sessions` | `sessions.sqlite` projected into `search.sqlite` | implemented |
 | `database.records` | `database` | `core.sqlite` records projected into `search.sqlite` | implemented |
-| `documents.blocks` | `documents` | framework document stores | planned |
+| `documents.blocks` | `documents` | `core.sqlite` documents and document blocks projected into `search.sqlite` | implemented initial adapter |
 | `images.derived` | `images` | OCR/labels/metadata stores | planned |
-| `code.symbols` | `code` | project/code symbol stores | planned |
+| `code.symbols` | `code` | bounded project file/symbol/docs projection into `search.sqlite` | implemented initial adapter |
 | native or external sources | `external` or source-specific domains | host/provider adapters | EXTERNAL PENDING |
 
 ## CLI
@@ -58,12 +58,15 @@ The public CLI surface is:
 claw search query "text" --json
 claw search query "text" --domains sessions --json
 claw search query "text" --domains database --filters '{"metadata.collection":"contacts","type":"record"}' --json
+claw search query "text" --domains documents --filters '{"metadata.scopeKind":"project"}' --json
+claw search query "symbolName" --domains code --code-root /path/to/project --json
 claw search sources --json
 claw search sources pause commands --json
 claw search sources exclude code.symbols --json
 claw search sources resume commands --json
 claw search status --json
 claw search rebuild --json
+claw search rebuild --code-root /path/to/project --code-limit 500 --json
 claw search saved create recent --query "text" --json
 claw search monitors create monitor-recent --saved-search recent --json
 claw search actions <result-id> --json
@@ -87,6 +90,24 @@ CLI `--filters` flag. Filters may target built-in fields such as `domain`,
 metadata via `metadata.<field>`. Query responses include the selected sources'
 declared facets so UI sections can build scoped filter controls from manifests.
 
+`code.symbols` is intentionally bounded. It indexes supported project files,
+Markdown docs, and lightweight symbol fragments under `--code-root` or the
+current workspace root. It skips dependency/build/cache/private control
+directories and respects `--code-limit`, `--code-max-depth`, and
+`--code-max-bytes`. Code indexing is refreshed lazily only for code-scoped
+queries or explicitly during `search rebuild`.
+
+`documents.blocks` projects framework document records from `core.sqlite`.
+Documents are returned as scoped section results, while document blocks are
+attached as fragments so a documents UI can search within block content without
+asking Root Search to scan unrelated domains.
+
+Search result actions are brokered. `search actions execute` produces a
+host-grants execution plan in `--dry-run` mode, fails closed when an approval is
+required but no `--host-approval-id` is provided, and returns a brokered receipt
+when the signed host supplies an approval id. The CLI does not perform native UI
+or provider side effects directly.
+
 ## Implementation Plan
 
 ### Phase 1: Core and chats fast path
@@ -94,12 +115,13 @@ declared facets so UI sections can build scoped filter controls from manifests.
 - Ship `@clawjs/search`.
 - Expose `claw search`.
 - Build `SearchStore` over `search.sqlite`.
-- Index `commands`, `sessions.chats`, and `database.records`.
+- Index `commands`, `sessions.chats`, `database.records`, `documents.blocks`,
+  and the first bounded `code.symbols` adapter.
 - Keep Clawix Mac Search and `Command-G` conversations-only.
 
 ### Phase 2: framework domains
 
-- Add source adapters for documents, images, code symbols, media, notes, tasks,
+- Continue source adapters for images, richer code symbols, media, notes, tasks,
   people, inbox, events, and other framework sections that need UI-level search.
 - Require each domain to have a source manifest, fast path, permissions, actions,
   and focused tests.

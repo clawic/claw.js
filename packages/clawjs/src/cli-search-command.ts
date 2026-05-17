@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { createHash } from "node:crypto";
 
 import Database from "better-sqlite3";
 
@@ -75,6 +76,12 @@ const BUILTIN_SEARCH_SOURCES: SearchSourceManifest[] = [
     domain: "documents",
     name: "Documents",
     resultTypes: ["document", "block"],
+    facets: [
+      { id: "namespaceId", label: "Namespace", type: "string" },
+      { id: "scopeKind", label: "Scope", type: "string" },
+      { id: "accessLevel", label: "Access", type: "string" },
+      { id: "blockType", label: "Block type", type: "string" },
+    ],
   }),
   createFrameworkSearchSourceManifest({
     id: "images.derived",
@@ -87,6 +94,11 @@ const BUILTIN_SEARCH_SOURCES: SearchSourceManifest[] = [
     domain: "code",
     name: "Code",
     resultTypes: ["project", "file", "symbol", "doc"],
+    facets: [
+      { id: "language", label: "Language", type: "string" },
+      { id: "extension", label: "Extension", type: "string" },
+      { id: "relativePath", label: "Path", type: "string" },
+    ],
   }),
   createCommandSearchSourceManifest(),
 ];
@@ -117,7 +129,11 @@ export async function runSearchQueryCli(input: {
     const indexedCommands = sourceCanIndex(store, "commands") ? ensureCommandSourceIndexed(store) : 0;
     const sources = parseListFlag(input.flags.sources ?? input.flags.source);
     const shouldRefreshDatabase = domains?.includes("database") || sources?.includes("database.records");
+    const shouldRefreshDocuments = domains?.includes("documents") || sources?.includes("documents.blocks");
+    const shouldRefreshCode = domains?.includes("code") || sources?.includes("code.symbols");
     const indexedDatabase = shouldRefreshDatabase && sourceCanIndex(store, "database.records") ? ensureDatabaseRecordsSourceIndexed(store, input.flags) : 0;
+    const indexedDocuments = shouldRefreshDocuments && sourceCanIndex(store, "documents.blocks") ? ensureDocumentsBlocksSourceIndexed(store, input.flags) : 0;
+    const indexedCode = shouldRefreshCode && sourceCanIndex(store, "code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const results = store.query({
       query,
       profile: input.flags.profile === "full" ? "full" : "framework",
@@ -135,6 +151,8 @@ export async function runSearchQueryCli(input: {
       indexedFastPaths: {
         commands: indexedCommands,
         ...(shouldRefreshDatabase ? { "database.records": indexedDatabase } : {}),
+        ...(shouldRefreshDocuments ? { "documents.blocks": indexedDocuments } : {}),
+        ...(shouldRefreshCode ? { "code.symbols": indexedCode } : {}),
       },
     };
     if (input.wantsJson) {
@@ -189,17 +207,21 @@ export async function runSearchRebuildCli(input: {
     const commandsIndexed = sourceCanIndex(store, "commands") ? ensureCommandSourceIndexed(store) : 0;
     const sessionsIndexed = sourceCanIndex(store, "sessions.chats") ? ensureSessionsChatsSourceIndexed(store, input.flags) : 0;
     const databaseIndexed = sourceCanIndex(store, "database.records") ? ensureDatabaseRecordsSourceIndexed(store, input.flags) : 0;
+    const documentsIndexed = sourceCanIndex(store, "documents.blocks") ? ensureDocumentsBlocksSourceIndexed(store, input.flags) : 0;
+    const codeIndexed = sourceCanIndex(store, "code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedSourceIds = new Set([
       ...(commandsIndexed > 0 ? ["commands"] : []),
       ...(sessionsIndexed > 0 ? ["sessions.chats"] : []),
       ...(databaseIndexed > 0 ? ["database.records"] : []),
+      ...(documentsIndexed > 0 ? ["documents.blocks"] : []),
+      ...(codeIndexed > 0 ? ["code.symbols"] : []),
     ]);
     const pendingSources = BUILTIN_SEARCH_SOURCES
       .filter((source) => !indexedSourceIds.has(source.id) && sourceCanIndex(store, source.id))
       .map((source) => source.id);
     const data = {
       rebuilt: true,
-      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed,
+      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + documentsIndexed + codeIndexed,
       embeddings: 0,
       profile: input.flags.profile === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
@@ -208,9 +230,11 @@ export async function runSearchRebuildCli(input: {
         commands: commandsIndexed,
         "sessions.chats": sessionsIndexed,
         "database.records": databaseIndexed,
+        "documents.blocks": documentsIndexed,
+        "code.symbols": codeIndexed,
       },
       pendingSources,
-      note: "Framework domain sources are registered; each domain keeps its own fast path until its adapter is wired.",
+      note: "Framework domain sources keep independent fast paths; heavyweight extractors remain async or explicit.",
     };
     if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "rebuild" });
     else input.context.stdout.write(`reindexed=${data.reindexed} embeddings=0 index=search.sqlite\n`);
@@ -720,6 +744,100 @@ function ensureDatabaseRecordsSourceIndexed(store: SearchStore, flags: Record<st
   }
 }
 
+function ensureDocumentsBlocksSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) {
+    store.setSourceState("documents.blocks", "enabled", {
+      backlog: 0,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 0;
+  }
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "records")) {
+      store.setSourceState("documents.blocks", "degraded", {
+        backlog: 0,
+        error: "core database does not contain records",
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return 0;
+    }
+    const rows = db.prepare(`
+      SELECT namespace_id, collection_name, id, data_json, created_at, updated_at
+      FROM records
+      WHERE collection_name IN ('documents', 'document_blocks')
+      ORDER BY updated_at DESC
+    `).all() as DatabaseRecordRow[];
+    const blocksByDocument = new Map<string, DatabaseRecordRow[]>();
+    const documents = rows.filter((row) => row.collection_name === "documents");
+    for (const block of rows.filter((row) => row.collection_name === "document_blocks")) {
+      const payload = parseJsonRecord(block.data_json);
+      const documentId = typeof payload.documentId === "string" ? payload.documentId : undefined;
+      if (!documentId) continue;
+      const key = `${block.namespace_id}:${documentId}`;
+      const blocks = blocksByDocument.get(key) ?? [];
+      blocks.push(block);
+      blocksByDocument.set(key, blocks);
+    }
+    let indexed = 0;
+    for (const document of documents) {
+      const blocks = blocksByDocument.get(`${document.namespace_id}:${document.id}`) ?? [];
+      const searchDocument = documentBlocksSearchDocument(document, blocks);
+      if (!searchDocument) continue;
+      store.upsertDocument(searchDocument);
+      indexed += 1;
+    }
+    store.setCursor({
+      source: "documents.blocks",
+      cursor: `rows:${indexed}`,
+      metadata: { store: "core.sqlite", collections: ["documents", "document_blocks"] },
+    });
+    store.setSourceState("documents.blocks", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return indexed;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureCodeSymbolsSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {
+  const root = resolveCodeSearchRoot(flags, cwd);
+  if (!fs.existsSync(root)) {
+    store.setSourceState("code.symbols", "degraded", {
+      backlog: 0,
+      error: `code root does not exist: ${root}`,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 0;
+  }
+  const maxFiles = boundedNumberFlag(flags["code-limit"] ?? flags["search-code-limit"], 500, 1, 10000);
+  const maxDepth = boundedNumberFlag(flags["code-max-depth"], 8, 1, 32);
+  const maxBytes = boundedNumberFlag(flags["code-max-bytes"], 256 * 1024, 1024, 2 * 1024 * 1024);
+  const files = discoverCodeSearchFiles(root, { maxFiles, maxDepth, maxBytes });
+  let indexed = 0;
+  for (const file of files) {
+    const document = codeFileSearchDocument(root, file);
+    if (!document) continue;
+    store.upsertDocument(document);
+    indexed += 1;
+  }
+  store.setCursor({
+    source: "code.symbols",
+    cursor: `root:${stableSearchId(root)}:files:${indexed}`,
+    metadata: { root, maxFiles, maxDepth, maxBytes },
+  });
+  store.setSourceState("code.symbols", "enabled", {
+    backlog: 0,
+    error: null,
+    lastIndexedAt: new Date().toISOString(),
+  });
+  return indexed;
+}
+
 function resolveSessionsDbPath(flags: Record<string, string>): string {
   if (flags["sessions-db-path"]) return path.resolve(flags["sessions-db-path"]);
   if (process.env.CLAW_SESSIONS_DB_PATH) return path.resolve(process.env.CLAW_SESSIONS_DB_PATH);
@@ -730,6 +848,213 @@ function resolveSessionsDbPath(flags: Record<string, string>): string {
 function resolveMainDbPath(flags: Record<string, string>): string {
   const env = flags["data-dir"] ? { ...process.env, CLAW_DATA_DIR: flags["data-dir"] } : process.env;
   return resolveClawjsMainDbPath(env);
+}
+
+function resolveCodeSearchRoot(flags: Record<string, string>, cwd: string): string {
+  return path.resolve(flags["code-root"] ?? flags.workspace ?? cwd);
+}
+
+function boundedNumberFlag(value: string | undefined, fallback: number, min: number, max: number): number {
+  const number = value ? Number(value) : fallback;
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(min, Math.min(max, Math.floor(number)));
+}
+
+function discoverCodeSearchFiles(root: string, limits: { maxFiles: number; maxDepth: number; maxBytes: number }): CodeFileCandidate[] {
+  const files: CodeFileCandidate[] = [];
+  const visit = (directory: string, depth: number): void => {
+    if (files.length >= limits.maxFiles || depth > limits.maxDepth) return;
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(directory, { withFileTypes: true }).sort((left, right) => left.name.localeCompare(right.name));
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (files.length >= limits.maxFiles) break;
+      const absolutePath = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        if (!isIgnoredCodeSearchDirectory(entry.name)) visit(absolutePath, depth + 1);
+        continue;
+      }
+      if (!entry.isFile()) continue;
+      const extension = path.extname(entry.name).toLowerCase();
+      const language = languageForCodeSearchExtension(extension);
+      if (!language) continue;
+      let stat: fs.Stats;
+      try {
+        stat = fs.statSync(absolutePath);
+      } catch {
+        continue;
+      }
+      if (!stat.isFile() || stat.size <= 0 || stat.size > limits.maxBytes) continue;
+      files.push({ absolutePath, extension, language, updatedAt: stat.mtime.toISOString() });
+    }
+  };
+  visit(root, 0);
+  return files;
+}
+
+function isIgnoredCodeSearchDirectory(name: string): boolean {
+  return [
+    ".git",
+    ".hg",
+    ".svn",
+    ".codex",
+    ".claw",
+    ".next",
+    ".nuxt",
+    ".turbo",
+    ".cache",
+    ".dart_tool",
+    ".build",
+    "build",
+    "coverage",
+    "dist",
+    "DerivedData",
+    "node_modules",
+    "target",
+    "vendor",
+  ].includes(name);
+}
+
+function languageForCodeSearchExtension(extension: string): string | null {
+  return ({
+    ".cjs": "javascript",
+    ".css": "css",
+    ".go": "go",
+    ".html": "html",
+    ".java": "java",
+    ".js": "javascript",
+    ".json": "json",
+    ".jsx": "javascript",
+    ".kt": "kotlin",
+    ".md": "markdown",
+    ".mdx": "markdown",
+    ".mjs": "javascript",
+    ".py": "python",
+    ".rs": "rust",
+    ".scss": "scss",
+    ".swift": "swift",
+    ".ts": "typescript",
+    ".tsx": "typescript",
+    ".yaml": "yaml",
+    ".yml": "yaml",
+  } as Record<string, string | undefined>)[extension] ?? null;
+}
+
+function codeFileSearchDocument(root: string, file: CodeFileCandidate): SearchDocumentInput | null {
+  let content: string;
+  try {
+    content = fs.readFileSync(file.absolutePath, "utf8");
+  } catch {
+    return null;
+  }
+  if (content.includes("\0")) return null;
+  const relativePath = normalizeRelativePath(path.relative(root, file.absolutePath));
+  const title = path.basename(file.absolutePath);
+  const symbols = extractCodeSearchSymbols(content, file.language);
+  const snippet = symbols[0]?.snippet ?? firstMeaningfulLine(content) ?? relativePath;
+  const documentType = file.language === "markdown" ? "doc" : "file";
+  return {
+    id: `code.symbols:${stableSearchId(`${root}\0${relativePath}`)}`,
+    source: "code.symbols",
+    domain: "code",
+    type: documentType,
+    resourceId: relativePath,
+    title,
+    subtitle: relativePath,
+    snippet,
+    body: content.slice(0, 128 * 1024),
+    path: file.absolutePath,
+    updatedAt: file.updatedAt,
+    metadata: {
+      root,
+      relativePath,
+      extension: file.extension,
+      language: file.language,
+      symbolCount: symbols.length,
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: {
+      fastPath: 1,
+      code: file.language === "markdown" ? 0.6 : 1,
+      symbolCount: Math.min(symbols.length, 20) / 20,
+    },
+    fragments: symbols.slice(0, 25).map((symbol, index) => ({
+      id: `code.symbols:${stableSearchId(`${root}\0${relativePath}`)}:symbol:${index}`,
+      title: symbol.title,
+      body: symbol.body,
+      snippet: symbol.snippet,
+      sortOrder: index,
+      metadata: { kind: symbol.kind, line: symbol.line },
+    })),
+    actions: [
+      { id: "open", kind: "open", label: "Open file", requiresApproval: true, risk: "read", grant: "search.code.open" },
+      { id: "copy-reference", kind: "copy", label: "Copy file reference", requiresApproval: false },
+    ],
+  };
+}
+
+function extractCodeSearchSymbols(content: string, language: string): CodeSearchSymbol[] {
+  const symbols: CodeSearchSymbol[] = [];
+  const lines = content.split(/\r?\n/);
+  const patterns = symbolPatternsForLanguage(language);
+  lines.forEach((line, index) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+    for (const pattern of patterns) {
+      const match = pattern.regex.exec(trimmed);
+      if (!match) continue;
+      const name = match[1] ?? trimmed.replace(/^#+\s*/, "").slice(0, 80);
+      symbols.push({
+        kind: pattern.kind,
+        title: `${pattern.kind} ${name}`.trim(),
+        body: trimmed,
+        snippet: trimmed.slice(0, 180),
+        line: index + 1,
+      });
+      return;
+    }
+  });
+  return symbols;
+}
+
+function symbolPatternsForLanguage(language: string): Array<{ kind: string; regex: RegExp }> {
+  if (language === "markdown") return [{ kind: "heading", regex: /^#{1,6}\s+(.+)$/ }];
+  if (language === "swift") return [
+    { kind: "type", regex: /^(?:public\s+|private\s+|internal\s+|final\s+|open\s+)*(?:struct|class|enum|protocol|actor|extension)\s+([A-Za-z_][A-Za-z0-9_]*)/ },
+    { kind: "function", regex: /^(?:public\s+|private\s+|internal\s+|static\s+|mutating\s+|override\s+)*func\s+([A-Za-z_][A-Za-z0-9_]*)/ },
+  ];
+  if (language === "python") return [
+    { kind: "type", regex: /^class\s+([A-Za-z_][A-Za-z0-9_]*)/ },
+    { kind: "function", regex: /^(?:async\s+)?def\s+([A-Za-z_][A-Za-z0-9_]*)/ },
+  ];
+  if (language === "rust") return [
+    { kind: "type", regex: /^(?:pub\s+)?(?:struct|enum|trait)\s+([A-Za-z_][A-Za-z0-9_]*)/ },
+    { kind: "function", regex: /^(?:pub\s+)?(?:async\s+)?fn\s+([A-Za-z_][A-Za-z0-9_]*)/ },
+  ];
+  if (language === "go") return [
+    { kind: "type", regex: /^type\s+([A-Za-z_][A-Za-z0-9_]*)/ },
+    { kind: "function", regex: /^func\s+(?:\([^)]*\)\s*)?([A-Za-z_][A-Za-z0-9_]*)/ },
+  ];
+  return [
+    { kind: "type", regex: /^(?:export\s+)?(?:abstract\s+)?(?:class|interface|type|enum)\s+([A-Za-z_$][A-Za-z0-9_$]*)/ },
+    { kind: "function", regex: /^(?:export\s+)?(?:async\s+)?function\s+([A-Za-z_$][A-Za-z0-9_$]*)/ },
+    { kind: "function", regex: /^(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][A-Za-z0-9_$]*)\s*=>/ },
+  ];
+}
+
+function firstMeaningfulLine(content: string): string | undefined {
+  return content.split(/\r?\n/).map((line) => line.trim()).find((line) => line.length > 0)?.slice(0, 180);
+}
+
+function normalizeRelativePath(value: string): string {
+  return value.split(path.sep).join(path.posix.sep);
+}
+
+function stableSearchId(value: string): string {
+  return createHash("sha256").update(value).digest("hex").slice(0, 20);
 }
 
 function hasTable(db: Database.Database, table: string): boolean {
@@ -835,6 +1160,75 @@ function databaseRecordSearchDocument(row: DatabaseRecordRow): SearchDocumentInp
   };
 }
 
+function documentBlocksSearchDocument(row: DatabaseRecordRow, blockRows: DatabaseRecordRow[]): SearchDocumentInput | null {
+  const payload = parseJsonRecord(row.data_json);
+  if (payload.archivedAt || payload.archived_at || payload.deletedAt || payload.deleted_at) return null;
+  const sensitive = isSensitiveRecord(payload) || String(payload.accessLevel ?? "").toUpperCase() === "PRIVATE";
+  const title = typeof payload.title === "string" && payload.title.trim() ? payload.title.trim() : `Document ${row.id}`;
+  const content = [
+    typeof payload.content === "string" ? payload.content : undefined,
+    textFromStructuredContent(payload.contentData),
+  ].filter(Boolean).join("\n");
+  const blocks = blockRows
+    .map((block) => ({ row: block, payload: parseJsonRecord(block.data_json) }))
+    .filter((block) => !block.payload.archivedAt && !block.payload.archived_at && !block.payload.deletedAt && !block.payload.deleted_at)
+    .sort((left, right) => Number(left.payload.position ?? 0) - Number(right.payload.position ?? 0));
+  const blockTexts = blocks.map((block) => textFromStructuredContent(block.payload.content)).filter(Boolean);
+  const body = [title, content, ...blockTexts].filter(Boolean).join("\n");
+  const snippet = sensitive ? "[redacted]" : firstMeaningfulLine([content, ...blockTexts].join("\n")) ?? title;
+  const blockTypes = Array.from(new Set(blocks.map((block) => String(block.payload.type ?? "block"))));
+  return {
+    id: `documents.blocks:${row.namespace_id}:${row.id}`,
+    source: "documents.blocks",
+    domain: "documents",
+    type: "document",
+    resourceId: `${row.namespace_id}:documents:${row.id}`,
+    title,
+    subtitle: [payload.scopeKind, payload.scopeId].filter((value): value is string => typeof value === "string" && value.trim().length > 0).join("/") || row.namespace_id,
+    snippet,
+    body,
+    updatedAt: row.updated_at,
+    metadata: {
+      namespaceId: row.namespace_id,
+      collection: "documents",
+      documentId: row.id,
+      scopeKind: payload.scopeKind ?? null,
+      scopeId: payload.scopeId ?? null,
+      parentDocumentId: payload.parentDocumentId ?? null,
+      accessLevel: payload.accessLevel ?? null,
+      blockCount: blocks.length,
+      blockType: blockTypes,
+      sensitive,
+    },
+    permissions: { canOpen: true, canPreview: !sensitive, redacted: sensitive },
+    rankingHints: {
+      fastPath: 1,
+      structuredDocument: 1,
+      blockCount: Math.min(blocks.length, 50) / 50,
+    },
+    fragments: sensitive ? [] : blocks.slice(0, 50).map((block, index) => {
+      const blockType = String(block.payload.type ?? "block");
+      const text = textFromStructuredContent(block.payload.content) ?? "";
+      return {
+        id: `documents.blocks:${row.namespace_id}:${row.id}:block:${block.row.id}`,
+        title: blockType,
+        body: text,
+        snippet: text.slice(0, 180),
+        sortOrder: Number(block.payload.position ?? index),
+        metadata: {
+          blockId: block.row.id,
+          type: blockType,
+          parentBlockId: block.payload.parentBlockId ?? null,
+        },
+      };
+    }),
+    actions: [
+      { id: "open", kind: "open", label: "Open document", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy document reference", requiresApproval: false },
+    ],
+  };
+}
+
 interface DatabaseRecordRow {
   namespace_id: string;
   collection_name: string;
@@ -842,6 +1236,21 @@ interface DatabaseRecordRow {
   data_json: string;
   created_at: string;
   updated_at: string;
+}
+
+interface CodeFileCandidate {
+  absolutePath: string;
+  extension: string;
+  language: string;
+  updatedAt: string;
+}
+
+interface CodeSearchSymbol {
+  kind: string;
+  title: string;
+  body: string;
+  snippet: string;
+  line: number;
 }
 
 function titleForDatabaseRecord(row: DatabaseRecordRow, payload: Record<string, unknown>): string {
@@ -882,6 +1291,33 @@ function stringifySearchValue(value: unknown): string {
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") return String(value);
   return JSON.stringify(value);
+}
+
+function textFromStructuredContent(value: unknown): string | undefined {
+  const parts: string[] = [];
+  collectStructuredText(value, parts, 0);
+  const text = parts.join(" ").replace(/\s+/g, " ").trim();
+  return text || undefined;
+}
+
+function collectStructuredText(value: unknown, parts: string[], depth: number): void {
+  if (parts.join(" ").length > 8192 || depth > 4 || value === null || value === undefined) return;
+  if (typeof value === "string") {
+    if (value.trim()) parts.push(value.trim());
+    return;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    parts.push(String(value));
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) collectStructuredText(item, parts, depth + 1);
+    return;
+  }
+  if (!isPlainRecord(value)) return;
+  for (const key of ["text", "plainText", "title", "heading", "caption", "alt", "code", "content", "children"]) {
+    if (key in value) collectStructuredText(value[key], parts, depth + 1);
+  }
 }
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {

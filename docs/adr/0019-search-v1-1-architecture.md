@@ -44,9 +44,10 @@ Search V1.1 is built from these layers:
   structured data storage. `search.sqlite` is rebuildable and owns FTS,
   fragments, cursors, tombstones, saved searches, monitors, ranking cache, and
   optional vector data.
-- **Domain fast paths**: `sessions.chats`, `database.records`, and `commands`
-  are initial framework sources. More framework domains are added source by
-  source; global Search must never replace a section-specific fast path.
+- **Domain fast paths**: `sessions.chats`, `database.records`,
+  `documents.blocks`, `code.symbols`, and `commands` are initial framework
+  sources. More framework domains are added source by source; global Search must
+  never replace a section-specific fast path.
 - **Profiles**: `framework` is default. `full` is opt-in and is where native,
   external, web, or broad local sources can be enabled later.
 - **Actions and permissions**: results can expose actions, but execution remains
@@ -85,6 +86,19 @@ The first complete acceptance slice is not "all possible sources"; it is a
 usable framework Root Search with multiple fast sources, CLI/admin controls,
 strict timeout behavior, saved searches, monitors, actions, and no regression to
 conversation-only Clawix search.
+
+The initial code source is bounded to an explicit project root, dependency/build
+directories are skipped, and query-time refresh happens only for code-scoped
+queries. This keeps project/code search available without putting file scanning
+on the hot path for chats, database records, commands, or other sections.
+The initial document source projects `documents` and `document_blocks` records
+from `core.sqlite`, returning documents as section results and blocks as
+fragments.
+
+Search action execution is represented as a brokered host-grants plan. CLI
+dry-runs are safe previews; non-dry-run execution fails closed unless a signed
+host approval id is supplied. Native UI, provider, or system side effects remain
+host-owned.
 
 External/native source indexing, OS-like file search, provider-backed semantic
 embeddings, and physical host validation remain `EXTERNAL PENDING` until the

@@ -410,3 +410,214 @@ test("search rebuild indexes database.records from core.sqlite", async () => {
     assert.deepEqual(sensitiveResult?.fragments ?? [], []);
   });
 });
+
+test("search rebuild indexes documents.blocks from document records", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-documents-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const createDocument = await runCliCapture([
+      "db",
+      "documents",
+      "create",
+      "--data",
+      JSON.stringify({
+        companyId: "company-demo",
+        title: "Implementation Blueprint",
+        content: "Search sections need independent document fast paths.",
+        scopeKind: "project",
+        scopeId: "project-search",
+        accessLevel: "PUBLIC",
+      }),
+      "--json",
+    ], workspaceRoot);
+    assert.equal(createDocument.code, CLI_EXIT_OK);
+    const createDocumentPayload = JSON.parse(createDocument.stdout) as { data: { id: string } };
+    assert.ok(createDocumentPayload.data.id);
+
+    const createBlock = await runCliCapture([
+      "db",
+      "document_blocks",
+      "create",
+      "--data",
+      JSON.stringify({
+        documentId: createDocumentPayload.data.id,
+        type: "paragraph",
+        position: 1,
+        content: { text: "The blueprint includes scoped block search and fast snippets." },
+      }),
+      "--json",
+    ], workspaceRoot);
+    assert.equal(createBlock.code, CLI_EXIT_OK);
+
+    const rebuild = await runCliCapture(["search", "rebuild", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(rebuild.code, CLI_EXIT_OK);
+    const rebuildPayload = JSON.parse(rebuild.stdout) as {
+      data: {
+        sources: string[];
+        pendingSources: string[];
+        indexedBySource: { "documents.blocks": number };
+      };
+    };
+    assert.equal(rebuildPayload.data.sources.includes("documents.blocks"), true);
+    assert.equal(rebuildPayload.data.pendingSources.includes("documents.blocks"), false);
+    assert.equal(rebuildPayload.data.indexedBySource["documents.blocks"], 1);
+
+    const query = await runCliCapture([
+      "search",
+      "query",
+      "scoped block search",
+      "--domains",
+      "documents",
+      "--filters",
+      JSON.stringify({ "metadata.scopeKind": "project", redacted: false }),
+      "--data-dir",
+      dataRoot,
+      "--json",
+      "--limit",
+      "5",
+      "--explain",
+      "true",
+    ], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: {
+        indexedFastPaths: { "documents.blocks": number };
+        results: Array<{
+          source: string;
+          domain: string;
+          type: string;
+          title: string;
+          subtitle?: string;
+          metadata?: { scopeKind?: string; blockCount?: number; blockType?: string[] };
+          permissions?: { redacted?: boolean };
+          actions?: Array<{ id: string; kind: string }>;
+          fragments?: Array<{ title?: string; snippet?: string }>;
+          explanation?: { matchedBy?: string[] };
+        }>;
+        facets?: Array<{ id: string; label: string }>;
+      };
+    };
+    assert.equal(queryPayload.data.indexedFastPaths["documents.blocks"], 1);
+    const result = queryPayload.data.results.find((candidate) => candidate.title === "Implementation Blueprint");
+    assert.equal(result?.source, "documents.blocks");
+    assert.equal(result?.domain, "documents");
+    assert.equal(result?.type, "document");
+    assert.equal(result?.subtitle, "project/project-search");
+    assert.equal(result?.metadata?.scopeKind, "project");
+    assert.equal(result?.metadata?.blockCount, 1);
+    assert.deepEqual(result?.metadata?.blockType, ["paragraph"]);
+    assert.equal(result?.permissions?.redacted, false);
+    assert.equal(result?.actions?.some((action) => action.id === "open" && action.kind === "open"), true);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "paragraph" && fragment.snippet?.includes("scoped block search")), true);
+    assert.ok(result?.explanation?.matchedBy?.length);
+    assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "scopeKind"), true);
+  });
+});
+
+test("search indexes scoped code.symbols without broadening other domains", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-code-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  const sourceRoot = path.join(workspaceRoot, "project");
+  fs.mkdirSync(path.join(sourceRoot, "src"), { recursive: true });
+  fs.writeFileSync(path.join(sourceRoot, "README.md"), [
+    "# Search Adapter Notes",
+    "",
+    "The framework search adapter keeps domain fast paths independent.",
+    "",
+  ].join("\n"));
+  fs.writeFileSync(path.join(sourceRoot, "src", "feature-search.ts"), [
+    "export interface SearchNeedleConfig {",
+    "  enabled: boolean;",
+    "}",
+    "",
+    "export function makeNeedleSymbol(config: SearchNeedleConfig) {",
+    "  return config.enabled ? \"needle-ready\" : \"needle-off\";",
+    "}",
+    "",
+  ].join("\n"));
+
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const rebuild = await runCliCapture(["search", "rebuild", "--data-dir", dataRoot, "--code-root", sourceRoot, "--json"], workspaceRoot);
+    assert.equal(rebuild.code, CLI_EXIT_OK);
+    const rebuildPayload = JSON.parse(rebuild.stdout) as {
+      data: {
+        sources: string[];
+        pendingSources: string[];
+        indexedBySource: { "code.symbols": number };
+      };
+    };
+    assert.equal(rebuildPayload.data.sources.includes("code.symbols"), true);
+    assert.equal(rebuildPayload.data.pendingSources.includes("code.symbols"), false);
+    assert.equal(rebuildPayload.data.indexedBySource["code.symbols"], 2);
+
+    const query = await runCliCapture([
+      "search",
+      "query",
+      "makeNeedleSymbol",
+      "--domains",
+      "code",
+      "--filters",
+      "metadata.language=typescript",
+      "--data-dir",
+      dataRoot,
+      "--code-root",
+      sourceRoot,
+      "--json",
+      "--limit",
+      "5",
+      "--explain",
+      "true",
+    ], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: {
+        indexedFastPaths: { "code.symbols": number };
+        results: Array<{
+          source: string;
+          domain: string;
+          type: string;
+          title: string;
+          path?: string;
+          metadata?: { language?: string; relativePath?: string; symbolCount?: number };
+          actions?: Array<{ id: string; kind: string; requiresApproval?: boolean; grant?: string }>;
+          fragments?: Array<{ title?: string; snippet?: string }>;
+          explanation?: { matchedBy?: string[] };
+        }>;
+        facets?: Array<{ id: string; label: string }>;
+      };
+    };
+    assert.equal(queryPayload.data.indexedFastPaths["code.symbols"], 2);
+    const result = queryPayload.data.results.find((candidate) => candidate.title === "feature-search.ts");
+    assert.equal(result?.source, "code.symbols");
+    assert.equal(result?.domain, "code");
+    assert.equal(result?.type, "file");
+    assert.equal(result?.metadata?.language, "typescript");
+    assert.equal(result?.metadata?.relativePath, "src/feature-search.ts");
+    assert.equal(result?.metadata?.symbolCount, 2);
+    assert.equal(result?.path, path.join(sourceRoot, "src", "feature-search.ts"));
+    assert.equal(result?.actions?.some((action) => action.id === "open" && action.requiresApproval === true && action.grant === "search.code.open"), true);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "function makeNeedleSymbol" && fragment.snippet?.includes("makeNeedleSymbol")), true);
+    assert.ok(result?.explanation?.matchedBy?.length);
+    assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "language"), true);
+
+    const chatOnly = await runCliCapture(["search", "query", "makeNeedleSymbol", "--domains", "sessions", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(chatOnly.code, CLI_EXIT_DEGRADED);
+    const chatOnlyPayload = JSON.parse(chatOnly.stdout) as {
+      data: { indexedFastPaths: Record<string, number>; results: unknown[] };
+    };
+    assert.equal("code.symbols" in chatOnlyPayload.data.indexedFastPaths, false);
+    assert.deepEqual(chatOnlyPayload.data.results, []);
+  });
+});
