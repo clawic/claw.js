@@ -174,7 +174,7 @@ claw attachments create "Spec" --entity-type task --entity-id task-123 --uri fil
 claw saved-views create "Upcoming" --domain tasks
 claw custom-fields create "Story points" --entity-type task --field-type number
 claw field-values create field-123 --entity-type task --entity-id task-123 --value 3
-claw milestones create "CLI beta" --project-id project-123
+claw milestones create "CLI launch" --project-id project-123
 claw activity list --task-id task-123
 claw blockers create "Waiting on approval" --kind policy_block --task-id task-123
 claw artifacts create "Staging screenshot" --kind screenshot --task-id task-123

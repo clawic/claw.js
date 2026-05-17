@@ -621,7 +621,7 @@ test("workspace productivity schemas validate linked records and search queries"
     createdAt: "2026-03-21T10:00:00.000Z",
     updatedAt: "2026-03-21T10:00:00.000Z",
     source: { kind: "local" },
-    title: "CLI beta",
+    title: "CLI launch",
     status: "active",
     areaId: "area-1",
     projectId: "project-1",

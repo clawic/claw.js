@@ -254,7 +254,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
   assert.equal(await runCli([
     "milestones",
     "create",
-    "CLI beta",
+    "CLI launch",
     "--status", "active",
     "--area-id", area.id,
     "--project-id", project.id,
@@ -281,7 +281,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     "--goal-id", goal.id,
     "--estimate-minutes", "45",
     "--blocked-reason", "waiting on release notes",
-    "--checklist-json", '[{"text":"cut release"},{"text":"announce beta","completed":true}]',
+    "--checklist-json", '[{"text":"cut release"},{"text":"announce launch","completed":true}]',
     "--json",
   ], {
     stdout: taskStdout.stream,

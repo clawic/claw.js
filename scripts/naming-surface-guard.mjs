@@ -540,6 +540,10 @@ for (const snippet of [
 
 forbidSnippet("docs/adr/0001-naming-and-stability-surfaces.md", "\n- `signals`\n");
 forbidSnippet("docs/naming-style-guide.md", "or `signals` surfaces");
+forbidSnippet("docs/workspace.md", "CLI beta");
+forbidSnippet("packages/clawjs-core/src/index.test.ts", "CLI beta");
+forbidSnippet("packages/clawjs/src/index-productivity.test.ts", "CLI beta");
+forbidSnippet("packages/clawjs/src/index-productivity.test.ts", "announce beta");
 
 const cliPackage = readJson("packages/clawjs/package.json");
 const cliBinKeys = Object.keys(cliPackage.bin ?? {}).sort();
