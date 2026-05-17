@@ -1695,6 +1695,7 @@ The docs check script validates that every current export from
     FLOW_FAMILY
     FREELANCE_CONSUMER_FAMILY
     GARDEN_FAMILY
+    GOVERNMENT_FAMILY
     getBuiltinCollection
     GoalRecord
     goalRecordSchema
@@ -2521,6 +2522,7 @@ The docs check script validates that every current export from
     createNodeTrustDecision
     createRemoteClientCacheSnapshot
     createRemoteCompatibilityAdapterReceipt
+    createRemoteAgentServiceExecutionReceipt
     createRemoteSecretProviderReceipt
     createSyncResourceManifest
     createTransportHandshakeReceipt
@@ -2558,6 +2560,8 @@ The docs check script validates that every current export from
     remoteAgentServiceBudgetSchema
     RemoteAgentServiceDecision
     remoteAgentServiceDecisionSchema
+    RemoteAgentServiceExecutionReceipt
+    remoteAgentServiceExecutionReceiptSchema
     RemoteAgentServiceRequest
     remoteAgentServiceRequestSchema
     RemoteOfflineCommandResult
