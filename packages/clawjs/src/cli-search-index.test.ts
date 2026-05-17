@@ -1395,6 +1395,185 @@ test("generations create and delete schedule Search artifact events", async () =
   });
 });
 
+test("image create and delete schedule Search image events", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-image-events-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  const scriptPath = createFakeGenerationScript();
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const registered = await runCliCapture([
+      "generations",
+      "register-command",
+      "--workspace",
+      workspaceRoot,
+      "--id",
+      "fake-image",
+      "--label",
+      "Fake Image",
+      "--kinds",
+      "image",
+      "--command",
+      scriptPath,
+      "--args-json",
+      "[\"--out\",\"{outputPath}\"]",
+      "--ext",
+      "png",
+      "--json",
+    ], workspaceRoot);
+    assert.equal(registered.code, CLI_EXIT_OK);
+
+    const created = await runCliCapture([
+      "image",
+      "create",
+      "--workspace",
+      workspaceRoot,
+      "--data-dir",
+      dataRoot,
+      "--backend",
+      "fake-image",
+      "--prompt",
+      "evented image search artifact",
+      "--json",
+    ], workspaceRoot);
+    assert.equal(created.code, CLI_EXIT_OK);
+    const createdPayload = JSON.parse(created.stdout) as { data: { id: string } };
+    assert.match(createdPayload.data.id, /^img-/);
+
+    const upsertJobs = await runCliCapture(["search", "jobs", "--source", "images.derived", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(upsertJobs.code, CLI_EXIT_OK);
+    const upsertJobsPayload = JSON.parse(upsertJobs.stdout) as {
+      data: { items: Array<{ source: string; operation: string; resourceId: string; shard: string; payload: { eventDriven?: boolean; imageId?: string } }> };
+    };
+    const upsertJob = upsertJobsPayload.data.items.find((job) => job.resourceId === createdPayload.data.id && job.operation === "upsert");
+    assert.equal(upsertJob?.source, "images.derived");
+    assert.equal(upsertJob?.shard, "hot");
+    assert.equal(upsertJob?.payload.eventDriven, true);
+    assert.equal(upsertJob?.payload.imageId, createdPayload.data.id);
+
+    const deleted = await runCliCapture([
+      "image",
+      "delete",
+      "--workspace",
+      workspaceRoot,
+      "--data-dir",
+      dataRoot,
+      "--id",
+      createdPayload.data.id,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(deleted.code, CLI_EXIT_OK);
+
+    const deleteJobs = await runCliCapture(["search", "jobs", "--source", "images.derived", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleteJobs.code, CLI_EXIT_OK);
+    const deleteJobsPayload = JSON.parse(deleteJobs.stdout) as {
+      data: { items: Array<{ operation: string; priority: number; resourceId: string; payload: { eventDriven?: boolean; imageId?: string } }> };
+    };
+    const deleteJob = deleteJobsPayload.data.items.find((job) => job.resourceId === createdPayload.data.id && job.operation === "delete");
+    assert.equal(deleteJob?.priority, 80);
+    assert.equal(deleteJob?.payload.eventDriven, true);
+    assert.equal(deleteJob?.payload.imageId, createdPayload.data.id);
+  });
+});
+
+test("typed media generation schedules Search media asset events", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-media-events-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  const scriptPath = createFakeGenerationScript();
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const registered = await runCliCapture([
+      "generations",
+      "register-command",
+      "--workspace",
+      workspaceRoot,
+      "--id",
+      "fake-audio",
+      "--label",
+      "Fake Audio",
+      "--kinds",
+      "audio",
+      "--command",
+      scriptPath,
+      "--args-json",
+      "[\"--out\",\"{outputPath}\"]",
+      "--ext",
+      "mp3",
+      "--json",
+    ], workspaceRoot);
+    assert.equal(registered.code, CLI_EXIT_OK);
+
+    const created = await runCliCapture([
+      "audio",
+      "generate",
+      "--workspace",
+      workspaceRoot,
+      "--data-dir",
+      dataRoot,
+      "--backend",
+      "fake-audio",
+      "--prompt",
+      "evented audio search asset",
+      "--json",
+    ], workspaceRoot);
+    assert.equal(created.code, CLI_EXIT_OK);
+    const createdPayload = JSON.parse(created.stdout) as { data: { id: string } };
+    assert.match(createdPayload.data.id, /^gen-/);
+
+    const generationJobs = await runCliCapture(["search", "jobs", "--source", "generations.artifacts", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(generationJobs.code, CLI_EXIT_OK);
+    const generationJobsPayload = JSON.parse(generationJobs.stdout) as {
+      data: { items: Array<{ operation: string; resourceId: string; payload: { eventDriven?: boolean; generationId?: string } }> };
+    };
+    const generationJob = generationJobsPayload.data.items.find((job) => job.resourceId === createdPayload.data.id && job.operation === "upsert");
+    assert.equal(generationJob?.payload.eventDriven, true);
+    assert.equal(generationJob?.payload.generationId, createdPayload.data.id);
+
+    const mediaJobs = await runCliCapture(["search", "jobs", "--source", "media.assets", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(mediaJobs.code, CLI_EXIT_OK);
+    const mediaJobsPayload = JSON.parse(mediaJobs.stdout) as {
+      data: { items: Array<{ operation: string; resourceId: string; shard: string; payload: { eventDriven?: boolean; mediaId?: string } }> };
+    };
+    const mediaJob = mediaJobsPayload.data.items.find((job) => job.operation === "upsert");
+    assert.match(mediaJob?.resourceId ?? "", /^media-/);
+    assert.equal(mediaJob?.shard, "hot");
+    assert.equal(mediaJob?.payload.eventDriven, true);
+    assert.equal(mediaJob?.payload.mediaId, mediaJob?.resourceId);
+
+    const deleted = await runCliCapture([
+      "audio",
+      "delete",
+      "--workspace",
+      workspaceRoot,
+      "--data-dir",
+      dataRoot,
+      "--id",
+      createdPayload.data.id,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(deleted.code, CLI_EXIT_OK);
+
+    const deletedMediaJobs = await runCliCapture(["search", "jobs", "--source", "media.assets", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deletedMediaJobs.code, CLI_EXIT_OK);
+    const deletedMediaJobsPayload = JSON.parse(deletedMediaJobs.stdout) as {
+      data: { items: Array<{ operation: string; priority: number; resourceId: string; payload: { eventDriven?: boolean; mediaId?: string } }> };
+    };
+    const deletedMediaJob = deletedMediaJobsPayload.data.items.find((job) => job.resourceId === mediaJob?.resourceId && job.operation === "delete");
+    assert.equal(deletedMediaJob?.priority, 80);
+    assert.equal(deletedMediaJob?.payload.eventDriven, true);
+    assert.equal(deletedMediaJob?.payload.mediaId, mediaJob?.resourceId);
+  });
+});
+
 test("search rebuild can refresh one source without clearing sibling fast paths", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-scoped-rebuild-"));
   const dataRoot = path.join(workspaceRoot, "data");

@@ -8,7 +8,7 @@ import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from
 import { parseCsvFlag, parseJsonFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
 import { createCliClaw } from "./cli-claw-factory.ts";
-import { scheduleGenerationArtifactSearchEvent } from "./cli-search-events.ts";
+import { scheduleGenerationArtifactSearchEvent, scheduleImageDerivedSearchEvent, scheduleMediaAssetSearchEvent } from "./cli-search-events.ts";
 import { parseRuleHints } from "./cli-rule-utils.ts";
 import { parseImageOperation, parseImageProvenance, parseImageType } from "./cli-image-parsers.ts";
 import { buildImageSharedInput, buildMediaListInput, buildMediaMetadata } from "./cli-media-utils.ts";
@@ -34,6 +34,69 @@ type CliMediaClaw = ClawInstance & {
 
 function searchEventDataDir(workspaceRoot: string, flags: Record<string, string>): string {
   return path.resolve(flags["data-dir"] ?? path.join(workspaceRoot, ".claw", "data"));
+}
+
+function scheduleImageRecordSearchEvent(input: {
+  operation: "upsert" | "delete";
+  imageId: string;
+  workspaceRoot: string;
+  flags: Record<string, string>;
+}): void {
+  scheduleImageDerivedSearchEvent({
+    operation: input.operation,
+    imageId: input.imageId,
+    dataDir: searchEventDataDir(input.workspaceRoot, input.flags),
+    flags: input.flags,
+  });
+}
+
+function scheduleGenerationRecordSearchEvent(input: {
+  operation: "upsert" | "delete";
+  generationId: string;
+  workspaceRoot: string;
+  flags: Record<string, string>;
+  mediaIds?: string[];
+}): void {
+  const dataDir = searchEventDataDir(input.workspaceRoot, input.flags);
+  scheduleGenerationArtifactSearchEvent({
+    operation: input.operation,
+    generationId: input.generationId,
+    dataDir,
+    flags: input.flags,
+  });
+  const mediaIds = input.mediaIds ?? mediaIdsForGeneration(input.workspaceRoot, input.generationId);
+  for (const mediaId of mediaIds) {
+    scheduleMediaAssetSearchEvent({
+      operation: input.operation,
+      mediaId,
+      dataDir,
+      flags: input.flags,
+    });
+  }
+}
+
+function mediaIdsForGeneration(workspaceRoot: string, generationId: string): string[] {
+  const dir = path.join(workspaceRoot, ".claw", "data", "collections", "media");
+  let entries: fs.Dirent[];
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  const ids: string[] = [];
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
+    try {
+      const parsed = JSON.parse(fs.readFileSync(path.join(dir, entry.name), "utf8")) as unknown;
+      if (!parsed || typeof parsed !== "object") continue;
+      const record = parsed as Record<string, unknown>;
+      if (record.sourceId !== generationId) continue;
+      if (typeof record.mediaId === "string" && record.mediaId) ids.push(record.mediaId);
+    } catch {
+      continue;
+    }
+  }
+  return ids.sort();
 }
 
 function resolveMediaCanonicalCommand(group: string | undefined, mediaGroup: GenerationCliMediaKind | null): string {
@@ -554,6 +617,7 @@ if (group === "image" && command === "create") {
     mimeType: flags["mime-type"],
     allowEnvCredentials: readBooleanFlag(argv, flags, "allow-env-credentials", false),
   });
+  scheduleImageRecordSearchEvent({ operation: "upsert", imageId: record.id, workspaceRoot, flags });
   if (wantsJson) {
     writeMediaJson(record);
   } else {
@@ -584,6 +648,7 @@ if (group === "image" && command === "edit") {
     mimeType: flags["mime-type"],
     allowEnvCredentials: readBooleanFlag(argv, flags, "allow-env-credentials", false),
   });
+  scheduleImageRecordSearchEvent({ operation: "upsert", imageId: record.id, workspaceRoot, flags });
   if (wantsJson) {
     writeMediaJson(record);
   } else {
@@ -612,6 +677,7 @@ if (group === "image" && command === "import") {
     backendId: flags.backend,
     backendLabel: flags["backend-label"],
   });
+  scheduleImageRecordSearchEvent({ operation: "upsert", imageId: record.id, workspaceRoot, flags });
   if (wantsJson) {
     writeMediaJson(record);
   } else {
@@ -656,6 +722,7 @@ if (mediaGroup && command === "generate") {
       mimeType: flags["mime-type"],
       allowEnvCredentials: readBooleanFlag(argv, flags, "allow-env-credentials", false),
     });
+    scheduleImageRecordSearchEvent({ operation: "upsert", imageId: record.id, workspaceRoot, flags });
     if (wantsJson) {
       writeMediaJson(record);
     } else {
@@ -682,6 +749,7 @@ if (mediaGroup && command === "generate") {
     outputExtension: flags.ext,
     mimeType: flags["mime-type"],
   });
+  scheduleGenerationRecordSearchEvent({ operation: "upsert", generationId: record.id, workspaceRoot, flags });
   if (wantsJson) {
     writeMediaJson(record);
   } else {
@@ -750,7 +818,15 @@ if (mediaGroup && command === "delete") {
     return CLI_EXIT_USAGE;
   }
   const { media } = await getTypedGenerationFacade(mediaGroup);
+  const mediaIds = mediaGroup === "image" ? [] : mediaIdsForGeneration(workspaceRoot, id);
   const removed = media.remove(id);
+  if (removed) {
+    if (mediaGroup === "image") {
+      scheduleImageRecordSearchEvent({ operation: "delete", imageId: id, workspaceRoot, flags });
+    } else {
+      scheduleGenerationRecordSearchEvent({ operation: "delete", generationId: id, workspaceRoot, flags, mediaIds });
+    }
+  }
   if (wantsJson) {
     writeMediaJson({ removed, id });
   } else {
@@ -834,12 +910,7 @@ if (group === "generations" && command === "create") {
     outputExtension: flags.ext,
     mimeType: flags["mime-type"],
   });
-  scheduleGenerationArtifactSearchEvent({
-    operation: "upsert",
-    generationId: record.id,
-    dataDir: searchEventDataDir(workspaceRoot, flags),
-    flags,
-  });
+  scheduleGenerationRecordSearchEvent({ operation: "upsert", generationId: record.id, workspaceRoot, flags });
   if (wantsJson) {
     writeMediaJson(record);
   } else {
@@ -887,14 +958,10 @@ if (group === "generations" && command === "delete") {
     return CLI_EXIT_USAGE;
   }
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+  const mediaIds = mediaIdsForGeneration(workspaceRoot, id);
   const removed = claw.generations.remove(id);
   if (removed) {
-    scheduleGenerationArtifactSearchEvent({
-      operation: "delete",
-      generationId: id,
-      dataDir: searchEventDataDir(workspaceRoot, flags),
-      flags,
-    });
+    scheduleGenerationRecordSearchEvent({ operation: "delete", generationId: id, workspaceRoot, flags, mediaIds });
   }
   if (wantsJson) {
     writeMediaJson({ removed, id });

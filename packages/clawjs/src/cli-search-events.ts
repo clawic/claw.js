@@ -83,6 +83,46 @@ export function scheduleGenerationArtifactSearchEvent(input: {
   });
 }
 
+export function scheduleImageDerivedSearchEvent(input: {
+  operation: "upsert" | "delete";
+  imageId: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  return scheduleSearchIndexEvent({
+    source: "images.derived",
+    operation: input.operation,
+    resourceId: input.imageId,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      imageId: input.imageId,
+    },
+  });
+}
+
+export function scheduleMediaAssetSearchEvent(input: {
+  operation: "upsert" | "delete";
+  mediaId: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  return scheduleSearchIndexEvent({
+    source: "media.assets",
+    operation: input.operation,
+    resourceId: input.mediaId,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      mediaId: input.mediaId,
+    },
+  });
+}
+
 export function scheduleSearchIndexEvent(input: {
   source: string;
   operation: "upsert" | "delete";
