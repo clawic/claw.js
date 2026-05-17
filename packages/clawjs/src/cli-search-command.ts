@@ -2547,6 +2547,34 @@ function ensureSkillsRegistryResourceIndexed(store: SearchStore, flags: Record<s
   }
 }
 
+function ensureSnippetsLibraryResourceIndexed(store: SearchStore, flags: Record<string, string>, slug: string): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) return 0;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "snippets")) return 0;
+    const row = db.prepare(`
+      SELECT id, slug, kind, title, body, shortcut, scope_json, skill_refs_json, metadata_json, created_at, updated_at
+      FROM snippets
+      WHERE slug = ?
+      LIMIT 1
+    `).get(slug) as SnippetLibraryRow | undefined;
+    if (!row) {
+      store.tombstone({ source: "snippets.library", resourceId: slug, reason: "snippet missing during Search event refresh" });
+      return 1;
+    }
+    store.upsertDocument(snippetLibrarySearchDocument(row));
+    store.setSourceState("snippets.library", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 1;
+  } finally {
+    db.close();
+  }
+}
+
 function ensureConnectorsCatalogSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
   const dbPath = resolveMainDbPath(flags);
   if (!fs.existsSync(dbPath)) {
