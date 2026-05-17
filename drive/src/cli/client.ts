@@ -1,1 +1,1 @@
-export { DriveApiClient, DriveApiError, type DriveClientOptions } from "../sdk/client.ts";
+export { DriveApiClient } from "../sdk/client.ts";

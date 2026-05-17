@@ -4,7 +4,7 @@ import { SignJWT, jwtVerify } from "jose";
 
 import type { DriveOperation } from "../shared/types.ts";
 
-export interface AdminClaims {
+interface AdminClaims {
   kind: "admin";
   sub: string;
   email: string;

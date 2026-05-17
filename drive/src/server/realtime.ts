@@ -12,7 +12,6 @@ import type {
 import type { DriveStore } from "./db.ts";
 import type {
   DriveRealtimeEvent,
-  DriveRealtimeEventKind,
   DriveRealtimeSubscriptionFilter,
 } from "../shared/types.ts";
 
@@ -175,6 +174,3 @@ export async function registerRealtime(options: RegisterRealtimeOptions): Promis
     bus.stop();
   });
 }
-
-export type { Client, Subscription };
-export type { DriveRealtimeEvent, DriveRealtimeEventKind } from "../shared/types.ts";
