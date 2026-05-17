@@ -1119,6 +1119,10 @@ The docs check script validates that every current export from
     AGENCY_MODES
     AgencyMode
     AgentAccessRequest
+    AgentActivityFeed
+    AgentActivityFeedInput
+    AgentActivityFeedItem
+    AgentActivityFeedItemKind
     AGENT_ASSIGNMENT_KINDS
     AgentAssignmentKind
     AgentAssignmentPrivacyPolicy
@@ -1554,6 +1558,7 @@ The docs check script validates that every current export from
     EffectiveAccessPolicy
     EffectPreview
     effectPreviewSchema
+    createAgentActivityFeed
     createAgentAuditEvent
     createAgentConfigRevision
     createAgentIncident
