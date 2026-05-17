@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   assertClawDenseDataOsRegistryComplete,
+  BUILTIN_COLLECTIONS_BY_NAME,
   clawDenseDataIntentStatuses,
   clawDenseDataOsRegistry,
   findClawDenseDataSystem,
@@ -125,6 +126,44 @@ test("dense data OS keeps ERP as an orchestrator over shared collections, not a 
   assert.equal(erp.orchestrator, true);
   assert.ok(erp.notes.includes("not a supercollection"));
   assert.ok(erp.sharedEngines.includes("finance_accounting"));
+});
+
+test("dense data OS graduated centers point at canonical built-in collections without duplicate systems", () => {
+  const expectedCollections: Record<string, string> = {
+    "health.patient": "patients",
+    "health.medication": "medications",
+    "health.symptom": "symptom_logs",
+    "research.study": "studies",
+    "research.participant": "participants",
+    "biology.organism": "organisms",
+    "biology.experiment": "biology_experiments",
+    "labs.sample": "samples",
+    "labs.assay": "assays",
+    "legal.case": "legal_cases",
+    "erp.company": "companies",
+    "erp.invoice": "invoices",
+    "erp.payment": "payment_intents",
+    "crm.account": "accounts",
+    "crm.deal": "deals",
+    "finance.accounting_entity": "financial_accounts",
+    "finance.transaction": "transactions",
+    "education.learner": "learners",
+    "education.course": "courses",
+    "manufacturing.work_order": "work_orders",
+    "ops.service": "services",
+    "ops.incident": "incidents",
+  };
+
+  for (const [key, collectionName] of Object.entries(expectedCollections)) {
+    const [systemId, centerId] = key.split(".");
+    const center = findClawDenseDataSystem(systemId)?.centers.find((entry) => entry.id === centerId);
+    assert.equal(center?.collectionName, collectionName, `${key} must point at ${collectionName}`);
+    assert.ok(BUILTIN_COLLECTIONS_BY_NAME.has(collectionName), `${collectionName} must be a built-in collection`);
+  }
+
+  const analyticsExperiment = BUILTIN_COLLECTIONS_BY_NAME.get("experiments");
+  assert.equal(analyticsExperiment?.family, "analytics");
+  assert.equal(findClawDenseDataSystem("biology")?.centers.find((entry) => entry.id === "experiment")?.collectionName, "biology_experiments");
 });
 
 test("dense data OS roadmap keeps the wider catalog visible before pack graduation", () => {

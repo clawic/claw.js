@@ -365,6 +365,7 @@ function getPrimaryField(collectionName: string): string {
     case "learners":
       return "displayName";
     case "samples":
+    case "organisms":
       return "label";
     case "symptom_logs":
       return "symptom";
@@ -435,6 +436,12 @@ function applyDefaults(collectionName: string, payload: Record<string, unknown>,
       break;
     case "samples":
       payload.status ??= "collected";
+      break;
+    case "organisms":
+      payload.status ??= "active";
+      break;
+    case "biology_experiments":
+      payload.status ??= "planned";
       break;
     case "assays":
       payload.status ??= "ordered";

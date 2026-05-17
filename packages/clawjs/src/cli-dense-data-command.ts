@@ -131,6 +131,15 @@ function denseDbFlags(flags: Record<string, string>, collectionName: string): Re
   if (collectionName === "assays" && flags.sample && !flags["sample-id"]) {
     nextFlags = { ...nextFlags, "sample-id": flags.sample };
   }
+  if (collectionName === "biology_experiments" && flags.organism && !flags["organism-id"]) {
+    nextFlags = { ...nextFlags, "organism-id": flags.organism };
+  }
+  if (collectionName === "samples" && flags.experiment && !flags["biology-experiment-id"]) {
+    nextFlags = { ...nextFlags, "biology-experiment-id": flags.experiment };
+  }
+  if (collectionName === "samples" && flags.organism && !flags["organism-id"]) {
+    nextFlags = { ...nextFlags, "organism-id": flags.organism };
+  }
   return nextFlags;
 }
 
@@ -171,6 +180,14 @@ function nestedDenseDbRoute(input: DenseDataCliInput): Parameters<typeof runMagi
       cohorts: "participants",
     },
   }) ?? nestedParentDbRoute(input, {
+    parentCommand: "experiment",
+    relationFlag: "biology-experiment-id",
+    relationField: "biologyExperimentId",
+    collections: {
+      sample: "samples",
+      samples: "samples",
+    },
+  }) ?? nestedParentDbRoute(input, {
     parentCommand: "sample",
     relationFlag: "sample-id",
     relationField: "sampleId",
@@ -200,9 +217,10 @@ function nestedParentDbRoute(input: DenseDataCliInput, config: {
   const dbAction = action === "add" ? "create" : action;
   if (!CRUD_ACTIONS.has(action) || dbAction === "purge") return null;
 
-  const flags = dbAction === "create"
+  const routeFlags = dbAction === "create"
     ? { ...input.flags, [config.relationFlag]: input.flags[config.relationFlag] ?? patientId }
     : { ...input.flags, filter: input.flags.filter ?? JSON.stringify({ [config.relationField]: patientId }) };
+  const flags = denseDbFlags(routeFlags, collectionName);
 
   return {
     argv: input.argv,

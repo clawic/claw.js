@@ -14,6 +14,8 @@ export const SAMPLES: BuiltinCollectionDefinition = {
   fields: [
     { name: "label", type: "text", required: true, requiredReason: "identity", aliases: ["name", "sampleLabel"] },
     { name: "studyId", type: "relation", relation: { collectionName: "studies" } },
+    { name: "biologyExperimentId", type: "relation", relation: { collectionName: "biology_experiments" }, aliases: ["experimentId", "biologyExperiment"] },
+    { name: "organismId", type: "relation", relation: { collectionName: "organisms" } },
     { name: "patientId", type: "relation", relation: { collectionName: "patients" } },
     { name: "participantId", type: "relation", relation: { collectionName: "participants" } },
     { name: "sampleType", type: "text" },
@@ -30,6 +32,8 @@ export const SAMPLES: BuiltinCollectionDefinition = {
   indexes: [
     { name: "samples_label_idx", fields: ["label"] },
     { name: "samples_study_idx", fields: ["studyId"] },
+    { name: "samples_biology_experiment_idx", fields: ["biologyExperimentId"] },
+    { name: "samples_organism_idx", fields: ["organismId"] },
     { name: "samples_patient_idx", fields: ["patientId"] },
     { name: "samples_participant_idx", fields: ["participantId"] },
     { name: "samples_status_idx", fields: ["status"] },

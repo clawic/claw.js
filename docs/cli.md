@@ -581,6 +581,9 @@ claw course create "Intro Biology" --json
 claw work-order create "Batch 42" --company company_123 --json
 claw financial-account create "Operating Account" --json
 claw transaction create Lunch --account financial_account_123 --amount-cents 1200 --json
+claw organism create "Mouse A" --species "Mus musculus" --json
+claw experiment create "Dose response" --organism organism_123 --json
+claw experiment experiment_123 samples add "Exp sample 1" --organism organism_123 --json
 claw travel --help
 claw career --help
 claw family --help

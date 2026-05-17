@@ -269,6 +269,31 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(transactionPayload.data.currency, "USD");
   assert.equal(typeof transactionPayload.data.postedAt, "string");
 
+  const organismCreate = await runCliCapture(["organism", "create", "Mouse A", "--species", "Mus musculus", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(organismCreate.code, CLI_EXIT_OK);
+  const organismPayload = JSON.parse(organismCreate.stdout) as { data: { id: string; label: string; species: string; status: string }; meta: { collection: string; action: string } };
+  assert.equal(organismPayload.meta.collection, "organisms");
+  assert.equal(organismPayload.data.label, "Mouse A");
+  assert.equal(organismPayload.data.species, "Mus musculus");
+  assert.equal(organismPayload.data.status, "active");
+
+  const experimentCreate = await runCliCapture(["experiment", "create", "Dose response", "--organism", organismPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(experimentCreate.code, CLI_EXIT_OK);
+  const experimentPayload = JSON.parse(experimentCreate.stdout) as { data: { id: string; title: string; organismId: string; status: string }; meta: { collection: string; action: string } };
+  assert.equal(experimentPayload.meta.collection, "biology_experiments");
+  assert.equal(experimentPayload.data.title, "Dose response");
+  assert.equal(experimentPayload.data.organismId, organismPayload.data.id);
+  assert.equal(experimentPayload.data.status, "planned");
+
+  const experimentSample = await runCliCapture(["experiment", experimentPayload.data.id, "samples", "add", "Exp sample 1", "--organism", organismPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(experimentSample.code, CLI_EXIT_OK);
+  const experimentSamplePayload = JSON.parse(experimentSample.stdout) as { data: { label: string; biologyExperimentId: string; organismId: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(experimentSamplePayload.meta.invokedCommand, "experiment");
+  assert.equal(experimentSamplePayload.meta.collection, "samples");
+  assert.equal(experimentSamplePayload.data.label, "Exp sample 1");
+  assert.equal(experimentSamplePayload.data.biologyExperimentId, experimentPayload.data.id);
+  assert.equal(experimentSamplePayload.data.organismId, organismPayload.data.id);
+
 });
 
 test("runCli searches the registered CLI discovery surface", async () => {

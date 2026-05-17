@@ -221,8 +221,8 @@ export const clawDenseDataOsRegistry: ClawDenseDataOsRegistry = {
       sensitivityDefault: "high",
       sharedEngines: ["evidence_provenance", "quality_gap", "relation_graph", "semantic_view", "intent_coverage", "vocabulary_unit", "instrument_response", "timeline"],
       centers: [
-        center("organism", "Organism", "organism", undefined, "Biological entity center for samples, assays, observations, and datasets."),
-        center("experiment", "Experiment", "experiment", undefined, "Experimental workflow center shared with ELN/LIMS style data."),
+        center("organism", "Organism", "organism", undefined, "Biological entity center for samples, assays, observations, and datasets.", undefined, "organisms"),
+        center("experiment", "Experiment", "experiment", undefined, "Experimental workflow center shared with ELN/LIMS style data.", ["experiments", "biology-experiment", "biology-experiments"], "biology_experiments"),
       ],
       commandPatterns: ["claw biology overview|gaps|intents", "claw experiment list|get|create|update|query", "claw organism list|get|create|query"],
       operations: [operation("experiment.timeline", "Read experiment timeline", ["claw experiment <id> timeline"], ["experiment", "sample", "assay", "evidence_source"])],

@@ -117,7 +117,10 @@ labs, education, and manufacturing now follow the same rule: `study create`,
 `sample <id> assays add`, `learner create`, `course create`, and
 `work-order create` execute against canonical collections. Finance/accounting
 also has executable centers for `financial-account create` and
-`transaction create --account <id>`. Dense routes
+`transaction create --account <id>`. Biology is backed by distinct biological
+collections rather than analytics A/B-test experiments: `organism create`,
+`experiment create --organism <id>`, and
+`experiment <id> samples add --organism <id>` route to canonical records. Dense routes
 that are known but not graduated still return a degraded response with an
 explicit `workflow_gap` until their canonical collections, schemas, relations,
 quality gaps, and DB smoke tests are connected.
