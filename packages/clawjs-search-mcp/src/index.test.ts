@@ -310,6 +310,62 @@ test("Search MCP schedules compacted event-driven indexing jobs", () => {
   }
 });
 
+test("Search MCP query records sensitive audit events", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-mcp-audit-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "documents.blocks",
+      domain: "documents",
+      name: "Documents",
+      resultTypes: ["document"],
+    }));
+    store.upsertDocument({
+      id: "documents.blocks:secret",
+      source: "documents.blocks",
+      domain: "documents",
+      type: "document",
+      title: "Private token rotation",
+      body: "secret token rotation notes",
+      permissions: { redacted: true, canPreview: false },
+    });
+
+    const tools = createSearchMcpTools(store);
+    const queryTool = tools.find((tool) => tool.name === "search.query");
+    assert.ok(queryTool);
+    const output = queryTool.handler({
+      query: "secret token",
+      domains: ["documents"],
+      actor: "agent:test",
+      surface: "mcp",
+    }) as { results: Array<{ id: string; snippet?: string; permissions?: { redacted?: boolean } }> };
+    assert.equal(output.results[0]?.id, "documents.blocks:secret");
+    assert.equal(output.results[0]?.permissions?.redacted, true);
+
+    const auditTool = tools.find((tool) => tool.name === "search.audit.list");
+    assert.ok(auditTool);
+    const audit = auditTool.handler({ type: "sensitive_query" }) as Array<{
+      type: string;
+      actor?: string;
+      surface?: string;
+      query?: string;
+      reason?: string;
+      metadata?: { resultCount?: number; redactedResultCount?: number; domains?: string[] };
+    }>;
+    assert.equal(audit[0]?.type, "sensitive_query");
+    assert.equal(audit[0]?.actor, "agent:test");
+    assert.equal(audit[0]?.surface, "mcp");
+    assert.equal(audit[0]?.query, "secret token");
+    assert.equal(audit[0]?.reason, "sensitive_query_or_redacted_result");
+    assert.equal(audit[0]?.metadata?.resultCount, 1);
+    assert.equal(audit[0]?.metadata?.redactedResultCount, 1);
+    assert.deepEqual(audit[0]?.metadata?.domains, ["documents"]);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("Search MCP action execution returns brokered plans and audit records", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-mcp-actions-"));
   const store = new SearchStore(path.join(dir, "search.sqlite"));

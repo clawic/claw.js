@@ -464,7 +464,9 @@ Search writes audit events into `search.sqlite` for action execution attempts
 and sensitive queries. A query is audited when it asks for sensitive material
 or returns redacted results. Action audit entries include source, domain, result
 id, action id, risk, grant, approval status, and compact metadata. `claw search
-audit` lists those derived records for admin/debug surfaces.
+audit` and Search MCP `search.audit.list` list those derived records for
+admin/debug surfaces. MCP `search.query` applies the same local sensitive-query
+audit rule as the CLI.
 
 `@clawjs/search-mcp` exposes the same Search sidecar directly through
 `@clawjs/search`; it does not depend on the legacy Index package and publishes

@@ -80,7 +80,7 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
           surface: { type: "string" },
         },
       },
-      handler: (p) => store.query(searchQueryFromParams(p)),
+      handler: (p) => handleSearchQueryTool(store, p),
     },
     {
       name: "search.embeddings.create",
@@ -438,6 +438,31 @@ function searchQueryFromParams(params: Record<string, unknown>): SearchQueryInpu
   };
 }
 
+function handleSearchQueryTool(store: SearchStore, params: Record<string, unknown>): SearchQueryOutput {
+  const input = searchQueryFromParams(params);
+  const output = store.query(input);
+  if (searchQueryRequiresAudit(input.query, output.results, input.filters)) {
+    store.recordAuditEvent({
+      type: "sensitive_query",
+      actor: input.actor,
+      surface: input.surface,
+      query: input.query,
+      reason: "sensitive_query_or_redacted_result",
+      metadata: {
+        profile: input.profile ?? "framework",
+        domains: input.domains ?? [],
+        sources: input.sources ?? [],
+        shards: input.shards ?? [],
+        strategy: input.strategy ?? "lexical",
+        embeddingModel: input.embedding?.model,
+        resultCount: output.results.length,
+        redactedResultCount: output.results.filter((result) => result.permissions?.redacted).length,
+      },
+    });
+  }
+  return output;
+}
+
 function evaluateSearchMonitors(
   store: SearchStore,
   input: { id?: string; includeDisabled?: boolean; limit?: number } = {},
@@ -587,4 +612,10 @@ function stringArrayParam(value: unknown): string[] | undefined {
 
 function recordParam(value: unknown): Record<string, unknown> | undefined {
   return typeof value === "object" && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
+}
+
+function searchQueryRequiresAudit(query: string, results: SearchResult[], filters: Record<string, unknown> | undefined): boolean {
+  if (results.some((result) => result.permissions?.redacted)) return true;
+  if (filters?.redacted === true || filters?.canPreview === false) return true;
+  return /\b(secret|private|restricted|sensitive|token|password|credential)\b/i.test(query);
 }
