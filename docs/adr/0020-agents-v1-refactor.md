@@ -59,13 +59,15 @@ The first implementation slice is model plus gates:
   route-check`, `claw agents resolve-external-identity`, and `claw agents
   project-support-inbox`, `claw agents memory-check`, and `claw agents
   surface-projection`, `claw agents config-revision`, and `claw agents
-  incident`, and `claw agents activity-feed`
+  incident`, `claw agents activity-feed`, `claw agents blueprint`, and
+  `claw agents evaluation`
 - `@clawjs/core` policy evaluators for effective access, grant expiry,
   assignment routing, external identity, support projection, flexible memory
   scopes, multidimensional budgets, redacted audit events, safe package export,
   safe surface projections for Relay/MCP/API/UI, redacted config revisions,
   first-class incidents, redacted activity feeds for human consumption, formal
-  escalation requests, and delegation no-laundering
+  reusable blueprints, redacted evaluations, escalation requests, and
+  delegation no-laundering
 - route graph coverage for internal Mac assignments, external support
   assignments, MCP/API assignments, runtime runs, sessions, grants, memory
   policies, and support/inbox projection

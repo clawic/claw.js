@@ -1,7 +1,9 @@
 import { AgentStoreFS, defaultAgent, type Agent, type Connection, type Personality, type SkillCollection } from "@clawjs/agents";
 import {
   createAgentActivityFeed,
+  createAgentBlueprint,
   createAgentConfigRevision,
+  createAgentEvaluation,
   createAgentIncident,
   createAgentSupportInboxProjection,
   createAgentSafeSurfaceProjection,
@@ -10,8 +12,10 @@ import {
   evaluateAgentMemoryAccess,
   resolveAgentExternalIdentity,
   type AgentActivityFeedInput,
+  type AgentBlueprintInput,
   type AgentAssignmentRouteRequest,
   type AgentEffectiveAccessInput,
+  type AgentEvaluationInput,
   type AgentExternalIdentityProfile,
   type AgentConfigRevisionInput,
   type AgentIncidentInput,
@@ -88,7 +92,7 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
       rootConcept: "agent",
       placementConcept: "agent_assignment",
       defaultPosture: "empty_sandbox_respond_only",
-      gates: ["evaluate-access", "route-check", "resolve-external-identity", "project-support-inbox", "memory-check", "surface-projection", "config-revision", "incident", "activity-feed"],
+      gates: ["evaluate-access", "route-check", "resolve-external-identity", "project-support-inbox", "memory-check", "surface-projection", "config-revision", "incident", "activity-feed", "blueprint", "evaluation"],
     });
     return V1_DATA_EXIT_OK;
   }
@@ -144,6 +148,18 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
     const record = recordFlag<AgentActivityFeedInput>(input);
     if (!record) return usageError(input, "Usage: claw agents activity-feed --record JSON [--json]");
     writeSuccess(input, createAgentActivityFeed(record));
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "blueprint") {
+    const record = recordFlag<AgentBlueprintInput>(input);
+    if (!record) return usageError(input, "Usage: claw agents blueprint --record JSON [--json]");
+    writeSuccess(input, createAgentBlueprint(record));
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "evaluation") {
+    const record = recordFlag<AgentEvaluationInput>(input);
+    if (!record) return usageError(input, "Usage: claw agents evaluation --record JSON [--json]");
+    writeSuccess(input, createAgentEvaluation(record));
     return V1_DATA_EXIT_OK;
   }
   return usageError(input, usage(input.binName, "agents"));

@@ -79,6 +79,8 @@ test("runCli exposes Agents V1 safe surface projection gate", async () => {
     assert.equal(schema.gates.includes("config-revision"), true);
     assert.equal(schema.gates.includes("incident"), true);
     assert.equal(schema.gates.includes("activity-feed"), true);
+    assert.equal(schema.gates.includes("blueprint"), true);
+    assert.equal(schema.gates.includes("evaluation"), true);
 
     const surfaceProjectionStdout = captureStream();
     assert.equal(await runCli(["agents", "surface-projection", "--record", JSON.stringify({
@@ -251,6 +253,74 @@ test("runCli exposes Agents V1 safe surface projection gate", async () => {
     assert.equal(activity.items[0]?.title, "Unsafe route blocked");
     assert.equal(String(activity.items[0]?.metadata.authorization).includes("Bearer"), false);
     assert.equal(JSON.stringify(activity.items[1]?.metadata).includes("/Users/example"), false);
+
+    const blueprintStdout = captureStream();
+    assert.equal(await runCli(["agents", "blueprint", "--record", JSON.stringify({
+      name: "Support blueprint",
+      agencyMode: "support",
+      version: 1,
+      skillRefs: ["skill.support@1"],
+      template: {
+        role: "Support",
+        systemPrompt: "private",
+        secretAllowlist: ["vault://agents/ops"],
+        localPath: "/Users/example/blueprint",
+      },
+      requiredResourceGrants: [{
+        id: "grant.support.read",
+        resourceType: "collection",
+        resourceId: "support_conversations",
+        action: "read",
+      }],
+      createdAt: "2026-05-17T10:00:00.000Z",
+    }), "--json"], {
+      stdout: blueprintStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const blueprint = parseCliJsonPayload(blueprintStdout.getOutput()) as {
+      id: string;
+      template: Record<string, unknown>;
+      safeExport: { packageKind: string };
+      audit: { kind: string; resourceType?: string };
+    };
+    assert.match(blueprint.id, /^agent_blueprint_/);
+    assert.equal(String(blueprint.template.secretAllowlist).includes("vault://"), false);
+    assert.equal(JSON.stringify(blueprint.template).includes("/Users/example"), false);
+    assert.equal(blueprint.safeExport.packageKind, "claw_agent_package");
+    assert.equal(blueprint.audit.kind, "blueprint");
+    assert.equal(blueprint.audit.resourceType, "agent_blueprint");
+
+    const evaluationStdout = captureStream();
+    assert.equal(await runCli(["agents", "evaluation", "--record", JSON.stringify({
+      agentId: "agent-ops",
+      assignmentId: "assignment.mcp",
+      runId: "run_1",
+      evaluatorId: "actor.evaluator",
+      status: "failed",
+      score: 0.25,
+      criteria: { metric: "safety", rawTracePath: "/Users/example/eval.log" },
+      result: { reason: "Unsafe disclosure", authorization: "Bearer raw" },
+      evaluatedAt: "2026-05-17T10:00:00.000Z",
+    }), "--json"], {
+      stdout: evaluationStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const evaluation = parseCliJsonPayload(evaluationStdout.getOutput()) as {
+      id: string;
+      status: string;
+      criteria: Record<string, unknown>;
+      result: Record<string, unknown>;
+      audit: { kind: string; result: string; resourceType?: string };
+    };
+    assert.match(evaluation.id, /^agent_evaluation_/);
+    assert.equal(evaluation.status, "failed");
+    assert.equal(String(evaluation.criteria.rawTracePath).includes("/Users/example"), false);
+    assert.equal(String(evaluation.result.authorization).includes("Bearer raw"), false);
+    assert.equal(evaluation.audit.kind, "evaluation");
+    assert.equal(evaluation.audit.result, "blocked");
+    assert.equal(evaluation.audit.resourceType, "agent_evaluation");
   });
   fs.rmSync(tempRoot, { recursive: true, force: true });
 });

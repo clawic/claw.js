@@ -201,7 +201,7 @@ function shouldHandleV1DataCommand(group: string | undefined, command: string | 
     mcp: new Set(["list", "get", "upsert", "delete", "config-path", "help"]),
     apps: new Set(["list", "upsert", "help"]),
     design: new Set(["list", "upsert", "help"]),
-    agents: new Set(["list", "get", "upsert", "delete", "schema", "evaluate-access", "route-check", "resolve-external-identity", "project-support-inbox", "memory-check", "surface-projection", "config-revision", "incident", "activity-feed", "help"]),
+    agents: new Set(["list", "get", "upsert", "delete", "schema", "evaluate-access", "route-check", "resolve-external-identity", "project-support-inbox", "memory-check", "surface-projection", "config-revision", "incident", "activity-feed", "blueprint", "evaluation", "help"]),
     skills: new Set(["get", "upsert", "delete", "help"]),
     personalities: new Set(["list", "get", "upsert", "delete", "help"]),
     "skill-collections": new Set(["list", "get", "upsert", "delete", "help"]),
