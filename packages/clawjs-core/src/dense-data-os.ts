@@ -1126,7 +1126,7 @@ export function assertClawDenseDataOsRegistryComplete(): void {
     if (!requirement.validationNeeded.trim()) failures.push(`${requirement.id}: missing validation needed`);
   }
 
-  const requiredFirstWave = ["health", "research", "biology", "labs", "legal", "erp", "crm", "finance", "education", "manufacturing", "ops"];
+  const requiredFirstWave = ["health", "research", "biology", "labs", "legal", "erp", "crm", "finance", "education", "manufacturing", "ops", "eln"];
   for (const id of requiredFirstWave) {
     const system = findClawDenseDataSystem(id);
     if (!system) {

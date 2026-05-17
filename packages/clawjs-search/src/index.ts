@@ -681,6 +681,21 @@ export function createBuiltinSearchSourceManifests(): SearchSourceManifest[] {
       ],
     }),
     createFrameworkSearchSourceManifest({
+      id: "eln.records",
+      domain: "eln",
+      name: "ELN records",
+      resultTypes: ["lab_notebook", "notebook_entry", "protocol_run", "experiment_observation"],
+      facets: [
+        { id: "collection", label: "Collection", type: "string" },
+        { id: "status", label: "Status", type: "string" },
+        { id: "notebookId", label: "Notebook", type: "string" },
+        { id: "studyId", label: "Study", type: "string" },
+        { id: "sampleId", label: "Sample", type: "string" },
+        { id: "assayId", label: "Assay", type: "string" },
+        { id: "sensitive", label: "Sensitive", type: "boolean" },
+      ],
+    }),
+    createFrameworkSearchSourceManifest({
       id: "images.derived",
       domain: "images",
       name: "Images",

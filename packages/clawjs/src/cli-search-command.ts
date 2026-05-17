@@ -76,6 +76,13 @@ const FINANCE_SEARCH_COLLECTIONS = [
   "accounting_lines",
 ] as const;
 
+const ELN_SEARCH_COLLECTIONS = [
+  "lab_notebooks",
+  "notebook_entries",
+  "protocol_runs",
+  "experiment_observations",
+] as const;
+
 const WORK_SEARCH_COLLECTIONS = new Set([
   "tasks",
   "projects",
@@ -158,6 +165,7 @@ export async function runSearchQueryCli(input: {
     const shouldRefreshSignals = domains?.includes("signals") || sources?.includes("signals.observations");
     const shouldRefreshCalendar = domains?.includes("calendar") || sources?.includes("calendar.events");
     const shouldRefreshFinance = domains?.includes("finance") || sources?.includes("finance.records");
+    const shouldRefreshEln = domains?.includes("eln") || sources?.includes("eln.records");
     const shouldRefreshImages = domains?.includes("images") || sources?.includes("images.derived");
     const shouldRefreshMedia = domains?.includes("media") || sources?.includes("media.assets");
     const shouldRefreshGenerations = domains?.includes("generations") || sources?.includes("generations.artifacts");
@@ -187,6 +195,7 @@ export async function runSearchQueryCli(input: {
     const indexedSignals = shouldRefreshSignals && sourceCanIndex(store, "signals.observations") ? ensureSignalsObservationsSourceIndexed(store, input.flags) : 0;
     const indexedCalendar = shouldRefreshCalendar && sourceCanIndex(store, "calendar.events") ? ensureCalendarEventsSourceIndexed(store, input.flags) : 0;
     const indexedFinance = shouldRefreshFinance && sourceCanIndex(store, "finance.records") ? ensureFinanceRecordsSourceIndexed(store, input.flags) : 0;
+    const indexedEln = shouldRefreshEln && sourceCanIndex(store, "eln.records") ? ensureElnRecordsSourceIndexed(store, input.flags) : 0;
     const indexedImages = shouldRefreshImages && sourceCanIndex(store, "images.derived") ? ensureImagesDerivedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedMedia = shouldRefreshMedia && sourceCanIndex(store, "media.assets") ? ensureMediaAssetsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedGenerations = shouldRefreshGenerations && sourceCanIndex(store, "generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -282,6 +291,7 @@ export async function runSearchQueryCli(input: {
         ...(shouldRefreshSignals ? { "signals.observations": indexedSignals } : {}),
         ...(shouldRefreshCalendar ? { "calendar.events": indexedCalendar } : {}),
         ...(shouldRefreshFinance ? { "finance.records": indexedFinance } : {}),
+        ...(shouldRefreshEln ? { "eln.records": indexedEln } : {}),
         ...(shouldRefreshImages ? { "images.derived": indexedImages } : {}),
         ...(shouldRefreshMedia ? { "media.assets": indexedMedia } : {}),
         ...(shouldRefreshGenerations ? { "generations.artifacts": indexedGenerations } : {}),
@@ -419,6 +429,7 @@ export async function runSearchRebuildCli(input: {
     const signalsIndexed = rebuildsSource("signals.observations") ? ensureSignalsObservationsSourceIndexed(store, input.flags) : 0;
     const calendarIndexed = rebuildsSource("calendar.events") ? ensureCalendarEventsSourceIndexed(store, input.flags) : 0;
     const financeIndexed = rebuildsSource("finance.records") ? ensureFinanceRecordsSourceIndexed(store, input.flags) : 0;
+    const elnIndexed = rebuildsSource("eln.records") ? ensureElnRecordsSourceIndexed(store, input.flags) : 0;
     const imagesIndexed = rebuildsSource("images.derived") ? ensureImagesDerivedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const mediaIndexed = rebuildsSource("media.assets") ? ensureMediaAssetsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const generationsIndexed = rebuildsSource("generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -451,6 +462,7 @@ export async function runSearchRebuildCli(input: {
       ...(signalsIndexed > 0 ? ["signals.observations"] : []),
       ...(calendarIndexed > 0 ? ["calendar.events"] : []),
       ...(financeIndexed > 0 ? ["finance.records"] : []),
+      ...(elnIndexed > 0 ? ["eln.records"] : []),
       ...(imagesIndexed > 0 ? ["images.derived"] : []),
       ...(mediaIndexed > 0 ? ["media.assets"] : []),
       ...(generationsIndexed > 0 ? ["generations.artifacts"] : []),
@@ -483,7 +495,7 @@ export async function runSearchRebuildCli(input: {
       mode: selectedSources && selectedShards ? "shard_scoped" : selectedSources ? "scoped" : "full",
       selectedSources: selectedSources ?? null,
       selectedShards: selectedShards ?? null,
-      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + workIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + skillsIndexed + providersIndexed + snippetsIndexed + agentsIndexed + marketplaceIndexed + contentIndexed + businessIndexed + socialIndexed + iotIndexed + connectorsIndexed + mcpIndexed + appsIndexed + designIndexed + runtimeIndexed + localFilesIndexed + webIndexed + externalIndexed,
+      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + workIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + elnIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + skillsIndexed + providersIndexed + snippetsIndexed + agentsIndexed + marketplaceIndexed + contentIndexed + businessIndexed + socialIndexed + iotIndexed + connectorsIndexed + mcpIndexed + appsIndexed + designIndexed + runtimeIndexed + localFilesIndexed + webIndexed + externalIndexed,
       embeddings: 0,
       profile: input.flags.profile === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
@@ -499,6 +511,7 @@ export async function runSearchRebuildCli(input: {
         "signals.observations": signalsIndexed,
         "calendar.events": calendarIndexed,
         "finance.records": financeIndexed,
+        "eln.records": elnIndexed,
         "images.derived": imagesIndexed,
         "media.assets": mediaIndexed,
         "generations.artifacts": generationsIndexed,
@@ -1122,6 +1135,8 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
       return ensureCalendarEventsSourceIndexed(store, flags);
     case "finance.records":
       return ensureFinanceRecordsSourceIndexed(store, flags);
+    case "eln.records":
+      return ensureElnRecordsSourceIndexed(store, flags);
     case "images.derived":
       return ensureImagesDerivedSourceIndexed(store, flags, cwd);
     case "media.assets":
@@ -1199,6 +1214,8 @@ function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flag
         : resourceIdFromJobPayload(job, "recordId") ?? job.resourceId;
       return resourceId ? ensureFinanceRecordResourceIndexed(store, flags, resourceId) : 0;
     }
+    case "eln.records":
+      return ensureElnRecordResourceIndexed(store, flags, job);
     case "images.derived": {
       const resourceId = resourceIdFromJobPayload(job, "imageId") ?? job.resourceId;
       return resourceId ? ensureImageDerivedResourceIndexed(store, flags, cwd, resourceId) : 0;
@@ -2592,6 +2609,90 @@ function ensureFinanceRecordTableResourceIndexed(store: SearchStore, flags: Reco
     }
     store.upsertDocument(financeRecordTableSearchDocument(row, pageBodyForSearch(db, row.page_id)));
     store.setSourceState("finance.records", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 1;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureElnRecordsSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) {
+    store.setSourceState("eln.records", "enabled", {
+      backlog: 0,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 0;
+  }
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "records")) {
+      store.setSourceState("eln.records", "degraded", {
+        backlog: 0,
+        error: "core database does not contain records",
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return 0;
+    }
+    const placeholders = ELN_SEARCH_COLLECTIONS.map(() => "?").join(", ");
+    const rows = db.prepare(`
+      SELECT namespace_id, collection_name, id, data_json, created_at, updated_at
+      FROM records
+      WHERE collection_name IN (${placeholders})
+      ORDER BY updated_at DESC
+    `).all(...ELN_SEARCH_COLLECTIONS) as DatabaseRecordRow[];
+    let indexed = 0;
+    for (const row of rows) {
+      const document = elnRecordSearchDocument(row);
+      if (!document) continue;
+      store.upsertDocument(document);
+      indexed += 1;
+    }
+    store.setCursor({
+      source: "eln.records",
+      cursor: `eln:${indexed}`,
+      metadata: { store: "core.sqlite", collections: [...ELN_SEARCH_COLLECTIONS] },
+    });
+    store.setSourceState("eln.records", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return indexed;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureElnRecordResourceIndexed(store: SearchStore, flags: Record<string, string>, job: SearchIndexJob): number {
+  const target = databaseRecordTargetFromJob(job);
+  if (!target || !ELN_SEARCH_COLLECTIONS.includes(target.collectionName as typeof ELN_SEARCH_COLLECTIONS[number])) return 0;
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) return 0;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "records")) return 0;
+    const row = db.prepare(`
+      SELECT namespace_id, collection_name, id, data_json, created_at, updated_at
+      FROM records
+      WHERE namespace_id = ? AND collection_name = ? AND id = ?
+      LIMIT 1
+    `).get(target.namespaceId, target.collectionName, target.recordId) as DatabaseRecordRow | undefined;
+    if (!row) {
+      store.tombstone({ source: "eln.records", resourceId: target.resourceId, reason: "ELN record missing during Search event refresh" });
+      return 1;
+    }
+    const document = elnRecordSearchDocument(row);
+    if (!document) {
+      store.tombstone({ source: "eln.records", resourceId: target.resourceId, reason: "ELN record excluded during Search event refresh" });
+      return 1;
+    }
+    store.upsertDocument(document);
+    store.setSourceState("eln.records", "enabled", {
       backlog: 0,
       error: null,
       lastIndexedAt: new Date().toISOString(),
@@ -4797,6 +4898,77 @@ function workItemShard(payload: Record<string, unknown>): "hot" | "cold" {
   const status = String(payload.status ?? payload.state ?? "").toLowerCase();
   if (payload.completedAt || payload.completed_at || payload.cancelledAt || payload.cancelled_at) return "cold";
   if (["done", "completed", "cancelled", "archived", "closed"].includes(status)) return "cold";
+  return "hot";
+}
+
+function elnRecordSearchDocument(row: DatabaseRecordRow): SearchDocumentInput | null {
+  if (!ELN_SEARCH_COLLECTIONS.includes(row.collection_name as typeof ELN_SEARCH_COLLECTIONS[number])) return null;
+  const payload = parseJsonRecord(row.data_json);
+  if (payload.archivedAt || payload.archived_at || payload.deletedAt || payload.deleted_at) return null;
+  const sensitive = isSensitiveRecord(payload);
+  const safePayload = redactExternalCachePayload(payload);
+  const title = titleForDatabaseRecord(row, payload);
+  const fields = searchableRecordFields(safePayload);
+  const body = fields.map(([key, value]) => `${key}: ${stringifySearchValue(value)}`).join("\n");
+  const snippet = sensitive ? "[redacted]" : firstTextValue(payload) ?? body.slice(0, 180);
+  const type = elnRecordResultType(row.collection_name);
+  return {
+    id: `eln.records:${row.namespace_id}:${row.collection_name}:${row.id}`,
+    source: "eln.records",
+    shard: elnRecordShard(payload),
+    domain: "eln",
+    type,
+    resourceId: `${row.namespace_id}:${row.collection_name}:${row.id}`,
+    title,
+    subtitle: `${row.collection_name} · ${row.namespace_id}`,
+    snippet,
+    body,
+    updatedAt: row.updated_at,
+    metadata: {
+      namespaceId: row.namespace_id,
+      collection: row.collection_name,
+      recordId: row.id,
+      status: stringMetadata(payload.status),
+      notebookId: stringMetadata(payload.notebookId),
+      studyId: stringMetadata(payload.studyId),
+      experimentId: stringMetadata(payload.biologyExperimentId),
+      sampleId: stringMetadata(payload.sampleId),
+      assayId: stringMetadata(payload.assayId),
+      sensitive,
+    },
+    permissions: { canOpen: true, canPreview: !sensitive, redacted: sensitive },
+    rankingHints: {
+      fastPath: 1,
+      eln: 1,
+      ...(elnRecordShard(payload) === "hot" ? { hot: 1 } : {}),
+    },
+    fragments: sensitive ? [] : fields.slice(0, 16).map(([key, value], index) => ({
+      id: `eln.records:${row.namespace_id}:${row.collection_name}:${row.id}:field:${key}`,
+      title: key,
+      body: stringifySearchValue(value),
+      snippet: stringifySearchValue(value).slice(0, 180),
+      sortOrder: index,
+      metadata: { field: key },
+    })),
+    actions: [
+      { id: "open", kind: "open", label: "Open ELN record", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy ELN reference", requiresApproval: false },
+    ],
+  };
+}
+
+function elnRecordResultType(collectionName: string): string {
+  if (collectionName === "lab_notebooks") return "lab_notebook";
+  if (collectionName === "notebook_entries") return "notebook_entry";
+  if (collectionName === "protocol_runs") return "protocol_run";
+  if (collectionName === "experiment_observations") return "experiment_observation";
+  return "eln_record";
+}
+
+function elnRecordShard(payload: Record<string, unknown>): "hot" | "cold" {
+  const status = String(payload.status ?? payload.state ?? "").toLowerCase();
+  if (payload.archivedAt || payload.archived_at || payload.closedAt || payload.closed_at) return "cold";
+  if (["archived", "closed", "void", "voided", "superseded"].includes(status)) return "cold";
   return "hot";
 }
 

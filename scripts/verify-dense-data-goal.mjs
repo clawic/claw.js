@@ -52,6 +52,7 @@ const requiredFirstWaveSystems = [
   "compliance",
   "iot",
   "construction",
+  "eln",
 ];
 
 const requiredFoundationMappings = {
@@ -118,6 +119,10 @@ const requiredFixtureCoverage = [
   "construction_site",
   "construction_rfi",
   "construction_change_order",
+  "lab_notebook",
+  "notebook_entry",
+  "protocol_run",
+  "experiment_observation",
   "invoice",
   "invoice_company",
   "incident",
@@ -153,6 +158,7 @@ const requiredExternalPending = [
   ["erp", "cost_bearing"],
   ["ops", "provider"],
   ["iot", "physical_device"],
+  ["eln", "regulated_export"],
 ];
 
 const requiredExistingAuditSurfaces = [
@@ -201,6 +207,10 @@ const requiredPluralIntentPhrases = [
   ["claw construction-sites list", "construction_sites"],
   ["claw construction-rfis list", "construction_rfis"],
   ["claw construction-change-orders list", "construction_change_orders"],
+  ["claw lab-notebooks list", "lab_notebooks"],
+  ["claw notebook-entries list", "notebook_entries"],
+  ["claw protocol-runs list", "protocol_runs"],
+  ["claw experiment-observations list", "experiment_observations"],
 ];
 
 const failures = [];
@@ -326,6 +336,10 @@ for (const phrase of [
   "claw construction-project construction_project_123 rfis add",
   "claw construction-project construction_project_123 change-orders add",
   "claw construction-project construction_project_123 timeline",
+  "claw lab-notebook lab_notebook_123 entries add",
+  "claw lab-notebook lab_notebook_123 protocol-runs add",
+  "claw protocol-run protocol_run_123 observations add",
+  "claw lab-notebook lab_notebook_123 timeline",
   "claw company company_123 timeline",
   "claw asset asset_123 timeline",
   "claw work-order work_order_123 timeline",
@@ -510,6 +524,9 @@ if (!semanticViews.some((entry) => entry.id === "thing.timeline" && entry.system
 }
 if (!semanticViews.some((entry) => entry.id === "construction_project.timeline" && entry.systemId === "construction")) {
   fail("semantic views must include construction_project.timeline");
+}
+if (!semanticViews.some((entry) => entry.id === "lab_notebook.timeline" && entry.systemId === "eln")) {
+  fail("semantic views must include lab_notebook.timeline");
 }
 if (!semanticViews.some((entry) => entry.id === "work_order.timeline" && entry.systemId === "manufacturing")) {
   fail("semantic views must include work_order.timeline");
