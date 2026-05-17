@@ -1,17 +1,17 @@
 export type SecretsUserRole = "tenant_admin" | "tenant_operator";
 export type SecretsPrincipalType = "service_principal" | "sidecar_principal";
-export type SecretsCapability =
+type SecretsCapability =
   | "metadata.read"
   | "secret.rotate"
   | "broker.http"
   | "lease.process"
   | "lease.browser"
   | "audit.read";
-export type SecretsEffect = "allow" | "deny";
-export type SecretsLeaseMode = "process" | "browser";
-export type SecretsSecretFieldKind = "string" | "password" | "url";
+type SecretsEffect = "allow" | "deny";
+type SecretsLeaseMode = "process" | "browser";
+type SecretsSecretFieldKind = "string" | "password" | "url";
 
-export interface SecretsSecretTypeFieldDescriptor {
+interface SecretsSecretTypeFieldDescriptor {
   id: string;
   label: string;
   kind: SecretsSecretFieldKind;
@@ -21,7 +21,7 @@ export interface SecretsSecretTypeFieldDescriptor {
   placeholder?: string;
 }
 
-export interface SecretsTypedActionDescriptor {
+interface SecretsTypedActionDescriptor {
   id: string;
   label: string;
   description: string;
@@ -29,7 +29,7 @@ export interface SecretsTypedActionDescriptor {
   method: "GET" | "POST";
 }
 
-export interface SecretsSecretTypeDescriptor {
+interface SecretsSecretTypeDescriptor {
   typeId: string;
   label: string;
   description: string;
@@ -46,7 +46,7 @@ export interface SecretsSecretTypeDescriptor {
   actions: SecretsTypedActionDescriptor[];
 }
 
-export interface SecretsSecretMetadata {
+interface SecretsSecretMetadata {
   secretName: string;
   label?: string;
   kind?: string;
@@ -66,12 +66,12 @@ export interface SecretsSecretMetadata {
   updatedAt: string;
 }
 
-export interface SecretsSecretCapabilityStatus {
+interface SecretsSecretCapabilityStatus {
   capability: SecretsCapability;
   allowed: boolean;
 }
 
-export interface SecretsPolicyRecord {
+interface SecretsPolicyRecord {
   id: string;
   tenantId: string;
   subjectType: SecretsUserRole | SecretsPrincipalType | "*";
@@ -82,7 +82,7 @@ export interface SecretsPolicyRecord {
   createdAt: string;
 }
 
-export interface SecretsPrincipalRecord {
+interface SecretsPrincipalRecord {
   id: string;
   tenantId: string;
   type: SecretsPrincipalType;
@@ -91,7 +91,7 @@ export interface SecretsPrincipalRecord {
   lastUsedAt?: string | null;
 }
 
-export interface SecretsLeaseRecord {
+interface SecretsLeaseRecord {
   id: string;
   tenantId: string;
   secretName: string;
@@ -103,7 +103,7 @@ export interface SecretsLeaseRecord {
   revokedAt?: string | null;
 }
 
-export interface SecretsAuditRecord {
+interface SecretsAuditRecord {
   id: string;
   tenantId: string;
   actorType: string;

@@ -14,11 +14,11 @@
     "unreferencedAssetCandidates": 88
   },
   "knipSummary": {
-    "filesWithIssues": 204,
-    "totalIssues": 957,
+    "filesWithIssues": 203,
+    "totalIssues": 944,
     "issueTypes": {
       "unlisted": 2,
-      "types": 159,
+      "types": 146,
       "owners": 134,
       "exports": 654,
       "duplicates": 8
@@ -59,6 +59,7 @@
     "Database magic and style schema cleanup removed retired productivity alias helpers and made style-only structural types private while preserving CLI style/template behavior.",
     "Agent plan cleanup made local risk/policy evaluation helpers private while keeping the plan CLI and delegation graph test surface unchanged.",
     "Time logic cleanup made local temporal helper aliases and parsing helpers private while keeping exported temporal input/status contracts unchanged.",
-    "Execution and Relay protocol cleanup made nested payload/envelope helpers private where only the union or public request/response envelopes are externally consumed."
+    "Execution and Relay protocol cleanup made nested payload/envelope helpers private where only the union or public request/response envelopes are externally consumed.",
+    "Secrets shared type cleanup kept exported only the role/principal types imported by auth and made the unused local DTO descriptors private."
   ]
 }
