@@ -409,6 +409,75 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(vehicleInsurancePolicyPayload.data.vehicleId, vehiclePayload.data.id);
   assert.equal(vehicleInsurancePolicyPayload.data.provider, "Example Mutual");
 
+  const vehicleMaintenanceCreate = await runCliCapture(["vehicle", vehiclePayload.data.id, "maintenance", "add", "Annual service", "--performed-by", "Example Garage", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(vehicleMaintenanceCreate.code, CLI_EXIT_OK, vehicleMaintenanceCreate.stderr || vehicleMaintenanceCreate.stdout);
+  const vehicleMaintenancePayload = JSON.parse(vehicleMaintenanceCreate.stdout) as { data: { vehicleId: string; title: string; performedBy: string; performedAt: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(vehicleMaintenancePayload.meta.invokedCommand, "vehicle");
+  assert.equal(vehicleMaintenancePayload.meta.collection, "vehicle_maintenance");
+  assert.equal(vehicleMaintenancePayload.meta.action, "create");
+  assert.equal(vehicleMaintenancePayload.data.vehicleId, vehiclePayload.data.id);
+  assert.equal(vehicleMaintenancePayload.data.title, "Annual service");
+  assert.equal(vehicleMaintenancePayload.data.performedBy, "Example Garage");
+  assert.equal(typeof vehicleMaintenancePayload.data.performedAt, "string");
+
+  const directVehicleMaintenanceCreate = await runCliCapture(["vehicle-maintenance", "add", "--vehicle", vehiclePayload.data.id, "Direct service", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(directVehicleMaintenanceCreate.code, CLI_EXIT_OK, directVehicleMaintenanceCreate.stderr || directVehicleMaintenanceCreate.stdout);
+  const directVehicleMaintenancePayload = JSON.parse(directVehicleMaintenanceCreate.stdout) as { data: { vehicleId: string; title: string }; meta: { collection: string; invokedCommand: string } };
+  assert.equal(directVehicleMaintenancePayload.meta.invokedCommand, "vehicle-maintenance");
+  assert.equal(directVehicleMaintenancePayload.meta.collection, "vehicle_maintenance");
+  assert.equal(directVehicleMaintenancePayload.data.vehicleId, vehiclePayload.data.id);
+  assert.equal(directVehicleMaintenancePayload.data.title, "Direct service");
+
+  const vehicleTimeline = await runCliCapture(["vehicle", vehiclePayload.data.id, "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(vehicleTimeline.code, CLI_EXIT_OK, vehicleTimeline.stderr || vehicleTimeline.stdout);
+  const vehicleTimelinePayload = JSON.parse(vehicleTimeline.stdout) as {
+    data: {
+      coverage: { implementationStatus: string; recordsMaterialized: boolean };
+      semanticView: { id: string; systemId: string };
+      materializedView: {
+        subject: { id: string; label: string };
+        summary: { maintenanceRecords: number; insurancePolicies: number };
+        itemCount: number;
+        items: Array<{ kind: string; label: string }>;
+      };
+    };
+  };
+  assert.equal(vehicleTimelinePayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(vehicleTimelinePayload.data.coverage.recordsMaterialized, true);
+  assert.equal(vehicleTimelinePayload.data.semanticView.id, "vehicle.timeline");
+  assert.equal(vehicleTimelinePayload.data.semanticView.systemId, "maintenance");
+  assert.equal(vehicleTimelinePayload.data.materializedView.subject.id, vehiclePayload.data.id);
+  assert.equal(vehicleTimelinePayload.data.materializedView.subject.label, "EV");
+  assert.equal(vehicleTimelinePayload.data.materializedView.summary.maintenanceRecords, 2);
+  assert.equal(vehicleTimelinePayload.data.materializedView.summary.insurancePolicies, 1);
+  assert.equal(vehicleTimelinePayload.data.materializedView.itemCount >= 4, true);
+  assert.equal(vehicleTimelinePayload.data.materializedView.items.some((item) => item.kind === "vehicle_maintenance" && item.label === "Annual service"), true);
+  assert.equal(vehicleTimelinePayload.data.materializedView.items.some((item) => item.kind === "vehicle_insurance_policy" && item.label === "Example Mutual"), true);
+
+  const applianceCreate = await runCliCapture(["appliance", "create", "Washer", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(applianceCreate.code, CLI_EXIT_OK, applianceCreate.stderr || applianceCreate.stdout);
+  const appliancePayload = JSON.parse(applianceCreate.stdout) as { data: { id: string; name: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(appliancePayload.meta.invokedCommand, "appliance");
+  assert.equal(appliancePayload.meta.collection, "appliances");
+  assert.equal(appliancePayload.data.name, "Washer");
+
+  const applianceMaintenanceCreate = await runCliCapture(["appliance", appliancePayload.data.id, "maintenance", "add", "Washer service", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(applianceMaintenanceCreate.code, CLI_EXIT_OK, applianceMaintenanceCreate.stderr || applianceMaintenanceCreate.stdout);
+  const applianceMaintenancePayload = JSON.parse(applianceMaintenanceCreate.stdout) as { data: { applianceId: string; title: string; performedAt: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(applianceMaintenancePayload.meta.invokedCommand, "appliance");
+  assert.equal(applianceMaintenancePayload.meta.collection, "appliance_maintenance");
+  assert.equal(applianceMaintenancePayload.data.applianceId, appliancePayload.data.id);
+  assert.equal(applianceMaintenancePayload.data.title, "Washer service");
+  assert.equal(typeof applianceMaintenancePayload.data.performedAt, "string");
+
+  const directApplianceMaintenanceCreate = await runCliCapture(["appliance-maintenance", "add", "--appliance", appliancePayload.data.id, "Direct washer service", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(directApplianceMaintenanceCreate.code, CLI_EXIT_OK, directApplianceMaintenanceCreate.stderr || directApplianceMaintenanceCreate.stdout);
+  const directApplianceMaintenancePayload = JSON.parse(directApplianceMaintenanceCreate.stdout) as { data: { applianceId: string; title: string }; meta: { collection: string; invokedCommand: string } };
+  assert.equal(directApplianceMaintenancePayload.meta.invokedCommand, "appliance-maintenance");
+  assert.equal(directApplianceMaintenancePayload.meta.collection, "appliance_maintenance");
+  assert.equal(directApplianceMaintenancePayload.data.applianceId, appliancePayload.data.id);
+  assert.equal(directApplianceMaintenancePayload.data.title, "Direct washer service");
+
   const accountCreate = await runCliCapture(["account", "create", "Acme Account", "--company", companyPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(accountCreate.code, CLI_EXIT_OK);
   const accountPayload = JSON.parse(accountCreate.stdout) as { data: { id: string; name: string; companyId: string }; meta: { collection: string; action: string } };
