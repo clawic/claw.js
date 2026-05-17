@@ -14,13 +14,13 @@
     "unreferencedAssetCandidates": 88
   },
   "knipSummary": {
-    "filesWithIssues": 107,
-    "totalIssues": 671,
+    "filesWithIssues": 106,
+    "totalIssues": 669,
     "issueTypes": {
       "unlisted": 2,
-      "types": 21,
+      "types": 20,
       "owners": 93,
-      "exports": 547,
+      "exports": 546,
       "duplicates": 8
     }
   },
@@ -94,6 +94,7 @@
     "Notify cleanup made admin JWT claims, subscription matching, schema surface node construction, and local delivery-state alias private while preserving exported notification contracts through the core surface.",
     "IoT adapter cleanup made provider id constants and local discovery helper types private while preserving adapter classes and runtime connector behavior.",
     "Monitor/execution cleanup made local monitor mode/schema helpers and password-hash implementation helpers private while preserving exported config, schema SQL, and verification APIs.",
-    "Drive cleanup narrowed the CLI test barrel to the used client API and made auth/realtime helper types private while preserving SDK, server, and realtime behavior."
+    "Drive cleanup narrowed the CLI test barrel to the used client API and made auth/realtime helper types private while preserving SDK, server, and realtime behavior.",
+    "Feed cleanup replaced the stale missing-test script with a real auth smoke test, made admin JWT claim helpers private, and removed an unused opaque-token helper."
   ]
 }

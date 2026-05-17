@@ -11,7 +11,7 @@
     "build": "npm run build:ui && npm run build:server",
     "start": "node dist/server.js",
     "cli": "node dist/cli.js",
-    "test": "tsx --test tests/e2e/backend.e2e.test.ts tests/e2e/cli.e2e.test.ts"
+    "test": "tsx --test src/**/*.test.ts"
   },
   "dependencies": {
     "@clawjs/core": "0.1.2",
