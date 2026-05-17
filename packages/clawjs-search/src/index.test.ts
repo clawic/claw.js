@@ -26,6 +26,7 @@ test("framework sources are opt-in and require fast paths", () => {
   assert.equal(manifest.capabilities.fastPath, true);
   assert.equal(manifest.capabilities.facets, true);
   assert.equal(manifest.indexing.freshness, "near_immediate");
+  assert.equal(manifest.indexing.limits?.maxFragments, 50);
 });
 
 test("registry federates sources with strict source timeouts", async () => {
@@ -254,6 +255,43 @@ test("SearchStore central ranking uses frecency, actor, surface and scope hints"
     assert.ok((output.results[0]?.explanation?.scoreBreakdown?.context ?? 0) > 0);
     assert.ok((output.results[0]?.explanation?.scoreBreakdown?.frecency ?? 0) > 0);
     assert.ok((output.results[0]?.explanation?.scoreBreakdown?.hints ?? 0) > 0);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("SearchStore enforces per-source document and fragment limits before indexing", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-limits-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    const manifest = createFrameworkSearchSourceManifest({
+      id: "documents.blocks",
+      domain: "documents",
+      name: "Documents",
+      resultTypes: ["document"],
+    });
+    manifest.indexing.limits = { maxBodyBytes: 1024, maxFragments: 1, maxFragmentBytes: 512 };
+    store.registerSource(manifest);
+    store.upsertDocument({
+      id: "documents.blocks:limited",
+      source: "documents.blocks",
+      domain: "documents",
+      type: "document",
+      title: "Limited document",
+      body: `visible opening ${"a".repeat(1200)} hidden-tail-token`,
+      fragments: [
+        { id: "documents.blocks:limited:first", title: "first", body: `fragment visible ${"b".repeat(700)} hidden-fragment-tail` },
+        { id: "documents.blocks:limited:second", title: "second", body: "second fragment should not be indexed" },
+      ],
+    });
+
+    assert.equal(store.query({ query: "hidden-tail-token", domains: ["documents"] }).results.length, 0);
+    assert.equal(store.query({ query: "hidden-fragment-tail", domains: ["documents"] }).results.length, 0);
+    assert.equal(store.query({ query: "second fragment", domains: ["documents"] }).results.length, 0);
+    const visible = store.query({ query: "visible", domains: ["documents"], explain: true });
+    assert.equal(visible.results.length, 1);
+    assert.equal(visible.results[0]?.fragments?.length, 1);
   } finally {
     store.close();
     fs.rmSync(dir, { recursive: true, force: true });

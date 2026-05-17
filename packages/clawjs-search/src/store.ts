@@ -14,6 +14,7 @@ import {
   type SearchQueryOutput,
   type SearchResult,
   type SearchSourceManifest,
+  type SearchSourceIndexingLimits,
   type SearchSourceState,
   type SearchSourceStatus,
 } from "./index.ts";
@@ -216,6 +217,13 @@ export class SearchStore {
 
   upsertDocument(input: SearchDocumentInput): void {
     const updatedAt = input.updatedAt ?? new Date().toISOString();
+    const limits = this.indexingLimitsForSource(input.source);
+    const body = truncateUtf8(input.body ?? "", limits.maxBodyBytes);
+    const fragments = (input.fragments ?? []).slice(0, limits.maxFragments).map((fragment) => ({
+      ...fragment,
+      body: fragment.body ? truncateUtf8(fragment.body, limits.maxFragmentBytes) : undefined,
+      snippet: fragment.snippet ? truncateUtf8(fragment.snippet, limits.maxFragmentBytes) : undefined,
+    }));
     const tx = this.db.transaction(() => {
       this.db.prepare(`
         INSERT INTO search_documents (
@@ -247,7 +255,7 @@ export class SearchStore {
         input.title,
         input.subtitle ?? null,
         input.snippet ?? null,
-        input.body ?? "",
+        body,
         input.path ?? null,
         updatedAt,
         JSON.stringify(input.metadata ?? {}),
@@ -260,7 +268,7 @@ export class SearchStore {
       this.db.prepare(`
         INSERT INTO search_fts (doc_id, fragment_id, source, domain, type, title, body, path)
         VALUES (?, NULL, ?, ?, ?, ?, ?, ?)
-      `).run(input.id, input.source, input.domain, input.type, input.title, [input.subtitle, input.snippet, input.body].filter(Boolean).join("\n"), input.path ?? "");
+      `).run(input.id, input.source, input.domain, input.type, input.title, [input.subtitle, input.snippet, body].filter(Boolean).join("\n"), input.path ?? "");
       const insertFragment = this.db.prepare(`
         INSERT INTO search_fragments (id, document_id, source, domain, title, body, snippet, sort_order, metadata_json)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -269,7 +277,7 @@ export class SearchStore {
         INSERT INTO search_fts (doc_id, fragment_id, source, domain, type, title, body, path)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `);
-      for (const [index, fragment] of (input.fragments ?? []).entries()) {
+      for (const [index, fragment] of fragments.entries()) {
         insertFragment.run(
           fragment.id,
           input.id,
@@ -534,6 +542,16 @@ export class SearchStore {
     }
   }
 
+  private indexingLimitsForSource(source: string): SearchSourceIndexingLimits {
+    const row = this.db.prepare("SELECT manifest_json FROM search_sources WHERE id = ?").get(source) as { manifest_json: string } | undefined;
+    const limits = row ? parseJson<SearchSourceManifest>(row.manifest_json).indexing.limits : undefined;
+    return {
+      maxBodyBytes: Math.max(1024, limits?.maxBodyBytes ?? 64 * 1024),
+      maxFragments: Math.max(0, limits?.maxFragments ?? 50),
+      maxFragmentBytes: Math.max(512, limits?.maxFragmentBytes ?? 8 * 1024),
+    };
+  }
+
   private omittedSourcesForInput(input: SearchQueryInput, profile: SearchProfileId): SearchQueryOutput["omittedSources"] {
     const selectedClauses: string[] = [];
     const params: unknown[] = [];
@@ -783,6 +801,19 @@ function jsonPath(key: string): string {
 function normalizeJsonFilterValue(value: unknown): unknown {
   if (typeof value === "boolean") return value ? 1 : 0;
   return value;
+}
+
+function truncateUtf8(value: string, maxBytes: number): string {
+  if (Buffer.byteLength(value, "utf8") <= maxBytes) return value;
+  let bytes = 0;
+  let output = "";
+  for (const char of value) {
+    const size = Buffer.byteLength(char, "utf8");
+    if (bytes + size > maxBytes) break;
+    output += char;
+    bytes += size;
+  }
+  return output;
 }
 
 function centralSearchScore(input: {

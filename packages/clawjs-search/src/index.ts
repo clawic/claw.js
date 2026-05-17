@@ -41,6 +41,13 @@ export interface SearchSourceIndexingPolicy {
   contentDepth: "metadata" | "metadata_content" | "derived_text";
   defaultState: "on" | "off";
   heavyExtraction: "none" | "async_throttled";
+  limits?: SearchSourceIndexingLimits;
+}
+
+export interface SearchSourceIndexingLimits {
+  maxBodyBytes: number;
+  maxFragments: number;
+  maxFragmentBytes: number;
 }
 
 export interface SearchSourcePermissionPolicy {
@@ -337,6 +344,11 @@ export function createFrameworkSearchSourceManifest(input: {
       contentDepth: "metadata_content",
       defaultState: "on",
       heavyExtraction: "async_throttled",
+      limits: {
+        maxBodyBytes: 64 * 1024,
+        maxFragments: 50,
+        maxFragmentBytes: 8 * 1024,
+      },
     },
     permissions: {
       default: "opt_in",
@@ -368,6 +380,11 @@ export function createCommandSearchSourceManifest(): SearchSourceManifest {
       contentDepth: "metadata",
       defaultState: "on",
       heavyExtraction: "none",
+      limits: {
+        maxBodyBytes: 16 * 1024,
+        maxFragments: 20,
+        maxFragmentBytes: 4 * 1024,
+      },
     },
     permissions: {
       default: "opt_in",

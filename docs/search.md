@@ -106,6 +106,10 @@ candidate batch with lexical score, source ranking hints, local frecency,
 `actor`, `surface`, and scope-like metadata filters before returning the final
 limit. `--explain` includes a compact score breakdown for debugging.
 
+Each source manifest declares indexing limits. `SearchStore` enforces body,
+fragment-count, and per-fragment byte budgets before writing to FTS, so a large
+document or extractor output cannot silently expand every section search path.
+
 `code.symbols` is intentionally bounded. It indexes supported project files,
 Markdown docs, and lightweight symbol fragments under `--code-root` or the
 current workspace root. It skips dependency/build/cache/private control

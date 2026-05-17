@@ -55,6 +55,9 @@ Search V1.1 is built from these layers:
   bounded candidate batch with lexical score, source hints, frecency,
   actor/surface context, and scope-like metadata matches, and exposes compact
   score breakdowns when explain mode is enabled.
+- **Per-source limits**: source manifests declare body, fragment-count, and
+  per-fragment byte limits. The store applies those limits before FTS writes so
+  heavy extractors cannot broaden unrelated fast paths.
 - **Actions and permissions**: results can expose actions, but execution remains
   brokered by grants/approvals. Sensitive previews are redacted before they
   reach generic Search output.
