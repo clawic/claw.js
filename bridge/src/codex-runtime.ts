@@ -22,7 +22,7 @@ export interface CodexLogger {
   error(message: string, ctx?: Record<string, unknown>): void;
 }
 
-export const noopLogger: CodexLogger = {
+const noopLogger: CodexLogger = {
   info: () => {},
   warn: () => {},
   error: () => {},
@@ -35,7 +35,7 @@ export interface CodexJsonRpcResponse {
   error?: CodexJsonRpcError;
 }
 
-export interface CodexJsonRpcError {
+interface CodexJsonRpcError {
   code: number;
   message: string;
   data?: unknown;

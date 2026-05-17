@@ -1,12 +1,11 @@
 import { z } from "zod";
 
 import {
-  SshClientError,
   installBridgeOverSsh,
   type SshClient,
 } from "@clawjs/ssh-client";
 
-export const SshJobInputSchema = z.discriminatedUnion("method", [
+const SshJobInputSchema = z.discriminatedUnion("method", [
   z.object({
     method: z.literal("ssh.open"),
     hostId: z.string().min(1),
@@ -69,7 +68,7 @@ export const SshJobInputSchema = z.discriminatedUnion("method", [
   }),
 ]);
 
-export type SshJobInput = z.infer<typeof SshJobInputSchema>;
+type SshJobInput = z.infer<typeof SshJobInputSchema>;
 
 export interface SshAuditSink {
   record(input: {
@@ -257,5 +256,3 @@ function summary(input: SshJobInput): Record<string, unknown> {
 function redactCommand(cmd: string): string {
   return cmd.length > 200 ? `${cmd.slice(0, 200)}...` : cmd;
 }
-
-export { SshClientError };

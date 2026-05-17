@@ -14,13 +14,13 @@
     "unreferencedAssetCandidates": 88
   },
   "knipSummary": {
-    "filesWithIssues": 173,
-    "totalIssues": 784,
+    "filesWithIssues": 168,
+    "totalIssues": 773,
     "issueTypes": {
       "unlisted": 2,
-      "types": 75,
+      "types": 71,
       "owners": 115,
-      "exports": 584,
+      "exports": 577,
       "duplicates": 8
     }
   },
@@ -82,6 +82,7 @@
     "CLI JSON cleanup made unused low-level writer wrappers private and removed a dead error writer alias while preserving command JSON envelopes.",
     "Style surface cleanup stopped re-exporting unused builtin manifest and CLI option types while preserving `claw style` behavior.",
     "Publishing channel contract cleanup made adapter lifecycle helper result types private while preserving the exported adapter interface.",
-    "Bridge server cleanup removed private-package duplicate bridge-frame re-exports and made SSH runtime options private."
+    "Bridge server cleanup removed private-package duplicate bridge-frame re-exports and made SSH runtime options private.",
+    "Bridge job-handler cleanup made internal Zod schemas, inferred request types, logger defaults, JSON-RPC helper types, and command abort errors private while preserving bridge runtime behavior."
   ]
 }

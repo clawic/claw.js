@@ -6,7 +6,7 @@ import {
   type CodexEvent,
 } from "./codex-runtime.ts";
 
-export const CodexJobInputSchema = z.discriminatedUnion("method", [
+const CodexJobInputSchema = z.discriminatedUnion("method", [
   z.object({
     method: z.literal("codex.startThread"),
   }),
@@ -26,7 +26,7 @@ export const CodexJobInputSchema = z.discriminatedUnion("method", [
   }),
 ]);
 
-export type CodexJobInput = z.infer<typeof CodexJobInputSchema>;
+type CodexJobInput = z.infer<typeof CodexJobInputSchema>;
 
 export interface CodexJobContext {
   runtime: CodexRuntime;

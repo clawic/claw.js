@@ -118,7 +118,7 @@ export class CommandTimeoutError extends Error {
   }
 }
 
-export class CommandAbortError extends Error {
+class CommandAbortError extends Error {
   readonly result: CommandRunResult;
   constructor(message: string, result: CommandRunResult) {
     super(message);

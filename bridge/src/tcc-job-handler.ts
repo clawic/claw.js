@@ -6,14 +6,14 @@ import {
 } from "./computer-use.ts";
 import type { TerminalProcess, TerminalProcessController } from "./terminal.ts";
 
-export const ModifierSchema = z.enum([
+const ModifierSchema = z.enum([
   "command",
   "control",
   "shift",
   "option",
 ]) satisfies z.ZodType<ModifierKey>;
 
-export const TccJobInputSchema = z.discriminatedUnion("method", [
+const TccJobInputSchema = z.discriminatedUnion("method", [
   z.object({
     method: z.literal("tcc.platform.capabilities"),
   }),
@@ -81,7 +81,7 @@ export const TccJobInputSchema = z.discriminatedUnion("method", [
   }),
 ]);
 
-export type TccJobInput = z.infer<typeof TccJobInputSchema>;
+type TccJobInput = z.infer<typeof TccJobInputSchema>;
 
 export interface TccAuditSink {
   record(input: {
