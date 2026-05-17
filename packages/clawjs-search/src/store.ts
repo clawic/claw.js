@@ -11,6 +11,8 @@ import {
   type SearchAction,
   type SearchAgentResultBudget,
   type SearchFacetDeclaration,
+  type SearchInteraction,
+  type SearchInteractionInput,
   type SearchProfileId,
   type SearchQueryInput,
   type SearchQueryOutput,
@@ -793,7 +795,50 @@ export class SearchStore {
       ...(row.reason ? { reason: row.reason } : {}),
       metadata: parseJson(row.metadata_json),
       createdAt: row.created_at,
-    }));
+      }));
+  }
+
+  recordInteraction(input: SearchInteractionInput): SearchInteraction | null {
+    const row = this.db.prepare(`
+      SELECT id, source, shard, domain
+      FROM search_documents
+      WHERE id = ? AND deleted_at IS NULL
+      LIMIT 1
+    `).get(input.resultId) as Pick<SearchDocumentRow, "id" | "source" | "shard" | "domain"> | undefined;
+    if (!row) return null;
+    const now = input.createdAt ?? new Date().toISOString();
+    const actor = input.actor?.trim() ?? "";
+    const surface = input.surface?.trim() ?? "";
+    const actionId = input.actionId?.trim() ?? "";
+    const kind = input.kind ?? "action";
+    const metadata = input.metadata ?? {};
+    this.db.prepare(`
+      INSERT INTO search_interactions (
+        document_id, source, shard, domain, actor, surface, action_id,
+        kind, interaction_count, last_interacted_at, metadata_json
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+      ON CONFLICT(document_id, actor, surface, action_id, kind) DO UPDATE SET
+        source = excluded.source,
+        shard = excluded.shard,
+        domain = excluded.domain,
+        interaction_count = search_interactions.interaction_count + 1,
+        last_interacted_at = excluded.last_interacted_at,
+        metadata_json = excluded.metadata_json
+    `).run(row.id, row.source, row.shard, row.domain, actor, surface, actionId, kind, now, JSON.stringify(metadata));
+    this.clearRankingCacheForScopes({
+      sources: new Set([row.source]),
+      domains: new Set([row.domain]),
+      shards: new Set([row.shard]),
+    });
+    const stored = this.db.prepare(`
+      SELECT document_id, source, shard, domain, actor, surface, action_id, kind,
+        interaction_count, last_interacted_at, metadata_json
+      FROM search_interactions
+      WHERE document_id = ? AND actor = ? AND surface = ? AND action_id = ? AND kind = ?
+      LIMIT 1
+    `).get(row.id, actor, surface, actionId, kind) as SearchInteractionRow;
+    return searchInteractionFromRow(stored);
   }
 
   actionsForResult(resultId: string): SearchAction[] {
@@ -970,7 +1015,8 @@ export class SearchStore {
     const lexical = scoreLexicalMatch(input.query, `${row.title} ${row.subtitle ?? ""} ${row.snippet ?? ""} ${row.body}`);
     const rankingHints = parseJson<Record<string, number>>(row.ranking_json);
     const metadata = parseJson(row.metadata_json);
-    const score = centralSearchScore({ lexicalScore: lexical.score, semanticScore: row.semantic_score ?? 0, rowRank: row.rank ?? 0, rankingHints, metadata, input });
+    const localFrecency = this.localFrecencyForResult(row.id, input);
+    const score = centralSearchScore({ lexicalScore: lexical.score, semanticScore: row.semantic_score ?? 0, rowRank: row.rank ?? 0, rankingHints, metadata, input, localFrecency });
     const matchedBy = lexical.matchedBy.length
       ? lexical.matchedBy
       : (fragmentsWithMatch.find((entry) => entry.match.matchedBy.length)?.match.matchedBy ?? []);
@@ -998,12 +1044,31 @@ export class SearchStore {
       ...(input.explain ? {
         explanation: {
           sourceScore: lexical.score,
-          rankingHints,
+          rankingHints: localFrecency > 0 ? { ...rankingHints, localFrecency } : rankingHints,
           scoreBreakdown: score.breakdown,
           matchedBy,
         },
       } : {}),
     };
+  }
+
+  private localFrecencyForResult(resultId: string, input: SearchQueryInput): number {
+    const rows = this.db.prepare(`
+      SELECT actor, surface, interaction_count, last_interacted_at
+      FROM search_interactions
+      WHERE document_id = ?
+    `).all(resultId) as Array<{ actor: string; surface: string; interaction_count: number; last_interacted_at: string }>;
+    if (!rows.length) return 0;
+    const actor = input.actor?.trim() ?? "";
+    const surface = input.surface?.trim() ?? "";
+    let score = 0;
+    for (const row of rows) {
+      const count = Math.max(0, row.interaction_count);
+      score += Math.min(0.35, count * 0.08);
+      if (actor && row.actor === actor) score += Math.min(0.35, count * 0.12);
+      if (surface && row.surface === surface) score += Math.min(0.2, count * 0.08);
+    }
+    return Math.min(1, score);
   }
 
   private rankingCacheGet(cacheKey: string): SearchQueryOutput | null {
@@ -1122,6 +1187,20 @@ interface SearchAuditEventRow {
   created_at: string;
 }
 
+interface SearchInteractionRow {
+  document_id: string;
+  source: string;
+  shard: string;
+  domain: string;
+  actor: string;
+  surface: string;
+  action_id: string;
+  kind: SearchInteraction["kind"];
+  interaction_count: number;
+  last_interacted_at: string;
+  metadata_json: string;
+}
+
 function parseJson<T = Record<string, unknown>>(value: string | null | undefined): T {
   if (!value) return {} as T;
   return JSON.parse(value) as T;
@@ -1142,6 +1221,22 @@ function existingSearchDocumentIds(db: Database.Database, ids: string[]): Set<st
 
 function searchCursorFromRow(row: SearchCursorRow): SearchSourceCursor {
   return { source: row.source, shard: row.shard, cursor: row.cursor, updatedAt: row.updated_at, metadata: parseJson(row.metadata_json) };
+}
+
+function searchInteractionFromRow(row: SearchInteractionRow): SearchInteraction {
+  return {
+    resultId: row.document_id,
+    source: row.source,
+    domain: row.domain,
+    ...(row.shard !== "default" ? { shard: row.shard } : {}),
+    ...(row.actor ? { actor: row.actor } : {}),
+    ...(row.surface ? { surface: row.surface } : {}),
+    ...(row.action_id ? { actionId: row.action_id } : {}),
+    kind: row.kind,
+    count: row.interaction_count,
+    lastInteractedAt: row.last_interacted_at,
+    metadata: parseJson(row.metadata_json),
+  };
 }
 
 function searchIndexJobFromRow(row: SearchIndexJobRow): SearchIndexJob {
@@ -1474,13 +1569,15 @@ function centralSearchScore(input: {
   rankingHints: Record<string, unknown>;
   metadata: Record<string, unknown>;
   input: SearchQueryInput;
+  localFrecency?: number;
 }): { total: number; breakdown: NonNullable<SearchResult["explanation"]>["scoreBreakdown"] } {
   const base = Math.max(1, 100 - Math.max(0, input.rowRank)) + input.lexicalScore / 100;
   const semanticBoost = boundedNumber(input.semanticScore, 0, 100) / 4;
   const hintBoost = boundedNumber(input.rankingHints.priority, 0, 10)
     + boundedNumber(input.rankingHints.hot, 0, 5)
     + boundedNumber(input.rankingHints.fastPath, 0, 2);
-  const frecencyBoost = boundedNumber(input.rankingHints.frecency ?? input.metadata.frecency, 0, 1) * 8;
+  const frecency = Math.min(1, boundedNumber(input.rankingHints.frecency ?? input.metadata.frecency, 0, 1) + boundedNumber(input.localFrecency, 0, 1));
+  const frecencyBoost = frecency * 8;
   const actorBoost = contextMatchBoost(input.input.actor, input.metadata, input.rankingHints, ["actor", "actorId", "agentId", "ownerActorId"], "actor");
   const surfaceBoost = contextMatchBoost(input.input.surface, input.metadata, input.rankingHints, ["surface", "surfaceId"], "surface");
   const scopeBoost = scopeFilterBoost(input.input.filters, input.metadata, input.rankingHints);
@@ -1769,6 +1866,23 @@ CREATE TABLE IF NOT EXISTS search_audit_events (
 CREATE INDEX IF NOT EXISTS search_audit_events_type_idx ON search_audit_events(type, created_at DESC);
 CREATE INDEX IF NOT EXISTS search_audit_events_actor_idx ON search_audit_events(actor, created_at DESC);
 
+CREATE TABLE IF NOT EXISTS search_interactions (
+  document_id TEXT NOT NULL REFERENCES search_documents(id) ON DELETE CASCADE,
+  source TEXT NOT NULL,
+  shard TEXT NOT NULL DEFAULT 'default',
+  domain TEXT NOT NULL,
+  actor TEXT NOT NULL DEFAULT '',
+  surface TEXT NOT NULL DEFAULT '',
+  action_id TEXT NOT NULL DEFAULT '',
+  kind TEXT NOT NULL DEFAULT 'action',
+  interaction_count INTEGER NOT NULL DEFAULT 0,
+  last_interacted_at TEXT NOT NULL,
+  metadata_json TEXT NOT NULL DEFAULT '{}',
+  PRIMARY KEY (document_id, actor, surface, action_id, kind)
+);
+CREATE INDEX IF NOT EXISTS search_interactions_document_idx ON search_interactions(document_id, last_interacted_at DESC);
+CREATE INDEX IF NOT EXISTS search_interactions_context_idx ON search_interactions(actor, surface, last_interacted_at DESC);
+
 CREATE TABLE IF NOT EXISTS search_vectors (
   document_id TEXT NOT NULL REFERENCES search_documents(id) ON DELETE CASCADE,
   fragment_id TEXT,
@@ -1803,6 +1917,7 @@ const SEARCH_RESET_SQL = String.raw`
 DROP TABLE IF EXISTS search_fts;
 DROP TABLE IF EXISTS search_ranking_cache;
 DROP TABLE IF EXISTS search_vectors;
+DROP TABLE IF EXISTS search_interactions;
 DROP TABLE IF EXISTS search_audit_events;
 DROP TABLE IF EXISTS search_monitors;
 DROP TABLE IF EXISTS saved_searches;

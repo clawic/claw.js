@@ -423,17 +423,35 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(actionBlockedPayload.meta.brokeredPlan?.status, "blocked");
     assert.equal(actionBlockedPayload.meta.brokeredPlan?.reasons.includes("host_approval_required"), true);
 
+    const actionApproved = await runCliCapture(["search", "actions", "execute", "commands:system", "help", "--host-approval-id", "approval-search-1", "--actor", "agent:codex", "--surface", "cli", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(actionApproved.code, CLI_EXIT_OK);
+    const actionApprovedPayload = JSON.parse(actionApproved.stdout) as { data: { plan: { status: string; hostApprovalId?: string } } };
+    assert.equal(actionApprovedPayload.data.plan.status, "brokered");
+    assert.equal(actionApprovedPayload.data.plan.hostApprovalId, "approval-search-1");
+
+    const frecencyQuery = await runCliCapture(["search", "query", "system capabilities", "--domains", "commands", "--actor", "agent:codex", "--surface", "cli", "--data-dir", dataRoot, "--json", "--explain", "true"], workspaceRoot);
+    assert.equal(frecencyQuery.code, CLI_EXIT_OK);
+    const frecencyPayload = JSON.parse(frecencyQuery.stdout) as {
+      data: { results: Array<{ id: string; explanation?: { rankingHints?: { localFrecency?: number }; scoreBreakdown?: { frecency?: number } } }> };
+    };
+    const frecencyResult = frecencyPayload.data.results.find((result) => result.id === "commands:system");
+    assert.ok((frecencyResult?.explanation?.rankingHints?.localFrecency ?? 0) > 0);
+    assert.ok((frecencyResult?.explanation?.scoreBreakdown?.frecency ?? 0) > 0);
+
     const actionAudit = await runCliCapture(["search", "audit", "--type", "action", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(actionAudit.code, CLI_EXIT_OK);
     const actionAuditPayload = JSON.parse(actionAudit.stdout) as {
       data: { items: Array<{ type: string; resultId?: string; actionId?: string; status?: string; grant?: string; risk?: string }> };
     };
-    assert.equal(actionAuditPayload.data.items[0]?.type, "action");
-    assert.equal(actionAuditPayload.data.items[0]?.resultId, "commands:system");
-    assert.equal(actionAuditPayload.data.items[0]?.actionId, "help");
-    assert.equal(actionAuditPayload.data.items[0]?.status, "blocked");
-    assert.equal(actionAuditPayload.data.items[0]?.grant, "search.commands.run");
-    assert.equal(actionAuditPayload.data.items[0]?.risk, "system");
+    const blockedAudit = actionAuditPayload.data.items.find((item) => item.status === "blocked");
+    const brokeredAudit = actionAuditPayload.data.items.find((item) => item.status === "brokered");
+    assert.equal(blockedAudit?.type, "action");
+    assert.equal(blockedAudit?.resultId, "commands:system");
+    assert.equal(blockedAudit?.actionId, "help");
+    assert.equal(blockedAudit?.grant, "search.commands.run");
+    assert.equal(blockedAudit?.risk, "system");
+    assert.equal(brokeredAudit?.resultId, "commands:system");
+    assert.equal(brokeredAudit?.actionId, "help");
 
     const actionBrokered = await runCliCapture(["search", "actions", "execute", "commands:system", "help", "--host-approval-id", "approval_search_help", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(actionBrokered.code, CLI_EXIT_OK);

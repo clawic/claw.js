@@ -112,6 +112,30 @@ export interface SearchActionExecutionPlan {
   };
 }
 
+export interface SearchInteractionInput {
+  resultId: string;
+  actor?: string;
+  surface?: string;
+  actionId?: string;
+  kind?: "open" | "copy" | "action" | "preview" | "custom";
+  metadata?: Record<string, unknown>;
+  createdAt?: string;
+}
+
+export interface SearchInteraction {
+  resultId: string;
+  source: string;
+  domain: string;
+  shard?: string;
+  actor?: string;
+  surface?: string;
+  actionId?: string;
+  kind: "open" | "copy" | "action" | "preview" | "custom";
+  count: number;
+  lastInteractedAt: string;
+  metadata: Record<string, unknown>;
+}
+
 export interface SearchFragment {
   id: string;
   title?: string;

@@ -716,6 +716,63 @@ test("SearchStore central ranking uses frecency, actor, surface and scope hints"
   }
 });
 
+test("SearchStore records local interactions as frecency ranking signals", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-local-frecency-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "work.tasks",
+      domain: "work",
+      name: "Work tasks",
+      resultTypes: ["task"],
+    }));
+    store.upsertDocument({
+      id: "work.tasks:recent",
+      source: "work.tasks",
+      domain: "work",
+      type: "task",
+      title: "Local frecency checklist",
+      body: "Local frecency checklist for Search source ranking.",
+      updatedAt: "2026-05-17T12:00:00.000Z",
+    });
+    store.upsertDocument({
+      id: "work.tasks:older",
+      source: "work.tasks",
+      domain: "work",
+      type: "task",
+      title: "Local frecency checklist",
+      body: "Local frecency checklist for Search source ranking.",
+      updatedAt: "2026-05-17T11:00:00.000Z",
+    });
+    assert.equal(store.query({ query: "local frecency checklist", domains: ["work"] }).results[0]?.id, "work.tasks:recent");
+
+    const interaction = store.recordInteraction({
+      resultId: "work.tasks:older",
+      actor: "agent:codex",
+      surface: "cli",
+      actionId: "open",
+      kind: "open",
+      createdAt: "2026-05-17T12:30:00.000Z",
+    });
+    assert.equal(interaction?.count, 1);
+    assert.equal(interaction?.actor, "agent:codex");
+
+    const output = store.query({
+      query: "local frecency checklist",
+      domains: ["work"],
+      actor: "agent:codex",
+      surface: "cli",
+      explain: true,
+    });
+    assert.equal(output.results[0]?.id, "work.tasks:older");
+    assert.ok((output.results[0]?.explanation?.scoreBreakdown?.frecency ?? 0) > 0);
+    assert.ok((output.results[0]?.explanation?.rankingHints?.localFrecency ?? 0) > 0);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("SearchStore filters results by actor and required search scopes", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-acl-"));
   const store = new SearchStore(path.join(dir, "search.sqlite"));

@@ -1034,6 +1034,20 @@ function runSearchActionExecuteCli(input: {
       }
       return error.exitCode;
     }
+    if (!dryRun && plan.status !== "blocked") {
+      store.recordInteraction({
+        resultId,
+        actor: input.flags.actor,
+        surface: input.flags.surface,
+        actionId,
+        kind: action.kind === "open" || action.kind === "copy" ? action.kind : "action",
+        metadata: {
+          status: plan.status,
+          risk: plan.risk,
+          grant: plan.grant,
+        },
+      });
+    }
   } finally {
     store.close();
   }

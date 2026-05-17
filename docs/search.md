@@ -217,7 +217,10 @@ match the indexed text for authorized discovery, but returned snippets are
 Ranking is centralized in `@clawjs/search`. The store reranks a bounded
 candidate batch with lexical score, source ranking hints, local frecency,
 `actor`, `surface`, and scope-like metadata filters before returning the final
-limit. `--explain` includes a compact score breakdown for debugging.
+limit. Local frecency is learned from Search interactions such as brokered
+action execution and stays in rebuildable `search.sqlite`, separate from
+canonical source records. `--explain` includes a compact score breakdown for
+debugging.
 
 Ranked query output is cached in `search_ranking_cache` by normalized query,
 profile, domain/source/shard filters, actor, surface, explain mode, strategy,
