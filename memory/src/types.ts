@@ -1,4 +1,4 @@
-export type ScalarType = "string" | "number" | "boolean" | "date" | "string[]";
+type ScalarType = "string" | "number" | "boolean" | "date" | "string[]";
 
 export type RelationCardinality = "one" | "many" | "at_least_one";
 
@@ -17,7 +17,7 @@ export interface RelationDefinition {
   metadata?: Record<string, AttributeDefinition>;
 }
 
-export interface TypeKindDefinition {
+interface TypeKindDefinition {
   id: string;
   description?: string;
 }
@@ -49,7 +49,7 @@ export interface SchemaDocument {
 export type NoteKind = "entity" | "memory";
 export type MemoryClass = "semantic" | "episodic" | "procedural" | "archival";
 
-export type FrontmatterScalar = string | number | boolean | null;
+type FrontmatterScalar = string | number | boolean | null;
 export type FrontmatterValue =
   | FrontmatterScalar
   | FrontmatterValue[]

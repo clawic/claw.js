@@ -497,14 +497,14 @@ export function startServer(
   return server;
 }
 
-export interface StartMemoryServerOptions {
+interface StartMemoryServerOptions {
   port?: number;
   host?: string;
   workspace?: string;
   statusFile?: string;
 }
 
-export interface StartMemoryServerResult {
+interface StartMemoryServerResult {
   server: http.Server;
   service: MemoryService;
   config: { host: string; port: number; workspace: string };

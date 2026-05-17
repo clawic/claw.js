@@ -14,13 +14,13 @@
     "unreferencedAssetCandidates": 88
   },
   "knipSummary": {
-    "filesWithIssues": 168,
-    "totalIssues": 773,
+    "filesWithIssues": 166,
+    "totalIssues": 767,
     "issueTypes": {
       "unlisted": 2,
-      "types": 71,
+      "types": 66,
       "owners": 115,
-      "exports": 577,
+      "exports": 576,
       "duplicates": 8
     }
   },
@@ -83,6 +83,7 @@
     "Style surface cleanup stopped re-exporting unused builtin manifest and CLI option types while preserving `claw style` behavior.",
     "Publishing channel contract cleanup made adapter lifecycle helper result types private while preserving the exported adapter interface.",
     "Bridge server cleanup removed private-package duplicate bridge-frame re-exports and made SSH runtime options private.",
-    "Bridge job-handler cleanup made internal Zod schemas, inferred request types, logger defaults, JSON-RPC helper types, and command abort errors private while preserving bridge runtime behavior."
+    "Bridge job-handler cleanup made internal Zod schemas, inferred request types, logger defaults, JSON-RPC helper types, and command abort errors private while preserving bridge runtime behavior.",
+    "Memory cleanup made workspace path, scalar/type-kind/frontmatter aliases, and server option/result helper types private while preserving the dynamically loaded `startMemoryServer` entrypoint."
   ]
 }

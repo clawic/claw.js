@@ -4,7 +4,7 @@ import { CORE_SCHEMA } from "./core-ontology";
 import { AppConfig, WorkspacePaths } from "./types";
 import { ensureDir, readJsonFile, resolveWorkspaceRoot, writeJsonFile } from "./utils";
 
-export function getWorkspacePaths(root: string): WorkspacePaths {
+function getWorkspacePaths(root: string): WorkspacePaths {
   const memoryDir = path.join(root, ".memory");
   const notesDir = path.join(memoryDir, "notes");
   return {
