@@ -319,6 +319,61 @@ test("registry federates sources with strict source timeouts", async () => {
   assert.equal(registry.budgets.globalFirstBatchMs, DEFAULT_SEARCH_BUDGETS.globalFirstBatchMs);
 });
 
+test("registry skips disabled sources and applies agent result budgets", async () => {
+  const registry = createRootSearchFederator({ budgets: { sourceTimeoutMs: 20 } });
+  registry.register({
+    manifest: createFrameworkSearchSourceManifest({
+      id: "notes.pages",
+      domain: "notes",
+      name: "Notes",
+      resultTypes: ["note"],
+    }),
+    status: () => ({ source: "notes.pages", domain: "notes", state: "enabled", backlog: 0 }),
+    query: () => [
+      { id: "notes.pages:1", source: "notes.pages", domain: "notes", type: "note", title: "Alpha note", score: 100 },
+      { id: "notes.pages:2", source: "notes.pages", domain: "notes", type: "note", title: "Beta note", score: 90 },
+    ],
+  });
+  registry.register({
+    manifest: createFrameworkSearchSourceManifest({
+      id: "documents.blocks",
+      domain: "documents",
+      name: "Documents",
+      resultTypes: ["document"],
+    }),
+    status: () => ({ source: "documents.blocks", domain: "documents", state: "enabled", backlog: 0 }),
+    query: () => [
+      { id: "documents.blocks:1", source: "documents.blocks", domain: "documents", type: "document", title: "Alpha doc", score: 95 },
+      { id: "documents.blocks:2", source: "documents.blocks", domain: "documents", type: "document", title: "Beta doc", score: 80 },
+    ],
+  });
+  registry.register({
+    manifest: createFrameworkSearchSourceManifest({
+      id: "sessions.chats",
+      domain: "sessions",
+      name: "Chats",
+      resultTypes: ["chat"],
+    }),
+    status: () => ({ source: "sessions.chats", domain: "sessions", state: "paused", backlog: 3 }),
+    query: () => [{ id: "sessions.chats:1", source: "sessions.chats", domain: "sessions", type: "chat", title: "Paused chat", score: 200 }],
+  });
+
+  const output = await registry.query({
+    query: "alpha",
+    agentBudget: {
+      maxResults: 3,
+      maxResultsPerSource: 1,
+      maxResultsPerDomain: 1,
+    },
+  });
+
+  assert.deepEqual(output.results.map((result) => result.id), ["notes.pages:1", "documents.blocks:1"]);
+  assert.equal(output.partial, true);
+  assert.equal(output.omittedSources[0]?.source, "sessions.chats");
+  assert.equal(output.omittedSources[0]?.reason, "disabled");
+  assert.match(output.omittedSources[0]?.message ?? "", /paused/);
+});
+
 test("createSearchRegistry remains a compatible Root Search registry alias", async () => {
   const registry = createSearchRegistry({ budgets: { sourceTimeoutMs: 10 } });
   registry.register({

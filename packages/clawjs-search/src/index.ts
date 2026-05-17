@@ -403,6 +403,17 @@ export function createRootSearchFederator(options: RootSearchFederatorOptions = 
       const omittedSources: SearchQueryOutput["omittedSources"] = [];
       const settled = await Promise.all(selected.map(async (source) => {
         try {
+          const status = source.status
+            ? await withTimeout(Promise.resolve(source.status()), budgets.sourceTimeoutMs)
+            : defaultSourceStatus(source.manifest);
+          if (status.state === "disabled" || status.state === "paused" || status.state === "excluded") {
+            omittedSources.push({
+              source: source.manifest.id,
+              reason: "disabled",
+              message: `source is ${status.state}`,
+            });
+            return { source, results: [] };
+          }
           const results = await withTimeout(
             Promise.resolve(source.query(input, { budgets, startedAt })),
             budgets.sourceTimeoutMs,
@@ -417,10 +428,10 @@ export function createRootSearchFederator(options: RootSearchFederatorOptions = 
           return { source, results: [] };
         }
       }));
-      const results = settled
+      const rankedResults = settled
         .flatMap((entry) => entry.results.map((result) => normalizeSearchResult(result, entry.source.manifest)))
-        .sort((left, right) => right.score - left.score || (right.updatedAt ?? "").localeCompare(left.updatedAt ?? ""))
-        .slice(0, Math.max(1, input.limit ?? 20));
+        .sort((left, right) => right.score - left.score || (right.updatedAt ?? "").localeCompare(left.updatedAt ?? ""));
+      const results = applyAgentResultBudget(rankedResults, input);
       return {
         query: input.query,
         profile,
@@ -825,6 +836,44 @@ function validateSearchEngineDescriptor(descriptor: SearchEngineDescriptor): voi
   if (descriptor.storage.kind === "sidecar" && !descriptor.storage.defaultFileName?.trim()) {
     throw new Error(`search engine ${descriptor.id} sidecar storage requires a default file name`);
   }
+}
+
+function defaultSourceStatus(manifest: SearchSourceManifest): SearchSourceStatus {
+  return {
+    source: manifest.id,
+    domain: manifest.domain,
+    state: manifest.indexing.defaultState === "on" ? "enabled" : "disabled",
+    backlog: 0,
+  };
+}
+
+function applyAgentResultBudget(results: SearchResult[], input: SearchQueryInput): SearchResult[] {
+  const maxResults = boundedResultBudget(input.agentBudget?.maxResults ?? input.limit ?? 20);
+  const maxResultsPerSource = optionalResultBudget(input.agentBudget?.maxResultsPerSource);
+  const maxResultsPerDomain = optionalResultBudget(input.agentBudget?.maxResultsPerDomain);
+  const sourceCounts = new Map<string, number>();
+  const domainCounts = new Map<string, number>();
+  const filtered: SearchResult[] = [];
+  for (const result of results) {
+    const sourceCount = sourceCounts.get(result.source) ?? 0;
+    if (maxResultsPerSource !== undefined && sourceCount >= maxResultsPerSource) continue;
+    const domainCount = domainCounts.get(result.domain) ?? 0;
+    if (maxResultsPerDomain !== undefined && domainCount >= maxResultsPerDomain) continue;
+    filtered.push(result);
+    sourceCounts.set(result.source, sourceCount + 1);
+    domainCounts.set(result.domain, domainCount + 1);
+    if (filtered.length >= maxResults) break;
+  }
+  return filtered;
+}
+
+function optionalResultBudget(value: number | undefined): number | undefined {
+  return value === undefined ? undefined : boundedResultBudget(value);
+}
+
+function boundedResultBudget(value: number): number {
+  if (!Number.isFinite(value)) return 20;
+  return Math.max(0, Math.floor(value));
 }
 
 function normalizeSearchResult(result: SearchResult, manifest: SearchSourceManifest): SearchResult {

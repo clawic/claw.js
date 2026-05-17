@@ -22,8 +22,9 @@ Search V1.1 has four layers:
 2. **Source fast path**: each domain or UI section owns a fast query route. A
    source can use its own store, `search.sqlite`, or both.
 3. **Root Search federator**: `createRootSearchFederator()` fans out across
-   selected sources, applies strict per-source timeouts, merges/ranks results,
-   and reports partial results when slow sources are omitted.
+   selected enabled sources, applies strict per-source timeouts and agent result
+   budgets, merges/ranks results, and reports partial results when slow or
+   disabled sources are omitted.
 4. **Search store**: `search.sqlite` is rebuildable and stores FTS documents,
    fragments, actions, cursors, tombstones, saved searches, monitors, ranking
    cache, and optional vectors. Canonical records and configuration stay in
