@@ -358,6 +358,7 @@ const sourceAudit = docTexts.get("docs/dense-data-source-decision-audit.md") ?? 
 const decisionMatrix = docTexts.get("docs/dense-data-decision-matrix.md") ?? "";
 const completionAudit = docTexts.get("docs/dense-data-completion-audit.md") ?? "";
 const existingCatalogAudit = docTexts.get("docs/dense-data-existing-catalog-audit.md") ?? "";
+const cliDiscoveryTest = readRequired("packages/clawjs/src/cli-discovery.test.ts");
 
 requireText("completion audit", completionAudit, sourceConversationId);
 requireText("completion audit", completionAudit, sourcePlanId);
@@ -382,9 +383,13 @@ for (const requiredPhrase of [
   "EXTERNAL PENDING",
   "materialized timelines/overviews",
   "no-parallel-system",
+  "every graduated center noun and alias",
 ]) {
   requireText("completion audit", completionAudit, requiredPhrase);
 }
+requireText("CLI discovery test", cliDiscoveryTest, "every graduated dense-data noun and alias");
+requireText("CLI discovery test", cliDiscoveryTest, "must route through the shared database");
+requireText("CLI discovery test", cliDiscoveryTest, "must be a dense-data semantic route");
 
 const sourceDecisionIds = extractTableIds(sourceAudit, "DQ");
 for (let index = 1; index <= 18; index += 1) {

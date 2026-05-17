@@ -64,7 +64,10 @@ same canonical collection backs routes such as `patient list` / `patients
 list`, `company list` / `companies list`, `product list` / `products list`,
 and `assay list` / `assays list` without introducing a second data model. The
 guard rejects malformed aliases and keeps professional plurals explicitly
-audited instead of silently accepting bad mechanical forms.
+audited instead of silently accepting bad mechanical forms. The CLI smoke suite
+executes every graduated center noun and alias as a top-level `list` route, so a
+new audited collection cannot quietly require a domain prefix such as `health`
+or `erp` unless it is intentionally recorded as a semantic view or gap.
 
 Collections use the standard actions `list`, `get`, `create`, `update`,
 `delete`, `query`, and `schema`. `delete` means archive by default; `purge` is
