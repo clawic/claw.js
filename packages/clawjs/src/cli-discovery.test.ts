@@ -1734,7 +1734,9 @@ test("runCli returns registry help JSON when a command needs a subcommand", asyn
   }
 });
 
-test("runCli returns agents codex JSON in the common envelope", async () => {
+test("runCli returns agents codex JSON in the common envelope", async (t) => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-agents-json-"));
+  useIsolatedClawDataRoot(t, workspaceRoot);
   const result = await runCliCapture(["agents", "codex", "status", "--runtime", "demo", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK);
   const payload = JSON.parse(result.stdout) as { ok: boolean; data: { agentId: string; runtime: string }; meta: { canonicalCommand: string; subcommand: string } };
@@ -1779,8 +1781,9 @@ test("runCli returns code JSON in the common envelope", async () => {
   assert.deepEqual(payload.data.projects, []);
 });
 
-test("runCli returns temporal JSON in the common envelope", async () => {
+test("runCli returns temporal JSON in the common envelope", async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-temporal-json-"));
+  useIsolatedClawDataRoot(t, workspaceRoot);
   const result = await runCliCapture(["calendar", "list", "--workspace", workspaceRoot, "--runtime", "demo", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK);
   const payload = JSON.parse(result.stdout) as { ok: boolean; data: { items: unknown[] }; meta: { canonicalCommand: string; invokedCommand: string; subcommand: string } };
@@ -1791,8 +1794,9 @@ test("runCli returns temporal JSON in the common envelope", async () => {
   assert.deepEqual(payload.data.items, []);
 });
 
-test("runCli returns rules JSON in the common envelope", async () => {
+test("runCli returns rules JSON in the common envelope", async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-rules-json-"));
+  useIsolatedClawDataRoot(t, workspaceRoot);
   const result = await runCliCapture(["rules", "compile", "test request", "--workspace", workspaceRoot, "--runtime", "demo", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK);
   const payload = JSON.parse(result.stdout) as { ok: boolean; meta: { canonicalCommand: string; invokedCommand: string; subcommand: string } };
@@ -2077,7 +2081,9 @@ test("runCli rejects retired content portal shortcuts", async () => {
   assert.equal(shortcutPayload.meta.subcommand, "posts");
 });
 
-test("runCli returns root router JSON in the common envelope", async () => {
+test("runCli returns root router JSON in the common envelope", async (t) => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-runtime-json-"));
+  useIsolatedClawDataRoot(t, workspaceRoot);
   const result = await runCliCapture(["runtime", "status", "--runtime", "demo", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK);
   const payload = JSON.parse(result.stdout) as { ok: boolean; data: { adapter: string }; meta: { canonicalCommand: string; invokedCommand: string; subcommand: string } };
