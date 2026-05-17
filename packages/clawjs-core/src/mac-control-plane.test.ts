@@ -7,6 +7,7 @@ import {
   MAC_PERMISSION_CATALOG,
   MAC_PERMISSION_PACKS,
   assertMacControlPlaneRegistryComplete,
+  buildMacActionPlan,
   clawContractVersionV1,
   clawMacControlPlaneRegistry,
   findMacAtlasCapability,
@@ -196,4 +197,63 @@ test("Mac public schemas validate action, receipt, permission, grant and role co
     createdAt: "2026-05-17T00:00:00.000Z",
   });
   assert.equal(role.assignedByRole, "owner");
+});
+
+test("Mac action planner builds the shared dry-run contract for CLI, MCP, API and UI", () => {
+  const host = {
+    hostId: "host.local",
+    bundleId: "com.example.Claw",
+    signingIdentity: "Developer ID Application: Example",
+    appVariant: "standalone",
+    appVersion: "1.0.0",
+  };
+  const actor = { kind: "agent" as const, id: "agent.codex", assignmentId: "assignment.mac", runId: "run.1" };
+
+  const plan = buildMacActionPlan({
+    request: macActionRequestSchema.parse({
+      schemaVersion: clawContractVersionV1,
+      requestId: "req.mac.shared.1",
+      capabilityId: "mac.wifi.power.off",
+      actor,
+      host,
+      dryRun: true,
+      reason: "Testing continuity breaker plan",
+    }),
+  });
+
+  assert.equal(plan.planId, "macplan_req_mac_shared_1");
+  assert.equal(plan.capabilityId, "mac.wifi.power.off");
+  assert.equal(plan.risk, "critical");
+  assert.equal(plan.executable, true);
+  assert.equal(plan.willMutate, true);
+  assert.equal(plan.requiredApprovals[0]?.reason, "Testing continuity breaker plan");
+  assert.deepEqual(plan.requiredApprovals[0]?.approverRoles, ["owner", "admin"]);
+  assert.equal(plan.rollback.level, "best_effort");
+  assert.equal(plan.rollback.timerSeconds, 120);
+  assert.equal(plan.rollback.snapshotRequired, true);
+  assert.deepEqual(plan.blockedReasons, []);
+
+  const blocked = buildMacActionPlan({
+    request: macActionRequestSchema.parse({
+      schemaVersion: clawContractVersionV1,
+      requestId: "req.mac.blocked.1",
+      capabilityId: "mac.screen.capture",
+      actor,
+      host,
+      dryRun: true,
+    }),
+    permissionStates: [{
+      schemaVersion: clawContractVersionV1,
+      permissionId: "mac.permission.screen_capture",
+      host,
+      osState: "denied",
+      frameworkGrant: "denied",
+      requestedBefore: true,
+      canRequest: false,
+      source: "Central Mac Permission Broker",
+      lastCheckedAt: "2026-05-17T00:00:00.000Z",
+    }],
+  });
+  assert.equal(blocked.executable, false);
+  assert.deepEqual(blocked.blockedReasons, ["coverage_state:planned", "permission_blocked:mac.permission.screen_capture"]);
 });

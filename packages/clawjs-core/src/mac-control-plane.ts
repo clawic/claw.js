@@ -240,6 +240,12 @@ export type MacApprovalRequest = z.infer<typeof macApprovalRequestSchema>;
 export type MacRoleAssignment = z.infer<typeof macRoleAssignmentSchema>;
 export type MacAtlasCapability = z.infer<typeof macAtlasCapabilitySchema>;
 
+export interface BuildMacActionPlanInput {
+  request: MacActionRequest;
+  capability?: MacAtlasCapability;
+  permissionStates?: MacPermissionState[];
+}
+
 export interface MacControlCommandRoot {
   root: string;
   family: string;
@@ -606,6 +612,61 @@ export function listMacAtlasCapabilities(options: { family?: string; coverageSta
 
 export function findMacAtlasCapability(id: string): MacAtlasCapability | undefined {
   return MAC_CAPABILITY_ATLAS.find((capability) => capability.id === id);
+}
+
+export function buildMacActionPlan(input: BuildMacActionPlanInput): MacActionPlan {
+  const capability = input.capability ?? findMacAtlasCapability(input.request.capabilityId);
+  if (!capability) throw new Error(`Unknown Mac capability: ${input.request.capabilityId}`);
+
+  const permissionStates = new Map((input.permissionStates ?? []).map((state) => [state.permissionId, state]));
+  const permissionRequirements = capability.permissions.map((permissionId) => {
+    const state = permissionStates.get(permissionId);
+    return macPermissionRequirementSchema.parse({
+      permissionId,
+      required: true,
+      currentOsState: state?.osState ?? "unknown",
+      currentFrameworkGrant: state?.frameworkGrant ?? "not_granted",
+      guidance: state?.guidance,
+    });
+  });
+  const approvalRequired = ["medium", "high", "critical"].includes(capability.risk);
+  const executable = capability.coverageState === "executable" || capability.coverageState === "host_validated";
+  const blockedReasons = [
+    ...(!executable ? [`coverage_state:${capability.coverageState}`] : []),
+    ...permissionRequirements
+      .filter((permission) => permission.currentOsState === "denied" || permission.currentOsState === "restricted" || permission.currentFrameworkGrant === "denied")
+      .map((permission) => `permission_blocked:${permission.permissionId}`),
+  ];
+
+  return macActionPlanSchema.parse({
+    schemaVersion: clawContractVersionV1,
+    planId: `macplan_${input.request.requestId.replace(/[^a-zA-Z0-9_-]/g, "_")}`,
+    requestId: input.request.requestId,
+    capabilityId: capability.id,
+    risk: capability.risk,
+    coverageState: capability.coverageState,
+    actor: input.request.actor,
+    host: input.request.host,
+    resolvedTarget: input.request.target,
+    permissionRequirements,
+    requiredApprovals: approvalRequired
+      ? [{
+          risk: capability.risk,
+          reason: input.request.reason ?? `${capability.label} requires ${capability.risk} approval`,
+          approverRoles: ["owner", "admin"],
+        }]
+      : [],
+    rollback: {
+      level: capability.revert,
+      timerSeconds: capability.risk === "critical" && capability.revert !== "none" ? clawMacControlPlaneRegistry.policyDefaults.criticalRevertTimerSeconds : undefined,
+      snapshotRequired: capability.mutatesState && capability.revert !== "none" && (capability.risk === "high" || capability.risk === "critical"),
+      reason: capability.revert === "none" ? "No reliable automated revert is declared for this capability." : undefined,
+    },
+    willMutate: capability.mutatesState,
+    executable,
+    blockedReasons,
+    relatedSurfaces: capability.cli.relatedSurfaces,
+  });
 }
 
 export function listMacCommandRoots(): MacControlCommandRoot[] {

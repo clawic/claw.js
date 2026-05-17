@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "description": "Versioned allowlist for sensitive native macOS usage that is currently permitted outside generic feature code. Entries must be broker-owned, audited, reviewed, and migrated into the Mac Action Broker/Permission Broker closure path.",
+  "entries": [
+    {
+      "path": "bridge/src/computer-use.ts",
+      "owner": "signed-host-bridge",
+      "reason": "Computer-use broker implementation for screenshot and input primitives behind the host bridge.",
+      "allowedViolations": [
+        "macOS screenshot permission command",
+        "macOS accessibility input helper",
+        "macOS System Events automation"
+      ],
+      "expiresOn": "2026-12-31",
+      "tests": [
+        "scripts/verify-host-permission-contract.mjs --self-test",
+        "scripts/verify-host-permission-contract.mjs"
+      ]
+    },
+    {
+      "path": "bridge/src/server.ts",
+      "owner": "signed-host-bridge",
+      "reason": "Bridge capability advertisement for host-brokered computer-use methods.",
+      "allowedViolations": [
+        "TCC computer method"
+      ],
+      "expiresOn": "2026-12-31",
+      "tests": [
+        "scripts/verify-host-permission-contract.mjs --self-test",
+        "scripts/verify-host-permission-contract.mjs"
+      ]
+    },
+    {
+      "path": "bridge/src/tcc-job-handler.ts",
+      "owner": "signed-host-bridge",
+      "reason": "Audited host job handler for TCC-gated computer-use methods.",
+      "allowedViolations": [
+        "TCC computer method"
+      ],
+      "expiresOn": "2026-12-31",
+      "tests": [
+        "scripts/verify-host-permission-contract.mjs --self-test",
+        "scripts/verify-host-permission-contract.mjs"
+      ]
+    }
+  ]
+}

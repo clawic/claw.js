@@ -21,7 +21,7 @@ test("Mac control roots expose atlas and dry-run contracts without direct native
   assert.equal(dryRun.code, CLI_EXIT_OK);
   const dryRunPayload = JSON.parse(dryRun.stdout) as {
     ok: boolean;
-    data: { status: string; capabilityId: string; risk: string; execution: string; approvalRequired: boolean };
+    data: { status: string; capabilityId: string; risk: string; execution: string; approvalRequired: boolean; plan: { schemaVersion: number; planId: string; capabilityId: string; requiredApprovals: unknown[] } };
     meta: { canonicalCommand: string };
   };
   assert.equal(dryRunPayload.ok, true);
@@ -31,6 +31,10 @@ test("Mac control roots expose atlas and dry-run contracts without direct native
   assert.equal(dryRunPayload.data.risk, "high");
   assert.equal(dryRunPayload.data.execution, "signed_host_broker");
   assert.equal(dryRunPayload.data.approvalRequired, true);
+  assert.equal(dryRunPayload.data.plan.schemaVersion, 1);
+  assert.equal(dryRunPayload.data.plan.capabilityId, "mac.wifi.connect");
+  assert.equal(dryRunPayload.data.plan.planId, "macplan_cli_mac_wifi_connect");
+  assert.equal(dryRunPayload.data.plan.requiredApprovals.length, 1);
 });
 
 test("Mac permissions root exposes central permission catalog and request plans", async () => {

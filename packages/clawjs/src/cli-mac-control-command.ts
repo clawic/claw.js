@@ -3,10 +3,13 @@ import {
   MAC_CONTROL_COMMAND_ROOTS,
   MAC_PERMISSION_CATALOG,
   MAC_PERMISSION_PACKS,
+  buildMacActionPlan,
   clawMacControlPlaneRegistry,
+  clawContractVersionV1,
   findMacAtlasCapability,
   listMacAtlasCapabilities,
   listMacRelatedSurfaces,
+  macActionRequestSchema,
 } from "@clawjs/core";
 
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
@@ -180,16 +183,26 @@ function runMacFamily(input: {
 }
 
 function buildDryRunPlan(capability: NonNullable<ReturnType<typeof findMacAtlasCapability>>) {
+  const request = macActionRequestSchema.parse({
+    schemaVersion: clawContractVersionV1,
+    requestId: `cli.${capability.id}`,
+    capabilityId: capability.id,
+    actor: { kind: "owner_cli", id: "local-cli", role: "owner" },
+    host: { hostId: "active-signed-host", bundleId: "signed-host-required", appVariant: "cli-dry-run" },
+    dryRun: true,
+  });
+  const plan = buildMacActionPlan({ request, capability });
   return {
     status: "dry_run",
+    plan,
     capabilityId: capability.id,
-    risk: capability.risk,
-    coverageState: capability.coverageState,
-    willMutate: capability.mutatesState,
-    permissions: capability.permissions,
-    revert: capability.revert,
-    relatedSurfaces: capability.cli.relatedSurfaces,
-    approvalRequired: capability.risk === "medium" || capability.risk === "high" || capability.risk === "critical",
+    risk: plan.risk,
+    coverageState: plan.coverageState,
+    willMutate: plan.willMutate,
+    permissions: plan.permissionRequirements.map((permission) => permission.permissionId),
+    revert: plan.rollback.level,
+    relatedSurfaces: plan.relatedSurfaces,
+    approvalRequired: plan.requiredApprovals.length > 0,
     execution: "signed_host_broker",
   };
 }

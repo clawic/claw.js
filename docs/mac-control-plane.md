@@ -30,6 +30,8 @@ Agents working on this surface should use
 - All sensitive macOS actions are brokered by the active signed host.
 - Node/CLI code must not directly request TCC permissions or execute sensitive
   macOS commands outside the Mac Action Broker allowlist.
+- Temporary sensitive native usage is registered in
+  `docs/mac-native-usage-allowlist.json` with owner, reason, expiry, and tests.
 - Permission prompts are just-in-time. Missing permissions return a plan and
   guidance; they do not trigger surprise native prompts.
 - The most restrictive policy wins across host, role, user, agent, assignment,

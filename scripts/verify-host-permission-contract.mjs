@@ -4,6 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
+const allowlistPath = "docs/mac-native-usage-allowlist.json";
+const today = "2026-05-17";
 
 const implementationRoots = [
   "apps",
@@ -49,21 +51,20 @@ const skippedDirs = new Set([
   "__tests__",
 ]);
 
-const allowedNodeBrokerFiles = new Set([
-  "bridge/src/computer-use.ts",
-  "bridge/src/server.ts",
-  "bridge/src/tcc-job-handler.ts",
-]);
-
 const sensitiveNativePermissionPatterns = [
   { name: "TCC computer method", pattern: /\btcc\.computer\./ },
   { name: "macOS screenshot permission command", pattern: /["'`]screencapture["'`]/ },
   { name: "macOS accessibility input helper", pattern: /["'`]cliclick["'`]/ },
   { name: "macOS System Events automation", pattern: /\bSystem Events\b/ },
 ];
+const sensitiveNativePermissionNames = new Set(sensitiveNativePermissionPatterns.map((entry) => entry.name));
 
 function read(relativePath) {
   return fs.readFileSync(path.join(rootDir, relativePath), "utf8");
+}
+
+function readJson(relativePath) {
+  return JSON.parse(read(relativePath));
 }
 
 function listFiles(relativeDir, output = []) {
@@ -87,11 +88,38 @@ function shouldScan(relativePath) {
   return !/\.(?:test|spec)\.[cm]?[jt]sx?$/.test(basename);
 }
 
-function nativePermissionViolations(relativePath, text) {
-  if (allowedNodeBrokerFiles.has(relativePath)) return [];
+function loadAllowlist(errors = []) {
+  const allowlist = readJson(allowlistPath);
+  if (allowlist.version !== 1) errors.push(`${allowlistPath} version must be 1`);
+  const allowedByPath = new Map();
+  const seen = new Set();
+  for (const entry of allowlist.entries ?? []) {
+    const label = entry.path ?? "<missing path>";
+    if (!entry.path || typeof entry.path !== "string") errors.push(`${allowlistPath}: entry is missing path`);
+    if (seen.has(entry.path)) errors.push(`${allowlistPath}: duplicate path ${entry.path}`);
+    seen.add(entry.path);
+    if (entry.path && !fs.existsSync(path.join(rootDir, entry.path))) errors.push(`${allowlistPath}: ${entry.path} does not exist`);
+    if (!entry.owner) errors.push(`${allowlistPath}: ${label} is missing owner`);
+    if (!entry.reason) errors.push(`${allowlistPath}: ${label} is missing reason`);
+    if (!Array.isArray(entry.allowedViolations) || entry.allowedViolations.length === 0) {
+      errors.push(`${allowlistPath}: ${label} must declare allowedViolations`);
+    }
+    for (const violation of entry.allowedViolations ?? []) {
+      if (!sensitiveNativePermissionNames.has(violation)) errors.push(`${allowlistPath}: ${label} allows unknown violation ${violation}`);
+    }
+    if (entry.expiresOn && !/^\d{4}-\d{2}-\d{2}$/.test(entry.expiresOn)) errors.push(`${allowlistPath}: ${label} expiresOn must be YYYY-MM-DD`);
+    if (entry.expiresOn && entry.expiresOn < today) errors.push(`${allowlistPath}: ${label} expired on ${entry.expiresOn}`);
+    if (!Array.isArray(entry.tests) || entry.tests.length === 0) errors.push(`${allowlistPath}: ${label} must declare tests`);
+    allowedByPath.set(entry.path, new Set(entry.allowedViolations ?? []));
+  }
+  return allowedByPath;
+}
+
+function nativePermissionViolations(relativePath, text, allowedByPath = new Map()) {
+  const allowed = allowedByPath.get(relativePath) ?? new Set();
   const matches = [];
   for (const { name, pattern } of sensitiveNativePermissionPatterns) {
-    if (pattern.test(text)) matches.push(name);
+    if (pattern.test(text) && !allowed.has(name)) matches.push(name);
   }
   return matches;
 }
@@ -104,10 +132,11 @@ function requireSnippet(errors, relativePath, snippet) {
 
 function validate() {
   const errors = [];
+  const allowedByPath = loadAllowlist(errors);
   for (const root of implementationRoots) {
     for (const relativePath of listFiles(root)) {
       if (!shouldScan(relativePath)) continue;
-      const violations = nativePermissionViolations(relativePath, read(relativePath));
+      const violations = nativePermissionViolations(relativePath, read(relativePath), allowedByPath);
       if (violations.length > 0) {
         errors.push(`${relativePath} directly references host-owned native permission surface: ${violations.join(", ")}`);
       }
@@ -122,11 +151,15 @@ function validate() {
   requireSnippet(errors, "bridge/src/server.ts", "actorId: senderId");
   requireSnippet(errors, "packages/clawjs-core/src/surface-registry.ts", "never Node-only code");
   requireSnippet(errors, "docs/decision-map.md", "scripts/verify-host-permission-contract.mjs");
+  requireSnippet(errors, "docs/mac-control-plane.md", allowlistPath);
 
   return errors;
 }
 
 function runSelfTest() {
+  const allowlist = new Map([
+    ["bridge/src/computer-use.ts", new Set(["macOS screenshot permission command", "macOS accessibility input helper", "macOS System Events automation"])],
+  ]);
   assert.deepEqual(
     nativePermissionViolations("packages/clawjs/src/direct.ts", 'spawn("screencapture")'),
     ["macOS screenshot permission command"],
@@ -144,8 +177,12 @@ function runSelfTest() {
     [],
   );
   assert.deepEqual(
-    nativePermissionViolations("bridge/src/computer-use.ts", 'command: "screencapture"; "System Events"'),
+    nativePermissionViolations("bridge/src/computer-use.ts", 'command: "screencapture"; "System Events"', allowlist),
     [],
+  );
+  assert.deepEqual(
+    nativePermissionViolations("bridge/src/computer-use.ts", 'const method = "tcc.computer.screenshot";', allowlist),
+    ["TCC computer method"],
   );
 }
 
