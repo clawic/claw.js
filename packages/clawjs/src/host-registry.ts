@@ -49,7 +49,7 @@ export function readHostRegistry(options: HostRegistryOptions = {}): ClawHostReg
   return clawHostRegistrySchema.parse(parsed);
 }
 
-export function writeHostRegistry(registry: ClawHostRegistry, options: HostRegistryOptions = {}): ClawHostRegistry {
+function writeHostRegistry(registry: ClawHostRegistry, options: HostRegistryOptions = {}): ClawHostRegistry {
   const normalized = clawHostRegistrySchema.parse({
     ...registry,
     updatedAt: nowIso(),

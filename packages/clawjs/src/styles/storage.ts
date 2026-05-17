@@ -6,7 +6,7 @@ import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 import { parseStyleMd, serializeStyleMd } from "./serializer.ts";
 import type { StyleManifest } from "./schema.ts";
 
-export function stylesRootDir(workspaceRoot: string): string {
+function stylesRootDir(workspaceRoot: string): string {
   return resolveClawPersistentSurfacePath("claw.workspace.styles", workspaceRoot);
 }
 

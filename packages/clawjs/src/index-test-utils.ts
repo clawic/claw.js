@@ -103,7 +103,7 @@ export async function runCliCapture(args: string[], cwd: string): Promise<{ code
   return { code, stdout: stdout.getOutput(), stderr: stderr.getOutput() };
 }
 
-export function parseTestFlags(args: string[]): Record<string, string> {
+function parseTestFlags(args: string[]): Record<string, string> {
   const flags: Record<string, string> = {};
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index];
@@ -120,7 +120,7 @@ export function parseTestFlags(args: string[]): Record<string, string> {
   return flags;
 }
 
-export function extractTestPositionals(args: string[]): string[] {
+function extractTestPositionals(args: string[]): string[] {
   const positionals: string[] = [];
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index];

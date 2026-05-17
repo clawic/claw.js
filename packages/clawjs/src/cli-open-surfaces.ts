@@ -50,7 +50,7 @@ export const OPEN_SURFACES: OpenSurface[] = [
   { id: "user", label: "User", port: 24149, kind: "cli-serve", dir: "modules/user", buildCheck: "dist/cli.js" },
 ];
 
-export const OPEN_SURFACE_BY_NAME = new Map<string, OpenSurface>(
+const OPEN_SURFACE_BY_NAME = new Map<string, OpenSurface>(
   OPEN_SURFACES.flatMap((surface) => [
     [surface.id, surface],
     ...(surface.aliases ?? []).map((alias) => [alias, surface] as const),

@@ -6,7 +6,7 @@ import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 import { parseTemplateMd, serializeTemplateMd } from "./serializer.ts";
 import { isTemplateCategory, type TemplateCategory, type TemplateManifest } from "./schema.ts";
 
-export function templatesRootDir(workspaceRoot: string): string {
+function templatesRootDir(workspaceRoot: string): string {
   return resolveClawPersistentSurfacePath("claw.workspace.templates", workspaceRoot);
 }
 

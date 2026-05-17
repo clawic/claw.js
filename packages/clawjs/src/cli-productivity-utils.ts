@@ -18,7 +18,7 @@ export function coreProductivityCollection(rawCollection: string | undefined): s
   return CORE_PRODUCTIVITY_DB_COLLECTIONS[rawCollection.trim().toLowerCase()] ?? null;
 }
 
-export function getCoreProductivityCollectionDefinition(collectionName: string): ProductivityCollectionDefinition | undefined {
+function getCoreProductivityCollectionDefinition(collectionName: string): ProductivityCollectionDefinition | undefined {
   return CORE_COLLECTION_DEFINITIONS.get(collectionName);
 }
 

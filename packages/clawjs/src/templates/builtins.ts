@@ -408,7 +408,3 @@ export function builtinTemplateManifests(): TemplateManifest[] {
     updatedAt: now,
   }));
 }
-
-export function builtinTemplateCount(): number {
-  return SEEDS.length;
-}

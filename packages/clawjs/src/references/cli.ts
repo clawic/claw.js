@@ -12,7 +12,7 @@ import {
   writeReference,
 } from "./storage.ts";
 
-export interface ReferenceCliContext {
+interface ReferenceCliContext {
   stdout: NodeJS.WritableStream;
   stderr: NodeJS.WritableStream;
   cwd: string;

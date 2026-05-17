@@ -1,13 +1,13 @@
 export const REFERENCE_SCHEMA_VERSION = 1;
 
-export const REFERENCE_TYPES = ["web", "pdf", "image", "video", "screenshot", "snippet"] as const;
+const REFERENCE_TYPES = ["web", "pdf", "image", "video", "screenshot", "snippet"] as const;
 export type ReferenceType = typeof REFERENCE_TYPES[number];
 
 export function isReferenceType(value: string): value is ReferenceType {
   return (REFERENCE_TYPES as readonly string[]).includes(value);
 }
 
-export interface ReferenceExtractedStyle {
+interface ReferenceExtractedStyle {
   paletteHex?: string[];
   primaryFontFamily?: string;
   bodyFontFamily?: string;

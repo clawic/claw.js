@@ -19,11 +19,11 @@ function xmlEscape(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-export function domainsPlistPath(flags: Record<string, string>): string {
+function domainsPlistPath(flags: Record<string, string>): string {
   return flags["plist-file"] || `/Library/LaunchDaemons/${CLAW_DOMAINS_LABEL}.plist`;
 }
 
-export function domainsHostsFile(flags: Record<string, string>): string {
+function domainsHostsFile(flags: Record<string, string>): string {
   return flags["hosts-file"] || "/etc/hosts";
 }
 

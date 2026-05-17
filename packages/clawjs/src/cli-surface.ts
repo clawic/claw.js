@@ -1,6 +1,5 @@
 import {
   clawCliCommandRegistry,
-  listClawCliAliases,
   resolveClawCliCommand,
   searchClawCliRegistry,
   type ClawCliCommandRegistryEntry,
@@ -9,7 +8,7 @@ import {
 
 export const DEFAULT_CLI_BIN = "claw";
 
-export const PUBLIC_CLI_SURFACE = clawCliCommandRegistry.commands;
+const PUBLIC_CLI_SURFACE = clawCliCommandRegistry.commands;
 
 function surfaceRows(entries: ClawCliCommandRegistryEntry[]): string[] {
   return entries.map((entry) => {
@@ -154,10 +153,6 @@ export function normalizePublicCliArgv(argv: string[], stderr: NodeJS.WritableSt
     stderr.write(`Alias: \`${binName} ${group}\` maps to canonical \`${binName} ${canonical}\`.\n`);
   }
   return argv;
-}
-
-export function listCliAliasRecords(): ReturnType<typeof listClawCliAliases> {
-  return listClawCliAliases();
 }
 
 export function searchCliDiscovery(query: string, options: { limit?: number } = {}): ClawCliSearchResult[] {

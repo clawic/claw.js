@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 
-export function channelListenerId(provider: string, accountId?: string): string {
+function channelListenerId(provider: string, accountId?: string): string {
   return `${provider}:${accountId?.trim() || "default"}`;
 }
 

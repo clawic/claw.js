@@ -18,7 +18,7 @@ import type { TemplateAspect, TemplateManifest, TemplateOutputFormat } from "./s
 import { readStyle } from "../styles/storage.ts";
 import { renderTemplate } from "./render/adapters.ts";
 
-export interface TemplateCliContext {
+interface TemplateCliContext {
   stdout: NodeJS.WritableStream;
   stderr: NodeJS.WritableStream;
   cwd: string;

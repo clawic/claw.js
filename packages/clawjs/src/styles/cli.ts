@@ -15,7 +15,7 @@ import {
 import { normalizeStyleManifest } from "./serializer.ts";
 import type { StyleManifest } from "./schema.ts";
 
-export interface StyleCliContext {
+interface StyleCliContext {
   stdout: NodeJS.WritableStream;
   stderr: NodeJS.WritableStream;
   cwd: string;

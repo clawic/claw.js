@@ -191,7 +191,7 @@ function escMultiline(input: string): string {
   return esc(input).replace(/\n/g, "<br>");
 }
 
-export const SUPPORTED_SLOT_KINDS: TemplateSlotKind[] = [
+const SUPPORTED_SLOT_KINDS: TemplateSlotKind[] = [
   "heading",
   "subheading",
   "body",

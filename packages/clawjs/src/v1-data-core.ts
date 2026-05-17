@@ -14,7 +14,7 @@ import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 
 export const V1_DATA_EXIT_OK = 0;
 export const V1_DATA_EXIT_FAILURE = 1;
-export const V1_DATA_EXIT_USAGE = 64;
+const V1_DATA_EXIT_USAGE = 64;
 
 type Writable = NodeJS.WritableStream;
 
