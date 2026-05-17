@@ -1018,12 +1018,12 @@ test("search rebuild indexes skills.registry from core.sqlite without secret ref
     assert.equal(rebuildPayload.data.pendingSources.includes("skills.registry"), false);
     assert.equal(rebuildPayload.data.indexedBySource["skills.registry"], 1);
 
-    const query = await runCliCapture(["search", "query", "deployment APIs", "--domains", "skills", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    const query = await runCliCapture(["search", "query", "deployment APIs", "--domains", "skills", "--filters", "metadata.requiresProtectedRefs=true", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
         indexedFastPaths: { "skills.registry": number };
-        results: Array<{ source: string; domain: string; type: string; title: string; body?: string; metadata?: { hasSecretRefs?: boolean }; fragments?: Array<{ snippet?: string }> }>;
+        results: Array<{ source: string; domain: string; type: string; title: string; body?: string; metadata?: { requiresProtectedRefs?: boolean }; fragments?: Array<{ snippet?: string }> }>;
       };
     };
     assert.equal(queryPayload.data.indexedFastPaths["skills.registry"], 1);
@@ -1031,7 +1031,7 @@ test("search rebuild indexes skills.registry from core.sqlite without secret ref
     assert.equal(result?.source, "skills.registry");
     assert.equal(result?.domain, "skills");
     assert.equal(result?.type, "skill");
-    assert.equal(result?.metadata?.hasSecretRefs, true);
+    assert.equal(result?.metadata?.requiresProtectedRefs, true);
     assert.equal(JSON.stringify(result).includes("vault://skills/deploy-token"), false);
     assert.equal(result?.fragments?.some((fragment) => fragment.snippet?.includes("deployment APIs")), true);
 

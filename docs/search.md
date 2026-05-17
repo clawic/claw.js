@@ -75,7 +75,7 @@ claw search query "product mark" --domains images --filters metadata.imageType=l
 claw search query "requirements" --domains media --filters metadata.kind=document --json
 claw search query "analytics cards" --domains generations --filters metadata.status=succeeded --json
 claw search query "symbolName" --domains code --code-root /path/to/project --json
-claw search query "deployment APIs" --domains skills --filters metadata.hasSecretRefs=true --json
+claw search query "deployment APIs" --domains skills --filters metadata.requiresProtectedRefs=true --json
 claw search sources enable local.files --profile full --json
 claw search rebuild --source local.files --profile full --file-root /path/to/folder --json
 claw search query "invoice" --domains files --profile full --file-root /path/to/folder --json
@@ -279,8 +279,9 @@ when they are not also registered as media.
 
 `skills.registry` projects framework skill records from `core.sqlite`. It
 indexes the skill slug, name, kind, body, scope metadata, and export path, but
-does not index `secret_refs_json`; Search only exposes a `hasSecretRefs` facet
-so skill search stays useful without leaking local secret references.
+does not index `secret_refs_json`; Search only exposes a
+`requiresProtectedRefs` facet so skill search stays useful without leaking local
+secret references.
 
 Search result actions are brokered. `search actions execute` produces a
 host-grants execution plan in `--dry-run` mode, fails closed when an approval is

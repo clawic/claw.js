@@ -2548,14 +2548,14 @@ function skillRegistrySearchDocument(row: SkillRegistryRow): SearchDocumentInput
       slug: row.slug,
       kind: row.kind,
       scopeKind: scopeKind ?? null,
-      hasSecretRefs: secretRefs.length > 0,
+      requiresProtectedRefs: secretRefs.length > 0,
       exportPath: row.export_path ?? null,
     },
     permissions: { canOpen: true, canPreview: true, redacted: false },
     rankingHints: {
       fastPath: 1,
       skill: 1,
-      hasSecretRefs: secretRefs.length > 0 ? -0.1 : 0,
+      requiresProtectedRefs: secretRefs.length > 0 ? -0.1 : 0,
     },
     fragments: row.body ? [{
       id: `skills.registry:${row.slug}:body`,

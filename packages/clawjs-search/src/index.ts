@@ -543,7 +543,7 @@ export function createBuiltinSearchSourceManifests(): SearchSourceManifest[] {
       facets: [
         { id: "kind", label: "Kind", type: "string" },
         { id: "scopeKind", label: "Scope", type: "string" },
-        { id: "hasSecretRefs", label: "Requires secrets", type: "boolean" },
+        { id: "requiresProtectedRefs", label: "Requires protected refs", type: "boolean" },
       ],
     }),
     createFullSearchSourceManifest({
