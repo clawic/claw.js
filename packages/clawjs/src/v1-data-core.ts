@@ -281,6 +281,13 @@ export function ensureV1MainSchema(sqlite: Database.Database): void {
   ensureColumn(sqlite, "agents", "default_budget_id", "TEXT");
   ensureColumn(sqlite, "agents", "retired_at", "TEXT");
   ensureColumn(sqlite, "agents", "retirement_snapshot_ref", "TEXT");
+  ensureColumn(sqlite, "agent_incidents", "run_id", "TEXT");
+  ensureColumn(sqlite, "agent_incidents", "session_id", "TEXT");
+  ensureColumn(sqlite, "agent_incidents", "actor_id", "TEXT");
+  ensureColumn(sqlite, "agent_incidents", "description", "TEXT");
+  ensureColumn(sqlite, "agent_incidents", "scope_type", "TEXT");
+  ensureColumn(sqlite, "agent_incidents", "scope_id", "TEXT");
+  ensureColumn(sqlite, "agent_incidents", "detected_at", "TEXT");
   ensureColumn(sqlite, "skills", "secret_refs_json", "TEXT NOT NULL DEFAULT '[]'");
   ensureColumn(sqlite, "iot_config", "config_json", "TEXT NOT NULL DEFAULT '{}'");
   ensureColumn(sqlite, "iot_config", "secret_ref", "TEXT");

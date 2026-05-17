@@ -180,19 +180,25 @@ export const V1_AGENT_DATA_SCHEMA_SQL = String.raw`
       id TEXT PRIMARY KEY,
       agent_id TEXT NOT NULL,
       assignment_id TEXT,
+      run_id TEXT,
+      session_id TEXT,
+      actor_id TEXT,
       status TEXT NOT NULL DEFAULT 'open',
-      severity TEXT NOT NULL DEFAULT 'sev4',
-      title TEXT NOT NULL,
-      summary TEXT,
-      customer_impact TEXT,
+      severity TEXT NOT NULL DEFAULT 'low',
+      summary TEXT NOT NULL,
+      description TEXT,
+      scope_type TEXT,
+      scope_id TEXT,
       redaction_json TEXT NOT NULL DEFAULT '{}',
+      detected_at TEXT,
       resolved_at TEXT,
       metadata_json TEXT NOT NULL DEFAULT '{}',
       archived_at TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
-      FOREIGN KEY (assignment_id) REFERENCES agent_assignments(id) ON DELETE SET NULL
+      FOREIGN KEY (assignment_id) REFERENCES agent_assignments(id) ON DELETE SET NULL,
+      FOREIGN KEY (run_id) REFERENCES agent_runs(id) ON DELETE SET NULL
     );
     CREATE INDEX IF NOT EXISTS agent_incidents_agent_idx ON agent_incidents(agent_id);
     CREATE TABLE IF NOT EXISTS agent_blueprints (

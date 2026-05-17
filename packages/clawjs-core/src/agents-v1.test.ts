@@ -23,6 +23,7 @@ import {
   type AgentAssignmentRoute,
   type AgentResourceGrant,
 } from "./agents-v1.ts";
+import { AGENT_INCIDENTS } from "./builtins/agents/agent_v1_collections.ts";
 
 const request: AgentAccessRequest = {
   resourceType: "contact",
@@ -442,6 +443,18 @@ test("Agents V1 incidents are first-class redacted audit records", () => {
   assert.equal(incident.audit.result, "blocked");
   assert.equal(incident.audit.resourceType, "agent_incident");
   assert.equal((incident.audit.metadata.metadata as Record<string, unknown>).authorization, "[REDACTED]");
+});
+
+test("Agents V1 incident collection matches core incident vocabulary", () => {
+  const status = AGENT_INCIDENTS.fields.find((field) => field.name === "status");
+  const severity = AGENT_INCIDENTS.fields.find((field) => field.name === "severity");
+  const summary = AGENT_INCIDENTS.fields.find((field) => field.name === "summary");
+  assert.deepEqual(status?.options, ["open", "mitigating", "resolved", "archived"]);
+  assert.deepEqual(severity?.options, ["info", "low", "medium", "high", "critical"]);
+  assert.equal(summary?.required, true);
+  assert.equal(AGENT_INCIDENTS.fields.some((field) => field.name === "runId"), true);
+  assert.equal(AGENT_INCIDENTS.fields.some((field) => field.name === "sessionId"), true);
+  assert.equal(AGENT_INCIDENTS.fields.some((field) => field.name === "detectedAt"), true);
 });
 
 test("Agents V1 activity feed projects human-readable redacted timeline", () => {

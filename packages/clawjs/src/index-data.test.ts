@@ -373,6 +373,13 @@ test("V2 main schema upgrades app project resource ids before indexing them", as
       assert.equal(columns.some((column) => column.name === "resource_id"), true);
       const indexes = sqlite.prepare("PRAGMA index_list(app_projects)").all() as Array<{ name: string }>;
       assert.equal(indexes.some((index) => index.name === "app_projects_resource_id_idx"), true);
+      const incidentColumns = sqlite.prepare("PRAGMA table_info(agent_incidents)").all() as Array<{ name: string; dflt_value: string | null; notnull: number }>;
+      assert.equal(incidentColumns.some((column) => column.name === "run_id"), true);
+      assert.equal(incidentColumns.some((column) => column.name === "session_id"), true);
+      assert.equal(incidentColumns.some((column) => column.name === "actor_id"), true);
+      assert.equal(incidentColumns.some((column) => column.name === "detected_at"), true);
+      assert.equal(incidentColumns.find((column) => column.name === "severity")?.dflt_value, "'low'");
+      assert.equal(incidentColumns.find((column) => column.name === "summary")?.notnull, 1);
     } finally {
       sqlite.close();
       fs.rmSync(tempRoot, { recursive: true, force: true });
