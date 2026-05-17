@@ -35,7 +35,7 @@ import { ensureGenerationArtifactResourceIndexed, ensureGenerationsArtifactsSour
 import { ensureImageDerivedResourceIndexed, ensureImagesDerivedSourceIndexed, ensureMediaAssetResourceIndexed, ensureMediaAssetsSourceIndexed } from "./cli-search-image-media-sources.ts";
 import { pathSafeBasename, resolveRuntimeAdapterId } from "./cli-runtime-utils.ts";
 import { resolveClawjsDataRoot, resolveClawjsMainDbPath } from "./v1-data.ts";
-import { readMcpServers, type JsonRecord } from "./v1-data-core.ts";
+import { ensureV1MainSchema, readMcpServers, type JsonRecord } from "./v1-data-core.ts";
 
 const SEARCH_ADMIN_COMMANDS = new Set(["sources", "status", "service", "profiles", "entrypoints", "aliases", "saved", "monitors", "actions", "audit", "jobs", "shards", "explain"]);
 const WORKSPACE_SEARCH_DOMAINS = new Set([
@@ -155,7 +155,7 @@ export async function runSearchQueryCli(input: {
   }
   const store = openCliSearchStore(input.flags);
   try {
-    registerBuiltinSources(store);
+    registerCliSearchSources(store, input.flags);
     const indexedCommands = sourceCanIndex(store, "commands") ? ensureCommandSourceIndexed(store) : 0;
     const sources = parseListFlag(input.flags.sources ?? input.flags.source);
     const shards = parseListFlag(input.flags.shards ?? input.flags.shard);
@@ -379,7 +379,7 @@ export async function runSearchRebuildCli(input: {
       else input.context.stderr.write(`${message}\n`);
       return CLI_EXIT_USAGE;
     }
-    registerBuiltinSources(store);
+    registerCliSearchSources(store, input.flags);
     const enqueueRebuild = readBooleanFlag(input.argv, input.flags, "enqueue")
       || readBooleanFlag(input.argv, input.flags, "background")
       || readBooleanFlag(input.argv, input.flags, "async");
@@ -419,7 +419,7 @@ export async function runSearchRebuildCli(input: {
     if (selectedSources && selectedShards) store.resetSourceShards({ sources: selectedSources, shards: selectedShards });
     else if (selectedSources) store.resetSources(selectedSources);
     else store.reset();
-    registerBuiltinSources(store, preservedStates);
+    registerCliSearchSources(store, input.flags, preservedStates);
     const rebuildsSource = (source: string) => (!selectedSources || selectedSources.includes(source)) && sourceCanIndex(store, source);
     const commandsIndexed = rebuildsSource("commands") ? ensureCommandSourceIndexed(store) : 0;
     const sessionsIndexed = rebuildsSource("sessions.chats") ? ensureSessionsChatsSourceIndexed(store, input.flags) : 0;
@@ -612,7 +612,7 @@ export async function runSearchAdminCli(input: {
       }>;
     };
     try {
-      registerBuiltinSources(store);
+      registerCliSearchSources(store, input.flags);
       if (["enable", "disable", "pause", "exclude", "resume"].includes(action)) {
         if (!sourceId) {
           input.context.stderr.write(`Usage: ${input.binName} search sources ${action} <source-id> [--json]\n`);
@@ -620,6 +620,11 @@ export async function runSearchAdminCli(input: {
         }
         const state = sourceStateForAction(action);
         store.setSourceState(sourceId, state, { error: null });
+        writeCanonicalSearchSourceState(input.flags, sourceId, state, {
+          profile,
+          actor: input.flags.actor,
+          surface: input.flags.surface ?? "claw.search.sources",
+        });
       }
       const statusById = new Map(store.sourceStatus().map((status) => [status.source, status]));
       const sources = BUILTIN_SEARCH_SOURCES
@@ -655,7 +660,7 @@ export async function runSearchAdminCli(input: {
     const store = openCliSearchStore(input.flags);
     let sources: Array<{ source: string; domain: string; state: string; backlog: number; fastPath: boolean; lastIndexedAt?: string; error?: string }>;
     try {
-      registerBuiltinSources(store);
+      registerCliSearchSources(store, input.flags);
       const manifestById = new Map(BUILTIN_SEARCH_SOURCES.map((source) => [source.id, source]));
       sources = store.sourceStatus().map((status) => ({
         ...status,
@@ -729,7 +734,7 @@ export async function runSearchAdminCli(input: {
     const store = openCliSearchStore(input.flags);
     let data: { action: string; item?: unknown; items: unknown[]; state: string };
     try {
-      registerBuiltinSources(store);
+      registerCliSearchSources(store, input.flags);
       if (command === "saved" && (action === "create" || action === "upsert")) {
         const id = input.positionals[3] ?? input.flags.id;
         const query = input.flags.query ?? input.positionals.slice(4).join(" ");
@@ -774,7 +779,7 @@ export async function runSearchAdminCli(input: {
     const store = openCliSearchStore(input.flags);
     let items: ReturnType<SearchStore["listAuditEvents"]>;
     try {
-      registerBuiltinSources(store);
+      registerCliSearchSources(store, input.flags);
       items = store.listAuditEvents({
         limit: input.flags.limit ? Number(input.flags.limit) : undefined,
         type: input.flags.type === "action" || input.flags.type === "sensitive_query" ? input.flags.type : undefined,
@@ -798,7 +803,7 @@ export async function runSearchAdminCli(input: {
       state: string;
     };
     try {
-      registerBuiltinSources(store);
+      registerCliSearchSources(store, input.flags);
       if (action === "enqueue" || action === "create") {
         const source = input.flags.source ?? input.positionals[4];
         const operation = parseSearchIndexJobOperation(input.flags.operation ?? input.flags.op ?? input.positionals[3]);
@@ -886,7 +891,7 @@ export async function runSearchAdminCli(input: {
     const store = openCliSearchStore(input.flags);
     let shards: ReturnType<SearchStore["listShards"]>;
     try {
-      registerBuiltinSources(store);
+      registerCliSearchSources(store, input.flags);
       shards = store.listShards({
         source: input.flags.source,
         domain: input.flags.domain,
@@ -914,7 +919,7 @@ export async function runSearchAdminCli(input: {
     const store = openCliSearchStore(input.flags);
     let indexedActions: SearchAction[] | null = resultId ? [] : null;
     try {
-      registerBuiltinSources(store);
+      registerCliSearchSources(store, input.flags);
       indexedActions = resultId ? store.actionsForResult(resultId) : null;
     } finally {
       store.close();
@@ -1048,7 +1053,7 @@ function searchServiceSnapshot(
 } {
   const store = openCliSearchStore(flags);
   try {
-    registerBuiltinSources(store);
+    registerCliSearchSources(store, flags);
     const jobs = store.listIndexJobs({ limit: flags.limit ? Number(flags.limit) : 50 });
     return {
       action,
@@ -1072,7 +1077,7 @@ function runSearchServiceWorkerOnce(flags: Record<string, string>, cwd: string):
   const items: Array<{ id: string; source: string; operation: string; status: string; indexed?: number; error?: string }> = [];
   let stoppedReason: SearchServiceWorkerStopReason = "empty";
   try {
-    registerBuiltinSources(store);
+    registerCliSearchSources(store, flags);
     while (items.length < budgets.maxJobs) {
       if (Date.now() - startedAt >= budgets.maxRuntimeMs) {
         stoppedReason = "runtime_budget";
@@ -1437,7 +1442,7 @@ function runSearchActionExecuteCli(input: {
   const store = openCliSearchStore(input.flags);
   let plan: SearchActionExecutionPlan | undefined;
   try {
-    registerBuiltinSources(store);
+    registerCliSearchSources(store, input.flags);
     const result = store.resultForId(resultId);
     const action = store.actionsForResult(resultId).find((candidate) => candidate.id === actionId);
     if (!result || !action) {
@@ -1525,6 +1530,91 @@ function openCliSearchStore(flags: Record<string, string>): SearchStore {
   }
 }
 
+function searchCanonicalConfigEnv(flags: Record<string, string>): NodeJS.ProcessEnv {
+  return flags["data-dir"] ? { ...process.env, CLAW_DATA_DIR: flags["data-dir"] } : process.env;
+}
+
+function ensureSearchCanonicalConfigSchema(sqlite: Database.Database): void {
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS search_source_config (
+      source TEXT PRIMARY KEY,
+      state TEXT NOT NULL,
+      profile TEXT NOT NULL DEFAULT 'framework',
+      updated_at TEXT NOT NULL,
+      actor TEXT,
+      surface TEXT,
+      metadata_json TEXT NOT NULL DEFAULT '{}'
+    );
+    CREATE INDEX IF NOT EXISTS search_source_config_state_idx ON search_source_config(state);
+  `);
+}
+
+function readCanonicalSearchSourceStates(flags: Record<string, string>): Map<string, SearchSourceState> {
+  const env = searchCanonicalConfigEnv(flags);
+  const dbPath = resolveClawjsMainDbPath(env);
+  if (!fs.existsSync(dbPath)) return new Map();
+  const db = new Database(dbPath);
+  try {
+    ensureSearchCanonicalConfigSchema(db);
+    const rows = db.prepare("SELECT source, state FROM search_source_config").all() as Array<{ source: string; state: string }>;
+    return new Map(rows.flatMap((row) => {
+      const state = parseSearchSourceState(row.state);
+      return state ? [[row.source, state] as const] : [];
+    }));
+  } finally {
+    db.close();
+  }
+}
+
+function writeCanonicalSearchSourceState(
+  flags: Record<string, string>,
+  source: string,
+  state: SearchSourceState,
+  input: { profile: SearchProfileId; actor?: string; surface?: string } = { profile: "framework" },
+): void {
+  const env = searchCanonicalConfigEnv(flags);
+  const dbPath = resolveClawjsMainDbPath(env);
+  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+  const db = new Database(dbPath);
+  try {
+    ensureV1MainSchema(db, env);
+    ensureSearchCanonicalConfigSchema(db);
+    db.prepare(`
+      INSERT INTO search_source_config (source, state, profile, updated_at, actor, surface, metadata_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(source) DO UPDATE SET
+        state = excluded.state,
+        profile = excluded.profile,
+        updated_at = excluded.updated_at,
+        actor = excluded.actor,
+        surface = excluded.surface,
+        metadata_json = excluded.metadata_json
+    `).run(
+      source,
+      state,
+      input.profile,
+      new Date().toISOString(),
+      input.actor ?? null,
+      input.surface ?? null,
+      JSON.stringify({ source: "claw search sources" }),
+    );
+  } finally {
+    db.close();
+  }
+}
+
+function parseSearchSourceState(value: string): SearchSourceState | undefined {
+  return value === "enabled"
+    || value === "disabled"
+    || value === "paused"
+    || value === "excluded"
+    || value === "backfilling"
+    || value === "degraded"
+    || value === "error"
+    ? value
+    : undefined;
+}
+
 function resolveSearchDbPath(flags: Record<string, string>): string {
   if (flags["search-db-path"]) return path.resolve(flags["search-db-path"]);
   if (process.env.CLAW_SEARCH_DB_PATH) return path.resolve(process.env.CLAW_SEARCH_DB_PATH);
@@ -1547,6 +1637,14 @@ function searchStorageMetadata(flags: Record<string, string>): { canonical: stri
     index: "search.sqlite",
     indexRebuildable: true,
   };
+}
+
+function registerCliSearchSources(store: SearchStore, flags: Record<string, string>, states: Map<string, SearchSourceState> = new Map()): void {
+  const mergedStates = new Map(states);
+  for (const [source, state] of readCanonicalSearchSourceStates(flags)) {
+    mergedStates.set(source, state);
+  }
+  registerBuiltinSources(store, mergedStates);
 }
 
 function registerBuiltinSources(store: SearchStore, states: Map<string, SearchSourceState> = new Map()): void {
