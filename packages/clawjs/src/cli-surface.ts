@@ -75,8 +75,6 @@ const SINGULAR_MEDIA_COMMAND_ALIASES = new Map(
 
 export const PUBLIC_PORTAL_HELP_ONLY = new Set([
   "drive",
-  "design",
-  "apps",
   "business",
   "social",
   "monitor",

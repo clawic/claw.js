@@ -62,8 +62,6 @@ test("runCli rejects removed public pre-v1 namespaces before V1 routing", async 
     ["content", "upsert"],
     ["business", "upsert"],
     ["social", "list"],
-    ["apps", "list"],
-    ["design", "upsert"],
     ["monitor", "event"],
     ["workspace-search", "query", "x"],
     ["workspace-index", "rebuild"],

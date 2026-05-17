@@ -370,6 +370,44 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
     assert.equal(marketplace.choice, "openai");
     assert.equal(marketplace.kind, "provider");
 
+    const appStdout = captureStream();
+    assert.equal(await runCli(["apps", "upsert", "demo-app", "--name", "Demo App", "--path", "apps/demo-app", "--json"], {
+      stdout: appStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const app = parseCliData(appStdout.getOutput()) as { slug: string; name: string; rootPath: string };
+    assert.equal(app.slug, "demo-app");
+    assert.equal(app.name, "Demo App");
+    assert.equal(app.rootPath, path.join(cwd, "apps/demo-app"));
+
+    const appsListStdout = captureStream();
+    assert.equal(await runCli(["apps", "list", "--json"], {
+      stdout: appsListStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    assert.equal((parseCliData(appsListStdout.getOutput()) as { items: Array<{ slug: string }> }).items.some((item) => item.slug === "demo-app"), true);
+
+    const designStdout = captureStream();
+    assert.equal(await runCli(["design", "upsert", "style", "style.demo", "--name", "Demo Style", "--path", "design/style.demo", "--json"], {
+      stdout: designStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const design = parseCliData(designStdout.getOutput()) as { id: string; kind: string; name: string };
+    assert.equal(design.id, "style.demo");
+    assert.equal(design.kind, "style");
+    assert.equal(design.name, "Demo Style");
+
+    const designListStdout = captureStream();
+    assert.equal(await runCli(["design", "list", "--json"], {
+      stdout: designListStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    assert.equal((parseCliData(designListStdout.getOutput()) as { items: Array<{ id: string }> }).items.some((item) => item.id === "style.demo"), true);
+
     const mcpConfig = path.join(cwd, "config.toml");
     fs.writeFileSync(mcpConfig, "model = \"gpt\"\n\n[mcp_servers.old]\ncommand = \"old\"\n");
     const mcpUpsertStdout = captureStream();
@@ -441,6 +479,8 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
       assert.equal((main.prepare("SELECT secret_ref FROM connections WHERE id = ?").get("github") as { secret_ref: string }).secret_ref, "vault://connections/github");
       assert.equal((main.prepare("SELECT secret_ref FROM iot_config WHERE id = ?").get("thermostat") as { secret_ref: string }).secret_ref, "vault://iot/thermostat");
       assert.equal((main.prepare("SELECT choice FROM marketplace_choices WHERE target = ?").get("default-ai-provider") as { choice: string }).choice, "openai");
+      assert.equal((main.prepare("SELECT root_path FROM apps WHERE slug = ?").get("demo-app") as { root_path: string }).root_path, path.join(cwd, "apps/demo-app"));
+      assert.equal((main.prepare("SELECT root_path FROM design_resources WHERE id = ?").get("style.demo") as { root_path: string }).root_path, path.join(cwd, "design/style.demo"));
     } finally {
       main.close();
     }
