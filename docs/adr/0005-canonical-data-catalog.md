@@ -41,7 +41,7 @@ field optionality, relationship meaning, or migration safety.
   broad catalog expansion. `candidate_mapping` entries are not final coverage;
   each wave must prove field and relationship support or record a canonical gap
   or custom-database boundary.
-- Custom databases stay first-class for niche, private, experimental, or
+- Custom databases stay first-class for niche, private, fast-changing, or
   unapproved entities.
 - Every canonical or registered-hidden collection must be represented in the
   domain surface registry with storage ownership and CLI coverage from

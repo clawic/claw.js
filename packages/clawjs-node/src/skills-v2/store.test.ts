@@ -98,11 +98,11 @@ test("skills-v2: composite role expands children at compile time", () => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-skills-v2-role-"));
   const store = createSkillsStore({ homeDir: home });
   store.create({ slug: "a", kind: "snippet", description: "A", body: "alpha" });
-  store.create({ slug: "b", kind: "snippet", description: "B", body: "beta" });
+  store.create({ slug: "b", kind: "snippet", description: "B", body: "bravo" });
   store.create({ slug: "ab", kind: "role", description: "AB", body: "", children: ["a", "b"] });
   const out = compileSkills(store, ["ab"]);
   assert.equal(out.includes("alpha"), true);
-  assert.equal(out.includes("beta"), true);
+  assert.equal(out.includes("bravo"), true);
 });
 
 test("skills-v2: capsule rendering precedes full bodies, sorted by priority", () => {

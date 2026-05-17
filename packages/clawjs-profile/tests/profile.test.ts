@@ -72,7 +72,7 @@ test("Block: encode / decode preserves blockId", () => {
 
 test("Group: add/remove members works", () => {
   const node = makeNode("alpha");
-  const peer = makeNode("beta");
+  const peer = makeNode("peer");
   let g = createGroup({ id: "friends" });
   assert.equal(isMember(g, peer.root.publicKey), false);
   g = addMember(g, peer.root.publicKey);

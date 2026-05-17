@@ -169,7 +169,7 @@ test("sealed-box rejects wrong recipient", () => {
 
 test("X25519 derivation produces consistent shared key", async () => {
   const a = spawnNode("alpha");
-  const b = spawnNode("beta");
+  const b = spawnNode("bravo");
   const aXPriv = ed25519ToX25519Private(a.role.privateKey);
   const bXPriv = ed25519ToX25519Private(b.role.privateKey);
   const aXPub = ed25519ToX25519Public(a.role.publicKey);

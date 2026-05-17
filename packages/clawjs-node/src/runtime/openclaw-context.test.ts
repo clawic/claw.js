@@ -71,22 +71,22 @@ test("resolveOpenClawContext loads workspace and agent dirs from openclaw.json",
         workspace: "/tmp/default-workspace",
       },
       list: [{
-        id: "beta",
-        workspace: "/tmp/beta-workspace",
-        agentDir: "/tmp/beta-agent",
+        id: "bravo",
+        workspace: "/tmp/bravo-workspace",
+        agentDir: "/tmp/bravo-agent",
       }],
     },
   }));
 
   const context = resolveOpenClawContext({
     configPath,
-    agentId: "beta",
+    agentId: "bravo",
   });
 
   assert.equal(context.stateDir, stateDir);
-  assert.equal(context.workspaceDir, "/tmp/beta-workspace");
-  assert.equal(context.agentDir, "/tmp/beta-agent");
-  assert.equal(context.configuredAgent?.id, "beta");
+  assert.equal(context.workspaceDir, "/tmp/bravo-workspace");
+  assert.equal(context.agentDir, "/tmp/bravo-agent");
+  assert.equal(context.configuredAgent?.id, "bravo");
   assert.equal(context.configuredAgent?.model, undefined);
   assert.equal(context.gateway?.port, 18790);
   assert.equal(context.gateway?.token, "cfg-token");
@@ -113,7 +113,7 @@ test("listOpenClawAgents parses model metadata from CLI output", async () => {
     "openclaw agents list --json": {
       stdout: JSON.stringify([
         { id: "alpha", workspace: "/tmp/workspaces/alpha", agentDir: "/tmp/agents/alpha/agent", model: "openai-codex/gpt-5.4" },
-        { id: "beta", name: "Beta Agent" },
+        { id: "bravo", name: "Bravo Agent" },
       ]),
     },
   });
@@ -127,8 +127,8 @@ test("listOpenClawAgents parses model metadata from CLI output", async () => {
       model: "openai-codex/gpt-5.4",
     },
     {
-      id: "beta",
-      name: "Beta Agent",
+      id: "bravo",
+      name: "Bravo Agent",
     },
   ]);
 });
@@ -139,8 +139,8 @@ test("resolveOpenClawContextWithCli merges configured agent data with CLI metada
   fs.writeFileSync(configPath, JSON.stringify({
     agents: {
       list: [{
-        id: "beta",
-        name: "Configured Beta",
+        id: "bravo",
+        name: "Configured Bravo",
       }],
     },
   }));
@@ -149,9 +149,9 @@ test("resolveOpenClawContextWithCli merges configured agent data with CLI metada
     "openclaw agents list --json": {
       stdout: JSON.stringify([
         {
-          id: "beta",
-          workspace: "/tmp/beta-workspace",
-          agentDir: "/tmp/beta-agent",
+          id: "bravo",
+          workspace: "/tmp/bravo-workspace",
+          agentDir: "/tmp/bravo-agent",
           model: "openai-codex/gpt-5.4",
         },
       ]),
@@ -160,16 +160,16 @@ test("resolveOpenClawContextWithCli merges configured agent data with CLI metada
 
   const context = await resolveOpenClawContextWithCli(runner, {
     configPath,
-    agentId: "beta",
+    agentId: "bravo",
   });
 
-  assert.equal(context.configuredAgent?.id, "beta");
-  assert.equal(context.configuredAgent?.name, "Configured Beta");
-  assert.equal(context.configuredAgent?.workspace, "/tmp/beta-workspace");
-  assert.equal(context.configuredAgent?.agentDir, "/tmp/beta-agent");
+  assert.equal(context.configuredAgent?.id, "bravo");
+  assert.equal(context.configuredAgent?.name, "Configured Bravo");
+  assert.equal(context.configuredAgent?.workspace, "/tmp/bravo-workspace");
+  assert.equal(context.configuredAgent?.agentDir, "/tmp/bravo-agent");
   assert.equal(context.configuredAgent?.model, "openai-codex/gpt-5.4");
-  assert.equal(context.workspaceDir, "/tmp/beta-workspace");
-  assert.equal(context.agentDir, "/tmp/beta-agent");
+  assert.equal(context.workspaceDir, "/tmp/bravo-workspace");
+  assert.equal(context.agentDir, "/tmp/bravo-agent");
   assert.equal(context.cliAgent?.model, "openai-codex/gpt-5.4");
   assert.equal(context.cliAgentDetected, true);
 });
