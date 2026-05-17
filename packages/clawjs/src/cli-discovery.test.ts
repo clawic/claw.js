@@ -625,6 +625,124 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(productSpecTimelinePayload.data.materializedView.items.some((item) => item.kind === "product_bom" && item.label === "Press frame BOM"), true);
   assert.equal(productSpecTimelinePayload.data.materializedView.gaps.some((gap) => gap.id === productSpecGapPayload.data.id && gap.gapKind === "missing"), true);
 
+  const drugProductCreate = await runCliCapture(["drug-product", "create", "Example Therapy", "--product", erpProductPayload.data.id, "--product-spec", productSpecPayload.data.id, "--company", companyPayload.data.id, "--active-ingredient", "Examplemab", "--dosage-form", "tablet", "--strength", "10 mg", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(drugProductCreate.code, CLI_EXIT_OK, drugProductCreate.stderr || drugProductCreate.stdout);
+  const drugProductPayload = JSON.parse(drugProductCreate.stdout) as { data: { id: string; title: string; productCatalogId: string; productSpecId: string; companyId: string; activeIngredient: string; dosageForm: string; strength: string; status: string; regulatoryStatus: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(drugProductPayload.meta.invokedCommand, "drug-product");
+  assert.equal(drugProductPayload.meta.collection, "drug_products");
+  assert.equal(drugProductPayload.meta.action, "create");
+  assert.equal(drugProductPayload.data.title, "Example Therapy");
+  assert.equal(drugProductPayload.data.productCatalogId, erpProductPayload.data.id);
+  assert.equal(drugProductPayload.data.productSpecId, productSpecPayload.data.id);
+  assert.equal(drugProductPayload.data.companyId, companyPayload.data.id);
+  assert.equal(drugProductPayload.data.activeIngredient, "Examplemab");
+  assert.equal(drugProductPayload.data.dosageForm, "tablet");
+  assert.equal(drugProductPayload.data.strength, "10 mg");
+  assert.equal(drugProductPayload.data.status, "draft");
+  assert.equal(drugProductPayload.data.regulatoryStatus, "unknown");
+
+  const batchRecordCreate = await runCliCapture(["drug-product", drugProductPayload.data.id, "batches", "add", "Batch B-001", "--company", companyPayload.data.id, "--batch-number", "B-001", "--status", "completed", "--quantity-produced", "1000", "--unit", "tablets", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(batchRecordCreate.code, CLI_EXIT_OK, batchRecordCreate.stderr || batchRecordCreate.stdout);
+  const batchRecordPayload = JSON.parse(batchRecordCreate.stdout) as { data: { id: string; title: string; drugProductId: string; companyId: string; batchNumber: string; status: string; quantityProduced: number; unit: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(batchRecordPayload.meta.invokedCommand, "drug-product");
+  assert.equal(batchRecordPayload.meta.collection, "batch_records");
+  assert.equal(batchRecordPayload.meta.action, "create");
+  assert.equal(batchRecordPayload.data.title, "Batch B-001");
+  assert.equal(batchRecordPayload.data.drugProductId, drugProductPayload.data.id);
+  assert.equal(batchRecordPayload.data.companyId, companyPayload.data.id);
+  assert.equal(batchRecordPayload.data.batchNumber, "B-001");
+  assert.equal(batchRecordPayload.data.status, "completed");
+  assert.equal(batchRecordPayload.data.quantityProduced, 1000);
+  assert.equal(batchRecordPayload.data.unit, "tablets");
+
+  const lotReleaseCreate = await runCliCapture(["drug-product", drugProductPayload.data.id, "lot-releases", "add", "Lot release B-001", "--batch", batchRecordPayload.data.id, "--releaser", employeePayload.data.id, "--disposition", "release", "--status", "released", "--certificate-number", "COA-001", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(lotReleaseCreate.code, CLI_EXIT_OK, lotReleaseCreate.stderr || lotReleaseCreate.stdout);
+  const lotReleasePayload = JSON.parse(lotReleaseCreate.stdout) as { data: { id: string; title: string; drugProductId: string; batchRecordId: string; releasedByEmployeeId: string; disposition: string; status: string; certificateNumber: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(lotReleasePayload.meta.invokedCommand, "drug-product");
+  assert.equal(lotReleasePayload.meta.collection, "lot_releases");
+  assert.equal(lotReleasePayload.meta.action, "create");
+  assert.equal(lotReleasePayload.data.title, "Lot release B-001");
+  assert.equal(lotReleasePayload.data.drugProductId, drugProductPayload.data.id);
+  assert.equal(lotReleasePayload.data.batchRecordId, batchRecordPayload.data.id);
+  assert.equal(lotReleasePayload.data.releasedByEmployeeId, employeePayload.data.id);
+  assert.equal(lotReleasePayload.data.disposition, "release");
+  assert.equal(lotReleasePayload.data.status, "released");
+  assert.equal(lotReleasePayload.data.certificateNumber, "COA-001");
+
+  const adverseEventCreate = await runCliCapture(["drug-product", drugProductPayload.data.id, "adverse-events", "add", "Headache safety event", "--patient", createdPatient.data.id, "--event-term", "Headache", "--seriousness", "non_serious", "--severity", "mild", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(adverseEventCreate.code, CLI_EXIT_OK, adverseEventCreate.stderr || adverseEventCreate.stdout);
+  const adverseEventPayload = JSON.parse(adverseEventCreate.stdout) as { data: { id: string; title: string; drugProductId: string; patientId: string; eventTerm: string; seriousness: string; severity: string; status: string; reportedAt: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(adverseEventPayload.meta.invokedCommand, "drug-product");
+  assert.equal(adverseEventPayload.meta.collection, "adverse_events");
+  assert.equal(adverseEventPayload.meta.action, "create");
+  assert.equal(adverseEventPayload.data.title, "Headache safety event");
+  assert.equal(adverseEventPayload.data.drugProductId, drugProductPayload.data.id);
+  assert.equal(adverseEventPayload.data.patientId, createdPatient.data.id);
+  assert.equal(adverseEventPayload.data.eventTerm, "Headache");
+  assert.equal(adverseEventPayload.data.seriousness, "non_serious");
+  assert.equal(adverseEventPayload.data.severity, "mild");
+  assert.equal(adverseEventPayload.data.status, "draft");
+  assert.equal(typeof adverseEventPayload.data.reportedAt, "string");
+
+  const drugProductEvidenceSourceCreate = await runCliCapture(["evidence-source", "create", "Drug product dossier", "--kind", "document", "--collection-name", "drug_products", "--record-id", drugProductPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(drugProductEvidenceSourceCreate.code, CLI_EXIT_OK);
+  const drugProductEvidenceSourcePayload = JSON.parse(drugProductEvidenceSourceCreate.stdout) as { data: { id: string; collectionName: string; recordId: string } };
+  assert.equal(drugProductEvidenceSourcePayload.data.collectionName, "drug_products");
+  assert.equal(drugProductEvidenceSourcePayload.data.recordId, drugProductPayload.data.id);
+
+  const drugProductGapCreate = await runCliCapture(["quality-gap", "create", "Missing validated submission", "--target-collection", "drug_products", "--target-id", drugProductPayload.data.id, "--gap-kind", "external_pending", "--evidence-source-id", drugProductEvidenceSourcePayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(drugProductGapCreate.code, CLI_EXIT_OK);
+  const drugProductGapPayload = JSON.parse(drugProductGapCreate.stdout) as { data: { id: string; gapKind: string; targetCollection: string; targetId: string } };
+  assert.equal(drugProductGapPayload.data.targetCollection, "drug_products");
+  assert.equal(drugProductGapPayload.data.targetId, drugProductPayload.data.id);
+  assert.equal(drugProductGapPayload.data.gapKind, "external_pending");
+
+  const drugProductTimeline = await runCliCapture(["drug-product", drugProductPayload.data.id, "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(drugProductTimeline.code, CLI_EXIT_OK, drugProductTimeline.stderr || drugProductTimeline.stdout);
+  const drugProductTimelinePayload = JSON.parse(drugProductTimeline.stdout) as {
+    data: {
+      coverage: { implementationStatus: string; recordsMaterialized: boolean };
+      semanticView: { id: string; systemId: string };
+      materializedView: {
+        subject: { id: string; label: string };
+        product: { id: string; label: string } | null;
+        productSpec: { id: string; label: string } | null;
+        company: { id: string; label: string } | null;
+        summary: { batches: number; completedBatches: number; lotReleases: number; releasedLots: number; adverseEvents: number; seriousAdverseEvents: number; patients: number; evidenceSources: number; qualityGaps: number; hasCatalogProduct: boolean; hasProductSpec: boolean };
+        itemCount: number;
+        items: Array<{ kind: string; label: string }>;
+        gaps: Array<{ id: string; gapKind: string }>;
+        partial: boolean;
+      };
+    };
+  };
+  assert.equal(drugProductTimelinePayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(drugProductTimelinePayload.data.coverage.recordsMaterialized, true);
+  assert.equal(drugProductTimelinePayload.data.semanticView.id, "drug_product.timeline");
+  assert.equal(drugProductTimelinePayload.data.semanticView.systemId, "pharma");
+  assert.equal(drugProductTimelinePayload.data.materializedView.subject.id, drugProductPayload.data.id);
+  assert.equal(drugProductTimelinePayload.data.materializedView.subject.label, "Example Therapy");
+  assert.equal(drugProductTimelinePayload.data.materializedView.product?.id, erpProductPayload.data.id);
+  assert.equal(drugProductTimelinePayload.data.materializedView.productSpec?.id, productSpecPayload.data.id);
+  assert.equal(drugProductTimelinePayload.data.materializedView.company?.id, companyPayload.data.id);
+  assert.equal(drugProductTimelinePayload.data.materializedView.summary.batches, 1);
+  assert.equal(drugProductTimelinePayload.data.materializedView.summary.completedBatches, 1);
+  assert.equal(drugProductTimelinePayload.data.materializedView.summary.lotReleases, 1);
+  assert.equal(drugProductTimelinePayload.data.materializedView.summary.releasedLots, 1);
+  assert.equal(drugProductTimelinePayload.data.materializedView.summary.adverseEvents, 1);
+  assert.equal(drugProductTimelinePayload.data.materializedView.summary.seriousAdverseEvents, 0);
+  assert.equal(drugProductTimelinePayload.data.materializedView.summary.patients, 1);
+  assert.equal(drugProductTimelinePayload.data.materializedView.summary.evidenceSources, 1);
+  assert.equal(drugProductTimelinePayload.data.materializedView.summary.qualityGaps, 1);
+  assert.equal(drugProductTimelinePayload.data.materializedView.summary.hasCatalogProduct, true);
+  assert.equal(drugProductTimelinePayload.data.materializedView.summary.hasProductSpec, true);
+  assert.equal(drugProductTimelinePayload.data.materializedView.partial, true);
+  assert.equal(drugProductTimelinePayload.data.materializedView.itemCount >= 9, true);
+  assert.equal(drugProductTimelinePayload.data.materializedView.items.some((item) => item.kind === "batch_record" && item.label === "Batch B-001"), true);
+  assert.equal(drugProductTimelinePayload.data.materializedView.items.some((item) => item.kind === "lot_release" && item.label === "Lot release B-001"), true);
+  assert.equal(drugProductTimelinePayload.data.materializedView.items.some((item) => item.kind === "adverse_event" && item.label === "Headache safety event"), true);
+  assert.equal(drugProductTimelinePayload.data.materializedView.gaps.some((gap) => gap.id === drugProductGapPayload.data.id && gap.gapKind === "external_pending"), true);
+
   const supplierCreate = await runCliCapture(["supplier", "create", "Parts Co", "--company", companyPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(supplierCreate.code, CLI_EXIT_OK, supplierCreate.stderr || supplierCreate.stdout);
   const supplierPayload = JSON.parse(supplierCreate.stdout) as { data: { id: string; name: string; companyId: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
