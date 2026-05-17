@@ -39,8 +39,8 @@ The registry is the first executable canon for this model. It defines:
   Manufacturing/MES, Operations/ITSM, Real Estate/PropTech, Insurance, and
   Maintenance/CMMS, Procurement, Warehouse/WMS, Supply Chain/SCM, Transport/TMS,
   Compliance/GRC, Government/Gov, IoT, Construction, Electronic Lab Notebook/ELN,
-  Product/PIM/PLM, and Pharma/GxP
-- a roadmap taxonomy for CMS and remaining dense software categories
+  Content/CMS, Product/PIM/PLM, and Pharma/GxP
+- a roadmap taxonomy for remaining dense software categories
 - a non-executing dense intent resolver that can classify direct phrases such
   as `claw patient list`, `claw patients list`, `claw invoice list`, or `claw
   medication add --patient <id>` as covered, partial, blocked, or gaps before
@@ -299,6 +299,16 @@ experiment system. Direct routes such as `claw lab-notebook
 lab_notebook_123 entries add`, `claw lab-notebook lab_notebook_123
 protocol-runs add`, and `claw protocol-run protocol_run_123 observations add`
 all write canonical core.sqlite records.
+Content/CMS uses `claw content-entry <id> timeline` to materialize
+`content_entries`, `content_revisions`, `content_variants`,
+`content_approvals`, `content_publications`, `content_brands`,
+`content_campaigns`, `content_destinations`, document anchors, evidence,
+provenance, and quality gaps. It keeps the existing delegated `claw content`
+portal for specialized brand/destination/campaign/entry/approval/publish
+operations, but adds direct canonical nouns such as `content-entry` and
+`content-campaign`; legacy `posts`, `campaigns`, and `publications` shortcuts
+remain removed, and CRM `campaign` stays CRM-owned. External publication
+delivery remains EXTERNAL PENDING until a validated connector records receipts.
 ERP now has a materialized company overview through `claw erp company <id>
 overview`: it reads the shared company anchor plus CRM accounts/deals, billing
 customers, invoices, payment intents, services, work orders, evidence,

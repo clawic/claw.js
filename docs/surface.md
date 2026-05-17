@@ -2529,6 +2529,7 @@ The docs check script validates that every current export from
     createRemoteAgentServiceExecutionReceipt
     createRemoteGatewayAuditReceipt
     createRemoteSecretProviderReceipt
+    createRemoteSurfaceClassificationReceipt
     createSyncDriverApplicationReceipt
     createSyncResourceManifest
     createTransportHandshakeReceipt
@@ -2587,6 +2588,8 @@ The docs check script validates that every current export from
     RemoteSecretProviderReceipt
     remoteSecretProviderReceiptSchema
     RemoteSurfaceClassification
+    RemoteSurfaceClassificationReceipt
+    remoteSurfaceClassificationReceiptSchema
     remoteSurfaceClassificationSchema
     RemoteTransportHandshakeReceipt
     remoteTransportHandshakeReceiptSchema
