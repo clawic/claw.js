@@ -259,11 +259,12 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
 
   const syncStatus = await runCliCapture(["sync", "status", "--state-dir", stateDir, "--json"], process.cwd());
   assert.equal(syncStatus.code, CLI_EXIT_OK);
-  const syncStatusPayload = parseCliJson<{ state: { durable: boolean; manifests: number; queueEntries: number; applications: number; auditEvents: number; coordinatorSignatures: number; verifiedCoordinatorSignatures: number; invalidCoordinatorSignatures: number } }>(syncStatus.stdout).data;
+  const syncStatusPayload = parseCliJson<{ state: { durable: boolean; manifests: number; queueEntries: number; applications: number; authorityHandoffs: number; auditEvents: number; coordinatorSignatures: number; verifiedCoordinatorSignatures: number; invalidCoordinatorSignatures: number } }>(syncStatus.stdout).data;
   assert.equal(syncStatusPayload.state.durable, true);
   assert.equal(syncStatusPayload.state.manifests >= 1, true);
   assert.equal(syncStatusPayload.state.queueEntries, 1);
   assert.equal(syncStatusPayload.state.applications, 1);
+  assert.equal(syncStatusPayload.state.authorityHandoffs, 0);
   assert.equal(syncStatusPayload.state.auditEvents >= 4, true);
   assert.equal(syncStatusPayload.state.coordinatorSignatures, 4);
   assert.equal(syncStatusPayload.state.verifiedCoordinatorSignatures, 4);

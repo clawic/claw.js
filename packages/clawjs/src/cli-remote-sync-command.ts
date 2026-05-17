@@ -15,6 +15,7 @@ import {
   createRemoteCompatibilityAdapterReceipt,
   createRemoteGatewayAuditReceipt,
   createRemoteSurfaceClassificationReceipt,
+  createSyncAuthorityHandoffReceipt,
   createRemoteSecretProviderReceipt,
   createSyncDriverApplicationReceipt,
   createSyncResourceManifest,
@@ -25,6 +26,7 @@ import {
   syncObjectSnapshotSchema,
   type MeshShareAction,
   type RemoteCompatibilityClientKind,
+  type SyncAuthority,
   type SyncDriver,
   type SyncObjectSnapshot,
 } from "@clawjs/core";
@@ -166,6 +168,18 @@ function parseDriver(value: string | undefined): SyncDriver {
     || driver === "workspace_state"
   ) return driver;
   throw new Error(`Invalid sync driver: ${driver}`);
+}
+
+function parseAuthority(value: string | undefined): SyncAuthority | undefined {
+  if (!value) return undefined;
+  if (
+    value === "primary"
+    || value === "replica"
+    || value === "cache"
+    || value === "mirror"
+    || value === "joint"
+  ) return value;
+  throw new Error(`Invalid sync authority: ${value}`);
 }
 
 function parseSnapshots(value: string | undefined, fallback: SyncObjectSnapshot[]): SyncObjectSnapshot[] {
@@ -496,6 +510,7 @@ export async function runSyncCli(input: RemoteSyncCliInput): Promise<number> {
           manifests: Object.keys(stored.manifests).length,
           queueEntries: queueEntries.length,
           applications: Object.keys(stored.applications).length,
+          authorityHandoffs: Object.keys(stored.authorityHandoffs).length,
           blockedQueueEntries: queueEntries.filter((entry) => entry.status === "blocked").length,
           auditEvents: stored.audit.length,
           coordinatorSignatures: signatureStatus?.signatureCount ?? 0,
@@ -557,6 +572,35 @@ export async function runSyncCli(input: RemoteSyncCliInput): Promise<number> {
       state,
     }, `apply: ${state.receipt.status}`, command);
   }
+  if (command === "handoff") {
+    const usage = "sync handoff --resource-id <id> --driver <driver> --to-node <node-id> --state-dir <dir> --record true --coordinator-private-key-file <pem> --coordinator-public-key-file <pem>";
+    const manifest = manifestFromFlags(input);
+    const now = input.flags.now ?? new Date().toISOString();
+    const receipt = createSyncAuthorityHandoffReceipt({
+      manifest,
+      toNodeId: input.flags["to-node"] ?? input.flags["peer-node"] ?? "peer",
+      actor: actorContextFromFlags(input),
+      requestedAuthority: parseAuthority(input.flags["requested-authority"] ?? input.flags.authority),
+      requestedResidency: listFlag(input.flags["requested-residency"], []),
+      createdAt: now,
+      physicalAuthorityApplied: input.flags["physical-authority-applied"] === "true",
+      rejected: input.flags.rejected === "true",
+    });
+    const store = stateStoreFromFlags(input);
+    if (wantsDurableRecord(input) && !store) return missing(input, usage);
+    const signer = wantsDurableRecord(input) ? requireCoordinatorSigner(input, usage) : undefined;
+    if (typeof signer === "number") return signer;
+    const state = store && wantsDurableRecord(input) && signer
+      ? store.recordSyncAuthorityHandoffReceipt(receipt, { now, signer })
+      : undefined;
+    const status = state?.coordinatorSignature ? "signed_authority_handoff_recorded" : "dry_run_external_pending";
+    return writeOutput(input, "sync", {
+      status,
+      writes: false,
+      receipt: state?.receipt ?? receipt,
+      ...(state ? { state } : {}),
+    }, `handoff: ${status}`, command);
+  }
   if (command === "conflicts") {
     const plan = planFromFlags(input);
     const payload = { conflicts: plan.conflicts, defaultPolicy: "detect_and_elevate", silentOverwriteAllowed: false };
@@ -577,7 +621,7 @@ export async function runSyncCli(input: RemoteSyncCliInput): Promise<number> {
     const state = store && wantsDurableRecord(input) ? store.recordRemoteCacheSnapshot(snapshot, { now: input.flags.now, signer: coordinatorSignerFromFlags(input) }) : undefined;
     return writeOutput(input, "sync", { snapshot, status: state?.coordinatorSignature ? "signed_cache_snapshot_recorded" : state ? "cache_snapshot_recorded" : "dry_run_only", writes: false, ...(state ? { state } : {}) }, `cache: ${state ? "recorded" : "dry_run_only"}`, command);
   }
-  return missing(input, "sync manifest|status|plan|run|reconcile|apply|conflicts|cache");
+  return missing(input, "sync manifest|status|plan|run|reconcile|apply|handoff|conflicts|cache");
 }
 
 export async function runNodesCli(input: RemoteSyncCliInput): Promise<number> {

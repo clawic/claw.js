@@ -56,6 +56,7 @@ import {
   createRemoteCompatibilityAdapterReceipt,
   createRemoteGatewayAuditReceipt,
   createRemoteSurfaceClassificationReceipt,
+  createSyncAuthorityHandoffReceipt,
   createSyncDriverApplicationReceipt,
   createSyncResourceManifest,
   createTtsPlaybackPlan,
@@ -118,6 +119,7 @@ import {
   routeIdForSyncDriver,
   searchClawCliRegistry,
   syncConflictSchema,
+  syncAuthorityHandoffReceiptSchema,
   syncDriverApplicationReceiptSchema,
   syncObjectSnapshotSchema,
   taskRecordSchema,
@@ -727,6 +729,25 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(syncApplicationReceipt.externalPending.includes("physical_sync_driver_application"), true);
   assert.equal(syncApplicationReceipt.physicalDriverApplied, false);
   assert.equal(syncApplicationReceipt.writes, false);
+
+  const syncAuthorityHandoffReceipt = createSyncAuthorityHandoffReceipt({
+    manifest: pushPlan.manifest,
+    toNodeId: "node.server",
+    actor: {
+      actorKind: "agent",
+      actorId: "agent.sync",
+      nodeId: "node.mac",
+      transport: "gateway",
+      trustMode: "governed_gateway",
+    },
+    createdAt: "2026-05-17T10:05:45.000Z",
+  });
+  assert.equal(syncAuthorityHandoffReceiptSchema.safeParse(syncAuthorityHandoffReceipt).success, true);
+  assert.equal(syncAuthorityHandoffReceipt.status, "signed_pending_authority_handoff");
+  assert.equal(syncAuthorityHandoffReceipt.fromNodeId, "node.mac");
+  assert.equal(syncAuthorityHandoffReceipt.toNodeId, "node.server");
+  assert.equal(syncAuthorityHandoffReceipt.externalPending.includes("physical_authority_handoff"), true);
+  assert.equal(syncAuthorityHandoffReceipt.writes, false);
 
   const offlineCommand = buildRemoteOfflineCommandResult({
     routeId: "remote.chatGateway",
