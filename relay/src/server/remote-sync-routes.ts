@@ -11,6 +11,7 @@ import {
   createRemoteAgentServiceExecutionReceipt,
   createRemoteCompatibilityAdapterReceipt,
   createRemoteGatewayAuditReceipt,
+  createRemoteSurfaceClassificationReceipt,
   createSyncDriverApplicationReceipt,
   createSyncResourceManifest,
   evaluateRemoteAgentServiceAccess,
@@ -50,6 +51,21 @@ function remoteClassificationsPayload() {
       policy: node.notes ?? null,
     }));
   return { classifications };
+}
+
+function remoteClassificationReceiptFromInput(input: Record<string, unknown>) {
+  const classification = input.classification === "local-only" || input.classification === "blocked" || input.classification === "pending"
+    ? input.classification
+    : "remote-safe";
+  return createRemoteSurfaceClassificationReceipt({
+    capabilityId: stringValue(input.capabilityId ?? input["capability-id"], "remote.chatGateway"),
+    classification,
+    routeId: typeof input.routeId === "string" || typeof input["route-id"] === "string" ? stringValue(input.routeId ?? input["route-id"], "remote.chatGateway") : undefined,
+    policyRef: typeof input.policyRef === "string" || typeof input["policy-ref"] === "string" ? stringValue(input.policyRef ?? input["policy-ref"], "docs/relay.md") : undefined,
+    testRefs: arrayOfStrings(input.testRefs ?? input["test-refs"], []),
+    reason: typeof input.reason === "string" ? input.reason : undefined,
+    createdAt: stringValue(input.createdAt ?? input.now, "2026-05-17T10:15:00.000Z"),
+  });
 }
 
 function remoteLayerNodesPayload() {
@@ -294,6 +310,12 @@ function gatewayAuditReceiptFromInput(input: Record<string, unknown>) {
 
 export function registerRemoteSyncRoutes(app: FastifyInstance): void {
   app.get(clawApiPath("remote/classifications"), async () => remoteClassificationsPayload());
+
+  app.post(clawApiPath("remote/classifications/receipts"), async (request) => ({
+    status: "dry_run_only",
+    receipt: remoteClassificationReceiptFromInput(readBody(request)),
+    writes: false,
+  }));
 
   app.get(clawApiPath("remote/conformance"), async () => remoteConformancePayload());
 

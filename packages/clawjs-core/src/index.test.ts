@@ -53,6 +53,7 @@ import {
   createRemoteAgentServiceExecutionReceipt,
   createRemoteCompatibilityAdapterReceipt,
   createRemoteGatewayAuditReceipt,
+  createRemoteSurfaceClassificationReceipt,
   createSyncDriverApplicationReceipt,
   createSyncResourceManifest,
   createTtsPlaybackPlan,
@@ -105,6 +106,7 @@ import {
   remoteAgentServiceDecisionSchema,
   remoteAgentServiceExecutionReceiptSchema,
   remoteCompatibilityAdapterReceiptSchema,
+  remoteSurfaceClassificationReceiptSchema,
   remoteGatewayAuditReceiptSchema,
   remoteSecretLeaseSchema,
   remoteSyncRequiredDecisionIds,
@@ -520,6 +522,23 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(compatibilityReceipt.mapsToCanonical, true);
   assert.equal(compatibilityReceipt.parallelApiIntroduced, false);
   assert.equal(compatibilityReceipt.writes, false);
+  const classificationReceipt = createRemoteSurfaceClassificationReceipt({
+    capabilityId: "claw.gateway",
+    classification: "remote-safe",
+    routeId: "remote.chatGateway",
+    policyRef: "docs/adr/0022-remote-gateway-sync-redesign.md",
+    testRefs: ["packages/clawjs/src/inspect-cli.test.ts"],
+    createdAt: "2026-05-17T10:12:00.000Z",
+  });
+  assert.equal(remoteSurfaceClassificationReceiptSchema.safeParse(classificationReceipt).success, true);
+  assert.equal(classificationReceipt.remoteSafeReady, true);
+  assert.deepEqual(classificationReceipt.missingEvidence, []);
+  assert.equal(classificationReceipt.writes, false);
+  assert.throws(() => createRemoteSurfaceClassificationReceipt({
+    capabilityId: "claw.gateway",
+    classification: "remote-safe",
+    createdAt: "2026-05-17T10:12:30.000Z",
+  }), /requires route, policy, and tests/);
 
   assert.equal(routeIdForSyncDriver("skills"), "sync.skills");
   assert.equal(routeIdForSyncDriver("memory_user_model"), "sync.memoryUserModel");

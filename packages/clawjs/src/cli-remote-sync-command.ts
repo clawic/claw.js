@@ -12,6 +12,7 @@ import {
   createRemoteClientCacheSnapshot,
   createRemoteCompatibilityAdapterReceipt,
   createRemoteGatewayAuditReceipt,
+  createRemoteSurfaceClassificationReceipt,
   createRemoteSecretProviderReceipt,
   createSyncDriverApplicationReceipt,
   createSyncResourceManifest,
@@ -403,6 +404,29 @@ export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
           : node.surfaceGaps?.find((gap) => gap.surface === "relay")?.status ?? "pending",
         policy: node.notes ?? null,
       }));
+    if (input.flags["capability-id"]) {
+      const usage = "remote classify --capability-id <id> --classification remote-safe|local-only|blocked|pending --route-id <route-id> --policy-ref <ref> --test-refs <refs> --state-dir <dir> --record true --coordinator-private-key-file <pem> --coordinator-public-key-file <pem>";
+      const classificationFlag = input.flags.classification ?? input.flags.relay;
+      const classification = classificationFlag === "local-only" || classificationFlag === "blocked" || classificationFlag === "pending" ? classificationFlag : "remote-safe";
+      const receipt = createRemoteSurfaceClassificationReceipt({
+        capabilityId: input.flags["capability-id"],
+        classification,
+        routeId: input.flags["route-id"],
+        policyRef: input.flags["policy-ref"],
+        testRefs: listFlag(input.flags["test-refs"] ?? input.flags.tests, []),
+        reason: input.flags.reason,
+        createdAt: input.flags.now,
+      });
+      const store = stateStoreFromFlags(input);
+      if (wantsDurableRecord(input) && !store) return missing(input, usage);
+      const signer = wantsDurableRecord(input) ? requireCoordinatorSigner(input, usage) : undefined;
+      if (typeof signer === "number") return signer;
+      const state = store && wantsDurableRecord(input) && signer
+        ? store.recordRemoteSurfaceClassificationReceipt(receipt, { now: input.flags.now, signer })
+        : undefined;
+      const status = state?.coordinatorSignature ? "signed_remote_classification_recorded" : "dry_run_only";
+      return writeOutput(input, "remote", { status, receipt, writes: false, ...(state ? { state } : {}) }, `classify: ${status}`, command);
+    }
     return writeOutput(input, "remote", { classifications }, classifications.map((entry) => `${entry.id}: ${entry.relay}`).join("\n"), command);
   }
   if (command === "check") {
