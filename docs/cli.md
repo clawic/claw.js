@@ -170,6 +170,10 @@ record separately from the runtime session trace.
 Memory policies are checked with `memory-check`; this is the gate for flexible
 read/write combinations such as read-only global memory plus private writes,
 team/project/customer scopes, and explicit-grant-only cross-customer access.
+The SDK also exposes the same Agents V1 policy layer for multidimensional
+budgets, redacted audit events, and safe `claw_agent_package` export. Package
+exports redact secret fields and private local paths by construction; raw
+secrets remain in the vault and are not included in portable agent config.
 
 ## Global Flags
 
@@ -567,6 +571,8 @@ claw search people
 claw search "system capabilities" --json
 claw search query "release branch" --json
 claw search sources --json
+claw search sources enable local.files --profile full --json
+claw search query "invoice" --domains files --profile full --file-root ~/Documents --json
 claw search status --json
 claw search service status --json
 claw search service run-once --json

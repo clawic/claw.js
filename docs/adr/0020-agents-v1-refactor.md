@@ -60,7 +60,8 @@ The first implementation slice is model plus gates:
   project-support-inbox`, and `claw agents memory-check`
 - `@clawjs/core` policy evaluators for effective access, grant expiry,
   assignment routing, external identity, support projection, flexible memory
-  scopes, formal escalation requests, and delegation no-laundering
+  scopes, multidimensional budgets, redacted audit events, safe package export,
+  formal escalation requests, and delegation no-laundering
 - route graph coverage for internal Mac assignments, external support
   assignments, MCP/API assignments, runtime runs, sessions, grants, memory
   policies, and support/inbox projection

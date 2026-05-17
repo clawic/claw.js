@@ -1125,6 +1125,14 @@ The docs check script validates that every current export from
     AgentAssignmentRoute
     AgentAssignmentRouteRequest
     AgentAssignmentRouteResult
+    AgentAuditEvent
+    AgentAuditEventKind
+    AgentBudgetDimension
+    AgentBudgetEvaluationResult
+    AgentBudgetExceededBehavior
+    AgentBudgetLimit
+    AgentBudgetPolicy
+    AgentBudgetRequest
     AGENT_ASSIGNMENT_STATUSES
     AgentAssignmentStatus
     AgentDelegationAccessInput
@@ -1148,6 +1156,8 @@ The docs check script validates that every current export from
     AGENT_RESOURCE_ACTIONS
     AgentResourceAction
     AgentResourceGrant
+    AgentSafeExportInput
+    AgentSafePackageExport
     AgentSupportInboxProjection
     AgentSupportInboxProjectionInput
     AGENTS_FAMILY
@@ -1518,8 +1528,11 @@ The docs check script validates that every current export from
     EffectiveAccessPolicy
     EffectPreview
     effectPreviewSchema
+    createAgentAuditEvent
+    createAgentSafePackageExport
     createAgentSupportInboxProjection
     evaluateAgentAssignmentRoute
+    evaluateAgentBudget
     evaluateAgentDelegationAccess
     evaluateAgentEffectiveAccess
     evaluateAgentMemoryAccess
@@ -1532,6 +1545,7 @@ The docs check script validates that every current export from
     eventReminderSchema
     EVENTS_MEMORIES_FAMILY
     ExternalPrincipal
+    redactAgentBoundaryValue
     resolveAgentExternalIdentity
     ExternalPrincipalKind
     FAMILY_CARE_FAMILY
