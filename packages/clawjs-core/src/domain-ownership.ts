@@ -291,7 +291,7 @@ export const clawDomainOwnershipMatrixV1 = {
       apiShape: ["claw sessions index", "claw search rebuild", "claw inspect storage|events|apis"],
       eventTopics: ["index.resource.upserted", "index.search.updated", "index.source.mirrored"],
       fixtures: ["packages/clawjs/src/index-data.test.ts", "packages/clawjs-core/src/domain-surface-registry.test.ts"],
-      matrixRows: ["docs/interface-matrix.md#inspection-diagnostics-validation", "clawix/docs/interface-matrix.md#Index/Search"],
+      matrixRows: ["docs/interface-matrix.md#index-search", "clawix/docs/interface-matrix.md#Index/Search"],
       validation: ["packages/clawjs/src/index-data.test.ts external Codex read-only mirror", "scripts/domain-surface-registry-guard.mjs"],
       externalPending: ["Native filesystem watcher validation requires signed host broker"],
     },

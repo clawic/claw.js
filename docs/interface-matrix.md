@@ -132,6 +132,28 @@ The Relay also exposes equivalent project-scoped routes under:
 /v1/tenants/:tenantId/projects/:projectId/agents/:agentId
 ```
 
+### Database
+
+| Capability | Human UI | SDK | CLI | Service API | MCP | Relay | Persistence |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Database service lifecycle | Clawix database/workbench status | `DatabaseApiClient` | `claw database serve|login` | database service app and auth routes | diagnostics resources only | `local-only` | host-local service paths and audit |
+| Namespace and collection admin | Clawix database browser | `DatabaseApiClient` schema APIs | `claw database namespace|collection` | database schema routes | schema resources | `local-only` | framework schema registry |
+| Record CRUD and query | Clawix database browser and workbench | `DatabaseApiClient` record APIs | `claw database record`, `claw db <collection> list|get|create|update|delete|schema|query` | database record/query routes | collection resources and safe query tools | `local-only` until remote data policy is approved | `core.sqlite` collection records |
+| File, token, and backup policy | Clawix approval/status views | `DatabaseApiClient` scoped token/file APIs | `claw database token|file` | database token/file routes | diagnostics resources only | `blocked` for remote mutation without host policy | scoped token refs, backup/import/export metadata |
+
+### Index Search
+
+`index` is not a top-level CLI command in v1. The public contract is exposed
+through `search`, `sessions index`, workspace index APIs, and inspection
+surfaces.
+
+| Capability | Human UI | SDK | CLI | Service API | MCP | Relay | Persistence |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Workspace search | Clawix search UI | `workspace.search.query()` | `claw search query` | search/index service routes when hosted | search resources | `local-only` by default | workspace index records |
+| Workspace index rebuild | Clawix index health and stale-state views | `workspace.workspaceIndex.rebuild()` | `claw search rebuild` | search update route when hosted | diagnostics resources | `blocked` until remote rebuild policy is approved | workspace index and embedding records |
+| Session mirror indexing | Clawix session search and import status | `claw.sessions.*` plus sessions mirror APIs | `claw sessions index` | sessions import/index adapters | session resources | `remote-safe` for read-only session search subsets | sessions store and Codex read-only mirror metadata |
+| External source mirror policy | Clawix external source status | registry and inspection APIs | `claw inspect storage|events|apis` | host-brokered watcher/index adapters | diagnostics resources | `blocked` for native watcher validation without signed host broker | read-only mirror/index policy records |
+
 ### Runtime, Workspace, and Config
 
 | Capability | SDK | CLI | Relay API |
