@@ -150,6 +150,9 @@ that source is refreshed, so unrelated section fast paths remain available.
 with `--source`/`--sources`: only the selected source/shard documents, cursor,
 and full-text rows are cleared, the shard catalog is marked empty until fresh
 documents arrive, and sibling hot shards remain queryable.
+Add `--enqueue` to queue the same rebuild scope in `search.sqlite` instead of
+running it inline; `search service run-once` or the signed host worker claims
+those jobs and applies the source or source/shard reset under worker budgets.
 
 Source controls are persisted in `search.sqlite`. Disabled, paused, and excluded
 sources are skipped by `search query` lazy indexing and by `search rebuild`, and

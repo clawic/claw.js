@@ -3118,6 +3118,119 @@ test("search rebuild can refresh one shard without clearing sibling shard fast p
   });
 });
 
+test("search rebuild can enqueue background shard rebuilds for the service worker", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-background-rebuild-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const store = new SearchStore(path.join(dataRoot, "search.sqlite"));
+    try {
+      store.registerSource(createFrameworkSearchSourceManifest({
+        id: "images.derived",
+        domain: "images",
+        name: "Images",
+        resultTypes: ["image"],
+      }));
+      store.upsertDocument({
+        id: "images.derived:hot:background",
+        source: "images.derived",
+        shard: "hot",
+        domain: "images",
+        type: "image",
+        resourceId: "hot-background",
+        title: "Hot Background Gallery",
+        body: "hot background gallery remains searchable",
+        updatedAt: "2026-05-17T12:00:00.000Z",
+      });
+      store.upsertDocument({
+        id: "images.derived:cold:background",
+        source: "images.derived",
+        shard: "cold",
+        domain: "images",
+        type: "image",
+        resourceId: "cold-background",
+        title: "Cold Background Archive",
+        body: "cold background archive should be cleared by worker",
+        updatedAt: "2026-05-17T12:00:00.000Z",
+      });
+    } finally {
+      store.close();
+    }
+
+    const queued = await runCliCapture([
+      "search",
+      "rebuild",
+      "--source",
+      "images.derived",
+      "--shard",
+      "cold",
+      "--enqueue",
+      "--workspace",
+      workspaceRoot,
+      "--data-dir",
+      dataRoot,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(queued.code, CLI_EXIT_OK);
+    const queuedPayload = JSON.parse(queued.stdout) as {
+      data: {
+        rebuilt: boolean;
+        enqueued: boolean;
+        mode: string;
+        jobs: Array<{ id: string; source: string; shard: string; operation: string; status: string }>;
+      };
+    };
+    assert.equal(queuedPayload.data.rebuilt, false);
+    assert.equal(queuedPayload.data.enqueued, true);
+    assert.equal(queuedPayload.data.mode, "queued_shard_scoped");
+    assert.deepEqual(queuedPayload.data.jobs.map((job) => ({ source: job.source, shard: job.shard, operation: job.operation, status: job.status })), [
+      { source: "images.derived", shard: "cold", operation: "rebuild", status: "queued" },
+    ]);
+
+    const serviceRun = await runCliCapture([
+      "search",
+      "service",
+      "run-once",
+      "--source",
+      "images.derived",
+      "--shard",
+      "cold",
+      "--workspace",
+      workspaceRoot,
+      "--data-dir",
+      dataRoot,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(serviceRun.code, CLI_EXIT_OK);
+    const servicePayload = JSON.parse(serviceRun.stdout) as {
+      data: { service: { worker?: { claimed: number; completed: number; items: Array<{ source: string; operation: string; status: string; indexed?: number }> } } };
+    };
+    assert.equal(servicePayload.data.service.worker?.claimed, 1);
+    assert.equal(servicePayload.data.service.worker?.completed, 1);
+    assert.deepEqual(servicePayload.data.service.worker?.items.map((item) => ({ source: item.source, operation: item.operation, status: item.status, indexed: item.indexed })), [
+      { source: "images.derived", operation: "rebuild", status: "done", indexed: 0 },
+    ]);
+
+    const verified = new SearchStore(path.join(dataRoot, "search.sqlite"));
+    try {
+      assert.deepEqual(verified.listShards({ source: "images.derived" }).map((shard) => [shard.shard, shard.state, shard.documentCount]), [
+        ["cold", "empty", 0],
+        ["hot", "active", 1],
+      ]);
+      assert.deepEqual(verified.query({ query: "hot background", sources: ["images.derived"], shards: ["hot"] }).results.map((result) => result.id), ["images.derived:hot:background"]);
+      assert.deepEqual(verified.query({ query: "cold background", sources: ["images.derived"], shards: ["cold"] }).results, []);
+    } finally {
+      verified.close();
+    }
+  });
+});
+
 test("search indexes scoped code.symbols without broadening other domains", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-code-"));
   const dataRoot = path.join(workspaceRoot, "data");

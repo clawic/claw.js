@@ -289,6 +289,7 @@ async function runWorkspaceSearchQueryCli(input: {
 
 export async function runSearchRebuildCli(input: {
   flags: Record<string, string>;
+  argv: string[];
   context: CliContext;
   wantsJson: boolean;
 }): Promise<number> {
@@ -311,6 +312,41 @@ export async function runSearchRebuildCli(input: {
       return CLI_EXIT_USAGE;
     }
     registerBuiltinSources(store);
+    const enqueueRebuild = readBooleanFlag(input.argv, input.flags, "enqueue")
+      || readBooleanFlag(input.argv, input.flags, "background")
+      || readBooleanFlag(input.argv, input.flags, "async");
+    if (enqueueRebuild) {
+      const jobSources = (selectedSources ?? BUILTIN_SEARCH_SOURCES.map((source) => source.id)).filter((source) => sourceCanIndex(store, source));
+      const jobShards = selectedShards ?? ["default"];
+      const hasMultipleJobs = jobSources.length * jobShards.length > 1;
+      const jobs = jobSources.flatMap((source) => jobShards.map((shard) => store.enqueueIndexJob({
+        id: input.flags.id ? (hasMultipleJobs ? `${input.flags.id}:${source}:${shard}` : input.flags.id) : `rebuild:${source}:${shard}`,
+        source,
+        shard,
+        operation: "rebuild",
+        payload: {
+          requestedBy: "search.rebuild",
+          background: true,
+          profile: input.flags.profile === "full" ? "full" : "framework",
+          ...(selectedShards ? { shardScoped: true } : {}),
+        },
+        priority: input.flags.priority ? Number(input.flags.priority) : 50,
+        scheduledAt: input.flags["scheduled-at"],
+      })));
+      const data = {
+        rebuilt: false,
+        enqueued: true,
+        mode: selectedSources && selectedShards ? "queued_shard_scoped" : selectedSources ? "queued_scoped" : "queued_full",
+        selectedSources: selectedSources ?? null,
+        selectedShards: selectedShards ?? null,
+        jobs,
+        storage: searchStorageMetadata(input.flags),
+        note: "Rebuild jobs are queued in search.sqlite and processed by search service run-once or the signed host worker.",
+      };
+      if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "rebuild" });
+      else input.context.stdout.write(`enqueued=${jobs.length} index=search.sqlite\n`);
+      return CLI_EXIT_OK;
+    }
     const preservedStates = new Map(store.sourceStatus().map((status) => [status.source, status.state]));
     if (selectedSources && selectedShards) store.resetSourceShards({ sources: selectedSources, shards: selectedShards });
     else if (selectedSources) store.resetSources(selectedSources);
@@ -968,6 +1004,10 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
   if (job.operation === "upsert" && job.resourceId) {
     const indexed = runSearchResourceIndexJob(store, job, flags, cwd);
     if (indexed !== null) return indexed;
+  }
+  if (job.operation === "rebuild") {
+    if (job.shard && job.shard !== "default") store.resetSourceShards({ sources: [job.source], shards: [job.shard] });
+    else store.resetSources([job.source]);
   }
   switch (job.source) {
     case "commands":
