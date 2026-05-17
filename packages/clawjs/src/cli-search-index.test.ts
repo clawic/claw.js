@@ -4701,6 +4701,35 @@ test("search indexes scoped code.symbols without broadening other domains", asyn
     assert.ok(result?.explanation?.matchedBy?.length);
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "language"), true);
 
+    const semanticQuery = await runCliCapture([
+      "search",
+      "query",
+      "makeNeedleSymbol enabled",
+      "--domains",
+      "code",
+      "--strategy",
+      "semantic",
+      "--embedding-model",
+      "local-text-v1",
+      "--data-dir",
+      dataRoot,
+      "--code-root",
+      sourceRoot,
+      "--json",
+      "--limit",
+      "5",
+      "--explain",
+      "true",
+    ], workspaceRoot);
+    assert.equal(semanticQuery.code, CLI_EXIT_OK);
+    const semanticPayload = JSON.parse(semanticQuery.stdout) as {
+      data: { results: Array<{ source: string; title: string; explanation?: { matchedBy?: string[]; scoreBreakdown?: { semantic?: number } } }> };
+    };
+    const semanticResult = semanticPayload.data.results.find((candidate) => candidate.title === "feature-search.ts");
+    assert.equal(semanticResult?.source, "code.symbols");
+    assert.equal(semanticResult?.explanation?.matchedBy?.includes("semantic"), true);
+    assert.ok((semanticResult?.explanation?.scoreBreakdown?.semantic ?? 0) > 0);
+
     const chatOnly = await runCliCapture(["search", "query", "makeNeedleSymbol", "--domains", "sessions", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(chatOnly.code, CLI_EXIT_DEGRADED);
     const chatOnlyPayload = JSON.parse(chatOnly.stdout) as {

@@ -8,9 +8,11 @@ import Database from "better-sqlite3";
 import { clawCliCommandRegistry, listClawCliAliases, type ClawCliCommandRegistryEntry, type ClawCliSearchResult } from "@clawjs/core";
 import {
   DEFAULT_SEARCH_BUDGETS,
+  LOCAL_TEXT_EMBEDDING_MODEL,
   SEARCH_PROFILES,
   SearchStore,
   createBuiltinSearchSourceManifests,
+  createLocalTextEmbedding,
   createSearchActionExecutionPlan,
   listSearchEntrypointContracts,
   type SearchAction,
@@ -51,6 +53,7 @@ import {
   isIgnoredCodeSearchDirectory,
   languageForCodeSearchExtension,
   resolveCodeSearchRoot,
+  upsertCodeFileSearchDocument,
 } from "./cli-search-code-symbols-source.ts";
 import { ensureGenerationArtifactResourceIndexed, ensureGenerationsArtifactsSourceIndexed } from "./cli-search-generations-source.ts";
 import { ensureImageDerivedResourceIndexed, ensureImagesDerivedSourceIndexed, ensureMediaAssetResourceIndexed, ensureMediaAssetsSourceIndexed } from "./cli-search-image-media-sources.ts";
@@ -148,7 +151,8 @@ export async function runSearchQueryCli(input: {
     const indexedExternal = shouldRefreshExternal && sourceCanIndex(store, "external.cache") ? ensureExternalCacheSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const filters = parseSearchFiltersFlag(input.flags.filters ?? input.flags.filter);
     const strategy = parseSearchStrategyFlag(input.flags.strategy);
-    const embedding = parseSearchEmbeddingFlag(input.flags.embedding ?? input.flags["embedding-json"], input.flags["embedding-model"] ?? input.flags.model);
+    const embedding = parseSearchEmbeddingFlag(input.flags.embedding ?? input.flags["embedding-json"], input.flags["embedding-model"] ?? input.flags.model)
+      ?? localTextEmbeddingForQuery(query, strategy, input.flags);
     const agentBudget = parseSearchAgentBudget(input.flags);
     const limit = input.flags.limit ? boundedNumberFlag(input.flags.limit, 20, 1, 1000) : undefined;
     const results = store.query({
@@ -3871,7 +3875,7 @@ function ensureCodeSymbolsSourceIndexed(store: SearchStore, flags: Record<string
   for (const file of files) {
     const document = codeFileSearchDocument(root, file);
     if (!document) continue;
-    store.upsertDocument(document);
+    upsertCodeFileSearchDocument(store, document);
     indexed += 1;
   }
   store.setCursor({
@@ -7204,6 +7208,13 @@ function parseSearchEmbeddingFlag(value: string | undefined, model: string | und
   });
   if (!vector.length) throw new Error("--embedding must not be empty");
   return { model: model ?? "local", vector };
+}
+
+function localTextEmbeddingForQuery(query: string, strategy: SearchQueryInput["strategy"], flags: Record<string, string>): { model: string; vector: number[] } | undefined {
+  const model = flags["embedding-model"] ?? flags.model;
+  const requested = model === LOCAL_TEXT_EMBEDDING_MODEL || flags["local-embedding"] === "true";
+  if (!requested || strategy === "lexical") return undefined;
+  return createLocalTextEmbedding(query, { model: model ?? LOCAL_TEXT_EMBEDDING_MODEL });
 }
 
 function searchQueryRequiresAudit(query: string, results: SearchResult[], filters: Record<string, unknown> | undefined): boolean {

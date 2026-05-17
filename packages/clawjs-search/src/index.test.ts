@@ -7,8 +7,11 @@ import { test } from "vitest";
 import {
   DEFAULT_SEARCH_BUDGETS,
   DEFAULT_SEARCH_ENGINE_ID,
+  LOCAL_TEXT_EMBEDDING_DIMENSIONS,
+  LOCAL_TEXT_EMBEDDING_MODEL,
   SEARCH_SQLITE_ENGINE,
   SearchStore,
+  createLocalTextEmbedding,
   createFrameworkSearchSourceManifest,
   createFullSearchSourceManifest,
   createRootSearchFederator,
@@ -853,6 +856,13 @@ test("SearchStore supports local semantic vector retrieval when an embedding is 
     });
     store.upsertVector({ documentId: "documents.blocks:alpha", model: "local-test", embedding: [0.95, 0.05] });
     store.upsertVector({ documentId: "documents.blocks:beta", model: "local-test", embedding: [0.1, 0.9] });
+    const generatedAlpha = createLocalTextEmbedding("Design rationale Architecture notes about quiet interfaces.");
+    const generatedBeta = createLocalTextEmbedding("Release notes Changelog for packaging.");
+    assert.equal(generatedAlpha.model, LOCAL_TEXT_EMBEDDING_MODEL);
+    assert.equal(generatedAlpha.vector.length, LOCAL_TEXT_EMBEDDING_DIMENSIONS);
+    assert.deepEqual(createLocalTextEmbedding("Design rationale Architecture notes about quiet interfaces.").vector, generatedAlpha.vector);
+    store.upsertVector({ documentId: "documents.blocks:alpha", model: generatedAlpha.model, embedding: generatedAlpha.vector });
+    store.upsertVector({ documentId: "documents.blocks:beta", model: generatedBeta.model, embedding: generatedBeta.vector });
 
     assert.equal(store.listVectors("documents.blocks:alpha").at(0)?.model, "local-test");
     const semantic = store.query({
@@ -865,6 +875,14 @@ test("SearchStore supports local semantic vector retrieval when an embedding is 
     assert.equal(semantic.results[0]?.id, "documents.blocks:alpha");
     assert.equal(semantic.results[0]?.explanation?.matchedBy?.includes("semantic"), true);
     assert.ok((semantic.results[0]?.explanation?.scoreBreakdown?.semantic ?? 0) > 0);
+    const generatedSemantic = store.query({
+      query: "quiet architecture interface",
+      domains: ["documents"],
+      strategy: "semantic",
+      embedding: createLocalTextEmbedding("quiet architecture interface"),
+      explain: true,
+    });
+    assert.equal(generatedSemantic.results[0]?.id, "documents.blocks:alpha");
 
     const noEmbedding = store.query({ query: "unrelated words", domains: ["documents"], strategy: "semantic" });
     assert.equal(noEmbedding.results.length, 0);

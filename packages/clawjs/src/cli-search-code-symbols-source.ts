@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
 
-import { type SearchDocumentInput, type SearchStore } from "@clawjs/search";
+import { LOCAL_TEXT_EMBEDDING_MODEL, createLocalTextEmbedding, type SearchDocumentInput, type SearchStore } from "@clawjs/search";
 
 export function resolveCodeSearchRoot(flags: Record<string, string>, cwd: string): string {
   return path.resolve(flags["code-root"] ?? flags.workspace ?? cwd);
@@ -84,13 +84,29 @@ export function ensureCodeSymbolResourceIndexed(store: SearchStore, flags: Recor
     store.tombstone({ source: "code.symbols", resourceId: normalizedRelativePath, reason: "code symbol file could not be indexed during Search event refresh" });
     return 1;
   }
-  store.upsertDocument(document);
+  upsertCodeFileSearchDocument(store, document);
   store.setSourceState("code.symbols", "enabled", {
     backlog: 0,
     error: null,
     lastIndexedAt: new Date().toISOString(),
   });
   return 1;
+}
+
+export function upsertCodeFileSearchDocument(store: SearchStore, document: SearchDocumentInput): void {
+  store.upsertDocument(document);
+  const embedding = createLocalTextEmbedding([
+    document.title,
+    document.subtitle,
+    document.snippet,
+    document.body,
+  ].filter((value): value is string => typeof value === "string" && value.trim().length > 0).join("\n"));
+  store.upsertVector({
+    documentId: document.id,
+    model: LOCAL_TEXT_EMBEDDING_MODEL,
+    embedding: embedding.vector,
+    updatedAt: document.updatedAt,
+  });
 }
 
 export function codeFileSearchDocument(root: string, file: CodeFileCandidate): SearchDocumentInput | null {
