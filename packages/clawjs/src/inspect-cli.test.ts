@@ -316,6 +316,33 @@ test("runCli exposes CLI aliases and decision sources through inspect", async ()
   assert.equal(commandIntentPayload.ledgerSurfaceId, "claw.workspace.command_intents.ledger");
   assert.equal(commandIntentPayload.registryIntents.some((entry) => entry.id === "cmd_intent_house_buy" && entry.status === "future"), true);
 
+  const denseData = await runCliCapture(["inspect", "dense-data", "--json"], process.cwd());
+  assert.equal(denseData.code, CLI_EXIT_OK);
+  const denseDataPayload = parseCliJson<{ registry: { foundationCollections: Record<string, string>; systems: Array<{ id: string }>; externalPendingRequirements: Array<{ systemId: string; status: string }> }; intentCount: number; semanticViewCount: number }>(denseData.stdout).data;
+  assert.equal(denseDataPayload.registry.foundationCollections.quality_gaps, "quality_gaps");
+  assert.equal(denseDataPayload.registry.systems.some((entry) => entry.id === "health"), true);
+  assert.equal(denseDataPayload.registry.externalPendingRequirements.some((entry) => entry.systemId === "labs" && entry.status === "external_pending"), true);
+  assert.ok(denseDataPayload.intentCount > 0);
+  assert.ok(denseDataPayload.semanticViewCount > 0);
+
+  const denseIntents = await runCliCapture(["inspect", "dense-intents", "--json"], process.cwd());
+  assert.equal(denseIntents.code, CLI_EXIT_OK);
+  const denseIntentPayload = parseCliJson<{ intents: Array<{ phrase: string; status: string; collectionName?: string }> }>(denseIntents.stdout).data;
+  assert.equal(denseIntentPayload.intents.some((entry) => entry.phrase === "claw patient list" && entry.status === "covered" && entry.collectionName === "patients"), true);
+  assert.equal(denseIntentPayload.intents.some((entry) => entry.phrase === "claw encounter list" && entry.status === "workflow_gap"), true);
+
+  const denseViews = await runCliCapture(["inspect", "dense-views", "--json"], process.cwd());
+  assert.equal(denseViews.code, CLI_EXIT_OK);
+  const denseViewsPayload = parseCliJson<{ semanticViews: Array<{ id: string; systemId: string; commandPattern: string }> }>(denseViews.stdout).data;
+  assert.equal(denseViewsPayload.semanticViews.some((entry) => entry.id === "patient.timeline" && entry.systemId === "health" && entry.commandPattern === "claw patient <id> timeline"), true);
+
+  const denseFixtures = await runCliCapture(["inspect", "dense-fixtures", "--json"], process.cwd());
+  assert.equal(denseFixtures.code, CLI_EXIT_OK);
+  const denseFixturesPayload = parseCliJson<{ fixtureSetId: string; records: Array<{ id: string; collectionName: string; covers: string[] }> }>(denseFixtures.stdout).data;
+  assert.equal(denseFixturesPayload.fixtureSetId, "dense-data-acceptance-v1");
+  assert.equal(denseFixturesPayload.records.some((entry) => entry.collectionName === "patients" && entry.covers.includes("patient")), true);
+  assert.equal(denseFixturesPayload.records.some((entry) => entry.collectionName === "quality_gaps" && entry.covers.includes("partial_data_gap")), true);
+
   const why = await runCliCapture(["inspect", "why", "host", "--json"], process.cwd());
   assert.equal(why.code, CLI_EXIT_OK);
   const whyEnvelope = parseCliJson<{ name: string; adrs: string[]; docs: string[]; tests: string[]; source: { file: string } }>(why.stdout);

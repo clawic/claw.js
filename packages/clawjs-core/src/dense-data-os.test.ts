@@ -4,10 +4,13 @@ import assert from "node:assert/strict";
 import {
   assertClawDenseDataOsRegistryComplete,
   BUILTIN_COLLECTIONS_BY_NAME,
+  clawDenseDataAcceptanceFixture,
   PRODUCTIVITY_COLLECTION_DEFINITIONS,
   clawDenseDataIntentStatuses,
   clawDenseDataOsRegistry,
   findClawDenseDataSystem,
+  listClawDenseDataIntentEntries,
+  listClawDenseDataSemanticViewEntries,
   listClawDenseDataSystems,
   resolveClawDenseDataIntent,
 } from "./index.ts";
@@ -30,6 +33,81 @@ test("dense data OS exposes the agreed intent status model", () => {
     "blocked",
     "custom_pack",
   ]);
+});
+
+test("dense data OS records external pending requirements separately from bugs", () => {
+  const requirements = clawDenseDataOsRegistry.externalPendingRequirements;
+  assert.ok(requirements.length >= 5);
+  assert.ok(requirements.some((entry) => entry.systemId === "health" && entry.requirementType === "regulated_export"));
+  assert.ok(requirements.some((entry) => entry.systemId === "labs" && entry.requirementType === "physical_device"));
+  assert.ok(requirements.some((entry) => entry.systemId === "erp" && entry.requirementType === "cost_bearing"));
+  for (const requirement of requirements) {
+    assert.equal(requirement.status, "external_pending");
+    assert.ok(requirement.reason.length > 0);
+    assert.ok(requirement.validationNeeded.length > 0);
+  }
+});
+
+test("dense data OS foundation primitives are backed by canonical collections", () => {
+  const canonicalCollectionNames = new Set([
+    ...BUILTIN_COLLECTIONS_BY_NAME.keys(),
+    ...PRODUCTIVITY_COLLECTION_DEFINITIONS.map((collection) => collection.name),
+  ]);
+
+  for (const primitive of clawDenseDataOsRegistry.foundationPrimitives) {
+    const collectionName = clawDenseDataOsRegistry.foundationCollections[primitive];
+    assert.ok(collectionName, `${primitive} must map to a canonical foundation collection`);
+    assert.ok(canonicalCollectionNames.has(collectionName), `${primitive} maps to missing collection ${collectionName}`);
+  }
+
+  assert.equal(clawDenseDataOsRegistry.foundationCollections.universal_relations, "entity_relations");
+  assert.equal(BUILTIN_COLLECTIONS_BY_NAME.get("entity_relations")?.aliases.includes("universal_relations"), true);
+});
+
+test("dense data OS generates auditable intent and semantic view entries", () => {
+  const intents = listClawDenseDataIntentEntries();
+  const semanticViews = listClawDenseDataSemanticViewEntries();
+  const intentIds = new Set(intents.map((entry) => entry.id));
+
+  assert.equal(intentIds.size, intents.length, "generated dense intent ids must be unique");
+  assert.ok(intents.some((entry) => entry.phrase === "claw patient list" && entry.status === "covered" && entry.collectionName === "patients"));
+  assert.ok(intents.some((entry) => entry.phrase === "claw encounter list" && entry.status === "workflow_gap"));
+  assert.ok(intents.some((entry) => entry.phrase === "claw health gaps" && entry.status === "covered"));
+  assert.ok(semanticViews.some((entry) => entry.id === "patient.timeline" && entry.systemId === "health"));
+  assert.ok(semanticViews.some((entry) => entry.id === "invoice.list" && entry.systemId === "erp"));
+});
+
+test("dense data OS acceptance fixture covers required first-wave records and gaps", () => {
+  const canonicalCollectionNames = new Set([
+    ...BUILTIN_COLLECTIONS_BY_NAME.keys(),
+    ...PRODUCTIVITY_COLLECTION_DEFINITIONS.map((collection) => collection.name),
+  ]);
+  const records = clawDenseDataAcceptanceFixture.records;
+  const ids = new Set(records.map((record) => record.id));
+  const covered = new Set(records.flatMap((record) => record.covers));
+
+  assert.equal(clawDenseDataAcceptanceFixture.sourceConversationId, "019e35a1-06bb-77f2-a712-92ed2646bd15");
+  assert.equal(ids.size, records.length, "fixture ids must be unique");
+  for (const record of records) {
+    assert.ok(canonicalCollectionNames.has(record.collectionName), `${record.collectionName} must be canonical`);
+  }
+  for (const requiredCoverage of [
+    "patient",
+    "study",
+    "sample",
+    "legal_case",
+    "invoice",
+    "invoice_company",
+    "incident",
+    "service",
+    "course",
+    "work_order",
+    "evidence",
+    "provenance",
+    "partial_data_gap",
+  ]) {
+    assert.ok(covered.has(requiredCoverage), `fixture missing coverage ${requiredCoverage}`);
+  }
 });
 
 test("dense data OS first wave covers the agreed high-density systems", () => {

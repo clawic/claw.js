@@ -421,6 +421,8 @@ function getPrimaryField(collectionName: string): string {
       return "displayName";
     case "samples":
     case "organisms":
+    case "evidence_sources":
+    case "quality_gaps":
       return "label";
     case "symptom_logs":
       return "symptom";
@@ -513,6 +515,33 @@ function applyDefaults(collectionName: string, payload: Record<string, unknown>,
     case "transactions":
       payload.postedAt ??= new Date().toISOString();
       payload.currency ??= "USD";
+      break;
+    case "domain_systems":
+      payload.wave ??= "custom";
+      payload.status ??= "active";
+      break;
+    case "domain_packs":
+    case "semantic_views":
+      payload.status ??= "draft";
+      break;
+    case "domain_profiles":
+      payload.status ??= "active";
+      break;
+    case "quality_gaps":
+      payload.status ??= "open";
+      payload.severity ??= "medium";
+      break;
+    case "canonical_operations":
+      payload.status ??= "partial";
+      break;
+    case "vocabularies":
+    case "concepts":
+      payload.status ??= "active";
+      break;
+    case "provenance_events":
+    case "instrument_responses":
+      payload.occurredAt ??= collectionName === "provenance_events" ? new Date().toISOString() : payload.occurredAt;
+      payload.recordedAt ??= collectionName === "instrument_responses" ? new Date().toISOString() : payload.recordedAt;
       break;
     default:
       break;

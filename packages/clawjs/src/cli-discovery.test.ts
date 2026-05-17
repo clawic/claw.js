@@ -61,6 +61,27 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(patientPayload.meta.collection, "patients");
   assert.equal(patientPayload.data.some((record) => record.displayName === "Ada Patient"), true);
 
+  const evidenceSourceCreate = await runCliCapture(["evidence-source", "create", "Clinic note", "--kind", "document", "--collection-name", "patients", "--record-id", createdPatient.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(evidenceSourceCreate.code, CLI_EXIT_OK);
+  const evidenceSourcePayload = JSON.parse(evidenceSourceCreate.stdout) as { data: { id: string; label: string; kind: string; collectionName: string; recordId: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(evidenceSourcePayload.meta.invokedCommand, "evidence-source");
+  assert.equal(evidenceSourcePayload.meta.collection, "evidence_sources");
+  assert.equal(evidenceSourcePayload.data.label, "Clinic note");
+  assert.equal(evidenceSourcePayload.data.collectionName, "patients");
+  assert.equal(evidenceSourcePayload.data.recordId, createdPatient.data.id);
+
+  const qualityGapCreate = await runCliCapture(["quality-gap", "create", "Missing date of birth", "--target-collection", "patients", "--target-id", createdPatient.data.id, "--gap-kind", "missing", "--evidence-source-id", evidenceSourcePayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(qualityGapCreate.code, CLI_EXIT_OK);
+  const qualityGapPayload = JSON.parse(qualityGapCreate.stdout) as { data: { label: string; targetCollection: string; targetId: string; gapKind: string; status: string; evidenceSourceId: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(qualityGapPayload.meta.invokedCommand, "quality-gap");
+  assert.equal(qualityGapPayload.meta.collection, "quality_gaps");
+  assert.equal(qualityGapPayload.data.label, "Missing date of birth");
+  assert.equal(qualityGapPayload.data.targetCollection, "patients");
+  assert.equal(qualityGapPayload.data.targetId, createdPatient.data.id);
+  assert.equal(qualityGapPayload.data.gapKind, "missing");
+  assert.equal(qualityGapPayload.data.status, "open");
+  assert.equal(qualityGapPayload.data.evidenceSourceId, evidenceSourcePayload.data.id);
+
   const medicationCreate = await runCliCapture(["medication", "add", "--patient", createdPatient.data.id, "--name", "Atorvastatin", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(medicationCreate.code, CLI_EXIT_OK);
   const medicationPayload = JSON.parse(medicationCreate.stdout) as { data: { name: string; patientId: string }; meta: { collection: string; action: string } };

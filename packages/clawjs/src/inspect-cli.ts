@@ -4,7 +4,7 @@ import path from "path";
 
 import Database from "better-sqlite3";
 import { AgentStoreFS, type Agent } from "@clawjs/agents";
-import { CLAW_CLI_COMMAND_INTENT_STATUSES, clawPersistentSurfaceRegistry, connectorExecutionPipeline, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, resolveClawCliCommand, resolveClawPersistentSurfacePath, searchClawCliRegistry, withSurfaceChildren } from "@clawjs/core";
+import { CLAW_CLI_COMMAND_INTENT_STATUSES, clawDenseDataAcceptanceFixture, clawDenseDataOsRegistry, clawPersistentSurfaceRegistry, connectorExecutionPipeline, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, listClawDenseDataIntentEntries, listClawDenseDataSemanticViewEntries, resolveClawCliCommand, resolveClawPersistentSurfacePath, searchClawCliRegistry, withSurfaceChildren } from "@clawjs/core";
 import type { ClawPersistentSurfaceNode, ClawPersistentSurfaceRegistry, ClawSurfaceEdge, ClawSurfaceRoute } from "@clawjs/core";
 import { v1MainSchemaSurfaceNodes } from "./v1-data-surface.ts";
 import { normalizeDbRow, resolveClawjsMainDbPath, type JsonRecord } from "./v1-data-core.ts";
@@ -948,6 +948,43 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     else input.context.stdout.write(`${intents.map((entry) => `${entry.id}\t${entry.status}\t${entry.phrase}`).join("\n")}\n`);
     return CLI_EXIT_OK;
   }
+  if (command === "dense-data") {
+    const payload = {
+      schemaVersion: 1,
+      registry: clawDenseDataOsRegistry,
+      intentCount: listClawDenseDataIntentEntries().length,
+      semanticViewCount: listClawDenseDataSemanticViewEntries().length,
+    };
+    if (input.wantsJson) writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command));
+    else input.context.stdout.write(`${clawDenseDataOsRegistry.systems.map((system) => `${system.id}\t${system.wave}\t${system.canonicalCommand}`).join("\n")}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (command === "dense-intents") {
+    const intents = listClawDenseDataIntentEntries();
+    const payload = {
+      schemaVersion: 1,
+      statuses: clawDenseDataOsRegistry.intentStatuses,
+      intents,
+    };
+    if (input.wantsJson) writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command));
+    else input.context.stdout.write(`${intents.map((entry) => `${entry.id}\t${entry.status}\t${entry.phrase}`).join("\n")}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (command === "dense-views") {
+    const semanticViews = listClawDenseDataSemanticViewEntries();
+    const payload = {
+      schemaVersion: 1,
+      semanticViews,
+    };
+    if (input.wantsJson) writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command));
+    else input.context.stdout.write(`${semanticViews.map((entry) => `${entry.id}\t${entry.systemId}\t${entry.commandPattern}`).join("\n")}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (command === "dense-fixtures") {
+    if (input.wantsJson) writeJsonOk(input.context.stdout, clawDenseDataAcceptanceFixture, inspectJsonMeta(command));
+    else input.context.stdout.write(`${clawDenseDataAcceptanceFixture.records.map((entry) => `${entry.id}\t${entry.collectionName}\t${entry.label}`).join("\n")}\n`);
+    return CLI_EXIT_OK;
+  }
   if (command === "codebase") {
     const manifest = filterCodebaseManifest(readCodebaseManifest(input), input);
     if (input.wantsJson) writeJsonOk(input.context.stdout, manifest, inspectJsonMeta(command));
@@ -1043,7 +1080,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     }
     throw new InspectCliError("usage_error", `Unsupported inspect render format: ${format}`, CLI_EXIT_USAGE);
   }
-  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|neighbors|routes|route|agent|edges|why|commands|command-intents|codebase|connectors|aliases|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
+  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|neighbors|routes|route|agent|edges|why|commands|command-intents|dense-data|dense-intents|dense-views|dense-fixtures|codebase|connectors|aliases|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
 }
 
 export async function runInspectCli(input: InspectCliInput): Promise<number> {

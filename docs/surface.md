@@ -1318,19 +1318,29 @@ The docs check script validates that every current export from
     ClawCliSupportState
     ClawCliSurfaceKind
     assertClawDenseDataOsRegistryComplete
+    ClawDenseDataAcceptanceFixture
     ClawDenseDataCenter
+    ClawDenseDataExternalPendingRequirement
+    ClawDenseDataFixtureRecord
+    ClawDenseDataIntentEntry
     ClawDenseDataIntentResolution
     ClawDenseDataIntentStatus
     ClawDenseDataOperation
     ClawDenseDataOsRegistry
     ClawDenseDataSemanticView
+    ClawDenseDataSemanticViewEntry
     ClawDenseDataSensitivityDefault
     ClawDenseDataStoragePolicy
     ClawDenseDataSystem
     ClawDenseDataWave
+    clawDenseDataAcceptanceFixture
     clawDenseDataIntentStatuses
     clawDenseDataOsRegistry
+    DATA_FOUNDATION_FAMILY
     findClawDenseDataSystem
+    listClawDenseDataAcceptanceFixtureRecords
+    listClawDenseDataIntentEntries
+    listClawDenseDataSemanticViewEntries
     listClawDenseDataSystems
     resolveClawDenseDataIntent
     clawCodexExternalEventSamples

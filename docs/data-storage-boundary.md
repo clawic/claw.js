@@ -45,6 +45,11 @@ The main database owns:
   principals/accounts, credential bindings by `secret_ref`, capabilities,
   operations, policies, budgets, network/VPN/proxy declarations, and redacted
   audit events.
+- Dense-data foundation records: domain systems/packs, domain roles/profiles,
+  evidence sources, provenance events, quality gaps, canonical operations,
+  semantic views, domain intents, vocabularies, concepts, concept mappings,
+  units, instruments, instrument items/responses, and universal entity
+  relations.
 
 Framework-visible app projections may be stored in the main database when they
 are part of the reusable framework contract. Host-only UI preferences still live

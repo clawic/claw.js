@@ -118,6 +118,10 @@ claw inspect schemas --json
 claw inspect agent agent.ops --json
 claw inspect storage --json
 claw inspect command-intents --json
+claw inspect dense-data --json
+claw inspect dense-intents --json
+claw inspect dense-views --json
+claw inspect dense-fixtures --json
 claw inspect codebase --summary --json
 claw inspect codebase --path-prefix packages/clawjs/src/ --symbol runCli --language typescript --tests false --limit 20 --json
 ```
@@ -594,6 +598,10 @@ claw transaction create Lunch --account financial_account_123 --amount-cents 120
 claw organism create "Mouse A" --species "Mus musculus" --json
 claw experiment create "Dose response" --organism organism_123 --json
 claw experiment experiment_123 samples add "Exp sample 1" --organism organism_123 --json
+claw evidence-source create "Clinic note" --kind document --collection-name patients --record-id patient_123 --json
+claw quality-gap create "Missing date of birth" --target-collection patients --target-id patient_123 --gap-kind missing --json
+claw semantic-view list --json
+claw domain-intent list --json
 claw travel --help
 claw career --help
 claw family --help

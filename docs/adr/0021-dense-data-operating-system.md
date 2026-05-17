@@ -125,6 +125,44 @@ that are known but not graduated still return a degraded response with an
 explicit `workflow_gap` until their canonical collections, schemas, relations,
 quality gaps, and DB smoke tests are connected.
 
+The universal foundation is now a real built-in family, not only registry
+language. It includes canonical collections for `domain_systems`,
+`domain_packs`, `domain_roles`, `domain_profiles`, `evidence_sources`,
+`provenance_events`, `quality_gaps`, `canonical_operations`,
+`semantic_views`, `domain_intents`, `vocabularies`, `concepts`,
+`concept_mappings`, `units`, `instruments`, `instrument_items`, and
+`instrument_responses`. Foundation routes such as `evidence-source create`,
+`quality-gap create`, `semantic-view list`, and `domain-intent list` execute
+through the shared database. The existing `entity_relations` collection has
+been generalized into the universal relation graph so work/task relations and
+dense-domain cross-links do not split into competing relation systems.
+
+The companion [Dense Data Existing Catalog Audit](../dense-data-existing-catalog-audit.md)
+records how notes/pages, knowledge entities/facts, knowledge graph relations,
+custom fields, signals, attachments, CRM, billing, ERP, infra/ops, and identity
+fit into this model. Future dense packs must update that audit when they reuse,
+extend, retire, or replace an existing surface.
+The [Dense Data Source Decision Audit](../dense-data-source-decision-audit.md)
+enumerates the unique decision-bearing user turns that must be satisfied before
+the private goal can close.
+
+`claw inspect dense-data`, `claw inspect dense-intents`,
+`claw inspect dense-views`, and `claw inspect dense-fixtures` expose the dense
+registry, generated intent coverage, semantic-view catalog, and synthetic
+acceptance fixture without executing unknown behavior. These commands are the
+scale gate for "CLI intention completeness": every generated entry must resolve
+to a covered command, explicit workflow/data gap, blocked state, external
+pending state, or custom pack. The fixture covers patient, study, sample, legal
+case, invoice/company, incident/service, course, manufacturing work order,
+evidence, provenance, and partial-data quality gaps.
+
+The registry also carries explicit `external_pending` requirements for real
+EHR/FHIR exchange, lab instrument ingestion, CTMS synchronization, payment
+processor settlement/refund mutation, and live monitor/APM ingestion. These
+rows are not bugs and are not considered validated by local tests; they require
+provider, physical-device, regulated-export, cost-bearing, or live-runtime
+evidence through the relevant approval and connector path.
+
 Future implementation slices must connect this registry into CLI command
 coverage, command-intent resolution, database schema inspection, docs, and
 negative tests that block duplicated parallel systems.

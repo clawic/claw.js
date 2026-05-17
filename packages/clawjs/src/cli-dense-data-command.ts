@@ -25,6 +25,50 @@ interface DenseDataCliInput {
 
 const INSPECTION_ACTIONS = new Set(["overview", "gaps", "intents", "schema"]);
 const CRUD_ACTIONS = new Set(["list", "get", "create", "update", "delete", "query", "schema", "add"]);
+const FOUNDATION_COLLECTION_COMMANDS: Record<string, string> = {
+  "domain-system": "domain_systems",
+  "domain-systems": "domain_systems",
+  "domain-pack": "domain_packs",
+  "domain-packs": "domain_packs",
+  "domain-role": "domain_roles",
+  "domain-roles": "domain_roles",
+  "domain-profile": "domain_profiles",
+  "domain-profiles": "domain_profiles",
+  "typed-profile": "domain_profiles",
+  "typed-profiles": "domain_profiles",
+  "evidence-source": "evidence_sources",
+  "evidence-sources": "evidence_sources",
+  "provenance-event": "provenance_events",
+  "provenance-events": "provenance_events",
+  "quality-gap": "quality_gaps",
+  "quality-gaps": "quality_gaps",
+  "data-gap": "quality_gaps",
+  "data-gaps": "quality_gaps",
+  "canonical-operation": "canonical_operations",
+  "canonical-operations": "canonical_operations",
+  "semantic-view": "semantic_views",
+  "semantic-views": "semantic_views",
+  "domain-intent": "domain_intents",
+  "domain-intents": "domain_intents",
+  vocabulary: "vocabularies",
+  vocabularies: "vocabularies",
+  concept: "concepts",
+  concepts: "concepts",
+  "concept-mapping": "concept_mappings",
+  "concept-mappings": "concept_mappings",
+  unit: "units",
+  units: "units",
+  instrument: "instruments",
+  instruments: "instruments",
+  "instrument-item": "instrument_items",
+  "instrument-items": "instrument_items",
+  "instrument-response": "instrument_responses",
+  "instrument-responses": "instrument_responses",
+  relation: "entity_relations",
+  relations: "entity_relations",
+  "universal-relation": "entity_relations",
+  "universal-relations": "entity_relations",
+};
 
 export async function runDenseDataCli(input: DenseDataCliInput): Promise<number | null> {
   const phrase = input.positionals.join(" ");
@@ -32,6 +76,21 @@ export async function runDenseDataCli(input: DenseDataCliInput): Promise<number 
   const action = input.positionals[1];
   if (!group || !action) return null;
   if (!isDenseDataCommandGroup(group)) return null;
+
+  const foundationCollectionName = collectionForFoundationRoute(group);
+  const foundationDbAction = action === "add" ? "create" : action;
+  if (foundationCollectionName && CRUD_ACTIONS.has(action) && foundationDbAction !== "purge") {
+    return await runMagicDbCli({
+      argv: denseDbArgv(input.argv, foundationCollectionName, foundationDbAction),
+      positionals: [group, foundationCollectionName, foundationDbAction, ...input.positionals.slice(2)],
+      flags: input.flags,
+      workspaceRoot: input.workspaceRoot,
+      stdout: input.context.stdout,
+      stderr: input.context.stderr,
+      wantsJson: input.wantsJson,
+      binName: input.binName,
+    });
+  }
 
   const intent = resolveClawDenseDataIntent(phrase);
   if (intent.status === "data_gap") return null;
@@ -97,6 +156,15 @@ function collectionForDenseRoute(command: string | undefined, centerCollectionNa
   if (centerCollectionName) return centerCollectionName;
   if (!command) return undefined;
   return resolveBuiltinCollectionName(command);
+}
+
+function collectionForFoundationRoute(command: string | undefined): string | undefined {
+  if (!command) return undefined;
+  const explicit = FOUNDATION_COLLECTION_COMMANDS[command];
+  if (explicit) return explicit;
+  const resolved = resolveBuiltinCollectionName(command);
+  if (!resolved) return undefined;
+  return Object.values(clawDenseDataOsRegistry.foundationCollections).includes(resolved) ? resolved : undefined;
 }
 
 function denseDbArgv(argv: string[], collectionName: string, dbAction: string): string[] {
@@ -235,6 +303,7 @@ function nestedParentDbRoute(input: DenseDataCliInput, config: {
 }
 
 function isDenseDataCommandGroup(group: string): boolean {
+  if (collectionForFoundationRoute(group)) return true;
   return clawDenseDataOsRegistry.systems.some((system) =>
     system.canonicalCommand === group
     || system.aliases.includes(group)

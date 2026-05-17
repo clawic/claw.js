@@ -22,6 +22,7 @@ export {
   resolveBuiltinCollectionName,
 } from "./_registry.ts";
 
+export { DATA_FOUNDATION_FAMILY } from "./data_foundation/index.ts";
 export { COOKING_FAMILY, RECIPES } from "./cooking/index.ts";
 export { IDENTITY_FAMILY } from "./identity/index.ts";
 export { WORK_FAMILY } from "./work/index.ts";

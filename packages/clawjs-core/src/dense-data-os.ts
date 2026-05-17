@@ -79,11 +79,40 @@ export interface ClawDenseDataOsRegistry {
   sourcePlanId: string;
   privateGoalReference: string;
   foundationPrimitives: string[];
+  foundationCollections: Record<string, string>;
   sharedEngines: string[];
   intentStatuses: ClawDenseDataIntentStatus[];
   routeRejectionReasons: string[];
+  externalPendingRequirements: ClawDenseDataExternalPendingRequirement[];
   standardCollectionActions: string[];
   systems: ClawDenseDataSystem[];
+}
+
+export interface ClawDenseDataExternalPendingRequirement {
+  id: string;
+  systemId: string;
+  label: string;
+  requirementType: "provider" | "physical_device" | "native_permission" | "cost_bearing" | "regulated_export";
+  status: "external_pending";
+  reason: string;
+  validationNeeded: string;
+}
+
+export interface ClawDenseDataIntentEntry {
+  id: string;
+  systemId: string;
+  command: string;
+  phrase: string;
+  status: ClawDenseDataIntentStatus;
+  mappedCommand?: string;
+  collectionName?: string;
+  operationId?: string;
+  reasons: string[];
+  nextSteps: string[];
+}
+
+export interface ClawDenseDataSemanticViewEntry extends ClawDenseDataSemanticView {
+  systemId: string;
 }
 
 export const clawDenseDataIntentStatuses: ClawDenseDataIntentStatus[] = [
@@ -123,6 +152,27 @@ export const clawDenseDataOsRegistry: ClawDenseDataOsRegistry = {
     "instrument_responses",
     "universal_relations",
   ],
+  foundationCollections: {
+    identity_base: "people",
+    domain_roles: "domain_roles",
+    typed_profiles: "domain_profiles",
+    evidence_sources: "evidence_sources",
+    provenance_events: "provenance_events",
+    quality_gaps: "quality_gaps",
+    canonical_operations: "canonical_operations",
+    semantic_views: "semantic_views",
+    domain_systems: "domain_systems",
+    domain_packs: "domain_packs",
+    domain_intents: "domain_intents",
+    vocabularies: "vocabularies",
+    concepts: "concepts",
+    concept_mappings: "concept_mappings",
+    units: "units",
+    instruments: "instruments",
+    instrument_items: "instrument_items",
+    instrument_responses: "instrument_responses",
+    universal_relations: "entity_relations",
+  },
   sharedEngines: [
     "identity_role_profile",
     "evidence_provenance",
@@ -146,6 +196,53 @@ export const clawDenseDataOsRegistry: ClawDenseDataOsRegistry = {
     "duplicate_data_risk",
     "incorrect_data_risk",
     "destructive_action",
+  ],
+  externalPendingRequirements: [
+    {
+      id: "external_pending_health_ehr_export",
+      systemId: "health",
+      label: "Real EHR/FHIR export or import",
+      requirementType: "regulated_export",
+      status: "external_pending",
+      reason: "Requires an approved provider, patient-data authorization, and export/send gate; hermetic fixtures only prove local structure.",
+      validationNeeded: "Brokered provider fixture plus explicit live/manual approval for the target EHR environment.",
+    },
+    {
+      id: "external_pending_labs_instrument_ingest",
+      systemId: "labs",
+      label: "Physical lab instrument ingestion",
+      requirementType: "physical_device",
+      status: "external_pending",
+      reason: "Requires actual instrument output or a vendor-certified simulator; local DB tests cannot prove physical device behavior.",
+      validationNeeded: "Instrument-specific connector fixture and a real or certified simulated run marked separately from local tests.",
+    },
+    {
+      id: "external_pending_research_ctms_sync",
+      systemId: "research",
+      label: "External CTMS or registry synchronization",
+      requirementType: "provider",
+      status: "external_pending",
+      reason: "Requires provider credentials, consent/workspace boundaries, and schema mapping for the specific CTMS or registry.",
+      validationNeeded: "Connector-control-plane provider mapping, fixture replay, and approved live/manual sync.",
+    },
+    {
+      id: "external_pending_erp_payment_settlement",
+      systemId: "erp",
+      label: "Payment processor settlement or refund mutation",
+      requirementType: "cost_bearing",
+      status: "external_pending",
+      reason: "Can move money or mutate an external ledger; dense ERP fixtures only validate local representation.",
+      validationNeeded: "Dry-run fixture first, then explicit cost-bearing approval through the connector control plane.",
+    },
+    {
+      id: "external_pending_ops_monitor_runtime",
+      systemId: "ops",
+      label: "Live monitor/APM incident ingestion",
+      requirementType: "provider",
+      status: "external_pending",
+      reason: "Requires a real monitoring provider or live runtime signal and should not be treated as a local ITSM record bug.",
+      validationNeeded: "Provider catalog mapping, fixture event replay, and live provider validation when explicitly enabled.",
+    },
   ],
   standardCollectionActions: ["list", "get", "create", "update", "delete", "query", "schema", "purge"],
   systems: [
@@ -405,10 +502,92 @@ export function listClawDenseDataSystems(options: { wave?: ClawDenseDataWave } =
   return clawDenseDataOsRegistry.systems.filter((system) => !options.wave || system.wave === options.wave);
 }
 
+export function listClawDenseDataSemanticViewEntries(): ClawDenseDataSemanticViewEntry[] {
+  return clawDenseDataOsRegistry.systems.flatMap((system) => system.semanticViews.map((semanticView) => ({
+    ...semanticView,
+    systemId: system.id,
+  })));
+}
+
+export function listClawDenseDataIntentEntries(): ClawDenseDataIntentEntry[] {
+  const entries: ClawDenseDataIntentEntry[] = [];
+  for (const system of clawDenseDataOsRegistry.systems) {
+    for (const command of [system.canonicalCommand, ...system.aliases]) {
+      for (const action of ["overview", "gaps", "intents"] as const) {
+        entries.push({
+          id: denseIntentId(system.id, command, action),
+          systemId: system.id,
+          command,
+          phrase: `claw ${command} ${action}`,
+          status: "covered",
+          reasons: ["System inspection route is generated from the dense-data system registry."],
+          nextSteps: [],
+        });
+      }
+    }
+
+    for (const centerEntry of system.centers) {
+      const commands = [centerEntry.commandNoun, ...centerEntry.commandAliases];
+      for (const command of commands) {
+        for (const action of clawDenseDataOsRegistry.standardCollectionActions.filter((entry) => entry !== "purge")) {
+          const mappedCommand = centerEntry.collectionName ? `claw db ${centerEntry.collectionName} ${action}` : undefined;
+          entries.push({
+            id: denseIntentId(system.id, command, action),
+            systemId: system.id,
+            command,
+            phrase: `claw ${command} ${action}`,
+            status: centerEntry.collectionName ? "covered" : "workflow_gap",
+            mappedCommand,
+            collectionName: centerEntry.collectionName,
+            reasons: centerEntry.collectionName
+              ? ["Direct human noun is backed by a canonical collection and shared database operation."]
+              : ["Direct human noun is known, but the center is not yet graduated to a canonical collection."],
+            nextSteps: centerEntry.collectionName
+              ? []
+              : ["Graduate this center to a collection, relation model, fixtures, and CLI smoke tests before treating it as executable."],
+          });
+        }
+      }
+    }
+
+    for (const operationEntry of system.operations) {
+      for (const route of operationEntry.routes) {
+        entries.push({
+          id: denseIntentId(system.id, operationEntry.id, route),
+          systemId: system.id,
+          command: system.canonicalCommand,
+          phrase: route,
+          status: "partial",
+          operationId: operationEntry.id,
+          reasons: ["Canonical operation is declared by the dense-data registry; executable coverage is proven by route-specific tests when available."],
+          nextSteps: ["Keep operation-specific CLI tests and semantic view evidence in sync with pack graduation."],
+        });
+      }
+    }
+  }
+
+  return entries;
+}
+
 export function findClawDenseDataSystem(idOrCommand: string): ClawDenseDataSystem | undefined {
   return clawDenseDataOsRegistry.systems.find(
     (system) => system.id === idOrCommand || system.canonicalCommand === idOrCommand || system.aliases.includes(idOrCommand),
   );
+}
+
+function denseIntentId(systemId: string, command: string, action: string): string {
+  return `dense_intent_${systemId}_${slugForDenseIntent(command)}_${slugForDenseIntent(action)}`;
+}
+
+function slugForDenseIntent(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/^claw\s+/, "")
+    .replace(/<[^>]+>/g, "id")
+    .replace(/--[a-z0-9-]+/g, "flag")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 96);
 }
 
 export function resolveClawDenseDataIntent(phrase: string): ClawDenseDataIntentResolution {
@@ -485,6 +664,7 @@ export function assertClawDenseDataOsRegistryComplete(): void {
   ];
   for (const primitive of requiredFoundation) {
     if (!clawDenseDataOsRegistry.foundationPrimitives.includes(primitive)) failures.push(`missing foundation primitive ${primitive}`);
+    if (!clawDenseDataOsRegistry.foundationCollections[primitive]) failures.push(`missing foundation collection for ${primitive}`);
   }
 
   const requiredActions = ["list", "get", "create", "update", "delete", "query", "schema", "purge"];
@@ -494,6 +674,14 @@ export function assertClawDenseDataOsRegistryComplete(): void {
 
   for (const status of ["covered", "partial", "alias_candidate", "data_gap", "workflow_gap", "external_pending", "blocked", "custom_pack"] satisfies ClawDenseDataIntentStatus[]) {
     if (!clawDenseDataOsRegistry.intentStatuses.includes(status)) failures.push(`missing intent status ${status}`);
+  }
+  if (clawDenseDataOsRegistry.externalPendingRequirements.length === 0) {
+    failures.push("missing external pending requirements");
+  }
+  for (const requirement of clawDenseDataOsRegistry.externalPendingRequirements) {
+    if (requirement.status !== "external_pending") failures.push(`${requirement.id}: external pending requirement must use external_pending status`);
+    if (!findClawDenseDataSystem(requirement.systemId)) failures.push(`${requirement.id}: references missing system ${requirement.systemId}`);
+    if (!requirement.validationNeeded.trim()) failures.push(`${requirement.id}: missing validation needed`);
   }
 
   const requiredFirstWave = ["health", "research", "biology", "labs", "legal", "erp", "crm", "finance", "education", "manufacturing", "ops"];

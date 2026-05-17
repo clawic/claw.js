@@ -4,6 +4,7 @@ import type {
 } from "./_types.ts";
 
 import { COOKING_FAMILY } from "./cooking/index.ts";
+import { DATA_FOUNDATION_FAMILY } from "./data_foundation/index.ts";
 import { IDENTITY_FAMILY } from "./identity/index.ts";
 import { WORK_FAMILY } from "./work/index.ts";
 import { COLLABORATION_FAMILY } from "./collaboration/index.ts";
@@ -67,6 +68,7 @@ import { PERSONAL_CARE_AESTHETICS_FAMILY } from "./personal_care_aesthetics/inde
 import { enrichBuiltinFamilies } from "./_catalog_enrichment.ts";
 
 const RAW_BUILTIN_FAMILIES: BuiltinFamilyDefinition[] = [
+  DATA_FOUNDATION_FAMILY,
   COOKING_FAMILY,
   IDENTITY_FAMILY,
   WORK_FAMILY,
