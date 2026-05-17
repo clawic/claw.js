@@ -1375,6 +1375,8 @@ The docs check script validates that every current export from
     assertClawDenseDataOsRegistryComplete
     ClawDenseDataAcceptanceFixture
     ClawDenseDataCenter
+    ClawDenseDataExistingSurfaceDisposition
+    ClawDenseDataExistingSurfaceIntegration
     ClawDenseDataExternalPendingRequirement
     ClawDenseDataFixtureRecord
     ClawDenseDataIntentEntry
@@ -2516,6 +2518,7 @@ The docs check script validates that every current export from
     buildRemoteConformanceReport
     buildRemoteExternalPendingRegister
     buildRemoteOfflineCommandResult
+    buildRemoteRouteContractCatalog
     buildSyncPlan
     buildSyncQueueEntries
     createExampleSyncResourceManifest
@@ -2588,6 +2591,10 @@ The docs check script validates that every current export from
     remoteExternalPendingRequirementSchema
     RemoteGatewayAuditReceipt
     remoteGatewayAuditReceiptSchema
+    RemoteRouteContract
+    remoteRouteContractCatalogSchema
+    RemoteRouteContractCatalog
+    remoteRouteContractSchema
     RemoteSecretLease
     remoteSecretLeaseSchema
     RemoteSecretProviderReceipt

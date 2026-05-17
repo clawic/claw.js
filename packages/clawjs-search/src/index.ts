@@ -138,6 +138,35 @@ export interface SearchSourceManifest {
   facets?: SearchFacetDeclaration[];
 }
 
+export const LOCAL_TEXT_EMBEDDING_MODEL = "local-text-v1";
+export const LOCAL_TEXT_EMBEDDING_DIMENSIONS = 64;
+
+export interface LocalTextEmbeddingOptions {
+  model?: string;
+  dimensions?: number;
+}
+
+export function createLocalTextEmbedding(text: string, options: LocalTextEmbeddingOptions = {}): { model: string; vector: number[] } {
+  const dimensions = Math.max(8, Math.min(1024, Math.floor(options.dimensions ?? LOCAL_TEXT_EMBEDDING_DIMENSIONS)));
+  const vector = Array.from({ length: dimensions }, () => 0);
+  const tokens = localTextEmbeddingTokens(text);
+  if (!tokens.length) {
+    vector[0] = 1;
+    return { model: options.model ?? LOCAL_TEXT_EMBEDDING_MODEL, vector };
+  }
+  for (const token of tokens) {
+    const hash = localTextEmbeddingHash(token);
+    const index = hash % dimensions;
+    const sign = hash & 1 ? 1 : -1;
+    vector[index] += sign / Math.sqrt(tokens.length);
+  }
+  const magnitude = Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0));
+  return {
+    model: options.model ?? LOCAL_TEXT_EMBEDDING_MODEL,
+    vector: magnitude ? vector.map((value) => value / magnitude) : vector,
+  };
+}
+
 export interface SearchAction {
   id: string;
   kind: SearchActionKind;
@@ -1179,6 +1208,24 @@ function normalizeSearchResult(result: SearchResult, manifest: SearchSourceManif
       ...result.permissions,
     },
   };
+}
+
+function localTextEmbeddingTokens(text: string): string[] {
+  return text
+    .toLowerCase()
+    .split(/[^a-z0-9_]+/u)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 2)
+    .slice(0, 512);
+}
+
+function localTextEmbeddingHash(token: string): number {
+  let hash = 2166136261;
+  for (let index = 0; index < token.length; index += 1) {
+    hash ^= token.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
 }
 
 class SearchTimeoutError extends Error {
