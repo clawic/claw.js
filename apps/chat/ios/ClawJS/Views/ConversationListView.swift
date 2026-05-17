@@ -275,8 +275,7 @@ struct ConversationListView: View {
                         ProjectDetailView(project: project, navigationPath: $navigationPath)
                     }
                 case .allProjects:
-                    // TODO: all projects view
-                    Text(L10n.Home.allProjects)
+                    AllProjectsSheet(navigationPath: $navigationPath, showSheet: .constant(false), showsCloseButton: false)
                 case .topic(let id):
                     if let topic = chatService.topic(for: id) {
                         TopicDetailView(topic: topic, navigationPath: $navigationPath)
@@ -339,6 +338,7 @@ struct AllProjectsSheet: View {
     @EnvironmentObject private var chatService: ChatService
     @Binding var navigationPath: NavigationPath
     @Binding var showSheet: Bool
+    var showsCloseButton = true
 
     var body: some View {
         NavigationStack {
@@ -368,7 +368,9 @@ struct AllProjectsSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button(L10n.General.close) { showSheet = false }
+                    if showsCloseButton {
+                        Button(L10n.General.close) { showSheet = false }
+                    }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     EmptyView()
