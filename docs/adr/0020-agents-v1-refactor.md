@@ -64,6 +64,10 @@ The first implementation slice is model plus gates:
 - route graph coverage for internal Mac assignments, external support
   assignments, MCP/API assignments, runtime runs, sessions, grants, memory
   policies, and support/inbox projection
+- `claw inspect agent <id>` for the Agents V1 fiche: identity, owner, org
+  graph, assignments, grants, memory policies, execution profiles, budgets,
+  runs, sessions, routes, risks, gaps, tests, incidents, revisions, and recent
+  audit
 
 Validation must be hermetic unless the user explicitly approves real providers,
 paid calls, raw secrets, production mutation, or physical/native permissions.

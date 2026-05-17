@@ -1,9 +1,13 @@
 import fs from "fs";
+import os from "os";
 import path from "path";
 
-import { CLAW_CLI_COMMAND_INTENT_STATUSES, clawPersistentSurfaceRegistry, connectorExecutionPipeline, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, resolveClawCliCommand, searchClawCliRegistry, withSurfaceChildren } from "@clawjs/core";
+import Database from "better-sqlite3";
+import { AgentStoreFS, type Agent } from "@clawjs/agents";
+import { CLAW_CLI_COMMAND_INTENT_STATUSES, clawPersistentSurfaceRegistry, connectorExecutionPipeline, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, resolveClawCliCommand, resolveClawPersistentSurfacePath, searchClawCliRegistry, withSurfaceChildren } from "@clawjs/core";
 import type { ClawPersistentSurfaceNode, ClawPersistentSurfaceRegistry, ClawSurfaceEdge, ClawSurfaceRoute } from "@clawjs/core";
 import { v1MainSchemaSurfaceNodes } from "./v1-data-surface.ts";
+import { normalizeDbRow, resolveClawjsMainDbPath, type JsonRecord } from "./v1-data-core.ts";
 import { writeJsonError, writeJsonOk, type CliJsonMeta } from "./cli-json.ts";
 import { CliHandledError } from "./cli-errors.ts";
 
@@ -42,6 +46,47 @@ interface InspectCliInput {
   binName: string;
 }
 
+interface AgentInspectFiche {
+  schemaVersion: 1;
+  agent: {
+    id: string;
+    name: string;
+    role: string;
+    runtime: string;
+    model: string;
+    autonomyLevel: string;
+    avatar: Agent["avatar"];
+    isBuiltin: boolean;
+  };
+  owner: {
+    source: "legacy_agent_store" | "agents_v1_projection";
+    ownerKind?: unknown;
+    ownerId?: unknown;
+    workspaceId?: unknown;
+    projectId?: unknown;
+  };
+  orgGraph: {
+    reportsTo?: string;
+    allowedSubagents: string[];
+    scopeInherits: boolean;
+  };
+  assignments: unknown[];
+  executionProfiles: unknown[];
+  resourceGrants: unknown[];
+  memoryPolicies: unknown[];
+  budgets: unknown[];
+  runs: unknown[];
+  sessions: unknown[];
+  evaluations: unknown[];
+  incidents: unknown[];
+  configRevisions: unknown[];
+  routes: Array<{ id: string; visibility: string; validation: string }>;
+  risks: string[];
+  gaps: string[];
+  tests: string[];
+  recentAudit: unknown[];
+}
+
 function inspectNodes(): ClawPersistentSurfaceNode[] {
   return withSurfaceChildren([...clawPersistentSurfaceRegistry.nodes, ...v1MainSchemaSurfaceNodes]);
 }
@@ -62,6 +107,170 @@ function inspectRegistry(input: InspectCliInput): ClawPersistentSurfaceRegistry 
     edges,
     routes,
   };
+}
+
+function buildAgentInspectFiche(input: InspectCliInput, agentId: string, routes: ClawSurfaceRoute[]): AgentInspectFiche {
+  const store = new AgentStoreFS({ home: input.flags.home || input.flags["claw-home"] || process.env.CLAW_HOME });
+  const agent = store.readAgent(agentId);
+  if (!agent) throw new InspectCliError("inspect_not_found", `No agent found for ${agentId}.`, CLI_EXIT_USAGE);
+  const dataRootEnv = input.flags["data-dir"] ? { ...process.env, CLAW_DATA_DIR: input.flags["data-dir"] } as NodeJS.ProcessEnv : process.env;
+  const db = openReadonlyMainDb(dataRootEnv);
+  try {
+    const agentProjection = firstRowById(db, "agents", agent.id);
+    const assignments = rowsByAgent(db, "agent_assignments", agent.id);
+    const executionProfiles = rowsByAgent(db, "agent_execution_profiles", agent.id);
+    const resourceGrants = rowsByAgent(db, "agent_resource_grants", agent.id);
+    const memoryPolicies = rowsByAgent(db, "agent_memory_policies", agent.id);
+    const budgets = rowsByAgent(db, "agent_budgets", agent.id);
+    const runs = rowsByAgent(db, "agent_runs", agent.id);
+    const sessions = rowsByAgent(db, "agent_sessions", agent.id);
+    const evaluations = rowsByAgent(db, "agent_evaluations", agent.id);
+    const incidents = rowsByAgent(db, "agent_incidents", agent.id);
+    const configRevisions = rowsByAgent(db, "agent_config_revisions", agent.id);
+    const agentRoutes = routes.filter((route) => route.id.startsWith("agents."));
+    const risks = agentRisks(agent, assignments, resourceGrants, memoryPolicies, executionProfiles, incidents);
+    const gaps = agentGaps(agentProjection, assignments, resourceGrants, memoryPolicies, executionProfiles, budgets, agentRoutes);
+    return {
+      schemaVersion: 1,
+      agent: {
+        id: agent.id,
+        name: agent.name,
+        role: agent.role,
+        runtime: agent.runtime,
+        model: agent.model,
+        autonomyLevel: agent.autonomyLevel,
+        avatar: agent.avatar,
+        isBuiltin: agent.isBuiltin,
+      },
+      owner: {
+        source: agentProjection ? "agents_v1_projection" : "legacy_agent_store",
+        ...(agentProjection ? pickDefined(agentProjection as JsonRecord, ["ownerKind", "ownerId", "workspaceId", "projectId"]) : {}),
+      },
+      orgGraph: {
+        ...(agent.delegation.reportsTo ? { reportsTo: agent.delegation.reportsTo } : {}),
+        allowedSubagents: agent.delegation.allowedSubagents,
+        scopeInherits: agent.delegation.scopeInherits,
+      },
+      assignments,
+      executionProfiles,
+      resourceGrants,
+      memoryPolicies,
+      budgets,
+      runs,
+      sessions,
+      evaluations,
+      incidents,
+      configRevisions,
+      routes: agentRoutes.map((route) => ({ id: route.id, visibility: route.visibility, validation: route.validation })),
+      risks,
+      gaps,
+      tests: [
+        "packages/clawjs-core/src/agents-v1.test.ts",
+        "packages/clawjs/src/index-data.test.ts",
+        "packages/clawjs/src/inspect-cli.test.ts",
+      ],
+      recentAudit: readAgentAudit(agent.id, input.flags).slice(-10),
+    };
+  } finally {
+    db?.close();
+  }
+}
+
+function openReadonlyMainDb(env: NodeJS.ProcessEnv): Database.Database | null {
+  const dbPath = resolveClawjsMainDbPath(env);
+  if (!fs.existsSync(dbPath)) return null;
+  return new Database(dbPath, { readonly: true, fileMustExist: true });
+}
+
+function firstRowById(db: Database.Database | null, table: string, id: string): unknown | null {
+  if (!db || !tableExists(db, table)) return null;
+  return normalizeDbRow(db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id) as JsonRecord | undefined) ?? null;
+}
+
+function rowsByAgent(db: Database.Database | null, table: string, agentId: string): unknown[] {
+  if (!db || !tableExists(db, table)) return [];
+  const order = tableColumns(db, table).includes("updated_at") ? " ORDER BY updated_at DESC" : "";
+  return db.prepare(`SELECT * FROM ${table} WHERE agent_id = ?${order} LIMIT 100`).all(agentId).map(normalizeDbRow);
+}
+
+function tableExists(db: Database.Database, table: string): boolean {
+  return Boolean(db.prepare("SELECT name FROM sqlite_master WHERE type IN ('table', 'view') AND name = ?").get(table));
+}
+
+function tableColumns(db: Database.Database, table: string): string[] {
+  return db.prepare(`PRAGMA table_info(${table})`).all().map((row) => String((row as { name: unknown }).name));
+}
+
+function pickDefined(record: JsonRecord, keys: string[]): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of keys) {
+    if (record[key] !== undefined && record[key] !== null) out[key] = record[key];
+  }
+  return out;
+}
+
+function agentRisks(agent: Agent, assignments: unknown[], grants: unknown[], memoryPolicies: unknown[], executionProfiles: unknown[], incidents: unknown[]): string[] {
+  const risks: string[] = [];
+  if (agent.secretAllowlist.length > 0 || agent.secretTags.length > 0) risks.push("secret_refs_require_brokered_leases");
+  if (agent.autonomyLevel === "act_full") risks.push("act_full_requires_assignment_and_run_scope_review");
+  if (assignments.some((entry) => isExternalAssignment(entry) && (entry as JsonRecord).status === "active")) risks.push("external_assignment_requires_disclosure_identity_and_support_projection");
+  if (grants.length === 0) risks.push("empty_grants_fail_closed");
+  if (memoryPolicies.length === 0) risks.push("missing_memory_policy_defaults_to_no_memory");
+  if (executionProfiles.length === 0) risks.push("missing_execution_profile_defaults_to_empty_sandbox");
+  if (incidents.some((entry) => ["open", "investigating", "mitigating"].includes(String((entry as JsonRecord).status)))) risks.push("open_incidents_require_review");
+  return risks;
+}
+
+function agentGaps(agentProjection: unknown | null, assignments: unknown[], grants: unknown[], memoryPolicies: unknown[], executionProfiles: unknown[], budgets: unknown[], routes: ClawSurfaceRoute[]): string[] {
+  const gaps: string[] = [];
+  if (!agentProjection) gaps.push("agents_v1_projection_missing");
+  if (assignments.length === 0) gaps.push("no_assignments");
+  if (!assignments.some((entry) => (entry as JsonRecord).status === "active")) gaps.push("no_active_assignments");
+  if (grants.length === 0) gaps.push("no_resource_grants");
+  if (memoryPolicies.length === 0) gaps.push("no_memory_policy");
+  if (executionProfiles.length === 0) gaps.push("no_execution_profile");
+  if (budgets.length === 0) gaps.push("no_budget");
+  if (!routes.some((route) => route.id === "agents.internalMacAssignment")) gaps.push("internal_assignment_route_missing");
+  if (!routes.some((route) => route.id === "agents.externalSupportAssignment")) gaps.push("external_support_assignment_route_missing");
+  if (!routes.some((route) => route.id === "agents.mcpApiAssignment")) gaps.push("mcp_assignment_route_missing");
+  return gaps;
+}
+
+function isExternalAssignment(entry: unknown): boolean {
+  if (!entry || typeof entry !== "object") return false;
+  const kind = String((entry as JsonRecord).kind ?? "");
+  return kind.startsWith("external_") || kind === "support_inbox";
+}
+
+function readAgentAudit(agentId: string, flags: Record<string, string>): unknown[] {
+  const home = flags.home || flags["claw-home"] || process.env.CLAW_HOME || path.join(os.homedir(), resolveClawPersistentSurfacePath("claw.global.root").slice("~/".length));
+  const auditPath = path.join(home, "agents", agentId, "audit.log");
+  if (!fs.existsSync(auditPath)) return [];
+  return fs.readFileSync(auditPath, "utf8")
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map((line) => {
+      try {
+        return JSON.parse(line) as unknown;
+      } catch {
+        return { raw: line };
+      }
+    });
+}
+
+function inspectAgentText(fiche: AgentInspectFiche): string {
+  return [
+    `${fiche.agent.id}\t${fiche.agent.name}\t${fiche.agent.role || "-"}`,
+    `runtime\t${fiche.agent.runtime}\tmodel\t${fiche.agent.model}\tautonomy\t${fiche.agent.autonomyLevel}`,
+    `owner\t${fiche.owner.ownerKind ?? "-"}\t${fiche.owner.ownerId ?? "-"}`,
+    `assignments\t${fiche.assignments.length}`,
+    `resource_grants\t${fiche.resourceGrants.length}`,
+    `memory_policies\t${fiche.memoryPolicies.length}`,
+    `execution_profiles\t${fiche.executionProfiles.length}`,
+    `routes\t${fiche.routes.map((route) => route.id).join(", ") || "-"}`,
+    `risks\t${fiche.risks.join(", ") || "-"}`,
+    `gaps\t${fiche.gaps.join(", ") || "-"}`,
+  ].join("\n") + "\n";
 }
 
 function manifestPaths(flags: Record<string, string>): string[] {
@@ -597,6 +806,13 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     else input.context.stdout.write(`${inspectRouteText([route])}\n${inspectEdgeText(routeEdges)}\n`);
     return CLI_EXIT_OK;
   }
+  if (command === "agent") {
+    if (!target) throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect agent <agent-id> [--json]`, CLI_EXIT_USAGE);
+    const fiche = buildAgentInspectFiche(input, target, routes);
+    if (input.wantsJson) writeJsonOk(input.context.stdout, fiche, inspectJsonMeta(command, { agentId: target }));
+    else input.context.stdout.write(inspectAgentText(fiche));
+    return CLI_EXIT_OK;
+  }
   if (command === "edges") {
     const selected = target ? edges.filter((edge) => edge.id === target || edge.fromId === target || edge.toId === target) : edges;
     if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
@@ -827,7 +1043,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     }
     throw new InspectCliError("usage_error", `Unsupported inspect render format: ${format}`, CLI_EXIT_USAGE);
   }
-  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|neighbors|routes|route|edges|why|commands|command-intents|codebase|connectors|aliases|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
+  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|neighbors|routes|route|agent|edges|why|commands|command-intents|codebase|connectors|aliases|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
 }
 
 export async function runInspectCli(input: InspectCliInput): Promise<number> {

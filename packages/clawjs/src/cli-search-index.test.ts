@@ -257,6 +257,56 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(commandStatus?.fastPath, true);
     assert.ok(commandStatus?.lastIndexedAt);
 
+    const serviceStatus = await runCliCapture(["search", "service", "status", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(serviceStatus.code, CLI_EXIT_OK);
+    const serviceStatusPayload = JSON.parse(serviceStatus.stdout) as {
+      data: { service: { state: string; mode: string }; queuedJobs: number; sources: Array<{ source: string }> };
+    };
+    assert.equal(serviceStatusPayload.data.service.state, "stopped");
+    assert.equal(serviceStatusPayload.data.service.mode, "embedded");
+    assert.equal(serviceStatusPayload.data.sources.some((source) => source.source === "commands"), true);
+
+    const serviceStart = await runCliCapture(["search", "service", "start", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(serviceStart.code, CLI_EXIT_OK);
+    const serviceStartPayload = JSON.parse(serviceStart.stdout) as { data: { service: { state: string; mode: string; startedAt?: string } } };
+    assert.equal(serviceStartPayload.data.service.state, "ready");
+    assert.equal(serviceStartPayload.data.service.mode, "embedded");
+    assert.ok(serviceStartPayload.data.service.startedAt);
+    assert.equal(fs.existsSync(path.join(dataRoot, "search-service.json")), true);
+
+    const serviceJob = await runCliCapture(["search", "jobs", "enqueue", "rebuild", "--source", "commands", "--id", "job:service:commands", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(serviceJob.code, CLI_EXIT_OK);
+
+    const serviceRun = await runCliCapture(["search", "service", "run-once", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(serviceRun.code, CLI_EXIT_OK);
+    const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
+      data: {
+        service: { state: string; worker?: { claimed: number; completed: number; failed: number } };
+        worker?: { items: Array<{ id: string; status: string; indexed?: number }> };
+      };
+    };
+    assert.equal(serviceRunPayload.data.service.state, "ready");
+    assert.equal(serviceRunPayload.data.service.worker?.claimed, 1);
+    assert.equal(serviceRunPayload.data.service.worker?.completed, 1);
+    assert.equal(serviceRunPayload.data.service.worker?.failed, 0);
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.id, "job:service:commands");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
+    assert.ok((serviceRunPayload.data.worker?.items[0]?.indexed ?? 0) > 0);
+
+    const serviceStop = await runCliCapture(["search", "service", "stop", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(serviceStop.code, CLI_EXIT_OK);
+    const serviceStopPayload = JSON.parse(serviceStop.stdout) as { data: { service: { state: string; mode: string; stoppedAt?: string } } };
+    assert.equal(serviceStopPayload.data.service.state, "stopped");
+    assert.equal(serviceStopPayload.data.service.mode, "embedded");
+    assert.ok(serviceStopPayload.data.service.stoppedAt);
+
+    const daemonStart = await runCliCapture(["search", "service", "start", "--mode", "daemon", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(daemonStart.code, CLI_EXIT_DEGRADED);
+    const daemonStartPayload = JSON.parse(daemonStart.stdout) as { data: { service: { state: string; mode: string; reason?: string } } };
+    assert.equal(daemonStartPayload.data.service.state, "external_pending");
+    assert.equal(daemonStartPayload.data.service.mode, "daemon");
+    assert.equal(daemonStartPayload.data.service.reason?.includes("host supervisor"), true);
+
     const saved = await runCliCapture(["search", "saved", "create", "recent-system", "--query", "system capabilities", "--name", "Recent system", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(saved.code, CLI_EXIT_OK);
     const savedPayload = JSON.parse(saved.stdout) as {

@@ -81,6 +81,10 @@ claw search sources pause commands --json
 claw search sources exclude code.symbols --json
 claw search sources resume commands --json
 claw search status --json
+claw search service status --json
+claw search service start --json
+claw search service run-once --json
+claw search service stop --json
 claw search rebuild --json
 claw search rebuild --source generations.artifacts --json
 claw search rebuild --code-root /path/to/project --code-limit 500 --json
@@ -127,6 +131,14 @@ The CLI exposes that local queue through `claw search jobs`. Use `enqueue` to
 schedule upsert, delete, backfill, or rebuild work; `claim` to lease available
 jobs for a worker; `complete` and `fail --retry` to settle attempts; and the
 default list view to inspect queued, leased, done, or failed jobs.
+
+`claw search service` is the local lifecycle surface for Search. Embedded mode
+is available from the CLI and records `search-service.json` beside
+`search.sqlite`; `start`, `stop`, `restart`, and `status` manage that local
+state. `run-once` claims queued index jobs and processes bounded source rebuild
+or backfill work, then records a heartbeat and worker summary. Long-running
+daemon mode is intentionally reported as `EXTERNAL PENDING` until a signed host
+supervisor owns the persistent process.
 
 Adapters can also attach local embedding vectors to Search documents.
 `SearchQueryInput.strategy` supports lexical, semantic, and hybrid scoring when

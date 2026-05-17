@@ -14,6 +14,7 @@ import {
   type SearchAction,
   type SearchActionExecutionPlan,
   type SearchDocumentInput,
+  type SearchIndexJob,
   type SearchResult,
   type SearchSourceManifest,
   type SearchSourceState,
@@ -30,7 +31,7 @@ import { ensureImagesDerivedSourceIndexed, ensureMediaAssetsSourceIndexed } from
 import { pathSafeBasename, resolveRuntimeAdapterId } from "./cli-runtime-utils.ts";
 import { resolveClawjsDataRoot, resolveClawjsMainDbPath } from "./v1-data.ts";
 
-const SEARCH_ADMIN_COMMANDS = new Set(["sources", "status", "profiles", "saved", "monitors", "actions", "audit", "jobs", "explain"]);
+const SEARCH_ADMIN_COMMANDS = new Set(["sources", "status", "service", "profiles", "saved", "monitors", "actions", "audit", "jobs", "explain"]);
 const WORKSPACE_SEARCH_DOMAINS = new Set([
   "areas",
   "tasks",
@@ -55,6 +56,24 @@ const WORKSPACE_SEARCH_DOMAINS = new Set([
 ]);
 
 const BUILTIN_SEARCH_SOURCES: SearchSourceManifest[] = createBuiltinSearchSourceManifests();
+
+interface SearchServiceStateFile {
+  state: "ready" | "stopped" | "external_pending";
+  mode: "embedded" | "daemon";
+  pid?: number;
+  startedAt?: string;
+  stoppedAt?: string;
+  heartbeatAt?: string;
+  reason?: string;
+  storage: { canonical: string; index: string; indexRebuildable: true };
+  budgets: typeof DEFAULT_SEARCH_BUDGETS;
+  worker?: {
+    lastRunAt: string;
+    claimed: number;
+    completed: number;
+    failed: number;
+  };
+}
 
 export function isSearchAdminCommand(command: string | undefined): boolean {
   return !!command && SEARCH_ADMIN_COMMANDS.has(command);
@@ -387,6 +406,14 @@ export async function runSearchAdminCli(input: {
     return CLI_EXIT_OK;
   }
 
+  if (command === "service") {
+    const action = input.positionals[2] ?? "status";
+    const data = runSearchServiceAction(action, input);
+    if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "service" });
+    else input.context.stdout.write(`state=${data.service.state} mode=${data.service.mode} index=search.sqlite queued=${data.queuedJobs}\n`);
+    return data.service.state === "external_pending" ? CLI_EXIT_DEGRADED : CLI_EXIT_OK;
+  }
+
   if (command === "profiles") {
     if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", { profiles: SEARCH_PROFILES }, { subcommand: "profiles" });
     else input.context.stdout.write(`${SEARCH_PROFILES.map((entry) => `${entry.id}\t${entry.defaultEnabled ? "default" : "opt-in"}\t${entry.label}`).join("\n")}\n`);
@@ -579,6 +606,212 @@ export async function runSearchAdminCli(input: {
 
   input.context.stderr.write(`${buildCommandHelp(input.binName, "search") ?? input.usage}\n`);
   return CLI_EXIT_USAGE;
+}
+
+function runSearchServiceAction(action: string, input: {
+  flags: Record<string, string>;
+  context: CliContext;
+}): {
+  action: string;
+  service: SearchServiceStateFile;
+  queuedJobs: number;
+  sources: ReturnType<SearchStore["sourceStatus"]>;
+  jobs: SearchIndexJob[];
+  worker?: NonNullable<SearchServiceStateFile["worker"]> & { items: Array<{ id: string; source: string; operation: string; status: string; indexed?: number; error?: string }> };
+} {
+  const mode = input.flags.mode === "daemon" ? "daemon" : "embedded";
+  const now = new Date().toISOString();
+  const statePath = resolveSearchServiceStatePath(input.flags);
+  const previous = readSearchServiceState(input.flags);
+  if (action === "stop") {
+    const stopped: SearchServiceStateFile = {
+      ...(previous ?? defaultSearchServiceState(input.flags, "embedded")),
+      state: "stopped",
+      mode: previous?.mode ?? mode,
+      stoppedAt: now,
+      heartbeatAt: now,
+    };
+    writeSearchServiceState(input.flags, stopped);
+    return searchServiceSnapshot(input.flags, "stop", stopped);
+  }
+  if (action === "start" || action === "restart") {
+    if (mode === "daemon") {
+      const pending: SearchServiceStateFile = {
+        state: "external_pending",
+        mode: "daemon",
+        heartbeatAt: now,
+        reason: "daemon mode requires a long-running host supervisor; embedded service mode is available locally",
+        storage: searchStorageMetadata(input.flags),
+        budgets: DEFAULT_SEARCH_BUDGETS,
+      };
+      writeSearchServiceState(input.flags, pending);
+      return searchServiceSnapshot(input.flags, action, pending);
+    }
+    const started: SearchServiceStateFile = {
+      state: "ready",
+      mode: "embedded",
+      pid: process.pid,
+      startedAt: action === "restart" ? now : previous?.startedAt ?? now,
+      heartbeatAt: now,
+      storage: searchStorageMetadata(input.flags),
+      budgets: DEFAULT_SEARCH_BUDGETS,
+      ...(previous?.worker ? { worker: previous.worker } : {}),
+    };
+    fs.mkdirSync(path.dirname(statePath), { recursive: true });
+    writeSearchServiceState(input.flags, started);
+    return searchServiceSnapshot(input.flags, action, started);
+  }
+  if (action === "run-once" || action === "tick") {
+    const base = previous && previous.state !== "external_pending"
+      ? previous
+      : defaultSearchServiceState(input.flags, "embedded");
+    const worker = runSearchServiceWorkerOnce(input.flags, input.context.cwd);
+    const updated: SearchServiceStateFile = {
+      ...base,
+      state: "ready",
+      mode: "embedded",
+      pid: process.pid,
+      startedAt: base.startedAt ?? now,
+      heartbeatAt: now,
+      storage: searchStorageMetadata(input.flags),
+      budgets: DEFAULT_SEARCH_BUDGETS,
+      worker,
+    };
+    writeSearchServiceState(input.flags, updated);
+    return searchServiceSnapshot(input.flags, action, updated, worker);
+  }
+  return searchServiceSnapshot(input.flags, action, previous ?? defaultSearchServiceState(input.flags, "embedded"));
+}
+
+function searchServiceSnapshot(
+  flags: Record<string, string>,
+  action: string,
+  service: SearchServiceStateFile,
+  worker?: NonNullable<SearchServiceStateFile["worker"]> & { items: Array<{ id: string; source: string; operation: string; status: string; indexed?: number; error?: string }> },
+): {
+  action: string;
+  service: SearchServiceStateFile;
+  queuedJobs: number;
+  sources: ReturnType<SearchStore["sourceStatus"]>;
+  jobs: SearchIndexJob[];
+  worker?: NonNullable<SearchServiceStateFile["worker"]> & { items: Array<{ id: string; source: string; operation: string; status: string; indexed?: number; error?: string }> };
+} {
+  const store = openCliSearchStore(flags);
+  try {
+    registerBuiltinSources(store);
+    const jobs = store.listIndexJobs({ limit: flags.limit ? Number(flags.limit) : 50 });
+    return {
+      action,
+      service,
+      queuedJobs: jobs.filter((job) => job.status === "queued" || job.status === "leased").length,
+      sources: store.sourceStatus(),
+      jobs,
+      ...(worker ? { worker } : {}),
+    };
+  } finally {
+    store.close();
+  }
+}
+
+function runSearchServiceWorkerOnce(flags: Record<string, string>, cwd: string): NonNullable<SearchServiceStateFile["worker"]> & {
+  items: Array<{ id: string; source: string; operation: string; status: string; indexed?: number; error?: string }>;
+} {
+  const store = openCliSearchStore(flags);
+  const limit = flags.limit ? Number(flags.limit) : 10;
+  const items: Array<{ id: string; source: string; operation: string; status: string; indexed?: number; error?: string }> = [];
+  try {
+    registerBuiltinSources(store);
+    const jobs = store.claimIndexJobs({
+      limit,
+      sources: parseListFlag(flags.sources ?? flags.source),
+      shards: parseListFlag(flags.shards ?? flags.shard),
+      leaseMs: flags["lease-ms"] ? Number(flags["lease-ms"]) : undefined,
+    });
+    for (const job of jobs) {
+      try {
+        const indexed = runSearchIndexJob(store, job, flags, cwd);
+        const completed = store.completeIndexJob(job.id);
+        items.push({ id: job.id, source: job.source, operation: job.operation, status: completed?.status ?? "done", indexed });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const failed = store.failIndexJob(job.id, { error: message, retry: readBooleanish(flags.retry) });
+        items.push({ id: job.id, source: job.source, operation: job.operation, status: failed?.status ?? "failed", error: message });
+      }
+    }
+  } finally {
+    store.close();
+  }
+  const lastRunAt = new Date().toISOString();
+  return {
+    lastRunAt,
+    claimed: items.length,
+    completed: items.filter((item) => item.status === "done").length,
+    failed: items.filter((item) => item.status === "failed").length,
+    items,
+  };
+}
+
+function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Record<string, string>, cwd: string): number {
+  if (!sourceCanIndex(store, job.source)) return 0;
+  if (job.operation === "delete") {
+    if (!job.resourceId) return 0;
+    store.tombstone({ source: job.source, resourceId: job.resourceId, reason: "search service delete job" });
+    return 1;
+  }
+  switch (job.source) {
+    case "commands":
+      return ensureCommandSourceIndexed(store);
+    case "sessions.chats":
+      return ensureSessionsChatsSourceIndexed(store, flags);
+    case "database.records":
+      return ensureDatabaseRecordsSourceIndexed(store, flags);
+    case "documents.blocks":
+      return ensureDocumentsBlocksSourceIndexed(store, flags);
+    case "images.derived":
+      return ensureImagesDerivedSourceIndexed(store, flags, cwd);
+    case "media.assets":
+      return ensureMediaAssetsSourceIndexed(store, flags, cwd);
+    case "generations.artifacts":
+      return ensureGenerationsArtifactsSourceIndexed(store, flags, cwd);
+    case "code.symbols":
+      return ensureCodeSymbolsSourceIndexed(store, flags, cwd);
+    default:
+      throw new Error(`Search service cannot index source: ${job.source}`);
+  }
+}
+
+function defaultSearchServiceState(flags: Record<string, string>, mode: "embedded" | "daemon"): SearchServiceStateFile {
+  return {
+    state: "stopped",
+    mode,
+    storage: searchStorageMetadata(flags),
+    budgets: DEFAULT_SEARCH_BUDGETS,
+  };
+}
+
+function readSearchServiceState(flags: Record<string, string>): SearchServiceStateFile | null {
+  const statePath = resolveSearchServiceStatePath(flags);
+  if (!fs.existsSync(statePath)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(statePath, "utf8")) as SearchServiceStateFile;
+  } catch {
+    return null;
+  }
+}
+
+function writeSearchServiceState(flags: Record<string, string>, state: SearchServiceStateFile): void {
+  const statePath = resolveSearchServiceStatePath(flags);
+  fs.mkdirSync(path.dirname(statePath), { recursive: true });
+  fs.writeFileSync(statePath, `${JSON.stringify(state, null, 2)}\n`);
+}
+
+function resolveSearchServiceStatePath(flags: Record<string, string>): string {
+  if (flags["search-service-state-path"]) return path.resolve(flags["search-service-state-path"]);
+  return path.join(path.dirname(resolveSearchDbPath(flags)), "search-service.json");
+}
+
+function readBooleanish(value: string | undefined): boolean {
+  return value === "true" || value === "1" || value === "yes";
 }
 
 function runSearchActionExecuteCli(input: {

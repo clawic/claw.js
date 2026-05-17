@@ -80,6 +80,10 @@ Search V1.1 is built from these layers:
   upsert, delete, backfill, and rebuild work. Jobs use bounded leases,
   priorities, schedules, and retries so background indexing can progress
   without blocking section fast paths.
+- **Service lifecycle**: `claw search service` exposes embedded lifecycle state
+  and a bounded `run-once` worker over the local job queue. Long-running daemon
+  mode remains `EXTERNAL PENDING` until a signed host supervisor owns the
+  persistent process.
 - **Semantic candidates**: local embedding vectors can be stored beside Search
   documents and combined with lexical matches through semantic or hybrid query
   strategies. Model choice and embedding generation remain adapter-owned; the
@@ -94,6 +98,7 @@ Search V1.1 is built from these layers:
 - `claw search sources`
 - `claw search sources pause|exclude|resume <source-id>`
 - `claw search status`
+- `claw search service status|start|run-once|stop`
 - `claw search rebuild`
 - `claw search rebuild --source <source-id>`
 - `claw search jobs`

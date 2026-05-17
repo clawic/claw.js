@@ -115,6 +115,7 @@ claw inspect commands --json
 claw inspect why database --json
 claw inspect database --json
 claw inspect schemas --json
+claw inspect agent agent.ops --json
 claw inspect storage --json
 claw inspect command-intents --json
 claw inspect codebase --summary --json
@@ -567,6 +568,8 @@ claw search "system capabilities" --json
 claw search query "release branch" --json
 claw search sources --json
 claw search status --json
+claw search service status --json
+claw search service run-once --json
 claw search profiles --json
 claw search saved list --json
 claw search monitors list --json

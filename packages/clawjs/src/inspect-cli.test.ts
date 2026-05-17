@@ -1,12 +1,15 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
+import Database from "better-sqlite3";
 import { test } from "vitest";
 import assert from "node:assert/strict";
 import { clawEventsPath } from "@clawjs/core";
 
 import { runCli } from "./index.ts";
 import { CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
+import { ensureV1MainSchema } from "./v1-data-core.ts";
+import { withPatchedEnv } from "./index-test-utils.ts";
 
 function captureStream() {
   let output = "";
@@ -129,6 +132,99 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   const neighborPayload = parseCliJson<{ neighbors: Array<{ id: string }>; routes: Array<{ id: string }> }>(neighbors.stdout).data;
   assert.equal(neighborPayload.neighbors.some((node) => node.id === "claw.daemon.local"), true);
   assert.equal(neighborPayload.routes.some((entry) => entry.id === "chat.companionBridge"), true);
+});
+
+test("runCli exposes an agent inspection fiche", async () => {
+  const previousHome = process.env.CLAW_HOME;
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-inspect-agent-"));
+  process.env.CLAW_HOME = home;
+  try {
+    const upsert = await runCliCapture(["agents", "upsert", "agent.inspect", "--name", "Inspect Agent", "--json"], process.cwd());
+    assert.equal(upsert.code, CLI_EXIT_OK);
+
+    const result = await runCliCapture(["inspect", "agent", "agent.inspect", "--json"], process.cwd());
+    assert.equal(result.code, CLI_EXIT_OK);
+    const payload = parseCliJson<{
+      agent: { id: string; name: string; runtime: string };
+      owner: { source: string };
+      risks: string[];
+      gaps: string[];
+      tests: string[];
+    }>(result.stdout).data;
+    assert.equal(payload.agent.id, "agent.inspect");
+    assert.equal(payload.agent.name, "Inspect Agent");
+    assert.equal(payload.owner.source, "agents_v1_projection");
+    assert.equal(payload.risks.includes("empty_grants_fail_closed"), true);
+    assert.equal(payload.gaps.includes("no_resource_grants"), true);
+    assert.equal(payload.tests.includes("packages/clawjs/src/inspect-cli.test.ts"), true);
+  } finally {
+    if (previousHome === undefined) delete process.env.CLAW_HOME;
+    else process.env.CLAW_HOME = previousHome;
+    fs.rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("runCli renders an Agents V1 inspect fiche with grants, routes, memory, and gaps", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-inspect-agent-"));
+  const dataRoot = path.join(tempRoot, "data");
+  const homeRoot = path.join(tempRoot, "home");
+  await withPatchedEnv({ CLAW_DATA_DIR: dataRoot, CLAW_HOME: homeRoot }, async () => {
+    const upsert = await runCliCapture(["agents", "upsert", "agent.support", "--name", "Support", "--role", "Support agent", "--secret-ref", "vault://agents/support", "--json"], process.cwd());
+    assert.equal(upsert.code, CLI_EXIT_OK);
+
+    const sqlite = new Database(path.join(dataRoot, "core.sqlite"));
+    try {
+      ensureV1MainSchema(sqlite);
+      const now = "2026-05-17T10:00:00.000Z";
+      sqlite.prepare(`
+        INSERT INTO agent_assignments (id, agent_id, kind, status, label, channel, endpoint_ref, privacy_policy, external_disclosure, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run("assignment.web", "agent.support", "external_web_chat", "active", "Website chat", "chat", "web:support", "hashed", "transparent_agent", now, now);
+      sqlite.prepare(`
+        INSERT INTO agent_execution_profiles (id, agent_id, name, runtime, model, execution_mode, host_access, network_policy, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run("profile.safe", "agent.support", "Safe profile", "codex", "gpt-5.1", "async", "none", "connector_only", now, now);
+      sqlite.prepare(`
+        INSERT INTO agent_resource_grants (id, agent_id, assignment_id, execution_profile_id, effect, resource_type, resource_id, action, scope_type, scope_id, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run("grant.support.read", "agent.support", "assignment.web", "profile.safe", "allow", "collection", "support_conversations", "read", "customer", "customer_1", now, now);
+      sqlite.prepare(`
+        INSERT INTO agent_memory_policies (id, agent_id, name, read_scopes_json, write_scopes_json, write_policy, cross_user_boundary, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run("memory.support", "agent.support", "Support memory", JSON.stringify([{ layer: "customer", access: "read" }]), JSON.stringify([{ layer: "agent_private", access: "write" }]), "private_only", "explicit_grant_only", now, now);
+      sqlite.prepare(`
+        INSERT INTO agent_budgets (id, agent_id, assignment_id, name, currency, limit_json, usage_json, exceeded_behavior, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run("budget.support", "agent.support", "assignment.web", "Support budget", "USD", JSON.stringify({ monthlyUsd: 25 }), "{}", "pause_affected_scope", now, now);
+    } finally {
+      sqlite.close();
+    }
+
+    const inspect = await runCliCapture(["inspect", "agent", "agent.support", "--json"], process.cwd());
+    assert.equal(inspect.code, CLI_EXIT_OK);
+    const fiche = parseCliJson<{
+      agent: { id: string; name: string };
+      assignments: Array<{ id: string; kind: string; status: string }>;
+      resourceGrants: Array<{ id: string; resourceId: string }>;
+      memoryPolicies: Array<{ id: string; writePolicy: string }>;
+      executionProfiles: Array<{ id: string; networkPolicy: string }>;
+      budgets: Array<{ id: string }>;
+      routes: Array<{ id: string }>;
+      risks: string[];
+      gaps: string[];
+      tests: string[];
+    }>(inspect.stdout).data;
+    assert.equal(fiche.agent.id, "agent.support");
+    assert.equal(fiche.assignments.some((entry) => entry.id === "assignment.web" && entry.status === "active"), true);
+    assert.equal(fiche.resourceGrants.some((entry) => entry.resourceId === "support_conversations"), true);
+    assert.equal(fiche.memoryPolicies.some((entry) => entry.writePolicy === "private_only"), true);
+    assert.equal(fiche.executionProfiles.some((entry) => entry.networkPolicy === "connector_only"), true);
+    assert.equal(fiche.budgets.some((entry) => entry.id === "budget.support"), true);
+    assert.equal(fiche.routes.some((entry) => entry.id === "agents.externalSupportAssignment"), true);
+    assert.equal(fiche.risks.includes("secret_refs_require_brokered_leases"), true);
+    assert.equal(fiche.gaps.includes("no_resource_grants"), false);
+    assert.equal(fiche.tests.includes("packages/clawjs/src/inspect-cli.test.ts"), true);
+  });
 });
 
 test("runCli filters stable contract surface categories", async () => {
