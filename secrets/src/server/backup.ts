@@ -96,7 +96,7 @@ function scrubHostBoundMeta(row: Record<string, BackupScalar>): Record<string, B
   return { ...row, snapshot_json: JSON.stringify(snapshot) };
 }
 
-export function exportLogicalBackup(db: SqliteDb): LogicalBackup {
+function exportLogicalBackup(db: SqliteDb): LogicalBackup {
   const schema = db.prepare("SELECT version FROM schema_version LIMIT 1").get() as { version: number } | undefined;
   const tables = BACKUP_TABLES.map((table) => {
     const blobColumns = tableBlobColumns(db, table);

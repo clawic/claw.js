@@ -26,10 +26,6 @@ export const CLAW_SECRETS_CAPABILITIES = [
 
 export type ClawSecretsCapability = (typeof CLAW_SECRETS_CAPABILITIES)[number];
 
-export function isClawSecretsCapability(value: unknown): value is ClawSecretsCapability {
-  return typeof value === "string" && (CLAW_SECRETS_CAPABILITIES as readonly string[]).includes(value);
-}
-
 // ---------- BusinessCapability (discriminated union) ----------
 
 export type BusinessCapability =

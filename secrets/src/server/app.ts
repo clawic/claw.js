@@ -96,7 +96,7 @@ interface AppDeps {
   registry: PluginRegistry;
 }
 
-export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
+async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
   const { config, db, registry } = deps;
 
   const auth = new SecretsAuthService(config.jwtSecret);

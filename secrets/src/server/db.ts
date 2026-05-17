@@ -411,7 +411,7 @@ export type VersionReason =
   | "restore"
   | "proxyRefresh";
 export type VersionAuthor = "ui" | "admin" | "proxy" | "system";
-export type AuditSource = "proxy" | "ui" | "admin" | "system";
+type AuditSource = "proxy" | "ui" | "admin" | "system";
 export type LeaseMode = "process" | "browser";
 
 export interface TenantRow {
@@ -606,14 +606,6 @@ export interface AuditEventRow {
   prev_hash: Buffer;
   self_hash: Buffer;
   sequence: number;
-}
-
-export interface SecretSessionCacheRow {
-  secret_id: string;
-  cache_key: string;
-  wrapped_token: Buffer;
-  expires_at: string;
-  refreshed_at: string;
 }
 
 export interface SecretSyncedResourceRow {

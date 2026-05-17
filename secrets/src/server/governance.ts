@@ -187,24 +187,3 @@ export function evaluateGovernance(secret: SecretRow, ctx: ResolveContext): Gove
     needsVpn,
   };
 }
-
-export function describeReason(reason: GovernanceDenialReason): string {
-  switch (reason) {
-    case "host_not_allowed": return "Target host not in allowed list";
-    case "header_not_allowed": return "One or more request headers are not allowed";
-    case "placement_not_allowed": return "Secret cannot be injected at this placement";
-    case "insecure_transport_blocked": return "Insecure transport (http://) is blocked for this secret";
-    case "local_network_blocked": return "Local network targets are blocked for this secret";
-    case "agent_not_allowed": return "This agent is not allowed to use this secret";
-    case "secret_archived": return "Secret is archived";
-    case "secret_compromised": return "Secret is marked as compromised";
-    case "secret_locked": return "Secret is locked";
-    case "secret_read_only": return "Secret is read-only";
-    case "secret_trashed": return "Secret is in trash";
-    case "missing_context": return "Required governance context is missing";
-    case "ttl_expired": return "Secret has expired";
-    case "max_uses_exhausted": return "Secret reached its max uses";
-    case "approval_required": return "Approval window required";
-    case "vpn_required": return "VPN connection required";
-  }
-}

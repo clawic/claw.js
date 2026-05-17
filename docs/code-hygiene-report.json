@@ -14,13 +14,13 @@
     "unreferencedAssetCandidates": 88
   },
   "knipSummary": {
-    "filesWithIssues": 132,
-    "totalIssues": 702,
+    "filesWithIssues": 127,
+    "totalIssues": 696,
     "issueTypes": {
       "unlisted": 2,
-      "types": 32,
+      "types": 30,
       "owners": 93,
-      "exports": 567,
+      "exports": 563,
       "duplicates": 8
     }
   },
@@ -89,6 +89,7 @@
     "Integrations provider cleanup made provider-local runtime/source operation aliases private, removed redundant runner type re-exports, and kept public connector and Telegram event contracts available through the package entrypoint.",
     "Publishing cleanup made CLI parser/token helpers, default port, prefixed database class, AppServices, and raw ULID helper private while preserving exported command context, database alias, and prefixed ID APIs.",
     "Secrets cleanup made resolver field/output DTOs and actor helpers private, removed an unused governance re-export, and deleted the unreferenced session cache store class while keeping schema/backup compatibility.",
-    "Wiki cleanup made admin JWT claim helpers private and removed unused token/access-policy helper surfaces while preserving auth principal and wiki operation contracts."
+    "Wiki cleanup made admin JWT claim helpers private and removed unused token/access-policy helper surfaces while preserving auth principal and wiki operation contracts.",
+    "Secrets server cleanup made remaining local app/backup/database helpers private, removed stale capability/governance helpers, and deleted the unused session-cache row DTO after the store removal."
   ]
 }
