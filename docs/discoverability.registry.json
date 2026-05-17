@@ -257,6 +257,83 @@
       "reviewDate": "2026-08-17"
     },
     {
+      "id": "mac-control-plane-v1",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0023-mac-control-plane-v1.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/decision-map.md",
+        "docs/cli.md",
+        "docs/mac-control-plane.md"
+      ],
+      "discoveryTerms": [
+        "Mac Control Plane",
+        "Mac Action Broker",
+        "macOS action atlas",
+        "claw wifi",
+        "claw window"
+      ],
+      "searchQueries": [
+        {
+          "query": "Mac Control Plane",
+          "expectPath": "docs/mac-control-plane.md"
+        },
+        {
+          "query": "Mac Action Broker",
+          "expectPath": "docs/adr/0023-mac-control-plane-v1.md"
+        }
+      ],
+      "inspect": [
+        {
+          "command": "claw inspect commands --json",
+          "expectPath": "docs/mac-control-plane.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-17"
+    },
+    {
+      "id": "mac-permission-broker-v1",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0024-mac-permission-broker-v1.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/decision-map.md",
+        "docs/cli.md",
+        "docs/mac-control-plane.md"
+      ],
+      "discoveryTerms": [
+        "Mac Permission Broker",
+        "claw permissions",
+        "macOS TCC",
+        "permission packs"
+      ],
+      "searchQueries": [
+        {
+          "query": "Mac Permission Broker",
+          "expectPath": "docs/adr/0024-mac-permission-broker-v1.md"
+        },
+        {
+          "query": "claw permissions",
+          "expectPath": "docs/mac-control-plane.md"
+        }
+      ],
+      "inspect": [
+        {
+          "command": "claw inspect commands --json",
+          "expectPath": "docs/mac-control-plane.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-17"
+    },
+    {
       "id": "docs-alignment-routing",
       "kind": "guardrail",
       "owner": "claw",
