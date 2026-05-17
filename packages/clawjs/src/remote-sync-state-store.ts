@@ -18,6 +18,7 @@ import {
   remoteGatewayAuditReceiptSchema,
   remoteSecretLeaseSchema,
   remoteSecretProviderReceiptSchema,
+  remoteSurfaceClassificationReceiptSchema,
   remoteTransportHandshakeReceiptSchema,
   syncDriverApplicationReceiptSchema,
   syncCursorSchema,
@@ -36,6 +37,7 @@ import {
   type RemoteGatewayAuditReceipt,
   type RemoteSecretLease,
   type RemoteSecretProviderReceipt,
+  type RemoteSurfaceClassificationReceipt,
   type RemoteTransportHandshakeReceipt,
   type SyncCursor,
   type SyncDriverApplicationReceipt,
@@ -47,7 +49,7 @@ import {
 
 export type RemoteSyncStateAuditEvent = {
   eventId: string;
-  eventType: "sync.manifest.recorded" | "sync.queue.enqueued" | "sync.queue.reconciled" | "sync.driver_application.recorded" | "sync.cache.recorded" | "remote.compat.recorded" | "mesh.invitation.recorded" | "mesh.invitation.accepted" | "mesh.share.recorded" | "mesh.revocation.recorded" | "secret.lease.issued" | "secret.provider.recorded" | "transport.handshake.recorded" | "node.trust.recorded" | "gateway.deployment.recorded" | "gateway.agent_service.recorded" | "gateway.audit.recorded";
+  eventType: "sync.manifest.recorded" | "sync.queue.enqueued" | "sync.queue.reconciled" | "sync.driver_application.recorded" | "sync.cache.recorded" | "remote.classification.recorded" | "remote.compat.recorded" | "mesh.invitation.recorded" | "mesh.invitation.accepted" | "mesh.share.recorded" | "mesh.revocation.recorded" | "secret.lease.issued" | "secret.provider.recorded" | "transport.handshake.recorded" | "node.trust.recorded" | "gateway.deployment.recorded" | "gateway.agent_service.recorded" | "gateway.audit.recorded";
   targetId: string;
   createdAt: string;
   coordinatorSignatureId?: string;
@@ -84,6 +86,9 @@ export type RemoteSyncState = {
   };
   compatibility: {
     adapters: Record<string, RemoteCompatibilityAdapterReceipt>;
+  };
+  remote: {
+    classificationReceipts: Record<string, RemoteSurfaceClassificationReceipt>;
   };
   mesh: {
     invitations: Record<string, MeshInvitation>;
@@ -131,6 +136,9 @@ function emptyState(): RemoteSyncState {
     },
     compatibility: {
       adapters: {},
+    },
+    remote: {
+      classificationReceipts: {},
     },
     mesh: {
       invitations: {},
@@ -305,6 +313,16 @@ function parseState(raw: unknown): RemoteSyncState {
     if (adapters && typeof adapters === "object" && !Array.isArray(adapters)) {
       for (const [adapterId, receiptInput] of Object.entries(adapters)) {
         state.compatibility.adapters[adapterId] = remoteCompatibilityAdapterReceiptSchema.parse(receiptInput);
+      }
+    }
+  }
+
+  const remote = input.remote;
+  if (remote && typeof remote === "object" && !Array.isArray(remote)) {
+    const classificationReceipts = (remote as Record<string, unknown>).classificationReceipts;
+    if (classificationReceipts && typeof classificationReceipts === "object" && !Array.isArray(classificationReceipts)) {
+      for (const [receiptId, receiptInput] of Object.entries(classificationReceipts)) {
+        state.remote.classificationReceipts[receiptId] = remoteSurfaceClassificationReceiptSchema.parse(receiptInput);
       }
     }
   }
@@ -534,6 +552,17 @@ export class RemoteSyncStateStore {
     state.compatibility.adapters[receipt.adapterId] = receipt;
     state.updatedAt = now;
     const coordinatorSignature = appendAudit(state, "remote.compat.recorded", receipt.adapterId, now, receipt, input.signer);
+    this.write(state);
+    return { receipt, statePath: this.statePath, durable: true, coordinatorSignature };
+  }
+
+  recordRemoteSurfaceClassificationReceipt(receiptInput: RemoteSurfaceClassificationReceipt, input: { now?: string; signer: RemoteSyncCoordinatorSigner }): RemoteSyncStateWriteResult<{ receipt: RemoteSurfaceClassificationReceipt }> {
+    const receipt = remoteSurfaceClassificationReceiptSchema.parse(receiptInput);
+    const now = input.now ?? receipt.createdAt;
+    const state = this.read();
+    state.remote.classificationReceipts[receipt.receiptId] = receipt;
+    state.updatedAt = now;
+    const coordinatorSignature = appendAudit(state, "remote.classification.recorded", receipt.receiptId, now, receipt, input.signer);
     this.write(state);
     return { receipt, statePath: this.statePath, durable: true, coordinatorSignature };
   }

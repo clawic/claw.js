@@ -99,6 +99,22 @@ export const remoteCompatibilityAdapterReceiptSchema = z.object({
   writes: z.literal(false),
 });
 
+export const remoteSurfaceClassificationReceiptSchema = z.object({
+  schemaVersion: z.literal(1),
+  receiptId: z.string().min(1),
+  capabilityId: z.string().min(1),
+  classification: remoteSurfaceClassificationSchema,
+  routeId: z.string().min(1).optional(),
+  policyRef: z.string().min(1).optional(),
+  testRefs: z.array(z.string().min(1)),
+  remoteSafeReady: z.boolean(),
+  missingEvidence: z.array(z.enum(["route", "policy", "tests"])),
+  reason: z.string().min(1).optional(),
+  createdAt: z.string().datetime(),
+  auditEventId: z.string().min(1),
+  writes: z.literal(false),
+});
+
 export const nodeIdentitySchema = z.object({
   nodeId: z.string().min(1),
   displayName: z.string().min(1),
@@ -573,6 +589,7 @@ export type SyncCachePolicy = z.infer<typeof syncCachePolicySchema>;
 export type RemoteClientCacheSnapshot = z.infer<typeof remoteClientCacheSnapshotSchema>;
 export type RemoteCompatibilityClientKind = z.infer<typeof remoteCompatibilityClientKindSchema>;
 export type RemoteCompatibilityAdapterReceipt = z.infer<typeof remoteCompatibilityAdapterReceiptSchema>;
+export type RemoteSurfaceClassificationReceipt = z.infer<typeof remoteSurfaceClassificationReceiptSchema>;
 export type NodeIdentity = z.infer<typeof nodeIdentitySchema>;
 export type RemoteActorContext = z.infer<typeof remoteActorContextSchema>;
 export type SyncResourceManifest = z.infer<typeof syncResourceManifestSchema>;
@@ -799,6 +816,10 @@ function remoteClientCacheEntryId(parts: string[]): string {
 
 function remoteCompatibilityAdapterId(parts: string[]): string {
   return `remote_compat_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
+}
+
+function remoteClassificationReceiptId(parts: string[]): string {
+  return `remote_classification_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
 }
 
 function remoteAgentServiceExecutionReceiptId(parts: string[]): string {
@@ -1272,6 +1293,48 @@ export function createRemoteCompatibilityAdapterReceipt(input: {
     migrationRequired: status !== "blocked",
     createdAt,
     auditEventId: remoteCompatibilityAdapterId(["audit", input.legacySurface, input.canonicalRouteId, createdAt]),
+    writes: false,
+  });
+}
+
+export function createRemoteSurfaceClassificationReceipt(input: {
+  capabilityId: string;
+  classification: RemoteSurfaceClassification;
+  routeId?: string;
+  policyRef?: string;
+  testRefs?: string[];
+  reason?: string;
+  createdAt?: string;
+}): RemoteSurfaceClassificationReceipt {
+  const classification = remoteSurfaceClassificationSchema.parse(input.classification);
+  const testRefs = input.testRefs ?? [];
+  const missingEvidence = [
+    ...(input.routeId ? [] : ["route" as const]),
+    ...(input.policyRef ? [] : ["policy" as const]),
+    ...(testRefs.length ? [] : ["tests" as const]),
+  ];
+  const remoteSafeReady = classification === "remote-safe" && missingEvidence.length === 0;
+  const createdAt = input.createdAt ?? new Date().toISOString();
+  if (classification === "remote-safe" && !remoteSafeReady) {
+    throw new Error(`remote-safe classification for ${input.capabilityId} requires route, policy, and tests`);
+  }
+  return remoteSurfaceClassificationReceiptSchema.parse({
+    schemaVersion: 1,
+    receiptId: remoteClassificationReceiptId([
+      input.capabilityId,
+      classification,
+      createdAt,
+    ]),
+    capabilityId: input.capabilityId,
+    classification,
+    ...(input.routeId ? { routeId: input.routeId } : {}),
+    ...(input.policyRef ? { policyRef: input.policyRef } : {}),
+    testRefs,
+    remoteSafeReady,
+    missingEvidence,
+    ...(input.reason ? { reason: input.reason } : {}),
+    createdAt,
+    auditEventId: remoteClassificationReceiptId(["audit", input.capabilityId, classification, createdAt]),
     writes: false,
   });
 }
