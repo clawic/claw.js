@@ -133,9 +133,11 @@ strict timeout behavior, saved searches, monitors, actions, and no regression to
 conversation-only Clawix search.
 
 The showcase Search Index page is the first admin UI for source state and
-rebuild queue control. It is deliberately separate from Root Search and the
-current Clawix Mac chat search, so enabling wider indexing does not broaden or
-slow section-specific search surfaces by default.
+rebuild queue control. It includes explicit source onboarding: sources are
+selected before being enabled, and rebuild queueing is a separate choice. It is
+deliberately separate from Root Search and the current Clawix Mac chat search,
+so enabling wider indexing does not broaden or slow section-specific search
+surfaces by default.
 
 The showcase `/search` page is the first Root Search UI. It queries Search
 through `/api/search/query`, defaults to the framework profile, exposes simple

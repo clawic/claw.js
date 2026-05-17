@@ -217,7 +217,9 @@ audit` lists those derived records for admin/debug surfaces.
 The showcase app exposes `/search-index` as the Search Index admin surface. It
 shows framework and full-profile sources separately, keeps optional native/web/
 provider/file sources off by default, and can pause, exclude, resume, or enqueue
-source rebuild jobs without changing the normal chat search scope.
+source rebuild jobs without changing the normal chat search scope. Its source
+onboarding control requires explicit source selection before enabling optional
+or paused sources, with rebuild queueing as a separate checkbox.
 
 The showcase app also exposes `/search` as the first Root Search entrypoint.
 It is separate from chat search, uses the `framework` profile by default, and
@@ -254,7 +256,7 @@ usable without waiting for universal backfill.
   profile by default, domain filters, partial-source metadata, and a link to
   Search Index controls.
 - Keep `/search-index` as the technical/admin Search Index surface for source
-  state, opt-in profile checks, and rebuild queue control.
+  state, opt-in profile checks, source onboarding, and rebuild queue control.
 - Keep `framework` as default and use `full` for optional native, web, provider,
   and local-file sources.
 - Mark physical/native validation as `EXTERNAL PENDING` until a signed host and

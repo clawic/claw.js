@@ -15,7 +15,7 @@ import { isE2EEnabled } from "@/lib/e2e";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type SearchIndexAction = "enable" | "pause" | "exclude" | "resume" | "rebuild";
+type SearchIndexAction = "enable" | "pause" | "exclude" | "resume" | "rebuild" | "onboard";
 
 interface SearchIndexSourceView {
   id: string;
@@ -59,11 +59,12 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const body = await request.json().catch(() => ({}));
+  const body = await request.json().catch(() => ({})) as Record<string, unknown>;
   const source = typeof body.source === "string" ? body.source : "";
+  const sources = Array.isArray(body.sources) ? body.sources.filter((entry: unknown): entry is string => typeof entry === "string" && entry.trim().length > 0) : [];
   const action = isSearchIndexAction(body.action) ? body.action : null;
   const profile = readProfile(typeof body.profile === "string" ? body.profile : undefined);
-  if (!source || !action) {
+  if (!action || (action !== "onboard" && !source) || (action === "onboard" && sources.length === 0)) {
     return Response.json({ error: "source and action are required" }, { status: 400 });
   }
   if (isE2EEnabled()) return Response.json(createE2ESnapshot(profile));
@@ -71,33 +72,41 @@ export async function POST(request: Request) {
   const store = openSearchStore();
   try {
     const known = new Set(store.listSources("full").map((manifest) => manifest.id));
-    if (!known.has(source)) return Response.json({ error: `Unknown search source: ${source}` }, { status: 404 });
+    const selectedSources = action === "onboard" ? Array.from(new Set(sources)) : [source];
+    for (const selectedSource of selectedSources) {
+      if (!known.has(selectedSource)) return Response.json({ error: `Unknown search source: ${selectedSource}` }, { status: 404 });
+    }
 
     const statuses = new Map(store.sourceStatus().map((status) => [status.source, status]));
-    const current = statuses.get(source);
     switch (action) {
       case "enable":
       case "resume":
-        store.setSourceState(source, "enabled", { backlog: current?.backlog ?? 0, error: null });
+        {
+          const current = statuses.get(source);
+          store.setSourceState(source, "enabled", { backlog: current?.backlog ?? 0, error: null });
+        }
+        break;
+      case "onboard":
+        for (const selectedSource of selectedSources) {
+          const current = statuses.get(selectedSource);
+          store.setSourceState(selectedSource, "enabled", { backlog: current?.backlog ?? 0, error: null });
+          if (body.rebuild === true) enqueueRebuild(store, selectedSource, (current?.backlog ?? 0) + 1);
+        }
         break;
       case "pause":
-        store.setSourceState(source, "paused", { backlog: current?.backlog ?? 0, error: null });
+        {
+          const current = statuses.get(source);
+          store.setSourceState(source, "paused", { backlog: current?.backlog ?? 0, error: null });
+        }
         break;
       case "exclude":
         store.setSourceState(source, "excluded", { backlog: 0, error: null });
         break;
       case "rebuild":
-        store.enqueueIndexJob({
-          source,
-          operation: "rebuild",
-          shard: "default",
-          priority: source.startsWith("sessions.") ? 20 : 10,
-          payload: { requestedBy: "showcase.search-index" },
-        });
-        store.setSourceState(source, current?.state ?? "enabled", {
-          backlog: (current?.backlog ?? 0) + 1,
-          error: null,
-        });
+        {
+          const current = statuses.get(source);
+          enqueueRebuild(store, source, (current?.backlog ?? 0) + 1, current?.state ?? "enabled");
+        }
         break;
     }
   } finally {
@@ -105,6 +114,20 @@ export async function POST(request: Request) {
   }
 
   return Response.json(readSearchIndexSnapshot(profile));
+}
+
+function enqueueRebuild(store: SearchStore, source: string, backlog: number, state?: SearchSourceState): void {
+  store.enqueueIndexJob({
+    source,
+    operation: "rebuild",
+    shard: "default",
+    priority: source.startsWith("sessions.") ? 20 : 10,
+    payload: { requestedBy: "showcase.search-index" },
+  });
+  store.setSourceState(source, state ?? "enabled", {
+    backlog,
+    error: null,
+  });
 }
 
 function openSearchStore(): SearchStore {
@@ -213,5 +236,5 @@ function readProfile(value: string | null | undefined): SearchProfileId {
 }
 
 function isSearchIndexAction(value: unknown): value is SearchIndexAction {
-  return value === "enable" || value === "pause" || value === "exclude" || value === "resume" || value === "rebuild";
+  return value === "enable" || value === "pause" || value === "exclude" || value === "resume" || value === "rebuild" || value === "onboard";
 }

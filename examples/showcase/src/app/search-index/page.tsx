@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Ban,
+  CheckSquare2,
   CirclePause,
   Loader2,
   Play,
@@ -15,7 +16,7 @@ import {
 
 type SearchProfileId = "framework" | "full";
 type SearchSourceState = "enabled" | "disabled" | "paused" | "excluded" | "backfilling" | "degraded" | "error";
-type SearchIndexAction = "enable" | "pause" | "exclude" | "resume" | "rebuild";
+type SearchIndexAction = "enable" | "pause" | "exclude" | "resume" | "rebuild" | "onboard";
 
 interface SearchIndexSourceView {
   id: string;
@@ -78,6 +79,8 @@ export default function SearchIndexPage() {
   const [loading, setLoading] = useState(true);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedSources, setSelectedSources] = useState<string[]>([]);
+  const [rebuildOnboard, setRebuildOnboard] = useState(false);
 
   const load = useCallback(async (selectedProfile: SearchProfileId) => {
     setLoading(true);
@@ -97,6 +100,13 @@ export default function SearchIndexPage() {
   useEffect(() => {
     load(profile);
   }, [load, profile]);
+
+  useEffect(() => {
+    if (!snapshot) return;
+    setSelectedSources(snapshot.sources
+      .filter((source) => source.state === "disabled" || source.state === "paused" || source.state === "excluded")
+      .map((source) => source.id));
+  }, [snapshot?.profile, snapshot?.sources]);
 
   const runAction = async (source: string, action: SearchIndexAction) => {
     const key = `${source}:${action}`;
@@ -118,7 +128,35 @@ export default function SearchIndexPage() {
     }
   };
 
+  const runOnboarding = async () => {
+    const sources = selectedSources.filter(Boolean);
+    if (!sources.length) return;
+    setBusyAction("onboard");
+    setError(null);
+    try {
+      const res = await fetch("/api/search/index", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "onboard", sources, rebuild: rebuildOnboard, profile }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update search sources");
+      setSnapshot(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update search sources");
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const toggleSource = (sourceId: string) => {
+    setSelectedSources((current) => current.includes(sourceId)
+      ? current.filter((id) => id !== sourceId)
+      : [...current, sourceId]);
+  };
+
   const jobRows = useMemo(() => snapshot?.jobs.slice(0, 8) ?? [], [snapshot]);
+  const onboardingSources = useMemo(() => snapshot?.sources.filter((source) => source.state !== "enabled" && source.state !== "backfilling") ?? [], [snapshot]);
 
   if (loading && !snapshot) {
     return (
@@ -176,6 +214,61 @@ export default function SearchIndexPage() {
             <Metric icon={<Zap className="h-4 w-4" />} label="Enabled" value={snapshot.summary.enabled} />
             <Metric icon={<RefreshCw className="h-4 w-4" />} label="Queued" value={snapshot.summary.queuedJobs} />
             <Metric icon={<Shield className="h-4 w-4" />} label="External pending" value={snapshot.summary.externalPending} />
+          </div>
+
+          <div className="rounded-lg border border-border bg-card" data-testid="search-source-onboarding">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
+              <div className="flex items-center gap-2">
+                <CheckSquare2 className="h-4 w-4 text-muted-foreground" />
+                <h2 className="text-sm font-semibold text-foreground">Source Onboarding</h2>
+                <span className="rounded bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">{selectedSources.length} selected</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-sm text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={rebuildOnboard}
+                    onChange={(event) => setRebuildOnboard(event.target.checked)}
+                    className="h-4 w-4 accent-foreground"
+                  />
+                  Rebuild
+                </label>
+                <button
+                  type="button"
+                  onClick={runOnboarding}
+                  disabled={!selectedSources.length || busyAction === "onboard"}
+                  className="inline-flex items-center gap-2 rounded-md bg-foreground px-3 py-2 text-sm font-medium text-background disabled:cursor-not-allowed disabled:opacity-50"
+                  data-testid="search-source-onboard-selected"
+                >
+                  {busyAction === "onboard" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                  Enable selected
+                </button>
+              </div>
+            </div>
+            {onboardingSources.length ? (
+              <div className="divide-y divide-border overflow-x-auto">
+                {onboardingSources.map((source) => (
+                  <label key={source.id} className="grid min-w-[620px] cursor-pointer grid-cols-[24px_minmax(180px,1fr)_110px_110px_120px] items-center gap-3 px-4 py-3 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={selectedSources.includes(source.id)}
+                      onChange={() => toggleSource(source.id)}
+                      className="h-4 w-4 accent-foreground"
+                      data-testid={`search-source-onboard-${source.id}`}
+                    />
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium text-foreground">{source.name}</span>
+                      <span className="block truncate text-xs text-muted-foreground">{source.id}</span>
+                    </span>
+                    <span className={`w-fit rounded px-2 py-1 text-xs font-medium ${STATE_STYLES[source.state]}`}>{source.state}</span>
+                    <span className="truncate text-muted-foreground">{source.profile}</span>
+                    <span className="truncate text-muted-foreground">{source.externalPending ? "external pending" : source.freshness}</span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <div className="px-4 py-5 text-sm text-muted-foreground">No pending sources</div>
+            )}
           </div>
 
           <div className="overflow-x-auto rounded-lg border border-border bg-card">
