@@ -8,7 +8,7 @@ Use `claw inspect --manifest <path>` or `CLAW_INSPECT_MANIFEST=path[,path...]` t
 
 ```mermaid
 flowchart TD
-  claw_contracts["Claw stable compatibility surface\nroot"]
+  claw_contracts["Claw stable contract surface\nroot"]
   claw_contracts_api["API routes\nroot"]
   claw_contracts --> claw_contracts_api
   claw_contracts_protocol["Wire protocols\nroot"]

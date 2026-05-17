@@ -36,6 +36,11 @@ function readJson(relativePath) {
   return JSON.parse(read(relativePath));
 }
 
+forbidSnippet("packages/clawjs-core/src/surface-registry.ts", "stable compatibility surface");
+forbidSnippet("packages/clawjs/src/inspect-cli.test.ts", "stable compatibility surface");
+forbidSnippet("docs/adr/0004-persistent-surface-registry-and-inspection.md", "stable compatibility");
+forbidSnippet("docs/decision-map.md", "stable compatibility");
+
 const canonicalDocs = [
   "AGENTS.md",
   "CLAUDE.md",

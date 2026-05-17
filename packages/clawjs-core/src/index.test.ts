@@ -309,6 +309,9 @@ test("persistent surface registry exposes framework and host storage nodes", () 
   assert.equal(coreDatabase?.path, "~/.claw/data/core.sqlite");
   assert.deepEqual(coreDatabase?.envOverrides?.includes("CLAW_DATABASE_DB_PATH"), true);
 
+  const contracts = findClawPersistentSurfaceNode("claw.contracts");
+  assert.equal(contracts?.name, "Claw stable contract surface");
+
   const workspaceChildren = listClawPersistentSurfaceNodes("claw.workspace");
   assert.equal(workspaceChildren.some((node) => node.id === "claw.workspace.manifest"), true);
   assert.equal(findClawPersistentSurfaceNode(".claw/manifest.json")?.id, "claw.workspace.manifest");

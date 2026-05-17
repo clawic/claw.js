@@ -28,7 +28,7 @@ The user decision log for conversation `019e25c1-b831-73f2-a717-5690b171d0d4` re
 - The source of truth is code/builders, not hand-written CLI inventories.
 - The registry shape is typed builders.
 - The CLI reads a static definition that can be traversed recursively.
-- Policy is strict: new persistent or stable compatibility names must be
+- Policy is strict: new persistent or stable contract names must be
   registered through the supported builders before they land. The goal is not
   complete while any owned cross-version surface remains outside the registry
   contract.
@@ -44,7 +44,7 @@ The user decision log for conversation `019e25c1-b831-73f2-a717-5690b171d0d4` re
 
 ClawJS owns a typed stable surface registry in `@clawjs/core`. Persistent
 surfaces remain registered with `clawPersistentSurface` builders, and stable
-compatibility surfaces use the same contract through `clawStableSurface` or the
+contract surfaces use the same contract through `clawStableSurface` or the
 `contract` builder. `clawPersistentSurfaceRegistry` remains the exported
 manifest name for compatibility, but its nodes are now a superset: persistent
 surfaces plus API, protocol, schema, event, ID, CLI, config, and external
@@ -108,7 +108,7 @@ The persistent node kinds are:
 - `legacyPath`
 - `externalReadOnlySource`
 
-The stable compatibility node kinds are:
+The stable contract node kinds are:
 
 - `apiRoute`
 - `privateApiRoute`
@@ -197,10 +197,10 @@ Clawix may expose host-owned operational surfaces, but ClawJS/Claw remains the f
 
 ## Consequences
 
-Agents can recursively inspect persistent and compatibility-sensitive framework
+Agents can recursively inspect persistent and contract-sensitive framework
 and host surfaces using a single stable CLI.
 
-Enforcement blocks unregistered durable and stable compatibility surfaces by
+Enforcement blocks unregistered durable and stable contract surfaces by
 scanning implementation code and requiring builder-backed declarations. Tests
 must prove that public inspection works, generated docs are current, external
 language manifests can be fused, and the registry includes the known canonical

@@ -1179,7 +1179,7 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
   nodes: [
     clawPersistentSurface.root({
       id: "claw.contracts",
-      name: "Claw stable compatibility surface",
+      name: "Claw stable contract surface",
       path: "contracts",
       storageClass: "external",
       privacy: "public",

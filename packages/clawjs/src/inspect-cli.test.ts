@@ -114,7 +114,7 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   assert.equal(neighborPayload.routes.some((entry) => entry.id === "chat.companionBridge"), true);
 });
 
-test("runCli filters stable compatibility surface categories", async () => {
+test("runCli filters stable contract surface categories", async () => {
   const apis = await runCliCapture(["inspect", "apis", "--json"], process.cwd());
   assert.equal(apis.code, CLI_EXIT_OK);
   assert.equal(parseCliJson<Array<{ id: string; route?: string }>>(apis.stdout).data.some((node) => node.id === "claw.api.events" && node.route === clawEventsPath), true);
