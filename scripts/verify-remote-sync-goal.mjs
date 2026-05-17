@@ -16,6 +16,7 @@ import {
   createRemoteAgentServiceExecutionReceipt,
   createRemoteCompatibilityAdapterReceipt,
   createRemoteGatewayAuditReceipt,
+  createSyncDriverApplicationReceipt,
   createSyncResourceManifest,
   evaluateRemoteAgentServiceAccess,
   evaluateRemoteAccess,
@@ -37,6 +38,7 @@ import {
   remoteSyncRequiredRouteIds,
   reconcileSyncQueue,
   routeIdForSyncDriver,
+  syncDriverApplicationReceiptSchema,
   syncDriverSchema,
 } from "../packages/clawjs-core/src/index.ts";
 
@@ -79,6 +81,7 @@ const requiredServiceApiRoutes = [
   "sync/changes",
   "sync/plan",
   "sync/conflicts",
+  "sync/applications",
   "nodes",
   "nodes/pair",
   "nodes/trust",
@@ -120,6 +123,8 @@ const requiredDocSnippets = [
   "/v1/mesh/shares",
   "/v1/mesh/revocations",
   "--local-hash",
+  "SyncDriverApplicationReceipt",
+  "/v1/sync/applications",
   "claw remote conformance",
   "claw remote compat",
   "claw gateway conformance",
@@ -374,6 +379,17 @@ const appliedQueue = reconcileSyncQueue({
 });
 if (appliedQueue.queue[0]?.status !== "applied") fail("sync reconciliation must mark acknowledged changes applied");
 if (!appliedQueue.nextCursor?.cursor.includes("hash-local")) fail("sync reconciliation must advance cursor after acknowledged queued changes");
+const syncApplicationReceipt = createSyncDriverApplicationReceipt({
+  manifest,
+  reconciliation: appliedQueue,
+  actor,
+  createdAt: "2026-05-17T10:05:30.000Z",
+});
+if (!syncDriverApplicationReceiptSchema.safeParse(syncApplicationReceipt).success) fail("sync driver application receipt contract must validate");
+if (syncApplicationReceipt.status !== "signed_pending_driver_application") fail("sync driver application receipt must stay pending without physical driver execution");
+if (!syncApplicationReceipt.externalPending.includes("physical_sync_driver_application")) fail("sync driver application receipt must mark physical driver application external pending");
+if (syncApplicationReceipt.physicalDriverApplied !== false) fail("sync driver application receipt must not claim physical application by default");
+if (syncApplicationReceipt.writes !== false) fail("sync driver application receipt must be a no-write contract");
 
 const offlineCommand = buildRemoteOfflineCommandResult({
   routeId: "remote.chatGateway",

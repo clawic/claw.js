@@ -83,7 +83,10 @@ memory/user-model, sessions, drive/files, blobs, SQLite full or partial
 resources, sidecars, search indexes, agent config, and workspace state.
 Client caches are metadata snapshots, not authority. `RemoteClientCacheSnapshot`
 records encrypted TTL-bound cache entries with content hashes only, no
-plaintext, no secrets, and no authoritative state.
+plaintext, no secrets, and no authoritative state. `SyncDriverApplicationReceipt`
+records signed intent to apply reconciled queue entries through a physical sync
+driver while keeping the Relay route dry-run and `writes: false` until the
+host/Coordinator driver proves execution.
 
 Secrets cross remote and sync paths only as references plus audited broker
 leases. Plaintext secret replication is invalid.
@@ -100,6 +103,7 @@ POST /v1/sync/manifests
 GET  /v1/sync/changes
 POST /v1/sync/plan
 POST /v1/sync/conflicts
+POST /v1/sync/applications
 GET  /v1/nodes
 POST /v1/nodes/pair
 POST /v1/nodes/trust
@@ -152,6 +156,13 @@ start as `blocked`, and reconciliation advances the next cursor only after
 acknowledged changes or explicitly resolved conflicts. With `claw sync run
 --state-dir <dir> --queue true`, those no-write queue entries are persisted
 locally and can later be reconciled with `claw sync reconcile`.
+`SyncDriverApplicationReceipt` is the signed local bridge from reconciliation
+to a configured driver. `claw sync apply --record true` and
+`/v1/sync/applications` bind the manifest, driver, route, actor, applied change
+ids, and blocked conflict ids. Unless a signed host driver run proves the
+physical application, the receipt remains `signed_pending_driver_application`,
+marks `physical_sync_driver_application` as `EXTERNAL PENDING`, and keeps
+`writes: false`.
 
 Inter-mesh collaboration is represented by `MeshInvitation`,
 `MeshInvitationAcceptance`, `MeshResourceShare`, and `MeshRevocation`

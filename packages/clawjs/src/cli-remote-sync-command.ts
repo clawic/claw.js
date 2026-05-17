@@ -13,6 +13,7 @@ import {
   createRemoteCompatibilityAdapterReceipt,
   createRemoteGatewayAuditReceipt,
   createRemoteSecretProviderReceipt,
+  createSyncDriverApplicationReceipt,
   createSyncResourceManifest,
   createTransportHandshakeReceipt,
   evaluateRemoteAgentServiceAccess,
@@ -460,6 +461,7 @@ export async function runSyncCli(input: RemoteSyncCliInput): Promise<number> {
           durable: true,
           manifests: Object.keys(stored.manifests).length,
           queueEntries: queueEntries.length,
+          applications: Object.keys(stored.applications).length,
           blockedQueueEntries: queueEntries.filter((entry) => entry.status === "blocked").length,
           auditEvents: stored.audit.length,
           coordinatorSignatures: signatureStatus?.signatureCount ?? 0,
@@ -491,6 +493,36 @@ export async function runSyncCli(input: RemoteSyncCliInput): Promise<number> {
     });
     return writeOutput(input, "sync", state, `reconciled queue=${state.reconciliation.queue.length}`, command);
   }
+  if (command === "apply") {
+    const usage = "sync apply --state-dir <dir> --record true --resource-id <id> --driver <driver> --coordinator-private-key-file <pem> --coordinator-public-key-file <pem>";
+    const store = requireStateStore(input, usage);
+    if (typeof store === "number") return store;
+    const signer = requireCoordinatorSigner(input, usage);
+    if (typeof signer === "number") return signer;
+    const manifest = manifestFromFlags(input);
+    const now = input.flags.now ?? new Date().toISOString();
+    const reconciliationState = store.reconcile(manifest, {
+      acknowledgedChangeIds: listFlag(input.flags["ack-change-ids"] ?? input.flags.acks, []),
+      resolvedConflictIds: listFlag(input.flags["resolved-conflict-ids"] ?? input.flags.resolved, []),
+      now,
+      signer,
+    });
+    const receipt = createSyncDriverApplicationReceipt({
+      manifest,
+      reconciliation: reconciliationState.reconciliation,
+      actor: actorContextFromFlags(input),
+      createdAt: now,
+      physicalDriverApplied: input.flags["physical-driver-applied"] === "true",
+    });
+    const state = store.recordSyncDriverApplicationReceipt(receipt, { now, signer });
+    return writeOutput(input, "sync", {
+      status: state.receipt.status,
+      writes: false,
+      reconciliation: reconciliationState.reconciliation,
+      receipt: state.receipt,
+      state,
+    }, `apply: ${state.receipt.status}`, command);
+  }
   if (command === "conflicts") {
     const plan = planFromFlags(input);
     const payload = { conflicts: plan.conflicts, defaultPolicy: "detect_and_elevate", silentOverwriteAllowed: false };
@@ -511,7 +543,7 @@ export async function runSyncCli(input: RemoteSyncCliInput): Promise<number> {
     const state = store && wantsDurableRecord(input) ? store.recordRemoteCacheSnapshot(snapshot, { now: input.flags.now, signer: coordinatorSignerFromFlags(input) }) : undefined;
     return writeOutput(input, "sync", { snapshot, status: state?.coordinatorSignature ? "signed_cache_snapshot_recorded" : state ? "cache_snapshot_recorded" : "dry_run_only", writes: false, ...(state ? { state } : {}) }, `cache: ${state ? "recorded" : "dry_run_only"}`, command);
   }
-  return missing(input, "sync manifest|status|plan|run|reconcile|conflicts|cache");
+  return missing(input, "sync manifest|status|plan|run|reconcile|apply|conflicts|cache");
 }
 
 export async function runNodesCli(input: RemoteSyncCliInput): Promise<number> {

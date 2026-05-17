@@ -190,7 +190,7 @@ entrypoints:
 
 - `claw remote classify|check|routes|conformance`
 - `claw remote compat`
-- `claw sync manifest|status|plan|run|reconcile|conflicts`
+- `claw sync manifest|status|plan|run|reconcile|apply|conflicts`
 - `claw nodes list|pair|trust|revoke|invite|share|heartbeat`
 - `claw gateway serve|project|conformance|audit`
 
@@ -202,6 +202,11 @@ no-write queue entries, acknowledgements, mesh proposals, and revocations; this
 ledger is durable reconciliation state, not a trust mutation authority. When
 Coordinator key files are supplied, the ledger stores Ed25519 signatures and
 verification status for those records; unsigned records remain proposals only.
+`SyncDriverApplicationReceipt` connects reconciliation to a concrete manifest
+driver without making the driver implementation physical by default:
+`claw sync apply --record true` records applied change ids, blocked conflicts,
+actor, route, and driver, while `physical_sync_driver_application` remains
+external pending until a signed host driver run proves the write.
 `claw gateway secret-lease` is the local broker operation for secret references:
 it requires a signed Coordinator ledger, stores only the reference/actor/action
 lease metadata, sets `plaintextReturned: false`, and refuses plaintext-return

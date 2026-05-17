@@ -218,21 +218,36 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   const queuedChangeId = queuedSyncPayload.state.entries[0]?.changeId;
   assert.ok(queuedChangeId);
 
-  const reconciledSync = await runCliCapture(["sync", "reconcile", "--resource-id", "skills:default", "--driver", "skills", "--state-dir", stateDir, "--ack-change-ids", queuedChangeId, ...coordinatorSigningFlags, "--json"], process.cwd());
-  assert.equal(reconciledSync.code, CLI_EXIT_OK);
-  const reconciledSyncPayload = parseCliJson<{ reconciliation: { queue: Array<{ status: string }> }; durable: boolean }>(reconciledSync.stdout).data;
-  assert.equal(reconciledSyncPayload.durable, true);
-  assert.equal(reconciledSyncPayload.reconciliation.queue[0]?.status, "applied");
+  const appliedSync = await runCliCapture(["sync", "apply", "--resource-id", "skills:default", "--driver", "skills", "--state-dir", stateDir, "--record", "true", "--ack-change-ids", queuedChangeId, "--actor-id", "agent.sync", ...coordinatorSigningFlags, "--json"], process.cwd());
+  assert.equal(appliedSync.code, CLI_EXIT_OK, appliedSync.stderr || appliedSync.stdout);
+  const appliedSyncPayload = parseCliJson<{
+    status: string;
+    writes: boolean;
+    reconciliation: { queue: Array<{ status: string }>; appliedChangeIds: string[] };
+    receipt: { status: string; driver: string; physicalDriverApplied: boolean; externalPending: string[]; writes: boolean };
+    state: { durable: boolean; coordinatorSignature?: { verified: boolean } };
+  }>(appliedSync.stdout).data;
+  assert.equal(appliedSyncPayload.status, "signed_pending_driver_application");
+  assert.equal(appliedSyncPayload.writes, false);
+  assert.equal(appliedSyncPayload.reconciliation.queue[0]?.status, "applied");
+  assert.deepEqual(appliedSyncPayload.reconciliation.appliedChangeIds, [queuedChangeId]);
+  assert.equal(appliedSyncPayload.receipt.driver, "skills");
+  assert.equal(appliedSyncPayload.receipt.physicalDriverApplied, false);
+  assert.equal(appliedSyncPayload.receipt.externalPending.includes("physical_sync_driver_application"), true);
+  assert.equal(appliedSyncPayload.receipt.writes, false);
+  assert.equal(appliedSyncPayload.state.durable, true);
+  assert.equal(appliedSyncPayload.state.coordinatorSignature?.verified, true);
 
   const syncStatus = await runCliCapture(["sync", "status", "--state-dir", stateDir, "--json"], process.cwd());
   assert.equal(syncStatus.code, CLI_EXIT_OK);
-  const syncStatusPayload = parseCliJson<{ state: { durable: boolean; manifests: number; queueEntries: number; auditEvents: number; coordinatorSignatures: number; verifiedCoordinatorSignatures: number; invalidCoordinatorSignatures: number } }>(syncStatus.stdout).data;
+  const syncStatusPayload = parseCliJson<{ state: { durable: boolean; manifests: number; queueEntries: number; applications: number; auditEvents: number; coordinatorSignatures: number; verifiedCoordinatorSignatures: number; invalidCoordinatorSignatures: number } }>(syncStatus.stdout).data;
   assert.equal(syncStatusPayload.state.durable, true);
   assert.equal(syncStatusPayload.state.manifests >= 1, true);
   assert.equal(syncStatusPayload.state.queueEntries, 1);
-  assert.equal(syncStatusPayload.state.auditEvents >= 3, true);
-  assert.equal(syncStatusPayload.state.coordinatorSignatures, 3);
-  assert.equal(syncStatusPayload.state.verifiedCoordinatorSignatures, 3);
+  assert.equal(syncStatusPayload.state.applications, 1);
+  assert.equal(syncStatusPayload.state.auditEvents >= 4, true);
+  assert.equal(syncStatusPayload.state.coordinatorSignatures, 4);
+  assert.equal(syncStatusPayload.state.verifiedCoordinatorSignatures, 4);
   assert.equal(syncStatusPayload.state.invalidCoordinatorSignatures, 0);
 
   const secretLease = await runCliCapture(["gateway", "secret-lease", "--state-dir", stateDir, "--secret-ref", "vault://agents/support", "--resource-id", "skills:default", "--agent-id", "agent.support", "--assignment-id", "assignment.service", ...coordinatorSigningFlags, "--json"], process.cwd());

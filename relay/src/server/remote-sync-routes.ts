@@ -1,6 +1,7 @@
 import {
   buildRemoteConformanceReport,
   buildSyncPlan,
+  buildSyncQueueEntries,
   clawApiPath,
   clawPersistentSurfaceRegistry,
   createMeshInvitation,
@@ -10,8 +11,10 @@ import {
   createRemoteAgentServiceExecutionReceipt,
   createRemoteCompatibilityAdapterReceipt,
   createRemoteGatewayAuditReceipt,
+  createSyncDriverApplicationReceipt,
   createSyncResourceManifest,
   evaluateRemoteAgentServiceAccess,
+  reconcileSyncQueue,
   remoteSyncRequiredRouteIds,
   syncDriverSchema,
   syncObjectSnapshotSchema,
@@ -422,6 +425,32 @@ export function registerRemoteSyncRoutes(app: FastifyInstance): void {
       conflicts: plan.conflicts,
       defaultPolicy: "detect_and_elevate",
       silentOverwriteAllowed: false,
+      writes: false,
+    };
+  });
+
+  app.post(clawApiPath("sync/applications"), async (request) => {
+    const body = readBody(request);
+    const plan = planFromInput(body);
+    const queuedAt = stringValue(body.queuedAt ?? body.now, "2026-05-17T10:14:00.000Z");
+    const queue = buildSyncQueueEntries(plan, { queuedAt });
+    const reconciliation = reconcileSyncQueue({
+      manifest: plan.manifest,
+      queue,
+      acknowledgedChangeIds: arrayOfStrings(body.acknowledgedChangeIds ?? body["ack-change-ids"], plan.changes.map((change) => change.changeId)),
+      resolvedConflictIds: arrayOfStrings(body.resolvedConflictIds ?? body["resolved-conflict-ids"], []),
+      now: queuedAt,
+    });
+    return {
+      status: "dry_run_external_pending",
+      receipt: createSyncDriverApplicationReceipt({
+        manifest: plan.manifest,
+        reconciliation,
+        actor: meshActorFromInput(body),
+        createdAt: queuedAt,
+        physicalDriverApplied: body.physicalDriverApplied === true,
+      }),
+      reconciliation,
       writes: false,
     };
   });

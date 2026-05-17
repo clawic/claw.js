@@ -53,6 +53,7 @@ import {
   createRemoteAgentServiceExecutionReceipt,
   createRemoteCompatibilityAdapterReceipt,
   createRemoteGatewayAuditReceipt,
+  createSyncDriverApplicationReceipt,
   createSyncResourceManifest,
   createTtsPlaybackPlan,
   compatSnapshotSchema,
@@ -111,6 +112,7 @@ import {
   routeIdForSyncDriver,
   searchClawCliRegistry,
   syncConflictSchema,
+  syncDriverApplicationReceiptSchema,
   syncObjectSnapshotSchema,
   taskRecordSchema,
   workSessionRecordSchema,
@@ -663,6 +665,24 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.deepEqual(appliedReconciliation.appliedChangeIds, [pushPlan.changes[0]?.changeId]);
   assert.equal(appliedReconciliation.queue[0]?.status, "applied");
   assert.equal(appliedReconciliation.nextCursor?.cursor.includes("hash-local"), true);
+  const syncApplicationReceipt = createSyncDriverApplicationReceipt({
+    manifest: pushPlan.manifest,
+    reconciliation: appliedReconciliation,
+    actor: {
+      actorKind: "agent",
+      actorId: "agent.sync",
+      nodeId: "node.mac",
+      transport: "gateway",
+      trustMode: "governed_gateway",
+    },
+    createdAt: "2026-05-17T10:05:30.000Z",
+  });
+  assert.equal(syncDriverApplicationReceiptSchema.safeParse(syncApplicationReceipt).success, true);
+  assert.equal(syncApplicationReceipt.status, "signed_pending_driver_application");
+  assert.equal(syncApplicationReceipt.driver, "skills");
+  assert.equal(syncApplicationReceipt.externalPending.includes("physical_sync_driver_application"), true);
+  assert.equal(syncApplicationReceipt.physicalDriverApplied, false);
+  assert.equal(syncApplicationReceipt.writes, false);
 
   const offlineCommand = buildRemoteOfflineCommandResult({
     routeId: "remote.chatGateway",

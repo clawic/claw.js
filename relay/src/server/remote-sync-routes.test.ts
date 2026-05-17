@@ -192,6 +192,33 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(conflictsPayload.silentOverwriteAllowed, false);
     assert.equal(conflictsPayload.writes, false);
 
+    const syncApplication = await built.app.inject({
+      method: "POST",
+      url: "/v1/sync/applications",
+      headers: { "content-type": "application/json" },
+      payload: {
+        driver: "skills",
+        localHash: "hash-a",
+        peerSnapshot: [],
+        actorId: "agent.sync",
+      },
+    });
+    assert.equal(syncApplication.statusCode, 200);
+    const syncApplicationPayload = syncApplication.json() as {
+      status: string;
+      receipt: { status: string; driver: string; physicalDriverApplied: boolean; externalPending: string[]; writes: boolean };
+      reconciliation: { appliedChangeIds: string[] };
+      writes: boolean;
+    };
+    assert.equal(syncApplicationPayload.status, "dry_run_external_pending");
+    assert.equal(syncApplicationPayload.receipt.status, "signed_pending_driver_application");
+    assert.equal(syncApplicationPayload.receipt.driver, "skills");
+    assert.equal(syncApplicationPayload.receipt.physicalDriverApplied, false);
+    assert.equal(syncApplicationPayload.receipt.externalPending.includes("physical_sync_driver_application"), true);
+    assert.equal(syncApplicationPayload.receipt.writes, false);
+    assert.equal(syncApplicationPayload.reconciliation.appliedChangeIds.length, 1);
+    assert.equal(syncApplicationPayload.writes, false);
+
     const nodes = await built.app.inject({ method: "GET", url: "/v1/nodes" });
     assert.equal(nodes.statusCode, 200);
     const nodesPayload = nodes.json() as { nodes: Array<{ id: string }> };
