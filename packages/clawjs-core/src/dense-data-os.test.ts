@@ -74,8 +74,10 @@ test("dense data OS generates auditable intent and semantic view entries", () =>
   assert.ok(intents.some((entry) => entry.phrase === "claw patient list" && entry.status === "covered" && entry.collectionName === "patients"));
   assert.ok(intents.some((entry) => entry.phrase === "claw encounter list" && entry.status === "covered" && entry.collectionName === "encounters"));
   assert.ok(intents.some((entry) => entry.phrase === "claw health gaps" && entry.status === "covered"));
+  assert.ok(intents.some((entry) => entry.phrase === "claw lab-notebook list" && entry.status === "covered" && entry.collectionName === "lab_notebooks"));
   assert.ok(semanticViews.some((entry) => entry.id === "patient.timeline" && entry.systemId === "health"));
   assert.ok(semanticViews.some((entry) => entry.id === "invoice.list" && entry.systemId === "erp"));
+  assert.ok(semanticViews.some((entry) => entry.id === "lab_notebook.timeline" && entry.systemId === "eln"));
 });
 
 test("dense data OS acceptance fixture covers required first-wave records and gaps", () => {
@@ -134,6 +136,10 @@ test("dense data OS acceptance fixture covers required first-wave records and ga
     "construction_site",
     "construction_rfi",
     "construction_change_order",
+    "lab_notebook",
+    "notebook_entry",
+    "protocol_run",
+    "experiment_observation",
     "invoice",
     "invoice_company",
     "incident",
@@ -214,6 +220,7 @@ test("dense data OS keeps common names and professional acronyms as first-class 
   assert.equal(findClawDenseDataSystem("wms")?.id, "warehouse");
   assert.equal(findClawDenseDataSystem("scm")?.id, "supply_chain");
   assert.equal(findClawDenseDataSystem("grc")?.id, "compliance");
+  assert.equal(findClawDenseDataSystem("eln")?.id, "eln");
 });
 
 test("dense data OS centers have direct human CLI nouns and plural aliases", () => {
@@ -232,6 +239,13 @@ test("dense data OS centers have direct human CLI nouns and plural aliases", () 
 
   const labs = findClawDenseDataSystem("labs");
   assert.ok(labs?.centers.some((center) => center.commandNoun === "assay" && center.commandAliases.includes("assays") && !center.commandAliases.includes("assaies") && center.collectionName === "assays"));
+
+  const eln = findClawDenseDataSystem("eln");
+  assert.ok(eln?.centers.some((center) => center.commandNoun === "lab-notebook" && center.commandAliases.includes("lab-notebooks") && center.collectionName === "lab_notebooks"));
+  assert.ok(eln?.centers.some((center) => center.commandNoun === "notebook-entry" && center.commandAliases.includes("notebook-entries") && center.collectionName === "notebook_entries"));
+  assert.ok(eln?.centers.some((center) => center.commandNoun === "protocol-run" && center.commandAliases.includes("protocol-runs") && center.collectionName === "protocol_runs"));
+  assert.ok(eln?.centers.some((center) => center.commandNoun === "experiment-observation" && center.commandAliases.includes("experiment-observations") && center.collectionName === "experiment_observations"));
+  assert.ok(eln?.commandPatterns.includes("claw lab-notebook <id> timeline"));
 
   const erp = findClawDenseDataSystem("erp");
   assert.ok(erp?.centers.some((center) => center.commandNoun === "invoice" && center.commandAliases.includes("invoices") && center.collectionName === "invoices"));
@@ -407,6 +421,11 @@ test("dense data OS resolves direct CLI intent phrases without executing them", 
   assert.equal(constructionProjectList.system?.id, "construction");
   assert.equal(constructionProjectList.center?.collectionName, "construction_projects");
 
+  const labNotebookList = resolveClawDenseDataIntent("claw lab-notebook list");
+  assert.equal(labNotebookList.status, "covered");
+  assert.equal(labNotebookList.system?.id, "eln");
+  assert.equal(labNotebookList.center?.collectionName, "lab_notebooks");
+
   const medicationAdd = resolveClawDenseDataIntent("claw medication add --patient p_123");
   assert.equal(medicationAdd.status, "partial");
   assert.equal(medicationAdd.system?.id, "health");
@@ -478,6 +497,10 @@ test("dense data OS graduated centers point at canonical built-in collections wi
     "construction.construction_site": "construction_sites",
     "construction.construction_rfi": "construction_rfis",
     "construction.construction_change_order": "construction_change_orders",
+    "eln.lab_notebook": "lab_notebooks",
+    "eln.notebook_entry": "notebook_entries",
+    "eln.protocol_run": "protocol_runs",
+    "eln.experiment_observation": "experiment_observations",
     "erp.company": "companies",
     "erp.product": "products_catalog",
     "erp.invoice": "invoices",
