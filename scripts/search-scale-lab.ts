@@ -48,6 +48,7 @@ try {
   const interleavedEvery = Math.max(100, Math.floor(options.items / Math.max(1, options.queries)));
   const ingestBatchSize = 5000;
   let ingestBatch: Parameters<SearchStore["upsertDocuments"]>[0] = [];
+  const hotQuery = "hotneedle42";
   const flushBatch = () => {
     if (ingestBatch.length === 0) return;
     store.upsertDocuments(ingestBatch);
@@ -55,23 +56,26 @@ try {
   };
   for (let i = 0; i < options.items; i += 1) {
     const bucket = i % 1000;
+    const hot = bucket === 42;
+    const token = hot ? hotQuery : `coldneedle${bucket}`;
     ingestBatch.push({
       id: `lab.items:${i}`,
       source: "lab.items",
+      shard: hot ? "hot" : "cold",
       domain: "lab",
       type: "lab-item",
       resourceId: `item-${i}`,
-      title: `Scale item ${i} needle${bucket}`,
+      title: `Scale item ${i} ${token}`,
       subtitle: `bucket ${bucket}`,
       snippet: `Synthetic Search scale row ${bucket}`,
-      body: `framework search scale lab exact needle${bucket} prefix needle hot shard cold shard item ${i}`,
+      body: `framework search scale lab exact ${token} hot shard cold shard item ${i}`,
       updatedAt: new Date(1_800_000_000_000 + i).toISOString(),
-      rankingHints: { frecency: bucket === 42 ? 1 : 0.1 },
+      rankingHints: { frecency: hot ? 1 : 0.1 },
       fragments: [
         {
           id: `lab.items:${i}:fragment`,
           title: `Fragment ${i}`,
-          body: `fragment body needle${bucket} backfill cursor watermark`,
+          body: `fragment body ${token} backfill cursor watermark`,
         },
       ],
     });
@@ -79,7 +83,7 @@ try {
     if (i > 100 && i % interleavedEvery === 0) {
       flushBatch();
       const queryStarted = performance.now();
-      const output = store.query({ query: "needle42", domains: ["lab"], limit: 10 });
+      const output = store.query({ query: hotQuery, domains: ["lab"], shards: ["hot"], limit: 10 });
       interleavedQueryDurations.push(performance.now() - queryStarted);
       if (output.results.length === 0) throw new Error("scale lab interleaved query returned no results");
     }
@@ -99,7 +103,7 @@ try {
   const queryDurations: number[] = [];
   for (let i = 0; i < options.queries; i += 1) {
     const queryStarted = performance.now();
-    const output = store.query({ query: "needle42", domains: ["lab"], limit: 10 });
+    const output = store.query({ query: hotQuery, domains: ["lab"], shards: ["hot"], limit: 10 });
     queryDurations.push(performance.now() - queryStarted);
     if (output.results.length === 0) throw new Error("scale lab query returned no results");
   }
@@ -120,10 +124,10 @@ try {
       name: "Fast lab source",
       resultTypes: ["lab-item"],
     }),
-    query: () => store.query({ query: "needle42", domains: ["lab"], limit: 10 }).results,
+    query: () => store.query({ query: hotQuery, domains: ["lab"], shards: ["hot"], limit: 10 }).results,
   });
   const globalStarted = performance.now();
-  const globalOutput = await federator.query({ query: "needle42", domains: ["lab"], limit: 10 });
+  const globalOutput = await federator.query({ query: hotQuery, domains: ["lab"], shards: ["hot"], limit: 10 });
   const globalMs = performance.now() - globalStarted;
   if (globalOutput.results.length === 0) throw new Error("scale lab Root Search query returned no results");
   metrics.push({
