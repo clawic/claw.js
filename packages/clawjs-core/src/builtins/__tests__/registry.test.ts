@@ -62,7 +62,7 @@ test("builtin registry: relations point to known collections", () => {
     }
   }
   if (warnings.length > 0) {
-    // Dangling relations are warnings, not failures (target may live in store-legacy builtins).
+    // Dangling relations are warnings, not failures (target may live in an optional builtin set).
     console.warn(`Warning: ${warnings.length} dangling relations:\n  ${warnings.slice(0, 10).join("\n  ")}${warnings.length > 10 ? "\n  ..." : ""}`);
   }
 });

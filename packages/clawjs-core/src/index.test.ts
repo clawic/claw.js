@@ -935,7 +935,7 @@ test("productivity collection definitions expose the unified local and remote co
   assert.equal(collectionNames.includes("custom_fields"), true);
   assert.equal(collectionNames.includes("field_values"), true);
   assert.equal(collectionNames.includes("templates"), true);
-  // Keep this legacy workspace block contiguous even when adjacent catalog
+  // Keep this workspace collection block contiguous even when adjacent catalog
   // families move in or out of the productivity registry.
   const idxReminders = collectionNames.indexOf("reminders");
   assert.ok(idxReminders >= 0, "reminders collection present");

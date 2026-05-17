@@ -75,7 +75,7 @@ export type ClawPersistentSurfaceCanonicality =
   | "testOnly"
   | "externalReadOnly";
 export type ClawPersistentSurfacePrivacy = "public" | "userData" | "secretReference" | "secretMaterial" | "externalReadOnly";
-export type ClawPersistentSurfaceLifecycle = "durable" | "rebuildable" | "ephemeral" | "legacy" | "external";
+export type ClawPersistentSurfaceLifecycle = "durable" | "rebuildable" | "ephemeral" | "external";
 export type ClawStableSurfaceClass =
   | "persistent"
   | "api"
@@ -798,7 +798,7 @@ const stablePackageNames = [
   ["claw.package.cli", "@clawjs/cli", "Claw CLI package"],
   ["claw.package.claw", "@clawjs/claw", "Claw SDK package"],
   ["claw.package.workspace", "@clawjs/workspace", "Workspace package"],
-  ["claw.package.node", "@clawjs/node", "Node compatibility package"],
+  ["claw.package.node", "@clawjs/node", "Node runtime package"],
   ["claw.package.database", "@clawjs/database", "Database package"],
   ["claw.package.agents", "@clawjs/agents", "Agents package"],
   ["claw.package.integrations", "@clawjs/integrations", "Integrations package"],
