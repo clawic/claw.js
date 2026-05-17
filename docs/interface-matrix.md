@@ -181,6 +181,8 @@ The Relay also exposes equivalent project-scoped routes under:
 | Providers list | `claw.providers.list()` | `claw providers list` | `-` |
 | Providers catalog | `claw.providers.catalog()` | `claw providers catalog` | `-` |
 | Providers auth state | `claw.providers.authState()` | `claw providers auth-state` | `-` |
+| Provider routing set / list / delete | framework provider routing config | `claw providers routing list|set|delete` | `-` |
+| Provider enabled settings | framework provider settings config | `claw providers settings list|set` | `-` |
 | IoT homes / things / state | `claw.iot.inventory.*`, `claw.iot.state.get()` | `claw iot homes|things|state ...` | `GET /v1/tenants/:tenantId/homes...` |
 | IoT semantic actions | `claw.iot.actions.run()`, `lights.off()`, `climate.set()` | `claw iot lights ...`, `claw iot climate ...` | `POST /v1/tenants/:tenantId/homes/:homeId/actions` |
 | IoT scenes / automations / approvals | `claw.iot.scenes.*`, `claw.iot.automations.*`, `claw.iot.policies.*` | `claw iot scenes ...`, `automations ...`, `approvals ...` | `GET/POST /v1/tenants/:tenantId/homes/:homeId/...` |

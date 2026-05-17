@@ -170,7 +170,7 @@ test("runCli exposes CLI aliases and decision sources through inspect", async ()
   assert.equal(commandPayload.commands.some((entry) => entry.name === "personalities" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
   assert.equal(commandPayload.commands.some((entry) => entry.name === "skill-collections" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
   assert.equal(commandPayload.commands.some((entry) => entry.name === "connections" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
-  assert.equal(commandPayload.commands.some((entry) => entry.name === "providers" && entry.support.state === "auth_required"), true);
+  assert.equal(commandPayload.commands.some((entry) => entry.name === "providers" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
   assert.equal(commandPayload.commands.some((entry) => entry.name === "mcp" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
   assert.equal(commandPayload.commands.some((entry) => entry.name === "snippets" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
   assert.equal(commandPayload.commands.some((entry) => entry.name === "images" && entry.support.state === "cost_risk"), true);

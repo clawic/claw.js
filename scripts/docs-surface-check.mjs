@@ -155,6 +155,8 @@ const requiredSnippets = [
       "/v1/pairings/:pairingId/approve",
       "/v1/admin/tenants/:tenantId/workspace-grants",
       "providers auth-state",
+      "providers routing list|set|delete",
+      "providers settings list|set",
       "documents upload",
       "inference generate-text",
       "tts synthesize",
