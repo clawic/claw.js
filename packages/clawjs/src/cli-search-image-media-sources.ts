@@ -375,11 +375,13 @@ function mediaAssetSearchDocument(record: Record<string, unknown>, workspaceRoot
   const storage = isPlainRecord(record.storage) ? record.storage : {};
   const storageKey = stringField(storage, "key");
   const provider = stringField(channel, "provider");
+  const transcription = mediaTranscriptionFields(record);
   const body = [
     name,
     kind,
     stringField(record, "mimeType"),
     sourceText,
+    transcription.text,
     stringField(record, "origin"),
     stringField(record, "direction"),
     stringField(record, "workspaceId"),
@@ -422,6 +424,9 @@ function mediaAssetSearchDocument(record: Record<string, unknown>, workspaceRoot
       sizeBytes: numberField(record, "sizeBytes"),
       sourceType: stringField(record, "sourceType") ?? null,
       sourceId: stringField(record, "sourceId") ?? null,
+      transcriptionIndexed: !!transcription.text,
+      transcriptionLanguage: transcription.language ?? null,
+      transcriptionSegmentCount: transcription.segmentCount,
     },
     permissions: { canOpen: true, canPreview: true, redacted: false },
     rankingHints: {
@@ -429,14 +434,28 @@ function mediaAssetSearchDocument(record: Record<string, unknown>, workspaceRoot
       media: 1,
       image: kind === "image" ? 0.2 : 0,
     },
-    fragments: sourceText ? [{
-      id: `media.assets:${mediaId}:source-text`,
-      title: "source text",
-      body: sourceText,
-      snippet: sourceText.slice(0, 180),
-      sortOrder: 0,
-      metadata: { kind: "sourceText" },
-    }] : [],
+    fragments: [
+      ...(sourceText ? [{
+        id: `media.assets:${mediaId}:source-text`,
+        title: "source text",
+        body: sourceText,
+        snippet: sourceText.slice(0, 180),
+        sortOrder: 0,
+        metadata: { kind: "sourceText" },
+      }] : []),
+      ...(transcription.text ? [{
+        id: `media.assets:${mediaId}:transcription`,
+        title: "transcription",
+        body: transcription.text,
+        snippet: transcription.text.slice(0, 180),
+        sortOrder: 1,
+        metadata: {
+          kind: "transcription",
+          ...(transcription.language ? { language: transcription.language } : {}),
+          segmentCount: transcription.segmentCount,
+        },
+      }] : []),
+    ],
     actions: [
       { id: "open", kind: "open", label: "Open media", requiresApproval: true, risk: "read", grant: "search.media.open" },
       { id: "copy-reference", kind: "copy", label: "Copy media reference", requiresApproval: false },
@@ -479,6 +498,39 @@ function imageDerivedTextFields(record: Record<string, unknown>): {
     ...(caption ? { caption } : {}),
     labels,
     objects,
+  };
+}
+
+function mediaTranscriptionFields(record: Record<string, unknown>): {
+  text?: string;
+  language?: string;
+  segmentCount: number;
+} {
+  const metadata = isPlainRecord(record.metadata) ? record.metadata : {};
+  const transcriptionValue = record.transcription ?? metadata.transcription;
+  const transcription = isPlainRecord(transcriptionValue) ? transcriptionValue : {};
+  const transcript = firstStringField([record, metadata, transcription], [
+    "transcript",
+    "transcription",
+    "transcriptionText",
+    "captionText",
+    "captionsText",
+    "text",
+  ]) ?? (typeof transcriptionValue === "string" && transcriptionValue.trim() ? transcriptionValue.trim() : undefined);
+  const segments = uniqueStrings([
+    ...stringListFromValue(record.transcriptionSegments),
+    ...stringListFromValue(record.captions),
+    ...stringListFromValue(metadata.transcriptionSegments),
+    ...stringListFromValue(metadata.captions),
+    ...stringListFromValue(transcription.segments),
+    ...stringListFromValue(transcription.captions),
+  ]);
+  const text = [transcript, ...segments].filter(Boolean).join("\n").trim();
+  const language = firstStringField([record, metadata, transcription], ["language", "locale", "lang"]);
+  return {
+    ...(text ? { text } : {}),
+    ...(language ? { language } : {}),
+    segmentCount: segments.length,
   };
 }
 

@@ -278,7 +278,9 @@ remains source-owned.
 video, animations, and other persisted assets. It indexes names, source text,
 origin/direction, workspace/project/session linkage, channel metadata, and MIME
 metadata so generic media views can search without invoking image-specific
-extractors.
+extractors. Stored transcript, caption, or segment text is indexed as a
+transcription fragment when already present on the media record; Search does not
+run speech-to-text providers from this adapter.
 
 `generations.artifacts` projects generated artifact records. It indexes prompts,
 titles, kind, status, backend/model metadata, command provenance, output

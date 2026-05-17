@@ -1391,6 +1391,28 @@ test("search rebuild indexes media.assets from workspace media records", async (
     updatedAt: "2026-05-17T10:00:00.000Z",
     shareIds: [],
   }, null, 2));
+  fs.writeFileSync(path.join(mediaDir, "media-demo-audio.json"), JSON.stringify({
+    mediaId: "media-demo-audio",
+    name: "Planning Call.wav",
+    mimeType: "audio/wav",
+    kind: "audio",
+    origin: "recorded",
+    direction: "inbound",
+    workspaceId: "workspace-demo",
+    projectId: "project-search",
+    sessionId: "session-media",
+    transcription: {
+      text: "Transcript mentions async extractor scheduling and budgeted media indexing.",
+      language: "en",
+      segments: [
+        { text: "async extractor scheduling" },
+        { text: "budgeted media indexing" },
+      ],
+    },
+    createdAt: "2026-05-17T11:00:00.000Z",
+    updatedAt: "2026-05-17T11:00:00.000Z",
+    shareIds: [],
+  }, null, 2));
 
   await withPatchedEnv({
     CLAW_DATA_DIR: dataRoot,
@@ -1410,7 +1432,7 @@ test("search rebuild indexes media.assets from workspace media records", async (
     };
     assert.equal(rebuildPayload.data.sources.includes("media.assets"), true);
     assert.equal(rebuildPayload.data.pendingSources.includes("media.assets"), false);
-    assert.equal(rebuildPayload.data.indexedBySource["media.assets"], 1);
+    assert.equal(rebuildPayload.data.indexedBySource["media.assets"], 2);
 
     const query = await runCliCapture([
       "search",
@@ -1439,7 +1461,7 @@ test("search rebuild indexes media.assets from workspace media records", async (
           domain: string;
           type: string;
           title: string;
-          metadata?: { kind?: string; project?: string; sessionId?: string };
+          metadata?: { kind?: string; project?: string; sessionId?: string; transcriptionIndexed?: boolean; transcriptionLanguage?: string; transcriptionSegmentCount?: number };
           actions?: Array<{ id: string; kind: string; requiresApproval?: boolean; grant?: string }>;
           fragments?: Array<{ title?: string; snippet?: string }>;
           explanation?: { matchedBy?: string[] };
@@ -1447,7 +1469,7 @@ test("search rebuild indexes media.assets from workspace media records", async (
         facets?: Array<{ id: string; label: string }>;
       };
     };
-    assert.equal(queryPayload.data.indexedFastPaths["media.assets"], 1);
+    assert.equal(queryPayload.data.indexedFastPaths["media.assets"], 2);
     const result = queryPayload.data.results.find((candidate) => candidate.title === "Requirements Brief.pdf");
     assert.equal(result?.source, "media.assets");
     assert.equal(result?.domain, "media");
@@ -1459,6 +1481,39 @@ test("search rebuild indexes media.assets from workspace media records", async (
     assert.equal(result?.fragments?.some((fragment) => fragment.title === "source text" && fragment.snippet?.includes("media indexing")), true);
     assert.ok(result?.explanation?.matchedBy?.length);
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "kind"), true);
+
+    const transcriptQuery = await runCliCapture([
+      "search",
+      "query",
+      "async extractor scheduling",
+      "--domains",
+      "media",
+      "--filters",
+      "metadata.kind=audio",
+      "--workspace",
+      workspaceRoot,
+      "--data-dir",
+      dataRoot,
+      "--json",
+      "--limit",
+      "5",
+    ], workspaceRoot);
+    assert.equal(transcriptQuery.code, CLI_EXIT_OK);
+    const transcriptPayload = JSON.parse(transcriptQuery.stdout) as {
+      data: {
+        results: Array<{
+          title: string;
+          metadata?: { transcriptionIndexed?: boolean; transcriptionLanguage?: string; transcriptionSegmentCount?: number };
+          fragments?: Array<{ title?: string; snippet?: string }>;
+        }>;
+      };
+    };
+    const audioResult = transcriptPayload.data.results.find((candidate) => candidate.title === "Planning Call.wav");
+    assert.equal(audioResult?.metadata?.transcriptionIndexed, true);
+    assert.equal(audioResult?.metadata?.transcriptionLanguage, "en");
+    assert.equal(audioResult?.metadata?.transcriptionSegmentCount, 2);
+    const transcriptFragment = audioResult?.fragments?.find((fragment) => fragment.title === "transcription");
+    assert.equal(transcriptFragment?.snippet?.includes("async extractor scheduling"), true);
   });
 });
 
