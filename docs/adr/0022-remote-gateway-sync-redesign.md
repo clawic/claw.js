@@ -212,6 +212,11 @@ accepted.
 the remaining physical/provider/deployment checks. It keeps those dependencies
 visible as `external_pending` instead of treating them as implementation bugs or
 silently counting them as complete.
+The remote route contracts catalog, exposed by `claw remote contracts` and
+`/v1/remote/route-contracts`, binds every required remote route to canonical
+local contract references and remote entrypoints. Every row requires parity and
+keeps `parallelApiAllowed: false`, so the Gateway projects local capabilities
+instead of becoming a separate mobile/server API.
 `SyncDriverApplicationReceipt` connects reconciliation to a concrete manifest
 driver without making the driver implementation physical by default:
 `claw sync apply --record true` records applied change ids, blocked conflicts,

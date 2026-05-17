@@ -99,6 +99,7 @@ GET  /v1/remote/classifications
 POST /v1/remote/classifications/receipts
 GET  /v1/remote/conformance
 GET  /v1/remote/external-pending
+GET  /v1/remote/route-contracts
 GET  /v1/gateway/conformance
 GET  /v1/sync/manifests
 POST /v1/sync/manifests
@@ -140,6 +141,10 @@ audit register for physical Iroh, device trust, peer trust, physical Sync
 drivers, signed host audit persistence, client storage, provider retrieval,
 self-hosted and hosted deployment, runtime execution, billing meters, and
 provider/device end-to-end validation.
+Remote API parity is represented by the remote route contracts catalog exposed
+at `/v1/remote/route-contracts` and `claw remote contracts`. Each required
+route binds canonical local contract references to remote entrypoints, keeps
+`parityRequired: true`, and keeps `parallelApiAllowed: false`.
 Existing Relay/mobile routes are represented by `RemoteCompatibilityAdapterReceipt`
 records and the Relay `/v1/remote/compatibility/adapters` endpoint. Each
 adapter must map one legacy surface to one canonical Gateway/Connector/Sync

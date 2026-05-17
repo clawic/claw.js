@@ -172,6 +172,16 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.equal(remotePendingPayload.requirements.some((entry) => entry.requirementId === "provider_device_e2e" && entry.decisionId === "first_vertical_slice"), true);
   assert.equal(remotePendingPayload.requirements.every((entry) => entry.status === "external_pending" && entry.writes === false), true);
 
+  const remoteContracts = await runCliCapture(["remote", "contracts", "--now", "2026-05-17T10:14:00.000Z", "--json"], process.cwd());
+  assert.equal(remoteContracts.code, CLI_EXIT_OK);
+  const remoteContractsPayload = parseCliJson<{ status: string; writes: boolean; missingRouteIds: string[]; contracts: Array<{ routeId: string; localContractRefs: string[]; remoteEntryPoints: string[]; parityRequired: boolean; parallelApiAllowed: boolean; writes: boolean }> }>(remoteContracts.stdout).data;
+  assert.equal(remoteContractsPayload.status, "complete");
+  assert.equal(remoteContractsPayload.writes, false);
+  assert.deepEqual(remoteContractsPayload.missingRouteIds, []);
+  assert.equal(remoteContractsPayload.contracts.some((entry) => entry.routeId === "remote.searchGateway" && entry.localContractRefs.includes("claw search")), true);
+  assert.equal(remoteContractsPayload.contracts.some((entry) => entry.routeId === "gateway.multiTenantAgentService" && entry.remoteEntryPoints.includes("POST /v1/gateway/agent-service/evaluate")), true);
+  assert.equal(remoteContractsPayload.contracts.every((entry) => entry.parityRequired && !entry.parallelApiAllowed && entry.writes === false), true);
+
   const sync = await runCliCapture(["sync", "manifest", "--resource-id", "skills:default", "--kind", "skills", "--driver", "skills", "--json"], process.cwd());
   assert.equal(sync.code, CLI_EXIT_OK);
   const syncPayload = parseCliJson<{ manifest: { driver: string; conflictPolicy: string; secretPolicy: string } }>(sync.stdout).data;

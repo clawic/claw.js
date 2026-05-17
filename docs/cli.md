@@ -176,6 +176,7 @@ claw remote check --json
 claw remote routes --json
 claw remote conformance --json
 claw remote pending --json
+claw remote contracts --json
 claw remote compat --legacy-surface relay.mobile.chat --canonical-route remote.chatGateway --client-kind ios --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 
 claw sync manifest --resource-id skills:default --kind skills --driver skills --json
@@ -228,6 +229,10 @@ id, policy reference, and test evidence before anything is written.
 single audit list of hardware, provider, hosted rollout, client storage,
 runtime, billing, and end-to-end validations that cannot be claimed complete
 until explicitly run.
+`remote contracts` returns the no-write remote route contract catalog. Each
+required Gateway/Connector/Sync/Mesh route is bound to local CLI/service
+contract refs and remote entrypoints, requires parity, and keeps
+`parallelApiAllowed: false` so remote clients do not grow a parallel API.
 `--state-dir` records manifests, sync queues, reconciliation results, and
 mesh proposals/revocations in a local durable ledger. That ledger is not trust
 authority unless each record is signed with Coordinator keys. The

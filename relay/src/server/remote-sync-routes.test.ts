@@ -39,6 +39,16 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(externalPendingPayload.requirements.some((entry) => entry.requirementId === "hosted_deployment"), true);
     assert.equal(externalPendingPayload.requirements.every((entry) => entry.status === "external_pending" && entry.writes === false), true);
 
+    const routeContracts = await built.app.inject({ method: "GET", url: "/v1/remote/route-contracts" });
+    assert.equal(routeContracts.statusCode, 200);
+    const routeContractsPayload = routeContracts.json() as { status: string; writes: boolean; missingRouteIds: string[]; contracts: Array<{ routeId: string; localContractRefs: string[]; remoteEntryPoints: string[]; parityRequired: boolean; parallelApiAllowed: boolean; writes: boolean }> };
+    assert.equal(routeContractsPayload.status, "complete");
+    assert.equal(routeContractsPayload.writes, false);
+    assert.deepEqual(routeContractsPayload.missingRouteIds, []);
+    assert.equal(routeContractsPayload.contracts.some((entry) => entry.routeId === "remote.searchGateway" && entry.localContractRefs.includes("claw search")), true);
+    assert.equal(routeContractsPayload.contracts.some((entry) => entry.routeId === "gateway.multiTenantAgentService" && entry.remoteEntryPoints.includes("POST /v1/gateway/agent-service/evaluate")), true);
+    assert.equal(routeContractsPayload.contracts.every((entry) => entry.parityRequired && !entry.parallelApiAllowed && entry.writes === false), true);
+
     const classifications = await built.app.inject({ method: "GET", url: "/v1/remote/classifications" });
     assert.equal(classifications.statusCode, 200);
     const classificationPayload = classifications.json() as { classifications: Array<{ id: string; relay: string }> };

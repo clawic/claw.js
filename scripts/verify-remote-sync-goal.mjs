@@ -6,6 +6,7 @@ import {
   buildRemoteConformanceReport,
   buildRemoteExternalPendingRegister,
   buildRemoteOfflineCommandResult,
+  buildRemoteRouteContractCatalog,
   buildSyncPlan,
   buildSyncQueueEntries,
   clawCliCommandRegistry,
@@ -36,6 +37,7 @@ import {
   remoteCompatibilityAdapterReceiptSchema,
   remoteExternalPendingRegisterSchema,
   remoteGatewayAuditReceiptSchema,
+  remoteRouteContractCatalogSchema,
   remoteSecretLeaseSchema,
   remoteSurfaceClassificationReceiptSchema,
   remoteSyncRequiredDecisionIds,
@@ -78,6 +80,7 @@ const requiredServiceApiRoutes = [
   "remote/classifications/receipts",
   "remote/conformance",
   "remote/external-pending",
+  "remote/route-contracts",
   "remote/compatibility/adapters",
   "gateway/conformance",
   "gateway/agent-service/evaluate",
@@ -120,6 +123,8 @@ const requiredDocSnippets = [
   "/v1/remote/classifications/receipts",
   "RemoteExternalPendingRegister",
   "/v1/remote/external-pending",
+  "remote route contracts",
+  "/v1/remote/route-contracts",
   "/v1/gateway/agent-service/evaluate",
   "/v1/gateway/audit/receipts",
   "RemoteGatewayAuditReceipt",
@@ -259,6 +264,23 @@ for (const requirementId of [
   if (!externalPending.requirements.some((entry) => entry.requirementId === requirementId && entry.status === "external_pending" && entry.writes === false)) {
     fail(`remote external pending register must include ${requirementId}`);
   }
+}
+
+const routeContracts = buildRemoteRouteContractCatalog({
+  generatedAt: "2026-05-17T10:14:00.000Z",
+  registeredRouteIds: (clawPersistentSurfaceRegistry.routes ?? []).map((route) => route.id),
+});
+if (!remoteRouteContractCatalogSchema.safeParse(routeContracts).success) fail("remote route contract catalog must validate");
+if (routeContracts.status !== "complete") fail("remote route contract catalog must be complete");
+if (routeContracts.missingRouteIds.length !== 0) fail(`remote route contract catalog missing routes: ${routeContracts.missingRouteIds.join(", ")}`);
+if (routeContracts.contracts.length !== remoteSyncRequiredRouteIds.length) fail("remote route contract catalog must cover every required route");
+const requiredRouteIdSet = new Set(remoteSyncRequiredRouteIds);
+for (const contract of routeContracts.contracts) {
+  if (!requiredRouteIdSet.has(contract.routeId)) fail(`remote route contract catalog includes unexpected route ${contract.routeId}`);
+  if (contract.parityRequired !== true) fail(`${contract.routeId} must require local/remote parity`);
+  if (contract.parallelApiAllowed !== false) fail(`${contract.routeId} must forbid parallel APIs`);
+  if (contract.writes !== false) fail(`${contract.routeId} route contract must be no-write`);
+  if (contract.localContractRefs.length === 0 || contract.remoteEntryPoints.length === 0) fail(`${contract.routeId} must bind local contract refs and remote entrypoints`);
 }
 
 for (const commandName of requiredCliCommands) {

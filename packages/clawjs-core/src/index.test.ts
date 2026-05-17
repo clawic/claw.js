@@ -17,6 +17,7 @@ import {
   buildRemoteOfflineCommandResult,
   buildRemoteConformanceReport,
   buildRemoteExternalPendingRegister,
+  buildRemoteRouteContractCatalog,
   buildSyncQueueEntries,
   buildSyncPlan,
   capacityRecordSchema,
@@ -108,6 +109,7 @@ import {
   remoteAgentServiceExecutionReceiptSchema,
   remoteCompatibilityAdapterReceiptSchema,
   remoteExternalPendingRegisterSchema,
+  remoteRouteContractCatalogSchema,
   remoteSurfaceClassificationReceiptSchema,
   remoteGatewayAuditReceiptSchema,
   remoteSecretLeaseSchema,
@@ -549,6 +551,19 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(externalPending.requirements.some((entry) => entry.requirementId === "physical_iroh_handshake" && entry.sourceReceipt === "RemoteTransportHandshakeReceipt"), true);
   assert.equal(externalPending.requirements.some((entry) => entry.requirementId === "physical_sync_driver_application" && entry.decisionId === "sync_substrate"), true);
   assert.equal(externalPending.requirements.every((entry) => entry.status === "external_pending" && entry.writes === false), true);
+
+  const routeContracts = buildRemoteRouteContractCatalog({
+    generatedAt: "2026-05-17T10:14:00.000Z",
+    registeredRouteIds: remoteSyncRequiredRouteIds,
+  });
+  assert.equal(remoteRouteContractCatalogSchema.safeParse(routeContracts).success, true);
+  assert.equal(routeContracts.status, "complete");
+  assert.deepEqual(routeContracts.missingRouteIds, []);
+  assert.equal(routeContracts.writes, false);
+  assert.equal(routeContracts.contracts.length, remoteSyncRequiredRouteIds.length);
+  assert.equal(routeContracts.contracts.some((entry) => entry.routeId === "remote.searchGateway" && entry.localContractRefs.includes("claw search")), true);
+  assert.equal(routeContracts.contracts.some((entry) => entry.routeId === "gateway.multiTenantAgentService" && entry.remoteEntryPoints.includes("POST /v1/gateway/agent-service/evaluate")), true);
+  assert.equal(routeContracts.contracts.every((entry) => entry.parityRequired && !entry.parallelApiAllowed && entry.writes === false), true);
 
   assert.equal(routeIdForSyncDriver("skills"), "sync.skills");
   assert.equal(routeIdForSyncDriver("memory_user_model"), "sync.memoryUserModel");
