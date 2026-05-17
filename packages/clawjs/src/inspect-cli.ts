@@ -4,7 +4,7 @@ import path from "path";
 
 import Database from "better-sqlite3";
 import { AgentStoreFS, type Agent } from "@clawjs/agents";
-import { CLAW_CLI_COMMAND_INTENT_STATUSES, clawDenseDataAcceptanceFixture, clawDenseDataOsRegistry, clawPersistentSurfaceRegistry, connectorExecutionPipeline, createAgentControlPanel, createAgentPrivacyLifecyclePlan, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, listClawDenseDataGapRegistryEntries, listClawDenseDataIntentEntries, listClawDenseDataSemanticViewEntries, resolveClawCliCommand, resolveClawPersistentSurfacePath, searchClawCliRegistry, withSurfaceChildren } from "@clawjs/core";
+import { CLAW_CLI_COMMAND_INTENT_STATUSES, buildRemoteConformanceReport, buildRemoteExternalPendingRegister, buildRemoteRouteContractCatalog, clawDenseDataAcceptanceFixture, clawDenseDataOsRegistry, clawPersistentSurfaceRegistry, connectorExecutionPipeline, createAgentControlPanel, createAgentPrivacyLifecyclePlan, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, listClawDenseDataGapRegistryEntries, listClawDenseDataIntentEntries, listClawDenseDataSemanticViewEntries, resolveClawCliCommand, resolveClawPersistentSurfacePath, searchClawCliRegistry, syncDriverSchema, withSurfaceChildren } from "@clawjs/core";
 import type { AgentAuditEvent, ClawPersistentSurfaceNode, ClawPersistentSurfaceRegistry, ClawSurfaceEdge, ClawSurfaceRoute } from "@clawjs/core";
 import { v1MainSchemaSurfaceNodes } from "./v1-data-surface.ts";
 import { normalizeDbRow, resolveClawjsMainDbPath, type JsonRecord } from "./v1-data-core.ts";
@@ -775,6 +775,47 @@ function mermaidId(value: string): string {
   return value.replace(/[^a-zA-Z0-9_]/g, "_");
 }
 
+function buildRemoteInspectPayload(nodes: ClawPersistentSurfaceNode[], routes: ClawSurfaceRoute[]) {
+  const routeIds = routes.map((route) => route.id);
+  const nodeIds = nodes.map((node) => node.id);
+  const remoteNodes = nodes.filter((node) => node.programmaticSurfaces?.includes("relay") || node.surfaceGaps?.some((gap) => gap.surface === "relay"));
+  const remoteRoutes = routes.filter((route) => route.id.startsWith("remote.") || route.id.startsWith("sync.") || route.id.startsWith("gateway.") || route.id.startsWith("mesh."));
+  const tests = [...new Set(remoteRoutes.flatMap((route) => route.tests ?? []))].sort();
+  return {
+    schemaVersion: 1,
+    conformance: buildRemoteConformanceReport({ routeIds, nodeIds }),
+    classifications: remoteNodes.map((node) => ({
+      id: node.id,
+      name: node.name,
+      owner: node.owner,
+      classification: node.programmaticSurfaces?.includes("relay")
+        ? "remote-safe"
+        : node.surfaceGaps?.find((gap) => gap.surface === "relay")?.status ?? "pending",
+      routeIds: routes.filter((route) => route.fromId === node.id || route.toId === node.id || route.steps.some((step) => step.fromId === node.id || step.toId === node.id)).map((route) => route.id),
+      gaps: node.surfaceGaps?.filter((gap) => gap.surface === "relay") ?? [],
+      tests: node.source?.tests ?? [],
+    })),
+    sync: {
+      authorityClasses: ["primary", "replica", "cache", "mirror", "joint"],
+      drivers: [...syncDriverSchema.options],
+      conflictDefault: "detect_and_elevate",
+      receiptContracts: ["SyncResourceManifest", "SyncDriverApplicationReceipt", "SyncAuthorityHandoffReceipt", "RemoteClientCacheSnapshot"],
+      routeIds: routeIds.filter((routeId) => routeId.startsWith("sync.")),
+      writes: false,
+    },
+    transport: {
+      contract: "transport_agnostic_iroh_v1_adapter",
+      adapterNodeId: "claw.transport.iroh",
+      trustModes: ["sovereign_e2e_tunnel", "governed_gateway"],
+      receiptContract: "RemoteTransportHandshakeReceipt",
+      writes: false,
+    },
+    gaps: buildRemoteExternalPendingRegister().requirements,
+    routeContracts: buildRemoteRouteContractCatalog({ registeredRouteIds: routeIds }).contracts,
+    tests,
+  };
+}
+
 async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
   const [, command = "tree", target] = input.positionals;
   const registry = inspectRegistry(input);
@@ -957,6 +998,19 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     else input.context.stdout.write(`${inspectText(selected)}\n`);
     return CLI_EXIT_OK;
   }
+  if (command === "remote" || command === "remote-sync") {
+    const payload = buildRemoteInspectPayload(nodes, routes);
+    if (input.wantsJson) writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command));
+    else input.context.stdout.write([
+      `conformance\t${payload.conformance.status}`,
+      `classifications\t${payload.classifications.length}`,
+      `syncDrivers\t${payload.sync.drivers.length}`,
+      `transport\t${payload.transport.contract}`,
+      `gaps\t${payload.gaps.length}`,
+      `routeContracts\t${payload.routeContracts.length}`,
+    ].join("\n") + "\n");
+    return CLI_EXIT_OK;
+  }
   if (command === "commands") {
     const includeAdvanced = "all" in input.flags || input.flags.all === "true";
     const commands = listClawCliCommands({ includeAdvanced });
@@ -1128,7 +1182,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     }
     throw new InspectCliError("usage_error", `Unsupported inspect render format: ${format}`, CLI_EXIT_USAGE);
   }
-  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|neighbors|routes|route|agent|edges|why|commands|command-intents|dense-data|dense-gaps|dense-intents|dense-views|dense-fixtures|codebase|connectors|aliases|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
+  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|neighbors|routes|route|agent|edges|why|commands|command-intents|remote|remote-sync|dense-data|dense-gaps|dense-intents|dense-views|dense-fixtures|codebase|connectors|aliases|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
 }
 
 export async function runInspectCli(input: InspectCliInput): Promise<number> {

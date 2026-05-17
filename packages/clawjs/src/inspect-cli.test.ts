@@ -153,6 +153,36 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   assert.equal(gatewayRoutePayload.id, "remote.searchGateway");
   assert.equal(gatewayRoutePayload.edges.some((edge) => edge.id === "claw.edge.connector.brokers.search"), true);
   assert.equal(gatewayRoutePayload.adrs.includes("docs/adr/0022-remote-gateway-sync-redesign.md"), true);
+
+  const remoteInspect = await runCliCapture(["inspect", "remote", "--json"], process.cwd());
+  assert.equal(remoteInspect.code, CLI_EXIT_OK);
+  const remoteInspectPayload = parseCliJson<{
+    conformance: { status: string; missingRoutes: string[]; decisions: Array<{ decisionId: string }> };
+    classifications: Array<{ id: string; classification: string; routeIds: string[] }>;
+    sync: { authorityClasses: string[]; drivers: string[]; conflictDefault: string; receiptContracts: string[]; routeIds: string[]; writes: boolean };
+    transport: { contract: string; adapterNodeId: string; trustModes: string[]; receiptContract: string; writes: boolean };
+    gaps: Array<{ requirementId: string; status: string; writes: boolean }>;
+    routeContracts: Array<{ routeId: string; parallelApiAllowed: boolean; writes: boolean }>;
+    tests: string[];
+  }>(remoteInspect.stdout).data;
+  assert.equal(remoteInspectPayload.conformance.status, "baseline_registered");
+  assert.deepEqual(remoteInspectPayload.conformance.missingRoutes, []);
+  assert.equal(remoteInspectPayload.conformance.decisions.some((entry) => entry.decisionId === "remote_surface_parity"), true);
+  assert.equal(remoteInspectPayload.classifications.some((entry) => entry.id === "claw.gateway" && entry.classification === "remote-safe"), true);
+  assert.equal(remoteInspectPayload.sync.authorityClasses.includes("joint"), true);
+  assert.equal(remoteInspectPayload.sync.drivers.includes("skills"), true);
+  assert.equal(remoteInspectPayload.sync.conflictDefault, "detect_and_elevate");
+  assert.equal(remoteInspectPayload.sync.receiptContracts.includes("SyncAuthorityHandoffReceipt"), true);
+  assert.equal(remoteInspectPayload.sync.routeIds.includes("sync.skills"), true);
+  assert.equal(remoteInspectPayload.sync.writes, false);
+  assert.equal(remoteInspectPayload.transport.contract, "transport_agnostic_iroh_v1_adapter");
+  assert.equal(remoteInspectPayload.transport.adapterNodeId, "claw.transport.iroh");
+  assert.equal(remoteInspectPayload.transport.trustModes.includes("governed_gateway"), true);
+  assert.equal(remoteInspectPayload.transport.receiptContract, "RemoteTransportHandshakeReceipt");
+  assert.equal(remoteInspectPayload.transport.writes, false);
+  assert.equal(remoteInspectPayload.gaps.some((entry) => entry.requirementId === "physical_iroh_handshake" && entry.status === "external_pending" && entry.writes === false), true);
+  assert.equal(remoteInspectPayload.routeContracts.some((entry) => entry.routeId === "remote.chatGateway" && !entry.parallelApiAllowed && !entry.writes), true);
+  assert.equal(remoteInspectPayload.tests.includes("packages/clawjs/src/inspect-cli.test.ts"), true);
 });
 
 test("runCli exposes remote, sync, nodes, and gateway baseline commands", async () => {
