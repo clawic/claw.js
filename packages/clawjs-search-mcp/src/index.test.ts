@@ -4,7 +4,13 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "vitest";
 
-import { SearchStore, createFrameworkSearchSourceManifest } from "@clawjs/search";
+import {
+  LOCAL_TEXT_EMBEDDING_DIMENSIONS,
+  LOCAL_TEXT_EMBEDDING_MODEL,
+  SearchStore,
+  createFrameworkSearchSourceManifest,
+  createLocalTextEmbedding,
+} from "@clawjs/search";
 
 import { createSearchMcpTools } from "./index.ts";
 
@@ -17,6 +23,7 @@ test("Search MCP exposes profile, entrypoint, and explain tools", () => {
 
     for (const name of [
       "search.query",
+      "search.embeddings.create",
       "search.sources.list",
       "search.sources.set_state",
       "search.status",
@@ -166,6 +173,78 @@ test("Search MCP exposes profile, entrypoint, and explain tools", () => {
     assert.equal(partial.items[0]?.omittedSources[0]?.source, "commands");
     assert.equal(partial.items[0]?.omittedSources[0]?.reason, "disabled");
 
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("Search MCP derives local embeddings for semantic queries", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-mcp-embeddings-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "documents.blocks",
+      domain: "documents",
+      name: "Documents",
+      resultTypes: ["document"],
+      capabilities: { semantic: "optional" },
+    }));
+    store.upsertDocument({
+      id: "documents.blocks:alpha",
+      source: "documents.blocks",
+      domain: "documents",
+      type: "document",
+      title: "Design rationale",
+      body: "Architecture notes about quiet interfaces.",
+    });
+    store.upsertDocument({
+      id: "documents.blocks:beta",
+      source: "documents.blocks",
+      domain: "documents",
+      type: "document",
+      title: "Release notes",
+      body: "Changelog for packaging.",
+    });
+    store.upsertVector({
+      documentId: "documents.blocks:alpha",
+      model: LOCAL_TEXT_EMBEDDING_MODEL,
+      embedding: createLocalTextEmbedding("quiet architecture interface").vector,
+    });
+    store.upsertVector({
+      documentId: "documents.blocks:beta",
+      model: LOCAL_TEXT_EMBEDDING_MODEL,
+      embedding: createLocalTextEmbedding("packaging changelog release").vector,
+    });
+
+    const tools = createSearchMcpTools(store);
+    const embeddingsTool = tools.find((tool) => tool.name === "search.embeddings.create");
+    assert.ok(embeddingsTool);
+    const embedding = embeddingsTool.handler({ text: "quiet architecture interface" }) as { model: string; vector: number[] };
+    assert.equal(embedding.model, LOCAL_TEXT_EMBEDDING_MODEL);
+    assert.equal(embedding.vector.length, LOCAL_TEXT_EMBEDDING_DIMENSIONS);
+    assert.deepEqual(embedding.vector, createLocalTextEmbedding("quiet architecture interface").vector);
+
+    const queryTool = tools.find((tool) => tool.name === "search.query");
+    assert.ok(queryTool);
+    const semantic = queryTool.handler({
+      query: "quiet architecture interface",
+      domains: ["documents"],
+      strategy: "semantic",
+      embeddingModel: LOCAL_TEXT_EMBEDDING_MODEL,
+      explain: true,
+    }) as { results: Array<{ id: string; explanation?: { matchedBy?: string[]; scoreBreakdown?: { semantic?: number } } }> };
+    assert.equal(semantic.results[0]?.id, "documents.blocks:alpha");
+    assert.equal(semantic.results[0]?.explanation?.matchedBy?.includes("semantic"), true);
+    assert.ok((semantic.results[0]?.explanation?.scoreBreakdown?.semantic ?? 0) > 0);
+
+    const shorthand = queryTool.handler({
+      query: "packaging changelog release",
+      domains: ["documents"],
+      strategy: "semantic",
+      localEmbedding: true,
+    }) as { results: Array<{ id: string }> };
+    assert.equal(shorthand.results[0]?.id, "documents.blocks:beta");
   } finally {
     store.close();
     fs.rmSync(dir, { recursive: true, force: true });

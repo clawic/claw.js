@@ -7,9 +7,12 @@ import { Writable } from "node:stream";
 import { clawCliCommandRegistry, listClawCliAliases } from "@clawjs/core";
 import {
   DEFAULT_SEARCH_BUDGETS,
+  LOCAL_TEXT_EMBEDDING_DIMENSIONS,
+  LOCAL_TEXT_EMBEDDING_MODEL,
   SEARCH_PROFILES,
   SearchStore,
   createSearchActionExecutionPlan,
+  createLocalTextEmbedding,
   listSearchEntrypointContracts,
   type SearchAuditEventType,
   type SearchProfileId,
@@ -59,6 +62,8 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
           sources: { type: "array", items: { type: "string" } },
           shards: { type: "array", items: { type: "string" } },
           strategy: { type: "string", enum: ["lexical", "semantic", "hybrid"] },
+          embeddingModel: { type: "string" },
+          localEmbedding: { type: "boolean" },
           embedding: {
             type: "object",
             required: ["model", "vector"],
@@ -76,6 +81,23 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
         },
       },
       handler: (p) => store.query(searchQueryFromParams(p)),
+    },
+    {
+      name: "search.embeddings.create",
+      description: "Create a deterministic local Search embedding vector.",
+      inputSchema: {
+        type: "object",
+        required: ["text"],
+        properties: {
+          text: { type: "string" },
+          model: { type: "string" },
+          dimensions: { type: "integer" },
+        },
+      },
+      handler: (p) => createLocalTextEmbedding(requiredString(p, "text"), {
+        model: stringParam(p.model) ?? LOCAL_TEXT_EMBEDDING_MODEL,
+        dimensions: numberParam(p.dimensions) ?? LOCAL_TEXT_EMBEDDING_DIMENSIONS,
+      }),
     },
     { name: "search.sources.list", description: "List Search source manifests.", inputSchema: { type: "object", properties: { profile: { type: "string", enum: ["framework", "full"] } } }, handler: (p) => store.listSources(searchProfile(p.profile)) },
     {
@@ -371,13 +393,14 @@ function resolveSearchDbPath(opts: SearchMcpServerOptions): string {
 }
 
 function searchQueryFromParams(params: Record<string, unknown>): SearchQueryInput {
+  const query = requiredString(params, "query");
   return {
-    query: requiredString(params, "query"),
+    query,
     domains: stringArrayParam(params.domains),
     sources: stringArrayParam(params.sources),
     shards: stringArrayParam(params.shards),
     strategy: searchStrategy(params.strategy),
-    embedding: searchEmbedding(params.embedding),
+    embedding: searchEmbeddingFromParams(params, query),
     profile: searchProfile(params.profile),
     limit: numberParam(params.limit),
     explain: typeof params.explain === "boolean" ? params.explain : undefined,
@@ -470,6 +493,15 @@ function searchEmbedding(value: unknown): SearchQueryInput["embedding"] {
   if (typeof record.model !== "string" || !Array.isArray(record.vector)) return undefined;
   const vector = record.vector.filter((entry): entry is number => typeof entry === "number" && Number.isFinite(entry));
   return vector.length === record.vector.length && vector.length ? { model: record.model, vector } : undefined;
+}
+
+function searchEmbeddingFromParams(params: Record<string, unknown>, query: string): SearchQueryInput["embedding"] {
+  const explicit = searchEmbedding(params.embedding);
+  if (explicit) return explicit;
+  const model = stringParam(params.embeddingModel);
+  const requested = model === LOCAL_TEXT_EMBEDDING_MODEL || params.localEmbedding === true;
+  if (!requested) return undefined;
+  return createLocalTextEmbedding(query, { model: model ?? LOCAL_TEXT_EMBEDDING_MODEL });
 }
 
 function searchAuditType(value: unknown): SearchAuditEventType | undefined {

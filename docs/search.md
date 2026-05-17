@@ -312,10 +312,14 @@ Semantic retrieval is opt-in per query and per source capability. Search stores
 local vectors in `search.sqlite` and can run `semantic` or `hybrid` ranking when
 the caller supplies a local embedding vector and model. The CLI can derive a
 query vector with `--embedding-model local-text-v1` or `--local-embedding true`
-for sources that have local vectors, such as `code.symbols`. Search does not
-call external embedding providers from the sidecar; provider-backed generation
-and heavier extractor scheduling remain source/extractor responsibilities and
-can be throttled as background work.
+for sources that have local vectors, such as `code.symbols`. The Search MCP
+surface mirrors this local-only path: `search.query` accepts
+`embeddingModel: local-text-v1` or `localEmbedding: true`, and
+`search.embeddings.create` returns the deterministic local vector for callers
+that need to inspect or cache it.
+Search does not call external embedding providers from the sidecar;
+provider-backed generation and heavier extractor scheduling remain
+source/extractor responsibilities and can be throttled as background work.
 
 Each source manifest declares indexing limits. `SearchStore` enforces body,
 fragment-count, and per-fragment byte budgets before writing to FTS, so a large
