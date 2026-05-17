@@ -43,6 +43,7 @@ import { MANUFACTURING_FAMILY } from "./manufacturing/index.ts";
 import { BOOKMARKS_MISC_FAMILY } from "./bookmarks_misc/index.ts";
 import { EDUCATION_SCHOOL_FAMILY } from "./education_school/index.ts";
 import { CAREER_FAMILY } from "./career/index.ts";
+import { PROCUREMENT_FAMILY } from "./procurement/index.ts";
 import { TRAVEL_FAMILY } from "./travel/index.ts";
 import { RELATIONSHIPS_FAMILY } from "./relationships/index.ts";
 import { FAMILY_CARE_FAMILY } from "./family_care/index.ts";
@@ -108,6 +109,7 @@ const RAW_BUILTIN_FAMILIES: BuiltinFamilyDefinition[] = [
   BOOKMARKS_MISC_FAMILY,
   EDUCATION_SCHOOL_FAMILY,
   CAREER_FAMILY,
+  PROCUREMENT_FAMILY,
   TRAVEL_FAMILY,
   RELATIONSHIPS_FAMILY,
   FAMILY_CARE_FAMILY,
