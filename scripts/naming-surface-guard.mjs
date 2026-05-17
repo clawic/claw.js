@@ -263,6 +263,9 @@ for (const relativePath of [
   forbidSnippet(relativePath, "legacy: true");
   forbidSnippet(relativePath, "legacyEvents");
   forbidSnippet(relativePath, "legacyRoutines");
+  forbidSnippet(relativePath, "legacyWorkspaces");
+  forbidSnippet(relativePath, "legacySessionList");
+  forbidSnippet(relativePath, "LegacySessions");
   forbidSnippet(relativePath, "Relay compatibility plugin catalog");
   forbidSnippet(relativePath, "relay-compat");
   forbidSnippet(relativePath, "WorkspaceCompatStore");

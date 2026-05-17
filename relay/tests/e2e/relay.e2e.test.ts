@@ -1153,12 +1153,12 @@ describe("relay e2e", () => {
     assert.equal(agentProjectsPayload.projects[0]?.workspaceId, expectedWorkspaceId);
     assert.equal(agentProjectsPayload.projects[0]?.runtimeAgentId, expectedRuntimeAgentId);
 
-    const legacyWorkspaces = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/project-agent/workspaces`, {
+    const agentWorkspaces = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/project-agent/workspaces`, {
       headers: { Authorization: `Bearer ${userTokens.accessToken}` },
     });
-    assert.equal(legacyWorkspaces.status, 200);
-    const legacyWorkspacesPayload = await legacyWorkspaces.json() as { workspaces: Array<{ workspaceId: string }> };
-    assert.equal(legacyWorkspacesPayload.workspaces.some((workspace) => workspace.workspaceId === expectedWorkspaceId), true);
+    assert.equal(agentWorkspaces.status, 200);
+    const agentWorkspacesPayload = await agentWorkspaces.json() as { workspaces: Array<{ workspaceId: string }> };
+    assert.equal(agentWorkspacesPayload.workspaces.some((workspace) => workspace.workspaceId === expectedWorkspaceId), true);
 
     const createProjectSession = await fetch(`${baseUrl}/v1/tenants/demo-tenant/projects/alpha-app/agents/project-agent/sessions`, {
       method: "POST",
@@ -1196,12 +1196,12 @@ describe("relay e2e", () => {
     });
     assert.equal(projectStatus.status, 200);
 
-    const legacySessionList = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/project-agent/workspaces/${expectedWorkspaceId}/sessions`, {
+    const workspaceSessionList = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/project-agent/workspaces/${expectedWorkspaceId}/sessions`, {
       headers: { Authorization: `Bearer ${userTokens.accessToken}` },
     });
-    assert.equal(legacySessionList.status, 200);
-    const legacySessionsPayload = await legacySessionList.json() as { sessions: Array<{ sessionId: string }> };
-    assert.equal(legacySessionsPayload.sessions.some((session) => session.sessionId === createdSession.session.sessionId), true);
+    assert.equal(workspaceSessionList.status, 200);
+    const workspaceSessionsPayload = await workspaceSessionList.json() as { sessions: Array<{ sessionId: string }> };
+    assert.equal(workspaceSessionsPayload.sessions.some((session) => session.sessionId === createdSession.session.sessionId), true);
 
     const secondProject = await fetch(`${baseUrl}/v1/tenants/demo-tenant/projects`, {
       method: "POST",
@@ -1210,13 +1210,13 @@ describe("relay e2e", () => {
         Authorization: `Bearer ${adminTokens.accessToken}`,
       },
       body: JSON.stringify({
-        projectId: "beta-app",
-        displayName: "Beta App",
+        projectId: "second-app",
+        displayName: "Second App",
       }),
     });
     assert.equal(secondProject.status, 200);
 
-    const attachSecondProject = await fetch(`${baseUrl}/v1/tenants/demo-tenant/projects/beta-app/agents/project-agent`, {
+    const attachSecondProject = await fetch(`${baseUrl}/v1/tenants/demo-tenant/projects/second-app/agents/project-agent`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1224,35 +1224,35 @@ describe("relay e2e", () => {
       },
       body: JSON.stringify({
         agentDisplayName: "DevOps",
-        displayName: "Beta App / DevOps",
+        displayName: "Second App / DevOps",
       }),
     });
     assert.equal(attachSecondProject.status, 200);
-    const secondWorkspaceId = deriveAssignmentWorkspaceId("beta-app", "project-agent");
+    const secondWorkspaceId = deriveAssignmentWorkspaceId("second-app", "project-agent");
 
-    const createSecondSession = await fetch(`${baseUrl}/v1/tenants/demo-tenant/projects/beta-app/agents/project-agent/sessions`, {
+    const createSecondSession = await fetch(`${baseUrl}/v1/tenants/demo-tenant/projects/second-app/agents/project-agent/sessions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${userTokens.accessToken}`,
       },
-      body: JSON.stringify({ title: "Beta deploy" }),
+      body: JSON.stringify({ title: "Second deploy" }),
     });
     assert.equal(createSecondSession.status, 200);
 
-    const alphaLegacySessions = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/project-agent/workspaces/${expectedWorkspaceId}/sessions`, {
+    const alphaWorkspaceSessions = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/project-agent/workspaces/${expectedWorkspaceId}/sessions`, {
       headers: { Authorization: `Bearer ${userTokens.accessToken}` },
     });
-    const alphaLegacyPayload = await alphaLegacySessions.json() as { sessions: Array<{ title: string }> };
-    assert.equal(alphaLegacyPayload.sessions.some((session) => session.title === "Deploy plan"), true);
-    assert.equal(alphaLegacyPayload.sessions.some((session) => session.title === "Beta deploy"), false);
+    const alphaWorkspacePayload = await alphaWorkspaceSessions.json() as { sessions: Array<{ title: string }> };
+    assert.equal(alphaWorkspacePayload.sessions.some((session) => session.title === "Deploy plan"), true);
+    assert.equal(alphaWorkspacePayload.sessions.some((session) => session.title === "Second deploy"), false);
 
-    const betaLegacySessions = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/project-agent/workspaces/${secondWorkspaceId}/sessions`, {
+    const secondWorkspaceSessions = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/project-agent/workspaces/${secondWorkspaceId}/sessions`, {
       headers: { Authorization: `Bearer ${userTokens.accessToken}` },
     });
-    const betaLegacyPayload = await betaLegacySessions.json() as { sessions: Array<{ title: string }> };
-    assert.equal(betaLegacyPayload.sessions.some((session) => session.title === "Beta deploy"), true);
-    assert.equal(betaLegacyPayload.sessions.some((session) => session.title === "Deploy plan"), false);
+    const secondWorkspacePayload = await secondWorkspaceSessions.json() as { sessions: Array<{ title: string }> };
+    assert.equal(secondWorkspacePayload.sessions.some((session) => session.title === "Second deploy"), true);
+    assert.equal(secondWorkspacePayload.sessions.some((session) => session.title === "Deploy plan"), false);
 
     socket.close();
     await new Promise((resolve) => socket.once("close", () => resolve(null)));
