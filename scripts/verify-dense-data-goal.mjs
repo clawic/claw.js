@@ -23,6 +23,7 @@ const sourceConversationId = "019e35a1-06bb-77f2-a712-92ed2646bd15";
 const sourcePlanId = "019e3659-0335-7811-9cda-c9d176e91515-plan";
 
 const requiredDocs = [
+  "docs/dense-data-completion-audit.md",
   "docs/dense-data-decision-matrix.md",
   "docs/dense-data-source-decision-audit.md",
   "docs/dense-data-existing-catalog-audit.md",
@@ -205,6 +206,27 @@ const requiredExternalPending = [
   ["content", "provider"],
 ];
 
+const requiredCompletionAuditRows = [
+  "GA-001",
+  "GA-002",
+  "GA-003",
+  "GA-004",
+  "GA-005",
+  "GA-006",
+  "GA-007",
+  "GA-008",
+  "GA-009",
+  "GA-010",
+  "GA-011",
+  "GA-012",
+  "GA-013",
+  "GA-014",
+  "GA-015",
+  "GA-016",
+  "GA-017",
+  "GA-018",
+];
+
 const requiredExistingAuditSurfaces = [
   "Notes, pages, page blocks, comments, mentions, and record notes",
   "Knowledge entities and facts",
@@ -333,13 +355,35 @@ for (const [relativePath, text] of docTexts) {
 
 const sourceAudit = docTexts.get("docs/dense-data-source-decision-audit.md") ?? "";
 const decisionMatrix = docTexts.get("docs/dense-data-decision-matrix.md") ?? "";
+const completionAudit = docTexts.get("docs/dense-data-completion-audit.md") ?? "";
 const existingCatalogAudit = docTexts.get("docs/dense-data-existing-catalog-audit.md") ?? "";
 
+requireText("completion audit", completionAudit, sourceConversationId);
+requireText("completion audit", completionAudit, sourcePlanId);
 requireText("source audit", sourceAudit, sourceConversationId);
 requireText("source audit", sourceAudit, sourcePlanId);
 requireText("decision matrix", decisionMatrix, sourceConversationId);
 requireText("decision matrix", decisionMatrix, sourcePlanId);
 requireText("decision matrix", decisionMatrix, "Dense Data Source Decision Audit");
+
+const completionAuditIds = extractTableIds(completionAudit, "GA");
+for (const id of requiredCompletionAuditRows) {
+  if (!completionAuditIds.has(id)) fail(`dense completion audit missing ${id}`);
+}
+for (const requiredPhrase of [
+  "goal remains active",
+  "in_progress",
+  "implemented",
+  "external_pending",
+  "source session",
+  "core.sqlite",
+  "top-level human CLI nouns",
+  "EXTERNAL PENDING",
+  "materialized timelines/overviews",
+  "no-parallel-system",
+]) {
+  requireText("completion audit", completionAudit, requiredPhrase);
+}
 
 const sourceDecisionIds = extractTableIds(sourceAudit, "DQ");
 for (let index = 1; index <= 18; index += 1) {

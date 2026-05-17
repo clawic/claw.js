@@ -8,7 +8,9 @@ This matrix is the public, privacy-safe acceptance ledger for the dense data
 operating system. It must be updated before the goal can close. Private session
 paths and local goal files intentionally stay out of the public repository. The
 source-turn enumeration lives in
-[Dense Data Source Decision Audit](./dense-data-source-decision-audit.md).
+[Dense Data Source Decision Audit](./dense-data-source-decision-audit.md), and
+the final acceptance checklist lives in
+[Dense Data Completion Audit](./dense-data-completion-audit.md).
 `scripts/verify-dense-data-goal.mjs` guards this ledger against missing source
 decision rows, missing matrix rows, privacy-unsafe public paths, registry drift,
 fixture drift, semantic-view drift, missing `external_pending` rows, and missing

@@ -1,0 +1,47 @@
+# Dense Data Completion Audit
+
+Source conversation: `019e35a1-06bb-77f2-a712-92ed2646bd15`
+
+Reference plan item: `019e3659-0335-7811-9cda-c9d176e91515-plan`
+
+This audit is the public acceptance gate for the dense data operating system.
+It is intentionally stricter than the decision matrix: a row may stay
+`in_progress` while the goal remains active, but no final close is allowed
+until every row is either `implemented` with evidence or `external_pending`
+with a concrete provider/physical/regulatory blocker.
+It tracks top-level human CLI nouns, materialized timelines/overviews,
+`core.sqlite` storage, no-parallel-system reuse, and explicit
+`EXTERNAL PENDING` blockers.
+The checklist keeps top-level human CLI nouns, materialized timelines/overviews,
+and no-parallel-system evidence visible as explicit close criteria.
+
+Private source-session paths and local goal paths are intentionally excluded
+from this public file. The private goal requires the final agent to re-read the
+source session and update the source decision audit before completion.
+
+| ID | Acceptance requirement | Current status | Evidence | Remaining blocker before final close |
+| --- | --- | --- | --- | --- |
+| GA-001 | Full source session read and every decision-bearing user answer reviewed one by one. | in_progress | [Dense Data Source Decision Audit](./dense-data-source-decision-audit.md) enumerates DQ-001..DQ-018 and is guarded by `scripts/verify-dense-data-goal.mjs`. | Final close must re-read the source JSONL and mark every DQ row complete or blocked with concrete evidence. |
+| GA-002 | Decision matrix maps decision -> implementation -> docs/canon -> tests -> evidence/blocker. | in_progress | [Dense Data Decision Matrix](./dense-data-decision-matrix.md) maps DD-001..DD-011 to implementation, canon, tests, and remaining work. | Remaining `in_progress` rows must be resolved or explicitly blocked before close. |
+| GA-003 | No old competing catalog, graph, evidence model, CRM, billing, ERP, or ops system remains active without integration or retirement. | in_progress | [Dense Data Existing Catalog Audit](./dense-data-existing-catalog-audit.md), `clawDenseDataOsRegistry.existingSurfaceIntegrations`, `entity_relations` as universal operational relation graph, and verifier checks for existing-surface rows. | Newly discovered duplicate surfaces during the pre-v1 reset must be integrated, retired, replaced, or added as explicit blockers. |
+| GA-004 | `core.sqlite` is the primary store for user-facing structured dense records. | implemented | Foundation mappings, dense direct CLI routes, `dense-fixtures seed`, and materialized semantic views route through the main DB/store and document `core.sqlite`. | Sidecar exceptions must remain limited to blobs, search indexes, secrets, high-churn runtime state, or other documented technical reasons. |
+| GA-005 | Top-level human CLI nouns exist for audited dense collections without requiring a domain prefix. | in_progress | Generated dense intents cover singular/plural routes such as `patient`, `invoice`, `case`, `company`, `sample`, `employee`, `content-entry`, `product-spec`, and `drug-product`; CLI tests cover representative routes. | Final close needs stronger evidence that every audited collection has either executable top-level routing or a documented gap. |
+| GA-006 | Recognizable professional areas are visible while sharing engines. | implemented | Dense systems registry exposes first-wave systems plus roadmap systems; shared engines include identity/profile, evidence/provenance, quality gaps, relation graph, semantic views, intent coverage, vocabulary/units, instruments, timelines, workflow, finance, and location. | Roadmap systems remain visible taxonomy until graduated; they must not be counted as fully implemented packs. |
+| GA-007 | Multiple reasonable CLI routes map to one canonical operation. | in_progress | Health, legal, HR, real estate, procurement, warehouse, supply chain, transport, compliance, government, product, pharma, content, IoT, construction, and ELN operations declare alternate routes and nested/direct forms. | Add broader operation-specific tests proving alternate routes converge for every graduated operation. |
+| GA-008 | Partial data is allowed and explicit gaps are queryable. | implemented | `quality_gaps`, `evidence_sources`, `provenance_events`, dense gap registry, `claw inspect dense-gaps`, materialized views with `partial`, and fixture coverage for partial-data gaps. | New provider/physical/regulatory packs must add explicit `external_pending` or quality-gap rows as they graduate. |
+| GA-009 | Minimal shared identity plus roles/profiles prevents duplicated people/entities. | in_progress | `people`, `domain_roles`, `domain_profiles`, patient/participant/legal-client/employee/learner/account profile centers, and existing-surface identity audit. | More cross-domain identity fixtures and smoke tests are needed before final close. |
+| GA-010 | Real orchestrators exist for dense domains, not empty portals. | in_progress | First-wave systems declare centers, operations, semantic views, shared engines, standards, and DB-backed routes; ERP/CRM/finance/ops have materialized overviews or timelines. | Some packs still need richer workflow execution and alternate-route tests. |
+| GA-011 | Required first wave is implemented: health/EHR, research/CTMS, biology, labs/LIMS, legal, ERP, CRM, finance/accounting, education/LMS, manufacturing/MES, ops/ITSM. | in_progress | Registry and verifier require these systems plus expanded first-wave domains; CLI tests cover representative DB-backed routes and semantic views. | Final close requires enough workflow depth and executable evidence to stop treating the first wave as representative only. |
+| GA-012 | Existing catalog is aggressively reaudited under pre-v1 reset rules. | in_progress | Existing catalog audit, structured integration registry, no-parallel-system docs, and verifier checks for required surfaces. | Any additional duplicated or stale surfaces found during continued reset must be resolved rather than left as legacy. |
+| GA-013 | Guardrails landed before claiming completion. | implemented | `assertClawDenseDataOsRegistryComplete`, `dense-data-os.test.ts`, `domain-surface-registry.test.ts`, `inspect-cli.test.ts`, `cli-discovery.test.ts`, and `scripts/verify-dense-data-goal.mjs`. | Guardrails must keep expanding with every new pack graduation. |
+| GA-014 | Inspect/discovery exposes DB, catalog, systems, intents, gaps, semantic views, fixtures, and existing-surface integration coherently. | in_progress | `claw inspect dense-data`, `dense-gaps`, `dense-intents`, `dense-views`, `dense-fixtures`, `dense-fixtures seed`, CLI docs, and decision map. | Add direct discovery smoke for any new inspect surface or pack-specific route introduced later. |
+| GA-015 | Semantic views are materialized where the pack has enough local data. | in_progress | Materialized timelines/overviews cover patient, study, sample, experiment, case, service, learner, course, employee, property, insurance policy, vehicle, purchase order, warehouse, supply plan, shipment, control, public case, product spec, drug product, content entry, thing, construction project, lab notebook, company, asset, work order, invoice list, ERP company overview, CRM account overview, and finance entity overview. | Remaining first-wave views without enough execution depth must be materialized or explicitly marked as contract-only gaps. |
+| GA-016 | Fixtures cover patient, study, sample, legal case, invoice/company, incident/service, course, manufacturing work order, evidence/provenance, and partial-data gaps. | implemented | `clawDenseDataAcceptanceFixture`, `dense-fixtures seed`, fixture verifier rows, and CLI fixture seed tests. | New pack graduations must extend fixture coverage. |
+| GA-017 | EXTERNAL PENDING is separated from bugs for provider, physical, regulated, cost-bearing, and live-service requirements. | implemented | `externalPendingRequirements`, dense gap registry, quality-gap fixture rows, docs using `EXTERNAL PENDING`, and verifier checks for health/labs/research/ERP/ops/IoT/ELN/pharma/content blockers. | Live/provider validation remains outside local proof until explicitly approved and brokered. |
+| GA-018 | Final close must prove completion requirement-by-requirement, not by broad green tests. | in_progress | This audit, the source decision audit, decision matrix, existing catalog audit, and verifier prevent missing rows. | Before calling the goal complete, every `in_progress` row here must become implemented or external_pending with evidence. |
+
+## Final-Close Rule
+
+This file is not a completion claim. It is a checklist that keeps the full
+goal intact across turns. The goal remains active while any row is
+`in_progress`.
