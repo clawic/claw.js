@@ -262,6 +262,7 @@ export function openMainDataStore(env: NodeJS.ProcessEnv = process.env): Databas
 }
 export function ensureV1MainSchema(sqlite: Database.Database): void {
   sqlite.exec(V1_MAIN_SCHEMA_SQL);
+  migrateAgentIncidentsV1Schema(sqlite);
   ensureColumn(sqlite, "app_projects", "resource_id", "TEXT");
   sqlite.prepare("CREATE INDEX IF NOT EXISTS app_projects_resource_id_idx ON app_projects(resource_id) WHERE resource_id IS NOT NULL").run();
   ensureColumn(sqlite, "signals_observations", "page_id", "TEXT");
@@ -298,6 +299,115 @@ export function ensureV1MainSchema(sqlite: Database.Database): void {
   `).run(PROFILE_ID, JSON.stringify(PROFILE_ID), nowIso());
   seedSidecarRegistry(sqlite);
   ensureV2Sidecars();
+}
+
+function migrateAgentIncidentsV1Schema(sqlite: Database.Database): void {
+  const columns = sqlite.prepare("PRAGMA table_info(agent_incidents)").all() as Array<{ name: string; notnull: number; dflt_value: string | null }>;
+  if (columns.length === 0) return;
+  const byName = new Map(columns.map((column) => [column.name, column]));
+  const needsMigration =
+    byName.has("title") ||
+    byName.has("customer_impact") ||
+    !byName.has("run_id") ||
+    !byName.has("session_id") ||
+    !byName.has("actor_id") ||
+    !byName.has("detected_at") ||
+    byName.get("summary")?.notnull !== 1 ||
+    byName.get("severity")?.dflt_value === "'sev4'";
+  if (!needsMigration) return;
+
+  const has = (name: string) => byName.has(name);
+  const columnOrNull = (name: string) => has(name) ? quoteIdent(name) : "NULL";
+  const columnOrDefault = (name: string, fallback: string) => has(name) ? quoteIdent(name) : fallback;
+  const summaryExpr = has("summary") && has("title")
+    ? "COALESCE(NULLIF(summary, ''), NULLIF(title, ''), 'Agent incident')"
+    : has("summary")
+      ? "COALESCE(NULLIF(summary, ''), 'Agent incident')"
+      : has("title")
+        ? "COALESCE(NULLIF(title, ''), 'Agent incident')"
+        : "'Agent incident'";
+  const descriptionExpr = has("description") && has("customer_impact")
+    ? "COALESCE(description, customer_impact)"
+    : columnOrNull(has("description") ? "description" : "customer_impact");
+  const statusExpr = has("status")
+    ? "CASE status WHEN 'investigating' THEN 'mitigating' WHEN 'closed' THEN 'archived' ELSE COALESCE(status, 'open') END"
+    : "'open'";
+  const severityExpr = has("severity")
+    ? "CASE severity WHEN 'sev1' THEN 'critical' WHEN 'sev2' THEN 'high' WHEN 'sev3' THEN 'medium' WHEN 'sev4' THEN 'low' ELSE COALESCE(severity, 'low') END"
+    : "'low'";
+  const fallbackTimestamp = sqlLiteral(nowIso());
+
+  sqlite.pragma("foreign_keys = OFF");
+  const migrate = sqlite.transaction(() => {
+    sqlite.exec("DROP TABLE IF EXISTS agent_incidents_v1_new");
+    sqlite.exec(`
+      CREATE TABLE agent_incidents_v1_new (
+        id TEXT PRIMARY KEY,
+        agent_id TEXT NOT NULL,
+        assignment_id TEXT,
+        run_id TEXT,
+        session_id TEXT,
+        actor_id TEXT,
+        status TEXT NOT NULL DEFAULT 'open',
+        severity TEXT NOT NULL DEFAULT 'low',
+        summary TEXT NOT NULL,
+        description TEXT,
+        scope_type TEXT,
+        scope_id TEXT,
+        redaction_json TEXT NOT NULL DEFAULT '{}',
+        detected_at TEXT,
+        resolved_at TEXT,
+        metadata_json TEXT NOT NULL DEFAULT '{}',
+        archived_at TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
+        FOREIGN KEY (assignment_id) REFERENCES agent_assignments(id) ON DELETE SET NULL,
+        FOREIGN KEY (run_id) REFERENCES agent_runs(id) ON DELETE SET NULL
+      );
+    `);
+    sqlite.exec(`
+      INSERT INTO agent_incidents_v1_new (
+        id, agent_id, assignment_id, run_id, session_id, actor_id, status,
+        severity, summary, description, scope_type, scope_id, redaction_json,
+        detected_at, resolved_at, metadata_json, archived_at, created_at, updated_at
+      )
+      SELECT
+        id,
+        agent_id,
+        ${columnOrNull("assignment_id")},
+        ${columnOrNull("run_id")},
+        ${columnOrNull("session_id")},
+        ${columnOrNull("actor_id")},
+        ${statusExpr},
+        ${severityExpr},
+        ${summaryExpr},
+        ${descriptionExpr},
+        ${columnOrNull("scope_type")},
+        ${columnOrNull("scope_id")},
+        COALESCE(${columnOrDefault("redaction_json", "NULL")}, '{}'),
+        COALESCE(${columnOrDefault("detected_at", "NULL")}, ${columnOrDefault("created_at", "NULL")}),
+        ${columnOrNull("resolved_at")},
+        COALESCE(${columnOrDefault("metadata_json", "NULL")}, '{}'),
+        ${columnOrNull("archived_at")},
+        COALESCE(${columnOrDefault("created_at", "NULL")}, ${fallbackTimestamp}),
+        COALESCE(${columnOrDefault("updated_at", "NULL")}, ${fallbackTimestamp})
+      FROM agent_incidents;
+    `);
+    sqlite.exec("DROP TABLE agent_incidents");
+    sqlite.exec("ALTER TABLE agent_incidents_v1_new RENAME TO agent_incidents");
+    sqlite.exec("CREATE INDEX IF NOT EXISTS agent_incidents_agent_idx ON agent_incidents(agent_id)");
+    sqlite.exec("CREATE INDEX IF NOT EXISTS agent_incidents_status_idx ON agent_incidents(status, severity)");
+  });
+  try {
+    migrate();
+  } finally {
+    sqlite.pragma("foreign_keys = ON");
+  }
+}
+
+function sqlLiteral(value: string): string {
+  return `'${value.replace(/'/g, "''")}'`;
 }
 
 function ensureV1Collections(store: DatabaseServiceStore): void {

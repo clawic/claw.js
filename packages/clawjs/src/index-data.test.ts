@@ -387,6 +387,65 @@ test("V2 main schema upgrades app project resource ids before indexing them", as
   });
 });
 
+test("V2 main schema migrates legacy agent incidents into Agents V1 shape", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-agent-incident-upgrade-"));
+  await withPatchedEnv({ CLAW_DATA_DIR: tempRoot }, async () => {
+    const sqlite = new Database(":memory:");
+    try {
+      sqlite.exec(`
+        CREATE TABLE agent_incidents (
+          id TEXT PRIMARY KEY,
+          agent_id TEXT NOT NULL,
+          assignment_id TEXT,
+          status TEXT NOT NULL DEFAULT 'open',
+          severity TEXT NOT NULL DEFAULT 'sev4',
+          title TEXT NOT NULL,
+          summary TEXT,
+          customer_impact TEXT,
+          redaction_json TEXT NOT NULL DEFAULT '{}',
+          resolved_at TEXT,
+          metadata_json TEXT NOT NULL DEFAULT '{}',
+          archived_at TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        INSERT INTO agent_incidents (
+          id, agent_id, assignment_id, status, severity, title, summary,
+          customer_impact, redaction_json, metadata_json, created_at, updated_at
+        ) VALUES (
+          'incident.legacy', 'agent.support', 'assignment.web',
+          'investigating', 'sev1', 'Legacy title', '',
+          'Customer impact text', '{}', '{}',
+          '2026-05-17T10:00:00.000Z', '2026-05-17T10:01:00.000Z'
+        );
+      `);
+      ensureV1MainSchema(sqlite);
+      const columns = sqlite.prepare("PRAGMA table_info(agent_incidents)").all() as Array<{ name: string; dflt_value: string | null; notnull: number }>;
+      assert.equal(columns.some((column) => column.name === "title"), false);
+      assert.equal(columns.some((column) => column.name === "customer_impact"), false);
+      assert.equal(columns.some((column) => column.name === "run_id"), true);
+      assert.equal(columns.find((column) => column.name === "summary")?.notnull, 1);
+      const row = sqlite.prepare("SELECT status, severity, summary, description, detected_at FROM agent_incidents WHERE id = ?").get("incident.legacy") as {
+        status: string;
+        severity: string;
+        summary: string;
+        description: string;
+        detected_at: string;
+      };
+      assert.deepEqual(row, {
+        status: "mitigating",
+        severity: "critical",
+        summary: "Legacy title",
+        description: "Customer impact text",
+        detected_at: "2026-05-17T10:00:00.000Z",
+      });
+    } finally {
+      sqlite.close();
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+});
+
 test("runCli manages V2 knowledge, notes, profile, business, and search domains in the main sqlite", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-data-"));
   await withPatchedEnv({
