@@ -20,6 +20,7 @@ const requiredDocs = [
   "docs/mac-control-plane.md",
   "docs/mac-control-plane-source-decision-audit.md",
   "docs/mac-control-plane-decision-matrix.md",
+  "docs/mac-native-legacy-audit.md",
   "docs/mac-native-usage-allowlist.json",
   "docs/adr/0023-mac-control-plane-v1.md",
   "docs/adr/0024-mac-permission-broker-v1.md",
@@ -170,8 +171,13 @@ for (const snippet of ["Mac Action Broker", "Mac Permission Broker", "Related su
 }
 
 const macDocs = readRequired("docs/mac-control-plane.md");
-for (const snippet of ["Related surfaces", "mac.directCliAction", "mac.permissionLifecycle", "claw permissions", "MAC_PROGRAMMATIC_SURFACES", "mac.execute", "/v1/mac/execute", "claw.mac.execute"]) {
+for (const snippet of ["Related surfaces", "mac.directCliAction", "mac.permissionLifecycle", "claw permissions", "MAC_PROGRAMMATIC_SURFACES", "mac.execute", "/v1/mac/execute", "claw.mac.execute", "docs/mac-native-legacy-audit.md"]) {
   requireNormalizedText("Mac Control Plane docs", macDocs, snippet);
+}
+
+const legacyAudit = readRequired("docs/mac-native-legacy-audit.md");
+for (const snippet of ["MNL-001", "MNL-002", "MNL-003", "MNL-004", "MNL-005", "MNL-006", "MNL-007", "MNL-008", "`Commander*` names that remain in Swift are private implementation names only"]) {
+  requireText("Mac native legacy audit", legacyAudit, snippet);
 }
 
 const apiDocs = readRequired("docs/api.md");

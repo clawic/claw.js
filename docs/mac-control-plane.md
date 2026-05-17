@@ -11,6 +11,8 @@ Source decisions are tracked in [Mac Control Plane Source Decision Audit](./mac-
 and [Mac Control Plane Decision Matrix](./mac-control-plane-decision-matrix.md).
 Agents working on this surface should use
 `skills/mac-control-plane-work/SKILL.md`.
+Native legacy debt is tracked in
+[Mac Native Legacy Audit](./mac-native-legacy-audit.md).
 
 ## Public Shape
 
@@ -32,6 +34,7 @@ Agents working on this surface should use
   macOS commands outside the Mac Action Broker allowlist.
 - Temporary sensitive native usage is registered in
   `docs/mac-native-usage-allowlist.json` with owner, reason, expiry, and tests.
+- Legacy native host paths are tracked in `docs/mac-native-legacy-audit.md`.
 - Permission prompts are just-in-time. Missing permissions return a plan and
   guidance; they do not trigger surprise native prompts.
 - The most restrictive policy wins across host, role, user, agent, assignment,
