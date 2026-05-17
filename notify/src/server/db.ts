@@ -1444,7 +1444,7 @@ export class NotifyServiceStore {
   }
 }
 
-export function matchesSubscription(
+function matchesSubscription(
   subscription: SubscriptionRecord,
   input: {
     sourceAppId: string;

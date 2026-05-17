@@ -2,7 +2,7 @@ import { createHash, createSecretKey } from "node:crypto";
 
 import { SignJWT, jwtVerify } from "jose";
 
-export interface NotifyAdminClaims {
+interface NotifyAdminClaims {
   kind: "admin";
   sub: string;
   email: string;

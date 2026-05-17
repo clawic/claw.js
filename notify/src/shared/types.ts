@@ -1,6 +1,6 @@
 export type NotificationDeliveryMode = "alert" | "silent" | "glance";
 export type NotificationPriority = "passive" | "normal" | "time-sensitive" | "critical";
-export type DeliveryState = "queued" | "delivered" | "read" | "acked" | "cancelled" | "expired" | "failed";
+type DeliveryState = "queued" | "delivered" | "read" | "acked" | "cancelled" | "expired" | "failed";
 export type SubscriptionAction = "allow" | "mute";
 export type ClientPlatform = "ios" | "android";
 
