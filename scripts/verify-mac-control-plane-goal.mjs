@@ -179,6 +179,18 @@ const legacyAudit = readRequired("docs/mac-native-legacy-audit.md");
 for (const snippet of ["MNL-001", "MNL-002", "MNL-003", "MNL-004", "MNL-005", "MNL-006", "MNL-007", "MNL-008", "`Commander*` names that remain in Swift are private implementation names only"]) {
   requireText("Mac native legacy audit", legacyAudit, snippet);
 }
+for (const snippet of [
+  "retained-non-mac-control",
+  "permission-broker-covered",
+  "retained-installer-only",
+  "retained-process-helper",
+  "allowlisted-computer-use",
+  "MacControlPermissionID.calendar",
+  "MacControlPermissionID.contacts",
+  "MacControlPermissionID.reminders",
+]) {
+  requireText("Mac native legacy audit dispositions", legacyAudit, snippet);
+}
 
 const apiDocs = readRequired("docs/api.md");
 for (const snippet of ["claw.mac", "/v1/mac/plan", "mac.plan"]) {

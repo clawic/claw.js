@@ -1,7 +1,9 @@
 import AppKit
 import ApplicationServices
 import AVFoundation
+import Contacts
 import CoreWLAN
+import EventKit
 import Foundation
 import IOKit.hid
 import Speech
@@ -31,6 +33,9 @@ public enum MacControlPermissionID: String, CaseIterable, Codable, Sendable {
     case accessibility = "mac.permission.accessibility"
     case inputMonitoring = "mac.permission.input_monitoring"
     case automationAppleEvents = "mac.permission.automation_apple_events"
+    case contacts = "mac.permission.contacts"
+    case calendar = "mac.permission.calendar"
+    case reminders = "mac.permission.reminders"
 }
 
 public enum MacControlPermissionStatus: String, Codable, Sendable {
@@ -68,6 +73,12 @@ public enum MacControlPermissionBroker {
             }
         case .automationAppleEvents:
             return .notDetermined
+        case .contacts:
+            return contactsStatus(CNContactStore.authorizationStatus(for: .contacts))
+        case .calendar:
+            return eventKitStatus(EKEventStore.authorizationStatus(for: .event))
+        case .reminders:
+            return eventKitStatus(EKEventStore.authorizationStatus(for: .reminder))
         }
     }
 
@@ -93,6 +104,12 @@ public enum MacControlPermissionBroker {
             return IOHIDRequestAccess(kIOHIDRequestTypeListenEvent)
         case .automationAppleEvents:
             return false
+        case .contacts:
+            return await requestContacts()
+        case .calendar:
+            return await requestEventKit(.event)
+        case .reminders:
+            return await requestEventKit(.reminder)
         }
     }
 
@@ -111,6 +128,12 @@ public enum MacControlPermissionBroker {
             url = "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent"
         case .automationAppleEvents:
             url = "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation"
+        case .contacts:
+            url = "x-apple.systempreferences:com.apple.preference.security?Privacy_Contacts"
+        case .calendar:
+            url = "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars"
+        case .reminders:
+            url = "x-apple.systempreferences:com.apple.preference.security?Privacy_Reminders"
         }
         guard let parsed = URL(string: url) else { return }
         NSWorkspace.shared.open(parsed)
@@ -129,6 +152,60 @@ public enum MacControlPermissionBroker {
         await withCheckedContinuation { continuation in
             AVCaptureDevice.requestAccess(for: mediaType) { granted in
                 continuation.resume(returning: granted)
+            }
+        }
+    }
+
+    private static func contactsStatus(_ status: CNAuthorizationStatus) -> MacControlPermissionStatus {
+        switch status {
+        case .authorized: return .granted
+        case .denied, .restricted: return .denied
+        case .notDetermined: return .notDetermined
+        @unknown default: return .notDetermined
+        }
+    }
+
+    private static func requestContacts() async -> Bool {
+        await withCheckedContinuation { continuation in
+            CNContactStore().requestAccess(for: .contacts) { granted, _ in
+                continuation.resume(returning: granted)
+            }
+        }
+    }
+
+    private static func eventKitStatus(_ status: EKAuthorizationStatus) -> MacControlPermissionStatus {
+        switch status {
+        case .authorized, .fullAccess, .writeOnly:
+            return .granted
+        case .denied, .restricted:
+            return .denied
+        case .notDetermined:
+            return .notDetermined
+        @unknown default:
+            return .notDetermined
+        }
+    }
+
+    private static func requestEventKit(_ entityType: EKEntityType) async -> Bool {
+        let store = EKEventStore()
+        return await withCheckedContinuation { continuation in
+            if #available(macOS 14.0, *) {
+                switch entityType {
+                case .event:
+                    store.requestFullAccessToEvents { granted, _ in
+                        continuation.resume(returning: granted)
+                    }
+                case .reminder:
+                    store.requestFullAccessToReminders { granted, _ in
+                        continuation.resume(returning: granted)
+                    }
+                @unknown default:
+                    continuation.resume(returning: false)
+                }
+            } else {
+                store.requestAccess(to: entityType) { granted, _ in
+                    continuation.resume(returning: granted)
+                }
             }
         }
     }

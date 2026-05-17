@@ -27,6 +27,12 @@ final class MacControlTests: XCTestCase {
         XCTAssertEqual(plan.steps.first?.arguments, ["-setairportnetwork", "en0", "Office"])
     }
 
+    func testMacPermissionBrokerCoversPrivacyDataDomains() {
+        XCTAssertTrue(MacControlPermissionID.allCases.contains(.calendar))
+        XCTAssertTrue(MacControlPermissionID.allCases.contains(.contacts))
+        XCTAssertTrue(MacControlPermissionID.allCases.contains(.reminders))
+    }
+
     func testWifiDisconnectUsesNativeCoreWlanStepWithContinuityBreaker() throws {
         let request = MacControlActionRequest(
             requestId: "macreq_test_wifi_disconnect",
