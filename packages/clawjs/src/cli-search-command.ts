@@ -163,6 +163,8 @@ export async function runSearchQueryCli(input: {
     const shouldRefreshGenerations = domains?.includes("generations") || sources?.includes("generations.artifacts");
     const shouldRefreshCode = domains?.includes("code") || sources?.includes("code.symbols");
     const shouldRefreshSkills = domains?.includes("skills") || sources?.includes("skills.registry");
+    const shouldRefreshProviders = domains?.includes("providers") || sources?.includes("providers.routing");
+    const shouldRefreshSnippets = domains?.includes("snippets") || sources?.includes("snippets.library");
     const shouldRefreshConnectors = domains?.includes("connectors") || sources?.includes("connectors.catalog");
     const shouldRefreshMcp = domains?.includes("mcp") || sources?.includes("mcp.servers");
     const shouldRefreshApps = domains?.includes("apps") || sources?.includes("apps.catalog");
@@ -184,6 +186,8 @@ export async function runSearchQueryCli(input: {
     const indexedGenerations = shouldRefreshGenerations && sourceCanIndex(store, "generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedCode = shouldRefreshCode && sourceCanIndex(store, "code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedSkills = shouldRefreshSkills && sourceCanIndex(store, "skills.registry") ? ensureSkillsRegistrySourceIndexed(store, input.flags) : 0;
+    const indexedProviders = shouldRefreshProviders && sourceCanIndex(store, "providers.routing") ? ensureProvidersRoutingSourceIndexed(store, input.flags) : 0;
+    const indexedSnippets = shouldRefreshSnippets && sourceCanIndex(store, "snippets.library") ? ensureSnippetsLibrarySourceIndexed(store, input.flags) : 0;
     const indexedConnectors = shouldRefreshConnectors && sourceCanIndex(store, "connectors.catalog") ? ensureConnectorsCatalogSourceIndexed(store, input.flags) : 0;
     const indexedMcp = shouldRefreshMcp && sourceCanIndex(store, "mcp.servers") ? ensureMcpServersSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedApps = shouldRefreshApps && sourceCanIndex(store, "apps.catalog") ? ensureAppsCatalogSourceIndexed(store, input.flags) : 0;
@@ -271,6 +275,8 @@ export async function runSearchQueryCli(input: {
         ...(shouldRefreshGenerations ? { "generations.artifacts": indexedGenerations } : {}),
         ...(shouldRefreshCode ? { "code.symbols": indexedCode } : {}),
         ...(shouldRefreshSkills ? { "skills.registry": indexedSkills } : {}),
+        ...(shouldRefreshProviders ? { "providers.routing": indexedProviders } : {}),
+        ...(shouldRefreshSnippets ? { "snippets.library": indexedSnippets } : {}),
         ...(shouldRefreshConnectors ? { "connectors.catalog": indexedConnectors } : {}),
         ...(shouldRefreshMcp ? { "mcp.servers": indexedMcp } : {}),
         ...(shouldRefreshApps ? { "apps.catalog": indexedApps } : {}),

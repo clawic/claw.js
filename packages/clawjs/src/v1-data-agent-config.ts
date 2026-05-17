@@ -10,12 +10,14 @@ import {
   normalizeDbRow,
   nowIso,
   parseCsvOrJson,
+  resolveClawjsDataRoot,
   truthy,
   usage,
   usageError,
   writeSuccess,
 } from "./v1-data-core.ts";
 import type { V1DataCliInput } from "./v1-data-core.ts";
+import { scheduleProvidersRoutingSearchEvent, scheduleSnippetsLibrarySearchEvent } from "./cli-search-events.ts";
 
 export function runProviderRoutingCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
   const area = input.positionals[1];
@@ -55,6 +57,15 @@ export function runProviderRoutingCommand(input: V1DataCliInput, store: Database
       now,
       now,
     );
+    scheduleProvidersRoutingSearchEvent({
+      operation: "upsert",
+      kind: "routing",
+      feature,
+      capability,
+      provider,
+      dataDir: resolveClawjsDataRoot(),
+      flags: input.flags,
+    });
     writeSuccess(input, {
       id,
       feature,
@@ -73,6 +84,16 @@ export function runProviderRoutingCommand(input: V1DataCliInput, store: Database
       return usageError(input, "Usage: claw providers routing delete FEATURE --capability CAP [--json]");
     }
     const changes = store.sqlite.prepare("DELETE FROM provider_routing WHERE feature = ? AND capability = ?").run(feature, capability).changes;
+    if (changes > 0) {
+      scheduleProvidersRoutingSearchEvent({
+        operation: "delete",
+        kind: "routing",
+        feature,
+        capability,
+        dataDir: resolveClawjsDataRoot(),
+        flags: input.flags,
+      });
+    }
     writeSuccess(input, { feature, capability, deleted: changes > 0 });
     return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
@@ -108,6 +129,13 @@ function runProviderSettingsCommand(input: V1DataCliInput, store: DatabaseServic
       now,
       now,
     );
+    scheduleProvidersRoutingSearchEvent({
+      operation: "upsert",
+      kind: "setting",
+      provider,
+      dataDir: resolveClawjsDataRoot(),
+      flags: input.flags,
+    });
     writeSuccess(input, {
       id,
       provider,
@@ -157,6 +185,12 @@ export function runSnippetsCommand(input: V1DataCliInput, store: DatabaseService
       now,
       now,
     );
+    scheduleSnippetsLibrarySearchEvent({
+      operation: "upsert",
+      slug,
+      dataDir: resolveClawjsDataRoot(),
+      flags: input.flags,
+    });
     writeSuccess(input, {
       slug,
       title,
@@ -173,6 +207,14 @@ export function runSnippetsCommand(input: V1DataCliInput, store: DatabaseService
       return usageError(input, "Usage: claw snippets delete SLUG [--json]");
     }
     const changes = store.sqlite.prepare("DELETE FROM snippets WHERE slug = ?").run(slug).changes;
+    if (changes > 0) {
+      scheduleSnippetsLibrarySearchEvent({
+        operation: "delete",
+        slug,
+        dataDir: resolveClawjsDataRoot(),
+        flags: input.flags,
+      });
+    }
     writeSuccess(input, { slug, deleted: changes > 0 });
     return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
