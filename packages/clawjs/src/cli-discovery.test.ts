@@ -127,6 +127,28 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(gapsPayload.data.coverage.executable, true);
   assert.equal(gapsPayload.data.registry.systems.some((system) => system.id === "health"), true);
 
+  const patientTimeline = await runCliCapture(["patient", createdPatient.data.id, "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(patientTimeline.code, CLI_EXIT_OK);
+  const patientTimelinePayload = JSON.parse(patientTimeline.stdout) as {
+    data: {
+      coverage: { executable: boolean; implementationStatus: string; recordsMaterialized: boolean };
+      semanticView: { id: string; systemId: string; commandPattern: string };
+      view: { operationId: string; requiredInputs: string[]; createsOrReads: string[] };
+    };
+    meta: { denseData: boolean; semanticView: boolean };
+  };
+  assert.equal(patientTimelinePayload.meta.denseData, true);
+  assert.equal(patientTimelinePayload.meta.semanticView, true);
+  assert.equal(patientTimelinePayload.data.coverage.executable, true);
+  assert.equal(patientTimelinePayload.data.coverage.implementationStatus, "semantic_view_contract");
+  assert.equal(patientTimelinePayload.data.coverage.recordsMaterialized, false);
+  assert.equal(patientTimelinePayload.data.semanticView.id, "patient.timeline");
+  assert.equal(patientTimelinePayload.data.semanticView.systemId, "health");
+  assert.equal(patientTimelinePayload.data.semanticView.commandPattern, "claw patient <id> timeline");
+  assert.equal(patientTimelinePayload.data.view.operationId, "patient.timeline");
+  assert.deepEqual(patientTimelinePayload.data.view.requiredInputs, ["patient_id"]);
+  assert.equal(patientTimelinePayload.data.view.createsOrReads.includes("timeline_view"), true);
+
   const companyCreate = await runCliCapture(["company", "create", "Acme Corp", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(companyCreate.code, CLI_EXIT_OK);
   const companyPayload = JSON.parse(companyCreate.stdout) as { data: { id: string; name: string }; meta: { collection: string; action: string } };

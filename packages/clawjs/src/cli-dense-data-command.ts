@@ -1,6 +1,7 @@
 import {
   clawDenseDataOsRegistry,
   findClawDenseDataSystem,
+  listClawDenseDataSemanticViewEntries,
   resolveBuiltinCollectionName,
   resolveClawDenseDataIntent,
 } from "@clawjs/core";
@@ -113,6 +114,45 @@ export async function runDenseDataCli(input: DenseDataCliInput): Promise<number 
     });
   }
 
+  const semanticView = semanticViewForIntent(intent);
+  if (semanticView) {
+    const payload = {
+      intent,
+      semanticView,
+      coverage: {
+        routeKnown: true,
+        executable: true,
+        databaseConnected: false,
+        recordsMaterialized: false,
+        store: "core.sqlite",
+        implementationStatus: "semantic_view_contract",
+      },
+      view: {
+        id: semanticView.id,
+        label: semanticView.label,
+        operationId: semanticView.operationId,
+        requiredInputs: semanticView.requiredInputs,
+        outputShape: semanticView.outputShape,
+        createsOrReads: intent.operation?.createsOrReads ?? [],
+      },
+      gap: null,
+      registry: denseRegistryPayload(intent.system?.id, group, action),
+    };
+    if (input.wantsJson) {
+      writeJsonOk(input.context.stdout, payload, {
+        schemaVersion: 1,
+        canonicalCommand: intent.center?.commandNoun ?? intent.system?.canonicalCommand ?? group,
+        invokedCommand: group,
+        subcommand: action,
+        denseData: true,
+        semanticView: true,
+      });
+    } else {
+      input.context.stdout.write(renderDenseSemanticView(payload.view));
+    }
+    return CLI_EXIT_OK;
+  }
+
   const inspectionAction = INSPECTION_ACTIONS.has(action);
   if (!inspectionAction && !CRUD_ACTIONS.has(action) && !intent.operation) return null;
   const payload = {
@@ -150,6 +190,11 @@ export async function runDenseDataCli(input: DenseDataCliInput): Promise<number 
   }
 
   return inspectionAction ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+}
+
+function semanticViewForIntent(intent: ReturnType<typeof resolveClawDenseDataIntent>) {
+  if (!intent.system || !intent.operation) return undefined;
+  return listClawDenseDataSemanticViewEntries().find((entry) => entry.systemId === intent.system?.id && entry.operationId === intent.operation?.id);
 }
 
 function collectionForDenseRoute(command: string | undefined, centerCollectionName: string | undefined): string | undefined {
@@ -332,4 +377,13 @@ function renderDenseInspection(registry: ReturnType<typeof denseRegistryPayload>
     centers: system.centers.map((center) => center.commandNoun).join(", "),
   }));
   return `${formatCliTable(rows)}\n`;
+}
+
+function renderDenseSemanticView(view: { id: string; label: string; operationId: string; requiredInputs: string[]; outputShape: string; createsOrReads: string[] }): string {
+  return `${formatCliTable([{
+    id: view.id,
+    operation: view.operationId,
+    inputs: view.requiredInputs.join(", "),
+    data: view.createsOrReads.join(", "),
+  }])}\n`;
 }
