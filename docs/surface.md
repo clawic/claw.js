@@ -2528,6 +2528,7 @@ The docs check script validates that every current export from
     createRemoteAgentServiceExecutionReceipt
     createRemoteGatewayAuditReceipt
     createRemoteSecretProviderReceipt
+    createSyncDriverApplicationReceipt
     createSyncResourceManifest
     createTransportHandshakeReceipt
     evaluateRemoteAgentServiceAccess
@@ -2607,6 +2608,8 @@ The docs check script validates that every current export from
     SyncCursor
     syncCursorSchema
     SyncDriver
+    SyncDriverApplicationReceipt
+    syncDriverApplicationReceiptSchema
     syncDriverSchema
     SyncObjectSnapshot
     syncObjectSnapshotSchema
