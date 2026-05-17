@@ -909,6 +909,91 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(thingTimelinePayload.data.materializedView.itemCount >= 5, true);
   assert.equal(thingTimelinePayload.data.materializedView.items.some((item) => item.kind === "sensor_reading" && item.label === "vibration"), true);
 
+  const constructionProjectCreate = await runCliCapture(["construction-project", "create", "Lab buildout", "--company", companyPayload.data.id, "--customer", companyPayload.data.id, "--budget-cents", "25000000", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(constructionProjectCreate.code, CLI_EXIT_OK, constructionProjectCreate.stderr || constructionProjectCreate.stdout);
+  const constructionProjectPayload = JSON.parse(constructionProjectCreate.stdout) as { data: { id: string; title: string; companyId: string; customerCompanyId: string; budgetCents: number; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(constructionProjectPayload.meta.invokedCommand, "construction-project");
+  assert.equal(constructionProjectPayload.meta.collection, "construction_projects");
+  assert.equal(constructionProjectPayload.meta.action, "create");
+  assert.equal(constructionProjectPayload.data.title, "Lab buildout");
+  assert.equal(constructionProjectPayload.data.companyId, companyPayload.data.id);
+  assert.equal(constructionProjectPayload.data.customerCompanyId, companyPayload.data.id);
+  assert.equal(constructionProjectPayload.data.budgetCents, 25000000);
+  assert.equal(constructionProjectPayload.data.status, "planning");
+
+  const constructionSiteCreate = await runCliCapture(["construction-project", constructionProjectPayload.data.id, "sites", "add", "Lab site", "--property-listing-id", propertyPayload.data.id, "--superintendent-employee-id", employeePayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(constructionSiteCreate.code, CLI_EXIT_OK, constructionSiteCreate.stderr || constructionSiteCreate.stdout);
+  const constructionSitePayload = JSON.parse(constructionSiteCreate.stdout) as { data: { id: string; name: string; projectId: string; propertyListingId: string; superintendentEmployeeId: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(constructionSitePayload.meta.invokedCommand, "construction-project");
+  assert.equal(constructionSitePayload.meta.collection, "construction_sites");
+  assert.equal(constructionSitePayload.meta.action, "create");
+  assert.equal(constructionSitePayload.data.name, "Lab site");
+  assert.equal(constructionSitePayload.data.projectId, constructionProjectPayload.data.id);
+  assert.equal(constructionSitePayload.data.propertyListingId, propertyPayload.data.id);
+  assert.equal(constructionSitePayload.data.superintendentEmployeeId, employeePayload.data.id);
+  assert.equal(constructionSitePayload.data.status, "planned");
+
+  const constructionRfiCreate = await runCliCapture(["construction-project", constructionProjectPayload.data.id, "rfis", "add", "Ventilation clarification", "--site", constructionSitePayload.data.id, "--number", "RFI-001", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(constructionRfiCreate.code, CLI_EXIT_OK, constructionRfiCreate.stderr || constructionRfiCreate.stdout);
+  const constructionRfiPayload = JSON.parse(constructionRfiCreate.stdout) as { data: { id: string; title: string; projectId: string; siteId: string; number: string; status: string; requestedAt: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(constructionRfiPayload.meta.invokedCommand, "construction-project");
+  assert.equal(constructionRfiPayload.meta.collection, "construction_rfis");
+  assert.equal(constructionRfiPayload.meta.action, "create");
+  assert.equal(constructionRfiPayload.data.title, "Ventilation clarification");
+  assert.equal(constructionRfiPayload.data.projectId, constructionProjectPayload.data.id);
+  assert.equal(constructionRfiPayload.data.siteId, constructionSitePayload.data.id);
+  assert.equal(constructionRfiPayload.data.number, "RFI-001");
+  assert.equal(constructionRfiPayload.data.status, "open");
+  assert.equal(typeof constructionRfiPayload.data.requestedAt, "string");
+
+  const changeOrderCreate = await runCliCapture(["construction-project", constructionProjectPayload.data.id, "change-orders", "add", "Ventilation upgrade", "--site", constructionSitePayload.data.id, "--rfi", constructionRfiPayload.data.id, "--amount-cents", "1200000", "--schedule-impact-days", "5", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(changeOrderCreate.code, CLI_EXIT_OK, changeOrderCreate.stderr || changeOrderCreate.stdout);
+  const changeOrderPayload = JSON.parse(changeOrderCreate.stdout) as { data: { id: string; title: string; projectId: string; siteId: string; relatedRfiId: string; amountCents: number; scheduleImpactDays: number; status: string; submittedAt: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(changeOrderPayload.meta.invokedCommand, "construction-project");
+  assert.equal(changeOrderPayload.meta.collection, "construction_change_orders");
+  assert.equal(changeOrderPayload.meta.action, "create");
+  assert.equal(changeOrderPayload.data.title, "Ventilation upgrade");
+  assert.equal(changeOrderPayload.data.projectId, constructionProjectPayload.data.id);
+  assert.equal(changeOrderPayload.data.siteId, constructionSitePayload.data.id);
+  assert.equal(changeOrderPayload.data.relatedRfiId, constructionRfiPayload.data.id);
+  assert.equal(changeOrderPayload.data.amountCents, 1200000);
+  assert.equal(changeOrderPayload.data.scheduleImpactDays, 5);
+  assert.equal(changeOrderPayload.data.status, "draft");
+  assert.equal(typeof changeOrderPayload.data.submittedAt, "string");
+
+  const constructionTimeline = await runCliCapture(["construction-project", constructionProjectPayload.data.id, "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(constructionTimeline.code, CLI_EXIT_OK, constructionTimeline.stderr || constructionTimeline.stdout);
+  const constructionTimelinePayload = JSON.parse(constructionTimeline.stdout) as {
+    data: {
+      coverage: { implementationStatus: string; recordsMaterialized: boolean };
+      semanticView: { id: string; systemId: string };
+      materializedView: {
+        subject: { id: string; label: string };
+        company: { id: string; label: string } | null;
+        customerCompany: { id: string; label: string } | null;
+        summary: { sites: number; rfis: number; openRfis: number; changeOrders: number; approvedChangeOrders: number; changeOrderAmountCents: number };
+        itemCount: number;
+        items: Array<{ kind: string; label: string }>;
+      };
+    };
+  };
+  assert.equal(constructionTimelinePayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(constructionTimelinePayload.data.coverage.recordsMaterialized, true);
+  assert.equal(constructionTimelinePayload.data.semanticView.id, "construction_project.timeline");
+  assert.equal(constructionTimelinePayload.data.semanticView.systemId, "construction");
+  assert.equal(constructionTimelinePayload.data.materializedView.subject.id, constructionProjectPayload.data.id);
+  assert.equal(constructionTimelinePayload.data.materializedView.subject.label, "Lab buildout");
+  assert.equal(constructionTimelinePayload.data.materializedView.company?.id, companyPayload.data.id);
+  assert.equal(constructionTimelinePayload.data.materializedView.customerCompany?.id, companyPayload.data.id);
+  assert.equal(constructionTimelinePayload.data.materializedView.summary.sites, 1);
+  assert.equal(constructionTimelinePayload.data.materializedView.summary.rfis, 1);
+  assert.equal(constructionTimelinePayload.data.materializedView.summary.openRfis, 1);
+  assert.equal(constructionTimelinePayload.data.materializedView.summary.changeOrders, 1);
+  assert.equal(constructionTimelinePayload.data.materializedView.summary.approvedChangeOrders, 0);
+  assert.equal(constructionTimelinePayload.data.materializedView.summary.changeOrderAmountCents, 1200000);
+  assert.equal(constructionTimelinePayload.data.materializedView.itemCount >= 6, true);
+  assert.equal(constructionTimelinePayload.data.materializedView.items.some((item) => item.kind === "construction_change_order" && item.label === "Ventilation upgrade"), true);
+
   const contactCreate = await runCliCapture(["db", "contact", "create", "--set", `companyId=${companyPayload.data.id}`, "--set", `accountId=${accountPayload.data.id}`, "--set", "firstName=Ada", "--set", "lastName=Buyer", "--set", "email=ada@example.test", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(contactCreate.code, CLI_EXIT_OK, contactCreate.stderr || contactCreate.stdout);
   const contactPayload = JSON.parse(contactCreate.stdout) as { data: { id: string; companyId: string; accountId: string; firstName: string; lastName: string; email: string }; meta: { collection: string; action: string } };
