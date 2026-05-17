@@ -800,6 +800,7 @@ export function builtInCollections(): BuiltInCollectionSeed[] {
       coreFieldNames: ["companyId", "name", "status", "releaseType"],
       fields: [
         { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
+        { name: "serviceId", type: "relation", relation: { collectionName: "services" } },
         { name: "portfolioItemId", type: "relation", relation: { collectionName: "portfolio_items" } },
         { name: "projectId", type: "relation", relation: { collectionName: "projects" } },
         { name: "name", type: "text", required: true },

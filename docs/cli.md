@@ -144,10 +144,12 @@ claw agents list --json
 claw agents upsert agent.ops --name "Ops Agent" --personalities personality.review --skills deploy --secret-ref vault://agents/ops --json
 claw agents schema --json
 claw agents evaluate-access --record '{"requested":{"resourceType":"contact","action":"read"},"agentGrants":[],"assignmentGrants":[],"executionProfileGrants":[],"connectorGrants":[],"hostGrants":[],"runScopeGrants":[]}' --json
+claw agents delegation-check --record '{"parent":{"requested":{"resourceType":"collection","resourceId":"project_notes","action":"read"},"agentGrants":[{"resourceType":"collection","resourceId":"project_notes","action":"read"}],"assignmentGrants":[{"resourceType":"collection","resourceId":"project_notes","action":"read"}],"executionProfileGrants":[{"resourceType":"collection","resourceId":"project_notes","action":"read"}],"connectorGrants":[{"resourceType":"collection","resourceId":"project_notes","action":"read"}],"hostGrants":[{"resourceType":"collection","resourceId":"project_notes","action":"read"}],"runScopeGrants":[{"resourceType":"collection","resourceId":"project_notes","action":"read"}]},"child":{"requested":{"resourceType":"collection","resourceId":"project_notes","action":"read"},"agentGrants":[{"resourceType":"collection","resourceId":"project_notes","action":"read"}],"assignmentGrants":[{"resourceType":"collection","resourceId":"project_notes","action":"read"}],"executionProfileGrants":[{"resourceType":"collection","resourceId":"project_notes","action":"read"}],"connectorGrants":[{"resourceType":"collection","resourceId":"project_notes","action":"read"}],"hostGrants":[{"resourceType":"collection","resourceId":"project_notes","action":"read"}],"runScopeGrants":[{"resourceType":"collection","resourceId":"project_notes","action":"read"}]}}' --json
 claw agents route-check --record '{"assignment":{"id":"assignment.web","agentId":"agent.ops","kind":"external_web_chat","status":"active","channel":"chat"},"kind":"external_web_chat","channel":"chat"}' --json
 claw agents resolve-external-identity --record '{"provider":"web","externalId":"visitor-1","email":"visitor@example.com","privacyPolicy":"hashed"}' --json
 claw agents project-support-inbox --record '{"sessionId":"session-1","assignment":{"id":"assignment.web","agentId":"agent.ops","kind":"external_web_chat","status":"active","channel":"chat"},"identity":{"externalUserId":"external_user_1","actorId":"actor_external_1","contactProjection":"create_or_update","boundary":{"scopeType":"external_user","scopeId":"external_user_1"},"telemetry":{}},"initialMessage":"Need help"}' --json
 claw agents memory-check --record '{"policy":{"readScopes":[{"layer":"global","access":"read"}],"writeScopes":[{"layer":"agent_private","access":"write"}],"writePolicy":"private_only"},"request":{"operation":"write","layer":"agent_private"}}' --json
+claw agents budget-check --record '{"policy":{"exceededBehavior":"deny_action","limits":[{"dimension":"external_actions","limit":5,"used":1}]},"request":{"dimension":"external_actions","cost":1,"externalPaidAction":true,"connectorGateAllowed":true}}' --json
 claw agents surface-projection --record '{"surface":"relay","agent":{"id":"agent.ops","name":"Ops","secretAllowlist":["vault://agents/ops"]},"assignments":[{"id":"assignment.relay","agentId":"agent.ops","kind":"relay","status":"active","channel":"relay"}],"budgets":[{"id":"budget.relay","exceededBehavior":"deny_action","limits":[{"dimension":"external_actions","limit":10}]}]}' --json
 claw agents config-revision --record '{"agentId":"agent.ops","revision":2,"actorId":"actor.owner","reason":"Tighten MCP assignment","configSnapshot":{"name":"Ops","secretAllowlist":["vault://agents/ops"]}}' --json
 claw agents incident --record '{"agentId":"agent.ops","assignmentId":"assignment.relay","severity":"high","summary":"Unsafe route blocked","metadata":{"rawTraceRef":"trace:redacted"}}' --json
@@ -176,6 +178,10 @@ record separately from the runtime session trace.
 Memory policies are checked with `memory-check`; this is the gate for flexible
 read/write combinations such as read-only global memory plus private writes,
 team/project/customer scopes, and explicit-grant-only cross-customer access.
+Delegation is checked with `delegation-check`; both parent and child must pass
+the same effective access intersection, so subagents cannot launder grants
+through a weaker parent. Budgets are checked with `budget-check`; external paid
+actions require both a budget allowance and connector gate before dispatch.
 The SDK also exposes the same Agents V1 policy layer for multidimensional
 budgets, redacted audit events, and safe `claw_agent_package` export. Package
 exports redact secret fields and private local paths by construction; raw

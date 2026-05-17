@@ -76,6 +76,8 @@ test("runCli exposes Agents V1 safe surface projection gate", async () => {
     }), CLI_EXIT_OK);
     const schema = parseCliJsonPayload(schemaStdout.getOutput()) as { gates: string[] };
     assert.equal(schema.gates.includes("surface-projection"), true);
+    assert.equal(schema.gates.includes("delegation-check"), true);
+    assert.equal(schema.gates.includes("budget-check"), true);
     assert.equal(schema.gates.includes("config-revision"), true);
     assert.equal(schema.gates.includes("incident"), true);
     assert.equal(schema.gates.includes("activity-feed"), true);
@@ -549,6 +551,23 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
     }), CLI_EXIT_OK);
     assert.equal((parseCliJsonPayload(accessStdout.getOutput()) as { allowed: boolean }).allowed, true);
 
+    const delegationStdout = captureStream();
+    assert.equal(await runCli(["agents", "delegation-check", "--record", JSON.stringify({
+      parent: accessRecord,
+      child: {
+        ...accessRecord,
+        agentGrants: [{ id: "child-agent", resourceType: "contact", action: "read", scopeType: "customer", scopeId: "customer_1" }],
+      },
+    }), "--json"], {
+      stdout: delegationStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const delegationResult = parseCliJsonPayload(delegationStdout.getOutput()) as { allowed: boolean; matchedGrantIds: string[] };
+    assert.equal(delegationResult.allowed, true);
+    assert.equal(delegationResult.matchedGrantIds.includes("agent"), true);
+    assert.equal(delegationResult.matchedGrantIds.includes("child-agent"), true);
+
     const routeStdout = captureStream();
     const routeRecord = {
       assignment: {
@@ -635,6 +654,28 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
     const memoryResult = parseCliJsonPayload(memoryStdout.getOutput()) as { allowed: boolean; reasons: string[] };
     assert.equal(memoryResult.allowed, false);
     assert.deepEqual(memoryResult.reasons, ["memory: cross-boundary access requires explicit grant"]);
+
+    const budgetStdout = captureStream();
+    assert.equal(await runCli(["agents", "budget-check", "--record", JSON.stringify({
+      policy: {
+        exceededBehavior: "deny_action",
+        limits: [{ dimension: "external_actions", limit: 2, used: 2 }],
+      },
+      request: {
+        dimension: "external_actions",
+        cost: 1,
+        externalPaidAction: true,
+        connectorGateAllowed: true,
+      },
+    }), "--json"], {
+      stdout: budgetStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const budgetResult = parseCliJsonPayload(budgetStdout.getOutput()) as { allowed: boolean; reasons: string[]; exceededBehavior: string };
+    assert.equal(budgetResult.allowed, false);
+    assert.equal(budgetResult.exceededBehavior, "deny_action");
+    assert.deepEqual(budgetResult.reasons, ["budget: external_actions limit exceeded"]);
 
     const personalityStdout = captureStream();
     assert.equal(await runCli(["personalities", "upsert", "personality.review", "--name", "Reviewer", "--prompt", "Review with concrete evidence", "--json"], {
