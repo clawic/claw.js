@@ -199,6 +199,28 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   const nodesPayload = parseCliJson<{ nodes: Array<{ id: string }> }>(nodes.stdout).data;
   assert.equal(nodesPayload.nodes.some((node) => node.id === "claw.coordinator"), true);
 
+  const invitation = await runCliCapture(["nodes", "invite", "--issuer-mesh", "mesh.home", "--recipient-mesh", "mesh.server", "--allowed-resources", "skills:default", "--actions", "read,sync", "--json"], process.cwd());
+  assert.equal(invitation.code, CLI_EXIT_OK);
+  const invitationPayload = parseCliJson<{ invitation: { status: string; writes: boolean; allowedResourceIds: string[] }; writes: boolean }>(invitation.stdout).data;
+  assert.equal(invitationPayload.invitation.status, "pending");
+  assert.equal(invitationPayload.invitation.allowedResourceIds[0], "skills:default");
+  assert.equal(invitationPayload.writes, false);
+
+  const share = await runCliCapture(["nodes", "share", "--issuer-mesh", "mesh.home", "--to-mesh", "mesh.server", "--resource-id", "skills:default", "--driver", "skills", "--actions", "read,sync", "--json"], process.cwd());
+  assert.equal(share.code, CLI_EXIT_OK);
+  const sharePayload = parseCliJson<{ share: { status: string; resourceId: string; plaintextSecrets: string; writes: boolean }; writes: boolean }>(share.stdout).data;
+  assert.equal(sharePayload.share.status, "proposed");
+  assert.equal(sharePayload.share.resourceId, "skills:default");
+  assert.equal(sharePayload.share.plaintextSecrets, "[REDACTED]");
+  assert.equal(sharePayload.writes, false);
+
+  const meshRevoke = await runCliCapture(["nodes", "revoke", "--target-type", "share", "--target-id", "mesh_share_1", "--json"], process.cwd());
+  assert.equal(meshRevoke.code, CLI_EXIT_OK);
+  const meshRevokePayload = parseCliJson<{ revocation: { targetType: string; cascadeSyncQueues: boolean; writes: boolean }; writes: boolean }>(meshRevoke.stdout).data;
+  assert.equal(meshRevokePayload.revocation.targetType, "share");
+  assert.equal(meshRevokePayload.revocation.cascadeSyncQueues, true);
+  assert.equal(meshRevokePayload.writes, false);
+
   const gateway = await runCliCapture(["gateway", "conformance", "--json"], process.cwd());
   assert.equal(gateway.code, CLI_EXIT_OK);
   const gatewayPayload = parseCliJson<{ hostedSelfHostedParity: string }>(gateway.stdout).data;
