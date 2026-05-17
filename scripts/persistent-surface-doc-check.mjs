@@ -4,6 +4,10 @@ import path from "node:path";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const docPath = path.join(rootDir, "docs", "persistent-surface.md");
+execFileSync("npm", ["--prefix", "packages/clawjs-core", "run", "build"], {
+  cwd: rootDir,
+  stdio: "inherit",
+});
 const generated = execFileSync(
   process.execPath,
   [
