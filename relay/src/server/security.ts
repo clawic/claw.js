@@ -7,7 +7,7 @@ export interface PasswordVerificationResult {
   upgradedHash?: string;
 }
 
-export function hashLegacySecret(value: string): string {
+export function hashSha256Secret(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
@@ -25,7 +25,7 @@ export async function verifyPasswordHash(passwordHash: string, password: string)
     return { valid: await argon2.verify(passwordHash, password) };
   }
 
-  const valid = passwordHash === hashLegacySecret(password);
+  const valid = passwordHash === hashSha256Secret(password);
   if (!valid) return { valid: false };
   return {
     valid: true,
