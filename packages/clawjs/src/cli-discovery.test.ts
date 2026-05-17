@@ -514,6 +514,77 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(productsAliasPayload.meta.action, "list");
   assert.equal(productsAliasPayload.data.some((record) => record.id === erpProductPayload.data.id && record.name === "Hydraulic Press"), true);
 
+  const supplierCreate = await runCliCapture(["supplier", "create", "Parts Co", "--company", companyPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(supplierCreate.code, CLI_EXIT_OK, supplierCreate.stderr || supplierCreate.stdout);
+  const supplierPayload = JSON.parse(supplierCreate.stdout) as { data: { id: string; name: string; companyId: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(supplierPayload.meta.invokedCommand, "supplier");
+  assert.equal(supplierPayload.meta.collection, "suppliers");
+  assert.equal(supplierPayload.meta.action, "create");
+  assert.equal(supplierPayload.data.name, "Parts Co");
+  assert.equal(supplierPayload.data.companyId, companyPayload.data.id);
+  assert.equal(supplierPayload.data.status, "active");
+
+  const purchaseOrderCreate = await runCliCapture(["supplier", supplierPayload.data.id, "purchase-orders", "add", "PO-001", "--company", companyPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(purchaseOrderCreate.code, CLI_EXIT_OK, purchaseOrderCreate.stderr || purchaseOrderCreate.stdout);
+  const purchaseOrderPayload = JSON.parse(purchaseOrderCreate.stdout) as { data: { id: string; number: string; supplierId: string; companyId: string; status: string; orderedAt: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(purchaseOrderPayload.meta.invokedCommand, "supplier");
+  assert.equal(purchaseOrderPayload.meta.collection, "purchase_orders");
+  assert.equal(purchaseOrderPayload.meta.action, "create");
+  assert.equal(purchaseOrderPayload.data.number, "PO-001");
+  assert.equal(purchaseOrderPayload.data.supplierId, supplierPayload.data.id);
+  assert.equal(purchaseOrderPayload.data.companyId, companyPayload.data.id);
+  assert.equal(purchaseOrderPayload.data.status, "draft");
+  assert.equal(typeof purchaseOrderPayload.data.orderedAt, "string");
+
+  const purchaseOrderLineCreate = await runCliCapture(["purchase-order", purchaseOrderPayload.data.id, "line-items", "add", "Press frame", "--product", erpProductPayload.data.id, "--quantity", "2", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(purchaseOrderLineCreate.code, CLI_EXIT_OK, purchaseOrderLineCreate.stderr || purchaseOrderLineCreate.stdout);
+  const purchaseOrderLinePayload = JSON.parse(purchaseOrderLineCreate.stdout) as { data: { description: string; purchaseOrderId: string; productCatalogId: string; quantity: number; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(purchaseOrderLinePayload.meta.invokedCommand, "purchase-order");
+  assert.equal(purchaseOrderLinePayload.meta.collection, "purchase_order_line_items");
+  assert.equal(purchaseOrderLinePayload.meta.action, "create");
+  assert.equal(purchaseOrderLinePayload.data.description, "Press frame");
+  assert.equal(purchaseOrderLinePayload.data.purchaseOrderId, purchaseOrderPayload.data.id);
+  assert.equal(purchaseOrderLinePayload.data.productCatalogId, erpProductPayload.data.id);
+  assert.equal(purchaseOrderLinePayload.data.quantity, 2);
+  assert.equal(purchaseOrderLinePayload.data.status, "ordered");
+
+  const directPurchaseOrderLineCreate = await runCliCapture(["purchase-order-line-item", "add", "--purchase-order", purchaseOrderPayload.data.id, "Direct line", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(directPurchaseOrderLineCreate.code, CLI_EXIT_OK, directPurchaseOrderLineCreate.stderr || directPurchaseOrderLineCreate.stdout);
+  const directPurchaseOrderLinePayload = JSON.parse(directPurchaseOrderLineCreate.stdout) as { data: { description: string; purchaseOrderId: string }; meta: { collection: string; invokedCommand: string } };
+  assert.equal(directPurchaseOrderLinePayload.meta.invokedCommand, "purchase-order-line-item");
+  assert.equal(directPurchaseOrderLinePayload.meta.collection, "purchase_order_line_items");
+  assert.equal(directPurchaseOrderLinePayload.data.description, "Direct line");
+  assert.equal(directPurchaseOrderLinePayload.data.purchaseOrderId, purchaseOrderPayload.data.id);
+
+  const purchaseOrderTimeline = await runCliCapture(["purchase-order", purchaseOrderPayload.data.id, "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(purchaseOrderTimeline.code, CLI_EXIT_OK, purchaseOrderTimeline.stderr || purchaseOrderTimeline.stdout);
+  const purchaseOrderTimelinePayload = JSON.parse(purchaseOrderTimeline.stdout) as {
+    data: {
+      coverage: { implementationStatus: string; recordsMaterialized: boolean };
+      semanticView: { id: string; systemId: string };
+      materializedView: {
+        subject: { id: string; label: string };
+        supplier: { id: string; label: string } | null;
+        company: { id: string; label: string } | null;
+        summary: { lineItems: number; receivedLineItems: number };
+        itemCount: number;
+        items: Array<{ kind: string; label: string }>;
+      };
+    };
+  };
+  assert.equal(purchaseOrderTimelinePayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(purchaseOrderTimelinePayload.data.coverage.recordsMaterialized, true);
+  assert.equal(purchaseOrderTimelinePayload.data.semanticView.id, "purchase_order.timeline");
+  assert.equal(purchaseOrderTimelinePayload.data.semanticView.systemId, "procurement");
+  assert.equal(purchaseOrderTimelinePayload.data.materializedView.subject.id, purchaseOrderPayload.data.id);
+  assert.equal(purchaseOrderTimelinePayload.data.materializedView.subject.label, "PO-001");
+  assert.equal(purchaseOrderTimelinePayload.data.materializedView.supplier?.id, supplierPayload.data.id);
+  assert.equal(purchaseOrderTimelinePayload.data.materializedView.company?.id, companyPayload.data.id);
+  assert.equal(purchaseOrderTimelinePayload.data.materializedView.summary.lineItems, 2);
+  assert.equal(purchaseOrderTimelinePayload.data.materializedView.summary.receivedLineItems, 0);
+  assert.equal(purchaseOrderTimelinePayload.data.materializedView.itemCount >= 5, true);
+  assert.equal(purchaseOrderTimelinePayload.data.materializedView.items.some((item) => item.kind === "purchase_order_line_item" && item.label === "Press frame"), true);
+
   const contactCreate = await runCliCapture(["db", "contact", "create", "--set", `companyId=${companyPayload.data.id}`, "--set", `accountId=${accountPayload.data.id}`, "--set", "firstName=Ada", "--set", "lastName=Buyer", "--set", "email=ada@example.test", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(contactCreate.code, CLI_EXIT_OK, contactCreate.stderr || contactCreate.stdout);
   const contactPayload = JSON.parse(contactCreate.stdout) as { data: { id: string; companyId: string; accountId: string; firstName: string; lastName: string; email: string }; meta: { collection: string; action: string } };
