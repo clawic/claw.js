@@ -185,8 +185,8 @@ test("dense data OS first wave covers the agreed high-density systems", () => {
     "warehouse",
     "supply_chain",
     "compliance",
-    "iot",
     "construction",
+    "iot",
   ]);
 
   for (const system of listClawDenseDataSystems({ wave: "first_wave" })) {

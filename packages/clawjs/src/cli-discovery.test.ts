@@ -1822,7 +1822,7 @@ test("runCli seeds the dense-data acceptance fixture into the shared database", 
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-dense-fixture-"));
 
   const seedResult = await runCliCapture(["dense-fixtures", "seed", "--workspace", workspaceRoot, "--json"], process.cwd());
-  assert.equal(seedResult.code, CLI_EXIT_OK);
+  assert.equal(seedResult.code, CLI_EXIT_OK, seedResult.stderr || seedResult.stdout);
   const seedPayload = JSON.parse(seedResult.stdout) as {
     ok: boolean;
     data: { fixtureSetId: string; store: string; seeded: Array<{ id: string; collectionName: string; covers: string[] }> };

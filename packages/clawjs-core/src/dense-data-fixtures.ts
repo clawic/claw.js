@@ -92,7 +92,7 @@ export const clawDenseDataAcceptanceFixture: ClawDenseDataAcceptanceFixture = {
       collectionName: "construction_sites",
       label: "Lab site",
       covers: ["construction_site", "construction", "construction_project_timeline", "location"],
-      data: { name: "Lab site", projectId: "fixture_construction_project_lab", propertyListingId: "fixture_property_listing_main", superintendentEmployeeId: "fixture_employee_ada", status: "active", address: "Main Street 1" },
+      data: { name: "Lab site", projectId: "fixture_construction_project_lab", propertyListingId: "fixture_property_listing_main", superintendentEmployeeId: "fixture_employee_ada", status: "active", address: { line1: "Main Street 1", city: "Madrid" } },
     },
     {
       id: "fixture_construction_rfi_lab",
