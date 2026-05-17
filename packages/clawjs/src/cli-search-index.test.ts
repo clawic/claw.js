@@ -4621,3 +4621,72 @@ test("search indexes scoped code.symbols without broadening other domains", asyn
     assert.deepEqual(chatOnlyPayload.data.results, []);
   });
 });
+
+test("search keeps optional full sources out of scoped domain queries", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-scoped-full-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  const fileRoot = path.join(workspaceRoot, "file-root");
+  const webRoot = path.join(workspaceRoot, "web-root");
+  const externalRoot = path.join(workspaceRoot, "external-root");
+  fs.mkdirSync(path.join(fileRoot, "docs"), { recursive: true });
+  fs.mkdirSync(webRoot, { recursive: true });
+  fs.mkdirSync(externalRoot, { recursive: true });
+  fs.writeFileSync(path.join(fileRoot, "docs", "sentinel.txt"), "Optional full source sentinel from local files.");
+  fs.writeFileSync(path.join(webRoot, "sentinel.html"), "<html><body>Optional full source sentinel from web ingestion.</body></html>");
+  fs.writeFileSync(path.join(externalRoot, "sentinel.json"), JSON.stringify({
+    provider: "fixture",
+    type: "thread",
+    title: "Optional full source sentinel",
+    text: "Optional full source sentinel from external cache.",
+  }));
+
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const query = await runCliCapture([
+      "search",
+      "query",
+      "Optional full source sentinel",
+      "--domains",
+      "sessions",
+      "--profile",
+      "full",
+      "--file-root",
+      fileRoot,
+      "--web-root",
+      webRoot,
+      "--external-root",
+      externalRoot,
+      "--data-dir",
+      dataRoot,
+      "--json",
+      "--limit",
+      "5",
+    ], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_DEGRADED);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: {
+        indexedFastPaths: Record<string, number>;
+        results: Array<{ source: string }>;
+      };
+    };
+    assert.equal("local.files" in queryPayload.data.indexedFastPaths, false);
+    assert.equal("web.ingested" in queryPayload.data.indexedFastPaths, false);
+    assert.equal("external.cache" in queryPayload.data.indexedFastPaths, false);
+    assert.equal(queryPayload.data.results.some((result) => result.source === "local.files" || result.source === "web.ingested" || result.source === "external.cache"), false);
+
+    const verified = new SearchStore(path.join(dataRoot, "search.sqlite"));
+    try {
+      assert.deepEqual(verified.query({
+        query: "Optional full source sentinel",
+        sources: ["local.files", "web.ingested", "external.cache"],
+      }).results, []);
+    } finally {
+      verified.close();
+    }
+  });
+});
