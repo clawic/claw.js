@@ -75,6 +75,11 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(systemResult?.actions?.some((action) => action.id === "help" && action.kind === "run"), true);
     assert.ok(systemResult?.explanation?.matchedBy?.length);
 
+    const defaultShardQuery = await runCliCapture(["search", "query", "system capabilities", "--data-dir", dataRoot, "--json", "--limit", "5", "--shards", "default"], workspaceRoot);
+    assert.equal(defaultShardQuery.code, CLI_EXIT_OK);
+    const defaultShardPayload = JSON.parse(defaultShardQuery.stdout) as { data: { results: Array<{ source: string; title: string; shard?: string }> } };
+    assert.equal(defaultShardPayload.data.results.some((result) => result.source === "commands" && result.title === "system" && result.shard === undefined), true);
+
     const sensitiveQuery = await runCliCapture(["search", "query", "secret token", "--data-dir", dataRoot, "--json", "--actor", "agent:codex", "--surface", "cli"], workspaceRoot);
     assert.equal(sensitiveQuery.code, CLI_EXIT_DEGRADED);
     const sensitiveAudit = await runCliCapture(["search", "audit", "--type", "sensitive_query", "--data-dir", dataRoot, "--json"], workspaceRoot);

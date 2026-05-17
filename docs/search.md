@@ -65,6 +65,7 @@ claw search query "product mark" --domains images --filters metadata.imageType=l
 claw search query "requirements" --domains media --filters metadata.kind=document --json
 claw search query "analytics cards" --domains generations --filters metadata.status=succeeded --json
 claw search query "symbolName" --domains code --code-root /path/to/project --json
+claw search query "diagram" --domains images --shards hot --json
 claw search sources --json
 claw search sources pause commands --json
 claw search sources exclude code.symbols --json
@@ -95,11 +96,25 @@ sources are skipped by `search query` lazy indexing and by `search rebuild`, and
 Root Search reports omitted sources as partial metadata instead of blocking fast
 paths.
 
+Search documents and sync cursors are tracked per source and shard. The default
+shard preserves the simple source contract; hot/cold or extractor-specific
+shards can be indexed and queried independently during backfill and event-driven
+indexing. This is a logical shard boundary inside `search.sqlite`, not a claim
+that Search has separate physical shard tables yet.
+
+`search.sqlite` also owns a local indexing job queue. Sources can enqueue
+upsert, delete, backfill, or rebuild work with source, shard, priority,
+schedule, payload, and retry metadata. Workers claim bounded leases so heavy
+backfill can run progressively without blocking a UI section that is only
+searching its own already-hot data.
+
 Queries support structured filters through `SearchQueryInput.filters` and the
 CLI `--filters` flag. Filters may target built-in fields such as `domain`,
-`source`, `type`, `resourceId`, `path`, `canPreview`, and `redacted`, or source
-metadata via `metadata.<field>`. Query responses include the selected sources'
-declared facets so UI sections can build scoped filter controls from manifests.
+`source`, `shard`, `type`, `resourceId`, `path`, `canPreview`, and `redacted`,
+or source metadata via `metadata.<field>`. `SearchQueryInput.shards` and CLI
+`--shards` provide the same shard narrowing without mixing it into metadata
+filters. Query responses include the selected sources' declared facets so UI
+sections can build scoped filter controls from manifests.
 
 Ranking is centralized in `@clawjs/search`. The store reranks a bounded
 candidate batch with lexical score, source ranking hints, local frecency,

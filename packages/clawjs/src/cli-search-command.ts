@@ -151,7 +151,7 @@ export async function runSearchQueryCli(input: {
 }): Promise<number> {
   const query = input.positionals.slice(2).join(" ") || input.flags.query;
   if (!query) {
-    input.context.stderr.write(`Usage: ${input.binName} search query <query> [--domains tasks,notes,...] [--json]\n`);
+    input.context.stderr.write(`Usage: ${input.binName} search query <query> [--domains tasks,notes,...] [--shards hot,cold] [--json]\n`);
     return CLI_EXIT_USAGE;
   }
   const domains = parseListFlag(input.flags.domains);
@@ -163,6 +163,7 @@ export async function runSearchQueryCli(input: {
     registerBuiltinSources(store);
     const indexedCommands = sourceCanIndex(store, "commands") ? ensureCommandSourceIndexed(store) : 0;
     const sources = parseListFlag(input.flags.sources ?? input.flags.source);
+    const shards = parseListFlag(input.flags.shards ?? input.flags.shard);
     const shouldRefreshDatabase = domains?.includes("database") || sources?.includes("database.records");
     const shouldRefreshDocuments = domains?.includes("documents") || sources?.includes("documents.blocks");
     const shouldRefreshImages = domains?.includes("images") || sources?.includes("images.derived");
@@ -181,6 +182,7 @@ export async function runSearchQueryCli(input: {
       profile: input.flags.profile === "full" ? "full" : "framework",
       domains,
       sources,
+      shards,
       filters,
       limit: input.flags.limit ? Number(input.flags.limit) : undefined,
       explain: input.flags.explain === "true" || input.flags.explain === "1",
@@ -198,6 +200,7 @@ export async function runSearchQueryCli(input: {
           profile: input.flags.profile === "full" ? "full" : "framework",
           domains: domains ?? [],
           sources: sources ?? [],
+          shards: shards ?? [],
           resultCount: results.results.length,
           redactedResultCount: results.results.filter((result) => result.permissions?.redacted).length,
         },
