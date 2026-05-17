@@ -3090,7 +3090,7 @@ test("search rebuild can refresh one shard without clearing sibling shard fast p
       dataRoot,
       "--json",
     ], workspaceRoot);
-    assert.equal(shardRebuild.code, CLI_EXIT_OK);
+    assert.equal(shardRebuild.code, CLI_EXIT_OK, JSON.stringify(shardRebuild));
     const shardPayload = JSON.parse(shardRebuild.stdout) as {
       data: {
         mode: string;

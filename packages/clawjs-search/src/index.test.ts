@@ -552,6 +552,53 @@ test("SearchStore can isolate hot and cold document shards without changing defa
   }
 });
 
+test("SearchStore resets selected source shards without clearing sibling shards", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-shard-reset-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "images.derived",
+      domain: "images",
+      name: "Images",
+      resultTypes: ["image"],
+    }));
+    store.upsertDocument({
+      id: "images.derived:hot:one",
+      source: "images.derived",
+      shard: "hot",
+      domain: "images",
+      type: "image",
+      resourceId: "hot-one",
+      title: "Hot screenshot",
+      body: "diagram in active gallery",
+      updatedAt: "2026-05-17T12:00:00.000Z",
+    });
+    store.upsertDocument({
+      id: "images.derived:cold:one",
+      source: "images.derived",
+      shard: "cold",
+      domain: "images",
+      type: "image",
+      resourceId: "cold-one",
+      title: "Cold screenshot",
+      body: "diagram in archived gallery",
+      updatedAt: "2026-05-17T12:00:00.000Z",
+    });
+
+    store.resetSourceShards({ sources: ["images.derived"], shards: ["cold"] });
+
+    assert.deepEqual(store.listShards({ source: "images.derived" }).map((shard) => [shard.shard, shard.state, shard.documentCount]), [
+      ["cold", "empty", 0],
+      ["hot", "active", 1],
+    ]);
+    assert.deepEqual(store.query({ query: "diagram", domains: ["images"], shards: ["hot"] }).results.map((result) => result.id), ["images.derived:hot:one"]);
+    assert.deepEqual(store.query({ query: "diagram", domains: ["images"], shards: ["cold"] }).results, []);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("SearchStore leases indexing jobs by source and shard for controlled backfill", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-index-jobs-"));
   const store = new SearchStore(path.join(dir, "search.sqlite"));

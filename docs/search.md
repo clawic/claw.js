@@ -146,6 +146,10 @@ records, raw session artifacts, or external sources. `--source <id>` or
 `--sources <id,id>` performs a scoped rebuild: only the selected source
 documents, cursor, tombstones, and derived full-text rows are cleared before
 that source is refreshed, so unrelated section fast paths remain available.
+`--shard <id>` or `--shards <id,id>` can further scope a rebuild when paired
+with `--source`/`--sources`: only the selected source/shard documents, cursor,
+and full-text rows are cleared, the shard catalog is marked empty until fresh
+documents arrive, and sibling hot shards remain queryable.
 
 Source controls are persisted in `search.sqlite`. Disabled, paused, and excluded
 sources are skipped by `search query` lazy indexing and by `search rebuild`, and
