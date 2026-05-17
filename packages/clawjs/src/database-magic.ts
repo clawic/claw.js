@@ -10,6 +10,8 @@ import {
   BUILTIN_COLLECTIONS_BY_ALIAS,
   BUILTIN_COLLECTIONS_BY_NAME,
 } from "@clawjs/core";
+import fs from "fs";
+import path from "path";
 import { CliHandledError } from "./cli-errors.ts";
 import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 import { openMainDataStore } from "./v1-data.ts";
@@ -86,7 +88,19 @@ class LocalDbRuntime implements DbRuntime {
 
   constructor(workspaceRoot: string) {
     this.workspaceRoot = workspaceRoot;
-    this.store = openMainDataStore();
+    const dataDir = path.join(workspaceRoot, ".claw", "data");
+    fs.mkdirSync(dataDir, { recursive: true });
+    const previousDataDir = process.env.CLAW_DATA_DIR;
+    process.env.CLAW_DATA_DIR = dataDir;
+    try {
+      this.store = openMainDataStore({
+        ...process.env,
+        CLAW_DATA_DIR: dataDir,
+      });
+    } finally {
+      if (previousDataDir === undefined) delete process.env.CLAW_DATA_DIR;
+      else process.env.CLAW_DATA_DIR = previousDataDir;
+    }
   }
 
   async ensureNamespace(namespaceId: string): Promise<void> {
