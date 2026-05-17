@@ -31,107 +31,25 @@ import { createCliWorkspaceClaw } from "./cli-claw-factory.ts";
 import { readBooleanFlag } from "./cli-flag-parsers.ts";
 import { writeCommandJsonError, writeCommandJsonOk, writeJsonOk } from "./cli-json.ts";
 import { buildCommandHelp, searchCliDiscovery } from "./cli-surface.ts";
+import {
+  ELN_SEARCH_COLLECTIONS,
+  FINANCE_SEARCH_COLLECTIONS,
+  OPERATIONAL_SEARCH_SIDECARS,
+  SEARCH_ADMIN_COMMANDS,
+  WORKSPACE_SEARCH_DOMAINS,
+  WORK_SEARCH_COLLECTIONS,
+  type CommandFallbackPolicy,
+  type SearchServiceStateFile,
+  type SearchServiceWorkerBudgets,
+  type SearchServiceWorkerStopReason,
+} from "./cli-search-command-constants.ts";
 import { ensureGenerationArtifactResourceIndexed, ensureGenerationsArtifactsSourceIndexed } from "./cli-search-generations-source.ts";
 import { ensureImageDerivedResourceIndexed, ensureImagesDerivedSourceIndexed, ensureMediaAssetResourceIndexed, ensureMediaAssetsSourceIndexed } from "./cli-search-image-media-sources.ts";
 import { pathSafeBasename, resolveRuntimeAdapterId } from "./cli-runtime-utils.ts";
 import { resolveClawjsDataRoot, resolveClawjsMainDbPath } from "./v1-data.ts";
 import { ensureV1MainSchema, readMcpServers, type JsonRecord } from "./v1-data-core.ts";
 
-const SEARCH_ADMIN_COMMANDS = new Set(["sources", "status", "service", "profiles", "entrypoints", "aliases", "saved", "monitors", "actions", "audit", "jobs", "shards", "explain"]);
-const WORKSPACE_SEARCH_DOMAINS = new Set([
-  "areas",
-  "tasks",
-  "goals",
-  "projects",
-  "milestones",
-  "activity",
-  "blockers",
-  "artifacts",
-  "decisions",
-  "work_sessions",
-  "assignments",
-  "handoffs",
-  "approvals",
-  "capacity",
-  "reminders",
-  "deadlines",
-  "people",
-  "inbox",
-  "events",
-]);
-
 const BUILTIN_SEARCH_SOURCES: SearchSourceManifest[] = createBuiltinSearchSourceManifests();
-type CommandFallbackPolicy = "off" | "empty" | "always";
-
-const OPERATIONAL_SEARCH_SIDECARS = [
-  { filename: "monitor.sqlite", domain: "monitor" },
-  { filename: "infra.sqlite", domain: "infra" },
-  { filename: "ops.sqlite", domain: "ops" },
-] as const;
-
-const FINANCE_SEARCH_COLLECTIONS = [
-  "financial_accounts",
-  "transactions",
-  "invoices",
-  "payment_intents",
-  "accounting_entries",
-  "accounting_lines",
-] as const;
-
-const ELN_SEARCH_COLLECTIONS = [
-  "lab_notebooks",
-  "notebook_entries",
-  "protocol_runs",
-  "experiment_observations",
-] as const;
-
-const WORK_SEARCH_COLLECTIONS = new Set([
-  "tasks",
-  "projects",
-  "goals",
-  "people",
-  "inbox_threads",
-  "inbox_messages",
-  "events",
-  "reminders",
-  "deadlines",
-  "blockers",
-  "decisions",
-  "assignments",
-  "handoffs",
-  "approvals",
-  "work_sessions",
-  "artifacts",
-]);
-
-interface SearchServiceStateFile {
-  state: "ready" | "stopped" | "external_pending";
-  mode: "embedded" | "daemon";
-  pid?: number;
-  startedAt?: string;
-  stoppedAt?: string;
-  heartbeatAt?: string;
-  reason?: string;
-  storage: { canonical: string; index: string; indexRebuildable: true };
-  budgets: typeof DEFAULT_SEARCH_BUDGETS;
-  worker?: {
-    lastRunAt: string;
-    claimed: number;
-    completed: number;
-    failed: number;
-    stoppedReason?: SearchServiceWorkerStopReason;
-    budgets?: SearchServiceWorkerBudgets;
-  };
-}
-
-type SearchServiceWorkerStopReason = "empty" | "job_limit" | "runtime_budget" | "failure_budget";
-
-interface SearchServiceWorkerBudgets {
-  maxJobs: number;
-  maxRuntimeMs: number;
-  maxFailures: number;
-  leaseMs?: number;
-}
 
 export function isSearchAdminCommand(command: string | undefined): boolean {
   return !!command && SEARCH_ADMIN_COMMANDS.has(command);
