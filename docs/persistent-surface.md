@@ -1112,8 +1112,18 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_commitments
   claw_cli_command_sessions["sessions\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_sessions
+  claw_cli_command_agents["agents\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_agents
+  claw_cli_command_personalities["personalities\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_personalities
   claw_cli_command_skills["skills\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_skills
+  claw_cli_command_skill_collections["skill-collections\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_skill_collections
+  claw_cli_command_connections["connections\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_connections
+  claw_cli_command_snippets["snippets\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_snippets
   claw_cli_command_models["models\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_models
   claw_cli_command_providers["providers\ncliCommand"]
@@ -1182,12 +1192,6 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_apps
   claw_cli_command_content["content\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_content
-  claw_cli_command_posts["posts\ncliCommand"]
-  claw_contracts_cli --> claw_cli_command_posts
-  claw_cli_command_campaigns["campaigns\ncliCommand"]
-  claw_contracts_cli --> claw_cli_command_campaigns
-  claw_cli_command_publications["publications\ncliCommand"]
-  claw_contracts_cli --> claw_cli_command_publications
   claw_cli_command_knowledge["knowledge\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_knowledge
   claw_cli_command_profile["profile\ncliCommand"]
@@ -2310,7 +2314,12 @@ flowchart TD
 | `claw.cli.command.artifacts` | cliCommand | cli | claw |  |  |  | `artifacts` |
 | `claw.cli.command.commitments` | cliCommand | cli | claw |  |  |  | `commitments` |
 | `claw.cli.command.sessions` | cliCommand | cli | claw |  |  |  | `sessions` |
+| `claw.cli.command.agents` | cliCommand | cli | claw |  |  |  | `agents` |
+| `claw.cli.command.personalities` | cliCommand | cli | claw |  |  |  | `personalities` |
 | `claw.cli.command.skills` | cliCommand | cli | claw |  |  |  | `skills` |
+| `claw.cli.command.skill-collections` | cliCommand | cli | claw |  |  |  | `skill-collections` |
+| `claw.cli.command.connections` | cliCommand | cli | claw |  |  |  | `connections` |
+| `claw.cli.command.snippets` | cliCommand | cli | claw |  |  |  | `snippets` |
 | `claw.cli.command.models` | cliCommand | cli | claw |  |  |  | `models` |
 | `claw.cli.command.providers` | cliCommand | cli | claw |  |  |  | `providers` |
 | `claw.cli.command.auth` | cliCommand | cli | claw |  |  |  | `auth` |
@@ -2345,9 +2354,6 @@ flowchart TD
 | `claw.cli.command.design` | cliCommand | cli | claw |  |  |  | `design` |
 | `claw.cli.command.apps` | cliCommand | cli | claw |  |  |  | `apps` |
 | `claw.cli.command.content` | cliCommand | cli | claw |  |  |  | `content` |
-| `claw.cli.command.posts` | cliCommand | cli | claw |  |  |  | `posts` |
-| `claw.cli.command.campaigns` | cliCommand | cli | claw |  |  |  | `campaigns` |
-| `claw.cli.command.publications` | cliCommand | cli | claw |  |  |  | `publications` |
 | `claw.cli.command.knowledge` | cliCommand | cli | claw |  |  |  | `knowledge` |
 | `claw.cli.command.profile` | cliCommand | cli | claw |  |  |  | `profile` |
 | `claw.cli.command.health` | cliCommand | cli | claw |  |  |  | `health` |

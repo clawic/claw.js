@@ -158,6 +158,8 @@ const requiredSnippets = [
       "documents upload",
       "inference generate-text",
       "tts synthesize",
+      "claw apps list|upsert",
+      "claw design list|upsert",
     ],
   },
 ];

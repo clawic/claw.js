@@ -209,6 +209,8 @@ for (const relativePath of [
 }
 forbidSnippet("packages/clawjs/src/inspect-cli.test.ts", '"clawix.protocol.bridge"');
 requireSnippet("packages/clawjs/src/inspect-cli.test.ts", "clawix.protocol.bridge.v1");
+requireSnippet("docs/interface-matrix.md", "| Apps and openable surfaces | Clawix Apps catalog and app surface | app/resource registry APIs | `claw apps list|upsert` |");
+requireSnippet("docs/interface-matrix.md", "| Design resources | Clawix Design styles, templates, references, and editor | design/resource registry APIs | `claw design list|upsert` |");
 
 for (const relativePath of [
   "packages/clawjs-core/src/surface-registry.ts",
