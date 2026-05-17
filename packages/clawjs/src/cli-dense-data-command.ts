@@ -35,6 +35,10 @@ export async function runDenseDataCli(input: DenseDataCliInput): Promise<number 
 
   const intent = resolveClawDenseDataIntent(phrase);
   if (intent.status === "data_gap") return null;
+  const nestedPatientRoute = nestedPatientDbRoute(input);
+  if (nestedPatientRoute) {
+    return await runMagicDbCli(nestedPatientRoute);
+  }
   const collectionName = collectionForDenseRoute(input.positionals[0], intent.center?.collectionName);
   const dbAction = action === "add" ? "create" : action;
   if (collectionName && CRUD_ACTIONS.has(action) && dbAction !== "purge") {
@@ -102,8 +106,49 @@ function denseDbArgv(argv: string[], collectionName: string, dbAction: string): 
 }
 
 function denseDbFlags(flags: Record<string, string>, collectionName: string): Record<string, string> {
-  if (collectionName !== "medications" || !flags.patient || flags["patient-id"]) return flags;
+  if (!["medications", "symptom_logs"].includes(collectionName) || !flags.patient || flags["patient-id"]) return flags;
   return { ...flags, "patient-id": flags.patient };
+}
+
+function nestedPatientDbRoute(input: DenseDataCliInput): Parameters<typeof runMagicDbCli>[0] | null {
+  if (input.positionals[0] !== "patient") return null;
+  const patientId = input.positionals[1];
+  const noun = input.positionals[2];
+  const action = input.positionals[3];
+  if (!patientId || !noun || !action) return null;
+
+  const collectionName = nestedPatientCollection(noun);
+  if (!collectionName) return null;
+  const dbAction = action === "add" ? "create" : action;
+  if (!CRUD_ACTIONS.has(action) || dbAction === "purge") return null;
+
+  const flags = dbAction === "create"
+    ? { ...input.flags, "patient-id": input.flags["patient-id"] ?? patientId }
+    : { ...input.flags, filter: input.flags.filter ?? JSON.stringify({ patientId }) };
+
+  return {
+    argv: input.argv,
+    positionals: ["patient", collectionName, dbAction, ...input.positionals.slice(4)],
+    flags,
+    workspaceRoot: input.workspaceRoot,
+    stdout: input.context.stdout,
+    stderr: input.context.stderr,
+    wantsJson: input.wantsJson,
+    binName: input.binName,
+  };
+}
+
+function nestedPatientCollection(noun: string): string | null {
+  switch (noun) {
+    case "medication":
+    case "medications":
+      return "medications";
+    case "symptom":
+    case "symptoms":
+      return "symptom_logs";
+    default:
+      return null;
+  }
 }
 
 function isDenseDataCommandGroup(group: string): boolean {

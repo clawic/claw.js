@@ -6,6 +6,7 @@ export const SYMPTOM_LOGS: BuiltinCollectionDefinition = {
   family: "health",
   aliases: ["symptom","symptom_log","symptom_logs","symptoms"],
   fields: [
+    { name: "patientId", type: "relation", relation: { collectionName: "patients" }, aliases: ["patient", "patientRef"] },
     { name: "loggedAt", type: "date", required: true },
     { name: "symptom", type: "text", required: true },
     { name: "severity", type: "number" },
@@ -15,6 +16,7 @@ export const SYMPTOM_LOGS: BuiltinCollectionDefinition = {
     { name: "notes", type: "text" },
   ],
   indexes: [
+    { name: "symptom_logs_patient_idx", fields: ["patientId"] },
     { name: "symptom_logs_logged_idx", fields: ["loggedAt"] },
     { name: "symptom_logs_symptom_idx", fields: ["symptom"] },
   ],

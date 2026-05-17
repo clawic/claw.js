@@ -67,7 +67,7 @@ const CUSTOM_COLLECTION_INDEXES: IndexDefinition[] = [
 interface DbRuntime {
   ensureNamespace(namespaceId: string): Promise<void>;
   getCollection(namespaceId: string, collectionName: string): Promise<CollectionDefinition | null>;
-  listRecords(namespaceId: string, collectionName: string): Promise<{ total: number; items: RecordEnvelope[] }>;
+  listRecords(namespaceId: string, collectionName: string, options?: { filter?: Record<string, unknown> }): Promise<{ total: number; items: RecordEnvelope[] }>;
   getRecord(namespaceId: string, collectionName: string, recordId: string): Promise<RecordEnvelope | null>;
   createRecord(namespaceId: string, collectionName: string, payload: Record<string, unknown>): Promise<RecordEnvelope>;
   updateRecord(namespaceId: string, collectionName: string, recordId: string, payload: Record<string, unknown>): Promise<RecordEnvelope>;
@@ -97,8 +97,8 @@ class LocalDbRuntime implements DbRuntime {
     return this.store.getCollection(namespaceId, collectionName);
   }
 
-  async listRecords(namespaceId: string, collectionName: string): Promise<{ total: number; items: RecordEnvelope[] }> {
-    return this.store.listRecords(namespaceId, collectionName);
+  async listRecords(namespaceId: string, collectionName: string, options: { filter?: Record<string, unknown> } = {}): Promise<{ total: number; items: RecordEnvelope[] }> {
+    return this.store.listRecords(namespaceId, collectionName, options);
   }
 
   async getRecord(namespaceId: string, collectionName: string, recordId: string): Promise<RecordEnvelope | null> {
@@ -138,8 +138,10 @@ class RemoteDbRuntime implements DbRuntime {
     }
   }
 
-  async listRecords(namespaceId: string, collectionName: string): Promise<{ total: number; items: RecordEnvelope[] }> {
-    return await this.client.listRecords(namespaceId, collectionName) as { total: number; items: RecordEnvelope[] };
+  async listRecords(namespaceId: string, collectionName: string, options: { filter?: Record<string, unknown> } = {}): Promise<{ total: number; items: RecordEnvelope[] }> {
+    return await this.client.listRecords(namespaceId, collectionName, {
+      filter: options.filter ? JSON.stringify(options.filter) : undefined,
+    }) as { total: number; items: RecordEnvelope[] };
   }
 
   async getRecord(namespaceId: string, collectionName: string, recordId: string): Promise<RecordEnvelope | null> {
@@ -259,6 +261,16 @@ function parseJsonObject(value: string | undefined): Record<string, unknown> {
   return parsed as Record<string, unknown>;
 }
 
+function parseOptionalJsonObject(value: string | undefined, flagName: string): Record<string, unknown> | undefined {
+  if (!value?.trim()) return undefined;
+  try {
+    return parseJsonObject(value);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`--${flagName}: ${message}`);
+  }
+}
+
 function resolveCollectionName(rawCollection: string): string {
   const normalized = rawCollection.trim().toLowerCase();
   const productivityMatch = PRODUCTIVITY_COLLECTION_ALIASES[normalized];
@@ -335,6 +347,8 @@ function getPrimaryField(collectionName: string): string {
       return "displayName";
     case "projects":
       return "name";
+    case "symptom_logs":
+      return "symptom";
   }
   const builtinDef = BUILTIN_COLLECTIONS_BY_NAME.get(collectionName);
   if (builtinDef) {
@@ -366,6 +380,9 @@ function applyDefaults(collectionName: string, payload: Record<string, unknown>,
       break;
     case "people":
       payload.kind ??= "human";
+      break;
+    case "symptom_logs":
+      payload.loggedAt ??= new Date().toISOString();
       break;
     default:
       break;
@@ -553,6 +570,7 @@ function mergeInputPayload(
     "json",
     "id",
     "data",
+    "filter",
     "set",
     "limit",
     "include-archived",
@@ -775,7 +793,15 @@ export async function runMagicDbCli(input: {
   }
 
   if (action === "list") {
-    const records = await runtime.listRecords(namespaceId, collectionName);
+    let filter: Record<string, unknown> | undefined;
+    try {
+      filter = parseOptionalJsonObject(flags.filter, "filter");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      writeDbError(input, "invalid_json", message, DB_EXIT_FAILURE, dbJsonMeta(input, collectionName, action));
+      return DB_EXIT_FAILURE;
+    }
+    const records = await runtime.listRecords(namespaceId, collectionName, { filter });
     const items = readBooleanFlag(argv, flags, "include-archived", false)
       ? records.items
       : records.items.filter((record) => !record.archivedAt);
@@ -791,7 +817,15 @@ export async function runMagicDbCli(input: {
       writeDbError(input, "usage_error", "Usage: claw db <collection> query <text>", DB_EXIT_USAGE, dbJsonMeta(input, collectionName, action));
       return DB_EXIT_USAGE;
     }
-    const records = await runtime.listRecords(namespaceId, collectionName);
+    let filter: Record<string, unknown> | undefined;
+    try {
+      filter = parseOptionalJsonObject(flags.filter, "filter");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      writeDbError(input, "invalid_json", message, DB_EXIT_FAILURE, dbJsonMeta(input, collectionName, action));
+      return DB_EXIT_FAILURE;
+    }
+    const records = await runtime.listRecords(namespaceId, collectionName, { filter });
     const items = records.items
       .filter((record) => readBooleanFlag(argv, flags, "include-archived", false) || !record.archivedAt)
       .filter((record) => JSON.stringify(record).toLowerCase().includes(query));

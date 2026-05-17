@@ -69,6 +69,36 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(medicationPayload.data.name, "Atorvastatin");
   assert.equal(medicationPayload.data.patientId, createdPatient.data.id);
 
+  const patientMedications = await runCliCapture(["patient", createdPatient.data.id, "medications", "list", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(patientMedications.code, CLI_EXIT_OK);
+  const patientMedicationsPayload = JSON.parse(patientMedications.stdout) as { data: Array<{ name: string; patientId: string }>; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(patientMedicationsPayload.meta.invokedCommand, "patient");
+  assert.equal(patientMedicationsPayload.meta.collection, "medications");
+  assert.equal(patientMedicationsPayload.meta.action, "list");
+  assert.equal(patientMedicationsPayload.data.length, 1);
+  assert.equal(patientMedicationsPayload.data[0]?.name, "Atorvastatin");
+  assert.equal(patientMedicationsPayload.data[0]?.patientId, createdPatient.data.id);
+
+  const symptomCreate = await runCliCapture(["patient", createdPatient.data.id, "symptoms", "add", "Headache", "--severity", "4", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(symptomCreate.code, CLI_EXIT_OK);
+  const symptomPayload = JSON.parse(symptomCreate.stdout) as { data: { symptom: string; patientId: string; severity: number; loggedAt: string }; meta: { collection: string; action: string } };
+  assert.equal(symptomPayload.meta.collection, "symptom_logs");
+  assert.equal(symptomPayload.meta.action, "create");
+  assert.equal(symptomPayload.data.symptom, "Headache");
+  assert.equal(symptomPayload.data.patientId, createdPatient.data.id);
+  assert.equal(symptomPayload.data.severity, 4);
+  assert.equal(typeof symptomPayload.data.loggedAt, "string");
+
+  const patientSymptoms = await runCliCapture(["patient", createdPatient.data.id, "symptoms", "list", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(patientSymptoms.code, CLI_EXIT_OK);
+  const patientSymptomsPayload = JSON.parse(patientSymptoms.stdout) as { data: Array<{ symptom: string; patientId: string }>; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(patientSymptomsPayload.meta.invokedCommand, "patient");
+  assert.equal(patientSymptomsPayload.meta.collection, "symptom_logs");
+  assert.equal(patientSymptomsPayload.meta.action, "list");
+  assert.equal(patientSymptomsPayload.data.length, 1);
+  assert.equal(patientSymptomsPayload.data[0]?.symptom, "Headache");
+  assert.equal(patientSymptomsPayload.data[0]?.patientId, createdPatient.data.id);
+
   const healthGaps = await runCliCapture(["health", "gaps", "--json"], process.cwd());
   assert.equal(healthGaps.code, CLI_EXIT_OK);
   const gapsPayload = JSON.parse(healthGaps.stdout) as { data: { coverage: { executable: boolean }; registry: { systems: Array<{ id: string }> } }; meta: { denseData: boolean } };
