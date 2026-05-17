@@ -2520,6 +2520,7 @@ The docs check script validates that every current export from
     createGatewayDeploymentManifest
     createNodeTrustDecision
     createRemoteClientCacheSnapshot
+    createRemoteCompatibilityAdapterReceipt
     createRemoteSecretProviderReceipt
     createSyncResourceManifest
     createTransportHandshakeReceipt
@@ -2563,6 +2564,10 @@ The docs check script validates that every current export from
     remoteOfflineCommandResultSchema
     RemoteClientCacheSnapshot
     remoteClientCacheSnapshotSchema
+    RemoteCompatibilityAdapterReceipt
+    remoteCompatibilityAdapterReceiptSchema
+    RemoteCompatibilityClientKind
+    remoteCompatibilityClientKindSchema
     RemoteSecretLease
     remoteSecretLeaseSchema
     RemoteSecretProviderReceipt
