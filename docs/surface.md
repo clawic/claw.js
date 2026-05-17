@@ -1144,6 +1144,9 @@ The docs check script validates that every current export from
     AgentBudgetRequest
     AGENT_ASSIGNMENT_STATUSES
     AgentAssignmentStatus
+    AgentActionSeverity
+    AgentActionSeverityRequest
+    AgentActionSeverityResult
     AgentConfigRevision
     AgentConfigRevisionInput
     AgentConfigRevisionStatus
@@ -1595,6 +1598,7 @@ The docs check script validates that every current export from
     createAgentSafeSurfaceProjection
     createAgentServiceApiResponse
     createAgentSupportInboxProjection
+    evaluateAgentActionSeverity
     evaluateAgentAssignmentRoute
     evaluateAgentBudget
     evaluateAgentDelegationAccess

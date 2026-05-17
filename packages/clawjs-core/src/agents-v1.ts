@@ -123,6 +123,38 @@ export interface AgentPermissionEscalationRequest {
   approverId?: string;
 }
 
+export type AgentSupervisorAction = "observe" | "suggest" | "approve_escalation" | "pause_assignment" | "edit_config" | "retire_agent";
+export type AgentSupervisorAuthorityLevel = "observe" | "suggest" | "approve_low_risk" | "approve_medium_risk" | "approve_high_risk";
+
+export interface AgentSupervisorAuthorityInput {
+  supervisor: {
+    id: string;
+    authorityLevel?: AgentSupervisorAuthorityLevel;
+    allowedActions?: AgentSupervisorAction[];
+    scopeType?: string;
+    scopeId?: string;
+  };
+  targetAgent: {
+    id: string;
+    managerAgentId?: string;
+    teamId?: string;
+    scopeType?: string;
+    scopeId?: string;
+  };
+  request: {
+    action: AgentSupervisorAction;
+    risk: AgentPermissionEscalationRequest["risk"];
+    scopeType?: string;
+    scopeId?: string;
+  };
+}
+
+export interface AgentSupervisorAuthorityResult {
+  allowed: boolean;
+  reasons: string[];
+  maxRisk: AgentPermissionEscalationRequest["risk"];
+}
+
 export interface AgentRetirementInput {
   agent: Record<string, unknown>;
   assignments?: Array<Record<string, unknown>>;
@@ -304,6 +336,30 @@ export interface AgentBudgetEvaluationResult {
   reasons: string[];
   exceededBehavior: AgentBudgetExceededBehavior;
   matchedLimit?: AgentBudgetLimit;
+}
+
+export type AgentActionSeverity = AgentIncidentSeverity;
+
+export interface AgentActionSeverityRequest {
+  action: AgentResourceAction | string;
+  resourceType?: string;
+  resourceId?: string;
+  externalSideEffect?: boolean;
+  paidAction?: boolean;
+  rawPii?: boolean;
+  productionMutation?: boolean;
+  nativeHostAccess?: boolean;
+  destructive?: boolean;
+  irreversible?: boolean;
+}
+
+export interface AgentActionSeverityResult {
+  severity: AgentActionSeverity;
+  reasons: string[];
+  approvalRequired: boolean;
+  connectorGateRequired: boolean;
+  budgetRequired: boolean;
+  hostGateRequired: boolean;
 }
 
 export type AgentAuditEventKind =
@@ -682,6 +738,36 @@ export function createAgentPermissionEscalationRequest(
   return { ...input, id };
 }
 
+export function evaluateAgentSupervisorAuthority(input: AgentSupervisorAuthorityInput): AgentSupervisorAuthorityResult {
+  const reasons: string[] = [];
+  const authorityLevel = input.supervisor.authorityLevel ?? "observe";
+  const maxRisk = supervisorMaxRisk(authorityLevel);
+  const allowedActions = input.supervisor.allowedActions ?? supervisorDefaultActions(authorityLevel);
+  if (input.targetAgent.managerAgentId !== input.supervisor.id) {
+    reasons.push("supervisor: target agent does not report to supervisor");
+  }
+  if (!allowedActions.includes(input.request.action)) {
+    reasons.push(`supervisor: action ${input.request.action} is not delegated`);
+  }
+  if (riskRank(input.request.risk) > riskRank(maxRisk)) {
+    reasons.push(`supervisor: risk ${input.request.risk} exceeds ${maxRisk}`);
+  }
+  if (input.request.risk === "critical") {
+    reasons.push("supervisor: critical risk requires owner or host approval");
+  }
+  if (input.supervisor.scopeType && input.request.scopeType && input.supervisor.scopeType !== input.request.scopeType) {
+    reasons.push(`supervisor: scope type ${input.request.scopeType} is outside ${input.supervisor.scopeType}`);
+  }
+  if (input.supervisor.scopeId && input.request.scopeId && input.supervisor.scopeId !== input.request.scopeId) {
+    reasons.push(`supervisor: scope ${input.request.scopeId} is outside ${input.supervisor.scopeId}`);
+  }
+  return {
+    allowed: reasons.length === 0,
+    reasons,
+    maxRisk,
+  };
+}
+
 export function createAgentRetirementPlan(input: AgentRetirementInput): AgentRetirementPlan {
   const redaction = input.redaction ?? "strict";
   const retiredAt = input.retiredAt ?? new Date().toISOString();
@@ -867,6 +953,34 @@ export function evaluateAgentBudget(policy: AgentBudgetPolicy, request: AgentBud
     reasons,
     exceededBehavior: policy.exceededBehavior,
     ...(matchedLimit ? { matchedLimit } : {}),
+  };
+}
+
+export function evaluateAgentActionSeverity(request: AgentActionSeverityRequest): AgentActionSeverityResult {
+  const reasons: string[] = [];
+  let severityRank = severityRankForAction(request.action);
+  const raise = (severity: AgentActionSeverity, reason: string) => {
+    severityRank = Math.max(severityRank, AGENT_ACTION_SEVERITY_RANK[severity]);
+    reasons.push(reason);
+  };
+  const resourceType = request.resourceType?.toLowerCase() ?? "";
+  if (request.action === "*") raise("critical", "action wildcard can cover destructive authority");
+  if (resourceType === "secret" || resourceType === "vault" || resourceType === "credential") raise("high", "secret resource requires brokered review");
+  if (request.rawPii) raise("high", "raw PII requires privacy review");
+  if (request.externalSideEffect) raise("high", "external side effect requires connector gate");
+  if (request.paidAction) raise("high", "paid action requires budget gate");
+  if (request.productionMutation) raise("high", "production mutation requires approval");
+  if (request.nativeHostAccess) raise("critical", "native host access requires host gate");
+  if (request.destructive) raise("critical", "destructive action requires approval");
+  if (request.irreversible) raise("critical", "irreversible action requires approval");
+  const severity = AGENT_ACTION_SEVERITY_BY_RANK[severityRank];
+  return {
+    severity,
+    reasons: reasons.length > 0 ? reasons : [`action ${request.action} classified as ${severity}`],
+    approvalRequired: severity === "high" || severity === "critical" || request.productionMutation === true || request.destructive === true || request.irreversible === true,
+    connectorGateRequired: request.externalSideEffect === true || request.paidAction === true,
+    budgetRequired: request.paidAction === true,
+    hostGateRequired: request.nativeHostAccess === true,
   };
 }
 
@@ -1564,6 +1678,48 @@ function assignmentKindAllowedForSurface(surface: AgentSafeSurfaceKind, kind: un
     || kind === "external_email"
     || kind === "support_inbox"
     || kind === "custom_channel";
+}
+
+const AGENT_ACTION_SEVERITY_BY_RANK = ["info", "low", "medium", "high", "critical"] as const satisfies readonly AgentActionSeverity[];
+const AGENT_ACTION_SEVERITY_RANK: Record<AgentActionSeverity, number> = {
+  info: 0,
+  low: 1,
+  medium: 2,
+  high: 3,
+  critical: 4,
+};
+
+function severityRankForAction(action: AgentResourceAction | string): number {
+  if (action === "read") return AGENT_ACTION_SEVERITY_RANK.low;
+  if (action === "create" || action === "update" || action === "write") return AGENT_ACTION_SEVERITY_RANK.medium;
+  if (action === "invoke" || action === "execute" || action === "lease_secret" || action === "approve") return AGENT_ACTION_SEVERITY_RANK.high;
+  if (action === "delete" || action === "*") return AGENT_ACTION_SEVERITY_RANK.critical;
+  return AGENT_ACTION_SEVERITY_RANK.medium;
+}
+
+const SUPERVISOR_RISK_RANK: Record<AgentPermissionEscalationRequest["risk"], number> = {
+  low: 0,
+  medium: 1,
+  high: 2,
+  critical: 3,
+};
+
+function riskRank(risk: AgentPermissionEscalationRequest["risk"]): number {
+  return SUPERVISOR_RISK_RANK[risk];
+}
+
+function supervisorMaxRisk(level: AgentSupervisorAuthorityLevel): AgentPermissionEscalationRequest["risk"] {
+  if (level === "approve_high_risk") return "high";
+  if (level === "approve_medium_risk") return "medium";
+  return "low";
+}
+
+function supervisorDefaultActions(level: AgentSupervisorAuthorityLevel): AgentSupervisorAction[] {
+  if (level === "observe") return ["observe"];
+  if (level === "suggest") return ["observe", "suggest"];
+  if (level === "approve_low_risk") return ["observe", "suggest", "approve_escalation", "pause_assignment"];
+  if (level === "approve_medium_risk") return ["observe", "suggest", "approve_escalation", "pause_assignment", "edit_config"];
+  return ["observe", "suggest", "approve_escalation", "pause_assignment", "edit_config", "retire_agent"];
 }
 
 function isSensitiveAgentKey(key: string): boolean {

@@ -1,15 +1,19 @@
 import {
+  clawDenseDataAcceptanceFixture,
   clawDenseDataOsRegistry,
   findClawDenseDataSystem,
   listClawDenseDataSemanticViewEntries,
   resolveBuiltinCollectionName,
   resolveClawDenseDataIntent,
 } from "@clawjs/core";
+import fs from "fs";
+import path from "path";
 
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK } from "./cli-errors.ts";
 import { formatCliTable } from "./cli-flag-parsers.ts";
 import { writeJsonOk } from "./cli-json.ts";
 import { runMagicDbCli } from "./database-magic.ts";
+import { openMainDataStore } from "./v1-data.ts";
 
 interface DenseDataCliInput {
   argv: string[];
@@ -26,6 +30,7 @@ interface DenseDataCliInput {
 
 const INSPECTION_ACTIONS = new Set(["overview", "gaps", "intents", "schema"]);
 const CRUD_ACTIONS = new Set(["list", "get", "create", "update", "delete", "query", "schema", "add"]);
+const DENSE_FIXTURE_COMMANDS = new Set(["dense-fixture", "dense-fixtures"]);
 const FOUNDATION_COLLECTION_COMMANDS: Record<string, string> = {
   "domain-system": "domain_systems",
   "domain-systems": "domain_systems",
@@ -76,6 +81,7 @@ export async function runDenseDataCli(input: DenseDataCliInput): Promise<number 
   const group = input.positionals[0];
   const action = input.positionals[1];
   if (!group || !action) return null;
+  if (DENSE_FIXTURE_COMMANDS.has(group)) return runDenseFixtureCli(input, action);
   if (!isDenseDataCommandGroup(group)) return null;
 
   const foundationCollectionName = collectionForFoundationRoute(group);
@@ -190,6 +196,58 @@ export async function runDenseDataCli(input: DenseDataCliInput): Promise<number 
   }
 
   return inspectionAction ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+}
+
+function runDenseFixtureCli(input: DenseDataCliInput, action: string): number | null {
+  if (action !== "seed") return null;
+  const namespaceId = input.flags.namespace ?? "main";
+  const dataDir = path.join(input.workspaceRoot, ".claw", "data");
+  fs.mkdirSync(dataDir, { recursive: true });
+  const store = openMainDataStore({
+    ...process.env,
+    CLAW_DATA_DIR: dataDir,
+  });
+  store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
+
+  const seeded = clawDenseDataAcceptanceFixture.records.map((fixtureRecord) => {
+    const record = store.putRecord({
+      namespaceId,
+      collectionName: fixtureRecord.collectionName,
+      recordId: fixtureRecord.id,
+      payload: fixtureRecord.data,
+      createdAt: "2026-05-17T00:00:00.000Z",
+      updatedAt: "2026-05-17T00:00:00.000Z",
+    });
+    return {
+      id: record.id,
+      collectionName: fixtureRecord.collectionName,
+      label: fixtureRecord.label,
+      covers: fixtureRecord.covers,
+    };
+  });
+  const payload = {
+    fixtureSetId: clawDenseDataAcceptanceFixture.fixtureSetId,
+    sourceConversationId: clawDenseDataAcceptanceFixture.sourceConversationId,
+    namespaceId,
+    store: "core.sqlite",
+    seeded,
+  };
+  if (input.wantsJson) {
+    writeJsonOk(input.context.stdout, payload, {
+      schemaVersion: 1,
+      canonicalCommand: "dense-fixtures",
+      invokedCommand: input.positionals[0] ?? "dense-fixtures",
+      subcommand: action,
+      denseData: true,
+    });
+  } else {
+    input.context.stdout.write(`${formatCliTable(seeded.map((record) => ({
+      id: record.id,
+      collection: record.collectionName,
+      covers: record.covers.join(", "),
+    })))}\n`);
+  }
+  return CLI_EXIT_OK;
 }
 
 function semanticViewForIntent(intent: ReturnType<typeof resolveClawDenseDataIntent>) {

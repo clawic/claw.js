@@ -78,12 +78,33 @@ test("runCli exposes Agents V1 safe surface projection gate", async () => {
     assert.equal(schema.gates.includes("surface-projection"), true);
     assert.equal(schema.gates.includes("delegation-check"), true);
     assert.equal(schema.gates.includes("budget-check"), true);
+    assert.equal(schema.gates.includes("action-severity"), true);
     assert.equal(schema.gates.includes("config-revision"), true);
     assert.equal(schema.gates.includes("incident"), true);
     assert.equal(schema.gates.includes("activity-feed"), true);
     assert.equal(schema.gates.includes("blueprint"), true);
     assert.equal(schema.gates.includes("evaluation"), true);
     assert.equal(schema.gates.includes("retirement-plan"), true);
+
+    const actionSeverityStdout = captureStream();
+    assert.equal(await runCli(["agents", "action-severity", "--record", JSON.stringify({
+      action: "delete",
+      resourceType: "file",
+      nativeHostAccess: true,
+      irreversible: true,
+    }), "--json"], {
+      stdout: actionSeverityStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const actionSeverity = parseCliJsonPayload(actionSeverityStdout.getOutput()) as {
+      severity: string;
+      approvalRequired: boolean;
+      hostGateRequired: boolean;
+    };
+    assert.equal(actionSeverity.severity, "critical");
+    assert.equal(actionSeverity.approvalRequired, true);
+    assert.equal(actionSeverity.hostGateRequired, true);
 
     const surfaceProjectionStdout = captureStream();
     assert.equal(await runCli(["agents", "surface-projection", "--record", JSON.stringify({

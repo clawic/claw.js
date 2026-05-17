@@ -154,6 +154,7 @@ claw agents resolve-external-identity --record '{"provider":"web","externalId":"
 claw agents project-support-inbox --record '{"sessionId":"session-1","assignment":{"id":"assignment.web","agentId":"agent.ops","kind":"external_web_chat","status":"active","channel":"chat"},"identity":{"externalUserId":"external_user_1","actorId":"actor_external_1","contactProjection":"create_or_update","boundary":{"scopeType":"external_user","scopeId":"external_user_1"},"telemetry":{}},"initialMessage":"Need help"}' --json
 claw agents memory-check --record '{"policy":{"readScopes":[{"layer":"global","access":"read"}],"writeScopes":[{"layer":"agent_private","access":"write"}],"writePolicy":"private_only"},"request":{"operation":"write","layer":"agent_private"}}' --json
 claw agents budget-check --record '{"policy":{"exceededBehavior":"deny_action","limits":[{"dimension":"external_actions","limit":5,"used":1}]},"request":{"dimension":"external_actions","cost":1,"externalPaidAction":true,"connectorGateAllowed":true}}' --json
+claw agents action-severity --record '{"action":"invoke","resourceType":"connector","externalSideEffect":true,"paidAction":true}' --json
 claw agents surface-projection --record '{"surface":"relay","agent":{"id":"agent.ops","name":"Ops","secretAllowlist":["vault://agents/ops"]},"assignments":[{"id":"assignment.relay","agentId":"agent.ops","kind":"relay","status":"active","channel":"relay"}],"budgets":[{"id":"budget.relay","exceededBehavior":"deny_action","limits":[{"dimension":"external_actions","limit":10}]}]}' --json
 claw agents config-revision --record '{"agentId":"agent.ops","revision":2,"actorId":"actor.owner","reason":"Tighten MCP assignment","configSnapshot":{"name":"Ops","secretAllowlist":["vault://agents/ops"]}}' --json
 claw agents incident --record '{"agentId":"agent.ops","assignmentId":"assignment.relay","severity":"high","summary":"Unsafe route blocked","metadata":{"rawTraceRef":"trace:redacted"}}' --json
@@ -189,6 +190,9 @@ Delegation is checked with `delegation-check`; both parent and child must pass
 the same effective access intersection, so subagents cannot launder grants
 through a weaker parent. Budgets are checked with `budget-check`; external paid
 actions require both a budget allowance and connector gate before dispatch.
+`action-severity` classifies proposed actions as `info`, `low`, `medium`,
+`high`, or `critical` and returns the approval, connector, budget, and host
+gates required before dispatch.
 The SDK exposes the same Agents V1 policy layer through `createClaw().agents`
 for multidimensional budgets, redacted audit events, and safe
 `claw_agent_package` export. Package
@@ -581,6 +585,7 @@ claw medication add --patient patient_123 --json
 claw patient patient_123 medications list --json
 claw patient patient_123 symptoms add "Headache" --severity 4 --json
 claw patient patient_123 symptoms list --json
+claw patient patient_123 timeline --json
 claw company create "Acme Corp" --json
 claw account create "Acme Account" --company company_123 --json
 claw deal create "Pilot" --company company_123 --account-id account_123 --json
@@ -605,6 +610,7 @@ claw transaction create Lunch --account financial_account_123 --amount-cents 120
 claw organism create "Mouse A" --species "Mus musculus" --json
 claw experiment create "Dose response" --organism organism_123 --json
 claw experiment experiment_123 samples add "Exp sample 1" --organism organism_123 --json
+claw dense-fixtures seed --json
 claw evidence-source create "Clinic note" --kind document --collection-name patients --record-id patient_123 --json
 claw quality-gap create "Missing date of birth" --target-collection patients --target-id patient_123 --gap-kind missing --json
 claw semantic-view list --json

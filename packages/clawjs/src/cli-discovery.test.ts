@@ -339,6 +339,43 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
 
 });
 
+test("runCli seeds the dense-data acceptance fixture into the shared database", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-dense-fixture-"));
+
+  const seedResult = await runCliCapture(["dense-fixtures", "seed", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(seedResult.code, CLI_EXIT_OK);
+  const seedPayload = JSON.parse(seedResult.stdout) as {
+    ok: boolean;
+    data: { fixtureSetId: string; store: string; seeded: Array<{ id: string; collectionName: string; covers: string[] }> };
+    meta: { canonicalCommand: string; invokedCommand: string; subcommand: string; denseData: boolean };
+  };
+  assert.equal(seedPayload.ok, true);
+  assert.equal(seedPayload.meta.canonicalCommand, "dense-fixtures");
+  assert.equal(seedPayload.meta.invokedCommand, "dense-fixtures");
+  assert.equal(seedPayload.meta.subcommand, "seed");
+  assert.equal(seedPayload.meta.denseData, true);
+  assert.equal(seedPayload.data.fixtureSetId, "dense-data-acceptance-v1");
+  assert.equal(seedPayload.data.store, "core.sqlite");
+  assert.equal(seedPayload.data.seeded.some((record) => record.id === "fixture_patient_ada" && record.collectionName === "patients" && record.covers.includes("patient")), true);
+  assert.equal(seedPayload.data.seeded.some((record) => record.id === "fixture_gap_missing_dob" && record.collectionName === "quality_gaps" && record.covers.includes("partial_data_gap")), true);
+
+  const patientGet = await runCliCapture(["patient", "get", "fixture_patient_ada", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(patientGet.code, CLI_EXIT_OK);
+  const patientPayload = JSON.parse(patientGet.stdout) as { data: { id: string; displayName: string; qualityGaps: string[] }; meta: { collection: string; action: string } };
+  assert.equal(patientPayload.meta.collection, "patients");
+  assert.equal(patientPayload.meta.action, "get");
+  assert.equal(patientPayload.data.id, "fixture_patient_ada");
+  assert.equal(patientPayload.data.displayName, "Ada Patient");
+  assert.deepEqual(patientPayload.data.qualityGaps, ["fixture_gap_missing_dob"]);
+
+  const qualityGapGet = await runCliCapture(["quality-gap", "get", "fixture_gap_missing_dob", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(qualityGapGet.code, CLI_EXIT_OK);
+  const qualityGapPayload = JSON.parse(qualityGapGet.stdout) as { data: { targetCollection: string; targetId: string; evidenceSourceId: string } };
+  assert.equal(qualityGapPayload.data.targetCollection, "patients");
+  assert.equal(qualityGapPayload.data.targetId, "fixture_patient_ada");
+  assert.equal(qualityGapPayload.data.evidenceSourceId, "fixture_evidence_intake_note");
+});
+
 test("runCli searches the registered CLI discovery surface", async () => {
   const result = await runCliCapture(["search", "system capabilities", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK);

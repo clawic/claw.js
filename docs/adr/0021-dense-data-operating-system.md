@@ -158,6 +158,15 @@ to a covered command, explicit workflow/data gap, blocked state, external
 pending state, or custom pack. The fixture covers patient, study, sample, legal
 case, invoice/company, incident/service, course, manufacturing work order,
 evidence, provenance, and partial-data quality gaps.
+`claw dense-fixtures seed` writes that fixture into local `core.sqlite` with
+stable fixture IDs, so the acceptance set is executable through normal DB and
+human noun commands rather than remaining an inspect-only artifact.
+
+Semantic-view routes such as `claw patient <id> timeline` now return a stable
+view contract tied to the registry. They expose the operation, required inputs,
+output shape, and touched data classes without pretending that a full
+materialized clinical timeline exists before the relevant pack has real data
+and provider validation.
 
 The registry also carries explicit `external_pending` requirements for real
 EHR/FHIR exchange, lab instrument ingestion, CTMS synchronization, payment

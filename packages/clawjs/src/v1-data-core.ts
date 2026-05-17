@@ -1620,7 +1620,7 @@ export function usage(binName: string, group: string): string {
       return `Usage: ${binName} apps list|upsert [--json]`;
     case "design":
       return `Usage: ${binName} design list|upsert [--json]`;
-    case "agents": return `Usage: ${binName} agents list|get|upsert|delete|schema|evaluate-access|delegation-check|route-check|resolve-external-identity|project-support-inbox|memory-check|budget-check|surface-projection|config-revision|incident|activity-feed|blueprint|evaluation|retirement-plan [--json]`;
+    case "agents": return `Usage: ${binName} agents list|get|upsert|delete|schema|evaluate-access|delegation-check|route-check|resolve-external-identity|project-support-inbox|memory-check|budget-check|action-severity|surface-projection|config-revision|incident|activity-feed|blueprint|evaluation|retirement-plan [--json]`;
     case "skills": return `Usage: ${binName} skills get|upsert|delete [--json]`;
     case "personalities": return `Usage: ${binName} personalities list|get|upsert|delete [--json]`;
     case "skill-collections": return `Usage: ${binName} skill-collections list|get|upsert|delete [--json]`;

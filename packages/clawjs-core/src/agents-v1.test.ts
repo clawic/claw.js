@@ -17,8 +17,10 @@ import {
   evaluateAgentDelegationAccess,
   evaluateAgentEffectiveAccess,
   evaluateAgentAssignmentRoute,
+  evaluateAgentActionSeverity,
   evaluateAgentMemoryAccess,
   createAgentPermissionEscalationRequest,
+  evaluateAgentSupervisorAuthority,
   redactAgentBoundaryValue,
   resolveAgentExternalIdentity,
   type AgentAccessRequest,
@@ -170,6 +172,59 @@ test("Agents V1 permission escalation requests include auditable scope", () => {
   assert.match(request.id, /^agent_escalation_/);
   assert.equal(request.action, "read");
   assert.equal(request.scopeId, "customer_1");
+});
+
+test("Agents V1 supervisor authority is limited by org relation, action, risk, and scope", () => {
+  const allowed = evaluateAgentSupervisorAuthority({
+    supervisor: {
+      id: "agent.manager",
+      authorityLevel: "approve_medium_risk",
+      scopeType: "team",
+      scopeId: "support",
+    },
+    targetAgent: {
+      id: "agent.support",
+      managerAgentId: "agent.manager",
+      teamId: "support",
+    },
+    request: {
+      action: "edit_config",
+      risk: "medium",
+      scopeType: "team",
+      scopeId: "support",
+    },
+  });
+  assert.equal(allowed.allowed, true);
+  assert.deepEqual(allowed.reasons, []);
+  assert.equal(allowed.maxRisk, "medium");
+
+  const blocked = evaluateAgentSupervisorAuthority({
+    supervisor: {
+      id: "agent.manager",
+      authorityLevel: "approve_low_risk",
+      scopeType: "team",
+      scopeId: "support",
+    },
+    targetAgent: {
+      id: "agent.support",
+      managerAgentId: "agent.other",
+      teamId: "sales",
+    },
+    request: {
+      action: "retire_agent",
+      risk: "critical",
+      scopeType: "team",
+      scopeId: "sales",
+    },
+  });
+  assert.equal(blocked.allowed, false);
+  assert.deepEqual(blocked.reasons, [
+    "supervisor: target agent does not report to supervisor",
+    "supervisor: action retire_agent is not delegated",
+    "supervisor: risk critical exceeds low",
+    "supervisor: critical risk requires owner or host approval",
+    "supervisor: scope sales is outside support",
+  ]);
 });
 
 test("Agents V1 retirement archives the agent and revokes assignments and grants with a recoverable snapshot", () => {
@@ -424,6 +479,39 @@ test("Agents V1 external paid actions require both budget and connector gate", (
     connectorGateAllowed: true,
   });
   assert.equal(allowed.allowed, true);
+});
+
+test("Agents V1 action severity taxonomy classifies risky actions before dispatch", () => {
+  const read = evaluateAgentActionSeverity({
+    action: "read",
+    resourceType: "collection",
+  });
+  assert.equal(read.severity, "low");
+  assert.equal(read.approvalRequired, false);
+  assert.equal(read.connectorGateRequired, false);
+
+  const externalPaid = evaluateAgentActionSeverity({
+    action: "invoke",
+    resourceType: "connector",
+    externalSideEffect: true,
+    paidAction: true,
+    rawPii: true,
+  });
+  assert.equal(externalPaid.severity, "high");
+  assert.equal(externalPaid.approvalRequired, true);
+  assert.equal(externalPaid.connectorGateRequired, true);
+  assert.equal(externalPaid.budgetRequired, true);
+  assert.equal(externalPaid.reasons.includes("raw PII requires privacy review"), true);
+
+  const nativeDelete = evaluateAgentActionSeverity({
+    action: "delete",
+    resourceType: "file",
+    nativeHostAccess: true,
+    irreversible: true,
+  });
+  assert.equal(nativeDelete.severity, "critical");
+  assert.equal(nativeDelete.hostGateRequired, true);
+  assert.equal(nativeDelete.approvalRequired, true);
 });
 
 test("Agents V1 redaction removes raw secrets and private local paths at boundaries", () => {

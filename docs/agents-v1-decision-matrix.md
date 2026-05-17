@@ -68,7 +68,7 @@ a later user decision.
 | 40 | `conversation_canonical_store` | implemented | `createAgentSupportInboxProjection` creates support conversation/message records separate from runtime sessions. |
 | 41 | `visitor_pii_default` | implemented | Visitor telemetry is per assignment and defaults to hashed/minimized behavior. |
 | 42 | `tool_model` | partial | Tools are represented through grants and connector control plane; a fuller public tool catalog binding remains incomplete. |
-| 43 | `action_severity` | partial | Incidents/evaluations model severity/status; complete action severity taxonomy remains to be formalized. |
+| 43 | `action_severity` | implemented | `evaluateAgentActionSeverity`, SDK `agents.actionSeverity`, and `claw agents action-severity` classify actions into `info`/`low`/`medium`/`high`/`critical` and return approval, connector, budget, and host gates. |
 | 44 | `connector_integration` | implemented | MCP/control-plane tests require connector approval plus Agents V1 MCP assignment/access policy. |
 | 45 | `autonomy_axis` | partial | Agent records expose autonomy policy fields; full policy-profile registry and UI are incomplete. |
 | 46 | `supervision_model` | partial | Org graph supports managers/supervisors; limited-authority supervisor enforcement needs more policy tests. |

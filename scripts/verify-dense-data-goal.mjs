@@ -163,6 +163,7 @@ for (const phrase of [
   "dense-intents",
   "dense-views",
   "dense-fixtures",
+  "claw patient patient_123 timeline",
   "core.sqlite",
   "entity_relations",
   "quality_gaps",

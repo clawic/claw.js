@@ -7,6 +7,7 @@ import {
   createAgentIncident,
   createAgentRetirementPlan,
   createAgentSupportInboxProjection,
+  evaluateAgentActionSeverity,
   createAgentSafeSurfaceProjection,
   evaluateAgentAssignmentRoute,
   evaluateAgentBudget,
@@ -15,6 +16,7 @@ import {
   evaluateAgentMemoryAccess,
   resolveAgentExternalIdentity,
   type AgentActivityFeedInput,
+  type AgentActionSeverityRequest,
   type AgentBlueprintInput,
   type AgentAssignmentRouteRequest,
   type AgentBudgetPolicy,
@@ -99,7 +101,7 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
       rootConcept: "agent",
       placementConcept: "agent_assignment",
       defaultPosture: "empty_sandbox_respond_only",
-      gates: ["evaluate-access", "delegation-check", "route-check", "resolve-external-identity", "project-support-inbox", "memory-check", "budget-check", "surface-projection", "config-revision", "incident", "activity-feed", "blueprint", "evaluation", "retirement-plan"],
+      gates: ["evaluate-access", "delegation-check", "route-check", "resolve-external-identity", "project-support-inbox", "memory-check", "budget-check", "action-severity", "surface-projection", "config-revision", "incident", "activity-feed", "blueprint", "evaluation", "retirement-plan"],
     });
     return V1_DATA_EXIT_OK;
   }
@@ -143,6 +145,12 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
     const record = recordFlag<{ policy: AgentBudgetPolicy; request: AgentBudgetRequest }>(input);
     if (!record) return usageError(input, "Usage: claw agents budget-check --record JSON [--json]");
     writeSuccess(input, evaluateAgentBudget(record.policy, record.request));
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "action-severity") {
+    const record = recordFlag<AgentActionSeverityRequest>(input);
+    if (!record) return usageError(input, "Usage: claw agents action-severity --record JSON [--json]");
+    writeSuccess(input, evaluateAgentActionSeverity(record));
     return V1_DATA_EXIT_OK;
   }
   if (command === "surface-projection") {

@@ -87,6 +87,16 @@ test("createClaw exposes Agents V1 policy gates through claw.agents", async () =
   assert.equal(budget.allowed, false);
   assert.deepEqual(budget.reasons, ["budget: external_actions limit exceeded"]);
 
+  const severity = claw.agents.actionSeverity({
+    action: "invoke",
+    resourceType: "connector",
+    paidAction: true,
+    externalSideEffect: true,
+  });
+  assert.equal(severity.severity, "high");
+  assert.equal(severity.connectorGateRequired, true);
+  assert.equal(severity.budgetRequired, true);
+
   const service = claw.agents.serviceApi({
     requestId: "request.sdk.service",
     operation: "describe_agent",
