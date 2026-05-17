@@ -334,7 +334,7 @@ export function createFakeOpenClawPluginToolchain(): {
     },
     plugins: {
       slots: {
-        contextEngine: "legacy",
+        contextEngine: "runtime-default",
       },
     },
   }, null, 2));

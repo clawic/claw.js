@@ -239,7 +239,7 @@ test("createClaw exposes app discovery, managed block preservation, and secret r
   });
 
   const discovered = claw.runtime.discoverContext({
-    agentIds: ["legacy-demo", "demo-main"],
+    agentIds: ["demo-alias", "demo-main"],
   });
   const ensureResult = await claw.telegram.provisionSecretReference({
     secretName: "telegram_support_bot_token",
