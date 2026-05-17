@@ -44,6 +44,9 @@ First-class subentities are normalized under the agent domain:
 `agent_assignments`, `agent_execution_profiles`, `agent_resource_grants`,
 `agent_memory_policies`, `agent_budgets`, `agent_config_revisions`,
 `agent_evaluations`, `agent_incidents`, `agent_blueprints`, and `agent_runs`.
+Agent retirement is archive plus revoke plus recoverable snapshot, not hard
+termination: retirement plans archive the agent, revoke assignments, expire or
+deny resource grants, and record a snapshot reference for recovery/audit.
 
 Assignments cover internal Mac chat, external web/Telegram/WhatsApp/email,
 support inboxes, workflows, automations, subagent delegation, MCP/API, Relay,
@@ -83,7 +86,8 @@ The first implementation slice is model plus gates:
   for Relay/MCP/API/UI, redacted config revisions, first-class incidents,
   redacted activity feeds for human consumption, formal reusable blueprints,
   portable skill bindings with refs/versions and required grants, redacted
-  evaluations, escalation requests, and delegation no-laundering
+  evaluations, recoverable retirement plans, escalation requests, and
+  delegation no-laundering
 - route graph coverage for internal Mac assignments, external support
   assignments, MCP/API assignments, runtime runs, sessions, grants, memory
   policies, and support/inbox projection

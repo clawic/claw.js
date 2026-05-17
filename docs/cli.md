@@ -160,6 +160,7 @@ claw agents incident --record '{"agentId":"agent.ops","assignmentId":"assignment
 claw agents activity-feed --record '{"agentId":"agent.ops","runs":[{"id":"run.1","status":"completed","startedAt":"2026-05-17T09:00:00.000Z"}],"incidents":[{"id":"incident.1","severity":"high","summary":"Unsafe route blocked","detectedAt":"2026-05-17T10:00:00.000Z"}],"limit":10}' --json
 claw agents blueprint --record '{"name":"Support blueprint","agencyMode":"support","skillBindings":[{"ref":"skill.support","version":"1","requiredResourceGrants":[{"resourceType":"collection","resourceId":"support_conversations","action":"read"}]}],"template":{"role":"Support","secretAllowlist":["vault://agents/ops"]},"requiredResourceGrants":[{"resourceType":"collection","resourceId":"support_conversations","action":"read"}]}' --json
 claw agents evaluation --record '{"agentId":"agent.ops","assignmentId":"assignment.relay","status":"failed","score":0.25,"criteria":{"metric":"safety"},"result":{"reason":"Unsafe disclosure"}}' --json
+claw agents retirement-plan --record '{"agent":{"id":"agent.ops","name":"Ops","secretAllowlist":["vault://agents/ops"]},"assignments":[{"id":"assignment.relay","agentId":"agent.ops","status":"active"}],"resourceGrants":[{"id":"grant.ops","agentId":"agent.ops","resourceType":"collection","action":"read"}],"reason":"Rotate agent safely"}' --json
 claw personalities upsert personality.review --name Reviewer --prompt "Review with concrete evidence" --json
 claw skill-collections upsert collection.review --name Review --tags review,code --json
 claw connections upsert github --provider custom --label GitHub --secret-ref vault://connections/github --json
@@ -217,7 +218,10 @@ Portable agent packages use `skillBindings` as the canonical skill model:
 each binding carries a skill ref, optional version, required assignment kinds,
 and required resource grants. The older `skillRefs` input remains a shorthand
 that is normalized into bindings for compatibility. `evaluation` records
-redacted performance/safety assessments with audit output.
+redacted performance/safety assessments with audit output. `retirement-plan`
+produces a recoverable archive plan: the agent is archived, assignments are
+revoked, resource grants are expired/denied, and a snapshot ref is recorded
+without exposing raw secrets or local paths.
 
 ## Global Flags
 

@@ -1,6 +1,7 @@
 ---
 "@clawjs/core": patch
-"@clawjs/cli": patch
+"@clawjs/claw": patch
+"@clawjs/node": patch
 ---
 
-Add an Agents V1 retirement-plan helper and CLI gate that archives an agent, revokes assignments and grants, and records a recoverable redacted snapshot reference.
+Add an Agents V1 retirement plan helper and CLI surface that archives agents, revokes assignments, expires or denies grants, records a recoverable snapshot reference, and emits redacted audit output.

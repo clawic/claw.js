@@ -1170,6 +1170,8 @@ The docs check script validates that every current export from
     AgentMemoryWritePolicy
     AgentPermissionEscalationRequest
     AgentResolvedExternalIdentity
+    AgentRetirementInput
+    AgentRetirementPlan
     AgentRecord
     agentRecordSchema
     AGENT_RESOURCE_ACTIONS
@@ -1588,6 +1590,7 @@ The docs check script validates that every current export from
     createAgentConfigRevision
     createAgentEvaluation
     createAgentIncident
+    createAgentRetirementPlan
     createAgentSafePackageExport
     createAgentSafeSurfaceProjection
     createAgentServiceApiResponse

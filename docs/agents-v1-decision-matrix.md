@@ -51,7 +51,7 @@ a later user decision.
 | 23 | `data_access_scope` | partial | Structured access is grant and context-policy driven; explicit named context pack/view UX remains incomplete. |
 | 24 | `employee_model_depth` | partial | Agent as digital employee is canonical; full employee-management panel is not complete. |
 | 25 | `org_model` | implemented | Agent records and inspect fiche support owner, manager, team, reports, workspace, and project projections. |
-| 26 | `agent_retirement` | partial | Schema has archive/retired snapshot fields; complete revoke plus recoverable snapshot workflow still needs operational tests. |
+| 26 | `agent_retirement` | implemented | `createAgentRetirementPlan` and `claw agents retirement-plan` produce archive, assignment revoke, grant expiry/deny, recoverable snapshot, redaction, and audit output. |
 | 27 | `runtime_binding` | implemented | `agent_execution_profiles` and run records bind runtime/sandbox/model profile. |
 | 28 | `intelligence_levels` | implemented | Blueprints and execution profiles expose declarative model/speed/tier fields. |
 | 29 | `execution_modes` | partial | Schema includes execution mode; runtime dispatch coverage for sync/async remains incomplete. |
