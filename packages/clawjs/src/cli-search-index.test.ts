@@ -507,6 +507,22 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(serviceStatusPayload.data.service.mode, "embedded");
     assert.equal(serviceStatusPayload.data.sources.some((source) => source.source === "commands"), true);
 
+    const entrypoints = await runCliCapture(["search", "entrypoints", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(entrypoints.code, CLI_EXIT_OK);
+    const entrypointsPayload = JSON.parse(entrypoints.stdout) as {
+      data: {
+        rootSearchHotkeyState: string;
+        chatSearchIsolation: boolean;
+        entrypoints: Array<{ id: string; route?: string; queryScope: string; hotkey: { bindingId: string; state: string; reservedChord?: string } }>;
+      };
+    };
+    assert.equal(entrypointsPayload.data.rootSearchHotkeyState, "external_pending");
+    assert.equal(entrypointsPayload.data.chatSearchIsolation, true);
+    assert.equal(entrypointsPayload.data.entrypoints.find((entrypoint) => entrypoint.id === "root-search")?.route, "/search");
+    assert.equal(entrypointsPayload.data.entrypoints.find((entrypoint) => entrypoint.id === "root-search")?.hotkey.bindingId, "search.root.global");
+    assert.equal(entrypointsPayload.data.entrypoints.find((entrypoint) => entrypoint.id === "chat-search")?.queryScope, "conversations_only");
+    assert.equal(entrypointsPayload.data.entrypoints.find((entrypoint) => entrypoint.id === "chat-search")?.hotkey.reservedChord, "Command-G");
+
     const serviceStart = await runCliCapture(["search", "service", "start", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(serviceStart.code, CLI_EXIT_OK);
     const serviceStartPayload = JSON.parse(serviceStart.stdout) as { data: { service: { state: string; mode: string; startedAt?: string } } };

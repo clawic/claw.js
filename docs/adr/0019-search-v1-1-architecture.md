@@ -110,12 +110,20 @@ Search V1.1 is built from these layers:
 - `claw search actions execute <result-id> <action-id>`
 - `claw search audit`
 - `claw search profiles`
+- `claw search entrypoints`
 - `claw search explain`
 
 Clawix Mac Search and `Command-G` keep their current conversations-only UX.
 They must not display Root Search results by default, wait for universal
 indexing, or include random framework/native sources unless a future UI explicitly
 switches scope.
+
+Search entrypoints are explicit contracts. Root Search is `/search` plus
+`claw search query` and reserves a separate `search.root.global` native binding
+that remains `EXTERNAL PENDING` until a signed host shortcut broker owns it.
+Search Index is `/search-index` and has no global hotkey requirement. Chat
+Search remains a host UI entrypoint with the reserved `Command-G` chord and a
+conversations-only query scope.
 
 Scoped rebuilds clear only the selected source's derived rows before refreshing
 it. A generation, media, code, or document backfill must not wipe conversations,

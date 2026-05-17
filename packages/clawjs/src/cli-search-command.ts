@@ -11,6 +11,7 @@ import {
   SEARCH_PROFILES,
   SearchStore,
   createBuiltinSearchSourceManifests,
+  listSearchEntrypointContracts,
   type SearchAction,
   type SearchActionExecutionPlan,
   type SearchDocumentInput,
@@ -35,7 +36,7 @@ import { pathSafeBasename, resolveRuntimeAdapterId } from "./cli-runtime-utils.t
 import { resolveClawjsDataRoot, resolveClawjsMainDbPath } from "./v1-data.ts";
 import { readMcpServers, type JsonRecord } from "./v1-data-core.ts";
 
-const SEARCH_ADMIN_COMMANDS = new Set(["sources", "status", "service", "profiles", "saved", "monitors", "actions", "audit", "jobs", "shards", "explain"]);
+const SEARCH_ADMIN_COMMANDS = new Set(["sources", "status", "service", "profiles", "entrypoints", "saved", "monitors", "actions", "audit", "jobs", "shards", "explain"]);
 const WORKSPACE_SEARCH_DOMAINS = new Set([
   "areas",
   "tasks",
@@ -685,6 +686,18 @@ export async function runSearchAdminCli(input: {
   if (command === "profiles") {
     if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", { profiles: SEARCH_PROFILES }, { subcommand: "profiles" });
     else input.context.stdout.write(`${SEARCH_PROFILES.map((entry) => `${entry.id}\t${entry.defaultEnabled ? "default" : "opt-in"}\t${entry.label}`).join("\n")}\n`);
+    return CLI_EXIT_OK;
+  }
+
+  if (command === "entrypoints") {
+    const entrypoints = listSearchEntrypointContracts();
+    const data = {
+      entrypoints,
+      rootSearchHotkeyState: entrypoints.find((entrypoint) => entrypoint.id === "root-search")?.hotkey.state ?? "external_pending",
+      chatSearchIsolation: entrypoints.find((entrypoint) => entrypoint.id === "chat-search")?.queryScope === "conversations_only",
+    };
+    if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "entrypoints" });
+    else input.context.stdout.write(`${entrypoints.map((entrypoint) => `${entrypoint.id}\t${entrypoint.scope}\t${entrypoint.hotkey.state}\t${entrypoint.label}`).join("\n")}\n`);
     return CLI_EXIT_OK;
   }
 

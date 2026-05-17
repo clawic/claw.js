@@ -29,6 +29,29 @@ export interface SearchBudgets {
   sourceTimeoutMs: number;
 }
 
+export type SearchEntrypointId = "root-search" | "search-index" | "chat-search";
+
+export interface SearchHotkeyContract {
+  bindingId: string;
+  state: "ready" | "external_pending" | "not_applicable";
+  owner: "framework" | "signed_host" | "host_ui";
+  defaultChord?: string;
+  reservedChord?: string;
+  notes: string[];
+}
+
+export interface SearchEntrypointContract {
+  id: SearchEntrypointId;
+  label: string;
+  scope: "root" | "admin" | "chat";
+  route?: string;
+  command?: string;
+  defaultProfile: SearchProfileId;
+  queryScope: "framework" | "technical_admin" | "conversations_only";
+  hotkey: SearchHotkeyContract;
+  preservesConversationSearchIsolation: boolean;
+}
+
 export type SearchEngineId = "sqlite" | (string & {});
 
 export interface SearchEngineDescriptor {
@@ -310,6 +333,59 @@ export const DEFAULT_SEARCH_BUDGETS: SearchBudgets = {
   sourceTimeoutMs: 75,
 };
 
+export const SEARCH_ENTRYPOINT_CONTRACTS: SearchEntrypointContract[] = [
+  {
+    id: "root-search",
+    label: "Root Search",
+    scope: "root",
+    route: "/search",
+    command: "claw search query",
+    defaultProfile: "framework",
+    queryScope: "framework",
+    hotkey: {
+      bindingId: "search.root.global",
+      state: "external_pending",
+      owner: "signed_host",
+      notes: [
+        "Requires a signed host/global shortcut broker before native binding can be validated.",
+        "Must stay separate from the conversations-only chat search shortcut.",
+      ],
+    },
+    preservesConversationSearchIsolation: true,
+  },
+  {
+    id: "search-index",
+    label: "Search Index",
+    scope: "admin",
+    route: "/search-index",
+    command: "claw search sources",
+    defaultProfile: "framework",
+    queryScope: "technical_admin",
+    hotkey: {
+      bindingId: "search.index.admin",
+      state: "not_applicable",
+      owner: "framework",
+      notes: ["Technical/admin surface; no global native shortcut is required."],
+    },
+    preservesConversationSearchIsolation: true,
+  },
+  {
+    id: "chat-search",
+    label: "Chat Search",
+    scope: "chat",
+    defaultProfile: "framework",
+    queryScope: "conversations_only",
+    hotkey: {
+      bindingId: "search.chat.current",
+      state: "ready",
+      owner: "host_ui",
+      reservedChord: "Command-G",
+      notes: ["Existing Clawix Mac search remains conversations-only and must not show Root Search results."],
+    },
+    preservesConversationSearchIsolation: true,
+  },
+];
+
 export const DEFAULT_SEARCH_ENGINE_ID = "sqlite";
 
 export const SEARCH_SQLITE_ENGINE = defineSearchEngine({
@@ -446,6 +522,16 @@ export function createRootSearchFederator(options: RootSearchFederatorOptions = 
 
 export function createSearchRegistry(options: RootSearchFederatorOptions = {}): SearchRegistry {
   return createRootSearchFederator(options);
+}
+
+export function listSearchEntrypointContracts(): SearchEntrypointContract[] {
+  return SEARCH_ENTRYPOINT_CONTRACTS.map((entrypoint) => ({
+    ...entrypoint,
+    hotkey: {
+      ...entrypoint.hotkey,
+      notes: [...entrypoint.hotkey.notes],
+    },
+  }));
 }
 
 export function createFrameworkSearchSourceManifest(input: {

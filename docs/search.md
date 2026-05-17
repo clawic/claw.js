@@ -462,6 +462,11 @@ The showcase app also exposes `/search` as the first Root Search entrypoint.
 It is separate from chat search, uses the `framework` profile by default, and
 seeds only the commands hot path on demand so the launcher remains immediately
 usable without waiting for universal backfill.
+`claw search entrypoints` exposes the same contract for automation: Root Search
+uses `/search` and `claw search query`, Search Index uses `/search-index`, and
+the existing chat search remains conversations-only with `Command-G`. The Root
+Search native/global hotkey binding is explicit but `EXTERNAL PENDING` until a
+signed host shortcut broker validates it.
 
 ## Implementation Plan
 
@@ -496,6 +501,9 @@ usable without waiting for universal backfill.
 - Keep `/search` as the initial Root Search UI: small fast-source set, framework
   profile by default, domain filters, partial-source metadata, and a link to
   Search Index controls.
+- Expose `claw search entrypoints` so agents and hosts can inspect Root Search,
+  Search Index, and chat-search shortcut contracts before binding native
+  shortcuts.
 - Keep `/search-index` as the technical/admin Search Index surface for source
   state, opt-in profile checks, source onboarding, and rebuild queue control.
 - Keep `framework` as default and use `full` for optional native, web, provider,

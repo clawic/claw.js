@@ -14,6 +14,7 @@ import {
   createRootSearchFederator,
   createSearchRegistry,
   defineSearchEngine,
+  listSearchEntrypointContracts,
   scoreLexicalMatch,
 } from "./index.ts";
 
@@ -30,6 +31,29 @@ test("Search exposes SQLite as the default rebuildable engine boundary", () => {
   assert.equal(SEARCH_SQLITE_ENGINE.capabilities.vectors, true);
   assert.equal(SEARCH_SQLITE_ENGINE.capabilities.rankingCache, true);
   assert.deepEqual(SEARCH_SQLITE_ENGINE.query.strategies, ["lexical", "semantic", "hybrid"]);
+});
+
+test("Search entrypoint contracts keep Root Search separate from chat search", () => {
+  const entrypoints = listSearchEntrypointContracts();
+  const root = entrypoints.find((entrypoint) => entrypoint.id === "root-search");
+  const chat = entrypoints.find((entrypoint) => entrypoint.id === "chat-search");
+  const admin = entrypoints.find((entrypoint) => entrypoint.id === "search-index");
+
+  assert.equal(root?.route, "/search");
+  assert.equal(root?.command, "claw search query");
+  assert.equal(root?.queryScope, "framework");
+  assert.equal(root?.hotkey.bindingId, "search.root.global");
+  assert.equal(root?.hotkey.state, "external_pending");
+  assert.equal(root?.preservesConversationSearchIsolation, true);
+
+  assert.equal(chat?.queryScope, "conversations_only");
+  assert.equal(chat?.hotkey.reservedChord, "Command-G");
+  assert.equal(chat?.hotkey.state, "ready");
+  assert.equal(chat?.preservesConversationSearchIsolation, true);
+
+  assert.equal(admin?.route, "/search-index");
+  assert.equal(admin?.queryScope, "technical_admin");
+  assert.equal(admin?.hotkey.state, "not_applicable");
 });
 
 test("SearchStore reports the default Search engine descriptor", () => {
