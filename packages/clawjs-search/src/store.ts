@@ -332,10 +332,12 @@ export class SearchStore {
     const clearCache = this.db.prepare("DELETE FROM search_ranking_cache");
     const tx = this.db.transaction((documents: SearchDocumentInput[]) => {
       const touchedSources = new Map<string, string>();
+      const limitsBySource = new Map<string, SearchSourceIndexingLimits>();
       for (const input of documents) {
         const updatedAt = input.updatedAt ?? new Date().toISOString();
         const shard = input.shard ?? "default";
-        const limits = this.indexingLimitsForSource(input.source);
+        const limits = limitsBySource.get(input.source) ?? this.indexingLimitsForSource(input.source);
+        limitsBySource.set(input.source, limits);
         const body = truncateUtf8(input.body ?? "", limits.maxBodyBytes);
         const fragments = (input.fragments ?? []).slice(0, limits.maxFragments).map((fragment) => ({
           ...fragment,
