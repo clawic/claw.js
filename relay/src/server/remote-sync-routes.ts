@@ -14,6 +14,7 @@ import {
   createRemoteCompatibilityAdapterReceipt,
   createRemoteGatewayAuditReceipt,
   createRemoteSurfaceClassificationReceipt,
+  createSyncAuthorityHandoffReceipt,
   createSyncDriverApplicationReceipt,
   createSyncResourceManifest,
   evaluateRemoteAgentServiceAccess,
@@ -115,6 +116,12 @@ function numberValue(value: unknown, fallback: number): number {
 
 function parseDriver(value: unknown): SyncDriver {
   return syncDriverSchema.parse(stringValue(value, "skills"));
+}
+
+function parseAuthority(value: unknown): SyncAuthority | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (value === "primary" || value === "replica" || value === "cache" || value === "mirror" || value === "joint") return value;
+  return undefined;
 }
 
 function parseSnapshots(value: unknown, fallback: SyncObjectSnapshot[]): SyncObjectSnapshot[] {
@@ -223,6 +230,19 @@ function meshActorFromInput(input: Record<string, unknown>) {
     transport: stringValue(input.transport, "gateway"),
     trustMode: "governed_gateway" as const,
   };
+}
+
+function syncAuthorityHandoffFromInput(input: Record<string, unknown>) {
+  return createSyncAuthorityHandoffReceipt({
+    manifest: manifestFromInput(input),
+    toNodeId: stringValue(input.toNodeId ?? input["to-node"] ?? input.peerNodeId ?? input["peer-node"], "peer"),
+    actor: meshActorFromInput(input),
+    requestedAuthority: parseAuthority(input.requestedAuthority ?? input["requested-authority"] ?? input.authority),
+    requestedResidency: arrayOfStrings(input.requestedResidency ?? input["requested-residency"], []),
+    createdAt: stringValue(input.createdAt ?? input.now, "2026-05-17T10:15:00.000Z"),
+    physicalAuthorityApplied: input.physicalAuthorityApplied === true || input["physical-authority-applied"] === true,
+    rejected: input.rejected === true,
+  });
 }
 
 function meshInvitationFromInput(input: Record<string, unknown>) {
@@ -490,6 +510,12 @@ export function registerRemoteSyncRoutes(app: FastifyInstance): void {
       writes: false,
     };
   });
+
+  app.post(clawApiPath("sync/authority-handoffs"), async (request) => ({
+    status: "dry_run_external_pending",
+    receipt: syncAuthorityHandoffFromInput(readBody(request)),
+    writes: false,
+  }));
 
   app.get(clawApiPath("nodes"), async () => remoteLayerNodesPayload());
   app.post(clawApiPath("nodes/pair"), async (request) => dryRunNodeOperation("pair", readBody(request)));

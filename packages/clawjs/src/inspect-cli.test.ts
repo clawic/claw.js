@@ -270,6 +270,26 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.equal(syncStatusPayload.state.verifiedCoordinatorSignatures, 4);
   assert.equal(syncStatusPayload.state.invalidCoordinatorSignatures, 0);
 
+  const authorityHandoff = await runCliCapture(["sync", "handoff", "--resource-id", "skills:default", "--driver", "skills", "--to-node", "node.server", "--requested-authority", "primary", "--state-dir", stateDir, "--record", "true", "--actor-id", "agent.sync", ...coordinatorSigningFlags, "--json"], process.cwd());
+  assert.equal(authorityHandoff.code, CLI_EXIT_OK, authorityHandoff.stderr || authorityHandoff.stdout);
+  const authorityHandoffPayload = parseCliJson<{
+    status: string;
+    writes: boolean;
+    receipt: { status: string; fromNodeId: string; toNodeId: string; requestedAuthority: string; physicalAuthorityApplied: boolean; externalPending: string[]; writes: boolean };
+    state: { durable: boolean; coordinatorSignature?: { verified: boolean } };
+  }>(authorityHandoff.stdout).data;
+  assert.equal(authorityHandoffPayload.status, "signed_authority_handoff_recorded");
+  assert.equal(authorityHandoffPayload.writes, false);
+  assert.equal(authorityHandoffPayload.receipt.status, "signed_pending_authority_handoff");
+  assert.equal(authorityHandoffPayload.receipt.fromNodeId, "local");
+  assert.equal(authorityHandoffPayload.receipt.toNodeId, "node.server");
+  assert.equal(authorityHandoffPayload.receipt.requestedAuthority, "primary");
+  assert.equal(authorityHandoffPayload.receipt.physicalAuthorityApplied, false);
+  assert.equal(authorityHandoffPayload.receipt.externalPending.includes("physical_authority_handoff"), true);
+  assert.equal(authorityHandoffPayload.receipt.writes, false);
+  assert.equal(authorityHandoffPayload.state.durable, true);
+  assert.equal(authorityHandoffPayload.state.coordinatorSignature?.verified, true);
+
   const remoteClassification = await runCliCapture([
     "remote",
     "classify",

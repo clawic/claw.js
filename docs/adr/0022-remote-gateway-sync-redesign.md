@@ -222,6 +222,12 @@ driver without making the driver implementation physical by default:
 `claw sync apply --record true` records applied change ids, blocked conflicts,
 actor, route, and driver, while `physical_sync_driver_application` remains
 external pending until a signed host driver run proves the write.
+`SyncAuthorityHandoffReceipt` connects resource authority and residency changes
+to the same signed ledger: `claw sync handoff --record true` and
+`/v1/sync/authority-handoffs` record source node, target node, requested
+authority, requested residency, actor, and route ids while
+`physical_authority_handoff` remains external pending until the physical
+Coordinator/driver handoff is proven.
 `claw gateway secret-lease` is the local broker operation for secret references:
 it requires a signed Coordinator ledger, stores only the reference/actor/action
 lease metadata, sets `plaintextReturned: false`, and refuses plaintext-return

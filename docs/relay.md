@@ -87,6 +87,9 @@ plaintext, no secrets, and no authoritative state. `SyncDriverApplicationReceipt
 records signed intent to apply reconciled queue entries through a physical sync
 driver while keeping the Relay route dry-run and `writes: false` until the
 host/Coordinator driver proves execution.
+`SyncAuthorityHandoffReceipt` records signed intent to move a resource's
+authority or residency between nodes while keeping the physical handoff
+explicitly external pending.
 
 Secrets cross remote and sync paths only as references plus audited broker
 leases. Plaintext secret replication is invalid.
@@ -107,6 +110,7 @@ GET  /v1/sync/changes
 POST /v1/sync/plan
 POST /v1/sync/conflicts
 POST /v1/sync/applications
+POST /v1/sync/authority-handoffs
 GET  /v1/nodes
 POST /v1/nodes/pair
 POST /v1/nodes/trust
@@ -181,6 +185,13 @@ ids, and blocked conflict ids. Unless a signed host driver run proves the
 physical application, the receipt remains `signed_pending_driver_application`,
 marks `physical_sync_driver_application` as `EXTERNAL PENDING`, and keeps
 `writes: false`.
+`SyncAuthorityHandoffReceipt` is the equivalent no-write bridge for authority
+changes. `claw sync handoff --record true` and
+`/v1/sync/authority-handoffs` bind the manifest, source node, target node,
+requested authority, requested residency, and actor. Unless the Coordinator and
+physical sync driver prove the handoff, the receipt remains
+`signed_pending_authority_handoff`, marks `physical_authority_handoff` as
+`EXTERNAL PENDING`, and keeps `writes: false`.
 
 Inter-mesh collaboration is represented by `MeshInvitation`,
 `MeshInvitationAcceptance`, `MeshResourceShare`, and `MeshRevocation`

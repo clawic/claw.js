@@ -260,6 +260,35 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(syncApplicationPayload.reconciliation.appliedChangeIds.length, 1);
     assert.equal(syncApplicationPayload.writes, false);
 
+    const authorityHandoff = await built.app.inject({
+      method: "POST",
+      url: "/v1/sync/authority-handoffs",
+      headers: { "content-type": "application/json" },
+      payload: {
+        resourceId: "skills:default",
+        driver: "skills",
+        ownerNodeId: "node.mac",
+        toNodeId: "node.server",
+        requestedAuthority: "primary",
+        actorId: "agent.sync",
+      },
+    });
+    assert.equal(authorityHandoff.statusCode, 200);
+    const authorityHandoffPayload = authorityHandoff.json() as {
+      status: string;
+      receipt: { status: string; fromNodeId: string; toNodeId: string; requestedAuthority: string; physicalAuthorityApplied: boolean; externalPending: string[]; writes: boolean };
+      writes: boolean;
+    };
+    assert.equal(authorityHandoffPayload.status, "dry_run_external_pending");
+    assert.equal(authorityHandoffPayload.receipt.status, "signed_pending_authority_handoff");
+    assert.equal(authorityHandoffPayload.receipt.fromNodeId, "node.mac");
+    assert.equal(authorityHandoffPayload.receipt.toNodeId, "node.server");
+    assert.equal(authorityHandoffPayload.receipt.requestedAuthority, "primary");
+    assert.equal(authorityHandoffPayload.receipt.physicalAuthorityApplied, false);
+    assert.equal(authorityHandoffPayload.receipt.externalPending.includes("physical_authority_handoff"), true);
+    assert.equal(authorityHandoffPayload.receipt.writes, false);
+    assert.equal(authorityHandoffPayload.writes, false);
+
     const nodes = await built.app.inject({ method: "GET", url: "/v1/nodes" });
     assert.equal(nodes.statusCode, 200);
     const nodesPayload = nodes.json() as { nodes: Array<{ id: string }> };

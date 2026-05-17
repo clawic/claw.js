@@ -190,6 +190,7 @@ claw sync manifest --resource-id skills:default --driver skills --state-dir .cla
 claw sync run --resource-id skills:default --driver skills --peer-snapshot-json '[]' --state-dir .claw/remote-sync --queue true --json
 claw sync reconcile --resource-id skills:default --driver skills --state-dir .claw/remote-sync --ack-change-ids sync_change_... --json
 claw sync apply --resource-id skills:default --driver skills --state-dir .claw/remote-sync --ack-change-ids sync_change_... --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
+claw sync handoff --resource-id skills:default --driver skills --to-node node.server --requested-authority primary --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 claw sync manifest --resource-id skills:default --driver skills --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 claw sync conflicts --json
 claw sync cache --resource-id skills:default --driver skills --object-ref skill.review --client-id iphone.local --content-hash hash-cache --ttl-seconds 600 --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
@@ -252,6 +253,11 @@ authoritative state. It is cache metadata only, not a host write.
 that binds a reconciled queue to one manifest driver. It records applied change
 ids and blocked conflicts, but keeps `physical_sync_driver_application` as
 `external_pending` until a signed host driver physically applies the changes.
+`sync handoff --record true` records a signed `SyncAuthorityHandoffReceipt`
+for changing a resource's authority or residency between nodes. It remains
+`signed_pending_authority_handoff`, marks `physical_authority_handoff` as
+`external_pending`, and keeps `writes: false` until the physical authority move
+is separately proven.
 `nodes heartbeat --record true` stores a signed transport-handshake receipt for
 the Iroh v1 adapter contract. It verifies the local Coordinator ledger shape
 and still marks real multi-device transport and device trust acceptance as

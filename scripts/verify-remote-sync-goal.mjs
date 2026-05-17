@@ -19,6 +19,7 @@ import {
   createRemoteCompatibilityAdapterReceipt,
   createRemoteGatewayAuditReceipt,
   createRemoteSurfaceClassificationReceipt,
+  createSyncAuthorityHandoffReceipt,
   createSyncDriverApplicationReceipt,
   createSyncResourceManifest,
   evaluateRemoteAgentServiceAccess,
@@ -44,6 +45,7 @@ import {
   remoteSyncRequiredRouteIds,
   reconcileSyncQueue,
   routeIdForSyncDriver,
+  syncAuthorityHandoffReceiptSchema,
   syncDriverApplicationReceiptSchema,
   syncDriverSchema,
 } from "../packages/clawjs-core/src/index.ts";
@@ -91,6 +93,7 @@ const requiredServiceApiRoutes = [
   "sync/plan",
   "sync/conflicts",
   "sync/applications",
+  "sync/authority-handoffs",
   "nodes",
   "nodes/pair",
   "nodes/trust",
@@ -140,6 +143,9 @@ const requiredDocSnippets = [
   "--local-hash",
   "SyncDriverApplicationReceipt",
   "/v1/sync/applications",
+  "SyncAuthorityHandoffReceipt",
+  "/v1/sync/authority-handoffs",
+  "claw sync handoff",
   "claw remote conformance",
   "claw remote compat",
   "claw gateway conformance",
@@ -470,6 +476,22 @@ if (syncApplicationReceipt.status !== "signed_pending_driver_application") fail(
 if (!syncApplicationReceipt.externalPending.includes("physical_sync_driver_application")) fail("sync driver application receipt must mark physical driver application external pending");
 if (syncApplicationReceipt.physicalDriverApplied !== false) fail("sync driver application receipt must not claim physical application by default");
 if (syncApplicationReceipt.writes !== false) fail("sync driver application receipt must be a no-write contract");
+
+const syncAuthorityHandoffReceipt = createSyncAuthorityHandoffReceipt({
+  manifest,
+  toNodeId: "node.server",
+  actor,
+  requestedAuthority: "primary",
+  createdAt: "2026-05-17T10:05:45.000Z",
+});
+if (!syncAuthorityHandoffReceiptSchema.safeParse(syncAuthorityHandoffReceipt).success) fail("sync authority handoff receipt contract must validate");
+if (syncAuthorityHandoffReceipt.status !== "signed_pending_authority_handoff") fail("sync authority handoff must stay pending without physical authority transfer");
+if (!syncAuthorityHandoffReceipt.externalPending.includes("physical_authority_handoff")) fail("sync authority handoff must mark physical authority transfer external pending");
+if (syncAuthorityHandoffReceipt.physicalAuthorityApplied !== false) fail("sync authority handoff must not claim physical authority transfer by default");
+if (syncAuthorityHandoffReceipt.writes !== false) fail("sync authority handoff receipt must be a no-write contract");
+if (!syncAuthorityHandoffReceipt.requestedResidency.includes("node.server")) fail("sync authority handoff must include target node in requested residency");
+if (syncAuthorityHandoffReceipt.previousAuthority !== manifest.authority) fail("sync authority handoff must record previous manifest authority");
+if (syncAuthorityHandoffReceipt.fromNodeId !== manifest.ownerNodeId) fail("sync authority handoff must record source owner node");
 
 const offlineCommand = buildRemoteOfflineCommandResult({
   routeId: "remote.chatGateway",
