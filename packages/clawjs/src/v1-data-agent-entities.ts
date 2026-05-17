@@ -14,6 +14,7 @@ import {
   evaluateAgentDelegationAccess,
   evaluateAgentEffectiveAccess,
   evaluateAgentMemoryAccess,
+  evaluateAgentSupervisorAuthority,
   resolveAgentExternalIdentity,
   type AgentActivityFeedInput,
   type AgentActionSeverityRequest,
@@ -31,6 +32,7 @@ import {
   type AgentMemoryPolicy,
   type AgentRetirementInput,
   type AgentSafeSurfaceProjectionInput,
+  type AgentSupervisorAuthorityInput,
   type AgentSupportInboxProjectionInput,
 } from "@clawjs/core";
 import type { DatabaseServiceStore } from "@clawjs/database";
@@ -101,7 +103,7 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
       rootConcept: "agent",
       placementConcept: "agent_assignment",
       defaultPosture: "empty_sandbox_respond_only",
-      gates: ["evaluate-access", "delegation-check", "route-check", "resolve-external-identity", "project-support-inbox", "memory-check", "budget-check", "action-severity", "surface-projection", "config-revision", "incident", "activity-feed", "blueprint", "evaluation", "retirement-plan"],
+      gates: ["evaluate-access", "delegation-check", "supervisor-check", "route-check", "resolve-external-identity", "project-support-inbox", "memory-check", "budget-check", "action-severity", "surface-projection", "config-revision", "incident", "activity-feed", "blueprint", "evaluation", "retirement-plan"],
     });
     return V1_DATA_EXIT_OK;
   }
@@ -115,6 +117,12 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
     const record = recordFlag<AgentDelegationAccessInput>(input);
     if (!record) return usageError(input, "Usage: claw agents delegation-check --record JSON [--json]");
     writeSuccess(input, evaluateAgentDelegationAccess(record));
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "supervisor-check") {
+    const record = recordFlag<AgentSupervisorAuthorityInput>(input);
+    if (!record) return usageError(input, "Usage: claw agents supervisor-check --record JSON [--json]");
+    writeSuccess(input, evaluateAgentSupervisorAuthority(record));
     return V1_DATA_EXIT_OK;
   }
   if (command === "route-check") {

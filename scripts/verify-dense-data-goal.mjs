@@ -10,6 +10,7 @@ import {
   listClawDenseDataIntentEntries,
   listClawDenseDataSemanticViewEntries,
   PRODUCTIVITY_COLLECTION_DEFINITIONS,
+  resolveClawCliCommand,
 } from "../packages/clawjs-core/src/index.ts";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -163,6 +164,7 @@ for (const phrase of [
   "dense-intents",
   "dense-views",
   "dense-fixtures",
+  "claw dense-fixtures seed",
   "claw patient patient_123 timeline",
   "core.sqlite",
   "entity_relations",
@@ -257,6 +259,14 @@ if (!semanticViews.some((entry) => entry.id === "patient.timeline" && entry.syst
 }
 if (!semanticViews.some((entry) => entry.id === "invoice.list" && entry.systemId === "erp")) {
   fail("semantic views must include invoice.list");
+}
+
+const denseFixturesCommand = resolveClawCliCommand("dense-fixtures");
+if (!denseFixturesCommand || denseFixturesCommand.source.file !== "packages/clawjs/src/cli-dense-data-command.ts") {
+  fail("dense-fixtures command must be registered against cli-dense-data-command.ts");
+}
+if (resolveClawCliCommand("dense-fixture")?.target !== "dense-fixtures") {
+  fail("dense-fixture alias must target dense-fixtures");
 }
 
 const fixtureCoverage = new Set(clawDenseDataAcceptanceFixture.records.flatMap((record) => record.covers));

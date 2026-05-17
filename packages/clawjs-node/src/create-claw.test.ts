@@ -87,6 +87,27 @@ test("createClaw exposes Agents V1 policy gates through claw.agents", async () =
   assert.equal(budget.allowed, false);
   assert.deepEqual(budget.reasons, ["budget: external_actions limit exceeded"]);
 
+  const supervisor = claw.agents.supervisorCheck({
+    supervisor: {
+      id: "agent.manager",
+      authorityLevel: "approve_low_risk",
+      scopeType: "team",
+      scopeId: "support",
+    },
+    targetAgent: {
+      id: "agent.sdk",
+      managerAgentId: "agent.manager",
+      teamId: "support",
+    },
+    request: {
+      action: "pause_assignment",
+      risk: "low",
+      scopeType: "team",
+      scopeId: "support",
+    },
+  });
+  assert.equal(supervisor.allowed, true);
+
   const severity = claw.agents.actionSeverity({
     action: "invoke",
     resourceType: "connector",

@@ -17,6 +17,7 @@ import {
   evaluateAgentDelegationAccess,
   evaluateAgentEffectiveAccess,
   evaluateAgentMemoryAccess,
+  evaluateAgentSupervisorAuthority,
   redactAgentBoundaryValue,
   resolveAgentExternalIdentity,
   type AgentActivityFeed,
@@ -55,6 +56,8 @@ import {
   type AgentServiceApiResponse,
   type AgentSafeSurfaceProjection,
   type AgentSafeSurfaceProjectionInput,
+  type AgentSupervisorAuthorityInput,
+  type AgentSupervisorAuthorityResult,
   type AgentSupportInboxProjection,
   type AgentSupportInboxProjectionInput,
 } from "@clawjs/core";
@@ -62,6 +65,7 @@ import {
 export interface ClawAgentsFacade {
   evaluateAccess: (input: AgentEffectiveAccessInput) => AgentEffectiveAccessResult;
   delegationCheck: (input: AgentDelegationAccessInput) => AgentEffectiveAccessResult;
+  supervisorCheck: (input: AgentSupervisorAuthorityInput) => AgentSupervisorAuthorityResult;
   routeCheck: (input: AgentAssignmentRouteRequest) => AgentAssignmentRouteResult;
   resolveExternalIdentity: (profile: AgentExternalIdentityProfile, privacyPolicy?: AgentAssignmentPrivacyPolicy) => AgentResolvedExternalIdentity;
   projectSupportInbox: (input: AgentSupportInboxProjectionInput) => AgentSupportInboxProjection;
@@ -87,6 +91,7 @@ export function createClawAgentsFacades(): { agents: ClawAgentsFacade } {
     agents: {
       evaluateAccess: evaluateAgentEffectiveAccess,
       delegationCheck: evaluateAgentDelegationAccess,
+      supervisorCheck: evaluateAgentSupervisorAuthority,
       routeCheck: evaluateAgentAssignmentRoute,
       resolveExternalIdentity: resolveAgentExternalIdentity,
       projectSupportInbox: createAgentSupportInboxProjection,
