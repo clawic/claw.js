@@ -643,7 +643,7 @@ test("search rebuild indexes sessions.chats from the sessions sidecar", async ()
 
 test("search rebuild indexes database.records from core.sqlite", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-database-"));
-  const dataRoot = path.join(workspaceRoot, "data");
+  const dataRoot = path.join(workspaceRoot, ".claw", "data");
   await withPatchedEnv({
     CLAW_DATA_DIR: dataRoot,
     CLAW_DB_PATH: undefined,
@@ -781,7 +781,7 @@ test("search rebuild indexes database.records from core.sqlite", async () => {
 
 test("search rebuild indexes documents.blocks from document records", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-documents-"));
-  const dataRoot = path.join(workspaceRoot, "data");
+  const dataRoot = path.join(workspaceRoot, ".claw", "data");
   await withPatchedEnv({
     CLAW_DATA_DIR: dataRoot,
     CLAW_DB_PATH: undefined,
