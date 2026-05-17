@@ -2,10 +2,14 @@ import { test } from "vitest";
 import assert from "node:assert/strict";
 
 import {
+  createAgentSupportInboxProjection,
   evaluateAgentDelegationAccess,
   evaluateAgentEffectiveAccess,
+  evaluateAgentAssignmentRoute,
   createAgentPermissionEscalationRequest,
+  resolveAgentExternalIdentity,
   type AgentAccessRequest,
+  type AgentAssignmentRoute,
   type AgentResourceGrant,
 } from "./agents-v1.ts";
 
@@ -105,4 +109,85 @@ test("Agents V1 permission escalation requests include auditable scope", () => {
   assert.match(request.id, /^agent_escalation_/);
   assert.equal(request.action, "read");
   assert.equal(request.scopeId, "customer_1");
+});
+
+test("Agents V1 external routes fail closed without an active matching assignment", () => {
+  const assignment: AgentAssignmentRoute = {
+    id: "assignment.telegram",
+    agentId: "agent.support",
+    kind: "external_telegram",
+    status: "paused",
+    channel: "telegram",
+    endpointRef: "telegram:support",
+    externalDisclosure: "transparent_agent",
+  };
+  const result = evaluateAgentAssignmentRoute({
+    assignment,
+    kind: "external_telegram",
+    channel: "telegram",
+    endpointRef: "telegram:support",
+  });
+  assert.equal(result.allowed, false);
+  assert.deepEqual(result.reasons, ["assignment: status paused"]);
+  assert.equal(result.disclosureRequired, true);
+});
+
+test("Agents V1 external identity projects strong identifiers to contacts and hashes telemetry by default", () => {
+  const identity = resolveAgentExternalIdentity({
+    provider: "telegram",
+    externalId: "tg_42",
+    email: "customer@example.com",
+    displayName: "Customer",
+    customerId: "customer_1",
+    ip: "203.0.113.9",
+    userAgent: "Browser",
+  });
+  assert.equal(identity.contactProjection, "create_or_update");
+  assert.equal(identity.boundary.scopeType, "customer");
+  assert.equal(identity.boundary.scopeId, "customer_1");
+  assert.equal(identity.customerId, "customer_1");
+  assert.equal("ip" in identity.telemetry, false);
+  assert.equal(typeof identity.telemetry.ipHash, "string");
+});
+
+test("Agents V1 anonymous identity stays external-user scoped and can suppress telemetry", () => {
+  const identity = resolveAgentExternalIdentity({
+    provider: "web",
+    visitorId: "visitor_1",
+    ip: "203.0.113.10",
+  }, "off");
+  assert.equal(identity.contactProjection, "none");
+  assert.equal(identity.boundary.scopeType, "external_user");
+  assert.equal(identity.boundary.scopeId, identity.externalUserId);
+  assert.deepEqual(identity.telemetry, {});
+});
+
+test("Agents V1 support projection preserves customer boundary and session linkage", () => {
+  const assignment: AgentAssignmentRoute = {
+    id: "assignment.web",
+    agentId: "agent.support",
+    kind: "external_web_chat",
+    status: "active",
+    channel: "chat",
+    privacyPolicy: "hashed",
+    externalDisclosure: "transparent_agent",
+  };
+  const identity = resolveAgentExternalIdentity({
+    provider: "web",
+    externalId: "user_1",
+    customerId: "customer_1",
+  });
+  const projection = createAgentSupportInboxProjection({
+    sessionId: "session_1",
+    assignment,
+    identity,
+    initialMessage: "I need help",
+    now: "2026-05-17T10:00:00.000Z",
+  });
+  assert.equal(projection.conversation.externalUserId, identity.externalUserId);
+  assert.equal(projection.conversation.customerId, "customer_1");
+  assert.equal(projection.conversation.metadata.sessionId, "session_1");
+  assert.equal(projection.conversation.metadata.boundaryScopeId, "customer_1");
+  assert.equal(projection.message.direction, "inbound");
+  assert.equal(projection.message.channel, "chat");
 });

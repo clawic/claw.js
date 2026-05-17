@@ -1121,18 +1121,27 @@ The docs check script validates that every current export from
     AgentAccessRequest
     AGENT_ASSIGNMENT_KINDS
     AgentAssignmentKind
+    AgentAssignmentPrivacyPolicy
+    AgentAssignmentRoute
+    AgentAssignmentRouteRequest
+    AgentAssignmentRouteResult
     AGENT_ASSIGNMENT_STATUSES
     AgentAssignmentStatus
     AgentDelegationAccessInput
     AgentEffectiveAccessInput
     AgentEffectiveAccessResult
+    AgentExternalDisclosure
+    AgentExternalIdentityProfile
     AgentGrantEffect
     AgentPermissionEscalationRequest
+    AgentResolvedExternalIdentity
     AgentRecord
     agentRecordSchema
     AGENT_RESOURCE_ACTIONS
     AgentResourceAction
     AgentResourceGrant
+    AgentSupportInboxProjection
+    AgentSupportInboxProjectionInput
     AGENTS_FAMILY
     AgentToolCatalog
     AgentToolDescriptor
@@ -1501,6 +1510,8 @@ The docs check script validates that every current export from
     EffectiveAccessPolicy
     EffectPreview
     effectPreviewSchema
+    createAgentSupportInboxProjection
+    evaluateAgentAssignmentRoute
     evaluateAgentDelegationAccess
     evaluateAgentEffectiveAccess
     evaluateConnectorControlPlaneRequest
@@ -1512,6 +1523,7 @@ The docs check script validates that every current export from
     eventReminderSchema
     EVENTS_MEMORIES_FAMILY
     ExternalPrincipal
+    resolveAgentExternalIdentity
     ExternalPrincipalKind
     FAMILY_CARE_FAMILY
     FeatureOwnership

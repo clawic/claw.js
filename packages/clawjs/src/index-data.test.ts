@@ -282,6 +282,70 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
     }), CLI_EXIT_OK);
     assert.equal((parseCliJsonPayload(accessStdout.getOutput()) as { allowed: boolean }).allowed, true);
 
+    const routeStdout = captureStream();
+    const routeRecord = {
+      assignment: {
+        id: "assignment.web",
+        agentId: "agent-ops",
+        kind: "external_web_chat",
+        status: "paused",
+        channel: "chat",
+        externalDisclosure: "transparent_agent",
+      },
+      kind: "external_web_chat",
+      channel: "chat",
+    };
+    assert.equal(await runCli(["agents", "route-check", "--record", JSON.stringify(routeRecord), "--json"], {
+      stdout: routeStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const routeResult = parseCliJsonPayload(routeStdout.getOutput()) as { allowed: boolean; reasons: string[]; disclosureRequired: boolean };
+    assert.equal(routeResult.allowed, false);
+    assert.deepEqual(routeResult.reasons, ["assignment: status paused"]);
+    assert.equal(routeResult.disclosureRequired, true);
+
+    const identityStdout = captureStream();
+    assert.equal(await runCli(["agents", "resolve-external-identity", "--record", JSON.stringify({
+      provider: "web",
+      externalId: "visitor-strong",
+      email: "visitor@example.com",
+      customerId: "customer_1",
+      ip: "203.0.113.20",
+      privacyPolicy: "hashed",
+    }), "--json"], {
+      stdout: identityStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const identity = parseCliJsonPayload(identityStdout.getOutput()) as {
+      externalUserId: string;
+      actorId: string;
+      contactProjection: string;
+      telemetry: Record<string, string>;
+      boundary: { scopeId: string };
+    };
+    assert.equal(identity.contactProjection, "create_or_update");
+    assert.equal(identity.boundary.scopeId, "customer_1");
+    assert.equal(typeof identity.telemetry.ipHash, "string");
+
+    const supportProjectionStdout = captureStream();
+    assert.equal(await runCli(["agents", "project-support-inbox", "--record", JSON.stringify({
+      sessionId: "session_1",
+      assignment: { ...routeRecord.assignment, status: "active" },
+      identity,
+      initialMessage: "Need help",
+      now: "2026-05-17T10:00:00.000Z",
+    }), "--json"], {
+      stdout: supportProjectionStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const supportProjection = parseCliJsonPayload(supportProjectionStdout.getOutput()) as { conversation: { externalUserId: string; metadata: { sessionId: string } }; message: { direction: string } };
+    assert.equal(supportProjection.conversation.externalUserId, identity.externalUserId);
+    assert.equal(supportProjection.conversation.metadata.sessionId, "session_1");
+    assert.equal(supportProjection.message.direction, "inbound");
+
     const personalityStdout = captureStream();
     assert.equal(await runCli(["personalities", "upsert", "personality.review", "--name", "Reviewer", "--prompt", "Review with concrete evidence", "--json"], {
       stdout: personalityStdout.stream,

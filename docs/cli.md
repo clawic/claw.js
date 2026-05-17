@@ -143,6 +143,9 @@ claw agents list --json
 claw agents upsert agent.ops --name "Ops Agent" --personalities personality.review --skills deploy --secret-ref vault://agents/ops --json
 claw agents schema --json
 claw agents evaluate-access --record '{"requested":{"resourceType":"contact","action":"read"},"agentGrants":[],"assignmentGrants":[],"executionProfileGrants":[],"connectorGrants":[],"hostGrants":[],"runScopeGrants":[]}' --json
+claw agents route-check --record '{"assignment":{"id":"assignment.web","agentId":"agent.ops","kind":"external_web_chat","status":"active","channel":"chat"},"kind":"external_web_chat","channel":"chat"}' --json
+claw agents resolve-external-identity --record '{"provider":"web","externalId":"visitor-1","email":"visitor@example.com","privacyPolicy":"hashed"}' --json
+claw agents project-support-inbox --record '{"sessionId":"session-1","assignment":{"id":"assignment.web","agentId":"agent.ops","kind":"external_web_chat","status":"active","channel":"chat"},"identity":{"externalUserId":"external_user_1","actorId":"actor_external_1","contactProjection":"create_or_update","boundary":{"scopeType":"external_user","scopeId":"external_user_1"},"telemetry":{}},"initialMessage":"Need help"}' --json
 claw personalities upsert personality.review --name Reviewer --prompt "Review with concrete evidence" --json
 claw skill-collections upsert collection.review --name Review --tags review,code --json
 claw connections upsert github --provider custom --label GitHub --secret-ref vault://connections/github --json
@@ -155,6 +158,13 @@ Telegram, support inbox, workflow, automation, subagent, MCP/API, Relay, or a
 custom channel. New agents start with an empty sandbox. Effective access is the
 intersection of agent grants, assignment grants, execution profile sandbox,
 connector policy, host policy, and run scope.
+
+External channels must pass `route-check` before runtime dispatch. External
+identity resolution creates a stable `external_user`/`actor` boundary, hashes
+visitor telemetry by default, and projects to contacts only when there is a
+strong identifier such as email, phone, or verified provider id. Support-facing
+assignments use `project-support-inbox` to create the product conversation
+record separately from the runtime session trace.
 
 ## Global Flags
 

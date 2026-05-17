@@ -1,5 +1,14 @@
 import { AgentStoreFS, defaultAgent, type Agent, type Connection, type Personality, type SkillCollection } from "@clawjs/agents";
-import { evaluateAgentEffectiveAccess, type AgentEffectiveAccessInput } from "@clawjs/core";
+import {
+  createAgentSupportInboxProjection,
+  evaluateAgentAssignmentRoute,
+  evaluateAgentEffectiveAccess,
+  resolveAgentExternalIdentity,
+  type AgentAssignmentRouteRequest,
+  type AgentEffectiveAccessInput,
+  type AgentExternalIdentityProfile,
+  type AgentSupportInboxProjectionInput,
+} from "@clawjs/core";
 import type { DatabaseServiceStore } from "@clawjs/database";
 
 import {
@@ -68,6 +77,7 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
       rootConcept: "agent",
       placementConcept: "agent_assignment",
       defaultPosture: "empty_sandbox_respond_only",
+      gates: ["evaluate-access", "route-check", "resolve-external-identity", "project-support-inbox"],
     });
     return V1_DATA_EXIT_OK;
   }
@@ -75,6 +85,24 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
     const record = recordFlag<AgentEffectiveAccessInput>(input);
     if (!record) return usageError(input, "Usage: claw agents evaluate-access --record JSON [--json]");
     writeSuccess(input, evaluateAgentEffectiveAccess(record));
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "route-check") {
+    const record = recordFlag<AgentAssignmentRouteRequest>(input);
+    if (!record) return usageError(input, "Usage: claw agents route-check --record JSON [--json]");
+    writeSuccess(input, evaluateAgentAssignmentRoute(record));
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "resolve-external-identity") {
+    const record = recordFlag<AgentExternalIdentityProfile & { privacyPolicy?: "off" | "hashed" | "raw_with_retention" }>(input);
+    if (!record) return usageError(input, "Usage: claw agents resolve-external-identity --record JSON [--json]");
+    writeSuccess(input, resolveAgentExternalIdentity(record, record.privacyPolicy));
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "project-support-inbox") {
+    const record = recordFlag<AgentSupportInboxProjectionInput>(input);
+    if (!record) return usageError(input, "Usage: claw agents project-support-inbox --record JSON [--json]");
+    writeSuccess(input, createAgentSupportInboxProjection(record));
     return V1_DATA_EXIT_OK;
   }
   return usageError(input, usage(input.binName, "agents"));
