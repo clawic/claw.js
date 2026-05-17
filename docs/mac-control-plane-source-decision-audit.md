@@ -2,11 +2,9 @@
 
 Source conversation: `019e366f-8e14-7e51-8817-9820d2914dc4`
 
-Source session:
-`/Users/trabajo/.codex/sessions/2026/05/17/rollout-2026-05-17T16-55-41-019e366f-8e14-7e51-8817-9820d2914dc4.jsonl`
-
-Goal reference:
-`/Users/trabajo/.codex/goals/mac-control-plane-plan-2026-05-17.md`
+Private source session and goal references live in the maintainer's local
+Codex goal state. Public docs record only the conversation id and redacted
+decision rows.
 
 This audit is binding for final goal closure. Before the goal can be marked
 complete, each row must be re-read against the source session and marked
@@ -34,5 +32,4 @@ them here before closure.
 | MCQ-015 | Mac permissions correction | Code must not bypass central permission/native command paths, similar to secrets/database ownership rules. | `scripts/verify-host-permission-contract.mjs`, route graph broker nodes. | In progress: guard covers sensitive patterns; full allowlist/migration audit remains. |
 | MCQ-016 | Question acceleration correction | Ask only questions where the user could reasonably choose differently than the recommendation. | Goal closure checklist. | Process decision: keep implementation moving unless a real material fork appears. |
 | MCQ-017 | Help/collision correction | CLI help and ADRs must show related/alternative surfaces when command words collide or could mean another surface. | `Related surfaces` CLI help support, Mac root related surfaces, CLI tests. | In progress: first conflicts covered; full help golden coverage remains. |
-| MCQ-018 | Goal instruction | Establish this as a persistent active goal and do not close it until implementation, docs, tests, legacy migration, real validation, and one-by-one decision review are complete. | Active goal and goal file above; this audit. | In progress: goal active; final closure is explicitly blocked until all rows are complete or blocked. |
-
+| MCQ-018 | Goal instruction | Establish this as a persistent active goal and do not close it until implementation, docs, tests, legacy migration, real validation, and one-by-one decision review are complete. | Active private goal state and this public redacted audit. | In progress: goal active; final closure is explicitly blocked until all rows are complete or blocked. |

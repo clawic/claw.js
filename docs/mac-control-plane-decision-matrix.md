@@ -17,4 +17,3 @@ decisions. It complements the source decision audit and is checked by
 | MC-009 | First executable slice | V1 executable scope is Wi-Fi, windows, Shortcuts, and permissions. | V1 atlas entries and CLI dry-run commands. | Mac CLI/core tests. | Real signed-host validation in Clawix and Claw.app. |
 | MC-010 | Legacy reset | Commander is not a compatibility constraint; direct native uses must migrate or be registered. | ADR 0023, host permission guard. | Static guard self-test. | Audit Clawix/native code and retire Commander surfaces. |
 | MC-011 | Decision closure | Final goal closure requires one-by-one source Q/A review. | Source decision audit and active goal. | Verifier checks row ids and source references. | Re-read full source session at final close. |
-
