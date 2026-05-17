@@ -242,6 +242,27 @@ export const clawDenseDataAcceptanceFixture: ClawDenseDataAcceptanceFixture = {
       data: { name: "Press Model", companyId: "fixture_company_acme", type: "physical", active: true },
     },
     {
+      id: "fixture_supplier_parts_co",
+      collectionName: "suppliers",
+      label: "Parts Co",
+      covers: ["supplier", "procurement", "purchasing", "purchase_order_timeline", "company_timeline"],
+      data: { name: "Parts Co", companyId: "fixture_company_acme", status: "active", category: "parts" },
+    },
+    {
+      id: "fixture_purchase_order_001",
+      collectionName: "purchase_orders",
+      label: "PO-001",
+      covers: ["purchase_order", "procurement", "purchasing", "purchase_order_timeline", "document_evidence", "company_timeline"],
+      data: { number: "PO-001", supplierId: "fixture_supplier_parts_co", companyId: "fixture_company_acme", status: "issued", orderedAt: "2026-05-17T00:00:00.000Z", currency: "USD", totalCents: 50000 },
+    },
+    {
+      id: "fixture_purchase_order_line_press",
+      collectionName: "purchase_order_line_items",
+      label: "Press frame",
+      covers: ["purchase_order_line_item", "procurement", "purchasing", "purchase_order_timeline", "erp"],
+      data: { description: "Press frame", purchaseOrderId: "fixture_purchase_order_001", productCatalogId: "fixture_product_press_model", quantity: 2, unitCostCents: 25000, totalCents: 50000, status: "ordered" },
+    },
+    {
       id: "fixture_asset_press_001",
       collectionName: "assets",
       label: "Press 001",
