@@ -117,7 +117,8 @@ collections. Legal and ops centers also graduate through shared collections:
 `incident create --service <id>`, and `service <id> incidents list`. Research,
 labs, education, and manufacturing now follow the same rule: `study create`,
 `study <id> participants add/list`, `sample create`,
-`sample <id> assays add`, `learner create`, `course create`, and
+`sample <id> assays add`, `learner create`, `course create`,
+`relation create --from-entity-kind learners --to-entity-kind courses`, and
 `work-order create` execute against canonical collections. Finance/accounting
 also has executable centers for `financial-account create` and
 `transaction create --account <id>`. Biology is backed by distinct biological
@@ -156,8 +157,8 @@ acceptance fixture without executing unknown behavior. These commands are the
 scale gate for "CLI intention completeness": every generated entry must resolve
 to a covered command, explicit workflow/data gap, blocked state, external
 pending state, or custom pack. The fixture covers patient, study, sample, legal
-case, invoice/company, incident/service, course, manufacturing work order,
-evidence, provenance, and partial-data quality gaps.
+case, invoice/company, incident/service, learner/course relations,
+manufacturing work order, evidence, provenance, and partial-data quality gaps.
 `claw dense-fixtures seed` writes that fixture into local `core.sqlite` with
 stable fixture IDs, so the acceptance set is executable through normal DB and
 human noun commands rather than remaining an inspect-only artifact.
@@ -184,6 +185,10 @@ and provenance, while `claw experiment <id> timeline` materializes
 Research uses `claw study <id> timeline` to materialize `studies`,
 `participants`, linked samples, evidence, gaps, and provenance, keeping CTMS
 sync as `external_pending` unless a real provider connector is validated.
+Education/LMS uses `claw learner <id> timeline` to materialize `learners`,
+related `courses` through the shared `entity_relations` graph, evidence, gaps,
+and provenance. This keeps enrollment/progress-style links inside the universal
+relation model instead of creating a parallel LMS graph.
 Manufacturing uses `claw work-order <id> timeline` to materialize
 `work_orders`, evidence, quality gaps, and provenance as the MES slice grows
 toward material, operation, labor, equipment, and quality event records.
@@ -198,6 +203,11 @@ reads the shared `accounts` record, company anchor, `deals`, `contacts`,
 `activities`, evidence, provenance, and quality gaps. This keeps CRM inside the
 same dense-data operating system rather than maintaining a separate CRM graph
 or second account model.
+Finance/accounting now materializes `claw finance entity <id> overview` and
+the alias `claw accounting entity <id> overview` from `financial_accounts`,
+`transactions`, evidence, provenance, and quality gaps. The view keeps
+financial accounts as the accounting-entity center while leaving payment and
+invoice records under their existing billing/ERP owners.
 
 The registry also carries explicit `external_pending` requirements for real
 EHR/FHIR exchange, lab instrument ingestion, CTMS synchronization, payment

@@ -72,7 +72,9 @@ const requiredFixtureCoverage = [
   "invoice_company",
   "incident",
   "service",
+  "learner",
   "course",
+  "entity_relation",
   "work_order",
   "evidence",
   "provenance",
@@ -171,9 +173,11 @@ for (const phrase of [
   "claw service service_123 timeline",
   "claw sample sample_123 timeline",
   "claw experiment experiment_123 timeline",
+  "claw learner learner_123 timeline",
   "claw work-order work_order_123 timeline",
   "claw erp company company_123 overview",
   "claw crm account account_123 overview",
+  "claw finance entity financial_account_123 overview",
   "materialized_semantic_view",
   "core.sqlite",
   "entity_relations",
@@ -281,6 +285,9 @@ if (!semanticViews.some((entry) => entry.id === "sample.timeline" && entry.syste
 if (!semanticViews.some((entry) => entry.id === "experiment.timeline" && entry.systemId === "biology")) {
   fail("semantic views must include experiment.timeline");
 }
+if (!semanticViews.some((entry) => entry.id === "learner.timeline" && entry.systemId === "education")) {
+  fail("semantic views must include learner.timeline");
+}
 if (!semanticViews.some((entry) => entry.id === "work_order.timeline" && entry.systemId === "manufacturing")) {
   fail("semantic views must include work_order.timeline");
 }
@@ -289,6 +296,9 @@ if (!semanticViews.some((entry) => entry.id === "erp.company.overview" && entry.
 }
 if (!semanticViews.some((entry) => entry.id === "crm.account.overview" && entry.systemId === "crm")) {
   fail("semantic views must include crm.account.overview");
+}
+if (!semanticViews.some((entry) => entry.id === "finance.entity.overview" && entry.systemId === "finance")) {
+  fail("semantic views must include finance.entity.overview");
 }
 if (!semanticViews.some((entry) => entry.id === "invoice.list" && entry.systemId === "erp")) {
   fail("semantic views must include invoice.list");

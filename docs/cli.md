@@ -627,10 +627,14 @@ claw sample sample_123 assays add CBC --json
 claw sample sample_123 timeline --json
 claw learner create "Ada Learner" --json
 claw course create "Intro Biology" --json
+claw relation create --from-entity-kind learners --from-entity-id learner_123 --to-entity-kind courses --to-entity-id course_123 --type member_of --json
+claw learner learner_123 timeline --json
 claw work-order create "Batch 42" --company company_123 --json
 claw work-order work_order_123 timeline --json
 claw financial-account create "Operating Account" --json
 claw transaction create Lunch --account financial_account_123 --amount-cents 1200 --json
+claw finance entity financial_account_123 overview --json
+claw accounting entity financial_account_123 overview --json
 claw organism create "Mouse A" --species "Mus musculus" --json
 claw experiment create "Dose response" --organism organism_123 --json
 claw experiment experiment_123 samples add "Exp sample 1" --organism organism_123 --json

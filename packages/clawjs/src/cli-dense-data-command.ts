@@ -293,6 +293,9 @@ function materializedSemanticViewForIntent(
   if (semanticView.id === "work_order.timeline") return materializedWorkOrderTimeline(input, intent, semanticView);
   if (semanticView.id === "erp.company.overview") return materializedErpCompanyOverview(input, intent, semanticView);
   if (semanticView.id === "crm.account.overview") return materializedCrmAccountOverview(input, intent, semanticView);
+  if (semanticView.id === "finance.entity.overview") return materializedFinanceEntityOverview(input, intent, semanticView);
+  if (semanticView.id === "learner.timeline") return materializedLearnerTimeline(input, intent, semanticView);
+  if (semanticView.id === "course.timeline") return materializedCourseTimeline(input, intent, semanticView);
   return undefined;
 }
 
@@ -610,6 +613,152 @@ function materializedWorkOrderTimeline(
   };
 }
 
+function materializedLearnerTimeline(
+  input: DenseDataCliInput,
+  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
+) {
+  const learnerId = input.positionals[1];
+  if (!learnerId) return undefined;
+  const namespaceId = input.flags.namespace ?? "main";
+  const store = openDenseDataStore(input.workspaceRoot);
+  store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
+  const learner = store.getRecord(namespaceId, "learners", learnerId);
+  if (!learner) return undefined;
+
+  const outgoingRelations = store.listRecords(namespaceId, "entity_relations", { filter: { fromEntityKind: "learners", fromEntityId: learnerId } }).items;
+  const incomingRelations = store.listRecords(namespaceId, "entity_relations", { filter: { toEntityKind: "learners", toEntityId: learnerId } }).items;
+  const relations = uniqueRecordsById([...outgoingRelations, ...incomingRelations]);
+  const relatedCourseIds = new Set<string>();
+  for (const relation of relations) {
+    if (relation.fromEntityKind === "learners" && relation.fromEntityId === learnerId && relation.toEntityKind === "courses" && typeof relation.toEntityId === "string") relatedCourseIds.add(relation.toEntityId);
+    if (relation.toEntityKind === "learners" && relation.toEntityId === learnerId && relation.fromEntityKind === "courses" && typeof relation.fromEntityId === "string") relatedCourseIds.add(relation.fromEntityId);
+  }
+  const courses = [...relatedCourseIds].flatMap((courseId) => {
+    const record = store.getRecord(namespaceId, "courses", courseId);
+    return record ? [record] : [];
+  });
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "learners", recordId: learnerId } }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "learners", targetId: learnerId } }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "learners", targetId: learnerId } }).items;
+  const items = [
+    timelineItem(learner, "learner", learner.id, learner.displayName ?? learner.id, learner.startedAt ?? learner.createdAt, learner),
+    ...courses.map((record) => timelineItem(record, "course", record.id, record.title ?? record.id, record.startedAt ?? record.completedAt ?? record.createdAt, record)),
+    ...relations.map((record) => timelineItem(record, "relation", record.id, relationLabel(record), record.createdAt, record)),
+    ...evidence.map((record) => timelineItem(record, "evidence", record.id, record.label ?? record.id, record.capturedAt ?? record.createdAt, record)),
+    ...qualityGaps.map((record) => timelineItem(record, "quality_gap", record.id, record.label ?? record.id, record.createdAt, record)),
+    ...provenance.map((record) => timelineItem(record, "provenance", record.id, record.eventType ?? record.id, record.occurredAt ?? record.createdAt, record)),
+  ].sort((left, right) => String(left.occurredAt).localeCompare(String(right.occurredAt)));
+
+  return {
+    id: semanticView.id,
+    subject: { collectionName: "learners", id: learner.id, label: learner.displayName ?? learner.id },
+    summary: {
+      courses: courses.length,
+      relations: relations.length,
+      evidenceSources: evidence.length,
+      qualityGaps: qualityGaps.length,
+    },
+    itemCount: items.length,
+    items,
+    records: {
+      learner,
+      courses,
+      relations,
+      evidence,
+      provenance,
+    },
+    gaps: qualityGaps.map((record) => ({
+      id: record.id,
+      label: record.label,
+      status: record.status,
+      gapKind: record.gapKind,
+      severity: record.severity,
+      evidenceSourceId: record.evidenceSourceId,
+    })),
+    sourceCollections: ["learners", "courses", "entity_relations", "evidence_sources", "quality_gaps", "provenance_events"],
+    partial: qualityGaps.length > 0,
+    intentStatus: intent.status,
+  };
+}
+
+function materializedCourseTimeline(
+  input: DenseDataCliInput,
+  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
+) {
+  const courseId = input.positionals[1];
+  if (!courseId) return undefined;
+  const namespaceId = input.flags.namespace ?? "main";
+  const store = openDenseDataStore(input.workspaceRoot);
+  store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
+  const course = store.getRecord(namespaceId, "courses", courseId);
+  if (!course) return undefined;
+
+  const lessons = store.listRecords(namespaceId, "lessons", { filter: { courseId } }).items;
+  const studySessions = store.listRecords(namespaceId, "study_sessions", { filter: { courseId } }).items;
+  const outgoingRelations = store.listRecords(namespaceId, "entity_relations", { filter: { fromEntityKind: "courses", fromEntityId: courseId } }).items;
+  const incomingRelations = store.listRecords(namespaceId, "entity_relations", { filter: { toEntityKind: "courses", toEntityId: courseId } }).items;
+  const relations = uniqueRecordsById([...outgoingRelations, ...incomingRelations]);
+  const relatedLearnerIds = new Set<string>();
+  for (const relation of relations) {
+    if (relation.fromEntityKind === "courses" && relation.fromEntityId === courseId && relation.toEntityKind === "learners" && typeof relation.toEntityId === "string") relatedLearnerIds.add(relation.toEntityId);
+    if (relation.toEntityKind === "courses" && relation.toEntityId === courseId && relation.fromEntityKind === "learners" && typeof relation.fromEntityId === "string") relatedLearnerIds.add(relation.fromEntityId);
+  }
+  const learners = [...relatedLearnerIds].flatMap((learnerId) => {
+    const record = store.getRecord(namespaceId, "learners", learnerId);
+    return record ? [record] : [];
+  });
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "courses", recordId: courseId } }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "courses", targetId: courseId } }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "courses", targetId: courseId } }).items;
+  const items = [
+    timelineItem(course, "course", course.id, course.title ?? course.id, course.startedAt ?? course.createdAt, course),
+    ...lessons.map((record) => timelineItem(record, "lesson", record.id, record.title ?? record.id, record.createdAt, record)),
+    ...studySessions.map((record) => timelineItem(record, "study_session", record.id, record.topic ?? record.id, record.startedAt ?? record.createdAt, record)),
+    ...learners.map((record) => timelineItem(record, "learner", record.id, record.displayName ?? record.id, record.startedAt ?? record.createdAt, record)),
+    ...relations.map((record) => timelineItem(record, "relation", record.id, relationLabel(record), record.createdAt, record)),
+    ...evidence.map((record) => timelineItem(record, "evidence", record.id, record.label ?? record.id, record.capturedAt ?? record.createdAt, record)),
+    ...qualityGaps.map((record) => timelineItem(record, "quality_gap", record.id, record.label ?? record.id, record.createdAt, record)),
+    ...provenance.map((record) => timelineItem(record, "provenance", record.id, record.eventType ?? record.id, record.occurredAt ?? record.createdAt, record)),
+  ].sort((left, right) => String(left.occurredAt).localeCompare(String(right.occurredAt)));
+
+  return {
+    id: semanticView.id,
+    subject: { collectionName: "courses", id: course.id, label: course.title ?? course.id },
+    summary: {
+      lessons: lessons.length,
+      studySessions: studySessions.length,
+      learners: learners.length,
+      relations: relations.length,
+      evidenceSources: evidence.length,
+      qualityGaps: qualityGaps.length,
+    },
+    itemCount: items.length,
+    items,
+    records: {
+      course,
+      lessons,
+      studySessions,
+      learners,
+      relations,
+      evidence,
+      provenance,
+    },
+    gaps: qualityGaps.map((record) => ({
+      id: record.id,
+      label: record.label,
+      status: record.status,
+      gapKind: record.gapKind,
+      severity: record.severity,
+      evidenceSourceId: record.evidenceSourceId,
+    })),
+    sourceCollections: ["courses", "lessons", "study_sessions", "learners", "entity_relations", "evidence_sources", "quality_gaps", "provenance_events"],
+    partial: qualityGaps.length > 0,
+    intentStatus: intent.status,
+  };
+}
+
 function materializedErpCompanyOverview(
   input: DenseDataCliInput,
   intent: ReturnType<typeof resolveClawDenseDataIntent>,
@@ -746,6 +895,60 @@ function materializedCrmAccountOverview(
   };
 }
 
+function materializedFinanceEntityOverview(
+  input: DenseDataCliInput,
+  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
+) {
+  const entityId = input.positionals[2];
+  const command = input.positionals[0];
+  if ((command !== "finance" && command !== "accounting") || input.positionals[1] !== "entity" || input.positionals[3] !== "overview" || !entityId) return undefined;
+  const namespaceId = input.flags.namespace ?? "main";
+  const store = openDenseDataStore(input.workspaceRoot);
+  store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
+  const financialAccount = store.getRecord(namespaceId, "financial_accounts", entityId);
+  if (!financialAccount) return undefined;
+
+  const transactions = store.listRecords(namespaceId, "transactions", { filter: { accountId: entityId } }).items;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "financial_accounts", recordId: entityId } }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "financial_accounts", targetId: entityId } }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "financial_accounts", targetId: entityId } }).items;
+  const debitCents = sumNumericField(transactions.filter((record) => record.kind !== "credit" && typeof record.amountCents === "number" && record.amountCents > 0), "amountCents");
+  const creditCents = sumNumericField(transactions.filter((record) => record.kind === "credit" || (typeof record.amountCents === "number" && record.amountCents < 0)), "amountCents");
+  const netAmountCents = sumNumericField(transactions, "amountCents");
+
+  return {
+    id: semanticView.id,
+    subject: { collectionName: "financial_accounts", id: financialAccount.id, label: financialAccount.name ?? financialAccount.id },
+    summary: {
+      transactions: transactions.length,
+      debitCents,
+      creditCents,
+      netAmountCents,
+      currency: financialAccount.currency ?? firstStringField(transactions, "currency") ?? null,
+      evidenceSources: evidence.length,
+      qualityGaps: qualityGaps.length,
+    },
+    records: {
+      financialAccount,
+      transactions,
+      evidence,
+      provenance,
+    },
+    gaps: qualityGaps.map((record) => ({
+      id: record.id,
+      label: record.label,
+      status: record.status,
+      gapKind: record.gapKind,
+      severity: record.severity,
+      evidenceSourceId: record.evidenceSourceId,
+    })),
+    sourceCollections: ["financial_accounts", "transactions", "evidence_sources", "quality_gaps", "provenance_events"],
+    partial: qualityGaps.length > 0,
+    intentStatus: intent.status,
+  };
+}
+
 function uniqueRecordsById(records: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
   const seen = new Set<unknown>();
   const out: Array<Record<string, unknown>> = [];
@@ -759,6 +962,17 @@ function uniqueRecordsById(records: Array<Record<string, unknown>>): Array<Recor
 
 function sumNumericField(records: Array<Record<string, unknown>>, fieldName: string): number {
   return records.reduce((total, record) => total + (typeof record[fieldName] === "number" ? record[fieldName] : 0), 0);
+}
+
+function firstStringField(records: Array<Record<string, unknown>>, fieldName: string): string | undefined {
+  for (const record of records) {
+    if (typeof record[fieldName] === "string") return record[fieldName];
+  }
+  return undefined;
+}
+
+function relationLabel(record: Record<string, unknown>): string {
+  return `${String(record.type ?? "relates")} ${String(record.fromEntityKind ?? "entity")}/${String(record.fromEntityId ?? "?")} -> ${String(record.toEntityKind ?? "entity")}/${String(record.toEntityId ?? "?")}`;
 }
 
 function openDenseDataStore(workspaceRoot: string) {
@@ -848,6 +1062,9 @@ function denseDbFlags(flags: Record<string, string>, collectionName: string): Re
   if (collectionName === "samples" && flags.organism && !flags["organism-id"]) {
     nextFlags = { ...nextFlags, "organism-id": flags.organism };
   }
+  if (["lessons", "study_sessions"].includes(collectionName) && flags.course && !flags["course-id"]) {
+    nextFlags = { ...nextFlags, "course-id": flags.course };
+  }
   return nextFlags;
 }
 
@@ -894,6 +1111,18 @@ function nestedDenseDbRoute(input: DenseDataCliInput): Parameters<typeof runMagi
     collections: {
       sample: "samples",
       samples: "samples",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "course",
+    relationFlag: "course-id",
+    relationField: "courseId",
+    collections: {
+      lesson: "lessons",
+      lessons: "lessons",
+      "study-session": "study_sessions",
+      "study-sessions": "study_sessions",
+      session: "study_sessions",
+      sessions: "study_sessions",
     },
   }) ?? nestedParentDbRoute(input, {
     parentCommand: "sample",
