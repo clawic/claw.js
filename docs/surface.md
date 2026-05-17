@@ -2428,7 +2428,9 @@ The docs check script validates that every current export from
 
 ## Mac Control Plane Exports
 
+    BuildMacActionPlanInput
     assertMacControlPlaneRegistryComplete
+    buildMacActionPlan
     clawMacControlPlaneRegistry
     clawMacControlPlaneRegistryVersion
     findMacAtlasCapability
