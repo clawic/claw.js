@@ -147,14 +147,17 @@ leased, done, or failed jobs. Repeated `schedule` calls for the same changed
 resource compact into one queued job so noisy local events do not create
 unbounded duplicate backfill work.
 
-The local framework database write path now emits those compacted events for
-`database.records`, `documents.blocks`, and `generations.artifacts`: successful
-`db <collection> create|update` and `generations create` calls schedule hot
-upsert events, successful record or generation deletes schedule delete events
-where the source item is removed, and `document_blocks` changes schedule a hot
-upsert for the parent document so fragments refresh together. The event write is
-best effort because `search.sqlite` is a rebuildable sidecar; a temporary Search
-sidecar failure must not fail the canonical record or artifact write.
+The local framework database and artifact write paths now emit those compacted
+events for `database.records`, `documents.blocks`, `generations.artifacts`,
+`images.derived`, and `media.assets`: successful `db <collection>
+create|update`, `documents create|update`, `image create|edit|import`,
+typed-media generation, and `generations create` calls schedule hot upsert
+events; successful record, document, image, media, or generation deletes
+schedule delete events where the source item is removed; and `document_blocks`
+changes schedule a hot upsert for the parent document so fragments refresh
+together. The event write is best effort because `search.sqlite` is a
+rebuildable sidecar; a temporary Search sidecar failure must not fail the
+canonical record or artifact write.
 
 `claw search service` is the local lifecycle surface for Search. Embedded mode
 is available from the CLI and records `search-service.json` beside
