@@ -748,6 +748,99 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(supplyPlanTimelinePayload.data.materializedView.itemCount >= 9, true);
   assert.equal(supplyPlanTimelinePayload.data.materializedView.items.some((item) => item.kind === "supply_plan_item" && item.label === "Press shortage"), true);
 
+  const carrierCreate = await runCliCapture(["carrier", "create", "Fast Freight", "--company", companyPayload.data.id, "--mode", "ltl", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(carrierCreate.code, CLI_EXIT_OK, carrierCreate.stderr || carrierCreate.stdout);
+  const carrierPayload = JSON.parse(carrierCreate.stdout) as { data: { id: string; name: string; companyId: string; mode: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(carrierPayload.meta.invokedCommand, "carrier");
+  assert.equal(carrierPayload.meta.collection, "carriers");
+  assert.equal(carrierPayload.data.name, "Fast Freight");
+  assert.equal(carrierPayload.data.companyId, companyPayload.data.id);
+  assert.equal(carrierPayload.data.mode, "ltl");
+  assert.equal(carrierPayload.data.status, "active");
+
+  const shipmentCreate = await runCliCapture(["carrier", carrierPayload.data.id, "shipments", "add", "PO-001 inbound shipment", "--company", companyPayload.data.id, "--purchase-order", purchaseOrderPayload.data.id, "--warehouse", warehousePayload.data.id, "--tracking-number", "TRACK-001", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(shipmentCreate.code, CLI_EXIT_OK, shipmentCreate.stderr || shipmentCreate.stdout);
+  const shipmentPayload = JSON.parse(shipmentCreate.stdout) as { data: { id: string; title: string; carrierId: string; companyId: string; purchaseOrderId: string; warehouseId: string; trackingNumber: string; status: string; mode: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(shipmentPayload.meta.invokedCommand, "carrier");
+  assert.equal(shipmentPayload.meta.collection, "shipments");
+  assert.equal(shipmentPayload.data.title, "PO-001 inbound shipment");
+  assert.equal(shipmentPayload.data.carrierId, carrierPayload.data.id);
+  assert.equal(shipmentPayload.data.companyId, companyPayload.data.id);
+  assert.equal(shipmentPayload.data.purchaseOrderId, purchaseOrderPayload.data.id);
+  assert.equal(shipmentPayload.data.warehouseId, warehousePayload.data.id);
+  assert.equal(shipmentPayload.data.trackingNumber, "TRACK-001");
+  assert.equal(shipmentPayload.data.status, "planned");
+
+  const shipmentLegCreate = await runCliCapture(["shipment", shipmentPayload.data.id, "legs", "add", "Origin to warehouse", "--carrier", carrierPayload.data.id, "--sequence", "1", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(shipmentLegCreate.code, CLI_EXIT_OK, shipmentLegCreate.stderr || shipmentLegCreate.stdout);
+  const shipmentLegPayload = JSON.parse(shipmentLegCreate.stdout) as { data: { id: string; title: string; shipmentId: string; carrierId: string; sequence: number; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(shipmentLegPayload.meta.invokedCommand, "shipment");
+  assert.equal(shipmentLegPayload.meta.collection, "shipment_legs");
+  assert.equal(shipmentLegPayload.data.title, "Origin to warehouse");
+  assert.equal(shipmentLegPayload.data.shipmentId, shipmentPayload.data.id);
+  assert.equal(shipmentLegPayload.data.carrierId, carrierPayload.data.id);
+  assert.equal(shipmentLegPayload.data.sequence, 1);
+  assert.equal(shipmentLegPayload.data.status, "planned");
+
+  const freightRateCreate = await runCliCapture(["carrier", carrierPayload.data.id, "freight-rates", "add", "Fast Freight LTL", "--company", companyPayload.data.id, "--amount-cents", "15000", "--currency", "USD", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(freightRateCreate.code, CLI_EXIT_OK, freightRateCreate.stderr || freightRateCreate.stdout);
+  const freightRatePayload = JSON.parse(freightRateCreate.stdout) as { data: { id: string; title: string; carrierId: string; companyId: string; amountCents: number; currency: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(freightRatePayload.meta.invokedCommand, "carrier");
+  assert.equal(freightRatePayload.meta.collection, "freight_rates");
+  assert.equal(freightRatePayload.data.title, "Fast Freight LTL");
+  assert.equal(freightRatePayload.data.carrierId, carrierPayload.data.id);
+  assert.equal(freightRatePayload.data.companyId, companyPayload.data.id);
+  assert.equal(freightRatePayload.data.amountCents, 15000);
+  assert.equal(freightRatePayload.data.currency, "USD");
+  assert.equal(freightRatePayload.data.status, "draft");
+
+  const shipmentEvidenceSourceCreate = await runCliCapture(["evidence-source", "create", "Carrier tracking event", "--kind", "document", "--collection-name", "shipments", "--record-id", shipmentPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(shipmentEvidenceSourceCreate.code, CLI_EXIT_OK);
+  const shipmentEvidenceSourcePayload = JSON.parse(shipmentEvidenceSourceCreate.stdout) as { data: { id: string; collectionName: string; recordId: string } };
+  assert.equal(shipmentEvidenceSourcePayload.data.collectionName, "shipments");
+  assert.equal(shipmentEvidenceSourcePayload.data.recordId, shipmentPayload.data.id);
+
+  const shipmentGapCreate = await runCliCapture(["quality-gap", "create", "Missing bill of lading", "--target-collection", "shipments", "--target-id", shipmentPayload.data.id, "--gap-kind", "missing", "--evidence-source-id", shipmentEvidenceSourcePayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(shipmentGapCreate.code, CLI_EXIT_OK);
+  const shipmentGapPayload = JSON.parse(shipmentGapCreate.stdout) as { data: { id: string; gapKind: string; targetCollection: string; targetId: string } };
+  assert.equal(shipmentGapPayload.data.targetCollection, "shipments");
+  assert.equal(shipmentGapPayload.data.targetId, shipmentPayload.data.id);
+  assert.equal(shipmentGapPayload.data.gapKind, "missing");
+
+  const shipmentTimeline = await runCliCapture(["shipment", shipmentPayload.data.id, "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(shipmentTimeline.code, CLI_EXIT_OK, shipmentTimeline.stderr || shipmentTimeline.stdout);
+  const shipmentTimelinePayload = JSON.parse(shipmentTimeline.stdout) as {
+    data: {
+      coverage: { implementationStatus: string; recordsMaterialized: boolean };
+      semanticView: { id: string; systemId: string };
+      materializedView: {
+        subject: { id: string; label: string };
+        summary: { legs: number; evidenceSources: number; qualityGaps: number; hasCarrier: boolean; hasPurchaseOrder: boolean; hasWarehouse: boolean };
+        itemCount: number;
+        partial: boolean;
+        items: Array<{ kind: string; label: string; recordId: string }>;
+        gaps: Array<{ id: string; gapKind: string }>;
+      };
+    };
+  };
+  assert.equal(shipmentTimelinePayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(shipmentTimelinePayload.data.coverage.recordsMaterialized, true);
+  assert.equal(shipmentTimelinePayload.data.semanticView.id, "shipment.timeline");
+  assert.equal(shipmentTimelinePayload.data.semanticView.systemId, "transport");
+  assert.equal(shipmentTimelinePayload.data.materializedView.subject.id, shipmentPayload.data.id);
+  assert.equal(shipmentTimelinePayload.data.materializedView.subject.label, "PO-001 inbound shipment");
+  assert.equal(shipmentTimelinePayload.data.materializedView.summary.legs, 1);
+  assert.equal(shipmentTimelinePayload.data.materializedView.summary.evidenceSources, 1);
+  assert.equal(shipmentTimelinePayload.data.materializedView.summary.qualityGaps, 1);
+  assert.equal(shipmentTimelinePayload.data.materializedView.summary.hasCarrier, true);
+  assert.equal(shipmentTimelinePayload.data.materializedView.summary.hasPurchaseOrder, true);
+  assert.equal(shipmentTimelinePayload.data.materializedView.summary.hasWarehouse, true);
+  assert.equal(shipmentTimelinePayload.data.materializedView.partial, true);
+  assert.equal(shipmentTimelinePayload.data.materializedView.itemCount >= 6, true);
+  assert.equal(shipmentTimelinePayload.data.materializedView.items.some((item) => item.kind === "shipment_leg" && item.label === "Origin to warehouse"), true);
+  assert.equal(shipmentTimelinePayload.data.materializedView.items.some((item) => item.kind === "carrier" && item.label === "Fast Freight"), true);
+  assert.equal(shipmentTimelinePayload.data.materializedView.gaps.some((gap) => gap.id === shipmentGapPayload.data.id && gap.gapKind === "missing"), true);
+
   const obligationCreate = await runCliCapture(["obligation", "create", "SOC 2 access review", "--company", companyPayload.data.id, "--authority", "SOC 2", "--reference", "CC6.2", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(obligationCreate.code, CLI_EXIT_OK, obligationCreate.stderr || obligationCreate.stdout);
   const obligationPayload = JSON.parse(obligationCreate.stdout) as { data: { id: string; title: string; companyId: string; authority: string; reference: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
