@@ -1084,6 +1084,10 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_contacts
   claw_cli_command_inspect["inspect\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_inspect
+  claw_cli_command_dense_fixtures["dense-fixtures\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_dense_fixtures
+  claw_cli_command_dense_fixture["dense-fixture\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_dense_fixture
   claw_cli_command_search["search\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_search
   claw_cli_command_signals["signals\ncliCommand"]
@@ -2416,6 +2420,8 @@ flowchart TD
 | `claw.cli.command.records` | cliCommand | cli | claw |  |  |  | `records` |
 | `claw.cli.command.contacts` | cliCommand | cli | claw |  |  |  | `contacts` |
 | `claw.cli.command.inspect` | cliCommand | cli | claw |  |  |  | `inspect` |
+| `claw.cli.command.dense-fixtures` | cliCommand | cli | claw |  |  |  | `dense-fixtures` |
+| `claw.cli.command.dense-fixture` | cliCommand | cli | claw |  |  |  | `dense-fixture` |
 | `claw.cli.command.search` | cliCommand | cli | claw |  |  |  | `search` |
 | `claw.cli.command.signals` | cliCommand | cli | claw |  |  |  | `signals` |
 | `claw.cli.command.life` | cliCommand | cli | claw |  |  |  | `life` |
