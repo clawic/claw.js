@@ -284,93 +284,112 @@ export class SearchStore {
   }
 
   upsertDocument(input: SearchDocumentInput): void {
-    const updatedAt = input.updatedAt ?? new Date().toISOString();
-    const shard = input.shard ?? "default";
-    const limits = this.indexingLimitsForSource(input.source);
-    const body = truncateUtf8(input.body ?? "", limits.maxBodyBytes);
-    const fragments = (input.fragments ?? []).slice(0, limits.maxFragments).map((fragment) => ({
-      ...fragment,
-      body: fragment.body ? truncateUtf8(fragment.body, limits.maxFragmentBytes) : undefined,
-      snippet: fragment.snippet ? truncateUtf8(fragment.snippet, limits.maxFragmentBytes) : undefined,
-    }));
-    const tx = this.db.transaction(() => {
-      this.db.prepare(`
-        INSERT INTO search_documents (
-          id, source, shard, domain, type, resource_id, title, subtitle, snippet, body, path,
-          updated_at, metadata_json, permissions_json, ranking_json, deleted_at
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
-        ON CONFLICT(id) DO UPDATE SET
-          source = excluded.source,
-          shard = excluded.shard,
-          domain = excluded.domain,
-          type = excluded.type,
-          resource_id = excluded.resource_id,
-          title = excluded.title,
-          subtitle = excluded.subtitle,
-          snippet = excluded.snippet,
-          body = excluded.body,
-          path = excluded.path,
-          updated_at = excluded.updated_at,
-          metadata_json = excluded.metadata_json,
-          permissions_json = excluded.permissions_json,
-          ranking_json = excluded.ranking_json,
-          deleted_at = NULL
-      `).run(
-        input.id,
-        input.source,
-        shard,
-        input.domain,
-        input.type,
-        input.resourceId ?? null,
-        input.title,
-        input.subtitle ?? null,
-        input.snippet ?? null,
-        body,
-        input.path ?? null,
-        updatedAt,
-        JSON.stringify(input.metadata ?? {}),
-        JSON.stringify(input.permissions ?? {}),
-        JSON.stringify(input.rankingHints ?? {}),
-      );
-      this.db.prepare("DELETE FROM search_fragments WHERE document_id = ?").run(input.id);
-      this.db.prepare("DELETE FROM search_actions WHERE document_id = ?").run(input.id);
-      this.db.prepare("DELETE FROM search_fts WHERE doc_id = ?").run(input.id);
-      this.db.prepare(`
-        INSERT INTO search_fts (doc_id, fragment_id, source, shard, domain, type, title, body, path)
-        VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?)
-      `).run(input.id, input.source, shard, input.domain, input.type, input.title, [input.subtitle, input.snippet, body].filter(Boolean).join("\n"), input.path ?? "");
-      const insertFragment = this.db.prepare(`
-        INSERT INTO search_fragments (id, document_id, source, shard, domain, title, body, snippet, sort_order, metadata_json)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-      const insertFragmentFts = this.db.prepare(`
-        INSERT INTO search_fts (doc_id, fragment_id, source, shard, domain, type, title, body, path)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-      for (const [index, fragment] of fragments.entries()) {
-        insertFragment.run(
-          fragment.id,
+    this.upsertDocuments([input]);
+  }
+
+  upsertDocuments(inputs: SearchDocumentInput[]): number {
+    if (inputs.length === 0) return 0;
+    const upsertDocument = this.db.prepare(`
+      INSERT INTO search_documents (
+        id, source, shard, domain, type, resource_id, title, subtitle, snippet, body, path,
+        updated_at, metadata_json, permissions_json, ranking_json, deleted_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+      ON CONFLICT(id) DO UPDATE SET
+        source = excluded.source,
+        shard = excluded.shard,
+        domain = excluded.domain,
+        type = excluded.type,
+        resource_id = excluded.resource_id,
+        title = excluded.title,
+        subtitle = excluded.subtitle,
+        snippet = excluded.snippet,
+        body = excluded.body,
+        path = excluded.path,
+        updated_at = excluded.updated_at,
+        metadata_json = excluded.metadata_json,
+        permissions_json = excluded.permissions_json,
+        ranking_json = excluded.ranking_json,
+        deleted_at = NULL
+    `);
+    const deleteFragments = this.db.prepare("DELETE FROM search_fragments WHERE document_id = ?");
+    const deleteActions = this.db.prepare("DELETE FROM search_actions WHERE document_id = ?");
+    const deleteFts = this.db.prepare("DELETE FROM search_fts WHERE doc_id = ?");
+    const insertDocumentFts = this.db.prepare(`
+      INSERT INTO search_fts (doc_id, fragment_id, source, shard, domain, type, title, body, path)
+      VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const insertFragment = this.db.prepare(`
+      INSERT INTO search_fragments (id, document_id, source, shard, domain, title, body, snippet, sort_order, metadata_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const insertFragmentFts = this.db.prepare(`
+      INSERT INTO search_fts (doc_id, fragment_id, source, shard, domain, type, title, body, path)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const insertAction = this.db.prepare("INSERT INTO search_actions (document_id, action_id, action_json) VALUES (?, ?, ?)");
+    const updateSource = this.db.prepare("UPDATE search_sources SET last_indexed_at = ?, updated_at = ? WHERE id = ?");
+    const clearCache = this.db.prepare("DELETE FROM search_ranking_cache");
+    const tx = this.db.transaction((documents: SearchDocumentInput[]) => {
+      const touchedSources = new Map<string, string>();
+      for (const input of documents) {
+        const updatedAt = input.updatedAt ?? new Date().toISOString();
+        const shard = input.shard ?? "default";
+        const limits = this.indexingLimitsForSource(input.source);
+        const body = truncateUtf8(input.body ?? "", limits.maxBodyBytes);
+        const fragments = (input.fragments ?? []).slice(0, limits.maxFragments).map((fragment) => ({
+          ...fragment,
+          body: fragment.body ? truncateUtf8(fragment.body, limits.maxFragmentBytes) : undefined,
+          snippet: fragment.snippet ? truncateUtf8(fragment.snippet, limits.maxFragmentBytes) : undefined,
+        }));
+        upsertDocument.run(
           input.id,
           input.source,
           shard,
           input.domain,
-          fragment.title ?? "",
-          fragment.body ?? "",
-          fragment.snippet ?? null,
-          fragment.sortOrder ?? index,
-          JSON.stringify(fragment.metadata ?? {}),
+          input.type,
+          input.resourceId ?? null,
+          input.title,
+          input.subtitle ?? null,
+          input.snippet ?? null,
+          body,
+          input.path ?? null,
+          updatedAt,
+          JSON.stringify(input.metadata ?? {}),
+          JSON.stringify(input.permissions ?? {}),
+          JSON.stringify(input.rankingHints ?? {}),
         );
-        insertFragmentFts.run(input.id, fragment.id, input.source, shard, input.domain, input.type, fragment.title ?? "", [fragment.snippet, fragment.body].filter(Boolean).join("\n"), input.path ?? "");
+        deleteFragments.run(input.id);
+        deleteActions.run(input.id);
+        deleteFts.run(input.id);
+        insertDocumentFts.run(input.id, input.source, shard, input.domain, input.type, input.title, [input.subtitle, input.snippet, body].filter(Boolean).join("\n"), input.path ?? "");
+        for (const [index, fragment] of fragments.entries()) {
+          insertFragment.run(
+            fragment.id,
+            input.id,
+            input.source,
+            shard,
+            input.domain,
+            fragment.title ?? "",
+            fragment.body ?? "",
+            fragment.snippet ?? null,
+            fragment.sortOrder ?? index,
+            JSON.stringify(fragment.metadata ?? {}),
+          );
+          insertFragmentFts.run(input.id, fragment.id, input.source, shard, input.domain, input.type, fragment.title ?? "", [fragment.snippet, fragment.body].filter(Boolean).join("\n"), input.path ?? "");
+        }
+        for (const action of input.actions ?? []) {
+          insertAction.run(input.id, action.id, JSON.stringify(action));
+        }
+        touchedSources.set(input.source, updatedAt);
       }
-      const insertAction = this.db.prepare("INSERT INTO search_actions (document_id, action_id, action_json) VALUES (?, ?, ?)");
-      for (const action of input.actions ?? []) {
-        insertAction.run(input.id, action.id, JSON.stringify(action));
+      for (const [source, updatedAt] of touchedSources) {
+        updateSource.run(updatedAt, updatedAt, source);
       }
-      this.db.prepare("UPDATE search_sources SET last_indexed_at = ?, updated_at = ? WHERE id = ?").run(updatedAt, updatedAt, input.source);
-      this.db.prepare("DELETE FROM search_ranking_cache").run();
+      clearCache.run();
     });
-    tx();
+    tx(inputs);
+    return inputs.length;
   }
 
   query(input: SearchQueryInput): SearchQueryOutput {

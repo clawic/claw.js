@@ -86,6 +86,41 @@ test("SearchStore does not mark default framework queries partial because full s
   }
 });
 
+test("SearchStore bulk upserts documents in one cache-invalidating transaction", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-bulk-upsert-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "bulk.items",
+      domain: "bulk",
+      name: "Bulk items",
+      resultTypes: ["item"],
+    }));
+    const inserted = store.upsertDocuments(Array.from({ length: 25 }, (_, index) => ({
+      id: `bulk.items:${index}`,
+      source: "bulk.items",
+      domain: "bulk",
+      type: "item",
+      title: `Bulk item ${index}`,
+      body: `bulk transaction needle${index % 5}`,
+      fragments: [{
+        id: `bulk.items:${index}:fragment`,
+        title: "fragment",
+        body: `fragment needle${index % 5}`,
+      }],
+    })));
+
+    assert.equal(inserted, 25);
+    const query = store.query({ query: "needle3", domains: ["bulk"], limit: 10 });
+    assert.equal(query.partial, false);
+    assert.equal(query.results.length, 5);
+    assert.equal(store.sourceStatus().find((source) => source.source === "bulk.items")?.lastIndexedAt !== undefined, true);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("SearchStore parses inline domain, source, shard, type and scope filters", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-inline-filters-"));
   const store = new SearchStore(path.join(dir, "search.sqlite"));

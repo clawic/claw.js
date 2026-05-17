@@ -46,9 +46,16 @@ try {
 
   const startedIngest = performance.now();
   const interleavedEvery = Math.max(100, Math.floor(options.items / Math.max(1, options.queries)));
+  const ingestBatchSize = 5000;
+  let ingestBatch: Parameters<SearchStore["upsertDocuments"]>[0] = [];
+  const flushBatch = () => {
+    if (ingestBatch.length === 0) return;
+    store.upsertDocuments(ingestBatch);
+    ingestBatch = [];
+  };
   for (let i = 0; i < options.items; i += 1) {
     const bucket = i % 1000;
-    store.upsertDocument({
+    ingestBatch.push({
       id: `lab.items:${i}`,
       source: "lab.items",
       domain: "lab",
@@ -68,13 +75,16 @@ try {
         },
       ],
     });
+    if (ingestBatch.length >= ingestBatchSize) flushBatch();
     if (i > 100 && i % interleavedEvery === 0) {
+      flushBatch();
       const queryStarted = performance.now();
       const output = store.query({ query: "needle42", domains: ["lab"], limit: 10 });
       interleavedQueryDurations.push(performance.now() - queryStarted);
       if (output.results.length === 0) throw new Error("scale lab interleaved query returned no results");
     }
   }
+  flushBatch();
   metrics.push({ name: "ingest_total", valueMs: performance.now() - startedIngest });
   if (interleavedQueryDurations.length > 0) {
     const interleavedP95 = percentile(interleavedQueryDurations, 0.95);
