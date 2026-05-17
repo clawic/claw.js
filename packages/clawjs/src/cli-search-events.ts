@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { SearchStore, createBuiltinSearchSourceManifests, type SearchIndexJob } from "@clawjs/search";
 
-import { resolveClawjsDataRoot } from "./v1-data.ts";
+import { resolveClawjsDataRoot } from "./v1-data-core.ts";
 
 const BUILTIN_SEARCH_SOURCES_BY_ID = new Map(createBuiltinSearchSourceManifests().map((source) => [source.id, source]));
 
@@ -132,6 +132,55 @@ export function scheduleSkillsRegistrySearchEvent(input: {
 }): SearchEventScheduleResult {
   return scheduleSearchIndexEvent({
     source: "skills.registry",
+    operation: input.operation,
+    resourceId: input.slug,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      slug: input.slug,
+    },
+  });
+}
+
+export function scheduleProvidersRoutingSearchEvent(input: {
+  operation: "upsert" | "delete";
+  kind: "routing" | "setting";
+  provider?: string;
+  dataDir: string;
+  feature?: string;
+  capability?: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  const resourceId = input.kind === "routing"
+    ? `routing:${input.feature ?? "unknown"}:${input.capability ?? "chat"}`
+    : `setting:${input.provider ?? "unknown"}`;
+  return scheduleSearchIndexEvent({
+    source: "providers.routing",
+    operation: input.operation,
+    resourceId,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      kind: input.kind,
+      ...(input.provider ? { provider: input.provider } : {}),
+      ...(input.feature ? { feature: input.feature } : {}),
+      ...(input.capability ? { capability: input.capability } : {}),
+    },
+  });
+}
+
+export function scheduleSnippetsLibrarySearchEvent(input: {
+  operation: "upsert" | "delete";
+  slug: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  return scheduleSearchIndexEvent({
+    source: "snippets.library",
     operation: input.operation,
     resourceId: input.slug,
     dataDir: input.dataDir,

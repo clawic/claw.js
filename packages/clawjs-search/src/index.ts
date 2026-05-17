@@ -742,6 +742,32 @@ export function createBuiltinSearchSourceManifests(): SearchSourceManifest[] {
       ],
     }),
     createFrameworkSearchSourceManifest({
+      id: "providers.routing",
+      domain: "providers",
+      name: "Provider routing",
+      resultTypes: ["routing_rule", "provider_setting"],
+      facets: [
+        { id: "kind", label: "Kind", type: "string" },
+        { id: "feature", label: "Feature", type: "string" },
+        { id: "capability", label: "Capability", type: "string" },
+        { id: "provider", label: "Provider", type: "string" },
+        { id: "enabled", label: "Enabled", type: "boolean" },
+        { id: "hasAccountRef", label: "Has account ref", type: "boolean" },
+      ],
+    }),
+    createFrameworkSearchSourceManifest({
+      id: "snippets.library",
+      domain: "snippets",
+      name: "Snippets",
+      resultTypes: ["snippet", "prompt", "template", "slash"],
+      facets: [
+        { id: "kind", label: "Kind", type: "string" },
+        { id: "shortcut", label: "Shortcut", type: "string" },
+        { id: "scopeKind", label: "Scope", type: "string" },
+        { id: "skillRef", label: "Skill reference", type: "string" },
+      ],
+    }),
+    createFrameworkSearchSourceManifest({
       id: "connectors.catalog",
       domain: "connectors",
       name: "Connectors",
