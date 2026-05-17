@@ -221,6 +221,23 @@ export const syncReconciliationResultSchema = z.object({
   writes: z.literal(false),
 });
 
+export const syncDriverApplicationReceiptSchema = z.object({
+  schemaVersion: z.literal(1),
+  receiptId: z.string().min(1),
+  resourceId: z.string().min(1),
+  driver: syncDriverSchema,
+  routeId: z.string().min(1),
+  actor: remoteActorContextSchema,
+  appliedChangeIds: z.array(z.string().min(1)),
+  blockedConflictIds: z.array(z.string().min(1)),
+  status: z.enum(["signed_pending_driver_application", "applied", "blocked"]),
+  physicalDriverApplied: z.boolean(),
+  externalPending: z.array(z.enum(["physical_sync_driver_application"])),
+  createdAt: z.string().datetime(),
+  auditEventId: z.string().min(1),
+  writes: z.literal(false),
+});
+
 export const remoteSecretLeaseSchema = z.object({
   leaseId: z.string().min(1),
   secretRef: z.string().min(1),
@@ -567,6 +584,7 @@ export type SyncPlanAction = z.infer<typeof syncPlanActionSchema>;
 export type SyncPlanResult = z.infer<typeof syncPlanResultSchema>;
 export type SyncQueueEntry = z.infer<typeof syncQueueEntrySchema>;
 export type SyncReconciliationResult = z.infer<typeof syncReconciliationResultSchema>;
+export type SyncDriverApplicationReceipt = z.infer<typeof syncDriverApplicationReceiptSchema>;
 export type RemoteSecretLease = z.infer<typeof remoteSecretLeaseSchema>;
 export type RemoteSecretProviderReceipt = z.infer<typeof remoteSecretProviderReceiptSchema>;
 export type RemoteAccessGrantPlane = z.infer<typeof remoteAccessGrantPlaneSchema>;
@@ -791,6 +809,10 @@ function remoteGatewayAuditReceiptId(parts: string[]): string {
   return `gateway_audit_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
 }
 
+function syncDriverApplicationReceiptId(parts: string[]): string {
+  return `sync_driver_application_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
+}
+
 function newestSnapshot(left: SyncObjectSnapshot, right: SyncObjectSnapshot): SyncObjectSnapshot {
   return left.updatedAt >= right.updatedAt ? left : right;
 }
@@ -997,6 +1019,48 @@ export function reconcileSyncQueue(input: {
     appliedChangeIds,
     blockedConflictIds,
     ...(nextCursor ? { nextCursor } : {}),
+    writes: false,
+  });
+}
+
+export function createSyncDriverApplicationReceipt(input: {
+  manifest: SyncResourceManifest;
+  reconciliation: SyncReconciliationResult;
+  actor: RemoteActorContext;
+  createdAt?: string;
+  physicalDriverApplied?: boolean;
+}): SyncDriverApplicationReceipt {
+  const manifest = syncResourceManifestSchema.parse(input.manifest);
+  const reconciliation = syncReconciliationResultSchema.parse(input.reconciliation);
+  const actor = remoteActorContextSchema.parse(input.actor);
+  if (reconciliation.manifest.resourceId !== manifest.resourceId) {
+    throw new Error(`Sync application receipt manifest mismatch: ${manifest.resourceId} != ${reconciliation.manifest.resourceId}`);
+  }
+  const createdAt = input.createdAt ?? new Date().toISOString();
+  const physicalDriverApplied = input.physicalDriverApplied ?? false;
+  const blocked = reconciliation.blockedConflictIds.length > 0;
+  const status = blocked
+    ? "blocked"
+    : physicalDriverApplied ? "applied" : "signed_pending_driver_application";
+  return syncDriverApplicationReceiptSchema.parse({
+    schemaVersion: 1,
+    receiptId: syncDriverApplicationReceiptId([
+      manifest.resourceId,
+      manifest.driver,
+      status,
+      createdAt,
+    ]),
+    resourceId: manifest.resourceId,
+    driver: manifest.driver,
+    routeId: manifest.routeIds[0] ?? routeIdForSyncDriver(manifest.driver),
+    actor,
+    appliedChangeIds: reconciliation.appliedChangeIds,
+    blockedConflictIds: reconciliation.blockedConflictIds,
+    status,
+    physicalDriverApplied,
+    externalPending: physicalDriverApplied || blocked ? [] : ["physical_sync_driver_application"],
+    createdAt,
+    auditEventId: syncDriverApplicationReceiptId(["audit", manifest.resourceId, manifest.driver, createdAt]),
     writes: false,
   });
 }
