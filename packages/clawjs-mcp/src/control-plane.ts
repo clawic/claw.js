@@ -61,6 +61,7 @@ export function assertMCPToolControlPlane(input: {
   if (!controlPlane) {
     throw new Error("MCP tool execution requires connector control plane approval.");
   }
+  assertMCPAgentAssignmentPolicy(agentPolicy);
   if (!server.enabled) {
     throw new Error(`MCP server ${server.id} is disabled.`);
   }
@@ -104,6 +105,5 @@ export function assertMCPToolControlPlane(input: {
   if (!decision.allowed) {
     throw new Error(`MCP connector control plane denied execution: ${decision.reasons.map((reason) => reason.code).join(", ")}`);
   }
-  assertMCPAgentAssignmentPolicy(agentPolicy);
   return decision;
 }
