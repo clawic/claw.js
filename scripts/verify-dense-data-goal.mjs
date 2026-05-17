@@ -166,6 +166,14 @@ for (const phrase of [
   "dense-fixtures",
   "claw dense-fixtures seed",
   "claw patient patient_123 timeline",
+  "claw study study_123 timeline",
+  "claw case case_123 timeline",
+  "claw service service_123 timeline",
+  "claw sample sample_123 timeline",
+  "claw experiment experiment_123 timeline",
+  "claw work-order work_order_123 timeline",
+  "claw erp company company_123 overview",
+  "claw crm account account_123 overview",
   "materialized_semantic_view",
   "core.sqlite",
   "entity_relations",
@@ -257,6 +265,30 @@ if (!intents.some((entry) => entry.phrase === "claw health gaps" && entry.status
 }
 if (!semanticViews.some((entry) => entry.id === "patient.timeline" && entry.systemId === "health")) {
   fail("semantic views must include patient.timeline");
+}
+if (!semanticViews.some((entry) => entry.id === "study.timeline" && entry.systemId === "research")) {
+  fail("semantic views must include study.timeline");
+}
+if (!semanticViews.some((entry) => entry.id === "case.timeline" && entry.systemId === "legal")) {
+  fail("semantic views must include case.timeline");
+}
+if (!semanticViews.some((entry) => entry.id === "service.timeline" && entry.systemId === "ops")) {
+  fail("semantic views must include service.timeline");
+}
+if (!semanticViews.some((entry) => entry.id === "sample.timeline" && entry.systemId === "labs")) {
+  fail("semantic views must include sample.timeline");
+}
+if (!semanticViews.some((entry) => entry.id === "experiment.timeline" && entry.systemId === "biology")) {
+  fail("semantic views must include experiment.timeline");
+}
+if (!semanticViews.some((entry) => entry.id === "work_order.timeline" && entry.systemId === "manufacturing")) {
+  fail("semantic views must include work_order.timeline");
+}
+if (!semanticViews.some((entry) => entry.id === "erp.company.overview" && entry.systemId === "erp")) {
+  fail("semantic views must include erp.company.overview");
+}
+if (!semanticViews.some((entry) => entry.id === "crm.account.overview" && entry.systemId === "crm")) {
+  fail("semantic views must include crm.account.overview");
 }
 if (!semanticViews.some((entry) => entry.id === "invoice.list" && entry.systemId === "erp")) {
   fail("semantic views must include invoice.list");

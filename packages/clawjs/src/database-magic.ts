@@ -344,6 +344,8 @@ function resolveCollectionName(rawCollection: string): string {
   const normalized = rawCollection.trim().toLowerCase();
   const productivityMatch = PRODUCTIVITY_COLLECTION_ALIASES[normalized];
   if (productivityMatch) return productivityMatch;
+  const builtinAlias = BUILTIN_COLLECTIONS_BY_ALIAS.get(normalized);
+  if (builtinAlias) return builtinAlias;
   const builtinB2c = builtinB2cCollectionAlias(normalized);
   if (builtinB2c) return builtinB2c;
   return normalized.replace(/[^a-z0-9_]/g, "_");

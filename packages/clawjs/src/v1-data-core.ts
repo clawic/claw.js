@@ -1148,6 +1148,7 @@ export function rebuildNotesFts(sqlite: Database.Database): number {
 
 export function rebuildSearchSidecar(main: Database.Database): number {
   const sqlite = openSidecar("search.sqlite");
+  ensureV1SearchSidecarShape(sqlite);
   const docs: Array<{ id: string; domain: string; sourceId: string; title: string; body: string; path: string | null; updatedAt: string; metadata: JsonRecord }> = [];
   const pages = main.prepare("SELECT id, title, updated_at, tags_json FROM pages WHERE archived_at IS NULL").all() as Array<{ id: string; title: string; updated_at: string; tags_json: string }>;
   const pageBlocks = main.prepare("SELECT text FROM page_blocks WHERE page_id = ? ORDER BY sort_order, created_at");
@@ -1281,6 +1282,16 @@ export function rebuildSearchSidecar(main: Database.Database): number {
     sqlite.close();
   }
   return docs.length;
+}
+
+function ensureV1SearchSidecarShape(sqlite: Database.Database): void {
+  const columns = sqlite.prepare("PRAGMA table_info(search_documents)").all() as Array<{ name: string }>;
+  if (columns.length === 0 || columns.some((column) => column.name === "source_id")) return;
+  sqlite.exec(`
+    DROP TABLE IF EXISTS search_fts;
+    DROP TABLE IF EXISTS search_documents;
+  `);
+  sqlite.exec(V1_SIDECAR_SCHEMA_SQL_BY_FILE["search.sqlite"]);
 }
 
 export function querySearchSidecar(query: string, limit: number): unknown[] {
@@ -1620,7 +1631,7 @@ export function usage(binName: string, group: string): string {
       return `Usage: ${binName} apps list|upsert [--json]`;
     case "design":
       return `Usage: ${binName} design list|upsert [--json]`;
-    case "agents": return `Usage: ${binName} agents list|get|upsert|delete|schema|evaluate-access|delegation-check|supervisor-check|route-check|resolve-external-identity|project-support-inbox|memory-check|budget-check|action-severity|autonomy-check|surface-projection|config-revision|incident|activity-feed|blueprint|evaluation|retirement-plan [--json]`;
+    case "agents": return `Usage: ${binName} agents list|get|upsert|delete|schema|evaluate-access|delegation-check|supervisor-check|route-check|resolve-external-identity|project-support-inbox|memory-check|budget-check|action-severity|autonomy-check|dispatch-plan|context-pack|tool-catalog|creation-review|storage-audit|audit-coverage|operational-snapshot|control-panel|privacy-plan|paperclip-import|surface-projection|config-revision|incident|activity-feed|blueprint|evaluation|retirement-plan [--json]`;
     case "skills": return `Usage: ${binName} skills get|upsert|delete [--json]`;
     case "personalities": return `Usage: ${binName} personalities list|get|upsert|delete [--json]`;
     case "skill-collections": return `Usage: ${binName} skill-collections list|get|upsert|delete [--json]`;

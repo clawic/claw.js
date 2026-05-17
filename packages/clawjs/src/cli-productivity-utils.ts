@@ -222,6 +222,7 @@ const LOCAL_CLI_ALLOWED_FLAGS = new Set([
   "availability",
   "team-id",
   "agent-id",
+  "account-id",
   "max-wip",
   "current-wip",
   "queue-depth",

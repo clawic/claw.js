@@ -169,6 +169,35 @@ timeline` now reads `patients`, `medications`, `symptom_logs`,
 `core.sqlite`, returns `implementationStatus: "materialized_semantic_view"`,
 and marks the view partial when quality gaps remain. This keeps the view useful
 without pretending that external clinical/provider validation has happened.
+The same pattern now applies to `claw case <id> timeline`, which materializes
+`legal_cases`, `case_evidence`, `evidence_sources`, `quality_gaps`, and
+`provenance_events` into a legal case timeline while keeping legal
+decisioning/advice outside the local acceptance claim.
+`claw service <id> timeline` also materializes `services`, `incidents`,
+`evidence_sources`, `quality_gaps`, and `provenance_events` so ops/ITSM can
+show service history and explicit missing SLO/check data without pretending to
+be the live monitor/APM integration.
+Lab and biology timeline routes follow the same local-first pattern:
+`claw sample <id> timeline` materializes `samples`, `assays`, evidence, gaps,
+and provenance, while `claw experiment <id> timeline` materializes
+`biology_experiments`, child samples, assays, evidence, gaps, and provenance.
+Research uses `claw study <id> timeline` to materialize `studies`,
+`participants`, linked samples, evidence, gaps, and provenance, keeping CTMS
+sync as `external_pending` unless a real provider connector is validated.
+Manufacturing uses `claw work-order <id> timeline` to materialize
+`work_orders`, evidence, quality gaps, and provenance as the MES slice grows
+toward material, operation, labor, equipment, and quality event records.
+ERP now has a materialized company overview through `claw erp company <id>
+overview`: it reads the shared company anchor plus CRM accounts/deals, billing
+customers, invoices, payment intents, services, work orders, evidence,
+provenance, and quality gaps from `core.sqlite`. This keeps ERP as an
+orchestrator over existing canonical owners rather than creating a parallel
+ERP supercollection.
+CRM account overview is also materialized: `claw crm account <id> overview`
+reads the shared `accounts` record, company anchor, `deals`, `contacts`,
+`activities`, evidence, provenance, and quality gaps. This keeps CRM inside the
+same dense-data operating system rather than maintaining a separate CRM graph
+or second account model.
 
 The registry also carries explicit `external_pending` requirements for real
 EHR/FHIR exchange, lab instrument ingestion, CTMS synchronization, payment

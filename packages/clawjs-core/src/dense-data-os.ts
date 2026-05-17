@@ -296,6 +296,7 @@ export const clawDenseDataOsRegistry: ClawDenseDataOsRegistry = {
       commandPatterns: [
         "claw study list|get|create|update|delete|query|schema",
         "claw study <id> cohort list",
+        "claw study <id> timeline",
         "claw participant list|get|create|update|query",
         "claw research overview|gaps|intents",
         "claw ctms overview|gaps|intents",
@@ -303,9 +304,11 @@ export const clawDenseDataOsRegistry: ClawDenseDataOsRegistry = {
       operations: [
         operation("study.cohort.list", "List study cohort", ["claw study <id> cohort list"], ["study", "cohort", "participant_profile"]),
         operation("study.evidence.link", "Link research evidence", ["claw study <id> evidence add"], ["study", "evidence_source", "provenance_event"]),
+        operation("study.timeline", "Read study timeline", ["claw study <id> timeline"], ["study", "participant_profile", "sample", "evidence_source", "provenance_event"]),
       ],
       semanticViews: [
         view("study.cohort", "Study cohort", "claw study <id> cohort list", "study.cohort.list", ["study_id"], "participants/cohorts with eligibility, consent, and quality gaps"),
+        view("study.timeline", "Study timeline", "claw study <id> timeline", "study.timeline", ["study_id"], "study events, participants, samples, evidence, provenance, and gaps"),
       ],
       standards: ["CDISC", "OMOP", "FHIR ResearchStudy", "FHIR ResearchSubject"],
       notes: "Research is transversal and shares engines with health, labs, biology, and analytics.",
@@ -321,7 +324,7 @@ export const clawDenseDataOsRegistry: ClawDenseDataOsRegistry = {
         center("organism", "Organism", "organism", undefined, "Biological entity center for samples, assays, observations, and datasets.", undefined, "organisms"),
         center("experiment", "Experiment", "experiment", undefined, "Experimental workflow center shared with ELN/LIMS style data.", ["experiments", "biology-experiment", "biology-experiments"], "biology_experiments"),
       ],
-      commandPatterns: ["claw biology overview|gaps|intents", "claw experiment list|get|create|update|query", "claw organism list|get|create|query"],
+      commandPatterns: ["claw biology overview|gaps|intents", "claw experiment list|get|create|update|query", "claw experiment <id> timeline", "claw organism list|get|create|query"],
       operations: [operation("experiment.timeline", "Read experiment timeline", ["claw experiment <id> timeline"], ["experiment", "sample", "assay", "evidence_source"])],
       semanticViews: [view("experiment.timeline", "Experiment timeline", "claw experiment <id> timeline", "experiment.timeline", ["experiment_id"], "ordered experiment events, samples, assays, and evidence")],
       standards: ["ISA-Tab", "BioSample"],
@@ -360,7 +363,10 @@ export const clawDenseDataOsRegistry: ClawDenseDataOsRegistry = {
         operation("case.evidence.add", "Add case evidence", ["claw case <id> evidence add"], ["case", "evidence_source", "provenance_event"]),
         operation("case.timeline", "Read case timeline", ["claw case <id> timeline"], ["case", "deadline", "document", "evidence_source"]),
       ],
-      semanticViews: [view("case.evidence", "Case evidence", "claw case <id> evidence list", "case.evidence.add", ["case_id"], "case evidence with source, custody, confidence, and gaps")],
+      semanticViews: [
+        view("case.evidence", "Case evidence", "claw case <id> evidence list", "case.evidence.add", ["case_id"], "case evidence with source, custody, confidence, and gaps"),
+        view("case.timeline", "Case timeline", "claw case <id> timeline", "case.timeline", ["case_id"], "case events, evidence, documents, provenance, deadlines, and gaps"),
+      ],
       standards: ["Akoma Ntoso", "LegalRuleML"],
       notes: "Legal advice/decisioning remains out of scope; data organization and evidence reasoning are in scope.",
     }),

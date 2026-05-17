@@ -80,6 +80,13 @@ test("runCli exposes Agents V1 safe surface projection gate", async () => {
     assert.equal(schema.gates.includes("budget-check"), true);
     assert.equal(schema.gates.includes("action-severity"), true);
     assert.equal(schema.gates.includes("autonomy-check"), true);
+    assert.equal(schema.gates.includes("dispatch-plan"), true);
+    assert.equal(schema.gates.includes("context-pack"), true);
+    assert.equal(schema.gates.includes("tool-catalog"), true);
+    assert.equal(schema.gates.includes("creation-review"), true);
+    assert.equal(schema.gates.includes("storage-audit"), true);
+    assert.equal(schema.gates.includes("audit-coverage"), true);
+    assert.equal(schema.gates.includes("operational-snapshot"), true);
     assert.equal(schema.gates.includes("config-revision"), true);
     assert.equal(schema.gates.includes("incident"), true);
     assert.equal(schema.gates.includes("activity-feed"), true);
@@ -124,6 +131,360 @@ test("runCli exposes Agents V1 safe surface projection gate", async () => {
     assert.equal(autonomy.allowed, false);
     assert.equal(autonomy.dispatchMode, "suggest_only");
     assert.equal(autonomy.requiredGates.includes("human_approval"), true);
+
+    const dispatchStdout = captureStream();
+    assert.equal(await runCli(["agents", "dispatch-plan", "--record", JSON.stringify({
+      agentId: "agent-ops",
+      assignment: {
+        id: "assignment.web",
+        agentId: "agent-ops",
+        kind: "external_web_chat",
+        status: "active",
+        channel: "chat",
+        privacyPolicy: "hashed",
+        externalDisclosure: "transparent_agent",
+      },
+      assignmentRequest: { kind: "external_web_chat", channel: "chat" },
+      executionProfile: { id: "execution.async", executionMode: "async", status: "active", runtime: "service" },
+      autonomy: { profile: "act_limited" },
+      action: { action: "write", resourceType: "collection" },
+      now: "2026-05-17T10:00:00.000Z",
+    }), "--json"], {
+      stdout: dispatchStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const dispatch = parseCliJsonPayload(dispatchStdout.getOutput()) as {
+      planKind: string;
+      allowed: boolean;
+      disposition: string;
+      runStatus: string;
+      requiredGates: string[];
+      audit: { kind: string; result: string };
+    };
+    assert.equal(dispatch.planKind, "claw_agent_dispatch_plan");
+    assert.equal(dispatch.allowed, false);
+    assert.equal(dispatch.disposition, "blocked");
+    assert.equal(dispatch.runStatus, "blocked");
+    assert.equal(dispatch.requiredGates.includes("external_act"), true);
+    assert.equal(dispatch.audit.kind, "dispatch_plan");
+    assert.equal(dispatch.audit.result, "blocked");
+
+    const contextGrant = (id: string) => ({
+      id,
+      resourceType: "*",
+      action: "read",
+      scopeType: "customer",
+      scopeId: "customer_1",
+      effect: "allow",
+    });
+    const contextPackStdout = captureStream();
+    assert.equal(await runCli(["agents", "context-pack", "--record", JSON.stringify({
+      agentId: "agent-ops",
+      assignmentId: "assignment.web",
+      view: {
+        id: "view.support.customer",
+        allowedResourceTypes: ["contact"],
+        allowedScopes: [{ scopeType: "customer", scopeId: "customer_1" }],
+        includeContent: true,
+      },
+      requested: [{
+        id: "ctx.contact",
+        resourceType: "contact",
+        resourceId: "contact_1",
+        scopeType: "customer",
+        scopeId: "customer_1",
+        content: { apiToken: "raw", name: "Customer" },
+        required: true,
+      }, {
+        id: "ctx.secret",
+        resourceType: "secret",
+        resourceId: "vault://agents/ops",
+        scopeType: "customer",
+        scopeId: "customer_1",
+        required: true,
+      }],
+      agentGrants: [contextGrant("agent")],
+      assignmentGrants: [contextGrant("assignment")],
+      executionProfileGrants: [contextGrant("execution")],
+      connectorGrants: [contextGrant("connector")],
+      hostGrants: [contextGrant("host")],
+      runScopeGrants: [contextGrant("run")],
+      now: "2026-05-17T10:00:00.000Z",
+    }), "--json"], {
+      stdout: contextPackStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const contextPack = parseCliJsonPayload(contextPackStdout.getOutput()) as {
+      packKind: string;
+      items: Array<{ id: string; content?: Record<string, unknown> }>;
+      denied: Array<{ id: string; reasons: string[] }>;
+      gaps: string[];
+      audit: { kind: string; result: string };
+    };
+    assert.equal(contextPack.packKind, "claw_agent_context_pack");
+    assert.equal(contextPack.items[0]?.id, "ctx.contact");
+    assert.equal(contextPack.items[0]?.content?.name, "Customer");
+    assert.equal(contextPack.items[0]?.content?.apiToken === "raw", false);
+    assert.equal(contextPack.denied[0]?.id, "ctx.secret");
+    assert.equal(contextPack.denied[0]?.reasons.includes("context: resource type secret outside view"), true);
+    assert.equal(contextPack.gaps.includes("required_context_denied"), true);
+    assert.equal(contextPack.audit.kind, "context_pack");
+    assert.equal(contextPack.audit.result, "blocked");
+
+    const toolGrant = (id: string) => ({
+      id,
+      resourceType: "tool",
+      action: "invoke",
+      scopeType: "domain",
+      scopeId: "support",
+      effect: "allow",
+    });
+    const toolCatalogStdout = captureStream();
+    assert.equal(await runCli(["agents", "tool-catalog", "--record", JSON.stringify({
+      agentId: "agent-ops",
+      assignmentId: "assignment.web",
+      allowedDomains: ["support"],
+      tools: [{
+        id: "support.contacts.lookup",
+        title: "Lookup contact",
+        description: "Read contact context.",
+        domain: "support",
+        sourceFeature: "support",
+        parameters: { type: "object" },
+        riskLevel: "safe",
+      }, {
+        id: "support.ticket.refund",
+        title: "Refund ticket",
+        description: "Issue refund.",
+        domain: "support",
+        sourceFeature: "billing",
+        parameters: { type: "object" },
+        riskLevel: "sensitive",
+        requiresApproval: true,
+      }],
+      agentGrants: [toolGrant("agent")],
+      assignmentGrants: [toolGrant("assignment")],
+      executionProfileGrants: [toolGrant("execution")],
+      connectorGrants: [toolGrant("connector")],
+      hostGrants: [toolGrant("host")],
+      runScopeGrants: [toolGrant("run")],
+      now: "2026-05-17T10:00:00.000Z",
+    }), "--json"], {
+      stdout: toolCatalogStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const toolCatalog = parseCliJsonPayload(toolCatalogStdout.getOutput()) as {
+      catalogKind: string;
+      tools: Array<{ id: string }>;
+      blocked: Array<{ id: string; reasons: string[] }>;
+      gaps: string[];
+      audit: { kind: string };
+    };
+    assert.equal(toolCatalog.catalogKind, "claw_agent_tool_catalog");
+    assert.deepEqual(toolCatalog.tools.map((tool) => tool.id), ["support.contacts.lookup"]);
+    assert.equal(toolCatalog.blocked[0]?.id, "support.ticket.refund");
+    assert.equal(toolCatalog.blocked[0]?.reasons.includes("tool: approval required"), true);
+    assert.equal(toolCatalog.gaps.includes("tool_catalog_has_blocked_tools"), true);
+    assert.equal(toolCatalog.audit.kind, "tool_catalog");
+
+    const creationReviewStdout = captureStream();
+    assert.equal(await runCli(["agents", "creation-review", "--record", JSON.stringify({
+      reviewedAt: "2026-05-17T10:00:00.000Z",
+      surface: "external_channel",
+      agent: { id: "agent-ops", name: "Ops", role: "Support", secretAllowlist: ["vault://agents/ops"] },
+      assignments: [{ id: "assignment.web", agentId: "agent-ops", kind: "external_web_chat", status: "draft", channel: "chat", privacyPolicy: "raw_with_retention" }],
+      executionProfiles: [{ id: "execution.web", executionMode: "async", hostAccess: "native_host", networkPolicy: "open" }],
+      resourceGrants: [{ id: "grant.secret", resourceType: "secret", resourceId: "vault://agents/ops", action: "lease_secret" }],
+    }), "--json"], {
+      stdout: creationReviewStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const creationReview = parseCliJsonPayload(creationReviewStdout.getOutput()) as {
+      reviewKind: string;
+      ready: boolean;
+      requiredApprovals: string[];
+      gaps: string[];
+      audit: { kind: string; result: string };
+    };
+    assert.equal(creationReview.reviewKind, "claw_agent_creation_review");
+    assert.equal(creationReview.ready, false);
+    assert.equal(creationReview.requiredApprovals.includes("host"), true);
+    assert.equal(creationReview.gaps.includes("active_assignment_missing"), true);
+    assert.equal(creationReview.audit.kind, "creation_review");
+    assert.equal(creationReview.audit.result, "blocked");
+
+    const storageAuditStdout = captureStream();
+    assert.equal(await runCli(["agents", "storage-audit", "--record", JSON.stringify({
+      legacyCollections: ["company_agents"],
+      observedTables: ["agents", "agent_assignments"],
+      auditedAt: "2026-05-17T10:00:00.000Z",
+    }), "--json"], {
+      stdout: storageAuditStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const storageAudit = parseCliJsonPayload(storageAuditStdout.getOutput()) as {
+      auditKind: string;
+      ready: boolean;
+      missingCollections: string[];
+      legacyOverlaps: string[];
+      gaps: string[];
+      audit: { kind: string; result: string };
+    };
+    assert.equal(storageAudit.auditKind, "claw_agent_storage_audit");
+    assert.equal(storageAudit.ready, false);
+    assert.equal(storageAudit.missingCollections.includes("agent_execution_profiles"), true);
+    assert.deepEqual(storageAudit.legacyOverlaps, ["company_agents"]);
+    assert.equal(storageAudit.gaps.includes("legacy_overlap:company_agents"), true);
+    assert.equal(storageAudit.audit.kind, "storage_audit");
+    assert.equal(storageAudit.audit.result, "blocked");
+
+    const auditCoverageStdout = captureStream();
+    assert.equal(await runCli(["agents", "audit-coverage", "--record", JSON.stringify({
+      expectedKinds: ["blueprint", "service_api"],
+      events: [{
+        id: "audit.blueprint",
+        kind: "blueprint",
+        agentId: "agent-ops",
+        result: "recorded",
+        redaction: "strict",
+        createdAt: "2026-05-17T10:00:00.000Z",
+        metadata: { kind: "blueprint" },
+      }],
+      auditedAt: "2026-05-17T10:00:00.000Z",
+    }), "--json"], {
+      stdout: auditCoverageStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const auditCoverage = parseCliJsonPayload(auditCoverageStdout.getOutput()) as {
+      reportKind: string;
+      ready: boolean;
+      missingKinds: string[];
+      gaps: string[];
+      audit: { kind: string; result: string };
+    };
+    assert.equal(auditCoverage.reportKind, "claw_agent_audit_coverage");
+    assert.equal(auditCoverage.ready, false);
+    assert.deepEqual(auditCoverage.missingKinds, ["service_api"]);
+    assert.equal(auditCoverage.gaps.includes("missing_audit_kind:service_api"), true);
+    assert.equal(auditCoverage.audit.kind, "audit_coverage");
+    assert.equal(auditCoverage.audit.result, "blocked");
+
+    const operationalSnapshotStdout = captureStream();
+    assert.equal(await runCli(["agents", "operational-snapshot", "--record", JSON.stringify({
+      agentId: "agent-ops",
+      capturedAt: "2026-05-17T11:00:00.000Z",
+      assignments: [{ id: "assignment.web", agentId: "agent-ops", status: "active", updatedAt: "2026-05-17T10:00:00.000Z" }],
+      runs: [{ id: "run.1", agentId: "agent-ops", status: "running", startedAt: "2026-05-17T10:30:00.000Z", outcomeJson: { rawTracePath: "/Users/example/run.log" } }],
+      sessions: [{ id: "session.1", agentId: "agent-ops", status: "active", createdAt: "2026-05-17T10:20:00.000Z" }],
+      audits: [{ id: "audit.run", kind: "dispatch_plan", agentId: "agent-ops", result: "recorded", redaction: "strict", createdAt: "2026-05-17T10:40:00.000Z", metadata: {} }],
+    }), "--json"], {
+      stdout: operationalSnapshotStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const operationalSnapshot = parseCliJsonPayload(operationalSnapshotStdout.getOutput()) as {
+      snapshotKind: string;
+      summary: { runs: Record<string, number>; audits: Record<string, number> };
+      gaps: string[];
+      audit: { kind: string; result: string };
+      runs: Array<Record<string, unknown>>;
+    };
+    assert.equal(operationalSnapshot.snapshotKind, "claw_agent_operational_snapshot");
+    assert.equal(operationalSnapshot.summary.runs.running, 1);
+    assert.equal(operationalSnapshot.summary.audits.dispatch_plan, 1);
+    assert.deepEqual(operationalSnapshot.gaps, []);
+    assert.equal(JSON.stringify(operationalSnapshot.runs).includes("/Users/example"), false);
+    assert.equal(operationalSnapshot.audit.kind, "operational_snapshot");
+    assert.equal(operationalSnapshot.audit.result, "recorded");
+
+    const controlPanelStdout = captureStream();
+    assert.equal(await runCli(["agents", "control-panel", "--record", JSON.stringify({
+      generatedAt: "2026-05-17T11:00:00.000Z",
+      surface: "external_channel",
+      agent: { id: "agent-ops", name: "Ops", autonomyProfile: "respond_only", secretAllowlist: ["vault://agents/ops"] },
+      assignments: [{ id: "assignment.web", agentId: "agent-ops", kind: "external_web_chat", status: "active", channel: "chat", privacyPolicy: "hashed", externalDisclosure: "transparent_agent" }],
+      executionProfiles: [{ id: "execution.web", agentId: "agent-ops", executionMode: "async", networkPolicy: "connector_only" }],
+      resourceGrants: [{ id: "grant.support", agentId: "agent-ops", resourceType: "collection", resourceId: "support_conversations", action: "read", effect: "allow" }],
+      memoryPolicies: [{ id: "memory.support", writePolicy: "private_only", crossUserBoundary: "explicit_grant_only" }],
+      budgets: [{ id: "budget.support", exceededBehavior: "deny_action", limits: [{ dimension: "external_actions", limit: 5 }] }],
+      runs: [{ id: "run.1", agentId: "agent-ops", status: "running", startedAt: "2026-05-17T10:30:00.000Z" }],
+      sessions: [{ id: "session.1", agentId: "agent-ops", status: "active", createdAt: "2026-05-17T10:20:00.000Z" }],
+      audits: [{ id: "audit.run", kind: "dispatch_plan", agentId: "agent-ops", result: "recorded", redaction: "strict", createdAt: "2026-05-17T10:40:00.000Z", metadata: {} }],
+    }), "--json"], {
+      stdout: controlPanelStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const controlPanel = parseCliJsonPayload(controlPanelStdout.getOutput()) as {
+      panelKind: string;
+      posture: { activeAssignments: number; externalAssignments: number; failClosed: boolean };
+      permissions: { allowGrants: number };
+      operationalSnapshot: { snapshotKind: string };
+      audit: { kind: string; result: string };
+    };
+    assert.equal(controlPanel.panelKind, "claw_agent_control_panel");
+    assert.equal(controlPanel.posture.activeAssignments, 1);
+    assert.equal(controlPanel.posture.externalAssignments, 1);
+    assert.equal(controlPanel.posture.failClosed, false);
+    assert.equal(controlPanel.permissions.allowGrants, 1);
+    assert.equal(controlPanel.operationalSnapshot.snapshotKind, "claw_agent_operational_snapshot");
+    assert.equal(controlPanel.audit.kind, "control_panel");
+    assert.equal(controlPanel.audit.result, "recorded");
+
+    const privacyPlanStdout = captureStream();
+    assert.equal(await runCli(["agents", "privacy-plan", "--record", JSON.stringify({
+      operation: "delete",
+      subject: { scopeType: "external_user", scopeId: "external_user_1" },
+      requestedAt: "2026-05-17T11:00:00.000Z",
+      agent: { id: "agent-ops", name: "Ops", secretAllowlist: ["vault://agents/ops"] },
+      supportMessages: [{ id: "message.1", externalUserId: "external_user_1", body: "Need help" }],
+      legalHoldRecordIds: ["message.1"],
+    }), "--json"], {
+      stdout: privacyPlanStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const privacyPlan = parseCliJsonPayload(privacyPlanStdout.getOutput()) as {
+      planKind: string;
+      actions: Array<{ disposition: string }>;
+      gaps: string[];
+      audit: { kind: string; result: string };
+    };
+    assert.equal(privacyPlan.planKind, "claw_agent_privacy_lifecycle_plan");
+    assert.deepEqual(privacyPlan.actions.map((action) => action.disposition), ["retain"]);
+    assert.equal(privacyPlan.gaps.includes("legal_hold_records_retained"), true);
+    assert.equal(privacyPlan.audit.kind, "privacy_lifecycle");
+    assert.equal(privacyPlan.audit.result, "blocked");
+
+    const paperclipImportStdout = captureStream();
+    assert.equal(await runCli(["agents", "paperclip-import", "--record", JSON.stringify({
+      packageId: "paperclip.ops",
+      importedAt: "2026-05-17T11:00:00.000Z",
+      agentsMd: "# Ops Reviewer\nRole: reviewer\nSkills: skill.review@1\nInstructions: Review safely.",
+      package: { skills: [{ ref: "skill.shared", version: "1" }] },
+    }), "--json"], {
+      stdout: paperclipImportStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const paperclipImport = parseCliJsonPayload(paperclipImportStdout.getOutput()) as {
+      planKind: string;
+      dependencyPolicy: string;
+      blueprints: Array<{ agencyMode: string; skillRefs: string[] }>;
+      audit: { kind: string; result: string };
+    };
+    assert.equal(paperclipImport.planKind, "claw_agent_paperclip_import_plan");
+    assert.equal(paperclipImport.dependencyPolicy, "paperclip_not_required");
+    assert.equal(paperclipImport.blueprints[0]?.agencyMode, "reviewer");
+    assert.deepEqual(paperclipImport.blueprints[0]?.skillRefs, ["skill.review@1", "skill.shared@1"]);
+    assert.equal(paperclipImport.audit.kind, "paperclip_import");
+    assert.equal(paperclipImport.audit.result, "recorded");
 
     const surfaceProjectionStdout = captureStream();
     assert.equal(await runCli(["agents", "surface-projection", "--record", JSON.stringify({
@@ -1179,11 +1540,13 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
     assert.equal(fs.existsSync(path.join(tempRoot, "home", "skill-collections", "collection.review", "collection.yaml")), true);
     assert.equal(fs.existsSync(path.join(tempRoot, "home", "connections", "github", "connection.yaml")), true);
 
+    const searchRebuildStdout = captureStream();
+    const searchRebuildStderr = captureStream();
     assert.equal(await runInternalV1Cli(["search", "rebuild", "--json"], {
-      stdout: captureStream().stream,
-      stderr: captureStream().stream,
+      stdout: searchRebuildStdout.stream,
+      stderr: searchRebuildStderr.stream,
       cwd,
-    }), CLI_EXIT_OK);
+    }), CLI_EXIT_OK, searchRebuildStderr.getOutput() || searchRebuildStdout.getOutput());
     const searchStdout = captureStream();
     assert.equal(await runInternalV1Cli(["search", "query", "release branch", "--json"], {
       stdout: searchStdout.stream,
