@@ -123,6 +123,31 @@ export interface AgentPermissionEscalationRequest {
   approverId?: string;
 }
 
+export interface AgentRetirementInput {
+  agent: Record<string, unknown>;
+  assignments?: Array<Record<string, unknown>>;
+  resourceGrants?: Array<Record<string, unknown>>;
+  reason: string;
+  actorId?: string;
+  retiredAt?: string;
+  snapshotRef?: string;
+  redaction?: "default" | "strict" | "custom";
+}
+
+export interface AgentRetirementPlan {
+  schemaVersion: 1;
+  planKind: "claw_agent_retirement_plan";
+  agentId: string;
+  retiredAt: string;
+  reason: string;
+  snapshotRef: string;
+  agentPatch: Record<string, unknown>;
+  assignmentPatches: Array<Record<string, unknown>>;
+  resourceGrantPatches: Array<Record<string, unknown>>;
+  recoverable: boolean;
+  audit: AgentAuditEvent;
+}
+
 export type AgentAssignmentPrivacyPolicy = "off" | "hashed" | "raw_with_retention";
 export type AgentExternalDisclosure = "transparent_agent" | "custom_agent_wording";
 
@@ -285,6 +310,7 @@ export type AgentAuditEventKind =
   | "blueprint"
   | "evaluation"
   | "config_revision"
+  | "retirement"
   | "service_api"
   | "assignment_route"
   | "access_evaluation"
@@ -654,6 +680,67 @@ export function createAgentPermissionEscalationRequest(
     input.reason,
   ].join("|"))}`;
   return { ...input, id };
+}
+
+export function createAgentRetirementPlan(input: AgentRetirementInput): AgentRetirementPlan {
+  const redaction = input.redaction ?? "strict";
+  const retiredAt = input.retiredAt ?? new Date().toISOString();
+  const agentId = typeof input.agent.id === "string" ? input.agent.id : "agent.unknown";
+  const snapshotRef = input.snapshotRef ?? `agent_retirement_snapshot_${stableHash([
+    agentId,
+    retiredAt,
+    input.reason,
+  ].join("|"))}`;
+  const agentPatch = redactAgentBoundaryValue({
+    id: agentId,
+    status: "archived",
+    retiredAt,
+    archivedAt: retiredAt,
+    retirementSnapshotRef: snapshotRef,
+  }, redaction) as Record<string, unknown>;
+  const assignmentPatches = (input.assignments ?? []).map((assignment) => redactAgentBoundaryValue({
+    id: assignment.id,
+    agentId: assignment.agentId ?? agentId,
+    status: "revoked",
+    archivedAt: retiredAt,
+    revokedAt: retiredAt,
+    revokeReason: input.reason,
+  }, redaction) as Record<string, unknown>);
+  const resourceGrantPatches = (input.resourceGrants ?? []).map((grant) => redactAgentBoundaryValue({
+    id: grant.id,
+    agentId: grant.agentId ?? agentId,
+    effect: "deny",
+    expiresAt: retiredAt,
+    revokeReason: input.reason,
+  }, redaction) as Record<string, unknown>);
+  return {
+    schemaVersion: 1,
+    planKind: "claw_agent_retirement_plan",
+    agentId,
+    retiredAt,
+    reason: input.reason,
+    snapshotRef,
+    agentPatch,
+    assignmentPatches,
+    resourceGrantPatches,
+    recoverable: true,
+    audit: createAgentAuditEvent({
+      kind: "retirement",
+      agentId,
+      actorId: input.actorId,
+      result: "recorded",
+      reason: input.reason,
+      redaction,
+      createdAt: retiredAt,
+      resourceType: "agent",
+      resourceId: agentId,
+      metadata: {
+        snapshotRef,
+        assignmentPatchCount: assignmentPatches.length,
+        resourceGrantPatchCount: resourceGrantPatches.length,
+      },
+    }),
+  };
 }
 
 export function evaluateAgentAssignmentRoute(input: AgentAssignmentRouteRequest): AgentAssignmentRouteResult {

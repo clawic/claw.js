@@ -5,6 +5,7 @@ import {
   createAgentConfigRevision,
   createAgentEvaluation,
   createAgentIncident,
+  createAgentRetirementPlan,
   createAgentSupportInboxProjection,
   createAgentSafeSurfaceProjection,
   evaluateAgentAssignmentRoute,
@@ -26,6 +27,7 @@ import {
   type AgentIncidentInput,
   type AgentMemoryAccessRequest,
   type AgentMemoryPolicy,
+  type AgentRetirementInput,
   type AgentSafeSurfaceProjectionInput,
   type AgentSupportInboxProjectionInput,
 } from "@clawjs/core";
@@ -97,7 +99,7 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
       rootConcept: "agent",
       placementConcept: "agent_assignment",
       defaultPosture: "empty_sandbox_respond_only",
-      gates: ["evaluate-access", "delegation-check", "route-check", "resolve-external-identity", "project-support-inbox", "memory-check", "budget-check", "surface-projection", "config-revision", "incident", "activity-feed", "blueprint", "evaluation"],
+      gates: ["evaluate-access", "delegation-check", "route-check", "resolve-external-identity", "project-support-inbox", "memory-check", "budget-check", "surface-projection", "config-revision", "incident", "activity-feed", "blueprint", "evaluation", "retirement-plan"],
     });
     return V1_DATA_EXIT_OK;
   }
@@ -177,6 +179,12 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
     const record = recordFlag<AgentEvaluationInput>(input);
     if (!record) return usageError(input, "Usage: claw agents evaluation --record JSON [--json]");
     writeSuccess(input, createAgentEvaluation(record));
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "retirement-plan") {
+    const record = recordFlag<AgentRetirementInput>(input);
+    if (!record) return usageError(input, "Usage: claw agents retirement-plan --record JSON [--json]");
+    writeSuccess(input, createAgentRetirementPlan(record));
     return V1_DATA_EXIT_OK;
   }
   return usageError(input, usage(input.binName, "agents"));

@@ -12,6 +12,7 @@ import {
   createAgentSafeSurfaceProjection,
   createAgentServiceApiResponse,
   createAgentSupportInboxProjection,
+  createAgentRetirementPlan,
   evaluateAgentBudget,
   evaluateAgentDelegationAccess,
   evaluateAgentEffectiveAccess,
@@ -169,6 +170,50 @@ test("Agents V1 permission escalation requests include auditable scope", () => {
   assert.match(request.id, /^agent_escalation_/);
   assert.equal(request.action, "read");
   assert.equal(request.scopeId, "customer_1");
+});
+
+test("Agents V1 retirement archives the agent and revokes assignments and grants with a recoverable snapshot", () => {
+  const plan = createAgentRetirementPlan({
+    agent: {
+      id: "agent.support",
+      name: "Support",
+      secretAllowlist: ["vault://agents/support"],
+      localPath: "/Users/example/agent",
+    },
+    assignments: [{
+      id: "assignment.web",
+      agentId: "agent.support",
+      status: "active",
+      endpointRef: "web://support",
+    }],
+    resourceGrants: [{
+      id: "grant.support",
+      agentId: "agent.support",
+      resourceType: "collection",
+      resourceId: "support_conversations",
+      action: "read",
+    }],
+    actorId: "actor.owner",
+    reason: "Role replaced by new support agent",
+    retiredAt: "2026-05-17T10:00:00.000Z",
+  });
+  assert.equal(plan.planKind, "claw_agent_retirement_plan");
+  assert.equal(plan.recoverable, true);
+  assert.match(plan.snapshotRef, /^agent_retirement_snapshot_/);
+  assert.deepEqual(plan.agentPatch, {
+    id: "agent.support",
+    status: "archived",
+    retiredAt: "2026-05-17T10:00:00.000Z",
+    archivedAt: "2026-05-17T10:00:00.000Z",
+    retirementSnapshotRef: plan.snapshotRef,
+  });
+  assert.equal(plan.assignmentPatches[0]?.status, "revoked");
+  assert.equal(plan.resourceGrantPatches[0]?.effect, "deny");
+  assert.equal(plan.resourceGrantPatches[0]?.expiresAt, "2026-05-17T10:00:00.000Z");
+  assert.equal(plan.audit.kind, "retirement");
+  assert.equal(plan.audit.resourceType, "agent");
+  assert.equal(JSON.stringify(plan).includes("vault://"), false);
+  assert.equal(JSON.stringify(plan).includes("/Users/example"), false);
 });
 
 test("Agents V1 external routes fail closed without an active matching assignment", () => {

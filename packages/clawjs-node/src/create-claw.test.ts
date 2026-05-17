@@ -115,6 +115,17 @@ test("createClaw exposes Agents V1 policy gates through claw.agents", async () =
   assert.equal(service.projection.surface, "service_api");
   assert.equal("secretAllowlist" in service.projection.agent, false);
   assert.equal("localPath" in service.projection.agent, false);
+
+  const retirement = claw.agents.retirementPlan({
+    agent: { id: "agent.sdk", name: "SDK Agent" },
+    assignments: [{ id: "assignment.api", agentId: "agent.sdk", status: "active" }],
+    resourceGrants: [{ id: "grant.api", agentId: "agent.sdk", resourceType: "collection", action: "read" }],
+    reason: "Rotate SDK test agent",
+    retiredAt: "2026-05-17T10:00:00.000Z",
+  });
+  assert.equal(retirement.recoverable, true);
+  assert.equal(retirement.agentPatch.status, "archived");
+  assert.equal(retirement.assignmentPatches[0]?.status, "revoked");
 });
 
 test("createClaw initializes and inspects a workspace", async () => {

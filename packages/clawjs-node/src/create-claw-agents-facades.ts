@@ -6,6 +6,7 @@ import {
   createAgentEvaluation,
   createAgentIncident,
   createAgentPermissionEscalationRequest,
+  createAgentRetirementPlan,
   createAgentSafePackageExport,
   createAgentSafeSurfaceProjection,
   createAgentServiceApiResponse,
@@ -42,6 +43,8 @@ import {
   type AgentMemoryAccessResult,
   type AgentMemoryPolicy,
   type AgentPermissionEscalationRequest,
+  type AgentRetirementInput,
+  type AgentRetirementPlan,
   type AgentResolvedExternalIdentity,
   type AgentSafeExportInput,
   type AgentSafePackageExport,
@@ -69,6 +72,7 @@ export interface ClawAgentsFacade {
   evaluation: (input: AgentEvaluationInput) => AgentEvaluation;
   safePackageExport: (input: AgentSafeExportInput) => AgentSafePackageExport;
   serviceApi: (input: AgentServiceApiRequest) => AgentServiceApiResponse;
+  retirementPlan: (input: AgentRetirementInput) => AgentRetirementPlan;
   permissionEscalation: (input: Omit<AgentPermissionEscalationRequest, "id"> & { id?: string }) => AgentPermissionEscalationRequest;
   auditEvent: (input: Parameters<typeof createAgentAuditEvent>[0]) => AgentAuditEvent;
   redactBoundaryValue: typeof redactAgentBoundaryValue;
@@ -92,6 +96,7 @@ export function createClawAgentsFacades(): { agents: ClawAgentsFacade } {
       evaluation: createAgentEvaluation,
       safePackageExport: createAgentSafePackageExport,
       serviceApi: createAgentServiceApiResponse,
+      retirementPlan: createAgentRetirementPlan,
       permissionEscalation: createAgentPermissionEscalationRequest,
       auditEvent: createAgentAuditEvent,
       redactBoundaryValue: redactAgentBoundaryValue,

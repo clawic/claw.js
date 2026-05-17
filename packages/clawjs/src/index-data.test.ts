@@ -83,6 +83,7 @@ test("runCli exposes Agents V1 safe surface projection gate", async () => {
     assert.equal(schema.gates.includes("activity-feed"), true);
     assert.equal(schema.gates.includes("blueprint"), true);
     assert.equal(schema.gates.includes("evaluation"), true);
+    assert.equal(schema.gates.includes("retirement-plan"), true);
 
     const surfaceProjectionStdout = captureStream();
     assert.equal(await runCli(["agents", "surface-projection", "--record", JSON.stringify({
@@ -378,6 +379,42 @@ test("runCli exposes Agents V1 safe surface projection gate", async () => {
     assert.equal(evaluation.audit.kind, "evaluation");
     assert.equal(evaluation.audit.result, "blocked");
     assert.equal(evaluation.audit.resourceType, "agent_evaluation");
+
+    const retirementStdout = captureStream();
+    assert.equal(await runCli(["agents", "retirement-plan", "--record", JSON.stringify({
+      agent: {
+        id: "agent-ops",
+        name: "Ops",
+        secretAllowlist: ["vault://agents/ops"],
+        localPath: "/Users/example/agent",
+      },
+      assignments: [{ id: "assignment.mcp", agentId: "agent-ops", status: "active" }],
+      resourceGrants: [{ id: "grant.mcp", agentId: "agent-ops", resourceType: "collection", action: "read" }],
+      actorId: "actor.owner",
+      reason: "Rotate agent safely",
+      retiredAt: "2026-05-17T10:00:00.000Z",
+    }), "--json"], {
+      stdout: retirementStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const retirement = parseCliJsonPayload(retirementStdout.getOutput()) as {
+      planKind: string;
+      recoverable: boolean;
+      agentPatch: Record<string, unknown>;
+      assignmentPatches: Array<Record<string, unknown>>;
+      resourceGrantPatches: Array<Record<string, unknown>>;
+      audit: { kind: string; resourceType?: string };
+    };
+    assert.equal(retirement.planKind, "claw_agent_retirement_plan");
+    assert.equal(retirement.recoverable, true);
+    assert.equal(retirement.agentPatch.status, "archived");
+    assert.equal(retirement.assignmentPatches[0]?.status, "revoked");
+    assert.equal(retirement.resourceGrantPatches[0]?.effect, "deny");
+    assert.equal(JSON.stringify(retirement).includes("vault://"), false);
+    assert.equal(JSON.stringify(retirement).includes("/Users/example"), false);
+    assert.equal(retirement.audit.kind, "retirement");
+    assert.equal(retirement.audit.resourceType, "agent");
   });
   fs.rmSync(tempRoot, { recursive: true, force: true });
 });
