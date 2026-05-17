@@ -37,6 +37,32 @@ export function scheduleDatabaseRecordSearchEvent(input: {
   });
 }
 
+export function scheduleDocumentBlocksSearchEvent(input: {
+  operation: "upsert" | "delete";
+  namespaceId: string;
+  documentId: string;
+  collectionName: "documents" | "document_blocks";
+  recordId: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  return scheduleSearchIndexEvent({
+    source: "documents.blocks",
+    operation: input.operation,
+    resourceId: `${input.namespaceId}:documents:${input.documentId}`,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      namespaceId: input.namespaceId,
+      collection: input.collectionName,
+      recordId: input.recordId,
+      documentId: input.documentId,
+    },
+  });
+}
+
 export function scheduleSearchIndexEvent(input: {
   source: string;
   operation: "upsert" | "delete";

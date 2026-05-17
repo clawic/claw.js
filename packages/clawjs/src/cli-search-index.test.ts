@@ -866,6 +866,20 @@ test("search rebuild indexes documents.blocks from document records", async () =
     const createDocumentPayload = JSON.parse(createDocument.stdout) as { data: { id: string } };
     assert.ok(createDocumentPayload.data.id);
 
+    const documentJobs = await runCliCapture(["search", "jobs", "--source", "documents.blocks", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(documentJobs.code, CLI_EXIT_OK);
+    const documentJobsPayload = JSON.parse(documentJobs.stdout) as {
+      data: { items: Array<{ source: string; operation: string; resourceId: string; shard: string; payload: { eventDriven?: boolean; collection?: string; documentId?: string; recordId?: string } }> };
+    };
+    const documentJob = documentJobsPayload.data.items.find((job) => job.resourceId === `main:documents:${createDocumentPayload.data.id}`);
+    assert.equal(documentJob?.source, "documents.blocks");
+    assert.equal(documentJob?.operation, "upsert");
+    assert.equal(documentJob?.shard, "hot");
+    assert.equal(documentJob?.payload.eventDriven, true);
+    assert.equal(documentJob?.payload.collection, "documents");
+    assert.equal(documentJob?.payload.documentId, createDocumentPayload.data.id);
+    assert.equal(documentJob?.payload.recordId, createDocumentPayload.data.id);
+
     const createBlock = await runCliCapture([
       "db",
       "document_blocks",
@@ -880,6 +894,21 @@ test("search rebuild indexes documents.blocks from document records", async () =
       "--json",
     ], workspaceRoot);
     assert.equal(createBlock.code, CLI_EXIT_OK);
+    const createBlockPayload = JSON.parse(createBlock.stdout) as { data: { id: string } };
+    assert.ok(createBlockPayload.data.id);
+
+    const blockJobs = await runCliCapture(["search", "jobs", "--source", "documents.blocks", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(blockJobs.code, CLI_EXIT_OK);
+    const blockJobsPayload = JSON.parse(blockJobs.stdout) as {
+      data: { items: Array<{ operation: string; priority: number; resourceId: string; payload: { eventDriven?: boolean; collection?: string; documentId?: string; recordId?: string } }> };
+    };
+    const blockJob = blockJobsPayload.data.items.find((job) => job.resourceId === `main:documents:${createDocumentPayload.data.id}`);
+    assert.equal(blockJob?.operation, "upsert");
+    assert.equal(blockJob?.priority, 60);
+    assert.equal(blockJob?.payload.eventDriven, true);
+    assert.equal(blockJob?.payload.collection, "document_blocks");
+    assert.equal(blockJob?.payload.documentId, createDocumentPayload.data.id);
+    assert.equal(blockJob?.payload.recordId, createBlockPayload.data.id);
 
     const rebuild = await runCliCapture(["search", "rebuild", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(rebuild.code, CLI_EXIT_OK);
@@ -943,6 +972,20 @@ test("search rebuild indexes documents.blocks from document records", async () =
     assert.equal(result?.fragments?.some((fragment) => fragment.title === "paragraph" && fragment.snippet?.includes("scoped block search")), true);
     assert.ok(result?.explanation?.matchedBy?.length);
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "scopeKind"), true);
+
+    const deleteBlock = await runCliCapture(["db", "document_blocks", "delete", createBlockPayload.data.id, "--json"], workspaceRoot);
+    assert.equal(deleteBlock.code, CLI_EXIT_OK);
+    const deletedBlockJobs = await runCliCapture(["search", "jobs", "--source", "documents.blocks", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deletedBlockJobs.code, CLI_EXIT_OK);
+    const deletedBlockJobsPayload = JSON.parse(deletedBlockJobs.stdout) as {
+      data: { items: Array<{ operation: string; resourceId: string; payload: { eventDriven?: boolean; collection?: string; documentId?: string; recordId?: string } }> };
+    };
+    const deletedBlockJob = deletedBlockJobsPayload.data.items.find((job) => job.resourceId === `main:documents:${createDocumentPayload.data.id}`);
+    assert.equal(deletedBlockJob?.operation, "upsert");
+    assert.equal(deletedBlockJob?.payload.eventDriven, true);
+    assert.equal(deletedBlockJob?.payload.collection, "document_blocks");
+    assert.equal(deletedBlockJob?.payload.documentId, createDocumentPayload.data.id);
+    assert.equal(deletedBlockJob?.payload.recordId, createBlockPayload.data.id);
   });
 });
 

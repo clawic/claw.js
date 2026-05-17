@@ -14,7 +14,7 @@ import fs from "fs";
 import path from "path";
 import { CliHandledError } from "./cli-errors.ts";
 import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
-import { scheduleDatabaseRecordSearchEvent } from "./cli-search-events.ts";
+import { scheduleDatabaseRecordSearchEvent, scheduleDocumentBlocksSearchEvent } from "./cli-search-events.ts";
 import { openMainDataStore } from "./v1-data.ts";
 
 const DB_EXIT_OK = 0;
@@ -135,6 +135,56 @@ class LocalDbRuntime implements DbRuntime {
 
 function localDatabaseDataDir(workspaceRoot: string): string {
   return path.join(workspaceRoot, ".claw", "data");
+}
+
+function scheduleLocalSearchEventsForRecord(input: {
+  operation: "upsert" | "delete";
+  namespaceId: string;
+  collectionName: string;
+  record: Record<string, unknown>;
+  dataDir: string;
+  flags: Record<string, string>;
+}): void {
+  const recordId = typeof input.record.id === "string" ? input.record.id : undefined;
+  if (!recordId) return;
+  scheduleDatabaseRecordSearchEvent({
+    operation: input.operation,
+    namespaceId: input.namespaceId,
+    collectionName: input.collectionName,
+    recordId,
+    dataDir: input.dataDir,
+    flags: input.flags,
+  });
+  const documentEvent = documentBlocksSearchEventForRecord(input.operation, input.namespaceId, input.collectionName, input.record);
+  if (!documentEvent) return;
+  scheduleDocumentBlocksSearchEvent({
+    ...documentEvent,
+    dataDir: input.dataDir,
+    flags: input.flags,
+  });
+}
+
+function documentBlocksSearchEventForRecord(
+  operation: "upsert" | "delete",
+  namespaceId: string,
+  collectionName: string,
+  record: Record<string, unknown>,
+): {
+  operation: "upsert" | "delete";
+  namespaceId: string;
+  documentId: string;
+  collectionName: "documents" | "document_blocks";
+  recordId: string;
+} | null {
+  const recordId = typeof record.id === "string" ? record.id : undefined;
+  if (!recordId) return null;
+  if (collectionName === "documents") {
+    return { operation, namespaceId, documentId: recordId, collectionName, recordId };
+  }
+  if (collectionName !== "document_blocks") return null;
+  const documentId = typeof record.documentId === "string" ? record.documentId : undefined;
+  if (!documentId) return null;
+  return { operation: "upsert", namespaceId, documentId, collectionName, recordId };
 }
 
 class RemoteDbRuntime implements DbRuntime {
@@ -937,17 +987,18 @@ export async function runMagicDbCli(input: {
       writeDbError(input, "usage_error", "Usage: claw db <collection> delete <id>", DB_EXIT_USAGE, dbJsonMeta(input, collectionName, action));
       return DB_EXIT_USAGE;
     }
+    const deletedRecord = mode === "local" ? await runtime.getRecord(namespaceId, collectionName, recordId) : null;
     const removed = await runtime.deleteRecord(namespaceId, collectionName, recordId);
     if (!removed) {
       writeDbError(input, "not_found", `${collectionName} record not found: ${recordId}`, DB_EXIT_FAILURE, dbJsonMeta(input, collectionName, action));
       return DB_EXIT_FAILURE;
     }
     if (mode === "local") {
-      scheduleDatabaseRecordSearchEvent({
+      scheduleLocalSearchEventsForRecord({
         operation: "delete",
         namespaceId,
         collectionName,
-        recordId,
+        record: (deletedRecord ?? { id: recordId }) as Record<string, unknown>,
         dataDir: localDatabaseDataDir(workspaceRoot),
         flags,
       });
@@ -965,11 +1016,11 @@ export async function runMagicDbCli(input: {
       ? await runtime.createRecord(namespaceId, collectionName, payload)
       : await runtime.updateRecord(namespaceId, collectionName, recordId!, payload);
     if (mode === "local") {
-      scheduleDatabaseRecordSearchEvent({
+      scheduleLocalSearchEventsForRecord({
         operation: "upsert",
         namespaceId,
         collectionName,
-        recordId: record.id,
+        record: record as Record<string, unknown>,
         dataDir: localDatabaseDataDir(workspaceRoot),
         flags,
       });
