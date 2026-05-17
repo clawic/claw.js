@@ -1268,6 +1268,7 @@ The docs check script validates that every current export from
     clawDefaultBindAddress
     ClawDomain
     ClawDomainMigrationStatus
+    ClawDomainMinimumContract
     ClawDomainOwnership
     clawDomainOwnershipEntriesV1
     clawDomainOwnershipMatrixV1
@@ -1286,6 +1287,7 @@ The docs check script validates that every current export from
     findClawSurfaceRoute
     listClawSurfaceEdges
     listClawSurfaceRoutes
+    clawV1ClosureMinimumContractDomains
     clawDriveApiRoutePatterns
     clawDriveApiRoutes
     ClawError
