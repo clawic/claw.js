@@ -4,7 +4,7 @@ export const COMPLIANCE_OBLIGATIONS: BuiltinCollectionDefinition = {
   name: "compliance_obligations",
   displayName: "Compliance Obligations",
   family: "compliance",
-  aliases: ["obligation", "obligations", "compliance-obligation", "compliance-obligations", "requirement", "requirements"],
+  aliases: ["obligation", "obligations", "compliance-obligation", "compliance-obligations", "compliance_obligation", "compliance_obligations", "requirement", "requirements"],
   catalog: {
     purpose: "Regulatory, contractual, policy, or standards obligation center for scope, authority, applicability, evidence, and gaps.",
     evidence: ["human_recognizable", "market_validated", "multi_domain_reuse", "agent_useful"],

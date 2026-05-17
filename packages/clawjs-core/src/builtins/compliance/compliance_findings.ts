@@ -4,7 +4,7 @@ export const COMPLIANCE_FINDINGS: BuiltinCollectionDefinition = {
   name: "compliance_findings",
   displayName: "Compliance Findings",
   family: "compliance",
-  aliases: ["compliance-finding", "compliance-findings", "finding", "findings", "grc-finding", "grc-findings"],
+  aliases: ["compliance-finding", "compliance-findings", "compliance_finding", "compliance_findings", "finding", "findings", "grc-finding", "grc-findings"],
   catalog: {
     purpose: "Compliance finding center for control failures, audit issues, severity, ownership, remediation, evidence, and gaps.",
     evidence: ["human_recognizable", "market_validated", "multi_domain_reuse", "agent_useful"],
