@@ -147,6 +147,12 @@ candidate batch with lexical score, source ranking hints, local frecency,
 `actor`, `surface`, and scope-like metadata filters before returning the final
 limit. `--explain` includes a compact score breakdown for debugging.
 
+Ranked query output is cached in `search_ranking_cache` by normalized query,
+profile, domain/source/shard filters, actor, surface, explain mode, strategy,
+filters, and embedding hash. The cache is rebuildable and is invalidated when
+sources, documents, vectors, tombstones, or source state change, so repeated
+Root Search queries get a fast path without moving ranking into source adapters.
+
 Semantic retrieval is opt-in per query and per source capability. Search stores
 local vectors in `search.sqlite` and can run `semantic` or `hybrid` ranking when
 the caller supplies a local embedding vector and model. Search does not call

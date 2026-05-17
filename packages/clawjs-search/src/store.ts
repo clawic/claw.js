@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { createHash } from "node:crypto";
 
 import Database from "better-sqlite3";
 
@@ -155,6 +156,11 @@ export interface SearchAuditEvent extends SearchAuditEventInput {
   createdAt: string;
 }
 
+export interface SearchRankingCacheStats {
+  entries: number;
+  updatedAt?: string;
+}
+
 export class SearchStore {
   readonly db: Database.Database;
 
@@ -198,7 +204,8 @@ export class SearchStore {
 
   registerSource(manifest: SearchSourceManifest, options: { state?: SearchSourceState; backlog?: number; error?: string | null } = {}): void {
     const now = new Date().toISOString();
-    const existing = this.db.prepare("SELECT state, backlog, error FROM search_sources WHERE id = ?").get(manifest.id) as { state: SearchSourceState; backlog: number; error: string | null } | undefined;
+    const manifestJson = JSON.stringify(manifest);
+    const existing = this.db.prepare("SELECT state, backlog, error, manifest_json FROM search_sources WHERE id = ?").get(manifest.id) as { state: SearchSourceState; backlog: number; error: string | null; manifest_json: string } | undefined;
     this.db.prepare(`
       INSERT INTO search_sources (id, domain, name, version, profile, manifest_json, state, backlog, error, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -218,7 +225,7 @@ export class SearchStore {
       manifest.name,
       manifest.version,
       manifest.profile,
-      JSON.stringify(manifest),
+      manifestJson,
       options.state ?? existing?.state ?? (manifest.indexing.defaultState === "on" ? "enabled" : "disabled"),
       options.backlog ?? existing?.backlog ?? 0,
       options.error ?? existing?.error ?? null,
@@ -227,6 +234,15 @@ export class SearchStore {
       options.backlog !== undefined ? 1 : 0,
       options.error !== undefined ? 1 : 0,
     );
+    if (
+      !existing
+      || existing.manifest_json !== manifestJson
+      || options.state !== undefined
+      || options.backlog !== undefined
+      || options.error !== undefined
+    ) {
+      this.clearRankingCache();
+    }
   }
 
   listSources(profile: SearchProfileId = "framework"): SearchSourceManifest[] {
@@ -259,6 +275,7 @@ export class SearchStore {
       SET state = ?, backlog = COALESCE(?, backlog), error = ?, last_indexed_at = COALESCE(?, last_indexed_at), updated_at = ?
       WHERE id = ?
     `).run(state, input.backlog ?? null, input.error ?? null, input.lastIndexedAt ?? null, new Date().toISOString(), source);
+    this.clearRankingCache();
   }
 
   sourceState(source: string): SearchSourceState | null {
@@ -351,12 +368,16 @@ export class SearchStore {
         insertAction.run(input.id, action.id, JSON.stringify(action));
       }
       this.db.prepare("UPDATE search_sources SET last_indexed_at = ?, updated_at = ? WHERE id = ?").run(updatedAt, updatedAt, input.source);
+      this.db.prepare("DELETE FROM search_ranking_cache").run();
     });
     tx();
   }
 
   query(input: SearchQueryInput): SearchQueryOutput {
     const startedAt = Date.now();
+    const cacheKey = searchRankingCacheKey(input);
+    const cached = this.rankingCacheGet(cacheKey);
+    if (cached) return { ...cached, elapsedMs: Date.now() - startedAt };
     const limit = Math.max(1, input.limit ?? 20);
     const candidateLimit = Math.min(200, Math.max(limit * 4, limit));
     const profile = input.profile ?? "framework";
@@ -389,7 +410,7 @@ export class SearchStore {
       .map((row) => this.resultFromRow(row, input))
       .sort((left, right) => right.score - left.score || (right.updatedAt ?? "").localeCompare(left.updatedAt ?? ""))
       .slice(0, limit);
-    return {
+    const output: SearchQueryOutput = {
       query: input.query,
       profile,
       results,
@@ -398,6 +419,8 @@ export class SearchStore {
       omittedSources,
       elapsedMs: Date.now() - startedAt,
     };
+    this.rankingCacheSet(cacheKey, output);
+    return output;
   }
 
   upsertVector(input: SearchVectorInput): SearchVectorRecord {
@@ -411,6 +434,7 @@ export class SearchStore {
         embedding_json = excluded.embedding_json,
         updated_at = excluded.updated_at
     `).run(input.documentId, fragmentId, input.model, JSON.stringify(embedding), updatedAt);
+    this.clearRankingCache();
     return { documentId: input.documentId, ...(input.fragmentId ? { fragmentId: input.fragmentId } : {}), model: input.model, embedding, updatedAt };
   }
 
@@ -451,9 +475,22 @@ export class SearchStore {
         ON CONFLICT(id) DO UPDATE SET deleted_at = excluded.deleted_at, reason = excluded.reason
       `).run(id, input.source, input.resourceId, deletedAt, input.reason ?? null);
       this.db.prepare("UPDATE search_documents SET deleted_at = ? WHERE source = ? AND resource_id = ?").run(deletedAt, input.source, input.resourceId);
+      this.db.prepare("DELETE FROM search_ranking_cache").run();
     });
     tx();
     return { id, source: input.source, resourceId: input.resourceId, deletedAt, ...(input.reason ? { reason: input.reason } : {}) };
+  }
+
+  clearRankingCache(): void {
+    this.db.prepare("DELETE FROM search_ranking_cache").run();
+  }
+
+  rankingCacheStats(): SearchRankingCacheStats {
+    const row = this.db.prepare("SELECT COUNT(*) AS entries, MAX(updated_at) AS updated_at FROM search_ranking_cache").get() as { entries: number; updated_at: string | null };
+    return {
+      entries: row.entries,
+      ...(row.updated_at ? { updatedAt: row.updated_at } : {}),
+    };
   }
 
   setCursor(input: { source: string; shard?: string; cursor: string; metadata?: Record<string, unknown>; updatedAt?: string }): SearchSourceCursor {
@@ -890,6 +927,19 @@ export class SearchStore {
       } : {}),
     };
   }
+
+  private rankingCacheGet(cacheKey: string): SearchQueryOutput | null {
+    const row = this.db.prepare("SELECT result_json FROM search_ranking_cache WHERE cache_key = ?").get(cacheKey) as { result_json: string } | undefined;
+    return row ? parseJson<SearchQueryOutput>(row.result_json) : null;
+  }
+
+  private rankingCacheSet(cacheKey: string, output: SearchQueryOutput): void {
+    this.db.prepare(`
+      INSERT INTO search_ranking_cache (cache_key, result_json, updated_at)
+      VALUES (?, ?, ?)
+      ON CONFLICT(cache_key) DO UPDATE SET result_json = excluded.result_json, updated_at = excluded.updated_at
+    `).run(cacheKey, JSON.stringify({ ...output, elapsedMs: 0 }), new Date().toISOString());
+  }
 }
 
 interface SearchDocumentRow {
@@ -1238,6 +1288,44 @@ function metadataValueMatches(left: unknown, right: unknown): boolean {
 
 function boundedNumber(value: unknown, min: number, max: number): number {
   return typeof value === "number" && Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : 0;
+}
+
+function searchRankingCacheKey(input: SearchQueryInput): string {
+  return createHash("sha256").update(stableJson({
+    query: input.query,
+    domains: sortedStrings(input.domains),
+    sources: sortedStrings(input.sources),
+    shards: sortedStrings(input.shards),
+    profile: input.profile ?? "framework",
+    actor: input.actor ?? "",
+    surface: input.surface ?? "",
+    limit: input.limit ?? 20,
+    explain: input.explain === true,
+    filters: normalizeCacheValue(input.filters ?? {}),
+    strategy: input.strategy ?? (input.embedding ? "hybrid" : "lexical"),
+    embedding: input.embedding ? {
+      model: input.embedding.model,
+      vectorHash: createHash("sha256").update(JSON.stringify(normalizeEmbedding(input.embedding.vector))).digest("hex"),
+    } : null,
+  })).digest("hex");
+}
+
+function sortedStrings(values: string[] | undefined): string[] {
+  return [...new Set(values ?? [])].sort();
+}
+
+function stableJson(value: unknown): string {
+  return JSON.stringify(normalizeCacheValue(value));
+}
+
+function normalizeCacheValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(normalizeCacheValue);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, entry]) => [key, normalizeCacheValue(entry)]));
+  }
+  return value;
 }
 
 const SEARCH_SCHEMA_SQL = String.raw`

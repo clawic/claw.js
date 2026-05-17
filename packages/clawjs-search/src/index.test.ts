@@ -527,6 +527,55 @@ test("SearchStore central ranking uses frecency, actor, surface and scope hints"
   }
 });
 
+test("SearchStore caches ranked query output and invalidates on index changes", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-ranking-cache-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "commands",
+      domain: "commands",
+      name: "Commands",
+      resultTypes: ["command"],
+    }));
+    store.upsertDocument({
+      id: "commands:search",
+      source: "commands",
+      domain: "commands",
+      type: "command",
+      title: "search",
+      body: "Search command",
+      rankingHints: { hot: 1 },
+    });
+
+    assert.equal(store.rankingCacheStats().entries, 0);
+    const first = store.query({ query: "search", domains: ["commands"], explain: true });
+    assert.equal(first.results[0]?.id, "commands:search");
+    assert.equal(store.rankingCacheStats().entries, 1);
+
+    const cached = store.query({ query: "search", domains: ["commands"], explain: true });
+    assert.equal(cached.results[0]?.id, "commands:search");
+    assert.equal(store.rankingCacheStats().entries, 1);
+
+    store.upsertDocument({
+      id: "commands:search-docs",
+      source: "commands",
+      domain: "commands",
+      type: "command",
+      title: "search docs",
+      body: "Search command documentation",
+      rankingHints: { hot: 2 },
+    });
+    assert.equal(store.rankingCacheStats().entries, 0);
+    assert.equal(store.query({ query: "documentation", domains: ["commands"] }).results[0]?.id, "commands:search-docs");
+
+    store.setSourceState("commands", "paused");
+    assert.equal(store.rankingCacheStats().entries, 0);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("SearchStore enforces per-source document and fragment limits before indexing", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-limits-"));
   const store = new SearchStore(path.join(dir, "search.sqlite"));

@@ -56,7 +56,9 @@ Search V1.1 is built from these layers:
 - **Ranking**: SearchStore owns final ranking for indexed results. It reranks a
   bounded candidate batch with lexical score, source hints, frecency,
   actor/surface context, and scope-like metadata matches, and exposes compact
-  score breakdowns when explain mode is enabled.
+  score breakdowns when explain mode is enabled. Ranked query output is cached
+  in rebuildable `search_ranking_cache` and invalidated on source, document,
+  vector, tombstone, or source-state changes.
 - **Semantic retrieval**: vectors live in `search.sqlite` and are queried only
   when a caller provides a local embedding. `semantic` and `hybrid` modes are
   available without provider calls; embedding generation stays with throttled
