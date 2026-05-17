@@ -238,11 +238,13 @@ export const V1_AGENT_DATA_SCHEMA_SQL = String.raw`
     CREATE INDEX IF NOT EXISTS agent_runs_assignment_idx ON agent_runs(assignment_id);
     CREATE TABLE IF NOT EXISTS agent_sessions (
       id TEXT PRIMARY KEY,
+      company_id TEXT,
       agent_id TEXT,
       assignment_id TEXT,
       external_actor_id TEXT,
       contact_id TEXT,
       customer_id TEXT,
+      initiator_actor_id TEXT,
       status TEXT NOT NULL DEFAULT 'active',
       initial_source TEXT,
       conversation_kind TEXT,
@@ -250,6 +252,10 @@ export const V1_AGENT_DATA_SCHEMA_SQL = String.raw`
       context_json TEXT NOT NULL DEFAULT '{}',
       summary TEXT,
       read_at TEXT,
+      linked_issue_id TEXT,
+      linked_task_id TEXT,
+      source_json TEXT NOT NULL DEFAULT '{}',
+      links_json TEXT NOT NULL DEFAULT '{}',
       metadata_json TEXT NOT NULL DEFAULT '{}',
       archived_at TEXT,
       created_at TEXT NOT NULL,
@@ -257,6 +263,8 @@ export const V1_AGENT_DATA_SCHEMA_SQL = String.raw`
       FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE SET NULL,
       FOREIGN KEY (assignment_id) REFERENCES agent_assignments(id) ON DELETE SET NULL
     );
+    CREATE INDEX IF NOT EXISTS agent_sessions_company_idx ON agent_sessions(company_id);
+    CREATE INDEX IF NOT EXISTS agent_sessions_status_idx ON agent_sessions(status);
     CREATE INDEX IF NOT EXISTS agent_sessions_agent_idx ON agent_sessions(agent_id);
     CREATE INDEX IF NOT EXISTS agent_sessions_assignment_idx ON agent_sessions(assignment_id);
     CREATE TABLE IF NOT EXISTS agent_session_activities (
