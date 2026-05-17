@@ -104,6 +104,7 @@ claw search jobs complete <job-id> --json
 claw search jobs fail <job-id> --error "temporary extractor throttle" --retry --json
 claw search saved create recent --query "text" --json
 claw search monitors create monitor-recent --saved-search recent --json
+claw search monitors run monitor-recent --limit 10 --json
 claw search actions <result-id> --json
 claw search actions execute <result-id> <action-id> --dry-run --json
 claw search actions execute <result-id> <action-id> --host-approval-id <id> --json
@@ -302,7 +303,7 @@ usable without waiting for universal backfill.
 
 ### Phase 3: Root Search and optional external sources
 
-- Expand Root Search to saved searches, monitors, aliases/hotkeys, explain, and
+- Expand Root Search to saved searches, monitor evaluation, aliases/hotkeys, explain, and
   source onboarding controls.
 - Keep `/search` as the initial Root Search UI: small fast-source set, framework
   profile by default, domain filters, partial-source metadata, and a link to
@@ -331,7 +332,7 @@ Required validation for Search work:
   redaction, actions, permissions, tombstones, cursors, rebuild, and timeout
   behavior;
 - CLI integration tests for `query`, `sources`, `status`, `rebuild`, `saved`,
-  `monitors`, `actions`, `audit`, `profiles`, and `explain`;
+  `monitors` create/run, `actions`, `audit`, `profiles`, and `explain`;
 - Clawix Search/`Command-G` conversations-only regression tests;
 - performance tests for 50 ms hot path and 200 ms Root Search first batch;
 - `npm run search:scale-lab -- --items 1000000 --json` and

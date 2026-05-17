@@ -149,6 +149,8 @@ claw agents resolve-external-identity --record '{"provider":"web","externalId":"
 claw agents project-support-inbox --record '{"sessionId":"session-1","assignment":{"id":"assignment.web","agentId":"agent.ops","kind":"external_web_chat","status":"active","channel":"chat"},"identity":{"externalUserId":"external_user_1","actorId":"actor_external_1","contactProjection":"create_or_update","boundary":{"scopeType":"external_user","scopeId":"external_user_1"},"telemetry":{}},"initialMessage":"Need help"}' --json
 claw agents memory-check --record '{"policy":{"readScopes":[{"layer":"global","access":"read"}],"writeScopes":[{"layer":"agent_private","access":"write"}],"writePolicy":"private_only"},"request":{"operation":"write","layer":"agent_private"}}' --json
 claw agents surface-projection --record '{"surface":"relay","agent":{"id":"agent.ops","name":"Ops","secretAllowlist":["vault://agents/ops"]},"assignments":[{"id":"assignment.relay","agentId":"agent.ops","kind":"relay","status":"active","channel":"relay"}],"budgets":[{"id":"budget.relay","exceededBehavior":"deny_action","limits":[{"dimension":"external_actions","limit":10}]}]}' --json
+claw agents config-revision --record '{"agentId":"agent.ops","revision":2,"actorId":"actor.owner","reason":"Tighten MCP assignment","configSnapshot":{"name":"Ops","secretAllowlist":["vault://agents/ops"]}}' --json
+claw agents incident --record '{"agentId":"agent.ops","assignmentId":"assignment.relay","severity":"high","summary":"Unsafe route blocked","metadata":{"rawTracePath":"/Users/example/trace.log"}}' --json
 claw personalities upsert personality.review --name Reviewer --prompt "Review with concrete evidence" --json
 claw skill-collections upsert collection.review --name Review --tags review,code --json
 claw connections upsert github --provider custom --label GitHub --secret-ref vault://connections/github --json
@@ -179,6 +181,9 @@ Relay, MCP, service API, external channel, and internal UI views use the same
 safe surface projection contract so public surfaces only see bounded identity,
 assignment, budget, memory, and resource summaries instead of raw prompts,
 secret material, local paths, private endpoints, or runtime environment data.
+`config-revision` and `incident` create redacted, auditable records for
+governable agent changes and safety/runtime incidents without exposing raw
+secret references, authorization material, local traces, or private paths.
 
 ## Global Flags
 
@@ -593,6 +598,7 @@ claw search service run-once --json
 claw search profiles --json
 claw search saved list --json
 claw search monitors list --json
+claw search monitors run monitor-recent --limit 10 --json
 claw search actions --json
 claw search audit --json
 claw search explain "release branch" --json

@@ -1135,12 +1135,19 @@ The docs check script validates that every current export from
     AgentBudgetRequest
     AGENT_ASSIGNMENT_STATUSES
     AgentAssignmentStatus
+    AgentConfigRevision
+    AgentConfigRevisionInput
+    AgentConfigRevisionStatus
     AgentDelegationAccessInput
     AgentEffectiveAccessInput
     AgentEffectiveAccessResult
     AgentExternalDisclosure
     AgentExternalIdentityProfile
     AgentGrantEffect
+    AgentIncident
+    AgentIncidentInput
+    AgentIncidentSeverity
+    AgentIncidentStatus
     AgentMemoryAccessRequest
     AgentMemoryAccessResult
     AgentMemoryLayer
@@ -1548,6 +1555,8 @@ The docs check script validates that every current export from
     EffectPreview
     effectPreviewSchema
     createAgentAuditEvent
+    createAgentConfigRevision
+    createAgentIncident
     createAgentSafePackageExport
     createAgentSafeSurfaceProjection
     createAgentSupportInboxProjection
