@@ -6,6 +6,84 @@ import { describe, it } from "vitest";
 import { buildMCPApp } from "./app.ts";
 
 describe("MCP connector control plane", () => {
+  it("exposes Mac Control HTTP planning routes without native execution", async () => {
+    const { app, config } = buildFixtureApp();
+    try {
+      const request = fixtureMacActionRequest();
+      const plan = await app.inject({
+        method: "POST",
+        url: "/v1/mac/plan",
+        headers: { authorization: `Bearer ${config.sharedSecret}` },
+        payload: request,
+      });
+      assert.equal(plan.statusCode, 200);
+      assert.equal(plan.json().capabilityId, "mac.wifi.connect");
+      assert.equal(plan.json().risk, "high");
+      assert.equal(plan.json().requiredApprovals.length, 1);
+
+      const execute = await app.inject({
+        method: "POST",
+        url: "/v1/mac/execute",
+        headers: { authorization: `Bearer ${config.sharedSecret}` },
+        payload: request,
+      });
+      assert.equal(execute.statusCode, 409);
+      assert.equal(execute.json().status, "signed_host_required");
+      assert.equal(execute.json().plan.capabilityId, "mac.wifi.connect");
+
+      const permissions = await app.inject({
+        method: "GET",
+        url: "/v1/mac/permissions",
+        headers: { authorization: `Bearer ${config.sharedSecret}` },
+      });
+      assert.equal(permissions.statusCode, 200);
+      assert.equal(permissions.json().permissions.some((entry: { id: string }) => entry.id === "mac.permission.microphone"), true);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("exposes Mac Control MCP tools as plan-first surfaces", async () => {
+    const { app } = buildFixtureApp();
+    try {
+      const tools = await app.inject({
+        method: "POST",
+        url: "/v1/mcp/expose/rpc",
+        payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      });
+      assert.equal(tools.statusCode, 200);
+      assert.equal(tools.json().result.tools.some((entry: { name: string }) => entry.name === "mac.plan"), true);
+
+      const plan = await app.inject({
+        method: "POST",
+        url: "/v1/mcp/expose/rpc",
+        payload: {
+          jsonrpc: "2.0",
+          id: 2,
+          method: "tools/call",
+          params: { name: "mac.plan", arguments: fixtureMacActionRequest() },
+        },
+      });
+      assert.equal(plan.statusCode, 200);
+      assert.equal(plan.json().result.content.capabilityId, "mac.wifi.connect");
+
+      const execute = await app.inject({
+        method: "POST",
+        url: "/v1/mcp/expose/rpc",
+        payload: {
+          jsonrpc: "2.0",
+          id: 3,
+          method: "tools/call",
+          params: { name: "mac.execute", arguments: fixtureMacActionRequest() },
+        },
+      });
+      assert.equal(execute.statusCode, 200);
+      assert.equal(execute.json().result.content.status, "signed_host_required");
+    } finally {
+      await app.close();
+    }
+  });
+
   it("blocks tool calls without control plane approval", async () => {
     const { app, config } = buildFixtureApp();
     try {
@@ -156,6 +234,19 @@ describe("MCP connector control plane", () => {
     }
   });
 });
+
+function fixtureMacActionRequest() {
+  return {
+    schemaVersion: 1,
+    requestId: "req.mcp.mac.1",
+    capabilityId: "mac.wifi.connect",
+    actor: { kind: "mcp_client", id: "mcp.fixture", role: "operator" },
+    host: { hostId: "host.fixture", bundleId: "com.example.Claw" },
+    target: { kind: "wifi_network", name: "Office", selector: { ssid: "Office" } },
+    arguments: { ssid: "Office", secretRef: "secret_wifi" },
+    dryRun: true,
+  };
+}
 
 function buildFixtureApp(onToolCall?: () => void) {
   return buildMCPApp({

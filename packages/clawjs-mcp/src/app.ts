@@ -1,4 +1,12 @@
-import { clawApiPath } from "@clawjs/core";
+import {
+  MAC_PERMISSION_CATALOG,
+  MAC_PERMISSION_PACKS,
+  buildMacActionPlan,
+  clawApiPath,
+  clawMacControlPlaneRegistry,
+  listMacAtlasCapabilities,
+  macActionRequestSchema,
+} from "@clawjs/core";
 import fs from "node:fs";
 
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
@@ -45,6 +53,19 @@ function asString(value: unknown): string | undefined {
   return typeof value === "string" && value.length > 0 ? value : undefined;
 }
 
+function macCoveragePayload(family?: string) {
+  const capabilities = listMacAtlasCapabilities(family ? { family } : {});
+  return {
+    registryVersion: clawMacControlPlaneRegistry.version,
+    family: family ?? null,
+    capabilities,
+    coverage: capabilities.reduce<Record<string, number>>((summary, capability) => {
+      summary[capability.coverageState] = (summary[capability.coverageState] ?? 0) + 1;
+      return summary;
+    }, {}),
+  };
+}
+
 export function buildMCPApp(options: BuildMCPAppOptions = {}) {
   const config = loadMCPConfig(options.config);
   fs.mkdirSync(config.dataDir, { recursive: true });
@@ -56,6 +77,64 @@ export function buildMCPApp(options: BuildMCPAppOptions = {}) {
   app.addHook("onClose", async () => { store.close(); });
 
   app.get(clawApiPath("health"), async () => ({ ok: true, service: "mcp", host: config.host, port: config.port, exposedTools: exposed.map((tool) => tool.name) }));
+
+  app.get(clawApiPath("mac/coverage"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const query = readQuery(request);
+    return macCoveragePayload(asString(query.family));
+  });
+
+  app.post(clawApiPath("mac/plan"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const body = readBody(request);
+    try {
+      const actionRequest = macActionRequestSchema.parse(body.request ?? body);
+      return buildMacActionPlan({ request: actionRequest });
+    } catch (error) {
+      return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  app.post(clawApiPath("mac/execute"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const body = readBody(request);
+    try {
+      const actionRequest = macActionRequestSchema.parse(body.request ?? body);
+      const plan = buildMacActionPlan({ request: actionRequest });
+      return await reply.code(409).send({
+        status: "signed_host_required",
+        plan,
+        reason: "HTTP API cannot execute native Mac actions directly; route this plan to the active signed host broker.",
+      });
+    } catch (error) {
+      return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  app.post(clawApiPath("mac/revert"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const body = readBody(request);
+    const receiptId = asString(body.receiptId);
+    if (!receiptId?.startsWith("macact_")) return await reply.code(400).send({ error: "receiptId macact_<id> is required" });
+    return await reply.code(409).send({
+      status: "signed_host_required",
+      receiptId,
+      revertContract: "Revert always plans first and only executes after explicit confirmation in the signed host.",
+    });
+  });
+
+  app.get(clawApiPath("mac/audit"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    return await reply.code(409).send({ status: "host_required", reason: "Mac action audit lives in the signed host operational store." });
+  });
+
+  app.get(clawApiPath("mac/permissions"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    return {
+      packs: MAC_PERMISSION_PACKS,
+      permissions: MAC_PERMISSION_CATALOG,
+    };
+  });
 
   app.post(clawApiPath("mcp/servers"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
