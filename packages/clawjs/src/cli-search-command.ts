@@ -31,7 +31,7 @@ import { ensureImagesDerivedSourceIndexed, ensureMediaAssetsSourceIndexed } from
 import { pathSafeBasename, resolveRuntimeAdapterId } from "./cli-runtime-utils.ts";
 import { resolveClawjsDataRoot, resolveClawjsMainDbPath } from "./v1-data.ts";
 
-const SEARCH_ADMIN_COMMANDS = new Set(["sources", "status", "profiles", "saved", "monitors", "actions", "audit", "explain"]);
+const SEARCH_ADMIN_COMMANDS = new Set(["sources", "status", "profiles", "saved", "monitors", "actions", "audit", "jobs", "explain"]);
 const WORKSPACE_SEARCH_DOMAINS = new Set([
   "areas",
   "tasks",
@@ -534,6 +534,81 @@ export async function runSearchAdminCli(input: {
     const data = { items, state: items.length ? "ready" : "empty" };
     if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "audit" });
     else input.context.stdout.write(`${items.map((item) => `${item.createdAt}\t${item.type}\t${item.source ?? ""}\t${item.resultId ?? ""}\t${item.status ?? ""}`).join("\n")}\n`);
+    return CLI_EXIT_OK;
+  }
+
+  if (command === "jobs") {
+    const action = input.positionals[2] ?? "list";
+    const store = openCliSearchStore(input.flags);
+    let data: {
+      action: string;
+      item?: unknown;
+      items: unknown[];
+      state: string;
+    };
+    try {
+      registerBuiltinSources(store);
+      if (action === "enqueue" || action === "create") {
+        const source = input.flags.source ?? input.positionals[4];
+        const operation = parseSearchIndexJobOperation(input.flags.operation ?? input.flags.op ?? input.positionals[3]);
+        if (!source || !operation) {
+          input.context.stderr.write(`Usage: ${input.binName} search jobs enqueue <operation> --source <source-id> [--id <id>] [--shard <shard>] [--resource-id <id>] [--json]\n`);
+          return CLI_EXIT_USAGE;
+        }
+        const item = store.enqueueIndexJob({
+          id: input.flags.id,
+          source,
+          shard: input.flags.shard,
+          operation,
+          resourceId: input.flags["resource-id"],
+          payload: parseSearchJobPayloadFlag(input.flags.payload),
+          priority: input.flags.priority ? Number(input.flags.priority) : undefined,
+          scheduledAt: input.flags["scheduled-at"],
+        });
+        data = { action, item, items: store.listIndexJobs({ source, limit: input.flags.limit ? Number(input.flags.limit) : undefined }), state: "ready" };
+      } else if (action === "claim") {
+        const items = store.claimIndexJobs({
+          limit: input.flags.limit ? Number(input.flags.limit) : undefined,
+          now: input.flags.now,
+          leaseMs: input.flags["lease-ms"] ? Number(input.flags["lease-ms"]) : undefined,
+          sources: parseListFlag(input.flags.sources ?? input.flags.source),
+          shards: parseListFlag(input.flags.shards ?? input.flags.shard),
+        });
+        data = { action, items, state: items.length ? "ready" : "empty" };
+      } else if (action === "complete") {
+        const id = input.positionals[3] ?? input.flags.id;
+        if (!id) {
+          input.context.stderr.write(`Usage: ${input.binName} search jobs complete <job-id> [--json]\n`);
+          return CLI_EXIT_USAGE;
+        }
+        const item = store.completeIndexJob(id);
+        data = { action, item, items: store.listIndexJobs({ limit: input.flags.limit ? Number(input.flags.limit) : undefined }), state: item ? "ready" : "empty" };
+      } else if (action === "fail") {
+        const id = input.positionals[3] ?? input.flags.id;
+        const error = input.flags.error ?? input.positionals.slice(4).join(" ");
+        if (!id || !error) {
+          input.context.stderr.write(`Usage: ${input.binName} search jobs fail <job-id> --error <message> [--retry] [--json]\n`);
+          return CLI_EXIT_USAGE;
+        }
+        const item = store.failIndexJob(id, {
+          error,
+          retry: readBooleanFlag(input.argv, input.flags, "retry"),
+          scheduledAt: input.flags["scheduled-at"],
+        });
+        data = { action, item, items: store.listIndexJobs({ limit: input.flags.limit ? Number(input.flags.limit) : undefined }), state: item ? "ready" : "empty" };
+      } else {
+        const items = store.listIndexJobs({
+          status: parseSearchIndexJobStatus(input.flags.status),
+          source: input.flags.source,
+          limit: input.flags.limit ? Number(input.flags.limit) : undefined,
+        });
+        data = { action, items, state: items.length ? "ready" : "empty" };
+      }
+    } finally {
+      store.close();
+    }
+    if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "jobs" });
+    else input.context.stdout.write(`${data.items.map((item) => formatSearchJobLine(item)).join("\n")}\n`);
     return CLI_EXIT_OK;
   }
 
@@ -1618,6 +1693,27 @@ function parseSearchFiltersFlag(value: string | undefined): Record<string, unkno
 
 function parseSearchStrategyFlag(value: string | undefined): "lexical" | "semantic" | "hybrid" | undefined {
   return value === "semantic" || value === "hybrid" || value === "lexical" ? value : undefined;
+}
+
+function parseSearchIndexJobOperation(value: string | undefined): "upsert" | "delete" | "backfill" | "rebuild" | undefined {
+  return value === "upsert" || value === "delete" || value === "backfill" || value === "rebuild" ? value : undefined;
+}
+
+function parseSearchIndexJobStatus(value: string | undefined): "queued" | "leased" | "done" | "failed" | undefined {
+  return value === "queued" || value === "leased" || value === "done" || value === "failed" ? value : undefined;
+}
+
+function parseSearchJobPayloadFlag(value: string | undefined): Record<string, unknown> | undefined {
+  if (!value) return undefined;
+  const parsed = JSON.parse(value) as unknown;
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("--payload must be a JSON object");
+  return parsed as Record<string, unknown>;
+}
+
+function formatSearchJobLine(item: unknown): string {
+  if (!item || typeof item !== "object") return String(item);
+  const job = item as { id?: string; source?: string; shard?: string; operation?: string; status?: string; attempts?: number };
+  return `${job.id ?? ""}\t${job.source ?? ""}\t${job.shard ?? ""}\t${job.operation ?? ""}\t${job.status ?? ""}\tattempts=${job.attempts ?? 0}`;
 }
 
 function parseSearchEmbeddingFlag(value: string | undefined, model: string | undefined): { model: string; vector: number[] } | undefined {

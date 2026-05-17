@@ -71,6 +71,8 @@ claw search sources --json
 claw search sources pause commands --json
 claw search sources exclude code.symbols --json
 claw search sources resume commands --json
+claw search jobs enqueue backfill --source documents.blocks --shard cold --json
+claw search jobs claim --source documents.blocks --shards cold --json
 claw search status --json
 claw search rebuild --json
 claw search rebuild --source generations.artifacts --json
@@ -108,6 +110,11 @@ upsert, delete, backfill, or rebuild work with source, shard, priority,
 schedule, payload, and retry metadata. Workers claim bounded leases so heavy
 backfill can run progressively without blocking a UI section that is only
 searching its own already-hot data.
+
+The CLI exposes that local queue through `claw search jobs`. Use `enqueue` to
+schedule upsert, delete, backfill, or rebuild work; `claim` to lease available
+jobs for a worker; `complete` and `fail --retry` to settle attempts; and the
+default list view to inspect queued, leased, done, or failed jobs.
 
 Adapters can also attach local embedding vectors to Search documents.
 `SearchQueryInput.strategy` supports lexical, semantic, and hybrid scoring when

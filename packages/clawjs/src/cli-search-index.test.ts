@@ -80,6 +80,19 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     const defaultShardPayload = JSON.parse(defaultShardQuery.stdout) as { data: { results: Array<{ source: string; title: string; shard?: string }> } };
     assert.equal(defaultShardPayload.data.results.some((result) => result.source === "commands" && result.title === "system" && result.shard === undefined), true);
 
+    const enqueueJob = await runCliCapture(["search", "jobs", "enqueue", "backfill", "--source", "commands", "--id", "job:commands", "--shard", "default", "--resource-id", "commands", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(enqueueJob.code, CLI_EXIT_OK);
+    const enqueuePayload = JSON.parse(enqueueJob.stdout) as { data: { item?: { id: string; operation: string; shard: string }; items: Array<{ id: string }> } };
+    assert.equal(enqueuePayload.data.item?.id, "job:commands");
+    assert.equal(enqueuePayload.data.item?.operation, "backfill");
+    assert.equal(enqueuePayload.data.item?.shard, "default");
+    assert.equal(enqueuePayload.data.items.some((item) => item.id === "job:commands"), true);
+
+    const claimJob = await runCliCapture(["search", "jobs", "claim", "--source", "commands", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(claimJob.code, CLI_EXIT_OK);
+    const claimPayload = JSON.parse(claimJob.stdout) as { data: { items: Array<{ id: string; status: string }> } };
+    assert.deepEqual(claimPayload.data.items.map((item) => [item.id, item.status]), [["job:commands", "leased"]]);
+
     const hybridQuery = await runCliCapture(["search", "query", "system capabilities", "--data-dir", dataRoot, "--json", "--limit", "5", "--strategy", "hybrid", "--embedding-model", "local-test", "--embedding", "[1,0,0]"], workspaceRoot);
     assert.equal(hybridQuery.code, CLI_EXIT_OK);
     const hybridPayload = JSON.parse(hybridQuery.stdout) as {
@@ -88,6 +101,28 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(hybridPayload.data.strategy, "hybrid");
     assert.equal(hybridPayload.data.embeddingModel, "local-test");
     assert.equal(hybridPayload.data.results.some((result) => result.source === "commands" && result.title === "system"), true);
+
+    const enqueuedJob = await runCliCapture(["search", "jobs", "enqueue", "backfill", "--source", "commands", "--id", "job:commands:backfill", "--shard", "hot", "--priority", "9", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(enqueuedJob.code, CLI_EXIT_OK);
+    const enqueuedJobPayload = JSON.parse(enqueuedJob.stdout) as { data: { item: { id: string; source: string; shard: string; operation: string; status: string; priority: number } } };
+    assert.deepEqual({
+      id: enqueuedJobPayload.data.item.id,
+      source: enqueuedJobPayload.data.item.source,
+      shard: enqueuedJobPayload.data.item.shard,
+      operation: enqueuedJobPayload.data.item.operation,
+      status: enqueuedJobPayload.data.item.status,
+      priority: enqueuedJobPayload.data.item.priority,
+    }, { id: "job:commands:backfill", source: "commands", shard: "hot", operation: "backfill", status: "queued", priority: 9 });
+
+    const claimedJob = await runCliCapture(["search", "jobs", "claim", "--shards", "hot", "--limit", "1", "--lease-ms", "1000", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(claimedJob.code, CLI_EXIT_OK);
+    const claimedJobPayload = JSON.parse(claimedJob.stdout) as { data: { items: Array<{ id: string; status: string; attempts: number }> } };
+    assert.deepEqual(claimedJobPayload.data.items.map((job) => ({ id: job.id, status: job.status, attempts: job.attempts })), [{ id: "job:commands:backfill", status: "leased", attempts: 1 }]);
+
+    const completedJob = await runCliCapture(["search", "jobs", "complete", "job:commands:backfill", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(completedJob.code, CLI_EXIT_OK);
+    const completedJobPayload = JSON.parse(completedJob.stdout) as { data: { item: { id: string; status: string } } };
+    assert.deepEqual(completedJobPayload.data.item, { id: "job:commands:backfill", status: "done" });
 
     const sensitiveQuery = await runCliCapture(["search", "query", "secret token", "--data-dir", dataRoot, "--json", "--actor", "agent:codex", "--surface", "cli"], workspaceRoot);
     assert.equal(sensitiveQuery.code, CLI_EXIT_DEGRADED);
