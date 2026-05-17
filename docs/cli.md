@@ -175,6 +175,7 @@ claw remote classify --capability-id claw.gateway --classification remote-safe -
 claw remote check --json
 claw remote routes --json
 claw remote conformance --json
+claw remote pending --json
 claw remote compat --legacy-surface relay.mobile.chat --canonical-route remote.chatGateway --client-kind ios --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 
 claw sync manifest --resource-id skills:default --kind skills --driver skills --json
@@ -223,6 +224,10 @@ claw gateway secret-provider --state-dir .claw/remote-sync --secret-ref vault://
 `remote classify --capability-id ... --record true` records a signed
 `RemoteSurfaceClassificationReceipt`; a `remote-safe` receipt requires a route
 id, policy reference, and test evidence before anything is written.
+`remote pending` returns the no-write `RemoteExternalPendingRegister`: the
+single audit list of hardware, provider, hosted rollout, client storage,
+runtime, billing, and end-to-end validations that cannot be claimed complete
+until explicitly run.
 `--state-dir` records manifests, sync queues, reconciliation results, and
 mesh proposals/revocations in a local durable ledger. That ledger is not trust
 authority unless each record is signed with Coordinator keys. The

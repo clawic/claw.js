@@ -207,6 +207,11 @@ verification status for those records; unsigned records remain proposals only.
 `remote-safe` state requires a route id, policy reference, and test evidence;
 without all three, classification fails closed and no wider external surface is
 accepted.
+`RemoteExternalPendingRegister`, exposed by `claw remote pending` and
+`/v1/remote/external-pending`, is the consolidated no-write audit register for
+the remaining physical/provider/deployment checks. It keeps those dependencies
+visible as `external_pending` instead of treating them as implementation bugs or
+silently counting them as complete.
 `SyncDriverApplicationReceipt` connects reconciliation to a concrete manifest
 driver without making the driver implementation physical by default:
 `claw sync apply --record true` records applied change ids, blocked conflicts,

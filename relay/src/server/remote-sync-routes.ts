@@ -1,5 +1,6 @@
 import {
   buildRemoteConformanceReport,
+  buildRemoteExternalPendingRegister,
   buildSyncPlan,
   buildSyncQueueEntries,
   clawApiPath,
@@ -37,6 +38,10 @@ function nodeIds(): string[] {
 
 function remoteConformancePayload() {
   return buildRemoteConformanceReport({ routeIds: routeIds(), nodeIds: nodeIds() });
+}
+
+function remoteExternalPendingPayload() {
+  return buildRemoteExternalPendingRegister();
 }
 
 function remoteClassificationsPayload() {
@@ -318,6 +323,8 @@ export function registerRemoteSyncRoutes(app: FastifyInstance): void {
   }));
 
   app.get(clawApiPath("remote/conformance"), async () => remoteConformancePayload());
+
+  app.get(clawApiPath("remote/external-pending"), async () => remoteExternalPendingPayload());
 
   app.get(clawApiPath("remote/compatibility/adapters"), async () => ({
     adapters: [

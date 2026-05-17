@@ -16,6 +16,7 @@ import {
   blockerRecordSchema,
   buildRemoteOfflineCommandResult,
   buildRemoteConformanceReport,
+  buildRemoteExternalPendingRegister,
   buildSyncQueueEntries,
   buildSyncPlan,
   capacityRecordSchema,
@@ -106,6 +107,7 @@ import {
   remoteAgentServiceDecisionSchema,
   remoteAgentServiceExecutionReceiptSchema,
   remoteCompatibilityAdapterReceiptSchema,
+  remoteExternalPendingRegisterSchema,
   remoteSurfaceClassificationReceiptSchema,
   remoteGatewayAuditReceiptSchema,
   remoteSecretLeaseSchema,
@@ -539,6 +541,14 @@ test("remote gateway sync contracts register required layers, routes, and safe d
     classification: "remote-safe",
     createdAt: "2026-05-17T10:12:30.000Z",
   }), /requires route, policy, and tests/);
+
+  const externalPending = buildRemoteExternalPendingRegister({ generatedAt: "2026-05-17T10:13:00.000Z" });
+  assert.equal(remoteExternalPendingRegisterSchema.safeParse(externalPending).success, true);
+  assert.equal(externalPending.status, "external_pending");
+  assert.equal(externalPending.writes, false);
+  assert.equal(externalPending.requirements.some((entry) => entry.requirementId === "physical_iroh_handshake" && entry.sourceReceipt === "RemoteTransportHandshakeReceipt"), true);
+  assert.equal(externalPending.requirements.some((entry) => entry.requirementId === "physical_sync_driver_application" && entry.decisionId === "sync_substrate"), true);
+  assert.equal(externalPending.requirements.every((entry) => entry.status === "external_pending" && entry.writes === false), true);
 
   assert.equal(routeIdForSyncDriver("skills"), "sync.skills");
   assert.equal(routeIdForSyncDriver("memory_user_model"), "sync.memoryUserModel");

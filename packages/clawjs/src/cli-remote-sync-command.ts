@@ -1,5 +1,6 @@
 import {
   buildRemoteConformanceReport,
+  buildRemoteExternalPendingRegister,
   buildSyncPlan,
   clawPersistentSurfaceRegistry,
   createGatewayDeploymentManifest,
@@ -441,6 +442,10 @@ export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
     const payload = conformancePayload();
     return writeOutput(input, "remote", payload, `${payload.status} decisions=${payload.decisions.length}`, command);
   }
+  if (command === "pending") {
+    const register = buildRemoteExternalPendingRegister({ generatedAt: input.flags.now });
+    return writeOutput(input, "remote", register, `${register.status} requirements=${register.requirements.length}`, command);
+  }
   if (command === "compat") {
     const receipt = remoteCompatibilityAdapterFromFlags(input);
     const usage = "remote compat --legacy-surface <surface> --canonical-route <route-id> --client-kind ios|android|web|desktop --state-dir <dir> --record true --coordinator-private-key-file <pem> --coordinator-public-key-file <pem>";
@@ -459,7 +464,7 @@ export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
       ...(state ? { state } : {}),
     }, `compat: ${status}`, command);
   }
-  return missing(input, "remote classify|check|routes|conformance|compat");
+  return missing(input, "remote classify|check|routes|conformance|pending|compat");
 }
 
 export async function runSyncCli(input: RemoteSyncCliInput): Promise<number> {

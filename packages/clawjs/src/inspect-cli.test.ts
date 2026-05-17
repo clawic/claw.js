@@ -163,6 +163,15 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.equal(remotePayload.requiredRoutes.every((entry) => entry.registered), true);
   assert.equal(remotePayload.decisions.some((entry) => entry.decisionId === "remote_surface_parity"), true);
 
+  const remotePending = await runCliCapture(["remote", "pending", "--now", "2026-05-17T10:13:00.000Z", "--json"], process.cwd());
+  assert.equal(remotePending.code, CLI_EXIT_OK);
+  const remotePendingPayload = parseCliJson<{ status: string; writes: boolean; requirements: Array<{ requirementId: string; decisionId: string; sourceReceipt: string; status: string; writes: boolean }> }>(remotePending.stdout).data;
+  assert.equal(remotePendingPayload.status, "external_pending");
+  assert.equal(remotePendingPayload.writes, false);
+  assert.equal(remotePendingPayload.requirements.some((entry) => entry.requirementId === "physical_iroh_handshake" && entry.sourceReceipt === "RemoteTransportHandshakeReceipt"), true);
+  assert.equal(remotePendingPayload.requirements.some((entry) => entry.requirementId === "provider_device_e2e" && entry.decisionId === "first_vertical_slice"), true);
+  assert.equal(remotePendingPayload.requirements.every((entry) => entry.status === "external_pending" && entry.writes === false), true);
+
   const sync = await runCliCapture(["sync", "manifest", "--resource-id", "skills:default", "--kind", "skills", "--driver", "skills", "--json"], process.cwd());
   assert.equal(sync.code, CLI_EXIT_OK);
   const syncPayload = parseCliJson<{ manifest: { driver: string; conflictPolicy: string; secretPolicy: string } }>(sync.stdout).data;

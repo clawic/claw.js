@@ -30,6 +30,15 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(conformancePayload.transportContract, "transport_agnostic_iroh_v1_adapter");
     assert.equal(conformancePayload.decisions.some((entry) => entry.decisionId === "remote_surface_parity"), true);
 
+    const externalPending = await built.app.inject({ method: "GET", url: "/v1/remote/external-pending" });
+    assert.equal(externalPending.statusCode, 200);
+    const externalPendingPayload = externalPending.json() as { status: string; writes: boolean; requirements: Array<{ requirementId: string; sourceReceipt: string; status: string; writes: boolean }> };
+    assert.equal(externalPendingPayload.status, "external_pending");
+    assert.equal(externalPendingPayload.writes, false);
+    assert.equal(externalPendingPayload.requirements.some((entry) => entry.requirementId === "physical_iroh_handshake" && entry.sourceReceipt === "RemoteTransportHandshakeReceipt"), true);
+    assert.equal(externalPendingPayload.requirements.some((entry) => entry.requirementId === "hosted_deployment"), true);
+    assert.equal(externalPendingPayload.requirements.every((entry) => entry.status === "external_pending" && entry.writes === false), true);
+
     const classifications = await built.app.inject({ method: "GET", url: "/v1/remote/classifications" });
     assert.equal(classifications.statusCode, 200);
     const classificationPayload = classifications.json() as { classifications: Array<{ id: string; relay: string }> };

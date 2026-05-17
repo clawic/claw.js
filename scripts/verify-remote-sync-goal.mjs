@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   buildRemoteConformanceReport,
+  buildRemoteExternalPendingRegister,
   buildRemoteOfflineCommandResult,
   buildSyncPlan,
   buildSyncQueueEntries,
@@ -33,6 +34,7 @@ import {
   remoteAgentServiceDecisionSchema,
   remoteAgentServiceExecutionReceiptSchema,
   remoteCompatibilityAdapterReceiptSchema,
+  remoteExternalPendingRegisterSchema,
   remoteGatewayAuditReceiptSchema,
   remoteSecretLeaseSchema,
   remoteSurfaceClassificationReceiptSchema,
@@ -75,6 +77,7 @@ const requiredServiceApiRoutes = [
   "remote/classifications",
   "remote/classifications/receipts",
   "remote/conformance",
+  "remote/external-pending",
   "remote/compatibility/adapters",
   "gateway/conformance",
   "gateway/agent-service/evaluate",
@@ -115,6 +118,8 @@ const requiredDocSnippets = [
   "remote.agent_service.evaluated",
   "RemoteSurfaceClassificationReceipt",
   "/v1/remote/classifications/receipts",
+  "RemoteExternalPendingRegister",
+  "/v1/remote/external-pending",
   "/v1/gateway/agent-service/evaluate",
   "/v1/gateway/audit/receipts",
   "RemoteGatewayAuditReceipt",
@@ -232,6 +237,29 @@ if (conformance.missingRoutes.length > 0) fail(`remote conformance missing route
 if (conformance.missingNodes.length > 0) fail(`remote conformance missing nodes: ${conformance.missingNodes.join(", ")}`);
 if (conformance.hostedSelfHostedParity !== "required") fail("hosted/self-hosted parity must be required");
 if (conformance.transportContract !== "transport_agnostic_iroh_v1_adapter") fail("transport contract must stay Iroh-adapter and transport-agnostic");
+
+const externalPending = buildRemoteExternalPendingRegister({ generatedAt: "2026-05-17T10:13:00.000Z" });
+if (!remoteExternalPendingRegisterSchema.safeParse(externalPending).success) fail("remote external pending register must validate");
+if (externalPending.status !== "external_pending") fail("remote external pending register must remain external_pending while physical checks are unproven");
+if (externalPending.writes !== false) fail("remote external pending register must be no-write");
+for (const requirementId of [
+  "physical_iroh_handshake",
+  "device_trust_acceptance",
+  "physical_peer_trust",
+  "physical_sync_driver_application",
+  "signed_host_audit_persistence",
+  "physical_client_storage",
+  "provider_secret_retrieval",
+  "self_hosted_deployment",
+  "hosted_deployment",
+  "agent_runtime_execution",
+  "billing_meter_persistence",
+  "provider_device_e2e",
+]) {
+  if (!externalPending.requirements.some((entry) => entry.requirementId === requirementId && entry.status === "external_pending" && entry.writes === false)) {
+    fail(`remote external pending register must include ${requirementId}`);
+  }
+}
 
 for (const commandName of requiredCliCommands) {
   const command = clawCliCommandRegistry.commands.find((entry) => entry.name === commandName);

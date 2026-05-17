@@ -2514,6 +2514,7 @@ The docs check script validates that every current export from
 ## Remote Gateway And Sync Exports
 
     buildRemoteConformanceReport
+    buildRemoteExternalPendingRegister
     buildRemoteOfflineCommandResult
     buildSyncPlan
     buildSyncQueueEntries
@@ -2581,6 +2582,10 @@ The docs check script validates that every current export from
     remoteCompatibilityAdapterReceiptSchema
     RemoteCompatibilityClientKind
     remoteCompatibilityClientKindSchema
+    RemoteExternalPendingRegister
+    remoteExternalPendingRegisterSchema
+    RemoteExternalPendingRequirement
+    remoteExternalPendingRequirementSchema
     RemoteGatewayAuditReceipt
     remoteGatewayAuditReceiptSchema
     RemoteSecretLease

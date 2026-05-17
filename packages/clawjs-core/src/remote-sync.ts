@@ -115,6 +115,38 @@ export const remoteSurfaceClassificationReceiptSchema = z.object({
   writes: z.literal(false),
 });
 
+export const remoteExternalPendingRequirementSchema = z.object({
+  schemaVersion: z.literal(1),
+  requirementId: z.string().min(1),
+  decisionId: z.string().min(1),
+  category: z.enum([
+    "transport",
+    "device_trust",
+    "peer_trust",
+    "host_audit",
+    "sync_driver",
+    "client_storage",
+    "provider",
+    "deployment",
+    "runtime",
+    "billing",
+    "e2e_validation",
+  ]),
+  sourceReceipt: z.string().min(1),
+  evidenceRefs: z.array(z.string().min(1)).min(1),
+  unblockCriteria: z.string().min(1),
+  status: z.literal("external_pending"),
+  writes: z.literal(false),
+});
+
+export const remoteExternalPendingRegisterSchema = z.object({
+  schemaVersion: z.literal(1),
+  generatedAt: z.string().datetime(),
+  status: z.enum(["external_pending", "clear"]),
+  requirements: z.array(remoteExternalPendingRequirementSchema),
+  writes: z.literal(false),
+});
+
 export const nodeIdentitySchema = z.object({
   nodeId: z.string().min(1),
   displayName: z.string().min(1),
@@ -590,6 +622,8 @@ export type RemoteClientCacheSnapshot = z.infer<typeof remoteClientCacheSnapshot
 export type RemoteCompatibilityClientKind = z.infer<typeof remoteCompatibilityClientKindSchema>;
 export type RemoteCompatibilityAdapterReceipt = z.infer<typeof remoteCompatibilityAdapterReceiptSchema>;
 export type RemoteSurfaceClassificationReceipt = z.infer<typeof remoteSurfaceClassificationReceiptSchema>;
+export type RemoteExternalPendingRequirement = z.infer<typeof remoteExternalPendingRequirementSchema>;
+export type RemoteExternalPendingRegister = z.infer<typeof remoteExternalPendingRegisterSchema>;
 export type NodeIdentity = z.infer<typeof nodeIdentitySchema>;
 export type RemoteActorContext = z.infer<typeof remoteActorContextSchema>;
 export type SyncResourceManifest = z.infer<typeof syncResourceManifestSchema>;
@@ -661,6 +695,153 @@ export const remoteSyncRequiredRouteIds = [
   "gateway.multiTenantAgentService",
   "mesh.resourceShare",
 ] as const;
+
+export function buildRemoteExternalPendingRegister(input: {
+  generatedAt?: string;
+} = {}): RemoteExternalPendingRegister {
+  const generatedAt = input.generatedAt ?? new Date().toISOString();
+  const requirements = [
+    {
+      schemaVersion: 1 as const,
+      requirementId: "physical_iroh_handshake",
+      decisionId: "transport_contract",
+      category: "transport" as const,
+      sourceReceipt: "RemoteTransportHandshakeReceipt",
+      evidenceRefs: ["claw nodes heartbeat --record true", "docs/adr/0022-remote-gateway-sync-redesign.md"],
+      unblockCriteria: "Validate a real Iroh handshake between approved physical or server nodes.",
+      status: "external_pending" as const,
+      writes: false as const,
+    },
+    {
+      schemaVersion: 1 as const,
+      requirementId: "device_trust_acceptance",
+      decisionId: "server_trust_model",
+      category: "device_trust" as const,
+      sourceReceipt: "NodeTrustDecision",
+      evidenceRefs: ["claw nodes trust --record true", "docs/relay.md"],
+      unblockCriteria: "Validate signed device acceptance on the physical node before trust becomes authoritative.",
+      status: "external_pending" as const,
+      writes: false as const,
+    },
+    {
+      schemaVersion: 1 as const,
+      requirementId: "physical_peer_trust",
+      decisionId: "mesh_collaboration_scope",
+      category: "peer_trust" as const,
+      sourceReceipt: "MeshInvitationAcceptance",
+      evidenceRefs: ["claw nodes accept --record true", "docs/relay.md"],
+      unblockCriteria: "Validate physical peer trust for the accepted mesh invitation.",
+      status: "external_pending" as const,
+      writes: false as const,
+    },
+    {
+      schemaVersion: 1 as const,
+      requirementId: "physical_sync_driver_application",
+      decisionId: "sync_substrate",
+      category: "sync_driver" as const,
+      sourceReceipt: "SyncDriverApplicationReceipt",
+      evidenceRefs: ["claw sync apply --record true", "docs/relay.md"],
+      unblockCriteria: "Run an approved signed-host sync driver and verify the physical write or merge.",
+      status: "external_pending" as const,
+      writes: false as const,
+    },
+    {
+      schemaVersion: 1 as const,
+      requirementId: "signed_host_audit_persistence",
+      decisionId: "remote_actor_model",
+      category: "host_audit" as const,
+      sourceReceipt: "RemoteGatewayAuditReceipt",
+      evidenceRefs: ["claw gateway audit --record true", "docs/relay.md"],
+      unblockCriteria: "Persist the Gateway audit event in the signed host audit store and verify the signature.",
+      status: "external_pending" as const,
+      writes: false as const,
+    },
+    {
+      schemaVersion: 1 as const,
+      requirementId: "physical_client_storage",
+      decisionId: "client_cache_policy",
+      category: "client_storage" as const,
+      sourceReceipt: "RemoteClientCacheSnapshot",
+      evidenceRefs: ["claw sync cache --record true", "docs/adr/0022-remote-gateway-sync-redesign.md"],
+      unblockCriteria: "Validate encrypted TTL cache storage on an approved real client without plaintext or secrets.",
+      status: "external_pending" as const,
+      writes: false as const,
+    },
+    {
+      schemaVersion: 1 as const,
+      requirementId: "provider_secret_retrieval",
+      decisionId: "remote_secrets_model",
+      category: "provider" as const,
+      sourceReceipt: "RemoteSecretProviderReceipt",
+      evidenceRefs: ["claw gateway secret-provider", "docs/relay.md"],
+      unblockCriteria: "Run an approved provider retrieval that returns no plaintext through the remote contract.",
+      status: "external_pending" as const,
+      writes: false as const,
+    },
+    {
+      schemaVersion: 1 as const,
+      requirementId: "self_hosted_deployment",
+      decisionId: "hosted_service_position",
+      category: "deployment" as const,
+      sourceReceipt: "GatewayDeploymentManifest",
+      evidenceRefs: ["claw gateway serve --record true", "docs/relay.md"],
+      unblockCriteria: "Bind a real self-hosted Gateway process and verify the same conformance contract.",
+      status: "external_pending" as const,
+      writes: false as const,
+    },
+    {
+      schemaVersion: 1 as const,
+      requirementId: "hosted_deployment",
+      decisionId: "hosted_service_position",
+      category: "deployment" as const,
+      sourceReceipt: "GatewayDeploymentManifest",
+      evidenceRefs: ["claw gateway project --record true", "docs/relay.md"],
+      unblockCriteria: "Validate a real hosted rollout against the same Gateway conformance contract.",
+      status: "external_pending" as const,
+      writes: false as const,
+    },
+    {
+      schemaVersion: 1 as const,
+      requirementId: "agent_runtime_execution",
+      decisionId: "agent_service_model",
+      category: "runtime" as const,
+      sourceReceipt: "RemoteAgentServiceExecutionReceipt",
+      evidenceRefs: ["claw gateway agent-service --record true", "docs/relay.md"],
+      unblockCriteria: "Execute an approved remote agent-service run through signed host or Coordinator control.",
+      status: "external_pending" as const,
+      writes: false as const,
+    },
+    {
+      schemaVersion: 1 as const,
+      requirementId: "billing_meter_persistence",
+      decisionId: "agent_service_model",
+      category: "billing" as const,
+      sourceReceipt: "RemoteAgentServiceExecutionReceipt",
+      evidenceRefs: ["claw gateway agent-service --record true", "docs/relay.md"],
+      unblockCriteria: "Persist a real billing meter event for the governed remote agent-service run.",
+      status: "external_pending" as const,
+      writes: false as const,
+    },
+    {
+      schemaVersion: 1 as const,
+      requirementId: "provider_device_e2e",
+      decisionId: "first_vertical_slice",
+      category: "e2e_validation" as const,
+      sourceReceipt: "Remote conformance suite",
+      evidenceRefs: ["npm run test:remote-sync-goal", "docs/remote-gateway-sync-decision-matrix.md"],
+      unblockCriteria: "Run approved provider/device end-to-end validation across chat, search, sync, secret refs, and hosted agents.",
+      status: "external_pending" as const,
+      writes: false as const,
+    },
+  ];
+  return remoteExternalPendingRegisterSchema.parse({
+    schemaVersion: 1,
+    generatedAt,
+    status: requirements.length ? "external_pending" : "clear",
+    requirements,
+    writes: false,
+  });
+}
 
 export function createExampleSyncResourceManifest(input: {
   resourceId: string;
