@@ -20,6 +20,7 @@ const pt = {
     workspace: "Espaço",
     system: "Sistema",
     settings: "Definições",
+    search: "Pesquisa",
     contacts: "Contactos",
     notes: "Notas",
     images: "Imagens",

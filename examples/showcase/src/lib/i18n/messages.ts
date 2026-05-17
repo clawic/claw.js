@@ -35,6 +35,7 @@ const en = {
     workspace: "Workspace",
     system: "System",
     settings: "Settings",
+    search: "Search",
     contacts: "Contacts",
     notes: "Notes",
     images: "Images",

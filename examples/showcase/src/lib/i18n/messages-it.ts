@@ -20,6 +20,7 @@ const it = {
     workspace: "Spazio",
     system: "Sistema",
     settings: "Impostazioni",
+    search: "Cerca",
     contacts: "Contatti",
     notes: "Note",
     images: "Immagini",

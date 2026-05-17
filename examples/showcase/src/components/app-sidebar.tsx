@@ -23,7 +23,7 @@ const DEFAULT_WIDTH = 240;
 
 interface SidebarLink {
   href: string;
-  labelKey: "contacts" | "notes" | "images" | "skills" | "connectors" | "tasks" | "calendar" | "routines" | "activity" | "memory" | "personas" | "usage" | "plugins" | "health" | "inbox" | "searchIndex";
+  labelKey: "search" | "contacts" | "notes" | "images" | "skills" | "connectors" | "tasks" | "calendar" | "routines" | "activity" | "memory" | "personas" | "usage" | "plugins" | "health" | "inbox" | "searchIndex";
   icon: React.ReactNode;
   badgeId?: string;
 }
@@ -37,6 +37,12 @@ const sidebarGroups: SidebarGroup[] = [
   {
     labelKey: "tools",
     links: [
+      { href: "/search", labelKey: "search", icon: (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-3.5-3.5" />
+        </svg>
+      )},
       { href: "/notes", labelKey: "notes", icon: (
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />

@@ -20,6 +20,7 @@ const es = {
     workspace: "Espacio",
     system: "Sistema",
     settings: "Ajustes",
+    search: "Buscar",
     contacts: "Contactos",
     notes: "Notas",
     images: "Imágenes",

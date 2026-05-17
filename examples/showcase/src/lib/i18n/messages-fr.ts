@@ -20,6 +20,7 @@ const fr = {
     workspace: "Espace",
     system: "Système",
     settings: "Réglages",
+    search: "Recherche",
     contacts: "Contacts",
     notes: "Notes",
     images: "Images",

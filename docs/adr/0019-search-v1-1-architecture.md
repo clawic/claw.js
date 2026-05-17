@@ -131,6 +131,11 @@ rebuild queue control. It is deliberately separate from Root Search and the
 current Clawix Mac chat search, so enabling wider indexing does not broaden or
 slow section-specific search surfaces by default.
 
+The showcase `/search` page is the first Root Search UI. It queries Search
+through `/api/search/query`, defaults to the framework profile, exposes simple
+domain filters, and primes only the commands hot path so the entrypoint is
+usable before broader source backfills complete.
+
 The initial code source is bounded to an explicit project root, dependency/build
 directories are skipped, and query-time refresh happens only for code-scoped
 queries. This keeps project/code search available without putting file scanning

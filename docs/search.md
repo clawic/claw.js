@@ -207,6 +207,11 @@ shows framework and full-profile sources separately, keeps optional native/web/
 provider/file sources off by default, and can pause, exclude, resume, or enqueue
 source rebuild jobs without changing the normal chat search scope.
 
+The showcase app also exposes `/search` as the first Root Search entrypoint.
+It is separate from chat search, uses the `framework` profile by default, and
+seeds only the commands hot path on demand so the launcher remains immediately
+usable without waiting for universal backfill.
+
 ## Implementation Plan
 
 ### Phase 1: Core and chats fast path
@@ -233,6 +238,9 @@ source rebuild jobs without changing the normal chat search scope.
 
 - Expand Root Search to saved searches, monitors, aliases/hotkeys, explain, and
   source onboarding controls.
+- Keep `/search` as the initial Root Search UI: small fast-source set, framework
+  profile by default, domain filters, partial-source metadata, and a link to
+  Search Index controls.
 - Keep `/search-index` as the technical/admin Search Index surface for source
   state, opt-in profile checks, and rebuild queue control.
 - Keep `framework` as default and use `full` for optional native, web, provider,

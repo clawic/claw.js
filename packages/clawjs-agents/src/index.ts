@@ -4,7 +4,8 @@
 // filesystem (`~/.claw/agents/<id>/`) as the source of truth, the
 // daemon mirrors it through this store to surface agent identity over
 // the bridge protocol, and the SQL projection lives in
-// `@clawjs/database` (collections `company_agents`, `personalities`,
+// `@clawjs/database` (collections `agents`, `agent_assignments`,
+// `agent_resource_grants`, `agent_execution_profiles`, `personalities`,
 // `skill_collections`, `connections`, `integration_bindings`,
 // `agent_audit_log`).
 
