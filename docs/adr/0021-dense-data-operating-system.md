@@ -111,7 +111,11 @@ ERP/CRM routes such as `company create`, `account create --company <id>`,
 `invoice create --billing-customer <id>` all resolve to canonical core.sqlite
 collections. Legal and ops centers also graduate through shared collections:
 `case create`, `case <id> evidence add/list`, `service create`,
-`incident create --service <id>`, and `service <id> incidents list`. Dense routes
+`incident create --service <id>`, and `service <id> incidents list`. Research,
+labs, education, and manufacturing now follow the same rule: `study create`,
+`study <id> participants add/list`, `sample create`,
+`sample <id> assays add`, `learner create`, `course create`, and
+`work-order create` execute against canonical collections. Dense routes
 that are known but not graduated still return a degraded response with an
 explicit `workflow_gap` until their canonical collections, schemas, relations,
 quality gaps, and DB smoke tests are connected.

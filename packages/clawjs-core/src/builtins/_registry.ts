@@ -26,6 +26,8 @@ import { CALENDAR_FAMILY } from "./calendar/index.ts";
 import { COMMERCE_FAMILY } from "./commerce/index.ts";
 import { FITNESS_FAMILY } from "./fitness/index.ts";
 import { HEALTH_FAMILY } from "./health/index.ts";
+import { RESEARCH_FAMILY } from "./research/index.ts";
+import { LABS_FAMILY } from "./labs/index.ts";
 import { HABITS_JOURNALING_FAMILY } from "./habits_journaling/index.ts";
 import { FINANCE_FAMILY } from "./finance/index.ts";
 import { POSSESSIONS_FAMILY } from "./possessions/index.ts";
@@ -34,6 +36,8 @@ import { VEHICLES_FAMILY } from "./vehicles/index.ts";
 import { HOBBIES_FAMILY } from "./hobbies/index.ts";
 import { READING_MEDIA_FAMILY } from "./reading_media/index.ts";
 import { LEARNING_FAMILY } from "./learning/index.ts";
+import { EDUCATION_FAMILY } from "./education/index.ts";
+import { MANUFACTURING_FAMILY } from "./manufacturing/index.ts";
 import { BOOKMARKS_MISC_FAMILY } from "./bookmarks_misc/index.ts";
 import { EDUCATION_SCHOOL_FAMILY } from "./education_school/index.ts";
 import { CAREER_FAMILY } from "./career/index.ts";
@@ -85,6 +89,8 @@ const RAW_BUILTIN_FAMILIES: BuiltinFamilyDefinition[] = [
   COMMERCE_FAMILY,
   FITNESS_FAMILY,
   HEALTH_FAMILY,
+  RESEARCH_FAMILY,
+  LABS_FAMILY,
   HABITS_JOURNALING_FAMILY,
   FINANCE_FAMILY,
   POSSESSIONS_FAMILY,
@@ -93,6 +99,8 @@ const RAW_BUILTIN_FAMILIES: BuiltinFamilyDefinition[] = [
   HOBBIES_FAMILY,
   READING_MEDIA_FAMILY,
   LEARNING_FAMILY,
+  EDUCATION_FAMILY,
+  MANUFACTURING_FAMILY,
   BOOKMARKS_MISC_FAMILY,
   EDUCATION_SCHOOL_FAMILY,
   CAREER_FAMILY,

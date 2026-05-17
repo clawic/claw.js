@@ -190,6 +190,69 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(serviceIncidentsPayload.data.length, 1);
   assert.equal(serviceIncidentsPayload.data[0]?.serviceId, servicePayload.data.id);
 
+  const studyCreate = await runCliCapture(["study", "create", "Trial A", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(studyCreate.code, CLI_EXIT_OK);
+  const studyPayload = JSON.parse(studyCreate.stdout) as { data: { id: string; title: string; status: string }; meta: { collection: string; action: string } };
+  assert.equal(studyPayload.meta.collection, "studies");
+  assert.equal(studyPayload.data.title, "Trial A");
+  assert.equal(studyPayload.data.status, "planned");
+
+  const participantCreate = await runCliCapture(["study", studyPayload.data.id, "participants", "add", "Subject 001", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(participantCreate.code, CLI_EXIT_OK);
+  const participantPayload = JSON.parse(participantCreate.stdout) as { data: { displayName: string; studyId: string; status: string; consentStatus: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(participantPayload.meta.invokedCommand, "study");
+  assert.equal(participantPayload.meta.collection, "participants");
+  assert.equal(participantPayload.data.displayName, "Subject 001");
+  assert.equal(participantPayload.data.studyId, studyPayload.data.id);
+  assert.equal(participantPayload.data.status, "screening");
+
+  const studyParticipants = await runCliCapture(["study", studyPayload.data.id, "participants", "list", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(studyParticipants.code, CLI_EXIT_OK);
+  const studyParticipantsPayload = JSON.parse(studyParticipants.stdout) as { data: Array<{ displayName: string; studyId: string }>; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(studyParticipantsPayload.meta.invokedCommand, "study");
+  assert.equal(studyParticipantsPayload.meta.collection, "participants");
+  assert.equal(studyParticipantsPayload.data.length, 1);
+  assert.equal(studyParticipantsPayload.data[0]?.studyId, studyPayload.data.id);
+
+  const sampleCreate = await runCliCapture(["sample", "create", "Tube A", "--study-id", studyPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(sampleCreate.code, CLI_EXIT_OK);
+  const samplePayload = JSON.parse(sampleCreate.stdout) as { data: { id: string; label: string; studyId: string; status: string }; meta: { collection: string; action: string } };
+  assert.equal(samplePayload.meta.collection, "samples");
+  assert.equal(samplePayload.data.label, "Tube A");
+  assert.equal(samplePayload.data.studyId, studyPayload.data.id);
+  assert.equal(samplePayload.data.status, "collected");
+
+  const assayCreate = await runCliCapture(["sample", samplePayload.data.id, "assays", "add", "CBC", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(assayCreate.code, CLI_EXIT_OK);
+  const assayPayload = JSON.parse(assayCreate.stdout) as { data: { name: string; sampleId: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(assayPayload.meta.invokedCommand, "sample");
+  assert.equal(assayPayload.meta.collection, "assays");
+  assert.equal(assayPayload.data.name, "CBC");
+  assert.equal(assayPayload.data.sampleId, samplePayload.data.id);
+  assert.equal(assayPayload.data.status, "ordered");
+
+  const learnerCreate = await runCliCapture(["learner", "create", "Ada Learner", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(learnerCreate.code, CLI_EXIT_OK);
+  const learnerPayload = JSON.parse(learnerCreate.stdout) as { data: { displayName: string; status: string }; meta: { collection: string; action: string } };
+  assert.equal(learnerPayload.meta.collection, "learners");
+  assert.equal(learnerPayload.data.displayName, "Ada Learner");
+  assert.equal(learnerPayload.data.status, "active");
+
+  const courseCreate = await runCliCapture(["course", "create", "Intro Biology", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(courseCreate.code, CLI_EXIT_OK);
+  const coursePayload = JSON.parse(courseCreate.stdout) as { data: { title: string; status: string }; meta: { collection: string; action: string } };
+  assert.equal(coursePayload.meta.collection, "courses");
+  assert.equal(coursePayload.data.title, "Intro Biology");
+  assert.equal(coursePayload.data.status, "enrolled");
+
+  const workOrderCreate = await runCliCapture(["work-order", "create", "Batch 42", "--company", companyPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(workOrderCreate.code, CLI_EXIT_OK);
+  const workOrderPayload = JSON.parse(workOrderCreate.stdout) as { data: { title: string; companyId: string; status: string }; meta: { collection: string; action: string } };
+  assert.equal(workOrderPayload.meta.collection, "work_orders");
+  assert.equal(workOrderPayload.data.title, "Batch 42");
+  assert.equal(workOrderPayload.data.companyId, companyPayload.data.id);
+  assert.equal(workOrderPayload.data.status, "planned");
+
 });
 
 test("runCli searches the registered CLI discovery surface", async () => {

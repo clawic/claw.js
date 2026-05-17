@@ -361,6 +361,11 @@ function getPrimaryField(collectionName: string): string {
       return "displayName";
     case "projects":
       return "name";
+    case "participants":
+    case "learners":
+      return "displayName";
+    case "samples":
+      return "label";
     case "symptom_logs":
       return "symptom";
     case "invoices":
@@ -418,6 +423,28 @@ function applyDefaults(collectionName: string, payload: Record<string, unknown>,
     case "incidents":
       payload.status ??= "open";
       payload.severity ??= "sev3";
+      break;
+    case "studies":
+      payload.status ??= "planned";
+      break;
+    case "participants":
+      payload.status ??= "screening";
+      payload.consentStatus ??= "unknown";
+      break;
+    case "samples":
+      payload.status ??= "collected";
+      break;
+    case "assays":
+      payload.status ??= "ordered";
+      break;
+    case "learners":
+      payload.status ??= "active";
+      break;
+    case "courses":
+      payload.status ??= "enrolled";
+      break;
+    case "work_orders":
+      payload.status ??= "planned";
       break;
     default:
       break;

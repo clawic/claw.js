@@ -193,8 +193,8 @@ export const clawDenseDataOsRegistry: ClawDenseDataOsRegistry = {
       sensitivityDefault: "high",
       sharedEngines: ["identity_role_profile", "evidence_provenance", "quality_gap", "relation_graph", "semantic_view", "intent_coverage", "vocabulary_unit", "instrument_response", "timeline", "document_evidence"],
       centers: [
-        center("study", "Study", "study", undefined, "Research protocol/study center for participants, cohorts, events, documents, and analysis readiness."),
-        center("participant", "Participant", "participant", "participant_profile", "Research role/profile over shared identity."),
+        center("study", "Study", "study", undefined, "Research protocol/study center for participants, cohorts, events, documents, and analysis readiness.", undefined, "studies"),
+        center("participant", "Participant", "participant", "participant_profile", "Research role/profile over shared identity.", undefined, "participants"),
       ],
       commandPatterns: [
         "claw study list|get|create|update|delete|query|schema",
@@ -238,8 +238,8 @@ export const clawDenseDataOsRegistry: ClawDenseDataOsRegistry = {
       sensitivityDefault: "high",
       sharedEngines: ["evidence_provenance", "quality_gap", "relation_graph", "semantic_view", "intent_coverage", "vocabulary_unit", "instrument_response", "timeline", "document_evidence"],
       centers: [
-        center("sample", "Sample", "sample", undefined, "Specimen/material center for collection, chain, assay, storage, result, and provenance."),
-        center("assay", "Assay", "assay", undefined, "Test/protocol center for measured values and quality criteria."),
+        center("sample", "Sample", "sample", undefined, "Specimen/material center for collection, chain, assay, storage, result, and provenance.", ["samples", "specimen", "specimens"], "samples"),
+        center("assay", "Assay", "assay", undefined, "Test/protocol center for measured values and quality criteria.", undefined, "assays"),
       ],
       commandPatterns: ["claw sample list|get|create|update|query|schema", "claw sample <id> timeline", "claw labs overview|gaps|intents", "claw lims overview|gaps|intents"],
       operations: [operation("sample.timeline", "Read sample timeline", ["claw sample <id> timeline"], ["sample", "assay", "lab_result", "provenance_event"])],
@@ -339,8 +339,8 @@ export const clawDenseDataOsRegistry: ClawDenseDataOsRegistry = {
       sensitivityDefault: "normal",
       sharedEngines: ["identity_role_profile", "evidence_provenance", "quality_gap", "relation_graph", "semantic_view", "intent_coverage", "instrument_response", "timeline"],
       centers: [
-        center("learner", "Learner", "learner", "learner_profile", "Learning role over shared identity."),
-        center("course", "Course", "course", undefined, "Course/program center for lessons, assignments, exams, credentials, and progress."),
+        center("learner", "Learner", "learner", "learner_profile", "Learning role over shared identity.", undefined, "learners"),
+        center("course", "Course", "course", undefined, "Course/program center for lessons, assignments, exams, credentials, and progress.", undefined, "courses"),
       ],
       commandPatterns: ["claw education overview|gaps|intents", "claw lms overview|gaps|intents", "claw course list|get|create|update|query|schema", "claw learner <id> timeline"],
       operations: [operation("learner.timeline", "Read learner timeline", ["claw learner <id> timeline"], ["learner_profile", "course", "assessment", "credential"])],
@@ -356,7 +356,7 @@ export const clawDenseDataOsRegistry: ClawDenseDataOsRegistry = {
       sensitivityDefault: "normal",
       sharedEngines: ["evidence_provenance", "quality_gap", "relation_graph", "semantic_view", "intent_coverage", "workflow_state", "document_evidence", "timeline"],
       centers: [
-        center("work_order", "Work Order", "work-order", undefined, "Manufacturing execution center for materials, operations, quality, labor, and equipment."),
+        center("work_order", "Work Order", "work-order", undefined, "Manufacturing execution center for materials, operations, quality, labor, and equipment.", ["work-orders"], "work_orders"),
         center("asset", "Asset", "asset", undefined, "Equipment/production asset center shared with maintenance and ops."),
       ],
       commandPatterns: ["claw manufacturing overview|gaps|intents", "claw mes overview|gaps|intents", "claw work-order list|get|create|update|query|schema", "claw work-order <id> timeline"],

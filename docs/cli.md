@@ -571,6 +571,14 @@ claw case case_123 evidence list --json
 claw service create API --company company_123 --json
 claw incident create Outage --service service_123 --severity sev2 --json
 claw service service_123 incidents list --json
+claw study create "Trial A" --json
+claw study study_123 participants add "Subject 001" --json
+claw study study_123 participants list --json
+claw sample create "Tube A" --study-id study_123 --json
+claw sample sample_123 assays add CBC --json
+claw learner create "Ada Learner" --json
+claw course create "Intro Biology" --json
+claw work-order create "Batch 42" --company company_123 --json
 claw travel --help
 claw career --help
 claw family --help

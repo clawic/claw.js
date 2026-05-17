@@ -110,7 +110,7 @@ function denseDbFlags(flags: Record<string, string>, collectionName: string): Re
   if (["medications", "symptom_logs"].includes(collectionName) && flags.patient && !flags["patient-id"]) {
     nextFlags = { ...nextFlags, "patient-id": flags.patient };
   }
-  if (["accounts", "deals", "billing_customers", "legal_cases", "services"].includes(collectionName) && flags.company && !flags["company-id"]) {
+  if (["accounts", "deals", "billing_customers", "legal_cases", "services", "work_orders"].includes(collectionName) && flags.company && !flags["company-id"]) {
     nextFlags = { ...nextFlags, "company-id": flags.company };
   }
   if (["invoices", "payment_intents"].includes(collectionName) && flags["billing-customer"] && !flags["billing-customer-id"]) {
@@ -121,6 +121,12 @@ function denseDbFlags(flags: Record<string, string>, collectionName: string): Re
   }
   if (collectionName === "case_evidence" && flags.case && !flags["case-id"]) {
     nextFlags = { ...nextFlags, "case-id": flags.case };
+  }
+  if (collectionName === "participants" && flags.study && !flags["study-id"]) {
+    nextFlags = { ...nextFlags, "study-id": flags.study };
+  }
+  if (collectionName === "assays" && flags.sample && !flags["sample-id"]) {
+    nextFlags = { ...nextFlags, "sample-id": flags.sample };
   }
   return nextFlags;
 }
@@ -150,6 +156,26 @@ function nestedDenseDbRoute(input: DenseDataCliInput): Parameters<typeof runMagi
     collections: {
       incident: "incidents",
       incidents: "incidents",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "study",
+    relationFlag: "study-id",
+    relationField: "studyId",
+    collections: {
+      participant: "participants",
+      participants: "participants",
+      cohort: "participants",
+      cohorts: "participants",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "sample",
+    relationFlag: "sample-id",
+    relationField: "sampleId",
+    collections: {
+      assay: "assays",
+      assays: "assays",
+      test: "assays",
+      tests: "assays",
     },
   });
 }

@@ -1560,6 +1560,7 @@ The docs check script validates that every current export from
     DocumentRef
     DocumentSearchResult
     DocumentStorageDescriptor
+    EDUCATION_FAMILY
     EDUCATION_SCHOOL_FAMILY
     EffectiveAccessPolicy
     EffectPreview
@@ -1733,8 +1734,10 @@ The docs check script validates that every current export from
     ListRecord
     listRecordSchema
     LUXURY_AND_COLLECTING_FAMILY
+    LABS_FAMILY
     LEGAL_FAMILY
     manifestSchema
+    MANUFACTURING_FAMILY
     MARKETING_FAMILY
     MARKETPLACE_PRODUCTS_FAMILY
     MARKETPLACE_REAL_ESTATE_FAMILY
@@ -1813,6 +1816,7 @@ The docs check script validates that every current export from
     OperationalCheckRecord
     operationalCheckRecordSchema
     OrchestrationReadiness
+    RESEARCH_FAMILY
     OutcomeAddInput
     OutcomeCaptureInput
     OutcomeCaptureResult
