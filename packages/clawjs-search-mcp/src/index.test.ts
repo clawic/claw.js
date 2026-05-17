@@ -110,13 +110,30 @@ test("Search MCP exposes profile, entrypoint, and explain tools", () => {
     const evaluateTool = tools.find((tool) => tool.name === "search.monitors.evaluate");
     const evaluated = evaluateTool?.handler({ id: "monitor-search", limit: 1 }) as {
       state: string;
-      items: Array<{ monitorId: string; state: string; resultCount: number; results: Array<{ id: string }> }>;
+      items: Array<{
+        monitorId: string;
+        state: string;
+        resultCount: number;
+        partial: boolean;
+        query?: { limit?: number };
+        omittedSources?: Array<{ source: string; reason: string }>;
+        results: Array<{ id: string }>;
+      }>;
     };
     assert.equal(evaluated.state, "ready");
     assert.equal(evaluated.items[0]?.monitorId, "monitor-search");
     assert.equal(evaluated.items[0]?.state, "ready");
     assert.equal(evaluated.items[0]?.resultCount, 1);
+    assert.equal(evaluated.items[0]?.partial, false);
+    assert.equal(evaluated.items[0]?.query?.limit, 1);
     assert.equal(evaluated.items[0]?.results[0]?.id, "commands:search");
+
+    store.saveMonitor({ id: "monitor-disabled", savedSearchId: "saved-search", name: "Disabled monitor", enabled: false });
+    const enabledOnly = evaluateTool?.handler({}) as { items: Array<{ monitorId: string }> };
+    assert.equal(enabledOnly.items.some((item) => item.monitorId === "monitor-disabled"), false);
+    const allMonitors = evaluateTool?.handler({ all: true }) as { items: Array<{ monitorId: string }> };
+    assert.equal(allMonitors.items.some((item) => item.monitorId === "monitor-disabled"), true);
+
   } finally {
     store.close();
     fs.rmSync(dir, { recursive: true, force: true });
