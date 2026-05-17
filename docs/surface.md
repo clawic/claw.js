@@ -1935,6 +1935,7 @@ The docs check script validates that every current export from
     PluginCatalog
     PluginIntentConfig
     PluginsIntentState
+    PHARMA_FAMILY
     PluginsObservedState
     PolicyRecord
     policyRecordSchema
@@ -2525,6 +2526,7 @@ The docs check script validates that every current export from
     createRemoteClientCacheSnapshot
     createRemoteCompatibilityAdapterReceipt
     createRemoteAgentServiceExecutionReceipt
+    createRemoteGatewayAuditReceipt
     createRemoteSecretProviderReceipt
     createSyncResourceManifest
     createTransportHandshakeReceipt
@@ -2576,6 +2578,8 @@ The docs check script validates that every current export from
     remoteCompatibilityAdapterReceiptSchema
     RemoteCompatibilityClientKind
     remoteCompatibilityClientKindSchema
+    RemoteGatewayAuditReceipt
+    remoteGatewayAuditReceiptSchema
     RemoteSecretLease
     remoteSecretLeaseSchema
     RemoteSecretProviderReceipt
