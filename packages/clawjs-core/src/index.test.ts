@@ -47,6 +47,7 @@ import {
   agentRecordSchema,
   createCodexReadOnlySourceDescriptor,
   createMeshInvitation,
+  createMeshInvitationAcceptance,
   createMeshResourceShare,
   createMeshRevocation,
   createRemoteAgentServiceExecutionReceipt,
@@ -77,6 +78,7 @@ import {
   milestoneRecordSchema,
   maskCredential,
   meshInvitationSchema,
+  meshInvitationAcceptanceSchema,
   meshResourceShareSchema,
   meshRevocationSchema,
   nodeIdentitySchema,
@@ -688,6 +690,25 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(meshInvitation.trustMode, "sovereign_e2e_tunnel");
   assert.equal(meshInvitation.writes, false);
   assert.equal(meshInvitationSchema.safeParse(meshInvitation).success, true);
+  const meshAcceptance = createMeshInvitationAcceptance({
+    invitation: meshInvitation,
+    accepterMeshId: "mesh.server",
+    actor: {
+      actorKind: "human",
+      actorId: "user.remote",
+      nodeId: "node.server",
+      transport: "gateway",
+      trustMode: "governed_gateway",
+    },
+    acceptedAt: "2026-05-17T10:07:30.000Z",
+  });
+  assert.equal(meshAcceptance.status, "signed_pending_peer_trust");
+  assert.equal(meshAcceptance.acceptedResourceIds.includes("skills:default"), true);
+  assert.equal(meshAcceptance.acceptedActions.includes("sync"), true);
+  assert.equal(meshAcceptance.externalPending.includes("physical_peer_trust"), true);
+  assert.equal(meshAcceptance.externalPending.includes("device_trust_acceptance"), true);
+  assert.equal(meshAcceptance.writes, false);
+  assert.equal(meshInvitationAcceptanceSchema.safeParse(meshAcceptance).success, true);
 
   const meshShare = createMeshResourceShare({
     invitation: meshInvitation,

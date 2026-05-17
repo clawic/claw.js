@@ -200,6 +200,28 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(invitationPayload.invitation.allowedResourceIds[0], "skills:default");
     assert.equal(invitationPayload.writes, false);
 
+    const acceptance = await built.app.inject({
+      method: "POST",
+      url: "/v1/mesh/invitations/accept",
+      headers: { "content-type": "application/json" },
+      payload: {
+        issuerMeshId: "mesh.home",
+        coordinatorNodeId: "node.mac",
+        recipientMeshId: "mesh.server",
+        allowedResourceIds: ["skills:default"],
+        allowedActions: ["read", "sync"],
+      },
+    });
+    assert.equal(acceptance.statusCode, 200);
+    const acceptancePayload = acceptance.json() as { acceptance: { status: string; physicalPeerTrustVerified: boolean; externalPending: string[]; writes: boolean }; status: string; writes: boolean };
+    assert.equal(acceptancePayload.status, "dry_run_external_pending");
+    assert.equal(acceptancePayload.acceptance.status, "signed_pending_peer_trust");
+    assert.equal(acceptancePayload.acceptance.physicalPeerTrustVerified, false);
+    assert.equal(acceptancePayload.acceptance.externalPending.includes("physical_peer_trust"), true);
+    assert.equal(acceptancePayload.acceptance.externalPending.includes("device_trust_acceptance"), true);
+    assert.equal(acceptancePayload.acceptance.writes, false);
+    assert.equal(acceptancePayload.writes, false);
+
     const share = await built.app.inject({
       method: "POST",
       url: "/v1/mesh/shares",

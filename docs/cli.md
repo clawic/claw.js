@@ -195,6 +195,7 @@ claw nodes trust --dry-run --json
 claw nodes trust --target-node vps.server --owner-node mac.home --coordinator-node coord.home --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 claw nodes revoke --dry-run --json
 claw nodes invite --issuer-mesh mesh.home --recipient-mesh mesh.server --allowed-resources skills:default --actions read,sync --json
+claw nodes accept --issuer-mesh mesh.home --recipient-mesh mesh.server --allowed-resources skills:default --actions read,sync --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 claw nodes share --issuer-mesh mesh.home --to-mesh mesh.server --resource-id skills:default --driver skills --actions read,sync --json
 claw nodes revoke --target-type share --target-id mesh_share_1 --json
 claw nodes invite --issuer-mesh mesh.home --recipient-mesh mesh.server --allowed-resources skills:default --actions read,sync --state-dir .claw/remote-sync --record true --json
@@ -238,6 +239,11 @@ and still marks real multi-device transport and device trust acceptance as
 ledger. An allow decision remains `signed_pending_physical_acceptance` until
 the target device completes physical acceptance; it does not silently grant
 remote authority by itself.
+`nodes accept --record true` records a signed `MeshInvitationAcceptance` for
+an invitation scope. Acceptance is still not physical peer trust: without a
+real device trust run it remains `signed_pending_peer_trust`, marks
+`physical_peer_trust` and `device_trust_acceptance` as pending, and keeps
+`writes: false`.
 `gateway serve|project --record true` records signed Gateway deployment
 manifests for self-hosted and hosted projections. Both carry the same required
 route contract and parity flag; real process binding or hosted rollout remains

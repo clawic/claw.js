@@ -115,12 +115,14 @@ from a plan: push/pull changes are `queued`, conflicts are `blocked`, and
 reconciliation advances cursors only after acknowledged changes or explicitly
 resolved conflicts.
 
-Inter-mesh collaboration uses three explicit primitives: `MeshInvitation`,
-`MeshResourceShare`, and `MeshRevocation`. Invitations scope allowed resources
-and actions before any share is created. Shares bind one invitation to a Sync
-manifest and remain no-write/proposed until signed Coordinator execution.
-Revocations cascade to Sync queue access and audit; they do not silently leave
-old shares usable.
+Inter-mesh collaboration uses four explicit primitives: `MeshInvitation`,
+`MeshInvitationAcceptance`, `MeshResourceShare`, and `MeshRevocation`.
+Invitations scope allowed resources and actions before any share is created.
+Acceptance records signed intent for the invited mesh but remains
+`signed_pending_peer_trust` until physical peer trust is proven. Shares bind
+one invitation to a Sync manifest and remain no-write/proposed until signed
+Coordinator execution. Revocations cascade to Sync queue access and audit;
+they do not silently leave old shares usable.
 
 The governed multi-tenant agent service is also a Gateway contract, not a
 hosted-only shortcut. `evaluateRemoteAgentServiceAccess` admits a service

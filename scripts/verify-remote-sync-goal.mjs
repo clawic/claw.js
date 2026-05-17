@@ -10,6 +10,7 @@ import {
   clawCliCommandRegistry,
   clawPersistentSurfaceRegistry,
   createMeshInvitation,
+  createMeshInvitationAcceptance,
   createMeshResourceShare,
   createMeshRevocation,
   createRemoteAgentServiceExecutionReceipt,
@@ -20,6 +21,7 @@ import {
   findClawPersistentSurfaceNode,
   findClawSurfaceRoute,
   meshInvitationSchema,
+  meshInvitationAcceptanceSchema,
   meshResourceShareSchema,
   meshRevocationSchema,
   remoteAccessGrantSchema,
@@ -79,6 +81,7 @@ const requiredServiceApiRoutes = [
   "nodes/trust",
   "nodes/revoke",
   "mesh/invitations",
+  "mesh/invitations/accept",
   "mesh/shares",
   "mesh/revocations",
 ];
@@ -104,9 +107,11 @@ const requiredDocSnippets = [
   "/v1/gateway/agent-service/evaluate",
   "mesh.resourceShare",
   "MeshInvitation",
+  "MeshInvitationAcceptance",
   "MeshResourceShare",
   "MeshRevocation",
   "/v1/mesh/invitations",
+  "/v1/mesh/invitations/accept",
   "/v1/mesh/shares",
   "/v1/mesh/revocations",
   "--local-hash",
@@ -392,6 +397,23 @@ const meshInvitation = createMeshInvitation({
 if (meshInvitation.status !== "pending") fail("mesh invitations must start pending");
 if (meshInvitation.writes !== false) fail("mesh invitations must be no-write until signed Coordinator execution");
 if (!meshInvitationSchema.safeParse(meshInvitation).success) fail("mesh invitation contract must validate");
+const meshAcceptance = createMeshInvitationAcceptance({
+  invitation: meshInvitation,
+  accepterMeshId: "mesh.server",
+  actor: {
+    actorKind: "human",
+    actorId: "user.remote",
+    nodeId: "node.server",
+    transport: "gateway",
+    trustMode: "governed_gateway",
+  },
+  acceptedAt: "2026-05-17T10:07:30.000Z",
+});
+if (meshAcceptance.status !== "signed_pending_peer_trust") fail("mesh invitation acceptance must stay pending physical peer trust");
+if (!meshAcceptance.externalPending.includes("physical_peer_trust")) fail("mesh invitation acceptance must mark physical peer trust external pending");
+if (!meshAcceptance.externalPending.includes("device_trust_acceptance")) fail("mesh invitation acceptance must mark device trust acceptance external pending");
+if (meshAcceptance.writes !== false) fail("mesh invitation acceptance must be no-write until signed physical trust");
+if (!meshInvitationAcceptanceSchema.safeParse(meshAcceptance).success) fail("mesh invitation acceptance contract must validate");
 const meshShare = createMeshResourceShare({
   invitation: meshInvitation,
   toMeshId: "mesh.server",

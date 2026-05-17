@@ -2516,6 +2516,7 @@ The docs check script validates that every current export from
     buildSyncQueueEntries
     createExampleSyncResourceManifest
     createMeshInvitation
+    createMeshInvitationAcceptance
     createMeshResourceShare
     createMeshRevocation
     createGatewayDeploymentManifest
@@ -2531,6 +2532,8 @@ The docs check script validates that every current export from
     GatewayDeploymentManifest
     gatewayDeploymentManifestSchema
     MeshInvitation
+    MeshInvitationAcceptance
+    meshInvitationAcceptanceSchema
     meshInvitationSchema
     MeshResourceShare
     meshResourceShareSchema

@@ -105,6 +105,7 @@ POST /v1/nodes/pair
 POST /v1/nodes/trust
 POST /v1/nodes/revoke
 POST /v1/mesh/invitations
+POST /v1/mesh/invitations/accept
 POST /v1/mesh/shares
 POST /v1/mesh/revocations
 POST /v1/gateway/agent-service/evaluate
@@ -152,11 +153,13 @@ acknowledged changes or explicitly resolved conflicts. With `claw sync run
 locally and can later be reconciled with `claw sync reconcile`.
 
 Inter-mesh collaboration is represented by `MeshInvitation`,
-`MeshResourceShare`, and `MeshRevocation` contracts. Invitations define the
-resource/action scope first. Shares bind that scope to a Sync manifest and
-forbid plaintext secrets. Revocations cascade to Sync queue access. The Relay
-routes expose these shapes as dry-run contracts until signed Coordinator
-execution can persist and audit the mutation.
+`MeshInvitationAcceptance`, `MeshResourceShare`, and `MeshRevocation`
+contracts. Invitations define the resource/action scope first. Acceptance
+records the invited mesh's signed intent but does not grant physical peer
+trust by itself. Shares bind that scope to a Sync manifest and forbid
+plaintext secrets. Revocations cascade to Sync queue access. The Relay routes
+expose these shapes as dry-run contracts until signed Coordinator execution
+can persist and audit the mutation.
 
 The multi-tenant agent service path is evaluated through the same Gateway
 contract. A request must match tenant, agent, assignment, route, budget,
