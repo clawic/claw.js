@@ -31,6 +31,8 @@ const agentDocs = [
   "AGENTS.md",
   "CLAUDE.md",
   "docs/decision-map.md",
+  "docs/v1-surface-closure-decisions.json",
+  "docs/v1-surface-closure-completion-audit.md",
   "docs/host-ownership.md",
   "docs/data-storage-boundary.md",
   "docs/canonical-data-catalog.md",
@@ -45,6 +47,7 @@ const agentDocs = [
   "docs/adr/0013-agentic-naming-and-code-structure.md",
   "docs/adr/0005-canonical-data-catalog.md",
   "scripts/naming-shape-check.mjs",
+  "scripts/v1-surface-closure-audit-check.mjs",
 ];
 
 for (const relativePath of agentDocs) {
@@ -278,6 +281,18 @@ for (const snippet of [
   "Do not expose public abbreviations such as `/mp` or `/ws`.",
 ]) {
   requireSnippet("docs/adr/0001-naming-and-stability-surfaces.md", snippet);
+}
+
+if (fs.existsSync(path.join(rootDir, "scripts", "v1-surface-closure-audit-check.mjs"))) {
+  const { spawnSync } = await import("node:child_process");
+  const result = spawnSync(process.execPath, [path.join(rootDir, "scripts", "v1-surface-closure-audit-check.mjs")], {
+    cwd: rootDir,
+    encoding: "utf8",
+  });
+  if (result.status !== 0) {
+    fail("v1 surface closure audit check failed");
+    for (const line of result.stderr.trim().split("\n").filter(Boolean)) fail(line);
+  }
 }
 
 if (checks.length > 0) {
