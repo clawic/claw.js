@@ -70,7 +70,7 @@ a later user decision.
 | 42 | `tool_model` | partial | Tools are represented through grants and connector control plane; a fuller public tool catalog binding remains incomplete. |
 | 43 | `action_severity` | implemented | `evaluateAgentActionSeverity`, SDK `agents.actionSeverity`, and `claw agents action-severity` classify actions into `info`/`low`/`medium`/`high`/`critical` and return approval, connector, budget, and host gates. |
 | 44 | `connector_integration` | implemented | MCP/control-plane tests require connector approval plus Agents V1 MCP assignment/access policy. |
-| 45 | `autonomy_axis` | partial | Agent records expose autonomy policy fields; full policy-profile registry and UI are incomplete. |
+| 45 | `autonomy_axis` | implemented | `evaluateAgentAutonomyPolicy`, SDK `agents.autonomyCheck`, and `claw agents autonomy-check` enforce `respond_only`, `suggest`, `act_limited`, and `act_full` profiles against action severity and required gates. |
 | 46 | `supervision_model` | implemented | `evaluateAgentSupervisorAuthority`, SDK `agents.supervisorCheck`, and `claw agents supervisor-check` limit supervisors by manager relationship, delegated action, risk ceiling, and scope. |
 | 47 | `agent_evaluation` | implemented | `agent_evaluations`, `createAgentEvaluation`, CLI, SDK facade, and tests exist. |
 | 48 | `agent_config_versioning` | implemented | `agent_config_revisions`, redacted revision helper, CLI, and tests exist. |

@@ -8,6 +8,7 @@ import {
   createAgentRetirementPlan,
   createAgentSupportInboxProjection,
   evaluateAgentActionSeverity,
+  evaluateAgentAutonomyPolicy,
   createAgentSafeSurfaceProjection,
   evaluateAgentAssignmentRoute,
   evaluateAgentBudget,
@@ -18,6 +19,7 @@ import {
   resolveAgentExternalIdentity,
   type AgentActivityFeedInput,
   type AgentActionSeverityRequest,
+  type AgentAutonomyPolicyInput,
   type AgentBlueprintInput,
   type AgentAssignmentRouteRequest,
   type AgentBudgetPolicy,
@@ -103,7 +105,7 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
       rootConcept: "agent",
       placementConcept: "agent_assignment",
       defaultPosture: "empty_sandbox_respond_only",
-      gates: ["evaluate-access", "delegation-check", "supervisor-check", "route-check", "resolve-external-identity", "project-support-inbox", "memory-check", "budget-check", "action-severity", "surface-projection", "config-revision", "incident", "activity-feed", "blueprint", "evaluation", "retirement-plan"],
+      gates: ["evaluate-access", "delegation-check", "supervisor-check", "route-check", "resolve-external-identity", "project-support-inbox", "memory-check", "budget-check", "action-severity", "autonomy-check", "surface-projection", "config-revision", "incident", "activity-feed", "blueprint", "evaluation", "retirement-plan"],
     });
     return V1_DATA_EXIT_OK;
   }
@@ -159,6 +161,12 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
     const record = recordFlag<AgentActionSeverityRequest>(input);
     if (!record) return usageError(input, "Usage: claw agents action-severity --record JSON [--json]");
     writeSuccess(input, evaluateAgentActionSeverity(record));
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "autonomy-check") {
+    const record = recordFlag<AgentAutonomyPolicyInput>(input);
+    if (!record) return usageError(input, "Usage: claw agents autonomy-check --record JSON [--json]");
+    writeSuccess(input, evaluateAgentAutonomyPolicy(record));
     return V1_DATA_EXIT_OK;
   }
   if (command === "surface-projection") {

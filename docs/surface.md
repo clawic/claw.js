@@ -1147,6 +1147,10 @@ The docs check script validates that every current export from
     AgentActionSeverity
     AgentActionSeverityRequest
     AgentActionSeverityResult
+    AgentAutonomyDispatchMode
+    AgentAutonomyPolicyInput
+    AgentAutonomyPolicyResult
+    AgentAutonomyProfile
     AgentConfigRevision
     AgentConfigRevisionInput
     AgentConfigRevisionStatus
@@ -1603,6 +1607,7 @@ The docs check script validates that every current export from
     createAgentServiceApiResponse
     createAgentSupportInboxProjection
     evaluateAgentActionSeverity
+    evaluateAgentAutonomyPolicy
     evaluateAgentAssignmentRoute
     evaluateAgentBudget
     evaluateAgentDelegationAccess

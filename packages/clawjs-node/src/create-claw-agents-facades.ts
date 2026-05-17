@@ -13,6 +13,7 @@ import {
   createAgentSupportInboxProjection,
   evaluateAgentAssignmentRoute,
   evaluateAgentActionSeverity,
+  evaluateAgentAutonomyPolicy,
   evaluateAgentBudget,
   evaluateAgentDelegationAccess,
   evaluateAgentEffectiveAccess,
@@ -24,6 +25,8 @@ import {
   type AgentActivityFeedInput,
   type AgentActionSeverityRequest,
   type AgentActionSeverityResult,
+  type AgentAutonomyPolicyInput,
+  type AgentAutonomyPolicyResult,
   type AgentAssignmentPrivacyPolicy,
   type AgentAssignmentRouteRequest,
   type AgentAssignmentRouteResult,
@@ -72,6 +75,7 @@ export interface ClawAgentsFacade {
   memoryCheck: (policy: AgentMemoryPolicy, request: AgentMemoryAccessRequest) => AgentMemoryAccessResult;
   budgetCheck: (policy: AgentBudgetPolicy, request: AgentBudgetRequest) => AgentBudgetEvaluationResult;
   actionSeverity: (input: AgentActionSeverityRequest) => AgentActionSeverityResult;
+  autonomyCheck: (input: AgentAutonomyPolicyInput) => AgentAutonomyPolicyResult;
   surfaceProjection: (input: AgentSafeSurfaceProjectionInput) => AgentSafeSurfaceProjection;
   configRevision: (input: AgentConfigRevisionInput) => AgentConfigRevision;
   incident: (input: AgentIncidentInput) => AgentIncident;
@@ -98,6 +102,7 @@ export function createClawAgentsFacades(): { agents: ClawAgentsFacade } {
       memoryCheck: evaluateAgentMemoryAccess,
       budgetCheck: evaluateAgentBudget,
       actionSeverity: evaluateAgentActionSeverity,
+      autonomyCheck: evaluateAgentAutonomyPolicy,
       surfaceProjection: createAgentSafeSurfaceProjection,
       configRevision: createAgentConfigRevision,
       incident: createAgentIncident,

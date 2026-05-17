@@ -18,6 +18,7 @@ import {
   evaluateAgentEffectiveAccess,
   evaluateAgentAssignmentRoute,
   evaluateAgentActionSeverity,
+  evaluateAgentAutonomyPolicy,
   evaluateAgentMemoryAccess,
   createAgentPermissionEscalationRequest,
   evaluateAgentSupervisorAuthority,
@@ -512,6 +513,50 @@ test("Agents V1 action severity taxonomy classifies risky actions before dispatc
   assert.equal(nativeDelete.severity, "critical");
   assert.equal(nativeDelete.hostGateRequired, true);
   assert.equal(nativeDelete.approvalRequired, true);
+});
+
+test("Agents V1 autonomy policy gates dispatch by profile, severity, and required gates", () => {
+  const respondOnly = evaluateAgentAutonomyPolicy({
+    profile: "respond_only",
+    action: { action: "write", resourceType: "collection" },
+  });
+  assert.equal(respondOnly.allowed, false);
+  assert.equal(respondOnly.dispatchMode, "respond_only");
+  assert.deepEqual(respondOnly.reasons, [
+    "autonomy: respond_only cannot dispatch write",
+    "autonomy: medium exceeds respond_only limit low",
+  ]);
+
+  const suggest = evaluateAgentAutonomyPolicy({
+    profile: "suggest",
+    action: { action: "update", resourceType: "collection" },
+  });
+  assert.equal(suggest.allowed, false);
+  assert.equal(suggest.dispatchMode, "suggest_only");
+  assert.equal(suggest.requiredGates.includes("human_approval"), true);
+
+  const limitedExternal = evaluateAgentAutonomyPolicy({
+    profile: "act_limited",
+    action: { action: "invoke", resourceType: "connector", externalSideEffect: true, paidAction: true },
+    connectorGateAllowed: true,
+    budgetAllowed: true,
+  });
+  assert.equal(limitedExternal.allowed, false);
+  assert.deepEqual(limitedExternal.reasons, [
+    "autonomy: high exceeds act_limited limit medium",
+    "autonomy: approval required",
+  ]);
+
+  const fullWithGates = evaluateAgentAutonomyPolicy({
+    profile: "act_full",
+    action: { action: "invoke", resourceType: "connector", externalSideEffect: true, paidAction: true },
+    approvalGranted: true,
+    connectorGateAllowed: true,
+    budgetAllowed: true,
+  });
+  assert.equal(fullWithGates.allowed, true);
+  assert.deepEqual(fullWithGates.reasons, []);
+  assert.equal(fullWithGates.dispatchMode, "act");
 });
 
 test("Agents V1 redaction removes raw secrets and private local paths at boundaries", () => {

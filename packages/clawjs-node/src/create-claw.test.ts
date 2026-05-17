@@ -118,6 +118,16 @@ test("createClaw exposes Agents V1 policy gates through claw.agents", async () =
   assert.equal(severity.connectorGateRequired, true);
   assert.equal(severity.budgetRequired, true);
 
+  const autonomy = claw.agents.autonomyCheck({
+    profile: "act_full",
+    action: { action: "invoke", resourceType: "connector", paidAction: true, externalSideEffect: true },
+    approvalGranted: true,
+    connectorGateAllowed: true,
+    budgetAllowed: true,
+  });
+  assert.equal(autonomy.allowed, true);
+  assert.equal(autonomy.dispatchMode, "act");
+
   const service = claw.agents.serviceApi({
     requestId: "request.sdk.service",
     operation: "describe_agent",

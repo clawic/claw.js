@@ -156,6 +156,7 @@ claw agents project-support-inbox --record '{"sessionId":"session-1","assignment
 claw agents memory-check --record '{"policy":{"readScopes":[{"layer":"global","access":"read"}],"writeScopes":[{"layer":"agent_private","access":"write"}],"writePolicy":"private_only"},"request":{"operation":"write","layer":"agent_private"}}' --json
 claw agents budget-check --record '{"policy":{"exceededBehavior":"deny_action","limits":[{"dimension":"external_actions","limit":5,"used":1}]},"request":{"dimension":"external_actions","cost":1,"externalPaidAction":true,"connectorGateAllowed":true}}' --json
 claw agents action-severity --record '{"action":"invoke","resourceType":"connector","externalSideEffect":true,"paidAction":true}' --json
+claw agents autonomy-check --record '{"profile":"act_limited","action":{"action":"invoke","resourceType":"connector","externalSideEffect":true,"paidAction":true},"connectorGateAllowed":true,"budgetAllowed":true}' --json
 claw agents surface-projection --record '{"surface":"relay","agent":{"id":"agent.ops","name":"Ops","secretAllowlist":["vault://agents/ops"]},"assignments":[{"id":"assignment.relay","agentId":"agent.ops","kind":"relay","status":"active","channel":"relay"}],"budgets":[{"id":"budget.relay","exceededBehavior":"deny_action","limits":[{"dimension":"external_actions","limit":10}]}]}' --json
 claw agents config-revision --record '{"agentId":"agent.ops","revision":2,"actorId":"actor.owner","reason":"Tighten MCP assignment","configSnapshot":{"name":"Ops","secretAllowlist":["vault://agents/ops"]}}' --json
 claw agents incident --record '{"agentId":"agent.ops","assignmentId":"assignment.relay","severity":"high","summary":"Unsafe route blocked","metadata":{"rawTraceRef":"trace:redacted"}}' --json
@@ -195,7 +196,9 @@ can approve or change another agent. Budgets are checked with `budget-check`;
 external paid actions require both a budget allowance and connector gate before dispatch.
 `action-severity` classifies proposed actions as `info`, `low`, `medium`,
 `high`, or `critical` and returns the approval, connector, budget, and host
-gates required before dispatch.
+gates required before dispatch. `autonomy-check` applies the agent's
+`respond_only`, `suggest`, `act_limited`, or `act_full` profile to that
+severity and gate state before an action can be dispatched.
 The SDK exposes the same Agents V1 policy layer through `createClaw().agents`
 for multidimensional budgets, redacted audit events, and safe
 `claw_agent_package` export. Package

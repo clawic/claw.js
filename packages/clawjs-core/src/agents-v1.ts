@@ -362,6 +362,27 @@ export interface AgentActionSeverityResult {
   hostGateRequired: boolean;
 }
 
+export type AgentAutonomyProfile = "respond_only" | "suggest" | "act_limited" | "act_full";
+export type AgentAutonomyDispatchMode = "respond_only" | "suggest_only" | "act";
+
+export interface AgentAutonomyPolicyInput {
+  profile: AgentAutonomyProfile;
+  action: AgentActionSeverityRequest;
+  approvalGranted?: boolean;
+  connectorGateAllowed?: boolean;
+  budgetAllowed?: boolean;
+  hostGateAllowed?: boolean;
+}
+
+export interface AgentAutonomyPolicyResult {
+  allowed: boolean;
+  profile: AgentAutonomyProfile;
+  dispatchMode: AgentAutonomyDispatchMode;
+  severity: AgentActionSeverity;
+  reasons: string[];
+  requiredGates: string[];
+}
+
 export type AgentAuditEventKind =
   | "blueprint"
   | "evaluation"
@@ -981,6 +1002,48 @@ export function evaluateAgentActionSeverity(request: AgentActionSeverityRequest)
     connectorGateRequired: request.externalSideEffect === true || request.paidAction === true,
     budgetRequired: request.paidAction === true,
     hostGateRequired: request.nativeHostAccess === true,
+  };
+}
+
+export function evaluateAgentAutonomyPolicy(input: AgentAutonomyPolicyInput): AgentAutonomyPolicyResult {
+  const actionSeverity = evaluateAgentActionSeverity(input.action);
+  const reasons: string[] = [];
+  const requiredGates = new Set<string>();
+  const dispatchMode = autonomyDispatchMode(input.profile);
+  if (input.profile === "respond_only" && input.action.action !== "read") {
+    reasons.push(`autonomy: respond_only cannot dispatch ${input.action.action}`);
+  }
+  if (input.profile === "suggest" && input.action.action !== "read") {
+    reasons.push(`autonomy: suggest requires human approval before dispatching ${input.action.action}`);
+    requiredGates.add("human_approval");
+  }
+  const maxSeverity = maxAutonomySeverity(input.profile);
+  if (AGENT_ACTION_SEVERITY_RANK[actionSeverity.severity] > AGENT_ACTION_SEVERITY_RANK[maxSeverity]) {
+    reasons.push(`autonomy: ${actionSeverity.severity} exceeds ${input.profile} limit ${maxSeverity}`);
+  }
+  if (actionSeverity.approvalRequired && input.approvalGranted !== true) {
+    reasons.push("autonomy: approval required");
+    requiredGates.add("approval");
+  }
+  if (actionSeverity.connectorGateRequired && input.connectorGateAllowed !== true) {
+    reasons.push("autonomy: connector gate required");
+    requiredGates.add("connector");
+  }
+  if (actionSeverity.budgetRequired && input.budgetAllowed !== true) {
+    reasons.push("autonomy: budget gate required");
+    requiredGates.add("budget");
+  }
+  if (actionSeverity.hostGateRequired && input.hostGateAllowed !== true) {
+    reasons.push("autonomy: host gate required");
+    requiredGates.add("host");
+  }
+  return {
+    allowed: reasons.length === 0,
+    profile: input.profile,
+    dispatchMode,
+    severity: actionSeverity.severity,
+    reasons,
+    requiredGates: [...requiredGates],
   };
 }
 
@@ -1695,6 +1758,19 @@ function severityRankForAction(action: AgentResourceAction | string): number {
   if (action === "invoke" || action === "execute" || action === "lease_secret" || action === "approve") return AGENT_ACTION_SEVERITY_RANK.high;
   if (action === "delete" || action === "*") return AGENT_ACTION_SEVERITY_RANK.critical;
   return AGENT_ACTION_SEVERITY_RANK.medium;
+}
+
+function autonomyDispatchMode(profile: AgentAutonomyProfile): AgentAutonomyDispatchMode {
+  if (profile === "respond_only") return "respond_only";
+  if (profile === "suggest") return "suggest_only";
+  return "act";
+}
+
+function maxAutonomySeverity(profile: AgentAutonomyProfile): AgentActionSeverity {
+  if (profile === "respond_only") return "low";
+  if (profile === "suggest") return "medium";
+  if (profile === "act_limited") return "medium";
+  return "high";
 }
 
 const SUPERVISOR_RISK_RANK: Record<AgentPermissionEscalationRequest["risk"], number> = {

@@ -79,6 +79,7 @@ test("runCli exposes Agents V1 safe surface projection gate", async () => {
     assert.equal(schema.gates.includes("delegation-check"), true);
     assert.equal(schema.gates.includes("budget-check"), true);
     assert.equal(schema.gates.includes("action-severity"), true);
+    assert.equal(schema.gates.includes("autonomy-check"), true);
     assert.equal(schema.gates.includes("config-revision"), true);
     assert.equal(schema.gates.includes("incident"), true);
     assert.equal(schema.gates.includes("activity-feed"), true);
@@ -105,6 +106,24 @@ test("runCli exposes Agents V1 safe surface projection gate", async () => {
     assert.equal(actionSeverity.severity, "critical");
     assert.equal(actionSeverity.approvalRequired, true);
     assert.equal(actionSeverity.hostGateRequired, true);
+
+    const autonomyStdout = captureStream();
+    assert.equal(await runCli(["agents", "autonomy-check", "--record", JSON.stringify({
+      profile: "suggest",
+      action: { action: "update", resourceType: "collection" },
+    }), "--json"], {
+      stdout: autonomyStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const autonomy = parseCliJsonPayload(autonomyStdout.getOutput()) as {
+      allowed: boolean;
+      dispatchMode: string;
+      requiredGates: string[];
+    };
+    assert.equal(autonomy.allowed, false);
+    assert.equal(autonomy.dispatchMode, "suggest_only");
+    assert.equal(autonomy.requiredGates.includes("human_approval"), true);
 
     const surfaceProjectionStdout = captureStream();
     assert.equal(await runCli(["agents", "surface-projection", "--record", JSON.stringify({
