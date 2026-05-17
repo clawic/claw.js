@@ -1,3 +1,8 @@
+import type {
+  AgentAssignmentRouteRequest,
+  AgentEffectiveAccessInput,
+} from "@clawjs/core";
+
 export type MCPTransport = "stdio" | "http" | "sse";
 
 export interface MCPServerRecord {
@@ -45,6 +50,12 @@ export interface MCPToolCallInput {
   toolName?: string;
   args?: Record<string, unknown>;
   controlPlane?: import("./control-plane.ts").MCPConnectorControlPlaneInput;
+  agentPolicy?: MCPAgentAssignmentPolicyInput;
+}
+
+export interface MCPAgentAssignmentPolicyInput {
+  route: AgentAssignmentRouteRequest;
+  access: AgentEffectiveAccessInput;
 }
 
 export interface MCPToolCallResult {

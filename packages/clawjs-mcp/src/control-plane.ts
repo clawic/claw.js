@@ -1,5 +1,9 @@
 import {
+  evaluateAgentAssignmentRoute,
+  evaluateAgentEffectiveAccess,
   evaluateConnectorControlPlaneRequest,
+  type AgentEffectiveAccessResult,
+  type AgentAssignmentRouteResult,
   type ConnectorApprovalGrant,
   type ConnectorBudget,
   type ConnectorControlPlaneDecision,
@@ -10,7 +14,7 @@ import {
   type ConnectorProvider,
 } from "@clawjs/core";
 
-import type { MCPServerRecord, MCPToolRecord } from "./types.ts";
+import type { MCPAgentAssignmentPolicyInput, MCPServerRecord, MCPToolRecord } from "./types.ts";
 
 export interface MCPConnectorControlPlaneInput {
   capabilityId?: string;
@@ -27,12 +31,33 @@ export interface MCPConnectorControlPlaneInput {
   networkPolicyId?: string;
 }
 
+export interface MCPAgentAssignmentPolicyDecision {
+  route: AgentAssignmentRouteResult;
+  access: AgentEffectiveAccessResult;
+}
+
+export function assertMCPAgentAssignmentPolicy(input?: MCPAgentAssignmentPolicyInput): MCPAgentAssignmentPolicyDecision {
+  if (!input) {
+    throw new Error("MCP tool execution requires Agents V1 assignment policy.");
+  }
+  const route = evaluateAgentAssignmentRoute(input.route);
+  if (!route.allowed) {
+    throw new Error(`MCP Agents V1 assignment route denied execution: ${route.reasons.join(", ")}`);
+  }
+  const access = evaluateAgentEffectiveAccess(input.access);
+  if (!access.allowed) {
+    throw new Error(`MCP Agents V1 effective access denied execution: ${access.reasons.join(", ")}`);
+  }
+  return { route, access };
+}
+
 export function assertMCPToolControlPlane(input: {
   server: MCPServerRecord;
   tool: MCPToolRecord;
   controlPlane?: MCPConnectorControlPlaneInput;
+  agentPolicy?: MCPAgentAssignmentPolicyInput;
 }): ConnectorControlPlaneDecision {
-  const { server, tool, controlPlane } = input;
+  const { server, tool, controlPlane, agentPolicy } = input;
   if (!controlPlane) {
     throw new Error("MCP tool execution requires connector control plane approval.");
   }
@@ -79,5 +104,6 @@ export function assertMCPToolControlPlane(input: {
   if (!decision.allowed) {
     throw new Error(`MCP connector control plane denied execution: ${decision.reasons.map((reason) => reason.code).join(", ")}`);
   }
+  assertMCPAgentAssignmentPolicy(agentPolicy);
   return decision;
 }

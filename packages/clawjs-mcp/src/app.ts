@@ -130,7 +130,7 @@ export function buildMCPApp(options: BuildMCPAppOptions = {}) {
     const server = store.getServer(tool.serverId);
     if (!server) return await reply.code(404).send({ error: "server_not_found" });
     try {
-      assertMCPToolControlPlane({ server, tool, controlPlane: body.controlPlane });
+      assertMCPToolControlPlane({ server, tool, controlPlane: body.controlPlane, agentPolicy: body.agentPolicy });
     } catch (error) {
       return await reply.code(403).send({ error: error instanceof Error ? error.message : String(error) });
     }
