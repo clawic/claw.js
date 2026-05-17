@@ -32,6 +32,7 @@ const agentDocs = [
   "CLAUDE.md",
   "docs/decision-map.md",
   "docs/v1-surface-closure-decisions.json",
+  "docs/v1-surface-closure-acceptance.json",
   "docs/v1-surface-closure-completion-audit.md",
   "docs/host-ownership.md",
   "docs/data-storage-boundary.md",
