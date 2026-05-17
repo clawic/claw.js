@@ -1074,7 +1074,7 @@ test("runCli seeds the dense-data acceptance fixture into the shared database", 
 
   const domainSystemGet = await runCliCapture(["domain-system", "get", "fixture_domain_system_health", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(domainSystemGet.code, CLI_EXIT_OK);
-  const domainSystemPayload = JSON.parse(domainSystemGet.stdout) as { data: { key: string; canonicalCommand: string; orchestrator?: boolean; metadata: { orchestrator: boolean } }; meta: { collection: string; action: string } };
+  const domainSystemPayload = JSON.parse(domainSystemGet.stdout) as { data: { key: string; canonicalCommand: string; metadata: { orchestrator: boolean } }; meta: { collection: string; action: string } };
   assert.equal(domainSystemPayload.meta.collection, "domain_systems");
   assert.equal(domainSystemPayload.data.key, "health");
   assert.equal(domainSystemPayload.data.canonicalCommand, "health");
