@@ -38,6 +38,23 @@ function forbidFile(relativePath, reason) {
   }
 }
 
+function listFiles(relativeDir, output = []) {
+  const absoluteDir = path.join(rootDir, relativeDir);
+  if (!fs.existsSync(absoluteDir)) return output;
+  for (const entry of fs.readdirSync(absoluteDir, { withFileTypes: true })) {
+    if (["node_modules", "dist", "coverage", ".next", ".tmp", ".data", "artifacts", "test-results"].includes(entry.name)) {
+      continue;
+    }
+    const relativePath = path.join(relativeDir, entry.name);
+    if (entry.isDirectory()) {
+      listFiles(relativePath, output);
+    } else if (entry.isFile()) {
+      output.push(relativePath);
+    }
+  }
+  return output;
+}
+
 function readJson(relativePath) {
   return JSON.parse(read(relativePath));
 }
@@ -484,6 +501,63 @@ for (const relativePath of ["docs/workspace.md", "docs/setup.md", "docs/getting-
     ".clawjs/sessions",
   ]) {
     forbidSnippet(relativePath, snippet);
+  }
+}
+
+const implementationRoots = [
+  "apps",
+  "audio",
+  "bridge",
+  "content",
+  "database",
+  "delegation",
+  "drive",
+  "execution",
+  "integrations",
+  "iot",
+  "mcp",
+  "memory",
+  "modules",
+  "monitor",
+  "notify",
+  "packages",
+  "publishing",
+  "relay",
+  "runtime",
+  "secrets",
+  "sessions",
+  "storage",
+  "time",
+  "wiki",
+];
+const implementationFileExtensions = new Set([
+  ".cjs",
+  ".cs",
+  ".cts",
+  ".js",
+  ".jsx",
+  ".kt",
+  ".mjs",
+  ".mts",
+  ".swift",
+  ".ts",
+  ".tsx",
+]);
+for (const root of implementationRoots) {
+  for (const relativePath of listFiles(root)) {
+    if (!implementationFileExtensions.has(path.extname(relativePath))) continue;
+    const text = read(relativePath);
+    for (const pattern of [
+      /["'`]~\/\.clawjs(?:\/|["'`])/,
+      /["'`]\.clawjs(?:\/|["'`])/,
+      /path\.join\s*\([^;\n]*["'`]\.clawjs["'`]/,
+      /join\s*\([^;\n]*["'`]\.clawjs["'`]/,
+    ]) {
+      if (pattern.test(text)) {
+        fail(`${relativePath} must not introduce retired .clawjs workspace paths in implementation code`);
+        break;
+      }
+    }
   }
 }
 
