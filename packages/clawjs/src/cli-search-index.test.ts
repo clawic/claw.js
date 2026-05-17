@@ -1358,6 +1358,76 @@ test("search service resource jobs refresh only the targeted connector operation
   });
 });
 
+test("search shards lists physical shard catalog state", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-shards-cli-"));
+  const dataRoot = path.join(workspaceRoot, ".claw", "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    fs.mkdirSync(dataRoot, { recursive: true });
+    const store = new SearchStore(path.join(dataRoot, "search.sqlite"));
+    try {
+      store.registerSource(createFrameworkSearchSourceManifest({
+        id: "images.derived",
+        domain: "images",
+        name: "Images",
+        resultTypes: ["image"],
+      }));
+      store.upsertDocument({
+        id: "images.derived:hot:board",
+        source: "images.derived",
+        shard: "hot",
+        domain: "images",
+        type: "image",
+        title: "Hot board",
+        body: "search shard inspection",
+        fragments: [{
+          id: "images.derived:hot:board:ocr",
+          title: "ocr",
+          body: "pipeline labels",
+        }],
+      });
+      store.upsertDocument({
+        id: "images.derived:cold:board",
+        source: "images.derived",
+        shard: "cold",
+        domain: "images",
+        type: "image",
+        title: "Cold board",
+        body: "archive shard inspection",
+      });
+    } finally {
+      store.close();
+    }
+
+    const shards = await runCliCapture(["search", "shards", "--source", "images.derived", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(shards.code, CLI_EXIT_OK);
+    const payload = JSON.parse(shards.stdout) as {
+      data: {
+        state: string;
+        source: string;
+        domain: string | null;
+        shards: Array<{ source: string; shard: string; domain: string; state: string; documentCount: number; fragmentCount: number }>;
+      };
+    };
+    assert.equal(payload.data.state, "ready");
+    assert.equal(payload.data.source, "images.derived");
+    assert.equal(payload.data.domain, null);
+    assert.deepEqual(payload.data.shards.map((shard) => [shard.source, shard.shard, shard.domain, shard.state, shard.documentCount, shard.fragmentCount]), [
+      ["images.derived", "cold", "images", "active", 1, 0],
+      ["images.derived", "hot", "images", "active", 1, 1],
+    ]);
+
+    const human = await runCliCapture(["search", "shards", "--domain", "images", "--data-dir", dataRoot], workspaceRoot);
+    assert.equal(human.code, CLI_EXIT_OK);
+    assert.match(human.stdout, /images\.derived\thot\timages\tactive\tdocuments=1\tfragments=1/);
+  });
+});
+
 test("search rebuild indexes runtime.events from runtime and operational sidecars", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-runtime-"));
   const dataRoot = path.join(workspaceRoot, "data");

@@ -119,6 +119,7 @@ claw search service status --json
 claw search service start --json
 claw search service run-once --max-jobs 10 --max-runtime-ms 30000 --max-failures 3 --json
 claw search service stop --json
+claw search shards --source images.derived --json
 claw search rebuild --json
 claw search rebuild --source generations.artifacts --json
 claw search rebuild --code-root /path/to/project --code-limit 500 --json

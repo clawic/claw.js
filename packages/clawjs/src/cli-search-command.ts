@@ -34,7 +34,7 @@ import { ensureImageDerivedResourceIndexed, ensureImagesDerivedSourceIndexed, en
 import { pathSafeBasename, resolveRuntimeAdapterId } from "./cli-runtime-utils.ts";
 import { resolveClawjsDataRoot, resolveClawjsMainDbPath } from "./v1-data.ts";
 
-const SEARCH_ADMIN_COMMANDS = new Set(["sources", "status", "service", "profiles", "saved", "monitors", "actions", "audit", "jobs", "explain"]);
+const SEARCH_ADMIN_COMMANDS = new Set(["sources", "status", "service", "profiles", "saved", "monitors", "actions", "audit", "jobs", "shards", "explain"]);
 const WORKSPACE_SEARCH_DOMAINS = new Set([
   "areas",
   "tasks",
@@ -693,6 +693,30 @@ export async function runSearchAdminCli(input: {
     }
     if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "jobs" });
     else input.context.stdout.write(`${data.items.map((item) => formatSearchJobLine(item)).join("\n")}\n`);
+    return CLI_EXIT_OK;
+  }
+
+  if (command === "shards") {
+    const store = openCliSearchStore(input.flags);
+    let shards: ReturnType<SearchStore["listShards"]>;
+    try {
+      registerBuiltinSources(store);
+      shards = store.listShards({
+        source: input.flags.source,
+        domain: input.flags.domain,
+      });
+    } finally {
+      store.close();
+    }
+    const data = {
+      state: shards.length ? "ready" : "empty",
+      profile,
+      source: input.flags.source ?? null,
+      domain: input.flags.domain ?? null,
+      shards,
+    };
+    if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "shards" });
+    else input.context.stdout.write(`${shards.map((shard) => formatSearchShardLine(shard)).join("\n")}\n`);
     return CLI_EXIT_OK;
   }
 
@@ -4756,6 +4780,12 @@ function formatSearchJobLine(item: unknown): string {
   if (!item || typeof item !== "object") return String(item);
   const job = item as { id?: string; source?: string; shard?: string; operation?: string; status?: string; attempts?: number };
   return `${job.id ?? ""}\t${job.source ?? ""}\t${job.shard ?? ""}\t${job.operation ?? ""}\t${job.status ?? ""}\tattempts=${job.attempts ?? 0}`;
+}
+
+function formatSearchShardLine(item: unknown): string {
+  if (!item || typeof item !== "object") return String(item);
+  const shard = item as { source?: string; shard?: string; domain?: string; state?: string; documentCount?: number; fragmentCount?: number };
+  return `${shard.source ?? ""}\t${shard.shard ?? ""}\t${shard.domain ?? ""}\t${shard.state ?? ""}\tdocuments=${shard.documentCount ?? 0}\tfragments=${shard.fragmentCount ?? 0}`;
 }
 
 function parseSearchEmbeddingFlag(value: string | undefined, model: string | undefined): { model: string; vector: number[] } | undefined {
