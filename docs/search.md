@@ -448,8 +448,8 @@ id, action id, risk, grant, approval status, and compact metadata. `claw search
 audit` lists those derived records for admin/debug surfaces.
 
 `@clawjs/search-mcp` exposes the same Search sidecar directly through
-`@clawjs/search`; it does not depend on the legacy Index package. Its historical
-`clawjs-index-mcp` binary name is retained only as technical compatibility.
+`@clawjs/search`; it does not depend on the legacy Index package and publishes
+the `claw-search-mcp` binary.
 
 The showcase app exposes `/search-index` as the Search Index admin surface. It
 shows framework and full-profile sources separately, keeps optional native/web/
