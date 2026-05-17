@@ -58,7 +58,7 @@ backfill jobs.
 | `code.symbols` | `code` | bounded project file/symbol/docs projection into `search.sqlite` | implemented initial adapter |
 | `local.files` | `files` | bounded local file metadata and text-content projection | implemented opt-in adapter, `full`, off by default |
 | `native.system` | `native` | native app/system/contact adapters | EXTERNAL PENDING, `full`, off by default |
-| `web.ingested` | `web` | explicit web ingestion and crawler cache | EXTERNAL PENDING, `full`, off by default |
+| `web.ingested` | `web` | bounded explicit web cache ingestion | implemented opt-in adapter, `full`, off by default |
 | `external.cache` | `external` | provider reference + local cache adapters | EXTERNAL PENDING, `full`, off by default |
 
 ## CLI
@@ -77,6 +77,9 @@ claw search query "symbolName" --domains code --code-root /path/to/project --jso
 claw search sources enable local.files --profile full --json
 claw search rebuild --source local.files --profile full --file-root /path/to/folder --json
 claw search query "invoice" --domains files --profile full --file-root /path/to/folder --json
+claw search sources enable web.ingested --profile full --json
+claw search rebuild --source web.ingested --profile full --web-root /path/to/web-cache --json
+claw search query "release notes" --domains web --profile full --web-root /path/to/web-cache --json
 claw search query "diagram" --domains images --shards hot --json
 claw search query "related concept" --domains documents --strategy hybrid --embedding-model local --embedding '[0.1,0.2,0.3]' --json
 claw search sources --json
@@ -206,6 +209,14 @@ office/media files are indexed by metadata and path only. Dependency/build/
 cache/private control directories are skipped, and the source participates in
 scoped query refresh, rebuild accounting, and Search service `run-once` jobs
 only when selected.
+
+`web.ingested` is the first explicit web cache adapter. It does not crawl the
+network itself; it indexes bounded local exports under `--web-root` after the
+full-profile source is explicitly enabled. Supported cache files are HTML, text,
+Markdown, and JSON records with fields such as `url`, `title`, `description`,
+`text`, `html`, `crawlScope`, and `updatedAt`. `--web-limit`,
+`--web-max-depth`, and `--web-max-bytes` cap ingestion, and the adapter also
+participates in Search service `run-once` jobs.
 
 `documents.blocks` projects framework document records from `core.sqlite`.
 Documents are returned as scoped section results, while document blocks are

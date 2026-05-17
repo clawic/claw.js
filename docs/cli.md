@@ -577,6 +577,8 @@ claw search query "release branch" --json
 claw search sources --json
 claw search sources enable local.files --profile full --json
 claw search query "invoice" --domains files --profile full --file-root ~/Documents --json
+claw search sources enable web.ingested --profile full --json
+claw search query "release notes" --domains web --profile full --web-root ./web-cache --json
 claw search status --json
 claw search service status --json
 claw search service run-once --json

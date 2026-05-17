@@ -183,6 +183,71 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(fileResult?.actions?.some((action) => action.id === "open" && action.kind === "open"), true);
     assert.equal(localFileQueryPayload.data.results.some((result) => result.title === "hidden.txt"), false);
 
+    const webRoot = path.join(workspaceRoot, "web-cache");
+    fs.mkdirSync(webRoot, { recursive: true });
+    fs.writeFileSync(path.join(webRoot, "release.html"), [
+      "<html><head><title>Release Notes</title>",
+      "<meta name=\"description\" content=\"Framework release notes\"></head>",
+      "<body><h1>Release Notes</h1><p>Semantic crawler cache and explicit web ingestion.</p></body></html>",
+    ].join(""));
+    fs.writeFileSync(path.join(webRoot, "provider.json"), JSON.stringify({
+      url: "https://example.com/provider",
+      title: "Provider Cache",
+      description: "External provider notes",
+      text: "Provider cache mentions ingestion contracts.",
+      crawlScope: "manual",
+      updatedAt: "2026-05-17T10:00:00.000Z",
+    }));
+
+    const webDefaultQuery = await runCliCapture(["search", "query", "semantic crawler", "--domains", "web", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(webDefaultQuery.code, CLI_EXIT_DEGRADED);
+    const webDefaultPayload = JSON.parse(webDefaultQuery.stdout) as {
+      data: { results: unknown[]; omittedSources: Array<{ source: string; reason: string }> };
+    };
+    assert.deepEqual(webDefaultPayload.data.results, []);
+    assert.equal(webDefaultPayload.data.omittedSources.some((source) => source.source === "web.ingested" && source.reason === "profile"), true);
+
+    const enableWeb = await runCliCapture(["search", "sources", "enable", "web.ingested", "--profile", "full", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(enableWeb.code, CLI_EXIT_OK);
+
+    const webRebuild = await runCliCapture(["search", "rebuild", "--source", "web.ingested", "--profile", "full", "--web-root", webRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(webRebuild.code, CLI_EXIT_OK);
+    const webRebuildPayload = JSON.parse(webRebuild.stdout) as {
+      data: { sources: string[]; indexedBySource: { "web.ingested": number }; pendingSources: string[] };
+    };
+    assert.equal(webRebuildPayload.data.sources.includes("web.ingested"), true);
+    assert.equal(webRebuildPayload.data.indexedBySource["web.ingested"], 2);
+    assert.equal(webRebuildPayload.data.pendingSources.includes("web.ingested"), false);
+
+    const webQuery = await runCliCapture(["search", "query", "semantic crawler", "--domains", "web", "--profile", "full", "--web-root", webRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(webQuery.code, CLI_EXIT_OK);
+    const webQueryPayload = JSON.parse(webQuery.stdout) as {
+      data: {
+        indexedFastPaths: { "web.ingested": number };
+        results: Array<{ source: string; domain: string; type: string; title: string; metadata?: { host?: string; crawlScope?: string; contentType?: string }; actions?: Array<{ id: string; kind: string }> }>;
+      };
+    };
+    assert.equal(webQueryPayload.data.indexedFastPaths["web.ingested"], 2);
+    const webResult = webQueryPayload.data.results.find((result) => result.title === "Release Notes");
+    assert.equal(webResult?.source, "web.ingested");
+    assert.equal(webResult?.domain, "web");
+    assert.equal(webResult?.type, "page");
+    assert.equal(webResult?.metadata?.crawlScope, "explicit_cache");
+    assert.equal(webResult?.metadata?.contentType, "text/html");
+    assert.equal(webResult?.actions?.some((action) => action.id === "open" && action.kind === "open"), true);
+
+    const webServiceJob = await runCliCapture(["search", "jobs", "enqueue", "rebuild", "--source", "web.ingested", "--id", "job:service:web", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(webServiceJob.code, CLI_EXIT_OK);
+    const webServiceRun = await runCliCapture(["search", "service", "run-once", "--source", "web.ingested", "--web-root", webRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(webServiceRun.code, CLI_EXIT_OK);
+    const webServiceRunPayload = JSON.parse(webServiceRun.stdout) as {
+      data: { worker?: { items: Array<{ id: string; source: string; status: string; indexed?: number }> } };
+    };
+    assert.equal(webServiceRunPayload.data.worker?.items[0]?.id, "job:service:web");
+    assert.equal(webServiceRunPayload.data.worker?.items[0]?.source, "web.ingested");
+    assert.equal(webServiceRunPayload.data.worker?.items[0]?.status, "done");
+    assert.equal(webServiceRunPayload.data.worker?.items[0]?.indexed, 2);
+
     const sensitiveQuery = await runCliCapture(["search", "query", "secret token", "--data-dir", dataRoot, "--json", "--actor", "agent:codex", "--surface", "cli"], workspaceRoot);
     assert.equal(sensitiveQuery.code, CLI_EXIT_DEGRADED);
     const sensitiveAudit = await runCliCapture(["search", "audit", "--type", "sensitive_query", "--data-dir", dataRoot, "--json"], workspaceRoot);
@@ -309,7 +374,7 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     const serviceStatusPayload = JSON.parse(serviceStatus.stdout) as {
       data: { service: { state: string; mode: string }; queuedJobs: number; sources: Array<{ source: string }> };
     };
-    assert.equal(serviceStatusPayload.data.service.state, "stopped");
+    assert.equal(serviceStatusPayload.data.service.state, "ready");
     assert.equal(serviceStatusPayload.data.service.mode, "embedded");
     assert.equal(serviceStatusPayload.data.sources.some((source) => source.source === "commands"), true);
 

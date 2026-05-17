@@ -103,6 +103,7 @@ export async function runSearchQueryCli(input: {
     const shouldRefreshGenerations = domains?.includes("generations") || sources?.includes("generations.artifacts");
     const shouldRefreshCode = domains?.includes("code") || sources?.includes("code.symbols");
     const shouldRefreshLocalFiles = domains?.includes("files") || sources?.includes("local.files");
+    const shouldRefreshWeb = domains?.includes("web") || sources?.includes("web.ingested");
     const indexedDatabase = shouldRefreshDatabase && sourceCanIndex(store, "database.records") ? ensureDatabaseRecordsSourceIndexed(store, input.flags) : 0;
     const indexedDocuments = shouldRefreshDocuments && sourceCanIndex(store, "documents.blocks") ? ensureDocumentsBlocksSourceIndexed(store, input.flags) : 0;
     const indexedImages = shouldRefreshImages && sourceCanIndex(store, "images.derived") ? ensureImagesDerivedSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -110,6 +111,7 @@ export async function runSearchQueryCli(input: {
     const indexedGenerations = shouldRefreshGenerations && sourceCanIndex(store, "generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedCode = shouldRefreshCode && sourceCanIndex(store, "code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedLocalFiles = shouldRefreshLocalFiles && sourceCanIndex(store, "local.files") ? ensureLocalFilesSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const indexedWeb = shouldRefreshWeb && sourceCanIndex(store, "web.ingested") ? ensureWebIngestedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const filters = parseSearchFiltersFlag(input.flags.filters ?? input.flags.filter);
     const strategy = parseSearchStrategyFlag(input.flags.strategy);
     const embedding = parseSearchEmbeddingFlag(input.flags.embedding ?? input.flags["embedding-json"], input.flags["embedding-model"] ?? input.flags.model);
@@ -160,6 +162,7 @@ export async function runSearchQueryCli(input: {
         ...(shouldRefreshGenerations ? { "generations.artifacts": indexedGenerations } : {}),
         ...(shouldRefreshCode ? { "code.symbols": indexedCode } : {}),
         ...(shouldRefreshLocalFiles ? { "local.files": indexedLocalFiles } : {}),
+        ...(shouldRefreshWeb ? { "web.ingested": indexedWeb } : {}),
       },
     };
     if (input.wantsJson) {
@@ -231,6 +234,7 @@ export async function runSearchRebuildCli(input: {
     const generationsIndexed = rebuildsSource("generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const codeIndexed = rebuildsSource("code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const localFilesIndexed = rebuildsSource("local.files") ? ensureLocalFilesSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const webIndexed = rebuildsSource("web.ingested") ? ensureWebIngestedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedSourceIds = new Set([
       ...(commandsIndexed > 0 ? ["commands"] : []),
       ...(sessionsIndexed > 0 ? ["sessions.chats"] : []),
@@ -241,6 +245,7 @@ export async function runSearchRebuildCli(input: {
       ...(generationsIndexed > 0 ? ["generations.artifacts"] : []),
       ...(codeIndexed > 0 ? ["code.symbols"] : []),
       ...(localFilesIndexed > 0 ? ["local.files"] : []),
+      ...(webIndexed > 0 ? ["web.ingested"] : []),
     ]);
     const pendingScope = selectedSources ?? BUILTIN_SEARCH_SOURCES.map((source) => source.id);
     const pendingSources = BUILTIN_SEARCH_SOURCES
@@ -251,7 +256,7 @@ export async function runSearchRebuildCli(input: {
       rebuilt: true,
       mode: selectedSources ? "scoped" : "full",
       selectedSources: selectedSources ?? null,
-      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + documentsIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + localFilesIndexed,
+      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + documentsIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + localFilesIndexed + webIndexed,
       embeddings: 0,
       profile: input.flags.profile === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
@@ -266,6 +271,7 @@ export async function runSearchRebuildCli(input: {
         "generations.artifacts": generationsIndexed,
         "code.symbols": codeIndexed,
         "local.files": localFilesIndexed,
+        "web.ingested": webIndexed,
       },
       pendingSources,
       note: "Framework domain sources keep independent fast paths; heavyweight extractors remain async or explicit.",
@@ -778,6 +784,8 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
       return ensureCodeSymbolsSourceIndexed(store, flags, cwd);
     case "local.files":
       return ensureLocalFilesSourceIndexed(store, flags, cwd);
+    case "web.ingested":
+      return ensureWebIngestedSourceIndexed(store, flags, cwd);
     default:
       throw new Error(`Search service cannot index source: ${job.source}`);
   }
@@ -1237,6 +1245,74 @@ function ensureLocalFilesSourceIndexed(store: SearchStore, flags: Record<string,
   return indexed;
 }
 
+function ensureWebIngestedSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {
+  const root = resolveWebIngestedRoot(flags, cwd);
+  if (!fs.existsSync(root)) {
+    store.setSourceState("web.ingested", "degraded", {
+      backlog: 0,
+      error: `web cache root does not exist: ${root}`,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 0;
+  }
+  const maxFiles = boundedNumberFlag(flags["web-limit"] ?? flags["web-cache-limit"], 500, 1, 20000);
+  const maxDepth = boundedNumberFlag(flags["web-max-depth"] ?? flags["web-cache-max-depth"], 8, 1, 32);
+  const maxBytes = boundedNumberFlag(flags["web-max-bytes"] ?? flags["web-cache-max-bytes"], 512 * 1024, 1024, 4 * 1024 * 1024);
+  const files = discoverWebIngestedFiles(root, { maxFiles, maxDepth, maxBytes });
+  let indexed = 0;
+  for (const file of files) {
+    const document = webIngestedSearchDocument(root, file, maxBytes);
+    if (!document) continue;
+    store.upsertDocument(document);
+    indexed += 1;
+  }
+  store.setCursor({
+    source: "web.ingested",
+    cursor: `root:${stableSearchId(root)}:pages:${indexed}`,
+    metadata: { root, maxFiles, maxDepth, maxBytes },
+  });
+  store.setSourceState("web.ingested", "enabled", {
+    backlog: 0,
+    error: null,
+    lastIndexedAt: new Date().toISOString(),
+  });
+  return indexed;
+}
+
+function ensureExternalCacheSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {
+  const root = resolveExternalCacheRoot(flags, cwd);
+  if (!fs.existsSync(root)) {
+    store.setSourceState("external.cache", "degraded", {
+      backlog: 0,
+      error: `external cache root does not exist: ${root}`,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 0;
+  }
+  const maxFiles = boundedNumberFlag(flags["external-limit"] ?? flags["external-cache-limit"], 500, 1, 20000);
+  const maxDepth = boundedNumberFlag(flags["external-max-depth"] ?? flags["external-cache-max-depth"], 8, 1, 32);
+  const maxBytes = boundedNumberFlag(flags["external-max-bytes"] ?? flags["external-cache-max-bytes"], 512 * 1024, 1024, 4 * 1024 * 1024);
+  const files = discoverExternalCacheFiles(root, { maxFiles, maxDepth, maxBytes });
+  let indexed = 0;
+  for (const file of files) {
+    const document = externalCacheSearchDocument(root, file, maxBytes);
+    if (!document) continue;
+    store.upsertDocument(document);
+    indexed += 1;
+  }
+  store.setCursor({
+    source: "external.cache",
+    cursor: `root:${stableSearchId(root)}:items:${indexed}`,
+    metadata: { root, maxFiles, maxDepth, maxBytes },
+  });
+  store.setSourceState("external.cache", "enabled", {
+    backlog: 0,
+    error: null,
+    lastIndexedAt: new Date().toISOString(),
+  });
+  return indexed;
+}
+
 function resolveSessionsDbPath(flags: Record<string, string>): string {
   if (flags["sessions-db-path"]) return path.resolve(flags["sessions-db-path"]);
   if (process.env.CLAW_SESSIONS_DB_PATH) return path.resolve(process.env.CLAW_SESSIONS_DB_PATH);
@@ -1255,6 +1331,14 @@ function resolveCodeSearchRoot(flags: Record<string, string>, cwd: string): stri
 
 function resolveLocalFilesSearchRoot(flags: Record<string, string>, cwd: string): string {
   return path.resolve(flags["file-root"] ?? flags["local-files-root"] ?? flags.workspace ?? cwd);
+}
+
+function resolveWebIngestedRoot(flags: Record<string, string>, cwd: string): string {
+  return path.resolve(flags["web-root"] ?? flags["web-cache-root"] ?? flags.workspace ?? cwd);
+}
+
+function resolveExternalCacheRoot(flags: Record<string, string>, cwd: string): string {
+  return path.resolve(flags["external-root"] ?? flags["external-cache-root"] ?? flags.workspace ?? cwd);
 }
 
 function boundedNumberFlag(value: string | undefined, fallback: number, min: number, max: number): number {
@@ -1325,6 +1409,74 @@ function discoverLocalSearchFiles(root: string, limits: { maxFiles: number; maxD
       if (!stat.isFile() || stat.size <= 0) continue;
       const extension = path.extname(entry.name).toLowerCase();
       files.push({ absolutePath, extension, kind: localFileKind(extension), size: stat.size, updatedAt: stat.mtime.toISOString() });
+    }
+  };
+  visit(root, 0);
+  return files;
+}
+
+function discoverWebIngestedFiles(root: string, limits: { maxFiles: number; maxDepth: number; maxBytes: number }): WebIngestedCandidate[] {
+  const files: WebIngestedCandidate[] = [];
+  const visit = (directory: string, depth: number): void => {
+    if (files.length >= limits.maxFiles || depth > limits.maxDepth) return;
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(directory, { withFileTypes: true }).sort((left, right) => left.name.localeCompare(right.name));
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (files.length >= limits.maxFiles) break;
+      const absolutePath = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        if (!isIgnoredLocalFilesDirectory(entry.name)) visit(absolutePath, depth + 1);
+        continue;
+      }
+      if (!entry.isFile()) continue;
+      const extension = path.extname(entry.name).toLowerCase();
+      if (![".html", ".htm", ".json", ".md", ".txt"].includes(extension)) continue;
+      let stat: fs.Stats;
+      try {
+        stat = fs.statSync(absolutePath);
+      } catch {
+        continue;
+      }
+      if (!stat.isFile() || stat.size <= 0 || stat.size > limits.maxBytes) continue;
+      files.push({ absolutePath, extension, size: stat.size, updatedAt: stat.mtime.toISOString() });
+    }
+  };
+  visit(root, 0);
+  return files;
+}
+
+function discoverExternalCacheFiles(root: string, limits: { maxFiles: number; maxDepth: number; maxBytes: number }): ExternalCacheCandidate[] {
+  const files: ExternalCacheCandidate[] = [];
+  const visit = (directory: string, depth: number): void => {
+    if (files.length >= limits.maxFiles || depth > limits.maxDepth) return;
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(directory, { withFileTypes: true }).sort((left, right) => left.name.localeCompare(right.name));
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (files.length >= limits.maxFiles) break;
+      const absolutePath = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        if (!isIgnoredLocalFilesDirectory(entry.name)) visit(absolutePath, depth + 1);
+        continue;
+      }
+      if (!entry.isFile()) continue;
+      const extension = path.extname(entry.name).toLowerCase();
+      if (![".json", ".jsonl", ".md", ".txt"].includes(extension)) continue;
+      let stat: fs.Stats;
+      try {
+        stat = fs.statSync(absolutePath);
+      } catch {
+        continue;
+      }
+      if (!stat.isFile() || stat.size <= 0 || stat.size > limits.maxBytes) continue;
+      files.push({ absolutePath, extension, size: stat.size, updatedAt: stat.mtime.toISOString() });
     }
   };
   visit(root, 0);
@@ -1510,6 +1662,272 @@ function localFileSearchDocument(root: string, file: LocalFileCandidate, maxByte
       { id: "copy-reference", kind: "copy", label: "Copy file reference", requiresApproval: false },
     ],
   };
+}
+
+function webIngestedSearchDocument(root: string, file: WebIngestedCandidate, maxBytes: number): SearchDocumentInput | null {
+  const raw = readLocalTextFile(file.absolutePath).slice(0, maxBytes);
+  if (!raw) return null;
+  const relativePath = normalizeRelativePath(path.relative(root, file.absolutePath));
+  const parsed = parseWebIngestedPayload(raw, file.extension);
+  const url = parsed.url ?? urlFromWebCachePath(relativePath);
+  const title = parsed.title ?? titleFromWebText(parsed.text) ?? path.basename(file.absolutePath);
+  const text = parsed.text || title;
+  const host = parsed.host ?? hostFromUrl(url);
+  return {
+    id: `web.ingested:${stableSearchId(`${root}\0${relativePath}`)}`,
+    source: "web.ingested",
+    domain: "web",
+    type: "page",
+    resourceId: url ?? relativePath,
+    title,
+    subtitle: url ?? relativePath,
+    snippet: parsed.description ?? firstMeaningfulLine(text) ?? relativePath,
+    body: [title, parsed.description, url, text].filter(Boolean).join("\n").slice(0, maxBytes),
+    path: file.absolutePath,
+    updatedAt: parsed.updatedAt ?? file.updatedAt,
+    metadata: {
+      root,
+      relativePath,
+      extension: file.extension,
+      host,
+      url,
+      crawlScope: parsed.crawlScope ?? "explicit_cache",
+      contentType: parsed.contentType ?? contentTypeForWebCacheExtension(file.extension),
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: {
+      web: 1,
+      explicitCache: 1,
+    },
+    fragments: [{
+      id: `web.ingested:${stableSearchId(`${root}\0${relativePath}`)}:content`,
+      title: "Content",
+      body: text.slice(0, maxBytes),
+      snippet: firstMeaningfulLine(text) ?? title,
+      sortOrder: 0,
+      metadata: { kind: "content" },
+    }],
+    actions: [
+      { id: "open", kind: "open", label: "Open cached page", requiresApproval: true, risk: "read", grant: "search.web.open" },
+      { id: "copy-reference", kind: "copy", label: "Copy page reference", requiresApproval: false },
+    ],
+  };
+}
+
+function externalCacheSearchDocument(root: string, file: ExternalCacheCandidate, maxBytes: number): SearchDocumentInput | null {
+  const raw = readLocalTextFile(file.absolutePath).slice(0, maxBytes);
+  if (!raw) return null;
+  const relativePath = normalizeRelativePath(path.relative(root, file.absolutePath));
+  const record = parseExternalCacheRecord(raw, file.extension, relativePath);
+  if (!record) return null;
+  const title = record.title ?? record.subject ?? record.name ?? record.id ?? path.basename(file.absolutePath);
+  const body = [
+    title,
+    record.summary,
+    record.text,
+    record.provider,
+    record.app,
+    record.externalId,
+  ].filter(Boolean).join("\n").slice(0, maxBytes);
+  return {
+    id: `external.cache:${stableSearchId(`${root}\0${relativePath}\0${record.id ?? ""}`)}`,
+    source: "external.cache",
+    domain: "external",
+    type: record.type ?? "external_record",
+    resourceId: record.externalId ?? record.id ?? relativePath,
+    title,
+    subtitle: [record.provider, record.app].filter(Boolean).join("/") || relativePath,
+    snippet: record.summary ?? firstMeaningfulLine(record.text ?? body) ?? relativePath,
+    body,
+    path: file.absolutePath,
+    updatedAt: record.updatedAt ?? file.updatedAt,
+    metadata: {
+      root,
+      relativePath,
+      provider: record.provider ?? "unknown",
+      app: record.app ?? record.provider ?? "unknown",
+      syncMode: record.syncMode ?? "cache",
+      externalId: record.externalId ?? record.id,
+      kind: record.type ?? "external_record",
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: {
+      external: 1,
+      explicitCache: 1,
+    },
+    fragments: record.text ? [{
+      id: `external.cache:${stableSearchId(`${root}\0${relativePath}\0${record.id ?? ""}`)}:content`,
+      title: "Content",
+      body: record.text.slice(0, maxBytes),
+      snippet: firstMeaningfulLine(record.text) ?? title,
+      sortOrder: 0,
+      metadata: { kind: "content" },
+    }] : [],
+    actions: [
+      { id: "open", kind: "open", label: "Open external record", requiresApproval: true, risk: "read", grant: "search.external.open" },
+      { id: "copy-reference", kind: "copy", label: "Copy external reference", requiresApproval: false },
+    ],
+  };
+}
+
+function parseExternalCacheRecord(raw: string, extension: string, relativePath: string): {
+  id?: string;
+  externalId?: string;
+  provider?: string;
+  app?: string;
+  type?: string;
+  name?: string;
+  title?: string;
+  subject?: string;
+  summary?: string;
+  text?: string;
+  updatedAt?: string;
+  syncMode?: string;
+} | null {
+  if (extension === ".json") {
+    try {
+      return normalizeExternalCachePayload(JSON.parse(raw) as Record<string, unknown>, relativePath);
+    } catch {
+      return null;
+    }
+  }
+  if (extension === ".jsonl") {
+    const first = raw.split(/\r?\n/).map((line) => line.trim()).find(Boolean);
+    if (!first) return null;
+    try {
+      return normalizeExternalCachePayload(JSON.parse(first) as Record<string, unknown>, relativePath);
+    } catch {
+      return null;
+    }
+  }
+  return {
+    id: relativePath,
+    provider: path.dirname(relativePath).split(path.posix.sep)[0] || "local",
+    type: "external_record",
+    title: path.basename(relativePath),
+    text: raw,
+    syncMode: "cache",
+  };
+}
+
+function normalizeExternalCachePayload(payload: Record<string, unknown>, relativePath: string): ReturnType<typeof parseExternalCacheRecord> {
+  const nested = typeof payload.record === "object" && payload.record !== null ? payload.record as Record<string, unknown> : payload;
+  return {
+    id: stringValue(nested.id) ?? stringValue(payload.id) ?? relativePath,
+    externalId: stringValue(nested.externalId) ?? stringValue(nested.external_id) ?? stringValue(payload.externalId) ?? stringValue(payload.external_id),
+    provider: stringValue(nested.provider) ?? stringValue(payload.provider),
+    app: stringValue(nested.app) ?? stringValue(payload.app),
+    type: stringValue(nested.type) ?? stringValue(nested.kind) ?? "external_record",
+    name: stringValue(nested.name),
+    title: stringValue(nested.title),
+    subject: stringValue(nested.subject),
+    summary: stringValue(nested.summary) ?? stringValue(nested.description),
+    text: stringValue(nested.text) ?? stringValue(nested.body) ?? stringValue(nested.content) ?? JSON.stringify(redactExternalCachePayload(nested)),
+    updatedAt: stringValue(nested.updatedAt) ?? stringValue(nested.updated_at) ?? stringValue(payload.updatedAt) ?? stringValue(payload.updated_at),
+    syncMode: stringValue(nested.syncMode) ?? stringValue(nested.sync_mode) ?? stringValue(payload.syncMode) ?? stringValue(payload.sync_mode) ?? "cache",
+  };
+}
+
+function redactExternalCachePayload(payload: Record<string, unknown>): Record<string, unknown> {
+  const redacted: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(payload)) {
+    redacted[key] = /token|secret|password|credential|api[_-]?key/i.test(key) ? "[redacted]" : value;
+  }
+  return redacted;
+}
+
+function parseWebIngestedPayload(raw: string, extension: string): {
+  url?: string;
+  host?: string;
+  title?: string;
+  description?: string;
+  text: string;
+  updatedAt?: string;
+  crawlScope?: string;
+  contentType?: string;
+} {
+  if (extension === ".json") {
+    try {
+      const payload = JSON.parse(raw) as Record<string, unknown>;
+      const html = stringValue(payload.html);
+      const text = stringValue(payload.text) ?? stringValue(payload.content) ?? (html ? textFromHtml(html) : "");
+      return {
+        url: stringValue(payload.url),
+        host: stringValue(payload.host),
+        title: stringValue(payload.title),
+        description: stringValue(payload.description) ?? stringValue(payload.summary),
+        text,
+        updatedAt: stringValue(payload.updatedAt) ?? stringValue(payload.updated_at),
+        crawlScope: stringValue(payload.crawlScope) ?? stringValue(payload.crawl_scope),
+        contentType: stringValue(payload.contentType) ?? stringValue(payload.content_type),
+      };
+    } catch {
+      return { text: raw };
+    }
+  }
+  if (extension === ".html" || extension === ".htm") {
+    return {
+      title: htmlTitle(raw),
+      description: htmlMetaDescription(raw),
+      text: textFromHtml(raw),
+      contentType: "text/html",
+    };
+  }
+  return { text: raw, contentType: extension === ".md" ? "text/markdown" : "text/plain" };
+}
+
+function textFromHtml(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function htmlTitle(html: string): string | undefined {
+  return html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.replace(/\s+/g, " ").trim();
+}
+
+function htmlMetaDescription(html: string): string | undefined {
+  return html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["'][^>]*>/i)?.[1]?.trim()
+    ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']description["'][^>]*>/i)?.[1]?.trim();
+}
+
+function titleFromWebText(text: string): string | undefined {
+  const first = firstMeaningfulLine(text);
+  return first?.replace(/^#+\s*/, "").slice(0, 120);
+}
+
+function urlFromWebCachePath(relativePath: string): string | undefined {
+  const withoutExtension = relativePath.replace(/\.(html?|json|md|txt)$/i, "");
+  return withoutExtension.startsWith("http:/") || withoutExtension.startsWith("https:/")
+    ? withoutExtension.replace(/^https:\//, "https://").replace(/^http:\//, "http://")
+    : undefined;
+}
+
+function hostFromUrl(url: string | undefined): string | undefined {
+  if (!url) return undefined;
+  try {
+    return new URL(url).host;
+  } catch {
+    return undefined;
+  }
+}
+
+function contentTypeForWebCacheExtension(extension: string): string {
+  if (extension === ".html" || extension === ".htm") return "text/html";
+  if (extension === ".json") return "application/json";
+  if (extension === ".md") return "text/markdown";
+  return "text/plain";
+}
+
+function stringValue(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
 function readLocalTextFile(filePath: string): string {
@@ -1774,6 +2192,20 @@ interface LocalFileCandidate {
   absolutePath: string;
   extension: string;
   kind: string;
+  size: number;
+  updatedAt: string;
+}
+
+interface WebIngestedCandidate {
+  absolutePath: string;
+  extension: string;
+  size: number;
+  updatedAt: string;
+}
+
+interface ExternalCacheCandidate {
+  absolutePath: string;
+  extension: string;
   size: number;
   updatedAt: string;
 }
