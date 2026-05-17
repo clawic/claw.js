@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 
 const ENCODING = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
-export function ulid(now: number = Date.now()): string {
+function ulid(now: number = Date.now()): string {
   let time = now;
   let timePart = "";
   for (let i = 0; i < 10; i += 1) {

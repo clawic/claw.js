@@ -77,7 +77,7 @@ const PUBLISHING_SQL_NAMES = [
 
 type NativeDB = ReturnType<typeof Database>;
 
-export class PrefixedPublishingDatabase {
+class PrefixedPublishingDatabase {
   constructor(private readonly db: NativeDB) {}
 
   prepare(sql: string): any {

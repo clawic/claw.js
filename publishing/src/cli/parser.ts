@@ -20,13 +20,13 @@ interface CliHost {
   resolveCwd: (path: string) => string;
 }
 
-export interface ParsedArgs {
+interface ParsedArgs {
   positional: string[];
   flags: Record<string, string>;
   bools: Record<string, boolean>;
 }
 
-export function parseArgs(argv: string[]): ParsedArgs {
+function parseArgs(argv: string[]): ParsedArgs {
   const positional: string[] = [];
   const flags: Record<string, string> = {};
   const bools: Record<string, boolean> = {};
@@ -53,7 +53,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
   return { positional, flags, bools };
 }
 
-export function loadToken(flags: Record<string, string>): string | undefined {
+function loadToken(flags: Record<string, string>): string | undefined {
   if (flags.token) return flags.token;
   if (process.env.CLAW_PUBLISHING_TOKEN) return process.env.CLAW_PUBLISHING_TOKEN;
   const tokenPath = flags["token-file"] ?? loadConfig().tokenStorePath;

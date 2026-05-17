@@ -18,7 +18,7 @@ export interface PublishingConfig {
   pipelineEnabled: boolean;
 }
 
-export const PUBLISHING_DEFAULT_PORT = 24111;
+const PUBLISHING_DEFAULT_PORT = 24111;
 
 export function loadConfig(overrides: Partial<PublishingConfig> = {}): PublishingConfig {
   const dataDir = overrides.dataDir ?? process.env.CLAW_PUBLISHING_DATA_DIR ?? defaultClawjsDataRoot();

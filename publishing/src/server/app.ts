@@ -59,7 +59,7 @@ export interface BuiltApp {
   shutdown: () => Promise<void>;
 }
 
-export interface AppServices {
+interface AppServices {
   auth: AuthService;
   registry: ChannelRegistry;
   workspaces: WorkspacesService;
