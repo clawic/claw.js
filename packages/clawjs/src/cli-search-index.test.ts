@@ -1507,6 +1507,134 @@ test("search service resource jobs refresh only the targeted connector operation
   });
 });
 
+test("search rebuild indexes mcp.servers without secret values", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-mcp-"));
+  const dataRoot = path.join(workspaceRoot, ".claw", "data");
+  const configPath = path.join(workspaceRoot, "codex-config.toml");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    fs.writeFileSync(configPath, [
+      "[mcp_servers.docs]",
+      "command = \"node\"",
+      "args = [\"server.js\", \"--token\", \"secret-arg-value\"]",
+      "cwd = \"/tmp/docs-server\"",
+      "env_passthrough = [\"SAFE_TOKEN\"]",
+      "",
+      "[mcp_servers.docs.env]",
+      "API_TOKEN = \"super-secret-env-value\"",
+      "",
+      "[mcp_servers.docs.headers]",
+      "Authorization = \"Bearer super-secret-header-value\"",
+      "",
+      "[mcp_servers.docs.headers_from_env]",
+      "X_API_KEY = \"DOCS_API_KEY\"",
+    ].join("\n"));
+
+    const rebuild = await runCliCapture(["search", "rebuild", "--source", "mcp.servers", "--mcp-config", configPath, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(rebuild.code, CLI_EXIT_OK);
+    const rebuildPayload = JSON.parse(rebuild.stdout) as {
+      data: { sources: string[]; pendingSources: string[]; indexedBySource: { "mcp.servers": number } };
+    };
+    assert.equal(rebuildPayload.data.sources.includes("mcp.servers"), true);
+    assert.equal(rebuildPayload.data.pendingSources.includes("mcp.servers"), false);
+    assert.equal(rebuildPayload.data.indexedBySource["mcp.servers"], 1);
+
+    const query = await runCliCapture(["search", "query", "docs node API_TOKEN", "--domains", "mcp", "--mcp-config", configPath, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: {
+        indexedFastPaths: { "mcp.servers": number };
+        results: Array<{
+          source: string;
+          domain: string;
+          type: string;
+          title: string;
+          metadata?: { transport?: string; enabled?: boolean; envKey?: unknown; headerKey?: unknown; headersFromEnvKey?: unknown };
+          fragments?: Array<{ title?: string; snippet?: string; metadata?: { redactedValues?: boolean } }>;
+        }>;
+      };
+    };
+    assert.equal(queryPayload.data.indexedFastPaths["mcp.servers"], 1);
+    const result = queryPayload.data.results.find((entry) => entry.title === "docs");
+    assert.equal(result?.source, "mcp.servers");
+    assert.equal(result?.domain, "mcp");
+    assert.equal(result?.type, "server");
+    assert.equal(result?.metadata?.transport, "stdio");
+    assert.equal(result?.metadata?.enabled, true);
+    assert.equal(result?.metadata?.envKey, "[REDACTED]");
+    assert.equal(result?.metadata?.headerKey, "[REDACTED]");
+    assert.equal(result?.metadata?.headersFromEnvKey, "[REDACTED]");
+    const serialized = JSON.stringify(result);
+    assert.equal(serialized.includes("super-secret-env-value"), false);
+    assert.equal(serialized.includes("super-secret-header-value"), false);
+    assert.equal(serialized.includes("secret-arg-value"), false);
+  });
+});
+
+test("mcp writes enqueue and refresh mcp.servers jobs", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-mcp-events-"));
+  const dataRoot = path.join(workspaceRoot, ".claw", "data");
+  const configPath = path.join(workspaceRoot, "codex-config.toml");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const stdout = captureStream();
+    const stderr = captureStream();
+    const upsert = await runInternalV1Cli([
+      "mcp",
+      "upsert",
+      "localdocs",
+      "--command",
+      "node",
+      "--args",
+      JSON.stringify(["server.js"]),
+      "--env",
+      JSON.stringify({ DOCS_TOKEN: "hidden-token" }),
+      "--config",
+      configPath,
+      "--json",
+    ], { stdout: stdout.stream, stderr: stderr.stream, cwd: workspaceRoot });
+    assert.equal(upsert, CLI_EXIT_OK);
+
+    const jobs = await runCliCapture(["search", "jobs", "--source", "mcp.servers", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(jobs.code, CLI_EXIT_OK);
+    const jobsPayload = JSON.parse(jobs.stdout) as {
+      data: { items: Array<{ source: string; operation: string; resourceId: string; shard: string; payload: { eventDriven?: boolean; serverId?: string; configPath?: string } }> };
+    };
+    const job = jobsPayload.data.items.find((item) => item.resourceId === "localdocs");
+    assert.equal(job?.source, "mcp.servers");
+    assert.equal(job?.operation, "upsert");
+    assert.equal(job?.shard, "hot");
+    assert.equal(job?.payload.eventDriven, true);
+    assert.equal(job?.payload.serverId, "localdocs");
+    assert.equal(job?.payload.configPath, configPath);
+
+    const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "mcp.servers", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(serviceRun.code, CLI_EXIT_OK);
+
+    const query = await runCliCapture(["search", "query", "localdocs DOCS_TOKEN", "--domains", "mcp", "--mcp-config", configPath, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: { results: Array<{ source: string; domain: string; type: string; title: string; metadata?: { envKey?: unknown }; fragments?: Array<{ snippet?: string; metadata?: { redactedValues?: boolean } }> }> };
+    };
+    const result = queryPayload.data.results.find((entry) => entry.title === "localdocs");
+    assert.equal(result?.source, "mcp.servers");
+    assert.equal(result?.domain, "mcp");
+    assert.equal(result?.type, "server");
+    assert.equal(result?.metadata?.envKey, "[REDACTED]");
+    assert.equal(JSON.stringify(result).includes("hidden-token"), false);
+  });
+});
+
 test("search shards lists physical shard catalog state", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-shards-cli-"));
   const dataRoot = path.join(workspaceRoot, ".claw", "data");
