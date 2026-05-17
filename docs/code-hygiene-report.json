@@ -14,13 +14,13 @@
     "unreferencedAssetCandidates": 88
   },
   "knipSummary": {
-    "filesWithIssues": 212,
-    "totalIssues": 1075,
+    "filesWithIssues": 211,
+    "totalIssues": 1062,
     "issueTypes": {
       "unlisted": 2,
       "types": 215,
-      "owners": 140,
-      "exports": 710,
+      "owners": 139,
+      "exports": 698,
       "duplicates": 8
     }
   },
@@ -52,6 +52,7 @@
     "Secrets crypto cleanup made module-private constants and helper functions private while preserving the server crypto API used by stores, resolver, app, scripts, and smoke tests.",
     "Knip calibration now treats templates, public CSS, website CSS/HTML, generated fixtures, and reviewed cross-repo e2e imports as report-only owned surfaces.",
     "Unused file cleanup removed reviewed legacy CLI sidecar command files, private server re-export wrappers, placeholder clients, and unreferenced configs; Knip file findings are now zero.",
-    "Dead-file cleanup removed reviewed one-line server stubs, retired CLI bin shims, stale generated configs, and unreferenced helper modules while keeping package surface bins explicitly allowlisted."
+    "Dead-file cleanup removed reviewed one-line server stubs, retired CLI bin shims, stale generated configs, and unreferenced helper modules while keeping package surface bins explicitly allowlisted.",
+    "Database store-helper cleanup made clearly internal parser, normalizer, regex, and constraint helpers private while keeping the database package contract unchanged."
   ]
 }

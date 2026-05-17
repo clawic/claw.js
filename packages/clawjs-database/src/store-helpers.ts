@@ -77,7 +77,7 @@ export function nowIso(): string {
   return new Date().toISOString();
 }
 
-export function parseJson<T>(value: string | null | undefined, fallback: T): T {
+function parseJson<T>(value: string | null | undefined, fallback: T): T {
   if (!value) return fallback;
   try {
     return JSON.parse(value) as T;
@@ -132,7 +132,7 @@ export function isPlainObject(value: unknown): value is Record<string, unknown> 
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
-export function normalizeField(field: FieldDefinition): FieldDefinition {
+function normalizeField(field: FieldDefinition): FieldDefinition {
   if (!field.name || SYSTEM_FIELDS.includes(field.name as typeof SYSTEM_FIELDS[number])) {
     throw new Error(`Invalid field name ${field.name || "<empty>"}.`);
   }
@@ -250,16 +250,16 @@ export function serializeFile(row: FileRow): FileAsset {
   };
 }
 
-export const CURRENCY_REGEX = /^[A-Z]{3}$/;
-export const COUNTRY_REGEX = /^[A-Z]{2}$/;
-export const E164_REGEX = /^\+[1-9]\d{1,14}$/;
-export const HEX_COLOR_REGEX = /^#[0-9A-Fa-f]{6}$/;
-export const ISBN10_REGEX = /^(?:\d{9}[\dXx])$/;
-export const ISBN13_REGEX = /^\d{13}$/;
-export const EAN13_REGEX = /^\d{13}$/;
-export const UPC12_REGEX = /^\d{12}$/;
+const CURRENCY_REGEX = /^[A-Z]{3}$/;
+const COUNTRY_REGEX = /^[A-Z]{2}$/;
+const E164_REGEX = /^\+[1-9]\d{1,14}$/;
+const HEX_COLOR_REGEX = /^#[0-9A-Fa-f]{6}$/;
+const ISBN10_REGEX = /^(?:\d{9}[\dXx])$/;
+const ISBN13_REGEX = /^\d{13}$/;
+const EAN13_REGEX = /^\d{13}$/;
+const UPC12_REGEX = /^\d{12}$/;
 
-export function checkTextConstraints(field: FieldDefinition, value: string): void {
+function checkTextConstraints(field: FieldDefinition, value: string): void {
   if (typeof field.minLength === "number" && value.length < field.minLength) {
     throw new Error(`Field ${field.name} must be at least ${field.minLength} characters.`);
   }
@@ -271,7 +271,7 @@ export function checkTextConstraints(field: FieldDefinition, value: string): voi
   }
 }
 
-export function checkNumericConstraints(field: FieldDefinition, value: number): void {
+function checkNumericConstraints(field: FieldDefinition, value: number): void {
   if (typeof field.min === "number" && value < field.min) {
     throw new Error(`Field ${field.name} must be >= ${field.min}.`);
   }
