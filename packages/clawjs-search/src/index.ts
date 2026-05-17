@@ -594,6 +594,19 @@ export function createBuiltinSearchSourceManifests(): SearchSourceManifest[] {
       ],
     }),
     createFrameworkSearchSourceManifest({
+      id: "notes.pages",
+      domain: "notes",
+      name: "Notes",
+      resultTypes: ["note", "page", "block"],
+      facets: [
+        { id: "space", label: "Space", type: "string" },
+        { id: "surface", label: "Surface", type: "string" },
+        { id: "visibility", label: "Visibility", type: "string" },
+        { id: "sensitivity", label: "Sensitivity", type: "string" },
+        { id: "tag", label: "Tag", type: "string" },
+      ],
+    }),
+    createFrameworkSearchSourceManifest({
       id: "images.derived",
       domain: "images",
       name: "Images",

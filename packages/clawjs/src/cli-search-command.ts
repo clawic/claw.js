@@ -52,7 +52,6 @@ const WORKSPACE_SEARCH_DOMAINS = new Set([
   "capacity",
   "reminders",
   "deadlines",
-  "notes",
   "people",
   "inbox",
   "events",
@@ -118,6 +117,7 @@ export async function runSearchQueryCli(input: {
     const shards = parseListFlag(input.flags.shards ?? input.flags.shard);
     const shouldRefreshDatabase = domains?.includes("database") || sources?.includes("database.records");
     const shouldRefreshDocuments = domains?.includes("documents") || sources?.includes("documents.blocks");
+    const shouldRefreshNotes = domains?.includes("notes") || sources?.includes("notes.pages");
     const shouldRefreshImages = domains?.includes("images") || sources?.includes("images.derived");
     const shouldRefreshMedia = domains?.includes("media") || sources?.includes("media.assets");
     const shouldRefreshGenerations = domains?.includes("generations") || sources?.includes("generations.artifacts");
@@ -129,6 +129,7 @@ export async function runSearchQueryCli(input: {
     const shouldRefreshExternal = domains?.includes("external") || sources?.includes("external.cache");
     const indexedDatabase = shouldRefreshDatabase && sourceCanIndex(store, "database.records") ? ensureDatabaseRecordsSourceIndexed(store, input.flags) : 0;
     const indexedDocuments = shouldRefreshDocuments && sourceCanIndex(store, "documents.blocks") ? ensureDocumentsBlocksSourceIndexed(store, input.flags) : 0;
+    const indexedNotes = shouldRefreshNotes && sourceCanIndex(store, "notes.pages") ? ensureNotesPagesSourceIndexed(store, input.flags) : 0;
     const indexedImages = shouldRefreshImages && sourceCanIndex(store, "images.derived") ? ensureImagesDerivedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedMedia = shouldRefreshMedia && sourceCanIndex(store, "media.assets") ? ensureMediaAssetsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedGenerations = shouldRefreshGenerations && sourceCanIndex(store, "generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -206,6 +207,7 @@ export async function runSearchQueryCli(input: {
         commands: indexedCommands,
         ...(shouldRefreshDatabase ? { "database.records": indexedDatabase } : {}),
         ...(shouldRefreshDocuments ? { "documents.blocks": indexedDocuments } : {}),
+        ...(shouldRefreshNotes ? { "notes.pages": indexedNotes } : {}),
         ...(shouldRefreshImages ? { "images.derived": indexedImages } : {}),
         ...(shouldRefreshMedia ? { "media.assets": indexedMedia } : {}),
         ...(shouldRefreshGenerations ? { "generations.artifacts": indexedGenerations } : {}),
@@ -281,6 +283,7 @@ export async function runSearchRebuildCli(input: {
     const sessionsIndexed = rebuildsSource("sessions.chats") ? ensureSessionsChatsSourceIndexed(store, input.flags) : 0;
     const databaseIndexed = rebuildsSource("database.records") ? ensureDatabaseRecordsSourceIndexed(store, input.flags) : 0;
     const documentsIndexed = rebuildsSource("documents.blocks") ? ensureDocumentsBlocksSourceIndexed(store, input.flags) : 0;
+    const notesIndexed = rebuildsSource("notes.pages") ? ensureNotesPagesSourceIndexed(store, input.flags) : 0;
     const imagesIndexed = rebuildsSource("images.derived") ? ensureImagesDerivedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const mediaIndexed = rebuildsSource("media.assets") ? ensureMediaAssetsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const generationsIndexed = rebuildsSource("generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -295,6 +298,7 @@ export async function runSearchRebuildCli(input: {
       ...(sessionsIndexed > 0 ? ["sessions.chats"] : []),
       ...(databaseIndexed > 0 ? ["database.records"] : []),
       ...(documentsIndexed > 0 ? ["documents.blocks"] : []),
+      ...(notesIndexed > 0 ? ["notes.pages"] : []),
       ...(imagesIndexed > 0 ? ["images.derived"] : []),
       ...(mediaIndexed > 0 ? ["media.assets"] : []),
       ...(generationsIndexed > 0 ? ["generations.artifacts"] : []),
@@ -314,7 +318,7 @@ export async function runSearchRebuildCli(input: {
       rebuilt: true,
       mode: selectedSources ? "scoped" : "full",
       selectedSources: selectedSources ?? null,
-      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + documentsIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + skillsIndexed + connectorsIndexed + localFilesIndexed + webIndexed + externalIndexed,
+      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + documentsIndexed + notesIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + skillsIndexed + connectorsIndexed + localFilesIndexed + webIndexed + externalIndexed,
       embeddings: 0,
       profile: input.flags.profile === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
@@ -324,6 +328,7 @@ export async function runSearchRebuildCli(input: {
         "sessions.chats": sessionsIndexed,
         "database.records": databaseIndexed,
         "documents.blocks": documentsIndexed,
+        "notes.pages": notesIndexed,
         "images.derived": imagesIndexed,
         "media.assets": mediaIndexed,
         "generations.artifacts": generationsIndexed,
@@ -895,6 +900,8 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
       return ensureDatabaseRecordsSourceIndexed(store, flags);
     case "documents.blocks":
       return ensureDocumentsBlocksSourceIndexed(store, flags);
+    case "notes.pages":
+      return ensureNotesPagesSourceIndexed(store, flags);
     case "images.derived":
       return ensureImagesDerivedSourceIndexed(store, flags, cwd);
     case "media.assets":
@@ -924,6 +931,10 @@ function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flag
       return ensureDatabaseRecordResourceIndexed(store, flags, job);
     case "documents.blocks":
       return ensureDocumentBlocksResourceIndexed(store, flags, job);
+    case "notes.pages": {
+      const resourceId = resourceIdFromJobPayload(job, "pageId") ?? job.resourceId;
+      return resourceId ? ensureNotesPageResourceIndexed(store, flags, resourceId) : 0;
+    }
     case "images.derived": {
       const resourceId = resourceIdFromJobPayload(job, "imageId") ?? job.resourceId;
       return resourceId ? ensureImageDerivedResourceIndexed(store, flags, cwd, resourceId) : 0;
@@ -1613,6 +1624,106 @@ function ensureDocumentBlocksResourceIndexed(store: SearchStore, flags: Record<s
     }
     store.upsertDocument(searchDocument);
     store.setSourceState("documents.blocks", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 1;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureNotesPagesSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) {
+    store.setSourceState("notes.pages", "enabled", {
+      backlog: 0,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 0;
+  }
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "pages") || !hasTable(db, "page_blocks")) {
+      store.setSourceState("notes.pages", "degraded", {
+        backlog: 0,
+        error: "core database does not contain pages/page_blocks",
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return 0;
+    }
+    const pages = db.prepare(`
+      SELECT id, title, space, surface, owner_id, author_kind, author_id, visibility, sensitivity,
+        tags_json, properties_json, source_record_domain, source_record_id, created_at, updated_at, archived_at
+      FROM pages
+      WHERE archived_at IS NULL
+      ORDER BY updated_at DESC
+    `).all() as NotesPageRow[];
+    const blockRows = db.prepare(`
+      SELECT id, page_id, parent_block_id, sort_order, kind, content_json, text, metadata_json, created_at, updated_at
+      FROM page_blocks
+      ORDER BY page_id, sort_order ASC, created_at ASC
+    `).all() as NotesPageBlockRow[];
+    const blocksByPage = new Map<string, NotesPageBlockRow[]>();
+    for (const block of blockRows) {
+      const blocks = blocksByPage.get(block.page_id) ?? [];
+      blocks.push(block);
+      blocksByPage.set(block.page_id, blocks);
+    }
+    let indexed = 0;
+    for (const page of pages) {
+      const searchDocument = notesPageSearchDocument(page, blocksByPage.get(page.id) ?? []);
+      if (!searchDocument) continue;
+      store.upsertDocument(searchDocument);
+      indexed += 1;
+    }
+    store.setCursor({
+      source: "notes.pages",
+      cursor: `pages:${indexed}`,
+      metadata: { store: "core.sqlite", tables: ["pages", "page_blocks"] },
+    });
+    store.setSourceState("notes.pages", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return indexed;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureNotesPageResourceIndexed(store: SearchStore, flags: Record<string, string>, pageId: string): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) return 0;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "pages") || !hasTable(db, "page_blocks")) return 0;
+    const page = db.prepare(`
+      SELECT id, title, space, surface, owner_id, author_kind, author_id, visibility, sensitivity,
+        tags_json, properties_json, source_record_domain, source_record_id, created_at, updated_at, archived_at
+      FROM pages
+      WHERE id = ?
+      LIMIT 1
+    `).get(pageId) as NotesPageRow | undefined;
+    if (!page || page.archived_at) {
+      store.tombstone({ source: "notes.pages", resourceId: pageId, reason: "note page missing during Search event refresh" });
+      return 1;
+    }
+    const blocks = db.prepare(`
+      SELECT id, page_id, parent_block_id, sort_order, kind, content_json, text, metadata_json, created_at, updated_at
+      FROM page_blocks
+      WHERE page_id = ?
+      ORDER BY sort_order ASC, created_at ASC
+    `).all(pageId) as NotesPageBlockRow[];
+    const searchDocument = notesPageSearchDocument(page, blocks);
+    if (!searchDocument) {
+      store.tombstone({ source: "notes.pages", resourceId: pageId, reason: "note page skipped during Search event refresh" });
+      return 1;
+    }
+    store.upsertDocument(searchDocument);
+    store.setSourceState("notes.pages", "enabled", {
       backlog: 0,
       error: null,
       lastIndexedAt: new Date().toISOString(),
@@ -2795,6 +2906,73 @@ function documentBlocksSearchDocument(row: DatabaseRecordRow, blockRows: Databas
   };
 }
 
+function notesPageSearchDocument(row: NotesPageRow, blockRows: NotesPageBlockRow[]): SearchDocumentInput | null {
+  if (row.archived_at) return null;
+  const tags = parseJsonArray(row.tags_json).filter((tag): tag is string => typeof tag === "string" && tag.trim().length > 0);
+  const properties = parseJsonRecord(row.properties_json);
+  const sensitive = ["sensitive", "secret", "restricted"].includes(row.sensitivity.toLowerCase());
+  const blocks = blockRows
+    .filter((block) => block.page_id === row.id)
+    .sort((left, right) => left.sort_order - right.sort_order || left.created_at.localeCompare(right.created_at));
+  const blockTexts = blocks.map((block) => block.text || textFromStructuredContent(parseJsonRecord(block.content_json))).filter(Boolean);
+  const propertiesText = textFromStructuredContent(properties);
+  const body = [row.title, row.space, row.surface, tags.join(" "), propertiesText, ...blockTexts].filter(Boolean).join("\n");
+  const snippet = sensitive ? "[redacted]" : firstMeaningfulLine(blockTexts.join("\n")) ?? row.title;
+  const blockTypes = Array.from(new Set(blocks.map((block) => block.kind || "block")));
+  return {
+    id: `notes.pages:${row.id}`,
+    source: "notes.pages",
+    domain: "notes",
+    type: row.surface || "note",
+    resourceId: row.id,
+    title: row.title || `Note ${row.id}`,
+    subtitle: [row.space, row.surface].filter(Boolean).join(" / "),
+    snippet,
+    body,
+    updatedAt: row.updated_at,
+    metadata: {
+      pageId: row.id,
+      space: row.space,
+      surface: row.surface,
+      visibility: row.visibility,
+      sensitivity: row.sensitivity,
+      tag: tags,
+      sourceRecordDomain: row.source_record_domain,
+      sourceRecordId: row.source_record_id,
+      ownerId: row.owner_id,
+      authorKind: row.author_kind,
+      authorId: row.author_id,
+      blockCount: blocks.length,
+      blockType: blockTypes,
+    },
+    permissions: { canOpen: true, canPreview: !sensitive, redacted: sensitive },
+    rankingHints: {
+      fastPath: 1,
+      note: 1,
+      blockCount: Math.min(blocks.length, 50) / 50,
+    },
+    fragments: sensitive ? [] : blocks.slice(0, 50).map((block) => {
+      const text = block.text || textFromStructuredContent(parseJsonRecord(block.content_json)) || "";
+      return {
+        id: `notes.pages:${row.id}:block:${block.id}`,
+        title: block.kind || "block",
+        body: text,
+        snippet: text.slice(0, 180),
+        sortOrder: block.sort_order,
+        metadata: {
+          blockId: block.id,
+          type: block.kind,
+          parentBlockId: block.parent_block_id,
+        },
+      };
+    }),
+    actions: [
+      { id: "open", kind: "open", label: "Open note", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy note reference", requiresApproval: false },
+    ],
+  };
+}
+
 function skillRegistrySearchDocument(row: SkillRegistryRow): SearchDocumentInput | null {
   if (!row.slug) return null;
   const scope = parseJsonRecord(row.scope_json);
@@ -2953,6 +3131,38 @@ interface DatabaseRecordRow {
   collection_name: string;
   id: string;
   data_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface NotesPageRow {
+  id: string;
+  title: string;
+  space: string;
+  surface: string;
+  owner_id: string | null;
+  author_kind: string;
+  author_id: string | null;
+  visibility: string;
+  sensitivity: string;
+  tags_json: string;
+  properties_json: string;
+  source_record_domain: string | null;
+  source_record_id: string | null;
+  created_at: string;
+  updated_at: string;
+  archived_at: string | null;
+}
+
+interface NotesPageBlockRow {
+  id: string;
+  page_id: string;
+  parent_block_id: string | null;
+  sort_order: number;
+  kind: string;
+  content_json: string;
+  text: string;
+  metadata_json: string;
   created_at: string;
   updated_at: string;
 }

@@ -1420,6 +1420,89 @@ test("search rebuild indexes documents.blocks from document records", async () =
   });
 });
 
+test("search rebuild indexes notes.pages from pages and blocks", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-notes-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const created = await runCliCapture([
+      "notes",
+      "create",
+      "Quarterly planning",
+      "--body",
+      "Meeting notes include launch priorities and scoped search followups.",
+      "--tags",
+      "planning,search",
+      "--json",
+    ], workspaceRoot);
+    assert.equal(created.code, CLI_EXIT_OK);
+    const createdPayload = JSON.parse(created.stdout) as { data: { id: string; title: string } };
+    assert.ok(createdPayload.data.id);
+
+    const rebuild = await runCliCapture(["search", "rebuild", "--source", "notes.pages", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(rebuild.code, CLI_EXIT_OK);
+    const rebuildPayload = JSON.parse(rebuild.stdout) as {
+      data: { sources: string[]; pendingSources: string[]; indexedBySource: { "notes.pages": number } };
+    };
+    assert.equal(rebuildPayload.data.sources.includes("notes.pages"), true);
+    assert.equal(rebuildPayload.data.pendingSources.includes("notes.pages"), false);
+    assert.equal(rebuildPayload.data.indexedBySource["notes.pages"], 1);
+
+    const query = await runCliCapture([
+      "search",
+      "query",
+      "launch priorities",
+      "--domains",
+      "notes",
+      "--filters",
+      JSON.stringify({ "metadata.space": "notes", redacted: false }),
+      "--data-dir",
+      dataRoot,
+      "--json",
+      "--limit",
+      "5",
+      "--explain",
+      "true",
+    ], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: {
+        indexedFastPaths: { "notes.pages": number };
+        results: Array<{
+          source: string;
+          domain: string;
+          type: string;
+          title: string;
+          metadata?: { pageId?: string; space?: string; surface?: string; tag?: string[]; blockCount?: number };
+          fragments?: Array<{ title?: string; snippet?: string }>;
+          actions?: Array<{ id: string; kind: string }>;
+          explanation?: { matchedBy?: string[] };
+        }>;
+        facets?: Array<{ id: string }>;
+      };
+    };
+    assert.equal(queryPayload.data.indexedFastPaths["notes.pages"], 1);
+    const result = queryPayload.data.results.find((entry) => entry.title === "Quarterly planning");
+    assert.equal(result?.source, "notes.pages");
+    assert.equal(result?.domain, "notes");
+    assert.equal(result?.type, "note");
+    assert.equal(result?.metadata?.pageId, createdPayload.data.id);
+    assert.equal(result?.metadata?.space, "notes");
+    assert.equal(result?.metadata?.surface, "note");
+    assert.deepEqual(result?.metadata?.tag, ["planning", "search"]);
+    assert.equal(result?.metadata?.blockCount, 1);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "paragraph" && fragment.snippet?.includes("launch priorities")), true);
+    assert.equal(result?.actions?.some((action) => action.id === "open" && action.kind === "open"), true);
+    assert.ok(result?.explanation?.matchedBy?.length);
+    assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "space"), true);
+  });
+});
+
 test("search rebuild indexes images.derived from image library records", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-images-"));
   const dataRoot = path.join(workspaceRoot, "data");

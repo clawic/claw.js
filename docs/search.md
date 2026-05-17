@@ -61,6 +61,7 @@ backfill jobs.
 | `sessions.chats` | `sessions` | `sessions.sqlite` projected into `search.sqlite` | implemented |
 | `database.records` | `database` | `core.sqlite` records projected into `search.sqlite` | implemented |
 | `documents.blocks` | `documents` | `core.sqlite` documents and document blocks projected into `search.sqlite` | implemented initial adapter |
+| `notes.pages` | `notes` | `core.sqlite` pages and page blocks projected into `search.sqlite` | implemented initial adapter |
 | `images.derived` | `images` | image library, image media metadata, and stored OCR/vision-derived text projected into `search.sqlite` | implemented initial adapter |
 | `media.assets` | `media` | workspace media records projected into `search.sqlite` | implemented initial adapter |
 | `generations.artifacts` | `generations` | generated artifact records projected into `search.sqlite` | implemented initial adapter |
@@ -81,6 +82,7 @@ claw search query "text" --domains sessions --json
 claw search query "text" --domains database --filters '{"metadata.collection":"contacts","type":"record"}' --json
 claw search query "text" --domains documents --filters '{"metadata.scopeKind":"project"}' --json
 claw search query "product mark" --domains images --filters metadata.imageType=logo --json
+claw search query "meeting notes" --domains notes --filters metadata.space=notes --json
 claw search query "requirements" --domains media --filters metadata.kind=document --json
 claw search query "analytics cards" --domains generations --filters metadata.status=succeeded --json
 claw search query "symbolName" --domains code --code-root /path/to/project --json
@@ -164,8 +166,8 @@ unbounded duplicate backfill work.
 
 The local framework database and artifact write paths now emit those compacted
 events for `database.records`, `documents.blocks`, `generations.artifacts`,
-`images.derived`, `media.assets`, and `skills.registry`: successful `db
-<collection> create|update`, `documents create|update`, `image
+`images.derived`, `media.assets`, and `skills.registry`: successful
+`db collection create|update`, `documents create|update`, `image
 create|edit|import`, typed-media generation, `generations create`, and `skills
 upsert` calls schedule hot upsert events; successful record, document, image,
 media, generation, or skill deletes schedule delete events where the source item
@@ -288,6 +290,12 @@ Documents are returned as scoped section results, while document blocks are
 attached as fragments so a documents UI can search within block content without
 asking Root Search to scan unrelated domains.
 
+`notes.pages` projects framework page records and page blocks from `core.sqlite`.
+Notes are returned as scoped section results with block fragments, space/surface
+facets, tags, visibility, sensitivity, and source-record metadata. Sensitive
+notes can still match indexed text, but returned previews are redacted and block
+fragments are omitted.
+
 `images.derived` projects local image-library records and image media metadata.
 The initial adapter indexes prompts, revised prompts, tags, collections, type,
 provider/model, provenance, output metadata, and any stored OCR text, captions,
@@ -358,15 +366,15 @@ usable without waiting for universal backfill.
 - Expose `claw search`.
 - Build `SearchStore` over `search.sqlite`.
 - Index `commands`, `sessions.chats`, `database.records`, `documents.blocks`,
-  `images.derived`, `media.assets`, `generations.artifacts`, `skills.registry`,
-  and the first bounded `code.symbols` adapter.
+  `notes.pages`, `images.derived`, `media.assets`, `generations.artifacts`,
+  `skills.registry`, and the first bounded `code.symbols` adapter.
 - Keep Clawix Mac Search and `Command-G` conversations-only.
 
 ### Phase 2: framework domains
 
 - Continue source adapters for richer image derived text, richer code symbols,
-  notes, tasks, people, inbox, events, and other framework sections that need
-  UI-level search.
+  tasks, people, inbox, events, and other framework sections that need UI-level
+  search.
 - Require each domain to have a source manifest, fast path, permissions, actions,
   and focused tests.
 - Extend event-driven updates beyond `database.records` and keep advancing
