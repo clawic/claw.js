@@ -72,7 +72,8 @@ The first implementation slice is model plus gates:
   incident`, `claw agents activity-feed`, `claw agents blueprint`, and
   `claw agents evaluation`
 - `createClaw().agents` SDK facade with the same Agents V1 policy gates and
-  redacted package/surface helpers
+  redacted package/surface helpers, including a fail-closed `service_api`
+  envelope for service callers
 - MCP tool calls require both connector control-plane approval and an Agents V1
   `mcp_api` assignment/access policy before protocol invocation
 - `@clawjs/core` policy evaluators and `claw agents` gates for effective

@@ -1180,6 +1180,9 @@ The docs check script validates that every current export from
     AgentSafeSurfaceKind
     AgentSafeSurfaceProjection
     AgentSafeSurfaceProjectionInput
+    AgentServiceApiOperation
+    AgentServiceApiRequest
+    AgentServiceApiResponse
     AgentSkillBinding
     AgentSupportInboxProjection
     AgentSupportInboxProjectionInput
@@ -1587,6 +1590,7 @@ The docs check script validates that every current export from
     createAgentIncident
     createAgentSafePackageExport
     createAgentSafeSurfaceProjection
+    createAgentServiceApiResponse
     createAgentSupportInboxProjection
     evaluateAgentAssignmentRoute
     evaluateAgentBudget

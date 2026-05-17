@@ -285,6 +285,7 @@ export type AgentAuditEventKind =
   | "blueprint"
   | "evaluation"
   | "config_revision"
+  | "service_api"
   | "assignment_route"
   | "access_evaluation"
   | "memory_evaluation"
@@ -552,6 +553,37 @@ export interface AgentSafeSurfaceProjection {
   budgets: Array<Record<string, unknown>>;
   risks: string[];
   gaps: string[];
+  audit: AgentAuditEvent;
+}
+
+export type AgentServiceApiOperation =
+  | "describe_agent"
+  | "route_check"
+  | "surface_projection"
+  | "support_projection"
+  | "activity_feed";
+
+export interface AgentServiceApiRequest {
+  requestId?: string;
+  operation: AgentServiceApiOperation;
+  agent: Record<string, unknown>;
+  assignments?: Array<Record<string, unknown>>;
+  executionProfiles?: Array<Record<string, unknown>>;
+  resourceGrants?: Array<Record<string, unknown>>;
+  memoryPolicies?: Array<Record<string, unknown>>;
+  budgets?: Array<Record<string, unknown>>;
+  redaction?: "default" | "strict" | "custom";
+  requestedAt?: string;
+}
+
+export interface AgentServiceApiResponse {
+  schemaVersion: 1;
+  apiKind: "claw_agent_service_api";
+  requestId: string;
+  operation: AgentServiceApiOperation;
+  allowed: boolean;
+  errors: string[];
+  projection: AgentSafeSurfaceProjection;
   audit: AgentAuditEvent;
 }
 
@@ -1099,6 +1131,51 @@ export function createAgentSafeSurfaceProjection(input: AgentSafeSurfaceProjecti
         projectionKind: "claw_agent_safe_surface",
         surface: input.surface,
         assignmentCount: assignments.length,
+      },
+    }),
+  };
+}
+
+export function createAgentServiceApiResponse(input: AgentServiceApiRequest): AgentServiceApiResponse {
+  const requestedAt = input.requestedAt ?? new Date().toISOString();
+  const projection = createAgentSafeSurfaceProjection({
+    surface: "service_api",
+    projectedAt: requestedAt,
+    agent: input.agent,
+    assignments: input.assignments,
+    executionProfiles: input.executionProfiles,
+    resourceGrants: input.resourceGrants,
+    memoryPolicies: input.memoryPolicies,
+    budgets: input.budgets,
+    redaction: input.redaction,
+  });
+  const errors = projection.gaps.map((gap) => `service_api:${gap}`);
+  const agentId = typeof input.agent.id === "string" ? input.agent.id : "agent.unknown";
+  const requestId = input.requestId ?? `agent_service_api_${stableHash([
+    agentId,
+    input.operation,
+    requestedAt,
+  ].join("|"))}`;
+  return {
+    schemaVersion: 1,
+    apiKind: "claw_agent_service_api",
+    requestId,
+    operation: input.operation,
+    allowed: errors.length === 0,
+    errors,
+    projection,
+    audit: createAgentAuditEvent({
+      kind: "service_api",
+      agentId,
+      result: errors.length === 0 ? "allowed" : "blocked",
+      reason: "service API safe projection",
+      redaction: input.redaction ?? "strict",
+      createdAt: requestedAt,
+      metadata: {
+        operation: input.operation,
+        requestId,
+        risks: projection.risks,
+        gaps: projection.gaps,
       },
     }),
   };

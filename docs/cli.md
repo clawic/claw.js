@@ -197,6 +197,9 @@ Relay, MCP, service API, external channel, and internal UI views use the same
 safe surface projection contract so public surfaces only see bounded identity,
 assignment, budget, memory, and resource summaries instead of raw prompts,
 secret material, local paths, private endpoints, or runtime environment data.
+The SDK `agents.serviceApi()` helper wraps the `service_api` projection in a
+fail-closed API envelope, returning errors for projection gaps instead of
+giving service callers a privileged internal agent view.
 The projection fails closed when the assignment kind does not match the target
 surface: Relay needs a `relay` assignment, MCP/API and service APIs use
 `mcp_api`, internal UI uses `internal_mac_chat`, and external channel views use

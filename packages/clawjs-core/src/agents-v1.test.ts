@@ -10,6 +10,7 @@ import {
   createAgentIncident,
   createAgentSafePackageExport,
   createAgentSafeSurfaceProjection,
+  createAgentServiceApiResponse,
   createAgentSupportInboxProjection,
   evaluateAgentBudget,
   evaluateAgentDelegationAccess,
@@ -759,6 +760,64 @@ test("Agents V1 service API projection requires API-compatible assignments", () 
     }],
   });
   assert.deepEqual(allowed.gaps, []);
+});
+
+test("Agents V1 service API response exposes only the safe service projection", () => {
+  const blocked = createAgentServiceApiResponse({
+    requestId: "request.service.blocked",
+    operation: "describe_agent",
+    requestedAt: "2026-05-17T10:00:00.000Z",
+    agent: {
+      id: "agent.support",
+      name: "Support",
+      secretAllowlist: ["vault://agents/support"],
+      localPath: "/Users/example/agent",
+    },
+    assignments: [{
+      id: "assignment.mac",
+      agentId: "agent.support",
+      kind: "internal_mac_chat",
+      status: "active",
+      endpointRef: "clawix://workspace/main",
+    }],
+    budgets: [{
+      id: "budget.service",
+      exceededBehavior: "deny_action",
+      limits: [{ dimension: "external_actions", limit: 5, used: 1 }],
+    }],
+  });
+  assert.equal(blocked.apiKind, "claw_agent_service_api");
+  assert.equal(blocked.allowed, false);
+  assert.deepEqual(blocked.errors, ["service_api:surface_assignment_kind_missing"]);
+  assert.equal(blocked.projection.surface, "service_api");
+  assert.equal("secretAllowlist" in blocked.projection.agent, false);
+  assert.equal("localPath" in blocked.projection.agent, false);
+  assert.equal("endpointRef" in blocked.projection.assignments[0], false);
+  assert.equal(blocked.audit.kind, "service_api");
+  assert.equal(blocked.audit.result, "blocked");
+
+  const allowed = createAgentServiceApiResponse({
+    requestId: "request.service.allowed",
+    operation: "surface_projection",
+    requestedAt: "2026-05-17T10:00:00.000Z",
+    agent: { id: "agent.support", name: "Support" },
+    assignments: [{
+      id: "assignment.api",
+      agentId: "agent.support",
+      kind: "mcp_api",
+      status: "active",
+      channel: "api",
+      privacyPolicy: "hashed",
+    }],
+    budgets: [{
+      id: "budget.service",
+      exceededBehavior: "deny_action",
+      limits: [{ dimension: "external_actions", limit: 5, used: 1 }],
+    }],
+  });
+  assert.equal(allowed.allowed, true);
+  assert.deepEqual(allowed.errors, []);
+  assert.equal(allowed.audit.result, "allowed");
 });
 
 test("Agents V1 hermetic route acceptance covers internal Mac, external support, and subagent delegation", () => {

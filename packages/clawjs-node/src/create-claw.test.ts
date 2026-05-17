@@ -86,6 +86,35 @@ test("createClaw exposes Agents V1 policy gates through claw.agents", async () =
   });
   assert.equal(budget.allowed, false);
   assert.deepEqual(budget.reasons, ["budget: external_actions limit exceeded"]);
+
+  const service = claw.agents.serviceApi({
+    requestId: "request.sdk.service",
+    operation: "describe_agent",
+    requestedAt: "2026-05-17T10:00:00.000Z",
+    agent: {
+      id: "agent.sdk",
+      name: "SDK Agent",
+      secretAllowlist: ["vault://agents/sdk"],
+      localPath: "/Users/example/agent",
+    },
+    assignments: [{
+      id: "assignment.api",
+      agentId: "agent.sdk",
+      kind: "mcp_api",
+      status: "active",
+      channel: "api",
+      privacyPolicy: "hashed",
+    }],
+    budgets: [{
+      id: "budget.api",
+      exceededBehavior: "deny_action",
+      limits: [{ dimension: "external_actions", limit: 3, used: 0 }],
+    }],
+  });
+  assert.equal(service.allowed, true);
+  assert.equal(service.projection.surface, "service_api");
+  assert.equal("secretAllowlist" in service.projection.agent, false);
+  assert.equal("localPath" in service.projection.agent, false);
 });
 
 test("createClaw initializes and inspects a workspace", async () => {

@@ -8,6 +8,7 @@ import {
   createAgentPermissionEscalationRequest,
   createAgentSafePackageExport,
   createAgentSafeSurfaceProjection,
+  createAgentServiceApiResponse,
   createAgentSupportInboxProjection,
   evaluateAgentAssignmentRoute,
   evaluateAgentBudget,
@@ -44,6 +45,8 @@ import {
   type AgentResolvedExternalIdentity,
   type AgentSafeExportInput,
   type AgentSafePackageExport,
+  type AgentServiceApiRequest,
+  type AgentServiceApiResponse,
   type AgentSafeSurfaceProjection,
   type AgentSafeSurfaceProjectionInput,
   type AgentSupportInboxProjection,
@@ -65,6 +68,7 @@ export interface ClawAgentsFacade {
   blueprint: (input: AgentBlueprintInput) => AgentBlueprint;
   evaluation: (input: AgentEvaluationInput) => AgentEvaluation;
   safePackageExport: (input: AgentSafeExportInput) => AgentSafePackageExport;
+  serviceApi: (input: AgentServiceApiRequest) => AgentServiceApiResponse;
   permissionEscalation: (input: Omit<AgentPermissionEscalationRequest, "id"> & { id?: string }) => AgentPermissionEscalationRequest;
   auditEvent: (input: Parameters<typeof createAgentAuditEvent>[0]) => AgentAuditEvent;
   redactBoundaryValue: typeof redactAgentBoundaryValue;
@@ -87,6 +91,7 @@ export function createClawAgentsFacades(): { agents: ClawAgentsFacade } {
       blueprint: createAgentBlueprint,
       evaluation: createAgentEvaluation,
       safePackageExport: createAgentSafePackageExport,
+      serviceApi: createAgentServiceApiResponse,
       permissionEscalation: createAgentPermissionEscalationRequest,
       auditEvent: createAgentAuditEvent,
       redactBoundaryValue: redactAgentBoundaryValue,

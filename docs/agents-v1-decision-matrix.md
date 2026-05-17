@@ -29,7 +29,7 @@ a later user decision.
 | 1 | `surface_model` | superseded | ADR 0020 makes `agents` the root and keeps placements as `agent_assignments`; deployment-root wording is retired. |
 | 2 | `v1_target` | implemented | `AGENT_ASSIGNMENT_KINDS` covers Mac, web, Telegram, WhatsApp, email, support inbox, workflow, automation, subagent, MCP/API, Relay, and custom channels. |
 | 3 | `default_posture` | partial | External routing and budget gates are respond-only by default; remaining work is broader runtime dispatch enforcement outside the policy helpers. |
-| 4 | `v1_depth` | partial | Contracts and core gates exist in `packages/clawjs-core/src/agents-v1.ts`; full service API and E2E closure remain. |
+| 4 | `v1_depth` | partial | Contracts, core gates, and a service API envelope exist in `packages/clawjs-core/src/agents-v1.ts`; full network service binding and E2E closure remain. |
 | 5 | `deployment_granularity` | superseded | ADR 0020 models Agent plus assignment/endpoints instead of root deployments. |
 | 6 | `context_scope` | partial | Context is represented through grants, memory policies, safe projections, and package bindings; explicit context pack/view entities still need fuller query and import surfaces. |
 | 7 | `identity_storage` | implemented | `AgentAssignmentPrivacyPolicy` supports `off`, `hashed`, and `raw_with_retention`; raw retention now requires `telemetryRetentionDays`. |
@@ -80,7 +80,7 @@ a later user decision.
 | 52 | `permission_ui_model` | partial | Inspect fiche exposes grants/gaps/risks; full human permission UI remains future work. |
 | 53 | `agent_creation_flow` | partial | Blueprint/package helpers support assisted creation primitives; full assisted flow plus review UI remains incomplete. |
 | 54 | `agent_storage` | partial | Canonical DB tables and sidecar projections exist; full storage/secret-vault integration audit remains pending. |
-| 55 | `agent_public_surfaces` | partial | CLI, SDK, MCP gate, Relay-safe projections, persistence, and inspect exist; dedicated service API surface remains incomplete. |
+| 55 | `agent_public_surfaces` | partial | CLI, SDK, MCP gate, Relay-safe projections, service API envelope, persistence, and inspect exist; full HTTP/process service binding remains incomplete. |
 | 56 | `host_boundary_agents` | partial | ADR assigns native execution, approvals, leases, and host audit to host; host-dependent validation is external pending. |
 | 57 | `refactor_scope` | partial | `company_agents` overlap is reconciled in board storage; broader legacy audit remains before completion. |
 | 58 | `existing_agents_migration` | partial | Board roster writes canonical `agents`; remaining legacy public overlap must be audited and retired. |
@@ -103,12 +103,12 @@ a later user decision.
 | 75 | `audit_depth` | partial | Governable helpers emit audit events; final audit coverage across every write/query path remains incomplete. |
 | 76 | `redaction_model` | implemented | Boundary redaction applies to exports, projections, revisions, incidents, evaluations, activity feeds, and skill bindings. |
 | 77 | `incident_model` | implemented | `agent_incidents`, helper, CLI, schema migration, and tests exist. |
-| 78 | `query_surfaces` | partial | CLI/inspect/activity feed exist; complete operational query API and service surface remain incomplete. |
+| 78 | `query_surfaces` | partial | CLI/inspect/activity feed and SDK service API envelope exist; complete operational query API remains incomplete. |
 | 79 | `agent_inspect_depth` | partial | `claw inspect agent <id>` renders identity, routes, grants, memory, budgets, incidents, revisions, risks, and gaps; final fiche depth audit remains. |
 | 80 | `human_consumption` | implemented | `createAgentActivityFeed` and CLI produce a redacted timeline for human consumption. |
 | 81 | `placement_term` | implemented | Canonical term is `assignment` in ADR, CLI, schema, and tests. |
 | 82 | `execution_profile_term` | implemented | Canonical term is `execution_profile` in tables, CLI schema, and route graph. |
 | 83 | `grant_term` | implemented | Canonical term is `resource_grant` in tables, types, and CLI schema. |
-| 84 | `implementation_slice` | partial | Model plus gates are underway and tested; service API/E2E/legacy closure remain. |
+| 84 | `implementation_slice` | partial | Model plus gates and service API envelope are underway and tested; E2E and legacy closure remain. |
 | 85 | `privacy_regime` | partial | Local-first hashing, redaction, raw-retention opt-in, and support projection exist; export/delete lifecycle still needs complete public workflow. |
 | 86 | `acceptance_gate` | partial | Registry, policy tests, and focused hermetic tests exist; full E2E and one-by-one private decision audit remain before completion. |
