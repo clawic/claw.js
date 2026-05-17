@@ -668,6 +668,21 @@ function applyDefaults(collectionName: string, payload: Record<string, unknown>,
       payload.severity ??= "medium";
       payload.identifiedAt ??= new Date().toISOString();
       break;
+    case "carriers":
+      payload.status ??= "active";
+      payload.mode ??= "unknown";
+      break;
+    case "shipments":
+      payload.status ??= "planned";
+      payload.mode ??= "unknown";
+      break;
+    case "shipment_legs":
+      payload.status ??= "planned";
+      break;
+    case "freight_rates":
+      payload.status ??= "draft";
+      payload.mode ??= "unknown";
+      break;
     case "compliance_controls":
       payload.status ??= "draft";
       payload.controlType ??= "governance";
