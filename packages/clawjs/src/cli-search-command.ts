@@ -499,11 +499,63 @@ function ensureSessionsChatsSourceIndexed(store: SearchStore, flags: Record<stri
   }
 }
 
+function ensureDatabaseRecordsSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) {
+    store.setSourceState("database.records", "enabled", {
+      backlog: 0,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 0;
+  }
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "records")) {
+      store.setSourceState("database.records", "degraded", {
+        backlog: 0,
+        error: "core database does not contain records",
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return 0;
+    }
+    const rows = db.prepare(`
+      SELECT namespace_id, collection_name, id, data_json, created_at, updated_at
+      FROM records
+      ORDER BY updated_at DESC
+    `).all() as DatabaseRecordRow[];
+    let indexed = 0;
+    for (const row of rows) {
+      const document = databaseRecordSearchDocument(row);
+      if (!document) continue;
+      store.upsertDocument(document);
+      indexed += 1;
+    }
+    store.setCursor({
+      source: "database.records",
+      cursor: `rows:${indexed}`,
+      metadata: { store: "core.sqlite" },
+    });
+    store.setSourceState("database.records", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return indexed;
+  } finally {
+    db.close();
+  }
+}
+
 function resolveSessionsDbPath(flags: Record<string, string>): string {
   if (flags["sessions-db-path"]) return path.resolve(flags["sessions-db-path"]);
   if (process.env.CLAW_SESSIONS_DB_PATH) return path.resolve(process.env.CLAW_SESSIONS_DB_PATH);
   const env = flags["data-dir"] ? { ...process.env, CLAW_DATA_DIR: flags["data-dir"] } : process.env;
   return path.join(resolveClawjsDataRoot(env), "sessions.sqlite");
+}
+
+function resolveMainDbPath(flags: Record<string, string>): string {
+  const env = flags["data-dir"] ? { ...process.env, CLAW_DATA_DIR: flags["data-dir"] } : process.env;
+  return resolveClawjsMainDbPath(env);
 }
 
 function hasTable(db: Database.Database, table: string): boolean {
@@ -561,6 +613,123 @@ function sessionSearchDocument(session: ConversationSessionRow, messages: Conver
       { id: "copy-reference", kind: "copy", label: "Copy chat reference", requiresApproval: false },
     ],
   };
+}
+
+function databaseRecordSearchDocument(row: DatabaseRecordRow): SearchDocumentInput | null {
+  const payload = parseJsonRecord(row.data_json);
+  if (payload.archivedAt || payload.archived_at || payload.deletedAt || payload.deleted_at) return null;
+  const sensitive = isSensitiveRecord(payload);
+  const title = titleForDatabaseRecord(row, payload);
+  const fields = searchableRecordFields(payload);
+  const body = fields.map(([key, value]) => `${key}: ${stringifySearchValue(value)}`).join("\n");
+  const snippet = sensitive ? "[redacted]" : firstTextValue(payload) ?? body.slice(0, 180);
+  return {
+    id: `database.records:${row.namespace_id}:${row.collection_name}:${row.id}`,
+    source: "database.records",
+    domain: "database",
+    type: "record",
+    resourceId: `${row.namespace_id}:${row.collection_name}:${row.id}`,
+    title,
+    subtitle: `${row.namespace_id}/${row.collection_name}`,
+    snippet,
+    body,
+    updatedAt: row.updated_at,
+    metadata: {
+      namespaceId: row.namespace_id,
+      collection: row.collection_name,
+      recordId: row.id,
+      fieldNames: Object.keys(payload).sort(),
+      sensitive,
+    },
+    permissions: { canOpen: true, canPreview: !sensitive, redacted: sensitive },
+    rankingHints: {
+      fastPath: 1,
+      structuredRecord: 1,
+    },
+    fragments: sensitive ? [] : fields.slice(0, 20).map(([key, value], index) => ({
+      id: `database.records:${row.namespace_id}:${row.collection_name}:${row.id}:field:${key}`,
+      title: key,
+      body: stringifySearchValue(value),
+      snippet: stringifySearchValue(value).slice(0, 180),
+      sortOrder: index,
+      metadata: { field: key },
+    })),
+    actions: [
+      { id: "open", kind: "open", label: "Open record", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy record reference", requiresApproval: false },
+    ],
+  };
+}
+
+interface DatabaseRecordRow {
+  namespace_id: string;
+  collection_name: string;
+  id: string;
+  data_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
+function titleForDatabaseRecord(row: DatabaseRecordRow, payload: Record<string, unknown>): string {
+  const fullName = [payload.firstName, payload.lastName]
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .join(" ")
+    .trim();
+  if (fullName) return fullName;
+  const value = payload.title ?? payload.name ?? payload.displayName ?? payload.subject ?? payload.label ?? payload.email;
+  return typeof value === "string" && value.trim() ? value.trim() : `${row.collection_name}:${row.id}`;
+}
+
+function searchableRecordFields(payload: Record<string, unknown>): Array<[string, unknown]> {
+  const fields: Array<[string, unknown]> = [];
+  for (const [key, value] of Object.entries(payload)) {
+    if (["id", "createdAt", "updatedAt", "archivedAt", "deletedAt"].includes(key) || !isSearchableValue(value)) continue;
+    if (isPlainRecord(value)) {
+      for (const [childKey, childValue] of Object.entries(value)) {
+        if (isSearchableValue(childValue)) fields.push([key === "metadata" ? childKey : `${key}.${childKey}`, childValue]);
+      }
+      continue;
+    }
+    fields.push([key, value]);
+  }
+  return fields;
+}
+
+function isSearchableValue(value: unknown): boolean {
+  if (value === null || value === undefined) return false;
+  if (typeof value === "string") return value.trim().length > 0;
+  if (typeof value === "number" || typeof value === "boolean") return true;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === "object") return Object.keys(value).length > 0;
+  return false;
+}
+
+function stringifySearchValue(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return JSON.stringify(value);
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function firstTextValue(payload: Record<string, unknown>): string | undefined {
+  for (const key of ["description", "summary", "body", "content", "notes"]) {
+    const value = payload[key];
+    if (typeof value === "string" && value.trim()) return value.trim().slice(0, 180);
+  }
+  const metadata = payload.metadata;
+  if (isPlainRecord(metadata) && typeof metadata.notes === "string" && metadata.notes.trim()) {
+    return metadata.notes.trim().slice(0, 180);
+  }
+  return undefined;
+}
+
+function isSensitiveRecord(payload: Record<string, unknown>): boolean {
+  const metadata = isPlainRecord(payload.metadata) ? payload.metadata : {};
+  const sensitivity = String(payload.sensitivity ?? metadata.sensitivity ?? payload.visibility ?? metadata.visibility ?? payload.privacy ?? metadata.privacy ?? "").toLowerCase();
+  return ["sensitive", "private", "secret", "restricted"].includes(sensitivity);
 }
 
 interface ConversationSessionRow {

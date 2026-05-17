@@ -12,6 +12,9 @@ test("search rebuild and query use the Search sidecar without workspace state", 
   const dataRoot = path.join(workspaceRoot, "data");
   await withPatchedEnv({
     CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
     CLAW_SEARCH_DB_PATH: undefined,
   }, async () => {
     const rebuild = await runCliCapture(["search", "rebuild", "--json"], workspaceRoot);
@@ -126,6 +129,9 @@ test("search rebuild indexes sessions.chats from the sessions sidecar", async ()
   const dataRoot = path.join(workspaceRoot, "data");
   await withPatchedEnv({
     CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
     CLAW_SEARCH_DB_PATH: undefined,
     CLAW_SESSIONS_DB_PATH: undefined,
   }, async () => {
@@ -185,5 +191,103 @@ test("search rebuild indexes sessions.chats from the sessions sidecar", async ()
     const sessionsStatus = statusPayload.data.sources.find((source) => source.source === "sessions.chats");
     assert.equal(sessionsStatus?.state, "enabled");
     assert.ok(sessionsStatus?.lastIndexedAt);
+  });
+});
+
+test("search rebuild indexes database.records from core.sqlite", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-database-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const create = await runCliCapture([
+      "db",
+      "contacts",
+      "create",
+      "--data",
+      JSON.stringify({
+        companyId: "company-demo",
+        email: "ada@example.com",
+        firstName: "Ada",
+        lastName: "Lovelace",
+        notes: "Analytical engine rollout owner",
+      }),
+      "--json",
+    ], workspaceRoot);
+    assert.equal(create.code, CLI_EXIT_OK);
+    const createPayload = JSON.parse(create.stdout) as { data: { id: string } };
+    assert.ok(createPayload.data.id);
+
+    const sensitive = await runCliCapture([
+      "db",
+      "contacts",
+      "create",
+      "--data",
+      JSON.stringify({
+        companyId: "company-demo",
+        email: "private@example.com",
+        firstName: "Private",
+        lastName: "Contact",
+        notes: "Restricted launch details",
+        sensitivity: "sensitive",
+      }),
+      "--json",
+    ], workspaceRoot);
+    assert.equal(sensitive.code, CLI_EXIT_OK);
+
+    const rebuild = await runCliCapture(["search", "rebuild", "--json"], workspaceRoot);
+    assert.equal(rebuild.code, CLI_EXIT_OK);
+    const rebuildPayload = JSON.parse(rebuild.stdout) as {
+      data: {
+        sources: string[];
+        pendingSources: string[];
+        indexedBySource: { "database.records": number };
+      };
+    };
+    assert.equal(rebuildPayload.data.sources.includes("database.records"), true);
+    assert.equal(rebuildPayload.data.pendingSources.includes("database.records"), false);
+    assert.equal(rebuildPayload.data.indexedBySource["database.records"], 2);
+
+    const query = await runCliCapture(["search", "query", "Analytical engine", "--domains", "database", "--json", "--limit", "5", "--explain", "true"], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: {
+        indexedFastPaths: { "database.records": number };
+        results: Array<{
+          source: string;
+          domain: string;
+          type: string;
+          title: string;
+          subtitle?: string;
+          permissions?: { canPreview?: boolean; redacted?: boolean };
+          fragments?: Array<{ title?: string; snippet?: string }>;
+          explanation?: { matchedBy?: string[] };
+        }>;
+      };
+    };
+    assert.equal(queryPayload.data.indexedFastPaths["database.records"], 2);
+    const record = queryPayload.data.results.find((result) => result.title.includes("Ada"));
+    assert.equal(record?.source, "database.records");
+    assert.equal(record?.domain, "database");
+    assert.equal(record?.type, "record");
+    assert.equal(record?.subtitle, "main/contacts");
+    assert.equal(record?.permissions?.redacted, false);
+    assert.equal(record?.fragments?.some((fragment) => fragment.title === "notes" && fragment.snippet?.includes("Analytical engine")), true);
+    assert.ok(record?.explanation?.matchedBy?.length);
+
+    const redacted = await runCliCapture(["search", "query", "Restricted launch", "--domains", "database", "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(redacted.code, CLI_EXIT_OK);
+    const redactedPayload = JSON.parse(redacted.stdout) as {
+      data: { results: Array<{ title: string; snippet?: string; permissions?: { canPreview?: boolean; redacted?: boolean }; fragments?: unknown[] }> };
+    };
+    const sensitiveResult = redactedPayload.data.results.find((result) => result.title.includes("Private"));
+    assert.equal(sensitiveResult?.snippet, "[redacted]");
+    assert.equal(sensitiveResult?.permissions?.canPreview, false);
+    assert.equal(sensitiveResult?.permissions?.redacted, true);
+    assert.deepEqual(sensitiveResult?.fragments ?? [], []);
   });
 });
