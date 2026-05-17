@@ -58,6 +58,87 @@ test("mcp config writes refuse Codex-owned config paths", () => {
   assert.equal(fs.existsSync(codexConfig), false);
 });
 
+test("runCli exposes Agents V1 safe surface projection gate", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-agent-surface-projection-"));
+  await withPatchedEnv({
+    CLAW_HOME: path.join(tempRoot, "home"),
+    CLAW_DATA_DIR: tempRoot,
+    CLAW_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    DATABASE_FILES_DIR: undefined,
+  }, async () => {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-agent-surface-projection-cwd-"));
+    const schemaStdout = captureStream();
+    assert.equal(await runCli(["agents", "schema", "--json"], {
+      stdout: schemaStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const schema = parseCliJsonPayload(schemaStdout.getOutput()) as { gates: string[] };
+    assert.equal(schema.gates.includes("surface-projection"), true);
+
+    const surfaceProjectionStdout = captureStream();
+    assert.equal(await runCli(["agents", "surface-projection", "--record", JSON.stringify({
+      surface: "mcp_api",
+      projectedAt: "2026-05-17T10:00:00.000Z",
+      agent: {
+        id: "agent-ops",
+        name: "Ops",
+        role: "Support",
+        systemPrompt: "private",
+        secretAllowlist: ["vault://agents/ops"],
+        localPath: "/Users/example/private-agent",
+      },
+      assignments: [{
+        id: "assignment.mcp",
+        agentId: "agent-ops",
+        kind: "mcp_api",
+        status: "paused",
+        channel: "mcp",
+        endpointRef: "mcp://private",
+        privacyPolicy: "raw_with_retention",
+        externalDisclosure: "custom_agent_wording",
+      }],
+      resourceGrants: [{
+        id: "grant.secret",
+        resourceType: "secret",
+        resourceId: "vault://agents/ops",
+        action: "lease_secret",
+        apiToken: "raw",
+      }],
+    }), "--json"], {
+      stdout: surfaceProjectionStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const surfaceProjection = parseCliJsonPayload(surfaceProjectionStdout.getOutput()) as {
+      projectionKind: string;
+      surface: string;
+      agent: Record<string, unknown>;
+      assignments: Array<Record<string, unknown>>;
+      resourceAccess: { brokeredLeaseAllowed: boolean; grants: Array<Record<string, unknown>> };
+      risks: string[];
+      gaps: string[];
+    };
+    assert.equal(surfaceProjection.projectionKind, "claw_agent_safe_surface");
+    assert.equal(surfaceProjection.surface, "mcp_api");
+    assert.equal(surfaceProjection.agent.name, "Ops");
+    assert.equal("systemPrompt" in surfaceProjection.agent, false);
+    assert.equal("secretAllowlist" in surfaceProjection.agent, false);
+    assert.equal("localPath" in surfaceProjection.agent, false);
+    assert.equal("endpointRef" in surfaceProjection.assignments[0], false);
+    assert.equal("apiToken" in surfaceProjection.resourceAccess.grants[0], false);
+    assert.equal(surfaceProjection.resourceAccess.brokeredLeaseAllowed, true);
+    assert.deepEqual(surfaceProjection.gaps, ["active_assignment_missing", "budget_policy_missing"]);
+    assert.deepEqual(surfaceProjection.risks, [
+      "secret_lease_requires_brokered_runtime_only",
+      "raw_telemetry_retention_requires_policy_review",
+      "external_disclosure_uses_custom_wording",
+    ]);
+  });
+  fs.rmSync(tempRoot, { recursive: true, force: true });
+});
+
 test("app-state projects persist opaque resource ids alongside paths", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-app-state-resource-"));
   let restoreEnv: (() => void) | undefined;
@@ -259,12 +340,11 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
       stderr: captureStream().stream,
       cwd,
     }), CLI_EXIT_OK);
-    const agentsSchema = parseCliJsonPayload(agentsSchemaStdout.getOutput()) as { canonicalCollection: string; subentities: string[]; defaultPosture: string; gates: string[] };
+    const agentsSchema = parseCliJsonPayload(agentsSchemaStdout.getOutput()) as { canonicalCollection: string; subentities: string[]; defaultPosture: string };
     assert.equal(agentsSchema.canonicalCollection, "agents");
     assert.equal(agentsSchema.subentities.includes("agent_assignments"), true);
     assert.equal(agentsSchema.subentities.includes("agent_resource_grants"), true);
     assert.equal(agentsSchema.defaultPosture, "empty_sandbox_respond_only");
-    assert.equal(agentsSchema.gates.includes("surface-projection"), true);
 
     const accessStdout = captureStream();
     const accessRecord = {
@@ -369,65 +449,6 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
     const memoryResult = parseCliJsonPayload(memoryStdout.getOutput()) as { allowed: boolean; reasons: string[] };
     assert.equal(memoryResult.allowed, false);
     assert.deepEqual(memoryResult.reasons, ["memory: cross-boundary access requires explicit grant"]);
-
-    const surfaceProjectionStdout = captureStream();
-    assert.equal(await runCli(["agents", "surface-projection", "--record", JSON.stringify({
-      surface: "mcp_api",
-      projectedAt: "2026-05-17T10:00:00.000Z",
-      agent: {
-        id: "agent-ops",
-        name: "Ops",
-        role: "Support",
-        systemPrompt: "private",
-        secretAllowlist: ["vault://agents/ops"],
-        localPath: "/Users/example/private-agent",
-      },
-      assignments: [{
-        id: "assignment.mcp",
-        agentId: "agent-ops",
-        kind: "mcp_api",
-        status: "paused",
-        channel: "mcp",
-        endpointRef: "mcp://private",
-        privacyPolicy: "raw_with_retention",
-        externalDisclosure: "custom_agent_wording",
-      }],
-      resourceGrants: [{
-        id: "grant.secret",
-        resourceType: "secret",
-        resourceId: "vault://agents/ops",
-        action: "lease_secret",
-        apiToken: "raw",
-      }],
-    }), "--json"], {
-      stdout: surfaceProjectionStdout.stream,
-      stderr: captureStream().stream,
-      cwd,
-    }), CLI_EXIT_OK);
-    const surfaceProjection = parseCliJsonPayload(surfaceProjectionStdout.getOutput()) as {
-      projectionKind: string;
-      surface: string;
-      agent: Record<string, unknown>;
-      assignments: Array<Record<string, unknown>>;
-      resourceAccess: { brokeredLeaseAllowed: boolean; grants: Array<Record<string, unknown>> };
-      risks: string[];
-      gaps: string[];
-    };
-    assert.equal(surfaceProjection.projectionKind, "claw_agent_safe_surface");
-    assert.equal(surfaceProjection.surface, "mcp_api");
-    assert.equal(surfaceProjection.agent.name, "Ops");
-    assert.equal("systemPrompt" in surfaceProjection.agent, false);
-    assert.equal("secretAllowlist" in surfaceProjection.agent, false);
-    assert.equal("localPath" in surfaceProjection.agent, false);
-    assert.equal("endpointRef" in surfaceProjection.assignments[0], false);
-    assert.equal("apiToken" in surfaceProjection.resourceAccess.grants[0], false);
-    assert.equal(surfaceProjection.resourceAccess.brokeredLeaseAllowed, true);
-    assert.deepEqual(surfaceProjection.gaps, ["active_assignment_missing", "budget_policy_missing"]);
-    assert.deepEqual(surfaceProjection.risks, [
-      "secret_lease_requires_brokered_runtime_only",
-      "raw_telemetry_retention_requires_policy_review",
-      "external_disclosure_uses_custom_wording",
-    ]);
 
     const personalityStdout = captureStream();
     assert.equal(await runCli(["personalities", "upsert", "personality.review", "--name", "Reviewer", "--prompt", "Review with concrete evidence", "--json"], {
