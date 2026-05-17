@@ -26,6 +26,8 @@ import { createCliWorkspaceClaw } from "./cli-claw-factory.ts";
 import { readBooleanFlag } from "./cli-flag-parsers.ts";
 import { writeCommandJsonError, writeCommandJsonOk, writeJsonOk } from "./cli-json.ts";
 import { buildCommandHelp, searchCliDiscovery } from "./cli-surface.ts";
+import { ensureGenerationsArtifactsSourceIndexed } from "./cli-search-generations-source.ts";
+import { ensureImagesDerivedSourceIndexed, ensureMediaAssetsSourceIndexed } from "./cli-search-image-media-sources.ts";
 import { pathSafeBasename, resolveRuntimeAdapterId } from "./cli-runtime-utils.ts";
 import { resolveClawjsDataRoot, resolveClawjsMainDbPath } from "./v1-data.ts";
 
@@ -88,6 +90,39 @@ const BUILTIN_SEARCH_SOURCES: SearchSourceManifest[] = [
     domain: "images",
     name: "Images",
     resultTypes: ["image", "ocr", "label"],
+    facets: [
+      { id: "imageType", label: "Image type", type: "string" },
+      { id: "provenance", label: "Provenance", type: "string" },
+      { id: "operation", label: "Operation", type: "string" },
+      { id: "project", label: "Project", type: "string" },
+      { id: "tag", label: "Tag", type: "string" },
+    ],
+  }),
+  createFrameworkSearchSourceManifest({
+    id: "media.assets",
+    domain: "media",
+    name: "Media assets",
+    resultTypes: ["image", "audio", "video", "document", "animation", "asset"],
+    facets: [
+      { id: "kind", label: "Kind", type: "string" },
+      { id: "origin", label: "Origin", type: "string" },
+      { id: "direction", label: "Direction", type: "string" },
+      { id: "project", label: "Project", type: "string" },
+      { id: "provider", label: "Provider", type: "string" },
+    ],
+  }),
+  createFrameworkSearchSourceManifest({
+    id: "generations.artifacts",
+    domain: "generations",
+    name: "Generated artifacts",
+    resultTypes: ["generation", "artifact", "image", "audio", "video", "document"],
+    facets: [
+      { id: "kind", label: "Kind", type: "string" },
+      { id: "status", label: "Status", type: "string" },
+      { id: "backendId", label: "Backend", type: "string" },
+      { id: "backendSource", label: "Backend source", type: "string" },
+      { id: "model", label: "Model", type: "string" },
+    ],
   }),
   createFrameworkSearchSourceManifest({
     id: "code.symbols",
@@ -130,9 +165,15 @@ export async function runSearchQueryCli(input: {
     const sources = parseListFlag(input.flags.sources ?? input.flags.source);
     const shouldRefreshDatabase = domains?.includes("database") || sources?.includes("database.records");
     const shouldRefreshDocuments = domains?.includes("documents") || sources?.includes("documents.blocks");
+    const shouldRefreshImages = domains?.includes("images") || sources?.includes("images.derived");
+    const shouldRefreshMedia = domains?.includes("media") || sources?.includes("media.assets");
+    const shouldRefreshGenerations = domains?.includes("generations") || sources?.includes("generations.artifacts");
     const shouldRefreshCode = domains?.includes("code") || sources?.includes("code.symbols");
     const indexedDatabase = shouldRefreshDatabase && sourceCanIndex(store, "database.records") ? ensureDatabaseRecordsSourceIndexed(store, input.flags) : 0;
     const indexedDocuments = shouldRefreshDocuments && sourceCanIndex(store, "documents.blocks") ? ensureDocumentsBlocksSourceIndexed(store, input.flags) : 0;
+    const indexedImages = shouldRefreshImages && sourceCanIndex(store, "images.derived") ? ensureImagesDerivedSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const indexedMedia = shouldRefreshMedia && sourceCanIndex(store, "media.assets") ? ensureMediaAssetsSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const indexedGenerations = shouldRefreshGenerations && sourceCanIndex(store, "generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedCode = shouldRefreshCode && sourceCanIndex(store, "code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const results = store.query({
       query,
@@ -152,6 +193,9 @@ export async function runSearchQueryCli(input: {
         commands: indexedCommands,
         ...(shouldRefreshDatabase ? { "database.records": indexedDatabase } : {}),
         ...(shouldRefreshDocuments ? { "documents.blocks": indexedDocuments } : {}),
+        ...(shouldRefreshImages ? { "images.derived": indexedImages } : {}),
+        ...(shouldRefreshMedia ? { "media.assets": indexedMedia } : {}),
+        ...(shouldRefreshGenerations ? { "generations.artifacts": indexedGenerations } : {}),
         ...(shouldRefreshCode ? { "code.symbols": indexedCode } : {}),
       },
     };
@@ -200,28 +244,49 @@ export async function runSearchRebuildCli(input: {
 }): Promise<number> {
   const store = openCliSearchStore(input.flags);
   try {
+    const selectedSources = parseListFlag(input.flags.sources ?? input.flags.source);
+    const knownSources = new Set(BUILTIN_SEARCH_SOURCES.map((source) => source.id));
+    const unknownSources = (selectedSources ?? []).filter((source) => !knownSources.has(source));
+    if (unknownSources.length) {
+      const message = `Unknown search source(s): ${unknownSources.join(", ")}`;
+      if (input.wantsJson) writeCommandJsonError(input.context.stdout, "search", { code: "unknown_source", message }, { subcommand: "rebuild" });
+      else input.context.stderr.write(`${message}\n`);
+      return CLI_EXIT_USAGE;
+    }
     registerBuiltinSources(store);
     const preservedStates = new Map(store.sourceStatus().map((status) => [status.source, status.state]));
-    store.reset();
+    if (selectedSources) store.resetSources(selectedSources);
+    else store.reset();
     registerBuiltinSources(store, preservedStates);
-    const commandsIndexed = sourceCanIndex(store, "commands") ? ensureCommandSourceIndexed(store) : 0;
-    const sessionsIndexed = sourceCanIndex(store, "sessions.chats") ? ensureSessionsChatsSourceIndexed(store, input.flags) : 0;
-    const databaseIndexed = sourceCanIndex(store, "database.records") ? ensureDatabaseRecordsSourceIndexed(store, input.flags) : 0;
-    const documentsIndexed = sourceCanIndex(store, "documents.blocks") ? ensureDocumentsBlocksSourceIndexed(store, input.flags) : 0;
-    const codeIndexed = sourceCanIndex(store, "code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const rebuildsSource = (source: string) => (!selectedSources || selectedSources.includes(source)) && sourceCanIndex(store, source);
+    const commandsIndexed = rebuildsSource("commands") ? ensureCommandSourceIndexed(store) : 0;
+    const sessionsIndexed = rebuildsSource("sessions.chats") ? ensureSessionsChatsSourceIndexed(store, input.flags) : 0;
+    const databaseIndexed = rebuildsSource("database.records") ? ensureDatabaseRecordsSourceIndexed(store, input.flags) : 0;
+    const documentsIndexed = rebuildsSource("documents.blocks") ? ensureDocumentsBlocksSourceIndexed(store, input.flags) : 0;
+    const imagesIndexed = rebuildsSource("images.derived") ? ensureImagesDerivedSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const mediaIndexed = rebuildsSource("media.assets") ? ensureMediaAssetsSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const generationsIndexed = rebuildsSource("generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const codeIndexed = rebuildsSource("code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedSourceIds = new Set([
       ...(commandsIndexed > 0 ? ["commands"] : []),
       ...(sessionsIndexed > 0 ? ["sessions.chats"] : []),
       ...(databaseIndexed > 0 ? ["database.records"] : []),
       ...(documentsIndexed > 0 ? ["documents.blocks"] : []),
+      ...(imagesIndexed > 0 ? ["images.derived"] : []),
+      ...(mediaIndexed > 0 ? ["media.assets"] : []),
+      ...(generationsIndexed > 0 ? ["generations.artifacts"] : []),
       ...(codeIndexed > 0 ? ["code.symbols"] : []),
     ]);
+    const pendingScope = selectedSources ?? BUILTIN_SEARCH_SOURCES.map((source) => source.id);
     const pendingSources = BUILTIN_SEARCH_SOURCES
+      .filter((source) => pendingScope.includes(source.id))
       .filter((source) => !indexedSourceIds.has(source.id) && sourceCanIndex(store, source.id))
       .map((source) => source.id);
     const data = {
       rebuilt: true,
-      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + documentsIndexed + codeIndexed,
+      mode: selectedSources ? "scoped" : "full",
+      selectedSources: selectedSources ?? null,
+      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + documentsIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed,
       embeddings: 0,
       profile: input.flags.profile === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
@@ -231,6 +296,9 @@ export async function runSearchRebuildCli(input: {
         "sessions.chats": sessionsIndexed,
         "database.records": databaseIndexed,
         "documents.blocks": documentsIndexed,
+        "images.derived": imagesIndexed,
+        "media.assets": mediaIndexed,
+        "generations.artifacts": generationsIndexed,
         "code.symbols": codeIndexed,
       },
       pendingSources,

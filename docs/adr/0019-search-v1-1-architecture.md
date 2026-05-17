@@ -45,7 +45,8 @@ Search V1.1 is built from these layers:
   fragments, cursors, tombstones, saved searches, monitors, ranking cache, and
   optional vector data.
 - **Domain fast paths**: `sessions.chats`, `database.records`,
-  `documents.blocks`, `code.symbols`, and `commands` are initial framework
+  `documents.blocks`, `images.derived`, `media.assets`,
+  `generations.artifacts`, `code.symbols`, and `commands` are initial framework
   sources. More framework domains are added source by source; global Search must
   never replace a section-specific fast path.
 - **Profiles**: `framework` is default. `full` is opt-in and is where native,
@@ -61,6 +62,7 @@ Search V1.1 is built from these layers:
 - `claw search sources pause|exclude|resume <source-id>`
 - `claw search status`
 - `claw search rebuild`
+- `claw search rebuild --source <source-id>`
 - `claw search saved`
 - `claw search monitors`
 - `claw search actions`
@@ -72,6 +74,10 @@ Clawix Mac Search and `Command-G` keep their current conversations-only UX.
 They must not display Root Search results by default, wait for universal
 indexing, or include random framework/native sources unless a future UI explicitly
 switches scope.
+
+Scoped rebuilds clear only the selected source's derived rows before refreshing
+it. A generation, media, code, or document backfill must not wipe conversations,
+commands, or any other section-specific fast path.
 
 ## Consequences
 
@@ -94,6 +100,16 @@ on the hot path for chats, database records, commands, or other sections.
 The initial document source projects `documents` and `document_blocks` records
 from `core.sqlite`, returning documents as section results and blocks as
 fragments.
+The initial image source projects local image-library records and image media
+metadata. OCR and vision labels are explicit future derived-text extractors; the
+first fast path covers prompts, tags, provenance, type, provider/model, and
+output metadata.
+The initial media source projects workspace media records for generic
+document/image/audio/video asset search, leaving heavyweight content extraction
+to later per-kind adapters.
+The initial generations source projects generated artifact records and indexes
+prompts, kind/status, backend/model metadata, command provenance, and output
+references.
 
 Search action execution is represented as a brokered host-grants plan. CLI
 dry-runs are safe previews; non-dry-run execution fails closed unless a signed
