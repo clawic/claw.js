@@ -198,6 +198,7 @@ claw nodes invite --issuer-mesh mesh.home --recipient-mesh mesh.server --allowed
 claw nodes share --issuer-mesh mesh.home --to-mesh mesh.server --resource-id skills:default --driver skills --actions read,sync --state-dir .claw/remote-sync --record true --json
 claw nodes revoke --target-type share --target-id mesh_share_1 --state-dir .claw/remote-sync --record true --json
 claw nodes heartbeat --json
+claw nodes heartbeat --transport iroh --owner-node mac.home --peer-node vps.server --coordinator-node coord.home --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 
 claw gateway serve --dry-run --json
 claw gateway project --dry-run --json
@@ -215,6 +216,10 @@ authority unless each record is signed with Coordinator keys. The
 an Ed25519 signature that `claw sync status --state-dir ...` verifies and
 counts. Pairing, trust changes, real gateway serving, and physical sync
 execution still stay signed-host or Coordinator gated.
+`nodes heartbeat --record true` stores a signed transport-handshake receipt for
+the Iroh v1 adapter contract. It verifies the local Coordinator ledger shape
+and still marks real multi-device transport and device trust acceptance as
+`external_pending` until physical nodes prove the handshake.
 `gateway secret-lease` records a signed, expiring lease for a secret reference,
 never reads or returns the secret value, and rejects plaintext-return flags.
 

@@ -84,6 +84,11 @@ Iroh is the preferred v1 transport adapter for P2P, rendezvous, and relay
 fallback, but the stable contract is transport-agnostic. A central relay can
 exist only as a transport or governed Gateway deployment; it cannot become a
 privileged source of truth.
+`RemoteTransportHandshakeReceipt` records the local, signed Coordinator proof
+for the transport-adapter contract. For Iroh it defaults to `adapter:
+iroh_v1`; unless a real multi-device run proves the network handshake, the
+receipt keeps `physical_iroh_handshake` and `device_trust_acceptance` as
+external pending work.
 
 Every stable capability must expose remote classification metadata. A
 `remote-safe` capability must have a route, owner, policy, and test. A

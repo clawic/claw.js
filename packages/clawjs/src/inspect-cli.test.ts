@@ -275,6 +275,24 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.equal(recordedInvitationPayload.status, "recorded_proposal");
   assert.equal(recordedInvitationPayload.state.durable, true);
 
+  const heartbeat = await runCliCapture(["nodes", "heartbeat", "--state-dir", stateDir, "--record", "true", "--transport", "iroh", "--owner-node", "mac.home", "--peer-node", "vps.server", "--coordinator-node", "coord.home", ...coordinatorSigningFlags, "--json"], process.cwd());
+  assert.equal(heartbeat.code, CLI_EXIT_OK);
+  const heartbeatPayload = parseCliJson<{
+    status: string;
+    physicalTransport: string;
+    receipt: { adapter: string; contractVerified: boolean; physicalTransportVerified: boolean; externalPending: string[]; writes: boolean };
+    state: { durable: boolean; coordinatorSignature?: { verified: boolean } };
+  }>(heartbeat.stdout).data;
+  assert.equal(heartbeatPayload.status, "signed_transport_handshake_recorded");
+  assert.equal(heartbeatPayload.physicalTransport, "external_pending");
+  assert.equal(heartbeatPayload.receipt.adapter, "iroh_v1");
+  assert.equal(heartbeatPayload.receipt.contractVerified, true);
+  assert.equal(heartbeatPayload.receipt.physicalTransportVerified, false);
+  assert.equal(heartbeatPayload.receipt.externalPending.includes("physical_iroh_handshake"), true);
+  assert.equal(heartbeatPayload.receipt.writes, false);
+  assert.equal(heartbeatPayload.state.durable, true);
+  assert.equal(heartbeatPayload.state.coordinatorSignature?.verified, true);
+
   const share = await runCliCapture(["nodes", "share", "--issuer-mesh", "mesh.home", "--to-mesh", "mesh.server", "--resource-id", "skills:default", "--driver", "skills", "--actions", "read,sync", "--json"], process.cwd());
   assert.equal(share.code, CLI_EXIT_OK);
   const sharePayload = parseCliJson<{ share: { status: string; resourceId: string; plaintextSecrets: string; writes: boolean }; writes: boolean }>(share.stdout).data;

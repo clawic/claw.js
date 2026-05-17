@@ -256,6 +256,26 @@ export const remoteOfflineCommandResultSchema = z.object({
   writes: z.literal(false),
 });
 
+export const remoteTransportHandshakeReceiptSchema = z.object({
+  schemaVersion: z.literal(1),
+  receiptId: z.string().min(1),
+  transport: z.string().min(1),
+  adapter: z.string().min(1),
+  initiatorNodeId: z.string().min(1),
+  responderNodeId: z.string().min(1),
+  coordinatorNodeId: z.string().min(1),
+  trustMode: remoteTrustModeSchema,
+  challengeNonce: z.string().min(16),
+  responseNonce: z.string().min(16),
+  contractVerified: z.literal(true),
+  physicalTransportVerified: z.boolean(),
+  externalPending: z.array(z.enum(["physical_iroh_handshake", "device_trust_acceptance"])),
+  createdAt: z.string().datetime(),
+  expiresAt: z.string().datetime(),
+  auditEventId: z.string().min(1),
+  writes: z.literal(false),
+});
+
 export const meshShareActionSchema = z.enum([
   "read",
   "sync",
@@ -388,6 +408,7 @@ export type RemoteAccessGrant = z.infer<typeof remoteAccessGrantSchema>;
 export type RemoteAccessRequest = z.infer<typeof remoteAccessRequestSchema>;
 export type RemoteAccessDecision = z.infer<typeof remoteAccessDecisionSchema>;
 export type RemoteOfflineCommandResult = z.infer<typeof remoteOfflineCommandResultSchema>;
+export type RemoteTransportHandshakeReceipt = z.infer<typeof remoteTransportHandshakeReceiptSchema>;
 export type MeshShareAction = z.infer<typeof meshShareActionSchema>;
 export type MeshInvitation = z.infer<typeof meshInvitationSchema>;
 export type MeshResourceShare = z.infer<typeof meshResourceShareSchema>;
@@ -528,6 +549,10 @@ function syncQueueEntryId(parts: string[]): string {
 
 function meshId(prefix: string, parts: string[]): string {
   return `${prefix}_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
+}
+
+function remoteTransportReceiptId(parts: string[]): string {
+  return `transport_handshake_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
 }
 
 function newestSnapshot(left: SyncObjectSnapshot, right: SyncObjectSnapshot): SyncObjectSnapshot {
@@ -754,6 +779,50 @@ export function buildRemoteOfflineCommandResult(input: {
     enqueued: false,
     retryable: true,
     evaluatedAt: input.evaluatedAt ?? new Date().toISOString(),
+    writes: false,
+  });
+}
+
+export function createTransportHandshakeReceipt(input: {
+  transport?: string;
+  adapter?: string;
+  initiatorNodeId: string;
+  responderNodeId: string;
+  coordinatorNodeId: string;
+  trustMode?: RemoteTrustMode;
+  challengeNonce: string;
+  responseNonce: string;
+  createdAt?: string;
+  expiresAt?: string;
+  physicalTransportVerified?: boolean;
+}): RemoteTransportHandshakeReceipt {
+  const createdAt = input.createdAt ?? new Date().toISOString();
+  const expiresAt = input.expiresAt ?? new Date(Date.parse(createdAt) + 15 * 60 * 1000).toISOString();
+  const physicalTransportVerified = input.physicalTransportVerified ?? false;
+  const transport = input.transport ?? "iroh";
+  return remoteTransportHandshakeReceiptSchema.parse({
+    schemaVersion: 1,
+    receiptId: remoteTransportReceiptId([
+      transport,
+      input.initiatorNodeId,
+      input.responderNodeId,
+      input.coordinatorNodeId,
+      input.challengeNonce,
+    ]),
+    transport,
+    adapter: input.adapter ?? (transport === "iroh" ? "iroh_v1" : `${transport}_adapter`),
+    initiatorNodeId: input.initiatorNodeId,
+    responderNodeId: input.responderNodeId,
+    coordinatorNodeId: input.coordinatorNodeId,
+    trustMode: input.trustMode ?? "sovereign_e2e_tunnel",
+    challengeNonce: input.challengeNonce,
+    responseNonce: input.responseNonce,
+    contractVerified: true,
+    physicalTransportVerified,
+    externalPending: physicalTransportVerified ? [] : ["physical_iroh_handshake", "device_trust_acceptance"],
+    createdAt,
+    expiresAt,
+    auditEventId: remoteTransportReceiptId(["audit", input.initiatorNodeId, input.responderNodeId, createdAt]),
     writes: false,
   });
 }

@@ -118,6 +118,10 @@ state without becoming node-trust authority. When the CLI is given
 `--coordinator-private-key-file` and `--coordinator-public-key-file`, ledger
 records are signed with Ed25519 and later verified in `claw sync status`;
 unsigned records remain local proposals only.
+`claw nodes heartbeat --record true` uses the same ledger to store a signed
+transport-handshake receipt for the Iroh v1 adapter contract. The receipt is
+contract-level proof only; real multi-device Iroh connectivity and device
+trust acceptance remain `EXTERNAL PENDING` until validated on physical nodes.
 The local Gateway secret broker path issues only signed, expiring leases for
 secret references; it never reads or returns plaintext secret material.
 

@@ -10,6 +10,7 @@ import {
   meshRevocationSchema,
   remoteActorContextSchema,
   remoteSecretLeaseSchema,
+  remoteTransportHandshakeReceiptSchema,
   syncCursorSchema,
   syncQueueEntrySchema,
   syncResourceManifestSchema,
@@ -18,6 +19,7 @@ import {
   type MeshRevocation,
   type RemoteActorContext,
   type RemoteSecretLease,
+  type RemoteTransportHandshakeReceipt,
   type SyncCursor,
   type SyncPlanResult,
   type SyncQueueEntry,
@@ -27,7 +29,7 @@ import {
 
 export type RemoteSyncStateAuditEvent = {
   eventId: string;
-  eventType: "sync.manifest.recorded" | "sync.queue.enqueued" | "sync.queue.reconciled" | "mesh.invitation.recorded" | "mesh.share.recorded" | "mesh.revocation.recorded" | "secret.lease.issued";
+  eventType: "sync.manifest.recorded" | "sync.queue.enqueued" | "sync.queue.reconciled" | "mesh.invitation.recorded" | "mesh.share.recorded" | "mesh.revocation.recorded" | "secret.lease.issued" | "transport.handshake.recorded";
   targetId: string;
   createdAt: string;
   coordinatorSignatureId?: string;
@@ -69,6 +71,9 @@ export type RemoteSyncState = {
   secretBroker: {
     leases: Record<string, RemoteSecretLease>;
   };
+  transport: {
+    handshakes: Record<string, RemoteTransportHandshakeReceipt>;
+  };
   audit: RemoteSyncStateAuditEvent[];
 };
 
@@ -95,6 +100,9 @@ function emptyState(): RemoteSyncState {
     },
     secretBroker: {
       leases: {},
+    },
+    transport: {
+      handshakes: {},
     },
     audit: [],
   };
@@ -266,6 +274,16 @@ function parseState(raw: unknown): RemoteSyncState {
     }
   }
 
+  const transport = input.transport;
+  if (transport && typeof transport === "object" && !Array.isArray(transport)) {
+    const handshakes = (transport as Record<string, unknown>).handshakes;
+    if (handshakes && typeof handshakes === "object" && !Array.isArray(handshakes)) {
+      for (const [receiptId, receiptInput] of Object.entries(handshakes)) {
+        state.transport.handshakes[receiptId] = remoteTransportHandshakeReceiptSchema.parse(receiptInput);
+      }
+    }
+  }
+
   const audit = input.audit;
   if (Array.isArray(audit)) {
     state.audit = audit.flatMap((event) => {
@@ -423,6 +441,17 @@ export class RemoteSyncStateStore {
     const coordinatorSignature = appendAudit(state, "mesh.revocation.recorded", revocation.revocationId, now, { revocation, cascadedQueueEntries }, input.signer);
     this.write(state);
     return { revocation, cascadedQueueEntries, statePath: this.statePath, durable: true, ...(coordinatorSignature ? { coordinatorSignature } : {}) };
+  }
+
+  recordTransportHandshake(receiptInput: RemoteTransportHandshakeReceipt, input: { now?: string; signer: RemoteSyncCoordinatorSigner }): RemoteSyncStateWriteResult<{ receipt: RemoteTransportHandshakeReceipt }> {
+    const receipt = remoteTransportHandshakeReceiptSchema.parse(receiptInput);
+    const now = input.now ?? receipt.createdAt;
+    const state = this.read();
+    state.transport.handshakes[receipt.receiptId] = receipt;
+    state.updatedAt = now;
+    const coordinatorSignature = appendAudit(state, "transport.handshake.recorded", receipt.receiptId, now, receipt, input.signer);
+    this.write(state);
+    return { receipt, statePath: this.statePath, durable: true, coordinatorSignature };
   }
 
   issueSecretLease(input: {

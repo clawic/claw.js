@@ -6,6 +6,7 @@ import {
   createMeshResourceShare,
   createMeshRevocation,
   createSyncResourceManifest,
+  createTransportHandshakeReceipt,
   evaluateRemoteAgentServiceAccess,
   remoteSyncRequiredDecisionIds,
   remoteSyncRequiredRouteIds,
@@ -262,6 +263,23 @@ function meshShareFromFlags(input: RemoteSyncCliInput) {
   });
 }
 
+function transportHandshakeFromFlags(input: RemoteSyncCliInput) {
+  const now = input.flags.now ?? new Date().toISOString();
+  return createTransportHandshakeReceipt({
+    transport: input.flags.transport ?? "iroh",
+    adapter: input.flags.adapter,
+    initiatorNodeId: input.flags["owner-node"] ?? input.flags["initiator-node"] ?? "local",
+    responderNodeId: input.flags["peer-node"] ?? input.flags["responder-node"] ?? "peer",
+    coordinatorNodeId: input.flags["coordinator-node"] ?? input.flags["owner-node"] ?? "local",
+    trustMode: input.flags["trust-mode"] === "governed_gateway" ? "governed_gateway" : "sovereign_e2e_tunnel",
+    challengeNonce: input.flags["challenge-nonce"] ?? "challenge-nonce-local",
+    responseNonce: input.flags["response-nonce"] ?? "response-nonce-peer",
+    createdAt: now,
+    expiresAt: input.flags["expires-at"],
+    physicalTransportVerified: input.flags["physical-verified"] === "true",
+  });
+}
+
 function numberFlag(value: string | undefined, fallback: number): number {
   if (value && Number.isFinite(Number(value))) return Number(value);
   return fallback;
@@ -398,6 +416,25 @@ export async function runNodesCli(input: RemoteSyncCliInput): Promise<number> {
     return writeOutput(input, "nodes", { nodes }, nodes.map((node) => `${node.id}: ${node.name}`).join("\n"), command);
   }
   if (command === "pair" || command === "trust" || command === "revoke" || command === "heartbeat") {
+    if (command === "heartbeat") {
+      const receipt = transportHandshakeFromFlags(input);
+      const usage = "nodes heartbeat --state-dir <dir> --record true --coordinator-private-key-file <pem> --coordinator-public-key-file <pem> [--transport iroh] [--owner-node <id>] [--peer-node <id>]";
+      const store = stateStoreFromFlags(input);
+      if (wantsDurableRecord(input) && !store) return missing(input, usage);
+      const signer = wantsDurableRecord(input) ? requireCoordinatorSigner(input, usage) : undefined;
+      if (typeof signer === "number") return signer;
+      const state = store && wantsDurableRecord(input) && signer
+        ? store.recordTransportHandshake(receipt, { now: input.flags.now, signer })
+        : undefined;
+      const status = state?.coordinatorSignature ? "signed_transport_handshake_recorded" : "dry_run_external_pending";
+      return writeOutput(input, "nodes", {
+        receipt,
+        status,
+        writes: false,
+        physicalTransport: receipt.physicalTransportVerified ? "verified" : "external_pending",
+        ...(state ? { state } : {}),
+      }, `heartbeat: ${status}`, command);
+    }
     if (command === "revoke" && input.flags["target-id"]) {
       const revocation = createMeshRevocation({
         targetType: input.flags["target-type"] === "invitation" || input.flags["target-type"] === "node_trust" ? input.flags["target-type"] : "share",
