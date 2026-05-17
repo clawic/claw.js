@@ -86,9 +86,9 @@ test("SoulSpec CLI resolves per-agent souls and default fallback", async () => {
   expect(fallback.stdout).toContain("Default Soul");
 });
 
-test("SoulSpec CLI migrates legacy structured souls automatically", async () => {
+test("SoulSpec CLI rejects pre-v1 structured souls", async () => {
   const rootDir = process.cwd();
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-soul-legacy-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-soul-prev1-"));
   const workspaceDir = path.join(tempRoot, "workspace");
   const stateDir = path.join(workspaceDir, ".claw");
   const binPath = path.join(rootDir, "packages", "clawjs", "bin", "claw.mjs");
@@ -97,8 +97,8 @@ test("SoulSpec CLI migrates legacy structured souls automatically", async () => 
     schemaVersion: 1,
     specs: [{
       schemaVersion: 1,
-      id: "legacy",
-      title: "Legacy Soul",
+      id: "prev1",
+      title: "Pre-v1 Soul",
       extends: ["balanced"],
       modules: { communication: { settings: { directness: "very_high" }, directives: ["Keep the migrated rule."] } },
       createdAt: "2026-01-01T00:00:00.000Z",
@@ -107,9 +107,15 @@ test("SoulSpec CLI migrates legacy structured souls automatically", async () => 
     assignments: [],
     updatedAt: "2026-01-01T00:00:00.000Z",
   }, null, 2));
-  const inspected = await execFileAsync(process.execPath, [binPath, "soul", "inspect", "legacy", "--workspace", workspaceDir, "--json"], { cwd: rootDir });
-  expect(inspected.stdout).toContain("Keep the migrated rule.");
-  expect(inspected.stdout).toContain("very_high");
+  let inspectError: unknown;
+  try {
+    await execFileAsync(process.execPath, [binPath, "soul", "inspect", "prev1", "--workspace", workspaceDir, "--json"], { cwd: rootDir });
+  } catch (error) {
+    inspectError = error;
+  }
+  expect(inspectError).toMatchObject({ code: 1 });
+  expect(`${(inspectError as { stdout?: string })?.stdout ?? ""}\n${(inspectError as { stderr?: string })?.stderr ?? ""}`)
+    .toContain("Unrecognized key");
 });
 
 test("SoulSpec CLI rejects invalid structured setting values", async () => {
@@ -119,17 +125,21 @@ test("SoulSpec CLI rejects invalid structured setting values", async () => {
   const binPath = path.join(rootDir, "packages", "clawjs", "bin", "claw.mjs");
   const baseArgs = ["--workspace", workspaceDir, "--json"];
 
-  await expect(execFileAsync(process.execPath, [
-    binPath,
-    "soul",
-    "init",
-    "broken",
-    "--set",
-    "communication.directness=sideways",
-    ...baseArgs,
-  ], { cwd: rootDir }))
-    .rejects
-    .toMatchObject({
-      stderr: expect.stringContaining("Invalid enum value"),
-    });
+  let initError: unknown;
+  try {
+    await execFileAsync(process.execPath, [
+      binPath,
+      "soul",
+      "init",
+      "broken",
+      "--set",
+      "communication.directness=sideways",
+      ...baseArgs,
+    ], { cwd: rootDir });
+  } catch (error) {
+    initError = error;
+  }
+  expect(initError).toMatchObject({ code: 1 });
+  expect(`${(initError as { stdout?: string })?.stdout ?? ""}\n${(initError as { stderr?: string })?.stderr ?? ""}`)
+    .toContain("Invalid enum value");
 });
