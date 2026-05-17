@@ -212,4 +212,6 @@ export async function generateRuntimeSessionTitle(input: {
   return summarizeTitle(meaningfulMessages.find((message) => message.role === "user")?.content || meaningfulMessages[0]?.content || "");
 }
 
-export const generateSessionTitle = generateRuntimeSessionTitle;
+export function generateSessionTitle(input: Parameters<typeof generateRuntimeSessionTitle>[0]): Promise<string> {
+  return generateRuntimeSessionTitle(input);
+}
