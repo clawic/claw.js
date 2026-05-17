@@ -599,10 +599,13 @@ claw patient list --json
 claw patient schema --json
 claw medication add --patient patient_123 --json
 claw patient patient_123 medications list --json
+claw patients list --json
 claw patient patient_123 symptoms add "Headache" --severity 4 --json
 claw patient patient_123 symptoms list --json
 claw patient patient_123 timeline --json
 claw company create "Acme Corp" --json
+claw companies list --json
+claw company company_123 timeline --json
 claw account create "Acme Account" --company company_123 --json
 claw deal create "Pilot" --company company_123 --account-id account_123 --json
 claw crm account account_123 overview --json
@@ -623,12 +626,20 @@ claw study study_123 participants add "Subject 001" --json
 claw study study_123 participants list --json
 claw study study_123 timeline --json
 claw sample create "Tube A" --study-id study_123 --json
+claw assays list --json
 claw sample sample_123 assays add CBC --json
 claw sample sample_123 timeline --json
 claw learner create "Ada Learner" --json
 claw course create "Intro Biology" --json
 claw relation create --from-entity-kind learners --from-entity-id learner_123 --to-entity-kind courses --to-entity-id course_123 --type member_of --json
+claw course course_123 lessons add "Cell basics" --json
+claw course course_123 lessons list --json
+claw course course_123 timeline --json
 claw learner learner_123 timeline --json
+claw asset create --company company_123 --account-id account_123 --product product_123 --serial-number PRESS-001 --json
+claw asset asset_123 work-orders add "Batch 42" --company company_123 --json
+claw asset asset_123 work-orders list --json
+claw asset asset_123 timeline --json
 claw work-order create "Batch 42" --company company_123 --json
 claw work-order work_order_123 timeline --json
 claw financial-account create "Operating Account" --json

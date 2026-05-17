@@ -511,6 +511,9 @@ function applyDefaults(collectionName: string, payload: Record<string, unknown>,
     case "courses":
       payload.status ??= "enrolled";
       break;
+    case "assets":
+      payload.status ??= "active";
+      break;
     case "work_orders":
       payload.status ??= "planned";
       break;

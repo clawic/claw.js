@@ -291,11 +291,13 @@ function materializedSemanticViewForIntent(
   if (semanticView.id === "sample.timeline") return materializedSampleTimeline(input, intent, semanticView);
   if (semanticView.id === "experiment.timeline") return materializedExperimentTimeline(input, intent, semanticView);
   if (semanticView.id === "work_order.timeline") return materializedWorkOrderTimeline(input, intent, semanticView);
+  if (semanticView.id === "company.timeline") return materializedCompanyTimeline(input, intent, semanticView);
   if (semanticView.id === "erp.company.overview") return materializedErpCompanyOverview(input, intent, semanticView);
   if (semanticView.id === "crm.account.overview") return materializedCrmAccountOverview(input, intent, semanticView);
   if (semanticView.id === "finance.entity.overview") return materializedFinanceEntityOverview(input, intent, semanticView);
   if (semanticView.id === "learner.timeline") return materializedLearnerTimeline(input, intent, semanticView);
   if (semanticView.id === "course.timeline") return materializedCourseTimeline(input, intent, semanticView);
+  if (semanticView.id === "asset.timeline") return materializedAssetTimeline(input, intent, semanticView);
   return undefined;
 }
 
@@ -613,6 +615,79 @@ function materializedWorkOrderTimeline(
   };
 }
 
+function materializedAssetTimeline(
+  input: DenseDataCliInput,
+  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
+) {
+  const assetId = input.positionals[1];
+  if (!assetId) return undefined;
+  const namespaceId = input.flags.namespace ?? "main";
+  const store = openDenseDataStore(input.workspaceRoot);
+  store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
+  const asset = store.getRecord(namespaceId, "assets", assetId);
+  if (!asset) return undefined;
+
+  const company = typeof asset.companyId === "string" ? store.getRecord(namespaceId, "companies", asset.companyId) : undefined;
+  const account = typeof asset.accountId === "string" ? store.getRecord(namespaceId, "accounts", asset.accountId) : undefined;
+  const product = typeof asset.productCatalogId === "string" ? store.getRecord(namespaceId, "products_catalog", asset.productCatalogId) : undefined;
+  const workOrders = store.listRecords(namespaceId, "work_orders", { filter: { assetId } }).items;
+  const outgoingRelations = store.listRecords(namespaceId, "entity_relations", { filter: { fromEntityKind: "assets", fromEntityId: assetId } }).items;
+  const incomingRelations = store.listRecords(namespaceId, "entity_relations", { filter: { toEntityKind: "assets", toEntityId: assetId } }).items;
+  const relations = uniqueRecordsById([...outgoingRelations, ...incomingRelations]);
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "assets", recordId: assetId } }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "assets", targetId: assetId } }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "assets", targetId: assetId } }).items;
+  const items = [
+    timelineItem(asset, "asset", asset.id, asset.serialNumber ?? asset.id, asset.purchaseDate ?? asset.createdAt, asset),
+    ...(company ? [timelineItem(company, "company", company.id, company.name ?? company.legalName ?? company.id, company.createdAt, company)] : []),
+    ...(account ? [timelineItem(account, "account", account.id, account.name ?? account.id, account.createdAt, account)] : []),
+    ...(product ? [timelineItem(product, "product", product.id, product.name ?? product.id, product.createdAt, product)] : []),
+    ...workOrders.map((record) => timelineItem(record, "work_order", record.id, record.title ?? record.id, record.startedAt ?? record.plannedStartAt ?? record.createdAt, record)),
+    ...relations.map((record) => timelineItem(record, "relation", record.id, relationLabel(record), record.createdAt, record)),
+    ...evidence.map((record) => timelineItem(record, "evidence", record.id, record.label ?? record.id, record.capturedAt ?? record.createdAt, record)),
+    ...qualityGaps.map((record) => timelineItem(record, "quality_gap", record.id, record.label ?? record.id, record.createdAt, record)),
+    ...provenance.map((record) => timelineItem(record, "provenance", record.id, record.eventType ?? record.id, record.occurredAt ?? record.createdAt, record)),
+  ].sort((left, right) => String(left.occurredAt).localeCompare(String(right.occurredAt)));
+
+  return {
+    id: semanticView.id,
+    subject: { collectionName: "assets", id: asset.id, label: asset.serialNumber ?? asset.id },
+    company: company ? { id: company.id, label: company.name ?? company.legalName ?? company.id } : null,
+    account: account ? { id: account.id, label: account.name ?? account.id } : null,
+    product: product ? { id: product.id, label: product.name ?? product.id } : null,
+    summary: {
+      workOrders: workOrders.length,
+      relations: relations.length,
+      evidenceSources: evidence.length,
+      qualityGaps: qualityGaps.length,
+    },
+    itemCount: items.length,
+    items,
+    records: {
+      asset,
+      company,
+      account,
+      product,
+      workOrders,
+      relations,
+      evidence,
+      provenance,
+    },
+    gaps: qualityGaps.map((record) => ({
+      id: record.id,
+      label: record.label,
+      status: record.status,
+      gapKind: record.gapKind,
+      severity: record.severity,
+      evidenceSourceId: record.evidenceSourceId,
+    })),
+    sourceCollections: ["assets", "companies", "accounts", "products_catalog", "work_orders", "entity_relations", "evidence_sources", "quality_gaps", "provenance_events"],
+    partial: qualityGaps.length > 0,
+    intentStatus: intent.status,
+  };
+}
+
 function materializedLearnerTimeline(
   input: DenseDataCliInput,
   intent: ReturnType<typeof resolveClawDenseDataIntent>,
@@ -837,6 +912,109 @@ function materializedErpCompanyOverview(
   };
 }
 
+function materializedCompanyTimeline(
+  input: DenseDataCliInput,
+  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
+) {
+  const companyId = input.positionals[1];
+  if (input.positionals[0] !== "company" || input.positionals[2] !== "timeline" || !companyId) return undefined;
+  const namespaceId = input.flags.namespace ?? "main";
+  const store = openDenseDataStore(input.workspaceRoot);
+  store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
+  const company = store.getRecord(namespaceId, "companies", companyId);
+  if (!company) return undefined;
+
+  const accounts = store.listRecords(namespaceId, "accounts", { filter: { companyId } }).items;
+  const deals = store.listRecords(namespaceId, "deals", { filter: { companyId } }).items;
+  const contacts = store.listRecords(namespaceId, "contacts", { filter: { companyId } }).items;
+  const activities = store.listRecords(namespaceId, "activities", { filter: { companyId } }).items;
+  const billingCustomers = store.listRecords(namespaceId, "billing_customers", { filter: { companyId } }).items;
+  const invoices = billingCustomers.flatMap((record) => store.listRecords(namespaceId, "invoices", { filter: { billingCustomerId: record.id } }).items);
+  const paymentsByCustomer = billingCustomers.flatMap((record) => store.listRecords(namespaceId, "payment_intents", { filter: { billingCustomerId: record.id } }).items);
+  const paymentsByInvoice = invoices.flatMap((record) => store.listRecords(namespaceId, "payment_intents", { filter: { invoiceId: record.id } }).items);
+  const payments = uniqueRecordsById([...paymentsByCustomer, ...paymentsByInvoice]);
+  const services = store.listRecords(namespaceId, "services", { filter: { companyId } }).items;
+  const workOrders = store.listRecords(namespaceId, "work_orders", { filter: { companyId } }).items;
+  const assets = store.listRecords(namespaceId, "assets", { filter: { companyId } }).items;
+  const products = store.listRecords(namespaceId, "products_catalog", { filter: { companyId } }).items;
+  const outgoingRelations = store.listRecords(namespaceId, "entity_relations", { filter: { fromEntityKind: "companies", fromEntityId: companyId } }).items;
+  const incomingRelations = store.listRecords(namespaceId, "entity_relations", { filter: { toEntityKind: "companies", toEntityId: companyId } }).items;
+  const relations = uniqueRecordsById([...outgoingRelations, ...incomingRelations]);
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "companies", recordId: companyId } }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "companies", targetId: companyId } }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "companies", targetId: companyId } }).items;
+  const items = [
+    timelineItem(company, "company", company.id, company.name ?? company.legalName ?? company.id, company.createdAt, company),
+    ...accounts.map((record) => timelineItem(record, "account", record.id, record.name ?? record.id, record.createdAt, record)),
+    ...deals.map((record) => timelineItem(record, "deal", record.id, record.title ?? record.name ?? record.id, record.createdAt, record)),
+    ...contacts.map((record) => timelineItem(record, "contact", record.id, personLabel(record), record.createdAt, record)),
+    ...activities.map((record) => timelineItem(record, "activity", record.id, record.subject ?? record.kind ?? record.id, record.createdAt, record)),
+    ...billingCustomers.map((record) => timelineItem(record, "billing_customer", record.id, record.name ?? record.id, record.createdAt, record)),
+    ...invoices.map((record) => timelineItem(record, "invoice", record.id, record.number ?? record.id, record.issuedAt ?? record.createdAt, record)),
+    ...payments.map((record) => timelineItem(record, "payment", record.id, record.status ?? record.id, record.createdAt, record)),
+    ...services.map((record) => timelineItem(record, "service", record.id, record.name ?? record.id, record.createdAt, record)),
+    ...workOrders.map((record) => timelineItem(record, "work_order", record.id, record.title ?? record.id, record.startedAt ?? record.plannedStartAt ?? record.createdAt, record)),
+    ...assets.map((record) => timelineItem(record, "asset", record.id, record.serialNumber ?? record.id, record.purchaseDate ?? record.createdAt, record)),
+    ...products.map((record) => timelineItem(record, "product", record.id, record.name ?? record.id, record.createdAt, record)),
+    ...relations.map((record) => timelineItem(record, "relation", record.id, relationLabel(record), record.createdAt, record)),
+    ...evidence.map((record) => timelineItem(record, "evidence", record.id, record.label ?? record.id, record.capturedAt ?? record.createdAt, record)),
+    ...qualityGaps.map((record) => timelineItem(record, "quality_gap", record.id, record.label ?? record.id, record.createdAt, record)),
+    ...provenance.map((record) => timelineItem(record, "provenance", record.id, record.eventType ?? record.id, record.occurredAt ?? record.createdAt, record)),
+  ].sort((left, right) => String(left.occurredAt).localeCompare(String(right.occurredAt)));
+
+  return {
+    id: semanticView.id,
+    subject: { collectionName: "companies", id: company.id, label: company.name ?? company.legalName ?? company.id },
+    summary: {
+      accounts: accounts.length,
+      deals: deals.length,
+      contacts: contacts.length,
+      activities: activities.length,
+      billingCustomers: billingCustomers.length,
+      invoices: invoices.length,
+      payments: payments.length,
+      services: services.length,
+      workOrders: workOrders.length,
+      assets: assets.length,
+      products: products.length,
+      relations: relations.length,
+      evidenceSources: evidence.length,
+      qualityGaps: qualityGaps.length,
+    },
+    itemCount: items.length,
+    items,
+    records: {
+      company,
+      accounts,
+      deals,
+      contacts,
+      activities,
+      billingCustomers,
+      invoices,
+      payments,
+      services,
+      workOrders,
+      assets,
+      products,
+      relations,
+      evidence,
+      provenance,
+    },
+    gaps: qualityGaps.map((record) => ({
+      id: record.id,
+      label: record.label,
+      status: record.status,
+      gapKind: record.gapKind,
+      severity: record.severity,
+      evidenceSourceId: record.evidenceSourceId,
+    })),
+    sourceCollections: ["companies", "accounts", "deals", "contacts", "activities", "billing_customers", "invoices", "payment_intents", "services", "work_orders", "assets", "products_catalog", "entity_relations", "evidence_sources", "quality_gaps", "provenance_events"],
+    partial: qualityGaps.length > 0,
+    intentStatus: intent.status,
+  };
+}
+
 function materializedCrmAccountOverview(
   input: DenseDataCliInput,
   intent: ReturnType<typeof resolveClawDenseDataIntent>,
@@ -975,6 +1153,10 @@ function relationLabel(record: Record<string, unknown>): string {
   return `${String(record.type ?? "relates")} ${String(record.fromEntityKind ?? "entity")}/${String(record.fromEntityId ?? "?")} -> ${String(record.toEntityKind ?? "entity")}/${String(record.toEntityId ?? "?")}`;
 }
 
+function personLabel(record: Record<string, unknown>): string {
+  return [record.firstName, record.lastName].filter((value): value is string => typeof value === "string" && value.length > 0).join(" ") || String(record.email ?? record.id);
+}
+
 function openDenseDataStore(workspaceRoot: string) {
   const root = fs.realpathSync.native(workspaceRoot);
   const dataDir = path.join(root, ".claw", "data");
@@ -1032,8 +1214,11 @@ function denseDbFlags(flags: Record<string, string>, collectionName: string): Re
   if (["medications", "symptom_logs"].includes(collectionName) && flags.patient && !flags["patient-id"]) {
     nextFlags = { ...nextFlags, "patient-id": flags.patient };
   }
-  if (["accounts", "deals", "billing_customers", "legal_cases", "services", "work_orders"].includes(collectionName) && flags.company && !flags["company-id"]) {
+  if (["accounts", "deals", "billing_customers", "legal_cases", "services", "work_orders", "assets", "products_catalog"].includes(collectionName) && flags.company && !flags["company-id"]) {
     nextFlags = { ...nextFlags, "company-id": flags.company };
+  }
+  if (collectionName === "assets" && flags.product && !flags["product-catalog-id"]) {
+    nextFlags = { ...nextFlags, "product-catalog-id": flags.product };
   }
   if (["invoices", "payment_intents"].includes(collectionName) && flags["billing-customer"] && !flags["billing-customer-id"]) {
     nextFlags = { ...nextFlags, "billing-customer-id": flags["billing-customer"] };
@@ -1111,6 +1296,16 @@ function nestedDenseDbRoute(input: DenseDataCliInput): Parameters<typeof runMagi
     collections: {
       sample: "samples",
       samples: "samples",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "asset",
+    relationFlag: "asset-id",
+    relationField: "assetId",
+    collections: {
+      "work-order": "work_orders",
+      "work-orders": "work_orders",
+      work_order: "work_orders",
+      work_orders: "work_orders",
     },
   }) ?? nestedParentDbRoute(input, {
     parentCommand: "course",

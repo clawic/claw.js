@@ -74,7 +74,13 @@ const requiredFixtureCoverage = [
   "service",
   "learner",
   "course",
+  "lesson",
+  "study_session",
   "entity_relation",
+  "company_timeline",
+  "asset",
+  "product_catalog",
+  "asset_timeline",
   "work_order",
   "evidence",
   "provenance",
@@ -101,6 +107,14 @@ const requiredExistingAuditSurfaces = [
   "ERP",
   "Infra, observability, monitor, and ops",
   "Identity, actors, roles, and teams",
+];
+
+const requiredPluralIntentPhrases = [
+  ["claw patients list", "patients"],
+  ["claw companies list", "companies"],
+  ["claw assays list", "assays"],
+  ["claw assets list", "assets"],
+  ["claw courses list", "courses"],
 ];
 
 const failures = [];
@@ -168,12 +182,18 @@ for (const phrase of [
   "dense-fixtures",
   "claw dense-fixtures seed",
   "claw patient patient_123 timeline",
+  "claw patients list",
+  "claw companies list",
+  "claw assays list",
   "claw study study_123 timeline",
   "claw case case_123 timeline",
   "claw service service_123 timeline",
   "claw sample sample_123 timeline",
   "claw experiment experiment_123 timeline",
   "claw learner learner_123 timeline",
+  "claw course course_123 timeline",
+  "claw company company_123 timeline",
+  "claw asset asset_123 timeline",
   "claw work-order work_order_123 timeline",
   "claw erp company company_123 overview",
   "claw crm account account_123 overview",
@@ -267,6 +287,11 @@ if (!intents.some((entry) => entry.phrase === "claw encounter list" && entry.sta
 if (!intents.some((entry) => entry.phrase === "claw health gaps" && entry.status === "covered")) {
   fail("generated intents must cover claw health gaps");
 }
+for (const [phrase, collectionName] of requiredPluralIntentPhrases) {
+  if (!intents.some((entry) => entry.phrase === phrase && entry.status === "covered" && entry.collectionName === collectionName)) {
+    fail(`generated intents must cover plural alias ${phrase} against ${collectionName}`);
+  }
+}
 if (!semanticViews.some((entry) => entry.id === "patient.timeline" && entry.systemId === "health")) {
   fail("semantic views must include patient.timeline");
 }
@@ -288,8 +313,17 @@ if (!semanticViews.some((entry) => entry.id === "experiment.timeline" && entry.s
 if (!semanticViews.some((entry) => entry.id === "learner.timeline" && entry.systemId === "education")) {
   fail("semantic views must include learner.timeline");
 }
+if (!semanticViews.some((entry) => entry.id === "course.timeline" && entry.systemId === "education")) {
+  fail("semantic views must include course.timeline");
+}
 if (!semanticViews.some((entry) => entry.id === "work_order.timeline" && entry.systemId === "manufacturing")) {
   fail("semantic views must include work_order.timeline");
+}
+if (!semanticViews.some((entry) => entry.id === "company.timeline" && entry.systemId === "erp")) {
+  fail("semantic views must include company.timeline");
+}
+if (!semanticViews.some((entry) => entry.id === "asset.timeline" && entry.systemId === "manufacturing")) {
+  fail("semantic views must include asset.timeline");
 }
 if (!semanticViews.some((entry) => entry.id === "erp.company.overview" && entry.systemId === "erp")) {
   fail("semantic views must include erp.company.overview");

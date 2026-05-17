@@ -386,15 +386,18 @@ export const clawDenseDataOsRegistry: ClawDenseDataOsRegistry = {
       commandPatterns: [
         "claw erp overview|gaps|intents",
         "claw erp company <id> overview",
+        "claw company <id> timeline",
         "claw invoice list|get|create|update|delete|query|schema",
         "claw payment list|get|create|update|delete|query|schema",
       ],
       operations: [
         operation("erp.company.overview", "Read ERP company overview", ["claw erp company <id> overview"], ["company", "invoice", "payment", "product", "accounting_entry"]),
+        operation("company.timeline", "Read company timeline", ["claw company <id> timeline"], ["company", "account", "deal", "invoice", "payment", "service", "asset", "work_order", "evidence_source", "quality_gap", "provenance_event"]),
         operation("invoice.list", "List invoices", ["claw invoice list"], ["invoice", "company", "payment", "document_evidence"]),
       ],
       semanticViews: [
         view("erp.company.overview", "ERP company overview", "claw erp company <id> overview", "erp.company.overview", ["company_id"], "company/accounting/CRM/procurement/billing summary"),
+        view("company.timeline", "Company timeline", "claw company <id> timeline", "company.timeline", ["company_id"], "company accounts, deals, billing, ops, manufacturing, evidence, provenance, and gaps"),
         view("invoice.list", "Invoice list", "claw invoice list", "invoice.list", ["workspace_id"], "invoices with company, payment, evidence, and reconciliation gaps"),
       ],
       standards: ["UBL", "Peppol", "XBRL"],
@@ -466,11 +469,17 @@ export const clawDenseDataOsRegistry: ClawDenseDataOsRegistry = {
       sharedEngines: ["evidence_provenance", "quality_gap", "relation_graph", "semantic_view", "intent_coverage", "workflow_state", "document_evidence", "timeline"],
       centers: [
         center("work_order", "Work Order", "work-order", undefined, "Manufacturing execution center for materials, operations, quality, labor, and equipment.", ["work-orders"], "work_orders"),
-        center("asset", "Asset", "asset", undefined, "Equipment/production asset center shared with maintenance and ops."),
+        center("asset", "Asset", "asset", undefined, "Equipment/production asset center shared with maintenance and ops.", undefined, "assets"),
       ],
-      commandPatterns: ["claw manufacturing overview|gaps|intents", "claw mes overview|gaps|intents", "claw work-order list|get|create|update|query|schema", "claw work-order <id> timeline"],
-      operations: [operation("work_order.timeline", "Read work order timeline", ["claw work-order <id> timeline"], ["work_order", "asset", "material", "quality_event"])],
-      semanticViews: [view("work_order.timeline", "Work order timeline", "claw work-order <id> timeline", "work_order.timeline", ["work_order_id"], "materials, operations, quality, labor, evidence, and gaps")],
+      commandPatterns: ["claw manufacturing overview|gaps|intents", "claw mes overview|gaps|intents", "claw work-order list|get|create|update|query|schema", "claw work-order <id> timeline", "claw asset list|get|create|update|query|schema", "claw asset <id> work-orders list|add", "claw asset <id> timeline"],
+      operations: [
+        operation("work_order.timeline", "Read work order timeline", ["claw work-order <id> timeline"], ["work_order", "asset", "material", "quality_event"]),
+        operation("asset.timeline", "Read asset timeline", ["claw asset <id> timeline"], ["asset", "work_order", "evidence_source", "quality_gap", "provenance_event"]),
+      ],
+      semanticViews: [
+        view("work_order.timeline", "Work order timeline", "claw work-order <id> timeline", "work_order.timeline", ["work_order_id"], "materials, operations, quality, labor, evidence, and gaps"),
+        view("asset.timeline", "Asset timeline", "claw asset <id> timeline", "asset.timeline", ["asset_id"], "asset ownership, work orders, evidence, provenance, and quality gaps"),
+      ],
       standards: ["ISA-95"],
       notes: "MES is visible while sharing workflow, evidence, relation, and inventory engines.",
     }),
@@ -889,7 +898,7 @@ function roadmapSystem(id: string, label: string, command: string, aliases: stri
 }
 
 function pluralizeCommandNoun(commandNoun: string): string {
-  if (commandNoun.endsWith("y")) return `${commandNoun.slice(0, -1)}ies`;
+  if (/[bcdfghjklmnpqrstvwxyz]y$/.test(commandNoun)) return `${commandNoun.slice(0, -1)}ies`;
   if (commandNoun.endsWith("s")) return `${commandNoun}es`;
   return `${commandNoun}s`;
 }

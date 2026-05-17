@@ -158,6 +158,9 @@ test("dense data OS centers have direct human CLI nouns and plural aliases", () 
   assert.ok(health?.centers.some((center) => center.commandNoun === "patient" && center.commandAliases.includes("patients") && center.collectionName === "patients"));
   assert.ok(health?.commandPatterns.includes("claw patient list|get|create|update|delete|query|schema"));
 
+  const labs = findClawDenseDataSystem("labs");
+  assert.ok(labs?.centers.some((center) => center.commandNoun === "assay" && center.commandAliases.includes("assays") && !center.commandAliases.includes("assaies") && center.collectionName === "assays"));
+
   const erp = findClawDenseDataSystem("erp");
   assert.ok(erp?.centers.some((center) => center.commandNoun === "invoice" && center.commandAliases.includes("invoices") && center.collectionName === "invoices"));
   assert.ok(erp?.commandPatterns.includes("claw invoice list|get|create|update|delete|query|schema"));
@@ -184,6 +187,10 @@ test("dense data OS resolves direct CLI intent phrases without executing them", 
   const patientsList = resolveClawDenseDataIntent("patients list");
   assert.equal(patientsList.status, "covered");
   assert.equal(patientsList.center?.commandNoun, "patient");
+
+  const assaysList = resolveClawDenseDataIntent("assays list");
+  assert.equal(assaysList.status, "covered");
+  assert.equal(assaysList.center?.commandNoun, "assay");
 
   const invoiceList = resolveClawDenseDataIntent("claw invoice list");
   assert.equal(invoiceList.status, "covered");

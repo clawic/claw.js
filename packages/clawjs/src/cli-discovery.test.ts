@@ -61,6 +61,16 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(patientPayload.meta.collection, "patients");
   assert.equal(patientPayload.data.some((record) => record.displayName === "Ada Patient"), true);
 
+  const patientsAliasList = await runCliCapture(["patients", "list", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(patientsAliasList.code, CLI_EXIT_OK);
+  const patientsAliasPayload = JSON.parse(patientsAliasList.stdout) as { ok: boolean; data: Array<{ id: string; displayName: string }>; meta: { canonicalCommand: string; invokedCommand: string; collection: string; action: string } };
+  assert.equal(patientsAliasPayload.ok, true);
+  assert.equal(patientsAliasPayload.meta.canonicalCommand, "database");
+  assert.equal(patientsAliasPayload.meta.invokedCommand, "patients");
+  assert.equal(patientsAliasPayload.meta.collection, "patients");
+  assert.equal(patientsAliasPayload.meta.action, "list");
+  assert.equal(patientsAliasPayload.data.some((record) => record.id === createdPatient.data.id), true);
+
   const evidenceSourceCreate = await runCliCapture(["evidence-source", "create", "Clinic note", "--kind", "document", "--collection-name", "patients", "--record-id", createdPatient.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(evidenceSourceCreate.code, CLI_EXIT_OK);
   const evidenceSourcePayload = JSON.parse(evidenceSourceCreate.stdout) as { data: { id: string; label: string; kind: string; collectionName: string; recordId: string }; meta: { collection: string; action: string; invokedCommand: string } };
@@ -472,6 +482,16 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(assayPayload.data.sampleId, samplePayload.data.id);
   assert.equal(assayPayload.data.status, "ordered");
 
+  const assaysAliasList = await runCliCapture(["assays", "list", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(assaysAliasList.code, CLI_EXIT_OK);
+  const assaysAliasPayload = JSON.parse(assaysAliasList.stdout) as { ok: boolean; data: Array<{ id: string; name: string }>; meta: { canonicalCommand: string; invokedCommand: string; collection: string; action: string } };
+  assert.equal(assaysAliasPayload.ok, true);
+  assert.equal(assaysAliasPayload.meta.canonicalCommand, "database");
+  assert.equal(assaysAliasPayload.meta.invokedCommand, "assays");
+  assert.equal(assaysAliasPayload.meta.collection, "assays");
+  assert.equal(assaysAliasPayload.meta.action, "list");
+  assert.equal(assaysAliasPayload.data.some((record) => record.id === assayPayload.data.id), true);
+
   const sampleEvidenceSourceCreate = await runCliCapture(["evidence-source", "create", "Sample accession", "--kind", "document", "--collection-name", "samples", "--record-id", samplePayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(sampleEvidenceSourceCreate.code, CLI_EXIT_OK);
   const sampleEvidenceSourcePayload = JSON.parse(sampleEvidenceSourceCreate.stdout) as { data: { id: string; collectionName: string; recordId: string } };
@@ -554,6 +574,31 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(coursePayload.data.title, "Intro Biology");
   assert.equal(coursePayload.data.status, "enrolled");
 
+  const lessonCreate = await runCliCapture(["course", coursePayload.data.id, "lessons", "add", "Cell basics", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(lessonCreate.code, CLI_EXIT_OK);
+  const lessonPayload = JSON.parse(lessonCreate.stdout) as { data: { id: string; title: string; courseId: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(lessonPayload.meta.invokedCommand, "course");
+  assert.equal(lessonPayload.meta.collection, "lessons");
+  assert.equal(lessonPayload.meta.action, "create");
+  assert.equal(lessonPayload.data.title, "Cell basics");
+  assert.equal(lessonPayload.data.courseId, coursePayload.data.id);
+
+  const courseLessons = await runCliCapture(["course", coursePayload.data.id, "lessons", "list", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(courseLessons.code, CLI_EXIT_OK);
+  const courseLessonsPayload = JSON.parse(courseLessons.stdout) as { data: Array<{ id: string; courseId: string; title: string }>; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(courseLessonsPayload.meta.invokedCommand, "course");
+  assert.equal(courseLessonsPayload.meta.collection, "lessons");
+  assert.equal(courseLessonsPayload.meta.action, "list");
+  assert.equal(courseLessonsPayload.data.some((record) => record.id === lessonPayload.data.id && record.courseId === coursePayload.data.id), true);
+
+  const studySessionCreate = await runCliCapture(["course", coursePayload.data.id, "sessions", "add", "--set", "topic=Biology review", "--set", "startedAt=2026-05-17T00:00:00.000Z", "--set", "durationMinutes=45", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(studySessionCreate.code, CLI_EXIT_OK);
+  const studySessionPayload = JSON.parse(studySessionCreate.stdout) as { data: { id: string; topic: string; courseId: string; startedAt: string; durationMinutes: number }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(studySessionPayload.meta.invokedCommand, "course");
+  assert.equal(studySessionPayload.meta.collection, "study_sessions");
+  assert.equal(studySessionPayload.data.topic, "Biology review");
+  assert.equal(studySessionPayload.data.courseId, coursePayload.data.id);
+
   const learnerCourseRelationCreate = await runCliCapture(["relation", "create", "--from-entity-kind", "learners", "--from-entity-id", learnerPayload.data.id, "--to-entity-kind", "courses", "--to-entity-id", coursePayload.data.id, "--type", "member_of", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(learnerCourseRelationCreate.code, CLI_EXIT_OK, learnerCourseRelationCreate.stderr || learnerCourseRelationCreate.stdout);
   const learnerCourseRelationPayload = JSON.parse(learnerCourseRelationCreate.stdout) as { data: { id: string; fromEntityKind: string; fromEntityId: string; toEntityKind: string; toEntityId: string; type: string }; meta: { collection: string; action: string; invokedCommand: string } };
@@ -571,12 +616,25 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(learnerEvidenceSourcePayload.data.collectionName, "learners");
   assert.equal(learnerEvidenceSourcePayload.data.recordId, learnerPayload.data.id);
 
+  const courseEvidenceSourceCreate = await runCliCapture(["evidence-source", "create", "Course syllabus", "--kind", "document", "--collection-name", "courses", "--record-id", coursePayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(courseEvidenceSourceCreate.code, CLI_EXIT_OK);
+  const courseEvidenceSourcePayload = JSON.parse(courseEvidenceSourceCreate.stdout) as { data: { id: string; collectionName: string; recordId: string } };
+  assert.equal(courseEvidenceSourcePayload.data.collectionName, "courses");
+  assert.equal(courseEvidenceSourcePayload.data.recordId, coursePayload.data.id);
+
   const learnerGapCreate = await runCliCapture(["quality-gap", "create", "Missing credential evidence", "--target-collection", "learners", "--target-id", learnerPayload.data.id, "--gap-kind", "missing", "--evidence-source-id", learnerEvidenceSourcePayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(learnerGapCreate.code, CLI_EXIT_OK);
   const learnerGapPayload = JSON.parse(learnerGapCreate.stdout) as { data: { id: string; gapKind: string; targetCollection: string; targetId: string } };
   assert.equal(learnerGapPayload.data.targetCollection, "learners");
   assert.equal(learnerGapPayload.data.targetId, learnerPayload.data.id);
   assert.equal(learnerGapPayload.data.gapKind, "missing");
+
+  const courseGapCreate = await runCliCapture(["quality-gap", "create", "Missing assessment rubric", "--target-collection", "courses", "--target-id", coursePayload.data.id, "--gap-kind", "missing", "--evidence-source-id", courseEvidenceSourcePayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(courseGapCreate.code, CLI_EXIT_OK);
+  const courseGapPayload = JSON.parse(courseGapCreate.stdout) as { data: { id: string; gapKind: string; targetCollection: string; targetId: string } };
+  assert.equal(courseGapPayload.data.targetCollection, "courses");
+  assert.equal(courseGapPayload.data.targetId, coursePayload.data.id);
+  assert.equal(courseGapPayload.data.gapKind, "missing");
 
   const learnerTimeline = await runCliCapture(["learner", learnerPayload.data.id, "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(learnerTimeline.code, CLI_EXIT_OK);
@@ -605,13 +663,86 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(learnerTimelinePayload.data.materializedView.records.relations.some((record) => record.id === learnerCourseRelationPayload.data.id), true);
   assert.equal(learnerTimelinePayload.data.materializedView.gaps.some((gap) => gap.id === learnerGapPayload.data.id && gap.gapKind === "missing"), true);
 
-  const workOrderCreate = await runCliCapture(["work-order", "create", "Batch 42", "--company", companyPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  const courseTimeline = await runCliCapture(["course", coursePayload.data.id, "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(courseTimeline.code, CLI_EXIT_OK);
+  const courseTimelinePayload = JSON.parse(courseTimeline.stdout) as {
+    data: {
+      coverage: { implementationStatus: string; recordsMaterialized: boolean };
+      semanticView: { id: string; systemId: string };
+      materializedView: { subject: { id: string; label: string }; summary: { lessons: number; studySessions: number; learners: number; relations: number; evidenceSources: number; qualityGaps: number }; itemCount: number; partial: boolean; items: Array<{ kind: string; recordId: string; label: string }>; records: { lessons: Array<{ id: string }>; studySessions: Array<{ id: string }>; learners: Array<{ id: string }>; relations: Array<{ id: string }>; evidence: Array<{ id: string }> }; gaps: Array<{ id: string; gapKind: string }> };
+    };
+  };
+  assert.equal(courseTimelinePayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(courseTimelinePayload.data.coverage.recordsMaterialized, true);
+  assert.equal(courseTimelinePayload.data.semanticView.id, "course.timeline");
+  assert.equal(courseTimelinePayload.data.semanticView.systemId, "education");
+  assert.equal(courseTimelinePayload.data.materializedView.subject.id, coursePayload.data.id);
+  assert.equal(courseTimelinePayload.data.materializedView.subject.label, "Intro Biology");
+  assert.equal(courseTimelinePayload.data.materializedView.summary.lessons, 1);
+  assert.equal(courseTimelinePayload.data.materializedView.summary.studySessions, 1);
+  assert.equal(courseTimelinePayload.data.materializedView.summary.learners, 1);
+  assert.equal(courseTimelinePayload.data.materializedView.summary.relations, 1);
+  assert.equal(courseTimelinePayload.data.materializedView.summary.evidenceSources, 1);
+  assert.equal(courseTimelinePayload.data.materializedView.summary.qualityGaps, 1);
+  assert.equal(courseTimelinePayload.data.materializedView.itemCount >= 7, true);
+  assert.equal(courseTimelinePayload.data.materializedView.partial, true);
+  assert.equal(courseTimelinePayload.data.materializedView.items.some((item) => item.kind === "lesson" && item.label === "Cell basics"), true);
+  assert.equal(courseTimelinePayload.data.materializedView.items.some((item) => item.kind === "study_session" && item.label === "Biology review"), true);
+  assert.equal(courseTimelinePayload.data.materializedView.items.some((item) => item.kind === "learner" && item.label === "Ada Learner"), true);
+  assert.equal(courseTimelinePayload.data.materializedView.records.lessons.some((record) => record.id === lessonPayload.data.id), true);
+  assert.equal(courseTimelinePayload.data.materializedView.records.studySessions.some((record) => record.id === studySessionPayload.data.id), true);
+  assert.equal(courseTimelinePayload.data.materializedView.records.learners.some((record) => record.id === learnerPayload.data.id), true);
+  assert.equal(courseTimelinePayload.data.materializedView.records.relations.some((record) => record.id === learnerCourseRelationPayload.data.id), true);
+  assert.equal(courseTimelinePayload.data.materializedView.records.evidence.some((record) => record.id === courseEvidenceSourcePayload.data.id), true);
+  assert.equal(courseTimelinePayload.data.materializedView.gaps.some((gap) => gap.id === courseGapPayload.data.id && gap.gapKind === "missing"), true);
+
+  const productCreate = await runCliCapture(["db", "product", "create", "Press Model", "--company-id", companyPayload.data.id, "--type", "physical", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(productCreate.code, CLI_EXIT_OK);
+  const productPayload = JSON.parse(productCreate.stdout) as { data: { id: string; name: string; companyId: string; type: string }; meta: { collection: string; action: string } };
+  assert.equal(productPayload.meta.collection, "products_catalog");
+  assert.equal(productPayload.data.name, "Press Model");
+  assert.equal(productPayload.data.companyId, companyPayload.data.id);
+
+  const assetCreate = await runCliCapture(["asset", "create", "--company", companyPayload.data.id, "--account-id", accountPayload.data.id, "--product", productPayload.data.id, "--serial-number", "PRESS-001", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(assetCreate.code, CLI_EXIT_OK);
+  const assetPayload = JSON.parse(assetCreate.stdout) as { data: { id: string; companyId: string; accountId: string; productCatalogId: string; serialNumber: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(assetPayload.meta.invokedCommand, "asset");
+  assert.equal(assetPayload.meta.collection, "assets");
+  assert.equal(assetPayload.data.companyId, companyPayload.data.id);
+  assert.equal(assetPayload.data.accountId, accountPayload.data.id);
+  assert.equal(assetPayload.data.productCatalogId, productPayload.data.id);
+  assert.equal(assetPayload.data.serialNumber, "PRESS-001");
+  assert.equal(assetPayload.data.status, "active");
+
+  const assetEvidenceSourceCreate = await runCliCapture(["evidence-source", "create", "Asset install record", "--kind", "document", "--collection-name", "assets", "--record-id", assetPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(assetEvidenceSourceCreate.code, CLI_EXIT_OK);
+  const assetEvidenceSourcePayload = JSON.parse(assetEvidenceSourceCreate.stdout) as { data: { id: string; collectionName: string; recordId: string } };
+  assert.equal(assetEvidenceSourcePayload.data.collectionName, "assets");
+  assert.equal(assetEvidenceSourcePayload.data.recordId, assetPayload.data.id);
+
+  const assetGapCreate = await runCliCapture(["quality-gap", "create", "Missing maintenance plan", "--target-collection", "assets", "--target-id", assetPayload.data.id, "--gap-kind", "missing", "--evidence-source-id", assetEvidenceSourcePayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(assetGapCreate.code, CLI_EXIT_OK);
+  const assetGapPayload = JSON.parse(assetGapCreate.stdout) as { data: { id: string; gapKind: string; targetCollection: string; targetId: string } };
+  assert.equal(assetGapPayload.data.targetCollection, "assets");
+  assert.equal(assetGapPayload.data.targetId, assetPayload.data.id);
+
+  const workOrderCreate = await runCliCapture(["asset", assetPayload.data.id, "work-orders", "add", "Batch 42", "--company", companyPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(workOrderCreate.code, CLI_EXIT_OK);
-  const workOrderPayload = JSON.parse(workOrderCreate.stdout) as { data: { id: string; title: string; companyId: string; status: string }; meta: { collection: string; action: string } };
+  const workOrderPayload = JSON.parse(workOrderCreate.stdout) as { data: { id: string; title: string; companyId: string; assetId: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(workOrderPayload.meta.invokedCommand, "asset");
   assert.equal(workOrderPayload.meta.collection, "work_orders");
   assert.equal(workOrderPayload.data.title, "Batch 42");
   assert.equal(workOrderPayload.data.companyId, companyPayload.data.id);
+  assert.equal(workOrderPayload.data.assetId, assetPayload.data.id);
   assert.equal(workOrderPayload.data.status, "planned");
+
+  const assetWorkOrders = await runCliCapture(["asset", assetPayload.data.id, "work-orders", "list", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(assetWorkOrders.code, CLI_EXIT_OK);
+  const assetWorkOrdersPayload = JSON.parse(assetWorkOrders.stdout) as { data: Array<{ id: string; assetId: string; title: string }>; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(assetWorkOrdersPayload.meta.invokedCommand, "asset");
+  assert.equal(assetWorkOrdersPayload.meta.collection, "work_orders");
+  assert.equal(assetWorkOrdersPayload.meta.action, "list");
+  assert.equal(assetWorkOrdersPayload.data.some((record) => record.id === workOrderPayload.data.id && record.assetId === assetPayload.data.id), true);
 
   const workOrderEvidenceSourceCreate = await runCliCapture(["evidence-source", "create", "Batch traveler", "--kind", "document", "--collection-name", "work_orders", "--record-id", workOrderPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(workOrderEvidenceSourceCreate.code, CLI_EXIT_OK);
@@ -646,6 +777,88 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(workOrderTimelinePayload.data.materializedView.items.some((item) => item.kind === "work_order" && item.label === "Batch 42"), true);
   assert.equal(workOrderTimelinePayload.data.materializedView.items.some((item) => item.kind === "evidence" && item.recordId === workOrderEvidenceSourcePayload.data.id), true);
   assert.equal(workOrderTimelinePayload.data.materializedView.gaps.some((gap) => gap.id === workOrderGapPayload.data.id && gap.gapKind === "missing"), true);
+
+  const assetTimeline = await runCliCapture(["asset", assetPayload.data.id, "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(assetTimeline.code, CLI_EXIT_OK);
+  const assetTimelinePayload = JSON.parse(assetTimeline.stdout) as {
+    data: {
+      coverage: { implementationStatus: string; recordsMaterialized: boolean };
+      semanticView: { id: string; systemId: string };
+      materializedView: { subject: { id: string; label: string }; summary: { workOrders: number; evidenceSources: number; qualityGaps: number }; itemCount: number; partial: boolean; company: { id: string } | null; account: { id: string } | null; product: { id: string } | null; items: Array<{ kind: string; recordId: string; label: string }>; records: { workOrders: Array<{ id: string }>; evidence: Array<{ id: string }> }; gaps: Array<{ id: string; gapKind: string }> };
+    };
+  };
+  assert.equal(assetTimelinePayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(assetTimelinePayload.data.coverage.recordsMaterialized, true);
+  assert.equal(assetTimelinePayload.data.semanticView.id, "asset.timeline");
+  assert.equal(assetTimelinePayload.data.semanticView.systemId, "manufacturing");
+  assert.equal(assetTimelinePayload.data.materializedView.subject.id, assetPayload.data.id);
+  assert.equal(assetTimelinePayload.data.materializedView.subject.label, "PRESS-001");
+  assert.equal(assetTimelinePayload.data.materializedView.company?.id, companyPayload.data.id);
+  assert.equal(assetTimelinePayload.data.materializedView.account?.id, accountPayload.data.id);
+  assert.equal(assetTimelinePayload.data.materializedView.product?.id, productPayload.data.id);
+  assert.equal(assetTimelinePayload.data.materializedView.summary.workOrders, 1);
+  assert.equal(assetTimelinePayload.data.materializedView.summary.evidenceSources, 1);
+  assert.equal(assetTimelinePayload.data.materializedView.summary.qualityGaps, 1);
+  assert.equal(assetTimelinePayload.data.materializedView.itemCount >= 6, true);
+  assert.equal(assetTimelinePayload.data.materializedView.partial, true);
+  assert.equal(assetTimelinePayload.data.materializedView.items.some((item) => item.kind === "work_order" && item.recordId === workOrderPayload.data.id), true);
+  assert.equal(assetTimelinePayload.data.materializedView.records.workOrders.some((record) => record.id === workOrderPayload.data.id), true);
+  assert.equal(assetTimelinePayload.data.materializedView.records.evidence.some((record) => record.id === assetEvidenceSourcePayload.data.id), true);
+  assert.equal(assetTimelinePayload.data.materializedView.gaps.some((gap) => gap.id === assetGapPayload.data.id && gap.gapKind === "missing"), true);
+
+  const companyTimeline = await runCliCapture(["company", companyPayload.data.id, "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(companyTimeline.code, CLI_EXIT_OK);
+  const companyTimelinePayload = JSON.parse(companyTimeline.stdout) as {
+    data: {
+      coverage: { implementationStatus: string; recordsMaterialized: boolean };
+      semanticView: { id: string; systemId: string };
+      materializedView: { subject: { id: string; label: string }; summary: { accounts: number; deals: number; contacts: number; activities: number; billingCustomers: number; invoices: number; payments: number; services: number; workOrders: number; assets: number; products: number; evidenceSources: number; qualityGaps: number }; itemCount: number; partial: boolean; items: Array<{ kind: string; recordId: string; label: string }>; records: { accounts: Array<{ id: string }>; deals: Array<{ id: string }>; contacts: Array<{ id: string }>; activities: Array<{ id: string }>; billingCustomers: Array<{ id: string }>; invoices: Array<{ id: string }>; payments: Array<{ id: string }>; services: Array<{ id: string }>; workOrders: Array<{ id: string }>; assets: Array<{ id: string }>; products: Array<{ id: string }>; evidence: Array<{ id: string }> }; gaps: Array<{ id: string; gapKind: string }> };
+    };
+  };
+  assert.equal(companyTimelinePayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(companyTimelinePayload.data.coverage.recordsMaterialized, true);
+  assert.equal(companyTimelinePayload.data.semanticView.id, "company.timeline");
+  assert.equal(companyTimelinePayload.data.semanticView.systemId, "erp");
+  assert.equal(companyTimelinePayload.data.materializedView.subject.id, companyPayload.data.id);
+  assert.equal(companyTimelinePayload.data.materializedView.subject.label, "Acme Corp");
+  assert.equal(companyTimelinePayload.data.materializedView.summary.accounts, 1);
+  assert.equal(companyTimelinePayload.data.materializedView.summary.deals, 1);
+  assert.equal(companyTimelinePayload.data.materializedView.summary.contacts, 1);
+  assert.equal(companyTimelinePayload.data.materializedView.summary.activities, 1);
+  assert.equal(companyTimelinePayload.data.materializedView.summary.billingCustomers, 1);
+  assert.equal(companyTimelinePayload.data.materializedView.summary.invoices, 1);
+  assert.equal(companyTimelinePayload.data.materializedView.summary.payments, 1);
+  assert.equal(companyTimelinePayload.data.materializedView.summary.services, 1);
+  assert.equal(companyTimelinePayload.data.materializedView.summary.workOrders, 1);
+  assert.equal(companyTimelinePayload.data.materializedView.summary.assets, 1);
+  assert.equal(companyTimelinePayload.data.materializedView.summary.products, 1);
+  assert.equal(companyTimelinePayload.data.materializedView.summary.evidenceSources, 1);
+  assert.equal(companyTimelinePayload.data.materializedView.summary.qualityGaps, 1);
+  assert.equal(companyTimelinePayload.data.materializedView.itemCount >= 14, true);
+  assert.equal(companyTimelinePayload.data.materializedView.partial, true);
+  assert.equal(companyTimelinePayload.data.materializedView.records.accounts.some((record) => record.id === accountPayload.data.id), true);
+  assert.equal(companyTimelinePayload.data.materializedView.records.deals.some((record) => record.id === dealPayload.data.id), true);
+  assert.equal(companyTimelinePayload.data.materializedView.records.contacts.some((record) => record.id === contactPayload.data.id), true);
+  assert.equal(companyTimelinePayload.data.materializedView.records.activities.some((record) => record.id === activityPayload.data.id), true);
+  assert.equal(companyTimelinePayload.data.materializedView.records.billingCustomers.some((record) => record.id === billingCustomerPayload.data.id), true);
+  assert.equal(companyTimelinePayload.data.materializedView.records.invoices.some((record) => record.id === invoicePayload.data.id), true);
+  assert.equal(companyTimelinePayload.data.materializedView.records.payments.some((record) => record.id === paymentPayload.data.id), true);
+  assert.equal(companyTimelinePayload.data.materializedView.records.services.some((record) => record.id === servicePayload.data.id), true);
+  assert.equal(companyTimelinePayload.data.materializedView.records.workOrders.some((record) => record.id === workOrderPayload.data.id), true);
+  assert.equal(companyTimelinePayload.data.materializedView.records.assets.some((record) => record.id === assetPayload.data.id), true);
+  assert.equal(companyTimelinePayload.data.materializedView.records.products.some((record) => record.id === productPayload.data.id), true);
+  assert.equal(companyTimelinePayload.data.materializedView.records.evidence.some((record) => record.id === companyEvidenceSourcePayload.data.id), true);
+  assert.equal(companyTimelinePayload.data.materializedView.gaps.some((gap) => gap.id === companyGapPayload.data.id && gap.gapKind === "missing"), true);
+
+  const companiesAliasList = await runCliCapture(["companies", "list", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(companiesAliasList.code, CLI_EXIT_OK);
+  const companiesAliasPayload = JSON.parse(companiesAliasList.stdout) as { ok: boolean; data: Array<{ id: string; name: string }>; meta: { canonicalCommand: string; invokedCommand: string; collection: string; action: string } };
+  assert.equal(companiesAliasPayload.ok, true);
+  assert.equal(companiesAliasPayload.meta.canonicalCommand, "database");
+  assert.equal(companiesAliasPayload.meta.invokedCommand, "companies");
+  assert.equal(companiesAliasPayload.meta.collection, "companies");
+  assert.equal(companiesAliasPayload.meta.action, "list");
+  assert.equal(companiesAliasPayload.data.some((record) => record.id === companyPayload.data.id), true);
 
   const financialAccountCreate = await runCliCapture(["financial-account", "create", "Operating Account", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(financialAccountCreate.code, CLI_EXIT_OK);
@@ -947,6 +1160,91 @@ test("runCli seeds the dense-data acceptance fixture into the shared database", 
   assert.equal(learnerTimelinePayload.data.materializedView.records.relations.some((record) => record.id === "fixture_relation_learner_course"), true);
   assert.equal(learnerTimelinePayload.data.materializedView.records.evidence.some((record) => record.id === "fixture_evidence_learner_record"), true);
   assert.equal(learnerTimelinePayload.data.materializedView.gaps.some((gap) => gap.id === "fixture_gap_learner_credential"), true);
+
+  const courseTimeline = await runCliCapture(["course", "fixture_course_intro_biology", "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(courseTimeline.code, CLI_EXIT_OK);
+  const courseTimelinePayload = JSON.parse(courseTimeline.stdout) as { data: { coverage: { implementationStatus: string; recordsMaterialized: boolean }; semanticView: { id: string }; materializedView: { summary: { lessons: number; studySessions: number; learners: number; relations: number; evidenceSources: number; qualityGaps: number }; itemCount: number; partial: boolean; items: Array<{ kind: string; recordId: string }>; records: { lessons: Array<{ id: string }>; studySessions: Array<{ id: string }>; learners: Array<{ id: string }>; relations: Array<{ id: string }>; evidence: Array<{ id: string }> }; gaps: Array<{ id: string }> } } };
+  assert.equal(courseTimelinePayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(courseTimelinePayload.data.coverage.recordsMaterialized, true);
+  assert.equal(courseTimelinePayload.data.semanticView.id, "course.timeline");
+  assert.equal(courseTimelinePayload.data.materializedView.summary.lessons, 1);
+  assert.equal(courseTimelinePayload.data.materializedView.summary.studySessions, 1);
+  assert.equal(courseTimelinePayload.data.materializedView.summary.learners, 1);
+  assert.equal(courseTimelinePayload.data.materializedView.summary.relations, 1);
+  assert.equal(courseTimelinePayload.data.materializedView.summary.evidenceSources, 1);
+  assert.equal(courseTimelinePayload.data.materializedView.summary.qualityGaps, 1);
+  assert.equal(courseTimelinePayload.data.materializedView.partial, true);
+  assert.equal(courseTimelinePayload.data.materializedView.itemCount >= 7, true);
+  assert.equal(courseTimelinePayload.data.materializedView.items.some((item) => item.kind === "course" && item.recordId === "fixture_course_intro_biology"), true);
+  assert.equal(courseTimelinePayload.data.materializedView.items.some((item) => item.kind === "lesson" && item.recordId === "fixture_lesson_cell_basics"), true);
+  assert.equal(courseTimelinePayload.data.materializedView.items.some((item) => item.kind === "study_session" && item.recordId === "fixture_study_session_biology"), true);
+  assert.equal(courseTimelinePayload.data.materializedView.items.some((item) => item.kind === "learner" && item.recordId === "fixture_learner_ada"), true);
+  assert.equal(courseTimelinePayload.data.materializedView.items.some((item) => item.kind === "relation" && item.recordId === "fixture_relation_learner_course"), true);
+  assert.equal(courseTimelinePayload.data.materializedView.records.lessons.some((record) => record.id === "fixture_lesson_cell_basics"), true);
+  assert.equal(courseTimelinePayload.data.materializedView.records.studySessions.some((record) => record.id === "fixture_study_session_biology"), true);
+  assert.equal(courseTimelinePayload.data.materializedView.records.learners.some((record) => record.id === "fixture_learner_ada"), true);
+  assert.equal(courseTimelinePayload.data.materializedView.records.relations.some((record) => record.id === "fixture_relation_learner_course"), true);
+  assert.equal(courseTimelinePayload.data.materializedView.records.evidence.some((record) => record.id === "fixture_evidence_course_syllabus"), true);
+  assert.equal(courseTimelinePayload.data.materializedView.gaps.some((gap) => gap.id === "fixture_gap_course_assessment"), true);
+
+  const assetTimeline = await runCliCapture(["asset", "fixture_asset_press_001", "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(assetTimeline.code, CLI_EXIT_OK);
+  const assetTimelinePayload = JSON.parse(assetTimeline.stdout) as { data: { coverage: { implementationStatus: string; recordsMaterialized: boolean }; semanticView: { id: string }; materializedView: { summary: { workOrders: number; relations: number; evidenceSources: number; qualityGaps: number }; itemCount: number; partial: boolean; company: { id: string } | null; account: { id: string } | null; product: { id: string } | null; items: Array<{ kind: string; recordId: string }>; records: { workOrders: Array<{ id: string }>; relations: Array<{ id: string }>; evidence: Array<{ id: string }> }; gaps: Array<{ id: string }> } } };
+  assert.equal(assetTimelinePayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(assetTimelinePayload.data.coverage.recordsMaterialized, true);
+  assert.equal(assetTimelinePayload.data.semanticView.id, "asset.timeline");
+  assert.equal(assetTimelinePayload.data.materializedView.company?.id, "fixture_company_acme");
+  assert.equal(assetTimelinePayload.data.materializedView.account?.id, "fixture_account_acme");
+  assert.equal(assetTimelinePayload.data.materializedView.product?.id, "fixture_product_press_model");
+  assert.equal(assetTimelinePayload.data.materializedView.summary.workOrders, 1);
+  assert.equal(assetTimelinePayload.data.materializedView.summary.relations, 1);
+  assert.equal(assetTimelinePayload.data.materializedView.summary.evidenceSources, 1);
+  assert.equal(assetTimelinePayload.data.materializedView.summary.qualityGaps, 1);
+  assert.equal(assetTimelinePayload.data.materializedView.partial, true);
+  assert.equal(assetTimelinePayload.data.materializedView.itemCount >= 8, true);
+  assert.equal(assetTimelinePayload.data.materializedView.items.some((item) => item.kind === "asset" && item.recordId === "fixture_asset_press_001"), true);
+  assert.equal(assetTimelinePayload.data.materializedView.items.some((item) => item.kind === "work_order" && item.recordId === "fixture_work_order_batch_42"), true);
+  assert.equal(assetTimelinePayload.data.materializedView.items.some((item) => item.kind === "relation" && item.recordId === "fixture_relation_asset_service"), true);
+  assert.equal(assetTimelinePayload.data.materializedView.items.some((item) => item.kind === "evidence" && item.recordId === "fixture_evidence_asset_install"), true);
+  assert.equal(assetTimelinePayload.data.materializedView.records.workOrders.some((record) => record.id === "fixture_work_order_batch_42"), true);
+  assert.equal(assetTimelinePayload.data.materializedView.records.relations.some((record) => record.id === "fixture_relation_asset_service"), true);
+  assert.equal(assetTimelinePayload.data.materializedView.records.evidence.some((record) => record.id === "fixture_evidence_asset_install"), true);
+  assert.equal(assetTimelinePayload.data.materializedView.gaps.some((gap) => gap.id === "fixture_gap_asset_maintenance_plan"), true);
+
+  const companyTimeline = await runCliCapture(["company", "fixture_company_acme", "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(companyTimeline.code, CLI_EXIT_OK);
+  const companyTimelinePayload = JSON.parse(companyTimeline.stdout) as { data: { coverage: { implementationStatus: string; recordsMaterialized: boolean }; semanticView: { id: string }; materializedView: { summary: { accounts: number; deals: number; contacts: number; activities: number; billingCustomers: number; invoices: number; payments: number; services: number; workOrders: number; assets: number; products: number; evidenceSources: number; qualityGaps: number }; itemCount: number; partial: boolean; items: Array<{ kind: string; recordId: string }>; records: { accounts: Array<{ id: string }>; deals: Array<{ id: string }>; contacts: Array<{ id: string }>; activities: Array<{ id: string }>; billingCustomers: Array<{ id: string }>; invoices: Array<{ id: string }>; payments: Array<{ id: string }>; services: Array<{ id: string }>; workOrders: Array<{ id: string }>; assets: Array<{ id: string }>; products: Array<{ id: string }>; evidence: Array<{ id: string }> }; gaps: Array<{ id: string }> } } };
+  assert.equal(companyTimelinePayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(companyTimelinePayload.data.coverage.recordsMaterialized, true);
+  assert.equal(companyTimelinePayload.data.semanticView.id, "company.timeline");
+  assert.equal(companyTimelinePayload.data.materializedView.summary.accounts, 1);
+  assert.equal(companyTimelinePayload.data.materializedView.summary.deals, 1);
+  assert.equal(companyTimelinePayload.data.materializedView.summary.contacts, 1);
+  assert.equal(companyTimelinePayload.data.materializedView.summary.activities, 1);
+  assert.equal(companyTimelinePayload.data.materializedView.summary.billingCustomers, 1);
+  assert.equal(companyTimelinePayload.data.materializedView.summary.invoices, 1);
+  assert.equal(companyTimelinePayload.data.materializedView.summary.payments, 1);
+  assert.equal(companyTimelinePayload.data.materializedView.summary.services, 1);
+  assert.equal(companyTimelinePayload.data.materializedView.summary.workOrders, 1);
+  assert.equal(companyTimelinePayload.data.materializedView.summary.assets, 1);
+  assert.equal(companyTimelinePayload.data.materializedView.summary.products, 1);
+  assert.equal(companyTimelinePayload.data.materializedView.summary.evidenceSources, 1);
+  assert.equal(companyTimelinePayload.data.materializedView.summary.qualityGaps, 1);
+  assert.equal(companyTimelinePayload.data.materializedView.partial, true);
+  assert.equal(companyTimelinePayload.data.materializedView.itemCount >= 15, true);
+  assert.equal(companyTimelinePayload.data.materializedView.records.accounts.some((record) => record.id === "fixture_account_acme"), true);
+  assert.equal(companyTimelinePayload.data.materializedView.records.deals.some((record) => record.id === "fixture_deal_acme_pilot"), true);
+  assert.equal(companyTimelinePayload.data.materializedView.records.contacts.some((record) => record.id === "fixture_contact_acme_ada"), true);
+  assert.equal(companyTimelinePayload.data.materializedView.records.activities.some((record) => record.id === "fixture_activity_acme_demo"), true);
+  assert.equal(companyTimelinePayload.data.materializedView.records.billingCustomers.some((record) => record.id === "fixture_billing_customer_acme"), true);
+  assert.equal(companyTimelinePayload.data.materializedView.records.invoices.some((record) => record.id === "fixture_invoice_001"), true);
+  assert.equal(companyTimelinePayload.data.materializedView.records.payments.some((record) => record.id === "fixture_payment_intent_001"), true);
+  assert.equal(companyTimelinePayload.data.materializedView.records.services.some((record) => record.id === "fixture_service_api"), true);
+  assert.equal(companyTimelinePayload.data.materializedView.records.workOrders.some((record) => record.id === "fixture_work_order_batch_42"), true);
+  assert.equal(companyTimelinePayload.data.materializedView.records.assets.some((record) => record.id === "fixture_asset_press_001"), true);
+  assert.equal(companyTimelinePayload.data.materializedView.records.products.some((record) => record.id === "fixture_product_press_model"), true);
+  assert.equal(companyTimelinePayload.data.materializedView.records.evidence.some((record) => record.id === "fixture_evidence_company_import"), true);
+  assert.equal(companyTimelinePayload.data.materializedView.gaps.some((gap) => gap.id === "fixture_gap_company_tax_id"), true);
 
   const workOrderTimeline = await runCliCapture(["work-order", "fixture_work_order_batch_42", "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(workOrderTimeline.code, CLI_EXIT_OK);

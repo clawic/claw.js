@@ -55,6 +55,12 @@ runtime, high-churn logs, or large blobs.
 Human-facing nouns are top-level routes. Domain portals and acronyms are also
 routes, but they are not the only route. For example, `health` and `ehr` are
 valid pack routes, while `patient` remains a direct noun route.
+Direct human nouns and plural aliases are generated from dense centers, so the
+same canonical collection backs routes such as `patient list` / `patients
+list`, `company list` / `companies list`, and `assay list` / `assays list`
+without introducing a second data model. The guard rejects malformed aliases
+and keeps professional plurals explicitly audited instead of silently accepting
+bad mechanical forms.
 
 Collections use the standard actions `list`, `get`, `create`, `update`,
 `delete`, `query`, and `schema`. `delete` means archive by default; `purge` is
@@ -109,7 +115,8 @@ gaps` return structured registry coverage. Graduated centers execute through
 the shared database instead of a parallel domain store: `patient list`,
 `patient create`, `medication add --patient <id>`, `patient <id> medications
 list`, `patient <id> symptoms add`, `patient <id> symptoms list`, and
-ERP/CRM routes such as `company create`, `account create --company <id>`,
+ERP/CRM routes such as `company create`, `company <id> timeline`,
+`account create --company <id>`,
 `deal create --company <id>`, `invoice list`, and
 `invoice create --billing-customer <id>` all resolve to canonical core.sqlite
 collections. Legal and ops centers also graduate through shared collections:
@@ -118,8 +125,10 @@ collections. Legal and ops centers also graduate through shared collections:
 labs, education, and manufacturing now follow the same rule: `study create`,
 `study <id> participants add/list`, `sample create`,
 `sample <id> assays add`, `learner create`, `course create`,
-`relation create --from-entity-kind learners --to-entity-kind courses`, and
-`work-order create` execute against canonical collections. Finance/accounting
+`relation create --from-entity-kind learners --to-entity-kind courses`,
+`course <id> lessons add/list`, `asset create`, `asset <id> work-orders
+add/list`, and `work-order create` execute against
+canonical collections. Finance/accounting
 also has executable centers for `financial-account create` and
 `transaction create --account <id>`. Biology is backed by distinct biological
 collections rather than analytics A/B-test experiments: `organism create`,
@@ -157,8 +166,9 @@ acceptance fixture without executing unknown behavior. These commands are the
 scale gate for "CLI intention completeness": every generated entry must resolve
 to a covered command, explicit workflow/data gap, blocked state, external
 pending state, or custom pack. The fixture covers patient, study, sample, legal
-case, invoice/company, incident/service, learner/course relations,
-manufacturing work order, evidence, provenance, and partial-data quality gaps.
+case, invoice/company, incident/service, learner/course relations and lessons,
+company and manufacturing asset/work-order relations, evidence, provenance, and
+partial-data quality gaps.
 `claw dense-fixtures seed` writes that fixture into local `core.sqlite` with
 stable fixture IDs, so the acceptance set is executable through normal DB and
 human noun commands rather than remaining an inspect-only artifact.
@@ -189,15 +199,29 @@ Education/LMS uses `claw learner <id> timeline` to materialize `learners`,
 related `courses` through the shared `entity_relations` graph, evidence, gaps,
 and provenance. This keeps enrollment/progress-style links inside the universal
 relation model instead of creating a parallel LMS graph.
+It also materializes `claw course <id> timeline` from `courses`, `lessons`,
+`study_sessions`, related learners via `entity_relations`, evidence, provenance,
+and quality gaps so course-centric LMS workflows are not forced through the
+learner view.
 Manufacturing uses `claw work-order <id> timeline` to materialize
 `work_orders`, evidence, quality gaps, and provenance as the MES slice grows
 toward material, operation, labor, equipment, and quality event records.
+It also uses `claw asset <id> timeline` to materialize `assets`, company/account
+anchors, product catalog references, related work orders, cross-domain
+`entity_relations`, evidence, quality gaps, and provenance so CMMS/MES-style
+asset history is not forced into a parallel maintenance database.
 ERP now has a materialized company overview through `claw erp company <id>
 overview`: it reads the shared company anchor plus CRM accounts/deals, billing
 customers, invoices, payment intents, services, work orders, evidence,
 provenance, and quality gaps from `core.sqlite`. This keeps ERP as an
 orchestrator over existing canonical owners rather than creating a parallel
 ERP supercollection.
+The direct shared-company route `claw company <id> timeline` materializes the
+same company anchor as a chronological view across CRM accounts/deals,
+contacts/activities, billing customers, invoices, payments, services, assets,
+work orders, product catalog records, relations, evidence, provenance, and
+quality gaps. This gives the universal company entity a timeline without making
+users go through the ERP portal for ordinary company history.
 CRM account overview is also materialized: `claw crm account <id> overview`
 reads the shared `accounts` record, company anchor, `deals`, `contacts`,
 `activities`, evidence, provenance, and quality gaps. This keeps CRM inside the
