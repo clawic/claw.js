@@ -8,6 +8,7 @@ import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from
 import { parseCsvFlag, parseJsonFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
 import { createCliClaw } from "./cli-claw-factory.ts";
+import { scheduleGenerationArtifactSearchEvent } from "./cli-search-events.ts";
 import { parseRuleHints } from "./cli-rule-utils.ts";
 import { parseImageOperation, parseImageProvenance, parseImageType } from "./cli-image-parsers.ts";
 import { buildImageSharedInput, buildMediaListInput, buildMediaMetadata } from "./cli-media-utils.ts";
@@ -30,6 +31,10 @@ type CliMediaClaw = ClawInstance & {
     };
   };
 };
+
+function searchEventDataDir(workspaceRoot: string, flags: Record<string, string>): string {
+  return path.resolve(flags["data-dir"] ?? path.join(workspaceRoot, ".claw", "data"));
+}
 
 function resolveMediaCanonicalCommand(group: string | undefined, mediaGroup: GenerationCliMediaKind | null): string {
   if (mediaGroup === "image") return "images";
@@ -829,6 +834,12 @@ if (group === "generations" && command === "create") {
     outputExtension: flags.ext,
     mimeType: flags["mime-type"],
   });
+  scheduleGenerationArtifactSearchEvent({
+    operation: "upsert",
+    generationId: record.id,
+    dataDir: searchEventDataDir(workspaceRoot, flags),
+    flags,
+  });
   if (wantsJson) {
     writeMediaJson(record);
   } else {
@@ -877,6 +888,14 @@ if (group === "generations" && command === "delete") {
   }
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const removed = claw.generations.remove(id);
+  if (removed) {
+    scheduleGenerationArtifactSearchEvent({
+      operation: "delete",
+      generationId: id,
+      dataDir: searchEventDataDir(workspaceRoot, flags),
+      flags,
+    });
+  }
   if (wantsJson) {
     writeMediaJson({ removed, id });
   } else {

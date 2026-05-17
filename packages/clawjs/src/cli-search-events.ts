@@ -63,6 +63,26 @@ export function scheduleDocumentBlocksSearchEvent(input: {
   });
 }
 
+export function scheduleGenerationArtifactSearchEvent(input: {
+  operation: "upsert" | "delete";
+  generationId: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  return scheduleSearchIndexEvent({
+    source: "generations.artifacts",
+    operation: input.operation,
+    resourceId: input.generationId,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      generationId: input.generationId,
+    },
+  });
+}
+
 export function scheduleSearchIndexEvent(input: {
   source: string;
   operation: "upsert" | "delete";

@@ -5,7 +5,7 @@ import os from "os";
 import path from "path";
 
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK } from "./index.ts";
-import { runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
+import { createFakeGenerationScript, runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
 
 test("search rebuild and query use the Search sidecar without workspace state", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-cli-"));
@@ -1305,6 +1305,93 @@ test("search rebuild indexes generations.artifacts from workspace generation rec
     assert.equal(result?.fragments?.some((fragment) => fragment.title === "prompt" && fragment.snippet?.includes("analytics cards")), true);
     assert.ok(result?.explanation?.matchedBy?.length);
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "backendId"), true);
+  });
+});
+
+test("generations create and delete schedule Search artifact events", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-generation-events-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  const scriptPath = createFakeGenerationScript();
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const registered = await runCliCapture([
+      "generations",
+      "register-command",
+      "--workspace",
+      workspaceRoot,
+      "--id",
+      "fake-image",
+      "--label",
+      "Fake Image",
+      "--kinds",
+      "image",
+      "--command",
+      scriptPath,
+      "--args-json",
+      "[\"--out\",\"{outputPath}\"]",
+      "--ext",
+      "png",
+      "--json",
+    ], workspaceRoot);
+    assert.equal(registered.code, CLI_EXIT_OK);
+
+    const created = await runCliCapture([
+      "generations",
+      "create",
+      "--workspace",
+      workspaceRoot,
+      "--data-dir",
+      dataRoot,
+      "--kind",
+      "image",
+      "--backend",
+      "fake-image",
+      "--prompt",
+      "evented generation search artifact",
+      "--json",
+    ], workspaceRoot);
+    assert.equal(created.code, CLI_EXIT_OK);
+    const createdPayload = JSON.parse(created.stdout) as { data: { id: string } };
+    assert.match(createdPayload.data.id, /^gen-/);
+
+    const upsertJobs = await runCliCapture(["search", "jobs", "--source", "generations.artifacts", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(upsertJobs.code, CLI_EXIT_OK);
+    const upsertJobsPayload = JSON.parse(upsertJobs.stdout) as {
+      data: { items: Array<{ source: string; operation: string; resourceId: string; shard: string; payload: { eventDriven?: boolean; generationId?: string } }> };
+    };
+    const upsertJob = upsertJobsPayload.data.items.find((job) => job.resourceId === createdPayload.data.id && job.operation === "upsert");
+    assert.equal(upsertJob?.source, "generations.artifacts");
+    assert.equal(upsertJob?.shard, "hot");
+    assert.equal(upsertJob?.payload.eventDriven, true);
+    assert.equal(upsertJob?.payload.generationId, createdPayload.data.id);
+
+    const deleted = await runCliCapture([
+      "generations",
+      "delete",
+      "--workspace",
+      workspaceRoot,
+      "--data-dir",
+      dataRoot,
+      "--id",
+      createdPayload.data.id,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(deleted.code, CLI_EXIT_OK);
+
+    const deleteJobs = await runCliCapture(["search", "jobs", "--source", "generations.artifacts", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleteJobs.code, CLI_EXIT_OK);
+    const deleteJobsPayload = JSON.parse(deleteJobs.stdout) as {
+      data: { items: Array<{ operation: string; priority: number; resourceId: string; payload: { eventDriven?: boolean; generationId?: string } }> };
+    };
+    const deleteJob = deleteJobsPayload.data.items.find((job) => job.resourceId === createdPayload.data.id && job.operation === "delete");
+    assert.equal(deleteJob?.priority, 80);
+    assert.equal(deleteJob?.payload.eventDriven, true);
+    assert.equal(deleteJob?.payload.generationId, createdPayload.data.id);
   });
 });
 
