@@ -209,6 +209,7 @@ claw gateway project --dry-run --json
 claw gateway project --state-dir .claw/remote-sync --record true --gateway-node gateway.hosted --coordinator-node coord.home --public-base-url https://gateway.example.test --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 claw gateway conformance --json
 claw gateway agent-service --tenant-id tenant.acme --agent-id agent.support --assignment-id assignment.service --estimated-cost-cents 300 --json
+claw gateway agent-service --tenant-id tenant.acme --agent-id agent.support --assignment-id assignment.service --estimated-cost-cents 300 --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 claw gateway secret-lease --state-dir .claw/remote-sync --secret-ref vault://agents/support --resource-id skills:default --agent-id agent.support --assignment-id assignment.service --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 claw gateway secret-provider --state-dir .claw/remote-sync --secret-ref vault://agents/support --resource-id skills:default --provider-id provider.1password --credential-binding-id credential.support --agent-id agent.support --assignment-id assignment.service --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 ```
@@ -241,6 +242,12 @@ remote authority by itself.
 manifests for self-hosted and hosted projections. Both carry the same required
 route contract and parity flag; real process binding or hosted rollout remains
 `external_pending` until physical deployment validation is run.
+`gateway agent-service --record true` records a signed
+`RemoteAgentServiceExecutionReceipt` for the governed service decision. The
+receipt binds tenant, agent, assignment, route, budget, billing account, meter,
+isolation key, and audit id; without approved runtime/billing execution it
+marks `agent_runtime_execution` and `billing_meter_persistence` as
+`external_pending`.
 `gateway secret-lease` records a signed, expiring lease for a secret reference,
 never reads or returns the secret value, and rejects plaintext-return flags.
 `gateway secret-provider` adds a signed provider receipt bound to a broker
@@ -795,6 +802,11 @@ claw shipment shipment_123 timeline --json
 claw control control_123 assessments add "Q2 access review" --json
 claw control control_123 findings add "Missing reviewer sign-off" --json
 claw control control_123 timeline --json
+claw agency create "City Permitting Office" --json
+claw agency agency_123 public-cases add "Lab buildout permit case" --company company_123 --json
+claw public-case public_case_123 filings add "Permit application" --agency agency_123 --json
+claw public-case public_case_123 permits add "Lab buildout permit" --agency agency_123 --json
+claw public-case public_case_123 timeline --json
 claw thing thing_123 devices add "Press vibration sensor" --json
 claw iot-device device_123 readings add vibration --value 0.42 --json
 claw iot-device device_123 commands add "Restart gateway" --json

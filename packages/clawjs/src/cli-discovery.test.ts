@@ -923,6 +923,109 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(controlTimelinePayload.data.materializedView.itemCount >= 5, true);
   assert.equal(controlTimelinePayload.data.materializedView.items.some((item) => item.kind === "compliance_finding" && item.label === "Missing reviewer sign-off"), true);
 
+  const agencyCreate = await runCliCapture(["agency", "create", "City Permitting Office", "--jurisdiction", "Madrid", "--level", "municipal", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(agencyCreate.code, CLI_EXIT_OK, agencyCreate.stderr || agencyCreate.stdout);
+  const agencyPayload = JSON.parse(agencyCreate.stdout) as { data: { id: string; name: string; jurisdiction: string; level: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(agencyPayload.meta.invokedCommand, "agency");
+  assert.equal(agencyPayload.meta.collection, "agencies");
+  assert.equal(agencyPayload.meta.action, "create");
+  assert.equal(agencyPayload.data.name, "City Permitting Office");
+  assert.equal(agencyPayload.data.jurisdiction, "Madrid");
+  assert.equal(agencyPayload.data.level, "municipal");
+  assert.equal(agencyPayload.data.status, "active");
+
+  const publicCaseCreate = await runCliCapture(["agency", agencyPayload.data.id, "public-cases", "add", "Lab buildout permit case", "--company", companyPayload.data.id, "--case-number", "GOV-001", "--case-type", "permit", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(publicCaseCreate.code, CLI_EXIT_OK, publicCaseCreate.stderr || publicCaseCreate.stdout);
+  const publicCasePayload = JSON.parse(publicCaseCreate.stdout) as { data: { id: string; title: string; agencyId: string; companyId: string; caseNumber: string; caseType: string; status: string; openedAt: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(publicCasePayload.meta.invokedCommand, "agency");
+  assert.equal(publicCasePayload.meta.collection, "public_cases");
+  assert.equal(publicCasePayload.meta.action, "create");
+  assert.equal(publicCasePayload.data.title, "Lab buildout permit case");
+  assert.equal(publicCasePayload.data.agencyId, agencyPayload.data.id);
+  assert.equal(publicCasePayload.data.companyId, companyPayload.data.id);
+  assert.equal(publicCasePayload.data.caseNumber, "GOV-001");
+  assert.equal(publicCasePayload.data.caseType, "permit");
+  assert.equal(publicCasePayload.data.status, "draft");
+  assert.equal(typeof publicCasePayload.data.openedAt, "string");
+
+  const permitCreate = await runCliCapture(["public-case", publicCasePayload.data.id, "permits", "add", "Lab buildout permit", "--agency", agencyPayload.data.id, "--company", companyPayload.data.id, "--permit-number", "PERMIT-001", "--permit-type", "building", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(permitCreate.code, CLI_EXIT_OK, permitCreate.stderr || permitCreate.stdout);
+  const permitPayload = JSON.parse(permitCreate.stdout) as { data: { id: string; title: string; publicCaseId: string; agencyId: string; companyId: string; permitNumber: string; permitType: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(permitPayload.meta.invokedCommand, "public-case");
+  assert.equal(permitPayload.meta.collection, "permits");
+  assert.equal(permitPayload.meta.action, "create");
+  assert.equal(permitPayload.data.title, "Lab buildout permit");
+  assert.equal(permitPayload.data.publicCaseId, publicCasePayload.data.id);
+  assert.equal(permitPayload.data.agencyId, agencyPayload.data.id);
+  assert.equal(permitPayload.data.companyId, companyPayload.data.id);
+  assert.equal(permitPayload.data.permitNumber, "PERMIT-001");
+  assert.equal(permitPayload.data.permitType, "building");
+  assert.equal(permitPayload.data.status, "draft");
+
+  const filingCreate = await runCliCapture(["public-case", publicCasePayload.data.id, "filings", "add", "Permit application", "--agency", agencyPayload.data.id, "--filing-number", "FILING-001", "--filing-type", "application", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(filingCreate.code, CLI_EXIT_OK, filingCreate.stderr || filingCreate.stdout);
+  const filingPayload = JSON.parse(filingCreate.stdout) as { data: { id: string; title: string; publicCaseId: string; agencyId: string; filingNumber: string; filingType: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(filingPayload.meta.invokedCommand, "public-case");
+  assert.equal(filingPayload.meta.collection, "public_filings");
+  assert.equal(filingPayload.meta.action, "create");
+  assert.equal(filingPayload.data.title, "Permit application");
+  assert.equal(filingPayload.data.publicCaseId, publicCasePayload.data.id);
+  assert.equal(filingPayload.data.agencyId, agencyPayload.data.id);
+  assert.equal(filingPayload.data.filingNumber, "FILING-001");
+  assert.equal(filingPayload.data.filingType, "application");
+  assert.equal(filingPayload.data.status, "draft");
+
+  const publicCaseEvidenceSourceCreate = await runCliCapture(["evidence-source", "create", "Permit receipt", "--kind", "document", "--collection-name", "public_cases", "--record-id", publicCasePayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(publicCaseEvidenceSourceCreate.code, CLI_EXIT_OK);
+  const publicCaseEvidenceSourcePayload = JSON.parse(publicCaseEvidenceSourceCreate.stdout) as { data: { id: string; collectionName: string; recordId: string } };
+  assert.equal(publicCaseEvidenceSourcePayload.data.collectionName, "public_cases");
+  assert.equal(publicCaseEvidenceSourcePayload.data.recordId, publicCasePayload.data.id);
+
+  const publicCaseGapCreate = await runCliCapture(["quality-gap", "create", "Missing public response", "--target-collection", "public_cases", "--target-id", publicCasePayload.data.id, "--gap-kind", "missing", "--evidence-source-id", publicCaseEvidenceSourcePayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(publicCaseGapCreate.code, CLI_EXIT_OK);
+  const publicCaseGapPayload = JSON.parse(publicCaseGapCreate.stdout) as { data: { id: string; gapKind: string; targetCollection: string; targetId: string } };
+  assert.equal(publicCaseGapPayload.data.targetCollection, "public_cases");
+  assert.equal(publicCaseGapPayload.data.targetId, publicCasePayload.data.id);
+  assert.equal(publicCaseGapPayload.data.gapKind, "missing");
+
+  const publicCaseTimeline = await runCliCapture(["public-case", publicCasePayload.data.id, "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(publicCaseTimeline.code, CLI_EXIT_OK, publicCaseTimeline.stderr || publicCaseTimeline.stdout);
+  const publicCaseTimelinePayload = JSON.parse(publicCaseTimeline.stdout) as {
+    data: {
+      coverage: { implementationStatus: string; recordsMaterialized: boolean };
+      semanticView: { id: string; systemId: string };
+      materializedView: {
+        subject: { id: string; label: string };
+        agency: { id: string; label: string } | null;
+        company: { id: string; label: string } | null;
+        summary: { permits: number; filings: number; evidenceSources: number; qualityGaps: number; hasAgency: boolean; hasCompany: boolean };
+        itemCount: number;
+        items: Array<{ kind: string; label: string }>;
+        gaps: Array<{ id: string; gapKind: string }>;
+        partial: boolean;
+      };
+    };
+  };
+  assert.equal(publicCaseTimelinePayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(publicCaseTimelinePayload.data.coverage.recordsMaterialized, true);
+  assert.equal(publicCaseTimelinePayload.data.semanticView.id, "public_case.timeline");
+  assert.equal(publicCaseTimelinePayload.data.semanticView.systemId, "government");
+  assert.equal(publicCaseTimelinePayload.data.materializedView.subject.id, publicCasePayload.data.id);
+  assert.equal(publicCaseTimelinePayload.data.materializedView.subject.label, "Lab buildout permit case");
+  assert.equal(publicCaseTimelinePayload.data.materializedView.agency?.id, agencyPayload.data.id);
+  assert.equal(publicCaseTimelinePayload.data.materializedView.company?.id, companyPayload.data.id);
+  assert.equal(publicCaseTimelinePayload.data.materializedView.summary.permits, 1);
+  assert.equal(publicCaseTimelinePayload.data.materializedView.summary.filings, 1);
+  assert.equal(publicCaseTimelinePayload.data.materializedView.summary.evidenceSources, 1);
+  assert.equal(publicCaseTimelinePayload.data.materializedView.summary.qualityGaps, 1);
+  assert.equal(publicCaseTimelinePayload.data.materializedView.summary.hasAgency, true);
+  assert.equal(publicCaseTimelinePayload.data.materializedView.summary.hasCompany, true);
+  assert.equal(publicCaseTimelinePayload.data.materializedView.partial, true);
+  assert.equal(publicCaseTimelinePayload.data.materializedView.itemCount >= 6, true);
+  assert.equal(publicCaseTimelinePayload.data.materializedView.items.some((item) => item.kind === "permit" && item.label === "Lab buildout permit"), true);
+  assert.equal(publicCaseTimelinePayload.data.materializedView.items.some((item) => item.kind === "public_filing" && item.label === "Permit application"), true);
+  assert.equal(publicCaseTimelinePayload.data.materializedView.gaps.some((gap) => gap.id === publicCaseGapPayload.data.id && gap.gapKind === "missing"), true);
+
   const thingCreate = await runCliCapture(["thing", "create", "Press IoT thing", "--company", companyPayload.data.id, "--kind", "controller", "--external-id", "thing-001", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(thingCreate.code, CLI_EXIT_OK, thingCreate.stderr || thingCreate.stdout);
   const thingPayload = JSON.parse(thingCreate.stdout) as { data: { id: string; name: string; companyId: string; kind: string; status: string; externalId: string }; meta: { collection: string; action: string; invokedCommand: string } };

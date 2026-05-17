@@ -38,9 +38,8 @@ The registry is the first executable canon for this model. It defines:
   Labs/LIMS, Legal, ERP, CRM, Finance/Accounting, Education/LMS, HR/HRIS,
   Manufacturing/MES, Operations/ITSM, Real Estate/PropTech, Insurance, and
   Maintenance/CMMS, Procurement, Warehouse/WMS, Supply Chain/SCM, Transport/TMS,
-  Compliance/GRC, IoT, Construction, and Electronic Lab Notebook/ELN
-- a roadmap taxonomy for government,
-  CMS, PIM/PLM, and pharma
+  Compliance/GRC, Government/Gov, IoT, Construction, and Electronic Lab Notebook/ELN
+- a roadmap taxonomy for CMS, PIM/PLM, and pharma
 - a non-executing dense intent resolver that can classify direct phrases such
   as `claw patient list`, `claw patients list`, `claw invoice list`, or `claw
   medication add --patient <id>` as covered, partial, blocked, or gaps before
@@ -259,6 +258,12 @@ Compliance/GRC uses `claw control <id> timeline` to materialize
 `compliance_findings`, company anchors, evidence, provenance, and quality gaps.
 It deliberately stays separate from runtime agents `policy_gates`, generic
 project health audit records, and the universal `quality_gaps` primitive.
+Government/Gov uses `claw public-case <id> timeline` to materialize
+`public_cases`, `agencies`, `permits`, `public_filings`, subject anchors,
+evidence, provenance, and quality gaps. It uses explicit public-administration
+nouns such as `agency`, `public-case`, `permit`, and `public-filing` so the
+legal `case` route remains owned by `legal_cases` and content publishing
+entries remain separate from public filings.
 IoT uses `claw thing <id> timeline` to materialize `iot_things`,
 `iot_devices`, `sensor_readings`, `device_commands`, company/asset anchors,
 evidence, provenance, and quality gaps. It extends the existing `iot config`

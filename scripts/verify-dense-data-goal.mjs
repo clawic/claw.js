@@ -51,6 +51,7 @@ const requiredFirstWaveSystems = [
   "supply_chain",
   "transport",
   "compliance",
+  "government",
   "iot",
   "construction",
   "eln",
@@ -116,6 +117,10 @@ const requiredFixtureCoverage = [
   "control",
   "control_assessment",
   "compliance_finding",
+  "agency",
+  "public_case",
+  "permit",
+  "public_filing",
   "thing",
   "iot_device",
   "sensor_reading",
@@ -208,6 +213,10 @@ const requiredPluralIntentPhrases = [
   ["claw obligations list", "compliance_obligations"],
   ["claw control-assessments list", "control_assessments"],
   ["claw compliance-findings list", "compliance_findings"],
+  ["claw agencies list", "agencies"],
+  ["claw public-cases list", "public_cases"],
+  ["claw permits list", "permits"],
+  ["claw public-filings list", "public_filings"],
   ["claw things list", "iot_things"],
   ["claw iot-devices list", "iot_devices"],
   ["claw sensor-readings list", "sensor_readings"],
@@ -341,6 +350,10 @@ for (const phrase of [
   "claw control control_123 assessments add",
   "claw control control_123 findings add",
   "claw control control_123 timeline",
+  "claw agency agency_123 public-cases add",
+  "claw public-case public_case_123 filings add",
+  "claw public-case public_case_123 permits add",
+  "claw public-case public_case_123 timeline",
   "claw thing thing_123 devices add",
   "claw iot-device device_123 readings add",
   "claw iot-device device_123 commands add",
@@ -534,6 +547,9 @@ if (!semanticViews.some((entry) => entry.id === "shipment.timeline" && entry.sys
 }
 if (!semanticViews.some((entry) => entry.id === "control.timeline" && entry.systemId === "compliance")) {
   fail("semantic views must include control.timeline");
+}
+if (!semanticViews.some((entry) => entry.id === "public_case.timeline" && entry.systemId === "government")) {
+  fail("semantic views must include public_case.timeline");
 }
 if (!semanticViews.some((entry) => entry.id === "thing.timeline" && entry.systemId === "iot")) {
   fail("semantic views must include thing.timeline");
