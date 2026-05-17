@@ -18,6 +18,7 @@
     "@clawjs/core": "file:../../packages/clawjs-core",
     "@clawjs/claw": "file:../../packages/clawjs-node",
     "@clawjs/integrations": "file:../../packages/clawjs-integrations",
+    "@clawjs/search": "file:../../packages/clawjs-search",
     "@clawjs/workspace": "file:../../packages/clawjs-workspace",
     "better-sqlite3": "^12.6.2",
     "class-variance-authority": "^0.7.1",

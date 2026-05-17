@@ -31,6 +31,7 @@ const de = {
     memory: "Gedächtnis",
     personas: "Personas",
     usage: "Nutzung",
+    searchIndex: "Suchindex",
     plugins: "Plugins",
     health: "Zustand",
     inbox: "Posteingang",

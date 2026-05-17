@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
     "@clawjs/claw",
     "@clawjs/core",
     "@clawjs/integrations",
+    "@clawjs/search",
     "@clawjs/workspace",
   ],
   serverExternalPackages: ["better-sqlite3"],

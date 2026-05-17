@@ -126,6 +126,11 @@ usable framework Root Search with multiple fast sources, CLI/admin controls,
 strict timeout behavior, saved searches, monitors, actions, and no regression to
 conversation-only Clawix search.
 
+The showcase Search Index page is the first admin UI for source state and
+rebuild queue control. It is deliberately separate from Root Search and the
+current Clawix Mac chat search, so enabling wider indexing does not broaden or
+slow section-specific search surfaces by default.
+
 The initial code source is bounded to an explicit project root, dependency/build
 directories are skipped, and query-time refresh happens only for code-scoped
 queries. This keeps project/code search available without putting file scanning

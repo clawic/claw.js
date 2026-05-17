@@ -46,6 +46,7 @@ const en = {
     memory: "Memory",
     personas: "Personas",
     usage: "Usage",
+    searchIndex: "Search Index",
     plugins: "Plugins",
     health: "Health",
     inbox: "Inbox",

@@ -31,6 +31,7 @@ const pt = {
     memory: "Memória",
     personas: "Personas",
     usage: "Utilização",
+    searchIndex: "Índice de pesquisa",
     plugins: "Plugins",
     health: "Saúde",
     inbox: "Caixa",

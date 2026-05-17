@@ -31,6 +31,7 @@ const fr = {
     memory: "Mémoire",
     personas: "Personas",
     usage: "Utilisation",
+    searchIndex: "Index de recherche",
     plugins: "Plugins",
     health: "Santé",
     inbox: "Boîte",
