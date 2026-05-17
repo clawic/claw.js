@@ -307,6 +307,7 @@ function materializedSemanticViewForIntent(
   if (semanticView.id === "purchase_order.timeline") return materializedPurchaseOrderTimeline(input, intent, semanticView);
   if (semanticView.id === "warehouse.timeline") return materializedWarehouseTimeline(input, intent, semanticView);
   if (semanticView.id === "supply_plan.timeline") return materializedSupplyPlanTimeline(input, intent, semanticView);
+  if (semanticView.id === "shipment.timeline") return materializedShipmentTimeline(input, intent, semanticView);
   if (semanticView.id === "control.timeline") return materializedControlTimeline(input, intent, semanticView);
   if (semanticView.id === "thing.timeline") return materializedThingTimeline(input, intent, semanticView);
   if (semanticView.id === "construction_project.timeline") return materializedConstructionProjectTimeline(input, intent, semanticView);
@@ -1218,6 +1219,73 @@ function materializedSupplyPlanTimeline(
       evidenceSourceId: record.evidenceSourceId,
     })),
     sourceCollections: ["supply_plans", "supply_plan_items", "supply_risks", "companies", "suppliers", "purchase_orders", "warehouses", "inventory_items", "products_catalog", "evidence_sources", "quality_gaps", "provenance_events"],
+    partial: qualityGaps.length > 0,
+    intentStatus: intent.status,
+  };
+}
+
+function materializedShipmentTimeline(
+  input: DenseDataCliInput,
+  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
+) {
+  const shipmentId = input.positionals[1];
+  if (!shipmentId) return undefined;
+  const namespaceId = input.flags.namespace ?? "main";
+  const store = openDenseDataStore(input.workspaceRoot);
+  store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
+  const shipment = store.getRecord(namespaceId, "shipments", shipmentId);
+  if (!shipment) return undefined;
+
+  const legs = store.listRecords(namespaceId, "shipment_legs", { filter: { shipmentId } }).items;
+  const carrier = typeof shipment.carrierId === "string" ? store.getRecord(namespaceId, "carriers", shipment.carrierId) : undefined;
+  const purchaseOrder = typeof shipment.purchaseOrderId === "string" ? store.getRecord(namespaceId, "purchase_orders", shipment.purchaseOrderId) : undefined;
+  const warehouse = typeof shipment.warehouseId === "string" ? store.getRecord(namespaceId, "warehouses", shipment.warehouseId) : undefined;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "shipments", recordId: shipmentId } }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "shipments", targetId: shipmentId } }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "shipments", targetId: shipmentId } }).items;
+  const items = [
+    timelineItem(shipment, "shipment", shipment.id, shipment.title ?? shipment.trackingNumber ?? shipment.id, shipment.shippedAt ?? shipment.plannedShipAt ?? shipment.createdAt, shipment),
+    ...(carrier ? [timelineItem(carrier, "carrier", carrier.id, carrier.name ?? carrier.id, carrier.createdAt, carrier)] : []),
+    ...(purchaseOrder ? [timelineItem(purchaseOrder, "purchase_order", purchaseOrder.id, purchaseOrder.number ?? purchaseOrder.id, purchaseOrder.orderedAt ?? purchaseOrder.createdAt, purchaseOrder)] : []),
+    ...(warehouse ? [timelineItem(warehouse, "warehouse", warehouse.id, warehouse.name ?? warehouse.id, warehouse.createdAt, warehouse)] : []),
+    ...legs.map((record) => timelineItem(record, "shipment_leg", record.id, record.title ?? record.trackingNumber ?? record.id, record.actualDepartAt ?? record.plannedDepartAt ?? record.createdAt, record)),
+    ...evidence.map((record) => timelineItem(record, "evidence", record.id, record.label ?? record.id, record.capturedAt ?? record.createdAt, record)),
+    ...qualityGaps.map((record) => timelineItem(record, "quality_gap", record.id, record.label ?? record.id, record.createdAt, record)),
+    ...provenance.map((record) => timelineItem(record, "provenance", record.id, record.eventType ?? record.id, record.occurredAt ?? record.createdAt, record)),
+  ].sort((left, right) => String(left.occurredAt).localeCompare(String(right.occurredAt)));
+
+  return {
+    id: semanticView.id,
+    subject: { collectionName: "shipments", id: shipment.id, label: shipment.title ?? shipment.trackingNumber ?? shipment.id },
+    summary: {
+      legs: legs.length,
+      evidenceSources: evidence.length,
+      qualityGaps: qualityGaps.length,
+      hasCarrier: Boolean(carrier),
+      hasPurchaseOrder: Boolean(purchaseOrder),
+      hasWarehouse: Boolean(warehouse),
+    },
+    itemCount: items.length,
+    items,
+    records: {
+      shipment,
+      carrier,
+      purchaseOrder,
+      warehouse,
+      legs,
+      evidence,
+      provenance,
+    },
+    gaps: qualityGaps.map((record) => ({
+      id: record.id,
+      label: record.label,
+      status: record.status,
+      gapKind: record.gapKind,
+      severity: record.severity,
+      evidenceSourceId: record.evidenceSourceId,
+    })),
+    sourceCollections: ["shipments", "shipment_legs", "carriers", "purchase_orders", "warehouses", "evidence_sources", "quality_gaps", "provenance_events"],
     partial: qualityGaps.length > 0,
     intentStatus: intent.status,
   };
@@ -2141,6 +2209,27 @@ function denseDbFlags(flags: Record<string, string>, collectionName: string): Re
   if (collectionName === "supply_risks" && flags["inventory-item"] && !flags["inventory-item-id"]) {
     nextFlags = { ...nextFlags, "inventory-item-id": flags["inventory-item"] };
   }
+  if (["carriers", "freight_rates"].includes(collectionName) && flags.company && !flags["company-id"]) {
+    nextFlags = { ...nextFlags, "company-id": flags.company };
+  }
+  if (collectionName === "shipments" && flags.company && !flags["company-id"]) {
+    nextFlags = { ...nextFlags, "company-id": flags.company };
+  }
+  if (collectionName === "shipments" && flags.customer && !flags["customer-company-id"]) {
+    nextFlags = { ...nextFlags, "customer-company-id": flags.customer };
+  }
+  if (["shipments", "shipment_legs", "freight_rates"].includes(collectionName) && flags.carrier && !flags["carrier-id"]) {
+    nextFlags = { ...nextFlags, "carrier-id": flags.carrier };
+  }
+  if (collectionName === "shipments" && flags["purchase-order"] && !flags["purchase-order-id"]) {
+    nextFlags = { ...nextFlags, "purchase-order-id": flags["purchase-order"] };
+  }
+  if (collectionName === "shipments" && flags.warehouse && !flags["warehouse-id"]) {
+    nextFlags = { ...nextFlags, "warehouse-id": flags.warehouse };
+  }
+  if (collectionName === "shipment_legs" && flags.shipment && !flags["shipment-id"]) {
+    nextFlags = { ...nextFlags, "shipment-id": flags.shipment };
+  }
   if (["compliance_controls", "compliance_obligations"].includes(collectionName) && flags.company && !flags["company-id"]) {
     nextFlags = { ...nextFlags, "company-id": flags.company };
   }
@@ -2446,6 +2535,32 @@ function nestedDenseDbRoute(input: DenseDataCliInput): Parameters<typeof runMagi
       risks: "supply_risks",
       "supply-risk": "supply_risks",
       "supply-risks": "supply_risks",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "carrier",
+    relationFlag: "carrier-id",
+    relationField: "carrierId",
+    collections: {
+      shipment: "shipments",
+      shipments: "shipments",
+      "freight-shipment": "shipments",
+      "freight-shipments": "shipments",
+      "freight-rate": "freight_rates",
+      "freight-rates": "freight_rates",
+      rate: "freight_rates",
+      rates: "freight_rates",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "shipment",
+    relationFlag: "shipment-id",
+    relationField: "shipmentId",
+    collections: {
+      leg: "shipment_legs",
+      legs: "shipment_legs",
+      "shipment-leg": "shipment_legs",
+      "shipment-legs": "shipment_legs",
+      "freight-leg": "shipment_legs",
+      "freight-legs": "shipment_legs",
     },
   }) ?? nestedParentDbRoute(input, {
     parentCommand: "control",
