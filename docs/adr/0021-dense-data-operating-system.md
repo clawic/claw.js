@@ -39,8 +39,8 @@ The registry is the first executable canon for this model. It defines:
   Manufacturing/MES, Operations/ITSM, Real Estate/PropTech, Insurance, and
   Maintenance/CMMS, Procurement, Warehouse/WMS, Supply Chain/SCM, Transport/TMS,
   Compliance/GRC, Government/Gov, IoT, Construction, Electronic Lab Notebook/ELN,
-  and Product/PIM/PLM
-- a roadmap taxonomy for CMS and pharma
+  Product/PIM/PLM, and Pharma/GxP
+- a roadmap taxonomy for CMS and remaining dense software categories
 - a non-executing dense intent resolver that can classify direct phrases such
   as `claw patient list`, `claw patients list`, `claw invoice list`, or `claw
   medication add --patient <id>` as covered, partial, blocked, or gaps before
@@ -271,6 +271,13 @@ the canonical `products_catalog` record, company/owner anchors, evidence,
 provenance, and quality gaps. The pack portals are `pim` and `plm`; the direct
 `product` noun remains the ERP/catalog route, so lifecycle records do not create
 a second product master.
+Pharma/GxP uses `claw drug-product <id> timeline` to materialize
+`drug_products`, `batch_records`, `lot_releases`, `adverse_events`, the
+canonical `products_catalog` record, product specs, company, patient/study
+anchors, evidence, provenance, and quality gaps. It deliberately uses
+`drug-product` rather than `product`, so ERP/catalog ownership stays with
+`products_catalog`; live submissions, validated batch release, and safety
+reporting remain EXTERNAL PENDING until backed by regulated integrations.
 IoT uses `claw thing <id> timeline` to materialize `iot_things`,
 `iot_devices`, `sensor_readings`, `device_commands`, company/asset anchors,
 evidence, provenance, and quality gaps. It extends the existing `iot config`
