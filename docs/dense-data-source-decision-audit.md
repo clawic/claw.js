@@ -35,8 +35,10 @@ kept as separate decision rows.
 
 Before this goal can be marked complete, every row above must be updated or
 cross-referenced with concrete implementation, docs/canon, tests, and
-verification evidence. Rows that are not code features may close as process
-requirements only when the final completion audit shows the process was
-followed. Rows involving external providers, physical devices, regulated
+verification evidence. `scripts/verify-dense-data-goal.mjs` is the public
+guard that keeps these source rows present and tied to the dense registry,
+matrix, fixtures, semantic views, and external-pending ledger. Rows that are not
+code features may close as process requirements only when the final completion
+audit shows the process was followed. Rows involving external providers, physical devices, regulated
 exports, native permissions, secrets, cost-bearing calls, or real services must
 remain `EXTERNAL PENDING` until separately validated.
