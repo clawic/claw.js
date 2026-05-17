@@ -851,6 +851,34 @@ function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flag
   }
 }
 
+function databaseRecordTargetFromJob(job: SearchIndexJob): { namespaceId: string; collectionName: string; recordId: string; resourceId: string } | null {
+  const namespaceId = resourceIdFromJobPayload(job, "namespaceId");
+  const collectionName = resourceIdFromJobPayload(job, "collection");
+  const recordId = resourceIdFromJobPayload(job, "recordId");
+  if (namespaceId && collectionName && recordId) {
+    return { namespaceId, collectionName, recordId, resourceId: `${namespaceId}:${collectionName}:${recordId}` };
+  }
+  const parts = job.resourceId?.split(":") ?? [];
+  if (parts.length !== 3 || !parts[0] || !parts[1] || !parts[2]) return null;
+  return { namespaceId: parts[0], collectionName: parts[1], recordId: parts[2], resourceId: job.resourceId ?? parts.join(":") };
+}
+
+function documentTargetFromJob(job: SearchIndexJob): { namespaceId: string; documentId: string; resourceId: string } | null {
+  const namespaceId = resourceIdFromJobPayload(job, "namespaceId");
+  const documentId = resourceIdFromJobPayload(job, "documentId");
+  if (namespaceId && documentId) {
+    return { namespaceId, documentId, resourceId: `${namespaceId}:documents:${documentId}` };
+  }
+  const parts = job.resourceId?.split(":") ?? [];
+  if (parts.length !== 3 || !parts[0] || parts[1] !== "documents" || !parts[2]) return null;
+  return { namespaceId: parts[0], documentId: parts[2], resourceId: job.resourceId ?? parts.join(":") };
+}
+
+function resourceIdFromJobPayload(job: SearchIndexJob, key: string): string | undefined {
+  const value = job.payload[key];
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
 function defaultSearchServiceState(flags: Record<string, string>, mode: "embedded" | "daemon"): SearchServiceStateFile {
   return {
     state: "stopped",
