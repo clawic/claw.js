@@ -306,6 +306,28 @@ export const remoteAccessDecisionSchema = z.object({
   }),
 });
 
+export const remoteGatewayAuditReceiptSchema = z.object({
+  schemaVersion: z.literal(1),
+  receiptId: z.string().min(1),
+  sourceEventType: z.enum([
+    "remote.access.evaluated",
+    "remote.agent_service.evaluated",
+    "gateway.agent_service.execution",
+  ]),
+  routeId: z.string().min(1),
+  actor: remoteActorContextSchema,
+  resourceType: z.string().min(1),
+  resourceId: z.string().min(1).optional(),
+  action: z.string().min(1),
+  decision: z.enum(["allow", "deny"]),
+  hostAuditStore: z.literal("signed_host_audit"),
+  signedHostAuditPersisted: z.boolean(),
+  externalPending: z.array(z.enum(["signed_host_audit_persistence"])),
+  createdAt: z.string().datetime(),
+  auditEventId: z.string().min(1),
+  writes: z.literal(false),
+});
+
 export const remoteOfflineCommandResultSchema = z.object({
   routeId: z.string().min(1),
   actor: remoteActorContextSchema,
@@ -551,6 +573,7 @@ export type RemoteAccessGrantPlane = z.infer<typeof remoteAccessGrantPlaneSchema
 export type RemoteAccessGrant = z.infer<typeof remoteAccessGrantSchema>;
 export type RemoteAccessRequest = z.infer<typeof remoteAccessRequestSchema>;
 export type RemoteAccessDecision = z.infer<typeof remoteAccessDecisionSchema>;
+export type RemoteGatewayAuditReceipt = z.infer<typeof remoteGatewayAuditReceiptSchema>;
 export type RemoteOfflineCommandResult = z.infer<typeof remoteOfflineCommandResultSchema>;
 export type RemoteTransportHandshakeReceipt = z.infer<typeof remoteTransportHandshakeReceiptSchema>;
 export type NodeTrustDecision = z.infer<typeof nodeTrustDecisionSchema>;
@@ -762,6 +785,10 @@ function remoteCompatibilityAdapterId(parts: string[]): string {
 
 function remoteAgentServiceExecutionReceiptId(parts: string[]): string {
   return `agent_service_execution_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
+}
+
+function remoteGatewayAuditReceiptId(parts: string[]): string {
+  return `gateway_audit_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
 }
 
 function newestSnapshot(left: SyncObjectSnapshot, right: SyncObjectSnapshot): SyncObjectSnapshot {
@@ -1425,6 +1452,47 @@ export function createRemoteAgentServiceExecutionReceipt(input: {
     externalPending,
     createdAt,
     auditEventId: remoteAgentServiceExecutionReceiptId(["audit", request.tenantId, request.agentId, request.assignmentId, createdAt]),
+    writes: false,
+  });
+}
+
+export function createRemoteGatewayAuditReceipt(input: {
+  sourceEventType?: "remote.access.evaluated" | "remote.agent_service.evaluated" | "gateway.agent_service.execution";
+  routeId: string;
+  actor: RemoteActorContext;
+  resourceType: string;
+  resourceId?: string;
+  action: string;
+  decision: "allow" | "deny" | boolean;
+  createdAt?: string;
+  signedHostAuditPersisted?: boolean;
+}): RemoteGatewayAuditReceipt {
+  const actor = remoteActorContextSchema.parse(input.actor);
+  const createdAt = input.createdAt ?? new Date().toISOString();
+  const decision = typeof input.decision === "boolean" ? input.decision ? "allow" : "deny" : input.decision;
+  const signedHostAuditPersisted = input.signedHostAuditPersisted ?? false;
+  return remoteGatewayAuditReceiptSchema.parse({
+    schemaVersion: 1,
+    receiptId: remoteGatewayAuditReceiptId([
+      input.routeId,
+      actor.actorId,
+      input.resourceType,
+      input.resourceId ?? "none",
+      input.action,
+      createdAt,
+    ]),
+    sourceEventType: input.sourceEventType ?? "remote.access.evaluated",
+    routeId: input.routeId,
+    actor,
+    resourceType: input.resourceType,
+    ...(input.resourceId ? { resourceId: input.resourceId } : {}),
+    action: input.action,
+    decision,
+    hostAuditStore: "signed_host_audit",
+    signedHostAuditPersisted,
+    externalPending: signedHostAuditPersisted ? [] : ["signed_host_audit_persistence"],
+    createdAt,
+    auditEventId: remoteGatewayAuditReceiptId(["audit", input.routeId, actor.actorId, createdAt]),
     writes: false,
   });
 }

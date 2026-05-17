@@ -52,6 +52,7 @@ import {
   createMeshRevocation,
   createRemoteAgentServiceExecutionReceipt,
   createRemoteCompatibilityAdapterReceipt,
+  createRemoteGatewayAuditReceipt,
   createSyncResourceManifest,
   createTtsPlaybackPlan,
   compatSnapshotSchema,
@@ -103,6 +104,7 @@ import {
   remoteAgentServiceDecisionSchema,
   remoteAgentServiceExecutionReceiptSchema,
   remoteCompatibilityAdapterReceiptSchema,
+  remoteGatewayAuditReceiptSchema,
   remoteSecretLeaseSchema,
   remoteSyncRequiredDecisionIds,
   remoteSyncRequiredRouteIds,
@@ -892,6 +894,21 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(allowedRemoteAccess.audit.eventType, "remote.access.evaluated");
   assert.equal(allowedRemoteAccess.audit.decision, "allow");
   assert.equal(remoteAccessDecisionSchema.safeParse(allowedRemoteAccess).success, true);
+  const gatewayAuditReceipt = createRemoteGatewayAuditReceipt({
+    sourceEventType: allowedRemoteAccess.audit.eventType,
+    routeId: allowedRemoteAccess.audit.routeId,
+    actor: remoteRequest.actor,
+    resourceType: allowedRemoteAccess.audit.resourceType,
+    resourceId: allowedRemoteAccess.audit.resourceId,
+    action: allowedRemoteAccess.audit.action,
+    decision: allowedRemoteAccess.allowed,
+    createdAt: remoteRequest.now,
+  });
+  assert.equal(remoteGatewayAuditReceiptSchema.safeParse(gatewayAuditReceipt).success, true);
+  assert.equal(gatewayAuditReceipt.hostAuditStore, "signed_host_audit");
+  assert.equal(gatewayAuditReceipt.signedHostAuditPersisted, false);
+  assert.equal(gatewayAuditReceipt.externalPending.includes("signed_host_audit_persistence"), true);
+  assert.equal(gatewayAuditReceipt.writes, false);
 
   const deniedByClassification = evaluateRemoteAccess({
     request: { ...remoteRequest, classification: "local-only" },
