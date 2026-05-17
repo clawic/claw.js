@@ -56,6 +56,7 @@ backfill jobs.
 | `media.assets` | `media` | workspace media records projected into `search.sqlite` | implemented initial adapter |
 | `generations.artifacts` | `generations` | generated artifact records projected into `search.sqlite` | implemented initial adapter |
 | `code.symbols` | `code` | bounded project file/symbol/docs projection into `search.sqlite` | implemented initial adapter |
+| `skills.registry` | `skills` | framework skill records projected from `core.sqlite` without secret refs | implemented initial adapter |
 | `local.files` | `files` | bounded local file metadata and text-content projection | implemented opt-in adapter, `full`, off by default |
 | `native.system` | `native` | native app/system/contact adapters | EXTERNAL PENDING, `full`, off by default |
 | `web.ingested` | `web` | bounded explicit web cache ingestion | implemented opt-in adapter, `full`, off by default |
@@ -74,6 +75,7 @@ claw search query "product mark" --domains images --filters metadata.imageType=l
 claw search query "requirements" --domains media --filters metadata.kind=document --json
 claw search query "analytics cards" --domains generations --filters metadata.status=succeeded --json
 claw search query "symbolName" --domains code --code-root /path/to/project --json
+claw search query "deployment APIs" --domains skills --filters metadata.hasSecretRefs=true --json
 claw search sources enable local.files --profile full --json
 claw search rebuild --source local.files --profile full --file-root /path/to/folder --json
 claw search query "invoice" --domains files --profile full --file-root /path/to/folder --json
@@ -151,15 +153,15 @@ unbounded duplicate backfill work.
 
 The local framework database and artifact write paths now emit those compacted
 events for `database.records`, `documents.blocks`, `generations.artifacts`,
-`images.derived`, and `media.assets`: successful `db <collection>
-create|update`, `documents create|update`, `image create|edit|import`,
-typed-media generation, and `generations create` calls schedule hot upsert
-events; successful record, document, image, media, or generation deletes
-schedule delete events where the source item is removed; and `document_blocks`
-changes schedule a hot upsert for the parent document so fragments refresh
-together. The event write is best effort because `search.sqlite` is a
-rebuildable sidecar; a temporary Search sidecar failure must not fail the
-canonical record or artifact write.
+`images.derived`, `media.assets`, and `skills.registry`: successful `db
+<collection> create|update`, `documents create|update`, `image
+create|edit|import`, typed-media generation, `generations create`, and `skills
+upsert` calls schedule hot upsert events; successful record, document, image,
+media, generation, or skill deletes schedule delete events where the source item
+is removed; and `document_blocks` changes schedule a hot upsert for the parent
+document so fragments refresh together. The event write is best effort because
+`search.sqlite` is a rebuildable sidecar; a temporary Search sidecar failure
+must not fail the canonical record or artifact write.
 
 `claw search service` is the local lifecycle surface for Search. Embedded mode
 is available from the CLI and records `search-service.json` beside
@@ -275,6 +277,11 @@ titles, kind, status, backend/model metadata, command provenance, output
 references, and generation metadata so generated outputs remain searchable even
 when they are not also registered as media.
 
+`skills.registry` projects framework skill records from `core.sqlite`. It
+indexes the skill slug, name, kind, body, scope metadata, and export path, but
+does not index `secret_refs_json`; Search only exposes a `hasSecretRefs` facet
+so skill search stays useful without leaking local secret references.
+
 Search result actions are brokered. `search actions execute` produces a
 host-grants execution plan in `--dry-run` mode, fails closed when an approval is
 required but no `--host-approval-id` is provided, and returns a brokered receipt
@@ -311,8 +318,8 @@ usable without waiting for universal backfill.
 - Expose `claw search`.
 - Build `SearchStore` over `search.sqlite`.
 - Index `commands`, `sessions.chats`, `database.records`, `documents.blocks`,
-  `images.derived`, `media.assets`, `generations.artifacts`, and the first
-  bounded `code.symbols` adapter.
+  `images.derived`, `media.assets`, `generations.artifacts`, `skills.registry`,
+  and the first bounded `code.symbols` adapter.
 - Keep Clawix Mac Search and `Command-G` conversations-only.
 
 ### Phase 2: framework domains

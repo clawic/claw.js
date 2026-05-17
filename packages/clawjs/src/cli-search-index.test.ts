@@ -973,6 +973,82 @@ test("search rebuild indexes database.records from core.sqlite", async () => {
   });
 });
 
+test("search rebuild indexes skills.registry from core.sqlite without secret refs", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-skills-"));
+  const dataRoot = path.join(workspaceRoot, ".claw", "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const upsert = await runCliCapture([
+      "skills",
+      "upsert",
+      "deploy",
+      "--name",
+      "Deploy",
+      "--body",
+      "Use deployment APIs by reference",
+      "--secret-refs",
+      "vault://skills/deploy-token",
+      "--json",
+    ], workspaceRoot);
+    assert.equal(upsert.code, CLI_EXIT_OK);
+
+    const createdJobs = await runCliCapture(["search", "jobs", "--source", "skills.registry", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(createdJobs.code, CLI_EXIT_OK);
+    const createdJobsPayload = JSON.parse(createdJobs.stdout) as {
+      data: { items: Array<{ source: string; operation: string; resourceId: string; shard: string; payload: { eventDriven?: boolean; slug?: string } }> };
+    };
+    const createdJob = createdJobsPayload.data.items.find((job) => job.resourceId === "deploy");
+    assert.equal(createdJob?.source, "skills.registry");
+    assert.equal(createdJob?.operation, "upsert");
+    assert.equal(createdJob?.shard, "hot");
+    assert.equal(createdJob?.payload.eventDriven, true);
+    assert.equal(createdJob?.payload.slug, "deploy");
+
+    const rebuild = await runCliCapture(["search", "rebuild", "--source", "skills.registry", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(rebuild.code, CLI_EXIT_OK);
+    const rebuildPayload = JSON.parse(rebuild.stdout) as {
+      data: { sources: string[]; pendingSources: string[]; indexedBySource: { "skills.registry": number } };
+    };
+    assert.equal(rebuildPayload.data.sources.includes("skills.registry"), true);
+    assert.equal(rebuildPayload.data.pendingSources.includes("skills.registry"), false);
+    assert.equal(rebuildPayload.data.indexedBySource["skills.registry"], 1);
+
+    const query = await runCliCapture(["search", "query", "deployment APIs", "--domains", "skills", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: {
+        indexedFastPaths: { "skills.registry": number };
+        results: Array<{ source: string; domain: string; type: string; title: string; body?: string; metadata?: { hasSecretRefs?: boolean }; fragments?: Array<{ snippet?: string }> }>;
+      };
+    };
+    assert.equal(queryPayload.data.indexedFastPaths["skills.registry"], 1);
+    const result = queryPayload.data.results.find((entry) => entry.title === "Deploy");
+    assert.equal(result?.source, "skills.registry");
+    assert.equal(result?.domain, "skills");
+    assert.equal(result?.type, "skill");
+    assert.equal(result?.metadata?.hasSecretRefs, true);
+    assert.equal(JSON.stringify(result).includes("vault://skills/deploy-token"), false);
+    assert.equal(result?.fragments?.some((fragment) => fragment.snippet?.includes("deployment APIs")), true);
+
+    const deleted = await runCliCapture(["skills", "delete", "deploy", "--json"], workspaceRoot);
+    assert.equal(deleted.code, CLI_EXIT_OK);
+    const deleteJobs = await runCliCapture(["search", "jobs", "--source", "skills.registry", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleteJobs.code, CLI_EXIT_OK);
+    const deleteJobsPayload = JSON.parse(deleteJobs.stdout) as {
+      data: { items: Array<{ operation: string; priority: number; resourceId: string; payload: { eventDriven?: boolean; slug?: string } }> };
+    };
+    const deleteJob = deleteJobsPayload.data.items.find((job) => job.resourceId === "deploy" && job.operation === "delete");
+    assert.equal(deleteJob?.priority, 80);
+    assert.equal(deleteJob?.payload.eventDriven, true);
+    assert.equal(deleteJob?.payload.slug, "deploy");
+  });
+});
+
 test("search rebuild indexes documents.blocks from document records", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-documents-"));
   const dataRoot = path.join(workspaceRoot, ".claw", "data");

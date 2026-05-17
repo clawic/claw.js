@@ -1441,6 +1441,86 @@ function ensureDocumentBlocksResourceIndexed(store: SearchStore, flags: Record<s
   }
 }
 
+function ensureSkillsRegistrySourceIndexed(store: SearchStore, flags: Record<string, string>): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) {
+    store.setSourceState("skills.registry", "enabled", {
+      backlog: 0,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 0;
+  }
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "skills")) {
+      store.setSourceState("skills.registry", "degraded", {
+        backlog: 0,
+        error: "core database does not contain skills",
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return 0;
+    }
+    const rows = db.prepare(`
+      SELECT id, slug, kind, name, body, scope_json, secret_refs_json, metadata_json, export_path, created_at, updated_at
+      FROM skills
+      ORDER BY updated_at DESC
+    `).all() as SkillRegistryRow[];
+    let indexed = 0;
+    for (const row of rows) {
+      const document = skillRegistrySearchDocument(row);
+      if (!document) continue;
+      store.upsertDocument(document);
+      indexed += 1;
+    }
+    store.setCursor({
+      source: "skills.registry",
+      cursor: `skills:${indexed}`,
+      metadata: { store: "core.sqlite", collections: ["skills"] },
+    });
+    store.setSourceState("skills.registry", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return indexed;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureSkillsRegistryResourceIndexed(store: SearchStore, flags: Record<string, string>, slug: string): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) return 0;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "skills")) return 0;
+    const row = db.prepare(`
+      SELECT id, slug, kind, name, body, scope_json, secret_refs_json, metadata_json, export_path, created_at, updated_at
+      FROM skills
+      WHERE slug = ?
+      LIMIT 1
+    `).get(slug) as SkillRegistryRow | undefined;
+    if (!row) {
+      store.tombstone({ source: "skills.registry", resourceId: slug, reason: "skill missing during Search event refresh" });
+      return 1;
+    }
+    const document = skillRegistrySearchDocument(row);
+    if (!document) {
+      store.tombstone({ source: "skills.registry", resourceId: slug, reason: "skill skipped during Search event refresh" });
+      return 1;
+    }
+    store.upsertDocument(document);
+    store.setSourceState("skills.registry", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 1;
+  } finally {
+    db.close();
+  }
+}
+
 function ensureCodeSymbolsSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {
   const root = resolveCodeSearchRoot(flags, cwd);
   if (!fs.existsSync(root)) {
@@ -2436,11 +2516,81 @@ function documentBlocksSearchDocument(row: DatabaseRecordRow, blockRows: Databas
   };
 }
 
+function skillRegistrySearchDocument(row: SkillRegistryRow): SearchDocumentInput | null {
+  if (!row.slug) return null;
+  const scope = parseJsonRecord(row.scope_json);
+  const metadata = parseJsonRecord(row.metadata_json);
+  const secretRefs = parseJsonArray(row.secret_refs_json);
+  const metadataText = textFromStructuredContent(metadata);
+  const body = [
+    row.name,
+    row.slug,
+    row.kind,
+    row.body,
+    metadataText,
+    row.export_path,
+  ].filter(Boolean).join("\n");
+  const scopeKind = typeof scope.kind === "string" ? scope.kind : undefined;
+  return {
+    id: `skills.registry:${row.slug}`,
+    source: "skills.registry",
+    domain: "skills",
+    type: row.kind || "skill",
+    resourceId: row.slug,
+    title: row.name || row.slug,
+    subtitle: [row.kind, scopeKind].filter(Boolean).join(" / "),
+    snippet: firstMeaningfulLine(row.body) ?? row.name ?? row.slug,
+    body,
+    ...(row.export_path ? { path: row.export_path } : {}),
+    updatedAt: row.updated_at,
+    metadata: {
+      skillId: row.id,
+      slug: row.slug,
+      kind: row.kind,
+      scopeKind: scopeKind ?? null,
+      hasSecretRefs: secretRefs.length > 0,
+      exportPath: row.export_path ?? null,
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: {
+      fastPath: 1,
+      skill: 1,
+      hasSecretRefs: secretRefs.length > 0 ? -0.1 : 0,
+    },
+    fragments: row.body ? [{
+      id: `skills.registry:${row.slug}:body`,
+      title: "body",
+      body: row.body,
+      snippet: row.body.slice(0, 180),
+      sortOrder: 0,
+      metadata: { kind: "body" },
+    }] : [],
+    actions: [
+      { id: "open", kind: "open", label: "Open skill", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy skill reference", requiresApproval: false },
+    ],
+  };
+}
+
 interface DatabaseRecordRow {
   namespace_id: string;
   collection_name: string;
   id: string;
   data_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface SkillRegistryRow {
+  id: string;
+  slug: string;
+  kind: string;
+  name: string;
+  body: string;
+  scope_json: string;
+  secret_refs_json: string;
+  metadata_json: string;
+  export_path: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -2600,6 +2750,16 @@ function parseJsonRecord(value: string | null | undefined): Record<string, unkno
     return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed) ? parsed as Record<string, unknown> : {};
   } catch {
     return {};
+  }
+}
+
+function parseJsonArray(value: string | null | undefined): unknown[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
   }
 }
 

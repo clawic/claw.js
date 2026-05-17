@@ -166,6 +166,7 @@ for (const phrase of [
   "dense-fixtures",
   "claw dense-fixtures seed",
   "claw patient patient_123 timeline",
+  "materialized_semantic_view",
   "core.sqlite",
   "entity_relations",
   "quality_gaps",
