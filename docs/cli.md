@@ -150,7 +150,7 @@ claw agents project-support-inbox --record '{"sessionId":"session-1","assignment
 claw agents memory-check --record '{"policy":{"readScopes":[{"layer":"global","access":"read"}],"writeScopes":[{"layer":"agent_private","access":"write"}],"writePolicy":"private_only"},"request":{"operation":"write","layer":"agent_private"}}' --json
 claw agents surface-projection --record '{"surface":"relay","agent":{"id":"agent.ops","name":"Ops","secretAllowlist":["vault://agents/ops"]},"assignments":[{"id":"assignment.relay","agentId":"agent.ops","kind":"relay","status":"active","channel":"relay"}],"budgets":[{"id":"budget.relay","exceededBehavior":"deny_action","limits":[{"dimension":"external_actions","limit":10}]}]}' --json
 claw agents config-revision --record '{"agentId":"agent.ops","revision":2,"actorId":"actor.owner","reason":"Tighten MCP assignment","configSnapshot":{"name":"Ops","secretAllowlist":["vault://agents/ops"]}}' --json
-claw agents incident --record '{"agentId":"agent.ops","assignmentId":"assignment.relay","severity":"high","summary":"Unsafe route blocked","metadata":{"rawTracePath":"/Users/example/trace.log"}}' --json
+claw agents incident --record '{"agentId":"agent.ops","assignmentId":"assignment.relay","severity":"high","summary":"Unsafe route blocked","metadata":{"rawTraceRef":"trace:redacted"}}' --json
 claw personalities upsert personality.review --name Reviewer --prompt "Review with concrete evidence" --json
 claw skill-collections upsert collection.review --name Review --tags review,code --json
 claw connections upsert github --provider custom --label GitHub --secret-ref vault://connections/github --json
