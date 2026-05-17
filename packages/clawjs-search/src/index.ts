@@ -593,6 +593,19 @@ export function createBuiltinSearchSourceManifests(): SearchSourceManifest[] {
       ],
     }),
     createFrameworkSearchSourceManifest({
+      id: "work.items",
+      domain: "work",
+      name: "Work items",
+      resultTypes: ["task", "project", "goal", "person", "inbox_thread", "event", "work_item"],
+      facets: [
+        { id: "collection", label: "Collection", type: "string" },
+        { id: "status", label: "Status", type: "string" },
+        { id: "priority", label: "Priority", type: "string" },
+        { id: "projectId", label: "Project", type: "string" },
+        { id: "assigneeActorId", label: "Assignee", type: "string" },
+      ],
+    }),
+    createFrameworkSearchSourceManifest({
       id: "documents.blocks",
       domain: "documents",
       name: "Documents",

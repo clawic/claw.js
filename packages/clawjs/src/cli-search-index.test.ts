@@ -1106,6 +1106,118 @@ test("search rebuild indexes database.records from core.sqlite", async () => {
   });
 });
 
+test("search rebuild indexes work.items from productivity records", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-work-"));
+  const dataRoot = path.join(workspaceRoot, ".claw", "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    fs.mkdirSync(dataRoot, { recursive: true });
+    const sqlite = new Database(resolveClawjsMainDbPath());
+    try {
+      ensureV1MainSchema(sqlite);
+      const now = "2026-05-17T12:00:00.000Z";
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS records (
+          namespace_id TEXT NOT NULL,
+          collection_name TEXT NOT NULL,
+          id TEXT NOT NULL,
+          data_json TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          PRIMARY KEY (namespace_id, collection_name, id)
+        )
+      `);
+      sqlite.prepare(`
+        INSERT INTO records (namespace_id, collection_name, id, data_json, created_at, updated_at)
+        VALUES ('main', 'tasks', 'task-search-fast-path', ?, ?, ?)
+      `).run(JSON.stringify({
+        id: "task-search-fast-path",
+        title: "Review Search fast path",
+        status: "todo",
+        priority: "high",
+        projectId: "project-search",
+        assigneeActorId: "agent:codex",
+      }), now, now);
+      sqlite.prepare(`
+        INSERT INTO records (namespace_id, collection_name, id, data_json, created_at, updated_at)
+        VALUES ('main', 'goals', 'goal-search-v1', ?, ?, ?)
+      `).run(JSON.stringify({
+        id: "goal-search-v1",
+        title: "Ship Search v1.1",
+        status: "active",
+        description: "Framework-wide work search coverage",
+      }), now, now);
+    } finally {
+      sqlite.close();
+    }
+
+    const rebuild = await runCliCapture(["search", "rebuild", "--source", "work.items", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(rebuild.code, CLI_EXIT_OK);
+    const rebuildPayload = JSON.parse(rebuild.stdout) as {
+      data: {
+        sources: string[];
+        pendingSources: string[];
+        indexedBySource: { "work.items": number };
+      };
+    };
+    assert.deepEqual(rebuildPayload.data.sources, ["work.items"]);
+    assert.deepEqual(rebuildPayload.data.pendingSources, []);
+    assert.equal(rebuildPayload.data.indexedBySource["work.items"], 2);
+
+    const query = await runCliCapture([
+      "search",
+      "query",
+      "Search fast path",
+      "--domains",
+      "work",
+      "--data-dir",
+      dataRoot,
+      "--json",
+      "--limit",
+      "5",
+      "--explain",
+      "true",
+    ], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: {
+        indexedFastPaths: { "work.items": number };
+        results: Array<{
+          source: string;
+          domain: string;
+          type: string;
+          title: string;
+          subtitle?: string;
+          shard?: string;
+          metadata?: { collection?: string; priority?: string; projectId?: string; assigneeActorId?: string };
+          actions?: Array<{ id: string; kind: string }>;
+          explanation?: { matchedBy?: string[] };
+        }>;
+        facets?: Array<{ id: string; label: string }>;
+      };
+    };
+    assert.equal(queryPayload.data.indexedFastPaths["work.items"], 2);
+    const result = queryPayload.data.results.find((item) => item.title === "Review Search fast path");
+    assert.equal(result?.source, "work.items");
+    assert.equal(result?.domain, "work");
+    assert.equal(result?.type, "task");
+    assert.equal(result?.subtitle, "tasks · main");
+    assert.equal(result?.shard, "hot");
+    assert.equal(result?.metadata?.collection, "tasks");
+    assert.equal(result?.metadata?.priority, "high");
+    assert.equal(result?.metadata?.projectId, "project-search");
+    assert.equal(result?.metadata?.assigneeActorId, "agent:codex");
+    assert.equal(result?.actions?.some((action) => action.id === "open" && action.kind === "open"), true);
+    assert.ok(result?.explanation?.matchedBy?.length);
+    assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "collection"), true);
+  });
+});
+
 test("search rebuild indexes skills.registry from core.sqlite without secret refs", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-skills-"));
   const dataRoot = path.join(workspaceRoot, ".claw", "data");

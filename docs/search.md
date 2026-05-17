@@ -61,6 +61,7 @@ backfill jobs.
 | `commands` | `commands` | command registry projected into `search.sqlite` | implemented |
 | `sessions.chats` | `sessions` | `sessions.sqlite` projected into `search.sqlite` | implemented |
 | `database.records` | `database` | `core.sqlite` records projected into `search.sqlite` | implemented |
+| `work.items` | `work` | tasks, projects, goals, people, inbox, events, decisions, assignments, handoffs, approvals, and related work records from `core.sqlite` | implemented initial adapter |
 | `documents.blocks` | `documents` | `core.sqlite` documents and document blocks projected into `search.sqlite` | implemented initial adapter |
 | `notes.pages` | `notes` | `core.sqlite` pages and page blocks projected into `search.sqlite` | implemented initial adapter |
 | `knowledge.graph` | `knowledge` | `core.sqlite` knowledge entities and facts projected into `search.sqlite` | implemented initial adapter |
@@ -415,8 +416,9 @@ usable without waiting for universal backfill.
 ### Phase 2: framework domains
 
 - Continue source adapters for richer image derived text, richer code symbols,
-  tasks, people, inbox, events, and other framework sections that need UI-level
-  search.
+  and remaining framework sections that need UI-level search. `work.items`
+  covers the initial tasks, people, inbox, events, decisions, assignments,
+  handoffs, approvals, projects, and goals fast path.
 - Require each domain to have a source manifest, fast path, permissions, actions,
   and focused tests.
 - Extend event-driven updates beyond `database.records` and keep advancing

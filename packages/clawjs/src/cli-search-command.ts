@@ -75,6 +75,25 @@ const FINANCE_SEARCH_COLLECTIONS = [
   "accounting_lines",
 ] as const;
 
+const WORK_SEARCH_COLLECTIONS = new Set([
+  "tasks",
+  "projects",
+  "goals",
+  "people",
+  "inbox_threads",
+  "inbox_messages",
+  "events",
+  "reminders",
+  "deadlines",
+  "blockers",
+  "decisions",
+  "assignments",
+  "handoffs",
+  "approvals",
+  "work_sessions",
+  "artifacts",
+]);
+
 interface SearchServiceStateFile {
   state: "ready" | "stopped" | "external_pending";
   mode: "embedded" | "daemon";
@@ -131,6 +150,7 @@ export async function runSearchQueryCli(input: {
     const sources = parseListFlag(input.flags.sources ?? input.flags.source);
     const shards = parseListFlag(input.flags.shards ?? input.flags.shard);
     const shouldRefreshDatabase = domains?.includes("database") || sources?.includes("database.records");
+    const shouldRefreshWork = domains?.includes("work") || sources?.includes("work.items");
     const shouldRefreshDocuments = domains?.includes("documents") || sources?.includes("documents.blocks");
     const shouldRefreshNotes = domains?.includes("notes") || sources?.includes("notes.pages");
     const shouldRefreshKnowledge = domains?.includes("knowledge") || sources?.includes("knowledge.graph");
@@ -148,6 +168,7 @@ export async function runSearchQueryCli(input: {
     const shouldRefreshWeb = domains?.includes("web") || sources?.includes("web.ingested");
     const shouldRefreshExternal = domains?.includes("external") || sources?.includes("external.cache");
     const indexedDatabase = shouldRefreshDatabase && sourceCanIndex(store, "database.records") ? ensureDatabaseRecordsSourceIndexed(store, input.flags) : 0;
+    const indexedWork = shouldRefreshWork && sourceCanIndex(store, "work.items") ? ensureWorkItemsSourceIndexed(store, input.flags) : 0;
     const indexedDocuments = shouldRefreshDocuments && sourceCanIndex(store, "documents.blocks") ? ensureDocumentsBlocksSourceIndexed(store, input.flags) : 0;
     const indexedNotes = shouldRefreshNotes && sourceCanIndex(store, "notes.pages") ? ensureNotesPagesSourceIndexed(store, input.flags) : 0;
     const indexedKnowledge = shouldRefreshKnowledge && sourceCanIndex(store, "knowledge.graph") ? ensureKnowledgeGraphSourceIndexed(store, input.flags) : 0;
@@ -231,6 +252,7 @@ export async function runSearchQueryCli(input: {
       indexedFastPaths: {
         commands: indexedCommands,
         ...(shouldRefreshDatabase ? { "database.records": indexedDatabase } : {}),
+        ...(shouldRefreshWork ? { "work.items": indexedWork } : {}),
         ...(shouldRefreshDocuments ? { "documents.blocks": indexedDocuments } : {}),
         ...(shouldRefreshNotes ? { "notes.pages": indexedNotes } : {}),
         ...(shouldRefreshKnowledge ? { "knowledge.graph": indexedKnowledge } : {}),
@@ -356,6 +378,7 @@ export async function runSearchRebuildCli(input: {
     const commandsIndexed = rebuildsSource("commands") ? ensureCommandSourceIndexed(store) : 0;
     const sessionsIndexed = rebuildsSource("sessions.chats") ? ensureSessionsChatsSourceIndexed(store, input.flags) : 0;
     const databaseIndexed = rebuildsSource("database.records") ? ensureDatabaseRecordsSourceIndexed(store, input.flags) : 0;
+    const workIndexed = rebuildsSource("work.items") ? ensureWorkItemsSourceIndexed(store, input.flags) : 0;
     const documentsIndexed = rebuildsSource("documents.blocks") ? ensureDocumentsBlocksSourceIndexed(store, input.flags) : 0;
     const notesIndexed = rebuildsSource("notes.pages") ? ensureNotesPagesSourceIndexed(store, input.flags) : 0;
     const knowledgeIndexed = rebuildsSource("knowledge.graph") ? ensureKnowledgeGraphSourceIndexed(store, input.flags) : 0;
@@ -376,6 +399,7 @@ export async function runSearchRebuildCli(input: {
       ...(commandsIndexed > 0 ? ["commands"] : []),
       ...(sessionsIndexed > 0 ? ["sessions.chats"] : []),
       ...(databaseIndexed > 0 ? ["database.records"] : []),
+      ...(workIndexed > 0 ? ["work.items"] : []),
       ...(documentsIndexed > 0 ? ["documents.blocks"] : []),
       ...(notesIndexed > 0 ? ["notes.pages"] : []),
       ...(knowledgeIndexed > 0 ? ["knowledge.graph"] : []),
@@ -403,7 +427,7 @@ export async function runSearchRebuildCli(input: {
       mode: selectedSources && selectedShards ? "shard_scoped" : selectedSources ? "scoped" : "full",
       selectedSources: selectedSources ?? null,
       selectedShards: selectedShards ?? null,
-      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + skillsIndexed + connectorsIndexed + runtimeIndexed + localFilesIndexed + webIndexed + externalIndexed,
+      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + workIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + skillsIndexed + connectorsIndexed + runtimeIndexed + localFilesIndexed + webIndexed + externalIndexed,
       embeddings: 0,
       profile: input.flags.profile === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
@@ -412,6 +436,7 @@ export async function runSearchRebuildCli(input: {
         commands: commandsIndexed,
         "sessions.chats": sessionsIndexed,
         "database.records": databaseIndexed,
+        "work.items": workIndexed,
         "documents.blocks": documentsIndexed,
         "notes.pages": notesIndexed,
         "knowledge.graph": knowledgeIndexed,
@@ -1016,6 +1041,8 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
       return ensureSessionsChatsSourceIndexed(store, flags);
     case "database.records":
       return ensureDatabaseRecordsSourceIndexed(store, flags);
+    case "work.items":
+      return ensureWorkItemsSourceIndexed(store, flags);
     case "documents.blocks":
       return ensureDocumentsBlocksSourceIndexed(store, flags);
     case "notes.pages":
@@ -1057,6 +1084,8 @@ function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flag
   switch (job.source) {
     case "database.records":
       return ensureDatabaseRecordResourceIndexed(store, flags, job);
+    case "work.items":
+      return ensureWorkItemResourceIndexed(store, flags, job);
     case "documents.blocks":
       return ensureDocumentBlocksResourceIndexed(store, flags, job);
     case "notes.pages": {
@@ -1674,6 +1703,89 @@ function ensureDatabaseRecordResourceIndexed(store: SearchStore, flags: Record<s
     }
     store.upsertDocument(document);
     store.setSourceState("database.records", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 1;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureWorkItemsSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) {
+    store.setSourceState("work.items", "enabled", {
+      backlog: 0,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 0;
+  }
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "records")) {
+      store.setSourceState("work.items", "degraded", {
+        backlog: 0,
+        error: "core database does not contain records",
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return 0;
+    }
+    const rows = db.prepare(`
+      SELECT namespace_id, collection_name, id, data_json, created_at, updated_at
+      FROM records
+      WHERE collection_name IN (${Array.from(WORK_SEARCH_COLLECTIONS).map(() => "?").join(", ")})
+      ORDER BY updated_at DESC
+    `).all(...Array.from(WORK_SEARCH_COLLECTIONS)) as DatabaseRecordRow[];
+    let indexed = 0;
+    for (const row of rows) {
+      const document = workItemSearchDocument(row);
+      if (!document) continue;
+      store.upsertDocument(document);
+      indexed += 1;
+    }
+    store.setCursor({
+      source: "work.items",
+      cursor: `records:${indexed}`,
+      metadata: { store: "core.sqlite", collections: Array.from(WORK_SEARCH_COLLECTIONS).sort() },
+    });
+    store.setSourceState("work.items", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return indexed;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureWorkItemResourceIndexed(store: SearchStore, flags: Record<string, string>, job: SearchIndexJob): number {
+  const target = databaseRecordTargetFromJob(job);
+  if (!target || !WORK_SEARCH_COLLECTIONS.has(target.collectionName)) return 0;
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) return 0;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "records")) return 0;
+    const row = db.prepare(`
+      SELECT namespace_id, collection_name, id, data_json, created_at, updated_at
+      FROM records
+      WHERE namespace_id = ? AND collection_name = ? AND id = ?
+      LIMIT 1
+    `).get(target.namespaceId, target.collectionName, target.recordId) as DatabaseRecordRow | undefined;
+    if (!row) {
+      store.tombstone({ source: "work.items", resourceId: target.resourceId, reason: "work item missing during Search event refresh" });
+      return 1;
+    }
+    const document = workItemSearchDocument(row);
+    if (!document) {
+      store.tombstone({ source: "work.items", resourceId: target.resourceId, reason: "work item skipped during Search event refresh" });
+      return 1;
+    }
+    store.upsertDocument(document);
+    store.setSourceState("work.items", "enabled", {
       backlog: 0,
       error: null,
       lastIndexedAt: new Date().toISOString(),
@@ -3451,6 +3563,80 @@ function databaseRecordSearchDocument(row: DatabaseRecordRow): SearchDocumentInp
       { id: "copy-reference", kind: "copy", label: "Copy record reference", requiresApproval: false },
     ],
   };
+}
+
+function workItemSearchDocument(row: DatabaseRecordRow): SearchDocumentInput | null {
+  if (!WORK_SEARCH_COLLECTIONS.has(row.collection_name)) return null;
+  const payload = parseJsonRecord(row.data_json);
+  if (payload.archivedAt || payload.archived_at || payload.deletedAt || payload.deleted_at) return null;
+  const sensitive = isSensitiveRecord(payload);
+  const title = titleForDatabaseRecord(row, payload);
+  const fields = searchableRecordFields(payload);
+  const body = fields.map(([key, value]) => `${key}: ${stringifySearchValue(value)}`).join("\n");
+  const snippet = sensitive ? "[redacted]" : firstTextValue(payload) ?? body.slice(0, 180);
+  const type = workItemResultType(row.collection_name);
+  return {
+    id: `work.items:${row.namespace_id}:${row.collection_name}:${row.id}`,
+    source: "work.items",
+    shard: workItemShard(payload),
+    domain: "work",
+    type,
+    resourceId: `${row.namespace_id}:${row.collection_name}:${row.id}`,
+    title,
+    subtitle: `${row.collection_name} · ${row.namespace_id}`,
+    snippet,
+    body,
+    updatedAt: row.updated_at,
+    metadata: {
+      namespaceId: row.namespace_id,
+      collection: row.collection_name,
+      recordId: row.id,
+      status: stringMetadata(payload.status),
+      priority: stringMetadata(payload.priority),
+      projectId: stringMetadata(payload.projectId),
+      goalId: stringMetadata(payload.goalId),
+      assigneeActorId: stringMetadata(payload.assigneeActorId ?? payload.assignee),
+      sensitive,
+    },
+    permissions: { canOpen: true, canPreview: !sensitive, redacted: sensitive },
+    rankingHints: {
+      fastPath: 2,
+      workItem: 2,
+      ...(workItemShard(payload) === "hot" ? { hot: 1 } : {}),
+    },
+    fragments: sensitive ? [] : fields.slice(0, 16).map(([key, value], index) => ({
+      id: `work.items:${row.namespace_id}:${row.collection_name}:${row.id}:field:${key}`,
+      title: key,
+      body: stringifySearchValue(value),
+      snippet: stringifySearchValue(value).slice(0, 180),
+      sortOrder: index,
+      metadata: { field: key },
+    })),
+    actions: [
+      { id: "open", kind: "open", label: "Open work item", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy work item reference", requiresApproval: false },
+    ],
+  };
+}
+
+function workItemResultType(collectionName: string): string {
+  if (collectionName === "people") return "person";
+  if (collectionName === "inbox_threads") return "inbox_thread";
+  if (collectionName === "inbox_messages") return "inbox_message";
+  if (collectionName === "work_sessions") return "work_session";
+  if (collectionName.endsWith("s")) return collectionName.slice(0, -1);
+  return "work_item";
+}
+
+function workItemShard(payload: Record<string, unknown>): "hot" | "cold" {
+  const status = String(payload.status ?? payload.state ?? "").toLowerCase();
+  if (payload.completedAt || payload.completed_at || payload.cancelledAt || payload.cancelled_at) return "cold";
+  if (["done", "completed", "cancelled", "archived", "closed"].includes(status)) return "cold";
+  return "hot";
+}
+
+function stringMetadata(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
 function documentBlocksSearchDocument(row: DatabaseRecordRow, blockRows: DatabaseRecordRow[]): SearchDocumentInput | null {
