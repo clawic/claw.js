@@ -43,6 +43,6 @@
     "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean --target node20"
   },
   "dependencies": {
-    "@clawjs/index": "0.1.2"
+    "@clawjs/search": "0.1.2"
   }
 }

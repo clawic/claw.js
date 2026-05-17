@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { runSearchMcpServer } from "../dist/index.js";
 
-const baseUrl = process.env.CLAW_SEARCH_BASE ?? "http://127.0.0.1:24106";
-const token = process.env.CLAW_SEARCH_ADMIN_TOKEN ?? process.env.CLAW_SEARCH_TOKEN;
+const dbPath = process.env.CLAW_SEARCH_DB_PATH;
+const dataDir = process.env.CLAW_DATA_DIR;
 
-runSearchMcpServer({ baseUrl, token });
+runSearchMcpServer({ dbPath, dataDir });

@@ -147,6 +147,10 @@ or returns redacted results. Action audit entries include source, domain, result
 id, action id, risk, grant, approval status, and compact metadata. `claw search
 audit` lists those derived records for admin/debug surfaces.
 
+`@clawjs/search-mcp` exposes the same Search sidecar directly through
+`@clawjs/search`; it does not depend on the legacy Index package. Its historical
+`clawjs-index-mcp` binary name is retained only as technical compatibility.
+
 ## Implementation Plan
 
 ### Phase 1: Core and chats fast path

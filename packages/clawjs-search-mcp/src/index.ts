@@ -1,7 +1,10 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { createInterface } from "node:readline";
 import { Writable } from "node:stream";
 
-import { IndexApiClient as SearchApiClient } from "@clawjs/index";
+import { SearchStore, type SearchAuditEventType, type SearchProfileId, type SearchQueryInput } from "@clawjs/search";
 
 interface JsonRpcRequest {
   jsonrpc: "2.0";
@@ -21,25 +24,62 @@ interface ToolDef {
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;
-  handler: (params: Record<string, unknown>) => Promise<unknown>;
+  handler: (params: Record<string, unknown>) => Promise<unknown> | unknown;
 }
 
-function buildTools(client: SearchApiClient): ToolDef[] {
+export interface SearchMcpServerOptions {
+  dbPath?: string;
+  dataDir?: string;
+}
+
+function buildTools(store: SearchStore): ToolDef[] {
   return [
-    { name: "search.types.list", description: "List entity types known by Search (canonical + custom).", inputSchema: { type: "object", properties: {} }, handler: async () => client.listTypes() },
-    { name: "search.types.declare", description: "Declare or update a custom entity type with JSON Schema, identity fields and timeseries fields.", inputSchema: { type: "object", required: ["name", "schema", "identityFields"], properties: { name: { type: "string" }, schema: { type: "object" }, identityFields: { type: "array", items: { type: "string" } }, timeseriesFields: { type: "array", items: { type: "string" } }, uiHints: { type: "object" } } }, handler: async (p) => client.declareType(p) },
-    { name: "search.entities.upsert", description: "Insert or update an entity. Returns {entityId, isNew, changedFields, entity}.", inputSchema: { type: "object", required: ["type", "data"], properties: { type: { type: "string" }, data: { type: "object" }, sourceUrl: { type: "string" }, observedAt: { type: "string" }, runId: { type: "string" }, agentSessionId: { type: "string" } } }, handler: async (p) => client.upsertEntity(p) },
-    { name: "search.entities.get", description: "Get one entity, its observations, relations and tags.", inputSchema: { type: "object", required: ["entityId"], properties: { entityId: { type: "string" } } }, handler: async (p) => client.getEntity(p.entityId as string) },
-    { name: "search.entities.query", description: "Query entities by type, predicates, tags or collection.", inputSchema: { type: "object", properties: { type: { type: "string" }, where: { type: "object" }, orderBy: { type: "object" }, limit: { type: "integer" }, offset: { type: "integer" }, tagIds: { type: "array", items: { type: "string" } }, collectionId: { type: "string" } } }, handler: async (p) => client.queryEntities(p) },
-    { name: "search.entities.search", description: "Full-text search across entity payloads (FTS5).", inputSchema: { type: "object", required: ["fullText"], properties: { fullText: { type: "string" }, type: { type: "string" }, limit: { type: "integer" } } }, handler: async (p) => client.searchEntities(p) },
-    { name: "search.entities.history", description: "Read the timeseries values for a specific field on an entity.", inputSchema: { type: "object", required: ["entityId", "field"], properties: { entityId: { type: "string" }, field: { type: "string" } } }, handler: async (p) => client.getHistory(p.entityId as string, p.field as string) },
-    { name: "search.searches.create", description: "Persist a saved Search (name + criteria + prompt template).", inputSchema: { type: "object", required: ["name"], properties: { name: { type: "string" }, type: { type: "string" }, criteria: { type: "object" }, promptTemplate: { type: "string" } } }, handler: async (p) => client.createSearch(p) },
-    { name: "search.searches.run", description: "Trigger a manual Run of an existing Search.", inputSchema: { type: "object", required: ["searchId"], properties: { searchId: { type: "string" }, prompt: { type: "string" } } }, handler: async (p) => client.runSearch(p.searchId as string, p) },
-    { name: "search.monitors.create", description: "Promote a Search into a recurring Monitor with cron and alert rules.", inputSchema: { type: "object", required: ["searchId", "cronExpr"], properties: { searchId: { type: "string" }, cronExpr: { type: "string" }, name: { type: "string" }, alertRules: { type: "array", items: { type: "object" } }, enabled: { type: "boolean" } } }, handler: async (p) => client.createMonitor(p) },
-    { name: "search.monitors.fireNow", description: "Trigger a Monitor immediately, outside its schedule.", inputSchema: { type: "object", required: ["monitorId"], properties: { monitorId: { type: "string" } } }, handler: async (p) => client.fireMonitor(p.monitorId as string) },
-    { name: "search.runs.get", description: "Inspect a Run, its captured entities and log.", inputSchema: { type: "object", required: ["runId"], properties: { runId: { type: "string" } } }, handler: async (p) => client.getRun(p.runId as string) },
-    { name: "search.tags.apply", description: "Apply a tag to an entity by name (creates the tag if missing).", inputSchema: { type: "object", required: ["entityId", "name"], properties: { entityId: { type: "string" }, name: { type: "string" }, color: { type: "string" } } }, handler: async (p) => client.applyTag(p) },
-    { name: "search.alerts.list", description: "List recent alerts (unacked first).", inputSchema: { type: "object", properties: {} }, handler: async () => client.listAlerts() },
+    {
+      name: "search.query",
+      description: "Query the local @clawjs/search sidecar index.",
+      inputSchema: {
+        type: "object",
+        required: ["query"],
+        properties: {
+          query: { type: "string" },
+          domains: { type: "array", items: { type: "string" } },
+          sources: { type: "array", items: { type: "string" } },
+          profile: { type: "string", enum: ["framework", "full"] },
+          limit: { type: "integer" },
+          filters: { type: "object" },
+          explain: { type: "boolean" },
+          actor: { type: "string" },
+          surface: { type: "string" },
+        },
+      },
+      handler: (p) => store.query(searchQueryFromParams(p)),
+    },
+    { name: "search.sources.list", description: "List Search source manifests.", inputSchema: { type: "object", properties: { profile: { type: "string", enum: ["framework", "full"] } } }, handler: (p) => store.listSources(searchProfile(p.profile)) },
+    { name: "search.status", description: "List Search source status rows.", inputSchema: { type: "object", properties: {} }, handler: () => store.sourceStatus() },
+    { name: "search.actions.list", description: "List actions attached to one Search result.", inputSchema: { type: "object", required: ["resultId"], properties: { resultId: { type: "string" } } }, handler: (p) => store.actionsForResult(requiredString(p, "resultId")) },
+    { name: "search.saved.list", description: "List saved searches.", inputSchema: { type: "object", properties: {} }, handler: () => store.listSavedSearches() },
+    {
+      name: "search.saved.create",
+      description: "Create or update a saved search.",
+      inputSchema: { type: "object", required: ["id", "query"], properties: { id: { type: "string" }, name: { type: "string" }, query: { type: "string" }, profile: { type: "string", enum: ["framework", "full"] } } },
+      handler: (p) => {
+        const id = requiredString(p, "id");
+        store.saveSearch({ id, name: stringParam(p.name) ?? id, query: { query: requiredString(p, "query"), profile: searchProfile(p.profile) } });
+        return store.listSavedSearches().find((item) => item.id === id) ?? null;
+      },
+    },
+    { name: "search.monitors.list", description: "List Search monitors.", inputSchema: { type: "object", properties: {} }, handler: () => store.listMonitors() },
+    {
+      name: "search.monitors.create",
+      description: "Create or update a Search monitor for a saved search.",
+      inputSchema: { type: "object", required: ["id", "savedSearchId"], properties: { id: { type: "string" }, savedSearchId: { type: "string" }, name: { type: "string" }, cadence: { type: "string" }, enabled: { type: "boolean" } } },
+      handler: (p) => {
+        const id = requiredString(p, "id");
+        store.saveMonitor({ id, savedSearchId: requiredString(p, "savedSearchId"), name: stringParam(p.name), cadence: stringParam(p.cadence), enabled: typeof p.enabled === "boolean" ? p.enabled : true });
+        return store.listMonitors().find((item) => item.id === id) ?? null;
+      },
+    },
+    { name: "search.audit.list", description: "List Search audit events for actions and sensitive queries.", inputSchema: { type: "object", properties: { limit: { type: "integer" }, type: { type: "string", enum: ["action", "sensitive_query"] } } }, handler: (p) => store.listAuditEvents({ limit: numberParam(p.limit), type: searchAuditType(p.type) }) },
   ];
 }
 
@@ -49,10 +89,10 @@ function send(out: Writable, message: JsonRpcResponse | JsonRpcRequest): void {
   out.write(header + payload);
 }
 
-export function runSearchMcpServer(opts: { baseUrl: string; token?: string }) {
-  const client = new SearchApiClient(opts);
-  const tools = buildTools(client);
-  const toolMap = new Map(tools.map((t) => [t.name, t] as const));
+export function runSearchMcpServer(opts: SearchMcpServerOptions = {}) {
+  const store = new SearchStore(resolveSearchDbPath(opts));
+  const tools = buildTools(store);
+  const toolMap = new Map(tools.map((tool) => [tool.name, tool] as const));
 
   const respond = (id: JsonRpcRequest["id"], result?: unknown, error?: JsonRpcResponse["error"]) => {
     const response: JsonRpcResponse = { jsonrpc: "2.0", id: id ?? null };
@@ -67,7 +107,7 @@ export function runSearchMcpServer(opts: { baseUrl: string; token?: string }) {
         return;
       }
       if (req.method === "tools/list") {
-        respond(req.id, { tools: tools.map((t) => ({ name: t.name, description: t.description, inputSchema: t.inputSchema })) });
+        respond(req.id, { tools: tools.map((tool) => ({ name: tool.name, description: tool.description, inputSchema: tool.inputSchema })) });
         return;
       }
       if (req.method === "tools/call") {
@@ -110,6 +150,60 @@ export function runSearchMcpServer(opts: { baseUrl: string; token?: string }) {
   });
 }
 
-export default function runDefaultSearchMcpServer(opts: Parameters<typeof runSearchMcpServer>[0]): void {
+export default function runDefaultSearchMcpServer(opts: SearchMcpServerOptions = {}): void {
   runSearchMcpServer(opts);
+}
+
+function resolveSearchDbPath(opts: SearchMcpServerOptions): string {
+  if (opts.dbPath) return path.resolve(opts.dbPath);
+  if (process.env.CLAW_SEARCH_DB_PATH) return path.resolve(process.env.CLAW_SEARCH_DB_PATH);
+  const dataDir = opts.dataDir ?? process.env.CLAW_DATA_DIR ?? path.join(os.homedir(), ".claw", "data");
+  fs.mkdirSync(dataDir, { recursive: true });
+  return path.join(dataDir, "search.sqlite");
+}
+
+function searchQueryFromParams(params: Record<string, unknown>): SearchQueryInput {
+  return {
+    query: requiredString(params, "query"),
+    domains: stringArrayParam(params.domains),
+    sources: stringArrayParam(params.sources),
+    profile: searchProfile(params.profile),
+    limit: numberParam(params.limit),
+    explain: typeof params.explain === "boolean" ? params.explain : undefined,
+    actor: stringParam(params.actor),
+    surface: stringParam(params.surface),
+    filters: recordParam(params.filters),
+  };
+}
+
+function searchProfile(value: unknown): SearchProfileId {
+  return value === "full" ? "full" : "framework";
+}
+
+function searchAuditType(value: unknown): SearchAuditEventType | undefined {
+  return value === "action" || value === "sensitive_query" ? value : undefined;
+}
+
+function requiredString(params: Record<string, unknown>, key: string): string {
+  const value = stringParam(params[key]);
+  if (!value) throw new Error(`${key} is required`);
+  return value;
+}
+
+function stringParam(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function numberParam(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function stringArrayParam(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const entries = value.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0).map((entry) => entry.trim());
+  return entries.length ? entries : undefined;
+}
+
+function recordParam(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
 }
