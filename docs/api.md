@@ -95,6 +95,7 @@ const same = await createClaw({
 | `claw.routines` | routine CRUD, natural `every(...)`, `enable`, `disable`, `run`, and `history` |
 | `claw.time` | temporal item CRUD, pause/resume/run, execution history, calendar/timeline views, and anchor signals |
 | `claw.iot` | inventory, state, actions, scenes, automations, approvals, and raw connector invocations |
+| `claw.mac` | Mac Control Plane contracts: plan, execute, revert, audit, and permissions via signed-host broker |
 | `claw.content` | brands, destinations, campaigns, entries, variants, approvals, calendar, publish plans/runs, app read models, and scoped tokens |
 | `claw.notify` | notification send/cancel, receipts, feed sync, read/ack flows, push tokens, glances, and subscriptions |
 | `claw.sessions` | session CRUD, title generation, structured reply streaming, chunk streaming |
@@ -168,6 +169,19 @@ const clawjsStatus = await claw.runtime.plugins.clawjs.status();
 
 Use this namespace when you want to manage the OpenClaw bridge from app
 code without shelling out yourself.
+
+## Mac Control Plane
+
+`claw.mac` is the SDK projection of the same Mac Action Broker and Permission
+Broker contracts used by CLI and MCP. `claw.mac.plan` builds a non-mutating
+`MacActionPlan`; `claw.mac.execute` and `claw.mac.revert` must route through
+the active signed host and approval evaluation; `claw.mac.audit` reads redacted
+receipts/events; `claw.mac.permissions` uses the central permission lifecycle.
+
+The matching HTTP routes are `/v1/mac/plan`, `/v1/mac/execute`,
+`/v1/mac/revert`, `/v1/mac/audit`, and `/v1/mac/permissions`. The matching MCP
+tools are `mac.plan`, `mac.execute`, `mac.revert`, `mac.audit`, and
+`mac.permissions`.
 
 ## Workspace
 

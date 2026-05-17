@@ -64,6 +64,21 @@ confidence, backend, OS permissions, risk tier, coverage state, CLI usage,
 related surfaces, UI pack, and validation references. The atlas starts
 macOS 14+ and must be audited for each macOS major release.
 
+## Programmatic Surfaces
+
+MCP, HTTP API, and SDK callers use the same broker contracts as the CLI. V1
+registers these names in `MAC_PROGRAMMATIC_SURFACES`:
+
+- MCP tools: `mac.plan`, `mac.execute`, `mac.revert`, `mac.audit`,
+  `mac.permissions`.
+- HTTP routes: `/v1/mac/plan`, `/v1/mac/execute`, `/v1/mac/revert`,
+  `/v1/mac/audit`, `/v1/mac/permissions`.
+- SDK methods: `claw.mac.plan`, `claw.mac.execute`, `claw.mac.revert`,
+  `claw.mac.audit`, `claw.mac.permissions`.
+
+`plan` is non-mutating. `execute` and `revert` require signed-host routing and
+approval evaluation before any native action can run.
+
 ## Route Graph
 
 The stable surface graph registers the first Mac routes explicitly:

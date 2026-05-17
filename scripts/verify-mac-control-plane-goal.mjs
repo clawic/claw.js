@@ -6,6 +6,7 @@ import {
   MAC_CAPABILITY_ATLAS,
   MAC_CONTROL_COMMAND_ROOTS,
   MAC_PERMISSION_CATALOG,
+  MAC_PROGRAMMATIC_SURFACES,
   clawMacControlPlaneRegistry,
   findClawPersistentSurfaceNode,
   findClawSurfaceRoute,
@@ -25,6 +26,24 @@ const requiredDocs = [
   "docs/decision-map.md",
   "docs/adr/0012-surface-route-graph.md",
   "skills/mac-control-plane-work/SKILL.md",
+];
+
+const requiredProgrammaticSurfaces = [
+  "mac.plan",
+  "mac.execute",
+  "mac.revert",
+  "mac.audit",
+  "mac.permissions",
+  "/v1/mac/plan",
+  "/v1/mac/execute",
+  "/v1/mac/revert",
+  "/v1/mac/audit",
+  "/v1/mac/permissions",
+  "claw.mac.plan",
+  "claw.mac.execute",
+  "claw.mac.revert",
+  "claw.mac.audit",
+  "claw.mac.permissions",
 ];
 
 const requiredDecisionRows = [
@@ -151,8 +170,13 @@ for (const snippet of ["Mac Action Broker", "Mac Permission Broker", "Related su
 }
 
 const macDocs = readRequired("docs/mac-control-plane.md");
-for (const snippet of ["Related surfaces", "mac.directCliAction", "mac.permissionLifecycle", "claw permissions"]) {
+for (const snippet of ["Related surfaces", "mac.directCliAction", "mac.permissionLifecycle", "claw permissions", "MAC_PROGRAMMATIC_SURFACES", "mac.execute", "/v1/mac/execute", "claw.mac.execute"]) {
   requireNormalizedText("Mac Control Plane docs", macDocs, snippet);
+}
+
+const apiDocs = readRequired("docs/api.md");
+for (const snippet of ["claw.mac", "/v1/mac/plan", "mac.plan"]) {
+  requireNormalizedText("API docs", apiDocs, snippet);
 }
 
 const nativeUsageAllowlist = JSON.parse(readRequired("docs/mac-native-usage-allowlist.json"));
@@ -186,6 +210,15 @@ for (const id of requiredExecutableCapabilities) {
 const permissions = new Set(MAC_PERMISSION_CATALOG.map((entry) => entry.id));
 for (const id of requiredPermissionIds) {
   if (!permissions.has(id)) fail(`missing Mac permission ${id}`);
+}
+
+const programmaticSurfaces = new Set(MAC_PROGRAMMATIC_SURFACES.map((entry) => entry.name));
+for (const name of requiredProgrammaticSurfaces) {
+  if (!programmaticSurfaces.has(name)) fail(`missing Mac programmatic surface ${name}`);
+}
+for (const surface of MAC_PROGRAMMATIC_SURFACES) {
+  if (surface.mutatesNativeState && !surface.requiresSignedHost) fail(`mutating Mac surface must require signed host: ${surface.name}`);
+  if (surface.lifecycleAction === "execute" && !surface.requiresApproval) fail(`Mac execute surface must require approval: ${surface.name}`);
 }
 
 for (const nodeId of requiredNodes) {
