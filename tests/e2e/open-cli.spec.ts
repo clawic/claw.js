@@ -160,9 +160,9 @@ test("open cli refuses occupied ports that it does not own", async () => {
 
 test("domains cli supports dry-run lifecycle and open prefers .claw when configured", async () => {
   const rootDir = process.cwd();
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-domains-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-e2e-domains-"));
   const hostsFile = path.join(tempRoot, "hosts");
-  const plistFile = path.join(tempRoot, "clawjs-domains.plist");
+  const plistFile = path.join(tempRoot, "claw-domains.plist");
   fs.writeFileSync(hostsFile, "127.0.0.1 localhost\n");
 
   const statusEnvelope = JSON.parse((await runCli(rootDir, [
@@ -191,7 +191,7 @@ test("domains cli supports dry-run lifecycle and open prefers .claw when configu
   expect(install.dryRun).toBe(true);
   expect(install.hostsBlock).toContain("dashboard.claw");
   expect(install.hostsBlock).toContain("storage.claw");
-  expect(install.plist).toContain("/Library/Application Support/ClawJS/domains/proxy.mjs");
+  expect(install.plist).toContain("/Library/Application Support/Claw/domains/proxy.mjs");
   expect(install.plist).not.toContain(rootDir);
   expect(fs.readFileSync(hostsFile, "utf8")).not.toContain("storage.claw");
 

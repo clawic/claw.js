@@ -6,10 +6,10 @@ import { CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { parseCsvFlag } from "./cli-flag-parsers.ts";
 import { OPEN_SURFACES, allOpenSurfaceHostnames, resolveOpenSurface, type OpenSurface } from "./cli-open-surfaces.ts";
 
-export const CLAW_DOMAINS_BEGIN = "# BEGIN CLAWJS DOMAINS";
-export const CLAW_DOMAINS_END = "# END CLAWJS DOMAINS";
+export const CLAW_DOMAINS_BEGIN = "# BEGIN CLAW DOMAINS";
+export const CLAW_DOMAINS_END = "# END CLAW DOMAINS";
 export const CLAW_DOMAINS_LABEL = "com.claw.domains";
-const CLAW_DOMAINS_SERVICE_DIR = "/Library/Application Support/ClawJS/domains";
+const CLAW_DOMAINS_SERVICE_DIR = "/Library/Application Support/Claw/domains";
 
 function xmlEscape(value: string): string {
   return value
@@ -64,9 +64,9 @@ export function buildDomainsPlist(flags: Record<string, string>): string {
     `  <key>KeepAlive</key>`,
     `  <true/>`,
     `  <key>StandardOutPath</key>`,
-    `  <string>/tmp/clawjs-domains.out.log</string>`,
+    `  <string>/tmp/claw-domains.out.log</string>`,
     `  <key>StandardErrorPath</key>`,
-    `  <string>/tmp/clawjs-domains.err.log</string>`,
+    `  <string>/tmp/claw-domains.err.log</string>`,
     `</dict>`,
     `</plist>`,
     "",
@@ -142,7 +142,7 @@ async function ensureSurface(surface) {
     "--workspace",
     config.workspace,
     "--domains-hosts-file",
-    "/tmp/clawjs-domains-disabled-hosts",
+    "/tmp/claw-domains-disabled-hosts",
     "--no-browser",
     "--json",
   ];

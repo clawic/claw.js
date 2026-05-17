@@ -60,6 +60,14 @@ function readJson(relativePath) {
 }
 
 forbidFile("bridge/MIGRATION.md", "pre-v1 bridge cutover notes use stale ports and legacy bridge language");
+forbidSnippet("packages/clawjs/src/cli-domains-config.ts", "/Library/Application Support/ClawJS/domains");
+forbidSnippet("packages/clawjs/src/cli-domains-config.ts", "CLAWJS DOMAINS");
+forbidSnippet("packages/clawjs/src/cli-domains-config.ts", "/tmp/clawjs-domains");
+forbidSnippet("packages/clawjs/src/cli-domains-command.ts", "clawjs-domains");
+forbidSnippet("packages/clawjs/src/cli-domains-privileges.ts", "clawjs-domains");
+forbidSnippet("packages/clawjs/src/index.ts", "clawjs-domains");
+forbidSnippet("tests/e2e/open-cli.spec.ts", "clawjs-domains");
+forbidSnippet("tests/e2e/open-cli.spec.ts", "/Library/Application Support/ClawJS/domains");
 forbidSnippet("packages/clawjs-core/src/surface-registry.ts", "stable compatibility surface");
 forbidSnippet("packages/clawjs/src/inspect-cli.test.ts", "stable compatibility surface");
 forbidSnippet("docs/adr/0004-persistent-surface-registry-and-inspection.md", "stable compatibility");

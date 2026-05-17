@@ -28,7 +28,7 @@ export function runPrivilegedScript(script: string, flags: Record<string, string
     sudoScript(script);
     return;
   }
-  const helperPath = path.join(os.tmpdir(), `clawjs-domains-privileged-${process.pid}.sh`);
+  const helperPath = path.join(os.tmpdir(), `claw-domains-privileged-${process.pid}.sh`);
   fs.writeFileSync(helperPath, `#!/bin/sh\nset -eu\n${script}\n`, { mode: 0o700 });
   const result = spawnSync("osascript", [
     "-e",

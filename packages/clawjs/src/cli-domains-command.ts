@@ -70,10 +70,10 @@ export async function runDomainsCli(input: {
       fs.writeFileSync(domainsProxyScriptPath(input.flags), proxyScript);
       fs.writeFileSync(domainsProxyConfigPath(input.flags), serviceConfig);
     } else {
-      const tempHosts = path.join(os.tmpdir(), `clawjs-domains-hosts-${process.pid}`);
-      const tempPlist = path.join(os.tmpdir(), `clawjs-domains-${process.pid}.plist`);
-      const tempProxy = path.join(os.tmpdir(), `clawjs-domains-proxy-${process.pid}.mjs`);
-      const tempConfig = path.join(os.tmpdir(), `clawjs-domains-config-${process.pid}.json`);
+      const tempHosts = path.join(os.tmpdir(), `claw-domains-hosts-${process.pid}`);
+      const tempPlist = path.join(os.tmpdir(), `claw-domains-${process.pid}.plist`);
+      const tempProxy = path.join(os.tmpdir(), `claw-domains-proxy-${process.pid}.mjs`);
+      const tempConfig = path.join(os.tmpdir(), `claw-domains-config-${process.pid}.json`);
       fs.writeFileSync(tempHosts, nextHosts);
       fs.writeFileSync(tempPlist, plist);
       fs.writeFileSync(tempProxy, proxyScript);
@@ -119,7 +119,7 @@ export async function runDomainsCli(input: {
       fs.rmSync(plan.plistFile, { force: true });
       fs.rmSync(domainsServiceDir(input.flags), { force: true, recursive: true });
     } else {
-      const tempHosts = path.join(os.tmpdir(), `clawjs-domains-hosts-${process.pid}`);
+      const tempHosts = path.join(os.tmpdir(), `claw-domains-hosts-${process.pid}`);
       fs.writeFileSync(tempHosts, nextHosts);
       runPrivilegedScript([
         `launchctl bootout system/${CLAW_DOMAINS_LABEL} >/dev/null 2>&1 || true`,

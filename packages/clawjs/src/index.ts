@@ -147,7 +147,7 @@ async function ensureDomainSurfaceRunning(surface: OpenSurface, flags: Record<st
     "--workspace",
     workspace,
     "--domains-hosts-file",
-    path.join(os.tmpdir(), "clawjs-domains-disabled-hosts"),
+    path.join(os.tmpdir(), "claw-domains-disabled-hosts"),
     "--no-browser",
     "--json",
   ], {
