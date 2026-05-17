@@ -34,16 +34,16 @@ import { ARGON2_DEFAULT_PARAMS, type Argon2Params } from "./calibration.ts";
 const TEXT = new TextEncoder();
 const TEXT_DEC = new TextDecoder();
 
-export const CRYPTO_VERSION = 1;
-export const FORMAT_VERSION = 1;
+const CRYPTO_VERSION = 1;
+const FORMAT_VERSION = 1;
 export const SECRETS_SCHEMA_VERSION = 3;
 export const KEY_LENGTH = 32;
-export const NONCE_LENGTH = 12;
-export const SALT_LENGTH = 32;
+const NONCE_LENGTH = 12;
+const SALT_LENGTH = 32;
 
 // ---------- Random helpers ----------
 
-export function randomBytes(length: number): Uint8Array {
+function randomBytes(length: number): Uint8Array {
   return new Uint8Array(nodeRandomBytes(length).buffer, 0, length);
 }
 
@@ -51,7 +51,7 @@ export function generateKey(): Uint8Array {
   return randomBytes(KEY_LENGTH);
 }
 
-export function generateNonce(): Uint8Array {
+function generateNonce(): Uint8Array {
   return randomBytes(NONCE_LENGTH);
 }
 
@@ -149,7 +149,7 @@ function secretKeyChecksum(body: string): string {
   return base32Encode(sha256(TEXT.encode(`${SECRET_KEY_PREFIX}:${body}`)).subarray(0, 5)).slice(0, SECRET_KEY_CHECKSUM_LENGTH);
 }
 
-export function generateSecretKey(): string {
+function generateSecretKey(): string {
   const raw = generateKey();
   try {
     const body = base32Encode(raw);
@@ -159,7 +159,7 @@ export function generateSecretKey(): string {
   }
 }
 
-export function decodeSecretKey(secretKey: string): Uint8Array {
+function decodeSecretKey(secretKey: string): Uint8Array {
   const compact = secretKey.trim().toUpperCase().replace(/[\s-]+/g, "");
   if (!compact.startsWith(SECRET_KEY_PREFIX)) throw new Error("Secret Key prefix invalid");
   const payload = compact.slice(SECRET_KEY_PREFIX.length);
@@ -184,7 +184,7 @@ export function normalizeSecretKey(secretKey: string): string {
   }
 }
 
-export function secretKeyFingerprint(secretKey: string): string {
+function secretKeyFingerprint(secretKey: string): string {
   const raw = decodeSecretKey(secretKey);
   try {
     return `${SECRET_KEY_PREFIX}:${base32Encode(sha256(raw).subarray(0, 5)).slice(0, SECRET_KEY_CHECKSUM_LENGTH)}`;
@@ -193,7 +193,7 @@ export function secretKeyFingerprint(secretKey: string): string {
   }
 }
 
-export function deriveUnlockKey(password: string, secretKey: string, salt: Uint8Array, params: Argon2Params): Uint8Array {
+function deriveUnlockKey(password: string, secretKey: string, salt: Uint8Array, params: Argon2Params): Uint8Array {
   if (!password) throw new Error("Password required");
   if (!secretKey) throw new Error("Secret Key required");
   const passwordBytes = TEXT.encode(password);
@@ -219,11 +219,11 @@ export function deriveUnlockKey(password: string, secretKey: string, salt: Uint8
 
 const VERIFIER_LABEL = TEXT.encode("clawjs-secrets.verifier.v1");
 
-export function computeVerifier(masterKey: Uint8Array): Uint8Array {
+function computeVerifier(masterKey: Uint8Array): Uint8Array {
   return hmac(sha256, masterKey, VERIFIER_LABEL);
 }
 
-export function constantTimeEqual(a: Uint8Array, b: Uint8Array): boolean {
+function constantTimeEqual(a: Uint8Array, b: Uint8Array): boolean {
   if (a.length !== b.length) return false;
   return timingSafeEqual(Buffer.from(a), Buffer.from(b));
 }
@@ -235,15 +235,15 @@ export function constantTimeEqual(a: Uint8Array, b: Uint8Array): boolean {
 // from the mnemonic + recoverySalt, NOT the standard BIP39 seed (which is
 // PBKDF2-HMAC-SHA512 with 2048 iterations, much weaker than Argon2id).
 
-export function generateMnemonic(): string {
+function generateMnemonic(): string {
   return bip39.generateMnemonic(256); // 24 words
 }
 
-export function validateMnemonic(phrase: string): boolean {
+function validateMnemonic(phrase: string): boolean {
   return bip39.validateMnemonic(phrase.trim());
 }
 
-export function deriveRecoveryKey(mnemonic: string, salt: Uint8Array, params: Argon2Params): Uint8Array {
+function deriveRecoveryKey(mnemonic: string, salt: Uint8Array, params: Argon2Params): Uint8Array {
   const normalized = mnemonic.trim().toLowerCase().split(/\s+/).join(" ");
   return deriveKey(normalized, salt, params);
 }
@@ -300,7 +300,7 @@ function assertPlatformKey(platformKey: Uint8Array): void {
   if (platformKey.length !== KEY_LENGTH) throw new Error(`Platform KEK must be ${KEY_LENGTH} bytes`);
 }
 
-export function wrapMasterKeyWithPlatformKey(masterKey: Uint8Array, platformKey: Uint8Array): Uint8Array {
+function wrapMasterKeyWithPlatformKey(masterKey: Uint8Array, platformKey: Uint8Array): Uint8Array {
   assertPlatformKey(platformKey);
   return aeadSeal(platformKey, masterKey, "secrets.master-key|platform-kek");
 }
@@ -708,7 +708,7 @@ export function computeChainHash(prevHash: Uint8Array, canonicalEvent: Uint8Arra
 
 // ---------- Fingerprint (display-only, masked) ----------
 
-export function maskFingerprint(secretValue: string): string {
+function maskFingerprint(secretValue: string): string {
   const digest = createHash("sha256").update(secretValue).digest("hex");
   return `sha256:${digest.slice(0, 8)}…${digest.slice(-6)}`;
 }
@@ -739,7 +739,7 @@ export function hashAgentToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-export function isAgentToken(token: string): boolean {
+function isAgentToken(token: string): boolean {
   return token.startsWith(SVAGT_PREFIX);
 }
 

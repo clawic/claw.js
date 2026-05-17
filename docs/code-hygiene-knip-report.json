@@ -3,19 +3,20 @@
   "program": "code-hygiene",
   "tool": "knip",
   "toolVersion": "6.14.0",
-  "generatedAt": "2026-05-16T23:58:31.510Z",
+  "generatedAt": "2026-05-17T00:01:18.043Z",
   "mode": "report-only",
   "config": "knip.json",
   "cwd": ".",
   "summary": {
-    "filesWithIssues": 382,
-    "totalIssues": 1311,
+    "filesWithIssues": 334,
+    "totalIssues": 1246,
     "issueTypes": {
-      "files": 169,
       "owners": 189,
-      "unlisted": 2,
+      "files": 120,
+      "unlisted": 3,
       "types": 215,
-      "exports": 728,
+      "unresolved": 1,
+      "exports": 710,
       "duplicates": 8
     },
     "topFiles": [
@@ -88,13 +89,6 @@
         "totalIssues": 19,
         "issueCounts": {
           "owners": 1,
-          "exports": 18
-        }
-      },
-      {
-        "file": "secrets/src/server/crypto.ts",
-        "totalIssues": 18,
-        "issueCounts": {
           "exports": 18
         }
       },
@@ -172,6 +166,14 @@
       },
       {
         "file": "packages/clawjs-core/src/builtins/support/index.ts",
+        "totalIssues": 12,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 11
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/travel/index.ts",
         "totalIssues": 12,
         "issueCounts": {
           "owners": 1,
