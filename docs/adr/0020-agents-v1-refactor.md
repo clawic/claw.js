@@ -4,6 +4,8 @@ Status: Accepted
 
 Date: 2026-05-17
 
+Decision matrix: [Agents V1 Decision Matrix](../agents-v1-decision-matrix.md)
+
 ## Context
 
 The pre-V1 framework had several overlapping agent concepts: filesystem agent
