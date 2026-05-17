@@ -245,9 +245,11 @@ signed host supervisor owns the persistent process.
 
 Adapters can also attach local embedding vectors to Search documents.
 `SearchQueryInput.strategy` supports lexical, semantic, and hybrid scoring when
-the caller provides an embedding model and vector. Embedding generation remains
-adapter-owned; Root Search stores vectors and applies deterministic cosine
-similarity scoring alongside the existing ranking hints and context boosts.
+the caller provides an embedding model and vector. `@clawjs/search` includes a
+deterministic local text embedding helper (`local-text-v1`) so adapters can
+generate reproducible vectors without calling providers; Root Search stores
+vectors and applies deterministic cosine similarity scoring alongside the
+existing ranking hints and context boosts.
 
 Queries support structured filters through `SearchQueryInput.filters` and the
 CLI `--filters` flag. Filters may target built-in fields such as `domain`,
@@ -308,9 +310,12 @@ source adapters.
 
 Semantic retrieval is opt-in per query and per source capability. Search stores
 local vectors in `search.sqlite` and can run `semantic` or `hybrid` ranking when
-the caller supplies a local embedding vector and model. Search does not call
-external embedding providers from the sidecar; embedding generation remains a
-source/extractor responsibility and can be throttled as background work.
+the caller supplies a local embedding vector and model. The CLI can derive a
+query vector with `--embedding-model local-text-v1` or `--local-embedding true`
+for sources that have local vectors, such as `code.symbols`. Search does not
+call external embedding providers from the sidecar; provider-backed generation
+and heavier extractor scheduling remain source/extractor responsibilities and
+can be throttled as background work.
 
 Each source manifest declares indexing limits. `SearchStore` enforces body,
 fragment-count, and per-fragment byte budgets before writing to FTS, so a large

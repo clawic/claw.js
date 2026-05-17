@@ -9,6 +9,7 @@ import {
   clawDenseDataIntentStatuses,
   clawDenseDataOsRegistry,
   findClawDenseDataSystem,
+  listClawDenseDataGapRegistryEntries,
   listClawDenseDataIntentEntries,
   listClawDenseDataSemanticViewEntries,
   listClawDenseDataSystems,
@@ -88,6 +89,26 @@ test("dense data OS generates auditable intent and semantic view entries", () =>
   assert.ok(semanticViews.some((entry) => entry.id === "product_spec.timeline" && entry.systemId === "product"));
   assert.ok(semanticViews.some((entry) => entry.id === "drug_product.timeline" && entry.systemId === "pharma"));
   assert.ok(semanticViews.some((entry) => entry.id === "content_entry.timeline" && entry.systemId === "content"));
+});
+
+test("dense data OS derives a gap registry from intents, policies, and external pending rows", () => {
+  const gaps = listClawDenseDataGapRegistryEntries();
+  const statuses = new Set(gaps.map((entry) => entry.status));
+  const ids = new Set(gaps.map((entry) => entry.id));
+
+  assert.equal(ids.size, gaps.length, "dense gap ids must be unique");
+  for (const status of ["partial", "workflow_gap", "data_gap", "external_pending", "blocked"]) {
+    assert.ok(statuses.has(status), `gap registry missing ${status}`);
+  }
+
+  assert.ok(gaps.some((entry) => entry.source === "intent" && entry.status === "workflow_gap" && entry.phrase === "claw utility-account list"));
+  assert.ok(gaps.some((entry) => entry.source === "external_pending" && entry.status === "external_pending" && entry.requirementId === "external_pending_health_ehr_export"));
+  assert.ok(gaps.some((entry) => entry.source === "policy" && entry.status === "data_gap" && entry.id === "dense_gap_unknown_intent"));
+  assert.ok(gaps.some((entry) => entry.source === "policy" && entry.status === "blocked" && entry.command === "purge"));
+  for (const gap of gaps) {
+    assert.ok(gap.reason.length > 0, `${gap.id} must include a reason`);
+    assert.ok(gap.nextStep.length > 0, `${gap.id} must include a next step`);
+  }
 });
 
 test("dense data OS acceptance fixture covers required first-wave records and gaps", () => {

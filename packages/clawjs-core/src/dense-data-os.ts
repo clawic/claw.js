@@ -125,6 +125,23 @@ export interface ClawDenseDataIntentEntry {
   nextSteps: string[];
 }
 
+export type ClawDenseDataGapRegistrySource = "intent" | "external_pending" | "policy";
+
+export interface ClawDenseDataGapRegistryEntry {
+  id: string;
+  source: ClawDenseDataGapRegistrySource;
+  status: Exclude<ClawDenseDataIntentStatus, "covered" | "alias_candidate" | "custom_pack">;
+  systemId?: string;
+  command?: string;
+  phrase?: string;
+  collectionName?: string;
+  operationId?: string;
+  requirementId?: string;
+  requirementType?: ClawDenseDataExternalPendingRequirement["requirementType"];
+  reason: string;
+  nextStep: string;
+}
+
 export interface ClawDenseDataSemanticViewEntry extends ClawDenseDataSemanticView {
   systemId: string;
 }
@@ -1367,6 +1384,56 @@ export function listClawDenseDataIntentEntries(): ClawDenseDataIntentEntry[] {
   return entries;
 }
 
+export function listClawDenseDataGapRegistryEntries(): ClawDenseDataGapRegistryEntry[] {
+  const entries: ClawDenseDataGapRegistryEntry[] = [];
+  for (const intent of listClawDenseDataIntentEntries()) {
+    if (["covered", "alias_candidate", "custom_pack"].includes(intent.status)) continue;
+    entries.push({
+      id: `dense_gap_${intent.id}`,
+      source: "intent",
+      status: intent.status as ClawDenseDataGapRegistryEntry["status"],
+      systemId: intent.systemId,
+      command: intent.command,
+      phrase: intent.phrase,
+      collectionName: intent.collectionName,
+      operationId: intent.operationId,
+      reason: intent.reasons[0] ?? "Dense-data intent is not fully executable.",
+      nextStep: intent.nextSteps[0] ?? "Keep the dense-data registry, CLI route, fixture, and test evidence in sync before closing this gap.",
+    });
+  }
+
+  for (const requirement of clawDenseDataOsRegistry.externalPendingRequirements) {
+    entries.push({
+      id: `dense_gap_${requirement.id}`,
+      source: "external_pending",
+      status: "external_pending",
+      systemId: requirement.systemId,
+      requirementId: requirement.id,
+      requirementType: requirement.requirementType,
+      reason: requirement.reason,
+      nextStep: requirement.validationNeeded,
+    });
+  }
+
+  entries.push({
+    id: "dense_gap_unknown_intent",
+    source: "policy",
+    status: "data_gap",
+    reason: "Unknown professional phrases must be recorded as dense-data gaps before adding schema, aliases, or CLI routes.",
+    nextStep: "Resolve the phrase with the dense intent registry, then map it to a canonical operation, collection, workflow gap, blocked state, or external pending requirement.",
+  });
+  entries.push({
+    id: "dense_gap_restricted_purge",
+    source: "policy",
+    status: "blocked",
+    command: "purge",
+    reason: "Dense-data purge is intentionally excluded from generated CRUD routes because destructive deletion needs approval, audit, and export/snapshot checks.",
+    nextStep: "Use an explicit restricted purge flow; ordinary delete remains archive/soft-delete semantics.",
+  });
+
+  return entries;
+}
+
 export function findClawDenseDataSystem(idOrCommand: string): ClawDenseDataSystem | undefined {
   return clawDenseDataOsRegistry.systems.find(
     (system) => system.id === idOrCommand || system.canonicalCommand === idOrCommand || system.aliases.includes(idOrCommand),
@@ -1508,6 +1575,17 @@ export function assertClawDenseDataOsRegistryComplete(): void {
     for (const systemId of integration.denseSystems) {
       if (!findClawDenseDataSystem(systemId)) failures.push(`${integration.id}: references missing dense system ${systemId}`);
     }
+  }
+  const gapRegistry = listClawDenseDataGapRegistryEntries();
+  const gapStatuses = new Set(gapRegistry.map((gap) => gap.status));
+  for (const status of ["partial", "workflow_gap", "data_gap", "external_pending", "blocked"] satisfies ClawDenseDataGapRegistryEntry["status"][]) {
+    if (!gapStatuses.has(status)) failures.push(`gap registry missing ${status}`);
+  }
+  for (const gap of gapRegistry) {
+    if (!gap.id || !/^dense_gap_[a-z0-9_]+$/.test(gap.id)) failures.push(`${gap.id}: invalid dense gap id`);
+    if (!gap.reason.trim()) failures.push(`${gap.id}: missing gap reason`);
+    if (!gap.nextStep.trim()) failures.push(`${gap.id}: missing gap next step`);
+    if (gap.systemId && !findClawDenseDataSystem(gap.systemId)) failures.push(`${gap.id}: references missing dense system ${gap.systemId}`);
   }
 
   const requiredFirstWave = ["health", "research", "biology", "labs", "legal", "erp", "crm", "finance", "education", "manufacturing", "ops", "transport", "eln"];
