@@ -2653,6 +2653,118 @@ function ensureMcpServerResourceIndexed(store: SearchStore, flags: Record<string
   return 1;
 }
 
+function ensureAppsCatalogSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) return 0;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "apps")) return 0;
+    const rows = db.prepare(`
+      SELECT id, slug, name, description, root_path, manifest_json, permissions_json, pinned, last_opened_at, created_by_chat_id, created_at, updated_at
+      FROM apps
+      ORDER BY pinned DESC, COALESCE(last_opened_at, updated_at) DESC
+    `).all() as AppCatalogRow[];
+    for (const row of rows) store.upsertDocument(appCatalogSearchDocument(row));
+    store.setCursor({
+      source: "apps.catalog",
+      cursor: `apps:${rows.length}`,
+      metadata: { store: "core.sqlite", table: "apps" },
+    });
+    store.setSourceState("apps.catalog", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return rows.length;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureAppCatalogResourceIndexed(store: SearchStore, flags: Record<string, string>, appId: string): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) return 0;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "apps")) return 0;
+    const row = db.prepare(`
+      SELECT id, slug, name, description, root_path, manifest_json, permissions_json, pinned, last_opened_at, created_by_chat_id, created_at, updated_at
+      FROM apps
+      WHERE id = ? OR slug = ?
+      LIMIT 1
+    `).get(appId, appId) as AppCatalogRow | undefined;
+    if (!row) {
+      store.tombstone({ source: "apps.catalog", resourceId: appId, reason: "app missing during Search event refresh" });
+      return 1;
+    }
+    store.upsertDocument(appCatalogSearchDocument(row));
+    store.setSourceState("apps.catalog", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 1;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureDesignResourcesSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) return 0;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "design_resources")) return 0;
+    const rows = db.prepare(`
+      SELECT id, kind, name, root_path, manifest_json, builtin, created_at, updated_at
+      FROM design_resources
+      ORDER BY kind, updated_at DESC
+    `).all() as DesignResourceRow[];
+    for (const row of rows) store.upsertDocument(designResourceSearchDocument(row));
+    store.setCursor({
+      source: "design.resources",
+      cursor: `resources:${rows.length}`,
+      metadata: { store: "core.sqlite", table: "design_resources" },
+    });
+    store.setSourceState("design.resources", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return rows.length;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureDesignResourceIndexed(store: SearchStore, flags: Record<string, string>, resourceId: string): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) return 0;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "design_resources")) return 0;
+    const row = db.prepare(`
+      SELECT id, kind, name, root_path, manifest_json, builtin, created_at, updated_at
+      FROM design_resources
+      WHERE id = ?
+      LIMIT 1
+    `).get(resourceId) as DesignResourceRow | undefined;
+    if (!row) {
+      store.tombstone({ source: "design.resources", resourceId, reason: "design resource missing during Search event refresh" });
+      return 1;
+    }
+    store.upsertDocument(designResourceSearchDocument(row));
+    store.setSourceState("design.resources", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 1;
+  } finally {
+    db.close();
+  }
+}
+
 function ensureRuntimeEventsSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
   let indexed = 0;
   const runtimePath = resolveSearchSidecarPath(flags, "runtime.sqlite");
