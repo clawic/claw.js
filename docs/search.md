@@ -38,6 +38,12 @@ stay fast enough for UI sections and CLI use.
 Spotlight-style sources belong here unless a specific source is promoted into a
 framework section with its own fast path.
 
+The `full` profile registers optional source manifests for local files, native
+system data, explicit web ingestion, and external provider caches. These sources
+are disabled by default and have no built-in extractor in the framework slice;
+enabling them requires a host/provider adapter, permissions, and source-specific
+backfill jobs.
+
 ## Current Sources
 
 | Source | Domain | Storage | Status |
@@ -50,7 +56,10 @@ framework section with its own fast path.
 | `media.assets` | `media` | workspace media records projected into `search.sqlite` | implemented initial adapter |
 | `generations.artifacts` | `generations` | generated artifact records projected into `search.sqlite` | implemented initial adapter |
 | `code.symbols` | `code` | bounded project file/symbol/docs projection into `search.sqlite` | implemented initial adapter |
-| native or external sources | `external` or source-specific domains | host/provider adapters | EXTERNAL PENDING |
+| `local.files` | `files` | local file metadata/content adapter | EXTERNAL PENDING, `full`, off by default |
+| `native.system` | `native` | native app/system/contact adapters | EXTERNAL PENDING, `full`, off by default |
+| `web.ingested` | `web` | explicit web ingestion and crawler cache | EXTERNAL PENDING, `full`, off by default |
+| `external.cache` | `external` | provider reference + local cache adapters | EXTERNAL PENDING, `full`, off by default |
 
 ## CLI
 

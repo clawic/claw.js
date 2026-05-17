@@ -754,6 +754,7 @@ export class SearchStore {
   private omittedSourcesForInput(input: SearchQueryInput, profile: SearchProfileId): SearchQueryOutput["omittedSources"] {
     const selectedClauses: string[] = [];
     const params: unknown[] = [];
+    const explicitlyScoped = Boolean(input.sources?.length || input.domains?.length);
     if (input.sources?.length) {
       selectedClauses.push(`id IN (${input.sources.map(() => "?").join(", ")})`);
       params.push(...input.sources);
@@ -762,8 +763,11 @@ export class SearchStore {
       selectedClauses.push(`domain IN (${input.domains.map(() => "?").join(", ")})`);
       params.push(...input.domains);
     }
+    if (profile !== "full" && !explicitlyScoped) {
+      selectedClauses.push("profile = 'framework'");
+    }
     const omissionClauses = ["state IN ('disabled', 'paused', 'excluded')"];
-    if (profile !== "full") omissionClauses.push("profile != 'framework'");
+    if (profile !== "full" && explicitlyScoped) omissionClauses.push("profile != 'framework'");
     const rows = this.db.prepare(`
       SELECT id, state, profile FROM search_sources
       WHERE ${selectedClauses.length ? `${selectedClauses.join(" AND ")} AND ` : ""}(${omissionClauses.join(" OR ")})

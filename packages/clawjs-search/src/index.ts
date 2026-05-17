@@ -369,6 +369,51 @@ export function createFrameworkSearchSourceManifest(input: {
   });
 }
 
+export function createFullSearchSourceManifest(input: {
+  id: string;
+  domain: string;
+  name: string;
+  resultTypes: string[];
+  facets?: SearchFacetDeclaration[];
+  contentDepth?: SearchSourceIndexingPolicy["contentDepth"];
+  heavyExtraction?: SearchSourceIndexingPolicy["heavyExtraction"];
+}): SearchSourceManifest {
+  return defineSearchSource({
+    id: input.id,
+    domain: input.domain,
+    name: input.name,
+    version: 1,
+    profile: "full",
+    resultTypes: input.resultTypes,
+    facets: input.facets,
+    capabilities: {
+      fastPath: false,
+      fragments: true,
+      actions: true,
+      facets: Boolean(input.facets?.length),
+      semantic: "optional",
+    },
+    indexing: {
+      strategy: "event_driven_backfill",
+      freshness: "manual",
+      contentDepth: input.contentDepth ?? "metadata",
+      defaultState: "off",
+      heavyExtraction: input.heavyExtraction ?? "async_throttled",
+      limits: {
+        maxBodyBytes: 32 * 1024,
+        maxFragments: 20,
+        maxFragmentBytes: 4 * 1024,
+      },
+    },
+    permissions: {
+      default: "opt_in",
+      acl: ["domain", "source", "agent"],
+      redactSensitivePreviews: true,
+      audit: ["actions", "sensitive_queries"],
+    },
+  });
+}
+
 export function createCommandSearchSourceManifest(): SearchSourceManifest {
   return defineSearchSource({
     id: "commands",

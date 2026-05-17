@@ -125,6 +125,17 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(completedJobPayload.data.item.id, "job:commands:backfill");
     assert.equal(completedJobPayload.data.item.status, "done");
 
+    const fullSources = await runCliCapture(["search", "sources", "--profile", "full", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(fullSources.code, CLI_EXIT_OK);
+    const fullSourcesPayload = JSON.parse(fullSources.stdout) as { data: { sources: Array<{ id: string; profile: string; defaultState: string; state: string; fastPath: boolean }> } };
+    const localFilesSource = fullSourcesPayload.data.sources.find((source) => source.id === "local.files");
+    assert.equal(localFilesSource?.profile, "full");
+    assert.equal(localFilesSource?.defaultState, "off");
+    assert.equal(localFilesSource?.state, "disabled");
+    assert.equal(localFilesSource?.fastPath, false);
+    assert.equal(fullSourcesPayload.data.sources.some((source) => source.id === "web.ingested"), true);
+    assert.equal(fullSourcesPayload.data.sources.some((source) => source.id === "external.cache"), true);
+
     const sensitiveQuery = await runCliCapture(["search", "query", "secret token", "--data-dir", dataRoot, "--json", "--actor", "agent:codex", "--surface", "cli"], workspaceRoot);
     assert.equal(sensitiveQuery.code, CLI_EXIT_DEGRADED);
     const sensitiveAudit = await runCliCapture(["search", "audit", "--type", "sensitive_query", "--data-dir", dataRoot, "--json"], workspaceRoot);

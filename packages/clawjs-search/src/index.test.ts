@@ -8,6 +8,7 @@ import {
   DEFAULT_SEARCH_BUDGETS,
   SearchStore,
   createFrameworkSearchSourceManifest,
+  createFullSearchSourceManifest,
   createRootSearchFederator,
   createSearchRegistry,
   scoreLexicalMatch,
@@ -27,6 +28,62 @@ test("framework sources are opt-in and require fast paths", () => {
   assert.equal(manifest.capabilities.facets, true);
   assert.equal(manifest.indexing.freshness, "near_immediate");
   assert.equal(manifest.indexing.limits?.maxFragments, 50);
+});
+
+test("full profile sources are opt-in and may defer their fast path to external adapters", () => {
+  const manifest = createFullSearchSourceManifest({
+    id: "local.files",
+    domain: "files",
+    name: "Local files",
+    resultTypes: ["file"],
+    facets: [{ id: "extension", label: "Extension", type: "string" }],
+  });
+
+  assert.equal(manifest.profile, "full");
+  assert.equal(manifest.indexing.defaultState, "off");
+  assert.equal(manifest.indexing.freshness, "manual");
+  assert.equal(manifest.permissions.default, "opt_in");
+  assert.equal(manifest.capabilities.fastPath, false);
+  assert.equal(manifest.capabilities.semantic, "optional");
+});
+
+test("SearchStore does not mark default framework queries partial because full sources are disabled", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-full-sources-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "commands",
+      domain: "commands",
+      name: "Commands",
+      resultTypes: ["command"],
+    }));
+    store.registerSource(createFullSearchSourceManifest({
+      id: "local.files",
+      domain: "files",
+      name: "Local files",
+      resultTypes: ["file"],
+    }));
+    store.upsertDocument({
+      id: "commands:search",
+      source: "commands",
+      domain: "commands",
+      type: "command",
+      title: "search",
+      body: "Framework Search command",
+    });
+
+    const frameworkQuery = store.query({ query: "search" });
+    assert.equal(frameworkQuery.partial, false);
+    assert.deepEqual(frameworkQuery.omittedSources, []);
+
+    const explicitlyFullSource = store.query({ query: "search", sources: ["local.files"] });
+    assert.equal(explicitlyFullSource.partial, true);
+    assert.equal(explicitlyFullSource.omittedSources[0]?.source, "local.files");
+    assert.equal(explicitlyFullSource.omittedSources[0]?.reason, "profile");
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test("registry federates sources with strict source timeouts", async () => {
