@@ -43,6 +43,7 @@ test("dense data OS records external pending requirements separately from bugs",
   assert.ok(requirements.some((entry) => entry.systemId === "erp" && entry.requirementType === "cost_bearing"));
   assert.ok(requirements.some((entry) => entry.systemId === "iot" && entry.requirementType === "physical_device"));
   assert.ok(requirements.some((entry) => entry.systemId === "pharma" && entry.requirementType === "regulated_export"));
+  assert.ok(requirements.some((entry) => entry.systemId === "content" && entry.requirementType === "provider"));
   for (const requirement of requirements) {
     assert.equal(requirement.status, "external_pending");
     assert.ok(requirement.reason.length > 0);
@@ -79,12 +80,14 @@ test("dense data OS generates auditable intent and semantic view entries", () =>
   assert.ok(intents.some((entry) => entry.phrase === "claw public-case list" && entry.status === "covered" && entry.collectionName === "public_cases"));
   assert.ok(intents.some((entry) => entry.phrase === "claw product-spec list" && entry.status === "covered" && entry.collectionName === "product_specs"));
   assert.ok(intents.some((entry) => entry.phrase === "claw drug-product list" && entry.status === "covered" && entry.collectionName === "drug_products"));
+  assert.ok(intents.some((entry) => entry.phrase === "claw content-entry list" && entry.status === "covered" && entry.collectionName === "content_entries"));
   assert.ok(semanticViews.some((entry) => entry.id === "patient.timeline" && entry.systemId === "health"));
   assert.ok(semanticViews.some((entry) => entry.id === "invoice.list" && entry.systemId === "erp"));
   assert.ok(semanticViews.some((entry) => entry.id === "lab_notebook.timeline" && entry.systemId === "eln"));
   assert.ok(semanticViews.some((entry) => entry.id === "public_case.timeline" && entry.systemId === "government"));
   assert.ok(semanticViews.some((entry) => entry.id === "product_spec.timeline" && entry.systemId === "product"));
   assert.ok(semanticViews.some((entry) => entry.id === "drug_product.timeline" && entry.systemId === "pharma"));
+  assert.ok(semanticViews.some((entry) => entry.id === "content_entry.timeline" && entry.systemId === "content"));
 });
 
 test("dense data OS acceptance fixture covers required first-wave records and gaps", () => {
@@ -151,6 +154,14 @@ test("dense data OS acceptance fixture covers required first-wave records and ga
     "batch_record",
     "lot_release",
     "adverse_event",
+    "content_brand",
+    "content_destination",
+    "content_campaign",
+    "content_entry",
+    "content_revision",
+    "content_variant",
+    "content_approval",
+    "content_publication",
     "thing",
     "iot_device",
     "sensor_reading",
@@ -368,6 +379,14 @@ test("dense data OS centers have direct human CLI nouns and plural aliases", () 
   assert.ok(pharma?.commandPatterns.includes("claw drug-product <id> timeline"));
   assert.equal(pharma?.centers.some((center) => center.commandNoun === "product"), false);
 
+  const content = findClawDenseDataSystem("content");
+  assert.equal(content?.canonicalCommand, "content");
+  assert.ok(content?.centers.some((center) => center.commandNoun === "content-entry" && center.commandAliases.includes("content-entries") && center.collectionName === "content_entries"));
+  assert.ok(content?.centers.some((center) => center.commandNoun === "content-campaign" && center.commandAliases.includes("content-campaigns") && center.collectionName === "content_campaigns"));
+  assert.ok(content?.centers.some((center) => center.commandNoun === "content-publication" && center.commandAliases.includes("content-publications") && center.collectionName === "content_publications"));
+  assert.ok(content?.commandPatterns.includes("claw content-entry <id> timeline"));
+  assert.equal(content?.centers.some((center) => center.commandNoun === "campaign"), false);
+
   const iot = findClawDenseDataSystem("iot");
   assert.ok(iot?.centers.some((center) => center.commandNoun === "thing" && center.commandAliases.includes("things") && center.collectionName === "iot_things"));
   assert.ok(iot?.centers.some((center) => center.commandNoun === "iot-device" && center.commandAliases.includes("devices") && center.collectionName === "iot_devices"));
@@ -517,6 +536,15 @@ test("dense data OS resolves direct CLI intent phrases without executing them", 
   assert.equal(pharmaOverview.status, "covered");
   assert.equal(pharmaOverview.system?.id, "pharma");
 
+  const contentEntryList = resolveClawDenseDataIntent("claw content-entry list");
+  assert.equal(contentEntryList.status, "covered");
+  assert.equal(contentEntryList.system?.id, "content");
+  assert.equal(contentEntryList.center?.collectionName, "content_entries");
+
+  const contentOverview = resolveClawDenseDataIntent("claw cms overview");
+  assert.equal(contentOverview.status, "covered");
+  assert.equal(contentOverview.system?.id, "content");
+
   const shipmentList = resolveClawDenseDataIntent("claw shipment list");
   assert.equal(shipmentList.status, "covered");
   assert.equal(shipmentList.system?.id, "transport");
@@ -613,6 +641,14 @@ test("dense data OS graduated centers point at canonical built-in collections wi
     "pharma.batch_record": "batch_records",
     "pharma.lot_release": "lot_releases",
     "pharma.adverse_event": "adverse_events",
+    "content.content_brand": "content_brands",
+    "content.content_destination": "content_destinations",
+    "content.content_campaign": "content_campaigns",
+    "content.content_entry": "content_entries",
+    "content.content_revision": "content_revisions",
+    "content.content_variant": "content_variants",
+    "content.content_approval": "content_approvals",
+    "content.content_publication": "content_publications",
     "iot.thing": "iot_things",
     "iot.iot_device": "iot_devices",
     "iot.sensor_reading": "sensor_readings",
