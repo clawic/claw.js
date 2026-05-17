@@ -514,6 +514,117 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(productsAliasPayload.meta.action, "list");
   assert.equal(productsAliasPayload.data.some((record) => record.id === erpProductPayload.data.id && record.name === "Hydraulic Press"), true);
 
+  const productSpecCreate = await runCliCapture(["product-spec", "create", "Hydraulic Press Spec", "--product", erpProductPayload.data.id, "--company", companyPayload.data.id, "--owner", employeePayload.data.id, "--sku", "PRESS-MODEL", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(productSpecCreate.code, CLI_EXIT_OK, productSpecCreate.stderr || productSpecCreate.stdout);
+  const productSpecPayload = JSON.parse(productSpecCreate.stdout) as { data: { id: string; title: string; productCatalogId: string; companyId: string; ownerEmployeeId: string; sku: string; status: string; lifecycleStage: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(productSpecPayload.meta.invokedCommand, "product-spec");
+  assert.equal(productSpecPayload.meta.collection, "product_specs");
+  assert.equal(productSpecPayload.meta.action, "create");
+  assert.equal(productSpecPayload.data.title, "Hydraulic Press Spec");
+  assert.equal(productSpecPayload.data.productCatalogId, erpProductPayload.data.id);
+  assert.equal(productSpecPayload.data.companyId, companyPayload.data.id);
+  assert.equal(productSpecPayload.data.ownerEmployeeId, employeePayload.data.id);
+  assert.equal(productSpecPayload.data.status, "draft");
+  assert.equal(productSpecPayload.data.lifecycleStage, "unknown");
+
+  const productRevisionCreate = await runCliCapture(["product-spec", productSpecPayload.data.id, "revisions", "add", "Revision A", "--product", erpProductPayload.data.id, "--revision", "A", "--status", "released", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(productRevisionCreate.code, CLI_EXIT_OK, productRevisionCreate.stderr || productRevisionCreate.stdout);
+  const productRevisionPayload = JSON.parse(productRevisionCreate.stdout) as { data: { id: string; title: string; productSpecId: string; productCatalogId: string; revision: string; status: string; changeType: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(productRevisionPayload.meta.invokedCommand, "product-spec");
+  assert.equal(productRevisionPayload.meta.collection, "product_revisions");
+  assert.equal(productRevisionPayload.meta.action, "create");
+  assert.equal(productRevisionPayload.data.title, "Revision A");
+  assert.equal(productRevisionPayload.data.productSpecId, productSpecPayload.data.id);
+  assert.equal(productRevisionPayload.data.productCatalogId, erpProductPayload.data.id);
+  assert.equal(productRevisionPayload.data.revision, "A");
+  assert.equal(productRevisionPayload.data.status, "released");
+  assert.equal(productRevisionPayload.data.changeType, "unknown");
+
+  const productRequirementCreate = await runCliCapture(["product-spec", productSpecPayload.data.id, "requirements", "add", "Emergency stop response", "--product", erpProductPayload.data.id, "--requirement-type", "quality", "--priority", "high", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(productRequirementCreate.code, CLI_EXIT_OK, productRequirementCreate.stderr || productRequirementCreate.stdout);
+  const productRequirementPayload = JSON.parse(productRequirementCreate.stdout) as { data: { id: string; title: string; productSpecId: string; productCatalogId: string; requirementType: string; priority: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(productRequirementPayload.meta.invokedCommand, "product-spec");
+  assert.equal(productRequirementPayload.meta.collection, "product_requirements");
+  assert.equal(productRequirementPayload.meta.action, "create");
+  assert.equal(productRequirementPayload.data.title, "Emergency stop response");
+  assert.equal(productRequirementPayload.data.productSpecId, productSpecPayload.data.id);
+  assert.equal(productRequirementPayload.data.productCatalogId, erpProductPayload.data.id);
+  assert.equal(productRequirementPayload.data.requirementType, "quality");
+  assert.equal(productRequirementPayload.data.priority, "high");
+  assert.equal(productRequirementPayload.data.status, "proposed");
+
+  const productBomCreate = await runCliCapture(["product-spec", productSpecPayload.data.id, "boms", "add", "Press frame BOM", "--product", erpProductPayload.data.id, "--component", erpProductPayload.data.id, "--quantity", "1", "--unit", "each", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(productBomCreate.code, CLI_EXIT_OK, productBomCreate.stderr || productBomCreate.stdout);
+  const productBomPayload = JSON.parse(productBomCreate.stdout) as { data: { id: string; title: string; productSpecId: string; productCatalogId: string; componentProductCatalogId: string; quantity: number; unit: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(productBomPayload.meta.invokedCommand, "product-spec");
+  assert.equal(productBomPayload.meta.collection, "product_boms");
+  assert.equal(productBomPayload.meta.action, "create");
+  assert.equal(productBomPayload.data.title, "Press frame BOM");
+  assert.equal(productBomPayload.data.productSpecId, productSpecPayload.data.id);
+  assert.equal(productBomPayload.data.productCatalogId, erpProductPayload.data.id);
+  assert.equal(productBomPayload.data.componentProductCatalogId, erpProductPayload.data.id);
+  assert.equal(productBomPayload.data.quantity, 1);
+  assert.equal(productBomPayload.data.unit, "each");
+  assert.equal(productBomPayload.data.status, "draft");
+
+  const productSpecEvidenceSourceCreate = await runCliCapture(["evidence-source", "create", "Spec approval note", "--kind", "document", "--collection-name", "product_specs", "--record-id", productSpecPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(productSpecEvidenceSourceCreate.code, CLI_EXIT_OK);
+  const productSpecEvidenceSourcePayload = JSON.parse(productSpecEvidenceSourceCreate.stdout) as { data: { id: string; collectionName: string; recordId: string } };
+  assert.equal(productSpecEvidenceSourcePayload.data.collectionName, "product_specs");
+  assert.equal(productSpecEvidenceSourcePayload.data.recordId, productSpecPayload.data.id);
+
+  const productSpecGapCreate = await runCliCapture(["quality-gap", "create", "Missing validation report", "--target-collection", "product_specs", "--target-id", productSpecPayload.data.id, "--gap-kind", "missing", "--evidence-source-id", productSpecEvidenceSourcePayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(productSpecGapCreate.code, CLI_EXIT_OK);
+  const productSpecGapPayload = JSON.parse(productSpecGapCreate.stdout) as { data: { id: string; gapKind: string; targetCollection: string; targetId: string } };
+  assert.equal(productSpecGapPayload.data.targetCollection, "product_specs");
+  assert.equal(productSpecGapPayload.data.targetId, productSpecPayload.data.id);
+  assert.equal(productSpecGapPayload.data.gapKind, "missing");
+
+  const productSpecTimeline = await runCliCapture(["product-spec", productSpecPayload.data.id, "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(productSpecTimeline.code, CLI_EXIT_OK, productSpecTimeline.stderr || productSpecTimeline.stdout);
+  const productSpecTimelinePayload = JSON.parse(productSpecTimeline.stdout) as {
+    data: {
+      coverage: { implementationStatus: string; recordsMaterialized: boolean };
+      semanticView: { id: string; systemId: string };
+      materializedView: {
+        subject: { id: string; label: string };
+        product: { id: string; label: string } | null;
+        company: { id: string; label: string } | null;
+        owner: { id: string; label: string } | null;
+        summary: { revisions: number; releasedRevisions: number; requirements: number; openRequirements: number; boms: number; releasedBoms: number; evidenceSources: number; qualityGaps: number; hasCatalogProduct: boolean; hasCompany: boolean };
+        itemCount: number;
+        items: Array<{ kind: string; label: string }>;
+        gaps: Array<{ id: string; gapKind: string }>;
+        partial: boolean;
+      };
+    };
+  };
+  assert.equal(productSpecTimelinePayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(productSpecTimelinePayload.data.coverage.recordsMaterialized, true);
+  assert.equal(productSpecTimelinePayload.data.semanticView.id, "product_spec.timeline");
+  assert.equal(productSpecTimelinePayload.data.semanticView.systemId, "product");
+  assert.equal(productSpecTimelinePayload.data.materializedView.subject.id, productSpecPayload.data.id);
+  assert.equal(productSpecTimelinePayload.data.materializedView.subject.label, "Hydraulic Press Spec");
+  assert.equal(productSpecTimelinePayload.data.materializedView.product?.id, erpProductPayload.data.id);
+  assert.equal(productSpecTimelinePayload.data.materializedView.company?.id, companyPayload.data.id);
+  assert.equal(productSpecTimelinePayload.data.materializedView.owner?.id, employeePayload.data.id);
+  assert.equal(productSpecTimelinePayload.data.materializedView.summary.revisions, 1);
+  assert.equal(productSpecTimelinePayload.data.materializedView.summary.releasedRevisions, 1);
+  assert.equal(productSpecTimelinePayload.data.materializedView.summary.requirements, 1);
+  assert.equal(productSpecTimelinePayload.data.materializedView.summary.openRequirements, 1);
+  assert.equal(productSpecTimelinePayload.data.materializedView.summary.boms, 1);
+  assert.equal(productSpecTimelinePayload.data.materializedView.summary.releasedBoms, 0);
+  assert.equal(productSpecTimelinePayload.data.materializedView.summary.evidenceSources, 1);
+  assert.equal(productSpecTimelinePayload.data.materializedView.summary.qualityGaps, 1);
+  assert.equal(productSpecTimelinePayload.data.materializedView.summary.hasCatalogProduct, true);
+  assert.equal(productSpecTimelinePayload.data.materializedView.summary.hasCompany, true);
+  assert.equal(productSpecTimelinePayload.data.materializedView.partial, true);
+  assert.equal(productSpecTimelinePayload.data.materializedView.itemCount >= 8, true);
+  assert.equal(productSpecTimelinePayload.data.materializedView.items.some((item) => item.kind === "product_revision" && item.label === "Revision A"), true);
+  assert.equal(productSpecTimelinePayload.data.materializedView.items.some((item) => item.kind === "product_requirement" && item.label === "Emergency stop response"), true);
+  assert.equal(productSpecTimelinePayload.data.materializedView.items.some((item) => item.kind === "product_bom" && item.label === "Press frame BOM"), true);
+  assert.equal(productSpecTimelinePayload.data.materializedView.gaps.some((gap) => gap.id === productSpecGapPayload.data.id && gap.gapKind === "missing"), true);
+
   const supplierCreate = await runCliCapture(["supplier", "create", "Parts Co", "--company", companyPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(supplierCreate.code, CLI_EXIT_OK, supplierCreate.stderr || supplierCreate.stdout);
   const supplierPayload = JSON.parse(supplierCreate.stdout) as { data: { id: string; name: string; companyId: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };

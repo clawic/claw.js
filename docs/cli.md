@@ -824,6 +824,11 @@ claw construction-project construction_project_123 timeline --json
 claw product list --json
 claw products list --json
 claw product create "Hydraulic Press" --company company_123 --json
+claw product-spec create "Hydraulic Press Spec" --product product_123 --company company_123 --json
+claw product-spec product_spec_123 revisions add "Revision A" --product product_123 --json
+claw product-spec product_spec_123 requirements add "Emergency stop response" --product product_123 --json
+claw product-spec product_spec_123 boms add "Press frame BOM" --product product_123 --component product_123 --json
+claw product-spec product_spec_123 timeline --json
 claw asset create --company company_123 --account-id account_123 --product product_123 --serial-number PRESS-001 --json
 claw asset asset_123 work-orders add "Batch 42" --company company_123 --json
 claw asset asset_123 work-orders list --json
