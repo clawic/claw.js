@@ -928,7 +928,7 @@ flowchart TD
   claw_contracts_packages --> claw_package_claw
   claw_package_workspace["Workspace package\npackageName"]
   claw_contracts_packages --> claw_package_workspace
-  claw_package_node["Node compatibility package\npackageName"]
+  claw_package_node["Node runtime package\npackageName"]
   claw_contracts_packages --> claw_package_node
   claw_package_database["Database package\npackageName"]
   claw_contracts_packages --> claw_package_database

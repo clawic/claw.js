@@ -142,7 +142,6 @@ export interface ClawPersistentSurfaceNode {
   externalProvider?: string;
   replacement?: string;
   introducedIn?: string;
-  deprecatedIn?: string;
   dataType?: string;
   nullable?: boolean;
   humanSurfaces?: ClawSurfaceParitySurface[];
