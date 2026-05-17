@@ -5,7 +5,7 @@ import crypto from "crypto";
 import type { DiffPreview, ManagedBlockInspection, MergeManagedBlocksOptions } from "../files/managed-blocks.ts";
 import { inspectManagedBlock, listManagedBlocks, mergeManagedBlocks, previewDiff } from "../files/managed-blocks.ts";
 import { NodeFileSystemHost } from "../host/filesystem.ts";
-import { migrateCompatSnapshot } from "../compat/store.ts";
+import { canonicalizeCompatSnapshotFile } from "../compat/store.ts";
 import { CLAW_DIR, initializeWorkspaceManifest, readWorkspaceManifest, resolveManifestPath } from "./manifest.ts";
 import type { CompatSnapshot, WorkspaceConfig, ClawManifest, RuntimeFileDescriptor } from "@clawjs/core";
 
@@ -86,8 +86,7 @@ export interface WorkspaceRepairResult {
   createdDirectories: string[];
   createdRuntimeFiles: string[];
   compatSnapshot: CompatSnapshot | null;
-  compatSnapshotMigrated: boolean;
-  compatSnapshotSourcePath: string | null;
+  compatSnapshotCanonicalized: boolean;
 }
 
 function normalizeRuntimeDescriptors(runtimeFiles: RuntimeFileDescriptor[] = DEFAULT_RUNTIME_FILE_DESCRIPTORS): RuntimeFileDescriptor[] {
@@ -274,15 +273,14 @@ export function repairWorkspace(
       }
     }
 
-    const compatMigration = migrateCompatSnapshot(config.rootDir, filesystem);
+    const compatSnapshotCanonicalization = canonicalizeCompatSnapshotFile(config.rootDir, filesystem);
 
     return {
       manifest,
       createdDirectories,
       createdRuntimeFiles,
-      compatSnapshot: compatMigration.snapshot,
-      compatSnapshotMigrated: compatMigration.migrated,
-      compatSnapshotSourcePath: compatMigration.sourcePath,
+      compatSnapshot: compatSnapshotCanonicalization.snapshot,
+      compatSnapshotCanonicalized: compatSnapshotCanonicalization.canonicalized,
     };
   });
 }

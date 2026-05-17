@@ -370,13 +370,13 @@ export function createClawRuntimeWorkspaceFacades(locals: Record<string, any>): 
         appendAuditEvent("workspace.repaired", "workspace", {
           createdDirectories: repaired.createdDirectories.length,
           createdRuntimeFiles: repaired.createdRuntimeFiles.length,
-          compatSnapshotMigrated: repaired.compatSnapshotMigrated,
+          compatSnapshotCanonicalized: repaired.compatSnapshotCanonicalized,
           runtimeAdapter: adapter.id,
         });
         eventBus.emit("workspace.repaired", {
           createdDirectories: repaired.createdDirectories.length,
           createdRuntimeFiles: repaired.createdRuntimeFiles.length,
-          compatSnapshotMigrated: repaired.compatSnapshotMigrated,
+          compatSnapshotCanonicalized: repaired.compatSnapshotCanonicalized,
           runtimeAdapter: adapter.id,
         });
         return repaired;

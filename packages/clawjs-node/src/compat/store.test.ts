@@ -4,7 +4,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
-import { migrateCompatSnapshot, readCompatSnapshot, resolveCompatSnapshotPath, writeCompatSnapshot } from "./store.ts";
+import { canonicalizeCompatSnapshotFile, readCompatSnapshot, resolveCompatSnapshotPath, writeCompatSnapshot } from "./store.ts";
 import { createMockRuntimeCompatReport, createMockRuntimeProbeStatus } from "../runtime/test-helpers.ts";
 
 test("compat snapshots round-trip inside the workspace", () => {
@@ -85,11 +85,12 @@ test("compat snapshots preserve non-openclaw adapter families", () => {
   assert.equal(readCompatSnapshot(workspaceDir)?.runtimeAdapter, "proto-claw");
 });
 
-test("compat snapshot migration normalizes current-path payloads", () => {
-  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-compat-migrate-"));
+test("compat snapshot canonicalization formats current-path v1 payloads", () => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-compat-canonical-"));
   const currentSnapshotPath = resolveCompatSnapshotPath(workspaceDir);
   fs.mkdirSync(path.dirname(currentSnapshotPath), { recursive: true });
   fs.writeFileSync(currentSnapshotPath, JSON.stringify({
+    schemaVersion: 1,
     runtimeAdapter: "openclaw",
     runtimeVersion: "1.2.3",
     probedAt: "2026-03-20T00:00:00.000Z",
@@ -102,18 +103,18 @@ test("compat snapshot migration normalizes current-path payloads", () => {
     diagnostics: {
       fixture: true,
     },
-  }, null, 2));
+  }));
 
-  const migrated = migrateCompatSnapshot(workspaceDir);
+  const canonicalized = canonicalizeCompatSnapshotFile(workspaceDir);
 
-  assert.equal(migrated.migrated, true);
-  assert.equal(migrated.sourcePath, currentSnapshotPath);
+  assert.equal(canonicalized.canonicalized, true);
+  assert.equal(canonicalized.targetPath, currentSnapshotPath);
   assert.equal(fs.existsSync(resolveCompatSnapshotPath(workspaceDir)), true);
   assert.equal(readCompatSnapshot(workspaceDir)?.runtimeVersion, "1.2.3");
   assert.equal(readCompatSnapshot(workspaceDir)?.schemaVersion, 1);
 });
 
-test("compat snapshot migration repairs wrapper payloads and capability drift", () => {
+test("compat snapshot read rejects wrapper payloads", () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-compat-wrapper-"));
   const currentSnapshotPath = resolveCompatSnapshotPath(workspaceDir);
   fs.mkdirSync(path.dirname(currentSnapshotPath), { recursive: true });
@@ -138,23 +139,15 @@ test("compat snapshot migration repairs wrapper payloads and capability drift", 
     },
   }, null, 2));
 
-  const migrated = migrateCompatSnapshot(workspaceDir);
+  const canonicalized = canonicalizeCompatSnapshotFile(workspaceDir);
 
-  assert.equal(migrated.migrated, true);
-  assert.equal(migrated.sourcePath, currentSnapshotPath);
-  assert.equal(migrated.snapshot?.runtimeAdapter, "openclaw");
-  assert.equal(migrated.snapshot?.runtimeVersion, "0.9.0");
-  assert.deepEqual(migrated.snapshot?.capabilities, {
-    version: true,
-    modelsStatus: true,
-    agentsList: true,
-    gatewayCall: false,
-  });
-  assert.equal(readCompatSnapshot(workspaceDir)?.diagnostics?.wrappedShape, true);
+  assert.equal(canonicalized.canonicalized, false);
+  assert.equal(canonicalized.snapshot, null);
+  assert.equal(readCompatSnapshot(workspaceDir), null);
   assert.equal(fs.existsSync(resolveCompatSnapshotPath(workspaceDir)), true);
 });
 
-test("compat snapshot migration fills gaps in current-path snapshots", () => {
+test("compat snapshot read rejects incomplete current-path snapshots", () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-compat-incomplete-"));
   const currentSnapshotPath = resolveCompatSnapshotPath(workspaceDir);
   fs.mkdirSync(path.dirname(currentSnapshotPath), { recursive: true });
@@ -170,29 +163,20 @@ test("compat snapshot migration fills gaps in current-path snapshots", () => {
     diagnostics: null,
   }, null, 2));
 
-  const migrated = migrateCompatSnapshot(workspaceDir);
+  const canonicalized = canonicalizeCompatSnapshotFile(workspaceDir);
 
-  assert.equal(migrated.migrated, true);
-  assert.equal(migrated.sourcePath, currentSnapshotPath);
-  assert.equal(migrated.snapshot?.schemaVersion, 1);
-  assert.equal(migrated.snapshot?.runtimeAdapter, "unknown");
-  assert.equal(migrated.snapshot?.runtimeVersion, null);
-  assert.match(migrated.snapshot?.probedAt ?? "", /\d{4}-\d{2}-\d{2}T/);
-  assert.deepEqual(migrated.snapshot?.capabilities, {
-    version: true,
-    modelsStatus: false,
-    agentsList: true,
-    gatewayCall: false,
-  });
-  assert.equal(readCompatSnapshot(workspaceDir)?.diagnostics, undefined);
+  assert.equal(canonicalized.canonicalized, false);
+  assert.equal(canonicalized.snapshot, null);
+  assert.equal(readCompatSnapshot(workspaceDir), null);
   assert.equal(fs.existsSync(resolveCompatSnapshotPath(workspaceDir)), true);
 });
 
-test("compat snapshot migration keeps adapter identity for non-openclaw snapshots", () => {
+test("compat snapshot canonicalization keeps adapter identity for non-openclaw snapshots", () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-compat-other-adapter-"));
   const currentSnapshotPath = resolveCompatSnapshotPath(workspaceDir);
   fs.mkdirSync(path.dirname(currentSnapshotPath), { recursive: true });
   fs.writeFileSync(currentSnapshotPath, JSON.stringify({
+    schemaVersion: 1,
     runtimeAdapter: "proto-claw",
     runtimeVersion: "3.4.5",
     probedAt: "2026-03-20T00:00:00.000Z",
@@ -205,14 +189,14 @@ test("compat snapshot migration keeps adapter identity for non-openclaw snapshot
     },
   }, null, 2));
 
-  const migrated = migrateCompatSnapshot(workspaceDir);
+  const canonicalized = canonicalizeCompatSnapshotFile(workspaceDir);
 
-  assert.equal(migrated.migrated, true);
-  assert.equal(migrated.snapshot?.runtimeAdapter, "proto-claw");
+  assert.equal(canonicalized.canonicalized, true);
+  assert.equal(canonicalized.snapshot?.runtimeAdapter, "proto-claw");
   assert.equal(readCompatSnapshot(workspaceDir)?.runtimeAdapter, "proto-claw");
 });
 
-test("compat snapshot migration stays isolated across sibling workspaces", () => {
+test("compat snapshot canonicalization stays isolated across sibling workspaces", () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-compat-isolation-"));
   const workspaceA = path.join(tempRoot, "workspace-a");
   const workspaceB = path.join(tempRoot, "workspace-b");
@@ -222,6 +206,7 @@ test("compat snapshot migration stays isolated across sibling workspaces", () =>
   fs.mkdirSync(path.dirname(snapshotA), { recursive: true });
   fs.mkdirSync(path.dirname(snapshotB), { recursive: true });
   fs.writeFileSync(snapshotA, JSON.stringify({
+    schemaVersion: 1,
     runtimeAdapter: "openclaw",
     runtimeVersion: "1.2.3",
     probedAt: "2026-03-20T00:00:00.000Z",
@@ -233,6 +218,7 @@ test("compat snapshot migration stays isolated across sibling workspaces", () =>
     },
   }, null, 2));
   fs.writeFileSync(snapshotB, JSON.stringify({
+    schemaVersion: 1,
     runtimeAdapter: "openclaw",
     runtimeVersion: "9.9.9",
     probedAt: "2026-03-20T00:00:00.000Z",
@@ -244,11 +230,11 @@ test("compat snapshot migration stays isolated across sibling workspaces", () =>
     },
   }, null, 2));
 
-  const migratedA = migrateCompatSnapshot(workspaceA);
-  const migratedB = migrateCompatSnapshot(workspaceB);
+  const canonicalizedA = canonicalizeCompatSnapshotFile(workspaceA);
+  const canonicalizedB = canonicalizeCompatSnapshotFile(workspaceB);
 
-  assert.equal(migratedA.migrated, true);
-  assert.equal(migratedB.migrated, true);
+  assert.equal(canonicalizedA.canonicalized, true);
+  assert.equal(canonicalizedB.canonicalized, true);
   assert.equal(readCompatSnapshot(workspaceA)?.runtimeVersion, "1.2.3");
   assert.equal(readCompatSnapshot(workspaceB)?.runtimeVersion, "9.9.9");
   assert.notEqual(readCompatSnapshot(workspaceA)?.runtimeVersion, readCompatSnapshot(workspaceB)?.runtimeVersion);

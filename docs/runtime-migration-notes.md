@@ -5,15 +5,21 @@ description: Upgrade and migration notes for runtime adapter behavior and worksp
 
 # Runtime Migration Notes
 
-This repo keeps compatibility normalization logic for the current workspace snapshot path. When adapter behavior changes, prefer schema normalization over ad hoc file rewrites.
+This repo keeps strict compatibility snapshot parsing for the current workspace
+snapshot path. When adapter behavior changes, refresh snapshots through the
+runtime probe instead of accepting ad hoc file rewrites.
 
-## Snapshot migration
+## Snapshot canonicalization
 
 Current compat snapshots live at:
 
 - `.claw/state/observed/compat/runtime-snapshot.json`
 
-`migrateCompatSnapshot()` normalizes the current snapshot payload into the current compat schema. `repairWorkspace()` calls that normalization after it recreates the internal workspace layout.
+`canonicalizeCompatSnapshotFile()` rewrites an already-valid v1 snapshot into
+canonical JSON formatting after `repairWorkspace()` recreates the internal
+workspace layout. It does not infer missing fields, unwrap alternate payloads,
+or coerce old capability shapes; snapshots without a deliberate
+`schemaVersion: 1` are treated as invalid and should be regenerated.
 
 ## When runtime compatibility breaks
 
@@ -27,7 +33,7 @@ The compatibility contract is no longer tied to a single CLI surface. It is base
 
 If a runtime changes behavior:
 
-1. Normalize the new runtime output into the existing schemas.
+1. Refresh the runtime output into the existing schemas.
 2. Let `buildCompatDriftReport()` decide whether the stored snapshot is stale.
 3. Only then update docs or caller code that depends on the new shape.
 
@@ -52,7 +58,7 @@ The JSON records stored by ClawJS all carry a `schemaVersion`. That includes:
 - scheduler, memory, skills, and channels snapshots
 - template pack schema
 
-If you introduce a breaking runtime-compatibility change, bump the relevant schema version, keep the current-path normalization accurate, and document:
+If you introduce a breaking runtime-compatibility change, bump the relevant schema version, keep the current-path parser strict, and document:
 
 - what changed
 - which commands or APIs now require a fresh `compat --refresh` or `workspace repair`

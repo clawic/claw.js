@@ -800,10 +800,11 @@ process.exit(0);
   }
 });
 
-test("runCli can repair a workspace and normalize compat snapshots", async () => {
+test("runCli can repair a workspace and canonicalize compat snapshots", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-repair-"));
   fs.mkdirSync(resolveClawPersistentSurfacePath("claw.workspace.compat", workspaceRoot), { recursive: true });
   fs.writeFileSync(resolveClawPersistentSurfacePath("claw.workspace.compat", workspaceRoot, "runtime-snapshot.json"), JSON.stringify({
+    schemaVersion: 1,
     runtimeAdapter: "openclaw",
     runtimeVersion: "1.2.3",
     probedAt: "2026-03-20T00:00:00.000Z",
@@ -823,7 +824,7 @@ test("runCli can repair a workspace and normalize compat snapshots", async () =>
   });
 
   assert.equal(exitCode, CLI_EXIT_OK);
-  assert.match(stdout.getOutput(), /compatSnapshotMigrated/);
+  assert.match(stdout.getOutput(), /compatSnapshotCanonicalized/);
   assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace.compat", workspaceRoot, "runtime-snapshot.json")), true);
 });
 

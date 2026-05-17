@@ -1026,10 +1026,11 @@ test("createClaw exposes intent, observed, and feature APIs for declarative mode
   assert.equal(fs.existsSync(inspected.observedPaths.models), true);
 });
 
-test("createClaw can repair workspace layout and normalize compat snapshots", async () => {
+test("createClaw can repair workspace layout and canonicalize compat snapshots", async () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-instance-repair-"));
   fs.mkdirSync(resolveClawWorkspaceSurfacePath("claw.workspace.compat", workspaceDir), { recursive: true });
   fs.writeFileSync(resolveClawWorkspaceSurfacePath("claw.workspace.compat", workspaceDir, "runtime-snapshot.json"), JSON.stringify({
+    schemaVersion: 1,
     runtimeAdapter: "openclaw",
     runtimeVersion: "1.2.3",
     probedAt: "2026-03-20T00:00:00.000Z",
@@ -1052,7 +1053,7 @@ test("createClaw can repair workspace layout and normalize compat snapshots", as
   });
 
   const repaired = await claw.workspace.repair();
-  assert.equal(repaired.compatSnapshotMigrated, true);
+  assert.equal(repaired.compatSnapshotCanonicalized, true);
   assert.equal((await claw.workspace.validate()).ok, true);
 });
 

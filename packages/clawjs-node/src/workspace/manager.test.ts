@@ -113,11 +113,12 @@ test("resetWorkspace can fully clear managed state and repairWorkspace rebuilds 
   assert.equal(validateWorkspace(workspaceDir).ok, true);
 });
 
-test("repairWorkspace restores missing workspace layout and normalizes compat snapshots", () => {
+test("repairWorkspace restores missing workspace layout and canonicalizes compat snapshots", () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-workspace-repair-"));
   const snapshotPath = resolveClawWorkspaceSurfacePath("claw.workspace.compat", workspaceDir, "runtime-snapshot.json");
   fs.mkdirSync(path.dirname(snapshotPath), { recursive: true });
   fs.writeFileSync(snapshotPath, JSON.stringify({
+    schemaVersion: 1,
     runtimeAdapter: "openclaw",
     runtimeVersion: "1.2.3",
     probedAt: "2026-03-20T00:00:00.000Z",
@@ -128,7 +129,7 @@ test("repairWorkspace restores missing workspace layout and normalizes compat sn
       gatewayCall: false,
     },
     diagnostics: {
-      legacy: true,
+      fixture: true,
     },
   }, null, 2));
 
@@ -141,8 +142,7 @@ test("repairWorkspace restores missing workspace layout and normalizes compat sn
 
   assert.equal(validateWorkspace(workspaceDir).ok, true);
   assert.equal(result.createdRuntimeFiles.length, 6);
-  assert.equal(result.compatSnapshotMigrated, true);
-  assert.equal(result.compatSnapshotSourcePath, snapshotPath);
+  assert.equal(result.compatSnapshotCanonicalized, true);
   assert.equal(fs.existsSync(resolveCompatSnapshotPath(workspaceDir)), true);
   assert.equal(readCompatSnapshot(workspaceDir)?.runtimeVersion, "1.2.3");
   assert.equal(result.createdDirectories.includes(resolveClawWorkspaceSurfacePath("claw.workspace.sessions", workspaceDir)), true);

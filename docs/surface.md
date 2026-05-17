@@ -384,7 +384,7 @@ The docs check script validates that every current export from
     CompatDriftReport
     CompatReport
     compatSnapshotExists
-    CompatSnapshotMigrationResult
+    CompatSnapshotCanonicalizationResult
     CompileOptions
     compileSkills
     ContentApprovalRequest
@@ -643,7 +643,7 @@ The docs check script validates that every current export from
     mergeManagedBlocks
     MergeManagedBlocksOptions
     mergeRuntimeCapabilityMaps
-    migrateCompatSnapshot
+    canonicalizeCompatSnapshotFile
     nanobotAdapter
     nanoclawAdapter
     nemoclawAdapter

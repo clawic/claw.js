@@ -227,12 +227,25 @@ for (const relativePath of [
 for (const relativePath of [
   "packages/clawjs-node/src/compat/store.ts",
   "packages/clawjs-node/src/compat/store.test.ts",
+  "packages/clawjs-node/src/workspace/manager.ts",
+  "packages/clawjs-node/src/workspace/manager.test.ts",
+  "packages/clawjs-node/src/create-claw.test.ts",
+  "packages/clawjs/src/index-workspace-runtime.test.ts",
+  "docs/runtime-migration-notes.md",
+  "docs/surface.md",
 ]) {
   forbidSnippet(relativePath, "LEGACY_SNAPSHOT_WRAPPER_KEYS");
   forbidSnippet(relativePath, "findLegacySnapshotPayload");
   forbidSnippet(relativePath, "legacyPayload");
   forbidSnippet(relativePath, "normalizedLegacy");
   forbidSnippet(relativePath, "legacyWrapper");
+  forbidSnippet(relativePath, "migrateCompatSnapshot");
+  forbidSnippet(relativePath, "CompatSnapshotMigrationResult");
+  forbidSnippet(relativePath, "compatSnapshotMigrated");
+  forbidSnippet(relativePath, "compatSnapshotSourcePath");
+  forbidSnippet(relativePath, "normalizes compat snapshots");
+  forbidSnippet(relativePath, "wrapper payloads and capability drift");
+  forbidSnippet(relativePath, "fills gaps in current-path snapshots");
 }
 
 for (const relativePath of [
