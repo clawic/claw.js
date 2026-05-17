@@ -258,6 +258,8 @@ export const AGENT_BLUEPRINTS: BuiltinCollectionDefinition = {
     { name: "description", type: "text" },
     { name: "agencyMode", type: "select", required: true, options: ["assistant", "worker", "support", "receptionist", "operator", "automation", "workflow_agent", "subagent", "reviewer", "manager"] },
     { name: "templateJson", type: "json" },
+    { name: "skillRefsJson", type: "json" },
+    { name: "skillBindingsJson", type: "json" },
     { name: "safeExportJson", type: "json" },
     { name: "version", type: "number" },
     ...commonJsonFields,

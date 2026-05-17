@@ -70,6 +70,15 @@ export interface AgentResourceGrant {
   expiresAt?: string;
 }
 
+export interface AgentSkillBinding {
+  ref: string;
+  version?: string;
+  requiredResourceGrants?: AgentResourceGrant[];
+  requiredAssignmentKinds?: AgentAssignmentKind[];
+  optional?: boolean;
+  metadata?: Record<string, unknown>;
+}
+
 export interface AgentAccessRequest {
   resourceType: string;
   resourceId?: string;
@@ -426,6 +435,7 @@ export interface AgentBlueprintInput {
   template: Record<string, unknown>;
   requiredResourceGrants?: AgentResourceGrant[];
   skillRefs?: string[];
+  skillBindings?: AgentSkillBinding[];
   modelTier?: "fast" | "balanced" | "smart" | "max";
   status?: AgentBlueprintStatus;
   createdAt?: string;
@@ -441,6 +451,7 @@ export interface AgentBlueprint {
   template: Record<string, unknown>;
   requiredResourceGrants: AgentResourceGrant[];
   skillRefs: string[];
+  skillBindings: AgentSkillBinding[];
   modelTier?: "fast" | "balanced" | "smart" | "max";
   status: AgentBlueprintStatus;
   createdAt: string;
@@ -485,6 +496,7 @@ export interface AgentSafeExportInput {
   memoryPolicies?: Array<Record<string, unknown>>;
   budgets?: Array<Record<string, unknown>>;
   blueprints?: Array<Record<string, unknown>>;
+  skillBindings?: AgentSkillBinding[];
   configRevisions?: Array<Record<string, unknown>>;
   redaction?: "default" | "strict" | "custom";
   exportedAt?: string;
@@ -502,6 +514,7 @@ export interface AgentSafePackageExport {
   memoryPolicies: Array<Record<string, unknown>>;
   budgets: Array<Record<string, unknown>>;
   blueprints: Array<Record<string, unknown>>;
+  skillBindings: AgentSkillBinding[];
   configRevisions: Array<Record<string, unknown>>;
   audit: AgentAuditEvent;
 }
@@ -910,6 +923,8 @@ export function createAgentBlueprint(input: AgentBlueprintInput): AgentBlueprint
   ].join("|"))}`;
   const template = redactAgentBoundaryValue(input.template, redaction) as Record<string, unknown>;
   const requiredResourceGrants = (input.requiredResourceGrants ?? []).map((grant) => redactAgentBoundaryValue(grant, redaction) as AgentResourceGrant);
+  const skillBindings = normalizeAgentSkillBindings(input.skillRefs, input.skillBindings, redaction);
+  const skillRefs = skillBindings.map(formatAgentSkillBindingRef);
   const safeExport = createAgentSafePackageExport({
     exportedAt: createdAt,
     redaction,
@@ -923,7 +938,8 @@ export function createAgentBlueprint(input: AgentBlueprintInput): AgentBlueprint
       template,
     },
     resourceGrants: requiredResourceGrants.map((grant) => ({ ...grant })),
-    blueprints: [{ id, name: input.name, agencyMode: input.agencyMode, version, template }],
+    skillBindings,
+    blueprints: [{ id, name: input.name, agencyMode: input.agencyMode, version, template, skillBindings }],
   });
   const audit = createAgentAuditEvent({
     kind: "blueprint",
@@ -937,7 +953,8 @@ export function createAgentBlueprint(input: AgentBlueprintInput): AgentBlueprint
     metadata: {
       agencyMode: input.agencyMode,
       version,
-      skillRefs: input.skillRefs ?? [],
+      skillRefs,
+      skillBindings,
       requiredResourceGrantCount: requiredResourceGrants.length,
     },
   });
@@ -949,7 +966,8 @@ export function createAgentBlueprint(input: AgentBlueprintInput): AgentBlueprint
     version,
     template,
     requiredResourceGrants,
-    skillRefs: input.skillRefs ?? [],
+    skillRefs,
+    skillBindings,
     ...(input.modelTier ? { modelTier: input.modelTier } : {}),
     status: input.status ?? "draft",
     createdAt,
@@ -1022,6 +1040,7 @@ export function createAgentSafePackageExport(input: AgentSafeExportInput): Agent
     memoryPolicies: redactArray(input.memoryPolicies, redaction),
     budgets: redactArray(input.budgets, redaction),
     blueprints: redactArray(input.blueprints, redaction),
+    skillBindings: normalizeAgentSkillBindings(undefined, input.skillBindings, redaction),
     configRevisions: redactArray(input.configRevisions, redaction),
     audit: createAgentAuditEvent({
       kind: "safe_export",
@@ -1116,6 +1135,52 @@ function budgetLimitMatches(limit: AgentBudgetLimit, request: AgentBudgetRequest
 
 function redactArray(records: Array<Record<string, unknown>> | undefined, redaction: "default" | "strict" | "custom"): Array<Record<string, unknown>> {
   return (records ?? []).map((record) => redactAgentBoundaryValue(record, redaction) as Record<string, unknown>);
+}
+
+function normalizeAgentSkillBindings(
+  skillRefs: string[] | undefined,
+  skillBindings: AgentSkillBinding[] | undefined,
+  redaction: "default" | "strict" | "custom",
+): AgentSkillBinding[] {
+  const normalized = new Map<string, AgentSkillBinding>();
+  for (const skillRef of skillRefs ?? []) {
+    const parsed = parseAgentSkillRef(skillRef);
+    if (!parsed) continue;
+    normalized.set(formatAgentSkillBindingRef(parsed), parsed);
+  }
+  for (const binding of skillBindings ?? []) {
+    const ref = typeof binding.ref === "string" ? binding.ref.trim() : "";
+    if (!ref) continue;
+    const normalizedBinding: AgentSkillBinding = {
+      ref,
+      ...(binding.version !== undefined && String(binding.version).trim() ? { version: String(binding.version).trim() } : {}),
+      ...(binding.requiredResourceGrants ? {
+        requiredResourceGrants: binding.requiredResourceGrants.map((grant) => redactAgentBoundaryValue(grant, redaction) as AgentResourceGrant),
+      } : {}),
+      ...(binding.requiredAssignmentKinds ? { requiredAssignmentKinds: [...binding.requiredAssignmentKinds] } : {}),
+      ...(binding.optional !== undefined ? { optional: Boolean(binding.optional) } : {}),
+      ...(binding.metadata ? { metadata: redactAgentBoundaryValue(binding.metadata, redaction) as Record<string, unknown> } : {}),
+    };
+    normalized.set(formatAgentSkillBindingRef(normalizedBinding), normalizedBinding);
+  }
+  return [...normalized.values()];
+}
+
+function parseAgentSkillRef(skillRef: string): AgentSkillBinding | undefined {
+  const trimmed = skillRef.trim();
+  if (!trimmed) return undefined;
+  const versionSeparator = trimmed.lastIndexOf("@");
+  if (versionSeparator > 0 && versionSeparator < trimmed.length - 1) {
+    return {
+      ref: trimmed.slice(0, versionSeparator),
+      version: trimmed.slice(versionSeparator + 1),
+    };
+  }
+  return { ref: trimmed };
+}
+
+function formatAgentSkillBindingRef(binding: Pick<AgentSkillBinding, "ref" | "version">): string {
+  return binding.version ? `${binding.ref}@${binding.version}` : binding.ref;
 }
 
 function activityItem(agentId: string, kind: AgentActivityFeedItemKind, record: Record<string, unknown>, redaction: "default" | "strict" | "custom"): AgentActivityFeedItem {
@@ -1306,8 +1371,23 @@ function agentSurfaceGaps(surface: AgentSafeSurfaceKind, assignments: Array<Reco
   const gaps = new Set<string>();
   if (assignments.length === 0) gaps.add("assignment_missing");
   if (surface !== "internal_ui" && !assignments.some((assignment) => assignment.status === "active")) gaps.add("active_assignment_missing");
+  if (!assignments.some((assignment) => assignmentKindAllowedForSurface(surface, assignment.kind))) gaps.add("surface_assignment_kind_missing");
   if (surface !== "internal_ui" && budgets.length === 0) gaps.add("budget_policy_missing");
   return [...gaps];
+}
+
+function assignmentKindAllowedForSurface(surface: AgentSafeSurfaceKind, kind: unknown): boolean {
+  if (typeof kind !== "string") return false;
+  if (surface === "internal_ui") return kind === "internal_mac_chat";
+  if (surface === "mcp_api") return kind === "mcp_api";
+  if (surface === "service_api") return kind === "mcp_api";
+  if (surface === "relay") return kind === "relay";
+  return kind === "external_web_chat"
+    || kind === "external_telegram"
+    || kind === "external_whatsapp"
+    || kind === "external_email"
+    || kind === "support_inbox"
+    || kind === "custom_channel";
 }
 
 function isSensitiveAgentKey(key: string): boolean {

@@ -207,6 +207,8 @@ export const V1_AGENT_DATA_SCHEMA_SQL = String.raw`
       description TEXT,
       agency_mode TEXT NOT NULL,
       template_json TEXT NOT NULL DEFAULT '{}',
+      skill_refs_json TEXT NOT NULL DEFAULT '[]',
+      skill_bindings_json TEXT NOT NULL DEFAULT '[]',
       safe_export_json TEXT NOT NULL DEFAULT '{}',
       version INTEGER NOT NULL DEFAULT 1,
       metadata_json TEXT NOT NULL DEFAULT '{}',

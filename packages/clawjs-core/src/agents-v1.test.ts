@@ -374,11 +374,31 @@ test("Agents V1 safe package export omits secrets and records audit metadata", (
     },
     assignments: [{ id: "assignment.web", endpointRef: "web:support" }],
     resourceGrants: [{ id: "grant", resourceType: "collection", action: "read" }],
+    skillBindings: [{
+      ref: "skill.support",
+      version: "1",
+      requiredResourceGrants: [{
+        resourceType: "secret",
+        resourceId: "vault://agents/support",
+        action: "lease_secret",
+      }],
+      metadata: {
+        localPath: "/Users/example/skills/support",
+        apiToken: "raw",
+      },
+    }],
   });
   assert.equal(exported.schemaVersion, 1);
   assert.equal(exported.packageKind, "claw_agent_package");
   assert.equal(exported.agent.secretAllowlist, "[REDACTED]");
   assert.equal(exported.agent.localPath, "[REDACTED_LOCAL_PATH]");
+  assert.equal(exported.skillBindings[0]?.ref, "skill.support");
+  assert.equal(exported.skillBindings[0]?.version, "1");
+  assert.equal(exported.skillBindings[0]?.requiredResourceGrants?.[0]?.resourceId, "[REDACTED_SECRET_REF]");
+  assert.deepEqual(exported.skillBindings[0]?.metadata, {
+    localPath: "[REDACTED_LOCAL_PATH]",
+    apiToken: "[REDACTED]",
+  });
   assert.equal(exported.audit.kind, "safe_export");
   assert.equal(exported.audit.agentId, "agent.support");
 });
@@ -508,6 +528,17 @@ test("Agents V1 blueprints produce redacted portable templates", () => {
     version: 3,
     modelTier: "balanced",
     skillRefs: ["skill.support@1"],
+    skillBindings: [{
+      ref: "skill.escalation",
+      version: "2",
+      requiredAssignmentKinds: ["support_inbox"],
+      requiredResourceGrants: [{
+        id: "grant.escalate.secret",
+        resourceType: "secret",
+        resourceId: "vault://agents/support/escalation",
+        action: "lease_secret",
+      }],
+    }],
     createdAt: "2026-05-17T10:00:00.000Z",
     template: {
       role: "Support",
@@ -529,6 +560,11 @@ test("Agents V1 blueprints produce redacted portable templates", () => {
   assert.equal(blueprint.template.secretAllowlist, "[REDACTED]");
   assert.equal(blueprint.template.localPath, "[REDACTED_LOCAL_PATH]");
   assert.equal(blueprint.requiredResourceGrants[0]?.resourceType, "collection");
+  assert.deepEqual(blueprint.skillRefs, ["skill.support@1", "skill.escalation@2"]);
+  assert.deepEqual(blueprint.skillBindings.map((binding) => binding.ref), ["skill.support", "skill.escalation"]);
+  assert.equal(blueprint.skillBindings[1]?.requiredResourceGrants?.[0]?.resourceId, "[REDACTED_SECRET_REF]");
+  assert.equal(blueprint.safeExport.skillBindings[1]?.requiredAssignmentKinds?.[0], "support_inbox");
+  assert.equal(JSON.stringify(blueprint.safeExport).includes("vault://"), false);
   assert.equal(blueprint.safeExport.packageKind, "claw_agent_package");
   assert.equal(blueprint.audit.kind, "blueprint");
   assert.equal(blueprint.audit.resourceType, "agent_blueprint");
@@ -650,6 +686,45 @@ test("Agents V1 safe surface projection reports external route gaps fail-closed"
     "external_disclosure_uses_custom_wording",
     "memory_cross_user_boundary_not_explicit_grant_only",
   ]);
+});
+
+test("Agents V1 service API projection requires API-compatible assignments", () => {
+  const projection = createAgentSafeSurfaceProjection({
+    surface: "service_api",
+    projectedAt: "2026-05-17T10:00:00.000Z",
+    agent: { id: "agent.support", name: "Support" },
+    assignments: [{
+      id: "assignment.mac",
+      agentId: "agent.support",
+      kind: "internal_mac_chat",
+      status: "active",
+      channel: "mac",
+      endpointRef: "clawix://workspace/main",
+      privacyPolicy: "hashed",
+      externalDisclosure: "transparent_agent",
+    }],
+    budgets: [{
+      id: "budget.api",
+      exceededBehavior: "deny_action",
+      limits: [{ dimension: "external_actions", limit: 5, used: 1 }],
+    }],
+  });
+  assert.equal(projection.surface, "service_api");
+  assert.equal("endpointRef" in projection.assignments[0], false);
+  assert.deepEqual(projection.gaps, ["surface_assignment_kind_missing"]);
+
+  const allowed = createAgentSafeSurfaceProjection({
+    surface: "service_api",
+    projectedAt: "2026-05-17T10:00:00.000Z",
+    agent: { id: "agent.support", name: "Support" },
+    assignments: [{ ...projection.assignments[0], kind: "mcp_api", status: "active" }],
+    budgets: [{
+      id: "budget.api",
+      exceededBehavior: "deny_action",
+      limits: [{ dimension: "external_actions", limit: 5, used: 1 }],
+    }],
+  });
+  assert.deepEqual(allowed.gaps, []);
 });
 
 test("Agents V1 hermetic route acceptance covers internal Mac, external support, and subagent delegation", () => {

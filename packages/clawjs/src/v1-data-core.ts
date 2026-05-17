@@ -297,6 +297,8 @@ export function ensureV1MainSchema(sqlite: Database.Database): void {
   ensureColumn(sqlite, "agent_sessions", "links_json", "TEXT NOT NULL DEFAULT '{}'");
   sqlite.prepare("CREATE INDEX IF NOT EXISTS agent_sessions_company_idx ON agent_sessions(company_id)").run();
   sqlite.prepare("CREATE INDEX IF NOT EXISTS agent_sessions_status_idx ON agent_sessions(status)").run();
+  ensureColumn(sqlite, "agent_blueprints", "skill_refs_json", "TEXT NOT NULL DEFAULT '[]'");
+  ensureColumn(sqlite, "agent_blueprints", "skill_bindings_json", "TEXT NOT NULL DEFAULT '[]'");
   ensureColumn(sqlite, "skills", "secret_refs_json", "TEXT NOT NULL DEFAULT '[]'");
   ensureColumn(sqlite, "iot_config", "config_json", "TEXT NOT NULL DEFAULT '{}'");
   ensureColumn(sqlite, "iot_config", "secret_ref", "TEXT");

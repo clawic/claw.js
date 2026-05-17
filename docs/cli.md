@@ -154,7 +154,7 @@ claw agents surface-projection --record '{"surface":"relay","agent":{"id":"agent
 claw agents config-revision --record '{"agentId":"agent.ops","revision":2,"actorId":"actor.owner","reason":"Tighten MCP assignment","configSnapshot":{"name":"Ops","secretAllowlist":["vault://agents/ops"]}}' --json
 claw agents incident --record '{"agentId":"agent.ops","assignmentId":"assignment.relay","severity":"high","summary":"Unsafe route blocked","metadata":{"rawTraceRef":"trace:redacted"}}' --json
 claw agents activity-feed --record '{"agentId":"agent.ops","runs":[{"id":"run.1","status":"completed","startedAt":"2026-05-17T09:00:00.000Z"}],"incidents":[{"id":"incident.1","severity":"high","summary":"Unsafe route blocked","detectedAt":"2026-05-17T10:00:00.000Z"}],"limit":10}' --json
-claw agents blueprint --record '{"name":"Support blueprint","agencyMode":"support","template":{"role":"Support","secretAllowlist":["vault://agents/ops"]},"requiredResourceGrants":[{"resourceType":"collection","resourceId":"support_conversations","action":"read"}]}' --json
+claw agents blueprint --record '{"name":"Support blueprint","agencyMode":"support","skillBindings":[{"ref":"skill.support","version":"1","requiredResourceGrants":[{"resourceType":"collection","resourceId":"support_conversations","action":"read"}]}],"template":{"role":"Support","secretAllowlist":["vault://agents/ops"]},"requiredResourceGrants":[{"resourceType":"collection","resourceId":"support_conversations","action":"read"}]}' --json
 claw agents evaluation --record '{"agentId":"agent.ops","assignmentId":"assignment.relay","status":"failed","score":0.25,"criteria":{"metric":"safety"},"result":{"reason":"Unsafe disclosure"}}' --json
 claw personalities upsert personality.review --name Reviewer --prompt "Review with concrete evidence" --json
 claw skill-collections upsert collection.review --name Review --tags review,code --json
@@ -191,6 +191,10 @@ Relay, MCP, service API, external channel, and internal UI views use the same
 safe surface projection contract so public surfaces only see bounded identity,
 assignment, budget, memory, and resource summaries instead of raw prompts,
 secret material, local paths, private endpoints, or runtime environment data.
+The projection fails closed when the assignment kind does not match the target
+surface: Relay needs a `relay` assignment, MCP/API and service APIs use
+`mcp_api`, internal UI uses `internal_mac_chat`, and external channel views use
+external/support/custom channel assignments.
 MCP tool calls are double-gated: connector control-plane approval is required,
 and the request must also carry an Agents V1 `mcp_api` assignment policy that
 passes route and effective-access checks before the MCP protocol is invoked.
@@ -199,8 +203,12 @@ governable agent changes and safety/runtime incidents without exposing raw
 secret references, authorization material, local traces, or private paths.
 `activity-feed` turns runs, sessions, evaluations, incidents, config revisions,
 assignments, and audit events into a redacted timeline for human consumption.
-`blueprint` creates redacted reusable templates separate from live agents, and
-`evaluation` records redacted performance/safety assessments with audit output.
+`blueprint` creates redacted reusable templates separate from live agents.
+Portable agent packages use `skillBindings` as the canonical skill model:
+each binding carries a skill ref, optional version, required assignment kinds,
+and required resource grants. The older `skillRefs` input remains a shorthand
+that is normalized into bindings for compatibility. `evaluation` records
+redacted performance/safety assessments with audit output.
 
 ## Global Flags
 

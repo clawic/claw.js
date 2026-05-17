@@ -78,7 +78,8 @@ The first implementation slice is model plus gates:
   budgets, redacted audit events, safe package export, safe surface projections
   for Relay/MCP/API/UI, redacted config revisions, first-class incidents,
   redacted activity feeds for human consumption, formal reusable blueprints,
-  redacted evaluations, escalation requests, and delegation no-laundering
+  portable skill bindings with refs/versions and required grants, redacted
+  evaluations, escalation requests, and delegation no-laundering
 - route graph coverage for internal Mac assignments, external support
   assignments, MCP/API assignments, runtime runs, sessions, grants, memory
   policies, and support/inbox projection

@@ -143,6 +143,40 @@ test("runCli exposes Agents V1 safe surface projection gate", async () => {
       "external_disclosure_uses_custom_wording",
     ]);
 
+    const serviceApiProjectionStdout = captureStream();
+    assert.equal(await runCli(["agents", "surface-projection", "--record", JSON.stringify({
+      surface: "service_api",
+      projectedAt: "2026-05-17T10:00:00.000Z",
+      agent: { id: "agent-ops", name: "Ops", localPath: "/Users/example/private-agent" },
+      assignments: [{
+        id: "assignment.internal",
+        agentId: "agent-ops",
+        kind: "internal_mac_chat",
+        status: "active",
+        channel: "mac",
+        endpointRef: "clawix://workspace/main",
+      }],
+      budgets: [{
+        id: "budget.api",
+        exceededBehavior: "deny_action",
+        limits: [{ dimension: "external_actions", limit: 5, used: 1 }],
+      }],
+    }), "--json"], {
+      stdout: serviceApiProjectionStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const serviceApiProjection = parseCliJsonPayload(serviceApiProjectionStdout.getOutput()) as {
+      surface: string;
+      agent: Record<string, unknown>;
+      assignments: Array<Record<string, unknown>>;
+      gaps: string[];
+    };
+    assert.equal(serviceApiProjection.surface, "service_api");
+    assert.equal("localPath" in serviceApiProjection.agent, false);
+    assert.equal("endpointRef" in serviceApiProjection.assignments[0], false);
+    assert.deepEqual(serviceApiProjection.gaps, ["surface_assignment_kind_missing"]);
+
     const revisionStdout = captureStream();
     assert.equal(await runCli(["agents", "config-revision", "--record", JSON.stringify({
       agentId: "agent-ops",
@@ -262,6 +296,16 @@ test("runCli exposes Agents V1 safe surface projection gate", async () => {
       agencyMode: "support",
       version: 1,
       skillRefs: ["skill.support@1"],
+      skillBindings: [{
+        ref: "skill.escalation",
+        version: "2",
+        requiredAssignmentKinds: ["support_inbox"],
+        requiredResourceGrants: [{
+          resourceType: "secret",
+          resourceId: "vault://agents/ops/escalation",
+          action: "lease_secret",
+        }],
+      }],
       template: {
         role: "Support",
         systemPrompt: "private",
@@ -283,13 +327,20 @@ test("runCli exposes Agents V1 safe surface projection gate", async () => {
     const blueprint = parseCliJsonPayload(blueprintStdout.getOutput()) as {
       id: string;
       template: Record<string, unknown>;
-      safeExport: { packageKind: string };
+      skillRefs: string[];
+      skillBindings: Array<{ ref: string; version?: string; requiredAssignmentKinds?: string[]; requiredResourceGrants?: Array<Record<string, unknown>> }>;
+      safeExport: { packageKind: string; skillBindings: Array<Record<string, unknown>> };
       audit: { kind: string; resourceType?: string };
     };
     assert.match(blueprint.id, /^agent_blueprint_/);
     assert.equal(String(blueprint.template.secretAllowlist).includes("vault://"), false);
     assert.equal(JSON.stringify(blueprint.template).includes("/Users/example"), false);
+    assert.deepEqual(blueprint.skillRefs, ["skill.support@1", "skill.escalation@2"]);
+    assert.deepEqual(blueprint.skillBindings.map((binding) => binding.ref), ["skill.support", "skill.escalation"]);
+    assert.equal(blueprint.skillBindings[1]?.requiredAssignmentKinds?.[0], "support_inbox");
+    assert.equal(String(blueprint.skillBindings[1]?.requiredResourceGrants?.[0]?.resourceId).includes("vault://"), false);
     assert.equal(blueprint.safeExport.packageKind, "claw_agent_package");
+    assert.equal(JSON.stringify(blueprint.safeExport.skillBindings).includes("vault://"), false);
     assert.equal(blueprint.audit.kind, "blueprint");
     assert.equal(blueprint.audit.resourceType, "agent_blueprint");
 
@@ -390,6 +441,9 @@ test("V2 main schema upgrades app project resource ids before indexing them", as
       const sessionIndexes = sqlite.prepare("PRAGMA index_list(agent_sessions)").all() as Array<{ name: string }>;
       assert.equal(sessionIndexes.some((index) => index.name === "agent_sessions_company_idx"), true);
       assert.equal(sessionIndexes.some((index) => index.name === "agent_sessions_status_idx"), true);
+      const blueprintColumns = sqlite.prepare("PRAGMA table_info(agent_blueprints)").all() as Array<{ name: string; dflt_value: string | null }>;
+      assert.equal(blueprintColumns.find((column) => column.name === "skill_refs_json")?.dflt_value, "'[]'");
+      assert.equal(blueprintColumns.find((column) => column.name === "skill_bindings_json")?.dflt_value, "'[]'");
     } finally {
       sqlite.close();
       fs.rmSync(tempRoot, { recursive: true, force: true });

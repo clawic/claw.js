@@ -1180,6 +1180,7 @@ The docs check script validates that every current export from
     AgentSafeSurfaceKind
     AgentSafeSurfaceProjection
     AgentSafeSurfaceProjectionInput
+    AgentSkillBinding
     AgentSupportInboxProjection
     AgentSupportInboxProjectionInput
     AGENTS_FAMILY
