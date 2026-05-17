@@ -1,14 +1,14 @@
 # @clawjs/node
 
-Compatibility wrapper for Claw.
+Stable Node SDK entrypoint for Claw.
 
-New code should prefer [`@clawjs/claw`](https://www.npmjs.com/package/@clawjs/claw).
+Use this package when an integration wants the Node-oriented SDK package name.
 
 ```bash
 npm install @clawjs/node
 ```
 
-Or migrate older imports to the primary package:
+The primary package exposes the same SDK surface:
 
 ```bash
 npm install @clawjs/claw
@@ -18,5 +18,5 @@ npm install @clawjs/claw
 import { Claw } from "@clawjs/claw";
 ```
 
-`@clawjs/node` is a direct re-export of `@clawjs/claw` for older imports.
+`@clawjs/node` is a direct re-export of `@clawjs/claw`.
 It does not add a separate runtime model, API layer, or release policy.

@@ -1,7 +1,7 @@
 {
   "name": "@clawjs/node",
   "version": "0.1.2",
-  "description": "Compatibility wrapper for Claw. Prefer @clawjs/claw for new code.",
+  "description": "Stable Node SDK entrypoint for Claw.",
   "type": "module",
   "license": "MIT",
   "author": {

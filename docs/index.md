@@ -46,7 +46,7 @@ ClawJS gives you one place to solve the hard parts that show up across runtimes:
 | `@clawjs/sessions` | Shared session mirror store, FTS search, and native runtime import adapters. |
 | `@clawjs/user-model` | Shared user profile store, snapshots, and embeddable profile service app. |
 | `@clawjs/runtime` | Shared runtime loops for distillation, nudges, and profile refresh. |
-| `@clawjs/node` | Compatibility wrapper that reexports the primary SDK surface for existing integrations that still import `@clawjs/node`. |
+| `@clawjs/node` | Stable Node SDK entrypoint that reexports the primary SDK surface. |
 | `@clawjs/ssh-client` | Audited SSH client for mesh hosts with TOFU known-host handling, exec, SFTP, and bridge installation helpers. |
 | `@clawjs/cli` | Official CLI with `claw` as the public binary for scaffolding, runtime management, workspace ops, productivity commands, sessions, media, and package-aware project generation. |
 | `@clawjs/openclaw-plugin` | OpenClaw bridge plugin for gateway RPC methods, observability hooks, and managed tooling. |

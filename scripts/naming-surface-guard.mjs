@@ -276,16 +276,22 @@ for (const relativePath of [
   "docs/getting-started.md",
   "docs/index.md",
   "docs/plugins.md",
+  "packages/clawjs-node-compat/package.json",
+  "packages/clawjs-node-compat/README.md",
   "packages/create-claw-app/README.md",
   "packages/create-claw-agent/README.md",
   "packages/create-claw-server/README.md",
   "packages/create-claw-plugin/README.md",
 ]) {
   forbidSnippet(relativePath, "compatibility wrapper");
+  forbidSnippet(relativePath, "older imports");
+  forbidSnippet(relativePath, "existing integrations that still import");
   forbidSnippet(relativePath, "compatibility metadata");
   forbidSnippet(relativePath, "compatibility and packaged surfaces");
   forbidSnippet(relativePath, "compatibility and packaged-surface metadata");
-  requireSnippet(relativePath, "generator entrypoint");
+  if (!relativePath.includes("clawjs-node-compat")) {
+    requireSnippet(relativePath, "generator entrypoint");
+  }
 }
 
 for (const relativePath of [

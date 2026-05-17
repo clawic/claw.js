@@ -79,10 +79,10 @@ run("node", ["--input-type=module", "-e", `
     throw new Error("Claw export is missing");
   }
   if (typeof sdk.createClaw !== "function") {
-    throw new Error("createClaw compatibility export is missing");
+    throw new Error("createClaw export is missing");
   }
-  const compat = await import("@clawjs/node");
-  if (compat.Claw !== sdk.Claw) {
+  const nodeSdk = await import("@clawjs/node");
+  if (nodeSdk.Claw !== sdk.Claw) {
     throw new Error("@clawjs/node does not reexport the primary Claw API");
   }
   const eslintConfig = await import("eslint-config-claw");
