@@ -1163,7 +1163,7 @@ export interface WorkspaceConversationInput extends BaseWorkspaceConversationInp
   workspaceContext?: "off" | "auto" | WorkspaceConversationContextOption;
 }
 
-export interface WorkspaceClawInstance extends Omit<ClawInstance, "workspace" | "sessions" | "context"> {
+export interface WorkspaceClawInstance extends Omit<ClawInstance, "workspace" | "sessions" | "context" | "agents"> {
   workspace: ClawInstance["workspace"] & {
     tools: {
       describe: () => WorkspaceToolDescriptor[];

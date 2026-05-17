@@ -308,6 +308,7 @@ The docs check script validates that every current export from
     CHANNELS_STATE_FILE
     ChannelsRegistry
     Claw
+    ClawAgentsFacade
     CLAW_DIR
     CLAW_RUNTIME_PROVIDERS
     CLAW_RUNTIME_WORKSPACE_FILES
@@ -415,6 +416,7 @@ The docs check script validates that every current export from
     createChannelsRegistry
     CreateChannelsRegistryOptions
     createClaw
+    createClawAgentsFacades
     CreateClawOptions
     createCodeGlobalIndex
     CreateCodeGlobalIndexOptions
