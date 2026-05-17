@@ -1128,6 +1128,10 @@ function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flag
       const resourceId = resourceIdFromJobPayload(job, "operationId") ?? job.resourceId;
       return resourceId ? ensureConnectorCatalogResourceIndexed(store, flags, resourceId) : 0;
     }
+    case "runtime.events": {
+      const resourceId = resourceIdFromJobPayload(job, "runtimeResourceId") ?? job.resourceId;
+      return resourceId ? ensureRuntimeEventsResourceIndexed(store, flags, resourceId) : 0;
+    }
     default:
       return null;
   }
@@ -2637,6 +2641,112 @@ function ensureRuntimeEventsSourceIndexed(store: SearchStore, flags: Record<stri
     lastIndexedAt: new Date().toISOString(),
   });
   return indexed;
+}
+
+function ensureRuntimeEventsResourceIndexed(store: SearchStore, flags: Record<string, string>, resourceId: string): number {
+  if (resourceId.startsWith("job:")) {
+    const jobId = resourceId.slice("job:".length);
+    const runtimePath = resolveSearchSidecarPath(flags, "runtime.sqlite");
+    if (!jobId || !fs.existsSync(runtimePath)) {
+      store.tombstone({ source: "runtime.events", resourceId, reason: "runtime job missing during Search event refresh" });
+      return 1;
+    }
+    const db = new Database(runtimePath, { readonly: true, fileMustExist: true });
+    try {
+      if (!hasTable(db, "runtime_jobs")) {
+        store.tombstone({ source: "runtime.events", resourceId, reason: "runtime job table missing during Search event refresh" });
+        return 1;
+      }
+      const row = db.prepare(`
+        SELECT id, kind, title, status, claim_owner, run_at, attempts, payload_json, created_at, updated_at
+        FROM runtime_jobs
+        WHERE id = ?
+      `).get(jobId) as RuntimeJobRow | undefined;
+      if (!row) {
+        store.tombstone({ source: "runtime.events", resourceId, reason: "runtime job missing during Search event refresh" });
+        return 1;
+      }
+      store.upsertDocument(runtimeJobSearchDocument(row));
+    } finally {
+      db.close();
+    }
+    setRuntimeEventsResourceState(store);
+    return 1;
+  }
+  if (resourceId.startsWith("event:")) {
+    const eventId = resourceId.slice("event:".length);
+    const runtimePath = resolveSearchSidecarPath(flags, "runtime.sqlite");
+    if (!eventId || !fs.existsSync(runtimePath)) {
+      store.tombstone({ source: "runtime.events", resourceId, reason: "runtime event missing during Search event refresh" });
+      return 1;
+    }
+    const db = new Database(runtimePath, { readonly: true, fileMustExist: true });
+    try {
+      if (!hasTable(db, "runtime_events")) {
+        store.tombstone({ source: "runtime.events", resourceId, reason: "runtime event table missing during Search event refresh" });
+        return 1;
+      }
+      const row = db.prepare(`
+        SELECT id, job_id, kind, level, message, created_at, metadata_json
+        FROM runtime_events
+        WHERE id = ?
+      `).get(eventId) as RuntimeEventRow | undefined;
+      if (!row) {
+        store.tombstone({ source: "runtime.events", resourceId, reason: "runtime event missing during Search event refresh" });
+        return 1;
+      }
+      store.upsertDocument(runtimeEventSearchDocument(row));
+    } finally {
+      db.close();
+    }
+    setRuntimeEventsResourceState(store);
+    return 1;
+  }
+  if (resourceId.startsWith("operational:")) {
+    const [, domain, ...idParts] = resourceId.split(":");
+    const eventId = idParts.join(":");
+    const sidecar = OPERATIONAL_SEARCH_SIDECARS.find((entry) => entry.domain === domain);
+    if (!sidecar || !eventId) {
+      store.tombstone({ source: "runtime.events", resourceId, reason: "operational event target missing during Search event refresh" });
+      return 1;
+    }
+    const sidecarPath = resolveSearchSidecarPath(flags, sidecar.filename);
+    if (!fs.existsSync(sidecarPath)) {
+      store.tombstone({ source: "runtime.events", resourceId, reason: "operational sidecar missing during Search event refresh" });
+      return 1;
+    }
+    const db = new Database(sidecarPath, { readonly: true, fileMustExist: true });
+    try {
+      if (!hasTable(db, "operational_events")) {
+        store.tombstone({ source: "runtime.events", resourceId, reason: "operational event table missing during Search event refresh" });
+        return 1;
+      }
+      const row = db.prepare(`
+        SELECT id, kind, level, message, created_at, metadata_json
+        FROM operational_events
+        WHERE id = ?
+      `).get(eventId) as OperationalEventRow | undefined;
+      if (!row) {
+        store.tombstone({ source: "runtime.events", resourceId, reason: "operational event missing during Search event refresh" });
+        return 1;
+      }
+      store.upsertDocument(operationalEventSearchDocument(row, sidecar));
+    } finally {
+      db.close();
+    }
+    setRuntimeEventsResourceState(store);
+    return 1;
+  }
+  store.tombstone({ source: "runtime.events", resourceId, reason: "unknown runtime event resource during Search event refresh" });
+  return 1;
+}
+
+function setRuntimeEventsResourceState(store: SearchStore): void {
+  store.setSourceState("runtime.events", "enabled", {
+    backlog: 0,
+    error: null,
+    lastIndexedAt: new Date().toISOString(),
+  });
 }
 
 function ensureCodeSymbolsSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {

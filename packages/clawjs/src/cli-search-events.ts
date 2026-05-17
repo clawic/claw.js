@@ -299,6 +299,32 @@ export function scheduleConnectorCatalogSearchEvent(input: {
   });
 }
 
+export function scheduleRuntimeEventsSearchEvent(input: {
+  operation: "upsert" | "delete";
+  kind: "job" | "event" | "operational";
+  id: string;
+  dataDir: string;
+  domain?: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  const resourceId = input.kind === "operational" ? `operational:${input.domain ?? "runtime"}:${input.id}` : `${input.kind}:${input.id}`;
+  return scheduleSearchIndexEvent({
+    source: "runtime.events",
+    operation: input.operation,
+    resourceId,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      runtimeKind: input.kind,
+      runtimeResourceId: resourceId,
+      id: input.id,
+      ...(input.domain ? { domain: input.domain } : {}),
+    },
+  });
+}
+
 export function scheduleSearchIndexEvent(input: {
   source: string;
   operation: "upsert" | "delete";

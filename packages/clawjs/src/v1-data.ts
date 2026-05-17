@@ -7,7 +7,7 @@ import type Database from "better-sqlite3";
 import { DatabaseServiceStore } from "@clawjs/database";
 import { runAgentsCommand, runConnectionsCommand, runPersonalitiesCommand, runSkillCollectionsCommand } from "./v1-data-agent-entities.ts";
 import { runProviderRoutingCommand, runSnippetsCommand } from "./v1-data-agent-config.ts";
-import { scheduleCalendarEventsSearchEvent, scheduleKnowledgeGraphSearchEvent, scheduleNotesPagesSearchEvent, scheduleSignalsObservationsSearchEvent, scheduleSkillsRegistrySearchEvent } from "./cli-search-events.ts";
+import { scheduleCalendarEventsSearchEvent, scheduleKnowledgeGraphSearchEvent, scheduleNotesPagesSearchEvent, scheduleRuntimeEventsSearchEvent, scheduleSignalsObservationsSearchEvent, scheduleSkillsRegistrySearchEvent } from "./cli-search-events.ts";
 export {
   openMainDataStore,
   resolveClawjsDataRoot,
@@ -61,6 +61,8 @@ import {
   PROFILE_ID,
 } from "./v1-data-core.ts";
 import type { JsonRecord, V1DataCliInput } from "./v1-data-core.ts"; // Public storage surface: CLAW_DATA_DIR, CLAW_HOME, CLAW_DB_PATH, core.sqlite.
+
+const RUNTIME_SEARCH_OPERATIONAL_DOMAINS = new Set(["monitor", "infra", "ops"]);
 
 export async function runV1DataCli(input: V1DataCliInput): Promise<number | null> {
   const [group, command] = input.positionals;
@@ -1468,6 +1470,13 @@ function runRuntimeSidecarCommand(input: V1DataCliInput, store: DatabaseServiceS
       sqlite.close();
     }
     upsertRegistry(store.sqlite, "runtime", "job", id, { metadata: { status: "queued" } });
+    scheduleRuntimeEventsSearchEvent({
+      operation: "upsert",
+      kind: "job",
+      id,
+      dataDir: resolveClawjsDataRoot(),
+      flags: input.flags,
+    });
     writeSuccess(input, { id, title, status: "queued", sidecar: "runtime.sqlite" });
     return V1_DATA_EXIT_OK;
   }
@@ -1489,6 +1498,15 @@ function runRuntimeSidecarCommand(input: V1DataCliInput, store: DatabaseServiceS
       }
       if (action === "delete") {
         const changes = sqlite.prepare("DELETE FROM runtime_jobs WHERE id = ?").run(id).changes;
+        if (changes > 0) {
+          scheduleRuntimeEventsSearchEvent({
+            operation: "delete",
+            kind: "job",
+            id,
+            dataDir: resolveClawjsDataRoot(),
+            flags: input.flags,
+          });
+        }
         writeSuccess(input, { deleted: changes > 0, id });
         return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
       }
@@ -1498,16 +1516,24 @@ function runRuntimeSidecarCommand(input: V1DataCliInput, store: DatabaseServiceS
   }
   if (command === "event") {
     const now = nowIso();
+    const id = input.flags.id || `event-${randomUUID()}`;
     const sqlite = openSidecar("runtime.sqlite");
     try {
       sqlite.prepare(`
         INSERT INTO runtime_events (id, job_id, kind, level, message, created_at, metadata_json)
         VALUES (?, ?, ?, ?, ?, ?, ?)
-      `).run(input.flags.id || `event-${randomUUID()}`, input.flags["job-id"] || null, input.flags.kind || "event", input.flags.level || "info", input.flags.message || input.positionals.slice(2).join(" "), now, input.flags.metadata ? JSON.stringify(parseMaybeJson(input.flags.metadata)) : "{}");
+      `).run(id, input.flags["job-id"] || null, input.flags.kind || "event", input.flags.level || "info", input.flags.message || input.positionals.slice(2).join(" "), now, input.flags.metadata ? JSON.stringify(parseMaybeJson(input.flags.metadata)) : "{}");
     } finally {
       sqlite.close();
     }
-    writeSuccess(input, { recorded: true, sidecar: "runtime.sqlite" });
+    scheduleRuntimeEventsSearchEvent({
+      operation: "upsert",
+      kind: "event",
+      id,
+      dataDir: resolveClawjsDataRoot(),
+      flags: input.flags,
+    });
+    writeSuccess(input, { recorded: true, id, sidecar: "runtime.sqlite" });
     return V1_DATA_EXIT_OK;
   }
   if (command === "retention") {
@@ -1515,8 +1541,28 @@ function runRuntimeSidecarCommand(input: V1DataCliInput, store: DatabaseServiceS
     const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
     const sqlite = openSidecar("runtime.sqlite");
     try {
+      const eventIds = sqlite.prepare("SELECT id FROM runtime_events WHERE created_at < ?").all(cutoff) as Array<{ id: string }>;
+      const jobIds = sqlite.prepare("SELECT id FROM runtime_jobs WHERE updated_at < ? AND status IN ('done','failed','cancelled')").all(cutoff) as Array<{ id: string }>;
       const events = sqlite.prepare("DELETE FROM runtime_events WHERE created_at < ?").run(cutoff).changes;
       const jobs = sqlite.prepare("DELETE FROM runtime_jobs WHERE updated_at < ? AND status IN ('done','failed','cancelled')").run(cutoff).changes;
+      for (const event of eventIds) {
+        scheduleRuntimeEventsSearchEvent({
+          operation: "delete",
+          kind: "event",
+          id: event.id,
+          dataDir: resolveClawjsDataRoot(),
+          flags: input.flags,
+        });
+      }
+      for (const job of jobIds) {
+        scheduleRuntimeEventsSearchEvent({
+          operation: "delete",
+          kind: "job",
+          id: job.id,
+          dataDir: resolveClawjsDataRoot(),
+          flags: input.flags,
+        });
+      }
       writeSuccess(input, { cutoff, deleted: { runtimeEvents: events, runtimeJobs: jobs } });
       return V1_DATA_EXIT_OK;
     } finally {
@@ -1547,6 +1593,12 @@ function runOperationalSidecarCommand(input: V1DataCliInput, store: DatabaseServ
       sqlite.close();
     }
     upsertRegistry(store.sqlite, domain, command === "metric" ? "metric" : "event", id, { metadata: { kind, level } });
+    scheduleOperationalRuntimeSearchEventIfNeeded({
+      operation: "upsert",
+      domain,
+      id,
+      flags: input.flags,
+    });
     writeSuccess(input, { id, kind, level, message, sidecar: filename });
     return V1_DATA_EXIT_OK;
   }
@@ -1569,7 +1621,16 @@ function runOperationalSidecarCommand(input: V1DataCliInput, store: DatabaseServ
     const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
     const sqlite = openSidecar(filename);
     try {
+      const eventIds = sqlite.prepare("SELECT id FROM operational_events WHERE created_at < ?").all(cutoff) as Array<{ id: string }>;
       const events = sqlite.prepare("DELETE FROM operational_events WHERE created_at < ?").run(cutoff).changes;
+      for (const event of eventIds) {
+        scheduleOperationalRuntimeSearchEventIfNeeded({
+          operation: "delete",
+          domain,
+          id: event.id,
+          flags: input.flags,
+        });
+      }
       writeSuccess(input, { cutoff, deleted: { operationalEvents: events }, sidecar: filename });
       return V1_DATA_EXIT_OK;
     } finally {
@@ -1577,6 +1638,23 @@ function runOperationalSidecarCommand(input: V1DataCliInput, store: DatabaseServ
     }
   }
   return usageError(input, usage(input.binName, domain));
+}
+
+function scheduleOperationalRuntimeSearchEventIfNeeded(input: {
+  operation: "upsert" | "delete";
+  domain: string;
+  id: string;
+  flags: Record<string, string>;
+}): void {
+  if (!RUNTIME_SEARCH_OPERATIONAL_DOMAINS.has(input.domain)) return;
+  scheduleRuntimeEventsSearchEvent({
+    operation: input.operation,
+    kind: "operational",
+    id: input.id,
+    domain: input.domain,
+    dataDir: resolveClawjsDataRoot(),
+    flags: input.flags,
+  });
 }
 
 function runMcpCommand(input: V1DataCliInput): number {

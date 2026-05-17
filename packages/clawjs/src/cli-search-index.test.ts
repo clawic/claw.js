@@ -8,7 +8,7 @@ import Database from "better-sqlite3";
 import { SearchStore, createFrameworkSearchSourceManifest } from "@clawjs/search";
 
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./index.ts";
-import { createFakeGenerationScript, runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
+import { captureStream, createFakeGenerationScript, runCliCapture, runInternalV1Cli, withPatchedEnv } from "./index-test-utils.ts";
 import { ensureV1MainSchema, resolveClawjsMainDbPath } from "./v1-data-core.ts";
 
 test("search rebuild and query use the Search sidecar without workspace state", async () => {
@@ -1692,6 +1692,66 @@ test("search rebuild indexes runtime.events from runtime and operational sidecar
     assert.equal(result?.metadata?.jobId, "job-runtime-worker");
     assert.equal(result?.metadata?.sidecar, "runtime.sqlite");
     assert.equal(result?.fragments?.some((fragment) => fragment.title === "metadata" && fragment.snippet?.includes("documents.blocks")), true);
+  });
+});
+
+test("operational writes enqueue and refresh runtime.events jobs", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-runtime-events-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const recordedStdout = captureStream();
+    const recordedStderr = captureStream();
+    const recorded = await runInternalV1Cli([
+      "monitor",
+      "event",
+      "Runtime queue lag exceeded threshold",
+      "--id",
+      "monitor-runtime-lag",
+      "--kind",
+      "uptime",
+      "--level",
+      "warn",
+      "--metadata",
+      JSON.stringify({ queue: "search", lagMs: 1200 }),
+      "--json",
+    ], { stdout: recordedStdout.stream, stderr: recordedStderr.stream, cwd: workspaceRoot });
+    assert.equal(recorded, CLI_EXIT_OK);
+
+    const jobs = await runCliCapture(["search", "jobs", "--source", "runtime.events", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(jobs.code, CLI_EXIT_OK);
+    const jobsPayload = JSON.parse(jobs.stdout) as {
+      data: { items: Array<{ source: string; operation: string; resourceId: string; shard: string; payload: { eventDriven?: boolean; runtimeKind?: string; domain?: string; id?: string } }> };
+    };
+    const job = jobsPayload.data.items.find((item) => item.resourceId === "operational:monitor:monitor-runtime-lag");
+    assert.equal(job?.source, "runtime.events");
+    assert.equal(job?.operation, "upsert");
+    assert.equal(job?.shard, "hot");
+    assert.equal(job?.payload.eventDriven, true);
+    assert.equal(job?.payload.runtimeKind, "operational");
+    assert.equal(job?.payload.domain, "monitor");
+    assert.equal(job?.payload.id, "monitor-runtime-lag");
+
+    const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "runtime.events", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(serviceRun.code, CLI_EXIT_OK);
+
+    const query = await runCliCapture(["search", "query", "queue lag threshold", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: { results: Array<{ source: string; domain: string; type: string; title: string; metadata?: { sidecar?: string; operationalDomain?: string; level?: string } }> };
+    };
+    const result = queryPayload.data.results.find((entry) => entry.title.includes("Runtime queue lag"));
+    assert.equal(result?.source, "runtime.events");
+    assert.equal(result?.domain, "runtime");
+    assert.equal(result?.type, "operational_event");
+    assert.equal(result?.metadata?.sidecar, "monitor.sqlite");
+    assert.equal(result?.metadata?.operationalDomain, "monitor");
+    assert.equal(result?.metadata?.level, "warn");
   });
 });
 
