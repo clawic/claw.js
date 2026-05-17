@@ -15,6 +15,17 @@ import {
   useIsolatedClawDataRoot,
 } from "./index-test-utils.ts";
 
+test("published CLI package does not depend on the retired Index package", () => {
+  const cliPackageJson = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "packages/clawjs/package.json"), "utf8")) as {
+    dependencies?: Record<string, string>;
+  };
+  const indexLauncher = fs.readFileSync(path.resolve(process.cwd(), "packages/clawjs/bin/index-server-launcher.mjs"), "utf8");
+
+  assert.equal(cliPackageJson.dependencies?.["@clawjs/index"], undefined);
+  assert.equal(cliPackageJson.dependencies?.["@clawjs/search"], "0.1.2");
+  assert.equal(indexLauncher.includes('import("@clawjs/index")'), false);
+});
+
 test("published CLI tarballs install with npm and manage local-first productivity zero-config from the real binary", { concurrency: false }, async (t) => {
   const packDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-packages-"));
   const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-installed-"));
