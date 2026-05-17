@@ -1072,6 +1072,8 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_collections
   claw_cli_command_records["records\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_records
+  claw_cli_command_contacts["contacts\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_contacts
   claw_cli_command_inspect["inspect\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_inspect
   claw_cli_command_search["search\ncliCommand"]
@@ -2296,6 +2298,7 @@ flowchart TD
 | `claw.cli.command.db` | cliCommand | cli | claw |  |  |  | `db` |
 | `claw.cli.command.collections` | cliCommand | cli | claw |  |  |  | `collections` |
 | `claw.cli.command.records` | cliCommand | cli | claw |  |  |  | `records` |
+| `claw.cli.command.contacts` | cliCommand | cli | claw |  |  |  | `contacts` |
 | `claw.cli.command.inspect` | cliCommand | cli | claw |  |  |  | `inspect` |
 | `claw.cli.command.search` | cliCommand | cli | claw |  |  |  | `search` |
 | `claw.cli.command.signals` | cliCommand | cli | claw |  |  |  | `signals` |

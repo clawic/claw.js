@@ -223,7 +223,7 @@ export const clawDomainOwnershipMatrixV1 = {
     requiredTests: [...hostCapabilityTests, "signed_permission_preflight"],
     minimumContract: {
       resourceTypes: ["contact", "contact_group", "contact_change"],
-      apiShape: ["claw contacts list|get|create|update|archive", "host command domain=contacts resource=contacts"],
+      apiShape: ["claw contacts list|get|create|update|delete|schema", "host command domain=contacts resource=contacts"],
       eventTopics: ["contacts.contact.created", "contacts.contact.updated", "contacts.contact.archived"],
       fixtures: ["packages/clawjs-core/src/host-contract-fixtures.ts", "packages/clawjs-integrations/fixtures/started-provider-runtime-catalog.json"],
       matrixRows: ["docs/interface-matrix.md#host-forwarded-domains", "clawix/docs/interface-matrix.md#Contacts"],

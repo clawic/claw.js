@@ -165,6 +165,7 @@ test("runCli exposes CLI aliases and decision sources through inspect", async ()
   const commandPayload = parseCliJson<{ commands: Array<{ name: string; usage?: string; support: { state: string }; securityPolicy: string; source?: { file: string; symbol: string } }> }>(commands.stdout).data;
   assert.equal(commandPayload.commands.some((entry) => entry.name === "host" && entry.support.state === "host_required" && entry.securityPolicy === "signed_host_broker"), true);
   assert.equal(commandPayload.commands.some((entry) => entry.name === "apps" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
+  assert.equal(commandPayload.commands.some((entry) => entry.name === "contacts" && entry.support.state === "supported" && entry.securityPolicy === "local_write" && entry.usage === "contacts list|get|create|update|delete|schema" && entry.source?.symbol === "runMagicDbCli"), true);
   assert.equal(commandPayload.commands.some((entry) => entry.name === "design" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
   assert.equal(commandPayload.commands.some((entry) => entry.name === "agents" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
   assert.equal(commandPayload.commands.some((entry) => entry.name === "personalities" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
@@ -188,6 +189,7 @@ test("runCli exposes CLI aliases and decision sources through inspect", async ()
   assert.equal(aliases.code, CLI_EXIT_OK);
   const aliasPayload = parseCliJson<{ aliases: Array<{ alias: string; canonicalName: string; source: string; shadowedByCommand?: string }> }>(aliases.stdout).data;
   assert.equal(aliasPayload.aliases.some((entry) => entry.alias === "db" && entry.canonicalName === "database"), true);
+  assert.equal(aliasPayload.aliases.some((entry) => entry.alias === "contacts" && entry.canonicalName === "database" && entry.source === "command"), true);
   assert.equal(aliasPayload.aliases.some((entry) => entry.alias === "image" && entry.canonicalName === "images"), true);
   assert.equal(aliasPayload.aliases.some((entry) => entry.alias === "lead" && entry.canonicalName === "leads" && entry.source === "collection"), true);
   assert.equal(aliasPayload.aliases.some((entry) => entry.alias === "sessions" && entry.canonicalName === "agent_sessions" && entry.shadowedByCommand === "sessions"), true);

@@ -370,6 +370,17 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
     assert.equal(marketplace.choice, "openai");
     assert.equal(marketplace.kind, "provider");
 
+    const contactsStdout = captureStream();
+    assert.equal(await runCli(["db", "contacts", "create", "--data", JSON.stringify({ companyId: "company-demo", email: "demo@example.com", firstName: "Demo" }), "--json"], {
+      stdout: contactsStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const contact = parseCliData(contactsStdout.getOutput()) as { companyId: string; email: string; firstName: string };
+    assert.equal(contact.companyId, "company-demo");
+    assert.equal(contact.email, "demo@example.com");
+    assert.equal(contact.firstName, "Demo");
+
     const appStdout = captureStream();
     assert.equal(await runCli(["apps", "upsert", "demo-app", "--name", "Demo App", "--path", "apps/demo-app", "--json"], {
       stdout: appStdout.stream,

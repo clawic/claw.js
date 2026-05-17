@@ -368,6 +368,8 @@ test("CLI command registry is the source for stable CLI surface nodes", () => {
   assert.equal(clawCliCommandRegistry.commands.find((entry) => entry.name === "providers")?.support.state, "supported");
   assert.equal(clawCliCommandRegistry.commands.find((entry) => entry.name === "providers")?.securityPolicy, "local_write");
   assert.equal(clawCliCommandRegistry.commands.find((entry) => entry.name === "providers")?.source?.symbol, "runProviderRoutingCommand");
+  assert.equal(clawCliCommandRegistry.commands.find((entry) => entry.name === "contacts")?.target, "database");
+  assert.equal(clawCliCommandRegistry.commands.find((entry) => entry.name === "contacts")?.usage, "contacts list|get|create|update|delete|schema");
   assert.equal(clawCliCommandRegistry.commands.find((entry) => entry.name === "agents")?.source?.symbol, "runAgentsCommand");
   assert.equal(clawCliCommandRegistry.commands.find((entry) => entry.name === "personalities")?.source?.symbol, "runPersonalitiesCommand");
   assert.equal(clawCliCommandRegistry.commands.find((entry) => entry.name === "skill-collections")?.source?.symbol, "runSkillCollectionsCommand");
