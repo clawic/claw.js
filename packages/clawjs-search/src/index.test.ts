@@ -19,10 +19,12 @@ test("framework sources are opt-in and require fast paths", () => {
     domain: "sessions",
     name: "Chats",
     resultTypes: ["chat", "message"],
+    facets: [{ id: "projectId", label: "Project", type: "string" }],
   });
 
   assert.equal(manifest.permissions.default, "opt_in");
   assert.equal(manifest.capabilities.fastPath, true);
+  assert.equal(manifest.capabilities.facets, true);
   assert.equal(manifest.indexing.freshness, "near_immediate");
 });
 
@@ -94,6 +96,10 @@ test("SearchStore persists sources, fragments, FTS documents, actions, cursors, 
       domain: "sessions",
       name: "Chats",
       resultTypes: ["chat", "message"],
+      facets: [
+        { id: "projectId", label: "Project", type: "string" },
+        { id: "kind", label: "Kind", type: "enum", values: ["chat", "message"] },
+      ],
     });
     store.registerSource(manifest);
     assert.equal(store.listSources().at(0)?.id, "sessions.chats");
@@ -114,6 +120,7 @@ test("SearchStore persists sources, fragments, FTS documents, actions, cursors, 
       snippet: "Planning notes",
       body: "A conversation about fast search and source manifests.",
       updatedAt: "2026-05-17T10:00:00.000Z",
+      metadata: { projectId: "project-alpha", kind: "chat" },
       permissions: { canOpen: true, canPreview: true, redacted: false },
       rankingHints: { frecency: 0.8 },
       fragments: [
@@ -133,6 +140,16 @@ test("SearchStore persists sources, fragments, FTS documents, actions, cursors, 
     assert.equal(output.results[0]?.fragments?.[0]?.id, "sessions:chat_1:message_1");
     assert.equal(output.results[0]?.actions?.[0]?.id, "open");
     assert.deepEqual(output.results[0]?.explanation?.matchedBy, ["fts"]);
+    assert.equal(output.facets?.some((facet) => facet.id === "projectId"), true);
+
+    const filtered = store.query({
+      query: "timeouts",
+      domains: ["sessions"],
+      filters: { type: "chat", "metadata.projectId": "project-alpha", canPreview: true, redacted: false },
+    });
+    assert.equal(filtered.results.length, 1);
+    const filteredOut = store.query({ query: "timeouts", domains: ["sessions"], filters: { "metadata.projectId": "project-beta" } });
+    assert.equal(filteredOut.results.length, 0);
 
     const cursor = store.setCursor({ source: "sessions.chats", cursor: "watermark-1", metadata: { shard: "hot" } });
     assert.equal(cursor.cursor, "watermark-1");

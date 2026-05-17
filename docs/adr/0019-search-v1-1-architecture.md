@@ -36,6 +36,10 @@ Search V1.1 is built from these layers:
   query fan-out layer. It applies profile/source/domain selection, strict source
   timeouts, result normalization, central ranking, and partial-result reporting.
   `createSearchRegistry()` remains a compatible alias for existing code.
+- **Filters and facets**: sources declare facets in their manifests. Query input
+  carries structured filters for built-in result fields, permissions, and source
+  metadata so section-level search can stay narrow without invoking a broad
+  global scan.
 - **SQLite-first store**: `core.sqlite` remains canonical configuration and
   structured data storage. `search.sqlite` is rebuildable and owns FTS,
   fragments, cursors, tombstones, saved searches, monitors, ranking cache, and

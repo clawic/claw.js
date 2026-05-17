@@ -8,6 +8,7 @@ import {
   createSearchRegistry,
   scoreLexicalMatch,
   type SearchAction,
+  type SearchFacetDeclaration,
   type SearchProfileId,
   type SearchQueryInput,
   type SearchQueryOutput,
@@ -267,11 +268,13 @@ export class SearchStore {
       clauses.push(`d.source IN (${input.sources.map(() => "?").join(", ")})`);
       params.push(...input.sources);
     }
+    applySearchFilters(clauses, params, input.filters);
     if (profile !== "full") {
       clauses.push("s.profile = 'framework'");
     }
     clauses.push("s.state NOT IN ('disabled', 'paused', 'excluded')");
     const omittedSources = this.omittedSourcesForInput(input, profile);
+    const facets = this.facetsForInput(input, profile);
     params.push(limit);
     const rows = this.db.prepare(`
       SELECT d.*, 0 AS rank
@@ -288,6 +291,7 @@ export class SearchStore {
       query: input.query,
       profile,
       results,
+      ...(facets.length ? { facets } : {}),
       partial: omittedSources.length > 0,
       omittedSources,
       elapsedMs: Date.now() - startedAt,
@@ -433,6 +437,33 @@ export class SearchStore {
       : { source: row.id, reason: "disabled" as const, message: `source is ${row.state}` });
   }
 
+  private facetsForInput(input: SearchQueryInput, profile: SearchProfileId): SearchFacetDeclaration[] {
+    const clauses: string[] = [];
+    const params: unknown[] = [];
+    if (input.sources?.length) {
+      clauses.push(`id IN (${input.sources.map(() => "?").join(", ")})`);
+      params.push(...input.sources);
+    }
+    if (input.domains?.length) {
+      clauses.push(`domain IN (${input.domains.map(() => "?").join(", ")})`);
+      params.push(...input.domains);
+    }
+    if (profile !== "full") clauses.push("profile = 'framework'");
+    const rows = this.db.prepare(`
+      SELECT manifest_json FROM search_sources
+      ${clauses.length ? `WHERE ${clauses.join(" AND ")}` : ""}
+      ORDER BY domain ASC, id ASC
+    `).all(...params) as Array<{ manifest_json: string }>;
+    const facets = new Map<string, SearchFacetDeclaration>();
+    for (const row of rows) {
+      const manifest = parseJson<SearchSourceManifest>(row.manifest_json);
+      for (const facet of manifest.facets ?? []) {
+        if (!facets.has(facet.id)) facets.set(facet.id, facet);
+      }
+    }
+    return [...facets.values()];
+  }
+
   private resultFromRow(row: SearchDocumentRow, input: SearchQueryInput): SearchResult {
     const fragmentsWithMatch = (this.db.prepare(`
       SELECT id, title, snippet, body FROM search_fragments
@@ -548,6 +579,68 @@ function ftsQuery(query: string): string {
     .map((term) => term.replace(/[^\p{L}\p{N}_-]/gu, ""))
     .filter(Boolean);
   return terms.map((term) => `"${term}"*`).join(" ");
+}
+
+function applySearchFilters(clauses: string[], params: unknown[], filters: Record<string, unknown> | undefined): void {
+  if (!filters) return;
+  for (const [key, value] of Object.entries(filters)) {
+    if (value === undefined || value === null || value === "") continue;
+    switch (key) {
+      case "domain":
+      case "domains":
+        addInClause(clauses, params, "d.domain", value);
+        break;
+      case "source":
+      case "sources":
+        addInClause(clauses, params, "d.source", value);
+        break;
+      case "type":
+      case "types":
+        addInClause(clauses, params, "d.type", value);
+        break;
+      case "resourceId":
+      case "resource_id":
+        addInClause(clauses, params, "d.resource_id", value);
+        break;
+      case "path":
+        addInClause(clauses, params, "d.path", value);
+        break;
+      case "canOpen":
+      case "canPreview":
+      case "redacted":
+        addJsonEqualsClause(clauses, params, "d.permissions_json", key, value);
+        break;
+      default:
+        addJsonEqualsClause(clauses, params, "d.metadata_json", key.startsWith("metadata.") ? key.slice("metadata.".length) : key, value);
+        break;
+    }
+  }
+}
+
+function addInClause(clauses: string[], params: unknown[], column: string, value: unknown): void {
+  const values = Array.isArray(value) ? value : [value];
+  const normalized = values.filter((entry) => entry !== undefined && entry !== null && entry !== "");
+  if (!normalized.length) return;
+  clauses.push(`${column} IN (${normalized.map(() => "?").join(", ")})`);
+  params.push(...normalized);
+}
+
+function addJsonEqualsClause(clauses: string[], params: unknown[], jsonColumn: string, key: string, value: unknown): void {
+  const path = jsonPath(key);
+  const values = Array.isArray(value) ? value : [value];
+  const normalized = values.filter((entry) => entry !== undefined && entry !== null && entry !== "");
+  if (!normalized.length) return;
+  clauses.push(`json_extract(${jsonColumn}, ?) IN (${normalized.map(() => "?").join(", ")})`);
+  params.push(path, ...normalized.map(normalizeJsonFilterValue));
+}
+
+function jsonPath(key: string): string {
+  return `$.${key.split(".").map((part) => `"${part.replace(/"/g, '\\"')}"`).join(".")}`;
+}
+
+function normalizeJsonFilterValue(value: unknown): unknown {
+  if (typeof value === "boolean") return value ? 1 : 0;
+  return value;
 }
 
 const SEARCH_SCHEMA_SQL = String.raw`

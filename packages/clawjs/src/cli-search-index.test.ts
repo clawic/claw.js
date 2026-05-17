@@ -299,6 +299,7 @@ test("search rebuild indexes database.records from core.sqlite", async () => {
           fragments?: Array<{ title?: string; snippet?: string }>;
           explanation?: { matchedBy?: string[] };
         }>;
+        facets?: Array<{ id: string; label: string }>;
       };
     };
     assert.equal(queryPayload.data.indexedFastPaths["database.records"], 2);
@@ -310,6 +311,45 @@ test("search rebuild indexes database.records from core.sqlite", async () => {
     assert.equal(record?.permissions?.redacted, false);
     assert.equal(record?.fragments?.some((fragment) => fragment.title === "notes" && fragment.snippet?.includes("Analytical engine")), true);
     assert.ok(record?.explanation?.matchedBy?.length);
+    assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "collection"), true);
+
+    const filtered = await runCliCapture([
+      "search",
+      "query",
+      "Analytical engine",
+      "--domains",
+      "database",
+      "--filters",
+      JSON.stringify({ type: "record", "metadata.collection": "contacts", redacted: false }),
+      "--data-dir",
+      dataRoot,
+      "--json",
+      "--limit",
+      "5",
+    ], workspaceRoot);
+    assert.equal(filtered.code, CLI_EXIT_OK);
+    const filteredPayload = JSON.parse(filtered.stdout) as {
+      data: { results: Array<{ title: string; metadata?: { collection?: string } }> };
+    };
+    assert.equal(filteredPayload.data.results.some((result) => result.title.includes("Ada") && result.metadata?.collection === "contacts"), true);
+
+    const filteredOut = await runCliCapture([
+      "search",
+      "query",
+      "Analytical engine",
+      "--domains",
+      "database",
+      "--filters",
+      "metadata.collection=companies",
+      "--data-dir",
+      dataRoot,
+      "--json",
+      "--limit",
+      "5",
+    ], workspaceRoot);
+    assert.equal(filteredOut.code, CLI_EXIT_DEGRADED);
+    const filteredOutPayload = JSON.parse(filteredOut.stdout) as { data: { results: unknown[] } };
+    assert.deepEqual(filteredOutPayload.data.results, []);
 
     const redacted = await runCliCapture(["search", "query", "Restricted launch", "--domains", "database", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(redacted.code, CLI_EXIT_OK);

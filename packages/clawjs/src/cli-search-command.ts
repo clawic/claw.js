@@ -61,6 +61,11 @@ const BUILTIN_SEARCH_SOURCES: SearchSourceManifest[] = [
     domain: "database",
     name: "Database records",
     resultTypes: ["record", "fragment"],
+    facets: [
+      { id: "namespaceId", label: "Namespace", type: "string" },
+      { id: "collection", label: "Collection", type: "string" },
+      { id: "sensitive", label: "Sensitive", type: "boolean" },
+    ],
   }),
   createFrameworkSearchSourceManifest({
     id: "documents.blocks",
@@ -115,6 +120,7 @@ export async function runSearchQueryCli(input: {
       profile: input.flags.profile === "full" ? "full" : "framework",
       domains,
       sources,
+      filters: parseSearchFiltersFlag(input.flags.filters ?? input.flags.filter),
       limit: input.flags.limit ? Number(input.flags.limit) : undefined,
       explain: input.flags.explain === "true" || input.flags.explain === "1",
       surface: input.flags.surface,
@@ -901,6 +907,36 @@ function parseListFlag(value: string | undefined): string[] | undefined {
   if (!value) return undefined;
   const entries = value.split(",").map((entry) => entry.trim()).filter(Boolean);
   return entries.length ? entries : undefined;
+}
+
+function parseSearchFiltersFlag(value: string | undefined): Record<string, unknown> | undefined {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.startsWith("{")) {
+    const parsed = JSON.parse(trimmed) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("--filters must be a JSON object");
+    }
+    return parsed as Record<string, unknown>;
+  }
+  const filters: Record<string, unknown> = {};
+  for (const entry of trimmed.split(",")) {
+    const [rawKey, ...rawValue] = entry.split("=");
+    const key = rawKey?.trim();
+    const text = rawValue.join("=").trim();
+    if (!key || !text) continue;
+    filters[key] = parseFilterValue(text);
+  }
+  return Object.keys(filters).length ? filters : undefined;
+}
+
+function parseFilterValue(value: string): unknown {
+  if (value === "true") return true;
+  if (value === "false") return false;
+  if (/^-?\d+(\.\d+)?$/.test(value)) return Number(value);
+  if (value.includes("|")) return value.split("|").map((entry) => parseFilterValue(entry.trim()));
+  return value;
 }
 
 function searchRegisteredLocalFiles(query: string, cwd: string): ClawCliSearchResult[] {

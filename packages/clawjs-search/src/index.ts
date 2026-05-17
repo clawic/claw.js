@@ -131,6 +131,7 @@ export interface SearchQueryOutput {
   query: string;
   profile: SearchProfileId;
   results: SearchResult[];
+  facets?: SearchFacetDeclaration[];
   partial: boolean;
   omittedSources: Array<{
     source: string;

@@ -57,6 +57,7 @@ The public CLI surface is:
 ```bash
 claw search query "text" --json
 claw search query "text" --domains sessions --json
+claw search query "text" --domains database --filters '{"metadata.collection":"contacts","type":"record"}' --json
 claw search sources --json
 claw search sources pause commands --json
 claw search sources exclude code.symbols --json
@@ -77,6 +78,12 @@ Source controls are persisted in `search.sqlite`. Disabled, paused, and excluded
 sources are skipped by `search query` lazy indexing and by `search rebuild`, and
 Root Search reports omitted sources as partial metadata instead of blocking fast
 paths.
+
+Queries support structured filters through `SearchQueryInput.filters` and the
+CLI `--filters` flag. Filters may target built-in fields such as `domain`,
+`source`, `type`, `resourceId`, `path`, `canPreview`, and `redacted`, or source
+metadata via `metadata.<field>`. Query responses include the selected sources'
+declared facets so UI sections can build scoped filter controls from manifests.
 
 ## Implementation Plan
 
