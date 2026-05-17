@@ -15,7 +15,7 @@ export interface IrohBiStream extends EventEmitter {
   close(): void;
 }
 
-export interface IrohRemote {
+interface IrohRemote {
   nodeId: string;
   relayUrl?: string | null;
   publicAddrs?: string[];

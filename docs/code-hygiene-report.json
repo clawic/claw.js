@@ -15,10 +15,10 @@
   },
   "knipSummary": {
     "filesWithIssues": 64,
-    "totalIssues": 585,
+    "totalIssues": 584,
     "issueTypes": {
       "unlisted": 2,
-      "types": 5,
+      "types": 4,
       "exports": 509,
       "owners": 61,
       "duplicates": 8
@@ -101,6 +101,7 @@
     "Claw CLI cleanup removed or privatized implementation-only CLI/domain/open/reference/style/template/data helpers while preserving the published CLI entrypoint exports and generated declaration build.",
     "Workspace/delegation/runtime cleanup made local SQLite and provider helpers private and removed the unused command delegation adapter while preserving deterministic delegation behavior.",
     "Drive/browser/relay/plugin cleanup made local error/location/envelope helpers private and removed unused browser audit and plugin session-key wrappers.",
-    "Bridge/Relay follow-up made the screenshot region type private, wired Relay mDNS cleanup into server shutdown, and fixed bridge pairing to send the current platform contract."
+    "Bridge/Relay follow-up made the screenshot region type private, wired Relay mDNS cleanup into server shutdown, and fixed bridge pairing to send the current platform contract.",
+    "Bridge Iroh cleanup made the remote endpoint descriptor private while preserving the exported node and stream bridge contract."
   ]
 }
