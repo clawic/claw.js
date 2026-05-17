@@ -1213,6 +1213,7 @@ The docs check script validates that every current export from
     AutomationRecord
     automationRecordSchema
     BILLING_FAMILY
+    BIOLOGY_FAMILY
     BindingDefinition
     bindingDefinitionSchema
     BlockerRecord

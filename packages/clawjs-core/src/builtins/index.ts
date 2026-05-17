@@ -46,6 +46,7 @@ export { COMMERCE_FAMILY } from "./commerce/index.ts";
 export { FITNESS_FAMILY } from "./fitness/index.ts";
 export { HEALTH_FAMILY } from "./health/index.ts";
 export { RESEARCH_FAMILY } from "./research/index.ts";
+export { BIOLOGY_FAMILY } from "./biology/index.ts";
 export { LABS_FAMILY } from "./labs/index.ts";
 export { HABITS_JOURNALING_FAMILY } from "./habits_journaling/index.ts";
 export { FINANCE_FAMILY } from "./finance/index.ts";

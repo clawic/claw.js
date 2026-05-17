@@ -27,6 +27,7 @@ import { COMMERCE_FAMILY } from "./commerce/index.ts";
 import { FITNESS_FAMILY } from "./fitness/index.ts";
 import { HEALTH_FAMILY } from "./health/index.ts";
 import { RESEARCH_FAMILY } from "./research/index.ts";
+import { BIOLOGY_FAMILY } from "./biology/index.ts";
 import { LABS_FAMILY } from "./labs/index.ts";
 import { HABITS_JOURNALING_FAMILY } from "./habits_journaling/index.ts";
 import { FINANCE_FAMILY } from "./finance/index.ts";
@@ -90,6 +91,7 @@ const RAW_BUILTIN_FAMILIES: BuiltinFamilyDefinition[] = [
   FITNESS_FAMILY,
   HEALTH_FAMILY,
   RESEARCH_FAMILY,
+  BIOLOGY_FAMILY,
   LABS_FAMILY,
   HABITS_JOURNALING_FAMILY,
   FINANCE_FAMILY,
