@@ -152,6 +152,7 @@ export const clawCliCommandRegistry: ClawCliCommandRegistry = {
     command({ name: "commitments", kind: "canonical", summary: "Promises and follow-ups.", family: "work", securityPolicy: "local_write" }),
     command({ name: "sessions", kind: "canonical", summary: "Agent sessions.", family: "runtime", securityPolicy: "local_write" }),
     command({ name: "skills", kind: "canonical", summary: "Skill catalog and assignment.", family: "runtime", securityPolicy: "local_write" }),
+    command({ name: "snippets", kind: "canonical", summary: "Framework snippets, prompts, templates and slash command bindings.", usage: "snippets list|upsert|delete", family: "agent", securityPolicy: "local_write", tests: ["packages/clawjs/src/index-data.test.ts", "packages/clawjs/src/inspect-cli.test.ts"], source: { file: "packages/clawjs/src/v1-data-agent-config.ts", symbol: "runSnippetsCommand" } }),
     command({ name: "models", kind: "canonical", summary: "Model list/defaults.", family: "runtime", securityPolicy: "local_write" }),
     command({ name: "providers", kind: "canonical", summary: "Provider catalog and auth state.", family: "runtime", securityPolicy: "auth_required" }),
     command({ name: "auth", kind: "canonical", summary: "Authentication status and login.", family: "runtime", securityPolicy: "auth_required" }),

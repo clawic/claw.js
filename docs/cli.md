@@ -143,6 +143,7 @@ claw agents upsert agent.ops --name "Ops Agent" --personalities personality.revi
 claw personalities upsert personality.review --name Reviewer --prompt "Review with concrete evidence" --json
 claw skill-collections upsert collection.review --name Review --tags review,code --json
 claw connections upsert github --provider custom --label GitHub --secret-ref vault://connections/github --json
+claw snippets upsert quickask-review --title "QuickAsk Review" --body "Review the current selection" --kind prompt --json
 ```
 
 ## Global Flags
