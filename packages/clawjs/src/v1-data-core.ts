@@ -261,6 +261,7 @@ export function openMainDataStore(env: NodeJS.ProcessEnv = process.env): Databas
   return store;
 }
 export function ensureV1MainSchema(sqlite: Database.Database, env: NodeJS.ProcessEnv = process.env): void {
+  migrateAgentSessionsPreSchema(sqlite);
   sqlite.exec(V1_MAIN_SCHEMA_SQL);
   migrateAgentIncidentsV1Schema(sqlite);
   ensureColumn(sqlite, "app_projects", "resource_id", "TEXT");
@@ -309,6 +310,12 @@ export function ensureV1MainSchema(sqlite: Database.Database, env: NodeJS.Proces
   `).run(PROFILE_ID, JSON.stringify(PROFILE_ID), nowIso());
   seedSidecarRegistry(sqlite);
   ensureV2Sidecars(env);
+}
+
+function migrateAgentSessionsPreSchema(sqlite: Database.Database): void {
+  const table = sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'agent_sessions'").get() as { name: string } | undefined;
+  if (!table) return;
+  ensureColumn(sqlite, "agent_sessions", "company_id", "TEXT");
 }
 
 function migrateAgentIncidentsV1Schema(sqlite: Database.Database): void {
