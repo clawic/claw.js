@@ -12,15 +12,18 @@ import {
   createCommandSearchSourceManifest,
   createFrameworkSearchSourceManifest,
   type SearchAction,
+  type SearchActionExecutionPlan,
   type SearchDocumentInput,
+  type SearchResult,
   type SearchSourceManifest,
   type SearchSourceState,
 } from "@clawjs/search";
 
 import type { CliContext } from "./index.ts";
-import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
+import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { createCliWorkspaceClaw } from "./cli-claw-factory.ts";
-import { writeCommandJsonOk, writeJsonOk } from "./cli-json.ts";
+import { readBooleanFlag } from "./cli-flag-parsers.ts";
+import { writeCommandJsonError, writeCommandJsonOk, writeJsonOk } from "./cli-json.ts";
 import { buildCommandHelp, searchCliDiscovery } from "./cli-surface.ts";
 import { pathSafeBasename, resolveRuntimeAdapterId } from "./cli-runtime-utils.ts";
 import { resolveClawjsDataRoot, resolveClawjsMainDbPath } from "./v1-data.ts";
@@ -253,6 +256,7 @@ export async function runCliDiscoverySearch(input: {
 export async function runSearchAdminCli(input: {
   positionals: string[];
   flags: Record<string, string>;
+  argv: string[];
   context: CliContext;
   wantsJson: boolean;
   binName: string;
@@ -396,6 +400,9 @@ export async function runSearchAdminCli(input: {
   }
 
   if (command === "actions") {
+    if (input.positionals[2] === "execute") {
+      return runSearchActionExecuteCli(input);
+    }
     const resultId = input.positionals[2] ?? input.flags["result-id"];
     const store = openCliSearchStore(input.flags);
     let indexedActions: SearchAction[] | null = resultId ? [] : null;
@@ -441,6 +448,67 @@ export async function runSearchAdminCli(input: {
 
   input.context.stderr.write(`${buildCommandHelp(input.binName, "search") ?? input.usage}\n`);
   return CLI_EXIT_USAGE;
+}
+
+function runSearchActionExecuteCli(input: {
+  positionals: string[];
+  flags: Record<string, string>;
+  argv: string[];
+  context: CliContext;
+  wantsJson: boolean;
+  binName: string;
+}): number {
+  const resultId = input.positionals[3] ?? input.flags["result-id"];
+  const actionId = input.positionals[4] ?? input.flags["action-id"];
+  if (!resultId || !actionId) {
+    input.context.stderr.write(`Usage: ${input.binName} search actions execute <result-id> <action-id> [--dry-run] [--host-approval-id <id>] [--json]\n`);
+    return CLI_EXIT_USAGE;
+  }
+
+  const store = openCliSearchStore(input.flags);
+  let result: SearchResult | null;
+  let actions: SearchAction[];
+  try {
+    registerBuiltinSources(store);
+    result = store.resultForId(resultId);
+    actions = store.actionsForResult(resultId);
+  } finally {
+    store.close();
+  }
+  const action = actions.find((candidate) => candidate.id === actionId);
+  if (!result || !action) {
+    const error = new CliHandledError("search_action_not_found", `Search action not found: ${resultId} ${actionId}`, CLI_EXIT_FAILURE);
+    if (input.wantsJson) writeCommandJsonError(input.context.stdout, "search", error, { subcommand: "actions.execute" });
+    else input.context.stderr.write(`${error.message}\n`);
+    return error.exitCode;
+  }
+
+  const dryRun = readBooleanFlag(input.argv, input.flags, "dry-run", false);
+  const hostApprovalId = input.flags["host-approval-id"] || input.flags["approval-id"];
+  const plan = searchActionExecutionPlan({
+    result,
+    action,
+    dryRun,
+    hostApprovalId,
+    actor: input.flags.actor,
+    surface: input.flags.surface,
+  });
+  if (!dryRun && plan.requiresApproval && !hostApprovalId) {
+    const error = new CliHandledError("host_approval_required", "Search action execution requires --host-approval-id from the signed host approval flow, or --dry-run for a brokered preview.", CLI_EXIT_FAILURE);
+    if (input.wantsJson) {
+      writeCommandJsonError(input.context.stdout, "search", error, {
+        subcommand: "actions.execute",
+        brokeredPlan: plan,
+      });
+    } else {
+      input.context.stderr.write(`${error.message}\n`);
+    }
+    return error.exitCode;
+  }
+
+  if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", { plan }, { subcommand: "actions.execute" });
+  else input.context.stdout.write(`${plan.status}\t${plan.resultId}\t${plan.actionId}\t${plan.grant}\n`);
+  return CLI_EXIT_OK;
 }
 
 function openCliSearchStore(flags: Record<string, string>): SearchStore {
@@ -490,6 +558,51 @@ function sourceStateForAction(action: string): SearchSourceState {
   if (action === "pause") return "paused";
   if (action === "exclude") return "excluded";
   return "enabled";
+}
+
+function searchActionExecutionPlan(input: {
+  result: SearchResult;
+  action: SearchAction;
+  dryRun: boolean;
+  hostApprovalId?: string;
+  actor?: string;
+  surface?: string;
+}): SearchActionExecutionPlan {
+  const grant = input.action.grant ?? `search.${input.result.domain}.${input.action.kind}`;
+  const risk = input.action.risk ?? (input.action.kind === "open" || input.action.kind === "copy" ? "read" : "system");
+  const requiresApproval = input.action.requiresApproval ?? input.action.kind !== "copy";
+  const status = input.dryRun
+    ? "planned"
+    : requiresApproval && !input.hostApprovalId
+      ? "blocked"
+      : "brokered";
+  const reasons = [
+    ...(requiresApproval ? ["host_approval_required"] : []),
+    ...(status === "brokered" ? ["host_broker_receipt_only"] : []),
+  ];
+  return {
+    id: `search-action:${input.result.id}:${input.action.id}`,
+    resultId: input.result.id,
+    actionId: input.action.id,
+    actionKind: input.action.kind,
+    source: input.result.source,
+    domain: input.result.domain,
+    ...(input.result.resourceId ? { resourceId: input.result.resourceId } : {}),
+    ...(input.actor ? { actor: input.actor } : {}),
+    ...(input.surface ? { surface: input.surface } : {}),
+    grant,
+    risk,
+    requiresApproval,
+    ...(input.hostApprovalId ? { hostApprovalId: input.hostApprovalId } : {}),
+    dryRun: input.dryRun,
+    status,
+    reasons,
+    broker: {
+      system: "host grants/approvals",
+      operation: "search.action.execute",
+      sideEffects: input.dryRun ? "none" : "host_brokered",
+    },
+  };
 }
 
 function ensureCommandSourceIndexed(store: SearchStore): number {
@@ -897,7 +1010,7 @@ function commandSearchDocument(command: ClawCliCommandRegistryEntry): SearchDocu
       })),
     ],
     actions: [
-      { id: "help", kind: "run", label: `Show ${command.name} help`, requiresApproval: false },
+      { id: "help", kind: "run", label: `Show ${command.name} help`, requiresApproval: true, risk: "system", grant: "search.commands.run" },
       { id: "copy-reference", kind: "copy", label: "Copy command reference", requiresApproval: false },
     ],
   };

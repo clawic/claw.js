@@ -4,7 +4,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
-import { CLI_EXIT_DEGRADED, CLI_EXIT_OK } from "./index.ts";
+import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK } from "./index.ts";
 import { runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
 
 test("search rebuild and query use the Search sidecar without workspace state", async () => {
@@ -87,6 +87,53 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(actionsPayload.data.resultId, "commands:system");
     assert.equal(actionsPayload.data.actions.some((action) => action.id === "help"), true);
     assert.equal(actionsPayload.data.brokered, true);
+
+    const actionPreview = await runCliCapture(["search", "actions", "execute", "commands:system", "help", "--dry-run", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(actionPreview.code, CLI_EXIT_OK);
+    const actionPreviewPayload = JSON.parse(actionPreview.stdout) as {
+      data: {
+        plan: {
+          resultId: string;
+          actionId: string;
+          status: string;
+          dryRun: boolean;
+          requiresApproval: boolean;
+          grant: string;
+          risk: string;
+          broker: { operation: string; sideEffects: string };
+        };
+      };
+    };
+    assert.equal(actionPreviewPayload.data.plan.resultId, "commands:system");
+    assert.equal(actionPreviewPayload.data.plan.actionId, "help");
+    assert.equal(actionPreviewPayload.data.plan.status, "planned");
+    assert.equal(actionPreviewPayload.data.plan.dryRun, true);
+    assert.equal(actionPreviewPayload.data.plan.requiresApproval, true);
+    assert.equal(actionPreviewPayload.data.plan.grant, "search.commands.run");
+    assert.equal(actionPreviewPayload.data.plan.risk, "system");
+    assert.equal(actionPreviewPayload.data.plan.broker.operation, "search.action.execute");
+    assert.equal(actionPreviewPayload.data.plan.broker.sideEffects, "none");
+
+    const actionBlocked = await runCliCapture(["search", "actions", "execute", "commands:system", "help", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(actionBlocked.code, CLI_EXIT_FAILURE);
+    const actionBlockedPayload = JSON.parse(actionBlocked.stdout) as {
+      ok: boolean;
+      error: { code: string };
+      meta: { brokeredPlan?: { status: string; reasons: string[] } };
+    };
+    assert.equal(actionBlockedPayload.ok, false);
+    assert.equal(actionBlockedPayload.error.code, "host_approval_required");
+    assert.equal(actionBlockedPayload.meta.brokeredPlan?.status, "blocked");
+    assert.equal(actionBlockedPayload.meta.brokeredPlan?.reasons.includes("host_approval_required"), true);
+
+    const actionBrokered = await runCliCapture(["search", "actions", "execute", "commands:system", "help", "--host-approval-id", "approval_search_help", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(actionBrokered.code, CLI_EXIT_OK);
+    const actionBrokeredPayload = JSON.parse(actionBrokered.stdout) as {
+      data: { plan: { status: string; hostApprovalId?: string; broker: { sideEffects: string } } };
+    };
+    assert.equal(actionBrokeredPayload.data.plan.status, "brokered");
+    assert.equal(actionBrokeredPayload.data.plan.hostApprovalId, "approval_search_help");
+    assert.equal(actionBrokeredPayload.data.plan.broker.sideEffects, "host_brokered");
 
     const status = await runCliCapture(["search", "status", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(status.code, CLI_EXIT_OK);

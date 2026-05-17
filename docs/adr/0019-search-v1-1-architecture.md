@@ -63,6 +63,7 @@ Search V1.1 is built from these layers:
 - `claw search saved`
 - `claw search monitors`
 - `claw search actions`
+- `claw search actions execute <result-id> <action-id>`
 - `claw search profiles`
 - `claw search explain`
 

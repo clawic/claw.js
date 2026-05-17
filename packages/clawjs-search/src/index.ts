@@ -19,6 +19,8 @@ export type SearchMatchKind = "exact" | "prefix" | "fuzzy" | "fts" | "semantic";
 
 export type SearchActionKind = "open" | "copy" | "run" | "rebuild" | "custom";
 
+export type SearchActionRisk = "read" | "write" | "destructive" | "cost" | "system";
+
 export interface SearchBudgets {
   hotMs: number;
   globalFirstBatchMs: number;
@@ -74,6 +76,31 @@ export interface SearchAction {
   label: string;
   requiresApproval?: boolean;
   grant?: string;
+  risk?: SearchActionRisk;
+}
+
+export interface SearchActionExecutionPlan {
+  id: string;
+  resultId: string;
+  actionId: string;
+  actionKind: SearchActionKind;
+  source: string;
+  domain: string;
+  resourceId?: string;
+  actor?: string;
+  surface?: string;
+  grant: string;
+  risk: SearchActionRisk;
+  requiresApproval: boolean;
+  hostApprovalId?: string;
+  dryRun: boolean;
+  status: "planned" | "blocked" | "brokered";
+  reasons: string[];
+  broker: {
+    system: "host grants/approvals";
+    operation: "search.action.execute";
+    sideEffects: "none" | "host_brokered";
+  };
 }
 
 export interface SearchFragment {

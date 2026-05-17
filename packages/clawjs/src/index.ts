@@ -662,7 +662,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     return await runCodeCli({ positionals, flags, argv, context, wantsJson, binName });
   }
   if (group === "search" && isSearchAdminCommand(command)) {
-    return await runSearchAdminCli({ positionals, flags, context, wantsJson, binName, usage });
+    return await runSearchAdminCli({ positionals, flags, argv, context, wantsJson, binName, usage });
   }
   if (group === "search" && command !== "query" && command !== "rebuild") {
     return await runCliDiscoverySearch({ positionals, flags, context, wantsJson, binName, usage });

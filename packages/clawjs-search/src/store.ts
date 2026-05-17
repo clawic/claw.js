@@ -395,6 +395,17 @@ export class SearchStore {
       .map((action) => parseJson<SearchAction>(action.action_json));
   }
 
+  resultForId(resultId: string): SearchResult | null {
+    const row = this.db.prepare(`
+      SELECT d.*, 0 AS rank
+      FROM search_documents d
+      JOIN search_sources s ON s.id = d.source
+      WHERE d.id = ? AND d.deleted_at IS NULL AND s.state NOT IN ('disabled', 'paused', 'excluded')
+      LIMIT 1
+    `).get(resultId) as SearchDocumentRow | undefined;
+    return row ? this.resultFromRow(row, { query: "" }) : null;
+  }
+
   private seedProfiles(): void {
     const insert = this.db.prepare(`
       INSERT INTO search_profiles (id, label, default_enabled)

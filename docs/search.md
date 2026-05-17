@@ -67,6 +67,8 @@ claw search rebuild --json
 claw search saved create recent --query "text" --json
 claw search monitors create monitor-recent --saved-search recent --json
 claw search actions <result-id> --json
+claw search actions execute <result-id> <action-id> --dry-run --json
+claw search actions execute <result-id> <action-id> --host-approval-id <id> --json
 claw search profiles --json
 claw search explain "text" --json
 ```
