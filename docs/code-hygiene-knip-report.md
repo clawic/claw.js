@@ -5,15 +5,15 @@ Mode: report-only.
 - Tool version: 6.14.0
 - Config: knip.json
 - Working directory: .
-- Files with issues: 211
-- Total issues: 1041
+- Files with issues: 210
+- Total issues: 1024
 
 ## Issue Types
 
 - duplicates: 8
-- exports: 677
-- owners: 139
-- types: 215
+- exports: 673
+- owners: 138
+- types: 203
 - unlisted: 2
 
 ## Top Files
@@ -27,7 +27,6 @@ Mode: report-only.
 - packages/clawjs-core/src/builtins/cooking/index.ts: 19 (owners:1, exports:18)
 - packages/clawjs-core/src/builtins/crm/index.ts: 19 (owners:1, exports:18)
 - packages/clawjs-core/src/builtins/agents/index.ts: 17 (owners:1, exports:16)
-- packages/clawjs/src/slides.ts: 17 (owners:1, exports:4, types:12)
 - packages/clawjs-core/src/builtins/identity/index.ts: 16 (owners:1, exports:15)
 - packages/clawjs-core/src/builtins/hr/index.ts: 14 (owners:1, exports:13)
 - packages/clawjs-core/src/builtins/luxury_and_collecting/index.ts: 14 (owners:1, exports:13)
@@ -38,5 +37,6 @@ Mode: report-only.
 - packages/clawjs-core/src/builtins/travel/index.ts: 12 (owners:1, exports:11)
 - packages/clawjs/src/styles/schema.ts: 12 (owners:1, exports:2, types:9)
 - relay/src/shared/protocol.ts: 12 (types:12)
+- packages/clawjs-core/src/builtins/career/index.ts: 11 (owners:1, exports:10)
 
 This report does not authorize automatic deletion; cleanup still requires category review.

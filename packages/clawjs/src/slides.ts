@@ -4,7 +4,7 @@ import path from "path";
 import { randomBytes } from "crypto";
 import { pathToFileURL } from "url";
 import { resolveClawPersistentSurfacePath } from "@clawjs/core";
-export const SLIDE_LAYOUTS = [
+const SLIDE_LAYOUTS = [
   "title",
   "section",
   "title-bullets",
@@ -22,7 +22,7 @@ export const SLIDE_LAYOUTS = [
   "closing",
 ] as const;
 
-export const SLIDE_THEMES = [
+const SLIDE_THEMES = [
   "editorial",
   "studio",
   "midnight",
@@ -35,24 +35,24 @@ export const SLIDE_THEMES = [
   "claw",
 ] as const;
 
-export type SlideLayout = typeof SLIDE_LAYOUTS[number];
-export type SlideTheme = typeof SLIDE_THEMES[number];
-export type SlideSeverity = "green" | "yellow" | "orange" | "red";
-export type SlideRenderFormat = "pdf" | "pptx" | "html" | "png";
+type SlideLayout = typeof SLIDE_LAYOUTS[number];
+type SlideTheme = typeof SLIDE_THEMES[number];
+type SlideSeverity = "green" | "yellow" | "orange" | "red";
+type SlideRenderFormat = "pdf" | "pptx" | "html" | "png";
 
-export interface SlideMetric {
+interface SlideMetric {
   label: string;
   value: string;
   detail?: string;
 }
 
-export interface SlideImageRef {
+interface SlideImageRef {
   src: string;
   alt?: string;
   caption?: string;
 }
 
-export interface SlideManifestSlide {
+interface SlideManifestSlide {
   id: string;
   layout: SlideLayout;
   title?: string;
@@ -72,7 +72,7 @@ export interface SlideManifestSlide {
   metadata?: Record<string, unknown>;
 }
 
-export interface SlideManifestOutput {
+interface SlideManifestOutput {
   format: SlideRenderFormat;
   path: string;
   mediaId?: string;
@@ -80,7 +80,7 @@ export interface SlideManifestOutput {
   sizeBytes: number;
 }
 
-export interface SlideDeckManifest {
+interface SlideDeckManifest {
   schemaVersion: 1;
   id: string;
   title: string;
@@ -96,7 +96,7 @@ export interface SlideDeckManifest {
   updatedAt: string;
 }
 
-export interface SlideValidationIssue {
+interface SlideValidationIssue {
   slideId?: string;
   slideIndex?: number;
   field: string;
@@ -107,7 +107,7 @@ export interface SlideValidationIssue {
   max?: number;
 }
 
-export interface SlideValidationReport {
+interface SlideValidationReport {
   ok: boolean;
   issueCount: number;
   errorCount: number;
@@ -115,7 +115,7 @@ export interface SlideValidationReport {
   issues: SlideValidationIssue[];
 }
 
-export interface SlidesCliContext {
+interface SlidesCliContext {
   stdout: NodeJS.WritableStream;
   stderr: NodeJS.WritableStream;
   cwd: string;
@@ -362,7 +362,7 @@ export async function runSlidesCli(options: SlidesCliOptions): Promise<number> {
   return SLIDES_USAGE;
 }
 
-export function createDeckManifest(input: {
+function createDeckManifest(input: {
   title: string;
   theme: SlideTheme;
   agentId?: string;
@@ -388,7 +388,7 @@ export function createDeckManifest(input: {
   };
 }
 
-export function validateSlideDeck(deck: SlideDeckManifest, options: { cwd: string }): SlideValidationReport {
+function validateSlideDeck(deck: SlideDeckManifest, options: { cwd: string }): SlideValidationReport {
   const issues: SlideValidationIssue[] = [];
   if (deck.schemaVersion !== 1) {
     issues.push({ field: "schemaVersion", severity: "red", message: "Unsupported slide deck schema." });
