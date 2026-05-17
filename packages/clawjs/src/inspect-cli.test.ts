@@ -770,10 +770,12 @@ test("runCli exposes CLI aliases and decision sources through inspect", async ()
 
   const denseData = await runCliCapture(["inspect", "dense-data", "--json"], process.cwd());
   assert.equal(denseData.code, CLI_EXIT_OK);
-  const denseDataPayload = parseCliJson<{ registry: { foundationCollections: Record<string, string>; systems: Array<{ id: string }>; externalPendingRequirements: Array<{ systemId: string; status: string }> }; intentCount: number; semanticViewCount: number }>(denseData.stdout).data;
+  const denseDataPayload = parseCliJson<{ registry: { foundationCollections: Record<string, string>; systems: Array<{ id: string }>; externalPendingRequirements: Array<{ systemId: string; status: string }>; existingSurfaceIntegrations: Array<{ id: string; disposition: string; canonicalOwner: string }> }; intentCount: number; semanticViewCount: number }>(denseData.stdout).data;
   assert.equal(denseDataPayload.registry.foundationCollections.quality_gaps, "quality_gaps");
   assert.equal(denseDataPayload.registry.systems.some((entry) => entry.id === "health"), true);
   assert.equal(denseDataPayload.registry.externalPendingRequirements.some((entry) => entry.systemId === "labs" && entry.status === "external_pending"), true);
+  assert.equal(denseDataPayload.registry.existingSurfaceIntegrations.some((entry) => entry.id === "knowledge_graph_relations" && entry.canonicalOwner.includes("entity_relations")), true);
+  assert.equal(denseDataPayload.registry.existingSurfaceIntegrations.some((entry) => entry.id === "infra_observability_monitor_ops" && entry.disposition === "split"), true);
   assert.ok(denseDataPayload.intentCount > 0);
   assert.ok(denseDataPayload.semanticViewCount > 0);
 

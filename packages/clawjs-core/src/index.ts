@@ -12,6 +12,7 @@ export * from "./host-json-schemas.ts";
 export * from "./mac-control-plane.ts";
 export * from "./productivity.ts";
 export * from "./remote-sync.ts";
+export * from "./remote-sync-route-contracts.ts";
 export * from "./schemas.ts";
 export * from "./semantic.ts";
 export * from "./storage.ts";
