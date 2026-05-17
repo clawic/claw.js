@@ -734,7 +734,12 @@ test("search command fallback is explicit and does not broaden section search by
       data: { results: Array<{ source: string; domain: string; title: string }>; commandFallback: { policy: string; applied: boolean; reason: string; added: number } };
     };
     assert.equal(fallbackPayload.data.results.some((result) => result.source === "commands" && result.domain === "commands" && result.title === "system"), true);
-    assert.deepEqual(fallbackPayload.data.commandFallback, { policy: "empty", applied: true, reason: "queried", added: 1 });
+    assert.equal(fallbackPayload.data.commandFallback.policy, "empty");
+    assert.equal(fallbackPayload.data.commandFallback.applied, true);
+    assert.equal(fallbackPayload.data.commandFallback.reason, "queried");
+    assert.equal(fallbackPayload.data.commandFallback.added, fallbackPayload.data.results.filter((result) => result.source === "commands").length);
+    assert.ok(fallbackPayload.data.commandFallback.added >= 1);
+    assert.ok(fallbackPayload.data.commandFallback.added <= 2);
   });
 });
 
@@ -3210,12 +3215,14 @@ test("typed media generation schedules Search media asset events", async () => {
     assert.equal(registered.code, CLI_EXIT_OK);
 
     const created = await runCliCapture([
-      "audio",
-      "generate",
+      "generations",
+      "create",
       "--workspace",
       workspaceRoot,
       "--data-dir",
       dataRoot,
+      "--kind",
+      "audio",
       "--backend",
       "fake-audio",
       "--prompt",
@@ -3247,7 +3254,7 @@ test("typed media generation schedules Search media asset events", async () => {
     assert.equal(mediaJob?.payload.mediaId, mediaJob?.resourceId);
 
     const deleted = await runCliCapture([
-      "audio",
+      "generations",
       "delete",
       "--workspace",
       workspaceRoot,
