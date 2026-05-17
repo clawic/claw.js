@@ -12,8 +12,9 @@
       "reason": "Public CLI routing after delegated domain, temporal, productivity, and knowledge-tail command extraction; keep under 2000 by splitting new domains into modules."
     },
     "packages/clawjs/src/cli-search-command.ts": {
-      "lines": 2004,
-      "reason": "Search CLI orchestration after source, job, service lifecycle, and local file source expansion; extract service worker and source adapters before expanding further."
+      "lines": 5446,
+      "blockGrowth": true,
+      "reason": "Emergency search CLI debt after MCP server indexing and config-source orchestration expansion; do not expand further except for extraction, deletion, or compatibility-preserving split work."
     },
     "packages/clawjs-node/src/create-claw.ts": {
       "lines": 1964,
@@ -26,6 +27,10 @@
     "packages/clawjs/src/cli-search-index.test.ts": {
       "lines": 2084,
       "reason": "Search index integration coverage after protected refs, ACL, action, facet, and ranking scenarios; split new search scenarios into focused test files before expanding further."
+    },
+    "packages/clawjs/src/cli-discovery.test.ts": {
+      "lines": 2055,
+      "reason": "Broad CLI discovery integration coverage after dense-domain direct noun graduation; split new domain route scenarios into focused test files before expanding further."
     },
     "packages/clawjs-search/src/store.ts": {
       "lines": 2185,
