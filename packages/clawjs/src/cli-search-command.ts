@@ -59,6 +59,7 @@ const WORKSPACE_SEARCH_DOMAINS = new Set([
 ]);
 
 const BUILTIN_SEARCH_SOURCES: SearchSourceManifest[] = createBuiltinSearchSourceManifests();
+type CommandFallbackPolicy = "off" | "empty" | "always";
 
 interface SearchServiceStateFile {
   state: "ready" | "stopped" | "external_pending";
@@ -122,6 +123,7 @@ export async function runSearchQueryCli(input: {
     const filters = parseSearchFiltersFlag(input.flags.filters ?? input.flags.filter);
     const strategy = parseSearchStrategyFlag(input.flags.strategy);
     const embedding = parseSearchEmbeddingFlag(input.flags.embedding ?? input.flags["embedding-json"], input.flags["embedding-model"] ?? input.flags.model);
+    const limit = input.flags.limit ? boundedNumberFlag(input.flags.limit, 20, 1, 1000) : undefined;
     const results = store.query({
       query,
       profile: input.flags.profile === "full" ? "full" : "framework",
@@ -131,12 +133,29 @@ export async function runSearchQueryCli(input: {
       filters,
       strategy,
       embedding,
-      limit: input.flags.limit ? Number(input.flags.limit) : undefined,
+      limit,
       explain: input.flags.explain === "true" || input.flags.explain === "1",
       surface: input.flags.surface,
       actor: input.flags.actor,
     });
-    if (searchQueryRequiresAudit(query, results.results, filters)) {
+    const commandFallback = commandFallbackForSearchQuery(store, {
+      query,
+      flags: input.flags,
+      policy: parseCommandFallbackPolicy(input.flags["command-fallback"] ?? input.flags["fallback-commands"]),
+      limit: limit ?? 20,
+      domains,
+      sources,
+      shards,
+      filters,
+      strategy,
+      embedding,
+      explain: input.flags.explain === "true" || input.flags.explain === "1",
+      surface: input.flags.surface,
+      actor: input.flags.actor,
+      baseResults: results,
+    });
+    const outputResults = commandFallback.output ?? results;
+    if (searchQueryRequiresAudit(query, outputResults.results, filters)) {
       store.recordAuditEvent({
         type: "sensitive_query",
         actor: input.flags.actor,
@@ -150,15 +169,16 @@ export async function runSearchQueryCli(input: {
           shards: shards ?? [],
           strategy: input.flags.strategy ?? "lexical",
           embeddingModel: embedding?.model,
-          resultCount: results.results.length,
-          redactedResultCount: results.results.filter((result) => result.permissions?.redacted).length,
+          resultCount: outputResults.results.length,
+          redactedResultCount: outputResults.results.filter((result) => result.permissions?.redacted).length,
         },
       });
     }
     const data = {
-      ...results,
+      ...outputResults,
       strategy: strategy ?? "lexical",
       embeddingModel: embedding?.model,
+      commandFallback: commandFallback.report,
       storage: searchStorageMetadata(input.flags),
       indexedFastPaths: {
         commands: indexedCommands,
@@ -177,9 +197,9 @@ export async function runSearchQueryCli(input: {
     if (input.wantsJson) {
       writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "query" });
     } else {
-      input.context.stdout.write(`${results.results.map((result) => `${result.domain}\t${result.score.toFixed(1)}\t${result.id}\t${result.title}`).join("\n")}\n`);
+      input.context.stdout.write(`${outputResults.results.map((result) => `${result.domain}\t${result.score.toFixed(1)}\t${result.id}\t${result.title}`).join("\n")}\n`);
     }
-    return results.results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+    return outputResults.results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
   } finally {
     store.close();
   }
@@ -1047,6 +1067,86 @@ function registerBuiltinSources(store: SearchStore, states: Map<string, SearchSo
 
 function sourceCanIndex(store: SearchStore, source: string): boolean {
   return !["disabled", "paused", "excluded"].includes(store.sourceState(source) ?? "enabled");
+}
+
+function parseCommandFallbackPolicy(value: string | undefined): CommandFallbackPolicy {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized || normalized === "off" || normalized === "none" || normalized === "never" || normalized === "false" || normalized === "0") return "off";
+  if (normalized === "empty" || normalized === "empty-results" || normalized === "no-results" || normalized === "missing") return "empty";
+  if (normalized === "always" || normalized === "on" || normalized === "true" || normalized === "1") return "always";
+  return "off";
+}
+
+function commandFallbackForSearchQuery(store: SearchStore, input: {
+  query: string;
+  flags: Record<string, string>;
+  policy: CommandFallbackPolicy;
+  limit: number;
+  domains?: string[];
+  sources?: string[];
+  shards?: string[];
+  filters?: Record<string, unknown>;
+  strategy?: SearchQueryInput["strategy"];
+  embedding?: SearchQueryInput["embedding"];
+  explain?: boolean;
+  surface?: string;
+  actor?: string;
+  baseResults: SearchQueryOutput;
+}): {
+  output?: SearchQueryOutput;
+  report: {
+    policy: CommandFallbackPolicy;
+    applied: boolean;
+    reason: "disabled" | "already_in_scope" | "not_needed" | "source_disabled" | "no_budget" | "queried";
+    added: number;
+  };
+} {
+  if (input.policy === "off") {
+    return { report: { policy: "off", applied: false, reason: "disabled", added: 0 } };
+  }
+  if (input.domains?.includes("commands") || input.sources?.includes("commands")) {
+    return { report: { policy: input.policy, applied: false, reason: "already_in_scope", added: 0 } };
+  }
+  if (input.policy === "empty" && input.baseResults.results.length > 0) {
+    return { report: { policy: input.policy, applied: false, reason: "not_needed", added: 0 } };
+  }
+  if (!sourceCanIndex(store, "commands")) {
+    return { report: { policy: input.policy, applied: false, reason: "source_disabled", added: 0 } };
+  }
+  const fallbackLimit = boundedNumberFlag(input.flags["command-fallback-limit"] ?? input.flags["fallback-commands-limit"], 5, 1, 20);
+  const remaining = input.policy === "empty" ? input.limit : Math.max(0, input.limit - input.baseResults.results.length);
+  const limit = Math.min(fallbackLimit, remaining);
+  if (limit <= 0) {
+    return { report: { policy: input.policy, applied: false, reason: "no_budget", added: 0 } };
+  }
+  const commandOutput = store.query({
+    query: input.query,
+    profile: input.flags.profile === "full" ? "full" : "framework",
+    domains: ["commands"],
+    shards: input.shards,
+    filters: input.filters,
+    strategy: input.strategy,
+    embedding: input.embedding,
+    limit,
+    explain: input.explain,
+    surface: input.surface,
+    actor: input.actor,
+  });
+  const existingIds = new Set(input.baseResults.results.map((result) => result.id));
+  const addedResults = commandOutput.results.filter((result) => !existingIds.has(result.id)).slice(0, limit);
+  if (!addedResults.length) {
+    return { report: { policy: input.policy, applied: true, reason: "queried", added: 0 } };
+  }
+  return {
+    output: {
+      ...input.baseResults,
+      results: [...input.baseResults.results, ...addedResults].slice(0, input.limit),
+      partial: input.baseResults.partial || commandOutput.partial,
+      omittedSources: [...input.baseResults.omittedSources, ...commandOutput.omittedSources],
+      elapsedMs: input.baseResults.elapsedMs + commandOutput.elapsedMs,
+    },
+    report: { policy: input.policy, applied: true, reason: "queried", added: addedResults.length },
+  };
 }
 
 function runSearchMonitorEvaluations(

@@ -605,6 +605,49 @@ test("search rebuild and query use the Search sidecar without workspace state", 
   });
 });
 
+test("search command fallback is explicit and does not broaden section search by default", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-command-fallback-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const scoped = await runCliCapture(["search", "query", "system capabilities", "--domains", "database", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(scoped.code, CLI_EXIT_DEGRADED);
+    const scopedPayload = JSON.parse(scoped.stdout) as {
+      data: { results: Array<{ source: string }>; commandFallback: { policy: string; applied: boolean; reason: string; added: number } };
+    };
+    assert.deepEqual(scopedPayload.data.results, []);
+    assert.deepEqual(scopedPayload.data.commandFallback, { policy: "off", applied: false, reason: "disabled", added: 0 });
+
+    const fallback = await runCliCapture([
+      "search",
+      "query",
+      "system capabilities",
+      "--domains",
+      "database",
+      "--command-fallback",
+      "empty",
+      "--command-fallback-limit",
+      "2",
+      "--data-dir",
+      dataRoot,
+      "--json",
+      "--limit",
+      "5",
+    ], workspaceRoot);
+    assert.equal(fallback.code, CLI_EXIT_OK);
+    const fallbackPayload = JSON.parse(fallback.stdout) as {
+      data: { results: Array<{ source: string; domain: string; title: string }>; commandFallback: { policy: string; applied: boolean; reason: string; added: number } };
+    };
+    assert.equal(fallbackPayload.data.results.some((result) => result.source === "commands" && result.domain === "commands" && result.title === "system"), true);
+    assert.deepEqual(fallbackPayload.data.commandFallback, { policy: "empty", applied: true, reason: "queried", added: 1 });
+  });
+});
+
 test("search service upsert jobs refresh only the targeted database resource", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-resource-db-"));
   const dataRoot = path.join(workspaceRoot, ".claw", "data");

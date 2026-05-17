@@ -76,6 +76,7 @@ claw search query "requirements" --domains media --filters metadata.kind=documen
 claw search query "analytics cards" --domains generations --filters metadata.status=succeeded --json
 claw search query "symbolName" --domains code --code-root /path/to/project --json
 claw search query "deployment APIs" --domains skills --filters metadata.requiresProtectedRefs=true --json
+claw search query "system capabilities" --domains database --command-fallback empty --json
 claw search sources enable local.files --profile full --json
 claw search rebuild --source local.files --profile full --file-root /path/to/folder --json
 claw search query "invoice" --domains files --profile full --file-root /path/to/folder --json
@@ -190,6 +191,13 @@ The store also normalizes basic inline query filters before FTS runs:
 the lexical query and merged into the structured query input. This keeps Root
 Search usable from a single text box while preserving the same fast-path
 constraints as explicit filters.
+
+Command fallback is explicit. Scoped section searches do not broaden into
+commands by default, preserving section-only result contracts. CLI callers can
+opt in with `--command-fallback empty` to fill an empty scoped query from the
+commands source, or `--command-fallback always` to use commands for any
+remaining result budget. `--command-fallback-limit` caps how many command
+results may be added.
 
 Result ACL is enforced before ranking output is returned. Indexed documents can
 declare `permissions.allowedActors`, `permissions.allowedAgents`, and
