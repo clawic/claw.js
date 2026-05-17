@@ -1,6 +1,6 @@
 export const TEMPLATE_SCHEMA_VERSION = 1;
 
-export const TEMPLATE_CATEGORIES = [
+const TEMPLATE_CATEGORIES = [
   "presentation",
   "card",
   "poster",
@@ -90,22 +90,4 @@ export interface TemplateManifest {
   builtin?: boolean;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface TemplateRenderRequest {
-  templateId: string;
-  variantId?: string;
-  styleId: string;
-  data: Record<string, unknown>;
-  format: TemplateOutputFormat;
-}
-
-export interface TemplateRenderResult {
-  templateId: string;
-  variantId: string;
-  styleId: string;
-  format: TemplateOutputFormat;
-  outputPath: string;
-  sizeBytes: number;
-  createdAt: string;
 }

@@ -14,13 +14,13 @@
     "unreferencedAssetCandidates": 88
   },
   "knipSummary": {
-    "filesWithIssues": 189,
-    "totalIssues": 847,
+    "filesWithIssues": 187,
+    "totalIssues": 838,
     "issueTypes": {
       "unlisted": 2,
-      "types": 111,
-      "owners": 125,
-      "exports": 601,
+      "types": 107,
+      "owners": 123,
+      "exports": 598,
       "duplicates": 8
     }
   },
@@ -74,6 +74,7 @@
     "Memory CLI cleanup made local exit-code and usage helpers private while preserving the `runMemoryCli` entrypoint.",
     "References storage cleanup made local path and Markdown serialization helpers private while preserving generated reference IDs and CLI storage flows.",
     "Secrets plugin type cleanup made nested field, governance, context, action, resource, and sync helper interfaces private while preserving plugin manifest contracts.",
-    "Bridge platform cleanup removed unused platform predicate and TCC capability helper exports while preserving `detectPlatform`."
+    "Bridge platform cleanup removed unused platform predicate and TCC capability helper exports while preserving `detectPlatform`.",
+    "Template surface cleanup stopped re-exporting unused builtin counters and CLI option types, and removed unused render DTO aliases while preserving `claw template` behavior."
   ]
 }
