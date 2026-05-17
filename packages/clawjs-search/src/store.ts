@@ -86,7 +86,7 @@ export class SearchStore {
     this.db = new Database(dbPath);
     this.db.pragma("journal_mode = WAL");
     this.db.pragma("foreign_keys = ON");
-    this.db.exec(SEARCH_SCHEMA_SQL);
+    this.ensureSchema();
     this.seedProfiles();
   }
 
@@ -389,6 +389,16 @@ export class SearchStore {
     for (const profile of SEARCH_PROFILES) insert.run(profile.id, profile.label, profile.defaultEnabled ? 1 : 0);
   }
 
+  private ensureSchema(): void {
+    try {
+      this.db.exec(SEARCH_SCHEMA_SQL);
+    } catch (error) {
+      if (!isRebuildableSearchSchemaMismatch(error)) throw error;
+      this.db.exec(SEARCH_RESET_SQL);
+      this.db.exec(SEARCH_SCHEMA_SQL);
+    }
+  }
+
   private resultFromRow(row: SearchDocumentRow, input: SearchQueryInput): SearchResult {
     const fragmentsWithMatch = (this.db.prepare(`
       SELECT id, title, snippet, body FROM search_fragments
@@ -490,6 +500,11 @@ interface SearchMonitorRow {
 function parseJson<T = Record<string, unknown>>(value: string | null | undefined): T {
   if (!value) return {} as T;
   return JSON.parse(value) as T;
+}
+
+function isRebuildableSearchSchemaMismatch(error: unknown): boolean {
+  return error instanceof Error
+    && /no such column: source|search_fts|schema/i.test(error.message);
 }
 
 function ftsQuery(query: string): string {

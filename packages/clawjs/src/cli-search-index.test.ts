@@ -120,3 +120,70 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(monitorPayload.data.items.some((item) => item.id === "monitor-system" && item.enabled), true);
   });
 });
+
+test("search rebuild indexes sessions.chats from the sessions sidecar", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-sessions-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_SEARCH_DB_PATH: undefined,
+    CLAW_SESSIONS_DB_PATH: undefined,
+  }, async () => {
+    const sessionsRoot = path.join(workspaceRoot, "codex-sessions");
+    fs.mkdirSync(sessionsRoot, { recursive: true });
+    const sessionId = "22222222-3333-4444-8555-666666666666";
+    fs.writeFileSync(path.join(sessionsRoot, `rollout-${sessionId}.jsonl`), [
+      JSON.stringify({ type: "session_meta", payload: { id: sessionId, cwd: workspaceRoot, timestamp: "2026-05-12T10:00:00.000Z" } }),
+      JSON.stringify({ type: "event_msg", payload: { type: "user_message", message: "Index the large rollout and keep chat search fast" } }),
+      "",
+    ].join("\n"));
+
+    const index = await runCliCapture(["sessions", "index", "--root", sessionsRoot, "--json"], workspaceRoot);
+    assert.equal(index.code, CLI_EXIT_OK);
+
+    const rebuild = await runCliCapture(["search", "rebuild", "--json"], workspaceRoot);
+    assert.equal(rebuild.code, CLI_EXIT_OK);
+    const rebuildPayload = JSON.parse(rebuild.stdout) as {
+      data: {
+        sources: string[];
+        pendingSources: string[];
+        indexedBySource: { "sessions.chats": number };
+      };
+    };
+    assert.equal(rebuildPayload.data.sources.includes("sessions.chats"), true);
+    assert.equal(rebuildPayload.data.pendingSources.includes("sessions.chats"), false);
+    assert.equal(rebuildPayload.data.indexedBySource["sessions.chats"], 1);
+
+    const query = await runCliCapture(["search", "query", "large rollout", "--domains", "sessions", "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: {
+        results: Array<{
+          id: string;
+          source: string;
+          domain: string;
+          type: string;
+          resourceId?: string;
+          actions?: Array<{ id: string; kind: string }>;
+          fragments?: Array<{ title?: string; snippet?: string }>;
+        }>;
+      };
+    };
+    const sessionResult = queryPayload.data.results.find((result) => result.resourceId === sessionId);
+    assert.equal(sessionResult?.id, `sessions.chats:${sessionId}`);
+    assert.equal(sessionResult?.source, "sessions.chats");
+    assert.equal(sessionResult?.domain, "sessions");
+    assert.equal(sessionResult?.type, "chat");
+    assert.equal(sessionResult?.actions?.some((action) => action.id === "open" && action.kind === "open"), true);
+    assert.equal(sessionResult?.fragments?.some((fragment) => fragment.snippet?.includes("keep chat search fast")), true);
+
+    const status = await runCliCapture(["search", "status", "--json"], workspaceRoot);
+    assert.equal(status.code, CLI_EXIT_OK);
+    const statusPayload = JSON.parse(status.stdout) as {
+      data: { sources: Array<{ source: string; state: string; lastIndexedAt?: string }> };
+    };
+    const sessionsStatus = statusPayload.data.sources.find((source) => source.source === "sessions.chats");
+    assert.equal(sessionsStatus?.state, "enabled");
+    assert.ok(sessionsStatus?.lastIndexedAt);
+  });
+});

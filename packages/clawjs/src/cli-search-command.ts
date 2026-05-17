@@ -2,6 +2,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import Database from "better-sqlite3";
+
 import { clawCliCommandRegistry, type ClawCliCommandRegistryEntry, type ClawCliSearchResult } from "@clawjs/core";
 import {
   DEFAULT_SEARCH_BUDGETS,
@@ -16,11 +18,35 @@ import {
 
 import type { CliContext } from "./index.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
+import { createCliWorkspaceClaw } from "./cli-claw-factory.ts";
 import { writeCommandJsonOk, writeJsonOk } from "./cli-json.ts";
 import { buildCommandHelp, searchCliDiscovery } from "./cli-surface.ts";
-import { resolveClawjsDataRoot } from "./v1-data.ts";
+import { pathSafeBasename, resolveRuntimeAdapterId } from "./cli-runtime-utils.ts";
+import { resolveClawjsDataRoot, resolveClawjsMainDbPath } from "./v1-data.ts";
 
 const SEARCH_ADMIN_COMMANDS = new Set(["sources", "status", "profiles", "saved", "monitors", "actions", "explain"]);
+const WORKSPACE_SEARCH_DOMAINS = new Set([
+  "areas",
+  "tasks",
+  "goals",
+  "projects",
+  "milestones",
+  "activity",
+  "blockers",
+  "artifacts",
+  "decisions",
+  "work_sessions",
+  "assignments",
+  "handoffs",
+  "approvals",
+  "capacity",
+  "reminders",
+  "deadlines",
+  "notes",
+  "people",
+  "inbox",
+  "events",
+]);
 
 const BUILTIN_SEARCH_SOURCES: SearchSourceManifest[] = [
   createFrameworkSearchSourceManifest({
@@ -72,15 +98,22 @@ export async function runSearchQueryCli(input: {
     input.context.stderr.write(`Usage: ${input.binName} search query <query> [--domains tasks,notes,...] [--json]\n`);
     return CLI_EXIT_USAGE;
   }
+  const domains = parseListFlag(input.flags.domains);
+  if (domains?.some((domain) => WORKSPACE_SEARCH_DOMAINS.has(domain))) {
+    return await runWorkspaceSearchQueryCli(input, query, domains);
+  }
   const store = openCliSearchStore(input.flags);
   try {
     registerBuiltinSources(store);
     const indexedCommands = ensureCommandSourceIndexed(store);
+    const sources = parseListFlag(input.flags.sources ?? input.flags.source);
+    const shouldRefreshDatabase = domains?.includes("database") || sources?.includes("database.records");
+    const indexedDatabase = shouldRefreshDatabase ? ensureDatabaseRecordsSourceIndexed(store, input.flags) : 0;
     const results = store.query({
       query,
       profile: input.flags.profile === "full" ? "full" : "framework",
-      domains: parseListFlag(input.flags.domains),
-      sources: parseListFlag(input.flags.sources ?? input.flags.source),
+      domains,
+      sources,
       limit: input.flags.limit ? Number(input.flags.limit) : undefined,
       explain: input.flags.explain === "true" || input.flags.explain === "1",
       surface: input.flags.surface,
@@ -89,7 +122,10 @@ export async function runSearchQueryCli(input: {
     const data = {
       ...results,
       storage: searchStorageMetadata(input.flags),
-      indexedFastPaths: { commands: indexedCommands },
+      indexedFastPaths: {
+        commands: indexedCommands,
+        ...(shouldRefreshDatabase ? { "database.records": indexedDatabase } : {}),
+      },
     };
     if (input.wantsJson) {
       writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "query" });
@@ -102,6 +138,33 @@ export async function runSearchQueryCli(input: {
   }
 }
 
+async function runWorkspaceSearchQueryCli(input: {
+  flags: Record<string, string>;
+  context: CliContext;
+  wantsJson: boolean;
+}, query: string, domains: string[]): Promise<number> {
+  const workspaceRoot = input.flags.workspace || input.context.cwd;
+  const claw = await createCliWorkspaceClaw(
+    resolveRuntimeAdapterId(input.flags),
+    input.flags,
+    workspaceRoot,
+    input.flags["app-id"] || "clawjs-app",
+    input.flags["workspace-id"] || pathSafeBasename(workspaceRoot),
+    input.flags["agent-id"] || input.flags["workspace-id"] || pathSafeBasename(workspaceRoot),
+    input.context.cwd,
+  );
+  const results = await claw.search.query({
+    query,
+    domains: domains as Array<"areas" | "tasks" | "goals" | "projects" | "milestones" | "activity" | "blockers" | "artifacts" | "decisions" | "work_sessions" | "assignments" | "handoffs" | "approvals" | "capacity" | "reminders" | "deadlines" | "notes" | "people" | "inbox" | "events">,
+    strategy: input.flags.strategy as "auto" | "keyword" | "semantic" | "hybrid" | undefined,
+    ...(input.flags.limit ? { limit: Number(input.flags.limit) } : {}),
+    includeArchived: input.flags["include-archived"] === "true" || input.flags["include-archived"] === "1",
+  });
+  if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", results, { subcommand: "query" });
+  else input.context.stdout.write(`${results.map((result) => `${result.domain} ${result.score.toFixed(1)} ${result.id} ${result.title}`).join("\n")}\n`);
+  return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+}
+
 export async function runSearchRebuildCli(input: {
   flags: Record<string, string>;
   context: CliContext;
@@ -111,17 +174,30 @@ export async function runSearchRebuildCli(input: {
   try {
     store.reset();
     registerBuiltinSources(store);
-    const reindexed = ensureCommandSourceIndexed(store);
+    const commandsIndexed = ensureCommandSourceIndexed(store);
+    const sessionsIndexed = ensureSessionsChatsSourceIndexed(store, input.flags);
+    const databaseIndexed = ensureDatabaseRecordsSourceIndexed(store, input.flags);
     const pendingSources = BUILTIN_SEARCH_SOURCES
-      .filter((source) => source.id !== "commands")
+      .filter((source) => source.id !== "commands"
+        && !(source.id === "sessions.chats" && sessionsIndexed > 0)
+        && !(source.id === "database.records" && databaseIndexed > 0))
       .map((source) => source.id);
     const data = {
       rebuilt: true,
-      reindexed,
+      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed,
       embeddings: 0,
       profile: input.flags.profile === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
-      sources: ["commands"],
+      sources: [
+        "commands",
+        ...(sessionsIndexed > 0 ? ["sessions.chats"] : []),
+        ...(databaseIndexed > 0 ? ["database.records"] : []),
+      ],
+      indexedBySource: {
+        commands: commandsIndexed,
+        "sessions.chats": sessionsIndexed,
+        "database.records": databaseIndexed,
+      },
       pendingSources,
       note: "Framework domain sources are registered; each domain keeps its own fast path until its adapter is wired.",
     };
@@ -321,6 +397,7 @@ export async function runSearchAdminCli(input: {
 
 function openCliSearchStore(flags: Record<string, string>): SearchStore {
   const dbPath = resolveSearchDbPath(flags);
+  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
   try {
     return new SearchStore(dbPath);
   } catch (error) {
@@ -366,6 +443,156 @@ function ensureCommandSourceIndexed(store: SearchStore): number {
     metadata: { version: clawCliCommandRegistry.version },
   });
   return reindexed;
+}
+
+function ensureSessionsChatsSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
+  const dbPath = resolveSessionsDbPath(flags);
+  if (!fs.existsSync(dbPath)) {
+    store.setSourceState("sessions.chats", "enabled", {
+      backlog: 0,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 0;
+  }
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "conversation_sessions")) {
+      store.setSourceState("sessions.chats", "degraded", {
+        backlog: 0,
+        error: "sessions sidecar does not contain conversation_sessions",
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return 0;
+    }
+    const sessions = db.prepare(`
+      SELECT session_id, source, artifact_path, title, cwd, updated_at, snippet, metadata_json, archived, pinned
+      FROM conversation_sessions
+      WHERE archived = 0
+      ORDER BY updated_at DESC
+    `).all() as ConversationSessionRow[];
+    const messageRows = hasTable(db, "conversation_messages")
+      ? db.prepare(`
+          SELECT id, role, text, turn_index, created_at, metadata_json
+          FROM conversation_messages
+          WHERE session_id = ?
+          ORDER BY turn_index ASC, id ASC
+          LIMIT 50
+        `)
+      : null;
+    for (const session of sessions) {
+      const messages = messageRows?.all(session.session_id) as ConversationMessageRow[] | undefined;
+      store.upsertDocument(sessionSearchDocument(session, messages ?? []));
+    }
+    store.setCursor({
+      source: "sessions.chats",
+      cursor: `rows:${sessions.length}`,
+      metadata: { sidecar: "sessions.sqlite" },
+    });
+    store.setSourceState("sessions.chats", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return sessions.length;
+  } finally {
+    db.close();
+  }
+}
+
+function resolveSessionsDbPath(flags: Record<string, string>): string {
+  if (flags["sessions-db-path"]) return path.resolve(flags["sessions-db-path"]);
+  if (process.env.CLAW_SESSIONS_DB_PATH) return path.resolve(process.env.CLAW_SESSIONS_DB_PATH);
+  const env = flags["data-dir"] ? { ...process.env, CLAW_DATA_DIR: flags["data-dir"] } : process.env;
+  return path.join(resolveClawjsDataRoot(env), "sessions.sqlite");
+}
+
+function hasTable(db: Database.Database, table: string): boolean {
+  const row = db.prepare("SELECT name FROM sqlite_master WHERE type IN ('table', 'view') AND name = ?").get(table) as { name: string } | undefined;
+  return !!row;
+}
+
+function sessionSearchDocument(session: ConversationSessionRow, messages: ConversationMessageRow[]): SearchDocumentInput {
+  const metadata = parseJsonRecord(session.metadata_json);
+  const title = session.title || `Session ${session.session_id}`;
+  const body = [
+    session.snippet,
+    session.cwd,
+    ...messages.map((message) => `${message.role}: ${message.text}`),
+  ].filter(Boolean).join("\n");
+  return {
+    id: `sessions.chats:${session.session_id}`,
+    source: "sessions.chats",
+    domain: "sessions",
+    type: "chat",
+    resourceId: session.session_id,
+    title,
+    subtitle: session.cwd ?? session.source,
+    snippet: session.snippet ?? messages[0]?.text ?? "",
+    body,
+    path: session.artifact_path,
+    updatedAt: session.updated_at,
+    metadata: {
+      ...metadata,
+      sessionId: session.session_id,
+      source: session.source,
+      cwd: session.cwd,
+      archived: session.archived === 1,
+      pinned: session.pinned === 1,
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: {
+      fastPath: 1,
+      pinned: session.pinned === 1 ? 0.2 : 0,
+    },
+    fragments: messages.slice(0, 25).map((message) => ({
+      id: `sessions.chats:${session.session_id}:message:${message.id}`,
+      title: message.role,
+      body: message.text,
+      snippet: message.text.slice(0, 180),
+      sortOrder: message.turn_index,
+      metadata: {
+        role: message.role,
+        createdAt: message.created_at,
+        ...parseJsonRecord(message.metadata_json),
+      },
+    })),
+    actions: [
+      { id: "open", kind: "open", label: "Open chat", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy chat reference", requiresApproval: false },
+    ],
+  };
+}
+
+interface ConversationSessionRow {
+  session_id: string;
+  source: string;
+  artifact_path: string;
+  title: string;
+  cwd: string | null;
+  updated_at: string;
+  snippet: string | null;
+  metadata_json: string | null;
+  archived: number;
+  pinned: number;
+}
+
+interface ConversationMessageRow {
+  id: string;
+  role: string;
+  text: string;
+  turn_index: number;
+  created_at: string | null;
+  metadata_json: string | null;
+}
+
+function parseJsonRecord(value: string | null | undefined): Record<string, unknown> {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed) ? parsed as Record<string, unknown> : {};
+  } catch {
+    return {};
+  }
 }
 
 function commandSearchDocument(command: ClawCliCommandRegistryEntry): SearchDocumentInput {
