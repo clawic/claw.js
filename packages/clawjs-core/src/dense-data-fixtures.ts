@@ -1,3 +1,9 @@
+import {
+  clawDenseDataOsRegistry,
+  listClawDenseDataIntentEntries,
+  listClawDenseDataSemanticViewEntries,
+} from "./dense-data-os.ts";
+
 export interface ClawDenseDataFixtureRecord {
   id: string;
   collectionName: string;
@@ -31,6 +37,13 @@ export const clawDenseDataAcceptanceFixture: ClawDenseDataAcceptanceFixture = {
       label: "Ada Patient",
       covers: ["patient", "health", "identity_profile", "partial_data"],
       data: { displayName: "Ada Patient", status: "active", qualityGaps: ["fixture_gap_missing_dob"], evidence: ["fixture_evidence_intake_note"] },
+    },
+    {
+      id: "fixture_lab_result_cbc",
+      collectionName: "lab_results",
+      label: "CBC panel",
+      covers: ["lab_result", "health", "patient_timeline", "evidence"],
+      data: { title: "CBC panel", patientId: "fixture_patient_ada", lab: "Central Lab", reportedAt: "2026-05-17T00:00:00.000Z", values: { hemoglobin: "13.7 g/dL" } },
     },
     {
       id: "fixture_study_trial_a",
@@ -403,9 +416,196 @@ export const clawDenseDataAcceptanceFixture: ClawDenseDataAcceptanceFixture = {
       covers: ["partial_data_gap", "quality_gap", "finance_entity_overview"],
       data: { label: "Missing reconciliation status", targetCollection: "financial_accounts", targetId: "fixture_financial_account_ops", gapKind: "missing", status: "open", severity: "medium", evidenceSourceId: "fixture_evidence_finance_statement" },
     },
+    ...listClawDenseDataRegistryFixtureRecords(),
   ],
 };
 
 export function listClawDenseDataAcceptanceFixtureRecords(): ClawDenseDataFixtureRecord[] {
   return [...clawDenseDataAcceptanceFixture.records];
+}
+
+export function listClawDenseDataRegistryFixtureRecords(): ClawDenseDataFixtureRecord[] {
+  const records: ClawDenseDataFixtureRecord[] = [];
+  const profileTargets: Record<string, { entityKind: string; entityId: string; fields: Record<string, unknown> }> = {
+    patient_profile: { entityKind: "patients", entityId: "fixture_patient_ada", fields: { status: "active" } },
+    participant_profile: { entityKind: "participants", entityId: "fixture_participant_subject_001", fields: { status: "screening", consentStatus: "unknown" } },
+    learner_profile: { entityKind: "learners", entityId: "fixture_learner_ada", fields: { status: "active", program: "Biology" } },
+    organization_profile: { entityKind: "companies", entityId: "fixture_company_acme", fields: { domain: "example.test" } },
+    account_profile: { entityKind: "accounts", entityId: "fixture_account_acme", fields: { industry: "research_manufacturing" } },
+  };
+
+  for (const system of clawDenseDataOsRegistry.systems) {
+    records.push({
+      id: `fixture_domain_system_${system.id}`,
+      collectionName: "domain_systems",
+      label: system.label,
+      covers: ["domain_system", "dense_registry", system.id, system.wave],
+      data: {
+        key: system.id,
+        label: system.label,
+        wave: system.wave,
+        canonicalCommand: system.canonicalCommand,
+        aliases: system.aliases,
+        sensitivityDefault: system.sensitivityDefault,
+        storagePolicy: system.storagePolicy,
+        standards: system.standards,
+        status: "active",
+        source: { sourceConversationId: clawDenseDataOsRegistry.sourceConversationId, sourcePlanId: clawDenseDataOsRegistry.sourcePlanId },
+        metadata: { visiblePack: system.visiblePack, orchestrator: system.orchestrator, sharedEngines: system.sharedEngines, notes: system.notes },
+      },
+    });
+
+    records.push({
+      id: `fixture_domain_pack_${system.id}_core`,
+      collectionName: "domain_packs",
+      label: `${system.label} core pack`,
+      covers: ["domain_pack", "dense_registry", system.id, system.wave],
+      data: {
+        systemKey: system.id,
+        key: `${system.id}.core`,
+        label: `${system.label} core pack`,
+        description: system.notes,
+        collectionNames: system.centers.map((center) => center.collectionName).filter(Boolean),
+        commandPatterns: system.commandPatterns,
+        fixtures: system.centers.map((center) => center.id),
+        status: system.wave === "roadmap" ? "roadmap" : "active",
+        metadata: { aliases: system.aliases, standards: system.standards },
+      },
+    });
+
+    for (const center of system.centers) {
+      records.push({
+        id: `fixture_domain_role_${system.id}_${center.id}`,
+        collectionName: "domain_roles",
+        label: center.label,
+        covers: ["domain_role", "dense_registry", "identity_profile", system.id, center.id],
+        data: {
+          key: `${system.id}.${center.id}`,
+          label: center.label,
+          domainSystemKey: system.id,
+          description: center.notes,
+          permissions: { sensitivityDefault: system.sensitivityDefault },
+          metadata: {
+            commandNoun: center.commandNoun,
+            commandAliases: center.commandAliases,
+            collectionName: center.collectionName,
+            profileKind: center.profileKind,
+          },
+        },
+      });
+
+      const profileTarget = center.profileKind ? profileTargets[center.profileKind] : undefined;
+      if (profileTarget) {
+        records.push({
+          id: `fixture_domain_profile_${system.id}_${center.id}`,
+          collectionName: "domain_profiles",
+          label: `${center.label} profile`,
+          covers: ["domain_profile", "typed_profile", "identity_profile", system.id, center.id],
+          data: {
+            entityKind: profileTarget.entityKind,
+            entityId: profileTarget.entityId,
+            domainSystemKey: system.id,
+            domainRoleKey: `${system.id}.${center.id}`,
+            profileKind: center.profileKind,
+            status: "active",
+            fields: profileTarget.fields,
+            evidenceSourceIds: ["fixture_evidence_intake_note"],
+            qualityGapIds: [],
+            metadata: { generatedFromDenseRegistry: true },
+          },
+        });
+      }
+    }
+
+    for (const operation of system.operations) {
+      records.push({
+        id: `fixture_canonical_operation_${slugFixtureId(system.id, operation.id)}`,
+        collectionName: "canonical_operations",
+        label: operation.label,
+        covers: ["canonical_operation", "dense_registry", system.id],
+        data: {
+          key: operation.id,
+          domainSystemKey: system.id,
+          label: operation.label,
+          routes: operation.routes,
+          createsOrReads: operation.createsOrReads,
+          sensitivity: system.sensitivityDefault,
+          status: system.wave === "roadmap" ? "external_pending" : "partial",
+          metadata: { generatedFromDenseRegistry: true },
+        },
+      });
+    }
+  }
+
+  for (const view of listClawDenseDataSemanticViewEntries()) {
+    records.push({
+      id: `fixture_semantic_view_${slugFixtureId(view.systemId, view.id)}`,
+      collectionName: "semantic_views",
+      label: view.label,
+      covers: ["semantic_view", "dense_registry", view.systemId],
+      data: {
+        key: view.id,
+        domainSystemKey: view.systemId,
+        label: view.label,
+        commandPattern: view.commandPattern,
+        operationKey: view.operationId,
+        requiredInputs: view.requiredInputs,
+        outputShape: view.outputShape,
+        collectionNames: view.requiredInputs,
+        status: "active",
+        metadata: { generatedFromDenseRegistry: true },
+      },
+    });
+  }
+
+  for (const intent of listClawDenseDataIntentEntries()) {
+    records.push({
+      id: `fixture_domain_intent_${intent.id}`,
+      collectionName: "domain_intents",
+      label: intent.phrase,
+      covers: ["domain_intent", "intent_coverage", "dense_registry", intent.systemId, intent.status],
+      data: {
+        key: intent.id,
+        domainSystemKey: intent.systemId,
+        phrase: intent.phrase,
+        status: intent.status,
+        mappedCommand: intent.mappedCommand,
+        operationKey: intent.operationId,
+        collectionName: intent.collectionName,
+        reasons: intent.reasons,
+        nextSteps: intent.nextSteps,
+        metadata: { generatedFromDenseRegistry: true, command: intent.command },
+      },
+    });
+  }
+
+  for (const requirement of clawDenseDataOsRegistry.externalPendingRequirements) {
+    records.push({
+      id: `fixture_external_pending_${requirement.id}`,
+      collectionName: "quality_gaps",
+      label: requirement.label,
+      covers: ["external_pending", "quality_gap", "dense_registry", requirement.systemId],
+      data: {
+        label: requirement.label,
+        targetCollection: "domain_systems",
+        targetId: `fixture_domain_system_${requirement.systemId}`,
+        gapKind: "external_pending",
+        status: "open",
+        severity: "high",
+        detail: requirement.reason,
+        nextStep: requirement.validationNeeded,
+        metadata: { requirementType: requirement.requirementType, requirementId: requirement.id },
+      },
+    });
+  }
+
+  return records;
+}
+
+function slugFixtureId(...parts: string[]): string {
+  return parts
+    .join("_")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
 }

@@ -316,6 +316,7 @@ function materializedPatientTimeline(
 
   const medications = store.listRecords(namespaceId, "medications", { filter: { patientId } }).items;
   const symptoms = store.listRecords(namespaceId, "symptom_logs", { filter: { patientId } }).items;
+  const labResults = store.listRecords(namespaceId, "lab_results", { filter: { patientId } }).items;
   const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "patients", recordId: patientId } }).items;
   const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "patients", targetId: patientId } }).items;
   const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "patients", targetId: patientId } }).items;
@@ -323,6 +324,7 @@ function materializedPatientTimeline(
     timelineItem(patient, "patient", patient.id, patient.displayName ?? patient.id, patient.createdAt, patient),
     ...medications.map((record) => timelineItem(record, "medication", record.id, record.name ?? record.id, record.startedAt ?? record.createdAt, record)),
     ...symptoms.map((record) => timelineItem(record, "symptom", record.id, record.symptom ?? record.id, record.loggedAt ?? record.createdAt, record)),
+    ...labResults.map((record) => timelineItem(record, "lab_result", record.id, record.title ?? record.lab ?? record.id, record.reportedAt ?? record.collectedAt ?? record.createdAt, record)),
     ...evidence.map((record) => timelineItem(record, "evidence", record.id, record.label ?? record.id, record.capturedAt ?? record.createdAt, record)),
     ...qualityGaps.map((record) => timelineItem(record, "quality_gap", record.id, record.label ?? record.id, record.createdAt, record)),
     ...provenance.map((record) => timelineItem(record, "provenance", record.id, record.eventType ?? record.id, record.occurredAt ?? record.createdAt, record)),
@@ -341,7 +343,7 @@ function materializedPatientTimeline(
       severity: record.severity,
       evidenceSourceId: record.evidenceSourceId,
     })),
-    sourceCollections: ["patients", "medications", "symptom_logs", "evidence_sources", "quality_gaps", "provenance_events"],
+    sourceCollections: ["patients", "medications", "symptom_logs", "lab_results", "evidence_sources", "quality_gaps", "provenance_events"],
     partial: qualityGaps.length > 0,
     intentStatus: intent.status,
   };
@@ -1211,7 +1213,7 @@ function denseDbArgv(argv: string[], collectionName: string, dbAction: string): 
 
 function denseDbFlags(flags: Record<string, string>, collectionName: string): Record<string, string> {
   let nextFlags = flags;
-  if (["medications", "symptom_logs"].includes(collectionName) && flags.patient && !flags["patient-id"]) {
+  if (["medications", "symptom_logs", "lab_results"].includes(collectionName) && flags.patient && !flags["patient-id"]) {
     nextFlags = { ...nextFlags, "patient-id": flags.patient };
   }
   if (["accounts", "deals", "billing_customers", "legal_cases", "services", "work_orders", "assets", "products_catalog"].includes(collectionName) && flags.company && !flags["company-id"]) {
@@ -1263,6 +1265,10 @@ function nestedDenseDbRoute(input: DenseDataCliInput): Parameters<typeof runMagi
       medications: "medications",
       symptom: "symptom_logs",
       symptoms: "symptom_logs",
+      lab: "lab_results",
+      labs: "lab_results",
+      "lab-result": "lab_results",
+      "lab-results": "lab_results",
     },
   }) ?? nestedParentDbRoute(input, {
     parentCommand: "case",

@@ -258,6 +258,7 @@ export const clawDenseDataOsRegistry: ClawDenseDataOsRegistry = {
         center("encounter", "Encounter", "encounter", undefined, "Clinical visit/contact center for appointments, procedures, documents, observations, and follow-up."),
         center("medication", "Medication", "medication", undefined, "Medication center for active/historical drug exposure, orders, doses, and evidence links.", undefined, "medications"),
         center("symptom", "Symptom", "symptom", undefined, "Symptom center for reported problems, observations, severity, timing, provenance, and quality gaps.", ["symptoms"], "symptom_logs"),
+        center("lab_result", "Lab Result", "lab", undefined, "Lab result center for ordered, collected, reported, document-backed, and partial lab values.", ["labs", "lab-result", "lab-results"], "lab_results"),
       ],
       commandPatterns: [
         "claw patient list|get|create|update|delete|query|schema",
@@ -265,6 +266,8 @@ export const clawDenseDataOsRegistry: ClawDenseDataOsRegistry = {
         "claw patient <id> medications list|add",
         "claw symptom list|get|create|update|delete|query|schema",
         "claw patient <id> labs list|add",
+        "claw lab list|get|create|update|delete|query|schema",
+        "claw lab add --patient <id>",
         "claw medication list|get|create|update|delete|query|schema",
         "claw medication add --patient <id>",
         "claw health overview|gaps|intents",
@@ -379,7 +382,7 @@ export const clawDenseDataOsRegistry: ClawDenseDataOsRegistry = {
       sharedEngines: ["identity_role_profile", "evidence_provenance", "quality_gap", "relation_graph", "semantic_view", "intent_coverage", "finance_accounting", "workflow_state", "document_evidence"],
       centers: [
         center("company", "Company", "company", "organization_profile", "Business organization center shared with CRM, billing, finance, procurement, and legal.", undefined, "companies"),
-        center("product", "Product", "product", undefined, "Catalog/product center shared across commerce, inventory, procurement, PIM, and billing."),
+        center("product", "Product", "product", undefined, "Catalog/product center shared across commerce, inventory, procurement, PIM, and billing.", undefined, "products_catalog"),
         center("invoice", "Invoice", "invoice", undefined, "Invoice center shared across ERP, accounting, billing, payments, documents, and reconciliation.", undefined, "invoices"),
         center("payment", "Payment", "payment", undefined, "Payment center for money movement, reconciliation, evidence, and accounting links.", undefined, "payment_intents"),
       ],
@@ -636,11 +639,6 @@ export function resolveClawDenseDataIntent(phrase: string): ClawDenseDataIntentR
     });
   }
 
-  const system = findClawDenseDataSystem(tokens[0] ?? "");
-  if (system) {
-    return denseDataIntentResolution(phrase, normalizedPhrase, system.wave === "first_wave" ? "partial" : "external_pending", [`Matched dense-data system ${system.id}, but no specific route pattern matched.`], nextStepsFor(system, tokens), { system });
-  }
-
   const centerMatch = findCenterByCommand(tokens[0] ?? "");
   if (centerMatch) {
     const action = tokens[1];
@@ -651,6 +649,14 @@ export function resolveClawDenseDataIntent(phrase: string): ClawDenseDataIntentR
         matchedRoute: `claw ${centerMatch.center.commandNoun} ${action}`,
       });
     }
+  }
+
+  const system = findClawDenseDataSystem(tokens[0] ?? "");
+  if (system) {
+    return denseDataIntentResolution(phrase, normalizedPhrase, system.wave === "first_wave" ? "partial" : "external_pending", [`Matched dense-data system ${system.id}, but no specific route pattern matched.`], nextStepsFor(system, tokens), { system });
+  }
+
+  if (centerMatch) {
     return denseDataIntentResolution(phrase, normalizedPhrase, "workflow_gap", [`Matched direct dense-data noun ${centerMatch.center.commandNoun}, but no standard action was present.`], [`Use one of ${clawDenseDataOsRegistry.standardCollectionActions.join(", ")} or add a canonical operation to the dense-data registry.`], {
       system: centerMatch.system,
       center: centerMatch.center,

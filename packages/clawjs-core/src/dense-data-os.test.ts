@@ -93,6 +93,7 @@ test("dense data OS acceptance fixture covers required first-wave records and ga
   }
   for (const requiredCoverage of [
     "patient",
+    "lab_result",
     "study",
     "sample",
     "legal_case",
@@ -105,9 +106,25 @@ test("dense data OS acceptance fixture covers required first-wave records and ga
     "evidence",
     "provenance",
     "partial_data_gap",
+    "domain_system",
+    "domain_pack",
+    "domain_role",
+    "domain_profile",
+    "canonical_operation",
+    "semantic_view",
+    "domain_intent",
+    "intent_coverage",
+    "external_pending",
   ]) {
     assert.ok(covered.has(requiredCoverage), `fixture missing coverage ${requiredCoverage}`);
   }
+
+  assert.ok(records.some((record) => record.id === "fixture_domain_system_health" && record.collectionName === "domain_systems"));
+  assert.ok(records.some((record) => record.id === "fixture_domain_role_health_patient" && record.collectionName === "domain_roles"));
+  assert.ok(records.some((record) => record.id === "fixture_domain_profile_health_patient" && record.collectionName === "domain_profiles"));
+  assert.ok(records.some((record) => record.id === "fixture_semantic_view_health_patient_timeline" && record.collectionName === "semantic_views"));
+  assert.ok(records.some((record) => record.collectionName === "domain_intents" && record.covers.includes("intent_coverage")));
+  assert.ok(records.some((record) => record.collectionName === "quality_gaps" && record.covers.includes("external_pending")));
 });
 
 test("dense data OS first wave covers the agreed high-density systems", () => {
@@ -192,6 +209,17 @@ test("dense data OS resolves direct CLI intent phrases without executing them", 
   assert.equal(assaysList.status, "covered");
   assert.equal(assaysList.center?.commandNoun, "assay");
 
+  const productList = resolveClawDenseDataIntent("claw product list");
+  assert.equal(productList.status, "covered");
+  assert.equal(productList.system?.id, "erp");
+  assert.equal(productList.center?.commandNoun, "product");
+  assert.equal(productList.center?.collectionName, "products_catalog");
+
+  const productOverview = resolveClawDenseDataIntent("claw product overview");
+  assert.equal(productOverview.status, "covered");
+  assert.equal(productOverview.system?.id, "product");
+  assert.equal(productOverview.center, undefined);
+
   const invoiceList = resolveClawDenseDataIntent("claw invoice list");
   assert.equal(invoiceList.status, "covered");
   assert.equal(invoiceList.system?.id, "erp");
@@ -223,6 +251,7 @@ test("dense data OS graduated centers point at canonical built-in collections wi
     "health.patient": "patients",
     "health.medication": "medications",
     "health.symptom": "symptom_logs",
+    "health.lab_result": "lab_results",
     "research.study": "studies",
     "research.participant": "participants",
     "biology.organism": "organisms",
@@ -231,6 +260,7 @@ test("dense data OS graduated centers point at canonical built-in collections wi
     "labs.assay": "assays",
     "legal.case": "legal_cases",
     "erp.company": "companies",
+    "erp.product": "products_catalog",
     "erp.invoice": "invoices",
     "erp.payment": "payment_intents",
     "crm.account": "accounts",
@@ -254,6 +284,30 @@ test("dense data OS graduated centers point at canonical built-in collections wi
   const analyticsExperiment = BUILTIN_COLLECTIONS_BY_NAME.get("experiments");
   assert.equal(analyticsExperiment?.family, "analytics");
   assert.equal(findClawDenseDataSystem("biology")?.centers.find((entry) => entry.id === "experiment")?.collectionName, "biology_experiments");
+});
+
+test("dense data OS generates covered singular and plural intents for every graduated center", () => {
+  const canonicalCollectionNames = new Set([
+    ...BUILTIN_COLLECTIONS_BY_NAME.keys(),
+    ...PRODUCTIVITY_COLLECTION_DEFINITIONS.map((collection) => collection.name),
+  ]);
+  const intents = listClawDenseDataIntentEntries();
+  const coveredIntentKeys = new Set(intents
+    .filter((entry) => entry.status === "covered" && entry.collectionName)
+    .map((entry) => `${entry.phrase}:${entry.collectionName}`));
+
+  for (const system of clawDenseDataOsRegistry.systems) {
+    for (const center of system.centers) {
+      if (!center.collectionName) continue;
+      assert.ok(canonicalCollectionNames.has(center.collectionName), `${system.id}.${center.id} must use a canonical collection`);
+      for (const command of [center.commandNoun, ...center.commandAliases]) {
+        for (const action of clawDenseDataOsRegistry.standardCollectionActions.filter((entry) => entry !== "purge")) {
+          const phrase = `claw ${command} ${action}`;
+          assert.ok(coveredIntentKeys.has(`${phrase}:${center.collectionName}`), `${system.id}.${center.id} missing covered intent ${phrase}`);
+        }
+      }
+    }
+  }
 });
 
 test("dense data OS roadmap keeps the wider catalog visible before pack graduation", () => {

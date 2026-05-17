@@ -642,6 +642,9 @@ claw patient patient_123 medications list --json
 claw patients list --json
 claw patient patient_123 symptoms add "Headache" --severity 4 --json
 claw patient patient_123 symptoms list --json
+claw patient patient_123 lab add "CBC panel" --lab "Central Lab" --json
+claw patient patient_123 labs list --json
+claw lab add --patient patient_123 --title "Metabolic panel" --json
 claw patient patient_123 timeline --json
 claw company create "Acme Corp" --json
 claw companies list --json
@@ -676,6 +679,9 @@ claw course course_123 lessons add "Cell basics" --json
 claw course course_123 lessons list --json
 claw course course_123 timeline --json
 claw learner learner_123 timeline --json
+claw product list --json
+claw products list --json
+claw product create "Hydraulic Press" --company company_123 --json
 claw asset create --company company_123 --account-id account_123 --product product_123 --serial-number PRESS-001 --json
 claw asset asset_123 work-orders add "Batch 42" --company company_123 --json
 claw asset asset_123 work-orders list --json
@@ -691,10 +697,12 @@ claw experiment create "Dose response" --organism organism_123 --json
 claw experiment experiment_123 samples add "Exp sample 1" --organism organism_123 --json
 claw experiment experiment_123 timeline --json
 claw dense-fixtures seed --json
+claw domain-system get fixture_domain_system_health --json
+claw domain-profile get fixture_domain_profile_health_patient --json
+claw domain-intent list --json
 claw evidence-source create "Clinic note" --kind document --collection-name patients --record-id patient_123 --json
 claw quality-gap create "Missing date of birth" --target-collection patients --target-id patient_123 --gap-kind missing --json
 claw semantic-view list --json
-claw domain-intent list --json
 claw travel --help
 claw career --help
 claw family --help

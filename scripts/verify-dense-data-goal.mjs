@@ -4,11 +4,14 @@ import { fileURLToPath } from "node:url";
 
 import {
   assertClawDenseDataOsRegistryComplete,
+  BUILTIN_COLLECTIONS,
   BUILTIN_COLLECTIONS_BY_NAME,
   clawDenseDataAcceptanceFixture,
   clawDenseDataOsRegistry,
   listClawDenseDataIntentEntries,
   listClawDenseDataSemanticViewEntries,
+  resolveClawCliCommandIntent,
+  resolveBuiltinCollectionName,
   PRODUCTIVITY_COLLECTION_DEFINITIONS,
   resolveClawCliCommand,
 } from "../packages/clawjs-core/src/index.ts";
@@ -65,6 +68,7 @@ const requiredFoundationMappings = {
 
 const requiredFixtureCoverage = [
   "patient",
+  "lab_result",
   "study",
   "sample",
   "legal_case",
@@ -85,6 +89,15 @@ const requiredFixtureCoverage = [
   "evidence",
   "provenance",
   "partial_data_gap",
+  "domain_system",
+  "domain_pack",
+  "domain_role",
+  "domain_profile",
+  "canonical_operation",
+  "semantic_view",
+  "domain_intent",
+  "intent_coverage",
+  "external_pending",
 ];
 
 const requiredExternalPending = [
@@ -112,6 +125,7 @@ const requiredExistingAuditSurfaces = [
 const requiredPluralIntentPhrases = [
   ["claw patients list", "patients"],
   ["claw companies list", "companies"],
+  ["claw products list", "products_catalog"],
   ["claw assays list", "assays"],
   ["claw assets list", "assets"],
   ["claw courses list", "courses"],
@@ -182,9 +196,13 @@ for (const phrase of [
   "dense-fixtures",
   "claw dense-fixtures seed",
   "claw patient patient_123 timeline",
+  "claw patient patient_123 lab add",
+  "claw patient patient_123 labs list",
+  "claw lab add --patient patient_123",
   "claw patients list",
   "claw companies list",
   "claw assays list",
+  "claw product list",
   "claw study study_123 timeline",
   "claw case case_123 timeline",
   "claw service service_123 timeline",
@@ -287,9 +305,40 @@ if (!intents.some((entry) => entry.phrase === "claw encounter list" && entry.sta
 if (!intents.some((entry) => entry.phrase === "claw health gaps" && entry.status === "covered")) {
   fail("generated intents must cover claw health gaps");
 }
+const collectionAliasIntent = resolveClawCliCommandIntent({ phrase: "lead list" });
+if (collectionAliasIntent.status !== "covered" || collectionAliasIntent.intent.mappedCommand !== "db leads list") {
+  fail("command intents must resolve audited collection alias lead list to db leads list");
+}
+for (const collection of BUILTIN_COLLECTIONS) {
+  const aliases = collection.aliases ?? [];
+  const preferredAlias = aliases.find((alias) => resolveBuiltinCollectionName(alias) === collection.name && !resolveClawCliCommand(alias))
+    ?? aliases.find((alias) => resolveBuiltinCollectionName(alias) === collection.name)
+    ?? collection.name;
+  const resolution = resolveClawCliCommandIntent({ phrase: `${preferredAlias} list` });
+  if (resolution.status !== "covered") {
+    fail(`audited collection ${collection.name} must resolve top-level command ${preferredAlias} list as covered`);
+  }
+}
 for (const [phrase, collectionName] of requiredPluralIntentPhrases) {
   if (!intents.some((entry) => entry.phrase === phrase && entry.status === "covered" && entry.collectionName === collectionName)) {
     fail(`generated intents must cover plural alias ${phrase} against ${collectionName}`);
+  }
+}
+for (const system of clawDenseDataOsRegistry.systems) {
+  for (const center of system.centers) {
+    if (!center.collectionName) continue;
+    if (!canonicalCollections.has(center.collectionName)) {
+      fail(`${system.id}.${center.id} maps to non-canonical collection ${center.collectionName}`);
+      continue;
+    }
+    for (const command of [center.commandNoun, ...center.commandAliases]) {
+      for (const action of clawDenseDataOsRegistry.standardCollectionActions.filter((entry) => entry !== "purge")) {
+        const phrase = `claw ${command} ${action}`;
+        if (!intents.some((entry) => entry.phrase === phrase && entry.status === "covered" && entry.collectionName === center.collectionName)) {
+          fail(`generated intents must cover graduated center route ${phrase} against ${center.collectionName}`);
+        }
+      }
+    }
   }
 }
 if (!semanticViews.some((entry) => entry.id === "patient.timeline" && entry.systemId === "health")) {
@@ -349,6 +398,22 @@ if (resolveClawCliCommand("dense-fixture")?.target !== "dense-fixtures") {
 const fixtureCoverage = new Set(clawDenseDataAcceptanceFixture.records.flatMap((record) => record.covers));
 for (const coverage of requiredFixtureCoverage) {
   if (!fixtureCoverage.has(coverage)) fail(`acceptance fixture missing ${coverage}`);
+}
+
+for (const [id, collectionName] of [
+  ["fixture_domain_system_health", "domain_systems"],
+  ["fixture_domain_pack_health_core", "domain_packs"],
+  ["fixture_domain_role_health_patient", "domain_roles"],
+  ["fixture_domain_profile_health_patient", "domain_profiles"],
+  ["fixture_canonical_operation_health_patient_timeline", "canonical_operations"],
+  ["fixture_semantic_view_health_patient_timeline", "semantic_views"],
+]) {
+  if (!clawDenseDataAcceptanceFixture.records.some((record) => record.id === id && record.collectionName === collectionName)) {
+    fail(`acceptance fixture missing dense registry record ${id} in ${collectionName}`);
+  }
+}
+if (!clawDenseDataAcceptanceFixture.records.some((record) => record.collectionName === "domain_intents" && record.covers.includes("intent_coverage"))) {
+  fail("acceptance fixture must materialize generated domain intents");
 }
 
 for (const record of clawDenseDataAcceptanceFixture.records) {

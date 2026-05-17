@@ -57,10 +57,10 @@ routes, but they are not the only route. For example, `health` and `ehr` are
 valid pack routes, while `patient` remains a direct noun route.
 Direct human nouns and plural aliases are generated from dense centers, so the
 same canonical collection backs routes such as `patient list` / `patients
-list`, `company list` / `companies list`, and `assay list` / `assays list`
-without introducing a second data model. The guard rejects malformed aliases
-and keeps professional plurals explicitly audited instead of silently accepting
-bad mechanical forms.
+list`, `company list` / `companies list`, `product list` / `products list`,
+and `assay list` / `assays list` without introducing a second data model. The
+guard rejects malformed aliases and keeps professional plurals explicitly
+audited instead of silently accepting bad mechanical forms.
 
 Collections use the standard actions `list`, `get`, `create`, `update`,
 `delete`, `query`, and `schema`. `delete` means archive by default; `purge` is
@@ -117,7 +117,8 @@ the shared database instead of a parallel domain store: `patient list`,
 list`, `patient <id> symptoms add`, `patient <id> symptoms list`, and
 ERP/CRM routes such as `company create`, `company <id> timeline`,
 `account create --company <id>`,
-`deal create --company <id>`, `invoice list`, and
+`deal create --company <id>`, `product list`, `product create --company <id>`,
+`invoice list`, and
 `invoice create --billing-customer <id>` all resolve to canonical core.sqlite
 collections. Legal and ops centers also graduate through shared collections:
 `case create`, `case <id> evidence add/list`, `service create`,
@@ -168,14 +169,17 @@ to a covered command, explicit workflow/data gap, blocked state, external
 pending state, or custom pack. The fixture covers patient, study, sample, legal
 case, invoice/company, incident/service, learner/course relations and lessons,
 company and manufacturing asset/work-order relations, evidence, provenance, and
-partial-data quality gaps.
+partial-data quality gaps. It also materializes the registry layer itself:
+`domain_systems`, `domain_packs`, `domain_roles`, `domain_profiles`,
+`canonical_operations`, `semantic_views`, generated `domain_intents`, and
+`external_pending` quality-gap records.
 `claw dense-fixtures seed` writes that fixture into local `core.sqlite` with
 stable fixture IDs, so the acceptance set is executable through normal DB and
 human noun commands rather than remaining an inspect-only artifact.
 
 Semantic-view routes start as stable view contracts tied to the registry and
 graduate to materialized views when local data is available. `claw patient <id>
-timeline` now reads `patients`, `medications`, `symptom_logs`,
+timeline` now reads `patients`, `medications`, `symptom_logs`, `lab_results`,
 `evidence_sources`, `quality_gaps`, and `provenance_events` from local
 `core.sqlite`, returns `implementationStatus: "materialized_semantic_view"`,
 and marks the view partial when quality gaps remain. This keeps the view useful
