@@ -57,7 +57,7 @@ function runMacPortal(input: {
     });
   }
   if (action === "permissions") {
-    return runMacPermissions({ ...input, positionals: ["permissions", target].filter(Boolean) }, target, undefined);
+    return runMacPermissions({ ...input, positionals: ["permissions", ...(target ? [target] : [])] }, target, undefined);
   }
   if (action === "doctor") {
     return writePayload(input, "mac", {
