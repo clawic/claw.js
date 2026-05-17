@@ -18,6 +18,7 @@ test("Search MCP exposes profile, entrypoint, and explain tools", () => {
     for (const name of [
       "search.query",
       "search.sources.list",
+      "search.sources.set_state",
       "search.status",
       "search.profiles.list",
       "search.entrypoints.list",
@@ -55,6 +56,25 @@ test("Search MCP exposes profile, entrypoint, and explain tools", () => {
     assert.equal(explanation.query, "release branch");
     assert.equal(explanation.budgets.sourceTimeoutMs, 75);
     assert.equal(explanation.ranking.includes("local frecency"), true);
+
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "commands",
+      domain: "commands",
+      name: "Commands",
+      resultTypes: ["command"],
+    }));
+    const setStateTool = tools.find((tool) => tool.name === "search.sources.set_state");
+    const paused = setStateTool?.handler({ source: "commands", state: "paused", backlog: 3 }) as {
+      source: string;
+      state: string;
+      backlog: number;
+    };
+    assert.equal(paused.source, "commands");
+    assert.equal(paused.state, "paused");
+    assert.equal(paused.backlog, 3);
+    const enabled = setStateTool?.handler({ source: "commands", state: "enabled" }) as { state: string };
+    assert.equal(enabled.state, "enabled");
+    assert.throws(() => setStateTool?.handler({ source: "missing", state: "enabled" }), /Search source not found/);
   } finally {
     store.close();
     fs.rmSync(dir, { recursive: true, force: true });

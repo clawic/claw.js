@@ -13,6 +13,7 @@ import {
   type SearchAuditEventType,
   type SearchProfileId,
   type SearchQueryInput,
+  type SearchSourceState,
 } from "@clawjs/search";
 
 interface JsonRpcRequest {
@@ -74,6 +75,34 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
       handler: (p) => store.query(searchQueryFromParams(p)),
     },
     { name: "search.sources.list", description: "List Search source manifests.", inputSchema: { type: "object", properties: { profile: { type: "string", enum: ["framework", "full"] } } }, handler: (p) => store.listSources(searchProfile(p.profile)) },
+    {
+      name: "search.sources.set_state",
+      description: "Set a Search source state for Search Index style admin controls.",
+      inputSchema: {
+        type: "object",
+        required: ["source", "state"],
+        properties: {
+          source: { type: "string" },
+          state: { type: "string", enum: ["enabled", "disabled", "paused", "excluded", "backfilling", "degraded", "error"] },
+          backlog: { type: "integer" },
+          error: { type: "string" },
+          lastIndexedAt: { type: "string" },
+        },
+      },
+      handler: (p) => {
+        const source = requiredString(p, "source");
+        const state = requiredSearchSourceState(p.state);
+        if (!store.sourceStatus().some((row) => row.source === source)) {
+          throw new Error(`Search source not found: ${source}`);
+        }
+        store.setSourceState(source, state, {
+          backlog: numberParam(p.backlog),
+          error: stringParam(p.error) ?? null,
+          lastIndexedAt: stringParam(p.lastIndexedAt),
+        });
+        return store.sourceStatus().find((row) => row.source === source) ?? null;
+      },
+    },
     { name: "search.status", description: "List Search source status rows.", inputSchema: { type: "object", properties: {} }, handler: () => store.sourceStatus() },
     { name: "search.profiles.list", description: "List Search profiles and default enablement.", inputSchema: { type: "object", properties: {} }, handler: () => ({ profiles: SEARCH_PROFILES }) },
     {
@@ -329,6 +358,21 @@ function searchAuditType(value: unknown): SearchAuditEventType | undefined {
 
 function searchJobStatus(value: unknown): "queued" | "leased" | "done" | "failed" | undefined {
   return value === "queued" || value === "leased" || value === "done" || value === "failed" ? value : undefined;
+}
+
+function requiredSearchSourceState(value: unknown): SearchSourceState {
+  if (
+    value === "enabled" ||
+    value === "disabled" ||
+    value === "paused" ||
+    value === "excluded" ||
+    value === "backfilling" ||
+    value === "degraded" ||
+    value === "error"
+  ) {
+    return value;
+  }
+  throw new Error("state is required");
 }
 
 function requiredSearchJobOperation(value: unknown): "upsert" | "delete" | "backfill" | "rebuild" {
