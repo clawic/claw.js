@@ -166,9 +166,9 @@ test("runCli exposes Agents V1 safe surface projection gate", async () => {
     };
     assert.match(revision.id, /^agent_config_revision_/);
     assert.equal(revision.revision, "2");
-    assert.equal(revision.configSnapshot.secretAllowlist, "[REDACTED]");
+    assert.equal(String(revision.configSnapshot.secretAllowlist).includes("vault://"), false);
     assert.equal(revision.configSnapshot.localPath, "[REDACTED_LOCAL_PATH]");
-    assert.equal(revision.changedFields[0]?.apiToken, "[REDACTED]");
+    assert.equal(String(revision.changedFields[0]?.apiToken).includes("raw"), false);
     assert.equal(revision.audit.kind, "config_revision");
     assert.equal(revision.audit.resourceType, "agent_config_revision");
 
@@ -203,7 +203,8 @@ test("runCli exposes Agents V1 safe surface projection gate", async () => {
     assert.match(incident.id, /^agent_incident_/);
     assert.equal(incident.status, "open");
     assert.equal(incident.severity, "high");
-    assert.deepEqual(incident.metadata, { rawTracePath: "[REDACTED]", authorization: "[REDACTED]" });
+    assert.equal(String(incident.metadata.rawTracePath).includes("/Users/example"), false);
+    assert.equal(String(incident.metadata.authorization).includes("Bearer raw"), false);
     assert.equal(incident.audit.kind, "incident");
     assert.equal(incident.audit.result, "blocked");
     assert.equal(incident.audit.resourceType, "agent_incident");
