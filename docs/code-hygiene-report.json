@@ -14,11 +14,11 @@
     "unreferencedAssetCandidates": 88
   },
   "knipSummary": {
-    "filesWithIssues": 175,
-    "totalIssues": 791,
+    "filesWithIssues": 174,
+    "totalIssues": 787,
     "issueTypes": {
       "unlisted": 2,
-      "types": 82,
+      "types": 78,
       "owners": 115,
       "exports": 584,
       "duplicates": 8
@@ -80,6 +80,7 @@
     "V1 data cleanup removed duplicate exit-code/schema re-exports from the CLI wrapper while preserving the consumed data-root/storage helpers.",
     "Integration runtime cleanup kept catalog helper metadata public through the package entrypoint and made provider-local Slack/GitHub/Stripe/Airtable helper constants private.",
     "CLI JSON cleanup made unused low-level writer wrappers private and removed a dead error writer alias while preserving command JSON envelopes.",
-    "Style surface cleanup stopped re-exporting unused builtin manifest and CLI option types while preserving `claw style` behavior."
+    "Style surface cleanup stopped re-exporting unused builtin manifest and CLI option types while preserving `claw style` behavior.",
+    "Publishing channel contract cleanup made adapter lifecycle helper result types private while preserving the exported adapter interface."
   ]
 }

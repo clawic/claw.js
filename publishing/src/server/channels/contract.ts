@@ -31,13 +31,13 @@ export interface AdapterVariant {
   isOriginal: boolean;
 }
 
-export interface OAuthStartResult {
+interface OAuthStartResult {
   authorizationUrl: string;
   state: string;
   codeVerifier?: string;
 }
 
-export interface ChannelAccountInit {
+interface ChannelAccountInit {
   providerAccountId: string;
   displayName: string;
   handle?: string | null;
@@ -48,12 +48,12 @@ export interface ChannelAccountInit {
   tokenExpiresAt?: number | null;
 }
 
-export interface TokenRefreshResult {
+interface TokenRefreshResult {
   credentialsVaultRef: string;
   tokenExpiresAt?: number | null;
 }
 
-export interface EntityCandidate {
+interface EntityCandidate {
   entityId: string;
   displayName: string;
   handle?: string | null;
