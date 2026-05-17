@@ -1270,6 +1270,94 @@ test("search rebuild indexes connectors.catalog from control-plane operations wi
   });
 });
 
+test("search service resource jobs refresh only the targeted connector operation", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-connectors-resource-"));
+  const dataRoot = path.join(workspaceRoot, ".claw", "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    fs.mkdirSync(dataRoot, { recursive: true });
+    const sqlite = new Database(resolveClawjsMainDbPath());
+    try {
+      ensureV1MainSchema(sqlite);
+      const now = "2026-05-17T12:00:00.000Z";
+      sqlite.prepare(`
+        INSERT INTO connector_providers (id, display_name, trust_tier, enabled, metadata_json, created_at, updated_at)
+        VALUES ('openai', 'OpenAI', 'external_saas', 1, '{}', ?, ?)
+      `).run(now, now);
+      sqlite.prepare(`
+        INSERT INTO connector_capabilities (id, domain, action, facet, summary, created_at, updated_at)
+        VALUES ('image.edit.background', 'image', 'edit', 'background', 'Edit image backgrounds through a brokered connector.', ?, ?)
+      `).run(now, now);
+      sqlite.prepare(`
+        INSERT INTO connector_operations (
+          id, provider_id, runtime_kind, support, native_name, capability_ids_json,
+          risk_tiers_json, credential_required, cost_risk, requires_approval,
+          network_policy_id, metadata_json, created_at, updated_at
+        )
+        VALUES (?, 'openai', 'api', 'supported', ?, '["image.edit.background"]', '["cost"]', 1, 'cost', 1, NULL, ?, ?, ?)
+      `).run("openai.images.edit", "images.edit", JSON.stringify({ notes: "needle connector alpha only" }), now, now);
+      sqlite.prepare(`
+        INSERT INTO connector_operations (
+          id, provider_id, runtime_kind, support, native_name, capability_ids_json,
+          risk_tiers_json, credential_required, cost_risk, requires_approval,
+          network_policy_id, metadata_json, created_at, updated_at
+        )
+        VALUES (?, 'openai', 'api', 'supported', ?, '["image.edit.background"]', '["cost"]', 1, 'cost', 1, NULL, ?, ?, ?)
+      `).run("openai.images.generate", "images.generate", JSON.stringify({ notes: "needle connector beta only" }), now, now);
+    } finally {
+      sqlite.close();
+    }
+
+    const scheduled = await runCliCapture([
+      "search",
+      "jobs",
+      "schedule",
+      "upsert",
+      "--source",
+      "connectors.catalog",
+      "--resource-id",
+      "openai.images.edit",
+      "--payload",
+      JSON.stringify({ operationId: "openai.images.edit" }),
+      "--data-dir",
+      dataRoot,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(scheduled.code, CLI_EXIT_OK);
+    const scheduledPayload = JSON.parse(scheduled.stdout) as {
+      data: { item: { source: string; operation: string; resourceId: string; payload: { eventDriven?: boolean; operationId?: string } } };
+    };
+    assert.equal(scheduledPayload.data.item.source, "connectors.catalog");
+    assert.equal(scheduledPayload.data.item.operation, "upsert");
+    assert.equal(scheduledPayload.data.item.resourceId, "openai.images.edit");
+    assert.equal(scheduledPayload.data.item.payload.eventDriven, true);
+    assert.equal(scheduledPayload.data.item.payload.operationId, "openai.images.edit");
+
+    const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "connectors.catalog", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(serviceRun.code, CLI_EXIT_OK);
+    const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.source, "connectors.catalog");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.operation, "upsert");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
+
+    const store = new SearchStore(path.join(dataRoot, "search.sqlite"));
+    try {
+      assert.equal(store.query({ query: "images edit", sources: ["connectors.catalog"] }).results.length, 1);
+      assert.equal(store.query({ query: "images generate", sources: ["connectors.catalog"] }).results.length, 0);
+    } finally {
+      store.close();
+    }
+  });
+});
+
 test("search rebuild indexes runtime.events from runtime and operational sidecars", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-runtime-"));
   const dataRoot = path.join(workspaceRoot, "data");
