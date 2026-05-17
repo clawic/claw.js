@@ -40,6 +40,10 @@ Search V1.1 is built from these layers:
   carries structured filters for built-in result fields, permissions, and source
   metadata so section-level search can stay narrow without invoking a broad
   global scan.
+- **Result ACL**: indexed documents can declare allowed actors, allowed agents,
+  and required scopes. The store filters those rows before returning results, so
+  agent-scoped records do not leak into Root Search while public records remain
+  searchable without extra context.
 - **SQLite-first store**: `core.sqlite` remains canonical configuration and
   structured data storage. `search.sqlite` is rebuildable and owns FTS,
   fragments, cursors, tombstones, saved searches, monitors, ranking cache, and
