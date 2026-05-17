@@ -1233,7 +1233,13 @@ The docs check script validates that every current export from
     clawCapabilitySchema
     clawChannelEvents
     clawChatAppStorageKeys
+    CLAW_CLI_COMMAND_INTENT_STATUSES
     clawCliCommandRegistry
+    ClawCliCommandIntentEntry
+    ClawCliCommandIntentResolution
+    ClawCliCommandIntentRisk
+    ClawCliCommandIntentSource
+    ClawCliCommandIntentStatus
     ClawCliCommandRegistry
     ClawCliCommandRegistryEntry
     clawCliCommandRegistryVersion
@@ -1812,8 +1818,14 @@ The docs check script validates that every current export from
     reportStatusSchema
     reportValidationPlanSchema
     REPRODUCTIVE_INTIMATE_FAMILY
+    commandIntentToNeedOpportunity
+    listClawCliCommandIntentRegistry
+    mergeClawCliCommandIntentEntries
+    normalizeClawCliCommandIntentPhrase
+    normalizeCommandIntentEntry
     resolveBuiltinCollectionName
     resolveClawCliCommand
+    resolveClawCliCommandIntent
     resolveClawGlobalDataDir
     resolveClawHostRegistryPath
     resolveClawHostStateDir

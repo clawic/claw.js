@@ -74,6 +74,43 @@
       "reviewDate": "2026-08-17"
     },
     {
+      "id": "cli-action-intent-registry",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0018-cli-action-intent-registry.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/decision-map.md",
+        "docs/cli.md",
+        "skills/cli-agent-surface-work/SKILL.md"
+      ],
+      "discoveryTerms": [
+        "command intent",
+        "CLI action vocabulary",
+        "claw commands"
+      ],
+      "searchQueries": [
+        {
+          "query": "command intent",
+          "expectPath": "docs/adr/0018-cli-action-intent-registry.md"
+        },
+        {
+          "query": "CLI action vocabulary",
+          "expectPath": "docs/adr/0018-cli-action-intent-registry.md"
+        }
+      ],
+      "inspect": [
+        {
+          "command": "claw inspect command-intents --json",
+          "expectRoute": "cli.commandIntentResolution"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-17"
+    },
+    {
       "id": "docs-alignment-routing",
       "kind": "guardrail",
       "owner": "claw",

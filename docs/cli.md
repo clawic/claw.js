@@ -116,6 +116,7 @@ claw inspect why database --json
 claw inspect database --json
 claw inspect schemas --json
 claw inspect storage --json
+claw inspect command-intents --json
 claw inspect codebase --summary --json
 claw inspect codebase --path-prefix packages/clawjs/src/ --symbol runCli --language typescript --tests false --limit 20 --json
 ```
@@ -257,6 +258,36 @@ test, docs, data, surface, validation, security, perf, and research. Scoring is
 composite: severity, human scope, frequency, route blocker, constitutional risk,
 effort, reuse/leverage, and confidence. Promotion is a draft packet for
 `claw report` in V1 and remains approval-gated.
+
+## Command Intents
+
+`claw commands` is the action-vocabulary registry for CLI phrases agents may
+try. It resolves arbitrary words to covered commands, candidate aliases, gaps,
+future ideas, blocked requests, or external-pending needs without executing
+unknown behavior.
+
+```bash
+claw commands resolve "house buy" --json
+claw commands record --phrase "archive client dashboard" --purpose "Save a client dashboard snapshot for later review" --json
+claw commands list --status gap --json
+claw commands opportunities --json
+claw commands promote cmd_intent_house_buy --to report --json
+claw inspect command-intents --json
+```
+
+The registry source of truth is versioned TypeScript in `@clawjs/core`. Explicit
+workspace records are written only when requested to
+`.claw/command-intents/command-intents.json`; `phrase` and `purpose` are
+required. Raw local phrases can stay in the ledger, while promotion uses
+`claw report` redaction and approval gates.
+
+Unknown command JSON includes `meta.commandIntent`. Human unknown-command output
+stays brief and points to `claw commands resolve`. Candidate aliases are
+inactive suggestions, not routing changes. `future`, `blocked`, and
+`external_pending` entries must describe next steps without producing executable
+plans for risky or unavailable actions. See
+[ADR 0018: CLI action intent registry](./adr/0018-cli-action-intent-registry.md)
+for the durable contract.
 
 ## Guidance And Resources
 

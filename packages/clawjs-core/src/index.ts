@@ -15,6 +15,7 @@ export * from "./catalog-coverage.ts";
 export * from "./need-route-lab.ts";
 export * from "./cli-guidance.ts";
 export * from "./cli-command-registry.ts";
+export * from "./cli-command-intents.ts";
 export * from "./connector-control-plane.ts";
 export * from "./terminology.ts";
 export * from "./tts.ts";

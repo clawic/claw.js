@@ -10,10 +10,25 @@ import { runCliCapture, useIsolatedMainData } from "./index-test-utils.ts";
 test("runCli returns structured related matches for unknown JSON commands", async () => {
   const result = await runCliCapture(["peopel", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_USAGE);
-  const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string }; meta: { related: Array<{ canonicalCommand?: string }> } };
+  const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string }; meta: { related: Array<{ canonicalCommand?: string }>; commandIntent: { status: string; execute: boolean; intent: { mappedCommand?: string } } } };
   assert.equal(payload.ok, false);
   assert.equal(payload.error.code, "unknown_command");
   assert.equal(payload.meta.related.some((entry) => entry.canonicalCommand === "people"), true);
+  assert.equal(payload.meta.commandIntent.status, "candidate_alias");
+  assert.equal(payload.meta.commandIntent.execute, false);
+  assert.equal(payload.meta.commandIntent.intent.mappedCommand, "people");
+});
+
+test("runCli returns command-intent metadata for future unknown JSON phrases", async () => {
+  const result = await runCliCapture(["house", "buy", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string }; meta: { commandIntent: { status: string; execute: boolean; intent: { id: string; reportTarget: string } } } };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "unknown_command");
+  assert.equal(payload.meta.commandIntent.status, "future");
+  assert.equal(payload.meta.commandIntent.execute, false);
+  assert.equal(payload.meta.commandIntent.intent.id, "cmd_intent_house_buy");
+  assert.equal(payload.meta.commandIntent.intent.reportTarget, "github_discussions_ideas");
 });
 
 test("runCli searches the registered CLI discovery surface", async () => {

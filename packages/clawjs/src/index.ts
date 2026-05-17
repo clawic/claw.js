@@ -80,6 +80,7 @@ import { runPlanCli } from "./cli-plan-command.ts";
 import { runKnowledgeTailCli } from "./cli-knowledge-tail-command.ts";
 import { runCliDiscoverySearch } from "./cli-search-command.ts"; import { runGuidanceResourcesCli } from "./cli-guidance-resources-command.ts";
 import { runNeedsCli } from "./cli-needs-command.ts";
+import { runCommandsCli } from "./cli-commands-command.ts";
 import { runPublicPortalShortcut, writeMissingSubcommandJsonHelp, writePublicPortalHelpOnly } from "./cli-public-portal-routes.ts";
 import { handleUnknownCliCommand } from "./cli-unknown-command.ts";
 import { channelListenerPaths, isProcessRunning, readListenerPid, readTail, waitForListenerPid } from "./cli-channel-listener.ts";
@@ -585,6 +586,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   if (group === "collections") return await runCollectionsCli({ argv, positionals, flags, context, wantsJson, runCli: runCliUnsafe });
   if (group === "records") return await runCliUnsafe(["db", ...argv.slice(1)], context);
   if (group === "needs") return await runNeedsCli({ positionals, flags, argv, context, wantsJson, binName, workspaceRoot: flags.workspace || context.cwd });
+  if (group === "commands") return await runCommandsCli({ positionals, flags, argv, context, wantsJson, binName, workspaceRoot: flags.workspace || context.cwd });
 
   const portalShortcutExit = await runPublicPortalShortcut({ group, command, subcommand, argv, flags, context, runCli: runCliUnsafe });
   if (portalShortcutExit !== null) return portalShortcutExit;
@@ -1992,7 +1994,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   const collectionAlias = group ? resolveBuiltinCollectionName(group) : undefined;
   if (collectionAlias) return await runCliUnsafe(["db", collectionAlias, ...(command ? argv.slice(1) : ["list", ...argv.slice(1)])], context);
 
-  return handleUnknownCliCommand({ group, context, wantsJson, usage });
+  return handleUnknownCliCommand({ group, positionals, context, wantsJson, usage });
 }
 
 export async function runCli(argv: string[], context: CliContext): Promise<number> {

@@ -921,6 +921,15 @@ const runtimeCriticalNodes = [
     notes: "`claw` is the single public framework CLI and primary local agent inspection surface.",
   },
   {
+    id: "claw.cli.commandIntentRegistry",
+    owner: "claw",
+    name: "CLI command intent registry",
+    path: "claw/commands",
+    humanSurfaces: ["humanUi"],
+    programmaticSurfaces: ["cli", "persistence"],
+    notes: "Deterministic action-vocabulary layer for phrases agents try in the CLI. It records demand and resolution state without executing unknown phrases.",
+  },
+  {
     id: "claw.mcp.surface",
     owner: "claw",
     name: "MCP model-native surface",
@@ -1067,6 +1076,10 @@ const runtimeCriticalNodes = [
 ] as const;
 
 export const clawSurfaceGraphEdges: ClawSurfaceEdge[] = [
+  { id: "claw.edge.commands.consumes.intentSchema", type: "consumes", fromId: "claw.cli.command.commands", toId: "claw.schema.commandIntents.v1", owner: "claw", visibility: "public", contractId: "claw.schema.commandIntents.v1", transport: "local deterministic registry", validation: "CLI command-intent fixture tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.commands.owns.intentLedger", type: "owns", fromId: "claw.cli.command.commands", toId: "claw.workspace.command_intents.ledger", owner: "claw", visibility: "private", contractId: "claw.workspace.command_intents.ledger", transport: "workspace JSON ledger", validation: "CLI command-intent record/list tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.commands.brokers.needs", type: "brokers", fromId: "claw.cli.command.commands", toId: "claw.cli.command.needs", owner: "claw", visibility: "public", contractId: "claw.cli.command.needs", transport: "NeedOpportunity-compatible projection", validation: "CLI command-intent opportunities tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.commands.brokers.report", type: "brokers", fromId: "claw.cli.command.commands", toId: "claw.cli.command.report", owner: "claw", visibility: "public", contractId: "claw.cli.command.report", transport: "approval-gated report promotion packet", validation: "CLI command-intent promote tests", source: surfaceRouteGraphSource },
   { id: "claw.edge.chat.ui.consumes.bridge", type: "consumes", fromId: "clawix.ui.chat", toId: "clawix.bridge.local", owner: "clawix", visibility: "internal", contractId: "clawix.protocol.bridge.v1", transport: "local bridge RPC", validation: "macOS bridge daemon E2E fixture", source: surfaceRouteGraphSource },
   { id: "claw.edge.bridge.brokers.daemon", type: "brokers", fromId: "clawix.bridge.local", toId: "claw.daemon.local", owner: "clawix", visibility: "internal", contractId: "claw.protocol.hostCommand.v1", transport: "localhost/process bridge", validation: "daemon bridge fixture", source: surfaceRouteGraphSource },
   { id: "claw.edge.daemon.brokers.runtime", type: "brokers", fromId: "claw.daemon.local", toId: "claw.runtime.agent", owner: "claw", visibility: "internal", contractId: "claw.protocol.hostCommand.v1", transport: "framework runtime adapter", validation: "runtime fixture", source: surfaceRouteGraphSource },
@@ -1101,6 +1114,27 @@ function routeStep(edgeId: string, gaps: string[] = []): ClawSurfaceRouteStep {
 }
 
 export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
+  {
+    id: "cli.commandIntentResolution",
+    name: "CLI command intent resolution",
+    summary: "The public CLI resolves arbitrary agent action phrases through a deterministic command-intent registry, optional workspace ledger, Need-compatible opportunities, and approval-gated report promotion packets without executing unknown phrases.",
+    fromId: "claw.cli.command.commands",
+    toId: "claw.cli.command.report",
+    owner: "claw",
+    visibility: "public",
+    transport: "local CLI registry plus workspace JSON ledger",
+    validation: "Fixture tests for resolve, record, list, opportunities, promote, unknown fallback metadata, and inspect command-intents.",
+    steps: [
+      routeStep("claw.edge.commands.consumes.intentSchema"),
+      routeStep("claw.edge.commands.owns.intentLedger"),
+      routeStep("claw.edge.commands.brokers.needs"),
+      routeStep("claw.edge.commands.brokers.report"),
+    ],
+    tests: ["packages/clawjs-core/src/cli-command-intents.test.ts", "packages/clawjs/src/cli-commands.test.ts", "packages/clawjs/src/cli-discovery.test.ts", "packages/clawjs/src/inspect-cli.test.ts"],
+    docs: ["docs/cli.md", "docs/adr/0018-cli-action-intent-registry.md"],
+    adrs: ["docs/adr/0007-cli-agent-interface.md", "docs/adr/0011-report-governance-v1.md", "docs/adr/0014-need-route-lab-v1.md", "docs/adr/0018-cli-action-intent-registry.md"],
+    source: surfaceRouteGraphSource,
+  },
   {
     id: "chat.localDesktop",
     name: "Local desktop agent chat",
@@ -1488,6 +1522,17 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       surfaceClass: "cli",
       direction: "inbound",
     })),
+    clawPersistentSurface.contract({
+      ...contractDefaults,
+      id: "claw.schema.commandIntents.v1",
+      kind: "jsonSchema",
+      name: "CLI command intent schema v1",
+      value: "claw.cli.commandIntents.v1",
+      parentId: "claw.contracts.schemas",
+      surfaceClass: "schema",
+      direction: "bidirectional",
+      notes: "Stable V1 JSON shape for actionable CLI intent registry entries, local ledger entries, and unknown-command resolution metadata.",
+    }),
     ...["--json", "--dry-run", "--workspace", "--runtime", "--help", "--guidance", "--actor-assertion"].map((flag) => clawPersistentSurface.contract({
       ...contractDefaults,
       id: `claw.cli.flag.${flag.slice(2)}`,
@@ -1739,6 +1784,26 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       storageClass: "workspace",
       source: registrySource,
       notes: "Stores deterministic route evaluations and opportunities; promotion to reports/backlogs remains approval-gated.",
+    }),
+    clawPersistentSurface.path({
+      id: "claw.workspace.command_intents",
+      kind: "folder",
+      name: "command-intents",
+      path: `${clawWorkspaceLayout.root}/command-intents`,
+      parentId: "claw.workspace",
+      storageClass: "workspace",
+      source: registrySource,
+      notes: "Explicit local records of actionable CLI phrases, purposes, statuses, and promotion state.",
+    }),
+    clawPersistentSurface.path({
+      id: "claw.workspace.command_intents.ledger",
+      kind: "file",
+      name: "command intent ledger",
+      path: `${clawWorkspaceLayout.root}/command-intents/command-intents.json`,
+      parentId: "claw.workspace.command_intents",
+      storageClass: "workspace",
+      source: registrySource,
+      notes: "Raw local command-intent phrases and purposes stay in the workspace ledger. Promotion uses report redaction and approval gates.",
     }),
     clawPersistentSurface.path({
       id: "claw.workspace.slides",

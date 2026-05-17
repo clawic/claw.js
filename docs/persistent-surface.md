@@ -32,6 +32,7 @@ flowchart TD
   claw_contracts_external["External dependencies and owned mappings\nroot"]
   claw_contracts --> claw_contracts_external
   claw_cli_public["Public claw CLI\nroot"]
+  claw_cli_commandIntentRegistry["CLI command intent registry\nroot"]
   claw_mcp_surface["MCP model-native surface\nroot"]
   claw_storage_canonical["Canonical storage boundary\nroot"]
   claw_host_signed["Active signed host\nroot"]
@@ -1086,6 +1087,8 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_report
   claw_cli_command_needs["needs\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_needs
+  claw_cli_command_commands["commands\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_commands
   claw_cli_command_work["work\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_work
   claw_cli_command_projects["projects\ncliCommand"]
@@ -1276,6 +1279,8 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_browser
   claw_cli_command_compat["compat\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_compat
+  claw_schema_commandIntents_v1["CLI command intent schema v1\njsonSchema"]
+  claw_contracts_schemas --> claw_schema_commandIntents_v1
   claw_cli_flag_json["--json\ncliFlag"]
   claw_contracts_cli --> claw_cli_flag_json
   claw_cli_flag_dry_run["--dry-run\ncliFlag"]
@@ -1379,6 +1384,10 @@ flowchart TD
   claw_workspace --> claw_workspace_need_routes
   claw_workspace_need_routes_ledger["need route lab ledger\nfile"]
   claw_workspace_need_routes --> claw_workspace_need_routes_ledger
+  claw_workspace_command_intents["command-intents\nfolder"]
+  claw_workspace --> claw_workspace_command_intents
+  claw_workspace_command_intents_ledger["command intent ledger\nfile"]
+  claw_workspace_command_intents --> claw_workspace_command_intents_ledger
   claw_workspace_slides["slides\nfolder"]
   claw_workspace --> claw_workspace_slides
   claw_workspace_dashboard_database["dashboard-database\nfolder"]
@@ -1712,6 +1721,10 @@ flowchart TD
   claw_database_core --> claw_database_core_table_operational_events
   claw_database_core_index_operational_events_kind_idx["operational_events_kind_idx\nindex"]
   claw_database_core --> claw_database_core_index_operational_events_kind_idx
+  claw_cli_command_commands -- "consumes" --> claw_schema_commandIntents_v1
+  claw_cli_command_commands -- "owns" --> claw_workspace_command_intents_ledger
+  claw_cli_command_commands -- "brokers" --> claw_cli_command_needs
+  claw_cli_command_commands -- "brokers" --> claw_cli_command_report
   clawix_ui_chat -- "consumes" --> clawix_bridge_local
   clawix_bridge_local -- "brokers" --> claw_daemon_local
   claw_daemon_local -- "brokers" --> claw_runtime_agent
@@ -1732,6 +1745,7 @@ flowchart TD
 
 | ID | From | To | Visibility | Validation |
 | --- | --- | --- | --- | --- |
+| `cli.commandIntentResolution` | `claw.cli.command.commands` | `claw.cli.command.report` | public | Fixture tests for resolve, record, list, opportunities, promote, unknown fallback metadata, and inspect command-intents. |
 | `chat.localDesktop` | `clawix.ui.chat` | `claw.sessions` | internal | Fixture + hermetic E2E for local desktop chat |
 | `chat.companionBridge` | `clawix.companion.client` | `claw.sessions` | public | Fixture + hermetic E2E for companion bridge traffic |
 | `chat.remoteRelay` | `claw.remote.client` | `claw.sessions` | external | Fixture + hermetic Relay E2E without production services |
@@ -1740,6 +1754,10 @@ flowchart TD
 
 | ID | Type | From | To | Contract | Transport |
 | --- | --- | --- | --- | --- | --- |
+| `claw.edge.commands.consumes.intentSchema` | consumes | `claw.cli.command.commands` | `claw.schema.commandIntents.v1` | `claw.schema.commandIntents.v1` | local deterministic registry |
+| `claw.edge.commands.owns.intentLedger` | owns | `claw.cli.command.commands` | `claw.workspace.command_intents.ledger` | `claw.workspace.command_intents.ledger` | workspace JSON ledger |
+| `claw.edge.commands.brokers.needs` | brokers | `claw.cli.command.commands` | `claw.cli.command.needs` | `claw.cli.command.needs` | NeedOpportunity-compatible projection |
+| `claw.edge.commands.brokers.report` | brokers | `claw.cli.command.commands` | `claw.cli.command.report` | `claw.cli.command.report` | approval-gated report promotion packet |
 | `claw.edge.chat.ui.consumes.bridge` | consumes | `clawix.ui.chat` | `clawix.bridge.local` | `clawix.protocol.bridge.v1` | local bridge RPC |
 | `claw.edge.bridge.brokers.daemon` | brokers | `clawix.bridge.local` | `claw.daemon.local` | `claw.protocol.hostCommand.v1` | localhost/process bridge |
 | `claw.edge.daemon.brokers.runtime` | brokers | `claw.daemon.local` | `claw.runtime.agent` | `claw.protocol.hostCommand.v1` | framework runtime adapter |
@@ -1772,6 +1790,7 @@ flowchart TD
 | `claw.contracts.formats` | root | format | claw |  | cli, persistence | humanUi:optional | `contracts/formats` |
 | `claw.contracts.external` | root | external | claw |  | sdk, serviceApi, mcp | humanUi:optional | `contracts/external` |
 | `claw.cli.public` | root | protocol | claw | humanUi | cli |  | `claw` |
+| `claw.cli.commandIntentRegistry` | root | protocol | claw | humanUi | cli, persistence |  | `claw/commands` |
 | `claw.mcp.surface` | root | protocol | claw | humanUi | mcp, sdk, serviceApi |  | `mcp` |
 | `claw.storage.canonical` | root | protocol | claw | humanUi | sdk, cli, serviceApi, persistence |  | `storage` |
 | `claw.host.signed` | root | protocol | claw | humanUi | cli, serviceApi |  | `host` |
@@ -2307,6 +2326,7 @@ flowchart TD
 | `claw.cli.command.life` | cliCommand | cli | claw |  |  |  | `life` |
 | `claw.cli.command.report` | cliCommand | cli | claw |  |  |  | `report` |
 | `claw.cli.command.needs` | cliCommand | cli | claw |  |  |  | `needs` |
+| `claw.cli.command.commands` | cliCommand | cli | claw |  |  |  | `commands` |
 | `claw.cli.command.work` | cliCommand | cli | claw |  |  |  | `work` |
 | `claw.cli.command.projects` | cliCommand | cli | claw |  |  |  | `projects` |
 | `claw.cli.command.tasks` | cliCommand | cli | claw |  |  |  | `tasks` |
@@ -2402,6 +2422,7 @@ flowchart TD
 | `claw.cli.command.preview` | cliCommand | cli | claw |  |  |  | `preview` |
 | `claw.cli.command.browser` | cliCommand | cli | claw |  |  |  | `browser` |
 | `claw.cli.command.compat` | cliCommand | cli | claw |  |  |  | `compat` |
+| `claw.schema.commandIntents.v1` | jsonSchema | schema | claw |  |  |  | `claw.cli.commandIntents.v1` |
 | `claw.cli.flag.json` | cliFlag | cli | claw |  |  |  | `--json` |
 | `claw.cli.flag.dry-run` | cliFlag | cli | claw |  |  |  | `--dry-run` |
 | `claw.cli.flag.workspace` | cliFlag | cli | claw |  |  |  | `--workspace` |
@@ -2455,6 +2476,8 @@ flowchart TD
 | `claw.workspace.reports.governance_state` | file | persistent | claw |  |  |  | `.claw/reports/report-governance.json` |
 | `claw.workspace.need_routes` | folder | persistent | claw |  |  |  | `.claw/need-routes` |
 | `claw.workspace.need_routes.ledger` | file | persistent | claw |  |  |  | `.claw/need-routes/need-route-lab.json` |
+| `claw.workspace.command_intents` | folder | persistent | claw |  |  |  | `.claw/command-intents` |
+| `claw.workspace.command_intents.ledger` | file | persistent | claw |  |  |  | `.claw/command-intents/command-intents.json` |
 | `claw.workspace.slides` | folder | persistent | claw |  |  |  | `.claw/slides` |
 | `claw.workspace.dashboard_database` | folder | persistent | claw |  |  |  | `.claw/dashboard-database` |
 | `claw.workspace.channel_run` | folder | persistent | claw |  |  |  | `.claw/run/channels` |

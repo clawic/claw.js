@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-import { clawPersistentSurfaceRegistry, connectorExecutionPipeline, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommands, resolveClawCliCommand, searchClawCliRegistry, withSurfaceChildren } from "@clawjs/core";
+import { CLAW_CLI_COMMAND_INTENT_STATUSES, clawPersistentSurfaceRegistry, connectorExecutionPipeline, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, resolveClawCliCommand, searchClawCliRegistry, withSurfaceChildren } from "@clawjs/core";
 import type { ClawPersistentSurfaceNode, ClawPersistentSurfaceRegistry, ClawSurfaceEdge, ClawSurfaceRoute } from "@clawjs/core";
 import { v1MainSchemaSurfaceNodes } from "./v1-data-surface.ts";
 import { writeJsonError, writeJsonOk, type CliJsonMeta } from "./cli-json.ts";
@@ -719,6 +719,19 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     }
     return CLI_EXIT_OK;
   }
+  if (command === "command-intents") {
+    const intents = listClawCliCommandIntentRegistry();
+    const payload = {
+      schemaVersion: 1,
+      statuses: CLAW_CLI_COMMAND_INTENT_STATUSES,
+      registryIntents: intents,
+      ledgerSurfaceId: "claw.workspace.command_intents.ledger",
+      routeId: "cli.commandIntentResolution",
+    };
+    if (input.wantsJson) writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command));
+    else input.context.stdout.write(`${intents.map((entry) => `${entry.id}\t${entry.status}\t${entry.phrase}`).join("\n")}\n`);
+    return CLI_EXIT_OK;
+  }
   if (command === "codebase") {
     const manifest = filterCodebaseManifest(readCodebaseManifest(input), input);
     if (input.wantsJson) writeJsonOk(input.context.stdout, manifest, inspectJsonMeta(command));
@@ -814,7 +827,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     }
     throw new InspectCliError("usage_error", `Unsupported inspect render format: ${format}`, CLI_EXIT_USAGE);
   }
-  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|neighbors|routes|route|edges|why|commands|codebase|connectors|aliases|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
+  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|neighbors|routes|route|edges|why|commands|command-intents|codebase|connectors|aliases|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
 }
 
 export async function runInspectCli(input: InspectCliInput): Promise<number> {

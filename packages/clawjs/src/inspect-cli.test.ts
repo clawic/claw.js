@@ -97,8 +97,9 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   const routes = await runCliCapture(["inspect", "routes", "--json"], process.cwd());
   assert.equal(routes.code, CLI_EXIT_OK);
   const routeList = parseCliJson<Array<{ id: string; steps: Array<{ edgeType: string; fromId: string; toId: string }> }>>(routes.stdout).data;
-  assert.deepEqual(routeList.map((route) => route.id).sort(), ["chat.companionBridge", "chat.localDesktop", "chat.remoteRelay"]);
+  assert.deepEqual(routeList.map((route) => route.id).sort(), ["chat.companionBridge", "chat.localDesktop", "chat.remoteRelay", "cli.commandIntentResolution"]);
   assert.equal(routeList.find((route) => route.id === "chat.localDesktop")?.steps.every((step) => ["owns", "consumes", "exposes", "brokers"].includes(step.edgeType)), true);
+  assert.equal(routeList.find((route) => route.id === "cli.commandIntentResolution")?.steps.every((step) => ["owns", "consumes", "exposes", "brokers"].includes(step.edgeType)), true);
 
   const route = await runCliCapture(["inspect", "route", "chat.remoteRelay", "--json"], process.cwd());
   assert.equal(route.code, CLI_EXIT_OK);
@@ -106,6 +107,13 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   assert.equal(remoteRoute.id, "chat.remoteRelay");
   assert.equal(remoteRoute.edges.some((edge) => edge.id === "claw.edge.relay.brokers.connector" && edge.type === "brokers"), true);
   assert.equal(remoteRoute.tests.includes("packages/clawjs/src/inspect-cli.test.ts"), true);
+
+  const commandIntentRoute = await runCliCapture(["inspect", "route", "cli.commandIntentResolution", "--json"], process.cwd());
+  assert.equal(commandIntentRoute.code, CLI_EXIT_OK);
+  const commandIntentPayload = parseCliJson<{ id: string; edges: Array<{ id: string; type: string }>; tests: string[] }>(commandIntentRoute.stdout).data;
+  assert.equal(commandIntentPayload.id, "cli.commandIntentResolution");
+  assert.equal(commandIntentPayload.edges.some((edge) => edge.id === "claw.edge.commands.owns.intentLedger" && edge.type === "owns"), true);
+  assert.equal(commandIntentPayload.tests.includes("packages/clawjs/src/cli-commands.test.ts"), true);
 
   const neighbors = await runCliCapture(["inspect", "neighbors", "clawix.bridge.local", "--json"], process.cwd());
   assert.equal(neighbors.code, CLI_EXIT_OK);
@@ -195,6 +203,13 @@ test("runCli exposes CLI aliases and decision sources through inspect", async ()
   assert.equal(aliasPayload.aliases.some((entry) => entry.alias === "image" && entry.canonicalName === "images"), true);
   assert.equal(aliasPayload.aliases.some((entry) => entry.alias === "lead" && entry.canonicalName === "leads" && entry.source === "collection"), true);
   assert.equal(aliasPayload.aliases.some((entry) => entry.alias === "sessions" && entry.canonicalName === "agent_sessions" && entry.shadowedByCommand === "sessions"), true);
+
+  const commandIntents = await runCliCapture(["inspect", "command-intents", "--json"], process.cwd());
+  assert.equal(commandIntents.code, CLI_EXIT_OK);
+  const commandIntentPayload = parseCliJson<{ routeId: string; ledgerSurfaceId: string; registryIntents: Array<{ id: string; status: string }> }>(commandIntents.stdout).data;
+  assert.equal(commandIntentPayload.routeId, "cli.commandIntentResolution");
+  assert.equal(commandIntentPayload.ledgerSurfaceId, "claw.workspace.command_intents.ledger");
+  assert.equal(commandIntentPayload.registryIntents.some((entry) => entry.id === "cmd_intent_house_buy" && entry.status === "future"), true);
 
   const why = await runCliCapture(["inspect", "why", "host", "--json"], process.cwd());
   assert.equal(why.code, CLI_EXIT_OK);
