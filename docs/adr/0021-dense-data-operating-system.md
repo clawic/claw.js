@@ -162,6 +162,9 @@ records how notes/pages, knowledge entities/facts, knowledge graph relations,
 custom fields, signals, attachments, CRM, billing, ERP, infra/ops, and identity
 fit into this model. Future dense packs must update that audit when they reuse,
 extend, retire, or replace an existing surface.
+Those decisions are also mirrored in
+`clawDenseDataOsRegistry.existingSurfaceIntegrations`, so the no-parallel-system
+requirement is checked as registry data instead of relying only on prose.
 The [Dense Data Source Decision Audit](../dense-data-source-decision-audit.md)
 enumerates the unique decision-bearing user turns that must be satisfied before
 the private goal can close.

@@ -579,6 +579,41 @@ test("dense data OS keeps ERP as an orchestrator over shared collections, not a 
   assert.ok(erp.sharedEngines.includes("finance_accounting"));
 });
 
+test("dense data OS records existing catalog integration choices as registry data", () => {
+  const integrations = clawDenseDataOsRegistry.existingSurfaceIntegrations;
+  const ids = new Set(integrations.map((entry) => entry.id));
+  const requiredIds = [
+    "notes_pages_record_notes",
+    "knowledge_entities_facts",
+    "knowledge_graph_relations",
+    "associations_custom_fields",
+    "signals_observations",
+    "attachments_files_documents_imports",
+    "crm_collections",
+    "billing_finance_collections",
+    "erp_orchestrator",
+    "infra_observability_monitor_ops",
+    "identity_actors_roles_teams",
+  ];
+
+  assert.equal(ids.size, integrations.length, "existing surface integration ids must be unique");
+  for (const id of requiredIds) assert.ok(ids.has(id), `missing existing surface integration ${id}`);
+
+  for (const entry of integrations) {
+    assert.ok(entry.canonicalOwner.length > 0, `${entry.id} must declare a canonical owner`);
+    assert.ok(entry.followUpGate.length > 0, `${entry.id} must declare a follow-up gate`);
+    assert.ok(entry.sharedPrimitives.length > 0, `${entry.id} must declare shared primitives`);
+    for (const primitive of entry.sharedPrimitives) {
+      assert.ok(clawDenseDataOsRegistry.foundationPrimitives.includes(primitive), `${entry.id} references unknown primitive ${primitive}`);
+    }
+    for (const systemId of entry.denseSystems) assert.ok(findClawDenseDataSystem(systemId), `${entry.id} references missing system ${systemId}`);
+  }
+
+  assert.equal(integrations.find((entry) => entry.id === "knowledge_graph_relations")?.canonicalOwner.includes("entity_relations"), true);
+  assert.equal(integrations.find((entry) => entry.id === "erp_orchestrator")?.disposition, "extend");
+  assert.equal(integrations.find((entry) => entry.id === "infra_observability_monitor_ops")?.disposition, "split");
+});
+
 test("dense data OS graduated centers point at canonical built-in collections without duplicate systems", () => {
   const canonicalCollectionNames = new Set([
     ...BUILTIN_COLLECTIONS_BY_NAME.keys(),

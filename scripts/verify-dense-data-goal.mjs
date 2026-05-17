@@ -218,6 +218,20 @@ const requiredExistingAuditSurfaces = [
   "Identity, actors, roles, and teams",
 ];
 
+const requiredExistingIntegrationIds = [
+  "notes_pages_record_notes",
+  "knowledge_entities_facts",
+  "knowledge_graph_relations",
+  "associations_custom_fields",
+  "signals_observations",
+  "attachments_files_documents_imports",
+  "crm_collections",
+  "billing_finance_collections",
+  "erp_orchestrator",
+  "infra_observability_monitor_ops",
+  "identity_actors_roles_teams",
+];
+
 const requiredPluralIntentPhrases = [
   ["claw patients list", "patients"],
   ["claw encounters list", "encounters"],
@@ -465,6 +479,7 @@ for (const requiredPhrase of [
   "quality_gaps",
   "core",
   "sidecars",
+  "clawDenseDataOsRegistry.existingSurfaceIntegrations",
 ]) {
   requireText("existing catalog audit", existingCatalogAudit, requiredPhrase);
 }
@@ -493,6 +508,30 @@ for (const [primitive, collectionName] of Object.entries(requiredFoundationMappi
   }
   if (!canonicalCollections.has(collectionName)) {
     fail(`foundation primitive ${primitive} maps to non-canonical collection ${collectionName}`);
+  }
+}
+
+const existingIntegrationIds = new Set(clawDenseDataOsRegistry.existingSurfaceIntegrations.map((entry) => entry.id));
+for (const integrationId of requiredExistingIntegrationIds) {
+  if (!existingIntegrationIds.has(integrationId)) fail(`dense registry missing existing surface integration ${integrationId}`);
+}
+for (const integration of clawDenseDataOsRegistry.existingSurfaceIntegrations) {
+  if (!requiredExistingAuditSurfaces.includes(integration.surface)) {
+    fail(`existing surface integration ${integration.id} is not mirrored in the public audit table`);
+  }
+  if (!["reuse", "extend", "split", "replace", "retire"].includes(integration.disposition)) {
+    fail(`existing surface integration ${integration.id} has invalid disposition ${integration.disposition}`);
+  }
+  if (!integration.canonicalOwner.trim()) fail(`existing surface integration ${integration.id} must declare a canonical owner`);
+  if (!integration.followUpGate.trim()) fail(`existing surface integration ${integration.id} must declare a follow-up gate`);
+  if (integration.sharedPrimitives.length === 0) fail(`existing surface integration ${integration.id} must declare shared primitives`);
+  for (const primitive of integration.sharedPrimitives) {
+    if (!Object.hasOwn(requiredFoundationMappings, primitive)) fail(`existing surface integration ${integration.id} references unknown primitive ${primitive}`);
+  }
+  for (const systemId of integration.denseSystems) {
+    if (!clawDenseDataOsRegistry.systems.some((entry) => entry.id === systemId)) {
+      fail(`existing surface integration ${integration.id} references missing system ${systemId}`);
+    }
   }
 }
 

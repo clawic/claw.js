@@ -6,6 +6,12 @@ conversation `019e35a1-06bb-77f2-a712-92ed2646bd15`: no dense-data pack may
 close by creating a second catalog, graph, evidence model, CRM, billing, ERP,
 or ops model that ignores the current framework surface.
 
+The same decisions are mirrored as structured registry data in
+`clawDenseDataOsRegistry.existingSurfaceIntegrations`. The public table below is
+the human-readable canon; the registry entry is the executable guard that
+requires every audited surface to declare a disposition, canonical owner,
+shared primitive set, dense-system references, and follow-up gate.
+
 ## Current Decisions
 
 | Existing surface | Dense-data decision | Canonical owner now | Follow-up gate |
@@ -25,8 +31,8 @@ or ops model that ignores the current framework surface.
 ## Guardrails
 
 - New dense collection proposals must state whether they reuse an existing
-  collection, extend one, replace one during the pre-v1 reset, or are a new
-  canonical owner.
+  collection, extend one, split ownership by purpose, replace one during the
+  pre-v1 reset, retire it, or are a new canonical owner.
 - Direct stable links use schema relation fields. Secondary, cross-pack, or
   evolving links use `entity_relations`.
 - Documents, notes, files, and imports are evidence. They create or support

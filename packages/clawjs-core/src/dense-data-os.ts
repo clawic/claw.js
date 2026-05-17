@@ -4,6 +4,8 @@ export type ClawDenseDataSensitivityDefault = "normal" | "high";
 
 export type ClawDenseDataStoragePolicy = "core_sqlite" | "sidecar_exception_only";
 
+export type ClawDenseDataExistingSurfaceDisposition = "reuse" | "extend" | "split" | "replace" | "retire";
+
 export type ClawDenseDataIntentStatus =
   | "covered"
   | "partial"
@@ -80,12 +82,24 @@ export interface ClawDenseDataOsRegistry {
   privateGoalReference: string;
   foundationPrimitives: string[];
   foundationCollections: Record<string, string>;
+  existingSurfaceIntegrations: ClawDenseDataExistingSurfaceIntegration[];
   sharedEngines: string[];
   intentStatuses: ClawDenseDataIntentStatus[];
   routeRejectionReasons: string[];
   externalPendingRequirements: ClawDenseDataExternalPendingRequirement[];
   standardCollectionActions: string[];
   systems: ClawDenseDataSystem[];
+}
+
+export interface ClawDenseDataExistingSurfaceIntegration {
+  id: string;
+  surface: string;
+  disposition: ClawDenseDataExistingSurfaceDisposition;
+  canonicalOwner: string;
+  denseSystems: string[];
+  sharedPrimitives: string[];
+  followUpGate: string;
+  notes: string;
 }
 
 export interface ClawDenseDataExternalPendingRequirement {
@@ -173,6 +187,118 @@ export const clawDenseDataOsRegistry: ClawDenseDataOsRegistry = {
     instrument_responses: "instrument_responses",
     universal_relations: "entity_relations",
   },
+  existingSurfaceIntegrations: [
+    {
+      id: "notes_pages_record_notes",
+      surface: "Notes, pages, page blocks, comments, mentions, and record notes",
+      disposition: "reuse",
+      canonicalOwner: "Main database pages/notes plus evidence_sources handles",
+      denseSystems: [],
+      sharedPrimitives: ["evidence_sources", "provenance_events", "quality_gaps"],
+      followUpGate: "Dense import flows must create or link evidence_sources and preserve raw notes when normalization is unsafe.",
+      notes: "Narrative evidence can support structured records, but it never replaces canonical dense collections.",
+    },
+    {
+      id: "knowledge_entities_facts",
+      surface: "Knowledge entities and facts",
+      disposition: "split",
+      canonicalOwner: "Knowledge collections for reusable facts; dense typed collections for professional centers",
+      denseSystems: ["health", "research", "legal", "erp"],
+      sharedPrimitives: ["concepts", "concept_mappings", "evidence_sources"],
+      followUpGate: "Avoid adding generic subject or fact tables for domain records; promote stable professional objects to typed collections.",
+      notes: "Knowledge remains a reusable context layer while patient, study, case, company, and similar centers stay typed.",
+    },
+    {
+      id: "knowledge_graph_relations",
+      surface: "Knowledge graph relations",
+      disposition: "split",
+      canonicalOwner: "knowledge_graph_relations for knowledge graphs; entity_relations for operational dense links",
+      denseSystems: [],
+      sharedPrimitives: ["universal_relations"],
+      followUpGate: "New dense routes must choose one graph owner explicitly before adding relation writes.",
+      notes: "This preserves knowledge graph context and prevents a second operational relation graph.",
+    },
+    {
+      id: "associations_custom_fields",
+      surface: "Associations and custom fields",
+      disposition: "extend",
+      canonicalOwner: "Existing custom-field and association surfaces plus built-in schema fields",
+      denseSystems: [],
+      sharedPrimitives: ["universal_relations", "quality_gaps"],
+      followUpGate: "Graduation from custom field to schema field must include docs, relation semantics, and smoke coverage.",
+      notes: "Custom fields remain an evolution layer; stable dense links become schema relations or entity_relations.",
+    },
+    {
+      id: "signals_observations",
+      surface: "Signals and observations",
+      disposition: "reuse",
+      canonicalOwner: "Signals tables plus dense measurement collections",
+      denseSystems: ["health", "labs", "education", "ops", "iot"],
+      sharedPrimitives: ["instrument_responses", "semantic_views", "quality_gaps"],
+      followUpGate: "Do not duplicate high-churn time-series data into one-off dense records without a concrete view reason.",
+      notes: "Dense records link to repeated observations where useful while raw/high-churn signal storage keeps its owner.",
+    },
+    {
+      id: "attachments_files_documents_imports",
+      surface: "Attachments, files, documents, and raw imports",
+      disposition: "reuse",
+      canonicalOwner: "File/document stores plus evidence_sources and provenance_events",
+      denseSystems: [],
+      sharedPrimitives: ["evidence_sources", "provenance_events", "quality_gaps"],
+      followUpGate: "Export, external send, purge, and native access remain gated and audited.",
+      notes: "Binary and raw content stay in file/document storage; dense records store handles, summaries, provenance, and gaps.",
+    },
+    {
+      id: "crm_collections",
+      surface: "CRM companies, accounts, contacts, leads, deals, activities, and assets",
+      disposition: "extend",
+      canonicalOwner: "Existing CRM built-ins, especially companies, accounts, and deals",
+      denseSystems: ["crm", "erp"],
+      sharedPrimitives: ["identity_base", "domain_roles", "typed_profiles", "universal_relations"],
+      followUpGate: "CRM pack graduation must reuse current built-ins or explicitly reset/rename them.",
+      notes: "CRM is a first-wave dense system and ERP dependency, not a new parallel CRM.",
+    },
+    {
+      id: "billing_finance_collections",
+      surface: "Billing customers, invoices, payments, subscriptions, prices, and ledger-like records",
+      disposition: "extend",
+      canonicalOwner: "Existing billing and finance built-ins, including invoices, payment_intents, and transactions",
+      denseSystems: ["erp", "finance"],
+      sharedPrimitives: ["evidence_sources", "provenance_events", "quality_gaps"],
+      followUpGate: "Accounting views must map to these collections before adding new finance tables.",
+      notes: "Billing is part of ERP/finance orchestration while money-moving provider actions stay gated.",
+    },
+    {
+      id: "erp_orchestrator",
+      surface: "ERP",
+      disposition: "extend",
+      canonicalOwner: "ERP dense system over shared CRM, billing, finance, commerce, procurement, and inventory collections",
+      denseSystems: ["erp", "crm", "finance", "procurement", "warehouse", "supply_chain"],
+      sharedPrimitives: ["semantic_views", "canonical_operations", "universal_relations"],
+      followUpGate: "New ERP commands must route to a canonical owner collection.",
+      notes: "ERP is an orchestrator over shared collections, not a supercollection.",
+    },
+    {
+      id: "infra_observability_monitor_ops",
+      surface: "Infra, observability, monitor, and ops",
+      disposition: "split",
+      canonicalOwner: "ops dense system for services/incidents; sidecars for telemetry and runtime state",
+      denseSystems: ["ops"],
+      sharedPrimitives: ["evidence_sources", "provenance_events", "quality_gaps"],
+      followUpGate: "Do not expose infra/ops sidecars as public dense records unless an ADR promotes them.",
+      notes: "User-facing ITSM records live in core.sqlite; high-churn telemetry remains a sidecar exception.",
+    },
+    {
+      id: "identity_actors_roles_teams",
+      surface: "Identity, actors, roles, and teams",
+      disposition: "extend",
+      canonicalOwner: "people, actors, identity roles, domain_roles, and domain_profiles",
+      denseSystems: ["health", "research", "legal", "hr", "education", "crm"],
+      sharedPrimitives: ["identity_base", "domain_roles", "typed_profiles", "provenance_events", "quality_gaps"],
+      followUpGate: "Sensitive role/profile writes need provenance and quality-gap support.",
+      notes: "Minimal shared identity prevents duplicate patient, participant, client, employee, learner, lead, and vendor records.",
+    },
+  ],
   sharedEngines: [
     "identity_role_profile",
     "evidence_provenance",
@@ -1363,6 +1489,25 @@ export function assertClawDenseDataOsRegistryComplete(): void {
     if (requirement.status !== "external_pending") failures.push(`${requirement.id}: external pending requirement must use external_pending status`);
     if (!findClawDenseDataSystem(requirement.systemId)) failures.push(`${requirement.id}: references missing system ${requirement.systemId}`);
     if (!requirement.validationNeeded.trim()) failures.push(`${requirement.id}: missing validation needed`);
+  }
+  if (clawDenseDataOsRegistry.existingSurfaceIntegrations.length === 0) {
+    failures.push("missing existing surface integration audit");
+  }
+  const existingSurfaceIds = new Set<string>();
+  for (const integration of clawDenseDataOsRegistry.existingSurfaceIntegrations) {
+    if (!integration.id || !/^[a-z][a-z0-9_]*$/.test(integration.id)) failures.push(`${integration.id}: invalid existing surface integration id`);
+    if (existingSurfaceIds.has(integration.id)) failures.push(`${integration.id}: duplicate existing surface integration id`);
+    existingSurfaceIds.add(integration.id);
+    if (!integration.surface.trim()) failures.push(`${integration.id}: missing existing surface label`);
+    if (!integration.canonicalOwner.trim()) failures.push(`${integration.id}: missing canonical owner`);
+    if (!integration.followUpGate.trim()) failures.push(`${integration.id}: missing follow-up gate`);
+    if (!integration.notes.trim()) failures.push(`${integration.id}: missing integration notes`);
+    for (const primitive of integration.sharedPrimitives) {
+      if (!clawDenseDataOsRegistry.foundationPrimitives.includes(primitive)) failures.push(`${integration.id}: unknown shared primitive ${primitive}`);
+    }
+    for (const systemId of integration.denseSystems) {
+      if (!findClawDenseDataSystem(systemId)) failures.push(`${integration.id}: references missing dense system ${systemId}`);
+    }
   }
 
   const requiredFirstWave = ["health", "research", "biology", "labs", "legal", "erp", "crm", "finance", "education", "manufacturing", "ops", "transport", "eln"];
