@@ -357,7 +357,7 @@ function enrichAssetRecord(
         };
       }
     } catch {
-      // Fall back to legacy image assets.
+      // Fall back to workspace image files when object storage is unavailable.
     }
   }
   const asset = dataStore.asset(record.outputRelativePath);

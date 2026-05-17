@@ -677,7 +677,7 @@ test("runCli manages V2 conversation artifact sidecars for audio, drive, runtime
   });
 });
 
-test("runCli reset covers V2 main DB legacy service tables when present", async () => {
+test("runCli reset covers V2 main DB retired service tables when present", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-reset-"));
   await withPatchedEnv({
     CLAW_DATA_DIR: tempRoot,

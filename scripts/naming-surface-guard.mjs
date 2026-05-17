@@ -278,6 +278,18 @@ for (const relativePath of [
   requireSnippet(relativePath, "pre-v1");
 }
 
+forbidSnippet("packages/clawjs/src/index-data.test.ts", "legacy service tables");
+
+for (const relativePath of [
+  "packages/clawjs-node/src/generations/store.ts",
+  "packages/clawjs-node/src/images/store.ts",
+  "packages/clawjs-node/src/skills/sources.ts",
+]) {
+  forbidSnippet(relativePath, "legacy workspace assets");
+  forbidSnippet(relativePath, "legacy image assets");
+  forbidSnippet(relativePath, "legacy v1 skill surface");
+}
+
 for (const relativePath of [
   "docs/index.md",
   "packages/openclaw-context-engine/package.json",

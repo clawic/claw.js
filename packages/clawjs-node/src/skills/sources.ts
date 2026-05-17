@@ -1,9 +1,8 @@
 /**
  * @deprecated Skill source adapters (workspace, clawhub, clawic, skills.sh)
- * are part of the legacy v1 skill surface. The unified skills-v2 model
- * (`@clawjs/claw` skills-v2 module + agentskills.io standard) supersedes
- * this. Callers should migrate to `claw.skills.create / listV2 / importExternal`.
- * Scheduled for removal in a future release.
+ * are retired source adapters kept only inside the @clawjs/node compatibility
+ * package. The unified skills-v2 model (`@clawjs/claw` skills-v2 module plus
+ * the agentskills.io standard) is the stable v1 surface.
  */
 import fs from "fs";
 import path from "path";

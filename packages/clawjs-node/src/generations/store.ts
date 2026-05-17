@@ -266,7 +266,7 @@ function enrichAssetRecord(
         };
       }
     } catch {
-      // Fall back to legacy workspace assets.
+      // Fall back to workspace asset files when object storage is unavailable.
     }
   }
   const asset = dataStore.asset(relativePath);
