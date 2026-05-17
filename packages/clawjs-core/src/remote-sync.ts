@@ -295,6 +295,24 @@ export const nodeTrustDecisionSchema = z.object({
   writes: z.literal(false),
 });
 
+export const gatewayDeploymentManifestSchema = z.object({
+  schemaVersion: z.literal(1),
+  deploymentId: z.string().min(1),
+  deploymentKind: z.enum(["self_hosted", "hosted"]),
+  gatewayNodeId: z.string().min(1),
+  coordinatorNodeId: z.string().min(1),
+  bindAddress: z.string().min(1),
+  publicBaseUrl: z.string().min(1).optional(),
+  contractRouteIds: z.array(z.string().min(1)).min(1),
+  hostedSelfHostedParity: z.literal(true),
+  conformanceStatus: z.enum(["baseline_registered", "external_pending"]),
+  physicalDeploymentVerified: z.boolean(),
+  externalPending: z.array(z.enum(["self_hosted_deployment", "hosted_deployment"])),
+  createdAt: z.string().datetime(),
+  auditEventId: z.string().min(1),
+  writes: z.literal(false),
+});
+
 export const meshShareActionSchema = z.enum([
   "read",
   "sync",
@@ -429,6 +447,7 @@ export type RemoteAccessDecision = z.infer<typeof remoteAccessDecisionSchema>;
 export type RemoteOfflineCommandResult = z.infer<typeof remoteOfflineCommandResultSchema>;
 export type RemoteTransportHandshakeReceipt = z.infer<typeof remoteTransportHandshakeReceiptSchema>;
 export type NodeTrustDecision = z.infer<typeof nodeTrustDecisionSchema>;
+export type GatewayDeploymentManifest = z.infer<typeof gatewayDeploymentManifestSchema>;
 export type MeshShareAction = z.infer<typeof meshShareActionSchema>;
 export type MeshInvitation = z.infer<typeof meshInvitationSchema>;
 export type MeshResourceShare = z.infer<typeof meshResourceShareSchema>;
@@ -577,6 +596,10 @@ function remoteTransportReceiptId(parts: string[]): string {
 
 function nodeTrustDecisionId(parts: string[]): string {
   return `node_trust_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
+}
+
+function gatewayDeploymentId(parts: string[]): string {
+  return `gateway_deployment_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
 }
 
 function newestSnapshot(left: SyncObjectSnapshot, right: SyncObjectSnapshot): SyncObjectSnapshot {
@@ -894,6 +917,43 @@ export function createNodeTrustDecision(input: {
     createdAt,
     ...(input.expiresAt ? { expiresAt: input.expiresAt } : {}),
     auditEventId: nodeTrustDecisionId(["audit", input.subjectNodeId, input.coordinatorNodeId, createdAt]),
+    writes: false,
+  });
+}
+
+export function createGatewayDeploymentManifest(input: {
+  deploymentKind?: "self_hosted" | "hosted";
+  gatewayNodeId: string;
+  coordinatorNodeId: string;
+  bindAddress?: string;
+  publicBaseUrl?: string;
+  contractRouteIds?: string[];
+  createdAt?: string;
+  physicalDeploymentVerified?: boolean;
+}): GatewayDeploymentManifest {
+  const createdAt = input.createdAt ?? new Date().toISOString();
+  const deploymentKind = input.deploymentKind ?? "self_hosted";
+  const physicalDeploymentVerified = input.physicalDeploymentVerified ?? false;
+  return gatewayDeploymentManifestSchema.parse({
+    schemaVersion: 1,
+    deploymentId: gatewayDeploymentId([
+      deploymentKind,
+      input.gatewayNodeId,
+      input.coordinatorNodeId,
+      createdAt,
+    ]),
+    deploymentKind,
+    gatewayNodeId: input.gatewayNodeId,
+    coordinatorNodeId: input.coordinatorNodeId,
+    bindAddress: input.bindAddress ?? "127.0.0.1:24102",
+    ...(input.publicBaseUrl ? { publicBaseUrl: input.publicBaseUrl } : {}),
+    contractRouteIds: input.contractRouteIds?.length ? input.contractRouteIds : remoteSyncRequiredRouteIds.slice(),
+    hostedSelfHostedParity: true,
+    conformanceStatus: physicalDeploymentVerified ? "baseline_registered" : "external_pending",
+    physicalDeploymentVerified,
+    externalPending: physicalDeploymentVerified ? [] : [deploymentKind === "hosted" ? "hosted_deployment" : "self_hosted_deployment"],
+    createdAt,
+    auditEventId: gatewayDeploymentId(["audit", deploymentKind, input.gatewayNodeId, createdAt]),
     writes: false,
   });
 }

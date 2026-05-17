@@ -4,6 +4,7 @@ import crypto from "crypto";
 
 import {
   buildSyncQueueEntries,
+  gatewayDeploymentManifestSchema,
   reconcileSyncQueue,
   meshInvitationSchema,
   meshResourceShareSchema,
@@ -15,6 +16,7 @@ import {
   syncCursorSchema,
   syncQueueEntrySchema,
   syncResourceManifestSchema,
+  type GatewayDeploymentManifest,
   type MeshInvitation,
   type MeshResourceShare,
   type MeshRevocation,
@@ -31,7 +33,7 @@ import {
 
 export type RemoteSyncStateAuditEvent = {
   eventId: string;
-  eventType: "sync.manifest.recorded" | "sync.queue.enqueued" | "sync.queue.reconciled" | "mesh.invitation.recorded" | "mesh.share.recorded" | "mesh.revocation.recorded" | "secret.lease.issued" | "transport.handshake.recorded" | "node.trust.recorded";
+  eventType: "sync.manifest.recorded" | "sync.queue.enqueued" | "sync.queue.reconciled" | "mesh.invitation.recorded" | "mesh.share.recorded" | "mesh.revocation.recorded" | "secret.lease.issued" | "transport.handshake.recorded" | "node.trust.recorded" | "gateway.deployment.recorded";
   targetId: string;
   createdAt: string;
   coordinatorSignatureId?: string;
@@ -79,6 +81,9 @@ export type RemoteSyncState = {
   nodeTrust: {
     decisions: Record<string, NodeTrustDecision>;
   };
+  gateway: {
+    deployments: Record<string, GatewayDeploymentManifest>;
+  };
   audit: RemoteSyncStateAuditEvent[];
 };
 
@@ -111,6 +116,9 @@ function emptyState(): RemoteSyncState {
     },
     nodeTrust: {
       decisions: {},
+    },
+    gateway: {
+      deployments: {},
     },
     audit: [],
   };
@@ -302,6 +310,16 @@ function parseState(raw: unknown): RemoteSyncState {
     }
   }
 
+  const gateway = input.gateway;
+  if (gateway && typeof gateway === "object" && !Array.isArray(gateway)) {
+    const deployments = (gateway as Record<string, unknown>).deployments;
+    if (deployments && typeof deployments === "object" && !Array.isArray(deployments)) {
+      for (const [deploymentId, deploymentInput] of Object.entries(deployments)) {
+        state.gateway.deployments[deploymentId] = gatewayDeploymentManifestSchema.parse(deploymentInput);
+      }
+    }
+  }
+
   const audit = input.audit;
   if (Array.isArray(audit)) {
     state.audit = audit.flatMap((event) => {
@@ -481,6 +499,17 @@ export class RemoteSyncStateStore {
     const coordinatorSignature = appendAudit(state, "node.trust.recorded", decision.decisionId, now, decision, input.signer);
     this.write(state);
     return { decision, statePath: this.statePath, durable: true, coordinatorSignature };
+  }
+
+  recordGatewayDeployment(deploymentInput: GatewayDeploymentManifest, input: { now?: string; signer: RemoteSyncCoordinatorSigner }): RemoteSyncStateWriteResult<{ deployment: GatewayDeploymentManifest }> {
+    const deployment = gatewayDeploymentManifestSchema.parse(deploymentInput);
+    const now = input.now ?? deployment.createdAt;
+    const state = this.read();
+    state.gateway.deployments[deployment.deploymentId] = deployment;
+    state.updatedAt = now;
+    const coordinatorSignature = appendAudit(state, "gateway.deployment.recorded", deployment.deploymentId, now, deployment, input.signer);
+    this.write(state);
+    return { deployment, statePath: this.statePath, durable: true, coordinatorSignature };
   }
 
   issueSecretLease(input: {
