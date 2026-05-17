@@ -71,7 +71,7 @@
         "provider_config_owner"
       ],
       "evidence": ["docs/data-storage-boundary.md", "docs/persistent-surface.md", "scripts/persistent-surface-guard.mjs"],
-      "validationCommands": ["node scripts/persistent-surface-doc-check.mjs", "node scripts/persistent-surface-guard.mjs"]
+      "validationCommands": ["node scripts/persistent-surface-doc-check.mjs", "node scripts/persistent-surface-guard.mjs --self-test"]
     },
     {
       "id": "framework-owned-artifacts",

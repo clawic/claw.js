@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "program": "v1-surface-closure",
+  "repo": "clawjs",
+  "generatedAt": "2026-05-17",
+  "statusVocabulary": {
+    "passed": "The command ran locally and returned exit code 0.",
+    "external-pending": "The local harness exists, but a live, provider, Docker, paid, destructive, physical, or approved external prerequisite was intentionally not exercised.",
+    "blocked-tooling": "The validation path exists, but required local tooling was unavailable in this environment."
+  },
+  "results": [
+    {
+      "id": "clawjs-v1-audit",
+      "acceptanceCategoryIds": ["bridge-swift", "deep-links", "external-pending-policy"],
+      "command": "node scripts/v1-surface-closure-audit-check.mjs",
+      "status": "passed",
+      "evidence": "V1 surface closure audit check passed (37 decisions)."
+    },
+    {
+      "id": "clawjs-bridge-contracts",
+      "acceptanceCategoryIds": ["bridge-android", "bridge-windows", "pairing"],
+      "command": "npm run bridge:test",
+      "status": "passed",
+      "evidence": "Bridge test suite passed: 14 files, 90 tests."
+    },
+    {
+      "id": "clawjs-mcp-registry",
+      "acceptanceCategoryIds": ["mcp-registry"],
+      "command": "npm run mcp:test",
+      "status": "passed",
+      "evidence": "MCP e2e suite passed: 6 tests."
+    },
+    {
+      "id": "clawjs-domain-contracts",
+      "acceptanceCategoryIds": ["domain-resource-fixtures"],
+      "command": "node --import tsx scripts/domain-surface-registry-guard.mjs && node scripts/verify-domain-surface-decision-matrix.mjs",
+      "status": "passed",
+      "evidence": "Domain surface registry guard passed with 976 entries; decision matrix check passed for 20 decisions."
+    },
+    {
+      "id": "clawjs-integration-qa",
+      "acceptanceCategoryIds": ["integrations-qa"],
+      "command": "npm run test:qa-scenarios",
+      "status": "passed",
+      "evidence": "Integration QA scenario validation passed."
+    },
+    {
+      "id": "clawjs-package-live-harness",
+      "acceptanceCategoryIds": ["integrations-qa"],
+      "command": "npm run test:package-live",
+      "status": "external-pending",
+      "evidence": "Package/live harness passed locally and separately reported Docker and brokered live lanes as EXTERNAL PENDING.",
+      "nextAction": "Set CLAWJS_PACKAGE_LIVE_DOCKER=1 for the container install lane, or set CLAW_TEST_LIVE=1 and CLAW_LIVE_BROKER_COMMAND for approved brokered provider validation."
+    },
+    {
+      "id": "clawjs-storage-boundary",
+      "acceptanceCategoryIds": ["storage-boundary", "framework-owned-artifacts", "host-tools-policy"],
+      "command": "node scripts/persistent-surface-doc-check.mjs && node scripts/persistent-surface-guard.mjs --self-test",
+      "status": "passed",
+      "evidence": "Persistent surface docs check and persistent surface guard self-test passed."
+    },
+    {
+      "id": "clawjs-provider-routing",
+      "acceptanceCategoryIds": ["provider-routing"],
+      "command": "node scripts/naming-surface-guard.mjs",
+      "status": "passed",
+      "evidence": "Naming surface guard passed."
+    },
+    {
+      "id": "clawjs-docs-alignment",
+      "acceptanceCategoryIds": ["docs-alignment"],
+      "command": "node scripts/docs-alignment-check.mjs && node scripts/docs-surface-check.mjs && node --import tsx scripts/surface-route-graph-guard.mjs",
+      "status": "passed",
+      "evidence": "Docs alignment, documentation surface, and route graph guards passed."
+    },
+    {
+      "id": "clawjs-source-size",
+      "acceptanceCategoryIds": ["source-size"],
+      "command": "node scripts/source-size-check.mjs",
+      "status": "passed",
+      "evidence": "Source size check passed with existing warnings/signals."
+    },
+    {
+      "id": "clawjs-public-hygiene",
+      "acceptanceCategoryIds": ["public-hygiene"],
+      "command": "node scripts/privacy-check.mjs && node scripts/tracked-ignored-check.mjs && node scripts/code-hygiene-check.mjs",
+      "status": "passed",
+      "evidence": "Privacy, tracked ignored, and code hygiene checks passed."
+    }
+  ]
+}
