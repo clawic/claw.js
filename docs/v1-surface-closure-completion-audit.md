@@ -73,7 +73,14 @@ Status vocabulary:
 | 36 | `experimental_correction` | Do not skip existing experimental surfaces | verified | The matrix and domain guard force explicit classification for current surfaces. |
 | 37 | `external_pending_policy` | Separate external validation | verified | Matrix rows and QA docs mark live provider/device/payment checks as external pending instead of silent skips. |
 
+Final source reread: completed on 2026-05-17 against the private JSONL source.
+The structured reread found 39 `request_user_input` prompts, 37 binding
+answers, and the same 2 excluded prompts recorded above. The free-form
+Apps/Design inventory concern and the later move-now answer are both covered by
+the storage rows.
+
 Current close condition: all listed decisions have public-safe implementation
-or explicit external-pending evidence. The validation ledger currently has no
-tooling blockers for this repo, but the private source session must be re-read
-again immediately before any `update_goal(status=complete)` call.
+or explicit external-pending evidence, this repo's validation ledger has no
+tooling blockers, and the final private-source reread has been completed. Live
+provider, device, payment, destructive, and permission-bound checks remain
+explicit `EXTERNAL PENDING`, not local implementation blockers.
