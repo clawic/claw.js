@@ -1096,6 +1096,10 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
       return ensureCodeSymbolsSourceIndexed(store, flags, cwd);
     case "skills.registry":
       return ensureSkillsRegistrySourceIndexed(store, flags);
+    case "providers.routing":
+      return ensureProvidersRoutingSourceIndexed(store, flags);
+    case "snippets.library":
+      return ensureSnippetsLibrarySourceIndexed(store, flags);
     case "connectors.catalog":
       return ensureConnectorsCatalogSourceIndexed(store, flags);
     case "mcp.servers":
@@ -1160,6 +1164,14 @@ function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flag
     case "skills.registry": {
       const resourceId = resourceIdFromJobPayload(job, "slug") ?? job.resourceId;
       return resourceId ? ensureSkillsRegistryResourceIndexed(store, flags, resourceId) : 0;
+    }
+    case "providers.routing": {
+      const resourceId = job.resourceId;
+      return resourceId ? ensureProvidersRoutingResourceIndexed(store, flags, resourceId) : 0;
+    }
+    case "snippets.library": {
+      const resourceId = resourceIdFromJobPayload(job, "slug") ?? job.resourceId;
+      return resourceId ? ensureSnippetsLibraryResourceIndexed(store, flags, resourceId) : 0;
     }
     case "connectors.catalog": {
       const resourceId = resourceIdFromJobPayload(job, "operationId") ?? job.resourceId;
