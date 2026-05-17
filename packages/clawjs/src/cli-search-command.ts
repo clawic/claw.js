@@ -16,6 +16,8 @@ import {
   type SearchDocumentInput,
   type SearchIndexJob,
   type SearchProfileId,
+  type SearchQueryInput,
+  type SearchQueryOutput,
   type SearchResult,
   type SearchSourceManifest,
   type SearchSourceState,
@@ -466,6 +468,8 @@ export async function runSearchAdminCli(input: {
         };
         store.saveMonitor(item);
         data = { action, item, items: store.listMonitors(), state: "ready" };
+      } else if (command === "monitors" && (action === "run" || action === "evaluate")) {
+        data = runSearchMonitorEvaluations(store, input, action);
       } else {
         const items = command === "saved" ? store.listSavedSearches() : store.listMonitors();
         data = { action, items, state: items.length ? "ready" : "empty" };
@@ -957,6 +961,90 @@ function registerBuiltinSources(store: SearchStore, states: Map<string, SearchSo
 
 function sourceCanIndex(store: SearchStore, source: string): boolean {
   return !["disabled", "paused", "excluded"].includes(store.sourceState(source) ?? "enabled");
+}
+
+function runSearchMonitorEvaluations(
+  store: SearchStore,
+  input: {
+    positionals: string[];
+    flags: Record<string, string>;
+    argv: string[];
+    context: CliContext;
+  },
+  action: string,
+): {
+  action: string;
+  items: Array<{
+    monitorId: string;
+    savedSearchId: string;
+    name?: string;
+    cadence?: string;
+    enabled: boolean;
+    query?: SearchQueryInput;
+    state: "ready" | "missing_saved_search";
+    resultCount: number;
+    partial: boolean;
+    omittedSources: SearchQueryOutput["omittedSources"];
+    results: SearchResult[];
+    evaluatedAt: string;
+  }>;
+  state: string;
+} {
+  const monitorId = input.positionals[3] ?? input.flags.id ?? input.flags.monitor;
+  const includeDisabled = readBooleanFlag(input.argv, input.flags, "include-disabled") || readBooleanFlag(input.argv, input.flags, "all");
+  const savedSearches = new Map(store.listSavedSearches().map((saved) => [saved.id, saved]));
+  const monitors = store.listMonitors().filter((monitor) => {
+    if (monitorId) return monitor.id === monitorId;
+    return includeDisabled || monitor.enabled;
+  });
+  if (sourceCanIndex(store, "commands")) ensureCommandSourceIndexed(store);
+  const limit = input.flags.limit ? Number(input.flags.limit) : undefined;
+  const evaluatedAt = new Date().toISOString();
+  const items = monitors.map((monitor) => {
+    const saved = savedSearches.get(monitor.savedSearchId);
+    if (!saved) {
+      return {
+        monitorId: monitor.id,
+        savedSearchId: monitor.savedSearchId,
+        ...(monitor.name ? { name: monitor.name } : {}),
+        ...(monitor.cadence ? { cadence: monitor.cadence } : {}),
+        enabled: monitor.enabled,
+        state: "missing_saved_search" as const,
+        resultCount: 0,
+        partial: true,
+        omittedSources: [
+          {
+            source: "saved_searches",
+            reason: "error" as const,
+            message: `Saved search '${monitor.savedSearchId}' was not found.`,
+          },
+        ],
+        results: [],
+        evaluatedAt,
+      };
+    }
+    const query = {
+      ...saved.query,
+      ...(limit === undefined ? {} : { limit }),
+    };
+    const output = store.query(query);
+    return {
+      monitorId: monitor.id,
+      savedSearchId: monitor.savedSearchId,
+      name: monitor.name ?? saved.name,
+      ...(monitor.cadence ? { cadence: monitor.cadence } : {}),
+      enabled: monitor.enabled,
+      query,
+      state: "ready" as const,
+      resultCount: output.results.length,
+      partial: output.partial,
+      omittedSources: output.omittedSources,
+      results: output.results,
+      evaluatedAt,
+    };
+  });
+  const state = items.length === 0 ? "empty" : items.some((item) => item.partial) ? "partial" : "ready";
+  return { action, items, state };
 }
 
 function sourceStateForAction(action: string): SearchSourceState {

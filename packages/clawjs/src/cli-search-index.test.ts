@@ -507,6 +507,36 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(monitorPayload.data.item.cadence, "hourly");
     assert.equal(monitorPayload.data.items.some((item) => item.id === "monitor-system" && item.enabled), true);
 
+    const monitorRun = await runCliCapture(["search", "monitors", "run", "monitor-system", "--data-dir", dataRoot, "--json", "--limit", "3"], workspaceRoot);
+    assert.equal(monitorRun.code, CLI_EXIT_OK);
+    const monitorRunPayload = JSON.parse(monitorRun.stdout) as {
+      data: {
+        action: string;
+        state: string;
+        items: Array<{
+          monitorId: string;
+          savedSearchId: string;
+          state: string;
+          query: { query: string; limit: number };
+          resultCount: number;
+          partial: boolean;
+          results: Array<{ source: string; domain: string; title: string }>;
+          evaluatedAt: string;
+        }>;
+      };
+    };
+    assert.equal(monitorRunPayload.data.action, "run");
+    assert.equal(monitorRunPayload.data.state, "ready");
+    assert.equal(monitorRunPayload.data.items[0]?.monitorId, "monitor-system");
+    assert.equal(monitorRunPayload.data.items[0]?.savedSearchId, "recent-system");
+    assert.equal(monitorRunPayload.data.items[0]?.state, "ready");
+    assert.equal(monitorRunPayload.data.items[0]?.query.query, "system capabilities");
+    assert.equal(monitorRunPayload.data.items[0]?.query.limit, 3);
+    assert.ok(monitorRunPayload.data.items[0]?.resultCount > 0);
+    assert.equal(monitorRunPayload.data.items[0]?.partial, false);
+    assert.ok(monitorRunPayload.data.items[0]?.results.some((result) => result.source === "commands"));
+    assert.ok(monitorRunPayload.data.items[0]?.evaluatedAt);
+
     const paused = await runCliCapture(["search", "sources", "pause", "commands", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(paused.code, CLI_EXIT_OK);
     const pausedPayload = JSON.parse(paused.stdout) as {
