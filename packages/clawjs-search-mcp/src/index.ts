@@ -8,13 +8,11 @@ import {
   DEFAULT_SEARCH_BUDGETS,
   SEARCH_PROFILES,
   SearchStore,
+  createSearchActionExecutionPlan,
   listSearchEntrypointContracts,
-  type SearchAction,
-  type SearchActionExecutionPlan,
   type SearchAuditEventType,
   type SearchProfileId,
   type SearchQueryInput,
-  type SearchResult,
 } from "@clawjs/search";
 
 interface JsonRpcRequest {
@@ -145,7 +143,7 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
         }
         const dryRun = typeof p.dryRun === "boolean" ? p.dryRun : false;
         const hostApprovalId = stringParam(p.hostApprovalId);
-        const plan = searchActionExecutionPlan({ result, action, dryRun, hostApprovalId, actor, surface });
+        const plan = createSearchActionExecutionPlan({ result, action, dryRun, hostApprovalId, actor, surface });
         store.recordAuditEvent({
           type: "action",
           actor,
@@ -323,51 +321,6 @@ function searchEmbedding(value: unknown): SearchQueryInput["embedding"] {
   if (typeof record.model !== "string" || !Array.isArray(record.vector)) return undefined;
   const vector = record.vector.filter((entry): entry is number => typeof entry === "number" && Number.isFinite(entry));
   return vector.length === record.vector.length && vector.length ? { model: record.model, vector } : undefined;
-}
-
-function searchActionExecutionPlan(input: {
-  result: SearchResult;
-  action: SearchAction;
-  dryRun: boolean;
-  hostApprovalId?: string;
-  actor?: string;
-  surface?: string;
-}): SearchActionExecutionPlan {
-  const grant = input.action.grant ?? `search.${input.result.domain}.${input.action.kind}`;
-  const risk = input.action.risk ?? (input.action.kind === "open" || input.action.kind === "copy" ? "read" : "system");
-  const requiresApproval = input.action.requiresApproval ?? input.action.kind !== "copy";
-  const status = input.dryRun
-    ? "planned"
-    : requiresApproval && !input.hostApprovalId
-      ? "blocked"
-      : "brokered";
-  const reasons = [
-    ...(requiresApproval ? ["host_approval_required"] : []),
-    ...(status === "brokered" ? ["host_broker_receipt_only"] : []),
-  ];
-  return {
-    id: `search-action:${input.result.id}:${input.action.id}`,
-    resultId: input.result.id,
-    actionId: input.action.id,
-    actionKind: input.action.kind,
-    source: input.result.source,
-    domain: input.result.domain,
-    ...(input.result.resourceId ? { resourceId: input.result.resourceId } : {}),
-    ...(input.actor ? { actor: input.actor } : {}),
-    ...(input.surface ? { surface: input.surface } : {}),
-    grant,
-    risk,
-    requiresApproval,
-    ...(input.hostApprovalId ? { hostApprovalId: input.hostApprovalId } : {}),
-    dryRun: input.dryRun,
-    status,
-    reasons,
-    broker: {
-      system: "host grants/approvals",
-      operation: "search.action.execute",
-      sideEffects: input.dryRun ? "none" : "host_brokered",
-    },
-  };
 }
 
 function searchAuditType(value: unknown): SearchAuditEventType | undefined {

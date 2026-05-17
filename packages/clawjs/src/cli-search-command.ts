@@ -11,6 +11,7 @@ import {
   SEARCH_PROFILES,
   SearchStore,
   createBuiltinSearchSourceManifests,
+  createSearchActionExecutionPlan,
   listSearchEntrypointContracts,
   type SearchAction,
   type SearchActionExecutionPlan,
@@ -1436,7 +1437,7 @@ function runSearchActionExecuteCli(input: {
       return error.exitCode;
     }
 
-    plan = searchActionExecutionPlan({
+    plan = createSearchActionExecutionPlan({
       result,
       action,
       dryRun,
@@ -1712,51 +1713,6 @@ function sourceStateForAction(action: string): SearchSourceState {
   if (action === "pause") return "paused";
   if (action === "exclude") return "excluded";
   return "enabled";
-}
-
-function searchActionExecutionPlan(input: {
-  result: SearchResult;
-  action: SearchAction;
-  dryRun: boolean;
-  hostApprovalId?: string;
-  actor?: string;
-  surface?: string;
-}): SearchActionExecutionPlan {
-  const grant = input.action.grant ?? `search.${input.result.domain}.${input.action.kind}`;
-  const risk = input.action.risk ?? (input.action.kind === "open" || input.action.kind === "copy" ? "read" : "system");
-  const requiresApproval = input.action.requiresApproval ?? input.action.kind !== "copy";
-  const status = input.dryRun
-    ? "planned"
-    : requiresApproval && !input.hostApprovalId
-      ? "blocked"
-      : "brokered";
-  const reasons = [
-    ...(requiresApproval ? ["host_approval_required"] : []),
-    ...(status === "brokered" ? ["host_broker_receipt_only"] : []),
-  ];
-  return {
-    id: `search-action:${input.result.id}:${input.action.id}`,
-    resultId: input.result.id,
-    actionId: input.action.id,
-    actionKind: input.action.kind,
-    source: input.result.source,
-    domain: input.result.domain,
-    ...(input.result.resourceId ? { resourceId: input.result.resourceId } : {}),
-    ...(input.actor ? { actor: input.actor } : {}),
-    ...(input.surface ? { surface: input.surface } : {}),
-    grant,
-    risk,
-    requiresApproval,
-    ...(input.hostApprovalId ? { hostApprovalId: input.hostApprovalId } : {}),
-    dryRun: input.dryRun,
-    status,
-    reasons,
-    broker: {
-      system: "host grants/approvals",
-      operation: "search.action.execute",
-      sideEffects: input.dryRun ? "none" : "host_brokered",
-    },
-  };
 }
 
 function ensureCommandSourceIndexed(store: SearchStore): number {

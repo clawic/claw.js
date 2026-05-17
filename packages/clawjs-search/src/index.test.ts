@@ -12,6 +12,7 @@ import {
   createFrameworkSearchSourceManifest,
   createFullSearchSourceManifest,
   createRootSearchFederator,
+  createSearchActionExecutionPlan,
   createSearchRegistry,
   defineSearchEngine,
   listSearchEntrypointContracts,
@@ -54,6 +55,34 @@ test("Search entrypoint contracts keep Root Search separate from chat search", (
   assert.equal(admin?.route, "/search-index");
   assert.equal(admin?.queryScope, "technical_admin");
   assert.equal(admin?.hotkey.state, "not_applicable");
+});
+
+test("Search action execution plans are brokered and fail closed without host approval", () => {
+  const result = {
+    id: "commands:system",
+    source: "commands",
+    domain: "commands",
+    type: "command",
+    title: "system",
+    score: 1,
+  };
+  const action = { id: "help", kind: "run" as const, label: "Show help", requiresApproval: true, risk: "system" as const, grant: "search.commands.run" };
+
+  const dryRun = createSearchActionExecutionPlan({ result, action, dryRun: true, actor: "agent:test", surface: "mcp" });
+  assert.equal(dryRun.status, "planned");
+  assert.equal(dryRun.broker.sideEffects, "none");
+  assert.equal(dryRun.actor, "agent:test");
+  assert.equal(dryRun.surface, "mcp");
+
+  const blocked = createSearchActionExecutionPlan({ result, action, dryRun: false });
+  assert.equal(blocked.status, "blocked");
+  assert.equal(blocked.requiresApproval, true);
+  assert.equal(blocked.reasons.includes("host_approval_required"), true);
+
+  const brokered = createSearchActionExecutionPlan({ result, action, dryRun: false, hostApprovalId: "approval_search_help" });
+  assert.equal(brokered.status, "brokered");
+  assert.equal(brokered.hostApprovalId, "approval_search_help");
+  assert.equal(brokered.broker.sideEffects, "host_brokered");
 });
 
 test("SearchStore reports the default Search engine descriptor", () => {
