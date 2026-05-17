@@ -14,13 +14,12 @@
     "unreferencedAssetCandidates": 0
   },
   "knipSummary": {
-    "filesWithIssues": 63,
-    "totalIssues": 582,
+    "filesWithIssues": 62,
+    "totalIssues": 577,
     "issueTypes": {
       "unlisted": 2,
-      "types": 4,
       "exports": 509,
-      "owners": 60,
+      "owners": 59,
       "duplicates": 7
     }
   },
@@ -103,6 +102,7 @@
     "Drive/browser/relay/plugin cleanup made local error/location/envelope helpers private and removed unused browser audit and plugin session-key wrappers.",
     "Bridge/Relay follow-up made the screenshot region type private, wired Relay mDNS cleanup into server shutdown, and fixed bridge pairing to send the current platform contract.",
     "Bridge Iroh cleanup made the remote endpoint descriptor private while preserving the exported node and stream bridge contract.",
-    "ClawJS node state cleanup removed the unused Telegram state filename alias while preserving the public Telegram state path resolver."
+    "ClawJS node state cleanup removed the unused Telegram state filename alias while preserving the public Telegram state path resolver.",
+    "Built-in catalog type cleanup made field-kind and collection-rule helper aliases private while preserving exported catalog definition interfaces."
   ]
 }

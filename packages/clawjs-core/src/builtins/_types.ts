@@ -1,4 +1,4 @@
-export type BuiltinFieldType =
+type BuiltinFieldType =
   | "text"
   | "number"
   | "boolean"
@@ -21,9 +21,9 @@ export type BuiltinFieldType =
   | "color_hex"
   | "barcode";
 
-export type BuiltinBarcodeKind = "isbn10" | "isbn13" | "ean13" | "upc12" | "qr_text" | "generic";
+type BuiltinBarcodeKind = "isbn10" | "isbn13" | "ean13" | "upc12" | "qr_text" | "generic";
 
-export type BuiltinDurationDisplayUnit = "second" | "minute" | "hour" | "day";
+type BuiltinDurationDisplayUnit = "second" | "minute" | "hour" | "day";
 
 export type BuiltinCatalogEvidenceTag =
   | "human_recognizable"
@@ -82,7 +82,7 @@ export interface BuiltinIndexDefinition {
   unique?: boolean;
 }
 
-export type BuiltinCollectionRule =
+type BuiltinCollectionRule =
   | { kind: "compare_dates"; left: string; op: "<" | "<=" | "==" | ">=" | ">"; right: string; message?: string }
   | { kind: "required_if"; field: string; whenField: string; whenEquals: unknown; message?: string }
   | { kind: "number_compare"; left: string; op: "<" | "<=" | "==" | ">=" | ">"; right: string | number; message?: string }
