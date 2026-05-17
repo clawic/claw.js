@@ -764,6 +764,10 @@ claw thing thing_123 devices add "Press vibration sensor" --json
 claw iot-device device_123 readings add vibration --value 0.42 --json
 claw iot-device device_123 commands add "Restart gateway" --json
 claw thing thing_123 timeline --json
+claw construction-project construction_project_123 sites add "Lab site" --json
+claw construction-project construction_project_123 rfis add "Ventilation clarification" --json
+claw construction-project construction_project_123 change-orders add "Ventilation upgrade" --json
+claw construction-project construction_project_123 timeline --json
 claw product list --json
 claw products list --json
 claw product create "Hydraulic Press" --company company_123 --json

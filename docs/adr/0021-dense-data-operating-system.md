@@ -38,9 +38,9 @@ The registry is the first executable canon for this model. It defines:
   Labs/LIMS, Legal, ERP, CRM, Finance/Accounting, Education/LMS, HR/HRIS,
   Manufacturing/MES, Operations/ITSM, Real Estate/PropTech, Insurance, and
   Maintenance/CMMS, Procurement, Warehouse/WMS, Supply Chain/SCM, and
-  Compliance/GRC, and IoT
+  Compliance/GRC, IoT, and Construction
 - a roadmap taxonomy for TMS, government,
-  construction, CMS, PIM/PLM, pharma, and ELN
+  CMS, PIM/PLM, pharma, and ELN
 - a non-executing dense intent resolver that can classify direct phrases such
   as `claw patient list`, `claw patients list`, `claw invoice list`, or `claw
   medication add --patient <id>` as covered, partial, blocked, or gaps before
@@ -259,6 +259,12 @@ evidence, provenance, and quality gaps. It extends the existing `iot config`
 and `iot serve` portal without replacing connector setup; real device control
 and physical telemetry are tracked as EXTERNAL PENDING unless validated against
 actual hardware or a certified simulator.
+Construction uses `claw construction-project <id> timeline` to materialize
+`construction_projects`, `construction_sites`, `construction_rfis`,
+`construction_change_orders`, company anchors, evidence, provenance, and quality
+gaps. It deliberately avoids the generic `project` and HR `contractor`
+collections while reusing companies, employees, real-estate locations, invoices,
+evidence, and quality gaps.
 ERP now has a materialized company overview through `claw erp company <id>
 overview`: it reads the shared company anchor plus CRM accounts/deals, billing
 customers, invoices, payment intents, services, work orders, evidence,
