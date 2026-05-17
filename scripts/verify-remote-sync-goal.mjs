@@ -13,6 +13,7 @@ import {
   createMeshResourceShare,
   createMeshRevocation,
   createSyncResourceManifest,
+  evaluateRemoteAgentServiceAccess,
   evaluateRemoteAccess,
   findClawPersistentSurfaceNode,
   findClawSurfaceRoute,
@@ -22,6 +23,7 @@ import {
   remoteAccessGrantSchema,
   remoteAccessRequestSchema,
   remoteActorContextSchema,
+  remoteAgentServiceDecisionSchema,
   remoteSecretLeaseSchema,
   remoteSyncRequiredDecisionIds,
   remoteSyncRequiredRouteIds,
@@ -61,6 +63,7 @@ const requiredServiceApiRoutes = [
   "remote/classifications",
   "remote/conformance",
   "gateway/conformance",
+  "gateway/agent-service/evaluate",
   "sync/manifests",
   "sync/changes",
   "sync/plan",
@@ -91,6 +94,8 @@ const requiredDocSnippets = [
   "Iroh",
   "headless",
   "multi-tenant agent service",
+  "remote.agent_service.evaluated",
+  "/v1/gateway/agent-service/evaluate",
   "mesh.resourceShare",
   "MeshInvitation",
   "MeshResourceShare",
@@ -415,6 +420,71 @@ const meshRevocation = createMeshRevocation({
 if (meshRevocation.cascadeSyncQueues !== true) fail("mesh revocations must cascade sync queue access");
 if (meshRevocation.writes !== false) fail("mesh revocations must be no-write contracts until signed execution");
 if (!meshRevocationSchema.safeParse(meshRevocation).success) fail("mesh revocation contract must validate");
+
+const serviceAssignment = {
+  schemaVersion: 1,
+  tenantId: "tenant.acme",
+  agentId: "agent.support",
+  assignmentId: "assignment.service",
+  status: "active",
+  routeIds: ["gateway.multiTenantAgentService"],
+  budgetId: "budget.service",
+  billingAccountId: "billing.acme",
+  isolationKey: "tenant.acme:assignment.service",
+  auditRequired: true,
+};
+const serviceBudget = {
+  budgetId: "budget.service",
+  tenantId: "tenant.acme",
+  billingAccountId: "billing.acme",
+  limitCents: 5000,
+  usedCents: 1200,
+  billingMeterId: "meter.agent-service",
+};
+const serviceAllowed = evaluateRemoteAgentServiceAccess({
+  request: {
+    tenantId: "tenant.acme",
+    agentId: "agent.support",
+    assignmentId: "assignment.service",
+    routeId: "gateway.multiTenantAgentService",
+    estimatedCostCents: 300,
+    now: "2026-05-17T10:10:00.000Z",
+  },
+  assignment: serviceAssignment,
+  budget: serviceBudget,
+});
+if (!serviceAllowed.allowed) fail(`multi-tenant agent service evaluator must allow scoped assignment/budget: ${serviceAllowed.reasons.join(", ")}`);
+if (serviceAllowed.audit.eventType !== "remote.agent_service.evaluated") fail("multi-tenant agent service evaluator must emit audit metadata");
+if (serviceAllowed.writes !== false) fail("multi-tenant agent service evaluator must be no-write");
+if (!remoteAgentServiceDecisionSchema.safeParse(serviceAllowed).success) fail("multi-tenant agent service decision contract must validate");
+const serviceTenantDenied = evaluateRemoteAgentServiceAccess({
+  request: {
+    tenantId: "tenant.other",
+    agentId: "agent.support",
+    assignmentId: "assignment.service",
+    routeId: "gateway.multiTenantAgentService",
+    estimatedCostCents: 300,
+    now: "2026-05-17T10:11:00.000Z",
+  },
+  assignment: serviceAssignment,
+  budget: serviceBudget,
+});
+if (serviceTenantDenied.allowed) fail("multi-tenant agent service evaluator must deny tenant mismatch");
+if (!serviceTenantDenied.reasons.includes("tenant: assignment belongs to a different tenant")) fail("multi-tenant agent service evaluator must explain tenant isolation denial");
+const serviceBudgetDenied = evaluateRemoteAgentServiceAccess({
+  request: {
+    tenantId: "tenant.acme",
+    agentId: "agent.support",
+    assignmentId: "assignment.service",
+    routeId: "gateway.multiTenantAgentService",
+    estimatedCostCents: 4000,
+    now: "2026-05-17T10:12:00.000Z",
+  },
+  assignment: serviceAssignment,
+  budget: serviceBudget,
+});
+if (serviceBudgetDenied.allowed) fail("multi-tenant agent service evaluator must deny over-budget requests");
+if (!serviceBudgetDenied.reasons.includes("budget: estimated cost exceeds limit")) fail("multi-tenant agent service evaluator must explain budget denial");
 
 const lease = remoteSecretLeaseSchema.parse({
   leaseId: "lease.1",

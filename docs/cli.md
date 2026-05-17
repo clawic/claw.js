@@ -194,6 +194,7 @@ claw nodes heartbeat --json
 claw gateway serve --dry-run --json
 claw gateway project --dry-run --json
 claw gateway conformance --json
+claw gateway agent-service --tenant-id tenant.acme --agent-id agent.support --assignment-id assignment.service --estimated-cost-cents 300 --json
 ```
 
 `remote-safe` means the capability has a route, owner, policy, and tests.

@@ -2487,6 +2487,7 @@ The docs check script validates that every current export from
     createMeshResourceShare
     createMeshRevocation
     createSyncResourceManifest
+    evaluateRemoteAgentServiceAccess
     evaluateRemoteAccess
     MeshInvitation
     meshInvitationSchema
@@ -2510,6 +2511,14 @@ The docs check script validates that every current export from
     remoteActorContextSchema
     RemoteActorKind
     remoteActorKindSchema
+    RemoteAgentServiceAssignment
+    remoteAgentServiceAssignmentSchema
+    RemoteAgentServiceBudget
+    remoteAgentServiceBudgetSchema
+    RemoteAgentServiceDecision
+    remoteAgentServiceDecisionSchema
+    RemoteAgentServiceRequest
+    remoteAgentServiceRequestSchema
     RemoteOfflineCommandResult
     remoteOfflineCommandResultSchema
     RemoteSecretLease

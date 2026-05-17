@@ -110,6 +110,13 @@ manifest and remain no-write/proposed until signed Coordinator execution.
 Revocations cascade to Sync queue access and audit; they do not silently leave
 old shares usable.
 
+The governed multi-tenant agent service is also a Gateway contract, not a
+hosted-only shortcut. `evaluateRemoteAgentServiceAccess` admits a service
+request only when tenant, agent, assignment, route, budget, billing account,
+isolation key, and audit requirement all match. Budget overruns, tenant
+mismatch, inactive assignments, missing billing meters, or route drift deny the
+request with `writes: false`.
+
 Secrets never synchronize as plaintext. Remote and sync flows may carry secret
 references and may request broker leases for a specific actor, action,
 resource, route, and expiry. The audit event records the lease; the payload

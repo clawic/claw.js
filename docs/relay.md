@@ -104,6 +104,7 @@ POST /v1/nodes/revoke
 POST /v1/mesh/invitations
 POST /v1/mesh/shares
 POST /v1/mesh/revocations
+POST /v1/gateway/agent-service/evaluate
 ```
 
 The mutation-shaped node and sync endpoints are dry-run until signed
@@ -125,6 +126,13 @@ resource/action scope first. Shares bind that scope to a Sync manifest and
 forbid plaintext secrets. Revocations cascade to Sync queue access. The Relay
 routes expose these shapes as dry-run contracts until signed Coordinator
 execution can persist and audit the mutation.
+
+The multi-tenant agent service path is evaluated through the same Gateway
+contract. A request must match tenant, agent, assignment, route, budget,
+billing account, tenant isolation key, and audit requirement before it is
+allowed. The evaluator returns `remote.agent_service.evaluated` audit metadata
+and `writes: false`; real hosted execution remains signed-host/Coordinator
+gated.
 
 Gateway authorization is evaluated fail-closed through the shared
 `evaluateRemoteAccess` contract. Governed remote requests need active allow
