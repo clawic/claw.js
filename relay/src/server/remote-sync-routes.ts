@@ -3,10 +3,14 @@ import {
   buildSyncPlan,
   clawApiPath,
   clawPersistentSurfaceRegistry,
+  createMeshInvitation,
+  createMeshResourceShare,
+  createMeshRevocation,
   createSyncResourceManifest,
   remoteSyncRequiredRouteIds,
   syncDriverSchema,
   syncObjectSnapshotSchema,
+  type MeshShareAction,
   type SyncAuthority,
   type SyncDriver,
   type SyncObjectSnapshot,
@@ -148,6 +152,61 @@ function dryRunNodeOperation(operation: string, body: Record<string, unknown>) {
   };
 }
 
+function arrayOfStrings(value: unknown, fallback: string[]): string[] {
+  if (!Array.isArray(value)) return fallback;
+  const strings = value.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
+  return strings.length ? strings : fallback;
+}
+
+function meshActions(value: unknown, fallback: MeshShareAction[]): MeshShareAction[] {
+  const allowed = new Set<MeshShareAction>(["read", "sync", "search", "execute", "lease_secret"]);
+  const parsed = arrayOfStrings(value, fallback).filter((entry): entry is MeshShareAction => allowed.has(entry as MeshShareAction));
+  return parsed.length ? parsed : fallback;
+}
+
+function meshActorFromInput(input: Record<string, unknown>) {
+  return {
+    actorKind: "human" as const,
+    actorId: stringValue(input.actorId ?? input["actor-id"], "user.remote"),
+    nodeId: stringValue(input.nodeId ?? input["node-id"], "local"),
+    transport: stringValue(input.transport, "gateway"),
+    trustMode: "governed_gateway" as const,
+  };
+}
+
+function meshInvitationFromInput(input: Record<string, unknown>) {
+  return createMeshInvitation({
+    issuerMeshId: stringValue(input.issuerMeshId ?? input["issuer-mesh"], "mesh.local"),
+    coordinatorNodeId: stringValue(input.coordinatorNodeId ?? input["coordinator-node"], "local"),
+    recipientMeshId: typeof input.recipientMeshId === "string" ? input.recipientMeshId : typeof input["recipient-mesh"] === "string" ? input["recipient-mesh"] : undefined,
+    inviteePublicKeyRef: typeof input.inviteePublicKeyRef === "string" ? input.inviteePublicKeyRef : typeof input["invitee-key"] === "string" ? input["invitee-key"] : undefined,
+    trustMode: input.trustMode === "governed_gateway" ? "governed_gateway" : "sovereign_e2e_tunnel",
+    transport: stringValue(input.transport, "iroh"),
+    allowedResourceIds: arrayOfStrings(input.allowedResourceIds ?? input["allowed-resources"], ["skills:default"]),
+    allowedActions: meshActions(input.allowedActions ?? input.actions, ["read", "sync"]),
+    createdAt: stringValue(input.createdAt ?? input.now, "2026-05-17T10:07:00.000Z"),
+    expiresAt: stringValue(input.expiresAt ?? input["expires-at"], "2026-05-18T10:07:00.000Z"),
+  });
+}
+
+function meshShareFromInput(input: Record<string, unknown>) {
+  const manifest = manifestFromInput(input);
+  const invitation = meshInvitationFromInput({
+    ...input,
+    allowedResourceIds: arrayOfStrings(input.allowedResourceIds ?? input["allowed-resources"], [manifest.resourceId]),
+  });
+  return createMeshResourceShare({
+    invitation,
+    fromMeshId: stringValue(input.fromMeshId ?? input["from-mesh"], invitation.issuerMeshId),
+    toMeshId: stringValue(input.toMeshId ?? input["to-mesh"], invitation.recipientMeshId ?? "mesh.peer"),
+    manifest,
+    actions: meshActions(input.actions ?? input.allowedActions, ["read", "sync"]),
+    secretRefs: arrayOfStrings(input.secretRefs ?? input["secret-refs"], []),
+    createdAt: stringValue(input.createdAt ?? input.now, "2026-05-17T10:08:00.000Z"),
+    expiresAt: stringValue(input.expiresAt ?? input["expires-at"], "2026-05-18T10:08:00.000Z"),
+  });
+}
+
 export function registerRemoteSyncRoutes(app: FastifyInstance): void {
   app.get(clawApiPath("remote/classifications"), async () => remoteClassificationsPayload());
 
@@ -208,4 +267,28 @@ export function registerRemoteSyncRoutes(app: FastifyInstance): void {
   app.post(clawApiPath("nodes/pair"), async (request) => dryRunNodeOperation("pair", readBody(request)));
   app.post(clawApiPath("nodes/trust"), async (request) => dryRunNodeOperation("trust", readBody(request)));
   app.post(clawApiPath("nodes/revoke"), async (request) => dryRunNodeOperation("revoke", readBody(request)));
+  app.post(clawApiPath("mesh/invitations"), async (request) => ({
+    invitation: meshInvitationFromInput(readBody(request)),
+    status: "dry_run_only",
+    writes: false,
+  }));
+  app.post(clawApiPath("mesh/shares"), async (request) => ({
+    share: meshShareFromInput(readBody(request)),
+    status: "dry_run_only",
+    writes: false,
+  }));
+  app.post(clawApiPath("mesh/revocations"), async (request) => {
+    const body = readBody(request);
+    return {
+      revocation: createMeshRevocation({
+        targetType: body.targetType === "invitation" || body.targetType === "node_trust" ? body.targetType : "share",
+        targetId: stringValue(body.targetId ?? body["target-id"], "mesh_share_default"),
+        actor: meshActorFromInput(body),
+        reason: stringValue(body.reason, "owner_revoked"),
+        revokedAt: stringValue(body.revokedAt ?? body.now, "2026-05-17T10:09:00.000Z"),
+      }),
+      status: "dry_run_only",
+      writes: false,
+    };
+  });
 }

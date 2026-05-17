@@ -100,6 +100,56 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(revokePayload.operation, "revoke");
     assert.equal(revokePayload.status, "dry_run_only");
     assert.equal(revokePayload.writes, false);
+
+    const invitation = await built.app.inject({
+      method: "POST",
+      url: "/v1/mesh/invitations",
+      headers: { "content-type": "application/json" },
+      payload: {
+        issuerMeshId: "mesh.home",
+        coordinatorNodeId: "node.mac",
+        recipientMeshId: "mesh.server",
+        allowedResourceIds: ["skills:default"],
+        allowedActions: ["read", "sync"],
+      },
+    });
+    assert.equal(invitation.statusCode, 200);
+    const invitationPayload = invitation.json() as { invitation: { status: string; writes: boolean; allowedResourceIds: string[] }; writes: boolean };
+    assert.equal(invitationPayload.invitation.status, "pending");
+    assert.equal(invitationPayload.invitation.allowedResourceIds[0], "skills:default");
+    assert.equal(invitationPayload.writes, false);
+
+    const share = await built.app.inject({
+      method: "POST",
+      url: "/v1/mesh/shares",
+      headers: { "content-type": "application/json" },
+      payload: {
+        issuerMeshId: "mesh.home",
+        coordinatorNodeId: "node.mac",
+        recipientMeshId: "mesh.server",
+        resourceId: "skills:default",
+        driver: "skills",
+        actions: ["read", "sync"],
+      },
+    });
+    assert.equal(share.statusCode, 200);
+    const sharePayload = share.json() as { share: { status: string; resourceId: string; plaintextSecrets: boolean; writes: boolean }; writes: boolean };
+    assert.equal(sharePayload.share.status, "proposed");
+    assert.equal(sharePayload.share.resourceId, "skills:default");
+    assert.equal(sharePayload.share.plaintextSecrets, false);
+    assert.equal(sharePayload.writes, false);
+
+    const meshRevocation = await built.app.inject({
+      method: "POST",
+      url: "/v1/mesh/revocations",
+      headers: { "content-type": "application/json" },
+      payload: { targetType: "share", targetId: "mesh_share_1", reason: "owner_revoked" },
+    });
+    assert.equal(meshRevocation.statusCode, 200);
+    const meshRevocationPayload = meshRevocation.json() as { revocation: { targetType: string; cascadeSyncQueues: boolean; writes: boolean }; writes: boolean };
+    assert.equal(meshRevocationPayload.revocation.targetType, "share");
+    assert.equal(meshRevocationPayload.revocation.cascadeSyncQueues, true);
+    assert.equal(meshRevocationPayload.writes, false);
   } finally {
     await built.app.close();
     fs.rmSync(tempRoot, { recursive: true, force: true });

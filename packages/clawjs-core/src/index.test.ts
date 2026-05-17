@@ -46,6 +46,9 @@ import {
   clawJsonSchemasV1,
   agentRecordSchema,
   createCodexReadOnlySourceDescriptor,
+  createMeshInvitation,
+  createMeshResourceShare,
+  createMeshRevocation,
   createSyncResourceManifest,
   createTtsPlaybackPlan,
   compatSnapshotSchema,
@@ -70,6 +73,9 @@ import {
   manifestSchema,
   milestoneRecordSchema,
   maskCredential,
+  meshInvitationSchema,
+  meshResourceShareSchema,
+  meshRevocationSchema,
   nodeIdentitySchema,
   noteRecordSchema,
   operationalCheckRecordSchema,
@@ -638,6 +644,63 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(offlineCommand.status, "failed_fast");
   assert.equal(offlineCommand.enqueued, false);
   assert.equal(offlineCommand.writes, false);
+
+  const meshInvitation = createMeshInvitation({
+    issuerMeshId: "mesh.home",
+    coordinatorNodeId: "node.mac",
+    recipientMeshId: "mesh.server",
+    allowedResourceIds: ["skills:default"],
+    allowedActions: ["read", "sync"],
+    createdAt: "2026-05-17T10:07:00.000Z",
+    expiresAt: "2026-05-18T10:07:00.000Z",
+  });
+  assert.equal(meshInvitation.status, "pending");
+  assert.equal(meshInvitation.trustMode, "sovereign_e2e_tunnel");
+  assert.equal(meshInvitation.writes, false);
+  assert.equal(meshInvitationSchema.safeParse(meshInvitation).success, true);
+
+  const meshShare = createMeshResourceShare({
+    invitation: meshInvitation,
+    toMeshId: "mesh.server",
+    manifest: plan.manifest,
+    actions: ["read", "sync"],
+    createdAt: "2026-05-17T10:08:00.000Z",
+    expiresAt: "2026-05-18T10:08:00.000Z",
+  });
+  assert.equal(meshShare.status, "proposed");
+  assert.equal(meshShare.resourceId, "skills:default");
+  assert.equal(meshShare.plaintextSecrets, false);
+  assert.equal(meshShare.writes, false);
+  assert.equal(meshResourceShareSchema.safeParse(meshShare).success, true);
+  assert.throws(() => createMeshResourceShare({
+    invitation: meshInvitation,
+    toMeshId: "mesh.server",
+    manifest: createSyncResourceManifest({
+      resourceId: "memory:default",
+      kind: "memory",
+      ownerNodeId: "node.mac",
+      driver: "memory_user_model",
+    }),
+    actions: ["sync"],
+    expiresAt: "2026-05-18T10:09:00.000Z",
+  }), /does not allow resource/);
+
+  const meshRevocation = createMeshRevocation({
+    targetType: "share",
+    targetId: meshShare.shareId,
+    actor: {
+      actorKind: "human",
+      actorId: "user.local",
+      nodeId: "node.mac",
+      transport: "gateway",
+      trustMode: "governed_gateway",
+    },
+    reason: "owner_revoked",
+    revokedAt: "2026-05-17T10:09:00.000Z",
+  });
+  assert.equal(meshRevocation.cascadeSyncQueues, true);
+  assert.equal(meshRevocation.writes, false);
+  assert.equal(meshRevocationSchema.safeParse(meshRevocation).success, true);
 
   const conformance = buildRemoteConformanceReport({
     routeIds: remoteSyncRequiredRouteIds.map((routeId) => routeId),

@@ -9,10 +9,16 @@ import {
   buildSyncQueueEntries,
   clawCliCommandRegistry,
   clawPersistentSurfaceRegistry,
+  createMeshInvitation,
+  createMeshResourceShare,
+  createMeshRevocation,
   createSyncResourceManifest,
   evaluateRemoteAccess,
   findClawPersistentSurfaceNode,
   findClawSurfaceRoute,
+  meshInvitationSchema,
+  meshResourceShareSchema,
+  meshRevocationSchema,
   remoteAccessGrantSchema,
   remoteAccessRequestSchema,
   remoteActorContextSchema,
@@ -63,6 +69,9 @@ const requiredServiceApiRoutes = [
   "nodes/pair",
   "nodes/trust",
   "nodes/revoke",
+  "mesh/invitations",
+  "mesh/shares",
+  "mesh/revocations",
 ];
 
 const requiredDocSnippets = [
@@ -341,6 +350,65 @@ const offlineCommand = buildRemoteOfflineCommandResult({
 if (offlineCommand.status !== "failed_fast") fail("offline remote commands must fail fast");
 if (offlineCommand.enqueued !== false) fail("offline remote commands must not be queued as sync work");
 if (offlineCommand.writes !== false) fail("offline remote command failure must not write");
+
+const meshInvitation = createMeshInvitation({
+  issuerMeshId: "mesh.home",
+  coordinatorNodeId: "node.mac",
+  recipientMeshId: "mesh.server",
+  allowedResourceIds: ["skills:default"],
+  allowedActions: ["read", "sync"],
+  createdAt: "2026-05-17T10:07:00.000Z",
+  expiresAt: "2026-05-18T10:07:00.000Z",
+});
+if (meshInvitation.status !== "pending") fail("mesh invitations must start pending");
+if (meshInvitation.writes !== false) fail("mesh invitations must be no-write until signed Coordinator execution");
+if (!meshInvitationSchema.safeParse(meshInvitation).success) fail("mesh invitation contract must validate");
+const meshShare = createMeshResourceShare({
+  invitation: meshInvitation,
+  toMeshId: "mesh.server",
+  manifest,
+  actions: ["read", "sync"],
+  createdAt: "2026-05-17T10:08:00.000Z",
+  expiresAt: "2026-05-18T10:08:00.000Z",
+});
+if (meshShare.status !== "proposed") fail("mesh resource shares must be proposed before signed execution");
+if (meshShare.plaintextSecrets !== false) fail("mesh resource shares must forbid plaintext secrets");
+if (meshShare.writes !== false) fail("mesh resource shares must be no-write contracts");
+if (!meshResourceShareSchema.safeParse(meshShare).success) fail("mesh share contract must validate");
+let disallowedShareFailed = false;
+try {
+  createMeshResourceShare({
+    invitation: meshInvitation,
+    toMeshId: "mesh.server",
+    manifest: createSyncResourceManifest({
+      resourceId: "memory:default",
+      kind: "memory",
+      ownerNodeId: "node.mac",
+      driver: "memory_user_model",
+    }),
+    actions: ["sync"],
+    expiresAt: "2026-05-18T10:09:00.000Z",
+  });
+} catch {
+  disallowedShareFailed = true;
+}
+if (!disallowedShareFailed) fail("mesh shares must reject resources outside invitation scope");
+const meshRevocation = createMeshRevocation({
+  targetType: "share",
+  targetId: meshShare.shareId,
+  actor: {
+    actorKind: "human",
+    actorId: "user.local",
+    nodeId: "node.mac",
+    transport: "gateway",
+    trustMode: "governed_gateway",
+  },
+  reason: "owner_revoked",
+  revokedAt: "2026-05-17T10:09:00.000Z",
+});
+if (meshRevocation.cascadeSyncQueues !== true) fail("mesh revocations must cascade sync queue access");
+if (meshRevocation.writes !== false) fail("mesh revocations must be no-write contracts until signed execution");
+if (!meshRevocationSchema.safeParse(meshRevocation).success) fail("mesh revocation contract must validate");
 
 const lease = remoteSecretLeaseSchema.parse({
   leaseId: "lease.1",

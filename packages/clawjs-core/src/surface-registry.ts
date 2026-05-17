@@ -798,6 +798,9 @@ const corePublicRoutes = [
   ["claw.api.nodes.pair", "POST", "/v1/nodes/pair", "Node pairing dry-run contract"],
   ["claw.api.nodes.trust", "POST", "/v1/nodes/trust", "Node trust dry-run contract"],
   ["claw.api.nodes.revoke", "POST", "/v1/nodes/revoke", "Node revocation dry-run contract"],
+  ["claw.api.mesh.invitations", "POST", "/v1/mesh/invitations", "Inter-mesh invitation dry-run contract"],
+  ["claw.api.mesh.shares", "POST", "/v1/mesh/shares", "Inter-mesh scoped resource share dry-run contract"],
+  ["claw.api.mesh.revocations", "POST", "/v1/mesh/revocations", "Inter-mesh share/invitation revocation dry-run contract"],
   ["claw.api.gateway.conformance", "GET", "/v1/gateway/conformance", "Gateway hosted/self-hosted conformance contract"],
 ] as const;
 
@@ -1342,7 +1345,7 @@ export const clawSurfaceGraphEdges: ClawSurfaceEdge[] = [
   { id: "claw.edge.gateway.exposes.headlessHost", type: "exposes", fromId: "claw.gateway", toId: "claw.headlessHost", owner: "claw", visibility: "public", contractId: "claw.api.gateway.conformance", transport: "headless service projection", validation: "headless gateway conformance tests", source: surfaceRouteGraphSource },
   { id: "claw.edge.headlessHost.brokers.assignments", type: "brokers", fromId: "claw.headlessHost", toId: "claw.agents.assignments", owner: "claw", visibility: "public", contractId: "claw.agent_assignment.external.v1", transport: "multi-tenant governed assignment routing", validation: "multi-tenant assignment isolation tests", source: surfaceRouteGraphSource },
   { id: "claw.edge.coordinator.consumes.iroh", type: "consumes", fromId: "claw.coordinator", toId: "claw.transport.iroh", owner: "claw", visibility: "external", contractId: "claw.api.nodes", transport: "Iroh adapter for P2P/rendezvous/relay fallback", validation: "Iroh fallback conformance tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.meshShare.brokers.sync", type: "brokers", fromId: "claw.mesh.share", toId: "claw.sync", owner: "claw", visibility: "external", contractId: "claw.api.sync.manifests", transport: "invite/share/revoke primitives", validation: "inter-mesh sharing primitive tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.meshShare.brokers.sync", type: "brokers", fromId: "claw.mesh.share", toId: "claw.sync", owner: "claw", visibility: "external", contractId: "claw.api.mesh.shares", transport: "invite/share/revoke primitives", validation: "inter-mesh sharing primitive tests", source: surfaceRouteGraphSource },
 ];
 
 function routeStep(edgeId: string, gaps: string[] = []): ClawSurfaceRouteStep {

@@ -256,6 +256,64 @@ export const remoteOfflineCommandResultSchema = z.object({
   writes: z.literal(false),
 });
 
+export const meshShareActionSchema = z.enum([
+  "read",
+  "sync",
+  "search",
+  "execute",
+  "lease_secret",
+]);
+
+export const meshInvitationSchema = z.object({
+  schemaVersion: z.literal(1),
+  invitationId: z.string().min(1),
+  issuerMeshId: z.string().min(1),
+  coordinatorNodeId: z.string().min(1),
+  recipientMeshId: z.string().min(1).optional(),
+  inviteePublicKeyRef: z.string().min(1).optional(),
+  trustMode: remoteTrustModeSchema,
+  transport: z.string().min(1),
+  status: z.enum(["pending", "accepted", "revoked", "expired"]),
+  allowedResourceIds: z.array(z.string().min(1)).min(1),
+  allowedActions: z.array(meshShareActionSchema).min(1),
+  createdAt: z.string().datetime(),
+  expiresAt: z.string().datetime(),
+  writes: z.literal(false),
+});
+
+export const meshResourceShareSchema = z.object({
+  schemaVersion: z.literal(1),
+  shareId: z.string().min(1),
+  invitationId: z.string().min(1),
+  fromMeshId: z.string().min(1),
+  toMeshId: z.string().min(1),
+  resourceId: z.string().min(1),
+  resourceKind: z.string().min(1),
+  routeId: z.string().min(1),
+  actions: z.array(meshShareActionSchema).min(1),
+  syncManifest: syncResourceManifestSchema,
+  secretRefs: z.array(z.string().min(1)).default([]),
+  plaintextSecrets: z.literal(false),
+  status: z.enum(["proposed", "active", "revoked", "expired"]),
+  createdAt: z.string().datetime(),
+  expiresAt: z.string().datetime(),
+  auditEventId: z.string().min(1),
+  writes: z.literal(false),
+});
+
+export const meshRevocationSchema = z.object({
+  schemaVersion: z.literal(1),
+  revocationId: z.string().min(1),
+  targetType: z.enum(["invitation", "share", "node_trust"]),
+  targetId: z.string().min(1),
+  actor: remoteActorContextSchema,
+  reason: z.string().min(1),
+  revokedAt: z.string().datetime(),
+  cascadeSyncQueues: z.literal(true),
+  auditEventId: z.string().min(1),
+  writes: z.literal(false),
+});
+
 export type RemoteSurfaceClassification = z.infer<typeof remoteSurfaceClassificationSchema>;
 export type RemoteTrustMode = z.infer<typeof remoteTrustModeSchema>;
 export type RemoteActorKind = z.infer<typeof remoteActorKindSchema>;
@@ -280,6 +338,10 @@ export type RemoteAccessGrant = z.infer<typeof remoteAccessGrantSchema>;
 export type RemoteAccessRequest = z.infer<typeof remoteAccessRequestSchema>;
 export type RemoteAccessDecision = z.infer<typeof remoteAccessDecisionSchema>;
 export type RemoteOfflineCommandResult = z.infer<typeof remoteOfflineCommandResultSchema>;
+export type MeshShareAction = z.infer<typeof meshShareActionSchema>;
+export type MeshInvitation = z.infer<typeof meshInvitationSchema>;
+export type MeshResourceShare = z.infer<typeof meshResourceShareSchema>;
+export type MeshRevocation = z.infer<typeof meshRevocationSchema>;
 
 export const remoteSyncRequiredDecisionIds = [
   "relay_boundary",
@@ -408,6 +470,10 @@ function syncConflictId(resourceId: string, objectRef: string): string {
 
 function syncQueueEntryId(parts: string[]): string {
   return `sync_queue_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
+}
+
+function meshId(prefix: string, parts: string[]): string {
+  return `${prefix}_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
 }
 
 function newestSnapshot(left: SyncObjectSnapshot, right: SyncObjectSnapshot): SyncObjectSnapshot {
@@ -634,6 +700,108 @@ export function buildRemoteOfflineCommandResult(input: {
     enqueued: false,
     retryable: true,
     evaluatedAt: input.evaluatedAt ?? new Date().toISOString(),
+    writes: false,
+  });
+}
+
+export function createMeshInvitation(input: {
+  issuerMeshId: string;
+  coordinatorNodeId: string;
+  recipientMeshId?: string;
+  inviteePublicKeyRef?: string;
+  trustMode?: RemoteTrustMode;
+  transport?: string;
+  allowedResourceIds: string[];
+  allowedActions: MeshShareAction[];
+  createdAt?: string;
+  expiresAt: string;
+}): MeshInvitation {
+  const createdAt = input.createdAt ?? new Date().toISOString();
+  return meshInvitationSchema.parse({
+    schemaVersion: 1,
+    invitationId: meshId("mesh_invitation", [
+      input.issuerMeshId,
+      input.recipientMeshId ?? input.inviteePublicKeyRef ?? "recipient",
+      createdAt,
+    ]),
+    issuerMeshId: input.issuerMeshId,
+    coordinatorNodeId: input.coordinatorNodeId,
+    ...(input.recipientMeshId ? { recipientMeshId: input.recipientMeshId } : {}),
+    ...(input.inviteePublicKeyRef ? { inviteePublicKeyRef: input.inviteePublicKeyRef } : {}),
+    trustMode: input.trustMode ?? "sovereign_e2e_tunnel",
+    transport: input.transport ?? "iroh",
+    status: "pending",
+    allowedResourceIds: input.allowedResourceIds,
+    allowedActions: input.allowedActions,
+    createdAt,
+    expiresAt: input.expiresAt,
+    writes: false,
+  });
+}
+
+export function createMeshResourceShare(input: {
+  invitation: MeshInvitation;
+  fromMeshId?: string;
+  toMeshId: string;
+  manifest: SyncResourceManifest;
+  actions: MeshShareAction[];
+  secretRefs?: string[];
+  createdAt?: string;
+  expiresAt: string;
+}): MeshResourceShare {
+  const invitation = meshInvitationSchema.parse(input.invitation);
+  const manifest = syncResourceManifestSchema.parse(input.manifest);
+  const createdAt = input.createdAt ?? new Date().toISOString();
+  if (!invitation.allowedResourceIds.includes(manifest.resourceId)) {
+    throw new Error(`Mesh invitation ${invitation.invitationId} does not allow resource ${manifest.resourceId}`);
+  }
+  for (const action of input.actions) {
+    if (!invitation.allowedActions.includes(action)) {
+      throw new Error(`Mesh invitation ${invitation.invitationId} does not allow action ${action}`);
+    }
+  }
+  if ((input.secretRefs?.length ?? 0) > 0 && !input.actions.includes("lease_secret")) {
+    throw new Error("Mesh shares with secret refs require lease_secret scope");
+  }
+  return meshResourceShareSchema.parse({
+    schemaVersion: 1,
+    shareId: meshId("mesh_share", [invitation.invitationId, manifest.resourceId, input.toMeshId]),
+    invitationId: invitation.invitationId,
+    fromMeshId: input.fromMeshId ?? invitation.issuerMeshId,
+    toMeshId: input.toMeshId,
+    resourceId: manifest.resourceId,
+    resourceKind: manifest.kind,
+    routeId: manifest.routeIds[0],
+    actions: input.actions,
+    syncManifest: manifest,
+    secretRefs: input.secretRefs ?? [],
+    plaintextSecrets: false,
+    status: "proposed",
+    createdAt,
+    expiresAt: input.expiresAt,
+    auditEventId: meshId("audit_mesh_share", [invitation.invitationId, manifest.resourceId, createdAt]),
+    writes: false,
+  });
+}
+
+export function createMeshRevocation(input: {
+  targetType: MeshRevocation["targetType"];
+  targetId: string;
+  actor: RemoteActorContext;
+  reason: string;
+  revokedAt?: string;
+}): MeshRevocation {
+  const revokedAt = input.revokedAt ?? new Date().toISOString();
+  return meshRevocationSchema.parse({
+    schemaVersion: 1,
+    revocationId: meshId("mesh_revocation", [input.targetType, input.targetId, revokedAt]),
+    targetType: input.targetType,
+    targetId: input.targetId,
+    actor: remoteActorContextSchema.parse(input.actor),
+    reason: input.reason,
+    revokedAt,
+    cascadeSyncQueues: true,
+    auditEventId: meshId("audit_mesh_revocation", [input.targetType, input.targetId, revokedAt]),
     writes: false,
   });
 }

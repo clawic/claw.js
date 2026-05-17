@@ -2,10 +2,14 @@ import {
   buildRemoteConformanceReport,
   buildSyncPlan,
   clawPersistentSurfaceRegistry,
+  createMeshInvitation,
+  createMeshResourceShare,
+  createMeshRevocation,
   createSyncResourceManifest,
   remoteSyncRequiredDecisionIds,
   remoteSyncRequiredRouteIds,
   syncObjectSnapshotSchema,
+  type MeshShareAction,
   type SyncDriver,
   type SyncObjectSnapshot,
 } from "@clawjs/core";
@@ -147,6 +151,58 @@ function planFromFlags(input: RemoteSyncCliInput) {
   });
 }
 
+function listFlag(value: string | undefined, fallback: string[]): string[] {
+  if (!value) return fallback;
+  const entries = value.split(",").map((entry) => entry.trim()).filter(Boolean);
+  return entries.length ? entries : fallback;
+}
+
+function meshActionFlags(value: string | undefined, fallback: MeshShareAction[]): MeshShareAction[] {
+  const allowed = new Set<MeshShareAction>(["read", "sync", "search", "execute", "lease_secret"]);
+  const parsed = listFlag(value, fallback).filter((entry): entry is MeshShareAction => allowed.has(entry as MeshShareAction));
+  return parsed.length ? parsed : fallback;
+}
+
+function meshInvitationFromFlags(input: RemoteSyncCliInput) {
+  return createMeshInvitation({
+    issuerMeshId: input.flags["issuer-mesh"] ?? "mesh.local",
+    coordinatorNodeId: input.flags["coordinator-node"] ?? input.flags["owner-node"] ?? "local",
+    recipientMeshId: input.flags["recipient-mesh"],
+    inviteePublicKeyRef: input.flags["invitee-key"],
+    trustMode: input.flags["trust-mode"] === "governed_gateway" ? "governed_gateway" : "sovereign_e2e_tunnel",
+    transport: input.flags.transport ?? "iroh",
+    allowedResourceIds: listFlag(input.flags["allowed-resources"] ?? input.flags["resource-id"], ["skills:default"]),
+    allowedActions: meshActionFlags(input.flags.actions, ["read", "sync"]),
+    createdAt: input.flags.now ?? "2026-05-17T10:07:00.000Z",
+    expiresAt: input.flags["expires-at"] ?? "2026-05-18T10:07:00.000Z",
+  });
+}
+
+function meshShareFromFlags(input: RemoteSyncCliInput) {
+  const manifest = manifestFromFlags(input);
+  const invitation = createMeshInvitation({
+    issuerMeshId: input.flags["issuer-mesh"] ?? "mesh.local",
+    coordinatorNodeId: input.flags["coordinator-node"] ?? input.flags["owner-node"] ?? "local",
+    recipientMeshId: input.flags["recipient-mesh"] ?? input.flags["to-mesh"] ?? "mesh.peer",
+    trustMode: input.flags["trust-mode"] === "governed_gateway" ? "governed_gateway" : "sovereign_e2e_tunnel",
+    transport: input.flags.transport ?? "iroh",
+    allowedResourceIds: listFlag(input.flags["allowed-resources"] ?? manifest.resourceId, [manifest.resourceId]),
+    allowedActions: meshActionFlags(input.flags.actions, ["read", "sync"]),
+    createdAt: input.flags.now ?? "2026-05-17T10:07:00.000Z",
+    expiresAt: input.flags["expires-at"] ?? "2026-05-18T10:07:00.000Z",
+  });
+  return createMeshResourceShare({
+    invitation,
+    fromMeshId: input.flags["from-mesh"] ?? invitation.issuerMeshId,
+    toMeshId: input.flags["to-mesh"] ?? invitation.recipientMeshId ?? "mesh.peer",
+    manifest,
+    actions: meshActionFlags(input.flags.actions, ["read", "sync"]),
+    secretRefs: listFlag(input.flags["secret-refs"], []),
+    createdAt: input.flags.now ?? "2026-05-17T10:08:00.000Z",
+    expiresAt: input.flags["expires-at"] ?? "2026-05-18T10:08:00.000Z",
+  });
+}
+
 export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
   const command = input.positionals[1];
   if (command === "classify") {
@@ -207,10 +263,38 @@ export async function runNodesCli(input: RemoteSyncCliInput): Promise<number> {
     return writeOutput(input, "nodes", { nodes }, nodes.map((node) => `${node.id}: ${node.name}`).join("\n"), command);
   }
   if (command === "pair" || command === "trust" || command === "revoke" || command === "heartbeat") {
+    if (command === "revoke" && input.flags["target-id"]) {
+      const payload = {
+        revocation: createMeshRevocation({
+          targetType: input.flags["target-type"] === "invitation" || input.flags["target-type"] === "node_trust" ? input.flags["target-type"] : "share",
+          targetId: input.flags["target-id"],
+          actor: {
+            actorKind: "human",
+            actorId: input.flags["actor-id"] ?? "user.local",
+            nodeId: input.flags["owner-node"] ?? "local",
+            transport: input.flags.transport ?? "gateway",
+            trustMode: "governed_gateway",
+          },
+          reason: input.flags.reason ?? "owner_revoked",
+          revokedAt: input.flags.now ?? "2026-05-17T10:09:00.000Z",
+        }),
+        status: "dry_run_only",
+        writes: false,
+      };
+      return writeOutput(input, "nodes", payload, "revoke: dry_run_only mesh revocation", command);
+    }
     const payload = { operation: command, status: "dry_run_only", writes: false, reason: "Pairing/trust mutations require explicit signed-host or Coordinator implementation." };
     return writeOutput(input, "nodes", payload, `${command}: dry_run_only`, command);
   }
-  return missing(input, "nodes list|pair|trust|revoke|heartbeat");
+  if (command === "invite") {
+    const invitation = meshInvitationFromFlags(input);
+    return writeOutput(input, "nodes", { invitation, status: "dry_run_only", writes: false }, "invite: dry_run_only", command);
+  }
+  if (command === "share") {
+    const share = meshShareFromFlags(input);
+    return writeOutput(input, "nodes", { share, status: "dry_run_only", writes: false }, "share: dry_run_only", command);
+  }
+  return missing(input, "nodes list|pair|trust|revoke|invite|share|heartbeat");
 }
 
 export async function runGatewayCli(input: RemoteSyncCliInput): Promise<number> {
