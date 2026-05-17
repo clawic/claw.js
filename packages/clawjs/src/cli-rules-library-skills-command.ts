@@ -352,12 +352,6 @@ if (group === "library") {
 
 if (group === "skills" && command === "list") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
-  if (readBooleanFlag(argv, flags, "legacy", false)) {
-    const skills = await claw.skills.list();
-    if (wantsJson) writeSurfaceJson(skills);
-    else context.stdout.write(`${skills.map((entry) => `${entry.enabled ? "*" : "-"} ${entry.id}`).join("\n")}\n`);
-    return skills.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
-  }
   const filter: { kinds?: ("personality" | "procedure" | "snippet" | "role")[]; scope?: "global" | "project" | "tag" | "session"; tags?: string[]; builtin?: boolean } = {};
   if (flags.kind) filter.kinds = [flags.kind as "personality" | "procedure" | "snippet" | "role"];
   if (flags.scope) filter.scope = flags.scope as "global" | "project" | "tag" | "session";
@@ -533,18 +527,18 @@ if (group === "skills" && command === "search") {
 
 if (group === "skills" && (command === "sync" || command === "inspect")) {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
-  if (command === "sync" && !readBooleanFlag(argv, flags, "legacy", false)) {
+  if (command === "sync") {
     const targets = flags.target && flags.target !== "all" ? flags.target.split(",").map((t) => t.trim()).filter(Boolean) : undefined;
     const report = await claw.skills.syncV2({ targets });
     if (wantsJson) writeSurfaceJson(report);
     else context.stdout.write(`synced=${report.synced.length} removed=${report.removed.length} warnings=${report.warnings.length}\n`);
     return CLI_EXIT_OK;
   }
-  const skills = command === "sync" ? await claw.skills.sync() : await claw.skills.list();
+  const skills = claw.skills.listV2();
   if (wantsJson) {
     writeSurfaceJson(skills);
   } else {
-    context.stdout.write(`${skills.map((entry) => entry.id).join("\n")}\n`);
+    context.stdout.write(`${skills.map((entry) => entry.slug).join("\n")}\n`);
   }
   return skills.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
 }

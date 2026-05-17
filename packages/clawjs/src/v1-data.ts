@@ -204,7 +204,7 @@ function shouldHandleV1DataCommand(group: string | undefined, command: string | 
     apps: new Set(["list", "upsert", "help"]),
     design: new Set(["list", "upsert", "help"]),
     agents: new Set(["list", "get", "upsert", "delete", "help"]),
-    skills: new Set(["list", "get", "upsert", "delete", "help"]),
+    skills: new Set(["get", "upsert", "delete", "help"]),
     personalities: new Set(["list", "get", "upsert", "delete", "help"]),
     "skill-collections": new Set(["list", "get", "upsert", "delete", "help"]),
     connections: new Set(["list", "get", "upsert", "delete", "help"]),

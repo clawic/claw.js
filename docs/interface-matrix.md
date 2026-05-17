@@ -204,8 +204,8 @@ The Relay also exposes equivalent project-scoped routes under:
 | Commitments capture / outcome / link | `claw.commitments.*` | `claw commitments capture|add|list|show|fulfill|miss|cancel|link` | `-` |
 | Judgment prepare / record / link | `claw.judgment.*` | `claw judgment prepare|record|list|show|link|archive` | `-` |
 | Outcomes add / capture / link | `claw.outcomes.*` | `claw outcomes add|capture|list|show|link|archive` | `-` |
-| Skills list | `claw.skills.list()` | `claw skills list` | `GET WS/skills/list` |
-| Skills sync | `claw.skills.sync()` | `claw skills sync` | `-` |
+| Skills list | `claw.skills.listV2()` | `claw skills list` | `GET WS/skills/list` |
+| Skills sync | `claw.skills.syncV2()` | `claw skills sync` | `-` |
 | Skills sources | `claw.skills.sources()` | `claw skills sources` | `GET WS/skills/sources` |
 | Skills search | `claw.skills.search()` | `claw skills search` | `GET WS/skills/search` |
 | Skills install | `claw.skills.install()` | `claw skills install` | `-` |

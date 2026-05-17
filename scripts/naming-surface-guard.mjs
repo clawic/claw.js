@@ -317,6 +317,11 @@ forbidSnippet("packages/clawjs-integrations/src/connection-controller.test.ts", 
 forbidSnippet("packages/clawjs-node/src/runtime/claw-runtime.test.ts", "pre-v1 legacy model");
 
 forbidSnippet("packages/clawjs/src/index-data.test.ts", "legacy service tables");
+forbidSnippet("packages/clawjs/src/cli-rules-library-skills-command.ts", "readBooleanFlag(argv, flags, \"legacy\"");
+forbidSnippet("docs/interface-matrix.md", "claw.skills.list()");
+forbidSnippet("docs/interface-matrix.md", "claw.skills.sync()");
+forbidSnippet("packages/clawjs/src/v1-data.ts", "skills: new Set([\"list\"");
+forbidSnippet("packages/clawjs/src/v1-data-core.ts", "skills list|get|upsert|delete");
 
 for (const relativePath of [
   "packages/clawjs-node/src/generations/store.ts",
