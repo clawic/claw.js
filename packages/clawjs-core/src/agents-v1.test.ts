@@ -87,6 +87,53 @@ test("Agents V1 grant expiry and denies fail closed", () => {
   assert.deepEqual(result.reasons, ["agent: no active allow grant", "connector: denied by deny"]);
 });
 
+test("Agents V1 secrets require brokered lease action instead of direct reads", () => {
+  const secretRequest: AgentAccessRequest = {
+    resourceType: "secret",
+    resourceId: "vault://agents/support/api-key",
+    action: "read",
+    scopeType: "assignment",
+    scopeId: "assignment.web",
+  };
+  const secretGrant = (plane: string): AgentResourceGrant => ({
+    id: `${plane}.secret`,
+    resourceType: "secret",
+    resourceId: "vault://agents/support/api-key",
+    action: "read",
+    scopeType: "assignment",
+    scopeId: "assignment.web",
+    effect: "allow",
+  });
+  const result = evaluateAgentEffectiveAccess({
+    requested: secretRequest,
+    agentGrants: [secretGrant("agent")],
+    assignmentGrants: [secretGrant("assignment")],
+    executionProfileGrants: [secretGrant("execution")],
+    connectorGrants: [secretGrant("connector")],
+    hostGrants: [secretGrant("host")],
+    runScopeGrants: [secretGrant("run")],
+  });
+  assert.equal(result.allowed, false);
+  assert.equal(result.reasons[0], "secret: direct access denied; use lease_secret broker flow");
+
+  const leaseRequest: AgentAccessRequest = { ...secretRequest, action: "lease_secret" };
+  const leaseGrant = (plane: string): AgentResourceGrant => ({
+    ...secretGrant(plane),
+    id: `${plane}.lease`,
+    action: "lease_secret",
+  });
+  const lease = evaluateAgentEffectiveAccess({
+    requested: leaseRequest,
+    agentGrants: [leaseGrant("agent")],
+    assignmentGrants: [leaseGrant("assignment")],
+    executionProfileGrants: [leaseGrant("execution")],
+    connectorGrants: [leaseGrant("connector")],
+    hostGrants: [leaseGrant("host")],
+    runScopeGrants: [leaseGrant("run")],
+  });
+  assert.equal(lease.allowed, true);
+});
+
 test("Agents V1 delegation cannot launder authority through a child agent", () => {
   const base = {
     requested: request,

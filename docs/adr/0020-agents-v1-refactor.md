@@ -53,7 +53,9 @@ Effective access is fail-closed and is the intersection of agent grants,
 assignment grants, execution profile sandbox, connector control plane, host
 policy, and current run scope. Secrets are never exposed as plaintext to
 agents; agents may only request operation-scoped broker leases with audit and
-expiry.
+expiry. The central access gate rejects direct `read`/`write`/`execute`
+requests against secret/vault resources even when all planes contain matching
+allow grants; only `lease_secret` can pass into the broker flow.
 
 ## Enforcement
 

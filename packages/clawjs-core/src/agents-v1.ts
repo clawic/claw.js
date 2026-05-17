@@ -555,6 +555,10 @@ export function evaluateAgentEffectiveAccess(input: AgentEffectiveAccessInput): 
   const reasons: string[] = [];
   const matchedGrantIds: string[] = [];
 
+  if (isSecretResourceRequest(input.requested) && input.requested.action !== "lease_secret") {
+    reasons.push("secret: direct access denied; use lease_secret broker flow");
+  }
+
   for (const [planeName, key] of PLANES) {
     const grants = input[key] ?? [];
     const activeMatches = grants.filter((grant) => grantMatches(input.requested, grant, now));
@@ -1084,6 +1088,10 @@ function grantMatches(request: AgentAccessRequest, grant: AgentResourceGrant, no
     && matchesOptional(request.resourceId, grant.resourceId)
     && matchesOptional(request.scopeType, grant.scopeType)
     && matchesOptional(request.scopeId, grant.scopeId);
+}
+
+function isSecretResourceRequest(request: AgentAccessRequest): boolean {
+  return /^(secret|secrets|credential|credentials|vault)$/i.test(request.resourceType);
 }
 
 function matches(value: string | undefined, pattern: string | undefined): boolean {
