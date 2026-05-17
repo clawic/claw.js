@@ -44,6 +44,7 @@ ClawJS gives you one place to solve the hard parts that show up across runtimes:
 | `@clawjs/agents` | Filesystem-first agent identity, personality, skill collection, connection, and audit records. |
 | `@clawjs/integrations` | Connection watchers and routing for inbound channel messages. |
 | `@clawjs/sessions` | Shared session mirror store, FTS search, and native runtime import adapters. |
+| `@clawjs/search` | Source registry, Root Search federation, rebuildable Search store, saved searches, monitors, and result actions. |
 | `@clawjs/user-model` | Shared user profile store, snapshots, and embeddable profile service app. |
 | `@clawjs/runtime` | Shared runtime loops for distillation, nudges, and profile refresh. |
 | `@clawjs/node` | Stable Node SDK entrypoint that reexports the primary SDK surface. |
@@ -100,6 +101,7 @@ ClawJS writes new canonical workspace state under `.claw/` even when runtimes di
 ### Use services
 
 - [Database](/database) for local-first CRUD, the standalone service, scoped tokens, files, and realtime.
+- [Search](/search) for source manifests, Root Search, the rebuildable Search store, saved searches, monitors, and Search CLI.
 - [Canonical Data Catalog](/canonical-data-catalog) for built-in collections, fields, aliases, and relationship semantics.
 - [Audio Service](/audio) for app-scoped audio blobs, transcripts, and local service APIs.
 - [Time Service](/time) for calendar, routines, deadlines, follow-ups, executions, and timeline views.

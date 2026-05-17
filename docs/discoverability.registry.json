@@ -111,6 +111,43 @@
       "reviewDate": "2026-08-17"
     },
     {
+      "id": "search-v1-1-architecture",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0019-search-v1-1-architecture.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/decision-map.md",
+        "docs/search.md"
+      ],
+      "discoveryTerms": [
+        "Search V1.1",
+        "Root Search",
+        "Search Source Registry",
+        "Search Index"
+      ],
+      "searchQueries": [
+        {
+          "query": "Search V1.1",
+          "expectPath": "docs/adr/0019-search-v1-1-architecture.md"
+        },
+        {
+          "query": "Root Search",
+          "expectPath": "docs/search.md"
+        }
+      ],
+      "inspect": [
+        {
+          "command": "claw search sources --json",
+          "expectPath": "docs/search.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-17"
+    },
+    {
       "id": "docs-alignment-routing",
       "kind": "guardrail",
       "owner": "claw",

@@ -105,6 +105,7 @@ export default {
         text: "Services",
         items: [
           { text: "Database", link: "/database" },
+          { text: "Search", link: "/search" },
           { text: "Canonical Data Catalog", link: "/canonical-data-catalog" },
           { text: "Audio Service", link: "/audio" },
           { text: "Time Service", link: "/time" },
