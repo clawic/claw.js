@@ -743,6 +743,146 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(drugProductTimelinePayload.data.materializedView.items.some((item) => item.kind === "adverse_event" && item.label === "Headache safety event"), true);
   assert.equal(drugProductTimelinePayload.data.materializedView.gaps.some((gap) => gap.id === drugProductGapPayload.data.id && gap.gapKind === "external_pending"), true);
 
+  const contentBrandCreate = await runCliCapture(["content-brand", "create", "Acme Editorial", "--company", companyPayload.data.id, "--slug", "acme-editorial", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(contentBrandCreate.code, CLI_EXIT_OK, contentBrandCreate.stderr || contentBrandCreate.stdout);
+  const contentBrandPayload = JSON.parse(contentBrandCreate.stdout) as { data: { id: string; name: string; companyId: string; status: string; defaultLocale: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(contentBrandPayload.meta.invokedCommand, "content-brand");
+  assert.equal(contentBrandPayload.meta.collection, "content_brands");
+  assert.equal(contentBrandPayload.meta.action, "create");
+  assert.equal(contentBrandPayload.data.name, "Acme Editorial");
+  assert.equal(contentBrandPayload.data.companyId, companyPayload.data.id);
+  assert.equal(contentBrandPayload.data.status, "draft");
+  assert.equal(contentBrandPayload.data.defaultLocale, "en-US");
+
+  const contentDestinationCreate = await runCliCapture(["content-destination", "create", "Acme Blog", "--brand", contentBrandPayload.data.id, "--kind", "blog", "--publish-policy", "approval_required", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(contentDestinationCreate.code, CLI_EXIT_OK, contentDestinationCreate.stderr || contentDestinationCreate.stdout);
+  const contentDestinationPayload = JSON.parse(contentDestinationCreate.stdout) as { data: { id: string; name: string; contentBrandId: string; kind: string; publishPolicy: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(contentDestinationPayload.meta.collection, "content_destinations");
+  assert.equal(contentDestinationPayload.data.name, "Acme Blog");
+  assert.equal(contentDestinationPayload.data.contentBrandId, contentBrandPayload.data.id);
+  assert.equal(contentDestinationPayload.data.kind, "blog");
+  assert.equal(contentDestinationPayload.data.publishPolicy, "approval_required");
+  assert.equal(contentDestinationPayload.data.status, "draft");
+
+  const contentCampaignCreate = await runCliCapture(["content-campaign", "create", "Launch Campaign", "--brand", contentBrandPayload.data.id, "--slug", "launch-campaign", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(contentCampaignCreate.code, CLI_EXIT_OK, contentCampaignCreate.stderr || contentCampaignCreate.stdout);
+  const contentCampaignPayload = JSON.parse(contentCampaignCreate.stdout) as { data: { id: string; name: string; contentBrandId: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(contentCampaignPayload.meta.collection, "content_campaigns");
+  assert.equal(contentCampaignPayload.data.name, "Launch Campaign");
+  assert.equal(contentCampaignPayload.data.contentBrandId, contentBrandPayload.data.id);
+  assert.equal(contentCampaignPayload.data.status, "planning");
+
+  const contentEntryCreate = await runCliCapture(["content-entry", "create", "Launch note", "--brand", contentBrandPayload.data.id, "--campaign", contentCampaignPayload.data.id, "--content-type", "article", "--canonical-format", "markdown", "--summary", "Launch announcement draft.", "--canonical-body", "Structured launch note.", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(contentEntryCreate.code, CLI_EXIT_OK, contentEntryCreate.stderr || contentEntryCreate.stdout);
+  const contentEntryPayload = JSON.parse(contentEntryCreate.stdout) as { data: { id: string; title: string; contentBrandId: string; contentCampaignId: string; contentType: string; canonicalFormat: string; status: string; currentRevisionNumber: number }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(contentEntryPayload.meta.collection, "content_entries");
+  assert.equal(contentEntryPayload.data.title, "Launch note");
+  assert.equal(contentEntryPayload.data.contentBrandId, contentBrandPayload.data.id);
+  assert.equal(contentEntryPayload.data.contentCampaignId, contentCampaignPayload.data.id);
+  assert.equal(contentEntryPayload.data.contentType, "article");
+  assert.equal(contentEntryPayload.data.canonicalFormat, "markdown");
+  assert.equal(contentEntryPayload.data.status, "draft");
+  assert.equal(contentEntryPayload.data.currentRevisionNumber, 1);
+
+  const contentRevisionCreate = await runCliCapture(["content-entry", contentEntryPayload.data.id, "revisions", "add", "Launch note revision 1", "--revision-number", "1", "--body", "Structured launch note.", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(contentRevisionCreate.code, CLI_EXIT_OK, contentRevisionCreate.stderr || contentRevisionCreate.stdout);
+  const contentRevisionPayload = JSON.parse(contentRevisionCreate.stdout) as { data: { id: string; title: string; contentEntryId: string; revisionNumber: number; createdAt: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(contentRevisionPayload.meta.collection, "content_revisions");
+  assert.equal(contentRevisionPayload.data.title, "Launch note revision 1");
+  assert.equal(contentRevisionPayload.data.contentEntryId, contentEntryPayload.data.id);
+  assert.equal(contentRevisionPayload.data.revisionNumber, 1);
+  assert.equal(typeof contentRevisionPayload.data.createdAt, "string");
+
+  const contentVariantCreate = await runCliCapture(["content-entry", contentEntryPayload.data.id, "variants", "add", "Blog variant", "--destination", contentDestinationPayload.data.id, "--format", "markdown", "--body", "Blog-ready launch note.", "--status", "approved", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(contentVariantCreate.code, CLI_EXIT_OK, contentVariantCreate.stderr || contentVariantCreate.stdout);
+  const contentVariantPayload = JSON.parse(contentVariantCreate.stdout) as { data: { id: string; title: string; contentEntryId: string; contentDestinationId: string; format: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(contentVariantPayload.meta.collection, "content_variants");
+  assert.equal(contentVariantPayload.data.title, "Blog variant");
+  assert.equal(contentVariantPayload.data.contentEntryId, contentEntryPayload.data.id);
+  assert.equal(contentVariantPayload.data.contentDestinationId, contentDestinationPayload.data.id);
+  assert.equal(contentVariantPayload.data.status, "approved");
+
+  const contentApprovalCreate = await runCliCapture(["content-entry", contentEntryPayload.data.id, "approvals", "add", "--title", "Blog approval", "--variant", contentVariantPayload.data.id, "--destination", contentDestinationPayload.data.id, "--status", "approved", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(contentApprovalCreate.code, CLI_EXIT_OK, contentApprovalCreate.stderr || contentApprovalCreate.stdout);
+  const contentApprovalPayload = JSON.parse(contentApprovalCreate.stdout) as { data: { id: string; title: string; contentEntryId: string; contentVariantId: string; contentDestinationId: string; status: string; requestedAt: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(contentApprovalPayload.meta.collection, "content_approvals");
+  assert.equal(contentApprovalPayload.data.title, "Blog approval");
+  assert.equal(contentApprovalPayload.data.contentEntryId, contentEntryPayload.data.id);
+  assert.equal(contentApprovalPayload.data.contentVariantId, contentVariantPayload.data.id);
+  assert.equal(contentApprovalPayload.data.contentDestinationId, contentDestinationPayload.data.id);
+  assert.equal(contentApprovalPayload.data.status, "approved");
+  assert.equal(typeof contentApprovalPayload.data.requestedAt, "string");
+
+  const contentPublicationCreate = await runCliCapture(["content-entry", contentEntryPayload.data.id, "publications", "add", "--title", "Blog publication", "--variant", contentVariantPayload.data.id, "--destination", contentDestinationPayload.data.id, "--status", "published", "--external-url", "https://example.test/launch-note", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(contentPublicationCreate.code, CLI_EXIT_OK, contentPublicationCreate.stderr || contentPublicationCreate.stdout);
+  const contentPublicationPayload = JSON.parse(contentPublicationCreate.stdout) as { data: { id: string; title: string; contentEntryId: string; contentVariantId: string; contentDestinationId: string; status: string; externalUrl: string; attemptNumber: number }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(contentPublicationPayload.meta.collection, "content_publications");
+  assert.equal(contentPublicationPayload.data.title, "Blog publication");
+  assert.equal(contentPublicationPayload.data.contentEntryId, contentEntryPayload.data.id);
+  assert.equal(contentPublicationPayload.data.contentVariantId, contentVariantPayload.data.id);
+  assert.equal(contentPublicationPayload.data.contentDestinationId, contentDestinationPayload.data.id);
+  assert.equal(contentPublicationPayload.data.status, "published");
+  assert.equal(contentPublicationPayload.data.externalUrl, "https://example.test/launch-note");
+  assert.equal(contentPublicationPayload.data.attemptNumber, 0);
+
+  const contentEvidenceSourceCreate = await runCliCapture(["evidence-source", "create", "Content brief", "--kind", "document", "--collection-name", "content_entries", "--record-id", contentEntryPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(contentEvidenceSourceCreate.code, CLI_EXIT_OK);
+  const contentEvidenceSourcePayload = JSON.parse(contentEvidenceSourceCreate.stdout) as { data: { id: string; collectionName: string; recordId: string } };
+  assert.equal(contentEvidenceSourcePayload.data.collectionName, "content_entries");
+  assert.equal(contentEvidenceSourcePayload.data.recordId, contentEntryPayload.data.id);
+
+  const contentGapCreate = await runCliCapture(["quality-gap", "create", "Provider receipt pending", "--target-collection", "content_entries", "--target-id", contentEntryPayload.data.id, "--gap-kind", "external_pending", "--evidence-source-id", contentEvidenceSourcePayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(contentGapCreate.code, CLI_EXIT_OK);
+  const contentGapPayload = JSON.parse(contentGapCreate.stdout) as { data: { id: string; gapKind: string; targetCollection: string; targetId: string } };
+  assert.equal(contentGapPayload.data.targetCollection, "content_entries");
+  assert.equal(contentGapPayload.data.targetId, contentEntryPayload.data.id);
+  assert.equal(contentGapPayload.data.gapKind, "external_pending");
+
+  const contentEntryTimeline = await runCliCapture(["content-entry", contentEntryPayload.data.id, "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(contentEntryTimeline.code, CLI_EXIT_OK, contentEntryTimeline.stderr || contentEntryTimeline.stdout);
+  const contentEntryTimelinePayload = JSON.parse(contentEntryTimeline.stdout) as {
+    data: {
+      coverage: { implementationStatus: string; recordsMaterialized: boolean };
+      semanticView: { id: string; systemId: string };
+      materializedView: {
+        subject: { id: string; label: string };
+        brand: { id: string; label: string } | null;
+        campaign: { id: string; label: string } | null;
+        summary: { revisions: number; variants: number; approvals: number; approvedApprovals: number; publications: number; publishedPublications: number; destinations: number; evidenceSources: number; qualityGaps: number; hasBrand: boolean; hasCampaign: boolean };
+        itemCount: number;
+        items: Array<{ kind: string; label: string }>;
+        gaps: Array<{ id: string; gapKind: string }>;
+        partial: boolean;
+      };
+    };
+  };
+  assert.equal(contentEntryTimelinePayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(contentEntryTimelinePayload.data.coverage.recordsMaterialized, true);
+  assert.equal(contentEntryTimelinePayload.data.semanticView.id, "content_entry.timeline");
+  assert.equal(contentEntryTimelinePayload.data.semanticView.systemId, "content");
+  assert.equal(contentEntryTimelinePayload.data.materializedView.subject.id, contentEntryPayload.data.id);
+  assert.equal(contentEntryTimelinePayload.data.materializedView.subject.label, "Launch note");
+  assert.equal(contentEntryTimelinePayload.data.materializedView.brand?.id, contentBrandPayload.data.id);
+  assert.equal(contentEntryTimelinePayload.data.materializedView.campaign?.id, contentCampaignPayload.data.id);
+  assert.equal(contentEntryTimelinePayload.data.materializedView.summary.revisions, 1);
+  assert.equal(contentEntryTimelinePayload.data.materializedView.summary.variants, 1);
+  assert.equal(contentEntryTimelinePayload.data.materializedView.summary.approvals, 1);
+  assert.equal(contentEntryTimelinePayload.data.materializedView.summary.approvedApprovals, 1);
+  assert.equal(contentEntryTimelinePayload.data.materializedView.summary.publications, 1);
+  assert.equal(contentEntryTimelinePayload.data.materializedView.summary.publishedPublications, 1);
+  assert.equal(contentEntryTimelinePayload.data.materializedView.summary.destinations, 1);
+  assert.equal(contentEntryTimelinePayload.data.materializedView.summary.evidenceSources, 1);
+  assert.equal(contentEntryTimelinePayload.data.materializedView.summary.qualityGaps, 1);
+  assert.equal(contentEntryTimelinePayload.data.materializedView.summary.hasBrand, true);
+  assert.equal(contentEntryTimelinePayload.data.materializedView.summary.hasCampaign, true);
+  assert.equal(contentEntryTimelinePayload.data.materializedView.partial, true);
+  assert.equal(contentEntryTimelinePayload.data.materializedView.itemCount >= 9, true);
+  assert.equal(contentEntryTimelinePayload.data.materializedView.items.some((item) => item.kind === "content_revision" && item.label === "Launch note revision 1"), true);
+  assert.equal(contentEntryTimelinePayload.data.materializedView.items.some((item) => item.kind === "content_variant" && item.label === "Blog variant"), true);
+  assert.equal(contentEntryTimelinePayload.data.materializedView.items.some((item) => item.kind === "content_approval" && item.label === "Blog approval"), true);
+  assert.equal(contentEntryTimelinePayload.data.materializedView.items.some((item) => item.kind === "content_publication" && item.label === "Blog publication"), true);
+  assert.equal(contentEntryTimelinePayload.data.materializedView.gaps.some((gap) => gap.id === contentGapPayload.data.id && gap.gapKind === "external_pending"), true);
+
   const supplierCreate = await runCliCapture(["supplier", "create", "Parts Co", "--company", companyPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(supplierCreate.code, CLI_EXIT_OK, supplierCreate.stderr || supplierCreate.stdout);
   const supplierPayload = JSON.parse(supplierCreate.stdout) as { data: { id: string; name: string; companyId: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
