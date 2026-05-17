@@ -529,7 +529,20 @@ export async function createAgent(input: {
 export async function updateAgent(id: string, patch: Partial<CompanyAgent>): Promise<CompanyAgent> {
   const current = await getRecord<CompanyAgent>(C_AGENTS, id);
   if (!current) {
-    return toCompanyAgent(await updateRecord<CompanyAgent>(C_LEGACY_AGENTS, id, patch as Record<string, unknown>));
+    const legacy = await getLegacyCompanyAgent(id);
+    if (!legacy) throw new Error(`Agent ${id} not found`);
+    const migrated = await createRecord<CompanyAgent>(C_AGENTS, canonicalCompanyAgentPayload({
+      ...legacy,
+      ...patch,
+      id: legacy.id,
+      companyId: legacy.companyId,
+      status: patch.status ?? legacy.status,
+      autonomyLevel: patch.autonomyLevel ?? legacy.autonomyLevel,
+      legacySourceCollection: C_LEGACY_AGENTS,
+      legacySourceId: legacy.id,
+      legacyMigrationState: "migrated_on_write",
+    }));
+    return toCompanyAgent(migrated);
   }
   const canonicalPatch = {
     ...patch,

@@ -1,12 +1,22 @@
 import { AgentStoreFS, defaultAgent, type Agent, type Connection, type Personality, type SkillCollection } from "@clawjs/agents";
 import {
   createAgentActivityFeed,
+  createAgentAuditCoverageReport,
   createAgentBlueprint,
   createAgentConfigRevision,
+  createAgentContextPack,
+  createAgentControlPanel,
+  createAgentCreationReview,
+  createAgentDispatchPlan,
   createAgentEvaluation,
   createAgentIncident,
+  createAgentOperationalSnapshot,
+  createAgentPaperclipImportPlan,
+  createAgentPrivacyLifecyclePlan,
   createAgentRetirementPlan,
   createAgentSupportInboxProjection,
+  createAgentStorageAudit,
+  createAgentToolCatalogProjection,
   evaluateAgentActionSeverity,
   evaluateAgentAutonomyPolicy,
   createAgentSafeSurfaceProjection,
@@ -19,6 +29,7 @@ import {
   resolveAgentExternalIdentity,
   type AgentActivityFeedInput,
   type AgentActionSeverityRequest,
+  type AgentAuditCoverageInput,
   type AgentAutonomyPolicyInput,
   type AgentBlueprintInput,
   type AgentAssignmentRouteRequest,
@@ -29,13 +40,22 @@ import {
   type AgentEvaluationInput,
   type AgentExternalIdentityProfile,
   type AgentConfigRevisionInput,
+  type AgentContextPackInput,
+  type AgentControlPanelInput,
+  type AgentCreationReviewInput,
+  type AgentDispatchPlanInput,
   type AgentIncidentInput,
   type AgentMemoryAccessRequest,
   type AgentMemoryPolicy,
+  type AgentOperationalSnapshotInput,
+  type AgentPaperclipImportInput,
+  type AgentPrivacyLifecycleInput,
   type AgentRetirementInput,
   type AgentSafeSurfaceProjectionInput,
+  type AgentStorageAuditInput,
   type AgentSupervisorAuthorityInput,
   type AgentSupportInboxProjectionInput,
+  type AgentToolCatalogProjectionInput,
 } from "@clawjs/core";
 import type { DatabaseServiceStore } from "@clawjs/database";
 
@@ -105,7 +125,7 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
       rootConcept: "agent",
       placementConcept: "agent_assignment",
       defaultPosture: "empty_sandbox_respond_only",
-      gates: ["evaluate-access", "delegation-check", "supervisor-check", "route-check", "resolve-external-identity", "project-support-inbox", "memory-check", "budget-check", "action-severity", "autonomy-check", "surface-projection", "config-revision", "incident", "activity-feed", "blueprint", "evaluation", "retirement-plan"],
+      gates: ["evaluate-access", "delegation-check", "supervisor-check", "route-check", "resolve-external-identity", "project-support-inbox", "memory-check", "budget-check", "action-severity", "autonomy-check", "dispatch-plan", "context-pack", "tool-catalog", "creation-review", "storage-audit", "audit-coverage", "operational-snapshot", "control-panel", "privacy-plan", "paperclip-import", "surface-projection", "config-revision", "incident", "activity-feed", "blueprint", "evaluation", "retirement-plan"],
     });
     return V1_DATA_EXIT_OK;
   }
@@ -167,6 +187,64 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
     const record = recordFlag<AgentAutonomyPolicyInput>(input);
     if (!record) return usageError(input, "Usage: claw agents autonomy-check --record JSON [--json]");
     writeSuccess(input, evaluateAgentAutonomyPolicy(record));
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "dispatch-plan") {
+    const record = recordFlag<AgentDispatchPlanInput>(input);
+    if (!record) return usageError(input, "Usage: claw agents dispatch-plan --record JSON [--json]");
+    writeSuccess(input, createAgentDispatchPlan(record));
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "context-pack") {
+    const record = recordFlag<AgentContextPackInput>(input);
+    if (!record) return usageError(input, "Usage: claw agents context-pack --record JSON [--json]");
+    writeSuccess(input, createAgentContextPack(record));
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "tool-catalog") {
+    const record = recordFlag<AgentToolCatalogProjectionInput>(input);
+    if (!record) return usageError(input, "Usage: claw agents tool-catalog --record JSON [--json]");
+    writeSuccess(input, createAgentToolCatalogProjection(record));
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "creation-review") {
+    const record = recordFlag<AgentCreationReviewInput>(input);
+    if (!record) return usageError(input, "Usage: claw agents creation-review --record JSON [--json]");
+    writeSuccess(input, createAgentCreationReview(record));
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "storage-audit") {
+    const record = recordFlag<AgentStorageAuditInput>(input) ?? {};
+    writeSuccess(input, createAgentStorageAudit(record));
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "audit-coverage") {
+    const record = recordFlag<AgentAuditCoverageInput>(input) ?? {};
+    writeSuccess(input, createAgentAuditCoverageReport(record));
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "operational-snapshot") {
+    const record = recordFlag<AgentOperationalSnapshotInput>(input);
+    if (!record) return usageError(input, "Usage: claw agents operational-snapshot --record JSON [--json]");
+    writeSuccess(input, createAgentOperationalSnapshot(record));
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "control-panel") {
+    const record = recordFlag<AgentControlPanelInput>(input);
+    if (!record) return usageError(input, "Usage: claw agents control-panel --record JSON [--json]");
+    writeSuccess(input, createAgentControlPanel(record));
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "privacy-plan") {
+    const record = recordFlag<AgentPrivacyLifecycleInput>(input);
+    if (!record) return usageError(input, "Usage: claw agents privacy-plan --record JSON [--json]");
+    writeSuccess(input, createAgentPrivacyLifecyclePlan(record));
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "paperclip-import") {
+    const record = recordFlag<AgentPaperclipImportInput>(input);
+    if (!record) return usageError(input, "Usage: claw agents paperclip-import --record JSON [--json]");
+    writeSuccess(input, createAgentPaperclipImportPlan(record));
     return V1_DATA_EXIT_OK;
   }
   if (command === "surface-projection") {

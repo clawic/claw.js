@@ -1,3 +1,7 @@
+import type { AgentToolDescriptor, AgentToolRiskLevel } from "./agent_tools.ts";
+import type { BuiltinCollectionDefinition, BuiltinFieldDefinition } from "./builtins/index.ts";
+import { AGENTS_FAMILY } from "./builtins/index.ts";
+
 export const AGENT_ASSIGNMENT_STATUSES = [
   "draft",
   "pending_approval",
@@ -197,6 +201,7 @@ export interface AgentAssignmentRoute {
   expiresAt?: string;
   scopeType?: string;
   scopeId?: string;
+  respondOnlyDefault?: boolean;
 }
 
 export interface AgentAssignmentRouteRequest {
@@ -383,6 +388,434 @@ export interface AgentAutonomyPolicyResult {
   requiredGates: string[];
 }
 
+export type AgentExecutionMode = "sync" | "async" | "streaming" | "scheduled";
+export type AgentDispatchDisposition = "respond" | "suggest" | "invoke_sync" | "queue_async" | "stream" | "schedule" | "blocked";
+export type AgentDispatchRunStatus = "ready" | "queued" | "running" | "awaiting_input" | "blocked";
+
+export interface AgentExecutionProfileDispatch {
+  id?: string;
+  executionMode?: AgentExecutionMode;
+  runtime?: string;
+  status?: "active" | "paused" | "archived" | "error";
+}
+
+export interface AgentDispatchPlanInput {
+  agentId: string;
+  assignment?: AgentAssignmentRoute | null;
+  assignmentRequest: Omit<AgentAssignmentRouteRequest, "assignment">;
+  executionProfile?: AgentExecutionProfileDispatch | null;
+  autonomy: Omit<AgentAutonomyPolicyInput, "action">;
+  action: AgentActionSeverityRequest;
+  scheduledAt?: string;
+  externalActAllowed?: boolean;
+  now?: string | Date;
+}
+
+export interface AgentDispatchPlan {
+  schemaVersion: 1;
+  planKind: "claw_agent_dispatch_plan";
+  agentId: string;
+  assignmentId?: string;
+  executionProfileId?: string;
+  allowed: boolean;
+  disposition: AgentDispatchDisposition;
+  runStatus: AgentDispatchRunStatus;
+  executionMode?: AgentExecutionMode;
+  autonomy: AgentAutonomyPolicyResult;
+  route: AgentAssignmentRouteResult;
+  reasons: string[];
+  requiredGates: string[];
+  audit: AgentAuditEvent;
+}
+
+export interface AgentContextScope {
+  scopeType: string;
+  scopeId?: string;
+}
+
+export interface AgentContextViewPolicy {
+  id?: string;
+  name?: string;
+  allowedResourceTypes?: string[];
+  allowedScopes?: AgentContextScope[];
+  maxItems?: number;
+  includeContent?: boolean;
+}
+
+export interface AgentContextPackEntry {
+  id?: string;
+  resourceType: string;
+  resourceId?: string;
+  action?: AgentResourceAction;
+  scopeType?: string;
+  scopeId?: string;
+  title?: string;
+  content?: unknown;
+  metadata?: Record<string, unknown>;
+  required?: boolean;
+}
+
+export interface AgentContextPackInput {
+  agentId: string;
+  assignmentId?: string;
+  view: AgentContextViewPolicy;
+  requested: AgentContextPackEntry[];
+  agentGrants?: AgentResourceGrant[];
+  assignmentGrants?: AgentResourceGrant[];
+  executionProfileGrants?: AgentResourceGrant[];
+  connectorGrants?: AgentResourceGrant[];
+  hostGrants?: AgentResourceGrant[];
+  runScopeGrants?: AgentResourceGrant[];
+  now?: string | Date;
+  redaction?: "default" | "strict" | "custom";
+}
+
+export interface AgentContextPackItem {
+  id: string;
+  resourceType: string;
+  resourceId?: string;
+  action: AgentResourceAction;
+  scopeType?: string;
+  scopeId?: string;
+  title?: string;
+  hasContent: boolean;
+  content?: unknown;
+  metadata: Record<string, unknown>;
+  matchedGrantIds: string[];
+}
+
+export interface AgentContextPackDeniedItem {
+  id: string;
+  resourceType: string;
+  resourceId?: string;
+  reasons: string[];
+}
+
+export interface AgentContextPack {
+  schemaVersion: 1;
+  packKind: "claw_agent_context_pack";
+  agentId: string;
+  assignmentId?: string;
+  view: AgentContextViewPolicy;
+  items: AgentContextPackItem[];
+  denied: AgentContextPackDeniedItem[];
+  gaps: string[];
+  audit: AgentAuditEvent;
+}
+
+export interface AgentToolCatalogProjectionInput {
+  agentId: string;
+  assignmentId?: string;
+  tools: AgentToolDescriptor[];
+  allowedToolIds?: string[];
+  allowedDomains?: string[];
+  approvalGrantedToolIds?: string[];
+  agentGrants?: AgentResourceGrant[];
+  assignmentGrants?: AgentResourceGrant[];
+  executionProfileGrants?: AgentResourceGrant[];
+  connectorGrants?: AgentResourceGrant[];
+  hostGrants?: AgentResourceGrant[];
+  runScopeGrants?: AgentResourceGrant[];
+  now?: string | Date;
+  redaction?: "default" | "strict" | "custom";
+}
+
+export interface AgentToolCatalogProjectionItem {
+  id: string;
+  title: string;
+  description: string;
+  domain: string;
+  sourceFeature: string;
+  parameters: AgentToolDescriptor["parameters"];
+  riskLevel: AgentToolRiskLevel;
+  version?: string;
+  requiresApproval: boolean;
+  matchedGrantIds: string[];
+}
+
+export interface AgentToolCatalogBlockedItem {
+  id: string;
+  domain: string;
+  riskLevel: AgentToolRiskLevel;
+  reasons: string[];
+}
+
+export interface AgentToolCatalogProjection {
+  schemaVersion: 1;
+  catalogKind: "claw_agent_tool_catalog";
+  agentId: string;
+  assignmentId?: string;
+  tools: AgentToolCatalogProjectionItem[];
+  blocked: AgentToolCatalogBlockedItem[];
+  gaps: string[];
+  audit: AgentAuditEvent;
+}
+
+export interface AgentCreationReviewInput {
+  agent: Record<string, unknown>;
+  assignments?: Array<Record<string, unknown>>;
+  executionProfiles?: Array<Record<string, unknown>>;
+  resourceGrants?: Array<Record<string, unknown>>;
+  memoryPolicies?: Array<Record<string, unknown>>;
+  budgets?: Array<Record<string, unknown>>;
+  skillBindings?: AgentSkillBinding[];
+  surface?: AgentSafeSurfaceKind;
+  actorId?: string;
+  reviewedAt?: string;
+  redaction?: "default" | "strict" | "custom";
+}
+
+export interface AgentCreationReview {
+  schemaVersion: 1;
+  reviewKind: "claw_agent_creation_review";
+  agentId: string;
+  reviewedAt: string;
+  ready: boolean;
+  requiredApprovals: string[];
+  gaps: string[];
+  risks: string[];
+  safePackage: AgentSafePackageExport;
+  surfaceProjection: AgentSafeSurfaceProjection;
+  audit: AgentAuditEvent;
+}
+
+export interface AgentStorageAuditInput {
+  collections?: BuiltinCollectionDefinition[];
+  observedTables?: string[];
+  legacyCollections?: string[];
+  allowedJsonFields?: string[];
+  auditedAt?: string;
+}
+
+export interface AgentStorageAudit {
+  schemaVersion: 1;
+  auditKind: "claw_agent_storage_audit";
+  ready: boolean;
+  canonicalCollections: string[];
+  missingCollections: string[];
+  missingRequiredFields: Array<{ collection: string; field: string }>;
+  jsonFields: Array<{ collection: string; field: string; allowed: boolean }>;
+  unexpectedJsonFields: Array<{ collection: string; field: string }>;
+  legacyOverlaps: string[];
+  secretPolicyFindings: string[];
+  gaps: string[];
+  audit: AgentAuditEvent;
+}
+
+export interface AgentAuditCoverageInput {
+  events?: AgentAuditEvent[];
+  expectedKinds?: AgentAuditEventKind[];
+  auditedAt?: string;
+}
+
+export interface AgentAuditCoverageInvalidEvent {
+  id?: string;
+  kind?: string;
+  reasons: string[];
+}
+
+export interface AgentAuditCoverageReport {
+  schemaVersion: 1;
+  reportKind: "claw_agent_audit_coverage";
+  ready: boolean;
+  expectedKinds: AgentAuditEventKind[];
+  coveredKinds: AgentAuditEventKind[];
+  missingKinds: AgentAuditEventKind[];
+  invalidEvents: AgentAuditCoverageInvalidEvent[];
+  sensitiveFindings: string[];
+  gaps: string[];
+  audit: AgentAuditEvent;
+}
+
+export interface AgentOperationalSnapshotInput {
+  agentId: string;
+  assignments?: Array<Record<string, unknown>>;
+  runs?: Array<Record<string, unknown>>;
+  sessions?: Array<Record<string, unknown>>;
+  evaluations?: Array<Record<string, unknown>>;
+  incidents?: Array<Record<string, unknown>>;
+  configRevisions?: Array<Record<string, unknown>>;
+  audits?: AgentAuditEvent[];
+  statuses?: string[];
+  since?: string;
+  limit?: number;
+  capturedAt?: string;
+  redaction?: "default" | "strict" | "custom";
+}
+
+export interface AgentOperationalSnapshotSummary {
+  assignments: Record<string, number>;
+  runs: Record<string, number>;
+  sessions: Record<string, number>;
+  evaluations: Record<string, number>;
+  incidents: Record<string, number>;
+  configRevisions: number;
+  audits: Record<string, number>;
+}
+
+export interface AgentOperationalSnapshot {
+  schemaVersion: 1;
+  snapshotKind: "claw_agent_operational_snapshot";
+  agentId: string;
+  capturedAt: string;
+  filters: {
+    statuses: string[];
+    since?: string;
+    limit?: number;
+  };
+  summary: AgentOperationalSnapshotSummary;
+  assignments: Array<Record<string, unknown>>;
+  runs: Array<Record<string, unknown>>;
+  sessions: Array<Record<string, unknown>>;
+  evaluations: Array<Record<string, unknown>>;
+  incidents: Array<Record<string, unknown>>;
+  configRevisions: Array<Record<string, unknown>>;
+  audits: AgentAuditEvent[];
+  gaps: string[];
+  audit: AgentAuditEvent;
+}
+
+export interface AgentControlPanelInput {
+  agent: Record<string, unknown>;
+  assignments?: Array<Record<string, unknown>>;
+  executionProfiles?: Array<Record<string, unknown>>;
+  resourceGrants?: Array<Record<string, unknown>>;
+  memoryPolicies?: Array<Record<string, unknown>>;
+  budgets?: Array<Record<string, unknown>>;
+  runs?: Array<Record<string, unknown>>;
+  sessions?: Array<Record<string, unknown>>;
+  evaluations?: Array<Record<string, unknown>>;
+  incidents?: Array<Record<string, unknown>>;
+  configRevisions?: Array<Record<string, unknown>>;
+  audits?: AgentAuditEvent[];
+  surface?: AgentSafeSurfaceKind;
+  actorId?: string;
+  generatedAt?: string;
+  redaction?: "default" | "strict" | "custom";
+}
+
+export interface AgentControlPanel {
+  schemaVersion: 1;
+  panelKind: "claw_agent_control_panel";
+  agentId: string;
+  generatedAt: string;
+  identity: Record<string, unknown>;
+  posture: {
+    status: string;
+    autonomyProfile?: string;
+    activeAssignments: number;
+    externalAssignments: number;
+    openIncidents: number;
+    failClosed: boolean;
+  };
+  uiVisibility: {
+    macVisible: boolean;
+    surfaces: string[];
+  };
+  permissions: {
+    allowGrants: number;
+    denyGrants: number;
+    wildcardGrants: number;
+    secretLeaseGrants: number;
+    expiredGrants: number;
+    requiredApprovals: string[];
+  };
+  memory: {
+    policyCount: number;
+    crossUserBoundary: string[];
+    writePolicies: string[];
+  };
+  budgets: {
+    policyCount: number;
+    exceededBehaviors: string[];
+  };
+  creationReview: AgentCreationReview;
+  surfaceProjection: AgentSafeSurfaceProjection;
+  operationalSnapshot: AgentOperationalSnapshot;
+  activityFeed: AgentActivityFeed;
+  risks: string[];
+  gaps: string[];
+  audit: AgentAuditEvent;
+}
+
+export type AgentPrivacyLifecycleOperation = "export" | "delete" | "anonymize";
+export type AgentPrivacyLifecycleDisposition = "include_export" | "delete" | "anonymize" | "retain";
+
+export interface AgentPrivacyLifecycleSubject {
+  scopeType: "agent" | "customer" | "external_user" | "actor" | "workspace" | "project" | "team";
+  scopeId: string;
+}
+
+export interface AgentPrivacyLifecycleInput {
+  operation: AgentPrivacyLifecycleOperation;
+  subject: AgentPrivacyLifecycleSubject;
+  agent: Record<string, unknown>;
+  assignments?: Array<Record<string, unknown>>;
+  runs?: Array<Record<string, unknown>>;
+  sessions?: Array<Record<string, unknown>>;
+  evaluations?: Array<Record<string, unknown>>;
+  incidents?: Array<Record<string, unknown>>;
+  configRevisions?: Array<Record<string, unknown>>;
+  audits?: AgentAuditEvent[];
+  supportConversations?: Array<Record<string, unknown>>;
+  supportMessages?: Array<Record<string, unknown>>;
+  actorId?: string;
+  requestedAt?: string;
+  legalHoldRecordIds?: string[];
+  redaction?: "default" | "strict" | "custom";
+}
+
+export interface AgentPrivacyLifecycleAction {
+  collection: string;
+  recordId: string;
+  disposition: AgentPrivacyLifecycleDisposition;
+  reason: string;
+  patch?: Record<string, unknown>;
+}
+
+export interface AgentPrivacyLifecyclePlan {
+  schemaVersion: 1;
+  planKind: "claw_agent_privacy_lifecycle_plan";
+  operation: AgentPrivacyLifecycleOperation;
+  subject: AgentPrivacyLifecycleSubject;
+  agentId: string;
+  requestedAt: string;
+  actions: AgentPrivacyLifecycleAction[];
+  exportPackage?: AgentSafePackageExport;
+  exportRecords: Array<{ collection: string; record: Record<string, unknown> }>;
+  gaps: string[];
+  audit: AgentAuditEvent;
+}
+
+export interface AgentPaperclipImportInput {
+  packageId?: string;
+  agentsMd?: string;
+  package?: {
+    name?: string;
+    description?: string;
+    agents?: Array<Record<string, unknown>>;
+    skills?: AgentSkillBinding[];
+    metadata?: Record<string, unknown>;
+  };
+  defaultOwnerId?: string;
+  importedAt?: string;
+  redaction?: "default" | "strict" | "custom";
+}
+
+export interface AgentPaperclipImportPlan {
+  schemaVersion: 1;
+  planKind: "claw_agent_paperclip_import_plan";
+  packageId: string;
+  importedAt: string;
+  source: "agents_md" | "package" | "mixed";
+  dependencyPolicy: "paperclip_not_required";
+  blueprints: AgentBlueprint[];
+  safePackages: AgentSafePackageExport[];
+  warnings: string[];
+  gaps: string[];
+  audit: AgentAuditEvent;
+}
+
 export type AgentAuditEventKind =
   | "blueprint"
   | "evaluation"
@@ -395,6 +828,16 @@ export type AgentAuditEventKind =
   | "budget_evaluation"
   | "safe_export"
   | "incident"
+  | "context_pack"
+  | "tool_catalog"
+  | "dispatch_plan"
+  | "creation_review"
+  | "storage_audit"
+  | "audit_coverage"
+  | "operational_snapshot"
+  | "control_panel"
+  | "privacy_lifecycle"
+  | "paperclip_import"
   | "permission_escalation";
 
 export interface AgentAuditEvent {
@@ -688,6 +1131,25 @@ export interface AgentServiceApiResponse {
   errors: string[];
   projection: AgentSafeSurfaceProjection;
   audit: AgentAuditEvent;
+}
+
+export interface AgentServiceApiHttpRequest {
+  method: string;
+  path: string;
+  headers?: Record<string, string>;
+  body?: AgentServiceApiRequest | string | null;
+  receivedAt?: string;
+}
+
+export interface AgentServiceApiHttpResponse {
+  status: number;
+  headers: Record<string, string>;
+  body: AgentServiceApiResponse | {
+    schemaVersion: 1;
+    apiKind: "claw_agent_service_api_error";
+    error: string;
+    message: string;
+  };
 }
 
 const PLANES = [
@@ -1044,6 +1506,718 @@ export function evaluateAgentAutonomyPolicy(input: AgentAutonomyPolicyInput): Ag
     severity: actionSeverity.severity,
     reasons,
     requiredGates: [...requiredGates],
+  };
+}
+
+export function createAgentDispatchPlan(input: AgentDispatchPlanInput): AgentDispatchPlan {
+  const now = normalizeTime(input.now);
+  const route = evaluateAgentAssignmentRoute({
+    assignment: input.assignment,
+    kind: input.assignmentRequest.kind,
+    channel: input.assignmentRequest.channel,
+    endpointRef: input.assignmentRequest.endpointRef,
+    now,
+  });
+  const autonomy = evaluateAgentAutonomyPolicy({
+    ...input.autonomy,
+    action: input.action,
+  });
+  const reasons = [...route.reasons, ...autonomy.reasons];
+  const requiredGates = new Set(autonomy.requiredGates);
+  const executionMode = input.executionProfile?.executionMode;
+
+  if (!input.assignment) {
+    requiredGates.add("assignment");
+  } else if (input.assignment.agentId !== input.agentId) {
+    reasons.push("dispatch: assignment belongs to a different agent");
+  }
+
+  if (!input.executionProfile) {
+    reasons.push("execution: profile missing");
+    requiredGates.add("execution_profile");
+  } else {
+    if (input.executionProfile.status && input.executionProfile.status !== "active") {
+      reasons.push(`execution: profile status ${input.executionProfile.status}`);
+    }
+    if (!executionMode) {
+      reasons.push("execution: mode missing");
+    }
+  }
+
+  if (isExternalAssignmentKind(input.assignmentRequest.kind) && input.action.action !== "read") {
+    const respondOnlyDefault = input.assignment?.respondOnlyDefault !== false;
+    if (respondOnlyDefault && input.externalActAllowed !== true) {
+      reasons.push("dispatch: external assignment defaults to respond_only");
+      requiredGates.add("external_act");
+    }
+  }
+
+  if (executionMode === "scheduled" && !input.scheduledAt) {
+    reasons.push("execution: scheduled mode requires scheduledAt");
+    requiredGates.add("schedule");
+  }
+
+  const preliminaryDisposition = dispatchDisposition(autonomy.dispatchMode, executionMode);
+  const allowed = route.allowed && autonomy.allowed && reasons.length === 0 && preliminaryDisposition !== "blocked";
+  const disposition = allowed ? preliminaryDisposition : "blocked";
+  const runStatus = dispatchRunStatus(disposition);
+  const createdAt = now.toISOString();
+  return {
+    schemaVersion: 1,
+    planKind: "claw_agent_dispatch_plan",
+    agentId: input.agentId,
+    ...(input.assignment?.id ? { assignmentId: input.assignment.id } : {}),
+    ...(input.executionProfile?.id ? { executionProfileId: input.executionProfile.id } : {}),
+    allowed,
+    disposition,
+    runStatus,
+    ...(executionMode ? { executionMode } : {}),
+    autonomy,
+    route,
+    reasons,
+    requiredGates: [...requiredGates],
+    audit: createAgentAuditEvent({
+      kind: "dispatch_plan",
+      agentId: input.agentId,
+      assignmentId: input.assignment?.id,
+      result: allowed ? "allowed" : "blocked",
+      reason: "agent dispatch plan",
+      redaction: "strict",
+      createdAt,
+      metadata: {
+        disposition,
+        runStatus,
+        executionMode,
+        assignmentKind: input.assignmentRequest.kind,
+        requiredGates: [...requiredGates],
+      },
+    }),
+  };
+}
+
+export function createAgentContextPack(input: AgentContextPackInput): AgentContextPack {
+  const redaction = input.redaction ?? "strict";
+  const now = normalizeTime(input.now);
+  const maxItems = normalizePositiveInteger(input.view.maxItems);
+  const denied: AgentContextPackDeniedItem[] = [];
+  const accepted: AgentContextPackItem[] = [];
+  let limitApplied = false;
+
+  for (const entry of input.requested) {
+    const entryId = contextEntryId(entry);
+    const reasons = contextViewRejectionReasons(input.view, entry);
+    const action = entry.action ?? "read";
+    if (reasons.length === 0) {
+      const access = evaluateAgentEffectiveAccess({
+        requested: {
+          resourceType: entry.resourceType,
+          resourceId: entry.resourceId,
+          action,
+          scopeType: entry.scopeType,
+          scopeId: entry.scopeId,
+        },
+        agentGrants: input.agentGrants,
+        assignmentGrants: input.assignmentGrants,
+        executionProfileGrants: input.executionProfileGrants,
+        connectorGrants: input.connectorGrants,
+        hostGrants: input.hostGrants,
+        runScopeGrants: input.runScopeGrants,
+        now,
+      });
+      if (access.allowed) {
+        if (!maxItems || accepted.length < maxItems) {
+          accepted.push(contextPackItem(entryId, entry, action, access.matchedGrantIds, input.view.includeContent === true, redaction));
+        } else {
+          limitApplied = true;
+        }
+      } else {
+        reasons.push(...access.reasons);
+      }
+    }
+    if (reasons.length > 0) {
+      denied.push({
+        id: entryId,
+        resourceType: entry.resourceType,
+        ...(entry.resourceId ? { resourceId: entry.resourceId } : {}),
+        reasons,
+      });
+    }
+  }
+
+  const gaps = contextPackGaps(input.requested, accepted, denied, limitApplied);
+  const createdAt = now.toISOString();
+  return {
+    schemaVersion: 1,
+    packKind: "claw_agent_context_pack",
+    agentId: input.agentId,
+    ...(input.assignmentId ? { assignmentId: input.assignmentId } : {}),
+    view: redactAgentBoundaryValue(input.view, redaction) as AgentContextViewPolicy,
+    items: accepted,
+    denied,
+    gaps,
+    audit: createAgentAuditEvent({
+      kind: "context_pack",
+      agentId: input.agentId,
+      assignmentId: input.assignmentId,
+      result: gaps.includes("required_context_denied") ? "blocked" : "recorded",
+      reason: "agent context pack projection",
+      redaction,
+      createdAt,
+      metadata: {
+        viewId: input.view.id,
+        viewName: input.view.name,
+        requestedCount: input.requested.length,
+        itemCount: accepted.length,
+        deniedCount: denied.length,
+        gaps,
+      },
+    }),
+  };
+}
+
+export function createAgentToolCatalogProjection(input: AgentToolCatalogProjectionInput): AgentToolCatalogProjection {
+  const redaction = input.redaction ?? "strict";
+  const now = normalizeTime(input.now);
+  const allowedToolIds = new Set(input.allowedToolIds ?? []);
+  const allowedDomains = new Set(input.allowedDomains ?? []);
+  const approvedToolIds = new Set(input.approvalGrantedToolIds ?? []);
+  const tools: AgentToolCatalogProjectionItem[] = [];
+  const blocked: AgentToolCatalogBlockedItem[] = [];
+
+  for (const tool of input.tools) {
+    const reasons: string[] = [];
+    if (allowedToolIds.size > 0 && !allowedToolIds.has(tool.id)) reasons.push("tool: not in allowed tool ids");
+    if (allowedDomains.size > 0 && !allowedDomains.has(tool.domain)) reasons.push(`tool: domain ${tool.domain} outside allowed domains`);
+    const access = evaluateAgentEffectiveAccess({
+      requested: {
+        resourceType: "tool",
+        resourceId: tool.id,
+        action: "invoke",
+        scopeType: "domain",
+        scopeId: tool.domain,
+      },
+      agentGrants: input.agentGrants,
+      assignmentGrants: input.assignmentGrants,
+      executionProfileGrants: input.executionProfileGrants,
+      connectorGrants: input.connectorGrants,
+      hostGrants: input.hostGrants,
+      runScopeGrants: input.runScopeGrants,
+      now,
+    });
+    if (!access.allowed) reasons.push(...access.reasons);
+    if (tool.requiresApproval === true && !approvedToolIds.has(tool.id)) reasons.push("tool: approval required");
+    if (tool.riskLevel === "catastrophic") reasons.push("tool: catastrophic risk requires host approval flow");
+
+    if (reasons.length === 0) {
+      tools.push(toolCatalogProjectionItem(tool, access.matchedGrantIds, redaction));
+    } else {
+      blocked.push({
+        id: tool.id,
+        domain: tool.domain,
+        riskLevel: tool.riskLevel,
+        reasons,
+      });
+    }
+  }
+
+  const gaps = toolCatalogGaps(input.tools, tools, blocked);
+  const createdAt = now.toISOString();
+  return {
+    schemaVersion: 1,
+    catalogKind: "claw_agent_tool_catalog",
+    agentId: input.agentId,
+    ...(input.assignmentId ? { assignmentId: input.assignmentId } : {}),
+    tools,
+    blocked,
+    gaps,
+    audit: createAgentAuditEvent({
+      kind: "tool_catalog",
+      agentId: input.agentId,
+      assignmentId: input.assignmentId,
+      result: tools.length > 0 ? "recorded" : "blocked",
+      reason: "agent tool catalog projection",
+      redaction,
+      createdAt,
+      metadata: {
+        toolCount: tools.length,
+        blockedCount: blocked.length,
+        gaps,
+      },
+    }),
+  };
+}
+
+export function createAgentCreationReview(input: AgentCreationReviewInput): AgentCreationReview {
+  const redaction = input.redaction ?? "strict";
+  const reviewedAt = input.reviewedAt ?? new Date().toISOString();
+  const agentId = typeof input.agent.id === "string" ? input.agent.id : "agent.unknown";
+  const safePackage = createAgentSafePackageExport({
+    agent: input.agent,
+    assignments: input.assignments,
+    executionProfiles: input.executionProfiles,
+    resourceGrants: input.resourceGrants,
+    memoryPolicies: input.memoryPolicies,
+    budgets: input.budgets,
+    skillBindings: input.skillBindings,
+    exportedAt: reviewedAt,
+    redaction,
+  });
+  const surfaceProjection = createAgentSafeSurfaceProjection({
+    surface: input.surface ?? "internal_ui",
+    agent: input.agent,
+    assignments: input.assignments,
+    executionProfiles: input.executionProfiles,
+    resourceGrants: input.resourceGrants,
+    memoryPolicies: input.memoryPolicies,
+    budgets: input.budgets,
+    projectedAt: reviewedAt,
+    redaction,
+  });
+  const requiredApprovals = creationReviewRequiredApprovals(input.resourceGrants ?? [], input.executionProfiles ?? [], surfaceProjection.risks);
+  const gaps = [...new Set([...surfaceProjection.gaps, ...creationReviewGaps(input)])];
+  const risks = [...new Set([...surfaceProjection.risks, ...creationReviewRisks(input)])];
+  const ready = gaps.length === 0 && requiredApprovals.length === 0;
+  return {
+    schemaVersion: 1,
+    reviewKind: "claw_agent_creation_review",
+    agentId,
+    reviewedAt,
+    ready,
+    requiredApprovals,
+    gaps,
+    risks,
+    safePackage,
+    surfaceProjection,
+    audit: createAgentAuditEvent({
+      kind: "creation_review",
+      agentId,
+      actorId: input.actorId,
+      result: ready ? "allowed" : "blocked",
+      reason: "agent creation review",
+      redaction,
+      createdAt: reviewedAt,
+      metadata: {
+        surface: input.surface ?? "internal_ui",
+        requiredApprovals,
+        gaps,
+        risks,
+      },
+    }),
+  };
+}
+
+export function createAgentStorageAudit(input: AgentStorageAuditInput = {}): AgentStorageAudit {
+  const auditedAt = input.auditedAt ?? new Date().toISOString();
+  const collections = input.collections ?? AGENTS_FAMILY.collections;
+  const collectionNames = new Set(collections.map((collection) => collection.name));
+  const observedTables = new Set(input.observedTables ?? [...collectionNames]);
+  const allowedJsonFields = new Set(input.allowedJsonFields ?? DEFAULT_AGENT_ALLOWED_JSON_FIELDS);
+  const requiredCollectionNames = new Set<string>(REQUIRED_AGENT_STORAGE_COLLECTIONS);
+  const legacyOverlapNames = new Set<string>(LEGACY_AGENT_OVERLAP_COLLECTIONS);
+  const missingCollections = REQUIRED_AGENT_STORAGE_COLLECTIONS.filter((name) => !collectionNames.has(name) || !observedTables.has(name));
+  const missingRequiredFields: Array<{ collection: string; field: string }> = [];
+  const jsonFields: Array<{ collection: string; field: string; allowed: boolean }> = [];
+  const unexpectedJsonFields: Array<{ collection: string; field: string }> = [];
+  const secretPolicyFindings: string[] = [];
+
+  for (const collection of collections.filter((entry) => requiredCollectionNames.has(entry.name))) {
+    for (const field of collection.fields) {
+      if (field.required === true && !field.name) missingRequiredFields.push({ collection: collection.name, field: field.name });
+      if (field.type === "json") {
+        const allowed = allowedJsonFields.has(`${collection.name}.${field.name}`) || allowedJsonFields.has(field.name);
+        jsonFields.push({ collection: collection.name, field: field.name, allowed });
+        if (!allowed) unexpectedJsonFields.push({ collection: collection.name, field: field.name });
+      }
+      if (agentFieldLooksLikeRawSecret(field) && field.type !== "relation") {
+        secretPolicyFindings.push(`${collection.name}.${field.name}: raw secret-shaped field must be a brokered ref or redacted metadata`);
+      }
+    }
+  }
+
+  const legacyOverlaps = (input.legacyCollections ?? []).filter((name) => legacyOverlapNames.has(name));
+  const gaps = [
+    ...missingCollections.map((name) => `missing_collection:${name}`),
+    ...missingRequiredFields.map((item) => `missing_required_field:${item.collection}.${item.field}`),
+    ...unexpectedJsonFields.map((item) => `unexpected_json_field:${item.collection}.${item.field}`),
+    ...legacyOverlaps.map((name) => `legacy_overlap:${name}`),
+    ...secretPolicyFindings.map((finding) => `secret_policy:${finding}`),
+  ];
+  const ready = gaps.length === 0;
+
+  return {
+    schemaVersion: 1,
+    auditKind: "claw_agent_storage_audit",
+    ready,
+    canonicalCollections: [...REQUIRED_AGENT_STORAGE_COLLECTIONS],
+    missingCollections,
+    missingRequiredFields,
+    jsonFields,
+    unexpectedJsonFields,
+    legacyOverlaps,
+    secretPolicyFindings,
+    gaps,
+    audit: createAgentAuditEvent({
+      kind: "storage_audit",
+      agentId: "agents.storage",
+      result: ready ? "allowed" : "blocked",
+      reason: "agents storage and JSON policy audit",
+      redaction: "strict",
+      createdAt: auditedAt,
+      metadata: {
+        canonicalCollectionCount: REQUIRED_AGENT_STORAGE_COLLECTIONS.length,
+        missingCollections,
+        legacyOverlaps,
+        unexpectedJsonFields,
+      },
+    }),
+  };
+}
+
+export function createAgentAuditCoverageReport(input: AgentAuditCoverageInput = {}): AgentAuditCoverageReport {
+  const auditedAt = input.auditedAt ?? new Date().toISOString();
+  const expectedKinds = input.expectedKinds ?? [...DEFAULT_AGENT_AUDIT_COVERAGE_KINDS];
+  const expectedKindSet = new Set<AgentAuditEventKind>(expectedKinds);
+  const events = input.events ?? [];
+  const coveredKinds = [...new Set(events.map((event) => event.kind).filter((kind) => expectedKindSet.has(kind)))];
+  const missingKinds = expectedKinds.filter((kind) => !coveredKinds.includes(kind));
+  const invalidEvents = events
+    .map((event) => auditCoverageInvalidEvent(event))
+    .filter((entry): entry is AgentAuditCoverageInvalidEvent => Boolean(entry));
+  const sensitiveFindings = events.flatMap((event) => auditCoverageSensitiveFindings(event));
+  const gaps = [
+    ...missingKinds.map((kind) => `missing_audit_kind:${kind}`),
+    ...invalidEvents.map((event) => `invalid_audit_event:${event.id ?? event.kind ?? "unknown"}`),
+    ...sensitiveFindings.map((finding) => `sensitive_audit_metadata:${finding}`),
+  ];
+  const ready = gaps.length === 0;
+  return {
+    schemaVersion: 1,
+    reportKind: "claw_agent_audit_coverage",
+    ready,
+    expectedKinds,
+    coveredKinds,
+    missingKinds,
+    invalidEvents,
+    sensitiveFindings,
+    gaps,
+    audit: createAgentAuditEvent({
+      kind: "audit_coverage",
+      agentId: "agents.audit",
+      result: ready ? "allowed" : "blocked",
+      reason: "agents audit coverage report",
+      redaction: "strict",
+      createdAt: auditedAt,
+      metadata: {
+        expectedKinds,
+        coveredKinds,
+        missingKinds,
+        invalidEventCount: invalidEvents.length,
+        sensitiveFindingCount: sensitiveFindings.length,
+      },
+    }),
+  };
+}
+
+export function createAgentOperationalSnapshot(input: AgentOperationalSnapshotInput): AgentOperationalSnapshot {
+  const redaction = input.redaction ?? "strict";
+  const capturedAt = input.capturedAt ?? new Date().toISOString();
+  const limit = normalizePositiveInteger(input.limit);
+  const statuses = input.statuses ?? [];
+  const assignments = filterOperationalRecords(input.assignments ?? [], input, redaction);
+  const runs = filterOperationalRecords(input.runs ?? [], input, redaction);
+  const sessions = filterOperationalRecords(input.sessions ?? [], input, redaction);
+  const evaluations = filterOperationalRecords(input.evaluations ?? [], input, redaction);
+  const incidents = filterOperationalRecords(input.incidents ?? [], input, redaction);
+  const configRevisions = filterOperationalRecords(input.configRevisions ?? [], input, redaction);
+  const audits = filterOperationalAudits(input.audits ?? [], input, redaction);
+  const limitedAssignments = limit ? assignments.slice(0, limit) : assignments;
+  const limitedRuns = limit ? runs.slice(0, limit) : runs;
+  const limitedSessions = limit ? sessions.slice(0, limit) : sessions;
+  const limitedEvaluations = limit ? evaluations.slice(0, limit) : evaluations;
+  const limitedIncidents = limit ? incidents.slice(0, limit) : incidents;
+  const limitedConfigRevisions = limit ? configRevisions.slice(0, limit) : configRevisions;
+  const limitedAudits = limit ? audits.slice(0, limit) : audits;
+  const gaps = operationalSnapshotGaps(limitedAssignments, limitedRuns, limitedSessions, limitedAudits);
+  return {
+    schemaVersion: 1,
+    snapshotKind: "claw_agent_operational_snapshot",
+    agentId: input.agentId,
+    capturedAt,
+    filters: {
+      statuses,
+      ...(input.since ? { since: input.since } : {}),
+      ...(limit ? { limit } : {}),
+    },
+    summary: {
+      assignments: countByStatus(limitedAssignments),
+      runs: countByStatus(limitedRuns),
+      sessions: countByStatus(limitedSessions),
+      evaluations: countByStatus(limitedEvaluations),
+      incidents: countByStatus(limitedIncidents),
+      configRevisions: limitedConfigRevisions.length,
+      audits: countByKind(limitedAudits),
+    },
+    assignments: limitedAssignments,
+    runs: limitedRuns,
+    sessions: limitedSessions,
+    evaluations: limitedEvaluations,
+    incidents: limitedIncidents,
+    configRevisions: limitedConfigRevisions,
+    audits: limitedAudits,
+    gaps,
+    audit: createAgentAuditEvent({
+      kind: "operational_snapshot",
+      agentId: input.agentId,
+      result: gaps.length === 0 ? "recorded" : "blocked",
+      reason: "agent operational query snapshot",
+      redaction,
+      createdAt: capturedAt,
+      metadata: {
+        filters: { statuses, since: input.since, limit },
+        summary: {
+          assignments: limitedAssignments.length,
+          runs: limitedRuns.length,
+          sessions: limitedSessions.length,
+          evaluations: limitedEvaluations.length,
+          incidents: limitedIncidents.length,
+          configRevisions: limitedConfigRevisions.length,
+          audits: limitedAudits.length,
+        },
+        gaps,
+      },
+    }),
+  };
+}
+
+export function createAgentControlPanel(input: AgentControlPanelInput): AgentControlPanel {
+  const redaction = input.redaction ?? "strict";
+  const generatedAt = input.generatedAt ?? new Date().toISOString();
+  const agentId = typeof input.agent.id === "string" ? input.agent.id : "agent.unknown";
+  const surface = input.surface ?? "internal_ui";
+  const surfaceProjection = createAgentSafeSurfaceProjection({
+    surface,
+    agent: input.agent,
+    assignments: input.assignments,
+    executionProfiles: input.executionProfiles,
+    resourceGrants: input.resourceGrants,
+    memoryPolicies: input.memoryPolicies,
+    budgets: input.budgets,
+    projectedAt: generatedAt,
+    redaction,
+  });
+  const creationReview = createAgentCreationReview({
+    agent: input.agent,
+    assignments: input.assignments,
+    executionProfiles: input.executionProfiles,
+    resourceGrants: input.resourceGrants,
+    memoryPolicies: input.memoryPolicies,
+    budgets: input.budgets,
+    surface,
+    actorId: input.actorId,
+    reviewedAt: generatedAt,
+    redaction,
+  });
+  const operationalSnapshot = createAgentOperationalSnapshot({
+    agentId,
+    assignments: input.assignments,
+    runs: input.runs,
+    sessions: input.sessions,
+    evaluations: input.evaluations,
+    incidents: input.incidents,
+    configRevisions: input.configRevisions,
+    audits: input.audits,
+    capturedAt: generatedAt,
+    redaction,
+  });
+  const activityFeed = createAgentActivityFeed({
+    agentId,
+    assignments: input.assignments,
+    runs: input.runs,
+    sessions: input.sessions,
+    evaluations: input.evaluations,
+    incidents: input.incidents,
+    configRevisions: input.configRevisions,
+    audits: input.audits as unknown as Array<Record<string, unknown>> | undefined,
+    limit: 25,
+    redaction,
+  });
+  const permissionSummary = agentPermissionControlSummary(input.resourceGrants ?? [], generatedAt);
+  const posture = agentControlPosture(input.agent, input.assignments ?? [], input.incidents ?? [], permissionSummary);
+  const memory = agentMemoryControlSummary(input.memoryPolicies ?? []);
+  const budgets = agentBudgetControlSummary(input.budgets ?? []);
+  const uiVisibility = agentControlUiVisibility(input.assignments ?? [], surface);
+  const risks = [...new Set([
+    ...surfaceProjection.risks,
+    ...creationReview.risks,
+    ...agentControlPanelRisks(input),
+  ])];
+  const gaps = [...new Set([
+    ...surfaceProjection.gaps,
+    ...creationReview.gaps,
+    ...operationalSnapshot.gaps,
+    ...agentControlPanelGaps(input, posture, permissionSummary),
+  ])];
+  return {
+    schemaVersion: 1,
+    panelKind: "claw_agent_control_panel",
+    agentId,
+    generatedAt,
+    identity: surfaceProjection.agent,
+    posture,
+    uiVisibility,
+    permissions: permissionSummary,
+    memory,
+    budgets,
+    creationReview,
+    surfaceProjection,
+    operationalSnapshot,
+    activityFeed,
+    risks,
+    gaps,
+    audit: createAgentAuditEvent({
+      kind: "control_panel",
+      agentId,
+      actorId: input.actorId,
+      result: gaps.length === 0 ? "recorded" : "blocked",
+      reason: "agent human control panel projection",
+      redaction,
+      createdAt: generatedAt,
+      metadata: {
+        surface,
+        posture,
+        permissionSummary,
+        gaps,
+        risks,
+      },
+    }),
+  };
+}
+
+export function createAgentPrivacyLifecyclePlan(input: AgentPrivacyLifecycleInput): AgentPrivacyLifecyclePlan {
+  const redaction = input.redaction ?? "strict";
+  const requestedAt = input.requestedAt ?? new Date().toISOString();
+  const agentId = typeof input.agent.id === "string" ? input.agent.id : "agent.unknown";
+  const legalHoldRecordIds = new Set(input.legalHoldRecordIds ?? []);
+  const matching = agentPrivacyLifecycleRecords(input, redaction);
+  const actions = matching.map(({ collection, record }) => agentPrivacyLifecycleAction(
+    collection,
+    record,
+    input.operation,
+    input.subject,
+    requestedAt,
+    legalHoldRecordIds,
+  ));
+  const exportRecords = input.operation === "export"
+    ? matching.map(({ collection, record }) => ({ collection, record: redactAgentBoundaryValue(record, redaction) as Record<string, unknown> }))
+    : [];
+  const exportPackage = input.operation === "export"
+    ? createAgentSafePackageExport({
+      agent: input.agent,
+      assignments: matching.filter((entry) => entry.collection === "agent_assignments").map((entry) => entry.record),
+      configRevisions: matching.filter((entry) => entry.collection === "agent_config_revisions").map((entry) => entry.record),
+      exportedAt: requestedAt,
+      redaction,
+    })
+    : undefined;
+  const gaps = agentPrivacyLifecycleGaps(input, matching, actions);
+  return {
+    schemaVersion: 1,
+    planKind: "claw_agent_privacy_lifecycle_plan",
+    operation: input.operation,
+    subject: input.subject,
+    agentId,
+    requestedAt,
+    actions,
+    ...(exportPackage ? { exportPackage } : {}),
+    exportRecords,
+    gaps,
+    audit: createAgentAuditEvent({
+      kind: "privacy_lifecycle",
+      agentId,
+      actorId: input.actorId,
+      result: gaps.length === 0 ? "recorded" : "blocked",
+      reason: `agent privacy lifecycle ${input.operation}`,
+      redaction,
+      createdAt: requestedAt,
+      metadata: {
+        operation: input.operation,
+        subject: input.subject,
+        actionCount: actions.length,
+        legalHoldCount: actions.filter((action) => action.disposition === "retain").length,
+        gaps,
+      },
+    }),
+  };
+}
+
+export function createAgentPaperclipImportPlan(input: AgentPaperclipImportInput): AgentPaperclipImportPlan {
+  const redaction = input.redaction ?? "strict";
+  const importedAt = input.importedAt ?? new Date().toISOString();
+  const packageId = input.packageId ?? `paperclip_import_${stableHash([
+    input.package?.name ?? "",
+    input.agentsMd ?? "",
+    importedAt,
+  ].join("|"))}`;
+  const importedAgents = [
+    ...paperclipAgentsFromMarkdown(input.agentsMd),
+    ...((input.package?.agents ?? []).map((agent, index) => paperclipAgentFromRecord(agent, index))),
+  ];
+  const warnings = new Set<string>();
+  const gaps = new Set<string>();
+  if (!input.agentsMd && !input.package) gaps.add("paperclip_source_missing");
+  if (input.package?.metadata) warnings.add("paperclip_metadata_imported_as_redacted_blueprint_context");
+  if (input.package?.skills && input.package.skills.length > 0) warnings.add("paperclip_skills_mapped_to_claw_skill_bindings");
+  if (importedAgents.length === 0) gaps.add("paperclip_agents_missing");
+  const blueprints = importedAgents.map((agent, index) => createAgentBlueprint({
+    id: agent.id ?? `paperclip_agent_${stableHash([packageId, agent.name, index].join("|"))}`,
+    name: agent.name,
+    description: agent.description,
+    agencyMode: agent.agencyMode,
+    modelTier: agent.modelTier,
+    skillBindings: normalizeAgentSkillBindings(agent.skillRefs, [
+      ...(input.package?.skills ?? []),
+      ...(agent.skillBindings ?? []),
+    ], redaction),
+    requiredResourceGrants: agent.requiredResourceGrants,
+    template: {
+      sourceFormat: "paperclip",
+      packageId,
+      ownerId: input.defaultOwnerId,
+      role: agent.role,
+      instructions: agent.instructions,
+      metadata: input.package?.metadata,
+    },
+    status: "draft",
+    createdAt: importedAt,
+    redaction,
+  }));
+  const safePackages = blueprints.map((blueprint) => blueprint.safeExport);
+  return {
+    schemaVersion: 1,
+    planKind: "claw_agent_paperclip_import_plan",
+    packageId,
+    importedAt,
+    source: input.agentsMd && input.package ? "mixed" : input.agentsMd ? "agents_md" : "package",
+    dependencyPolicy: "paperclip_not_required",
+    blueprints,
+    safePackages,
+    warnings: [...warnings],
+    gaps: [...gaps],
+    audit: createAgentAuditEvent({
+      kind: "paperclip_import",
+      agentId: packageId,
+      result: gaps.size === 0 ? "recorded" : "blocked",
+      reason: "optional Paperclip-style agent import compatibility",
+      redaction,
+      createdAt: importedAt,
+      metadata: {
+        packageId,
+        source: input.agentsMd && input.package ? "mixed" : input.agentsMd ? "agents_md" : "package",
+        blueprintCount: blueprints.length,
+        warnings: [...warnings],
+        gaps: [...gaps],
+      },
+    }),
   };
 }
 
@@ -1445,6 +2619,33 @@ export function createAgentServiceApiResponse(input: AgentServiceApiRequest): Ag
   };
 }
 
+export function createAgentServiceApiHttpResponse(input: AgentServiceApiHttpRequest): AgentServiceApiHttpResponse {
+  const headers = {
+    "content-type": "application/json; charset=utf-8",
+    "x-claw-agents-api": "v1",
+  };
+  if (input.path !== "/v1/agents/service-api") {
+    return agentServiceApiError(404, "not_found", "Agents service API route not found.", headers);
+  }
+  if (input.method.toUpperCase() !== "POST") {
+    return agentServiceApiError(405, "method_not_allowed", "Agents service API only accepts POST.", {
+      ...headers,
+      allow: "POST",
+    });
+  }
+  const body = parseAgentServiceApiBody(input.body);
+  if (!body) return agentServiceApiError(400, "invalid_body", "Agents service API requires a JSON request body.", headers);
+  const response = createAgentServiceApiResponse({
+    ...body,
+    requestedAt: body.requestedAt ?? input.receivedAt,
+  });
+  return {
+    status: response.allowed ? 200 : 422,
+    headers,
+    body: response,
+  };
+}
+
 function grantMatches(request: AgentAccessRequest, grant: AgentResourceGrant, now: Date): boolean {
   if (grant.expiresAt && new Date(grant.expiresAt).getTime() <= now.getTime()) return false;
   return matches(request.resourceType, grant.resourceType)
@@ -1522,6 +2723,45 @@ function parseAgentSkillRef(skillRef: string): AgentSkillBinding | undefined {
     };
   }
   return { ref: trimmed };
+}
+
+function parseAgentServiceApiBody(body: AgentServiceApiHttpRequest["body"]): AgentServiceApiRequest | null {
+  if (!body) return null;
+  if (typeof body === "string") {
+    try {
+      const parsed = JSON.parse(body) as unknown;
+      return isAgentServiceApiRequest(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+  return isAgentServiceApiRequest(body) ? body : null;
+}
+
+function isAgentServiceApiRequest(value: unknown): value is AgentServiceApiRequest {
+  return Boolean(value)
+    && typeof value === "object"
+    && typeof (value as AgentServiceApiRequest).operation === "string"
+    && Boolean((value as AgentServiceApiRequest).agent)
+    && typeof (value as AgentServiceApiRequest).agent === "object";
+}
+
+function agentServiceApiError(
+  status: number,
+  error: string,
+  message: string,
+  headers: Record<string, string>,
+): AgentServiceApiHttpResponse {
+  return {
+    status,
+    headers,
+    body: {
+      schemaVersion: 1,
+      apiKind: "claw_agent_service_api_error",
+      error,
+      message,
+    },
+  };
 }
 
 function formatAgentSkillBindingRef(binding: Pick<AgentSkillBinding, "ref" | "version">): string {
@@ -1683,6 +2923,652 @@ function pickBudgetSurfaceFields(budget: Record<string, unknown>, redaction: "de
   ]);
 }
 
+function contextViewRejectionReasons(view: AgentContextViewPolicy, entry: AgentContextPackEntry): string[] {
+  const reasons: string[] = [];
+  if (view.allowedResourceTypes && view.allowedResourceTypes.length > 0 && !view.allowedResourceTypes.includes(entry.resourceType)) {
+    reasons.push(`context: resource type ${entry.resourceType} outside view`);
+  }
+  if (view.allowedScopes && view.allowedScopes.length > 0 && !view.allowedScopes.some((scope) => contextScopeMatches(scope, entry))) {
+    reasons.push("context: scope outside view");
+  }
+  return reasons;
+}
+
+function contextScopeMatches(scope: AgentContextScope, entry: AgentContextPackEntry): boolean {
+  return scope.scopeType === entry.scopeType && matchesOptional(entry.scopeId, scope.scopeId);
+}
+
+function contextPackItem(
+  id: string,
+  entry: AgentContextPackEntry,
+  action: AgentResourceAction,
+  matchedGrantIds: string[],
+  includeContent: boolean,
+  redaction: "default" | "strict" | "custom",
+): AgentContextPackItem {
+  const content = redactAgentBoundaryValue(entry.content, redaction);
+  const metadata = redactAgentBoundaryValue(entry.metadata ?? {}, redaction) as Record<string, unknown>;
+  return {
+    id,
+    resourceType: entry.resourceType,
+    ...(entry.resourceId ? { resourceId: entry.resourceId } : {}),
+    action,
+    ...(entry.scopeType ? { scopeType: entry.scopeType } : {}),
+    ...(entry.scopeId ? { scopeId: entry.scopeId } : {}),
+    ...(entry.title ? { title: entry.title } : {}),
+    hasContent: entry.content !== undefined,
+    ...(includeContent && entry.content !== undefined ? { content } : {}),
+    metadata,
+    matchedGrantIds,
+  };
+}
+
+function contextEntryId(entry: AgentContextPackEntry): string {
+  return entry.id ?? `agent_context_${stableHash([
+    entry.resourceType,
+    entry.resourceId ?? "",
+    entry.scopeType ?? "",
+    entry.scopeId ?? "",
+    entry.title ?? "",
+  ].join("|"))}`;
+}
+
+function contextPackGaps(
+  requested: AgentContextPackEntry[],
+  accepted: AgentContextPackItem[],
+  denied: AgentContextPackDeniedItem[],
+  limitApplied: boolean,
+): string[] {
+  const gaps = new Set<string>();
+  if (requested.length === 0) gaps.add("context_requested_empty");
+  if (requested.length > 0 && accepted.length === 0) gaps.add("context_pack_empty");
+  if (limitApplied) gaps.add("context_item_limit_applied");
+  const deniedIds = new Set(denied.map((entry) => entry.id));
+  if (requested.some((entry) => entry.required === true && deniedIds.has(contextEntryId(entry)))) gaps.add("required_context_denied");
+  return [...gaps];
+}
+
+function normalizePositiveInteger(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : undefined;
+}
+
+function toolCatalogProjectionItem(
+  tool: AgentToolDescriptor,
+  matchedGrantIds: string[],
+  redaction: "default" | "strict" | "custom",
+): AgentToolCatalogProjectionItem {
+  return {
+    id: tool.id,
+    title: tool.title,
+    description: tool.description,
+    domain: tool.domain,
+    sourceFeature: tool.sourceFeature,
+    parameters: redactAgentBoundaryValue(tool.parameters, redaction) as AgentToolDescriptor["parameters"],
+    riskLevel: tool.riskLevel,
+    ...(tool.version ? { version: tool.version } : {}),
+    requiresApproval: tool.requiresApproval === true,
+    matchedGrantIds,
+  };
+}
+
+function toolCatalogGaps(
+  requestedTools: AgentToolDescriptor[],
+  allowedTools: AgentToolCatalogProjectionItem[],
+  blockedTools: AgentToolCatalogBlockedItem[],
+): string[] {
+  const gaps = new Set<string>();
+  if (requestedTools.length === 0) gaps.add("tool_catalog_empty");
+  if (requestedTools.length > 0 && allowedTools.length === 0) gaps.add("tool_catalog_all_blocked");
+  if (blockedTools.length > 0) gaps.add("tool_catalog_has_blocked_tools");
+  return [...gaps];
+}
+
+function creationReviewRequiredApprovals(
+  resourceGrants: Array<Record<string, unknown>>,
+  executionProfiles: Array<Record<string, unknown>>,
+  risks: string[],
+): string[] {
+  const approvals = new Set<string>();
+  if (resourceGrants.some((grant) => grant.action === "*" || grant.action === "lease_secret" || grant.resourceType === "secret")) approvals.add("resource_owner");
+  if (executionProfiles.some((profile) => profile.hostAccess === "native_host")) approvals.add("host");
+  if (executionProfiles.some((profile) => profile.networkPolicy === "open")) approvals.add("network");
+  if (risks.length > 0) approvals.add("risk_review");
+  return [...approvals];
+}
+
+function creationReviewGaps(input: AgentCreationReviewInput): string[] {
+  const gaps = new Set<string>();
+  if (typeof input.agent.id !== "string") gaps.add("agent_id_missing");
+  if (typeof input.agent.name !== "string" && typeof input.agent.displayName !== "string") gaps.add("agent_name_missing");
+  if ((input.assignments ?? []).length === 0) gaps.add("assignment_missing");
+  if ((input.executionProfiles ?? []).length === 0) gaps.add("execution_profile_missing");
+  if ((input.budgets ?? []).length === 0 && input.surface !== "internal_ui") gaps.add("budget_policy_missing");
+  return [...gaps];
+}
+
+function creationReviewRisks(input: AgentCreationReviewInput): string[] {
+  const risks = new Set<string>();
+  if ((input.resourceGrants ?? []).some((grant) => grant.action === "*")) risks.add("wildcard_resource_grant");
+  if ((input.executionProfiles ?? []).some((profile) => profile.hostAccess === "native_host")) risks.add("native_host_access");
+  if ((input.executionProfiles ?? []).some((profile) => profile.networkPolicy === "open")) risks.add("open_network_policy");
+  return [...risks];
+}
+
+const REQUIRED_AGENT_STORAGE_COLLECTIONS = [
+  "agents",
+  "agent_assignments",
+  "agent_execution_profiles",
+  "agent_resource_grants",
+  "agent_memory_policies",
+  "agent_budgets",
+  "agent_config_revisions",
+  "agent_evaluations",
+  "agent_incidents",
+  "agent_blueprints",
+  "agent_runs",
+  "agent_sessions",
+] as const;
+
+const LEGACY_AGENT_OVERLAP_COLLECTIONS = [
+  "company_agents",
+  "deployments",
+  "agent_deployments",
+  "legacy_agents",
+] as const;
+
+const DEFAULT_AGENT_ALLOWED_JSON_FIELDS = [
+  "source",
+  "links",
+  "metadata",
+  "agents.schedule",
+  "agents.capabilitySummary",
+  "agent_assignments.scopeJson",
+  "agent_execution_profiles.sandboxJson",
+  "agent_execution_profiles.resourceGrantsJson",
+  "agent_memory_policies.readScopesJson",
+  "agent_memory_policies.writeScopesJson",
+  "agent_memory_policies.retentionJson",
+  "agent_budgets.limitJson",
+  "agent_budgets.usageJson",
+  "agent_config_revisions.snapshotJson",
+  "agent_evaluations.criteriaJson",
+  "agent_evaluations.resultJson",
+  "agent_incidents.redactionJson",
+  "agent_blueprints.templateJson",
+  "agent_blueprints.skillRefsJson",
+  "agent_blueprints.skillBindingsJson",
+  "agent_blueprints.safeExportJson",
+  "agent_runs.sandboxJson",
+  "agent_runs.costJson",
+  "agent_runs.outcomeJson",
+  "agent_sessions.context",
+] as const;
+
+const DEFAULT_AGENT_AUDIT_COVERAGE_KINDS: AgentAuditEventKind[] = [
+  "blueprint",
+  "evaluation",
+  "config_revision",
+  "retirement",
+  "service_api",
+  "safe_export",
+  "incident",
+  "context_pack",
+  "tool_catalog",
+  "dispatch_plan",
+  "creation_review",
+  "storage_audit",
+  "control_panel",
+  "privacy_lifecycle",
+  "paperclip_import",
+  "permission_escalation",
+];
+
+function agentFieldLooksLikeRawSecret(field: BuiltinFieldDefinition): boolean {
+  return /(secret|password|token|credential|privateKey|apiKey)/i.test(field.name)
+    && !/(Ref|Refs|reference)$/i.test(field.name);
+}
+
+function auditCoverageInvalidEvent(event: AgentAuditEvent): AgentAuditCoverageInvalidEvent | undefined {
+  const reasons: string[] = [];
+  if (!event.id) reasons.push("audit: id missing");
+  if (!event.kind) reasons.push("audit: kind missing");
+  if (!event.agentId) reasons.push("audit: agentId missing");
+  if (!["allowed", "denied", "blocked", "recorded"].includes(event.result)) reasons.push("audit: invalid result");
+  if (!["default", "strict", "custom"].includes(event.redaction)) reasons.push("audit: invalid redaction");
+  if (!event.createdAt || Number.isNaN(new Date(event.createdAt).getTime())) reasons.push("audit: invalid createdAt");
+  if (!event.metadata || typeof event.metadata !== "object" || Array.isArray(event.metadata)) reasons.push("audit: metadata must be an object");
+  if (reasons.length === 0) return undefined;
+  return {
+    ...(event.id ? { id: event.id } : {}),
+    ...(event.kind ? { kind: event.kind } : {}),
+    reasons,
+  };
+}
+
+function auditCoverageSensitiveFindings(event: AgentAuditEvent): string[] {
+  const serialized = JSON.stringify(event.metadata ?? {});
+  const findings: string[] = [];
+  if (/vault:\/\//i.test(serialized)) findings.push(`${event.id}:raw_vault_ref`);
+  if (/\/Users\//.test(serialized) || /~\//.test(serialized)) findings.push(`${event.id}:local_path`);
+  if (/(Bearer\s+|api[_-]?key|password|secret|token)/i.test(serialized) && !serialized.includes("[REDACTED")) {
+    findings.push(`${event.id}:raw_secret_token`);
+  }
+  return findings;
+}
+
+function filterOperationalRecords(
+  records: Array<Record<string, unknown>>,
+  input: Pick<AgentOperationalSnapshotInput, "agentId" | "statuses" | "since" | "redaction">,
+  redaction: "default" | "strict" | "custom",
+): Array<Record<string, unknown>> {
+  return records
+    .filter((record) => operationalRecordBelongsToAgent(record, input.agentId))
+    .filter((record) => operationalStatusMatches(record, input.statuses))
+    .filter((record) => operationalSinceMatches(record, input.since))
+    .sort((a, b) => operationalRecordTimestamp(b).localeCompare(operationalRecordTimestamp(a)))
+    .map((record) => redactAgentBoundaryValue(record, redaction) as Record<string, unknown>);
+}
+
+function filterOperationalAudits(
+  audits: AgentAuditEvent[],
+  input: Pick<AgentOperationalSnapshotInput, "agentId" | "statuses" | "since" | "redaction">,
+  redaction: "default" | "strict" | "custom",
+): AgentAuditEvent[] {
+  return audits
+    .filter((event) => event.agentId === input.agentId)
+    .filter((event) => !input.statuses || input.statuses.length === 0 || input.statuses.includes(event.result))
+    .filter((event) => !input.since || event.createdAt >= input.since)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map((event) => redactAgentBoundaryValue(event, redaction) as AgentAuditEvent);
+}
+
+function operationalRecordBelongsToAgent(record: Record<string, unknown>, agentId: string): boolean {
+  const recordAgentId = stringRecordValue(record, "agentId", "agent_id");
+  return !recordAgentId || recordAgentId === agentId;
+}
+
+function operationalStatusMatches(record: Record<string, unknown>, statuses: string[] | undefined): boolean {
+  if (!statuses || statuses.length === 0) return true;
+  const status = stringRecordValue(record, "status", "result");
+  return status ? statuses.includes(status) : false;
+}
+
+function operationalSinceMatches(record: Record<string, unknown>, since: string | undefined): boolean {
+  if (!since) return true;
+  return operationalRecordTimestamp(record) >= since;
+}
+
+function operationalRecordTimestamp(record: Record<string, unknown>): string {
+  return stringRecordValue(record, "updatedAt", "updated_at", "createdAt", "created_at", "startedAt", "started_at", "detectedAt", "detected_at", "evaluatedAt", "evaluated_at", "endedAt", "ended_at") ?? "";
+}
+
+function countByStatus(records: Array<Record<string, unknown>>): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const record of records) {
+    const status = stringRecordValue(record, "status", "result") ?? "unknown";
+    counts[status] = (counts[status] ?? 0) + 1;
+  }
+  return counts;
+}
+
+function countByKind(events: AgentAuditEvent[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const event of events) counts[event.kind] = (counts[event.kind] ?? 0) + 1;
+  return counts;
+}
+
+function operationalSnapshotGaps(
+  assignments: Array<Record<string, unknown>>,
+  runs: Array<Record<string, unknown>>,
+  sessions: Array<Record<string, unknown>>,
+  audits: AgentAuditEvent[],
+): string[] {
+  const gaps = new Set<string>();
+  if (assignments.length === 0) gaps.add("assignments_missing");
+  if (runs.length === 0) gaps.add("runs_missing");
+  if (sessions.length === 0) gaps.add("sessions_missing");
+  if (audits.length === 0) gaps.add("audits_missing");
+  return [...gaps];
+}
+
+function agentPermissionControlSummary(resourceGrants: Array<Record<string, unknown>>, now: string): AgentControlPanel["permissions"] {
+  const activeGrants = resourceGrants.filter((grant) => !recordExpired(grant, now));
+  const requiredApprovals = new Set<string>();
+  if (activeGrants.some((grant) => grant.action === "*" || grant.resourceType === "secret" || grant.action === "lease_secret")) {
+    requiredApprovals.add("resource_owner");
+  }
+  if (activeGrants.some((grant) => grant.action === "delete" || grant.action === "*")) requiredApprovals.add("destructive_action");
+  return {
+    allowGrants: activeGrants.filter((grant) => grant.effect === undefined || grant.effect === "allow").length,
+    denyGrants: activeGrants.filter((grant) => grant.effect === "deny").length,
+    wildcardGrants: activeGrants.filter((grant) => grant.action === "*" || grant.resourceType === "*" || grant.resourceId === "*").length,
+    secretLeaseGrants: activeGrants.filter((grant) => grant.action === "lease_secret" || grant.resourceType === "secret").length,
+    expiredGrants: resourceGrants.length - activeGrants.length,
+    requiredApprovals: [...requiredApprovals],
+  };
+}
+
+function agentControlPosture(
+  agent: Record<string, unknown>,
+  assignments: Array<Record<string, unknown>>,
+  incidents: Array<Record<string, unknown>>,
+  permissions: AgentControlPanel["permissions"],
+): AgentControlPanel["posture"] {
+  const activeAssignments = assignments.filter((assignment) => assignment.status === "active");
+  const openIncidents = incidents.filter((incident) => ["open", "mitigating"].includes(String(incident.status ?? "")));
+  return {
+    status: stringRecordValue(agent, "status") ?? "active",
+    ...(stringRecordValue(agent, "autonomyProfile", "autonomy_profile") ? { autonomyProfile: stringRecordValue(agent, "autonomyProfile", "autonomy_profile") } : {}),
+    activeAssignments: activeAssignments.length,
+    externalAssignments: activeAssignments.filter((assignment) => isExternalAssignmentRecord(assignment)).length,
+    openIncidents: openIncidents.length,
+    failClosed: activeAssignments.length === 0 || permissions.allowGrants === 0,
+  };
+}
+
+function agentMemoryControlSummary(memoryPolicies: Array<Record<string, unknown>>): AgentControlPanel["memory"] {
+  return {
+    policyCount: memoryPolicies.length,
+    crossUserBoundary: [...new Set(memoryPolicies.map((policy) => stringRecordValue(policy, "crossUserBoundary", "cross_user_boundary")).filter((value): value is string => Boolean(value)))],
+    writePolicies: [...new Set(memoryPolicies.map((policy) => stringRecordValue(policy, "writePolicy", "write_policy")).filter((value): value is string => Boolean(value)))],
+  };
+}
+
+function agentBudgetControlSummary(budgets: Array<Record<string, unknown>>): AgentControlPanel["budgets"] {
+  return {
+    policyCount: budgets.length,
+    exceededBehaviors: [...new Set(budgets.map((budget) => stringRecordValue(budget, "exceededBehavior", "exceeded_behavior")).filter((value): value is string => Boolean(value)))],
+  };
+}
+
+function agentControlUiVisibility(assignments: Array<Record<string, unknown>>, surface: AgentSafeSurfaceKind): AgentControlPanel["uiVisibility"] {
+  const activeAssignments = assignments.filter((assignment) => assignment.status === "active");
+  const surfaces = new Set<string>([surface]);
+  for (const assignment of activeAssignments) {
+    const kind = stringRecordValue(assignment, "kind");
+    if (!kind) continue;
+    if (kind === "internal_mac_chat") surfaces.add("mac");
+    else if (kind === "mcp_api") surfaces.add("mcp_api");
+    else if (kind === "relay") surfaces.add("relay");
+    else if (isExternalAssignmentRecord(assignment)) surfaces.add("external_channel");
+  }
+  return {
+    macVisible: activeAssignments.some((assignment) => assignment.kind === "internal_mac_chat"),
+    surfaces: [...surfaces],
+  };
+}
+
+function agentControlPanelRisks(input: AgentControlPanelInput): string[] {
+  const risks = new Set<string>();
+  if ((input.resourceGrants ?? []).some((grant) => grant.action === "*")) risks.add("wildcard_resource_grant");
+  if ((input.incidents ?? []).some((incident) => ["open", "mitigating"].includes(String(incident.status ?? "")))) risks.add("open_incidents");
+  if ((input.assignments ?? []).some((assignment) => isExternalAssignmentRecord(assignment) && assignment.status === "active" && assignment.privacyPolicy === "raw_with_retention")) {
+    risks.add("external_assignment_raw_telemetry");
+  }
+  return [...risks];
+}
+
+function agentControlPanelGaps(
+  input: AgentControlPanelInput,
+  posture: AgentControlPanel["posture"],
+  permissions: AgentControlPanel["permissions"],
+): string[] {
+  const gaps = new Set<string>();
+  if (typeof input.agent.id !== "string") gaps.add("agent_id_missing");
+  if (posture.activeAssignments === 0) gaps.add("active_assignment_missing");
+  if (permissions.allowGrants === 0) gaps.add("allow_grants_missing");
+  if ((input.memoryPolicies ?? []).length === 0) gaps.add("memory_policy_missing");
+  if ((input.executionProfiles ?? []).length === 0) gaps.add("execution_profile_missing");
+  if ((input.budgets ?? []).length === 0) gaps.add("budget_policy_missing");
+  return [...gaps];
+}
+
+function recordExpired(record: Record<string, unknown>, now: string): boolean {
+  const expiresAt = stringRecordValue(record, "expiresAt", "expires_at");
+  return Boolean(expiresAt && expiresAt <= now);
+}
+
+function isExternalAssignmentRecord(record: Record<string, unknown>): boolean {
+  const kind = stringRecordValue(record, "kind") ?? "";
+  return isExternalAssignmentKind(kind as AgentAssignmentKind);
+}
+
+function agentPrivacyLifecycleRecords(
+  input: AgentPrivacyLifecycleInput,
+  redaction: "default" | "strict" | "custom",
+): Array<{ collection: string; record: Record<string, unknown> }> {
+  const records: Array<{ collection: string; record: Record<string, unknown> }> = [
+    ...privacyCollectionRecords("agents", [input.agent]),
+    ...privacyCollectionRecords("agent_assignments", input.assignments),
+    ...privacyCollectionRecords("agent_runs", input.runs),
+    ...privacyCollectionRecords("agent_sessions", input.sessions),
+    ...privacyCollectionRecords("agent_evaluations", input.evaluations),
+    ...privacyCollectionRecords("agent_incidents", input.incidents),
+    ...privacyCollectionRecords("agent_config_revisions", input.configRevisions),
+    ...privacyCollectionRecords("support_conversations", input.supportConversations),
+    ...privacyCollectionRecords("support_messages", input.supportMessages),
+    ...privacyCollectionRecords("agent_audit_events", input.audits as unknown as Array<Record<string, unknown>> | undefined),
+  ];
+  return records
+    .filter((entry) => recordMatchesPrivacySubject(entry.record, input.subject, input.agent))
+    .map((entry) => ({ collection: entry.collection, record: redactAgentBoundaryValue(entry.record, redaction) as Record<string, unknown> }));
+}
+
+function privacyCollectionRecords(collection: string, records: Array<Record<string, unknown>> | undefined): Array<{ collection: string; record: Record<string, unknown> }> {
+  return (records ?? []).map((record) => ({ collection, record }));
+}
+
+function recordMatchesPrivacySubject(record: Record<string, unknown>, subject: AgentPrivacyLifecycleSubject, rootAgent: Record<string, unknown>): boolean {
+  if (subject.scopeType === "agent") {
+    return stringRecordValue(record, "id", "agentId", "agent_id") === subject.scopeId
+      || stringRecordValue(rootAgent, "id") === subject.scopeId;
+  }
+  const candidateKeys = privacySubjectKeys(subject.scopeType);
+  if (candidateKeys.some((key) => stringRecordValue(record, key) === subject.scopeId)) return true;
+  return JSON.stringify(record).includes(JSON.stringify(subject.scopeId));
+}
+
+function privacySubjectKeys(scopeType: AgentPrivacyLifecycleSubject["scopeType"]): string[] {
+  if (scopeType === "customer") return ["customerId", "customer_id", "scopeId", "scope_id", "boundaryScopeId"];
+  if (scopeType === "external_user") return ["externalUserId", "external_user_id", "scopeId", "scope_id", "boundaryScopeId"];
+  if (scopeType === "actor") return ["actorId", "actor_id", "assigneeActorId"];
+  if (scopeType === "workspace") return ["workspaceId", "workspace_id", "scopeId", "scope_id"];
+  if (scopeType === "project") return ["projectId", "project_id", "scopeId", "scope_id"];
+  return ["teamId", "team_id", "scopeId", "scope_id"];
+}
+
+function agentPrivacyLifecycleAction(
+  collection: string,
+  record: Record<string, unknown>,
+  operation: AgentPrivacyLifecycleOperation,
+  subject: AgentPrivacyLifecycleSubject,
+  requestedAt: string,
+  legalHoldRecordIds: Set<string>,
+): AgentPrivacyLifecycleAction {
+  const recordId = stringRecordValue(record, "id") ?? `${collection}_${stableHash(JSON.stringify(record))}`;
+  if (legalHoldRecordIds.has(recordId)) {
+    return {
+      collection,
+      recordId,
+      disposition: "retain",
+      reason: "record under legal hold",
+    };
+  }
+  if (operation === "export") {
+    return {
+      collection,
+      recordId,
+      disposition: "include_export",
+      reason: "record matches privacy subject export scope",
+    };
+  }
+  if (operation === "delete") {
+    return {
+      collection,
+      recordId,
+      disposition: "delete",
+      reason: "record matches privacy subject delete scope",
+      patch: {
+        id: recordId,
+        deletedAt: requestedAt,
+        privacySubject: subject,
+      },
+    };
+  }
+  return {
+    collection,
+    recordId,
+    disposition: "anonymize",
+    reason: "record matches privacy subject anonymization scope",
+    patch: {
+      id: recordId,
+      anonymizedAt: requestedAt,
+      privacySubject: subject,
+      subjectId: "[REDACTED_SUBJECT]",
+    },
+  };
+}
+
+function agentPrivacyLifecycleGaps(
+  input: AgentPrivacyLifecycleInput,
+  records: Array<{ collection: string; record: Record<string, unknown> }>,
+  actions: AgentPrivacyLifecycleAction[],
+): string[] {
+  const gaps = new Set<string>();
+  if (!input.subject.scopeId) gaps.add("privacy_subject_missing");
+  if (records.length === 0) gaps.add("privacy_subject_records_missing");
+  if (input.operation !== "export" && actions.some((action) => action.disposition === "retain")) gaps.add("legal_hold_records_retained");
+  return [...gaps];
+}
+
+interface PaperclipAgentDraft {
+  id?: string;
+  name: string;
+  role?: string;
+  description?: string;
+  instructions?: string;
+  agencyMode: AgencyMode;
+  modelTier?: AgentBlueprint["modelTier"];
+  skillRefs?: string[];
+  skillBindings?: AgentSkillBinding[];
+  requiredResourceGrants?: AgentResourceGrant[];
+}
+
+function paperclipAgentsFromMarkdown(agentsMd: string | undefined): PaperclipAgentDraft[] {
+  if (!agentsMd || !agentsMd.trim()) return [];
+  const sections = splitPaperclipMarkdownAgents(agentsMd);
+  return sections.map((section, index) => {
+    const fields = parsePaperclipFields(section.body);
+    const name = fields.name ?? section.title ?? `Paperclip Agent ${index + 1}`;
+    return {
+      id: fields.id,
+      name,
+      role: fields.role,
+      description: fields.description,
+      instructions: fields.instructions ?? section.body.trim(),
+      agencyMode: paperclipAgencyMode(fields.mode ?? fields.role ?? name),
+      modelTier: paperclipModelTier(fields.modelTier ?? fields.model),
+      skillRefs: parseCsv(fields.skills),
+      requiredResourceGrants: parsePaperclipGrantRefs(fields.grants),
+    };
+  });
+}
+
+function paperclipAgentFromRecord(record: Record<string, unknown>, index: number): PaperclipAgentDraft {
+  const name = stringRecordValue(record, "name", "title") ?? `Paperclip Agent ${index + 1}`;
+  return {
+    id: stringRecordValue(record, "id"),
+    name,
+    role: stringRecordValue(record, "role"),
+    description: stringRecordValue(record, "description"),
+    instructions: stringRecordValue(record, "instructions", "prompt", "systemPrompt"),
+    agencyMode: paperclipAgencyMode(stringRecordValue(record, "agencyMode", "mode", "role", "kind") ?? name),
+    modelTier: paperclipModelTier(stringRecordValue(record, "modelTier", "model")),
+    skillRefs: Array.isArray(record.skillRefs) ? record.skillRefs.map(String) : parseCsv(stringRecordValue(record, "skills")),
+    skillBindings: Array.isArray(record.skillBindings) ? record.skillBindings as AgentSkillBinding[] : undefined,
+    requiredResourceGrants: Array.isArray(record.requiredResourceGrants) ? record.requiredResourceGrants as AgentResourceGrant[] : undefined,
+  };
+}
+
+function splitPaperclipMarkdownAgents(markdown: string): Array<{ title?: string; body: string }> {
+  const matches = [...markdown.matchAll(/^#{1,3}\s+(.+)$/gm)];
+  if (matches.length === 0) return [{ body: markdown }];
+  return matches.map((match, index) => {
+    const start = (match.index ?? 0) + match[0].length;
+    const end = matches[index + 1]?.index ?? markdown.length;
+    return {
+      title: match[1]?.trim(),
+      body: markdown.slice(start, end).trim(),
+    };
+  });
+}
+
+function parsePaperclipFields(body: string): Record<string, string> {
+  const fields: Record<string, string> = {};
+  for (const line of body.split(/\r?\n/)) {
+    const match = line.match(/^\s*(?:[-*]\s*)?([A-Za-z][A-Za-z0-9 _-]{1,32})\s*:\s*(.+?)\s*$/);
+    if (!match) continue;
+    const key = match[1]?.trim().toLowerCase().replace(/[\s-]+/g, "");
+    const value = match[2]?.trim();
+    if (key && value) fields[key] = value;
+  }
+  return {
+    id: fields.id,
+    name: fields.name,
+    role: fields.role,
+    description: fields.description,
+    instructions: fields.instructions,
+    mode: fields.mode,
+    model: fields.model,
+    modelTier: fields.modeltier,
+    skills: fields.skills,
+    grants: fields.grants,
+  };
+}
+
+function paperclipAgencyMode(value: string): AgencyMode {
+  const normalized = value.toLowerCase();
+  if (normalized.includes("support")) return "support";
+  if (normalized.includes("reception")) return "receptionist";
+  if (normalized.includes("operator")) return "operator";
+  if (normalized.includes("automation")) return "automation";
+  if (normalized.includes("workflow")) return "workflow_agent";
+  if (normalized.includes("review")) return "reviewer";
+  if (normalized.includes("manager") || normalized.includes("lead") || normalized.includes("ceo")) return "manager";
+  if (normalized.includes("subagent")) return "subagent";
+  if (normalized.includes("worker")) return "worker";
+  return "assistant";
+}
+
+function paperclipModelTier(value: string | undefined): AgentBlueprint["modelTier"] | undefined {
+  if (!value) return undefined;
+  const normalized = value.toLowerCase();
+  if (normalized.includes("fast")) return "fast";
+  if (normalized.includes("smart")) return "smart";
+  if (normalized.includes("max")) return "max";
+  if (normalized.includes("balanced")) return "balanced";
+  return undefined;
+}
+
+function parseCsv(value: string | undefined): string[] | undefined {
+  if (!value) return undefined;
+  const entries = value.split(",").map((entry) => entry.trim()).filter(Boolean);
+  return entries.length > 0 ? entries : undefined;
+}
+
+function parsePaperclipGrantRefs(value: string | undefined): AgentResourceGrant[] | undefined {
+  const refs = parseCsv(value);
+  if (!refs) return undefined;
+  return refs.map((ref) => {
+    const [resourceType = "resource", resourceId = "*", action = "read"] = ref.split(":");
+    return {
+      resourceType,
+      resourceId,
+      action: action as AgentResourceAction,
+    };
+  });
+}
+
 function pickRedacted(record: Record<string, unknown>, redaction: "default" | "strict" | "custom", keys: string[]): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const key of keys) {
@@ -1771,6 +3657,33 @@ function maxAutonomySeverity(profile: AgentAutonomyProfile): AgentActionSeverity
   if (profile === "suggest") return "medium";
   if (profile === "act_limited") return "medium";
   return "high";
+}
+
+function dispatchDisposition(dispatchMode: AgentAutonomyDispatchMode, executionMode: AgentExecutionMode | undefined): AgentDispatchDisposition {
+  if (dispatchMode === "respond_only") return "respond";
+  if (dispatchMode === "suggest_only") return "suggest";
+  if (executionMode === "sync") return "invoke_sync";
+  if (executionMode === "async") return "queue_async";
+  if (executionMode === "streaming") return "stream";
+  if (executionMode === "scheduled") return "schedule";
+  return "blocked";
+}
+
+function dispatchRunStatus(disposition: AgentDispatchDisposition): AgentDispatchRunStatus {
+  if (disposition === "respond") return "ready";
+  if (disposition === "suggest") return "awaiting_input";
+  if (disposition === "invoke_sync" || disposition === "stream") return "running";
+  if (disposition === "queue_async" || disposition === "schedule") return "queued";
+  return "blocked";
+}
+
+function isExternalAssignmentKind(kind: AgentAssignmentKind): boolean {
+  return kind === "external_web_chat"
+    || kind === "external_telegram"
+    || kind === "external_whatsapp"
+    || kind === "external_email"
+    || kind === "support_inbox"
+    || kind === "custom_channel";
 }
 
 const SUPERVISOR_RISK_RANK: Record<AgentPermissionEscalationRequest["risk"], number> = {

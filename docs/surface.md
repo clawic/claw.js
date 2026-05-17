@@ -1147,6 +1147,9 @@ The docs check script validates that every current export from
     AgentActionSeverity
     AgentActionSeverityRequest
     AgentActionSeverityResult
+    AgentAuditCoverageInput
+    AgentAuditCoverageInvalidEvent
+    AgentAuditCoverageReport
     AgentAutonomyDispatchMode
     AgentAutonomyPolicyInput
     AgentAutonomyPolicyResult
@@ -1154,12 +1157,29 @@ The docs check script validates that every current export from
     AgentConfigRevision
     AgentConfigRevisionInput
     AgentConfigRevisionStatus
+    AgentControlPanel
+    AgentControlPanelInput
+    AgentContextPack
+    AgentContextPackDeniedItem
+    AgentContextPackEntry
+    AgentContextPackInput
+    AgentContextPackItem
+    AgentContextScope
+    AgentContextViewPolicy
+    AgentCreationReview
+    AgentCreationReviewInput
     AgentDelegationAccessInput
+    AgentDispatchDisposition
+    AgentDispatchPlan
+    AgentDispatchPlanInput
+    AgentDispatchRunStatus
     AgentEffectiveAccessInput
     AgentEffectiveAccessResult
     AgentEvaluation
     AgentEvaluationInput
     AgentEvaluationStatus
+    AgentExecutionMode
+    AgentExecutionProfileDispatch
     AgentExternalDisclosure
     AgentExternalIdentityProfile
     AgentGrantEffect
@@ -1175,7 +1195,18 @@ The docs check script validates that every current export from
     AgentMemoryScope
     AgentMemoryScopeAccess
     AgentMemoryWritePolicy
+    AgentOperationalSnapshot
+    AgentOperationalSnapshotInput
+    AgentOperationalSnapshotSummary
+    AgentPaperclipImportInput
+    AgentPaperclipImportPlan
     AgentPermissionEscalationRequest
+    AgentPrivacyLifecycleAction
+    AgentPrivacyLifecycleDisposition
+    AgentPrivacyLifecycleInput
+    AgentPrivacyLifecycleOperation
+    AgentPrivacyLifecyclePlan
+    AgentPrivacyLifecycleSubject
     AgentResolvedExternalIdentity
     AgentRetirementInput
     AgentRetirementPlan
@@ -1190,9 +1221,13 @@ The docs check script validates that every current export from
     AgentSafeSurfaceProjection
     AgentSafeSurfaceProjectionInput
     AgentServiceApiOperation
+    AgentServiceApiHttpRequest
+    AgentServiceApiHttpResponse
     AgentServiceApiRequest
     AgentServiceApiResponse
     AgentSkillBinding
+    AgentStorageAudit
+    AgentStorageAuditInput
     AgentSupervisorAction
     AgentSupervisorAuthorityInput
     AgentSupervisorAuthorityLevel
@@ -1200,7 +1235,11 @@ The docs check script validates that every current export from
     AgentSupportInboxProjection
     AgentSupportInboxProjectionInput
     AGENTS_FAMILY
+    AgentToolCatalogBlockedItem
     AgentToolCatalog
+    AgentToolCatalogProjection
+    AgentToolCatalogProjectionInput
+    AgentToolCatalogProjectionItem
     AgentToolDescriptor
     AgentToolInvocationError
     AgentToolInvocationRequest
@@ -1596,16 +1635,27 @@ The docs check script validates that every current export from
     EffectPreview
     effectPreviewSchema
     createAgentActivityFeed
+    createAgentAuditCoverageReport
     createAgentAuditEvent
     createAgentBlueprint
     createAgentConfigRevision
+    createAgentContextPack
+    createAgentControlPanel
+    createAgentCreationReview
+    createAgentDispatchPlan
     createAgentEvaluation
     createAgentIncident
+    createAgentOperationalSnapshot
+    createAgentPaperclipImportPlan
+    createAgentPrivacyLifecyclePlan
     createAgentRetirementPlan
     createAgentSafePackageExport
     createAgentSafeSurfaceProjection
+    createAgentServiceApiHttpResponse
     createAgentServiceApiResponse
+    createAgentStorageAudit
     createAgentSupportInboxProjection
+    createAgentToolCatalogProjection
     evaluateAgentActionSeverity
     evaluateAgentAutonomyPolicy
     evaluateAgentAssignmentRoute

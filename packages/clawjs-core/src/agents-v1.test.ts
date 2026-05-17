@@ -4,16 +4,27 @@ import assert from "node:assert/strict";
 import {
   createAgentAuditEvent,
   createAgentActivityFeed,
+  createAgentAuditCoverageReport,
   createAgentConfigRevision,
+  createAgentContextPack,
+  createAgentControlPanel,
+  createAgentCreationReview,
+  createAgentDispatchPlan,
+  createAgentToolCatalogProjection,
   createAgentBlueprint,
   createAgentEvaluation,
   createAgentIncident,
+  createAgentOperationalSnapshot,
+  createAgentPaperclipImportPlan,
+  createAgentPrivacyLifecyclePlan,
   createAgentSafePackageExport,
   createAgentSafeSurfaceProjection,
   createAgentServiceApiResponse,
+  createAgentServiceApiHttpResponse,
   createAgentSupportInboxProjection,
   createAgentRetirementPlan,
   evaluateAgentBudget,
+  createAgentStorageAudit,
   evaluateAgentDelegationAccess,
   evaluateAgentEffectiveAccess,
   evaluateAgentAssignmentRoute,
@@ -559,6 +570,561 @@ test("Agents V1 autonomy policy gates dispatch by profile, severity, and require
   assert.equal(fullWithGates.dispatchMode, "act");
 });
 
+test("Agents V1 dispatch plans fail closed and map execution modes to run status", () => {
+  const assignment: AgentAssignmentRoute = {
+    id: "assignment.web",
+    agentId: "agent.support",
+    kind: "external_web_chat",
+    status: "active",
+    channel: "chat",
+    privacyPolicy: "hashed",
+    externalDisclosure: "transparent_agent",
+  };
+
+  const externalWrite = createAgentDispatchPlan({
+    agentId: "agent.support",
+    assignment,
+    assignmentRequest: { kind: "external_web_chat", channel: "chat" },
+    executionProfile: { id: "execution.async", executionMode: "async", status: "active", runtime: "service" },
+    autonomy: { profile: "act_limited" },
+    action: { action: "write", resourceType: "collection" },
+    now: "2026-05-17T10:00:00.000Z",
+  });
+  assert.equal(externalWrite.allowed, false);
+  assert.equal(externalWrite.disposition, "blocked");
+  assert.equal(externalWrite.runStatus, "blocked");
+  assert.equal(externalWrite.requiredGates.includes("external_act"), true);
+  assert.equal(externalWrite.reasons.includes("dispatch: external assignment defaults to respond_only"), true);
+
+  const asyncWrite = createAgentDispatchPlan({
+    agentId: "agent.support",
+    assignment: { ...assignment, respondOnlyDefault: false },
+    assignmentRequest: { kind: "external_web_chat", channel: "chat" },
+    executionProfile: { id: "execution.async", executionMode: "async", status: "active", runtime: "service" },
+    autonomy: { profile: "act_limited" },
+    action: { action: "write", resourceType: "collection" },
+    externalActAllowed: true,
+    now: "2026-05-17T10:00:00.000Z",
+  });
+  assert.equal(asyncWrite.allowed, true);
+  assert.equal(asyncWrite.disposition, "queue_async");
+  assert.equal(asyncWrite.runStatus, "queued");
+  assert.equal(asyncWrite.audit.kind, "dispatch_plan");
+  assert.equal(asyncWrite.audit.result, "allowed");
+
+  const scheduled = createAgentDispatchPlan({
+    agentId: "agent.support",
+    assignment: { ...assignment, respondOnlyDefault: false },
+    assignmentRequest: { kind: "external_web_chat", channel: "chat" },
+    executionProfile: { id: "execution.scheduled", executionMode: "scheduled", status: "active", runtime: "service" },
+    autonomy: { profile: "act_limited" },
+    action: { action: "write", resourceType: "collection" },
+    externalActAllowed: true,
+    now: "2026-05-17T10:00:00.000Z",
+  });
+  assert.equal(scheduled.allowed, false);
+  assert.equal(scheduled.reasons.includes("execution: scheduled mode requires scheduledAt"), true);
+  assert.equal(scheduled.requiredGates.includes("schedule"), true);
+
+  const readResponse = createAgentDispatchPlan({
+    agentId: "agent.support",
+    assignment,
+    assignmentRequest: { kind: "external_web_chat", channel: "chat" },
+    executionProfile: { id: "execution.sync", executionMode: "sync", status: "active", runtime: "service" },
+    autonomy: { profile: "respond_only" },
+    action: { action: "read", resourceType: "collection" },
+    now: "2026-05-17T10:00:00.000Z",
+  });
+  assert.equal(readResponse.allowed, true);
+  assert.equal(readResponse.disposition, "respond");
+  assert.equal(readResponse.runStatus, "ready");
+});
+
+test("Agents V1 context packs project only view-allowed and grant-authorized records", () => {
+  const contextGrant = (id: string): AgentResourceGrant => ({
+    id,
+    resourceType: "*",
+    action: "read",
+    scopeType: "customer",
+    scopeId: "customer_1",
+    effect: "allow",
+  });
+  const pack = createAgentContextPack({
+    agentId: "agent.support",
+    assignmentId: "assignment.web",
+    view: {
+      id: "view.support.customer",
+      name: "Support Customer Context",
+      allowedResourceTypes: ["contact", "note"],
+      allowedScopes: [{ scopeType: "customer", scopeId: "customer_1" }],
+      includeContent: true,
+      maxItems: 1,
+    },
+    requested: [
+      {
+        id: "ctx.contact",
+        resourceType: "contact",
+        resourceId: "contact_1",
+        scopeType: "customer",
+        scopeId: "customer_1",
+        title: "Primary contact",
+        content: { email: "customer@example.com", apiToken: "raw" },
+        metadata: { localPath: "/Users/example/context.json" },
+        required: true,
+      },
+      {
+        id: "ctx.note.extra",
+        resourceType: "note",
+        resourceId: "note_1",
+        scopeType: "customer",
+        scopeId: "customer_1",
+        title: "Extra note",
+      },
+      {
+        id: "ctx.note.other",
+        resourceType: "note",
+        resourceId: "note_2",
+        scopeType: "customer",
+        scopeId: "customer_2",
+        required: true,
+      },
+      {
+        id: "ctx.file",
+        resourceType: "file",
+        resourceId: "file_1",
+        scopeType: "customer",
+        scopeId: "customer_1",
+      },
+    ],
+    agentGrants: [contextGrant("agent")],
+    assignmentGrants: [contextGrant("assignment")],
+    executionProfileGrants: [contextGrant("execution")],
+    connectorGrants: [contextGrant("connector")],
+    hostGrants: [contextGrant("host")],
+    runScopeGrants: [contextGrant("run")],
+    now: "2026-05-17T10:00:00.000Z",
+  });
+
+  assert.equal(pack.packKind, "claw_agent_context_pack");
+  assert.equal(pack.items.length, 1);
+  assert.equal(pack.items[0]?.id, "ctx.contact");
+  assert.deepEqual(pack.items[0]?.matchedGrantIds, ["agent", "assignment", "execution", "connector", "host", "run"]);
+  assert.deepEqual(pack.items[0]?.content, { email: "customer@example.com", apiToken: "[REDACTED]" });
+  assert.deepEqual(pack.items[0]?.metadata, { localPath: "[REDACTED_LOCAL_PATH]" });
+  assert.equal(pack.denied.length, 2);
+  assert.deepEqual(pack.denied.map((entry) => entry.id), ["ctx.note.other", "ctx.file"]);
+  assert.deepEqual(pack.gaps, ["context_item_limit_applied", "required_context_denied"]);
+  assert.equal(pack.audit.kind, "context_pack");
+  assert.equal(pack.audit.result, "blocked");
+});
+
+test("Agents V1 tool catalogs expose only grant-authorized tools for an assignment", () => {
+  const toolGrant = (id: string): AgentResourceGrant => ({
+    id,
+    resourceType: "tool",
+    action: "invoke",
+    scopeType: "domain",
+    scopeId: "support",
+    effect: "allow",
+  });
+  const catalog = createAgentToolCatalogProjection({
+    agentId: "agent.support",
+    assignmentId: "assignment.web",
+    allowedDomains: ["support"],
+    tools: [{
+      id: "support.contacts.lookup",
+      title: "Lookup contact",
+      description: "Read contact context for the active support case.",
+      domain: "support",
+      sourceFeature: "support",
+      parameters: { type: "object", properties: { contactId: { type: "string" } }, required: ["contactId"] },
+      riskLevel: "safe",
+    }, {
+      id: "support.ticket.refund",
+      title: "Refund ticket",
+      description: "Issue a customer refund.",
+      domain: "support",
+      sourceFeature: "billing",
+      parameters: { type: "object", properties: { ticketId: { type: "string" } } },
+      riskLevel: "sensitive",
+      requiresApproval: true,
+    }, {
+      id: "ops.host.erase",
+      title: "Erase host",
+      description: "Erase host data.",
+      domain: "ops",
+      sourceFeature: "host",
+      parameters: { type: "object" },
+      riskLevel: "catastrophic",
+    }],
+    agentGrants: [toolGrant("agent")],
+    assignmentGrants: [toolGrant("assignment")],
+    executionProfileGrants: [toolGrant("execution")],
+    connectorGrants: [toolGrant("connector")],
+    hostGrants: [toolGrant("host")],
+    runScopeGrants: [toolGrant("run")],
+    now: "2026-05-17T10:00:00.000Z",
+  });
+
+  assert.equal(catalog.catalogKind, "claw_agent_tool_catalog");
+  assert.deepEqual(catalog.tools.map((tool) => tool.id), ["support.contacts.lookup"]);
+  assert.deepEqual(catalog.tools[0]?.matchedGrantIds, ["agent", "assignment", "execution", "connector", "host", "run"]);
+  assert.deepEqual(catalog.blocked.map((tool) => tool.id), ["support.ticket.refund", "ops.host.erase"]);
+  assert.equal(catalog.blocked[0]?.reasons.includes("tool: approval required"), true);
+  assert.equal(catalog.blocked[1]?.reasons.includes("tool: domain ops outside allowed domains"), true);
+  assert.equal(catalog.blocked[1]?.reasons.includes("tool: catastrophic risk requires host approval flow"), true);
+  assert.deepEqual(catalog.gaps, ["tool_catalog_has_blocked_tools"]);
+  assert.equal(catalog.audit.kind, "tool_catalog");
+});
+
+test("Agents V1 creation reviews package a proposed agent and block risky missing setup", () => {
+  const review = createAgentCreationReview({
+    reviewedAt: "2026-05-17T10:00:00.000Z",
+    actorId: "actor.owner",
+    surface: "external_channel",
+    agent: {
+      id: "agent.support",
+      name: "Support",
+      role: "Support",
+      secretAllowlist: ["vault://agents/support"],
+    },
+    assignments: [{
+      id: "assignment.web",
+      agentId: "agent.support",
+      kind: "external_web_chat",
+      status: "draft",
+      channel: "chat",
+      privacyPolicy: "raw_with_retention",
+    }],
+    executionProfiles: [{
+      id: "execution.web",
+      agentId: "agent.support",
+      executionMode: "async",
+      hostAccess: "native_host",
+      networkPolicy: "open",
+    }],
+    resourceGrants: [{
+      id: "grant.secret",
+      resourceType: "secret",
+      resourceId: "vault://agents/support",
+      action: "lease_secret",
+    }],
+  });
+
+  assert.equal(review.reviewKind, "claw_agent_creation_review");
+  assert.equal(review.ready, false);
+  assert.equal(review.requiredApprovals.includes("resource_owner"), true);
+  assert.equal(review.requiredApprovals.includes("host"), true);
+  assert.equal(review.requiredApprovals.includes("network"), true);
+  assert.equal(review.gaps.includes("active_assignment_missing"), true);
+  assert.equal(review.gaps.includes("budget_policy_missing"), true);
+  assert.equal(review.risks.includes("native_host_access"), true);
+  assert.equal(review.risks.includes("open_network_policy"), true);
+  assert.equal(String(review.safePackage.agent.secretAllowlist).includes("vault://"), false);
+  assert.equal(review.audit.kind, "creation_review");
+  assert.equal(review.audit.result, "blocked");
+});
+
+test("Agents V1 storage audit verifies canonical subentities, JSON policy, and legacy overlap", () => {
+  const ready = createAgentStorageAudit({ auditedAt: "2026-05-17T10:00:00.000Z" });
+  assert.equal(ready.auditKind, "claw_agent_storage_audit");
+  assert.equal(ready.ready, true);
+  assert.equal(ready.canonicalCollections.includes("agents"), true);
+  assert.equal(ready.canonicalCollections.includes("agent_sessions"), true);
+  assert.deepEqual(ready.missingCollections, []);
+  assert.deepEqual(ready.unexpectedJsonFields, []);
+  assert.equal(ready.audit.kind, "storage_audit");
+  assert.equal(ready.audit.result, "allowed");
+
+  const blocked = createAgentStorageAudit({
+    auditedAt: "2026-05-17T10:00:00.000Z",
+    observedTables: ready.canonicalCollections.filter((name) => name !== "agent_budgets"),
+    legacyCollections: ["company_agents"],
+    allowedJsonFields: ["source", "links", "metadata"],
+  });
+  assert.equal(blocked.ready, false);
+  assert.equal(blocked.missingCollections.includes("agent_budgets"), true);
+  assert.deepEqual(blocked.legacyOverlaps, ["company_agents"]);
+  assert.equal(blocked.unexpectedJsonFields.some((field) => field.collection === "agents" && field.field === "schedule"), true);
+  assert.equal(blocked.gaps.includes("legacy_overlap:company_agents"), true);
+  assert.equal(blocked.audit.result, "blocked");
+});
+
+test("Agents V1 audit coverage reports missing, invalid, and sensitive audit events", () => {
+  const eventFor = (kind: Parameters<typeof createAgentAuditEvent>[0]["kind"]) => createAgentAuditEvent({
+    id: `audit.${kind}`,
+    kind,
+    agentId: "agent.support",
+    result: "recorded",
+    reason: `covered ${kind}`,
+    redaction: "strict",
+    createdAt: "2026-05-17T10:00:00.000Z",
+    metadata: { kind },
+  });
+  const covered = createAgentAuditCoverageReport({
+    auditedAt: "2026-05-17T10:00:00.000Z",
+    events: [
+      "blueprint",
+      "evaluation",
+      "config_revision",
+      "retirement",
+      "service_api",
+      "safe_export",
+      "incident",
+      "context_pack",
+      "tool_catalog",
+      "dispatch_plan",
+      "creation_review",
+      "storage_audit",
+      "control_panel",
+      "privacy_lifecycle",
+      "paperclip_import",
+      "permission_escalation",
+    ].map((kind) => eventFor(kind as Parameters<typeof createAgentAuditEvent>[0]["kind"])),
+  });
+  assert.equal(covered.reportKind, "claw_agent_audit_coverage");
+  assert.equal(covered.ready, true);
+  assert.deepEqual(covered.missingKinds, []);
+  assert.deepEqual(covered.invalidEvents, []);
+  assert.deepEqual(covered.sensitiveFindings, []);
+  assert.equal(covered.audit.kind, "audit_coverage");
+  assert.equal(covered.audit.result, "allowed");
+
+  const blocked = createAgentAuditCoverageReport({
+    expectedKinds: ["blueprint", "service_api"],
+    events: [{
+      id: "audit.blueprint",
+      kind: "blueprint",
+      agentId: "agent.support",
+      result: "recorded",
+      redaction: "strict",
+      createdAt: "2026-05-17T10:00:00.000Z",
+      metadata: { raw: "vault://agents/support/api-key" },
+    }],
+    auditedAt: "2026-05-17T10:00:00.000Z",
+  });
+  assert.equal(blocked.ready, false);
+  assert.deepEqual(blocked.missingKinds, ["service_api"]);
+  assert.equal(blocked.sensitiveFindings.includes("audit.blueprint:raw_vault_ref"), true);
+  assert.equal(blocked.gaps.includes("missing_audit_kind:service_api"), true);
+  assert.equal(blocked.audit.result, "blocked");
+});
+
+test("Agents V1 operational snapshots query redacted runs, sessions, incidents, and audits", () => {
+  const snapshot = createAgentOperationalSnapshot({
+    agentId: "agent.support",
+    capturedAt: "2026-05-17T11:00:00.000Z",
+    statuses: ["active", "running", "open", "recorded"],
+    since: "2026-05-17T09:00:00.000Z",
+    assignments: [{
+      id: "assignment.web",
+      agentId: "agent.support",
+      status: "active",
+      endpointRef: "web://support",
+      updatedAt: "2026-05-17T10:00:00.000Z",
+    }],
+    runs: [{
+      id: "run.1",
+      agentId: "agent.support",
+      status: "running",
+      startedAt: "2026-05-17T10:30:00.000Z",
+      outcomeJson: { rawTracePath: "/Users/example/run.log" },
+    }],
+    sessions: [{
+      id: "session.1",
+      agentId: "agent.support",
+      status: "active",
+      createdAt: "2026-05-17T10:20:00.000Z",
+    }],
+    incidents: [{
+      id: "incident.1",
+      agentId: "agent.support",
+      status: "open",
+      severity: "high",
+      detectedAt: "2026-05-17T10:40:00.000Z",
+    }],
+    audits: [createAgentAuditEvent({
+      id: "audit.snapshot",
+      kind: "incident",
+      agentId: "agent.support",
+      result: "recorded",
+      redaction: "strict",
+      createdAt: "2026-05-17T10:45:00.000Z",
+      metadata: { tracePath: "/Users/example/audit.log" },
+    })],
+  });
+  assert.equal(snapshot.snapshotKind, "claw_agent_operational_snapshot");
+  assert.equal(snapshot.summary.assignments.active, 1);
+  assert.equal(snapshot.summary.runs.running, 1);
+  assert.equal(snapshot.summary.incidents.open, 1);
+  assert.equal(snapshot.summary.audits.incident, 1);
+  assert.deepEqual(snapshot.gaps, []);
+  assert.equal(JSON.stringify(snapshot).includes("/Users/example"), false);
+  assert.equal(snapshot.audit.kind, "operational_snapshot");
+  assert.equal(snapshot.audit.result, "recorded");
+
+  const blocked = createAgentOperationalSnapshot({
+    agentId: "agent.support",
+    capturedAt: "2026-05-17T11:00:00.000Z",
+    assignments: [],
+    runs: [],
+    sessions: [],
+    audits: [],
+  });
+  assert.equal(blocked.gaps.includes("assignments_missing"), true);
+  assert.equal(blocked.gaps.includes("audits_missing"), true);
+  assert.equal(blocked.audit.result, "blocked");
+});
+
+test("Agents V1 control panels compose identity, permissions, posture, and operations for human review", () => {
+  const panel = createAgentControlPanel({
+    generatedAt: "2026-05-17T11:00:00.000Z",
+    surface: "external_channel",
+    agent: {
+      id: "agent.support",
+      name: "Support",
+      autonomyProfile: "respond_only",
+      status: "active",
+      secretAllowlist: ["vault://agents/support"],
+    },
+    assignments: [{
+      id: "assignment.web",
+      agentId: "agent.support",
+      kind: "external_web_chat",
+      status: "active",
+      channel: "chat",
+      privacyPolicy: "hashed",
+      externalDisclosure: "transparent_agent",
+    }],
+    executionProfiles: [{ id: "execution.web", agentId: "agent.support", executionMode: "async", networkPolicy: "connector_only" }],
+    resourceGrants: [{
+      id: "grant.support",
+      agentId: "agent.support",
+      resourceType: "collection",
+      resourceId: "support_conversations",
+      action: "read",
+      effect: "allow",
+    }],
+    memoryPolicies: [{ id: "memory.support", writePolicy: "private_only", crossUserBoundary: "explicit_grant_only" }],
+    budgets: [{ id: "budget.support", exceededBehavior: "deny_action", limits: [{ dimension: "external_actions", limit: 5 }] }],
+    runs: [{ id: "run.support", agentId: "agent.support", status: "running", startedAt: "2026-05-17T10:30:00.000Z" }],
+    sessions: [{ id: "session.support", agentId: "agent.support", status: "active", createdAt: "2026-05-17T10:20:00.000Z" }],
+    audits: [createAgentAuditEvent({
+      id: "audit.support.dispatch",
+      kind: "dispatch_plan",
+      agentId: "agent.support",
+      result: "recorded",
+      redaction: "strict",
+      createdAt: "2026-05-17T10:25:00.000Z",
+      metadata: {},
+    })],
+  });
+  assert.equal(panel.panelKind, "claw_agent_control_panel");
+  assert.equal(panel.posture.activeAssignments, 1);
+  assert.equal(panel.posture.externalAssignments, 1);
+  assert.equal(panel.posture.failClosed, false);
+  assert.equal(panel.uiVisibility.surfaces.includes("external_channel"), true);
+  assert.equal(panel.permissions.allowGrants, 1);
+  assert.equal(panel.memory.writePolicies[0], "private_only");
+  assert.equal(panel.operationalSnapshot.summary.runs.running, 1);
+  assert.equal(panel.creationReview.ready, true);
+  assert.equal(JSON.stringify(panel).includes("vault://"), false);
+  assert.equal(panel.audit.kind, "control_panel");
+  assert.equal(panel.audit.result, "recorded");
+});
+
+test("Agents V1 privacy lifecycle plans export, delete, anonymize, and respect legal holds", () => {
+  const exported = createAgentPrivacyLifecyclePlan({
+    operation: "export",
+    subject: { scopeType: "external_user", scopeId: "external_user_1" },
+    requestedAt: "2026-05-17T11:00:00.000Z",
+    agent: { id: "agent.support", name: "Support", secretAllowlist: ["vault://agents/support"] },
+    sessions: [{ id: "session.1", agentId: "agent.support", externalUserId: "external_user_1", status: "active" }],
+    supportConversations: [{ id: "conversation.1", externalUserId: "external_user_1", metadata: { rawPath: "/Users/example/customer.json" } }],
+    supportMessages: [{ id: "message.1", externalUserId: "external_user_1", body: "Need help" }],
+    audits: [createAgentAuditEvent({
+      id: "audit.privacy",
+      kind: "service_api",
+      agentId: "agent.support",
+      result: "recorded",
+      redaction: "strict",
+      createdAt: "2026-05-17T10:00:00.000Z",
+      metadata: { externalUserId: "external_user_1" },
+    })],
+  });
+  assert.equal(exported.planKind, "claw_agent_privacy_lifecycle_plan");
+  assert.equal(exported.actions.every((action) => action.disposition === "include_export"), true);
+  assert.equal(exported.exportRecords.some((entry) => entry.collection === "support_messages"), true);
+  assert.equal(JSON.stringify(exported).includes("/Users/example"), false);
+  assert.equal(exported.exportPackage?.agent.secretAllowlist, "[REDACTED]");
+  assert.equal(exported.audit.kind, "privacy_lifecycle");
+  assert.equal(exported.audit.result, "recorded");
+
+  const deletion = createAgentPrivacyLifecyclePlan({
+    operation: "delete",
+    subject: { scopeType: "external_user", scopeId: "external_user_1" },
+    requestedAt: "2026-05-17T11:00:00.000Z",
+    agent: { id: "agent.support", name: "Support" },
+    supportMessages: [{ id: "message.1", externalUserId: "external_user_1", body: "Need help" }],
+    legalHoldRecordIds: ["message.1"],
+  });
+  assert.deepEqual(deletion.actions.map((action) => action.disposition), ["retain"]);
+  assert.equal(deletion.gaps.includes("legal_hold_records_retained"), true);
+  assert.equal(deletion.audit.result, "blocked");
+
+  const anonymized = createAgentPrivacyLifecyclePlan({
+    operation: "anonymize",
+    subject: { scopeType: "customer", scopeId: "customer_1" },
+    agent: { id: "agent.support", name: "Support" },
+    supportConversations: [{ id: "conversation.2", customerId: "customer_1" }],
+  });
+  assert.equal(anonymized.actions[0]?.disposition, "anonymize");
+  assert.equal(anonymized.actions[0]?.patch?.subjectId, "[REDACTED_SUBJECT]");
+});
+
+test("Agents V1 imports Paperclip-style agent packages as Claw blueprints without dependency", () => {
+  const plan = createAgentPaperclipImportPlan({
+    packageId: "paperclip.support",
+    importedAt: "2026-05-17T11:00:00.000Z",
+    defaultOwnerId: "company_1",
+    agentsMd: [
+      "# Support Lead",
+      "Role: support",
+      "Model: balanced",
+      "Skills: skill.support@1, skill.escalate@2",
+      "Grants: collection:support_conversations:read",
+      "Instructions: Help customers safely.",
+    ].join("\n"),
+    package: {
+      name: "Support package",
+      skills: [{ ref: "skill.shared", version: "1" }],
+      metadata: {
+        localPath: "/Users/example/paperclip",
+        apiToken: "raw",
+      },
+    },
+  });
+  assert.equal(plan.planKind, "claw_agent_paperclip_import_plan");
+  assert.equal(plan.dependencyPolicy, "paperclip_not_required");
+  assert.equal(plan.source, "mixed");
+  assert.equal(plan.blueprints.length, 1);
+  assert.equal(plan.blueprints[0]?.agencyMode, "support");
+  assert.equal(plan.blueprints[0]?.modelTier, "balanced");
+  assert.deepEqual(plan.blueprints[0]?.skillRefs, ["skill.support@1", "skill.escalate@2", "skill.shared@1"]);
+  assert.equal(plan.blueprints[0]?.requiredResourceGrants[0]?.resourceId, "support_conversations");
+  assert.equal(JSON.stringify(plan).includes("/Users/example"), false);
+  assert.equal(JSON.stringify(plan).includes("raw"), false);
+  assert.equal(plan.audit.kind, "paperclip_import");
+  assert.equal(plan.audit.result, "recorded");
+
+  const blocked = createAgentPaperclipImportPlan({
+    importedAt: "2026-05-17T11:00:00.000Z",
+  });
+  assert.equal(blocked.gaps.includes("paperclip_source_missing"), true);
+  assert.equal(blocked.gaps.includes("paperclip_agents_missing"), true);
+  assert.equal(blocked.audit.result, "blocked");
+});
+
 test("Agents V1 redaction removes raw secrets and private local paths at boundaries", () => {
   const redacted = redactAgentBoundaryValue({
     name: "Support",
@@ -996,6 +1562,44 @@ test("Agents V1 service API response exposes only the safe service projection", 
   assert.equal(allowed.allowed, true);
   assert.deepEqual(allowed.errors, []);
   assert.equal(allowed.audit.result, "allowed");
+});
+
+test("Agents V1 service API HTTP binding is hermetic and fail-closed", () => {
+  const accepted = createAgentServiceApiHttpResponse({
+    method: "POST",
+    path: "/v1/agents/service-api",
+    receivedAt: "2026-05-17T10:00:00.000Z",
+    body: JSON.stringify({
+      requestId: "request.http.allowed",
+      operation: "describe_agent",
+      agent: { id: "agent.support", name: "Support", localPath: "/Users/example/agent" },
+      assignments: [{ id: "assignment.api", agentId: "agent.support", kind: "mcp_api", status: "active", channel: "api" }],
+      budgets: [{ id: "budget.api", exceededBehavior: "deny_action", limits: [{ dimension: "external_actions", limit: 5 }] }],
+    }),
+  });
+  assert.equal(accepted.status, 200);
+  assert.equal(accepted.headers["x-claw-agents-api"], "v1");
+  assert.equal((accepted.body as ReturnType<typeof createAgentServiceApiResponse>).allowed, true);
+  assert.equal(JSON.stringify(accepted.body).includes("/Users/example"), false);
+
+  const blocked = createAgentServiceApiHttpResponse({
+    method: "POST",
+    path: "/v1/agents/service-api",
+    body: {
+      operation: "describe_agent",
+      agent: { id: "agent.support", name: "Support" },
+      assignments: [{ id: "assignment.mac", agentId: "agent.support", kind: "internal_mac_chat", status: "active" }],
+    },
+  });
+  assert.equal(blocked.status, 422);
+  assert.equal((blocked.body as ReturnType<typeof createAgentServiceApiResponse>).allowed, false);
+
+  const wrongMethod = createAgentServiceApiHttpResponse({
+    method: "GET",
+    path: "/v1/agents/service-api",
+  });
+  assert.equal(wrongMethod.status, 405);
+  assert.equal((wrongMethod.body as { error: string }).error, "method_not_allowed");
 });
 
 test("Agents V1 hermetic route acceptance covers internal Mac, external support, and subagent delegation", () => {

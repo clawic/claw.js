@@ -157,6 +157,16 @@ claw agents memory-check --record '{"policy":{"readScopes":[{"layer":"global","a
 claw agents budget-check --record '{"policy":{"exceededBehavior":"deny_action","limits":[{"dimension":"external_actions","limit":5,"used":1}]},"request":{"dimension":"external_actions","cost":1,"externalPaidAction":true,"connectorGateAllowed":true}}' --json
 claw agents action-severity --record '{"action":"invoke","resourceType":"connector","externalSideEffect":true,"paidAction":true}' --json
 claw agents autonomy-check --record '{"profile":"act_limited","action":{"action":"invoke","resourceType":"connector","externalSideEffect":true,"paidAction":true},"connectorGateAllowed":true,"budgetAllowed":true}' --json
+claw agents dispatch-plan --record '{"agentId":"agent.ops","assignment":{"id":"assignment.relay","agentId":"agent.ops","kind":"relay","status":"active","channel":"relay"},"assignmentRequest":{"kind":"relay","channel":"relay"},"executionProfile":{"id":"execution.async","executionMode":"async","status":"active","runtime":"service"},"autonomy":{"profile":"act_limited"},"action":{"action":"write","resourceType":"collection"}}' --json
+claw agents context-pack --record '{"agentId":"agent.ops","assignmentId":"assignment.relay","view":{"id":"view.customer","allowedResourceTypes":["contact"],"allowedScopes":[{"scopeType":"customer","scopeId":"customer_1"}],"includeContent":true},"requested":[{"id":"ctx.contact","resourceType":"contact","resourceId":"contact_1","scopeType":"customer","scopeId":"customer_1","content":{"name":"Customer"}}],"agentGrants":[{"resourceType":"*","action":"read","scopeType":"customer","scopeId":"customer_1"}],"assignmentGrants":[{"resourceType":"*","action":"read","scopeType":"customer","scopeId":"customer_1"}],"executionProfileGrants":[{"resourceType":"*","action":"read","scopeType":"customer","scopeId":"customer_1"}],"connectorGrants":[{"resourceType":"*","action":"read","scopeType":"customer","scopeId":"customer_1"}],"hostGrants":[{"resourceType":"*","action":"read","scopeType":"customer","scopeId":"customer_1"}],"runScopeGrants":[{"resourceType":"*","action":"read","scopeType":"customer","scopeId":"customer_1"}]}' --json
+claw agents tool-catalog --record '{"agentId":"agent.ops","assignmentId":"assignment.relay","allowedDomains":["support"],"tools":[{"id":"support.contacts.lookup","title":"Lookup contact","description":"Read contact context.","domain":"support","sourceFeature":"support","parameters":{"type":"object"},"riskLevel":"safe"}],"agentGrants":[{"resourceType":"tool","action":"invoke","scopeType":"domain","scopeId":"support"}],"assignmentGrants":[{"resourceType":"tool","action":"invoke","scopeType":"domain","scopeId":"support"}],"executionProfileGrants":[{"resourceType":"tool","action":"invoke","scopeType":"domain","scopeId":"support"}],"connectorGrants":[{"resourceType":"tool","action":"invoke","scopeType":"domain","scopeId":"support"}],"hostGrants":[{"resourceType":"tool","action":"invoke","scopeType":"domain","scopeId":"support"}],"runScopeGrants":[{"resourceType":"tool","action":"invoke","scopeType":"domain","scopeId":"support"}]}' --json
+claw agents creation-review --record '{"surface":"external_channel","agent":{"id":"agent.ops","name":"Ops","role":"Support"},"assignments":[{"id":"assignment.relay","agentId":"agent.ops","kind":"relay","status":"active","channel":"relay"}],"executionProfiles":[{"id":"execution.async","executionMode":"async","hostAccess":"none","networkPolicy":"connector_only"}],"budgets":[{"id":"budget.relay","exceededBehavior":"deny_action","limits":[{"dimension":"external_actions","limit":10}]}]}' --json
+claw agents storage-audit --record '{"legacyCollections":["company_agents"],"observedTables":["agents","agent_assignments"]}' --json
+claw agents audit-coverage --record '{"expectedKinds":["blueprint","service_api"],"events":[{"id":"audit.blueprint","kind":"blueprint","agentId":"agent.ops","result":"recorded","redaction":"strict","createdAt":"2026-05-17T10:00:00.000Z","metadata":{"kind":"blueprint"}}]}' --json
+claw agents operational-snapshot --record '{"agentId":"agent.ops","assignments":[{"id":"assignment.relay","agentId":"agent.ops","status":"active"}],"runs":[{"id":"run.1","agentId":"agent.ops","status":"running"}],"sessions":[{"id":"session.1","agentId":"agent.ops","status":"active"}],"audits":[{"id":"audit.run","kind":"dispatch_plan","agentId":"agent.ops","result":"recorded","redaction":"strict","createdAt":"2026-05-17T10:00:00.000Z","metadata":{}}]}' --json
+claw agents control-panel --record '{"surface":"external_channel","agent":{"id":"agent.ops","name":"Ops","autonomyProfile":"respond_only"},"assignments":[{"id":"assignment.web","agentId":"agent.ops","kind":"external_web_chat","status":"active","privacyPolicy":"hashed"}],"executionProfiles":[{"id":"execution.web","executionMode":"async","networkPolicy":"connector_only"}],"resourceGrants":[{"id":"grant.support","resourceType":"collection","resourceId":"support_conversations","action":"read","effect":"allow"}],"memoryPolicies":[{"id":"memory.support","writePolicy":"private_only","crossUserBoundary":"explicit_grant_only"}],"budgets":[{"id":"budget.support","exceededBehavior":"deny_action","limits":[{"dimension":"external_actions","limit":5}]}]}' --json
+claw agents privacy-plan --record '{"operation":"export","subject":{"scopeType":"external_user","scopeId":"external_user_1"},"agent":{"id":"agent.ops","name":"Ops"},"supportMessages":[{"id":"message.1","externalUserId":"external_user_1","body":"Need help"}]}' --json
+claw agents paperclip-import --record '{"packageId":"paperclip.ops","agentsMd":"# Ops Reviewer\nRole: reviewer\nSkills: skill.review@1\nInstructions: Review safely.","package":{"skills":[{"ref":"skill.shared","version":"1"}]}}' --json
 claw agents surface-projection --record '{"surface":"relay","agent":{"id":"agent.ops","name":"Ops","secretAllowlist":["vault://agents/ops"]},"assignments":[{"id":"assignment.relay","agentId":"agent.ops","kind":"relay","status":"active","channel":"relay"}],"budgets":[{"id":"budget.relay","exceededBehavior":"deny_action","limits":[{"dimension":"external_actions","limit":10}]}]}' --json
 claw agents config-revision --record '{"agentId":"agent.ops","revision":2,"actorId":"actor.owner","reason":"Tighten MCP assignment","configSnapshot":{"name":"Ops","secretAllowlist":["vault://agents/ops"]}}' --json
 claw agents incident --record '{"agentId":"agent.ops","assignmentId":"assignment.relay","severity":"high","summary":"Unsafe route blocked","metadata":{"rawTraceRef":"trace:redacted"}}' --json
@@ -595,27 +605,36 @@ claw patient patient_123 timeline --json
 claw company create "Acme Corp" --json
 claw account create "Acme Account" --company company_123 --json
 claw deal create "Pilot" --company company_123 --account-id account_123 --json
+claw crm account account_123 overview --json
+claw erp company company_123 overview --json
 claw invoice list --json
 claw invoice create INV-001 --billing-customer billing_customer_123 --total-cents 9900 --json
+claw payment create --billing-customer billing_customer_123 --invoice-id invoice_123 --amount-cents 9900 --json
 claw case create "Smith v Jones" --json
 claw case case_123 evidence add "Signed contract" --json
 claw case case_123 evidence list --json
+claw case case_123 timeline --json
 claw service create API --company company_123 --json
 claw incident create Outage --service service_123 --severity sev2 --json
 claw service service_123 incidents list --json
+claw service service_123 timeline --json
 claw study create "Trial A" --json
 claw study study_123 participants add "Subject 001" --json
 claw study study_123 participants list --json
+claw study study_123 timeline --json
 claw sample create "Tube A" --study-id study_123 --json
 claw sample sample_123 assays add CBC --json
+claw sample sample_123 timeline --json
 claw learner create "Ada Learner" --json
 claw course create "Intro Biology" --json
 claw work-order create "Batch 42" --company company_123 --json
+claw work-order work_order_123 timeline --json
 claw financial-account create "Operating Account" --json
 claw transaction create Lunch --account financial_account_123 --amount-cents 1200 --json
 claw organism create "Mouse A" --species "Mus musculus" --json
 claw experiment create "Dose response" --organism organism_123 --json
 claw experiment experiment_123 samples add "Exp sample 1" --organism organism_123 --json
+claw experiment experiment_123 timeline --json
 claw dense-fixtures seed --json
 claw evidence-source create "Clinic note" --kind document --collection-name patients --record-id patient_123 --json
 claw quality-gap create "Missing date of birth" --target-collection patients --target-id patient_123 --gap-kind missing --json

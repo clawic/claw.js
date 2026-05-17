@@ -4,8 +4,8 @@ import path from "path";
 
 import Database from "better-sqlite3";
 import { AgentStoreFS, type Agent } from "@clawjs/agents";
-import { CLAW_CLI_COMMAND_INTENT_STATUSES, clawDenseDataAcceptanceFixture, clawDenseDataOsRegistry, clawPersistentSurfaceRegistry, connectorExecutionPipeline, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, listClawDenseDataIntentEntries, listClawDenseDataSemanticViewEntries, resolveClawCliCommand, resolveClawPersistentSurfacePath, searchClawCliRegistry, withSurfaceChildren } from "@clawjs/core";
-import type { ClawPersistentSurfaceNode, ClawPersistentSurfaceRegistry, ClawSurfaceEdge, ClawSurfaceRoute } from "@clawjs/core";
+import { CLAW_CLI_COMMAND_INTENT_STATUSES, clawDenseDataAcceptanceFixture, clawDenseDataOsRegistry, clawPersistentSurfaceRegistry, connectorExecutionPipeline, createAgentControlPanel, createAgentPrivacyLifecyclePlan, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, listClawDenseDataIntentEntries, listClawDenseDataSemanticViewEntries, resolveClawCliCommand, resolveClawPersistentSurfacePath, searchClawCliRegistry, withSurfaceChildren } from "@clawjs/core";
+import type { AgentAuditEvent, ClawPersistentSurfaceNode, ClawPersistentSurfaceRegistry, ClawSurfaceEdge, ClawSurfaceRoute } from "@clawjs/core";
 import { v1MainSchemaSurfaceNodes } from "./v1-data-surface.ts";
 import { normalizeDbRow, resolveClawjsMainDbPath, type JsonRecord } from "./v1-data-core.ts";
 import { writeJsonError, writeJsonOk, type CliJsonMeta } from "./cli-json.ts";
@@ -81,6 +81,8 @@ interface AgentInspectFiche {
   incidents: unknown[];
   configRevisions: unknown[];
   routes: Array<{ id: string; visibility: string; validation: string }>;
+  controlPanel: unknown;
+  privacyLifecycle: unknown;
   risks: string[];
   gaps: string[];
   tests: string[];
@@ -127,9 +129,41 @@ function buildAgentInspectFiche(input: InspectCliInput, agentId: string, routes:
     const evaluations = rowsByAgent(db, "agent_evaluations", agent.id);
     const incidents = rowsByAgent(db, "agent_incidents", agent.id);
     const configRevisions = rowsByAgent(db, "agent_config_revisions", agent.id);
+    const auditEvents = readAgentAudit(agent.id, input.flags).slice(-50);
     const agentRoutes = routes.filter((route) => route.id.startsWith("agents."));
     const risks = agentRisks(agent, assignments, resourceGrants, memoryPolicies, executionProfiles, incidents);
     const gaps = agentGaps(agentProjection, assignments, resourceGrants, memoryPolicies, executionProfiles, budgets, agentRoutes);
+    const panelAgent = agentProjection && typeof agentProjection === "object" ? agentProjection as JsonRecord : agent as unknown as JsonRecord;
+    const controlPanel = createAgentControlPanel({
+      agent: panelAgent,
+      assignments: assignments as JsonRecord[],
+      executionProfiles: executionProfiles as JsonRecord[],
+      resourceGrants: resourceGrants as JsonRecord[],
+      memoryPolicies: memoryPolicies as JsonRecord[],
+      budgets: budgets as JsonRecord[],
+      runs: runs as JsonRecord[],
+      sessions: sessions as JsonRecord[],
+      evaluations: evaluations as JsonRecord[],
+      incidents: incidents as JsonRecord[],
+      configRevisions: configRevisions as JsonRecord[],
+      audits: auditEvents as AgentAuditEvent[],
+      generatedAt: new Date(0).toISOString(),
+      redaction: "strict",
+    });
+    const privacyLifecycle = createAgentPrivacyLifecyclePlan({
+      operation: "export",
+      subject: { scopeType: "agent", scopeId: agent.id },
+      agent: panelAgent,
+      assignments: assignments as JsonRecord[],
+      runs: runs as JsonRecord[],
+      sessions: sessions as JsonRecord[],
+      evaluations: evaluations as JsonRecord[],
+      incidents: incidents as JsonRecord[],
+      configRevisions: configRevisions as JsonRecord[],
+      audits: auditEvents as AgentAuditEvent[],
+      requestedAt: new Date(0).toISOString(),
+      redaction: "strict",
+    });
     return {
       schemaVersion: 1,
       agent: {
@@ -162,6 +196,8 @@ function buildAgentInspectFiche(input: InspectCliInput, agentId: string, routes:
       incidents,
       configRevisions,
       routes: agentRoutes.map((route) => ({ id: route.id, visibility: route.visibility, validation: route.validation })),
+      controlPanel,
+      privacyLifecycle,
       risks,
       gaps,
       tests: [
@@ -169,7 +205,7 @@ function buildAgentInspectFiche(input: InspectCliInput, agentId: string, routes:
         "packages/clawjs/src/index-data.test.ts",
         "packages/clawjs/src/inspect-cli.test.ts",
       ],
-      recentAudit: readAgentAudit(agent.id, input.flags).slice(-10),
+      recentAudit: auditEvents.slice(-10),
     };
   } finally {
     db?.close();

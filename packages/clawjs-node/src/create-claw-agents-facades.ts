@@ -1,16 +1,27 @@
 import {
   createAgentActivityFeed,
   createAgentAuditEvent,
+  createAgentAuditCoverageReport,
   createAgentBlueprint,
   createAgentConfigRevision,
+  createAgentContextPack,
+  createAgentControlPanel,
+  createAgentCreationReview,
+  createAgentDispatchPlan,
   createAgentEvaluation,
   createAgentIncident,
+  createAgentOperationalSnapshot,
+  createAgentPaperclipImportPlan,
   createAgentPermissionEscalationRequest,
+  createAgentPrivacyLifecyclePlan,
   createAgentRetirementPlan,
   createAgentSafePackageExport,
   createAgentSafeSurfaceProjection,
   createAgentServiceApiResponse,
+  createAgentServiceApiHttpResponse,
+  createAgentStorageAudit,
   createAgentSupportInboxProjection,
+  createAgentToolCatalogProjection,
   evaluateAgentAssignmentRoute,
   evaluateAgentActionSeverity,
   evaluateAgentAutonomyPolicy,
@@ -25,6 +36,8 @@ import {
   type AgentActivityFeedInput,
   type AgentActionSeverityRequest,
   type AgentActionSeverityResult,
+  type AgentAuditCoverageInput,
+  type AgentAuditCoverageReport,
   type AgentAutonomyPolicyInput,
   type AgentAutonomyPolicyResult,
   type AgentAssignmentPrivacyPolicy,
@@ -38,6 +51,14 @@ import {
   type AgentBudgetRequest,
   type AgentConfigRevision,
   type AgentConfigRevisionInput,
+  type AgentContextPack,
+  type AgentContextPackInput,
+  type AgentControlPanel,
+  type AgentControlPanelInput,
+  type AgentCreationReview,
+  type AgentCreationReviewInput,
+  type AgentDispatchPlan,
+  type AgentDispatchPlanInput,
   type AgentDelegationAccessInput,
   type AgentEffectiveAccessInput,
   type AgentEffectiveAccessResult,
@@ -49,7 +70,13 @@ import {
   type AgentMemoryAccessRequest,
   type AgentMemoryAccessResult,
   type AgentMemoryPolicy,
+  type AgentOperationalSnapshot,
+  type AgentOperationalSnapshotInput,
+  type AgentPaperclipImportInput,
+  type AgentPaperclipImportPlan,
   type AgentPermissionEscalationRequest,
+  type AgentPrivacyLifecycleInput,
+  type AgentPrivacyLifecyclePlan,
   type AgentRetirementInput,
   type AgentRetirementPlan,
   type AgentResolvedExternalIdentity,
@@ -57,12 +84,18 @@ import {
   type AgentSafePackageExport,
   type AgentServiceApiRequest,
   type AgentServiceApiResponse,
+  type AgentServiceApiHttpRequest,
+  type AgentServiceApiHttpResponse,
   type AgentSafeSurfaceProjection,
   type AgentSafeSurfaceProjectionInput,
+  type AgentStorageAudit,
+  type AgentStorageAuditInput,
   type AgentSupervisorAuthorityInput,
   type AgentSupervisorAuthorityResult,
   type AgentSupportInboxProjection,
   type AgentSupportInboxProjectionInput,
+  type AgentToolCatalogProjection,
+  type AgentToolCatalogProjectionInput,
 } from "@clawjs/core";
 
 export interface ClawAgentsFacade {
@@ -76,6 +109,12 @@ export interface ClawAgentsFacade {
   budgetCheck: (policy: AgentBudgetPolicy, request: AgentBudgetRequest) => AgentBudgetEvaluationResult;
   actionSeverity: (input: AgentActionSeverityRequest) => AgentActionSeverityResult;
   autonomyCheck: (input: AgentAutonomyPolicyInput) => AgentAutonomyPolicyResult;
+  dispatchPlan: (input: AgentDispatchPlanInput) => AgentDispatchPlan;
+  contextPack: (input: AgentContextPackInput) => AgentContextPack;
+  controlPanel: (input: AgentControlPanelInput) => AgentControlPanel;
+  toolCatalog: (input: AgentToolCatalogProjectionInput) => AgentToolCatalogProjection;
+  creationReview: (input: AgentCreationReviewInput) => AgentCreationReview;
+  storageAudit: (input?: AgentStorageAuditInput) => AgentStorageAudit;
   surfaceProjection: (input: AgentSafeSurfaceProjectionInput) => AgentSafeSurfaceProjection;
   configRevision: (input: AgentConfigRevisionInput) => AgentConfigRevision;
   incident: (input: AgentIncidentInput) => AgentIncident;
@@ -84,7 +123,12 @@ export interface ClawAgentsFacade {
   evaluation: (input: AgentEvaluationInput) => AgentEvaluation;
   safePackageExport: (input: AgentSafeExportInput) => AgentSafePackageExport;
   serviceApi: (input: AgentServiceApiRequest) => AgentServiceApiResponse;
+  serviceApiHttp: (input: AgentServiceApiHttpRequest) => AgentServiceApiHttpResponse;
   retirementPlan: (input: AgentRetirementInput) => AgentRetirementPlan;
+  auditCoverage: (input?: AgentAuditCoverageInput) => AgentAuditCoverageReport;
+  operationalSnapshot: (input: AgentOperationalSnapshotInput) => AgentOperationalSnapshot;
+  paperclipImport: (input: AgentPaperclipImportInput) => AgentPaperclipImportPlan;
+  privacyPlan: (input: AgentPrivacyLifecycleInput) => AgentPrivacyLifecyclePlan;
   permissionEscalation: (input: Omit<AgentPermissionEscalationRequest, "id"> & { id?: string }) => AgentPermissionEscalationRequest;
   auditEvent: (input: Parameters<typeof createAgentAuditEvent>[0]) => AgentAuditEvent;
   redactBoundaryValue: typeof redactAgentBoundaryValue;
@@ -103,6 +147,12 @@ export function createClawAgentsFacades(): { agents: ClawAgentsFacade } {
       budgetCheck: evaluateAgentBudget,
       actionSeverity: evaluateAgentActionSeverity,
       autonomyCheck: evaluateAgentAutonomyPolicy,
+      dispatchPlan: createAgentDispatchPlan,
+      contextPack: createAgentContextPack,
+      controlPanel: createAgentControlPanel,
+      toolCatalog: createAgentToolCatalogProjection,
+      creationReview: createAgentCreationReview,
+      storageAudit: createAgentStorageAudit,
       surfaceProjection: createAgentSafeSurfaceProjection,
       configRevision: createAgentConfigRevision,
       incident: createAgentIncident,
@@ -111,7 +161,12 @@ export function createClawAgentsFacades(): { agents: ClawAgentsFacade } {
       evaluation: createAgentEvaluation,
       safePackageExport: createAgentSafePackageExport,
       serviceApi: createAgentServiceApiResponse,
+      serviceApiHttp: createAgentServiceApiHttpResponse,
       retirementPlan: createAgentRetirementPlan,
+      auditCoverage: createAgentAuditCoverageReport,
+      operationalSnapshot: createAgentOperationalSnapshot,
+      paperclipImport: createAgentPaperclipImportPlan,
+      privacyPlan: createAgentPrivacyLifecyclePlan,
       permissionEscalation: createAgentPermissionEscalationRequest,
       auditEvent: createAgentAuditEvent,
       redactBoundaryValue: redactAgentBoundaryValue,

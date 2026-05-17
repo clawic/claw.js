@@ -27,7 +27,9 @@ new public concepts.
 `apps/board` stores its organization roster in canonical `agents` records with
 `sourceDomain: "board"`, `ownerKind: "company"`, `ownerId`, and a preserved
 `boardStatus` projection for the board UI. The historical `company_agents`
-store is read-only fallback/cleanup legacy, not a new write path.
+store is read-only fallback/cleanup legacy, not a new write path; board updates
+for a legacy-only row migrate that row into canonical `agents` before applying
+the patch.
 
 Agents V1 uses three layers:
 
@@ -72,13 +74,19 @@ The first implementation slice is model plus gates:
   supervisor-check`, `claw agents route-check`, `claw agents
   resolve-external-identity`, and `claw agents project-support-inbox`,
   `claw agents memory-check`, `claw agents
-  budget-check`, `claw agents action-severity`, `claw agents autonomy-check`, and `claw agents
-  surface-projection`, `claw agents config-revision`, and `claw agents
+  budget-check`, `claw agents action-severity`, `claw agents autonomy-check`,
+  `claw agents dispatch-plan`, `claw agents context-pack`, and `claw agents
+  tool-catalog`, `claw agents creation-review`, `claw agents surface-projection`,
+  `claw agents storage-audit`, `claw agents audit-coverage`,
+  `claw agents operational-snapshot`, `claw agents control-panel`,
+  `claw agents privacy-plan`, `claw agents paperclip-import`,
+  `claw agents config-revision`, and `claw agents
   incident`, `claw agents activity-feed`, `claw agents blueprint`, `claw
   agents evaluation`, and `claw agents retirement-plan`
 - `createClaw().agents` SDK facade with the same Agents V1 policy gates and
   redacted package/surface helpers, including a fail-closed `service_api`
-  envelope for service callers
+  envelope and hermetic POST `/v1/agents/service-api` handler for service
+  callers
 - MCP tool calls require both connector control-plane approval and an Agents V1
   `mcp_api` assignment/access policy before protocol invocation
 - `@clawjs/core` policy evaluators and `claw agents` gates for effective
@@ -90,15 +98,18 @@ The first implementation slice is model plus gates:
   for Relay/MCP/API/UI, redacted config revisions, first-class incidents,
   redacted activity feeds for human consumption, formal reusable blueprints,
   portable skill bindings with refs/versions and required grants, redacted
-  evaluations, recoverable retirement plans, escalation requests, and
+  evaluations, recoverable retirement plans, privacy lifecycle plans for
+  subject export/delete/anonymization, human control panel projections,
+  optional Paperclip-style import plans that map to Claw blueprints without
+  making Paperclip a dependency or source of truth, escalation requests, and
   delegation no-laundering
 - route graph coverage for internal Mac assignments, external support
   assignments, MCP/API assignments, runtime runs, sessions, grants, memory
   policies, and support/inbox projection
 - `claw inspect agent <id>` for the Agents V1 fiche: identity, owner, org
   graph, assignments, grants, memory policies, execution profiles, budgets,
-  runs, sessions, routes, risks, gaps, tests, incidents, revisions, and recent
-  audit
+  runs, sessions, routes, risks, gaps, tests, incidents, revisions, control
+  panel, privacy lifecycle projection, and recent audit
 
 Validation must be hermetic unless the user explicitly approves real providers,
 paid calls, raw secrets, production mutation, or physical/native permissions.
@@ -110,5 +121,10 @@ implicit success.
 Mac UI visibility is based on assignments and favorites, not every global
 agent. External channels cannot route without an active assignment. Subagents
 delegate through assignments and cannot launder authority, budgets, grants, or
-memory. Future UI work should build a full agent control panel on top of these
-contracts rather than creating a second app-local agent model.
+memory. UI work should consume the shared control-panel projection instead of
+creating a second app-local agent model.
+
+Paperclip remains inspiration only. Optional compatibility maps AGENTS.md-style
+or package-style agent descriptions into draft Claw blueprints and safe
+packages; imported output is still governed by Agents V1 grants, assignments,
+redaction, review, and activation gates.

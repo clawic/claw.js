@@ -23,6 +23,10 @@
       "lines": 1580,
       "reason": "Remaining CLI smoke and integration test surface after scenario split; add new scenario files instead of expanding broadly."
     },
+    "packages/clawjs/src/cli-search-index.test.ts": {
+      "lines": 2084,
+      "reason": "Search index integration coverage after protected refs, ACL, action, facet, and ranking scenarios; split new search scenarios into focused test files before expanding further."
+    },
     "examples/showcase/src/lib/i18n/messages.ts": {
       "lines": 1267,
       "reason": "English locale, locale registry, and brand override assembly after locale table extraction; add new translations in locale-specific modules."
@@ -50,6 +54,10 @@
     "packages/clawjs-core/src/surface-registry.ts": {
       "lines": 1589,
       "reason": "Stable surface registry after cross-surface enforcement expansion for routes, events, app/browser storage keys, report governance state, stable package/native/format surfaces, and registered DDL sources; split route families and compatibility categories into focused modules before expanding further."
+    },
+    "packages/clawjs-core/src/agents-v1.ts": {
+      "lines": 2225,
+      "reason": "Agents V1 runtime model after autonomy, supervisor, memory, budget, access, routing, and projection gates; split new policy families into focused modules before expanding further."
     },
     "packages/clawjs-node/src/create-claw.test.ts": {
       "lines": 1994,

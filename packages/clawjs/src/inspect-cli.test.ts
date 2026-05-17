@@ -149,11 +149,17 @@ test("runCli exposes an agent inspection fiche", async () => {
       owner: { source: string };
       risks: string[];
       gaps: string[];
+      controlPanel: { panelKind: string; posture: { failClosed: boolean }; audit: { kind: string } };
+      privacyLifecycle: { planKind: string; operation: string; audit: { kind: string } };
       tests: string[];
     }>(result.stdout).data;
     assert.equal(payload.agent.id, "agent.inspect");
     assert.equal(payload.agent.name, "Inspect Agent");
     assert.equal(payload.owner.source, "agents_v1_projection");
+    assert.equal(payload.controlPanel.panelKind, "claw_agent_control_panel");
+    assert.equal(payload.controlPanel.posture.failClosed, true);
+    assert.equal(payload.privacyLifecycle.planKind, "claw_agent_privacy_lifecycle_plan");
+    assert.equal(payload.privacyLifecycle.operation, "export");
     assert.equal(payload.risks.includes("empty_grants_fail_closed"), true);
     assert.equal(payload.gaps.includes("no_resource_grants"), true);
     assert.equal(payload.tests.includes("packages/clawjs/src/inspect-cli.test.ts"), true);
@@ -212,6 +218,8 @@ test("runCli renders an Agents V1 inspect fiche with grants, routes, memory, and
       routes: Array<{ id: string }>;
       risks: string[];
       gaps: string[];
+      controlPanel: { permissions: { allowGrants: number }; operationalSnapshot: { snapshotKind: string } };
+      privacyLifecycle: { actions: Array<{ disposition: string }> };
       tests: string[];
     }>(inspect.stdout).data;
     assert.equal(fiche.agent.id, "agent.support");
@@ -220,6 +228,9 @@ test("runCli renders an Agents V1 inspect fiche with grants, routes, memory, and
     assert.equal(fiche.memoryPolicies.some((entry) => entry.writePolicy === "private_only"), true);
     assert.equal(fiche.executionProfiles.some((entry) => entry.networkPolicy === "connector_only"), true);
     assert.equal(fiche.budgets.some((entry) => entry.id === "budget.support"), true);
+    assert.equal(fiche.controlPanel.permissions.allowGrants, 1);
+    assert.equal(fiche.controlPanel.operationalSnapshot.snapshotKind, "claw_agent_operational_snapshot");
+    assert.equal(fiche.privacyLifecycle.actions.some((action) => action.disposition === "include_export"), true);
     assert.equal(fiche.routes.some((entry) => entry.id === "agents.externalSupportAssignment"), true);
     assert.equal(fiche.risks.includes("secret_refs_require_brokered_leases"), true);
     assert.equal(fiche.gaps.includes("no_resource_grants"), false);

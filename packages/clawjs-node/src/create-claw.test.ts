@@ -128,6 +128,191 @@ test("createClaw exposes Agents V1 policy gates through claw.agents", async () =
   assert.equal(autonomy.allowed, true);
   assert.equal(autonomy.dispatchMode, "act");
 
+  const dispatch = claw.agents.dispatchPlan({
+    agentId: "agent.sdk",
+    assignment: {
+      id: "assignment.api",
+      agentId: "agent.sdk",
+      kind: "mcp_api",
+      status: "active",
+      channel: "api",
+      privacyPolicy: "hashed",
+      externalDisclosure: "transparent_agent",
+    },
+    assignmentRequest: { kind: "mcp_api", channel: "api" },
+    executionProfile: { id: "execution.sync", executionMode: "sync", status: "active", runtime: "service" },
+    autonomy: { profile: "act_limited" },
+    action: { action: "write", resourceType: "collection" },
+    now: "2026-05-17T10:00:00.000Z",
+  });
+  assert.equal(dispatch.allowed, true);
+  assert.equal(dispatch.disposition, "invoke_sync");
+  assert.equal(dispatch.runStatus, "running");
+
+  const contextGrant = (id: string) => ({
+    id,
+    resourceType: "*",
+    action: "read" as const,
+    scopeType: "customer",
+    scopeId: "customer_1",
+    effect: "allow" as const,
+  });
+  const contextPack = claw.agents.contextPack({
+    agentId: "agent.sdk",
+    assignmentId: "assignment.api",
+    view: {
+      id: "view.sdk.customer",
+      allowedResourceTypes: ["contact"],
+      allowedScopes: [{ scopeType: "customer", scopeId: "customer_1" }],
+      includeContent: false,
+    },
+    requested: [{
+      id: "ctx.sdk.contact",
+      resourceType: "contact",
+      resourceId: "contact_1",
+      scopeType: "customer",
+      scopeId: "customer_1",
+      content: { name: "Customer" },
+    }],
+    agentGrants: [contextGrant("agent")],
+    assignmentGrants: [contextGrant("assignment")],
+    executionProfileGrants: [contextGrant("execution")],
+    connectorGrants: [contextGrant("connector")],
+    hostGrants: [contextGrant("host")],
+    runScopeGrants: [contextGrant("run")],
+    now: "2026-05-17T10:00:00.000Z",
+  });
+  assert.equal(contextPack.packKind, "claw_agent_context_pack");
+  assert.equal(contextPack.items[0]?.id, "ctx.sdk.contact");
+  assert.equal("content" in (contextPack.items[0] ?? {}), false);
+  assert.equal(contextPack.audit.kind, "context_pack");
+
+  const toolCatalog = claw.agents.toolCatalog({
+    agentId: "agent.sdk",
+    assignmentId: "assignment.api",
+    allowedDomains: ["support"],
+    tools: [{
+      id: "support.contacts.lookup",
+      title: "Lookup contact",
+      description: "Read contact context.",
+      domain: "support",
+      sourceFeature: "support",
+      parameters: { type: "object" },
+      riskLevel: "safe",
+    }],
+    agentGrants: [{ ...contextGrant("agent"), resourceType: "tool", action: "invoke", scopeType: "domain", scopeId: "support" }],
+    assignmentGrants: [{ ...contextGrant("assignment"), resourceType: "tool", action: "invoke", scopeType: "domain", scopeId: "support" }],
+    executionProfileGrants: [{ ...contextGrant("execution"), resourceType: "tool", action: "invoke", scopeType: "domain", scopeId: "support" }],
+    connectorGrants: [{ ...contextGrant("connector"), resourceType: "tool", action: "invoke", scopeType: "domain", scopeId: "support" }],
+    hostGrants: [{ ...contextGrant("host"), resourceType: "tool", action: "invoke", scopeType: "domain", scopeId: "support" }],
+    runScopeGrants: [{ ...contextGrant("run"), resourceType: "tool", action: "invoke", scopeType: "domain", scopeId: "support" }],
+    now: "2026-05-17T10:00:00.000Z",
+  });
+  assert.equal(toolCatalog.catalogKind, "claw_agent_tool_catalog");
+  assert.equal(toolCatalog.tools[0]?.id, "support.contacts.lookup");
+  assert.equal(toolCatalog.audit.kind, "tool_catalog");
+
+  const creationReview = claw.agents.creationReview({
+    reviewedAt: "2026-05-17T10:00:00.000Z",
+    surface: "service_api",
+    agent: { id: "agent.sdk", name: "SDK Agent", role: "Support" },
+    assignments: [{ id: "assignment.api", agentId: "agent.sdk", kind: "mcp_api", status: "active", channel: "api" }],
+    executionProfiles: [{ id: "execution.sync", executionMode: "sync", hostAccess: "none", networkPolicy: "connector_only" }],
+    budgets: [{ id: "budget.api", exceededBehavior: "deny_action", limits: [{ dimension: "external_actions", limit: 3 }] }],
+  });
+  assert.equal(creationReview.reviewKind, "claw_agent_creation_review");
+  assert.equal(creationReview.ready, true);
+  assert.equal(creationReview.audit.kind, "creation_review");
+
+  const storageAudit = claw.agents.storageAudit({
+    legacyCollections: [],
+    auditedAt: "2026-05-17T10:00:00.000Z",
+  });
+  assert.equal(storageAudit.auditKind, "claw_agent_storage_audit");
+  assert.equal(storageAudit.ready, true);
+  assert.equal(storageAudit.canonicalCollections.includes("agent_sessions"), true);
+
+  const auditCoverage = claw.agents.auditCoverage({
+    expectedKinds: ["blueprint"],
+    events: [claw.agents.auditEvent({
+      id: "audit.sdk.blueprint",
+      kind: "blueprint",
+      agentId: "agent.sdk",
+      result: "recorded",
+      createdAt: "2026-05-17T10:00:00.000Z",
+      redaction: "strict",
+      metadata: { source: "sdk" },
+    })],
+    auditedAt: "2026-05-17T10:00:00.000Z",
+  });
+  assert.equal(auditCoverage.reportKind, "claw_agent_audit_coverage");
+  assert.equal(auditCoverage.ready, true);
+
+  const operationalSnapshot = claw.agents.operationalSnapshot({
+    agentId: "agent.sdk",
+    assignments: [{ id: "assignment.api", agentId: "agent.sdk", status: "active", updatedAt: "2026-05-17T10:00:00.000Z" }],
+    runs: [{ id: "run.sdk", agentId: "agent.sdk", status: "running", startedAt: "2026-05-17T10:00:00.000Z" }],
+    sessions: [{ id: "session.sdk", agentId: "agent.sdk", status: "active", createdAt: "2026-05-17T10:00:00.000Z" }],
+    audits: [claw.agents.auditEvent({
+      id: "audit.sdk.run",
+      kind: "dispatch_plan",
+      agentId: "agent.sdk",
+      result: "recorded",
+      redaction: "strict",
+      createdAt: "2026-05-17T10:00:00.000Z",
+      metadata: {},
+    })],
+    capturedAt: "2026-05-17T11:00:00.000Z",
+  });
+  assert.equal(operationalSnapshot.snapshotKind, "claw_agent_operational_snapshot");
+  assert.equal(operationalSnapshot.summary.runs.running, 1);
+  assert.deepEqual(operationalSnapshot.gaps, []);
+
+  const controlPanel = claw.agents.controlPanel({
+    generatedAt: "2026-05-17T11:00:00.000Z",
+    surface: "service_api",
+    agent: { id: "agent.sdk", name: "SDK Agent", autonomyProfile: "act_limited" },
+    assignments: [{ id: "assignment.api", agentId: "agent.sdk", kind: "mcp_api", status: "active", channel: "api", privacyPolicy: "hashed" }],
+    executionProfiles: [{ id: "execution.sync", executionMode: "sync", networkPolicy: "connector_only" }],
+    resourceGrants: [{ id: "grant.api", agentId: "agent.sdk", resourceType: "collection", resourceId: "support_conversations", action: "read", effect: "allow" }],
+    memoryPolicies: [{ id: "memory.sdk", writePolicy: "private_only", crossUserBoundary: "explicit_grant_only" }],
+    budgets: [{ id: "budget.api", exceededBehavior: "deny_action", limits: [{ dimension: "external_actions", limit: 3 }] }],
+    runs: [{ id: "run.sdk", agentId: "agent.sdk", status: "running", startedAt: "2026-05-17T10:00:00.000Z" }],
+    sessions: [{ id: "session.sdk", agentId: "agent.sdk", status: "active", createdAt: "2026-05-17T10:00:00.000Z" }],
+    audits: [claw.agents.auditEvent({
+      id: "audit.sdk.panel",
+      kind: "dispatch_plan",
+      agentId: "agent.sdk",
+      result: "recorded",
+      redaction: "strict",
+      createdAt: "2026-05-17T10:00:00.000Z",
+      metadata: {},
+    })],
+  });
+  assert.equal(controlPanel.panelKind, "claw_agent_control_panel");
+  assert.equal(controlPanel.permissions.allowGrants, 1);
+  assert.equal(controlPanel.audit.kind, "control_panel");
+
+  const privacyPlan = claw.agents.privacyPlan({
+    operation: "export",
+    subject: { scopeType: "external_user", scopeId: "external_user_1" },
+    requestedAt: "2026-05-17T11:00:00.000Z",
+    agent: { id: "agent.sdk", name: "SDK Agent", secretAllowlist: ["vault://agents/sdk"] },
+    supportMessages: [{ id: "message.sdk", externalUserId: "external_user_1", body: "Need help" }],
+  });
+  assert.equal(privacyPlan.planKind, "claw_agent_privacy_lifecycle_plan");
+  assert.equal(privacyPlan.actions[0]?.disposition, "include_export");
+  assert.equal(privacyPlan.exportPackage?.agent.secretAllowlist, "[REDACTED]");
+
+  const paperclipImport = claw.agents.paperclipImport({
+    packageId: "paperclip.sdk",
+    importedAt: "2026-05-17T11:00:00.000Z",
+    agentsMd: "# SDK Reviewer\nRole: reviewer\nSkills: skill.review@1\nInstructions: Review SDK changes.",
+  });
+  assert.equal(paperclipImport.planKind, "claw_agent_paperclip_import_plan");
+  assert.equal(paperclipImport.dependencyPolicy, "paperclip_not_required");
+  assert.equal(paperclipImport.blueprints[0]?.agencyMode, "reviewer");
+
   const service = claw.agents.serviceApi({
     requestId: "request.sdk.service",
     operation: "describe_agent",
@@ -156,6 +341,21 @@ test("createClaw exposes Agents V1 policy gates through claw.agents", async () =
   assert.equal(service.projection.surface, "service_api");
   assert.equal("secretAllowlist" in service.projection.agent, false);
   assert.equal("localPath" in service.projection.agent, false);
+
+  const serviceHttp = claw.agents.serviceApiHttp({
+    method: "POST",
+    path: "/v1/agents/service-api",
+    receivedAt: "2026-05-17T10:00:00.000Z",
+    body: {
+      requestId: "request.sdk.http",
+      operation: "describe_agent",
+      agent: { id: "agent.sdk", name: "SDK Agent" },
+      assignments: [{ id: "assignment.api", agentId: "agent.sdk", kind: "mcp_api", status: "active", channel: "api" }],
+      budgets: [{ id: "budget.api", exceededBehavior: "deny_action", limits: [{ dimension: "external_actions", limit: 3 }] }],
+    },
+  });
+  assert.equal(serviceHttp.status, 200);
+  assert.equal(serviceHttp.headers["x-claw-agents-api"], "v1");
 
   const retirement = claw.agents.retirementPlan({
     agent: { id: "agent.sdk", name: "SDK Agent" },
