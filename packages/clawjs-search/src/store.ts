@@ -912,23 +912,25 @@ export class SearchStore {
   }
 
   private resultFromRow(row: SearchDocumentRow, input: SearchQueryInput): SearchResult {
-    const fragmentsWithMatch = (this.db.prepare(`
-      SELECT id, title, snippet, body FROM search_fragments
-      WHERE document_id = ?
-      ORDER BY sort_order ASC, id ASC
-      LIMIT 5
-    `).all(row.id) as SearchFragmentRow[]).map((fragment) => {
-      const match = scoreLexicalMatch(input.query, `${fragment.title} ${fragment.snippet ?? ""} ${fragment.body}`);
-      return {
-        fragment: {
-          id: fragment.id,
-          title: fragment.title || undefined,
-          snippet: fragment.snippet || fragment.body.slice(0, 180) || undefined,
-          score: match.score,
-        },
-        match,
-      };
-    });
+    const permissions = { canOpen: true, canPreview: true, redacted: false, ...parseJson(row.permissions_json) };
+    const previewRedacted = permissions.redacted === true || permissions.canPreview === false;
+    const fragmentsWithMatch = previewRedacted ? [] : (this.db.prepare(`
+        SELECT id, title, snippet, body FROM search_fragments
+        WHERE document_id = ?
+        ORDER BY sort_order ASC, id ASC
+        LIMIT 5
+      `).all(row.id) as SearchFragmentRow[]).map((fragment) => {
+        const match = scoreLexicalMatch(input.query, `${fragment.title} ${fragment.snippet ?? ""} ${fragment.body}`);
+        return {
+          fragment: {
+            id: fragment.id,
+            title: fragment.title || undefined,
+            snippet: fragment.snippet || fragment.body.slice(0, 180) || undefined,
+            score: match.score,
+          },
+          match,
+        };
+      });
     const fragments = fragmentsWithMatch.map((entry) => entry.fragment);
     const actions = (this.db.prepare("SELECT action_json FROM search_actions WHERE document_id = ? ORDER BY action_id ASC").all(row.id) as Array<{ action_json: string }>).map((action) => parseJson<SearchAction>(action.action_json));
     const lexical = scoreLexicalMatch(input.query, `${row.title} ${row.subtitle ?? ""} ${row.snippet ?? ""} ${row.body}`);
@@ -947,14 +949,17 @@ export class SearchStore {
       type: row.type,
       title: row.title,
       ...(row.subtitle ? { subtitle: row.subtitle } : {}),
-      snippet: row.snippet ?? row.body.slice(0, 180),
+      snippet: previewRedacted ? "[redacted]" : row.snippet ?? row.body.slice(0, 180),
       score: score.total,
       updatedAt: row.updated_at,
       ...(row.resource_id ? { resourceId: row.resource_id } : {}),
       ...(row.path ? { path: row.path } : {}),
       ...(fragments.length ? { fragments } : {}),
       ...(actions.length ? { actions } : {}),
-      permissions: { canOpen: true, canPreview: true, redacted: false, ...parseJson(row.permissions_json) },
+      permissions: {
+        ...permissions,
+        ...(previewRedacted ? { canPreview: false, redacted: true } : {}),
+      },
       metadata,
       ...(input.explain ? {
         explanation: {
