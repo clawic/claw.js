@@ -656,6 +656,23 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(pausedPayload.data.source, "commands");
     assert.equal(pausedPayload.data.state, "paused");
     assert.equal(pausedPayload.data.sources.find((source) => source.id === "commands")?.state, "paused");
+    const configDb = new Database(resolveClawjsMainDbPath({ ...process.env, CLAW_DATA_DIR: dataRoot }));
+    try {
+      const configRow = configDb.prepare("SELECT source, state, profile, surface FROM search_source_config WHERE source = ?").get("commands") as {
+        source: string;
+        state: string;
+        profile: string;
+        surface: string;
+      };
+      assert.deepEqual(configRow, {
+        source: "commands",
+        state: "paused",
+        profile: "framework",
+        surface: "claw.search.sources",
+      });
+    } finally {
+      configDb.close();
+    }
 
     const pausedQuery = await runCliCapture(["search", "query", "system capabilities", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(pausedQuery.code, CLI_EXIT_DEGRADED);
@@ -740,6 +757,55 @@ test("search service run-once obeys worker resource budgets", async () => {
     assert.equal(failurePayload.data.worker?.items[0]?.source, "missing.source");
     assert.equal(failurePayload.data.worker?.items[0]?.status, "failed");
     assert.equal(failurePayload.data.worker?.items[0]?.error?.includes("cannot index source"), true);
+  });
+});
+
+test("search source controls persist canonical config in core.sqlite", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-core-config-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const paused = await runCliCapture(["search", "sources", "pause", "commands", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(paused.code, CLI_EXIT_OK);
+
+    const core = new Database(path.join(dataRoot, "core.sqlite"));
+    try {
+      const row = core.prepare("SELECT source, state, profile FROM search_source_config WHERE source = ?").get("commands") as { source: string; state: string; profile: string } | undefined;
+      assert.deepEqual(row, { source: "commands", state: "paused", profile: "framework" });
+    } finally {
+      core.close();
+    }
+
+    fs.rmSync(path.join(dataRoot, "search.sqlite"), { force: true });
+    const status = await runCliCapture(["search", "status", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(status.code, CLI_EXIT_OK);
+    const statusPayload = JSON.parse(status.stdout) as {
+      data: { sources: Array<{ source: string; state: string }> };
+    };
+    assert.equal(statusPayload.data.sources.find((source) => source.source === "commands")?.state, "paused");
+
+    const query = await runCliCapture(["search", "query", "system capabilities", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_DEGRADED);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: { partial: boolean; omittedSources: Array<{ source: string; reason: string; message?: string }> };
+    };
+    assert.equal(queryPayload.data.partial, true);
+    assert.equal(queryPayload.data.omittedSources.some((source) => source.source === "commands" && source.reason === "disabled" && source.message?.includes("paused")), true);
+
+    const resumed = await runCliCapture(["search", "sources", "resume", "commands", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(resumed.code, CLI_EXIT_OK);
+    const resumedCore = new Database(path.join(dataRoot, "core.sqlite"));
+    try {
+      const state = (resumedCore.prepare("SELECT state FROM search_source_config WHERE source = ?").get("commands") as { state: string } | undefined)?.state;
+      assert.equal(state, "enabled");
+    } finally {
+      resumedCore.close();
+    }
   });
 });
 
