@@ -384,6 +384,20 @@ test("runCli searches registered local docs and ADR contents", async () => {
   assert.equal(payload.data.results.some((entry) => entry.type === "adr" && entry.path === "docs/adr/0007-cli-agent-interface.md" && /Stable JSON output uses/.test(entry.summary)), true);
 });
 
+test("runCli searches discoverability and route governance artifacts", async () => {
+  for (const [query, expectedPath] of [
+    ["surface route graph", "docs/adr/0012-surface-route-graph.md"],
+    ["docs alignment", "skills/docs-alignment-update/SKILL.md"],
+    ["discoverability", "docs/adr/0017-discoverability-and-meta-code-routing.md"],
+    ["meta-code routing", "docs/adr/0017-discoverability-and-meta-code-routing.md"],
+  ]) {
+    const result = await runCliCapture(["search", query, "--json"], process.cwd());
+    assert.equal(result.code, CLI_EXIT_OK, query);
+    const payload = JSON.parse(result.stdout) as { data: { results: Array<{ path?: string }> } };
+    assert.equal(payload.data.results.some((entry) => entry.path === expectedPath), true, query);
+  }
+});
+
 test("runCli prints related matches for unknown human commands", async () => {
   const result = await runCliCapture(["peopel"], process.cwd());
   assert.equal(result.code, CLI_EXIT_USAGE);

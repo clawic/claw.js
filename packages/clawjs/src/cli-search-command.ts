@@ -49,6 +49,9 @@ function searchRegisteredLocalFiles(query: string, cwd: string): ClawCliSearchRe
     for (const test of entry.tests) paths.set(test, { type: "test", canonicalName: entry.target ?? entry.name });
     paths.set(entry.source.file, { type: "source", canonicalName: entry.target ?? entry.name });
   }
+  for (const entry of discoverabilitySearchFiles(cwd)) {
+    paths.set(entry.path, { type: entry.type, canonicalName: entry.canonicalName });
+  }
 
   const results: ClawCliSearchResult[] = [];
   for (const [relativePath, meta] of paths) {
@@ -74,6 +77,34 @@ function searchRegisteredLocalFiles(query: string, cwd: string): ClawCliSearchRe
     });
   }
   return results;
+}
+
+function discoverabilitySearchFiles(cwd: string): Array<{ path: string; type: ClawCliSearchResult["type"]; canonicalName: string }> {
+  const registryPath = path.resolve(cwd, "docs/discoverability.registry.json");
+  try {
+    const registry = JSON.parse(fs.readFileSync(registryPath, "utf8")) as {
+      artifacts?: Array<{
+        id?: string;
+        kind?: string;
+        canonicalSource?: string;
+        searchQueries?: Array<{ expectPath?: string }>;
+      }>;
+    };
+    const entries: Array<{ path: string; type: ClawCliSearchResult["type"]; canonicalName: string }> = [];
+    for (const artifact of registry.artifacts ?? []) {
+      const type: ClawCliSearchResult["type"] = artifact.kind === "adr" || artifact.canonicalSource?.includes("/adr/") ? "adr"
+        : artifact.kind === "skill" || artifact.canonicalSource?.includes("/skills/") ? "doc"
+          : "doc";
+      const canonicalName = artifact.id ?? "discoverability";
+      if (artifact.canonicalSource) entries.push({ path: artifact.canonicalSource, type, canonicalName });
+      for (const query of artifact.searchQueries ?? []) {
+        if (query.expectPath) entries.push({ path: query.expectPath, type, canonicalName });
+      }
+    }
+    return entries;
+  } catch {
+    return [];
+  }
 }
 
 function isSafeSearchFile(cwd: string, absolutePath: string): boolean {
