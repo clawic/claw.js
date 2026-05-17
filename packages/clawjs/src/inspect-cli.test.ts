@@ -176,7 +176,13 @@ test("runCli exposes CLI aliases and decision sources through inspect", async ()
   assert.equal(commandPayload.commands.some((entry) => entry.name === "audio" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
   assert.equal(commandPayload.commands.some((entry) => entry.name === "calendar" && entry.support.state === "supported" && entry.securityPolicy === "local_write" && entry.usage === "calendar create|list|get|update|delete" && entry.source?.symbol === "runV1DataCli"), true);
   assert.equal(commandPayload.commands.some((entry) => entry.name === "content" && entry.support.state === "supported" && entry.securityPolicy === "local_write" && entry.usage === "content brand|destination|campaign|entry|approval|publish" && entry.source?.symbol === "runDelegatedContentCli"), true);
+  assert.equal(commandPayload.commands.some((entry) => entry.name === "marketplace" && entry.support.state === "supported" && entry.securityPolicy === "local_write" && entry.usage === "marketplace choice upsert|list|get|delete" && entry.source?.symbol === "runV1DataCli"), true);
   assert.equal(commandPayload.commands.some((entry) => entry.name === "images" && entry.support.state === "cost_risk"), true);
+
+  const advancedCommands = await runCliCapture(["inspect", "commands", "--all=true", "--json"], process.cwd());
+  assert.equal(advancedCommands.code, CLI_EXIT_OK);
+  const advancedCommandPayload = parseCliJson<{ commands: Array<{ name: string; usage?: string; support: { state: string }; securityPolicy: string; source?: { file: string; symbol: string } }> }>(advancedCommands.stdout).data;
+  assert.equal(advancedCommandPayload.commands.some((entry) => entry.name === "iot" && entry.support.state === "supported" && entry.securityPolicy === "local_write" && entry.usage === "iot config|serve|homes|things|state|lights|climate|scenes|automations|approvals" && entry.source?.symbol === "runDelegatedIotCli"), true);
 
   const aliases = await runCliCapture(["inspect", "aliases", "--json"], process.cwd());
   assert.equal(aliases.code, CLI_EXIT_OK);

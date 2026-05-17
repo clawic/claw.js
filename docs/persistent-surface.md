@@ -1190,6 +1190,8 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_design
   claw_cli_command_apps["apps\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_apps
+  claw_cli_command_marketplace["marketplace\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_marketplace
   claw_cli_command_content["content\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_content
   claw_cli_command_knowledge["knowledge\ncliCommand"]
@@ -2353,6 +2355,7 @@ flowchart TD
 | `claw.cli.command.drive` | cliCommand | cli | claw |  |  |  | `drive` |
 | `claw.cli.command.design` | cliCommand | cli | claw |  |  |  | `design` |
 | `claw.cli.command.apps` | cliCommand | cli | claw |  |  |  | `apps` |
+| `claw.cli.command.marketplace` | cliCommand | cli | claw |  |  |  | `marketplace` |
 | `claw.cli.command.content` | cliCommand | cli | claw |  |  |  | `content` |
 | `claw.cli.command.knowledge` | cliCommand | cli | claw |  |  |  | `knowledge` |
 | `claw.cli.command.profile` | cliCommand | cli | claw |  |  |  | `profile` |
