@@ -193,7 +193,7 @@ before(async () => {
     serviceRequests.push({
       pathname: url.pathname,
       authorization: request.headers.authorization,
-      relayAuth: request.headers["x-clawjs-relay-authorization"] as string | undefined,
+      relayAuth: request.headers["x-relay-authorization"] as string | undefined,
     });
     if (url.pathname === clawApiPath("secure")) {
       if (request.headers.authorization !== "Bearer native-token") return sendJson(response, 401, { error: "native_auth_required" });
@@ -268,7 +268,7 @@ after(async () => {
 test("Relay service gateway preserves native service auth and proxies HTTP, uploads, downloads, SSE and WebSocket", async () => {
   const user = await login("user@relay.local", "relay-user");
   const relayHeaders = {
-    "x-clawjs-relay-authorization": `Bearer ${user.accessToken}`,
+    "x-relay-authorization": `Bearer ${user.accessToken}`,
   };
   const secure = await fetch(`${baseUrl}/v1/tenants/demo-tenant/services/example-service/v1/secure?q=relay`, {
     headers: {

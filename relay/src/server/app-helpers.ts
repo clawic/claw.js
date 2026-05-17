@@ -32,7 +32,7 @@ export function parseBearerToken(request: FastifyRequest): string | null {
 }
 
 export function parseServiceRelayToken(request: FastifyRequest): string | null {
-  const relayHeader = request.headers["x-clawjs-relay-authorization"] ?? request.headers["x-relay-authorization"];
+  const relayHeader = request.headers["x-relay-authorization"];
   const header = Array.isArray(relayHeader) ? relayHeader[0] : relayHeader;
   if (typeof header === "string" && header.trim()) {
     const [scheme, token] = header.trim().split(" ");
@@ -214,7 +214,6 @@ export function filteredServiceHeaders(request: FastifyRequest): Record<string, 
     "sec-websocket-version",
     "sec-websocket-extensions",
     "sec-websocket-protocol",
-    "x-clawjs-relay-authorization",
     "x-relay-authorization",
   ]);
   const headers: Record<string, string> = {};

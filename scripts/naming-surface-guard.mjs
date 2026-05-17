@@ -71,6 +71,9 @@ forbidSnippet("tests/e2e/open-cli.spec.ts", "/Library/Application Support/ClawJS
 forbidSnippet("packages/clawjs-node/src/media/store.ts", "clawjs://media-gallery");
 forbidSnippet("tests/e2e/slides-cli.spec.ts", "clawjs://media-gallery");
 forbidSnippet("tests/e2e/sdk-storage.spec.ts", "clawjs://media-gallery");
+forbidSnippet("relay/src/server/app-helpers.ts", "x-clawjs-relay-authorization");
+forbidSnippet("relay/src/service-proxy/local.ts", "x-clawjs-relay-authorization");
+forbidSnippet("relay/tests/e2e/service-gateway.e2e.test.ts", "x-clawjs-relay-authorization");
 forbidSnippet("packages/clawjs-core/src/surface-registry.ts", "stable compatibility surface");
 forbidSnippet("packages/clawjs/src/inspect-cli.test.ts", "stable compatibility surface");
 forbidSnippet("docs/adr/0004-persistent-surface-registry-and-inspection.md", "stable compatibility");

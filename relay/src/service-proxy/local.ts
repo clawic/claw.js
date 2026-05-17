@@ -95,7 +95,7 @@ export async function startRelayServiceProxy(options: RelayServiceProxyOptions):
         const targetBase = `${relayBase}/v1/tenants/${encodeURIComponent(options.tenantId)}/services/${encodeURIComponent(options.serviceId)}`;
         await forwardHttp(request, response, targetBase, {
           ...copyHeaders(request),
-          "x-clawjs-relay-authorization": `Bearer ${token}`,
+          "x-relay-authorization": `Bearer ${token}`,
         });
         return;
       }
@@ -127,7 +127,7 @@ export async function startRelayServiceProxy(options: RelayServiceProxyOptions):
         const upstream = new WebSocket(url, {
           headers: {
             ...copyHeaders(request),
-            "x-clawjs-relay-authorization": `Bearer ${token}`,
+            "x-relay-authorization": `Bearer ${token}`,
             "x-relay-proxy-channel": randomUUID(),
           },
         });
