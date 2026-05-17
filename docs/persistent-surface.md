@@ -176,6 +176,8 @@ flowchart TD
   claw_contracts_api --> claw_api_sync_plan
   claw_api_sync_conflicts["Sync conflict inspection contract\napiRoute"]
   claw_contracts_api --> claw_api_sync_conflicts
+  claw_api_sync_applications["Sync driver application receipt contract\napiRoute"]
+  claw_contracts_api --> claw_api_sync_applications
   claw_api_nodes["Node identity and trust contract\napiRoute"]
   claw_contracts_api --> claw_api_nodes
   claw_api_nodes_pair["Node pairing dry-run contract\napiRoute"]
@@ -2179,6 +2181,7 @@ flowchart TD
 | `claw.api.sync.changes` | apiRoute | api | claw |  |  |  | `/v1/sync/changes` |
 | `claw.api.sync.plan` | apiRoute | api | claw |  |  |  | `/v1/sync/plan` |
 | `claw.api.sync.conflicts` | apiRoute | api | claw |  |  |  | `/v1/sync/conflicts` |
+| `claw.api.sync.applications` | apiRoute | api | claw |  |  |  | `/v1/sync/applications` |
 | `claw.api.nodes` | apiRoute | api | claw |  |  |  | `/v1/nodes` |
 | `claw.api.nodes.pair` | apiRoute | api | claw |  |  |  | `/v1/nodes/pair` |
 | `claw.api.nodes.trust` | apiRoute | api | claw |  |  |  | `/v1/nodes/trust` |
