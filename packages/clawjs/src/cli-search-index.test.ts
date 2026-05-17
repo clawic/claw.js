@@ -3421,6 +3421,17 @@ test("search service indexes local finance_records with redacted previews", asyn
     assert.ok(result?.explanation?.matchedBy?.length);
     assert.equal(JSON.stringify(result).includes("Sensitive launch invoice evidence"), false);
     assert.equal(JSON.stringify(result).includes("88.5"), false);
+
+    const deleted = await runCliCapture(["finance", "delete", "--id", "finance.local.invoice", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleted.code, CLI_EXIT_OK, deleted.stderr || deleted.stdout);
+    const deleteJobs = await runCliCapture(["search", "jobs", "--source", "finance.records", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleteJobs.code, CLI_EXIT_OK);
+    const deleteJobsPayload = JSON.parse(deleteJobs.stdout) as {
+      data: { items: Array<{ operation: string; resourceId: string; payload: { table?: string; recordId?: string } }> };
+    };
+    const deleteJob = deleteJobsPayload.data.items.find((job) => job.operation === "delete" && job.resourceId === "finance_records:finance.local.invoice");
+    assert.equal(deleteJob?.payload.table, "finance_records");
+    assert.equal(deleteJob?.payload.recordId, "finance.local.invoice");
   });
 });
 
