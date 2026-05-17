@@ -2,6 +2,7 @@ import {
   buildRemoteConformanceReport,
   buildSyncPlan,
   clawPersistentSurfaceRegistry,
+  createGatewayDeploymentManifest,
   createMeshInvitation,
   createMeshResourceShare,
   createMeshRevocation,
@@ -297,6 +298,20 @@ function nodeTrustDecisionFromFlags(input: RemoteSyncCliInput) {
   });
 }
 
+function gatewayDeploymentFromFlags(input: RemoteSyncCliInput, operation: "serve" | "project") {
+  const deploymentKind = input.flags["deployment-kind"] === "hosted" || input.flags.hosted === "true" || operation === "project" ? "hosted" : "self_hosted";
+  return createGatewayDeploymentManifest({
+    deploymentKind,
+    gatewayNodeId: input.flags["gateway-node"] ?? input.flags["owner-node"] ?? "gateway.local",
+    coordinatorNodeId: input.flags["coordinator-node"] ?? input.flags["owner-node"] ?? "local",
+    bindAddress: input.flags["bind-address"] ?? input.flags.bind ?? "127.0.0.1:24102",
+    publicBaseUrl: input.flags["public-base-url"],
+    contractRouteIds: listFlag(input.flags["route-ids"], remoteSyncRequiredRouteIds.slice()),
+    createdAt: input.flags.now ?? new Date().toISOString(),
+    physicalDeploymentVerified: input.flags["physical-verified"] === "true",
+  });
+}
+
 function numberFlag(value: string | undefined, fallback: number): number {
   if (value && Number.isFinite(Number(value))) return Number(value);
   return fallback;
@@ -523,8 +538,18 @@ export async function runGatewayCli(input: RemoteSyncCliInput): Promise<number> 
     return writeOutput(input, "gateway", payload, `${payload.status} hostedSelfHostedParity=${payload.hostedSelfHostedParity}`, command);
   }
   if (command === "serve" || command === "project") {
-    const payload = { operation: command, status: "dry_run_only", writes: false, conformanceRequired: true };
-    return writeOutput(input, "gateway", payload, `${command}: dry_run_only conformanceRequired=true`, command);
+    const deployment = gatewayDeploymentFromFlags(input, command);
+    const usage = `gateway ${command} --state-dir <dir> --record true --coordinator-private-key-file <pem> --coordinator-public-key-file <pem> [--deployment-kind hosted|self_hosted]`;
+    const store = stateStoreFromFlags(input);
+    if (wantsDurableRecord(input) && !store) return missing(input, usage);
+    const signer = wantsDurableRecord(input) ? requireCoordinatorSigner(input, usage) : undefined;
+    if (typeof signer === "number") return signer;
+    const state = store && wantsDurableRecord(input) && signer
+      ? store.recordGatewayDeployment(deployment, { now: input.flags.now, signer })
+      : undefined;
+    const status = state?.coordinatorSignature ? "signed_gateway_deployment_recorded" : "dry_run_external_pending";
+    const payload = { operation: command, deployment, status, writes: false, conformanceRequired: true, ...(state ? { state } : {}) };
+    return writeOutput(input, "gateway", payload, `${command}: ${status} conformanceRequired=true`, command);
   }
   if (command === "agent-service") {
     const assignment = agentServiceAssignmentFromFlags(input);

@@ -202,7 +202,9 @@ claw nodes heartbeat --json
 claw nodes heartbeat --transport iroh --owner-node mac.home --peer-node vps.server --coordinator-node coord.home --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 
 claw gateway serve --dry-run --json
+claw gateway serve --state-dir .claw/remote-sync --record true --gateway-node gateway.self --coordinator-node coord.home --bind-address 127.0.0.1:24102 --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 claw gateway project --dry-run --json
+claw gateway project --state-dir .claw/remote-sync --record true --gateway-node gateway.hosted --coordinator-node coord.home --public-base-url https://gateway.example.test --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 claw gateway conformance --json
 claw gateway agent-service --tenant-id tenant.acme --agent-id agent.support --assignment-id assignment.service --estimated-cost-cents 300 --json
 claw gateway secret-lease --state-dir .claw/remote-sync --secret-ref vault://agents/support --resource-id skills:default --agent-id agent.support --assignment-id assignment.service --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
@@ -225,6 +227,10 @@ and still marks real multi-device transport and device trust acceptance as
 ledger. An allow decision remains `signed_pending_physical_acceptance` until
 the target device completes physical acceptance; it does not silently grant
 remote authority by itself.
+`gateway serve|project --record true` records signed Gateway deployment
+manifests for self-hosted and hosted projections. Both carry the same required
+route contract and parity flag; real process binding or hosted rollout remains
+`external_pending` until physical deployment validation is run.
 `gateway secret-lease` records a signed, expiring lease for a secret reference,
 never reads or returns the secret value, and rejects plaintext-return flags.
 

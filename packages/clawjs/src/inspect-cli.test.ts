@@ -344,6 +344,32 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   const gatewayPayload = parseCliJson<{ hostedSelfHostedParity: string }>(gateway.stdout).data;
   assert.equal(gatewayPayload.hostedSelfHostedParity, "required");
 
+  const gatewayProject = await runCliCapture(["gateway", "project", "--state-dir", stateDir, "--record", "true", "--gateway-node", "gateway.hosted", "--coordinator-node", "coord.home", "--public-base-url", "https://gateway.example.test", ...coordinatorSigningFlags, "--json"], process.cwd());
+  assert.equal(gatewayProject.code, CLI_EXIT_OK);
+  const gatewayProjectPayload = parseCliJson<{
+    status: string;
+    operation: string;
+    deployment: { deploymentKind: string; hostedSelfHostedParity: boolean; conformanceStatus: string; physicalDeploymentVerified: boolean; externalPending: string[]; writes: boolean };
+    state: { durable: boolean; coordinatorSignature?: { verified: boolean } };
+  }>(gatewayProject.stdout).data;
+  assert.equal(gatewayProjectPayload.status, "signed_gateway_deployment_recorded");
+  assert.equal(gatewayProjectPayload.operation, "project");
+  assert.equal(gatewayProjectPayload.deployment.deploymentKind, "hosted");
+  assert.equal(gatewayProjectPayload.deployment.hostedSelfHostedParity, true);
+  assert.equal(gatewayProjectPayload.deployment.conformanceStatus, "external_pending");
+  assert.equal(gatewayProjectPayload.deployment.physicalDeploymentVerified, false);
+  assert.equal(gatewayProjectPayload.deployment.externalPending.includes("hosted_deployment"), true);
+  assert.equal(gatewayProjectPayload.deployment.writes, false);
+  assert.equal(gatewayProjectPayload.state.durable, true);
+  assert.equal(gatewayProjectPayload.state.coordinatorSignature?.verified, true);
+
+  const gatewayServe = await runCliCapture(["gateway", "serve", "--state-dir", stateDir, "--record", "true", "--gateway-node", "gateway.self", "--coordinator-node", "coord.home", "--bind-address", "127.0.0.1:24102", ...coordinatorSigningFlags, "--json"], process.cwd());
+  assert.equal(gatewayServe.code, CLI_EXIT_OK);
+  const gatewayServePayload = parseCliJson<{ deployment: { deploymentKind: string; externalPending: string[] }; state: { coordinatorSignature?: { verified: boolean } } }>(gatewayServe.stdout).data;
+  assert.equal(gatewayServePayload.deployment.deploymentKind, "self_hosted");
+  assert.equal(gatewayServePayload.deployment.externalPending.includes("self_hosted_deployment"), true);
+  assert.equal(gatewayServePayload.state.coordinatorSignature?.verified, true);
+
   const agentService = await runCliCapture(["gateway", "agent-service", "--tenant-id", "tenant.acme", "--agent-id", "agent.support", "--assignment-id", "assignment.service", "--estimated-cost-cents", "300", "--json"], process.cwd());
   assert.equal(agentService.code, CLI_EXIT_OK);
   const agentServicePayload = parseCliJson<{

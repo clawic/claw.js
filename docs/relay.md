@@ -151,6 +151,12 @@ billing account, tenant isolation key, and audit requirement before it is
 allowed. The evaluator returns `remote.agent_service.evaluated` audit metadata
 and `writes: false`; real hosted execution remains signed-host/Coordinator
 gated.
+Gateway deployment itself is also represented in the signed local ledger:
+`claw gateway serve --record true` records a self-hosted projection and
+`claw gateway project --record true` records a hosted projection. Both use
+`GatewayDeploymentManifest`, the same required route set, and
+`hostedSelfHostedParity: true`; actual process binding or hosted rollout stays
+`EXTERNAL PENDING` until physically validated.
 
 Gateway authorization is evaluated fail-closed through the shared
 `evaluateRemoteAccess` contract. Governed remote requests need active allow

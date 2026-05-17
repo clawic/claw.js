@@ -196,6 +196,11 @@ canonical architecture moves to Coordinator, Gateway, Connector, and Sync.
 Hosted service deployments and self-hosted deployments are peers. A hosted
 deployment cannot expose capabilities that are absent from self-hosted
 conformance unless the gap is explicitly blocked and documented.
+`GatewayDeploymentManifest` is the signed local projection for those
+deployments. `claw gateway serve --record true` and `claw gateway project
+--record true` record the same contract route set and `hostedSelfHostedParity:
+true`; they remain `external_pending` until a real self-hosted process or
+hosted rollout is physically validated.
 
 Goal completion for the source conversation requires a decision-by-decision
 review against the source session before the goal can be marked complete.
