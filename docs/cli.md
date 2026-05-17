@@ -179,6 +179,7 @@ claw remote conformance --json
 claw remote pending --json
 claw remote contracts --json
 claw remote compat --legacy-surface relay.mobile.chat --canonical-route remote.chatGateway --client-kind ios --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
+claw inspect remote --json
 
 claw sync manifest --resource-id skills:default --kind skills --driver skills --json
 claw sync status --json
@@ -235,6 +236,9 @@ until explicitly run.
 required Gateway/Connector/Sync/Mesh route is bound to local CLI/service
 contract refs and remote entrypoints, requires parity, and keeps
 `parallelApiAllowed: false` so remote clients do not grow a parallel API.
+`inspect remote` is the read-only inspection view that puts remote
+classification, Sync authority/drivers, transport, route contracts, tests,
+gaps, and conformance in one JSON payload.
 `--state-dir` records manifests, sync queues, reconciliation results, and
 mesh proposals/revocations in a local durable ledger. That ledger is not trust
 authority unless each record is signed with Coordinator keys. The

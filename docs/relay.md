@@ -149,6 +149,9 @@ Remote API parity is represented by the remote route contracts catalog exposed
 at `/v1/remote/route-contracts` and `claw remote contracts`. Each required
 route binds canonical local contract references to remote entrypoints, keeps
 `parityRequired: true`, and keeps `parallelApiAllowed: false`.
+`claw inspect remote` gives operators and agents the read-only inspection view
+for remote classification, Sync authority/drivers, transport, route contracts,
+tests, gaps, and conformance without mutating the Coordinator ledger.
 Existing Relay/mobile routes are represented by `RemoteCompatibilityAdapterReceipt`
 records and the Relay `/v1/remote/compatibility/adapters` endpoint. Each
 adapter must map one legacy surface to one canonical Gateway/Connector/Sync

@@ -148,6 +148,7 @@ const requiredDocSnippets = [
   "claw sync handoff",
   "claw remote conformance",
   "claw remote compat",
+  "claw inspect remote",
   "claw gateway conformance",
 ];
 
@@ -302,6 +303,18 @@ for (const commandName of requiredCliCommands) {
 const remoteSyncRoutesSource = readRequired("relay/src/server/remote-sync-routes.ts");
 for (const route of requiredServiceApiRoutes) {
   requireText("remote sync service routes", remoteSyncRoutesSource, `clawApiPath("${route}")`);
+}
+
+const inspectCliSource = readRequired("packages/clawjs/src/inspect-cli.ts");
+for (const snippet of [
+  'command === "remote"',
+  "buildRemoteConformanceReport",
+  "buildRemoteExternalPendingRegister",
+  "buildRemoteRouteContractCatalog",
+  "SyncAuthorityHandoffReceipt",
+  "transport_agnostic_iroh_v1_adapter",
+]) {
+  requireText("inspect remote CLI", inspectCliSource, snippet);
 }
 
 for (const [driver, expectedRoute] of driverRouteExpectations) {
