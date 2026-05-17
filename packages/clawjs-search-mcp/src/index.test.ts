@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "vitest";
 
-import { SearchStore } from "@clawjs/search";
+import { SearchStore, createFrameworkSearchSourceManifest } from "@clawjs/search";
 
 import { createSearchMcpTools } from "./index.ts";
 
@@ -23,6 +23,7 @@ test("Search MCP exposes profile, entrypoint, and explain tools", () => {
       "search.entrypoints.list",
       "search.explain",
       "search.actions.list",
+      "search.actions.execute",
       "search.saved.list",
       "search.monitors.list",
       "search.audit.list",
@@ -54,6 +55,68 @@ test("Search MCP exposes profile, entrypoint, and explain tools", () => {
     assert.equal(explanation.query, "release branch");
     assert.equal(explanation.budgets.sourceTimeoutMs, 75);
     assert.equal(explanation.ranking.includes("local frecency"), true);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("Search MCP action execution returns brokered plans and audit records", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-mcp-actions-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "commands",
+      domain: "commands",
+      name: "Commands",
+      resultTypes: ["command"],
+    }));
+    store.upsertDocument({
+      id: "commands:system",
+      source: "commands",
+      domain: "commands",
+      type: "command",
+      title: "system",
+      body: "system help",
+      actions: [{ id: "help", kind: "run", label: "Show help", requiresApproval: true, risk: "system", grant: "search.commands.run" }],
+    });
+
+    const tools = createSearchMcpTools(store);
+    const executeTool = tools.find((tool) => tool.name === "search.actions.execute");
+    assert.ok(executeTool);
+
+    const dryRun = executeTool.handler({ resultId: "commands:system", actionId: "help", dryRun: true, actor: "agent:test", surface: "mcp" }) as {
+      plan: { status: string; dryRun: boolean; broker: { sideEffects: string }; actor?: string; surface?: string };
+      blocked: boolean;
+    };
+    assert.equal(dryRun.plan.status, "planned");
+    assert.equal(dryRun.plan.dryRun, true);
+    assert.equal(dryRun.plan.broker.sideEffects, "none");
+    assert.equal(dryRun.plan.actor, "agent:test");
+    assert.equal(dryRun.plan.surface, "mcp");
+    assert.equal(dryRun.blocked, false);
+
+    const blocked = executeTool.handler({ resultId: "commands:system", actionId: "help" }) as {
+      plan: { status: string; requiresApproval: boolean };
+      blocked: boolean;
+    };
+    assert.equal(blocked.plan.status, "blocked");
+    assert.equal(blocked.plan.requiresApproval, true);
+    assert.equal(blocked.blocked, true);
+
+    const brokered = executeTool.handler({ resultId: "commands:system", actionId: "help", hostApprovalId: "approval_search_help" }) as {
+      plan: { status: string; hostApprovalId?: string; broker: { sideEffects: string } };
+      brokered: boolean;
+    };
+    assert.equal(brokered.plan.status, "brokered");
+    assert.equal(brokered.plan.hostApprovalId, "approval_search_help");
+    assert.equal(brokered.plan.broker.sideEffects, "host_brokered");
+    assert.equal(brokered.brokered, true);
+
+    const audit = store.listAuditEvents({ type: "action" });
+    assert.equal(audit.some((item) => item.resultId === "commands:system" && item.actionId === "help" && item.status === "planned"), true);
+    assert.equal(audit.some((item) => item.resultId === "commands:system" && item.actionId === "help" && item.status === "blocked"), true);
+    assert.equal(audit.some((item) => item.resultId === "commands:system" && item.actionId === "help" && item.status === "brokered" && item.metadata?.hostApprovalId === "approval_search_help"), true);
   } finally {
     store.close();
     fs.rmSync(dir, { recursive: true, force: true });
