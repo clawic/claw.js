@@ -271,7 +271,7 @@ export function createClawGenerationImageFacades(locals: Record<string, any>): R
     };
     const native = imageStore.list(scopedOptions);
     const existingIds = new Set(native.map((record) => String(record.metadata?.generationId ?? record.id)));
-    const legacy = generationStore.list({
+    const generationBacked = generationStore.list({
       kind: "image",
       ...(scopedOptions.backendId ? { backendId: scopedOptions.backendId } : {}),
       ...(scopedOptions.status ? { status: scopedOptions.status } : {}),
@@ -279,7 +279,7 @@ export function createClawGenerationImageFacades(locals: Record<string, any>): R
       .filter((record) => !existingIds.has(record.id))
       .map(mapGenerationToImageRecord);
     const query = scopedOptions.query?.trim().toLowerCase();
-    const merged = [...native, ...legacy]
+    const merged = [...native, ...generationBacked]
       .filter((record) => !scopedOptions.operation || record.operation === scopedOptions.operation)
       .filter((record) => !scopedOptions.provenance || record.provenance === scopedOptions.provenance)
       .filter((record) => !scopedOptions.imageType || record.imageType === scopedOptions.imageType)
