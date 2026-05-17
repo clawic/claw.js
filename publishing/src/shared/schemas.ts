@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const editorialStatus = z.enum([
+const editorialStatus = z.enum([
   "idea",
   "drafting",
   "in_review",
@@ -9,7 +9,7 @@ export const editorialStatus = z.enum([
   "published",
 ]);
 
-export const publishStatus = z.enum([
+const publishStatus = z.enum([
   "unscheduled",
   "scheduled",
   "queued",
@@ -21,9 +21,9 @@ export const publishStatus = z.enum([
   "deleted",
 ]);
 
-export const role = z.enum(["owner", "admin", "editor", "member", "guest"]);
+const role = z.enum(["owner", "admin", "editor", "member", "guest"]);
 
-export const postBlock = z.object({
+const postBlock = z.object({
   body: z.string(),
   url: z.string().url().optional(),
   media_ids: z.array(z.string()).optional(),
@@ -57,7 +57,7 @@ export const postBlock = z.object({
     .optional(),
 });
 
-export const variantSpec = z.object({
+const variantSpec = z.object({
   is_original: z.boolean().optional(),
   channel_account_id: z.string().nullable().optional(),
   locale: z.string().nullable().optional(),
@@ -66,7 +66,7 @@ export const variantSpec = z.object({
   metadata: z.record(z.unknown()).optional(),
 });
 
-export const scheduleSpec = z.discriminatedUnion("kind", [
+const scheduleSpec = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("datetime"),
     at: z.string(),
@@ -189,7 +189,3 @@ export const tokenInput = z.object({
   scopes: z.array(z.string()).optional(),
   expires_at: z.string().nullable().optional(),
 });
-
-export type PostSpec = z.infer<typeof postSpec>;
-export type QueueInput = z.infer<typeof queueInput>;
-export type WebhookInput = z.infer<typeof webhookInput>;

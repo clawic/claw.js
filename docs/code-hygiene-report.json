@@ -14,13 +14,13 @@
     "unreferencedAssetCandidates": 88
   },
   "knipSummary": {
-    "filesWithIssues": 201,
-    "totalIssues": 925,
+    "filesWithIssues": 200,
+    "totalIssues": 916,
     "issueTypes": {
       "unlisted": 2,
-      "types": 130,
+      "types": 127,
       "owners": 134,
-      "exports": 651,
+      "exports": 645,
       "duplicates": 8
     }
   },
@@ -62,6 +62,7 @@
     "Execution and Relay protocol cleanup made nested payload/envelope helpers private where only the union or public request/response envelopes are externally consumed.",
     "Secrets shared type cleanup kept exported only the role/principal types imported by auth and made the unused local DTO descriptors private.",
     "Execution shared type cleanup made local status aliases and unused helper DTOs private while preserving imported records and protocol types.",
-    "IoT tool registry cleanup made local descriptor and invocation helpers private while keeping server route registration exported."
+    "IoT tool registry cleanup made local descriptor and invocation helpers private while keeping server route registration exported.",
+    "Publishing schema cleanup made nested Zod schema helpers private and removed unused inferred type aliases while preserving route-imported validators."
   ]
 }
