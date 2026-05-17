@@ -601,6 +601,16 @@ function applyDefaults(collectionName: string, payload: Record<string, unknown>,
     case "appliance_maintenance":
       payload.performedAt ??= new Date().toISOString();
       break;
+    case "suppliers":
+      payload.status ??= "active";
+      break;
+    case "purchase_orders":
+      payload.status ??= "draft";
+      payload.orderedAt ??= new Date().toISOString();
+      break;
+    case "purchase_order_line_items":
+      payload.status ??= "ordered";
+      break;
     case "assets":
       payload.status ??= "active";
       break;

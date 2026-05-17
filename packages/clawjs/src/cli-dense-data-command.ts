@@ -302,6 +302,7 @@ function materializedSemanticViewForIntent(
   if (semanticView.id === "property.timeline") return materializedPropertyTimeline(input, intent, semanticView);
   if (semanticView.id === "insurance_policy.timeline") return materializedInsurancePolicyTimeline(input, intent, semanticView);
   if (semanticView.id === "vehicle.timeline") return materializedVehicleTimeline(input, intent, semanticView);
+  if (semanticView.id === "purchase_order.timeline") return materializedPurchaseOrderTimeline(input, intent, semanticView);
   return undefined;
 }
 
@@ -870,6 +871,70 @@ function materializedVehicleTimeline(
       evidenceSourceId: record.evidenceSourceId,
     })),
     sourceCollections: ["vehicles", "vehicle_maintenance", "vehicle_insurance_policies", "evidence_sources", "quality_gaps", "provenance_events"],
+    partial: qualityGaps.length > 0,
+    intentStatus: intent.status,
+  };
+}
+
+function materializedPurchaseOrderTimeline(
+  input: DenseDataCliInput,
+  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
+) {
+  const purchaseOrderId = input.positionals[1];
+  if (!purchaseOrderId) return undefined;
+  const namespaceId = input.flags.namespace ?? "main";
+  const store = openDenseDataStore(input.workspaceRoot);
+  store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
+  const purchaseOrder = store.getRecord(namespaceId, "purchase_orders", purchaseOrderId);
+  if (!purchaseOrder) return undefined;
+
+  const supplier = typeof purchaseOrder.supplierId === "string" ? store.getRecord(namespaceId, "suppliers", purchaseOrder.supplierId) : undefined;
+  const company = typeof purchaseOrder.companyId === "string" ? store.getRecord(namespaceId, "companies", purchaseOrder.companyId) : undefined;
+  const lineItems = store.listRecords(namespaceId, "purchase_order_line_items", { filter: { purchaseOrderId } }).items;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "purchase_orders", recordId: purchaseOrderId } }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "purchase_orders", targetId: purchaseOrderId } }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "purchase_orders", targetId: purchaseOrderId } }).items;
+  const items = [
+    timelineItem(purchaseOrder, "purchase_order", purchaseOrder.id, purchaseOrder.number ?? purchaseOrder.id, purchaseOrder.orderedAt ?? purchaseOrder.createdAt, purchaseOrder),
+    ...(supplier ? [timelineItem(supplier, "supplier", supplier.id, supplier.name ?? supplier.id, supplier.createdAt, supplier)] : []),
+    ...(company ? [timelineItem(company, "company", company.id, company.name ?? company.legalName ?? company.id, company.createdAt, company)] : []),
+    ...lineItems.map((record) => timelineItem(record, "purchase_order_line_item", record.id, record.description ?? record.id, record.createdAt, record)),
+    ...evidence.map((record) => timelineItem(record, "evidence", record.id, record.label ?? record.id, record.capturedAt ?? record.createdAt, record)),
+    ...qualityGaps.map((record) => timelineItem(record, "quality_gap", record.id, record.label ?? record.id, record.createdAt, record)),
+    ...provenance.map((record) => timelineItem(record, "provenance", record.id, record.eventType ?? record.id, record.occurredAt ?? record.createdAt, record)),
+  ].sort((left, right) => String(left.occurredAt).localeCompare(String(right.occurredAt)));
+
+  return {
+    id: semanticView.id,
+    subject: { collectionName: "purchase_orders", id: purchaseOrder.id, label: purchaseOrder.number ?? purchaseOrder.id },
+    supplier: supplier ? { id: supplier.id, label: supplier.name ?? supplier.id } : null,
+    company: company ? { id: company.id, label: company.name ?? company.legalName ?? company.id } : null,
+    summary: {
+      lineItems: lineItems.length,
+      receivedLineItems: lineItems.filter((record) => record.status === "received").length,
+      evidenceSources: evidence.length,
+      qualityGaps: qualityGaps.length,
+    },
+    itemCount: items.length,
+    items,
+    records: {
+      purchaseOrder,
+      supplier,
+      company,
+      lineItems,
+      evidence,
+      provenance,
+    },
+    gaps: qualityGaps.map((record) => ({
+      id: record.id,
+      label: record.label,
+      status: record.status,
+      gapKind: record.gapKind,
+      severity: record.severity,
+      evidenceSourceId: record.evidenceSourceId,
+    })),
+    sourceCollections: ["purchase_orders", "suppliers", "companies", "purchase_order_line_items", "evidence_sources", "quality_gaps", "provenance_events"],
     partial: qualityGaps.length > 0,
     intentStatus: intent.status,
   };
@@ -1510,6 +1575,18 @@ function denseDbFlags(flags: Record<string, string>, collectionName: string): Re
   if (collectionName === "appliance_maintenance" && flags.appliance && !flags["appliance-id"]) {
     nextFlags = { ...nextFlags, "appliance-id": flags.appliance };
   }
+  if (collectionName === "purchase_orders" && flags.supplier && !flags["supplier-id"]) {
+    nextFlags = { ...nextFlags, "supplier-id": flags.supplier };
+  }
+  if (collectionName === "purchase_orders" && flags.company && !flags["company-id"]) {
+    nextFlags = { ...nextFlags, "company-id": flags.company };
+  }
+  if (collectionName === "purchase_order_line_items" && flags["purchase-order"] && !flags["purchase-order-id"]) {
+    nextFlags = { ...nextFlags, "purchase-order-id": flags["purchase-order"] };
+  }
+  if (collectionName === "purchase_order_line_items" && flags.product && !flags["product-catalog-id"]) {
+    nextFlags = { ...nextFlags, "product-catalog-id": flags.product };
+  }
   if (collectionName === "transactions" && flags.account && !flags["account-id"]) {
     nextFlags = { ...nextFlags, "account-id": flags.account };
   }
@@ -1664,6 +1741,28 @@ function nestedDenseDbRoute(input: DenseDataCliInput): Parameters<typeof runMagi
       maintenance: "appliance_maintenance",
       "maintenance-record": "appliance_maintenance",
       "maintenance-records": "appliance_maintenance",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "supplier",
+    relationFlag: "supplier-id",
+    relationField: "supplierId",
+    collections: {
+      "purchase-order": "purchase_orders",
+      "purchase-orders": "purchase_orders",
+      po: "purchase_orders",
+      pos: "purchase_orders",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "purchase-order",
+    relationFlag: "purchase-order-id",
+    relationField: "purchaseOrderId",
+    collections: {
+      "line-item": "purchase_order_line_items",
+      "line-items": "purchase_order_line_items",
+      "purchase-order-line-item": "purchase_order_line_items",
+      "purchase-order-line-items": "purchase_order_line_items",
+      "po-line": "purchase_order_line_items",
+      "po-lines": "purchase_order_line_items",
     },
   }) ?? nestedParentDbRoute(input, {
     parentCommand: "sample",
