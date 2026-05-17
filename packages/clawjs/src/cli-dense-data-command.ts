@@ -1657,7 +1657,7 @@ function materializedContentEntryTimeline(
     ...(owner ? [timelineItem(owner, "owner_actor", owner.id, owner.displayName ?? owner.name ?? owner.id, owner.createdAt, owner)] : []),
     ...(author ? [timelineItem(author, "author_actor", author.id, author.displayName ?? author.name ?? author.id, author.createdAt, author)] : []),
     ...destinations.map((record) => timelineItem(record, "content_destination", record.id, record.name ?? record.id, record.lastCheckedAt ?? record.createdAt, record)),
-    ...revisions.map((record) => timelineItem(record, "content_revision", record.id, record.title ?? `Revision ${record.revisionNumber ?? record.id}`, record.createdAt, record)),
+    ...revisions.map((record) => timelineItem(record, "content_revision", record.id, record.title ?? `Revision ${record.revisionNumber ?? record.id}`, record.authoredAt ?? record.createdAt, record)),
     ...variants.map((record) => timelineItem(record, "content_variant", record.id, record.title ?? record.format ?? record.id, record.createdAt, record)),
     ...approvals.map((record) => timelineItem(record, "content_approval", record.id, record.title ?? record.status ?? record.id, record.reviewedAt ?? record.requestedAt ?? record.createdAt, record)),
     ...publications.map((record) => timelineItem(record, "content_publication", record.id, record.title ?? record.externalUrl ?? record.status ?? record.id, record.publishedAt ?? record.scheduledAt ?? record.createdAt, record)),

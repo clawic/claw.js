@@ -786,12 +786,12 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
 
   const contentRevisionCreate = await runCliCapture(["content-entry", contentEntryPayload.data.id, "revisions", "add", "Launch note revision 1", "--revision-number", "1", "--body", "Structured launch note.", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(contentRevisionCreate.code, CLI_EXIT_OK, contentRevisionCreate.stderr || contentRevisionCreate.stdout);
-  const contentRevisionPayload = JSON.parse(contentRevisionCreate.stdout) as { data: { id: string; title: string; contentEntryId: string; revisionNumber: number; createdAt: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  const contentRevisionPayload = JSON.parse(contentRevisionCreate.stdout) as { data: { id: string; title: string; contentEntryId: string; revisionNumber: number; authoredAt: string }; meta: { collection: string; action: string; invokedCommand: string } };
   assert.equal(contentRevisionPayload.meta.collection, "content_revisions");
   assert.equal(contentRevisionPayload.data.title, "Launch note revision 1");
   assert.equal(contentRevisionPayload.data.contentEntryId, contentEntryPayload.data.id);
   assert.equal(contentRevisionPayload.data.revisionNumber, 1);
-  assert.equal(typeof contentRevisionPayload.data.createdAt, "string");
+  assert.equal(typeof contentRevisionPayload.data.authoredAt, "string");
 
   const contentVariantCreate = await runCliCapture(["content-entry", contentEntryPayload.data.id, "variants", "add", "Blog variant", "--destination", contentDestinationPayload.data.id, "--format", "markdown", "--body", "Blog-ready launch note.", "--status", "approved", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(contentVariantCreate.code, CLI_EXIT_OK, contentVariantCreate.stderr || contentVariantCreate.stdout);

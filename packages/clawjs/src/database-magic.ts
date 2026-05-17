@@ -768,7 +768,7 @@ function applyDefaults(collectionName: string, payload: Record<string, unknown>,
       payload.currentRevisionNumber ??= 1;
       break;
     case "content_revisions":
-      payload.createdAt ??= new Date().toISOString();
+      payload.authoredAt ??= new Date().toISOString();
       break;
     case "content_variants":
       payload.status ??= "draft";

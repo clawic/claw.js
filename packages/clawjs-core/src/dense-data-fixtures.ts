@@ -386,7 +386,7 @@ export const clawDenseDataAcceptanceFixture: ClawDenseDataAcceptanceFixture = {
       collectionName: "content_revisions",
       label: "Launch note revision 1",
       covers: ["content_revision", "content", "cms", "content_entry_timeline"],
-      data: { contentEntryId: "fixture_content_entry_launch_note", revisionNumber: 1, title: "Launch note", body: "Structured launch note.", createdAt: "2026-05-17T00:00:00.000Z" },
+      data: { contentEntryId: "fixture_content_entry_launch_note", revisionNumber: 1, title: "Launch note", body: "Structured launch note.", authoredAt: "2026-05-17T00:00:00.000Z" },
     },
     {
       id: "fixture_content_variant_blog",

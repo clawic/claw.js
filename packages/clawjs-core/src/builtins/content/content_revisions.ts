@@ -17,6 +17,7 @@ export const CONTENT_REVISIONS: BuiltinCollectionDefinition = {
     { name: "summary", type: "markdown" },
     { name: "body", type: "markdown" },
     { name: "authorActorId", type: "relation", relation: { collectionName: "actors" } },
+    { name: "authoredAt", type: "date" },
     { name: "snapshot", type: "json" },
     { name: "source", type: "json" },
     { name: "links", type: "json" },
