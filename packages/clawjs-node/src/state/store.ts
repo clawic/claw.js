@@ -33,7 +33,6 @@ export const SCHEDULER_STATE_FILE = "scheduler.json";
 export const MEMORY_STATE_FILE = "memory.json";
 export const SKILLS_STATE_FILE = "skills.json";
 export const CHANNELS_STATE_FILE = "channels.json";
-export const TELEGRAM_STATE_FILE = CHANNELS_STATE_FILE;
 
 export function resolveCapabilityReportPath(workspaceDir: string): string {
   return resolveClawWorkspaceSurfacePath("claw.workspace.compat", workspaceDir, CAPABILITY_REPORT_FILE);

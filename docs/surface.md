@@ -978,7 +978,6 @@ The docs check script validates that every current export from
     SyncBindingOptions
     SyncEngineOptions
     synthesize
-    TELEGRAM_STATE_FILE
     TelegramBanOrRestrictInput
     TelegramConnectBotInput
     TelegramInviteLinkOptions

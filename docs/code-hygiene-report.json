@@ -14,14 +14,14 @@
     "unreferencedAssetCandidates": 0
   },
   "knipSummary": {
-    "filesWithIssues": 64,
-    "totalIssues": 584,
+    "filesWithIssues": 63,
+    "totalIssues": 582,
     "issueTypes": {
       "unlisted": 2,
       "types": 4,
       "exports": 509,
-      "owners": 61,
-      "duplicates": 8
+      "owners": 60,
+      "duplicates": 7
     }
   },
   "peripherySummary": {
@@ -102,6 +102,7 @@
     "Workspace/delegation/runtime cleanup made local SQLite and provider helpers private and removed the unused command delegation adapter while preserving deterministic delegation behavior.",
     "Drive/browser/relay/plugin cleanup made local error/location/envelope helpers private and removed unused browser audit and plugin session-key wrappers.",
     "Bridge/Relay follow-up made the screenshot region type private, wired Relay mDNS cleanup into server shutdown, and fixed bridge pairing to send the current platform contract.",
-    "Bridge Iroh cleanup made the remote endpoint descriptor private while preserving the exported node and stream bridge contract."
+    "Bridge Iroh cleanup made the remote endpoint descriptor private while preserving the exported node and stream bridge contract.",
+    "ClawJS node state cleanup removed the unused Telegram state filename alias while preserving the public Telegram state path resolver."
   ]
 }
