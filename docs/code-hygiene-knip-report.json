@@ -3,18 +3,18 @@
   "program": "code-hygiene",
   "tool": "knip",
   "toolVersion": "6.14.0",
-  "generatedAt": "2026-05-17T00:36:45.465Z",
+  "generatedAt": "2026-05-17T00:41:46.288Z",
   "mode": "report-only",
   "config": "knip.json",
   "cwd": ".",
   "summary": {
-    "filesWithIssues": 207,
-    "totalIssues": 995,
+    "filesWithIssues": 206,
+    "totalIssues": 982,
     "issueTypes": {
       "unlisted": 2,
-      "types": 194,
-      "owners": 135,
-      "exports": 656,
+      "types": 184,
+      "owners": 134,
+      "exports": 654,
       "duplicates": 8
     },
     "topFiles": [
@@ -122,15 +122,6 @@
         }
       },
       {
-        "file": "packages/clawjs-node/src/time/logic.ts",
-        "totalIssues": 13,
-        "issueCounts": {
-          "owners": 1,
-          "exports": 2,
-          "types": 10
-        }
-      },
-      {
         "file": "secrets/src/shared/types.ts",
         "totalIssues": 13,
         "issueCounts": {
@@ -170,6 +161,14 @@
       },
       {
         "file": "packages/clawjs-core/src/builtins/infra/index.ts",
+        "totalIssues": 11,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 10
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/learning/index.ts",
         "totalIssues": 11,
         "issueCounts": {
           "owners": 1,
