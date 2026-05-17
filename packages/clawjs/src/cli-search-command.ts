@@ -4842,6 +4842,110 @@ function mcpServerSearchDocument(server: JsonRecord & { id: string }, configPath
   };
 }
 
+function appCatalogSearchDocument(row: AppCatalogRow): SearchDocumentInput {
+  const manifest = parseJsonRecord(row.manifest_json);
+  const permissions = parseJsonRecord(row.permissions_json);
+  const manifestText = textFromStructuredContent(redactExternalCachePayload(manifest));
+  const permissionsKeys = Object.keys(permissions).sort();
+  const body = [
+    row.name,
+    row.slug,
+    row.description,
+    row.root_path ? path.basename(row.root_path) : undefined,
+    manifestText,
+    permissionsKeys.join(" "),
+  ].filter(Boolean).join("\n");
+  return {
+    id: `apps.catalog:${row.id}`,
+    source: "apps.catalog",
+    domain: "apps",
+    type: "app",
+    resourceId: row.id,
+    title: row.name || row.slug || row.id,
+    subtitle: [row.slug, row.pinned === 1 ? "pinned" : ""].filter(Boolean).join(" / "),
+    snippet: firstMeaningfulLine(row.description || manifestText || "") ?? row.slug,
+    body,
+    ...(row.root_path ? { path: row.root_path } : {}),
+    updatedAt: row.updated_at,
+    metadata: {
+      appId: row.id,
+      slug: row.slug,
+      pinned: row.pinned === 1,
+      rootBasename: row.root_path ? path.basename(row.root_path) : null,
+      lastOpenedAt: row.last_opened_at,
+      createdByChatId: row.created_by_chat_id,
+      manifestKeys: Object.keys(manifest).sort(),
+      permissionKey: permissionsKeys,
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: {
+      fastPath: 1,
+      app: 1,
+      pinned: row.pinned === 1 ? 0.4 : 0,
+    },
+    fragments: manifestText ? [{
+      id: `apps.catalog:${row.id}:manifest`,
+      title: "manifest",
+      body: manifestText,
+      snippet: manifestText.slice(0, 180),
+      sortOrder: 0,
+    }] : [],
+    actions: [
+      { id: "open", kind: "open", label: "Open app", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy app reference", requiresApproval: false },
+    ],
+  };
+}
+
+function designResourceSearchDocument(row: DesignResourceRow): SearchDocumentInput {
+  const manifest = parseJsonRecord(row.manifest_json);
+  const manifestText = textFromStructuredContent(redactExternalCachePayload(manifest));
+  const body = [
+    row.name,
+    row.kind,
+    row.id,
+    row.root_path ? path.basename(row.root_path) : undefined,
+    manifestText,
+  ].filter(Boolean).join("\n");
+  return {
+    id: `design.resources:${row.id}`,
+    source: "design.resources",
+    domain: "design",
+    type: row.kind || "resource",
+    resourceId: row.id,
+    title: row.name || row.id,
+    subtitle: [row.kind, row.builtin === 1 ? "built-in" : ""].filter(Boolean).join(" / "),
+    snippet: firstMeaningfulLine(manifestText || "") ?? row.kind,
+    body,
+    ...(row.root_path ? { path: row.root_path } : {}),
+    updatedAt: row.updated_at,
+    metadata: {
+      resourceId: row.id,
+      kind: row.kind,
+      builtin: row.builtin === 1,
+      rootBasename: row.root_path ? path.basename(row.root_path) : null,
+      manifestKeys: Object.keys(manifest).sort(),
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: {
+      fastPath: 1,
+      design: 1,
+      builtin: row.builtin === 1 ? 0.2 : 0,
+    },
+    fragments: manifestText ? [{
+      id: `design.resources:${row.id}:manifest`,
+      title: "manifest",
+      body: manifestText,
+      snippet: manifestText.slice(0, 180),
+      sortOrder: 0,
+    }] : [],
+    actions: [
+      { id: "open", kind: "open", label: "Open design resource", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy design reference", requiresApproval: false },
+    ],
+  };
+}
+
 function connectorCapabilitiesById(db: Database.Database): Map<string, ConnectorCapabilityRow> {
   if (!hasTable(db, "connector_capabilities")) return new Map();
   const rows = db.prepare(`
@@ -5009,6 +5113,32 @@ interface OperationalEventRow {
   message: string;
   created_at: string;
   metadata_json: string;
+}
+
+interface AppCatalogRow {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  root_path: string | null;
+  manifest_json: string;
+  permissions_json: string;
+  pinned: number;
+  last_opened_at: string | null;
+  created_by_chat_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface DesignResourceRow {
+  id: string;
+  kind: string;
+  name: string;
+  root_path: string | null;
+  manifest_json: string;
+  builtin: number;
+  created_at: string;
+  updated_at: string;
 }
 
 interface SkillRegistryRow {
