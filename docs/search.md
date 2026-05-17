@@ -293,6 +293,14 @@ does not index `secret_refs_json`; Search only exposes a
 `requiresProtectedRefs` facet so skill search stays useful without leaking local
 secret references.
 
+`connectors.catalog` projects connector control-plane operations from
+`core.sqlite`. It indexes provider names, runtime/support state, operation ids,
+native operation names, cost/approval metadata, network policy references, and
+declared capability summaries. It does not index credential bindings, secret
+references, or raw traces; connector execution remains host-brokered and
+approval-gated. A resource-scoped scheduling helper exists for connector
+operation changes; automatic control-plane write emitters remain source-owned.
+
 Search result actions are brokered. `search actions execute` produces a
 host-grants execution plan in `--dry-run` mode, fails closed when an approval is
 required but no `--host-approval-id` is provided, and returns a brokered receipt

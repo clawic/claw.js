@@ -3,11 +3,13 @@ import assert from "node:assert/strict";
 import fs from "fs";
 import os from "os";
 import path from "path";
+import Database from "better-sqlite3";
 
 import { SearchStore } from "@clawjs/search";
 
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK } from "./index.ts";
 import { createFakeGenerationScript, runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
+import { ensureV1MainSchema, resolveClawjsMainDbPath } from "./v1-data-core.ts";
 
 test("search rebuild and query use the Search sidecar without workspace state", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-cli-"));
@@ -1089,6 +1091,94 @@ test("search rebuild indexes skills.registry from core.sqlite without secret ref
     assert.equal(deleteJob?.priority, 80);
     assert.equal(deleteJob?.payload.eventDriven, true);
     assert.equal(deleteJob?.payload.slug, "deploy");
+  });
+});
+
+test("search rebuild indexes connectors.catalog from control-plane operations without secrets", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-connectors-"));
+  const dataRoot = path.join(workspaceRoot, ".claw", "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    fs.mkdirSync(dataRoot, { recursive: true });
+    const sqlite = new Database(resolveClawjsMainDbPath());
+    try {
+      ensureV1MainSchema(sqlite);
+      const now = "2026-05-17T12:00:00.000Z";
+      sqlite.prepare(`
+        INSERT INTO connector_providers (id, display_name, trust_tier, enabled, metadata_json, created_at, updated_at)
+        VALUES ('openai', 'OpenAI', 'external_saas', 1, '{"region":"us"}', ?, ?)
+      `).run(now, now);
+      sqlite.prepare(`
+        INSERT INTO connector_capabilities (id, domain, action, facet, summary, created_at, updated_at)
+        VALUES ('image.edit.background', 'image', 'edit', 'background', 'Edit image backgrounds through a brokered connector.', ?, ?)
+      `).run(now, now);
+      sqlite.prepare(`
+        INSERT INTO connector_network_policies (id, required, egress_profile_id, vpn_profile_id, allowed_hosts_json, created_at, updated_at)
+        VALUES ('openai-egress', 1, 'egress.default', 'vpn.openai', '["api.openai.com"]', ?, ?)
+      `).run(now, now);
+      sqlite.prepare(`
+        INSERT INTO connector_operations (
+          id, provider_id, runtime_kind, support, native_name, capability_ids_json,
+          risk_tiers_json, credential_required, cost_risk, requires_approval,
+          network_policy_id, metadata_json, created_at, updated_at
+        )
+        VALUES (
+          'openai.images.edit', 'openai', 'api', 'supported', 'images.edit',
+          '["image.edit.background"]', '["cost"]', 1, 'cost', 1,
+          'openai-egress', '{"notes":"background replacement connector operation"}', ?, ?
+        )
+      `).run(now, now);
+      sqlite.prepare(`
+        INSERT INTO connector_credential_bindings (id, provider_id, secret_ref, scopes_json, operation_ids_json, created_at, updated_at)
+        VALUES ('openai.key.admin', 'openai', 'vault://connectors/openai/admin', '["images"]', '["openai.images.edit"]', ?, ?)
+      `).run(now, now);
+    } finally {
+      sqlite.close();
+    }
+
+    const rebuild = await runCliCapture(["search", "rebuild", "--source", "connectors.catalog", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(rebuild.code, CLI_EXIT_OK);
+    const rebuildPayload = JSON.parse(rebuild.stdout) as {
+      data: { sources: string[]; pendingSources: string[]; indexedBySource: { "connectors.catalog": number } };
+    };
+    assert.equal(rebuildPayload.data.sources.includes("connectors.catalog"), true);
+    assert.equal(rebuildPayload.data.pendingSources.includes("connectors.catalog"), false);
+    assert.equal(rebuildPayload.data.indexedBySource["connectors.catalog"], 1);
+
+    const query = await runCliCapture(["search", "query", "image backgrounds", "--domains", "connectors", "--filters", "metadata.provider=openai", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: {
+        indexedFastPaths: { "connectors.catalog": number };
+        results: Array<{
+          source: string;
+          domain: string;
+          type: string;
+          title: string;
+          metadata?: { provider?: string; support?: string; requiresApproval?: boolean; costRisk?: string; capabilityId?: string[] };
+          actions?: Array<{ id: string; kind: string; requiresApproval?: boolean; grant?: string }>;
+          fragments?: Array<{ title?: string; snippet?: string }>;
+        }>;
+      };
+    };
+    assert.equal(queryPayload.data.indexedFastPaths["connectors.catalog"], 1);
+    const result = queryPayload.data.results.find((entry) => entry.title === "OpenAI images.edit");
+    assert.equal(result?.source, "connectors.catalog");
+    assert.equal(result?.domain, "connectors");
+    assert.equal(result?.type, "operation");
+    assert.equal(result?.metadata?.provider, "openai");
+    assert.equal(result?.metadata?.support, "supported");
+    assert.equal(result?.metadata?.requiresApproval, true);
+    assert.equal(result?.metadata?.costRisk, "cost");
+    assert.deepEqual(result?.metadata?.capabilityId, ["image.edit.background"]);
+    assert.equal(result?.actions?.some((action) => action.id === "execute" && action.kind === "custom" && action.requiresApproval === true && action.grant === "search.connectors.execute"), true);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "image.edit.background" && fragment.snippet?.includes("brokered connector")), true);
+    assert.equal(JSON.stringify(result).includes("vault://connectors/openai/admin"), false);
   });
 });
 

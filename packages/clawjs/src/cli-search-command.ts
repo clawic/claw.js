@@ -107,6 +107,7 @@ export async function runSearchQueryCli(input: {
     const shouldRefreshGenerations = domains?.includes("generations") || sources?.includes("generations.artifacts");
     const shouldRefreshCode = domains?.includes("code") || sources?.includes("code.symbols");
     const shouldRefreshSkills = domains?.includes("skills") || sources?.includes("skills.registry");
+    const shouldRefreshConnectors = domains?.includes("connectors") || sources?.includes("connectors.catalog");
     const shouldRefreshLocalFiles = domains?.includes("files") || sources?.includes("local.files");
     const shouldRefreshWeb = domains?.includes("web") || sources?.includes("web.ingested");
     const shouldRefreshExternal = domains?.includes("external") || sources?.includes("external.cache");
@@ -117,6 +118,7 @@ export async function runSearchQueryCli(input: {
     const indexedGenerations = shouldRefreshGenerations && sourceCanIndex(store, "generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedCode = shouldRefreshCode && sourceCanIndex(store, "code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedSkills = shouldRefreshSkills && sourceCanIndex(store, "skills.registry") ? ensureSkillsRegistrySourceIndexed(store, input.flags) : 0;
+    const indexedConnectors = shouldRefreshConnectors && sourceCanIndex(store, "connectors.catalog") ? ensureConnectorsCatalogSourceIndexed(store, input.flags) : 0;
     const indexedLocalFiles = shouldRefreshLocalFiles && sourceCanIndex(store, "local.files") ? ensureLocalFilesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedWeb = shouldRefreshWeb && sourceCanIndex(store, "web.ingested") ? ensureWebIngestedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedExternal = shouldRefreshExternal && sourceCanIndex(store, "external.cache") ? ensureExternalCacheSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -189,6 +191,7 @@ export async function runSearchQueryCli(input: {
         ...(shouldRefreshGenerations ? { "generations.artifacts": indexedGenerations } : {}),
         ...(shouldRefreshCode ? { "code.symbols": indexedCode } : {}),
         ...(shouldRefreshSkills ? { "skills.registry": indexedSkills } : {}),
+        ...(shouldRefreshConnectors ? { "connectors.catalog": indexedConnectors } : {}),
         ...(shouldRefreshLocalFiles ? { "local.files": indexedLocalFiles } : {}),
         ...(shouldRefreshWeb ? { "web.ingested": indexedWeb } : {}),
         ...(shouldRefreshExternal ? { "external.cache": indexedExternal } : {}),
@@ -263,6 +266,7 @@ export async function runSearchRebuildCli(input: {
     const generationsIndexed = rebuildsSource("generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const codeIndexed = rebuildsSource("code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const skillsIndexed = rebuildsSource("skills.registry") ? ensureSkillsRegistrySourceIndexed(store, input.flags) : 0;
+    const connectorsIndexed = rebuildsSource("connectors.catalog") ? ensureConnectorsCatalogSourceIndexed(store, input.flags) : 0;
     const localFilesIndexed = rebuildsSource("local.files") ? ensureLocalFilesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const webIndexed = rebuildsSource("web.ingested") ? ensureWebIngestedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const externalIndexed = rebuildsSource("external.cache") ? ensureExternalCacheSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -276,6 +280,7 @@ export async function runSearchRebuildCli(input: {
       ...(generationsIndexed > 0 ? ["generations.artifacts"] : []),
       ...(codeIndexed > 0 ? ["code.symbols"] : []),
       ...(skillsIndexed > 0 ? ["skills.registry"] : []),
+      ...(connectorsIndexed > 0 ? ["connectors.catalog"] : []),
       ...(localFilesIndexed > 0 ? ["local.files"] : []),
       ...(webIndexed > 0 ? ["web.ingested"] : []),
       ...(externalIndexed > 0 ? ["external.cache"] : []),
@@ -289,7 +294,7 @@ export async function runSearchRebuildCli(input: {
       rebuilt: true,
       mode: selectedSources ? "scoped" : "full",
       selectedSources: selectedSources ?? null,
-      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + documentsIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + localFilesIndexed + webIndexed + externalIndexed,
+      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + documentsIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + skillsIndexed + connectorsIndexed + localFilesIndexed + webIndexed + externalIndexed,
       embeddings: 0,
       profile: input.flags.profile === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
@@ -304,6 +309,7 @@ export async function runSearchRebuildCli(input: {
         "generations.artifacts": generationsIndexed,
         "code.symbols": codeIndexed,
         "skills.registry": skillsIndexed,
+        "connectors.catalog": connectorsIndexed,
         "local.files": localFilesIndexed,
         "web.ingested": webIndexed,
         "external.cache": externalIndexed,
@@ -845,6 +851,8 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
       return ensureCodeSymbolsSourceIndexed(store, flags, cwd);
     case "skills.registry":
       return ensureSkillsRegistrySourceIndexed(store, flags);
+    case "connectors.catalog":
+      return ensureConnectorsCatalogSourceIndexed(store, flags);
     case "local.files":
       return ensureLocalFilesSourceIndexed(store, flags, cwd);
     case "web.ingested":
@@ -877,6 +885,10 @@ function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flag
     case "skills.registry": {
       const resourceId = resourceIdFromJobPayload(job, "slug") ?? job.resourceId;
       return resourceId ? ensureSkillsRegistryResourceIndexed(store, flags, resourceId) : 0;
+    }
+    case "connectors.catalog": {
+      const resourceId = resourceIdFromJobPayload(job, "operationId") ?? job.resourceId;
+      return resourceId ? ensureConnectorCatalogResourceIndexed(store, flags, resourceId) : 0;
     }
     default:
       return null;
@@ -1611,6 +1623,103 @@ function ensureSkillsRegistryResourceIndexed(store: SearchStore, flags: Record<s
     }
     store.upsertDocument(document);
     store.setSourceState("skills.registry", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 1;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureConnectorsCatalogSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) {
+    store.setSourceState("connectors.catalog", "enabled", {
+      backlog: 0,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 0;
+  }
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "connector_operations") || !hasTable(db, "connector_providers")) {
+      store.setSourceState("connectors.catalog", "degraded", {
+        backlog: 0,
+        error: "core database does not contain connector catalog tables",
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return 0;
+    }
+    const capabilities = connectorCapabilitiesById(db);
+    const rows = db.prepare(`
+      SELECT
+        o.id, o.provider_id, o.runtime_kind, o.support, o.native_name,
+        o.capability_ids_json, o.risk_tiers_json, o.credential_required,
+        o.cost_risk, o.requires_approval, o.network_policy_id,
+        o.metadata_json, o.created_at, o.updated_at,
+        p.display_name AS provider_display_name,
+        p.trust_tier AS provider_trust_tier,
+        p.enabled AS provider_enabled
+      FROM connector_operations o
+      LEFT JOIN connector_providers p ON p.id = o.provider_id
+      ORDER BY o.updated_at DESC
+    `).all() as ConnectorOperationRow[];
+    let indexed = 0;
+    for (const row of rows) {
+      const document = connectorCatalogSearchDocument(row, capabilities);
+      if (!document) continue;
+      store.upsertDocument(document);
+      indexed += 1;
+    }
+    store.setCursor({
+      source: "connectors.catalog",
+      cursor: `operations:${indexed}`,
+      metadata: { store: "core.sqlite", collections: ["connector_operations", "connector_providers", "connector_capabilities"] },
+    });
+    store.setSourceState("connectors.catalog", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return indexed;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureConnectorCatalogResourceIndexed(store: SearchStore, flags: Record<string, string>, operationId: string): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) return 0;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "connector_operations") || !hasTable(db, "connector_providers")) return 0;
+    const row = db.prepare(`
+      SELECT
+        o.id, o.provider_id, o.runtime_kind, o.support, o.native_name,
+        o.capability_ids_json, o.risk_tiers_json, o.credential_required,
+        o.cost_risk, o.requires_approval, o.network_policy_id,
+        o.metadata_json, o.created_at, o.updated_at,
+        p.display_name AS provider_display_name,
+        p.trust_tier AS provider_trust_tier,
+        p.enabled AS provider_enabled
+      FROM connector_operations o
+      LEFT JOIN connector_providers p ON p.id = o.provider_id
+      WHERE o.id = ?
+      LIMIT 1
+    `).get(operationId) as ConnectorOperationRow | undefined;
+    if (!row) {
+      store.tombstone({ source: "connectors.catalog", resourceId: operationId, reason: "connector operation missing during Search event refresh" });
+      return 1;
+    }
+    const document = connectorCatalogSearchDocument(row, connectorCapabilitiesById(db));
+    if (!document) {
+      store.tombstone({ source: "connectors.catalog", resourceId: operationId, reason: "connector operation skipped during Search event refresh" });
+      return 1;
+    }
+    store.upsertDocument(document);
+    store.setSourceState("connectors.catalog", "enabled", {
       backlog: 0,
       error: null,
       lastIndexedAt: new Date().toISOString(),
@@ -2672,6 +2781,103 @@ function skillRegistrySearchDocument(row: SkillRegistryRow): SearchDocumentInput
   };
 }
 
+function connectorCatalogSearchDocument(row: ConnectorOperationRow, capabilitiesById: Map<string, ConnectorCapabilityRow>): SearchDocumentInput | null {
+  if (!row.id) return null;
+  const capabilityIds = parseJsonArray(row.capability_ids_json).filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+  const riskTiers = parseJsonArray(row.risk_tiers_json).filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+  const metadata = parseJsonRecord(row.metadata_json);
+  const capabilities = capabilityIds
+    .map((id) => capabilitiesById.get(id))
+    .filter((value): value is ConnectorCapabilityRow => Boolean(value));
+  const capabilityText = capabilities.map((capability) => [
+    capability.id,
+    capability.domain,
+    capability.action,
+    capability.facet,
+    capability.summary,
+  ].filter(Boolean).join(" ")).join("\n");
+  const providerName = row.provider_display_name || row.provider_id;
+  const nativeName = row.native_name || row.id;
+  const body = [
+    providerName,
+    row.provider_id,
+    row.id,
+    row.runtime_kind,
+    row.support,
+    nativeName,
+    row.cost_risk,
+    row.network_policy_id,
+    capabilityText,
+    textFromStructuredContent(metadata),
+  ].filter(Boolean).join("\n");
+  const capabilityDomains = Array.from(new Set(capabilities.map((capability) => capability.domain)));
+  const capabilityActions = Array.from(new Set(capabilities.map((capability) => capability.action)));
+  const requiresApproval = row.requires_approval === 1;
+  const costRisk = row.cost_risk || "unknown";
+  return {
+    id: `connectors.catalog:${row.id}`,
+    source: "connectors.catalog",
+    domain: "connectors",
+    type: "operation",
+    resourceId: row.id,
+    title: `${providerName} ${nativeName}`.trim(),
+    subtitle: [row.runtime_kind, row.support].filter(Boolean).join(" / "),
+    snippet: firstMeaningfulLine(capabilityText) ?? nativeName,
+    body,
+    updatedAt: row.updated_at,
+    metadata: {
+      provider: row.provider_id,
+      providerDisplayName: providerName,
+      providerTrustTier: row.provider_trust_tier ?? null,
+      providerEnabled: row.provider_enabled === 1,
+      runtimeKind: row.runtime_kind,
+      support: row.support,
+      nativeName: row.native_name ?? null,
+      capabilityId: capabilityIds,
+      capabilityDomain: capabilityDomains,
+      capabilityAction: capabilityActions,
+      riskTier: riskTiers,
+      credentialRequired: row.credential_required === 1,
+      costRisk,
+      requiresApproval,
+      networkPolicyId: row.network_policy_id ?? null,
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: {
+      fastPath: 1,
+      connectorOperation: 1,
+      supported: row.support === "supported" ? 0.2 : 0,
+    },
+    fragments: capabilities.slice(0, 20).map((capability, index) => ({
+      id: `connectors.catalog:${row.id}:capability:${capability.id}`,
+      title: capability.id,
+      body: [capability.domain, capability.action, capability.facet, capability.summary].filter(Boolean).join("\n"),
+      snippet: capability.summary.slice(0, 180),
+      sortOrder: index,
+      metadata: {
+        kind: "capability",
+        domain: capability.domain,
+        action: capability.action,
+        facet: capability.facet,
+      },
+    })),
+    actions: [
+      { id: "open", kind: "open", label: "Open connector operation", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy connector reference", requiresApproval: false },
+      { id: "execute", kind: "custom", label: "Plan connector operation", requiresApproval, risk: costRisk === "none" || costRisk === "free" ? "system" : "cost", grant: "search.connectors.execute" },
+    ],
+  };
+}
+
+function connectorCapabilitiesById(db: Database.Database): Map<string, ConnectorCapabilityRow> {
+  if (!hasTable(db, "connector_capabilities")) return new Map();
+  const rows = db.prepare(`
+    SELECT id, domain, action, facet, summary
+    FROM connector_capabilities
+  `).all() as ConnectorCapabilityRow[];
+  return new Map(rows.map((row) => [row.id, row]));
+}
+
 interface DatabaseRecordRow {
   namespace_id: string;
   collection_name: string;
@@ -2693,6 +2899,34 @@ interface SkillRegistryRow {
   export_path: string | null;
   created_at: string;
   updated_at: string;
+}
+
+interface ConnectorOperationRow {
+  id: string;
+  provider_id: string;
+  runtime_kind: string;
+  support: string;
+  native_name: string | null;
+  capability_ids_json: string;
+  risk_tiers_json: string;
+  credential_required: number;
+  cost_risk: string;
+  requires_approval: number;
+  network_policy_id: string | null;
+  metadata_json: string;
+  created_at: string;
+  updated_at: string;
+  provider_display_name: string | null;
+  provider_trust_tier: string | null;
+  provider_enabled: number | null;
+}
+
+interface ConnectorCapabilityRow {
+  id: string;
+  domain: string;
+  action: string;
+  facet: string;
+  summary: string;
 }
 
 interface CodeFileCandidate {

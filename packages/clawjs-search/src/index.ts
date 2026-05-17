@@ -546,6 +546,19 @@ export function createBuiltinSearchSourceManifests(): SearchSourceManifest[] {
         { id: "requiresProtectedRefs", label: "Requires protected refs", type: "boolean" },
       ],
     }),
+    createFrameworkSearchSourceManifest({
+      id: "connectors.catalog",
+      domain: "connectors",
+      name: "Connectors",
+      resultTypes: ["operation", "provider", "capability"],
+      facets: [
+        { id: "provider", label: "Provider", type: "string" },
+        { id: "runtimeKind", label: "Runtime", type: "string" },
+        { id: "support", label: "Support", type: "string" },
+        { id: "requiresApproval", label: "Requires approval", type: "boolean" },
+        { id: "costRisk", label: "Cost risk", type: "string" },
+      ],
+    }),
     createFullSearchSourceManifest({
       id: "local.files",
       domain: "files",

@@ -143,6 +143,26 @@ export function scheduleSkillsRegistrySearchEvent(input: {
   });
 }
 
+export function scheduleConnectorCatalogSearchEvent(input: {
+  operation: "upsert" | "delete";
+  operationId: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  return scheduleSearchIndexEvent({
+    source: "connectors.catalog",
+    operation: input.operation,
+    resourceId: input.operationId,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      operationId: input.operationId,
+    },
+  });
+}
+
 export function scheduleSearchIndexEvent(input: {
   source: string;
   operation: "upsert" | "delete";
