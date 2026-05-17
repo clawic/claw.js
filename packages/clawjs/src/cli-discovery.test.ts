@@ -585,6 +585,79 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(purchaseOrderTimelinePayload.data.materializedView.itemCount >= 5, true);
   assert.equal(purchaseOrderTimelinePayload.data.materializedView.items.some((item) => item.kind === "purchase_order_line_item" && item.label === "Press frame"), true);
 
+  const warehouseCreate = await runCliCapture(["warehouse", "create", "Main Warehouse", "--company", companyPayload.data.id, "--code", "WH-1", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(warehouseCreate.code, CLI_EXIT_OK, warehouseCreate.stderr || warehouseCreate.stdout);
+  const warehousePayload = JSON.parse(warehouseCreate.stdout) as { data: { id: string; name: string; companyId: string; code: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(warehousePayload.meta.invokedCommand, "warehouse");
+  assert.equal(warehousePayload.meta.collection, "warehouses");
+  assert.equal(warehousePayload.meta.action, "create");
+  assert.equal(warehousePayload.data.name, "Main Warehouse");
+  assert.equal(warehousePayload.data.companyId, companyPayload.data.id);
+  assert.equal(warehousePayload.data.status, "active");
+
+  const inventoryItemCreate = await runCliCapture(["warehouse", warehousePayload.data.id, "inventory-items", "add", "Press stock", "--product", erpProductPayload.data.id, "--quantity-on-hand", "3", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(inventoryItemCreate.code, CLI_EXIT_OK, inventoryItemCreate.stderr || inventoryItemCreate.stdout);
+  const inventoryItemPayload = JSON.parse(inventoryItemCreate.stdout) as { data: { id: string; name: string; warehouseId: string; productCatalogId: string; quantityOnHand: number; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(inventoryItemPayload.meta.invokedCommand, "warehouse");
+  assert.equal(inventoryItemPayload.meta.collection, "inventory_items");
+  assert.equal(inventoryItemPayload.meta.action, "create");
+  assert.equal(inventoryItemPayload.data.name, "Press stock");
+  assert.equal(inventoryItemPayload.data.warehouseId, warehousePayload.data.id);
+  assert.equal(inventoryItemPayload.data.productCatalogId, erpProductPayload.data.id);
+  assert.equal(inventoryItemPayload.data.quantityOnHand, 3);
+  assert.equal(inventoryItemPayload.data.status, "in_stock");
+
+  const stockMovementCreate = await runCliCapture(["inventory-item", inventoryItemPayload.data.id, "stock-movements", "add", "Receipt", "--warehouse", warehousePayload.data.id, "--movement-type", "received", "--quantity", "3", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(stockMovementCreate.code, CLI_EXIT_OK, stockMovementCreate.stderr || stockMovementCreate.stdout);
+  const stockMovementPayload = JSON.parse(stockMovementCreate.stdout) as { data: { title: string; inventoryItemId: string; warehouseId: string; movementType: string; quantity: number; occurredAt: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(stockMovementPayload.meta.invokedCommand, "inventory-item");
+  assert.equal(stockMovementPayload.meta.collection, "stock_movements");
+  assert.equal(stockMovementPayload.meta.action, "create");
+  assert.equal(stockMovementPayload.data.title, "Receipt");
+  assert.equal(stockMovementPayload.data.inventoryItemId, inventoryItemPayload.data.id);
+  assert.equal(stockMovementPayload.data.warehouseId, warehousePayload.data.id);
+  assert.equal(stockMovementPayload.data.movementType, "received");
+  assert.equal(stockMovementPayload.data.quantity, 3);
+  assert.equal(typeof stockMovementPayload.data.occurredAt, "string");
+
+  const directStockMovementCreate = await runCliCapture(["stock-movement", "add", "--inventory-item", inventoryItemPayload.data.id, "--warehouse", warehousePayload.data.id, "Direct adjustment", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(directStockMovementCreate.code, CLI_EXIT_OK, directStockMovementCreate.stderr || directStockMovementCreate.stdout);
+  const directStockMovementPayload = JSON.parse(directStockMovementCreate.stdout) as { data: { title: string; inventoryItemId: string; warehouseId: string }; meta: { collection: string; invokedCommand: string } };
+  assert.equal(directStockMovementPayload.meta.invokedCommand, "stock-movement");
+  assert.equal(directStockMovementPayload.meta.collection, "stock_movements");
+  assert.equal(directStockMovementPayload.data.title, "Direct adjustment");
+  assert.equal(directStockMovementPayload.data.inventoryItemId, inventoryItemPayload.data.id);
+  assert.equal(directStockMovementPayload.data.warehouseId, warehousePayload.data.id);
+
+  const warehouseTimeline = await runCliCapture(["warehouse", warehousePayload.data.id, "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(warehouseTimeline.code, CLI_EXIT_OK, warehouseTimeline.stderr || warehouseTimeline.stdout);
+  const warehouseTimelinePayload = JSON.parse(warehouseTimeline.stdout) as {
+    data: {
+      coverage: { implementationStatus: string; recordsMaterialized: boolean };
+      semanticView: { id: string; systemId: string };
+      materializedView: {
+        subject: { id: string; label: string };
+        company: { id: string; label: string } | null;
+        summary: { inventoryItems: number; stockMovements: number; products: number; quantityOnHand: number };
+        itemCount: number;
+        items: Array<{ kind: string; label: string }>;
+      };
+    };
+  };
+  assert.equal(warehouseTimelinePayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(warehouseTimelinePayload.data.coverage.recordsMaterialized, true);
+  assert.equal(warehouseTimelinePayload.data.semanticView.id, "warehouse.timeline");
+  assert.equal(warehouseTimelinePayload.data.semanticView.systemId, "warehouse");
+  assert.equal(warehouseTimelinePayload.data.materializedView.subject.id, warehousePayload.data.id);
+  assert.equal(warehouseTimelinePayload.data.materializedView.subject.label, "Main Warehouse");
+  assert.equal(warehouseTimelinePayload.data.materializedView.company?.id, companyPayload.data.id);
+  assert.equal(warehouseTimelinePayload.data.materializedView.summary.inventoryItems, 1);
+  assert.equal(warehouseTimelinePayload.data.materializedView.summary.stockMovements, 2);
+  assert.equal(warehouseTimelinePayload.data.materializedView.summary.products, 1);
+  assert.equal(warehouseTimelinePayload.data.materializedView.summary.quantityOnHand, 3);
+  assert.equal(warehouseTimelinePayload.data.materializedView.itemCount >= 6, true);
+  assert.equal(warehouseTimelinePayload.data.materializedView.items.some((item) => item.kind === "inventory_item" && item.label === "Press stock"), true);
+
   const contactCreate = await runCliCapture(["db", "contact", "create", "--set", `companyId=${companyPayload.data.id}`, "--set", `accountId=${accountPayload.data.id}`, "--set", "firstName=Ada", "--set", "lastName=Buyer", "--set", "email=ada@example.test", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(contactCreate.code, CLI_EXIT_OK, contactCreate.stderr || contactCreate.stdout);
   const contactPayload = JSON.parse(contactCreate.stdout) as { data: { id: string; companyId: string; accountId: string; firstName: string; lastName: string; email: string }; meta: { collection: string; action: string } };
