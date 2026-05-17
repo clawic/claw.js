@@ -66,10 +66,12 @@ import type { NotifyClient, SendNotificationInput, UpsertSubscriptionInput } fro
 import type { IotClient } from "./iot/index.ts";
 import type { EmbeddedTimeEngine, TimeClient, CreateTemporalItemInput, TemporalHeartbeatAgentRunner, TemporalHeartbeatCheckProvider, TimeServiceLike, UpdateTemporalItemInput, } from "./time/index.ts";
 import type { ContentClient, ContentApprovalRequest, ContentAssetRef, ContentBrand, ContentCampaign, ContentDestination, ContentEntry, ContentOperation, ContentPublishPlan, ContentPublicationRun, ContentScopedTokenRecord, ContentVariant, } from "./content/index.ts";
+import type { ClawAgentsFacade } from "./create-claw-agents-facades.ts";
 
 import type { TemporalListFilters, TemporalNaturalCreateInput, TemporalReminderAfterInput, TemporalWatchInput } from "./create-claw-options.ts";
 
 export interface ClawInstance {
+  agents: ClawAgentsFacade;
   runtime: {
     context: () => OpenClawRuntimeContext | null;
     status: () => Promise<RuntimeProbeStatus>;

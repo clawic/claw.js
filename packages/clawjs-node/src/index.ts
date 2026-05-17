@@ -26,6 +26,7 @@ export * from "./soul/store.ts";
 export * from "./user/store.ts";
 export * from "./create-claw.ts";
 export type * from "./create-claw-instance.ts";
+export * from "./create-claw-agents-facades.ts";
 export type { ClawFactory, CreateClawOptions } from "./create-claw-options.ts";
 export * from "./data/index.ts";
 export * from "./files/managed-blocks.ts";

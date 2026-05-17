@@ -182,8 +182,9 @@ Delegation is checked with `delegation-check`; both parent and child must pass
 the same effective access intersection, so subagents cannot launder grants
 through a weaker parent. Budgets are checked with `budget-check`; external paid
 actions require both a budget allowance and connector gate before dispatch.
-The SDK also exposes the same Agents V1 policy layer for multidimensional
-budgets, redacted audit events, and safe `claw_agent_package` export. Package
+The SDK exposes the same Agents V1 policy layer through `createClaw().agents`
+for multidimensional budgets, redacted audit events, and safe
+`claw_agent_package` export. Package
 exports redact secret fields and private local paths by construction; raw
 secrets remain in the vault and are not included in portable agent config.
 Relay, MCP, service API, external channel, and internal UI views use the same
@@ -561,6 +562,12 @@ claw account create "Acme Account" --company company_123 --json
 claw deal create "Pilot" --company company_123 --account-id account_123 --json
 claw invoice list --json
 claw invoice create INV-001 --billing-customer billing_customer_123 --total-cents 9900 --json
+claw case create "Smith v Jones" --json
+claw case case_123 evidence add "Signed contract" --json
+claw case case_123 evidence list --json
+claw service create API --company company_123 --json
+claw incident create Outage --service service_123 --severity sev2 --json
+claw service service_123 incidents list --json
 claw travel --help
 claw career --help
 claw family --help

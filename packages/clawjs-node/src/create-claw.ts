@@ -501,6 +501,7 @@ import { createClawContentIotFacades } from "./create-claw-content-iot-facades.t
 import { createClawCapabilityFacades } from "./create-claw-capability-facades.ts";
 import { createClawSessionFacades } from "./create-claw-session-facades.ts";
 import { createClawDataWatchFacades } from "./create-claw-data-watch-facades.ts";
+import { createClawAgentsFacades } from "./create-claw-agents-facades.ts";
 
 function parseTemporalTarget(target: string): Required<Pick<TemporalTarget, "anchorType" | "anchorId">> {
   const separatorIndex = target.indexOf(":");
@@ -1935,6 +1936,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       requireTimeClient,
     }),
     ...createClawChannelFacades({ readChannels, persistChannelsState, channelsRegistry, patchTelegramChannelIntent, connectTelegramAccount, processHost, secretsEnv, ensureTelegramCodexBridgeCommands, refreshChannelSnapshots, appendAuditEvent, adapter, eventBus, refreshTelegramAccountStatus, runChannelListener, sendTelegramAccountMessage, registerOutboundChannelMedia, syncTelegramAccount, registerInboundTelegramMedia, ingestTelegramVoiceNote, setTelegramAccountCommands, getTelegramAccountCommands, ensureTelegramBotSecretReference, telegram, recordTelegramStatusInChannels, disableTelegramAccountWebhook, configureTelegramAccountWebhook, callTelegramApi, callTelegramAccountBooleanMethod, callTelegramAccountRecordMethod, downloadTelegramFile, getTelegramAccountChat, listTelegramAccountChats, telegramBanOrRestrictParams, telegramInviteLinkParams, slack, whatsapp }),
+    ...createClawAgentsFacades(),
     calendar: calendarFacade,
     routines: routinesFacade,
     reminders: temporalRemindersFacade,

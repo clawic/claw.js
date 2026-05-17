@@ -35,6 +35,59 @@ test("Claw is an alias for the primary async factory", async () => {
   assert.equal(Claw.create, createClaw);
 });
 
+test("createClaw exposes Agents V1 policy gates through claw.agents", async () => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-instance-agents-v1-"));
+  const claw = await createClaw({
+    runtime: { adapter: "demo" },
+    workspace: {
+      appId: "demo",
+      workspaceId: "agents-v1-sdk",
+      agentId: "agent.sdk",
+      rootDir: workspaceDir,
+    },
+  });
+
+  const route = claw.agents.routeCheck({
+    assignment: {
+      id: "assignment.web",
+      agentId: "agent.sdk",
+      kind: "external_web_chat",
+      status: "active",
+      channel: "chat",
+      endpointRef: "web://support",
+      externalDisclosure: "transparent_agent",
+    },
+    kind: "external_web_chat",
+    channel: "chat",
+    endpointRef: "web://support",
+    now: "2026-05-17T10:00:00.000Z",
+  });
+  assert.equal(route.allowed, true);
+
+  const identity = claw.agents.resolveExternalIdentity({
+    provider: "web",
+    externalId: "visitor_1",
+    email: "customer@example.com",
+    customerId: "customer_1",
+    ip: "203.0.113.42",
+  });
+  assert.equal(identity.contactProjection, "create_or_update");
+  assert.equal(identity.boundary.scopeId, "customer_1");
+  assert.equal("ip" in identity.telemetry, false);
+
+  const budget = claw.agents.budgetCheck({
+    exceededBehavior: "deny_action",
+    limits: [{ dimension: "external_actions", limit: 1, used: 1 }],
+  }, {
+    dimension: "external_actions",
+    cost: 1,
+    externalPaidAction: true,
+    connectorGateAllowed: true,
+  });
+  assert.equal(budget.allowed, false);
+  assert.deepEqual(budget.reasons, ["budget: external_actions limit exceeded"]);
+});
+
 test("createClaw initializes and inspects a workspace", async () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-instance-"));
   const claw = await createClaw({

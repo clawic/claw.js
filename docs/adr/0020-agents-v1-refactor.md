@@ -61,6 +61,8 @@ The first implementation slice is model plus gates:
   surface-projection`, `claw agents config-revision`, and `claw agents
   incident`, `claw agents activity-feed`, `claw agents blueprint`, and
   `claw agents evaluation`
+- `createClaw().agents` SDK facade with the same Agents V1 policy gates and
+  redacted package/surface helpers
 - `@clawjs/core` policy evaluators and `claw agents` gates for effective
   access, grant expiry, delegation checks, assignment routing, external
   identity, support projection, flexible memory scopes, multidimensional
