@@ -295,6 +295,7 @@ function materializedSemanticViewForIntent(
   if (semanticView.id === "work_order.timeline") return materializedWorkOrderTimeline(input, intent, semanticView);
   if (semanticView.id === "company.timeline") return materializedCompanyTimeline(input, intent, semanticView);
   if (semanticView.id === "erp.company.overview") return materializedErpCompanyOverview(input, intent, semanticView);
+  if (semanticView.id === "invoice.list") return materializedInvoiceList(input, intent, semanticView);
   if (semanticView.id === "crm.account.overview") return materializedCrmAccountOverview(input, intent, semanticView);
   if (semanticView.id === "finance.entity.overview") return materializedFinanceEntityOverview(input, intent, semanticView);
   if (semanticView.id === "learner.timeline") return materializedLearnerTimeline(input, intent, semanticView);
@@ -2161,6 +2162,75 @@ function materializedErpCompanyOverview(
       evidenceSourceId: record.evidenceSourceId,
     })),
     sourceCollections: ["companies", "accounts", "deals", "billing_customers", "invoices", "payment_intents", "services", "work_orders", "evidence_sources", "quality_gaps", "provenance_events"],
+    partial: qualityGaps.length > 0,
+    intentStatus: intent.status,
+  };
+}
+
+function materializedInvoiceList(
+  input: DenseDataCliInput,
+  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
+) {
+  if (input.positionals[0] !== "invoice" || input.positionals[1] !== "list") return undefined;
+  const namespaceId = input.flags.namespace ?? "main";
+  const store = openDenseDataStore(input.workspaceRoot);
+  store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
+
+  const invoices = store.listRecords(namespaceId, "invoices").items;
+  const billingCustomers = uniqueRecordsById(invoices
+    .map((record) => typeof record.billingCustomerId === "string" ? store.getRecord(namespaceId, "billing_customers", record.billingCustomerId) : undefined)
+    .filter((record): record is Record<string, unknown> => Boolean(record)));
+  const billingCustomerIds = new Set(billingCustomers.map((record) => record.id));
+  const paymentsByInvoice = invoices.flatMap((record) => store.listRecords(namespaceId, "payment_intents", { filter: { invoiceId: record.id } }).items);
+  const paymentsByCustomer = billingCustomers.flatMap((record) => store.listRecords(namespaceId, "payment_intents", { filter: { billingCustomerId: record.id } }).items);
+  const payments = uniqueRecordsById([...paymentsByInvoice, ...paymentsByCustomer]);
+  const evidence = invoices.flatMap((record) => store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "invoices", recordId: record.id } }).items);
+  const qualityGaps = invoices.flatMap((record) => store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "invoices", targetId: record.id } }).items);
+  const provenance = invoices.flatMap((record) => store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "invoices", targetId: record.id } }).items);
+  const invoiceTotalCents = sumNumericField(invoices, "totalCents");
+  const paymentTotalCents = sumNumericField(payments, "amountCents");
+  const items = [
+    ...invoices.map((record) => timelineItem(record, "invoice", record.id, record.number ?? record.title ?? record.id, record.issuedAt ?? record.createdAt, record)),
+    ...payments.map((record) => timelineItem(record, "payment", record.id, record.status ?? record.id, record.createdAt, record)),
+    ...evidence.map((record) => timelineItem(record, "evidence", record.id, record.label ?? record.id, record.capturedAt ?? record.createdAt, record)),
+    ...qualityGaps.map((record) => timelineItem(record, "quality_gap", record.id, record.label ?? record.id, record.createdAt, record)),
+    ...provenance.map((record) => timelineItem(record, "provenance", record.id, record.eventType ?? record.id, record.occurredAt ?? record.createdAt, record)),
+  ].sort((left, right) => String(left.occurredAt).localeCompare(String(right.occurredAt)));
+
+  return {
+    id: semanticView.id,
+    subject: { collectionName: "invoices", id: "all", label: "Invoices" },
+    summary: {
+      invoices: invoices.length,
+      billingCustomers: billingCustomers.length,
+      invoiceTotalCents,
+      payments: payments.length,
+      paymentTotalCents,
+      evidenceSources: evidence.length,
+      qualityGaps: qualityGaps.length,
+    },
+    itemCount: items.length,
+    items,
+    records: {
+      invoices,
+      billingCustomers,
+      payments,
+      evidence,
+      provenance,
+    },
+    linkedIds: {
+      billingCustomerIds: [...billingCustomerIds],
+    },
+    gaps: qualityGaps.map((record) => ({
+      id: record.id,
+      label: record.label,
+      status: record.status,
+      gapKind: record.gapKind,
+      severity: record.severity,
+      evidenceSourceId: record.evidenceSourceId,
+    })),
+    sourceCollections: ["invoices", "billing_customers", "payment_intents", "evidence_sources", "quality_gaps", "provenance_events"],
     partial: qualityGaps.length > 0,
     intentStatus: intent.status,
   };

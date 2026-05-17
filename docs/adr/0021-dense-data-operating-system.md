@@ -207,6 +207,10 @@ Lab and biology timeline routes follow the same local-first pattern:
 `claw sample <id> timeline` materializes `samples`, `assays`, evidence, gaps,
 and provenance, while `claw experiment <id> timeline` materializes
 `biology_experiments`, child samples, assays, evidence, gaps, and provenance.
+ERP invoice listing is also a materialized semantic view: `claw invoice list`
+reads `invoices`, `billing_customers`, `payment_intents`, invoice evidence,
+provenance, and quality gaps so reconciliation gaps remain queryable without a
+second billing view model.
 Research uses `claw study <id> timeline` to materialize `studies`,
 `participants`, linked samples, evidence, gaps, and provenance, keeping CTMS
 sync as `external_pending` unless a real provider connector is validated.
