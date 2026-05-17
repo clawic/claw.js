@@ -14,7 +14,7 @@ export const INCIDENTS: BuiltinCollectionDefinition = {
   fields: [
     { name: "serviceId", type: "relation", relation: { collectionName: "services" }, aliases: ["service", "affectedServiceId"] },
     { name: "title", type: "text", required: true, requiredReason: "identity", aliases: ["summary", "name"] },
-    { name: "severity", type: "select", options: ["low", "medium", "high", "critical"] },
+    { name: "severity", type: "select", options: ["sev1", "sev2", "sev3", "sev4"] },
     { name: "status", type: "select", options: ["open", "investigating", "mitigated", "resolved", "closed"] },
     { name: "startedAt", type: "date" },
     { name: "detectedAt", type: "date" },

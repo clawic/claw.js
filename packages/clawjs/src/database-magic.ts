@@ -417,7 +417,7 @@ function applyDefaults(collectionName: string, payload: Record<string, unknown>,
       break;
     case "incidents":
       payload.status ??= "open";
-      payload.severity ??= "medium";
+      payload.severity ??= "sev3";
       break;
     default:
       break;
