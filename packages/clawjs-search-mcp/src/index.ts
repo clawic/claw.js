@@ -4,6 +4,7 @@ import path from "node:path";
 import { createInterface } from "node:readline";
 import { Writable } from "node:stream";
 
+import { clawCliCommandRegistry, listClawCliAliases } from "@clawjs/core";
 import {
   DEFAULT_SEARCH_BUDGETS,
   SEARCH_PROFILES,
@@ -118,6 +119,26 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
           entrypoints,
           rootSearchShortcutState: entrypoints.find((entrypoint) => entrypoint.id === "root-search")?.shortcut.state ?? "external_pending",
           chatSearchIsolation: entrypoints.find((entrypoint) => entrypoint.id === "chat-search")?.queryScope === "conversations_only",
+        };
+      },
+    },
+    {
+      name: "search.aliases.list",
+      description: "List launcher aliases exposed to Root Search automation.",
+      inputSchema: { type: "object", properties: {} },
+      handler: () => {
+        const commandNames = new Set(clawCliCommandRegistry.commands.map((entry) => entry.name));
+        const aliases = listClawCliAliases().map((alias) => ({
+          ...alias,
+          source: alias.source === "collection" ? "collection" : "command",
+          searchDomain: "commands",
+          resultId: commandNames.has(alias.canonicalName) ? `commands:${alias.canonicalName}` : null,
+        }));
+        return {
+          aliases,
+          count: aliases.length,
+          rootSearchShortcutState: listSearchEntrypointContracts().find((entrypoint) => entrypoint.id === "root-search")?.hotkey.state ?? "external_pending",
+          chatSearchIsolation: true,
         };
       },
     },

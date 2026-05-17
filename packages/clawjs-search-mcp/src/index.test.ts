@@ -22,6 +22,7 @@ test("Search MCP exposes profile, entrypoint, and explain tools", () => {
       "search.status",
       "search.profiles.list",
       "search.entrypoints.list",
+      "search.aliases.list",
       "search.explain",
       "search.actions.list",
       "search.actions.execute",
@@ -50,6 +51,25 @@ test("Search MCP exposes profile, entrypoint, and explain tools", () => {
     assert.equal(entrypoints.entrypoints.find((entrypoint) => entrypoint.id === "root-search")?.shortcut.bindingId, "search.root.global");
     assert.equal(entrypoints.entrypoints.find((entrypoint) => entrypoint.id === "chat-search")?.queryScope, "conversations_only");
     assert.equal(entrypoints.entrypoints.find((entrypoint) => entrypoint.id === "chat-search")?.shortcut.reservedChord, "Command-G");
+
+    const aliasesTool = tools.find((tool) => tool.name === "search.aliases.list");
+    const aliases = aliasesTool?.handler({}) as {
+      count: number;
+      rootSearchShortcutState: string;
+      chatSearchIsolation: boolean;
+      aliases: Array<{ alias: string; canonicalName: string; source: string; searchDomain: string; resultId: string | null }>;
+    };
+    assert.equal(aliases.count, aliases.aliases.length);
+    assert.equal(aliases.rootSearchShortcutState, "external_pending");
+    assert.equal(aliases.chatSearchIsolation, true);
+    const dbAlias = aliases.aliases.find((alias) => alias.alias === "db");
+    assert.equal(dbAlias?.canonicalName, "database");
+    assert.equal(dbAlias?.source, "command");
+    assert.equal(dbAlias?.searchDomain, "commands");
+    assert.equal(dbAlias?.resultId, "commands:database");
+    const imageAlias = aliases.aliases.find((alias) => alias.alias === "image");
+    assert.equal(imageAlias?.canonicalName, "images");
+    assert.equal(imageAlias?.resultId, "commands:images");
 
     const explainTool = tools.find((tool) => tool.name === "search.explain");
     const explanation = explainTool?.handler({ query: "release branch" }) as { query: string; budgets: { sourceTimeoutMs: number }; ranking: string[] };
