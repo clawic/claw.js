@@ -162,7 +162,7 @@ test("runCli filters stable contract surface categories", async () => {
 test("runCli exposes CLI aliases and decision sources through inspect", async () => {
   const commands = await runCliCapture(["inspect", "commands", "--json"], process.cwd());
   assert.equal(commands.code, CLI_EXIT_OK);
-  const commandPayload = parseCliJson<{ commands: Array<{ name: string; support: { state: string }; securityPolicy: string }> }>(commands.stdout).data;
+  const commandPayload = parseCliJson<{ commands: Array<{ name: string; usage?: string; support: { state: string }; securityPolicy: string; source?: { file: string; symbol: string } }> }>(commands.stdout).data;
   assert.equal(commandPayload.commands.some((entry) => entry.name === "host" && entry.support.state === "host_required" && entry.securityPolicy === "signed_host_broker"), true);
   assert.equal(commandPayload.commands.some((entry) => entry.name === "apps" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
   assert.equal(commandPayload.commands.some((entry) => entry.name === "design" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
@@ -174,6 +174,7 @@ test("runCli exposes CLI aliases and decision sources through inspect", async ()
   assert.equal(commandPayload.commands.some((entry) => entry.name === "mcp" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
   assert.equal(commandPayload.commands.some((entry) => entry.name === "snippets" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
   assert.equal(commandPayload.commands.some((entry) => entry.name === "audio" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
+  assert.equal(commandPayload.commands.some((entry) => entry.name === "calendar" && entry.support.state === "supported" && entry.securityPolicy === "local_write" && entry.usage === "calendar create|list|get|update|delete" && entry.source?.symbol === "runV1DataCli"), true);
   assert.equal(commandPayload.commands.some((entry) => entry.name === "images" && entry.support.state === "cost_risk"), true);
 
   const aliases = await runCliCapture(["inspect", "aliases", "--json"], process.cwd());
