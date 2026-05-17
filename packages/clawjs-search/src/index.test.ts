@@ -138,6 +138,7 @@ test("SearchStore persists sources, fragments, FTS documents, actions, cursors, 
     const output = store.query({ query: "timeouts", domains: ["sessions"], explain: true });
     assert.equal(output.results.length, 1);
     assert.equal(output.results[0]?.domain, "sessions");
+    assert.equal(output.results[0]?.shard, undefined);
     assert.equal(output.results[0]?.fragments?.[0]?.id, "sessions:chat_1:message_1");
     assert.equal(output.results[0]?.actions?.[0]?.id, "open");
     assert.deepEqual(output.results[0]?.explanation?.matchedBy, ["fts"]);
@@ -153,9 +154,14 @@ test("SearchStore persists sources, fragments, FTS documents, actions, cursors, 
     const filteredOut = store.query({ query: "timeouts", domains: ["sessions"], filters: { "metadata.projectId": "project-beta" } });
     assert.equal(filteredOut.results.length, 0);
 
-    const cursor = store.setCursor({ source: "sessions.chats", cursor: "watermark-1", metadata: { shard: "hot" } });
+    const cursor = store.setCursor({ source: "sessions.chats", cursor: "watermark-1", metadata: { shard: "default" } });
     assert.equal(cursor.cursor, "watermark-1");
-    assert.deepEqual(store.getCursor("sessions.chats")?.metadata, { shard: "hot" });
+    assert.equal(cursor.shard, "default");
+    assert.deepEqual(store.getCursor("sessions.chats")?.metadata, { shard: "default" });
+    store.setCursor({ source: "sessions.chats", shard: "hot", cursor: "hot-watermark", metadata: { shard: "hot" } });
+    store.setCursor({ source: "sessions.chats", shard: "cold", cursor: "cold-watermark", metadata: { shard: "cold" } });
+    assert.equal(store.getCursor("sessions.chats", "hot")?.cursor, "hot-watermark");
+    assert.deepEqual(store.listCursors("sessions.chats").map((entry) => entry.shard), ["cold", "default", "hot"]);
 
     store.saveSearch({ id: "saved_1", name: "Chats about Search", query: { query: "search", domains: ["sessions"] } });
     assert.equal(store.listSavedSearches().at(0)?.name, "Chats about Search");
@@ -202,6 +208,111 @@ test("SearchStore persists sources, fragments, FTS documents, actions, cursors, 
     const tombstone = store.tombstone({ source: "sessions.chats", resourceId: "chat_1", reason: "deleted upstream" });
     assert.equal(tombstone.source, "sessions.chats");
     assert.equal(store.query({ query: "timeouts", domains: ["sessions"] }).results.length, 0);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("SearchStore can isolate hot and cold document shards without changing default queries", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-shards-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "images.derived",
+      domain: "images",
+      name: "Images",
+      resultTypes: ["image"],
+    }));
+    store.upsertDocument({
+      id: "images.derived:hot:one",
+      source: "images.derived",
+      shard: "hot",
+      domain: "images",
+      type: "image",
+      title: "Launch whiteboard",
+      body: "diagram of search pipeline",
+      updatedAt: "2026-05-17T12:00:00.000Z",
+      rankingHints: { hot: 2 },
+    });
+    store.upsertDocument({
+      id: "images.derived:cold:one",
+      source: "images.derived",
+      shard: "cold",
+      domain: "images",
+      type: "image",
+      title: "Archived whiteboard",
+      body: "diagram of search pipeline",
+      updatedAt: "2026-05-16T12:00:00.000Z",
+    });
+
+    const all = store.query({ query: "diagram", domains: ["images"] });
+    assert.equal(all.results.length, 2);
+    assert.deepEqual(all.results.map((result) => result.shard), ["hot", "cold"]);
+    assert.deepEqual(store.query({ query: "diagram", domains: ["images"], shards: ["hot"] }).results.map((result) => result.id), ["images.derived:hot:one"]);
+    assert.deepEqual(store.query({ query: "diagram", domains: ["images"], filters: { shard: "cold" } }).results.map((result) => result.id), ["images.derived:cold:one"]);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("SearchStore leases indexing jobs by source and shard for controlled backfill", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-index-jobs-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "documents.blocks",
+      domain: "documents",
+      name: "Documents",
+      resultTypes: ["document"],
+    }));
+    store.enqueueIndexJob({
+      id: "job:cold",
+      source: "documents.blocks",
+      shard: "cold",
+      operation: "backfill",
+      resourceId: "doc:cold",
+      priority: 1,
+      scheduledAt: "2026-05-17T10:00:00.000Z",
+      createdAt: "2026-05-17T10:00:00.000Z",
+    });
+    store.enqueueIndexJob({
+      id: "job:hot",
+      source: "documents.blocks",
+      shard: "hot",
+      operation: "upsert",
+      resourceId: "doc:hot",
+      payload: { reason: "changed" },
+      priority: 10,
+      scheduledAt: "2026-05-17T10:00:00.000Z",
+      createdAt: "2026-05-17T10:00:01.000Z",
+    });
+
+    const hotClaims = store.claimIndexJobs({
+      now: "2026-05-17T10:00:02.000Z",
+      leaseMs: 1_000,
+      shards: ["hot"],
+    });
+    assert.deepEqual(hotClaims.map((job) => job.id), ["job:hot"]);
+    assert.equal(hotClaims[0]?.attempts, 1);
+    assert.equal(hotClaims[0]?.payload.reason, "changed");
+    assert.equal(store.claimIndexJobs({ now: "2026-05-17T10:00:02.500Z", shards: ["hot"] }).length, 0);
+
+    const retried = store.failIndexJob("job:hot", {
+      error: "temporary extractor throttle",
+      retry: true,
+      scheduledAt: "2026-05-17T10:00:04.000Z",
+      updatedAt: "2026-05-17T10:00:03.000Z",
+    });
+    assert.equal(retried?.status, "queued");
+    assert.equal(retried?.error, "temporary extractor throttle");
+    assert.equal(store.claimIndexJobs({ now: "2026-05-17T10:00:03.500Z", shards: ["hot"] }).length, 0);
+    assert.deepEqual(store.claimIndexJobs({ now: "2026-05-17T10:00:04.000Z", shards: ["hot"] }).map((job) => job.id), ["job:hot"]);
+
+    assert.equal(store.completeIndexJob("job:hot", { updatedAt: "2026-05-17T10:00:05.000Z" })?.status, "done");
+    assert.deepEqual(store.claimIndexJobs({ now: "2026-05-17T10:00:05.000Z" }).map((job) => job.id), ["job:cold"]);
+    assert.deepEqual(store.listIndexJobs({ status: "done" }).map((job) => job.id), ["job:hot"]);
   } finally {
     store.close();
     fs.rmSync(dir, { recursive: true, force: true });

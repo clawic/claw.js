@@ -121,6 +121,7 @@ export interface SearchFragment {
 export interface SearchResult {
   id: string;
   source: string;
+  shard?: string;
   domain: string;
   type: string;
   title: string;
@@ -160,6 +161,7 @@ export interface SearchQueryInput {
   query: string;
   domains?: string[];
   sources?: string[];
+  shards?: string[];
   profile?: SearchProfileId;
   actor?: string;
   surface?: string;

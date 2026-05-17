@@ -58,6 +58,14 @@ Search V1.1 is built from these layers:
 - **Per-source limits**: source manifests declare body, fragment-count, and
   per-fragment byte limits. The store applies those limits before FTS writes so
   heavy extractors cannot broaden unrelated fast paths.
+- **Logical shards**: indexed documents and source cursors are keyed by source
+  and shard. The default shard preserves simple adapters; hot/cold and
+  extractor-specific shards can be queried or advanced independently as backfill
+  matures. Physical shard tables remain a later scale-engine boundary.
+- **Indexing jobs**: the sidecar owns a source/shard-aware job queue for
+  upsert, delete, backfill, and rebuild work. Jobs use bounded leases,
+  priorities, schedules, and retries so background indexing can progress
+  without blocking section fast paths.
 - **Actions and permissions**: results can expose actions, but execution remains
   brokered by grants/approvals. Sensitive previews are redacted before they
   reach generic Search output.

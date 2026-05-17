@@ -31,6 +31,7 @@ export interface SearchDocumentFragmentInput {
 export interface SearchDocumentInput {
   id: string;
   source: string;
+  shard?: string;
   domain: string;
   type: string;
   title: string;
@@ -67,6 +68,7 @@ export interface SearchMonitorInput {
 
 export interface SearchSourceCursor {
   source: string;
+  shard: string;
   cursor: string;
   updatedAt: string;
   metadata: Record<string, unknown>;
@@ -78,6 +80,39 @@ export interface SearchTombstone {
   resourceId: string;
   deletedAt: string;
   reason?: string;
+}
+
+export type SearchIndexJobOperation = "upsert" | "delete" | "backfill" | "rebuild";
+
+export type SearchIndexJobStatus = "queued" | "leased" | "done" | "failed";
+
+export interface SearchIndexJobInput {
+  id?: string;
+  source: string;
+  shard?: string;
+  operation: SearchIndexJobOperation;
+  resourceId?: string;
+  payload?: Record<string, unknown>;
+  priority?: number;
+  scheduledAt?: string;
+  createdAt?: string;
+}
+
+export interface SearchIndexJob {
+  id: string;
+  source: string;
+  shard: string;
+  operation: SearchIndexJobOperation;
+  resourceId?: string;
+  payload: Record<string, unknown>;
+  status: SearchIndexJobStatus;
+  attempts: number;
+  priority: number;
+  scheduledAt: string;
+  createdAt: string;
+  updatedAt: string;
+  leasedUntil?: string;
+  error?: string;
 }
 
 export type SearchAuditEventType = "sensitive_query" | "action";
@@ -217,6 +252,7 @@ export class SearchStore {
 
   upsertDocument(input: SearchDocumentInput): void {
     const updatedAt = input.updatedAt ?? new Date().toISOString();
+    const shard = input.shard ?? "default";
     const limits = this.indexingLimitsForSource(input.source);
     const body = truncateUtf8(input.body ?? "", limits.maxBodyBytes);
     const fragments = (input.fragments ?? []).slice(0, limits.maxFragments).map((fragment) => ({
@@ -227,12 +263,13 @@ export class SearchStore {
     const tx = this.db.transaction(() => {
       this.db.prepare(`
         INSERT INTO search_documents (
-          id, source, domain, type, resource_id, title, subtitle, snippet, body, path,
+          id, source, shard, domain, type, resource_id, title, subtitle, snippet, body, path,
           updated_at, metadata_json, permissions_json, ranking_json, deleted_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
         ON CONFLICT(id) DO UPDATE SET
           source = excluded.source,
+          shard = excluded.shard,
           domain = excluded.domain,
           type = excluded.type,
           resource_id = excluded.resource_id,
@@ -249,6 +286,7 @@ export class SearchStore {
       `).run(
         input.id,
         input.source,
+        shard,
         input.domain,
         input.type,
         input.resourceId ?? null,
@@ -266,22 +304,23 @@ export class SearchStore {
       this.db.prepare("DELETE FROM search_actions WHERE document_id = ?").run(input.id);
       this.db.prepare("DELETE FROM search_fts WHERE doc_id = ?").run(input.id);
       this.db.prepare(`
-        INSERT INTO search_fts (doc_id, fragment_id, source, domain, type, title, body, path)
-        VALUES (?, NULL, ?, ?, ?, ?, ?, ?)
-      `).run(input.id, input.source, input.domain, input.type, input.title, [input.subtitle, input.snippet, body].filter(Boolean).join("\n"), input.path ?? "");
+        INSERT INTO search_fts (doc_id, fragment_id, source, shard, domain, type, title, body, path)
+        VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?)
+      `).run(input.id, input.source, shard, input.domain, input.type, input.title, [input.subtitle, input.snippet, body].filter(Boolean).join("\n"), input.path ?? "");
       const insertFragment = this.db.prepare(`
-        INSERT INTO search_fragments (id, document_id, source, domain, title, body, snippet, sort_order, metadata_json)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO search_fragments (id, document_id, source, shard, domain, title, body, snippet, sort_order, metadata_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       const insertFragmentFts = this.db.prepare(`
-        INSERT INTO search_fts (doc_id, fragment_id, source, domain, type, title, body, path)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO search_fts (doc_id, fragment_id, source, shard, domain, type, title, body, path)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       for (const [index, fragment] of fragments.entries()) {
         insertFragment.run(
           fragment.id,
           input.id,
           input.source,
+          shard,
           input.domain,
           fragment.title ?? "",
           fragment.body ?? "",
@@ -289,7 +328,7 @@ export class SearchStore {
           fragment.sortOrder ?? index,
           JSON.stringify(fragment.metadata ?? {}),
         );
-        insertFragmentFts.run(input.id, fragment.id, input.source, input.domain, input.type, fragment.title ?? "", [fragment.snippet, fragment.body].filter(Boolean).join("\n"), input.path ?? "");
+        insertFragmentFts.run(input.id, fragment.id, input.source, shard, input.domain, input.type, fragment.title ?? "", [fragment.snippet, fragment.body].filter(Boolean).join("\n"), input.path ?? "");
       }
       const insertAction = this.db.prepare("INSERT INTO search_actions (document_id, action_id, action_json) VALUES (?, ?, ?)");
       for (const action of input.actions ?? []) {
@@ -319,6 +358,10 @@ export class SearchStore {
     if (input.sources?.length) {
       clauses.push(`d.source IN (${input.sources.map(() => "?").join(", ")})`);
       params.push(...input.sources);
+    }
+    if (input.shards?.length) {
+      clauses.push(`d.shard IN (${input.shards.map(() => "?").join(", ")})`);
+      params.push(...input.shards);
     }
     applySearchFilters(clauses, params, input.filters);
     if (profile !== "full") {
@@ -385,19 +428,128 @@ export class SearchStore {
     return { id, source: input.source, resourceId: input.resourceId, deletedAt, ...(input.reason ? { reason: input.reason } : {}) };
   }
 
-  setCursor(input: { source: string; cursor: string; metadata?: Record<string, unknown>; updatedAt?: string }): SearchSourceCursor {
+  setCursor(input: { source: string; shard?: string; cursor: string; metadata?: Record<string, unknown>; updatedAt?: string }): SearchSourceCursor {
     const updatedAt = input.updatedAt ?? new Date().toISOString();
+    const shard = input.shard ?? "default";
     this.db.prepare(`
-      INSERT INTO search_cursors (source, cursor, updated_at, metadata_json)
-      VALUES (?, ?, ?, ?)
-      ON CONFLICT(source) DO UPDATE SET cursor = excluded.cursor, updated_at = excluded.updated_at, metadata_json = excluded.metadata_json
-    `).run(input.source, input.cursor, updatedAt, JSON.stringify(input.metadata ?? {}));
-    return { source: input.source, cursor: input.cursor, updatedAt, metadata: input.metadata ?? {} };
+      INSERT INTO search_cursors (source, shard, cursor, updated_at, metadata_json)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(source, shard) DO UPDATE SET cursor = excluded.cursor, updated_at = excluded.updated_at, metadata_json = excluded.metadata_json
+    `).run(input.source, shard, input.cursor, updatedAt, JSON.stringify(input.metadata ?? {}));
+    return { source: input.source, shard, cursor: input.cursor, updatedAt, metadata: input.metadata ?? {} };
   }
 
-  getCursor(source: string): SearchSourceCursor | null {
-    const row = this.db.prepare("SELECT source, cursor, updated_at, metadata_json FROM search_cursors WHERE source = ?").get(source) as SearchCursorRow | undefined;
-    return row ? { source: row.source, cursor: row.cursor, updatedAt: row.updated_at, metadata: parseJson(row.metadata_json) } : null;
+  getCursor(source: string, shard = "default"): SearchSourceCursor | null {
+    const row = this.db.prepare("SELECT source, shard, cursor, updated_at, metadata_json FROM search_cursors WHERE source = ? AND shard = ?").get(source, shard) as SearchCursorRow | undefined;
+    return row ? searchCursorFromRow(row) : null;
+  }
+
+  listCursors(source?: string): SearchSourceCursor[] {
+    const rows = source
+      ? this.db.prepare("SELECT source, shard, cursor, updated_at, metadata_json FROM search_cursors WHERE source = ? ORDER BY shard ASC").all(source) as SearchCursorRow[]
+      : this.db.prepare("SELECT source, shard, cursor, updated_at, metadata_json FROM search_cursors ORDER BY source ASC, shard ASC").all() as SearchCursorRow[];
+    return rows.map(searchCursorFromRow);
+  }
+
+  enqueueIndexJob(input: SearchIndexJobInput): SearchIndexJob {
+    const now = input.createdAt ?? new Date().toISOString();
+    const shard = input.shard ?? "default";
+    const id = input.id ?? `${input.source}:${shard}:${input.operation}:${input.resourceId ?? Math.random().toString(36).slice(2, 10)}`;
+    const priority = Math.max(0, Math.min(100, input.priority ?? 0));
+    const scheduledAt = input.scheduledAt ?? now;
+    this.db.prepare(`
+      INSERT INTO search_index_jobs (
+        id, source, shard, operation, resource_id, payload_json, status, attempts,
+        priority, scheduled_at, leased_until, error, created_at, updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, 'queued', 0, ?, ?, NULL, NULL, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        source = excluded.source,
+        shard = excluded.shard,
+        operation = excluded.operation,
+        resource_id = excluded.resource_id,
+        payload_json = excluded.payload_json,
+        status = 'queued',
+        priority = excluded.priority,
+        scheduled_at = excluded.scheduled_at,
+        leased_until = NULL,
+        error = NULL,
+        updated_at = excluded.updated_at
+    `).run(id, input.source, shard, input.operation, input.resourceId ?? null, JSON.stringify(input.payload ?? {}), priority, scheduledAt, now, now);
+    return this.indexJob(id) as SearchIndexJob;
+  }
+
+  claimIndexJobs(input: { limit?: number; now?: string; leaseMs?: number; sources?: string[]; shards?: string[] } = {}): SearchIndexJob[] {
+    const limit = Math.max(1, Math.min(100, input.limit ?? 10));
+    const now = input.now ?? new Date().toISOString();
+    const leasedUntil = new Date(Date.parse(now) + Math.max(1000, input.leaseMs ?? 30_000)).toISOString();
+    const clauses = ["status IN ('queued', 'leased')", "scheduled_at <= ?", "(leased_until IS NULL OR leased_until <= ?)"];
+    const params: unknown[] = [now, now];
+    if (input.sources?.length) {
+      clauses.push(`source IN (${input.sources.map(() => "?").join(", ")})`);
+      params.push(...input.sources);
+    }
+    if (input.shards?.length) {
+      clauses.push(`shard IN (${input.shards.map(() => "?").join(", ")})`);
+      params.push(...input.shards);
+    }
+    const tx = this.db.transaction(() => {
+      const rows = this.db.prepare(`
+        SELECT id FROM search_index_jobs
+        WHERE ${clauses.join(" AND ")}
+        ORDER BY priority DESC, scheduled_at ASC, created_at ASC, id ASC
+        LIMIT ?
+      `).all(...params, limit) as Array<{ id: string }>;
+      const lease = this.db.prepare(`
+        UPDATE search_index_jobs
+        SET status = 'leased', attempts = attempts + 1, leased_until = ?, updated_at = ?
+        WHERE id = ?
+      `);
+      for (const row of rows) lease.run(leasedUntil, now, row.id);
+      return rows.map((row) => this.indexJob(row.id)).filter((job): job is SearchIndexJob => !!job);
+    });
+    return tx();
+  }
+
+  completeIndexJob(id: string, input: { updatedAt?: string } = {}): SearchIndexJob | null {
+    const updatedAt = input.updatedAt ?? new Date().toISOString();
+    this.db.prepare(`
+      UPDATE search_index_jobs
+      SET status = 'done', leased_until = NULL, error = NULL, updated_at = ?
+      WHERE id = ?
+    `).run(updatedAt, id);
+    return this.indexJob(id);
+  }
+
+  failIndexJob(id: string, input: { error: string; retry?: boolean; scheduledAt?: string; updatedAt?: string }): SearchIndexJob | null {
+    const updatedAt = input.updatedAt ?? new Date().toISOString();
+    this.db.prepare(`
+      UPDATE search_index_jobs
+      SET status = ?, leased_until = NULL, error = ?, scheduled_at = COALESCE(?, scheduled_at), updated_at = ?
+      WHERE id = ?
+    `).run(input.retry === true ? "queued" : "failed", input.error, input.scheduledAt ?? null, updatedAt, id);
+    return this.indexJob(id);
+  }
+
+  listIndexJobs(input: { status?: SearchIndexJobStatus; source?: string; limit?: number } = {}): SearchIndexJob[] {
+    const limit = Math.max(1, Math.min(200, input.limit ?? 50));
+    const clauses: string[] = [];
+    const params: unknown[] = [];
+    if (input.status) {
+      clauses.push("status = ?");
+      params.push(input.status);
+    }
+    if (input.source) {
+      clauses.push("source = ?");
+      params.push(input.source);
+    }
+    const rows = this.db.prepare(`
+      SELECT * FROM search_index_jobs
+      ${clauses.length ? `WHERE ${clauses.join(" AND ")}` : ""}
+      ORDER BY priority DESC, scheduled_at ASC, created_at ASC, id ASC
+      LIMIT ?
+    `).all(...params, limit) as SearchIndexJobRow[];
+    return rows.map(searchIndexJobFromRow);
   }
 
   saveSearch(input: SavedSearchInput): void {
@@ -523,6 +675,11 @@ export class SearchStore {
     return row ? this.resultFromRow(row, { query: "" }) : null;
   }
 
+  private indexJob(id: string): SearchIndexJob | null {
+    const row = this.db.prepare("SELECT * FROM search_index_jobs WHERE id = ?").get(id) as SearchIndexJobRow | undefined;
+    return row ? searchIndexJobFromRow(row) : null;
+  }
+
   private seedProfiles(): void {
     const insert = this.db.prepare(`
       INSERT INTO search_profiles (id, label, default_enabled)
@@ -535,11 +692,25 @@ export class SearchStore {
   private ensureSchema(): void {
     try {
       this.db.exec(SEARCH_SCHEMA_SQL);
+      if (
+        !this.tableHasColumn("search_cursors", "shard")
+        || !this.tableHasColumn("search_documents", "shard")
+        || !this.tableHasColumn("search_fragments", "shard")
+        || !this.tableHasColumn("search_fts", "shard")
+      ) {
+        this.db.exec(SEARCH_RESET_SQL);
+        this.db.exec(SEARCH_SCHEMA_SQL);
+      }
     } catch (error) {
       if (!isRebuildableSearchSchemaMismatch(error)) throw error;
       this.db.exec(SEARCH_RESET_SQL);
       this.db.exec(SEARCH_SCHEMA_SQL);
     }
+  }
+
+  private tableHasColumn(table: string, column: string): boolean {
+    const rows = this.db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+    return rows.some((row) => row.name === column);
   }
 
   private indexingLimitsForSource(source: string): SearchSourceIndexingLimits {
@@ -629,6 +800,7 @@ export class SearchStore {
     return {
       id: row.id,
       source: row.source,
+      ...(row.shard !== "default" ? { shard: row.shard } : {}),
       domain: row.domain,
       type: row.type,
       title: row.title,
@@ -657,6 +829,7 @@ export class SearchStore {
 interface SearchDocumentRow {
   id: string;
   source: string;
+  shard: string;
   domain: string;
   type: string;
   resource_id: string | null;
@@ -681,9 +854,27 @@ interface SearchFragmentRow {
 
 interface SearchCursorRow {
   source: string;
+  shard: string;
   cursor: string;
   updated_at: string;
   metadata_json: string;
+}
+
+interface SearchIndexJobRow {
+  id: string;
+  source: string;
+  shard: string;
+  operation: SearchIndexJobOperation;
+  resource_id: string | null;
+  payload_json: string;
+  status: SearchIndexJobStatus;
+  attempts: number;
+  priority: number;
+  scheduled_at: string;
+  created_at: string;
+  updated_at: string;
+  leased_until: string | null;
+  error: string | null;
 }
 
 interface SavedSearchRow {
@@ -727,9 +918,32 @@ function parseJson<T = Record<string, unknown>>(value: string | null | undefined
   return JSON.parse(value) as T;
 }
 
+function searchCursorFromRow(row: SearchCursorRow): SearchSourceCursor {
+  return { source: row.source, shard: row.shard, cursor: row.cursor, updatedAt: row.updated_at, metadata: parseJson(row.metadata_json) };
+}
+
+function searchIndexJobFromRow(row: SearchIndexJobRow): SearchIndexJob {
+  return {
+    id: row.id,
+    source: row.source,
+    shard: row.shard,
+    operation: row.operation,
+    ...(row.resource_id ? { resourceId: row.resource_id } : {}),
+    payload: parseJson(row.payload_json),
+    status: row.status,
+    attempts: row.attempts,
+    priority: row.priority,
+    scheduledAt: row.scheduled_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    ...(row.leased_until ? { leasedUntil: row.leased_until } : {}),
+    ...(row.error ? { error: row.error } : {}),
+  };
+}
+
 function isRebuildableSearchSchemaMismatch(error: unknown): boolean {
   return error instanceof Error
-    && /no such column: source|search_fts|schema/i.test(error.message);
+    && /no such column: source|no such column: shard|search_fts|schema/i.test(error.message);
 }
 
 function ftsQuery(query: string): string {
@@ -753,6 +967,10 @@ function applySearchFilters(clauses: string[], params: unknown[], filters: Recor
       case "source":
       case "sources":
         addInClause(clauses, params, "d.source", value);
+        break;
+      case "shard":
+      case "shards":
+        addInClause(clauses, params, "d.shard", value);
         break;
       case "type":
       case "types":
@@ -903,6 +1121,7 @@ CREATE INDEX IF NOT EXISTS search_sources_domain_idx ON search_sources(domain, s
 CREATE TABLE IF NOT EXISTS search_documents (
   id TEXT PRIMARY KEY,
   source TEXT NOT NULL REFERENCES search_sources(id) ON DELETE CASCADE,
+  shard TEXT NOT NULL DEFAULT 'default',
   domain TEXT NOT NULL,
   type TEXT NOT NULL,
   resource_id TEXT,
@@ -918,6 +1137,7 @@ CREATE TABLE IF NOT EXISTS search_documents (
   deleted_at TEXT
 );
 CREATE INDEX IF NOT EXISTS search_documents_source_idx ON search_documents(source, updated_at DESC);
+CREATE INDEX IF NOT EXISTS search_documents_shard_idx ON search_documents(source, shard, updated_at DESC);
 CREATE INDEX IF NOT EXISTS search_documents_domain_idx ON search_documents(domain, updated_at DESC);
 CREATE INDEX IF NOT EXISTS search_documents_resource_idx ON search_documents(source, resource_id);
 
@@ -925,6 +1145,7 @@ CREATE TABLE IF NOT EXISTS search_fragments (
   id TEXT PRIMARY KEY,
   document_id TEXT NOT NULL REFERENCES search_documents(id) ON DELETE CASCADE,
   source TEXT NOT NULL,
+  shard TEXT NOT NULL DEFAULT 'default',
   domain TEXT NOT NULL,
   title TEXT NOT NULL DEFAULT '',
   body TEXT NOT NULL DEFAULT '',
@@ -942,11 +1163,33 @@ CREATE TABLE IF NOT EXISTS search_actions (
 );
 
 CREATE TABLE IF NOT EXISTS search_cursors (
-  source TEXT PRIMARY KEY REFERENCES search_sources(id) ON DELETE CASCADE,
+  source TEXT NOT NULL REFERENCES search_sources(id) ON DELETE CASCADE,
+  shard TEXT NOT NULL DEFAULT 'default',
   cursor TEXT NOT NULL,
   updated_at TEXT NOT NULL,
-  metadata_json TEXT NOT NULL DEFAULT '{}'
+  metadata_json TEXT NOT NULL DEFAULT '{}',
+  PRIMARY KEY (source, shard)
 );
+CREATE INDEX IF NOT EXISTS search_cursors_source_idx ON search_cursors(source, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS search_index_jobs (
+  id TEXT PRIMARY KEY,
+  source TEXT NOT NULL REFERENCES search_sources(id) ON DELETE CASCADE,
+  shard TEXT NOT NULL DEFAULT 'default',
+  operation TEXT NOT NULL,
+  resource_id TEXT,
+  payload_json TEXT NOT NULL DEFAULT '{}',
+  status TEXT NOT NULL DEFAULT 'queued',
+  attempts INTEGER NOT NULL DEFAULT 0,
+  priority INTEGER NOT NULL DEFAULT 0,
+  scheduled_at TEXT NOT NULL,
+  leased_until TEXT,
+  error TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS search_index_jobs_claim_idx ON search_index_jobs(status, scheduled_at, priority DESC);
+CREATE INDEX IF NOT EXISTS search_index_jobs_source_idx ON search_index_jobs(source, shard, status, scheduled_at);
 
 CREATE TABLE IF NOT EXISTS search_tombstones (
   id TEXT PRIMARY KEY,
@@ -1015,6 +1258,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS search_fts USING fts5(
   doc_id UNINDEXED,
   fragment_id UNINDEXED,
   source UNINDEXED,
+  shard UNINDEXED,
   domain UNINDEXED,
   type UNINDEXED,
   title,
@@ -1032,6 +1276,7 @@ DROP TABLE IF EXISTS search_audit_events;
 DROP TABLE IF EXISTS search_monitors;
 DROP TABLE IF EXISTS saved_searches;
 DROP TABLE IF EXISTS search_tombstones;
+DROP TABLE IF EXISTS search_index_jobs;
 DROP TABLE IF EXISTS search_cursors;
 DROP TABLE IF EXISTS search_actions;
 DROP TABLE IF EXISTS search_fragments;
