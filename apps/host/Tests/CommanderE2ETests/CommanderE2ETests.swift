@@ -145,6 +145,30 @@ final class CommanderE2ETests: XCTestCase {
         XCTAssertEqual(finderCapabilityIDs, Set(["finder.read", "finder.write"]))
     }
 
+    func testSystemMacHostBridgeRoutesLocallyWithoutDaemon() throws {
+        let context = try TestContext()
+        defer { context.cleanup() }
+
+        let permissions = try context.runCLI(["system", "mac", "permissions", "--json"])
+        XCTAssertTrue(permissions.ok)
+        XCTAssertEqual(permissions.meta.adapter, "mac-permission-broker")
+        XCTAssertEqual(permissions.meta.source, .localCLI)
+        XCTAssertTrue((permissions.data?.objectValue?["permissions"]?.arrayValue?.count ?? 0) > 0)
+
+        let plan = try context.runCLI([
+            "system", "mac", "plan",
+            "--capability-id", "mac.wifi.status",
+            "--dry-run", "true",
+            "--json",
+        ])
+        XCTAssertTrue(plan.ok)
+        XCTAssertEqual(plan.meta.adapter, "mac-control")
+        XCTAssertEqual(plan.meta.source, .localCLI)
+        XCTAssertEqual(plan.data?.objectValue?["capabilityId"]?.stringValue, "mac.wifi.status")
+        XCTAssertEqual(plan.data?.objectValue?["risk"]?.stringValue, "read")
+        XCTAssertEqual(plan.data?.objectValue?["willMutate"]?.boolValue, false)
+    }
+
     func testDaemonAutoStartHealthAndReconnect() throws {
         let context = try TestContext()
         defer { context.cleanup() }
