@@ -599,14 +599,76 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(daemonStartPayload.data.service.mode, "daemon");
     assert.equal(daemonStartPayload.data.service.reason?.includes("host supervisor"), true);
 
-    const saved = await runCliCapture(["search", "saved", "create", "recent-system", "--query", "system capabilities", "--name", "Recent system", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    const saved = await runCliCapture([
+      "search",
+      "saved",
+      "create",
+      "recent-system",
+      "--query",
+      "system capabilities",
+      "--name",
+      "Recent system",
+      "--domains",
+      "commands",
+      "--sources",
+      "commands",
+      "--shards",
+      "default",
+      "--strategy",
+      "hybrid",
+      "--local-embedding",
+      "true",
+      "--filters",
+      "type=command",
+      "--actor",
+      "agent:test",
+      "--surface",
+      "cli",
+      "--limit",
+      "4",
+      "--explain",
+      "true",
+      "--data-dir",
+      dataRoot,
+      "--json",
+    ], workspaceRoot);
     assert.equal(saved.code, CLI_EXIT_OK);
     const savedPayload = JSON.parse(saved.stdout) as {
-      data: { item: { id: string; name: string; query: { query: string } }; items: Array<{ id: string }> };
+      data: {
+        item: {
+          id: string;
+          name: string;
+          query: {
+            query: string;
+            domains?: string[];
+            sources?: string[];
+            shards?: string[];
+            strategy?: string;
+            embedding?: { model: string; vector: number[] };
+            filters?: Record<string, unknown>;
+            actor?: string;
+            surface?: string;
+            limit?: number;
+            explain?: boolean;
+          };
+        };
+        items: Array<{ id: string }>;
+      };
     };
     assert.equal(savedPayload.data.item.id, "recent-system");
     assert.equal(savedPayload.data.item.name, "Recent system");
     assert.equal(savedPayload.data.item.query.query, "system capabilities");
+    assert.deepEqual(savedPayload.data.item.query.domains, ["commands"]);
+    assert.deepEqual(savedPayload.data.item.query.sources, ["commands"]);
+    assert.deepEqual(savedPayload.data.item.query.shards, ["default"]);
+    assert.equal(savedPayload.data.item.query.strategy, "hybrid");
+    assert.equal(savedPayload.data.item.query.embedding?.model, "local-text-v1");
+    assert.equal(savedPayload.data.item.query.embedding?.vector.length, 64);
+    assert.deepEqual(savedPayload.data.item.query.filters, { type: "command" });
+    assert.equal(savedPayload.data.item.query.actor, "agent:test");
+    assert.equal(savedPayload.data.item.query.surface, "cli");
+    assert.equal(savedPayload.data.item.query.limit, 4);
+    assert.equal(savedPayload.data.item.query.explain, true);
     assert.equal(savedPayload.data.items.some((item) => item.id === "recent-system"), true);
 
     const monitor = await runCliCapture(["search", "monitors", "create", "monitor-system", "--saved-search", "recent-system", "--cadence", "hourly", "--data-dir", dataRoot, "--json"], workspaceRoot);
@@ -629,7 +691,7 @@ test("search rebuild and query use the Search sidecar without workspace state", 
           monitorId: string;
           savedSearchId: string;
           state: string;
-          query: { query: string; limit: number };
+          query: { query: string; limit: number; domains?: string[]; sources?: string[]; shards?: string[]; filters?: Record<string, unknown> };
           resultCount: number;
           partial: boolean;
           results: Array<{ source: string; domain: string; title: string }>;
@@ -644,6 +706,10 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(monitorRunPayload.data.items[0]?.state, "ready");
     assert.equal(monitorRunPayload.data.items[0]?.query.query, "system capabilities");
     assert.equal(monitorRunPayload.data.items[0]?.query.limit, 3);
+    assert.deepEqual(monitorRunPayload.data.items[0]?.query.domains, ["commands"]);
+    assert.deepEqual(monitorRunPayload.data.items[0]?.query.sources, ["commands"]);
+    assert.deepEqual(monitorRunPayload.data.items[0]?.query.shards, ["default"]);
+    assert.deepEqual(monitorRunPayload.data.items[0]?.query.filters, { type: "command" });
     assert.ok(monitorRunPayload.data.items[0]?.resultCount > 0);
     assert.equal(monitorRunPayload.data.items[0]?.partial, false);
     assert.ok(monitorRunPayload.data.items[0]?.results.some((result) => result.source === "commands"));

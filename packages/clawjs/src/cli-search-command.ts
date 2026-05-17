@@ -673,7 +673,27 @@ export async function runSearchAdminCli(input: {
           input.context.stderr.write(`Usage: ${input.binName} search saved create <id> --query <query> [--name <name>] [--json]\n`);
           return CLI_EXIT_USAGE;
         }
-        const item = { id, name: input.flags.name ?? id, query: { query, profile } };
+        const strategy = parseSearchStrategyFlag(input.flags.strategy);
+        const item = {
+          id,
+          name: input.flags.name ?? id,
+          query: {
+            query,
+            profile,
+            domains: parseListFlag(input.flags.domains),
+            sources: parseListFlag(input.flags.sources ?? input.flags.source),
+            shards: parseListFlag(input.flags.shards ?? input.flags.shard),
+            filters: parseSearchFiltersFlag(input.flags.filters ?? input.flags.filter),
+            strategy,
+            embedding: parseSearchEmbeddingFlag(input.flags.embedding ?? input.flags["embedding-json"], input.flags["embedding-model"] ?? input.flags.model)
+              ?? localTextEmbeddingForQuery(query, strategy, input.flags),
+            agentBudget: parseSearchAgentBudget(input.flags),
+            limit: input.flags.limit ? boundedNumberFlag(input.flags.limit, 20, 1, 1000) : undefined,
+            explain: input.flags.explain === undefined ? undefined : input.flags.explain === "true" || input.flags.explain === "1",
+            surface: input.flags.surface,
+            actor: input.flags.actor,
+          },
+        };
         store.saveSearch(item);
         data = { action, item, items: store.listSavedSearches(), state: "ready" };
       } else if (command === "monitors" && (action === "create" || action === "upsert")) {
