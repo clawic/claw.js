@@ -34,6 +34,12 @@ function freshEnv(prefix: string): RunOptions {
   return { home, workspace };
 }
 
+function parseCliData<T>(stdout: string): T {
+  const envelope = JSON.parse(stdout) as { ok: boolean; data: T };
+  expect(envelope.ok).toBe(true);
+  return envelope.data;
+}
+
 test("skills-v2 CLI: create, list, view, activate, compile, sync to mock target, edit, follow symlink", async () => {
   const env = freshEnv("clawjs-skills-v2-");
   const externalTarget = path.join(env.home, "external-codex");
@@ -50,11 +56,11 @@ test("skills-v2 CLI: create, list, view, activate, compile, sync to mock target,
   ]);
 
   const list = await run(env, ["skills", "list", "--json"]);
-  const parsed = JSON.parse(list.stdout) as Array<{ slug: string; kind: string }>;
+  const parsed = parseCliData<Array<{ slug: string; kind: string }>>(list.stdout);
   expect(parsed.find((s) => s.slug === "cold-email")?.kind).toBe("procedure");
 
   const view = await run(env, ["skills", "view", "cold-email", "--json"]);
-  const spec = JSON.parse(view.stdout) as { body: string; description: string };
+  const spec = parseCliData<{ body: string; description: string }>(view.stdout);
   expect(spec.description).toContain("cold sales email");
   expect(spec.body).toContain("Single CTA");
 
@@ -69,7 +75,7 @@ test("skills-v2 CLI: create, list, view, activate, compile, sync to mock target,
   fs.writeFileSync(configPath, `skills:\n  sync_targets:\n    - id: test-target\n      home: ${externalTarget}\n      mode: symlink\n`);
 
   const syncResult = await run(env, ["skills", "sync", "--target", "test-target", "--json"]);
-  const report = JSON.parse(syncResult.stdout) as { synced: Array<{ slug: string }>; warnings: string[] };
+  const report = parseCliData<{ synced: Array<{ slug: string }>; warnings: string[] }>(syncResult.stdout);
   expect(report.synced.find((s) => s.slug === "cold-email")).toBeDefined();
 
   const linkPath = path.join(externalTarget, "cold-email");
@@ -100,7 +106,7 @@ test("skills-v2 CLI: instantiate template, freeze instance produces inline body"
     "--save-as", "my-cold-email",
     "--json",
   ]);
-  const instance = JSON.parse(inst.stdout) as { slug: string; body: string };
+  const instance = parseCliData<{ slug: string; body: string }>(inst.stdout);
   expect(instance.slug).toBe("my-cold-email");
 
   const compileBefore = await run(env, ["skills", "compile", "my-cold-email"]);
@@ -109,7 +115,7 @@ test("skills-v2 CLI: instantiate template, freeze instance produces inline body"
   // Freeze and verify body is inline.
   await run(env, ["skills", "freeze", "my-cold-email"]);
   const viewFrozen = await run(env, ["skills", "view", "my-cold-email", "--json"]);
-  const frozen = JSON.parse(viewFrozen.stdout) as { body: string; frontmatter: { metadata: { clawjs: { instance: { frozen: boolean } } } } };
+  const frozen = parseCliData<{ body: string; frontmatter: { metadata: { clawjs: { instance: { frozen: boolean } } } } }>(viewFrozen.stdout);
   expect(frozen.body).toContain("Write formal email of length short for SaaS.");
   expect(frozen.frontmatter.metadata.clawjs.instance.frozen).toBe(true);
 });
