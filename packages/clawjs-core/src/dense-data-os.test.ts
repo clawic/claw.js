@@ -115,6 +115,9 @@ test("dense data OS acceptance fixture covers required first-wave records and ga
     "supplier",
     "purchase_order",
     "purchase_order_line_item",
+    "warehouse",
+    "inventory_item",
+    "stock_movement",
     "invoice",
     "invoice_company",
     "incident",
@@ -163,6 +166,7 @@ test("dense data OS first wave covers the agreed high-density systems", () => {
     "insurance",
     "maintenance",
     "procurement",
+    "warehouse",
   ]);
 
   for (const system of listClawDenseDataSystems({ wave: "first_wave" })) {
@@ -186,6 +190,7 @@ test("dense data OS keeps common names and professional acronyms as first-class 
   assert.equal(findClawDenseDataSystem("itsm")?.id, "ops");
   assert.equal(findClawDenseDataSystem("proptech")?.id, "real_estate");
   assert.equal(findClawDenseDataSystem("purchasing")?.id, "procurement");
+  assert.equal(findClawDenseDataSystem("wms")?.id, "warehouse");
 });
 
 test("dense data OS centers have direct human CLI nouns and plural aliases", () => {
@@ -238,6 +243,12 @@ test("dense data OS centers have direct human CLI nouns and plural aliases", () 
   assert.ok(procurement?.centers.some((center) => center.commandNoun === "purchase-order" && center.commandAliases.includes("po") && center.collectionName === "purchase_orders"));
   assert.ok(procurement?.centers.some((center) => center.commandNoun === "purchase-order-line-item" && center.collectionName === "purchase_order_line_items"));
   assert.ok(procurement?.commandPatterns.includes("claw purchase-order <id> timeline"));
+
+  const warehouse = findClawDenseDataSystem("warehouse");
+  assert.ok(warehouse?.centers.some((center) => center.commandNoun === "warehouse" && center.commandAliases.includes("warehouses") && center.collectionName === "warehouses"));
+  assert.ok(warehouse?.centers.some((center) => center.commandNoun === "inventory-item" && center.commandAliases.includes("stock-items") && center.collectionName === "inventory_items"));
+  assert.ok(warehouse?.centers.some((center) => center.commandNoun === "stock-movement" && center.collectionName === "stock_movements"));
+  assert.ok(warehouse?.commandPatterns.includes("claw warehouse <id> timeline"));
 });
 
 test("dense data OS models patient medication routes without forcing a health prefix", () => {
@@ -321,6 +332,11 @@ test("dense data OS resolves direct CLI intent phrases without executing them", 
   assert.equal(purchaseOrderList.system?.id, "procurement");
   assert.equal(purchaseOrderList.center?.collectionName, "purchase_orders");
 
+  const warehouseList = resolveClawDenseDataIntent("claw warehouse list");
+  assert.equal(warehouseList.status, "covered");
+  assert.equal(warehouseList.system?.id, "warehouse");
+  assert.equal(warehouseList.center?.collectionName, "warehouses");
+
   const medicationAdd = resolveClawDenseDataIntent("claw medication add --patient p_123");
   assert.equal(medicationAdd.status, "partial");
   assert.equal(medicationAdd.system?.id, "health");
@@ -374,6 +390,9 @@ test("dense data OS graduated centers point at canonical built-in collections wi
     "procurement.supplier": "suppliers",
     "procurement.purchase_order": "purchase_orders",
     "procurement.purchase_order_line_item": "purchase_order_line_items",
+    "warehouse.warehouse": "warehouses",
+    "warehouse.inventory_item": "inventory_items",
+    "warehouse.stock_movement": "stock_movements",
     "erp.company": "companies",
     "erp.product": "products_catalog",
     "erp.invoice": "invoices",
@@ -429,7 +448,6 @@ test("dense data OS roadmap keeps the wider catalog visible before pack graduati
   const roadmapIds = new Set(listClawDenseDataSystems({ wave: "roadmap" }).map((system) => system.id));
   for (const id of [
     "supply_chain",
-    "warehouse",
     "transport",
     "compliance",
     "government",

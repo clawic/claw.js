@@ -2338,6 +2338,7 @@ The docs check script validates that every current export from
     UserValidationIssue
     UserValidationResult
     VEHICLES_FAMILY
+    WAREHOUSE_FAMILY
     WARDROBE_FAMILY
     WhatsAppBotProfile
     whatsappBotProfileSchema

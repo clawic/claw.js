@@ -611,6 +611,17 @@ function applyDefaults(collectionName: string, payload: Record<string, unknown>,
     case "purchase_order_line_items":
       payload.status ??= "ordered";
       break;
+    case "warehouses":
+      payload.status ??= "active";
+      break;
+    case "inventory_items":
+      payload.status ??= "in_stock";
+      payload.quantityOnHand ??= 0;
+      break;
+    case "stock_movements":
+      payload.movementType ??= "adjusted";
+      payload.occurredAt ??= new Date().toISOString();
+      break;
     case "assets":
       payload.status ??= "active";
       break;
