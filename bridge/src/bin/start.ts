@@ -6,7 +6,7 @@ async function main(): Promise<void> {
   const runtime = createBridgeRuntime({ config });
   await runtime.start();
   process.stdout.write(
-    `clawjs-bridge ready on http://${config.bindAddress}:${config.httpPort} (mesh) and ws://${config.bindAddress}:${config.bridgePort}/bridge (ws)\n`,
+    `clawix-bridge ready on http://${config.bindAddress}:${config.httpPort} (mesh) and ws://${config.bindAddress}:${config.bridgePort}/bridge (ws)\n`,
   );
   const shutdown = async (signal: string): Promise<void> => {
     process.stdout.write(`received ${signal}, shutting down\n`);
@@ -18,6 +18,6 @@ async function main(): Promise<void> {
 }
 
 void main().catch((err) => {
-  process.stderr.write(`clawjs-bridge failed: ${String(err)}\n`);
+  process.stderr.write(`clawix-bridge failed: ${String(err)}\n`);
   process.exit(1);
 });

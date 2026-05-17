@@ -39,8 +39,8 @@ const stopFile = claw.watch.file("SOUL.md", (event) => {
   console.log(event.eventType, event.filePath);
 });
 
-const stopTranscript = claw.watch.transcript("clawjs-123", async () => {
-  const session = claw.sessions.getSession("clawjs-123");
+const stopTranscript = claw.watch.transcript("session-123", async () => {
+  const session = claw.sessions.getSession("session-123");
   console.log(session?.messageCount);
 });
 
