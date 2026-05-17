@@ -38,3 +38,10 @@ Source session: private session, not published
 - Latest summary: 2 Swift packages discovered; local Periphery binary not installed on PATH, so no Swift findings have been calibrated yet.
 - Retention rules: public API, SwiftUI previews, Objective-C-accessible declarations, and Codable properties retained by default.
 - Mode: report-only; no automatic removal and no blocking gate yet.
+
+## 2026-05-17 - ClawJS release gate wiring
+
+- Status: PARTIAL
+- Scope: ClawJS CI/release gate.
+- Work recorded: GitHub release workflow runs the canonical `test:release` lane and package publish dry-run on pull requests to `main`, `next`, and `release/**`, plus manual dispatch.
+- Remaining: Clawix release proof remains pending before `ci_gate` can be marked fully implemented across the agreed Clawix + ClawJS scope.

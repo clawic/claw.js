@@ -30,7 +30,7 @@ with concrete evidence.
 | `generated_policy` | Manifest + marcadores | documented | ADR 0016 generated/vendor rule. |
 | `docs_references` | Solo docs canonicas | documented | ADR 0016 public/canonical retention rule. |
 | `cleanup_batching` | Por categoria y repo | documented | Cleanup skill procedure. |
-| `ci_gate` | Changed + release | partially implemented | ClawJS/Clawix changed lanes call hygiene check; full release proof pending. |
+| `ci_gate` | Changed + release | partially implemented | ClawJS changed lane calls hygiene check and ClawJS release workflow runs `test:release` plus publish dry-run; Clawix release proof remains pending. |
 | `report_format` | JSON + Markdown | implemented | `docs/code-hygiene-report.json` and `.md`. |
 | `skill_shape` | Dos skills | implemented | `code-hygiene-audit`, `code-hygiene-cleanup`. |
 | `skill_location` | ClawJS y proyectada | partially implemented | ClawJS canonical skills exist; Clawix projection exists pending full repo validation. |
