@@ -134,6 +134,19 @@ test("Search MCP exposes profile, entrypoint, and explain tools", () => {
     const allMonitors = evaluateTool?.handler({ all: true }) as { items: Array<{ monitorId: string }> };
     assert.equal(allMonitors.items.some((item) => item.monitorId === "monitor-disabled"), true);
 
+    store.setSourceState("commands", "paused", { error: "maintenance" });
+    const partial = evaluateTool?.handler({ monitorId: "monitor-search" }) as {
+      state: string;
+      items: Array<{ monitorId: string; state: string; partial: boolean; resultCount: number; omittedSources: Array<{ source: string; reason: string }> }>;
+    };
+    assert.equal(partial.state, "partial");
+    assert.equal(partial.items[0]?.monitorId, "monitor-search");
+    assert.equal(partial.items[0]?.state, "ready");
+    assert.equal(partial.items[0]?.partial, true);
+    assert.equal(partial.items[0]?.resultCount, 0);
+    assert.equal(partial.items[0]?.omittedSources[0]?.source, "commands");
+    assert.equal(partial.items[0]?.omittedSources[0]?.reason, "disabled");
+
   } finally {
     store.close();
     fs.rmSync(dir, { recursive: true, force: true });
