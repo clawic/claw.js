@@ -138,6 +138,13 @@ export interface SearchResult {
 export interface SearchResultExplanation {
   sourceScore?: number;
   rankingHints?: Record<string, number>;
+  scoreBreakdown?: {
+    lexical: number;
+    base: number;
+    hints: number;
+    frecency: number;
+    context: number;
+  };
   matchedBy?: SearchMatchKind[];
   omitted?: string[];
 }

@@ -101,6 +101,11 @@ CLI `--filters` flag. Filters may target built-in fields such as `domain`,
 metadata via `metadata.<field>`. Query responses include the selected sources'
 declared facets so UI sections can build scoped filter controls from manifests.
 
+Ranking is centralized in `@clawjs/search`. The store reranks a bounded
+candidate batch with lexical score, source ranking hints, local frecency,
+`actor`, `surface`, and scope-like metadata filters before returning the final
+limit. `--explain` includes a compact score breakdown for debugging.
+
 `code.symbols` is intentionally bounded. It indexes supported project files,
 Markdown docs, and lightweight symbol fragments under `--code-root` or the
 current workspace root. It skips dependency/build/cache/private control

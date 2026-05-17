@@ -51,6 +51,10 @@ Search V1.1 is built from these layers:
   never replace a section-specific fast path.
 - **Profiles**: `framework` is default. `full` is opt-in and is where native,
   external, web, or broad local sources can be enabled later.
+- **Ranking**: SearchStore owns final ranking for indexed results. It reranks a
+  bounded candidate batch with lexical score, source hints, frecency,
+  actor/surface context, and scope-like metadata matches, and exposes compact
+  score breakdowns when explain mode is enabled.
 - **Actions and permissions**: results can expose actions, but execution remains
   brokered by grants/approvals. Sensitive previews are redacted before they
   reach generic Search output.

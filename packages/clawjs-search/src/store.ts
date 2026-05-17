@@ -295,6 +295,7 @@ export class SearchStore {
   query(input: SearchQueryInput): SearchQueryOutput {
     const startedAt = Date.now();
     const limit = Math.max(1, input.limit ?? 20);
+    const candidateLimit = Math.min(200, Math.max(limit * 4, limit));
     const profile = input.profile ?? "framework";
     const match = ftsQuery(input.query);
     const clauses = ["d.deleted_at IS NULL"];
@@ -318,7 +319,7 @@ export class SearchStore {
     clauses.push("s.state NOT IN ('disabled', 'paused', 'excluded')");
     const omittedSources = this.omittedSourcesForInput(input, profile);
     const facets = this.facetsForInput(input, profile);
-    params.push(limit);
+    params.push(candidateLimit);
     const rows = this.db.prepare(`
       SELECT d.*, 0 AS rank
       FROM search_fts
@@ -329,7 +330,10 @@ export class SearchStore {
       ORDER BY rank ASC, d.updated_at DESC
       LIMIT ?
     `).all(...params) as SearchDocumentRow[];
-    const results = rows.map((row) => this.resultFromRow(row, input));
+    const results = rows
+      .map((row) => this.resultFromRow(row, input))
+      .sort((left, right) => right.score - left.score || (right.updatedAt ?? "").localeCompare(left.updatedAt ?? ""))
+      .slice(0, limit);
     return {
       query: input.query,
       profile,
@@ -601,6 +605,9 @@ export class SearchStore {
     const fragments = fragmentsWithMatch.map((entry) => entry.fragment);
     const actions = (this.db.prepare("SELECT action_json FROM search_actions WHERE document_id = ? ORDER BY action_id ASC").all(row.id) as Array<{ action_json: string }>).map((action) => parseJson<SearchAction>(action.action_json));
     const lexical = scoreLexicalMatch(input.query, `${row.title} ${row.subtitle ?? ""} ${row.snippet ?? ""} ${row.body}`);
+    const rankingHints = parseJson<Record<string, number>>(row.ranking_json);
+    const metadata = parseJson(row.metadata_json);
+    const score = centralSearchScore({ lexicalScore: lexical.score, rowRank: row.rank ?? 0, rankingHints, metadata, input });
     return {
       id: row.id,
       source: row.source,
@@ -609,18 +616,19 @@ export class SearchStore {
       title: row.title,
       ...(row.subtitle ? { subtitle: row.subtitle } : {}),
       snippet: row.snippet ?? row.body.slice(0, 180),
-      score: Math.max(1, 100 - Math.max(0, row.rank ?? 0)) + lexical.score / 100,
+      score: score.total,
       updatedAt: row.updated_at,
       ...(row.resource_id ? { resourceId: row.resource_id } : {}),
       ...(row.path ? { path: row.path } : {}),
       ...(fragments.length ? { fragments } : {}),
       ...(actions.length ? { actions } : {}),
       permissions: { canOpen: true, canPreview: true, redacted: false, ...parseJson(row.permissions_json) },
-      metadata: parseJson(row.metadata_json),
+      metadata,
       ...(input.explain ? {
         explanation: {
           sourceScore: lexical.score,
-          rankingHints: parseJson(row.ranking_json),
+          rankingHints,
+          scoreBreakdown: score.breakdown,
           matchedBy: lexical.matchedBy.length ? lexical.matchedBy : (fragmentsWithMatch.find((entry) => entry.match.matchedBy.length)?.match.matchedBy ?? []),
         },
       } : {}),
@@ -775,6 +783,68 @@ function jsonPath(key: string): string {
 function normalizeJsonFilterValue(value: unknown): unknown {
   if (typeof value === "boolean") return value ? 1 : 0;
   return value;
+}
+
+function centralSearchScore(input: {
+  lexicalScore: number;
+  rowRank: number;
+  rankingHints: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+  input: SearchQueryInput;
+}): { total: number; breakdown: NonNullable<SearchResult["explanation"]>["scoreBreakdown"] } {
+  const base = Math.max(1, 100 - Math.max(0, input.rowRank)) + input.lexicalScore / 100;
+  const hintBoost = boundedNumber(input.rankingHints.priority, 0, 10)
+    + boundedNumber(input.rankingHints.hot, 0, 5)
+    + boundedNumber(input.rankingHints.fastPath, 0, 2);
+  const frecencyBoost = boundedNumber(input.rankingHints.frecency ?? input.metadata.frecency, 0, 1) * 8;
+  const actorBoost = contextMatchBoost(input.input.actor, input.metadata, input.rankingHints, ["actor", "actorId", "agentId", "ownerActorId"], "actor");
+  const surfaceBoost = contextMatchBoost(input.input.surface, input.metadata, input.rankingHints, ["surface", "surfaceId"], "surface");
+  const scopeBoost = scopeFilterBoost(input.input.filters, input.metadata, input.rankingHints);
+  const context = actorBoost + surfaceBoost + scopeBoost;
+  return {
+    total: base + hintBoost + frecencyBoost + context,
+    breakdown: {
+      lexical: input.lexicalScore,
+      base,
+      hints: hintBoost,
+      frecency: frecencyBoost,
+      context,
+    },
+  };
+}
+
+function contextMatchBoost(
+  value: string | undefined,
+  metadata: Record<string, unknown>,
+  rankingHints: Record<string, unknown>,
+  metadataKeys: string[],
+  hintPrefix: string,
+): number {
+  if (!value) return 0;
+  let boost = boundedNumber(rankingHints[`${hintPrefix}:${value}`], 0, 10);
+  if (metadataKeys.some((key) => metadataValueMatches(metadata[key], value))) boost += 6;
+  return boost;
+}
+
+function scopeFilterBoost(filters: Record<string, unknown> | undefined, metadata: Record<string, unknown>, rankingHints: Record<string, unknown>): number {
+  if (!filters) return 0;
+  let boost = 0;
+  for (const [key, value] of Object.entries(filters)) {
+    if (!key.startsWith("metadata.")) continue;
+    const metadataKey = key.slice("metadata.".length);
+    if (metadataValueMatches(metadata[metadataKey], value)) boost += 2;
+  }
+  return Math.min(8, boost + boundedNumber(rankingHints.scope, 0, 4));
+}
+
+function metadataValueMatches(left: unknown, right: unknown): boolean {
+  if (Array.isArray(right)) return right.some((entry) => metadataValueMatches(left, entry));
+  if (Array.isArray(left)) return left.some((entry) => metadataValueMatches(entry, right));
+  return left !== undefined && left !== null && right !== undefined && right !== null && String(left) === String(right);
+}
+
+function boundedNumber(value: unknown, min: number, max: number): number {
+  return typeof value === "number" && Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : 0;
 }
 
 const SEARCH_SCHEMA_SQL = String.raw`

@@ -140,6 +140,7 @@ test("SearchStore persists sources, fragments, FTS documents, actions, cursors, 
     assert.equal(output.results[0]?.fragments?.[0]?.id, "sessions:chat_1:message_1");
     assert.equal(output.results[0]?.actions?.[0]?.id, "open");
     assert.deepEqual(output.results[0]?.explanation?.matchedBy, ["fts"]);
+    assert.equal(output.results[0]?.explanation?.scoreBreakdown?.frecency, 6.4);
     assert.equal(output.facets?.some((facet) => facet.id === "projectId"), true);
 
     const filtered = store.query({
@@ -200,6 +201,59 @@ test("SearchStore persists sources, fragments, FTS documents, actions, cursors, 
     const tombstone = store.tombstone({ source: "sessions.chats", resourceId: "chat_1", reason: "deleted upstream" });
     assert.equal(tombstone.source, "sessions.chats");
     assert.equal(store.query({ query: "timeouts", domains: ["sessions"] }).results.length, 0);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("SearchStore central ranking uses frecency, actor, surface and scope hints", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-ranking-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "work.tasks",
+      domain: "work",
+      name: "Work tasks",
+      resultTypes: ["task"],
+    }));
+    store.upsertDocument({
+      id: "work.tasks:cold",
+      source: "work.tasks",
+      domain: "work",
+      type: "task",
+      title: "Launch checklist",
+      body: "Launch checklist for Search source ranking.",
+      updatedAt: "2026-05-17T12:00:00.000Z",
+      metadata: { scopeKind: "project", scopeId: "other-project", actorId: "agent:other", surface: "other" },
+      rankingHints: { priority: 1 },
+    });
+    store.upsertDocument({
+      id: "work.tasks:hot",
+      source: "work.tasks",
+      domain: "work",
+      type: "task",
+      title: "Launch checklist",
+      body: "Launch checklist for Search source ranking.",
+      updatedAt: "2026-05-17T11:00:00.000Z",
+      metadata: { scopeKind: "project", scopeId: "project-alpha", actorId: "agent:codex", surface: "cli" },
+      rankingHints: { frecency: 1, priority: 2, "actor:agent:codex": 3, "surface:cli": 2, scope: 2 },
+    });
+
+    const output = store.query({
+      query: "launch checklist",
+      domains: ["work"],
+      actor: "agent:codex",
+      surface: "cli",
+      filters: { "metadata.scopeKind": "project" },
+      explain: true,
+    });
+
+    assert.equal(output.results[0]?.id, "work.tasks:hot");
+    assert.ok((output.results[0]?.score ?? 0) > (output.results[1]?.score ?? 0));
+    assert.ok((output.results[0]?.explanation?.scoreBreakdown?.context ?? 0) > 0);
+    assert.ok((output.results[0]?.explanation?.scoreBreakdown?.frecency ?? 0) > 0);
+    assert.ok((output.results[0]?.explanation?.scoreBreakdown?.hints ?? 0) > 0);
   } finally {
     store.close();
     fs.rmSync(dir, { recursive: true, force: true });
