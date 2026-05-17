@@ -579,6 +579,8 @@ claw sample sample_123 assays add CBC --json
 claw learner create "Ada Learner" --json
 claw course create "Intro Biology" --json
 claw work-order create "Batch 42" --company company_123 --json
+claw financial-account create "Operating Account" --json
+claw transaction create Lunch --account financial_account_123 --amount-cents 1200 --json
 claw travel --help
 claw career --help
 claw family --help

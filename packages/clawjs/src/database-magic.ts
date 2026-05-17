@@ -370,6 +370,8 @@ function getPrimaryField(collectionName: string): string {
       return "symptom";
     case "invoices":
       return "number";
+    case "transactions":
+      return "description";
   }
   const builtinDef = BUILTIN_COLLECTIONS_BY_NAME.get(collectionName);
   if (builtinDef) {
@@ -445,6 +447,10 @@ function applyDefaults(collectionName: string, payload: Record<string, unknown>,
       break;
     case "work_orders":
       payload.status ??= "planned";
+      break;
+    case "transactions":
+      payload.postedAt ??= new Date().toISOString();
+      payload.currency ??= "USD";
       break;
     default:
       break;

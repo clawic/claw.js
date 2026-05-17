@@ -322,8 +322,8 @@ export const clawDenseDataOsRegistry: ClawDenseDataOsRegistry = {
       sensitivityDefault: "high",
       sharedEngines: ["evidence_provenance", "quality_gap", "relation_graph", "semantic_view", "intent_coverage", "finance_accounting", "document_evidence"],
       centers: [
-        center("accounting_entity", "Accounting Entity", "accounting-entity", undefined, "Ledger/reporting entity center for finance and ERP."),
-        center("transaction", "Transaction", "transaction", undefined, "Financial event center for payments, invoices, balances, and reconciliation."),
+        center("accounting_entity", "Accounting Entity", "accounting-entity", undefined, "Ledger/reporting entity center for finance and ERP.", ["accounting-entities", "financial-account", "financial-accounts"], "financial_accounts"),
+        center("transaction", "Transaction", "transaction", undefined, "Financial event center for payments, invoices, balances, and reconciliation.", undefined, "transactions"),
       ],
       commandPatterns: ["claw finance overview|gaps|intents", "claw accounting overview|gaps|intents", "claw transaction list|get|create|update|query|schema"],
       operations: [operation("finance.entity.overview", "Read finance entity overview", ["claw finance entity <id> overview"], ["accounting_entity", "transaction", "invoice", "accounting_entry"])],

@@ -253,6 +253,22 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(workOrderPayload.data.companyId, companyPayload.data.id);
   assert.equal(workOrderPayload.data.status, "planned");
 
+  const financialAccountCreate = await runCliCapture(["financial-account", "create", "Operating Account", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(financialAccountCreate.code, CLI_EXIT_OK);
+  const financialAccountPayload = JSON.parse(financialAccountCreate.stdout) as { data: { id: string; name: string }; meta: { collection: string; action: string } };
+  assert.equal(financialAccountPayload.meta.collection, "financial_accounts");
+  assert.equal(financialAccountPayload.data.name, "Operating Account");
+
+  const transactionCreate = await runCliCapture(["transaction", "create", "Lunch", "--account", financialAccountPayload.data.id, "--amount-cents", "1200", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(transactionCreate.code, CLI_EXIT_OK);
+  const transactionPayload = JSON.parse(transactionCreate.stdout) as { data: { description: string; accountId: string; amountCents: number; currency: string; postedAt: string }; meta: { collection: string; action: string } };
+  assert.equal(transactionPayload.meta.collection, "transactions");
+  assert.equal(transactionPayload.data.description, "Lunch");
+  assert.equal(transactionPayload.data.accountId, financialAccountPayload.data.id);
+  assert.equal(transactionPayload.data.amountCents, 1200);
+  assert.equal(transactionPayload.data.currency, "USD");
+  assert.equal(typeof transactionPayload.data.postedAt, "string");
+
 });
 
 test("runCli searches the registered CLI discovery surface", async () => {

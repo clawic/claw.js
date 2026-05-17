@@ -4,7 +4,7 @@ export const FINANCIAL_ACCOUNTS: BuiltinCollectionDefinition = {
   name: "financial_accounts",
   displayName: "Financial Accounts",
   family: "finance",
-  aliases: ["financial_account","financial_accounts","account"],
+  aliases: ["financial_account","financial_accounts","financial-account","financial-accounts","account"],
   fields: [
     { name: "name", type: "text", required: true },
     { name: "kind", type: "select", options: ["checking","savings","credit_card","cash","investment","loan","wallet","other"] },

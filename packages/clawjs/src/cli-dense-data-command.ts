@@ -122,6 +122,9 @@ function denseDbFlags(flags: Record<string, string>, collectionName: string): Re
   if (collectionName === "case_evidence" && flags.case && !flags["case-id"]) {
     nextFlags = { ...nextFlags, "case-id": flags.case };
   }
+  if (collectionName === "transactions" && flags.account && !flags["account-id"]) {
+    nextFlags = { ...nextFlags, "account-id": flags.account };
+  }
   if (collectionName === "participants" && flags.study && !flags["study-id"]) {
     nextFlags = { ...nextFlags, "study-id": flags.study };
   }
