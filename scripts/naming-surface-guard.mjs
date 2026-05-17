@@ -32,10 +32,17 @@ function forbidSnippet(relativePath, snippet) {
   }
 }
 
+function forbidFile(relativePath, reason) {
+  if (fs.existsSync(path.join(rootDir, relativePath))) {
+    fail(`${relativePath} must not exist: ${reason}`);
+  }
+}
+
 function readJson(relativePath) {
   return JSON.parse(read(relativePath));
 }
 
+forbidFile("bridge/MIGRATION.md", "pre-v1 bridge cutover notes use stale ports and legacy bridge language");
 forbidSnippet("packages/clawjs-core/src/surface-registry.ts", "stable compatibility surface");
 forbidSnippet("packages/clawjs/src/inspect-cli.test.ts", "stable compatibility surface");
 forbidSnippet("docs/adr/0004-persistent-surface-registry-and-inspection.md", "stable compatibility");
