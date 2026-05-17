@@ -213,6 +213,7 @@ for (const snippet of [
   "~/.clawix",
   ".claw/",
   "ClawHostKit",
+  "MacControlWire",
   "Claw.app",
   "`claw` is the single public CLI",
   "~/.codex",

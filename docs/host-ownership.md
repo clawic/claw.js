@@ -75,6 +75,15 @@ host performs those actions:
 - `Claw.app` when using the standalone framework host.
 - Clawix when using the embedded Clawix host.
 
+Mac Control V1 host implementation lives in `ClawHostKit` under the
+`MacControl...` surface: `MacControlPermissionBroker` owns TCC/AX/IOKit
+permission state and prompts, `MacControlActionBroker` owns native action
+planning/execution, `MacControlPolicy` owns local approval/audit decisions, and
+`MacControlWire` owns the JSON plan/evaluate contract that CLI, API, MCP,
+bridge, Clawix, and `Claw.app` adapters consume. New macOS control work must
+extend that shared host surface instead of reviving Commander-specific or
+Node-side native execution.
+
 The transport contract is the v1 host command contract. XPC is the final macOS
 transport. Unix socket and HTTP transports are allowed for development, tests,
 fixtures, and fallback behavior.
