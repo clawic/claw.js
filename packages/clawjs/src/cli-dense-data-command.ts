@@ -85,6 +85,7 @@ export async function runDenseDataCli(input: DenseDataCliInput): Promise<number 
   const directSemanticView = semanticTimelineViewForRoute(input);
   if (directSemanticView) return writeDenseSemanticView(input, resolveClawDenseDataIntent(phrase), directSemanticView, group, action);
   if (!isDenseDataCommandGroup(group)) return null;
+  if (group === "finance" && ["upsert", "list", "get", "delete"].includes(action)) return null;
 
   const intent = resolveClawDenseDataIntent(phrase);
   const semanticView = intent.status === "data_gap" ? undefined : (semanticViewForIntent(intent) ?? semanticTimelineViewForRoute(input));

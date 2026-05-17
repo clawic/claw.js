@@ -67,7 +67,7 @@ backfill jobs.
 | `knowledge.graph` | `knowledge` | `core.sqlite` knowledge entities and facts projected into `search.sqlite` | implemented initial adapter |
 | `signals.observations` | `signals` | `core.sqlite` signal verticals, variables, and observations projected into `search.sqlite` | implemented initial adapter |
 | `calendar.events` | `calendar` | `core.sqlite` calendar events projected into `search.sqlite` | implemented initial adapter |
-| `finance.records` | `finance` | `core.sqlite` dense-data finance collections projected into `search.sqlite` with redacted previews | implemented initial adapter |
+| `finance.records` | `finance` | `core.sqlite` dense-data finance collections and local `finance_records` projected into `search.sqlite` with redacted previews | implemented initial adapter |
 | `images.derived` | `images` | image library, image media metadata, and stored OCR/vision-derived text projected into `search.sqlite` | implemented initial adapter |
 | `media.assets` | `media` | workspace media records projected into `search.sqlite` | implemented initial adapter |
 | `generations.artifacts` | `generations` | generated artifact records projected into `search.sqlite` | implemented initial adapter |

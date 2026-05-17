@@ -1194,7 +1194,9 @@ function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flag
       return resourceId ? ensureCalendarEventResourceIndexed(store, flags, resourceId) : 0;
     }
     case "finance.records": {
-      const resourceId = resourceIdFromJobPayload(job, "recordId") ?? job.resourceId;
+      const resourceId = job.payload.table === "finance_records" && job.resourceId
+        ? job.resourceId
+        : resourceIdFromJobPayload(job, "recordId") ?? job.resourceId;
       return resourceId ? ensureFinanceRecordResourceIndexed(store, flags, resourceId) : 0;
     }
     case "images.derived": {
