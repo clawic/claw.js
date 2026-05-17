@@ -136,6 +136,53 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(fullSourcesPayload.data.sources.some((source) => source.id === "web.ingested"), true);
     assert.equal(fullSourcesPayload.data.sources.some((source) => source.id === "external.cache"), true);
 
+    const fileRoot = path.join(workspaceRoot, "local-files");
+    fs.mkdirSync(path.join(fileRoot, "docs"), { recursive: true });
+    fs.mkdirSync(path.join(fileRoot, "node_modules", "ignored"), { recursive: true });
+    fs.writeFileSync(path.join(fileRoot, "docs", "launch-plan.txt"), "Offline invoice launch plan with local file content.");
+    fs.writeFileSync(path.join(fileRoot, "node_modules", "ignored", "hidden.txt"), "This dependency copy must not be indexed.");
+
+    const localFileDefaultQuery = await runCliCapture(["search", "query", "offline invoice", "--domains", "files", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(localFileDefaultQuery.code, CLI_EXIT_DEGRADED);
+    const localFileDefaultPayload = JSON.parse(localFileDefaultQuery.stdout) as {
+      data: { results: unknown[]; omittedSources: Array<{ source: string; reason: string }> };
+    };
+    assert.deepEqual(localFileDefaultPayload.data.results, []);
+    assert.equal(localFileDefaultPayload.data.omittedSources.some((source) => source.source === "local.files" && source.reason === "profile"), true);
+
+    const enableLocalFiles = await runCliCapture(["search", "sources", "enable", "local.files", "--profile", "full", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(enableLocalFiles.code, CLI_EXIT_OK);
+    const enableLocalFilesPayload = JSON.parse(enableLocalFiles.stdout) as { data: { state: string } };
+    assert.equal(enableLocalFilesPayload.data.state, "enabled");
+
+    const localFilesRebuild = await runCliCapture(["search", "rebuild", "--source", "local.files", "--profile", "full", "--file-root", fileRoot, "--file-limit", "20", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(localFilesRebuild.code, CLI_EXIT_OK);
+    const localFilesRebuildPayload = JSON.parse(localFilesRebuild.stdout) as {
+      data: { sources: string[]; indexedBySource: { "local.files": number }; pendingSources: string[] };
+    };
+    assert.equal(localFilesRebuildPayload.data.sources.includes("local.files"), true);
+    assert.equal(localFilesRebuildPayload.data.indexedBySource["local.files"], 1);
+    assert.equal(localFilesRebuildPayload.data.pendingSources.includes("local.files"), false);
+
+    const localFileQuery = await runCliCapture(["search", "query", "offline invoice", "--domains", "files", "--profile", "full", "--file-root", fileRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(localFileQuery.code, CLI_EXIT_OK);
+    const localFileQueryPayload = JSON.parse(localFileQuery.stdout) as {
+      data: {
+        indexedFastPaths: { "local.files": number };
+        results: Array<{ source: string; domain: string; type: string; title: string; path?: string; metadata?: { kind?: string; indexedContent?: boolean; relativePath?: string }; actions?: Array<{ id: string; kind: string }> }>;
+      };
+    };
+    assert.equal(localFileQueryPayload.data.indexedFastPaths["local.files"], 1);
+    const fileResult = localFileQueryPayload.data.results.find((result) => result.title === "launch-plan.txt");
+    assert.equal(fileResult?.source, "local.files");
+    assert.equal(fileResult?.domain, "files");
+    assert.equal(fileResult?.type, "file");
+    assert.equal(fileResult?.metadata?.kind, "text");
+    assert.equal(fileResult?.metadata?.indexedContent, true);
+    assert.equal(fileResult?.metadata?.relativePath, "docs/launch-plan.txt");
+    assert.equal(fileResult?.actions?.some((action) => action.id === "open" && action.kind === "open"), true);
+    assert.equal(localFileQueryPayload.data.results.some((result) => result.title === "hidden.txt"), false);
+
     const sensitiveQuery = await runCliCapture(["search", "query", "secret token", "--data-dir", dataRoot, "--json", "--actor", "agent:codex", "--surface", "cli"], workspaceRoot);
     assert.equal(sensitiveQuery.code, CLI_EXIT_DEGRADED);
     const sensitiveAudit = await runCliCapture(["search", "audit", "--type", "sensitive_query", "--data-dir", dataRoot, "--json"], workspaceRoot);

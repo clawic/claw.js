@@ -67,12 +67,7 @@ interface SearchServiceStateFile {
   reason?: string;
   storage: { canonical: string; index: string; indexRebuildable: true };
   budgets: typeof DEFAULT_SEARCH_BUDGETS;
-  worker?: {
-    lastRunAt: string;
-    claimed: number;
-    completed: number;
-    failed: number;
-  };
+  worker?: { lastRunAt: string; claimed: number; completed: number; failed: number };
 }
 
 export function isSearchAdminCommand(command: string | undefined): boolean {
@@ -107,12 +102,14 @@ export async function runSearchQueryCli(input: {
     const shouldRefreshMedia = domains?.includes("media") || sources?.includes("media.assets");
     const shouldRefreshGenerations = domains?.includes("generations") || sources?.includes("generations.artifacts");
     const shouldRefreshCode = domains?.includes("code") || sources?.includes("code.symbols");
+    const shouldRefreshLocalFiles = domains?.includes("files") || sources?.includes("local.files");
     const indexedDatabase = shouldRefreshDatabase && sourceCanIndex(store, "database.records") ? ensureDatabaseRecordsSourceIndexed(store, input.flags) : 0;
     const indexedDocuments = shouldRefreshDocuments && sourceCanIndex(store, "documents.blocks") ? ensureDocumentsBlocksSourceIndexed(store, input.flags) : 0;
     const indexedImages = shouldRefreshImages && sourceCanIndex(store, "images.derived") ? ensureImagesDerivedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedMedia = shouldRefreshMedia && sourceCanIndex(store, "media.assets") ? ensureMediaAssetsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedGenerations = shouldRefreshGenerations && sourceCanIndex(store, "generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedCode = shouldRefreshCode && sourceCanIndex(store, "code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const indexedLocalFiles = shouldRefreshLocalFiles && sourceCanIndex(store, "local.files") ? ensureLocalFilesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const filters = parseSearchFiltersFlag(input.flags.filters ?? input.flags.filter);
     const strategy = parseSearchStrategyFlag(input.flags.strategy);
     const embedding = parseSearchEmbeddingFlag(input.flags.embedding ?? input.flags["embedding-json"], input.flags["embedding-model"] ?? input.flags.model);
@@ -162,6 +159,7 @@ export async function runSearchQueryCli(input: {
         ...(shouldRefreshMedia ? { "media.assets": indexedMedia } : {}),
         ...(shouldRefreshGenerations ? { "generations.artifacts": indexedGenerations } : {}),
         ...(shouldRefreshCode ? { "code.symbols": indexedCode } : {}),
+        ...(shouldRefreshLocalFiles ? { "local.files": indexedLocalFiles } : {}),
       },
     };
     if (input.wantsJson) {
@@ -232,6 +230,7 @@ export async function runSearchRebuildCli(input: {
     const mediaIndexed = rebuildsSource("media.assets") ? ensureMediaAssetsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const generationsIndexed = rebuildsSource("generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const codeIndexed = rebuildsSource("code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const localFilesIndexed = rebuildsSource("local.files") ? ensureLocalFilesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedSourceIds = new Set([
       ...(commandsIndexed > 0 ? ["commands"] : []),
       ...(sessionsIndexed > 0 ? ["sessions.chats"] : []),
@@ -241,6 +240,7 @@ export async function runSearchRebuildCli(input: {
       ...(mediaIndexed > 0 ? ["media.assets"] : []),
       ...(generationsIndexed > 0 ? ["generations.artifacts"] : []),
       ...(codeIndexed > 0 ? ["code.symbols"] : []),
+      ...(localFilesIndexed > 0 ? ["local.files"] : []),
     ]);
     const pendingScope = selectedSources ?? BUILTIN_SEARCH_SOURCES.map((source) => source.id);
     const pendingSources = BUILTIN_SEARCH_SOURCES
@@ -251,7 +251,7 @@ export async function runSearchRebuildCli(input: {
       rebuilt: true,
       mode: selectedSources ? "scoped" : "full",
       selectedSources: selectedSources ?? null,
-      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + documentsIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed,
+      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + documentsIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + localFilesIndexed,
       embeddings: 0,
       profile: input.flags.profile === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
@@ -265,6 +265,7 @@ export async function runSearchRebuildCli(input: {
         "media.assets": mediaIndexed,
         "generations.artifacts": generationsIndexed,
         "code.symbols": codeIndexed,
+        "local.files": localFilesIndexed,
       },
       pendingSources,
       note: "Framework domain sources keep independent fast paths; heavyweight extractors remain async or explicit.",
@@ -775,6 +776,8 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
       return ensureGenerationsArtifactsSourceIndexed(store, flags, cwd);
     case "code.symbols":
       return ensureCodeSymbolsSourceIndexed(store, flags, cwd);
+    case "local.files":
+      return ensureLocalFilesSourceIndexed(store, flags, cwd);
     default:
       throw new Error(`Search service cannot index source: ${job.source}`);
   }
@@ -1200,6 +1203,40 @@ function ensureCodeSymbolsSourceIndexed(store: SearchStore, flags: Record<string
   return indexed;
 }
 
+function ensureLocalFilesSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {
+  const root = resolveLocalFilesSearchRoot(flags, cwd);
+  if (!fs.existsSync(root)) {
+    store.setSourceState("local.files", "degraded", {
+      backlog: 0,
+      error: `local files root does not exist: ${root}`,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 0;
+  }
+  const maxFiles = boundedNumberFlag(flags["file-limit"] ?? flags["local-files-limit"], 500, 1, 20000);
+  const maxDepth = boundedNumberFlag(flags["file-max-depth"] ?? flags["local-files-max-depth"], 8, 1, 32);
+  const maxBytes = boundedNumberFlag(flags["file-max-bytes"] ?? flags["local-files-max-bytes"], 256 * 1024, 1024, 2 * 1024 * 1024);
+  const files = discoverLocalSearchFiles(root, { maxFiles, maxDepth });
+  let indexed = 0;
+  for (const file of files) {
+    const document = localFileSearchDocument(root, file, maxBytes);
+    if (!document) continue;
+    store.upsertDocument(document);
+    indexed += 1;
+  }
+  store.setCursor({
+    source: "local.files",
+    cursor: `root:${stableSearchId(root)}:files:${indexed}`,
+    metadata: { root, maxFiles, maxDepth, maxBytes },
+  });
+  store.setSourceState("local.files", "enabled", {
+    backlog: 0,
+    error: null,
+    lastIndexedAt: new Date().toISOString(),
+  });
+  return indexed;
+}
+
 function resolveSessionsDbPath(flags: Record<string, string>): string {
   if (flags["sessions-db-path"]) return path.resolve(flags["sessions-db-path"]);
   if (process.env.CLAW_SESSIONS_DB_PATH) return path.resolve(process.env.CLAW_SESSIONS_DB_PATH);
@@ -1214,6 +1251,10 @@ function resolveMainDbPath(flags: Record<string, string>): string {
 
 function resolveCodeSearchRoot(flags: Record<string, string>, cwd: string): string {
   return path.resolve(flags["code-root"] ?? flags.workspace ?? cwd);
+}
+
+function resolveLocalFilesSearchRoot(flags: Record<string, string>, cwd: string): string {
+  return path.resolve(flags["file-root"] ?? flags["local-files-root"] ?? flags.workspace ?? cwd);
 }
 
 function boundedNumberFlag(value: string | undefined, fallback: number, min: number, max: number): number {
@@ -1257,6 +1298,39 @@ function discoverCodeSearchFiles(root: string, limits: { maxFiles: number; maxDe
   return files;
 }
 
+function discoverLocalSearchFiles(root: string, limits: { maxFiles: number; maxDepth: number }): LocalFileCandidate[] {
+  const files: LocalFileCandidate[] = [];
+  const visit = (directory: string, depth: number): void => {
+    if (files.length >= limits.maxFiles || depth > limits.maxDepth) return;
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(directory, { withFileTypes: true }).sort((left, right) => left.name.localeCompare(right.name));
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (files.length >= limits.maxFiles) break;
+      const absolutePath = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        if (!isIgnoredLocalFilesDirectory(entry.name)) visit(absolutePath, depth + 1);
+        continue;
+      }
+      if (!entry.isFile()) continue;
+      let stat: fs.Stats;
+      try {
+        stat = fs.statSync(absolutePath);
+      } catch {
+        continue;
+      }
+      if (!stat.isFile() || stat.size <= 0) continue;
+      const extension = path.extname(entry.name).toLowerCase();
+      files.push({ absolutePath, extension, kind: localFileKind(extension), size: stat.size, updatedAt: stat.mtime.toISOString() });
+    }
+  };
+  visit(root, 0);
+  return files;
+}
+
 function isIgnoredCodeSearchDirectory(name: string): boolean {
   return [
     ".git",
@@ -1278,6 +1352,10 @@ function isIgnoredCodeSearchDirectory(name: string): boolean {
     "target",
     "vendor",
   ].includes(name);
+}
+
+function isIgnoredLocalFilesDirectory(name: string): boolean {
+  return isIgnoredCodeSearchDirectory(name) || name === ".Spotlight-V100" || name === ".TemporaryItems" || name === ".Trashes";
 }
 
 function languageForCodeSearchExtension(extension: string): string | null {
@@ -1303,6 +1381,31 @@ function languageForCodeSearchExtension(extension: string): string | null {
     ".yaml": "yaml",
     ".yml": "yaml",
   } as Record<string, string | undefined>)[extension] ?? null;
+}
+
+function localFileKind(extension: string): string {
+  if ([".png", ".jpg", ".jpeg", ".gif", ".webp", ".heic", ".svg"].includes(extension)) return "image";
+  if ([".mp3", ".wav", ".m4a", ".aac", ".flac"].includes(extension)) return "audio";
+  if ([".mp4", ".mov", ".m4v", ".webm"].includes(extension)) return "video";
+  if ([".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".pages", ".numbers", ".key"].includes(extension)) return "document";
+  if (localFileTextExtension(extension)) return "text";
+  return "file";
+}
+
+function localFileTextExtension(extension: string): boolean {
+  return [
+    ".csv",
+    ".html",
+    ".json",
+    ".log",
+    ".md",
+    ".mdx",
+    ".rtf",
+    ".txt",
+    ".xml",
+    ".yaml",
+    ".yml",
+  ].includes(extension) || languageForCodeSearchExtension(extension) !== null;
 }
 
 function codeFileSearchDocument(root: string, file: CodeFileCandidate): SearchDocumentInput | null {
@@ -1356,6 +1459,66 @@ function codeFileSearchDocument(root: string, file: CodeFileCandidate): SearchDo
       { id: "copy-reference", kind: "copy", label: "Copy file reference", requiresApproval: false },
     ],
   };
+}
+
+function localFileSearchDocument(root: string, file: LocalFileCandidate, maxBytes: number): SearchDocumentInput | null {
+  const relativePath = normalizeRelativePath(path.relative(root, file.absolutePath));
+  const title = path.basename(file.absolutePath);
+  const canReadContent = localFileTextExtension(file.extension) && file.size <= maxBytes;
+  const content = canReadContent ? readLocalTextFile(file.absolutePath) : "";
+  const snippet = firstMeaningfulLine(content) ?? relativePath;
+  return {
+    id: `local.files:${stableSearchId(`${root}\0${relativePath}`)}`,
+    source: "local.files",
+    domain: "files",
+    type: "file",
+    resourceId: relativePath,
+    title,
+    subtitle: relativePath,
+    snippet,
+    body: [
+      title,
+      relativePath,
+      file.extension,
+      content,
+    ].filter(Boolean).join("\n").slice(0, maxBytes),
+    path: file.absolutePath,
+    updatedAt: file.updatedAt,
+    metadata: {
+      root,
+      relativePath,
+      extension: file.extension,
+      kind: file.kind,
+      size: file.size,
+      indexedContent: Boolean(content),
+    },
+    permissions: { canOpen: true, canPreview: Boolean(content), redacted: false },
+    rankingHints: {
+      localFile: 1,
+      fastPath: file.kind === "text" || file.kind === "document" ? 0.5 : 0.2,
+    },
+    fragments: content ? [{
+      id: `local.files:${stableSearchId(`${root}\0${relativePath}`)}:content`,
+      title: "Content",
+      body: content.slice(0, maxBytes),
+      snippet,
+      sortOrder: 0,
+      metadata: { kind: "content" },
+    }] : [],
+    actions: [
+      { id: "open", kind: "open", label: "Open file", requiresApproval: true, risk: "read", grant: "search.files.open" },
+      { id: "copy-reference", kind: "copy", label: "Copy file reference", requiresApproval: false },
+    ],
+  };
+}
+
+function readLocalTextFile(filePath: string): string {
+  try {
+    const content = fs.readFileSync(filePath, "utf8");
+    return content.includes("\0") ? "" : content;
+  } catch {
+    return "";
+  }
 }
 
 function extractCodeSearchSymbols(content: string, language: string): CodeSearchSymbol[] {
@@ -1604,6 +1767,14 @@ interface CodeFileCandidate {
   absolutePath: string;
   extension: string;
   language: string;
+  updatedAt: string;
+}
+
+interface LocalFileCandidate {
+  absolutePath: string;
+  extension: string;
+  kind: string;
+  size: number;
   updatedAt: string;
 }
 

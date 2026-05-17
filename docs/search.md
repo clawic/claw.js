@@ -56,7 +56,7 @@ backfill jobs.
 | `media.assets` | `media` | workspace media records projected into `search.sqlite` | implemented initial adapter |
 | `generations.artifacts` | `generations` | generated artifact records projected into `search.sqlite` | implemented initial adapter |
 | `code.symbols` | `code` | bounded project file/symbol/docs projection into `search.sqlite` | implemented initial adapter |
-| `local.files` | `files` | local file metadata/content adapter | EXTERNAL PENDING, `full`, off by default |
+| `local.files` | `files` | bounded local file metadata and text-content projection | implemented opt-in adapter, `full`, off by default |
 | `native.system` | `native` | native app/system/contact adapters | EXTERNAL PENDING, `full`, off by default |
 | `web.ingested` | `web` | explicit web ingestion and crawler cache | EXTERNAL PENDING, `full`, off by default |
 | `external.cache` | `external` | provider reference + local cache adapters | EXTERNAL PENDING, `full`, off by default |
@@ -74,6 +74,9 @@ claw search query "product mark" --domains images --filters metadata.imageType=l
 claw search query "requirements" --domains media --filters metadata.kind=document --json
 claw search query "analytics cards" --domains generations --filters metadata.status=succeeded --json
 claw search query "symbolName" --domains code --code-root /path/to/project --json
+claw search sources enable local.files --profile full --json
+claw search rebuild --source local.files --profile full --file-root /path/to/folder --json
+claw search query "invoice" --domains files --profile full --file-root /path/to/folder --json
 claw search query "diagram" --domains images --shards hot --json
 claw search query "related concept" --domains documents --strategy hybrid --embedding-model local --embedding '[0.1,0.2,0.3]' --json
 claw search sources --json
@@ -193,6 +196,16 @@ current workspace root. It skips dependency/build/cache/private control
 directories and respects `--code-limit`, `--code-max-depth`, and
 `--code-max-bytes`. Code indexing is refreshed lazily only for code-scoped
 queries or explicitly during `search rebuild`.
+
+`local.files` follows the same explicit-source rule. It stays in the `full`
+profile and is disabled until explicitly enabled with `claw search sources
+enable local.files --profile full`. Once enabled, `--file-root` selects the
+local tree; `--file-limit`, `--file-max-depth`, and `--file-max-bytes` cap
+traversal and content reads. Text-like files are indexed with content; binary
+office/media files are indexed by metadata and path only. Dependency/build/
+cache/private control directories are skipped, and the source participates in
+scoped query refresh, rebuild accounting, and Search service `run-once` jobs
+only when selected.
 
 `documents.blocks` projects framework document records from `core.sqlite`.
 Documents are returned as scoped section results, while document blocks are
