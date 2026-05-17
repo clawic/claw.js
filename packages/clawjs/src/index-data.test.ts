@@ -76,6 +76,8 @@ test("runCli exposes Agents V1 safe surface projection gate", async () => {
     }), CLI_EXIT_OK);
     const schema = parseCliJsonPayload(schemaStdout.getOutput()) as { gates: string[] };
     assert.equal(schema.gates.includes("surface-projection"), true);
+    assert.equal(schema.gates.includes("config-revision"), true);
+    assert.equal(schema.gates.includes("incident"), true);
 
     const surfaceProjectionStdout = captureStream();
     assert.equal(await runCli(["agents", "surface-projection", "--record", JSON.stringify({
@@ -135,6 +137,76 @@ test("runCli exposes Agents V1 safe surface projection gate", async () => {
       "raw_telemetry_retention_requires_policy_review",
       "external_disclosure_uses_custom_wording",
     ]);
+
+    const revisionStdout = captureStream();
+    assert.equal(await runCli(["agents", "config-revision", "--record", JSON.stringify({
+      agentId: "agent-ops",
+      revision: 2,
+      actorId: "actor.owner",
+      reason: "Tighten MCP assignment",
+      configSnapshot: {
+        name: "Ops",
+        systemPrompt: "private",
+        secretAllowlist: ["vault://agents/ops"],
+        localPath: "/Users/example/private-agent",
+      },
+      changedFields: [{ field: "assignments.mcp", fromValue: "active", toValue: "paused", apiToken: "raw" }],
+      createdAt: "2026-05-17T10:00:00.000Z",
+    }), "--json"], {
+      stdout: revisionStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const revision = parseCliJsonPayload(revisionStdout.getOutput()) as {
+      id: string;
+      revision: string;
+      configSnapshot: Record<string, unknown>;
+      changedFields: Array<Record<string, unknown>>;
+      audit: { kind: string; resourceType?: string };
+    };
+    assert.match(revision.id, /^agent_config_revision_/);
+    assert.equal(revision.revision, "2");
+    assert.equal(revision.configSnapshot.secretAllowlist, "[REDACTED]");
+    assert.equal(revision.configSnapshot.localPath, "[REDACTED_LOCAL_PATH]");
+    assert.equal(revision.changedFields[0]?.apiToken, "[REDACTED]");
+    assert.equal(revision.audit.kind, "config_revision");
+    assert.equal(revision.audit.resourceType, "agent_config_revision");
+
+    const incidentStdout = captureStream();
+    assert.equal(await runCli(["agents", "incident", "--record", JSON.stringify({
+      agentId: "agent-ops",
+      assignmentId: "assignment.mcp",
+      runId: "run_1",
+      sessionId: "session_1",
+      actorId: "actor.monitor",
+      severity: "high",
+      summary: "Unsafe route blocked",
+      scopeType: "customer",
+      scopeId: "customer_1",
+      detectedAt: "2026-05-17T10:00:00.000Z",
+      metadata: {
+        rawTracePath: "/Users/example/trace.log",
+        authorization: "Bearer raw",
+      },
+    }), "--json"], {
+      stdout: incidentStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const incident = parseCliJsonPayload(incidentStdout.getOutput()) as {
+      id: string;
+      status: string;
+      severity: string;
+      metadata: Record<string, unknown>;
+      audit: { kind: string; result: string; resourceType?: string };
+    };
+    assert.match(incident.id, /^agent_incident_/);
+    assert.equal(incident.status, "open");
+    assert.equal(incident.severity, "high");
+    assert.deepEqual(incident.metadata, { rawTracePath: "[REDACTED]", authorization: "[REDACTED]" });
+    assert.equal(incident.audit.kind, "incident");
+    assert.equal(incident.audit.result, "blocked");
+    assert.equal(incident.audit.resourceType, "agent_incident");
   });
   fs.rmSync(tempRoot, { recursive: true, force: true });
 });
