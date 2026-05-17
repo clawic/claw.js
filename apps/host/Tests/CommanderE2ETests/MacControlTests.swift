@@ -112,9 +112,9 @@ final class MacControlTests: XCTestCase {
         XCTAssertEqual(plan.coverageState, "executable")
         XCTAssertEqual(plan.actor.kind, "agent")
         XCTAssertEqual(plan.host.bundleId, "com.example.claw-host")
-        XCTAssertEqual(plan.requiredApprovalRoles, ["owner", "admin"])
-        XCTAssertEqual(plan.rollbackLevel, "best_effort")
-        XCTAssertEqual(plan.rollbackTimerSeconds, 120)
+        XCTAssertEqual(plan.requiredApprovals.first?.approverRoles, ["owner", "admin"])
+        XCTAssertEqual(plan.rollback.level, "best_effort")
+        XCTAssertEqual(plan.rollback.timerSeconds, 120)
         XCTAssertTrue(plan.executable)
     }
 
@@ -137,6 +137,7 @@ final class MacControlTests: XCTestCase {
         XCTAssertEqual(evaluation.capabilityId, "mac.shortcut.run")
         XCTAssertEqual(evaluation.receipt?.result, "ok")
         XCTAssertEqual(evaluation.receipt?.secretRefs, ["sec_shortcut_input"])
+        XCTAssertEqual(evaluation.auditEvent?.receiptId, evaluation.receipt?.id)
         XCTAssertEqual(runner.processCalls, [
             RecordingMacControlRunner.ProcessCall(executable: "/usr/bin/shortcuts", arguments: ["run", "Daily Plan"]),
         ])

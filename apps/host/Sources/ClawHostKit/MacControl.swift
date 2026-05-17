@@ -630,6 +630,14 @@ public struct MacControlWireActor: Codable, Equatable, Sendable {
     public var role: String?
     public var assignmentId: String?
     public var runId: String?
+
+    public init(kind: String, id: String, role: String? = nil, assignmentId: String? = nil, runId: String? = nil) {
+        self.kind = kind
+        self.id = id
+        self.role = role
+        self.assignmentId = assignmentId
+        self.runId = runId
+    }
 }
 
 public struct MacControlWireHost: Codable, Equatable, Sendable {
@@ -639,6 +647,51 @@ public struct MacControlWireHost: Codable, Equatable, Sendable {
     public var teamId: String?
     public var appVariant: String?
     public var appVersion: String?
+
+    public init(
+        hostId: String,
+        bundleId: String,
+        signingIdentity: String? = nil,
+        teamId: String? = nil,
+        appVariant: String? = nil,
+        appVersion: String? = nil
+    ) {
+        self.hostId = hostId
+        self.bundleId = bundleId
+        self.signingIdentity = signingIdentity
+        self.teamId = teamId
+        self.appVariant = appVariant
+        self.appVersion = appVersion
+    }
+}
+
+public struct MacControlWireTarget: Codable, Equatable, Sendable {
+    public var kind: String
+    public var id: String?
+    public var name: String?
+    public var selector: [String: JSONValue]
+
+    public init(kind: String, id: String? = nil, name: String? = nil, selector: [String: JSONValue] = [:]) {
+        self.kind = kind
+        self.id = id
+        self.name = name
+        self.selector = selector
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case kind
+        case id
+        case name
+        case selector
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        kind = try container.decode(String.self, forKey: .kind)
+        id = try container.decodeIfPresent(String.self, forKey: .id)
+        name = try container.decodeIfPresent(String.self, forKey: .name)
+        selector = try container.decodeIfPresent([String: JSONValue].self, forKey: .selector) ?? [:]
+    }
 }
 
 public struct MacControlWireRequest: Codable, Equatable, Sendable {
@@ -647,6 +700,7 @@ public struct MacControlWireRequest: Codable, Equatable, Sendable {
     public var capabilityId: String
     public var actor: MacControlWireActor
     public var host: MacControlWireHost
+    public var target: MacControlWireTarget?
     public var arguments: [String: JSONValue]
     public var dryRun: Bool
     public var reason: String?
@@ -658,6 +712,7 @@ public struct MacControlWireRequest: Codable, Equatable, Sendable {
         capabilityId: String,
         actor: MacControlWireActor,
         host: MacControlWireHost,
+        target: MacControlWireTarget? = nil,
         arguments: [String: JSONValue] = [:],
         dryRun: Bool = false,
         reason: String? = nil,
@@ -668,11 +723,62 @@ public struct MacControlWireRequest: Codable, Equatable, Sendable {
         self.capabilityId = capabilityId
         self.actor = actor
         self.host = host
+        self.target = target
         self.arguments = arguments
         self.dryRun = dryRun
         self.reason = reason
         self.approved = approved
     }
+
+    enum CodingKeys: String, CodingKey {
+        case schemaVersion
+        case requestId
+        case capabilityId
+        case actor
+        case host
+        case target
+        case arguments
+        case dryRun
+        case reason
+        case approved
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        schemaVersion = try container.decode(Int.self, forKey: .schemaVersion)
+        requestId = try container.decode(String.self, forKey: .requestId)
+        capabilityId = try container.decode(String.self, forKey: .capabilityId)
+        actor = try container.decode(MacControlWireActor.self, forKey: .actor)
+        host = try container.decode(MacControlWireHost.self, forKey: .host)
+        target = try container.decodeIfPresent(MacControlWireTarget.self, forKey: .target)
+        arguments = try container.decodeIfPresent([String: JSONValue].self, forKey: .arguments) ?? [:]
+        dryRun = try container.decodeIfPresent(Bool.self, forKey: .dryRun) ?? false
+        reason = try container.decodeIfPresent(String.self, forKey: .reason)
+        approved = try container.decodeIfPresent(Bool.self, forKey: .approved)
+    }
+}
+
+public struct MacControlWirePermissionRequirement: Codable, Equatable, Sendable {
+    public var permissionId: String
+    public var required: Bool
+    public var currentOsState: String
+    public var currentFrameworkGrant: String
+    public var guidance: String?
+}
+
+public struct MacControlWireRequiredApproval: Codable, Equatable, Sendable {
+    public var risk: String
+    public var reason: String
+    public var approverRoles: [String]
+    public var requestId: String?
+}
+
+public struct MacControlWireRollbackPlan: Codable, Equatable, Sendable {
+    public var level: String
+    public var timerSeconds: Int?
+    public var snapshotRequired: Bool
+    public var snapshotRef: String?
+    public var reason: String?
 }
 
 public struct MacControlWirePlan: Codable, Equatable, Sendable {
@@ -684,26 +790,56 @@ public struct MacControlWirePlan: Codable, Equatable, Sendable {
     public var coverageState: String
     public var actor: MacControlWireActor
     public var host: MacControlWireHost
-    public var permissionRequirements: [String]
-    public var requiredApprovalRoles: [String]
-    public var rollbackLevel: String
-    public var rollbackTimerSeconds: Int?
+    public var resolvedTarget: MacControlWireTarget?
+    public var permissionRequirements: [MacControlWirePermissionRequirement]
+    public var requiredApprovals: [MacControlWireRequiredApproval]
+    public var rollback: MacControlWireRollbackPlan
     public var willMutate: Bool
     public var executable: Bool
     public var blockedReasons: [String]
+    public var relatedSurfaces: [String]
+}
+
+public struct MacControlWireRedaction: Codable, Equatable, Sendable {
+    public var level: String
+    public var fields: [String]
 }
 
 public struct MacControlWireReceipt: Codable, Equatable, Sendable {
     public var schemaVersion: Int
     public var id: String
     public var requestId: String
-    public var planId: String
+    public var planId: String?
     public var capabilityId: String
     public var actor: MacControlWireActor
     public var host: MacControlWireHost
     public var result: String
     public var risk: String
+    public var permissionSnapshotRefs: [String]
+    public var beforeRef: String?
+    public var afterRef: String?
+    public var auditId: String
+    public var revert: MacControlWireRollbackPlan
     public var secretRefs: [String]
+    public var redaction: MacControlWireRedaction
+    public var createdAt: String
+}
+
+public struct MacControlWireAuditEvent: Codable, Equatable, Sendable {
+    public var schemaVersion: Int
+    public var id: String
+    public var receiptId: String
+    public var requestId: String
+    public var planId: String?
+    public var capabilityId: String
+    public var actor: MacControlWireActor
+    public var host: MacControlWireHost
+    public var result: String
+    public var risk: String
+    public var summary: String
+    public var redaction: MacControlWireRedaction
+    public var metadata: [String: JSONValue]
+    public var createdAt: String
 }
 
 public struct MacControlWireEvaluation: Codable, Equatable, Sendable {
@@ -715,7 +851,9 @@ public struct MacControlWireEvaluation: Codable, Equatable, Sendable {
     public var actor: MacControlWireActor
     public var host: MacControlWireHost
     public var reasons: [String]
+    public var approvalRequestIds: [String]
     public var receipt: MacControlWireReceipt?
+    public var auditEvent: MacControlWireAuditEvent?
 }
 
 @MainActor
@@ -760,20 +898,41 @@ public enum MacControlWire {
             coverageState: "executable",
             actor: request.actor,
             host: request.host,
-            permissionRequirements: plan.requiredPermissionIds.map(\.rawValue),
-            requiredApprovalRoles: plan.requiresApproval ? ["owner", "admin"] : [],
-            rollbackLevel: plan.revertLevel.rawValue,
-            rollbackTimerSeconds: plan.risk == .critical && plan.revertLevel != .none ? 120 : nil,
+            resolvedTarget: request.target,
+            permissionRequirements: plan.requiredPermissionIds.map {
+                MacControlWirePermissionRequirement(
+                    permissionId: $0.rawValue,
+                    required: true,
+                    currentOsState: "unknown",
+                    currentFrameworkGrant: "not_granted",
+                    guidance: nil
+                )
+            },
+            requiredApprovals: plan.requiresApproval ? [
+                MacControlWireRequiredApproval(
+                    risk: plan.risk.rawValue,
+                    reason: request.reason ?? "\(plan.capabilityId) requires \(plan.risk.rawValue) approval",
+                    approverRoles: ["owner", "admin"],
+                    requestId: nil
+                ),
+            ] : [],
+            rollback: rollbackPlan(from: plan),
             willMutate: plan.risk != .read,
             executable: blockedReasons.isEmpty && !plan.steps.isEmpty,
-            blockedReasons: blockedReasons
+            blockedReasons: blockedReasons,
+            relatedSurfaces: []
         )
     }
 
     private static func wireEvaluation(from receipt: MacControlActionReceipt, plan: MacControlWirePlan?, request: MacControlWireRequest) -> MacControlWireEvaluation {
         let decision = decisionValue(from: receipt)
         let result = resultValue(from: receipt)
+        let createdAt = ISO8601DateFormatter().string(from: Date())
+        let fallbackRollback = MacControlWireRollbackPlan(level: "none", timerSeconds: nil, snapshotRequired: false, snapshotRef: nil, reason: nil)
+        let rollback = plan?.rollback ?? fallbackRollback
         let risk = plan?.risk ?? "high"
+        let redaction = MacControlWireRedaction(level: risk == "high" || risk == "critical" ? "high" : "low", fields: ["arguments"])
+        let auditId = "macaudit_\(receipt.requestId)_\(result)".replacingOccurrences(of: "-", with: "_")
         let wireReceipt = MacControlWireReceipt(
             schemaVersion: schemaVersion,
             id: receipt.receiptId,
@@ -784,7 +943,30 @@ public enum MacControlWire {
             host: request.host,
             result: result,
             risk: risk,
-            secretRefs: secretRefs(from: request.arguments)
+            permissionSnapshotRefs: [],
+            beforeRef: nil,
+            afterRef: nil,
+            auditId: auditId,
+            revert: rollback,
+            secretRefs: secretRefs(from: request.arguments),
+            redaction: redaction,
+            createdAt: createdAt
+        )
+        let auditEvent = MacControlWireAuditEvent(
+            schemaVersion: schemaVersion,
+            id: auditId,
+            receiptId: wireReceipt.id,
+            requestId: receipt.requestId,
+            planId: receipt.planId,
+            capabilityId: receipt.capabilityId,
+            actor: request.actor,
+            host: request.host,
+            result: result,
+            risk: risk,
+            summary: "Mac action \(receipt.capabilityId) \(result)",
+            redaction: redaction,
+            metadata: receipt.error.map { ["error": .string($0)] } ?? [:],
+            createdAt: createdAt
         )
         return MacControlWireEvaluation(
             schemaVersion: schemaVersion,
@@ -795,7 +977,19 @@ public enum MacControlWire {
             actor: request.actor,
             host: request.host,
             reasons: receipt.error.map { [$0] } ?? (decision == "dry_run" ? ["dry_run"] : []),
-            receipt: wireReceipt
+            approvalRequestIds: [],
+            receipt: wireReceipt,
+            auditEvent: auditEvent
+        )
+    }
+
+    private static func rollbackPlan(from plan: MacControlActionPlan) -> MacControlWireRollbackPlan {
+        MacControlWireRollbackPlan(
+            level: plan.revertLevel.rawValue,
+            timerSeconds: plan.risk == .critical && plan.revertLevel != .none ? 120 : nil,
+            snapshotRequired: (plan.risk == .high || plan.risk == .critical) && plan.revertLevel != .none,
+            snapshotRef: nil,
+            reason: plan.revertLevel == .none ? "No reliable automated revert is declared for this capability." : nil
         )
     }
 
