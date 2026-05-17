@@ -101,6 +101,16 @@ references and may request broker leases for a specific actor, action,
 resource, route, and expiry. The audit event records the lease; the payload
 does not return plaintext to the caller.
 
+Remote access is fail-closed. A governed Gateway request is allowed only when
+the requested capability is `remote-safe`, actor transport and trust mode match
+the request, agent actors include an assignment, and every control plane has an
+active allow grant: agent, assignment, execution profile, connector, host, run
+scope, remote classification, and transport trust. Secret references add a
+required broker-lease grant. Plaintext secret access is always denied, even
+when other grants match. Every evaluation emits an audit decision with actor,
+node, route, resource, action, trust mode, classification, and allow/deny
+outcome.
+
 ## Enforcement
 
 The surface route graph must register:

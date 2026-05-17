@@ -2431,8 +2431,17 @@ The docs check script validates that every current export from
     buildSyncPlan
     createExampleSyncResourceManifest
     createSyncResourceManifest
+    evaluateRemoteAccess
     NodeIdentity
     nodeIdentitySchema
+    RemoteAccessDecision
+    remoteAccessDecisionSchema
+    RemoteAccessGrant
+    remoteAccessGrantPlaneSchema
+    RemoteAccessGrantPlane
+    remoteAccessGrantSchema
+    RemoteAccessRequest
+    remoteAccessRequestSchema
     RemoteActorContext
     remoteActorContextSchema
     RemoteActorKind

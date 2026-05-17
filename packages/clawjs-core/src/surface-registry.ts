@@ -790,8 +790,14 @@ const corePublicRoutes = [
   ["claw.api.remote.classifications", "GET", "/v1/remote/classifications", "Remote surface classification contract"],
   ["claw.api.remote.conformance", "GET", "/v1/remote/conformance", "Remote conformance report contract"],
   ["claw.api.sync.manifests", "GET", "/v1/sync/manifests", "Sync resource manifest contract"],
+  ["claw.api.sync.manifests.create", "POST", "/v1/sync/manifests", "Sync resource manifest dry-run creation contract"],
   ["claw.api.sync.changes", "GET", "/v1/sync/changes", "Sync changelog and cursor contract"],
+  ["claw.api.sync.plan", "POST", "/v1/sync/plan", "Sync dry-run planning contract"],
+  ["claw.api.sync.conflicts", "POST", "/v1/sync/conflicts", "Sync conflict inspection contract"],
   ["claw.api.nodes", "GET", "/v1/nodes", "Node identity and trust contract"],
+  ["claw.api.nodes.pair", "POST", "/v1/nodes/pair", "Node pairing dry-run contract"],
+  ["claw.api.nodes.trust", "POST", "/v1/nodes/trust", "Node trust dry-run contract"],
+  ["claw.api.nodes.revoke", "POST", "/v1/nodes/revoke", "Node revocation dry-run contract"],
   ["claw.api.gateway.conformance", "GET", "/v1/gateway/conformance", "Gateway hosted/self-hosted conformance contract"],
 ] as const;
 

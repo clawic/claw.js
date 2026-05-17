@@ -1,0 +1,38 @@
+# Remote Gateway And Sync Decision Matrix
+
+Source conversation: `019e36a3-c2e6-73b3-a3fe-f3e7340e42c8`
+
+Reference plan item: `019e3732-c90e-7491-9217-37020c43217e-plan`
+
+This matrix is the public acceptance ledger for the remote Gateway, Connector,
+Coordinator, and Sync redesign. It is guarded by
+`scripts/verify-remote-sync-goal.mjs` and links to the privacy-safe
+[source decision audit](./remote-gateway-sync-source-decision-audit.md).
+Before the maintainer-local goal closes, every row must be re-read against the
+private source session and marked implemented, documented, or explicitly
+blocked.
+
+| ID | Decision key | Implementation state | Canon/docs | Tests/evidence | Remaining work |
+| --- | --- | --- | --- | --- | --- |
+| RG-001 | `relay_boundary` | Implemented baseline: Relay is split into Coordinator, Gateway, Connector, and Sync nodes and docs. | ADR 0022, Relay docs, decision map, surface registry. | `surface-route-graph-guard`, `inspect-cli.test.ts`, `verify-remote-sync-goal`. | Replace remaining compatibility Relay paths only after clients migrate. |
+| RG-002 | `server_trust_model` | Implemented contract: `sovereign_e2e_tunnel` and `governed_gateway` are typed trust modes. | ADR 0022, remote-sync contracts. | Core contract tests and remote conformance smoke. | Real trust mutations remain signed-host/Coordinator gated. |
+| RG-003 | `remote_surface_parity` | Implemented baseline states: `remote-safe`, `local-only`, `blocked`, and `pending`. | Interface matrix, surface contract registry, ADR 0022. | `docs-surface-check`, `claw remote classify`, inspect CLI tests. | Continue closing `pending` capabilities as each stable domain graduates. |
+| RG-004 | `topology_priority` | Implemented baseline for personal mesh plus headless/server topology. | ADR 0022, route graph, CLI docs. | Required nodes/routes in graph guard and goal verifier. | Physical multi-device validation is EXTERNAL PENDING until real nodes are paired. |
+| RG-005 | `sync_authority_model` | Implemented manifest contract with authority, residency, owner, allowed peers, routes, and driver. | `SyncResourceManifest`, ADR 0022. | Core sync tests and CLI `sync manifest`. | Add persistent manifest store once signed host writes are available. |
+| RG-006 | `remote_secrets_model` | Implemented contract: secret refs only, broker lease required, plaintext forbidden. | ADR 0022, remote-sync contracts, interface matrix. | Core tests validate secret policy and `RemoteSecretLease`. | Real secret broker execution remains signed-host gated. |
+| RG-007 | `transport_contract` | Implemented baseline: Iroh v1 is represented as adapter, contract stays transport-agnostic. | ADR 0022, surface graph. | Remote conformance reports `transport_agnostic_iroh_v1_adapter`. | Physical Iroh handshake is EXTERNAL PENDING. |
+| RG-008 | `remote_api_shape` | Implemented baseline: Gateway routes broker local registered contracts instead of a parallel API, with CLI and HTTP service routes sharing the same core contracts. | ADR 0022, Relay docs, decision map, surface route graph. | Route graph guard, CLI/router parity, Relay remote-sync route tests, and goal verifier. | Expand per-domain remote-safe conformance as domains close. |
+| RG-009 | `offline_behavior` | Implemented executable planner: dry-run sync actions, changes, conflicts, and cursors with no writes across CLI and HTTP service routes. | CLI docs, Relay docs, and `remote-sync.ts`. | Core tests, inspect CLI tests, `claw sync plan`, and Relay `/v1/sync/plan`. | Durable queues are pending signed-host storage integration. |
+| RG-010 | `remote_actor_model` | Implemented actor context and fail-closed access evaluation for human, device, agent, service, and organization actors; agent requests require assignment and emit audit decisions. | ADR 0022, Relay docs, remote-sync contracts. | Core schema/access tests and goal verifier. | Tie real Gateway audit events to signed host audit store. |
+| RG-011 | `headless_host_model` | Implemented baseline route and node for complete headless hosts. | ADR 0022, surface registry, CLI docs. | Required route `gateway.headlessAgentHost`. | Real daemon/server deployment validation is EXTERNAL PENDING. |
+| RG-012 | `first_vertical_slice` | Implemented baseline covers chat, search, secret broker, sync, headless agents, and multi-tenant service. | ADR 0022 and route graph. | Required route checks in core tests and goal verifier. | End-to-end physical integration remains per-provider EXTERNAL PENDING. |
+| RG-013 | `sync_substrate` | Implemented driver taxonomy for skills, memory, sessions, drive/files, blobs, SQLite, partial SQLite, sidecars, search index, agent config, and workspace state. | ADR 0022 and `syncDriverSchema`. | Core route-driver mapping tests. | Add physical drivers incrementally behind the same manifest contract. |
+| RG-014 | `conflict_default` | Implemented: diverged snapshots create open conflicts and never silently overwrite. | ADR 0022, CLI docs. | Core and CLI tests for conflict/noop/push planning. | Add human review UI later; the contract already blocks silent overwrite. |
+| RG-015 | `client_cache_policy` | Implemented strict encrypted TTL cache policy with no secrets or authoritative state. | ADR 0022 and manifest schema. | Core manifest tests. | Add physical cache implementation after host storage gate. |
+| RG-016 | `guardrail_strictness` | Implemented baseline conformance and fail-closed access evaluation: missing required nodes/routes fail the report, and missing grants/classification/trust deny the request. | ADR 0022, decision map, goal verifier. | `remote conformance`, graph guard, core access tests, goal verifier. | Move more domain-specific gaps from `pending` to closed states. |
+| RG-017 | `compat_policy` | Implemented docs and graph stance: compatibility Relay routes stay while canonical Gateway/Connector/Sync takes over. | ADR 0022, Relay docs. | Required Relay and Gateway route tests. | Retire compatibility names only through a migration ADR. |
+| RG-018 | `hosted_service_position` | Implemented conformance field requiring hosted/self-hosted parity. | ADR 0022, CLI `gateway conformance`. | Inspect CLI tests and goal verifier. | Real hosted deployment validation is EXTERNAL PENDING. |
+| RG-019 | `layer_names` | Implemented canonical taxonomy: Coordinator, Gateway, Connector, Sync. | ADR 0022, docs, CLI, registry. | Docs checks and goal verifier. | Keep Relay naming compatibility-only. |
+| RG-020 | `mesh_collaboration_scope` | Implemented baseline share/revoke surface through `mesh.resourceShare` and node commands. | ADR 0022, route graph, CLI docs. | Route graph guard and goal verifier. | Real signed invitations are pending Coordinator implementation. |
+| RG-021 | `agent_service_model` | Implemented baseline multi-tenant agent service route with governed parity requirement. | ADR 0022, route graph. | Required route `gateway.multiTenantAgentService`. | Tenant isolation runtime enforcement remains implementation work. |
+| RG-022 | `sync_lateral_domains` | Implemented lateral sync taxonomy and route mapping across skills, memory, drive/files, sessions, DBs, sidecars, blobs, indexes, agent config, and workspace state. | ADR 0022, remote-sync contracts. | Core driver mapping tests and goal verifier. | Add physical drivers without changing the governance manifest. |

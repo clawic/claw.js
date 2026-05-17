@@ -1178,6 +1178,78 @@
         "visibility": "stable"
       },
       {
+        "method": "GET",
+        "path": "/v1/remote/classifications",
+        "tier": "Relay control plane",
+        "visibility": "stable"
+      },
+      {
+        "method": "GET",
+        "path": "/v1/remote/conformance",
+        "tier": "Relay control plane",
+        "visibility": "stable"
+      },
+      {
+        "method": "GET",
+        "path": "/v1/gateway/conformance",
+        "tier": "Relay control plane",
+        "visibility": "stable"
+      },
+      {
+        "method": "GET",
+        "path": "/v1/sync/manifests",
+        "tier": "Relay control plane",
+        "visibility": "stable"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/sync/manifests",
+        "tier": "Relay control plane",
+        "visibility": "stable"
+      },
+      {
+        "method": "GET",
+        "path": "/v1/sync/changes",
+        "tier": "Relay control plane",
+        "visibility": "stable"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/sync/plan",
+        "tier": "Relay control plane",
+        "visibility": "stable"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/sync/conflicts",
+        "tier": "Relay control plane",
+        "visibility": "stable"
+      },
+      {
+        "method": "GET",
+        "path": "/v1/nodes",
+        "tier": "Relay control plane",
+        "visibility": "stable"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/nodes/pair",
+        "tier": "Relay control plane",
+        "visibility": "stable"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/nodes/trust",
+        "tier": "Relay control plane",
+        "visibility": "stable"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/nodes/revoke",
+        "tier": "Relay control plane",
+        "visibility": "stable"
+      },
+      {
         "method": "POST",
         "path": "/v1/auth/login",
         "tier": "Relay control plane",

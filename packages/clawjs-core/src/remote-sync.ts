@@ -152,6 +152,32 @@ export const syncPlanResultSchema = z.object({
   writes: z.literal(false),
 });
 
+export const syncQueueEntrySchema = z.object({
+  queueEntryId: z.string().min(1),
+  resourceId: z.string().min(1),
+  objectRef: z.string().min(1),
+  direction: z.enum(["push", "pull", "conflict"]),
+  status: z.enum(["queued", "applied", "blocked", "resolved", "failed", "skipped"]),
+  changeId: z.string().min(1).optional(),
+  conflictId: z.string().min(1).optional(),
+  cursorBefore: syncCursorSchema.optional(),
+  cursorAfter: syncCursorSchema.optional(),
+  queuedAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+  reason: z.string().min(1),
+  secretRefs: z.array(z.string().min(1)).default([]),
+  writes: z.literal(false),
+});
+
+export const syncReconciliationResultSchema = z.object({
+  manifest: syncResourceManifestSchema,
+  queue: z.array(syncQueueEntrySchema),
+  appliedChangeIds: z.array(z.string().min(1)),
+  blockedConflictIds: z.array(z.string().min(1)),
+  nextCursor: syncCursorSchema.optional(),
+  writes: z.literal(false),
+});
+
 export const remoteSecretLeaseSchema = z.object({
   leaseId: z.string().min(1),
   secretRef: z.string().min(1),
@@ -161,6 +187,73 @@ export const remoteSecretLeaseSchema = z.object({
   expiresAt: z.string().datetime(),
   plaintextReturned: z.literal(false),
   auditEventId: z.string().min(1),
+});
+
+export const remoteAccessGrantPlaneSchema = z.enum([
+  "agent",
+  "assignment",
+  "execution_profile",
+  "connector",
+  "host",
+  "run_scope",
+  "remote_classification",
+  "transport_trust",
+  "secret_broker",
+]);
+
+export const remoteAccessGrantSchema = z.object({
+  id: z.string().min(1),
+  plane: remoteAccessGrantPlaneSchema,
+  resourceType: z.string().min(1),
+  resourceId: z.string().min(1).optional(),
+  action: z.string().min(1),
+  effect: z.enum(["allow", "deny"]).default("allow"),
+  expiresAt: z.string().datetime().optional(),
+  requiresBrokerLease: z.boolean().default(false),
+});
+
+export const remoteAccessRequestSchema = z.object({
+  actor: remoteActorContextSchema,
+  routeId: z.string().min(1),
+  resourceType: z.string().min(1),
+  resourceId: z.string().min(1).optional(),
+  action: z.string().min(1),
+  classification: remoteSurfaceClassificationSchema,
+  trustMode: remoteTrustModeSchema,
+  transport: z.string().min(1),
+  secretRefs: z.array(z.string().min(1)).default([]),
+  plaintextSecretRequested: z.boolean().default(false),
+  now: z.string().datetime().optional(),
+});
+
+export const remoteAccessDecisionSchema = z.object({
+  allowed: z.boolean(),
+  reasons: z.array(z.string()),
+  requiredBrokerLease: z.boolean(),
+  audit: z.object({
+    eventType: z.literal("remote.access.evaluated"),
+    actorId: z.string().min(1),
+    actorKind: remoteActorKindSchema,
+    nodeId: z.string().min(1),
+    routeId: z.string().min(1),
+    resourceType: z.string().min(1),
+    resourceId: z.string().min(1).optional(),
+    action: z.string().min(1),
+    trustMode: remoteTrustModeSchema,
+    classification: remoteSurfaceClassificationSchema,
+    decision: z.enum(["allow", "deny"]),
+  }),
+});
+
+export const remoteOfflineCommandResultSchema = z.object({
+  routeId: z.string().min(1),
+  actor: remoteActorContextSchema,
+  status: z.literal("failed_fast"),
+  reason: z.enum(["connector_offline", "node_unreachable", "transport_unavailable"]),
+  enqueued: z.literal(false),
+  retryable: z.literal(true),
+  evaluatedAt: z.string().datetime(),
+  writes: z.literal(false),
 });
 
 export type RemoteSurfaceClassification = z.infer<typeof remoteSurfaceClassificationSchema>;
@@ -179,7 +272,14 @@ export type SyncConflict = z.infer<typeof syncConflictSchema>;
 export type SyncObjectSnapshot = z.infer<typeof syncObjectSnapshotSchema>;
 export type SyncPlanAction = z.infer<typeof syncPlanActionSchema>;
 export type SyncPlanResult = z.infer<typeof syncPlanResultSchema>;
+export type SyncQueueEntry = z.infer<typeof syncQueueEntrySchema>;
+export type SyncReconciliationResult = z.infer<typeof syncReconciliationResultSchema>;
 export type RemoteSecretLease = z.infer<typeof remoteSecretLeaseSchema>;
+export type RemoteAccessGrantPlane = z.infer<typeof remoteAccessGrantPlaneSchema>;
+export type RemoteAccessGrant = z.infer<typeof remoteAccessGrantSchema>;
+export type RemoteAccessRequest = z.infer<typeof remoteAccessRequestSchema>;
+export type RemoteAccessDecision = z.infer<typeof remoteAccessDecisionSchema>;
+export type RemoteOfflineCommandResult = z.infer<typeof remoteOfflineCommandResultSchema>;
 
 export const remoteSyncRequiredDecisionIds = [
   "relay_boundary",
@@ -306,6 +406,10 @@ function syncConflictId(resourceId: string, objectRef: string): string {
   return `sync_conflict_${resourceId}_${objectRef}`.replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase();
 }
 
+function syncQueueEntryId(parts: string[]): string {
+  return `sync_queue_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
+}
+
 function newestSnapshot(left: SyncObjectSnapshot, right: SyncObjectSnapshot): SyncObjectSnapshot {
   return left.updatedAt >= right.updatedAt ? left : right;
 }
@@ -408,6 +512,234 @@ export function buildSyncPlan(input: {
     conflicts,
     ...(nextCursor ? { nextCursor } : {}),
     writes: false,
+  });
+}
+
+export function buildSyncQueueEntries(
+  planInput: SyncPlanResult,
+  input: {
+    queuedAt?: string;
+    cursorBefore?: SyncCursor;
+  } = {},
+): SyncQueueEntry[] {
+  const plan = syncPlanResultSchema.parse(planInput);
+  const queuedAt = input.queuedAt ?? new Date().toISOString();
+  const cursorBefore = input.cursorBefore ? syncCursorSchema.parse(input.cursorBefore) : undefined;
+  const changesByRef = new Map(plan.changes.map((change) => [change.objectRef, change]));
+  const conflictsByRef = new Map(plan.conflicts.map((conflict) => [conflict.objectRef, conflict]));
+
+  return plan.actions.flatMap((action) => {
+    if (action.action === "noop") return [];
+    const change = changesByRef.get(action.objectRef);
+    const conflict = conflictsByRef.get(action.objectRef);
+    return [syncQueueEntrySchema.parse({
+      queueEntryId: syncQueueEntryId([
+        plan.manifest.resourceId,
+        action.objectRef,
+        action.action,
+        change?.changeId ?? conflict?.conflictId ?? "pending",
+      ]),
+      resourceId: action.resourceId,
+      objectRef: action.objectRef,
+      direction: action.action,
+      status: action.action === "conflict" ? "blocked" : "queued",
+      ...(change ? { changeId: change.changeId } : {}),
+      ...(conflict ? { conflictId: conflict.conflictId } : {}),
+      ...(cursorBefore ? { cursorBefore } : {}),
+      ...(plan.nextCursor ? { cursorAfter: plan.nextCursor } : {}),
+      queuedAt,
+      updatedAt: queuedAt,
+      reason: action.reason,
+      secretRefs: change?.secretRefs ?? [],
+      writes: false,
+    })];
+  });
+}
+
+function isTerminalSyncQueueStatus(status: SyncQueueEntry["status"]): boolean {
+  return status === "applied" || status === "resolved" || status === "failed" || status === "skipped";
+}
+
+export function reconcileSyncQueue(input: {
+  manifest: SyncResourceManifest;
+  queue: SyncQueueEntry[];
+  acknowledgedChangeIds?: string[];
+  resolvedConflictIds?: string[];
+  now?: string;
+}): SyncReconciliationResult {
+  const manifest = syncResourceManifestSchema.parse(input.manifest);
+  const acknowledgedChangeIds = new Set(input.acknowledgedChangeIds ?? []);
+  const resolvedConflictIds = new Set(input.resolvedConflictIds ?? []);
+  const now = input.now ?? new Date().toISOString();
+  const appliedChangeIds: string[] = [];
+  const blockedConflictIds: string[] = [];
+
+  const queue = input.queue.map((entryInput) => {
+    const entry = syncQueueEntrySchema.parse(entryInput);
+    if (entry.resourceId !== manifest.resourceId) {
+      return syncQueueEntrySchema.parse({
+        ...entry,
+        status: "failed",
+        updatedAt: now,
+        reason: "queue_entry_resource_does_not_match_manifest",
+        writes: false,
+      });
+    }
+    if (entry.status === "queued" && entry.changeId && acknowledgedChangeIds.has(entry.changeId)) {
+      appliedChangeIds.push(entry.changeId);
+      return syncQueueEntrySchema.parse({
+        ...entry,
+        status: "applied",
+        updatedAt: now,
+        writes: false,
+      });
+    }
+    if (entry.status === "blocked" && entry.conflictId && resolvedConflictIds.has(entry.conflictId)) {
+      return syncQueueEntrySchema.parse({
+        ...entry,
+        status: "resolved",
+        updatedAt: now,
+        writes: false,
+      });
+    }
+    if (entry.status === "blocked" && entry.conflictId) blockedConflictIds.push(entry.conflictId);
+    return syncQueueEntrySchema.parse({ ...entry, writes: false });
+  });
+
+  const nextCursor = queue.length > 0 && queue.every((entry) => isTerminalSyncQueueStatus(entry.status))
+    ? queue.findLast((entry) => entry.cursorAfter)?.cursorAfter
+    : undefined;
+
+  return syncReconciliationResultSchema.parse({
+    manifest,
+    queue,
+    appliedChangeIds,
+    blockedConflictIds,
+    ...(nextCursor ? { nextCursor } : {}),
+    writes: false,
+  });
+}
+
+export function buildRemoteOfflineCommandResult(input: {
+  routeId: string;
+  actor: RemoteActorContext;
+  reason?: RemoteOfflineCommandResult["reason"];
+  evaluatedAt?: string;
+}): RemoteOfflineCommandResult {
+  return remoteOfflineCommandResultSchema.parse({
+    routeId: input.routeId,
+    actor: remoteActorContextSchema.parse(input.actor),
+    status: "failed_fast",
+    reason: input.reason ?? "connector_offline",
+    enqueued: false,
+    retryable: true,
+    evaluatedAt: input.evaluatedAt ?? new Date().toISOString(),
+    writes: false,
+  });
+}
+
+const governedGatewayRequiredGrantPlanes: RemoteAccessGrantPlane[] = [
+  "agent",
+  "execution_profile",
+  "connector",
+  "host",
+  "run_scope",
+  "remote_classification",
+  "transport_trust",
+];
+
+function remoteGrantMatches(request: RemoteAccessRequest, grant: RemoteAccessGrant, now: Date): boolean {
+  if (grant.expiresAt && Date.parse(grant.expiresAt) <= now.getTime()) return false;
+  return (grant.resourceType === "*" || grant.resourceType === request.resourceType)
+    && (grant.action === "*" || grant.action === request.action)
+    && (grant.resourceId === undefined || grant.resourceId === "*" || grant.resourceId === request.resourceId);
+}
+
+function evaluateRemoteGrantPlane(input: {
+  request: RemoteAccessRequest;
+  grants: RemoteAccessGrant[];
+  plane: RemoteAccessGrantPlane;
+  now: Date;
+}): string | null {
+  const planeGrants = input.grants
+    .map((grant) => remoteAccessGrantSchema.parse(grant))
+    .filter((grant) => grant.plane === input.plane && remoteGrantMatches(input.request, grant, input.now));
+  const deny = planeGrants.find((grant) => grant.effect === "deny");
+  if (deny) return `${input.plane}: denied by ${deny.id}`;
+  const allow = planeGrants.find((grant) => grant.effect === "allow");
+  return allow ? null : `${input.plane}: no active allow grant`;
+}
+
+function remoteAccessAuditFor(request: RemoteAccessRequest, allowed: boolean): RemoteAccessDecision["audit"] {
+  return {
+    eventType: "remote.access.evaluated",
+    actorId: request.actor.actorId,
+    actorKind: request.actor.actorKind,
+    nodeId: request.actor.nodeId,
+    routeId: request.routeId,
+    resourceType: request.resourceType,
+    ...(request.resourceId ? { resourceId: request.resourceId } : {}),
+    action: request.action,
+    trustMode: request.trustMode,
+    classification: request.classification,
+    decision: allowed ? "allow" : "deny",
+  };
+}
+
+export function evaluateRemoteAccess(input: {
+  request: RemoteAccessRequest;
+  grants: RemoteAccessGrant[];
+}): RemoteAccessDecision {
+  const request = remoteAccessRequestSchema.parse(input.request);
+  const grants = input.grants.map((grant) => remoteAccessGrantSchema.parse(grant));
+  const now = new Date(request.now ?? new Date().toISOString());
+  const reasons: string[] = [];
+  const requiredBrokerLease = request.secretRefs.length > 0;
+
+  if (request.classification !== "remote-safe") {
+    reasons.push(`remote_classification: ${request.classification} is not remote-safe`);
+  }
+  if (request.actor.trustMode !== request.trustMode) {
+    reasons.push("transport_trust: actor trust mode mismatch");
+  }
+  if (request.actor.transport !== request.transport) {
+    reasons.push("transport_trust: actor transport mismatch");
+  }
+  if (request.actor.actorKind === "agent" && !request.actor.assignmentId) {
+    reasons.push("assignment: agent remote access requires assignmentId");
+  }
+  if (request.plaintextSecretRequested) {
+    reasons.push("secret_broker: plaintext secret access is forbidden");
+  }
+
+  const requiredPlanes = request.trustMode === "governed_gateway"
+    ? [...governedGatewayRequiredGrantPlanes]
+    : ["remote_classification", "transport_trust"] as RemoteAccessGrantPlane[];
+  if (request.actor.actorKind === "agent") requiredPlanes.splice(1, 0, "assignment");
+  if (requiredBrokerLease) requiredPlanes.push("secret_broker");
+
+  for (const plane of [...new Set(requiredPlanes)]) {
+    const planeFailure = evaluateRemoteGrantPlane({ request, grants, plane, now });
+    if (planeFailure) reasons.push(planeFailure);
+  }
+
+  if (requiredBrokerLease) {
+    const brokerAllowsLease = grants.some((grant) => {
+      const parsed = remoteAccessGrantSchema.parse(grant);
+      return parsed.plane === "secret_broker"
+        && parsed.effect === "allow"
+        && (parsed.requiresBrokerLease || parsed.action === "lease_secret" || parsed.action === "*")
+        && remoteGrantMatches({ ...request, action: parsed.action === "lease_secret" ? "lease_secret" : request.action }, parsed, now);
+    });
+    if (!brokerAllowsLease) reasons.push("secret_broker: broker lease grant required for secret refs");
+  }
+
+  const allowed = reasons.length === 0;
+  return remoteAccessDecisionSchema.parse({
+    allowed,
+    reasons,
+    requiredBrokerLease,
+    audit: remoteAccessAuditFor(request, allowed),
   });
 }
 

@@ -164,10 +164,22 @@ flowchart TD
   claw_contracts_api --> claw_api_remote_conformance
   claw_api_sync_manifests["Sync resource manifest contract\napiRoute"]
   claw_contracts_api --> claw_api_sync_manifests
+  claw_api_sync_manifests_create["Sync resource manifest dry-run creation contract\napiRoute"]
+  claw_contracts_api --> claw_api_sync_manifests_create
   claw_api_sync_changes["Sync changelog and cursor contract\napiRoute"]
   claw_contracts_api --> claw_api_sync_changes
+  claw_api_sync_plan["Sync dry-run planning contract\napiRoute"]
+  claw_contracts_api --> claw_api_sync_plan
+  claw_api_sync_conflicts["Sync conflict inspection contract\napiRoute"]
+  claw_contracts_api --> claw_api_sync_conflicts
   claw_api_nodes["Node identity and trust contract\napiRoute"]
   claw_contracts_api --> claw_api_nodes
+  claw_api_nodes_pair["Node pairing dry-run contract\napiRoute"]
+  claw_contracts_api --> claw_api_nodes_pair
+  claw_api_nodes_trust["Node trust dry-run contract\napiRoute"]
+  claw_contracts_api --> claw_api_nodes_trust
+  claw_api_nodes_revoke["Node revocation dry-run contract\napiRoute"]
+  claw_contracts_api --> claw_api_nodes_revoke
   claw_api_gateway_conformance["Gateway hosted/self-hosted conformance contract\napiRoute"]
   claw_contracts_api --> claw_api_gateway_conformance
   claw_privateApi_attachments["/api/attachments private API route\nprivateApiRoute"]
@@ -2043,8 +2055,14 @@ flowchart TD
 | `claw.api.remote.classifications` | apiRoute | api | claw |  |  |  | `/v1/remote/classifications` |
 | `claw.api.remote.conformance` | apiRoute | api | claw |  |  |  | `/v1/remote/conformance` |
 | `claw.api.sync.manifests` | apiRoute | api | claw |  |  |  | `/v1/sync/manifests` |
+| `claw.api.sync.manifests.create` | apiRoute | api | claw |  |  |  | `/v1/sync/manifests` |
 | `claw.api.sync.changes` | apiRoute | api | claw |  |  |  | `/v1/sync/changes` |
+| `claw.api.sync.plan` | apiRoute | api | claw |  |  |  | `/v1/sync/plan` |
+| `claw.api.sync.conflicts` | apiRoute | api | claw |  |  |  | `/v1/sync/conflicts` |
 | `claw.api.nodes` | apiRoute | api | claw |  |  |  | `/v1/nodes` |
+| `claw.api.nodes.pair` | apiRoute | api | claw |  |  |  | `/v1/nodes/pair` |
+| `claw.api.nodes.trust` | apiRoute | api | claw |  |  |  | `/v1/nodes/trust` |
+| `claw.api.nodes.revoke` | apiRoute | api | claw |  |  |  | `/v1/nodes/revoke` |
 | `claw.api.gateway.conformance` | apiRoute | api | claw |  |  |  | `/v1/gateway/conformance` |
 | `claw.privateApi.attachments` | privateApiRoute | api | claw |  |  |  | `/api/attachments` |
 | `claw.privateApi.authToken` | privateApiRoute | api | claw |  |  |  | `/api/auth/token` |

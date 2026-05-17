@@ -14,7 +14,9 @@ import {
   artifactRecordSchema,
   auditEventSchema,
   blockerRecordSchema,
+  buildRemoteOfflineCommandResult,
   buildRemoteConformanceReport,
+  buildSyncQueueEntries,
   buildSyncPlan,
   capacityRecordSchema,
   clawCommandRequestSchema,
@@ -51,6 +53,7 @@ import {
   decisionRecordSchema,
   deadlineRecordSchema,
   eventRecordSchema,
+  evaluateRemoteAccess,
   feedbackRecordSchema,
   findClawPersistentSurfaceNode,
   findClawSurfaceRoute,
@@ -75,6 +78,7 @@ import {
   productivityApprovalRecordSchema,
   releaseRecordSchema,
   reminderRecordSchema,
+  reconcileSyncQueue,
   resolveClawPersistentSurfacePath,
   resolveClawGlobalDataDir,
   resolveClawHostRegistryPath,
@@ -82,6 +86,9 @@ import {
   resolveClawWorkspaceDir,
   resourceKindSchema,
   remoteActorContextSchema,
+  remoteAccessDecisionSchema,
+  remoteAccessGrantSchema,
+  remoteAccessRequestSchema,
   remoteSecretLeaseSchema,
   remoteSyncRequiredDecisionIds,
   remoteSyncRequiredRouteIds,
@@ -589,6 +596,81 @@ test("remote gateway sync contracts register required layers, routes, and safe d
     nodeIds: ["claw.coordinator", "claw.gateway", "claw.connector", "claw.sync", "claw.transport.iroh", "claw.headlessHost", "claw.remoteCache"],
   });
   assert.equal(conformance.status, "baseline_registered");
+
+  const remoteRequest = remoteAccessRequestSchema.parse({
+    actor: {
+      actorKind: "agent",
+      actorId: "agent.sync",
+      agentId: "agent.sync",
+      assignmentId: "assignment.sync",
+      runId: "run.sync",
+      nodeId: "node.mac",
+      transport: "gateway",
+      trustMode: "governed_gateway",
+    },
+    routeId: "remote.secretBrokeredOperation",
+    resourceType: "secret",
+    resourceId: "vault://agents/sync",
+    action: "sync.plan",
+    classification: "remote-safe",
+    trustMode: "governed_gateway",
+    transport: "gateway",
+    secretRefs: ["vault://agents/sync"],
+    plaintextSecretRequested: false,
+    now: "2026-05-17T10:00:00.000Z",
+  });
+  const grants = [
+    "agent",
+    "assignment",
+    "execution_profile",
+    "connector",
+    "host",
+    "run_scope",
+    "remote_classification",
+    "transport_trust",
+    "secret_broker",
+  ].map((plane) => remoteAccessGrantSchema.parse({
+    id: `grant.${plane}`,
+    plane,
+    resourceType: "secret",
+    resourceId: "vault://agents/sync",
+    action: "sync.plan",
+    effect: "allow",
+    ...(plane === "secret_broker" ? { requiresBrokerLease: true } : {}),
+  }));
+  const allowedRemoteAccess = evaluateRemoteAccess({ request: remoteRequest, grants });
+  assert.equal(allowedRemoteAccess.allowed, true);
+  assert.equal(allowedRemoteAccess.requiredBrokerLease, true);
+  assert.equal(allowedRemoteAccess.audit.eventType, "remote.access.evaluated");
+  assert.equal(allowedRemoteAccess.audit.decision, "allow");
+  assert.equal(remoteAccessDecisionSchema.safeParse(allowedRemoteAccess).success, true);
+
+  const deniedByClassification = evaluateRemoteAccess({
+    request: { ...remoteRequest, classification: "local-only" },
+    grants,
+  });
+  assert.equal(deniedByClassification.allowed, false);
+  assert.equal(deniedByClassification.reasons.includes("remote_classification: local-only is not remote-safe"), true);
+  assert.equal(deniedByClassification.audit.decision, "deny");
+
+  const deniedWithoutHostGrant = evaluateRemoteAccess({
+    request: { ...remoteRequest, secretRefs: [], resourceType: "skills", resourceId: "skills:default", action: "read" },
+    grants: grants.filter((grant) => grant.plane !== "host").map((grant) => ({
+      ...grant,
+      resourceType: "skills",
+      resourceId: "skills:default",
+      action: "read",
+    })),
+  });
+  assert.equal(deniedWithoutHostGrant.allowed, false);
+  assert.equal(deniedWithoutHostGrant.reasons.includes("host: no active allow grant"), true);
+
+  const deniedPlaintextSecret = evaluateRemoteAccess({
+    request: { ...remoteRequest, plaintextSecretRequested: true },
+    grants,
+  });
+  assert.equal(deniedPlaintextSecret.allowed, false);
+  assert.equal(deniedPlaintextSecret.reasons.includes("secret_broker: plaintext secret access is forbidden"), true);
 });
 
 test("CLI command registry is the source for stable CLI surface nodes", () => {

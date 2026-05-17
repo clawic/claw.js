@@ -85,6 +85,40 @@ resources, sidecars, search indexes, agent config, and workspace state.
 Secrets cross remote and sync paths only as references plus audited broker
 leases. Plaintext secret replication is invalid.
 
+The Relay/Gateway service exposes the same baseline contracts as HTTP routes so
+remote clients do not need a CLI-only integration path:
+
+```bash
+GET  /v1/remote/classifications
+GET  /v1/remote/conformance
+GET  /v1/gateway/conformance
+GET  /v1/sync/manifests
+POST /v1/sync/manifests
+GET  /v1/sync/changes
+POST /v1/sync/plan
+POST /v1/sync/conflicts
+GET  /v1/nodes
+POST /v1/nodes/pair
+POST /v1/nodes/trust
+POST /v1/nodes/revoke
+```
+
+The mutation-shaped node and sync endpoints are dry-run until signed
+Coordinator/host execution can prove policy, audit, rollback, and physical
+transport behavior. They still return the canonical contract shape, including
+`writes: false`, conflict status, cursors, hosted/self-hosted conformance, and
+secret-reference-only sync policy.
+
+Gateway authorization is evaluated fail-closed through the shared
+`evaluateRemoteAccess` contract. Governed remote requests need active allow
+grants across agent, assignment, execution profile, connector, host, run scope,
+remote classification, and transport trust. Agent requests without an
+assignment are denied. `local-only`, `blocked`, and `pending` capabilities are
+denied remotely until reclassified. Secret references require a broker-lease
+grant and plaintext secret access is always rejected. The decision emits audit
+metadata for the actor, node, route, resource, action, trust mode,
+classification, and allow/deny outcome.
+
 ## Data Ownership
 
 The relay persists control-plane metadata only:

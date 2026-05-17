@@ -30,6 +30,7 @@ import { RelayLogger } from "./logger.ts";
 import { MonitorBus } from "./monitor-bus.ts";
 import { registerMonitorRoutes } from "./monitor-routes.ts";
 import { MemoryRateLimiter } from "./rate-limit.ts";
+import { registerRemoteSyncRoutes } from "./remote-sync-routes.ts";
 import { registerWorkspaceRoutes } from "./workspace-routes.ts";
 import {
   assignmentWorkspaceParams,
@@ -197,6 +198,8 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     service: "clawjs-relay",
     uptimeSeconds: Math.round(process.uptime()),
   }));
+
+  registerRemoteSyncRoutes(app);
 
   const serviceHttpHandler = async (
     request: FastifyRequest<{ Params: { tenantId: string; serviceId: string; "*": string } }>,

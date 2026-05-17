@@ -325,6 +325,7 @@ for (const group of surfaceContract.cli.groups) {
 const relaySourceDir = path.join(rootDir, "relay", "src", "server");
 const relayRaw = [
   "app.ts",
+  "remote-sync-routes.ts",
   "workspace-routes.ts",
   "monitor-routes.ts",
 ].map((fileName) => {
