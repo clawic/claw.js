@@ -1777,7 +1777,7 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
 
   const experimentSampleAssay = await runCliCapture(["sample", experimentSamplePayload.data.id, "assays", "add", "Marker assay", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(experimentSampleAssay.code, CLI_EXIT_OK);
-  const experimentSampleAssayPayload = JSON.parse(experimentSampleAssay.stdout) as { data: { name: string; sampleId: string }; meta: { collection: string } };
+  const experimentSampleAssayPayload = JSON.parse(experimentSampleAssay.stdout) as { data: { id: string; name: string; sampleId: string }; meta: { collection: string } };
   assert.equal(experimentSampleAssayPayload.meta.collection, "assays");
   assert.equal(experimentSampleAssayPayload.data.name, "Marker assay");
   assert.equal(experimentSampleAssayPayload.data.sampleId, experimentSamplePayload.data.id);
@@ -1815,6 +1815,109 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(experimentTimelinePayload.data.materializedView.items.some((item) => item.kind === "sample" && item.label === "Exp sample 1"), true);
   assert.equal(experimentTimelinePayload.data.materializedView.items.some((item) => item.kind === "assay" && item.label === "Marker assay"), true);
   assert.equal(experimentTimelinePayload.data.materializedView.gaps.some((gap) => gap.id === experimentGapPayload.data.id && gap.gapKind === "unverified"), true);
+
+  const labNotebookCreate = await runCliCapture(["lab-notebook", "create", "Trial A notebook", "--study", studyPayload.data.id, "--experiment", experimentPayload.data.id, "--company", companyPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(labNotebookCreate.code, CLI_EXIT_OK, labNotebookCreate.stderr || labNotebookCreate.stdout);
+  const labNotebookPayload = JSON.parse(labNotebookCreate.stdout) as { data: { id: string; title: string; studyId: string; biologyExperimentId: string; companyId: string; status: string; openedAt: string }; meta: { collection: string; action: string } };
+  assert.equal(labNotebookPayload.meta.collection, "lab_notebooks");
+  assert.equal(labNotebookPayload.data.title, "Trial A notebook");
+  assert.equal(labNotebookPayload.data.studyId, studyPayload.data.id);
+  assert.equal(labNotebookPayload.data.biologyExperimentId, experimentPayload.data.id);
+  assert.equal(labNotebookPayload.data.companyId, companyPayload.data.id);
+  assert.equal(labNotebookPayload.data.status, "active");
+  assert.equal(typeof labNotebookPayload.data.openedAt, "string");
+
+  const notebookEntryCreate = await runCliCapture(["lab-notebook", labNotebookPayload.data.id, "entries", "add", "Day 1 setup", "--sample", experimentSamplePayload.data.id, "--assay", experimentSampleAssayPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(notebookEntryCreate.code, CLI_EXIT_OK, notebookEntryCreate.stderr || notebookEntryCreate.stdout);
+  const notebookEntryPayload = JSON.parse(notebookEntryCreate.stdout) as { data: { id: string; title: string; notebookId: string; sampleId: string; assayId: string; status: string; entryType: string; authoredAt: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(notebookEntryPayload.meta.invokedCommand, "lab-notebook");
+  assert.equal(notebookEntryPayload.meta.collection, "notebook_entries");
+  assert.equal(notebookEntryPayload.meta.action, "create");
+  assert.equal(notebookEntryPayload.data.title, "Day 1 setup");
+  assert.equal(notebookEntryPayload.data.notebookId, labNotebookPayload.data.id);
+  assert.equal(notebookEntryPayload.data.sampleId, experimentSamplePayload.data.id);
+  assert.equal(notebookEntryPayload.data.assayId, experimentSampleAssayPayload.data.id);
+  assert.equal(notebookEntryPayload.data.status, "draft");
+  assert.equal(notebookEntryPayload.data.entryType, "note");
+
+  const protocolRunCreate = await runCliCapture(["lab-notebook", labNotebookPayload.data.id, "protocol-runs", "add", "Dose response run", "--experiment", experimentPayload.data.id, "--sample", experimentSamplePayload.data.id, "--assay", experimentSampleAssayPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(protocolRunCreate.code, CLI_EXIT_OK, protocolRunCreate.stderr || protocolRunCreate.stdout);
+  const protocolRunPayload = JSON.parse(protocolRunCreate.stdout) as { data: { id: string; title: string; notebookId: string; biologyExperimentId: string; sampleId: string; assayId: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(protocolRunPayload.meta.invokedCommand, "lab-notebook");
+  assert.equal(protocolRunPayload.meta.collection, "protocol_runs");
+  assert.equal(protocolRunPayload.data.title, "Dose response run");
+  assert.equal(protocolRunPayload.data.notebookId, labNotebookPayload.data.id);
+  assert.equal(protocolRunPayload.data.biologyExperimentId, experimentPayload.data.id);
+  assert.equal(protocolRunPayload.data.sampleId, experimentSamplePayload.data.id);
+  assert.equal(protocolRunPayload.data.assayId, experimentSampleAssayPayload.data.id);
+  assert.equal(protocolRunPayload.data.status, "planned");
+
+  const experimentObservationCreate = await runCliCapture(["protocol-run", protocolRunPayload.data.id, "observations", "add", "Marker intensity", "--lab-notebook", labNotebookPayload.data.id, "--sample", experimentSamplePayload.data.id, "--assay", experimentSampleAssayPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(experimentObservationCreate.code, CLI_EXIT_OK, experimentObservationCreate.stderr || experimentObservationCreate.stdout);
+  const experimentObservationPayload = JSON.parse(experimentObservationCreate.stdout) as { data: { id: string; title: string; notebookId: string; protocolRunId: string; sampleId: string; assayId: string; status: string; quality: string; observedAt: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(experimentObservationPayload.meta.invokedCommand, "protocol-run");
+  assert.equal(experimentObservationPayload.meta.collection, "experiment_observations");
+  assert.equal(experimentObservationPayload.data.title, "Marker intensity");
+  assert.equal(experimentObservationPayload.data.notebookId, labNotebookPayload.data.id);
+  assert.equal(experimentObservationPayload.data.protocolRunId, protocolRunPayload.data.id);
+  assert.equal(experimentObservationPayload.data.sampleId, experimentSamplePayload.data.id);
+  assert.equal(experimentObservationPayload.data.assayId, experimentSampleAssayPayload.data.id);
+  assert.equal(experimentObservationPayload.data.status, "recorded");
+  assert.equal(experimentObservationPayload.data.quality, "unknown");
+
+  const labNotebookEvidenceSourceCreate = await runCliCapture(["evidence-source", "create", "Notebook export", "--kind", "document", "--collection-name", "lab_notebooks", "--record-id", labNotebookPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(labNotebookEvidenceSourceCreate.code, CLI_EXIT_OK);
+  const labNotebookEvidenceSourcePayload = JSON.parse(labNotebookEvidenceSourceCreate.stdout) as { data: { id: string; collectionName: string; recordId: string } };
+  assert.equal(labNotebookEvidenceSourcePayload.data.collectionName, "lab_notebooks");
+  assert.equal(labNotebookEvidenceSourcePayload.data.recordId, labNotebookPayload.data.id);
+
+  const labNotebookGapCreate = await runCliCapture(["quality-gap", "create", "Missing e-signature validation", "--target-collection", "lab_notebooks", "--target-id", labNotebookPayload.data.id, "--gap-kind", "external_pending", "--evidence-source-id", labNotebookEvidenceSourcePayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(labNotebookGapCreate.code, CLI_EXIT_OK);
+  const labNotebookGapPayload = JSON.parse(labNotebookGapCreate.stdout) as { data: { id: string; gapKind: string; targetCollection: string; targetId: string } };
+  assert.equal(labNotebookGapPayload.data.targetCollection, "lab_notebooks");
+  assert.equal(labNotebookGapPayload.data.targetId, labNotebookPayload.data.id);
+  assert.equal(labNotebookGapPayload.data.gapKind, "external_pending");
+
+  const labNotebookTimeline = await runCliCapture(["lab-notebook", labNotebookPayload.data.id, "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(labNotebookTimeline.code, CLI_EXIT_OK, labNotebookTimeline.stderr || labNotebookTimeline.stdout);
+  const labNotebookTimelinePayload = JSON.parse(labNotebookTimeline.stdout) as {
+    data: {
+      coverage: { implementationStatus: string; recordsMaterialized: boolean };
+      semanticView: { id: string; systemId: string };
+      materializedView: {
+        subject: { id: string; label: string };
+        summary: { entries: number; protocolRuns: number; observations: number; samples: number; assays: number; evidenceSources: number; qualityGaps: number };
+        itemCount: number;
+        partial: boolean;
+        items: Array<{ kind: string; recordId: string; label: string }>;
+        records: { entries: Array<{ id: string }>; protocolRuns: Array<{ id: string }>; observations: Array<{ id: string }>; samples: Array<{ id: string }>; assays: Array<{ id: string }>; evidence: Array<{ id: string }> };
+        gaps: Array<{ id: string; gapKind: string }>;
+      };
+    };
+  };
+  assert.equal(labNotebookTimelinePayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(labNotebookTimelinePayload.data.coverage.recordsMaterialized, true);
+  assert.equal(labNotebookTimelinePayload.data.semanticView.id, "lab_notebook.timeline");
+  assert.equal(labNotebookTimelinePayload.data.semanticView.systemId, "eln");
+  assert.equal(labNotebookTimelinePayload.data.materializedView.subject.id, labNotebookPayload.data.id);
+  assert.equal(labNotebookTimelinePayload.data.materializedView.subject.label, "Trial A notebook");
+  assert.equal(labNotebookTimelinePayload.data.materializedView.summary.entries, 1);
+  assert.equal(labNotebookTimelinePayload.data.materializedView.summary.protocolRuns, 1);
+  assert.equal(labNotebookTimelinePayload.data.materializedView.summary.observations, 1);
+  assert.equal(labNotebookTimelinePayload.data.materializedView.summary.samples, 1);
+  assert.equal(labNotebookTimelinePayload.data.materializedView.summary.assays, 1);
+  assert.equal(labNotebookTimelinePayload.data.materializedView.summary.evidenceSources, 1);
+  assert.equal(labNotebookTimelinePayload.data.materializedView.summary.qualityGaps, 1);
+  assert.equal(labNotebookTimelinePayload.data.materializedView.itemCount >= 9, true);
+  assert.equal(labNotebookTimelinePayload.data.materializedView.partial, true);
+  assert.equal(labNotebookTimelinePayload.data.materializedView.items.some((item) => item.kind === "notebook_entry" && item.label === "Day 1 setup"), true);
+  assert.equal(labNotebookTimelinePayload.data.materializedView.items.some((item) => item.kind === "protocol_run" && item.label === "Dose response run"), true);
+  assert.equal(labNotebookTimelinePayload.data.materializedView.items.some((item) => item.kind === "experiment_observation" && item.label === "Marker intensity"), true);
+  assert.equal(labNotebookTimelinePayload.data.materializedView.records.entries.some((record) => record.id === notebookEntryPayload.data.id), true);
+  assert.equal(labNotebookTimelinePayload.data.materializedView.records.protocolRuns.some((record) => record.id === protocolRunPayload.data.id), true);
+  assert.equal(labNotebookTimelinePayload.data.materializedView.records.observations.some((record) => record.id === experimentObservationPayload.data.id), true);
+  assert.equal(labNotebookTimelinePayload.data.materializedView.records.evidence.some((record) => record.id === labNotebookEvidenceSourcePayload.data.id), true);
+  assert.equal(labNotebookTimelinePayload.data.materializedView.gaps.some((gap) => gap.id === labNotebookGapPayload.data.id && gap.gapKind === "external_pending"), true);
 
 });
 
