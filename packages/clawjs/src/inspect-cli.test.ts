@@ -416,14 +416,14 @@ test("runCli fuses static inspect manifests from other language builders", async
         lifecycle: "durable",
       },
       {
-        id: "clawix.protocol.bridge",
+        id: "clawix.protocol.bridge.v1",
         kind: "protocol",
         owner: "clawix",
         repo: "Clawix",
         project: "core",
         language: "swift",
         name: "Clawix bridge protocol",
-        value: "bridge-protocol",
+        value: "clawix-bridge-v1",
         storageClass: "external",
         canonicality: "hostOnly",
         privacy: "public",
@@ -446,7 +446,7 @@ test("runCli fuses static inspect manifests from other language builders", async
 
   const protocols = await runCliCapture(["inspect", "protocols", "--manifest", manifestPath, "--json"], process.cwd());
   assert.equal(protocols.code, CLI_EXIT_OK);
-  assert.equal(parseCliJson<Array<{ id: string }>>(protocols.stdout).data.some((node) => node.id === "clawix.protocol.bridge"), true);
+  assert.equal(parseCliJson<Array<{ id: string }>>(protocols.stdout).data.some((node) => node.id === "clawix.protocol.bridge.v1"), true);
 });
 
 test("runCli returns inspect JSON errors in the common envelope", async () => {

@@ -200,6 +200,17 @@ for (const relativePath of [
 }
 
 for (const relativePath of [
+  "docs/persistent-surface.md",
+  "packages/clawjs-core/src/surface-registry.ts",
+]) {
+  forbidSnippet(relativePath, "`clawix.protocol.bridge`");
+  forbidSnippet(relativePath, '"clawix.protocol.bridge"');
+  requireSnippet(relativePath, "clawix.protocol.bridge.v1");
+}
+forbidSnippet("packages/clawjs/src/inspect-cli.test.ts", '"clawix.protocol.bridge"');
+requireSnippet("packages/clawjs/src/inspect-cli.test.ts", "clawix.protocol.bridge.v1");
+
+for (const relativePath of [
   "packages/clawjs-core/src/surface-registry.ts",
   "packages/clawjs-node/src/time/index.ts",
   "time/src/server/app.ts",
