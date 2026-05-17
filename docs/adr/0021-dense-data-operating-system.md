@@ -37,10 +37,10 @@ The registry is the first executable canon for this model. It defines:
 - a first wave of visible dense systems: Health/EHR, Research/CTMS, Biology,
   Labs/LIMS, Legal, ERP, CRM, Finance/Accounting, Education/LMS, HR/HRIS,
   Manufacturing/MES, Operations/ITSM, Real Estate/PropTech, Insurance, and
-  Maintenance/CMMS, Procurement, Warehouse/WMS, Supply Chain/SCM, and
-  Compliance/GRC, IoT, and Construction
+  Maintenance/CMMS, Procurement, Warehouse/WMS, Supply Chain/SCM,
+  Compliance/GRC, IoT, Construction, and Electronic Lab Notebook/ELN
 - a roadmap taxonomy for TMS, government,
-  CMS, PIM/PLM, pharma, and ELN
+  CMS, PIM/PLM, and pharma
 - a non-executing dense intent resolver that can classify direct phrases such
   as `claw patient list`, `claw patients list`, `claw invoice list`, or `claw
   medication add --patient <id>` as covered, partial, blocked, or gaps before
@@ -265,6 +265,15 @@ Construction uses `claw construction-project <id> timeline` to materialize
 gaps. It deliberately avoids the generic `project` and HR `contractor`
 collections while reusing companies, employees, real-estate locations, invoices,
 evidence, and quality gaps.
+Electronic Lab Notebook/ELN uses `claw lab-notebook <id> timeline` to
+materialize `lab_notebooks`, `notebook_entries`, `protocol_runs`,
+`experiment_observations`, linked studies, `biology_experiments`, samples,
+assays, evidence, provenance, and quality gaps. It is a notebook/protocol/
+observation layer over research, biology, and labs rather than a duplicate
+experiment system. Direct routes such as `claw lab-notebook
+lab_notebook_123 entries add`, `claw lab-notebook lab_notebook_123
+protocol-runs add`, and `claw protocol-run protocol_run_123 observations add`
+all write canonical core.sqlite records.
 ERP now has a materialized company overview through `claw erp company <id>
 overview`: it reads the shared company anchor plus CRM accounts/deals, billing
 customers, invoices, payment intents, services, work orders, evidence,
@@ -290,7 +299,8 @@ invoice records under their existing billing/ERP owners.
 
 The registry also carries explicit `external_pending` requirements for real
 EHR/FHIR exchange, lab instrument ingestion, CTMS synchronization, payment
-processor settlement/refund mutation, and live monitor/APM ingestion. These
+processor settlement/refund mutation, live monitor/APM ingestion, IoT physical
+dispatch, and validated ELN signatures/instrument capture. These
 rows are not bugs and are not considered validated by local tests; they require
 provider, physical-device, regulated-export, cost-bearing, or live-runtime
 evidence through the relevant approval and connector path.

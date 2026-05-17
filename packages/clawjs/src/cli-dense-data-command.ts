@@ -610,15 +610,15 @@ function materializedLabNotebookTimeline(
   const study = typeof notebook.studyId === "string" ? store.getRecord(namespaceId, "studies", notebook.studyId) : undefined;
   const experiment = typeof notebook.biologyExperimentId === "string" ? store.getRecord(namespaceId, "biology_experiments", notebook.biologyExperimentId) : undefined;
   const samples = uniqueRecordsById([
-    ...entries.flatMap((record) => typeof record.sampleId === "string" ? [store.getRecord(namespaceId, "samples", record.sampleId)] : []),
-    ...protocolRuns.flatMap((record) => typeof record.sampleId === "string" ? [store.getRecord(namespaceId, "samples", record.sampleId)] : []),
-    ...observations.flatMap((record) => typeof record.sampleId === "string" ? [store.getRecord(namespaceId, "samples", record.sampleId)] : []),
-  ].filter((record): record is Record<string, unknown> => Boolean(record)));
+    ...entries.flatMap((record) => typeof record.sampleId === "string" ? [store.getRecord(namespaceId, "samples", record.sampleId) as Record<string, unknown> | null] : []),
+    ...protocolRuns.flatMap((record) => typeof record.sampleId === "string" ? [store.getRecord(namespaceId, "samples", record.sampleId) as Record<string, unknown> | null] : []),
+    ...observations.flatMap((record) => typeof record.sampleId === "string" ? [store.getRecord(namespaceId, "samples", record.sampleId) as Record<string, unknown> | null] : []),
+  ].filter((record): record is Record<string, unknown> => record !== null));
   const assays = uniqueRecordsById([
-    ...entries.flatMap((record) => typeof record.assayId === "string" ? [store.getRecord(namespaceId, "assays", record.assayId)] : []),
-    ...protocolRuns.flatMap((record) => typeof record.assayId === "string" ? [store.getRecord(namespaceId, "assays", record.assayId)] : []),
-    ...observations.flatMap((record) => typeof record.assayId === "string" ? [store.getRecord(namespaceId, "assays", record.assayId)] : []),
-  ].filter((record): record is Record<string, unknown> => Boolean(record)));
+    ...entries.flatMap((record) => typeof record.assayId === "string" ? [store.getRecord(namespaceId, "assays", record.assayId) as Record<string, unknown> | null] : []),
+    ...protocolRuns.flatMap((record) => typeof record.assayId === "string" ? [store.getRecord(namespaceId, "assays", record.assayId) as Record<string, unknown> | null] : []),
+    ...observations.flatMap((record) => typeof record.assayId === "string" ? [store.getRecord(namespaceId, "assays", record.assayId) as Record<string, unknown> | null] : []),
+  ].filter((record): record is Record<string, unknown> => record !== null));
   const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "lab_notebooks", recordId: notebookId } }).items;
   const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "lab_notebooks", targetId: notebookId } }).items;
   const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "lab_notebooks", targetId: notebookId } }).items;

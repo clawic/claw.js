@@ -801,6 +801,11 @@ claw organism create "Mouse A" --species "Mus musculus" --json
 claw experiment create "Dose response" --organism organism_123 --json
 claw experiment experiment_123 samples add "Exp sample 1" --organism organism_123 --json
 claw experiment experiment_123 timeline --json
+claw lab-notebook create "Trial A notebook" --study study_123 --experiment experiment_123 --json
+claw lab-notebook lab_notebook_123 entries add "Day 1 setup" --sample sample_123 --assay assay_123 --json
+claw lab-notebook lab_notebook_123 protocol-runs add "Dose response run" --experiment experiment_123 --sample sample_123 --json
+claw protocol-run protocol_run_123 observations add "Marker intensity" --lab-notebook lab_notebook_123 --sample sample_123 --assay assay_123 --json
+claw lab-notebook lab_notebook_123 timeline --json
 claw dense-fixtures seed --json
 claw domain-system get fixture_domain_system_health --json
 claw domain-profile get fixture_domain_profile_health_patient --json
