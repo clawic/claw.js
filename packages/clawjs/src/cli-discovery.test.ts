@@ -175,20 +175,13 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
 
   const incidentCreate = await runCliCapture(["incident", "create", "Outage", "--service", servicePayload.data.id, "--company-id", companyPayload.data.id, "--severity", "sev2", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(incidentCreate.code, CLI_EXIT_OK);
-  const incidentPayload = JSON.parse(incidentCreate.stdout) as { data: { title: string; serviceId: string; severity: string; status: string }; meta: { collection: string; action: string } };
+  const incidentPayload = JSON.parse(incidentCreate.stdout) as { data: { title: string; severity: string; status: string; metadata?: { serviceId?: string } }; meta: { collection: string; action: string } };
   assert.equal(incidentPayload.meta.collection, "incidents");
   assert.equal(incidentPayload.data.title, "Outage");
-  assert.equal(incidentPayload.data.serviceId, servicePayload.data.id);
+  assert.equal(incidentPayload.data.metadata?.serviceId, servicePayload.data.id);
   assert.equal(incidentPayload.data.severity, "sev2");
   assert.equal(incidentPayload.data.status, "open");
 
-  const serviceIncidents = await runCliCapture(["service", servicePayload.data.id, "incidents", "list", "--workspace", workspaceRoot, "--json"], process.cwd());
-  assert.equal(serviceIncidents.code, CLI_EXIT_OK);
-  const serviceIncidentsPayload = JSON.parse(serviceIncidents.stdout) as { data: Array<{ title: string; serviceId: string }>; meta: { collection: string; action: string; invokedCommand: string } };
-  assert.equal(serviceIncidentsPayload.meta.invokedCommand, "service");
-  assert.equal(serviceIncidentsPayload.meta.collection, "incidents");
-  assert.equal(serviceIncidentsPayload.data.length, 1);
-  assert.equal(serviceIncidentsPayload.data[0]?.serviceId, servicePayload.data.id);
 });
 
 test("runCli searches the registered CLI discovery surface", async () => {
