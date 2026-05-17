@@ -6,6 +6,16 @@ export type ClawDomainMigrationStatus =
   | "host_pattern_done"
   | "clawix_projection_only";
 
+export type ClawDomainMinimumContract = {
+  resourceTypes: readonly string[];
+  apiShape: readonly string[];
+  eventTopics: readonly string[];
+  fixtures: readonly string[];
+  matrixRows: readonly string[];
+  validation: readonly string[];
+  externalPending?: readonly string[];
+};
+
 export type ClawDomainOwnership = {
   domain: ClawDomain;
   phase: number;
@@ -17,6 +27,7 @@ export type ClawDomainOwnership = {
   destructivePolicy: "none" | "explicit_grant" | "explicit_grant_and_audit";
   costPolicy: "none" | "host_approval_or_grant";
   requiredTests: readonly string[];
+  minimumContract?: ClawDomainMinimumContract;
 };
 
 const commonContractTests = [
@@ -33,6 +44,17 @@ const hostCapabilityTests = [
   "host_specific_audit",
   "host_grants",
 ] as const;
+
+export const clawV1ClosureMinimumContractDomains = [
+  "signals",
+  "calendar",
+  "contacts",
+  "database",
+  "index",
+  "marketplace",
+  "iot",
+  "publishing",
+] as const satisfies readonly ClawDomain[];
 
 export const clawDomainOwnershipMatrixV1 = {
   agents: {
@@ -178,6 +200,15 @@ export const clawDomainOwnershipMatrixV1 = {
     destructivePolicy: "explicit_grant_and_audit",
     costPolicy: "none",
     requiredTests: [...hostCapabilityTests, "signed_permission_preflight"],
+    minimumContract: {
+      resourceTypes: ["calendar_event", "calendar_list", "freebusy_window"],
+      apiShape: ["claw calendar list|get|create|update|delete", "claw time calendar", "host command domain=calendar resource=events"],
+      eventTopics: ["calendar.event.created", "calendar.event.updated", "calendar.event.deleted"],
+      fixtures: ["packages/clawjs-core/src/host-contract-fixtures.ts", "packages/clawjs-integrations/fixtures/google-create-calendar-request.json"],
+      matrixRows: ["docs/interface-matrix.md#time", "clawix/docs/interface-matrix.md#Calendar"],
+      validation: ["packages/clawjs/src/index.test.ts calendar CLI lifecycle", "packages/clawjs/src/index-host.test.ts host calendar forwarding"],
+      externalPending: ["macOS Calendar permission preflight and live provider sync require signed host approval"],
+    },
   },
   contacts: {
     domain: "contacts",
@@ -190,6 +221,15 @@ export const clawDomainOwnershipMatrixV1 = {
     destructivePolicy: "explicit_grant_and_audit",
     costPolicy: "none",
     requiredTests: [...hostCapabilityTests, "signed_permission_preflight"],
+    minimumContract: {
+      resourceTypes: ["contact", "contact_group", "contact_change"],
+      apiShape: ["claw contacts list|get|create|update|archive", "host command domain=contacts resource=contacts"],
+      eventTopics: ["contacts.contact.created", "contacts.contact.updated", "contacts.contact.archived"],
+      fixtures: ["packages/clawjs-core/src/host-contract-fixtures.ts", "packages/clawjs-integrations/fixtures/started-provider-runtime-catalog.json"],
+      matrixRows: ["docs/interface-matrix.md#host-forwarded-domains", "clawix/docs/interface-matrix.md#Contacts"],
+      validation: ["packages/clawjs/src/index-host.test.ts host contacts forwarding"],
+      externalPending: ["macOS Contacts permission preflight and live provider sync require signed host approval"],
+    },
   },
   reminders: {
     domain: "reminders",
@@ -226,6 +266,14 @@ export const clawDomainOwnershipMatrixV1 = {
     destructivePolicy: "explicit_grant_and_audit",
     costPolicy: "none",
     requiredTests: hostCapabilityTests,
+    minimumContract: {
+      resourceTypes: ["namespace", "collection", "record", "scoped_token", "database_file"],
+      apiShape: ["claw database serve|login|namespace|collection|record|token|file", "claw db <collection> list|get|create|update|delete|schema|query", "DatabaseApiClient"],
+      eventTopics: ["database.record.created", "database.record.updated", "database.record.deleted"],
+      fixtures: ["database/tests/e2e/backend.e2e.test.ts", "packages/clawjs/src/database-custom-collections.test.ts"],
+      matrixRows: ["docs/interface-matrix.md#database", "clawix/docs/interface-matrix.md#Database and Workbench"],
+      validation: ["packages/clawjs-core/src/domain-surface-registry.test.ts", "packages/clawjs/src/database-custom-collections.test.ts"],
+    },
   },
   index: {
     domain: "index",
@@ -238,6 +286,15 @@ export const clawDomainOwnershipMatrixV1 = {
     destructivePolicy: "explicit_grant_and_audit",
     costPolicy: "host_approval_or_grant",
     requiredTests: [...hostCapabilityTests, "codex_read_only"],
+    minimumContract: {
+      resourceTypes: ["indexed_resource", "search_document", "search_monitor", "codex_session_mirror"],
+      apiShape: ["claw sessions index", "claw search rebuild", "claw inspect storage|events|apis"],
+      eventTopics: ["index.resource.upserted", "index.search.updated", "index.source.mirrored"],
+      fixtures: ["packages/clawjs/src/index-data.test.ts", "packages/clawjs-core/src/domain-surface-registry.test.ts"],
+      matrixRows: ["docs/interface-matrix.md#inspection-diagnostics-validation", "clawix/docs/interface-matrix.md#Index/Search"],
+      validation: ["packages/clawjs/src/index-data.test.ts external Codex read-only mirror", "scripts/domain-surface-registry-guard.mjs"],
+      externalPending: ["Native filesystem watcher validation requires signed host broker"],
+    },
   },
   marketplace: {
     domain: "marketplace",
@@ -250,6 +307,15 @@ export const clawDomainOwnershipMatrixV1 = {
     destructivePolicy: "explicit_grant_and_audit",
     costPolicy: "host_approval_or_grant",
     requiredTests: hostCapabilityTests,
+    minimumContract: {
+      resourceTypes: ["listing", "offer", "want", "install_manifest", "receipt"],
+      apiShape: ["claw marketplace choice", "marketplace identity/profile/vertical APIs", "claw db marketplace-related collections"],
+      eventTopics: ["marketplace.listing.published", "marketplace.install.requested", "marketplace.receipt.signed"],
+      fixtures: ["packages/marketplace/tests/e2e.test.ts", "packages/clawjs/src/index-data.test.ts"],
+      matrixRows: ["docs/interface-matrix.md#marketplace", "clawix/docs/interface-matrix.md#Marketplace"],
+      validation: ["packages/marketplace/tests/e2e.test.ts", "packages/clawjs/src/index-data.test.ts marketplace choice"],
+      externalPending: ["Payment and third-party install flows require explicit live approval"],
+    },
   },
   iot: {
     domain: "iot",
@@ -262,6 +328,15 @@ export const clawDomainOwnershipMatrixV1 = {
     destructivePolicy: "explicit_grant_and_audit",
     costPolicy: "none",
     requiredTests: hostCapabilityTests,
+    minimumContract: {
+      resourceTypes: ["home", "thing", "scene", "automation", "device_action"],
+      apiShape: ["claw iot homes|things|state|lights|climate|scenes|automations|approvals", "IoT relay home/action routes"],
+      eventTopics: ["iot.thing.state_changed", "iot.action.requested", "iot.automation.triggered"],
+      fixtures: ["packages/clawjs/src/index-data.test.ts", "packages/clawjs/src/cli-needs.test.ts"],
+      matrixRows: ["docs/interface-matrix.md#iot", "clawix/docs/interface-matrix.md#IoT/Home"],
+      validation: ["packages/clawjs/src/index-data.test.ts iot config", "packages/clawjs/src/cli-needs.test.ts iot_home dry-run"],
+      externalPending: ["Physical device and local network adapter checks require approved hardware/lab access"],
+    },
   },
   publishing: {
     domain: "publishing",
@@ -274,6 +349,15 @@ export const clawDomainOwnershipMatrixV1 = {
     destructivePolicy: "explicit_grant_and_audit",
     costPolicy: "host_approval_or_grant",
     requiredTests: hostCapabilityTests,
+    minimumContract: {
+      resourceTypes: ["brand", "destination", "campaign", "content_entry", "approval", "publishing_plan", "publication"],
+      apiShape: ["claw content brand|destination|campaign|entry|approval|publish", "content Relay read/write routes"],
+      eventTopics: ["publishing.entry.created", "publishing.approval.decided", "publishing.plan.run"],
+      fixtures: ["packages/clawjs/src/index-workspace-runtime.test.ts", "publishing/src/server/app.ts"],
+      matrixRows: ["docs/interface-matrix.md#content", "clawix/docs/interface-matrix.md#Publishing"],
+      validation: ["packages/clawjs/src/index-workspace-runtime.test.ts publishing approval policy", "publishing server tests"],
+      externalPending: ["Live channel publication requires provider credentials and explicit publish approval"],
+    },
   },
   signals: {
     domain: "signals",
@@ -286,6 +370,15 @@ export const clawDomainOwnershipMatrixV1 = {
     destructivePolicy: "explicit_grant_and_audit",
     costPolicy: "host_approval_or_grant",
     requiredTests: hostCapabilityTests,
+    minimumContract: {
+      resourceTypes: ["signal_vertical", "signal_variable", "signal_session", "signal_observation", "life_projection"],
+      apiShape: ["claw signals catalog|seed-catalog|observe|list|delete", "claw db signals_* inspection routes"],
+      eventTopics: ["signals.observation.created", "signals.session.updated", "signals.vertical.seeded"],
+      fixtures: ["tracking-registry.json", "packages/clawjs/src/signals-cli.test.ts"],
+      matrixRows: ["docs/interface-matrix.md#signals", "clawix/docs/interface-matrix.md#Life verticals"],
+      validation: ["packages/clawjs-core/src/domain-surface-registry.test.ts", "packages/clawjs/src/signals-cli.test.ts"],
+      externalPending: ["Native or provider-backed life adapters require signed host/provider approval"],
+    },
   },
   health: {
     domain: "health",

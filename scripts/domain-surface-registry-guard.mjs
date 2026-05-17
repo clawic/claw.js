@@ -6,7 +6,9 @@ import {
   assertClawDomainSurfaceRegistryComplete,
   clawCliCommandRegistry,
   clawDomainOwnershipEntriesV1,
+  clawDomainOwnershipMatrixV1,
   clawDomainSurfaceRegistry,
+  clawV1ClosureMinimumContractDomains,
   clawPersistentSurfaceRegistry,
   findClawDomainSurfaceEntry,
   listClawDomainSurfaceEntries,
@@ -86,6 +88,22 @@ for (const command of clawCliCommandRegistry.commands) {
 
 for (const domain of clawDomainOwnershipEntriesV1) {
   if (!entriesById.has(`service:${domain.domain}`)) failures.push(`missing service runtime surface entry for ${domain.domain}`);
+}
+
+for (const domain of clawV1ClosureMinimumContractDomains) {
+  const contract = clawDomainOwnershipMatrixV1[domain].minimumContract;
+  if (!contract) {
+    failures.push(`${domain}: missing v1 minimum contract`);
+    continue;
+  }
+  for (const key of ["resourceTypes", "apiShape", "eventTopics", "fixtures", "matrixRows", "validation"]) {
+    if (!Array.isArray(contract[key]) || contract[key].length === 0) {
+      failures.push(`${domain}: minimum contract missing ${key}`);
+    }
+  }
+  for (const fixture of contract.fixtures) {
+    if (!fixture.includes("#") && !exists(fixture)) failures.push(`${domain}: fixture evidence does not exist: ${fixture}`);
+  }
 }
 
 for (const node of clawPersistentSurfaceRegistry.nodes) {

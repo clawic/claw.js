@@ -6,8 +6,10 @@ import {
   PRODUCTIVITY_COLLECTION_DEFINITIONS,
   assertClawDomainSurfaceRegistryComplete,
   clawCliCommandRegistry,
+  clawDomainOwnershipMatrixV1,
   clawDomainSurfaceRegistry,
   clawDomainSurfaceRegistryVersion,
+  clawV1ClosureMinimumContractDomains,
   findClawDomainSurfaceEntry,
   listClawDomainSurfaceEntries,
 } from "./index.ts";
@@ -71,4 +73,22 @@ test("domain surface registry maps database, services, modules and CLI ownership
   assert.equal(erp?.status, "runtime_service");
   assert.equal(erp?.modulePath, "modules/erp");
   assert.ok(erp?.invariants?.some((invariant) => invariant.includes("ERP workflows may coordinate")));
+});
+
+test("v1 closure domains declare minimum resource API event fixture and validation contracts", () => {
+  assert.deepEqual(
+    [...clawV1ClosureMinimumContractDomains],
+    ["signals", "calendar", "contacts", "database", "index", "marketplace", "iot", "publishing"],
+  );
+
+  for (const domain of clawV1ClosureMinimumContractDomains) {
+    const contract = clawDomainOwnershipMatrixV1[domain].minimumContract;
+    assert.ok(contract, `${domain} missing minimum contract`);
+    assert.ok(contract.resourceTypes.length > 0, `${domain} missing resource types`);
+    assert.ok(contract.apiShape.length > 0, `${domain} missing API shape`);
+    assert.ok(contract.eventTopics.every((event) => event.startsWith(`${domain}.`) || (domain === "signals" && event.startsWith("signals."))), `${domain} event topic prefix`);
+    assert.ok(contract.fixtures.length > 0, `${domain} missing fixtures`);
+    assert.ok(contract.matrixRows.length > 0, `${domain} missing matrix rows`);
+    assert.ok(contract.validation.length > 0, `${domain} missing validation`);
+  }
 });

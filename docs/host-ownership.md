@@ -9,6 +9,10 @@ storage to collections, signals, systems, services, packages, module manifests,
 CLI portals, aliases, and host boundaries is tracked by
 `clawDomainSurfaceRegistry` in
 `packages/clawjs-core/src/domain-surface-registry.ts`.
+The v1 closure-required domains are listed in
+`clawV1ClosureMinimumContractDomains`; each one must carry an executable
+`minimumContract` with resource types, API shape, event topics, fixture
+evidence, matrix rows, validation, and any `EXTERNAL PENDING` live dependency.
 
 ## Ownership rule
 
@@ -105,6 +109,8 @@ A domain is done only when all of these are true:
 - It works through `claw` plus `Claw.app`.
 - It works inside Clawix through embedded `ClawHostKit`.
 - It uses the same v1 contracts and fixtures.
+- Closure-required domains declare resource/API/event shape in
+  `minimumContract`, not only in prose.
 - Grants and audit logs are host-specific.
 - Clawix has no duplicated canonical store for that domain.
 - Any sensitive permission path has real signed-host validation; dry-run counts
