@@ -2373,7 +2373,7 @@ function nestedDenseDbRoute(input: DenseDataCliInput): Parameters<typeof runMagi
     },
   }) ?? nestedParentDbRoute(input, {
     parentCommand: "construction-project",
-    relationFlag: "construction-project-id",
+    relationFlag: "project-id",
     relationField: "projectId",
     collections: {
       site: "construction_sites",

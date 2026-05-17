@@ -1,0 +1,40 @@
+import type { BuiltinCollectionDefinition } from "../_types.ts";
+
+export const CONSTRUCTION_CHANGE_ORDERS: BuiltinCollectionDefinition = {
+  name: "construction_change_orders",
+  displayName: "Construction Change Orders",
+  family: "construction",
+  aliases: ["construction-change-order", "construction-change-orders", "construction_change_order", "construction_change_orders", "change-order", "change-orders"],
+  catalog: {
+    purpose: "Construction change-order center for scope, schedule, cost, approval status, evidence, and gaps.",
+    evidence: ["human_recognizable", "market_validated", "multi_domain_reuse", "agent_useful"],
+    relationGuidance: "Link projectId and siteId; use relatedRfiId when a change originates from an RFI.",
+    notes: "Change orders capture construction contract modifications and should not replace invoices or generic tasks.",
+  },
+  fields: [
+    { name: "title", type: "text", required: true, requiredReason: "identity", aliases: ["subject", "name"] },
+    { name: "projectId", type: "relation", required: true, requiredReason: "relation_integrity", relation: { collectionName: "construction_projects" } },
+    { name: "siteId", type: "relation", relation: { collectionName: "construction_sites" } },
+    { name: "relatedRfiId", type: "relation", relation: { collectionName: "construction_rfis" } },
+    { name: "number", type: "text" },
+    { name: "status", type: "select", options: ["draft", "submitted", "approved", "rejected", "void", "unknown"] },
+    { name: "submittedAt", type: "date" },
+    { name: "approvedAt", type: "date" },
+    { name: "amountCents", type: "number" },
+    { name: "currency", type: "currency" },
+    { name: "scheduleImpactDays", type: "number" },
+    { name: "description", type: "markdown" },
+    { name: "source", type: "json" },
+    { name: "links", type: "json" },
+    { name: "evidence", type: "json" },
+    { name: "qualityGaps", type: "json" },
+    { name: "metadata", type: "json" },
+    { name: "archivedAt", type: "date" },
+  ],
+  indexes: [
+    { name: "construction_change_orders_project_idx", fields: ["projectId"] },
+    { name: "construction_change_orders_site_idx", fields: ["siteId"] },
+    { name: "construction_change_orders_rfi_idx", fields: ["relatedRfiId"] },
+    { name: "construction_change_orders_status_idx", fields: ["status"] },
+  ],
+};

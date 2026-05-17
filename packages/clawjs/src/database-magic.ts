@@ -668,6 +668,20 @@ function applyDefaults(collectionName: string, payload: Record<string, unknown>,
       payload.commandType ??= "custom";
       payload.requestedAt ??= new Date().toISOString();
       break;
+    case "construction_projects":
+      payload.status ??= "planning";
+      break;
+    case "construction_sites":
+      payload.status ??= "planned";
+      break;
+    case "construction_rfis":
+      payload.status ??= "open";
+      payload.requestedAt ??= new Date().toISOString();
+      break;
+    case "construction_change_orders":
+      payload.status ??= "draft";
+      payload.submittedAt ??= new Date().toISOString();
+      break;
     case "assets":
       payload.status ??= "active";
       break;
