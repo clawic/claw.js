@@ -367,6 +367,52 @@ export interface AgentIncident {
   audit: AgentAuditEvent;
 }
 
+export type AgentActivityFeedItemKind =
+  | "assignment"
+  | "run"
+  | "session"
+  | "evaluation"
+  | "incident"
+  | "config_revision"
+  | "audit";
+
+export interface AgentActivityFeedInput {
+  agentId: string;
+  assignments?: Array<Record<string, unknown>>;
+  runs?: Array<Record<string, unknown>>;
+  sessions?: Array<Record<string, unknown>>;
+  evaluations?: Array<Record<string, unknown>>;
+  incidents?: Array<Record<string, unknown>>;
+  configRevisions?: Array<Record<string, unknown>>;
+  audits?: Array<Record<string, unknown>>;
+  limit?: number;
+  redaction?: "default" | "strict" | "custom";
+}
+
+export interface AgentActivityFeedItem {
+  id: string;
+  agentId: string;
+  kind: AgentActivityFeedItemKind;
+  sourceId: string;
+  happenedAt: string;
+  title: string;
+  summary?: string;
+  status?: string;
+  severity?: string;
+  assignmentId?: string;
+  runId?: string;
+  sessionId?: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface AgentActivityFeed {
+  schemaVersion: 1;
+  feedKind: "claw_agent_activity_feed";
+  agentId: string;
+  items: AgentActivityFeedItem[];
+  redaction: "default" | "strict" | "custom";
+}
+
 export interface AgentSafeExportInput {
   agent: Record<string, unknown>;
   assignments?: Array<Record<string, unknown>>;
@@ -762,6 +808,28 @@ export function createAgentIncident(input: AgentIncidentInput): AgentIncident {
   };
 }
 
+export function createAgentActivityFeed(input: AgentActivityFeedInput): AgentActivityFeed {
+  const redaction = input.redaction ?? "strict";
+  const items = [
+    ...(input.assignments ?? []).map((record) => activityItem(input.agentId, "assignment", record, redaction)),
+    ...(input.runs ?? []).map((record) => activityItem(input.agentId, "run", record, redaction)),
+    ...(input.sessions ?? []).map((record) => activityItem(input.agentId, "session", record, redaction)),
+    ...(input.evaluations ?? []).map((record) => activityItem(input.agentId, "evaluation", record, redaction)),
+    ...(input.incidents ?? []).map((record) => activityItem(input.agentId, "incident", record, redaction)),
+    ...(input.configRevisions ?? []).map((record) => activityItem(input.agentId, "config_revision", record, redaction)),
+    ...(input.audits ?? []).map((record) => activityItem(input.agentId, "audit", record, redaction)),
+  ].sort((a, b) => b.happenedAt.localeCompare(a.happenedAt));
+  const requestedLimit = input.limit;
+  const limit = typeof requestedLimit === "number" && Number.isInteger(requestedLimit) && requestedLimit > 0 ? requestedLimit : undefined;
+  return {
+    schemaVersion: 1,
+    feedKind: "claw_agent_activity_feed",
+    agentId: input.agentId,
+    items: limit ? items.slice(0, limit) : items,
+    redaction,
+  };
+}
+
 export function createAgentSafePackageExport(input: AgentSafeExportInput): AgentSafePackageExport {
   const redaction = input.redaction ?? "strict";
   const exportedAt = input.exportedAt ?? new Date().toISOString();
@@ -869,6 +937,69 @@ function budgetLimitMatches(limit: AgentBudgetLimit, request: AgentBudgetRequest
 
 function redactArray(records: Array<Record<string, unknown>> | undefined, redaction: "default" | "strict" | "custom"): Array<Record<string, unknown>> {
   return (records ?? []).map((record) => redactAgentBoundaryValue(record, redaction) as Record<string, unknown>);
+}
+
+function activityItem(agentId: string, kind: AgentActivityFeedItemKind, record: Record<string, unknown>, redaction: "default" | "strict" | "custom"): AgentActivityFeedItem {
+  const sourceId = stringRecordValue(record, "id") ?? `${kind}_${stableHash(JSON.stringify(redactAgentBoundaryValue(record, redaction)))}`;
+  const happenedAt = activityTimestamp(record);
+  const assignmentId = stringRecordValue(record, "assignmentId", "assignment_id");
+  const runId = kind === "run" ? sourceId : stringRecordValue(record, "runId", "run_id");
+  const sessionId = kind === "session" ? sourceId : stringRecordValue(record, "sessionId", "session_id");
+  return {
+    id: `agent_activity_${stableHash([agentId, kind, sourceId, happenedAt].join("|"))}`,
+    agentId,
+    kind,
+    sourceId,
+    happenedAt,
+    title: activityTitle(kind, record),
+    ...(activitySummary(record) ? { summary: activitySummary(record) } : {}),
+    ...(stringRecordValue(record, "status") ? { status: stringRecordValue(record, "status") } : {}),
+    ...(stringRecordValue(record, "severity") ? { severity: stringRecordValue(record, "severity") } : {}),
+    ...(assignmentId ? { assignmentId } : {}),
+    ...(runId ? { runId } : {}),
+    ...(sessionId ? { sessionId } : {}),
+    metadata: activityMetadata(record, redaction),
+  };
+}
+
+function activityTitle(kind: AgentActivityFeedItemKind, record: Record<string, unknown>): string {
+  const direct = stringRecordValue(record, "title", "summary", "reason", "name");
+  if (direct) return direct;
+  if (kind === "config_revision") return `Config revision ${stringRecordValue(record, "revision") ?? "recorded"}`;
+  return kind.replace("_", " ");
+}
+
+function activitySummary(record: Record<string, unknown>): string | undefined {
+  return stringRecordValue(record, "summary", "description", "reason");
+}
+
+function activityTimestamp(record: Record<string, unknown>): string {
+  return stringRecordValue(record, "happenedAt", "detectedAt", "evaluatedAt", "startedAt", "endedAt", "createdAt", "updatedAt", "created_at", "updated_at") ?? new Date(0).toISOString();
+}
+
+function activityMetadata(record: Record<string, unknown>, redaction: "default" | "strict" | "custom"): Record<string, unknown> {
+  const metadata = {
+    ...(isRecord(record.metadata) ? record.metadata : {}),
+    ...(isRecord(record.metadata_json) ? record.metadata_json : {}),
+    ...(isRecord(record.costJson) ? { cost: record.costJson } : {}),
+    ...(isRecord(record.outcomeJson) ? { outcome: record.outcomeJson } : {}),
+    ...(isRecord(record.resultJson) ? { result: record.resultJson } : {}),
+    ...(isRecord(record.configSnapshot) ? { configSnapshot: record.configSnapshot } : {}),
+  };
+  return redactAgentBoundaryValue(metadata, redaction) as Record<string, unknown>;
+}
+
+function stringRecordValue(record: Record<string, unknown>, ...keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  }
+  return undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 function pickAgentSurfaceFields(agent: Record<string, unknown>, redaction: "default" | "strict" | "custom"): Record<string, unknown> {

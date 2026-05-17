@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   createAgentAuditEvent,
+  createAgentActivityFeed,
   createAgentConfigRevision,
   createAgentIncident,
   createAgentSafePackageExport,
@@ -392,6 +393,50 @@ test("Agents V1 incidents are first-class redacted audit records", () => {
   assert.equal(incident.audit.result, "blocked");
   assert.equal(incident.audit.resourceType, "agent_incident");
   assert.equal((incident.audit.metadata.metadata as Record<string, unknown>).authorization, "[REDACTED]");
+});
+
+test("Agents V1 activity feed projects human-readable redacted timeline", () => {
+  const feed = createAgentActivityFeed({
+    agentId: "agent.support",
+    limit: 3,
+    runs: [{
+      id: "run_1",
+      assignmentId: "assignment.web",
+      status: "completed",
+      startedAt: "2026-05-17T09:00:00.000Z",
+      outcomeJson: { result: "resolved", rawTracePath: "/Users/example/run.log" },
+      metadata: { promptToken: "raw" },
+    }],
+    incidents: [{
+      id: "incident_1",
+      assignmentId: "assignment.web",
+      severity: "critical",
+      status: "open",
+      summary: "Unsafe route blocked",
+      detectedAt: "2026-05-17T10:00:00.000Z",
+      metadata: { authorization: "Bearer raw" },
+    }],
+    configRevisions: [{
+      id: "revision_1",
+      revision: 3,
+      reason: "Reduced support scope",
+      createdAt: "2026-05-17T08:00:00.000Z",
+      configSnapshot: { secretAllowlist: ["vault://agents/support"] },
+    }],
+    sessions: [{
+      id: "session_1",
+      status: "active",
+      summary: "Customer asked for help",
+      createdAt: "2026-05-17T09:30:00.000Z",
+    }],
+  });
+  assert.equal(feed.feedKind, "claw_agent_activity_feed");
+  assert.equal(feed.items.length, 3);
+  assert.deepEqual(feed.items.map((item) => item.kind), ["incident", "session", "run"]);
+  assert.equal(feed.items[0]?.title, "Unsafe route blocked");
+  assert.equal(feed.items[0]?.severity, "critical");
+  assert.equal((feed.items[0]?.metadata as Record<string, unknown>).authorization, "[REDACTED]");
+  assert.equal((feed.items[2]?.metadata.outcome as Record<string, unknown>).rawTracePath, "[REDACTED]");
 });
 
 test("Agents V1 safe surface projection exposes only bounded Relay/MCP/API fields", () => {

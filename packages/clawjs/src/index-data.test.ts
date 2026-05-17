@@ -78,6 +78,7 @@ test("runCli exposes Agents V1 safe surface projection gate", async () => {
     assert.equal(schema.gates.includes("surface-projection"), true);
     assert.equal(schema.gates.includes("config-revision"), true);
     assert.equal(schema.gates.includes("incident"), true);
+    assert.equal(schema.gates.includes("activity-feed"), true);
 
     const surfaceProjectionStdout = captureStream();
     assert.equal(await runCli(["agents", "surface-projection", "--record", JSON.stringify({
@@ -208,6 +209,48 @@ test("runCli exposes Agents V1 safe surface projection gate", async () => {
     assert.equal(incident.audit.kind, "incident");
     assert.equal(incident.audit.result, "blocked");
     assert.equal(incident.audit.resourceType, "agent_incident");
+
+    const activityStdout = captureStream();
+    assert.equal(await runCli(["agents", "activity-feed", "--record", JSON.stringify({
+      agentId: "agent-ops",
+      limit: 2,
+      runs: [{
+        id: "run_1",
+        assignmentId: "assignment.mcp",
+        status: "completed",
+        startedAt: "2026-05-17T09:00:00.000Z",
+        outcomeJson: { result: "blocked", rawTracePath: "/Users/example/run.log" },
+      }],
+      incidents: [{
+        id: "incident_1",
+        assignmentId: "assignment.mcp",
+        severity: "high",
+        status: "open",
+        summary: "Unsafe route blocked",
+        detectedAt: "2026-05-17T10:00:00.000Z",
+        metadata: { authorization: "Bearer raw" },
+      }],
+      configRevisions: [{
+        id: "revision_1",
+        revision: 2,
+        reason: "Tighten MCP assignment",
+        createdAt: "2026-05-17T08:00:00.000Z",
+        configSnapshot: { secretAllowlist: ["vault://agents/ops"] },
+      }],
+    }), "--json"], {
+      stdout: activityStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const activity = parseCliJsonPayload(activityStdout.getOutput()) as {
+      feedKind: string;
+      items: Array<{ kind: string; title: string; metadata: Record<string, unknown> }>;
+    };
+    assert.equal(activity.feedKind, "claw_agent_activity_feed");
+    assert.deepEqual(activity.items.map((item) => item.kind), ["incident", "run"]);
+    assert.equal(activity.items[0]?.title, "Unsafe route blocked");
+    assert.equal(String(activity.items[0]?.metadata.authorization).includes("Bearer"), false);
+    assert.equal(JSON.stringify(activity.items[1]?.metadata).includes("/Users/example"), false);
   });
   fs.rmSync(tempRoot, { recursive: true, force: true });
 });
