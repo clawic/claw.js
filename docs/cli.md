@@ -154,6 +154,8 @@ claw remote conformance --json
 claw sync manifest --resource-id skills:default --kind skills --driver skills --json
 claw sync status --json
 claw sync plan --json
+claw sync plan --resource-id skills:default --driver skills --local-hash hash-a --peer-hash hash-b --json
+claw sync plan --local-snapshot-json '{"resourceId":"skills:default","objectRef":"skill.review","nodeId":"local","contentHash":"hash-a","updatedAt":"2026-05-17T09:00:00.000Z"}' --peer-snapshot-json '{"resourceId":"skills:default","objectRef":"skill.review","nodeId":"peer","contentHash":"hash-b","updatedAt":"2026-05-17T09:05:00.000Z"}' --json
 claw sync run --json
 claw sync conflicts --json
 

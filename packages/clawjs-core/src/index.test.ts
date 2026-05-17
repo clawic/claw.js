@@ -548,7 +548,41 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   });
   assert.equal(matchingPlan.actions[0]?.action, "noop");
   assert.equal(matchingPlan.conflicts.length, 0);
-  assert.equal(syncObjectSnapshotSchema.safeParse(matchingPlan.localSnapshots).success, false);
+  assert.equal(syncObjectSnapshotSchema.safeParse({
+    resourceId: "skills:default",
+    objectRef: "skill.review",
+    nodeId: "node.mac",
+    contentHash: "hash-a",
+    updatedAt: "2026-05-17T09:00:00.000Z",
+    deleted: false,
+  }).success, true);
+
+  const pushPlan = buildSyncPlan({
+    manifest: plan.manifest,
+    actor: {
+      actorKind: "agent",
+      actorId: "agent.sync",
+      nodeId: "node.mac",
+      transport: "gateway",
+      trustMode: "governed_gateway",
+    },
+    localNodeId: "node.mac",
+    peerNodeId: "node.server",
+    localSnapshots: [{
+      resourceId: "skills:default",
+      objectRef: "skill.local-only",
+      nodeId: "node.mac",
+      contentHash: "hash-local",
+      updatedAt: "2026-05-17T09:10:00.000Z",
+      deleted: false,
+    }],
+    peerSnapshots: [],
+    now: "2026-05-17T10:00:00.000Z",
+  });
+  assert.equal(pushPlan.writes, false);
+  assert.equal(pushPlan.actions[0]?.action, "push");
+  assert.equal(pushPlan.changes[0]?.objectRef, "skill.local-only");
+  assert.equal(pushPlan.nextCursor?.cursor.includes("hash-local"), true);
 
   const conformance = buildRemoteConformanceReport({
     routeIds: remoteSyncRequiredRouteIds.map((routeId) => routeId),

@@ -166,6 +166,34 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.equal(syncPayload.manifest.conflictPolicy, "detect_and_elevate");
   assert.equal(syncPayload.manifest.secretPolicy, "[REDACTED]");
 
+  const plan = await runCliCapture(["sync", "plan", "--local-hash", "hash-a", "--peer-hash", "hash-b", "--json"], process.cwd());
+  assert.equal(plan.code, CLI_EXIT_OK);
+  const planPayload = parseCliJson<{
+    mode: string;
+    writes: boolean;
+    actions: Array<{ action: string; reason: string }>;
+    conflicts: Array<{ status: string; objectRef: string }>;
+    nextCursor?: { cursor: string };
+  }>(plan.stdout).data;
+  assert.equal(planPayload.mode, "plan");
+  assert.equal(planPayload.writes, false);
+  assert.equal(planPayload.actions.some((action) => action.action === "conflict" && action.reason === "diverged_snapshots_detect_and_elevate"), true);
+  assert.equal(planPayload.conflicts[0]?.status, "open");
+  assert.equal(planPayload.conflicts[0]?.objectRef, "skill.review");
+  assert.equal(planPayload.nextCursor?.cursor.includes("skill.review"), true);
+
+  const matchingPlan = await runCliCapture(["sync", "plan", "--local-hash", "hash-a", "--peer-hash", "hash-a", "--json"], process.cwd());
+  assert.equal(matchingPlan.code, CLI_EXIT_OK);
+  const matchingPlanPayload = parseCliJson<{ actions: Array<{ action: string }>; conflicts: unknown[] }>(matchingPlan.stdout).data;
+  assert.equal(matchingPlanPayload.actions[0]?.action, "noop");
+  assert.equal(matchingPlanPayload.conflicts.length, 0);
+
+  const conflicts = await runCliCapture(["sync", "conflicts", "--local-hash", "hash-a", "--peer-hash", "hash-b", "--json"], process.cwd());
+  assert.equal(conflicts.code, CLI_EXIT_OK);
+  const conflictsPayload = parseCliJson<{ conflicts: Array<{ status: string }>; silentOverwriteAllowed: boolean }>(conflicts.stdout).data;
+  assert.equal(conflictsPayload.conflicts[0]?.status, "open");
+  assert.equal(conflictsPayload.silentOverwriteAllowed, false);
+
   const nodes = await runCliCapture(["nodes", "list", "--json"], process.cwd());
   assert.equal(nodes.code, CLI_EXIT_OK);
   const nodesPayload = parseCliJson<{ nodes: Array<{ id: string }> }>(nodes.stdout).data;
