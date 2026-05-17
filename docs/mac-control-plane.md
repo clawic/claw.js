@@ -10,7 +10,7 @@ The permission decision is [ADR 0024: Mac Permission Broker V1](./adr/0024-mac-p
 Source decisions are tracked in [Mac Control Plane Source Decision Audit](./mac-control-plane-source-decision-audit.md)
 and [Mac Control Plane Decision Matrix](./mac-control-plane-decision-matrix.md).
 Agents working on this surface should use
-[`mac-control-plane-work`](../skills/mac-control-plane-work/SKILL.md).
+`skills/mac-control-plane-work/SKILL.md`.
 
 ## Public Shape
 
