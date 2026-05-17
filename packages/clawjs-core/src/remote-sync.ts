@@ -482,6 +482,28 @@ export const remoteAgentServiceDecisionSchema = z.object({
   writes: z.literal(false),
 });
 
+export const remoteAgentServiceExecutionReceiptSchema = z.object({
+  schemaVersion: z.literal(1),
+  receiptId: z.string().min(1),
+  tenantId: z.string().min(1),
+  agentId: z.string().min(1),
+  assignmentId: z.string().min(1),
+  routeId: z.string().min(1),
+  billingAccountId: z.string().min(1),
+  budgetId: z.string().min(1),
+  billingMeterId: z.string().min(1),
+  estimatedCostCents: z.number().int().nonnegative(),
+  isolationKey: z.string().min(1),
+  decisionAllowed: z.boolean(),
+  status: z.enum(["signed_pending_runtime", "executed", "denied"]),
+  runtimeExecutionVerified: z.boolean(),
+  billingMeterPersisted: z.boolean(),
+  externalPending: z.array(z.enum(["agent_runtime_execution", "billing_meter_persistence"])),
+  createdAt: z.string().datetime(),
+  auditEventId: z.string().min(1),
+  writes: z.literal(false),
+});
+
 export type RemoteSurfaceClassification = z.infer<typeof remoteSurfaceClassificationSchema>;
 export type RemoteTrustMode = z.infer<typeof remoteTrustModeSchema>;
 export type RemoteActorKind = z.infer<typeof remoteActorKindSchema>;
@@ -521,6 +543,7 @@ export type RemoteAgentServiceAssignment = z.infer<typeof remoteAgentServiceAssi
 export type RemoteAgentServiceBudget = z.infer<typeof remoteAgentServiceBudgetSchema>;
 export type RemoteAgentServiceRequest = z.infer<typeof remoteAgentServiceRequestSchema>;
 export type RemoteAgentServiceDecision = z.infer<typeof remoteAgentServiceDecisionSchema>;
+export type RemoteAgentServiceExecutionReceipt = z.infer<typeof remoteAgentServiceExecutionReceiptSchema>;
 
 export const remoteSyncRequiredDecisionIds = [
   "relay_boundary",
@@ -714,6 +737,10 @@ function remoteClientCacheEntryId(parts: string[]): string {
 
 function remoteCompatibilityAdapterId(parts: string[]): string {
   return `remote_compat_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
+}
+
+function remoteAgentServiceExecutionReceiptId(parts: string[]): string {
+  return `agent_service_execution_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
 }
 
 function newestSnapshot(left: SyncObjectSnapshot, right: SyncObjectSnapshot): SyncObjectSnapshot {
@@ -1284,6 +1311,60 @@ export function evaluateRemoteAgentServiceAccess(input: {
       routeId: request.routeId,
       decision: allowed ? "allow" : "deny",
     },
+    writes: false,
+  });
+}
+
+export function createRemoteAgentServiceExecutionReceipt(input: {
+  request: RemoteAgentServiceRequest;
+  assignment: RemoteAgentServiceAssignment;
+  budget: RemoteAgentServiceBudget;
+  decision: RemoteAgentServiceDecision;
+  createdAt?: string;
+  runtimeExecutionVerified?: boolean;
+  billingMeterPersisted?: boolean;
+}): RemoteAgentServiceExecutionReceipt {
+  const request = remoteAgentServiceRequestSchema.parse(input.request);
+  const assignment = remoteAgentServiceAssignmentSchema.parse(input.assignment);
+  const budget = remoteAgentServiceBudgetSchema.parse(input.budget);
+  const decision = remoteAgentServiceDecisionSchema.parse(input.decision);
+  const createdAt = input.createdAt ?? request.now;
+  const runtimeExecutionVerified = input.runtimeExecutionVerified ?? false;
+  const billingMeterPersisted = input.billingMeterPersisted ?? false;
+  const externalPending = decision.allowed
+    ? [
+      ...(runtimeExecutionVerified ? [] : ["agent_runtime_execution" as const]),
+      ...(billingMeterPersisted ? [] : ["billing_meter_persistence" as const]),
+    ]
+    : [];
+  const status = decision.allowed
+    ? runtimeExecutionVerified && billingMeterPersisted ? "executed" : "signed_pending_runtime"
+    : "denied";
+  return remoteAgentServiceExecutionReceiptSchema.parse({
+    schemaVersion: 1,
+    receiptId: remoteAgentServiceExecutionReceiptId([
+      request.tenantId,
+      request.agentId,
+      request.assignmentId,
+      request.routeId,
+      createdAt,
+    ]),
+    tenantId: request.tenantId,
+    agentId: request.agentId,
+    assignmentId: request.assignmentId,
+    routeId: request.routeId,
+    billingAccountId: assignment.billingAccountId,
+    budgetId: assignment.budgetId,
+    billingMeterId: budget.billingMeterId,
+    estimatedCostCents: request.estimatedCostCents,
+    isolationKey: assignment.isolationKey,
+    decisionAllowed: decision.allowed,
+    status,
+    runtimeExecutionVerified,
+    billingMeterPersisted,
+    externalPending,
+    createdAt,
+    auditEventId: remoteAgentServiceExecutionReceiptId(["audit", request.tenantId, request.agentId, request.assignmentId, createdAt]),
     writes: false,
   });
 }

@@ -7,6 +7,7 @@ import {
   createMeshResourceShare,
   createMeshRevocation,
   createNodeTrustDecision,
+  createRemoteAgentServiceExecutionReceipt,
   createRemoteClientCacheSnapshot,
   createRemoteCompatibilityAdapterReceipt,
   createRemoteSecretProviderReceipt,
@@ -607,18 +608,43 @@ export async function runGatewayCli(input: RemoteSyncCliInput): Promise<number> 
   if (command === "agent-service") {
     const assignment = agentServiceAssignmentFromFlags(input);
     const budget = agentServiceBudgetFromFlags(input, assignment);
+    const request = {
+      tenantId: input.flags["tenant-id"] ?? assignment.tenantId,
+      agentId: input.flags["agent-id"] ?? assignment.agentId,
+      assignmentId: input.flags["assignment-id"] ?? assignment.assignmentId,
+      routeId: input.flags["route-id"] ?? "gateway.multiTenantAgentService",
+      estimatedCostCents: numberFlag(input.flags["estimated-cost-cents"], 0),
+      now: input.flags.now ?? "2026-05-17T10:10:00.000Z",
+    };
     const decision = evaluateRemoteAgentServiceAccess({
-      request: {
-        tenantId: input.flags["tenant-id"] ?? assignment.tenantId,
-        agentId: input.flags["agent-id"] ?? assignment.agentId,
-        assignmentId: input.flags["assignment-id"] ?? assignment.assignmentId,
-        routeId: input.flags["route-id"] ?? "gateway.multiTenantAgentService",
-        estimatedCostCents: numberFlag(input.flags["estimated-cost-cents"], 0),
-        now: input.flags.now ?? "2026-05-17T10:10:00.000Z",
-      },
+      request,
       assignment,
       budget,
     });
+    if (wantsDurableRecord(input)) {
+      const usage = "gateway agent-service --state-dir <dir> --record true --coordinator-private-key-file <pem> --coordinator-public-key-file <pem> [--tenant-id <id>] [--agent-id <id>] [--assignment-id <id>]";
+      const store = requireStateStore(input, usage);
+      if (typeof store === "number") return store;
+      const signer = requireCoordinatorSigner(input, usage);
+      if (typeof signer === "number") return signer;
+      const receipt = createRemoteAgentServiceExecutionReceipt({
+        request,
+        assignment,
+        budget,
+        decision,
+        createdAt: request.now,
+        runtimeExecutionVerified: input.flags["runtime-verified"] === "true",
+        billingMeterPersisted: input.flags["billing-meter-persisted"] === "true",
+      });
+      const state = store.recordRemoteAgentServiceExecutionReceipt(receipt, { now: request.now, signer });
+      return writeOutput(input, "gateway", {
+        status: "signed_agent_service_receipt_recorded",
+        writes: false,
+        decision,
+        receipt: state.receipt,
+        state,
+      }, "agent-service: signed_agent_service_receipt_recorded", command);
+    }
     return writeOutput(input, "gateway", decision, `agent-service: ${decision.allowed ? "allow" : "deny"}`, command);
   }
   if (command === "secret-lease" || command === "secret-provider") {

@@ -11,6 +11,7 @@ import {
   meshRevocationSchema,
   nodeTrustDecisionSchema,
   remoteActorContextSchema,
+  remoteAgentServiceExecutionReceiptSchema,
   remoteClientCacheSnapshotSchema,
   remoteCompatibilityAdapterReceiptSchema,
   remoteSecretLeaseSchema,
@@ -25,6 +26,7 @@ import {
   type MeshRevocation,
   type NodeTrustDecision,
   type RemoteActorContext,
+  type RemoteAgentServiceExecutionReceipt,
   type RemoteClientCacheSnapshot,
   type RemoteCompatibilityAdapterReceipt,
   type RemoteSecretLease,
@@ -39,7 +41,7 @@ import {
 
 export type RemoteSyncStateAuditEvent = {
   eventId: string;
-  eventType: "sync.manifest.recorded" | "sync.queue.enqueued" | "sync.queue.reconciled" | "sync.cache.recorded" | "remote.compat.recorded" | "mesh.invitation.recorded" | "mesh.share.recorded" | "mesh.revocation.recorded" | "secret.lease.issued" | "secret.provider.recorded" | "transport.handshake.recorded" | "node.trust.recorded" | "gateway.deployment.recorded";
+  eventType: "sync.manifest.recorded" | "sync.queue.enqueued" | "sync.queue.reconciled" | "sync.cache.recorded" | "remote.compat.recorded" | "mesh.invitation.recorded" | "mesh.share.recorded" | "mesh.revocation.recorded" | "secret.lease.issued" | "secret.provider.recorded" | "transport.handshake.recorded" | "node.trust.recorded" | "gateway.deployment.recorded" | "gateway.agent_service.recorded";
   targetId: string;
   createdAt: string;
   coordinatorSignatureId?: string;
@@ -96,6 +98,7 @@ export type RemoteSyncState = {
   };
   gateway: {
     deployments: Record<string, GatewayDeploymentManifest>;
+    agentServiceReceipts: Record<string, RemoteAgentServiceExecutionReceipt>;
   };
   audit: RemoteSyncStateAuditEvent[];
 };
@@ -139,6 +142,7 @@ function emptyState(): RemoteSyncState {
     },
     gateway: {
       deployments: {},
+      agentServiceReceipts: {},
     },
     audit: [],
   };
@@ -359,10 +363,17 @@ function parseState(raw: unknown): RemoteSyncState {
 
   const gateway = input.gateway;
   if (gateway && typeof gateway === "object" && !Array.isArray(gateway)) {
-    const deployments = (gateway as Record<string, unknown>).deployments;
+    const gatewayObject = gateway as Record<string, unknown>;
+    const deployments = gatewayObject.deployments;
     if (deployments && typeof deployments === "object" && !Array.isArray(deployments)) {
       for (const [deploymentId, deploymentInput] of Object.entries(deployments)) {
         state.gateway.deployments[deploymentId] = gatewayDeploymentManifestSchema.parse(deploymentInput);
+      }
+    }
+    const agentServiceReceipts = gatewayObject.agentServiceReceipts;
+    if (agentServiceReceipts && typeof agentServiceReceipts === "object" && !Array.isArray(agentServiceReceipts)) {
+      for (const [receiptId, receiptInput] of Object.entries(agentServiceReceipts)) {
+        state.gateway.agentServiceReceipts[receiptId] = remoteAgentServiceExecutionReceiptSchema.parse(receiptInput);
       }
     }
   }
@@ -579,6 +590,17 @@ export class RemoteSyncStateStore {
     const coordinatorSignature = appendAudit(state, "gateway.deployment.recorded", deployment.deploymentId, now, deployment, input.signer);
     this.write(state);
     return { deployment, statePath: this.statePath, durable: true, coordinatorSignature };
+  }
+
+  recordRemoteAgentServiceExecutionReceipt(receiptInput: RemoteAgentServiceExecutionReceipt, input: { now?: string; signer: RemoteSyncCoordinatorSigner }): RemoteSyncStateWriteResult<{ receipt: RemoteAgentServiceExecutionReceipt }> {
+    const receipt = remoteAgentServiceExecutionReceiptSchema.parse(receiptInput);
+    const now = input.now ?? receipt.createdAt;
+    const state = this.read();
+    state.gateway.agentServiceReceipts[receipt.receiptId] = receipt;
+    state.updatedAt = now;
+    const coordinatorSignature = appendAudit(state, "gateway.agent_service.recorded", receipt.receiptId, now, receipt, input.signer);
+    this.write(state);
+    return { receipt, statePath: this.statePath, durable: true, coordinatorSignature };
   }
 
   issueSecretLease(input: {
