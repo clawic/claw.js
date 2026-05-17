@@ -97,6 +97,25 @@ export class SearchStore {
     this.seedProfiles();
   }
 
+  resetSources(sources: string[]): void {
+    const uniqueSources = Array.from(new Set(sources.map((source) => source.trim()).filter(Boolean)));
+    if (!uniqueSources.length) return;
+    const tx = this.db.transaction(() => {
+      const deleteFts = this.db.prepare("DELETE FROM search_fts WHERE source = ?");
+      const deleteDocuments = this.db.prepare("DELETE FROM search_documents WHERE source = ?");
+      const deleteCursors = this.db.prepare("DELETE FROM search_cursors WHERE source = ?");
+      const deleteTombstones = this.db.prepare("DELETE FROM search_tombstones WHERE source = ?");
+      for (const source of uniqueSources) {
+        deleteFts.run(source);
+        deleteDocuments.run(source);
+        deleteCursors.run(source);
+        deleteTombstones.run(source);
+      }
+      this.db.prepare("DELETE FROM search_ranking_cache").run();
+    });
+    tx();
+  }
+
   close(): void {
     this.db.close();
   }
