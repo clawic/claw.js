@@ -2547,6 +2547,154 @@ function ensureSkillsRegistryResourceIndexed(store: SearchStore, flags: Record<s
   }
 }
 
+function ensureProvidersRoutingSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) {
+    store.setSourceState("providers.routing", "enabled", {
+      backlog: 0,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 0;
+  }
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "provider_routing") || !hasTable(db, "provider_settings")) {
+      store.setSourceState("providers.routing", "degraded", {
+        backlog: 0,
+        error: "core database does not contain provider routing tables",
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return 0;
+    }
+    const routingRows = db.prepare(`
+      SELECT id, feature, capability, provider, model, account_ref, policy_json, metadata_json, created_at, updated_at
+      FROM provider_routing
+      ORDER BY updated_at DESC
+    `).all() as ProviderRoutingRow[];
+    const settingRows = db.prepare(`
+      SELECT id, provider, enabled, policy_json, metadata_json, created_at, updated_at
+      FROM provider_settings
+      ORDER BY updated_at DESC
+    `).all() as ProviderSettingRow[];
+    let indexed = 0;
+    for (const row of routingRows) {
+      store.upsertDocument(providerRoutingSearchDocument(row));
+      indexed += 1;
+    }
+    for (const row of settingRows) {
+      store.upsertDocument(providerSettingSearchDocument(row));
+      indexed += 1;
+    }
+    store.setCursor({
+      source: "providers.routing",
+      cursor: `providers:${indexed}`,
+      metadata: { store: "core.sqlite", collections: ["provider_routing", "provider_settings"] },
+    });
+    store.setSourceState("providers.routing", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return indexed;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureProvidersRoutingResourceIndexed(store: SearchStore, flags: Record<string, string>, resourceId: string): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) return 0;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "provider_routing") || !hasTable(db, "provider_settings")) return 0;
+    if (resourceId.startsWith("setting:")) {
+      const provider = resourceId.slice("setting:".length);
+      const row = db.prepare(`
+        SELECT id, provider, enabled, policy_json, metadata_json, created_at, updated_at
+        FROM provider_settings
+        WHERE provider = ?
+        LIMIT 1
+      `).get(provider) as ProviderSettingRow | undefined;
+      if (!row) {
+        store.tombstone({ source: "providers.routing", resourceId, reason: "provider setting missing during Search event refresh" });
+        return 1;
+      }
+      store.upsertDocument(providerSettingSearchDocument(row));
+      store.setSourceState("providers.routing", "enabled", {
+        backlog: 0,
+        error: null,
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return 1;
+    }
+    const parsed = parseProviderRoutingResourceId(resourceId);
+    if (!parsed) {
+      store.tombstone({ source: "providers.routing", resourceId, reason: "unknown provider routing resource during Search event refresh" });
+      return 1;
+    }
+    const row = db.prepare(`
+      SELECT id, feature, capability, provider, model, account_ref, policy_json, metadata_json, created_at, updated_at
+      FROM provider_routing
+      WHERE feature = ? AND capability = ?
+      LIMIT 1
+    `).get(parsed.feature, parsed.capability) as ProviderRoutingRow | undefined;
+    if (!row) {
+      store.tombstone({ source: "providers.routing", resourceId, reason: "provider route missing during Search event refresh" });
+      return 1;
+    }
+    store.upsertDocument(providerRoutingSearchDocument(row));
+    store.setSourceState("providers.routing", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 1;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureSnippetsLibrarySourceIndexed(store: SearchStore, flags: Record<string, string>): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) {
+    store.setSourceState("snippets.library", "enabled", {
+      backlog: 0,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 0;
+  }
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "snippets")) {
+      store.setSourceState("snippets.library", "degraded", {
+        backlog: 0,
+        error: "core database does not contain snippets",
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return 0;
+    }
+    const rows = db.prepare(`
+      SELECT id, slug, kind, title, body, shortcut, scope_json, skill_refs_json, metadata_json, created_at, updated_at
+      FROM snippets
+      ORDER BY updated_at DESC
+    `).all() as SnippetLibraryRow[];
+    for (const row of rows) store.upsertDocument(snippetLibrarySearchDocument(row));
+    store.setCursor({
+      source: "snippets.library",
+      cursor: `snippets:${rows.length}`,
+      metadata: { store: "core.sqlite", collections: ["snippets"] },
+    });
+    store.setSourceState("snippets.library", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return rows.length;
+  } finally {
+    db.close();
+  }
+}
+
 function ensureSnippetsLibraryResourceIndexed(store: SearchStore, flags: Record<string, string>, slug: string): number {
   const dbPath = resolveMainDbPath(flags);
   if (!fs.existsSync(dbPath)) return 0;
