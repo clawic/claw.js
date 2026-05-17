@@ -27,6 +27,35 @@ final class MacControlTests: XCTestCase {
         XCTAssertEqual(plan.steps.first?.arguments, ["-setairportnetwork", "en0", "Office"])
     }
 
+    func testWifiDisconnectUsesNativeCoreWlanStepWithContinuityBreaker() throws {
+        let request = MacControlActionRequest(
+            requestId: "macreq_test_wifi_disconnect",
+            capabilityId: "mac.wifi.disconnect",
+            actorId: "owner",
+            origin: .ownerCLI,
+            arguments: ["device": "en1"],
+            approved: true
+        )
+
+        let plan = try MacControlActionBroker.plan(for: request)
+
+        XCTAssertEqual(plan.risk, .critical)
+        XCTAssertTrue(plan.requiresApproval)
+        XCTAssertTrue(plan.continuityBreaker)
+        XCTAssertEqual(plan.revertLevel, .bestEffort)
+        XCTAssertEqual(plan.steps.first?.kind, .native)
+        XCTAssertEqual(plan.steps.first?.executable, "corewlan.disconnect")
+        XCTAssertEqual(plan.steps.first?.arguments, ["en1"])
+
+        let runner = RecordingMacControlRunner()
+        let receipt = MacControlActionBroker.evaluate(request, defaults: try makeDefaults(), runner: runner)
+        XCTAssertEqual(receipt.outcome, .executed)
+        XCTAssertEqual(runner.nativeCalls, [
+            RecordingMacControlRunner.NativeCall(action: "corewlan.disconnect", arguments: ["en1"]),
+        ])
+    }
+
+
     func testAgentWindowCloseRequiresApprovalAndAuditsDecision() throws {
         let runner = RecordingMacControlRunner()
         let defaults = try makeDefaults()
@@ -48,6 +77,51 @@ final class MacControlTests: XCTestCase {
         XCTAssertEqual(events[0].action, "mac.window.close")
         XCTAssertEqual(events[0].origin, .agent)
         XCTAssertEqual(events[0].outcome, "requires_approval")
+    }
+
+    func testWindowFocusMoveAndResizeAreBrokeredAppleScriptPlans() throws {
+        let focus = try MacControlActionBroker.plan(for: MacControlActionRequest(
+            requestId: "macreq_test_window_focus",
+            capabilityId: "mac.window.focus",
+            actorId: "owner",
+            origin: .ownerCLI,
+            arguments: ["app": "TextEdit"]
+        ))
+        XCTAssertEqual(focus.risk, .low)
+        XCTAssertTrue(focus.requiresApproval)
+        XCTAssertEqual(focus.requiredPermissionIds, [.accessibility])
+        XCTAssertEqual(focus.steps.first?.kind, .appleScript)
+        XCTAssertTrue(focus.steps.first?.script?.contains("perform action \"AXRaise\"") == true)
+        XCTAssertTrue(focus.steps.first?.preview.contains("<app:8 chars>") == true)
+
+        let move = try MacControlActionBroker.plan(for: MacControlActionRequest(
+            requestId: "macreq_test_window_move",
+            capabilityId: "mac.window.move",
+            actorId: "owner",
+            origin: .ownerCLI,
+            arguments: ["x": "120", "y": "80", "title": "Notes"]
+        ))
+        XCTAssertEqual(move.revertLevel, .bestEffort)
+        XCTAssertTrue(move.steps.first?.script?.contains("set position of targetWindow to {120, 80}") == true)
+
+        let resize = try MacControlActionBroker.plan(for: MacControlActionRequest(
+            requestId: "macreq_test_window_resize",
+            capabilityId: "mac.window.resize",
+            actorId: "owner",
+            origin: .ownerCLI,
+            arguments: ["width": "900", "height": "700"]
+        ))
+        XCTAssertEqual(resize.revertLevel, .bestEffort)
+        XCTAssertTrue(resize.steps.first?.script?.contains("set size of targetWindow to {900, 700}") == true)
+
+        let blockedMove = try MacControlActionBroker.plan(for: MacControlActionRequest(
+            requestId: "macreq_test_window_move_blocked",
+            capabilityId: "mac.window.move",
+            actorId: "owner",
+            origin: .ownerCLI,
+            arguments: ["x": "120"]
+        ))
+        XCTAssertEqual(blockedMove.blockedReason, "Window move requires integer x and y arguments.")
     }
 
     func testApprovedShortcutRunUsesShortcutsCLI() throws {
@@ -197,8 +271,14 @@ final class RecordingMacControlRunner: MacControlCommandRunning {
         var arguments: [String]
     }
 
+    struct NativeCall: Equatable {
+        var action: String
+        var arguments: [String]
+    }
+
     private(set) var processCalls: [ProcessCall] = []
     private(set) var appleScriptCalls: [String] = []
+    private(set) var nativeCalls: [NativeCall] = []
 
     func runProcess(_ executable: String, arguments: [String]) throws -> String {
         processCalls.append(ProcessCall(executable: executable, arguments: arguments))
@@ -207,6 +287,11 @@ final class RecordingMacControlRunner: MacControlCommandRunning {
 
     func runAppleScript(_ source: String) throws -> String {
         appleScriptCalls.append(source)
+        return "ok"
+    }
+
+    func runNative(_ action: String, arguments: [String]) throws -> String {
+        nativeCalls.append(NativeCall(action: action, arguments: arguments))
         return "ok"
     }
 }

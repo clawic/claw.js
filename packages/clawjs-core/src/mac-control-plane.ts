@@ -646,10 +646,10 @@ export const MAC_CAPABILITY_ATLAS: MacAtlasCapability[] = [
     summary: "Disconnect Wi-Fi with continuity breaker and rollback timer when possible.",
     portableFamily: "network.wifi.disconnect",
     platforms: ["darwin"],
-    coverageState: "planned",
+    coverageState: "executable",
     sourceConfidence: "official",
     sources: [{ label: "networksetup", localPath: "/usr/sbin/networksetup" }],
-    backend: { strategy: "networksetup", executablePath: "/usr/sbin/networksetup", notes: "Planned until the signed host has a continuity-safe CoreWLAN disconnect implementation." },
+    backend: { strategy: "corewlan", notes: "Executed inside the signed host with a continuity breaker; no private airport CLI usage." },
     permissions: wifiPermissions,
     risk: "critical",
     mutatesState: true,
@@ -706,14 +706,12 @@ export const MAC_CAPABILITY_ATLAS: MacAtlasCapability[] = [
     summary: `Governed local window ${action} action through Accessibility.`,
     portableFamily: `desktop.window.${action}`,
     platforms: ["darwin"],
-    coverageState: ["list", "close", "minimize"].includes(action) ? "executable" : "planned",
+    coverageState: "executable",
     sourceConfidence: "official",
     sources: [{ label: "AXUIElement", url: appleAx }],
     backend: {
       strategy: action === "list" ? "cgwindow_observation" : "accessibility_ax",
-      notes: ["list", "close", "minimize"].includes(action)
-        ? "AX is primary for control; CGWindow is observation only."
-        : "Atlas entry only until the signed host implements this AX action.",
+      notes: "AX is primary for control; CGWindow is observation only.",
     },
     permissions: action === "list" ? screenPermissions : windowPermissions,
     risk: action === "list" ? "read" : action === "close" ? "medium" : "low",
@@ -867,9 +865,17 @@ export function buildMacActionPlan(input: BuildMacActionPlanInput): MacActionPla
     capability.id === "mac.wifi.connect" &&
     typeof input.request.arguments.password === "string" &&
     input.request.arguments.password.length > 0;
+  const missingWindowMoveArgs =
+    capability.id === "mac.window.move" &&
+    (!isIntegerLike(input.request.arguments.x) || !isIntegerLike(input.request.arguments.y));
+  const missingWindowResizeArgs =
+    capability.id === "mac.window.resize" &&
+    (!isPositiveIntegerLike(input.request.arguments.width) || !isPositiveIntegerLike(input.request.arguments.height));
   const blockedReasons = [
     ...(!executable ? [`coverage_state:${capability.coverageState}`] : []),
     ...(plaintextWifiPassword ? ["secret_blocked:plaintext_wifi_password"] : []),
+    ...(missingWindowMoveArgs ? ["arguments_required:x,y"] : []),
+    ...(missingWindowResizeArgs ? ["arguments_required:width,height"] : []),
     ...permissionRequirements
       .filter((permission) => permission.currentOsState === "denied" || permission.currentOsState === "restricted" || permission.currentFrameworkGrant === "denied")
       .map((permission) => `permission_blocked:${permission.permissionId}`),
@@ -904,6 +910,17 @@ export function buildMacActionPlan(input: BuildMacActionPlanInput): MacActionPla
     blockedReasons,
     relatedSurfaces: capability.cli.relatedSurfaces,
   });
+}
+
+function isIntegerLike(value: unknown): boolean {
+  return typeof value === "number"
+    ? Number.isInteger(value)
+    : typeof value === "string" && /^-?\d+$/.test(value);
+}
+
+function isPositiveIntegerLike(value: unknown): boolean {
+  if (!isIntegerLike(value)) return false;
+  return Number(value) > 0;
 }
 
 function macStableId(prefix: "macact" | "macaudit", parts: string[]): string {
@@ -1101,9 +1118,13 @@ export function assertMacControlPlaneRegistryComplete(): void {
     "mac.wifi.status",
     "mac.wifi.list",
     "mac.wifi.connect",
+    "mac.wifi.disconnect",
     "mac.wifi.power.on",
     "mac.wifi.power.off",
     "mac.window.list",
+    "mac.window.focus",
+    "mac.window.move",
+    "mac.window.resize",
     "mac.window.close",
     "mac.window.minimize",
     "mac.shortcut.list",

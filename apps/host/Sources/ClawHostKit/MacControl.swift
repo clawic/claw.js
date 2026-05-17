@@ -1,6 +1,7 @@
 import AppKit
 import ApplicationServices
 import AVFoundation
+import CoreWLAN
 import Foundation
 import IOKit.hid
 import Speech
@@ -180,6 +181,7 @@ public struct MacControlActionPlan: Codable, Equatable, Sendable {
         public enum Kind: String, Codable, Sendable {
             case process
             case appleScript = "apple_script"
+            case native
         }
 
         public var kind: Kind
@@ -225,6 +227,7 @@ public struct MacControlActionReceipt: Codable, Equatable, Sendable {
 public protocol MacControlCommandRunning {
     func runProcess(_ executable: String, arguments: [String]) throws -> String
     func runAppleScript(_ source: String) throws -> String
+    func runNative(_ action: String, arguments: [String]) throws -> String
 }
 
 public struct MacControlProcessRunner: MacControlCommandRunning {
@@ -260,6 +263,20 @@ public struct MacControlProcessRunner: MacControlCommandRunning {
             throw MacControlError.commandFailed(message)
         }
         return result.stringValue ?? ""
+    }
+
+    public func runNative(_ action: String, arguments: [String]) throws -> String {
+        switch action {
+        case "corewlan.disconnect":
+            let device = arguments.first?.isEmpty == false ? arguments[0] : "en0"
+            guard let interface = CWInterface.interface(withName: device) else {
+                throw MacControlError.commandFailed("Wi-Fi interface \(device) was not found.")
+            }
+            interface.disassociate()
+            return "disconnected \(device)"
+        default:
+            throw MacControlError.commandFailed("Unsupported native Mac Control action \(action).")
+        }
     }
 }
 
@@ -422,13 +439,34 @@ public enum MacControlActionBroker {
                 blockedReason: blockedReason
             )
         case "mac.wifi.disconnect":
-            return blockedPlan(request, reason: "Wi-Fi disconnect needs the CoreWLAN implementation before it can execute safely.")
+            return processPlan(
+                request,
+                risk: .critical,
+                permissions: [],
+                steps: [.native("corewlan.disconnect", [wifiDevice(from: request)], "Disconnect Wi-Fi from the current network")],
+                requiresApproval: true,
+                continuityBreaker: true,
+                revertLevel: .bestEffort,
+                blockedReason: blockedReason
+            )
         case "mac.wifi.power.on":
             return wifiPowerPlan(request, power: "on", risk: .medium, blockedReason: blockedReason)
         case "mac.wifi.power.off":
             return wifiPowerPlan(request, power: "off", risk: .critical, blockedReason: blockedReason)
         case "mac.window.list":
             return appleScriptPlan(request, risk: .read, permissions: [.accessibility], script: windowListScript, preview: "List visible application windows", blockedReason: blockedReason)
+        case "mac.window.focus":
+            return appleScriptPlan(request, risk: .low, permissions: [.accessibility], script: focusWindowScript(for: request), preview: windowPreview("Focus", request), requiresApproval: true, revertLevel: .none, blockedReason: blockedReason)
+        case "mac.window.move":
+            guard let x = integerArgument("x", from: request), let y = integerArgument("y", from: request) else {
+                return blockedPlan(request, reason: "Window move requires integer x and y arguments.")
+            }
+            return appleScriptPlan(request, risk: .low, permissions: [.accessibility], script: moveWindowScript(for: request, x: x, y: y), preview: "\(windowPreview("Move", request)) to x=\(x), y=\(y)", requiresApproval: true, revertLevel: .bestEffort, blockedReason: blockedReason)
+        case "mac.window.resize":
+            guard let width = positiveIntegerArgument("width", from: request), let height = positiveIntegerArgument("height", from: request) else {
+                return blockedPlan(request, reason: "Window resize requires positive integer width and height arguments.")
+            }
+            return appleScriptPlan(request, risk: .low, permissions: [.accessibility], script: resizeWindowScript(for: request, width: width, height: height), preview: "\(windowPreview("Resize", request)) to width=\(width), height=\(height)", requiresApproval: true, revertLevel: .bestEffort, blockedReason: blockedReason)
         case "mac.window.close":
             return appleScriptPlan(request, risk: .high, permissions: [.accessibility], script: closeFocusedWindowScript, preview: "Close the focused window", requiresApproval: true, revertLevel: .none, blockedReason: blockedReason)
         case "mac.window.minimize":
@@ -492,6 +530,9 @@ public enum MacControlActionBroker {
                 case .appleScript:
                     guard let script = step.script else { continue }
                     outputs.append(try runner.runAppleScript(script))
+                case .native:
+                    guard let action = step.executable else { continue }
+                    outputs.append(try runner.runNative(action, arguments: step.arguments))
                 }
             }
             return receipt(for: request, plan: plan, outcome: .executed, outputs: outputs)
@@ -578,8 +619,85 @@ public enum MacControlActionBroker {
         request.arguments["password"] == nil ? nil : "Plaintext Wi-Fi passwords are not accepted by the Mac Action Broker. Use a secret reference."
     }
 
+    private static func integerArgument(_ name: String, from request: MacControlActionRequest) -> Int? {
+        guard let value = request.arguments[name], !value.isEmpty else { return nil }
+        return Int(value)
+    }
+
+    private static func positiveIntegerArgument(_ name: String, from request: MacControlActionRequest) -> Int? {
+        guard let value = integerArgument(name, from: request), value > 0 else { return nil }
+        return value
+    }
+
     private static func redactedName(_ label: String, _ value: String) -> String {
         value.isEmpty ? "<\(label)>" : "<\(label):\(value.count) chars>"
+    }
+
+    private static func appleScriptString(_ value: String) -> String {
+        "\"\(value.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\""))\""
+    }
+
+    private static func windowPreview(_ verb: String, _ request: MacControlActionRequest) -> String {
+        if let app = request.arguments["app"], !app.isEmpty {
+            return "\(verb) window in app \(redactedName("app", app))"
+        }
+        if let title = request.arguments["title"], !title.isEmpty {
+            return "\(verb) window titled \(redactedName("title", title))"
+        }
+        return "\(verb) the focused window"
+    }
+
+    private static func selectedWindowScriptPrelude(for request: MacControlActionRequest) -> String {
+        let appName = request.arguments["app"] ?? ""
+        let title = request.arguments["title"] ?? ""
+        let appLiteral = appleScriptString(appName)
+        let titleLiteral = appleScriptString(title)
+        return """
+        set targetAppName to \(appLiteral)
+        set targetTitle to \(titleLiteral)
+        tell application "System Events"
+            if targetAppName is not "" then
+                set targetProcess to first application process whose name is targetAppName
+            else
+                set targetProcess to first application process whose frontmost is true
+            end if
+            if targetTitle is not "" then
+                set targetWindow to first window of targetProcess whose name contains targetTitle
+            else
+                set targetWindow to window 1 of targetProcess
+            end if
+        """
+    }
+
+    private static func selectedWindowScriptSuffix() -> String {
+        """
+        end tell
+        """
+    }
+
+    private static func focusWindowScript(for request: MacControlActionRequest) -> String {
+        """
+        \(selectedWindowScriptPrelude(for: request))
+            set frontmost of targetProcess to true
+            perform action "AXRaise" of targetWindow
+        \(selectedWindowScriptSuffix())
+        """
+    }
+
+    private static func moveWindowScript(for request: MacControlActionRequest, x: Int, y: Int) -> String {
+        """
+        \(selectedWindowScriptPrelude(for: request))
+            set position of targetWindow to {\(x), \(y)}
+        \(selectedWindowScriptSuffix())
+        """
+    }
+
+    private static func resizeWindowScript(for request: MacControlActionRequest, width: Int, height: Int) -> String {
+        """
+        \(selectedWindowScriptPrelude(for: request))
+            set size of targetWindow to {\(width), \(height)}
+        \(selectedWindowScriptSuffix())
+        """
     }
 
     private static let windowListScript = """
@@ -621,6 +739,10 @@ public enum MacControlActionBroker {
 private extension MacControlActionPlan.Step {
     static func process(_ executable: String, _ arguments: [String], _ preview: String, redacted: Bool = false) -> MacControlActionPlan.Step {
         MacControlActionPlan.Step(kind: .process, executable: executable, arguments: arguments, script: nil, preview: preview, redacted: redacted)
+    }
+
+    static func native(_ action: String, _ arguments: [String], _ preview: String, redacted: Bool = false) -> MacControlActionPlan.Step {
+        MacControlActionPlan.Step(kind: .native, executable: action, arguments: arguments, script: nil, preview: preview, redacted: redacted)
     }
 }
 

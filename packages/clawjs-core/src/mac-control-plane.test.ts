@@ -130,9 +130,13 @@ test("Mac V1 executable slice is fully declared", () => {
     "mac.wifi.status",
     "mac.wifi.list",
     "mac.wifi.connect",
+    "mac.wifi.disconnect",
     "mac.wifi.power.on",
     "mac.wifi.power.off",
     "mac.window.list",
+    "mac.window.focus",
+    "mac.window.move",
+    "mac.window.resize",
     "mac.window.close",
     "mac.window.minimize",
     "mac.shortcut.list",
@@ -144,9 +148,13 @@ test("Mac V1 executable slice is fully declared", () => {
     "mac.wifi.status",
     "mac.wifi.list",
     "mac.wifi.connect",
+    "mac.wifi.disconnect",
     "mac.wifi.power.on",
     "mac.wifi.power.off",
     "mac.window.list",
+    "mac.window.focus",
+    "mac.window.move",
+    "mac.window.resize",
     "mac.window.close",
     "mac.window.minimize",
     "mac.shortcut.list",
@@ -158,11 +166,11 @@ test("Mac V1 executable slice is fully declared", () => {
 
   assert.equal(findMacAtlasCapability("mac.wifi.connect")?.backend.strategy, "networksetup");
   assert.equal(findMacAtlasCapability("mac.wifi.connect")?.cli.canonicalUsage, "claw wifi connect --ssid <ssid>");
-  assert.equal(findMacAtlasCapability("mac.wifi.disconnect")?.coverageState, "planned");
+  assert.equal(findMacAtlasCapability("mac.wifi.disconnect")?.backend.strategy, "corewlan");
   assert.equal(findMacAtlasCapability("mac.wifi.power.off")?.risk, "critical");
-  assert.equal(findMacAtlasCapability("mac.window.focus")?.coverageState, "planned");
-  assert.equal(findMacAtlasCapability("mac.window.move")?.coverageState, "planned");
-  assert.equal(findMacAtlasCapability("mac.window.resize")?.coverageState, "planned");
+  assert.equal(findMacAtlasCapability("mac.window.focus")?.coverageState, "executable");
+  assert.equal(findMacAtlasCapability("mac.window.move")?.coverageState, "executable");
+  assert.equal(findMacAtlasCapability("mac.window.resize")?.coverageState, "executable");
   assert.equal(findMacAtlasCapability("mac.window.close")?.backend.strategy, "accessibility_ax");
   assert.equal(findMacAtlasCapability("mac.shortcut.run")?.backend.executablePath, "/usr/bin/shortcuts");
   assert.equal(findMacAtlasCapability("mac.shortcut.run")?.risk, "high");
@@ -307,6 +315,33 @@ test("Mac action planner builds the shared dry-run contract for CLI, MCP, API an
   });
   assert.equal(plaintextPassword.executable, true);
   assert.deepEqual(plaintextPassword.blockedReasons, ["secret_blocked:plaintext_wifi_password"]);
+
+  const missingMoveArgs = buildMacActionPlan({
+    request: macActionRequestSchema.parse({
+      schemaVersion: clawContractVersionV1,
+      requestId: "req.mac.window.move.missing.1",
+      capabilityId: "mac.window.move",
+      actor,
+      host,
+      arguments: { x: "120" },
+      dryRun: true,
+    }),
+  });
+  assert.equal(missingMoveArgs.executable, true);
+  assert.deepEqual(missingMoveArgs.blockedReasons, ["arguments_required:x,y"]);
+
+  const resizeArgs = buildMacActionPlan({
+    request: macActionRequestSchema.parse({
+      schemaVersion: clawContractVersionV1,
+      requestId: "req.mac.window.resize.1",
+      capabilityId: "mac.window.resize",
+      actor,
+      host,
+      arguments: { width: "900", height: "700" },
+      dryRun: true,
+    }),
+  });
+  assert.deepEqual(resizeArgs.blockedReasons, []);
 
   const blocked = buildMacActionPlan({
     request: macActionRequestSchema.parse({

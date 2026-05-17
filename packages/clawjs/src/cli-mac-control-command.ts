@@ -245,10 +245,16 @@ function buildRequestShape(
 
   if (capability.family === "window") {
     const selector: Record<string, unknown> = {};
+    for (const key of ["id", "app", "title", "x", "y", "width", "height"]) {
+      if (flags[key]) args[key] = flags[key];
+    }
     if (flags.id) selector.id = flags.id;
     if (flags.app) selector.app = flags.app;
     if (flags.title) selector.title = flags.title;
-    if (flags.focused === "true" || flags.focused === "") selector.focused = true;
+    if (flags.focused === "true" || flags.focused === "") {
+      selector.focused = true;
+      args.focused = "true";
+    }
     return {
       target: Object.keys(selector).length > 0 ? { kind: "window", selector } : undefined,
       arguments: args,
