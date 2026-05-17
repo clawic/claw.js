@@ -126,17 +126,27 @@ test("Mac V1 executable slice is fully declared", () => {
     .filter((entry) => entry.coverageState === "executable" || entry.coverageState === "host_validated")
     .map((entry) => entry.id);
 
+  assert.deepEqual(executableIds, [
+    "mac.wifi.status",
+    "mac.wifi.list",
+    "mac.wifi.connect",
+    "mac.wifi.power.on",
+    "mac.wifi.power.off",
+    "mac.window.list",
+    "mac.window.close",
+    "mac.window.minimize",
+    "mac.shortcut.list",
+    "mac.shortcut.show",
+    "mac.shortcut.run",
+  ]);
+
   for (const id of [
     "mac.wifi.status",
     "mac.wifi.list",
     "mac.wifi.connect",
-    "mac.wifi.disconnect",
     "mac.wifi.power.on",
     "mac.wifi.power.off",
     "mac.window.list",
-    "mac.window.focus",
-    "mac.window.move",
-    "mac.window.resize",
     "mac.window.close",
     "mac.window.minimize",
     "mac.shortcut.list",
@@ -148,7 +158,11 @@ test("Mac V1 executable slice is fully declared", () => {
 
   assert.equal(findMacAtlasCapability("mac.wifi.connect")?.backend.strategy, "networksetup");
   assert.equal(findMacAtlasCapability("mac.wifi.connect")?.cli.canonicalUsage, "claw wifi connect --ssid <ssid>");
+  assert.equal(findMacAtlasCapability("mac.wifi.disconnect")?.coverageState, "planned");
   assert.equal(findMacAtlasCapability("mac.wifi.power.off")?.risk, "critical");
+  assert.equal(findMacAtlasCapability("mac.window.focus")?.coverageState, "planned");
+  assert.equal(findMacAtlasCapability("mac.window.move")?.coverageState, "planned");
+  assert.equal(findMacAtlasCapability("mac.window.resize")?.coverageState, "planned");
   assert.equal(findMacAtlasCapability("mac.window.close")?.backend.strategy, "accessibility_ax");
   assert.equal(findMacAtlasCapability("mac.shortcut.run")?.backend.executablePath, "/usr/bin/shortcuts");
   assert.equal(findMacAtlasCapability("mac.shortcut.run")?.risk, "high");
@@ -279,6 +293,21 @@ test("Mac action planner builds the shared dry-run contract for CLI, MCP, API an
   assert.equal(plan.rollback.snapshotRequired, true);
   assert.deepEqual(plan.blockedReasons, []);
 
+  const plaintextPassword = buildMacActionPlan({
+    request: macActionRequestSchema.parse({
+      schemaVersion: clawContractVersionV1,
+      requestId: "req.mac.secret.blocked.1",
+      capabilityId: "mac.wifi.connect",
+      actor,
+      host,
+      target: { kind: "wifi_network", name: "Office", selector: { ssid: "Office" } },
+      arguments: { ssid: "Office", password: "not-allowed" },
+      dryRun: true,
+    }),
+  });
+  assert.equal(plaintextPassword.executable, true);
+  assert.deepEqual(plaintextPassword.blockedReasons, ["secret_blocked:plaintext_wifi_password"]);
+
   const blocked = buildMacActionPlan({
     request: macActionRequestSchema.parse({
       schemaVersion: clawContractVersionV1,
@@ -381,7 +410,7 @@ test("Mac action broker records blocked permission decisions without executing n
   const request = macActionRequestSchema.parse({
     schemaVersion: clawContractVersionV1,
     requestId: "req.mac.broker.blocked.1",
-    capabilityId: "mac.window.focus",
+    capabilityId: "mac.window.close",
     actor,
     host,
   });

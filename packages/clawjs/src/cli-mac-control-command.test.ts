@@ -21,7 +21,21 @@ test("Mac control roots expose atlas and dry-run contracts without direct native
   assert.equal(dryRun.code, CLI_EXIT_OK);
   const dryRunPayload = JSON.parse(dryRun.stdout) as {
     ok: boolean;
-    data: { status: string; capabilityId: string; risk: string; execution: string; approvalRequired: boolean; plan: { schemaVersion: number; planId: string; capabilityId: string; requiredApprovals: unknown[] } };
+    data: {
+      status: string;
+      capabilityId: string;
+      risk: string;
+      execution: string;
+      approvalRequired: boolean;
+      blockedReasons: string[];
+      plan: {
+        schemaVersion: number;
+        planId: string;
+        capabilityId: string;
+        resolvedTarget?: { kind: string; name?: string; selector?: { ssid?: string } };
+        requiredApprovals: unknown[];
+      };
+    };
     meta: { canonicalCommand: string };
   };
   assert.equal(dryRunPayload.ok, true);
@@ -34,7 +48,20 @@ test("Mac control roots expose atlas and dry-run contracts without direct native
   assert.equal(dryRunPayload.data.plan.schemaVersion, 1);
   assert.equal(dryRunPayload.data.plan.capabilityId, "mac.wifi.connect");
   assert.equal(dryRunPayload.data.plan.planId, "macplan_cli_mac_wifi_connect");
+  assert.equal(dryRunPayload.data.plan.resolvedTarget?.kind, "wifi_network");
+  assert.equal(dryRunPayload.data.plan.resolvedTarget?.name, "Office");
+  assert.equal(dryRunPayload.data.plan.resolvedTarget?.selector?.ssid, "Office");
+  assert.deepEqual(dryRunPayload.data.blockedReasons, []);
   assert.equal(dryRunPayload.data.plan.requiredApprovals.length, 1);
+
+  const plaintextPassword = await runCliCapture(["wifi", "connect", "Office", "--password", "not-allowed", "--dry-run", "--json"], process.cwd());
+  assert.equal(plaintextPassword.code, CLI_EXIT_OK);
+  const plaintextPasswordPayload = JSON.parse(plaintextPassword.stdout) as {
+    data: { blockedReasons: string[]; plan: { resolvedTarget?: { name?: string }; blockedReasons: string[] } };
+  };
+  assert.equal(plaintextPasswordPayload.data.plan.resolvedTarget?.name, "Office");
+  assert.deepEqual(plaintextPasswordPayload.data.blockedReasons, ["secret_blocked:plaintext_wifi_password"]);
+  assert.deepEqual(plaintextPasswordPayload.data.plan.blockedReasons, ["secret_blocked:plaintext_wifi_password"]);
 });
 
 test("Mac permissions root exposes central permission catalog and request plans", async () => {
