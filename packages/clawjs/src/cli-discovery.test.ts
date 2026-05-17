@@ -31,8 +31,9 @@ test("runCli returns command-intent metadata for future unknown JSON phrases", a
   assert.equal(payload.meta.commandIntent.intent.reportTarget, "github_discussions_ideas");
 });
 
-test("runCli routes graduated dense-data direct nouns through the shared database", async () => {
+test("runCli routes graduated dense-data direct nouns through the shared database", async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-dense-db-"));
+  useIsolatedClawDataRoot(t, workspaceRoot);
 
   const patientCreate = await runCliCapture(["patient", "create", "Ada Patient", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(patientCreate.code, CLI_EXIT_OK);

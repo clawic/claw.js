@@ -102,10 +102,14 @@ keeping the actual storage under shared core database ownership.
 
 `packages/clawjs/src/cli-dense-data-command.ts` handles known dense-data
 phrases before the unknown-command path. Inspection actions such as `health
-gaps` return structured registry coverage. Direct CRUD-shaped phrases such as
-`patient list` or `invoice list` return a degraded, non-executing response with
-an explicit `workflow_gap` until their canonical collections, schemas,
-relations, quality gaps, and DB smoke tests are connected.
+gaps` return structured registry coverage. Graduated centers execute through
+the shared database instead of a parallel domain store: `patient list`,
+`patient create`, `medication add --patient <id>`, `patient <id> medications
+list`, `patient <id> symptoms add`, `patient <id> symptoms list`, and
+`invoice list` all resolve to canonical core.sqlite collections. Dense routes
+that are known but not graduated still return a degraded response with an
+explicit `workflow_gap` until their canonical collections, schemas, relations,
+quality gaps, and DB smoke tests are connected.
 
 Future implementation slices must connect this registry into CLI command
 coverage, command-intent resolution, database schema inspection, docs, and
