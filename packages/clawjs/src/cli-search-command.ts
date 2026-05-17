@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 
 import Database from "better-sqlite3";
 
-import { clawCliCommandRegistry, type ClawCliCommandRegistryEntry, type ClawCliSearchResult } from "@clawjs/core";
+import { clawCliCommandRegistry, listClawCliAliases, type ClawCliCommandRegistryEntry, type ClawCliSearchResult } from "@clawjs/core";
 import {
   DEFAULT_SEARCH_BUDGETS,
   SEARCH_PROFILES,
@@ -37,7 +37,7 @@ import { pathSafeBasename, resolveRuntimeAdapterId } from "./cli-runtime-utils.t
 import { resolveClawjsDataRoot, resolveClawjsMainDbPath } from "./v1-data.ts";
 import { readMcpServers, type JsonRecord } from "./v1-data-core.ts";
 
-const SEARCH_ADMIN_COMMANDS = new Set(["sources", "status", "service", "profiles", "entrypoints", "saved", "monitors", "actions", "audit", "jobs", "shards", "explain"]);
+const SEARCH_ADMIN_COMMANDS = new Set(["sources", "status", "service", "profiles", "entrypoints", "aliases", "saved", "monitors", "actions", "audit", "jobs", "shards", "explain"]);
 const WORKSPACE_SEARCH_DOMAINS = new Set([
   "areas",
   "tasks",
@@ -702,6 +702,25 @@ export async function runSearchAdminCli(input: {
     };
     if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "entrypoints" });
     else input.context.stdout.write(`${entrypoints.map((entrypoint) => `${entrypoint.id}\t${entrypoint.scope}\t${entrypoint.shortcut.state}\t${entrypoint.label}`).join("\n")}\n`);
+    return CLI_EXIT_OK;
+  }
+
+  if (command === "aliases") {
+    const commandNames = new Set(clawCliCommandRegistry.commands.map((entry) => entry.name));
+    const aliases = listClawCliAliases().map((alias) => ({
+      ...alias,
+      source: alias.source === "collection" ? "collection" : "command",
+      searchDomain: "commands",
+      resultId: commandNames.has(alias.canonicalName) ? `commands:${alias.canonicalName}` : null,
+    }));
+    const data = {
+      aliases,
+      count: aliases.length,
+      rootSearchShortcutState: listSearchEntrypointContracts().find((entrypoint) => entrypoint.id === "root-search")?.hotkey.state ?? "external_pending",
+      chatSearchIsolation: true,
+    };
+    if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "aliases" });
+    else input.context.stdout.write(`${aliases.map((alias) => `${alias.alias}\t${alias.canonicalName}\t${alias.source}`).join("\n")}\n`);
     return CLI_EXIT_OK;
   }
 

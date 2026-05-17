@@ -136,6 +136,7 @@ claw search sources exclude code.symbols --json
 claw search sources resume commands --json
 claw search status --json
 claw search service status --json
+claw search aliases --json
 claw search service start --json
 claw search service run-once --max-jobs 10 --max-runtime-ms 30000 --max-failures 3 --json
 claw search service stop --json
@@ -267,6 +268,13 @@ opt in with `--command-fallback empty` to fill an empty scoped query from the
 commands source, or `--command-fallback always` to use commands for any
 remaining result budget. `--command-fallback-limit` caps how many command
 results may be added.
+
+`claw search aliases` exposes launcher aliases from the canonical command
+registry as Search-visible contracts. Each row records the alias, canonical
+command or collection, `commands` search domain, optional Search result id, and
+the same Root Search shortcut state used by `claw search entrypoints`. Native
+global shortcut binding stays outside this command until the signed host owns
+the physical binding.
 
 Result ACL is enforced before ranking output is returned. Indexed documents can
 declare `permissions.allowedActors`, `permissions.allowedAgents`, and

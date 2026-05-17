@@ -535,6 +535,28 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(entrypointsPayload.data.entrypoints.find((entrypoint) => entrypoint.id === "chat-search")?.queryScope, "conversations_only");
     assert.equal(entrypointsPayload.data.entrypoints.find((entrypoint) => entrypoint.id === "chat-search")?.shortcut.reservedChord, "Command-G");
 
+    const aliases = await runCliCapture(["search", "aliases", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(aliases.code, CLI_EXIT_OK);
+    const aliasesPayload = JSON.parse(aliases.stdout) as {
+      data: {
+        count: number;
+        rootSearchShortcutState: string;
+        chatSearchIsolation: boolean;
+        aliases: Array<{ alias: string; canonicalName: string; source: string; searchDomain: string; resultId: string | null }>;
+      };
+    };
+    assert.equal(aliasesPayload.data.count, aliasesPayload.data.aliases.length);
+    assert.equal(aliasesPayload.data.rootSearchShortcutState, "external_pending");
+    assert.equal(aliasesPayload.data.chatSearchIsolation, true);
+    const dbAlias = aliasesPayload.data.aliases.find((alias) => alias.alias === "db");
+    assert.equal(dbAlias?.canonicalName, "database");
+    assert.equal(dbAlias?.source, "command");
+    assert.equal(dbAlias?.searchDomain, "commands");
+    assert.equal(dbAlias?.resultId, "commands:database");
+    const imageAlias = aliasesPayload.data.aliases.find((alias) => alias.alias === "image");
+    assert.equal(imageAlias?.canonicalName, "images");
+    assert.equal(imageAlias?.resultId, "commands:images");
+
     const serviceStart = await runCliCapture(["search", "service", "start", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(serviceStart.code, CLI_EXIT_OK);
     const serviceStartPayload = JSON.parse(serviceStart.stdout) as { data: { service: { state: string; mode: string; startedAt?: string } } };
