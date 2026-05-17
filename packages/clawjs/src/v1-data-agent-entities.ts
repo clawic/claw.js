@@ -8,12 +8,17 @@ import {
   createAgentSupportInboxProjection,
   createAgentSafeSurfaceProjection,
   evaluateAgentAssignmentRoute,
+  evaluateAgentBudget,
+  evaluateAgentDelegationAccess,
   evaluateAgentEffectiveAccess,
   evaluateAgentMemoryAccess,
   resolveAgentExternalIdentity,
   type AgentActivityFeedInput,
   type AgentBlueprintInput,
   type AgentAssignmentRouteRequest,
+  type AgentBudgetPolicy,
+  type AgentBudgetRequest,
+  type AgentDelegationAccessInput,
   type AgentEffectiveAccessInput,
   type AgentEvaluationInput,
   type AgentExternalIdentityProfile,
@@ -92,7 +97,7 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
       rootConcept: "agent",
       placementConcept: "agent_assignment",
       defaultPosture: "empty_sandbox_respond_only",
-      gates: ["evaluate-access", "route-check", "resolve-external-identity", "project-support-inbox", "memory-check", "surface-projection", "config-revision", "incident", "activity-feed", "blueprint", "evaluation"],
+      gates: ["evaluate-access", "delegation-check", "route-check", "resolve-external-identity", "project-support-inbox", "memory-check", "budget-check", "surface-projection", "config-revision", "incident", "activity-feed", "blueprint", "evaluation"],
     });
     return V1_DATA_EXIT_OK;
   }
@@ -100,6 +105,12 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
     const record = recordFlag<AgentEffectiveAccessInput>(input);
     if (!record) return usageError(input, "Usage: claw agents evaluate-access --record JSON [--json]");
     writeSuccess(input, evaluateAgentEffectiveAccess(record));
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "delegation-check") {
+    const record = recordFlag<AgentDelegationAccessInput>(input);
+    if (!record) return usageError(input, "Usage: claw agents delegation-check --record JSON [--json]");
+    writeSuccess(input, evaluateAgentDelegationAccess(record));
     return V1_DATA_EXIT_OK;
   }
   if (command === "route-check") {
@@ -124,6 +135,12 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
     const record = recordFlag<{ policy: AgentMemoryPolicy; request: AgentMemoryAccessRequest }>(input);
     if (!record) return usageError(input, "Usage: claw agents memory-check --record JSON [--json]");
     writeSuccess(input, evaluateAgentMemoryAccess(record.policy, record.request));
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "budget-check") {
+    const record = recordFlag<{ policy: AgentBudgetPolicy; request: AgentBudgetRequest }>(input);
+    if (!record) return usageError(input, "Usage: claw agents budget-check --record JSON [--json]");
+    writeSuccess(input, evaluateAgentBudget(record.policy, record.request));
     return V1_DATA_EXIT_OK;
   }
   if (command === "surface-projection") {
