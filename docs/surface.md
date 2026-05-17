@@ -1528,6 +1528,7 @@ The docs check script validates that every current export from
     CommentRecord
     commentRecordSchema
     COMMERCE_FAMILY
+    COMPLIANCE_FAMILY
     CommitmentAddInput
     CommitmentCaptureInput
     CommitmentCaptureResult
@@ -1552,6 +1553,7 @@ The docs check script validates that every current export from
     commitmentStateSchema
     CommitmentStatus
     commitmentStatusSchema
+    CONSTRUCTION_FAMILY
     COMMUNITIES_SPIRITUALITY_FAMILY
     CompatSnapshot
     compatSnapshotSchema
@@ -1632,6 +1634,7 @@ The docs check script validates that every current export from
     DocumentStorageDescriptor
     EDUCATION_FAMILY
     EDUCATION_SCHOOL_FAMILY
+    ELN_FAMILY
     EffectiveAccessPolicy
     EffectPreview
     effectPreviewSchema
@@ -1728,6 +1731,7 @@ The docs check script validates that every current export from
     incidentRecordSchema
     INFRA_FAMILY
     INTEGRATIONS_FAMILY
+    IOT_FAMILY
     Intent
     IntentDomain
     intentDomainSchema
@@ -2223,6 +2227,7 @@ The docs check script validates that every current export from
     SubscriptionFilter
     summarizeCatalogAuditedBatch
     summarizeReadiness
+    SUPPLY_CHAIN_FAMILY
     SUPPORT_FAMILY
     TaskChecklistItem
     taskChecklistItemSchema
@@ -2281,6 +2286,7 @@ The docs check script validates that every current export from
     IoTDeviceDescriptor
     thingDescriptorSchema
     toClawError
+    TRANSPORT_FAMILY
     TRAVEL_FAMILY
     TtsPlaybackPlan
     TtsPlaybackPlanInput
@@ -2511,9 +2517,16 @@ The docs check script validates that every current export from
     createMeshInvitation
     createMeshResourceShare
     createMeshRevocation
+    createGatewayDeploymentManifest
+    createNodeTrustDecision
+    createRemoteClientCacheSnapshot
+    createRemoteSecretProviderReceipt
     createSyncResourceManifest
+    createTransportHandshakeReceipt
     evaluateRemoteAgentServiceAccess
     evaluateRemoteAccess
+    GatewayDeploymentManifest
+    gatewayDeploymentManifestSchema
     MeshInvitation
     meshInvitationSchema
     MeshResourceShare
@@ -2524,6 +2537,8 @@ The docs check script validates that every current export from
     meshShareActionSchema
     NodeIdentity
     nodeIdentitySchema
+    NodeTrustDecision
+    nodeTrustDecisionSchema
     RemoteAccessDecision
     remoteAccessDecisionSchema
     RemoteAccessGrant
@@ -2546,10 +2561,16 @@ The docs check script validates that every current export from
     remoteAgentServiceRequestSchema
     RemoteOfflineCommandResult
     remoteOfflineCommandResultSchema
+    RemoteClientCacheSnapshot
+    remoteClientCacheSnapshotSchema
     RemoteSecretLease
     remoteSecretLeaseSchema
+    RemoteSecretProviderReceipt
+    remoteSecretProviderReceiptSchema
     RemoteSurfaceClassification
     remoteSurfaceClassificationSchema
+    RemoteTransportHandshakeReceipt
+    remoteTransportHandshakeReceiptSchema
     remoteSyncRequiredDecisionIds
     remoteSyncRequiredRouteIds
     RemoteTrustMode
