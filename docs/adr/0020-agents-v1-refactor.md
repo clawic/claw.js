@@ -22,6 +22,11 @@ assignment with stricter scoped policy.
 and deployment-style language are legacy overlap and must not be introduced as
 new public concepts.
 
+`apps/board` stores its organization roster in canonical `agents` records with
+`sourceDomain: "board"`, `ownerKind: "company"`, `ownerId`, and a preserved
+`boardStatus` projection for the board UI. The historical `company_agents`
+store is read-only fallback/cleanup legacy, not a new write path.
+
 Agents V1 uses three layers:
 
 - `agent`: durable identity, role, owner, org graph, instructions, skills,

@@ -38,7 +38,8 @@ const C_PORTFOLIOS = "portfolios";
 const C_PORTFOLIO_ITEMS = "portfolio_items";
 const C_GOALS = "goals";
 const C_PROJECTS = "projects";
-const C_AGENTS = "company_agents";
+const C_AGENTS = "agents";
+const C_LEGACY_AGENTS = "company_agents";
 const C_ISSUES = "issues";
 const C_COMMENTS = "issue_comments";
 const C_APPROVALS = "company_approvals";
@@ -99,6 +100,80 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+function canonicalAgentStatus(status: CompanyAgent["status"]): "draft" | "active" | "paused" | "archived" {
+  if (status === "active") return "active";
+  if (status === "paused") return "paused";
+  if (status === "fired") return "archived";
+  return "draft";
+}
+
+function boardAgentStatus(record: Record<string, unknown>): CompanyAgent["status"] {
+  const boardStatus = record.boardStatus;
+  if (
+    boardStatus === "pending_approval" ||
+    boardStatus === "active" ||
+    boardStatus === "paused" ||
+    boardStatus === "fired"
+  ) {
+    return boardStatus;
+  }
+  if (record.status === "active") return "active";
+  if (record.status === "paused") return "paused";
+  if (record.status === "archived") return "fired";
+  return "pending_approval";
+}
+
+function toCompanyAgent(record: CompanyAgent & Record<string, unknown>): CompanyAgent {
+  return {
+    ...record,
+    status: boardAgentStatus(record),
+  };
+}
+
+function isMissingLegacyAgentStore(error: unknown): boolean {
+  return error instanceof Error && /\b404\b|not_found|not found/i.test(error.message);
+}
+
+async function listLegacyCompanyAgents(companyId: string): Promise<CompanyAgent[]> {
+  try {
+    return await listRecords<CompanyAgent>(C_LEGACY_AGENTS, { filter: { companyId } });
+  } catch (error) {
+    if (!isMissingLegacyAgentStore(error)) throw error;
+    return [];
+  }
+}
+
+async function getLegacyCompanyAgent(id: string): Promise<CompanyAgent | null> {
+  try {
+    return await getRecord<CompanyAgent>(C_LEGACY_AGENTS, id);
+  } catch (error) {
+    if (!isMissingLegacyAgentStore(error)) throw error;
+    return null;
+  }
+}
+
+function canonicalCompanyAgentPayload(
+  input: Record<string, unknown> & {
+    companyId: string;
+    role?: string;
+    status: CompanyAgent["status"];
+    autonomyLevel?: CompanyAgent["autonomyLevel"];
+  },
+): Record<string, unknown> {
+  const autonomyProfile = input.autonomyLevel === "observe" ? "respond_only" : input.autonomyLevel;
+  return compactRecord({
+    kind: "agent",
+    sourceDomain: "board",
+    ownerKind: "company",
+    ownerId: input.companyId,
+    agencyMode: input.role === "ceo" ? "manager" : "worker",
+    ...input,
+    status: canonicalAgentStatus(input.status),
+    boardStatus: input.status,
+    autonomyProfile,
+  });
+}
+
 async function requireCompany(companyId: string): Promise<Company> {
   const company = await getCompany(companyId);
   if (!company) throw new Error(`Company ${companyId} not found`);
@@ -154,7 +229,7 @@ export async function createCompany(input: {
     spentMonthlyCents: 0,
   });
 
-  const ceo = await createRecord<CompanyAgent>(C_AGENTS, {
+  const ceo = toCompanyAgent(await createRecord<CompanyAgent>(C_AGENTS, canonicalCompanyAgentPayload({
     companyId: company.id,
     name: "Board (you)",
     role: "ceo",
@@ -166,7 +241,7 @@ export async function createCompany(input: {
     scopeType: "company",
     autonomyLevel: "act_full",
     watchDomains: ["strategy", "execution", "operations", "feedback"],
-  });
+  })));
 
   const portfolio = await createPortfolio({
     companyId: company.id,
@@ -404,11 +479,16 @@ export async function updateProject(id: string, patch: Partial<Project>): Promis
 // ── Agents ───────────────────────────────────────────────────────────────
 
 export async function listAgents(companyId: string): Promise<CompanyAgent[]> {
-  return listRecords<CompanyAgent>(C_AGENTS, { filter: { companyId } });
+  const canonical = (await listRecords<CompanyAgent>(C_AGENTS, { filter: { companyId } })).map(toCompanyAgent);
+  const seen = new Set(canonical.map((agent) => agent.id));
+  const legacy = (await listLegacyCompanyAgents(companyId)).filter((agent) => !seen.has(agent.id));
+  return [...canonical, ...legacy];
 }
 
 export async function getAgent(id: string): Promise<CompanyAgent | null> {
-  return getRecord<CompanyAgent>(C_AGENTS, id);
+  const canonical = await getRecord<CompanyAgent>(C_AGENTS, id);
+  if (canonical) return toCompanyAgent(canonical);
+  return getLegacyCompanyAgent(id);
 }
 
 export async function createAgent(input: {
@@ -427,7 +507,7 @@ export async function createAgent(input: {
   watchDomains?: string[];
 }): Promise<CompanyAgent> {
   await requireCompany(input.companyId);
-  return createRecord<CompanyAgent>(C_AGENTS, compactRecord({
+  return toCompanyAgent(await createRecord<CompanyAgent>(C_AGENTS, canonicalCompanyAgentPayload({
     companyId: input.companyId,
     name: input.name.trim(),
     role: input.role.trim().toLowerCase(),
@@ -443,11 +523,20 @@ export async function createAgent(input: {
     autonomyLevel: input.autonomyLevel ?? "suggest",
     approvalPolicy: input.approvalPolicy,
     watchDomains: input.watchDomains,
-  }));
+  })));
 }
 
 export async function updateAgent(id: string, patch: Partial<CompanyAgent>): Promise<CompanyAgent> {
-  return updateRecord<CompanyAgent>(C_AGENTS, id, patch as Record<string, unknown>);
+  const current = await getRecord<CompanyAgent>(C_AGENTS, id);
+  if (!current) {
+    return toCompanyAgent(await updateRecord<CompanyAgent>(C_LEGACY_AGENTS, id, patch as Record<string, unknown>));
+  }
+  const canonicalPatch = {
+    ...patch,
+    ...(patch.status ? { status: canonicalAgentStatus(patch.status), boardStatus: patch.status } : {}),
+    ...(patch.autonomyLevel ? { autonomyProfile: patch.autonomyLevel === "observe" ? "respond_only" : patch.autonomyLevel } : {}),
+  };
+  return toCompanyAgent(await updateRecord<CompanyAgent>(C_AGENTS, id, canonicalPatch as Record<string, unknown>));
 }
 
 // ── Issues + comments ────────────────────────────────────────────────────
@@ -892,6 +981,9 @@ export async function deleteCompany(companyId: string): Promise<void> {
     for (const item of items) {
       await deleteRecord(collection, item.id);
     }
+  }
+  for (const item of await listLegacyCompanyAgents(companyId)) {
+    await deleteRecord(C_LEGACY_AGENTS, item.id);
   }
   await deleteRecord(C_COMPANIES, companyId);
 }

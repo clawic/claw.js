@@ -2,7 +2,7 @@
  * Shared TypeScript types for the Company app.
  *
  * Mirrors the database service collections defined in
- * database/src/server/db.ts (companies, goals, projects, company_agents,
+ * database/src/server/db.ts (companies, goals, projects, agents,
  * issues, issue_comments, company_approvals, runs).
  */
 
@@ -128,6 +128,12 @@ export interface CompanyAgent extends DatabaseRecord {
   autonomyLevel?: AutonomyLevel;
   approvalPolicy?: Record<string, unknown>;
   watchDomains?: string[];
+  boardStatus?: CompanyAgentStatus;
+  sourceDomain?: "board" | string;
+  ownerKind?: "company" | string;
+  ownerId?: string;
+  agencyMode?: "manager" | "worker" | string;
+  autonomyProfile?: "respond_only" | "suggest" | "act_limited" | "act_full" | string;
 }
 
 export type IssueStatus = "todo" | "in_progress" | "blocked" | "in_review" | "done" | "cancelled";
