@@ -229,6 +229,49 @@ export class SearchStore {
     tx();
   }
 
+  resetSourceShards(input: { sources: string[]; shards: string[] }): void {
+    const uniqueSources = Array.from(new Set(input.sources.map((source) => source.trim()).filter(Boolean)));
+    const uniqueShards = Array.from(new Set(input.shards.map((shard) => shard.trim()).filter(Boolean)));
+    if (!uniqueSources.length || !uniqueShards.length) return;
+    const now = new Date().toISOString();
+    const tx = this.db.transaction(() => {
+      const findShard = this.db.prepare("SELECT domain FROM search_shards WHERE source = ? AND shard = ?");
+      const findDocument = this.db.prepare("SELECT domain FROM search_documents WHERE source = ? AND shard = ? LIMIT 1");
+      const deleteFts = this.db.prepare("DELETE FROM search_fts WHERE source = ? AND shard = ?");
+      const deleteDocuments = this.db.prepare("DELETE FROM search_documents WHERE source = ? AND shard = ?");
+      const deleteCursors = this.db.prepare("DELETE FROM search_cursors WHERE source = ? AND shard = ?");
+      const markShardEmpty = this.db.prepare(`
+        INSERT INTO search_shards (source, shard, domain, state, document_count, fragment_count, updated_at)
+        VALUES (?, ?, ?, 'empty', 0, 0, ?)
+        ON CONFLICT(source, shard) DO UPDATE SET
+          domain = excluded.domain,
+          state = 'empty',
+          document_count = 0,
+          fragment_count = 0,
+          updated_at = excluded.updated_at
+      `);
+      const touchedCacheScopes: SearchTouchedCacheScopes = { sources: new Set(), domains: new Set(), shards: new Set() };
+      for (const source of uniqueSources) {
+        touchedCacheScopes.sources.add(source);
+        for (const shard of uniqueShards) {
+          touchedCacheScopes.shards.add(shard);
+          const shardRow = findShard.get(source, shard) as { domain: string } | undefined;
+          const documentRow = findDocument.get(source, shard) as { domain: string } | undefined;
+          const domain = shardRow?.domain ?? documentRow?.domain;
+          deleteFts.run(source, shard);
+          deleteDocuments.run(source, shard);
+          deleteCursors.run(source, shard);
+          if (domain) {
+            touchedCacheScopes.domains.add(domain);
+            markShardEmpty.run(source, shard, domain, now);
+          }
+        }
+      }
+      this.clearRankingCacheForScopes(touchedCacheScopes);
+    });
+    tx();
+  }
+
   close(): void {
     this.db.close();
   }

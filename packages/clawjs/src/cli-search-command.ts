@@ -295,6 +295,7 @@ export async function runSearchRebuildCli(input: {
   const store = openCliSearchStore(input.flags);
   try {
     const selectedSources = parseListFlag(input.flags.sources ?? input.flags.source);
+    const selectedShards = parseListFlag(input.flags.shards ?? input.flags.shard);
     const knownSources = new Set(BUILTIN_SEARCH_SOURCES.map((source) => source.id));
     const unknownSources = (selectedSources ?? []).filter((source) => !knownSources.has(source));
     if (unknownSources.length) {
@@ -303,9 +304,16 @@ export async function runSearchRebuildCli(input: {
       else input.context.stderr.write(`${message}\n`);
       return CLI_EXIT_USAGE;
     }
+    if (selectedShards && !selectedSources) {
+      const message = "Search shard rebuilds require --source or --sources.";
+      if (input.wantsJson) writeCommandJsonError(input.context.stdout, "search", { code: "missing_source", message }, { subcommand: "rebuild" });
+      else input.context.stderr.write(`${message}\n`);
+      return CLI_EXIT_USAGE;
+    }
     registerBuiltinSources(store);
     const preservedStates = new Map(store.sourceStatus().map((status) => [status.source, status.state]));
-    if (selectedSources) store.resetSources(selectedSources);
+    if (selectedSources && selectedShards) store.resetSourceShards({ sources: selectedSources, shards: selectedShards });
+    else if (selectedSources) store.resetSources(selectedSources);
     else store.reset();
     registerBuiltinSources(store, preservedStates);
     const rebuildsSource = (source: string) => (!selectedSources || selectedSources.includes(source)) && sourceCanIndex(store, source);
@@ -356,8 +364,9 @@ export async function runSearchRebuildCli(input: {
       .map((source) => source.id);
     const data = {
       rebuilt: true,
-      mode: selectedSources ? "scoped" : "full",
+      mode: selectedSources && selectedShards ? "shard_scoped" : selectedSources ? "scoped" : "full",
       selectedSources: selectedSources ?? null,
+      selectedShards: selectedShards ?? null,
       reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + skillsIndexed + connectorsIndexed + runtimeIndexed + localFilesIndexed + webIndexed + externalIndexed,
       embeddings: 0,
       profile: input.flags.profile === "full" ? "full" : "framework",

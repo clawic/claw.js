@@ -7,7 +7,7 @@ import Database from "better-sqlite3";
 
 import { SearchStore, createFrameworkSearchSourceManifest } from "@clawjs/search";
 
-import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK } from "./index.ts";
+import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./index.ts";
 import { createFakeGenerationScript, runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
 import { ensureV1MainSchema, resolveClawjsMainDbPath } from "./v1-data-core.ts";
 
@@ -3024,6 +3024,97 @@ test("search rebuild can refresh one source without clearing sibling fast paths"
     assert.equal(generationQuery.code, CLI_EXIT_OK);
     const generationPayload = JSON.parse(generationQuery.stdout) as { data: { results: Array<{ source: string; title: string }> } };
     assert.equal(generationPayload.data.results.some((result) => result.source === "generations.artifacts" && result.title === "Campaign Market Maps"), true);
+  });
+});
+
+test("search rebuild can refresh one shard without clearing sibling shard fast paths", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-shard-rebuild-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const store = new SearchStore(path.join(dataRoot, "search.sqlite"));
+    try {
+      store.registerSource(createFrameworkSearchSourceManifest({
+        id: "images.derived",
+        domain: "images",
+        name: "Images",
+        resultTypes: ["image"],
+      }));
+      store.upsertDocument({
+        id: "images.derived:hot:gallery",
+        source: "images.derived",
+        shard: "hot",
+        domain: "images",
+        type: "image",
+        resourceId: "hot-gallery",
+        title: "Hot Gallery",
+        body: "hot gallery preview remains searchable",
+        updatedAt: "2026-05-17T12:00:00.000Z",
+      });
+      store.upsertDocument({
+        id: "images.derived:cold:archive",
+        source: "images.derived",
+        shard: "cold",
+        domain: "images",
+        type: "image",
+        resourceId: "cold-archive",
+        title: "Cold Archive",
+        body: "cold archive entry should be cleared",
+        updatedAt: "2026-05-17T12:00:00.000Z",
+      });
+    } finally {
+      store.close();
+    }
+
+    const missingSource = await runCliCapture(["search", "rebuild", "--shard", "cold", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(missingSource.code, CLI_EXIT_USAGE);
+    const missingSourcePayload = JSON.parse(missingSource.stdout) as { error: { code: string } };
+    assert.equal(missingSourcePayload.error.code, "missing_source");
+
+    const shardRebuild = await runCliCapture([
+      "search",
+      "rebuild",
+      "--source",
+      "images.derived",
+      "--shard",
+      "cold",
+      "--workspace",
+      workspaceRoot,
+      "--data-dir",
+      dataRoot,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(shardRebuild.code, CLI_EXIT_OK);
+    const shardPayload = JSON.parse(shardRebuild.stdout) as {
+      data: {
+        mode: string;
+        selectedSources: string[];
+        selectedShards: string[];
+        indexedBySource: { "images.derived": number };
+      };
+    };
+    assert.equal(shardPayload.data.mode, "shard_scoped");
+    assert.deepEqual(shardPayload.data.selectedSources, ["images.derived"]);
+    assert.deepEqual(shardPayload.data.selectedShards, ["cold"]);
+    assert.equal(shardPayload.data.indexedBySource["images.derived"], 0);
+
+    const verified = new SearchStore(path.join(dataRoot, "search.sqlite"));
+    try {
+      assert.deepEqual(verified.listShards({ source: "images.derived" }).map((shard) => [shard.shard, shard.state, shard.documentCount]), [
+        ["cold", "empty", 0],
+        ["hot", "active", 1],
+      ]);
+      assert.deepEqual(verified.query({ query: "hot gallery", sources: ["images.derived"], shards: ["hot"] }).results.map((result) => result.id), ["images.derived:hot:gallery"]);
+      assert.deepEqual(verified.query({ query: "cold archive", sources: ["images.derived"], shards: ["cold"] }).results, []);
+    } finally {
+      verified.close();
+    }
   });
 });
 
