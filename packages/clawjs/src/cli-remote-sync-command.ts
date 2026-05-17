@@ -1,8 +1,13 @@
 import {
+  buildRemoteConformanceReport,
+  buildSyncPlan,
   clawPersistentSurfaceRegistry,
-  createExampleSyncResourceManifest,
+  createSyncResourceManifest,
   remoteSyncRequiredDecisionIds,
   remoteSyncRequiredRouteIds,
+  syncObjectSnapshotSchema,
+  type SyncDriver,
+  type SyncObjectSnapshot,
 } from "@clawjs/core";
 
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
@@ -25,6 +30,10 @@ type RemoteSyncCliInput = {
 
 function routeIds() {
   return (clawPersistentSurfaceRegistry.routes ?? []).map((route) => route.id);
+}
+
+function nodeIds() {
+  return clawPersistentSurfaceRegistry.nodes.map((node) => node.id);
 }
 
 function remoteRoutes() {
@@ -61,17 +70,81 @@ function missing(input: RemoteSyncCliInput, usage: string): number {
 }
 
 function conformancePayload() {
-  const routes = routeIds();
-  const missingRoutes = remoteSyncRequiredRouteIds.filter((routeId) => !routes.includes(routeId));
-  return {
-    status: missingRoutes.length === 0 ? "baseline_registered" : "baseline_incomplete",
-    decisions: remoteSyncRequiredDecisionIds.map((decisionId) => ({ decisionId, status: "must_verify_before_goal_completion" })),
-    requiredRoutes: remoteSyncRequiredRouteIds.map((routeId) => ({ routeId, registered: routes.includes(routeId) })),
-    missingRoutes,
-    hostedSelfHostedParity: "required",
-    trustModes: ["sovereign_e2e_tunnel", "governed_gateway"],
-    transportContract: "transport_agnostic_iroh_v1_adapter",
-  };
+  return buildRemoteConformanceReport({ routeIds: routeIds(), nodeIds: nodeIds() });
+}
+
+function parseDriver(value: string | undefined): SyncDriver {
+  const driver = value ?? "skills";
+  if (
+    driver === "skills"
+    || driver === "memory_user_model"
+    || driver === "sessions"
+    || driver === "drive_files"
+    || driver === "blobs"
+    || driver === "sqlite_tables"
+    || driver === "sqlite_partial"
+    || driver === "sidecar"
+    || driver === "search_index"
+    || driver === "agent_config"
+    || driver === "workspace_state"
+  ) return driver;
+  throw new Error(`Invalid sync driver: ${driver}`);
+}
+
+function parseSnapshots(value: string | undefined, fallback: SyncObjectSnapshot[]): SyncObjectSnapshot[] {
+  if (!value) return fallback;
+  const parsed = JSON.parse(value) as unknown;
+  const entries = Array.isArray(parsed) ? parsed : [parsed];
+  return entries.map((entry) => syncObjectSnapshotSchema.parse(entry));
+}
+
+function manifestFromFlags(input: RemoteSyncCliInput) {
+  const driver = parseDriver(input.flags.driver);
+  return createSyncResourceManifest({
+    resourceId: input.flags["resource-id"] ?? "skills:default",
+    kind: input.flags.kind ?? driver,
+    ownerNodeId: input.flags["owner-node"] ?? "local",
+    driver,
+    allowedPeerNodeIds: input.flags["peer-node"] ? [input.flags["peer-node"]] : [],
+  });
+}
+
+function planFromFlags(input: RemoteSyncCliInput) {
+  const manifest = manifestFromFlags(input);
+  const now = input.flags.now ?? "2026-05-17T10:00:00.000Z";
+  const localNodeId = input.flags["owner-node"] ?? "local";
+  const peerNodeId = input.flags["peer-node"] ?? "peer";
+  const localSnapshots = parseSnapshots(input.flags["local-snapshot-json"], [{
+    resourceId: manifest.resourceId,
+    objectRef: input.flags["object-ref"] ?? "skill.review",
+    nodeId: localNodeId,
+    contentHash: input.flags["local-hash"] ?? "hash-local",
+    updatedAt: input.flags["local-updated-at"] ?? "2026-05-17T09:00:00.000Z",
+    deleted: false,
+  }]);
+  const peerSnapshots = parseSnapshots(input.flags["peer-snapshot-json"], [{
+    resourceId: manifest.resourceId,
+    objectRef: input.flags["object-ref"] ?? "skill.review",
+    nodeId: peerNodeId,
+    contentHash: input.flags["peer-hash"] ?? "hash-peer",
+    updatedAt: input.flags["peer-updated-at"] ?? "2026-05-17T09:05:00.000Z",
+    deleted: false,
+  }]);
+  return buildSyncPlan({
+    manifest,
+    actor: {
+      actorKind: "agent",
+      actorId: input.flags["actor-id"] ?? "agent.sync",
+      nodeId: localNodeId,
+      transport: input.flags.transport ?? "gateway",
+      trustMode: "governed_gateway",
+    },
+    localNodeId,
+    peerNodeId,
+    localSnapshots,
+    peerSnapshots,
+    now,
+  });
 }
 
 export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
@@ -107,13 +180,7 @@ export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
 export async function runSyncCli(input: RemoteSyncCliInput): Promise<number> {
   const command = input.positionals[1];
   if (command === "manifest") {
-    const manifest = createExampleSyncResourceManifest({
-      resourceId: input.flags["resource-id"] ?? "skills:default",
-      kind: input.flags.kind ?? "skills",
-      ownerNodeId: input.flags["owner-node"] ?? "local",
-      driver: (input.flags.driver ?? "skills") as Parameters<typeof createExampleSyncResourceManifest>[0]["driver"],
-      routeIds: ["sync.skills"],
-    });
+    const manifest = manifestFromFlags(input);
     return writeOutput(input, "sync", { manifest }, JSON.stringify(manifest, null, 2), command);
   }
   if (command === "status") {
@@ -121,12 +188,14 @@ export async function runSyncCli(input: RemoteSyncCliInput): Promise<number> {
     return writeOutput(input, "sync", payload, `${payload.status} resources=${payload.resources.length}`, command);
   }
   if (command === "plan" || command === "run") {
-    const payload = { mode: command === "run" ? "dry_run_required_initially" : "plan", writes: false, routes: remoteRoutes().filter((route) => route.id.startsWith("sync.")).map((route) => route.id) };
-    return writeOutput(input, "sync", payload, `${payload.mode} routes=${payload.routes.length}`, command);
+    const plan = planFromFlags(input);
+    const payload = { mode: command === "run" ? "dry_run" : "plan", ...plan };
+    return writeOutput(input, "sync", payload, `${payload.mode} actions=${plan.actions.length} conflicts=${plan.conflicts.length}`, command);
   }
   if (command === "conflicts") {
-    const payload = { conflicts: [], defaultPolicy: "detect_and_elevate", silentOverwriteAllowed: false };
-    return writeOutput(input, "sync", payload, "conflicts=0 defaultPolicy=detect_and_elevate", command);
+    const plan = planFromFlags(input);
+    const payload = { conflicts: plan.conflicts, defaultPolicy: "detect_and_elevate", silentOverwriteAllowed: false };
+    return writeOutput(input, "sync", payload, `conflicts=${plan.conflicts.length} defaultPolicy=detect_and_elevate`, command);
   }
   return missing(input, "sync manifest|status|plan|run|conflicts");
 }

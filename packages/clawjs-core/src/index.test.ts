@@ -14,6 +14,8 @@ import {
   artifactRecordSchema,
   auditEventSchema,
   blockerRecordSchema,
+  buildRemoteConformanceReport,
+  buildSyncPlan,
   capacityRecordSchema,
   clawCommandRequestSchema,
   clawCommandResponseSchema,
@@ -42,6 +44,7 @@ import {
   clawJsonSchemasV1,
   agentRecordSchema,
   createCodexReadOnlySourceDescriptor,
+  createSyncResourceManifest,
   createTtsPlaybackPlan,
   compatSnapshotSchema,
   createManifest,
@@ -82,8 +85,10 @@ import {
   remoteSecretLeaseSchema,
   remoteSyncRequiredDecisionIds,
   remoteSyncRequiredRouteIds,
+  routeIdForSyncDriver,
   searchClawCliRegistry,
   syncConflictSchema,
+  syncObjectSnapshotSchema,
   taskRecordSchema,
   workSessionRecordSchema,
   stripMarkdownForTts,
@@ -467,6 +472,89 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   }).success, true);
 
   assert.equal(remoteSyncRequiredDecisionIds.includes("sync_lateral_domains"), true);
+  assert.equal(routeIdForSyncDriver("skills"), "sync.skills");
+  assert.equal(routeIdForSyncDriver("memory_user_model"), "sync.memoryUserModel");
+  assert.equal(routeIdForSyncDriver("drive_files"), "sync.driveFiles");
+  assert.equal(routeIdForSyncDriver("sqlite_partial"), "sync.sqliteResources");
+
+  const plan = buildSyncPlan({
+    manifest: createSyncResourceManifest({
+      resourceId: "skills:default",
+      kind: "skills",
+      ownerNodeId: "node.mac",
+      driver: "skills",
+      allowedPeerNodeIds: ["node.server"],
+    }),
+    actor: {
+      actorKind: "agent",
+      actorId: "agent.sync",
+      nodeId: "node.mac",
+      transport: "gateway",
+      trustMode: "governed_gateway",
+    },
+    localNodeId: "node.mac",
+    peerNodeId: "node.server",
+    localSnapshots: [{
+      resourceId: "skills:default",
+      objectRef: "skill.review",
+      nodeId: "node.mac",
+      contentHash: "hash-a",
+      updatedAt: "2026-05-17T09:00:00.000Z",
+      deleted: false,
+    }],
+    peerSnapshots: [{
+      resourceId: "skills:default",
+      objectRef: "skill.review",
+      nodeId: "node.server",
+      contentHash: "hash-b",
+      updatedAt: "2026-05-17T09:05:00.000Z",
+      deleted: false,
+    }],
+    now: "2026-05-17T10:00:00.000Z",
+  });
+  assert.equal(plan.writes, false);
+  assert.equal(plan.actions.some((action) => action.action === "conflict" && action.reason === "diverged_snapshots_detect_and_elevate"), true);
+  assert.equal(plan.conflicts[0]?.status, "open");
+  assert.equal(plan.nextCursor?.cursor.includes("skill.review"), true);
+
+  const matchingPlan = buildSyncPlan({
+    manifest: plan.manifest,
+    actor: {
+      actorKind: "agent",
+      actorId: "agent.sync",
+      nodeId: "node.mac",
+      transport: "gateway",
+      trustMode: "governed_gateway",
+    },
+    localNodeId: "node.mac",
+    peerNodeId: "node.server",
+    localSnapshots: [{
+      resourceId: "skills:default",
+      objectRef: "skill.review",
+      nodeId: "node.mac",
+      contentHash: "hash-a",
+      updatedAt: "2026-05-17T09:00:00.000Z",
+      deleted: false,
+    }],
+    peerSnapshots: [{
+      resourceId: "skills:default",
+      objectRef: "skill.review",
+      nodeId: "node.server",
+      contentHash: "hash-a",
+      updatedAt: "2026-05-17T09:05:00.000Z",
+      deleted: false,
+    }],
+    now: "2026-05-17T10:00:00.000Z",
+  });
+  assert.equal(matchingPlan.actions[0]?.action, "noop");
+  assert.equal(matchingPlan.conflicts.length, 0);
+  assert.equal(syncObjectSnapshotSchema.safeParse(matchingPlan.localSnapshots).success, false);
+
+  const conformance = buildRemoteConformanceReport({
+    routeIds: remoteSyncRequiredRouteIds.map((routeId) => routeId),
+    nodeIds: ["claw.coordinator", "claw.gateway", "claw.connector", "claw.sync", "claw.transport.iroh", "claw.headlessHost", "claw.remoteCache"],
+  });
+  assert.equal(conformance.status, "baseline_registered");
 });
 
 test("CLI command registry is the source for stable CLI surface nodes", () => {
