@@ -48,7 +48,7 @@ let package = Package(
         ),
         .testTarget(
             name: "CommanderE2ETests",
-            dependencies: ["CommanderCore", "CommanderAdapters"]
+            dependencies: ["CommanderCore", "CommanderAdapters", "ClawHostKit"]
         ),
     ]
 )
