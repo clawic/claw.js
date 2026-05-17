@@ -126,6 +126,15 @@ test("dense data OS acceptance fixture covers required first-wave records and ga
     assert.ok(canonicalCollectionNames.has(record.collectionName), `${record.collectionName} must be canonical`);
   }
   for (const requiredCoverage of [
+    "person",
+    "shared_identity",
+    "identity_base",
+    "no_duplicate_identity",
+    "patient_person_link",
+    "participant_person_link",
+    "legal_client_person_link",
+    "learner_person_link",
+    "employee_person_link",
     "patient",
     "encounter",
     "lab_result",
@@ -220,6 +229,11 @@ test("dense data OS acceptance fixture covers required first-wave records and ga
   assert.ok(records.some((record) => record.id === "fixture_domain_system_health" && record.collectionName === "domain_systems"));
   assert.ok(records.some((record) => record.id === "fixture_domain_role_health_patient" && record.collectionName === "domain_roles"));
   assert.ok(records.some((record) => record.id === "fixture_domain_profile_health_patient" && record.collectionName === "domain_profiles"));
+  assert.ok(records.some((record) => record.id === "fixture_domain_profile_legal_legal_client" && record.collectionName === "domain_profiles"));
+  assert.ok(records.some((record) => record.id === "fixture_domain_profile_hr_employee" && record.collectionName === "domain_profiles"));
+  assert.ok(records.some((record) => record.id === "fixture_relation_person_patient" && record.collectionName === "entity_relations"));
+  assert.ok(records.some((record) => record.id === "fixture_relation_person_learner" && record.collectionName === "entity_relations"));
+  assert.ok(records.some((record) => record.id === "fixture_relation_person_employee" && record.collectionName === "entity_relations"));
   assert.ok(records.some((record) => record.id === "fixture_semantic_view_health_patient_timeline" && record.collectionName === "semantic_views"));
   assert.ok(records.some((record) => record.collectionName === "domain_intents" && record.covers.includes("intent_coverage")));
   assert.ok(records.some((record) => record.collectionName === "quality_gaps" && record.covers.includes("external_pending")));
