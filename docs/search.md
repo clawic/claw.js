@@ -462,7 +462,8 @@ audit` lists those derived records for admin/debug surfaces.
 the `claw-search-mcp` binary. Its tool surface includes query, source/status,
 source-state control, profiles, entrypoints, aliases, explain, action
 listing/execution with brokered host-approval plans, saved searches, monitor
-evaluation, monitor management, audit, and indexing-job tools.
+evaluation, monitor management, shard catalog inspection, audit, and
+indexing-job tools.
 
 The showcase app exposes `/search-index` as the Search Index admin surface. It
 shows framework and full-profile sources separately, keeps optional native/web/

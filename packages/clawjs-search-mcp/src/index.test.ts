@@ -20,6 +20,7 @@ test("Search MCP exposes profile, entrypoint, and explain tools", () => {
       "search.sources.list",
       "search.sources.set_state",
       "search.status",
+      "search.shards.list",
       "search.profiles.list",
       "search.entrypoints.list",
       "search.aliases.list",
@@ -104,7 +105,25 @@ test("Search MCP exposes profile, entrypoint, and explain tools", () => {
       type: "command",
       title: "search",
       body: "search help",
+      shard: "hot",
+      fragments: [{ id: "commands:search:usage", title: "usage", body: "search usage", sortOrder: 0 }],
     });
+    const shardsTool = tools.find((tool) => tool.name === "search.shards.list");
+    const shards = shardsTool?.handler({ source: "commands" }) as {
+      state: string;
+      shards: Array<{ source: string; domain: string; shard: string; state: string; documentCount: number; fragmentCount: number }>;
+    };
+    assert.equal(shards.state, "ready");
+    assert.equal(shards.shards[0]?.source, "commands");
+    assert.equal(shards.shards[0]?.domain, "commands");
+    assert.equal(shards.shards[0]?.shard, "hot");
+    assert.equal(shards.shards[0]?.state, "active");
+    assert.equal(shards.shards[0]?.documentCount, 1);
+    assert.equal(shards.shards[0]?.fragmentCount, 1);
+    const emptyShards = shardsTool?.handler({ domain: "missing" }) as { state: string; shards: unknown[] };
+    assert.equal(emptyShards.state, "empty");
+    assert.deepEqual(emptyShards.shards, []);
+
     store.saveSearch({ id: "saved-search", name: "Search command", query: { query: "search", domains: ["commands"] } });
     store.saveMonitor({ id: "monitor-search", savedSearchId: "saved-search", name: "Search monitor", cadence: "hourly" });
     const evaluateTool = tools.find((tool) => tool.name === "search.monitors.evaluate");

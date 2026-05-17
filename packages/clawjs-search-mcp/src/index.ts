@@ -107,6 +107,15 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
       },
     },
     { name: "search.status", description: "List Search source status rows.", inputSchema: { type: "object", properties: {} }, handler: () => store.sourceStatus() },
+    {
+      name: "search.shards.list",
+      description: "List Search shard catalog rows for Search Index administration.",
+      inputSchema: { type: "object", properties: { source: { type: "string" }, domain: { type: "string" } } },
+      handler: (p) => {
+        const shards = store.listShards({ source: stringParam(p.source), domain: stringParam(p.domain) });
+        return { state: shards.length ? "ready" : "empty", shards };
+      },
+    },
     { name: "search.profiles.list", description: "List Search profiles and default enablement.", inputSchema: { type: "object", properties: {} }, handler: () => ({ profiles: SEARCH_PROFILES }) },
     {
       name: "search.entrypoints.list",
