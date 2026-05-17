@@ -20,7 +20,7 @@ export const WHATSAPP_ACTION_SLUGS = [
   "mark-message-read",
 ] as const;
 
-export type WhatsAppRuntimeOperation =
+type WhatsAppRuntimeOperation =
   | "verify-phone-number"
   | "send-text-message"
   | "send-image-message"

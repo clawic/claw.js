@@ -5,7 +5,7 @@ import type {
   ConnectorOperationDefinition,
 } from "./types.ts";
 
-export type StripeSourceOperation = "event";
+type StripeSourceOperation = "event";
 
 export function isStripeSourceOperationSupported(operationId: string): boolean {
   return stripeSourceOperation(operationId) !== null;

@@ -24,7 +24,7 @@ export const SLACK_SOURCE_OPERATION_SLUGS = [
   "tokens-revoked",
 ] as const;
 
-export type SlackSourceOperation = typeof SLACK_SOURCE_OPERATION_SLUGS[number];
+type SlackSourceOperation = typeof SLACK_SOURCE_OPERATION_SLUGS[number];
 
 const SLACK_SOURCE_OPERATION_SET = new Set<string>(SLACK_SOURCE_OPERATION_SLUGS);
 const SLACK_SOURCE_ALIASES: Record<string, SlackSourceOperation> = {

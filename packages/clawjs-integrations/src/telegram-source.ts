@@ -6,13 +6,13 @@ export type TelegramSourceKind =
   | "channel-updates"
   | "new-bot-command-received";
 
-export interface TelegramUser {
+interface TelegramUser {
   id: number;
   first_name?: string;
   username?: string;
 }
 
-export interface TelegramChat {
+interface TelegramChat {
   id: number;
   title?: string;
 }

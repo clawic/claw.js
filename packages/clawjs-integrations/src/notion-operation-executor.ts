@@ -6,7 +6,7 @@ import type {
   IntegrationJson,
 } from "./types.ts";
 
-export type NotionRuntimeOperation =
+type NotionRuntimeOperation =
   | "search"
   | "get-block"
   | "list-block-children"

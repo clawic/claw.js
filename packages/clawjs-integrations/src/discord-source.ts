@@ -5,7 +5,7 @@ import type {
   ConnectorOperationDefinition,
 } from "./types.ts";
 
-export type DiscordSourceOperation =
+type DiscordSourceOperation =
   | "event"
   | "hello"
   | "ready"

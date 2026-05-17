@@ -90,6 +90,3 @@ export const telegramAdapter: IntegrationAdapter = {
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
-
-// Re-export for callers that only need the outbound message type.
-export type { IntegrationOutboundMessage };

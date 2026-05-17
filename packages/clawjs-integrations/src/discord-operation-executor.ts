@@ -58,7 +58,7 @@ import {
   auditHeaders,
 } from "./discord-operation-values.ts";
 
-export type DiscordRuntimeOperation =
+type DiscordRuntimeOperation =
   | "get-current-user"
   | "get-user"
   | "modify-current-user"

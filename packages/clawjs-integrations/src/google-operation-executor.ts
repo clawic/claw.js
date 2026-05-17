@@ -21,7 +21,7 @@ export const GOOGLE_ACTION_SPECS = [
 ] as const satisfies readonly GoogleOperationSpec[];
 
 export const GOOGLE_ACTION_SLUGS = GOOGLE_ACTION_SPECS.map((spec) => spec.slug);
-export type GoogleRuntimeOperation = typeof GOOGLE_ACTION_SLUGS[number];
+type GoogleRuntimeOperation = typeof GOOGLE_ACTION_SLUGS[number];
 
 const GOOGLE_SPEC_BY_SLUG = new Map(GOOGLE_ACTION_SPECS.map((spec) => [spec.slug, spec]));
 

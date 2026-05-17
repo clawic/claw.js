@@ -23,7 +23,7 @@ export const GITLAB_SOURCE_SLUGS = [
   "emoji",
 ] as const;
 
-export type GitLabSourceOperation = typeof GITLAB_SOURCE_SLUGS[number];
+type GitLabSourceOperation = typeof GITLAB_SOURCE_SLUGS[number];
 
 const GITLAB_SOURCE_OPERATIONS = new Set<GitLabSourceOperation>(GITLAB_SOURCE_SLUGS);
 

@@ -16,7 +16,7 @@ export const HUBSPOT_SOURCE_SLUGS = [
   "conversation-event",
 ] as const;
 
-export type HubSpotSourceOperation = typeof HUBSPOT_SOURCE_SLUGS[number];
+type HubSpotSourceOperation = typeof HUBSPOT_SOURCE_SLUGS[number];
 
 const HUBSPOT_SOURCE_OPERATIONS = new Set<string>(HUBSPOT_SOURCE_SLUGS);
 

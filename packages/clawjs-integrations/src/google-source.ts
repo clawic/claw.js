@@ -15,7 +15,7 @@ export const GOOGLE_SOURCE_SLUGS = [
   "sheets-change",
 ] as const;
 
-export type GoogleSourceOperation = typeof GOOGLE_SOURCE_SLUGS[number];
+type GoogleSourceOperation = typeof GOOGLE_SOURCE_SLUGS[number];
 
 const GOOGLE_SOURCE_SET = new Set<string>(GOOGLE_SOURCE_SLUGS);
 

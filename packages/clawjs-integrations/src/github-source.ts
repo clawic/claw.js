@@ -29,7 +29,7 @@ export const GITHUB_SOURCE_SLUGS = [
   "member",
 ] as const;
 
-export type GitHubSourceOperation = typeof GITHUB_SOURCE_SLUGS[number];
+type GitHubSourceOperation = typeof GITHUB_SOURCE_SLUGS[number];
 
 const GITHUB_SOURCE_SET = new Set<string>(GITHUB_SOURCE_SLUGS);
 const GITHUB_SOURCE_ALIASES: Record<string, GitHubSourceOperation> = {

@@ -25,7 +25,7 @@ export const AIRTABLE_ACTION_SPECS = [
 ] as const satisfies readonly AirtableOperationSpec[];
 
 export const AIRTABLE_ACTION_SLUGS = AIRTABLE_ACTION_SPECS.map((spec) => spec.slug);
-export type AirtableRuntimeOperation = typeof AIRTABLE_ACTION_SLUGS[number];
+type AirtableRuntimeOperation = typeof AIRTABLE_ACTION_SLUGS[number];
 
 const AIRTABLE_SPEC_BY_SLUG = new Map(AIRTABLE_ACTION_SPECS.map((spec) => [spec.slug, spec]));
 

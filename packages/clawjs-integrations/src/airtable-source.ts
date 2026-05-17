@@ -15,7 +15,7 @@ export const AIRTABLE_SOURCE_SLUGS = [
   "webhook-payload",
 ] as const;
 
-export type AirtableSourceOperation = typeof AIRTABLE_SOURCE_SLUGS[number];
+type AirtableSourceOperation = typeof AIRTABLE_SOURCE_SLUGS[number];
 
 const AIRTABLE_SOURCE_SET = new Set<string>(AIRTABLE_SOURCE_SLUGS);
 

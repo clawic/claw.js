@@ -108,7 +108,7 @@ export const SALESFORCE_ACTION_SLUGS = [
   ...SALESFORCE_STANDARD_OBJECTS.flatMap((object) => OBJECT_ACTIONS.map((action) => `${action}-${object.singular}`)),
 ] as const;
 
-export type SalesforceRuntimeOperation = typeof SALESFORCE_ACTION_SLUGS[number];
+type SalesforceRuntimeOperation = typeof SALESFORCE_ACTION_SLUGS[number];
 
 const SALESFORCE_OPERATION_SET = new Set<string>(SALESFORCE_ACTION_SLUGS);
 const SALESFORCE_OBJECT_BY_SINGULAR = new Map<string, string>(SALESFORCE_STANDARD_OBJECTS.map((object) => [object.singular, object.object]));

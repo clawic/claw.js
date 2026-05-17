@@ -18,7 +18,7 @@ export const SALESFORCE_SOURCE_SLUGS = [
   "real-time-event-monitoring",
 ] as const;
 
-export type SalesforceSourceOperation = typeof SALESFORCE_SOURCE_SLUGS[number];
+type SalesforceSourceOperation = typeof SALESFORCE_SOURCE_SLUGS[number];
 
 const SALESFORCE_SOURCE_OPERATIONS = new Set<string>(SALESFORCE_SOURCE_SLUGS);
 

@@ -81,7 +81,7 @@ export const HUBSPOT_ACTION_SLUGS = [
   "delete-webhook-subscription",
 ] as const;
 
-export type HubSpotRuntimeOperation = typeof HUBSPOT_ACTION_SLUGS[number];
+type HubSpotRuntimeOperation = typeof HUBSPOT_ACTION_SLUGS[number];
 
 const HUBSPOT_OPERATION_SET = new Set<string>(HUBSPOT_ACTION_SLUGS);
 const CRM_OBJECT_SET = new Set<string>(HUBSPOT_CRM_OBJECTS);

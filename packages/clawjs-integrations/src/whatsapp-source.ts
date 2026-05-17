@@ -5,7 +5,7 @@ import type {
   ConnectorOperationDefinition,
 } from "./types.ts";
 
-export type WhatsAppSourceOperation = "new-message" | "message-status";
+type WhatsAppSourceOperation = "new-message" | "message-status";
 
 export function isWhatsAppSourceOperationSupported(operationId: string): boolean {
   return whatsAppSourceOperation(operationId) !== null;

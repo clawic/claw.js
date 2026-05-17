@@ -201,5 +201,3 @@ export async function runConnectorOperation(
     }
   }
 }
-
-export type { ConnectorCatalogError };

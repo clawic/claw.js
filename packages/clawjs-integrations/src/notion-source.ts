@@ -5,7 +5,7 @@ import type {
   ConnectorOperationDefinition,
 } from "./types.ts";
 
-export type NotionSourceOperation =
+type NotionSourceOperation =
   | "page-event"
   | "data-source-event"
   | "comment-event"

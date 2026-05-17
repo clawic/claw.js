@@ -380,5 +380,3 @@ function isoTimestamp(value: Date | string | undefined): string {
   if (typeof value === "string") return value;
   return (value ?? new Date()).toISOString();
 }
-
-export type { ConnectorCatalogError };
