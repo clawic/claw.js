@@ -69,6 +69,7 @@ export { COMPLIANCE_FAMILY } from "./compliance/index.ts";
 export { IOT_FAMILY } from "./iot/index.ts";
 export { CONSTRUCTION_FAMILY } from "./construction/index.ts";
 export { ELN_FAMILY } from "./eln/index.ts";
+export { TRANSPORT_FAMILY } from "./transport/index.ts";
 export { TRAVEL_FAMILY } from "./travel/index.ts";
 export { RELATIONSHIPS_FAMILY } from "./relationships/index.ts";
 export { FAMILY_CARE_FAMILY } from "./family_care/index.ts";

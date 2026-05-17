@@ -1,0 +1,41 @@
+import type { BuiltinCollectionDefinition } from "../_types.ts";
+
+export const FREIGHT_RATES: BuiltinCollectionDefinition = {
+  name: "freight_rates",
+  displayName: "Freight Rates",
+  family: "transport",
+  aliases: ["freight-rate", "freight-rates", "freight_rate", "freight_rates", "transport-rate", "transport-rates"],
+  catalog: {
+    purpose: "Freight-rate center for carrier pricing, lanes, service levels, effective windows, evidence, and gaps.",
+    evidence: ["human_recognizable", "market_validated", "multi_domain_reuse", "agent_useful"],
+    relationGuidance: "Link rates to carrierId and companyId; shipments may reference rates through relations or source evidence as pricing matures.",
+    notes: "Rates are planning/pricing data and do not replace invoices, payments, or accounting transactions.",
+  },
+  fields: [
+    { name: "title", type: "text", required: true, requiredReason: "identity", aliases: ["name", "rateName"] },
+    { name: "carrierId", type: "relation", relation: { collectionName: "carriers" } },
+    { name: "companyId", type: "relation", relation: { collectionName: "companies" } },
+    { name: "mode", type: "select", options: ["parcel", "ltl", "ftl", "ocean", "air", "rail", "courier", "multimodal", "other", "unknown"] },
+    { name: "origin", type: "text" },
+    { name: "destination", type: "text" },
+    { name: "serviceLevel", type: "text" },
+    { name: "amountCents", type: "number", min: 0 },
+    { name: "currency", type: "currency" },
+    { name: "effectiveAt", type: "date" },
+    { name: "expiresAt", type: "date" },
+    { name: "status", type: "select", options: ["draft", "active", "expired", "blocked", "unknown"] },
+    { name: "source", type: "json" },
+    { name: "links", type: "json" },
+    { name: "evidence", type: "json" },
+    { name: "qualityGaps", type: "json" },
+    { name: "metadata", type: "json" },
+    { name: "archivedAt", type: "date" },
+  ],
+  indexes: [
+    { name: "freight_rates_title_idx", fields: ["title"] },
+    { name: "freight_rates_carrier_idx", fields: ["carrierId"] },
+    { name: "freight_rates_company_idx", fields: ["companyId"] },
+    { name: "freight_rates_lane_idx", fields: ["origin", "destination"] },
+    { name: "freight_rates_status_idx", fields: ["status"] },
+  ],
+};

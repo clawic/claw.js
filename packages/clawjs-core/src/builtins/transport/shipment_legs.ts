@@ -1,0 +1,40 @@
+import type { BuiltinCollectionDefinition } from "../_types.ts";
+
+export const SHIPMENT_LEGS: BuiltinCollectionDefinition = {
+  name: "shipment_legs",
+  displayName: "Shipment Legs",
+  family: "transport",
+  aliases: ["shipment-leg", "shipment-legs", "shipment_leg", "shipment_legs", "freight-leg", "freight-legs"],
+  catalog: {
+    purpose: "Shipment-leg center for multi-stop or multi-carrier execution, timing, location, tracking, evidence, and gaps.",
+    evidence: ["human_recognizable", "market_validated", "multi_domain_reuse", "agent_useful"],
+    relationGuidance: "Every leg belongs to a shipment and may override carrier, origin, destination, and timing for that segment.",
+    notes: "Legs are execution events for a shipment; they do not replace warehouse stock movements.",
+  },
+  fields: [
+    { name: "title", type: "text", required: true, requiredReason: "identity", aliases: ["name", "legName"] },
+    { name: "shipmentId", type: "relation", required: true, requiredReason: "relation_integrity", relation: { collectionName: "shipments" } },
+    { name: "carrierId", type: "relation", relation: { collectionName: "carriers" } },
+    { name: "sequence", type: "number", min: 0 },
+    { name: "status", type: "select", options: ["planned", "tendered", "in_transit", "delivered", "exception", "cancelled", "unknown"] },
+    { name: "originAddress", type: "address" },
+    { name: "destinationAddress", type: "address" },
+    { name: "plannedDepartAt", type: "date" },
+    { name: "actualDepartAt", type: "date" },
+    { name: "plannedArriveAt", type: "date" },
+    { name: "actualArriveAt", type: "date" },
+    { name: "trackingNumber", type: "text" },
+    { name: "source", type: "json" },
+    { name: "links", type: "json" },
+    { name: "evidence", type: "json" },
+    { name: "qualityGaps", type: "json" },
+    { name: "metadata", type: "json" },
+    { name: "archivedAt", type: "date" },
+  ],
+  indexes: [
+    { name: "shipment_legs_shipment_idx", fields: ["shipmentId"] },
+    { name: "shipment_legs_carrier_idx", fields: ["carrierId"] },
+    { name: "shipment_legs_status_idx", fields: ["status"] },
+    { name: "shipment_legs_sequence_idx", fields: ["shipmentId", "sequence"] },
+  ],
+};
