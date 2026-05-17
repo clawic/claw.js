@@ -29,7 +29,7 @@ checkRequiredSource(
 checkRequiredSource(
   "packages/clawjs-mcp/src/app.ts",
   [
-    "assertMCPToolControlPlane({ server, tool, controlPlane: body.controlPlane })",
+    "assertMCPToolControlPlane({ server, tool, controlPlane: body.controlPlane, agentPolicy: body.agentPolicy })",
     "protocol.callTool(tool.toolName, body.args ?? {})",
   ],
 );
