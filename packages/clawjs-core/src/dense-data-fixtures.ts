@@ -102,6 +102,27 @@ export const clawDenseDataAcceptanceFixture: ClawDenseDataAcceptanceFixture = {
       data: { vehicleId: "fixture_vehicle_ev", policyNumber: "AUTO-001", provider: "Example Mutual", startedAt: "2026-05-17T00:00:00.000Z", premiumCents: 60000, coverage: "Vehicle liability" },
     },
     {
+      id: "fixture_vehicle_maintenance_ev",
+      collectionName: "vehicle_maintenance",
+      label: "EV annual service",
+      covers: ["vehicle_maintenance", "maintenance", "cmms", "vehicle_timeline", "document_evidence"],
+      data: { vehicleId: "fixture_vehicle_ev", title: "EV annual service", performedAt: "2026-05-20T00:00:00.000Z", performedBy: "Example Garage", costCents: 15000 },
+    },
+    {
+      id: "fixture_appliance_washer",
+      collectionName: "appliances",
+      label: "Washer",
+      covers: ["appliance", "maintenance", "cmms"],
+      data: { name: "Washer", brand: "Example", model: "W1", room: "Laundry" },
+    },
+    {
+      id: "fixture_appliance_maintenance_washer",
+      collectionName: "appliance_maintenance",
+      label: "Washer service",
+      covers: ["appliance_maintenance", "maintenance", "cmms", "document_evidence"],
+      data: { applianceId: "fixture_appliance_washer", title: "Washer service", performedAt: "2026-05-21T00:00:00.000Z", performedBy: "Example Repair", costCents: 9000 },
+    },
+    {
       id: "fixture_patient_ada",
       collectionName: "patients",
       label: "Ada Patient",

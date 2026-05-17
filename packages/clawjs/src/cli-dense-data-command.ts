@@ -301,6 +301,7 @@ function materializedSemanticViewForIntent(
   if (semanticView.id === "asset.timeline") return materializedAssetTimeline(input, intent, semanticView);
   if (semanticView.id === "property.timeline") return materializedPropertyTimeline(input, intent, semanticView);
   if (semanticView.id === "insurance_policy.timeline") return materializedInsurancePolicyTimeline(input, intent, semanticView);
+  if (semanticView.id === "vehicle.timeline") return materializedVehicleTimeline(input, intent, semanticView);
   return undefined;
 }
 
@@ -810,6 +811,65 @@ function materializedInsurancePolicyTimeline(
       evidenceSourceId: record.evidenceSourceId,
     })),
     sourceCollections: ["insurance_policies", "important_receipts", "evidence_sources", "quality_gaps", "provenance_events"],
+    partial: qualityGaps.length > 0,
+    intentStatus: intent.status,
+  };
+}
+
+function materializedVehicleTimeline(
+  input: DenseDataCliInput,
+  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
+) {
+  const vehicleId = input.positionals[1];
+  if (!vehicleId) return undefined;
+  const namespaceId = input.flags.namespace ?? "main";
+  const store = openDenseDataStore(input.workspaceRoot);
+  store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
+  const vehicle = store.getRecord(namespaceId, "vehicles", vehicleId);
+  if (!vehicle) return undefined;
+
+  const maintenanceRecords = store.listRecords(namespaceId, "vehicle_maintenance", { filter: { vehicleId } }).items;
+  const insurancePolicies = store.listRecords(namespaceId, "vehicle_insurance_policies", { filter: { vehicleId } }).items;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "vehicles", recordId: vehicleId } }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "vehicles", targetId: vehicleId } }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "vehicles", targetId: vehicleId } }).items;
+  const items = [
+    timelineItem(vehicle, "vehicle", vehicle.id, vehicle.name ?? vehicle.plate ?? vehicle.id, vehicle.createdAt, vehicle),
+    ...maintenanceRecords.map((record) => timelineItem(record, "vehicle_maintenance", record.id, record.title ?? record.id, record.performedAt ?? record.createdAt, record)),
+    ...insurancePolicies.map((record) => timelineItem(record, "vehicle_insurance_policy", record.id, record.policyNumber ?? record.provider ?? record.id, record.startedAt ?? record.createdAt, record)),
+    ...evidence.map((record) => timelineItem(record, "evidence", record.id, record.label ?? record.id, record.capturedAt ?? record.createdAt, record)),
+    ...qualityGaps.map((record) => timelineItem(record, "quality_gap", record.id, record.label ?? record.id, record.createdAt, record)),
+    ...provenance.map((record) => timelineItem(record, "provenance", record.id, record.eventType ?? record.id, record.occurredAt ?? record.createdAt, record)),
+  ].sort((left, right) => String(left.occurredAt).localeCompare(String(right.occurredAt)));
+
+  return {
+    id: semanticView.id,
+    subject: { collectionName: "vehicles", id: vehicle.id, label: vehicle.name ?? vehicle.plate ?? vehicle.id },
+    summary: {
+      maintenanceRecords: maintenanceRecords.length,
+      insurancePolicies: insurancePolicies.length,
+      evidenceSources: evidence.length,
+      qualityGaps: qualityGaps.length,
+    },
+    itemCount: items.length,
+    items,
+    records: {
+      vehicle,
+      maintenanceRecords,
+      insurancePolicies,
+      evidence,
+      provenance,
+    },
+    gaps: qualityGaps.map((record) => ({
+      id: record.id,
+      label: record.label,
+      status: record.status,
+      gapKind: record.gapKind,
+      severity: record.severity,
+      evidenceSourceId: record.evidenceSourceId,
+    })),
+    sourceCollections: ["vehicles", "vehicle_maintenance", "vehicle_insurance_policies", "evidence_sources", "quality_gaps", "provenance_events"],
     partial: qualityGaps.length > 0,
     intentStatus: intent.status,
   };
@@ -1444,6 +1504,12 @@ function denseDbFlags(flags: Record<string, string>, collectionName: string): Re
   if (collectionName === "vehicle_insurance_policies" && flags.vehicle && !flags["vehicle-id"]) {
     nextFlags = { ...nextFlags, "vehicle-id": flags.vehicle };
   }
+  if (collectionName === "vehicle_maintenance" && flags.vehicle && !flags["vehicle-id"]) {
+    nextFlags = { ...nextFlags, "vehicle-id": flags.vehicle };
+  }
+  if (collectionName === "appliance_maintenance" && flags.appliance && !flags["appliance-id"]) {
+    nextFlags = { ...nextFlags, "appliance-id": flags.appliance };
+  }
   if (collectionName === "transactions" && flags.account && !flags["account-id"]) {
     nextFlags = { ...nextFlags, "account-id": flags.account };
   }
@@ -1578,6 +1644,26 @@ function nestedDenseDbRoute(input: DenseDataCliInput): Parameters<typeof runMagi
       offers: "property_offers",
       inspection: "property_inspections",
       inspections: "property_inspections",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "vehicle",
+    relationFlag: "vehicle-id",
+    relationField: "vehicleId",
+    collections: {
+      maintenance: "vehicle_maintenance",
+      "maintenance-record": "vehicle_maintenance",
+      "maintenance-records": "vehicle_maintenance",
+      "insurance-policy": "vehicle_insurance_policies",
+      "insurance-policies": "vehicle_insurance_policies",
+    },
+  }) ?? nestedParentDbRoute(input, {
+    parentCommand: "appliance",
+    relationFlag: "appliance-id",
+    relationField: "applianceId",
+    collections: {
+      maintenance: "appliance_maintenance",
+      "maintenance-record": "appliance_maintenance",
+      "maintenance-records": "appliance_maintenance",
     },
   }) ?? nestedParentDbRoute(input, {
     parentCommand: "sample",

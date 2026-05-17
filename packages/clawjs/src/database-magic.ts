@@ -597,6 +597,10 @@ function applyDefaults(collectionName: string, payload: Record<string, unknown>,
     case "property_inspections":
       payload.inspectedAt ??= new Date().toISOString();
       break;
+    case "vehicle_maintenance":
+    case "appliance_maintenance":
+      payload.performedAt ??= new Date().toISOString();
+      break;
     case "assets":
       payload.status ??= "active";
       break;
