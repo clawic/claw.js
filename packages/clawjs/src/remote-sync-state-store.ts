@@ -19,6 +19,7 @@ import {
   remoteSecretLeaseSchema,
   remoteSecretProviderReceiptSchema,
   remoteTransportHandshakeReceiptSchema,
+  syncDriverApplicationReceiptSchema,
   syncCursorSchema,
   syncQueueEntrySchema,
   syncResourceManifestSchema,
@@ -37,6 +38,7 @@ import {
   type RemoteSecretProviderReceipt,
   type RemoteTransportHandshakeReceipt,
   type SyncCursor,
+  type SyncDriverApplicationReceipt,
   type SyncPlanResult,
   type SyncQueueEntry,
   type SyncReconciliationResult,
@@ -45,7 +47,7 @@ import {
 
 export type RemoteSyncStateAuditEvent = {
   eventId: string;
-  eventType: "sync.manifest.recorded" | "sync.queue.enqueued" | "sync.queue.reconciled" | "sync.cache.recorded" | "remote.compat.recorded" | "mesh.invitation.recorded" | "mesh.invitation.accepted" | "mesh.share.recorded" | "mesh.revocation.recorded" | "secret.lease.issued" | "secret.provider.recorded" | "transport.handshake.recorded" | "node.trust.recorded" | "gateway.deployment.recorded" | "gateway.agent_service.recorded" | "gateway.audit.recorded";
+  eventType: "sync.manifest.recorded" | "sync.queue.enqueued" | "sync.queue.reconciled" | "sync.driver_application.recorded" | "sync.cache.recorded" | "remote.compat.recorded" | "mesh.invitation.recorded" | "mesh.invitation.accepted" | "mesh.share.recorded" | "mesh.revocation.recorded" | "secret.lease.issued" | "secret.provider.recorded" | "transport.handshake.recorded" | "node.trust.recorded" | "gateway.deployment.recorded" | "gateway.agent_service.recorded" | "gateway.audit.recorded";
   targetId: string;
   createdAt: string;
   coordinatorSignatureId?: string;
@@ -76,6 +78,7 @@ export type RemoteSyncState = {
   manifests: Record<string, SyncResourceManifest>;
   queues: Record<string, SyncQueueEntry[]>;
   cursors: Record<string, SyncCursor>;
+  applications: Record<string, SyncDriverApplicationReceipt>;
   remoteCache: {
     snapshots: Record<string, RemoteClientCacheSnapshot>;
   };
@@ -122,6 +125,7 @@ function emptyState(): RemoteSyncState {
     manifests: {},
     queues: {},
     cursors: {},
+    applications: {},
     remoteCache: {
       snapshots: {},
     },
@@ -275,6 +279,13 @@ function parseState(raw: unknown): RemoteSyncState {
   if (cursors && typeof cursors === "object" && !Array.isArray(cursors)) {
     for (const [resourceId, cursor] of Object.entries(cursors)) {
       state.cursors[resourceId] = syncCursorSchema.parse(cursor);
+    }
+  }
+
+  const applications = input.applications;
+  if (applications && typeof applications === "object" && !Array.isArray(applications)) {
+    for (const [receiptId, receiptInput] of Object.entries(applications)) {
+      state.applications[receiptId] = syncDriverApplicationReceiptSchema.parse(receiptInput);
     }
   }
 
@@ -492,6 +503,17 @@ export class RemoteSyncStateStore {
     const coordinatorSignature = appendAudit(state, "sync.queue.reconciled", manifest.resourceId, now, reconciliation, input.signer);
     this.write(state);
     return { reconciliation, statePath: this.statePath, durable: true, ...(coordinatorSignature ? { coordinatorSignature } : {}) };
+  }
+
+  recordSyncDriverApplicationReceipt(receiptInput: SyncDriverApplicationReceipt, input: { now?: string; signer: RemoteSyncCoordinatorSigner }): RemoteSyncStateWriteResult<{ receipt: SyncDriverApplicationReceipt }> {
+    const receipt = syncDriverApplicationReceiptSchema.parse(receiptInput);
+    const now = input.now ?? receipt.createdAt;
+    const state = this.read();
+    state.applications[receipt.receiptId] = receipt;
+    state.updatedAt = now;
+    const coordinatorSignature = appendAudit(state, "sync.driver_application.recorded", receipt.receiptId, now, receipt, input.signer);
+    this.write(state);
+    return { receipt, statePath: this.statePath, durable: true, coordinatorSignature };
   }
 
   recordRemoteCacheSnapshot(snapshotInput: RemoteClientCacheSnapshot, input: { now?: string; signer?: RemoteSyncCoordinatorSigner } = {}): RemoteSyncStateWriteResult<{ snapshot: RemoteClientCacheSnapshot }> {
