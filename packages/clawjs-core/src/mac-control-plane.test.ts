@@ -8,6 +8,8 @@ import {
   MAC_PERMISSION_PACKS,
   assertMacControlPlaneRegistryComplete,
   buildMacActionPlan,
+  buildMacActionReceipt,
+  evaluateMacActionBroker,
   clawContractVersionV1,
   clawMacControlPlaneRegistry,
   findMacAtlasCapability,
@@ -15,6 +17,7 @@ import {
   macActionPlanSchema,
   macActionReceiptSchema,
   macActionRequestSchema,
+  macApprovalRequestSchema,
   macPermissionStateSchema,
   macPolicyGrantSchema,
   macRoleAssignmentSchema,
@@ -256,4 +259,111 @@ test("Mac action planner builds the shared dry-run contract for CLI, MCP, API an
   });
   assert.equal(blocked.executable, false);
   assert.deepEqual(blocked.blockedReasons, ["coverage_state:planned", "permission_blocked:mac.permission.screen_capture"]);
+});
+
+test("Mac action broker blocks unsafe plans and emits redacted receipts before host execution", () => {
+  const host = {
+    hostId: "host.local",
+    bundleId: "com.example.Claw",
+    signingIdentity: "Developer ID Application: Example",
+    appVariant: "standalone",
+    appVersion: "1.0.0",
+  };
+  const actor = { kind: "agent" as const, id: "agent.codex", assignmentId: "assignment.mac", runId: "run.1" };
+  const request = macActionRequestSchema.parse({
+    schemaVersion: clawContractVersionV1,
+    requestId: "req.mac.broker.1",
+    capabilityId: "mac.wifi.connect",
+    actor,
+    host,
+    target: { kind: "wifi_network", name: "Office", selector: { ssid: "Office" } },
+    arguments: { secretRef: "secret_lease_wifi" },
+    dryRun: false,
+    reason: "Join the office network",
+  });
+  const plan = buildMacActionPlan({ request });
+
+  const approvalRequired = evaluateMacActionBroker({
+    request,
+    plan,
+    now: "2026-05-17T10:00:00.000Z",
+  });
+  assert.equal(approvalRequired.decision, "approval_required");
+  assert.deepEqual(approvalRequired.reasons, ["approval_required"]);
+  assert.equal(approvalRequired.receipt?.result, "planned");
+  assert.equal(approvalRequired.auditEvent?.id, approvalRequired.receipt?.auditId);
+  assert.equal(approvalRequired.receipt?.redaction.level, "high");
+  assert.deepEqual(approvalRequired.receipt?.secretRefs, ["secret_lease_wifi"]);
+  assert.equal(approvalRequired.receipt?.redaction.fields.includes("arguments"), true);
+  assert.equal(approvalRequired.receipt?.redaction.fields.includes("target.selector"), true);
+
+  const approved = macApprovalRequestSchema.parse({
+    schemaVersion: clawContractVersionV1,
+    id: "macapproval_1",
+    actionRequest: request,
+    plan,
+    approverRoles: ["owner", "admin"],
+    status: "approved",
+    createdAt: "2026-05-17T09:59:00.000Z",
+    decidedAt: "2026-05-17T10:00:00.000Z",
+    decidedBy: { kind: "owner_cli", id: "owner.local", role: "owner" },
+  });
+  const allowed = evaluateMacActionBroker({ request, plan, approvals: [approved] });
+  assert.equal(allowed.decision, "allow");
+  assert.equal(allowed.receipt, undefined);
+  assert.equal(allowed.auditEvent, undefined);
+
+  const receipt = buildMacActionReceipt({
+    request,
+    plan,
+    result: "ok",
+    now: "2026-05-17T10:01:00.000Z",
+    beforeRef: "snap_before",
+    afterRef: "snap_after",
+  });
+  assert.equal(receipt.id, "macact_req_mac_broker_1_ok");
+  assert.equal(receipt.auditId, "macaudit_req_mac_broker_1_ok");
+  assert.deepEqual(receipt.secretRefs, ["secret_lease_wifi"]);
+});
+
+test("Mac action broker records blocked permission decisions without executing native code", () => {
+  const host = {
+    hostId: "host.local",
+    bundleId: "com.example.Claw",
+    signingIdentity: "Developer ID Application: Example",
+    appVariant: "embedded",
+    appVersion: "1.0.0",
+  };
+  const actor = { kind: "agent" as const, id: "agent.codex", assignmentId: "assignment.mac", runId: "run.2" };
+  const request = macActionRequestSchema.parse({
+    schemaVersion: clawContractVersionV1,
+    requestId: "req.mac.broker.blocked.1",
+    capabilityId: "mac.window.focus",
+    actor,
+    host,
+  });
+  const plan = buildMacActionPlan({
+    request,
+    permissionStates: [{
+      schemaVersion: clawContractVersionV1,
+      permissionId: "mac.permission.accessibility",
+      host,
+      osState: "restricted",
+      frameworkGrant: "not_granted",
+      requestedBefore: true,
+      canRequest: false,
+      source: "Central Mac Permission Broker",
+      lastCheckedAt: "2026-05-17T00:00:00.000Z",
+    }],
+  });
+  const decision = evaluateMacActionBroker({
+    request,
+    plan,
+    now: "2026-05-17T10:02:00.000Z",
+  });
+
+  assert.equal(decision.decision, "blocked");
+  assert.deepEqual(decision.reasons, ["permission_blocked:mac.permission.accessibility"]);
+  assert.equal(decision.receipt?.result, "blocked");
+  assert.equal(decision.auditEvent?.metadata.reasons instanceof Array, true);
 });

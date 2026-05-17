@@ -2429,11 +2429,17 @@ The docs check script validates that every current export from
 
 ## Mac Control Plane Exports
 
+    BuildMacActionAuditEventInput
     BuildMacActionPlanInput
+    BuildMacActionReceiptInput
+    buildMacActionAuditEvent
     assertMacControlPlaneRegistryComplete
     buildMacActionPlan
+    buildMacActionReceipt
     clawMacControlPlaneRegistry
     clawMacControlPlaneRegistryVersion
+    evaluateMacActionBroker
+    EvaluateMacActionBrokerInput
     findMacAtlasCapability
     listMacAtlasCapabilities
     listMacCommandRoots
@@ -2442,12 +2448,19 @@ The docs check script validates that every current export from
     MAC_CONTROL_COMMAND_ROOTS
     MAC_PERMISSION_CATALOG
     MAC_PERMISSION_PACKS
+    MacActionAuditEvent
+    macActionAuditEventSchema
+    MacActionBrokerDecision
+    macActionBrokerDecisionSchema
+    MacActionBrokerEvaluation
+    macActionBrokerEvaluationSchema
     MacActionPlan
     macActionPlanSchema
     MacActionReceipt
     macActionReceiptSchema
     MacActionRequest
     macActionRequestSchema
+    MacActionResult
     macActionResultSchema
     macActionTargetSchema
     macActorKindSchema

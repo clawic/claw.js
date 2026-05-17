@@ -25,6 +25,7 @@ export const macRoleSchema = z.enum(["owner", "admin", "operator", "viewer"]);
 export const macRevertLevelSchema = z.enum(["guaranteed", "best_effort", "none"]);
 export const macActionResultSchema = z.enum(["planned", "ok", "denied", "blocked", "error", "reverted"]);
 export const macApprovalStatusSchema = z.enum(["pending", "approved", "rejected", "expired", "revoked"]);
+export const macActionBrokerDecisionSchema = z.enum(["dry_run", "allow", "approval_required", "blocked"]);
 
 export const macActorSchema = z.object({
   kind: macActorKindSchema,
@@ -125,6 +126,40 @@ export const macActionReceiptSchema = z.object({
     fields: z.array(z.string().min(1)).default([]),
   }).default({ level: "high", fields: [] }),
   createdAt: z.string().min(1),
+});
+
+export const macActionAuditEventSchema = z.object({
+  schemaVersion: z.literal(clawContractVersionV1),
+  id: z.string().regex(/^macaudit_[a-zA-Z0-9_-]+$/),
+  receiptId: z.string().regex(/^macact_[a-zA-Z0-9_-]+$/),
+  requestId: z.string().min(1),
+  planId: z.string().min(1).optional(),
+  capabilityId: z.string().min(1),
+  actor: macActorSchema,
+  host: macHostIdentitySchema,
+  result: macActionResultSchema,
+  risk: macRiskTierSchema,
+  summary: z.string().min(1),
+  redaction: z.object({
+    level: z.enum(["high", "medium", "low"]),
+    fields: z.array(z.string().min(1)).default([]),
+  }),
+  metadata: z.record(z.unknown()).default({}),
+  createdAt: z.string().min(1),
+});
+
+export const macActionBrokerEvaluationSchema = z.object({
+  schemaVersion: z.literal(clawContractVersionV1),
+  decision: macActionBrokerDecisionSchema,
+  requestId: z.string().min(1),
+  planId: z.string().min(1),
+  capabilityId: z.string().min(1),
+  actor: macActorSchema,
+  host: macHostIdentitySchema,
+  reasons: z.array(z.string().min(1)).default([]),
+  approvalRequestIds: z.array(z.string().min(1)).default([]),
+  receipt: macActionReceiptSchema.optional(),
+  auditEvent: macActionAuditEventSchema.optional(),
 });
 
 export const macPermissionStateSchema = z.object({
@@ -231,9 +266,13 @@ export const macAtlasCapabilitySchema = z.object({
 
 export type MacRiskTier = z.infer<typeof macRiskTierSchema>;
 export type MacCoverageState = z.infer<typeof macCoverageStateSchema>;
+export type MacActionBrokerDecision = z.infer<typeof macActionBrokerDecisionSchema>;
+export type MacActionBrokerEvaluation = z.infer<typeof macActionBrokerEvaluationSchema>;
+export type MacActionAuditEvent = z.infer<typeof macActionAuditEventSchema>;
 export type MacActionRequest = z.infer<typeof macActionRequestSchema>;
 export type MacActionPlan = z.infer<typeof macActionPlanSchema>;
 export type MacActionReceipt = z.infer<typeof macActionReceiptSchema>;
+export type MacActionResult = z.infer<typeof macActionResultSchema>;
 export type MacPermissionState = z.infer<typeof macPermissionStateSchema>;
 export type MacPolicyGrant = z.infer<typeof macPolicyGrantSchema>;
 export type MacApprovalRequest = z.infer<typeof macApprovalRequestSchema>;
@@ -244,6 +283,36 @@ export interface BuildMacActionPlanInput {
   request: MacActionRequest;
   capability?: MacAtlasCapability;
   permissionStates?: MacPermissionState[];
+}
+
+export interface BuildMacActionReceiptInput {
+  request: MacActionRequest;
+  plan: MacActionPlan;
+  result: MacActionResult;
+  now?: string;
+  id?: string;
+  auditId?: string;
+  permissionSnapshotRefs?: string[];
+  beforeRef?: string;
+  afterRef?: string;
+  secretRefs?: string[];
+  redaction?: {
+    level: "high" | "medium" | "low";
+    fields?: string[];
+  };
+}
+
+export interface BuildMacActionAuditEventInput {
+  receipt: MacActionReceipt;
+  summary?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface EvaluateMacActionBrokerInput {
+  request: MacActionRequest;
+  plan: MacActionPlan;
+  approvals?: MacApprovalRequest[];
+  now?: string;
 }
 
 export interface MacControlCommandRoot {
@@ -666,6 +735,171 @@ export function buildMacActionPlan(input: BuildMacActionPlanInput): MacActionPla
     executable,
     blockedReasons,
     relatedSurfaces: capability.cli.relatedSurfaces,
+  });
+}
+
+function macStableId(prefix: "macact" | "macaudit", parts: string[]): string {
+  return `${prefix}_${parts.join("_").replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+}
+
+function collectMacSecretRefs(request: MacActionRequest, explicitSecretRefs: string[] = []): string[] {
+  const refs = new Set(explicitSecretRefs);
+  const secretRef = request.arguments.secretRef;
+  if (typeof secretRef === "string" && secretRef.length > 0) refs.add(secretRef);
+  const secretRefs = request.arguments.secretRefs;
+  if (Array.isArray(secretRefs)) {
+    for (const ref of secretRefs) {
+      if (typeof ref === "string" && ref.length > 0) refs.add(ref);
+    }
+  }
+  return [...refs];
+}
+
+function macDefaultRedaction(plan: MacActionPlan, secretRefs: string[]): { level: "high" | "medium" | "low"; fields: string[] } {
+  const sensitiveRisk = plan.risk === "high" || plan.risk === "critical";
+  const fields = ["arguments"];
+  if (plan.resolvedTarget?.selector && Object.keys(plan.resolvedTarget.selector).length > 0) fields.push("target.selector");
+  if (secretRefs.length > 0) fields.push("secretRefs");
+  return {
+    level: sensitiveRisk || secretRefs.length > 0 ? "high" : plan.risk === "medium" ? "medium" : "low",
+    fields,
+  };
+}
+
+function assertMacActionPlanMatchesRequest(request: MacActionRequest, plan: MacActionPlan): void {
+  if (plan.requestId !== request.requestId) throw new Error(`Mac action plan ${plan.planId} does not match request ${request.requestId}`);
+  if (plan.capabilityId !== request.capabilityId) throw new Error(`Mac action plan ${plan.planId} targets ${plan.capabilityId}, not ${request.capabilityId}`);
+}
+
+export function buildMacActionReceipt(input: BuildMacActionReceiptInput): MacActionReceipt {
+  assertMacActionPlanMatchesRequest(input.request, input.plan);
+  const createdAt = input.now ?? new Date().toISOString();
+  const secretRefs = collectMacSecretRefs(input.request, input.secretRefs);
+  const redaction = input.redaction ?? macDefaultRedaction(input.plan, secretRefs);
+  const id = input.id ?? macStableId("macact", [input.request.requestId, input.result]);
+  const auditId = input.auditId ?? macStableId("macaudit", [input.request.requestId, input.result]);
+
+  return macActionReceiptSchema.parse({
+    schemaVersion: clawContractVersionV1,
+    id,
+    requestId: input.request.requestId,
+    planId: input.plan.planId,
+    capabilityId: input.plan.capabilityId,
+    actor: input.plan.actor,
+    host: input.plan.host,
+    result: input.result,
+    risk: input.plan.risk,
+    permissionSnapshotRefs: input.permissionSnapshotRefs ?? [],
+    beforeRef: input.beforeRef,
+    afterRef: input.afterRef,
+    auditId,
+    revert: input.plan.rollback,
+    secretRefs,
+    redaction: {
+      level: redaction.level,
+      fields: redaction.fields ?? [],
+    },
+    createdAt,
+  });
+}
+
+export function buildMacActionAuditEvent(input: BuildMacActionAuditEventInput): MacActionAuditEvent {
+  return macActionAuditEventSchema.parse({
+    schemaVersion: clawContractVersionV1,
+    id: input.receipt.auditId,
+    receiptId: input.receipt.id,
+    requestId: input.receipt.requestId,
+    planId: input.receipt.planId,
+    capabilityId: input.receipt.capabilityId,
+    actor: input.receipt.actor,
+    host: input.receipt.host,
+    result: input.receipt.result,
+    risk: input.receipt.risk,
+    summary: input.summary ?? `Mac action ${input.receipt.capabilityId} ${input.receipt.result}`,
+    redaction: input.receipt.redaction,
+    metadata: input.metadata ?? {},
+    createdAt: input.receipt.createdAt,
+  });
+}
+
+function macApprovalSatisfiesPlan(approval: MacApprovalRequest, request: MacActionRequest, plan: MacActionPlan): boolean {
+  return approval.status === "approved" &&
+    approval.actionRequest.requestId === request.requestId &&
+    approval.plan.planId === plan.planId &&
+    approval.plan.capabilityId === plan.capabilityId;
+}
+
+export function evaluateMacActionBroker(input: EvaluateMacActionBrokerInput): MacActionBrokerEvaluation {
+  assertMacActionPlanMatchesRequest(input.request, input.plan);
+  const approvalRequestIds = input.plan.requiredApprovals
+    .map((approval) => approval.requestId)
+    .filter((requestId): requestId is string => Boolean(requestId));
+  const approved = input.plan.requiredApprovals.length === 0 ||
+    (input.approvals ?? []).some((approval) => macApprovalSatisfiesPlan(approval, input.request, input.plan));
+
+  const blockedReasons = [...input.plan.blockedReasons];
+  if (!input.plan.executable) blockedReasons.push("plan_not_executable");
+  if (blockedReasons.length > 0) {
+    const receipt = buildMacActionReceipt({ request: input.request, plan: input.plan, result: "blocked", now: input.now });
+    return macActionBrokerEvaluationSchema.parse({
+      schemaVersion: clawContractVersionV1,
+      decision: "blocked",
+      requestId: input.request.requestId,
+      planId: input.plan.planId,
+      capabilityId: input.plan.capabilityId,
+      actor: input.plan.actor,
+      host: input.plan.host,
+      reasons: [...new Set(blockedReasons)],
+      approvalRequestIds,
+      receipt,
+      auditEvent: buildMacActionAuditEvent({ receipt, metadata: { reasons: [...new Set(blockedReasons)] } }),
+    });
+  }
+
+  if (input.request.dryRun) {
+    const receipt = buildMacActionReceipt({ request: input.request, plan: input.plan, result: "planned", now: input.now });
+    return macActionBrokerEvaluationSchema.parse({
+      schemaVersion: clawContractVersionV1,
+      decision: "dry_run",
+      requestId: input.request.requestId,
+      planId: input.plan.planId,
+      capabilityId: input.plan.capabilityId,
+      actor: input.plan.actor,
+      host: input.plan.host,
+      reasons: ["dry_run"],
+      approvalRequestIds,
+      receipt,
+      auditEvent: buildMacActionAuditEvent({ receipt, metadata: { reasons: ["dry_run"] } }),
+    });
+  }
+
+  if (!approved) {
+    const receipt = buildMacActionReceipt({ request: input.request, plan: input.plan, result: "planned", now: input.now });
+    return macActionBrokerEvaluationSchema.parse({
+      schemaVersion: clawContractVersionV1,
+      decision: "approval_required",
+      requestId: input.request.requestId,
+      planId: input.plan.planId,
+      capabilityId: input.plan.capabilityId,
+      actor: input.plan.actor,
+      host: input.plan.host,
+      reasons: ["approval_required"],
+      approvalRequestIds,
+      receipt,
+      auditEvent: buildMacActionAuditEvent({ receipt, metadata: { reasons: ["approval_required"] } }),
+    });
+  }
+
+  return macActionBrokerEvaluationSchema.parse({
+    schemaVersion: clawContractVersionV1,
+    decision: "allow",
+    requestId: input.request.requestId,
+    planId: input.plan.planId,
+    capabilityId: input.plan.capabilityId,
+    actor: input.plan.actor,
+    host: input.plan.host,
+    reasons: [],
+    approvalRequestIds,
   });
 }
 
