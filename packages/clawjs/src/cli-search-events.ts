@@ -231,6 +231,30 @@ export function scheduleCalendarEventsSearchEvent(input: {
   });
 }
 
+export function scheduleFinanceRecordsSearchEvent(input: {
+  operation: "upsert" | "delete";
+  namespaceId: string;
+  collectionName: string;
+  recordId: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  return scheduleSearchIndexEvent({
+    source: "finance.records",
+    operation: input.operation,
+    resourceId: `${input.namespaceId}:${input.collectionName}:${input.recordId}`,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      namespaceId: input.namespaceId,
+      collection: input.collectionName,
+      recordId: input.recordId,
+    },
+  });
+}
+
 export function scheduleConnectorCatalogSearchEvent(input: {
   operation: "upsert" | "delete";
   operationId: string;

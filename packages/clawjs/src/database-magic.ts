@@ -14,7 +14,7 @@ import fs from "fs";
 import path from "path";
 import { CliHandledError } from "./cli-errors.ts";
 import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
-import { scheduleDatabaseRecordSearchEvent, scheduleDocumentBlocksSearchEvent } from "./cli-search-events.ts";
+import { scheduleDatabaseRecordSearchEvent, scheduleDocumentBlocksSearchEvent, scheduleFinanceRecordsSearchEvent } from "./cli-search-events.ts";
 import { openMainDataStore } from "./v1-data.ts";
 
 const DB_EXIT_OK = 0;
@@ -23,6 +23,15 @@ const DB_EXIT_DEGRADED = 2;
 const DB_EXIT_USAGE = 64;
 
 type Writable = NodeJS.WritableStream;
+
+const FINANCE_SEARCH_COLLECTIONS = new Set([
+  "financial_accounts",
+  "transactions",
+  "invoices",
+  "payment_intents",
+  "accounting_entries",
+  "accounting_lines",
+]);
 type DbAction = "list" | "get" | "create" | "update" | "delete" | "schema" | "query";
 
 const DB_ACTIONS = new Set<DbAction>(["list", "get", "create", "update", "delete", "schema", "query"]);
@@ -155,6 +164,16 @@ function scheduleLocalSearchEventsForRecord(input: {
     dataDir: input.dataDir,
     flags: input.flags,
   });
+  if (FINANCE_SEARCH_COLLECTIONS.has(input.collectionName)) {
+    scheduleFinanceRecordsSearchEvent({
+      operation: input.operation,
+      namespaceId: input.namespaceId,
+      collectionName: input.collectionName,
+      recordId,
+      dataDir: input.dataDir,
+      flags: input.flags,
+    });
+  }
   const documentEvent = documentBlocksSearchEventForRecord(input.operation, input.namespaceId, input.collectionName, input.record);
   if (!documentEvent) return;
   scheduleDocumentBlocksSearchEvent({

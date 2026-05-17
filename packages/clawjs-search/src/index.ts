@@ -644,6 +644,19 @@ export function createBuiltinSearchSourceManifests(): SearchSourceManifest[] {
       ],
     }),
     createFrameworkSearchSourceManifest({
+      id: "finance.records",
+      domain: "finance",
+      name: "Finance records",
+      resultTypes: ["transaction", "finance_record"],
+      facets: [
+        { id: "kind", label: "Kind", type: "string" },
+        { id: "accountId", label: "Account", type: "string" },
+        { id: "currency", label: "Currency", type: "string" },
+        { id: "category", label: "Category", type: "string" },
+        { id: "sensitive", label: "Sensitive", type: "boolean" },
+      ],
+    }),
+    createFrameworkSearchSourceManifest({
       id: "images.derived",
       domain: "images",
       name: "Images",

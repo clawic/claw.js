@@ -66,6 +66,16 @@ const OPERATIONAL_SEARCH_SIDECARS = [
   { filename: "ops.sqlite", domain: "ops" },
 ] as const;
 
+const FINANCE_SEARCH_COLLECTIONS = [
+  "finance_records",
+  "financial_accounts",
+  "transactions",
+  "invoices",
+  "payment_intents",
+  "accounting_entries",
+  "accounting_lines",
+] as const;
+
 interface SearchServiceStateFile {
   state: "ready" | "stopped" | "external_pending";
   mode: "embedded" | "daemon";
@@ -127,6 +137,7 @@ export async function runSearchQueryCli(input: {
     const shouldRefreshKnowledge = domains?.includes("knowledge") || sources?.includes("knowledge.graph");
     const shouldRefreshSignals = domains?.includes("signals") || sources?.includes("signals.observations");
     const shouldRefreshCalendar = domains?.includes("calendar") || sources?.includes("calendar.events");
+    const shouldRefreshFinance = domains?.includes("finance") || sources?.includes("finance.records");
     const shouldRefreshImages = domains?.includes("images") || sources?.includes("images.derived");
     const shouldRefreshMedia = domains?.includes("media") || sources?.includes("media.assets");
     const shouldRefreshGenerations = domains?.includes("generations") || sources?.includes("generations.artifacts");
@@ -143,6 +154,7 @@ export async function runSearchQueryCli(input: {
     const indexedKnowledge = shouldRefreshKnowledge && sourceCanIndex(store, "knowledge.graph") ? ensureKnowledgeGraphSourceIndexed(store, input.flags) : 0;
     const indexedSignals = shouldRefreshSignals && sourceCanIndex(store, "signals.observations") ? ensureSignalsObservationsSourceIndexed(store, input.flags) : 0;
     const indexedCalendar = shouldRefreshCalendar && sourceCanIndex(store, "calendar.events") ? ensureCalendarEventsSourceIndexed(store, input.flags) : 0;
+    const indexedFinance = shouldRefreshFinance && sourceCanIndex(store, "finance.records") ? ensureFinanceRecordsSourceIndexed(store, input.flags) : 0;
     const indexedImages = shouldRefreshImages && sourceCanIndex(store, "images.derived") ? ensureImagesDerivedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedMedia = shouldRefreshMedia && sourceCanIndex(store, "media.assets") ? ensureMediaAssetsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedGenerations = shouldRefreshGenerations && sourceCanIndex(store, "generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -225,6 +237,7 @@ export async function runSearchQueryCli(input: {
         ...(shouldRefreshKnowledge ? { "knowledge.graph": indexedKnowledge } : {}),
         ...(shouldRefreshSignals ? { "signals.observations": indexedSignals } : {}),
         ...(shouldRefreshCalendar ? { "calendar.events": indexedCalendar } : {}),
+        ...(shouldRefreshFinance ? { "finance.records": indexedFinance } : {}),
         ...(shouldRefreshImages ? { "images.derived": indexedImages } : {}),
         ...(shouldRefreshMedia ? { "media.assets": indexedMedia } : {}),
         ...(shouldRefreshGenerations ? { "generations.artifacts": indexedGenerations } : {}),
@@ -305,6 +318,7 @@ export async function runSearchRebuildCli(input: {
     const knowledgeIndexed = rebuildsSource("knowledge.graph") ? ensureKnowledgeGraphSourceIndexed(store, input.flags) : 0;
     const signalsIndexed = rebuildsSource("signals.observations") ? ensureSignalsObservationsSourceIndexed(store, input.flags) : 0;
     const calendarIndexed = rebuildsSource("calendar.events") ? ensureCalendarEventsSourceIndexed(store, input.flags) : 0;
+    const financeIndexed = rebuildsSource("finance.records") ? ensureFinanceRecordsSourceIndexed(store, input.flags) : 0;
     const imagesIndexed = rebuildsSource("images.derived") ? ensureImagesDerivedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const mediaIndexed = rebuildsSource("media.assets") ? ensureMediaAssetsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const generationsIndexed = rebuildsSource("generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -324,6 +338,7 @@ export async function runSearchRebuildCli(input: {
       ...(knowledgeIndexed > 0 ? ["knowledge.graph"] : []),
       ...(signalsIndexed > 0 ? ["signals.observations"] : []),
       ...(calendarIndexed > 0 ? ["calendar.events"] : []),
+      ...(financeIndexed > 0 ? ["finance.records"] : []),
       ...(imagesIndexed > 0 ? ["images.derived"] : []),
       ...(mediaIndexed > 0 ? ["media.assets"] : []),
       ...(generationsIndexed > 0 ? ["generations.artifacts"] : []),
@@ -344,7 +359,7 @@ export async function runSearchRebuildCli(input: {
       rebuilt: true,
       mode: selectedSources ? "scoped" : "full",
       selectedSources: selectedSources ?? null,
-      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + skillsIndexed + connectorsIndexed + runtimeIndexed + localFilesIndexed + webIndexed + externalIndexed,
+      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + skillsIndexed + connectorsIndexed + runtimeIndexed + localFilesIndexed + webIndexed + externalIndexed,
       embeddings: 0,
       profile: input.flags.profile === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
@@ -358,6 +373,7 @@ export async function runSearchRebuildCli(input: {
         "knowledge.graph": knowledgeIndexed,
         "signals.observations": signalsIndexed,
         "calendar.events": calendarIndexed,
+        "finance.records": financeIndexed,
         "images.derived": imagesIndexed,
         "media.assets": mediaIndexed,
         "generations.artifacts": generationsIndexed,
@@ -938,6 +954,8 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
       return ensureSignalsObservationsSourceIndexed(store, flags);
     case "calendar.events":
       return ensureCalendarEventsSourceIndexed(store, flags);
+    case "finance.records":
+      return ensureFinanceRecordsSourceIndexed(store, flags);
     case "images.derived":
       return ensureImagesDerivedSourceIndexed(store, flags, cwd);
     case "media.assets":
@@ -985,6 +1003,10 @@ function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flag
       const resourceId = resourceIdFromJobPayload(job, "eventId") ?? job.resourceId;
       return resourceId ? ensureCalendarEventResourceIndexed(store, flags, resourceId) : 0;
     }
+    case "finance.records": {
+      const resourceId = resourceIdFromJobPayload(job, "recordId") ?? job.resourceId;
+      return resourceId ? ensureFinanceRecordResourceIndexed(store, flags, resourceId) : 0;
+    }
     case "images.derived": {
       const resourceId = resourceIdFromJobPayload(job, "imageId") ?? job.resourceId;
       return resourceId ? ensureImageDerivedResourceIndexed(store, flags, cwd, resourceId) : 0;
@@ -1020,6 +1042,12 @@ function databaseRecordTargetFromJob(job: SearchIndexJob): { namespaceId: string
   const parts = job.resourceId?.split(":") ?? [];
   if (parts.length !== 3 || !parts[0] || !parts[1] || !parts[2]) return null;
   return { namespaceId: parts[0], collectionName: parts[1], recordId: parts[2], resourceId: job.resourceId ?? parts.join(":") };
+}
+
+function financeRecordTargetFromResourceId(resourceId: string): { namespaceId: string; collectionName: string; recordId: string } | null {
+  const parts = resourceId.split(":");
+  if (parts.length !== 3 || !parts[0] || !parts[1] || !parts[2]) return null;
+  return { namespaceId: parts[0], collectionName: parts[1], recordId: parts[2] };
 }
 
 function documentTargetFromJob(job: SearchIndexJob): { namespaceId: string; documentId: string; resourceId: string } | null {
@@ -2097,6 +2125,114 @@ function ensureCalendarEventResourceIndexed(store: SearchStore, flags: Record<st
     }
     store.upsertDocument(calendarEventSearchDocument(row));
     store.setSourceState("calendar.events", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 1;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureFinanceRecordsSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) {
+    store.setSourceState("finance.records", "enabled", {
+      backlog: 0,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 0;
+  }
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "records")) {
+      store.setSourceState("finance.records", "degraded", {
+        backlog: 0,
+        error: "core database does not contain records",
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return 0;
+    }
+    const placeholders = FINANCE_SEARCH_COLLECTIONS.map(() => "?").join(", ");
+    const rows = db.prepare(`
+      SELECT namespace_id, collection_name, id, data_json, created_at, updated_at
+      FROM records
+      WHERE collection_name IN (${placeholders})
+      ORDER BY updated_at DESC
+    `).all(...FINANCE_SEARCH_COLLECTIONS) as DatabaseRecordRow[];
+    let indexed = 0;
+    for (const row of rows) {
+      store.upsertDocument(financeRecordSearchDocument(row));
+      indexed += 1;
+    }
+    if (hasTable(db, "finance_records")) {
+      const financeRows = db.prepare(`
+        SELECT id, kind, account_id, amount, currency, occurred_at, merchant, category, page_id, metadata_json, created_at, updated_at
+        FROM finance_records
+        ORDER BY occurred_at DESC
+      `).all() as FinanceRecordTableRow[];
+      for (const row of financeRows) {
+        store.upsertDocument(financeTableRecordSearchDocument(row));
+        indexed += 1;
+      }
+    }
+    store.setCursor({
+      source: "finance.records",
+      cursor: `records:${indexed}`,
+      metadata: { store: "core.sqlite", collections: FINANCE_SEARCH_COLLECTIONS },
+    });
+    store.setSourceState("finance.records", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return indexed;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureFinanceRecordResourceIndexed(store: SearchStore, flags: Record<string, string>, recordId: string): number {
+  const target = financeRecordTargetFromResourceId(recordId);
+  if (!target || !FINANCE_SEARCH_COLLECTIONS.includes(target.collectionName as typeof FINANCE_SEARCH_COLLECTIONS[number])) return 0;
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) return 0;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (target.collectionName === "finance_records") {
+      if (!hasTable(db, "finance_records")) return 0;
+      const row = db.prepare(`
+        SELECT id, kind, account_id, amount, currency, occurred_at, merchant, category, page_id, metadata_json, created_at, updated_at
+        FROM finance_records
+        WHERE id = ?
+        LIMIT 1
+      `).get(target.recordId) as FinanceRecordTableRow | undefined;
+      if (!row) {
+        store.tombstone({ source: "finance.records", resourceId: recordId, reason: "finance record missing during Search event refresh" });
+        return 1;
+      }
+      store.upsertDocument(financeTableRecordSearchDocument(row));
+      store.setSourceState("finance.records", "enabled", {
+        backlog: 0,
+        error: null,
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return 1;
+    }
+    if (!hasTable(db, "records")) return 0;
+    const row = db.prepare(`
+      SELECT namespace_id, collection_name, id, data_json, created_at, updated_at
+      FROM records
+      WHERE namespace_id = ? AND collection_name = ? AND id = ?
+      LIMIT 1
+    `).get(target.namespaceId, target.collectionName, target.recordId) as DatabaseRecordRow | undefined;
+    if (!row) {
+      store.tombstone({ source: "finance.records", resourceId: recordId, reason: "finance record missing during Search event refresh" });
+      return 1;
+    }
+    store.upsertDocument(financeRecordSearchDocument(row));
+    store.setSourceState("finance.records", "enabled", {
       backlog: 0,
       error: null,
       lastIndexedAt: new Date().toISOString(),
@@ -3741,6 +3877,117 @@ function calendarEventSearchDocument(row: CalendarEventRow): SearchDocumentInput
   };
 }
 
+function financeRecordSearchDocument(row: DatabaseRecordRow): SearchDocumentInput {
+  const payload = parseJsonRecord(row.data_json);
+  const metadata = isPlainRecord(payload.metadata) ? payload.metadata : {};
+  const metadataText = textFromStructuredContent(metadata) ?? (Object.keys(metadata).length ? JSON.stringify(redactExternalCachePayload(metadata)) : undefined);
+  const occurredAt = stringValue(payload.postedAt) ?? stringValue(payload.occurredAt) ?? stringValue(payload.date) ?? row.updated_at;
+  const kind = financeRecordKind(row.collection_name, payload);
+  const currency = stringValue(payload.currency);
+  const accountId = stringValue(payload.accountId) ?? stringValue(payload.account_id);
+  const category = stringValue(payload.category) ?? stringValue(payload.type);
+  const description = stringValue(payload.description) ?? stringValue(payload.memo) ?? stringValue(payload.number) ?? stringValue(payload.name);
+  const body = [
+    row.collection_name,
+    kind,
+    accountId,
+    currency,
+    occurredAt,
+    stringValue(payload.merchant),
+    category,
+    payload.amount,
+    payload.amountCents,
+    description,
+    metadataText,
+  ].filter((value) => value !== null && value !== undefined && String(value).trim()).join("\n");
+  return {
+    id: `finance.records:${row.namespace_id}:${row.collection_name}:${row.id}`,
+    source: "finance.records",
+    domain: "finance",
+    type: kind,
+    resourceId: `${row.namespace_id}:${row.collection_name}:${row.id}`,
+    title: `${kind} ${row.id}`,
+    subtitle: [currency, occurredAt].filter(Boolean).join(" / "),
+    snippet: "[redacted]",
+    body,
+    updatedAt: row.updated_at,
+    metadata: {
+      recordId: row.id,
+      namespaceId: row.namespace_id,
+      collection: row.collection_name,
+      kind,
+      accountId,
+      currency,
+      category,
+      occurredAt,
+      sensitive: true,
+      metadataKeys: Object.keys(metadata).sort(),
+    },
+    permissions: { canOpen: true, canPreview: false, redacted: true },
+    rankingHints: {
+      fastPath: 1,
+      finance: 1,
+      transaction: row.collection_name === "transactions" ? 0.2 : 0,
+    },
+    fragments: [],
+    actions: [
+      { id: "open", kind: "open", label: "Open finance record", requiresApproval: true, risk: "read", grant: "search.finance.open" },
+      { id: "copy-reference", kind: "copy", label: "Copy finance reference", requiresApproval: false },
+    ],
+  };
+}
+
+function financeTableRecordSearchDocument(row: FinanceRecordTableRow): SearchDocumentInput {
+  const metadata = parseJsonRecord(row.metadata_json);
+  const metadataText = textFromStructuredContent(metadata) ?? (Object.keys(metadata).length ? JSON.stringify(redactExternalCachePayload(metadata)) : undefined);
+  const body = [
+    row.kind,
+    row.account_id,
+    row.currency,
+    row.occurred_at,
+    row.merchant,
+    row.category,
+    row.amount,
+    metadataText,
+  ].filter((value) => value !== null && value !== undefined && String(value).trim()).join("\n");
+  return {
+    id: `finance.records:main:finance_records:${row.id}`,
+    source: "finance.records",
+    domain: "finance",
+    type: row.kind || "finance_record",
+    resourceId: `main:finance_records:${row.id}`,
+    title: `${row.kind || "finance record"} ${row.id}`,
+    subtitle: [row.currency, row.occurred_at].filter(Boolean).join(" / "),
+    snippet: "[redacted]",
+    body,
+    updatedAt: row.updated_at,
+    metadata: {
+      recordId: row.id,
+      namespaceId: "main",
+      collection: "finance_records",
+      kind: row.kind,
+      accountId: row.account_id,
+      currency: row.currency,
+      category: row.category,
+      occurredAt: row.occurred_at,
+      pageId: row.page_id,
+      sensitive: true,
+      metadataKeys: Object.keys(metadata).sort(),
+    },
+    permissions: { canOpen: true, canPreview: false, redacted: true },
+    rankingHints: {
+      fastPath: 1,
+      finance: 1,
+      transaction: row.kind === "transaction" ? 0.2 : 0,
+    },
+    fragments: [],
+    actions: [
+      { id: "open", kind: "open", label: "Open finance record", requiresApproval: true, risk: "read", grant: "search.finance.open" },
+      { id: "copy-reference", kind: "copy", label: "Copy finance reference", requiresApproval: false },
+    ],
+  };
+}
+
 function runtimeJobSearchDocument(row: RuntimeJobRow): SearchDocumentInput {
   const payload = parseJsonRecord(row.payload_json);
   const payloadText = textFromStructuredContent(payload) ?? (Object.keys(payload).length ? JSON.stringify(payload) : undefined);
@@ -4027,6 +4274,21 @@ interface DatabaseRecordRow {
   collection_name: string;
   id: string;
   data_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface FinanceRecordTableRow {
+  id: string;
+  kind: string;
+  account_id: string | null;
+  amount: number;
+  currency: string;
+  occurred_at: string;
+  merchant: string | null;
+  category: string | null;
+  page_id: string | null;
+  metadata_json: string;
   created_at: string;
   updated_at: string;
 }
@@ -4426,6 +4688,18 @@ function signalUnitLabel(value: unknown): string | undefined {
       ?? stringValue(value.name);
   }
   return undefined;
+}
+
+function financeRecordKind(collectionName: string, payload: Record<string, unknown>): string {
+  const explicit = stringValue(payload.kind) ?? stringValue(payload.type);
+  if (explicit) return explicit;
+  if (collectionName === "transactions") return "transaction";
+  if (collectionName === "financial_accounts") return "financial_account";
+  if (collectionName === "invoices") return "invoice";
+  if (collectionName === "payment_intents") return "payment_intent";
+  if (collectionName === "accounting_entries") return "accounting_entry";
+  if (collectionName === "accounting_lines") return "accounting_line";
+  return "finance_record";
 }
 
 function isSensitiveKnowledge(sensitivity: string): boolean {

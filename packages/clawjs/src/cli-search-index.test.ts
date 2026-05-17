@@ -2025,6 +2025,117 @@ test("search rebuild indexes calendar.events from core.sqlite", async () => {
   });
 });
 
+test("search rebuild indexes finance.records with redacted previews", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-finance-"));
+  const dataRoot = path.join(workspaceRoot, ".claw", "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const created = await runCliCapture([
+      "transaction",
+      "create",
+      "Travel invoice for Search launch planning",
+      "--amount-cents",
+      "12945",
+      "--currency",
+      "USD",
+      "--category",
+      "travel",
+      "--account-id",
+      "acct-operating",
+      "--json",
+    ], workspaceRoot);
+    assert.equal(created.code, CLI_EXIT_OK);
+    const createdPayload = JSON.parse(created.stdout) as { data: { id: string } };
+
+    const jobs = await runCliCapture(["search", "jobs", "--source", "finance.records", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(jobs.code, CLI_EXIT_OK);
+    const jobsPayload = JSON.parse(jobs.stdout) as {
+      data: { items: Array<{ operation: string; resourceId: string; shard: string; payload: { recordId?: string } }> };
+    };
+    const recordJob = jobsPayload.data.items.find((job) => job.resourceId === `main:transactions:${createdPayload.data.id}`);
+    assert.equal(recordJob?.operation, "upsert");
+    assert.equal(recordJob?.shard, "hot");
+    assert.equal(recordJob?.payload.recordId, createdPayload.data.id);
+
+    const rebuild = await runCliCapture(["search", "rebuild", "--source", "finance.records", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(rebuild.code, CLI_EXIT_OK);
+    const rebuildPayload = JSON.parse(rebuild.stdout) as {
+      data: { sources: string[]; pendingSources: string[]; indexedBySource: { "finance.records": number } };
+    };
+    assert.equal(rebuildPayload.data.sources.includes("finance.records"), true);
+    assert.equal(rebuildPayload.data.pendingSources.includes("finance.records"), false);
+    assert.equal(rebuildPayload.data.indexedBySource["finance.records"], 1);
+
+    const query = await runCliCapture([
+      "search",
+      "query",
+      "travel invoice",
+      "--domains",
+      "finance",
+      "--filters",
+      JSON.stringify({ "metadata.currency": "USD", redacted: true }),
+      "--data-dir",
+      dataRoot,
+      "--json",
+      "--limit",
+      "5",
+      "--explain",
+      "true",
+    ], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: {
+        indexedFastPaths: { "finance.records": number };
+        results: Array<{
+          source: string;
+          domain: string;
+          type: string;
+          title: string;
+          snippet?: string;
+          metadata?: { recordId?: string; kind?: string; accountId?: string; currency?: string; category?: string; sensitive?: boolean };
+          fragments?: Array<{ title?: string; snippet?: string }>;
+          permissions?: { redacted?: boolean; canPreview?: boolean };
+          actions?: Array<{ id: string; kind: string; requiresApproval?: boolean }>;
+          explanation?: { matchedBy?: string[] };
+        }>;
+        facets?: Array<{ id: string }>;
+      };
+    };
+    assert.equal(queryPayload.data.indexedFastPaths["finance.records"], 1);
+    const result = queryPayload.data.results.find((entry) => entry.metadata?.recordId === createdPayload.data.id);
+    assert.equal(result?.source, "finance.records");
+    assert.equal(result?.domain, "finance");
+    assert.equal(result?.type, "transaction");
+    assert.equal(result?.snippet, "[redacted]");
+    assert.equal(result?.permissions?.redacted, true);
+    assert.equal(result?.permissions?.canPreview, false);
+    assert.deepEqual(result?.fragments ?? [], []);
+    assert.equal(result?.metadata?.accountId, "acct-operating");
+    assert.equal(result?.metadata?.currency, "USD");
+    assert.equal(result?.metadata?.sensitive, true);
+    assert.equal(result?.actions?.some((action) => action.id === "open" && action.kind === "open" && action.requiresApproval === true), true);
+    assert.ok(result?.explanation?.matchedBy?.length);
+    assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "currency"), true);
+    assert.equal(JSON.stringify(result).includes("Travel invoice"), false);
+    assert.equal(JSON.stringify(result).includes("12945"), false);
+
+    const deleted = await runCliCapture(["transaction", "delete", createdPayload.data.id, "--json"], workspaceRoot);
+    assert.equal(deleted.code, CLI_EXIT_OK);
+    const deleteJobs = await runCliCapture(["search", "jobs", "--source", "finance.records", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleteJobs.code, CLI_EXIT_OK);
+    const deleteJobsPayload = JSON.parse(deleteJobs.stdout) as {
+      data: { items: Array<{ operation: string; resourceId: string; payload: { recordId?: string } }> };
+    };
+    const deleteJob = deleteJobsPayload.data.items.find((job) => job.operation === "delete" && job.resourceId === `main:transactions:${createdPayload.data.id}`);
+    assert.equal(deleteJob?.payload.recordId, createdPayload.data.id);
+  });
+});
+
 test("search rebuild indexes images.derived from image library records", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-images-"));
   const dataRoot = path.join(workspaceRoot, "data");

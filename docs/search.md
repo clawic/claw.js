@@ -65,6 +65,7 @@ backfill jobs.
 | `knowledge.graph` | `knowledge` | `core.sqlite` knowledge entities and facts projected into `search.sqlite` | implemented initial adapter |
 | `signals.observations` | `signals` | `core.sqlite` signal verticals, variables, and observations projected into `search.sqlite` | implemented initial adapter |
 | `calendar.events` | `calendar` | `core.sqlite` calendar events projected into `search.sqlite` | implemented initial adapter |
+| `finance.records` | `finance` | `core.sqlite` dense-data finance collections projected into `search.sqlite` with redacted previews | implemented initial adapter |
 | `images.derived` | `images` | image library, image media metadata, and stored OCR/vision-derived text projected into `search.sqlite` | implemented initial adapter |
 | `media.assets` | `media` | workspace media records projected into `search.sqlite` | implemented initial adapter |
 | `generations.artifacts` | `generations` | generated artifact records projected into `search.sqlite` | implemented initial adapter |
@@ -90,6 +91,7 @@ claw search query "meeting notes" --domains notes --filters metadata.space=notes
 claw search query "user preference" --domains knowledge --filters metadata.kind=fact --json
 claw search query "activation" --domains signals --filters metadata.kind=observation --json
 claw search query "architecture review" --domains calendar --filters metadata.calendarId=framework --json
+claw search query "travel invoice" --domains finance --filters metadata.currency=USD --json
 claw search query "requirements" --domains media --filters metadata.kind=document --json
 claw search query "analytics cards" --domains generations --filters metadata.status=succeeded --json
 claw search query "symbolName" --domains code --code-root /path/to/project --json
@@ -175,14 +177,15 @@ unbounded duplicate backfill work.
 The local framework database and artifact write paths now emit those compacted
 events for `database.records`, `documents.blocks`, `notes.pages`,
 `knowledge.graph`, `signals.observations`, `calendar.events`,
+`finance.records`,
 `generations.artifacts`, `images.derived`, `media.assets`, and
 `skills.registry`: successful `db
 collection create|update`, `documents create|update`, `notes create|update`,
 `knowledge entity|fact`, `signals seed-catalog|observe`, `calendar
-create|update`, `image
+create|update`, canonical finance collection writes such as `transaction create|update`, `image
 create|edit|import`, typed-media generation, `generations create`, and `skills
 upsert` calls schedule hot upsert events; successful record, document, note,
-signal observation, calendar event, image, media, generation, or skill deletes
+signal observation, calendar event, finance collection record, image, media, generation, or skill deletes
 schedule delete events where the source item is removed; and `document_blocks`
 changes schedule a hot upsert for the parent document so fragments refresh together. The event write is best effort because
 `search.sqlite` is a rebuildable sidecar; a temporary Search sidecar failure
