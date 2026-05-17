@@ -1,5 +1,7 @@
 import { resolveClawCliCommand, searchClawCliRegistry } from "./cli-command-registry.ts";
 import type { ClawCliCommandRegistryEntry, ClawCliSearchResult } from "./cli-command-registry.ts";
+import { resolveClawDenseDataIntent } from "./dense-data-os.ts";
+import type { ClawDenseDataIntentResolution, ClawDenseDataIntentStatus } from "./dense-data-os.ts";
 import { scoreNeedOpportunity } from "./need-route-lab.ts";
 import type { NeedOpportunity, NeedOpportunityKind, NeedRouteMaturityState } from "./need-route-lab.ts";
 
@@ -246,6 +248,8 @@ export function resolveClawCliCommandIntent(input: {
   const firstToken = normalizedPhrase.split(" ")[0] ?? "";
   const command = firstToken ? resolveClawCliCommand(firstToken) : undefined;
   if (command) return resolutionFromCommand(input.phrase, normalizedPhrase, command, related);
+  const denseDataIntent = resolveClawDenseDataIntent(input.phrase);
+  if (denseDataIntent.status !== "data_gap") return resolutionFromDenseDataIntent(input.phrase, normalizedPhrase, denseDataIntent, related);
   return resolutionFromRelated(input.phrase, normalizedPhrase, related);
 }
 
@@ -297,6 +301,30 @@ function resolutionFromCommand(query: string, normalizedPhrase: string, command:
   return { schemaVersion: 1, query, normalizedPhrase, status: entry.status, intent: entry, related, nextSteps: entry.nextSteps, execute: false };
 }
 
+function resolutionFromDenseDataIntent(query: string, normalizedPhrase: string, denseDataIntent: ClawDenseDataIntentResolution, related: ClawCliSearchResult[]): ClawCliCommandIntentResolution {
+  const status = cliStatusForDenseDataStatus(denseDataIntent.status);
+  const mappedCommand = denseDataIntent.center?.commandNoun ?? denseDataIntent.system?.canonicalCommand;
+  const relatedCommands = [
+    denseDataIntent.system?.canonicalCommand,
+    ...(denseDataIntent.system?.aliases ?? []),
+    denseDataIntent.center?.commandNoun,
+    ...(denseDataIntent.center?.commandAliases ?? []),
+  ].filter((command): command is string => Boolean(command));
+  const entry = intent(`cmd_intent_dense_${normalizedPhrase.replace(/[^a-z0-9]+/g, "_") || "empty"}`, query, `Resolve dense-data phrase through ${denseDataIntent.system?.label ?? "the dense-data registry"}.`, status, {
+    mappedCommand,
+    relatedCommands,
+    risk: denseDataIntent.system?.sensitivityDefault === "high" ? ["local_read", "local_write"] : ["local_read"],
+    evidence: [
+      ...denseDataIntent.reasons,
+      ...(denseDataIntent.matchedRoute ? [`matchedRoute=${denseDataIntent.matchedRoute}`] : []),
+      ...(denseDataIntent.operation ? [`operation=${denseDataIntent.operation.id}`] : []),
+    ],
+    nextSteps: denseDataIntent.nextSteps,
+    reportTarget: status === "covered" || status === "candidate_alias" ? "none" : status === "blocked" ? "github_discussions_feedback" : "github_discussions_ideas",
+  });
+  return { schemaVersion: 1, query, normalizedPhrase, status, intent: entry, related, nextSteps: entry.nextSteps, execute: false };
+}
+
 function resolutionFromRelated(query: string, normalizedPhrase: string, related: ClawCliSearchResult[]): ClawCliCommandIntentResolution {
   const likelyCommands = related.filter((entry) => entry.canonicalName).slice(0, 3).map((entry) => entry.canonicalName as string);
   const status: ClawCliCommandIntentStatus = likelyCommands.length ? "candidate_alias" : "gap";
@@ -309,6 +337,14 @@ function resolutionFromRelated(query: string, normalizedPhrase: string, related:
       : ["Record the phrase with `claw commands record --phrase <phrase> --purpose <purpose> --json`.", "Promote through `claw commands opportunities` if this is a repeatable agent need."],
   });
   return { schemaVersion: 1, query, normalizedPhrase, status, intent: entry, related, nextSteps: entry.nextSteps, execute: false };
+}
+
+function cliStatusForDenseDataStatus(status: ClawDenseDataIntentStatus): ClawCliCommandIntentStatus {
+  if (status === "covered") return "covered";
+  if (status === "partial" || status === "alias_candidate") return "candidate_alias";
+  if (status === "external_pending") return "external_pending";
+  if (status === "blocked") return "blocked";
+  return "gap";
 }
 
 function statusOrder(status: ClawCliCommandIntentStatus): number {

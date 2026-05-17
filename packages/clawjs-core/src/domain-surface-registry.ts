@@ -1,5 +1,6 @@
 import { BUILTIN_COLLECTIONS, BUILTIN_FAMILIES } from "./builtins/index.ts";
 import { clawCliCommandRegistry } from "./cli-command-registry.ts";
+import { clawDenseDataOsRegistry } from "./dense-data-os.ts";
 import { clawDomainOwnershipEntriesV1 } from "./domain-ownership.ts";
 import { PRODUCTIVITY_COLLECTION_DEFINITIONS } from "./productivity.ts";
 import { clawPersistentSurfaceRegistry } from "./surface-registry.ts";
@@ -253,6 +254,35 @@ const aggregateEntries: ClawDomainSurfaceEntry[] = [
   },
 ];
 
+const denseDataSystemEntries: ClawDomainSurfaceEntry[] = clawDenseDataOsRegistry.systems.map((system): ClawDomainSurfaceEntry => ({
+  id: `dense-system:${system.id}`,
+  kind: "system",
+  name: system.id,
+  label: system.label,
+  owner: "claw",
+  status: system.wave === "first_wave" ? "canonical" : "conceptual_manifest",
+  storageIds: system.storagePolicy === "core_sqlite" ? [CORE_DB_ID] : undefined,
+  cliCommands: [
+    `claw ${system.canonicalCommand}`,
+    ...system.aliases.map((alias) => `claw ${alias}`),
+    ...system.centers.flatMap((center) => [`claw ${center.commandNoun}`, ...center.commandAliases.map((alias) => `claw ${alias}`)]),
+  ],
+  packageNames: ["@clawjs/core"],
+  source: {
+    file: "packages/clawjs-core/src/dense-data-os.ts",
+    symbol: "clawDenseDataOsRegistry",
+  },
+  aliases: system.aliases,
+  family: "dense-data",
+  sensitive: system.sensitivityDefault === "high",
+  notes: system.notes,
+  invariants: [
+    "Dense systems are visible orchestration packs, not duplicate databases.",
+    "Human CLI nouns must remain direct routes and may also be reached through domain portals or acronyms.",
+    "External standards are mapping targets, not schemas cloned into core.sqlite.",
+  ],
+}));
+
 const systemEntries: ClawDomainSurfaceEntry[] = [
   {
     id: "system:erp",
@@ -445,6 +475,7 @@ export const clawDomainSurfaceRegistry: ClawDomainSurfaceRegistry = {
     ...signalVerticalEntries,
     ...conceptualFamilyEntries,
     ...aggregateEntries,
+    ...denseDataSystemEntries,
     ...systemEntries,
     ...serviceRuntimeEntries,
     ...packageEntries,
@@ -472,6 +503,7 @@ export function assertClawDomainSurfaceRegistryComplete(): void {
     ...trackingRegistry.entries.map((entry) => `signal:${entry.id}`),
     ...trackingRegistry.entries.map((entry) => `module:${entry.id}`),
     ...clawCliCommandRegistry.commands.map((command) => `cli:${command.name}`),
+    ...clawDenseDataOsRegistry.systems.map((system) => `dense-system:${system.id}`),
     ...clawDomainOwnershipEntriesV1.map((entry) => `service:${entry.domain}`),
     ...SIGNALS_STORAGE_IDS.map((id) => `storage:${id}`),
   ].filter((id) => !ids.has(id));

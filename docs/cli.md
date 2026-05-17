@@ -531,6 +531,11 @@ claw profile get --json
 claw profile refresh --json
 claw profile --help
 claw health --help
+claw health gaps --json
+claw patient list --json
+claw patient schema --json
+claw medication add --patient patient_123 --json
+claw invoice list --json
 claw travel --help
 claw career --help
 claw family --help
@@ -580,6 +585,8 @@ claw search sources enable local.files --profile full --json
 claw search query "invoice" --domains files --profile full --file-root ~/Documents --json
 claw search sources enable web.ingested --profile full --json
 claw search query "release notes" --domains web --profile full --web-root ./web-cache --json
+claw search sources enable external.cache --profile full --json
+claw search query "provider thread" --domains external --profile full --external-root ./provider-cache --json
 claw search status --json
 claw search service status --json
 claw search service run-once --json

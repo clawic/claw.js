@@ -186,6 +186,38 @@
       "reviewDate": "2026-08-17"
     },
     {
+      "id": "dense-data-operating-system",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0021-dense-data-operating-system.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/decision-map.md",
+        "docs/canonical-data-catalog.md"
+      ],
+      "discoveryTerms": [
+        "dense data operating system",
+        "dense data",
+        "professional domains"
+      ],
+      "searchQueries": [
+        {
+          "query": "dense data operating system",
+          "expectPath": "docs/adr/0021-dense-data-operating-system.md"
+        }
+      ],
+      "inspect": [
+        {
+          "command": "claw inspect why search --json",
+          "expectPath": "docs/decision-map.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-17"
+    },
+    {
       "id": "docs-alignment-routing",
       "kind": "guardrail",
       "owner": "claw",

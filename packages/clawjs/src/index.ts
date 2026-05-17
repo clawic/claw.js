@@ -81,6 +81,7 @@ import { runKnowledgeTailCli } from "./cli-knowledge-tail-command.ts";
 import { isSearchAdminCommand, runCliDiscoverySearch, runSearchAdminCli, runSearchQueryCli, runSearchRebuildCli } from "./cli-search-command.ts"; import { runGuidanceResourcesCli } from "./cli-guidance-resources-command.ts";
 import { runNeedsCli } from "./cli-needs-command.ts";
 import { runCommandsCli } from "./cli-commands-command.ts";
+import { runDenseDataCli } from "./cli-dense-data-command.ts";
 import { runPublicPortalShortcut, writeMissingSubcommandJsonHelp, writePublicPortalHelpOnly } from "./cli-public-portal-routes.ts";
 import { handleUnknownCliCommand } from "./cli-unknown-command.ts";
 import { channelListenerPaths, isProcessRunning, readListenerPid, readTail, waitForListenerPid } from "./cli-channel-listener.ts";
@@ -587,6 +588,9 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   if (group === "records") return await runCliUnsafe(["db", ...argv.slice(1)], context);
   if (group === "needs") return await runNeedsCli({ positionals, flags, argv, context, wantsJson, binName, workspaceRoot: flags.workspace || context.cwd });
   if (group === "commands") return await runCommandsCli({ positionals, flags, argv, context, wantsJson, binName, workspaceRoot: flags.workspace || context.cwd });
+
+  const denseDataExit = await runDenseDataCli({ positionals, flags, context, wantsJson, binName });
+  if (denseDataExit !== null) return denseDataExit;
 
   const portalShortcutExit = await runPublicPortalShortcut({ group, command, subcommand, argv, flags, context, runCli: runCliUnsafe });
   if (portalShortcutExit !== null) return portalShortcutExit;

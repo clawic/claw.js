@@ -29,6 +29,31 @@ canonical type.
 - Custom databases remain first-class storage for niche, private, or
   unapproved entities.
 
+## Dense Data Operating System
+
+High-density professional domains are governed by the dense data operating
+system registry in `packages/clawjs-core/src/dense-data-os.ts` and
+[ADR 0021](./adr/0021-dense-data-operating-system.md).
+
+Dense domains are areas where specialized software usually exists because the
+data is relational, regulated, evidence-heavy, or operationally dense. The
+first-wave systems are Health/EHR, Research/CTMS, Biology, Labs/LIMS, Legal,
+ERP, CRM, Finance/Accounting, Education/LMS, Manufacturing/MES, and
+Operations/ITSM. The roadmap keeps HR/HRIS, SCM, WMS, TMS, procurement, GRC,
+real estate, insurance, government, construction, IoT, CMS, PIM/PLM, pharma,
+CMMS, and ELN visible before they graduate into deeper packs.
+
+Dense systems are visible packs and orchestrators over shared canonical
+collections. They do not own duplicate identity, notes, documents, signals,
+graphs, billing, CRM, ERP, or workflow stores. Human nouns stay direct in the
+CLI, so `claw patient list`, `claw invoice list`, or `claw case <id> evidence
+list` can route to the same canonical operations that domain portals expose.
+
+External standards are mapping targets, not cloned schemas. Records should
+prefer sparse typed fields, typed relations, evidence links, provenance events,
+quality/completeness gaps, semantic views, and intent coverage over large
+provider-shaped payloads.
+
 ## Canonical Status
 
 A collection may be canonical when it satisfies at least one evidence tag:

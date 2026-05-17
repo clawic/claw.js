@@ -74,6 +74,24 @@ test("domain surface registry maps database, services, modules and CLI ownership
   assert.equal(erp?.modulePath, "modules/erp");
   assert.ok(erp?.invariants?.some((invariant) => invariant.includes("ERP workflows may coordinate")));
 
+  const denseHealth = findClawDomainSurfaceEntry("dense-system:health");
+  assert.equal(denseHealth?.status, "canonical");
+  assert.equal(denseHealth?.sensitive, true);
+  assert.ok(denseHealth?.storageIds?.includes("claw.database.core"));
+  assert.ok(denseHealth?.cliCommands?.includes("claw health"));
+  assert.ok(denseHealth?.cliCommands?.includes("claw ehr"));
+  assert.ok(denseHealth?.cliCommands?.includes("claw patient"));
+  assert.ok(denseHealth?.cliCommands?.includes("claw patients"));
+  assert.ok(denseHealth?.invariants?.some((invariant) => invariant.includes("not duplicate databases")));
+
+  const denseErp = findClawDomainSurfaceEntry("dense-system:erp");
+  assert.equal(denseErp?.status, "canonical");
+  assert.ok(denseErp?.invariants?.some((invariant) => invariant.includes("visible orchestration packs")));
+
+  const denseHris = findClawDomainSurfaceEntry("dense-system:hr");
+  assert.equal(denseHris?.status, "conceptual_manifest");
+  assert.ok(denseHris?.cliCommands?.includes("claw hris"));
+
   const contentPublishing = findClawDomainSurfaceEntry("aggregate:content-publishing");
   assert.ok(contentPublishing?.cliCommands?.includes("claw content brand list|create"));
   assert.ok(contentPublishing?.cliCommands?.includes("claw content destination list|create|test"));

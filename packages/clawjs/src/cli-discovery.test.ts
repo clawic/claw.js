@@ -31,6 +31,40 @@ test("runCli returns command-intent metadata for future unknown JSON phrases", a
   assert.equal(payload.meta.commandIntent.intent.reportTarget, "github_discussions_ideas");
 });
 
+test("runCli routes dense-data direct nouns as known non-executing surfaces", async () => {
+  const patientList = await runCliCapture(["patient", "list", "--json"], process.cwd());
+  assert.equal(patientList.code, CLI_EXIT_DEGRADED);
+  const patientPayload = JSON.parse(patientList.stdout) as {
+    ok: boolean;
+    data: {
+      intent: { status: string; execute: boolean; system: { id: string }; center: { commandNoun: string } };
+      coverage: { routeKnown: boolean; executable: boolean; databaseConnected: boolean; implementationStatus: string };
+      gap: { status: string };
+    };
+    meta: { canonicalCommand: string; invokedCommand: string; denseData: boolean };
+  };
+  assert.equal(patientPayload.ok, true);
+  assert.equal(patientPayload.meta.canonicalCommand, "patient");
+  assert.equal(patientPayload.meta.invokedCommand, "patient");
+  assert.equal(patientPayload.meta.denseData, true);
+  assert.equal(patientPayload.data.intent.status, "covered");
+  assert.equal(patientPayload.data.intent.execute, false);
+  assert.equal(patientPayload.data.intent.system.id, "health");
+  assert.equal(patientPayload.data.intent.center.commandNoun, "patient");
+  assert.equal(patientPayload.data.coverage.routeKnown, true);
+  assert.equal(patientPayload.data.coverage.executable, false);
+  assert.equal(patientPayload.data.coverage.databaseConnected, false);
+  assert.equal(patientPayload.data.coverage.implementationStatus, "db_adapter_pending");
+  assert.equal(patientPayload.data.gap.status, "workflow_gap");
+
+  const healthGaps = await runCliCapture(["health", "gaps", "--json"], process.cwd());
+  assert.equal(healthGaps.code, CLI_EXIT_OK);
+  const gapsPayload = JSON.parse(healthGaps.stdout) as { data: { coverage: { executable: boolean }; registry: { systems: Array<{ id: string }> } }; meta: { denseData: boolean } };
+  assert.equal(gapsPayload.meta.denseData, true);
+  assert.equal(gapsPayload.data.coverage.executable, true);
+  assert.equal(gapsPayload.data.registry.systems.some((system) => system.id === "health"), true);
+});
+
 test("runCli searches the registered CLI discovery surface", async () => {
   const result = await runCliCapture(["search", "system capabilities", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK);
