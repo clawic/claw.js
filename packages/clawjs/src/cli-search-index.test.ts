@@ -726,6 +726,8 @@ test("search command fallback is explicit and does not broaden section search by
       "--json",
       "--limit",
       "5",
+      "--explain",
+      "true",
     ], workspaceRoot);
     assert.equal(fallback.code, CLI_EXIT_OK);
     const fallbackPayload = JSON.parse(fallback.stdout) as {
@@ -1265,6 +1267,124 @@ test("search rebuild indexes connectors.catalog from control-plane operations wi
     assert.equal(result?.actions?.some((action) => action.id === "execute" && action.kind === "custom" && action.requiresApproval === true && action.grant === "search.connectors.execute"), true);
     assert.equal(result?.fragments?.some((fragment) => fragment.title === "image.edit.background" && fragment.snippet?.includes("brokered connector")), true);
     assert.equal(JSON.stringify(result).includes("vault://connectors/openai/admin"), false);
+  });
+});
+
+test("search rebuild indexes runtime.events from runtime and operational sidecars", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-runtime-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    fs.mkdirSync(dataRoot, { recursive: true });
+    const now = new Date().toISOString();
+    const runtimeDb = new Database(path.join(dataRoot, "runtime.sqlite"));
+    try {
+      runtimeDb.exec(`
+        CREATE TABLE runtime_jobs (
+          id TEXT PRIMARY KEY,
+          kind TEXT NOT NULL,
+          title TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'queued',
+          claim_owner TEXT,
+          run_at TEXT,
+          attempts INTEGER NOT NULL DEFAULT 0,
+          payload_json TEXT NOT NULL DEFAULT '{}',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        CREATE TABLE runtime_events (
+          id TEXT PRIMARY KEY,
+          job_id TEXT,
+          kind TEXT NOT NULL,
+          level TEXT NOT NULL DEFAULT 'info',
+          message TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          metadata_json TEXT NOT NULL DEFAULT '{}'
+        );
+      `);
+      runtimeDb.prepare(`
+        INSERT INTO runtime_jobs (id, kind, title, status, claim_owner, run_at, attempts, payload_json, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run("job-runtime-worker", "search-worker", "Search worker backfill", "queued", null, now, 0, JSON.stringify({ shard: "cold", source: "documents.blocks" }), now, now);
+      runtimeDb.prepare(`
+        INSERT INTO runtime_events (id, job_id, kind, level, message, created_at, metadata_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run("event-runtime-worker", "job-runtime-worker", "worker", "error", "Search worker failed during cold shard backfill", now, JSON.stringify({ source: "documents.blocks", shard: "cold" }));
+    } finally {
+      runtimeDb.close();
+    }
+    const monitorDb = new Database(path.join(dataRoot, "monitor.sqlite"));
+    try {
+      monitorDb.exec(`
+        CREATE TABLE operational_events (
+          id TEXT PRIMARY KEY,
+          kind TEXT NOT NULL,
+          level TEXT NOT NULL DEFAULT 'info',
+          message TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          metadata_json TEXT NOT NULL DEFAULT '{}'
+        );
+      `);
+      monitorDb.prepare(`
+        INSERT INTO operational_events (id, kind, level, message, created_at, metadata_json)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run("monitor-runtime-lag", "uptime", "warn", "Runtime queue lag exceeded threshold", now, JSON.stringify({ queue: "search", lagMs: 1200 }));
+    } finally {
+      monitorDb.close();
+    }
+
+    const rebuild = await runCliCapture(["search", "rebuild", "--source", "runtime.events", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(rebuild.code, CLI_EXIT_OK);
+    const rebuildPayload = JSON.parse(rebuild.stdout) as {
+      data: { sources: string[]; pendingSources: string[]; indexedBySource: { "runtime.events": number } };
+    };
+    assert.equal(rebuildPayload.data.sources.includes("runtime.events"), true);
+    assert.equal(rebuildPayload.data.pendingSources.includes("runtime.events"), false);
+    assert.equal(rebuildPayload.data.indexedBySource["runtime.events"], 3);
+
+    const query = await runCliCapture([
+      "search",
+      "query",
+      "worker failed",
+      "--domains",
+      "runtime",
+      "--filters",
+      "metadata.level=error",
+      "--data-dir",
+      dataRoot,
+      "--json",
+      "--limit",
+      "5",
+    ], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: {
+        indexedFastPaths: { "runtime.events": number };
+        results: Array<{
+          source: string;
+          domain: string;
+          type: string;
+          title: string;
+          metadata?: { kind?: string; level?: string; jobId?: string; sidecar?: string };
+          fragments?: Array<{ title?: string; snippet?: string }>;
+        }>;
+      };
+    };
+    assert.equal(queryPayload.data.indexedFastPaths["runtime.events"], 3);
+    const result = queryPayload.data.results.find((entry) => entry.title.includes("Search worker failed"));
+    assert.equal(result?.source, "runtime.events");
+    assert.equal(result?.domain, "runtime");
+    assert.equal(result?.type, "event");
+    assert.equal(result?.metadata?.kind, "worker");
+    assert.equal(result?.metadata?.level, "error");
+    assert.equal(result?.metadata?.jobId, "job-runtime-worker");
+    assert.equal(result?.metadata?.sidecar, "runtime.sqlite");
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "metadata" && fragment.snippet?.includes("documents.blocks")), true);
   });
 });
 

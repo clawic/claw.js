@@ -60,6 +60,12 @@ const WORKSPACE_SEARCH_DOMAINS = new Set([
 const BUILTIN_SEARCH_SOURCES: SearchSourceManifest[] = createBuiltinSearchSourceManifests();
 type CommandFallbackPolicy = "off" | "empty" | "always";
 
+const OPERATIONAL_SEARCH_SIDECARS = [
+  { filename: "monitor.sqlite", domain: "monitor" },
+  { filename: "infra.sqlite", domain: "infra" },
+  { filename: "ops.sqlite", domain: "ops" },
+] as const;
+
 interface SearchServiceStateFile {
   state: "ready" | "stopped" | "external_pending";
   mode: "embedded" | "daemon";
@@ -125,6 +131,7 @@ export async function runSearchQueryCli(input: {
     const shouldRefreshCode = domains?.includes("code") || sources?.includes("code.symbols");
     const shouldRefreshSkills = domains?.includes("skills") || sources?.includes("skills.registry");
     const shouldRefreshConnectors = domains?.includes("connectors") || sources?.includes("connectors.catalog");
+    const shouldRefreshRuntime = domains?.includes("runtime") || sources?.includes("runtime.events");
     const shouldRefreshLocalFiles = domains?.includes("files") || sources?.includes("local.files");
     const shouldRefreshWeb = domains?.includes("web") || sources?.includes("web.ingested");
     const shouldRefreshExternal = domains?.includes("external") || sources?.includes("external.cache");
@@ -138,6 +145,7 @@ export async function runSearchQueryCli(input: {
     const indexedCode = shouldRefreshCode && sourceCanIndex(store, "code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedSkills = shouldRefreshSkills && sourceCanIndex(store, "skills.registry") ? ensureSkillsRegistrySourceIndexed(store, input.flags) : 0;
     const indexedConnectors = shouldRefreshConnectors && sourceCanIndex(store, "connectors.catalog") ? ensureConnectorsCatalogSourceIndexed(store, input.flags) : 0;
+    const indexedRuntime = shouldRefreshRuntime && sourceCanIndex(store, "runtime.events") ? ensureRuntimeEventsSourceIndexed(store, input.flags) : 0;
     const indexedLocalFiles = shouldRefreshLocalFiles && sourceCanIndex(store, "local.files") ? ensureLocalFilesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedWeb = shouldRefreshWeb && sourceCanIndex(store, "web.ingested") ? ensureWebIngestedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedExternal = shouldRefreshExternal && sourceCanIndex(store, "external.cache") ? ensureExternalCacheSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -217,6 +225,7 @@ export async function runSearchQueryCli(input: {
         ...(shouldRefreshCode ? { "code.symbols": indexedCode } : {}),
         ...(shouldRefreshSkills ? { "skills.registry": indexedSkills } : {}),
         ...(shouldRefreshConnectors ? { "connectors.catalog": indexedConnectors } : {}),
+        ...(shouldRefreshRuntime ? { "runtime.events": indexedRuntime } : {}),
         ...(shouldRefreshLocalFiles ? { "local.files": indexedLocalFiles } : {}),
         ...(shouldRefreshWeb ? { "web.ingested": indexedWeb } : {}),
         ...(shouldRefreshExternal ? { "external.cache": indexedExternal } : {}),
@@ -294,6 +303,7 @@ export async function runSearchRebuildCli(input: {
     const codeIndexed = rebuildsSource("code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const skillsIndexed = rebuildsSource("skills.registry") ? ensureSkillsRegistrySourceIndexed(store, input.flags) : 0;
     const connectorsIndexed = rebuildsSource("connectors.catalog") ? ensureConnectorsCatalogSourceIndexed(store, input.flags) : 0;
+    const runtimeIndexed = rebuildsSource("runtime.events") ? ensureRuntimeEventsSourceIndexed(store, input.flags) : 0;
     const localFilesIndexed = rebuildsSource("local.files") ? ensureLocalFilesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const webIndexed = rebuildsSource("web.ingested") ? ensureWebIngestedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const externalIndexed = rebuildsSource("external.cache") ? ensureExternalCacheSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -310,6 +320,7 @@ export async function runSearchRebuildCli(input: {
       ...(codeIndexed > 0 ? ["code.symbols"] : []),
       ...(skillsIndexed > 0 ? ["skills.registry"] : []),
       ...(connectorsIndexed > 0 ? ["connectors.catalog"] : []),
+      ...(runtimeIndexed > 0 ? ["runtime.events"] : []),
       ...(localFilesIndexed > 0 ? ["local.files"] : []),
       ...(webIndexed > 0 ? ["web.ingested"] : []),
       ...(externalIndexed > 0 ? ["external.cache"] : []),
@@ -323,7 +334,7 @@ export async function runSearchRebuildCli(input: {
       rebuilt: true,
       mode: selectedSources ? "scoped" : "full",
       selectedSources: selectedSources ?? null,
-      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + skillsIndexed + connectorsIndexed + localFilesIndexed + webIndexed + externalIndexed,
+      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + skillsIndexed + connectorsIndexed + runtimeIndexed + localFilesIndexed + webIndexed + externalIndexed,
       embeddings: 0,
       profile: input.flags.profile === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
@@ -341,6 +352,7 @@ export async function runSearchRebuildCli(input: {
         "code.symbols": codeIndexed,
         "skills.registry": skillsIndexed,
         "connectors.catalog": connectorsIndexed,
+        "runtime.events": runtimeIndexed,
         "local.files": localFilesIndexed,
         "web.ingested": webIndexed,
         "external.cache": externalIndexed,
@@ -922,6 +934,8 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
       return ensureSkillsRegistrySourceIndexed(store, flags);
     case "connectors.catalog":
       return ensureConnectorsCatalogSourceIndexed(store, flags);
+    case "runtime.events":
+      return ensureRuntimeEventsSourceIndexed(store, flags);
     case "local.files":
       return ensureLocalFilesSourceIndexed(store, flags, cwd);
     case "web.ingested":
@@ -1147,6 +1161,11 @@ function resolveSearchDbPath(flags: Record<string, string>): string {
   if (process.env.CLAW_SEARCH_DB_PATH) return path.resolve(process.env.CLAW_SEARCH_DB_PATH);
   const env = flags["data-dir"] ? { ...process.env, CLAW_DATA_DIR: flags["data-dir"] } : process.env;
   return path.join(resolveClawjsDataRoot(env), "search.sqlite");
+}
+
+function resolveSearchSidecarPath(flags: Record<string, string>, filename: string): string {
+  const env = flags["data-dir"] ? { ...process.env, CLAW_DATA_DIR: flags["data-dir"] } : process.env;
+  return path.join(resolveClawjsDataRoot(env), filename);
 }
 
 function hasExplicitSearchStorage(flags: Record<string, string>): boolean {
@@ -2025,6 +2044,72 @@ function ensureConnectorCatalogResourceIndexed(store: SearchStore, flags: Record
   } finally {
     db.close();
   }
+}
+
+function ensureRuntimeEventsSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
+  let indexed = 0;
+  const runtimePath = resolveSearchSidecarPath(flags, "runtime.sqlite");
+  if (fs.existsSync(runtimePath)) {
+    const db = new Database(runtimePath, { readonly: true, fileMustExist: true });
+    try {
+      if (hasTable(db, "runtime_jobs")) {
+        const jobs = db.prepare(`
+          SELECT id, kind, title, status, claim_owner, run_at, attempts, payload_json, created_at, updated_at
+          FROM runtime_jobs
+          ORDER BY updated_at DESC
+        `).all() as RuntimeJobRow[];
+        for (const job of jobs) {
+          store.upsertDocument(runtimeJobSearchDocument(job));
+          indexed += 1;
+        }
+      }
+      if (hasTable(db, "runtime_events")) {
+        const events = db.prepare(`
+          SELECT id, job_id, kind, level, message, created_at, metadata_json
+          FROM runtime_events
+          ORDER BY created_at DESC
+        `).all() as RuntimeEventRow[];
+        for (const event of events) {
+          store.upsertDocument(runtimeEventSearchDocument(event));
+          indexed += 1;
+        }
+      }
+    } finally {
+      db.close();
+    }
+  }
+  for (const sidecar of OPERATIONAL_SEARCH_SIDECARS) {
+    const dbPath = resolveSearchSidecarPath(flags, sidecar.filename);
+    if (!fs.existsSync(dbPath)) continue;
+    const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+    try {
+      if (!hasTable(db, "operational_events")) continue;
+      const rows = db.prepare(`
+        SELECT id, kind, level, message, created_at, metadata_json
+        FROM operational_events
+        ORDER BY created_at DESC
+      `).all() as OperationalEventRow[];
+      for (const row of rows) {
+        store.upsertDocument(operationalEventSearchDocument(row, sidecar));
+        indexed += 1;
+      }
+    } finally {
+      db.close();
+    }
+  }
+  store.setCursor({
+    source: "runtime.events",
+    cursor: `items:${indexed}`,
+    metadata: {
+      sidecars: ["runtime.sqlite", ...OPERATIONAL_SEARCH_SIDECARS.map((entry) => entry.filename)],
+    },
+  });
+  store.setSourceState("runtime.events", "enabled", {
+    backlog: 0,
+    error: null,
+    lastIndexedAt: new Date().toISOString(),
+  });
+  return indexed;
 }
 
 function ensureCodeSymbolsSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {
@@ -3207,6 +3292,134 @@ function knowledgeFactSearchDocument(row: KnowledgeFactRow): SearchDocumentInput
   };
 }
 
+function runtimeJobSearchDocument(row: RuntimeJobRow): SearchDocumentInput {
+  const payload = parseJsonRecord(row.payload_json);
+  const payloadText = textFromStructuredContent(payload) ?? (Object.keys(payload).length ? JSON.stringify(payload) : undefined);
+  const body = [row.title, row.kind, row.status, row.claim_owner, row.run_at, payloadText].filter(Boolean).join("\n");
+  return {
+    id: `runtime.events:job:${row.id}`,
+    source: "runtime.events",
+    domain: "runtime",
+    type: "job",
+    resourceId: `job:${row.id}`,
+    title: row.title || row.id,
+    subtitle: [row.kind, row.status].filter(Boolean).join(" / "),
+    snippet: firstMeaningfulLine(payloadText ?? "") ?? row.status,
+    body,
+    updatedAt: row.updated_at,
+    metadata: {
+      kind: row.kind,
+      status: row.status,
+      claimOwner: row.claim_owner,
+      runAt: row.run_at,
+      attempts: row.attempts,
+      sidecar: "runtime.sqlite",
+      payloadKeys: Object.keys(payload).sort(),
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: {
+      fastPath: 1,
+      runtime: 1,
+      job: 1,
+    },
+    fragments: payloadText ? [{
+      id: `runtime.events:job:${row.id}:payload`,
+      title: "payload",
+      body: payloadText,
+      snippet: payloadText.slice(0, 180),
+      sortOrder: 0,
+    }] : [],
+    actions: [
+      { id: "open", kind: "open", label: "Open runtime job", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy runtime job reference", requiresApproval: false },
+    ],
+  };
+}
+
+function runtimeEventSearchDocument(row: RuntimeEventRow): SearchDocumentInput {
+  const metadata = parseJsonRecord(row.metadata_json);
+  const metadataText = textFromStructuredContent(metadata) ?? (Object.keys(metadata).length ? JSON.stringify(metadata) : undefined);
+  const body = [row.message, row.kind, row.level, row.job_id, metadataText].filter(Boolean).join("\n");
+  return {
+    id: `runtime.events:event:${row.id}`,
+    source: "runtime.events",
+    domain: "runtime",
+    type: "event",
+    resourceId: `event:${row.id}`,
+    title: row.message || row.kind,
+    subtitle: [row.kind, row.level].filter(Boolean).join(" / "),
+    snippet: firstMeaningfulLine(row.message || metadataText || "") ?? row.kind,
+    body,
+    updatedAt: row.created_at,
+    metadata: {
+      kind: row.kind,
+      level: row.level,
+      jobId: row.job_id,
+      sidecar: "runtime.sqlite",
+      metadataKeys: Object.keys(metadata).sort(),
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: {
+      fastPath: 1,
+      runtime: 1,
+      event: 1,
+    },
+    fragments: metadataText ? [{
+      id: `runtime.events:event:${row.id}:metadata`,
+      title: "metadata",
+      body: metadataText,
+      snippet: metadataText.slice(0, 180),
+      sortOrder: 0,
+    }] : [],
+    actions: [
+      { id: "open", kind: "open", label: "Open runtime event", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy runtime event reference", requiresApproval: false },
+    ],
+  };
+}
+
+function operationalEventSearchDocument(row: OperationalEventRow, sidecar: typeof OPERATIONAL_SEARCH_SIDECARS[number]): SearchDocumentInput {
+  const metadata = parseJsonRecord(row.metadata_json);
+  const metadataText = textFromStructuredContent(metadata) ?? (Object.keys(metadata).length ? JSON.stringify(metadata) : undefined);
+  const body = [row.message, row.kind, row.level, sidecar.domain, metadataText].filter(Boolean).join("\n");
+  return {
+    id: `runtime.events:operational:${sidecar.domain}:${row.id}`,
+    source: "runtime.events",
+    domain: "runtime",
+    type: "operational_event",
+    resourceId: `operational:${sidecar.domain}:${row.id}`,
+    title: row.message || `${sidecar.domain} ${row.kind}`,
+    subtitle: [sidecar.domain, row.kind, row.level].filter(Boolean).join(" / "),
+    snippet: firstMeaningfulLine(row.message || metadataText || "") ?? row.kind,
+    body,
+    updatedAt: row.created_at,
+    metadata: {
+      kind: row.kind,
+      level: row.level,
+      sidecar: sidecar.filename,
+      operationalDomain: sidecar.domain,
+      metadataKeys: Object.keys(metadata).sort(),
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: {
+      fastPath: 1,
+      runtime: 1,
+      operationalEvent: 1,
+    },
+    fragments: metadataText ? [{
+      id: `runtime.events:operational:${sidecar.domain}:${row.id}:metadata`,
+      title: "metadata",
+      body: metadataText,
+      snippet: metadataText.slice(0, 180),
+      sortOrder: 0,
+    }] : [],
+    actions: [
+      { id: "open", kind: "open", label: "Open operational event", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy operational event reference", requiresApproval: false },
+    ],
+  };
+}
+
 function skillRegistrySearchDocument(row: SkillRegistryRow): SearchDocumentInput | null {
   if (!row.slug) return null;
   const scope = parseJsonRecord(row.scope_json);
@@ -3430,6 +3643,38 @@ interface KnowledgeFactRow {
   valid_to: string | null;
   created_at: string;
   updated_at: string;
+}
+
+interface RuntimeJobRow {
+  id: string;
+  kind: string;
+  title: string;
+  status: string;
+  claim_owner: string | null;
+  run_at: string | null;
+  attempts: number;
+  payload_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface RuntimeEventRow {
+  id: string;
+  job_id: string | null;
+  kind: string;
+  level: string;
+  message: string;
+  created_at: string;
+  metadata_json: string;
+}
+
+interface OperationalEventRow {
+  id: string;
+  kind: string;
+  level: string;
+  message: string;
+  created_at: string;
+  metadata_json: string;
 }
 
 interface SkillRegistryRow {

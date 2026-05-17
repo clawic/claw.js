@@ -68,6 +68,7 @@ backfill jobs.
 | `generations.artifacts` | `generations` | generated artifact records projected into `search.sqlite` | implemented initial adapter |
 | `code.symbols` | `code` | bounded project file/symbol/docs projection into `search.sqlite` | implemented initial adapter |
 | `skills.registry` | `skills` | framework skill records projected from `core.sqlite` without secret refs | implemented initial adapter |
+| `runtime.events` | `runtime` | runtime jobs/events and monitor/infra/ops operational sidecars projected into `search.sqlite` | implemented initial adapter |
 | `local.files` | `files` | bounded local file metadata and text-content projection | implemented opt-in adapter, `full`, off by default |
 | `native.system` | `native` | native app/system/contact adapters | EXTERNAL PENDING, `full`, off by default |
 | `web.ingested` | `web` | bounded explicit web cache ingestion | implemented opt-in adapter, `full`, off by default |
@@ -89,6 +90,7 @@ claw search query "requirements" --domains media --filters metadata.kind=documen
 claw search query "analytics cards" --domains generations --filters metadata.status=succeeded --json
 claw search query "symbolName" --domains code --code-root /path/to/project --json
 claw search query "deployment APIs" --domains skills --filters metadata.requiresProtectedRefs=true --json
+claw search query "worker failed" --domains runtime --filters metadata.level=error --json
 claw search query "system capabilities" --domains database --command-fallback empty --json
 claw search query "launch checklist" --actor agent:codex --agent-result-limit 5 --agent-source-limit 2 --json
 claw search sources enable local.files --profile full --json
@@ -339,6 +341,12 @@ declared capability summaries. It does not index credential bindings, secret
 references, or raw traces; connector execution remains host-brokered and
 approval-gated. A resource-scoped scheduling helper exists for connector
 operation changes; automatic control-plane write emitters remain source-owned.
+
+`runtime.events` projects technical runtime jobs, runtime events, and
+monitor/infra/ops operational events from local sidecars. It indexes job status,
+run timing, payload summaries, event kind/level/message, sidecar origin, and
+operational metadata so technical artifacts can be searched without mixing them
+into user-facing domain sections.
 
 Search result actions are brokered. `search actions execute` produces a
 host-grants execution plan in `--dry-run` mode, fails closed when an approval is

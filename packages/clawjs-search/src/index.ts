@@ -693,6 +693,18 @@ export function createBuiltinSearchSourceManifests(): SearchSourceManifest[] {
         { id: "costRisk", label: "Cost risk", type: "string" },
       ],
     }),
+    createFrameworkSearchSourceManifest({
+      id: "runtime.events",
+      domain: "runtime",
+      name: "Runtime events",
+      resultTypes: ["job", "event", "operational_event"],
+      facets: [
+        { id: "kind", label: "Kind", type: "string" },
+        { id: "level", label: "Level", type: "string" },
+        { id: "status", label: "Status", type: "string" },
+        { id: "sidecar", label: "Sidecar", type: "string" },
+      ],
+    }),
     createFullSearchSourceManifest({
       id: "local.files",
       domain: "files",
