@@ -7,7 +7,7 @@ import type Database from "better-sqlite3";
 import { DatabaseServiceStore } from "@clawjs/database";
 import { runAgentsCommand, runConnectionsCommand, runPersonalitiesCommand, runSkillCollectionsCommand } from "./v1-data-agent-entities.ts";
 import { runProviderRoutingCommand, runSnippetsCommand } from "./v1-data-agent-config.ts";
-import { scheduleNotesPagesSearchEvent, scheduleSkillsRegistrySearchEvent } from "./cli-search-events.ts";
+import { scheduleKnowledgeGraphSearchEvent, scheduleNotesPagesSearchEvent, scheduleSkillsRegistrySearchEvent } from "./cli-search-events.ts";
 export {
   openMainDataStore,
   resolveClawjsDataRoot,
@@ -678,6 +678,13 @@ function runKnowledgeCommand(input: V1DataCliInput, store: DatabaseServiceStore)
       now,
       now,
     );
+    scheduleKnowledgeGraphSearchEvent({
+      operation: "upsert",
+      kind: "entity",
+      id,
+      dataDir: resolveClawjsDataRoot(),
+      flags: input.flags,
+    });
     writeSuccess(input, normalizeDbRow(store.sqlite.prepare("SELECT * FROM knowledge_entities WHERE id = ?").get(id) as JsonRecord));
     return V1_DATA_EXIT_OK;
   }
@@ -712,6 +719,13 @@ function runKnowledgeCommand(input: V1DataCliInput, store: DatabaseServiceStore)
       now,
       now,
     );
+    scheduleKnowledgeGraphSearchEvent({
+      operation: "upsert",
+      kind: "fact",
+      id,
+      dataDir: resolveClawjsDataRoot(),
+      flags: input.flags,
+    });
     writeSuccess(input, normalizeDbRow(store.sqlite.prepare("SELECT * FROM knowledge_facts WHERE id = ?").get(id) as JsonRecord));
     return V1_DATA_EXIT_OK;
   }
@@ -758,7 +772,7 @@ function runNotesCommand(input: V1DataCliInput, store: DatabaseServiceStore): nu
     });
     scheduleNotesPagesSearchEvent({
       operation: "upsert",
-      pageId: result.id,
+      pageId: String(result.id),
       dataDir: resolveClawjsDataRoot(),
       flags: input.flags,
     });
@@ -848,7 +862,7 @@ function runNotesCommand(input: V1DataCliInput, store: DatabaseServiceStore): nu
     });
     scheduleNotesPagesSearchEvent({
       operation: "upsert",
-      pageId: result.id,
+      pageId: String(result.id),
       dataDir: resolveClawjsDataRoot(),
       flags: input.flags,
     });

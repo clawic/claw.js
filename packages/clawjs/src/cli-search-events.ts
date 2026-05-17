@@ -163,6 +163,30 @@ export function scheduleNotesPagesSearchEvent(input: {
   });
 }
 
+export function scheduleKnowledgeGraphSearchEvent(input: {
+  operation: "upsert" | "delete";
+  kind: "entity" | "fact";
+  id: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  const knowledgeResourceId = `${input.kind}:${input.id}`;
+  return scheduleSearchIndexEvent({
+    source: "knowledge.graph",
+    operation: input.operation,
+    resourceId: knowledgeResourceId,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      kind: input.kind,
+      knowledgeResourceId,
+      [`${input.kind}Id`]: input.id,
+    },
+  });
+}
+
 export function scheduleConnectorCatalogSearchEvent(input: {
   operation: "upsert" | "delete";
   operationId: string;

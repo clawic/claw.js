@@ -1525,6 +1525,126 @@ test("search rebuild indexes notes.pages from pages and blocks", async () => {
   });
 });
 
+test("search rebuild indexes knowledge.graph from entities and facts", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-knowledge-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const entity = await runCliCapture([
+      "knowledge",
+      "entity",
+      "entity-search-system",
+      "--type",
+      "system",
+      "--label",
+      "Search System",
+      "--description",
+      "Stores framework knowledge for launcher ranking and entity lookup.",
+      "--properties",
+      JSON.stringify({ owner: "search", stage: "initial" }),
+      "--json",
+    ], workspaceRoot);
+    assert.equal(entity.code, CLI_EXIT_OK);
+    const entityPayload = JSON.parse(entity.stdout) as { data: { id: string } };
+    assert.equal(entityPayload.data.id, "entity-search-system");
+
+    const fact = await runCliCapture([
+      "knowledge",
+      "fact",
+      "--id",
+      "fact-search-preference",
+      "--subject",
+      "entity-search-system",
+      "--predicate",
+      "prefers",
+      "--value",
+      "fast scoped Search results",
+      "--confidence",
+      "0.91",
+      "--json",
+    ], workspaceRoot);
+    assert.equal(fact.code, CLI_EXIT_OK);
+    const factPayload = JSON.parse(fact.stdout) as { data: { id: string } };
+    assert.equal(factPayload.data.id, "fact-search-preference");
+
+    const jobs = await runCliCapture(["search", "jobs", "--source", "knowledge.graph", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(jobs.code, CLI_EXIT_OK);
+    const jobsPayload = JSON.parse(jobs.stdout) as {
+      data: { items: Array<{ operation: string; resourceId: string; shard: string; payload: { kind?: string; knowledgeResourceId?: string; entityId?: string; factId?: string } }> };
+    };
+    const entityJob = jobsPayload.data.items.find((job) => job.resourceId === "entity:entity-search-system");
+    assert.equal(entityJob?.operation, "upsert");
+    assert.equal(entityJob?.shard, "hot");
+    assert.equal(entityJob?.payload.kind, "entity");
+    assert.equal(entityJob?.payload.entityId, "entity-search-system");
+    const factJob = jobsPayload.data.items.find((job) => job.resourceId === "fact:fact-search-preference");
+    assert.equal(factJob?.operation, "upsert");
+    assert.equal(factJob?.payload.kind, "fact");
+    assert.equal(factJob?.payload.factId, "fact-search-preference");
+
+    const rebuild = await runCliCapture(["search", "rebuild", "--source", "knowledge.graph", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(rebuild.code, CLI_EXIT_OK);
+    const rebuildPayload = JSON.parse(rebuild.stdout) as {
+      data: { sources: string[]; pendingSources: string[]; indexedBySource: { "knowledge.graph": number } };
+    };
+    assert.equal(rebuildPayload.data.sources.includes("knowledge.graph"), true);
+    assert.equal(rebuildPayload.data.pendingSources.includes("knowledge.graph"), false);
+    assert.equal(rebuildPayload.data.indexedBySource["knowledge.graph"], 2);
+
+    const query = await runCliCapture([
+      "search",
+      "query",
+      "fast scoped Search results",
+      "--domains",
+      "knowledge",
+      "--filters",
+      JSON.stringify({ "metadata.kind": "fact", "metadata.predicate": "prefers", redacted: false }),
+      "--data-dir",
+      dataRoot,
+      "--json",
+      "--limit",
+      "5",
+      "--explain",
+      "true",
+    ], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: {
+        indexedFastPaths: { "knowledge.graph": number };
+        results: Array<{
+          source: string;
+          domain: string;
+          type: string;
+          title: string;
+          metadata?: { kind?: string; factId?: string; subjectId?: string; predicate?: string; confidence?: number };
+          fragments?: Array<{ title?: string; snippet?: string }>;
+          actions?: Array<{ id: string; kind: string }>;
+          explanation?: { matchedBy?: string[] };
+        }>;
+        facets?: Array<{ id: string }>;
+      };
+    };
+    assert.equal(queryPayload.data.indexedFastPaths["knowledge.graph"], 2);
+    const result = queryPayload.data.results.find((entry) => entry.metadata?.factId === "fact-search-preference");
+    assert.equal(result?.source, "knowledge.graph");
+    assert.equal(result?.domain, "knowledge");
+    assert.equal(result?.type, "fact");
+    assert.equal(result?.metadata?.kind, "fact");
+    assert.equal(result?.metadata?.subjectId, "entity-search-system");
+    assert.equal(result?.metadata?.predicate, "prefers");
+    assert.equal(result?.metadata?.confidence, 0.91);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "prefers" && fragment.snippet?.includes("fast scoped Search")), true);
+    assert.equal(result?.actions?.some((action) => action.id === "open" && action.kind === "open"), true);
+    assert.ok(result?.explanation?.matchedBy?.length);
+    assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "predicate"), true);
+  });
+});
+
 test("search rebuild indexes images.derived from image library records", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-images-"));
   const dataRoot = path.join(workspaceRoot, "data");

@@ -607,6 +607,19 @@ export function createBuiltinSearchSourceManifests(): SearchSourceManifest[] {
       ],
     }),
     createFrameworkSearchSourceManifest({
+      id: "knowledge.graph",
+      domain: "knowledge",
+      name: "Knowledge",
+      resultTypes: ["entity", "fact"],
+      facets: [
+        { id: "kind", label: "Kind", type: "string" },
+        { id: "type", label: "Type", type: "string" },
+        { id: "predicate", label: "Predicate", type: "string" },
+        { id: "source", label: "Source", type: "string" },
+        { id: "sensitivity", label: "Sensitivity", type: "string" },
+      ],
+    }),
+    createFrameworkSearchSourceManifest({
       id: "images.derived",
       domain: "images",
       name: "Images",

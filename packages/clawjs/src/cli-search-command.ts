@@ -118,6 +118,7 @@ export async function runSearchQueryCli(input: {
     const shouldRefreshDatabase = domains?.includes("database") || sources?.includes("database.records");
     const shouldRefreshDocuments = domains?.includes("documents") || sources?.includes("documents.blocks");
     const shouldRefreshNotes = domains?.includes("notes") || sources?.includes("notes.pages");
+    const shouldRefreshKnowledge = domains?.includes("knowledge") || sources?.includes("knowledge.graph");
     const shouldRefreshImages = domains?.includes("images") || sources?.includes("images.derived");
     const shouldRefreshMedia = domains?.includes("media") || sources?.includes("media.assets");
     const shouldRefreshGenerations = domains?.includes("generations") || sources?.includes("generations.artifacts");
@@ -130,6 +131,7 @@ export async function runSearchQueryCli(input: {
     const indexedDatabase = shouldRefreshDatabase && sourceCanIndex(store, "database.records") ? ensureDatabaseRecordsSourceIndexed(store, input.flags) : 0;
     const indexedDocuments = shouldRefreshDocuments && sourceCanIndex(store, "documents.blocks") ? ensureDocumentsBlocksSourceIndexed(store, input.flags) : 0;
     const indexedNotes = shouldRefreshNotes && sourceCanIndex(store, "notes.pages") ? ensureNotesPagesSourceIndexed(store, input.flags) : 0;
+    const indexedKnowledge = shouldRefreshKnowledge && sourceCanIndex(store, "knowledge.graph") ? ensureKnowledgeGraphSourceIndexed(store, input.flags) : 0;
     const indexedImages = shouldRefreshImages && sourceCanIndex(store, "images.derived") ? ensureImagesDerivedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedMedia = shouldRefreshMedia && sourceCanIndex(store, "media.assets") ? ensureMediaAssetsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedGenerations = shouldRefreshGenerations && sourceCanIndex(store, "generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -208,6 +210,7 @@ export async function runSearchQueryCli(input: {
         ...(shouldRefreshDatabase ? { "database.records": indexedDatabase } : {}),
         ...(shouldRefreshDocuments ? { "documents.blocks": indexedDocuments } : {}),
         ...(shouldRefreshNotes ? { "notes.pages": indexedNotes } : {}),
+        ...(shouldRefreshKnowledge ? { "knowledge.graph": indexedKnowledge } : {}),
         ...(shouldRefreshImages ? { "images.derived": indexedImages } : {}),
         ...(shouldRefreshMedia ? { "media.assets": indexedMedia } : {}),
         ...(shouldRefreshGenerations ? { "generations.artifacts": indexedGenerations } : {}),
@@ -284,6 +287,7 @@ export async function runSearchRebuildCli(input: {
     const databaseIndexed = rebuildsSource("database.records") ? ensureDatabaseRecordsSourceIndexed(store, input.flags) : 0;
     const documentsIndexed = rebuildsSource("documents.blocks") ? ensureDocumentsBlocksSourceIndexed(store, input.flags) : 0;
     const notesIndexed = rebuildsSource("notes.pages") ? ensureNotesPagesSourceIndexed(store, input.flags) : 0;
+    const knowledgeIndexed = rebuildsSource("knowledge.graph") ? ensureKnowledgeGraphSourceIndexed(store, input.flags) : 0;
     const imagesIndexed = rebuildsSource("images.derived") ? ensureImagesDerivedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const mediaIndexed = rebuildsSource("media.assets") ? ensureMediaAssetsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const generationsIndexed = rebuildsSource("generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -299,6 +303,7 @@ export async function runSearchRebuildCli(input: {
       ...(databaseIndexed > 0 ? ["database.records"] : []),
       ...(documentsIndexed > 0 ? ["documents.blocks"] : []),
       ...(notesIndexed > 0 ? ["notes.pages"] : []),
+      ...(knowledgeIndexed > 0 ? ["knowledge.graph"] : []),
       ...(imagesIndexed > 0 ? ["images.derived"] : []),
       ...(mediaIndexed > 0 ? ["media.assets"] : []),
       ...(generationsIndexed > 0 ? ["generations.artifacts"] : []),
@@ -318,7 +323,7 @@ export async function runSearchRebuildCli(input: {
       rebuilt: true,
       mode: selectedSources ? "scoped" : "full",
       selectedSources: selectedSources ?? null,
-      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + documentsIndexed + notesIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + skillsIndexed + connectorsIndexed + localFilesIndexed + webIndexed + externalIndexed,
+      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + skillsIndexed + connectorsIndexed + localFilesIndexed + webIndexed + externalIndexed,
       embeddings: 0,
       profile: input.flags.profile === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
@@ -329,6 +334,7 @@ export async function runSearchRebuildCli(input: {
         "database.records": databaseIndexed,
         "documents.blocks": documentsIndexed,
         "notes.pages": notesIndexed,
+        "knowledge.graph": knowledgeIndexed,
         "images.derived": imagesIndexed,
         "media.assets": mediaIndexed,
         "generations.artifacts": generationsIndexed,
@@ -902,6 +908,8 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
       return ensureDocumentsBlocksSourceIndexed(store, flags);
     case "notes.pages":
       return ensureNotesPagesSourceIndexed(store, flags);
+    case "knowledge.graph":
+      return ensureKnowledgeGraphSourceIndexed(store, flags);
     case "images.derived":
       return ensureImagesDerivedSourceIndexed(store, flags, cwd);
     case "media.assets":
@@ -934,6 +942,10 @@ function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flag
     case "notes.pages": {
       const resourceId = resourceIdFromJobPayload(job, "pageId") ?? job.resourceId;
       return resourceId ? ensureNotesPageResourceIndexed(store, flags, resourceId) : 0;
+    }
+    case "knowledge.graph": {
+      const resourceId = resourceIdFromJobPayload(job, "knowledgeResourceId") ?? job.resourceId;
+      return resourceId ? ensureKnowledgeGraphResourceIndexed(store, flags, resourceId) : 0;
     }
     case "images.derived": {
       const resourceId = resourceIdFromJobPayload(job, "imageId") ?? job.resourceId;
@@ -1724,6 +1736,110 @@ function ensureNotesPageResourceIndexed(store: SearchStore, flags: Record<string
     }
     store.upsertDocument(searchDocument);
     store.setSourceState("notes.pages", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 1;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureKnowledgeGraphSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) {
+    store.setSourceState("knowledge.graph", "enabled", {
+      backlog: 0,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 0;
+  }
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "knowledge_entities") || !hasTable(db, "knowledge_facts")) {
+      store.setSourceState("knowledge.graph", "degraded", {
+        backlog: 0,
+        error: "core database does not contain knowledge_entities/knowledge_facts",
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return 0;
+    }
+    const entities = db.prepare(`
+      SELECT id, type, label, description, properties_json, sensitivity, source, provenance_json, created_at, updated_at
+      FROM knowledge_entities
+      ORDER BY updated_at DESC
+    `).all() as KnowledgeEntityRow[];
+    const facts = db.prepare(`
+      SELECT id, subject_id, predicate, object_kind, object_value_json, confidence, scope_json,
+        sensitivity, source, provenance_json, supersedes_id, valid_from, valid_to, created_at, updated_at
+      FROM knowledge_facts
+      ORDER BY updated_at DESC
+    `).all() as KnowledgeFactRow[];
+    let indexed = 0;
+    for (const entity of entities) {
+      const document = knowledgeEntitySearchDocument(entity);
+      if (!document) continue;
+      store.upsertDocument(document);
+      indexed += 1;
+    }
+    for (const fact of facts) {
+      const document = knowledgeFactSearchDocument(fact);
+      if (!document) continue;
+      store.upsertDocument(document);
+      indexed += 1;
+    }
+    store.setCursor({
+      source: "knowledge.graph",
+      cursor: `items:${indexed}`,
+      metadata: { store: "core.sqlite", tables: ["knowledge_entities", "knowledge_facts"] },
+    });
+    store.setSourceState("knowledge.graph", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return indexed;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureKnowledgeGraphResourceIndexed(store: SearchStore, flags: Record<string, string>, resourceId: string): number {
+  const target = parseKnowledgeGraphResourceId(resourceId);
+  if (!target) return 0;
+  const dbPath = resolveMainDbPath(flags);
+  if (!fs.existsSync(dbPath)) return 0;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "knowledge_entities") || !hasTable(db, "knowledge_facts")) return 0;
+    if (target.kind === "entity") {
+      const entity = db.prepare(`
+        SELECT id, type, label, description, properties_json, sensitivity, source, provenance_json, created_at, updated_at
+        FROM knowledge_entities
+        WHERE id = ?
+        LIMIT 1
+      `).get(target.id) as KnowledgeEntityRow | undefined;
+      if (!entity) {
+        store.tombstone({ source: "knowledge.graph", resourceId, reason: "knowledge entity missing during Search event refresh" });
+        return 1;
+      }
+      store.upsertDocument(knowledgeEntitySearchDocument(entity));
+    } else {
+      const fact = db.prepare(`
+        SELECT id, subject_id, predicate, object_kind, object_value_json, confidence, scope_json,
+          sensitivity, source, provenance_json, supersedes_id, valid_from, valid_to, created_at, updated_at
+        FROM knowledge_facts
+        WHERE id = ?
+        LIMIT 1
+      `).get(target.id) as KnowledgeFactRow | undefined;
+      if (!fact) {
+        store.tombstone({ source: "knowledge.graph", resourceId, reason: "knowledge fact missing during Search event refresh" });
+        return 1;
+      }
+      store.upsertDocument(knowledgeFactSearchDocument(fact));
+    }
+    store.setSourceState("knowledge.graph", "enabled", {
       backlog: 0,
       error: null,
       lastIndexedAt: new Date().toISOString(),
@@ -2973,6 +3089,124 @@ function notesPageSearchDocument(row: NotesPageRow, blockRows: NotesPageBlockRow
   };
 }
 
+function knowledgeEntitySearchDocument(row: KnowledgeEntityRow): SearchDocumentInput {
+  const properties = parseJsonRecord(row.properties_json);
+  const provenance = parseJsonRecord(row.provenance_json);
+  const sensitive = isSensitiveKnowledge(row.sensitivity);
+  const propertiesText = textFromStructuredContent(properties);
+  const provenanceText = textFromStructuredContent(provenance);
+  const body = [row.label, row.type, row.description, propertiesText, provenanceText, row.source].filter(Boolean).join("\n");
+  return {
+    id: `knowledge.graph:entity:${row.id}`,
+    source: "knowledge.graph",
+    domain: "knowledge",
+    type: "entity",
+    resourceId: `entity:${row.id}`,
+    title: row.label || row.id,
+    subtitle: row.type,
+    snippet: sensitive ? "[redacted]" : firstMeaningfulLine(row.description ?? propertiesText ?? "") ?? row.label,
+    body,
+    updatedAt: row.updated_at,
+    metadata: {
+      kind: "entity",
+      entityId: row.id,
+      type: row.type,
+      source: row.source,
+      sensitivity: row.sensitivity,
+      propertyNames: Object.keys(properties).sort(),
+    },
+    permissions: { canOpen: true, canPreview: !sensitive, redacted: sensitive },
+    rankingHints: {
+      fastPath: 1,
+      knowledge: 1,
+      entity: 1,
+    },
+    fragments: sensitive ? [] : [
+      ...(row.description ? [{
+        id: `knowledge.graph:entity:${row.id}:description`,
+        title: "description",
+        body: row.description,
+        snippet: row.description.slice(0, 180),
+        sortOrder: 0,
+      }] : []),
+      ...(propertiesText ? [{
+        id: `knowledge.graph:entity:${row.id}:properties`,
+        title: "properties",
+        body: propertiesText,
+        snippet: propertiesText.slice(0, 180),
+        sortOrder: 1,
+      }] : []),
+    ],
+    actions: [
+      { id: "open", kind: "open", label: "Open entity", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy entity reference", requiresApproval: false },
+    ],
+  };
+}
+
+function knowledgeFactSearchDocument(row: KnowledgeFactRow): SearchDocumentInput {
+  const scope = parseJsonRecord(row.scope_json);
+  const provenance = parseJsonRecord(row.provenance_json);
+  const objectValue = parseJsonValue(row.object_value_json);
+  const objectText = stringifySearchValue(objectValue);
+  const scopeText = textFromStructuredContent(scope);
+  const provenanceText = textFromStructuredContent(provenance);
+  const sensitive = isSensitiveKnowledge(row.sensitivity);
+  const body = [row.subject_id, row.predicate, row.object_kind, objectText, scopeText, provenanceText, row.source].filter(Boolean).join("\n");
+  return {
+    id: `knowledge.graph:fact:${row.id}`,
+    source: "knowledge.graph",
+    domain: "knowledge",
+    type: "fact",
+    resourceId: `fact:${row.id}`,
+    title: `${row.predicate}: ${objectText.slice(0, 80)}`,
+    subtitle: [row.subject_id, row.object_kind].filter(Boolean).join(" / "),
+    snippet: sensitive ? "[redacted]" : firstMeaningfulLine(objectText) ?? row.predicate,
+    body,
+    updatedAt: row.updated_at,
+    metadata: {
+      kind: "fact",
+      factId: row.id,
+      subjectId: row.subject_id,
+      predicate: row.predicate,
+      objectKind: row.object_kind,
+      confidence: row.confidence,
+      source: row.source,
+      sensitivity: row.sensitivity,
+      supersedesId: row.supersedes_id,
+      validFrom: row.valid_from,
+      validTo: row.valid_to,
+    },
+    permissions: { canOpen: true, canPreview: !sensitive, redacted: sensitive },
+    rankingHints: {
+      fastPath: 1,
+      knowledge: 1,
+      fact: 1,
+      confidence: typeof row.confidence === "number" ? row.confidence : 0,
+    },
+    fragments: sensitive ? [] : [
+      {
+        id: `knowledge.graph:fact:${row.id}:object`,
+        title: row.predicate,
+        body: objectText,
+        snippet: objectText.slice(0, 180),
+        sortOrder: 0,
+      },
+      ...(scopeText ? [{
+        id: `knowledge.graph:fact:${row.id}:scope`,
+        title: "scope",
+        body: scopeText,
+        snippet: scopeText.slice(0, 180),
+        sortOrder: 1,
+      }] : []),
+    ],
+    actions: [
+      { id: "open", kind: "open", label: "Open fact", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy fact reference", requiresApproval: false },
+    ],
+  };
+}
+
 function skillRegistrySearchDocument(row: SkillRegistryRow): SearchDocumentInput | null {
   if (!row.slug) return null;
   const scope = parseJsonRecord(row.scope_json);
@@ -3163,6 +3397,37 @@ interface NotesPageBlockRow {
   content_json: string;
   text: string;
   metadata_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface KnowledgeEntityRow {
+  id: string;
+  type: string;
+  label: string;
+  description: string | null;
+  properties_json: string;
+  sensitivity: string;
+  source: string;
+  provenance_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface KnowledgeFactRow {
+  id: string;
+  subject_id: string | null;
+  predicate: string;
+  object_kind: string;
+  object_value_json: string;
+  confidence: number | null;
+  scope_json: string;
+  sensitivity: string;
+  source: string;
+  provenance_json: string;
+  supersedes_id: string | null;
+  valid_from: string | null;
+  valid_to: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -3367,6 +3632,15 @@ function parseJsonRecord(value: string | null | undefined): Record<string, unkno
   }
 }
 
+function parseJsonValue(value: string | null | undefined): unknown {
+  if (!value) return null;
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return value;
+  }
+}
+
 function parseJsonArray(value: string | null | undefined): unknown[] {
   if (!value) return [];
   try {
@@ -3375,6 +3649,18 @@ function parseJsonArray(value: string | null | undefined): unknown[] {
   } catch {
     return [];
   }
+}
+
+function parseKnowledgeGraphResourceId(resourceId: string): { kind: "entity" | "fact"; id: string } | null {
+  const separator = resourceId.indexOf(":");
+  if (separator <= 0 || separator === resourceId.length - 1) return null;
+  const kind = resourceId.slice(0, separator);
+  if (kind !== "entity" && kind !== "fact") return null;
+  return { kind, id: resourceId.slice(separator + 1) };
+}
+
+function isSensitiveKnowledge(sensitivity: string): boolean {
+  return ["sensitive", "private", "secret", "restricted"].includes(sensitivity.toLowerCase());
 }
 
 function commandSearchDocument(command: ClawCliCommandRegistryEntry): SearchDocumentInput {

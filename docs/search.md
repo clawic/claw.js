@@ -62,6 +62,7 @@ backfill jobs.
 | `database.records` | `database` | `core.sqlite` records projected into `search.sqlite` | implemented |
 | `documents.blocks` | `documents` | `core.sqlite` documents and document blocks projected into `search.sqlite` | implemented initial adapter |
 | `notes.pages` | `notes` | `core.sqlite` pages and page blocks projected into `search.sqlite` | implemented initial adapter |
+| `knowledge.graph` | `knowledge` | `core.sqlite` knowledge entities and facts projected into `search.sqlite` | implemented initial adapter |
 | `images.derived` | `images` | image library, image media metadata, and stored OCR/vision-derived text projected into `search.sqlite` | implemented initial adapter |
 | `media.assets` | `media` | workspace media records projected into `search.sqlite` | implemented initial adapter |
 | `generations.artifacts` | `generations` | generated artifact records projected into `search.sqlite` | implemented initial adapter |
@@ -83,6 +84,7 @@ claw search query "text" --domains database --filters '{"metadata.collection":"c
 claw search query "text" --domains documents --filters '{"metadata.scopeKind":"project"}' --json
 claw search query "product mark" --domains images --filters metadata.imageType=logo --json
 claw search query "meeting notes" --domains notes --filters metadata.space=notes --json
+claw search query "user preference" --domains knowledge --filters metadata.kind=fact --json
 claw search query "requirements" --domains media --filters metadata.kind=document --json
 claw search query "analytics cards" --domains generations --filters metadata.status=succeeded --json
 claw search query "symbolName" --domains code --code-root /path/to/project --json
@@ -166,9 +168,9 @@ unbounded duplicate backfill work.
 
 The local framework database and artifact write paths now emit those compacted
 events for `database.records`, `documents.blocks`, `notes.pages`,
-`generations.artifacts`, `images.derived`, `media.assets`, and
+`knowledge.graph`, `generations.artifacts`, `images.derived`, `media.assets`, and
 `skills.registry`: successful `db collection create|update`, `documents
-create|update`, `notes create|update`, `image
+create|update`, `notes create|update`, `knowledge entity|fact`, `image
 create|edit|import`, typed-media generation, `generations create`, and `skills
 upsert` calls schedule hot upsert events; successful record, document, note,
 image, media, generation, or skill deletes schedule delete events where the
@@ -297,6 +299,13 @@ facets, tags, visibility, sensitivity, and source-record metadata. Sensitive
 notes can still match indexed text, but returned previews are redacted and block
 fragments are omitted.
 
+`knowledge.graph` projects framework knowledge entities and facts from
+`core.sqlite`. Entities index labels, descriptions, properties, provenance, type,
+source, and sensitivity. Facts index subject, predicate, object value, scope,
+confidence, validity window, source, and provenance. Sensitive knowledge can
+still match indexed text, but returned previews are redacted and fragments are
+omitted.
+
 `images.derived` projects local image-library records and image media metadata.
 The initial adapter indexes prompts, revised prompts, tags, collections, type,
 provider/model, provenance, output metadata, and any stored OCR text, captions,
@@ -367,8 +376,9 @@ usable without waiting for universal backfill.
 - Expose `claw search`.
 - Build `SearchStore` over `search.sqlite`.
 - Index `commands`, `sessions.chats`, `database.records`, `documents.blocks`,
-  `notes.pages`, `images.derived`, `media.assets`, `generations.artifacts`,
-  `skills.registry`, and the first bounded `code.symbols` adapter.
+  `notes.pages`, `knowledge.graph`, `images.derived`, `media.assets`,
+  `generations.artifacts`, `skills.registry`, and the first bounded
+  `code.symbols` adapter.
 - Keep Clawix Mac Search and `Command-G` conversations-only.
 
 ### Phase 2: framework domains
