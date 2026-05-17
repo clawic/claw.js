@@ -610,7 +610,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     return CLI_EXIT_OK;
   }
   if (command === "storage") {
-    const selected = nodes.filter((node) => ["root", "folder", "file", "socket", "statusFile", "legacyPath", "externalReadOnlySource"].includes(node.kind));
+    const selected = nodes.filter((node) => ["root", "folder", "file", "socket", "statusFile", "retiredPath", "externalReadOnlySource"].includes(node.kind));
     if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
     else input.context.stdout.write(`${inspectText(selected)}\n`);
     return CLI_EXIT_OK;

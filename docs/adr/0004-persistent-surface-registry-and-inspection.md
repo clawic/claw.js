@@ -105,7 +105,7 @@ The persistent node kinds are:
 - `cache`
 - `fixture`
 - `persistentTemp`
-- `legacyPath`
+- `retiredPath`
 - `externalReadOnlySource`
 
 The stable contract node kinds are:
@@ -153,7 +153,7 @@ classifications from ADR 0009: `required`, `optional`, `local-only`,
 Any code that introduces a new durable path, database, collection/table,
 durable field, preference key, app storage key, browser storage key,
 environment variable or override, persistent temp location, cache intended to survive app
-restarts, host operational state, fixture with stable naming, legacy path, or
+restarts, host operational state, fixture with stable naming, retired path, or
 external read-only source must register it through a typed builder in the
 persistent surface registry or a language-specific builder that feeds the same
 registry contract.

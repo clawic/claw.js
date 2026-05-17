@@ -30,7 +30,7 @@ export type ClawDomainSurfaceStatus =
   | "runtime_service"
   | "host_required"
   | "external_pending"
-  | "cleanup_required";
+  | "retired_read_only";
 
 export interface ClawDomainSurfaceSource {
   file: string;
@@ -352,7 +352,7 @@ const storageEntries = clawPersistentSurfaceRegistry.nodes
     name: node.name,
     label: node.name,
     owner: node.owner === "clawix" ? "clawix" : node.owner === "external" ? "external" : "claw",
-    status: node.canonicality === "legacyReadOnly" ? "cleanup_required" : "canonical",
+    status: node.canonicality === "retiredReadOnly" ? "retired_read_only" : "canonical",
     storageIds: [node.id],
     source: node.source ?? { file: "packages/clawjs-core/src/surface-registry.ts" },
     notes: node.notes,

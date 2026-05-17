@@ -39,6 +39,11 @@ function readJson(relativePath) {
 forbidSnippet("packages/clawjs-core/src/surface-registry.ts", "stable compatibility surface");
 forbidSnippet("packages/clawjs/src/inspect-cli.test.ts", "stable compatibility surface");
 forbidSnippet("docs/adr/0004-persistent-surface-registry-and-inspection.md", "stable compatibility");
+forbidSnippet("docs/adr/0004-persistent-surface-registry-and-inspection.md", "legacyPath");
+forbidSnippet("packages/clawjs-core/src/surface-registry.ts", "legacyPath");
+forbidSnippet("packages/clawjs-core/src/surface-registry.ts", "legacyReadOnly");
+forbidSnippet("packages/clawjs-core/src/domain-surface-registry.ts", "cleanup_required");
+forbidSnippet("packages/clawjs/src/inspect-cli.ts", "legacyPath");
 forbidSnippet("docs/decision-map.md", "stable compatibility");
 
 for (const relativePath of [

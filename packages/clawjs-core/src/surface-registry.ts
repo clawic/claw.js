@@ -21,7 +21,7 @@ export type ClawPersistentSurfaceKind =
   | "cache"
   | "fixture"
   | "persistentTemp"
-  | "legacyPath"
+  | "retiredPath"
   | "externalReadOnlySource"
   | "apiRoute"
   | "privateApiRoute"
@@ -71,7 +71,7 @@ export type ClawPersistentSurfaceCanonicality =
   | "hostOnly"
   | "cache"
   | "generated"
-  | "legacyReadOnly"
+  | "retiredReadOnly"
   | "testOnly"
   | "externalReadOnly";
 export type ClawPersistentSurfacePrivacy = "public" | "userData" | "secretReference" | "secretMaterial" | "externalReadOnly";
@@ -245,7 +245,7 @@ export const clawPersistentSurface = {
   index(input: SurfaceBuilderInput<"index">): ClawPersistentSurfaceNode {
     return surfaceNode({ ...input, kind: "index" });
   },
-  path(input: Omit<SurfaceBuilderInput<"folder" | "file" | "socket" | "statusFile" | "cache" | "fixture" | "persistentTemp" | "legacyPath" | "externalReadOnlySource">, "kind"> & { kind: "folder" | "file" | "socket" | "statusFile" | "cache" | "fixture" | "persistentTemp" | "legacyPath" | "externalReadOnlySource" }): ClawPersistentSurfaceNode {
+  path(input: Omit<SurfaceBuilderInput<"folder" | "file" | "socket" | "statusFile" | "cache" | "fixture" | "persistentTemp" | "retiredPath" | "externalReadOnlySource">, "kind"> & { kind: "folder" | "file" | "socket" | "statusFile" | "cache" | "fixture" | "persistentTemp" | "retiredPath" | "externalReadOnlySource" }): ClawPersistentSurfaceNode {
     return surfaceNode(input);
   },
   preference(input: SurfaceBuilderInput<"preferenceKey" | "appStorageKey" | "browserStorageKey">): ClawPersistentSurfaceNode {
