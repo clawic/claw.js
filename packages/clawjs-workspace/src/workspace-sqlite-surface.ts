@@ -3,14 +3,14 @@ import { homedir } from "os";
 
 import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 
-export const WORKSPACE_SQLITE_SURFACE_IDS = {
+const WORKSPACE_SQLITE_SURFACE_IDS = {
   database: "claw.database.core",
   recordsTable: "claw.database.core.table.workspace_records",
   recordsUpdatedIndex: "claw.database.core.table.workspace_records.index.workspace_records_collection_updated_idx",
   metaTable: "claw.database.core.table.workspace_meta",
 } as const;
 
-export function expandHome(value: string): string {
+function expandHome(value: string): string {
   return value.startsWith("~/") ? path.join(homedir(), value.slice(2)) : value;
 }
 

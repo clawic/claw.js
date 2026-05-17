@@ -14,13 +14,13 @@
     "unreferencedAssetCandidates": 88
   },
   "knipSummary": {
-    "filesWithIssues": 75,
-    "totalIssues": 602,
+    "filesWithIssues": 71,
+    "totalIssues": 593,
     "issueTypes": {
       "unlisted": 2,
-      "types": 10,
-      "exports": 517,
-      "owners": 65,
+      "types": 8,
+      "exports": 513,
+      "owners": 62,
       "duplicates": 8
     }
   },
@@ -98,6 +98,7 @@
     "Feed cleanup replaced the stale missing-test script with a real auth smoke test, made admin JWT claim helpers private, and removed an unused opaque-token helper.",
     "Content/database/execution cleanup made local form-field and worker option types private and narrowed the database CLI barrel while preserving service and worker behavior.",
     "ClawJS node cleanup made implementation-only runtime, OpenClaw, secrets, Telegram, rules, demo, and schema surface helpers private while preserving the package entrypoint and generated declaration build.",
-    "Claw CLI cleanup removed or privatized implementation-only CLI/domain/open/reference/style/template/data helpers while preserving the published CLI entrypoint exports and generated declaration build."
+    "Claw CLI cleanup removed or privatized implementation-only CLI/domain/open/reference/style/template/data helpers while preserving the published CLI entrypoint exports and generated declaration build.",
+    "Workspace/delegation/runtime cleanup made local SQLite and provider helpers private and removed the unused command delegation adapter while preserving deterministic delegation behavior."
   ]
 }

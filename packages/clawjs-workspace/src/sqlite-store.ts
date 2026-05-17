@@ -6,7 +6,7 @@ import { resolveWorkspaceSqliteDatabasePath, workspaceSqliteSchemaSql } from "./
 
 // Frozen storage surface remains part of this store contract:
 // CLAW_DATA_DIR, CLAW_HOME, CLAW_DB_PATH, core.sqlite.
-export interface SqliteCollectionHandle<T = unknown> {
+interface SqliteCollectionHandle<T = unknown> {
   listIds(): string[];
   list(): T[];
   entries(): Array<{ id: string; value: T }>;

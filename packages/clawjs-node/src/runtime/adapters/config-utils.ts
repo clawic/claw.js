@@ -52,7 +52,7 @@ export function normalizeProviderAuthSummary(input: {
   };
 }
 
-export function providerSummaryFromApiKey(provider: string, apiKey?: string | null): ProviderAuthSummary {
+function providerSummaryFromApiKey(provider: string, apiKey?: string | null): ProviderAuthSummary {
   const trimmed = apiKey?.trim() || "";
   return normalizeProviderAuthSummary({
     provider,
