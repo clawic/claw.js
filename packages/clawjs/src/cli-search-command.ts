@@ -406,6 +406,8 @@ export async function runSearchRebuildCli(input: {
     const generationsIndexed = rebuildsSource("generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const codeIndexed = rebuildsSource("code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const skillsIndexed = rebuildsSource("skills.registry") ? ensureSkillsRegistrySourceIndexed(store, input.flags) : 0;
+    const providersIndexed = rebuildsSource("providers.routing") ? ensureProvidersRoutingSourceIndexed(store, input.flags) : 0;
+    const snippetsIndexed = rebuildsSource("snippets.library") ? ensureSnippetsLibrarySourceIndexed(store, input.flags) : 0;
     const connectorsIndexed = rebuildsSource("connectors.catalog") ? ensureConnectorsCatalogSourceIndexed(store, input.flags) : 0;
     const mcpIndexed = rebuildsSource("mcp.servers") ? ensureMcpServersSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const appsIndexed = rebuildsSource("apps.catalog") ? ensureAppsCatalogSourceIndexed(store, input.flags) : 0;
@@ -430,6 +432,8 @@ export async function runSearchRebuildCli(input: {
       ...(generationsIndexed > 0 ? ["generations.artifacts"] : []),
       ...(codeIndexed > 0 ? ["code.symbols"] : []),
       ...(skillsIndexed > 0 ? ["skills.registry"] : []),
+      ...(providersIndexed > 0 ? ["providers.routing"] : []),
+      ...(snippetsIndexed > 0 ? ["snippets.library"] : []),
       ...(connectorsIndexed > 0 ? ["connectors.catalog"] : []),
       ...(mcpIndexed > 0 ? ["mcp.servers"] : []),
       ...(appsIndexed > 0 ? ["apps.catalog"] : []),
@@ -449,7 +453,7 @@ export async function runSearchRebuildCli(input: {
       mode: selectedSources && selectedShards ? "shard_scoped" : selectedSources ? "scoped" : "full",
       selectedSources: selectedSources ?? null,
       selectedShards: selectedShards ?? null,
-      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + workIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + skillsIndexed + connectorsIndexed + mcpIndexed + appsIndexed + designIndexed + runtimeIndexed + localFilesIndexed + webIndexed + externalIndexed,
+      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + workIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + skillsIndexed + providersIndexed + snippetsIndexed + connectorsIndexed + mcpIndexed + appsIndexed + designIndexed + runtimeIndexed + localFilesIndexed + webIndexed + externalIndexed,
       embeddings: 0,
       profile: input.flags.profile === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
@@ -470,6 +474,8 @@ export async function runSearchRebuildCli(input: {
         "generations.artifacts": generationsIndexed,
         "code.symbols": codeIndexed,
         "skills.registry": skillsIndexed,
+        "providers.routing": providersIndexed,
+        "snippets.library": snippetsIndexed,
         "connectors.catalog": connectorsIndexed,
         "mcp.servers": mcpIndexed,
         "apps.catalog": appsIndexed,
