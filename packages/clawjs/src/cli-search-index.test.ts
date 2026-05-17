@@ -4,6 +4,8 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
+import { SearchStore } from "@clawjs/search";
+
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK } from "./index.ts";
 import { createFakeGenerationScript, runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
 
@@ -600,6 +602,140 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(resumed.code, CLI_EXIT_OK);
     const resumedPayload = JSON.parse(resumed.stdout) as { data: { state: string } };
     assert.equal(resumedPayload.data.state, "enabled");
+  });
+});
+
+test("search service upsert jobs refresh only the targeted database resource", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-resource-db-"));
+  const dataRoot = path.join(workspaceRoot, ".claw", "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const first = await runCliCapture([
+      "db",
+      "contacts",
+      "create",
+      "--data",
+      JSON.stringify({
+        companyId: "company-demo",
+        email: "alpha@example.com",
+        firstName: "Alpha",
+        lastName: "Contact",
+        notes: "needle-alpha-only",
+      }),
+      "--json",
+    ], workspaceRoot);
+    assert.equal(first.code, CLI_EXIT_OK);
+    const firstPayload = JSON.parse(first.stdout) as { data: { id: string } };
+
+    const second = await runCliCapture([
+      "db",
+      "contacts",
+      "create",
+      "--data",
+      JSON.stringify({
+        companyId: "company-demo",
+        email: "beta@example.com",
+        firstName: "Beta",
+        lastName: "Contact",
+        notes: "needle-beta-only",
+      }),
+      "--json",
+    ], workspaceRoot);
+    assert.equal(second.code, CLI_EXIT_OK);
+    const secondPayload = JSON.parse(second.stdout) as { data: { id: string } };
+
+    const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "database.records", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(serviceRun.code, CLI_EXIT_OK);
+    const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
+
+    const jobs = await runCliCapture(["search", "jobs", "--source", "database.records", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(jobs.code, CLI_EXIT_OK);
+    const jobsPayload = JSON.parse(jobs.stdout) as { data: { items: Array<{ status: string; resourceId: string }> } };
+    const doneJob = jobsPayload.data.items.find((job) => job.status === "done");
+    const queuedJob = jobsPayload.data.items.find((job) => job.status === "queued");
+    assert.ok(doneJob);
+    assert.ok(queuedJob);
+
+    const doneTerm = doneJob.resourceId.endsWith(`:${firstPayload.data.id}`) ? "needle-alpha-only" : "needle-beta-only";
+    const queuedTerm = queuedJob.resourceId.endsWith(`:${secondPayload.data.id}`) ? "needle-beta-only" : "needle-alpha-only";
+    const store = new SearchStore(path.join(dataRoot, "search.sqlite"));
+    try {
+      assert.equal(store.query({ query: doneTerm, sources: ["database.records"] }).results.length, 1);
+      assert.equal(store.query({ query: queuedTerm, sources: ["database.records"] }).results.length, 0);
+    } finally {
+      store.close();
+    }
+  });
+});
+
+test("search service upsert jobs refresh only the targeted media resource", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-resource-media-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const mediaDir = path.join(workspaceRoot, ".claw", "data", "collections", "media");
+    fs.mkdirSync(mediaDir, { recursive: true });
+    fs.writeFileSync(path.join(mediaDir, "media-alpha.json"), `${JSON.stringify({
+      mediaId: "media-alpha",
+      kind: "document",
+      name: "Alpha media",
+      sourceText: "needle-media-alpha-only",
+      createdAt: "2026-05-17T00:00:00.000Z",
+    })}\n`);
+    fs.writeFileSync(path.join(mediaDir, "media-beta.json"), `${JSON.stringify({
+      mediaId: "media-beta",
+      kind: "document",
+      name: "Beta media",
+      sourceText: "needle-media-beta-only",
+      createdAt: "2026-05-17T00:00:00.000Z",
+    })}\n`);
+
+    const scheduled = await runCliCapture([
+      "search",
+      "jobs",
+      "schedule",
+      "upsert",
+      "--source",
+      "media.assets",
+      "--resource-id",
+      "media-alpha",
+      "--payload",
+      JSON.stringify({ mediaId: "media-alpha" }),
+      "--data-dir",
+      dataRoot,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(scheduled.code, CLI_EXIT_OK);
+
+    const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "media.assets", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(serviceRun.code, CLI_EXIT_OK);
+    const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
+
+    const store = new SearchStore(path.join(dataRoot, "search.sqlite"));
+    try {
+      assert.equal(store.query({ query: "needle-media-alpha-only", sources: ["media.assets"] }).results.length, 1);
+      assert.equal(store.query({ query: "needle-media-beta-only", sources: ["media.assets"] }).results.length, 0);
+    } finally {
+      store.close();
+    }
   });
 });
 

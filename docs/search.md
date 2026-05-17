@@ -134,9 +134,11 @@ that Search has separate physical shard tables yet.
 
 `search.sqlite` also owns a local indexing job queue. Sources can enqueue
 upsert, delete, backfill, or rebuild work with source, shard, priority,
-schedule, payload, and retry metadata. Workers claim bounded leases so heavy
-backfill can run progressively without blocking a UI section that is only
-searching its own already-hot data.
+schedule, payload, and retry metadata. Event-driven upsert/delete jobs for
+framework records and artifacts are processed by resource id when the source
+adapter supports it; full-source refresh remains for explicit rebuild/backfill
+jobs. Workers claim bounded leases so heavy backfill can run progressively
+without blocking a UI section that is only searching its own already-hot data.
 
 The CLI exposes that local queue through `claw search jobs`. Use `enqueue` to
 schedule explicit upsert, delete, backfill, or rebuild work; `schedule` for
