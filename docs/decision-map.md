@@ -9,6 +9,8 @@ This map tells contributors and agents where durable ClawJS/Clawix decisions
 live and which check or review step protects them. It is an index, not a second
 source of truth: update the canonical document first, then update this map.
 The contract format is decision -> document -> validation.
+`scripts/docs-rendered-link-check.mjs` builds the VitePress docs and verifies
+that this map and every ADR render with valid source and rendered links.
 
 ## Architecture and ownership
 
@@ -69,5 +71,3 @@ The contract format is decision -> document -> validation.
 
 - PENDING GUARDRAIL: add a host-contract check that proves sensitive native
   permission requests cannot be executed directly from Node-only code.
-- PENDING GUARDRAIL: add an automated docs link check for this map and the ADRs
-  in the rendered website build.
