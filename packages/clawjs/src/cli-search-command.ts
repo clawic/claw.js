@@ -38,11 +38,20 @@ import {
   SEARCH_ADMIN_COMMANDS,
   WORKSPACE_SEARCH_DOMAINS,
   WORK_SEARCH_COLLECTIONS,
+  type BusinessRecordRow,
   type CommandFallbackPolicy,
   type SearchServiceStateFile,
   type SearchServiceWorkerBudgets,
   type SearchServiceWorkerStopReason,
 } from "./cli-search-command-constants.ts";
+import {
+  codeFileSearchDocument,
+  discoverCodeSearchFiles,
+  ensureCodeSymbolResourceIndexed,
+  isIgnoredCodeSearchDirectory,
+  languageForCodeSearchExtension,
+  resolveCodeSearchRoot,
+} from "./cli-search-code-symbols-source.ts";
 import { ensureGenerationArtifactResourceIndexed, ensureGenerationsArtifactsSourceIndexed } from "./cli-search-generations-source.ts";
 import { ensureImageDerivedResourceIndexed, ensureImagesDerivedSourceIndexed, ensureMediaAssetResourceIndexed, ensureMediaAssetsSourceIndexed } from "./cli-search-image-media-sources.ts";
 import { pathSafeBasename, resolveRuntimeAdapterId } from "./cli-runtime-utils.ts";
@@ -3192,57 +3201,6 @@ function ensureMarketplaceChoiceResourceIndexed(store: SearchStore, flags: Recor
   }
 }
 
-interface ContentItemRow {
-  id: string;
-  kind: string;
-  title: string;
-  status: string;
-  brand_id: string | null;
-  campaign_id: string | null;
-  page_id: string | null;
-  metadata_json: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface BusinessRecordRow {
-  id: string;
-  kind: string;
-  name: string;
-  status: string;
-  page_id: string | null;
-  metadata_json: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface SocialPostRow {
-  id: string;
-  title: string;
-  status: string;
-  channel_json: string;
-  scheduled_at: string | null;
-  published_at: string | null;
-  page_id: string | null;
-  metadata_json: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface IotConfigRow {
-  id: string;
-  kind: string;
-  name: string;
-  parent_id: string | null;
-  status: string;
-  config_json: string;
-  secret_ref: string | null;
-  enabled: number;
-  metadata_json: string;
-  created_at: string;
-  updated_at: string;
-}
-
 function ensureContentItemsSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
   const dbPath = resolveMainDbPath(flags);
   if (!fs.existsSync(dbPath)) {
@@ -3929,56 +3887,6 @@ function ensureCodeSymbolsSourceIndexed(store: SearchStore, flags: Record<string
   return indexed;
 }
 
-function ensureCodeSymbolResourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string, relativePath: string, rootOverride?: string): number {
-  const root = rootOverride ? path.resolve(rootOverride) : resolveCodeSearchRoot(flags, cwd);
-  const normalizedRelativePath = normalizeRelativePath(relativePath);
-  const absolutePath = path.resolve(root, normalizedRelativePath);
-  const relativeFromRoot = normalizeRelativePath(path.relative(root, absolutePath));
-  if (relativeFromRoot.startsWith("../") || relativeFromRoot === ".." || path.isAbsolute(relativeFromRoot)) {
-    store.tombstone({ source: "code.symbols", resourceId: normalizedRelativePath, reason: "code symbol path outside root during Search event refresh" });
-    return 1;
-  }
-  const extension = path.extname(absolutePath).toLowerCase();
-  const language = languageForCodeSearchExtension(extension);
-  if (!language) {
-    store.tombstone({ source: "code.symbols", resourceId: normalizedRelativePath, reason: "unsupported code symbol file during Search event refresh" });
-    return 1;
-  }
-  let stat: fs.Stats;
-  try {
-    stat = fs.statSync(absolutePath);
-  } catch {
-    store.tombstone({ source: "code.symbols", resourceId: normalizedRelativePath, reason: "code symbol file missing during Search event refresh" });
-    return 1;
-  }
-  if (!stat.isFile() || stat.size <= 0) {
-    store.tombstone({ source: "code.symbols", resourceId: normalizedRelativePath, reason: "code symbol file not indexable during Search event refresh" });
-    return 1;
-  }
-  const maxBytes = boundedNumberFlag(flags["code-max-bytes"], 256 * 1024, 1024, 2 * 1024 * 1024);
-  if (stat.size > maxBytes) {
-    store.tombstone({ source: "code.symbols", resourceId: normalizedRelativePath, reason: "code symbol file exceeds Search event byte limit" });
-    return 1;
-  }
-  const document = codeFileSearchDocument(root, {
-    absolutePath,
-    extension,
-    language,
-    updatedAt: stat.mtime.toISOString(),
-  });
-  if (!document) {
-    store.tombstone({ source: "code.symbols", resourceId: normalizedRelativePath, reason: "code symbol file could not be indexed during Search event refresh" });
-    return 1;
-  }
-  store.upsertDocument(document);
-  store.setSourceState("code.symbols", "enabled", {
-    backlog: 0,
-    error: null,
-    lastIndexedAt: new Date().toISOString(),
-  });
-  return 1;
-}
-
 function ensureLocalFilesSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {
   const root = resolveLocalFilesSearchRoot(flags, cwd);
   if (!fs.existsSync(root)) {
@@ -4093,10 +4001,6 @@ function resolveMainDbPath(flags: Record<string, string>): string {
   return resolveClawjsMainDbPath(env);
 }
 
-function resolveCodeSearchRoot(flags: Record<string, string>, cwd: string): string {
-  return path.resolve(flags["code-root"] ?? flags.workspace ?? cwd);
-}
-
 function resolveLocalFilesSearchRoot(flags: Record<string, string>, cwd: string): string {
   return path.resolve(flags["file-root"] ?? flags["local-files-root"] ?? flags.workspace ?? cwd);
 }
@@ -4134,41 +4038,6 @@ function boundedNumberFlag(value: string | undefined, fallback: number, min: num
   const number = value ? Number(value) : fallback;
   if (!Number.isFinite(number)) return fallback;
   return Math.max(min, Math.min(max, Math.floor(number)));
-}
-
-function discoverCodeSearchFiles(root: string, limits: { maxFiles: number; maxDepth: number; maxBytes: number }): CodeFileCandidate[] {
-  const files: CodeFileCandidate[] = [];
-  const visit = (directory: string, depth: number): void => {
-    if (files.length >= limits.maxFiles || depth > limits.maxDepth) return;
-    let entries: fs.Dirent[];
-    try {
-      entries = fs.readdirSync(directory, { withFileTypes: true }).sort((left, right) => left.name.localeCompare(right.name));
-    } catch {
-      return;
-    }
-    for (const entry of entries) {
-      if (files.length >= limits.maxFiles) break;
-      const absolutePath = path.join(directory, entry.name);
-      if (entry.isDirectory()) {
-        if (!isIgnoredCodeSearchDirectory(entry.name)) visit(absolutePath, depth + 1);
-        continue;
-      }
-      if (!entry.isFile()) continue;
-      const extension = path.extname(entry.name).toLowerCase();
-      const language = languageForCodeSearchExtension(extension);
-      if (!language) continue;
-      let stat: fs.Stats;
-      try {
-        stat = fs.statSync(absolutePath);
-      } catch {
-        continue;
-      }
-      if (!stat.isFile() || stat.size <= 0 || stat.size > limits.maxBytes) continue;
-      files.push({ absolutePath, extension, language, updatedAt: stat.mtime.toISOString() });
-    }
-  };
-  visit(root, 0);
-  return files;
 }
 
 function discoverLocalSearchFiles(root: string, limits: { maxFiles: number; maxDepth: number }): LocalFileCandidate[] {
@@ -4272,56 +4141,8 @@ function discoverExternalCacheFiles(root: string, limits: { maxFiles: number; ma
   return files;
 }
 
-function isIgnoredCodeSearchDirectory(name: string): boolean {
-  return [
-    ".git",
-    ".hg",
-    ".svn",
-    ".codex",
-    ".claw",
-    ".next",
-    ".nuxt",
-    ".turbo",
-    ".cache",
-    ".dart_tool",
-    ".build",
-    "build",
-    "coverage",
-    "dist",
-    "DerivedData",
-    "node_modules",
-    "target",
-    "vendor",
-  ].includes(name);
-}
-
 function isIgnoredLocalFilesDirectory(name: string): boolean {
   return isIgnoredCodeSearchDirectory(name) || name === ".Spotlight-V100" || name === ".TemporaryItems" || name === ".Trashes";
-}
-
-function languageForCodeSearchExtension(extension: string): string | null {
-  return ({
-    ".cjs": "javascript",
-    ".css": "css",
-    ".go": "go",
-    ".html": "html",
-    ".java": "java",
-    ".js": "javascript",
-    ".json": "json",
-    ".jsx": "javascript",
-    ".kt": "kotlin",
-    ".md": "markdown",
-    ".mdx": "markdown",
-    ".mjs": "javascript",
-    ".py": "python",
-    ".rs": "rust",
-    ".scss": "scss",
-    ".swift": "swift",
-    ".ts": "typescript",
-    ".tsx": "typescript",
-    ".yaml": "yaml",
-    ".yml": "yaml",
-  } as Record<string, string | undefined>)[extension] ?? null;
 }
 
 function localFileKind(extension: string): string {
@@ -4347,59 +4168,6 @@ function localFileTextExtension(extension: string): boolean {
     ".yaml",
     ".yml",
   ].includes(extension) || languageForCodeSearchExtension(extension) !== null;
-}
-
-function codeFileSearchDocument(root: string, file: CodeFileCandidate): SearchDocumentInput | null {
-  let content: string;
-  try {
-    content = fs.readFileSync(file.absolutePath, "utf8");
-  } catch {
-    return null;
-  }
-  if (content.includes("\0")) return null;
-  const relativePath = normalizeRelativePath(path.relative(root, file.absolutePath));
-  const title = path.basename(file.absolutePath);
-  const symbols = extractCodeSearchSymbols(content, file.language);
-  const snippet = symbols[0]?.snippet ?? firstMeaningfulLine(content) ?? relativePath;
-  const documentType = file.language === "markdown" ? "doc" : "file";
-  return {
-    id: `code.symbols:${stableSearchId(`${root}\0${relativePath}`)}`,
-    source: "code.symbols",
-    domain: "code",
-    type: documentType,
-    resourceId: relativePath,
-    title,
-    subtitle: relativePath,
-    snippet,
-    body: content.slice(0, 128 * 1024),
-    path: file.absolutePath,
-    updatedAt: file.updatedAt,
-    metadata: {
-      root,
-      relativePath,
-      extension: file.extension,
-      language: file.language,
-      symbolCount: symbols.length,
-    },
-    permissions: { canOpen: true, canPreview: true, redacted: false },
-    rankingHints: {
-      fastPath: 1,
-      code: file.language === "markdown" ? 0.6 : 1,
-      symbolCount: Math.min(symbols.length, 20) / 20,
-    },
-    fragments: symbols.slice(0, 25).map((symbol, index) => ({
-      id: `code.symbols:${stableSearchId(`${root}\0${relativePath}`)}:symbol:${index}`,
-      title: symbol.title,
-      body: symbol.body,
-      snippet: symbol.snippet,
-      sortOrder: index,
-      metadata: { kind: symbol.kind, line: symbol.line },
-    })),
-    actions: [
-      { id: "open", kind: "open", label: "Open file", requiresApproval: true, risk: "read", grant: "search.code.open" },
-      { id: "copy-reference", kind: "copy", label: "Copy file reference", requiresApproval: false },
-    ],
-  };
 }
 
 function localFileSearchDocument(root: string, file: LocalFileCandidate, maxBytes: number): SearchDocumentInput | null {
@@ -4726,55 +4494,6 @@ function readLocalTextFile(filePath: string): string {
   } catch {
     return "";
   }
-}
-
-function extractCodeSearchSymbols(content: string, language: string): CodeSearchSymbol[] {
-  const symbols: CodeSearchSymbol[] = [];
-  const lines = content.split(/\r?\n/);
-  const patterns = symbolPatternsForLanguage(language);
-  lines.forEach((line, index) => {
-    const trimmed = line.trim();
-    if (!trimmed) return;
-    for (const pattern of patterns) {
-      const match = pattern.regex.exec(trimmed);
-      if (!match) continue;
-      const name = match[1] ?? trimmed.replace(/^#+\s*/, "").slice(0, 80);
-      symbols.push({
-        kind: pattern.kind,
-        title: `${pattern.kind} ${name}`.trim(),
-        body: trimmed,
-        snippet: trimmed.slice(0, 180),
-        line: index + 1,
-      });
-      return;
-    }
-  });
-  return symbols;
-}
-
-function symbolPatternsForLanguage(language: string): Array<{ kind: string; regex: RegExp }> {
-  if (language === "markdown") return [{ kind: "heading", regex: /^#{1,6}\s+(.+)$/ }];
-  if (language === "swift") return [
-    { kind: "type", regex: /^(?:public\s+|private\s+|internal\s+|final\s+|open\s+)*(?:struct|class|enum|protocol|actor|extension)\s+([A-Za-z_][A-Za-z0-9_]*)/ },
-    { kind: "function", regex: /^(?:public\s+|private\s+|internal\s+|static\s+|mutating\s+|override\s+)*func\s+([A-Za-z_][A-Za-z0-9_]*)/ },
-  ];
-  if (language === "python") return [
-    { kind: "type", regex: /^class\s+([A-Za-z_][A-Za-z0-9_]*)/ },
-    { kind: "function", regex: /^(?:async\s+)?def\s+([A-Za-z_][A-Za-z0-9_]*)/ },
-  ];
-  if (language === "rust") return [
-    { kind: "type", regex: /^(?:pub\s+)?(?:struct|enum|trait)\s+([A-Za-z_][A-Za-z0-9_]*)/ },
-    { kind: "function", regex: /^(?:pub\s+)?(?:async\s+)?fn\s+([A-Za-z_][A-Za-z0-9_]*)/ },
-  ];
-  if (language === "go") return [
-    { kind: "type", regex: /^type\s+([A-Za-z_][A-Za-z0-9_]*)/ },
-    { kind: "function", regex: /^func\s+(?:\([^)]*\)\s*)?([A-Za-z_][A-Za-z0-9_]*)/ },
-  ];
-  return [
-    { kind: "type", regex: /^(?:export\s+)?(?:abstract\s+)?(?:class|interface|type|enum)\s+([A-Za-z_$][A-Za-z0-9_$]*)/ },
-    { kind: "function", regex: /^(?:export\s+)?(?:async\s+)?function\s+([A-Za-z_$][A-Za-z0-9_$]*)/ },
-    { kind: "function", regex: /^(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][A-Za-z0-9_$]*)\s*=>/ },
-  ];
 }
 
 function firstMeaningfulLine(content: string): string | undefined {
@@ -7084,13 +6803,6 @@ interface ConnectorCapabilityRow {
   summary: string;
 }
 
-interface CodeFileCandidate {
-  absolutePath: string;
-  extension: string;
-  language: string;
-  updatedAt: string;
-}
-
 interface LocalFileCandidate {
   absolutePath: string;
   extension: string;
@@ -7111,14 +6823,6 @@ interface ExternalCacheCandidate {
   extension: string;
   size: number;
   updatedAt: string;
-}
-
-interface CodeSearchSymbol {
-  kind: string;
-  title: string;
-  body: string;
-  snippet: string;
-  line: number;
 }
 
 function titleForDatabaseRecord(row: DatabaseRecordRow, payload: Record<string, unknown>): string {

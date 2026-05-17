@@ -95,3 +95,14 @@ export interface SearchServiceWorkerBudgets {
   maxFailures: number;
   leaseMs?: number;
 }
+
+export interface BusinessRecordRow {
+  id: string;
+  kind: string;
+  name: string;
+  status: string;
+  page_id: string | null;
+  metadata_json: string;
+  created_at: string;
+  updated_at: string;
+}
