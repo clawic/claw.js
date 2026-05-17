@@ -125,6 +125,11 @@ if (!contentPublishing) {
     if (cliCommands.includes(stale)) failures.push(`aggregate:content-publishing keeps stale CLI route ${stale}`);
   }
 }
+for (const command of ["posts", "campaigns", "publications"]) {
+  if (clawCliCommandRegistry.commands.some((entry) => entry.name === command)) {
+    failures.push(`public CLI registry keeps retired content portal ${command}`);
+  }
+}
 
 for (const node of clawPersistentSurfaceRegistry.nodes) {
   if (["database", "sidecar", "table", "index"].includes(node.kind) && !entriesById.has(`storage:${node.id}`)) {

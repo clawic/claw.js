@@ -81,6 +81,9 @@ test("domain surface registry maps database, services, modules and CLI ownership
   assert.ok(contentPublishing?.cliCommands?.includes("claw content approval list|approve|reject"));
   assert.ok(contentPublishing?.cliCommands?.includes("claw content publish plan-list|plan-create|run|cancel|runs|retry"));
   assert.equal(contentPublishing?.cliCommands?.some((command) => command.includes("posts|campaigns|publications")), false);
+  for (const command of ["posts", "campaigns", "publications"]) {
+    assert.equal(clawCliCommandRegistry.commands.some((entry) => entry.name === command), false);
+  }
 });
 
 test("v1 closure domains declare minimum resource API event fixture and validation contracts", () => {

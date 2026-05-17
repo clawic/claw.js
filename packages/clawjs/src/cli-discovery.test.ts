@@ -344,16 +344,26 @@ test("runCli exposes help-only portals through JSON", async () => {
   }
 });
 
-test("runCli routes content portals and envelopes unavailable services", async () => {
+test("runCli rejects retired content portal shortcuts", async () => {
   const result = await runCliCapture(["posts", "list", "--json"], process.cwd());
-  assert.equal(result.code, CLI_EXIT_FAILURE);
-  const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string }; meta: { canonicalCommand: string; invokedCommand: string; subcommand: string; operation: string } };
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string; message: string }; meta: { canonicalCommand: string; invokedCommand: string; subcommand: string } };
   assert.equal(payload.ok, false);
-  assert.equal(payload.error.code, "content_service_unavailable");
-  assert.equal(payload.meta.canonicalCommand, "content");
-  assert.equal(payload.meta.invokedCommand, "content");
-  assert.equal(payload.meta.subcommand, "entry");
-  assert.equal(payload.meta.operation, "list");
+  assert.equal(payload.error.code, "removed_public_command");
+  assert.match(payload.error.message, /claw content entry/);
+  assert.equal(payload.meta.canonicalCommand, "posts");
+  assert.equal(payload.meta.invokedCommand, "posts");
+  assert.equal(payload.meta.subcommand, "list");
+
+  const contentShortcut = await runCliCapture(["content", "posts", "list", "--json"], process.cwd());
+  assert.equal(contentShortcut.code, CLI_EXIT_USAGE);
+  const shortcutPayload = JSON.parse(contentShortcut.stdout) as { ok: boolean; error: { code: string; message: string }; meta: { canonicalCommand: string; invokedCommand: string; subcommand: string } };
+  assert.equal(shortcutPayload.ok, false);
+  assert.equal(shortcutPayload.error.code, "removed_public_command");
+  assert.match(shortcutPayload.error.message, /content brand, destination, campaign, entry, approval, or publish/);
+  assert.equal(shortcutPayload.meta.canonicalCommand, "content");
+  assert.equal(shortcutPayload.meta.invokedCommand, "content");
+  assert.equal(shortcutPayload.meta.subcommand, "posts");
 });
 
 test("runCli returns root router JSON in the common envelope", async () => {

@@ -1,4 +1,3 @@
-import { runDelegatedContentCli } from "./cli-delegated-domains.ts";
 import { CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
 import { PUBLIC_PORTAL_HELP_ONLY, buildCommandHelp } from "./cli-surface.ts";
@@ -12,7 +11,6 @@ type CliContext = {
 
 type RunCli = (argv: string[], context: CliContext) => Promise<number>;
 
-const CONTENT_PORTALS = new Set(["posts", "campaigns", "publications"]);
 const MEDIA_PORTAL_CHILDREN = new Set([
   "documents",
   "files",
@@ -72,16 +70,7 @@ export async function runPublicPortalShortcut(input: {
   context: CliContext;
   runCli: RunCli;
 }): Promise<number | null> {
-  const { group, command, subcommand, argv, flags, context, runCli } = input;
-  if (group && CONTENT_PORTALS.has(group)) {
-    return await runCli(["content", group, ...(command ? argv.slice(1) : ["list", ...argv.slice(1)])], context);
-  }
-  if (group === "content" && command && CONTENT_PORTALS.has(command)) {
-    const contentGroup = command === "posts" ? "entry" : command === "campaigns" ? "campaign" : "publish";
-    const contentCommand = command === "publications" ? (!subcommand || subcommand === "list" ? "runs" : subcommand) : (subcommand ?? "list");
-    const passthrough = subcommand ? argv.slice(3) : argv.slice(2);
-    return await runDelegatedContentCli(["content", contentGroup, contentCommand, ...passthrough], flags, context);
-  }
+  const { group, command, argv, context, runCli } = input;
   if (group === "media" && command && MEDIA_PORTAL_CHILDREN.has(command)) {
     return await runCli([command, ...argv.slice(2)], context);
   }

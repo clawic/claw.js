@@ -55,6 +55,9 @@ const REMOVED_PUBLIC_COMMANDS = new Map<string, string>([
   ["export", "Use `claw work export ...`."],
   ["import", "Use `claw work import ...`."],
   ["backup", "Use `claw work backup ...` or `claw database ...` for technical database backups."],
+  ["posts", "Use `claw content entry ...`."],
+  ["campaigns", "Use `claw content campaign ...`."],
+  ["publications", "Use `claw content publish ...`."],
 ]);
 
 export const REMOVED_RUNTIME_COMMANDS = new Set(["queue", "job", "event", "retention"]);

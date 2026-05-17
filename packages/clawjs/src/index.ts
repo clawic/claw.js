@@ -120,6 +120,9 @@ type CliMediaClaw = ClawInstance & {
     };
   };
 };
+
+const REMOVED_CONTENT_PORTAL_COMMANDS = new Set(["posts", "campaigns", "publications"]);
+
 function isClawDomainConfigured(flags: Record<string, string>): boolean {
   if (process.env.CLAW_DOMAINS_ACTIVE === "1") return true;
   if (process.env.CLAW_DOMAINS_ACTIVE === "0") return false;
@@ -523,6 +526,9 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   if (group === "content" && command && REMOVED_V1_CRUD_COMMANDS.has(command)) {
     return writeRemovedJsonOrText("content", `\`${binName} content ${command}\` is removed pre-v1 CRUD and is not part of the public Claw CLI surface. Use content brand, destination, campaign, entry, approval, or publish commands.`);
   }
+  if (group === "content" && command && REMOVED_CONTENT_PORTAL_COMMANDS.has(command)) {
+    return writeRemovedJsonOrText("content", `\`${binName} content ${command}\` is removed pre-v1 portal shorthand and is not part of the public Claw CLI surface. Use content brand, destination, campaign, entry, approval, or publish commands.`);
+  }
 
   if (wantsHelp || group === "help") {
     if (!group || group === "help") {
@@ -738,6 +744,13 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     throw new CliHandledError(
       "removed_public_command",
       `\`${binName} content ${command}\` was removed pre-v1 CRUD and is not part of the public Claw CLI surface. Use content brand, destination, campaign, entry, approval, or publish commands.`,
+      CLI_EXIT_USAGE,
+    );
+  }
+  if (group === "content" && command && REMOVED_CONTENT_PORTAL_COMMANDS.has(command)) {
+    throw new CliHandledError(
+      "removed_public_command",
+      `\`${binName} content ${command}\` was removed pre-v1 portal shorthand and is not part of the public Claw CLI surface. Use content brand, destination, campaign, entry, approval, or publish commands.`,
       CLI_EXIT_USAGE,
     );
   }
