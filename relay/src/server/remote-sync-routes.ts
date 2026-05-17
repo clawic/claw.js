@@ -6,12 +6,14 @@ import {
   createMeshInvitation,
   createMeshResourceShare,
   createMeshRevocation,
+  createRemoteCompatibilityAdapterReceipt,
   createSyncResourceManifest,
   evaluateRemoteAgentServiceAccess,
   remoteSyncRequiredRouteIds,
   syncDriverSchema,
   syncObjectSnapshotSchema,
   type MeshShareAction,
+  type RemoteCompatibilityClientKind,
   type SyncAuthority,
   type SyncDriver,
   type SyncObjectSnapshot,
@@ -165,6 +167,22 @@ function meshActions(value: unknown, fallback: MeshShareAction[]): MeshShareActi
   return parsed.length ? parsed : fallback;
 }
 
+function compatibilityClientKind(value: unknown): RemoteCompatibilityClientKind {
+  if (value === "ios" || value === "android" || value === "web" || value === "desktop" || value === "server" || value === "unknown") return value;
+  return "unknown";
+}
+
+function remoteCompatibilityAdapterFromInput(input: Record<string, unknown>) {
+  const status = input.status === "deprecated_adapter" || input.status === "blocked" ? input.status : "active_adapter";
+  return createRemoteCompatibilityAdapterReceipt({
+    legacySurface: stringValue(input.legacySurface ?? input["legacy-surface"] ?? input.surface, "relay.mobile.chat"),
+    canonicalRouteId: stringValue(input.canonicalRouteId ?? input["canonical-route"] ?? input.routeId ?? input["route-id"], "remote.chatGateway"),
+    clientKind: compatibilityClientKind(input.clientKind ?? input["client-kind"]),
+    status,
+    createdAt: stringValue(input.createdAt ?? input.now, "2026-05-17T10:11:00.000Z"),
+  });
+}
+
 function meshActorFromInput(input: Record<string, unknown>) {
   return {
     actorKind: "human" as const,
@@ -242,6 +260,30 @@ export function registerRemoteSyncRoutes(app: FastifyInstance): void {
   app.get(clawApiPath("remote/classifications"), async () => remoteClassificationsPayload());
 
   app.get(clawApiPath("remote/conformance"), async () => remoteConformancePayload());
+
+  app.get(clawApiPath("remote/compatibility/adapters"), async () => ({
+    adapters: [
+      createRemoteCompatibilityAdapterReceipt({
+        legacySurface: "relay.mobile.chat",
+        canonicalRouteId: "remote.chatGateway",
+        clientKind: "ios",
+        createdAt: "2026-05-17T10:11:00.000Z",
+      }),
+      createRemoteCompatibilityAdapterReceipt({
+        legacySurface: "relay.mobile.search",
+        canonicalRouteId: "remote.searchGateway",
+        clientKind: "web",
+        createdAt: "2026-05-17T10:11:00.000Z",
+      }),
+    ],
+    writes: false,
+  }));
+
+  app.post(clawApiPath("remote/compatibility/adapters"), async (request) => ({
+    receipt: remoteCompatibilityAdapterFromInput(readBody(request)),
+    status: "dry_run_only",
+    writes: false,
+  }));
 
   app.get(clawApiPath("gateway/conformance"), async () => ({
     ...remoteConformancePayload(),

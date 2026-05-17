@@ -174,6 +174,7 @@ claw remote classify --json
 claw remote check --json
 claw remote routes --json
 claw remote conformance --json
+claw remote compat --legacy-surface relay.mobile.chat --canonical-route remote.chatGateway --client-kind ios --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 
 claw sync manifest --resource-id skills:default --kind skills --driver skills --json
 claw sync status --json
@@ -221,6 +222,10 @@ authority unless each record is signed with Coordinator keys. The
 an Ed25519 signature that `claw sync status --state-dir ...` verifies and
 counts. Pairing, trust changes, real gateway serving, and physical sync
 execution still stay signed-host or Coordinator gated.
+`remote compat --record true` records a signed compatibility adapter receipt
+for existing Relay/mobile clients. The receipt binds the legacy surface to one
+canonical route, requires `mapsToCanonical: true`, forbids parallel APIs with
+`parallelApiIntroduced: false`, and is a no-write migration record.
 `sync cache --record true` records a signed client cache snapshot with
 `encrypted: true`, a TTL, no plaintext payload, no secrets, and no
 authoritative state. It is cache metadata only, not a host write.
@@ -882,6 +887,7 @@ claw search status --json
 claw search service status --json
 claw search service run-once --json
 claw search profiles --json
+claw search entrypoints --json
 claw search saved list --json
 claw search monitors list --json
 claw search monitors run monitor-recent --limit 10 --json

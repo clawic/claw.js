@@ -75,6 +75,30 @@ export const remoteClientCacheSnapshotSchema = z.object({
   writes: z.literal(false),
 });
 
+export const remoteCompatibilityClientKindSchema = z.enum([
+  "ios",
+  "android",
+  "web",
+  "desktop",
+  "server",
+  "unknown",
+]);
+
+export const remoteCompatibilityAdapterReceiptSchema = z.object({
+  schemaVersion: z.literal(1),
+  adapterId: z.string().min(1),
+  legacySurface: z.string().min(1),
+  canonicalRouteId: z.string().min(1),
+  clientKind: remoteCompatibilityClientKindSchema,
+  status: z.enum(["active_adapter", "deprecated_adapter", "blocked"]),
+  mapsToCanonical: z.literal(true),
+  parallelApiIntroduced: z.literal(false),
+  migrationRequired: z.boolean(),
+  createdAt: z.string().datetime(),
+  auditEventId: z.string().min(1),
+  writes: z.literal(false),
+});
+
 export const nodeIdentitySchema = z.object({
   nodeId: z.string().min(1),
   displayName: z.string().min(1),
@@ -466,6 +490,8 @@ export type SyncDriver = z.infer<typeof syncDriverSchema>;
 export type SyncConflictPolicy = z.infer<typeof syncConflictPolicySchema>;
 export type SyncCachePolicy = z.infer<typeof syncCachePolicySchema>;
 export type RemoteClientCacheSnapshot = z.infer<typeof remoteClientCacheSnapshotSchema>;
+export type RemoteCompatibilityClientKind = z.infer<typeof remoteCompatibilityClientKindSchema>;
+export type RemoteCompatibilityAdapterReceipt = z.infer<typeof remoteCompatibilityAdapterReceiptSchema>;
 export type NodeIdentity = z.infer<typeof nodeIdentitySchema>;
 export type RemoteActorContext = z.infer<typeof remoteActorContextSchema>;
 export type SyncResourceManifest = z.infer<typeof syncResourceManifestSchema>;
@@ -684,6 +710,10 @@ function secretProviderReceiptId(parts: string[]): string {
 
 function remoteClientCacheEntryId(parts: string[]): string {
   return `remote_cache_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
+}
+
+function remoteCompatibilityAdapterId(parts: string[]): string {
+  return `remote_compat_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
 }
 
 function newestSnapshot(left: SyncObjectSnapshot, right: SyncObjectSnapshot): SyncObjectSnapshot {
@@ -1073,6 +1103,36 @@ export function createRemoteSecretProviderReceipt(input: {
     externalPending: providerAccessVerified ? [] : ["provider_secret_retrieval"],
     createdAt,
     auditEventId: secretProviderReceiptId(["audit", lease.leaseId, input.providerId, createdAt]),
+    writes: false,
+  });
+}
+
+export function createRemoteCompatibilityAdapterReceipt(input: {
+  legacySurface: string;
+  canonicalRouteId: string;
+  clientKind?: RemoteCompatibilityClientKind;
+  status?: "active_adapter" | "deprecated_adapter" | "blocked";
+  createdAt?: string;
+}): RemoteCompatibilityAdapterReceipt {
+  const createdAt = input.createdAt ?? new Date().toISOString();
+  const status = input.status ?? "active_adapter";
+  return remoteCompatibilityAdapterReceiptSchema.parse({
+    schemaVersion: 1,
+    adapterId: remoteCompatibilityAdapterId([
+      input.legacySurface,
+      input.canonicalRouteId,
+      input.clientKind ?? "unknown",
+      createdAt,
+    ]),
+    legacySurface: input.legacySurface,
+    canonicalRouteId: input.canonicalRouteId,
+    clientKind: input.clientKind ?? "unknown",
+    status,
+    mapsToCanonical: true,
+    parallelApiIntroduced: false,
+    migrationRequired: status !== "blocked",
+    createdAt,
+    auditEventId: remoteCompatibilityAdapterId(["audit", input.legacySurface, input.canonicalRouteId, createdAt]),
     writes: false,
   });
 }

@@ -8,6 +8,7 @@ import {
   createMeshRevocation,
   createNodeTrustDecision,
   createRemoteClientCacheSnapshot,
+  createRemoteCompatibilityAdapterReceipt,
   createRemoteSecretProviderReceipt,
   createSyncResourceManifest,
   createTransportHandshakeReceipt,
@@ -16,6 +17,7 @@ import {
   remoteSyncRequiredRouteIds,
   syncObjectSnapshotSchema,
   type MeshShareAction,
+  type RemoteCompatibilityClientKind,
   type SyncDriver,
   type SyncObjectSnapshot,
 } from "@clawjs/core";
@@ -227,6 +229,22 @@ function meshActionFlags(value: string | undefined, fallback: MeshShareAction[])
   return parsed.length ? parsed : fallback;
 }
 
+function remoteCompatibilityClientKind(value: string | undefined): RemoteCompatibilityClientKind {
+  if (value === "ios" || value === "android" || value === "web" || value === "desktop" || value === "server" || value === "unknown") return value;
+  return "unknown";
+}
+
+function remoteCompatibilityAdapterFromFlags(input: RemoteSyncCliInput) {
+  const status = input.flags.status === "deprecated_adapter" || input.flags.status === "blocked" ? input.flags.status : "active_adapter";
+  return createRemoteCompatibilityAdapterReceipt({
+    legacySurface: input.flags["legacy-surface"] ?? input.flags.surface ?? "relay.mobile.chat",
+    canonicalRouteId: input.flags["canonical-route"] ?? input.flags["route-id"] ?? "remote.chatGateway",
+    clientKind: remoteCompatibilityClientKind(input.flags["client-kind"]),
+    status,
+    createdAt: input.flags.now ?? new Date().toISOString(),
+  });
+}
+
 function meshInvitationFromFlags(input: RemoteSyncCliInput) {
   return createMeshInvitation({
     issuerMeshId: input.flags["issuer-mesh"] ?? "mesh.local",
@@ -378,7 +396,25 @@ export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
     const payload = conformancePayload();
     return writeOutput(input, "remote", payload, `${payload.status} decisions=${payload.decisions.length}`, command);
   }
-  return missing(input, "remote classify|check|routes|conformance");
+  if (command === "compat") {
+    const receipt = remoteCompatibilityAdapterFromFlags(input);
+    const usage = "remote compat --legacy-surface <surface> --canonical-route <route-id> --client-kind ios|android|web|desktop --state-dir <dir> --record true --coordinator-private-key-file <pem> --coordinator-public-key-file <pem>";
+    const store = stateStoreFromFlags(input);
+    if (wantsDurableRecord(input) && !store) return missing(input, usage);
+    const signer = wantsDurableRecord(input) ? requireCoordinatorSigner(input, usage) : undefined;
+    if (typeof signer === "number") return signer;
+    const state = store && wantsDurableRecord(input) && signer
+      ? store.recordCompatibilityAdapterReceipt(receipt, { now: input.flags.now, signer })
+      : undefined;
+    const status = state?.coordinatorSignature ? "signed_compat_adapter_recorded" : "dry_run_only";
+    return writeOutput(input, "remote", {
+      status,
+      receipt,
+      writes: false,
+      ...(state ? { state } : {}),
+    }, `compat: ${status}`, command);
+  }
+  return missing(input, "remote classify|check|routes|conformance|compat");
 }
 
 export async function runSyncCli(input: RemoteSyncCliInput): Promise<number> {

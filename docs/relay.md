@@ -121,6 +121,11 @@ state without becoming node-trust authority. When the CLI is given
 `--coordinator-private-key-file` and `--coordinator-public-key-file`, ledger
 records are signed with Ed25519 and later verified in `claw sync status`;
 unsigned records remain local proposals only.
+Existing Relay/mobile routes are represented by `RemoteCompatibilityAdapterReceipt`
+records and the Relay `/v1/remote/compatibility/adapters` endpoint. Each
+adapter must map one legacy surface to one canonical Gateway/Connector/Sync
+route, must keep `parallelApiIntroduced: false`, and must be a no-write
+migration record until clients move to the canonical route directly.
 `claw nodes heartbeat --record true` uses the same ledger to store a signed
 transport-handshake receipt for the Iroh v1 adapter contract. The receipt is
 contract-level proof only; real multi-device Iroh connectivity and device

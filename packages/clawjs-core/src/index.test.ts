@@ -49,6 +49,7 @@ import {
   createMeshInvitation,
   createMeshResourceShare,
   createMeshRevocation,
+  createRemoteCompatibilityAdapterReceipt,
   createSyncResourceManifest,
   createTtsPlaybackPlan,
   compatSnapshotSchema,
@@ -97,6 +98,7 @@ import {
   remoteAccessGrantSchema,
   remoteAccessRequestSchema,
   remoteAgentServiceDecisionSchema,
+  remoteCompatibilityAdapterReceiptSchema,
   remoteSecretLeaseSchema,
   remoteSyncRequiredDecisionIds,
   remoteSyncRequiredRouteIds,
@@ -500,6 +502,17 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   }).success, true);
 
   assert.equal(remoteSyncRequiredDecisionIds.includes("sync_lateral_domains"), true);
+  const compatibilityReceipt = createRemoteCompatibilityAdapterReceipt({
+    legacySurface: "relay.mobile.chat",
+    canonicalRouteId: "remote.chatGateway",
+    clientKind: "ios",
+    createdAt: "2026-05-17T10:11:00.000Z",
+  });
+  assert.equal(remoteCompatibilityAdapterReceiptSchema.safeParse(compatibilityReceipt).success, true);
+  assert.equal(compatibilityReceipt.mapsToCanonical, true);
+  assert.equal(compatibilityReceipt.parallelApiIntroduced, false);
+  assert.equal(compatibilityReceipt.writes, false);
+
   assert.equal(routeIdForSyncDriver("skills"), "sync.skills");
   assert.equal(routeIdForSyncDriver("memory_user_model"), "sync.memoryUserModel");
   assert.equal(routeIdForSyncDriver("drive_files"), "sync.driveFiles");

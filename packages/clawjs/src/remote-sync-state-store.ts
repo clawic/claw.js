@@ -12,6 +12,7 @@ import {
   nodeTrustDecisionSchema,
   remoteActorContextSchema,
   remoteClientCacheSnapshotSchema,
+  remoteCompatibilityAdapterReceiptSchema,
   remoteSecretLeaseSchema,
   remoteSecretProviderReceiptSchema,
   remoteTransportHandshakeReceiptSchema,
@@ -25,6 +26,7 @@ import {
   type NodeTrustDecision,
   type RemoteActorContext,
   type RemoteClientCacheSnapshot,
+  type RemoteCompatibilityAdapterReceipt,
   type RemoteSecretLease,
   type RemoteSecretProviderReceipt,
   type RemoteTransportHandshakeReceipt,
@@ -37,7 +39,7 @@ import {
 
 export type RemoteSyncStateAuditEvent = {
   eventId: string;
-  eventType: "sync.manifest.recorded" | "sync.queue.enqueued" | "sync.queue.reconciled" | "sync.cache.recorded" | "mesh.invitation.recorded" | "mesh.share.recorded" | "mesh.revocation.recorded" | "secret.lease.issued" | "secret.provider.recorded" | "transport.handshake.recorded" | "node.trust.recorded" | "gateway.deployment.recorded";
+  eventType: "sync.manifest.recorded" | "sync.queue.enqueued" | "sync.queue.reconciled" | "sync.cache.recorded" | "remote.compat.recorded" | "mesh.invitation.recorded" | "mesh.share.recorded" | "mesh.revocation.recorded" | "secret.lease.issued" | "secret.provider.recorded" | "transport.handshake.recorded" | "node.trust.recorded" | "gateway.deployment.recorded";
   targetId: string;
   createdAt: string;
   coordinatorSignatureId?: string;
@@ -70,6 +72,9 @@ export type RemoteSyncState = {
   cursors: Record<string, SyncCursor>;
   remoteCache: {
     snapshots: Record<string, RemoteClientCacheSnapshot>;
+  };
+  compatibility: {
+    adapters: Record<string, RemoteCompatibilityAdapterReceipt>;
   };
   mesh: {
     invitations: Record<string, MeshInvitation>;
@@ -110,6 +115,9 @@ function emptyState(): RemoteSyncState {
     cursors: {},
     remoteCache: {
       snapshots: {},
+    },
+    compatibility: {
+      adapters: {},
     },
     mesh: {
       invitations: {},
@@ -264,6 +272,16 @@ function parseState(raw: unknown): RemoteSyncState {
     if (snapshots && typeof snapshots === "object" && !Array.isArray(snapshots)) {
       for (const [cacheEntryId, snapshotInput] of Object.entries(snapshots)) {
         state.remoteCache.snapshots[cacheEntryId] = remoteClientCacheSnapshotSchema.parse(snapshotInput);
+      }
+    }
+  }
+
+  const compatibility = input.compatibility;
+  if (compatibility && typeof compatibility === "object" && !Array.isArray(compatibility)) {
+    const adapters = (compatibility as Record<string, unknown>).adapters;
+    if (adapters && typeof adapters === "object" && !Array.isArray(adapters)) {
+      for (const [adapterId, receiptInput] of Object.entries(adapters)) {
+        state.compatibility.adapters[adapterId] = remoteCompatibilityAdapterReceiptSchema.parse(receiptInput);
       }
     }
   }
@@ -454,6 +472,17 @@ export class RemoteSyncStateStore {
     const coordinatorSignature = appendAudit(state, "sync.cache.recorded", snapshot.cacheEntryId, now, snapshot, input.signer);
     this.write(state);
     return { snapshot, statePath: this.statePath, durable: true, ...(coordinatorSignature ? { coordinatorSignature } : {}) };
+  }
+
+  recordCompatibilityAdapterReceipt(receiptInput: RemoteCompatibilityAdapterReceipt, input: { now?: string; signer: RemoteSyncCoordinatorSigner }): RemoteSyncStateWriteResult<{ receipt: RemoteCompatibilityAdapterReceipt }> {
+    const receipt = remoteCompatibilityAdapterReceiptSchema.parse(receiptInput);
+    const now = input.now ?? receipt.createdAt;
+    const state = this.read();
+    state.compatibility.adapters[receipt.adapterId] = receipt;
+    state.updatedAt = now;
+    const coordinatorSignature = appendAudit(state, "remote.compat.recorded", receipt.adapterId, now, receipt, input.signer);
+    this.write(state);
+    return { receipt, statePath: this.statePath, durable: true, coordinatorSignature };
   }
 
   recordInvitation(invitationInput: MeshInvitation, input: { now?: string; signer?: RemoteSyncCoordinatorSigner } = {}): RemoteSyncStateWriteResult<{ invitation: MeshInvitation }> {

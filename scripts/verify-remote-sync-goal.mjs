@@ -12,6 +12,7 @@ import {
   createMeshInvitation,
   createMeshResourceShare,
   createMeshRevocation,
+  createRemoteCompatibilityAdapterReceipt,
   createSyncResourceManifest,
   evaluateRemoteAgentServiceAccess,
   evaluateRemoteAccess,
@@ -24,6 +25,7 @@ import {
   remoteAccessRequestSchema,
   remoteActorContextSchema,
   remoteAgentServiceDecisionSchema,
+  remoteCompatibilityAdapterReceiptSchema,
   remoteSecretLeaseSchema,
   remoteSyncRequiredDecisionIds,
   remoteSyncRequiredRouteIds,
@@ -62,6 +64,7 @@ const requiredCliCommands = ["remote", "sync", "nodes", "gateway"];
 const requiredServiceApiRoutes = [
   "remote/classifications",
   "remote/conformance",
+  "remote/compatibility/adapters",
   "gateway/conformance",
   "gateway/agent-service/evaluate",
   "sync/manifests",
@@ -105,6 +108,7 @@ const requiredDocSnippets = [
   "/v1/mesh/revocations",
   "--local-hash",
   "claw remote conformance",
+  "claw remote compat",
   "claw gateway conformance",
 ];
 
@@ -239,6 +243,17 @@ if (manifest.secretPolicy.brokerLeaseRequired !== true) fail("sync manifest must
 if (manifest.cachePolicy.encrypted !== true) fail("sync client cache must be encrypted");
 if (manifest.cachePolicy.storesSecrets !== false) fail("sync client cache must not store secrets");
 if (manifest.cachePolicy.storesAuthoritativeState !== false) fail("sync client cache must not store authoritative state");
+
+const compatReceipt = createRemoteCompatibilityAdapterReceipt({
+  legacySurface: "relay.mobile.chat",
+  canonicalRouteId: "remote.chatGateway",
+  clientKind: "ios",
+  createdAt: "2026-05-17T10:11:00.000Z",
+});
+if (!remoteCompatibilityAdapterReceiptSchema.safeParse(compatReceipt).success) fail("remote compatibility adapter receipt must validate");
+if (compatReceipt.mapsToCanonical !== true) fail("remote compatibility adapters must map to canonical routes");
+if (compatReceipt.parallelApiIntroduced !== false) fail("remote compatibility adapters must not introduce parallel APIs");
+if (compatReceipt.writes !== false) fail("remote compatibility adapter receipts must be no-write contracts");
 
 const actor = remoteActorContextSchema.parse({
   actorKind: "agent",

@@ -288,6 +288,26 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.equal(remoteCachePayload.state.durable, true);
   assert.equal(remoteCachePayload.state.coordinatorSignature?.verified, true);
 
+  const compatibility = await runCliCapture(["remote", "compat", "--legacy-surface", "relay.mobile.chat", "--canonical-route", "remote.chatGateway", "--client-kind", "ios", "--state-dir", stateDir, "--record", "true", ...coordinatorSigningFlags, "--json"], process.cwd());
+  assert.equal(compatibility.code, CLI_EXIT_OK);
+  const compatibilityPayload = parseCliJson<{
+    status: string;
+    writes: boolean;
+    receipt: { legacySurface: string; canonicalRouteId: string; clientKind: string; mapsToCanonical: boolean; parallelApiIntroduced: boolean; migrationRequired: boolean; writes: boolean };
+    state: { durable: boolean; coordinatorSignature?: { verified: boolean } };
+  }>(compatibility.stdout).data;
+  assert.equal(compatibilityPayload.status, "signed_compat_adapter_recorded");
+  assert.equal(compatibilityPayload.writes, false);
+  assert.equal(compatibilityPayload.receipt.legacySurface, "relay.mobile.chat");
+  assert.equal(compatibilityPayload.receipt.canonicalRouteId, "remote.chatGateway");
+  assert.equal(compatibilityPayload.receipt.clientKind, "ios");
+  assert.equal(compatibilityPayload.receipt.mapsToCanonical, true);
+  assert.equal(compatibilityPayload.receipt.parallelApiIntroduced, false);
+  assert.equal(compatibilityPayload.receipt.migrationRequired, true);
+  assert.equal(compatibilityPayload.receipt.writes, false);
+  assert.equal(compatibilityPayload.state.durable, true);
+  assert.equal(compatibilityPayload.state.coordinatorSignature?.verified, true);
+
   const conflicts = await runCliCapture(["sync", "conflicts", "--local-hash", "hash-a", "--peer-hash", "hash-b", "--json"], process.cwd());
   assert.equal(conflicts.code, CLI_EXIT_OK);
   const conflictsPayload = parseCliJson<{ conflicts: Array<{ status: string }>; silentOverwriteAllowed: boolean }>(conflicts.stdout).data;

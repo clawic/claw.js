@@ -41,6 +41,33 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(gatewayPayload.gateway.contract, "registered_local_contract_projection");
     assert.equal(gatewayPayload.gateway.hostedSelfHostedParity, "required");
 
+    const compatibilityAdapters = await built.app.inject({ method: "GET", url: "/v1/remote/compatibility/adapters" });
+    assert.equal(compatibilityAdapters.statusCode, 200);
+    const compatibilityAdaptersPayload = compatibilityAdapters.json() as { adapters: Array<{ legacySurface: string; canonicalRouteId: string; mapsToCanonical: boolean; parallelApiIntroduced: boolean; writes: boolean }>; writes: boolean };
+    assert.equal(compatibilityAdaptersPayload.adapters.some((entry) => entry.legacySurface === "relay.mobile.chat" && entry.canonicalRouteId === "remote.chatGateway"), true);
+    assert.equal(compatibilityAdaptersPayload.adapters.every((entry) => entry.mapsToCanonical && !entry.parallelApiIntroduced && !entry.writes), true);
+    assert.equal(compatibilityAdaptersPayload.writes, false);
+
+    const compatibilityAdapter = await built.app.inject({
+      method: "POST",
+      url: "/v1/remote/compatibility/adapters",
+      headers: { "content-type": "application/json" },
+      payload: {
+        legacySurface: "relay.mobile.search",
+        canonicalRouteId: "remote.searchGateway",
+        clientKind: "web",
+      },
+    });
+    assert.equal(compatibilityAdapter.statusCode, 200);
+    const compatibilityAdapterPayload = compatibilityAdapter.json() as { receipt: { clientKind: string; canonicalRouteId: string; mapsToCanonical: boolean; parallelApiIntroduced: boolean; writes: boolean }; status: string; writes: boolean };
+    assert.equal(compatibilityAdapterPayload.status, "dry_run_only");
+    assert.equal(compatibilityAdapterPayload.receipt.clientKind, "web");
+    assert.equal(compatibilityAdapterPayload.receipt.canonicalRouteId, "remote.searchGateway");
+    assert.equal(compatibilityAdapterPayload.receipt.mapsToCanonical, true);
+    assert.equal(compatibilityAdapterPayload.receipt.parallelApiIntroduced, false);
+    assert.equal(compatibilityAdapterPayload.receipt.writes, false);
+    assert.equal(compatibilityAdapterPayload.writes, false);
+
     const agentService = await built.app.inject({
       method: "POST",
       url: "/v1/gateway/agent-service/evaluate",

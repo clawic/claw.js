@@ -177,6 +177,7 @@ The public CLI exposes read-only, dry-run, and opt-in local durable ledger
 entrypoints:
 
 - `claw remote classify|check|routes|conformance`
+- `claw remote compat`
 - `claw sync manifest|status|plan|run|reconcile|conflicts`
 - `claw nodes list|pair|trust|revoke|invite|share|heartbeat`
 - `claw gateway serve|project|conformance`
@@ -199,6 +200,10 @@ flags.
 Relay is no longer the architectural bucket for every network concern. It is
 kept as a compatibility deployment and transport-facing service while the
 canonical architecture moves to Coordinator, Gateway, Connector, and Sync.
+`RemoteCompatibilityAdapterReceipt` is the signed local projection for that
+migration: each Relay/mobile legacy surface maps to one canonical route, keeps
+`parallelApiIntroduced: false`, and remains a no-write audited adapter record
+rather than a new business API.
 
 Hosted service deployments and self-hosted deployments are peers. A hosted
 deployment cannot expose capabilities that are absent from self-hosted
