@@ -714,6 +714,19 @@ test("dense data OS generates covered singular and plural intents for every grad
 
 test("dense data OS roadmap keeps the wider catalog visible before pack graduation", () => {
   const roadmapIds = new Set(listClawDenseDataSystems({ wave: "roadmap" }).map((system) => system.id));
+  for (const id of [
+    "energy_utilities",
+    "telecom",
+    "hospitality",
+    "agriculture",
+    "nonprofit",
+    "media_production",
+    "aerospace",
+    "banking",
+    "public_safety",
+  ]) {
+    assert.equal(roadmapIds.has(id), true, `${id} must stay visible in the follow-up roadmap taxonomy`);
+  }
   assert.equal(roadmapIds.has("content"), false, "content must be graduated from roadmap to first-wave dense data");
   assert.equal(findClawDenseDataSystem("content")?.wave, "first_wave", "content must be graduated from roadmap to first-wave dense data");
   assert.equal(findClawDenseDataSystem("product")?.wave, "first_wave", "product must be graduated from roadmap to first-wave dense data");

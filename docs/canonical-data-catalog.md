@@ -43,7 +43,10 @@ Operations/ITSM, Real Estate/PropTech, Insurance, Maintenance/CMMS,
 Procurement, Warehouse/WMS, Supply Chain/SCM, Transport/TMS, Compliance/GRC,
 Government/Gov, Construction, IoT, ELN, Content/CMS, Product/PIM/PLM, and
 Pharma/GxP. The roadmap remains available for additional dense software
-categories before they graduate into deeper packs.
+categories before they graduate into deeper packs: energy/utilities,
+telecom/network operations, hospitality/PMS, agriculture/farm management,
+nonprofit/grants, media production, aerospace/MRO, banking/core banking, and
+public safety/CAD.
 
 Dense systems are visible packs and orchestrators over shared canonical
 collections. They do not own duplicate identity, notes, documents, signals,

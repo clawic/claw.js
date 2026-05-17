@@ -40,7 +40,10 @@ The registry is the first executable canon for this model. It defines:
   Maintenance/CMMS, Procurement, Warehouse/WMS, Supply Chain/SCM, Transport/TMS,
   Compliance/GRC, Government/Gov, IoT, Construction, Electronic Lab Notebook/ELN,
   Content/CMS, Product/PIM/PLM, and Pharma/GxP
-- a roadmap taxonomy for remaining dense software categories
+- a roadmap taxonomy for remaining dense software categories, currently
+  including energy/utilities, telecom/network operations, hospitality/PMS,
+  agriculture/farm management, nonprofit/grants, media production, aerospace
+  MRO, banking/core banking, and public safety/CAD
 - a non-executing dense intent resolver that can classify direct phrases such
   as `claw patient list`, `claw patients list`, `claw invoice list`, or `claw
   medication add --patient <id>` as covered, partial, blocked, or gaps before

@@ -1158,6 +1158,15 @@ export const clawDenseDataOsRegistry: ClawDenseDataOsRegistry = {
       standards: ["ICH", "GxP", "IDMP", "MedDRA", "ISO 11238", "21 CFR Part 11"],
       notes: "Pharma is a regulated orchestration pack over product/PIM, manufacturing, research, health, evidence, provenance, and quality gaps. It deliberately uses `drug-product` rather than `product` so ERP/catalog ownership stays with products_catalog; live submissions, validated batch release, and safety reporting stay EXTERNAL PENDING.",
     }),
+    roadmapSystem("energy_utilities", "Energy / Utilities", "utilities", ["energy"], "utility-account"),
+    roadmapSystem("telecom", "Telecom / Network Operations", "telecom", ["network-ops"], "circuit"),
+    roadmapSystem("hospitality", "Hospitality / Property Management", "hospitality", ["pms"], "reservation"),
+    roadmapSystem("agriculture", "Agriculture / Farm Management", "agriculture", ["farm"], "crop-plan"),
+    roadmapSystem("nonprofit", "Nonprofit / Grants", "nonprofit", ["grants"], "grant"),
+    roadmapSystem("media_production", "Media Production", "production", ["media-production"], "production-project"),
+    roadmapSystem("aerospace", "Aerospace / MRO", "aerospace", ["mro"], "aircraft"),
+    roadmapSystem("banking", "Banking / Core Banking", "banking", ["core-banking"], "bank-account"),
+    roadmapSystem("public_safety", "Public Safety / CAD", "public-safety", ["cad"], "incident-report"),
   ],
 };
 

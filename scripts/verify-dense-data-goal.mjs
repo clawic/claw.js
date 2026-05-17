@@ -60,6 +60,18 @@ const requiredFirstWaveSystems = [
   "pharma",
 ];
 
+const requiredRoadmapSystems = [
+  "energy_utilities",
+  "telecom",
+  "hospitality",
+  "agriculture",
+  "nonprofit",
+  "media_production",
+  "aerospace",
+  "banking",
+  "public_safety",
+];
+
 const requiredFoundationMappings = {
   identity_base: "people",
   domain_roles: "domain_roles",
@@ -497,6 +509,21 @@ for (const systemId of requiredFirstWaveSystems) {
   if (system.centers.length < 2) fail(`${systemId} must define at least two centers`);
   if (system.operations.length === 0) fail(`${systemId} must define operations`);
   if (system.semanticViews.length === 0) fail(`${systemId} must define semantic views`);
+}
+
+for (const systemId of requiredRoadmapSystems) {
+  const system = clawDenseDataOsRegistry.systems.find((entry) => entry.id === systemId);
+  if (!system) {
+    fail(`missing roadmap system ${systemId}`);
+    continue;
+  }
+  if (system.wave !== "roadmap") fail(`${systemId} must be roadmap`);
+  if (!system.visiblePack) fail(`${systemId} must be visible in the roadmap taxonomy`);
+  if (!system.orchestrator) fail(`${systemId} must be modeled as a future orchestrator`);
+  if (system.storagePolicy !== "core_sqlite") fail(`${systemId} must plan for core_sqlite`);
+  if (system.centers.length === 0) fail(`${systemId} must define a roadmap center`);
+  if (system.commandPatterns.length === 0) fail(`${systemId} must expose roadmap inspection routes`);
+  if (system.semanticViews.length === 0) fail(`${systemId} must define a roadmap semantic view contract`);
 }
 
 const intents = listClawDenseDataIntentEntries();
