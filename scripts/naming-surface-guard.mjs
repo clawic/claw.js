@@ -272,6 +272,16 @@ for (const relativePath of [
 }
 
 for (const relativePath of [
+  "packages/mesh/src/heartbeat.test.ts",
+  "packages/mesh/src/host-store.test.ts",
+  "packages/mesh/src/pairing.test.ts",
+  "packages/mesh/src/mesh-server.test.ts",
+]) {
+  forbidSnippet(relativePath, "24180");
+  forbidSnippet(relativePath, "24181");
+}
+
+for (const relativePath of [
   "docs/relay.md",
   "relay/tests/e2e/relay.e2e.test.ts",
   "relay/src/connector/runtime.ts",
