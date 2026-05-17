@@ -9,6 +9,7 @@ import { SearchStore, createFrameworkSearchSourceManifest } from "@clawjs/search
 
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./index.ts";
 import { captureStream, createFakeGenerationScript, runCliCapture, runInternalV1Cli, withPatchedEnv } from "./index-test-utils.ts";
+import { scheduleCodeSymbolsSearchEvent } from "./cli-search-events.ts";
 import { ensureV1MainSchema, resolveClawjsMainDbPath } from "./v1-data-core.ts";
 
 test("Search MCP package publishes only the public Search binary", () => {
@@ -4707,6 +4708,75 @@ test("search indexes scoped code.symbols without broadening other domains", asyn
     };
     assert.equal("code.symbols" in chatOnlyPayload.data.indexedFastPaths, false);
     assert.deepEqual(chatOnlyPayload.data.results, []);
+  });
+});
+
+test("code.symbols event jobs refresh and tombstone individual files", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-code-events-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  const sourceRoot = path.join(workspaceRoot, "project");
+  const filePath = path.join(sourceRoot, "src", "event-refresh.ts");
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, [
+    "export function eventDrivenNeedle() {",
+    "  return \"code-symbol-event-ready\";",
+    "}",
+    "",
+  ].join("\n"));
+
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const scheduled = scheduleCodeSymbolsSearchEvent({
+      operation: "upsert",
+      root: sourceRoot,
+      filePath,
+      dataDir: dataRoot,
+      flags: { "code-root": sourceRoot },
+    });
+    assert.equal(scheduled.ok, true, scheduled.error);
+    assert.equal(scheduled.job?.source, "code.symbols");
+    assert.equal(scheduled.job?.operation, "upsert");
+    assert.equal(scheduled.job?.resourceId, "src/event-refresh.ts");
+    assert.equal(scheduled.job?.shard, "hot");
+    assert.equal(scheduled.job?.payload.eventDriven, true);
+    assert.equal(scheduled.job?.payload.relativePath, "src/event-refresh.ts");
+
+    const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "code.symbols", "--data-dir", dataRoot, "--code-root", sourceRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(serviceRun.code, CLI_EXIT_OK);
+
+    const query = await runCliCapture(["search", "query", "eventDrivenNeedle", "--domains", "code", "--data-dir", dataRoot, "--code-root", sourceRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: { results: Array<{ source: string; domain: string; title: string; resourceId?: string; fragments?: Array<{ title?: string }> }> };
+    };
+    const result = queryPayload.data.results.find((entry) => entry.title === "event-refresh.ts");
+    assert.equal(result?.source, "code.symbols");
+    assert.equal(result?.domain, "code");
+    assert.equal(result?.resourceId, "src/event-refresh.ts");
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "function eventDrivenNeedle"), true);
+
+    fs.rmSync(filePath);
+    const deleted = scheduleCodeSymbolsSearchEvent({
+      operation: "delete",
+      root: sourceRoot,
+      filePath,
+      dataDir: dataRoot,
+      flags: { "code-root": sourceRoot },
+    });
+    assert.equal(deleted.ok, true, deleted.error);
+
+    const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "code.symbols", "--data-dir", dataRoot, "--code-root", sourceRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(deleteRun.code, CLI_EXIT_OK);
+
+    const afterDelete = await runCliCapture(["search", "query", "eventDrivenNeedle", "--domains", "code", "--data-dir", dataRoot, "--code-root", sourceRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterDelete.code, CLI_EXIT_DEGRADED);
+    const afterDeletePayload = JSON.parse(afterDelete.stdout) as { data: { results: unknown[] } };
+    assert.deepEqual(afterDeletePayload.data.results, []);
   });
 });
 

@@ -320,8 +320,9 @@ document or extractor output cannot silently expand every section search path.
 Markdown docs, and lightweight symbol fragments under `--code-root` or the
 current workspace root. It skips dependency/build/cache/private control
 directories and respects `--code-limit`, `--code-max-depth`, and
-`--code-max-bytes`. Code indexing is refreshed lazily only for code-scoped
-queries or explicitly during `search rebuild`.
+`--code-max-bytes`. Code indexing is refreshed lazily for code-scoped queries,
+explicitly during `search rebuild`, or incrementally through event-driven
+file upsert/delete jobs keyed by the project root and relative file path.
 
 `local.files` follows the same explicit-source rule. It stays in the `full`
 profile and is disabled until explicitly enabled with `claw search sources
@@ -492,7 +493,7 @@ signed host shortcut broker validates it.
   `generations.artifacts`, `skills.registry`, `providers.routing`,
   `snippets.library`, `agents.catalog`, `marketplace.choices`, `content.items`,
   `business.records`, `social.posts`, `iot.config`, and the first bounded
-  `code.symbols` adapter.
+  `code.symbols` adapter with per-file event refresh.
 - Keep Clawix Mac Search and `Command-G` conversations-only.
 
 ### Phase 2: framework domains

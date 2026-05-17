@@ -83,6 +83,36 @@ export function scheduleGenerationArtifactSearchEvent(input: {
   });
 }
 
+export function scheduleCodeSymbolsSearchEvent(input: {
+  operation: "upsert" | "delete";
+  root: string;
+  filePath: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  const root = path.resolve(input.root);
+  const absolutePath = path.resolve(input.filePath);
+  const relativeFromRoot = path.relative(root, absolutePath);
+  if (relativeFromRoot === ".." || relativeFromRoot.startsWith(`..${path.sep}`) || path.isAbsolute(relativeFromRoot)) {
+    return { ok: false, error: `code file is outside root: ${input.filePath}` };
+  }
+  const relativePath = normalizeEventRelativePath(relativeFromRoot);
+  return scheduleSearchIndexEvent({
+    source: "code.symbols",
+    operation: input.operation,
+    resourceId: relativePath,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      root,
+      relativePath,
+      absolutePath,
+    },
+  });
+}
+
 export function scheduleImageDerivedSearchEvent(input: {
   operation: "upsert" | "delete";
   imageId: string;
@@ -640,4 +670,8 @@ function resolveSearchEventDbPath(dataDir: string, flags: Record<string, string>
   if (flags["search-db-path"]) return path.resolve(flags["search-db-path"]);
   if (process.env.CLAW_SEARCH_DB_PATH) return path.resolve(process.env.CLAW_SEARCH_DB_PATH);
   return path.join(resolveClawjsDataRoot({ ...process.env, CLAW_DATA_DIR: dataDir }), "search.sqlite");
+}
+
+function normalizeEventRelativePath(value: string): string {
+  return value.split(path.sep).join(path.posix.sep);
 }

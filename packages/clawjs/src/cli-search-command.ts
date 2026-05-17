@@ -1187,6 +1187,10 @@ function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flag
       const resourceId = resourceIdFromJobPayload(job, "generationId") ?? job.resourceId;
       return resourceId ? ensureGenerationArtifactResourceIndexed(store, flags, cwd, resourceId) : 0;
     }
+    case "code.symbols": {
+      const relativePath = resourceIdFromJobPayload(job, "relativePath") ?? job.resourceId;
+      return relativePath ? ensureCodeSymbolResourceIndexed(store, flags, cwd, relativePath, resourceIdFromJobPayload(job, "root")) : 0;
+    }
     case "skills.registry": {
       const resourceId = resourceIdFromJobPayload(job, "slug") ?? job.resourceId;
       return resourceId ? ensureSkillsRegistryResourceIndexed(store, flags, resourceId) : 0;
@@ -3923,6 +3927,56 @@ function ensureCodeSymbolsSourceIndexed(store: SearchStore, flags: Record<string
     lastIndexedAt: new Date().toISOString(),
   });
   return indexed;
+}
+
+function ensureCodeSymbolResourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string, relativePath: string, rootOverride?: string): number {
+  const root = rootOverride ? path.resolve(rootOverride) : resolveCodeSearchRoot(flags, cwd);
+  const normalizedRelativePath = normalizeRelativePath(relativePath);
+  const absolutePath = path.resolve(root, normalizedRelativePath);
+  const relativeFromRoot = normalizeRelativePath(path.relative(root, absolutePath));
+  if (relativeFromRoot.startsWith("../") || relativeFromRoot === ".." || path.isAbsolute(relativeFromRoot)) {
+    store.tombstone({ source: "code.symbols", resourceId: normalizedRelativePath, reason: "code symbol path outside root during Search event refresh" });
+    return 1;
+  }
+  const extension = path.extname(absolutePath).toLowerCase();
+  const language = languageForCodeSearchExtension(extension);
+  if (!language) {
+    store.tombstone({ source: "code.symbols", resourceId: normalizedRelativePath, reason: "unsupported code symbol file during Search event refresh" });
+    return 1;
+  }
+  let stat: fs.Stats;
+  try {
+    stat = fs.statSync(absolutePath);
+  } catch {
+    store.tombstone({ source: "code.symbols", resourceId: normalizedRelativePath, reason: "code symbol file missing during Search event refresh" });
+    return 1;
+  }
+  if (!stat.isFile() || stat.size <= 0) {
+    store.tombstone({ source: "code.symbols", resourceId: normalizedRelativePath, reason: "code symbol file not indexable during Search event refresh" });
+    return 1;
+  }
+  const maxBytes = boundedNumberFlag(flags["code-max-bytes"], 256 * 1024, 1024, 2 * 1024 * 1024);
+  if (stat.size > maxBytes) {
+    store.tombstone({ source: "code.symbols", resourceId: normalizedRelativePath, reason: "code symbol file exceeds Search event byte limit" });
+    return 1;
+  }
+  const document = codeFileSearchDocument(root, {
+    absolutePath,
+    extension,
+    language,
+    updatedAt: stat.mtime.toISOString(),
+  });
+  if (!document) {
+    store.tombstone({ source: "code.symbols", resourceId: normalizedRelativePath, reason: "code symbol file could not be indexed during Search event refresh" });
+    return 1;
+  }
+  store.upsertDocument(document);
+  store.setSourceState("code.symbols", "enabled", {
+    backlog: 0,
+    error: null,
+    lastIndexedAt: new Date().toISOString(),
+  });
+  return 1;
 }
 
 function ensureLocalFilesSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {
