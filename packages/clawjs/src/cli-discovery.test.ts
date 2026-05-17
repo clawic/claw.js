@@ -354,6 +354,61 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(propertyTimelinePayload.data.materializedView.items.some((item) => item.kind === "property_visit" && item.label === "Ada Visitor"), true);
   assert.equal(propertyTimelinePayload.data.materializedView.items.some((item) => item.kind === "property_offer" && item.label === "Ada Buyer"), true);
 
+  const insurancePolicyCreate = await runCliCapture(["insurance-policy", "create", "Home policy", "--provider", "Example Mutual", "--policy-number", "HOME-001", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(insurancePolicyCreate.code, CLI_EXIT_OK, insurancePolicyCreate.stderr || insurancePolicyCreate.stdout);
+  const insurancePolicyPayload = JSON.parse(insurancePolicyCreate.stdout) as { data: { id: string; title: string; provider: string; policyNumber: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(insurancePolicyPayload.meta.invokedCommand, "insurance-policy");
+  assert.equal(insurancePolicyPayload.meta.collection, "insurance_policies");
+  assert.equal(insurancePolicyPayload.meta.action, "create");
+  assert.equal(insurancePolicyPayload.data.title, "Home policy");
+  assert.equal(insurancePolicyPayload.data.provider, "Example Mutual");
+  assert.equal(insurancePolicyPayload.data.policyNumber, "HOME-001");
+
+  const insuranceEvidenceSourceCreate = await runCliCapture(["evidence-source", "create", "Policy PDF", "--kind", "document", "--collection-name", "insurance_policies", "--record-id", insurancePolicyPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(insuranceEvidenceSourceCreate.code, CLI_EXIT_OK);
+  const insuranceEvidenceSourcePayload = JSON.parse(insuranceEvidenceSourceCreate.stdout) as { data: { id: string; collectionName: string; recordId: string } };
+  assert.equal(insuranceEvidenceSourcePayload.data.collectionName, "insurance_policies");
+  assert.equal(insuranceEvidenceSourcePayload.data.recordId, insurancePolicyPayload.data.id);
+
+  const insurancePolicyTimeline = await runCliCapture(["insurance-policy", insurancePolicyPayload.data.id, "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(insurancePolicyTimeline.code, CLI_EXIT_OK, insurancePolicyTimeline.stderr || insurancePolicyTimeline.stdout);
+  const insurancePolicyTimelinePayload = JSON.parse(insurancePolicyTimeline.stdout) as {
+    data: {
+      coverage: { implementationStatus: string; recordsMaterialized: boolean };
+      semanticView: { id: string; systemId: string };
+      materializedView: {
+        subject: { id: string; label: string };
+        summary: { evidenceSources: number };
+        itemCount: number;
+        items: Array<{ kind: string; label: string }>;
+      };
+    };
+  };
+  assert.equal(insurancePolicyTimelinePayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(insurancePolicyTimelinePayload.data.coverage.recordsMaterialized, true);
+  assert.equal(insurancePolicyTimelinePayload.data.semanticView.id, "insurance_policy.timeline");
+  assert.equal(insurancePolicyTimelinePayload.data.semanticView.systemId, "insurance");
+  assert.equal(insurancePolicyTimelinePayload.data.materializedView.subject.id, insurancePolicyPayload.data.id);
+  assert.equal(insurancePolicyTimelinePayload.data.materializedView.subject.label, "Home policy");
+  assert.equal(insurancePolicyTimelinePayload.data.materializedView.summary.evidenceSources, 1);
+  assert.equal(insurancePolicyTimelinePayload.data.materializedView.itemCount >= 2, true);
+  assert.equal(insurancePolicyTimelinePayload.data.materializedView.items.some((item) => item.kind === "evidence" && item.label === "Policy PDF"), true);
+
+  const vehicleCreate = await runCliCapture(["db", "vehicle", "create", "EV", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(vehicleCreate.code, CLI_EXIT_OK, vehicleCreate.stderr || vehicleCreate.stdout);
+  const vehiclePayload = JSON.parse(vehicleCreate.stdout) as { data: { id: string; name: string }; meta: { collection: string; action: string } };
+  assert.equal(vehiclePayload.meta.collection, "vehicles");
+  assert.equal(vehiclePayload.data.name, "EV");
+
+  const vehicleInsurancePolicyCreate = await runCliCapture(["vehicle-insurance-policy", "add", "--vehicle", vehiclePayload.data.id, "--provider", "Example Mutual", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(vehicleInsurancePolicyCreate.code, CLI_EXIT_OK, vehicleInsurancePolicyCreate.stderr || vehicleInsurancePolicyCreate.stdout);
+  const vehicleInsurancePolicyPayload = JSON.parse(vehicleInsurancePolicyCreate.stdout) as { data: { vehicleId: string; provider: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(vehicleInsurancePolicyPayload.meta.invokedCommand, "vehicle-insurance-policy");
+  assert.equal(vehicleInsurancePolicyPayload.meta.collection, "vehicle_insurance_policies");
+  assert.equal(vehicleInsurancePolicyPayload.meta.action, "create");
+  assert.equal(vehicleInsurancePolicyPayload.data.vehicleId, vehiclePayload.data.id);
+  assert.equal(vehicleInsurancePolicyPayload.data.provider, "Example Mutual");
+
   const accountCreate = await runCliCapture(["account", "create", "Acme Account", "--company", companyPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(accountCreate.code, CLI_EXIT_OK);
   const accountPayload = JSON.parse(accountCreate.stdout) as { data: { id: string; name: string; companyId: string }; meta: { collection: string; action: string } };

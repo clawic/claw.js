@@ -720,6 +720,9 @@ claw property property_123 visits list --json
 claw property property_123 offer add --buyer-name "Ada Buyer" --amount-cents 250000 --json
 claw property-offer add --property property_123 --buyer-name "Direct Buyer" --json
 claw property property_123 timeline --json
+claw insurance-policy create "Home policy" --provider "Example Mutual" --json
+claw insurance-policy insurance_policy_123 timeline --json
+claw vehicle-insurance-policy add --vehicle vehicle_123 --provider "Example Mutual" --json
 claw product list --json
 claw products list --json
 claw product create "Hydraulic Press" --company company_123 --json

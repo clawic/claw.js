@@ -300,6 +300,7 @@ function materializedSemanticViewForIntent(
   if (semanticView.id === "employee.timeline") return materializedEmployeeTimeline(input, intent, semanticView);
   if (semanticView.id === "asset.timeline") return materializedAssetTimeline(input, intent, semanticView);
   if (semanticView.id === "property.timeline") return materializedPropertyTimeline(input, intent, semanticView);
+  if (semanticView.id === "insurance_policy.timeline") return materializedInsurancePolicyTimeline(input, intent, semanticView);
   return undefined;
 }
 
@@ -754,6 +755,61 @@ function materializedPropertyTimeline(
       evidenceSourceId: record.evidenceSourceId,
     })),
     sourceCollections: ["property_listings", "property_visits", "property_offers", "property_inspections", "evidence_sources", "quality_gaps", "provenance_events"],
+    partial: qualityGaps.length > 0,
+    intentStatus: intent.status,
+  };
+}
+
+function materializedInsurancePolicyTimeline(
+  input: DenseDataCliInput,
+  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
+) {
+  const policyId = input.positionals[1];
+  if (!policyId) return undefined;
+  const namespaceId = input.flags.namespace ?? "main";
+  const store = openDenseDataStore(input.workspaceRoot);
+  store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
+  const policy = store.getRecord(namespaceId, "insurance_policies", policyId);
+  if (!policy) return undefined;
+
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "insurance_policies", recordId: policyId } }).items;
+  const receipts = store.listRecords(namespaceId, "important_receipts", { filter: { tags: ["insurance", policyId] } }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "insurance_policies", targetId: policyId } }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "insurance_policies", targetId: policyId } }).items;
+  const items = [
+    timelineItem(policy, "insurance_policy", policy.id, policy.title ?? policy.policyNumber ?? policy.id, policy.startedAt ?? policy.createdAt, policy),
+    ...receipts.map((record) => timelineItem(record, "receipt", record.id, record.title ?? record.vendor ?? record.id, record.issuedAt ?? record.createdAt, record)),
+    ...evidence.map((record) => timelineItem(record, "evidence", record.id, record.label ?? record.id, record.capturedAt ?? record.createdAt, record)),
+    ...qualityGaps.map((record) => timelineItem(record, "quality_gap", record.id, record.label ?? record.id, record.createdAt, record)),
+    ...provenance.map((record) => timelineItem(record, "provenance", record.id, record.eventType ?? record.id, record.occurredAt ?? record.createdAt, record)),
+  ].sort((left, right) => String(left.occurredAt).localeCompare(String(right.occurredAt)));
+
+  return {
+    id: semanticView.id,
+    subject: { collectionName: "insurance_policies", id: policy.id, label: policy.title ?? policy.policyNumber ?? policy.id },
+    summary: {
+      receipts: receipts.length,
+      evidenceSources: evidence.length,
+      qualityGaps: qualityGaps.length,
+    },
+    itemCount: items.length,
+    items,
+    records: {
+      policy,
+      receipts,
+      evidence,
+      provenance,
+    },
+    gaps: qualityGaps.map((record) => ({
+      id: record.id,
+      label: record.label,
+      status: record.status,
+      gapKind: record.gapKind,
+      severity: record.severity,
+      evidenceSourceId: record.evidenceSourceId,
+    })),
+    sourceCollections: ["insurance_policies", "important_receipts", "evidence_sources", "quality_gaps", "provenance_events"],
     partial: qualityGaps.length > 0,
     intentStatus: intent.status,
   };
@@ -1384,6 +1440,9 @@ function denseDbFlags(flags: Record<string, string>, collectionName: string): Re
   }
   if (["property_visits", "property_offers", "property_inspections"].includes(collectionName) && flags.property && !flags["property-listing-id"]) {
     nextFlags = { ...nextFlags, "property-listing-id": flags.property };
+  }
+  if (collectionName === "vehicle_insurance_policies" && flags.vehicle && !flags["vehicle-id"]) {
+    nextFlags = { ...nextFlags, "vehicle-id": flags.vehicle };
   }
   if (collectionName === "transactions" && flags.account && !flags["account-id"]) {
     nextFlags = { ...nextFlags, "account-id": flags.account };

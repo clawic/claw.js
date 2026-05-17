@@ -36,9 +36,9 @@ The registry is the first executable canon for this model. It defines:
   workflow state
 - a first wave of visible dense systems: Health/EHR, Research/CTMS, Biology,
   Labs/LIMS, Legal, ERP, CRM, Finance/Accounting, Education/LMS, HR/HRIS,
-  Manufacturing/MES, Operations/ITSM, and Real Estate/PropTech
-- a roadmap taxonomy for SCM, WMS, TMS, procurement, GRC, insurance,
-  government, construction, IoT, CMS, PIM/PLM, pharma, CMMS, and ELN
+  Manufacturing/MES, Operations/ITSM, Real Estate/PropTech, and Insurance
+- a roadmap taxonomy for SCM, WMS, TMS, procurement, GRC, government,
+  construction, IoT, CMS, PIM/PLM, pharma, CMMS, and ELN
 - a non-executing dense intent resolver that can classify direct phrases such
   as `claw patient list`, `claw patients list`, `claw invoice list`, or `claw
   medication add --patient <id>` as covered, partial, blocked, or gaps before
@@ -217,6 +217,10 @@ Real Estate/PropTech uses `claw property <id> timeline` to materialize existing
 `property_listings`, `property_visits`, `property_offers`,
 `property_inspections`, evidence, provenance, and quality gaps without adding a
 second property model.
+Insurance uses `claw insurance-policy <id> timeline` to materialize
+`insurance_policies`, related receipts/evidence, provenance, and quality gaps,
+with vehicle-specific policies kept in `vehicle_insurance_policies` instead of
+overloading generic policy-gate records.
 Manufacturing uses `claw work-order <id> timeline` to materialize
 `work_orders`, evidence, quality gaps, and provenance as the MES slice grows
 toward material, operation, labor, equipment, and quality event records.

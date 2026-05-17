@@ -81,6 +81,27 @@ export const clawDenseDataAcceptanceFixture: ClawDenseDataAcceptanceFixture = {
       data: { propertyListingId: "fixture_property_listing_main", inspectedAt: "2026-05-19T00:00:00.000Z", inspectorName: "Inspector One", findings: { moisture: "none" } },
     },
     {
+      id: "fixture_insurance_policy_home",
+      collectionName: "insurance_policies",
+      label: "Home policy",
+      covers: ["insurance_policy", "insurance", "policy_timeline", "document_evidence", "partial_data"],
+      data: { title: "Home policy", kind: "home", policyNumber: "HOME-001", provider: "Example Mutual", startedAt: "2026-05-17T00:00:00.000Z", premiumCents: 120000, coverage: "Home coverage summary" },
+    },
+    {
+      id: "fixture_vehicle_ev",
+      collectionName: "vehicles",
+      label: "EV",
+      covers: ["vehicle", "insurance", "vehicle_insurance_policy"],
+      data: { name: "EV", make: "Example", model: "EV", year: 2026, active: true },
+    },
+    {
+      id: "fixture_vehicle_insurance_policy_ev",
+      collectionName: "vehicle_insurance_policies",
+      label: "EV policy",
+      covers: ["vehicle_insurance_policy", "insurance", "document_evidence"],
+      data: { vehicleId: "fixture_vehicle_ev", policyNumber: "AUTO-001", provider: "Example Mutual", startedAt: "2026-05-17T00:00:00.000Z", premiumCents: 60000, coverage: "Vehicle liability" },
+    },
+    {
       id: "fixture_patient_ada",
       collectionName: "patients",
       label: "Ada Patient",
