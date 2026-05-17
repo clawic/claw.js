@@ -190,6 +190,7 @@ claw sync conflicts --json
 claw nodes list --json
 claw nodes pair --dry-run --json
 claw nodes trust --dry-run --json
+claw nodes trust --target-node vps.server --owner-node mac.home --coordinator-node coord.home --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 claw nodes revoke --dry-run --json
 claw nodes invite --issuer-mesh mesh.home --recipient-mesh mesh.server --allowed-resources skills:default --actions read,sync --json
 claw nodes share --issuer-mesh mesh.home --to-mesh mesh.server --resource-id skills:default --driver skills --actions read,sync --json
@@ -220,6 +221,10 @@ execution still stay signed-host or Coordinator gated.
 the Iroh v1 adapter contract. It verifies the local Coordinator ledger shape
 and still marks real multi-device transport and device trust acceptance as
 `external_pending` until physical nodes prove the handshake.
+`nodes trust --record true` records a signed node-trust decision in the same
+ledger. An allow decision remains `signed_pending_physical_acceptance` until
+the target device completes physical acceptance; it does not silently grant
+remote authority by itself.
 `gateway secret-lease` records a signed, expiring lease for a secret reference,
 never reads or returns the secret value, and rejects plaintext-return flags.
 

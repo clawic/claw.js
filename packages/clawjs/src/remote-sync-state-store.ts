@@ -8,6 +8,7 @@ import {
   meshInvitationSchema,
   meshResourceShareSchema,
   meshRevocationSchema,
+  nodeTrustDecisionSchema,
   remoteActorContextSchema,
   remoteSecretLeaseSchema,
   remoteTransportHandshakeReceiptSchema,
@@ -17,6 +18,7 @@ import {
   type MeshInvitation,
   type MeshResourceShare,
   type MeshRevocation,
+  type NodeTrustDecision,
   type RemoteActorContext,
   type RemoteSecretLease,
   type RemoteTransportHandshakeReceipt,
@@ -29,7 +31,7 @@ import {
 
 export type RemoteSyncStateAuditEvent = {
   eventId: string;
-  eventType: "sync.manifest.recorded" | "sync.queue.enqueued" | "sync.queue.reconciled" | "mesh.invitation.recorded" | "mesh.share.recorded" | "mesh.revocation.recorded" | "secret.lease.issued" | "transport.handshake.recorded";
+  eventType: "sync.manifest.recorded" | "sync.queue.enqueued" | "sync.queue.reconciled" | "mesh.invitation.recorded" | "mesh.share.recorded" | "mesh.revocation.recorded" | "secret.lease.issued" | "transport.handshake.recorded" | "node.trust.recorded";
   targetId: string;
   createdAt: string;
   coordinatorSignatureId?: string;
@@ -74,6 +76,9 @@ export type RemoteSyncState = {
   transport: {
     handshakes: Record<string, RemoteTransportHandshakeReceipt>;
   };
+  nodeTrust: {
+    decisions: Record<string, NodeTrustDecision>;
+  };
   audit: RemoteSyncStateAuditEvent[];
 };
 
@@ -103,6 +108,9 @@ function emptyState(): RemoteSyncState {
     },
     transport: {
       handshakes: {},
+    },
+    nodeTrust: {
+      decisions: {},
     },
     audit: [],
   };
@@ -284,6 +292,16 @@ function parseState(raw: unknown): RemoteSyncState {
     }
   }
 
+  const nodeTrust = input.nodeTrust;
+  if (nodeTrust && typeof nodeTrust === "object" && !Array.isArray(nodeTrust)) {
+    const decisions = (nodeTrust as Record<string, unknown>).decisions;
+    if (decisions && typeof decisions === "object" && !Array.isArray(decisions)) {
+      for (const [decisionId, decisionInput] of Object.entries(decisions)) {
+        state.nodeTrust.decisions[decisionId] = nodeTrustDecisionSchema.parse(decisionInput);
+      }
+    }
+  }
+
   const audit = input.audit;
   if (Array.isArray(audit)) {
     state.audit = audit.flatMap((event) => {
@@ -452,6 +470,17 @@ export class RemoteSyncStateStore {
     const coordinatorSignature = appendAudit(state, "transport.handshake.recorded", receipt.receiptId, now, receipt, input.signer);
     this.write(state);
     return { receipt, statePath: this.statePath, durable: true, coordinatorSignature };
+  }
+
+  recordNodeTrustDecision(decisionInput: NodeTrustDecision, input: { now?: string; signer: RemoteSyncCoordinatorSigner }): RemoteSyncStateWriteResult<{ decision: NodeTrustDecision }> {
+    const decision = nodeTrustDecisionSchema.parse(decisionInput);
+    const now = input.now ?? decision.createdAt;
+    const state = this.read();
+    state.nodeTrust.decisions[decision.decisionId] = decision;
+    state.updatedAt = now;
+    const coordinatorSignature = appendAudit(state, "node.trust.recorded", decision.decisionId, now, decision, input.signer);
+    this.write(state);
+    return { decision, statePath: this.statePath, durable: true, coordinatorSignature };
   }
 
   issueSecretLease(input: {

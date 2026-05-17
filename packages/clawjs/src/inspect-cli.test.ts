@@ -293,6 +293,24 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.equal(heartbeatPayload.state.durable, true);
   assert.equal(heartbeatPayload.state.coordinatorSignature?.verified, true);
 
+  const nodeTrust = await runCliCapture(["nodes", "trust", "--target-node", "vps.server", "--owner-node", "mac.home", "--coordinator-node", "coord.home", "--state-dir", stateDir, "--record", "true", "--transport", "iroh", ...coordinatorSigningFlags, "--json"], process.cwd());
+  assert.equal(nodeTrust.code, CLI_EXIT_OK);
+  const nodeTrustPayload = parseCliJson<{
+    status: string;
+    physicalAcceptance: string;
+    decision: { status: string; effect: string; physicalAcceptanceVerified: boolean; externalPending: string[]; writes: boolean };
+    state: { durable: boolean; coordinatorSignature?: { verified: boolean } };
+  }>(nodeTrust.stdout).data;
+  assert.equal(nodeTrustPayload.status, "signed_node_trust_recorded");
+  assert.equal(nodeTrustPayload.physicalAcceptance, "external_pending");
+  assert.equal(nodeTrustPayload.decision.status, "signed_pending_physical_acceptance");
+  assert.equal(nodeTrustPayload.decision.effect, "allow");
+  assert.equal(nodeTrustPayload.decision.physicalAcceptanceVerified, false);
+  assert.equal(nodeTrustPayload.decision.externalPending.includes("device_trust_acceptance"), true);
+  assert.equal(nodeTrustPayload.decision.writes, false);
+  assert.equal(nodeTrustPayload.state.durable, true);
+  assert.equal(nodeTrustPayload.state.coordinatorSignature?.verified, true);
+
   const share = await runCliCapture(["nodes", "share", "--issuer-mesh", "mesh.home", "--to-mesh", "mesh.server", "--resource-id", "skills:default", "--driver", "skills", "--actions", "read,sync", "--json"], process.cwd());
   assert.equal(share.code, CLI_EXIT_OK);
   const sharePayload = parseCliJson<{ share: { status: string; resourceId: string; plaintextSecrets: string; writes: boolean }; writes: boolean }>(share.stdout).data;

@@ -89,6 +89,10 @@ for the transport-adapter contract. For Iroh it defaults to `adapter:
 iroh_v1`; unless a real multi-device run proves the network handshake, the
 receipt keeps `physical_iroh_handshake` and `device_trust_acceptance` as
 external pending work.
+`NodeTrustDecision` records signed trust intent separately from physical trust
+acceptance. A local `allow` decision stays `signed_pending_physical_acceptance`
+until the target node proves device acceptance; deny and revoke decisions are
+still signed, audited no-write records.
 
 Every stable capability must expose remote classification metadata. A
 `remote-safe` capability must have a route, owner, policy, and test. A

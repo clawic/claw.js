@@ -13,7 +13,7 @@ the maintainer-local goal can be closed.
 | ID | Decision key | Source decision | Acceptance gate |
 | --- | --- | --- | --- |
 | RQ-001 | `relay_boundary` | The old Relay bucket must split into Coordinator, Gateway, Connector, and Sync. | ADR 0022, route graph nodes, CLI commands, and docs name the four layers explicitly. |
-| RQ-002 | `server_trust_model` | Remote operation must support sovereign E2E/tunnel-only and governed Gateway trust modes. | Remote actor, node identity, and conformance contracts expose both trust modes. |
+| RQ-002 | `server_trust_model` | Remote operation must support sovereign E2E/tunnel-only and governed Gateway trust modes. | Remote actor, node identity, and conformance contracts expose both trust modes; `claw nodes trust --record true` stores signed trust intent while physical acceptance remains explicit. |
 | RQ-003 | `remote_surface_parity` | Stable local capabilities must be classified as `remote-safe`, `local-only`, `blocked`, or `pending`. | Surface contract and interface matrix include the four states; `claw remote classify` exposes them. |
 | RQ-004 | `topology_priority` | Personal devices and headless/server deployments use the same architecture. | Headless host, multi-tenant Gateway, and personal mesh routes share the same conformance contract. |
 | RQ-005 | `sync_authority_model` | Synchronization authority is assigned per resource. | `SyncResourceManifest` records authority, owner node, residency, route IDs, and allowed peers. |

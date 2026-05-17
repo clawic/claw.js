@@ -5,6 +5,7 @@ import {
   createMeshInvitation,
   createMeshResourceShare,
   createMeshRevocation,
+  createNodeTrustDecision,
   createSyncResourceManifest,
   createTransportHandshakeReceipt,
   evaluateRemoteAgentServiceAccess,
@@ -280,6 +281,22 @@ function transportHandshakeFromFlags(input: RemoteSyncCliInput) {
   });
 }
 
+function nodeTrustDecisionFromFlags(input: RemoteSyncCliInput) {
+  const effect = input.flags.effect === "deny" || input.flags.effect === "revoke" ? input.flags.effect : "allow";
+  return createNodeTrustDecision({
+    subjectNodeId: input.flags["target-node"] ?? input.flags["peer-node"] ?? input.flags["subject-node"] ?? "peer",
+    coordinatorNodeId: input.flags["coordinator-node"] ?? input.flags["owner-node"] ?? "local",
+    actor: actorContextFromFlags(input),
+    trustMode: input.flags["trust-mode"] === "governed_gateway" ? "governed_gateway" : "sovereign_e2e_tunnel",
+    transport: input.flags.transport ?? "iroh",
+    effect,
+    grantedRouteIds: listFlag(input.flags["route-ids"], remoteSyncRequiredRouteIds.slice()),
+    createdAt: input.flags.now ?? new Date().toISOString(),
+    expiresAt: input.flags["expires-at"],
+    physicalAcceptanceVerified: input.flags["physical-accepted"] === "true",
+  });
+}
+
 function numberFlag(value: string | undefined, fallback: number): number {
   if (value && Number.isFinite(Number(value))) return Number(value);
   return fallback;
@@ -434,6 +451,25 @@ export async function runNodesCli(input: RemoteSyncCliInput): Promise<number> {
         physicalTransport: receipt.physicalTransportVerified ? "verified" : "external_pending",
         ...(state ? { state } : {}),
       }, `heartbeat: ${status}`, command);
+    }
+    if (command === "trust") {
+      const decision = nodeTrustDecisionFromFlags(input);
+      const usage = "nodes trust --target-node <id> --state-dir <dir> --record true --coordinator-private-key-file <pem> --coordinator-public-key-file <pem> [--transport iroh]";
+      const store = stateStoreFromFlags(input);
+      if (wantsDurableRecord(input) && !store) return missing(input, usage);
+      const signer = wantsDurableRecord(input) ? requireCoordinatorSigner(input, usage) : undefined;
+      if (typeof signer === "number") return signer;
+      const state = store && wantsDurableRecord(input) && signer
+        ? store.recordNodeTrustDecision(decision, { now: input.flags.now, signer })
+        : undefined;
+      const status = state?.coordinatorSignature ? "signed_node_trust_recorded" : "dry_run_external_pending";
+      return writeOutput(input, "nodes", {
+        decision,
+        status,
+        writes: false,
+        physicalAcceptance: decision.physicalAcceptanceVerified ? "verified" : "external_pending",
+        ...(state ? { state } : {}),
+      }, `trust: ${status}`, command);
     }
     if (command === "revoke" && input.flags["target-id"]) {
       const revocation = createMeshRevocation({

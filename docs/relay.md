@@ -122,6 +122,10 @@ unsigned records remain local proposals only.
 transport-handshake receipt for the Iroh v1 adapter contract. The receipt is
 contract-level proof only; real multi-device Iroh connectivity and device
 trust acceptance remain `EXTERNAL PENDING` until validated on physical nodes.
+`claw nodes trust --record true` stores signed node-trust decisions without
+turning them into authority automatically. Allow decisions remain pending until
+physical device acceptance is proven; deny and revoke decisions stay audited
+no-write records.
 The local Gateway secret broker path issues only signed, expiring leases for
 secret references; it never reads or returns plaintext secret material.
 

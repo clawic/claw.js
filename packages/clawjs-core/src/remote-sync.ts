@@ -276,6 +276,25 @@ export const remoteTransportHandshakeReceiptSchema = z.object({
   writes: z.literal(false),
 });
 
+export const nodeTrustDecisionSchema = z.object({
+  schemaVersion: z.literal(1),
+  decisionId: z.string().min(1),
+  subjectNodeId: z.string().min(1),
+  coordinatorNodeId: z.string().min(1),
+  actor: remoteActorContextSchema,
+  trustMode: remoteTrustModeSchema,
+  transport: z.string().min(1),
+  effect: z.enum(["allow", "deny", "revoke"]),
+  status: z.enum(["signed_pending_physical_acceptance", "active", "denied", "revoked"]),
+  grantedRouteIds: z.array(z.string().min(1)),
+  physicalAcceptanceVerified: z.boolean(),
+  externalPending: z.array(z.enum(["device_trust_acceptance", "physical_iroh_handshake"])),
+  createdAt: z.string().datetime(),
+  expiresAt: z.string().datetime().optional(),
+  auditEventId: z.string().min(1),
+  writes: z.literal(false),
+});
+
 export const meshShareActionSchema = z.enum([
   "read",
   "sync",
@@ -409,6 +428,7 @@ export type RemoteAccessRequest = z.infer<typeof remoteAccessRequestSchema>;
 export type RemoteAccessDecision = z.infer<typeof remoteAccessDecisionSchema>;
 export type RemoteOfflineCommandResult = z.infer<typeof remoteOfflineCommandResultSchema>;
 export type RemoteTransportHandshakeReceipt = z.infer<typeof remoteTransportHandshakeReceiptSchema>;
+export type NodeTrustDecision = z.infer<typeof nodeTrustDecisionSchema>;
 export type MeshShareAction = z.infer<typeof meshShareActionSchema>;
 export type MeshInvitation = z.infer<typeof meshInvitationSchema>;
 export type MeshResourceShare = z.infer<typeof meshResourceShareSchema>;
@@ -553,6 +573,10 @@ function meshId(prefix: string, parts: string[]): string {
 
 function remoteTransportReceiptId(parts: string[]): string {
   return `transport_handshake_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
+}
+
+function nodeTrustDecisionId(parts: string[]): string {
+  return `node_trust_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
 }
 
 function newestSnapshot(left: SyncObjectSnapshot, right: SyncObjectSnapshot): SyncObjectSnapshot {
@@ -823,6 +847,53 @@ export function createTransportHandshakeReceipt(input: {
     createdAt,
     expiresAt,
     auditEventId: remoteTransportReceiptId(["audit", input.initiatorNodeId, input.responderNodeId, createdAt]),
+    writes: false,
+  });
+}
+
+export function createNodeTrustDecision(input: {
+  subjectNodeId: string;
+  coordinatorNodeId: string;
+  actor: RemoteActorContext;
+  trustMode?: RemoteTrustMode;
+  transport?: string;
+  effect?: "allow" | "deny" | "revoke";
+  grantedRouteIds?: string[];
+  createdAt?: string;
+  expiresAt?: string;
+  physicalAcceptanceVerified?: boolean;
+}): NodeTrustDecision {
+  const createdAt = input.createdAt ?? new Date().toISOString();
+  const effect = input.effect ?? "allow";
+  const physicalAcceptanceVerified = input.physicalAcceptanceVerified ?? false;
+  const status = effect === "deny"
+    ? "denied"
+    : effect === "revoke"
+      ? "revoked"
+      : physicalAcceptanceVerified
+        ? "active"
+        : "signed_pending_physical_acceptance";
+  return nodeTrustDecisionSchema.parse({
+    schemaVersion: 1,
+    decisionId: nodeTrustDecisionId([
+      input.subjectNodeId,
+      input.coordinatorNodeId,
+      effect,
+      createdAt,
+    ]),
+    subjectNodeId: input.subjectNodeId,
+    coordinatorNodeId: input.coordinatorNodeId,
+    actor: remoteActorContextSchema.parse(input.actor),
+    trustMode: input.trustMode ?? "sovereign_e2e_tunnel",
+    transport: input.transport ?? "iroh",
+    effect,
+    status,
+    grantedRouteIds: input.grantedRouteIds ?? remoteSyncRequiredRouteIds.slice(),
+    physicalAcceptanceVerified,
+    externalPending: physicalAcceptanceVerified ? [] : ["device_trust_acceptance", "physical_iroh_handshake"],
+    createdAt,
+    ...(input.expiresAt ? { expiresAt: input.expiresAt } : {}),
+    auditEventId: nodeTrustDecisionId(["audit", input.subjectNodeId, input.coordinatorNodeId, createdAt]),
     writes: false,
   });
 }
