@@ -58,6 +58,7 @@
     "test:domain-surface-registry": "node --import tsx ./scripts/domain-surface-registry-guard.mjs",
     "test:persistent-surface-guard": "node ./scripts/persistent-surface-guard.mjs --self-test",
     "test:stable-surface-guard": "node ./scripts/persistent-surface-guard.mjs --self-test",
+    "search:scale-lab": "node --import tsx ./scripts/search-scale-lab.ts",
     "test:e2e": "npm run build:packages && rm -rf examples/showcase/.next && NEXT_DIST_DIR=.next-e2e npm --prefix examples/showcase run build && node ./scripts/run-e2e.mjs",
     "test:e2e:ci": "npm run build:packages && rm -rf examples/showcase/.next && NEXT_DIST_DIR=.next-e2e npm --prefix examples/showcase run build && CI=1 node ./scripts/run-e2e.mjs",
     "test:e2e:smoke-real": "npm run build:packages && rm -rf examples/showcase/.next && NEXT_DIST_DIR=.next-e2e npm --prefix examples/showcase run build && playwright test --grep @smoke-real",

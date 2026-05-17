@@ -133,4 +133,7 @@ Required validation for Search work:
   `monitors`, `actions`, `profiles`, and `explain`;
 - Clawix Search/`Command-G` conversations-only regression tests;
 - performance tests for 50 ms hot path and 200 ms Root Search first batch;
-- 1M and 10M item labs before claiming scale completion.
+- `npm run search:scale-lab -- --items 1000000 --json` and
+  `npm run search:scale-lab -- --items 10000000 --json` before claiming scale
+  completion. The default lab run is intentionally smaller so normal validation
+  does not index millions of synthetic rows.
