@@ -290,6 +290,70 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(employeeTimelinePayload.data.materializedView.items.some((item) => item.kind === "time_off_request" && item.label === "vacation"), true);
   assert.equal(employeeTimelinePayload.data.materializedView.items.some((item) => item.kind === "performance_review" && item.label === "2026 Q2"), true);
 
+  const propertyCreate = await runCliCapture(["property", "create", "Main Street Loft", "--city", "Madrid", "--transaction", "rent", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(propertyCreate.code, CLI_EXIT_OK, propertyCreate.stderr || propertyCreate.stdout);
+  const propertyPayload = JSON.parse(propertyCreate.stdout) as { data: { id: string; title: string; city: string; transaction: string; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(propertyPayload.meta.invokedCommand, "property");
+  assert.equal(propertyPayload.meta.collection, "property_listings");
+  assert.equal(propertyPayload.meta.action, "create");
+  assert.equal(propertyPayload.data.title, "Main Street Loft");
+  assert.equal(propertyPayload.data.city, "Madrid");
+  assert.equal(propertyPayload.data.status, "draft");
+
+  const propertyVisitCreate = await runCliCapture(["property", propertyPayload.data.id, "visits", "add", "--visitor-name", "Ada Visitor", "--rating", "4", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(propertyVisitCreate.code, CLI_EXIT_OK, propertyVisitCreate.stderr || propertyVisitCreate.stdout);
+  const propertyVisitPayload = JSON.parse(propertyVisitCreate.stdout) as { data: { propertyListingId: string; visitorName: string; rating: number; visitedAt: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(propertyVisitPayload.meta.invokedCommand, "property");
+  assert.equal(propertyVisitPayload.meta.collection, "property_visits");
+  assert.equal(propertyVisitPayload.data.propertyListingId, propertyPayload.data.id);
+  assert.equal(propertyVisitPayload.data.visitorName, "Ada Visitor");
+  assert.equal(propertyVisitPayload.data.rating, 4);
+  assert.equal(typeof propertyVisitPayload.data.visitedAt, "string");
+
+  const propertyOfferCreate = await runCliCapture(["property", propertyPayload.data.id, "offer", "add", "--buyer-name", "Ada Buyer", "--amount-cents", "250000", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(propertyOfferCreate.code, CLI_EXIT_OK, propertyOfferCreate.stderr || propertyOfferCreate.stdout);
+  const propertyOfferPayload = JSON.parse(propertyOfferCreate.stdout) as { data: { propertyListingId: string; buyerName: string; amountCents: number; status: string }; meta: { collection: string; action: string; invokedCommand: string } };
+  assert.equal(propertyOfferPayload.meta.invokedCommand, "property");
+  assert.equal(propertyOfferPayload.meta.collection, "property_offers");
+  assert.equal(propertyOfferPayload.data.propertyListingId, propertyPayload.data.id);
+  assert.equal(propertyOfferPayload.data.buyerName, "Ada Buyer");
+  assert.equal(propertyOfferPayload.data.amountCents, 250000);
+  assert.equal(propertyOfferPayload.data.status, "pending");
+
+  const directPropertyOffer = await runCliCapture(["property-offer", "add", "--property", propertyPayload.data.id, "--buyer-name", "Direct Buyer", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(directPropertyOffer.code, CLI_EXIT_OK, directPropertyOffer.stderr || directPropertyOffer.stdout);
+  const directPropertyOfferPayload = JSON.parse(directPropertyOffer.stdout) as { data: { propertyListingId: string; buyerName: string }; meta: { collection: string; invokedCommand: string } };
+  assert.equal(directPropertyOfferPayload.meta.invokedCommand, "property-offer");
+  assert.equal(directPropertyOfferPayload.meta.collection, "property_offers");
+  assert.equal(directPropertyOfferPayload.data.propertyListingId, propertyPayload.data.id);
+  assert.equal(directPropertyOfferPayload.data.buyerName, "Direct Buyer");
+
+  const propertyTimeline = await runCliCapture(["property", propertyPayload.data.id, "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(propertyTimeline.code, CLI_EXIT_OK, propertyTimeline.stderr || propertyTimeline.stdout);
+  const propertyTimelinePayload = JSON.parse(propertyTimeline.stdout) as {
+    data: {
+      coverage: { implementationStatus: string; recordsMaterialized: boolean };
+      semanticView: { id: string; systemId: string };
+      materializedView: {
+        subject: { id: string; label: string };
+        summary: { visits: number; offers: number };
+        itemCount: number;
+        items: Array<{ kind: string; label: string | number }>;
+      };
+    };
+  };
+  assert.equal(propertyTimelinePayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(propertyTimelinePayload.data.coverage.recordsMaterialized, true);
+  assert.equal(propertyTimelinePayload.data.semanticView.id, "property.timeline");
+  assert.equal(propertyTimelinePayload.data.semanticView.systemId, "real_estate");
+  assert.equal(propertyTimelinePayload.data.materializedView.subject.id, propertyPayload.data.id);
+  assert.equal(propertyTimelinePayload.data.materializedView.subject.label, "Main Street Loft");
+  assert.equal(propertyTimelinePayload.data.materializedView.summary.visits, 1);
+  assert.equal(propertyTimelinePayload.data.materializedView.summary.offers, 2);
+  assert.equal(propertyTimelinePayload.data.materializedView.itemCount >= 4, true);
+  assert.equal(propertyTimelinePayload.data.materializedView.items.some((item) => item.kind === "property_visit" && item.label === "Ada Visitor"), true);
+  assert.equal(propertyTimelinePayload.data.materializedView.items.some((item) => item.kind === "property_offer" && item.label === "Ada Buyer"), true);
+
   const accountCreate = await runCliCapture(["account", "create", "Acme Account", "--company", companyPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(accountCreate.code, CLI_EXIT_OK);
   const accountPayload = JSON.parse(accountCreate.stdout) as { data: { id: string; name: string; companyId: string }; meta: { collection: string; action: string } };
