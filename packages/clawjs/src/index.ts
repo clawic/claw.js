@@ -602,6 +602,20 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   const denseDataShortcutExit = await runDenseDataCli({ argv, positionals, flags, context, wantsJson, binName, workspaceRoot: flags.workspace || context.cwd });
   if (denseDataShortcutExit !== null) return denseDataShortcutExit;
 
+  if (["runtime", "monitor", "infra", "ops"].includes(group ?? "") && command) {
+    const v1DataExitCode = await runV1DataCli({
+      argv,
+      positionals,
+      flags,
+      stdout: context.stdout,
+      stderr: context.stderr,
+      wantsJson,
+      binName,
+      cwd: context.cwd,
+    });
+    if (v1DataExitCode !== null) return v1DataExitCode;
+  }
+
   if (group === "diagnostics") {
     return await runCliUnsafe(["doctor", ...argv.slice(1)], context);
   }

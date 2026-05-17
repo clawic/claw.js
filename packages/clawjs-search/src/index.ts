@@ -755,6 +755,18 @@ export function createBuiltinSearchSourceManifests(): SearchSourceManifest[] {
       ],
     }),
     createFrameworkSearchSourceManifest({
+      id: "mcp.servers",
+      domain: "mcp",
+      name: "MCP servers",
+      resultTypes: ["server", "tool_server", "config"],
+      facets: [
+        { id: "transport", label: "Transport", type: "string" },
+        { id: "enabled", label: "Enabled", type: "boolean" },
+        { id: "hasEnv", label: "Has env", type: "boolean" },
+        { id: "hasHeaders", label: "Has headers", type: "boolean" },
+      ],
+    }),
+    createFrameworkSearchSourceManifest({
       id: "runtime.events",
       domain: "runtime",
       name: "Runtime events",

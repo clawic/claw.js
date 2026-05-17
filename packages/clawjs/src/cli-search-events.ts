@@ -299,6 +299,28 @@ export function scheduleConnectorCatalogSearchEvent(input: {
   });
 }
 
+export function scheduleMcpServersSearchEvent(input: {
+  operation: "upsert" | "delete";
+  serverId: string;
+  configPath: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  return scheduleSearchIndexEvent({
+    source: "mcp.servers",
+    operation: input.operation,
+    resourceId: input.serverId,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      serverId: input.serverId,
+      configPath: input.configPath,
+    },
+  });
+}
+
 export function scheduleRuntimeEventsSearchEvent(input: {
   operation: "upsert" | "delete";
   kind: "job" | "event" | "operational";

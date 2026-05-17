@@ -7,7 +7,7 @@ import type Database from "better-sqlite3";
 import { DatabaseServiceStore } from "@clawjs/database";
 import { runAgentsCommand, runConnectionsCommand, runPersonalitiesCommand, runSkillCollectionsCommand } from "./v1-data-agent-entities.ts";
 import { runProviderRoutingCommand, runSnippetsCommand } from "./v1-data-agent-config.ts";
-import { scheduleCalendarEventsSearchEvent, scheduleKnowledgeGraphSearchEvent, scheduleNotesPagesSearchEvent, scheduleRuntimeEventsSearchEvent, scheduleSignalsObservationsSearchEvent, scheduleSkillsRegistrySearchEvent } from "./cli-search-events.ts";
+import { scheduleCalendarEventsSearchEvent, scheduleKnowledgeGraphSearchEvent, scheduleMcpServersSearchEvent, scheduleNotesPagesSearchEvent, scheduleRuntimeEventsSearchEvent, scheduleSignalsObservationsSearchEvent, scheduleSkillsRegistrySearchEvent } from "./cli-search-events.ts";
 export {
   openMainDataStore,
   resolveClawjsDataRoot,
@@ -1702,6 +1702,13 @@ function runMcpCommand(input: V1DataCliInput): number {
     };
     const items = [...current.filter((server) => server.id !== id), next];
     writeMcpServers(configPath, items);
+    scheduleMcpServersSearchEvent({
+      operation: "upsert",
+      serverId: id,
+      configPath,
+      dataDir: resolveClawjsDataRoot(),
+      flags: input.flags,
+    });
     writeUnredactedSuccess(input, { id, configPath, server: next });
     return V1_DATA_EXIT_OK;
   }
@@ -1711,6 +1718,15 @@ function runMcpCommand(input: V1DataCliInput): number {
     const current = readMcpServers(configPath);
     const items = current.filter((server) => server.id !== id);
     writeMcpServers(configPath, items);
+    if (items.length !== current.length) {
+      scheduleMcpServersSearchEvent({
+        operation: "delete",
+        serverId: id,
+        configPath,
+        dataDir: resolveClawjsDataRoot(),
+        flags: input.flags,
+      });
+    }
     writeSuccess(input, { id, deleted: items.length !== current.length, configPath });
     return items.length !== current.length ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }

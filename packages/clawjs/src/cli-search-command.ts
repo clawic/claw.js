@@ -33,6 +33,7 @@ import { ensureGenerationArtifactResourceIndexed, ensureGenerationsArtifactsSour
 import { ensureImageDerivedResourceIndexed, ensureImagesDerivedSourceIndexed, ensureMediaAssetResourceIndexed, ensureMediaAssetsSourceIndexed } from "./cli-search-image-media-sources.ts";
 import { pathSafeBasename, resolveRuntimeAdapterId } from "./cli-runtime-utils.ts";
 import { resolveClawjsDataRoot, resolveClawjsMainDbPath } from "./v1-data.ts";
+import { readMcpServers, type JsonRecord } from "./v1-data-core.ts";
 
 const SEARCH_ADMIN_COMMANDS = new Set(["sources", "status", "service", "profiles", "saved", "monitors", "actions", "audit", "jobs", "shards", "explain"]);
 const WORKSPACE_SEARCH_DOMAINS = new Set([
@@ -163,6 +164,7 @@ export async function runSearchQueryCli(input: {
     const shouldRefreshCode = domains?.includes("code") || sources?.includes("code.symbols");
     const shouldRefreshSkills = domains?.includes("skills") || sources?.includes("skills.registry");
     const shouldRefreshConnectors = domains?.includes("connectors") || sources?.includes("connectors.catalog");
+    const shouldRefreshMcp = domains?.includes("mcp") || sources?.includes("mcp.servers");
     const shouldRefreshRuntime = domains?.includes("runtime") || sources?.includes("runtime.events");
     const shouldRefreshLocalFiles = domains?.includes("files") || sources?.includes("local.files");
     const shouldRefreshWeb = domains?.includes("web") || sources?.includes("web.ingested");
@@ -181,6 +183,7 @@ export async function runSearchQueryCli(input: {
     const indexedCode = shouldRefreshCode && sourceCanIndex(store, "code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedSkills = shouldRefreshSkills && sourceCanIndex(store, "skills.registry") ? ensureSkillsRegistrySourceIndexed(store, input.flags) : 0;
     const indexedConnectors = shouldRefreshConnectors && sourceCanIndex(store, "connectors.catalog") ? ensureConnectorsCatalogSourceIndexed(store, input.flags) : 0;
+    const indexedMcp = shouldRefreshMcp && sourceCanIndex(store, "mcp.servers") ? ensureMcpServersSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedRuntime = shouldRefreshRuntime && sourceCanIndex(store, "runtime.events") ? ensureRuntimeEventsSourceIndexed(store, input.flags) : 0;
     const indexedLocalFiles = shouldRefreshLocalFiles && sourceCanIndex(store, "local.files") ? ensureLocalFilesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedWeb = shouldRefreshWeb && sourceCanIndex(store, "web.ingested") ? ensureWebIngestedSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -265,6 +268,7 @@ export async function runSearchQueryCli(input: {
         ...(shouldRefreshCode ? { "code.symbols": indexedCode } : {}),
         ...(shouldRefreshSkills ? { "skills.registry": indexedSkills } : {}),
         ...(shouldRefreshConnectors ? { "connectors.catalog": indexedConnectors } : {}),
+        ...(shouldRefreshMcp ? { "mcp.servers": indexedMcp } : {}),
         ...(shouldRefreshRuntime ? { "runtime.events": indexedRuntime } : {}),
         ...(shouldRefreshLocalFiles ? { "local.files": indexedLocalFiles } : {}),
         ...(shouldRefreshWeb ? { "web.ingested": indexedWeb } : {}),
@@ -391,6 +395,7 @@ export async function runSearchRebuildCli(input: {
     const codeIndexed = rebuildsSource("code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const skillsIndexed = rebuildsSource("skills.registry") ? ensureSkillsRegistrySourceIndexed(store, input.flags) : 0;
     const connectorsIndexed = rebuildsSource("connectors.catalog") ? ensureConnectorsCatalogSourceIndexed(store, input.flags) : 0;
+    const mcpIndexed = rebuildsSource("mcp.servers") ? ensureMcpServersSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const runtimeIndexed = rebuildsSource("runtime.events") ? ensureRuntimeEventsSourceIndexed(store, input.flags) : 0;
     const localFilesIndexed = rebuildsSource("local.files") ? ensureLocalFilesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const webIndexed = rebuildsSource("web.ingested") ? ensureWebIngestedSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -412,6 +417,7 @@ export async function runSearchRebuildCli(input: {
       ...(codeIndexed > 0 ? ["code.symbols"] : []),
       ...(skillsIndexed > 0 ? ["skills.registry"] : []),
       ...(connectorsIndexed > 0 ? ["connectors.catalog"] : []),
+      ...(mcpIndexed > 0 ? ["mcp.servers"] : []),
       ...(runtimeIndexed > 0 ? ["runtime.events"] : []),
       ...(localFilesIndexed > 0 ? ["local.files"] : []),
       ...(webIndexed > 0 ? ["web.ingested"] : []),
@@ -427,7 +433,7 @@ export async function runSearchRebuildCli(input: {
       mode: selectedSources && selectedShards ? "shard_scoped" : selectedSources ? "scoped" : "full",
       selectedSources: selectedSources ?? null,
       selectedShards: selectedShards ?? null,
-      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + workIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + skillsIndexed + connectorsIndexed + runtimeIndexed + localFilesIndexed + webIndexed + externalIndexed,
+      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + workIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + skillsIndexed + connectorsIndexed + mcpIndexed + runtimeIndexed + localFilesIndexed + webIndexed + externalIndexed,
       embeddings: 0,
       profile: input.flags.profile === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
@@ -449,6 +455,7 @@ export async function runSearchRebuildCli(input: {
         "code.symbols": codeIndexed,
         "skills.registry": skillsIndexed,
         "connectors.catalog": connectorsIndexed,
+        "mcp.servers": mcpIndexed,
         "runtime.events": runtimeIndexed,
         "local.files": localFilesIndexed,
         "web.ingested": webIndexed,
@@ -1067,6 +1074,8 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
       return ensureSkillsRegistrySourceIndexed(store, flags);
     case "connectors.catalog":
       return ensureConnectorsCatalogSourceIndexed(store, flags);
+    case "mcp.servers":
+      return ensureMcpServersSourceIndexed(store, flags, cwd);
     case "runtime.events":
       return ensureRuntimeEventsSourceIndexed(store, flags);
     case "local.files":
@@ -1127,6 +1136,10 @@ function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flag
     case "connectors.catalog": {
       const resourceId = resourceIdFromJobPayload(job, "operationId") ?? job.resourceId;
       return resourceId ? ensureConnectorCatalogResourceIndexed(store, flags, resourceId) : 0;
+    }
+    case "mcp.servers": {
+      const serverId = resourceIdFromJobPayload(job, "serverId") ?? job.resourceId;
+      return serverId ? ensureMcpServerResourceIndexed(store, flags, serverId, cwd, resourceIdFromJobPayload(job, "configPath")) : 0;
     }
     case "runtime.events": {
       const resourceId = resourceIdFromJobPayload(job, "runtimeResourceId") ?? job.resourceId;
@@ -2577,6 +2590,45 @@ function ensureConnectorCatalogResourceIndexed(store: SearchStore, flags: Record
   }
 }
 
+function ensureMcpServersSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {
+  const configPath = resolveMcpSearchConfigPath(flags, cwd);
+  const updatedAt = mcpConfigUpdatedAt(configPath);
+  const servers = readMcpServers(configPath);
+  let indexed = 0;
+  for (const server of servers) {
+    store.upsertDocument(mcpServerSearchDocument(server, configPath, updatedAt));
+    indexed += 1;
+  }
+  store.setCursor({
+    source: "mcp.servers",
+    cursor: `config:${stableSearchId(configPath)}:servers:${indexed}`,
+    metadata: { configPath, count: indexed },
+  });
+  store.setSourceState("mcp.servers", "enabled", {
+    backlog: 0,
+    error: null,
+    lastIndexedAt: new Date().toISOString(),
+  });
+  return indexed;
+}
+
+function ensureMcpServerResourceIndexed(store: SearchStore, flags: Record<string, string>, serverId: string, cwd: string, configPathFromJob?: string): number {
+  const configPath = configPathFromJob ? path.resolve(expandSearchHome(configPathFromJob)) : resolveMcpSearchConfigPath(flags, cwd);
+  const updatedAt = mcpConfigUpdatedAt(configPath);
+  const server = readMcpServers(configPath).find((entry) => entry.id === serverId);
+  if (!server) {
+    store.tombstone({ source: "mcp.servers", resourceId: serverId, reason: "MCP server missing during Search event refresh" });
+    return 1;
+  }
+  store.upsertDocument(mcpServerSearchDocument(server, configPath, updatedAt));
+  store.setSourceState("mcp.servers", "enabled", {
+    backlog: 0,
+    error: null,
+    lastIndexedAt: new Date().toISOString(),
+  });
+  return 1;
+}
+
 function ensureRuntimeEventsSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
   let indexed = 0;
   const runtimePath = resolveSearchSidecarPath(flags, "runtime.sqlite");
@@ -2907,6 +2959,27 @@ function resolveLocalFilesSearchRoot(flags: Record<string, string>, cwd: string)
 
 function resolveWebIngestedRoot(flags: Record<string, string>, cwd: string): string {
   return path.resolve(flags["web-root"] ?? flags["web-cache-root"] ?? flags.workspace ?? cwd);
+}
+
+function resolveMcpSearchConfigPath(flags: Record<string, string>, cwd: string): string {
+  const configured = flags["mcp-config"] ?? flags.config ?? process.env.CLAW_MCP_CONFIG_PATH;
+  if (!configured) return path.join(os.homedir(), ".codex", "config.toml");
+  const expanded = expandSearchHome(configured);
+  return path.isAbsolute(expanded) ? expanded : path.resolve(cwd, expanded);
+}
+
+function expandSearchHome(value: string): string {
+  if (value === "~") return os.homedir();
+  if (value.startsWith("~/")) return path.join(os.homedir(), value.slice(2));
+  return value;
+}
+
+function mcpConfigUpdatedAt(configPath: string): string {
+  try {
+    return fs.statSync(configPath).mtime.toISOString();
+  } catch {
+    return new Date().toISOString();
+  }
 }
 
 function resolveExternalCacheRoot(flags: Record<string, string>, cwd: string): string {
@@ -4546,6 +4619,93 @@ function connectorCatalogSearchDocument(row: ConnectorOperationRow, capabilities
   };
 }
 
+function mcpServerSearchDocument(server: JsonRecord & { id: string }, configPath: string, updatedAt: string): SearchDocumentInput {
+  const transport = typeof server.url === "string" ? "http" : typeof server.command === "string" ? "stdio" : "unknown";
+  const enabled = typeof server.enabled === "boolean" ? server.enabled : (typeof server.disabled === "boolean" ? !server.disabled : true);
+  const command = typeof server.command === "string" ? server.command : undefined;
+  const commandName = command ? path.basename(command) : undefined;
+  const url = typeof server.url === "string" ? server.url : undefined;
+  const urlHost = url ? safeSearchUrlHost(url) : undefined;
+  const cwd = typeof server.cwd === "string" ? server.cwd : undefined;
+  const envKeys = sortedRecordKeys(server.env);
+  const envPassthrough = stringArray(server.env_passthrough);
+  const headerKeys = sortedRecordKeys(server.headers);
+  const headersFromEnvKeys = sortedRecordKeys(server.headers_from_env);
+  const bearerTokenEnvVar = typeof server.bearer_token_env_var === "string" ? server.bearer_token_env_var : undefined;
+  const args = Array.isArray(server.args) ? server.args : [];
+  const hasEnv = envKeys.length > 0 || envPassthrough.length > 0 || !!bearerTokenEnvVar;
+  const hasHeaders = headerKeys.length > 0 || headersFromEnvKeys.length > 0;
+  const configName = path.basename(configPath);
+  const body = [
+    server.id,
+    transport,
+    enabled ? "enabled" : "disabled",
+    commandName,
+    urlHost,
+    cwd ? path.basename(cwd) : undefined,
+    envKeys.join(" "),
+    envPassthrough.join(" "),
+    headerKeys.join(" "),
+    headersFromEnvKeys.join(" "),
+    bearerTokenEnvVar,
+  ].filter(Boolean).join("\n");
+  const secretSummary = [
+    envKeys.length ? `env keys: ${envKeys.join(", ")}` : "",
+    envPassthrough.length ? `env passthrough: ${envPassthrough.join(", ")}` : "",
+    headerKeys.length ? `header keys: ${headerKeys.join(", ")}` : "",
+    headersFromEnvKeys.length ? `headers from env: ${headersFromEnvKeys.join(", ")}` : "",
+    bearerTokenEnvVar ? `bearer token env var: ${bearerTokenEnvVar}` : "",
+  ].filter(Boolean).join("\n");
+  return {
+    id: `mcp.servers:${server.id}`,
+    source: "mcp.servers",
+    domain: "mcp",
+    type: "server",
+    resourceId: server.id,
+    title: server.id,
+    subtitle: [transport, enabled ? "enabled" : "disabled"].filter(Boolean).join(" / "),
+    snippet: [commandName, urlHost, configName].filter(Boolean).join(" / ") || transport,
+    body,
+    path: configPath,
+    updatedAt,
+    metadata: {
+      serverId: server.id,
+      transport,
+      enabled,
+      commandName: commandName ?? null,
+      urlHost: urlHost ?? null,
+      cwdBasename: cwd ? path.basename(cwd) : null,
+      argCount: args.length,
+      hasEnv,
+      hasHeaders,
+      envKey: envKeys,
+      envPassthrough,
+      headerKey: headerKeys,
+      headersFromEnvKey: headersFromEnvKeys,
+      bearerTokenEnvVar: bearerTokenEnvVar ?? null,
+      configPath,
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: {
+      fastPath: 1,
+      mcp: 1,
+      enabled: enabled ? 0.2 : -0.1,
+    },
+    fragments: secretSummary ? [{
+      id: `mcp.servers:${server.id}:redacted-config`,
+      title: "redacted config",
+      body: secretSummary,
+      snippet: secretSummary.slice(0, 180),
+      sortOrder: 0,
+      metadata: { redactedValues: true },
+    }] : [],
+    actions: [
+      { id: "open", kind: "open", label: "Open MCP server", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy MCP reference", requiresApproval: false },
+    ],
+  };
+}
+
 function connectorCapabilitiesById(db: Database.Database): Map<string, ConnectorCapabilityRow> {
   if (!hasTable(db, "connector_capabilities")) return new Map();
   const rows = db.prepare(`
@@ -4832,6 +4992,24 @@ function stringifySearchValue(value: unknown): string {
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") return String(value);
   return JSON.stringify(value);
+}
+
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0).map((entry) => entry.trim()).sort()
+    : [];
+}
+
+function sortedRecordKeys(value: unknown): string[] {
+  return isPlainRecord(value) ? Object.keys(value).sort() : [];
+}
+
+function safeSearchUrlHost(value: string): string | undefined {
+  try {
+    return new URL(value).host || undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function textFromStructuredContent(value: unknown): string | undefined {
