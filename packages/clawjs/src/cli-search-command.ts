@@ -71,7 +71,23 @@ interface SearchServiceStateFile {
   reason?: string;
   storage: { canonical: string; index: string; indexRebuildable: true };
   budgets: typeof DEFAULT_SEARCH_BUDGETS;
-  worker?: { lastRunAt: string; claimed: number; completed: number; failed: number };
+  worker?: {
+    lastRunAt: string;
+    claimed: number;
+    completed: number;
+    failed: number;
+    stoppedReason?: SearchServiceWorkerStopReason;
+    budgets?: SearchServiceWorkerBudgets;
+  };
+}
+
+type SearchServiceWorkerStopReason = "empty" | "job_limit" | "runtime_budget" | "failure_budget";
+
+interface SearchServiceWorkerBudgets {
+  maxJobs: number;
+  maxRuntimeMs: number;
+  maxFailures: number;
+  leaseMs?: number;
 }
 
 export function isSearchAdminCommand(command: string | undefined): boolean {
@@ -791,17 +807,31 @@ function runSearchServiceWorkerOnce(flags: Record<string, string>, cwd: string):
   items: Array<{ id: string; source: string; operation: string; status: string; indexed?: number; error?: string }>;
 } {
   const store = openCliSearchStore(flags);
-  const limit = flags.limit ? Number(flags.limit) : 10;
+  const budgets = readSearchServiceWorkerBudgets(flags);
+  const startedAt = Date.now();
   const items: Array<{ id: string; source: string; operation: string; status: string; indexed?: number; error?: string }> = [];
+  let stoppedReason: SearchServiceWorkerStopReason = "empty";
   try {
     registerBuiltinSources(store);
-    const jobs = store.claimIndexJobs({
-      limit,
-      sources: parseListFlag(flags.sources ?? flags.source),
-      shards: parseListFlag(flags.shards ?? flags.shard),
-      leaseMs: flags["lease-ms"] ? Number(flags["lease-ms"]) : undefined,
-    });
-    for (const job of jobs) {
+    while (items.length < budgets.maxJobs) {
+      if (Date.now() - startedAt >= budgets.maxRuntimeMs) {
+        stoppedReason = "runtime_budget";
+        break;
+      }
+      if (items.filter((item) => item.status === "failed").length >= budgets.maxFailures) {
+        stoppedReason = "failure_budget";
+        break;
+      }
+      const [job] = store.claimIndexJobs({
+        limit: 1,
+        sources: parseListFlag(flags.sources ?? flags.source),
+        shards: parseListFlag(flags.shards ?? flags.shard),
+        leaseMs: budgets.leaseMs,
+      });
+      if (!job) {
+        stoppedReason = "empty";
+        break;
+      }
       try {
         const indexed = runSearchIndexJob(store, job, flags, cwd);
         const completed = store.completeIndexJob(job.id);
@@ -811,6 +841,11 @@ function runSearchServiceWorkerOnce(flags: Record<string, string>, cwd: string):
         const failed = store.failIndexJob(job.id, { error: message, retry: readBooleanish(flags.retry) });
         items.push({ id: job.id, source: job.source, operation: job.operation, status: failed?.status ?? "failed", error: message });
       }
+      if (items.filter((item) => item.status === "failed").length >= budgets.maxFailures) {
+        stoppedReason = "failure_budget";
+        break;
+      }
+      if (items.length >= budgets.maxJobs) stoppedReason = "job_limit";
     }
   } finally {
     store.close();
@@ -821,7 +856,22 @@ function runSearchServiceWorkerOnce(flags: Record<string, string>, cwd: string):
     claimed: items.length,
     completed: items.filter((item) => item.status === "done").length,
     failed: items.filter((item) => item.status === "failed").length,
+    stoppedReason,
+    budgets,
     items,
+  };
+}
+
+function readSearchServiceWorkerBudgets(flags: Record<string, string>): SearchServiceWorkerBudgets {
+  const maxJobs = boundedNumberFlag(flags["max-jobs"] ?? flags.limit, 10, 1, 1000);
+  const maxRuntimeMs = boundedNumberFlag(flags["max-runtime-ms"] ?? flags["worker-runtime-ms"], 30_000, 1, 10 * 60 * 1000);
+  const maxFailures = boundedNumberFlag(flags["max-failures"] ?? flags["failure-limit"], 10, 1, 1000);
+  const leaseMs = parseOptionalBoundedInteger(flags["lease-ms"], 1000, 60 * 60 * 1000);
+  return {
+    maxJobs,
+    maxRuntimeMs,
+    maxFailures,
+    ...(leaseMs === undefined ? {} : { leaseMs }),
   };
 }
 

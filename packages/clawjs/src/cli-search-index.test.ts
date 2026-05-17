@@ -5,7 +5,7 @@ import os from "os";
 import path from "path";
 import Database from "better-sqlite3";
 
-import { SearchStore } from "@clawjs/search";
+import { SearchStore, createFrameworkSearchSourceManifest } from "@clawjs/search";
 
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK } from "./index.ts";
 import { createFakeGenerationScript, runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
@@ -628,6 +628,68 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(resumed.code, CLI_EXIT_OK);
     const resumedPayload = JSON.parse(resumed.stdout) as { data: { state: string } };
     assert.equal(resumedPayload.data.state, "enabled");
+  });
+});
+
+test("search service run-once obeys worker resource budgets", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-worker-budgets-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    await runCliCapture(["search", "jobs", "enqueue", "rebuild", "--source", "commands", "--id", "job:budget:one", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    await runCliCapture(["search", "jobs", "enqueue", "rebuild", "--source", "commands", "--id", "job:budget:two", "--data-dir", dataRoot, "--json"], workspaceRoot);
+
+    const limitedRun = await runCliCapture(["search", "service", "run-once", "--data-dir", dataRoot, "--json", "--max-jobs", "1", "--max-runtime-ms", "30000"], workspaceRoot);
+    assert.equal(limitedRun.code, CLI_EXIT_OK);
+    const limitedPayload = JSON.parse(limitedRun.stdout) as {
+      data: {
+        service: { worker?: { claimed: number; stoppedReason?: string; budgets?: { maxJobs: number; maxRuntimeMs: number } } };
+        worker?: { items: Array<{ id: string; status: string }> };
+      };
+    };
+    assert.equal(limitedPayload.data.service.worker?.claimed, 1);
+    assert.equal(limitedPayload.data.service.worker?.stoppedReason, "job_limit");
+    assert.equal(limitedPayload.data.service.worker?.budgets?.maxJobs, 1);
+    assert.equal(limitedPayload.data.service.worker?.budgets?.maxRuntimeMs, 30000);
+    assert.equal(limitedPayload.data.worker?.items[0]?.id, "job:budget:one");
+    assert.equal(limitedPayload.data.worker?.items[0]?.status, "done");
+
+    await runCliCapture(["search", "service", "run-once", "--data-dir", dataRoot, "--json", "--source", "commands", "--max-jobs", "10"], workspaceRoot);
+
+    const store = new SearchStore(path.join(dataRoot, "search.sqlite"));
+    try {
+      store.registerSource(createFrameworkSearchSourceManifest({
+        id: "missing.source",
+        domain: "missing",
+        name: "Missing source",
+        resultTypes: ["missing"],
+      }));
+    } finally {
+      store.close();
+    }
+
+    await runCliCapture(["search", "jobs", "enqueue", "rebuild", "--source", "missing.source", "--id", "job:budget:bad-one", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    await runCliCapture(["search", "jobs", "enqueue", "rebuild", "--source", "missing.source", "--id", "job:budget:bad-two", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    const failureRun = await runCliCapture(["search", "service", "run-once", "--data-dir", dataRoot, "--json", "--max-jobs", "10", "--max-failures", "1"], workspaceRoot);
+    assert.equal(failureRun.code, CLI_EXIT_OK);
+    const failurePayload = JSON.parse(failureRun.stdout) as {
+      data: {
+        service: { worker?: { claimed: number; failed: number; stoppedReason?: string; budgets?: { maxFailures: number } } };
+        worker?: { items: Array<{ source: string; status: string; error?: string }> };
+      };
+    };
+    assert.equal(failurePayload.data.service.worker?.claimed, 1);
+    assert.equal(failurePayload.data.service.worker?.failed, 1);
+    assert.equal(failurePayload.data.service.worker?.stoppedReason, "failure_budget");
+    assert.equal(failurePayload.data.service.worker?.budgets?.maxFailures, 1);
+    assert.equal(failurePayload.data.worker?.items[0]?.source, "missing.source");
+    assert.equal(failurePayload.data.worker?.items[0]?.status, "failed");
+    assert.equal(failurePayload.data.worker?.items[0]?.error?.includes("cannot index source"), true);
   });
 });
 

@@ -105,7 +105,7 @@ claw search sources resume commands --json
 claw search status --json
 claw search service status --json
 claw search service start --json
-claw search service run-once --json
+claw search service run-once --max-jobs 10 --max-runtime-ms 30000 --max-failures 3 --json
 claw search service stop --json
 claw search rebuild --json
 claw search rebuild --source generations.artifacts --json
@@ -178,9 +178,12 @@ must not fail the canonical record or artifact write.
 is available from the CLI and records `search-service.json` beside
 `search.sqlite`; `start`, `stop`, `restart`, and `status` manage that local
 state. `run-once` claims queued index jobs and processes bounded source rebuild
-or backfill work, then records a heartbeat and worker summary. Long-running
-daemon mode is intentionally reported as `EXTERNAL PENDING` until a signed host
-supervisor owns the persistent process.
+or backfill work, then records a heartbeat and worker summary. `--max-jobs`,
+`--max-runtime-ms`, and `--max-failures` let hosts throttle each tick by work
+count, wall-clock budget, and failure budget; the worker claims one job at a
+time so it does not lease more work than it can process before stopping.
+Long-running daemon mode is intentionally reported as `EXTERNAL PENDING` until a
+signed host supervisor owns the persistent process.
 
 Adapters can also attach local embedding vectors to Search documents.
 `SearchQueryInput.strategy` supports lexical, semantic, and hybrid scoring when
