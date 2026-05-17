@@ -1539,7 +1539,7 @@ function denseDbFlags(flags: Record<string, string>, collectionName: string): Re
   if (["encounters", "medications", "symptom_logs", "lab_results"].includes(collectionName) && flags.patient && !flags["patient-id"]) {
     nextFlags = { ...nextFlags, "patient-id": flags.patient };
   }
-  if (["accounts", "deals", "billing_customers", "legal_cases", "legal_clients", "services", "work_orders", "assets", "products_catalog", "employees", "payroll_runs", "praise", "okrs"].includes(collectionName) && flags.company && !flags["company-id"]) {
+  if (["accounts", "deals", "billing_customers", "legal_cases", "legal_clients", "services", "work_orders", "assets", "products_catalog", "employees", "payroll_runs", "praise", "okrs", "suppliers"].includes(collectionName) && flags.company && !flags["company-id"]) {
     nextFlags = { ...nextFlags, "company-id": flags.company };
   }
   if (collectionName === "assets" && flags.product && !flags["product-catalog-id"]) {

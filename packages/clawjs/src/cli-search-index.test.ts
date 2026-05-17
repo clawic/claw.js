@@ -1727,7 +1727,7 @@ test("apps and design writes enqueue and index section fast paths", async () => 
     assert.equal(appResult?.metadata?.slug, "canvas-lab");
     assert.equal(appResult?.metadata?.pinned, true);
 
-    const designQuery = await runCliCapture(["search", "query", "launch slides", "--domains", "design", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    const designQuery = await runCliCapture(["search", "query", "launch deck", "--domains", "design", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(designQuery.code, CLI_EXIT_OK);
     const designQueryPayload = JSON.parse(designQuery.stdout) as {
       data: { indexedFastPaths: { "design.resources": number }; results: Array<{ source: string; domain: string; type: string; title: string; metadata?: { kind?: string; builtin?: boolean } }> };
