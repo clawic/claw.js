@@ -51,6 +51,7 @@ const requiredFirstWaveSystems = [
   "supply_chain",
   "compliance",
   "iot",
+  "construction",
 ];
 
 const requiredFoundationMappings = {
@@ -113,6 +114,10 @@ const requiredFixtureCoverage = [
   "iot_device",
   "sensor_reading",
   "device_command",
+  "construction_project",
+  "construction_site",
+  "construction_rfi",
+  "construction_change_order",
   "invoice",
   "invoice_company",
   "incident",
@@ -192,6 +197,10 @@ const requiredPluralIntentPhrases = [
   ["claw iot-devices list", "iot_devices"],
   ["claw sensor-readings list", "sensor_readings"],
   ["claw device-commands list", "device_commands"],
+  ["claw construction-projects list", "construction_projects"],
+  ["claw construction-sites list", "construction_sites"],
+  ["claw construction-rfis list", "construction_rfis"],
+  ["claw construction-change-orders list", "construction_change_orders"],
 ];
 
 const failures = [];
@@ -313,6 +322,10 @@ for (const phrase of [
   "claw iot-device device_123 readings add",
   "claw iot-device device_123 commands add",
   "claw thing thing_123 timeline",
+  "claw construction-project construction_project_123 sites add",
+  "claw construction-project construction_project_123 rfis add",
+  "claw construction-project construction_project_123 change-orders add",
+  "claw construction-project construction_project_123 timeline",
   "claw company company_123 timeline",
   "claw asset asset_123 timeline",
   "claw work-order work_order_123 timeline",
@@ -494,6 +507,9 @@ if (!semanticViews.some((entry) => entry.id === "control.timeline" && entry.syst
 }
 if (!semanticViews.some((entry) => entry.id === "thing.timeline" && entry.systemId === "iot")) {
   fail("semantic views must include thing.timeline");
+}
+if (!semanticViews.some((entry) => entry.id === "construction_project.timeline" && entry.systemId === "construction")) {
+  fail("semantic views must include construction_project.timeline");
 }
 if (!semanticViews.some((entry) => entry.id === "work_order.timeline" && entry.systemId === "manufacturing")) {
   fail("semantic views must include work_order.timeline");
