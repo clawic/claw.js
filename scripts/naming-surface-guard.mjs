@@ -206,6 +206,15 @@ for (const relativePath of [
   forbidSnippet(relativePath, "legacy soul shape");
   forbidSnippet(relativePath, "legacy library compatibility");
 }
+for (const relativePath of [
+  "packages/clawjs-node/src/soul/store.ts",
+  "packages/clawjs-node/src/create-claw-instance.ts",
+]) {
+  forbidSnippet(relativePath, "migrateLegacySpec");
+  forbidSnippet(relativePath, "LegacySpec");
+  forbidSnippet(relativePath, "LegacyModule");
+  forbidSnippet(relativePath, "compatibility shim");
+}
 
 for (const relativePath of [
   "packages/clawjs-node/src/compat/store.ts",

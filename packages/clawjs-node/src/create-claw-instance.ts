@@ -342,11 +342,7 @@ export interface ClawInstance {
     inspectManagedBlock: (relativePath: string, blockId: string) => ReturnType<typeof inspectManagedWorkspaceFile>;
     mergeManagedBlocks: (originalContent: string, editedContent: string, options?: MergeManagedBlocksOptions) => string;
   };
-  /**
-   * @deprecated Souls are now skills-v2 entries with `kind: personality`.
-   * Use `claw.skills.create / activate / compile` for new code. The
-   * `claw.soul.*` API is preserved as a compatibility shim.
-   */
+  /** V1 soul/personality API for agent posture specs and markdown projection. */
   soul: {
     list: () => SoulSpec[];
     get: (id: string) => SoulSpec | null;
@@ -573,11 +569,7 @@ export interface ClawInstance {
     /** Generate the built-in skills (14 personality presets + 20 procedures). Idempotent. */
     initBuiltins: () => { personalitiesCreated: number; proceduresCreated: number; skipped: number };
   };
-  /**
-   * @deprecated Library assets (skills, instructions, bundles) are unified
-   * under skills-v2. Use `claw.skills.create / compile / activate` for new
-   * code. The `claw.library.*` API is preserved as a compatibility shim.
-   */
+  /** V1 local library API for reusable skills, instructions, bundles, and projections. */
   library: {
     list: () => LibraryAsset[];
     get: (id: string) => LibraryAsset | null;

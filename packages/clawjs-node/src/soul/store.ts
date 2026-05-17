@@ -95,36 +95,11 @@ export interface SoulStoreOptions { workspaceDir: string; filesystem?: NodeFileS
 export interface SoulInitInput { id?: string; title?: string; description?: string; presetId?: string; extends?: string[]; modules?: Partial<SoulModules>; }
 export interface SoulCompileOptions { soulId?: string; agentId?: string; write?: boolean; }
 
-type LegacyModule = { directives?: string[]; notes?: string[]; settings?: Record<string, unknown>; enabled?: boolean } & Record<string, unknown>;
-type LegacySpec = Omit<SoulSpec, "modules"> & { extends?: string[]; modules?: Record<string, LegacyModule> };
-
-function camelSetting(key: string): string {
-  return key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
-}
-function migrateLegacySpec(raw: LegacySpec): SoulSpec {
-  const base = raw.presetId ? preset(raw.presetId) : raw.extends?.[0] ? preset(raw.extends[0]) : baseBalanced(raw.id || DEFAULT_SOUL_ID, raw.title || "Default Soul");
-  const next = makeSpec(raw.id || base.id, raw.title || base.title, base.modules, raw.description || base.description, raw.presetId || raw.extends?.[0] || base.presetId);
-  next.createdAt = raw.createdAt || next.createdAt;
-  next.updatedAt = raw.updatedAt || nowIso();
-  for (const key of MODULE_KEYS) {
-    const legacy = raw.modules?.[key];
-    if (!legacy) continue;
-    const target = next.modules[key] as Record<string, unknown>;
-    for (const [settingKey, value] of Object.entries(legacy.settings ?? {})) target[camelSetting(settingKey)] = value;
-    if (legacy.directives?.length) target.principles = unique([...(target.principles as string[] ?? []), ...legacy.directives]);
-    if (legacy.notes?.length) target.principles = unique([...(target.principles as string[] ?? []), ...legacy.notes]);
-  }
-  return next;
-}
 function normalizeState(raw: unknown): SoulState {
-  const parsed = raw as { schemaVersion?: number; specs?: LegacySpec[]; assignments?: Array<Record<string, unknown>>; updatedAt?: string };
-  const normalizeSpec = (spec: LegacySpec): SoulSpec => {
-    const maybeModern = soulSpecSchema.safeParse(spec);
-    return maybeModern.success ? maybeModern.data : migrateLegacySpec(spec);
-  };
+  const parsed = raw as { schemaVersion?: number; specs?: SoulSpec[]; assignments?: Array<Record<string, unknown>>; updatedAt?: string };
   const state: SoulState = {
     schemaVersion: 1,
-    specs: (parsed.specs ?? []).map(normalizeSpec),
+    specs: (parsed.specs ?? []).map((spec) => soulSpecSchema.parse(spec)),
     assignments: (parsed.assignments ?? []).map((a) => ({ agentId: String(a.agentId || ""), soulId: String(a.soulId || DEFAULT_SOUL_ID), createdAt: String(a.createdAt || nowIso()), updatedAt: String(a.updatedAt || nowIso()) })).filter((a) => a.agentId),
     updatedAt: parsed.updatedAt || nowIso(),
   };
@@ -143,12 +118,7 @@ function levelText(value?: string): string | null {
 }
 function sentence(lines: string[], value: string | null | undefined): void { if (value) lines.push(value.endsWith(".") ? value : `${value}.`); }
 
-/**
- * @deprecated SoulStore is a compatibility shim. Souls are now modeled as
- * skills-v2 entries with `kind: personality`. Use `claw.skills.create({ kind: "personality", ... })`
- * and `claw.skills.compile([slug])` for new code. SoulStore continues to work
- * for the duration of the deprecation window.
- */
+/** Stores v1 soul/personality specs and projects them into agent-facing markdown. */
 export class SoulStore {
   readonly workspaceDir: string;
   private readonly filesystem: NodeFileSystemHost;
