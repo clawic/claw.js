@@ -148,7 +148,9 @@ export function extractJsonPayloadText(stdout: string): string {
   throw new Error("Runtime CLI returned an invalid JSON payload");
 }
 
-export const extractOpenClawCliText = extractJsonPayloadText;
+export function extractOpenClawCliText(stdout: string): string {
+  return extractJsonPayloadText(stdout);
+}
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -803,7 +805,12 @@ export async function* streamRuntimeSession(
   yield* streamCliChunks(input, dependencies.runner, sessionAdapter);
 }
 
-export const streamOpenClawSession = streamRuntimeSession;
+export async function* streamOpenClawSession(
+  input: StreamSessionInput,
+  dependencies: StreamSessionDependencies = {},
+): AsyncGenerator<StreamChunk> {
+  yield* streamRuntimeSession(input, dependencies);
+}
 
 export async function* streamRuntimeSessionEvents(
   input: StreamSessionInput,
@@ -1035,4 +1042,9 @@ export async function* streamRuntimeSessionEvents(
   }
 }
 
-export const streamOpenClawSessionEvents = streamRuntimeSessionEvents;
+export async function* streamOpenClawSessionEvents(
+  input: StreamSessionInput,
+  dependencies: StreamSessionDependencies = {},
+): AsyncGenerator<SessionStreamEvent> {
+  yield* streamRuntimeSessionEvents(input, dependencies);
+}

@@ -5,14 +5,14 @@ Mode: report-only.
 - Tool version: 6.14.0
 - Config: knip.json
 - Working directory: .
-- Files with issues: 59
-- Total issues: 571
+- Files with issues: 58
+- Total issues: 567
 
 ## Issue Types
 
-- duplicates: 4
+- duplicates: 1
 - exports: 509
-- owners: 56
+- owners: 55
 - unlisted: 2
 
 ## Top Files
