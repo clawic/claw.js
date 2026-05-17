@@ -32,7 +32,7 @@ export type LedgerLineSpec = {
   dimensions?: Record<string, unknown>;
 };
 
-export const ERP_TABLES = [
+const ERP_TABLES = [
   "admins",
   "tenants",
   "legal_entities",
@@ -84,7 +84,7 @@ export class PrefixedErpDatabase {
   }
 }
 
-export function rewriteErpSql(sql: string): string {
+function rewriteErpSql(sql: string): string {
   let rewritten = sql;
   for (const table of ERP_TABLES) {
     rewritten = rewritten.replace(new RegExp(`\\b${table}\\b`, "g"), `erp_${table}`);

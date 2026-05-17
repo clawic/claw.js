@@ -1,20 +1,6 @@
 import frontendContractFixture from "../../docs/fixtures/frontend-contract.json" with { type: "json" };
 import formQuoteFixture from "../../docs/fixtures/form-sales-quote-create.json" with { type: "json" };
 
-export interface AppListColumn {
-  key: string;
-  label: string;
-  type: "text" | "money" | "status" | "date" | "badge" | "number";
-  sortable: boolean;
-}
-
-export interface AppFilterDefinition {
-  key: string;
-  label: string;
-  type: "text" | "select" | "date_range" | "number_range";
-  options?: Array<{ value: string; label: string }>;
-}
-
 export interface AppScreenDefinition {
   id: string;
   route: string;
@@ -22,7 +8,7 @@ export interface AppScreenDefinition {
   testIds: string[];
 }
 
-export interface AppFormField {
+interface AppFormField {
   key: string;
   label: string;
   component: string;

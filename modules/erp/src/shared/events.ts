@@ -1,4 +1,4 @@
-export type ErpEventType =
+type ErpEventType =
   | "tenant.bootstrapped"
   | "localization.installed"
   | "document.created"
