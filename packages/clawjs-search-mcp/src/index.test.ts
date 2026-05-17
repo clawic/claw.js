@@ -28,6 +28,7 @@ test("Search MCP exposes profile, entrypoint, and explain tools", () => {
       "search.actions.execute",
       "search.saved.list",
       "search.monitors.list",
+      "search.monitors.evaluate",
       "search.audit.list",
       "search.jobs.list",
     ]) {
@@ -95,6 +96,27 @@ test("Search MCP exposes profile, entrypoint, and explain tools", () => {
     const enabled = setStateTool?.handler({ source: "commands", state: "enabled" }) as { state: string };
     assert.equal(enabled.state, "enabled");
     assert.throws(() => setStateTool?.handler({ source: "missing", state: "enabled" }), /Search source not found/);
+
+    store.upsertDocument({
+      id: "commands:search",
+      source: "commands",
+      domain: "commands",
+      type: "command",
+      title: "search",
+      body: "search help",
+    });
+    store.saveSearch({ id: "saved-search", name: "Search command", query: { query: "search", domains: ["commands"] } });
+    store.saveMonitor({ id: "monitor-search", savedSearchId: "saved-search", name: "Search monitor", cadence: "hourly" });
+    const evaluateTool = tools.find((tool) => tool.name === "search.monitors.evaluate");
+    const evaluated = evaluateTool?.handler({ id: "monitor-search", limit: 1 }) as {
+      state: string;
+      items: Array<{ monitorId: string; state: string; resultCount: number; results: Array<{ id: string }> }>;
+    };
+    assert.equal(evaluated.state, "ready");
+    assert.equal(evaluated.items[0]?.monitorId, "monitor-search");
+    assert.equal(evaluated.items[0]?.state, "ready");
+    assert.equal(evaluated.items[0]?.resultCount, 1);
+    assert.equal(evaluated.items[0]?.results[0]?.id, "commands:search");
   } finally {
     store.close();
     fs.rmSync(dir, { recursive: true, force: true });

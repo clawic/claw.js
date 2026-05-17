@@ -256,13 +256,15 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
         type: "object",
         properties: {
           id: { type: "string" },
+          monitorId: { type: "string" },
           includeDisabled: { type: "boolean" },
+          all: { type: "boolean" },
           limit: { type: "integer" },
         },
       },
       handler: (p) => evaluateSearchMonitors(store, {
-        id: stringParam(p.id),
-        includeDisabled: typeof p.includeDisabled === "boolean" ? p.includeDisabled : false,
+        id: stringParam(p.id) ?? stringParam(p.monitorId),
+        includeDisabled: p.includeDisabled === true || p.all === true,
         limit: numberParam(p.limit),
       }),
     },
