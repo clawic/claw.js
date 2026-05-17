@@ -488,10 +488,16 @@ test("SearchStore can isolate hot and cold document shards without changing defa
       shard: "hot",
       domain: "images",
       type: "image",
+      resourceId: "hot-one",
       title: "Launch whiteboard",
       body: "diagram of search pipeline",
       updatedAt: "2026-05-17T12:00:00.000Z",
       rankingHints: { hot: 2 },
+      fragments: [{
+        id: "images.derived:hot:one:ocr",
+        title: "ocr",
+        body: "diagram annotation",
+      }],
     });
     store.upsertDocument({
       id: "images.derived:cold:one",
@@ -499,16 +505,45 @@ test("SearchStore can isolate hot and cold document shards without changing defa
       shard: "cold",
       domain: "images",
       type: "image",
+      resourceId: "cold-one",
       title: "Archived whiteboard",
       body: "diagram of search pipeline",
       updatedAt: "2026-05-16T12:00:00.000Z",
     });
+
+    const initialShards = store.listShards({ source: "images.derived" });
+    assert.deepEqual(initialShards.map((shard) => [shard.shard, shard.state, shard.documentCount, shard.fragmentCount]), [
+      ["cold", "active", 1, 0],
+      ["hot", "active", 1, 1],
+    ]);
 
     const all = store.query({ query: "diagram", domains: ["images"] });
     assert.equal(all.results.length, 2);
     assert.deepEqual(all.results.map((result) => result.shard), ["hot", "cold"]);
     assert.deepEqual(store.query({ query: "diagram", domains: ["images"], shards: ["hot"] }).results.map((result) => result.id), ["images.derived:hot:one"]);
     assert.deepEqual(store.query({ query: "diagram", domains: ["images"], filters: { shard: "cold" } }).results.map((result) => result.id), ["images.derived:cold:one"]);
+
+    store.upsertDocument({
+      id: "images.derived:cold:one",
+      source: "images.derived",
+      shard: "hot",
+      domain: "images",
+      type: "image",
+      resourceId: "cold-one",
+      title: "Moved whiteboard",
+      body: "diagram moved into the hot shard",
+      updatedAt: "2026-05-17T13:00:00.000Z",
+    });
+    assert.deepEqual(store.listShards({ source: "images.derived" }).map((shard) => [shard.shard, shard.state, shard.documentCount, shard.fragmentCount]), [
+      ["cold", "empty", 0, 0],
+      ["hot", "active", 2, 1],
+    ]);
+
+    store.tombstone({ source: "images.derived", resourceId: "cold-one", deletedAt: "2026-05-18T12:00:00.000Z" });
+    assert.deepEqual(store.listShards({ source: "images.derived" }).map((shard) => [shard.shard, shard.state, shard.documentCount, shard.fragmentCount]), [
+      ["cold", "empty", 0, 0],
+      ["hot", "active", 1, 1],
+    ]);
   } finally {
     store.close();
     fs.rmSync(dir, { recursive: true, force: true });

@@ -80,6 +80,18 @@ export interface SearchSourceCursor {
   metadata: Record<string, unknown>;
 }
 
+export type SearchShardState = "active" | "empty";
+
+export interface SearchShardStatus {
+  source: string;
+  shard: string;
+  domain: string;
+  state: SearchShardState;
+  documentCount: number;
+  fragmentCount: number;
+  updatedAt: string;
+}
+
 export interface SearchTombstone {
   id: string;
   source: string;
@@ -202,11 +214,13 @@ export class SearchStore {
     const tx = this.db.transaction(() => {
       const deleteFts = this.db.prepare("DELETE FROM search_fts WHERE source = ?");
       const deleteDocuments = this.db.prepare("DELETE FROM search_documents WHERE source = ?");
+      const deleteShards = this.db.prepare("DELETE FROM search_shards WHERE source = ?");
       const deleteCursors = this.db.prepare("DELETE FROM search_cursors WHERE source = ?");
       const deleteTombstones = this.db.prepare("DELETE FROM search_tombstones WHERE source = ?");
       for (const source of uniqueSources) {
         deleteFts.run(source);
         deleteDocuments.run(source);
+        deleteShards.run(source);
         deleteCursors.run(source);
         deleteTombstones.run(source);
       }
@@ -354,10 +368,13 @@ export class SearchStore {
       const touchedSources = new Map<string, string>();
       const limitsBySource = new Map<string, SearchSourceIndexingLimits>();
       const existingDocumentIds = existingSearchDocumentIds(this.db, documents.map((document) => document.id));
+      const previousDocumentShards = existingSearchDocumentShardRows(this.db, documents.map((document) => document.id));
       const touchedCacheScopes: SearchTouchedCacheScopes = { sources: new Set(), domains: new Set(), shards: new Set() };
+      const touchedShards = new Map<string, { source: string; shard: string; domain: string; updatedAt: string }>();
       for (const input of documents) {
         const updatedAt = input.updatedAt ?? new Date().toISOString();
         const shard = input.shard ?? "default";
+        const previousShard = previousDocumentShards.get(input.id);
         const limits = limitsBySource.get(input.source) ?? this.indexingLimitsForSource(input.source);
         limitsBySource.set(input.source, limits);
         const body = truncateUtf8(input.body ?? "", limits.maxBodyBytes);
@@ -411,9 +428,19 @@ export class SearchStore {
         touchedCacheScopes.sources.add(input.source);
         touchedCacheScopes.domains.add(input.domain);
         touchedCacheScopes.shards.add(shard);
+        touchedShards.set(`${input.source}\0${shard}`, { source: input.source, shard, domain: input.domain, updatedAt });
+        if (previousShard && (previousShard.source !== input.source || previousShard.shard !== shard || previousShard.domain !== input.domain)) {
+          touchedCacheScopes.sources.add(previousShard.source);
+          touchedCacheScopes.domains.add(previousShard.domain);
+          touchedCacheScopes.shards.add(previousShard.shard);
+          touchedShards.set(`${previousShard.source}\0${previousShard.shard}`, { ...previousShard, updatedAt });
+        }
       }
       for (const [source, updatedAt] of touchedSources) {
         updateSource.run(updatedAt, updatedAt, source);
+      }
+      for (const shard of touchedShards.values()) {
+        this.refreshShardStats(shard);
       }
       this.clearRankingCacheForScopes(touchedCacheScopes);
     });
@@ -521,12 +548,20 @@ export class SearchStore {
     const deletedAt = input.deletedAt ?? new Date().toISOString();
     const id = input.id ?? `${input.source}:${input.resourceId}`;
     const tx = this.db.transaction(() => {
+      const affectedShards = this.db.prepare(`
+        SELECT DISTINCT source, shard, domain
+        FROM search_documents
+        WHERE source = ? AND resource_id = ?
+      `).all(input.source, input.resourceId) as Array<{ source: string; shard: string; domain: string }>;
       this.db.prepare(`
         INSERT INTO search_tombstones (id, source, resource_id, deleted_at, reason)
         VALUES (?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET deleted_at = excluded.deleted_at, reason = excluded.reason
       `).run(id, input.source, input.resourceId, deletedAt, input.reason ?? null);
       this.db.prepare("UPDATE search_documents SET deleted_at = ? WHERE source = ? AND resource_id = ?").run(deletedAt, input.source, input.resourceId);
+      for (const shard of affectedShards) {
+        this.refreshShardStats({ ...shard, updatedAt: deletedAt });
+      }
       this.db.prepare("DELETE FROM search_ranking_cache").run();
     });
     tx();
@@ -575,6 +610,26 @@ export class SearchStore {
       ? this.db.prepare("SELECT source, shard, cursor, updated_at, metadata_json FROM search_cursors WHERE source = ? ORDER BY shard ASC").all(source) as SearchCursorRow[]
       : this.db.prepare("SELECT source, shard, cursor, updated_at, metadata_json FROM search_cursors ORDER BY source ASC, shard ASC").all() as SearchCursorRow[];
     return rows.map(searchCursorFromRow);
+  }
+
+  listShards(input: { source?: string; domain?: string } = {}): SearchShardStatus[] {
+    const clauses: string[] = [];
+    const params: unknown[] = [];
+    if (input.source) {
+      clauses.push("source = ?");
+      params.push(input.source);
+    }
+    if (input.domain) {
+      clauses.push("domain = ?");
+      params.push(input.domain);
+    }
+    const rows = this.db.prepare(`
+      SELECT source, shard, domain, state, document_count, fragment_count, updated_at
+      FROM search_shards
+      ${clauses.length ? `WHERE ${clauses.join(" AND ")}` : ""}
+      ORDER BY source ASC, shard ASC
+    `).all(...params) as SearchShardRow[];
+    return rows.map(searchShardFromRow);
   }
 
   enqueueIndexJob(input: SearchIndexJobInput): SearchIndexJob {
@@ -903,6 +958,49 @@ export class SearchStore {
     return rows.some((row) => row.name === column);
   }
 
+  private refreshShardStats(input: { source: string; shard: string; domain: string; updatedAt: string }): void {
+    this.db.prepare(`
+      INSERT INTO search_shards (source, shard, domain, state, document_count, fragment_count, updated_at)
+      VALUES (?, ?, ?, 'active', 0, 0, ?)
+      ON CONFLICT(source, shard) DO UPDATE SET domain = excluded.domain, updated_at = excluded.updated_at
+    `).run(input.source, input.shard, input.domain, input.updatedAt);
+    this.db.prepare(`
+      UPDATE search_shards
+      SET
+        state = CASE
+          WHEN (
+            SELECT COUNT(*)
+            FROM search_documents
+            WHERE source = ? AND shard = ? AND deleted_at IS NULL
+          ) > 0 THEN 'active'
+          ELSE 'empty'
+        END,
+        document_count = (
+          SELECT COUNT(*)
+          FROM search_documents
+          WHERE source = ? AND shard = ? AND deleted_at IS NULL
+        ),
+        fragment_count = (
+          SELECT COUNT(*)
+          FROM search_fragments f
+          JOIN search_documents d ON d.id = f.document_id
+          WHERE f.source = ? AND f.shard = ? AND d.deleted_at IS NULL
+        ),
+        updated_at = ?
+      WHERE source = ? AND shard = ?
+    `).run(
+      input.source,
+      input.shard,
+      input.source,
+      input.shard,
+      input.source,
+      input.shard,
+      input.updatedAt,
+      input.source,
+      input.shard,
+    );
+  }
+
   private indexingLimitsForSource(source: string): SearchSourceIndexingLimits {
     const row = this.db.prepare("SELECT manifest_json FROM search_sources WHERE id = ?").get(source) as { manifest_json: string } | undefined;
     const limits = row ? parseJson<SearchSourceManifest>(row.manifest_json).indexing.limits : undefined;
@@ -1133,6 +1231,16 @@ interface SearchCursorRow {
   metadata_json: string;
 }
 
+interface SearchShardRow {
+  source: string;
+  shard: string;
+  domain: string;
+  state: SearchShardState;
+  document_count: number;
+  fragment_count: number;
+  updated_at: string;
+}
+
 interface SearchIndexJobRow {
   id: string;
   source: string;
@@ -1226,8 +1334,33 @@ function existingSearchDocumentIds(db: Database.Database, ids: string[]): Set<st
   return existing;
 }
 
+function existingSearchDocumentShardRows(db: Database.Database, ids: string[]): Map<string, { source: string; shard: string; domain: string }> {
+  const uniqueIds = [...new Set(ids)];
+  const existing = new Map<string, { source: string; shard: string; domain: string }>();
+  for (let index = 0; index < uniqueIds.length; index += 900) {
+    const chunk = uniqueIds.slice(index, index + 900);
+    if (!chunk.length) continue;
+    const placeholders = chunk.map(() => "?").join(",");
+    const rows = db.prepare(`SELECT id, source, shard, domain FROM search_documents WHERE id IN (${placeholders})`).all(...chunk) as Array<{ id: string; source: string; shard: string; domain: string }>;
+    for (const row of rows) existing.set(row.id, { source: row.source, shard: row.shard, domain: row.domain });
+  }
+  return existing;
+}
+
 function searchCursorFromRow(row: SearchCursorRow): SearchSourceCursor {
   return { source: row.source, shard: row.shard, cursor: row.cursor, updatedAt: row.updated_at, metadata: parseJson(row.metadata_json) };
+}
+
+function searchShardFromRow(row: SearchShardRow): SearchShardStatus {
+  return {
+    source: row.source,
+    shard: row.shard,
+    domain: row.domain,
+    state: row.state,
+    documentCount: row.document_count,
+    fragmentCount: row.fragment_count,
+    updatedAt: row.updated_at,
+  };
 }
 
 function searchInteractionFromRow(row: SearchInteractionRow): SearchInteraction {
@@ -1775,6 +1908,18 @@ CREATE INDEX IF NOT EXISTS search_documents_shard_idx ON search_documents(source
 CREATE INDEX IF NOT EXISTS search_documents_domain_idx ON search_documents(domain, updated_at DESC);
 CREATE INDEX IF NOT EXISTS search_documents_resource_idx ON search_documents(source, resource_id);
 
+CREATE TABLE IF NOT EXISTS search_shards (
+  source TEXT NOT NULL REFERENCES search_sources(id) ON DELETE CASCADE,
+  shard TEXT NOT NULL DEFAULT 'default',
+  domain TEXT NOT NULL,
+  state TEXT NOT NULL DEFAULT 'active',
+  document_count INTEGER NOT NULL DEFAULT 0,
+  fragment_count INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (source, shard)
+);
+CREATE INDEX IF NOT EXISTS search_shards_domain_idx ON search_shards(domain, shard, state);
+
 CREATE TABLE IF NOT EXISTS search_fragments (
   id TEXT PRIMARY KEY,
   document_id TEXT NOT NULL REFERENCES search_documents(id) ON DELETE CASCADE,
@@ -1933,6 +2078,7 @@ DROP TABLE IF EXISTS search_index_jobs;
 DROP TABLE IF EXISTS search_cursors;
 DROP TABLE IF EXISTS search_actions;
 DROP TABLE IF EXISTS search_fragments;
+DROP TABLE IF EXISTS search_shards;
 DROP TABLE IF EXISTS search_documents;
 DROP TABLE IF EXISTS search_sources;
 DROP TABLE IF EXISTS search_profiles;

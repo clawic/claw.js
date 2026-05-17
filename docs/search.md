@@ -154,8 +154,11 @@ paths.
 Search documents and sync cursors are tracked per source and shard. The default
 shard preserves the simple source contract; hot/cold or extractor-specific
 shards can be indexed and queried independently during backfill and event-driven
-indexing. This is a logical shard boundary inside `search.sqlite`, not a claim
-that Search has separate physical shard tables yet.
+indexing. `search.sqlite` now also maintains a physical `search_shards` catalog
+table with per-source/per-shard document and fragment counts so hosts can
+inspect shard health without scanning every document. Query data still lives in
+the shared document and FTS tables; per-shard FTS partitions remain future scale
+hardening.
 
 `search.sqlite` also owns a local indexing job queue. Sources can enqueue
 upsert, delete, backfill, or rebuild work with source, shard, priority,
