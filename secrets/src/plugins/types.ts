@@ -15,7 +15,7 @@ import type { ClawSecretsCapability } from "../server/capabilities.ts";
 
 // ---------- Field declaration ----------
 
-export interface FieldDeclaration {
+interface FieldDeclaration {
   name: string;
   label?: string;
   kind: "text" | "password" | "url" | "email" | "number" | "otp" | "note" | "reference";
@@ -29,7 +29,7 @@ export interface FieldDeclaration {
 
 // ---------- 1. SecretType ----------
 
-export interface GovernanceDefaults {
+interface GovernanceDefaults {
   allowedHosts?: string[];
   allowedHeaders?: string[];
   allowInUrl?: boolean;
@@ -57,7 +57,7 @@ export interface SecretTypeDeclaration {
 
 // ---------- 2. Executor ----------
 
-export interface ExecutorContext {
+interface ExecutorContext {
   secret: SecretRow;
   /** @deprecated Legacy plugin executors must not be exposed as a public execution path. Use broker handles. */
   resolvedFields: Record<string, string>;
@@ -93,7 +93,7 @@ export interface SessionToken {
   metadata?: Record<string, unknown>;
 }
 
-export interface SessionStrategyContext {
+interface SessionStrategyContext {
   secret: SecretRow;
   /** @deprecated Legacy session strategies must run only behind broker/session governance. */
   resolvedFields: Record<string, string>;
@@ -111,13 +111,13 @@ export interface SessionStrategy {
 
 // ---------- 4. Permission model ----------
 
-export interface PermissionAction {
+interface PermissionAction {
   id: string;
   label: string;
   isMutation?: boolean;
 }
 
-export interface PermissionResource {
+interface PermissionResource {
   type: string;
   id: string;
   metadata?: Record<string, unknown>;
@@ -139,7 +139,7 @@ export interface PermissionModel {
 
 // ---------- 5. Brand sync ----------
 
-export interface BrandSyncContext {
+interface BrandSyncContext {
   secret: SecretRow;
   /** @deprecated Legacy brand syncs must not be exposed as a public execution path. */
   resolvedFields: Record<string, string>;
