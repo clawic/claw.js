@@ -438,6 +438,23 @@ test("dense data OS models patient medication routes without forcing a health pr
   assert.ok(health.commandPatterns.includes("claw medication add --patient <id>"));
 });
 
+test("dense data OS resolves alternate operation routes to the same canonical operation", () => {
+  let multiRouteOperations = 0;
+  for (const system of clawDenseDataOsRegistry.systems) {
+    for (const operation of system.operations) {
+      if (operation.routes.length < 2) continue;
+      multiRouteOperations += 1;
+      for (const route of operation.routes) {
+        const phrase = route.replace(/<[^>]+>/g, "fixture_id");
+        const resolution = resolveClawDenseDataIntent(phrase);
+        assert.equal(resolution.system?.id, system.id, `${phrase} must resolve to ${system.id}`);
+        assert.equal(resolution.operation?.id, operation.id, `${phrase} must resolve to ${operation.id}`);
+      }
+    }
+  }
+  assert.ok(multiRouteOperations >= 20, "dense registry must prove alternate-route convergence across many operations");
+});
+
 test("dense data OS resolves direct CLI intent phrases without executing them", () => {
   const patientList = resolveClawDenseDataIntent("claw patient list");
   assert.equal(patientList.execute, false);

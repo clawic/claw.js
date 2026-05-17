@@ -11,6 +11,7 @@ import {
   listClawDenseDataGapRegistryEntries,
   listClawDenseDataIntentEntries,
   listClawDenseDataSemanticViewEntries,
+  resolveClawDenseDataIntent,
   resolveClawCliCommandIntent,
   resolveBuiltinCollectionName,
   PRODUCTIVITY_COLLECTION_DEFINITIONS,
@@ -671,6 +672,23 @@ for (const system of clawDenseDataOsRegistry.systems) {
       }
     }
   }
+}
+let multiRouteOperationCount = 0;
+for (const system of clawDenseDataOsRegistry.systems) {
+  for (const operation of system.operations) {
+    if (operation.routes.length < 2) continue;
+    multiRouteOperationCount += 1;
+    for (const route of operation.routes) {
+      const phrase = route.replace(/<[^>]+>/g, "fixture_id");
+      const resolution = resolveClawDenseDataIntent(phrase);
+      if (resolution.system?.id !== system.id || resolution.operation?.id !== operation.id) {
+        fail(`operation route ${phrase} must resolve to ${system.id}/${operation.id}`);
+      }
+    }
+  }
+}
+if (multiRouteOperationCount < 20) {
+  fail("dense registry must prove at least 20 multi-route canonical operations");
 }
 if (!semanticViews.some((entry) => entry.id === "patient.timeline" && entry.systemId === "health")) {
   fail("semantic views must include patient.timeline");
