@@ -96,6 +96,7 @@ remote clients do not need a CLI-only integration path:
 
 ```bash
 GET  /v1/remote/classifications
+POST /v1/remote/classifications/receipts
 GET  /v1/remote/conformance
 GET  /v1/gateway/conformance
 GET  /v1/sync/manifests
@@ -127,6 +128,11 @@ state without becoming node-trust authority. When the CLI is given
 `--coordinator-private-key-file` and `--coordinator-public-key-file`, ledger
 records are signed with Ed25519 and later verified in `claw sync status`;
 unsigned records remain local proposals only.
+Remote surface parity is represented by `RemoteSurfaceClassificationReceipt`
+records and the Relay `/v1/remote/classifications/receipts` endpoint. A
+`remote-safe` classification is valid only when it carries a canonical route,
+policy reference, and test evidence; missing evidence fails closed instead of
+silently widening the external surface.
 Existing Relay/mobile routes are represented by `RemoteCompatibilityAdapterReceipt`
 records and the Relay `/v1/remote/compatibility/adapters` endpoint. Each
 adapter must map one legacy surface to one canonical Gateway/Connector/Sync

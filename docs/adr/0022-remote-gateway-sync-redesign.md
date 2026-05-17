@@ -202,6 +202,11 @@ no-write queue entries, acknowledgements, mesh proposals, and revocations; this
 ledger is durable reconciliation state, not a trust mutation authority. When
 Coordinator key files are supplied, the ledger stores Ed25519 signatures and
 verification status for those records; unsigned records remain proposals only.
+`claw remote classify --capability-id ... --record true` records signed
+`RemoteSurfaceClassificationReceipt` evidence for each exposed capability. A
+`remote-safe` state requires a route id, policy reference, and test evidence;
+without all three, classification fails closed and no wider external surface is
+accepted.
 `SyncDriverApplicationReceipt` connects reconciliation to a concrete manifest
 driver without making the driver implementation physical by default:
 `claw sync apply --record true` records applied change ids, blocked conflicts,

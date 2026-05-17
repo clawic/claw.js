@@ -250,6 +250,46 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.equal(syncStatusPayload.state.verifiedCoordinatorSignatures, 4);
   assert.equal(syncStatusPayload.state.invalidCoordinatorSignatures, 0);
 
+  const remoteClassification = await runCliCapture([
+    "remote",
+    "classify",
+    "--capability-id",
+    "claw.gateway",
+    "--classification",
+    "remote-safe",
+    "--route-id",
+    "remote.chatGateway",
+    "--policy-ref",
+    "docs/adr/0022-remote-gateway-sync-redesign.md",
+    "--test-refs",
+    "packages/clawjs/src/inspect-cli.test.ts",
+    "--state-dir",
+    stateDir,
+    "--record",
+    "true",
+    ...coordinatorSigningFlags,
+    "--json",
+  ], process.cwd());
+  assert.equal(remoteClassification.code, CLI_EXIT_OK, remoteClassification.stderr || remoteClassification.stdout);
+  const remoteClassificationPayload = parseCliJson<{
+    status: string;
+    writes: boolean;
+    receipt: { capabilityId: string; classification: string; routeId: string; policyRef: string; testRefs: string[]; remoteSafeReady: boolean; missingEvidence: string[]; writes: boolean };
+    state: { durable: boolean; coordinatorSignature?: { verified: boolean } };
+  }>(remoteClassification.stdout).data;
+  assert.equal(remoteClassificationPayload.status, "signed_remote_classification_recorded");
+  assert.equal(remoteClassificationPayload.writes, false);
+  assert.equal(remoteClassificationPayload.receipt.capabilityId, "claw.gateway");
+  assert.equal(remoteClassificationPayload.receipt.classification, "remote-safe");
+  assert.equal(remoteClassificationPayload.receipt.routeId, "remote.chatGateway");
+  assert.equal(remoteClassificationPayload.receipt.policyRef, "docs/adr/0022-remote-gateway-sync-redesign.md");
+  assert.deepEqual(remoteClassificationPayload.receipt.testRefs, ["packages/clawjs/src/inspect-cli.test.ts"]);
+  assert.equal(remoteClassificationPayload.receipt.remoteSafeReady, true);
+  assert.deepEqual(remoteClassificationPayload.receipt.missingEvidence, []);
+  assert.equal(remoteClassificationPayload.receipt.writes, false);
+  assert.equal(remoteClassificationPayload.state.durable, true);
+  assert.equal(remoteClassificationPayload.state.coordinatorSignature?.verified, true);
+
   const secretLease = await runCliCapture(["gateway", "secret-lease", "--state-dir", stateDir, "--secret-ref", "vault://agents/support", "--resource-id", "skills:default", "--agent-id", "agent.support", "--assignment-id", "assignment.service", ...coordinatorSigningFlags, "--json"], process.cwd());
   assert.equal(secretLease.code, CLI_EXIT_OK);
   const secretLeasePayload = parseCliJson<{

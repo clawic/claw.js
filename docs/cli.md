@@ -171,6 +171,7 @@ hosted/self-hosted conformance:
 
 ```bash
 claw remote classify --json
+claw remote classify --capability-id claw.gateway --classification remote-safe --route-id remote.chatGateway --policy-ref docs/adr/0022-remote-gateway-sync-redesign.md --test-refs packages/clawjs/src/inspect-cli.test.ts --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 claw remote check --json
 claw remote routes --json
 claw remote conformance --json
@@ -219,6 +220,9 @@ claw gateway secret-provider --state-dir .claw/remote-sync --secret-ref vault://
 
 `remote-safe` means the capability has a route, owner, policy, and tests.
 `local-only`, `blocked`, and `pending` are explicit states, not silent gaps.
+`remote classify --capability-id ... --record true` records a signed
+`RemoteSurfaceClassificationReceipt`; a `remote-safe` receipt requires a route
+id, policy reference, and test evidence before anything is written.
 `--state-dir` records manifests, sync queues, reconciliation results, and
 mesh proposals/revocations in a local durable ledger. That ledger is not trust
 authority unless each record is signed with Coordinator keys. The

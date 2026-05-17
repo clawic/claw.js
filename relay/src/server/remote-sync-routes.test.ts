@@ -35,6 +35,28 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     const classificationPayload = classifications.json() as { classifications: Array<{ id: string; relay: string }> };
     assert.equal(classificationPayload.classifications.some((entry) => entry.id === "claw.gateway" && entry.relay === "remote-safe"), true);
 
+    const classificationReceipt = await built.app.inject({
+      method: "POST",
+      url: "/v1/remote/classifications/receipts",
+      headers: { "content-type": "application/json" },
+      payload: {
+        capabilityId: "claw.gateway",
+        classification: "remote-safe",
+        routeId: "remote.chatGateway",
+        policyRef: "docs/adr/0022-remote-gateway-sync-redesign.md",
+        testRefs: ["relay/src/server/remote-sync-routes.test.ts"],
+      },
+    });
+    assert.equal(classificationReceipt.statusCode, 200);
+    const classificationReceiptPayload = classificationReceipt.json() as { status: string; receipt: { capabilityId: string; classification: string; remoteSafeReady: boolean; missingEvidence: string[]; writes: boolean }; writes: boolean };
+    assert.equal(classificationReceiptPayload.status, "dry_run_only");
+    assert.equal(classificationReceiptPayload.receipt.capabilityId, "claw.gateway");
+    assert.equal(classificationReceiptPayload.receipt.classification, "remote-safe");
+    assert.equal(classificationReceiptPayload.receipt.remoteSafeReady, true);
+    assert.deepEqual(classificationReceiptPayload.receipt.missingEvidence, []);
+    assert.equal(classificationReceiptPayload.receipt.writes, false);
+    assert.equal(classificationReceiptPayload.writes, false);
+
     const gateway = await built.app.inject({ method: "GET", url: "/v1/gateway/conformance" });
     assert.equal(gateway.statusCode, 200);
     const gatewayPayload = gateway.json() as { gateway: { contract: string; hostedSelfHostedParity: string } };

@@ -16,6 +16,7 @@ import {
   createRemoteAgentServiceExecutionReceipt,
   createRemoteCompatibilityAdapterReceipt,
   createRemoteGatewayAuditReceipt,
+  createRemoteSurfaceClassificationReceipt,
   createSyncDriverApplicationReceipt,
   createSyncResourceManifest,
   evaluateRemoteAgentServiceAccess,
@@ -34,6 +35,7 @@ import {
   remoteCompatibilityAdapterReceiptSchema,
   remoteGatewayAuditReceiptSchema,
   remoteSecretLeaseSchema,
+  remoteSurfaceClassificationReceiptSchema,
   remoteSyncRequiredDecisionIds,
   remoteSyncRequiredRouteIds,
   reconcileSyncQueue,
@@ -71,6 +73,7 @@ const requiredCliCommands = ["remote", "sync", "nodes", "gateway"];
 
 const requiredServiceApiRoutes = [
   "remote/classifications",
+  "remote/classifications/receipts",
   "remote/conformance",
   "remote/compatibility/adapters",
   "gateway/conformance",
@@ -110,6 +113,8 @@ const requiredDocSnippets = [
   "headless",
   "multi-tenant agent service",
   "remote.agent_service.evaluated",
+  "RemoteSurfaceClassificationReceipt",
+  "/v1/remote/classifications/receipts",
   "/v1/gateway/agent-service/evaluate",
   "/v1/gateway/audit/receipts",
   "RemoteGatewayAuditReceipt",
@@ -272,6 +277,31 @@ if (!remoteCompatibilityAdapterReceiptSchema.safeParse(compatReceipt).success) f
 if (compatReceipt.mapsToCanonical !== true) fail("remote compatibility adapters must map to canonical routes");
 if (compatReceipt.parallelApiIntroduced !== false) fail("remote compatibility adapters must not introduce parallel APIs");
 if (compatReceipt.writes !== false) fail("remote compatibility adapter receipts must be no-write contracts");
+
+const classificationReceipt = createRemoteSurfaceClassificationReceipt({
+  capabilityId: "claw.gateway",
+  classification: "remote-safe",
+  routeId: "remote.chatGateway",
+  policyRef: "docs/adr/0022-remote-gateway-sync-redesign.md",
+  testRefs: ["scripts/verify-remote-sync-goal.mjs"],
+  createdAt: "2026-05-17T10:12:00.000Z",
+});
+if (!remoteSurfaceClassificationReceiptSchema.safeParse(classificationReceipt).success) fail("remote surface classification receipt must validate");
+if (classificationReceipt.remoteSafeReady !== true) fail("remote-safe classification receipts must require complete evidence");
+if (classificationReceipt.missingEvidence.length !== 0) fail("complete remote-safe classification receipts must not report missing evidence");
+if (classificationReceipt.writes !== false) fail("remote surface classification receipts must be no-write contracts");
+try {
+  createRemoteSurfaceClassificationReceipt({
+    capabilityId: "claw.gateway",
+    classification: "remote-safe",
+    createdAt: "2026-05-17T10:12:30.000Z",
+  });
+  fail("remote-safe classification without route/policy/tests must fail closed");
+} catch (error) {
+  if (!(error instanceof Error) || !/requires route, policy, and tests/.test(error.message)) {
+    fail("remote-safe classification failure must explain missing route/policy/tests");
+  }
+}
 
 const actor = remoteActorContextSchema.parse({
   actorKind: "agent",
