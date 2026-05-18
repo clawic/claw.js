@@ -103,7 +103,7 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
         },
       },
       handler: (p) => createLocalTextEmbedding(requiredString(p, "text"), {
-        model: stringParam(p.model) ?? LOCAL_TEXT_EMBEDDING_MODEL,
+        model: localEmbeddingModel(p.model),
         dimensions: numberParam(p.dimensions) ?? LOCAL_TEXT_EMBEDDING_DIMENSIONS,
       }),
     },
@@ -125,7 +125,7 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
         domains: stringArrayParam(p.domains),
         shards: stringArrayParam(p.shards),
         limit: numberParam(p.limit),
-        model: localEmbeddingIndexModel(p.model),
+        model: localEmbeddingModel(p.model),
       }),
     },
     {
@@ -721,7 +721,7 @@ function requiredSearchEventOperation(value: unknown): "upsert" | "delete" {
   throw new Error("operation must be upsert or delete");
 }
 
-function localEmbeddingIndexModel(value: unknown): string {
+function localEmbeddingModel(value: unknown): string {
   const model = stringParam(value);
   if (!model || model === LOCAL_TEXT_EMBEDDING_MODEL) return LOCAL_TEXT_EMBEDDING_MODEL;
   throw new Error(`Search local embedding indexing only supports ${LOCAL_TEXT_EMBEDDING_MODEL}; provider-backed embedding workers are EXTERNAL PENDING.`);

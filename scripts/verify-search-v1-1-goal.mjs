@@ -953,6 +953,8 @@ requireNoSnippet("packages/clawjs-search-mcp/package.json", "clawjs-index-mcp");
 
 for (const snippet of [
   "search.query",
+  "search.embeddings.create",
+  "model: localEmbeddingModel(p.model)",
   "search.sources.list",
   "search.sources.set_state",
   "search.status",

@@ -334,6 +334,10 @@ test("Search MCP derives local embeddings for semantic queries", () => {
     assert.equal(embedding.model, LOCAL_TEXT_EMBEDDING_MODEL);
     assert.equal(embedding.vector.length, LOCAL_TEXT_EMBEDDING_DIMENSIONS);
     assert.deepEqual(embedding.vector, createLocalTextEmbedding("quiet architecture interface").vector);
+    assert.throws(
+      () => embeddingsTool.handler({ text: "quiet architecture interface", model: "provider-text-v1" }),
+      /provider-backed embedding workers are EXTERNAL PENDING/,
+    );
 
     const embeddingsIndexTool = tools.find((tool) => tool.name === "search.embeddings.index");
     assert.ok(embeddingsIndexTool);
@@ -342,6 +346,10 @@ test("Search MCP derives local embeddings for semantic queries", () => {
     assert.equal(indexed.documents, 2);
     assert.equal(indexed.indexed, 2);
     assert.deepEqual(indexed.selectedSources, ["documents.blocks"]);
+    assert.throws(
+      () => embeddingsIndexTool.handler({ sources: ["documents.blocks"], model: "provider-text-v1" }),
+      /provider-backed embedding workers are EXTERNAL PENDING/,
+    );
 
     const embeddingsStatusTool = tools.find((tool) => tool.name === "search.embeddings.status");
     assert.ok(embeddingsStatusTool);
