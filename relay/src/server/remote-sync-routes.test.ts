@@ -325,13 +325,16 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
 
     const providerDeviceE2EPlan = await built.app.inject({ method: "GET", url: "/v1/remote/provider-device-e2e-plan" });
     assert.equal(providerDeviceE2EPlan.statusCode, 200);
-    const providerDeviceE2EPlanPayload = providerDeviceE2EPlan.json() as { status: string; writes: boolean; requiredDomains: string[]; requiredRouteIds: string[]; requiredExternalPendingIds: string[]; noPlaintextSecrets: boolean; plaintextMaterialIncluded: boolean; hostedSelfHostedParityRequired: boolean };
+    const providerDeviceE2EPlanPayload = providerDeviceE2EPlan.json() as { status: string; writes: boolean; requiredDomains: string[]; requiredRouteIds: string[]; requiredExternalPendingIds: string[]; validationSteps: Array<{ domain: string; requiredRouteIds: string[]; requiredExternalPendingIds: string[]; requiredArtifacts: string[]; acceptanceCriteria: string[]; writes: boolean }>; noPlaintextSecrets: boolean; plaintextMaterialIncluded: boolean; hostedSelfHostedParityRequired: boolean };
     const expectedProviderDeviceE2EPlan = buildRemoteProviderDeviceE2EValidationPlan({ requiredRouteIds: remoteSyncRequiredRouteIds });
     assert.equal(providerDeviceE2EPlanPayload.status, "external_pending");
     assert.equal(providerDeviceE2EPlanPayload.writes, false);
     assert.deepEqual(providerDeviceE2EPlanPayload.requiredDomains, expectedProviderDeviceE2EPlan.requiredDomains);
     assert.deepEqual(providerDeviceE2EPlanPayload.requiredRouteIds, expectedProviderDeviceE2EPlan.requiredRouteIds);
     assert.deepEqual(providerDeviceE2EPlanPayload.requiredExternalPendingIds, expectedProviderDeviceE2EPlan.requiredExternalPendingIds);
+    assert.deepEqual(providerDeviceE2EPlanPayload.validationSteps.map((entry) => entry.domain), expectedProviderDeviceE2EPlan.requiredDomains);
+    assert.equal(providerDeviceE2EPlanPayload.validationSteps.some((entry) => entry.domain === "secret_refs" && entry.requiredRouteIds.includes("remote.secretBrokeredOperation") && entry.requiredExternalPendingIds.includes("provider_secret_retrieval")), true);
+    assert.equal(providerDeviceE2EPlanPayload.validationSteps.every((entry) => entry.requiredArtifacts.length > 0 && entry.acceptanceCriteria.length > 0 && !entry.writes), true);
     assert.equal(providerDeviceE2EPlanPayload.noPlaintextSecrets, true);
     assert.equal(providerDeviceE2EPlanPayload.plaintextMaterialIncluded, false);
     assert.equal(providerDeviceE2EPlanPayload.hostedSelfHostedParityRequired, true);

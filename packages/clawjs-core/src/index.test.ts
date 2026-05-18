@@ -841,6 +841,12 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(remoteProviderDeviceE2EValidationPlanSchema.safeParse(providerDeviceE2EPlan).success, true);
   assert.equal(providerDeviceE2EPlan.status, "external_pending");
   assert.deepEqual(providerDeviceE2EPlan.requiredDomains, ["chat", "search", "sync", "secret_refs", "hosted_agents"]);
+  assert.deepEqual(providerDeviceE2EPlan.validationSteps.map((entry) => entry.domain), providerDeviceE2EPlan.requiredDomains);
+  assert.equal(providerDeviceE2EPlan.validationSteps.every((entry) => entry.status === "external_pending" && entry.writes === false), true);
+  assert.equal(providerDeviceE2EPlan.validationSteps.some((entry) => entry.domain === "chat" && entry.requiredRouteIds.includes("remote.chatGateway") && entry.requiredExternalPendingIds.includes("physical_iroh_handshake")), true);
+  assert.equal(providerDeviceE2EPlan.validationSteps.some((entry) => entry.domain === "sync" && entry.requiredRouteIds.includes("sync.skills") && entry.requiredRouteIds.includes("mesh.resourceShare") && entry.requiredExternalPendingIds.includes("physical_sync_driver_application")), true);
+  assert.equal(providerDeviceE2EPlan.validationSteps.some((entry) => entry.domain === "secret_refs" && entry.requiredRouteIds.includes("remote.secretBrokeredOperation") && entry.requiredExternalPendingIds.includes("provider_secret_retrieval")), true);
+  assert.equal(providerDeviceE2EPlan.validationSteps.some((entry) => entry.domain === "hosted_agents" && entry.requiredRouteIds.includes("gateway.multiTenantAgentService") && entry.requiredExternalPendingIds.includes("billing_meter_persistence")), true);
   assert.equal(providerDeviceE2EPlan.requiredRouteIds.includes("remote.chatGateway"), true);
   assert.equal(providerDeviceE2EPlan.requiredRouteIds.includes("remote.searchGateway"), true);
   assert.equal(providerDeviceE2EPlan.requiredRouteIds.includes("remote.secretBrokeredOperation"), true);

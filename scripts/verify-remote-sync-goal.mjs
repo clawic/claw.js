@@ -834,6 +834,24 @@ if (providerDeviceE2EPlan.status !== "external_pending") fail("provider/device E
 for (const domain of ["chat", "search", "sync", "secret_refs", "hosted_agents"]) {
   if (!providerDeviceE2EPlan.requiredDomains.includes(domain)) fail(`provider/device E2E plan must include ${domain}`);
 }
+if (providerDeviceE2EPlan.validationSteps.map((entry) => entry.domain).join(",") !== providerDeviceE2EPlan.requiredDomains.join(",")) {
+  fail("provider/device E2E plan must include one validation step per required domain in order");
+}
+for (const step of providerDeviceE2EPlan.validationSteps) {
+  if (step.status !== "external_pending" || step.writes !== false) fail(`provider/device E2E step ${step.domain} must remain external_pending and no-write`);
+  if (step.requiredRouteIds.length === 0 || step.requiredExternalPendingIds.length === 0 || step.requiredArtifacts.length === 0 || step.acceptanceCriteria.length === 0) {
+    fail(`provider/device E2E step ${step.domain} must bind routes, external blockers, artifacts, and acceptance criteria`);
+  }
+}
+if (!providerDeviceE2EPlan.validationSteps.some((entry) => entry.domain === "sync" && entry.requiredRouteIds.includes("sync.skills") && entry.requiredRouteIds.includes("mesh.resourceShare") && entry.requiredExternalPendingIds.includes("physical_sync_driver_application"))) {
+  fail("provider/device E2E sync step must cover Sync routes, mesh share, and physical driver validation");
+}
+if (!providerDeviceE2EPlan.validationSteps.some((entry) => entry.domain === "secret_refs" && entry.requiredRouteIds.includes("remote.secretBrokeredOperation") && entry.requiredExternalPendingIds.includes("provider_secret_retrieval"))) {
+  fail("provider/device E2E secret_refs step must cover brokered secret references and provider retrieval");
+}
+if (!providerDeviceE2EPlan.validationSteps.some((entry) => entry.domain === "hosted_agents" && entry.requiredRouteIds.includes("gateway.multiTenantAgentService") && entry.requiredExternalPendingIds.includes("billing_meter_persistence"))) {
+  fail("provider/device E2E hosted_agents step must cover multi-tenant agent service and billing meter persistence");
+}
 for (const routeId of ["remote.chatGateway", "remote.searchGateway", "remote.secretBrokeredOperation", "gateway.multiTenantAgentService"]) {
   if (!providerDeviceE2EPlan.requiredRouteIds.includes(routeId)) fail(`provider/device E2E plan must include route ${routeId}`);
 }

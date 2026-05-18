@@ -2698,6 +2698,8 @@ The docs check script validates that every current export from
     remoteProviderDeviceE2EDomainSchema
     RemoteProviderDeviceE2EValidationPlan
     remoteProviderDeviceE2EValidationPlanSchema
+    RemoteProviderDeviceE2EValidationStep
+    remoteProviderDeviceE2EValidationStepSchema
     RemoteClientCacheSnapshot
     remoteClientCacheSnapshotSchema
     RemoteCompatibilityAdapterReceipt

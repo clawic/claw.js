@@ -312,7 +312,10 @@ contract refs and remote entrypoints, requires parity, and keeps
 `parallelApiAllowed: false` so remote clients do not grow a parallel API.
 `remote e2e-plan` returns the same no-write
 `RemoteProviderDeviceE2EValidationPlan` for operators and agents that need the
-final provider/device checklist without calling Relay directly.
+final provider/device checklist without calling Relay directly. Its
+`validationSteps` split the final run into `chat`, `search`, `sync`,
+`secret_refs`, and `hosted_agents`, and each step binds required routes,
+external pending blockers, artifacts, and acceptance criteria.
 `inspect remote` is the read-only inspection view that puts remote
 classification, Sync authority/drivers, transport, route contracts, tests,
 gaps, and conformance in one JSON payload.

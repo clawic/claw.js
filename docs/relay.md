@@ -202,7 +202,10 @@ together against the same route contracts, external-pending register, hosted
 parity rule, and no-plaintext-secret policy before `provider_device_e2e` can
 be cleared. It is exposed as `claw remote e2e-plan` and
 `/v1/remote/provider-device-e2e-plan` so clients and operators inspect the same
-checklist.
+checklist. The plan includes per-domain `validationSteps` for `chat`, `search`,
+`sync`, `secret_refs`, and `hosted_agents`; each step names the routes, external
+pending rows, required artifacts, and acceptance criteria needed for the final
+approved run.
 Remote API parity is represented by the remote route contracts catalog exposed
 at `/v1/remote/route-contracts` and `claw remote contracts`. Each required
 route binds canonical local contract references to remote entrypoints, keeps
