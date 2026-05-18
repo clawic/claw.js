@@ -126,9 +126,14 @@ for (const kind of [
 const diff = currentPublicSurfaceDiff();
 if (!diff) {
   errors.push("public surface baseline diff must run successfully");
-} else if (diff.uncoveredChanges?.length > 0) {
-  for (const change of diff.uncoveredChanges) {
-    errors.push(`public surface baseline drift is not covered by an active evolution record: ${change.area}:${change.change}:${change.id}`);
+} else {
+  if (diff.status !== "unchanged") {
+    errors.push("public surface baseline must be refreshed after stable surface changes");
+  }
+  if (diff.uncoveredChanges?.length > 0) {
+    for (const change of diff.uncoveredChanges) {
+      errors.push(`public surface baseline drift is not covered by an active evolution record: ${change.area}:${change.change}:${change.id}`);
+    }
   }
 }
 

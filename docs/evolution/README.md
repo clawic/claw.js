@@ -26,6 +26,8 @@ knowledge in migrators, adapters, receipts, repair tools, and fixtures.
 It runs the governance check, self-test, and `claw evolution verify --json`.
 `npm run test:changed`, `npm run test:fast`, and release lanes must keep this
 gate in their path so stable surface drift fails before merge or publication.
+The gate requires both an active evolution record and a refreshed
+`public-surface-baseline.json`; covered-but-unsealed drift is still a failure.
 
 ## Files
 
