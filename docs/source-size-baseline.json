@@ -156,7 +156,7 @@
       "reason": "Extended productivity CLI groups extracted from the public CLI router; split by capability family before expanding."
     },
     "packages/clawjs/src/cli-search-command.ts": {
-      "lines": 7788,
+      "lines": 7659,
       "blockGrowth": true,
       "reason": "Emergency search CLI debt after dense-source indexing and entrypoint contract expansion; immediate follow-up should extract source adapters, event refresh, and admin subcommands, and future growth is blocked except for extraction, deletion, or compatibility-preserving split work."
     },
