@@ -171,6 +171,17 @@ function assertReleaseScriptsRunLegalGate() {
   }
 }
 
+function assertLegalDocsAreBilingual() {
+  for (const relativePath of ["TERMS.md", "PRIVACY.md", "DISCLAIMER.md", "SAFETY.md", "REGULATED_DOMAINS.md", "EULA.md"]) {
+    const text = read(relativePath);
+    for (const snippet of ["## English", "## Espanol"]) {
+      if (!text.includes(snippet)) {
+        errors.push(`${relativePath}: legal document must keep bilingual section ${JSON.stringify(snippet)}`);
+      }
+    }
+  }
+}
+
 try {
   assertRegulatedDomainSafetyComplete();
 } catch (error) {
@@ -404,6 +415,7 @@ for (const snippet of [
 assertNoBannedPublicClaims();
 assertPackageReadmeDisclaimers();
 assertReleaseScriptsRunLegalGate();
+assertLegalDocsAreBilingual();
 
 if (errors.length > 0) {
   console.error(`Regulated domain safety guard failed with ${errors.length} issue(s):`);
