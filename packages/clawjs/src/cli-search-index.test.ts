@@ -3030,6 +3030,43 @@ test("search rebuild indexes documents.blocks from document records", async () =
     assert.equal(embeddingsIndexPayload.data.indexed, 1);
     assert.deepEqual(embeddingsIndexPayload.data.selectedSources, ["documents.blocks"]);
 
+    const providerEmbeddingCreate = await runCliCapture([
+      "search",
+      "embeddings",
+      "create",
+      "scoped block search",
+      "--model",
+      "provider-text-v1",
+      "--data-dir",
+      dataRoot,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(providerEmbeddingCreate.code, CLI_EXIT_USAGE);
+    const providerEmbeddingCreatePayload = JSON.parse(providerEmbeddingCreate.stdout) as {
+      error: { code: string; message: string };
+    };
+    assert.equal(providerEmbeddingCreatePayload.error.code, "SEARCH_EMBEDDING_PROVIDER_PENDING");
+    assert.match(providerEmbeddingCreatePayload.error.message, /EXTERNAL PENDING/);
+
+    const providerEmbeddingIndex = await runCliCapture([
+      "search",
+      "embeddings",
+      "index",
+      "--source",
+      "documents.blocks",
+      "--model",
+      "provider-text-v1",
+      "--data-dir",
+      dataRoot,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(providerEmbeddingIndex.code, CLI_EXIT_USAGE);
+    const providerEmbeddingIndexPayload = JSON.parse(providerEmbeddingIndex.stdout) as {
+      error: { code: string; message: string };
+    };
+    assert.equal(providerEmbeddingIndexPayload.error.code, "SEARCH_EMBEDDING_PROVIDER_PENDING");
+    assert.match(providerEmbeddingIndexPayload.error.message, /EXTERNAL PENDING/);
+
     const embeddingsStatus = await runCliCapture(["search", "embeddings", "status", "--source", "documents.blocks", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(embeddingsStatus.code, CLI_EXIT_OK);
     const embeddingsStatusPayload = JSON.parse(embeddingsStatus.stdout) as {

@@ -811,7 +811,9 @@ export async function runSearchAdminCli(input: {
         input.context.stderr.write(`Usage: ${input.binName} search embeddings create <text> [--json]\n`);
         return CLI_EXIT_USAGE;
       }
-      const embedding = createLocalTextEmbedding(text, { model: LOCAL_TEXT_EMBEDDING_MODEL });
+      const embedding = createLocalTextEmbedding(text, {
+        model: localSearchEmbeddingModel(input.flags.model ?? input.flags["embedding-model"]),
+      });
       const data = { state: "ready", model: embedding.model, dimensions: embedding.vector.length, vector: embedding.vector };
       if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "embeddings" });
       else input.context.stdout.write(`model=${data.model} dimensions=${data.dimensions}\n`);

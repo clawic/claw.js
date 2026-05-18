@@ -353,6 +353,44 @@ function readCliSearchJson(args, label, dataRoot = fs.mkdtempSync(path.join(os.t
   }
 }
 
+function readCliSearchErrorJson(args, label, dataRoot) {
+  try {
+    execFileSync(process.execPath, [
+      "packages/clawjs/bin/claw.mjs",
+      "search",
+      ...args,
+      ...(args.includes("--json") ? [] : ["--json"]),
+    ], {
+      cwd: rootDir,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        CLAW_DATA_DIR: dataRoot,
+      },
+      timeout: 15_000,
+    });
+    failures.push(`${label}: expected a non-zero external-pending error`);
+    return {};
+  } catch (error) {
+    const stdout = error && typeof error === "object" && "stdout" in error ? error.stdout : "";
+    if (!stdout) {
+      failures.push(`${label}: missing JSON error output`);
+      return {};
+    }
+    try {
+      const parsed = JSON.parse(Buffer.isBuffer(stdout) ? stdout.toString("utf8") : String(stdout));
+      if (parsed?.ok !== false || parsed?.meta?.canonicalCommand !== "search") {
+        failures.push(`${label}: unexpected error response shape`);
+        return {};
+      }
+      return parsed;
+    } catch (parseError) {
+      failures.push(`${label}: invalid JSON error: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+      return {};
+    }
+  }
+}
+
 function requireCliSearchAcceptanceSmoke() {
   const dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-search-smoke-"));
   const rebuild = readCliSearchJson(["rebuild", "--source", "commands"], "claw search rebuild --source commands --json", dataRoot);
@@ -435,6 +473,10 @@ function requireCliSearchAcceptanceSmoke() {
   }
   if (!Array.isArray(embeddingsCreate.data?.vector) || embeddingsCreate.data.vector.length !== 64) {
     failures.push("claw search embeddings create --json: must return a 64-dimensional local vector");
+  }
+  const providerEmbeddingCreate = readCliSearchErrorJson(["embeddings", "create", "system capabilities", "--model", "provider-text-v1"], "claw search embeddings create provider model --json", dataRoot);
+  if (providerEmbeddingCreate.error?.code !== "SEARCH_EMBEDDING_PROVIDER_PENDING" || !String(providerEmbeddingCreate.error?.message ?? "").includes("EXTERNAL PENDING")) {
+    failures.push("claw search embeddings create provider model --json: must mark provider-backed embedding generation external pending");
   }
 
   const saved = readCliSearchJson(["saved"], "claw search saved --json", dataRoot);
