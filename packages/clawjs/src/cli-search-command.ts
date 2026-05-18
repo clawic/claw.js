@@ -1401,6 +1401,14 @@ function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flag
       const relativePath = resourceIdFromJobPayload(job, "relativePath") ?? job.resourceId;
       return relativePath ? ensureLocalFileResourceIndexed(store, flags, cwd, relativePath, resourceIdFromJobPayload(job, "root")) : 0;
     }
+    case "web.ingested": {
+      const relativePath = resourceIdFromJobPayload(job, "relativePath") ?? job.resourceId;
+      return relativePath ? ensureWebIngestedResourceIndexed(store, flags, cwd, relativePath, resourceIdFromJobPayload(job, "root")) : 0;
+    }
+    case "external.cache": {
+      const relativePath = resourceIdFromJobPayload(job, "relativePath") ?? job.resourceId;
+      return relativePath ? ensureExternalCacheResourceIndexed(store, flags, cwd, relativePath, resourceIdFromJobPayload(job, "root")) : 0;
+    }
     default:
       return null;
   }
@@ -4220,6 +4228,45 @@ function ensureWebIngestedSourceIndexed(store: SearchStore, flags: Record<string
   return indexed;
 }
 
+function ensureWebIngestedResourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string, relativePath: string, rootOverride?: string): number {
+  const root = path.resolve(rootOverride ?? resolveWebIngestedRoot(flags, cwd));
+  const absolutePath = path.resolve(root, relativePath);
+  const relativeFromRoot = normalizeRelativePath(path.relative(root, absolutePath));
+  if (relativeFromRoot === ".." || relativeFromRoot.startsWith("../") || path.isAbsolute(relativeFromRoot)) {
+    store.tombstone({ source: "web.ingested", resourceId: relativePath, reason: "web cache file outside root during Search event refresh" });
+    return 1;
+  }
+  const maxBytes = boundedNumberFlag(flags["web-max-bytes"] ?? flags["web-cache-max-bytes"], 512 * 1024, 1024, 4 * 1024 * 1024);
+  const extension = path.extname(absolutePath).toLowerCase();
+  if (![".html", ".htm", ".json", ".md", ".txt"].includes(extension)) {
+    store.tombstone({ source: "web.ingested", resourceId: relativeFromRoot, reason: "web cache file skipped during Search event refresh" });
+    return 1;
+  }
+  let stat: fs.Stats;
+  try {
+    stat = fs.statSync(absolutePath);
+  } catch {
+    store.tombstone({ source: "web.ingested", resourceId: relativeFromRoot, reason: "web cache file missing during Search event refresh" });
+    return 1;
+  }
+  if (!stat.isFile() || stat.size <= 0 || stat.size > maxBytes) {
+    store.tombstone({ source: "web.ingested", resourceId: relativeFromRoot, reason: "web cache file skipped during Search event refresh" });
+    return 1;
+  }
+  const document = webIngestedSearchDocument(root, { absolutePath, extension, size: stat.size, updatedAt: stat.mtime.toISOString() }, maxBytes);
+  if (!document) {
+    store.tombstone({ source: "web.ingested", resourceId: relativeFromRoot, reason: "web cache file skipped during Search event refresh" });
+    return 1;
+  }
+  store.upsertDocument(document);
+  store.setSourceState("web.ingested", "enabled", {
+    backlog: 0,
+    error: null,
+    lastIndexedAt: new Date().toISOString(),
+  });
+  return 1;
+}
+
 function ensureExternalCacheSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {
   const root = resolveExternalCacheRoot(flags, cwd);
   if (!fs.existsSync(root)) {
@@ -4252,6 +4299,45 @@ function ensureExternalCacheSourceIndexed(store: SearchStore, flags: Record<stri
     lastIndexedAt: new Date().toISOString(),
   });
   return indexed;
+}
+
+function ensureExternalCacheResourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string, relativePath: string, rootOverride?: string): number {
+  const root = path.resolve(rootOverride ?? resolveExternalCacheRoot(flags, cwd));
+  const absolutePath = path.resolve(root, relativePath);
+  const relativeFromRoot = normalizeRelativePath(path.relative(root, absolutePath));
+  if (relativeFromRoot === ".." || relativeFromRoot.startsWith("../") || path.isAbsolute(relativeFromRoot)) {
+    store.tombstone({ source: "external.cache", resourceId: relativePath, reason: "external cache file outside root during Search event refresh" });
+    return 1;
+  }
+  const maxBytes = boundedNumberFlag(flags["external-max-bytes"] ?? flags["external-cache-max-bytes"], 512 * 1024, 1024, 4 * 1024 * 1024);
+  const extension = path.extname(absolutePath).toLowerCase();
+  if (![".json", ".jsonl", ".md", ".txt"].includes(extension)) {
+    store.tombstone({ source: "external.cache", resourceId: relativeFromRoot, reason: "external cache file skipped during Search event refresh" });
+    return 1;
+  }
+  let stat: fs.Stats;
+  try {
+    stat = fs.statSync(absolutePath);
+  } catch {
+    store.tombstone({ source: "external.cache", resourceId: relativeFromRoot, reason: "external cache file missing during Search event refresh" });
+    return 1;
+  }
+  if (!stat.isFile() || stat.size <= 0 || stat.size > maxBytes) {
+    store.tombstone({ source: "external.cache", resourceId: relativeFromRoot, reason: "external cache file skipped during Search event refresh" });
+    return 1;
+  }
+  const document = externalCacheSearchDocument(root, { absolutePath, extension, size: stat.size, updatedAt: stat.mtime.toISOString() }, maxBytes);
+  if (!document) {
+    store.tombstone({ source: "external.cache", resourceId: relativeFromRoot, reason: "external cache file skipped during Search event refresh" });
+    return 1;
+  }
+  store.upsertDocument(document);
+  store.setSourceState("external.cache", "enabled", {
+    backlog: 0,
+    error: null,
+    lastIndexedAt: new Date().toISOString(),
+  });
+  return 1;
 }
 
 function resolveSessionsDbPath(flags: Record<string, string>): string {
@@ -4387,7 +4473,7 @@ function webIngestedSearchDocument(root: string, file: WebIngestedCandidate, max
     source: "web.ingested",
     domain: "web",
     type: "page",
-    resourceId: url ?? relativePath,
+    resourceId: relativePath,
     title,
     subtitle: url ?? relativePath,
     snippet: parsed.description ?? firstMeaningfulLine(text) ?? relativePath,
@@ -4443,7 +4529,7 @@ function externalCacheSearchDocument(root: string, file: ExternalCacheCandidate,
     source: "external.cache",
     domain: "external",
     type: record.type ?? "external_record",
-    resourceId: record.externalId ?? record.id ?? relativePath,
+    resourceId: relativePath,
     title,
     subtitle: [record.provider, record.app].filter(Boolean).join("/") || relativePath,
     snippet: record.summary ?? firstMeaningfulLine(record.text ?? body) ?? relativePath,
