@@ -163,10 +163,51 @@ function requirePackageScript(name, expected) {
   }
 }
 
+function requireSameMembers(label, actual, expected) {
+  const actualCounts = countMembers(actual);
+  const expectedCounts = countMembers(expected);
+  const duplicateActual = [...actualCounts.entries()].filter(([, count]) => count > 1).map(([value]) => value);
+  const missing = [...expectedCounts.keys()].filter((value) => !actualCounts.has(value)).sort();
+  const extra = [...actualCounts.keys()].filter((value) => !expectedCounts.has(value)).sort();
+
+  if (duplicateActual.length > 0) {
+    failures.push(`${label}: duplicate member(s) ${duplicateActual.join(", ")}`);
+  }
+  if (missing.length > 0) {
+    failures.push(`${label}: missing required member(s) ${missing.join(", ")}`);
+  }
+  if (extra.length > 0) {
+    failures.push(`${label}: unexpected member(s) ${extra.join(", ")}`);
+  }
+}
+
+function countMembers(values) {
+  const counts = new Map();
+  for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1);
+  return counts;
+}
+
+function extractBuiltinSearchSourceIds() {
+  const text = read("packages/clawjs-search/src/index.ts");
+  const match = text.match(/export function createBuiltinSearchSourceManifests\(\): SearchSourceManifest\[] \{\n\s*return \[([\s\S]*?)\n\s*\];\n\}/);
+  if (!match) {
+    failures.push("packages/clawjs-search/src/index.ts: cannot find createBuiltinSearchSourceManifests body");
+    return [];
+  }
+
+  const body = match[1];
+  const ids = [];
+  const manifestPattern = /create(?:Framework|Full)SearchSourceManifest\(\{\s*id: "([^"]+)"/g;
+  for (const manifestMatch of body.matchAll(manifestPattern)) ids.push(manifestMatch[1]);
+  if (body.includes("createCommandSearchSourceManifest()")) ids.push("commands");
+  return ids;
+}
+
 for (const file of requiredPublicFiles) read(file);
 
 requirePackageScript("search:scale-lab", "node --import tsx ./scripts/search-scale-lab.ts");
 requirePackageScript("test:search-goal", "node ./scripts/verify-search-v1-1-goal.mjs");
+requireSameMembers("builtin search source manifests", extractBuiltinSearchSourceIds(), requiredSources);
 
 for (const source of requiredSources) {
   requireSnippet("packages/clawjs-search/src/index.ts", `id: "${source}"`);
