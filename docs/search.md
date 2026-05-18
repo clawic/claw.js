@@ -89,6 +89,7 @@ backfill jobs.
 | `apps.catalog` | `apps` | framework app records projected from `core.sqlite` | implemented initial adapter |
 | `design.resources` | `design` | design resources from `core.sqlite` plus workspace style, template, and reference manifests projected into `search.sqlite` | implemented initial adapter |
 | `runtime.events` | `runtime` | runtime jobs/events and monitor/infra/ops operational sidecars projected into `search.sqlite` | implemented initial adapter |
+| `surfaces.routes` | `surfaces` | surface route graph contracts, steps, tests, docs, and ADR links projected from the framework registry | implemented initial adapter |
 | `local.files` | `files` | bounded local file metadata and text-content projection | implemented opt-in adapter, `full`, off by default |
 | `native.system` | `native` | native app/system/contact adapters | EXTERNAL PENDING, `full`, off by default |
 | `web.ingested` | `web` | bounded explicit web cache ingestion | implemented opt-in adapter, `full`, off by default |
@@ -499,6 +500,13 @@ monitor/infra/ops operational events from local sidecars. It indexes job status,
 run timing, payload summaries, event kind/level/message, sidecar origin, and
 operational metadata so technical artifacts can be searched without mixing them
 into user-facing domain sections.
+
+`surfaces.routes` projects the framework surface route graph from
+`packages/clawjs-core/src/surface-registry.ts`. It indexes each route's source
+and destination nodes, owner, visibility, transport, validation text, route
+steps, tests, docs, ADRs, and explicit gaps as technical Search documents. This
+keeps route/debug queries source-scoped while giving Search and Search Index a
+fast path over the same registry used by `claw inspect routes`.
 
 Search result actions are brokered. `search actions execute` produces a
 host-grants execution plan in `--dry-run` mode, fails closed when an approval is

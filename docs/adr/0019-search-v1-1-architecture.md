@@ -178,6 +178,10 @@ output metadata.
 The initial media source projects workspace media records for generic
 document/image/audio/video asset search, leaving heavyweight content extraction
 to later per-kind adapters.
+The initial surface-route source projects the framework route graph from the
+surface registry, including route steps, contracts, validation, tests, docs, and
+ADR links, so technical route/debug search has its own fast path instead of
+piggybacking on Root Search broadening.
 The initial generations source projects generated artifact records and indexes
 prompts, kind/status, backend/model metadata, command provenance, and output
 references.
