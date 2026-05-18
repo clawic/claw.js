@@ -452,8 +452,27 @@ test("evolution migrator lab validates foundation fixtures", () => {
         : kind === "search_index"
           ? "rebuildable_no_canonical_backup"
           : "touched_objects_metadata",
-      payload: { synthetic: true },
-      expectedCurrent: { preserved: true },
+      payload: kind === "search_index" ? { source: "core.sqlite" } : { synthetic: true },
+      expectedCurrent: (() => {
+        switch (kind) {
+        case "protocol":
+          return { degradeTo: "ephemeral_chat" };
+        case "route":
+          return { command: "claw evolution doctor --json", survivesPartialMigration: true };
+        case "cli_json":
+          return { json: true, schemaVersion: 1 };
+        case "package_export":
+          return { exportsRemainTyped: true };
+        case "agent_instruction":
+          return { instruction: "Keep current code clean; legacy only in migrators/adapters/receipts/fixtures." };
+        case "skill":
+          return { skill: "compatibility-evolution-work", projectedToClawix: true };
+        case "search_index":
+          return { rebuildFromCanonical: true };
+        default:
+          return { preserved: true };
+        }
+      })(),
     })),
     notes: ["synthetic"],
   });
@@ -474,6 +493,10 @@ test("evolution migrator lab validates foundation fixtures", () => {
   assert.equal(result.versionChain[0]?.status, "pass");
   assert.equal(result.checks.every((check) => check.status === "pass"), true);
   assert.equal(result.checks.find((check) => check.id === "version_chain_complete")?.status, "pass");
+  assert.equal(result.checks.find((check) => check.id === "adapter_contracts_present")?.status, "pass");
+  assert.equal(result.checks.find((check) => check.id === "rebuild_contracts_present")?.status, "pass");
+  assert.equal(result.adapterChecks.every((check) => check.status === "pass"), true);
+  assert.equal(result.rebuildChecks.every((check) => check.status === "pass"), true);
   assert.equal(result.receipts[0].redaction.promptsIncluded, false);
 
   const v2Fixture = clawEvolutionVersionFixtureSchema.parse({
@@ -540,6 +563,32 @@ test("evolution migrator lab validates foundation fixtures", () => {
   });
   assert.equal(incomplete.status, "fail");
   assert.equal(incomplete.checks.find((check) => check.id === "required_surface_kinds")?.status, "fail");
+
+  const missingRebuildContract = runEvolutionMigratorLab({
+    fixtures: [{
+      ...fixture,
+      fixtureId: "evo_fixture_test_missing_rebuild",
+      surfaces: fixture.surfaces.map((surface) => surface.kind === "search_index"
+        ? { ...surface, expectedCurrent: { preserved: true } }
+        : surface),
+    }],
+    ledger,
+  });
+  assert.equal(missingRebuildContract.status, "fail");
+  assert.equal(missingRebuildContract.checks.find((check) => check.id === "rebuild_contracts_present")?.status, "fail");
+
+  const missingAdapterContract = runEvolutionMigratorLab({
+    fixtures: [{
+      ...fixture,
+      fixtureId: "evo_fixture_test_missing_adapter",
+      surfaces: fixture.surfaces.map((surface) => surface.kind === "protocol"
+        ? { ...surface, expectedCurrent: { preserved: true } }
+        : surface),
+    }],
+    ledger,
+  });
+  assert.equal(missingAdapterContract.status, "fail");
+  assert.equal(missingAdapterContract.checks.find((check) => check.id === "adapter_contracts_present")?.status, "fail");
 });
 
 test("maskCredential keeps only the tail", () => {

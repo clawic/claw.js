@@ -328,6 +328,18 @@ export const clawEvolutionMigratorLabResultSchema = z.object({
     status: z.enum(["pass", "fail", "blocked"]),
     notes: z.array(z.string()),
   })),
+  adapterChecks: z.array(z.object({
+    surfaceId: z.string().min(1),
+    kind: clawEvolutionFixtureSurfaceSchema.shape.kind,
+    status: z.enum(["pass", "fail", "blocked"]),
+    notes: z.array(z.string()),
+  })),
+  rebuildChecks: z.array(z.object({
+    surfaceId: z.string().min(1),
+    kind: z.literal("search_index"),
+    status: z.enum(["pass", "fail", "blocked"]),
+    notes: z.array(z.string()),
+  })),
   checks: z.array(z.object({
     id: z.string().min(1),
     status: z.enum(["pass", "fail", "blocked"]),
@@ -738,6 +750,8 @@ export function runEvolutionMigratorLab(input: {
   const toVersion = input.toVersion ?? "current";
   const checkedSurfaces = [...new Set(fixtures.flatMap((fixture) => fixture.surfaces.map((surface) => surface.id)))].sort();
   const versionChain = buildEvolutionVersionChain(fixtures, fromVersion);
+  const adapterChecks = buildEvolutionAdapterChecks(fixtures);
+  const rebuildChecks = buildEvolutionRebuildChecks(fixtures);
   const plan = createEvolutionOperatorPlan({
     action: "dry-run",
     ledger: input.ledger,
@@ -758,6 +772,8 @@ export function runEvolutionMigratorLab(input: {
     checkEvolutionLab(input.ledger.policy.sourceOfTruth === "clawjs", "ledger_source_of_truth", "Migration lab must use the ClawJS ledger as canon."),
     checkEvolutionLab(input.ledger.policy.postV1Migration === "step_by_step_all_public_versions", "step_by_step_policy", "Post-V1 migrations must chain through public versions."),
     checkEvolutionLab(versionChain.length > 0 && versionChain.every((entry) => entry.status === "pass"), "version_chain_complete", "Public fixtures must form an explicit forward migration chain."),
+    checkEvolutionLab(adapterChecks.length > 0 && adapterChecks.every((entry) => entry.status === "pass"), "adapter_contracts_present", "Protocol, route, CLI JSON, package, instruction, and skill fixtures must declare current adapter expectations."),
+    checkEvolutionLab(rebuildChecks.length > 0 && rebuildChecks.every((entry) => entry.status === "pass"), "rebuild_contracts_present", "Search/index fixtures must prove rebuild-from-canonical behavior instead of treating indexes as canonical data."),
   ];
   const status = checks.some((check) => check.status === "fail")
     ? "fail"
@@ -773,6 +789,8 @@ export function runEvolutionMigratorLab(input: {
     fixtureCount: fixtures.length,
     checkedSurfaces,
     versionChain,
+    adapterChecks,
+    rebuildChecks,
     checks,
     receipts: [createEvolutionReceipt({
       action: "dry-run",
@@ -782,6 +800,75 @@ export function runEvolutionMigratorLab(input: {
       notes: [`migration lab ${status} for ${fromVersion} to ${toVersion}`],
     })],
   });
+}
+
+function buildEvolutionAdapterChecks(fixtures: ClawEvolutionVersionFixture[]): ClawEvolutionMigratorLabResult["adapterChecks"] {
+  const adapterKinds = new Set<ClawEvolutionFixtureSurface["kind"]>([
+    "protocol",
+    "route",
+    "cli_json",
+    "package_export",
+    "agent_instruction",
+    "skill",
+  ]);
+  return fixtures
+    .flatMap((fixture) => fixture.surfaces)
+    .filter((surface) => adapterKinds.has(surface.kind))
+    .map((surface) => {
+      const pass = hasCurrentAdapterExpectation(surface);
+      return {
+        surfaceId: surface.id,
+        kind: surface.kind,
+        status: pass ? "pass" : "fail",
+        notes: [
+          pass
+            ? "fixture declares a current adapter expectation for this durable contract"
+            : "fixture must declare explicit current adapter expectations, not just legacy payload shape",
+        ],
+      };
+    });
+}
+
+function buildEvolutionRebuildChecks(fixtures: ClawEvolutionVersionFixture[]): ClawEvolutionMigratorLabResult["rebuildChecks"] {
+  return fixtures
+    .flatMap((fixture) => fixture.surfaces)
+    .filter((surface) => surface.kind === "search_index")
+    .map((surface) => {
+      const pass = surface.backupStrategy === "rebuildable_no_canonical_backup"
+        && surface.expectedCurrent.rebuildFromCanonical === true
+        && typeof surface.payload.source === "string"
+        && surface.payload.source.length > 0;
+      return {
+        surfaceId: surface.id,
+        kind: "search_index" as const,
+        status: pass ? "pass" : "fail",
+        notes: [
+          pass
+            ? "search/index fixture is rebuildable from canonical source and not treated as canonical backup data"
+            : "search/index fixtures must use rebuildable_no_canonical_backup and declare rebuildFromCanonical plus canonical source",
+        ],
+      };
+    });
+}
+
+function hasCurrentAdapterExpectation(surface: ClawEvolutionFixtureSurface): boolean {
+  const expected = surface.expectedCurrent;
+  switch (surface.kind) {
+  case "protocol":
+    return typeof expected.degradeTo === "string" || expected.backwardCompatible === true || expected.adapterRequired === true;
+  case "route":
+    return expected.survivesPartialMigration === true || typeof expected.command === "string" || expected.adapterRequired === true;
+  case "cli_json":
+    return expected.json === true && typeof expected.schemaVersion === "number";
+  case "package_export":
+    return expected.exportsRemainTyped === true || Array.isArray(expected.exports);
+  case "agent_instruction":
+    return typeof expected.instruction === "string" && expected.instruction.length > 0;
+  case "skill":
+    return typeof expected.skill === "string" || expected.projectedToClawix === true;
+  default:
+    return true;
+  }
 }
 
 export function redactEvolutionReceiptText(text: string): string {

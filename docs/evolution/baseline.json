@@ -29,6 +29,8 @@
         "claw evolution",
         "@clawjs/core evolution policy",
         "@clawjs/core migration lab API",
+        "@clawjs/core migration lab adapterChecks",
+        "@clawjs/core migration lab rebuildChecks",
         "Clawix rescue mirror"
       ],
       "tests": [
@@ -39,8 +41,9 @@
         "docs/evolution/fixtures/v1-foundation.json"
       ],
       "adr": "docs/adr/0030-post-v1-evolution-rescue-backbone.md",
-      "notes": "Initial additive backbone. Post-V1 registry diffs and migration labs build on this baseline.",
-      "createdAt": "2026-05-18T00:00:00.000Z"
+      "notes": "Initial additive backbone. Post-V1 registry diffs and migration labs build on this baseline. Migration lab results include adapterChecks and rebuildChecks so durable contract fixtures declare current adapter expectations and search/index fixtures prove rebuild-from-canonical behavior.",
+      "createdAt": "2026-05-18T00:00:00.000Z",
+      "updatedAt": "2026-05-18T00:00:00.000Z"
     },
     {
       "id": "evo_repair_report_package",

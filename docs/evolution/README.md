@@ -43,7 +43,14 @@ The gate requires both an active evolution record and a refreshed
   backup, search/index rebuild, permissions, audit, and rescue survival.
   Future public fixtures declare `previousPublicVersion`; the migrator lab
   emits a `versionChain` and fails if public fixtures do not form an explicit
-  forward chain.
+  forward chain. The lab also emits `adapterChecks` and `rebuildChecks`:
+  protocol/route/CLI JSON/package/agent/skill fixtures must declare current
+  adapter expectations, and search/index fixtures must prove
+  `rebuildFromCanonical` with `rebuildable_no_canonical_backup`.
+- `backbone-source-decision-audit.md`: public, redacted register of the source
+  conversation decisions that must be reviewed before the active backbone goal
+  can be closed. It is not a completion claim; `partial` rows keep the goal
+  open until verified or explicitly blocked.
 - `claw evolution plan|dry-run|repair|rollback|backup|receipt|report --json`:
   safe operator contracts for migration planning, backup classification, rescue
   preservation, and redacted receipts. `repair` and `report` also emit an
