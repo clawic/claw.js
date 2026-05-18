@@ -6,14 +6,16 @@ import {
   clawEvolutionLedgerSchema,
   clawEvolutionPolicy,
   clawEvolutionPublicSurfaceBaselineSchema,
+  clawEvolutionVersionFixtureSchema,
   clawPersistentSurfaceRegistry,
   createEvolutionOperatorPlan,
   createEvolutionPublicSurfaceBaseline,
   createEvolutionReceipt,
   diffEvolutionPublicSurfaceBaseline,
+  runEvolutionMigratorLab,
   summarizeEvolutionLedger,
 } from "@clawjs/core";
-import type { ClawEvolutionLedger, ClawEvolutionOperatorAction, ClawEvolutionPublicSurfaceBaseline } from "@clawjs/core";
+import type { ClawEvolutionLedger, ClawEvolutionOperatorAction, ClawEvolutionPublicSurfaceBaseline, ClawEvolutionVersionFixture } from "@clawjs/core";
 
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { formatCliTable } from "./cli-flag-parsers.ts";
@@ -36,6 +38,7 @@ export async function runEvolutionCli(input: EvolutionCliInput): Promise<number>
   const root = findEvolutionRoot(input.context.cwd);
   const ledgerPath = path.join(root, clawEvolutionPolicy.ledger.baseline);
   const publicSurfaceBaselinePath = path.join(root, clawEvolutionPolicy.ledger.publicSurfaceBaseline);
+  const fixtureDirectory = path.join(root, clawEvolutionPolicy.ledger.directory, "fixtures");
   const ledger = readEvolutionLedger(ledgerPath);
 
   if (action === "list") {
@@ -53,10 +56,13 @@ export async function runEvolutionCli(input: EvolutionCliInput): Promise<number>
     const baseline = readPublicSurfaceBaseline(publicSurfaceBaselinePath);
     const current = createCurrentPublicSurfaceBaseline();
     const diff = baseline ? diffEvolutionPublicSurfaceBaseline({ baseline, current, ledger }) : null;
+    const fixtures = readEvolutionFixtures(fixtureDirectory);
+    const migrationLab = runEvolutionMigratorLab({ fixtures, ledger, fromVersion: input.flags.from, toVersion: input.flags.to });
     return writeEvolutionResult(input, action, {
-      status: !diff || diff.uncoveredChanges.length === 0 ? "ok" : "needs_evolution_record",
+      status: (!diff || diff.uncoveredChanges.length === 0) && migrationLab.status === "pass" ? "ok" : "needs_attention",
       ledgerPath,
       publicSurfaceBaselinePath,
+      fixtureDirectory,
       policy: {
         sourceOfTruth: clawEvolutionPolicy.sourceOfTruth,
         postV1Migration: clawEvolutionPolicy.postV1Migration,
@@ -66,12 +72,14 @@ export async function runEvolutionCli(input: EvolutionCliInput): Promise<number>
       surfaceBaseline: diff
         ? { status: diff.status, changed: diff.summary.changed, uncovered: diff.summary.uncovered }
         : { status: "missing", changed: null, uncovered: null },
+      migrationLab,
       checks: [
         "ledger_schema_valid",
         "records_have_owner_surfaces_tests",
         "receipts_redacted_by_policy",
         "rescue_core_declared",
         diff && diff.uncoveredChanges.length === 0 ? "public_surface_baseline_covered" : "public_surface_baseline_needs_attention",
+        migrationLab.status === "pass" ? "migration_lab_foundation_fixture_passed" : "migration_lab_needs_attention",
       ],
     });
   }
@@ -103,6 +111,13 @@ export async function runEvolutionCli(input: EvolutionCliInput): Promise<number>
     const baseline = readPublicSurfaceBaseline(publicSurfaceBaselinePath);
     const current = createCurrentPublicSurfaceBaseline();
     const diff = baseline ? diffEvolutionPublicSurfaceBaseline({ baseline, current, ledger }) : null;
+    const fixtures = readEvolutionFixtures(fixtureDirectory);
+    const migrationLab = runEvolutionMigratorLab({
+      fixtures,
+      ledger,
+      fromVersion: input.flags.from,
+      toVersion: input.flags.to,
+    });
     const plan = createEvolutionOperatorPlan({
       action: action as ClawEvolutionOperatorAction,
       ledger,
@@ -114,6 +129,7 @@ export async function runEvolutionCli(input: EvolutionCliInput): Promise<number>
     if (action === "receipt") {
       return writeEvolutionResult(input, action, {
         plan,
+        migrationLab,
         receipt: createEvolutionReceipt({
           action: "receipt",
           plan,
@@ -126,6 +142,7 @@ export async function runEvolutionCli(input: EvolutionCliInput): Promise<number>
       surfaceBaseline: diff
         ? { status: diff.status, changed: diff.summary.changed, uncovered: diff.summary.uncovered }
         : { status: "missing", changed: null, uncovered: null },
+      migrationLab,
       receiptPreview: createEvolutionReceipt({
         action: action as ClawEvolutionOperatorAction,
         plan,
@@ -181,6 +198,14 @@ function readEvolutionLedger(file: string): ClawEvolutionLedger {
 function readPublicSurfaceBaseline(file: string): ClawEvolutionPublicSurfaceBaseline | null {
   if (!fs.existsSync(file)) return null;
   return clawEvolutionPublicSurfaceBaselineSchema.parse(JSON.parse(fs.readFileSync(file, "utf8")));
+}
+
+function readEvolutionFixtures(directory: string): ClawEvolutionVersionFixture[] {
+  if (!fs.existsSync(directory)) return [];
+  return fs.readdirSync(directory)
+    .filter((entry) => entry.endsWith(".json"))
+    .sort()
+    .map((entry) => clawEvolutionVersionFixtureSchema.parse(JSON.parse(fs.readFileSync(path.join(directory, entry), "utf8"))));
 }
 
 function createCurrentPublicSurfaceBaseline(): ClawEvolutionPublicSurfaceBaseline {
