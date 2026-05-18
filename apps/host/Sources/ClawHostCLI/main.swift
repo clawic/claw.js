@@ -62,6 +62,25 @@ struct CommanderCLI {
                 exit(response.ok ? 0 : 1)
             }
 
+            if parsed.domain == .system && ["telemetry", "metrics", "widgets", "rules", "history"].contains(parsed.resource) {
+                var arguments = parsed.arguments
+                if environment["CLAW_HOST_SAFE"] == "1" {
+                    arguments["__validation_mode"] = ValidationMode.hostIsolated.rawValue
+                } else if let validationMode = environment["CLAW_HOST_VALIDATION_MODE"], !validationMode.isEmpty {
+                    arguments["__validation_mode"] = validationMode
+                }
+                let service = try CommandService(environment: environment, registry: DefaultRegistry.make())
+                let response = await service.execute(CommandRequest(
+                    domain: parsed.domain,
+                    resource: parsed.resource,
+                    action: parsed.action,
+                    arguments: arguments,
+                    clientContext: .current()
+                ))
+                try printJSON(response)
+                exit(response.ok ? 0 : 1)
+            }
+
             let response = try await route(parsed: parsed, environment: environment)
             try printJSON(response)
             exit(response.ok ? 0 : 1)

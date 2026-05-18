@@ -802,6 +802,7 @@ const corePublicRoutes = [
   ["claw.api.remote.externalValidationArtifact", "POST", "/v1/remote/external-validation-artifact", "Remote physical/provider validation evidence artifact contract"],
   ["claw.api.remote.externalValidationRunbook", "GET", "/v1/remote/external-validation-runbook", "Remote physical/provider validation runbook contract"],
   ["claw.api.remote.externalValidationReadiness", "POST", "/v1/remote/external-validation-readiness", "Remote physical/provider validation readiness contract"],
+  ["claw.api.remote.externalValidationApprovalRequest", "POST", "/v1/remote/external-validation-approval-request", "Remote physical/provider validation approval request contract"],
   ["claw.api.remote.externalValidationReport", "POST", "/v1/remote/external-validation-report", "Remote physical/provider validation evidence report contract"],
   ["claw.api.remote.sourceQaTemplate", "POST", "/v1/remote/source-qa-template", "Remote source Q/A review template contract"],
   ["claw.api.remote.closureGate", "POST", "/v1/remote/closure-gate", "Remote goal closure gate contract"],
@@ -964,6 +965,7 @@ const stableSurfaceRoots = [
   ["claw.contracts.formats", "Import/export formats", "format", ["cli", "persistence"]],
   ["claw.contracts.external", "External dependencies and owned mappings", "external", ["sdk", "serviceApi", "mcp"]],
   ["claw.contracts.versionGovernance", "Pre-V1 version governance", "schema", ["cli", "sdk"]],
+  ["claw.contracts.evolution", "Evolution ledger and rescue policy", "schema", ["cli", "sdk", "persistence"]],
 ] as const;
 
 const runtimeCriticalNodes = [
@@ -2297,6 +2299,17 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       direction: "bidirectional",
       notes: "Machine-readable policy for pre-public mutable work. Owned version bumps require explicit user approval until V1 is frozen.",
     }),
+    clawPersistentSurface.contract({
+      ...contractDefaults,
+      id: "claw.schema.evolutionRecord.v1",
+      kind: "jsonSchema",
+      name: "Evolution ledger record schema v1",
+      value: "claw.evolution.record.v1",
+      parentId: "claw.contracts.evolution",
+      surfaceClass: "schema",
+      direction: "bidirectional",
+      notes: "Stable record shape for public surface evolution, migrations, adapters, rescue policy, redacted receipts, and repair planning.",
+    }),
     ...["--json", "--dry-run", "--workspace", "--runtime", "--help", "--guidance", "--actor-assertion"].map((flag) => clawPersistentSurface.contract({
       ...contractDefaults,
       id: `claw.cli.flag.${flag.slice(2)}`,
@@ -2480,6 +2493,33 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       source: registrySource,
       envOverrides: ["CLAW_MONITOR_DB_PATH", "CLAW_MONITOR_DATA_DIR", "CLAW_DATA_DIR", "CLAW_HOME"],
     }),
+    clawPersistentSurface.table({
+      id: "claw.database.monitor.table.metric_sources",
+      name: "metric_sources",
+      parentId: "claw.database.monitor",
+      databaseId: "claw.database.monitor",
+      storageClass: "sidecar",
+      source: registrySource,
+      notes: "Generic metric source registry for system telemetry, context providers and custom metrics.",
+    }),
+    clawPersistentSurface.table({
+      id: "claw.database.monitor.table.metric_samples",
+      name: "metric_samples",
+      parentId: "claw.database.monitor",
+      databaseId: "claw.database.monitor",
+      storageClass: "sidecar",
+      source: registrySource,
+      notes: "Short local raw samples used by system history, charts and rules.",
+    }),
+    clawPersistentSurface.table({
+      id: "claw.database.monitor.table.metric_rollups",
+      name: "metric_rollups",
+      parentId: "claw.database.monitor",
+      databaseId: "claw.database.monitor",
+      storageClass: "sidecar",
+      source: registrySource,
+      notes: "Longer-lived aggregate buckets for metric history without retaining exhaustive raw samples.",
+    }),
     clawPersistentSurface.path({
       id: "claw.workspace.manifest",
       kind: "file",
@@ -2642,7 +2682,7 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       storageClass: "workspace",
       source: registrySource,
     }),
-    ...["projections", "sessions", "audit", "backups", "locks", "intents", "compat", "documents", "data"].map((name) => clawPersistentSurface.path({
+    ...["projections", "sessions", "audit", "backups", "locks", "intents", "compat", "evolution", "documents", "data"].map((name) => clawPersistentSurface.path({
       id: `claw.workspace.${name}`,
       kind: "folder",
       name,

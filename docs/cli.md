@@ -50,6 +50,26 @@ Pre-V1 raw JSON responses that predate the registry are migration debt. New or
 materially changed stable commands must use the envelope and include command
 schema/version metadata.
 
+## Evolution
+
+`claw evolution` is the agent-facing operator surface for public surface
+evolution, migration planning, rescue diagnostics, redacted receipts, and
+repair packets.
+
+```bash
+claw evolution list --json
+claw evolution show policy --json
+claw evolution diff --json
+claw evolution verify --json
+claw evolution repair --json
+```
+
+Risky actions such as apply, repair, rollback, backup creation, report sharing,
+external source access, deletion, movement, or large-state overrides are
+approval-gated. The command keeps its first slice plan-first: it classifies
+state, verifies the ledger, and returns redacted repair context before any
+future mutating implementation is allowed.
+
 CLI responses can also include compact just-in-time guidance:
 
 ```json
@@ -285,16 +305,26 @@ instructions in one payload.
 evidence artifact, checklist, runbook, E2E plan, and closure gate are all ready
 before an approved physical/provider validation run. With the current checked-in
 artifacts it returns `ready_for_approved_run`: source review is complete, the
-evidence artifact has one pending row per external requirement, and only
+evidence artifact has one clean pending row per external requirement, and only
 `external_validation` remains blocked. It is no-write and does not approve the
-physical/provider run by itself.
+physical/provider run by itself. Partially approved evidence, for example rows
+missing `approvedRunRef`, is `not_ready`; after a real approved run the same
+gate advances only when the evidence is fully clearable.
+`remote validation-approval-request` returns the no-write approval packet for
+that real run. It includes the source-bound conversation/plan IDs, readiness
+status, all 13 requirement IDs, required E2E domains, commands to run, approval
+scope, and prohibited actions. It always reports `approvalRequired: true` and
+`approved: false` with status `approval_required`; it is a request for explicit
+approval, not approval itself.
 `remote validation-report` evaluates supplied external evidence, if any, against
 that checklist. With no approved physical evidence it stays `external_pending`;
 only rows with `approvedRun: true`, an `approvedRunRef`, physical evidence, all
 required artifacts, all acceptance criteria, and no plaintext material become
 `clearable`. Unknown or duplicate evidence requirement IDs are fail-closed and
 reported through `invalidEvidenceRequirementIds` and
-`duplicateEvidenceRequirementIds`; they never silently clear the report.
+`duplicateEvidenceRequirementIds`; they never silently clear the report. When
+files use the versioned artifact shape, the source conversation and plan IDs
+must match this goal before the rows are accepted.
 `remote source-qa-template` returns the no-write source Q/A review template for
 the original Relay/Gateway/Coordinator/Connector/Sync source conversation and
 plan. It is intentionally incomplete: every row must be reviewed one by one and
@@ -307,7 +337,8 @@ mismatches as `invalidExternalPendingDispositionQaIds`. The closure command can
 consume either `--source-qa-review-json` or a versioned artifact with
 `--source-qa-review-file docs/remote-gateway-sync-source-qa-review.json`; if
 the file is an object with an `items` array, those items are submitted as the
-review rows.
+review rows. Versioned source Q/A artifacts are source-bound too and are
+rejected when their conversation or plan IDs do not match this goal.
 `remote closure-gate` combines the external validation report with the required
 source Q/A review report. It remains `blocked` until all 23 source Q/A rows
 have a disposition, evidence refs, and every external validation row is

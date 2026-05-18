@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "policy": {
+    "sourceOfTruth": "clawjs",
+    "phase": "pre_v1_mutable",
+    "postV1Migration": "step_by_step_all_public_versions",
+    "rescueCore": "launch_chat_repair",
+    "legacyLocation": "boundary_migrators_adapters_receipts",
+    "breakingApproval": "adr_required",
+    "backupThreshold": {
+      "maxBytes": 1073741824,
+      "maxFiles": 10000,
+      "overrideRequired": true
+    },
+    "backupRetentionDays": 30,
+    "reportDefault": "local_redacted_file",
+    "externalSubmission": "explicit_approval_only"
+  },
+  "records": [
+    {
+      "id": "evo_backbone_foundation",
+      "title": "Evolution and rescue backbone foundation",
+      "class": "additive",
+      "status": "active",
+      "owner": "claw",
+      "surfaces": [
+        "docs/evolution",
+        "claw evolution",
+        "@clawjs/core evolution policy",
+        "Clawix rescue mirror"
+      ],
+      "tests": [
+        "scripts/evolution-governance-check.mjs",
+        "packages/clawjs-core/src/index.test.ts",
+        "packages/clawjs/src/index.test.ts"
+      ],
+      "adr": "docs/adr/0030-post-v1-evolution-rescue-backbone.md",
+      "notes": "Initial additive backbone. Post-V1 registry diffs and migration labs build on this baseline.",
+      "createdAt": "2026-05-18T00:00:00.000Z"
+    }
+  ]
+}

@@ -52,6 +52,7 @@ test("runCli exposes the generated stable surface inspection CLI", async () => {
   const treePayload = treeEnvelope.data;
   assert.equal(treePayload.version, 1);
   assert.equal(treePayload.nodes.some((node: { id: string }) => node.id === "claw.database.core"), true);
+  assert.equal(treePayload.nodes.some((node: { id: string }) => node.id === "claw.database.monitor.table.metric_samples"), true);
   assert.equal(treePayload.nodes.some((node: { id: string }) => node.id === "claw.contracts"), true);
 
   const show = await runCliCapture(["inspect", "show", "/database/core", "--json"], process.cwd());
@@ -111,6 +112,26 @@ test("runCli exposes pre-v1 version governance through inspect", async () => {
   assert.equal(whyPayload.type, "surfaceNode");
   assert.equal(whyPayload.id, "claw.versionGovernance.preV1");
   assert.match(whyPayload.notes, /Owned version bumps require explicit user approval/);
+});
+
+test("runCli exposes evolution policy through inspect", async () => {
+  const evolution = await runCliCapture(["inspect", "evolution", "--json"], process.cwd());
+  assert.equal(evolution.code, CLI_EXIT_OK);
+  const payload = parseCliJson<{
+    policy: { sourceOfTruth: string; postV1Migration: string; rescueCore: string };
+    surfaces: Array<{ id: string }>;
+  }>(evolution.stdout).data;
+  assert.equal(payload.policy.sourceOfTruth, "clawjs");
+  assert.equal(payload.policy.postV1Migration, "step_by_step_all_public_versions");
+  assert.equal(payload.policy.rescueCore, "launch_chat_repair");
+  assert.equal(payload.surfaces.some((surface) => surface.id === "claw.schema.evolutionRecord.v1"), true);
+
+  const why = await runCliCapture(["inspect", "why", "claw.schema.evolutionRecord.v1", "--json"], process.cwd());
+  assert.equal(why.code, CLI_EXIT_OK);
+  const whyPayload = parseCliJson<{ type: string; id: string; notes: string }>(why.stdout).data;
+  assert.equal(whyPayload.type, "surfaceNode");
+  assert.equal(whyPayload.id, "claw.schema.evolutionRecord.v1");
+  assert.match(whyPayload.notes, /rescue policy/);
 });
 
 test("runCli exposes governance model invariants through inspect", async () => {
@@ -233,6 +254,7 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
     externalValidationChecklist: { status: string; writes: boolean; requirementIds: string[]; coverage: { requirementCount: number; coveredRequirementCount: number; missingRequirementIds: string[] }; items: Array<{ requirementId: string; requiredCommand: string; requiredArtifacts: string[]; approvedRunRequired: boolean; physicalEvidenceRequired: boolean; plaintextMaterialIncluded: boolean; writes: boolean }> };
     externalValidationEvidenceTemplate: { status: string; writes: boolean; requirementCount: number; submissionCommand: string; checklistItems: unknown[]; evidence: Array<{ requirementId: string; approvedRun: boolean; artifactRefs: string[]; acceptedCriteria: string[]; plaintextMaterialIncluded: boolean; writes: boolean }> };
     externalValidationReadiness: { status: string; writes: boolean; sourceQaReady: boolean; externalEvidenceReady: boolean; sourceQaReviewStatus: string; evidenceCount: number; requiredEvidenceCount: number; missingEvidenceRequirementIds: string[]; closureGateBlockers: string[]; nextAction: string };
+    externalValidationApprovalRequest: { status: string; approvalRequired: boolean; approved: boolean; readinessStatus: string; writes: boolean; requirementIds: string[]; validationDomains: string[]; prohibitedActions: string[] };
     externalValidationReport: { status: string; writes: boolean; requirementCount: number; evidenceCount: number; clearableRequirementIds: string[]; blockedRequirementIds: string[]; items: Array<{ requirementId: string; clearable: boolean; status: string; writes: boolean }> };
     sourceQaReviewTemplate: { status: string; writes: boolean; sourceConversationId: string; sourcePlanId: string; requiredSourceQaIds: string[]; reviewCount: number; submissionCommand: string; items: Array<{ qaId: string; decisionKey: string; requirementId: string; reviewed: boolean; disposition: null; evidenceRefs: string[]; reviewedAt: null; writes: boolean }> };
     closureGate: { status: string; writes: boolean; requiredSourceQaIds: string[]; reviewedSourceQaIds: string[]; missingSourceQaIds: string[]; sourceQaReviewStatus: string; sourceQaReviewItems: unknown[]; blockedExternalRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockers: string[] };
@@ -283,6 +305,14 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   assert.equal(remoteInspectPayload.externalValidationReadiness.writes, false);
   assert.equal(remoteInspectPayload.externalValidationReadiness.sourceQaReady, false);
   assert.equal(remoteInspectPayload.externalValidationReadiness.externalEvidenceReady, false);
+  assert.equal(remoteInspectPayload.externalValidationApprovalRequest.status, "approval_required");
+  assert.equal(remoteInspectPayload.externalValidationApprovalRequest.approvalRequired, true);
+  assert.equal(remoteInspectPayload.externalValidationApprovalRequest.approved, false);
+  assert.equal(remoteInspectPayload.externalValidationApprovalRequest.readinessStatus, "not_ready");
+  assert.equal(remoteInspectPayload.externalValidationApprovalRequest.writes, false);
+  assert.equal(remoteInspectPayload.externalValidationApprovalRequest.requirementIds.length, remoteInspectPayload.gaps.length);
+  assert.deepEqual(remoteInspectPayload.externalValidationApprovalRequest.validationDomains, ["chat", "search", "sync", "secret_refs", "hosted_agents"]);
+  assert.equal(remoteInspectPayload.externalValidationApprovalRequest.prohibitedActions.some((entry) => entry.includes("plaintext secrets")), true);
   assert.equal(remoteInspectPayload.externalValidationReadiness.sourceQaReviewStatus, "incomplete");
   assert.equal(remoteInspectPayload.externalValidationReadiness.evidenceCount, 0);
   assert.equal(remoteInspectPayload.externalValidationReadiness.requiredEvidenceCount, remoteInspectPayload.gaps.length);
@@ -423,6 +453,29 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.deepEqual(remoteValidationReadinessPayload.missingEvidenceRequirementIds, []);
   assert.deepEqual(remoteValidationReadinessPayload.closureGateBlockers, ["external_validation"]);
   assert.equal(remoteValidationReadinessPayload.nextAction.includes("approved physical/provider validation"), true);
+
+  const remoteValidationApprovalRequest = await runCliCapture([
+    "remote",
+    "validation-approval-request",
+    "--now",
+    "2026-05-18T11:50:00.000Z",
+    "--source-qa-review-file",
+    "docs/remote-gateway-sync-source-qa-review.json",
+    "--external-validation-file",
+    "docs/remote-gateway-sync-external-validation-evidence.json",
+    "--json",
+  ], process.cwd());
+  assert.equal(remoteValidationApprovalRequest.code, CLI_EXIT_OK);
+  const remoteValidationApprovalRequestPayload = parseCliJson<{ status: string; approvalRequired: boolean; approved: boolean; readinessStatus: string; requirementIds: string[]; validationDomains: string[]; requiredCommands: string[]; prohibitedActions: string[]; writes: boolean }>(remoteValidationApprovalRequest.stdout).data;
+  assert.equal(remoteValidationApprovalRequestPayload.status, "approval_required");
+  assert.equal(remoteValidationApprovalRequestPayload.approvalRequired, true);
+  assert.equal(remoteValidationApprovalRequestPayload.approved, false);
+  assert.equal(remoteValidationApprovalRequestPayload.readinessStatus, "ready_for_approved_run");
+  assert.equal(remoteValidationApprovalRequestPayload.requirementIds.length, remotePendingPayload.requirements.length);
+  assert.deepEqual(remoteValidationApprovalRequestPayload.validationDomains, ["chat", "search", "sync", "secret_refs", "hosted_agents"]);
+  assert.equal(remoteValidationApprovalRequestPayload.requiredCommands.some((entry) => entry.includes("validation-readiness")), true);
+  assert.equal(remoteValidationApprovalRequestPayload.prohibitedActions.some((entry) => entry.includes("plaintext secrets")), true);
+  assert.equal(remoteValidationApprovalRequestPayload.writes, false);
 
   const remoteSourceQaTemplate = await runCliCapture(["remote", "source-qa-template", "--now", "2026-05-17T10:13:26.250Z", "--json"], process.cwd());
   assert.equal(remoteSourceQaTemplate.code, CLI_EXIT_OK);
@@ -1104,6 +1157,7 @@ test("runCli exposes CLI aliases and decision sources through inspect", async ()
   assert.equal(commands.code, CLI_EXIT_OK);
   const commandPayload = parseCliJson<{ commands: Array<{ name: string; usage?: string; support: { state: string }; securityPolicy: string; source?: { file: string; symbol: string } }> }>(commands.stdout).data;
   assert.equal(commandPayload.commands.some((entry) => entry.name === "host" && entry.support.state === "host_required" && entry.securityPolicy === "signed_host_broker"), true);
+  assert.equal(commandPayload.commands.some((entry) => entry.name === "system" && entry.support.state === "supported" && entry.securityPolicy === "local_read" && entry.source?.symbol === "runSystemCli"), true);
   assert.equal(commandPayload.commands.some((entry) => entry.name === "apps" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
   assert.equal(commandPayload.commands.some((entry) => entry.name === "contacts" && entry.support.state === "supported" && entry.securityPolicy === "local_write" && entry.usage === "contacts list|get|create|update|delete|schema" && entry.source?.symbol === "runMagicDbCli"), true);
   assert.equal(commandPayload.commands.some((entry) => entry.name === "life" && entry.support.state === "supported" && entry.securityPolicy === "local_write" && entry.usage === "life catalog|seed-catalog|observe|list|delete" && entry.source?.symbol === "runV1DataCli"), true);

@@ -4,7 +4,7 @@ import path from "path";
 
 import Database from "better-sqlite3";
 import { AgentStoreFS, type Agent } from "@clawjs/agents";
-import { CLAW_CLI_COMMAND_INTENT_STATUSES, GOVERNANCE_CAPABILITIES, GOVERNANCE_ENTITY_KINDS, GOVERNANCE_PRINCIPAL_KINDS, GOVERNANCE_SCOPE_KINDS, buildRemoteConformanceReport, buildRemoteExternalPendingRegister, buildRemoteExternalValidationChecklist, buildRemoteExternalValidationEvidenceTemplate, buildRemoteExternalValidationReadiness, buildRemoteExternalValidationReport, buildRemoteGoalClosureGate, buildRemoteProviderDeviceE2EValidationPlan, buildRemoteRouteContractCatalog, buildRemoteSourceQaReviewTemplate, clawDenseDataAcceptanceFixture, clawDenseDataOsRegistry, clawPersistentSurfaceRegistry, clawPreV1VersionGovernancePolicy, connectorExecutionPipeline, createAgentControlPanel, createAgentPrivacyLifecyclePlan, evaluateGovernanceAccess, evaluateGovernanceDelegation, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, listClawDenseDataGapRegistryEntries, listClawDenseDataIntentEntries, listClawDenseDataSemanticViewEntries, remoteSyncRequiredRouteIds, resolveClawCliCommand, resolveClawPersistentSurfacePath, searchClawCliRegistry, summarizeGovernanceBindings, syncDriverSchema, withSurfaceChildren } from "@clawjs/core";
+import { CLAW_CLI_COMMAND_INTENT_STATUSES, GOVERNANCE_CAPABILITIES, GOVERNANCE_ENTITY_KINDS, GOVERNANCE_PRINCIPAL_KINDS, GOVERNANCE_SCOPE_KINDS, buildRemoteConformanceReport, buildRemoteExternalPendingRegister, buildRemoteExternalValidationApprovalRequest, buildRemoteExternalValidationChecklist, buildRemoteExternalValidationEvidenceTemplate, buildRemoteExternalValidationReadiness, buildRemoteExternalValidationReport, buildRemoteGoalClosureGate, buildRemoteProviderDeviceE2EValidationPlan, buildRemoteRouteContractCatalog, buildRemoteSourceQaReviewTemplate, clawDenseDataAcceptanceFixture, clawDenseDataOsRegistry, clawEvolutionPolicy, clawPersistentSurfaceRegistry, clawPreV1VersionGovernancePolicy, connectorExecutionPipeline, createAgentControlPanel, createAgentPrivacyLifecyclePlan, evaluateGovernanceAccess, evaluateGovernanceDelegation, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, listClawDenseDataGapRegistryEntries, listClawDenseDataIntentEntries, listClawDenseDataSemanticViewEntries, remoteSyncRequiredRouteIds, resolveClawCliCommand, resolveClawPersistentSurfacePath, searchClawCliRegistry, summarizeGovernanceBindings, syncDriverSchema, withSurfaceChildren } from "@clawjs/core";
 import type { AgentAuditEvent, ClawPersistentSurfaceNode, ClawPersistentSurfaceRegistry, ClawSurfaceEdge, ClawSurfaceRoute } from "@clawjs/core";
 import { v1MainSchemaSurfaceNodes } from "./v1-data-surface.ts";
 import { normalizeDbRow, resolveClawjsMainDbPath, type JsonRecord } from "./v1-data-core.ts";
@@ -832,6 +832,7 @@ function buildRemoteInspectPayload(nodes: ClawPersistentSurfaceNode[], routes: C
     externalValidationChecklist: buildRemoteExternalValidationChecklist(),
     externalValidationEvidenceTemplate: buildRemoteExternalValidationEvidenceTemplate(),
     externalValidationReadiness: buildRemoteExternalValidationReadiness(),
+    externalValidationApprovalRequest: buildRemoteExternalValidationApprovalRequest(),
     externalValidationReport: buildRemoteExternalValidationReport(),
     sourceQaReviewTemplate: buildRemoteSourceQaReviewTemplate(),
     closureGate: buildRemoteGoalClosureGate(),
@@ -1051,6 +1052,27 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
         `freezeTrigger\t${payload.freezeTrigger.kind}`,
         `approvalGate\t${payload.approvalGate.decisionAuthority}`,
         `changesets\t${payload.changesets.mode}`,
+      ].join("\n") + "\n");
+    }
+    return CLI_EXIT_OK;
+  }
+  if (command === "evolution") {
+    const payload = {
+      policy: clawEvolutionPolicy,
+      surfaces: nodes.filter((node) => [
+        "claw.contracts.evolution",
+        "claw.schema.evolutionRecord.v1",
+        "claw.cli.command.evolution",
+        "claw.workspace.evolution",
+      ].includes(node.id)),
+    };
+    if (input.wantsJson) writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command));
+    else {
+      input.context.stdout.write([
+        `sourceOfTruth\t${payload.policy.sourceOfTruth}`,
+        `postV1Migration\t${payload.policy.postV1Migration}`,
+        `rescueCore\t${payload.policy.rescueCore}`,
+        `ledger\t${payload.policy.ledger.baseline}`,
       ].join("\n") + "\n");
     }
     return CLI_EXIT_OK;
@@ -1279,7 +1301,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     }
     throw new InspectCliError("usage_error", `Unsupported inspect render format: ${format}`, CLI_EXIT_USAGE);
   }
-  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|neighbors|routes|route|agent|edges|why|commands|command-intents|remote|remote-sync|version-governance|governance|dense-data|dense-gaps|dense-intents|dense-views|dense-fixtures|codebase|connectors|aliases|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
+  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|neighbors|routes|route|agent|edges|why|commands|command-intents|remote|remote-sync|version-governance|evolution|governance|dense-data|dense-gaps|dense-intents|dense-views|dense-fixtures|codebase|connectors|aliases|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
 }
 
 export async function runInspectCli(input: InspectCliInput): Promise<number> {

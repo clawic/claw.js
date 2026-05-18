@@ -59,6 +59,7 @@ import { CLAW_DOMAINS_BEGIN, CLAW_DOMAINS_END, parseSurfacePortOverrides, surfac
 import { runDomainsCli } from "./cli-domains-command.ts";
 import { hostRegistryOptions, runHostCli } from "./cli-host-command.ts";
 import { runDirectHostDomainCli, runHostForwardCli, runSystemCapabilitiesCli } from "./cli-host-forward.ts";
+import { runSystemCli } from "./cli-system-command.ts";
 import { createCliClaw, createCliWorkspaceClaw } from "./cli-claw-factory.ts";
 import { parseRuleHints, parseRuleReferences } from "./cli-rule-utils.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
@@ -81,6 +82,7 @@ import { runKnowledgeTailCli } from "./cli-knowledge-tail-command.ts";
 import { isSearchAdminCommand, runCliDiscoverySearch, runSearchAdminCli, runSearchQueryCli, runSearchRebuildCli } from "./cli-search-command.ts"; import { runGuidanceResourcesCli } from "./cli-guidance-resources-command.ts";
 import { runNeedsCli } from "./cli-needs-command.ts";
 import { runCommandsCli } from "./cli-commands-command.ts";
+import { runEvolutionCli } from "./cli-evolution-command.ts";
 import { runSafetyCli } from "./cli-safety-command.ts";
 import { runConnectorContextCli } from "./cli-connector-context-command.ts";
 import { runProjectManifestCli } from "./cli-project-command.ts";
@@ -522,8 +524,11 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     return CLI_EXIT_USAGE;
   }
 
-  if (group === "runtime" && command && REMOVED_RUNTIME_COMMANDS.has(command)) {
-    return writeRemovedJsonOrText("runtime", `\`${binName} runtime ${command}\` is not part of the public Claw CLI surface. Runtime is limited to adapters and setup.`);
+  if ((group === "runtime" || group === "monitor") && command && REMOVED_RUNTIME_COMMANDS.has(command)) {
+    const detail = group === "runtime"
+      ? "Runtime is limited to adapters and setup."
+      : "Monitor is limited to health, uptime, incidents, metrics and dashboards.";
+    return writeRemovedJsonOrText(group, `\`${binName} ${group} ${command}\` is not part of the public Claw CLI surface. ${detail}`);
   }
 
   if ((group === "business" || group === "social") && command && REMOVED_V1_CRUD_COMMANDS.has(command)) {
@@ -589,10 +594,15 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     return await runSystemCapabilitiesCli({ positionals, flags, context, wantsJson, binName });
   }
 
+  if (group === "system") {
+    return await runSystemCli({ argv, positionals, flags, context, wantsJson, binName });
+  }
+
   if (group === "collections") return await runCollectionsCli({ argv, positionals, flags, context, wantsJson, runCli: runCliUnsafe });
   if (group === "records") return await runCliUnsafe(["db", ...argv.slice(1)], context);
   if (group === "needs") return await runNeedsCli({ positionals, flags, argv, context, wantsJson, binName, workspaceRoot: flags.workspace || context.cwd });
   if (group === "commands") return await runCommandsCli({ positionals, flags, argv, context, wantsJson, binName, workspaceRoot: flags.workspace || context.cwd });
+  if (group === "evolution") return await runEvolutionCli({ positionals, flags, context, wantsJson, binName });
   if (group === "safety") return await runSafetyCli({ positionals, flags, context, wantsJson, binName });
   const connectorContextExit = await runConnectorContextCli({ group, command, subcommand, positionals, flags, argv, context, wantsJson, binName });
   if (connectorContextExit !== null) return connectorContextExit;
@@ -706,6 +716,28 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   if (group === "search" && command === "rebuild") {
     return await runSearchRebuildCli({ flags, argv, context, wantsJson });
   }
+  const workspaceRoot = flags.workspace || context.cwd;
+  const appId = flags["app-id"] || "clawjs-app";
+  const workspaceId = flags["workspace-id"] || pathSafeBasename(workspaceRoot);
+  const agentId = flags["agent-id"] || workspaceId;
+  const runtimeAdapterId = resolveRuntimeAdapterId(flags);
+  const earlyTemporalResult = await runTemporalCli({
+    argv,
+    group,
+    command,
+    subcommand,
+    positionals,
+    flags,
+    context,
+    wantsJson,
+    runtimeAdapterId,
+    workspaceRoot,
+    appId,
+    workspaceId,
+    agentId,
+  });
+  if (earlyTemporalResult !== null) return earlyTemporalResult;
+
   {
     const v1DataExitCode = await runV1DataCli({
       argv,
@@ -966,10 +998,6 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     }
   }
 
-  const workspaceRoot = flags.workspace || context.cwd;
-  const appId = flags["app-id"] || "clawjs-app";
-  const workspaceId = flags["workspace-id"] || pathSafeBasename(workspaceRoot);
-  const agentId = flags["agent-id"] || workspaceId; const runtimeAdapterId = resolveRuntimeAdapterId(flags);
   const runtimeAdapter = getRuntimeAdapter(runtimeAdapterId); const mediaGroup = group === "image" || group === "audio" || group === "video" ? group : null;
   await installCliRuntimeMetaProvider({ group, command, subcommand, argv, flags, cwd: context.cwd, workspaceRoot, appId, workspaceId, agentId, runtimeAdapterId });
   const guidanceResourcesResult = await runGuidanceResourcesCli({ group, command, subcommand, positionals, flags, argv, context, wantsJson, runtimeAdapterId, workspaceRoot, appId, workspaceId, agentId }); if (guidanceResourcesResult !== null) return guidanceResourcesResult;

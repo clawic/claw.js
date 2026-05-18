@@ -15,7 +15,7 @@ export interface StructuredLogSink {
 
 const SENSITIVE_KEY_PATTERN = /(key|token|secret|authorization|apiKey)/i;
 const SAFE_SECRET_METADATA_KEYS = new Set(["missingSecrets", "requiredSecrets"]);
-const SAFE_PUBLIC_CATALOG_KEY_FIELDS = new Set(["key", "decisionKey", "domainSystemKey", "domainRoleKey", "operationKey", "profileKind", "canonicalCommand", "mappedCommand", "collectionName"]);
+const SAFE_PUBLIC_CATALOG_KEY_FIELDS = new Set(["key", "metricKey", "decisionKey", "domainSystemKey", "domainRoleKey", "operationKey", "profileKind", "canonicalCommand", "mappedCommand", "collectionName"]);
 const SAFE_PUBLIC_CATALOG_VALUE_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,160}$/;
 const UNSAFE_PUBLIC_CATALOG_VALUE_PATTERN = /(secret|token|password|credential|authorization|bearer|sk-)/i;
 const INLINE_SECRET_PATTERNS: RegExp[] = [

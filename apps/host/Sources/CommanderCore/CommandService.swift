@@ -294,6 +294,39 @@ public actor CommandService {
                 adapter: "system",
                 source: .filesystem
             )
+        case ("telemetry", "snapshot"), ("snapshot", "get"):
+            return success(
+                data: SystemTelemetry.snapshot(),
+                adapter: "system-telemetry",
+                source: .framework
+            )
+        case ("metrics", "list"):
+            return success(
+                data: SystemTelemetry.metricsCatalog(),
+                adapter: "system-telemetry",
+                source: .framework
+            )
+        case ("widgets", "list"):
+            return success(
+                data: SystemTelemetry.defaultWidgets(),
+                adapter: "system-telemetry",
+                source: .framework
+            )
+        case ("rules", "list"):
+            return success(
+                data: SystemTelemetry.rulesCatalog(),
+                adapter: "system-telemetry",
+                source: .framework
+            )
+        case ("history", "list"):
+            return success(
+                data: SystemTelemetry.history(
+                    metricKey: request.arguments["metric_key"] ?? request.arguments["metric-key"],
+                    range: request.arguments["range"]
+                ),
+                adapter: "system-telemetry",
+                source: .framework
+            )
         case ("daemon", "health"):
             let health = try daemonHealth()
             return success(

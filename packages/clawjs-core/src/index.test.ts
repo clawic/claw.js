@@ -19,6 +19,7 @@ import {
   buildRemoteExternalPendingRegister,
   buildRemoteExternalValidationChecklist,
   buildRemoteExternalValidationEvidenceArtifact,
+  buildRemoteExternalValidationApprovalRequest,
   buildRemoteExternalValidationEvidenceTemplate,
   buildRemoteExternalValidationReport,
   buildRemoteExternalValidationReadiness,
@@ -28,6 +29,7 @@ import {
   buildRemoteSourceQaReviewReport,
   buildRemoteSourceQaReviewTemplate,
   parseRemoteExternalValidationEvidenceInput,
+  parseRemoteSourceQaReviewInput,
   remoteGoalClosureRequiredSourceQaIds,
   buildRemoteRouteContractCatalog,
   buildSyncQueueEntries,
@@ -35,6 +37,9 @@ import {
   capacityRecordSchema,
   clawCommandRequestSchema,
   clawCommandResponseSchema,
+  clawEvolutionLedgerSchema,
+  clawEvolutionPolicy,
+  clawEvolutionRecordSchema,
   clawApiPath,
   clawCorePorts,
   clawContractFixturesV1,
@@ -165,6 +170,39 @@ test("createManifest returns a valid manifest", () => {
   assert.equal(manifest.logicalAgentId, "designer");
   assert.equal(manifest.runtimeAgentId, "designer-demo-project");
   assert.equal(manifest.materializationVersion, 1);
+});
+
+test("evolution policy and ledger schemas preserve the rescue backbone", () => {
+  assert.equal(clawEvolutionPolicy.sourceOfTruth, "clawjs");
+  assert.equal(clawEvolutionPolicy.postV1Migration, "step_by_step_all_public_versions");
+  assert.equal(clawEvolutionPolicy.rescueCore, "launch_chat_repair");
+  assert.equal(clawEvolutionPolicy.legacyLocation, "boundary_migrators_adapters_receipts");
+  assert.equal(clawEvolutionPolicy.receipts.externalSubmission, "explicit_approval_only");
+  assert.equal(clawEvolutionPolicy.cli.subcommands.includes("repair"), true);
+  assert.equal(clawEvolutionPolicy.cli.subcommands.includes("rollback"), true);
+
+  const record = clawEvolutionRecordSchema.parse({
+    id: "evo_test_record",
+    title: "Test record",
+    class: "migration_required",
+    status: "active",
+    owner: "claw",
+    surfaces: ["claw.schema.example"],
+    tests: ["packages/clawjs-core/src/index.test.ts"],
+    createdAt: "2026-05-18T00:00:00.000Z",
+  });
+  assert.equal(record.class, "migration_required");
+
+  const ledger = clawEvolutionLedgerSchema.parse({
+    schemaVersion: 1,
+    policy: {
+      sourceOfTruth: "clawjs",
+      postV1Migration: "step_by_step_all_public_versions",
+      rescueCore: "launch_chat_repair",
+    },
+    records: [record],
+  });
+  assert.equal(ledger.records.length, 1);
 });
 
 test("maskCredential keeps only the tail", () => {
@@ -622,6 +660,11 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(generatedExternalValidationEvidenceArtifact.status, "external_pending");
   assert.equal(generatedExternalValidationEvidenceArtifact.writes, false);
   assert.deepEqual(generatedExternalValidationEvidenceArtifact.evidence, externalValidationEvidenceTemplate.evidence);
+  assert.equal(parseRemoteExternalValidationEvidenceInput(generatedExternalValidationEvidenceArtifact).length, externalPending.requirements.length);
+  assert.throws(() => parseRemoteExternalValidationEvidenceInput({
+    ...generatedExternalValidationEvidenceArtifact,
+    sourcePlanId: "wrong-source-plan",
+  }), /sourcePlanId/);
   const externalValidationRunbook = buildRemoteExternalValidationRunbook({ generatedAt: "2026-05-17T10:13:19.000Z" });
   assert.equal(remoteExternalValidationRunbookSchema.safeParse(externalValidationRunbook).success, true);
   assert.equal(externalValidationRunbook.status, "external_pending");
@@ -776,6 +819,25 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.deepEqual(completeSourceQaReviewReport.invalidExternalPendingDispositionQaIds, []);
   assert.deepEqual(completeSourceQaReviewReport.externalPendingRequiredSourceQaIds, [...externalPendingSourceQaIds].sort());
   assert.equal(completeSourceQaReviewReport.items.every((entry) => entry.evidenceRefs.length >= 2 && !entry.writes), true);
+  const parsedSourceQaReviewItems = parseRemoteSourceQaReviewInput({
+    schemaVersion: 1,
+    sourceConversationId: "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8",
+    sourcePlanId: "019e3732-c90e-7491-9217-37020c43217e-plan",
+    reviewedAt: "2026-05-17T10:13:26.500Z",
+    status: "complete_with_external_pending",
+    items: completeSourceQaReviewReport.items,
+    writes: false,
+  });
+  assert.equal(parsedSourceQaReviewItems.length, 23);
+  assert.throws(() => parseRemoteSourceQaReviewInput({
+    schemaVersion: 1,
+    sourceConversationId: "wrong-source-conversation",
+    sourcePlanId: "019e3732-c90e-7491-9217-37020c43217e-plan",
+    reviewedAt: "2026-05-17T10:13:26.500Z",
+    status: "complete_with_external_pending",
+    items: completeSourceQaReviewReport.items,
+    writes: false,
+  }), /sourceConversationId/);
 
   const readyForApprovedRun = buildRemoteExternalValidationReadiness({
     generatedAt: "2026-05-17T10:13:26.550Z",
@@ -791,6 +853,29 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.deepEqual(readyForApprovedRun.missingEvidenceRequirementIds, []);
   assert.deepEqual(readyForApprovedRun.closureGateBlockers, ["external_validation"]);
   assert.equal(readyForApprovedRun.nextAction.includes("approved physical/provider validation"), true);
+  const approvalRequest = buildRemoteExternalValidationApprovalRequest({
+    generatedAt: "2026-05-17T10:13:26.560Z",
+    sourceQaReviews: completeSourceQaReviewReport.items,
+    evidence: externalValidationEvidenceTemplate.evidence,
+  });
+  assert.equal(approvalRequest.status, "approval_required");
+  assert.equal(approvalRequest.approvalRequired, true);
+  assert.equal(approvalRequest.approved, false);
+  assert.equal(approvalRequest.readinessStatus, "ready_for_approved_run");
+  assert.equal(approvalRequest.requirementIds.length, externalPending.requirements.length);
+  assert.deepEqual(approvalRequest.validationDomains, ["chat", "search", "sync", "secret_refs", "hosted_agents"]);
+  assert.equal(approvalRequest.prohibitedActions.some((entry) => entry.includes("plaintext secrets")), true);
+  assert.equal(approvalRequest.writes, false);
+
+  const incompleteApprovedEvidenceReadiness = buildRemoteExternalValidationReadiness({
+    generatedAt: "2026-05-17T10:13:26.575Z",
+    sourceQaReviews: completeSourceQaReviewReport.items,
+    evidence: completeExternalEvidence.map((entry) => ({ ...entry, approvedRunRef: undefined })),
+  });
+  assert.equal(incompleteApprovedEvidenceReadiness.status, "not_ready");
+  assert.equal(incompleteApprovedEvidenceReadiness.externalEvidenceReady, false);
+  assert.equal(incompleteApprovedEvidenceReadiness.blockedExternalRequirementIds.length, externalPending.requirements.length);
+  assert.deepEqual(incompleteApprovedEvidenceReadiness.closureGateBlockers, ["external_validation"]);
 
   const invalidSourceQaReviews = [{
     schemaVersion: 1 as const,

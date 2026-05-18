@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://clawjs.dev/schemas/evolution-record.v1.json",
+  "title": "Claw Evolution Ledger",
+  "type": "object",
+  "required": ["schemaVersion", "policy", "records"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "policy": {
+      "type": "object",
+      "required": ["sourceOfTruth", "postV1Migration", "rescueCore"],
+      "properties": {
+        "sourceOfTruth": { "const": "clawjs" },
+        "postV1Migration": { "const": "step_by_step_all_public_versions" },
+        "rescueCore": { "const": "launch_chat_repair" }
+      },
+      "additionalProperties": true
+    },
+    "records": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/record" }
+    }
+  },
+  "$defs": {
+    "record": {
+      "type": "object",
+      "required": ["id", "title", "class", "status", "owner", "surfaces", "tests", "createdAt"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^evo_[a-z0-9_]+$" },
+        "title": { "type": "string", "minLength": 1 },
+        "class": {
+          "enum": ["additive", "compatible", "migration_required", "adapter_required", "breaking_requires_adr"]
+        },
+        "status": {
+          "enum": ["draft", "active", "superseded", "blocked", "retired_runtime_adapter"]
+        },
+        "owner": { "type": "string", "minLength": 1 },
+        "surfaces": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        },
+        "tests": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "adr": { "type": "string" },
+        "migration": { "type": "string" },
+        "adapter": { "type": "string" },
+        "receipt": { "type": "string" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -169,6 +169,50 @@ final class CommanderE2ETests: XCTestCase {
         XCTAssertEqual(plan.data?.objectValue?["willMutate"]?.boolValue, false)
     }
 
+    func testSystemTelemetrySnapshotMetricsAndWidgets() throws {
+        let context = try TestContext()
+        defer { context.cleanup() }
+
+        let snapshot = try context.runCLI(["system", "telemetry", "snapshot", "--json"])
+        XCTAssertTrue(snapshot.ok)
+        XCTAssertEqual(snapshot.meta.adapter, "system-telemetry")
+        XCTAssertEqual(snapshot.meta.source, .framework)
+        XCTAssertEqual(snapshot.data?.objectValue?["policy"]?.objectValue?["default_agent_access"]?.stringValue, "safe_read")
+        XCTAssertEqual(snapshot.data?.objectValue?["policy"]?.objectValue?["retention_owner"]?.stringValue, "monitor")
+        XCTAssertTrue(snapshot.data?.objectValue?["samples"]?.arrayValue?.contains(where: {
+            $0.objectValue?["metric_key"]?.stringValue == "system.cpu.load_1m"
+        }) == true)
+        XCTAssertTrue(snapshot.data?.objectValue?["samples"]?.arrayValue?.contains(where: {
+            $0.objectValue?["metric_key"]?.stringValue == "system.memory.used_bytes"
+        }) == true)
+        XCTAssertTrue(snapshot.data?.objectValue?["unavailable_metrics"]?.arrayValue?.contains(where: {
+            $0.objectValue?["metric_key"]?.stringValue == "system.sensor.temperature"
+        }) == true)
+
+        let metrics = try context.runCLI(["system", "metrics", "list", "--json"])
+        XCTAssertTrue(metrics.ok)
+        XCTAssertTrue(metrics.data?.arrayValue?.contains(where: {
+            $0.objectValue?["key"]?.stringValue == "system.network.public_ip"
+                && $0.objectValue?["agent_access"]?.stringValue == "restricted"
+        }) == true)
+
+        let widgets = try context.runCLI(["system", "widgets", "list", "--json"])
+        XCTAssertTrue(widgets.ok)
+        XCTAssertTrue(widgets.data?.arrayValue?.contains(where: {
+            $0.objectValue?["id"]?.stringValue == "menu.cpu-memory"
+        }) == true)
+
+        let history = try context.runCLI([
+            "system", "history", "list",
+            "--metric-key", "system.cpu.load_1m",
+            "--range", "1h",
+            "--json",
+        ])
+        XCTAssertTrue(history.ok)
+        XCTAssertEqual(history.data?.objectValue?["source"]?.stringValue, "monitor")
+        XCTAssertEqual(history.data?.objectValue?["status"]?.stringValue, "not_recorded")
+    }
+
     func testDaemonAutoStartHealthAndReconnect() throws {
         let context = try TestContext()
         defer { context.cleanup() }

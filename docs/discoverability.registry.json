@@ -940,6 +940,33 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "adr-docs-adr-0030-post-v1-evolution-rescue-backbone",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0030-post-v1-evolution-rescue-backbone.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0030: Post-V1 evolution and rescue backbone",
+        "0030-post-v1-evolution-rescue-backbone",
+        "ADR 0030"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0030: Post-V1 evolution and rescue backbone",
+          "expectPath": "docs/adr/0030-post-v1-evolution-rescue-backbone.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "surface-route-graph",
       "kind": "surface-route",
       "owner": "claw",
@@ -1210,6 +1237,30 @@
         {
           "query": "commit-hygiene-public",
           "expectPath": "skills/commit-hygiene-public/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-compatibility-evolution-work",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/compatibility-evolution-work/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "compatibility-evolution-work",
+        "Add or change stable public state, contracts, routes, migrations, adapters, rescue behavior, or compatibility-sensitive surfaces through the evolution ledger."
+      ],
+      "searchQueries": [
+        {
+          "query": "compatibility-evolution-work",
+          "expectPath": "skills/compatibility-evolution-work/SKILL.md"
         }
       ],
       "guard": "scripts/skills-check.mjs",
@@ -1899,6 +1950,31 @@
         }
       ],
       "guard": "scripts/domain-surface-registry-guard.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-evolution-governance-check",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/evolution-governance-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "evolution-governance-check",
+        "Evolution Governance Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "evolution-governance-check",
+          "expectPath": "scripts/evolution-governance-check.mjs"
+        }
+      ],
+      "guard": "scripts/evolution-governance-check.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-18"
     },
@@ -2703,6 +2779,31 @@
         }
       ],
       "guard": "scripts/privacy-check.test.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-search-scale-lab-test",
+      "kind": "test-harness",
+      "owner": "claw",
+      "canonicalSource": "scripts/search-scale-lab.test.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "search-scale-lab.test",
+        "Search Scale Lab.Test"
+      ],
+      "searchQueries": [
+        {
+          "query": "search-scale-lab.test",
+          "expectPath": "scripts/search-scale-lab.test.mjs"
+        }
+      ],
+      "guard": "scripts/search-scale-lab.test.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-18"
     },
