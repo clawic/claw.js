@@ -10,6 +10,7 @@ import {
   clawPersistentSurfaceRegistry,
   createEvolutionOperatorPlan,
   createEvolutionPublicSurfaceBaseline,
+  createEvolutionRepairReport,
   createEvolutionReceipt,
   diffEvolutionPublicSurfaceBaseline,
   runEvolutionMigratorLab,
@@ -126,6 +127,9 @@ export async function runEvolutionCli(input: EvolutionCliInput): Promise<number>
       fromVersion: input.flags.from,
       toVersion: input.flags.to,
     });
+    const surfaceBaseline = diff
+      ? { status: diff.status, changed: diff.summary.changed, uncovered: diff.summary.uncovered }
+      : { status: "missing" as const, changed: null, uncovered: null };
     if (action === "receipt") {
       return writeEvolutionResult(input, action, {
         plan,
@@ -137,11 +141,22 @@ export async function runEvolutionCli(input: EvolutionCliInput): Promise<number>
         }),
       });
     }
+    if (action === "repair" || action === "report") {
+      return writeEvolutionResult(input, action, {
+        ...plan,
+        surfaceBaseline,
+        migrationLab,
+        repairReport: createEvolutionRepairReport({
+          action: action as ClawEvolutionOperatorAction,
+          plan,
+          migrationLab,
+          surfaceBaseline,
+        }),
+      });
+    }
     return writeEvolutionResult(input, action, {
       ...plan,
-      surfaceBaseline: diff
-        ? { status: diff.status, changed: diff.summary.changed, uncovered: diff.summary.uncovered }
-        : { status: "missing", changed: null, uncovered: null },
+      surfaceBaseline,
       migrationLab,
       receiptPreview: createEvolutionReceipt({
         action: action as ClawEvolutionOperatorAction,
