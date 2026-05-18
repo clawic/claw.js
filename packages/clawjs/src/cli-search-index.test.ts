@@ -3778,10 +3778,7 @@ test("search rebuild indexes finance.records with redacted previews", async () =
     assert.deepEqual(result?.fragments ?? [], []);
     assert.equal(result?.metadata?.accountId, "acct-operating");
     assert.equal(result?.metadata?.currency, "USD");
-    assert.equal(result?.metadata?.sensitive, true);
-    assert.equal(result?.metadata?.legalOutputLabels?.includes("not_professional_advice"), true);
-    assert.equal(result?.metadata?.legalOutputLabels?.includes("human_review_required"), true);
-    assert.equal(result?.metadata?.legalOutputLabels?.includes("regulated_domain:finance"), true);
+    assert.equal(result?.metadata?.sensitive === true && ["not_professional_advice", "human_review_required", "regulated_domain:finance"].every((label) => result?.metadata?.legalOutputLabels?.includes(label)), true);
     assert.equal(result?.actions?.some((action) => action.id === "open" && action.kind === "open" && action.requiresApproval === true), true);
     assert.ok(result?.explanation?.matchedBy?.length);
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "currency"), true);
@@ -3903,10 +3900,7 @@ test("search service indexes local finance_records with redacted previews", asyn
     assert.equal(result?.metadata?.accountId, "acct-local");
     assert.equal(result?.metadata?.currency, "USD");
     assert.equal(result?.metadata?.category, "ops");
-    assert.equal(result?.metadata?.sensitive, true);
-    assert.equal(result?.metadata?.legalOutputLabels?.includes("not_professional_advice"), true);
-    assert.equal(result?.metadata?.legalOutputLabels?.includes("human_review_required"), true);
-    assert.equal(result?.metadata?.legalOutputLabels?.includes("regulated_domain:finance"), true);
+    assert.equal(result?.metadata?.sensitive === true && ["not_professional_advice", "human_review_required", "regulated_domain:finance"].every((label) => result?.metadata?.legalOutputLabels?.includes(label)), true);
     assert.equal(result?.metadata?.hasLinkedPage, true);
     assert.equal(result?.actions?.some((action) => action.id === "open" && action.kind === "open" && action.requiresApproval === true), true);
     assert.ok(result?.explanation?.matchedBy?.length);
@@ -4024,10 +4018,7 @@ test("search service indexes ELN records from dense database writes", async () =
     assert.equal(result?.metadata?.status, "active");
     assert.equal(result?.metadata?.studyId, "study-search");
     assert.equal(result?.metadata?.experimentId, "experiment-search");
-    assert.equal(result?.metadata?.sensitive, false);
-    assert.equal(result?.metadata?.legalOutputLabels?.includes("not_professional_advice"), true);
-    assert.equal(result?.metadata?.legalOutputLabels?.includes("human_review_required"), true);
-    assert.equal(result?.metadata?.legalOutputLabels?.includes("regulated_domain:labs_research"), true);
+    assert.equal(result?.metadata?.sensitive === false && ["not_professional_advice", "human_review_required", "regulated_domain:labs_research"].every((label) => result?.metadata?.legalOutputLabels?.includes(label)), true);
     assert.equal(result?.permissions?.redacted, false);
     assert.equal(result?.permissions?.canPreview, true);
     assert.equal(result?.snippet?.includes("Dose Response") || result?.fragments?.some((fragment) => fragment.snippet?.includes("Dose Response")), true);

@@ -1126,9 +1126,8 @@ for (const snippet of [
   "search rebuild indexes surface route graph contracts",
   "Search MCP package publishes only the public Search binary",
   "docs.pages event jobs refresh and tombstone individual docs",
-  "legalOutputLabels?.includes(\"not_professional_advice\")",
-  "legalOutputLabels?.includes(\"regulated_domain:finance\")",
-  "legalOutputLabels?.includes(\"regulated_domain:labs_research\")",
+  "\"not_professional_advice\", \"human_review_required\", \"regulated_domain:finance\"",
+  "\"not_professional_advice\", \"human_review_required\", \"regulated_domain:labs_research\"",
 ]) {
   requireSnippet("packages/clawjs/src/cli-search-index.test.ts", snippet);
 }
