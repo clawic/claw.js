@@ -367,6 +367,9 @@ function imageMediaSearchDocument(record: Record<string, unknown>, workspaceRoot
 function mediaAssetSearchDocument(record: Record<string, unknown>, workspaceRoot: string): SearchDocumentInput | null {
   const mediaId = stringField(record, "mediaId");
   if (!mediaId) return null;
+  const sourceType = stringField(record, "sourceType");
+  const sourceId = stringField(record, "sourceId");
+  if (sourceType === "generation" && sourceId && !readWorkspaceCollectionRecord(workspaceRoot, "generations", sourceId)) return null;
   const kind = stringField(record, "kind") ?? "asset";
   const name = stringField(record, "name") ?? mediaId;
   const sourceText = stringField(record, "sourceText");
@@ -422,8 +425,8 @@ function mediaAssetSearchDocument(record: Record<string, unknown>, workspaceRoot
       threadId: stringField(channel, "threadId") ?? null,
       mimeType: stringField(record, "mimeType") ?? null,
       sizeBytes: numberField(record, "sizeBytes"),
-      sourceType: stringField(record, "sourceType") ?? null,
-      sourceId: stringField(record, "sourceId") ?? null,
+      sourceType: sourceType ?? null,
+      sourceId: sourceId ?? null,
       transcriptionIndexed: !!transcription.text,
       transcriptionLanguage: transcription.language ?? null,
       transcriptionSegmentCount: transcription.segmentCount,

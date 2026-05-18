@@ -6,7 +6,9 @@ import { createCliClaw } from "./cli-claw-factory.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { extractPositionals, joinedPositionals } from "./cli-flag-parsers.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
+import { scheduleCalendarEventsSearchEvent } from "./cli-search-events.ts";
 import { buildRoutineHeartbeat, parseRoutineStaggerMs, parseSimpleDurationMs, parseWatchTarget, writeTemporalExecutions, writeTemporalItems } from "./cli-temporal-utils.ts";
+import { resolveClawjsDataRoot } from "./v1-data.ts";
 
 export async function runTemporalCli(input: {
   argv: string[];
@@ -74,6 +76,7 @@ export async function runTemporalCli(input: {
         return CLI_EXIT_USAGE;
       }
       const payload = await claw.calendar.create({
+        id: flags.id,
         title,
         description: flags.description,
         location: flags.location,
@@ -85,6 +88,7 @@ export async function runTemporalCli(input: {
         ...(flags["agent-id"] ? { agentId: flags["agent-id"] } : {}),
         schedule: { mode: "one_off", timezone: flags.timezone || "UTC", startsAt: flags["starts-at"] },
       });
+      scheduleLocalCalendarSearchEvent(flags, "upsert", payload.item.id);
       if (wantsJson) writeTemporalJson(payload);
       else writeTemporalItems(context.stdout, [payload.item]);
       return CLI_EXIT_OK;
@@ -115,6 +119,7 @@ export async function runTemporalCli(input: {
         ...(flags.timezone ? { timezone: flags.timezone } : {}),
         ...(flags["starts-at"] ? { schedule: { mode: "one_off", timezone: flags.timezone || "UTC", startsAt: flags["starts-at"] } } : {}),
       });
+      scheduleLocalCalendarSearchEvent(flags, "upsert", payload.item.id);
       if (wantsJson) writeTemporalJson(payload);
       else writeTemporalItems(context.stdout, [payload.item]);
       return CLI_EXIT_OK;
@@ -126,6 +131,7 @@ export async function runTemporalCli(input: {
         return CLI_EXIT_USAGE;
       }
       const payload = await claw.calendar.delete(id);
+      scheduleLocalCalendarSearchEvent(flags, "delete", id);
       if (wantsJson) writeTemporalJson(payload);
       else context.stdout.write("ok\n");
       return CLI_EXIT_OK;
@@ -577,4 +583,14 @@ export async function runTemporalCli(input: {
   }
 
   return null;
+}
+
+function scheduleLocalCalendarSearchEvent(flags: Record<string, string>, operation: "upsert" | "delete", eventId: string) {
+  if (flags["time-url"] || process.env.CLAW_TIME_URL) return;
+  scheduleCalendarEventsSearchEvent({
+    operation,
+    eventId,
+    dataDir: resolveClawjsDataRoot(flags["data-dir"] ? { ...process.env, CLAW_DATA_DIR: flags["data-dir"] } : process.env),
+    flags,
+  });
 }

@@ -4,8 +4,8 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
-import { CLI_EXIT_OK } from "./index.ts";
-import { scheduleSheetsWorkbookSearchEvent } from "./cli-search-events.ts";
+import { CLI_EXIT_DEGRADED, CLI_EXIT_OK } from "./index.ts";
+import { scheduleSheetsWorkbookSearchEvent, scheduleSlidesDeckSearchEvent } from "./cli-search-events.ts";
 import { runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
 
 test("search rebuild indexes slides.decks from slide manifests", async () => {
@@ -144,6 +144,28 @@ test("slides.decks event jobs refresh changed slide manifests", async () => {
     assert.equal(result?.title, "Event Driven Deck");
     assert.equal(result?.resourceId, createdPayload.deck.id);
     assert.equal(result?.fragments?.some((fragment) => fragment.title === "Event refresh pipeline"), true);
+
+    fs.unlinkSync(createdPayload.path);
+    const deleted = scheduleSlidesDeckSearchEvent({
+      operation: "delete",
+      deckId: createdPayload.deck.id,
+      workspaceRoot,
+      dataDir: dataRoot,
+      flags: { workspace: workspaceRoot },
+    });
+    assert.equal(deleted.ok, true, deleted.error);
+    assert.equal(deleted.job?.source, "slides.decks");
+    assert.equal(deleted.job?.operation, "delete");
+    assert.equal(deleted.job?.resourceId, createdPayload.deck.id);
+    assert.equal(deleted.job?.payload.deckId, createdPayload.deck.id);
+    const slideDeleteRun = await runCliCapture(["search", "service", "run-once", "--source", "slides.decks", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(slideDeleteRun.code, CLI_EXIT_OK);
+    const slideDeleteRunItem = (JSON.parse(slideDeleteRun.stdout) as any).data.service.worker?.items.find((entry: any) => entry.source === "slides.decks");
+    assert.deepEqual({ source: slideDeleteRunItem?.source, operation: slideDeleteRunItem?.operation, status: slideDeleteRunItem?.status, indexed: slideDeleteRunItem?.indexed }, { source: "slides.decks", operation: "delete", status: "done", indexed: 1 });
+    const afterSlideDelete = await runCliCapture(["search", "query", "Slide deck Search queue", "--sources", "slides.decks", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterSlideDelete.code, CLI_EXIT_DEGRADED, afterSlideDelete.stderr || afterSlideDelete.stdout);
+    const afterSlideDeletePayload = JSON.parse(afterSlideDelete.stdout) as any;
+    assert.equal(afterSlideDeletePayload.data.results.some((entry: any) => entry.source === "slides.decks" && entry.resourceId === createdPayload.deck.id), false);
   });
 });
 
@@ -430,5 +452,27 @@ test("sheets.workbooks event jobs refresh changed workbook manifests", async () 
     assert.equal(result?.title, "Event Workbook");
     assert.equal(result?.resourceId, workbookId);
     assert.equal(result?.fragments?.some((fragment) => fragment.title === "Pipeline"), true);
+
+    fs.unlinkSync(path.join(workbooksDir, `${workbookId}.json`));
+    const deleted = scheduleSheetsWorkbookSearchEvent({
+      operation: "delete",
+      workbookId,
+      workspaceRoot,
+      dataDir: dataRoot,
+      flags: { workspace: workspaceRoot },
+    });
+    assert.equal(deleted.ok, true, deleted.error);
+    assert.equal(deleted.job?.source, "sheets.workbooks");
+    assert.equal(deleted.job?.operation, "delete");
+    assert.equal(deleted.job?.resourceId, workbookId);
+    assert.equal(deleted.job?.payload.workbookId, workbookId);
+    const sheetDeleteRun = await runCliCapture(["search", "service", "run-once", "--source", "sheets.workbooks", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(sheetDeleteRun.code, CLI_EXIT_OK);
+    const sheetDeleteRunItem = (JSON.parse(sheetDeleteRun.stdout) as any).data.service.worker?.items.find((entry: any) => entry.source === "sheets.workbooks");
+    assert.deepEqual({ source: sheetDeleteRunItem?.source, operation: sheetDeleteRunItem?.operation, status: sheetDeleteRunItem?.status, indexed: sheetDeleteRunItem?.indexed }, { source: "sheets.workbooks", operation: "delete", status: "done", indexed: 1 });
+    const afterSheetDelete = await runCliCapture(["search", "query", "weighted workbook sentinel", "--sources", "sheets.workbooks", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterSheetDelete.code, CLI_EXIT_DEGRADED, afterSheetDelete.stderr || afterSheetDelete.stdout);
+    const afterSheetDeletePayload = JSON.parse(afterSheetDelete.stdout) as any;
+    assert.equal(afterSheetDeletePayload.data.results.some((entry: any) => entry.source === "sheets.workbooks" && entry.resourceId === workbookId), false);
   });
 });

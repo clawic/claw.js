@@ -812,7 +812,6 @@ test("search service run-once obeys worker resource budgets", async () => {
   }, async () => {
     await runCliCapture(["search", "jobs", "enqueue", "rebuild", "--source", "commands", "--id", "job:budget:one", "--data-dir", dataRoot, "--json"], workspaceRoot);
     await runCliCapture(["search", "jobs", "enqueue", "rebuild", "--source", "commands", "--id", "job:budget:two", "--data-dir", dataRoot, "--json"], workspaceRoot);
-
     const limitedRun = await runCliCapture(["search", "service", "run-once", "--data-dir", dataRoot, "--json", "--max-jobs", "1", "--max-runtime-ms", "30000"], workspaceRoot);
     assert.equal(limitedRun.code, CLI_EXIT_OK);
     const limitedPayload = JSON.parse(limitedRun.stdout) as {
@@ -891,7 +890,6 @@ test("search source controls persist canonical config in core.sqlite", async () 
     };
     assert.equal(queryPayload.data.partial, true);
     assert.equal(queryPayload.data.omittedSources.some((source) => source.source === "commands" && source.reason === "disabled" && source.message?.includes("paused")), true);
-
     const resumed = await runCliCapture(["search", "sources", "resume", "commands", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(resumed.code, CLI_EXIT_OK);
     const resumedCore = new Database(path.join(dataRoot, "core.sqlite"));
@@ -920,7 +918,6 @@ test("search command fallback is explicit and does not broaden section search by
     };
     assert.deepEqual(scopedPayload.data.results, []);
     assert.deepEqual(scopedPayload.data.commandFallback, { policy: "off", applied: false, reason: "disabled", added: 0 });
-
     const fallback = await runCliCapture([
       "search",
       "query",
@@ -952,7 +949,6 @@ test("search command fallback is explicit and does not broaden section search by
     assert.ok(fallbackPayload.data.commandFallback.added <= 2);
   });
 });
-
 test("search service upsert jobs refresh only the targeted database resource", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-resource-db-"));
   const dataRoot = path.join(workspaceRoot, ".claw", "data");
@@ -1009,7 +1005,6 @@ test("search service upsert jobs refresh only the targeted database resource", a
     const queuedJob = jobsPayload.data.items.find((job) => job.status === "queued");
     assert.ok(doneJob);
     assert.ok(queuedJob);
-
     const doneTerm = doneJob.resourceId.endsWith(`:${firstPayload.data.id}`) ? "needle-alpha-only" : "needle-beta-only";
     const queuedTerm = queuedJob.resourceId.endsWith(`:${secondPayload.data.id}`) ? "needle-beta-only" : "needle-alpha-only";
     const store = new SearchStore(path.join(dataRoot, "search.sqlite"));
@@ -1021,7 +1016,6 @@ test("search service upsert jobs refresh only the targeted database resource", a
     }
   });
 });
-
 test("search service upsert jobs refresh only the targeted media resource", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-resource-media-"));
   const dataRoot = path.join(workspaceRoot, "data");
@@ -1048,7 +1042,6 @@ test("search service upsert jobs refresh only the targeted media resource", asyn
       sourceText: "needle-media-beta-only",
       createdAt: "2026-05-17T00:00:00.000Z",
     })}\n`);
-
     const scheduled = await runCliCapture([
       "search",
       "jobs",
@@ -1065,7 +1058,6 @@ test("search service upsert jobs refresh only the targeted media resource", asyn
       "--json",
     ], workspaceRoot);
     assert.equal(scheduled.code, CLI_EXIT_OK);
-
     const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "media.assets", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(serviceRun.code, CLI_EXIT_OK);
     const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
@@ -1073,7 +1065,6 @@ test("search service upsert jobs refresh only the targeted media resource", asyn
     };
     assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
     assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
-
     const store = new SearchStore(path.join(dataRoot, "search.sqlite"));
     try {
       assert.equal(store.query({ query: "needle-media-alpha-only", sources: ["media.assets"] }).results.length, 1);
@@ -1083,7 +1074,6 @@ test("search service upsert jobs refresh only the targeted media resource", asyn
     }
   });
 });
-
 test("search rebuild indexes sessions.chats from the sessions sidecar", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-sessions-"));
   const dataRoot = path.join(workspaceRoot, "data");
@@ -1104,10 +1094,8 @@ test("search rebuild indexes sessions.chats from the sessions sidecar", async ()
       JSON.stringify({ type: "event_msg", payload: { type: "user_message", message: "Index the large rollout and keep chat search fast" } }),
       "",
     ].join("\n"));
-
     const index = await runCliCapture(["sessions", "index", "--root", sessionsRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(index.code, CLI_EXIT_OK);
-
     const rebuild = await runCliCapture(["search", "rebuild", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json"], workspaceRoot);
     assert.equal(rebuild.code, CLI_EXIT_OK);
     const rebuildPayload = JSON.parse(rebuild.stdout) as {
@@ -1120,7 +1108,6 @@ test("search rebuild indexes sessions.chats from the sessions sidecar", async ()
     assert.equal(rebuildPayload.data.sources.includes("sessions.chats"), true);
     assert.equal(rebuildPayload.data.pendingSources.includes("sessions.chats"), false);
     assert.equal(rebuildPayload.data.indexedBySource["sessions.chats"], 1);
-
     const query = await runCliCapture(["search", "query", "large rollout", "--domains", "sessions", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
@@ -1143,7 +1130,6 @@ test("search rebuild indexes sessions.chats from the sessions sidecar", async ()
     assert.equal(sessionResult?.type, "chat");
     assert.equal(sessionResult?.actions?.some((action) => action.id === "open" && action.kind === "open"), true);
     assert.equal(sessionResult?.fragments?.some((fragment) => fragment.snippet?.includes("keep chat search fast")), true);
-
     const status = await runCliCapture(["search", "status", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(status.code, CLI_EXIT_OK);
     const statusPayload = JSON.parse(status.stdout) as {
@@ -1154,7 +1140,6 @@ test("search rebuild indexes sessions.chats from the sessions sidecar", async ()
     assert.ok(sessionsStatus?.lastIndexedAt);
   });
 });
-
 test("sessions.chats event jobs refresh and tombstone individual chats", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-session-events-"));
   const dataRoot = path.join(workspaceRoot, "data");
@@ -1175,10 +1160,8 @@ test("sessions.chats event jobs refresh and tombstone individual chats", async (
       JSON.stringify({ type: "event_msg", payload: { type: "user_message", message: "A session-event-refresh-needle proves chat event refresh" } }),
       "",
     ].join("\n"));
-
     const index = await runCliCapture(["sessions", "index", "--root", sessionsRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(index.code, CLI_EXIT_OK);
-
     const scheduled = scheduleSessionChatSearchEvent({
       operation: "upsert",
       sessionId,
@@ -1191,7 +1174,6 @@ test("sessions.chats event jobs refresh and tombstone individual chats", async (
     assert.equal(scheduled.job?.shard, "hot");
     assert.equal(scheduled.job?.payload.eventDriven, true);
     assert.equal(scheduled.job?.payload.sessionId, sessionId);
-
     const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "sessions.chats", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(serviceRun.code, CLI_EXIT_OK);
     const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
@@ -1201,7 +1183,6 @@ test("sessions.chats event jobs refresh and tombstone individual chats", async (
     assert.equal(serviceRunPayload.data.worker?.items[0]?.source, "sessions.chats");
     assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
     assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
-
     const query = await runCliCapture(["search", "query", "session-event-refresh-needle", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
@@ -1211,14 +1192,12 @@ test("sessions.chats event jobs refresh and tombstone individual chats", async (
     assert.equal(result?.source, "sessions.chats");
     assert.equal(result?.domain, "sessions");
     assert.equal(result?.fragments?.some((fragment) => fragment.snippet?.includes("session-event-refresh-needle")), true);
-
     const sessionsDb = new Database(sessionsDbPath);
     try {
       sessionsDb.prepare("UPDATE conversation_sessions SET archived = 1 WHERE session_id = ?").run(sessionId);
     } finally {
       sessionsDb.close();
     }
-
     const deleted = scheduleSessionChatSearchEvent({
       operation: "delete",
       sessionId,
@@ -1226,17 +1205,14 @@ test("sessions.chats event jobs refresh and tombstone individual chats", async (
     });
     assert.equal(deleted.ok, true, deleted.error);
     assert.equal(deleted.job?.operation, "delete");
-
     const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "sessions.chats", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(deleteRun.code, CLI_EXIT_OK);
-
     const afterDelete = await runCliCapture(["search", "query", "session-event-refresh-needle", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(afterDelete.code, CLI_EXIT_DEGRADED);
     const afterDeletePayload = JSON.parse(afterDelete.stdout) as { data: { results: unknown[] } };
     assert.deepEqual(afterDeletePayload.data.results, []);
   });
 });
-
 test("search rebuild indexes database.records from core.sqlite", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-database-"));
   const dataRoot = path.join(workspaceRoot, ".claw", "data");
@@ -1264,7 +1240,6 @@ test("search rebuild indexes database.records from core.sqlite", async () => {
     assert.equal(create.code, CLI_EXIT_OK);
     const createPayload = JSON.parse(create.stdout) as { data: { id: string } };
     assert.ok(createPayload.data.id);
-
     const createdJobs = await runCliCapture(["search", "jobs", "--source", "database.records", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(createdJobs.code, CLI_EXIT_OK);
     const createdJobsPayload = JSON.parse(createdJobs.stdout) as {
@@ -1277,7 +1252,6 @@ test("search rebuild indexes database.records from core.sqlite", async () => {
     assert.equal(createdJob?.payload.eventDriven, true);
     assert.equal(createdJob?.payload.collection, "contacts");
     assert.equal(createdJob?.payload.recordId, createPayload.data.id);
-
     const sensitive = await runCliCapture([
       "db",
       "contacts",
@@ -1294,7 +1268,6 @@ test("search rebuild indexes database.records from core.sqlite", async () => {
       "--json",
     ], workspaceRoot);
     assert.equal(sensitive.code, CLI_EXIT_OK);
-
     const rebuild = await runCliCapture(["search", "rebuild", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(rebuild.code, CLI_EXIT_OK);
     const rebuildPayload = JSON.parse(rebuild.stdout) as {
@@ -1307,7 +1280,6 @@ test("search rebuild indexes database.records from core.sqlite", async () => {
     assert.equal(rebuildPayload.data.sources.includes("database.records"), true);
     assert.equal(rebuildPayload.data.pendingSources.includes("database.records"), false);
     assert.equal(rebuildPayload.data.indexedBySource["database.records"], 2);
-
     const query = await runCliCapture(["search", "query", "Analytical engine", "--domains", "database", "--data-dir", dataRoot, "--json", "--limit", "5", "--explain", "true"], workspaceRoot);
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
@@ -1525,7 +1497,6 @@ test("search rebuild indexes work.items from productivity records", async () => 
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "collection"), true);
   });
 });
-
 test("database writes enqueue work.items refresh jobs", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-work-events-"));
   const dataRoot = path.join(workspaceRoot, ".claw", "data");
@@ -1837,7 +1808,6 @@ test("agent entity writes enqueue and index agent catalog fast paths without sec
       "--json",
     ], workspaceRoot);
     assert.equal(collection.code, CLI_EXIT_OK);
-
     const connection = await runCliCapture([
       "connections",
       "upsert",
@@ -1853,7 +1823,6 @@ test("agent entity writes enqueue and index agent catalog fast paths without sec
       "--json",
     ], workspaceRoot);
     assert.equal(connection.code, CLI_EXIT_OK);
-
     const jobs = await runCliCapture(["search", "jobs", "--source", "agents.catalog", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(jobs.code, CLI_EXIT_OK);
     const jobsPayload = JSON.parse(jobs.stdout) as {
@@ -1868,7 +1837,6 @@ test("agent entity writes enqueue and index agent catalog fast paths without sec
     assert.equal(jobsPayload.data.items.some((job) => job.resourceId === "personality:personality.review"), true);
     assert.equal(jobsPayload.data.items.some((job) => job.resourceId === "skill_collection:collection.review"), true);
     assert.equal(jobsPayload.data.items.some((job) => job.resourceId === "connection:github.ops"), true);
-
     const run = await runCliCapture(["search", "service", "run-once", "--source", "agents.catalog", "--data-dir", dataRoot, "--json", "--limit", "4"], workspaceRoot);
     assert.equal(run.code, CLI_EXIT_OK);
 
@@ -2433,6 +2401,39 @@ test("search service resource jobs refresh only the targeted connector operation
     } finally {
       store.close();
     }
+    const deleteSqlite = new Database(resolveClawjsMainDbPath());
+    try {
+      deleteSqlite.prepare("DELETE FROM connector_operations WHERE id = ?").run("openai.images.edit");
+    } finally {
+      deleteSqlite.close();
+    }
+    const deleted = await runCliCapture([
+      "search",
+      "jobs",
+      "schedule",
+      "delete",
+      "--source",
+      "connectors.catalog",
+      "--resource-id",
+      "openai.images.edit",
+      "--payload",
+      JSON.stringify({ operationId: "openai.images.edit" }),
+      "--data-dir",
+      dataRoot,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(deleted.code, CLI_EXIT_OK);
+    const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "connectors.catalog", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(deleteRun.code, CLI_EXIT_OK);
+    const deleteRunPayload = JSON.parse(deleteRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    const connectorDeleteRunItem = deleteRunPayload.data.worker?.items.find((entry) => entry.source === "connectors.catalog");
+    assert.deepEqual({ source: connectorDeleteRunItem?.source, operation: connectorDeleteRunItem?.operation, status: connectorDeleteRunItem?.status, indexed: connectorDeleteRunItem?.indexed }, { source: "connectors.catalog", operation: "delete", status: "done", indexed: 1 });
+    const afterConnectorDelete = await runCliCapture(["search", "query", "alpha", "--sources", "connectors.catalog", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterConnectorDelete.code, CLI_EXIT_DEGRADED, afterConnectorDelete.stderr || afterConnectorDelete.stdout);
+    const afterConnectorDeletePayload = JSON.parse(afterConnectorDelete.stdout) as any;
+    assert.equal(afterConnectorDeletePayload.data.results.some((entry: any) => entry.source === "connectors.catalog" && entry.resourceId === "openai.images.edit"), false);
   });
 });
 test("search rebuild indexes mcp.servers without secret values", async () => {
@@ -3468,7 +3469,6 @@ test("search rebuild indexes signals.observations from signal catalog and observ
     assert.equal(observation.code, CLI_EXIT_OK);
     const observationPayload = JSON.parse(observation.stdout) as { data: { id: string; variableId: string } };
     assert.equal(observationPayload.data.variableId, "signal.activation");
-
     const jobs = await runCliCapture(["search", "jobs", "--source", "signals.observations", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(jobs.code, CLI_EXIT_OK);
     const jobsPayload = JSON.parse(jobs.stdout) as {
@@ -3484,7 +3484,6 @@ test("search rebuild indexes signals.observations from signal catalog and observ
     const observationJob = jobsPayload.data.items.find((job) => job.resourceId === `observation:${observationPayload.data.id}`);
     assert.equal(observationJob?.operation, "upsert");
     assert.equal(observationJob?.payload.observationId, observationPayload.data.id);
-
     const rebuild = await runCliCapture(["search", "rebuild", "--source", "signals.observations", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(rebuild.code, CLI_EXIT_OK);
     const rebuildPayload = JSON.parse(rebuild.stdout) as {
@@ -3493,7 +3492,6 @@ test("search rebuild indexes signals.observations from signal catalog and observ
     assert.equal(rebuildPayload.data.sources.includes("signals.observations"), true);
     assert.equal(rebuildPayload.data.pendingSources.includes("signals.observations"), false);
     assert.equal(rebuildPayload.data.indexedBySource["signals.observations"], 3);
-
     const query = await runCliCapture([
       "search",
       "query",
@@ -3541,7 +3539,6 @@ test("search rebuild indexes signals.observations from signal catalog and observ
     assert.equal(result?.actions?.some((action) => action.id === "open" && action.kind === "open"), true);
     assert.ok(result?.explanation?.matchedBy?.length);
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "variableId"), true);
-
     const deleted = await runCliCapture(["signals", "delete", observationPayload.data.id, "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(deleted.code, CLI_EXIT_OK);
     const deleteJobs = await runCliCapture(["search", "jobs", "--source", "signals.observations", "--data-dir", dataRoot, "--json"], workspaceRoot);
@@ -3574,7 +3571,6 @@ test("search rebuild indexes signals.observations from signal catalog and observ
     assert.equal(afterSignalsDeletePayload.data.results.some((entry: any) => entry.source === "signals.observations" && entry.metadata?.observationId === observationPayload.data.id), false);
   });
 });
-
 test("search rebuild indexes calendar.events from core.sqlite", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-calendar-"));
   const dataRoot = path.join(workspaceRoot, "data");
@@ -3596,16 +3592,13 @@ test("search rebuild indexes calendar.events from core.sqlite", async () => {
       "2026-05-19T09:00:00.000Z",
       "--ends-at",
       "2026-05-19T10:00:00.000Z",
-      "--calendar-id",
-      "framework",
-      "--metadata",
-      JSON.stringify({ agenda: "Review fast path budgets and Search source coverage." }),
+      "--description",
+      "Review fast path budgets and Search source coverage.",
       "--data-dir",
       dataRoot,
       "--json",
     ], workspaceRoot);
     assert.equal(created.code, CLI_EXIT_OK);
-
     const jobs = await runCliCapture(["search", "jobs", "--source", "calendar.events", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(jobs.code, CLI_EXIT_OK);
     const jobsPayload = JSON.parse(jobs.stdout) as {
@@ -3615,7 +3608,6 @@ test("search rebuild indexes calendar.events from core.sqlite", async () => {
     assert.equal(eventJob?.operation, "upsert");
     assert.equal(eventJob?.shard, "hot");
     assert.equal(eventJob?.payload.eventId, "event-search-review");
-
     const rebuild = await runCliCapture(["search", "rebuild", "--source", "calendar.events", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(rebuild.code, CLI_EXIT_OK);
     const rebuildPayload = JSON.parse(rebuild.stdout) as {
@@ -3624,15 +3616,12 @@ test("search rebuild indexes calendar.events from core.sqlite", async () => {
     assert.equal(rebuildPayload.data.sources.includes("calendar.events"), true);
     assert.equal(rebuildPayload.data.pendingSources.includes("calendar.events"), false);
     assert.equal(rebuildPayload.data.indexedBySource["calendar.events"], 1);
-
     const query = await runCliCapture([
       "search",
       "query",
       "architecture review",
       "--domains",
       "calendar",
-      "--filters",
-      JSON.stringify({ "metadata.calendarId": "framework" }),
       "--data-dir",
       dataRoot,
       "--json",
@@ -3650,7 +3639,7 @@ test("search rebuild indexes calendar.events from core.sqlite", async () => {
           domain: string;
           type: string;
           title: string;
-          metadata?: { eventId?: string; calendarId?: string; startsAt?: string; endsAt?: string; source?: string; hasPage?: boolean };
+          metadata?: { eventId?: string; status?: string; startsAt?: string; endsAt?: string; source?: string; hasPage?: boolean };
           fragments?: Array<{ title?: string; snippet?: string }>;
           actions?: Array<{ id: string; kind: string }>;
           explanation?: { matchedBy?: string[] };
@@ -3664,16 +3653,15 @@ test("search rebuild indexes calendar.events from core.sqlite", async () => {
     assert.equal(result?.domain, "calendar");
     assert.equal(result?.type, "event");
     assert.equal(result?.title, "Search Architecture Review");
-    assert.equal(result?.metadata?.calendarId, "framework");
+    assert.equal(result?.metadata?.status, "active");
     assert.equal(result?.metadata?.startsAt, "2026-05-19T09:00:00.000Z");
     assert.equal(result?.metadata?.endsAt, "2026-05-19T10:00:00.000Z");
-    assert.equal(result?.metadata?.source, "clawjs");
+    assert.equal(result?.metadata?.source, "clawjs-time");
     assert.equal(result?.metadata?.hasPage, false);
-    assert.equal(result?.fragments?.some((fragment) => fragment.title === "metadata" && fragment.snippet?.includes("fast path budgets")), true);
+    assert.equal(result?.snippet?.includes("fast path budgets") || result?.fragments?.some((fragment) => fragment.title === "metadata" && fragment.snippet?.includes("fast path budgets")), true);
     assert.equal(result?.actions?.some((action) => action.id === "open" && action.kind === "open"), true);
     assert.ok(result?.explanation?.matchedBy?.length);
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "calendarId"), true);
-
     const deleted = await runCliCapture(["calendar", "delete", "event-search-review", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(deleted.code, CLI_EXIT_OK);
     const deleteJobs = await runCliCapture(["search", "jobs", "--source", "calendar.events", "--data-dir", dataRoot, "--json"], workspaceRoot);
@@ -3683,9 +3671,16 @@ test("search rebuild indexes calendar.events from core.sqlite", async () => {
     };
     const deleteJob = deleteJobsPayload.data.items.find((job) => job.operation === "delete" && job.resourceId === "event-search-review");
     assert.equal(deleteJob?.payload.eventId, "event-search-review");
+    const calendarDeleteRun = await runCliCapture(["search", "service", "run-once", "--source", "calendar.events", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(calendarDeleteRun.code, CLI_EXIT_OK);
+    const calendarDeleteRunItem = (JSON.parse(calendarDeleteRun.stdout) as any).data.service.worker?.items.find((entry: any) => entry.source === "calendar.events");
+    assert.deepEqual({ source: calendarDeleteRunItem?.source, operation: calendarDeleteRunItem?.operation, status: calendarDeleteRunItem?.status, indexed: calendarDeleteRunItem?.indexed }, { source: "calendar.events", operation: "delete", status: "done", indexed: 1 });
+    const afterCalendarDelete = await runCliCapture(["search", "query", "architecture review", "--sources", "calendar.events", "--filters", JSON.stringify({ "metadata.status": "active", redacted: false }), "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterCalendarDelete.code, CLI_EXIT_DEGRADED, afterCalendarDelete.stderr || afterCalendarDelete.stdout);
+    const afterCalendarDeletePayload = JSON.parse(afterCalendarDelete.stdout) as any;
+    assert.equal(afterCalendarDeletePayload.data.results.some((entry: any) => entry.source === "calendar.events" && entry.metadata?.eventId === "event-search-review"), false);
   });
 });
-
 test("search rebuild indexes finance.records with redacted previews", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-finance-"));
   const dataRoot = path.join(workspaceRoot, ".claw", "data");
@@ -3712,7 +3707,6 @@ test("search rebuild indexes finance.records with redacted previews", async () =
     ], workspaceRoot);
     assert.equal(created.code, CLI_EXIT_OK);
     const createdPayload = JSON.parse(created.stdout) as { data: { id: string } };
-
     const jobs = await runCliCapture(["search", "jobs", "--source", "finance.records", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(jobs.code, CLI_EXIT_OK);
     const jobsPayload = JSON.parse(jobs.stdout) as {
@@ -3722,7 +3716,6 @@ test("search rebuild indexes finance.records with redacted previews", async () =
     assert.equal(recordJob?.operation, "upsert");
     assert.equal(recordJob?.shard, "hot");
     assert.equal(recordJob?.payload.recordId, createdPayload.data.id);
-
     const rebuild = await runCliCapture(["search", "rebuild", "--source", "finance.records", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(rebuild.code, CLI_EXIT_OK);
     const rebuildPayload = JSON.parse(rebuild.stdout) as {
@@ -3731,7 +3724,6 @@ test("search rebuild indexes finance.records with redacted previews", async () =
     assert.equal(rebuildPayload.data.sources.includes("finance.records"), true);
     assert.equal(rebuildPayload.data.pendingSources.includes("finance.records"), false);
     assert.equal(rebuildPayload.data.indexedBySource["finance.records"], 1);
-
     const query = await runCliCapture([
       "search",
       "query",
@@ -3784,7 +3776,6 @@ test("search rebuild indexes finance.records with redacted previews", async () =
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "currency"), true);
     assert.equal(JSON.stringify(result).includes("Travel invoice"), false);
     assert.equal(JSON.stringify(result).includes("12945"), false);
-
     const deleted = await runCliCapture(["transaction", "delete", createdPayload.data.id, "--json"], workspaceRoot);
     assert.equal(deleted.code, CLI_EXIT_OK);
     const deleteJobs = await runCliCapture(["search", "jobs", "--source", "finance.records", "--data-dir", dataRoot, "--json"], workspaceRoot);
@@ -3794,9 +3785,16 @@ test("search rebuild indexes finance.records with redacted previews", async () =
     };
     const deleteJob = deleteJobsPayload.data.items.find((job) => job.operation === "delete" && job.resourceId === `main:transactions:${createdPayload.data.id}`);
     assert.equal(deleteJob?.payload.recordId, createdPayload.data.id);
+    const financeDeleteRun = await runCliCapture(["search", "service", "run-once", "--source", "finance.records", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(financeDeleteRun.code, CLI_EXIT_OK);
+    const financeDeleteRunItem = (JSON.parse(financeDeleteRun.stdout) as any).data.service.worker?.items.find((entry: any) => entry.source === "finance.records");
+    assert.deepEqual({ source: financeDeleteRunItem?.source, operation: financeDeleteRunItem?.operation, status: financeDeleteRunItem?.status, indexed: financeDeleteRunItem?.indexed }, { source: "finance.records", operation: "delete", status: "done", indexed: 1 });
+    const afterFinanceRecordDelete = await runCliCapture(["search", "query", "travel invoice", "--sources", "finance.records", "--filters", JSON.stringify({ "metadata.currency": "USD", redacted: true }), "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterFinanceRecordDelete.code, CLI_EXIT_DEGRADED, afterFinanceRecordDelete.stderr || afterFinanceRecordDelete.stdout);
+    const afterFinanceRecordDeletePayload = JSON.parse(afterFinanceRecordDelete.stdout) as any;
+    assert.equal(afterFinanceRecordDeletePayload.data.results.some((entry: any) => entry.source === "finance.records" && entry.metadata?.recordId === createdPayload.data.id), false);
   });
 });
-
 test("search service indexes local finance_records with redacted previews", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-finance-local-"));
   const dataRoot = path.join(workspaceRoot, ".claw", "data");
@@ -3831,7 +3829,6 @@ test("search service indexes local finance_records with redacted previews", asyn
       "--json",
     ], workspaceRoot);
     assert.equal(created.code, CLI_EXIT_OK);
-
     const jobs = await runCliCapture(["search", "jobs", "--source", "finance.records", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(jobs.code, CLI_EXIT_OK);
     const jobsPayload = JSON.parse(jobs.stdout) as {
@@ -3842,7 +3839,6 @@ test("search service indexes local finance_records with redacted previews", asyn
     assert.equal(recordJob?.shard, "hot");
     assert.equal(recordJob?.payload.table, "finance_records");
     assert.equal(recordJob?.payload.recordId, "finance.local.invoice");
-
     const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "finance.records", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(serviceRun.code, CLI_EXIT_OK);
     const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
@@ -3852,7 +3848,6 @@ test("search service indexes local finance_records with redacted previews", asyn
     assert.equal(serviceRunPayload.data.worker?.items[0]?.operation, "upsert");
     assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
     assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
-
     const query = await runCliCapture([
       "search",
       "query",
@@ -3906,7 +3901,6 @@ test("search service indexes local finance_records with redacted previews", asyn
     assert.ok(result?.explanation?.matchedBy?.length);
     assert.equal(JSON.stringify(result).includes("Sensitive launch invoice evidence"), false);
     assert.equal(JSON.stringify(result).includes("88.5"), false);
-
     const deleted = await runCliCapture(["finance", "delete", "--id", "finance.local.invoice", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(deleted.code, CLI_EXIT_OK, deleted.stderr || deleted.stdout);
     const deleteJobs = await runCliCapture(["search", "jobs", "--source", "finance.records", "--data-dir", dataRoot, "--json"], workspaceRoot);
@@ -3917,9 +3911,16 @@ test("search service indexes local finance_records with redacted previews", asyn
     const deleteJob = deleteJobsPayload.data.items.find((job) => job.operation === "delete" && job.resourceId === "finance_records:finance.local.invoice");
     assert.equal(deleteJob?.payload.table, "finance_records");
     assert.equal(deleteJob?.payload.recordId, "finance.local.invoice");
+    const financeLocalDeleteRun = await runCliCapture(["search", "service", "run-once", "--source", "finance.records", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(financeLocalDeleteRun.code, CLI_EXIT_OK);
+    const financeLocalDeleteRunItem = (JSON.parse(financeLocalDeleteRun.stdout) as any).data.service.worker?.items.find((entry: any) => entry.source === "finance.records");
+    assert.deepEqual({ source: financeLocalDeleteRunItem?.source, operation: financeLocalDeleteRunItem?.operation, status: financeLocalDeleteRunItem?.status, indexed: financeLocalDeleteRunItem?.indexed }, { source: "finance.records", operation: "delete", status: "done", indexed: 1 });
+    const afterFinanceLocalDelete = await runCliCapture(["search", "query", "sensitive launch invoice evidence", "--sources", "finance.records", "--filters", JSON.stringify({ "metadata.table": "finance_records", redacted: true }), "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterFinanceLocalDelete.code, CLI_EXIT_DEGRADED, afterFinanceLocalDelete.stderr || afterFinanceLocalDelete.stdout);
+    const afterFinanceLocalDeletePayload = JSON.parse(afterFinanceLocalDelete.stdout) as any;
+    assert.equal(afterFinanceLocalDeletePayload.data.results.some((entry: any) => entry.source === "finance.records" && entry.metadata?.recordId === "finance.local.invoice"), false);
   });
 });
-
 test("search service indexes ELN records from dense database writes", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-eln-"));
   const dataRoot = path.join(workspaceRoot, ".claw", "data");
@@ -3947,11 +3948,9 @@ test("search service indexes ELN records from dense database writes", async () =
     ], workspaceRoot);
     assert.equal(created.code, CLI_EXIT_OK);
     const createdPayload = JSON.parse(created.stdout) as { data: { id: string } };
-
     const databaseJobs = await runCliCapture(["search", "jobs", "--source", "database.records", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(databaseJobs.code, CLI_EXIT_OK);
     assert.notEqual(JSON.parse(databaseJobs.stdout).data.items.length, 0, created.stdout);
-
     const jobs = await runCliCapture(["search", "jobs", "--source", "eln.records", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(jobs.code, CLI_EXIT_OK);
     const jobsPayload = JSON.parse(jobs.stdout) as {
@@ -3963,7 +3962,6 @@ test("search service indexes ELN records from dense database writes", async () =
     assert.equal(recordJob?.payload.namespaceId, "main");
     assert.equal(recordJob?.payload.collection, "lab_notebooks");
     assert.equal(recordJob?.payload.recordId, createdPayload.data.id);
-
     const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "eln.records", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(serviceRun.code, CLI_EXIT_OK);
     const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
@@ -3973,7 +3971,6 @@ test("search service indexes ELN records from dense database writes", async () =
     assert.equal(serviceRunPayload.data.worker?.items[0]?.operation, "upsert");
     assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
     assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
-
     const query = await runCliCapture([
       "search",
       "query",
@@ -4024,7 +4021,6 @@ test("search service indexes ELN records from dense database writes", async () =
     assert.equal(result?.snippet?.includes("Dose Response") || result?.fragments?.some((fragment) => fragment.snippet?.includes("Dose Response")), true);
     assert.equal(result?.actions?.some((action) => action.id === "open" && action.kind === "open"), true);
     assert.ok(result?.explanation?.matchedBy?.length);
-
     const deleted = await runCliCapture(["db", "lab_notebooks", "delete", createdPayload.data.id, "--json"], workspaceRoot);
     assert.equal(deleted.code, CLI_EXIT_OK);
     const deleteJobs = await runCliCapture(["search", "jobs", "--source", "eln.records", "--data-dir", dataRoot, "--json"], workspaceRoot);
@@ -4035,9 +4031,16 @@ test("search service indexes ELN records from dense database writes", async () =
     const deleteJob = deleteJobsPayload.data.items.find((job) => job.operation === "delete" && job.resourceId === `main:lab_notebooks:${createdPayload.data.id}`);
     assert.equal(deleteJob?.payload.collection, "lab_notebooks");
     assert.equal(deleteJob?.payload.recordId, createdPayload.data.id);
+    const elnDeleteRun = await runCliCapture(["search", "service", "run-once", "--source", "eln.records", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(elnDeleteRun.code, CLI_EXIT_OK);
+    const elnDeleteRunItem = (JSON.parse(elnDeleteRun.stdout) as any).data.service.worker?.items.find((entry: any) => entry.source === "eln.records");
+    assert.deepEqual({ source: elnDeleteRunItem?.source, operation: elnDeleteRunItem?.operation, status: elnDeleteRunItem?.status, indexed: elnDeleteRunItem?.indexed }, { source: "eln.records", operation: "delete", status: "done", indexed: 1 });
+    const afterElnDelete = await runCliCapture(["search", "query", "marker dose response", "--sources", "eln.records", "--filters", JSON.stringify({ "metadata.collection": "lab_notebooks", redacted: false }), "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterElnDelete.code, CLI_EXIT_DEGRADED, afterElnDelete.stderr || afterElnDelete.stdout);
+    const afterElnDeletePayload = JSON.parse(afterElnDelete.stdout) as any;
+    assert.equal(afterElnDeletePayload.data.results.some((entry: any) => entry.source === "eln.records" && entry.metadata?.recordId === createdPayload.data.id), false);
   });
 });
-
 test("search rebuild indexes images.derived from image library records", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-images-"));
   const dataRoot = path.join(workspaceRoot, "data");
@@ -4091,7 +4094,6 @@ test("search rebuild indexes images.derived from image library records", async (
         objects: [{ name: "badge" }, { label: "wordmark" }],
       },
     }, null, 2));
-
     const rebuild = await runCliCapture(["search", "rebuild", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(rebuild.code, CLI_EXIT_OK);
     const rebuildPayload = JSON.parse(rebuild.stdout) as {
@@ -4104,7 +4106,6 @@ test("search rebuild indexes images.derived from image library records", async (
     assert.equal(rebuildPayload.data.sources.includes("images.derived"), true);
     assert.equal(rebuildPayload.data.pendingSources.includes("images.derived"), false);
     assert.equal(rebuildPayload.data.indexedBySource["images.derived"], 1);
-
     const query = await runCliCapture([
       "search",
       "query",
@@ -4160,7 +4161,6 @@ test("search rebuild indexes images.derived from image library records", async (
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "imageType"), true);
   });
 });
-
 test("search rebuild indexes media.assets from workspace media records", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-media-"));
   const dataRoot = path.join(workspaceRoot, "data");
@@ -4207,7 +4207,6 @@ test("search rebuild indexes media.assets from workspace media records", async (
     updatedAt: "2026-05-17T11:00:00.000Z",
     shareIds: [],
   }, null, 2));
-
   await withPatchedEnv({
     CLAW_DATA_DIR: dataRoot,
     CLAW_DB_PATH: undefined,
@@ -4227,7 +4226,6 @@ test("search rebuild indexes media.assets from workspace media records", async (
     assert.equal(rebuildPayload.data.sources.includes("media.assets"), true);
     assert.equal(rebuildPayload.data.pendingSources.includes("media.assets"), false);
     assert.equal(rebuildPayload.data.indexedBySource["media.assets"], 2);
-
     const query = await runCliCapture([
       "search",
       "query",
@@ -4275,7 +4273,6 @@ test("search rebuild indexes media.assets from workspace media records", async (
     assert.equal(result?.fragments?.some((fragment) => fragment.title === "source text" && fragment.snippet?.includes("media indexing")), true);
     assert.ok(result?.explanation?.matchedBy?.length);
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "kind"), true);
-
     const transcriptQuery = await runCliCapture([
       "search",
       "query",
@@ -4310,7 +4307,6 @@ test("search rebuild indexes media.assets from workspace media records", async (
     assert.equal(transcriptFragment?.snippet?.includes("async extractor scheduling"), true);
   });
 });
-
 test("search rebuild indexes generations.artifacts from workspace generation records", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-generations-"));
   const dataRoot = path.join(workspaceRoot, "data");
@@ -4340,7 +4336,6 @@ test("search rebuild indexes generations.artifacts from workspace generation rec
     outputRelativePath: "generations/image/gen-demo-image.png",
     outputMimeType: "image/png",
   }, null, 2));
-
   await withPatchedEnv({
     CLAW_DATA_DIR: dataRoot,
     CLAW_DB_PATH: undefined,
@@ -4360,7 +4355,6 @@ test("search rebuild indexes generations.artifacts from workspace generation rec
     assert.equal(rebuildPayload.data.sources.includes("generations.artifacts"), true);
     assert.equal(rebuildPayload.data.pendingSources.includes("generations.artifacts"), false);
     assert.equal(rebuildPayload.data.indexedBySource["generations.artifacts"], 1);
-
     const query = await runCliCapture([
       "search",
       "query",
@@ -4411,7 +4405,6 @@ test("search rebuild indexes generations.artifacts from workspace generation rec
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "backendId"), true);
   });
 });
-
 test("generations create and delete schedule Search artifact events", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-generation-events-"));
   const dataRoot = path.join(workspaceRoot, "data");
@@ -4443,7 +4436,6 @@ test("generations create and delete schedule Search artifact events", async () =
       "--json",
     ], workspaceRoot);
     assert.equal(registered.code, CLI_EXIT_OK);
-
     const created = await runCliCapture([
       "generations",
       "create",
@@ -4462,7 +4454,6 @@ test("generations create and delete schedule Search artifact events", async () =
     assert.equal(created.code, CLI_EXIT_OK);
     const createdPayload = JSON.parse(created.stdout) as { data: { id: string } };
     assert.match(createdPayload.data.id, /^gen-/);
-
     const upsertJobs = await runCliCapture(["search", "jobs", "--source", "generations.artifacts", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(upsertJobs.code, CLI_EXIT_OK);
     const upsertJobsPayload = JSON.parse(upsertJobs.stdout) as {
@@ -4473,7 +4464,14 @@ test("generations create and delete schedule Search artifact events", async () =
     assert.equal(upsertJob?.shard, "hot");
     assert.equal(upsertJob?.payload.eventDriven, true);
     assert.equal(upsertJob?.payload.generationId, createdPayload.data.id);
-
+    const generationUpsertRun = await runCliCapture(["search", "service", "run-once", "--source", "generations.artifacts", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(generationUpsertRun.code, CLI_EXIT_OK);
+    const generationUpsertRunItem = (JSON.parse(generationUpsertRun.stdout) as any).data.service.worker?.items.find((entry: any) => entry.source === "generations.artifacts");
+    assert.deepEqual({ source: generationUpsertRunItem?.source, operation: generationUpsertRunItem?.operation, status: generationUpsertRunItem?.status, indexed: generationUpsertRunItem?.indexed }, { source: "generations.artifacts", operation: "upsert", status: "done", indexed: 1 });
+    const generationQuery = await runCliCapture(["search", "query", "evented generation search artifact", "--sources", "generations.artifacts", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(generationQuery.code, CLI_EXIT_OK);
+    const generationQueryPayload = JSON.parse(generationQuery.stdout) as any;
+    assert.equal(generationQueryPayload.data.results.some((entry: any) => entry.source === "generations.artifacts" && entry.metadata?.generationId === createdPayload.data.id), true);
     const deleted = await runCliCapture([
       "generations",
       "delete",
@@ -4486,7 +4484,6 @@ test("generations create and delete schedule Search artifact events", async () =
       "--json",
     ], workspaceRoot);
     assert.equal(deleted.code, CLI_EXIT_OK);
-
     const deleteJobs = await runCliCapture(["search", "jobs", "--source", "generations.artifacts", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(deleteJobs.code, CLI_EXIT_OK);
     const deleteJobsPayload = JSON.parse(deleteJobs.stdout) as {
@@ -4496,9 +4493,16 @@ test("generations create and delete schedule Search artifact events", async () =
     assert.equal(deleteJob?.priority, 80);
     assert.equal(deleteJob?.payload.eventDriven, true);
     assert.equal(deleteJob?.payload.generationId, createdPayload.data.id);
+    const generationDeleteRun = await runCliCapture(["search", "service", "run-once", "--source", "generations.artifacts", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(generationDeleteRun.code, CLI_EXIT_OK);
+    const generationDeleteRunItem = (JSON.parse(generationDeleteRun.stdout) as any).data.service.worker?.items.find((entry: any) => entry.source === "generations.artifacts");
+    assert.deepEqual({ source: generationDeleteRunItem?.source, operation: generationDeleteRunItem?.operation, status: generationDeleteRunItem?.status, indexed: generationDeleteRunItem?.indexed }, { source: "generations.artifacts", operation: "delete", status: "done", indexed: 1 });
+    const afterGenerationDelete = await runCliCapture(["search", "query", "evented generation search artifact", "--sources", "generations.artifacts", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterGenerationDelete.code, CLI_EXIT_DEGRADED, afterGenerationDelete.stderr || afterGenerationDelete.stdout);
+    const afterGenerationDeletePayload = JSON.parse(afterGenerationDelete.stdout) as any;
+    assert.equal(afterGenerationDeletePayload.data.results.some((entry: any) => entry.source === "generations.artifacts" && entry.metadata?.generationId === createdPayload.data.id), false);
   });
 });
-
 test("image create and delete schedule Search image events", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-image-events-"));
   const dataRoot = path.join(workspaceRoot, "data");
@@ -4530,7 +4534,6 @@ test("image create and delete schedule Search image events", async () => {
       "--json",
     ], workspaceRoot);
     assert.equal(registered.code, CLI_EXIT_OK);
-
     const created = await runCliCapture([
       "image",
       "create",
@@ -4547,7 +4550,6 @@ test("image create and delete schedule Search image events", async () => {
     assert.equal(created.code, CLI_EXIT_OK);
     const createdPayload = JSON.parse(created.stdout) as { data: { id: string } };
     assert.match(createdPayload.data.id, /^img-/);
-
     const upsertJobs = await runCliCapture(["search", "jobs", "--source", "images.derived", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(upsertJobs.code, CLI_EXIT_OK);
     const upsertJobsPayload = JSON.parse(upsertJobs.stdout) as {
@@ -4558,7 +4560,14 @@ test("image create and delete schedule Search image events", async () => {
     assert.equal(upsertJob?.shard, "hot");
     assert.equal(upsertJob?.payload.eventDriven, true);
     assert.equal(upsertJob?.payload.imageId, createdPayload.data.id);
-
+    const imageUpsertRun = await runCliCapture(["search", "service", "run-once", "--source", "images.derived", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(imageUpsertRun.code, CLI_EXIT_OK);
+    const imageUpsertRunItem = (JSON.parse(imageUpsertRun.stdout) as any).data.service.worker?.items.find((entry: any) => entry.source === "images.derived");
+    assert.deepEqual({ source: imageUpsertRunItem?.source, operation: imageUpsertRunItem?.operation, status: imageUpsertRunItem?.status, indexed: imageUpsertRunItem?.indexed }, { source: "images.derived", operation: "upsert", status: "done", indexed: 1 });
+    const imageQuery = await runCliCapture(["search", "query", "evented image search artifact", "--sources", "images.derived", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(imageQuery.code, CLI_EXIT_OK);
+    const imageQueryPayload = JSON.parse(imageQuery.stdout) as any;
+    assert.equal(imageQueryPayload.data.results.some((entry: any) => entry.source === "images.derived" && entry.metadata?.imageId === createdPayload.data.id), true);
     const deleted = await runCliCapture([
       "image",
       "delete",
@@ -4571,7 +4580,6 @@ test("image create and delete schedule Search image events", async () => {
       "--json",
     ], workspaceRoot);
     assert.equal(deleted.code, CLI_EXIT_OK);
-
     const deleteJobs = await runCliCapture(["search", "jobs", "--source", "images.derived", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(deleteJobs.code, CLI_EXIT_OK);
     const deleteJobsPayload = JSON.parse(deleteJobs.stdout) as {
@@ -4581,9 +4589,16 @@ test("image create and delete schedule Search image events", async () => {
     assert.equal(deleteJob?.priority, 80);
     assert.equal(deleteJob?.payload.eventDriven, true);
     assert.equal(deleteJob?.payload.imageId, createdPayload.data.id);
+    const imageDeleteRun = await runCliCapture(["search", "service", "run-once", "--source", "images.derived", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(imageDeleteRun.code, CLI_EXIT_OK);
+    const imageDeleteRunItem = (JSON.parse(imageDeleteRun.stdout) as any).data.service.worker?.items.find((entry: any) => entry.source === "images.derived");
+    assert.deepEqual({ source: imageDeleteRunItem?.source, operation: imageDeleteRunItem?.operation, status: imageDeleteRunItem?.status, indexed: imageDeleteRunItem?.indexed }, { source: "images.derived", operation: "delete", status: "done", indexed: 1 });
+    const afterImageDelete = await runCliCapture(["search", "query", "evented image search artifact", "--sources", "images.derived", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(afterImageDelete.code), true, afterImageDelete.stderr || afterImageDelete.stdout);
+    const afterImageDeletePayload = JSON.parse(afterImageDelete.stdout) as any;
+    assert.equal(afterImageDeletePayload.data.results.some((entry: any) => entry.source === "images.derived" && entry.metadata?.imageId === createdPayload.data.id), false);
   });
 });
-
 test("typed media generation schedules Search media asset events", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-media-events-"));
   const dataRoot = path.join(workspaceRoot, "data");
@@ -4615,7 +4630,6 @@ test("typed media generation schedules Search media asset events", async () => {
       "--json",
     ], workspaceRoot);
     assert.equal(registered.code, CLI_EXIT_OK);
-
     const created = await runCliCapture([
       "generations",
       "create",
@@ -4634,7 +4648,6 @@ test("typed media generation schedules Search media asset events", async () => {
     assert.equal(created.code, CLI_EXIT_OK);
     const createdPayload = JSON.parse(created.stdout) as { data: { id: string } };
     assert.match(createdPayload.data.id, /^gen-/);
-
     const generationJobs = await runCliCapture(["search", "jobs", "--source", "generations.artifacts", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(generationJobs.code, CLI_EXIT_OK);
     const generationJobsPayload = JSON.parse(generationJobs.stdout) as {
@@ -4643,7 +4656,6 @@ test("typed media generation schedules Search media asset events", async () => {
     const generationJob = generationJobsPayload.data.items.find((job) => job.resourceId === createdPayload.data.id && job.operation === "upsert");
     assert.equal(generationJob?.payload.eventDriven, true);
     assert.equal(generationJob?.payload.generationId, createdPayload.data.id);
-
     const mediaJobs = await runCliCapture(["search", "jobs", "--source", "media.assets", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(mediaJobs.code, CLI_EXIT_OK);
     const mediaJobsPayload = JSON.parse(mediaJobs.stdout) as {
@@ -4654,7 +4666,14 @@ test("typed media generation schedules Search media asset events", async () => {
     assert.equal(mediaJob?.shard, "hot");
     assert.equal(mediaJob?.payload.eventDriven, true);
     assert.equal(mediaJob?.payload.mediaId, mediaJob?.resourceId);
-
+    const mediaUpsertRun = await runCliCapture(["search", "service", "run-once", "--source", "media.assets", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(mediaUpsertRun.code, CLI_EXIT_OK);
+    const mediaUpsertRunItem = (JSON.parse(mediaUpsertRun.stdout) as any).data.service.worker?.items.find((entry: any) => entry.source === "media.assets");
+    assert.deepEqual({ source: mediaUpsertRunItem?.source, operation: mediaUpsertRunItem?.operation, status: mediaUpsertRunItem?.status, indexed: mediaUpsertRunItem?.indexed }, { source: "media.assets", operation: "upsert", status: "done", indexed: 1 });
+    const mediaQuery = await runCliCapture(["search", "query", "evented audio search asset", "--sources", "media.assets", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(mediaQuery.code, CLI_EXIT_OK);
+    const mediaQueryPayload = JSON.parse(mediaQuery.stdout) as any;
+    assert.equal(mediaQueryPayload.data.results.some((entry: any) => entry.source === "media.assets" && entry.metadata?.mediaId === mediaJob?.resourceId), true);
     const deleted = await runCliCapture([
       "generations",
       "delete",
@@ -4667,7 +4686,6 @@ test("typed media generation schedules Search media asset events", async () => {
       "--json",
     ], workspaceRoot);
     assert.equal(deleted.code, CLI_EXIT_OK);
-
     const deletedMediaJobs = await runCliCapture(["search", "jobs", "--source", "media.assets", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(deletedMediaJobs.code, CLI_EXIT_OK);
     const deletedMediaJobsPayload = JSON.parse(deletedMediaJobs.stdout) as {
@@ -4677,9 +4695,16 @@ test("typed media generation schedules Search media asset events", async () => {
     assert.equal(deletedMediaJob?.priority, 80);
     assert.equal(deletedMediaJob?.payload.eventDriven, true);
     assert.equal(deletedMediaJob?.payload.mediaId, mediaJob?.resourceId);
+    const mediaDeleteRun = await runCliCapture(["search", "service", "run-once", "--source", "media.assets", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(mediaDeleteRun.code, CLI_EXIT_OK);
+    const mediaDeleteRunItem = (JSON.parse(mediaDeleteRun.stdout) as any).data.service.worker?.items.find((entry: any) => entry.source === "media.assets");
+    assert.deepEqual({ source: mediaDeleteRunItem?.source, operation: mediaDeleteRunItem?.operation, status: mediaDeleteRunItem?.status, indexed: mediaDeleteRunItem?.indexed }, { source: "media.assets", operation: "delete", status: "done", indexed: 1 });
+    const afterMediaDelete = await runCliCapture(["search", "query", "evented audio search asset", "--sources", "media.assets", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterMediaDelete.code, CLI_EXIT_DEGRADED, afterMediaDelete.stderr || afterMediaDelete.stdout);
+    const afterMediaDeletePayload = JSON.parse(afterMediaDelete.stdout) as any;
+    assert.equal(afterMediaDeletePayload.data.results.some((entry: any) => entry.source === "media.assets" && entry.metadata?.mediaId === mediaJob?.resourceId), false);
   });
 });
-
 test("search rebuild can refresh one source without clearing sibling fast paths", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-scoped-rebuild-"));
   const dataRoot = path.join(workspaceRoot, "data");
@@ -4710,7 +4735,6 @@ test("search rebuild can refresh one source without clearing sibling fast paths"
     createdAt: "2026-05-17T10:00:00.000Z",
     updatedAt: "2026-05-17T10:00:00.000Z",
   }, null, 2));
-
   await withPatchedEnv({
     CLAW_DATA_DIR: dataRoot,
     CLAW_DB_PATH: undefined,
@@ -4720,7 +4744,6 @@ test("search rebuild can refresh one source without clearing sibling fast paths"
   }, async () => {
     const fullRebuild = await runCliCapture(["search", "rebuild", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(fullRebuild.code, CLI_EXIT_OK);
-
     fs.writeFileSync(generationPath, JSON.stringify({
       id: "gen-campaign-brief",
       kind: "document",
@@ -4732,7 +4755,6 @@ test("search rebuild can refresh one source without clearing sibling fast paths"
       createdAt: "2026-05-17T10:00:00.000Z",
       updatedAt: "2026-05-17T10:05:00.000Z",
     }, null, 2));
-
     const scopedRebuild = await runCliCapture([
       "search",
       "rebuild",
@@ -4760,23 +4782,19 @@ test("search rebuild can refresh one source without clearing sibling fast paths"
     assert.deepEqual(scopedPayload.data.pendingSources, []);
     assert.equal(scopedPayload.data.indexedBySource["generations.artifacts"], 1);
     assert.equal(scopedPayload.data.indexedBySource["media.assets"], 0);
-
     const mediaQuery = await runCliCapture(["search", "query", "Audited Receipt", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(mediaQuery.code, CLI_EXIT_OK);
     const mediaPayload = JSON.parse(mediaQuery.stdout) as { data: { results: Array<{ source: string; title: string }> } };
     assert.equal(mediaPayload.data.results.some((result) => result.source === "media.assets" && result.title === "Audited Receipt.pdf"), true);
-
     const generationQuery = await runCliCapture(["search", "query", "market maps", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(generationQuery.code, CLI_EXIT_OK);
     const generationPayload = JSON.parse(generationQuery.stdout) as { data: { results: Array<{ source: string; title: string }> } };
     assert.equal(generationPayload.data.results.some((result) => result.source === "generations.artifacts" && result.title === "Campaign Market Maps"), true);
   });
 });
-
 test("search rebuild can refresh one shard without clearing sibling shard fast paths", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-shard-rebuild-"));
   const dataRoot = path.join(workspaceRoot, "data");
-
   await withPatchedEnv({
     CLAW_DATA_DIR: dataRoot,
     CLAW_DB_PATH: undefined,
@@ -4817,12 +4835,10 @@ test("search rebuild can refresh one shard without clearing sibling shard fast p
     } finally {
       store.close();
     }
-
     const missingSource = await runCliCapture(["search", "rebuild", "--shard", "cold", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(missingSource.code, CLI_EXIT_USAGE);
     const missingSourcePayload = JSON.parse(missingSource.stdout) as { error: { code: string } };
     assert.equal(missingSourcePayload.error.code, "missing_source");
-
     const shardRebuild = await runCliCapture([
       "search",
       "rebuild",
@@ -4849,7 +4865,6 @@ test("search rebuild can refresh one shard without clearing sibling shard fast p
     assert.deepEqual(shardPayload.data.selectedSources, ["images.derived"]);
     assert.deepEqual(shardPayload.data.selectedShards, ["cold"]);
     assert.equal(shardPayload.data.indexedBySource["images.derived"], 0);
-
     const verified = new SearchStore(path.join(dataRoot, "search.sqlite"));
     try {
       assert.deepEqual(verified.listShards({ source: "images.derived" }).map((shard) => [shard.shard, shard.state, shard.documentCount]), [
@@ -4863,11 +4878,9 @@ test("search rebuild can refresh one shard without clearing sibling shard fast p
     }
   });
 });
-
 test("search rebuild can enqueue background shard rebuilds for the service worker", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-background-rebuild-"));
   const dataRoot = path.join(workspaceRoot, "data");
-
   await withPatchedEnv({
     CLAW_DATA_DIR: dataRoot,
     CLAW_DB_PATH: undefined,
@@ -4908,7 +4921,6 @@ test("search rebuild can enqueue background shard rebuilds for the service worke
     } finally {
       store.close();
     }
-
     const queued = await runCliCapture([
       "search",
       "rebuild",
@@ -4938,7 +4950,6 @@ test("search rebuild can enqueue background shard rebuilds for the service worke
     assert.deepEqual(queuedPayload.data.jobs.map((job) => ({ source: job.source, shard: job.shard, operation: job.operation, status: job.status })), [
       { source: "images.derived", shard: "cold", operation: "rebuild", status: "queued" },
     ]);
-
     const serviceRun = await runCliCapture([
       "search",
       "service",
@@ -4962,7 +4973,6 @@ test("search rebuild can enqueue background shard rebuilds for the service worke
     assert.deepEqual(servicePayload.data.service.worker?.items.map((item) => ({ source: item.source, operation: item.operation, status: item.status, indexed: item.indexed })), [
       { source: "images.derived", operation: "rebuild", status: "done", indexed: 0 },
     ]);
-
     const verified = new SearchStore(path.join(dataRoot, "search.sqlite"));
     try {
       assert.deepEqual(verified.listShards({ source: "images.derived" }).map((shard) => [shard.shard, shard.state, shard.documentCount]), [
@@ -4976,7 +4986,6 @@ test("search rebuild can enqueue background shard rebuilds for the service worke
     }
   });
 });
-
 test("search indexes scoped code.symbols without broadening other domains", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-code-"));
   const dataRoot = path.join(workspaceRoot, "data");
@@ -4998,7 +5007,6 @@ test("search indexes scoped code.symbols without broadening other domains", asyn
     "}",
     "",
   ].join("\n"));
-
   await withPatchedEnv({
     CLAW_DATA_DIR: dataRoot,
     CLAW_DB_PATH: undefined,
@@ -5018,7 +5026,6 @@ test("search indexes scoped code.symbols without broadening other domains", asyn
     assert.equal(rebuildPayload.data.sources.includes("code.symbols"), true);
     assert.equal(rebuildPayload.data.pendingSources.includes("code.symbols"), false);
     assert.equal(rebuildPayload.data.indexedBySource["code.symbols"], 2);
-
     const query = await runCliCapture([
       "search",
       "query",
@@ -5068,7 +5075,6 @@ test("search indexes scoped code.symbols without broadening other domains", asyn
     assert.equal(result?.fragments?.some((fragment) => fragment.title === "function makeNeedleSymbol" && fragment.snippet?.includes("makeNeedleSymbol")), true);
     assert.ok(result?.explanation?.matchedBy?.length);
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "language"), true);
-
     const semanticQuery = await runCliCapture([
       "search",
       "query",
@@ -5097,7 +5103,6 @@ test("search indexes scoped code.symbols without broadening other domains", asyn
     assert.equal(semanticResult?.source, "code.symbols");
     assert.equal(semanticResult?.explanation?.matchedBy?.includes("semantic"), true);
     assert.ok((semanticResult?.explanation?.scoreBreakdown?.semantic ?? 0) > 0);
-
     const chatOnly = await runCliCapture(["search", "query", "makeNeedleSymbol", "--domains", "sessions", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(chatOnly.code, CLI_EXIT_DEGRADED);
     const chatOnlyPayload = JSON.parse(chatOnly.stdout) as {
@@ -5107,7 +5112,6 @@ test("search indexes scoped code.symbols without broadening other domains", asyn
     assert.deepEqual(chatOnlyPayload.data.results, []);
   });
 });
-
 test("code.symbols event jobs refresh and tombstone individual files", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-code-events-"));
   const dataRoot = path.join(workspaceRoot, "data");
@@ -5120,7 +5124,6 @@ test("code.symbols event jobs refresh and tombstone individual files", async () 
     "}",
     "",
   ].join("\n"));
-
   await withPatchedEnv({
     CLAW_DATA_DIR: dataRoot,
     CLAW_DB_PATH: undefined,
@@ -5142,10 +5145,8 @@ test("code.symbols event jobs refresh and tombstone individual files", async () 
     assert.equal(scheduled.job?.shard, "hot");
     assert.equal(scheduled.job?.payload.eventDriven, true);
     assert.equal(scheduled.job?.payload.relativePath, "src/event-refresh.ts");
-
     const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "code.symbols", "--data-dir", dataRoot, "--code-root", sourceRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(serviceRun.code, CLI_EXIT_OK);
-
     const query = await runCliCapture(["search", "query", "eventDrivenNeedle", "--domains", "code", "--data-dir", dataRoot, "--code-root", sourceRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
@@ -5156,7 +5157,6 @@ test("code.symbols event jobs refresh and tombstone individual files", async () 
     assert.equal(result?.domain, "code");
     assert.equal(result?.resourceId, "src/event-refresh.ts");
     assert.equal(result?.fragments?.some((fragment) => fragment.title === "function eventDrivenNeedle"), true);
-
     fs.rmSync(filePath);
     const deleted = scheduleCodeSymbolsSearchEvent({
       operation: "delete",
@@ -5166,17 +5166,14 @@ test("code.symbols event jobs refresh and tombstone individual files", async () 
       flags: { "code-root": sourceRoot },
     });
     assert.equal(deleted.ok, true, deleted.error);
-
     const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "code.symbols", "--data-dir", dataRoot, "--code-root", sourceRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(deleteRun.code, CLI_EXIT_OK);
-
     const afterDelete = await runCliCapture(["search", "query", "eventDrivenNeedle", "--domains", "code", "--data-dir", dataRoot, "--code-root", sourceRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(afterDelete.code, CLI_EXIT_DEGRADED);
     const afterDeletePayload = JSON.parse(afterDelete.stdout) as { data: { results: unknown[] } };
     assert.deepEqual(afterDeletePayload.data.results, []);
   });
 });
-
 test("search keeps optional full sources out of scoped domain queries", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-scoped-full-"));
   const dataRoot = path.join(workspaceRoot, "data");

@@ -2,9 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createHash } from "node:crypto";
-
 import Database from "better-sqlite3";
-
 import { clawCliCommandRegistry, listClawCliAliases, type ClawCliCommandRegistryEntry, type ClawCliSearchResult } from "@clawjs/core";
 import {
   DEFAULT_SEARCH_BUDGETS,
@@ -26,7 +24,6 @@ import {
   type SearchSourceManifest,
   type SearchSourceState,
 } from "@clawjs/search";
-
 import type { CliContext } from "./index.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { createCliWorkspaceClaw } from "./cli-claw-factory.ts";
@@ -66,13 +63,10 @@ import { listStyles, readStyle, styleManifestPath } from "./styles/storage.ts";
 import { listTemplates, readTemplate, templateManifestPath } from "./templates/storage.ts";
 import { resolveClawjsDataRoot, resolveClawjsMainDbPath } from "./v1-data.ts";
 import { ensureV1MainSchema, readMcpServers, type JsonRecord } from "./v1-data-core.ts";
-
 const BUILTIN_SEARCH_SOURCES: SearchSourceManifest[] = createBuiltinSearchSourceManifests();
-
 export function isSearchAdminCommand(command: string | undefined): boolean {
   return !!command && SEARCH_ADMIN_COMMANDS.has(command);
 }
-
 export async function runSearchQueryCli(input: {
   positionals: string[];
   flags: Record<string, string>;
@@ -283,7 +277,6 @@ export async function runSearchQueryCli(input: {
     store.close();
   }
 }
-
 async function runWorkspaceSearchQueryCli(input: {
   flags: Record<string, string>;
   context: CliContext;
@@ -310,7 +303,6 @@ async function runWorkspaceSearchQueryCli(input: {
   else input.context.stdout.write(`${results.map((result) => `${result.domain} ${result.score.toFixed(1)} ${result.id} ${result.title}`).join("\n")}\n`);
   return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
 }
-
 export async function runSearchRebuildCli(input: {
   flags: Record<string, string>;
   argv: string[];
@@ -1357,8 +1349,15 @@ function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flag
       return ensureElnRecordResourceIndexed(store, flags, job);
     case "images.derived":
       return indexJobResource(job, "imageId", (resourceId) => ensureImageDerivedResourceIndexed(store, flags, cwd, resourceId));
-    case "media.assets":
+    case "media.assets": {
+      if (job.operation === "delete") {
+        const resourceId = resourceIdFromJobPayload(job, "mediaId") ?? job.resourceId;
+        if (!resourceId) return 0;
+        store.tombstone({ source: "media.assets", resourceId, reason: "media asset delete event" });
+        return 1;
+      }
       return indexJobResource(job, "mediaId", (resourceId) => ensureMediaAssetResourceIndexed(store, flags, cwd, resourceId));
+    }
     case "slides.decks": {
       const deckId = resourceIdFromJobPayload(job, "deckId") ?? job.resourceId;
       return deckId ? ensureSlidesDeckResourceIndexed(store, flags, cwd, deckId, resourceIdFromJobPayload(job, "workspaceRoot")) : 0;
@@ -2692,28 +2691,44 @@ function ensureCalendarEventsSourceIndexed(store: SearchStore, flags: Record<str
   }
   const db = new Database(dbPath, { readonly: true, fileMustExist: true });
   try {
-    if (!hasTable(db, "calendar_events")) {
+    const hasCalendarEvents = hasTable(db, "calendar_events");
+    const hasTemporalItems = hasTable(db, "temporal_items");
+    if (!hasCalendarEvents && !hasTemporalItems) {
       store.setSourceState("calendar.events", "degraded", {
         backlog: 0,
-        error: "core database does not contain calendar_events",
+        error: "core database does not contain calendar event tables",
         lastIndexedAt: new Date().toISOString(),
       });
       return 0;
     }
-    const rows = db.prepare(`
-      SELECT id, title, starts_at, ends_at, calendar_id, source, external_id, page_id, metadata_json, created_at, updated_at
-      FROM calendar_events
-      ORDER BY starts_at ASC
-    `).all() as CalendarEventRow[];
     let indexed = 0;
-    for (const row of rows) {
-      store.upsertDocument(calendarEventSearchDocument(row));
-      indexed += 1;
+    if (hasCalendarEvents) {
+      const rows = db.prepare(`
+        SELECT id, title, starts_at, ends_at, calendar_id, source, external_id, page_id, metadata_json, created_at, updated_at
+        FROM calendar_events
+        ORDER BY starts_at ASC
+      `).all() as CalendarEventRow[];
+      for (const row of rows) {
+        store.upsertDocument(calendarEventSearchDocument(row));
+        indexed += 1;
+      }
+    }
+    if (hasTemporalItems) {
+      const rows = db.prepare(`
+        SELECT id, title, status, workspace_id, project_id, agent_id, source_provider, starts_at, next_run_at, created_at, updated_at, payload
+        FROM temporal_items
+        WHERE kind = 'event'
+        ORDER BY COALESCE(starts_at, next_run_at, updated_at) ASC
+      `).all() as TemporalCalendarEventRow[];
+      for (const row of rows) {
+        store.upsertDocument(temporalCalendarEventSearchDocument(row));
+        indexed += 1;
+      }
     }
     store.setCursor({
       source: "calendar.events",
       cursor: `events:${indexed}`,
-      metadata: { store: "core.sqlite", tables: ["calendar_events"] },
+      metadata: { store: "core.sqlite", tables: [...(hasCalendarEvents ? ["calendar_events"] : []), ...(hasTemporalItems ? ["temporal_items"] : [])] },
     });
     store.setSourceState("calendar.events", "enabled", {
       backlog: 0,
@@ -2731,23 +2746,41 @@ function ensureCalendarEventResourceIndexed(store: SearchStore, flags: Record<st
   if (!fs.existsSync(dbPath)) return 0;
   const db = new Database(dbPath, { readonly: true, fileMustExist: true });
   try {
-    if (!hasTable(db, "calendar_events")) return 0;
-    const row = db.prepare(`
-      SELECT id, title, starts_at, ends_at, calendar_id, source, external_id, page_id, metadata_json, created_at, updated_at
-      FROM calendar_events
-      WHERE id = ?
-      LIMIT 1
-    `).get(eventId) as CalendarEventRow | undefined;
-    if (!row) {
-      store.tombstone({ source: "calendar.events", resourceId: eventId, reason: "calendar event missing during Search event refresh" });
-      return 1;
+    if (hasTable(db, "calendar_events")) {
+      const row = db.prepare(`
+        SELECT id, title, starts_at, ends_at, calendar_id, source, external_id, page_id, metadata_json, created_at, updated_at
+        FROM calendar_events
+        WHERE id = ?
+        LIMIT 1
+      `).get(eventId) as CalendarEventRow | undefined;
+      if (row) {
+        store.upsertDocument(calendarEventSearchDocument(row));
+        store.setSourceState("calendar.events", "enabled", {
+          backlog: 0,
+          error: null,
+          lastIndexedAt: new Date().toISOString(),
+        });
+        return 1;
+      }
     }
-    store.upsertDocument(calendarEventSearchDocument(row));
-    store.setSourceState("calendar.events", "enabled", {
-      backlog: 0,
-      error: null,
-      lastIndexedAt: new Date().toISOString(),
-    });
+    if (hasTable(db, "temporal_items")) {
+      const row = db.prepare(`
+        SELECT id, title, status, workspace_id, project_id, agent_id, source_provider, starts_at, next_run_at, created_at, updated_at, payload
+        FROM temporal_items
+        WHERE kind = 'event' AND id = ?
+        LIMIT 1
+      `).get(eventId) as TemporalCalendarEventRow | undefined;
+      if (row) {
+        store.upsertDocument(temporalCalendarEventSearchDocument(row));
+        store.setSourceState("calendar.events", "enabled", {
+          backlog: 0,
+          error: null,
+          lastIndexedAt: new Date().toISOString(),
+        });
+        return 1;
+      }
+    }
+    store.tombstone({ source: "calendar.events", resourceId: eventId, reason: "calendar event missing during Search event refresh" });
     return 1;
   } finally {
     db.close();
@@ -4267,7 +4300,6 @@ function ensureWebIngestedSourceIndexed(store: SearchStore, flags: Record<string
   });
   return indexed;
 }
-
 function ensureWebIngestedResourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string, relativePath: string, rootOverride?: string): number {
   const root = path.resolve(rootOverride ?? resolveWebIngestedRoot(flags, cwd));
   const absolutePath = path.resolve(root, relativePath);
@@ -4306,7 +4338,6 @@ function ensureWebIngestedResourceIndexed(store: SearchStore, flags: Record<stri
   });
   return 1;
 }
-
 function ensureExternalCacheSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {
   const root = resolveExternalCacheRoot(flags, cwd);
   if (!fs.existsSync(root)) {
@@ -4340,7 +4371,6 @@ function ensureExternalCacheSourceIndexed(store: SearchStore, flags: Record<stri
   });
   return indexed;
 }
-
 function ensureExternalCacheResourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string, relativePath: string, rootOverride?: string): number {
   const root = path.resolve(rootOverride ?? resolveExternalCacheRoot(flags, cwd));
   const absolutePath = path.resolve(root, relativePath);
@@ -4379,36 +4409,30 @@ function ensureExternalCacheResourceIndexed(store: SearchStore, flags: Record<st
   });
   return 1;
 }
-
 function resolveSessionsDbPath(flags: Record<string, string>): string {
   if (flags["sessions-db-path"]) return path.resolve(flags["sessions-db-path"]);
   if (process.env.CLAW_SESSIONS_DB_PATH) return path.resolve(process.env.CLAW_SESSIONS_DB_PATH);
   const env = flags["data-dir"] ? { ...process.env, CLAW_DATA_DIR: flags["data-dir"] } : process.env;
   return path.join(resolveClawjsDataRoot(env), "sessions.sqlite");
 }
-
 function resolveMainDbPath(flags: Record<string, string>): string {
   const env = flags["data-dir"] ? { ...process.env, CLAW_DATA_DIR: flags["data-dir"] } : process.env;
   return resolveClawjsMainDbPath(env);
 }
-
 function resolveWebIngestedRoot(flags: Record<string, string>, cwd: string): string {
   return path.resolve(flags["web-root"] ?? flags["web-cache-root"] ?? flags.workspace ?? cwd);
 }
-
 function resolveMcpSearchConfigPath(flags: Record<string, string>, cwd: string): string {
   const configured = flags["mcp-config"] ?? flags.config ?? process.env.CLAW_MCP_CONFIG_PATH;
   if (!configured) return path.join(os.homedir(), ".codex", "config.toml");
   const expanded = expandSearchHome(configured);
   return path.isAbsolute(expanded) ? expanded : path.resolve(cwd, expanded);
 }
-
 function expandSearchHome(value: string): string {
   if (value === "~") return os.homedir();
   if (value.startsWith("~/")) return path.join(os.homedir(), value.slice(2));
   return value;
 }
-
 function mcpConfigUpdatedAt(configPath: string): string {
   try {
     return fs.statSync(configPath).mtime.toISOString();
@@ -4416,17 +4440,14 @@ function mcpConfigUpdatedAt(configPath: string): string {
     return new Date().toISOString();
   }
 }
-
 function resolveExternalCacheRoot(flags: Record<string, string>, cwd: string): string {
   return path.resolve(flags["external-root"] ?? flags["external-cache-root"] ?? flags.workspace ?? cwd);
 }
-
 function boundedNumberFlag(value: string | undefined, fallback: number, min: number, max: number): number {
   const number = value ? Number(value) : fallback;
   if (!Number.isFinite(number)) return fallback;
   return Math.max(min, Math.min(max, Math.floor(number)));
 }
-
 function discoverWebIngestedFiles(root: string, limits: { maxFiles: number; maxDepth: number; maxBytes: number }): WebIngestedCandidate[] {
   const files: WebIngestedCandidate[] = [];
   const visit = (directory: string, depth: number): void => {
@@ -4460,7 +4481,6 @@ function discoverWebIngestedFiles(root: string, limits: { maxFiles: number; maxD
   visit(root, 0);
   return files;
 }
-
 function discoverExternalCacheFiles(root: string, limits: { maxFiles: number; maxDepth: number; maxBytes: number }): ExternalCacheCandidate[] {
   const files: ExternalCacheCandidate[] = [];
   const visit = (directory: string, depth: number): void => {
@@ -4494,11 +4514,9 @@ function discoverExternalCacheFiles(root: string, limits: { maxFiles: number; ma
   visit(root, 0);
   return files;
 }
-
 function isIgnoredLocalFilesDirectory(name: string): boolean {
   return isIgnoredCodeSearchDirectory(name) || name === ".Spotlight-V100" || name === ".TemporaryItems" || name === ".Trashes";
 }
-
 function webIngestedSearchDocument(root: string, file: WebIngestedCandidate, maxBytes: number): SearchDocumentInput | null {
   const raw = readLocalTextFile(file.absolutePath).slice(0, maxBytes);
   if (!raw) return null;
@@ -4548,7 +4566,6 @@ function webIngestedSearchDocument(root: string, file: WebIngestedCandidate, max
     ],
   };
 }
-
 function externalCacheSearchDocument(root: string, file: ExternalCacheCandidate, maxBytes: number): SearchDocumentInput | null {
   const raw = readLocalTextFile(file.absolutePath).slice(0, maxBytes);
   if (!raw) return null;
@@ -4604,7 +4621,6 @@ function externalCacheSearchDocument(root: string, file: ExternalCacheCandidate,
     ],
   };
 }
-
 function parseExternalCacheRecord(raw: string, extension: string, relativePath: string): {
   id?: string;
   externalId?: string;
@@ -4644,7 +4660,6 @@ function parseExternalCacheRecord(raw: string, extension: string, relativePath: 
     syncMode: "cache",
   };
 }
-
 function normalizeExternalCachePayload(payload: Record<string, unknown>, relativePath: string): ReturnType<typeof parseExternalCacheRecord> {
   const nested = typeof payload.record === "object" && payload.record !== null ? payload.record as Record<string, unknown> : payload;
   return {
@@ -4662,7 +4677,6 @@ function normalizeExternalCachePayload(payload: Record<string, unknown>, relativ
     syncMode: stringValue(nested.syncMode) ?? stringValue(nested.sync_mode) ?? stringValue(payload.syncMode) ?? stringValue(payload.sync_mode) ?? "cache",
   };
 }
-
 function redactExternalCachePayload(payload: Record<string, unknown>): Record<string, unknown> {
   const redacted: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(payload)) {
@@ -4670,7 +4684,6 @@ function redactExternalCachePayload(payload: Record<string, unknown>): Record<st
   }
   return redacted;
 }
-
 function parseWebIngestedPayload(raw: string, extension: string): {
   url?: string;
   host?: string;
@@ -4710,7 +4723,6 @@ function parseWebIngestedPayload(raw: string, extension: string): {
   }
   return { text: raw, contentType: extension === ".md" ? "text/markdown" : "text/plain" };
 }
-
 function textFromHtml(html: string): string {
   return html
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
@@ -4723,28 +4735,23 @@ function textFromHtml(html: string): string {
     .replace(/\s+/g, " ")
     .trim();
 }
-
 function htmlTitle(html: string): string | undefined {
   return html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.replace(/\s+/g, " ").trim();
 }
-
 function htmlMetaDescription(html: string): string | undefined {
   return html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["'][^>]*>/i)?.[1]?.trim()
     ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']description["'][^>]*>/i)?.[1]?.trim();
 }
-
 function titleFromWebText(text: string): string | undefined {
   const first = firstMeaningfulLine(text);
   return first?.replace(/^#+\s*/, "").slice(0, 120);
 }
-
 function urlFromWebCachePath(relativePath: string): string | undefined {
   const withoutExtension = relativePath.replace(/\.(html?|json|md|txt)$/i, "");
   return withoutExtension.startsWith("http:/") || withoutExtension.startsWith("https:/")
     ? withoutExtension.replace(/^https:\//, "https://").replace(/^http:\//, "http://")
     : undefined;
 }
-
 function hostFromUrl(url: string | undefined): string | undefined {
   if (!url) return undefined;
   try {
@@ -4753,18 +4760,15 @@ function hostFromUrl(url: string | undefined): string | undefined {
     return undefined;
   }
 }
-
 function contentTypeForWebCacheExtension(extension: string): string {
   if (extension === ".html" || extension === ".htm") return "text/html";
   if (extension === ".json") return "application/json";
   if (extension === ".md") return "text/markdown";
   return "text/plain";
 }
-
 function stringValue(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
-
 function readLocalTextFile(filePath: string): string {
   try {
     const content = fs.readFileSync(filePath, "utf8");
@@ -4773,24 +4777,19 @@ function readLocalTextFile(filePath: string): string {
     return "";
   }
 }
-
 function firstMeaningfulLine(content: string): string | undefined {
   return content.split(/\r?\n/).map((line) => line.trim()).find((line) => line.length > 0)?.slice(0, 180);
 }
-
 function normalizeRelativePath(value: string): string {
   return value.split(path.sep).join(path.posix.sep);
 }
-
 function stableSearchId(value: string): string {
   return createHash("sha256").update(value).digest("hex").slice(0, 20);
 }
-
 function hasTable(db: Database.Database, table: string): boolean {
   const row = db.prepare("SELECT name FROM sqlite_master WHERE type IN ('table', 'view') AND name = ?").get(table) as { name: string } | undefined;
   return !!row;
 }
-
 function sessionSearchDocument(session: ConversationSessionRow, messages: ConversationMessageRow[]): SearchDocumentInput {
   const metadata = parseJsonRecord(session.metadata_json);
   const title = session.title || `Session ${session.session_id}`;
@@ -4842,7 +4841,6 @@ function sessionSearchDocument(session: ConversationSessionRow, messages: Conver
     ],
   };
 }
-
 function databaseRecordSearchDocument(row: DatabaseRecordRow): SearchDocumentInput | null {
   const payload = parseJsonRecord(row.data_json);
   if (payload.archivedAt || payload.archived_at || payload.deletedAt || payload.deleted_at) return null;
@@ -4888,7 +4886,6 @@ function databaseRecordSearchDocument(row: DatabaseRecordRow): SearchDocumentInp
     ],
   };
 }
-
 function workItemSearchDocument(row: DatabaseRecordRow): SearchDocumentInput | null {
   if (!WORK_SEARCH_COLLECTIONS.has(row.collection_name)) return null;
   const payload = parseJsonRecord(row.data_json);
@@ -4942,7 +4939,6 @@ function workItemSearchDocument(row: DatabaseRecordRow): SearchDocumentInput | n
     ],
   };
 }
-
 function workItemResultType(collectionName: string): string {
   if (collectionName === "people") return "person";
   if (collectionName === "inbox_threads") return "inbox_thread";
@@ -4951,14 +4947,12 @@ function workItemResultType(collectionName: string): string {
   if (collectionName.endsWith("s")) return collectionName.slice(0, -1);
   return "work_item";
 }
-
 function workItemShard(payload: Record<string, unknown>): "hot" | "cold" {
   const status = String(payload.status ?? payload.state ?? "").toLowerCase();
   if (payload.completedAt || payload.completed_at || payload.cancelledAt || payload.cancelled_at) return "cold";
   if (["done", "completed", "cancelled", "archived", "closed"].includes(status)) return "cold";
   return "hot";
 }
-
 const FINANCE_SEARCH_LEGAL_OUTPUT_LABELS = [
   "not_professional_advice",
   "human_review_required",
@@ -4966,7 +4960,6 @@ const FINANCE_SEARCH_LEGAL_OUTPUT_LABELS = [
   "regulated_domain:finance",
   "decision_effect:summary",
 ];
-
 const ELN_SEARCH_LEGAL_OUTPUT_LABELS = [
   "not_professional_advice",
   "human_review_required",
@@ -4974,7 +4967,6 @@ const ELN_SEARCH_LEGAL_OUTPUT_LABELS = [
   "regulated_domain:labs_research",
   "decision_effect:summary",
 ];
-
 function elnRecordSearchDocument(row: DatabaseRecordRow): SearchDocumentInput | null {
   if (!ELN_SEARCH_COLLECTIONS.includes(row.collection_name as typeof ELN_SEARCH_COLLECTIONS[number])) return null;
   const payload = parseJsonRecord(row.data_json);
@@ -5031,7 +5023,6 @@ function elnRecordSearchDocument(row: DatabaseRecordRow): SearchDocumentInput | 
     ],
   };
 }
-
 function elnRecordResultType(collectionName: string): string {
   if (collectionName === "lab_notebooks") return "lab_notebook";
   if (collectionName === "notebook_entries") return "notebook_entry";
@@ -5039,18 +5030,15 @@ function elnRecordResultType(collectionName: string): string {
   if (collectionName === "experiment_observations") return "experiment_observation";
   return "eln_record";
 }
-
 function elnRecordShard(payload: Record<string, unknown>): "hot" | "cold" {
   const status = String(payload.status ?? payload.state ?? "").toLowerCase();
   if (payload.archivedAt || payload.archived_at || payload.closedAt || payload.closed_at) return "cold";
   if (["archived", "closed", "void", "voided", "superseded"].includes(status)) return "cold";
   return "hot";
 }
-
 function stringMetadata(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
-
 function documentBlocksSearchDocument(row: DatabaseRecordRow, blockRows: DatabaseRecordRow[]): SearchDocumentInput | null {
   const payload = parseJsonRecord(row.data_json);
   if (payload.archivedAt || payload.archived_at || payload.deletedAt || payload.deleted_at) return null;
@@ -5119,7 +5107,6 @@ function documentBlocksSearchDocument(row: DatabaseRecordRow, blockRows: Databas
     ],
   };
 }
-
 function notesPageSearchDocument(row: NotesPageRow, blockRows: NotesPageBlockRow[]): SearchDocumentInput | null {
   if (row.archived_at) return null;
   const tags = parseJsonArray(row.tags_json).filter((tag): tag is string => typeof tag === "string" && tag.trim().length > 0);
@@ -5186,7 +5173,6 @@ function notesPageSearchDocument(row: NotesPageRow, blockRows: NotesPageBlockRow
     ],
   };
 }
-
 function knowledgeEntitySearchDocument(row: KnowledgeEntityRow): SearchDocumentInput {
   const properties = parseJsonRecord(row.properties_json);
   const provenance = parseJsonRecord(row.provenance_json);
@@ -5241,7 +5227,6 @@ function knowledgeEntitySearchDocument(row: KnowledgeEntityRow): SearchDocumentI
     ],
   };
 }
-
 function knowledgeFactSearchDocument(row: KnowledgeFactRow): SearchDocumentInput {
   const scope = parseJsonRecord(row.scope_json);
   const provenance = parseJsonRecord(row.provenance_json);
@@ -5304,7 +5289,6 @@ function knowledgeFactSearchDocument(row: KnowledgeFactRow): SearchDocumentInput
     ],
   };
 }
-
 function signalVerticalSearchDocument(row: SignalsVerticalRow): SearchDocumentInput {
   const metadata = parseJsonRecord(row.metadata_json);
   const metadataText = textFromStructuredContent(metadata);
@@ -5350,7 +5334,6 @@ function signalVerticalSearchDocument(row: SignalsVerticalRow): SearchDocumentIn
     ],
   };
 }
-
 function signalVariableSearchDocument(row: SignalsVariableRow, vertical?: SignalsVerticalRow): SearchDocumentInput {
   const definition = parseJsonRecord(row.definition_json);
   const unit = parseJsonValue(row.unit_json);
@@ -5398,7 +5381,6 @@ function signalVariableSearchDocument(row: SignalsVariableRow, vertical?: Signal
     ],
   };
 }
-
 function signalObservationSearchDocument(row: SignalsObservationRow, vertical?: SignalsVerticalRow, variable?: SignalsVariableRow): SearchDocumentInput {
   const value = parseJsonValue(row.value_json);
   const source = parseJsonRecord(row.source_json);
@@ -5469,7 +5451,6 @@ function signalObservationSearchDocument(row: SignalsObservationRow, vertical?: 
     ],
   };
 }
-
 function calendarEventSearchDocument(row: CalendarEventRow): SearchDocumentInput {
   const metadata = parseJsonRecord(row.metadata_json);
   const metadataText = textFromStructuredContent(metadata) ?? (Object.keys(metadata).length ? JSON.stringify(metadata) : undefined);
@@ -5515,7 +5496,66 @@ function calendarEventSearchDocument(row: CalendarEventRow): SearchDocumentInput
     ],
   };
 }
-
+function temporalCalendarEventSearchDocument(row: TemporalCalendarEventRow): SearchDocumentInput {
+  const payload = parseJsonRecord(row.payload);
+  const description = stringValue(payload.description);
+  const location = stringValue(payload.location);
+  const timezone = stringValue(payload.timezone);
+  const endsAt = stringValue(payload.endsAt);
+  const startsAt = row.starts_at || stringValue(payload.startsAt);
+  const metadataText = textFromStructuredContent({
+    description,
+    location,
+    timezone,
+    workspaceId: row.workspace_id,
+    projectId: row.project_id,
+    agentId: row.agent_id,
+  });
+  const body = [row.title, description, location, startsAt, endsAt, timezone, row.workspace_id, row.project_id, row.agent_id, row.source_provider].filter(Boolean).join("\n");
+  return {
+    id: `calendar.events:${row.id}`,
+    source: "calendar.events",
+    domain: "calendar",
+    type: "event",
+    resourceId: row.id,
+    title: row.title || row.id,
+    subtitle: [startsAt, row.workspace_id].filter(Boolean).join(" / "),
+    snippet: firstMeaningfulLine(description ?? metadataText ?? "") ?? startsAt,
+    body,
+    updatedAt: row.updated_at,
+    metadata: {
+      eventId: row.id,
+      startsAt,
+      endsAt,
+      status: row.status,
+      source: row.source_provider || "clawjs-time",
+      workspaceId: row.workspace_id,
+      projectId: row.project_id,
+      agentId: row.agent_id,
+      location,
+      timezone,
+      hasPage: false,
+      metadataKeys: Object.keys(payload).sort(),
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: {
+      fastPath: 1,
+      calendar: 1,
+      upcoming: startsAt && Date.parse(startsAt) >= Date.now() ? 0.2 : 0,
+    },
+    fragments: metadataText ? [{
+      id: `calendar.events:${row.id}:metadata`,
+      title: "metadata",
+      body: metadataText,
+      snippet: metadataText.slice(0, 180),
+      sortOrder: 0,
+    }] : [],
+    actions: [
+      { id: "open", kind: "open", label: "Open calendar event", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy event reference", requiresApproval: false },
+    ],
+  };
+}
 function financeRecordSearchDocument(row: DatabaseRecordRow): SearchDocumentInput {
   const payload = parseJsonRecord(row.data_json);
   const metadata = isPlainRecord(payload.metadata) ? payload.metadata : {};
@@ -5576,7 +5616,6 @@ function financeRecordSearchDocument(row: DatabaseRecordRow): SearchDocumentInpu
     ],
   };
 }
-
 function financeRecordTableSearchDocument(row: FinanceRecordTableRow, pageBody?: string): SearchDocumentInput {
   const metadata = parseJsonRecord(row.metadata_json);
   const metadataText = textFromStructuredContent(redactExternalCachePayload(metadata));
@@ -5628,7 +5667,6 @@ function financeRecordTableSearchDocument(row: FinanceRecordTableRow, pageBody?:
     ],
   };
 }
-
 function runtimeJobSearchDocument(row: RuntimeJobRow): SearchDocumentInput {
   const payload = parseJsonRecord(row.payload_json);
   const payloadText = textFromStructuredContent(payload) ?? (Object.keys(payload).length ? JSON.stringify(payload) : undefined);
@@ -5672,7 +5710,6 @@ function runtimeJobSearchDocument(row: RuntimeJobRow): SearchDocumentInput {
     ],
   };
 }
-
 function runtimeEventSearchDocument(row: RuntimeEventRow): SearchDocumentInput {
   const metadata = parseJsonRecord(row.metadata_json);
   const metadataText = textFromStructuredContent(metadata) ?? (Object.keys(metadata).length ? JSON.stringify(metadata) : undefined);
@@ -5714,7 +5751,6 @@ function runtimeEventSearchDocument(row: RuntimeEventRow): SearchDocumentInput {
     ],
   };
 }
-
 function operationalEventSearchDocument(row: OperationalEventRow, sidecar: typeof OPERATIONAL_SEARCH_SIDECARS[number]): SearchDocumentInput {
   const metadata = parseJsonRecord(row.metadata_json);
   const metadataText = textFromStructuredContent(metadata) ?? (Object.keys(metadata).length ? JSON.stringify(metadata) : undefined);
@@ -5756,7 +5792,6 @@ function operationalEventSearchDocument(row: OperationalEventRow, sidecar: typeo
     ],
   };
 }
-
 function skillRegistrySearchDocument(row: SkillRegistryRow): SearchDocumentInput | null {
   if (!row.slug) return null;
   const scope = parseJsonRecord(row.scope_json);
@@ -5812,7 +5847,6 @@ function skillRegistrySearchDocument(row: SkillRegistryRow): SearchDocumentInput
     ],
   };
 }
-
 function providerRoutingSearchDocument(row: ProviderRoutingRow): SearchDocumentInput {
   const policy = parseJsonRecord(row.policy_json);
   const metadata = parseJsonRecord(row.metadata_json);
@@ -5869,7 +5903,6 @@ function providerRoutingSearchDocument(row: ProviderRoutingRow): SearchDocumentI
     ],
   };
 }
-
 function providerSettingSearchDocument(row: ProviderSettingRow): SearchDocumentInput {
   const policy = parseJsonRecord(row.policy_json);
   const metadata = parseJsonRecord(row.metadata_json);
@@ -5913,7 +5946,6 @@ function providerSettingSearchDocument(row: ProviderSettingRow): SearchDocumentI
     ],
   };
 }
-
 function snippetLibrarySearchDocument(row: SnippetLibraryRow): SearchDocumentInput {
   const scope = parseJsonRecord(row.scope_json);
   const metadata = parseJsonRecord(row.metadata_json);
@@ -5971,7 +6003,6 @@ function snippetLibrarySearchDocument(row: SnippetLibraryRow): SearchDocumentInp
     ],
   };
 }
-
 function agentCatalogAgentSearchDocument(row: AgentCatalogAgentRow): SearchDocumentInput {
   const config = parseJsonRecord(row.config_json);
   const body = [
@@ -6032,7 +6063,6 @@ function agentCatalogAgentSearchDocument(row: AgentCatalogAgentRow): SearchDocum
     ],
   };
 }
-
 function agentCatalogPersonalitySearchDocument(row: AgentCatalogPersonalityRow): SearchDocumentInput {
   const resourceId = `personality:${row.id}`;
   const body = [row.name, row.description, row.prompt, `version ${row.version}`].filter(Boolean).join("\n");
@@ -6072,7 +6102,6 @@ function agentCatalogPersonalitySearchDocument(row: AgentCatalogPersonalityRow):
     ],
   };
 }
-
 function agentCatalogSkillCollectionSearchDocument(row: AgentCatalogSkillCollectionRow): SearchDocumentInput {
   const skills = parseJsonArray(row.skills_json).filter((value): value is string => typeof value === "string" && value.trim().length > 0);
   const metadata = parseJsonRecord(row.metadata_json);
@@ -6113,7 +6142,6 @@ function agentCatalogSkillCollectionSearchDocument(row: AgentCatalogSkillCollect
     ],
   };
 }
-
 function agentCatalogConnectionSearchDocument(row: AgentCatalogConnectionRow): SearchDocumentInput {
   const metadata = parseJsonRecord(row.metadata_json);
   const scopes = Array.isArray(metadata.scopes)
@@ -6157,7 +6185,6 @@ function agentCatalogConnectionSearchDocument(row: AgentCatalogConnectionRow): S
     ],
   };
 }
-
 function marketplaceChoiceSearchDocument(row: MarketplaceChoiceRow): SearchDocumentInput {
   const metadata = parseJsonRecord(row.metadata_json);
   const metadataText = textFromStructuredContent(redactExternalCachePayload(metadata));
@@ -6207,7 +6234,6 @@ function marketplaceChoiceSearchDocument(row: MarketplaceChoiceRow): SearchDocum
     ],
   };
 }
-
 function contentItemSearchDocument(row: ContentItemRow, pageBody?: string): SearchDocumentInput {
   const metadata = parseJsonRecord(row.metadata_json);
   const metadataText = textFromStructuredContent(redactExternalCachePayload(metadata));
@@ -6259,7 +6285,6 @@ function contentItemSearchDocument(row: ContentItemRow, pageBody?: string): Sear
     ],
   };
 }
-
 function businessRecordSearchDocument(row: BusinessRecordRow, pageBody?: string): SearchDocumentInput {
   const metadata = parseJsonRecord(row.metadata_json);
   const metadataText = textFromStructuredContent(redactExternalCachePayload(metadata));
@@ -6307,7 +6332,6 @@ function businessRecordSearchDocument(row: BusinessRecordRow, pageBody?: string)
     ],
   };
 }
-
 function socialPostSearchDocument(row: SocialPostRow, pageBody?: string): SearchDocumentInput {
   const channel = parseJsonRecord(row.channel_json);
   const metadata = parseJsonRecord(row.metadata_json);
@@ -6367,7 +6391,6 @@ function socialPostSearchDocument(row: SocialPostRow, pageBody?: string): Search
     ],
   };
 }
-
 function iotConfigSearchDocument(row: IotConfigRow): SearchDocumentInput {
   const config = redactExternalCachePayload(parseJsonRecord(row.config_json));
   const metadata = redactExternalCachePayload(parseJsonRecord(row.metadata_json));
@@ -6422,7 +6445,6 @@ function iotConfigSearchDocument(row: IotConfigRow): SearchDocumentInput {
     ],
   };
 }
-
 function connectorCatalogSearchDocument(row: ConnectorOperationRow, capabilitiesById: Map<string, ConnectorCapabilityRow>): SearchDocumentInput | null {
   if (!row.id) return null;
   const capabilityIds = parseJsonArray(row.capability_ids_json).filter((value): value is string => typeof value === "string" && value.trim().length > 0);
@@ -6510,7 +6532,6 @@ function connectorCatalogSearchDocument(row: ConnectorOperationRow, capabilities
     ],
   };
 }
-
 function mcpServerSearchDocument(server: JsonRecord & { id: string }, configPath: string, updatedAt: string): SearchDocumentInput {
   const transport = typeof server.url === "string" ? "http" : typeof server.command === "string" ? "stdio" : "unknown";
   const enabled = typeof server.enabled === "boolean" ? server.enabled : (typeof server.disabled === "boolean" ? !server.disabled : true);
@@ -6597,7 +6618,6 @@ function mcpServerSearchDocument(server: JsonRecord & { id: string }, configPath
     ],
   };
 }
-
 function appCatalogSearchDocument(row: AppCatalogRow): SearchDocumentInput {
   const manifest = parseJsonRecord(row.manifest_json);
   const permissions = parseJsonRecord(row.permissions_json);
@@ -6652,7 +6672,6 @@ function appCatalogSearchDocument(row: AppCatalogRow): SearchDocumentInput {
     ],
   };
 }
-
 function designResourceSearchDocument(row: DesignResourceRow): SearchDocumentInput {
   const manifest = parseJsonRecord(row.manifest_json);
   const manifestText = textFromStructuredContent(redactExternalCachePayload(manifest));
@@ -6701,7 +6720,6 @@ function designResourceSearchDocument(row: DesignResourceRow): SearchDocumentInp
     ],
   };
 }
-
 function connectorCapabilitiesById(db: Database.Database): Map<string, ConnectorCapabilityRow> {
   if (!hasTable(db, "connector_capabilities")) return new Map();
   const rows = db.prepare(`
@@ -6710,7 +6728,6 @@ function connectorCapabilitiesById(db: Database.Database): Map<string, Connector
   `).all() as ConnectorCapabilityRow[];
   return new Map(rows.map((row) => [row.id, row]));
 }
-
 interface DatabaseRecordRow {
   namespace_id: string;
   collection_name: string;
@@ -6719,7 +6736,6 @@ interface DatabaseRecordRow {
   created_at: string;
   updated_at: string;
 }
-
 interface FinanceRecordTableRow {
   id: string;
   kind: string;
@@ -6734,7 +6750,6 @@ interface FinanceRecordTableRow {
   created_at: string;
   updated_at: string;
 }
-
 interface NotesPageRow {
   id: string;
   title: string;
@@ -6753,7 +6768,6 @@ interface NotesPageRow {
   updated_at: string;
   archived_at: string | null;
 }
-
 interface NotesPageBlockRow {
   id: string;
   page_id: string;
@@ -6766,7 +6780,6 @@ interface NotesPageBlockRow {
   created_at: string;
   updated_at: string;
 }
-
 interface KnowledgeEntityRow {
   id: string;
   type: string;
@@ -6779,7 +6792,6 @@ interface KnowledgeEntityRow {
   created_at: string;
   updated_at: string;
 }
-
 interface KnowledgeFactRow {
   id: string;
   subject_id: string | null;
@@ -6797,7 +6809,6 @@ interface KnowledgeFactRow {
   created_at: string;
   updated_at: string;
 }
-
 interface SignalsVerticalRow {
   id: string;
   label: string;
@@ -6810,7 +6821,6 @@ interface SignalsVerticalRow {
   metadata_json: string;
   synced_at: string;
 }
-
 interface SignalsVariableRow {
   id: string;
   vertical_id: string;
@@ -6822,7 +6832,6 @@ interface SignalsVariableRow {
   definition_json: string;
   updated_at: string;
 }
-
 interface SignalsObservationRow {
   id: string;
   vertical_id: string;
@@ -6839,7 +6848,6 @@ interface SignalsObservationRow {
   created_at: string;
   updated_at: string;
 }
-
 interface CalendarEventRow {
   id: string;
   title: string;
@@ -6853,7 +6861,20 @@ interface CalendarEventRow {
   created_at: string;
   updated_at: string;
 }
-
+interface TemporalCalendarEventRow {
+  id: string;
+  title: string;
+  status: string;
+  workspace_id: string | null;
+  project_id: string | null;
+  agent_id: string | null;
+  source_provider: string | null;
+  starts_at: string | null;
+  next_run_at: string | null;
+  created_at: string;
+  updated_at: string;
+  payload: string;
+}
 interface RuntimeJobRow {
   id: string;
   kind: string;
@@ -6866,7 +6887,6 @@ interface RuntimeJobRow {
   created_at: string;
   updated_at: string;
 }
-
 interface RuntimeEventRow {
   id: string;
   job_id: string | null;
@@ -6876,7 +6896,6 @@ interface RuntimeEventRow {
   created_at: string;
   metadata_json: string;
 }
-
 interface OperationalEventRow {
   id: string;
   kind: string;
@@ -6885,7 +6904,6 @@ interface OperationalEventRow {
   created_at: string;
   metadata_json: string;
 }
-
 interface AppCatalogRow {
   id: string;
   slug: string;
@@ -6900,7 +6918,6 @@ interface AppCatalogRow {
   created_at: string;
   updated_at: string;
 }
-
 interface DesignResourceRow {
   id: string;
   kind: string;
@@ -6911,7 +6928,6 @@ interface DesignResourceRow {
   created_at: string;
   updated_at: string;
 }
-
 interface SkillRegistryRow {
   id: string;
   slug: string;
@@ -6925,7 +6941,6 @@ interface SkillRegistryRow {
   created_at: string;
   updated_at: string;
 }
-
 interface ProviderRoutingRow {
   id: string;
   feature: string;
@@ -6938,7 +6953,6 @@ interface ProviderRoutingRow {
   created_at: string;
   updated_at: string;
 }
-
 interface ProviderSettingRow {
   id: string;
   provider: string;
@@ -6948,7 +6962,6 @@ interface ProviderSettingRow {
   created_at: string;
   updated_at: string;
 }
-
 interface SnippetLibraryRow {
   id: string;
   slug: string;
@@ -6962,7 +6975,6 @@ interface SnippetLibraryRow {
   created_at: string;
   updated_at: string;
 }
-
 interface AgentCatalogAgentRow {
   id: string;
   kind: string;
@@ -6987,7 +6999,6 @@ interface AgentCatalogAgentRow {
   created_at: string;
   updated_at: string;
 }
-
 interface AgentCatalogPersonalityRow {
   id: string;
   name: string;
@@ -6997,7 +7008,6 @@ interface AgentCatalogPersonalityRow {
   created_at: string;
   updated_at: string;
 }
-
 interface AgentCatalogSkillCollectionRow {
   id: string;
   name: string;
@@ -7008,7 +7018,6 @@ interface AgentCatalogSkillCollectionRow {
   created_at: string;
   updated_at: string;
 }
-
 interface AgentCatalogConnectionRow {
   id: string;
   provider: string;
@@ -7019,7 +7028,6 @@ interface AgentCatalogConnectionRow {
   created_at: string;
   updated_at: string;
 }
-
 interface MarketplaceChoiceRow {
   id: string;
   kind: string;
@@ -7031,7 +7039,6 @@ interface MarketplaceChoiceRow {
   created_at: string;
   updated_at: string;
 }
-
 interface ContentItemRow {
   id: string;
   kind: string;
@@ -7044,7 +7051,6 @@ interface ContentItemRow {
   created_at: string;
   updated_at: string;
 }
-
 interface SocialPostRow {
   id: string;
   title: string;
@@ -7057,7 +7063,6 @@ interface SocialPostRow {
   created_at: string;
   updated_at: string;
 }
-
 interface IotConfigRow {
   id: string;
   kind: string;
@@ -7071,7 +7076,6 @@ interface IotConfigRow {
   created_at: string;
   updated_at: string;
 }
-
 interface ConnectorOperationRow {
   id: string;
   provider_id: string;
@@ -7091,7 +7095,6 @@ interface ConnectorOperationRow {
   provider_trust_tier: string | null;
   provider_enabled: number | null;
 }
-
 interface ConnectorCapabilityRow {
   id: string;
   domain: string;
@@ -7099,21 +7102,18 @@ interface ConnectorCapabilityRow {
   facet: string;
   summary: string;
 }
-
 interface WebIngestedCandidate {
   absolutePath: string;
   extension: string;
   size: number;
   updatedAt: string;
 }
-
 interface ExternalCacheCandidate {
   absolutePath: string;
   extension: string;
   size: number;
   updatedAt: string;
 }
-
 function titleForDatabaseRecord(row: DatabaseRecordRow, payload: Record<string, unknown>): string {
   const fullName = [payload.firstName, payload.lastName]
     .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
@@ -7123,7 +7123,6 @@ function titleForDatabaseRecord(row: DatabaseRecordRow, payload: Record<string, 
   const value = payload.title ?? payload.name ?? payload.displayName ?? payload.subject ?? payload.label ?? payload.email;
   return typeof value === "string" && value.trim() ? value.trim() : `${row.collection_name}:${row.id}`;
 }
-
 function searchableRecordFields(payload: Record<string, unknown>): Array<[string, unknown]> {
   const fields: Array<[string, unknown]> = [];
   for (const [key, value] of Object.entries(payload)) {
