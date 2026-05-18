@@ -297,6 +297,13 @@
       "disposition": "external_pending",
       "evidenceRefs": [
         "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "mesh.resourceShare",
+        "claw nodes invite",
+        "claw nodes share",
+        "claw nodes revoke",
+        "relay /v1/mesh/invitations",
+        "relay /v1/mesh/shares",
+        "relay /v1/mesh/revocations",
         "claw remote pending:physical_peer_trust"
       ],
       "reviewedAt": "2026-05-18T11:20:00.000Z",
@@ -310,6 +317,12 @@
       "disposition": "external_pending",
       "evidenceRefs": [
         "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "gateway.multiTenantAgentService",
+        "RemoteAgentServiceExecutionReceipt",
+        "evaluateRemoteAgentServiceAccess",
+        "claw gateway agent-service",
+        "relay /v1/gateway/agent-service/evaluate",
+        "relay /v1/gateway/agent-service/executions",
         "claw remote pending:agent_runtime_execution",
         "claw remote pending:billing_meter_persistence"
       ],

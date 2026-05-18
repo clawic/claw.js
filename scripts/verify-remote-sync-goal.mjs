@@ -476,6 +476,32 @@ for (const ref of [
 ]) {
   if (!syncAuthoritySourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-005 must cite ${ref}`);
 }
+const agentServiceSourceQaReview = sourceQaReviewReport.items.find((item) => item.qaId === "QA-021");
+for (const ref of [
+  "gateway.multiTenantAgentService",
+  "RemoteAgentServiceExecutionReceipt",
+  "evaluateRemoteAgentServiceAccess",
+  "claw gateway agent-service",
+  "relay /v1/gateway/agent-service/evaluate",
+  "relay /v1/gateway/agent-service/executions",
+  "claw remote pending:agent_runtime_execution",
+  "claw remote pending:billing_meter_persistence",
+]) {
+  if (!agentServiceSourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-021 must cite ${ref}`);
+}
+const meshCollaborationSourceQaReview = sourceQaReviewReport.items.find((item) => item.qaId === "QA-020");
+for (const ref of [
+  "mesh.resourceShare",
+  "claw nodes invite",
+  "claw nodes share",
+  "claw nodes revoke",
+  "relay /v1/mesh/invitations",
+  "relay /v1/mesh/shares",
+  "relay /v1/mesh/revocations",
+  "claw remote pending:physical_peer_trust",
+]) {
+  if (!meshCollaborationSourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-020 must cite ${ref}`);
+}
 const reviewedClosureGate = buildRemoteGoalClosureGate({
   generatedAt: "2026-05-18T11:20:01.000Z",
   sourceQaReviews: sourceQaReviewReport.items,
