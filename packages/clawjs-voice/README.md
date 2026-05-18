@@ -1,25 +1,6 @@
-# @clawjs/openclaw-context-engine
+# @clawjs/voice
 
-dev-only context engine plugin for OpenClaw and ClawJS.
-
-Install with OpenClaw:
-
-```bash
-openclaw plugins install @clawjs/openclaw-context-engine
-openclaw plugins enable clawjs-context
-```
-
-Select it explicitly:
-
-```json
-{
-  "plugins": {
-    "slots": {
-      "contextEngine": "clawjs-context"
-    }
-  }
-}
-```
+TTS/STT provider abstraction for ClawJS with system, ElevenLabs, OpenAI, Whisper local/remote, Azure, and Deepgram adapters.
 
 ## Safety and legal
 

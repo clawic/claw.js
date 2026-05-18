@@ -164,3 +164,7 @@ Or generate a deterministic offline harness before replaying intercepted fetch:
 ```bash
 npm --workspace @clawjs/integrations run openapi:verify-runtime -- --spec /tmp/provider-openapi.yaml --app-id provider --evidence packages/clawjs-integrations/src/openapi-runtime.test.ts --generate-fixtures /tmp/provider-runtime-fixtures --report /tmp/provider-runtime-audit.json --execute-offline
 ```
+
+## Safety and legal
+
+ClawJS is an assistive local-first framework. It may help with sensitive records, summaries, searches, and non-final drafts, but it does not replace regulated professionals, is not professional advice, and must not make final medical, mental health, legal, financial, insurance, employment, education, government, emergency, or physical-safety decisions. See [SAFETY.md](https://github.com/clawic/clawjs/blob/main/SAFETY.md) and [REGULATED_DOMAINS.md](https://github.com/clawic/clawjs/blob/main/REGULATED_DOMAINS.md).

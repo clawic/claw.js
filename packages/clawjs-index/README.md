@@ -1,25 +1,6 @@
-# @clawjs/openclaw-context-engine
+# @clawjs/index
 
-dev-only context engine plugin for OpenClaw and ClawJS.
-
-Install with OpenClaw:
-
-```bash
-openclaw plugins install @clawjs/openclaw-context-engine
-openclaw plugins enable clawjs-context
-```
-
-Select it explicitly:
-
-```json
-{
-  "plugins": {
-    "slots": {
-      "contextEngine": "clawjs-context"
-    }
-  }
-}
-```
+Structured capture of agent-read internet. Catalog of typed entities, observations, timeseries, searches, monitors, runs and alerts.
 
 ## Safety and legal
 

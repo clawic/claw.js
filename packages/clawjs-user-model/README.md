@@ -1,25 +1,6 @@
-# @clawjs/openclaw-context-engine
+# @clawjs/user-model
 
-dev-only context engine plugin for OpenClaw and ClawJS.
-
-Install with OpenClaw:
-
-```bash
-openclaw plugins install @clawjs/openclaw-context-engine
-openclaw plugins enable clawjs-context
-```
-
-Select it explicitly:
-
-```json
-{
-  "plugins": {
-    "slots": {
-      "contextEngine": "clawjs-context"
-    }
-  }
-}
-```
+Cross-session user model for communication style, expertise, projects, preferences, and edge cases maintained by ClawJS runtime/.
 
 ## Safety and legal
 

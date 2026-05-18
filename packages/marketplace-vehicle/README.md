@@ -1,25 +1,6 @@
-# @clawjs/openclaw-context-engine
+# @clawjs/marketplace-vehicle
 
-dev-only context engine plugin for OpenClaw and ClawJS.
-
-Install with OpenClaw:
-
-```bash
-openclaw plugins install @clawjs/openclaw-context-engine
-openclaw plugins enable clawjs-context
-```
-
-Select it explicitly:
-
-```json
-{
-  "plugins": {
-    "slots": {
-      "contextEngine": "clawjs-context"
-    }
-  }
-}
-```
+Vehicle vertical plugin for the Clawix marketplace/* protocol: make/model/year/km/VIN/condition/photos/price/geo_zone for second-hand vehicle listings.
 
 ## Safety and legal
 

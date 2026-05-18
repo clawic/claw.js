@@ -1,25 +1,6 @@
-# @clawjs/openclaw-context-engine
+# @clawjs/search-mcp
 
-dev-only context engine plugin for OpenClaw and ClawJS.
-
-Install with OpenClaw:
-
-```bash
-openclaw plugins install @clawjs/openclaw-context-engine
-openclaw plugins enable clawjs-context
-```
-
-Select it explicitly:
-
-```json
-{
-  "plugins": {
-    "slots": {
-      "contextEngine": "clawjs-context"
-    }
-  }
-}
-```
+MCP stdio server that exposes the @clawjs/search API as typed tools.
 
 ## Safety and legal
 

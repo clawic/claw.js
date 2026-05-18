@@ -1,25 +1,6 @@
-# @clawjs/openclaw-context-engine
+# @clawjs/audio
 
-dev-only context engine plugin for OpenClaw and ClawJS.
-
-Install with OpenClaw:
-
-```bash
-openclaw plugins install @clawjs/openclaw-context-engine
-openclaw plugins enable clawjs-context
-```
-
-Select it explicitly:
-
-```json
-{
-  "plugins": {
-    "slots": {
-      "contextEngine": "clawjs-context"
-    }
-  }
-}
-```
+Shared audio asset store, transcript catalog, API client, and service app for ClawJS.
 
 ## Safety and legal
 

@@ -1,25 +1,6 @@
-# @clawjs/openclaw-context-engine
+# @clawjs/marketplace-real-estate
 
-dev-only context engine plugin for OpenClaw and ClawJS.
-
-Install with OpenClaw:
-
-```bash
-openclaw plugins install @clawjs/openclaw-context-engine
-openclaw plugins enable clawjs-context
-```
-
-Select it explicitly:
-
-```json
-{
-  "plugins": {
-    "slots": {
-      "contextEngine": "clawjs-context"
-    }
-  }
-}
-```
+Real-estate vertical plugin (sale / rental_long / rental_short) for the Clawix marketplace/* protocol. Extracted from @clawjs/marketplace/verticals.
 
 ## Safety and legal
 

@@ -110,6 +110,41 @@ function assertNoBannedPublicClaims() {
   }
 }
 
+function assertPackageReadmeDisclaimers() {
+  const packageReadmes = walk("packages", (file) => path.basename(file) === "README.md");
+  const missingPackageReadmes = [];
+  const packageJsons = walk("packages", (file) => path.basename(file) === "package.json");
+  for (const packageJsonPath of packageJsons) {
+    const packageJson = JSON.parse(read(packageJsonPath));
+    if (
+      packageJson.publishConfig?.access === "public"
+      && Array.isArray(packageJson.files)
+      && packageJson.files.includes("README.md")
+    ) {
+      const expectedReadme = path.join(path.dirname(packageJsonPath), "README.md");
+      if (!fs.existsSync(path.join(rootDir, expectedReadme))) {
+        missingPackageReadmes.push(expectedReadme);
+      }
+    }
+  }
+  for (const relativePath of missingPackageReadmes) {
+    errors.push(`${relativePath}: public package declares README.md but the file is missing`);
+  }
+  for (const relativePath of packageReadmes) {
+    const text = read(relativePath);
+    for (const snippet of [
+      "does not replace regulated professionals",
+      "not professional advice",
+      "must not make final medical",
+      "REGULATED_DOMAINS.md",
+    ]) {
+      if (!text.includes(snippet)) {
+        errors.push(`${relativePath}: missing package legal disclaimer snippet ${JSON.stringify(snippet)}`);
+      }
+    }
+  }
+}
+
 try {
   assertRegulatedDomainSafetyComplete();
 } catch (error) {
@@ -255,6 +290,7 @@ for (const snippet of [
   requireNoSnippet("docs/adr/0026-regulated-domain-safety-liability-boundary.md", snippet);
 }
 assertNoBannedPublicClaims();
+assertPackageReadmeDisclaimers();
 
 if (errors.length > 0) {
   console.error(`Regulated domain safety guard failed with ${errors.length} issue(s):`);

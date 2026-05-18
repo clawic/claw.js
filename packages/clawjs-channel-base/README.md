@@ -1,25 +1,6 @@
-# @clawjs/openclaw-context-engine
+# @clawjs/channel-base
 
-dev-only context engine plugin for OpenClaw and ClawJS.
-
-Install with OpenClaw:
-
-```bash
-openclaw plugins install @clawjs/openclaw-context-engine
-openclaw plugins enable clawjs-context
-```
-
-Select it explicitly:
-
-```json
-{
-  "plugins": {
-    "slots": {
-      "contextEngine": "clawjs-context"
-    }
-  }
-}
-```
+Shared scaffolding for ClawJS messaging integrations: accounts, routing, messages, send/webhook contract.
 
 ## Safety and legal
 

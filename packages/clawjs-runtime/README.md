@@ -1,25 +1,6 @@
-# @clawjs/openclaw-context-engine
+# @clawjs/runtime
 
-dev-only context engine plugin for OpenClaw and ClawJS.
-
-Install with OpenClaw:
-
-```bash
-openclaw plugins install @clawjs/openclaw-context-engine
-openclaw plugins enable clawjs-context
-```
-
-Select it explicitly:
-
-```json
-{
-  "plugins": {
-    "slots": {
-      "contextEngine": "clawjs-context"
-    }
-  }
-}
-```
+Out-of-band runtime loop services for ClawJS: skill distillation, periodic nudges, cross-session user model refresh.
 
 ## Safety and legal
 

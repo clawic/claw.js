@@ -1,25 +1,6 @@
-# @clawjs/openclaw-context-engine
+# @clawjs personal namespace
 
-dev-only context engine plugin for OpenClaw and ClawJS.
-
-Install with OpenClaw:
-
-```bash
-openclaw plugins install @clawjs/openclaw-context-engine
-openclaw plugins enable clawjs-context
-```
-
-Select it explicitly:
-
-```json
-{
-  "plugins": {
-    "slots": {
-      "contextEngine": "clawjs-context"
-    }
-  }
-}
-```
+Clawix personal namespace with typed blocks, owner-driven groups, capability tokens, and visibility-aware ACL resolution on top of the marketplace/* peer-to-peer protocol.
 
 ## Safety and legal
 

@@ -1,25 +1,6 @@
-# @clawjs/openclaw-context-engine
+# @clawjs/sessions
 
-dev-only context engine plugin for OpenClaw and ClawJS.
-
-Install with OpenClaw:
-
-```bash
-openclaw plugins install @clawjs/openclaw-context-engine
-openclaw plugins enable clawjs-context
-```
-
-Select it explicitly:
-
-```json
-{
-  "plugins": {
-    "slots": {
-      "contextEngine": "clawjs-context"
-    }
-  }
-}
-```
+Multi-agent session mirror with FTS5 search, native-storage adapters, and HTTP service for ClawJS.
 
 ## Safety and legal
 

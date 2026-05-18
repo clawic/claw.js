@@ -1,25 +1,6 @@
-# @clawjs/openclaw-context-engine
+# @clawjs/signals
 
-dev-only context engine plugin for OpenClaw and ClawJS.
-
-Install with OpenClaw:
-
-```bash
-openclaw plugins install @clawjs/openclaw-context-engine
-openclaw plugins enable clawjs-context
-```
-
-Select it explicitly:
-
-```json
-{
-  "plugins": {
-    "slots": {
-      "contextEngine": "clawjs-context"
-    }
-  }
-}
-```
+Reusable SQLite store, Fastify route builder, and HTTP client factory for ClawJS signals modules (Health, Sleep, Workouts, Emotions, etc.).
 
 ## Safety and legal
 

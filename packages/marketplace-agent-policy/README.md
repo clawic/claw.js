@@ -1,25 +1,6 @@
-# @clawjs/openclaw-context-engine
+# @clawjs/marketplace-agent-policy
 
-dev-only context engine plugin for OpenClaw and ClawJS.
-
-Install with OpenClaw:
-
-```bash
-openclaw plugins install @clawjs/openclaw-context-engine
-openclaw plugins enable clawjs-context
-```
-
-Select it explicitly:
-
-```json
-{
-  "plugins": {
-    "slots": {
-      "contextEngine": "clawjs-context"
-    }
-  }
-}
-```
+Agent policy framework for the Clawix marketplace/* protocol: declarative auto-publish, auto-respond, auto-accept-interest and auto-lower-price decisions evaluated per Block with auditable side-effects.
 
 ## Safety and legal
 
