@@ -82,6 +82,7 @@ external requirement list as blocked until approved evidence clears:
 | Public executable inspection | `node packages/clawjs/bin/claw.mjs inspect remote --json` after building the CLI package |
 | Clawix remote mirror | In the public Clawix repo, `bash scripts/test.sh fast`; this runs `scripts/remote_canon_alignment_check.mjs` and verifies the Clawix interface matrix/ADR mirror stays a consumer of ClawJS Coordinator/Gateway/Connector/Sync route anchors, not a second source of truth. |
 | Public docs hygiene | `npm run code-hygiene:check` and `git diff --check` |
+| Full public docs lane | `npm run test:docs`; this runs the remote-sync goal verifier as part of the full documentation, governance, surface, route, source-size, and code-hygiene lane. |
 
 ## Current Validation Evidence
 
@@ -96,15 +97,16 @@ remaining a consumer of the framework graph, not a second remote API source of
 truth.
 
 The public ClawJS executable inspection was also rerun after
-`npm run build:packages`: `node packages/clawjs/bin/claw.mjs inspect remote
---json` returned `baseline_registered` conformance, 16 remote route contracts,
-13 external-pending requirements, 57 Relay-classified surfaces, zero Relay
-`pending` classifications, zero Relay `blocked` classifications, an
-`external_pending` external validation report with 13 blocked requirements, and
-a `blocked` closure gate with `source_qa_review` and `external_validation`
-blockers. This keeps executable inspection aligned with the completion audit:
-software/source review can be checked locally, while physical/provider evidence
-still requires approved external validation.
+`npm run build:packages`. As of 2026-05-19,
+`node packages/clawjs/bin/claw.mjs inspect remote --json` returned
+`baseline_registered` conformance, 16 remote route contracts, an
+`external_pending` external validation report with 13 requirements and 13
+blocked requirements, 57 Relay-classified surfaces, zero Relay `pending` classifications,
+zero Relay `blocked` classifications, and a `blocked` closure
+gate with `source_qa_review` and `external_validation` blockers. This keeps
+executable inspection aligned with the completion audit: software/source review
+can be checked locally, while physical/provider evidence still requires
+approved external validation.
 
 The focused core/CLI and Relay HTTP route tests were rerun as listed above.
 `npx vitest run --config vitest.config.ts packages/clawjs-core/src/index.test.ts
@@ -118,7 +120,7 @@ gate, route contracts, provider/device E2E plan, and conformance.
 
 CLI/router parity was rerun with
 `node --import tsx ./scripts/verify-cli-registry-router-parity.mjs` and passed
-with `cli registry/router parity passed (155 commands)`. This keeps the public
+with `cli registry/router parity passed (157 commands)`. This keeps the public
 `claw` command registry aligned with router-dispatched command surfaces before
 final remote close.
 
@@ -134,6 +136,15 @@ Public docs hygiene was rerun with `npm run code-hygiene:check` and
 `git diff --check`, and both passed. `node ./scripts/docs-alignment-check.mjs`
 also returned `docs alignment check passed`, keeping the completion audit,
 decision map references, and generated documentation alignment checks current.
+
+The full public documentation lane was rerun with `npm run test:docs` after the
+remote verifier line-count cleanup and generated public surface updates. It
+passed end-to-end, including rendered docs links, discoverability, naming,
+governance, package surface, CLI/router parity, domain/surface/route guards,
+the remote-sync goal verifier, connector/search goal verifiers, regulated
+domain safety, persistent surface docs, connector control-plane guard, version
+and evolution governance, tracked ignored files, codebase manifest, source-size,
+code hygiene, and code hygiene self-tests.
 
 ## Closure Rule
 

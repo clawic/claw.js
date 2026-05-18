@@ -2654,6 +2654,31 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "guard-scripts-verify-remote-sync-source-session",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/verify-remote-sync-source-session.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "verify-remote-sync-source-session",
+        "Verify Remote Sync Source Session"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-remote-sync-source-session",
+          "expectPath": "scripts/verify-remote-sync-source-session.mjs"
+        }
+      ],
+      "guard": "scripts/verify-remote-sync-source-session.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "guard-scripts-verify-search-v1-1-goal",
       "kind": "guardrail",
       "owner": "claw",

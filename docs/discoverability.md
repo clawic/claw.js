@@ -105,6 +105,7 @@ file; do not hand-maintain this table.
 | `guard-scripts-verify-openapi-runtime-coverage` | guardrail | `scripts/verify-openapi-runtime-coverage.mjs` | verify-openapi-runtime-coverage, Verify Openapi Runtime Coverage | `scripts/verify-openapi-runtime-coverage.mjs` |
 | `guard-scripts-verify-regulated-domain-safety-goal` | guardrail | `scripts/verify-regulated-domain-safety-goal.mjs` | verify-regulated-domain-safety-goal, Verify Regulated Domain Safety Goal | `scripts/verify-regulated-domain-safety-goal.mjs` |
 | `guard-scripts-verify-remote-sync-goal` | guardrail | `scripts/verify-remote-sync-goal.mjs` | verify-remote-sync-goal, Verify Remote Sync Goal | `scripts/verify-remote-sync-goal.mjs` |
+| `guard-scripts-verify-remote-sync-source-session` | guardrail | `scripts/verify-remote-sync-source-session.mjs` | verify-remote-sync-source-session, Verify Remote Sync Source Session | `scripts/verify-remote-sync-source-session.mjs` |
 | `guard-scripts-verify-search-v1-1-goal` | guardrail | `scripts/verify-search-v1-1-goal.mjs` | verify-search-v1-1-goal, Verify Search V1 1 Goal | `scripts/verify-search-v1-1-goal.mjs` |
 | `guard-scripts-verify-testing-policy` | guardrail | `scripts/verify-testing-policy.mjs` | verify-testing-policy, Verify Testing Policy | `scripts/verify-testing-policy.mjs` |
 | `guard-scripts-version-governance-check` | guardrail | `scripts/version-governance-check.mjs` | version-governance-check, Version Governance Check | `scripts/version-governance-check.mjs` |

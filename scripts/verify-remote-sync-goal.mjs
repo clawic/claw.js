@@ -322,7 +322,7 @@ for (const snippet of [
   "Clawix remote mirror", "Current Validation Evidence", "completed successfully in the public Clawix repo", "scripts/code-hygiene-check.mjs",
   "public ClawJS executable inspection", "16 remote route contracts", "57 Relay-classified surfaces", "zero Relay", "`pending` classifications", "source_qa_review` and `external_validation`",
   "2 files and 42 tests", "1 file and 1 test", "HTTP route parity",
-  "cli registry/router parity passed", "155 commands",
+  "cli registry/router parity passed", "157 commands", "Full public docs lane", "npm run test:docs", "source-size", "code hygiene self-tests",
   "remote sync source session verification passed", "23 Q/A rows", "Public docs hygiene", "docs alignment check passed",
   "REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl> node scripts/verify-remote-sync-source-session.mjs",
   "remote_canon_alignment_check.mjs",
