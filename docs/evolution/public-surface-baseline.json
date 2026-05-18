@@ -7741,7 +7741,7 @@
     {
       "name": "design",
       "kind": "canonical",
-      "usage": "design list|upsert",
+      "usage": "design list|upsert|delete",
       "family": "media",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.design.v1"

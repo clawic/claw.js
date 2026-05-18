@@ -97,7 +97,7 @@ the full parity format.
 | Sessions and chat | Clawix chat, history, composer, activity views | `claw.sessions.*` | `claw sessions ...` | sessions service routes | `required` for session resources and reply tools | `remote-safe` subset under `WS/sessions` | session store and transcript records |
 | Documents and media | Clawix attachment, preview, drive, and generated asset views | `claw.documents.*`, `claw.image.*`, `claw.audio.*`, `claw.video.*` | `claw documents ...`, `claw image ...`, media commands | document/media service routes | `required` for resource reads and safe creation tools | `remote-safe` subset for uploads, downloads, and reads | blob store, metadata tables, share records |
 | Apps and openable surfaces | Clawix Apps catalog and app surface | app/resource registry APIs | `claw apps list|upsert|delete` | `optional` local service contract | MCP resources for app/surface discovery | `local-only` until remote launch semantics are approved | framework workspace app records |
-| Design resources | Clawix Design styles, templates, references, and editor | design/resource registry APIs | `claw design list|upsert` | `optional` local service contract | MCP resources for design assets | `local-only` unless explicitly synced | framework workspace design records |
+| Design resources | Clawix Design styles, templates, references, and editor | design/resource registry APIs | `claw design list|upsert|delete` | `optional` local service contract | MCP resources for design assets | `local-only` unless explicitly synced | framework workspace design records |
 | Skills and local library | Clawix skill/library selection and assignment UI | `claw.skills.*`, `claw.library.*` | `claw skills ...`, `claw library ...` | `optional` local service contract | MCP prompts/resources for model-host discovery | `local-only` unless explicitly synced | skill files, library records, assignments |
 | Integrations and channels | Clawix connection status, approval, and QA state | `claw.channels.*`, provider namespaces | provider CLI groups where implemented | integration service APIs | MCP tools/resources for provider actions and state | `blocked` until provider action is remote-safe | connection records, fixtures, audit, QA matrices |
 | Approvals, grants, and secrets | Host-owned approval and reveal UI | `claw.secrets.*`, policy/grant APIs | approval/grant/secret commands where safe | signed-host service contracts | `blocked` unless tool consent and secret leasing are explicit | `blocked` for sensitive material by default | encrypted vault sidecar, host audit, opaque references |
@@ -261,7 +261,7 @@ surfaces.
 | TTS config / providers / catalog | `claw.tts.config()`, `setConfig()`, `providers()`, `catalog()` | `claw tts config`, `set-config`, `providers`, `catalog` | `-` |
 | Audio asset service | `@clawjs/audio` API client | `claw audio index|transcript|artifact list|get|delete`; `audio serve` | standalone Audio service routes |
 | Apps catalog | app/resource registry APIs | `claw apps list|upsert|delete` | `-` |
-| Design resource registry | design/resource registry APIs | `claw design list|upsert` | `-` |
+| Design resource registry | design/resource registry APIs | `claw design list|upsert|delete` | `-` |
 | Non-stream reply helper | `-` | `-` | `POST WS/sessions/:sessionId/reply` |
 | Clear all sessions | `-` | `-` | `POST /v1/admin/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/sessions/clear` |
 | Delete one session | `-` | `-` | `-` |
