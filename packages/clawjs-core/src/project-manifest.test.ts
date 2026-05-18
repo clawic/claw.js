@@ -5,6 +5,7 @@ import {
   assertSafeClawProjectHandoff,
   clawProjectManifestSchema,
   createClawProjectId,
+  findClawProjectManifestPortabilityViolations,
   normalizeClawProjectManifest,
 } from "./project-manifest.ts";
 
@@ -41,4 +42,22 @@ test("project ids are stable portable slugs", () => {
 test("project handoff safety blocks secret-like fields", () => {
   assert.deepEqual(assertSafeClawProjectHandoff({ project: { projectId: "demo" } }), { safe: true, blockedFields: [] });
   assert.deepEqual(assertSafeClawProjectHandoff({ project: { secretToken: "bad" } }), { safe: false, blockedFields: ["project.secretToken"] });
+});
+
+test("project manifest rejects absolute paths and workspace .claw state", () => {
+  assert.deepEqual(findClawProjectManifestPortabilityViolations({
+    primaryFolder: { id: "primary", path: "/Users/me/work", role: "primary" },
+    folderRefs: [{ id: "workspace", path: ".claw", role: "reference" }],
+    directories: { memory: ".claw/memory" },
+    resources: { files: [{ id: "secret", path: "C:\\Users\\me\\.claw\\secret" }] },
+  }), ["primaryFolder.path", "folderRefs.0.path", "directories.memory", "resources.files.0.path"]);
+
+  assert.throws(() => clawProjectManifestSchema.parse({
+    schemaVersion: 1,
+    manifestKind: "claw.project",
+    projectId: "demo",
+    name: "demo",
+    title: "Demo",
+    primaryFolder: { id: "primary", path: "/tmp/demo", role: "primary" },
+  }), /relative paths/);
 });

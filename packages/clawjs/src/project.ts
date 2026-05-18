@@ -5,6 +5,7 @@ import path from "path";
 import {
   assertSafeClawProjectHandoff,
   createClawProjectId,
+  findClawProjectManifestPortabilityViolations,
   normalizeClawProjectManifest,
   resolveClawPersistentSurfacePath,
   type ClawProjectManifest,
@@ -130,7 +131,12 @@ export function locateProjectRoot(startDir: string): string | null {
 
 export function readProjectConfig(projectRoot: string): ClawProjectConfig | null {
   const raw = safeReadJson<ClawProjectConfig>(path.join(projectRoot, PROJECT_CONFIG_FILE));
-  return raw ? normalizeClawProjectManifest(raw, path.basename(projectRoot)) as ClawProjectConfig : null;
+  if (!raw) return null;
+  try {
+    return normalizeClawProjectManifest(raw, path.basename(projectRoot)) as ClawProjectConfig;
+  } catch {
+    return null;
+  }
 }
 
 async function writeProjectConfig(projectRoot: string, config: ClawProjectConfig): Promise<void> {
@@ -509,7 +515,7 @@ export interface ClawProjectFolderInspection {
   claudePath: string;
   agentsManaged: boolean;
   claudeShim: boolean;
-  state: "missing" | "unattached" | "attached" | "detached";
+  state: "missing" | "unattached" | "attached" | "detached" | "duplicate";
   warnings: string[];
 }
 
@@ -545,21 +551,36 @@ function writeAction(filePath: string, content: string): "create" | "update" | "
   return readTextSafe(filePath) === content ? "unchanged" : "update";
 }
 
-export function inspectProjectFolder(projectRoot: string): ClawProjectFolderInspection {
+export function inspectProjectFolder(projectRoot: string, options: { workspaceId?: string } = {}): ClawProjectFolderInspection {
   const resolved = path.resolve(projectRoot);
   const manifestPath = path.join(resolved, PROJECT_CONFIG_FILE);
   const raw = safeReadJson<unknown>(manifestPath);
-  const manifest = raw ? normalizeClawProjectManifest(raw, path.basename(resolved)) : null;
+  let manifest: ClawProjectManifest | null = null;
+  const warnings: string[] = [];
+  if (raw) {
+    try {
+      manifest = normalizeClawProjectManifest(raw, path.basename(resolved));
+    } catch {
+      warnings.push("invalid_claw_project_manifest");
+    }
+  }
   const agentsPath = path.join(resolved, "AGENTS.md");
   const claudePath = path.join(resolved, "CLAUDE.md");
   const agentsText = readTextSafe(agentsPath);
   const claudeText = readTextSafe(claudePath);
   const exists = fs.existsSync(resolved);
-  const warnings: string[] = [];
   const hasWorkspaceDirectory = fs.existsSync(path.join(resolved, ".claw"));
   if (hasWorkspaceDirectory) warnings.push("folder_contains_workspace_claw_directory");
   if (!manifest) warnings.push("missing_claw_project_manifest");
   if (manifest?.primaryFolder.path !== ".") warnings.push("primary_folder_path_should_be_relative_dot");
+  const manifestWorkspaceId = manifest?.attachment.workspaceId ?? manifest?.workspaceBinding?.workspaceId;
+  const isDuplicate = Boolean(
+    options.workspaceId
+      && manifest?.attachment.state === "attached"
+      && manifestWorkspaceId
+      && manifestWorkspaceId !== options.workspaceId,
+  );
+  if (isDuplicate) warnings.push("duplicate_project_id_attached_to_different_workspace");
   return {
     projectRoot: resolved,
     manifestPath,
@@ -570,7 +591,7 @@ export function inspectProjectFolder(projectRoot: string): ClawProjectFolderInsp
     claudePath,
     agentsManaged: Boolean(agentsText?.includes("This folder is a Claw Project primary folder.")),
     claudeShim: Boolean(claudeText?.includes("Read `AGENTS.md` first")),
-    state: !exists ? "missing" : !manifest ? "unattached" : manifest.attachment.state,
+    state: !exists ? "missing" : !manifest ? "unattached" : isDuplicate ? "duplicate" : manifest.attachment.state,
     warnings,
   };
 }
@@ -582,18 +603,44 @@ export async function attachProjectFolder(input: {
   name?: string;
   title?: string;
   accept?: boolean;
+  replaceDuplicate?: boolean;
 }): Promise<ClawProjectAttachPreview> {
   const projectRoot = path.resolve(input.projectRoot);
   const now = new Date().toISOString();
   const previous = safeReadJson<unknown>(path.join(projectRoot, PROJECT_CONFIG_FILE));
+  const previousRecord = previous && typeof previous === "object" && !Array.isArray(previous)
+    ? previous as Record<string, unknown>
+    : {};
+  const previousAttachment = previousRecord.attachment && typeof previousRecord.attachment === "object" && !Array.isArray(previousRecord.attachment)
+    ? previousRecord.attachment as Record<string, unknown>
+    : {};
+  const previousWorkspaceBinding = previousRecord.workspaceBinding && typeof previousRecord.workspaceBinding === "object" && !Array.isArray(previousRecord.workspaceBinding)
+    ? previousRecord.workspaceBinding as Record<string, unknown>
+    : {};
+  const previousWorkspaceId = typeof previousAttachment.workspaceId === "string"
+    ? previousAttachment.workspaceId
+    : typeof previousWorkspaceBinding.workspaceId === "string"
+      ? previousWorkspaceBinding.workspaceId
+      : undefined;
+  const requestedProjectId = input.projectId ?? (typeof previousRecord.projectId === "string" ? previousRecord.projectId : undefined) ?? createClawProjectId(input.name ?? path.basename(projectRoot));
+  const duplicateAttachedProject = Boolean(
+    previousWorkspaceId
+      && previousWorkspaceId !== input.workspaceId
+      && typeof previousRecord.projectId === "string"
+      && previousRecord.projectId === requestedProjectId
+      && previousAttachment.state === "attached"
+      && !input.replaceDuplicate,
+  );
   const manifest = normalizeClawProjectManifest({
-    ...(previous && typeof previous === "object" && !Array.isArray(previous) ? previous as Record<string, unknown> : {}),
-    projectId: input.projectId ?? (previous as { projectId?: string } | null)?.projectId ?? createClawProjectId(input.name ?? path.basename(projectRoot)),
-    name: input.name ?? (previous as { name?: string } | null)?.name ?? createClawProjectId(path.basename(projectRoot)),
-    title: input.title ?? (previous as { title?: string } | null)?.title ?? input.name ?? path.basename(projectRoot),
+    ...previousRecord,
+    projectId: requestedProjectId,
+    name: input.name ?? (typeof previousRecord.name === "string" ? previousRecord.name : undefined) ?? createClawProjectId(path.basename(projectRoot)),
+    title: input.title ?? (typeof previousRecord.title === "string" ? previousRecord.title : undefined) ?? input.name ?? path.basename(projectRoot),
     primaryFolder: { id: "primary", path: ".", role: "primary" },
-    workspaceBinding: { workspaceId: input.workspaceId },
-    attachment: { state: "attached", workspaceId: input.workspaceId },
+    workspaceBinding: duplicateAttachedProject ? undefined : { workspaceId: input.workspaceId },
+    attachment: duplicateAttachedProject
+      ? { state: "detached", detachedReason: "duplicate_project_id_attached_to_different_workspace" }
+      : { state: "attached", workspaceId: input.workspaceId },
     updatedAt: now,
   }, path.basename(projectRoot), now);
   const manifestPath = path.join(projectRoot, PROJECT_CONFIG_FILE);
@@ -604,7 +651,11 @@ export async function attachProjectFolder(input: {
     { path: agentsPath, action: writeAction(agentsPath, managedAgentsContent(manifest)) },
     { path: claudePath, action: writeAction(claudePath, managedClaudeContent()) },
   ];
-  const warnings = fs.existsSync(path.join(projectRoot, ".claw")) ? ["folder_contains_workspace_claw_directory"] : [];
+  const warnings = [
+    ...(fs.existsSync(path.join(projectRoot, ".claw")) ? ["folder_contains_workspace_claw_directory"] : []),
+    ...(duplicateAttachedProject ? ["duplicate_project_id_attached_to_different_workspace"] : []),
+    ...findClawProjectManifestPortabilityViolations(manifest).map((field) => `non_portable_manifest_path:${field}`),
+  ];
   if (input.accept) {
     await fsp.mkdir(projectRoot, { recursive: true });
     await writeJsonFile(manifestPath, manifest);

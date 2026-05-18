@@ -2114,6 +2114,7 @@ The docs check script validates that every current export from
     createClawProjectId
     evaluateGovernanceAccess
     evaluateGovernanceDelegation
+    findClawProjectManifestPortabilityViolations
     listClawCliCommandIntentRegistry
     mergeClawCliCommandIntentEntries
     normalizeClawProjectManifest

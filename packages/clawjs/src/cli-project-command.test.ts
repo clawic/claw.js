@@ -112,3 +112,107 @@ test("claw project detach and export keep folder data while producing safe hando
   assert.match(fs.readFileSync(output, "utf8"), /claw.project.handoff/);
   assert.doesNotMatch(fs.readFileSync(output, "utf8"), /token|password|credential/i);
 });
+
+test("claw project copy into another workspace stays detached until explicitly replaced", async () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-project-copy-"));
+  const folder = path.join(cwd, "copied-project");
+  fs.mkdirSync(folder, { recursive: true });
+
+  assert.equal(await runCli([
+    "project",
+    "attach",
+    folder,
+    "--workspace-id",
+    "workspace-main",
+    "--project-id",
+    "copied-project",
+    "--accept",
+    "--json",
+  ], {
+    stdout: captureStream().stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+
+  const duplicateInspectStdout = captureStream();
+  assert.equal(await runCli([
+    "project",
+    "inspect",
+    folder,
+    "--workspace-id",
+    "workspace-other",
+    "--json",
+  ], {
+    stdout: duplicateInspectStdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+  const duplicateInspection = parseCliJsonPayload<{ state: string; warnings: string[] }>(duplicateInspectStdout.getOutput());
+  assert.equal(duplicateInspection.state, "duplicate");
+  assert.equal(duplicateInspection.warnings.includes("duplicate_project_id_attached_to_different_workspace"), true);
+
+  const attachCopyStdout = captureStream();
+  assert.equal(await runCli([
+    "project",
+    "attach",
+    folder,
+    "--workspace-id",
+    "workspace-other",
+    "--accept",
+    "--json",
+  ], {
+    stdout: attachCopyStdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+  const attachCopy = parseCliJsonPayload<{ warnings: string[]; manifest: { attachment: { state: string; detachedReason: string }; workspaceBinding?: unknown } }>(attachCopyStdout.getOutput());
+  assert.equal(attachCopy.warnings.includes("duplicate_project_id_attached_to_different_workspace"), true);
+  assert.deepEqual(attachCopy.manifest.attachment, {
+    state: "detached",
+    detachedReason: "duplicate_project_id_attached_to_different_workspace",
+  });
+  assert.equal(attachCopy.manifest.workspaceBinding, undefined);
+
+  const replaceStdout = captureStream();
+  assert.equal(await runCli([
+    "project",
+    "attach",
+    folder,
+    "--workspace-id",
+    "workspace-other",
+    "--replace",
+    "--accept",
+    "--json",
+  ], {
+    stdout: replaceStdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+  const replaced = parseCliJsonPayload<{ manifest: { attachment: { state: string; workspaceId: string }; workspaceBinding: { workspaceId: string } } }>(replaceStdout.getOutput());
+  assert.deepEqual(replaced.manifest.attachment, { state: "attached", workspaceId: "workspace-other" });
+  assert.deepEqual(replaced.manifest.workspaceBinding, { workspaceId: "workspace-other" });
+});
+
+test("claw project commands never create a workspace .claw directory in project folders", async () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-project-no-claw-"));
+  const folder = path.join(cwd, "project");
+  fs.mkdirSync(folder, { recursive: true });
+
+  assert.equal(await runCli(["project", "attach", folder, "--workspace-id", "workspace-main", "--accept", "--json"], {
+    stdout: captureStream().stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+  assert.equal(await runCli(["project", "sync-handoff", folder, "--json"], {
+    stdout: captureStream().stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+  assert.equal(await runCli(["project", "export", folder, "--json"], {
+    stdout: captureStream().stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+
+  assert.equal(fs.existsSync(path.join(folder, ".claw")), false);
+});

@@ -11,6 +11,46 @@ export const clawProjectFolderRefSchema = z.object({
   label: z.string().min(1).optional(),
 });
 
+function isAbsoluteOrWorkspacePrivatePath(value: string): boolean {
+  return value.startsWith("/")
+    || /^[A-Za-z]:[\\/]/.test(value)
+    || value.startsWith("\\\\")
+    || value === ".claw"
+    || value.startsWith(".claw/")
+    || value.startsWith(".claw\\");
+}
+
+export function findClawProjectManifestPortabilityViolations(value: unknown): string[] {
+  const violations: string[] = [];
+  const raw = value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+  const checkPath = (field: string, candidate: unknown): void => {
+    if (typeof candidate === "string" && isAbsoluteOrWorkspacePrivatePath(candidate)) violations.push(field);
+  };
+  const primaryFolder = raw.primaryFolder && typeof raw.primaryFolder === "object" && !Array.isArray(raw.primaryFolder)
+    ? raw.primaryFolder as Record<string, unknown>
+    : undefined;
+  checkPath("primaryFolder.path", primaryFolder?.path);
+  if (Array.isArray(raw.folderRefs)) {
+    raw.folderRefs.forEach((entry, index) => {
+      if (entry && typeof entry === "object" && !Array.isArray(entry)) checkPath(`folderRefs.${index}.path`, (entry as Record<string, unknown>).path);
+    });
+  }
+  if (raw.directories && typeof raw.directories === "object" && !Array.isArray(raw.directories)) {
+    for (const [key, entry] of Object.entries(raw.directories as Record<string, unknown>)) checkPath(`directories.${key}`, entry);
+  }
+  if (raw.resources && typeof raw.resources === "object" && !Array.isArray(raw.resources)) {
+    for (const [bucket, entries] of Object.entries(raw.resources as Record<string, unknown>)) {
+      if (!Array.isArray(entries)) continue;
+      entries.forEach((entry, index) => {
+        if (entry && typeof entry === "object" && !Array.isArray(entry)) checkPath(`resources.${bucket}.${index}.path`, (entry as Record<string, unknown>).path);
+      });
+    }
+  }
+  return [...new Set(violations)];
+}
+
 export const clawProjectManifestSchema = z.object({
   schemaVersion: z.literal(1),
   manifestKind: z.literal("claw.project").default("claw.project"),
@@ -40,6 +80,14 @@ export const clawProjectManifestSchema = z.object({
   }))).default({}),
   createdAt: z.string().min(1).optional(),
   updatedAt: z.string().min(1).optional(),
+}).superRefine((manifest, ctx) => {
+  for (const field of findClawProjectManifestPortabilityViolations(manifest)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: field.split("."),
+      message: "Project manifests must use relative paths and must not point at Workspace .claw state.",
+    });
+  }
 });
 
 export type ClawProjectManifest = z.infer<typeof clawProjectManifestSchema>;

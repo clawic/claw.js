@@ -28,7 +28,7 @@ export async function runProjectManifestCli(input: {
   const meta = { invokedCommand: "project", subcommand: action };
 
   if (action === "inspect" || action === "status") {
-    const inspection = inspectProjectFolder(projectRoot);
+    const inspection = inspectProjectFolder(projectRoot, { workspaceId: input.flags["workspace-id"] || input.flags.workspaceId });
     if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "project", inspection, meta);
     else input.context.stdout.write(`${inspection.state} ${inspection.manifest?.projectId ?? "unattached"} ${inspection.projectRoot}\n`);
     return CLI_EXIT_OK;
@@ -47,6 +47,7 @@ export async function runProjectManifestCli(input: {
       name: input.flags.name,
       title: input.flags.title,
       accept: readBooleanFlag(input.argv, input.flags, "accept", false),
+      replaceDuplicate: readBooleanFlag(input.argv, input.flags, "replace", false),
     });
     if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "project", preview, meta);
     else {
