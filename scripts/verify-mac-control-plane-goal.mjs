@@ -177,16 +177,88 @@ function requireNormalizedText(label, text, snippet) {
   if (!normalizedText.includes(normalizedSnippet)) fail(`${label} is missing ${snippet}`);
 }
 
+function verifySourceSessionIfProvided() {
+  const sourceSession = process.env.CLAW_MAC_CONTROL_SOURCE_SESSION;
+  if (!sourceSession) return;
+
+  const sourceSessionPath = path.resolve(sourceSession);
+  if (!fs.existsSync(sourceSessionPath)) fail(`source session file does not exist: ${sourceSessionPath}`);
+
+  const calls = new Map();
+  let sessionId = null;
+  const lines = fs.readFileSync(sourceSessionPath, "utf8").trimEnd().split("\n");
+  for (const [index, line] of lines.entries()) {
+    let event;
+    try {
+      event = JSON.parse(line);
+    } catch (error) {
+      fail(`source session line ${index + 1} is not valid JSON: ${error.message}`);
+    }
+
+    if (event.type === "session_meta") sessionId = event.payload?.id ?? null;
+    const payload = event.payload;
+    if (payload?.name === "request_user_input") {
+      const args = JSON.parse(payload.arguments || "{}");
+      calls.set(payload.call_id, {
+        line: index + 1,
+        ids: (args.questions || []).map((question) => question.id),
+        answers: null,
+      });
+    }
+    if (payload?.type === "function_call_output" && calls.has(payload.call_id)) {
+      const call = calls.get(payload.call_id);
+      call.answers = JSON.parse(payload.output || "{}").answers || {};
+    }
+  }
+
+  if (sessionId !== sourceConversationId) fail(`source session id ${sessionId} did not match ${sourceConversationId}`);
+  if (calls.size !== 83) fail(`source session must contain 83 request_user_input prompt groups, found ${calls.size}`);
+
+  const promptIdCount = [...calls.values()].reduce((count, call) => count + call.ids.length, 0);
+  if (promptIdCount !== 245) fail(`source session must contain 245 structured prompt ids, found ${promptIdCount}`);
+
+  const answered = [...calls.values()].filter((call) => call.answers).length;
+  if (answered !== 82) fail(`source session must contain 82 answered prompt groups, found ${answered}`);
+
+  const unanswered = [...calls.values()].filter((call) => !call.answers);
+  if (
+    unanswered.length !== 1 ||
+    unanswered[0].line !== 329 ||
+    unanswered[0].ids.join(",") !== "permission_catalog_coverage,manual_permission_policy,usage_description_policy"
+  ) {
+    fail("source session unanswered prompt group did not match the known interrupted permission catalog group");
+  }
+
+  const freeFormAnswers = [];
+  for (const call of calls.values()) {
+    for (const [id, answer] of Object.entries(call.answers || {})) {
+      const values = answer?.answers || [];
+      if (values.some((value) => !String(value).includes("(Recommended)"))) {
+        freeFormAnswers.push(id);
+      }
+    }
+  }
+  if (freeFormAnswers.length !== 17) fail(`source session must contain 17 free-form or non-recommended answers, found ${freeFormAnswers.length}`);
+}
+
 function renderSafeCli(text) {
   return text.replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }
+
+verifySourceSessionIfProvided();
 
 for (const doc of requiredDocs) readRequired(doc);
 
 const sourceAudit = readRequired("docs/mac-control-plane-source-decision-audit.md");
 requireText("source decision audit", sourceAudit, sourceConversationId);
 for (const id of requiredDecisionRows) requireText("source decision audit", sourceAudit, id);
-for (const snippet of ["Structured Prompt Review", "83 `request_user_input` prompts", "not counted as user-selected answers"]) {
+for (const snippet of [
+  "Structured Prompt Review",
+  "83 `request_user_input` prompt groups",
+  "82 answered prompt groups",
+  "245 structured prompt ids",
+  "17 free-form or non-recommended selected answers",
+]) {
   requireNormalizedText("source decision audit prompt review", sourceAudit, snippet);
 }
 
@@ -199,16 +271,28 @@ for (const snippet of [
   "VALIDATION-001",
   "CSSMERR_TP_CERT_REVOKED",
   "Structured Prompt Review",
-  "83 `request_user_input` prompts",
-  "not counted as user-selected answers",
+  "82 answered prompt groups",
+  "17 free-form or non-recommended selected answers",
   "Claw.app",
   "Clawix embedded",
   "global inbox",
   "MacControlGlobalInboxProjector",
+  "| MCQ-015 | implemented |",
+  "Host permission contract guard",
+  "node scripts/verify-host-permission-contract.mjs --self-test",
+  "node scripts/verify-host-permission-contract.mjs",
 ]) {
   requireNormalizedText("closure audit", closureAudit, snippet);
 }
 for (const id of requiredDecisionRows) requireText("closure audit", closureAudit, id);
+
+for (const snippet of [
+  "| MCQ-015 | Mac permissions correction |",
+  "Implemented: static guard coverage is now repeatable",
+  "scripts/verify-host-permission-contract.mjs --self-test",
+]) {
+  requireNormalizedText("source decision audit MCQ-015", sourceAudit, snippet);
+}
 
 const decisionMatrix = readRequired("docs/mac-control-plane-decision-matrix.md");
 for (const id of requiredMatrixRows) requireText("decision matrix", decisionMatrix, id);
@@ -219,7 +303,7 @@ for (const snippet of ["Mac Action Broker", "Mac Permission Broker", "Related su
 }
 
 const macDocs = readRequired("docs/mac-control-plane.md");
-for (const snippet of ["Related surfaces", "mac.directCliAction", "mac.permissionLifecycle", "claw permissions", "MAC_PROGRAMMATIC_SURFACES", "mac.execute", "/v1/mac/execute", "claw.mac.execute", "docs/mac-native-legacy-audit.md", "Mac Control Plane Verb Audit", "Mac Control Plane Version Drift Audit", "stt", "tts", "voice-notes", "mac-permission-lifecycle.json", "requestedBefore", "revocationDetectedAt", "mac-control-policy-grants.json", "most-restrictive-wins", "role", "mcp_client", "mac-control-continuity.json", "confirmation_required", "macsnap_"]) {
+for (const snippet of ["Related surfaces", "mac.directCliAction", "mac.permissionLifecycle", "claw permissions", "MAC_PROGRAMMATIC_SURFACES", "mac.execute", "/v1/mac/execute", "claw.mac.execute", "docs/mac-native-legacy-audit.md", "Mac Control Plane Verb Audit", "Mac Control Plane Version Drift Audit", "stt", "tts", "voice-notes", "mac-permission-lifecycle.json", "requestedBefore", "revocationDetectedAt", "mac-control-policy-grants.json", "most-restrictive-wins", "role", "mcp_client", "mac-control-continuity.json", "confirmation_required", "macsnap_", "nativePrompt: just_in_time_only", "/v1/mac/permissions/request", "CLAW_LIVE_BROKER_COMMAND", "system mac execute"]) {
   requireNormalizedText("Mac Control Plane docs", macDocs, snippet);
 }
 
@@ -259,7 +343,7 @@ for (const capability of MAC_CAPABILITY_ATLAS) {
 }
 
 const cliDocs = readRequired("docs/cli.md");
-for (const snippet of ["mac-permission-lifecycle.json", "requestedBefore", "lastRequestedAt", "revocationDetectedAt", "mac-control-policy-grants.json", "upsert", "revoke", "mac-control-continuity.json"]) {
+for (const snippet of ["mac-permission-lifecycle.json", "requestedBefore", "lastRequestedAt", "revocationDetectedAt", "mac-control-policy-grants.json", "upsert", "revoke", "mac-control-continuity.json", "system mac permissions --command request", "lastRequestResult", "CLAW_LIVE_BROKER_COMMAND", "signed_host_required"]) {
   requireNormalizedText("CLI docs", cliDocs, snippet);
 }
 
@@ -281,7 +365,7 @@ for (const snippet of [
 }
 
 const apiDocs = readRequired("docs/api.md");
-for (const snippet of ["claw.mac", "/v1/mac/plan", "mac.plan"]) {
+for (const snippet of ["claw.mac", "/v1/mac/plan", "mac.plan", "/v1/mac/permissions/request", "confirmation_required"]) {
   requireNormalizedText("API docs", apiDocs, snippet);
 }
 
@@ -291,13 +375,38 @@ for (const snippet of ["MacControlPermissionLifecycleStore", "mac-permission-lif
 }
 
 const hostMacBridge = readRequired("apps/host/Sources/ClawHostKit/MacControlHostBridge.swift");
-for (const snippet of ["lifecyclePath", "requestedBefore", "lastCheckedAt", "revocationDetectedAt", "policyPath", "policyResponse", "policyGrant(from:", "continuityPath", "confirmation_required", "decodeRevertSteps"]){
+for (const snippet of ["lifecyclePath", "requestedBefore", "lastCheckedAt", "revocationDetectedAt", "policyPath", "policyResponse", "policyGrant(from:", "continuityPath", "confirmation_required", "decodeRevertSteps", "responseAsync", "PermissionRequester", "nativePrompt", "surprisePrompt", "permissionRequestResponse"]){
   requireText("Host Mac Control bridge lifecycle projection", hostMacBridge, snippet);
 }
 
 const hostMacTests = readRequired("apps/host/Tests/CommanderE2ETests/MacControlTests.swift");
-for (const snippet of ["testPermissionLifecycleStorePersistsRequestsAndDetectsRevocation", "mac-permission-lifecycle", "requestedBefore", "revocationDetectedAt", "testPolicyGrantStoreMatchesEveryActorScope", "testHostBridgePersistsPolicyGrantEditsAndUsesThemForExecution", "grant_role_operator_block", "testHostBridgeCapturesContinuitySnapshotAndExecutesConfirmedWifiRevert", "mac-control-continuity", "confirmation_required"]) {
+for (const snippet of ["testPermissionLifecycleStorePersistsRequestsAndDetectsRevocation", "mac-permission-lifecycle", "requestedBefore", "revocationDetectedAt", "testPolicyGrantStoreMatchesEveryActorScope", "testHostBridgePersistsPolicyGrantEditsAndUsesThemForExecution", "grant_role_operator_block", "testHostBridgeCapturesContinuitySnapshotAndExecutesConfirmedWifiRevert", "mac-control-continuity", "confirmation_required", "testHostBridgePlansAndRecordsConfirmedPermissionRequest", "just_in_time_only"]) {
   requireText("Host Mac Control lifecycle tests", hostMacTests, snippet);
+}
+
+const mcpBridge = readRequired("packages/clawjs-mcp/src/mac-signed-host-bridge.ts");
+for (const snippet of ["MacPermissionBridgeRequest", "--permission-id", "--confirm"]) {
+  requireText("Mac MCP signed host bridge permissions", mcpBridge, snippet);
+}
+
+const mcpApp = readRequired("packages/clawjs-mcp/src/app.ts");
+for (const snippet of ["mac/permissions/request", "signed_host_required", "just_in_time_only"]) {
+  requireText("Mac MCP API permission request route", mcpApp, snippet);
+}
+
+const mcpExpose = readRequired("packages/clawjs-mcp/src/expose.ts");
+for (const snippet of ["mac.permissions", "permissionId", "confirm", "just_in_time_only"]) {
+  requireText("Mac MCP permissions tool", mcpExpose, snippet);
+}
+
+const macCli = readRequired("packages/clawjs/src/cli-mac-control-command.ts");
+for (const snippet of ["CLAW_LIVE_BROKER_COMMAND", "system", "mac", "execute", "runSignedHostIfConfigured", "signed_host_result"]) {
+  requireText("Mac CLI signed host bridge", macCli, snippet);
+}
+
+const macCliTests = readRequired("packages/clawjs/src/cli-mac-control-command.test.ts");
+for (const snippet of ["Mac direct roots and permission requests hand off to configured signed host", "CLAW_LIVE_BROKER_COMMAND", "mac.wifi.connect", "macact_123"]) {
+  requireText("Mac CLI signed host bridge tests", macCliTests, snippet);
 }
 
 const macCore = readRequired("packages/clawjs-core/src/mac-control-plane.ts");

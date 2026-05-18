@@ -92,6 +92,14 @@ registers these names in `MAC_PROGRAMMATIC_SURFACES`:
 `plan` is non-mutating. `execute` and `revert` require signed-host routing and
 approval evaluation before any native action can run.
 
+The public CLI uses the same boundary. When `CLAW_LIVE_BROKER_COMMAND` is
+configured, direct roots (`claw wifi ...`, `claw window ...`, `claw shortcut
+...`) build the typed `MacActionRequest` and hand executable actions to the
+signed host as `system mac execute --request-json ...`. Portal operations such
+as `claw mac audit`, `claw mac revert`, and `claw permissions request` also use
+the signed-host bridge. If no signed host is configured, the CLI remains
+fail-closed and returns a dry-run plan or `signed_host_required` response.
+
 ## Permission Lifecycle
 
 The signed host owns durable permission lifecycle state in
@@ -102,6 +110,15 @@ triggering prompts. Native request execution records `requestedBefore`,
 as granted is later observed as denied or not determined, the broker records
 `revocationDetectedAt` so CLI, API, MCP, and Clawix surfaces can explain the
 state change instead of treating it as a fresh unknown permission.
+
+Permission requests are plan-first and just-in-time. `system mac permissions
+--command request --permission-id mac.permission...` returns
+`confirmation_required`, `nativePrompt: just_in_time_only`, and
+`surprisePrompt: false` without invoking a native prompt. With `--confirm true`,
+the async signed-host path calls the Mac Permission Broker request API and
+persists the result in `mac-permission-lifecycle.json`. MCP/API callers use the
+same signed-host handoff through `mac.permissions` and
+`/v1/mac/permissions/request`.
 
 ## Policy Grants
 

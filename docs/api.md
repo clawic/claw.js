@@ -179,9 +179,12 @@ the active signed host and approval evaluation; `claw.mac.audit` reads redacted
 receipts/events; `claw.mac.permissions` uses the central permission lifecycle.
 
 The matching HTTP routes are `/v1/mac/plan`, `/v1/mac/execute`,
-`/v1/mac/revert`, `/v1/mac/audit`, and `/v1/mac/permissions`. The matching MCP
-tools are `mac.plan`, `mac.execute`, `mac.revert`, `mac.audit`, and
-`mac.permissions`.
+`/v1/mac/revert`, `/v1/mac/audit`, `/v1/mac/permissions`, and
+`/v1/mac/permissions/request`. The matching MCP tools are `mac.plan`,
+`mac.execute`, `mac.revert`, `mac.audit`, and `mac.permissions`.
+Permission request calls are signed-host handoffs: without confirmation they
+return `confirmation_required`, and with confirmation the signed host owns the
+native just-in-time prompt and lifecycle recording.
 
 ## Workspace
 

@@ -52,7 +52,7 @@ struct CommanderCLI {
             }
 
             if parsed.domain == .system && parsed.resource == "mac" {
-                let response = try MacControlHostBridge.response(
+                let response = try await MacControlHostBridge.responseAsync(
                     resource: parsed.resource,
                     action: parsed.action,
                     arguments: parsed.arguments,

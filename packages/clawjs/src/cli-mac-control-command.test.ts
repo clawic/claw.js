@@ -1,8 +1,11 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 import { CLI_EXIT_OK } from "./index.ts";
-import { runCliCapture } from "./index-test-utils.ts";
+import { runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
 
 test("Mac control roots expose atlas and dry-run contracts without direct native execution", async () => {
   const coverage = await runCliCapture(["mac", "coverage", "--json"], process.cwd());
@@ -84,6 +87,47 @@ test("Mac permissions root exposes central permission catalog and request plans"
   assert.equal(requestPayload.data.plan.surprisePrompt, false);
 });
 
+test("Mac direct roots and permission requests hand off to configured signed host", async () => {
+  const hostCommand = createFakeMacSignedHostCommand();
+  await withPatchedEnv({ CLAW_LIVE_BROKER_COMMAND: hostCommand }, async () => {
+    const execute = await runCliCapture(["wifi", "connect", "--ssid", "Office", "--json"], process.cwd());
+    assert.equal(execute.code, CLI_EXIT_OK);
+    const executePayload = JSON.parse(execute.stdout) as {
+      data: {
+        status: string;
+        response: {
+          ok: boolean;
+          data: { decision: string; capabilityId: string; requestId: string; ssid: string };
+        };
+      };
+    };
+    assert.equal(executePayload.data.status, "signed_host_result");
+    assert.equal(executePayload.data.response.ok, true);
+    assert.equal(executePayload.data.response.data.decision, "allow");
+    assert.equal(executePayload.data.response.data.capabilityId, "mac.wifi.connect");
+    assert.equal(executePayload.data.response.data.requestId, "cli.mac.wifi.connect");
+    assert.equal(executePayload.data.response.data.ssid, "Office");
+
+    const permission = await runCliCapture(["permissions", "request", "microphone", "--json"], process.cwd());
+    assert.equal(permission.code, CLI_EXIT_OK);
+    const permissionPayload = JSON.parse(permission.stdout) as {
+      data: { response: { data: { status: string; permissionId: string; surprisePrompt: boolean } } };
+    };
+    assert.equal(permissionPayload.data.response.data.status, "confirmation_required");
+    assert.equal(permissionPayload.data.response.data.permissionId, "mac.permission.microphone");
+    assert.equal(permissionPayload.data.response.data.surprisePrompt, false);
+
+    const revert = await runCliCapture(["mac", "revert", "macact_123", "--confirm", "--json"], process.cwd());
+    assert.equal(revert.code, CLI_EXIT_OK);
+    const revertPayload = JSON.parse(revert.stdout) as {
+      data: { response: { data: { status: string; receiptId: string; confirmed: boolean } } };
+    };
+    assert.equal(revertPayload.data.response.data.status, "reverted");
+    assert.equal(revertPayload.data.response.data.receiptId, "macact_123");
+    assert.equal(revertPayload.data.response.data.confirmed, true);
+  });
+});
+
 test("Mac control help shows related surfaces in normal help", async () => {
   const cases: Array<[string, string[]]> = [
     ["app", ["claw apps"]],
@@ -110,3 +154,61 @@ test("Mac control help shows related surfaces in normal help", async () => {
     for (const related of relatedSurfaces) assert.match(help.stdout, new RegExp(related.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), command);
   }
 });
+
+function createFakeMacSignedHostCommand(): string {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-mac-host-"));
+  const script = path.join(dir, "fake-mac-host.mjs");
+  fs.writeFileSync(script, `#!/usr/bin/env node
+const args = process.argv.slice(2);
+function value(flag) {
+  const index = args.indexOf(flag);
+  return index >= 0 ? args[index + 1] : undefined;
+}
+const action = args[2];
+if (args[0] !== "system" || args[1] !== "mac") {
+  console.log(JSON.stringify({ ok: false, error: { code: "unexpected_args", message: args.join(" ") } }));
+  process.exit(1);
+}
+if (action === "execute") {
+  const request = JSON.parse(value("--request-json"));
+  console.log(JSON.stringify({
+    ok: true,
+    data: {
+      decision: "allow",
+      capabilityId: request.capabilityId,
+      requestId: request.requestId,
+      ssid: request.arguments?.ssid
+    },
+    meta: { source: "local_cli" }
+  }));
+} else if (action === "permissions") {
+  console.log(JSON.stringify({
+    ok: true,
+    data: {
+      status: args.includes("--confirm") ? "granted" : "confirmation_required",
+      permissionId: value("--permission-id") ?? "mac.permission.microphone",
+      surprisePrompt: false,
+      nativePrompt: "just_in_time_only"
+    },
+    meta: { source: "local_cli" }
+  }));
+} else if (action === "revert") {
+  console.log(JSON.stringify({
+    ok: true,
+    data: {
+      status: args.includes("--confirm") ? "reverted" : "confirmation_required",
+      receiptId: value("--receipt-id"),
+      confirmed: args.includes("--confirm")
+    },
+    meta: { source: "local_cli" }
+  }));
+} else if (action === "audit") {
+  console.log(JSON.stringify({ ok: true, data: { events: [] }, meta: { source: "local_cli" } }));
+} else {
+  console.log(JSON.stringify({ ok: false, error: { code: "unknown_action", message: action } }));
+  process.exit(1);
+}
+`);
+  fs.chmodSync(script, 0o755);
+  return script;
+}

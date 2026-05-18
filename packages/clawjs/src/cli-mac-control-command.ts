@@ -3,6 +3,7 @@ import {
   MAC_CONTROL_COMMAND_ROOTS,
   MAC_PERMISSION_CATALOG,
   MAC_PERMISSION_PACKS,
+  type MacActionRequest,
   buildMacActionPlan,
   clawMacControlPlaneRegistry,
   clawContractVersionV1,
@@ -11,11 +12,15 @@ import {
   listMacRelatedSurfaces,
   macActionRequestSchema,
 } from "@clawjs/core";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { formatCliTable } from "./cli-flag-parsers.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
 import type { CliContext } from "./index.ts";
+
+const execFileAsync = promisify(execFile);
 
 export const MAC_CONTROL_CLI_ROOTS = new Set(MAC_CONTROL_COMMAND_ROOTS.map((entry) => entry.root));
 
@@ -34,18 +39,19 @@ export async function runMacControlCli(input: {
   const [group, command, target] = input.positionals;
   if (!group || !isMacControlCliRoot(group)) return CLI_EXIT_USAGE;
 
-  if (group === "mac") return runMacPortal(input, command, target);
-  if (group === "permissions") return runMacPermissions(input, command, target);
-  return runMacFamily(input, group, command, input.positionals.slice(2));
+  if (group === "mac") return await runMacPortal(input, command, target);
+  if (group === "permissions") return await runMacPermissions(input, command, target);
+  return await runMacFamily(input, group, command, input.positionals.slice(2));
 }
 
-function runMacPortal(input: {
+async function runMacPortal(input: {
+  argv: string[];
   positionals: string[];
   flags: Record<string, string>;
   context: CliContext;
   wantsJson: boolean;
   binName: string;
-}, command: string | undefined, target: string | undefined): number {
+}, command: string | undefined, target: string | undefined): Promise<number> {
   const action = command ?? "coverage";
   if (action === "atlas" || action === "coverage") {
     const family = input.flags.family ?? target;
@@ -76,6 +82,8 @@ function runMacPortal(input: {
     });
   }
   if (action === "audit") {
+    const live = await runSignedHostIfConfigured(input, "mac", ["system", "mac", "audit", "--json"]);
+    if (live !== null) return live;
     return writePayload(input, "mac", { command: "audit", status: "host_required", reason: "Mac action audit lives in the signed host operational store." });
   }
   if (action === "plan") {
@@ -86,6 +94,10 @@ function runMacPortal(input: {
   }
   if (action === "revert") {
     if (!target?.startsWith("macact_")) throw new CliHandledError("usage_error", `Usage: ${input.binName} mac revert macact_<id> [--json]`, CLI_EXIT_USAGE);
+    const hostArgs = ["system", "mac", "revert", "--receipt-id", target, "--json"];
+    if (hasConfirm(input)) hostArgs.splice(hostArgs.length - 1, 0, "--confirm", "true");
+    const live = await runSignedHostIfConfigured(input, "mac", hostArgs);
+    if (live !== null) return live;
     return writePayload(input, "mac", {
       command: "revert",
       receiptId: target,
@@ -96,15 +108,18 @@ function runMacPortal(input: {
   throw new CliHandledError("unknown_mac_command", `Unknown Mac control command: ${action}`, CLI_EXIT_USAGE);
 }
 
-function runMacPermissions(input: {
+async function runMacPermissions(input: {
+  argv?: string[];
   positionals: string[];
   flags: Record<string, string>;
   context: CliContext;
   wantsJson: boolean;
   binName: string;
-}, command: string | undefined, target: string | undefined): number {
+}, command: string | undefined, target: string | undefined): Promise<number> {
   const action = command ?? "list";
   if (action === "list" || action === "coverage") {
+    const live = await runSignedHostIfConfigured(input, "permissions", ["system", "mac", "permissions", "--json"]);
+    if (live !== null) return live;
     return writePayload(input, "permissions", {
       command: action,
       packs: MAC_PERMISSION_PACKS,
@@ -114,6 +129,21 @@ function runMacPermissions(input: {
   if (action === "show" || action === "check" || action === "request" || action === "explain") {
     const permission = target ? resolvePermission(target) : undefined;
     if (!permission) throw new CliHandledError("unknown_mac_permission", `Unknown Mac permission: ${target ?? "<missing>"}`, CLI_EXIT_USAGE);
+    if (action === "request") {
+      const hostArgs = [
+        "system",
+        "mac",
+        "permissions",
+        "--command",
+        "request",
+        "--permission-id",
+        permission.id,
+        "--json",
+      ];
+      if (hasConfirm(input)) hostArgs.splice(hostArgs.length - 1, 0, "--confirm", "true");
+      const live = await runSignedHostIfConfigured(input, "permissions", hostArgs);
+      if (live !== null) return live;
+    }
     return writePayload(input, "permissions", {
       command: action,
       permission,
@@ -139,14 +169,14 @@ function runMacPermissions(input: {
   throw new CliHandledError("unknown_permissions_command", `Unknown permissions command: ${action}`, CLI_EXIT_USAGE);
 }
 
-function runMacFamily(input: {
+async function runMacFamily(input: {
   argv: string[];
   positionals: string[];
   flags: Record<string, string>;
   context: CliContext;
   wantsJson: boolean;
   binName: string;
-}, group: string, command: string | undefined, targetPositionals: string[] = []): number {
+}, group: string, command: string | undefined, targetPositionals: string[] = []): Promise<number> {
   const capabilities = listMacAtlasCapabilities({ family: group });
   const action = command ?? "coverage";
   if (action === "coverage" || action === "list" && capabilities.length === 0) {
@@ -173,6 +203,13 @@ function runMacFamily(input: {
     return writePayload(input, group, buildDryRunPlan(capability, input.flags, targetPositionals));
   }
 
+  if (capability.coverageState === "executable" || capability.coverageState === "host_validated") {
+    const request = buildMacRequest(capability, input.flags, targetPositionals, false);
+    const hostArgs = ["system", "mac", "execute", "--request-json", JSON.stringify(request), "--json"];
+    const live = await runSignedHostIfConfigured(input, group, hostArgs);
+    if (live !== null) return live;
+  }
+
   return writePayload(input, group, {
     root: group,
     capability,
@@ -183,16 +220,7 @@ function runMacFamily(input: {
 }
 
 function buildDryRunPlan(capability: NonNullable<ReturnType<typeof findMacAtlasCapability>>, flags: Record<string, string> = {}, targetPositionals: string[] = []) {
-  const requestShape = buildRequestShape(capability, flags, targetPositionals);
-  const request = macActionRequestSchema.parse({
-    schemaVersion: clawContractVersionV1,
-    requestId: `cli.${capability.id}`,
-    capabilityId: capability.id,
-    actor: { kind: "owner_cli", id: "local-cli", role: "owner" },
-    host: { hostId: "active-signed-host", bundleId: "signed-host-required", appVariant: "cli-dry-run" },
-    ...requestShape,
-    dryRun: true,
-  });
+  const request = buildMacRequest(capability, flags, targetPositionals, true);
   const plan = buildMacActionPlan({ request, capability });
   return {
     status: "dry_run",
@@ -208,6 +236,25 @@ function buildDryRunPlan(capability: NonNullable<ReturnType<typeof findMacAtlasC
     approvalRequired: plan.requiredApprovals.length > 0,
     execution: "signed_host_broker",
   };
+}
+
+function buildMacRequest(
+  capability: NonNullable<ReturnType<typeof findMacAtlasCapability>>,
+  flags: Record<string, string> = {},
+  targetPositionals: string[] = [],
+  dryRun: boolean,
+): MacActionRequest {
+  const requestShape = buildRequestShape(capability, flags, targetPositionals);
+  return macActionRequestSchema.parse({
+    schemaVersion: clawContractVersionV1,
+    requestId: `cli.${capability.id}`,
+    capabilityId: capability.id,
+    actor: { kind: "owner_cli", id: "local-cli", role: "owner" },
+    host: { hostId: "active-signed-host", bundleId: "signed-host-required", appVariant: dryRun ? "cli-dry-run" : "cli-live" },
+    ...requestShape,
+    dryRun,
+    reason: flags.reason,
+  });
 }
 
 function buildRequestShape(
@@ -295,4 +342,61 @@ function writePayload(input: {
     input.context.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
   }
   return CLI_EXIT_OK;
+}
+
+async function runSignedHostIfConfigured(
+  input: { context: CliContext; wantsJson: boolean },
+  canonicalCommand: string,
+  args: string[],
+): Promise<number | null> {
+  const parts = splitLiveBrokerCommand(process.env.CLAW_LIVE_BROKER_COMMAND);
+  if (!parts) return null;
+  const [executable, ...prefixArgs] = parts;
+  const response = await runSignedHostCommand(executable, [...prefixArgs, ...args]);
+  return writePayload(input, canonicalCommand, {
+    status: "signed_host_result",
+    source: "CLAW_LIVE_BROKER_COMMAND",
+    response,
+  });
+}
+
+function splitLiveBrokerCommand(command: string | undefined): string[] | null {
+  const trimmed = command?.trim();
+  if (!trimmed) return null;
+  return trimmed.split(/\s+/);
+}
+
+async function runSignedHostCommand(executable: string, args: string[]): Promise<unknown> {
+  try {
+    const { stdout } = await execFileAsync(executable, args, {
+      env: process.env,
+      maxBuffer: 4 * 1024 * 1024,
+    });
+    return parseSignedHostJSON(stdout);
+  } catch (error) {
+    const stdout = typeof (error as { stdout?: unknown }).stdout === "string" ? (error as { stdout: string }).stdout : "";
+    if (stdout.trim()) return parseSignedHostJSON(stdout);
+    const message = error instanceof Error ? error.message : String(error);
+    throw new CliHandledError("signed_host_bridge_failed", `Mac signed host bridge failed: ${message}`);
+  }
+}
+
+function parseSignedHostJSON(stdout: string): unknown {
+  try {
+    return JSON.parse(stdout);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new CliHandledError("signed_host_bridge_invalid_json", `Mac signed host bridge returned invalid JSON: ${message}`);
+  }
+}
+
+function isTruthy(value: string | undefined): boolean {
+  return value === "true" || value === "1" || value === "yes" || value === "";
+}
+
+function hasConfirm(input: { argv?: string[]; flags: Record<string, string> }): boolean {
+  return isTruthy(input.flags.confirm) ||
+    isTruthy(input.flags.approved) ||
+    input.argv?.includes("--confirm") === true ||
+    input.argv?.includes("--approved") === true;
 }

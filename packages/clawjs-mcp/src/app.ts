@@ -160,6 +160,24 @@ export function buildMCPApp(options: BuildMCPAppOptions = {}) {
     };
   });
 
+  app.post(clawApiPath("mac/permissions/request"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const body = readBody(request);
+    const permissionId = asString(body.permissionId ?? body.permission_id ?? body.id ?? body.permission);
+    if (!permissionId?.startsWith("mac.permission.")) return await reply.code(400).send({ error: "permissionId mac.permission.<id> is required" });
+    const confirm = body.confirm === true || body.approved === true;
+    if (macSignedHostBridge) {
+      return await sendMacHostBridgeResult(reply, macSignedHostBridge.permissions({ command: "request", permissionId, confirm }));
+    }
+    return await reply.code(409).send({
+      status: "signed_host_required",
+      permissionId,
+      nativePrompt: "just_in_time_only",
+      surprisePrompt: false,
+      reason: "Permission prompts must be routed to the active signed host broker.",
+    });
+  });
+
   app.post(clawApiPath("mcp/servers"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const body = readBody(request);

@@ -4,11 +4,17 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 
+export interface MacPermissionBridgeRequest {
+  command?: "list" | "request";
+  permissionId?: string;
+  confirm?: boolean;
+}
+
 export interface MacSignedHostBridge {
   execute(request: MacActionRequest): Promise<unknown>;
   revert(receiptId: string): Promise<unknown>;
   audit(): Promise<unknown>;
-  permissions(): Promise<unknown>;
+  permissions(request?: MacPermissionBridgeRequest): Promise<unknown>;
 }
 
 export function createMacSignedHostBridge(command: string | null | undefined, env: NodeJS.ProcessEnv = process.env): MacSignedHostBridge | null {
@@ -19,8 +25,16 @@ export function createMacSignedHostBridge(command: string | null | undefined, en
     execute: async (request) => runHostCommand(executable, [...prefixArgs, "system", "mac", "execute", "--request-json", JSON.stringify(request), "--json"], env),
     revert: async (receiptId) => runHostCommand(executable, [...prefixArgs, "system", "mac", "revert", "--receipt-id", receiptId, "--json"], env),
     audit: async () => runHostCommand(executable, [...prefixArgs, "system", "mac", "audit", "--json"], env),
-    permissions: async () => runHostCommand(executable, [...prefixArgs, "system", "mac", "permissions", "--json"], env),
+    permissions: async (request) => runHostCommand(executable, [...prefixArgs, "system", "mac", "permissions", ...permissionArgs(request), "--json"], env),
   };
+}
+
+function permissionArgs(request: MacPermissionBridgeRequest | undefined): string[] {
+  const args: string[] = [];
+  if (request?.command) args.push("--command", request.command);
+  if (request?.permissionId) args.push("--permission-id", request.permissionId);
+  if (request?.confirm !== undefined) args.push("--confirm", request.confirm ? "true" : "false");
+  return args;
 }
 
 function splitCommand(command: string | null | undefined): string[] | null {

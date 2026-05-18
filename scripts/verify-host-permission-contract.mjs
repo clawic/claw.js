@@ -5,7 +5,7 @@ import path from "node:path";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const allowlistPath = "docs/mac-native-usage-allowlist.json";
-const today = "2026-05-17";
+const today = new Date().toISOString().slice(0, 10);
 
 const implementationRoots = [
   "apps",

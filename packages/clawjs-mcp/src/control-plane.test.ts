@@ -100,8 +100,8 @@ describe("MCP connector control plane", () => {
         calls.push("audit");
         return { ok: true, data: { events: [] }, meta: { source: "local_cli" } };
       },
-      permissions: async () => {
-        calls.push("permissions");
+      permissions: async (request) => {
+        calls.push(request?.command === "request" ? `permissions:${request.permissionId}:${request.confirm}` : "permissions");
         return { ok: true, data: { permissions: [{ id: "mac.permission.microphone", status: "not_determined" }] }, meta: { source: "local_cli" } };
       },
     };
@@ -134,6 +134,14 @@ describe("MCP connector control plane", () => {
       assert.equal(permissions.statusCode, 200);
       assert.equal(permissions.json().data.permissions[0].id, "mac.permission.microphone");
 
+      const permissionRequest = await app.inject({
+        method: "POST",
+        url: "/v1/mac/permissions/request",
+        headers: { authorization: `Bearer ${config.sharedSecret}` },
+        payload: { permissionId: "mac.permission.microphone", confirm: false },
+      });
+      assert.equal(permissionRequest.statusCode, 200);
+
       const mcpExecute = await app.inject({
         method: "POST",
         url: "/v1/mcp/expose/rpc",
@@ -147,11 +155,28 @@ describe("MCP connector control plane", () => {
       assert.equal(mcpExecute.statusCode, 200);
       assert.equal(mcpExecute.json().result.content.ok, true);
 
+      const mcpPermissionRequest = await app.inject({
+        method: "POST",
+        url: "/v1/mcp/expose/rpc",
+        payload: {
+          jsonrpc: "2.0",
+          id: 5,
+          method: "tools/call",
+          params: {
+            name: "mac.permissions",
+            arguments: { command: "request", permissionId: "mac.permission.microphone", confirm: false },
+          },
+        },
+      });
+      assert.equal(mcpPermissionRequest.statusCode, 200);
+
       assert.deepEqual(calls, [
         "execute:req.mcp.mac.1",
         "audit",
         "permissions",
+        "permissions:mac.permission.microphone:false",
         "execute:req.mcp.mac.1",
+        "permissions:mac.permission.microphone:false",
       ]);
     } finally {
       await app.close();

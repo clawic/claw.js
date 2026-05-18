@@ -56,14 +56,35 @@ export function defaultExposedTools(options: DefaultExposedToolsOptions = {}): M
     },
     {
       name: "mac.permissions",
-      description: "Lists central Mac permission packs and atomic permission ids.",
-      inputSchema: { type: "object", properties: {}, additionalProperties: false },
-      handler: async () => macSignedHostBridge
-        ? macSignedHostBridge.permissions()
-        : ({
+      description: "Lists central Mac permissions or plans/routes a just-in-time signed-host permission request.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          command: { type: "string", enum: ["list", "request"] },
+          permissionId: { type: "string" },
+          confirm: { type: "boolean" },
+        },
+        additionalProperties: false,
+      },
+      handler: async (args) => {
+        const command = args.command === "request" ? "request" : "list";
+        const permissionId = typeof args.permissionId === "string" ? args.permissionId : undefined;
+        const confirm = args.confirm === true;
+        if (macSignedHostBridge) return macSignedHostBridge.permissions({ command, permissionId, confirm });
+        if (command === "request") {
+          return {
+            status: "signed_host_required",
+            permissionId,
+            nativePrompt: "just_in_time_only",
+            surprisePrompt: false,
+            reason: "Permission prompts must be routed to the active signed host broker.",
+          };
+        }
+        return {
             packs: MAC_PERMISSION_PACKS,
             permissions: MAC_PERMISSION_CATALOG,
-          }),
+        };
+      },
     },
     {
       name: "mac.audit",

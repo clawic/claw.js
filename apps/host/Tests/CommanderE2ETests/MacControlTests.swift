@@ -459,6 +459,58 @@ final class MacControlTests: XCTestCase {
         XCTAssertNotNil(audit.data?.objectValue?["auditPath"]?.stringValue)
     }
 
+    func testHostBridgePlansAndRecordsConfirmedPermissionRequest() async throws {
+        let environment = temporaryStateEnvironment()
+        let plan = try await MacControlHostBridge.responseAsync(
+            resource: "mac",
+            action: "permissions",
+            arguments: [
+                "command": "request",
+                "permission-id": MacControlPermissionID.microphone.rawValue,
+            ],
+            environment: environment,
+            permissionRequester: { _ in
+                XCTFail("Permission requester should not run without confirmation.")
+                return false
+            }
+        )
+
+        XCTAssertTrue(plan.ok)
+        XCTAssertEqual(plan.meta.adapter, "mac-permission-broker")
+        XCTAssertEqual(plan.data?.objectValue?["permissionId"]?.stringValue, MacControlPermissionID.microphone.rawValue)
+        XCTAssertEqual(plan.data?.objectValue?["status"]?.stringValue, "confirmation_required")
+        XCTAssertEqual(plan.data?.objectValue?["nativePrompt"]?.stringValue, "just_in_time_only")
+        XCTAssertEqual(plan.data?.objectValue?["surprisePrompt"]?.boolValue, false)
+
+        let requested = try await MacControlHostBridge.responseAsync(
+            resource: "mac",
+            action: "permissions",
+            arguments: [
+                "command": "request",
+                "permission-id": MacControlPermissionID.microphone.rawValue,
+                "confirm": "true",
+            ],
+            environment: environment,
+            permissionRequester: { permission in
+                XCTAssertEqual(permission, .microphone)
+                return true
+            }
+        )
+
+        XCTAssertTrue(requested.ok)
+        XCTAssertEqual(requested.data?.objectValue?["status"]?.stringValue, "granted")
+        XCTAssertEqual(requested.data?.objectValue?["requestedBefore"]?.boolValue, true)
+        XCTAssertEqual(requested.data?.objectValue?["lastRequestResult"]?.stringValue, "granted")
+        let lifecyclePath = try XCTUnwrap(requested.data?.objectValue?["lifecyclePath"]?.stringValue)
+        let lifecycle = try XCTUnwrap(MacControlPermissionLifecycleStore.record(
+            permission: .microphone,
+            stateURL: URL(fileURLWithPath: lifecyclePath)
+        ))
+        XCTAssertTrue(lifecycle.requestedBefore)
+        XCTAssertEqual(lifecycle.lastRequestResult, .granted)
+        XCTAssertNotNil(lifecycle.lastRequestedAt)
+    }
+
     func testHostBridgePersistsPolicyGrantEditsAndUsesThemForExecution() throws {
         let runner = RecordingMacControlRunner()
         let environment = temporaryStateEnvironment()

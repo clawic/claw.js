@@ -3,6 +3,39 @@ import CommanderCore
 
 @MainActor
 public enum MacControlHostBridge {
+    public typealias PermissionRequester = (MacControlPermissionID) async -> Bool
+
+    public static func responseAsync(
+        resource: String,
+        action: String,
+        arguments: [String: String],
+        environment: [String: String] = ProcessInfo.processInfo.environment,
+        runner: MacControlCommandRunning = MacControlProcessRunner(),
+        permissionRequester: @escaping PermissionRequester = { permission in
+            await MacControlPermissionBroker.request(permission)
+        }
+    ) async throws -> CommandResponse {
+        guard resource == "mac" else {
+            throw CommanderError.invalidCommand("Mac Control host bridge only handles system mac actions.")
+        }
+
+        if action == "permissions" {
+            return try await permissionsResponse(
+                arguments: arguments,
+                environment: environment,
+                permissionRequester: permissionRequester
+            )
+        }
+
+        return try response(
+            resource: resource,
+            action: action,
+            arguments: arguments,
+            environment: environment,
+            runner: runner
+        )
+    }
+
     public static func response(
         resource: String,
         action: String,
@@ -20,7 +53,7 @@ public enum MacControlHostBridge {
         case "execute":
             return try executeResponse(arguments: arguments, environment: environment, runner: runner)
         case "permissions":
-            return try permissionsResponse(environment: environment)
+            return try permissionsResponse(arguments: arguments, environment: environment)
         case "policy":
             return try policyResponse(arguments: arguments, environment: environment)
         case "audit":
@@ -81,7 +114,35 @@ public enum MacControlHostBridge {
         )
     }
 
-    private static func permissionsResponse(environment: [String: String]) throws -> CommandResponse {
+    private static func permissionsResponse(arguments: [String: String], environment: [String: String]) throws -> CommandResponse {
+        let command = arguments["command"] ?? arguments["permission-command"] ?? arguments["permission_command"] ?? "list"
+        guard command == "list" || command == "status" else {
+            throw CommanderError.invalidArguments("Mac Control permission \(command) requires the async signed-host path.")
+        }
+        return try permissionListResponse(environment: environment)
+    }
+
+    private static func permissionsResponse(
+        arguments: [String: String],
+        environment: [String: String],
+        permissionRequester: PermissionRequester
+    ) async throws -> CommandResponse {
+        let command = arguments["command"] ?? arguments["permission-command"] ?? arguments["permission_command"] ?? "list"
+        switch command {
+        case "list", "status":
+            return try permissionListResponse(environment: environment)
+        case "request":
+            return try await permissionRequestResponse(
+                arguments: arguments,
+                environment: environment,
+                permissionRequester: permissionRequester
+            )
+        default:
+            throw CommanderError.invalidCommand("Unknown Mac Control permission command \(command).")
+        }
+    }
+
+    private static func permissionListResponse(environment: [String: String]) throws -> CommandResponse {
         let stateDirectory = try StatePaths.ensureStateDirectory(environment: environment)
         let lifecycleURL = MacControlPermissionLifecycleStore.fileURL(stateDirectory: stateDirectory)
         let permissions = MacControlPermissionID.allCases.map { permission in
@@ -123,6 +184,79 @@ public enum MacControlHostBridge {
             environment: environment,
             capabilityId: "mac.permissions.status",
             riskLevel: "read"
+        )
+    }
+
+    private static func permissionRequestResponse(
+        arguments: [String: String],
+        environment: [String: String],
+        permissionRequester: PermissionRequester
+    ) async throws -> CommandResponse {
+        guard let rawPermission = arguments["permission-id"] ?? arguments["permission_id"] ?? arguments["id"] ?? arguments["permission"],
+              let permission = MacControlPermissionID(rawValue: rawPermission) else {
+            throw CommanderError.invalidArguments("Mac Control permission request requires --permission-id.")
+        }
+
+        let stateDirectory = try StatePaths.ensureStateDirectory(environment: environment)
+        let lifecycleURL = MacControlPermissionLifecycleStore.fileURL(stateDirectory: stateDirectory)
+        let before = MacControlPermissionBroker.status(for: permission)
+        let observed = try MacControlPermissionLifecycleStore.observeStatus(
+            permission: permission,
+            status: before,
+            stateURL: lifecycleURL
+        )
+        let confirm = boolArgument(arguments["confirm"] ?? arguments["approved"]) ?? false
+
+        guard confirm else {
+            return commandResponse(
+                requestId: "macpermreq_\(UUID().uuidString)",
+                ok: true,
+                data: .object([
+                    "schemaVersion": .integer(MacControlWire.schemaVersion),
+                    "permissionId": .string(permission.rawValue),
+                    "lifecyclePath": .string(lifecycleURL.path),
+                    "status": .string("confirmation_required"),
+                    "nativePrompt": .string("just_in_time_only"),
+                    "surprisePrompt": .bool(false),
+                    "beforeStatus": .string(before.rawValue),
+                    "requestedBefore": .bool(observed.requestedBefore),
+                    "canRequest": .bool(observed.canRequest),
+                    "requiresRestart": .bool(observed.requiresRestart),
+                    "reason": .string("Permission prompts are broker-owned and require explicit signed-host confirmation."),
+                ]),
+                adapter: "mac-permission-broker",
+                environment: environment,
+                capabilityId: "mac.privacy.permission.request",
+                riskLevel: "medium"
+            )
+        }
+
+        let granted = await permissionRequester(permission)
+        let result = granted ? MacControlPermissionStatus.granted : MacControlPermissionBroker.status(for: permission)
+        let lifecycle = try MacControlPermissionLifecycleStore.recordRequest(
+            permission: permission,
+            result: result,
+            stateURL: lifecycleURL
+        )
+        return commandResponse(
+            requestId: "macpermreq_\(UUID().uuidString)",
+            ok: true,
+            data: .object([
+                "schemaVersion": .integer(MacControlWire.schemaVersion),
+                "permissionId": .string(permission.rawValue),
+                "lifecyclePath": .string(lifecycleURL.path),
+                "status": .string(result.rawValue),
+                "requestedBefore": .bool(lifecycle.requestedBefore),
+                "lastRequestedAt": lifecycle.lastRequestedAt.map(JSONValue.string) ?? .null,
+                "lastRequestResult": lifecycle.lastRequestResult.map { .string($0.rawValue) } ?? .null,
+                "requiresRestart": .bool(lifecycle.requiresRestart),
+                "nativePrompt": .string("just_in_time_only"),
+                "surprisePrompt": .bool(false),
+            ]),
+            adapter: "mac-permission-broker",
+            environment: environment,
+            capabilityId: "mac.privacy.permission.request",
+            riskLevel: "medium"
         )
     }
 

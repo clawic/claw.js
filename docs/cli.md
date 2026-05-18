@@ -98,12 +98,22 @@ automation subjects.
 Connectivity-changing Wi-Fi actions persist broker-owned continuity snapshots
 in `mac-control-continuity.json`; `claw mac revert macact_...` remains
 plan-first and signed-host execution requires explicit confirmation.
+Permission requests are also plan-first: signed-host
+`system mac permissions --command request --permission-id mac.permission...`
+returns `confirmation_required` unless `--confirm true` is supplied, then
+records `lastRequestedAt` and `lastRequestResult` in the lifecycle file.
 
 The Mac Control Plane is plan-first and signed-host brokered. CLI surfaces may
 be visible while a family is atlas-only; they report coverage, gaps, or dry-run
 plans until execution is complete. Sensitive native calls, TCC permission
 requests, receipts, rollback, and audit belong behind the Mac Action Broker and
 Mac Permission Broker.
+When `CLAW_LIVE_BROKER_COMMAND` points at the active signed host, direct roots
+such as `claw wifi connect`, `claw window close`, and `claw shortcut run` hand
+off executable requests to `system mac execute`; `claw mac audit`, `claw mac
+revert`, and `claw permissions request` use the same signed-host bridge.
+Without that bridge, these commands fail closed with a plan or
+`signed_host_required`.
 
 Commands with semantic collisions show `Related surfaces` in normal help. For
 example, `claw app --help` points to the `apps` catalog, `notification` points
@@ -189,6 +199,7 @@ claw remote routes --json
 claw remote conformance --json
 claw remote pending --json
 claw remote contracts --json
+claw remote e2e-plan --json
 claw remote compat --legacy-surface relay.mobile.chat --canonical-route remote.chatGateway --client-kind ios --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 claw inspect remote --json
 
@@ -251,6 +262,9 @@ remote contracts and pending register before `provider_device_e2e` can clear.
 required Gateway/Connector/Sync/Mesh route is bound to local CLI/service
 contract refs and remote entrypoints, requires parity, and keeps
 `parallelApiAllowed: false` so remote clients do not grow a parallel API.
+`remote e2e-plan` returns the same no-write
+`RemoteProviderDeviceE2EValidationPlan` for operators and agents that need the
+final provider/device checklist without calling Relay directly.
 `inspect remote` is the read-only inspection view that puts remote
 classification, Sync authority/drivers, transport, route contracts, tests,
 gaps, and conformance in one JSON payload.
