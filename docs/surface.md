@@ -2627,6 +2627,7 @@ The docs check script validates that every current export from
     buildRemoteExternalValidationEvidenceArtifact
     buildRemoteExternalValidationEvidenceTemplate
     buildRemoteExternalValidationReport
+    buildRemoteExternalValidationRunbook
     buildRemoteGoalClosureGate
     buildRemoteOfflineCommandResult
     buildRemoteProviderDeviceE2EValidationPlan
@@ -2723,6 +2724,8 @@ The docs check script validates that every current export from
     remoteExternalValidationEvidenceSchema
     remoteExternalValidationEvidenceTemplateSchema
     parseRemoteExternalValidationEvidenceInput
+    RemoteExternalValidationRunbook
+    remoteExternalValidationRunbookSchema
     RemoteExternalValidationReport
     remoteExternalValidationReportItemSchema
     RemoteExternalValidationReportItem
