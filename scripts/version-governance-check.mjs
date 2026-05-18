@@ -2,6 +2,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const args = new Set(process.argv.slice(2));
@@ -125,8 +126,26 @@ function checkReleaseScripts() {
       fail(`${scriptName} must run the pre-v1 release approval gate`);
     }
   }
+  if (!packageJson.scripts?.["publish:dry-run"]?.includes("verify-regulated-domain-safety-goal.mjs")) {
+    fail("publish:dry-run must run the regulated-domain legal release gate");
+  }
   const testDocs = packageJson.scripts?.["test:docs"] ?? "";
   if (!testDocs.includes("version-governance-check.mjs")) fail("test:docs must include version-governance-check.mjs");
+  if (!testDocs.includes("verify-regulated-domain-safety-goal.mjs")) {
+    fail("test:docs must include verify-regulated-domain-safety-goal.mjs");
+  }
+}
+
+function checkLegalReleaseGate() {
+  const result = spawnSync(
+    process.execPath,
+    ["--import", "tsx", "./scripts/verify-regulated-domain-safety-goal.mjs"],
+    { cwd: rootDir, encoding: "utf8", maxBuffer: 20 * 1024 * 1024 },
+  );
+  if (result.status !== 0) {
+    const output = `${result.stdout || ""}${result.stderr || ""}`.trim();
+    fail(`regulated-domain legal release gate failed${output ? `:\n${output}` : ""}`);
+  }
 }
 
 function checkCompletionAudit() {
@@ -197,6 +216,7 @@ if (args.has("--release-gate")) {
   if (process.env.CLAW_ALLOW_PRE_V1_RELEASE !== "1") {
     fail("pre_v1_mutable blocks release/version/publish flows without CLAW_ALLOW_PRE_V1_RELEASE=1 and explicit user approval");
   }
+  checkLegalReleaseGate();
 } else {
   checkPolicyExport();
   checkLedger();

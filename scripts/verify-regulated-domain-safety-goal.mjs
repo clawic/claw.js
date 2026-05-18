@@ -29,6 +29,80 @@ function requireNoSnippet(relativePath, snippet) {
   }
 }
 
+function walk(dir, predicate, files = []) {
+  const absoluteDir = path.join(rootDir, dir);
+  if (!fs.existsSync(absoluteDir)) return files;
+  for (const entry of fs.readdirSync(absoluteDir, { withFileTypes: true })) {
+    const relativePath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (["node_modules", "dist", ".next", ".vitepress", "test-results", "artifacts"].includes(entry.name)) continue;
+      walk(relativePath, predicate, files);
+    } else if (predicate(relativePath)) {
+      files.push(relativePath);
+    }
+  }
+  return files;
+}
+
+function assertNoBannedPublicClaims() {
+  const roots = [
+    "README.md",
+    "TERMS.md",
+    "PRIVACY.md",
+    "DISCLAIMER.md",
+    "SAFETY.md",
+    "REGULATED_DOMAINS.md",
+    "SECURITY.md",
+    "RELEASING.md",
+  ];
+  const docs = walk("docs", (file) => [".md", ".json"].includes(path.extname(file)))
+    .filter((file) => ![
+      "docs/codebase-manifest.json",
+      "docs/discoverability.registry.json",
+    ].includes(file));
+  const website = walk("website", (file) => [".md", ".html", ".json", ".js", ".jsx", ".ts", ".tsx"].includes(path.extname(file)));
+  const examples = walk("examples", (file) => [".md", ".html", ".json", ".js", ".jsx", ".ts", ".tsx"].includes(path.extname(file)));
+  const packageReadmes = walk("packages", (file) => path.basename(file) === "README.md");
+  const scanned = [...roots, ...docs, ...website, ...examples, ...packageReadmes]
+    .filter((file, index, all) => all.indexOf(file) === index)
+    .filter((file) => fs.existsSync(path.join(rootDir, file)));
+  const bannedClaims = [
+    "autopilot",
+    "compliance-ready",
+    "hipaa compliant",
+    "gdpr compliant",
+    "ai act compliant",
+    "fda approved",
+    "fda cleared",
+    "cfpb compliant",
+    "diagnose and treat",
+    "replaces a doctor",
+    "replaces a lawyer",
+    "replaces a therapist",
+    "provides legal advice",
+    "provides medical advice",
+    "provides financial advice",
+    "makes credit decisions",
+    "makes insurance decisions",
+    "makes employment decisions",
+    "makes admission decisions",
+    "submits regulated filings autonomously",
+    "send bank details",
+  ];
+  for (const relativePath of scanned) {
+    const lines = read(relativePath).split(/\r?\n/);
+    for (const [index, rawLine] of lines.entries()) {
+      const line = rawLine.toLowerCase();
+      if (/\b(do not|does not|must not|without|no)\b/.test(line)) continue;
+      for (const claim of bannedClaims) {
+        if (line.includes(claim)) {
+          errors.push(`${relativePath}:${index + 1}: contains banned or unqualified public claim ${JSON.stringify(claim)}`);
+        }
+      }
+    }
+  }
+}
+
 try {
   assertRegulatedDomainSafetyComplete();
 } catch (error) {
@@ -142,6 +216,7 @@ for (const snippet of [
   requireNoSnippet("docs/regulated-domain-safety.md", snippet);
   requireNoSnippet("docs/adr/0026-regulated-domain-safety-liability-boundary.md", snippet);
 }
+assertNoBannedPublicClaims();
 
 if (errors.length > 0) {
   console.error(`Regulated domain safety guard failed with ${errors.length} issue(s):`);
