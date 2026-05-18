@@ -132,7 +132,7 @@ npm run release:status
 Apply version bumps locally:
 
 ```bash
-CLAW_ALLOW_PRE_V1_RELEASE=1 npm run release:version
+CLAW_ALLOW_PRE_V1_RELEASE=1 CLAW_RELEASE_APPROVED_FOR=release-version npm run release:version
 ```
 
 ## Publish commands
@@ -146,5 +146,5 @@ npm run publish:dry-run
 Publish for real from the workspace root after authentication:
 
 ```bash
-CLAW_ALLOW_PRE_V1_RELEASE=1 npm run release:publish
+CLAW_ALLOW_PRE_V1_RELEASE=1 CLAW_RELEASE_APPROVED_FOR=release-publish npm run release:publish
 ```

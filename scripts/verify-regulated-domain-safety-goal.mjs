@@ -376,6 +376,8 @@ for (const [relativePath, snippets] of [
     "Website Channel Checklist",
     "App And Binary Channel Checklist",
     "explicit approval for that exact",
+    "CLAW_RELEASE_APPROVED_FOR=release-version",
+    "CLAW_RELEASE_APPROVED_FOR=release-publish",
     "docs/legal-external-pending-validation.md",
   ]],
   ["package.json", [
@@ -387,6 +389,13 @@ for (const [relativePath, snippets] of [
   ["scripts/build-packages.mjs", [
     "\"@clawjs/search\"",
     "\"@clawjs/search-mcp\"",
+  ]],
+  ["scripts/version-governance-check.mjs", [
+    "releaseApprovalTargets",
+    "\"release:version\": \"release-version\"",
+    "\"release:publish\": \"release-publish\"",
+    "\"publish:packages\": \"publish-packages\"",
+    "CLAW_RELEASE_APPROVED_FOR=${expectedApproval}",
   ]],
   ["scripts/pack-smoke.mjs", [
     "packages\", \"clawjs-search\"",

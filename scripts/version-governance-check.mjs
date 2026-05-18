@@ -7,6 +7,11 @@ import { spawnSync } from "node:child_process";
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const args = new Set(process.argv.slice(2));
 const errors = [];
+const releaseApprovalTargets = {
+  "release:version": "release-version",
+  "release:publish": "release-publish",
+  "publish:packages": "publish-packages",
+};
 
 function fail(message) {
   errors.push(message);
@@ -215,6 +220,11 @@ function selfTest() {
 if (args.has("--release-gate")) {
   if (process.env.CLAW_ALLOW_PRE_V1_RELEASE !== "1") {
     fail("pre_v1_mutable blocks release/version/publish flows without CLAW_ALLOW_PRE_V1_RELEASE=1 and explicit user approval");
+  }
+  const lifecycleEvent = process.env.npm_lifecycle_event ?? "";
+  const expectedApproval = releaseApprovalTargets[lifecycleEvent] ?? "direct-release-gate";
+  if (process.env.CLAW_RELEASE_APPROVED_FOR !== expectedApproval) {
+    fail(`pre_v1_mutable requires exact release approval CLAW_RELEASE_APPROVED_FOR=${expectedApproval}`);
   }
   checkLegalReleaseGate();
 } else {
