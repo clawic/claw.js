@@ -156,6 +156,7 @@ claw search jobs claim --sources documents.blocks --shards cold --limit 10 --jso
 claw search jobs complete <job-id> --json
 claw search jobs fail <job-id> --error "temporary extractor throttle" --retry --json
 claw search jobs schedule upsert --source documents.blocks --resource-id doc_123 --json
+claw search changes schedule upsert --source code.symbols --root ./repo --path ./repo/src/app.ts --json
 claw search saved create recent --query "text" --json
 claw search monitors create monitor-recent --saved-search recent --json
 claw search monitors run monitor-recent --limit 10 --json
@@ -218,6 +219,12 @@ resource id; `claim` to lease available jobs for a worker; `complete` and
 leased, done, or failed jobs. Repeated `schedule` calls for the same changed
 resource compact into one queued job so noisy local events do not create
 unbounded duplicate backfill work.
+
+`claw search changes schedule` is the typed producer-facing wrapper for changed
+file or route events. It uses the source schedulers for `code.symbols`,
+`local.files`, `web.ingested`, `external.cache`, and `surfaces.routes`, so
+producer paths are checked against their selected root and the queued job
+contains the payload the embedded worker needs for resource-scoped refresh.
 
 The local framework database and artifact write paths now emit those compacted
 events for `database.records`, `documents.blocks`, `notes.pages`,
@@ -371,6 +378,9 @@ directories and respects `--code-limit`, `--code-max-depth`, and
 `--code-max-bytes`. Code indexing is refreshed lazily for code-scoped queries,
 explicitly during `search rebuild`, or incrementally through event-driven
 file upsert/delete jobs keyed by the project root and relative file path.
+Source file producers can call `claw search changes schedule upsert|delete
+--source code.symbols --root <code-root> --path <file>` to enqueue the typed hot
+job; paths outside the root are rejected before a job is written.
 
 `local.files` follows the same explicit-source rule. It stays in the `full`
 profile and is disabled until explicitly enabled with `claw search sources
@@ -383,7 +393,8 @@ control directories are skipped, and the source participates in scoped query
 refresh, rebuild accounting, and Search service `run-once` jobs only when
 selected. Changed-file producers can schedule resource-scoped refresh jobs keyed
 by the path under `--file-root`; paths outside that root are rejected before a
-job is written.
+job is written. The typed CLI form is `claw search changes schedule
+upsert|delete --source local.files --root <file-root> --path <file>`.
 
 `web.ingested` is the first explicit web cache adapter. It does not crawl the
 network itself; it indexes bounded local exports under `--web-root` after the
@@ -395,7 +406,8 @@ participates in Search service `run-once` jobs. Markdown-shaped `text` payloads
 are split into bounded section fragments; this still never crawls the network.
 Changed-cache producers can schedule resource-scoped refresh jobs keyed by the
 path under `--web-root`; paths outside that root are rejected before a job is
-written.
+written. The typed CLI form is `claw search changes schedule upsert|delete
+--source web.ingested --root <web-root> --path <cache-file>`.
 
 `external.cache` follows the same local-only rule for provider exports. It
 indexes JSON, JSONL, Markdown, and text files under `--external-root` only after
@@ -406,6 +418,8 @@ is indexed. Markdown-shaped exported text is split into bounded section
 fragments. Search never calls provider APIs from this adapter. Changed-cache
 producers can schedule resource-scoped refresh jobs keyed by the path under
 `--external-root`; paths outside that root are rejected before a job is written.
+The typed CLI form is `claw search changes schedule upsert|delete --source
+external.cache --root <external-root> --path <cache-file>`.
 
 `documents.blocks` projects framework document records from `core.sqlite`.
 Documents are returned as scoped section results, while redacted structured
@@ -587,9 +601,11 @@ redacted before fallback JSON text is indexed.
 `docs/`, including ADRs under `docs/adr/`, into source-scoped docs results. It
 indexes document titles, simple frontmatter `title`/`description`, section
 headings, section snippets, kind/category/path metadata, and supports
-resource-scoped refresh jobs keyed by repository-relative docs paths. It also
-writes deterministic local `local-text-v1` vectors for provider-free semantic
-and hybrid docs queries.
+resource-scoped refresh jobs keyed by repository-relative docs paths.
+`claw docs page upsert|delete` writes public Markdown pages under `docs/` and
+emits hot `docs.pages` refresh/delete jobs for the changed page. It also writes
+deterministic local `local-text-v1` vectors for provider-free semantic and
+hybrid docs queries.
 
 `surfaces.routes` projects the framework surface route graph from
 `packages/clawjs-core/src/surface-registry.ts`. It indexes each route's source
@@ -666,7 +682,8 @@ signed host shortcut broker validates it.
   `snippets.library`, `agents.catalog`, `marketplace.choices`, `content.items`,
   `business.records`, `social.posts`, `iot.config`, and the first bounded
   `code.symbols` adapter with per-file event refresh. `sessions.chats` supports
-  resource-scoped refresh jobs keyed by session id. `docs.pages` indexes
+  resource-scoped refresh jobs keyed by session id, and `claw sessions index`
+  enqueues hot Search refresh jobs for indexed local session artifacts. `docs.pages` indexes
   public root docs, docs, and ADR sections with resource-scoped refresh jobs and
   best-effort event scheduling for changed docs files. `surfaces.routes` indexes
   route graph contracts with resource-scoped refresh jobs keyed by route id.

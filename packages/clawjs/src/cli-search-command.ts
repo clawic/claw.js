@@ -31,6 +31,14 @@ import { readBooleanFlag } from "./cli-flag-parsers.ts";
 import { writeCommandJsonError, writeCommandJsonOk, writeJsonOk } from "./cli-json.ts";
 import { buildCommandHelp, searchCliDiscovery } from "./cli-surface.ts";
 import {
+  scheduleCodeSymbolsSearchEvent,
+  scheduleExternalCacheSearchEvent,
+  scheduleLocalFileSearchEvent,
+  scheduleSurfaceRouteSearchEvent,
+  scheduleWebIngestedSearchEvent,
+  type SearchEventScheduleResult,
+} from "./cli-search-events.ts";
+import {
   ELN_SEARCH_COLLECTIONS,
   FINANCE_SEARCH_COLLECTIONS,
   OPERATIONAL_SEARCH_SIDECARS,
@@ -948,6 +956,32 @@ export async function runSearchAdminCli(input: {
     return CLI_EXIT_OK;
   }
 
+  if (command === "changes" || command === "changed") {
+    const action = input.positionals[2] ?? "schedule";
+    const operation = parseSearchChangedOperation(input.flags.operation ?? input.flags.op ?? input.positionals[3]);
+    const source = input.flags.source ?? input.positionals[4];
+    if (action !== "schedule" || !operation || !source) {
+      input.context.stderr.write(`Usage: ${input.binName} search changes schedule <upsert|delete> --source <source-id> [--root <root> --path <path>|--route-id <id>] [--json]\n`);
+      return CLI_EXIT_USAGE;
+    }
+    const scheduled = scheduleSearchChangedSourceEvent({
+      source,
+      operation,
+      cwd: input.context.cwd,
+      flags: input.flags,
+      positionals: input.positionals,
+    });
+    if (!scheduled.ok) {
+      if (input.wantsJson) writeCommandJsonError(input.context.stdout, "search", new CliHandledError("search_changed_event_error", scheduled.error ?? "Search changed event could not be scheduled", CLI_EXIT_USAGE), { subcommand: "changes" });
+      else input.context.stderr.write(`${scheduled.error ?? "Search changed event could not be scheduled"}\n`);
+      return CLI_EXIT_USAGE;
+    }
+    const data = { action, source, operation, item: scheduled.job ?? null, state: scheduled.job ? "ready" : "empty" };
+    if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "changes" });
+    else input.context.stdout.write(formatSearchJobLine(scheduled.job) + "\n");
+    return CLI_EXIT_OK;
+  }
+
   if (command === "shards") {
     const store = openCliSearchStore(input.flags);
     let shards: ReturnType<SearchStore["listShards"]>;
@@ -1191,6 +1225,82 @@ function runSearchServiceWorkerOnce(flags: Record<string, string>, cwd: string):
 function searchWorkerErrorMessage(error: unknown): string {
   if (error instanceof CliHandledError) return `${error.code}: ${error.message}`;
   return error instanceof Error ? error.message : String(error);
+}
+
+function scheduleSearchChangedSourceEvent(input: {
+  source: string;
+  operation: "upsert" | "delete";
+  cwd: string;
+  flags: Record<string, string>;
+  positionals: string[];
+}): SearchEventScheduleResult {
+  const dataDir = input.flags["data-dir"] ?? resolveClawjsDataRoot();
+  const observedAt = input.flags["observed-at"];
+  const filePath = input.flags.path ?? input.flags.file ?? input.flags["file-path"] ?? input.positionals[5];
+  const root = input.flags.root
+    ?? input.flags["code-root"]
+    ?? input.flags["file-root"]
+    ?? input.flags["web-root"]
+    ?? input.flags["external-root"];
+  switch (input.source) {
+    case "code.symbols":
+      if (!root || !filePath) return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source code.symbols --root <code-root> --path <file>" };
+      return scheduleCodeSymbolsSearchEvent({
+        operation: input.operation,
+        root: path.resolve(input.cwd, expandSearchPath(root)),
+        filePath: path.resolve(input.cwd, expandSearchPath(filePath)),
+        dataDir,
+        flags: input.flags,
+        observedAt,
+      });
+    case "local.files":
+      if (!root || !filePath) return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source local.files --root <file-root> --path <file>" };
+      return scheduleLocalFileSearchEvent({
+        operation: input.operation,
+        root: path.resolve(input.cwd, expandSearchPath(root)),
+        filePath: path.resolve(input.cwd, expandSearchPath(filePath)),
+        dataDir,
+        flags: input.flags,
+        observedAt,
+      });
+    case "web.ingested":
+      if (!root || !filePath) return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source web.ingested --root <web-root> --path <file>" };
+      return scheduleWebIngestedSearchEvent({
+        operation: input.operation,
+        root: path.resolve(input.cwd, expandSearchPath(root)),
+        filePath: path.resolve(input.cwd, expandSearchPath(filePath)),
+        dataDir,
+        flags: input.flags,
+        observedAt,
+      });
+    case "external.cache":
+      if (!root || !filePath) return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source external.cache --root <external-root> --path <file>" };
+      return scheduleExternalCacheSearchEvent({
+        operation: input.operation,
+        root: path.resolve(input.cwd, expandSearchPath(root)),
+        filePath: path.resolve(input.cwd, expandSearchPath(filePath)),
+        dataDir,
+        flags: input.flags,
+        observedAt,
+      });
+    case "surfaces.routes": {
+      const routeId = input.flags["route-id"] ?? input.flags["resource-id"] ?? input.flags.route ?? input.positionals[5];
+      if (!routeId) return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source surfaces.routes --route-id <route-id>" };
+      return scheduleSurfaceRouteSearchEvent({
+        operation: input.operation,
+        routeId,
+        dataDir,
+        flags: input.flags,
+        observedAt,
+      });
+    }
+    default:
+      return { ok: false, error: `Search changed events are typed for code.symbols, local.files, web.ingested, external.cache, and surfaces.routes; use search jobs schedule for ${input.source}.` };
+  }
+}
+
+function expandSearchPath(value: string): string {
+  return value === "~" || value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
 }
 
 function readSearchServiceWorkerBudgets(flags: Record<string, string>): SearchServiceWorkerBudgets {
@@ -7260,6 +7370,10 @@ function parseOptionalBoundedInteger(value: string | undefined, min: number, max
 
 function parseSearchIndexJobOperation(value: string | undefined): "upsert" | "delete" | "backfill" | "rebuild" | "embed" | undefined {
   return value === "upsert" || value === "delete" || value === "backfill" || value === "rebuild" || value === "embed" ? value : undefined;
+}
+
+function parseSearchChangedOperation(value: string | undefined): "upsert" | "delete" | undefined {
+  return value === "upsert" || value === "delete" ? value : undefined;
 }
 
 function parseSearchIndexJobStatus(value: string | undefined): "queued" | "leased" | "done" | "failed" | undefined {

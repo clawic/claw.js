@@ -652,7 +652,7 @@ export function sessionRoots(input: V1DataCliInput): string[] {
   return resolved;
 }
 
-export function indexSessionRoots(sqlite: Database.Database, roots: string[], source: string): number {
+export function indexSessionRoots(sqlite: Database.Database, roots: string[], source: string, onIndexed?: (sessionId: string) => void): number {
   const files = roots.flatMap((root) => findSessionArtifacts(root));
   const now = nowIso();
   const upsert = sqlite.prepare(`
@@ -665,6 +665,7 @@ export function indexSessionRoots(sqlite: Database.Database, roots: string[], so
   `);
   const replaceFts = sqlite.prepare("INSERT INTO session_index_fts (session_id, title, snippet, cwd) VALUES (?, ?, ?, ?)");
   const deleteFts = sqlite.prepare("DELETE FROM session_index_fts WHERE session_id = ?");
+  const indexedSessionIds: string[] = [];
   const tx = sqlite.transaction(() => {
     for (const file of files) {
       const stat = fs.statSync(file);
@@ -687,10 +688,12 @@ export function indexSessionRoots(sqlite: Database.Database, roots: string[], so
       );
       deleteFts.run(summary.sessionId);
       replaceFts.run(summary.sessionId, summary.title, summary.snippet, summary.cwd ?? "");
+      indexedSessionIds.push(summary.sessionId);
     }
   });
   tx();
   indexSessionSidecar(files, source, now);
+  for (const sessionId of indexedSessionIds) onIndexed?.(sessionId);
   return files.length;
 }
 
@@ -1642,6 +1645,8 @@ export function usage(binName: string, group: string): string {
       return `Usage: ${binName} audio index|transcript|artifact list|get|delete [--json]`;
     case "drive":
       return `Usage: ${binName} drive index|attach|artifact list|get|delete [--json]`;
+    case "docs":
+      return `Usage: ${binName} docs page list|get|upsert|delete [--json]`;
     case "runtime":
       return `Usage: ${binName} runtime queue|job list|get|delete|event|retention [--json]`;
     case "notify":

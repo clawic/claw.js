@@ -927,6 +927,8 @@ claw notify subscriptions delete sub-123 --notify-url http://127.0.0.1:24102 --n
 
 ```bash
 claw media --help
+claw docs page upsert search-notes --title "Search Notes" --body "Search doc text" --json
+claw docs page delete search-notes --json
 claw documents upload ./brief.md
 claw documents read document-123
 claw files read README.md
@@ -950,6 +952,8 @@ claw apps --help
 `sheets workbook upsert|delete` maintains local workbook manifests in the
 workspace and schedules `sheets.workbooks` Search refresh/delete jobs for the
 changed workbook id. Binary spreadsheet parsing remains extractor-owned.
+`docs page upsert|delete` maintains public Markdown pages under `docs/` and
+schedules `docs.pages` Search refresh/delete jobs for the changed page.
 
 ## Apps And Profile
 
@@ -1174,7 +1178,7 @@ material.
 
 ```bash
 claw sessions list
-claw sessions index --workspace ./workspace
+claw sessions index --root ./workspace
 claw sessions search "release"
 claw sessions generate-title session-123
 claw skills list
@@ -1187,6 +1191,10 @@ claw providers list
 claw providers auth-state
 claw auth status
 ```
+
+`claw sessions index` projects local session artifacts into the conversations
+sidecar and schedules `sessions.chats` Search refresh jobs for each indexed
+session id. It does not send prompts or mutate the source conversation files.
 
 `runtime` is limited to adapters and setup.
 
@@ -1212,6 +1220,7 @@ claw search sources enable web.ingested --profile full --json
 claw search query "release notes" --domains web --profile full --web-root ./web-cache --json
 claw search sources enable external.cache --profile full --json
 claw search query "provider thread" --domains external --profile full --external-root ./provider-cache --json
+claw search changes schedule upsert --source code.symbols --root ./repo --path ./repo/src/app.ts --json
 claw search status --json
 claw search service status --json
 claw search service run-once --json

@@ -233,3 +233,81 @@ export async function runSearchDocsPagesEventScenario(): Promise<void> {
     assert.deepEqual(afterDeletePayload.data.results, []);
   });
 }
+
+export async function runSearchDocsPagesCliWriteScenario(): Promise<void> {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-docs-writes-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const created = await runCliCapture([
+      "docs",
+      "page",
+      "upsert",
+      "cli-event-refresh",
+      "--title",
+      "CLI Docs Event Refresh",
+      "--description",
+      "docs-pages-cli-frontmatter-needle",
+      "--body",
+      "# CLI Docs Event Refresh\n\nA docs-pages-cli-event-refresh-needle proves CLI write refresh.",
+      "--workspace",
+      workspaceRoot,
+      "--data-dir",
+      dataRoot,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(created.code, CLI_EXIT_OK, created.stderr || created.stdout);
+
+    const jobs = await runCliCapture(["search", "jobs", "list", "--source", "docs.pages", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(jobs.code, CLI_EXIT_OK);
+    const jobsPayload = JSON.parse(jobs.stdout) as {
+      data: { items: Array<{ source: string; operation: string; resourceId?: string; shard?: string; payload?: Record<string, unknown> }> };
+    };
+    const upsertJob = jobsPayload.data.items.find((job) => job.resourceId === "docs/cli-event-refresh.md" && job.operation === "upsert");
+    assert.equal(upsertJob?.source, "docs.pages");
+    assert.equal(upsertJob?.shard, "hot");
+    assert.equal(upsertJob?.payload?.eventDriven, true);
+    assert.equal(upsertJob?.payload?.relativePath, "docs/cli-event-refresh.md");
+
+    const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "docs.pages", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(serviceRun.code, CLI_EXIT_OK);
+    const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.source, "docs.pages");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.operation, "upsert");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
+
+    const query = await runCliCapture(["search", "query", "docs-pages-cli-event-refresh-needle", "--domains", "docs", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK, query.stderr || query.stdout);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: { results: Array<{ source: string; domain: string; resourceId?: string; title: string; snippet?: string; metadata?: { frontmatterDescription?: string } }> };
+    };
+    const result = queryPayload.data.results.find((entry) => entry.resourceId === "docs/cli-event-refresh.md");
+    assert.equal(result?.source, "docs.pages");
+    assert.equal(result?.domain, "docs");
+    assert.equal(result?.title, "CLI Docs Event Refresh");
+    assert.equal(result?.metadata?.frontmatterDescription, "docs-pages-cli-frontmatter-needle");
+
+    const deleted = await runCliCapture(["docs", "page", "delete", "cli-event-refresh", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleted.code, CLI_EXIT_OK, deleted.stderr || deleted.stdout);
+    const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "docs.pages", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(deleteRun.code, CLI_EXIT_OK);
+    const deleteRunPayload = JSON.parse(deleteRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    const docsDeleteRunItem = deleteRunPayload.data.worker?.items.find((entry) => entry.source === "docs.pages");
+    assert.deepEqual({ source: docsDeleteRunItem?.source, operation: docsDeleteRunItem?.operation, status: docsDeleteRunItem?.status, indexed: docsDeleteRunItem?.indexed }, { source: "docs.pages", operation: "delete", status: "done", indexed: 1 });
+    const afterDelete = await runCliCapture(["search", "query", "docs-pages-cli-event-refresh-needle", "--domains", "docs", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterDelete.code, CLI_EXIT_DEGRADED, afterDelete.stderr || afterDelete.stdout);
+    const afterDeletePayload = JSON.parse(afterDelete.stdout) as { data: { results: unknown[] } };
+    assert.deepEqual(afterDeletePayload.data.results, []);
+  });
+}

@@ -7,7 +7,7 @@ import type Database from "better-sqlite3";
 import { DatabaseServiceStore } from "@clawjs/database";
 import { runAgentsCommand, runConnectionsCommand, runPersonalitiesCommand, runSkillCollectionsCommand } from "./v1-data-agent-entities.ts";
 import { runProviderRoutingCommand, runSnippetsCommand } from "./v1-data-agent-config.ts";
-import { scheduleAppsCatalogSearchEvent, scheduleBusinessRecordsSearchEvent, scheduleCalendarEventsSearchEvent, scheduleConnectorCatalogSearchEvent, scheduleContentItemsSearchEvent, scheduleDesignResourcesSearchEvent, scheduleFinanceRecordTableSearchEvent, scheduleIotConfigSearchEvent, scheduleKnowledgeGraphSearchEvent, scheduleMarketplaceChoicesSearchEvent, scheduleMcpServersSearchEvent, scheduleNotesPagesSearchEvent, scheduleRuntimeEventsSearchEvent, scheduleSheetsWorkbookSearchEvent, scheduleSignalsObservationsSearchEvent, scheduleSkillsRegistrySearchEvent, scheduleSocialPostsSearchEvent } from "./cli-search-events.ts";
+import { scheduleAppsCatalogSearchEvent, scheduleBusinessRecordsSearchEvent, scheduleCalendarEventsSearchEvent, scheduleConnectorCatalogSearchEvent, scheduleContentItemsSearchEvent, scheduleDesignResourcesSearchEvent, scheduleDocsPagesSearchEvent, scheduleFinanceRecordTableSearchEvent, scheduleIotConfigSearchEvent, scheduleKnowledgeGraphSearchEvent, scheduleMarketplaceChoicesSearchEvent, scheduleMcpServersSearchEvent, scheduleNotesPagesSearchEvent, scheduleRuntimeEventsSearchEvent, scheduleSessionChatSearchEvent, scheduleSheetsWorkbookSearchEvent, scheduleSignalsObservationsSearchEvent, scheduleSkillsRegistrySearchEvent, scheduleSocialPostsSearchEvent } from "./cli-search-events.ts";
 export {
   openMainDataStore,
   resolveClawjsDataRoot,
@@ -137,6 +137,8 @@ export async function runV1DataCli(input: V1DataCliInput): Promise<number | null
         return runAudioSidecarCommand(input, store);
       case "drive":
         return runDriveSidecarCommand(input, store);
+      case "docs":
+        return runDocsCommand(input);
       case "runtime":
         return runRuntimeSidecarCommand(input, store);
       case "notify":
@@ -201,6 +203,7 @@ function shouldHandleV1DataCommand(group: string | undefined, command: string | 
     search: new Set(["query", "rebuild", "help"]),
     audio: new Set(["index", "artifact", "transcript", "help"]),
     drive: new Set(["index", "artifact", "attach", "help"]),
+    docs: new Set(["page", "pages", "help"]),
     runtime: new Set(["queue", "job", "event", "retention", "help"]),
     notify: new Set(["event", "list", "retention", "help"]),
     monitor: new Set(["event", "list", "retention", "help"]),
@@ -1629,6 +1632,98 @@ function runDriveSidecarCommand(input: V1DataCliInput, store: DatabaseServiceSto
   return usageError(input, usage(input.binName, "drive"));
 }
 
+function runDocsCommand(input: V1DataCliInput): number {
+  const scope = input.positionals[1];
+  if (scope !== "page" && scope !== "pages") return usageError(input, usage(input.binName, "docs"));
+  const command = input.positionals[2] || "list";
+  const workspaceRoot = path.resolve(input.cwd, expandHome(input.flags.workspace || input.cwd));
+  const docsRoot = path.join(workspaceRoot, "docs");
+  if (command === "list") {
+    const items = fs.existsSync(docsRoot)
+      ? fs.readdirSync(docsRoot, { withFileTypes: true })
+        .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+        .map((entry) => `docs/${entry.name}`)
+        .sort()
+        .slice(0, Math.max(1, Number(input.flags.limit ?? 100)))
+      : [];
+    writeSuccess(input, { root: docsRoot, items });
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "get") {
+    const docPath = resolveDocsPageCliPath(input, workspaceRoot);
+    if (!docPath) return usageError(input, "Usage: claw docs page get DOC_ID [--json]");
+    const exists = fs.existsSync(docPath.absolutePath);
+    writeSuccess(input, exists ? { path: docPath.relativePath, body: fs.readFileSync(docPath.absolutePath, "utf8") } : null);
+    return exists ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
+  }
+  if (command === "upsert" || command === "create" || command === "edit") {
+    const docPath = resolveDocsPageCliPath(input, workspaceRoot);
+    if (!docPath) return usageError(input, "Usage: claw docs page upsert DOC_ID --title TITLE [--body TEXT|--file PATH] [--json]");
+    const title = input.flags.title || titleFromDocsPageId(docPath.relativePath);
+    const body = input.flags.file
+      ? fs.readFileSync(path.resolve(input.cwd, expandHome(input.flags.file)), "utf8")
+      : input.flags.body || `# ${title}\n`;
+    const description = input.flags.description;
+    const content = description
+      ? [`---`, `title: ${yamlScalar(title)}`, `description: ${yamlScalar(description)}`, `---`, "", body].join("\n")
+      : body.startsWith("#") ? body : `# ${title}\n\n${body}`;
+    fs.mkdirSync(path.dirname(docPath.absolutePath), { recursive: true });
+    fs.writeFileSync(docPath.absolutePath, content.endsWith("\n") ? content : `${content}\n`, "utf8");
+    const scheduled = scheduleDocsPagesSearchEvent({
+      operation: "upsert",
+      workspaceRoot,
+      filePath: docPath.absolutePath,
+      dataDir: resolveClawjsDataRoot(),
+      flags: { ...input.flags, workspace: workspaceRoot },
+    });
+    if (!scheduled.ok) return usageError(input, scheduled.error ?? "Unable to schedule docs.page Search event");
+    writeSuccess(input, { path: docPath.relativePath, durable: true, store: "workspace" });
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "delete") {
+    const docPath = resolveDocsPageCliPath(input, workspaceRoot);
+    if (!docPath) return usageError(input, "Usage: claw docs page delete DOC_ID [--json]");
+    const existed = fs.existsSync(docPath.absolutePath);
+    if (existed) {
+      fs.rmSync(docPath.absolutePath, { force: true });
+      const scheduled = scheduleDocsPagesSearchEvent({
+        operation: "delete",
+        workspaceRoot,
+        filePath: docPath.absolutePath,
+        dataDir: resolveClawjsDataRoot(),
+        flags: { ...input.flags, workspace: workspaceRoot },
+      });
+      if (!scheduled.ok) return usageError(input, scheduled.error ?? "Unable to schedule docs.page Search event");
+    }
+    writeSuccess(input, { path: docPath.relativePath, deleted: existed });
+    return existed ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
+  }
+  return usageError(input, usage(input.binName, "docs"));
+}
+
+function resolveDocsPageCliPath(input: V1DataCliInput, workspaceRoot: string): { absolutePath: string; relativePath: string } | null {
+  const raw = input.flags.path || input.flags.id || input.flags.page || input.positionals[3];
+  if (!raw) return null;
+  const normalized = raw.split(path.sep).join(path.posix.sep).replace(/^\.\/+/, "");
+  const relativePath = normalized.startsWith("docs/")
+    ? normalized
+    : `docs/${normalized.endsWith(".md") ? normalized : `${normalized}.md`}`;
+  if (!relativePath.endsWith(".md") || relativePath.includes("..")) return null;
+  const absolutePath = path.resolve(workspaceRoot, relativePath);
+  const relativeFromWorkspace = path.relative(workspaceRoot, absolutePath);
+  if (relativeFromWorkspace === ".." || relativeFromWorkspace.startsWith(`..${path.sep}`) || path.isAbsolute(relativeFromWorkspace)) return null;
+  return { absolutePath, relativePath: relativeFromWorkspace.split(path.sep).join(path.posix.sep) };
+}
+
+function titleFromDocsPageId(relativePath: string): string {
+  const base = path.posix.basename(relativePath, ".md").replace(/[-_]+/g, " ").trim();
+  return base ? base.replace(/\b\w/g, (letter) => letter.toUpperCase()) : "Doc";
+}
+
+function yamlScalar(value: string): string {
+  return JSON.stringify(value);
+}
+
 function runRuntimeSidecarCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
   const command = input.positionals[1];
   if (command === "queue") {
@@ -2367,7 +2462,18 @@ function runSessionsIndexCommand(input: V1DataCliInput, store: DatabaseServiceSt
   }
   if (command === "index") {
     const roots = sessionRoots(input);
-    const indexed = indexSessionRoots(store.sqlite, roots, input.flags.source || "codex");
+    const sessionIds = new Set<string>();
+    const indexed = indexSessionRoots(store.sqlite, roots, input.flags.source || "codex", (sessionId) => {
+      sessionIds.add(sessionId);
+    });
+    for (const sessionId of sessionIds) {
+      scheduleSessionChatSearchEvent({
+        operation: "upsert",
+        sessionId,
+        dataDir: resolveClawjsDataRoot(),
+        flags: input.flags,
+      });
+    }
     writeSuccess(input, { indexed, roots });
     return V1_DATA_EXIT_OK;
   }

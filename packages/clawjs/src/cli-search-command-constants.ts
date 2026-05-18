@@ -1,6 +1,6 @@
 import type { DEFAULT_SEARCH_BUDGETS } from "@clawjs/search";
 
-export const SEARCH_ADMIN_COMMANDS = new Set(["sources", "status", "service", "profiles", "entrypoints", "aliases", "saved", "monitors", "actions", "audit", "jobs", "shards", "embeddings", "explain"]);
+export const SEARCH_ADMIN_COMMANDS = new Set(["sources", "status", "service", "profiles", "entrypoints", "aliases", "saved", "monitors", "actions", "audit", "jobs", "changes", "changed", "shards", "embeddings", "explain"]);
 
 export const WORKSPACE_SEARCH_DOMAINS = new Set([
   "areas",
