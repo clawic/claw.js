@@ -35,14 +35,65 @@ For preview builds from `next`, run prereleases with the npm dist-tag `next` ins
 3. Run `npm run ci`.
 4. Confirm [TERMS.md](TERMS.md), [PRIVACY.md](PRIVACY.md), [DISCLAIMER.md](DISCLAIMER.md), [SAFETY.md](SAFETY.md), [REGULATED_DOMAINS.md](REGULATED_DOMAINS.md), [EULA.md](EULA.md), and `docs/regulated-domain-safety.md` are current.
 5. Confirm public README, package docs, CLI help, examples, demos, and website copy do not make unqualified autonomy, professional-advice, or compliance-ready claims.
-6. Run `npm run publish:dry-run`.
-7. Verify adapter support/stability metadata and docs support matrix are current.
-8. Review the pending release PR created from changesets.
-9. Update [CHANGELOG.md](CHANGELOG.md) in that release PR if the top-level note needs curation.
-10. Merge the release PR into `main`.
-11. Publish packages manually only after confirming the dry run and authentication state.
-12. Tag the release as `v<semver>` manually after publishing.
-13. Copy the changelog entry into the GitHub release notes if you want a manually curated GitHub release body.
+6. Classify every new sensitive collection, connector, agent, CLI route, MCP tool, Relay route, app surface, demo, or docs claim against `docs/regulated-domain-safety.md` before treating the release candidate as complete.
+7. Run `npm run publish:dry-run`.
+8. Verify adapter support/stability metadata and docs support matrix are current.
+9. Review the pending release PR created from changesets.
+10. Update [CHANGELOG.md](CHANGELOG.md) in that release PR if the top-level note needs curation.
+11. Merge the release PR into `main`.
+12. Publish packages manually only after confirming the dry run and authentication state.
+13. Tag the release as `v<semver>` manually after publishing.
+14. Copy the changelog entry into the GitHub release notes if you want a manually curated GitHub release body.
+
+## Channel-Specific Release Checklists
+
+These checklists do not approve release actions. Every npm publish, GitHub tag,
+GitHub release, website deployment, app upload, or binary distribution requires
+fresh maintainer approval for that exact action.
+Unavailable provider, signed-host, store, registry, website, app, or binary
+validation must be recorded in `docs/legal-external-pending-validation.md` as
+`EXTERNAL PENDING`; do not treat it as passed.
+
+### npm Package Channel Checklist
+
+1. Run `node --import tsx ./scripts/verify-regulated-domain-safety-goal.mjs`.
+2. Run `npm run publish:dry-run` and review the package file lists.
+3. Confirm every public package ships `README.md` with regulated-domain
+   disclaimers and links to Terms, Privacy, Disclaimer, Safety, Regulated
+   Domains, and EULA where applicable.
+4. Publish with `npm run publish:packages` or `npm run release:publish` only
+   after explicit approval for that exact npm action.
+
+### GitHub Release Channel Checklist
+
+1. Run the release checklist and npm package dry run if release assets mention
+   packages or CLI install commands.
+2. Confirm release notes do not expose private paths, credentials, logs,
+   production user data, signing details, or unpublished store metadata.
+3. Link current legal docs and regulated-domain policy from the GitHub release
+   notes when package, CLI, app, or binary artifacts are attached.
+4. Create tags or GitHub releases only after explicit approval for that exact
+   GitHub action.
+
+### Website Channel Checklist
+
+1. Run `node --import tsx ./scripts/verify-regulated-domain-safety-goal.mjs`.
+2. Build the website from the release candidate and confirm public copy remains
+   conservative: no professional-advice, final-decision, compliance-ready,
+   emergency-service, or autonomous-filing claims.
+3. Confirm demos and examples remain synthetic and consent-safe.
+4. Deploy or publish the website only after explicit approval for that exact web
+   action.
+
+### App And Binary Channel Checklist
+
+1. Run `node --import tsx ./scripts/verify-regulated-domain-safety-goal.mjs`.
+2. Confirm downstream Clawix or host app release candidates expose current EULA,
+   legal consent, 18+ confirmation, regulated-domain labels, export/share
+   review, support opt-in, and remote/provider opt-ins.
+3. Treat signing, notarization, TestFlight, App Store, installer, package
+   manager, and hosted binary uploads as separate exact actions requiring
+   separate approval.
 
 ## Package map
 

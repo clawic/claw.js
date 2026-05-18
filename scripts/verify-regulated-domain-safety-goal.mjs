@@ -182,6 +182,39 @@ function assertLegalDocsAreBilingual() {
   }
 }
 
+function assertLegalDocVersionsAreAligned() {
+  const expectedVersion = "2026-05-18";
+  for (const relativePath of ["TERMS.md", "PRIVACY.md", "DISCLAIMER.md", "SAFETY.md", "REGULATED_DOMAINS.md", "EULA.md"]) {
+    const text = read(relativePath);
+    if (!text.includes(`Last updated: ${expectedVersion}`)) {
+      errors.push(`${relativePath}: legal document must keep Last updated: ${expectedVersion}`);
+    }
+  }
+}
+
+function assertDemoDataIsSynthetic() {
+  const seedPath = "examples/mock/seed.mjs";
+  const seed = read(seedPath);
+  if (!seed.includes("All people, messages, emails, tokens, costs, and incidents are synthetic placeholders.")) {
+    errors.push(`${seedPath}: mock seed must explicitly declare synthetic placeholder data`);
+  }
+
+  const allowedEmailDomains = new Set([
+    "example.com",
+    "example.net",
+    "example.org",
+    "example.test",
+    "clawjs.local",
+  ]);
+  const emailPattern = /\b[A-Z0-9._%+-]+@([A-Z0-9.-]+\.[A-Z]{2,})\b/gi;
+  for (const match of seed.matchAll(emailPattern)) {
+    const domain = match[1].toLowerCase();
+    if (!allowedEmailDomains.has(domain)) {
+      errors.push(`${seedPath}: public mock data must use reserved email domains, found ${match[0]}`);
+    }
+  }
+}
+
 try {
   assertRegulatedDomainSafetyComplete();
 } catch (error) {
@@ -265,6 +298,14 @@ for (const [relativePath, snippets] of [
     "TERMS.md",
     "EULA.md",
     "compliance-ready claims",
+    "Classify every new sensitive collection, connector, agent, CLI route, MCP tool, Relay route, app surface, demo, or docs claim",
+    "docs/regulated-domain-safety.md",
+    "npm Package Channel Checklist",
+    "GitHub Release Channel Checklist",
+    "Website Channel Checklist",
+    "App And Binary Channel Checklist",
+    "explicit approval for that exact",
+    "docs/legal-external-pending-validation.md",
   ]],
   ["CONSTITUTION.md", [
     "Regulated domains are assistive",
@@ -285,6 +326,17 @@ for (const [relativePath, snippets] of [
     "EXTERNAL PENDING",
     "Required Evidence Spine",
     "legal certification is made here",
+    "docs/legal-external-pending-validation.md",
+  ]],
+  ["docs/legal-external-pending-validation.md", [
+    "Source conversation: `019e3a44-1175-7930-b45c-252f342b5ec2`",
+    "Status: `active_goal_not_complete`",
+    "LEGAL-EXT-001",
+    "LEGAL-EXT-006",
+    "EXTERNAL PENDING",
+    "not passes",
+    "must not be downgraded to `EXTERNAL PENDING`",
+    "No row authorizes a push, tag, publish, upload, notarization, TestFlight",
   ]],
   ["docs/regulated-domain-safety.md", [
     "The default safe envelope",
@@ -418,6 +470,8 @@ assertNoBannedPublicClaims();
 assertPackageReadmeDisclaimers();
 assertReleaseScriptsRunLegalGate();
 assertLegalDocsAreBilingual();
+assertLegalDocVersionsAreAligned();
+assertDemoDataIsSynthetic();
 
 if (errors.length > 0) {
   console.error(`Regulated domain safety guard failed with ${errors.length} issue(s):`);
