@@ -1121,6 +1121,7 @@ The docs check script validates that every current export from
     AGENCY_MODES
     AgencyMode
     AgentAccessRequest
+    AgentRegulatedSafetyDeclaration
     AgentActivityFeed
     AgentActivityFeedInput
     AgentActivityFeedItem
@@ -1592,6 +1593,12 @@ The docs check script validates that every current export from
     ConnectorSupportState
     ConnectorTraceMode
     ConnectorTrustTier
+    allowedRegulatedUses
+    AllowedRegulatedUse
+    assertRegulatedDomainSafetyComplete
+    AuditPolicy
+    blockedRegulatedUses
+    BlockedRegulatedUse
     ContextChip
     ContextPackBudget
     contextPackBudgetSchema
@@ -1616,12 +1623,14 @@ The docs check script validates that every current export from
     createAgentPermissionEscalationRequest
     createConnectorCapability
     createManifest
+    createRegulatedOutputLabels
     createTtsPlaybackPlan
     CREATIVITY_FAMILY
     CredentialBinding
     CredentialSource
     CRM_FAMILY
     CUSTOMER_INTAKE_FAMILY
+    DisclaimerPolicy
     CustomFieldRecord
     customFieldRecordSchema
     CycleRecord
@@ -1677,6 +1686,7 @@ The docs check script validates that every current export from
     evaluateAgentMemoryAccess
     evaluateAgentSupervisorAuthority
     evaluateConnectorControlPlaneRequest
+    evaluateRegulatedAction
     EpicRecord
     epicRecordSchema
     EventRecord
@@ -1705,6 +1715,7 @@ The docs check script validates that every current export from
     GARDEN_FAMILY
     GOVERNMENT_FAMILY
     getBuiltinCollection
+    getRegulatedDomainPolicy
     GoalRecord
     goalRecordSchema
     GuidanceHint
@@ -1759,6 +1770,7 @@ The docs check script validates that every current export from
     IoTDeviceKind
     isConnectorCapabilityId
     isInsideCodexHome
+    isRegulatedDomain
     isStableClawCliCommand
     JudgmentContextRefs
     judgmentContextRefsSchema
@@ -1988,6 +2000,16 @@ The docs check script validates that every current export from
     RawIoTInvocation
     rawIotInvocationSchema
     READING_MEDIA_FAMILY
+    regulatedDecisionEffects
+    RegulatedActionDecision
+    RegulatedActionDenialCode
+    RegulatedActionRequest
+    RegulatedDecisionEffect
+    RegulatedDomain
+    RegulatedDomainPolicy
+    regulatedDomains
+    regulatedDomainSafetyPolicies
+    regulatedDomainSafetyVersion
     RECIPES
     RecurrenceRecord
     recurrenceRecordSchema
@@ -2034,6 +2056,8 @@ The docs check script validates that every current export from
     resolveClawHostStateDir
     resolveClawPersistentSurfacePath
     resolveClawWorkspaceDir
+    sensitiveDataClasses
+    SensitiveDataClass
     ResourceKind
     resourceKindSchema
     ResourceLocator
@@ -2050,6 +2074,10 @@ The docs check script validates that every current export from
     ruleApplyWhenSchema
     RuleInput
     RuleKind
+    OutputLabelPolicy
+    ProhibitedRegulatedPractice
+    prohibitedRegulatedPractices
+    SubjectKind
     ruleKindSchema
     RuleRecord
     ruleRecordSchema
@@ -2523,12 +2551,14 @@ The docs check script validates that every current export from
     buildRemoteConformanceReport
     buildRemoteExternalPendingRegister
     buildRemoteExternalValidationChecklist
+    buildRemoteExternalValidationEvidenceTemplate
     buildRemoteExternalValidationReport
     buildRemoteGoalClosureGate
     buildRemoteOfflineCommandResult
     buildRemoteProviderDeviceE2EValidationPlan
     buildRemoteRouteContractCatalog
     buildRemoteSourceQaReviewReport
+    buildRemoteSourceQaReviewTemplate
     buildSyncPlan
     buildSyncQueueEntries
     createExampleSyncResourceManifest
@@ -2609,7 +2639,9 @@ The docs check script validates that every current export from
     RemoteExternalValidationChecklistItem
     remoteExternalValidationChecklistSchema
     RemoteExternalValidationEvidence
+    RemoteExternalValidationEvidenceTemplate
     remoteExternalValidationEvidenceSchema
+    remoteExternalValidationEvidenceTemplateSchema
     RemoteExternalValidationReport
     remoteExternalValidationReportItemSchema
     RemoteExternalValidationReportItem
@@ -2633,6 +2665,12 @@ The docs check script validates that every current export from
     remoteSourceQaReviewItemSchema
     RemoteSourceQaReviewReport
     remoteSourceQaReviewReportSchema
+    RemoteSourceQaReviewTemplate
+    RemoteSourceQaReviewTemplateItem
+    remoteSourceQaReviewTemplateItemSchema
+    remoteSourceQaReviewTemplateSchema
+    remoteSourceConversationId
+    remoteSourcePlanId
     RemoteSurfaceClassification
     RemoteSurfaceClassificationReceipt
     remoteSurfaceClassificationReceiptSchema

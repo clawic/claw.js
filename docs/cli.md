@@ -199,7 +199,9 @@ claw remote routes --json
 claw remote conformance --json
 claw remote pending --json
 claw remote validation-checklist --json
+claw remote validation-template --json
 claw remote validation-report --json
+claw remote source-qa-template --json
 claw remote closure-gate --json
 claw remote contracts --json
 claw remote e2e-plan --json
@@ -261,10 +263,20 @@ until explicitly run.
 checklist: one command, artifact set, and acceptance-criteria set for every
 `RemoteExternalPendingRegister` row, so `EXTERNAL PENDING` has explicit proof
 requirements before any row can clear.
+`remote validation-template` returns the matching no-write evidence JSON
+template. Operators fill its `evidence` array only after approved
+physical/provider runs, including an `approvedRunRef` approval/audit reference
+for each row, then submit that array to `remote validation-report`.
 `remote validation-report` evaluates supplied external evidence, if any, against
 that checklist. With no approved physical evidence it stays `external_pending`;
-only rows with approved run evidence, physical evidence, all required artifacts,
-all acceptance criteria, and no plaintext material become `clearable`.
+only rows with `approvedRun: true`, an `approvedRunRef`, physical evidence, all
+required artifacts, all acceptance criteria, and no plaintext material become
+`clearable`.
+`remote source-qa-template` returns the no-write source Q/A review template for
+the original Relay/Gateway/Coordinator/Connector/Sync source conversation and
+plan. It is intentionally incomplete: every row must be reviewed one by one and
+converted into a `RemoteSourceQaReviewItem` with disposition, evidence refs,
+review timestamp, and `writes: false` before submission to `remote closure-gate`.
 `remote closure-gate` combines the external validation report with the required
 source Q/A review report. It remains `blocked` until all 23 source Q/A rows
 have a disposition, evidence refs, and every external validation row is
@@ -593,6 +605,28 @@ inactive suggestions, not routing changes. `future`, `blocked`, and
 plans for risky or unavailable actions. See
 [ADR 0018: CLI action intent registry](./adr/0018-cli-action-intent-registry.md)
 for the durable contract.
+
+## Regulated Domain Safety
+
+`claw safety` exposes the regulated-domain boundary for agents and scripts. It
+is read-only: it classifies domains, explains policy, checks a proposed
+decision effect, and returns the disclaimer/output-label contract without
+executing sensitive work.
+
+```bash
+claw safety domains --json
+claw safety classify health --json
+claw safety check --domain finance --effect final_decision --use investment_or_credit_decision --json
+claw safety explain legal --json
+claw safety disclaimers mental_health --json
+```
+
+The safe default is local recordkeeping, search, extraction, factual summary,
+questions to review, gaps/provenance, non-final drafts, and preparation for
+human or professional review. Final regulated decisions, diagnosis/treatment,
+professional advice as a final answer, emergency handling, and autonomous
+sensitive external actions are blocked or require explicit review under
+[ADR 0026](./adr/0026-regulated-domain-safety-liability-boundary.md).
 
 ## Guidance And Resources
 

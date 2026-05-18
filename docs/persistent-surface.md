@@ -170,8 +170,12 @@ flowchart TD
   claw_contracts_api --> claw_api_remote_conformance
   claw_api_remote_externalValidationChecklist["Remote physical/provider validation checklist contract\napiRoute"]
   claw_contracts_api --> claw_api_remote_externalValidationChecklist
+  claw_api_remote_externalValidationTemplate["Remote physical/provider validation evidence template contract\napiRoute"]
+  claw_contracts_api --> claw_api_remote_externalValidationTemplate
   claw_api_remote_externalValidationReport["Remote physical/provider validation evidence report contract\napiRoute"]
   claw_contracts_api --> claw_api_remote_externalValidationReport
+  claw_api_remote_sourceQaTemplate["Remote source Q/A review template contract\napiRoute"]
+  claw_contracts_api --> claw_api_remote_sourceQaTemplate
   claw_api_remote_closureGate["Remote goal closure gate contract\napiRoute"]
   claw_contracts_api --> claw_api_remote_closureGate
   claw_api_remote_providerDeviceE2EPlan["Remote provider/device E2E validation plan contract\napiRoute"]
@@ -1242,6 +1246,8 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_needs
   claw_cli_command_commands["commands\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_commands
+  claw_cli_command_safety["safety\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_safety
   claw_cli_command_work["work\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_work
   claw_cli_command_projects["projects\ncliCommand"]
@@ -2208,7 +2214,9 @@ flowchart TD
 | `claw.api.remote.classifications` | apiRoute | api | claw |  |  |  | `/v1/remote/classifications` |
 | `claw.api.remote.conformance` | apiRoute | api | claw |  |  |  | `/v1/remote/conformance` |
 | `claw.api.remote.externalValidationChecklist` | apiRoute | api | claw |  |  |  | `/v1/remote/external-validation-checklist` |
+| `claw.api.remote.externalValidationTemplate` | apiRoute | api | claw |  |  |  | `/v1/remote/external-validation-template` |
 | `claw.api.remote.externalValidationReport` | apiRoute | api | claw |  |  |  | `/v1/remote/external-validation-report` |
+| `claw.api.remote.sourceQaTemplate` | apiRoute | api | claw |  |  |  | `/v1/remote/source-qa-template` |
 | `claw.api.remote.closureGate` | apiRoute | api | claw |  |  |  | `/v1/remote/closure-gate` |
 | `claw.api.remote.providerDeviceE2EPlan` | apiRoute | api | claw |  |  |  | `/v1/remote/provider-device-e2e-plan` |
 | `claw.api.sync.manifests` | apiRoute | api | claw |  |  |  | `/v1/sync/manifests` |
@@ -2744,6 +2752,7 @@ flowchart TD
 | `claw.cli.command.report` | cliCommand | cli | claw |  |  |  | `report` |
 | `claw.cli.command.needs` | cliCommand | cli | claw |  |  |  | `needs` |
 | `claw.cli.command.commands` | cliCommand | cli | claw |  |  |  | `commands` |
+| `claw.cli.command.safety` | cliCommand | cli | claw |  |  |  | `safety` |
 | `claw.cli.command.work` | cliCommand | cli | claw |  |  |  | `work` |
 | `claw.cli.command.projects` | cliCommand | cli | claw |  |  |  | `projects` |
 | `claw.cli.command.tasks` | cliCommand | cli | claw |  |  |  | `tasks` |
