@@ -1174,6 +1174,10 @@ requireSnippet("packages/clawjs/src/cli-search-query-embedding-gate.test.ts", "s
 requireSnippet("packages/clawjs/src/cli-search-command.ts", "localSearchEmbeddingModel(model)");
 requireSnippet("packages/clawjs-search-mcp/src/index.test.ts", "provider semantic query");
 requireSnippet("packages/clawjs-search-mcp/src/index.test.ts", "saved-provider-semantic");
+requireSnippet("packages/clawjs/src/cli-search-command.ts", "searchWorkerErrorMessage");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "job:documents:provider-embed");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "SEARCH_EMBEDDING_PROVIDER_PENDING");
+requireSnippet("docs/search.md", "Embedded `embed` jobs\nfail closed with `SEARCH_EMBEDDING_PROVIDER_PENDING`");
 requireSnippet("packages/clawjs-search/src/index.ts", "regulated_result_review_required");
 requireSnippet("packages/clawjs-search/src/index.ts", "legalOutputLabelsFromSearchResult");
 requireSnippet("packages/clawjs-search/src/index.test.ts", "Search action execution requires review and labels for regulated results");
@@ -1276,6 +1280,15 @@ requireSnippet("packages/clawjs/src/cli-search-command.ts", "temporalCalendarEve
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "afterFinanceRecordDelete");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "afterFinanceLocalDelete");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "source: \"finance.records\", operation: \"delete\", status: \"done\", indexed: 1");
+requireSnippet("packages/clawjs/src/cli-search-command.ts", "const metadataText = redactedStructuredText(metadata);");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "finance-metadata-fragment-needle");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "finance-metadata-secret-never-index");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "finance-local-metadata-fragment-needle");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "finance-local-metadata-secret-never-index");
+requireSnippet("docs/search.md", "Searchable\nfinance metadata is redacted before indexing");
+requireSnippet("packages/clawjs-search/src/store.ts", ".flatMap((term) => term.replace");
+requireSnippet("packages/clawjs-search/src/index.test.ts", "SearchStore tokenizes hyphenated query terms for FTS");
+requireSnippet("docs/search.md", "hyphenated and punctuation-delimited query\ntokens are split before FTS");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "afterElnDelete");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "source: \"eln.records\", operation: \"delete\", status: \"done\", indexed: 1");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "afterGenerationDelete");

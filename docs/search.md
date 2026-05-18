@@ -68,7 +68,7 @@ backfill jobs.
 | `knowledge.graph` | `knowledge` | `core.sqlite` knowledge entities and facts projected into `search.sqlite` | implemented initial adapter |
 | `signals.observations` | `signals` | `core.sqlite` signal verticals, variables, and observations projected into `search.sqlite` | implemented initial adapter |
 | `calendar.events` | `calendar` | `core.sqlite` calendar events projected into `search.sqlite` | implemented initial adapter |
-| `finance.records` | `finance` | `core.sqlite` dense-data finance collections and local `finance_records` projected into `search.sqlite` with redacted previews | implemented initial adapter |
+| `finance.records` | `finance` | `core.sqlite` dense-data finance collections and local `finance_records` projected into `search.sqlite` with redacted previews and redacted metadata text | implemented initial adapter |
 | `eln.records` | `eln` | `core.sqlite` ELN notebooks, entries, protocol runs, and observations projected into `search.sqlite` | implemented initial adapter |
 | `images.derived` | `images` | image library, image media metadata, and stored OCR/vision-derived text projected into `search.sqlite` | implemented initial adapter |
 | `media.assets` | `media` | workspace media records projected into `search.sqlite` | implemented initial adapter |
@@ -283,10 +283,12 @@ Search usable from a single text box while preserving the same fast-path
 constraints as explicit filters.
 
 Lexical matching reports exact, prefix, FTS, fuzzy, and semantic match reasons.
-The primary path remains SQLite FTS; when FTS cannot produce enough candidates,
-the store runs a bounded fuzzy fallback over the already-scoped candidate set so
-small typos can still return section-safe results without broadening source,
-domain, shard, profile, ACL, or metadata filters.
+The primary path remains SQLite FTS; hyphenated and punctuation-delimited query
+tokens are split before FTS so metadata markers, file-like labels, and dashed
+ids remain searchable. When FTS cannot produce enough candidates, the store runs
+a bounded fuzzy fallback over the already-scoped candidate set so small typos can
+still return section-safe results without broadening source, domain, shard,
+profile, ACL, or metadata filters.
 
 Command fallback is explicit. Scoped section searches do not broaden into
 commands by default, preserving section-only result contracts. CLI callers can
@@ -354,7 +356,9 @@ that need to inspect or cache it, and `search.embeddings.status` reports vector
 coverage.
 Search does not call external embedding providers from the sidecar;
 provider-backed generation remains `EXTERNAL PENDING` until an explicit
-provider worker owns credentials, billing, and throttling.
+provider worker owns credentials, billing, and throttling. Embedded `embed` jobs
+fail closed with `SEARCH_EMBEDDING_PROVIDER_PENDING` for provider-backed models
+instead of calling a network provider from the Search worker.
 
 Each source manifest declares indexing limits. `SearchStore` enforces body,
 fragment-count, and per-fragment byte budgets before writing to FTS, so a large
@@ -477,6 +481,12 @@ before fallback JSON text is indexed.
 event titles, times, calendar/source identifiers, and redacted metadata.
 Calendar event metadata is exposed as a separate redacted fragment, with
 secret-like nested metadata keys redacted before fallback JSON text is indexed.
+
+`finance.records` projects dense-data finance records and local finance records
+from `core.sqlite`. Finance results remain non-previewable, return `[redacted]`
+snippets, omit fragments, and carry regulated-domain output labels. Searchable
+finance metadata is redacted before indexing, so benign metadata markers can
+match while secret-like nested values are not indexed.
 
 `skills.registry` projects framework skill records from `core.sqlite`. It
 indexes the skill slug, name, kind, body, scope metadata, export path, and

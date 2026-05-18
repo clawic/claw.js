@@ -1163,7 +1163,7 @@ function runSearchServiceWorkerOnce(flags: Record<string, string>, cwd: string):
         const completed = store.completeIndexJob(job.id);
         items.push({ id: job.id, source: job.source, operation: job.operation, status: completed?.status ?? "done", indexed });
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
+        const message = searchWorkerErrorMessage(error);
         const failed = store.failIndexJob(job.id, { error: message, retry: readBooleanish(flags.retry) });
         items.push({ id: job.id, source: job.source, operation: job.operation, status: failed?.status ?? "failed", error: message });
       }
@@ -1186,6 +1186,11 @@ function runSearchServiceWorkerOnce(flags: Record<string, string>, cwd: string):
     budgets,
     items,
   };
+}
+
+function searchWorkerErrorMessage(error: unknown): string {
+  if (error instanceof CliHandledError) return `${error.code}: ${error.message}`;
+  return error instanceof Error ? error.message : String(error);
 }
 
 function readSearchServiceWorkerBudgets(flags: Record<string, string>): SearchServiceWorkerBudgets {
@@ -5183,7 +5188,7 @@ function temporalCalendarEventSearchDocument(row: TemporalCalendarEventRow): Sea
 function financeRecordSearchDocument(row: DatabaseRecordRow): SearchDocumentInput {
   const payload = parseJsonRecord(row.data_json);
   const metadata = isPlainRecord(payload.metadata) ? payload.metadata : {};
-  const metadataText = textFromStructuredContent(metadata) ?? (Object.keys(metadata).length ? JSON.stringify(redactExternalCachePayload(metadata)) : undefined);
+  const metadataText = redactedStructuredText(metadata);
   const occurredAt = stringValue(payload.postedAt) ?? stringValue(payload.occurredAt) ?? stringValue(payload.date) ?? row.updated_at;
   const kind = financeRecordKind(row.collection_name, payload);
   const currency = stringValue(payload.currency);
@@ -5242,7 +5247,7 @@ function financeRecordSearchDocument(row: DatabaseRecordRow): SearchDocumentInpu
 }
 function financeRecordTableSearchDocument(row: FinanceRecordTableRow, pageBody?: string): SearchDocumentInput {
   const metadata = parseJsonRecord(row.metadata_json);
-  const metadataText = textFromStructuredContent(redactExternalCachePayload(metadata));
+  const metadataText = redactedStructuredText(metadata);
   const body = [
     row.kind,
     row.account_id,

@@ -2040,13 +2040,13 @@ function ftsQuery(query: string): string {
   const terms = query
     .trim()
     .split(/\s+/)
-    .map((term) => term.replace(/[^\p{L}\p{N}_-]/gu, ""))
+    .flatMap((term) => term.replace(/[^\p{L}\p{N}_]+/gu, " ").split(/\s+/))
     .filter(Boolean);
   return terms.map((term) => `"${term}"*`).join(" ");
 }
 
 function shouldRunFuzzyFallback(query: string): boolean {
-  return query.trim().split(/\s+/).some((term) => term.replace(/[^\p{L}\p{N}_-]/gu, "").length >= 4);
+  return query.trim().split(/[^\p{L}\p{N}_]+/u).some((term) => term.length >= 4);
 }
 
 function normalizeInlineSearchQuery(input: SearchQueryInput): SearchQueryInput {

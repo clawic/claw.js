@@ -738,6 +738,35 @@ test("SearchStore returns bounded fuzzy fallback results when FTS has no hit", (
   }
 });
 
+test("SearchStore tokenizes hyphenated query terms for FTS", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-hyphen-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "documents.blocks",
+      domain: "documents",
+      name: "Documents",
+      resultTypes: ["document"],
+    }));
+    store.upsertDocument({
+      id: "documents.blocks:metadata",
+      source: "documents.blocks",
+      domain: "documents",
+      type: "document",
+      title: "Metadata fragment",
+      body: "finance-metadata-fragment-needle",
+    });
+    const hyphenated = store.query({ query: "finance-metadata-fragment-needle", sources: ["documents.blocks"], explain: true });
+    assert.deepEqual(hyphenated.results.map((result) => result.id), ["documents.blocks:metadata"]);
+    assert.equal(hyphenated.results[0]?.explanation?.matchedBy?.includes("fts"), true);
+    const spaced = store.query({ query: "finance metadata fragment needle", sources: ["documents.blocks"] });
+    assert.deepEqual(spaced.results.map((result) => result.id), ["documents.blocks:metadata"]);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("SearchStore can isolate hot and cold document shards without changing default queries", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-shards-"));
   const store = new SearchStore(path.join(dir, "search.sqlite"));

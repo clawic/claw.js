@@ -2750,6 +2750,33 @@ test("search rebuild indexes documents.blocks from document records", async () =
     assert.equal(embeddingsServiceRunPayload.data.worker?.items[0]?.operation, "embed");
     assert.equal(embeddingsServiceRunPayload.data.worker?.items[0]?.status, "done");
     assert.equal(embeddingsServiceRunPayload.data.worker?.items[0]?.indexed, 1);
+    const providerEmbeddingsJob = await runCliCapture([
+      "search",
+      "jobs",
+      "enqueue",
+      "embed",
+      "--source",
+      "documents.blocks",
+      "--id",
+      "job:documents:provider-embed",
+      "--payload",
+      JSON.stringify({ model: "provider-text-v1", limit: 10 }),
+      "--data-dir",
+      dataRoot,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(providerEmbeddingsJob.code, CLI_EXIT_OK);
+    const providerEmbeddingsServiceRun = await runCliCapture(["search", "service", "run-once", "--source", "documents.blocks", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(providerEmbeddingsServiceRun.code, CLI_EXIT_OK);
+    const providerEmbeddingsServiceRunPayload = JSON.parse(providerEmbeddingsServiceRun.stdout) as {
+      data: { worker?: { items: Array<{ id: string; source: string; operation: string; status: string; error?: string }> } };
+    };
+    assert.equal(providerEmbeddingsServiceRunPayload.data.worker?.items[0]?.id, "job:documents:provider-embed");
+    assert.equal(providerEmbeddingsServiceRunPayload.data.worker?.items[0]?.source, "documents.blocks");
+    assert.equal(providerEmbeddingsServiceRunPayload.data.worker?.items[0]?.operation, "embed");
+    assert.equal(providerEmbeddingsServiceRunPayload.data.worker?.items[0]?.status, "failed");
+    assert.match(providerEmbeddingsServiceRunPayload.data.worker?.items[0]?.error ?? "", /SEARCH_EMBEDDING_PROVIDER_PENDING/);
+    assert.match(providerEmbeddingsServiceRunPayload.data.worker?.items[0]?.error ?? "", /EXTERNAL PENDING/);
     const deleteBlock = await runCliCapture(["db", "document_blocks", "delete", createBlockPayload.data.id, "--json"], workspaceRoot);
     assert.equal(deleteBlock.code, CLI_EXIT_OK);
     const deletedBlockJobs = await runCliCapture(["search", "jobs", "--source", "documents.blocks", "--data-dir", dataRoot, "--json"], workspaceRoot);
@@ -3550,6 +3577,18 @@ test("search rebuild indexes finance.records with redacted previews", async () =
     ], workspaceRoot);
     assert.equal(created.code, CLI_EXIT_OK);
     const createdPayload = JSON.parse(created.stdout) as { data: { id: string } };
+    const sqlite = new Database(resolveClawjsMainDbPath());
+    try {
+      const row = sqlite.prepare("SELECT data_json FROM records WHERE namespace_id = 'main' AND collection_name = 'transactions' AND id = ?").get(createdPayload.data.id) as { data_json: string };
+      const payload = JSON.parse(row.data_json) as Record<string, unknown>;
+      payload.metadata = {
+        workflow: "finance-metadata-fragment-needle",
+        credentials: { token: "finance-metadata-secret-never-index" },
+      };
+      sqlite.prepare("UPDATE records SET data_json = ?, updated_at = ? WHERE namespace_id = 'main' AND collection_name = 'transactions' AND id = ?").run(JSON.stringify(payload), "2026-05-17T12:00:00.000Z", createdPayload.data.id);
+    } finally {
+      sqlite.close();
+    }
     const jobs = await runCliCapture(["search", "jobs", "--source", "finance.records", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(jobs.code, CLI_EXIT_OK);
     const jobsPayload = JSON.parse(jobs.stdout) as {
@@ -3567,6 +3606,14 @@ test("search rebuild indexes finance.records with redacted previews", async () =
     assert.equal(rebuildPayload.data.sources.includes("finance.records"), true);
     assert.equal(rebuildPayload.data.pendingSources.includes("finance.records"), false);
     assert.equal(rebuildPayload.data.indexedBySource["finance.records"], 1);
+    const searchSqlite = new Database(path.join(dataRoot, "search.sqlite"), { readonly: true, fileMustExist: true });
+    try {
+      const stored = searchSqlite.prepare("SELECT body FROM search_documents WHERE source = 'finance.records' AND resource_id = ?").get(`main:transactions:${createdPayload.data.id}`) as { body: string };
+      assert.equal(stored.body.includes("finance-metadata-fragment-needle"), true, stored.body);
+      assert.equal(stored.body.includes("finance-metadata-secret-never-index"), false);
+    } finally {
+      searchSqlite.close();
+    }
     const query = await runCliCapture([
       "search",
       "query",
@@ -3619,6 +3666,15 @@ test("search rebuild indexes finance.records with redacted previews", async () =
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "currency"), true);
     assert.equal(JSON.stringify(result).includes("Travel invoice"), false);
     assert.equal(JSON.stringify(result).includes("12945"), false);
+    const metadataQuery = await runCliCapture(["search", "query", "finance-metadata-fragment-needle", "--sources", "finance.records", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(metadataQuery.code, CLI_EXIT_OK, metadataQuery.stderr || metadataQuery.stdout);
+    const metadataQueryPayload = JSON.parse(metadataQuery.stdout) as { data: { results: Array<{ metadata?: { recordId?: string } }> } };
+    assert.equal(metadataQueryPayload.data.results.some((entry) => entry.metadata?.recordId === createdPayload.data.id), true);
+    assert.equal(JSON.stringify(metadataQueryPayload.data.results).includes("finance-metadata-secret-never-index"), false);
+    const metadataSecretQuery = await runCliCapture(["search", "query", "finance-metadata-secret-never-index", "--sources", "finance.records", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(metadataSecretQuery.code, CLI_EXIT_DEGRADED, metadataSecretQuery.stderr || metadataSecretQuery.stdout);
+    const metadataSecretPayload = JSON.parse(metadataSecretQuery.stdout) as { data: { results: unknown[] } };
+    assert.equal(metadataSecretPayload.data.results.length, 0);
     const deleted = await runCliCapture(["transaction", "delete", createdPayload.data.id, "--json"], workspaceRoot);
     assert.equal(deleted.code, CLI_EXIT_OK);
     const deleteJobs = await runCliCapture(["search", "jobs", "--source", "finance.records", "--data-dir", dataRoot, "--json"], workspaceRoot);
@@ -3667,6 +3723,11 @@ test("search service indexes local finance_records with redacted previews", asyn
       "ops",
       "--notes",
       "Sensitive launch invoice evidence",
+      "--metadata",
+      JSON.stringify({
+        workflow: "finance-local-metadata-fragment-needle",
+        credentials: { token: "finance-local-metadata-secret-never-index" },
+      }),
       "--data-dir",
       dataRoot,
       "--json",
@@ -3744,6 +3805,15 @@ test("search service indexes local finance_records with redacted previews", asyn
     assert.ok(result?.explanation?.matchedBy?.length);
     assert.equal(JSON.stringify(result).includes("Sensitive launch invoice evidence"), false);
     assert.equal(JSON.stringify(result).includes("88.5"), false);
+    const metadataQuery = await runCliCapture(["search", "query", "finance-local-metadata-fragment-needle", "--sources", "finance.records", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(metadataQuery.code, CLI_EXIT_OK, metadataQuery.stderr || metadataQuery.stdout);
+    const metadataQueryPayload = JSON.parse(metadataQuery.stdout) as { data: { results: Array<{ metadata?: { recordId?: string } }> } };
+    assert.equal(metadataQueryPayload.data.results.some((entry) => entry.metadata?.recordId === "finance.local.invoice"), true);
+    assert.equal(JSON.stringify(metadataQueryPayload.data.results).includes("finance-local-metadata-secret-never-index"), false);
+    const metadataSecretQuery = await runCliCapture(["search", "query", "finance-local-metadata-secret-never-index", "--sources", "finance.records", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(metadataSecretQuery.code, CLI_EXIT_DEGRADED, metadataSecretQuery.stderr || metadataSecretQuery.stdout);
+    const metadataSecretPayload = JSON.parse(metadataSecretQuery.stdout) as { data: { results: unknown[] } };
+    assert.equal(metadataSecretPayload.data.results.length, 0);
     const deleted = await runCliCapture(["finance", "delete", "--id", "finance.local.invoice", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(deleted.code, CLI_EXIT_OK, deleted.stderr || deleted.stdout);
     const deleteJobs = await runCliCapture(["search", "jobs", "--source", "finance.records", "--data-dir", dataRoot, "--json"], workspaceRoot);
