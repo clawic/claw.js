@@ -551,6 +551,38 @@ function requireCliSearchAcceptanceSmoke() {
   if (!explain.data?.ranking?.includes("central score") || !explain.data?.ranking?.includes("local frecency")) {
     failures.push("claw search explain system --json: must explain central ranking and local frecency");
   }
+
+  const pausedSource = readCliSearchJson(["sources", "pause", "commands"], "claw search sources pause commands --json", dataRoot);
+  if (pausedSource.data?.action !== "pause" || pausedSource.data?.source !== "commands" || pausedSource.data?.state !== "paused") {
+    failures.push("claw search sources pause commands --json: must pause commands");
+  }
+  const pausedList = readCliSearchJson(["sources"], "claw search sources after pause --json", dataRoot);
+  const pausedCommands = pausedList.data?.sources?.find((source) => source.id === "commands");
+  if (pausedCommands?.state !== "paused") failures.push("claw search sources after pause --json: must persist paused state");
+  const pausedQuery = readCliSearchJson(["query", "system", "--sources", "commands", "--limit", "3"], "claw search query paused source --json", dataRoot);
+  if (!pausedQuery.data?.omittedSources?.some((source) => source.source === "commands" && source.reason === "disabled" && String(source.message ?? "").includes("paused"))) {
+    failures.push("claw search query paused source --json: must omit paused commands source");
+  }
+  if (pausedQuery.data?.results?.some((result) => result.source === "commands")) {
+    failures.push("claw search query paused source --json: must not return paused command results");
+  }
+
+  const excludedSource = readCliSearchJson(["sources", "exclude", "commands"], "claw search sources exclude commands --json", dataRoot);
+  if (excludedSource.data?.action !== "exclude" || excludedSource.data?.source !== "commands" || excludedSource.data?.state !== "excluded") {
+    failures.push("claw search sources exclude commands --json: must exclude commands");
+  }
+  const excludedList = readCliSearchJson(["sources"], "claw search sources after exclude --json", dataRoot);
+  const excludedCommands = excludedList.data?.sources?.find((source) => source.id === "commands");
+  if (excludedCommands?.state !== "excluded") failures.push("claw search sources after exclude --json: must persist excluded state");
+
+  const resumedSource = readCliSearchJson(["sources", "resume", "commands"], "claw search sources resume commands --json", dataRoot);
+  if (resumedSource.data?.action !== "resume" || resumedSource.data?.source !== "commands" || resumedSource.data?.state !== "enabled") {
+    failures.push("claw search sources resume commands --json: must resume commands");
+  }
+  const resumedQuery = readCliSearchJson(["query", "system", "--sources", "commands", "--limit", "3"], "claw search query resumed source --json", dataRoot);
+  if (!resumedQuery.data?.results?.some((result) => result.source === "commands" && result.title === "system")) {
+    failures.push("claw search query resumed source --json: must return resumed command results");
+  }
 }
 
 for (const file of requiredPublicFiles) read(file);
