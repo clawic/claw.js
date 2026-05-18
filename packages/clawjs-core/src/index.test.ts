@@ -577,6 +577,7 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(providerDeviceE2EPlan.requiredExternalPendingIds.includes("provider_device_e2e"), true);
   assert.equal(providerDeviceE2EPlan.approvedPhysicalValidationRequired, true);
   assert.equal(providerDeviceE2EPlan.noPlaintextSecrets, true);
+  assert.equal(providerDeviceE2EPlan.plaintextMaterialIncluded, false);
   assert.equal(providerDeviceE2EPlan.hostedSelfHostedParityRequired, true);
   assert.equal(providerDeviceE2EPlan.writes, false);
 

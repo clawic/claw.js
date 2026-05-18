@@ -204,6 +204,7 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
     sync: { authorityClasses: string[]; drivers: string[]; conflictDefault: string; receiptContracts: string[]; routeIds: string[]; writes: boolean };
     transport: { contract: string; adapterNodeId: string; trustModes: string[]; receiptContract: string; writes: boolean };
     gaps: Array<{ requirementId: string; status: string; writes: boolean }>;
+    providerDeviceE2EPlan: { status: string; writes: boolean; requiredDomains: string[]; requiredRouteIds: string[]; requiredExternalPendingIds: string[]; plaintextMaterialIncluded: boolean };
     routeContracts: Array<{ routeId: string; parallelApiAllowed: boolean; writes: boolean }>;
     tests: string[];
   }>(remoteInspect.stdout).data;
@@ -230,6 +231,12 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   assert.equal(remoteInspectPayload.transport.writes, false);
   assert.equal(remoteInspectPayload.gaps.some((entry) => entry.requirementId === "physical_iroh_handshake" && entry.status === "external_pending" && entry.writes === false), true);
   assert.equal(remoteInspectPayload.gaps.some((entry) => entry.requirementId === "physical_authority_handoff" && entry.status === "external_pending" && entry.writes === false), true);
+  assert.equal(remoteInspectPayload.providerDeviceE2EPlan.status, "external_pending");
+  assert.equal(remoteInspectPayload.providerDeviceE2EPlan.writes, false);
+  assert.equal(remoteInspectPayload.providerDeviceE2EPlan.requiredDomains.includes("hosted_agents"), true);
+  assert.equal(remoteInspectPayload.providerDeviceE2EPlan.requiredRouteIds.includes("remote.secretBrokeredOperation"), true);
+  assert.equal(remoteInspectPayload.providerDeviceE2EPlan.requiredExternalPendingIds.includes("provider_device_e2e"), true);
+  assert.equal(remoteInspectPayload.providerDeviceE2EPlan.plaintextMaterialIncluded, false);
   assert.equal(remoteInspectPayload.routeContracts.some((entry) => entry.routeId === "remote.chatGateway" && !entry.parallelApiAllowed && !entry.writes), true);
   assert.equal(remoteInspectPayload.routeContracts.some((entry) => entry.routeId === "sync.sessions" && !entry.parallelApiAllowed && !entry.writes), true);
   assert.equal(remoteInspectPayload.routeContracts.some((entry) => entry.routeId === "sync.searchIndex" && !entry.parallelApiAllowed && !entry.writes), true);
@@ -259,7 +266,7 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
 
   const remoteE2EPlan = await runCliCapture(["remote", "e2e-plan", "--now", "2026-05-17T10:13:30.000Z", "--json"], process.cwd());
   assert.equal(remoteE2EPlan.code, CLI_EXIT_OK);
-  const remoteE2EPlanPayload = parseCliJson<{ status: string; writes: boolean; requiredDomains: string[]; requiredRouteIds: string[]; requiredExternalPendingIds: string[]; noPlaintextSecrets: boolean; hostedSelfHostedParityRequired: boolean }>(remoteE2EPlan.stdout).data;
+  const remoteE2EPlanPayload = parseCliJson<{ status: string; writes: boolean; requiredDomains: string[]; requiredRouteIds: string[]; requiredExternalPendingIds: string[]; plaintextMaterialIncluded: boolean; hostedSelfHostedParityRequired: boolean }>(remoteE2EPlan.stdout).data;
   assert.equal(remoteE2EPlanPayload.status, "external_pending");
   assert.equal(remoteE2EPlanPayload.writes, false);
   assert.deepEqual(remoteE2EPlanPayload.requiredDomains, ["chat", "search", "sync", "secret_refs", "hosted_agents"]);
@@ -268,7 +275,7 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.equal(remoteE2EPlanPayload.requiredRouteIds.includes("remote.secretBrokeredOperation"), true);
   assert.equal(remoteE2EPlanPayload.requiredRouteIds.includes("gateway.multiTenantAgentService"), true);
   assert.equal(remoteE2EPlanPayload.requiredExternalPendingIds.includes("provider_device_e2e"), true);
-  assert.equal(remoteE2EPlanPayload.noPlaintextSecrets, true);
+  assert.equal(remoteE2EPlanPayload.plaintextMaterialIncluded, false);
   assert.equal(remoteE2EPlanPayload.hostedSelfHostedParityRequired, true);
 
   const remoteContracts = await runCliCapture(["remote", "contracts", "--now", "2026-05-17T10:14:00.000Z", "--json"], process.cwd());
@@ -585,7 +592,7 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   const sharePayload = parseCliJson<{ share: { status: string; resourceId: string; plaintextSecrets: string; writes: boolean }; writes: boolean }>(share.stdout).data;
   assert.equal(sharePayload.share.status, "proposed");
   assert.equal(sharePayload.share.resourceId, "skills:default");
-  assert.equal(sharePayload.share.plaintextSecrets, "[REDACTED]");
+  assert.equal(sharePayload.share.plaintextSecrets, false);
   assert.equal(sharePayload.writes, false);
 
   const recordedShare = await runCliCapture(["nodes", "share", "--issuer-mesh", "mesh.home", "--to-mesh", "mesh.server", "--resource-id", "skills:default", "--driver", "skills", "--actions", "read,sync", "--state-dir", stateDir, "--record", "true", "--json"], process.cwd());

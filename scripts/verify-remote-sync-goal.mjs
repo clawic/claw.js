@@ -361,6 +361,7 @@ for (const requirementId of externalPending.requirements.map((entry) => entry.re
 }
 if (!providerDeviceE2EPlan.approvedPhysicalValidationRequired) fail("provider/device E2E plan must require approved physical validation");
 if (!providerDeviceE2EPlan.noPlaintextSecrets) fail("provider/device E2E plan must forbid plaintext secrets");
+if (providerDeviceE2EPlan.plaintextMaterialIncluded !== false) fail("provider/device E2E plan must expose that plaintext material is absent");
 if (!providerDeviceE2EPlan.hostedSelfHostedParityRequired) fail("provider/device E2E plan must require hosted/self-hosted parity");
 if (providerDeviceE2EPlan.writes !== false) fail("provider/device E2E plan must be no-write");
 

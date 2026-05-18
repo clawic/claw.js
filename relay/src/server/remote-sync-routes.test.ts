@@ -76,7 +76,7 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
 
     const providerDeviceE2EPlan = await built.app.inject({ method: "GET", url: "/v1/remote/provider-device-e2e-plan" });
     assert.equal(providerDeviceE2EPlan.statusCode, 200);
-    const providerDeviceE2EPlanPayload = providerDeviceE2EPlan.json() as { status: string; writes: boolean; requiredDomains: string[]; requiredRouteIds: string[]; requiredExternalPendingIds: string[]; noPlaintextSecrets: boolean; hostedSelfHostedParityRequired: boolean };
+    const providerDeviceE2EPlanPayload = providerDeviceE2EPlan.json() as { status: string; writes: boolean; requiredDomains: string[]; requiredRouteIds: string[]; requiredExternalPendingIds: string[]; noPlaintextSecrets: boolean; plaintextMaterialIncluded: boolean; hostedSelfHostedParityRequired: boolean };
     const expectedProviderDeviceE2EPlan = buildRemoteProviderDeviceE2EValidationPlan({ requiredRouteIds: remoteSyncRequiredRouteIds });
     assert.equal(providerDeviceE2EPlanPayload.status, "external_pending");
     assert.equal(providerDeviceE2EPlanPayload.writes, false);
@@ -84,6 +84,7 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.deepEqual(providerDeviceE2EPlanPayload.requiredRouteIds, expectedProviderDeviceE2EPlan.requiredRouteIds);
     assert.deepEqual(providerDeviceE2EPlanPayload.requiredExternalPendingIds, expectedProviderDeviceE2EPlan.requiredExternalPendingIds);
     assert.equal(providerDeviceE2EPlanPayload.noPlaintextSecrets, true);
+    assert.equal(providerDeviceE2EPlanPayload.plaintextMaterialIncluded, false);
     assert.equal(providerDeviceE2EPlanPayload.hostedSelfHostedParityRequired, true);
 
     const classifications = await built.app.inject({ method: "GET", url: "/v1/remote/classifications" });

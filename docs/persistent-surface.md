@@ -168,6 +168,8 @@ flowchart TD
   claw_contracts_api --> claw_api_remote_classifications
   claw_api_remote_conformance["Remote conformance report contract\napiRoute"]
   claw_contracts_api --> claw_api_remote_conformance
+  claw_api_remote_providerDeviceE2EPlan["Remote provider/device E2E validation plan contract\napiRoute"]
+  claw_contracts_api --> claw_api_remote_providerDeviceE2EPlan
   claw_api_sync_manifests["Sync resource manifest contract\napiRoute"]
   claw_contracts_api --> claw_api_sync_manifests
   claw_api_sync_manifests_create["Sync resource manifest dry-run creation contract\napiRoute"]
@@ -2199,6 +2201,7 @@ flowchart TD
 | `claw.api.relay.connector` | apiRoute | api | claw |  |  |  | `/v1/relay/connectors` |
 | `claw.api.remote.classifications` | apiRoute | api | claw |  |  |  | `/v1/remote/classifications` |
 | `claw.api.remote.conformance` | apiRoute | api | claw |  |  |  | `/v1/remote/conformance` |
+| `claw.api.remote.providerDeviceE2EPlan` | apiRoute | api | claw |  |  |  | `/v1/remote/provider-device-e2e-plan` |
 | `claw.api.sync.manifests` | apiRoute | api | claw |  |  |  | `/v1/sync/manifests` |
 | `claw.api.sync.manifests.create` | apiRoute | api | claw |  |  |  | `/v1/sync/manifests` |
 | `claw.api.sync.changes` | apiRoute | api | claw |  |  |  | `/v1/sync/changes` |
