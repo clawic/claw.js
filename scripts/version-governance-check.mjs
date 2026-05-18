@@ -129,6 +129,35 @@ function checkReleaseScripts() {
   if (!testDocs.includes("version-governance-check.mjs")) fail("test:docs must include version-governance-check.mjs");
 }
 
+function checkCompletionAudit() {
+  const audit = read("docs/pre-v1-version-governance-completion-audit.md");
+  for (const snippet of [
+    "Source conversation: `019e2b82-6118-7d52-9237-71a3e9ba4e41`",
+    "private session, not published",
+    "3 `request_user_input` prompts",
+    "8 binding answers",
+    "0 excluded prompts",
+    "`v1_meaning`",
+    "`Pre-V1 mutable`",
+    "`approval_gate`",
+    "`Todo contrato publico`",
+    "`changesets_policy`",
+    "`Congelar bumps`",
+    "`source_of_truth`",
+    "`ClawJS primero`",
+    "`existing_versions`",
+    "`Renombrar agresivo`",
+    "`existing_changesets`",
+    "`Consolidar en ledger`",
+    "`branch_policy`",
+    "`Main mutable`",
+    "`freeze_trigger`",
+    "`Frase explicita`",
+  ]) {
+    if (!audit.includes(snippet)) fail(`completion audit is missing ${JSON.stringify(snippet)}`);
+  }
+}
+
 function checkOwnedVersionDrift() {
   const scanned = [
     "packages/clawjs-core/src/surface-registry.ts",
@@ -136,6 +165,7 @@ function checkOwnedVersionDrift() {
     "packages/clawjs/src/inspect-cli.ts",
     "packages/clawjs/src/inspect-cli.test.ts",
     "docs/adr/0025-pre-v1-version-governance.md",
+    "docs/pre-v1-version-governance-completion-audit.md",
     "docs/decision-map.md",
     "docs/git-workflow.md",
     "RELEASING.md",
@@ -171,6 +201,7 @@ if (args.has("--release-gate")) {
   checkPolicyExport();
   checkLedger();
   checkReleaseScripts();
+  checkCompletionAudit();
   checkOwnedVersionDrift();
   if (args.has("--self-test")) selfTest();
 }
