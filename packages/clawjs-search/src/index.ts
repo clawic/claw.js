@@ -11,6 +11,7 @@ export type SearchSourceState =
   | "excluded"
   | "backfilling"
   | "degraded"
+  | "external_pending"
   | "error";
 
 export type SearchSourceProfile = "framework" | "full";

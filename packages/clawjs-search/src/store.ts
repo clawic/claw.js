@@ -632,7 +632,7 @@ export class SearchStore {
     const limit = Math.max(1, Math.min(10_000, Math.floor(Number.isFinite(input.limit) ? input.limit as number : 500)));
     const clauses = [
       "d.deleted_at IS NULL",
-      "s.state NOT IN ('disabled', 'paused', 'excluded')",
+      "s.state NOT IN ('disabled', 'paused', 'excluded', 'external_pending')",
       "json_extract(s.manifest_json, '$.capabilities.semantic') IN ('optional', 'required')",
     ];
     const params: unknown[] = [];
@@ -1116,7 +1116,7 @@ export class SearchStore {
       SELECT d.*, 0 AS rank
       FROM search_documents d
       JOIN search_sources s ON s.id = d.source
-      WHERE d.id = ? AND d.deleted_at IS NULL AND s.state NOT IN ('disabled', 'paused', 'excluded')
+      WHERE d.id = ? AND d.deleted_at IS NULL AND s.state NOT IN ('disabled', 'paused', 'excluded', 'external_pending')
       LIMIT 1
     `).get(resultId) as SearchDocumentRow | undefined;
     return row ? this.resultFromRow(row, { query: "" }) : null;
@@ -1393,7 +1393,7 @@ export class SearchStore {
     if (profile !== "full" && !explicitlyScoped) {
       selectedClauses.push("profile = 'framework'");
     }
-    const omissionClauses = ["state IN ('disabled', 'paused', 'excluded')"];
+    const omissionClauses = ["state IN ('disabled', 'paused', 'excluded', 'external_pending')"];
     if (profile !== "full" && explicitlyScoped) omissionClauses.push("profile != 'framework'");
     const rows = this.db.prepare(`
       SELECT id, state, profile FROM search_sources
@@ -1929,7 +1929,7 @@ function buildDocumentClauses(input: SearchQueryInput, profile: SearchProfileId,
   }
   applySearchFilters(clauses, params, input.filters);
   if (profile !== "full") clauses.push("s.profile = 'framework'");
-  clauses.push("s.state NOT IN ('disabled', 'paused', 'excluded')");
+  clauses.push("s.state NOT IN ('disabled', 'paused', 'excluded', 'external_pending')");
   return { clauses, params };
 }
 

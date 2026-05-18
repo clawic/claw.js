@@ -201,11 +201,14 @@ export async function runSearchQueryCli(input: {
       actor: input.flags.actor,
       baseResults: results,
     });
-    const outputResults = mergeQueryOutputWithLocalDiscovery(
-      commandFallback.output ?? results,
-      searchRegisteredLocalFiles(query, input.context.cwd),
-      limit ?? 20,
-    );
+    const canUseLocalDiscoveryFallback = !domains?.length && !sources?.length && !shards?.length;
+    const outputResults = canUseLocalDiscoveryFallback
+      ? mergeQueryOutputWithLocalDiscovery(
+          commandFallback.output ?? results,
+          searchRegisteredLocalFiles(query, input.context.cwd),
+          limit ?? 20,
+        )
+      : commandFallback.output ?? results;
     if (searchQueryRequiresAudit(query, outputResults.results, filters)) {
       store.recordAuditEvent({
         type: "sensitive_query",
@@ -583,8 +586,11 @@ export async function runSearchAdminCli(input: {
           input.context.stderr.write(`Usage: ${input.binName} search sources ${action} <source-id> [--json]\n`);
           return CLI_EXIT_USAGE;
         }
-        const state = sourceStateForAction(action);
-        store.setSourceState(sourceId, state, { error: null });
+        const state = sourceStateForAction(action, sourceId);
+        const error = state === "external_pending"
+          ? "native.system requires a signed host adapter before it can be indexed"
+          : null;
+        store.setSourceState(sourceId, state, { error });
         writeCanonicalSearchSourceState(input.flags, sourceId, state, {
           profile,
           actor: input.flags.actor,
@@ -1699,6 +1705,7 @@ function parseSearchSourceState(value: string): SearchSourceState | undefined {
     || value === "excluded"
     || value === "backfilling"
     || value === "degraded"
+    || value === "external_pending"
     || value === "error"
     ? value
     : undefined;
@@ -1744,7 +1751,7 @@ function registerBuiltinSources(store: SearchStore, states: Map<string, SearchSo
 }
 
 function sourceCanIndex(store: SearchStore, source: string): boolean {
-  return !["disabled", "paused", "excluded"].includes(store.sourceState(source) ?? "enabled");
+  return !["disabled", "paused", "excluded", "external_pending"].includes(store.sourceState(source) ?? "enabled");
 }
 
 function parseCommandFallbackPolicy(value: string | undefined): CommandFallbackPolicy {
@@ -1913,7 +1920,8 @@ function runSearchMonitorEvaluations(
   return { action, items, state };
 }
 
-function sourceStateForAction(action: string): SearchSourceState {
+function sourceStateForAction(action: string, sourceId?: string): SearchSourceState {
+  if ((action === "enable" || action === "resume") && sourceId === "native.system") return "external_pending";
   if (action === "enable" || action === "resume") return "enabled";
   if (action === "disable") return "disabled";
   if (action === "pause") return "paused";

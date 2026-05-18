@@ -657,6 +657,22 @@ function requireCliSearchAcceptanceSmoke() {
     failures.push("claw search query resumed source --json: must return resumed command results");
   }
 
+  const nativePending = readCliSearchJson(["sources", "enable", "native.system", "--profile", "full"], "claw search sources enable native.system --profile full --json", dataRoot);
+  const nativeSource = nativePending.data?.sources?.find((source) => source.id === "native.system");
+  if (nativePending.data?.action !== "enable" || nativePending.data?.source !== "native.system" || nativePending.data?.state !== "external_pending") {
+    failures.push("claw search sources enable native.system --profile full --json: must keep native system activation external pending");
+  }
+  if (nativeSource?.state !== "external_pending" || nativeSource?.profile !== "full" || nativeSource?.defaultState !== "off" || nativeSource?.fastPath !== false) {
+    failures.push("claw search sources enable native.system --profile full --json: must expose native.system as a full-profile pending source");
+  }
+  const nativeQuery = readCliSearchJson(["query", "native settings", "--profile", "full", "--sources", "native.system", "--limit", "3"], "claw search query native.system external pending --json", dataRoot);
+  if (!nativeQuery.data?.omittedSources?.some((source) => source.source === "native.system" && source.reason === "disabled" && String(source.message ?? "").includes("external_pending"))) {
+    failures.push("claw search query native.system external pending --json: must omit external-pending native.system results");
+  }
+  if (nativeQuery.data?.results?.some((result) => result.source === "native.system")) {
+    failures.push("claw search query native.system external pending --json: must not return native.system results before host integration");
+  }
+
   const scheduledJob = readCliSearchJson([
     "jobs",
     "schedule",
