@@ -37,6 +37,7 @@ async function runCliCapture(args: string[], cwd: string): Promise<{ code: numbe
 const expectedSyncDrivers = ["skills", "memory_user_model", "sessions", "drive_files", "blobs", "sqlite_tables", "sqlite_partial", "sidecar", "search_index", "agent_config", "workspace_state"];
 const expectedSyncDriverRouteIds = ["sync.skills", "sync.memoryUserModel", "sync.sessions", "sync.driveFiles", "sync.blobs", "sync.sqliteResources", "sync.sqliteResources", "sync.sidecars", "sync.searchIndex", "sync.agentConfig", "sync.workspaceState"];
 const expectedSyncDriverRequiredRouteIds = ["sync.agentConfig", "sync.blobs", "sync.driveFiles", "sync.memoryUserModel", "sync.searchIndex", "sync.sessions", "sync.sidecars", "sync.skills", "sync.sqliteResources", "sync.workspaceState"];
+const expectedInspectSyncRouteIds = ["sync.skills", "sync.memoryUserModel", "sync.sessions", "sync.driveFiles", "sync.blobs", "sync.sqliteResources", "sync.sidecars", "sync.agentConfig", "sync.workspaceState", "sync.searchIndex"];
 const expectedSyncDriverLateralDomains = [["skills"], ["memory", "user_model", "profile"], ["sessions"], ["drive", "files"], ["blobs", "files"], ["database", "records"], ["database", "partial_database"], ["sidecars", "runtime"], ["search", "indexes"], ["agents", "config"], ["workspace", "projects"]];
 const expectedSyncDriverCommands = expectedSyncDrivers.map((driver) => [
   `claw sync manifest --driver ${driver} --json`,
@@ -282,7 +283,7 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   assert.deepEqual(remoteInspectPayload.sync.drivers, expectedSyncDrivers);
   assert.equal(remoteInspectPayload.sync.conflictDefault, "detect_and_elevate");
   assert.equal(remoteInspectPayload.sync.receiptContracts.includes("SyncAuthorityHandoffReceipt"), true);
-  assert.deepEqual(remoteInspectPayload.sync.routeIds, expectedSyncDriverRequiredRouteIds);
+  assert.deepEqual(remoteInspectPayload.sync.routeIds, expectedInspectSyncRouteIds);
   assert.equal(remoteInspectPayload.sync.driverCatalog.status, "complete");
   assert.equal(remoteInspectPayload.sync.driverCatalog.writes, false);
   assert.equal(remoteInspectPayload.sync.driverCatalog.driverCount, 11);
