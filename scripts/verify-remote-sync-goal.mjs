@@ -273,6 +273,13 @@ function requireText(label, text, needle) {
   if (!text.includes(needle)) fail(`${label} must include ${needle}`);
 }
 
+function requireSameOrderedList(label, actual, expected) {
+  const actualList = Array.isArray(actual) ? actual : [];
+  if (actualList.join(",") !== expected.join(",")) {
+    fail(`${label} must be ${expected.join(",")} but was ${actualList.join(",")}`);
+  }
+}
+
 function extractTableIds(text, prefix) {
   return new Set([...text.matchAll(new RegExp(`\\|\\s*(${prefix}-\\d{3})\\s*\\|`, "g"))].map((match) => match[1]));
 }
@@ -386,7 +393,7 @@ if (sourceQaReviewReport.duplicateSourceQaIds.length !== 0) fail("source Q/A rev
 if (sourceQaReviewReport.invalidExternalPendingDispositionQaIds.length !== 0) {
   fail("source Q/A review artifact must mark physical/provider rows as external_pending");
 }
-const expectedExternalPendingQaIds = new Set([
+const expectedExternalPendingQaIdList = [
   "QA-002",
   "QA-004",
   "QA-005",
@@ -399,7 +406,28 @@ const expectedExternalPendingQaIds = new Set([
   "QA-018",
   "QA-020",
   "QA-021",
-]);
+];
+const expectedExternalPendingQaIds = new Set(expectedExternalPendingQaIdList);
+requireSameOrderedList(
+  "source Q/A review artifact external-pending source Q/A ids",
+  sourceQaReviewReport.externalPendingRequiredSourceQaIds,
+  expectedExternalPendingQaIdList,
+);
+const expectedExternalPendingRequirementIds = [
+  "physical_iroh_handshake",
+  "device_trust_acceptance",
+  "physical_peer_trust",
+  "physical_sync_driver_application",
+  "physical_authority_handoff",
+  "signed_host_audit_persistence",
+  "physical_client_storage",
+  "provider_secret_retrieval",
+  "self_hosted_deployment",
+  "hosted_deployment",
+  "agent_runtime_execution",
+  "billing_meter_persistence",
+  "provider_device_e2e",
+];
 for (const item of sourceQaReviewReport.items) {
   if (!sourceQaIds.has(item.qaId)) fail(`source Q/A review artifact includes unknown ${item.qaId}`);
   const expectedDisposition = expectedExternalPendingQaIds.has(item.qaId) ? "external_pending" : "implemented";
@@ -853,6 +881,11 @@ if (externalValidationEvidenceArtifactRows.length !== externalPending.requiremen
   fail("external validation evidence artifact must include one row per external pending requirement");
 }
 const externalPendingRequirementIds = externalPending.requirements.map((entry) => entry.requirementId);
+requireSameOrderedList(
+  "remote external-pending register requirement ids",
+  externalPendingRequirementIds,
+  expectedExternalPendingRequirementIds,
+);
 const externalValidationEvidenceArtifactIds = externalValidationEvidenceArtifactRows.map((entry) => entry.requirementId);
 if (externalValidationEvidenceArtifactIds.join(",") !== externalPendingRequirementIds.join(",")) {
   fail("external validation evidence artifact rows must match external pending requirements in order");
@@ -1064,13 +1097,21 @@ if (blockedClosureGate.requiredSourceQaIds.length !== 23) fail("remote closure g
 if (blockedClosureGate.missingSourceQaIds.length !== 23) fail("default remote closure gate must miss all source Q/A ids");
 if (blockedClosureGate.invalidSourceQaIds.length !== 0) fail("default remote closure gate must expose no invalid source Q/A ids");
 if (blockedClosureGate.duplicateSourceQaIds.length !== 0) fail("default remote closure gate must expose no duplicate source Q/A ids");
-if (!blockedClosureGate.externalPendingRequiredSourceQaIds.includes("QA-004")) fail("remote closure gate must expose topology source Q/A as requiring external_pending disposition");
-if (!blockedClosureGate.externalPendingRequiredSourceQaIds.includes("QA-007")) fail("remote closure gate must expose physical/provider source Q/A ids requiring external_pending disposition");
+requireSameOrderedList(
+  "default remote closure gate external-pending source Q/A ids",
+  blockedClosureGate.externalPendingRequiredSourceQaIds,
+  expectedExternalPendingQaIdList,
+);
 if (blockedClosureGate.invalidExternalPendingDispositionQaIds.length !== 0) fail("default remote closure gate must expose no invalid external-pending dispositions");
 if (!blockedClosureGate.blockers.includes("source_qa_review") || !blockedClosureGate.blockers.includes("external_validation")) {
   fail("default remote closure gate must block on source Q/A review and external validation");
 }
 if (blockedClosureGate.blockedExternalRequirementIds.length !== externalPending.requirements.length) fail("default remote closure gate must block every external pending requirement");
+requireSameOrderedList(
+  "default remote closure gate blocked external requirement ids",
+  blockedClosureGate.blockedExternalRequirementIds,
+  expectedExternalPendingRequirementIds,
+);
 if (blockedClosureGate.sourceQaReviewStatus !== "incomplete" || blockedClosureGate.sourceQaReviewItems.length !== 0) {
   fail("default remote closure gate must expose an incomplete source Q/A review report");
 }
@@ -1086,9 +1127,11 @@ if (completeSourceQaReviewReport.items.length !== 23) fail("complete source Q/A 
 if (!completeSourceQaReviewReport.items.every((entry) => entry.disposition && entry.evidenceRefs.length > 0 && entry.writes === false)) {
   fail("complete source Q/A review report must include disposition, evidence refs, and no-write items");
 }
-if (!completeSourceQaReviewReport.externalPendingRequiredSourceQaIds.includes("QA-004") || !completeSourceQaReviewReport.externalPendingRequiredSourceQaIds.includes("QA-007")) {
-  fail("complete source Q/A review report must identify source Q/A rows that still require external-pending disposition");
-}
+requireSameOrderedList(
+  "complete source Q/A review report external-pending source Q/A ids",
+  completeSourceQaReviewReport.externalPendingRequiredSourceQaIds,
+  expectedExternalPendingQaIdList,
+);
 if (!completeSourceQaReviewReport.items.every((entry) => !completeSourceQaReviewReport.externalPendingRequiredSourceQaIds.includes(entry.qaId) || entry.disposition === "external_pending")) {
   fail("complete source Q/A review report must mark physical/provider source Q/A rows as external_pending");
 }
