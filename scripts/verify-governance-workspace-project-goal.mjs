@@ -55,7 +55,7 @@ for (let index = 1; index <= 14; index += 1) {
 }
 
 for (const snippet of [
-  "Closure state: `active_with_remaining_validation`",
+  "Closure state: `ready_for_close_with_external_pending`",
   "EXTERNAL PENDING",
   "npm run test:governance",
   "swift test --package-path macos --filter ProjectFolderStateTests",
