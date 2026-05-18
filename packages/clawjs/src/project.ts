@@ -15,7 +15,7 @@ import { createPackageName, createPascalCase, createTitle, type SupportedPackage
 
 const PROJECT_CONFIG_FILE = "claw.project.json";
 
-export type ClawProjectType = "app" | "agent" | "server" | "workspace" | "skill" | "plugin";
+export type ClawProjectType = "app" | "agent" | "server" | "workspace" | "skill" | "plugin" | "project";
 export type ClawResourceType = "skill" | "plugin" | "provider" | "channel" | "command";
 export type ClawIntegrationType = "provider" | "channel" | "telegram" | "scheduler" | "memory" | "workspace";
 
@@ -545,6 +545,11 @@ export interface ClawProjectAttachPreview {
   manifest: ClawProjectManifest;
 }
 
+export interface ClawProjectImportPreview extends ClawProjectAttachPreview {
+  handoffPath: string;
+  handoffKind: "claw.project.handoff";
+}
+
 function readTextSafe(filePath: string): string | null {
   try {
     return fs.readFileSync(filePath, "utf8");
@@ -619,13 +624,21 @@ export async function attachProjectFolder(input: {
   title?: string;
   accept?: boolean;
   replaceDuplicate?: boolean;
+  seed?: Record<string, unknown>;
 }): Promise<ClawProjectAttachPreview> {
   const projectRoot = path.resolve(input.projectRoot);
   const now = new Date().toISOString();
   const previous = safeReadJson<unknown>(path.join(projectRoot, PROJECT_CONFIG_FILE));
-  const previousRecord = previous && typeof previous === "object" && !Array.isArray(previous)
+  const previousRecordOnDisk = previous && typeof previous === "object" && !Array.isArray(previous)
     ? previous as Record<string, unknown>
     : {};
+  const seedRecord = input.seed && typeof input.seed === "object" && !Array.isArray(input.seed)
+    ? input.seed
+    : {};
+  const previousRecord = {
+    ...previousRecordOnDisk,
+    ...seedRecord,
+  };
   const previousAttachment = previousRecord.attachment && typeof previousRecord.attachment === "object" && !Array.isArray(previousRecord.attachment)
     ? previousRecord.attachment as Record<string, unknown>
     : {};
@@ -686,6 +699,56 @@ export async function attachProjectFolder(input: {
     warnings,
     accepted: Boolean(input.accept),
     manifest,
+  };
+}
+
+export async function importProjectHandoff(input: {
+  handoffPath: string;
+  projectRoot: string;
+  workspaceId: string;
+  accept?: boolean;
+  replaceDuplicate?: boolean;
+}): Promise<ClawProjectImportPreview> {
+  const handoffPath = path.resolve(input.handoffPath);
+  const raw = safeReadJson<unknown>(handoffPath);
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error(`Missing or invalid project handoff at ${handoffPath}.`);
+  const handoff = raw as Record<string, unknown>;
+  if (handoff.kind !== "claw.project.handoff") throw new Error(`Unsupported project handoff kind at ${handoffPath}.`);
+  const safety = assertSafeClawProjectHandoff(handoff);
+  if (!safety.safe) throw new Error(`Unsafe handoff fields: ${safety.blockedFields.join(", ")}`);
+  const project = handoff.project && typeof handoff.project === "object" && !Array.isArray(handoff.project)
+    ? handoff.project as Record<string, unknown>
+    : {};
+  const projectRoot = path.resolve(input.projectRoot);
+  const fallbackName = path.basename(projectRoot);
+  const importedManifest = normalizeClawProjectManifest({
+    schemaVersion: 1,
+    manifestKind: "claw.project",
+    projectId: typeof project.projectId === "string" && project.projectId.trim() ? project.projectId : createClawProjectId(fallbackName),
+    name: typeof project.name === "string" && project.name.trim() ? project.name : createClawProjectId(fallbackName),
+    title: typeof project.title === "string" && project.title.trim() ? project.title : fallbackName,
+    type: typeof project.type === "string" ? project.type : "project",
+    primaryFolder: { id: "primary", path: ".", role: "primary" },
+    folderRefs: Array.isArray(project.folderRefs) ? project.folderRefs : [],
+    attachment: { state: "detached", detachedReason: "imported_handoff" },
+    workspaceBinding: undefined,
+    directories: {},
+    resources: {},
+  }, fallbackName);
+  const preview = await attachProjectFolder({
+    projectRoot,
+    workspaceId: input.workspaceId,
+    projectId: importedManifest.projectId,
+    name: importedManifest.name,
+    title: importedManifest.title,
+    accept: input.accept,
+    replaceDuplicate: input.replaceDuplicate,
+    seed: importedManifest as unknown as Record<string, unknown>,
+  });
+  return {
+    ...preview,
+    handoffPath,
+    handoffKind: "claw.project.handoff",
   };
 }
 
