@@ -228,6 +228,10 @@ requirements, the five E2E domains, the required topology targets, and the
 required route contract IDs, carries the required commands and prohibited
 actions, and always keeps `approvalRequired: true` with `approved: false` and
 status `approval_required`.
+With the current source Q/A and external evidence files supplied, the packet's
+readiness is `ready_for_approved_run`; without those artifacts it deliberately
+stays `not_ready` because the approval request cannot prove the source review or
+pending evidence binding.
 The Relay `/v1/remote/external-validation-report` endpoint and
 `claw remote validation-report` evaluate external validation evidence against
 that checklist. External validation is artifact-only clearable: raw evidence
@@ -285,7 +289,11 @@ route binds canonical local contract references to remote entrypoints, keeps
 `parityRequired: true`, and keeps `parallelApiAllowed: false`.
 `claw inspect remote` gives operators and agents the read-only inspection view
 for remote classification, Sync authority/drivers, transport, route contracts,
-tests, gaps, and conformance without mutating the Coordinator ledger.
+tests, gaps, and conformance without mutating the Coordinator ledger. Its
+default view remains fail-closed with no submitted artifacts; when supplied the
+versioned source Q/A and external evidence files, it overlays the same
+artifact-bound readiness, approval request, validation report, and closure gate
+state used by the `claw remote` validation commands.
 Existing Relay/mobile routes are represented by `RemoteCompatibilityAdapterReceipt`
 records and the Relay `/v1/remote/compatibility/adapters` endpoint. Each
 adapter must map one legacy surface to one canonical Gateway/Connector/Sync

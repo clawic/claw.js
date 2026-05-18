@@ -106,7 +106,39 @@ zero Relay `blocked` classifications, and a `blocked` closure
 gate with `source_qa_review` and `external_validation` blockers. This keeps
 executable inspection aligned with the completion audit: software/source review
 can be checked locally, while physical/provider evidence still requires
-approved external validation.
+approved external validation. The artifact-bound inspection path,
+`node packages/clawjs/bin/claw.mjs inspect remote --source-qa-review-file
+docs/remote-gateway-sync-source-qa-review.json --external-validation-file
+docs/remote-gateway-sync-external-validation-evidence.json --json`, overlays the
+current source Q/A and evidence artifacts and reports
+`ready_for_approved_run`, an approval request with `approved: false`,
+`sourceQaReviewStatus: complete`, and only the `external_validation` closure
+blocker.
+
+The artifact-bound closure handoff was also rerun with the current public
+source Q/A and external evidence artifacts. As of 2026-05-19, `claw remote
+validation-readiness --source-qa-review-file
+docs/remote-gateway-sync-source-qa-review.json --external-validation-file
+docs/remote-gateway-sync-external-validation-evidence.json --json` returned
+`ready_for_approved_run`: source Q/A was complete, no source Q/A IDs were
+missing/invalid/duplicated, the pending evidence artifact contained all 13
+required evidence rows, and the closure gate had only the `external_validation`
+blocker. `claw remote validation-report --evidence-file
+docs/remote-gateway-sync-external-validation-evidence.json --json` kept all 13
+requirements blocked with zero clearable requirements, while `claw remote
+closure-gate --source-qa-review-file
+docs/remote-gateway-sync-source-qa-review.json --external-validation-file
+docs/remote-gateway-sync-external-validation-evidence.json --json` confirmed
+`sourceQaReviewStatus: complete`, zero missing source Q/A rows, and only
+`external_validation` as the remaining blocker. The approval packet was rerun as
+`claw remote validation-approval-request --source-qa-review-file
+docs/remote-gateway-sync-source-qa-review.json --external-validation-file
+docs/remote-gateway-sync-external-validation-evidence.json --json`; it returned
+`approval_required` with `readinessStatus: ready_for_approved_run`,
+`approvalRequired: true`, `approved: false`, all 13 requirement IDs, five E2E
+domains, required topology targets, and required route contract IDs. This is the
+no-write handoff state before an explicitly approved physical/provider run; it
+is not evidence that any physical/provider validation has already happened.
 
 The focused core/CLI and Relay HTTP route tests were rerun as listed above.
 `npx vitest run --config vitest.config.ts packages/clawjs-core/src/index.test.ts
@@ -130,7 +162,11 @@ npm run test:remote-sync-source-session` and passed with
 `remote sync source session verification passed (23 Q/A rows)`. The maintainer
 session path is intentionally not published, but the result proves the
 versioned source Q/A artifact still matches the decision-bearing source
-conversation and plan.
+conversation and plan. This reread was repeated after the artifact-bound
+approval packet reached `readinessStatus: ready_for_approved_run`, so the
+current approval handoff, source Q/A artifact, and public completion audit are
+bound to the same source conversation and plan before the external validation
+blocker is handed to a real approved run.
 
 Public docs hygiene was rerun with `npm run code-hygiene:check` and
 `git diff --check`, and both passed. `node ./scripts/docs-alignment-check.mjs`
