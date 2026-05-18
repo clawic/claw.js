@@ -17,6 +17,12 @@ import { assertMCPToolControlPlane } from "./control-plane.ts";
 import { defaultExposedTools } from "./expose.ts";
 import { createMacSignedHostBridge, type MacSignedHostBridge } from "./mac-signed-host-bridge.ts";
 import { MCPServiceStore } from "./store.ts";
+import {
+  collectMcpSystemTelemetrySnapshot,
+  mcpSystemTelemetryMetricsPayload,
+  mcpSystemTelemetryWidgetsPayload,
+  readMcpSystemTelemetryHistory,
+} from "./system-telemetry.ts";
 import type {
   MCPExposedTool,
   MCPToolCallInput,
@@ -97,6 +103,32 @@ export function buildMCPApp(options: BuildMCPAppOptions = {}) {
   app.addHook("onClose", async () => { store.close(); });
 
   app.get(clawApiPath("health"), async () => ({ ok: true, service: "mcp", host: config.host, port: config.port, exposedTools: exposed.map((tool) => tool.name) }));
+
+  app.get(clawApiPath("system/snapshot"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    return collectMcpSystemTelemetrySnapshot();
+  });
+
+  app.get(clawApiPath("system/metrics"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    return mcpSystemTelemetryMetricsPayload();
+  });
+
+  app.get(clawApiPath("system/widgets"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    return mcpSystemTelemetryWidgetsPayload();
+  });
+
+  app.get(clawApiPath("system/history/:metricKey"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const params = request.params as { metricKey: string };
+    const query = readQuery(request);
+    return readMcpSystemTelemetryHistory({
+      metricKey: params.metricKey,
+      range: asString(query.range),
+      monitorDb: asString(query.monitorDb),
+    });
+  });
 
   app.get(clawApiPath("mac/coverage"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
