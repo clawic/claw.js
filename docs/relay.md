@@ -167,6 +167,10 @@ with source conversation and plan metadata. The checked-in artifact
 unapproved no-write rows for submission with `--evidence-file` or
 `--external-validation-file`; it is valid input, but cannot clear any row until
 approved physical/provider evidence is added.
+Relay `/v1/remote/external-validation-runbook` and
+`claw remote validation-runbook` bundle the E2E plan, checklist, evidence
+artifact, report command, closure command, required commands, and operator
+instructions into one no-write external-pending payload.
 The Relay `/v1/remote/external-validation-report` endpoint and
 `claw remote validation-report` evaluate external validation evidence against
 that checklist. A row is only `clearable` when the report includes approved-run

@@ -21,6 +21,7 @@ import {
   buildRemoteExternalValidationEvidenceArtifact,
   buildRemoteExternalValidationEvidenceTemplate,
   buildRemoteExternalValidationReport,
+  buildRemoteExternalValidationRunbook,
   buildRemoteGoalClosureGate,
   buildRemoteProviderDeviceE2EValidationPlan,
   buildRemoteSourceQaReviewReport,
@@ -120,6 +121,7 @@ import {
   remoteAgentServiceExecutionReceiptSchema,
   remoteCompatibilityAdapterReceiptSchema,
   remoteExternalValidationEvidenceArtifactSchema,
+  remoteExternalValidationRunbookSchema,
   remoteExternalPendingRegisterSchema,
   remoteProviderDeviceE2EValidationPlanSchema,
   remoteSourceQaReviewTemplateSchema,
@@ -619,6 +621,17 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(generatedExternalValidationEvidenceArtifact.status, "external_pending");
   assert.equal(generatedExternalValidationEvidenceArtifact.writes, false);
   assert.deepEqual(generatedExternalValidationEvidenceArtifact.evidence, externalValidationEvidenceTemplate.evidence);
+  const externalValidationRunbook = buildRemoteExternalValidationRunbook({ generatedAt: "2026-05-17T10:13:19.000Z" });
+  assert.equal(remoteExternalValidationRunbookSchema.safeParse(externalValidationRunbook).success, true);
+  assert.equal(externalValidationRunbook.status, "external_pending");
+  assert.equal(externalValidationRunbook.writes, false);
+  assert.equal(externalValidationRunbook.validationStepCount, 5);
+  assert.equal(externalValidationRunbook.externalRequirementCount, externalPending.requirements.length);
+  assert.deepEqual(externalValidationRunbook.e2ePlan.validationSteps.map((entry) => entry.domain), ["chat", "search", "sync", "secret_refs", "hosted_agents"]);
+  assert.equal(externalValidationRunbook.evidenceArtifact.evidence.length, externalPending.requirements.length);
+  assert.equal(externalValidationRunbook.reportCommand.includes("validation-report"), true);
+  assert.equal(externalValidationRunbook.closureGateCommand.includes("closure-gate"), true);
+  assert.equal(externalValidationRunbook.requiredCommands.some((entry) => entry.includes("validation-artifact")), true);
 
   const scopedExternalValidationEvidenceTemplate = buildRemoteExternalValidationEvidenceTemplate({
     generatedAt: "2026-05-17T10:13:18.000Z",

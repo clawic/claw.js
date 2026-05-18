@@ -202,6 +202,7 @@ claw remote pending --json
 claw remote validation-checklist --json
 claw remote validation-template --json
 claw remote validation-artifact --json
+claw remote validation-runbook --json
 claw remote validation-report --json
 claw remote source-qa-template --json
 claw remote closure-gate --json
@@ -275,6 +276,10 @@ artifact is `docs/remote-gateway-sync-external-validation-evidence.json`; it
 intentionally contains unapproved no-write rows and can be submitted with
 `--evidence-file docs/remote-gateway-sync-external-validation-evidence.json`
 or the alias `--external-validation-file`.
+`remote validation-runbook` returns the no-write operator bundle for the final
+external validation: the provider/device E2E plan, checklist, evidence artifact,
+report command, closure-gate command, required commands, and step-by-step
+instructions in one payload.
 `remote validation-report` evaluates supplied external evidence, if any, against
 that checklist. With no approved physical evidence it stays `external_pending`;
 only rows with `approvedRun: true`, an `approvedRunRef`, physical evidence, all

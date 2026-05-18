@@ -10,6 +10,7 @@ import {
   buildRemoteExternalValidationEvidenceArtifact,
   buildRemoteExternalValidationEvidenceTemplate,
   buildRemoteExternalValidationReport,
+  buildRemoteExternalValidationRunbook,
   buildRemoteGoalClosureGate,
   buildRemoteProviderDeviceE2EValidationPlan,
   buildRemoteRouteContractCatalog,
@@ -128,6 +129,20 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(scopedExternalValidationArtifact.statusCode, 200);
     const scopedExternalValidationArtifactPayload = scopedExternalValidationArtifact.json() as { evidence: Array<{ requirementId: string }> };
     assert.deepEqual(scopedExternalValidationArtifactPayload.evidence.map((entry) => entry.requirementId), ["physical_iroh_handshake", "provider_device_e2e"]);
+
+    const externalValidationRunbook = await built.app.inject({ method: "GET", url: "/v1/remote/external-validation-runbook" });
+    assert.equal(externalValidationRunbook.statusCode, 200);
+    const externalValidationRunbookPayload = externalValidationRunbook.json() as { status: string; writes: boolean; validationStepCount: number; externalRequirementCount: number; e2ePlan: { validationSteps: Array<{ domain: string }> }; evidenceArtifact: { evidence: unknown[] }; reportCommand: string; closureGateCommand: string; requiredCommands: string[] };
+    const expectedExternalValidationRunbook = buildRemoteExternalValidationRunbook();
+    assert.equal(externalValidationRunbookPayload.status, "external_pending");
+    assert.equal(externalValidationRunbookPayload.writes, false);
+    assert.equal(externalValidationRunbookPayload.validationStepCount, expectedExternalValidationRunbook.validationStepCount);
+    assert.equal(externalValidationRunbookPayload.externalRequirementCount, expectedExternalPending.requirements.length);
+    assert.deepEqual(externalValidationRunbookPayload.e2ePlan.validationSteps.map((entry) => entry.domain), ["chat", "search", "sync", "secret_refs", "hosted_agents"]);
+    assert.equal(externalValidationRunbookPayload.evidenceArtifact.evidence.length, expectedExternalPending.requirements.length);
+    assert.equal(externalValidationRunbookPayload.reportCommand.includes("validation-report"), true);
+    assert.equal(externalValidationRunbookPayload.closureGateCommand.includes("closure-gate"), true);
+    assert.equal(externalValidationRunbookPayload.requiredCommands.some((entry) => entry.includes("validation-artifact")), true);
 
     const externalValidationReport = await built.app.inject({ method: "GET", url: "/v1/remote/external-validation-report" });
     assert.equal(externalValidationReport.statusCode, 200);

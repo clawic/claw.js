@@ -376,6 +376,19 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.deepEqual(remoteValidationArtifactPayload.evidence.map((entry) => entry.requirementId), remoteValidationTemplatePayload.evidence.map((entry) => entry.requirementId));
   assert.equal(remoteValidationArtifactPayload.evidence.every((entry) => !entry.approvedRun && entry.artifactRefs.length === 0 && entry.acceptedCriteria.length === 0 && entry.plaintextMaterialIncluded === false && !entry.writes), true);
 
+  const remoteValidationRunbook = await runCliCapture(["remote", "validation-runbook", "--now", "2026-05-17T10:13:19.000Z", "--json"], process.cwd());
+  assert.equal(remoteValidationRunbook.code, CLI_EXIT_OK);
+  const remoteValidationRunbookPayload = parseCliJson<{ status: string; writes: boolean; validationStepCount: number; externalRequirementCount: number; e2ePlan: { validationSteps: Array<{ domain: string }> }; evidenceArtifact: { evidence: unknown[] }; reportCommand: string; closureGateCommand: string; requiredCommands: string[] }>(remoteValidationRunbook.stdout).data;
+  assert.equal(remoteValidationRunbookPayload.status, "external_pending");
+  assert.equal(remoteValidationRunbookPayload.writes, false);
+  assert.equal(remoteValidationRunbookPayload.validationStepCount, 5);
+  assert.equal(remoteValidationRunbookPayload.externalRequirementCount, remotePendingPayload.requirements.length);
+  assert.deepEqual(remoteValidationRunbookPayload.e2ePlan.validationSteps.map((entry) => entry.domain), ["chat", "search", "sync", "secret_refs", "hosted_agents"]);
+  assert.equal(remoteValidationRunbookPayload.evidenceArtifact.evidence.length, remotePendingPayload.requirements.length);
+  assert.equal(remoteValidationRunbookPayload.reportCommand.includes("validation-report"), true);
+  assert.equal(remoteValidationRunbookPayload.closureGateCommand.includes("closure-gate"), true);
+  assert.equal(remoteValidationRunbookPayload.requiredCommands.some((entry) => entry.includes("validation-artifact")), true);
+
   const remoteSourceQaTemplate = await runCliCapture(["remote", "source-qa-template", "--now", "2026-05-17T10:13:26.250Z", "--json"], process.cwd());
   assert.equal(remoteSourceQaTemplate.code, CLI_EXIT_OK);
   const remoteSourceQaTemplatePayload = parseCliJson<{ status: string; writes: boolean; sourceConversationId: string; sourcePlanId: string; requiredSourceQaIds: string[]; reviewCount: number; submissionCommand: string; items: Array<{ qaId: string; decisionKey: string; requirementId: string; reviewed: boolean; disposition: null; evidenceRefs: string[]; reviewedAt: null; writes: boolean }> }>(remoteSourceQaTemplate.stdout).data;
