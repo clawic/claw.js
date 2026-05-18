@@ -117,19 +117,27 @@ function assertNoBannedPublicClaims() {
 function assertPackageReadmeDisclaimers() {
   const packageReadmes = walk("packages", (file) => path.basename(file) === "README.md");
   const missingPackageReadmes = [];
+  const packageFileErrors = [];
   const packageJsons = walk("packages", (file) => path.basename(file) === "package.json");
   for (const packageJsonPath of packageJsons) {
     const packageJson = JSON.parse(read(packageJsonPath));
-    if (
-      packageJson.publishConfig?.access === "public"
-      && Array.isArray(packageJson.files)
-      && packageJson.files.includes("README.md")
-    ) {
+    if (packageJson.publishConfig?.access === "public") {
+      if (!Array.isArray(packageJson.files)) {
+        packageFileErrors.push(`${packageJsonPath}: public package must declare package files including README.md`);
+        continue;
+      }
+      if (!packageJson.files.includes("README.md")) {
+        packageFileErrors.push(`${packageJsonPath}: public package must ship README.md with legal disclaimer`);
+        continue;
+      }
       const expectedReadme = path.join(path.dirname(packageJsonPath), "README.md");
       if (!fs.existsSync(path.join(rootDir, expectedReadme))) {
         missingPackageReadmes.push(expectedReadme);
       }
     }
+  }
+  for (const message of packageFileErrors) {
+    errors.push(message);
   }
   for (const relativePath of missingPackageReadmes) {
     errors.push(`${relativePath}: public package declares README.md but the file is missing`);
