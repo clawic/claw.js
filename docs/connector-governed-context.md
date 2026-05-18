@@ -52,6 +52,9 @@ secret reference value or resolved credential.
   protected handling and must not contain plaintext secret values.
 - Blocked, paused, retired, missing, and wrong-environment context fails closed.
 - Defaults and fallbacks are included in decision traces.
+- Control-plane audit declarations preserve selected context refs, field refs,
+  secret refs, default refs, fallback rule ids, approval grant id, and reason
+  codes without private values or plaintext credentials.
 - Provider schemas cite source documentation and are checked by the doctor
   report.
 - `accounts` is the human surface; `connectors context` is the technical

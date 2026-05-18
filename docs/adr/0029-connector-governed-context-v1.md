@@ -47,6 +47,13 @@ upsert, edit, link-secret, defaults, activate, pause, block, and retire commands
 are executable against local framework state. These commands do not mutate real
 providers.
 
+Control-plane audit declarations include the joined governed-context and
+Secrets decision surface: provider, operation, actor/request ids when
+available, selected context refs, selected field refs, secret refs, default
+context refs, applied fallback rule ids, approval grant id, and redacted reason
+codes. The audit declaration is metadata only; it does not include private
+field values or plaintext credentials.
+
 ## Consequences
 
 - Agents can explain why a provider account, app, Team ID, Bundle ID, SKU,
@@ -56,6 +63,9 @@ providers.
   public examples or plaintext secrets.
 - Connector execution can require a governed context decision and fail closed
   before credentials, signing, publishing, or external mutation.
+- Field-level denials, approval-required context, wrong environments, missing
+  secret bindings, and blocked records all produce explicit fail-closed reasons
+  with remediation.
 - RevenueCat API v2 can be the preferred default while API v1 remains a traced
   fallback for unsupported v2 use cases.
 - `secret_ref` fields can be linked locally, but plaintext secret values are

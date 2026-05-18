@@ -91,7 +91,10 @@ references, expiry, and metadata.
 - `allowed`: whether the request may proceed;
 - `pipeline`: the full ordered pipeline;
 - `reasons`: stable reason codes for blocks or approval requirements;
-- `audit`: redacted audit declaration.
+- `audit`: redacted audit declaration with provider, operation, actor/request
+  ids when available, selected governed context refs, selected field refs,
+  secret refs, default context refs, applied fallback rule ids, approval grant
+  id, and redacted reason codes.
 
 Supported block reasons include missing context, disabled providers,
 unsupported operations, credential scope mismatch, policy denial, missing or
