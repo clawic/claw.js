@@ -54,6 +54,9 @@
       "disposition": "external_pending",
       "evidenceRefs": [
         "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "claw remote e2e-plan:requiredTopologyTargets",
+        "claw remote pending:physical_iroh_handshake",
+        "claw remote pending:device_trust_acceptance",
         "claw remote pending:self_hosted_deployment",
         "claw remote pending:hosted_deployment"
       ],
