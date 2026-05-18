@@ -312,6 +312,104 @@ function readCliSearchEntrypoints() {
   }
 }
 
+function readCliSearchJson(args, label, dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-search-goal-"))) {
+  const hasJson = args.includes("--json");
+  try {
+    const output = execFileSync(process.execPath, [
+      "packages/clawjs/bin/claw.mjs",
+      "search",
+      ...args,
+      ...(hasJson ? [] : ["--json"]),
+    ], {
+      cwd: rootDir,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        CLAW_DATA_DIR: dataRoot,
+      },
+      timeout: 15_000,
+    });
+    const parsed = JSON.parse(output);
+    if (parsed?.ok !== true || parsed?.meta?.canonicalCommand !== "search") {
+      failures.push(`${label}: unexpected response shape`);
+      return {};
+    }
+    return parsed;
+  } catch (error) {
+    failures.push(`${label} failed: ${error instanceof Error ? error.message : String(error)}`);
+    return {};
+  }
+}
+
+function requireCliSearchAcceptanceSmoke() {
+  const dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-search-smoke-"));
+  const rebuild = readCliSearchJson(["rebuild", "--source", "commands"], "claw search rebuild --source commands --json", dataRoot);
+  if (rebuild.meta?.subcommand !== "rebuild") failures.push("claw search rebuild --source commands --json: missing rebuild subcommand metadata");
+  if (rebuild.data?.mode !== "scoped") failures.push("claw search rebuild --source commands --json: must be a scoped rebuild");
+  if (JSON.stringify(rebuild.data?.selectedSources ?? []) !== JSON.stringify(["commands"])) {
+    failures.push("claw search rebuild --source commands --json: must rebuild only commands");
+  }
+  if (rebuild.data?.storage?.index !== "search.sqlite" || rebuild.data?.storage?.indexRebuildable !== true) {
+    failures.push("claw search rebuild --source commands --json: must report rebuildable search.sqlite storage");
+  }
+  if (typeof rebuild.data?.indexedBySource?.commands !== "number" || rebuild.data.indexedBySource.commands <= 0) {
+    failures.push("claw search rebuild --source commands --json: must index command results");
+  }
+
+  const query = readCliSearchJson(["query", "system", "--limit", "3", "--explain", "true"], "claw search query system --json", dataRoot);
+  if (query.meta?.subcommand !== "query") failures.push("claw search query system --json: missing query subcommand metadata");
+  if (query.data?.profile !== "framework") failures.push("claw search query system --json: must use framework profile by default");
+  if (!Array.isArray(query.data?.results) || !query.data.results.some((result) => result.source === "commands" && result.title === "system")) {
+    failures.push("claw search query system --json: must return the commands system result");
+  }
+  if (query.data?.partial !== false) failures.push("claw search query system --json: command-only smoke must not be partial");
+
+  const status = readCliSearchJson(["status"], "claw search status --json", dataRoot);
+  if (status.meta?.subcommand !== "status") failures.push("claw search status --json: missing status subcommand metadata");
+  if (status.data?.state !== "ready") failures.push("claw search status --json: must report ready state");
+  if (status.data?.budgets?.hotMs !== 50 || status.data?.budgets?.globalFirstBatchMs !== 200 || status.data?.budgets?.sourceTimeoutMs !== 75) {
+    failures.push("claw search status --json: must report accepted Search budgets");
+  }
+  if (!Array.isArray(status.data?.sources)) failures.push("claw search status --json: must report source statuses");
+  else requireSameMembers("claw search status source list", status.data.sources.map((source) => source.source), requiredSources);
+
+  const profiles = readCliSearchJson(["profiles"], "claw search profiles --json", dataRoot);
+  if (profiles.meta?.subcommand !== "profiles") failures.push("claw search profiles --json: missing profiles subcommand metadata");
+  const profileItems = profiles.data?.profiles ?? [];
+  if (!Array.isArray(profileItems) || profileItems.find((profile) => profile.id === "framework")?.defaultEnabled !== true) {
+    failures.push("claw search profiles --json: framework profile must be default-enabled");
+  }
+  if (!Array.isArray(profileItems) || profileItems.find((profile) => profile.id === "full")?.defaultEnabled !== false) {
+    failures.push("claw search profiles --json: full profile must be opt-in");
+  }
+
+  const saved = readCliSearchJson(["saved"], "claw search saved --json", dataRoot);
+  if (saved.meta?.subcommand !== "saved" || saved.data?.action !== "list" || !Array.isArray(saved.data?.items)) {
+    failures.push("claw search saved --json: must list saved searches");
+  }
+  const monitors = readCliSearchJson(["monitors"], "claw search monitors --json", dataRoot);
+  if (monitors.meta?.subcommand !== "monitors" || monitors.data?.action !== "list" || !Array.isArray(monitors.data?.items)) {
+    failures.push("claw search monitors --json: must list monitors");
+  }
+
+  const actions = readCliSearchJson(["actions"], "claw search actions --json", dataRoot);
+  if (actions.meta?.subcommand !== "actions" || actions.data?.brokered !== true || actions.data?.grantSystem !== "host grants/approvals") {
+    failures.push("claw search actions --json: must expose brokered host grants/approvals actions");
+  }
+  if (!Array.isArray(actions.data?.actions) || !actions.data.actions.some((action) => action.id === "open")) {
+    failures.push("claw search actions --json: must include the open action");
+  }
+
+  const explain = readCliSearchJson(["explain", "system"], "claw search explain system --json", dataRoot);
+  if (explain.meta?.subcommand !== "explain") failures.push("claw search explain system --json: missing explain subcommand metadata");
+  for (const mode of ["exact", "prefix", "fuzzy", "fts"]) {
+    if (!explain.data?.matching?.includes(mode)) failures.push(`claw search explain system --json: missing ${mode} matching mode`);
+  }
+  if (!explain.data?.ranking?.includes("central score") || !explain.data?.ranking?.includes("local frecency")) {
+    failures.push("claw search explain system --json: must explain central ranking and local frecency");
+  }
+}
+
 for (const file of requiredPublicFiles) read(file);
 
 requirePackageScript("search:scale-lab", "node --import tsx ./scripts/search-scale-lab.ts");
@@ -368,6 +466,7 @@ for (const [entrypointId, expected] of Object.entries(requiredEntrypoints)) {
     failures.push(`claw search entrypoints ${entrypointId}: preservesConversationSearchIsolation must be true`);
   }
 }
+requireCliSearchAcceptanceSmoke();
 
 for (const source of requiredSources) {
   requireSnippet("packages/clawjs-search/src/index.ts", `id: "${source}"`);
