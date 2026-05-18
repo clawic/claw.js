@@ -144,6 +144,7 @@ export const remoteSourceQaReviewReportSchema = z.object({
   reviewedSourceQaIds: z.array(z.string().min(1)),
   missingSourceQaIds: z.array(z.string().min(1)),
   invalidSourceQaIds: z.array(z.string().min(1)),
+  duplicateSourceQaIds: z.array(z.string().min(1)),
   externalPendingRequiredSourceQaIds: z.array(z.string().min(1)),
   invalidExternalPendingDispositionQaIds: z.array(z.string().min(1)),
   items: z.array(remoteSourceQaReviewItemSchema),
@@ -186,6 +187,7 @@ export const remoteGoalClosureGateSchema = z.object({
   reviewedSourceQaIds: z.array(z.string().min(1)),
   missingSourceQaIds: z.array(z.string().min(1)),
   invalidSourceQaIds: z.array(z.string().min(1)),
+  duplicateSourceQaIds: z.array(z.string().min(1)),
   externalPendingRequiredSourceQaIds: z.array(z.string().min(1)),
   invalidExternalPendingDispositionQaIds: z.array(z.string().min(1)),
   sourceQaReviewStatus: z.enum(["incomplete", "complete"]),
@@ -615,6 +617,16 @@ export function buildRemoteSourceQaReviewReport(input: {
   const explicitReviews = (input.reviews ?? []).map((entry) => remoteSourceQaReviewItemSchema.parse(entry));
   const explicitQaIds = new Set(explicitReviews.map((entry) => entry.qaId));
   const externalPendingQaIds = externalPendingRequiredSourceQaIds(generatedAt);
+  const seenSourceQaIds = new Set<string>();
+  const duplicateSourceQaIds = [...new Set(
+    explicitReviews
+      .map((entry) => entry.qaId)
+      .filter((qaId) => {
+        if (seenSourceQaIds.has(qaId)) return true;
+        seenSourceQaIds.add(qaId);
+        return false;
+      }),
+  )];
   const idOnlyReviews = [...new Set(input.reviewedSourceQaIds ?? [])]
     .filter((qaId) => remoteGoalClosureRequiredSourceQaIds.includes(qaId) && !explicitQaIds.has(qaId))
     .map((qaId) => {
@@ -640,6 +652,7 @@ export function buildRemoteSourceQaReviewReport(input: {
       && catalogEntry.decisionKey === entry.decisionKey
       && catalogEntry.requirementId === entry.requirementId
       && entry.evidenceRefs.length > 0
+      && !duplicateSourceQaIds.includes(entry.qaId)
       && !invalidExternalPendingDispositionQaIds.includes(entry.qaId)
       && entry.writes === false;
   });
@@ -656,6 +669,7 @@ export function buildRemoteSourceQaReviewReport(input: {
     reviewedSourceQaIds,
     missingSourceQaIds,
     invalidSourceQaIds,
+    duplicateSourceQaIds,
     externalPendingRequiredSourceQaIds: externalPendingQaIds,
     invalidExternalPendingDispositionQaIds,
     items: validItems,
@@ -733,6 +747,7 @@ export function buildRemoteGoalClosureGate(input: {
     reviewedSourceQaIds: sourceQaReviewReport.reviewedSourceQaIds,
     missingSourceQaIds: sourceQaReviewReport.missingSourceQaIds,
     invalidSourceQaIds: sourceQaReviewReport.invalidSourceQaIds,
+    duplicateSourceQaIds: sourceQaReviewReport.duplicateSourceQaIds,
     externalPendingRequiredSourceQaIds: sourceQaReviewReport.externalPendingRequiredSourceQaIds,
     invalidExternalPendingDispositionQaIds: sourceQaReviewReport.invalidExternalPendingDispositionQaIds,
     sourceQaReviewStatus: sourceQaReviewReport.status,
