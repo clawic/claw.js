@@ -159,8 +159,9 @@ function localFileSearchDocument(root: string, file: LocalFileCandidate, maxByte
   const canReadContent = localFileTextExtension(file.extension) && file.size <= maxBytes;
   const content = canReadContent ? readLocalTextFile(file.absolutePath) : "";
   const snippet = firstMeaningfulLine(content) ?? relativePath;
+  const documentId = `local.files:${stableSearchId(`${root}\0${relativePath}`)}`;
   return {
-    id: `local.files:${stableSearchId(`${root}\0${relativePath}`)}`,
+    id: documentId,
     source: "local.files",
     domain: "files",
     type: "file",
@@ -189,19 +190,63 @@ function localFileSearchDocument(root: string, file: LocalFileCandidate, maxByte
       localFile: 1,
       fastPath: file.kind === "text" || file.kind === "document" ? 0.5 : 0.2,
     },
-    fragments: content ? [{
-      id: `local.files:${stableSearchId(`${root}\0${relativePath}`)}:content`,
-      title: "Content",
-      body: content.slice(0, maxBytes),
-      snippet,
-      sortOrder: 0,
-      metadata: { kind: "content" },
-    }] : [],
+    fragments: localFileSearchFragments(documentId, content, file.extension, maxBytes),
     actions: [
       { id: "open", kind: "open", label: "Open file", requiresApproval: true, risk: "read", grant: "search.files.open" },
       { id: "copy-reference", kind: "copy", label: "Copy file reference", requiresApproval: false },
     ],
   };
+}
+
+function localFileSearchFragments(documentId: string, content: string, extension: string, maxBytes: number): NonNullable<SearchDocumentInput["fragments"]> {
+  if (!content) return [];
+  if (extension === ".md" || extension === ".mdx") {
+    const sections = extractMarkdownSections(content);
+    if (sections.length > 0) {
+      return sections.slice(0, 24).map((section, index) => ({
+        id: `${documentId}:section:${index}`,
+        title: section.title,
+        body: section.body.slice(0, Math.min(maxBytes, 4096)),
+        snippet: section.snippet,
+        sortOrder: index,
+        metadata: { kind: "section", level: section.level, line: section.line },
+      }));
+    }
+  }
+  const snippet = firstMeaningfulLine(content) ?? "Content";
+  return [{
+    id: `${documentId}:content`,
+    title: "Content",
+    body: content.slice(0, maxBytes),
+    snippet,
+    sortOrder: 0,
+    metadata: { kind: "content" },
+  }];
+}
+
+function extractMarkdownSections(content: string): LocalMarkdownSection[] {
+  const lines = content.split(/\r?\n/);
+  const sections: LocalMarkdownSection[] = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = /^(#{1,3})\s+(.+)$/.exec(lines[index]?.trim() ?? "");
+    if (!match) continue;
+    const bodyLines: string[] = [];
+    for (let bodyIndex = index + 1; bodyIndex < lines.length; bodyIndex += 1) {
+      if (/^#{1,3}\s+/.test(lines[bodyIndex]?.trim() ?? "")) break;
+      const line = lines[bodyIndex]?.trim();
+      if (line) bodyLines.push(line);
+      if (bodyLines.join("\n").length > 4096) break;
+    }
+    const body = bodyLines.join("\n");
+    sections.push({
+      title: match[2]?.trim() ?? "Section",
+      level: match[1]?.length ?? 1,
+      line: index + 1,
+      body,
+      snippet: firstMeaningfulLine(body) ?? match[2]?.trim() ?? "Section",
+    });
+  }
+  return sections;
 }
 
 function boundedNumberFlag(value: string | undefined, fallback: number, min: number, max: number): number {
@@ -237,4 +282,12 @@ interface LocalFileCandidate {
   kind: string;
   size: number;
   updatedAt: string;
+}
+
+interface LocalMarkdownSection {
+  title: string;
+  level: number;
+  line: number;
+  body: string;
+  snippet: string;
 }

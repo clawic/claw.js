@@ -11,9 +11,18 @@ export async function runSearchLocalFilesEventScenario(): Promise<void> {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-local-file-events-"));
   const dataRoot = path.join(workspaceRoot, "data");
   const fileRoot = path.join(workspaceRoot, "local-files");
-  const filePath = path.join(fileRoot, "docs", "event-file.txt");
+  const filePath = path.join(fileRoot, "docs", "event-file.md");
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, "A local-file-event-refresh-needle proves file event refresh.");
+  fs.writeFileSync(filePath, [
+    "# Event File",
+    "",
+    "Intro text for the local file fixture.",
+    "",
+    "## Local File Section",
+    "",
+    "A local-file-event-refresh-needle proves file event refresh.",
+    "",
+  ].join("\n"));
 
   await withPatchedEnv({
     CLAW_DATA_DIR: dataRoot,
@@ -35,10 +44,10 @@ export async function runSearchLocalFilesEventScenario(): Promise<void> {
     assert.equal(scheduled.ok, true, scheduled.error);
     assert.equal(scheduled.job?.source, "local.files");
     assert.equal(scheduled.job?.operation, "upsert");
-    assert.equal(scheduled.job?.resourceId, "docs/event-file.txt");
+    assert.equal(scheduled.job?.resourceId, "docs/event-file.md");
     assert.equal(scheduled.job?.shard, "hot");
     assert.equal(scheduled.job?.payload.eventDriven, true);
-    assert.equal(scheduled.job?.payload.relativePath, "docs/event-file.txt");
+    assert.equal(scheduled.job?.payload.relativePath, "docs/event-file.md");
 
     const outsideRoot = scheduleLocalFileSearchEvent({
       operation: "upsert",
@@ -62,12 +71,13 @@ export async function runSearchLocalFilesEventScenario(): Promise<void> {
     const query = await runCliCapture(["search", "query", "local-file-event-refresh-needle", "--profile", "full", "--file-root", fileRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
-      data: { results: Array<{ source: string; domain: string; resourceId?: string; metadata?: { indexedContent?: boolean } }> };
+      data: { results: Array<{ source: string; domain: string; resourceId?: string; metadata?: { indexedContent?: boolean }; fragments?: Array<{ title?: string; snippet?: string }> }> };
     };
-    const result = queryPayload.data.results.find((entry) => entry.resourceId === "docs/event-file.txt");
+    const result = queryPayload.data.results.find((entry) => entry.resourceId === "docs/event-file.md");
     assert.equal(result?.source, "local.files");
     assert.equal(result?.domain, "files");
     assert.equal(result?.metadata?.indexedContent, true);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "Local File Section" && fragment.snippet?.includes("local-file-event-refresh-needle")), true);
 
     fs.rmSync(filePath);
     const deleted = scheduleLocalFileSearchEvent({
@@ -82,6 +92,11 @@ export async function runSearchLocalFilesEventScenario(): Promise<void> {
 
     const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "local.files", "--profile", "full", "--file-root", fileRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(deleteRun.code, CLI_EXIT_OK);
+    const deleteRunPayload = JSON.parse(deleteRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    const localFileDeleteRunItem = deleteRunPayload.data.worker?.items.find((entry) => entry.source === "local.files");
+    assert.deepEqual({ source: localFileDeleteRunItem?.source, operation: localFileDeleteRunItem?.operation, status: localFileDeleteRunItem?.status, indexed: localFileDeleteRunItem?.indexed }, { source: "local.files", operation: "delete", status: "done", indexed: 1 });
 
     const afterDelete = await runCliCapture(["search", "query", "local-file-event-refresh-needle", "--profile", "full", "--file-root", fileRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(afterDelete.code, CLI_EXIT_DEGRADED);
