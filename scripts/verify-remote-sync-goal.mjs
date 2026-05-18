@@ -459,6 +459,15 @@ const expectedProviderDeviceE2EStepRoutes = [
   ["remote.secretBrokeredOperation"],
   ["gateway.headlessAgentHost", "gateway.multiTenantAgentService"],
 ];
+const expectedSyncDrivers = ["skills", "memory_user_model", "sessions", "drive_files", "blobs", "sqlite_tables", "sqlite_partial", "sidecar", "search_index", "agent_config", "workspace_state"];
+const expectedSyncDriverRouteIds = ["sync.skills", "sync.memoryUserModel", "sync.sessions", "sync.driveFiles", "sync.blobs", "sync.sqliteResources", "sync.sqliteResources", "sync.sidecars", "sync.searchIndex", "sync.agentConfig", "sync.workspaceState"];
+const expectedSyncDriverRequiredRouteIds = ["sync.agentConfig", "sync.blobs", "sync.driveFiles", "sync.memoryUserModel", "sync.searchIndex", "sync.sessions", "sync.sidecars", "sync.skills", "sync.sqliteResources", "sync.workspaceState"];
+const expectedSyncDriverLateralDomains = [["skills"], ["memory", "user_model", "profile"], ["sessions"], ["drive", "files"], ["blobs", "files"], ["database", "records"], ["database", "partial_database"], ["sidecars", "runtime"], ["search", "indexes"], ["agents", "config"], ["workspace", "projects"]];
+const expectedSyncDriverCommands = expectedSyncDrivers.map((driver) => [
+  `claw sync manifest --driver ${driver} --json`,
+  `claw sync plan --driver ${driver} --json`,
+  `claw sync apply --driver ${driver} --record true --json`,
+]);
 for (const item of sourceQaReviewReport.items) {
   if (!sourceQaIds.has(item.qaId)) fail(`source Q/A review artifact includes unknown ${item.qaId}`);
   const expectedDisposition = expectedExternalPendingQaIds.has(item.qaId) ? "external_pending" : "implemented";
@@ -1519,6 +1528,9 @@ for (const [driver, expectedRoute] of driverRouteExpectations) {
 const syncDriverCatalog = buildSyncDriverCatalog({ registeredRouteIds: remoteSyncRequiredRouteIds });
 if (syncDriverCatalog.status !== "complete") fail("sync driver catalog must be complete for required remote routes");
 if (syncDriverCatalog.driverCount !== syncDriverSchema.options.length) fail("sync driver catalog must cover every sync driver");
+requireSameOrderedList("sync driver catalog required drivers", syncDriverCatalog.requiredDrivers, expectedSyncDrivers);
+requireSameOrderedList("sync driver catalog covered drivers", syncDriverCatalog.coveredDrivers, expectedSyncDrivers);
+requireSameOrderedList("sync driver catalog required route ids", syncDriverCatalog.requiredRouteIds, expectedSyncDriverRequiredRouteIds);
 if (syncDriverCatalog.missingDrivers.length !== 0) fail("sync driver catalog must not miss drivers");
 if (syncDriverCatalog.missingRouteIds.length !== 0) fail("sync driver catalog must not miss routes");
 if (syncDriverCatalog.authorityModel !== "per_resource") fail("sync driver catalog must keep per-resource authority");
@@ -1527,10 +1539,13 @@ if (syncDriverCatalog.physicalApplicationStatus !== "external_pending") fail("sy
 if (!syncDriverCatalog.entries.every((entry) => entry.manifestBacked && entry.changelogBacked && entry.authorityScoped && entry.physicalDriverRequired && entry.writes === false)) {
   fail("sync driver catalog entries must be manifest/changelog backed, authority-scoped, physical-driver gated, and no-write");
 }
-if (!syncDriverCatalog.entries.some((entry) => entry.driver === "skills" && entry.lateralDomains.includes("skills"))) fail("sync driver catalog must include skills sync");
-if (!syncDriverCatalog.entries.some((entry) => entry.driver === "memory_user_model" && entry.lateralDomains.includes("memory"))) fail("sync driver catalog must include memory/user-model sync");
-if (!syncDriverCatalog.entries.some((entry) => entry.driver === "drive_files" && entry.lateralDomains.includes("drive"))) fail("sync driver catalog must include drive/files sync");
-if (!syncDriverCatalog.entries.some((entry) => entry.driver === "sqlite_partial" && entry.partialResourceSupported)) fail("sync driver catalog must include partial database sync");
+requireSameOrderedList("sync driver catalog entry drivers", syncDriverCatalog.entries.map((entry) => entry.driver), expectedSyncDrivers);
+requireSameOrderedList("sync driver catalog entry route ids", syncDriverCatalog.entries.map((entry) => entry.routeId), expectedSyncDriverRouteIds);
+if (JSON.stringify(syncDriverCatalog.entries.map((entry) => entry.lateralDomains)) !== JSON.stringify(expectedSyncDriverLateralDomains)) fail("sync driver catalog entry lateral domains must match expected complete Sync domain coverage");
+if (JSON.stringify(syncDriverCatalog.entries.map((entry) => entry.commands)) !== JSON.stringify(expectedSyncDriverCommands)) fail("sync driver catalog entry commands must match manifest/plan/apply commands for every driver");
+if (syncDriverCatalog.entries.map((entry) => entry.partialResourceSupported).join(",") !== "false,false,false,false,false,false,true,false,false,false,false") {
+  fail("sync driver catalog must mark only sqlite_partial as partial-resource capable");
+}
 
 const manifest = createSyncResourceManifest({
   resourceId: "skills:default",

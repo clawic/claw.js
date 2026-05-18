@@ -676,18 +676,23 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
 
   const syncDrivers = await runCliCapture(["sync", "drivers", "--now", "2026-05-17T10:14:30.000Z", "--json"], process.cwd());
   assert.equal(syncDrivers.code, CLI_EXIT_OK);
-  const syncDriversPayload = parseCliJson<{ status: string; writes: boolean; driverCount: number; missingDrivers: string[]; missingRouteIds: string[]; authorityModel: string; conflictDefault: string; physicalApplicationStatus: string; entries: Array<{ driver: string; routeId: string; lateralDomains: string[]; manifestBacked: boolean; changelogBacked: boolean; authorityScoped: boolean; partialResourceSupported: boolean; physicalDriverRequired: boolean; writes: boolean }> }>(syncDrivers.stdout).data;
+  const syncDriversPayload = parseCliJson<{ status: string; writes: boolean; driverCount: number; requiredDrivers: string[]; coveredDrivers: string[]; requiredRouteIds: string[]; missingDrivers: string[]; missingRouteIds: string[]; authorityModel: string; conflictDefault: string; physicalApplicationStatus: string; entries: Array<{ driver: string; routeId: string; lateralDomains: string[]; manifestBacked: boolean; changelogBacked: boolean; authorityScoped: boolean; partialResourceSupported: boolean; physicalDriverRequired: boolean; commands: string[]; writes: boolean }> }>(syncDrivers.stdout).data;
   assert.equal(syncDriversPayload.status, "complete");
   assert.equal(syncDriversPayload.writes, false);
   assert.equal(syncDriversPayload.driverCount, 11);
+  assert.deepEqual(syncDriversPayload.requiredDrivers, expectedSyncDrivers);
+  assert.deepEqual(syncDriversPayload.coveredDrivers, expectedSyncDrivers);
+  assert.deepEqual(syncDriversPayload.requiredRouteIds, expectedSyncDriverRequiredRouteIds);
   assert.deepEqual(syncDriversPayload.missingDrivers, []);
   assert.deepEqual(syncDriversPayload.missingRouteIds, []);
   assert.equal(syncDriversPayload.authorityModel, "per_resource");
   assert.equal(syncDriversPayload.conflictDefault, "detect_and_elevate");
   assert.equal(syncDriversPayload.physicalApplicationStatus, "external_pending");
-  assert.equal(syncDriversPayload.entries.some((entry) => entry.driver === "skills" && entry.routeId === "sync.skills" && entry.lateralDomains.includes("skills")), true);
-  assert.equal(syncDriversPayload.entries.some((entry) => entry.driver === "drive_files" && entry.routeId === "sync.driveFiles" && entry.lateralDomains.includes("drive")), true);
-  assert.equal(syncDriversPayload.entries.some((entry) => entry.driver === "sqlite_partial" && entry.partialResourceSupported), true);
+  assert.deepEqual(syncDriversPayload.entries.map((entry) => entry.driver), expectedSyncDrivers);
+  assert.deepEqual(syncDriversPayload.entries.map((entry) => entry.routeId), expectedSyncDriverRouteIds);
+  assert.deepEqual(syncDriversPayload.entries.map((entry) => entry.lateralDomains), expectedSyncDriverLateralDomains);
+  assert.deepEqual(syncDriversPayload.entries.map((entry) => entry.commands), expectedSyncDriverCommands);
+  assert.deepEqual(syncDriversPayload.entries.map((entry) => entry.partialResourceSupported), [false, false, false, false, false, false, true, false, false, false, false]);
   assert.equal(syncDriversPayload.entries.every((entry) => entry.manifestBacked && entry.changelogBacked && entry.authorityScoped && entry.physicalDriverRequired && !entry.writes), true);
 
   const sync = await runCliCapture(["sync", "manifest", "--resource-id", "skills:default", "--kind", "skills", "--driver", "skills", "--json"], process.cwd());
