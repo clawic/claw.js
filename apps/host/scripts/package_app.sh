@@ -64,28 +64,18 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-detect_sign_identity() {
+candidate_sign_identities() {
   if [[ -n "$SIGN_IDENTITY" ]]; then
     echo "$SIGN_IDENTITY"
     return 0
   fi
 
-  local detected
   if [[ -n "$TEAM_ID" ]]; then
-    detected="$(security find-identity -v -p codesigning 2>/dev/null | grep "Apple Development:" | grep "($TEAM_ID)" | head -n 1 | sed 's/.*"\(.*\)"/\1/' || true)"
-    if [[ -n "$detected" ]]; then
-      echo "$detected"
-      return 0
-    fi
-  fi
-
-  detected="$(security find-identity -v -p codesigning 2>/dev/null | grep "Apple Development:" | head -n 1 | sed 's/.*"\(.*\)"/\1/' || true)"
-  if [[ -n "$detected" ]]; then
-    echo "$detected"
+    security find-identity -v -p codesigning 2>/dev/null | grep "Apple Development:" | grep "($TEAM_ID)" | grep -v "CSSMERR" | awk '{print $2}' || true
     return 0
   fi
 
-  return 1
+  security find-identity -v -p codesigning 2>/dev/null | grep "Apple Development:" | grep -v "CSSMERR" | awk '{print $2}' || true
 }
 
 mkdir -p "$(dirname "$OUTPUT_PATH")"
@@ -162,12 +152,28 @@ EOF
 touch "$APP_CONTENTS/PkgInfo"
 
 if [[ "$SKIP_SIGN" != "1" ]]; then
-  SIGN_IDENTITY="$(detect_sign_identity)"
-  if [[ -z "$SIGN_IDENTITY" ]]; then
+  SIGNED="0"
+  SIGN_ERRORS=""
+  while IFS= read -r CANDIDATE_IDENTITY; do
+    if [[ -z "$CANDIDATE_IDENTITY" ]]; then
+      continue
+    fi
+    if SIGN_OUTPUT="$(codesign --force --deep --sign "$CANDIDATE_IDENTITY" "$OUTPUT_PATH" 2>&1)"; then
+      SIGN_IDENTITY="$CANDIDATE_IDENTITY"
+      SIGNED="1"
+      break
+    fi
+    SIGN_ERRORS="$SIGN_ERRORS
+$CANDIDATE_IDENTITY: $SIGN_OUTPUT"
+  done < <(candidate_sign_identities)
+
+  if [[ "$SIGNED" != "1" ]]; then
     echo "No Apple Development signing identity found" >&2
+    if [[ -n "$SIGN_ERRORS" ]]; then
+      echo "$SIGN_ERRORS" >&2
+    fi
     exit 1
   fi
-  codesign --force --deep --sign "$SIGN_IDENTITY" "$OUTPUT_PATH"
   codesign --verify --deep --strict "$OUTPUT_PATH"
 fi
 
