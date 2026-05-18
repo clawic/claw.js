@@ -791,20 +791,15 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     };
     assert.equal(pausedRebuildPayload.data.indexedBySource.commands, 0);
     assert.equal(pausedRebuildPayload.data.sources.includes("commands"), false);
-
     const resumed = await runCliCapture(["search", "sources", "resume", "commands", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(resumed.code, CLI_EXIT_OK);
     const resumedPayload = JSON.parse(resumed.stdout) as { data: { state: string } };
     assert.equal(resumedPayload.data.state, "enabled");
   });
 });
-
 test("local.files event jobs refresh and tombstone individual files", runSearchLocalFilesEventScenario);
-
 test("web.ingested event jobs refresh and tombstone individual cache files", runSearchWebIngestedEventScenario);
-
 test("external.cache event jobs refresh and tombstone individual cache files", runSearchExternalCacheEventScenario);
-
 test("search service run-once obeys worker resource budgets", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-worker-budgets-"));
   const dataRoot = path.join(workspaceRoot, "data");
@@ -832,9 +827,7 @@ test("search service run-once obeys worker resource budgets", async () => {
     assert.equal(limitedPayload.data.service.worker?.budgets?.maxRuntimeMs, 30000);
     assert.equal(limitedPayload.data.worker?.items[0]?.id, "job:budget:one");
     assert.equal(limitedPayload.data.worker?.items[0]?.status, "done");
-
     await runCliCapture(["search", "service", "run-once", "--data-dir", dataRoot, "--json", "--source", "commands", "--max-jobs", "10"], workspaceRoot);
-
     const store = new SearchStore(path.join(dataRoot, "search.sqlite"));
     try {
       store.registerSource(createFrameworkSearchSourceManifest({
@@ -846,7 +839,6 @@ test("search service run-once obeys worker resource budgets", async () => {
     } finally {
       store.close();
     }
-
     await runCliCapture(["search", "jobs", "enqueue", "rebuild", "--source", "missing.source", "--id", "job:budget:bad-one", "--data-dir", dataRoot, "--json"], workspaceRoot);
     await runCliCapture(["search", "jobs", "enqueue", "rebuild", "--source", "missing.source", "--id", "job:budget:bad-two", "--data-dir", dataRoot, "--json"], workspaceRoot);
     const failureRun = await runCliCapture(["search", "service", "run-once", "--data-dir", dataRoot, "--json", "--max-jobs", "10", "--max-failures", "1"], workspaceRoot);
@@ -866,7 +858,6 @@ test("search service run-once obeys worker resource budgets", async () => {
     assert.equal(failurePayload.data.worker?.items[0]?.error?.includes("cannot index source"), true);
   });
 });
-
 test("search source controls persist canonical config in core.sqlite", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-core-config-"));
   const dataRoot = path.join(workspaceRoot, "data");
@@ -879,7 +870,6 @@ test("search source controls persist canonical config in core.sqlite", async () 
   }, async () => {
     const paused = await runCliCapture(["search", "sources", "pause", "commands", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(paused.code, CLI_EXIT_OK);
-
     const core = new Database(path.join(dataRoot, "core.sqlite"));
     try {
       const row = core.prepare("SELECT source, state, profile FROM search_source_config WHERE source = ?").get("commands") as { source: string; state: string; profile: string } | undefined;
@@ -887,7 +877,6 @@ test("search source controls persist canonical config in core.sqlite", async () 
     } finally {
       core.close();
     }
-
     fs.rmSync(path.join(dataRoot, "search.sqlite"), { force: true });
     const status = await runCliCapture(["search", "status", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(status.code, CLI_EXIT_OK);
@@ -895,7 +884,6 @@ test("search source controls persist canonical config in core.sqlite", async () 
       data: { sources: Array<{ source: string; state: string }> };
     };
     assert.equal(statusPayload.data.sources.find((source) => source.source === "commands")?.state, "paused");
-
     const query = await runCliCapture(["search", "query", "system capabilities", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(query.code, CLI_EXIT_DEGRADED);
     const queryPayload = JSON.parse(query.stdout) as {
@@ -915,7 +903,6 @@ test("search source controls persist canonical config in core.sqlite", async () 
     }
   });
 });
-
 test("search command fallback is explicit and does not broaden section search by default", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-command-fallback-"));
   const dataRoot = path.join(workspaceRoot, "data");
