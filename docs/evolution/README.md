@@ -34,10 +34,12 @@ knowledge in migrators, adapters, receipts, repair tools, and fixtures.
   public migration lab. It covers DB/core, `.claw`, `~/.clawix`, protocol,
   CLI JSON, package exports, agent instructions, skills, routes, schemas,
   backup, search/index rebuild, permissions, audit, and rescue survival.
-- `claw evolution plan|dry-run|repair|rollback|backup|receipt --json`: safe
-  operator contracts for migration planning, backup classification, rescue
-  preservation, and redacted receipts. Mutating actions are approval-gated by
-  default.
+- `claw evolution plan|dry-run|repair|rollback|backup|receipt|report --json`:
+  safe operator contracts for migration planning, backup classification, rescue
+  preservation, and redacted receipts. `repair` and `report` also emit an
+  agent-readable repair package with diagnostics, safe actions, approval-gated
+  actions, a redacted suggested patch, and a local-only receipt. Mutating or
+  externally submitted actions are approval-gated by default.
 
 ## Rescue Rule
 
