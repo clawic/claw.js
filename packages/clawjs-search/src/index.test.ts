@@ -29,7 +29,7 @@ test("Search exposes SQLite as the default rebuildable engine boundary", () => {
   assert.equal(SEARCH_SQLITE_ENGINE.storage.defaultFileName, "search.sqlite");
   assert.equal(SEARCH_SQLITE_ENGINE.storage.rebuildable, true);
   assert.equal(SEARCH_SQLITE_ENGINE.storage.ownsCanonicalData, false);
-  assert.equal(SEARCH_SQLITE_ENGINE.storage.shardModel, "logical");
+  assert.equal(SEARCH_SQLITE_ENGINE.storage.shardModel, "physical");
   assert.equal(SEARCH_SQLITE_ENGINE.capabilities.fts, true);
   assert.equal(SEARCH_SQLITE_ENGINE.capabilities.jobQueue, true);
   assert.equal(SEARCH_SQLITE_ENGINE.capabilities.vectors, true);
@@ -110,7 +110,7 @@ test("custom Search engine descriptors must identify storage boundaries", () => 
         kind: "sidecar",
         rebuildable: true,
         ownsCanonicalData: false,
-        shardModel: "logical",
+        shardModel: "physical",
       },
       capabilities: {
         fts: true,
@@ -751,6 +751,65 @@ test("SearchStore can isolate hot and cold document shards without changing defa
     ]);
     assert.deepEqual(store.query({ query: "diagram", domains: ["images"], shards: ["cold"] }).results, []);
     assert.equal(store.rankingCacheStats().entries, 1);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("SearchStore uses physical FTS partitions for shard-scoped lexical queries", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-fts-partitions-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "documents.blocks",
+      domain: "documents",
+      name: "Documents",
+      resultTypes: ["document"],
+    }));
+    store.upsertDocument({
+      id: "documents.blocks:hot:one",
+      source: "documents.blocks",
+      shard: "hot",
+      domain: "documents",
+      type: "document",
+      resourceId: "hot-one",
+      title: "Hot launch note",
+      body: "partition-only sentinel in the active shard",
+      updatedAt: "2026-05-17T12:00:00.000Z",
+      fragments: [{
+        id: "documents.blocks:hot:one:block",
+        title: "body",
+        body: "fragment partition sentinel",
+      }],
+    });
+    store.upsertDocument({
+      id: "documents.blocks:cold:one",
+      source: "documents.blocks",
+      shard: "cold",
+      domain: "documents",
+      type: "document",
+      resourceId: "cold-one",
+      title: "Cold launch note",
+      body: "partition-only sentinel in the archived shard",
+      updatedAt: "2026-05-16T12:00:00.000Z",
+    });
+
+    const partitions = store.db.prepare(`
+      SELECT source, shard, table_name
+      FROM search_fts_partitions
+      WHERE source = 'documents.blocks'
+      ORDER BY shard ASC
+    `).all() as Array<{ source: string; shard: string; table_name: string }>;
+    assert.deepEqual(partitions.map((row) => row.shard), ["cold", "hot"]);
+    assert.equal(partitions.every((row) => row.table_name.startsWith("search_fts_part_")), true);
+
+    store.db.prepare("DELETE FROM search_fts WHERE source = ? AND shard = ?").run("documents.blocks", "hot");
+    const hot = store.query({ query: "partition sentinel", domains: ["documents"], shards: ["hot"], limit: 5 });
+    assert.deepEqual(hot.results.map((result) => result.id), ["documents.blocks:hot:one"]);
+
+    const unscoped = store.query({ query: "partition sentinel", domains: ["documents"], limit: 5 });
+    assert.equal(unscoped.results.some((result) => result.id === "documents.blocks:cold:one"), true);
   } finally {
     store.close();
     fs.rmSync(dir, { recursive: true, force: true });

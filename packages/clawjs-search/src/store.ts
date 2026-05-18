@@ -203,7 +203,7 @@ export class SearchStore {
   }
 
   reset(): void {
-    this.db.exec(SEARCH_RESET_SQL);
+    this.resetSearchSchema();
     this.db.exec(SEARCH_SCHEMA_SQL);
     this.seedProfiles();
   }
@@ -218,6 +218,7 @@ export class SearchStore {
       const deleteCursors = this.db.prepare("DELETE FROM search_cursors WHERE source = ?");
       const deleteTombstones = this.db.prepare("DELETE FROM search_tombstones WHERE source = ?");
       for (const source of uniqueSources) {
+        this.dropFtsPartitions({ source });
         deleteFts.run(source);
         deleteDocuments.run(source);
         deleteShards.run(source);
@@ -258,6 +259,7 @@ export class SearchStore {
           const shardRow = findShard.get(source, shard) as { domain: string } | undefined;
           const documentRow = findDocument.get(source, shard) as { domain: string } | undefined;
           const domain = shardRow?.domain ?? documentRow?.domain;
+          this.dropFtsPartitions({ source, shard });
           deleteFts.run(source, shard);
           deleteDocuments.run(source, shard);
           deleteCursors.run(source, shard);
@@ -447,8 +449,12 @@ export class SearchStore {
           deleteFragments.run(input.id);
           deleteActions.run(input.id);
           deleteFts.run(input.id);
+          if (previousShard) this.deleteDocumentFromFtsPartition(previousShard.source, previousShard.shard, input.id);
         }
+        const partitionTable = this.ensureFtsPartition({ source: input.source, shard, domain: input.domain, updatedAt });
+        this.deleteDocumentFromFtsPartition(input.source, shard, input.id);
         insertDocumentFts.run(input.id, input.source, shard, input.domain, input.type, input.title, [input.subtitle, input.snippet, body].filter(Boolean).join("\n"), input.path ?? "");
+        this.insertFtsPartitionRow(partitionTable, input.id, null, input.type, input.title, [input.subtitle, input.snippet, body].filter(Boolean).join("\n"), input.path ?? "");
         for (const [index, fragment] of fragments.entries()) {
           insertFragment.run(
             fragment.id,
@@ -463,6 +469,7 @@ export class SearchStore {
             JSON.stringify(fragment.metadata ?? {}),
           );
           insertFragmentFts.run(input.id, fragment.id, input.source, shard, input.domain, input.type, fragment.title ?? "", [fragment.snippet, fragment.body].filter(Boolean).join("\n"), input.path ?? "");
+          this.insertFtsPartitionRow(partitionTable, input.id, fragment.id, input.type, fragment.title ?? "", [fragment.snippet, fragment.body].filter(Boolean).join("\n"), input.path ?? "");
         }
         for (const action of input.actions ?? []) {
           insertAction.run(input.id, action.id, JSON.stringify(action));
@@ -524,17 +531,7 @@ export class SearchStore {
       : queryInput;
     const rows = new Map<string, SearchDocumentRow>();
     if (strategy !== "semantic" || !plannedQueryInput.embedding) {
-      const { clauses, params } = buildDocumentClauses(plannedQueryInput, profile, match);
-      const lexicalRows = this.db.prepare(`
-        SELECT d.*, 0 AS rank, NULL AS semantic_score
-        FROM search_fts
-        JOIN search_documents d ON d.id = search_fts.doc_id
-        JOIN search_sources s ON s.id = d.source
-        WHERE ${clauses.join(" AND ")}
-        GROUP BY d.id
-        ORDER BY rank ASC, d.updated_at DESC
-        LIMIT ?
-      `).all(...params, candidateLimit) as SearchDocumentRow[];
+      const lexicalRows = this.lexicalRows(plannedQueryInput, profile, match, candidateLimit);
       for (const row of lexicalRows) rows.set(row.id, row);
       if (rows.size < candidateLimit && shouldRunFuzzyFallback(plannedQueryInput.query)) {
         for (const row of this.fuzzyFallbackRows(plannedQueryInput, profile, candidateLimit, rows)) {
@@ -1018,12 +1015,12 @@ export class SearchStore {
         || !this.tableHasColumn("search_fts", "shard")
         || !this.tableHasColumn("search_ranking_cache", "query_json")
       ) {
-        this.db.exec(SEARCH_RESET_SQL);
+        this.resetSearchSchema();
         this.db.exec(SEARCH_SCHEMA_SQL);
       }
     } catch (error) {
       if (!isRebuildableSearchSchemaMismatch(error)) throw error;
-      this.db.exec(SEARCH_RESET_SQL);
+      this.resetSearchSchema();
       this.db.exec(SEARCH_SCHEMA_SQL);
     }
   }
@@ -1031,6 +1028,168 @@ export class SearchStore {
   private tableHasColumn(table: string, column: string): boolean {
     const rows = this.db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
     return rows.some((row) => row.name === column);
+  }
+
+  private resetSearchSchema(): void {
+    this.dropFtsPartitions();
+    this.db.exec(SEARCH_RESET_SQL);
+  }
+
+  private ensureFtsPartition(input: { source: string; shard: string; domain: string; updatedAt: string }): string {
+    const tableName = ftsPartitionTableName(input.source, input.shard);
+    const quotedTable = quoteSqlIdentifier(tableName);
+    this.db.exec(`
+      CREATE VIRTUAL TABLE IF NOT EXISTS ${quotedTable} USING fts5(
+        doc_id UNINDEXED,
+        fragment_id UNINDEXED,
+        type UNINDEXED,
+        title,
+        body,
+        path,
+        tokenize='unicode61'
+      )
+    `);
+    this.db.prepare(`
+      INSERT INTO search_fts_partitions (source, shard, domain, table_name, updated_at)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(source, shard) DO UPDATE SET
+        domain = excluded.domain,
+        table_name = excluded.table_name,
+        updated_at = excluded.updated_at
+    `).run(input.source, input.shard, input.domain, tableName, input.updatedAt);
+    return tableName;
+  }
+
+  private deleteDocumentFromFtsPartition(source: string, shard: string, documentId: string): void {
+    const partition = this.ftsPartitionForShard(source, shard);
+    if (!partition) return;
+    this.db.prepare(`DELETE FROM ${quoteSqlIdentifier(partition.tableName)} WHERE doc_id = ?`).run(documentId);
+  }
+
+  private insertFtsPartitionRow(tableName: string, documentId: string, fragmentId: string | null, type: string, title: string, body: string, filePath: string): void {
+    this.db.prepare(`
+      INSERT INTO ${quoteSqlIdentifier(tableName)} (doc_id, fragment_id, type, title, body, path)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(documentId, fragmentId, type, title, body, filePath);
+  }
+
+  private dropFtsPartitions(input: { source?: string; shard?: string } = {}): void {
+    if (!this.tableExists("search_fts_partitions")) return;
+    const clauses: string[] = [];
+    const params: unknown[] = [];
+    if (input.source) {
+      clauses.push("source = ?");
+      params.push(input.source);
+    }
+    if (input.shard) {
+      clauses.push("shard = ?");
+      params.push(input.shard);
+    }
+    const rows = this.db.prepare(`
+      SELECT table_name FROM search_fts_partitions
+      ${clauses.length ? `WHERE ${clauses.join(" AND ")}` : ""}
+    `).all(...params) as Array<{ table_name: string }>;
+    for (const row of rows) this.db.exec(`DROP TABLE IF EXISTS ${quoteSqlIdentifier(row.table_name)}`);
+    this.db.prepare(`
+      DELETE FROM search_fts_partitions
+      ${clauses.length ? `WHERE ${clauses.join(" AND ")}` : ""}
+    `).run(...params);
+  }
+
+  private tableExists(table: string): boolean {
+    const row = this.db.prepare("SELECT name FROM sqlite_master WHERE type IN ('table', 'view') AND name = ?").get(table) as { name: string } | undefined;
+    return !!row;
+  }
+
+  private ftsPartitionForShard(source: string, shard: string): { source: string; shard: string; domain: string; tableName: string } | null {
+    if (!this.tableExists("search_fts_partitions")) return null;
+    const row = this.db.prepare(`
+      SELECT source, shard, domain, table_name
+      FROM search_fts_partitions
+      WHERE source = ? AND shard = ?
+      LIMIT 1
+    `).get(source, shard) as SearchFtsPartitionRow | undefined;
+    return row ? searchFtsPartitionFromRow(row) : null;
+  }
+
+  private lexicalRows(input: SearchQueryInput, profile: SearchProfileId, match: string, limit: number): SearchDocumentRow[] {
+    const partitions = this.ftsPartitionsForInput(input, profile);
+    if (partitions.length > 0) return this.lexicalRowsFromPartitions(partitions, input, profile, match, limit);
+    return this.lexicalRowsFromGlobalFts(input, profile, match, limit);
+  }
+
+  private lexicalRowsFromGlobalFts(input: SearchQueryInput, profile: SearchProfileId, match: string, limit: number): SearchDocumentRow[] {
+    const { clauses, params } = buildDocumentClauses(input, profile, match);
+    return this.db.prepare(`
+      SELECT d.*, 0 AS rank, NULL AS semantic_score
+      FROM search_fts
+      JOIN search_documents d ON d.id = search_fts.doc_id
+      JOIN search_sources s ON s.id = d.source
+      WHERE ${clauses.join(" AND ")}
+      GROUP BY d.id
+      ORDER BY rank ASC, d.updated_at DESC
+      LIMIT ?
+    `).all(...params, limit) as SearchDocumentRow[];
+  }
+
+  private lexicalRowsFromPartitions(partitions: Array<{ tableName: string }>, input: SearchQueryInput, profile: SearchProfileId, match: string, limit: number): SearchDocumentRow[] {
+    const { clauses, params } = buildDocumentClauses(input, profile);
+    const selects: string[] = [];
+    const allParams: unknown[] = [];
+    for (const partition of partitions) {
+      const table = quoteSqlIdentifier(partition.tableName);
+      selects.push(`
+        SELECT d.*, 0 AS rank, NULL AS semantic_score
+        FROM ${table}
+        JOIN search_documents d ON d.id = ${table}.doc_id
+        JOIN search_sources s ON s.id = d.source
+        WHERE ${table} MATCH ? AND ${clauses.join(" AND ")}
+        GROUP BY d.id
+      `);
+      allParams.push(match, ...params);
+    }
+    return this.db.prepare(`
+      SELECT *
+      FROM (${selects.join(" UNION ALL ")})
+      GROUP BY id
+      ORDER BY rank ASC, updated_at DESC
+      LIMIT ?
+    `).all(...allParams, limit) as SearchDocumentRow[];
+  }
+
+  private ftsPartitionsForInput(input: SearchQueryInput, profile: SearchProfileId): Array<{ source: string; shard: string; domain: string; tableName: string }> {
+    if (!input.shards?.length || !this.tableExists("search_fts_partitions")) return [];
+    const shardClauses: string[] = [`shard IN (${input.shards.map(() => "?").join(", ")})`, "state = 'active'", "document_count > 0"];
+    const shardParams: unknown[] = [...input.shards];
+    if (input.sources?.length) {
+      shardClauses.push(`source IN (${input.sources.map(() => "?").join(", ")})`);
+      shardParams.push(...input.sources);
+    }
+    if (input.domains?.length) {
+      shardClauses.push(`domain IN (${input.domains.map(() => "?").join(", ")})`);
+      shardParams.push(...input.domains);
+    }
+    if (profile !== "full") shardClauses.push("source IN (SELECT id FROM search_sources WHERE profile = 'framework')");
+    const activeShards = this.db.prepare(`
+      SELECT source, shard, domain
+      FROM search_shards
+      WHERE ${shardClauses.join(" AND ")}
+      ORDER BY source ASC, shard ASC
+    `).all(...shardParams) as Array<{ source: string; shard: string; domain: string }>;
+    if (activeShards.length === 0) return [];
+    const partitions = this.db.prepare(`
+      SELECT source, shard, domain, table_name
+      FROM search_fts_partitions
+      WHERE source = ? AND shard = ?
+      LIMIT 1
+    `);
+    const out: Array<{ source: string; shard: string; domain: string; tableName: string }> = [];
+    for (const shard of activeShards) {
+      const row = partitions.get(shard.source, shard.shard) as SearchFtsPartitionRow | undefined;
+      if (!row) return [];
+      out.push(searchFtsPartitionFromRow(row));
+    }
+    return out;
   }
 
   private refreshShardStats(input: { source: string; shard: string; domain: string; updatedAt: string }): void {
@@ -1375,6 +1534,14 @@ interface SearchShardRow {
   updated_at: string;
 }
 
+interface SearchFtsPartitionRow {
+  source: string;
+  shard: string;
+  domain: string;
+  table_name: string;
+  updated_at: string;
+}
+
 interface SearchIndexJobRow {
   id: string;
   source: string;
@@ -1513,6 +1680,15 @@ function searchInteractionFromRow(row: SearchInteractionRow): SearchInteraction 
   };
 }
 
+function searchFtsPartitionFromRow(row: SearchFtsPartitionRow): { source: string; shard: string; domain: string; tableName: string } {
+  return {
+    source: row.source,
+    shard: row.shard,
+    domain: row.domain,
+    tableName: row.table_name,
+  };
+}
+
 function searchIndexJobFromRow(row: SearchIndexJobRow): SearchIndexJob {
   return {
     id: row.id,
@@ -1537,6 +1713,14 @@ function stableJobIdPart(value: string): string {
   if (safe === value && safe.length > 0 && safe.length <= 120) return safe;
   const hash = createHash("sha256").update(value).digest("hex").slice(0, 16);
   return `${safe.slice(0, 100) || "resource"}-${hash}`;
+}
+
+function ftsPartitionTableName(source: string, shard: string): string {
+  return `search_fts_part_${createHash("sha256").update(`${source}\0${shard}`).digest("hex").slice(0, 24)}`;
+}
+
+function quoteSqlIdentifier(identifier: string): string {
+  return `"${identifier.replace(/"/g, "\"\"")}"`;
 }
 
 function searchVectorFromRow(row: SearchVectorRow): SearchVectorRecord {
@@ -2046,6 +2230,16 @@ CREATE INDEX IF NOT EXISTS search_documents_shard_idx ON search_documents(source
 CREATE INDEX IF NOT EXISTS search_documents_domain_idx ON search_documents(domain, updated_at DESC);
 CREATE INDEX IF NOT EXISTS search_documents_resource_idx ON search_documents(source, resource_id);
 
+CREATE TABLE IF NOT EXISTS search_fts_partitions (
+  source TEXT NOT NULL REFERENCES search_sources(id) ON DELETE CASCADE,
+  shard TEXT NOT NULL DEFAULT 'default',
+  domain TEXT NOT NULL,
+  table_name TEXT NOT NULL UNIQUE,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (source, shard)
+);
+CREATE INDEX IF NOT EXISTS search_fts_partitions_domain_idx ON search_fts_partitions(domain, shard);
+
 CREATE TABLE IF NOT EXISTS search_shards (
   source TEXT NOT NULL REFERENCES search_sources(id) ON DELETE CASCADE,
   shard TEXT NOT NULL DEFAULT 'default',
@@ -2205,6 +2399,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS search_fts USING fts5(
 
 const SEARCH_RESET_SQL = String.raw`
 DROP TABLE IF EXISTS search_fts;
+DROP TABLE IF EXISTS search_fts_partitions;
 DROP TABLE IF EXISTS search_ranking_cache;
 DROP TABLE IF EXISTS search_vectors;
 DROP TABLE IF EXISTS search_interactions;

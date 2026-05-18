@@ -33,7 +33,7 @@ Search V1.1 has four layers:
 The physical engine boundary is explicit. `@clawjs/search` exports a
 `SearchEngineDescriptor` contract plus `SEARCH_SQLITE_ENGINE` as the default
 engine. SQLite is currently the only implemented engine: it is a rebuildable
-sidecar, owns no canonical data, provides logical shard boundaries inside
+sidecar, owns no canonical data, provides physical shard FTS partitions inside
 `search.sqlite`, and declares its supported FTS, vector, cursor, tombstone, job
 queue, audit, saved-search, monitor, and ranking-cache capabilities. Future
 engines must enter through the same descriptor contract instead of changing
@@ -186,12 +186,14 @@ reports omitted sources as partial metadata instead of blocking fast paths.
 Search documents and sync cursors are tracked per source and shard. The default
 shard preserves the simple source contract; hot/cold or extractor-specific
 shards can be indexed and queried independently during backfill and event-driven
-indexing. `search.sqlite` now also maintains a physical `search_shards` catalog
-table with per-source/per-shard document and fragment counts so hosts can
-inspect shard health without scanning every document. Shard-scoped queries use
-that catalog to skip empty requested shards before touching FTS when the catalog
-has coverage for the requested scope. Query data still lives in the shared
-document and FTS tables; per-shard FTS partitions remain future scale hardening.
+indexing. `search.sqlite` maintains a physical `search_shards` catalog table
+with per-source/per-shard document and fragment counts, plus source/shard FTS
+partition tables for shard-scoped lexical queries, so hosts can inspect shard
+health without scanning every document and hot shard queries do not need to scan
+the global FTS table. Shard-scoped queries use that catalog to skip empty
+requested shards before touching FTS when the catalog has coverage for the
+requested scope. Source/shard rebuilds clear only the selected cursor, document
+rows, global FTS rows, and FTS partitions for that shard.
 
 `search.sqlite` also owns a local indexing job queue. Sources can enqueue
 upsert, delete, backfill, or rebuild work with source, shard, priority,
@@ -584,10 +586,11 @@ signed host shortcut broker validates it.
 
 ### Phase 4: scale hardening
 
-- Add hot/cold shards, ranking cache, source throttling, batch ingestion, and
-  large-scale labs for 1M and 10M items.
+- Add hot/cold shards, source/shard FTS partitions, ranking cache, source
+  throttling, batch ingestion, and large-scale labs for 1M and 10M items.
 - Preserve scoped hot-shard ranking cache while unrelated cold backfill runs,
-  so section-specific searches do not wait for universal indexing.
+  use partitioned FTS for shard-scoped lexical queries, and keep
+  section-specific searches independent from universal indexing.
 - Enforce performance gates: hot searches target 50 ms; Root Search first batch
   targets 200 ms; slow sources time out instead of blocking. The Search package
   includes a synthetic latency regression gate for those hot/root budgets, while

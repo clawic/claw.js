@@ -426,7 +426,7 @@ export const SEARCH_SQLITE_ENGINE = defineSearchEngine({
     defaultFileName: "search.sqlite",
     rebuildable: true,
     ownsCanonicalData: false,
-    shardModel: "logical",
+    shardModel: "physical",
   },
   capabilities: {
     fts: true,
