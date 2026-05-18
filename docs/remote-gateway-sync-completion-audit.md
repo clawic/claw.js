@@ -122,6 +122,19 @@ with `cli registry/router parity passed (155 commands)`. This keeps the public
 `claw` command registry aligned with router-dispatched command surfaces before
 final remote close.
 
+The opt-in source-session reread verifier was rerun locally with
+`REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl>
+npm run test:remote-sync-source-session` and passed with
+`remote sync source session verification passed (23 Q/A rows)`. The maintainer
+session path is intentionally not published, but the result proves the
+versioned source Q/A artifact still matches the decision-bearing source
+conversation and plan.
+
+Public docs hygiene was rerun with `npm run code-hygiene:check` and
+`git diff --check`, and both passed. `node ./scripts/docs-alignment-check.mjs`
+also returned `docs alignment check passed`, keeping the completion audit,
+decision map references, and generated documentation alignment checks current.
+
 ## Closure Rule
 
 The goal may be closed only after a final pass confirms:
