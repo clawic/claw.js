@@ -52,6 +52,9 @@ for (const snippet of [
   "clawEvolutionRollbackReportSchema",
   "best_effort_forward_repair",
   "universalRollbackPromised",
+  "previousPublicVersion",
+  "versionChain",
+  "version_chain_complete",
   "redactEvolutionReceiptText",
   "runEvolutionMigratorLab",
 ]) requireSnippet("packages/clawjs-core/src/evolution.ts", snippet);
