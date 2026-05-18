@@ -800,6 +800,7 @@ const corePublicRoutes = [
   ["claw.api.remote.externalValidationChecklist", "GET", "/v1/remote/external-validation-checklist", "Remote physical/provider validation checklist contract"],
   ["claw.api.remote.externalValidationTemplate", "POST", "/v1/remote/external-validation-template", "Remote physical/provider validation evidence template contract"],
   ["claw.api.remote.externalValidationArtifact", "POST", "/v1/remote/external-validation-artifact", "Remote physical/provider validation evidence artifact contract"],
+  ["claw.api.remote.externalValidationRunbook", "GET", "/v1/remote/external-validation-runbook", "Remote physical/provider validation runbook contract"],
   ["claw.api.remote.externalValidationReport", "POST", "/v1/remote/external-validation-report", "Remote physical/provider validation evidence report contract"],
   ["claw.api.remote.sourceQaTemplate", "POST", "/v1/remote/source-qa-template", "Remote source Q/A review template contract"],
   ["claw.api.remote.closureGate", "POST", "/v1/remote/closure-gate", "Remote goal closure gate contract"],

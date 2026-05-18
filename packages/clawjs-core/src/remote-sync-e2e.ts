@@ -149,6 +149,25 @@ export const remoteExternalValidationEvidenceTemplateSchema = z.object({
   writes: z.literal(false),
 });
 
+export const remoteExternalValidationRunbookSchema = z.object({
+  schemaVersion: z.literal(1),
+  runbookId: z.string().min(1),
+  sourceConversationId: z.string().min(1),
+  sourcePlanId: z.string().min(1),
+  generatedAt: z.string().datetime(),
+  status: z.literal("external_pending"),
+  e2ePlan: remoteProviderDeviceE2EValidationPlanSchema,
+  checklist: remoteExternalValidationChecklistSchema,
+  evidenceArtifact: remoteExternalValidationEvidenceArtifactSchema,
+  validationStepCount: z.number().int().nonnegative(),
+  externalRequirementCount: z.number().int().nonnegative(),
+  reportCommand: z.string().min(1),
+  closureGateCommand: z.string().min(1),
+  requiredCommands: z.array(z.string().min(1)).min(1),
+  instructions: z.array(z.string().min(1)).min(1),
+  writes: z.literal(false),
+});
+
 export const remoteSourceQaReviewDispositionSchema = z.enum(["implemented", "validated", "external_pending"]);
 
 export const remoteSourceQaReviewItemSchema = z.object({
@@ -232,6 +251,7 @@ export type RemoteExternalValidationEvidenceArtifact = z.infer<typeof remoteExte
 export type RemoteExternalValidationReportItem = z.infer<typeof remoteExternalValidationReportItemSchema>;
 export type RemoteExternalValidationReport = z.infer<typeof remoteExternalValidationReportSchema>;
 export type RemoteExternalValidationEvidenceTemplate = z.infer<typeof remoteExternalValidationEvidenceTemplateSchema>;
+export type RemoteExternalValidationRunbook = z.infer<typeof remoteExternalValidationRunbookSchema>;
 export type RemoteSourceQaReviewDisposition = z.infer<typeof remoteSourceQaReviewDispositionSchema>;
 export type RemoteSourceQaReviewItem = z.infer<typeof remoteSourceQaReviewItemSchema>;
 export type RemoteSourceQaReviewReport = z.infer<typeof remoteSourceQaReviewReportSchema>;
@@ -450,6 +470,10 @@ function externalValidationReportId(parts: string[]): string {
 
 function externalValidationEvidenceTemplateId(parts: string[]): string {
   return `remote_external_validation_evidence_template_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
+}
+
+function externalValidationRunbookId(parts: string[]): string {
+  return `remote_external_validation_runbook_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
 }
 
 function sourceQaReviewTemplateId(parts: string[]): string {
@@ -703,6 +727,45 @@ export function buildRemoteExternalValidationEvidenceArtifact(input: {
     status: "external_pending",
     writes: false,
     evidence,
+  });
+}
+
+export function buildRemoteExternalValidationRunbook(input: {
+  generatedAt?: string;
+} = {}): RemoteExternalValidationRunbook {
+  const generatedAt = input.generatedAt ?? new Date().toISOString();
+  const e2ePlan = buildRemoteProviderDeviceE2EValidationPlan({ createdAt: generatedAt });
+  const checklist = buildRemoteExternalValidationChecklist({ generatedAt });
+  const evidenceArtifact = buildRemoteExternalValidationEvidenceArtifact({ generatedAt });
+  return remoteExternalValidationRunbookSchema.parse({
+    schemaVersion: 1,
+    runbookId: externalValidationRunbookId(["runbook", generatedAt]),
+    sourceConversationId: remoteSourceConversationId,
+    sourcePlanId: remoteSourcePlanId,
+    generatedAt,
+    status: "external_pending",
+    e2ePlan,
+    checklist,
+    evidenceArtifact,
+    validationStepCount: e2ePlan.validationSteps.length,
+    externalRequirementCount: checklist.requirementIds.length,
+    reportCommand: "claw remote validation-report --evidence-file docs/remote-gateway-sync-external-validation-evidence.json --json",
+    closureGateCommand: "claw remote closure-gate --source-qa-review-file docs/remote-gateway-sync-source-qa-review.json --external-validation-file docs/remote-gateway-sync-external-validation-evidence.json --json",
+    requiredCommands: [
+      "claw remote e2e-plan --json",
+      "claw remote validation-checklist --json",
+      "claw remote validation-artifact --json",
+      "claw remote validation-report --evidence-file docs/remote-gateway-sync-external-validation-evidence.json --json",
+      "claw remote closure-gate --source-qa-review-file docs/remote-gateway-sync-source-qa-review.json --external-validation-file docs/remote-gateway-sync-external-validation-evidence.json --json",
+    ],
+    instructions: [
+      "Run the approved physical/provider validation for every validationSteps domain before changing evidence rows.",
+      "Keep approvedRun false until an approved run has an approval/audit reference and physical evidence.",
+      "After each approved run, fill approvedRunRef, physicalEvidenceRef, artifactRefs, and acceptedCriteria for the matching external requirement.",
+      "Never attach plaintext secrets or raw credential material.",
+      "The closure gate remains blocked until the evidence report is clearable and the source Q/A review remains complete.",
+    ],
+    writes: false,
   });
 }
 

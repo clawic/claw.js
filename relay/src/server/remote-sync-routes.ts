@@ -5,6 +5,7 @@ import {
   buildRemoteExternalValidationChecklist,
   buildRemoteExternalValidationEvidenceTemplate,
   buildRemoteExternalValidationReport,
+  buildRemoteExternalValidationRunbook,
   buildRemoteGoalClosureGate,
   buildRemoteProviderDeviceE2EValidationPlan,
   buildRemoteRouteContractCatalog,
@@ -85,6 +86,10 @@ function remoteExternalValidationEvidenceArtifactPayload(input: Record<string, u
     requirementIds: arrayOfStrings(input.requirementIds ?? input["requirement-ids"], []),
     evidence: evidence.length ? evidence : undefined,
   });
+}
+
+function remoteExternalValidationRunbookPayload() {
+  return buildRemoteExternalValidationRunbook();
 }
 
 function remoteExternalValidationReportPayload(input: Record<string, unknown> = {}) {
@@ -430,6 +435,8 @@ export function registerRemoteSyncRoutes(app: FastifyInstance): void {
   app.get(clawApiPath("remote/external-validation-artifact"), async () => remoteExternalValidationEvidenceArtifactPayload());
 
   app.post(clawApiPath("remote/external-validation-artifact"), async (request) => remoteExternalValidationEvidenceArtifactPayload(readBody(request)));
+
+  app.get(clawApiPath("remote/external-validation-runbook"), async () => remoteExternalValidationRunbookPayload());
 
   app.get(clawApiPath("remote/external-validation-report"), async () => remoteExternalValidationReportPayload());
 
