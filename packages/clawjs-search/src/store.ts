@@ -5,8 +5,10 @@ import { createHash } from "node:crypto";
 import Database from "better-sqlite3";
 
 import {
+  LOCAL_TEXT_EMBEDDING_MODEL,
   SEARCH_SQLITE_ENGINE,
   SEARCH_PROFILES,
+  createLocalTextEmbedding,
   createSearchRegistry,
   scoreLexicalMatch,
   type SearchAction,
@@ -142,6 +144,40 @@ export interface SearchIndexJob {
   updatedAt: string;
   leasedUntil?: string;
   error?: string;
+}
+
+export interface SearchEmbeddingIndexInput {
+  sources?: string[];
+  domains?: string[];
+  shards?: string[];
+  limit?: number;
+  model?: string;
+}
+
+export interface SearchEmbeddingIndexSummary {
+  model: string;
+  documents: number;
+  indexed: number;
+  selectedSources: string[] | null;
+  selectedDomains: string[] | null;
+  selectedShards: string[] | null;
+}
+
+export interface SearchEmbeddingStatusInput {
+  sources?: string[];
+  domains?: string[];
+  shards?: string[];
+  model?: string;
+}
+
+export interface SearchEmbeddingStatus {
+  source: string;
+  domain: string;
+  shard: string;
+  model: string;
+  documents: number;
+  vectors: number;
+  updatedAt?: string;
 }
 
 export interface SearchVectorInput {
@@ -587,6 +623,91 @@ export class SearchStore {
       ORDER BY model ASC, fragment_id ASC
     `).all(documentId) as SearchVectorRow[];
     return rows.map(searchVectorFromRow);
+  }
+
+  indexLocalEmbeddings(input: SearchEmbeddingIndexInput = {}): SearchEmbeddingIndexSummary {
+    const model = input.model ?? LOCAL_TEXT_EMBEDDING_MODEL;
+    const limit = Math.max(1, Math.min(10_000, Math.floor(Number.isFinite(input.limit) ? input.limit as number : 500)));
+    const clauses = [
+      "d.deleted_at IS NULL",
+      "s.state NOT IN ('disabled', 'paused', 'excluded')",
+      "json_extract(s.manifest_json, '$.capabilities.semantic') IN ('optional', 'required')",
+    ];
+    const params: unknown[] = [];
+    addInClause(clauses, params, "d.source", input.sources);
+    addInClause(clauses, params, "d.domain", input.domains);
+    addInClause(clauses, params, "d.shard", input.shards);
+    const rows = this.db.prepare(`
+      SELECT d.id, d.source, d.shard, d.domain, d.title, d.subtitle, d.snippet, d.body, d.updated_at
+      FROM search_documents d
+      JOIN search_sources s ON s.id = d.source
+      WHERE ${clauses.join(" AND ")}
+      ORDER BY d.updated_at DESC, d.id ASC
+      LIMIT ?
+    `).all(...params, limit) as SearchEmbeddingDocumentRow[];
+    const fragmentsForDocument = this.db.prepare(`
+      SELECT title, snippet, body
+      FROM search_fragments
+      WHERE document_id = ?
+      ORDER BY sort_order ASC, id ASC
+      LIMIT 20
+    `);
+    const updatedAt = new Date().toISOString();
+    let indexed = 0;
+    const transaction = this.db.transaction((documents: SearchEmbeddingDocumentRow[]) => {
+      for (const row of documents) {
+        const fragments = fragmentsForDocument.all(row.id) as SearchEmbeddingFragmentRow[];
+        const text = searchEmbeddingText(row, fragments);
+        if (!text) continue;
+        const embedding = createLocalTextEmbedding(text, { model });
+        this.upsertVector({
+          documentId: row.id,
+          model: embedding.model,
+          embedding: embedding.vector,
+          updatedAt,
+        });
+        indexed += 1;
+      }
+    });
+    transaction(rows);
+    return {
+      model,
+      documents: rows.length,
+      indexed,
+      selectedSources: input.sources ?? null,
+      selectedDomains: input.domains ?? null,
+      selectedShards: input.shards ?? null,
+    };
+  }
+
+  listEmbeddingStatus(input: SearchEmbeddingStatusInput = {}): SearchEmbeddingStatus[] {
+    const clauses = ["d.deleted_at IS NULL"];
+    const params: unknown[] = [];
+    addInClause(clauses, params, "d.source", input.sources);
+    addInClause(clauses, params, "d.domain", input.domains);
+    addInClause(clauses, params, "d.shard", input.shards);
+    if (input.model) {
+      clauses.push("v.model = ?");
+      params.push(input.model);
+    }
+    const rows = this.db.prepare(`
+      SELECT d.source, d.domain, d.shard, v.model, COUNT(DISTINCT v.document_id) AS documents,
+        COUNT(*) AS vectors, MAX(v.updated_at) AS updated_at
+      FROM search_vectors v
+      JOIN search_documents d ON d.id = v.document_id
+      WHERE ${clauses.join(" AND ")}
+      GROUP BY d.source, d.domain, d.shard, v.model
+      ORDER BY d.source ASC, d.shard ASC, v.model ASC
+    `).all(...params) as SearchEmbeddingStatusRow[];
+    return rows.map((row) => ({
+      source: row.source,
+      domain: row.domain,
+      shard: row.shard,
+      model: row.model,
+      documents: row.documents,
+      vectors: row.vectors,
+      ...(row.updated_at ? { updatedAt: row.updated_at } : {}),
+    }));
   }
 
   createAdapterRegistry(): ReturnType<typeof createSearchRegistry> {
@@ -1567,6 +1688,34 @@ interface SearchVectorRow {
   updated_at: string;
 }
 
+interface SearchEmbeddingDocumentRow {
+  id: string;
+  source: string;
+  shard: string;
+  domain: string;
+  title: string;
+  subtitle: string | null;
+  snippet: string | null;
+  body: string;
+  updated_at: string;
+}
+
+interface SearchEmbeddingFragmentRow {
+  title: string;
+  snippet: string | null;
+  body: string;
+}
+
+interface SearchEmbeddingStatusRow {
+  source: string;
+  domain: string;
+  shard: string;
+  model: string;
+  documents: number;
+  vectors: number;
+  updated_at: string | null;
+}
+
 interface SavedSearchRow {
   id: string;
   name: string;
@@ -1991,6 +2140,21 @@ function addInClause(clauses: string[], params: unknown[], column: string, value
   if (!normalized.length) return;
   clauses.push(`${column} IN (${normalized.map(() => "?").join(", ")})`);
   params.push(...normalized);
+}
+
+function searchEmbeddingText(row: SearchEmbeddingDocumentRow, fragments: SearchEmbeddingFragmentRow[]): string {
+  const parts = [
+    row.title,
+    row.subtitle,
+    row.snippet,
+    row.body,
+    ...fragments.flatMap((fragment) => [fragment.title, fragment.snippet, fragment.body]),
+  ];
+  return parts
+    .map((part) => (part ?? "").trim())
+    .filter(Boolean)
+    .join("\n")
+    .slice(0, 128 * 1024);
 }
 
 function addJsonEqualsClause(clauses: string[], params: unknown[], jsonColumn: string, key: string, value: unknown): void {

@@ -798,12 +798,12 @@ export async function runSearchAdminCli(input: {
     try {
       registerCliSearchSources(store, input.flags);
       if (action === "index") {
-        const summary = indexLocalSearchEmbeddings(store, {
+        const summary = store.indexLocalEmbeddings({
           sources: parseListFlag(input.flags.sources ?? input.flags.source),
           domains: parseListFlag(input.flags.domains ?? input.flags.domain),
           shards: parseListFlag(input.flags.shards ?? input.flags.shard),
           limit: input.flags.limit ? Number(input.flags.limit) : undefined,
-          model: input.flags.model ?? input.flags["embedding-model"],
+          model: localSearchEmbeddingModel(input.flags.model ?? input.flags["embedding-model"]),
         });
         const data = { state: "ready", ...summary, storage: searchStorageMetadata(input.flags) };
         if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "embeddings" });
@@ -814,7 +814,7 @@ export async function runSearchAdminCli(input: {
         input.context.stderr.write(`Usage: ${input.binName} search embeddings [status|index|create] [--source <source-id>] [--shard <shard>] [--limit <n>] [--json]\n`);
         return CLI_EXIT_USAGE;
       }
-      const items = listLocalSearchEmbeddingStatus(store, {
+      const items = store.listEmbeddingStatus({
         sources: parseListFlag(input.flags.sources ?? input.flags.source),
         domains: parseListFlag(input.flags.domains ?? input.flags.domain),
         shards: parseListFlag(input.flags.shards ?? input.flags.shard),
@@ -1362,11 +1362,11 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
     if (indexed !== null) return indexed;
   }
   if (job.operation === "embed") {
-    return indexLocalSearchEmbeddings(store, {
+    return store.indexLocalEmbeddings({
       sources: [job.source],
       shards: job.shard ? [job.shard] : undefined,
       limit: numericPayloadValue(job.payload, "limit") ?? (flags.limit ? Number(flags.limit) : undefined),
-      model: stringPayloadValue(job.payload, "model") ?? flags.model ?? flags["embedding-model"],
+      model: localSearchEmbeddingModel(stringPayloadValue(job.payload, "model") ?? flags.model ?? flags["embedding-model"]),
     }).indexed;
   }
   if (job.operation === "rebuild") {
