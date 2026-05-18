@@ -314,8 +314,9 @@ missing `approvedRunRef`, is `not_ready`; after a real approved run the same
 gate advances only when the evidence is fully clearable.
 `remote validation-approval-request` returns the no-write approval packet for
 that real run. It includes the source-bound conversation/plan IDs, readiness
-status, all 13 requirement IDs, required E2E domains, commands to run, approval
-scope, and prohibited actions. It always reports `approvalRequired: true` and
+status, all 13 requirement IDs, required E2E domains, required topology
+targets, required route contract IDs, commands to run, approval scope, and
+prohibited actions. It always reports `approvalRequired: true` and
 `approved: false` with status `approval_required`; it is a request for explicit
 approval, not approval itself.
 `remote validation-report` evaluates supplied external evidence, if any, against

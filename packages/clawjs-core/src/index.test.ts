@@ -1134,6 +1134,7 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(externalValidationChecklist.items.some((entry) => entry.requirementId === "physical_iroh_handshake" && entry.requiredCommand.includes("claw nodes heartbeat")), true);
   assert.equal(externalValidationChecklist.items.some((entry) => entry.requirementId === "provider_secret_retrieval" && entry.requiredArtifacts.includes("RemoteSecretProviderReceipt")), true);
   assert.equal(externalValidationChecklist.items.some((entry) => entry.requirementId === "provider_device_e2e" && entry.requiredArtifacts.includes("RemoteProviderDeviceE2EValidationPlan")), true);
+  assert.equal(externalValidationChecklist.items.some((entry) => entry.requirementId === "provider_device_e2e" && entry.acceptanceCriteria.some((criterion) => criterion.includes("personal mesh") && criterion.includes("server host") && criterion.includes("hosted Gateway"))), true);
 
   const externalValidationEvidenceTemplate = buildRemoteExternalValidationEvidenceTemplate({ generatedAt: "2026-05-17T10:13:17.000Z" });
   assert.equal(externalValidationEvidenceTemplate.status, "external_pending");
@@ -1182,9 +1183,11 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.deepEqual(externalValidationRunbook.e2ePlan.validationSteps.map((entry) => entry.domain), ["chat", "search", "sync", "secret_refs", "hosted_agents"]);
   assert.deepEqual(externalValidationRunbook.evidenceArtifact.evidence.map((entry) => entry.requirementId), externalPending.requirements.map((entry) => entry.requirementId));
   assert.deepEqual(externalValidationRunbook.e2ePlan.requiredTopologyTargets, [
+    "personal_mesh",
     "mac_host",
     "linux_host",
     "windows_host",
+    "server_host",
     "headless_server",
     "vps_host",
     "mobile_client",
@@ -1388,6 +1391,8 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(approvalRequest.readinessStatus, "ready_for_approved_run");
   assert.deepEqual(approvalRequest.requirementIds, externalPending.requirements.map((entry) => entry.requirementId));
   assert.deepEqual(approvalRequest.validationDomains, ["chat", "search", "sync", "secret_refs", "hosted_agents"]);
+  assert.deepEqual(approvalRequest.validationTopologyTargets, ["personal_mesh", "mac_host", "linux_host", "windows_host", "server_host", "headless_server", "vps_host", "mobile_client", "browser_client", "self_hosted_gateway", "hosted_gateway"]);
+  assert.deepEqual(approvalRequest.validationRouteIds, remoteSyncRequiredRouteIds);
   assert.equal(approvalRequest.prohibitedActions.some((entry) => entry.includes("plaintext secrets")), true);
   assert.equal(approvalRequest.writes, false);
 
@@ -1489,7 +1494,7 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(remoteProviderDeviceE2EValidationPlanSchema.safeParse(providerDeviceE2EPlan).success, true);
   assert.equal(providerDeviceE2EPlan.status, "external_pending");
   assert.deepEqual(providerDeviceE2EPlan.requiredDomains, ["chat", "search", "sync", "secret_refs", "hosted_agents"]);
-  assert.deepEqual(providerDeviceE2EPlan.requiredTopologyTargets, ["mac_host", "linux_host", "windows_host", "headless_server", "vps_host", "mobile_client", "browser_client", "self_hosted_gateway", "hosted_gateway"]);
+  assert.deepEqual(providerDeviceE2EPlan.requiredTopologyTargets, ["personal_mesh", "mac_host", "linux_host", "windows_host", "server_host", "headless_server", "vps_host", "mobile_client", "browser_client", "self_hosted_gateway", "hosted_gateway"]);
   assert.deepEqual(providerDeviceE2EPlan.requiredRouteIds, remoteSyncRequiredRouteIds);
   assert.deepEqual(providerDeviceE2EPlan.validationSteps.map((entry) => entry.domain), providerDeviceE2EPlan.requiredDomains);
   assert.deepEqual(providerDeviceE2EPlan.validationSteps.map((entry) => entry.requiredRouteIds), [

@@ -258,5 +258,11 @@ deployments. `claw gateway serve --record true` and `claw gateway project
 true`; they remain `external_pending` until a real self-hosted process or
 hosted rollout is physically validated.
 
+The provider/device E2E topology target list is intentionally broader than
+platform names: it includes `personal_mesh` and `server_host` alongside
+Mac/Linux/Windows hosts, headless server, VPS, mobile/browser clients,
+self-hosted Gateway, and hosted Gateway so the personal-device and server
+requirements cannot collapse back into a single desktop-plus-mobile lane.
+
 Goal completion for the source conversation requires a decision-by-decision
 review against the source session before the goal can be marked complete.

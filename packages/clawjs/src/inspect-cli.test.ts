@@ -347,7 +347,7 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
     externalValidationChecklist: { status: string; writes: boolean; requirementIds: string[]; coverage: { requirementCount: number; coveredRequirementCount: number; missingRequirementIds: string[] }; items: Array<{ requirementId: string; requiredCommand: string; requiredArtifacts: string[]; approvedRunRequired: boolean; physicalEvidenceRequired: boolean; plaintextMaterialIncluded: boolean; writes: boolean }> };
     externalValidationEvidenceTemplate: { status: string; writes: boolean; requirementCount: number; submissionCommand: string; checklistItems: Array<{ requirementId: string }>; evidence: Array<{ requirementId: string; approvedRun: boolean; artifactRefs: string[]; acceptedCriteria: string[]; plaintextMaterialIncluded: boolean; writes: boolean }> };
     externalValidationReadiness: { status: string; writes: boolean; sourceQaReady: boolean; externalEvidenceReady: boolean; sourceQaReviewStatus: string; evidenceCount: number; requiredEvidenceCount: number; missingEvidenceRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockedExternalRequirementIds: string[]; closureGateBlockers: string[]; nextAction: string };
-    externalValidationApprovalRequest: { status: string; approvalRequired: boolean; approved: boolean; readinessStatus: string; writes: boolean; requirementIds: string[]; validationDomains: string[]; prohibitedActions: string[] };
+    externalValidationApprovalRequest: { status: string; approvalRequired: boolean; approved: boolean; readinessStatus: string; writes: boolean; requirementIds: string[]; validationDomains: string[]; validationTopologyTargets: string[]; validationRouteIds: string[]; prohibitedActions: string[] };
     externalValidationReport: { status: string; writes: boolean; requirementCount: number; evidenceCount: number; clearableRequirementIds: string[]; blockedRequirementIds: string[]; items: Array<{ requirementId: string; clearable: boolean; status: string; writes: boolean }> };
     sourceQaReviewTemplate: { status: string; writes: boolean; sourceConversationId: string; sourcePlanId: string; requiredSourceQaIds: string[]; externalPendingRequiredSourceQaIds: string[]; reviewCount: number; submissionCommand: string; items: Array<{ qaId: string; decisionKey: string; requirementId: string; reviewed: boolean; disposition: null; evidenceRefs: string[]; reviewedAt: null; writes: boolean }> };
     closureGate: { status: string; writes: boolean; requiredSourceQaIds: string[]; reviewedSourceQaIds: string[]; missingSourceQaIds: string[]; externalPendingRequiredSourceQaIds: string[]; sourceQaReviewStatus: string; sourceQaReviewItems: unknown[]; blockedExternalRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockers: string[] };
@@ -437,6 +437,8 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   assert.equal(remoteInspectPayload.externalValidationApprovalRequest.writes, false);
   assert.deepEqual(remoteInspectPayload.externalValidationApprovalRequest.requirementIds, remoteInspectPendingRequirementIds);
   assert.deepEqual(remoteInspectPayload.externalValidationApprovalRequest.validationDomains, ["chat", "search", "sync", "secret_refs", "hosted_agents"]);
+  assert.deepEqual(remoteInspectPayload.externalValidationApprovalRequest.validationTopologyTargets, ["personal_mesh", "mac_host", "linux_host", "windows_host", "server_host", "headless_server", "vps_host", "mobile_client", "browser_client", "self_hosted_gateway", "hosted_gateway"]);
+  assert.deepEqual(remoteInspectPayload.externalValidationApprovalRequest.validationRouteIds, remoteSyncRequiredRouteIds);
   assert.equal(remoteInspectPayload.externalValidationApprovalRequest.prohibitedActions.some((entry) => entry.includes("plaintext secrets")), true);
   assert.equal(remoteInspectPayload.externalValidationReadiness.sourceQaReviewStatus, "incomplete");
   assert.equal(remoteInspectPayload.externalValidationReadiness.evidenceCount, 0);
@@ -606,13 +608,15 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
     "--json",
   ], process.cwd());
   assert.equal(remoteValidationApprovalRequest.code, CLI_EXIT_OK);
-  const remoteValidationApprovalRequestPayload = parseCliJson<{ status: string; approvalRequired: boolean; approved: boolean; readinessStatus: string; requirementIds: string[]; validationDomains: string[]; requiredCommands: string[]; prohibitedActions: string[]; writes: boolean }>(remoteValidationApprovalRequest.stdout).data;
+  const remoteValidationApprovalRequestPayload = parseCliJson<{ status: string; approvalRequired: boolean; approved: boolean; readinessStatus: string; requirementIds: string[]; validationDomains: string[]; validationTopologyTargets: string[]; validationRouteIds: string[]; requiredCommands: string[]; prohibitedActions: string[]; writes: boolean }>(remoteValidationApprovalRequest.stdout).data;
   assert.equal(remoteValidationApprovalRequestPayload.status, "approval_required");
   assert.equal(remoteValidationApprovalRequestPayload.approvalRequired, true);
   assert.equal(remoteValidationApprovalRequestPayload.approved, false);
   assert.equal(remoteValidationApprovalRequestPayload.readinessStatus, "ready_for_approved_run");
   assert.deepEqual(remoteValidationApprovalRequestPayload.requirementIds, remotePendingRequirementIds);
   assert.deepEqual(remoteValidationApprovalRequestPayload.validationDomains, ["chat", "search", "sync", "secret_refs", "hosted_agents"]);
+  assert.deepEqual(remoteValidationApprovalRequestPayload.validationTopologyTargets, ["personal_mesh", "mac_host", "linux_host", "windows_host", "server_host", "headless_server", "vps_host", "mobile_client", "browser_client", "self_hosted_gateway", "hosted_gateway"]);
+  assert.deepEqual(remoteValidationApprovalRequestPayload.validationRouteIds, remoteSyncRequiredRouteIds);
   assert.equal(remoteValidationApprovalRequestPayload.requiredCommands.some((entry) => entry.includes("validation-readiness")), true);
   assert.equal(remoteValidationApprovalRequestPayload.prohibitedActions.some((entry) => entry.includes("plaintext secrets")), true);
   assert.equal(remoteValidationApprovalRequestPayload.writes, false);
@@ -711,7 +715,7 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.equal(remoteE2EPlanPayload.status, "external_pending");
   assert.equal(remoteE2EPlanPayload.writes, false);
   assert.deepEqual(remoteE2EPlanPayload.requiredDomains, ["chat", "search", "sync", "secret_refs", "hosted_agents"]);
-  assert.deepEqual(remoteE2EPlanPayload.requiredTopologyTargets, ["mac_host", "linux_host", "windows_host", "headless_server", "vps_host", "mobile_client", "browser_client", "self_hosted_gateway", "hosted_gateway"]);
+  assert.deepEqual(remoteE2EPlanPayload.requiredTopologyTargets, ["personal_mesh", "mac_host", "linux_host", "windows_host", "server_host", "headless_server", "vps_host", "mobile_client", "browser_client", "self_hosted_gateway", "hosted_gateway"]);
   assert.deepEqual(remoteE2EPlanPayload.requiredRouteIds, remoteSyncRequiredRouteIds);
   assert.deepEqual(remoteE2EPlanPayload.validationSteps.map((entry) => entry.domain), remoteE2EPlanPayload.requiredDomains);
   assert.deepEqual(remoteE2EPlanPayload.validationSteps.map((entry) => entry.requiredRouteIds), [

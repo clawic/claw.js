@@ -11,9 +11,11 @@ export const remoteProviderDeviceE2EDomainSchema = z.enum([
 ]);
 
 export const remoteProviderDeviceE2ETopologyTargetSchema = z.enum([
+  "personal_mesh",
   "mac_host",
   "linux_host",
   "windows_host",
+  "server_host",
   "headless_server",
   "vps_host",
   "mobile_client",
@@ -37,7 +39,7 @@ export const remoteProviderDeviceE2EValidationPlanSchema = z.object({
   schemaVersion: z.literal(1),
   planId: z.string().min(1),
   requiredDomains: z.array(remoteProviderDeviceE2EDomainSchema).min(5),
-  requiredTopologyTargets: z.array(remoteProviderDeviceE2ETopologyTargetSchema).min(9),
+  requiredTopologyTargets: z.array(remoteProviderDeviceE2ETopologyTargetSchema).min(11),
   requiredRouteIds: z.array(z.string().min(1)).min(1),
   requiredExternalPendingIds: z.array(z.string().min(1)).min(1),
   validationSteps: z.array(remoteProviderDeviceE2EValidationStepSchema).min(5),
@@ -229,6 +231,8 @@ export const remoteExternalValidationApprovalRequestSchema = z.object({
   readinessStatus: z.enum(["not_ready", "ready_for_approved_run", "ready_for_goal_closure"]),
   requirementIds: z.array(z.string().min(1)).min(1),
   validationDomains: z.array(remoteProviderDeviceE2EDomainSchema).min(1),
+  validationTopologyTargets: z.array(remoteProviderDeviceE2ETopologyTargetSchema).min(1),
+  validationRouteIds: z.array(z.string().min(1)).min(1),
   requiredCommands: z.array(z.string().min(1)).min(1),
   approvalScope: z.array(z.string().min(1)).min(1),
   prohibitedActions: z.array(z.string().min(1)).min(1),
@@ -364,9 +368,11 @@ const providerDeviceE2ERequiredExternalPendingIds = [
 ] as const;
 
 const providerDeviceE2ERequiredTopologyTargets = [
+  "personal_mesh",
   "mac_host",
   "linux_host",
   "windows_host",
+  "server_host",
   "headless_server",
   "vps_host",
   "mobile_client",
@@ -552,6 +558,7 @@ const externalValidationDefinitions: Record<string, ExternalValidationDefinition
     acceptanceCriteria: [
       "chat, search, Sync, reference-based provider retrieval, and hosted agents pass together",
       "the run covers all required route IDs and all external pending requirement IDs",
+      "the run covers personal mesh, server host, OS hosts, headless/VPS, mobile/browser clients, self-hosted Gateway, and hosted Gateway topology targets",
       "hosted/self-hosted parity and no-plaintext-material invariants hold",
     ],
   },
@@ -1048,6 +1055,8 @@ export function buildRemoteExternalValidationApprovalRequest(input: {
     readinessStatus: readiness.status,
     requirementIds: runbook.checklist.requirementIds,
     validationDomains: runbook.e2ePlan.requiredDomains,
+    validationTopologyTargets: runbook.e2ePlan.requiredTopologyTargets,
+    validationRouteIds: runbook.e2ePlan.requiredRouteIds,
     requiredCommands: [
       "claw remote validation-readiness --source-qa-review-file docs/remote-gateway-sync-source-qa-review.json --external-validation-file docs/remote-gateway-sync-external-validation-evidence.json --json",
       ...runbook.requiredCommands,
@@ -1055,6 +1064,8 @@ export function buildRemoteExternalValidationApprovalRequest(input: {
     approvalScope: [
       "Execute physical/provider validation for the 13 RemoteExternalPendingRegister rows only.",
       "Cover chat, search, Sync, secret_refs, and hosted_agents together in the provider/device E2E run.",
+      "Cover personal mesh, server host, OS hosts, headless/VPS, mobile/browser clients, self-hosted Gateway, and hosted Gateway targets in the same approved run.",
+      "Cover every required remote route contract ID from RemoteProviderDeviceE2EValidationPlan in the same approved run.",
       "Collect approvedRunRef, physicalEvidenceRef, artifactRefs, and acceptedCriteria for each requirement.",
       "Keep source Q/A review complete and source-bound to this goal before and after the run.",
     ],

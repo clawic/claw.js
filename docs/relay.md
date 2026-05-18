@@ -222,9 +222,10 @@ software-side package is ready for an explicitly approved run.
 Relay `/v1/remote/external-validation-approval-request` and
 `claw remote validation-approval-request` expose the no-write approval packet
 for that real run. The packet is source-bound to this goal, lists all 13
-requirements and the five E2E domains, carries the required commands and
-prohibited actions, and always keeps `approvalRequired: true` with
-`approved: false` and status `approval_required`.
+requirements, the five E2E domains, the required topology targets, and the
+required route contract IDs, carries the required commands and prohibited
+actions, and always keeps `approvalRequired: true` with `approved: false` and
+status `approval_required`.
 The Relay `/v1/remote/external-validation-report` endpoint and
 `claw remote validation-report` evaluate external validation evidence against
 that checklist. A row is only `clearable` when the report includes approved-run

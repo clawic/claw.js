@@ -153,7 +153,7 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
 
     const externalValidationChecklist = await built.app.inject({ method: "GET", url: "/v1/remote/external-validation-checklist" });
     assert.equal(externalValidationChecklist.statusCode, 200);
-    const externalValidationChecklistPayload = externalValidationChecklist.json() as { status: string; writes: boolean; requirementIds: string[]; coverage: { requirementCount: number; coveredRequirementCount: number; missingRequirementIds: string[] }; items: Array<{ requirementId: string; sourceReceipt: string; requiredCommand: string; requiredArtifacts: string[]; approvedRunRequired: boolean; physicalEvidenceRequired: boolean; plaintextMaterialIncluded: boolean; writes: boolean }> };
+    const externalValidationChecklistPayload = externalValidationChecklist.json() as { status: string; writes: boolean; requirementIds: string[]; coverage: { requirementCount: number; coveredRequirementCount: number; missingRequirementIds: string[] }; items: Array<{ requirementId: string; sourceReceipt: string; requiredCommand: string; requiredArtifacts: string[]; acceptanceCriteria: string[]; approvedRunRequired: boolean; physicalEvidenceRequired: boolean; plaintextMaterialIncluded: boolean; writes: boolean }> };
     const expectedExternalValidationChecklist = buildRemoteExternalValidationChecklist();
     assert.equal(externalValidationChecklistPayload.status, "external_pending");
     assert.equal(externalValidationChecklistPayload.writes, false);
@@ -168,6 +168,7 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     );
     assert.equal(externalValidationChecklistPayload.items.some((entry) => entry.requirementId === "physical_iroh_handshake" && entry.requiredCommand.includes("claw nodes heartbeat")), true);
     assert.equal(externalValidationChecklistPayload.items.some((entry) => entry.requirementId === "provider_device_e2e" && entry.requiredArtifacts.includes("RemoteProviderDeviceE2EValidationPlan")), true);
+    assert.equal(externalValidationChecklistPayload.items.some((entry) => entry.requirementId === "provider_device_e2e" && entry.acceptanceCriteria.some((criterion) => criterion.includes("personal mesh") && criterion.includes("server host") && criterion.includes("hosted Gateway"))), true);
     assert.equal(externalValidationChecklistPayload.items.every((entry) => entry.approvedRunRequired && entry.physicalEvidenceRequired && entry.plaintextMaterialIncluded === false && !entry.writes), true);
 
     const externalValidationTemplate = await built.app.inject({ method: "GET", url: "/v1/remote/external-validation-template" });
@@ -225,6 +226,8 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(externalValidationRunbookPayload.validationStepCount, expectedExternalValidationRunbook.validationStepCount);
     assert.equal(externalValidationRunbookPayload.externalRequirementCount, expectedExternalPending.requirements.length);
     assert.deepEqual(externalValidationRunbookPayload.e2ePlan.validationSteps.map((entry) => entry.domain), ["chat", "search", "sync", "secret_refs", "hosted_agents"]);
+    assert.equal(externalValidationRunbookPayload.e2ePlan.requiredTopologyTargets.includes("personal_mesh"), true);
+    assert.equal(externalValidationRunbookPayload.e2ePlan.requiredTopologyTargets.includes("server_host"), true);
     assert.equal(externalValidationRunbookPayload.e2ePlan.requiredTopologyTargets.includes("windows_host"), true);
     assert.equal(externalValidationRunbookPayload.e2ePlan.requiredTopologyTargets.includes("mobile_client"), true);
     assert.deepEqual(externalValidationRunbookPayload.evidenceArtifact.evidence.map((entry) => entry.requirementId), expectedExternalPendingRequirementIds);
@@ -249,7 +252,7 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
 
     const externalValidationApprovalRequest = await built.app.inject({ method: "GET", url: "/v1/remote/external-validation-approval-request" });
     assert.equal(externalValidationApprovalRequest.statusCode, 200);
-    const externalValidationApprovalRequestPayload = externalValidationApprovalRequest.json() as { status: string; approvalRequired: boolean; approved: boolean; readinessStatus: string; writes: boolean; requirementIds: string[]; validationDomains: string[]; prohibitedActions: string[] };
+    const externalValidationApprovalRequestPayload = externalValidationApprovalRequest.json() as { status: string; approvalRequired: boolean; approved: boolean; readinessStatus: string; writes: boolean; requirementIds: string[]; validationDomains: string[]; validationTopologyTargets: string[]; validationRouteIds: string[]; prohibitedActions: string[] };
     const expectedExternalValidationApprovalRequest = buildRemoteExternalValidationApprovalRequest();
     assert.equal(externalValidationApprovalRequestPayload.status, "approval_required");
     assert.equal(externalValidationApprovalRequestPayload.approvalRequired, true);
@@ -258,6 +261,8 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(externalValidationApprovalRequestPayload.writes, false);
     assert.deepEqual(externalValidationApprovalRequestPayload.requirementIds, expectedExternalPendingRequirementIds);
     assert.deepEqual(externalValidationApprovalRequestPayload.validationDomains, ["chat", "search", "sync", "secret_refs", "hosted_agents"]);
+    assert.deepEqual(externalValidationApprovalRequestPayload.validationTopologyTargets, ["personal_mesh", "mac_host", "linux_host", "windows_host", "server_host", "headless_server", "vps_host", "mobile_client", "browser_client", "self_hosted_gateway", "hosted_gateway"]);
+    assert.deepEqual(externalValidationApprovalRequestPayload.validationRouteIds, remoteSyncRequiredRouteIds);
     assert.equal(externalValidationApprovalRequestPayload.prohibitedActions.some((entry) => entry.includes("plaintext secrets")), true);
 
     const externalValidationReport = await built.app.inject({ method: "GET", url: "/v1/remote/external-validation-report" });
@@ -475,12 +480,14 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
       },
     });
     assert.equal(approvalRequestReady.statusCode, 200);
-    const approvalRequestReadyPayload = approvalRequestReady.json() as { status: string; approvalRequired: boolean; approved: boolean; readinessStatus: string; requirementIds: string[]; requiredCommands: string[]; writes: boolean };
+    const approvalRequestReadyPayload = approvalRequestReady.json() as { status: string; approvalRequired: boolean; approved: boolean; readinessStatus: string; requirementIds: string[]; validationTopologyTargets: string[]; validationRouteIds: string[]; requiredCommands: string[]; writes: boolean };
     assert.equal(approvalRequestReadyPayload.status, "approval_required");
     assert.equal(approvalRequestReadyPayload.approvalRequired, true);
     assert.equal(approvalRequestReadyPayload.approved, false);
     assert.equal(approvalRequestReadyPayload.readinessStatus, "ready_for_approved_run");
     assert.deepEqual(approvalRequestReadyPayload.requirementIds, expectedExternalPendingRequirementIds);
+    assert.deepEqual(approvalRequestReadyPayload.validationTopologyTargets, ["personal_mesh", "mac_host", "linux_host", "windows_host", "server_host", "headless_server", "vps_host", "mobile_client", "browser_client", "self_hosted_gateway", "hosted_gateway"]);
+    assert.deepEqual(approvalRequestReadyPayload.validationRouteIds, remoteSyncRequiredRouteIds);
     assert.equal(approvalRequestReadyPayload.requiredCommands.some((entry) => entry.includes("validation-readiness")), true);
     assert.equal(approvalRequestReadyPayload.writes, false);
 

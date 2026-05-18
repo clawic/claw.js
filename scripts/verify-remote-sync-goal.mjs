@@ -787,6 +787,10 @@ for (const requirementId of ["physical_iroh_handshake", "provider_secret_retriev
     fail(`remote external validation checklist must include command, artifacts, and criteria for ${requirementId}`);
   }
 }
+const providerDeviceE2EChecklistItem = externalValidationChecklist.items.find((entry) => entry.requirementId === "provider_device_e2e");
+if (!providerDeviceE2EChecklistItem?.acceptanceCriteria.some((criterion) => criterion.includes("personal mesh") && criterion.includes("server host") && criterion.includes("hosted Gateway"))) {
+  fail("provider_device_e2e checklist criteria must require the full personal/server/hosted topology target set");
+}
 
 const externalValidationEvidenceTemplate = buildRemoteExternalValidationEvidenceTemplate({
   generatedAt: "2026-05-17T10:13:17.000Z",
@@ -868,7 +872,7 @@ requireSameOrderedList(
   externalValidationRunbook.evidenceArtifact.evidence.map((entry) => entry.requirementId),
   expectedExternalPendingRequirementIds,
 );
-for (const target of ["mac_host", "linux_host", "windows_host", "headless_server", "vps_host", "mobile_client", "browser_client", "self_hosted_gateway", "hosted_gateway"]) {
+for (const target of ["personal_mesh", "mac_host", "linux_host", "windows_host", "server_host", "headless_server", "vps_host", "mobile_client", "browser_client", "self_hosted_gateway", "hosted_gateway"]) {
   if (!externalValidationRunbook.e2ePlan.requiredTopologyTargets.includes(target)) fail(`remote external validation runbook must include topology target ${target}`);
 }
 
@@ -968,6 +972,16 @@ requireSameOrderedList(
   expectedExternalPendingRequirementIds,
 );
 if (artifactExternalValidationApprovalRequest.validationDomains.join(",") !== "chat,search,sync,secret_refs,hosted_agents") fail("external validation approval request must cover all E2E domains");
+requireSameOrderedList(
+  "external validation approval request topology targets",
+  artifactExternalValidationApprovalRequest.validationTopologyTargets,
+  ["personal_mesh", "mac_host", "linux_host", "windows_host", "server_host", "headless_server", "vps_host", "mobile_client", "browser_client", "self_hosted_gateway", "hosted_gateway"],
+);
+requireSameOrderedList(
+  "external validation approval request route ids",
+  artifactExternalValidationApprovalRequest.validationRouteIds,
+  remoteSyncRequiredRouteIds,
+);
 if (!artifactExternalValidationApprovalRequest.requiredCommands.some((entry) => entry.includes("validation-readiness"))) fail("external validation approval request must include readiness command");
 if (!artifactExternalValidationApprovalRequest.prohibitedActions.some((entry) => entry.includes("plaintext secrets"))) fail("external validation approval request must prohibit plaintext secrets");
 if (artifactExternalValidationApprovalRequest.writes !== false) fail("external validation approval request must be no-write");
@@ -1320,7 +1334,7 @@ if (providerDeviceE2EPlan.status !== "external_pending") fail("provider/device E
 for (const domain of ["chat", "search", "sync", "secret_refs", "hosted_agents"]) {
   if (!providerDeviceE2EPlan.requiredDomains.includes(domain)) fail(`provider/device E2E plan must include ${domain}`);
 }
-for (const target of ["mac_host", "linux_host", "windows_host", "headless_server", "vps_host", "mobile_client", "browser_client", "self_hosted_gateway", "hosted_gateway"]) {
+for (const target of ["personal_mesh", "mac_host", "linux_host", "windows_host", "server_host", "headless_server", "vps_host", "mobile_client", "browser_client", "self_hosted_gateway", "hosted_gateway"]) {
   if (!providerDeviceE2EPlan.requiredTopologyTargets.includes(target)) fail(`provider/device E2E plan must include topology target ${target}`);
 }
 requireSameOrderedList(
