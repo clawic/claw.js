@@ -162,7 +162,7 @@ const requiredSnippets = [
       "tts synthesize",
       "claw audio index|transcript|artifact list|get|delete",
       "claw apps list|upsert|delete",
-      "claw design list|upsert",
+      "claw design list|upsert|delete",
     ],
   },
 ];
