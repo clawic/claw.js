@@ -368,6 +368,18 @@ function requireCliSearchAcceptanceSmoke() {
     failures.push("claw search rebuild --source commands --json: must index command results");
   }
 
+  const shards = readCliSearchJson(["shards"], "claw search shards --json", dataRoot);
+  const commandShard = shards.data?.shards?.find((shard) => shard.source === "commands" && shard.shard === "default");
+  if (shards.meta?.subcommand !== "shards" || shards.data?.state !== "ready") {
+    failures.push("claw search shards --json: must report shard catalog metadata");
+  }
+  if (!commandShard || commandShard.domain !== "commands" || commandShard.state !== "active") {
+    failures.push("claw search shards --json: must expose the active command default shard");
+  }
+  if (typeof commandShard?.documentCount !== "number" || commandShard.documentCount <= 0 || typeof commandShard?.fragmentCount !== "number" || commandShard.fragmentCount <= 0) {
+    failures.push("claw search shards --json: must report command shard document and fragment counts");
+  }
+
   const query = readCliSearchJson(["query", "system", "--limit", "3", "--explain", "true"], "claw search query system --json", dataRoot);
   if (query.meta?.subcommand !== "query") failures.push("claw search query system --json: missing query subcommand metadata");
   if (query.data?.profile !== "framework") failures.push("claw search query system --json: must use framework profile by default");
@@ -393,6 +405,36 @@ function requireCliSearchAcceptanceSmoke() {
   }
   if (!Array.isArray(profileItems) || profileItems.find((profile) => profile.id === "full")?.defaultEnabled !== false) {
     failures.push("claw search profiles --json: full profile must be opt-in");
+  }
+
+  const aliases = readCliSearchJson(["aliases"], "claw search aliases --json", dataRoot);
+  const aliasItems = aliases.data?.aliases ?? [];
+  if (aliases.meta?.subcommand !== "aliases" || aliases.data?.count !== aliasItems.length) {
+    failures.push("claw search aliases --json: must expose alias metadata and count");
+  }
+  if (aliases.data?.rootSearchShortcutState !== "external_pending" || aliases.data?.chatSearchIsolation !== true) {
+    failures.push("claw search aliases --json: must preserve Root Search shortcut and chat isolation contracts");
+  }
+  if (!Array.isArray(aliasItems) || !aliasItems.some((alias) => alias.alias === "db" && alias.canonicalName === "database" && alias.searchDomain === "commands")) {
+    failures.push("claw search aliases --json: must expose database launcher alias as a command-domain Search alias");
+  }
+  if (!Array.isArray(aliasItems) || !aliasItems.some((alias) => alias.alias === "image" && alias.canonicalName === "images" && alias.searchDomain === "commands")) {
+    failures.push("claw search aliases --json: must expose image launcher alias as a command-domain Search alias");
+  }
+
+  const embeddingsStatus = readCliSearchJson(["embeddings", "status"], "claw search embeddings status --json", dataRoot);
+  if (embeddingsStatus.meta?.subcommand !== "embeddings" || !["empty", "ready"].includes(embeddingsStatus.data?.state)) {
+    failures.push("claw search embeddings status --json: must expose local embedding status");
+  }
+  if (embeddingsStatus.data?.storage?.index !== "search.sqlite" || embeddingsStatus.data?.storage?.indexRebuildable !== true) {
+    failures.push("claw search embeddings status --json: must report rebuildable search.sqlite vector storage");
+  }
+  const embeddingsCreate = readCliSearchJson(["embeddings", "create", "system capabilities"], "claw search embeddings create --json", dataRoot);
+  if (embeddingsCreate.data?.state !== "ready" || embeddingsCreate.data?.model !== "local-text-v1" || embeddingsCreate.data?.dimensions !== 64) {
+    failures.push("claw search embeddings create --json: must create a local-text-v1 embedding");
+  }
+  if (!Array.isArray(embeddingsCreate.data?.vector) || embeddingsCreate.data.vector.length !== 64) {
+    failures.push("claw search embeddings create --json: must return a 64-dimensional local vector");
   }
 
   const saved = readCliSearchJson(["saved"], "claw search saved --json", dataRoot);
@@ -613,6 +655,25 @@ function requireCliSearchAcceptanceSmoke() {
   const resumedQuery = readCliSearchJson(["query", "system", "--sources", "commands", "--limit", "3"], "claw search query resumed source --json", dataRoot);
   if (!resumedQuery.data?.results?.some((result) => result.source === "commands" && result.title === "system")) {
     failures.push("claw search query resumed source --json: must return resumed command results");
+  }
+
+  const scheduledJob = readCliSearchJson([
+    "jobs",
+    "schedule",
+    "upsert",
+    "--source",
+    "commands",
+    "--resource-id",
+    "commands:system",
+  ], "claw search jobs schedule upsert --source commands --resource-id commands:system --json", dataRoot);
+  if (scheduledJob.meta?.subcommand !== "jobs" || scheduledJob.data?.action !== "schedule") {
+    failures.push("claw search jobs schedule upsert --source commands --resource-id commands:system --json: must report jobs schedule metadata");
+  }
+  if (scheduledJob.data?.item?.source !== "commands" || scheduledJob.data?.item?.shard !== "hot" || scheduledJob.data?.item?.operation !== "upsert") {
+    failures.push("claw search jobs schedule upsert --source commands --resource-id commands:system --json: must create a hot command upsert job");
+  }
+  if (scheduledJob.data?.item?.resourceId !== "commands:system" || scheduledJob.data?.item?.payload?.eventDriven !== true) {
+    failures.push("claw search jobs schedule upsert --source commands --resource-id commands:system --json: must preserve event-driven resource identity");
   }
 
   const serviceStatus = readCliSearchJson(["service", "status"], "claw search service status --json", dataRoot);
