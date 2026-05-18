@@ -89,6 +89,7 @@ const requiredDocs = [
   "CONSTITUTION.md",
   "docs/adr/0029-connector-governed-context-v1.md",
   "docs/connector-governed-context.md",
+  "docs/connector-governed-context-completion-audit.md",
   "docs/connector-governed-context-source-decision-audit.md",
   "docs/connector-control-plane.md",
   "docs/secrets.md",
@@ -186,6 +187,7 @@ function extractTableIds(text, prefix) {
 for (const file of requiredDocs) read(file);
 
 for (const file of [
+  "docs/connector-governed-context-completion-audit.md",
   "docs/connector-governed-context-source-decision-audit.md",
   "docs/adr/0029-connector-governed-context-v1.md",
 ]) {
@@ -214,6 +216,40 @@ for (const key of requiredDecisionKeys) {
 }
 for (const snippet of ["blocked external", "EXTERNAL PENDING", "This audit does not close the goal"]) {
   if (!sourceAudit.includes(snippet)) fail(`source decision audit must include ${snippet}`);
+}
+
+const completionAudit = read("docs/connector-governed-context-completion-audit.md");
+const cgaIds = extractTableIds(completionAudit, "CGA");
+if (cgaIds.size !== 14) fail(`completion audit must have 14 CGA rows, found ${cgaIds.size}`);
+for (let index = 1; index <= 14; index += 1) {
+  const id = `CGA-${String(index).padStart(3, "0")}`;
+  if (!cgaIds.has(id)) fail(`completion audit missing ${id}`);
+}
+for (const snippet of [
+  sourceConversationId,
+  sourcePlanId,
+  "Closure state: `complete_with_external_pending`",
+  "private source-session re-read",
+  "CGC-001",
+  "CGC-066",
+  "EXTERNAL PENDING",
+  "Required Validation Map",
+  "npm run test:connector-governed-context-goal",
+  "Closure Rule",
+]) {
+  if (!completionAudit.includes(snippet)) fail(`completion audit must include ${snippet}`);
+}
+if (/\|\s*partial\s*\|/u.test(completionAudit)) fail("completion audit must not contain partial rows at closure");
+if (!/\|\s*CGA-013\s*\|[^\n]*\|\s*external_pending\s*\|/u.test(completionAudit)) {
+  fail("completion audit must keep live provider import as external_pending");
+}
+for (const snippet of [
+  "CGA-001",
+  "CGA-014",
+  "Provider schema doctor checks report no structural gaps for all 15 provider",
+  "Live provider import and mutation remain explicit-approval work",
+]) {
+  if (!completionAudit.includes(snippet)) fail(`completion audit must include ${snippet}`);
 }
 
 const packageJson = readJson("package.json");
@@ -306,6 +342,8 @@ for (const snippet of [
   "core.sqlite",
   "resource projection",
   "source decision audit",
+  "Completion Audit",
+  "connector-governed-context-completion-audit.md",
 ]) {
   const corpus = `${read("docs/adr/0029-connector-governed-context-v1.md")}\n${read("docs/connector-governed-context.md")}\n${read("docs/decision-map.md")}\n${read("docs/cli.md")}`;
   if (!corpus.includes(snippet)) fail(`connector docs corpus missing ${snippet}`);

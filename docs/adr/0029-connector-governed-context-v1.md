@@ -99,3 +99,5 @@ field values or plaintext credentials.
 
 The one-by-one source decision audit lives in
 [Connector Governed Context Source Decision Audit](../connector-governed-context-source-decision-audit.md).
+The public close gate lives in
+[Connector Governed Context Completion Audit](../connector-governed-context-completion-audit.md).
