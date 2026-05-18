@@ -20,6 +20,20 @@ test("safety domains exposes regulated policy coverage", async () => {
   assert.equal(payload.data.domains.every((entry) => entry.outputLabelPolicy === "required"), true);
 });
 
+test("safety human domain surfaces preserve guard metadata", async () => {
+  const domains = await runCliCapture(["safety", "domains"], process.cwd());
+  assert.equal(domains.code, CLI_EXIT_OK, domains.stderr || domains.stdout);
+  assert.match(domains.stdout, /health/);
+  assert.match(domains.stdout, /contextual_remembered/);
+  assert.match(domains.stdout, /required/);
+
+  const classify = await runCliCapture(["safety", "classify", "finance"], process.cwd());
+  assert.equal(classify.code, CLI_EXIT_OK, classify.stderr || classify.stdout);
+  assert.match(classify.stdout, /"regulatedDomain": "finance"/);
+  assert.match(classify.stdout, /"disclaimerPolicy": "contextual_remembered"/);
+  assert.match(classify.stdout, /"outputLabelPolicy": "required"/);
+});
+
 test("safety check blocks final regulated decisions", async () => {
   const result = await runCliCapture([
     "safety",

@@ -382,6 +382,8 @@ for (const [relativePath, snippets] of [
     "labels\\t${data.decision.outputLabels.join(\",\")}",
   ]],
   ["packages/clawjs/src/cli-safety.test.ts", [
+    "safety human domain surfaces preserve guard metadata",
+    "\"outputLabelPolicy\": \"required\"",
     "safety check human output preserves disclaimer and labels",
     "regulated_domain:legal",
   ]],
