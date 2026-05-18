@@ -41,6 +41,30 @@
       "adr": "docs/adr/0030-post-v1-evolution-rescue-backbone.md",
       "notes": "Initial additive backbone. Post-V1 registry diffs and migration labs build on this baseline.",
       "createdAt": "2026-05-18T00:00:00.000Z"
+    },
+    {
+      "id": "evo_repair_report_package",
+      "title": "Agent-readable repair and report package",
+      "class": "additive",
+      "status": "active",
+      "owner": "claw",
+      "surfaces": [
+        "@clawjs/core evolution repair report API",
+        "claw evolution repair",
+        "claw evolution report",
+        "docs/evolution/REPAIR_REPORT.md",
+        "claw.database.monitor.table.metric_incidents",
+        "claw.cli.command.design"
+      ],
+      "tests": [
+        "packages/clawjs-core/src/index.test.ts",
+        "packages/clawjs/src/index.test.ts",
+        "scripts/evolution-governance-check.mjs",
+        "docs/evolution/public-surface-baseline.json"
+      ],
+      "adr": "docs/adr/0030-post-v1-evolution-rescue-backbone.md",
+      "notes": "Repair/report now return local, redacted, agent-readable diagnostics with safe actions, approval-gated actions, a suggested patch, and receipt context. The public surface baseline is refreshed with the current monitor incident table and design CLI metadata so drift remains explicit.",
+      "createdAt": "2026-05-18T00:00:00.000Z"
     }
   ]
 }
