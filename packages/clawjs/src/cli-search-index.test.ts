@@ -1736,7 +1736,7 @@ test("providers and snippets writes enqueue and index framework configuration fa
       JSON.stringify({ maxCost: "low", approval: "auto" }),
       "--json",
     ], workspaceRoot);
-    assert.equal(providerRoute.code, CLI_EXIT_OK);
+    assert.equal(providerRoute.code, CLI_EXIT_OK, providerRoute.stderr || providerRoute.stdout);
 
     const providerSetting = await runCliCapture([
       "providers",
@@ -1749,7 +1749,7 @@ test("providers and snippets writes enqueue and index framework configuration fa
       JSON.stringify({ region: "local" }),
       "--json",
     ], workspaceRoot);
-    assert.equal(providerSetting.code, CLI_EXIT_OK);
+    assert.equal(providerSetting.code, CLI_EXIT_OK, providerSetting.stderr || providerSetting.stdout);
 
     const snippet = await runCliCapture([
       "snippets",
@@ -1821,7 +1821,7 @@ test("providers and snippets writes enqueue and index framework configuration fa
     const providerDeleteJob = providerDeleteJobsPayload.data.items.find((job) => job.resourceId === "routing:quickask:chat" && job.operation === "delete");
     assert.deepEqual({ priority: providerDeleteJob?.priority, eventDriven: providerDeleteJob?.payload.eventDriven, kind: providerDeleteJob?.payload.kind, feature: providerDeleteJob?.payload.feature, capability: providerDeleteJob?.payload.capability }, { priority: 80, eventDriven: true, kind: "routing", feature: "quickask", capability: "chat" });
     const providerDeleteRun = await runCliCapture(["search", "service", "run-once", "--source", "providers.routing", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
-    assert.equal(providerDeleteRun.code, CLI_EXIT_OK);
+    assert.equal(providerDeleteRun.code, CLI_EXIT_OK, providerDeleteRun.stderr || providerDeleteRun.stdout);
     const providerDeleteRunPayload = JSON.parse(providerDeleteRun.stdout) as any;
     const providerDeleteRunItem = providerDeleteRunPayload.data.worker?.items?.[0];
     assert.deepEqual({ claimed: providerDeleteRunPayload.data.service.worker?.claimed, completed: providerDeleteRunPayload.data.service.worker?.completed, source: providerDeleteRunItem?.source, operation: providerDeleteRunItem?.operation, status: providerDeleteRunItem?.status, indexed: providerDeleteRunItem?.indexed }, { claimed: 1, completed: 1, source: "providers.routing", operation: "delete", status: "done", indexed: 1 });
