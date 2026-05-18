@@ -543,6 +543,25 @@ function requireCliSearchAcceptanceSmoke() {
     failures.push("claw search audit --type action --json: must record brokered approved action audit");
   }
 
+  const sensitiveQuery = readCliSearchJson([
+    "query",
+    "password qzx-private-token",
+    "--actor",
+    "agent:goal-smoke",
+    "--surface",
+    "cli",
+    "--limit",
+    "3",
+  ], "claw search query sensitive --json", dataRoot);
+  if (sensitiveQuery.meta?.subcommand !== "query" || sensitiveQuery.data?.query !== "password qzx-private-token") {
+    failures.push("claw search query sensitive --json: must execute the sensitive query");
+  }
+  const sensitiveAudit = readCliSearchJson(["audit", "--type", "sensitive_query"], "claw search audit --type sensitive_query --json", dataRoot);
+  const sensitiveAuditItems = sensitiveAudit.data?.items ?? [];
+  if (!Array.isArray(sensitiveAuditItems) || !sensitiveAuditItems.some((item) => item.type === "sensitive_query" && item.query === "password qzx-private-token" && item.actor === "agent:goal-smoke" && item.surface === "cli" && item.reason === "sensitive_query_or_redacted_result" && item.metadata?.profile === "framework" && typeof item.metadata?.resultCount === "number")) {
+    failures.push("claw search audit --type sensitive_query --json: must record sensitive query audit metadata");
+  }
+
   const explain = readCliSearchJson(["explain", "system"], "claw search explain system --json", dataRoot);
   if (explain.meta?.subcommand !== "explain") failures.push("claw search explain system --json: missing explain subcommand metadata");
   for (const mode of ["exact", "prefix", "fuzzy", "fts"]) {
