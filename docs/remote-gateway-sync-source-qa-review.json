@@ -278,6 +278,11 @@
       "disposition": "external_pending",
       "evidenceRefs": [
         "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "GatewayDeploymentManifest",
+        "claw gateway serve",
+        "claw gateway project",
+        "claw gateway conformance",
+        "hostedSelfHostedParity:required",
         "claw remote pending:self_hosted_deployment",
         "claw remote pending:hosted_deployment"
       ],
