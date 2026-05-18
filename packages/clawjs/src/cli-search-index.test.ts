@@ -2054,6 +2054,20 @@ test("marketplace choice writes enqueue and index marketplace fast paths", async
     const deleteJob = deleteJobsPayload.data.items.find((entry) => entry.resourceId === "choice.provider.default" && entry.operation === "delete");
     assert.equal(deleteJob?.payload.eventDriven, true);
     assert.equal(deleteJob?.payload.choiceId, "choice.provider.default");
+
+    const marketplaceDeleteRun = await runCliCapture(["search", "service", "run-once", "--source", "marketplace.choices", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(marketplaceDeleteRun.code, CLI_EXIT_OK);
+    const marketplaceDeleteRunPayload = JSON.parse(marketplaceDeleteRun.stdout) as {
+      data: { service: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed: number }> } } };
+    };
+    const marketplaceDeleteRunItem = marketplaceDeleteRunPayload.data.service.worker?.items.find((entry) => entry.source === "marketplace.choices");
+    assert.deepEqual({ source: marketplaceDeleteRunItem?.source, operation: marketplaceDeleteRunItem?.operation, status: marketplaceDeleteRunItem?.status, indexed: marketplaceDeleteRunItem?.indexed }, { source: "marketplace.choices", operation: "delete", status: "done", indexed: 1 });
+    const afterMarketplaceDelete = await runCliCapture(["search", "query", "default-ai-provider provider alpha", "--sources", "marketplace.choices", "--filters", "metadata.kind=provider", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterMarketplaceDelete.code, CLI_EXIT_DEGRADED, afterMarketplaceDelete.stderr || afterMarketplaceDelete.stdout);
+    const afterMarketplaceDeletePayload = JSON.parse(afterMarketplaceDelete.stdout) as {
+      data: { results: Array<{ source: string; title: string }> };
+    };
+    assert.equal(afterMarketplaceDeletePayload.data.results.some((entry) => entry.source === "marketplace.choices" && entry.title === "default-ai-provider: provider_alpha"), false);
   });
 });
 
