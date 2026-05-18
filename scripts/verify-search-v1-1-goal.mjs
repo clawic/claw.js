@@ -1229,6 +1229,15 @@ requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "afterBusinessDel
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "source: \"business.records\", operation: \"delete\", status: \"done\", indexed: 1");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "afterSkillDelete");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "source: \"skills.registry\", operation: \"delete\", status: \"done\", indexed: 1");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "afterDatabaseDelete");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "source: \"database.records\", operation: \"delete\", status: \"done\", indexed: 1");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "afterNotesDelete");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "source: \"notes.pages\", operation: \"delete\", status: \"done\", indexed: 1");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "afterKnowledgeFactDelete");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "afterKnowledgeEntityDelete");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "source: \"knowledge.graph\", operation: \"delete\", status: \"done\", indexed: 1");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "afterSignalsDelete");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "source: \"signals.observations\", operation: \"delete\", status: \"done\", indexed: 1");
 requireSnippet("packages/clawjs/src/cli-search-docs-pages-source.ts", "createLocalTextEmbedding");
 requireSnippet("packages/clawjs/src/cli-search-docs-pages-source.ts", "LOCAL_TEXT_EMBEDDING_MODEL");
 
