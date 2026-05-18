@@ -19,7 +19,6 @@ test("Search MCP package publishes only the public Search binary", () => {
     bin?: Record<string, string>;
     dependencies?: Record<string, string>;
   };
-
   assert.deepEqual(packageJson.bin, { "claw-search-mcp": "bin/claw-search-mcp.mjs" });
   assert.equal(packageJson.dependencies?.["@clawjs/search"], "0.1.2");
   assert.equal(fs.existsSync(path.resolve(process.cwd(), "packages/clawjs-search-mcp/bin/claw-search-mcp.mjs")), true);
@@ -60,7 +59,6 @@ test("search actions honor actor and scope ACLs", async () => {
   assert.equal(wrongScope.code, CLI_EXIT_OK);
   const wrongScopePayload = JSON.parse(wrongScope.stdout) as { data: { actions: unknown[] } };
   assert.deepEqual(wrongScopePayload.data.actions, []);
-
   const visible = await runCliCapture(["search", "actions", "documents.blocks:restricted", "--actor", "agent:codex", "--filter", "scopeId=project-alpha", "--data-dir", dataRoot, "--json"], workspaceRoot);
   assert.equal(visible.code, CLI_EXIT_OK);
   const visiblePayload = JSON.parse(visible.stdout) as { data: { actions: Array<{ id: string }> } };
@@ -70,7 +68,6 @@ test("search actions honor actor and scope ACLs", async () => {
   assert.equal(blockedExecute.code, CLI_EXIT_FAILURE);
   const blockedExecutePayload = JSON.parse(blockedExecute.stdout) as { error: { code: string } };
   assert.equal(blockedExecutePayload.error.code, "search_action_not_found");
-
   const allowedExecute = await runCliCapture(["search", "actions", "execute", "documents.blocks:restricted", "open", "--actor", "agent:codex", "--filter", "scopeId=project-alpha", "--dry-run", "--data-dir", dataRoot, "--json"], workspaceRoot);
   assert.equal(allowedExecute.code, CLI_EXIT_OK);
   const allowedExecutePayload = JSON.parse(allowedExecute.stdout) as { data: { plan: { status: string; resultId: string; actionId: string } } };
@@ -80,9 +77,7 @@ test("search actions honor actor and scope ACLs", async () => {
 });
 
 test("search rebuild indexes surface route graph contracts", runSearchSurfaceRouteGraphContractsScenario);
-
 test("search rebuild indexes docs pages and refreshes resource jobs", runSearchDocsPagesScenario);
-
 test("docs.pages event jobs refresh and tombstone individual docs", runSearchDocsPagesEventScenario);
 
 test("search rebuild and query use the Search sidecar without workspace state", async () => {
