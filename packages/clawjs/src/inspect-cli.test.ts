@@ -853,7 +853,7 @@ test("runCli exposes an agent inspection fiche", async () => {
     assert.equal(result.code, CLI_EXIT_OK);
     const payload = parseCliJson<{
       agent: { id: string; name: string; runtime: string };
-      owner: { source: string };
+      steward: { source: string };
       risks: string[];
       gaps: string[];
       controlPanel: { panelKind: string; posture: { failClosed: boolean }; audit: { kind: string } };
@@ -862,7 +862,7 @@ test("runCli exposes an agent inspection fiche", async () => {
     }>(result.stdout).data;
     assert.equal(payload.agent.id, "agent.inspect");
     assert.equal(payload.agent.name, "Inspect Agent");
-    assert.equal(payload.owner.source, "agents_v1_projection");
+    assert.equal(payload.steward.source, "agents_v1_projection");
     assert.equal(payload.controlPanel.panelKind, "claw_agent_control_panel");
     assert.equal(payload.controlPanel.posture.failClosed, true);
     assert.equal(payload.privacyLifecycle.planKind, "claw_agent_privacy_lifecycle_plan");

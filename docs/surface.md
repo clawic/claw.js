@@ -1611,6 +1611,7 @@ The docs check script validates that every current export from
     ConnectorContextChoiceInput
     ConnectorContextDecisionReason
     ConnectorContextDecisionReasonCode
+    ConnectorContextDefaultResolutionInput
     ConnectorContextDefaultRule
     ConnectorContextDoctorGap
     ConnectorContextDoctorReport
@@ -2063,6 +2064,7 @@ The docs check script validates that every current export from
     READING_MEDIA_FAMILY
     redactConnectorContextRecord
     redactConnectorContextValue
+    resolveConnectorContextDefaultRefs
     RedactedConnectorGovernedContextRecord
     regulatedDecisionEffects
     RegulatedActionDecision
