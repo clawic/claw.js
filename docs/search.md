@@ -586,7 +586,8 @@ signed host shortcut broker validates it.
   `snippets.library`, `agents.catalog`, `marketplace.choices`, `content.items`,
   `business.records`, `social.posts`, `iot.config`, and the first bounded
   `code.symbols` adapter with per-file event refresh. `docs.pages` indexes
-  public root docs, docs, and ADR sections with resource-scoped refresh jobs. `slides.decks` also
+  public root docs, docs, and ADR sections with resource-scoped refresh jobs and
+  best-effort event scheduling for changed docs files. `slides.decks` also
   supports changed-deck event refresh from local slide writes,
   `sheets.workbooks` supports changed-workbook event refresh for manifest
   producers, and `design.resources` refreshes workspace style, template, and

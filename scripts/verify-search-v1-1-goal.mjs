@@ -186,9 +186,13 @@ for (const snippet of [
   "search keeps optional full sources out of scoped domain queries",
   "search rebuild indexes surface route graph contracts",
   "Search MCP package publishes only the public Search binary",
+  "docs.pages event jobs refresh and tombstone individual docs",
 ]) {
   requireSnippet("packages/clawjs/src/cli-search-index.test.ts", snippet);
 }
+
+requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleDocsPagesSearchEvent");
+requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"docs.pages\"");
 
 const publicScanRoots = ["docs", "packages", "examples"];
 const forbiddenExternalReference = String.fromCharCode(82, 97, 121, 99, 97, 115, 116);

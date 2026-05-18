@@ -113,6 +113,39 @@ export function scheduleCodeSymbolsSearchEvent(input: {
   });
 }
 
+export function scheduleDocsPagesSearchEvent(input: {
+  operation: "upsert" | "delete";
+  workspaceRoot: string;
+  filePath: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  const workspaceRoot = path.resolve(input.workspaceRoot);
+  const absolutePath = path.resolve(input.filePath);
+  const relativeFromWorkspace = path.relative(workspaceRoot, absolutePath);
+  if (relativeFromWorkspace === ".." || relativeFromWorkspace.startsWith(`..${path.sep}`) || path.isAbsolute(relativeFromWorkspace)) {
+    return { ok: false, error: `docs page is outside workspace root: ${input.filePath}` };
+  }
+  const relativePath = normalizeEventRelativePath(relativeFromWorkspace);
+  if (!isDocsPageSearchResource(relativePath)) {
+    return { ok: false, error: `docs page is outside public docs scope: ${relativePath}` };
+  }
+  return scheduleSearchIndexEvent({
+    source: "docs.pages",
+    operation: input.operation,
+    resourceId: relativePath,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      workspaceRoot,
+      relativePath,
+      absolutePath,
+    },
+  });
+}
+
 export function scheduleImageDerivedSearchEvent(input: {
   operation: "upsert" | "delete";
   imageId: string;
@@ -721,3 +754,21 @@ function resolveSearchEventDbPath(dataDir: string, flags: Record<string, string>
 function normalizeEventRelativePath(value: string): string {
   return value.split(path.sep).join(path.posix.sep);
 }
+
+function isDocsPageSearchResource(relativePath: string): boolean {
+  return path.posix.extname(relativePath).toLowerCase() === ".md"
+    && (relativePath.startsWith("docs/") || ROOT_DOCS_PAGE_FILES.has(relativePath));
+}
+
+const ROOT_DOCS_PAGE_FILES = new Set([
+  "AGENTS.md",
+  "CONSTITUTION.md",
+  "DISCLAIMER.md",
+  "PRIVACY.md",
+  "README.md",
+  "REGULATED_DOMAINS.md",
+  "RELEASING.md",
+  "SAFETY.md",
+  "SECURITY.md",
+  "TERMS.md",
+]);
