@@ -267,6 +267,12 @@ the lexical query and merged into the structured query input. This keeps Root
 Search usable from a single text box while preserving the same fast-path
 constraints as explicit filters.
 
+Lexical matching reports exact, prefix, FTS, fuzzy, and semantic match reasons.
+The primary path remains SQLite FTS; when FTS cannot produce enough candidates,
+the store runs a bounded fuzzy fallback over the already-scoped candidate set so
+small typos can still return section-safe results without broadening source,
+domain, shard, profile, ACL, or metadata filters.
+
 Command fallback is explicit. Scoped section searches do not broaden into
 commands by default, preserving section-only result contracts. CLI callers can
 opt in with `--command-fallback empty` to fill an empty scoped query from the

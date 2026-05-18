@@ -1153,9 +1153,39 @@ export function scoreLexicalMatch(query: string, text: string): { score: number;
   if (normalizedText.startsWith(normalizedQuery)) return { score: 85, matchedBy: ["prefix"] };
   if (normalizedText.includes(normalizedQuery)) return { score: 70, matchedBy: ["fts"] };
   const terms = normalizedQuery.split(/\s+/).filter(Boolean);
-  const hits = terms.filter((term) => normalizedText.includes(term)).length;
+  const textTerms = normalizedText.split(/[^a-z0-9_]+/u).filter(Boolean);
+  const hits = terms.filter((term) => normalizedText.includes(term) || textTerms.some((candidate) => fuzzyTermMatch(term, candidate))).length;
   if (hits === 0) return { score: 0, matchedBy: [] };
   return { score: 30 + hits * 10, matchedBy: ["fuzzy"] };
+}
+
+function fuzzyTermMatch(queryTerm: string, candidate: string): boolean {
+  if (queryTerm.length < 4 || candidate.length < 4) return false;
+  if (/\d/.test(queryTerm) || /\d/.test(candidate)) return false;
+  const maxDistance = Math.max(queryTerm.length, candidate.length) >= 5 ? 2 : 1;
+  if (Math.abs(queryTerm.length - candidate.length) > maxDistance) return false;
+  return boundedEditDistance(queryTerm, candidate, maxDistance) <= maxDistance;
+}
+
+function boundedEditDistance(left: string, right: string, maxDistance: number): number {
+  let previous = Array.from({ length: right.length + 1 }, (_value, index) => index);
+  for (let i = 1; i <= left.length; i += 1) {
+    const current = [i];
+    let rowMin = current[0] ?? i;
+    for (let j = 1; j <= right.length; j += 1) {
+      const cost = left[i - 1] === right[j - 1] ? 0 : 1;
+      const value = Math.min(
+        (previous[j] ?? Number.MAX_SAFE_INTEGER) + 1,
+        (current[j - 1] ?? Number.MAX_SAFE_INTEGER) + 1,
+        (previous[j - 1] ?? Number.MAX_SAFE_INTEGER) + cost,
+      );
+      current[j] = value;
+      rowMin = Math.min(rowMin, value);
+    }
+    if (rowMin > maxDistance) return maxDistance + 1;
+    previous = current;
+  }
+  return previous[right.length] ?? maxDistance + 1;
 }
 
 function validateSearchSourceManifest(manifest: SearchSourceManifest): void {

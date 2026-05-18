@@ -510,6 +510,7 @@ test("lexical scoring distinguishes exact, prefix, fts and fuzzy matches", () =>
   assert.deepEqual(scoreLexicalMatch("alp", "alpha").matchedBy, ["prefix"]);
   assert.deepEqual(scoreLexicalMatch("beta", "alpha beta").matchedBy, ["fts"]);
   assert.deepEqual(scoreLexicalMatch("alpha gamma", "alpha beta").matchedBy, ["fuzzy"]);
+  assert.deepEqual(scoreLexicalMatch("alhpa", "alpha beta").matchedBy, ["fuzzy"]);
   assert.equal(DEFAULT_SEARCH_BUDGETS.hotMs, 50);
   assert.equal(DEFAULT_SEARCH_BUDGETS.globalFirstBatchMs, 200);
 });
@@ -640,6 +641,36 @@ test("SearchStore persists sources, fragments, FTS documents, actions, cursors, 
     const tombstone = store.tombstone({ source: "sessions.chats", resourceId: "chat_1", reason: "deleted upstream" });
     assert.equal(tombstone.source, "sessions.chats");
     assert.equal(store.query({ query: "timeouts", domains: ["sessions"] }).results.length, 0);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("SearchStore returns bounded fuzzy fallback results when FTS has no hit", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-fuzzy-fallback-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "notes.pages",
+      domain: "notes",
+      name: "Notes",
+      resultTypes: ["note"],
+    }));
+    store.upsertDocument({
+      id: "notes.pages:alpha",
+      source: "notes.pages",
+      domain: "notes",
+      type: "note",
+      title: "Alpha launch note",
+      body: "Project launch checklist and planning notes.",
+      updatedAt: "2026-05-18T00:00:00.000Z",
+    });
+
+    const output = store.query({ query: "alhpa", domains: ["notes"], explain: true });
+    assert.equal(output.results[0]?.id, "notes.pages:alpha");
+    assert.equal(output.results[0]?.explanation?.matchedBy?.includes("fuzzy"), true);
+    assert.equal(output.partial, false);
   } finally {
     store.close();
     fs.rmSync(dir, { recursive: true, force: true });

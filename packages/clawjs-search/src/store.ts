@@ -536,6 +536,11 @@ export class SearchStore {
         LIMIT ?
       `).all(...params, candidateLimit) as SearchDocumentRow[];
       for (const row of lexicalRows) rows.set(row.id, row);
+      if (rows.size < candidateLimit && shouldRunFuzzyFallback(plannedQueryInput.query)) {
+        for (const row of this.fuzzyFallbackRows(plannedQueryInput, profile, candidateLimit, rows)) {
+          rows.set(row.id, row);
+        }
+      }
     }
     if (plannedQueryInput.embedding && strategy !== "lexical") {
       for (const row of this.semanticRows(plannedQueryInput, profile, plannedQueryInput.embedding, candidateLimit)) {
@@ -1204,6 +1209,26 @@ export class SearchStore {
       .slice(0, limit);
   }
 
+  private fuzzyFallbackRows(input: SearchQueryInput, profile: SearchProfileId, limit: number, existingRows: Map<string, SearchDocumentRow>): SearchDocumentRow[] {
+    const { clauses, params } = buildDocumentClauses(input, profile);
+    const scanLimit = Math.min(1000, Math.max(limit * 8, 100));
+    const rows = this.db.prepare(`
+      SELECT d.*, 100 AS rank, NULL AS semantic_score
+      FROM search_documents d
+      JOIN search_sources s ON s.id = d.source
+      WHERE ${clauses.join(" AND ")}
+      ORDER BY d.updated_at DESC
+      LIMIT ?
+    `).all(...params, scanLimit) as SearchDocumentRow[];
+    return rows
+      .filter((row) => !existingRows.has(row.id))
+      .map((row) => ({ row, match: scoreLexicalMatch(input.query, `${row.title} ${row.subtitle ?? ""} ${row.snippet ?? ""} ${row.body}`) }))
+      .filter((entry) => entry.match.matchedBy.includes("fuzzy"))
+      .sort((left, right) => right.match.score - left.match.score || (right.row.updated_at ?? "").localeCompare(left.row.updated_at ?? ""))
+      .slice(0, Math.max(0, limit - existingRows.size))
+      .map((entry) => entry.row);
+  }
+
   private resultFromRow(row: SearchDocumentRow, input: SearchQueryInput): SearchResult {
     const permissions = { canOpen: true, canPreview: true, redacted: false, ...parseJson(row.permissions_json) };
     const previewRedacted = permissions.redacted === true || permissions.canPreview === false;
@@ -1642,6 +1667,10 @@ function ftsQuery(query: string): string {
     .map((term) => term.replace(/[^\p{L}\p{N}_-]/gu, ""))
     .filter(Boolean);
   return terms.map((term) => `"${term}"*`).join(" ");
+}
+
+function shouldRunFuzzyFallback(query: string): boolean {
+  return query.trim().split(/\s+/).some((term) => term.replace(/[^\p{L}\p{N}_-]/gu, "").length >= 4);
 }
 
 function normalizeInlineSearchQuery(input: SearchQueryInput): SearchQueryInput {
