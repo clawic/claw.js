@@ -33,6 +33,8 @@ flowchart TD
   claw_contracts --> claw_contracts_external
   claw_contracts_versionGovernance["Pre-V1 version governance\nroot"]
   claw_contracts --> claw_contracts_versionGovernance
+  claw_contracts_evolution["Evolution ledger and rescue policy\nroot"]
+  claw_contracts --> claw_contracts_evolution
   claw_cli_public["Public claw CLI\nroot"]
   claw_cli_commandIntentRegistry["CLI command intent registry\nroot"]
   claw_mcp_surface["MCP model-native surface\nroot"]
@@ -168,6 +170,8 @@ flowchart TD
   claw_contracts_api --> claw_api_remote_classifications
   claw_api_remote_conformance["Remote conformance report contract\napiRoute"]
   claw_contracts_api --> claw_api_remote_conformance
+  claw_api_remote_offlineCommand["Remote interactive command fail-fast contract\napiRoute"]
+  claw_contracts_api --> claw_api_remote_offlineCommand
   claw_api_remote_externalValidationChecklist["Remote physical/provider validation checklist contract\napiRoute"]
   claw_contracts_api --> claw_api_remote_externalValidationChecklist
   claw_api_remote_externalValidationTemplate["Remote physical/provider validation evidence template contract\napiRoute"]
@@ -178,6 +182,8 @@ flowchart TD
   claw_contracts_api --> claw_api_remote_externalValidationRunbook
   claw_api_remote_externalValidationReadiness["Remote physical/provider validation readiness contract\napiRoute"]
   claw_contracts_api --> claw_api_remote_externalValidationReadiness
+  claw_api_remote_externalValidationApprovalRequest["Remote physical/provider validation approval request contract\napiRoute"]
+  claw_contracts_api --> claw_api_remote_externalValidationApprovalRequest
   claw_api_remote_externalValidationReport["Remote physical/provider validation evidence report contract\napiRoute"]
   claw_contracts_api --> claw_api_remote_externalValidationReport
   claw_api_remote_sourceQaTemplate["Remote source Q/A review template contract\napiRoute"]
@@ -186,6 +192,8 @@ flowchart TD
   claw_contracts_api --> claw_api_remote_closureGate
   claw_api_remote_providerDeviceE2EPlan["Remote provider/device E2E validation plan contract\napiRoute"]
   claw_contracts_api --> claw_api_remote_providerDeviceE2EPlan
+  claw_api_sync_drivers["Sync driver catalog contract\napiRoute"]
+  claw_contracts_api --> claw_api_sync_drivers
   claw_api_sync_manifests["Sync resource manifest contract\napiRoute"]
   claw_contracts_api --> claw_api_sync_manifests
   claw_api_sync_manifests_create["Sync resource manifest dry-run creation contract\napiRoute"]
@@ -1252,6 +1260,8 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_needs
   claw_cli_command_commands["commands\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_commands
+  claw_cli_command_evolution["evolution\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_evolution
   claw_cli_command_safety["safety\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_safety
   claw_cli_command_work["work\ncliCommand"]
@@ -1472,6 +1482,8 @@ flowchart TD
   claw_contracts_schemas --> claw_schema_commandIntents_v1
   claw_versionGovernance_preV1["Pre-V1 version governance policy\njsonSchema"]
   claw_contracts_versionGovernance --> claw_versionGovernance_preV1
+  claw_schema_evolutionRecord_v1["Evolution ledger record schema v1\njsonSchema"]
+  claw_contracts_evolution --> claw_schema_evolutionRecord_v1
   claw_cli_flag_json["--json\ncliFlag"]
   claw_contracts_cli --> claw_cli_flag_json
   claw_cli_flag_dry_run["--dry-run\ncliFlag"]
@@ -1561,6 +1573,14 @@ flowchart TD
   claw_global --> claw_database_feed
   claw_database_monitor["Monitor sidecar database\nsidecar"]
   claw_global --> claw_database_monitor
+  claw_database_monitor_table_metric_sources["metric_sources\ntable"]
+  claw_database_monitor --> claw_database_monitor_table_metric_sources
+  claw_database_monitor_table_metric_samples["metric_samples\ntable"]
+  claw_database_monitor --> claw_database_monitor_table_metric_samples
+  claw_database_monitor_table_metric_rollups["metric_rollups\ntable"]
+  claw_database_monitor --> claw_database_monitor_table_metric_rollups
+  claw_database_monitor_table_metric_incidents["metric_incidents\ntable"]
+  claw_database_monitor --> claw_database_monitor_table_metric_incidents
   claw_workspace_manifest["Workspace manifest\nfile"]
   claw_workspace --> claw_workspace_manifest
   claw_workspace_desiredState["desiredState\nfolder"]
@@ -1627,6 +1647,8 @@ flowchart TD
   claw_workspace --> claw_workspace_intents
   claw_workspace_compat["compat\nfolder"]
   claw_workspace --> claw_workspace_compat
+  claw_workspace_evolution["evolution\nfolder"]
+  claw_workspace --> claw_workspace_evolution
   claw_workspace_documents["documents\nfolder"]
   claw_workspace --> claw_workspace_documents
   claw_workspace_data["data\nfolder"]
@@ -2136,6 +2158,7 @@ flowchart TD
 | `claw.contracts.formats` | root | format | claw |  | cli, persistence | humanUi:optional<br>relay:local-only | `contracts/formats` |
 | `claw.contracts.external` | root | external | claw |  | sdk, serviceApi, mcp | humanUi:optional<br>relay:local-only | `contracts/external` |
 | `claw.contracts.versionGovernance` | root | schema | claw |  | cli, sdk | humanUi:optional<br>relay:local-only | `contracts/versionGovernance` |
+| `claw.contracts.evolution` | root | schema | claw |  | cli, sdk, persistence | humanUi:optional<br>relay:local-only | `contracts/evolution` |
 | `claw.cli.public` | root | protocol | claw | humanUi | cli | relay:local-only | `claw` |
 | `claw.cli.commandIntentRegistry` | root | protocol | claw | humanUi | cli, persistence | relay:local-only | `claw/commands` |
 | `claw.mcp.surface` | root | protocol | claw | humanUi | mcp, sdk, serviceApi | relay:local-only | `mcp` |
@@ -2225,15 +2248,18 @@ flowchart TD
 | `claw.api.relay.connector` | apiRoute | api | claw |  |  |  | `/v1/relay/connectors` |
 | `claw.api.remote.classifications` | apiRoute | api | claw |  |  |  | `/v1/remote/classifications` |
 | `claw.api.remote.conformance` | apiRoute | api | claw |  |  |  | `/v1/remote/conformance` |
+| `claw.api.remote.offlineCommand` | apiRoute | api | claw |  |  |  | `/v1/remote/offline-command` |
 | `claw.api.remote.externalValidationChecklist` | apiRoute | api | claw |  |  |  | `/v1/remote/external-validation-checklist` |
 | `claw.api.remote.externalValidationTemplate` | apiRoute | api | claw |  |  |  | `/v1/remote/external-validation-template` |
 | `claw.api.remote.externalValidationArtifact` | apiRoute | api | claw |  |  |  | `/v1/remote/external-validation-artifact` |
 | `claw.api.remote.externalValidationRunbook` | apiRoute | api | claw |  |  |  | `/v1/remote/external-validation-runbook` |
 | `claw.api.remote.externalValidationReadiness` | apiRoute | api | claw |  |  |  | `/v1/remote/external-validation-readiness` |
+| `claw.api.remote.externalValidationApprovalRequest` | apiRoute | api | claw |  |  |  | `/v1/remote/external-validation-approval-request` |
 | `claw.api.remote.externalValidationReport` | apiRoute | api | claw |  |  |  | `/v1/remote/external-validation-report` |
 | `claw.api.remote.sourceQaTemplate` | apiRoute | api | claw |  |  |  | `/v1/remote/source-qa-template` |
 | `claw.api.remote.closureGate` | apiRoute | api | claw |  |  |  | `/v1/remote/closure-gate` |
 | `claw.api.remote.providerDeviceE2EPlan` | apiRoute | api | claw |  |  |  | `/v1/remote/provider-device-e2e-plan` |
+| `claw.api.sync.drivers` | apiRoute | api | claw |  |  |  | `/v1/sync/drivers` |
 | `claw.api.sync.manifests` | apiRoute | api | claw |  |  |  | `/v1/sync/manifests` |
 | `claw.api.sync.manifests.create` | apiRoute | api | claw |  |  |  | `/v1/sync/manifests` |
 | `claw.api.sync.changes` | apiRoute | api | claw |  |  |  | `/v1/sync/changes` |
@@ -2767,6 +2793,7 @@ flowchart TD
 | `claw.cli.command.report` | cliCommand | cli | claw |  |  |  | `report` |
 | `claw.cli.command.needs` | cliCommand | cli | claw |  |  |  | `needs` |
 | `claw.cli.command.commands` | cliCommand | cli | claw |  |  |  | `commands` |
+| `claw.cli.command.evolution` | cliCommand | cli | claw |  |  |  | `evolution` |
 | `claw.cli.command.safety` | cliCommand | cli | claw |  |  |  | `safety` |
 | `claw.cli.command.work` | cliCommand | cli | claw |  |  |  | `work` |
 | `claw.cli.command.project` | cliCommand | cli | claw |  |  |  | `project` |
@@ -2877,6 +2904,7 @@ flowchart TD
 | `claw.mac.policyGrant.v1` | jsonSchema | schema | claw |  |  |  | `claw.mac.policyGrant.v1` |
 | `claw.schema.commandIntents.v1` | jsonSchema | schema | claw |  |  |  | `claw.cli.commandIntents.v1` |
 | `claw.versionGovernance.preV1` | jsonSchema | schema | claw |  |  |  | `claw.versionGovernance.pre_v1_mutable` |
+| `claw.schema.evolutionRecord.v1` | jsonSchema | schema | claw |  |  |  | `claw.evolution.record.v1` |
 | `claw.cli.flag.json` | cliFlag | cli | claw |  |  |  | `--json` |
 | `claw.cli.flag.dry-run` | cliFlag | cli | claw |  |  |  | `--dry-run` |
 | `claw.cli.flag.workspace` | cliFlag | cli | claw |  |  |  | `--workspace` |
@@ -2923,6 +2951,10 @@ flowchart TD
 | `claw.database.notify` | sidecar | persistent | claw |  |  |  | `~/.claw/data/notify.sqlite` |
 | `claw.database.feed` | sidecar | persistent | claw |  |  |  | `~/.claw/data/feed.sqlite` |
 | `claw.database.monitor` | sidecar | persistent | claw |  |  |  | `~/.claw/data/monitor.sqlite` |
+| `claw.database.monitor.table.metric_sources` | table | persistent | claw |  |  |  | `` |
+| `claw.database.monitor.table.metric_samples` | table | persistent | claw |  |  |  | `` |
+| `claw.database.monitor.table.metric_rollups` | table | persistent | claw |  |  |  | `` |
+| `claw.database.monitor.table.metric_incidents` | table | persistent | claw |  |  |  | `` |
 | `claw.workspace.manifest` | file | persistent | claw |  |  |  | `.claw/manifest.json` |
 | `claw.workspace.desiredState` | folder | persistent | claw |  |  |  | `.claw/state/desired` |
 | `claw.workspace.projections` | folder | persistent | claw |  |  |  | `.claw/projections` |
@@ -2956,6 +2988,7 @@ flowchart TD
 | `claw.workspace.locks` | folder | persistent | claw |  |  |  | `.claw/locks` |
 | `claw.workspace.intents` | folder | persistent | claw |  |  |  | `.claw/intents` |
 | `claw.workspace.compat` | folder | persistent | claw |  |  |  | `.claw/compat` |
+| `claw.workspace.evolution` | folder | persistent | claw |  |  |  | `.claw/evolution` |
 | `claw.workspace.documents` | folder | persistent | claw |  |  |  | `.claw/documents` |
 | `claw.workspace.data` | folder | persistent | claw |  |  |  | `.claw/data` |
 | `claw.workspace.generations_tmp` | persistentTemp | persistent | claw |  |  |  | `.claw/tmp/generations` |
