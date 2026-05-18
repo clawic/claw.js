@@ -723,6 +723,12 @@ claw work export snapshot.json
 claw work import snapshot.json --replace
 claw work backup backups/
 
+claw project inspect --project .
+claw project attach . --workspace-id ops-main --accept
+claw project detach . --reason copied-to-new-workspace
+claw project export . --output project-handoff.clawexport
+claw project sync-handoff .
+
 claw projects list
 claw tasks list
 claw notes list

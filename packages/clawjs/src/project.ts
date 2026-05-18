@@ -2,7 +2,13 @@ import fs from "fs";
 import fsp from "fs/promises";
 import path from "path";
 
-import { resolveClawPersistentSurfacePath } from "@clawjs/core";
+import {
+  assertSafeClawProjectHandoff,
+  createClawProjectId,
+  normalizeClawProjectManifest,
+  resolveClawPersistentSurfacePath,
+  type ClawProjectManifest,
+} from "@clawjs/core";
 
 import { createPackageName, createPascalCase, createTitle, type SupportedPackageManager } from "./scaffold.ts";
 
@@ -19,9 +25,33 @@ interface ClawProjectResourceEntry {
 
 export interface ClawProjectConfig {
   schemaVersion: number;
+  manifestKind?: "claw.project";
+  projectId?: string;
   type: ClawProjectType;
   name: string;
   title: string;
+  primaryFolder?: {
+    id: string;
+    path: string;
+    role: "primary";
+    label?: string;
+  };
+  folderRefs?: Array<{
+    id: string;
+    path: string;
+    role?: "reference";
+    label?: string;
+  }>;
+  workspaceBinding?: {
+    workspaceId: string;
+    appId?: string;
+    agentId?: string;
+  };
+  attachment?: {
+    state: "attached" | "detached";
+    workspaceId?: string;
+    detachedReason?: string;
+  };
   runtime: {
     adapter: string;
   };
@@ -99,11 +129,12 @@ export function locateProjectRoot(startDir: string): string | null {
 }
 
 export function readProjectConfig(projectRoot: string): ClawProjectConfig | null {
-  return safeReadJson<ClawProjectConfig>(path.join(projectRoot, PROJECT_CONFIG_FILE));
+  const raw = safeReadJson<ClawProjectConfig>(path.join(projectRoot, PROJECT_CONFIG_FILE));
+  return raw ? normalizeClawProjectManifest(raw, path.basename(projectRoot)) as ClawProjectConfig : null;
 }
 
 async function writeProjectConfig(projectRoot: string, config: ClawProjectConfig): Promise<void> {
-  await writeJsonFile(path.join(projectRoot, PROJECT_CONFIG_FILE), config);
+  await writeJsonFile(path.join(projectRoot, PROJECT_CONFIG_FILE), normalizeClawProjectManifest(config, path.basename(projectRoot)));
 }
 
 function createProjectConfig(input: {
@@ -114,9 +145,17 @@ function createProjectConfig(input: {
 }): ClawProjectConfig {
   const base = {
     schemaVersion: 1,
+    manifestKind: "claw.project",
+    projectId: createClawProjectId(input.slug),
     type: input.type,
     name: input.slug,
     title: input.title,
+    primaryFolder: {
+      id: "primary",
+      path: ".",
+      role: "primary",
+    },
+    folderRefs: [],
     runtime: {
       adapter: input.runtimeAdapter ?? "demo",
     },
@@ -157,11 +196,20 @@ function createProjectConfig(input: {
 
   return {
     ...base,
-    workspace: {
-      appId: input.slug,
-      workspaceId: input.slug,
-      agentId: input.slug,
-    },
+      workspace: {
+        appId: input.slug,
+        workspaceId: input.slug,
+        agentId: input.slug,
+      },
+      workspaceBinding: {
+        appId: input.slug,
+        workspaceId: input.slug,
+        agentId: input.slug,
+      },
+      attachment: {
+        state: "attached",
+        workspaceId: input.slug,
+      },
     directories: {
       skills: "claw/skills",
       plugins: "claw/plugins",
@@ -449,4 +497,194 @@ export async function collectProjectSnapshot(projectRoot: string): Promise<Recor
       manifest,
     } : null,
   };
+}
+
+export interface ClawProjectFolderInspection {
+  projectRoot: string;
+  manifestPath: string;
+  manifest: ClawProjectManifest | null;
+  exists: boolean;
+  hasWorkspaceDirectory: boolean;
+  agentsPath: string;
+  claudePath: string;
+  agentsManaged: boolean;
+  claudeShim: boolean;
+  state: "missing" | "unattached" | "attached" | "detached";
+  warnings: string[];
+}
+
+export interface ClawProjectAttachPreview {
+  projectRoot: string;
+  manifestPath: string;
+  projectId: string;
+  workspaceId: string;
+  writes: Array<{ path: string; action: "create" | "update" | "unchanged" }>;
+  warnings: string[];
+  accepted: boolean;
+  manifest: ClawProjectManifest;
+}
+
+function readTextSafe(filePath: string): string | null {
+  try {
+    return fs.readFileSync(filePath, "utf8");
+  } catch {
+    return null;
+  }
+}
+
+function managedAgentsContent(manifest: ClawProjectManifest): string {
+  return `# ${manifest.title}\n\nThis folder is a Claw Project primary folder.\n\n- Project id: \`${manifest.projectId}\`\n- Manifest: \`claw.project.json\`\n- This folder is not a full Workspace root unless it also contains a complete \`.claw/\` workspace.\n- Folder location does not grant authority. Access is governed by Claw grants, scopes, and restrictions.\n- Do not paste secrets, tokens, credentials, or sensitive memory into this file.\n\nUse \`claw project inspect --project . --json\` to inspect the current attachment state.\n`;
+}
+
+function managedClaudeContent(): string {
+  return "# CLAUDE.md\n\nRead `AGENTS.md` first and treat it as canonical for this project folder.\n";
+}
+
+function writeAction(filePath: string, content: string): "create" | "update" | "unchanged" {
+  if (!fs.existsSync(filePath)) return "create";
+  return readTextSafe(filePath) === content ? "unchanged" : "update";
+}
+
+export function inspectProjectFolder(projectRoot: string): ClawProjectFolderInspection {
+  const resolved = path.resolve(projectRoot);
+  const manifestPath = path.join(resolved, PROJECT_CONFIG_FILE);
+  const raw = safeReadJson<unknown>(manifestPath);
+  const manifest = raw ? normalizeClawProjectManifest(raw, path.basename(resolved)) : null;
+  const agentsPath = path.join(resolved, "AGENTS.md");
+  const claudePath = path.join(resolved, "CLAUDE.md");
+  const agentsText = readTextSafe(agentsPath);
+  const claudeText = readTextSafe(claudePath);
+  const exists = fs.existsSync(resolved);
+  const warnings: string[] = [];
+  const hasWorkspaceDirectory = fs.existsSync(path.join(resolved, ".claw"));
+  if (hasWorkspaceDirectory) warnings.push("folder_contains_workspace_claw_directory");
+  if (!manifest) warnings.push("missing_claw_project_manifest");
+  if (manifest?.primaryFolder.path !== ".") warnings.push("primary_folder_path_should_be_relative_dot");
+  return {
+    projectRoot: resolved,
+    manifestPath,
+    manifest,
+    exists,
+    hasWorkspaceDirectory,
+    agentsPath,
+    claudePath,
+    agentsManaged: Boolean(agentsText?.includes("This folder is a Claw Project primary folder.")),
+    claudeShim: Boolean(claudeText?.includes("Read `AGENTS.md` first")),
+    state: !exists ? "missing" : !manifest ? "unattached" : manifest.attachment.state,
+    warnings,
+  };
+}
+
+export async function attachProjectFolder(input: {
+  projectRoot: string;
+  workspaceId: string;
+  projectId?: string;
+  name?: string;
+  title?: string;
+  accept?: boolean;
+}): Promise<ClawProjectAttachPreview> {
+  const projectRoot = path.resolve(input.projectRoot);
+  const now = new Date().toISOString();
+  const previous = safeReadJson<unknown>(path.join(projectRoot, PROJECT_CONFIG_FILE));
+  const manifest = normalizeClawProjectManifest({
+    ...(previous && typeof previous === "object" && !Array.isArray(previous) ? previous as Record<string, unknown> : {}),
+    projectId: input.projectId ?? (previous as { projectId?: string } | null)?.projectId ?? createClawProjectId(input.name ?? path.basename(projectRoot)),
+    name: input.name ?? (previous as { name?: string } | null)?.name ?? createClawProjectId(path.basename(projectRoot)),
+    title: input.title ?? (previous as { title?: string } | null)?.title ?? input.name ?? path.basename(projectRoot),
+    primaryFolder: { id: "primary", path: ".", role: "primary" },
+    workspaceBinding: { workspaceId: input.workspaceId },
+    attachment: { state: "attached", workspaceId: input.workspaceId },
+    updatedAt: now,
+  }, path.basename(projectRoot), now);
+  const manifestPath = path.join(projectRoot, PROJECT_CONFIG_FILE);
+  const agentsPath = path.join(projectRoot, "AGENTS.md");
+  const claudePath = path.join(projectRoot, "CLAUDE.md");
+  const writes = [
+    { path: manifestPath, action: writeAction(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`) },
+    { path: agentsPath, action: writeAction(agentsPath, managedAgentsContent(manifest)) },
+    { path: claudePath, action: writeAction(claudePath, managedClaudeContent()) },
+  ];
+  const warnings = fs.existsSync(path.join(projectRoot, ".claw")) ? ["folder_contains_workspace_claw_directory"] : [];
+  if (input.accept) {
+    await fsp.mkdir(projectRoot, { recursive: true });
+    await writeJsonFile(manifestPath, manifest);
+    await writeTextFile(agentsPath, managedAgentsContent(manifest));
+    await writeTextFile(claudePath, managedClaudeContent());
+  }
+  return {
+    projectRoot,
+    manifestPath,
+    projectId: manifest.projectId,
+    workspaceId: input.workspaceId,
+    writes,
+    warnings,
+    accepted: Boolean(input.accept),
+    manifest,
+  };
+}
+
+export async function detachProjectFolder(projectRoot: string, reason = "detached_by_user"): Promise<ClawProjectManifest> {
+  const resolved = path.resolve(projectRoot);
+  const current = readProjectConfig(resolved);
+  if (!current) throw new Error(`Missing or invalid ${PROJECT_CONFIG_FILE} at ${resolved}.`);
+  const manifest = normalizeClawProjectManifest({
+    ...current,
+    attachment: { state: "detached", detachedReason: reason },
+    workspaceBinding: undefined,
+  }, path.basename(resolved));
+  await writeJsonFile(path.join(resolved, PROJECT_CONFIG_FILE), manifest);
+  return manifest;
+}
+
+export async function syncProjectHandoff(projectRoot: string): Promise<{ projectRoot: string; writes: Array<{ path: string; action: "create" | "update" | "unchanged" }> }> {
+  const resolved = path.resolve(projectRoot);
+  const manifest = readProjectConfig(resolved);
+  if (!manifest) throw new Error(`Missing or invalid ${PROJECT_CONFIG_FILE} at ${resolved}.`);
+  const normalized = normalizeClawProjectManifest(manifest, path.basename(resolved));
+  const agentsPath = path.join(resolved, "AGENTS.md");
+  const claudePath = path.join(resolved, "CLAUDE.md");
+  const writes = [
+    { path: agentsPath, action: writeAction(agentsPath, managedAgentsContent(normalized)) },
+    { path: claudePath, action: writeAction(claudePath, managedClaudeContent()) },
+  ];
+  await writeTextFile(agentsPath, managedAgentsContent(normalized));
+  await writeTextFile(claudePath, managedClaudeContent());
+  return { projectRoot: resolved, writes };
+}
+
+export async function exportProjectHandoff(projectRoot: string, outputPath?: string): Promise<Record<string, unknown>> {
+  const resolved = path.resolve(projectRoot);
+  const inspection = inspectProjectFolder(resolved);
+  if (!inspection.manifest) throw new Error(`Missing or invalid ${PROJECT_CONFIG_FILE} at ${resolved}.`);
+  const handoff = {
+    schemaVersion: 1,
+    kind: "claw.project.handoff",
+    exportedAt: new Date().toISOString(),
+    project: {
+      projectId: inspection.manifest.projectId,
+      name: inspection.manifest.name,
+      title: inspection.manifest.title,
+      type: inspection.manifest.type,
+      attachmentState: inspection.manifest.attachment.state,
+      primaryFolder: inspection.manifest.primaryFolder,
+      folderRefs: inspection.manifest.folderRefs,
+    },
+    files: {
+      manifest: PROJECT_CONFIG_FILE,
+      agents: fs.existsSync(inspection.agentsPath),
+      claude: fs.existsSync(inspection.claudePath),
+    },
+    safety: {
+      includesSecrets: false,
+      includesSensitiveMemory: false,
+      folderLocationGrantsAuthority: false,
+    },
+  };
+  const safety = assertSafeClawProjectHandoff(handoff);
+  if (!safety.safe) throw new Error(`Unsafe handoff fields: ${safety.blockedFields.join(", ")}`);
+  if (outputPath) {
+    const absoluteOutput = path.resolve(process.cwd(), outputPath);
+    await writeJsonFile(absoluteOutput, handoff);
+  }
+  return handoff;
 }

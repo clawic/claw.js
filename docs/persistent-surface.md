@@ -1250,6 +1250,8 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_safety
   claw_cli_command_work["work\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_work
+  claw_cli_command_project["project\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_project
   claw_cli_command_projects["projects\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_projects
   claw_cli_command_tasks["tasks\ncliCommand"]
@@ -2756,6 +2758,7 @@ flowchart TD
 | `claw.cli.command.commands` | cliCommand | cli | claw |  |  |  | `commands` |
 | `claw.cli.command.safety` | cliCommand | cli | claw |  |  |  | `safety` |
 | `claw.cli.command.work` | cliCommand | cli | claw |  |  |  | `work` |
+| `claw.cli.command.project` | cliCommand | cli | claw |  |  |  | `project` |
 | `claw.cli.command.projects` | cliCommand | cli | claw |  |  |  | `projects` |
 | `claw.cli.command.tasks` | cliCommand | cli | claw |  |  |  | `tasks` |
 | `claw.cli.command.notes` | cliCommand | cli | claw |  |  |  | `notes` |

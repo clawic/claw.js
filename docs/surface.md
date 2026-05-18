@@ -1358,6 +1358,12 @@ The docs check script validates that every current export from
     CLAW_CLI_COMMAND_INTENT_STATUSES
     clawCliCommandRegistry
     ClawCliCommandIntentEntry
+    clawProjectAttachmentStateSchema
+    clawProjectFolderRefSchema
+    clawProjectFolderRoleSchema
+    ClawProjectManifest
+    clawProjectManifestSchema
+    clawProjectTypeSchema
     ClawCliCommandIntentResolution
     ClawCliCommandIntentRisk
     ClawCliCommandIntentSource
@@ -2080,8 +2086,11 @@ The docs check script validates that every current export from
     reportValidationPlanSchema
     REPRODUCTIVE_INTIMATE_FAMILY
     commandIntentToNeedOpportunity
+    assertSafeClawProjectHandoff
+    createClawProjectId
     listClawCliCommandIntentRegistry
     mergeClawCliCommandIntentEntries
+    normalizeClawProjectManifest
     normalizeClawCliCommandIntentPhrase
     normalizeCommandIntentEntry
     resolveBuiltinCollectionName
