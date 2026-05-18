@@ -1133,7 +1133,9 @@ for (const snippet of [
 
 for (const snippet of [
   "search rebuild indexes docs pages",
+  "sessions index enqueues sessions.chats search refresh jobs",
   "sessions.chats event jobs refresh and tombstone individual chats",
+  "search changes schedule enqueues typed code.symbols refresh jobs",
   "local.files event jobs refresh and tombstone individual files",
   "web.ingested event jobs refresh and tombstone individual cache files",
   "external.cache event jobs refresh and tombstone individual cache files",
@@ -1202,18 +1204,27 @@ requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleDocsPagesSea
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"docs.pages\"");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleSessionChatSearchEvent");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"sessions.chats\"");
+requireSnippet("packages/clawjs/src/v1-data.ts", "scheduleSessionChatSearchEvent");
+requireSnippet("packages/clawjs/src/v1-data.ts", "indexSessionRoots(store.sqlite, roots");
 requireSnippet("packages/clawjs/src/cli-search-command.ts", "ensureSessionChatResourceIndexed");
+requireSnippet("packages/clawjs/src/cli-search-command.ts", "scheduleCodeSymbolsSearchEvent({");
+requireSnippet("docs/search.md", "`claw search changes schedule` is the typed producer-facing wrapper");
+requireSnippet("docs/cli.md", "`claw sessions index` projects local session artifacts");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleLocalFileSearchEvent");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"local.files\"");
+requireSnippet("packages/clawjs/src/cli-search-command.ts", "scheduleLocalFileSearchEvent({");
 requireSnippet("packages/clawjs/src/cli-search-command.ts", "ensureLocalFileResourceIndexed");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleWebIngestedSearchEvent");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"web.ingested\"");
+requireSnippet("packages/clawjs/src/cli-search-command.ts", "scheduleWebIngestedSearchEvent({");
 requireSnippet("packages/clawjs/src/cli-search-command.ts", "ensureWebIngestedResourceIndexed");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleExternalCacheSearchEvent");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"external.cache\"");
+requireSnippet("packages/clawjs/src/cli-search-command.ts", "scheduleExternalCacheSearchEvent({");
 requireSnippet("packages/clawjs/src/cli-search-command.ts", "ensureExternalCacheResourceIndexed");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleSurfaceRouteSearchEvent");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"surfaces.routes\"");
+requireSnippet("packages/clawjs/src/cli-search-command.ts", "scheduleSurfaceRouteSearchEvent({");
 requireSnippet("packages/clawjs/src/cli-search-surface-routes-test-utils.ts", "scheduleSurfaceRouteSearchEvent");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "providers and snippets writes enqueue and index framework configuration fast paths");
 requireSnippet("packages/clawjs/src/cli-search-framework-fast-path-test-utils.ts", "providerDeleteRunPayload.data.service.worker?.claimed");
@@ -1291,20 +1302,20 @@ requireSnippet("packages/clawjs-search/src/index.test.ts", "SearchStore tokenize
 requireSnippet("docs/search.md", "hyphenated and punctuation-delimited query\ntokens are split before FTS");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "afterElnDelete");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "source: \"eln.records\", operation: \"delete\", status: \"done\", indexed: 1");
-requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "afterGenerationDelete");
-requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "source: \"generations.artifacts\", operation: \"delete\", status: \"done\", indexed: 1");
+requireSnippet("packages/clawjs/src/cli-search-media-generation.test.ts", "afterGenerationDelete");
+requireSnippet("packages/clawjs/src/cli-search-media-generation.test.ts", "source: \"generations.artifacts\", operation: \"delete\", status: \"done\", indexed: 1");
 requireSnippet("packages/clawjs/src/cli-search-generations-source.ts", "redactedStructuredText(metadata)");
-requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "generations-metadata-fragment-needle");
-requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "generations-metadata-secret-never-index");
+requireSnippet("packages/clawjs/src/cli-search-media-generation.test.ts", "generations-metadata-fragment-needle");
+requireSnippet("packages/clawjs/src/cli-search-media-generation.test.ts", "generations-metadata-secret-never-index");
 requireSnippet("docs/search.md", "redacted generation metadata fragments");
-requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "afterImageDelete");
-requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "source: \"images.derived\", operation: \"delete\", status: \"done\", indexed: 1");
+requireSnippet("packages/clawjs/src/cli-search-media-generation.test.ts", "afterImageDelete");
+requireSnippet("packages/clawjs/src/cli-search-media-generation.test.ts", "source: \"images.derived\", operation: \"delete\", status: \"done\", indexed: 1");
 requireSnippet("packages/clawjs/src/cli-search-image-media-sources.ts", "redactedStructuredText(metadata)");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "images-metadata-fragment-needle");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "images-metadata-secret-never-index");
 requireSnippet("docs/search.md", "redacted metadata fragments");
-requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "afterMediaDelete");
-requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "source: \"media.assets\", operation: \"delete\", status: \"done\", indexed: 1");
+requireSnippet("packages/clawjs/src/cli-search-media-generation.test.ts", "afterMediaDelete");
+requireSnippet("packages/clawjs/src/cli-search-media-generation.test.ts", "source: \"media.assets\", operation: \"delete\", status: \"done\", indexed: 1");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "media-metadata-fragment-needle");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "media-metadata-secret-never-index");
 requireSnippet("packages/clawjs/src/cli-search-image-media-sources.ts", "sourceType === \"generation\"");
@@ -1369,6 +1380,10 @@ requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "function SearchP
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "constant searchConfig");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "test renders local result");
 requireSnippet("packages/clawjs/src/cli-search-docs-pages-test-utils.ts", "source: \"docs.pages\", operation: \"delete\", status: \"done\", indexed: 1");
+requireSnippet("packages/clawjs/src/v1-data.ts", "case \"docs\"");
+requireSnippet("packages/clawjs/src/v1-data.ts", "scheduleDocsPagesSearchEvent({");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "docs page writes enqueue and tombstone docs page search events");
+requireSnippet("docs/search.md", "`claw docs page upsert|delete` writes public Markdown pages");
 requireSnippet("packages/clawjs/src/cli-search-docs-pages-source.ts", "extractMarkdownFrontmatter");
 requireSnippet("packages/clawjs/src/cli-search-docs-pages-source.ts", "frontmatterDescription");
 requireSnippet("packages/clawjs/src/cli-search-docs-pages-test-utils.ts", "docs-pages-frontmatter-description-needle");
