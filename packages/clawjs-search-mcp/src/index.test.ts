@@ -154,6 +154,7 @@ test("Search MCP exposes profile, entrypoint, and explain tools", () => {
       strategy: "hybrid",
       localEmbedding: true,
       limit: 2,
+      agentBudget: { maxResults: 2, maxResultsPerSource: 1, maxResultsPerDomain: 1 },
       filters: { type: "command" },
       explain: true,
       actor: "agent:test",
@@ -170,6 +171,7 @@ test("Search MCP exposes profile, entrypoint, and explain tools", () => {
         embedding?: { model: string; vector: number[] };
         filters?: Record<string, unknown>;
         limit?: number;
+        agentBudget?: { maxResults?: number; maxResultsPerSource?: number; maxResultsPerDomain?: number };
         explain?: boolean;
         actor?: string;
         surface?: string;
@@ -185,6 +187,7 @@ test("Search MCP exposes profile, entrypoint, and explain tools", () => {
     assert.equal(savedSemantic.query.embedding?.vector.length, LOCAL_TEXT_EMBEDDING_DIMENSIONS);
     assert.deepEqual(savedSemantic.query.filters, { type: "command" });
     assert.equal(savedSemantic.query.limit, 2);
+    assert.deepEqual(savedSemantic.query.agentBudget, { maxResults: 2, maxResultsPerSource: 1, maxResultsPerDomain: 1 });
     assert.equal(savedSemantic.query.explain, true);
     assert.equal(savedSemantic.query.actor, "agent:test");
     assert.equal(savedSemantic.query.surface, "mcp");
@@ -316,6 +319,50 @@ test("Search MCP derives local embeddings for semantic queries", () => {
       localEmbedding: true,
     }) as { results: Array<{ id: string }> };
     assert.equal(shorthand.results[0]?.id, "documents.blocks:beta");
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("Search MCP query applies agent result budgets", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-mcp-agent-budget-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "work.tasks",
+      domain: "work",
+      name: "Tasks",
+      resultTypes: ["task"],
+    }));
+    store.upsertDocument({
+      id: "work.tasks:one",
+      source: "work.tasks",
+      domain: "work",
+      type: "task",
+      title: "Budget result one",
+      body: "Budget result item for MCP agent limits.",
+      updatedAt: "2026-05-17T12:00:00.000Z",
+    });
+    store.upsertDocument({
+      id: "work.tasks:two",
+      source: "work.tasks",
+      domain: "work",
+      type: "task",
+      title: "Budget result two",
+      body: "Budget result item for MCP agent limits.",
+      updatedAt: "2026-05-17T12:01:00.000Z",
+    });
+
+    const tools = createSearchMcpTools(store);
+    const queryTool = tools.find((tool) => tool.name === "search.query");
+    assert.ok(queryTool);
+    const output = queryTool.handler({
+      query: "budget result",
+      limit: 10,
+      agentBudget: { maxResults: 1 },
+    }) as { results: Array<{ id: string }> };
+    assert.equal(output.results.length, 1);
   } finally {
     store.close();
     fs.rmSync(dir, { recursive: true, force: true });

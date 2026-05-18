@@ -74,6 +74,14 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
           },
           profile: { type: "string", enum: ["framework", "full"] },
           limit: { type: "integer" },
+          agentBudget: {
+            type: "object",
+            properties: {
+              maxResults: { type: "integer" },
+              maxResultsPerSource: { type: "integer" },
+              maxResultsPerDomain: { type: "integer" },
+            },
+          },
           filters: { type: "object" },
           explain: { type: "boolean" },
           actor: { type: "string" },
@@ -285,6 +293,14 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
           },
           profile: { type: "string", enum: ["framework", "full"] },
           limit: { type: "integer" },
+          agentBudget: {
+            type: "object",
+            properties: {
+              maxResults: { type: "integer" },
+              maxResultsPerSource: { type: "integer" },
+              maxResultsPerDomain: { type: "integer" },
+            },
+          },
           filters: { type: "object" },
           explain: { type: "boolean" },
           actor: { type: "string" },
@@ -459,6 +475,7 @@ function searchQueryFromParams(params: Record<string, unknown>): SearchQueryInpu
     embedding: searchEmbeddingFromParams(params, query),
     profile: searchProfile(params.profile),
     limit: numberParam(params.limit),
+    agentBudget: searchAgentBudget(params.agentBudget),
     explain: typeof params.explain === "boolean" ? params.explain : undefined,
     actor: stringParam(params.actor),
     surface: stringParam(params.surface),
@@ -583,6 +600,20 @@ function searchEmbeddingFromParams(params: Record<string, unknown>, query: strin
   const requested = model === LOCAL_TEXT_EMBEDDING_MODEL || params.localEmbedding === true;
   if (!requested) return undefined;
   return createLocalTextEmbedding(query, { model: model ?? LOCAL_TEXT_EMBEDDING_MODEL });
+}
+
+function searchAgentBudget(value: unknown): SearchQueryInput["agentBudget"] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  const maxResults = numberParam(record.maxResults);
+  const maxResultsPerSource = numberParam(record.maxResultsPerSource);
+  const maxResultsPerDomain = numberParam(record.maxResultsPerDomain);
+  if (maxResults === undefined && maxResultsPerSource === undefined && maxResultsPerDomain === undefined) return undefined;
+  return {
+    ...(maxResults === undefined ? {} : { maxResults }),
+    ...(maxResultsPerSource === undefined ? {} : { maxResultsPerSource }),
+    ...(maxResultsPerDomain === undefined ? {} : { maxResultsPerDomain }),
+  };
 }
 
 function searchAuditType(value: unknown): SearchAuditEventType | undefined {

@@ -290,7 +290,7 @@ their returned result budget after ACL and ranking, including per-source and
 per-domain caps for broad searches.
 Preview redaction is enforced in the store as well. If a result declares
 `permissions.redacted` or disables `permissions.canPreview`, Search can still
-match the indexed text for authorized discovery, but returned snippets are
+match the indexed text for authorized lookup, but returned snippets are
 `[redacted]` and fragments are omitted.
 
 Saved searches preserve structured query controls. `claw search saved create`
@@ -484,7 +484,10 @@ indexing-job tools, including compacted event scheduling through
 `search.jobs.schedule`. MCP `search.saved.create` accepts the same structured
 query controls as `search.query`, so saved searches and monitors can preserve
 domain/source/shard filters, strategy, limits, actor/surface context, and local
-embedding settings.
+embedding settings. MCP callers can pass `agentBudget.maxResults`,
+`agentBudget.maxResultsPerSource`, and `agentBudget.maxResultsPerDomain` on
+both direct queries and saved searches, matching the local Search result-budget
+contract used by agent callers.
 
 The showcase app exposes `/search-index` as the Search Index admin surface. It
 shows framework and full-profile sources separately, keeps optional native/web/
