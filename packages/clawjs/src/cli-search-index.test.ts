@@ -3947,6 +3947,77 @@ test("search rebuild indexes slides.decks from slide manifests", async () => {
   });
 });
 
+test("slides.decks event jobs refresh changed slide manifests", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-slides-events-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const created = await runCliCapture(["slides", "create", "Event Driven Deck", "--theme", "executive", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(created.code, CLI_EXIT_OK);
+    const createdPayload = JSON.parse(created.stdout) as { deck: { id: string }; path: string };
+    assert.equal(fs.existsSync(createdPayload.path), true);
+
+    const added = await runCliCapture([
+      "slides",
+      "add",
+      createdPayload.deck.id,
+      "--layout",
+      "title-bullets",
+      "--heading",
+      "Event refresh pipeline",
+      "--bullet",
+      "Slide deck Search queue",
+      "--workspace",
+      workspaceRoot,
+      "--data-dir",
+      dataRoot,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(added.code, CLI_EXIT_OK);
+
+    const jobs = await runCliCapture(["search", "jobs", "list", "--source", "slides.decks", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(jobs.code, CLI_EXIT_OK);
+    const jobsPayload = JSON.parse(jobs.stdout) as {
+      data: { items: Array<{ source: string; operation: string; resourceId?: string; shard?: string; payload?: Record<string, unknown> }> };
+    };
+    assert.equal(jobsPayload.data.items.length, 1);
+    assert.equal(jobsPayload.data.items[0]?.source, "slides.decks");
+    assert.equal(jobsPayload.data.items[0]?.operation, "upsert");
+    assert.equal(jobsPayload.data.items[0]?.resourceId, createdPayload.deck.id);
+    assert.equal(jobsPayload.data.items[0]?.shard, "hot");
+    assert.equal(jobsPayload.data.items[0]?.payload?.eventDriven, true);
+    assert.equal(jobsPayload.data.items[0]?.payload?.deckId, createdPayload.deck.id);
+    assert.equal(jobsPayload.data.items[0]?.payload?.workspaceRoot, path.resolve(workspaceRoot));
+
+    const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "slides.decks", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(serviceRun.code, CLI_EXIT_OK);
+    const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.source, "slides.decks");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.operation, "upsert");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
+
+    const query = await runCliCapture(["search", "query", "Slide deck Search queue", "--domains", "slides", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: { results: Array<{ source: string; domain: string; title: string; resourceId?: string; fragments?: Array<{ title?: string; snippet?: string }> }> };
+    };
+    const result = queryPayload.data.results.find((item) => item.source === "slides.decks");
+    assert.equal(result?.domain, "slides");
+    assert.equal(result?.title, "Event Driven Deck");
+    assert.equal(result?.resourceId, createdPayload.deck.id);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "Event refresh pipeline"), true);
+  });
+});
+
 test("search rebuild indexes sheets.workbooks from workbook manifests", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-sheets-"));
   const dataRoot = path.join(workspaceRoot, "data");

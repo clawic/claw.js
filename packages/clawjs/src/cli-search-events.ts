@@ -153,6 +153,28 @@ export function scheduleMediaAssetSearchEvent(input: {
   });
 }
 
+export function scheduleSlidesDeckSearchEvent(input: {
+  operation: "upsert" | "delete";
+  deckId: string;
+  workspaceRoot: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  return scheduleSearchIndexEvent({
+    source: "slides.decks",
+    operation: input.operation,
+    resourceId: input.deckId,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      deckId: input.deckId,
+      workspaceRoot: path.resolve(input.workspaceRoot),
+    },
+  });
+}
+
 export function scheduleSkillsRegistrySearchEvent(input: {
   operation: "upsert" | "delete";
   slug: string;

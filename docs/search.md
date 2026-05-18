@@ -406,7 +406,9 @@ surface. It indexes the deck title, theme, author metadata, output formats, and
 each slide as a Search fragment using headings, subtitles, body text, bullets,
 steps, metrics, tables, image captions, and notes already stored in the
 manifest. It does not parse rendered PPTX/PDF output; generated files remain
-media or generated-artifact records when those surfaces register them.
+media or generated-artifact records when those surfaces register them. Local
+`slides create`, `slides add`, `slides render`, and `slides share` writes
+schedule best-effort hot upsert jobs for changed deck manifests.
 
 `sheets.workbooks` projects local workbook manifests from
 `.claw/sheets/workbooks` or an explicit sheets root. It indexes workbook title,
@@ -537,7 +539,8 @@ signed host shortcut broker validates it.
   `slides.decks`, `sheets.workbooks`, `generations.artifacts`, `skills.registry`, `providers.routing`,
   `snippets.library`, `agents.catalog`, `marketplace.choices`, `content.items`,
   `business.records`, `social.posts`, `iot.config`, and the first bounded
-  `code.symbols` adapter with per-file event refresh.
+  `code.symbols` adapter with per-file event refresh. `slides.decks` also
+  supports changed-deck event refresh from local slide writes.
 - Keep Clawix Mac Search and `Command-G` conversations-only.
 
 ### Phase 2: framework domains

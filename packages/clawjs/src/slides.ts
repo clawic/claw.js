@@ -4,6 +4,7 @@ import path from "path";
 import { randomBytes } from "crypto";
 import { pathToFileURL } from "url";
 import { resolveClawPersistentSurfacePath } from "@clawjs/core";
+import { scheduleSlidesDeckSearchEvent } from "./cli-search-events.ts";
 const SLIDE_LAYOUTS = [
   "title",
   "section",
@@ -210,6 +211,7 @@ export async function runSlidesCli(options: SlidesCliOptions): Promise<number> {
     });
     const deckPath = deckManifestPath(options.workspaceRoot, deck.id);
     writeDeck(deckPath, deck);
+    scheduleSlideDeckSearchRefresh(options, deck.id);
     writeOutput(options, { deck, path: deckPath }, deckPath);
     return SLIDES_OK;
   }
@@ -228,6 +230,7 @@ export async function runSlidesCli(options: SlidesCliOptions): Promise<number> {
     resolved.deck.slides.push(slide);
     resolved.deck.updatedAt = nowIso();
     writeDeck(resolved.path, resolved.deck);
+    scheduleSlideDeckSearchRefresh(options, resolved.deck.id);
     const report = validateSlideDeck(resolved.deck, { cwd: path.dirname(resolved.path) });
     writeOutput(options, { deck: resolved.deck, slide, validation: report, path: resolved.path }, `${slide.id}\n`);
     return report.errorCount > 0 ? SLIDES_FAILURE : SLIDES_OK;
@@ -279,6 +282,7 @@ export async function runSlidesCli(options: SlidesCliOptions): Promise<number> {
     resolved.deck.outputs = [...rendered, ...resolved.deck.outputs.filter((output) => !rendered.some((next) => next.format === output.format))];
     resolved.deck.updatedAt = nowIso();
     writeDeck(resolved.path, resolved.deck);
+    scheduleSlideDeckSearchRefresh(options, resolved.deck.id);
     writeOutput(options, { deck: resolved.deck, validation: report, rendered }, rendered.map((output) => output.path).join("\n"));
     return SLIDES_OK;
   }
@@ -313,6 +317,7 @@ export async function runSlidesCli(options: SlidesCliOptions): Promise<number> {
       resolved.deck.outputs = [rendered, ...resolved.deck.outputs.filter((candidate) => candidate.format !== rendered.format)];
       resolved.deck.updatedAt = nowIso();
       writeDeck(resolved.path, resolved.deck);
+      scheduleSlideDeckSearchRefresh(options, resolved.deck.id);
       output = rendered;
     }
     if (!output.mediaId) {
@@ -325,6 +330,7 @@ export async function runSlidesCli(options: SlidesCliOptions): Promise<number> {
       });
       output.mediaId = media?.mediaId;
       writeDeck(resolved.path, resolved.deck);
+      scheduleSlideDeckSearchRefresh(options, resolved.deck.id);
     }
     if (!output.mediaId) {
       context.stderr.write("Unable to register slide output for sharing.\n");
@@ -1208,6 +1214,20 @@ function deckOutputDir(workspaceRoot: string, deckId: string): string {
 function writeDeck(filePath: string, deck: SlideDeckManifest): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(deck, null, 2)}\n`, "utf8");
+}
+
+function scheduleSlideDeckSearchRefresh(options: SlidesCliOptions, deckId: string): void {
+  scheduleSlidesDeckSearchEvent({
+    operation: "upsert",
+    deckId,
+    workspaceRoot: options.workspaceRoot,
+    dataDir: searchEventDataDir(options.workspaceRoot, options.flags),
+    flags: options.flags,
+  });
+}
+
+function searchEventDataDir(workspaceRoot: string, flags: Record<string, string>): string {
+  return path.resolve(flags["data-dir"] ?? path.join(workspaceRoot, ".claw", "data"));
 }
 
 function readDeckByRef(workspaceRoot: string, cwd: string, ref: string): { path: string; deck: SlideDeckManifest } {

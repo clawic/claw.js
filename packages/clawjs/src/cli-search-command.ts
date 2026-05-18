@@ -1248,6 +1248,10 @@ function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flag
       const resourceId = resourceIdFromJobPayload(job, "mediaId") ?? job.resourceId;
       return resourceId ? ensureMediaAssetResourceIndexed(store, flags, cwd, resourceId) : 0;
     }
+    case "slides.decks": {
+      const deckId = resourceIdFromJobPayload(job, "deckId") ?? job.resourceId;
+      return deckId ? ensureSlidesDeckResourceIndexed(store, flags, cwd, deckId, resourceIdFromJobPayload(job, "workspaceRoot")) : 0;
+    }
     case "generations.artifacts": {
       const resourceId = resourceIdFromJobPayload(job, "generationId") ?? job.resourceId;
       return resourceId ? ensureGenerationArtifactResourceIndexed(store, flags, cwd, resourceId) : 0;
@@ -4010,6 +4014,28 @@ function ensureSlidesDecksSourceIndexed(store: SearchStore, flags: Record<string
     lastIndexedAt: new Date().toISOString(),
   });
   return indexed;
+}
+
+function ensureSlidesDeckResourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string, deckId: string, workspaceRoot?: string): number {
+  const root = workspaceRoot ? resolveSlidesDecksRoot({ ...flags, workspace: workspaceRoot }, cwd) : resolveSlidesDecksRoot(flags, cwd);
+  const filePath = path.join(root, `${deckId}.json`);
+  const document = fs.existsSync(filePath) ? slideDeckSearchDocument(filePath) : null;
+  if (!document) {
+    store.tombstone({ source: "slides.decks", resourceId: deckId, reason: "slide deck missing during Search event refresh" });
+    store.setSourceState("slides.decks", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 1;
+  }
+  store.upsertDocument(document);
+  store.setSourceState("slides.decks", "enabled", {
+    backlog: 0,
+    error: null,
+    lastIndexedAt: new Date().toISOString(),
+  });
+  return 1;
 }
 
 function ensureSheetsWorkbooksSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {
