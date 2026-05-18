@@ -156,7 +156,7 @@ const requiredSnippets = [
       "/v1/admin/tenants/:tenantId/workspace-grants",
       "providers auth-state",
       "providers routing list|set|delete",
-      "providers settings list|set",
+      "providers settings list|set|delete",
       "documents upload",
       "inference generate-text",
       "tts synthesize",

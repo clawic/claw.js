@@ -144,6 +144,24 @@ function runProviderSettingsCommand(input: V1DataCliInput, store: DatabaseServic
     });
     return V1_DATA_EXIT_OK;
   }
+  if (subcommand === "delete") {
+    const provider = input.flags.provider || input.positionals[3];
+    if (!provider) {
+      return usageError(input, "Usage: claw providers settings delete PROVIDER [--json]");
+    }
+    const changes = store.sqlite.prepare("DELETE FROM provider_settings WHERE provider = ?").run(provider).changes;
+    if (changes > 0) {
+      scheduleProvidersRoutingSearchEvent({
+        operation: "delete",
+        kind: "setting",
+        provider,
+        dataDir: resolveClawjsDataRoot(),
+        flags: input.flags,
+      });
+    }
+    writeSuccess(input, { provider, deleted: changes > 0 });
+    return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
+  }
   return usageError(input, usage(input.binName, "providers"));
 }
 

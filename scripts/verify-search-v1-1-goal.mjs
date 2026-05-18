@@ -1209,6 +1209,10 @@ requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "providers and sn
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "providerDeleteRunPayload.data.service.worker?.claimed");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "operation: \"delete\"");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "routing:quickask:chat");
+requireSnippet("packages/clawjs/src/v1-data-agent-config.ts", "Usage: claw providers settings delete PROVIDER [--json]");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "settingDeleteRunItem?.operation");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "source: \"providers.routing\", operation: \"delete\", status: \"done\", indexed: 1");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "setting:provider_alpha");
 requireSnippet("packages/clawjs/src/cli-search-docs-pages-source.ts", "createLocalTextEmbedding");
 requireSnippet("packages/clawjs/src/cli-search-docs-pages-source.ts", "LOCAL_TEXT_EMBEDDING_MODEL");
 

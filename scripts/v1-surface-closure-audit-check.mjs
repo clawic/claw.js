@@ -281,7 +281,7 @@ for (const snippet of [
   "claw apps list|upsert|delete",
   "claw design list|upsert|delete",
   "providers routing list|set|delete",
-  "providers settings list|set",
+  "providers settings list|set|delete",
   "IoT homes / things / state",
   "Content brands / destinations / campaigns",
 ]) {

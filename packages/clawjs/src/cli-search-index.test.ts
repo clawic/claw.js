@@ -1767,7 +1767,7 @@ test("providers and snippets writes enqueue and index framework configuration fa
       "skill:review",
       "--json",
     ], workspaceRoot);
-    assert.equal(snippet.code, CLI_EXIT_OK);
+    assert.equal(snippet.code, CLI_EXIT_OK, snippet.stderr || snippet.stdout);
 
     const providerJobs = await runCliCapture(["search", "jobs", "--source", "providers.routing", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(providerJobs.code, CLI_EXIT_OK);
@@ -1799,6 +1799,11 @@ test("providers and snippets writes enqueue and index framework configuration fa
     const providerResult = providerQueryPayload.data.results.find((entry) => entry.type === "routing_rule");
     assert.deepEqual({ source: providerResult?.source, domain: providerResult?.domain, provider: providerResult?.metadata?.provider, hasAccountRef: providerResult?.metadata?.hasAccountRef }, { source: "providers.routing", domain: "providers", provider: "provider_alpha", hasAccountRef: true });
     assert.equal(JSON.stringify(providerQueryPayload.data.results).includes("vault://providers/provider_alpha/main"), false);
+    const providerSettingQuery = await runCliCapture(["search", "query", "provider_alpha local", "--sources", "providers.routing", "--filters", "metadata.kind=setting", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(providerSettingQuery.code, CLI_EXIT_OK);
+    const providerSettingPayload = JSON.parse(providerSettingQuery.stdout) as any;
+    const providerSettingResult = providerSettingPayload.data.results.find((entry) => entry.type === "provider_setting");
+    assert.deepEqual({ source: providerSettingResult?.source, provider: providerSettingResult?.metadata?.provider, enabled: providerSettingResult?.metadata?.enabled }, { source: "providers.routing", provider: "provider_alpha", enabled: true });
     const snippetQuery = await runCliCapture(["search", "query", "current selection", "--domains", "snippets", "--filters", "metadata.kind=prompt", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(snippetQuery.code, CLI_EXIT_OK);
     const snippetQueryPayload = JSON.parse(snippetQuery.stdout) as any;
@@ -1824,6 +1829,21 @@ test("providers and snippets writes enqueue and index framework configuration fa
     assert.equal(afterProviderDelete.code, CLI_EXIT_DEGRADED, afterProviderDelete.stderr || afterProviderDelete.stdout);
     const afterProviderDeletePayload = JSON.parse(afterProviderDelete.stdout) as any;
     assert.equal(afterProviderDeletePayload.data.results.some((entry) => entry.type === "routing_rule" && entry.metadata?.feature === "quickask" && entry.metadata?.capability === "chat"), false);
+    const deletedProviderSetting = await runCliCapture(["providers", "settings", "delete", "provider_alpha", "--json"], workspaceRoot);
+    assert.equal(deletedProviderSetting.code, CLI_EXIT_OK);
+    const settingDeleteJobs = await runCliCapture(["search", "jobs", "--source", "providers.routing", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(settingDeleteJobs.code, CLI_EXIT_OK);
+    const settingDeleteJobsPayload = JSON.parse(settingDeleteJobs.stdout) as any;
+    const settingDeleteJob = settingDeleteJobsPayload.data.items.find((job) => job.resourceId === "setting:provider_alpha" && job.operation === "delete");
+    assert.deepEqual({ priority: settingDeleteJob?.priority, eventDriven: settingDeleteJob?.payload.eventDriven, kind: settingDeleteJob?.payload.kind, provider: settingDeleteJob?.payload.provider }, { priority: 80, eventDriven: true, kind: "setting", provider: "provider_alpha" });
+    const settingDeleteRun = await runCliCapture(["search", "service", "run-once", "--source", "providers.routing", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(settingDeleteRun.code, CLI_EXIT_OK);
+    const settingDeleteRunItem = (JSON.parse(settingDeleteRun.stdout) as any).data.worker?.items?.[0];
+    assert.deepEqual({ source: settingDeleteRunItem?.source, operation: settingDeleteRunItem?.operation, status: settingDeleteRunItem?.status, indexed: settingDeleteRunItem?.indexed }, { source: "providers.routing", operation: "delete", status: "done", indexed: 1 });
+    const afterSettingDelete = await runCliCapture(["search", "query", "provider_alpha local", "--sources", "providers.routing", "--filters", "metadata.kind=setting", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterSettingDelete.code, CLI_EXIT_DEGRADED, afterSettingDelete.stderr || afterSettingDelete.stdout);
+    const afterSettingDeletePayload = JSON.parse(afterSettingDelete.stdout) as any;
+    assert.equal(afterSettingDeletePayload.data.results.some((entry) => entry.type === "provider_setting" && entry.metadata?.provider === "provider_alpha"), false);
     const deleteJobs = await runCliCapture(["search", "jobs", "--source", "snippets.library", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(deleteJobs.code, CLI_EXIT_OK);
     const deleteJobsPayload = JSON.parse(deleteJobs.stdout) as any;
