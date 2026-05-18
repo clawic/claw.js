@@ -287,6 +287,19 @@ for (const [relativePath, snippets] of [
     "sensitive_export_review_required",
     "remote_or_provider_opt_in_required",
   ]],
+  ["packages/clawjs-core/src/dense-data-os.ts", [
+    "regulatedDomains: RegulatedDomain[]",
+    "regulatedDomainsForDenseSystem",
+    "health: [\"health\"]",
+    "hr: [\"hr_employment\"]",
+    "iot: [\"iot_physical_actions\"]",
+  ]],
+  ["packages/clawjs-core/src/dense-data-os.test.ts", [
+    "dense data regulated systems are classified through the legal safety policy",
+    "evaluateRegulatedAction",
+    "decisionEffect: \"final_decision\"",
+    "final decisions must be blocked",
+  ]],
   ["packages/clawjs-core/src/remote-sync.ts", [
     "evaluateRegulatedAction",
     "regulatedDomainsForRemoteManifest",

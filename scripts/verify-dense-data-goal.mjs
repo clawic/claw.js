@@ -226,6 +226,27 @@ const requiredExternalPending = [
   ["content", "provider"],
 ];
 
+const requiredRegulatedDenseSystems = [
+  ["health", ["health"]],
+  ["research", ["labs_research"]],
+  ["biology", ["labs_research"]],
+  ["labs", ["labs_research"]],
+  ["legal", ["legal"]],
+  ["erp", ["finance", "billing_payments"]],
+  ["finance", ["finance"]],
+  ["education", ["education", "minors"]],
+  ["hr", ["hr_employment"]],
+  ["real_estate", ["housing_real_estate"]],
+  ["insurance", ["insurance"]],
+  ["maintenance", ["vehicles_transport"]],
+  ["compliance", ["compliance_grc"]],
+  ["government", ["government_public_services"]],
+  ["iot", ["iot_physical_actions"]],
+  ["pharma", ["pharma"]],
+  ["banking", ["banking", "finance"]],
+  ["public_safety", ["government_public_services"]],
+];
+
 const requiredCompletionAuditRows = [
   "GA-001",
   "GA-002",
@@ -887,6 +908,17 @@ for (const record of clawDenseDataAcceptanceFixture.records) {
 for (const [systemId, requirementType] of requiredExternalPending) {
   if (!clawDenseDataOsRegistry.externalPendingRequirements.some((entry) => entry.systemId === systemId && entry.requirementType === requirementType && entry.status === "external_pending")) {
     fail(`missing external_pending requirement for ${systemId}/${requirementType}`);
+  }
+}
+
+for (const [systemId, regulatedDomains] of requiredRegulatedDenseSystems) {
+  const system = clawDenseDataOsRegistry.systems.find((entry) => entry.id === systemId);
+  if (!system) {
+    fail(`missing regulated dense system ${systemId}`);
+    continue;
+  }
+  if (JSON.stringify(system.regulatedDomains) !== JSON.stringify(regulatedDomains)) {
+    fail(`regulated dense system ${systemId} must map to ${regulatedDomains.join(",")}`);
   }
 }
 
