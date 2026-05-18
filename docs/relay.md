@@ -175,6 +175,9 @@ template for the source conversation and plan. The template is not a review by
 itself: every row starts incomplete and must be converted into a
 `RemoteSourceQaReviewItem` with disposition, evidence refs, review timestamp,
 and `writes: false` before the closure gate accepts it.
+Rows tied to `RemoteExternalPendingRegister` physical/provider requirements
+must use `external_pending` disposition until those requirements are cleared;
+mismatches are exposed as `invalidExternalPendingDispositionQaIds`.
 The remote closure gate is exposed by Relay `/v1/remote/closure-gate` and
 `claw remote closure-gate`. It combines that evidence report with the source
 Q/A review report. The result stays `blocked` until all 23 source Q/A rows have

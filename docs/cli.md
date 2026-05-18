@@ -279,6 +279,9 @@ the original Relay/Gateway/Coordinator/Connector/Sync source conversation and
 plan. It is intentionally incomplete: every row must be reviewed one by one and
 converted into a `RemoteSourceQaReviewItem` with disposition, evidence refs,
 review timestamp, and `writes: false` before submission to `remote closure-gate`.
+Rows tied to physical/provider requirements in `RemoteExternalPendingRegister`
+must use `external_pending` disposition until those requirements are cleared;
+the report exposes mismatches as `invalidExternalPendingDispositionQaIds`.
 `remote closure-gate` combines the external validation report with the required
 source Q/A review report. It remains `blocked` until all 23 source Q/A rows
 have a disposition, evidence refs, and every external validation row is

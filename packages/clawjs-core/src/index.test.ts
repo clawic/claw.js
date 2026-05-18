@@ -693,6 +693,7 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(scopedSourceQaReviewTemplate.reviewCount, 2);
   assert.deepEqual(scopedSourceQaReviewTemplate.items.map((entry) => entry.qaId), ["QA-001", "QA-023"]);
 
+  const externalPendingSourceQaIds = new Set(["QA-002", "QA-005", "QA-006", "QA-007", "QA-010", "QA-012", "QA-013", "QA-015", "QA-018", "QA-020", "QA-021"]);
   const completeSourceQaReviewReport = buildRemoteSourceQaReviewReport({
     generatedAt: "2026-05-17T10:13:26.500Z",
     reviews: remoteGoalClosureRequiredSourceQaIds.map((qaId, index) => ({
@@ -723,7 +724,7 @@ test("remote gateway sync contracts register required layers, routes, and safe d
         "sync_lateral_domains",
       ][index],
       requirementId: qaId === "QA-023" ? "Completion audit" : `RQ-${String(index + 1).padStart(3, "0")}`,
-      disposition: "validated",
+      disposition: externalPendingSourceQaIds.has(qaId) ? "external_pending" : "validated",
       evidenceRefs: ["docs/remote-gateway-sync-source-decision-audit.md", "docs/remote-gateway-sync-completion-audit.md"],
       reviewedAt: "2026-05-17T10:13:26.500Z",
       writes: false,
@@ -732,13 +733,39 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(completeSourceQaReviewReport.status, "complete");
   assert.equal(completeSourceQaReviewReport.reviewedSourceQaIds.length, 23);
   assert.deepEqual(completeSourceQaReviewReport.missingSourceQaIds, []);
+  assert.deepEqual(completeSourceQaReviewReport.invalidExternalPendingDispositionQaIds, []);
+  assert.deepEqual(completeSourceQaReviewReport.externalPendingRequiredSourceQaIds, [...externalPendingSourceQaIds].sort());
   assert.equal(completeSourceQaReviewReport.items.every((entry) => entry.evidenceRefs.length >= 2 && !entry.writes), true);
+
+  const invalidSourceQaReviews = [{
+    schemaVersion: 1 as const,
+    qaId: "QA-007",
+    decisionKey: "transport_contract",
+    requirementId: "RQ-007",
+    disposition: "validated" as const,
+    evidenceRefs: ["docs/remote-gateway-sync-completion-audit.md"],
+    reviewedAt: "2026-05-17T10:13:26.600Z",
+    writes: false as const,
+  }];
+  const invalidSourceQaReviewReport = buildRemoteSourceQaReviewReport({ generatedAt: "2026-05-17T10:13:26.600Z", reviews: invalidSourceQaReviews });
+  assert.equal(invalidSourceQaReviewReport.status, "incomplete");
+  assert.deepEqual(invalidSourceQaReviewReport.invalidExternalPendingDispositionQaIds, ["QA-007"]);
+
+  const invalidSourceQaClosureGate = buildRemoteGoalClosureGate({
+    generatedAt: "2026-05-17T10:13:26.650Z",
+    sourceQaReviews: invalidSourceQaReviews,
+  });
+  assert.equal(invalidSourceQaClosureGate.status, "blocked");
+  assert.deepEqual(invalidSourceQaClosureGate.invalidExternalPendingDispositionQaIds, ["QA-007"]);
 
   const blockedClosureGate = buildRemoteGoalClosureGate({ generatedAt: "2026-05-17T10:13:26.000Z" });
   assert.equal(blockedClosureGate.status, "blocked");
   assert.equal(blockedClosureGate.writes, false);
   assert.equal(blockedClosureGate.requiredSourceQaIds.length, 23);
   assert.equal(blockedClosureGate.missingSourceQaIds.length, 23);
+  assert.deepEqual(blockedClosureGate.invalidSourceQaIds, []);
+  assert.equal(blockedClosureGate.externalPendingRequiredSourceQaIds.includes("QA-007"), true);
+  assert.deepEqual(blockedClosureGate.invalidExternalPendingDispositionQaIds, []);
   assert.equal(blockedClosureGate.blockers.includes("source_qa_review"), true);
   assert.equal(blockedClosureGate.blockers.includes("external_validation"), true);
   assert.equal(blockedClosureGate.blockedExternalRequirementIds.length, externalPending.requirements.length);
@@ -762,6 +789,8 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(clearableClosureGate.status, "clearable");
   assert.equal(clearableClosureGate.writes, false);
   assert.deepEqual(clearableClosureGate.missingSourceQaIds, []);
+  assert.deepEqual(clearableClosureGate.invalidSourceQaIds, []);
+  assert.deepEqual(clearableClosureGate.invalidExternalPendingDispositionQaIds, []);
   assert.deepEqual(clearableClosureGate.blockedExternalRequirementIds, []);
   assert.equal(clearableClosureGate.clearableExternalRequirementIds.length, externalPending.requirements.length);
   assert.deepEqual(clearableClosureGate.blockers, []);
