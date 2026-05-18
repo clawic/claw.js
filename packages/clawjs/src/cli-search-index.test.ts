@@ -2704,36 +2704,20 @@ test("apps and design writes enqueue and index section fast paths", async () => 
     assert.equal(designResult?.metadata?.kind, "template");
     assert.equal(designResult?.metadata?.builtin, true);
 
-    const designDelete = await runInternalV1Cli([
-      "design",
-      "delete",
-      "deck-template",
-      "--json",
-    ], { stdout: captureStream().stream, stderr: captureStream().stream, cwd: workspaceRoot });
+    const designDelete = await runInternalV1Cli(["design", "delete", "deck-template", "--json"], { stdout: captureStream().stream, stderr: captureStream().stream, cwd: workspaceRoot });
     assert.equal(designDelete, CLI_EXIT_OK);
     const designDeleteJobs = await runCliCapture(["search", "jobs", "--source", "design.resources", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(designDeleteJobs.code, CLI_EXIT_OK);
-    const designDeleteJobsPayload = JSON.parse(designDeleteJobs.stdout) as {
-      data: { items: Array<{ operation: string; priority: number; resourceId: string; payload: { resourceId?: string; eventDriven?: boolean } }> };
-    };
+    const designDeleteJobsPayload = JSON.parse(designDeleteJobs.stdout) as any;
     const designDeleteJob = designDeleteJobsPayload.data.items.find((job) => job.resourceId === "deck-template" && job.operation === "delete");
-    assert.equal(designDeleteJob?.priority, 80);
-    assert.equal(designDeleteJob?.payload.resourceId, "deck-template");
-    assert.equal(designDeleteJob?.payload.eventDriven, true);
+    assert.deepEqual({ priority: designDeleteJob?.priority, resourceId: designDeleteJob?.payload.resourceId, eventDriven: designDeleteJob?.payload.eventDriven }, { priority: 80, resourceId: "deck-template", eventDriven: true });
     const designDeleteRun = await runCliCapture(["search", "service", "run-once", "--source", "design.resources", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(designDeleteRun.code, CLI_EXIT_OK);
-    const designDeleteRunPayload = JSON.parse(designDeleteRun.stdout) as {
-      data: { worker?: { items?: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
-    };
-    assert.equal(designDeleteRunPayload.data.worker?.items?.[0]?.source, "design.resources");
-    assert.equal(designDeleteRunPayload.data.worker?.items?.[0]?.operation, "delete");
-    assert.equal(designDeleteRunPayload.data.worker?.items?.[0]?.status, "done");
-    assert.equal(designDeleteRunPayload.data.worker?.items?.[0]?.indexed, 1);
+    const designDeleteRunItem = (JSON.parse(designDeleteRun.stdout) as any).data.worker?.items?.[0];
+    assert.deepEqual({ source: designDeleteRunItem?.source, operation: designDeleteRunItem?.operation, status: designDeleteRunItem?.status, indexed: designDeleteRunItem?.indexed }, { source: "design.resources", operation: "delete", status: "done", indexed: 1 });
     const afterDesignDelete = await runCliCapture(["search", "query", "launch deck", "--sources", "design.resources", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(afterDesignDelete.code, CLI_EXIT_DEGRADED, afterDesignDelete.stderr || afterDesignDelete.stdout);
-    const afterDesignDeletePayload = JSON.parse(afterDesignDelete.stdout) as {
-      data: { results: Array<{ source: string; title: string }> };
-    };
+    const afterDesignDeletePayload = JSON.parse(afterDesignDelete.stdout) as any;
     assert.equal(afterDesignDeletePayload.data.results.some((entry) => entry.source === "design.resources" && entry.title === "Launch Deck Template"), false);
   });
 });

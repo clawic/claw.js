@@ -6,13 +6,13 @@
     "cliCommands": "packages/clawjs-core/src/cli-command-registry.ts"
   },
   "counts": {
-    "surfaces": 882,
+    "surfaces": 883,
     "cliCommands": 155
   },
   "fingerprints": {
-    "surfaces": "fnv1a32:527a9acc",
-    "cliCommands": "fnv1a32:d23a86f4",
-    "combined": "fnv1a32:f4ecf7e4"
+    "surfaces": "fnv1a32:02cd6514",
+    "cliCommands": "fnv1a32:6ab32150",
+    "combined": "fnv1a32:f55285e2"
   },
   "surfaces": [
     {
@@ -2617,6 +2617,12 @@
       "kind": "sidecar",
       "parentId": "claw.global",
       "path": "~/.claw/data/monitor.sqlite"
+    },
+    {
+      "id": "claw.database.monitor.table.metric_incidents",
+      "owner": "claw",
+      "kind": "table",
+      "parentId": "claw.database.monitor"
     },
     {
       "id": "claw.database.monitor.table.metric_rollups",
