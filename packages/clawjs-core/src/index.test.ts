@@ -32,14 +32,24 @@ import {
   parseRemoteSourceQaReviewInput,
   remoteGoalClosureRequiredSourceQaIds,
   buildRemoteRouteContractCatalog,
+  buildSyncDriverCatalog,
   buildSyncQueueEntries,
   buildSyncPlan,
   capacityRecordSchema,
   clawCommandRequestSchema,
   clawCommandResponseSchema,
   clawEvolutionLedgerSchema,
+  clawEvolutionPublicSurfaceBaselineSchema,
   clawEvolutionPolicy,
   clawEvolutionRecordSchema,
+  clawEvolutionOperatorPlanSchema,
+  clawEvolutionReceiptSchema,
+  classifyEvolutionBackupPolicy,
+  createEvolutionOperatorPlan,
+  createEvolutionPublicSurfaceBaseline,
+  createEvolutionReceipt,
+  diffEvolutionPublicSurfaceBaseline,
+  redactEvolutionReceiptText,
   clawApiPath,
   clawCorePorts,
   clawContractFixturesV1,
@@ -203,6 +213,132 @@ test("evolution policy and ledger schemas preserve the rescue backbone", () => {
     records: [record],
   });
   assert.equal(ledger.records.length, 1);
+});
+
+test("evolution public surface baseline detects uncovered drift", () => {
+  const baseline = createEvolutionPublicSurfaceBaseline({
+    generatedAt: "2026-05-18T00:00:00.000Z",
+    surfaces: clawPersistentSurfaceRegistry.nodes,
+    cliCommands: clawCliCommandRegistry.commands,
+  });
+  assert.equal(clawEvolutionPublicSurfaceBaselineSchema.safeParse(baseline).success, true);
+  assert.equal(baseline.counts.cliCommands, clawCliCommandRegistry.commands.length);
+  assert.equal(baseline.counts.surfaces, clawPersistentSurfaceRegistry.nodes.length);
+
+  const unchanged = diffEvolutionPublicSurfaceBaseline({
+    baseline,
+    current: baseline,
+    ledger: {
+      schemaVersion: 1,
+      policy: {
+        sourceOfTruth: "clawjs",
+        postV1Migration: "step_by_step_all_public_versions",
+        rescueCore: "launch_chat_repair",
+      },
+      records: [],
+    },
+  });
+  assert.equal(unchanged.status, "unchanged");
+  assert.equal(unchanged.summary.uncovered, 0);
+
+  const current = createEvolutionPublicSurfaceBaseline({
+    generatedAt: baseline.generatedAt,
+    surfaces: clawPersistentSurfaceRegistry.nodes,
+    cliCommands: clawCliCommandRegistry.commands.slice(1),
+  });
+  const changed = diffEvolutionPublicSurfaceBaseline({
+    baseline,
+    current,
+    ledger: {
+      schemaVersion: 1,
+      policy: {
+        sourceOfTruth: "clawjs",
+        postV1Migration: "step_by_step_all_public_versions",
+        rescueCore: "launch_chat_repair",
+      },
+      records: [],
+    },
+  });
+  assert.equal(changed.status, "changed");
+  assert.equal(changed.uncoveredChanges.length > 0, true);
+});
+
+test("evolution operator plan gates mutations and classifies backups", () => {
+  const ledger = clawEvolutionLedgerSchema.parse({
+    schemaVersion: 1,
+    policy: {
+      sourceOfTruth: "clawjs",
+      postV1Migration: "step_by_step_all_public_versions",
+      rescueCore: "launch_chat_repair",
+    },
+    records: [{
+      id: "evo_test_migration",
+      title: "Test migration",
+      class: "migration_required",
+      status: "active",
+      owner: "claw",
+      surfaces: ["claw.database.records", "claw.search.index", "claw.external.provider"],
+      tests: ["packages/clawjs-core/src/index.test.ts"],
+      createdAt: "2026-05-18T00:00:00.000Z",
+    }],
+  });
+
+  const dryRun = createEvolutionOperatorPlan({ action: "dry-run", ledger, ledgerPath: "docs/evolution/baseline.json" });
+  assert.equal(clawEvolutionOperatorPlanSchema.safeParse(dryRun).success, true);
+  assert.equal(dryRun.status, "dry_run_ready");
+  assert.equal(dryRun.mutates, false);
+  assert.equal(dryRun.requiresApproval, false);
+  assert.equal(dryRun.rescueCore, "launch_chat_repair");
+  assert.equal(dryRun.steps.some((step) => step.id === "preserve_launch_chat_repair"), true);
+  assert.equal(dryRun.backupPolicies.find((policy) => policy.surface === "claw.database.records")?.strategy, "snapshot_before_mutation");
+  assert.equal(dryRun.backupPolicies.find((policy) => policy.surface === "claw.search.index")?.strategy, "rebuildable_no_canonical_backup");
+  assert.equal(dryRun.backupPolicies.find((policy) => policy.surface === "claw.external.provider")?.strategy, "external_read_only");
+
+  const repair = createEvolutionOperatorPlan({ action: "repair", ledger });
+  assert.equal(repair.status, "approval_gated_plan");
+  assert.equal(repair.mutates, true);
+  assert.equal(repair.requiresApproval, true);
+  assert.equal(repair.steps.find((step) => step.id === "prepare_best_effort_backup")?.status, "approval_gated");
+
+  assert.equal(classifyEvolutionBackupPolicy("claw.schema.v1").strategy, "snapshot_before_mutation");
+});
+
+test("evolution receipts redact paths, prompts, and secrets", () => {
+  const ledger = clawEvolutionLedgerSchema.parse({
+    schemaVersion: 1,
+    policy: {
+      sourceOfTruth: "clawjs",
+      postV1Migration: "step_by_step_all_public_versions",
+      rescueCore: "launch_chat_repair",
+    },
+    records: [{
+      id: "evo_test_receipt",
+      title: "Test receipt",
+      class: "compatible",
+      status: "active",
+      owner: "claw",
+      surfaces: ["claw.workspace.state"],
+      tests: ["packages/clawjs-core/src/index.test.ts"],
+      createdAt: "2026-05-18T00:00:00.000Z",
+    }],
+  });
+  const plan = createEvolutionOperatorPlan({ action: "plan", ledger });
+  const receipt = createEvolutionReceipt({
+    action: "plan",
+    plan,
+    createdAt: "2026-05-18T00:00:00.000Z",
+    notes: ["prompt: please fix /Users/trabajo/private with sk-1234567890abcdef"],
+    errors: ["message=/Users/trabajo/Desktop/Clawix failed"],
+  });
+  assert.equal(clawEvolutionReceiptSchema.safeParse(receipt).success, true);
+  assert.equal(receipt.redaction.promptsIncluded, false);
+  assert.equal(receipt.redaction.secretsIncluded, false);
+  assert.equal(receipt.redaction.fullLocalPathsIncluded, false);
+  assert.equal(receipt.notes[0].includes("please fix"), false);
+  assert.equal(receipt.notes[0].includes("sk-"), false);
+  assert.equal(receipt.notes[0].includes("/Users/"), false);
+  assert.equal(receipt.errors[0].includes("/Users/"), false);
+  assert.equal(redactEvolutionReceiptText("input: hello; path /Users/me/demo"), "input: [redacted_prompt]; path [redacted_path]");
 });
 
 test("maskCredential keeps only the tail", () => {
@@ -1012,6 +1148,26 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(routeIdForSyncDriver("agent_config"), "sync.agentConfig");
   assert.equal(routeIdForSyncDriver("workspace_state"), "sync.workspaceState");
 
+  const syncDriverCatalog = buildSyncDriverCatalog({
+    generatedAt: "2026-05-17T10:14:30.000Z",
+    registeredRouteIds: remoteSyncRequiredRouteIds,
+  });
+  assert.equal(syncDriverCatalog.status, "complete");
+  assert.equal(syncDriverCatalog.writes, false);
+  assert.equal(syncDriverCatalog.authorityModel, "per_resource");
+  assert.equal(syncDriverCatalog.conflictDefault, "detect_and_elevate");
+  assert.equal(syncDriverCatalog.physicalApplicationStatus, "external_pending");
+  assert.deepEqual(syncDriverCatalog.missingDrivers, []);
+  assert.deepEqual(syncDriverCatalog.missingRouteIds, []);
+  assert.equal(syncDriverCatalog.driverCount, 11);
+  assert.equal(syncDriverCatalog.entries.every((entry) => entry.manifestBacked && entry.changelogBacked && entry.authorityScoped && entry.physicalDriverRequired && !entry.writes), true);
+  assert.equal(syncDriverCatalog.entries.every((entry) => entry.conflictPolicy === "detect_and_elevate" && entry.secretPolicy.plaintextReplication === false && entry.secretPolicy.secretRefsOnly === true), true);
+  assert.equal(syncDriverCatalog.entries.some((entry) => entry.driver === "skills" && entry.routeId === "sync.skills" && entry.lateralDomains.includes("skills")), true);
+  assert.equal(syncDriverCatalog.entries.some((entry) => entry.driver === "memory_user_model" && entry.routeId === "sync.memoryUserModel" && entry.lateralDomains.includes("memory")), true);
+  assert.equal(syncDriverCatalog.entries.some((entry) => entry.driver === "drive_files" && entry.routeId === "sync.driveFiles" && entry.lateralDomains.includes("drive")), true);
+  assert.equal(syncDriverCatalog.entries.some((entry) => entry.driver === "sqlite_partial" && entry.routeId === "sync.sqliteResources" && entry.partialResourceSupported), true);
+  assert.equal(syncDriverCatalog.entries.some((entry) => entry.driver === "workspace_state" && entry.commands.includes("claw sync apply --driver workspace_state --record true --json")), true);
+
   const plan = buildSyncPlan({
     manifest: createSyncResourceManifest({
       resourceId: "skills:default",
@@ -1201,7 +1357,9 @@ test("remote gateway sync contracts register required layers, routes, and safe d
     evaluatedAt: "2026-05-17T10:06:00.000Z",
   });
   assert.equal(offlineCommand.status, "failed_fast");
+  assert.equal(offlineCommand.reason, "connector_offline");
   assert.equal(offlineCommand.enqueued, false);
+  assert.equal(offlineCommand.retryable, true);
   assert.equal(offlineCommand.writes, false);
 
   const meshInvitation = createMeshInvitation({
@@ -1262,6 +1420,40 @@ test("remote gateway sync contracts register required layers, routes, and safe d
     actions: ["sync"],
     expiresAt: "2026-05-18T10:09:00.000Z",
   }), /does not allow resource/);
+
+  const regulatedInvitation = createMeshInvitation({
+    issuerMeshId: "mesh.local",
+    coordinatorNodeId: "node.mac",
+    recipientMeshId: "mesh.server",
+    allowedResourceIds: ["health:patient:123"],
+    allowedActions: ["read", "sync", "execute", "lease_secret"],
+    createdAt: "2026-05-17T10:09:00.000Z",
+    expiresAt: "2026-05-18T10:09:00.000Z",
+  });
+  const regulatedManifest = createSyncResourceManifest({
+    resourceId: "health:patient:123",
+    kind: "patient",
+    ownerNodeId: "node.mac",
+    driver: "sqlite_tables",
+    routeIds: ["remote.healthRecords"],
+  });
+  assert.throws(() => createMeshResourceShare({
+    invitation: regulatedInvitation,
+    toMeshId: "mesh.server",
+    manifest: regulatedManifest,
+    actions: ["execute"],
+    createdAt: "2026-05-17T10:09:30.000Z",
+    expiresAt: "2026-05-18T10:09:30.000Z",
+  }), /Regulated remote shares require explicit review/);
+  assert.throws(() => createMeshResourceShare({
+    invitation: regulatedInvitation,
+    toMeshId: "mesh.server",
+    manifest: regulatedManifest,
+    actions: ["lease_secret"],
+    secretRefs: ["secret://ehr/token"],
+    createdAt: "2026-05-17T10:09:45.000Z",
+    expiresAt: "2026-05-18T10:09:45.000Z",
+  }), /sensitive_export_review_required/);
 
   const meshRevocation = createMeshRevocation({
     targetType: "share",
