@@ -115,6 +115,7 @@ export interface ConnectorContextProviderSchema {
   subprofiles?: ConnectorContextProviderSubprofile[];
   defaults?: ConnectorContextDefaultRule[];
   fallbacks?: ConnectorContextFallbackRule[];
+  examples?: ConnectorGovernedContextRecord[];
   guidance?: ConnectorContextGuidance;
 }
 
@@ -208,6 +209,13 @@ export interface ConnectorContextDoctorGap {
     | "missing_required_field_schema"
     | "invalid_field_sensitivity"
     | "missing_source_doc"
+    | "missing_provider_guidance"
+    | "missing_context_kind_guidance"
+    | "missing_secret_ref_field"
+    | "missing_daily_use_example"
+    | "invalid_example_provider"
+    | "invalid_example_kind"
+    | "example_missing_required_field"
     | "fallback_ref_missing"
     | "default_ref_missing";
   providerId: string;
@@ -252,15 +260,76 @@ function kind(kind: ConnectorContextKind, displayName: string, requiredFields: s
     requiredFields,
     ...(recommendedFields.length > 0 ? { recommendedFields } : {}),
     defaultScopes: ["provider", "workspace", "project", "app", "environment", "agent", "role"],
+    guidance: { summary: `Use this ${displayName} context only when it matches the requested provider operation scope.` },
   };
 }
 
 function provider(input: Omit<ConnectorContextProviderSchema, "schemaVersion">): ConnectorContextProviderSchema {
-  return { schemaVersion: 1, ...input };
+  const schema: ConnectorContextProviderSchema = {
+    schemaVersion: 1,
+    ...input,
+    guidance: input.guidance ?? { summary: input.summary },
+  };
+  const examples = [...buildDefaultProviderExamples(schema), ...(input.examples ?? [])];
+  return {
+    ...schema,
+    examples: Array.from(new Map(examples.map((example) => [example.id, example])).values()),
+  };
 }
 
 function providerFieldNames(schema: ConnectorContextProviderSchema): Set<string> {
   return new Set(schema.fields.map((entry) => entry.name));
+}
+
+function buildDefaultProviderExamples(schema: ConnectorContextProviderSchema): ConnectorGovernedContextRecord[] {
+  const fieldByName = new Map(schema.fields.map((entry) => [entry.name, entry]));
+  return schema.contextKinds.map((entry) => {
+    const fields: ConnectorGovernedContextRecord["fields"] = {};
+    for (const fieldName of [...entry.requiredFields, ...(entry.recommendedFields ?? [])]) {
+      const fieldSchema = fieldByName.get(fieldName);
+      if (!fieldSchema) continue;
+      fields[fieldName] = exampleField(schema.providerId, fieldSchema);
+    }
+    return {
+      id: `${schema.providerId}_${entry.kind}_example`,
+      providerId: schema.providerId,
+      kind: entry.kind,
+      displayName: `${entry.displayName} example`,
+      state: "active",
+      fields,
+      guidance: entry.guidance ?? { summary: `Safe fixture for ${schema.displayName} ${entry.kind} context.` },
+      source: "fixture",
+      verification: {
+        source: "schema_fixture",
+        confidence: "example_only",
+      },
+    };
+  });
+}
+
+function exampleField(providerId: string, schema: ConnectorContextFieldSchema): ConnectorContextRecordField {
+  if (schema.sensitivity === "secret_ref") {
+    return {
+      sensitivity: "secret_ref",
+      secretRef: `secret://${providerId}/${schema.name}/example`,
+      ...(schema.guidance ? { guidance: schema.guidance } : {}),
+      ...(schema.policy ? { policy: schema.policy } : {}),
+    };
+  }
+  return {
+    sensitivity: schema.sensitivity,
+    value: exampleFieldValue(schema.name, schema.sensitivity),
+    ...(schema.guidance ? { guidance: schema.guidance } : {}),
+    ...(schema.policy ? { policy: schema.policy } : {}),
+  };
+}
+
+function exampleFieldValue(name: string, sensitivity: ConnectorContextSensitivity): string {
+  if (name === "environment") return "production";
+  if (name === "api_version") return "v2";
+  if (name === "track") return "production";
+  if (name === "binary_kind") return "android";
+  return sensitivity === "public" ? `${name}_example` : `example_${name}`;
 }
 
 export function redactConnectorContextValue(value: unknown, sensitivity: ConnectorContextSensitivity, includePrivate = false): unknown {
@@ -288,8 +357,16 @@ export function validateConnectorContextProviderSchema(schema: ConnectorContextP
   const gaps: ConnectorContextDoctorGap[] = [];
   const fields = providerFieldNames(schema);
   const kinds = new Set(schema.contextKinds.map((entry) => entry.kind));
+  const examples = schema.examples ?? [];
+  const exampleIds = new Set(examples.map((entry) => entry.id));
   if (schema.sourceDocs.length === 0) {
     gaps.push({ code: "missing_source_doc", providerId: schema.providerId, message: "Provider schema must cite official or canonical source documentation." });
+  }
+  if (!schema.guidance?.summary) {
+    gaps.push({ code: "missing_provider_guidance", providerId: schema.providerId, message: "Provider schema must include agent-facing guidance." });
+  }
+  if (!schema.fields.some((entry) => entry.sensitivity === "secret_ref")) {
+    gaps.push({ code: "missing_secret_ref_field", providerId: schema.providerId, message: "Provider schema must declare at least one secret_ref field for brokered credentials." });
   }
   for (const entry of schema.fields) {
     if (!CONNECTOR_CONTEXT_SENSITIVITIES.includes(entry.sensitivity)) {
@@ -299,6 +376,12 @@ export function validateConnectorContextProviderSchema(schema: ConnectorContextP
   for (const entry of schema.contextKinds) {
     if (!kinds.has(entry.kind)) {
       gaps.push({ code: "missing_context_kind", providerId: schema.providerId, kind: entry.kind, message: `Missing context kind ${entry.kind}.` });
+    }
+    if (!entry.guidance?.summary) {
+      gaps.push({ code: "missing_context_kind_guidance", providerId: schema.providerId, kind: entry.kind, message: `Context kind ${entry.kind} must include guidance.` });
+    }
+    if (!examples.some((example) => example.providerId === schema.providerId && example.kind === entry.kind)) {
+      gaps.push({ code: "missing_daily_use_example", providerId: schema.providerId, kind: entry.kind, message: `Context kind ${entry.kind} must include a safe daily-use fixture example.` });
     }
     for (const requiredField of entry.requiredFields) {
       if (!fields.has(requiredField)) {
@@ -311,6 +394,34 @@ export function validateConnectorContextProviderSchema(schema: ConnectorContextP
       if (!kinds.has(requiredKind)) {
         gaps.push({ code: "missing_context_kind", providerId: schema.providerId, kind: requiredKind, message: `Subprofile ${subprofile.id} requires missing kind ${requiredKind}.` });
       }
+    }
+  }
+  for (const example of examples) {
+    if (example.providerId !== schema.providerId) {
+      gaps.push({ code: "invalid_example_provider", providerId: schema.providerId, message: `Example ${example.id} belongs to ${example.providerId}.` });
+    }
+    const kindSchema = schema.contextKinds.find((entry) => entry.kind === example.kind);
+    if (!kindSchema) {
+      gaps.push({ code: "invalid_example_kind", providerId: schema.providerId, kind: example.kind, message: `Example ${example.id} uses unknown context kind ${example.kind}.` });
+      continue;
+    }
+    for (const requiredField of kindSchema.requiredFields) {
+      if (!example.fields[requiredField]) {
+        gaps.push({ code: "example_missing_required_field", providerId: schema.providerId, kind: example.kind, field: requiredField, message: `Example ${example.id} is missing required field ${requiredField}.` });
+      }
+    }
+  }
+  for (const defaultRule of schema.defaults ?? []) {
+    if (!exampleIds.has(defaultRule.contextRef)) {
+      gaps.push({ code: "default_ref_missing", providerId: schema.providerId, message: `Default ${defaultRule.id} references missing example/context ${defaultRule.contextRef}.` });
+    }
+  }
+  for (const fallback of schema.fallbacks ?? []) {
+    if (!exampleIds.has(fallback.fromRef)) {
+      gaps.push({ code: "fallback_ref_missing", providerId: schema.providerId, message: `Fallback ${fallback.id} references missing source ${fallback.fromRef}.` });
+    }
+    if (!exampleIds.has(fallback.toRef)) {
+      gaps.push({ code: "fallback_ref_missing", providerId: schema.providerId, message: `Fallback ${fallback.id} references missing target ${fallback.toRef}.` });
     }
   }
   return gaps;
@@ -619,6 +730,32 @@ export const CONNECTOR_GOVERNED_CONTEXT_PROVIDER_SCHEMAS: ConnectorContextProvid
     fields: [...commonAccountFields, field("project_id", "private", true), field("app_id", "private", true), field("product_id", "private", true), field("entitlement_id", "private", true), field("api_version", "public", true), field("webhook_secret", "secret_ref", true)],
     defaults: [{ id: "revenuecat_v2_default", scope: { kind: "provider", id: "revenuecat" }, providerId: "revenuecat", contextRef: "revenuecat_api_v2", priority: 100, condition: "Use API v2 whenever the required endpoint and permissions exist." }],
     fallbacks: [{ id: "revenuecat_v2_to_v1", fromRef: "revenuecat_api_v2", toRef: "revenuecat_api_v1", condition: "API v2 does not cover the needed endpoint.", guidance: "Use v1 only as an explicit fallback and preserve the trace." }],
+    examples: [
+      {
+        id: "revenuecat_api_v2",
+        providerId: "revenuecat",
+        kind: "key",
+        displayName: "RevenueCat API v2 fixture",
+        state: "active",
+        fields: {
+          api_version: { value: "v2", sensitivity: "public" },
+          api_key: { sensitivity: "secret_ref", secretRef: "secret://revenuecat/v2/example" },
+        },
+        source: "fixture",
+      },
+      {
+        id: "revenuecat_api_v1",
+        providerId: "revenuecat",
+        kind: "key",
+        displayName: "RevenueCat API v1 fallback fixture",
+        state: "active",
+        fields: {
+          api_version: { value: "v1", sensitivity: "public" },
+          api_key: { sensitivity: "secret_ref", secretRef: "secret://revenuecat/v1/example" },
+        },
+        source: "fixture",
+      },
+    ],
     guidance: {
       summary: "Prefer RevenueCat API v2 keys when possible; use v1 only as a traced fallback for endpoints not covered by v2.",
       instructions: ["Do not mix public SDK keys with server secret keys.", "Never expose secret API key material; use secret_ref bindings only."],
