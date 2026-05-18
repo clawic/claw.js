@@ -4,9 +4,13 @@ import { test } from "vitest";
 import {
   evaluateGovernanceAccess,
   evaluateGovernanceDelegation,
+  detachGovernanceResourceScopeBinding,
+  forkGovernanceResourceScopeBinding,
   summarizeGovernanceBindings,
+  summarizeGovernanceResourceSharing,
   type GovernanceAuthorityEdge,
   type GovernanceGrant,
+  type GovernanceResourceScopeBinding,
   type GovernanceRestriction,
 } from "./governance.ts";
 
@@ -197,4 +201,51 @@ test("governance local personal scope stays lightweight and binding summaries ar
     stewarded: 1,
     dataClasses: { private: 1, internal: 1 },
   });
+});
+
+test("governance shareable resource bindings summarize active, detached, and forked scopes", () => {
+  const source: GovernanceResourceScopeBinding = {
+    id: "binding.memory.workspace",
+    resource: { type: "memory", id: "shared_memory" },
+    scope: { kind: "workspace", id: "workspace_a" },
+    dataClass: "private",
+  };
+  const shared: GovernanceResourceScopeBinding = {
+    id: "binding.memory.project",
+    resource: { type: "memory", id: "shared_memory" },
+    scope: { kind: "project", id: "project_a" },
+    sourceBindingId: source.id,
+    dataClass: "private",
+  };
+  const detached = detachGovernanceResourceScopeBinding({
+    ...shared,
+    id: "binding.memory.detached",
+    scope: { kind: "workspace", id: "workspace_b" },
+  });
+  const forked = forkGovernanceResourceScopeBinding({
+    ...shared,
+    id: "binding.memory.fork",
+    scope: { kind: "project", id: "project_b" },
+  }, { type: "memory", id: "project_b_memory" });
+
+  assert.deepEqual(summarizeGovernanceResourceSharing([source, shared, detached, forked]), [
+    {
+      resourceKey: "memory:shared_memory",
+      sourceBindingId: "binding.memory.workspace",
+      activeScopeKeys: ["workspace:workspace_a", "project:project_a"],
+      detachedScopeKeys: ["workspace:workspace_b"],
+      forkedScopeKeys: [],
+      bindingIds: ["binding.memory.workspace", "binding.memory.project", "binding.memory.detached"],
+    },
+    {
+      resourceKey: "memory:project_b_memory",
+      sourceBindingId: "binding.memory.workspace",
+      activeScopeKeys: [],
+      detachedScopeKeys: [],
+      forkedScopeKeys: ["project:project_b"],
+      bindingIds: ["binding.memory.fork"],
+    },
+  ]);
+  assert.equal(detached.sourceBindingId, source.id);
+  assert.deepEqual(forked.forkedResource, { type: "memory", id: "project_b_memory" });
 });

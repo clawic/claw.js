@@ -91,6 +91,21 @@ export interface GovernanceBinding {
   dataClass?: "public" | "internal" | "private" | "sensitive" | "secret_ref";
 }
 
+export interface GovernanceResourceScopeBinding extends GovernanceBinding {
+  state?: "active" | "detached" | "forked";
+  sourceBindingId?: string;
+  forkedResource?: GovernanceResourceRef;
+}
+
+export interface GovernanceResourceSharingSummary {
+  resourceKey: string;
+  sourceBindingId?: string;
+  activeScopeKeys: string[];
+  detachedScopeKeys: string[];
+  forkedScopeKeys: string[];
+  bindingIds: string[];
+}
+
 export interface GovernanceScopeHierarchyEdge {
   parent: GovernanceScopeRef;
   child: GovernanceScopeRef;
@@ -170,6 +185,10 @@ function sameScope(left: GovernanceScopeRef, right: GovernanceScopeRef): boolean
 
 function scopeKey(scope: GovernanceScopeRef): string {
   return `${scope.kind}:${scope.id ?? "*"}`;
+}
+
+function resourceKey(resource: GovernanceResourceRef): string {
+  return `${resource.type}:${resource.id ?? "*"}`;
 }
 
 function scopeApplies(ruleScope: GovernanceScopeRef, requestedScope: GovernanceScopeRef, hierarchy: GovernanceScopeHierarchyEdge[] = []): boolean {
@@ -293,5 +312,50 @@ export function summarizeGovernanceBindings(bindings: GovernanceBinding[]): {
     scoped: bindings.filter((binding) => binding.scope.kind !== "global").length,
     stewarded: bindings.filter((binding) => Boolean(binding.steward)).length,
     dataClasses,
+  };
+}
+
+export function summarizeGovernanceResourceSharing(bindings: GovernanceResourceScopeBinding[]): GovernanceResourceSharingSummary[] {
+  const byResource = new Map<string, GovernanceResourceScopeBinding[]>();
+  for (const binding of bindings) {
+    const key = resourceKey(binding.resource);
+    byResource.set(key, [...(byResource.get(key) ?? []), binding]);
+  }
+  return [...byResource.entries()].map(([key, resourceBindings]) => {
+    const source = resourceBindings.find((binding) => !binding.sourceBindingId && (binding.state ?? "active") === "active")
+      ?? resourceBindings.find((binding) => (binding.state ?? "active") === "active");
+    const sourceBindingId = source?.id ?? resourceBindings.find((binding) => binding.sourceBindingId)?.sourceBindingId;
+    return {
+      resourceKey: key,
+      sourceBindingId,
+      activeScopeKeys: resourceBindings
+        .filter((binding) => (binding.state ?? "active") === "active")
+        .map((binding) => scopeKey(binding.scope)),
+      detachedScopeKeys: resourceBindings
+        .filter((binding) => binding.state === "detached")
+        .map((binding) => scopeKey(binding.scope)),
+      forkedScopeKeys: resourceBindings
+        .filter((binding) => binding.state === "forked")
+        .map((binding) => scopeKey(binding.scope)),
+      bindingIds: resourceBindings.map((binding) => binding.id),
+    };
+  });
+}
+
+export function detachGovernanceResourceScopeBinding(binding: GovernanceResourceScopeBinding): GovernanceResourceScopeBinding {
+  return {
+    ...binding,
+    state: "detached",
+    sourceBindingId: binding.sourceBindingId ?? binding.id,
+  };
+}
+
+export function forkGovernanceResourceScopeBinding(binding: GovernanceResourceScopeBinding, forkedResource: GovernanceResourceRef): GovernanceResourceScopeBinding {
+  return {
+    ...binding,
+    resource: forkedResource,
+    state: "forked",
+    forkedResource,
+    sourceBindingId: binding.sourceBindingId ?? binding.id,
   };
 }
