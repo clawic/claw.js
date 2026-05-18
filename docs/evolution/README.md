@@ -38,8 +38,13 @@ knowledge in migrators, adapters, receipts, repair tools, and fixtures.
   safe operator contracts for migration planning, backup classification, rescue
   preservation, and redacted receipts. `repair` and `report` also emit an
   agent-readable repair package with diagnostics, safe actions, approval-gated
-  actions, a redacted suggested patch, and a local-only receipt. Mutating or
-  externally submitted actions are approval-gated by default.
+  actions, a redacted suggested patch, and a local-only receipt. `backup` and
+  `rollback` emit a restore-point contract with retention/size limits,
+  `best_effort_forward_repair` reversibility, and
+  `universalRollbackPromised: false`; the supported recovery path after
+  rollback is `claw evolution repair --json`, and public data migrators stay
+  forward-compatible instead of being retired. Mutating or externally submitted
+  actions are approval-gated by default.
 
 ## Rescue Rule
 

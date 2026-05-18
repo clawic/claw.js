@@ -45,6 +45,7 @@ import {
   clawEvolutionOperatorPlanSchema,
   clawEvolutionReceiptSchema,
   clawEvolutionRepairReportSchema,
+  clawEvolutionRollbackReportSchema,
   clawEvolutionMigratorLabResultSchema,
   clawEvolutionVersionFixtureSchema,
   classifyEvolutionBackupPolicy,
@@ -52,6 +53,7 @@ import {
   createEvolutionPublicSurfaceBaseline,
   createEvolutionRepairReport,
   createEvolutionReceipt,
+  createEvolutionRollbackReport,
   diffEvolutionPublicSurfaceBaseline,
   redactEvolutionReceiptText,
   runEvolutionMigratorLab,
@@ -307,6 +309,57 @@ test("evolution operator plan gates mutations and classifies backups", () => {
 
   assert.equal(classifyEvolutionBackupPolicy("claw.schema.v1").strategy, "snapshot_before_mutation");
   assert.equal(classifyEvolutionBackupPolicy("@clawjs/core migration lab API").strategy, "touched_objects_metadata");
+});
+
+test("evolution rollback report records restore point and forward repair contract", () => {
+  const ledger = clawEvolutionLedgerSchema.parse({
+    schemaVersion: 1,
+    policy: {
+      sourceOfTruth: "clawjs",
+      postV1Migration: "step_by_step_all_public_versions",
+      rescueCore: "launch_chat_repair",
+    },
+    records: [{
+      id: "evo_test_rollback",
+      title: "Test rollback",
+      class: "migration_required",
+      status: "active",
+      owner: "claw",
+      surfaces: ["claw.database.records", "claw.search.index", "claw.external.provider"],
+      tests: ["packages/clawjs-core/src/index.test.ts"],
+      createdAt: "2026-05-18T00:00:00.000Z",
+    }],
+  });
+
+  const rollbackPlan = createEvolutionOperatorPlan({
+    action: "rollback",
+    ledger,
+    fromVersion: "v2",
+    toVersion: "v1",
+  });
+  const rollbackReport = createEvolutionRollbackReport({
+    action: "rollback",
+    plan: rollbackPlan,
+    createdAt: "2026-05-18T00:00:00.000Z",
+  });
+
+  assert.equal(clawEvolutionRollbackReportSchema.safeParse(rollbackReport).success, true);
+  assert.equal(rollbackReport.status, "needs_approval");
+  assert.equal(rollbackReport.restorePoint.reversibility, "best_effort_forward_repair");
+  assert.equal(rollbackReport.restorePoint.universalRollbackPromised, false);
+  assert.equal(rollbackReport.restorePoint.retentionDays, clawEvolutionPolicy.backup.retentionDays);
+  assert.equal(rollbackReport.restorePoint.maxBytesBeforeOverride, clawEvolutionPolicy.backup.threshold.maxBytes);
+  assert.equal(rollbackReport.restorePoint.maxFilesBeforeOverride, clawEvolutionPolicy.backup.threshold.maxFiles);
+  assert.equal(rollbackReport.restorePoint.surfaces.find((surface) => surface.surface === "claw.database.records")?.canonical, true);
+  assert.equal(rollbackReport.restorePoint.surfaces.find((surface) => surface.surface === "claw.search.index")?.canonical, false);
+  assert.equal(rollbackReport.forwardRepair.required, true);
+  assert.equal(rollbackReport.forwardRepair.command, "claw evolution repair --json");
+  assert.equal(rollbackReport.approvalRequiredActions.some((action) => action.id === "mutate_local_state"), true);
+  assert.equal(rollbackReport.approvalRequiredActions.some((action) => action.id === "snapshot_canonical_data"), true);
+  assert.equal(rollbackReport.approvalRequiredActions.some((action) => action.id === "create_restore_point"), true);
+  assert.equal(rollbackReport.approvalRequiredActions.some((action) => action.id === "forward_repair_after_rollback"), true);
+  assert.equal(rollbackReport.redaction.promptsIncluded, false);
+  assert.equal(rollbackReport.receipt.redaction.fullLocalPathsIncluded, false);
 });
 
 test("evolution receipts redact paths, prompts, and secrets", () => {

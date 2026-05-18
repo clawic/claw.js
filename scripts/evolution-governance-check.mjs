@@ -47,6 +47,11 @@ for (const snippet of [
   "createEvolutionReceipt",
   "createEvolutionRepairReport",
   "clawEvolutionRepairReportSchema",
+  "createEvolutionRestorePoint",
+  "createEvolutionRollbackReport",
+  "clawEvolutionRollbackReportSchema",
+  "best_effort_forward_repair",
+  "universalRollbackPromised",
   "redactEvolutionReceiptText",
   "runEvolutionMigratorLab",
 ]) requireSnippet("packages/clawjs-core/src/evolution.ts", snippet);

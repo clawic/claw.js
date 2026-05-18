@@ -12,6 +12,7 @@ import {
   createEvolutionPublicSurfaceBaseline,
   createEvolutionRepairReport,
   createEvolutionReceipt,
+  createEvolutionRollbackReport,
   diffEvolutionPublicSurfaceBaseline,
   runEvolutionMigratorLab,
   summarizeEvolutionLedger,
@@ -151,6 +152,17 @@ export async function runEvolutionCli(input: EvolutionCliInput): Promise<number>
           plan,
           migrationLab,
           surfaceBaseline,
+        }),
+      });
+    }
+    if (action === "backup" || action === "rollback") {
+      return writeEvolutionResult(input, action, {
+        ...plan,
+        surfaceBaseline,
+        migrationLab,
+        rollbackReport: createEvolutionRollbackReport({
+          action,
+          plan,
         }),
       });
     }

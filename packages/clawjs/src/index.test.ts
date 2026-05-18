@@ -270,6 +270,58 @@ test("runCli exposes the evolution operator surface", async () => {
   assert.equal(dryRunPayload.requiresApproval, false);
   assert.equal(dryRunPayload.migrationLab.status, "pass");
 
+  const rollback = await runCliCapture(["evolution", "rollback", "--json"], process.cwd());
+  assert.equal(rollback.code, CLI_EXIT_OK);
+  const rollbackPayload = parseCliJsonPayload<{
+    status: string;
+    requiresApproval: boolean;
+    rollbackReport: {
+      status: string;
+      restorePoint: {
+        reversibility: string;
+        universalRollbackPromised: boolean;
+        retentionDays: number;
+        maxBytesBeforeOverride: number;
+        maxFilesBeforeOverride: number;
+      };
+      forwardRepair: { required: boolean; command: string };
+      approvalRequiredActions: Array<{ id: string }>;
+      redaction: { promptsIncluded: boolean; secretsIncluded: boolean; fullLocalPathsIncluded: boolean };
+    };
+  }>(rollback.stdout);
+  assert.equal(rollbackPayload.status, "approval_gated_plan");
+  assert.equal(rollbackPayload.requiresApproval, true);
+  assert.equal(rollbackPayload.rollbackReport.status, "needs_approval");
+  assert.equal(rollbackPayload.rollbackReport.restorePoint.reversibility, "best_effort_forward_repair");
+  assert.equal(rollbackPayload.rollbackReport.restorePoint.universalRollbackPromised, false);
+  assert.equal(rollbackPayload.rollbackReport.restorePoint.retentionDays, 30);
+  assert.equal(rollbackPayload.rollbackReport.restorePoint.maxBytesBeforeOverride, 1_073_741_824);
+  assert.equal(rollbackPayload.rollbackReport.restorePoint.maxFilesBeforeOverride, 10_000);
+  assert.equal(rollbackPayload.rollbackReport.forwardRepair.required, true);
+  assert.equal(rollbackPayload.rollbackReport.forwardRepair.command, "claw evolution repair --json");
+  assert.equal(rollbackPayload.rollbackReport.approvalRequiredActions.some((action) => action.id === "create_restore_point"), true);
+  assert.equal(rollbackPayload.rollbackReport.approvalRequiredActions.some((action) => action.id === "forward_repair_after_rollback"), true);
+  assert.equal(rollbackPayload.rollbackReport.redaction.promptsIncluded, false);
+  assert.equal(rollbackPayload.rollbackReport.redaction.secretsIncluded, false);
+  assert.equal(rollbackPayload.rollbackReport.redaction.fullLocalPathsIncluded, false);
+
+  const backup = await runCliCapture(["evolution", "backup", "--json"], process.cwd());
+  assert.equal(backup.code, CLI_EXIT_OK);
+  const backupPayload = parseCliJsonPayload<{
+    rollbackReport: {
+      restorePoint: {
+        reversibility: string;
+        universalRollbackPromised: boolean;
+        retentionDays: number;
+      };
+      approvalRequiredActions: Array<{ id: string }>;
+    };
+  }>(backup.stdout);
+  assert.equal(backupPayload.rollbackReport.restorePoint.reversibility, "best_effort_forward_repair");
+  assert.equal(backupPayload.rollbackReport.restorePoint.universalRollbackPromised, false);
+  assert.equal(backupPayload.rollbackReport.restorePoint.retentionDays, 30);
+  assert.equal(backupPayload.rollbackReport.approvalRequiredActions.some((action) => action.id === "create_restore_point"), true);
+
   const receipt = await runCliCapture(["evolution", "receipt", "--json"], process.cwd());
   assert.equal(receipt.code, CLI_EXIT_OK);
   const receiptPayload = parseCliJsonPayload<{ migrationLab: { status: string }; receipt: { redaction: { externalSubmission: string }; notes: string[] } }>(receipt.stdout);
@@ -319,6 +371,13 @@ test("runCli exposes system telemetry snapshot, metrics, history, rules and widg
   const widgetPayload = parseCliJsonPayload<{ widgets: Array<{ placement: string }> }>(widgets.stdout);
   assert.equal(widgetPayload.widgets.some((widget) => widget.placement === "menubar"), true);
   assert.equal(widgetPayload.widgets.some((widget) => widget.placement === "combined_panel" || widget.placement === "both"), true);
+
+  const watch = await runCliCapture(["system", "watch", "--interval", "1", "--count", "2", "--json"], process.cwd());
+  assert.equal(watch.code, CLI_EXIT_OK);
+  const watchLines = watch.stdout.trim().split("\n").map((line) => JSON.parse(line) as { ok: boolean; data: { samples: Array<{ key: string }> }; meta: { intervalMs: number } });
+  assert.equal(watchLines.length, 2);
+  assert.equal(watchLines.every((line) => line.ok && line.meta.intervalMs === 1), true);
+  assert.equal(watchLines.every((line) => line.data.samples.some((sample) => sample.key === "system.memory.used")), true);
 });
 
 test("runCli records system telemetry snapshots into monitor metric history", async () => {
