@@ -9,9 +9,11 @@ import {
   buildRemoteExternalValidationReadiness,
   buildRemoteExternalValidationRunbook,
   buildRemoteGoalClosureGate,
+  buildRemoteOfflineCommandResult,
   buildRemoteProviderDeviceE2EValidationPlan,
   buildRemoteRouteContractCatalog,
   buildRemoteSourceQaReviewTemplate,
+  buildSyncDriverCatalog,
   buildSyncPlan,
   clawPersistentSurfaceRegistry,
   createGatewayDeploymentManifest,
@@ -195,6 +197,12 @@ function parseAuthority(value: string | undefined): SyncAuthority | undefined {
     || value === "joint"
   ) return value;
   throw new Error(`Invalid sync authority: ${value}`);
+}
+
+function parseOfflineReason(value: string | undefined): "connector_offline" | "node_unreachable" | "transport_unavailable" | undefined {
+  if (!value) return undefined;
+  if (value === "connector_offline" || value === "node_unreachable" || value === "transport_unavailable") return value;
+  throw new Error(`Invalid offline reason: ${value}`);
 }
 
 function parseSnapshots(value: string | undefined, fallback: SyncObjectSnapshot[]): SyncObjectSnapshot[] {
@@ -504,6 +512,15 @@ export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
     const payload = conformancePayload();
     return writeOutput(input, "remote", payload, `${payload.status} decisions=${payload.decisions.length}`, command);
   }
+  if (command === "offline-command" || command === "offline" || command === "fail-fast") {
+    const result = buildRemoteOfflineCommandResult({
+      routeId: input.flags["route-id"] ?? input.flags.route ?? "remote.chatGateway",
+      actor: actorContextFromFlags(input),
+      reason: parseOfflineReason(input.flags.reason),
+      evaluatedAt: input.flags.now,
+    });
+    return writeOutput(input, "remote", result, `${result.status} reason=${result.reason} enqueued=${result.enqueued}`, command);
+  }
   if (command === "pending") {
     const register = buildRemoteExternalPendingRegister({ generatedAt: input.flags.now });
     return writeOutput(input, "remote", register, `${register.status} requirements=${register.requirements.length}`, command);
@@ -604,11 +621,15 @@ export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
       ...(state ? { state } : {}),
     }, `compat: ${status}`, command);
   }
-  return missing(input, "remote classify|check|routes|conformance|pending|validation-checklist|validation-template|validation-artifact|validation-runbook|validation-readiness|validation-approval-request|validation-report|source-qa-template|closure-gate|contracts|e2e-plan|compat");
+  return missing(input, "remote classify|check|routes|conformance|offline-command|pending|validation-checklist|validation-template|validation-artifact|validation-runbook|validation-readiness|validation-approval-request|validation-report|source-qa-template|closure-gate|contracts|e2e-plan|compat");
 }
 
 export async function runSyncCli(input: RemoteSyncCliInput): Promise<number> {
   const command = input.positionals[1];
+  if (command === "drivers" || command === "driver-catalog" || command === "catalog") {
+    const catalog = buildSyncDriverCatalog({ generatedAt: input.flags.now, registeredRouteIds: routeIds() });
+    return writeOutput(input, "sync", catalog, `${catalog.status} drivers=${catalog.coveredDrivers.length}/${catalog.driverCount}`, command);
+  }
   if (command === "manifest") {
     const manifest = manifestFromFlags(input);
     const store = stateStoreFromFlags(input);
@@ -742,7 +763,7 @@ export async function runSyncCli(input: RemoteSyncCliInput): Promise<number> {
     const state = store && wantsDurableRecord(input) ? store.recordRemoteCacheSnapshot(snapshot, { now: input.flags.now, signer: coordinatorSignerFromFlags(input) }) : undefined;
     return writeOutput(input, "sync", { snapshot, status: state?.coordinatorSignature ? "signed_cache_snapshot_recorded" : state ? "cache_snapshot_recorded" : "dry_run_only", writes: false, ...(state ? { state } : {}) }, `cache: ${state ? "recorded" : "dry_run_only"}`, command);
   }
-  return missing(input, "sync manifest|status|plan|run|reconcile|apply|handoff|conflicts|cache");
+  return missing(input, "sync drivers|manifest|status|plan|run|reconcile|apply|handoff|conflicts|cache");
 }
 
 export async function runNodesCli(input: RemoteSyncCliInput): Promise<number> {

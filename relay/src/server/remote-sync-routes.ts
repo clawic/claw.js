@@ -9,9 +9,11 @@ import {
   buildRemoteExternalValidationReadiness,
   buildRemoteExternalValidationRunbook,
   buildRemoteGoalClosureGate,
+  buildRemoteOfflineCommandResult,
   buildRemoteProviderDeviceE2EValidationPlan,
   buildRemoteRouteContractCatalog,
   buildRemoteSourceQaReviewTemplate,
+  buildSyncDriverCatalog,
   buildSyncPlan,
   buildSyncQueueEntries,
   clawApiPath,
@@ -57,6 +59,24 @@ function remoteConformancePayload() {
 
 function remoteExternalPendingPayload() {
   return buildRemoteExternalPendingRegister();
+}
+
+function syncDriverCatalogPayload() {
+  return buildSyncDriverCatalog({ registeredRouteIds: routeIds() });
+}
+
+function offlineReason(value: unknown): "connector_offline" | "node_unreachable" | "transport_unavailable" | undefined {
+  if (value === "connector_offline" || value === "node_unreachable" || value === "transport_unavailable") return value;
+  return undefined;
+}
+
+function remoteOfflineCommandPayload(input: Record<string, unknown> = {}) {
+  return buildRemoteOfflineCommandResult({
+    routeId: stringValue(input.routeId ?? input["route-id"] ?? input.route, "remote.chatGateway"),
+    actor: meshActorFromInput(input),
+    reason: offlineReason(input.reason),
+    evaluatedAt: stringValue(input.evaluatedAt ?? input.now, "2026-05-17T10:06:00.000Z"),
+  });
 }
 
 function remoteExternalValidationChecklistPayload() {
@@ -461,6 +481,10 @@ export function registerRemoteSyncRoutes(app: FastifyInstance): void {
 
   app.get(clawApiPath("remote/conformance"), async () => remoteConformancePayload());
 
+  app.get(clawApiPath("remote/offline-command"), async () => remoteOfflineCommandPayload());
+
+  app.post(clawApiPath("remote/offline-command"), async (request) => remoteOfflineCommandPayload(readBody(request)));
+
   app.get(clawApiPath("remote/external-pending"), async () => remoteExternalPendingPayload());
 
   app.get(clawApiPath("remote/external-validation-checklist"), async () => remoteExternalValidationChecklistPayload());
@@ -588,6 +612,8 @@ export function registerRemoteSyncRoutes(app: FastifyInstance): void {
     receipt: gatewayAuditReceiptFromInput(readBody(request)),
     writes: false,
   }));
+
+  app.get(clawApiPath("sync/drivers"), async () => syncDriverCatalogPayload());
 
   app.get(clawApiPath("sync/manifests"), async (request) => {
     const query = request.query as Record<string, unknown>;

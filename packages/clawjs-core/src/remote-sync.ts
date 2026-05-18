@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { evaluateRegulatedAction, type RegulatedDomain } from "./regulated-domain-safety.ts";
 
 export const remoteSurfaceClassificationSchema = z.enum([
   "remote-safe",
@@ -241,6 +242,46 @@ export const syncPlanResultSchema = z.object({
   changes: z.array(syncChangeSchema),
   conflicts: z.array(syncConflictSchema),
   nextCursor: syncCursorSchema.optional(),
+  writes: z.literal(false),
+});
+
+export const syncDriverCatalogEntrySchema = z.object({
+  schemaVersion: z.literal(1),
+  driver: syncDriverSchema,
+  routeId: z.string().min(1),
+  resourceKinds: z.array(z.string().min(1)).min(1),
+  lateralDomains: z.array(z.string().min(1)).min(1),
+  manifestBacked: z.literal(true),
+  changelogBacked: z.literal(true),
+  authorityScoped: z.literal(true),
+  partialResourceSupported: z.boolean(),
+  conflictPolicy: syncConflictPolicySchema,
+  cachePolicy: syncCachePolicySchema,
+  secretPolicy: z.object({
+    plaintextReplication: z.literal(false),
+    secretRefsOnly: z.literal(true),
+    brokerLeaseRequired: z.literal(true),
+  }),
+  physicalDriverRequired: z.literal(true),
+  externalPendingRequirementId: z.literal("physical_sync_driver_application"),
+  commands: z.array(z.string().min(1)).min(1),
+  writes: z.literal(false),
+});
+
+export const syncDriverCatalogSchema = z.object({
+  schemaVersion: z.literal(1),
+  generatedAt: z.string().datetime(),
+  status: z.enum(["complete", "incomplete"]),
+  driverCount: z.number().int().nonnegative(),
+  requiredDrivers: z.array(syncDriverSchema).min(1),
+  coveredDrivers: z.array(syncDriverSchema),
+  missingDrivers: z.array(syncDriverSchema),
+  requiredRouteIds: z.array(z.string().min(1)).min(1),
+  missingRouteIds: z.array(z.string().min(1)),
+  entries: z.array(syncDriverCatalogEntrySchema).min(1),
+  authorityModel: z.literal("per_resource"),
+  conflictDefault: z.literal("detect_and_elevate"),
+  physicalApplicationStatus: z.literal("external_pending"),
   writes: z.literal(false),
 });
 
@@ -634,6 +675,8 @@ export type SyncConflict = z.infer<typeof syncConflictSchema>;
 export type SyncObjectSnapshot = z.infer<typeof syncObjectSnapshotSchema>;
 export type SyncPlanAction = z.infer<typeof syncPlanActionSchema>;
 export type SyncPlanResult = z.infer<typeof syncPlanResultSchema>;
+export type SyncDriverCatalogEntry = z.infer<typeof syncDriverCatalogEntrySchema>;
+export type SyncDriverCatalog = z.infer<typeof syncDriverCatalogSchema>;
 export type SyncQueueEntry = z.infer<typeof syncQueueEntrySchema>;
 export type SyncReconciliationResult = z.infer<typeof syncReconciliationResultSchema>;
 export type SyncDriverApplicationReceipt = z.infer<typeof syncDriverApplicationReceiptSchema>;
@@ -904,6 +947,85 @@ export function routeIdForSyncDriver(driver: SyncDriver): string {
   if (driver === "sidecar") return "sync.sidecars";
   if (driver === "agent_config") return "sync.agentConfig";
   return "sync.workspaceState";
+}
+
+const syncDriverCatalogMetadata: Record<SyncDriver, { resourceKinds: string[]; lateralDomains: string[]; partialResourceSupported?: boolean }> = {
+  skills: { resourceKinds: ["skills", "skill packs", "projected skills"], lateralDomains: ["skills"] },
+  memory_user_model: { resourceKinds: ["global memory", "user model", "profile memory"], lateralDomains: ["memory", "user_model", "profile"] },
+  sessions: { resourceKinds: ["sessions", "session transcripts", "handoffs"], lateralDomains: ["sessions"] },
+  drive_files: { resourceKinds: ["drive files", "documents", "folders"], lateralDomains: ["drive", "files"] },
+  blobs: { resourceKinds: ["binary blobs", "attachments", "large artifacts"], lateralDomains: ["blobs", "files"] },
+  sqlite_tables: { resourceKinds: ["SQLite databases", "tables", "collections"], lateralDomains: ["database", "records"] },
+  sqlite_partial: { resourceKinds: ["SQLite row ranges", "filtered tables", "partial databases"], lateralDomains: ["database", "partial_database"], partialResourceSupported: true },
+  sidecar: { resourceKinds: ["sidecar stores", "runtime sidecar state"], lateralDomains: ["sidecars", "runtime"] },
+  search_index: { resourceKinds: ["search indexes", "embedding shards", "query caches"], lateralDomains: ["search", "indexes"] },
+  agent_config: { resourceKinds: ["agent config", "assignments", "budgets"], lateralDomains: ["agents", "config"] },
+  workspace_state: { resourceKinds: ["workspace state", "project state", "local UI state"], lateralDomains: ["workspace", "projects"] },
+};
+
+export function buildSyncDriverCatalog(input: {
+  generatedAt?: string;
+  registeredRouteIds?: readonly string[];
+} = {}): SyncDriverCatalog {
+  const generatedAt = input.generatedAt ?? new Date().toISOString();
+  const requiredDrivers = syncDriverSchema.options;
+  const registeredRouteIds = new Set(input.registeredRouteIds ?? remoteSyncRequiredRouteIds);
+  const entries = requiredDrivers.map((driver) => {
+    const metadata = syncDriverCatalogMetadata[driver];
+    const routeId = routeIdForSyncDriver(driver);
+    const cachePolicy = {
+      encrypted: true as const,
+      ttlSeconds: 3600,
+      storesSecrets: false as const,
+      storesAuthoritativeState: false as const,
+    };
+    return syncDriverCatalogEntrySchema.parse({
+      schemaVersion: 1,
+      driver,
+      routeId,
+      resourceKinds: metadata.resourceKinds,
+      lateralDomains: metadata.lateralDomains,
+      manifestBacked: true,
+      changelogBacked: true,
+      authorityScoped: true,
+      partialResourceSupported: metadata.partialResourceSupported === true,
+      conflictPolicy: "detect_and_elevate",
+      cachePolicy,
+      secretPolicy: {
+        plaintextReplication: false,
+        secretRefsOnly: true,
+        brokerLeaseRequired: true,
+      },
+      physicalDriverRequired: true,
+      externalPendingRequirementId: "physical_sync_driver_application",
+      commands: [
+        `claw sync manifest --driver ${driver} --json`,
+        `claw sync plan --driver ${driver} --json`,
+        `claw sync apply --driver ${driver} --record true --json`,
+      ],
+      writes: false,
+    });
+  });
+  const requiredRouteIds = [...new Set(entries.map((entry) => entry.routeId))].sort();
+  const coveredDrivers = entries.filter((entry) => registeredRouteIds.has(entry.routeId)).map((entry) => entry.driver);
+  const missingDrivers = requiredDrivers.filter((driver) => !coveredDrivers.includes(driver));
+  const missingRouteIds = requiredRouteIds.filter((routeId) => !registeredRouteIds.has(routeId));
+  return syncDriverCatalogSchema.parse({
+    schemaVersion: 1,
+    generatedAt,
+    status: missingDrivers.length === 0 && missingRouteIds.length === 0 ? "complete" : "incomplete",
+    driverCount: entries.length,
+    requiredDrivers,
+    coveredDrivers,
+    missingDrivers,
+    requiredRouteIds,
+    missingRouteIds,
+    entries,
+    authorityModel: "per_resource",
+    conflictDefault: "detect_and_elevate",
+    physicalApplicationStatus: "external_pending",
+    writes: false,
+  });
 }
 
 export function createSyncResourceManifest(input: {
@@ -1639,6 +1761,22 @@ export function createMeshResourceShare(input: {
   if ((input.secretRefs?.length ?? 0) > 0 && !input.actions.includes("lease_secret")) {
     throw new Error("Mesh shares with secret refs require lease_secret scope");
   }
+  const regulatedDomains = regulatedDomainsForRemoteManifest(manifest);
+  if (regulatedDomains.length > 0 && input.actions.some((action) => action === "execute" || action === "lease_secret")) {
+    const denialMessages = regulatedDomains.flatMap((regulatedDomain) => {
+      const decision = evaluateRegulatedAction({
+        regulatedDomain,
+        decisionEffect: "external_action",
+        externalAction: true,
+        remoteOrProviderUse: true,
+        sensitiveExport: input.actions.includes("lease_secret") || (input.secretRefs?.length ?? 0) > 0,
+      });
+      return decision.allowed ? [] : [`${regulatedDomain}:${decision.denialCodes.join(",")}`];
+    });
+    if (denialMessages.length > 0) {
+      throw new Error(`Regulated remote shares require explicit review and cannot grant execute or lease_secret directly: ${denialMessages.join(";")}`);
+    }
+  }
   return meshResourceShareSchema.parse({
     schemaVersion: 1,
     shareId: meshId("mesh_share", [invitation.invitationId, manifest.resourceId, input.toMeshId]),
@@ -1658,6 +1796,42 @@ export function createMeshResourceShare(input: {
     auditEventId: meshId("audit_mesh_share", [invitation.invitationId, manifest.resourceId, createdAt]),
     writes: false,
   });
+}
+
+function regulatedDomainsForRemoteManifest(manifest: SyncResourceManifest): RegulatedDomain[] {
+  const haystack = [
+    manifest.resourceId,
+    manifest.kind,
+    manifest.driver,
+    ...manifest.routeIds,
+  ].join(" ").toLowerCase();
+  const domains: RegulatedDomain[] = [];
+  const add = (domain: RegulatedDomain) => {
+    if (!domains.includes(domain)) domains.push(domain);
+  };
+
+  if (/\b(health|ehr|patient|encounter|medication|clinical)\b/.test(haystack)) add("health");
+  if (/\b(mental[_-]?health|therapy|crisis)\b/.test(haystack)) add("mental_health");
+  if (/\b(pharma|drug|batch|adverse|pharmacovigilance)\b/.test(haystack)) add("pharma");
+  if (/\b(finance|accounting|transaction|investment|credit|tax)\b/.test(haystack)) add("finance");
+  if (/\b(bank|banking|lending|loan)\b/.test(haystack)) add("banking");
+  if (/\b(insurance|claim|underwriting)\b/.test(haystack)) add("insurance");
+  if (/\b(legal|case|court|filing|tribunal)\b/.test(haystack)) add("legal");
+  if (/\b(hr|employment|employee|candidate|hiring)\b/.test(haystack)) add("hr_employment");
+  if (/\b(education|learner|student|admission|credential)\b/.test(haystack)) add("education");
+  if (/\b(government|public[_-]?case|permit|license|benefits)\b/.test(haystack)) add("government_public_services");
+  if (/\b(real[_-]?estate|property|housing|lease)\b/.test(haystack)) add("housing_real_estate");
+  if (/\b(compliance|grc|audit|control|attestation)\b/.test(haystack)) add("compliance_grc");
+  if (/\b(identity|passport|ssn|credential)\b/.test(haystack)) add("identity");
+  if (/\b(security|secret|credential|token)\b/.test(haystack)) add("security");
+  if (/\b(payment|billing|invoice|subscription)\b/.test(haystack)) add("billing_payments");
+  if (/\b(lab|lims|eln|notebook|sample|assay|research)\b/.test(haystack)) add("labs_research");
+  if (/\b(iot|device|thing|physical[_-]?action)\b/.test(haystack)) add("iot_physical_actions");
+  if (/\b(vehicle|transport|shipment|driver)\b/.test(haystack)) add("vehicles_transport");
+  if (/\b(minor|child|children)\b/.test(haystack)) add("minors");
+  if (/\b(public[_-]?safety|emergency|dispatch|cad)\b/.test(haystack)) add("government_public_services");
+
+  return domains;
 }
 
 export function createMeshRevocation(input: {

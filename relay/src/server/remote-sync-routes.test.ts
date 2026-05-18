@@ -17,6 +17,7 @@ import {
   buildRemoteProviderDeviceE2EValidationPlan,
   buildRemoteRouteContractCatalog,
   buildRemoteSourceQaReviewTemplate,
+  buildSyncDriverCatalog,
   clawPersistentSurfaceRegistry,
   remoteGoalClosureRequiredSourceQaIds,
   remoteSyncRequiredRouteIds,
@@ -478,6 +479,49 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(gatewayPayload.gateway.contract, "registered_local_contract_projection");
     assert.equal(gatewayPayload.gateway.hostedSelfHostedParity, "required");
 
+    const offlineCommand = await built.app.inject({ method: "GET", url: "/v1/remote/offline-command" });
+    assert.equal(offlineCommand.statusCode, 200);
+    const offlineCommandPayload = offlineCommand.json() as { routeId: string; status: string; reason: string; enqueued: boolean; retryable: boolean; writes: boolean };
+    assert.equal(offlineCommandPayload.routeId, "remote.chatGateway");
+    assert.equal(offlineCommandPayload.status, "failed_fast");
+    assert.equal(offlineCommandPayload.reason, "connector_offline");
+    assert.equal(offlineCommandPayload.enqueued, false);
+    assert.equal(offlineCommandPayload.retryable, true);
+    assert.equal(offlineCommandPayload.writes, false);
+
+    const scopedOfflineCommand = await built.app.inject({
+      method: "POST",
+      url: "/v1/remote/offline-command",
+      headers: { "content-type": "application/json" },
+      payload: { routeId: "remote.searchGateway", reason: "transport_unavailable", actorId: "user.remote" },
+    });
+    assert.equal(scopedOfflineCommand.statusCode, 200);
+    const scopedOfflineCommandPayload = scopedOfflineCommand.json() as { routeId: string; status: string; reason: string; enqueued: boolean; writes: boolean };
+    assert.equal(scopedOfflineCommandPayload.routeId, "remote.searchGateway");
+    assert.equal(scopedOfflineCommandPayload.status, "failed_fast");
+    assert.equal(scopedOfflineCommandPayload.reason, "transport_unavailable");
+    assert.equal(scopedOfflineCommandPayload.enqueued, false);
+    assert.equal(scopedOfflineCommandPayload.writes, false);
+
+    const syncDrivers = await built.app.inject({ method: "GET", url: "/v1/sync/drivers" });
+    assert.equal(syncDrivers.statusCode, 200);
+    const syncDriversPayload = syncDrivers.json() as { status: string; writes: boolean; driverCount: number; missingDrivers: string[]; missingRouteIds: string[]; authorityModel: string; conflictDefault: string; physicalApplicationStatus: string; entries: Array<{ driver: string; routeId: string; lateralDomains: string[]; manifestBacked: boolean; changelogBacked: boolean; authorityScoped: boolean; partialResourceSupported: boolean; physicalDriverRequired: boolean; commands: string[]; writes: boolean }> };
+    const expectedSyncDrivers = buildSyncDriverCatalog({ registeredRouteIds: registeredRouteIds() });
+    assert.equal(syncDriversPayload.status, "complete");
+    assert.equal(syncDriversPayload.writes, false);
+    assert.equal(syncDriversPayload.driverCount, expectedSyncDrivers.driverCount);
+    assert.deepEqual(syncDriversPayload.missingDrivers, []);
+    assert.deepEqual(syncDriversPayload.missingRouteIds, []);
+    assert.equal(syncDriversPayload.authorityModel, "per_resource");
+    assert.equal(syncDriversPayload.conflictDefault, "detect_and_elevate");
+    assert.equal(syncDriversPayload.physicalApplicationStatus, "external_pending");
+    assert.equal(syncDriversPayload.entries.some((entry) => entry.driver === "skills" && entry.routeId === "sync.skills" && entry.lateralDomains.includes("skills")), true);
+    assert.equal(syncDriversPayload.entries.some((entry) => entry.driver === "memory_user_model" && entry.routeId === "sync.memoryUserModel" && entry.lateralDomains.includes("memory")), true);
+    assert.equal(syncDriversPayload.entries.some((entry) => entry.driver === "drive_files" && entry.routeId === "sync.driveFiles" && entry.lateralDomains.includes("drive")), true);
+    assert.equal(syncDriversPayload.entries.some((entry) => entry.driver === "sqlite_partial" && entry.partialResourceSupported), true);
+    assert.equal(syncDriversPayload.entries.every((entry) => entry.manifestBacked && entry.changelogBacked && entry.authorityScoped && entry.physicalDriverRequired && !entry.writes), true);
+    assert.equal(syncDriversPayload.entries.every((entry) => entry.commands.some((command) => command.includes("claw sync apply"))), true);
+
     const compatibilityAdapters = await built.app.inject({ method: "GET", url: "/v1/remote/compatibility/adapters" });
     assert.equal(compatibilityAdapters.statusCode, 200);
     const compatibilityAdaptersPayload = compatibilityAdapters.json() as { adapters: Array<{ legacySurface: string; canonicalRouteId: string; mapsToCanonical: boolean; parallelApiIntroduced: boolean; writes: boolean }>; writes: boolean };
@@ -761,6 +805,24 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(sharePayload.share.resourceId, "skills:default");
     assert.equal(sharePayload.share.plaintextSecrets, false);
     assert.equal(sharePayload.writes, false);
+
+    const regulatedShare = await built.app.inject({
+      method: "POST",
+      url: "/v1/mesh/shares",
+      headers: { "content-type": "application/json" },
+      payload: {
+        issuerMeshId: "mesh.home",
+        coordinatorNodeId: "node.mac",
+        recipientMeshId: "mesh.server",
+        resourceId: "health:patient:123",
+        kind: "patient",
+        driver: "sqlite_tables",
+        actions: ["execute"],
+        allowedActions: ["read", "sync", "execute"],
+      },
+    });
+    assert.equal(regulatedShare.statusCode, 500);
+    assert.equal(regulatedShare.body.includes("Regulated remote shares require explicit review"), true);
 
     const meshRevocation = await built.app.inject({
       method: "POST",

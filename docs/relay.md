@@ -60,6 +60,11 @@ The relay separates public control-plane concerns from remote workspace executio
 7. Client API requests are routed to that active connector and answered synchronously.
 
 The relay does not queue work for offline agents. If no active connector exists for the requested `tenantId + agentId`, the request fails immediately.
+The framework-level no-write equivalent is `RemoteOfflineCommandResult`,
+available through `claw remote offline-command` and
+`/v1/remote/offline-command`: interactive remote calls report `failed_fast`,
+`enqueued: false`, `retryable: true`, and `writes: false` instead of being
+silently converted into Sync work.
 
 ## Remote Parity And Sync Contract
 
@@ -95,6 +100,14 @@ host/Coordinator driver proves execution.
 `SyncAuthorityHandoffReceipt` records signed intent to move a resource's
 authority or residency between nodes while keeping the physical handoff
 explicitly external pending.
+The Sync driver catalog is exposed through `claw sync drivers` and
+`GET /v1/sync/drivers`. It is the public matrix for lateral synchronization:
+skills, memory/user-model, sessions, drive/files, blobs, full SQLite, partial
+SQLite, sidecars, search indexes, agent config, and workspace state. Each
+driver row is manifest-backed, changelog-backed, authority-scoped, defaults to
+`detect_and_elevate`, forbids plaintext secret replication, remains no-write,
+and keeps physical application as `EXTERNAL PENDING` until an approved driver
+run proves it.
 
 Secrets cross remote and sync paths only as references plus audited broker
 leases. Plaintext secret replication is invalid.
@@ -106,9 +119,11 @@ remote clients do not need a CLI-only integration path:
 GET  /v1/remote/classifications
 POST /v1/remote/classifications/receipts
 GET  /v1/remote/conformance
+POST /v1/remote/offline-command
 GET  /v1/remote/external-pending
 GET  /v1/remote/route-contracts
 GET  /v1/gateway/conformance
+GET  /v1/sync/drivers
 GET  /v1/sync/manifests
 POST /v1/sync/manifests
 GET  /v1/sync/changes

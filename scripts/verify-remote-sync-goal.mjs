@@ -18,6 +18,7 @@ import {
   buildRemoteRouteContractCatalog,
   buildRemoteSourceQaReviewReport,
   buildRemoteSourceQaReviewTemplate,
+  buildSyncDriverCatalog,
   buildSyncPlan,
   buildSyncQueueEntries,
   clawCliCommandRegistry,
@@ -104,6 +105,7 @@ const requiredServiceApiRoutes = [
   "remote/classifications",
   "remote/classifications/receipts",
   "remote/conformance",
+  "remote/offline-command",
   "remote/external-pending",
   "remote/external-validation-checklist",
   "remote/external-validation-template",
@@ -121,6 +123,7 @@ const requiredServiceApiRoutes = [
   "gateway/agent-service/evaluate",
   "gateway/agent-service/executions",
   "gateway/audit/receipts",
+  "sync/drivers",
   "sync/manifests",
   "sync/changes",
   "sync/plan",
@@ -149,6 +152,9 @@ const requiredDocSnippets = [
   "blocked",
   "pending",
   "SyncResourceManifest",
+  "Sync driver catalog",
+  "/v1/sync/drivers",
+  "claw sync drivers",
   "brokered leases",
   "transport-agnostic",
   "Iroh",
@@ -157,6 +163,9 @@ const requiredDocSnippets = [
   "remote.agent_service.evaluated",
   "RemoteSurfaceClassificationReceipt",
   "/v1/remote/classifications/receipts",
+  "RemoteOfflineCommandResult",
+  "/v1/remote/offline-command",
+  "claw remote offline-command",
   "RemoteExternalPendingRegister",
   "/v1/remote/external-pending",
   "external validation checklist",
@@ -1059,12 +1068,14 @@ const inspectCliSource = readRequired("packages/clawjs/src/inspect-cli.ts");
 for (const snippet of [
   'command === "remote"',
   "buildRemoteConformanceReport",
+  "buildRemoteOfflineCommandResult",
   "buildRemoteExternalPendingRegister",
   "buildRemoteExternalValidationEvidenceTemplate",
   "buildRemoteExternalValidationReadiness",
   "buildRemoteExternalValidationApprovalRequest",
   "buildRemoteSourceQaReviewTemplate",
   "buildRemoteRouteContractCatalog",
+  "buildSyncDriverCatalog",
   "SyncAuthorityHandoffReceipt",
   "transport_agnostic_iroh_v1_adapter",
 ]) {
@@ -1075,6 +1086,22 @@ for (const [driver, expectedRoute] of driverRouteExpectations) {
   const parsed = syncDriverSchema.parse(driver);
   if (routeIdForSyncDriver(parsed) !== expectedRoute) fail(`${driver} must map to ${expectedRoute}`);
 }
+
+const syncDriverCatalog = buildSyncDriverCatalog({ registeredRouteIds: remoteSyncRequiredRouteIds });
+if (syncDriverCatalog.status !== "complete") fail("sync driver catalog must be complete for required remote routes");
+if (syncDriverCatalog.driverCount !== syncDriverSchema.options.length) fail("sync driver catalog must cover every sync driver");
+if (syncDriverCatalog.missingDrivers.length !== 0) fail("sync driver catalog must not miss drivers");
+if (syncDriverCatalog.missingRouteIds.length !== 0) fail("sync driver catalog must not miss routes");
+if (syncDriverCatalog.authorityModel !== "per_resource") fail("sync driver catalog must keep per-resource authority");
+if (syncDriverCatalog.conflictDefault !== "detect_and_elevate") fail("sync driver catalog must default to detect-and-elevate");
+if (syncDriverCatalog.physicalApplicationStatus !== "external_pending") fail("sync driver catalog must keep physical driver application external pending");
+if (!syncDriverCatalog.entries.every((entry) => entry.manifestBacked && entry.changelogBacked && entry.authorityScoped && entry.physicalDriverRequired && entry.writes === false)) {
+  fail("sync driver catalog entries must be manifest/changelog backed, authority-scoped, physical-driver gated, and no-write");
+}
+if (!syncDriverCatalog.entries.some((entry) => entry.driver === "skills" && entry.lateralDomains.includes("skills"))) fail("sync driver catalog must include skills sync");
+if (!syncDriverCatalog.entries.some((entry) => entry.driver === "memory_user_model" && entry.lateralDomains.includes("memory"))) fail("sync driver catalog must include memory/user-model sync");
+if (!syncDriverCatalog.entries.some((entry) => entry.driver === "drive_files" && entry.lateralDomains.includes("drive"))) fail("sync driver catalog must include drive/files sync");
+if (!syncDriverCatalog.entries.some((entry) => entry.driver === "sqlite_partial" && entry.partialResourceSupported)) fail("sync driver catalog must include partial database sync");
 
 const manifest = createSyncResourceManifest({
   resourceId: "skills:default",
@@ -1272,7 +1299,9 @@ const offlineCommand = buildRemoteOfflineCommandResult({
   evaluatedAt: "2026-05-17T10:06:00.000Z",
 });
 if (offlineCommand.status !== "failed_fast") fail("offline remote commands must fail fast");
+if (offlineCommand.reason !== "connector_offline") fail("offline remote commands must expose the offline reason");
 if (offlineCommand.enqueued !== false) fail("offline remote commands must not be queued as sync work");
+if (offlineCommand.retryable !== true) fail("offline remote command failures must remain retryable");
 if (offlineCommand.writes !== false) fail("offline remote command failure must not write");
 
 const meshInvitation = createMeshInvitation({

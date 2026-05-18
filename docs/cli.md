@@ -218,6 +218,7 @@ claw remote classify --capability-id claw.gateway --classification remote-safe -
 claw remote check --json
 claw remote routes --json
 claw remote conformance --json
+claw remote offline-command --route-id remote.chatGateway --reason connector_offline --json
 claw remote pending --json
 claw remote validation-checklist --json
 claw remote validation-template --json
@@ -232,6 +233,7 @@ claw remote e2e-plan --json
 claw remote compat --legacy-surface relay.mobile.chat --canonical-route remote.chatGateway --client-kind ios --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 claw inspect remote --json
 
+claw sync drivers --json
 claw sync manifest --resource-id skills:default --kind skills --driver skills --json
 claw sync status --json
 claw sync plan --json
@@ -363,6 +365,11 @@ external pending blockers, artifacts, and acceptance criteria.
 `inspect remote` is the read-only inspection view that puts remote
 classification, Sync authority/drivers, transport, route contracts, tests,
 gaps, and conformance in one JSON payload.
+`remote offline-command` returns the no-write `RemoteOfflineCommandResult` for
+interactive remote calls when a Connector, node, or transport is unavailable.
+It always reports `failed_fast`, `enqueued: false`, `retryable: true`, and
+`writes: false`, so command execution cannot silently turn into Sync queue
+work.
 `--state-dir` records manifests, sync queues, reconciliation results, and
 mesh proposals/revocations in a local durable ledger. That ledger is not trust
 authority unless each record is signed with Coordinator keys. The
@@ -370,6 +377,13 @@ authority unless each record is signed with Coordinator keys. The
 an Ed25519 signature that `claw sync status --state-dir ...` verifies and
 counts. Pairing, trust changes, real gateway serving, and physical sync
 execution still stay signed-host or Coordinator gated.
+`sync drivers` returns the Sync driver catalog. Each row is manifest-backed,
+changelog-backed, authority-scoped, no-write, defaults to
+`detect_and_elevate`, forbids plaintext secret replication, and stays gated by
+`physical_sync_driver_application` until an approved physical driver run proves
+execution. The catalog covers skills, memory/user-model, sessions, drive/files,
+blobs, full SQLite, partial SQLite, sidecars, search indexes, agent config, and
+workspace state.
 `remote compat --record true` records a signed compatibility adapter receipt
 for existing Relay/mobile clients. The receipt binds the legacy surface to one
 canonical route, requires `mapsToCanonical: true`, forbids parallel APIs with

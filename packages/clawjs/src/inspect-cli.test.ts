@@ -248,8 +248,9 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   const remoteInspectPayload = parseCliJson<{
     conformance: { status: string; missingRoutes: string[]; decisions: Array<{ decisionId: string }> };
     classifications: Array<{ id: string; classification: string; routeIds: string[] }>;
-    sync: { authorityClasses: string[]; drivers: string[]; conflictDefault: string; receiptContracts: string[]; routeIds: string[]; writes: boolean };
+    sync: { authorityClasses: string[]; drivers: string[]; driverCatalog: { status: string; writes: boolean; driverCount: number; missingDrivers: string[]; missingRouteIds: string[]; authorityModel: string; conflictDefault: string; physicalApplicationStatus: string; entries: Array<{ driver: string; routeId: string; lateralDomains: string[]; manifestBacked: boolean; changelogBacked: boolean; authorityScoped: boolean; partialResourceSupported: boolean; physicalDriverRequired: boolean; writes: boolean }> }; conflictDefault: string; receiptContracts: string[]; routeIds: string[]; writes: boolean };
     transport: { contract: string; adapterNodeId: string; trustModes: string[]; receiptContract: string; writes: boolean };
+    offlineCommand: { routeId: string; status: string; reason: string; enqueued: boolean; retryable: boolean; writes: boolean };
     gaps: Array<{ requirementId: string; status: string; writes: boolean }>;
     externalValidationChecklist: { status: string; writes: boolean; requirementIds: string[]; coverage: { requirementCount: number; coveredRequirementCount: number; missingRequirementIds: string[] }; items: Array<{ requirementId: string; requiredCommand: string; requiredArtifacts: string[]; approvedRunRequired: boolean; physicalEvidenceRequired: boolean; plaintextMaterialIncluded: boolean; writes: boolean }> };
     externalValidationEvidenceTemplate: { status: string; writes: boolean; requirementCount: number; submissionCommand: string; checklistItems: unknown[]; evidence: Array<{ requirementId: string; approvedRun: boolean; artifactRefs: string[]; acceptedCriteria: string[]; plaintextMaterialIncluded: boolean; writes: boolean }> };
@@ -277,12 +278,30 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   assert.equal(remoteInspectPayload.sync.routeIds.includes("sync.sidecars"), true);
   assert.equal(remoteInspectPayload.sync.routeIds.includes("sync.agentConfig"), true);
   assert.equal(remoteInspectPayload.sync.routeIds.includes("sync.workspaceState"), true);
+  assert.equal(remoteInspectPayload.sync.driverCatalog.status, "complete");
+  assert.equal(remoteInspectPayload.sync.driverCatalog.writes, false);
+  assert.equal(remoteInspectPayload.sync.driverCatalog.driverCount, 11);
+  assert.deepEqual(remoteInspectPayload.sync.driverCatalog.missingDrivers, []);
+  assert.deepEqual(remoteInspectPayload.sync.driverCatalog.missingRouteIds, []);
+  assert.equal(remoteInspectPayload.sync.driverCatalog.authorityModel, "per_resource");
+  assert.equal(remoteInspectPayload.sync.driverCatalog.conflictDefault, "detect_and_elevate");
+  assert.equal(remoteInspectPayload.sync.driverCatalog.physicalApplicationStatus, "external_pending");
+  assert.equal(remoteInspectPayload.sync.driverCatalog.entries.some((entry) => entry.driver === "skills" && entry.routeId === "sync.skills" && entry.lateralDomains.includes("skills")), true);
+  assert.equal(remoteInspectPayload.sync.driverCatalog.entries.some((entry) => entry.driver === "memory_user_model" && entry.routeId === "sync.memoryUserModel" && entry.lateralDomains.includes("memory")), true);
+  assert.equal(remoteInspectPayload.sync.driverCatalog.entries.some((entry) => entry.driver === "sqlite_partial" && entry.partialResourceSupported), true);
+  assert.equal(remoteInspectPayload.sync.driverCatalog.entries.every((entry) => entry.manifestBacked && entry.changelogBacked && entry.authorityScoped && entry.physicalDriverRequired && !entry.writes), true);
   assert.equal(remoteInspectPayload.sync.writes, false);
   assert.equal(remoteInspectPayload.transport.contract, "transport_agnostic_iroh_v1_adapter");
   assert.equal(remoteInspectPayload.transport.adapterNodeId, "claw.transport.iroh");
   assert.equal(remoteInspectPayload.transport.trustModes.includes("governed_gateway"), true);
   assert.equal(remoteInspectPayload.transport.receiptContract, "RemoteTransportHandshakeReceipt");
   assert.equal(remoteInspectPayload.transport.writes, false);
+  assert.equal(remoteInspectPayload.offlineCommand.routeId, "remote.chatGateway");
+  assert.equal(remoteInspectPayload.offlineCommand.status, "failed_fast");
+  assert.equal(remoteInspectPayload.offlineCommand.reason, "connector_offline");
+  assert.equal(remoteInspectPayload.offlineCommand.enqueued, false);
+  assert.equal(remoteInspectPayload.offlineCommand.retryable, true);
+  assert.equal(remoteInspectPayload.offlineCommand.writes, false);
   assert.equal(remoteInspectPayload.gaps.some((entry) => entry.requirementId === "physical_iroh_handshake" && entry.status === "external_pending" && entry.writes === false), true);
   assert.equal(remoteInspectPayload.gaps.some((entry) => entry.requirementId === "physical_authority_handoff" && entry.status === "external_pending" && entry.writes === false), true);
   assert.equal(remoteInspectPayload.externalValidationChecklist.status, "external_pending");
@@ -588,6 +607,32 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.equal(remoteContractsPayload.contracts.some((entry) => entry.routeId === "remote.searchGateway" && entry.localContractRefs.includes("claw search")), true);
   assert.equal(remoteContractsPayload.contracts.some((entry) => entry.routeId === "gateway.multiTenantAgentService" && entry.remoteEntryPoints.includes("POST /v1/gateway/agent-service/evaluate")), true);
   assert.equal(remoteContractsPayload.contracts.every((entry) => entry.parityRequired && !entry.parallelApiAllowed && entry.writes === false), true);
+
+  const remoteOffline = await runCliCapture(["remote", "offline-command", "--route-id", "remote.searchGateway", "--reason", "node_unreachable", "--actor-kind", "human", "--actor-id", "user.local", "--json"], process.cwd());
+  assert.equal(remoteOffline.code, CLI_EXIT_OK);
+  const remoteOfflinePayload = parseCliJson<{ routeId: string; status: string; reason: string; enqueued: boolean; retryable: boolean; writes: boolean }>(remoteOffline.stdout).data;
+  assert.equal(remoteOfflinePayload.routeId, "remote.searchGateway");
+  assert.equal(remoteOfflinePayload.status, "failed_fast");
+  assert.equal(remoteOfflinePayload.reason, "node_unreachable");
+  assert.equal(remoteOfflinePayload.enqueued, false);
+  assert.equal(remoteOfflinePayload.retryable, true);
+  assert.equal(remoteOfflinePayload.writes, false);
+
+  const syncDrivers = await runCliCapture(["sync", "drivers", "--now", "2026-05-17T10:14:30.000Z", "--json"], process.cwd());
+  assert.equal(syncDrivers.code, CLI_EXIT_OK);
+  const syncDriversPayload = parseCliJson<{ status: string; writes: boolean; driverCount: number; missingDrivers: string[]; missingRouteIds: string[]; authorityModel: string; conflictDefault: string; physicalApplicationStatus: string; entries: Array<{ driver: string; routeId: string; lateralDomains: string[]; manifestBacked: boolean; changelogBacked: boolean; authorityScoped: boolean; partialResourceSupported: boolean; physicalDriverRequired: boolean; writes: boolean }> }>(syncDrivers.stdout).data;
+  assert.equal(syncDriversPayload.status, "complete");
+  assert.equal(syncDriversPayload.writes, false);
+  assert.equal(syncDriversPayload.driverCount, 11);
+  assert.deepEqual(syncDriversPayload.missingDrivers, []);
+  assert.deepEqual(syncDriversPayload.missingRouteIds, []);
+  assert.equal(syncDriversPayload.authorityModel, "per_resource");
+  assert.equal(syncDriversPayload.conflictDefault, "detect_and_elevate");
+  assert.equal(syncDriversPayload.physicalApplicationStatus, "external_pending");
+  assert.equal(syncDriversPayload.entries.some((entry) => entry.driver === "skills" && entry.routeId === "sync.skills" && entry.lateralDomains.includes("skills")), true);
+  assert.equal(syncDriversPayload.entries.some((entry) => entry.driver === "drive_files" && entry.routeId === "sync.driveFiles" && entry.lateralDomains.includes("drive")), true);
+  assert.equal(syncDriversPayload.entries.some((entry) => entry.driver === "sqlite_partial" && entry.partialResourceSupported), true);
+  assert.equal(syncDriversPayload.entries.every((entry) => entry.manifestBacked && entry.changelogBacked && entry.authorityScoped && entry.physicalDriverRequired && !entry.writes), true);
 
   const sync = await runCliCapture(["sync", "manifest", "--resource-id", "skills:default", "--kind", "skills", "--driver", "skills", "--json"], process.cwd());
   assert.equal(sync.code, CLI_EXIT_OK);
