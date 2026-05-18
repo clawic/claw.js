@@ -480,6 +480,7 @@ test("evolution migrator lab validates foundation fixtures", () => {
   const result = runEvolutionMigratorLab({
     fixtures: [fixture],
     ledger,
+    stableSurfaces: clawPersistentSurfaceRegistry.nodes,
     fromVersion: "v1",
     toVersion: "current",
     createdAt: "2026-05-18T00:00:00.000Z",
@@ -495,6 +496,10 @@ test("evolution migrator lab validates foundation fixtures", () => {
   assert.equal(result.checks.find((check) => check.id === "version_chain_complete")?.status, "pass");
   assert.equal(result.checks.find((check) => check.id === "adapter_contracts_present")?.status, "pass");
   assert.equal(result.checks.find((check) => check.id === "rebuild_contracts_present")?.status, "pass");
+  assert.equal(result.checks.find((check) => check.id === "adapter_retirement_policy")?.status, "pass");
+  assert.equal(result.checks.find((check) => check.id === "stable_surface_strategy_coverage")?.status, "pass");
+  assert.equal(result.stableSurfaceCoverage.length > 0, true);
+  assert.equal(result.stableSurfaceCoverage.every((check) => check.status === "pass"), true);
   assert.equal(result.adapterChecks.every((check) => check.status === "pass"), true);
   assert.equal(result.rebuildChecks.every((check) => check.status === "pass"), true);
   assert.equal(result.receipts[0].redaction.promptsIncluded, false);
@@ -589,6 +594,65 @@ test("evolution migrator lab validates foundation fixtures", () => {
   });
   assert.equal(missingAdapterContract.status, "fail");
   assert.equal(missingAdapterContract.checks.find((check) => check.id === "adapter_contracts_present")?.status, "fail");
+
+  const retiredRuntimeAdapter = runEvolutionMigratorLab({
+    fixtures: [fixture],
+    ledger: {
+      ...ledger,
+      records: [...ledger.records, {
+        id: "evo_retired_runtime_adapter_test",
+        title: "Retired runtime adapter test",
+        class: "adapter_required",
+        status: "retired_runtime_adapter",
+        owner: "claw",
+        surfaces: ["claw.runtime.adapter.test"],
+        tests: ["packages/clawjs-core/src/index.test.ts"],
+        adapter: "runtime protocol adapter retired after compatibility window",
+        createdAt: "2026-05-18T00:00:00.000Z",
+      }],
+    },
+  });
+  assert.equal(retiredRuntimeAdapter.status, "pass");
+  assert.equal(retiredRuntimeAdapter.checks.find((check) => check.id === "adapter_retirement_policy")?.status, "pass");
+
+  const retiredDataMigrator = runEvolutionMigratorLab({
+    fixtures: [fixture],
+    ledger: {
+      ...ledger,
+      records: [...ledger.records, {
+        id: "evo_retired_data_migrator_test",
+        title: "Retired data migrator test",
+        class: "migration_required",
+        status: "retired_runtime_adapter",
+        owner: "claw",
+        surfaces: ["claw.database.core.records.v1"],
+        tests: ["packages/clawjs-core/src/index.test.ts"],
+        migration: "public data migrator must remain forward-compatible",
+        createdAt: "2026-05-18T00:00:00.000Z",
+      }],
+    },
+  });
+  assert.equal(retiredDataMigrator.status, "fail");
+  assert.equal(retiredDataMigrator.checks.find((check) => check.id === "adapter_retirement_policy")?.status, "fail");
+
+  const missingStableSurfaceStrategy = runEvolutionMigratorLab({
+    fixtures: [fixture],
+    ledger,
+    stableSurfaces: [{
+      id: "test.unknown.stable.surface",
+      kind: "unsupportedStableKind",
+      owner: "claw",
+      name: "Unsupported Stable Surface",
+      storageClass: "frameworkGlobal",
+      canonicality: "canonical",
+      privacy: "userData",
+      lifecycle: "durable",
+      surfaceClass: "persistent",
+      stability: "v1",
+    } as any],
+  });
+  assert.equal(missingStableSurfaceStrategy.status, "fail");
+  assert.equal(missingStableSurfaceStrategy.checks.find((check) => check.id === "stable_surface_strategy_coverage")?.status, "fail");
 });
 
 test("maskCredential keeps only the tail", () => {

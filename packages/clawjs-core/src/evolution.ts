@@ -18,6 +18,15 @@ export const CLAW_EVOLUTION_RECORD_STATUSES = [
   "retired_runtime_adapter",
 ] as const;
 
+export const CLAW_EVOLUTION_STABLE_SURFACE_STRATEGIES = [
+  "migrate_canonical_data",
+  "preserve_touched_metadata",
+  "rebuild_from_canonical",
+  "contract_adapter",
+  "external_read_only",
+  "root_policy",
+] as const;
+
 export const clawEvolutionPolicy = {
   schemaVersion: 1,
   sourceOfTruth: "clawjs",
@@ -337,6 +346,20 @@ export const clawEvolutionMigratorLabResultSchema = z.object({
   rebuildChecks: z.array(z.object({
     surfaceId: z.string().min(1),
     kind: z.literal("search_index"),
+    status: z.enum(["pass", "fail", "blocked"]),
+    notes: z.array(z.string()),
+  })),
+  adapterRetirementChecks: z.array(z.object({
+    recordId: z.string().min(1),
+    status: z.enum(["pass", "fail", "blocked"]),
+    notes: z.array(z.string()),
+  })),
+  stableSurfaceCoverage: z.array(z.object({
+    surfaceId: z.string().min(1),
+    kind: z.string().min(1),
+    surfaceClass: z.string().optional(),
+    stability: z.string().optional(),
+    strategy: z.enum(CLAW_EVOLUTION_STABLE_SURFACE_STRATEGIES),
     status: z.enum(["pass", "fail", "blocked"]),
     notes: z.array(z.string()),
   })),
@@ -741,6 +764,7 @@ export function createEvolutionRollbackReport(input: {
 export function runEvolutionMigratorLab(input: {
   fixtures: ClawEvolutionVersionFixture[];
   ledger: ClawEvolutionLedger;
+  stableSurfaces?: ClawPersistentSurfaceNode[];
   fromVersion?: string;
   toVersion?: string;
   createdAt?: string;
@@ -752,6 +776,8 @@ export function runEvolutionMigratorLab(input: {
   const versionChain = buildEvolutionVersionChain(fixtures, fromVersion);
   const adapterChecks = buildEvolutionAdapterChecks(fixtures);
   const rebuildChecks = buildEvolutionRebuildChecks(fixtures);
+  const adapterRetirementChecks = buildEvolutionAdapterRetirementChecks(input.ledger);
+  const stableSurfaceCoverage = buildEvolutionStableSurfaceCoverage(input.stableSurfaces ?? []);
   const plan = createEvolutionOperatorPlan({
     action: "dry-run",
     ledger: input.ledger,
@@ -774,6 +800,8 @@ export function runEvolutionMigratorLab(input: {
     checkEvolutionLab(versionChain.length > 0 && versionChain.every((entry) => entry.status === "pass"), "version_chain_complete", "Public fixtures must form an explicit forward migration chain."),
     checkEvolutionLab(adapterChecks.length > 0 && adapterChecks.every((entry) => entry.status === "pass"), "adapter_contracts_present", "Protocol, route, CLI JSON, package, instruction, and skill fixtures must declare current adapter expectations."),
     checkEvolutionLab(rebuildChecks.length > 0 && rebuildChecks.every((entry) => entry.status === "pass"), "rebuild_contracts_present", "Search/index fixtures must prove rebuild-from-canonical behavior instead of treating indexes as canonical data."),
+    checkEvolutionLab(adapterRetirementChecks.every((entry) => entry.status === "pass"), "adapter_retirement_policy", "Only runtime/protocol compatibility adapters may use retired_runtime_adapter; public data migrators must remain forward-compatible."),
+    checkEvolutionLab(stableSurfaceCoverage.length === 0 || stableSurfaceCoverage.every((entry) => entry.status === "pass"), "stable_surface_strategy_coverage", "Every registered v1/internalCrossVersion surface supplied to the lab must map to migration, adapter, backup, rebuild, external-readonly, or root policy."),
   ];
   const status = checks.some((check) => check.status === "fail")
     ? "fail"
@@ -791,6 +819,8 @@ export function runEvolutionMigratorLab(input: {
     versionChain,
     adapterChecks,
     rebuildChecks,
+    adapterRetirementChecks,
+    stableSurfaceCoverage,
     checks,
     receipts: [createEvolutionReceipt({
       action: "dry-run",
@@ -800,6 +830,73 @@ export function runEvolutionMigratorLab(input: {
       notes: [`migration lab ${status} for ${fromVersion} to ${toVersion}`],
     })],
   });
+}
+
+function buildEvolutionAdapterRetirementChecks(ledger: ClawEvolutionLedger): ClawEvolutionMigratorLabResult["adapterRetirementChecks"] {
+  return ledger.records
+    .filter((record) => record.status === "retired_runtime_adapter")
+    .map((record) => {
+      const hasDataMigration = record.class === "migration_required" || typeof record.migration === "string";
+      const hasRuntimeAdapter = record.class === "adapter_required"
+        && typeof record.adapter === "string"
+        && record.surfaces.some((surface) => /\b(adapter|runtime|protocol|bridge)\b/i.test(surface));
+      const pass = hasRuntimeAdapter && !hasDataMigration;
+      return {
+        recordId: record.id,
+        status: pass ? "pass" as const : "fail" as const,
+        notes: [
+          pass
+            ? "retired record is scoped to a runtime/protocol compatibility adapter"
+            : "retired_runtime_adapter is forbidden for public data migrators and non-runtime adapter records",
+        ],
+      };
+    });
+}
+
+function buildEvolutionStableSurfaceCoverage(stableSurfaces: ClawPersistentSurfaceNode[]): ClawEvolutionMigratorLabResult["stableSurfaceCoverage"] {
+  return stableSurfaces
+    .filter((surface) => surface.stability === "v1" || surface.stability === "internalCrossVersion")
+    .sort((a, b) => a.id.localeCompare(b.id))
+    .map((surface) => {
+      const strategy = classifyEvolutionStableSurfaceStrategy(surface);
+      return {
+        surfaceId: surface.id,
+        kind: surface.kind,
+        surfaceClass: surface.surfaceClass,
+        stability: surface.stability,
+        strategy: strategy ?? "contract_adapter",
+        status: strategy ? "pass" as const : "fail" as const,
+        notes: [
+          strategy
+            ? `stable surface is covered by ${strategy}`
+            : "stable surface is v1/internalCrossVersion but has no registered evolution strategy",
+        ],
+      };
+    });
+}
+
+function classifyEvolutionStableSurfaceStrategy(surface: ClawPersistentSurfaceNode): typeof CLAW_EVOLUTION_STABLE_SURFACE_STRATEGIES[number] | null {
+  if (surface.canonicality === "externalReadOnly"
+    || surface.lifecycle === "external"
+    || (surface.owner === "external" && surface.storageClass === "external")
+    || ["externalReadOnlySource", "externalDependency", "externalMapping"].includes(surface.kind)) {
+    return "external_read_only";
+  }
+  if (surface.kind === "root") return "root_policy";
+  if (surface.lifecycle === "rebuildable"
+    || surface.canonicality === "cache"
+    || surface.canonicality === "generated"
+    || ["index", "cache"].includes(surface.kind)) {
+    return "rebuild_from_canonical";
+  }
+  if (["database", "table", "column", "jsonSchema"].includes(surface.kind)) return "migrate_canonical_data";
+  if (["folder", "file", "socket", "statusFile", "preferenceKey", "appStorageKey", "browserStorageKey", "fixture", "persistentTemp", "retiredPath"].includes(surface.kind)) {
+    return "preserve_touched_metadata";
+  }
+  if (["apiRoute", "privateApiRoute", "apiMethod", "apiParameter", "webhook", "webhookEvent", "eventTopic", "queueTopic", "jsonField", "enumValue", "errorCode", "packageName", "packageExport", "packageBin", "nativeIdentity", "fileFormat", "cliCommand", "cliFlag", "cliOutputField", "protocol", "protocolFrame", "protocolField", "idNamespace", "idPrefix", "deepLink", "hostname", "port", "envVar", "envOverride"].includes(surface.kind)) {
+    return "contract_adapter";
+  }
+  return null;
 }
 
 function buildEvolutionAdapterChecks(fixtures: ClawEvolutionVersionFixture[]): ClawEvolutionMigratorLabResult["adapterChecks"] {

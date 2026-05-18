@@ -33,6 +33,10 @@ The gate requires both an active evolution record and a refreshed
 
 - `schema.json`: machine-readable record schema.
 - `baseline.json`: current public ledger metadata and records.
+- `public-versions.json`: manifest of public versions and their permanent
+  fixtures. The governance gate fails if a fixture exists outside the manifest,
+  if a public version points to a missing fixture, or if any public-release
+  fixture omits `previousPublicVersion`.
 - `public-surface-baseline.json`: generated snapshot of registered public
   surfaces and CLI commands. `claw evolution diff --json` compares current
   registry state against this file and requires active evolution records for
@@ -46,11 +50,18 @@ The gate requires both an active evolution record and a refreshed
   forward chain. The lab also emits `adapterChecks` and `rebuildChecks`:
   protocol/route/CLI JSON/package/agent/skill fixtures must declare current
   adapter expectations, and search/index fixtures must prove
-  `rebuildFromCanonical` with `rebuildable_no_canonical_backup`.
+  `rebuildFromCanonical` with `rebuildable_no_canonical_backup`. When the
+  lab is run from `claw evolution verify|doctor`, it also emits
+  `stableSurfaceCoverage` and fails `stable_surface_strategy_coverage` unless
+  every registered `v1` or `internalCrossVersion` surface maps to a migration,
+  adapter, backup, rebuild, external-readonly, or root-policy strategy. It
+  also fails `adapter_retirement_policy` if any public data migrator is marked
+  `retired_runtime_adapter`; that status is reserved for runtime/protocol
+  compatibility adapters.
 - `backbone-source-decision-audit.md`: public, redacted register of the source
   conversation decisions that must be reviewed before the active backbone goal
-  can be closed. It is not a completion claim; `partial` rows keep the goal
-  open until verified or explicitly blocked.
+  can be closed. It is not a completion claim; `partial` or `blocked` rows keep
+  the goal open until verified or explicitly accepted as external scope.
 - `claw evolution plan|dry-run|repair|rollback|backup|receipt|report --json`:
   safe operator contracts for migration planning, backup classification, rescue
   preservation, and redacted receipts. `repair` and `report` also emit an

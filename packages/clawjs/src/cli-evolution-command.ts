@@ -59,7 +59,13 @@ export async function runEvolutionCli(input: EvolutionCliInput): Promise<number>
     const current = createCurrentPublicSurfaceBaseline();
     const diff = baseline ? diffEvolutionPublicSurfaceBaseline({ baseline, current, ledger }) : null;
     const fixtures = readEvolutionFixtures(fixtureDirectory);
-    const migrationLab = runEvolutionMigratorLab({ fixtures, ledger, fromVersion: input.flags.from, toVersion: input.flags.to });
+    const migrationLab = runEvolutionMigratorLab({
+      fixtures,
+      ledger,
+      stableSurfaces: clawPersistentSurfaceRegistry.nodes,
+      fromVersion: input.flags.from,
+      toVersion: input.flags.to,
+    });
     return writeEvolutionResult(input, action, {
       status: (!diff || diff.uncoveredChanges.length === 0) && migrationLab.status === "pass" ? "ok" : "needs_attention",
       ledgerPath,
@@ -117,6 +123,7 @@ export async function runEvolutionCli(input: EvolutionCliInput): Promise<number>
     const migrationLab = runEvolutionMigratorLab({
       fixtures,
       ledger,
+      stableSurfaces: clawPersistentSurfaceRegistry.nodes,
       fromVersion: input.flags.from,
       toVersion: input.flags.to,
     });

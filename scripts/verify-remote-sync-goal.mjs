@@ -75,18 +75,7 @@ const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const sourceConversationId = "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8";
 const sourcePlanId = "019e3732-c90e-7491-9217-37020c43217e-plan";
 
-const requiredDocs = [
-  "docs/adr/0022-remote-gateway-sync-redesign.md",
-  "docs/remote-gateway-sync-source-decision-audit.md",
-  "docs/remote-gateway-sync-source-qa-review.json",
-  "docs/remote-gateway-sync-external-validation-evidence.json",
-  "docs/remote-gateway-sync-completion-audit.md",
-  "docs/remote-gateway-sync-decision-matrix.md",
-  "docs/relay.md",
-  "docs/decision-map.md",
-  "docs/interface-matrix.md",
-  "docs/cli.md",
-];
+const requiredDocs = "CONSTITUTION.md docs/adr/0022-remote-gateway-sync-redesign.md docs/remote-gateway-sync-source-decision-audit.md docs/remote-gateway-sync-source-qa-review.json docs/remote-gateway-sync-external-validation-evidence.json docs/remote-gateway-sync-completion-audit.md docs/remote-gateway-sync-decision-matrix.md docs/relay.md docs/decision-map.md docs/interface-matrix.md docs/cli.md".split(" ");
 
 const requiredNodes = [
   "claw.coordinator",
@@ -101,44 +90,8 @@ const requiredNodes = [
 
 const requiredCliCommands = ["remote", "sync", "nodes", "gateway"];
 
-const requiredServiceApiRoutes = [
-  "remote/classifications",
-  "remote/classifications/receipts",
-  "remote/conformance",
-  "remote/offline-command",
-  "remote/external-pending",
-  "remote/external-validation-checklist",
-  "remote/external-validation-template",
-  "remote/external-validation-artifact",
-  "remote/external-validation-runbook",
-  "remote/external-validation-readiness",
-  "remote/external-validation-approval-request",
-  "remote/external-validation-report",
-  "remote/source-qa-template",
-  "remote/closure-gate",
-  "remote/route-contracts",
-  "remote/provider-device-e2e-plan",
-  "remote/compatibility/adapters",
-  "gateway/conformance",
-  "gateway/agent-service/evaluate",
-  "gateway/agent-service/executions",
-  "gateway/audit/receipts",
-  "sync/drivers",
-  "sync/manifests",
-  "sync/changes",
-  "sync/plan",
-  "sync/conflicts",
-  "sync/applications",
-  "sync/authority-handoffs",
-  "nodes",
-  "nodes/pair",
-  "nodes/trust",
-  "nodes/revoke",
-  "mesh/invitations",
-  "mesh/invitations/accept",
-  "mesh/shares",
-  "mesh/revocations",
-];
+const requiredServiceApiMethodRoutes = "GET:remote/classifications POST:remote/classifications/receipts GET:remote/conformance GET:remote/offline-command POST:remote/offline-command GET:remote/external-pending GET:remote/external-validation-checklist GET:remote/external-validation-template POST:remote/external-validation-template GET:remote/external-validation-artifact POST:remote/external-validation-artifact GET:remote/external-validation-runbook GET:remote/external-validation-readiness POST:remote/external-validation-readiness GET:remote/external-validation-approval-request POST:remote/external-validation-approval-request GET:remote/external-validation-report POST:remote/external-validation-report GET:remote/source-qa-template POST:remote/source-qa-template GET:remote/closure-gate POST:remote/closure-gate GET:remote/route-contracts GET:remote/provider-device-e2e-plan GET:remote/compatibility/adapters POST:remote/compatibility/adapters GET:gateway/conformance POST:gateway/agent-service/evaluate POST:gateway/agent-service/executions POST:gateway/audit/receipts GET:sync/drivers GET:sync/manifests POST:sync/manifests GET:sync/changes POST:sync/plan POST:sync/conflicts POST:sync/applications POST:sync/authority-handoffs GET:nodes POST:nodes/pair POST:nodes/trust POST:nodes/revoke POST:mesh/invitations POST:mesh/invitations/accept POST:mesh/shares POST:mesh/revocations".split(" ");
+const requiredServiceApiRoutes = [...new Set(requiredServiceApiMethodRoutes.map((entry) => entry.split(":")[1]))];
 
 const requiredDocSnippets = [
   "Coordinator",
@@ -298,12 +251,14 @@ for (const [relativePath, text] of docTexts) {
     fail(`${relativePath} must not include private local session paths`);
   }
 }
+for (const snippet of ["Remote framework access is organized as Coordinator, Gateway, Connector, and", "Gateway projects registered local SDK/service/CLI contracts under", "Iroh is the preferred v1 transport adapter"]) requireText("constitution remote mesh principle", docTexts.get("CONSTITUTION.md") ?? "", snippet);
 
 for (const snippet of [sourceConversationId, sourcePlanId]) {
   requireText("source decision audit", docTexts.get("docs/remote-gateway-sync-source-decision-audit.md") ?? "", snippet);
   requireText("completion audit", docTexts.get("docs/remote-gateway-sync-completion-audit.md") ?? "", snippet);
   requireText("decision matrix", docTexts.get("docs/remote-gateway-sync-decision-matrix.md") ?? "", snippet);
 }
+for (const snippet of ["Remote Gateway And Sync Interfaces", "/v1/remote/route-contracts", "/v1/remote/compatibility/adapters", "/v1/gateway/agent-service/executions", "/v1/sync/authority-handoffs", "/v1/mesh/invitations/accept"]) requireText("interface matrix remote inventory", docTexts.get("docs/interface-matrix.md") ?? "", snippet);
 
 const sourceDecisionIds = extractTableIds(docTexts.get("docs/remote-gateway-sync-source-decision-audit.md") ?? "", "RQ");
 const sourceQaIds = extractTableIds(docTexts.get("docs/remote-gateway-sync-source-decision-audit.md") ?? "", "QA");
@@ -447,6 +402,8 @@ const expectedSyncDriverRouteIds = ["sync.skills", "sync.memoryUserModel", "sync
 const expectedSyncDriverRequiredRouteIds = ["sync.agentConfig", "sync.blobs", "sync.driveFiles", "sync.memoryUserModel", "sync.searchIndex", "sync.sessions", "sync.sidecars", "sync.skills", "sync.sqliteResources", "sync.workspaceState"];
 const expectedSyncDriverLateralDomains = [["skills"], ["memory", "user_model", "profile"], ["sessions"], ["drive", "files"], ["blobs", "files"], ["database", "records"], ["database", "partial_database"], ["sidecars", "runtime"], ["search", "indexes"], ["agents", "config"], ["workspace", "projects"]];
 const expectedSyncDriverCommands = expectedSyncDrivers.map((driver) => [`claw sync manifest --driver ${driver} --json`, `claw sync plan --driver ${driver} --json`, `claw sync apply --driver ${driver} --record true --json`]);
+const expectedRemoteSafeClassificationIds = "claw.agents claw.agents.assignments claw.remote.client claw.relay claw.relay.connector claw.coordinator claw.gateway claw.connector claw.sync claw.transport.iroh claw.headlessHost claw.remoteCache claw.remote.classification claw.search claw.secrets.broker claw.drive.files claw.memory.userModel claw.skills.library claw.mesh.share".split(" ");
+const expectedCompatibilityAdapters = [["relay.mobile.chat", "remote.chatGateway", "ios"], ["relay.mobile.search", "remote.searchGateway", "web"]];
 for (const item of sourceQaReviewReport.items) {
   if (!sourceQaIds.has(item.qaId)) fail(`source Q/A review artifact includes unknown ${item.qaId}`);
   const expectedDisposition = expectedExternalPendingQaIds.has(item.qaId) ? "external_pending" : "implemented";
@@ -732,6 +689,11 @@ for (const node of clawPersistentSurfaceRegistry.nodes) {
     fail(`${node.id} must not keep a pending Relay classification before remote goal completion`);
   }
 }
+const relayClassifiedNodes = clawPersistentSurfaceRegistry.nodes.filter((node) => node.programmaticSurfaces?.includes("relay") || node.surfaceGaps?.some((gap) => gap.surface === "relay"));
+if (relayClassifiedNodes.length !== 57) fail(`remote Relay classification inventory must contain 57 entries, got ${relayClassifiedNodes.length}`);
+const remoteSafeClassificationIds = relayClassifiedNodes.filter((node) => node.programmaticSurfaces?.includes("relay")).map((node) => node.id);
+if (JSON.stringify(remoteSafeClassificationIds) !== JSON.stringify(expectedRemoteSafeClassificationIds)) fail("remote-safe Relay classification IDs changed without updating the goal proof");
+if (relayClassifiedNodes.some((node) => node.surfaceGaps?.find((gap) => gap.surface === "relay")?.status === "blocked")) fail("remote Relay classification inventory must not contain blocked entries for this goal");
 
 for (const routeId of remoteSyncRequiredRouteIds) {
   const route = findClawSurfaceRoute(routeId);
@@ -1443,6 +1405,14 @@ for (const commandName of requiredCliCommands) {
 const remoteSyncRoutesSource = readRequired("relay/src/server/remote-sync-routes.ts");
 for (const route of requiredServiceApiRoutes) {
   requireText("remote sync service routes", remoteSyncRoutesSource, `clawApiPath("${route}")`);
+  if (!clawPersistentSurfaceRegistry.nodes.some((node) => node.kind === "apiRoute" && node.route === `/v1/${route}`)) fail(`stable API registry missing /v1/${route}`);
+  requireText("relay docs service route inventory", docTexts.get("docs/relay.md") ?? "", `/v1/${route}`);
+}
+for (const entry of requiredServiceApiMethodRoutes) {
+  const [method, route] = entry.split(":");
+  requireText("remote sync service method routes", remoteSyncRoutesSource, `app.${method.toLowerCase()}(clawApiPath("${route}")`);
+  if (!clawPersistentSurfaceRegistry.nodes.some((node) => node.kind === "apiRoute" && node.method === method && node.route === `/v1/${route}`)) fail(`stable API registry missing ${method} /v1/${route}`);
+  requireText("relay docs service method inventory", docTexts.get("docs/relay.md") ?? "", `${method}${method.length === 3 ? "  " : " "}/v1/${route}`);
 }
 const remoteSyncRoutesTestSource = readRequired("relay/src/server/remote-sync-routes.test.ts");
 for (const snippet of [
@@ -1550,6 +1520,10 @@ if (!remoteCompatibilityAdapterReceiptSchema.safeParse(compatReceipt).success) f
 if (compatReceipt.mapsToCanonical !== true) fail("remote compatibility adapters must map to canonical routes");
 if (compatReceipt.parallelApiIntroduced !== false) fail("remote compatibility adapters must not introduce parallel APIs");
 if (compatReceipt.writes !== false) fail("remote compatibility adapter receipts must be no-write contracts");
+for (const [legacySurface, canonicalRouteId, clientKind] of expectedCompatibilityAdapters) {
+  const receipt = createRemoteCompatibilityAdapterReceipt({ legacySurface, canonicalRouteId, clientKind, createdAt: "2026-05-17T10:11:00.000Z" });
+  if (!receipt.mapsToCanonical || receipt.parallelApiIntroduced || receipt.writes) fail(`${legacySurface} compatibility adapter must map to ${canonicalRouteId} without parallel API or writes`);
+}
 
 const classificationReceipt = createRemoteSurfaceClassificationReceipt({
   capabilityId: "claw.gateway",

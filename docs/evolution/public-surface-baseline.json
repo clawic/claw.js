@@ -6,13 +6,13 @@
     "cliCommands": "packages/clawjs-core/src/cli-command-registry.ts"
   },
   "counts": {
-    "surfaces": 888,
+    "surfaces": 905,
     "cliCommands": 155
   },
   "fingerprints": {
-    "surfaces": "fnv1a32:3c55c4fa",
+    "surfaces": "fnv1a32:6c78b514",
     "cliCommands": "fnv1a32:6ab32150",
-    "combined": "fnv1a32:0b458d6f"
+    "combined": "fnv1a32:ec0b1049"
   },
   "surfaces": [
     {
@@ -226,6 +226,24 @@
       "stability": "v1"
     },
     {
+      "id": "claw.api.gateway.agentServiceExecutions",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "POST /v1/gateway/agent-service/executions",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.api.gateway.auditReceipts",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "POST /v1/gateway/audit/receipts",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
       "id": "claw.api.gateway.conformance",
       "owner": "claw",
       "kind": "apiRoute",
@@ -285,6 +303,15 @@
       "kind": "apiRoute",
       "parentId": "claw.contracts.api",
       "value": "POST /v1/mesh/invitations",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.api.mesh.invitationsAccept",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "POST /v1/mesh/invitations/accept",
       "surfaceClass": "api",
       "stability": "v1"
     },
@@ -370,6 +397,15 @@
       "stability": "v1"
     },
     {
+      "id": "claw.api.remote.classificationReceipts",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "POST /v1/remote/classifications/receipts",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
       "id": "claw.api.remote.classifications",
       "owner": "claw",
       "kind": "apiRoute",
@@ -388,11 +424,47 @@
       "stability": "v1"
     },
     {
+      "id": "claw.api.remote.closureGateRead",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /v1/remote/closure-gate",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.api.remote.compatibilityAdapters",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /v1/remote/compatibility/adapters",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.api.remote.compatibilityAdaptersCreate",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "POST /v1/remote/compatibility/adapters",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
       "id": "claw.api.remote.conformance",
       "owner": "claw",
       "kind": "apiRoute",
       "parentId": "claw.contracts.api",
       "value": "GET /v1/remote/conformance",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.api.remote.externalPending",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /v1/remote/external-pending",
       "surfaceClass": "api",
       "stability": "v1"
     },
@@ -406,11 +478,29 @@
       "stability": "v1"
     },
     {
+      "id": "claw.api.remote.externalValidationApprovalRequestRead",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /v1/remote/external-validation-approval-request",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
       "id": "claw.api.remote.externalValidationArtifact",
       "owner": "claw",
       "kind": "apiRoute",
       "parentId": "claw.contracts.api",
       "value": "POST /v1/remote/external-validation-artifact",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.api.remote.externalValidationArtifactRead",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /v1/remote/external-validation-artifact",
       "surfaceClass": "api",
       "stability": "v1"
     },
@@ -433,11 +523,29 @@
       "stability": "v1"
     },
     {
+      "id": "claw.api.remote.externalValidationReadinessRead",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /v1/remote/external-validation-readiness",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
       "id": "claw.api.remote.externalValidationReport",
       "owner": "claw",
       "kind": "apiRoute",
       "parentId": "claw.contracts.api",
       "value": "POST /v1/remote/external-validation-report",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.api.remote.externalValidationReportRead",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /v1/remote/external-validation-report",
       "surfaceClass": "api",
       "stability": "v1"
     },
@@ -460,11 +568,29 @@
       "stability": "v1"
     },
     {
+      "id": "claw.api.remote.externalValidationTemplateRead",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /v1/remote/external-validation-template",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
       "id": "claw.api.remote.offlineCommand",
       "owner": "claw",
       "kind": "apiRoute",
       "parentId": "claw.contracts.api",
       "value": "POST /v1/remote/offline-command",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.api.remote.offlineCommandInspect",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /v1/remote/offline-command",
       "surfaceClass": "api",
       "stability": "v1"
     },
@@ -478,11 +604,29 @@
       "stability": "v1"
     },
     {
+      "id": "claw.api.remote.routeContracts",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /v1/remote/route-contracts",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
       "id": "claw.api.remote.sourceQaTemplate",
       "owner": "claw",
       "kind": "apiRoute",
       "parentId": "claw.contracts.api",
       "value": "POST /v1/remote/source-qa-template",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.api.remote.sourceQaTemplateRead",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /v1/remote/source-qa-template",
       "surfaceClass": "api",
       "stability": "v1"
     },
@@ -618,6 +762,15 @@
       "kind": "apiRoute",
       "parentId": "claw.contracts.api",
       "value": "POST /v1/sync/applications",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.api.sync.authorityHandoffs",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "POST /v1/sync/authority-handoffs",
       "surfaceClass": "api",
       "stability": "v1"
     },

@@ -26,6 +26,76 @@ import {
 import { buildRelayApp } from "./app.ts";
 
 const registeredRouteIds = () => (clawPersistentSurfaceRegistry.routes ?? []).map((route) => route.id);
+const expectedRelayClassifications = () => clawPersistentSurfaceRegistry.nodes
+  .filter((node) => node.programmaticSurfaces?.includes("relay") || node.surfaceGaps?.some((gap) => gap.surface === "relay"))
+  .map((node) => ({
+    id: node.id,
+    relay: node.programmaticSurfaces?.includes("relay")
+      ? "remote-safe"
+      : node.surfaceGaps?.find((gap) => gap.surface === "relay")?.status ?? "pending",
+  }));
+
+const expectedCompatibilityAdapters = [
+  { legacySurface: "relay.mobile.chat", canonicalRouteId: "remote.chatGateway", clientKind: "ios" },
+  { legacySurface: "relay.mobile.search", canonicalRouteId: "remote.searchGateway", clientKind: "web" },
+];
+const expectedRemoteHttpMethodRoutes = [
+  "GET:/v1/remote/classifications",
+  "POST:/v1/remote/classifications/receipts",
+  "GET:/v1/remote/conformance",
+  "GET:/v1/remote/offline-command",
+  "POST:/v1/remote/offline-command",
+  "GET:/v1/remote/external-pending",
+  "GET:/v1/remote/external-validation-checklist",
+  "GET:/v1/remote/external-validation-template",
+  "POST:/v1/remote/external-validation-template",
+  "GET:/v1/remote/external-validation-artifact",
+  "POST:/v1/remote/external-validation-artifact",
+  "GET:/v1/remote/external-validation-runbook",
+  "GET:/v1/remote/external-validation-readiness",
+  "POST:/v1/remote/external-validation-readiness",
+  "GET:/v1/remote/external-validation-approval-request",
+  "POST:/v1/remote/external-validation-approval-request",
+  "GET:/v1/remote/external-validation-report",
+  "POST:/v1/remote/external-validation-report",
+  "GET:/v1/remote/source-qa-template",
+  "POST:/v1/remote/source-qa-template",
+  "GET:/v1/remote/closure-gate",
+  "POST:/v1/remote/closure-gate",
+  "GET:/v1/remote/route-contracts",
+  "GET:/v1/remote/provider-device-e2e-plan",
+  "GET:/v1/remote/compatibility/adapters",
+  "POST:/v1/remote/compatibility/adapters",
+  "GET:/v1/gateway/conformance",
+  "POST:/v1/gateway/agent-service/evaluate",
+  "POST:/v1/gateway/agent-service/executions",
+  "POST:/v1/gateway/audit/receipts",
+  "GET:/v1/sync/drivers",
+  "GET:/v1/sync/manifests",
+  "POST:/v1/sync/manifests",
+  "GET:/v1/sync/changes",
+  "POST:/v1/sync/plan",
+  "POST:/v1/sync/conflicts",
+  "POST:/v1/sync/applications",
+  "POST:/v1/sync/authority-handoffs",
+  "GET:/v1/nodes",
+  "POST:/v1/nodes/pair",
+  "POST:/v1/nodes/trust",
+  "POST:/v1/nodes/revoke",
+  "POST:/v1/mesh/invitations",
+  "POST:/v1/mesh/invitations/accept",
+  "POST:/v1/mesh/shares",
+  "POST:/v1/mesh/revocations",
+];
+const remoteHttpSmokePayloads: Record<string, Record<string, unknown>> = {
+  "POST:/v1/remote/classifications/receipts": {
+    capabilityId: "claw.gateway",
+    classification: "remote-safe",
+    routeId: "remote.chatGateway",
+    policyRef: "docs/adr/0022-remote-gateway-sync-redesign.md",
+    testRefs: ["relay/src/server/remote-sync-routes.test.ts"],
+  },
+};
 
 test("relay exposes remote Gateway and Sync conformance API routes", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-relay-remote-sync-"));
@@ -36,6 +106,17 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     },
   });
   try {
+    for (const entry of expectedRemoteHttpMethodRoutes) {
+      const [method, url] = entry.split(":");
+      const response = await built.app.inject({
+        method,
+        url,
+        headers: method === "POST" ? { "content-type": "application/json" } : undefined,
+        payload: method === "POST" ? remoteHttpSmokePayloads[entry] ?? {} : undefined,
+      });
+      assert.equal(response.statusCode, 200, `${method} ${url} must be mounted`);
+    }
+
     const conformance = await built.app.inject({ method: "GET", url: "/v1/remote/conformance" });
     assert.equal(conformance.statusCode, 200);
     const conformancePayload = conformance.json() as {
@@ -463,7 +544,13 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     const classifications = await built.app.inject({ method: "GET", url: "/v1/remote/classifications" });
     assert.equal(classifications.statusCode, 200);
     const classificationPayload = classifications.json() as { classifications: Array<{ id: string; relay: string }> };
-    assert.equal(classificationPayload.classifications.some((entry) => entry.id === "claw.gateway" && entry.relay === "remote-safe"), true);
+    assert.equal(classificationPayload.classifications.length, 57);
+    assert.deepEqual(
+      classificationPayload.classifications.map((entry) => ({ id: entry.id, relay: entry.relay })),
+      expectedRelayClassifications(),
+    );
+    assert.equal(classificationPayload.classifications.some((entry) => entry.relay === "pending" || entry.relay === "blocked"), false);
+    assert.equal(classificationPayload.classifications.filter((entry) => entry.relay === "remote-safe").length, 19);
 
     const classificationReceipt = await built.app.inject({
       method: "POST",
@@ -545,8 +632,11 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
 
     const compatibilityAdapters = await built.app.inject({ method: "GET", url: "/v1/remote/compatibility/adapters" });
     assert.equal(compatibilityAdapters.statusCode, 200);
-    const compatibilityAdaptersPayload = compatibilityAdapters.json() as { adapters: Array<{ legacySurface: string; canonicalRouteId: string; mapsToCanonical: boolean; parallelApiIntroduced: boolean; writes: boolean }>; writes: boolean };
-    assert.equal(compatibilityAdaptersPayload.adapters.some((entry) => entry.legacySurface === "relay.mobile.chat" && entry.canonicalRouteId === "remote.chatGateway"), true);
+    const compatibilityAdaptersPayload = compatibilityAdapters.json() as { adapters: Array<{ legacySurface: string; canonicalRouteId: string; clientKind: string; mapsToCanonical: boolean; parallelApiIntroduced: boolean; writes: boolean }>; writes: boolean };
+    assert.deepEqual(
+      compatibilityAdaptersPayload.adapters.map((entry) => ({ legacySurface: entry.legacySurface, canonicalRouteId: entry.canonicalRouteId, clientKind: entry.clientKind })),
+      expectedCompatibilityAdapters,
+    );
     assert.equal(compatibilityAdaptersPayload.adapters.every((entry) => entry.mapsToCanonical && !entry.parallelApiIntroduced && !entry.writes), true);
     assert.equal(compatibilityAdaptersPayload.writes, false);
 

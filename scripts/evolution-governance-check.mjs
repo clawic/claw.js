@@ -28,6 +28,7 @@ for (const file of [
   "docs/evolution/README.md",
   "docs/evolution/schema.json",
   "docs/evolution/baseline.json",
+  "docs/evolution/public-versions.json",
   "docs/evolution/public-surface-baseline.json",
   "docs/evolution/fixtures/v1-foundation.json",
   "docs/evolution/backbone-source-decision-audit.md",
@@ -58,8 +59,13 @@ for (const snippet of [
   "version_chain_complete",
   "adapterChecks",
   "rebuildChecks",
+  "adapterRetirementChecks",
+  "stableSurfaceCoverage",
   "adapter_contracts_present",
   "rebuild_contracts_present",
+  "adapter_retirement_policy",
+  "stable_surface_strategy_coverage",
+  "CLAW_EVOLUTION_STABLE_SURFACE_STRATEGIES",
   "redactEvolutionReceiptText",
   "runEvolutionMigratorLab",
 ]) requireSnippet("packages/clawjs-core/src/evolution.ts", snippet);
@@ -77,12 +83,30 @@ for (const snippet of [
 ]) requireSnippet("docs/decision-map.md", snippet);
 
 for (const snippet of [
+  "The current code path must not branch through old versions.",
+  "knowledge in migrators, adapters, receipts, repair tools, and fixtures.",
+]) requireSnippet("docs/evolution/README.md", snippet);
+
+for (const snippet of [
+  "function evolutionGate()",
+  "npmRun(\"test:evolution\")",
+  "function fast(",
+  "function changed()",
+  "function release()",
+  "integration();",
+]) requireSnippet("scripts/test-lane.mjs", snippet);
+
+for (const snippet of [
   "backbone-source-decision-audit.md",
   "Source conversation: `019e3b2e-3f4a-7753-a2ce-c92fce7c4436`",
   "Binding plan item: `019e3b8a-fab7-75e0-8a23-a49524afe727-plan`",
-  "Status: `partial`",
-  "The active goal must not be closed while any row is `partial`.",
+  "Status: `verified`",
+  "## Superseded Prompts",
+  "The active goal must not be closed while any row is `partial` or `blocked`.",
 ]) requireSnippet("docs/evolution/backbone-source-decision-audit.md", snippet);
+if (/\|\s*(?:partial|blocked)\s*\|/u.test(read("docs/evolution/backbone-source-decision-audit.md"))) {
+  errors.push("backbone source decision audit still has partial or blocked rows");
+}
 
 for (const decisionId of [
   "plan_scope",
@@ -161,7 +185,14 @@ for (const decisionId of [
   "core_api_shape",
 ]) requireSnippet("docs/evolution/backbone-source-decision-audit.md", `\`${decisionId}\``);
 
+for (const supersededPromptId of [
+  "startup_migration_policy",
+  "blocked_state_policy",
+  "migration_user_surface",
+]) requireSnippet("docs/evolution/backbone-source-decision-audit.md", `\`${supersededPromptId}\``);
+
 const ledger = readJson("docs/evolution/baseline.json");
+const publicVersions = readJson("docs/evolution/public-versions.json");
 const publicSurfaceBaseline = readJson("docs/evolution/public-surface-baseline.json");
 const v1FoundationFixture = readJson("docs/evolution/fixtures/v1-foundation.json");
 if (ledger.schemaVersion !== 1) errors.push("evolution ledger schemaVersion must be 1");
@@ -175,6 +206,49 @@ for (const record of ledger.records ?? []) {
   }
   if (!Array.isArray(record.surfaces) || record.surfaces.length < 1) errors.push(`evolution record ${record.id} needs surfaces`);
   if (!Array.isArray(record.tests)) errors.push(`evolution record ${record.id} needs tests`);
+}
+
+if (publicVersions.schemaVersion !== 1) errors.push("public versions manifest schemaVersion must be 1");
+if (publicVersions.sourceOfTruth !== "clawjs") errors.push("public versions manifest sourceOfTruth must be clawjs");
+if (publicVersions.policy !== "every_public_version_has_fixture") errors.push("public versions manifest policy drifted");
+if (!Array.isArray(publicVersions.versions) || publicVersions.versions.length < 1) errors.push("public versions manifest must list at least v1");
+const publicVersionIds = new Set();
+const publicVersionFixturePaths = new Set();
+for (const entry of publicVersions.versions ?? []) {
+  if (typeof entry.publicVersion !== "string" || entry.publicVersion.length < 1) errors.push("public version entry needs publicVersion");
+  if (publicVersionIds.has(entry.publicVersion)) errors.push(`duplicate public version ${entry.publicVersion}`);
+  publicVersionIds.add(entry.publicVersion);
+  if (typeof entry.fixture !== "string" || !entry.fixture.startsWith("docs/evolution/fixtures/")) {
+    errors.push(`public version ${entry.publicVersion} needs fixture under docs/evolution/fixtures`);
+    continue;
+  }
+  publicVersionFixturePaths.add(entry.fixture);
+  if (!fs.existsSync(path.join(rootDir, entry.fixture))) {
+    errors.push(`public version ${entry.publicVersion} fixture is missing: ${entry.fixture}`);
+    continue;
+  }
+  const fixture = readJson(entry.fixture);
+  if (fixture.publicVersion !== entry.publicVersion) {
+    errors.push(`public version ${entry.publicVersion} fixture has mismatched publicVersion ${fixture.publicVersion}`);
+  }
+  if (fixture.phase !== entry.phase) {
+    errors.push(`public version ${entry.publicVersion} fixture has mismatched phase ${fixture.phase}`);
+  }
+  if ((fixture.previousPublicVersion ?? null) !== (entry.previousPublicVersion ?? null)) {
+    errors.push(`public version ${entry.publicVersion} fixture has mismatched previousPublicVersion`);
+  }
+  if (entry.phase === "public_release" && !entry.previousPublicVersion) {
+    errors.push(`public release ${entry.publicVersion} must declare previousPublicVersion`);
+  }
+  if (entry.previousPublicVersion && !publicVersionIds.has(entry.previousPublicVersion)) {
+    errors.push(`public version ${entry.publicVersion} references unknown previousPublicVersion ${entry.previousPublicVersion}`);
+  }
+}
+for (const entry of fs.readdirSync(path.join(rootDir, "docs/evolution/fixtures")).filter((name) => name.endsWith(".json"))) {
+  const fixturePath = `docs/evolution/fixtures/${entry}`;
+  if (!publicVersionFixturePaths.has(fixturePath)) {
+    errors.push(`public fixture is not listed in public-versions manifest: ${fixturePath}`);
+  }
 }
 
 if (publicSurfaceBaseline.schemaVersion !== 1) errors.push("public surface baseline schemaVersion must be 1");

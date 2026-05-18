@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "sourceOfTruth": "clawjs",
+  "policy": "every_public_version_has_fixture",
+  "versions": [
+    {
+      "publicVersion": "v1",
+      "phase": "pre_v1_foundation",
+      "fixture": "docs/evolution/fixtures/v1-foundation.json",
+      "previousPublicVersion": null,
+      "releaseStatus": "foundation"
+    }
+  ]
+}

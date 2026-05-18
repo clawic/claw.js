@@ -26,22 +26,26 @@
       "surfaces": [
         "docs/evolution",
         "docs/evolution/fixtures",
+        "docs/evolution/public-versions.json",
         "claw evolution",
         "@clawjs/core evolution policy",
         "@clawjs/core migration lab API",
         "@clawjs/core migration lab adapterChecks",
         "@clawjs/core migration lab rebuildChecks",
+        "@clawjs/core migration lab adapterRetirementChecks",
+        "@clawjs/core migration lab stableSurfaceCoverage",
         "Clawix rescue mirror"
       ],
       "tests": [
         "scripts/evolution-governance-check.mjs",
         "packages/clawjs-core/src/index.test.ts",
         "packages/clawjs/src/index.test.ts",
+        "docs/evolution/public-versions.json",
         "docs/evolution/public-surface-baseline.json",
         "docs/evolution/fixtures/v1-foundation.json"
       ],
       "adr": "docs/adr/0030-post-v1-evolution-rescue-backbone.md",
-      "notes": "Initial additive backbone. Post-V1 registry diffs and migration labs build on this baseline. Migration lab results include adapterChecks and rebuildChecks so durable contract fixtures declare current adapter expectations and search/index fixtures prove rebuild-from-canonical behavior.",
+      "notes": "Initial additive backbone. Post-V1 registry diffs and migration labs build on this baseline. Migration lab results include adapterChecks, rebuildChecks, adapterRetirementChecks, and stableSurfaceCoverage so durable contract fixtures declare current adapter expectations, search/index fixtures prove rebuild-from-canonical behavior, retired_runtime_adapter stays limited to runtime/protocol adapters, and every registered v1/internalCrossVersion surface has an evolution strategy. The public versions manifest requires every public version to declare its permanent fixture.",
       "createdAt": "2026-05-18T00:00:00.000Z",
       "updatedAt": "2026-05-18T00:00:00.000Z"
     },
@@ -89,6 +93,59 @@
       ],
       "adr": "docs/adr/0030-post-v1-evolution-rescue-backbone.md",
       "notes": "Registers additive system telemetry HTTP contracts so public API surface drift remains covered by the evolution ledger and baseline.",
+      "createdAt": "2026-05-18T00:00:00.000Z"
+    },
+    {
+      "id": "evo_remote_gateway_mesh_api_surfaces",
+      "title": "Remote gateway and mesh API surfaces",
+      "class": "additive",
+      "status": "active",
+      "owner": "claw",
+      "surfaces": [
+        "claw.api.gateway.agentServiceExecutions",
+        "claw.api.gateway.auditReceipts",
+        "claw.api.mesh.invitationsAccept",
+        "claw.api.remote.classificationReceipts",
+        "claw.api.remote.compatibilityAdapters",
+        "claw.api.remote.externalPending",
+        "claw.api.remote.routeContracts",
+        "claw.api.sync.authorityHandoffs"
+      ],
+      "tests": [
+        "packages/clawjs-core/src/index.test.ts",
+        "packages/clawjs/src/index.test.ts",
+        "scripts/evolution-governance-check.mjs",
+        "docs/evolution/public-surface-baseline.json"
+      ],
+      "adr": "docs/adr/0030-post-v1-evolution-rescue-backbone.md",
+      "notes": "Registers additive remote, gateway, mesh, and sync API contracts so stable public surface drift is sealed by the evolution ledger and baseline.",
+      "createdAt": "2026-05-18T00:00:00.000Z"
+    },
+    {
+      "id": "evo_remote_validation_read_api_surfaces",
+      "title": "Remote validation read API surfaces",
+      "class": "additive",
+      "status": "active",
+      "owner": "claw",
+      "surfaces": [
+        "claw.api.remote.closureGateRead",
+        "claw.api.remote.compatibilityAdaptersCreate",
+        "claw.api.remote.externalValidationApprovalRequestRead",
+        "claw.api.remote.externalValidationArtifactRead",
+        "claw.api.remote.externalValidationReadinessRead",
+        "claw.api.remote.externalValidationReportRead",
+        "claw.api.remote.externalValidationTemplateRead",
+        "claw.api.remote.offlineCommandInspect",
+        "claw.api.remote.sourceQaTemplateRead"
+      ],
+      "tests": [
+        "packages/clawjs-core/src/index.test.ts",
+        "packages/clawjs/src/index.test.ts",
+        "scripts/evolution-governance-check.mjs",
+        "docs/evolution/public-surface-baseline.json"
+      ],
+      "adr": "docs/adr/0030-post-v1-evolution-rescue-backbone.md",
+      "notes": "Registers additive remote validation, closure, offline command, and compatibility adapter API contracts so public surface drift remains explicit and sealed.",
       "createdAt": "2026-05-18T00:00:00.000Z"
     }
   ]

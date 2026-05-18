@@ -5,7 +5,7 @@ import crypto from "crypto";
 import Database from "better-sqlite3";
 import { test } from "vitest";
 import assert from "node:assert/strict";
-import { clawEventsPath, remoteSyncRequiredRouteIds } from "@clawjs/core";
+import { clawEventsPath, clawPersistentSurfaceRegistry, remoteSyncRequiredRouteIds } from "@clawjs/core";
 
 import { runCli } from "./index.ts";
 import { CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
@@ -44,6 +44,86 @@ const expectedSyncDriverCommands = expectedSyncDrivers.map((driver) => [
   `claw sync plan --driver ${driver} --json`,
   `claw sync apply --driver ${driver} --record true --json`,
 ]);
+const expectedRemoteSafeClassificationIds = [
+  "claw.agents",
+  "claw.agents.assignments",
+  "claw.remote.client",
+  "claw.relay",
+  "claw.relay.connector",
+  "claw.coordinator",
+  "claw.gateway",
+  "claw.connector",
+  "claw.sync",
+  "claw.transport.iroh",
+  "claw.headlessHost",
+  "claw.remoteCache",
+  "claw.remote.classification",
+  "claw.search",
+  "claw.secrets.broker",
+  "claw.drive.files",
+  "claw.memory.userModel",
+  "claw.skills.library",
+  "claw.mesh.share",
+];
+const expectedRemoteApiMethodRoutes = [
+  "GET /v1/remote/classifications",
+  "POST /v1/remote/classifications/receipts",
+  "GET /v1/remote/conformance",
+  "GET /v1/remote/offline-command",
+  "POST /v1/remote/offline-command",
+  "GET /v1/remote/external-pending",
+  "GET /v1/remote/external-validation-checklist",
+  "GET /v1/remote/external-validation-template",
+  "POST /v1/remote/external-validation-template",
+  "GET /v1/remote/external-validation-artifact",
+  "POST /v1/remote/external-validation-artifact",
+  "GET /v1/remote/external-validation-runbook",
+  "GET /v1/remote/external-validation-readiness",
+  "POST /v1/remote/external-validation-readiness",
+  "GET /v1/remote/external-validation-approval-request",
+  "POST /v1/remote/external-validation-approval-request",
+  "GET /v1/remote/external-validation-report",
+  "POST /v1/remote/external-validation-report",
+  "GET /v1/remote/source-qa-template",
+  "POST /v1/remote/source-qa-template",
+  "GET /v1/remote/closure-gate",
+  "POST /v1/remote/closure-gate",
+  "GET /v1/remote/route-contracts",
+  "GET /v1/remote/provider-device-e2e-plan",
+  "GET /v1/remote/compatibility/adapters",
+  "POST /v1/remote/compatibility/adapters",
+  "GET /v1/sync/drivers",
+  "GET /v1/sync/manifests",
+  "POST /v1/sync/manifests",
+  "GET /v1/sync/changes",
+  "POST /v1/sync/plan",
+  "POST /v1/sync/conflicts",
+  "POST /v1/sync/applications",
+  "POST /v1/sync/authority-handoffs",
+  "GET /v1/nodes",
+  "POST /v1/nodes/pair",
+  "POST /v1/nodes/trust",
+  "POST /v1/nodes/revoke",
+  "POST /v1/mesh/invitations",
+  "POST /v1/mesh/invitations/accept",
+  "POST /v1/mesh/shares",
+  "POST /v1/mesh/revocations",
+  "GET /v1/gateway/conformance",
+  "POST /v1/gateway/agent-service/evaluate",
+  "POST /v1/gateway/agent-service/executions",
+  "POST /v1/gateway/audit/receipts",
+];
+
+function expectedRemoteClassificationEntries() {
+  return clawPersistentSurfaceRegistry.nodes
+    .filter((node) => node.programmaticSurfaces?.includes("relay") || node.surfaceGaps?.some((gap) => gap.surface === "relay"))
+    .map((node) => ({
+      id: node.id,
+      classification: node.programmaticSurfaces?.includes("relay")
+        ? "remote-safe"
+        : node.surfaceGaps?.find((gap) => gap.surface === "relay")?.status ?? "pending",
+    }));
+}
 
 function parseCliJson<T>(stdout: string): { ok: boolean; data: T; meta: { schemaVersion: number; canonicalCommand: string; subcommand?: string } } {
   return JSON.parse(stdout);
@@ -278,7 +358,18 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   assert.equal(remoteInspectPayload.conformance.status, "baseline_registered");
   assert.deepEqual(remoteInspectPayload.conformance.missingRoutes, []);
   assert.equal(remoteInspectPayload.conformance.decisions.some((entry) => entry.decisionId === "remote_surface_parity"), true);
-  assert.equal(remoteInspectPayload.classifications.some((entry) => entry.id === "claw.gateway" && entry.classification === "remote-safe"), true);
+  const expectedRemoteClassifications = expectedRemoteClassificationEntries();
+  assert.equal(remoteInspectPayload.classifications.length, 57);
+  assert.deepEqual(
+    remoteInspectPayload.classifications.map((entry) => ({ id: entry.id, classification: entry.classification })),
+    expectedRemoteClassifications,
+  );
+  assert.deepEqual(
+    remoteInspectPayload.classifications.filter((entry) => entry.classification === "remote-safe").map((entry) => entry.id),
+    expectedRemoteSafeClassificationIds,
+  );
+  assert.equal(remoteInspectPayload.classifications.some((entry) => entry.classification === "pending" || entry.classification === "blocked"), false);
+  assert.deepEqual(remoteInspectPayload.classifications.find((entry) => entry.id === "claw.gateway")?.routeIds, ["remote.chatGateway", "remote.searchGateway", "remote.secretBrokeredOperation", "gateway.headlessAgentHost"]);
   assert.equal(remoteInspectPayload.sync.authorityClasses.includes("joint"), true);
   assert.deepEqual(remoteInspectPayload.sync.drivers, expectedSyncDrivers);
   assert.equal(remoteInspectPayload.sync.conflictDefault, "detect_and_elevate");
@@ -1217,7 +1308,14 @@ test("runCli renders an Agents V1 inspect fiche with grants, routes, memory, and
 test("runCli filters stable contract surface categories", async () => {
   const apis = await runCliCapture(["inspect", "apis", "--json"], process.cwd());
   assert.equal(apis.code, CLI_EXIT_OK);
-  assert.equal(parseCliJson<Array<{ id: string; route?: string }>>(apis.stdout).data.some((node) => node.id === "claw.api.events" && node.route === clawEventsPath), true);
+  const apiPayload = parseCliJson<Array<{ id: string; method?: string; route?: string }>>(apis.stdout).data;
+  assert.equal(apiPayload.some((node) => node.id === "claw.api.events" && node.route === clawEventsPath), true);
+  assert.deepEqual(
+    apiPayload
+      .filter((node) => typeof node.route === "string" && /^\/v1\/(remote|gateway|sync|nodes|mesh)\b/.test(node.route))
+      .map((node) => `${node.method} ${node.route}`),
+    expectedRemoteApiMethodRoutes,
+  );
 
   const privateApis = await runCliCapture(["inspect", "private-apis", "--json"], process.cwd());
   assert.equal(privateApis.code, CLI_EXIT_OK);

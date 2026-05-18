@@ -119,10 +119,33 @@ remote clients do not need a CLI-only integration path:
 GET  /v1/remote/classifications
 POST /v1/remote/classifications/receipts
 GET  /v1/remote/conformance
+GET  /v1/remote/offline-command
 POST /v1/remote/offline-command
 GET  /v1/remote/external-pending
+GET  /v1/remote/external-validation-checklist
+GET  /v1/remote/external-validation-template
+POST /v1/remote/external-validation-template
+GET  /v1/remote/external-validation-artifact
+POST /v1/remote/external-validation-artifact
+GET  /v1/remote/external-validation-runbook
+GET  /v1/remote/external-validation-readiness
+POST /v1/remote/external-validation-readiness
+GET  /v1/remote/external-validation-approval-request
+POST /v1/remote/external-validation-approval-request
+GET  /v1/remote/external-validation-report
+POST /v1/remote/external-validation-report
+GET  /v1/remote/source-qa-template
+POST /v1/remote/source-qa-template
+GET  /v1/remote/closure-gate
+POST /v1/remote/closure-gate
 GET  /v1/remote/route-contracts
+GET  /v1/remote/provider-device-e2e-plan
+GET  /v1/remote/compatibility/adapters
+POST /v1/remote/compatibility/adapters
 GET  /v1/gateway/conformance
+POST /v1/gateway/agent-service/evaluate
+POST /v1/gateway/agent-service/executions
+POST /v1/gateway/audit/receipts
 GET  /v1/sync/drivers
 GET  /v1/sync/manifests
 POST /v1/sync/manifests
@@ -139,8 +162,6 @@ POST /v1/mesh/invitations
 POST /v1/mesh/invitations/accept
 POST /v1/mesh/shares
 POST /v1/mesh/revocations
-POST /v1/gateway/agent-service/evaluate
-POST /v1/gateway/audit/receipts
 ```
 
 The mutation-shaped Relay endpoints are dry-run until signed Coordinator/host
