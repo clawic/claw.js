@@ -364,6 +364,10 @@ test("Search MCP derives local embeddings for semantic queries", () => {
     assert.ok(embeddingsStatusTool);
     const status = embeddingsStatusTool.handler({ sources: ["documents.blocks"], model: LOCAL_TEXT_EMBEDDING_MODEL }) as Array<{ source: string; model: string; documents: number; vectors: number }>;
     assert.equal(status.some((item) => item.source === "documents.blocks" && item.model === LOCAL_TEXT_EMBEDDING_MODEL && item.documents === 2 && item.vectors === 2), true);
+    assert.throws(
+      () => embeddingsStatusTool.handler({ sources: ["documents.blocks"], model: "provider-text-v1" }),
+      /provider-backed embedding workers are EXTERNAL PENDING/,
+    );
 
     const queryTool = tools.find((tool) => tool.name === "search.query");
     assert.ok(queryTool);

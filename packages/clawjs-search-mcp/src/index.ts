@@ -144,7 +144,7 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
         sources: stringArrayParam(p.sources),
         domains: stringArrayParam(p.domains),
         shards: stringArrayParam(p.shards),
-        model: stringParam(p.model),
+        model: p.model === undefined ? undefined : localEmbeddingModel(p.model),
       }),
     },
     { name: "search.sources.list", description: "List Search source manifests.", inputSchema: { type: "object", properties: { profile: { type: "string", enum: ["framework", "full"] } } }, handler: (p) => store.listSources(searchProfile(p.profile)) },

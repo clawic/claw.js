@@ -839,13 +839,14 @@ export async function runSearchAdminCli(input: {
         input.context.stderr.write(`Usage: ${input.binName} search embeddings [status|index|create] [--source <source-id>] [--shard <shard>] [--limit <n>] [--json]\n`);
         return CLI_EXIT_USAGE;
       }
+      const statusModel = input.flags.model === undefined && input.flags["embedding-model"] === undefined ? undefined : localSearchEmbeddingModel(input.flags.model ?? input.flags["embedding-model"]);
       const items = store.listEmbeddingStatus({
         sources: parseListFlag(input.flags.sources ?? input.flags.source),
         domains: parseListFlag(input.flags.domains ?? input.flags.domain),
         shards: parseListFlag(input.flags.shards ?? input.flags.shard),
-        model: input.flags.model ?? input.flags["embedding-model"],
+        model: statusModel,
       });
-      const data = { state: items.length ? "ready" : "empty", model: input.flags.model ?? input.flags["embedding-model"] ?? null, items, storage: searchStorageMetadata(input.flags) };
+      const data = { state: items.length ? "ready" : "empty", model: statusModel ?? null, items, storage: searchStorageMetadata(input.flags) };
       if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "embeddings" });
       else input.context.stdout.write(`${items.map((item) => `${item.source}\t${item.shard}\t${item.model}\tdocuments=${item.documents}\tvectors=${item.vectors}`).join("\n")}\n`);
       return CLI_EXIT_OK;
@@ -1203,11 +1204,7 @@ function readSearchServiceWorkerBudgets(flags: Record<string, string>): SearchSe
 
 function localSearchEmbeddingModel(model: string | undefined): string {
   if (!model || model === LOCAL_TEXT_EMBEDDING_MODEL) return LOCAL_TEXT_EMBEDDING_MODEL;
-  throw new CliHandledError(
-    "SEARCH_EMBEDDING_PROVIDER_PENDING",
-    `Search local embedding indexing only supports ${LOCAL_TEXT_EMBEDDING_MODEL}; provider-backed embedding workers are EXTERNAL PENDING.`,
-    CLI_EXIT_USAGE,
-  );
+  throw new CliHandledError("SEARCH_EMBEDDING_PROVIDER_PENDING", `Search local embedding indexing only supports ${LOCAL_TEXT_EMBEDDING_MODEL}; provider-backed embedding workers are EXTERNAL PENDING.`, CLI_EXIT_USAGE);
 }
 
 function searchActionAccessInput(flags: Record<string, string>): Pick<SearchQueryInput, "actor" | "surface" | "filters"> {
