@@ -185,6 +185,8 @@ for (const snippet of [
   "search rebuild indexes docs pages",
   "sessions.chats event jobs refresh and tombstone individual chats",
   "local.files event jobs refresh and tombstone individual files",
+  "web.ingested event jobs refresh and tombstone individual cache files",
+  "external.cache event jobs refresh and tombstone individual cache files",
   "search keeps optional full sources out of scoped domain queries",
   "search rebuild indexes surface route graph contracts",
   "Search MCP package publishes only the public Search binary",
@@ -201,6 +203,12 @@ requireSnippet("packages/clawjs/src/cli-search-command.ts", "ensureSessionChatRe
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleLocalFileSearchEvent");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"local.files\"");
 requireSnippet("packages/clawjs/src/cli-search-command.ts", "ensureLocalFileResourceIndexed");
+requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleWebIngestedSearchEvent");
+requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"web.ingested\"");
+requireSnippet("packages/clawjs/src/cli-search-command.ts", "ensureWebIngestedResourceIndexed");
+requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleExternalCacheSearchEvent");
+requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"external.cache\"");
+requireSnippet("packages/clawjs/src/cli-search-command.ts", "ensureExternalCacheResourceIndexed");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleSurfaceRouteSearchEvent");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"surfaces.routes\"");
 requireSnippet("packages/clawjs/src/cli-search-surface-routes-test-utils.ts", "scheduleSurfaceRouteSearchEvent");
