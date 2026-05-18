@@ -9,6 +9,7 @@ import {
   buildRemoteExternalValidationChecklist,
   buildRemoteExternalValidationEvidenceTemplate,
   buildRemoteExternalValidationReport,
+  buildRemoteExternalValidationReadiness,
   buildRemoteExternalValidationRunbook,
   buildRemoteGoalClosureGate,
   buildRemoteOfflineCommandResult,
@@ -106,6 +107,7 @@ const requiredServiceApiRoutes = [
   "remote/external-validation-template",
   "remote/external-validation-artifact",
   "remote/external-validation-runbook",
+  "remote/external-validation-readiness",
   "remote/external-validation-report",
   "remote/source-qa-template",
   "remote/closure-gate",
@@ -161,9 +163,12 @@ const requiredDocSnippets = [
   "/v1/remote/external-validation-template",
   "/v1/remote/external-validation-artifact",
   "/v1/remote/external-validation-runbook",
+  "/v1/remote/external-validation-readiness",
   "claw remote validation-template",
   "claw remote validation-artifact",
   "claw remote validation-runbook",
+  "claw remote validation-readiness",
+  "ready_for_approved_run",
   "external validation report",
   "approvedRunRef",
   "invalidEvidenceRequirementIds",
@@ -586,6 +591,21 @@ if (artifactExternalValidationReport.clearableRequirementIds.length !== 0) fail(
 if (artifactExternalValidationReport.blockedRequirementIds.length !== externalPending.requirements.length) fail("external validation evidence artifact must leave every row blocked");
 if (artifactExternalValidationReport.invalidEvidenceRequirementIds.length !== 0) fail("external validation evidence artifact must not include unknown evidence IDs");
 if (artifactExternalValidationReport.duplicateEvidenceRequirementIds.length !== 0) fail("external validation evidence artifact must not include duplicate evidence IDs");
+const artifactExternalValidationReadiness = buildRemoteExternalValidationReadiness({
+  generatedAt: externalValidationEvidenceArtifact.generatedAt ?? "2026-05-18T11:40:00.000Z",
+  sourceQaReviews: sourceQaReviewReport.items,
+  evidence: externalValidationEvidenceArtifactRows,
+});
+if (artifactExternalValidationReadiness.status !== "ready_for_approved_run") {
+  fail("external validation readiness must report ready_for_approved_run for complete source Q/A plus pending evidence artifact");
+}
+if (artifactExternalValidationReadiness.sourceQaReady !== true) fail("external validation readiness must mark source Q/A ready");
+if (artifactExternalValidationReadiness.externalEvidenceReady !== true) fail("external validation readiness must mark pending evidence artifact ready");
+if (artifactExternalValidationReadiness.missingEvidenceRequirementIds.length !== 0) fail("external validation readiness must not miss evidence requirement IDs");
+if (artifactExternalValidationReadiness.closureGateBlockers.join(",") !== "external_validation") {
+  fail("external validation readiness must leave only external_validation blocked before physical/provider runs");
+}
+if (artifactExternalValidationReadiness.writes !== false) fail("external validation readiness must be no-write");
 
 const emptyExternalValidationReport = buildRemoteExternalValidationReport({
   generatedAt: "2026-05-17T10:13:20.000Z",
@@ -844,6 +864,25 @@ if (clearableClosureGate.sourceQaReviewStatus !== "complete" || clearableClosure
 if (clearableClosureGate.blockedExternalRequirementIds.length !== 0) fail("clearable remote closure gate must have no blocked external requirements");
 if (clearableClosureGate.clearableExternalRequirementIds.length !== externalPending.requirements.length) fail("clearable remote closure gate must clear every external requirement");
 if (clearableClosureGate.blockers.length !== 0) fail("clearable remote closure gate must have no blockers");
+const goalClosureReadiness = buildRemoteExternalValidationReadiness({
+  generatedAt: "2026-05-17T10:13:27.100Z",
+  sourceQaReviews: completeSourceQaReviewReport.items,
+  evidence: externalValidationChecklist.items.map((entry) => ({
+    schemaVersion: 1,
+    requirementId: entry.requirementId,
+    approvedRun: true,
+    approvedRunRef: `approval://${entry.requirementId}`,
+    physicalEvidenceRef: `evidence://${entry.requirementId}`,
+    artifactRefs: entry.requiredArtifacts,
+    acceptedCriteria: entry.acceptanceCriteria,
+    plaintextMaterialIncluded: false,
+    executedAt: "2026-05-17T10:13:24.000Z",
+    writes: false,
+  })),
+});
+if (goalClosureReadiness.status !== "ready_for_goal_closure") fail("external validation readiness must report ready_for_goal_closure after complete approved evidence");
+if (goalClosureReadiness.closureGateStatus !== "clearable") fail("goal-closure readiness must expose clearable closure gate");
+if (goalClosureReadiness.blockedExternalRequirementIds.length !== 0) fail("goal-closure readiness must have no blocked external rows");
 
 const providerDeviceE2EPlan = buildRemoteProviderDeviceE2EValidationPlan({
   createdAt: "2026-05-17T10:13:30.000Z",
@@ -930,6 +969,8 @@ for (const snippet of [
   "/v1/remote/external-validation-artifact",
   "buildRemoteExternalValidationRunbook",
   "/v1/remote/external-validation-runbook",
+  "buildRemoteExternalValidationReadiness",
+  "/v1/remote/external-validation-readiness",
   "buildRemoteExternalValidationReport",
   "/v1/remote/external-validation-report",
   "buildRemoteSourceQaReviewTemplate",
@@ -938,6 +979,7 @@ for (const snippet of [
   "sourceQaReviewItems",
   "docs/remote-gateway-sync-external-validation-evidence.json",
   "artifactExternalValidationReport",
+  "readyForApprovedRun",
   "sourceQaReviewArtifact",
   "reviewedPendingClosureGate",
   "/v1/remote/closure-gate",
@@ -954,6 +996,7 @@ for (const snippet of [
   "buildRemoteConformanceReport",
   "buildRemoteExternalPendingRegister",
   "buildRemoteExternalValidationEvidenceTemplate",
+  "buildRemoteExternalValidationReadiness",
   "buildRemoteSourceQaReviewTemplate",
   "buildRemoteRouteContractCatalog",
   "SyncAuthorityHandoffReceipt",

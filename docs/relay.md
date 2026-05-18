@@ -171,6 +171,16 @@ Relay `/v1/remote/external-validation-runbook` and
 `claw remote validation-runbook` bundle the E2E plan, checklist, evidence
 artifact, report command, closure command, required commands, and operator
 instructions into one no-write external-pending payload.
+Relay `/v1/remote/external-validation-readiness` and
+`claw remote validation-readiness` are the no-write handoff gate before a real
+physical/provider run. They combine the source Q/A review, external evidence
+artifact, checklist, runbook, E2E plan, and closure gate. With the current
+versioned source Q/A and pending evidence artifacts, the readiness status is
+`ready_for_approved_run`: source review is complete, evidence rows are present
+for all 13 external requirements, and the only remaining closure blocker is
+`external_validation`. This status is not approval to run physical/provider
+validation; it only proves the software-side package is ready for an explicitly
+approved run.
 The Relay `/v1/remote/external-validation-report` endpoint and
 `claw remote validation-report` evaluate external validation evidence against
 that checklist. A row is only `clearable` when the report includes approved-run

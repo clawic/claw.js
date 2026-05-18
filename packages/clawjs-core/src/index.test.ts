@@ -21,6 +21,7 @@ import {
   buildRemoteExternalValidationEvidenceArtifact,
   buildRemoteExternalValidationEvidenceTemplate,
   buildRemoteExternalValidationReport,
+  buildRemoteExternalValidationReadiness,
   buildRemoteExternalValidationRunbook,
   buildRemoteGoalClosureGate,
   buildRemoteProviderDeviceE2EValidationPlan,
@@ -776,6 +777,21 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.deepEqual(completeSourceQaReviewReport.externalPendingRequiredSourceQaIds, [...externalPendingSourceQaIds].sort());
   assert.equal(completeSourceQaReviewReport.items.every((entry) => entry.evidenceRefs.length >= 2 && !entry.writes), true);
 
+  const readyForApprovedRun = buildRemoteExternalValidationReadiness({
+    generatedAt: "2026-05-17T10:13:26.550Z",
+    sourceQaReviews: completeSourceQaReviewReport.items,
+    evidence: externalValidationEvidenceTemplate.evidence,
+  });
+  assert.equal(readyForApprovedRun.status, "ready_for_approved_run");
+  assert.equal(readyForApprovedRun.writes, false);
+  assert.equal(readyForApprovedRun.sourceQaReady, true);
+  assert.equal(readyForApprovedRun.externalEvidenceReady, true);
+  assert.equal(readyForApprovedRun.evidenceCount, externalPending.requirements.length);
+  assert.equal(readyForApprovedRun.requiredEvidenceCount, externalPending.requirements.length);
+  assert.deepEqual(readyForApprovedRun.missingEvidenceRequirementIds, []);
+  assert.deepEqual(readyForApprovedRun.closureGateBlockers, ["external_validation"]);
+  assert.equal(readyForApprovedRun.nextAction.includes("approved physical/provider validation"), true);
+
   const invalidSourceQaReviews = [{
     schemaVersion: 1 as const,
     qaId: "QA-007",
@@ -847,6 +863,16 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.deepEqual(clearableClosureGate.blockedExternalRequirementIds, []);
   assert.equal(clearableClosureGate.clearableExternalRequirementIds.length, externalPending.requirements.length);
   assert.deepEqual(clearableClosureGate.blockers, []);
+
+  const readyForGoalClosure = buildRemoteExternalValidationReadiness({
+    generatedAt: "2026-05-17T10:13:27.100Z",
+    sourceQaReviews: completeSourceQaReviewReport.items,
+    evidence: completeExternalEvidence,
+  });
+  assert.equal(readyForGoalClosure.status, "ready_for_goal_closure");
+  assert.equal(readyForGoalClosure.closureGateStatus, "clearable");
+  assert.deepEqual(readyForGoalClosure.blockedExternalRequirementIds, []);
+  assert.equal(readyForGoalClosure.clearableExternalRequirementIds.length, externalPending.requirements.length);
 
   const providerDeviceE2EPlan = buildRemoteProviderDeviceE2EValidationPlan({
     createdAt: "2026-05-17T10:13:30.000Z",

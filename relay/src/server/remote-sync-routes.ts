@@ -5,6 +5,7 @@ import {
   buildRemoteExternalValidationChecklist,
   buildRemoteExternalValidationEvidenceTemplate,
   buildRemoteExternalValidationReport,
+  buildRemoteExternalValidationReadiness,
   buildRemoteExternalValidationRunbook,
   buildRemoteGoalClosureGate,
   buildRemoteProviderDeviceE2EValidationPlan,
@@ -90,6 +91,20 @@ function remoteExternalValidationEvidenceArtifactPayload(input: Record<string, u
 
 function remoteExternalValidationRunbookPayload() {
   return buildRemoteExternalValidationRunbook();
+}
+
+function remoteExternalValidationReadinessPayload(input: Record<string, unknown> = {}) {
+  const sourceQaReviews = Array.isArray(input.sourceQaReviews)
+    ? input.sourceQaReviews
+    : Array.isArray(input.items) ? input.items : [];
+  const evidence = input.evidence === undefined
+    ? remoteExternalValidationEvidenceFromInput(input)
+    : parseRemoteExternalValidationEvidenceInput(input.evidence);
+  return buildRemoteExternalValidationReadiness({
+    reviewedSourceQaIds: Array.isArray(input.reviewedSourceQaIds) ? input.reviewedSourceQaIds.filter((entry): entry is string => typeof entry === "string") : [],
+    sourceQaReviews: sourceQaReviews as RemoteSourceQaReviewItem[],
+    evidence,
+  });
 }
 
 function remoteExternalValidationReportPayload(input: Record<string, unknown> = {}) {
@@ -437,6 +452,10 @@ export function registerRemoteSyncRoutes(app: FastifyInstance): void {
   app.post(clawApiPath("remote/external-validation-artifact"), async (request) => remoteExternalValidationEvidenceArtifactPayload(readBody(request)));
 
   app.get(clawApiPath("remote/external-validation-runbook"), async () => remoteExternalValidationRunbookPayload());
+
+  app.get(clawApiPath("remote/external-validation-readiness"), async () => remoteExternalValidationReadinessPayload());
+
+  app.post(clawApiPath("remote/external-validation-readiness"), async (request) => remoteExternalValidationReadinessPayload(readBody(request)));
 
   app.get(clawApiPath("remote/external-validation-report"), async () => remoteExternalValidationReportPayload());
 

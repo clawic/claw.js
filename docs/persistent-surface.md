@@ -176,6 +176,8 @@ flowchart TD
   claw_contracts_api --> claw_api_remote_externalValidationArtifact
   claw_api_remote_externalValidationRunbook["Remote physical/provider validation runbook contract\napiRoute"]
   claw_contracts_api --> claw_api_remote_externalValidationRunbook
+  claw_api_remote_externalValidationReadiness["Remote physical/provider validation readiness contract\napiRoute"]
+  claw_contracts_api --> claw_api_remote_externalValidationReadiness
   claw_api_remote_externalValidationReport["Remote physical/provider validation evidence report contract\napiRoute"]
   claw_contracts_api --> claw_api_remote_externalValidationReport
   claw_api_remote_sourceQaTemplate["Remote source Q/A review template contract\napiRoute"]
@@ -2227,6 +2229,7 @@ flowchart TD
 | `claw.api.remote.externalValidationTemplate` | apiRoute | api | claw |  |  |  | `/v1/remote/external-validation-template` |
 | `claw.api.remote.externalValidationArtifact` | apiRoute | api | claw |  |  |  | `/v1/remote/external-validation-artifact` |
 | `claw.api.remote.externalValidationRunbook` | apiRoute | api | claw |  |  |  | `/v1/remote/external-validation-runbook` |
+| `claw.api.remote.externalValidationReadiness` | apiRoute | api | claw |  |  |  | `/v1/remote/external-validation-readiness` |
 | `claw.api.remote.externalValidationReport` | apiRoute | api | claw |  |  |  | `/v1/remote/external-validation-report` |
 | `claw.api.remote.sourceQaTemplate` | apiRoute | api | claw |  |  |  | `/v1/remote/source-qa-template` |
 | `claw.api.remote.closureGate` | apiRoute | api | claw |  |  |  | `/v1/remote/closure-gate` |

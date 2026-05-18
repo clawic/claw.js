@@ -203,6 +203,7 @@ claw remote validation-checklist --json
 claw remote validation-template --json
 claw remote validation-artifact --json
 claw remote validation-runbook --json
+claw remote validation-readiness --source-qa-review-file docs/remote-gateway-sync-source-qa-review.json --external-validation-file docs/remote-gateway-sync-external-validation-evidence.json --json
 claw remote validation-report --json
 claw remote source-qa-template --json
 claw remote closure-gate --json
@@ -280,6 +281,13 @@ or the alias `--external-validation-file`.
 external validation: the provider/device E2E plan, checklist, evidence artifact,
 report command, closure-gate command, required commands, and step-by-step
 instructions in one payload.
+`remote validation-readiness` checks that the source Q/A artifact, external
+evidence artifact, checklist, runbook, E2E plan, and closure gate are all ready
+before an approved physical/provider validation run. With the current checked-in
+artifacts it returns `ready_for_approved_run`: source review is complete, the
+evidence artifact has one pending row per external requirement, and only
+`external_validation` remains blocked. It is no-write and does not approve the
+physical/provider run by itself.
 `remote validation-report` evaluates supplied external evidence, if any, against
 that checklist. With no approved physical evidence it stays `external_pending`;
 only rows with `approvedRun: true`, an `approvedRunRef`, physical evidence, all

@@ -5,6 +5,7 @@ import {
   buildRemoteExternalValidationChecklist,
   buildRemoteExternalValidationEvidenceTemplate,
   buildRemoteExternalValidationReport,
+  buildRemoteExternalValidationReadiness,
   buildRemoteExternalValidationRunbook,
   buildRemoteGoalClosureGate,
   buildRemoteProviderDeviceE2EValidationPlan,
@@ -535,6 +536,15 @@ export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
     const runbook = buildRemoteExternalValidationRunbook({ generatedAt: input.flags.now });
     return writeOutput(input, "remote", runbook, `${runbook.status} steps=${runbook.validationStepCount} requirements=${runbook.externalRequirementCount}`, command);
   }
+  if (command === "validation-readiness" || command === "external-validation-readiness") {
+    const readiness = buildRemoteExternalValidationReadiness({
+      generatedAt: input.flags.now,
+      reviewedSourceQaIds: parseReviewedSourceQaIds(input.flags["reviewed-source-qa-ids"] ?? input.flags["source-qa-ids"]),
+      sourceQaReviews: parseSourceQaReviews(input.flags["source-qa-review-json"], input.flags["source-qa-review-file"], input.context.cwd),
+      evidence: parseExternalValidationEvidence(input.flags["evidence-json"], input.flags["evidence-file"] ?? input.flags["external-validation-file"], input.context.cwd),
+    });
+    return writeOutput(input, "remote", readiness, `${readiness.status} sourceQa=${readiness.sourceQaReviewStatus} evidence=${readiness.evidenceCount}/${readiness.requiredEvidenceCount}`, command);
+  }
   if (command === "validation-report" || command === "external-validation-report") {
     const report = buildRemoteExternalValidationReport({
       generatedAt: input.flags.now,
@@ -587,7 +597,7 @@ export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
       ...(state ? { state } : {}),
     }, `compat: ${status}`, command);
   }
-  return missing(input, "remote classify|check|routes|conformance|pending|validation-checklist|validation-template|validation-artifact|validation-runbook|validation-report|source-qa-template|closure-gate|contracts|e2e-plan|compat");
+  return missing(input, "remote classify|check|routes|conformance|pending|validation-checklist|validation-template|validation-artifact|validation-runbook|validation-readiness|validation-report|source-qa-template|closure-gate|contracts|e2e-plan|compat");
 }
 
 export async function runSyncCli(input: RemoteSyncCliInput): Promise<number> {

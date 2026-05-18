@@ -168,6 +168,41 @@ export const remoteExternalValidationRunbookSchema = z.object({
   writes: z.literal(false),
 });
 
+export const remoteExternalValidationReadinessSchema = z.object({
+  schemaVersion: z.literal(1),
+  readinessId: z.string().min(1),
+  sourceConversationId: z.string().min(1),
+  sourcePlanId: z.string().min(1),
+  generatedAt: z.string().datetime(),
+  status: z.enum(["not_ready", "ready_for_approved_run", "ready_for_goal_closure"]),
+  sourceQaReady: z.boolean(),
+  sourceQaReviewStatus: z.enum(["incomplete", "complete"]),
+  missingSourceQaIds: z.array(z.string().min(1)),
+  invalidSourceQaIds: z.array(z.string().min(1)),
+  duplicateSourceQaIds: z.array(z.string().min(1)),
+  invalidExternalPendingDispositionQaIds: z.array(z.string().min(1)),
+  externalEvidenceReady: z.boolean(),
+  externalValidationStatus: z.enum(["external_pending", "clearable"]),
+  evidenceCount: z.number().int().nonnegative(),
+  requiredEvidenceCount: z.number().int().nonnegative(),
+  missingEvidenceRequirementIds: z.array(z.string().min(1)),
+  invalidEvidenceRequirementIds: z.array(z.string().min(1)),
+  duplicateEvidenceRequirementIds: z.array(z.string().min(1)),
+  clearableExternalRequirementIds: z.array(z.string().min(1)),
+  blockedExternalRequirementIds: z.array(z.string().min(1)),
+  runbookReady: z.boolean(),
+  checklistReady: z.boolean(),
+  e2ePlanReady: z.boolean(),
+  validationStepCount: z.number().int().nonnegative(),
+  externalRequirementCount: z.number().int().nonnegative(),
+  closureGateStatus: z.enum(["blocked", "clearable"]),
+  closureGateBlockers: z.array(z.enum(["source_qa_review", "external_validation"])),
+  requiredCommands: z.array(z.string().min(1)).min(1),
+  nextAction: z.string().min(1),
+  instructions: z.array(z.string().min(1)).min(1),
+  writes: z.literal(false),
+});
+
 export const remoteSourceQaReviewDispositionSchema = z.enum(["implemented", "validated", "external_pending"]);
 
 export const remoteSourceQaReviewItemSchema = z.object({
@@ -252,6 +287,7 @@ export type RemoteExternalValidationReportItem = z.infer<typeof remoteExternalVa
 export type RemoteExternalValidationReport = z.infer<typeof remoteExternalValidationReportSchema>;
 export type RemoteExternalValidationEvidenceTemplate = z.infer<typeof remoteExternalValidationEvidenceTemplateSchema>;
 export type RemoteExternalValidationRunbook = z.infer<typeof remoteExternalValidationRunbookSchema>;
+export type RemoteExternalValidationReadiness = z.infer<typeof remoteExternalValidationReadinessSchema>;
 export type RemoteSourceQaReviewDisposition = z.infer<typeof remoteSourceQaReviewDispositionSchema>;
 export type RemoteSourceQaReviewItem = z.infer<typeof remoteSourceQaReviewItemSchema>;
 export type RemoteSourceQaReviewReport = z.infer<typeof remoteSourceQaReviewReportSchema>;
@@ -474,6 +510,10 @@ function externalValidationEvidenceTemplateId(parts: string[]): string {
 
 function externalValidationRunbookId(parts: string[]): string {
   return `remote_external_validation_runbook_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
+}
+
+function externalValidationReadinessId(parts: string[]): string {
+  return `remote_external_validation_readiness_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
 }
 
 function sourceQaReviewTemplateId(parts: string[]): string {
@@ -764,6 +804,108 @@ export function buildRemoteExternalValidationRunbook(input: {
       "After each approved run, fill approvedRunRef, physicalEvidenceRef, artifactRefs, and acceptedCriteria for the matching external requirement.",
       "Never attach plaintext secrets or raw credential material.",
       "The closure gate remains blocked until the evidence report is clearable and the source Q/A review remains complete.",
+    ],
+    writes: false,
+  });
+}
+
+export function buildRemoteExternalValidationReadiness(input: {
+  generatedAt?: string;
+  sourceQaReviews?: RemoteSourceQaReviewItem[];
+  reviewedSourceQaIds?: string[];
+  evidence?: RemoteExternalValidationEvidence[];
+} = {}): RemoteExternalValidationReadiness {
+  const generatedAt = input.generatedAt ?? new Date().toISOString();
+  const sourceQaReport = buildRemoteSourceQaReviewReport({
+    generatedAt,
+    reviews: input.sourceQaReviews,
+    reviewedSourceQaIds: input.reviewedSourceQaIds,
+  });
+  const evidence = (input.evidence ?? []).map((entry) => remoteExternalValidationEvidenceSchema.parse(entry));
+  const checklist = buildRemoteExternalValidationChecklist({ generatedAt });
+  const report = buildRemoteExternalValidationReport({ generatedAt, evidence });
+  const runbook = buildRemoteExternalValidationRunbook({ generatedAt });
+  const gate = buildRemoteGoalClosureGate({
+    generatedAt,
+    sourceQaReviews: sourceQaReport.items,
+    evidence,
+  });
+  const evidenceIds = new Set(evidence.map((entry) => entry.requirementId));
+  const missingEvidenceRequirementIds = checklist.requirementIds.filter((requirementId) => !evidenceIds.has(requirementId));
+  const sourceQaReady = sourceQaReport.status === "complete"
+    && sourceQaReport.missingSourceQaIds.length === 0
+    && sourceQaReport.invalidSourceQaIds.length === 0
+    && sourceQaReport.duplicateSourceQaIds.length === 0
+    && sourceQaReport.invalidExternalPendingDispositionQaIds.length === 0;
+  const externalEvidenceReady = missingEvidenceRequirementIds.length === 0
+    && report.invalidEvidenceRequirementIds.length === 0
+    && report.duplicateEvidenceRequirementIds.length === 0
+    && evidence.every((entry) => entry.plaintextMaterialIncluded === false && entry.writes === false);
+  const validationDomains = new Set(runbook.e2ePlan.validationSteps.map((entry) => entry.domain));
+  const e2ePlanReady = runbook.e2ePlan.validationSteps.length === 5
+    && ["chat", "search", "sync", "secret_refs", "hosted_agents"].every((domain) => validationDomains.has(domain as RemoteProviderDeviceE2EDomain))
+    && runbook.e2ePlan.requiredExternalPendingIds.length === checklist.requirementIds.length
+    && runbook.e2ePlan.writes === false;
+  const checklistReady = checklist.coverage.missingRequirementIds.length === 0
+    && checklist.coverage.coveredRequirementCount === checklist.coverage.requirementCount
+    && checklist.items.every((entry) => entry.approvedRunRequired && entry.physicalEvidenceRequired && entry.writes === false);
+  const runbookReady = runbook.writes === false
+    && runbook.checklist.requirementIds.length === checklist.requirementIds.length
+    && runbook.evidenceArtifact.evidence.length === checklist.requirementIds.length
+    && runbook.requiredCommands.some((entry) => entry.includes("validation-artifact"))
+    && runbook.requiredCommands.some((entry) => entry.includes("validation-report"))
+    && runbook.requiredCommands.some((entry) => entry.includes("closure-gate"));
+  const readyForApprovedRun = sourceQaReady
+    && externalEvidenceReady
+    && runbookReady
+    && checklistReady
+    && e2ePlanReady
+    && gate.status === "blocked"
+    && gate.blockers.length === 1
+    && gate.blockers[0] === "external_validation";
+  const status = gate.status === "clearable"
+    ? "ready_for_goal_closure"
+    : readyForApprovedRun ? "ready_for_approved_run" : "not_ready";
+  const nextAction = status === "ready_for_goal_closure"
+    ? "Run the final source Q/A reread against current implementation, then close the goal if all evidence still proves completion."
+    : status === "ready_for_approved_run"
+      ? "Run the approved physical/provider validation and replace pending evidence rows with approvedRunRef, physicalEvidenceRef, artifacts, and accepted criteria."
+      : "Complete the source Q/A review artifact and evidence artifact readiness gaps before requesting a physical/provider validation run.";
+  return remoteExternalValidationReadinessSchema.parse({
+    schemaVersion: 1,
+    readinessId: externalValidationReadinessId(["readiness", generatedAt]),
+    sourceConversationId: remoteSourceConversationId,
+    sourcePlanId: remoteSourcePlanId,
+    generatedAt,
+    status,
+    sourceQaReady,
+    sourceQaReviewStatus: sourceQaReport.status,
+    missingSourceQaIds: sourceQaReport.missingSourceQaIds,
+    invalidSourceQaIds: sourceQaReport.invalidSourceQaIds,
+    duplicateSourceQaIds: sourceQaReport.duplicateSourceQaIds,
+    invalidExternalPendingDispositionQaIds: sourceQaReport.invalidExternalPendingDispositionQaIds,
+    externalEvidenceReady,
+    externalValidationStatus: report.status,
+    evidenceCount: report.evidenceCount,
+    requiredEvidenceCount: checklist.requirementIds.length,
+    missingEvidenceRequirementIds,
+    invalidEvidenceRequirementIds: report.invalidEvidenceRequirementIds,
+    duplicateEvidenceRequirementIds: report.duplicateEvidenceRequirementIds,
+    clearableExternalRequirementIds: report.clearableRequirementIds,
+    blockedExternalRequirementIds: report.blockedRequirementIds,
+    runbookReady,
+    checklistReady,
+    e2ePlanReady,
+    validationStepCount: runbook.validationStepCount,
+    externalRequirementCount: runbook.externalRequirementCount,
+    closureGateStatus: gate.status,
+    closureGateBlockers: gate.blockers,
+    requiredCommands: runbook.requiredCommands,
+    nextAction,
+    instructions: [
+      "This readiness gate is no-write and does not approve physical/provider validation by itself.",
+      "Use ready_for_approved_run only as the handoff point before an explicitly approved real validation run.",
+      "Keep external evidence rows unapproved until the real run provides approvedRunRef and physical/provider evidence.",
     ],
     writes: false,
   });
