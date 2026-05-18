@@ -1849,6 +1849,14 @@ test("providers and snippets writes enqueue and index framework configuration fa
     const deleteJobsPayload = JSON.parse(deleteJobs.stdout) as any;
     const deleteJob = deleteJobsPayload.data.items.find((job) => job.resourceId === "quickask-review" && job.operation === "delete");
     assert.deepEqual({ eventDriven: deleteJob?.payload.eventDriven, slug: deleteJob?.payload.slug }, { eventDriven: true, slug: "quickask-review" });
+    const snippetDeleteRun = await runCliCapture(["search", "service", "run-once", "--source", "snippets.library", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(snippetDeleteRun.code, CLI_EXIT_OK, snippetDeleteRun.stderr || snippetDeleteRun.stdout);
+    const snippetDeleteRunItem = (JSON.parse(snippetDeleteRun.stdout) as any).data.worker?.items?.[0];
+    assert.deepEqual({ source: snippetDeleteRunItem?.source, operation: snippetDeleteRunItem?.operation, status: snippetDeleteRunItem?.status, indexed: snippetDeleteRunItem?.indexed }, { source: "snippets.library", operation: "delete", status: "done", indexed: 1 });
+    const afterSnippetDelete = await runCliCapture(["search", "query", "current selection", "--sources", "snippets.library", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterSnippetDelete.code, CLI_EXIT_DEGRADED, afterSnippetDelete.stderr || afterSnippetDelete.stdout);
+    const afterSnippetDeletePayload = JSON.parse(afterSnippetDelete.stdout) as any;
+    assert.equal(afterSnippetDeletePayload.data.results.some((entry) => entry.source === "snippets.library" && entry.title === "QuickAsk Review"), false);
   });
 });
 test("agent entity writes enqueue and index agent catalog fast paths without secrets", async () => {
