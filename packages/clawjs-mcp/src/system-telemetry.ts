@@ -186,6 +186,11 @@ function safeJsonValue(value: string): number | string | boolean | null {
   }
 }
 
+function hasTable(db: Database.Database, name: string): boolean {
+  const row = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get(name) as { name?: string } | undefined;
+  return row?.name === name;
+}
+
 export function readMcpSystemTelemetryHistory(input: { metricKey: string; range?: string; monitorDb?: string }) {
   const dbPath = systemTelemetryMonitorDbPath({ monitorDb: input.monitorDb });
   const metric = listSystemTelemetryMetrics().find((entry) => entry.key === input.metricKey) ?? null;
@@ -195,7 +200,7 @@ export function readMcpSystemTelemetryHistory(input: { metricKey: string; range?
   const sinceMs = Date.now() - rangeMs;
   const db = new Database(dbPath, { readonly: true, fileMustExist: true });
   try {
-    const samples = (db.prepare(`
+    const samples = hasTable(db, "metric_samples") ? (db.prepare(`
       SELECT * FROM metric_samples
       WHERE metric_key = ? AND captured_at >= ?
       ORDER BY captured_at DESC
@@ -210,8 +215,8 @@ export function readMcpSystemTelemetryHistory(input: { metricKey: string; range?
       tags: safeJsonObject(row.tags),
       quality: row.quality,
       capturedAt: row.captured_at,
-    })).reverse();
-    const rollups = (db.prepare(`
+    })).reverse() : [];
+    const rollups = hasTable(db, "metric_rollups") ? (db.prepare(`
       SELECT * FROM metric_rollups
       WHERE metric_key = ? AND bucket_ms = ? AND bucket_start_at >= ?
       ORDER BY bucket_start_at DESC
@@ -234,8 +239,8 @@ export function readMcpSystemTelemetryHistory(input: { metricKey: string; range?
       }),
       unit: row.unit,
       tags: safeJsonObject(row.tags),
-    })).reverse();
-    const incidents = (db.prepare(`
+    })).reverse() : [];
+    const incidents = hasTable(db, "metric_incidents") ? (db.prepare(`
       SELECT * FROM metric_incidents
       WHERE metric_key = ? AND last_seen_at >= ?
       ORDER BY last_seen_at DESC
@@ -258,11 +263,11 @@ export function readMcpSystemTelemetryHistory(input: { metricKey: string; range?
       message: row.message,
       openedAt: row.opened_at,
       lastSeenAt: row.last_seen_at,
-    })).reverse();
+    })).reverse() : [];
     return {
       metric,
       rangeMs,
-      retention: { store: "monitor.sqlite", dbPath, status: samples.length > 0 ? "recorded" : "empty", rawPolicy: "short_local", rollups: true, rollupBucketMs: MONITOR_ROLLUP_BUCKET_MS },
+      retention: { store: "monitor.sqlite", dbPath, status: samples.length > 0 || rollups.length > 0 || incidents.length > 0 ? "recorded" : "empty", rawPolicy: "short_local", rollups: true, rollupBucketMs: MONITOR_ROLLUP_BUCKET_MS },
       samples,
       rollups,
       incidents,
