@@ -20,6 +20,11 @@ export async function runSearchDocsPagesScenario(): Promise<void> {
     "",
   ].join("\n"));
   fs.writeFileSync(path.join(docsRoot, "search-fixture.md"), [
+    "---",
+    "title: Frontmatter Search Fixture",
+    "description: docs-pages-frontmatter-description-needle proves frontmatter extraction.",
+    "---",
+    "",
     "# Search Fixture",
     "",
     "The docs pages adapter indexes the public docs needle.",
@@ -64,9 +69,10 @@ export async function runSearchDocsPagesScenario(): Promise<void> {
           domain: string;
           type: string;
           title: string;
+          snippet?: string;
           resourceId?: string;
           path?: string;
-          metadata?: { kind?: string; category?: string; relativePath?: string };
+          metadata?: { kind?: string; category?: string; relativePath?: string; frontmatterTitle?: string; frontmatterDescription?: string };
           fragments?: Array<{ title?: string; snippet?: string }>;
         }>;
         facets?: Array<{ id: string; label: string }>;
@@ -77,11 +83,25 @@ export async function runSearchDocsPagesScenario(): Promise<void> {
     assert.equal(docResult?.source, "docs.pages");
     assert.equal(docResult?.domain, "docs");
     assert.equal(docResult?.type, "doc");
+    assert.equal(docResult?.title, "Frontmatter Search Fixture");
+    assert.equal(docResult?.snippet, "docs-pages-frontmatter-description-needle proves frontmatter extraction.");
     assert.equal(docResult?.metadata?.kind, "doc");
     assert.equal(docResult?.metadata?.category, "docs");
+    assert.equal(docResult?.metadata?.frontmatterTitle, "Frontmatter Search Fixture");
+    assert.equal(docResult?.metadata?.frontmatterDescription, "docs-pages-frontmatter-description-needle proves frontmatter extraction.");
     assert.equal(docResult?.path, path.join(docsRoot, "search-fixture.md"));
     assert.equal(docResult?.fragments?.some((fragment) => fragment.title === "Runtime Contract"), true);
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "kind"), true);
+
+    const frontmatterQuery = await runCliCapture(["search", "query", "docs-pages-frontmatter-description-needle", "--domains", "docs", "--filters", "metadata.relativePath=docs/search-fixture.md", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(frontmatterQuery.code, CLI_EXIT_OK);
+    const frontmatterPayload = JSON.parse(frontmatterQuery.stdout) as {
+      data: { results: Array<{ source: string; resourceId?: string; snippet?: string; metadata?: { frontmatterDescription?: string } }> };
+    };
+    const frontmatterResult = frontmatterPayload.data.results.find((entry) => entry.resourceId === "docs/search-fixture.md");
+    assert.equal(frontmatterResult?.source, "docs.pages");
+    assert.equal(frontmatterResult?.snippet, "docs-pages-frontmatter-description-needle proves frontmatter extraction.");
+    assert.equal(frontmatterResult?.metadata?.frontmatterDescription, "docs-pages-frontmatter-description-needle proves frontmatter extraction.");
 
     const rootQuery = await runCliCapture(["search", "query", "docs-pages-root-needle", "--domains", "docs", "--filters", "metadata.category=root", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(rootQuery.code, CLI_EXIT_OK);
@@ -201,6 +221,11 @@ export async function runSearchDocsPagesEventScenario(): Promise<void> {
 
     const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "docs.pages", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(deleteRun.code, CLI_EXIT_OK);
+    const deleteRunPayload = JSON.parse(deleteRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    const docsDeleteRunItem = deleteRunPayload.data.worker?.items.find((entry) => entry.source === "docs.pages");
+    assert.deepEqual({ source: docsDeleteRunItem?.source, operation: docsDeleteRunItem?.operation, status: docsDeleteRunItem?.status, indexed: docsDeleteRunItem?.indexed }, { source: "docs.pages", operation: "delete", status: "done", indexed: 1 });
 
     const afterDelete = await runCliCapture(["search", "query", "docs-pages-event-refresh-needle", "--domains", "docs", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(afterDelete.code, CLI_EXIT_DEGRADED);

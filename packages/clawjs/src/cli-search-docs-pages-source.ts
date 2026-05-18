@@ -116,12 +116,13 @@ function docsPageSearchDocument(cwd: string, filePath: string): SearchDocumentIn
   if (!stat.isFile() || content.includes("\0")) return null;
   const relativePath = normalizeRelativePath(path.relative(cwd, filePath));
   if (!isDocsMarkdownResource(relativePath)) return null;
-  const headings = extractMarkdownHeadings(content);
+  const frontmatter = extractMarkdownFrontmatter(content);
+  const headings = extractMarkdownHeadings(frontmatter.content, frontmatter.lineOffset);
   const kind = relativePath.startsWith("docs/adr/") ? "adr" : "doc";
   const pathParts = relativePath.split("/");
   const category = kind === "adr" ? "adr" : relativePath.startsWith("docs/") ? pathParts.length > 2 ? pathParts[1] ?? "docs" : "docs" : "root";
-  const title = headings[0]?.title ?? path.basename(filePath, ".md");
-  const snippet = firstMeaningfulMarkdownLine(content) ?? relativePath;
+  const title = frontmatter.fields.title ?? headings[0]?.title ?? path.basename(filePath, ".md");
+  const snippet = frontmatter.fields.description ?? firstMeaningfulMarkdownLine(frontmatter.content) ?? relativePath;
   const documentId = `docs.pages:${stableSearchId(relativePath)}`;
   return {
     id: documentId,
@@ -132,7 +133,11 @@ function docsPageSearchDocument(cwd: string, filePath: string): SearchDocumentIn
     title,
     subtitle: relativePath,
     snippet,
-    body: content.slice(0, 96 * 1024),
+    body: [
+      frontmatter.fields.title,
+      frontmatter.fields.description,
+      frontmatter.content,
+    ].filter(Boolean).join("\n").slice(0, 96 * 1024),
     path: filePath,
     updatedAt: stat.mtime.toISOString(),
     metadata: {
@@ -141,6 +146,8 @@ function docsPageSearchDocument(cwd: string, filePath: string): SearchDocumentIn
       path: relativePath,
       relativePath,
       headingCount: headings.length,
+      ...(frontmatter.fields.title ? { frontmatterTitle: frontmatter.fields.title } : {}),
+      ...(frontmatter.fields.description ? { frontmatterDescription: frontmatter.fields.description } : {}),
     },
     permissions: { canOpen: true, canPreview: true, redacted: false },
     rankingHints: {
@@ -167,7 +174,7 @@ function docsPageSearchDocument(cwd: string, filePath: string): SearchDocumentIn
   };
 }
 
-function extractMarkdownHeadings(content: string): MarkdownHeading[] {
+function extractMarkdownHeadings(content: string, lineOffset = 0): MarkdownHeading[] {
   const lines = content.split(/\r?\n/);
   const headings: MarkdownHeading[] = [];
   for (let index = 0; index < lines.length; index += 1) {
@@ -184,12 +191,37 @@ function extractMarkdownHeadings(content: string): MarkdownHeading[] {
     headings.push({
       title: match[2]?.trim() ?? "Section",
       level: match[1]?.length ?? 1,
-      line: index + 1,
+      line: index + 1 + lineOffset,
       body,
       snippet: firstMeaningfulMarkdownLine(body) ?? match[2]?.trim() ?? "Section",
     });
   }
   return headings;
+}
+
+function extractMarkdownFrontmatter(content: string): MarkdownFrontmatter {
+  const lines = content.split(/\r?\n/);
+  if ((lines[0]?.trim() ?? "") !== "---") return { fields: {}, content, lineOffset: 0 };
+  const closeIndex = lines.findIndex((line, index) => index > 0 && line.trim() === "---");
+  if (closeIndex <= 0) return { fields: {}, content, lineOffset: 0 };
+  const fields: Record<string, string> = {};
+  for (const line of lines.slice(1, closeIndex)) {
+    const match = /^([A-Za-z][A-Za-z0-9_-]*):\s*(.*)$/.exec(line.trim());
+    if (!match) continue;
+    const key = match[1]?.trim();
+    const value = stripYamlScalarQuotes(match[2]?.trim() ?? "");
+    if (key && value) fields[key] = value;
+  }
+  return {
+    fields,
+    content: lines.slice(closeIndex + 1).join("\n"),
+    lineOffset: closeIndex + 1,
+  };
+}
+
+function stripYamlScalarQuotes(value: string): string {
+  if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) return value.slice(1, -1);
+  return value;
 }
 
 function firstMeaningfulMarkdownLine(content: string): string | null {
@@ -236,4 +268,10 @@ interface MarkdownHeading {
   line: number;
   body: string;
   snippet: string;
+}
+
+interface MarkdownFrontmatter {
+  fields: Record<string, string>;
+  content: string;
+  lineOffset: number;
 }
