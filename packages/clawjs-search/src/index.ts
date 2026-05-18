@@ -894,6 +894,17 @@ export function createBuiltinSearchSourceManifests(): SearchSourceManifest[] {
       ],
     }),
     createFrameworkSearchSourceManifest({
+      id: "sheets.workbooks",
+      domain: "sheets",
+      name: "Workbooks",
+      resultTypes: ["workbook", "sheet", "table", "cell"],
+      facets: [
+        { id: "sheetName", label: "Sheet", type: "string" },
+        { id: "authorAgentId", label: "Author agent", type: "string" },
+        { id: "outputFormat", label: "Output format", type: "string" },
+      ],
+    }),
+    createFrameworkSearchSourceManifest({
       id: "generations.artifacts",
       domain: "generations",
       name: "Generated artifacts",

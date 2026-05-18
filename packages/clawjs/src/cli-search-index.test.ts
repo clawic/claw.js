@@ -3947,6 +3947,74 @@ test("search rebuild indexes slides.decks from slide manifests", async () => {
   });
 });
 
+test("search rebuild indexes sheets.workbooks from workbook manifests", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-sheets-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  const workbooksDir = path.join(workspaceRoot, ".claw", "sheets", "workbooks");
+  fs.mkdirSync(workbooksDir, { recursive: true });
+  fs.writeFileSync(path.join(workbooksDir, "workbook-forecast.json"), `${JSON.stringify({
+    id: "workbook-forecast",
+    title: "Revenue Forecast Workbook",
+    author: { agentId: "agent:sheets", name: "Sheets agent" },
+    metadata: { team: "finance" },
+    outputs: [{ format: "xlsx", path: "outputs/workbook-forecast/forecast.xlsx" }],
+    sheets: [
+      {
+        id: "sheet-summary",
+        name: "Summary",
+        columns: ["Region", "Revenue", "Formula"],
+        rows: [
+          ["EMEA", "1200", "=SUM(B2:B4)"],
+          ["AMER", "1800", "=SUM(B5:B7)"],
+        ],
+        notes: "Expansion forecast table.",
+      },
+      {
+        id: "sheet-risks",
+        name: "Renewal Risks",
+        cells: [
+          { address: "A1", value: "Customer", formula: "" },
+          { address: "B2", value: "Contoso", formula: "=IF(C2>0.5,\"watch\",\"ok\")" },
+        ],
+      },
+    ],
+    updatedAt: "2026-05-17T00:15:00.000Z",
+  }, null, 2)}\n`, "utf8");
+
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const rebuild = await runCliCapture(["search", "rebuild", "--source", "sheets.workbooks", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(rebuild.code, CLI_EXIT_OK);
+    const rebuildPayload = JSON.parse(rebuild.stdout) as {
+      data: { sources: string[]; pendingSources: string[]; indexedBySource: { "sheets.workbooks": number } };
+    };
+    assert.equal(rebuildPayload.data.sources.includes("sheets.workbooks"), true);
+    assert.equal(rebuildPayload.data.pendingSources.includes("sheets.workbooks"), false);
+    assert.equal(rebuildPayload.data.indexedBySource["sheets.workbooks"], 1);
+
+    const query = await runCliCapture(["search", "query", "emea expansion formula revenue", "--domains", "sheets", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: {
+        indexedFastPaths: { "sheets.workbooks": number };
+        results: Array<{ source: string; domain: string; title: string; metadata?: { sheetName?: string[]; outputFormat?: string[] }; fragments?: Array<{ title?: string; snippet?: string }> }>;
+      };
+    };
+    assert.equal(queryPayload.data.indexedFastPaths["sheets.workbooks"], 1);
+    const result = queryPayload.data.results.find((item) => item.source === "sheets.workbooks");
+    assert.equal(result?.domain, "sheets");
+    assert.equal(result?.title, "Revenue Forecast Workbook");
+    assert.equal(result?.metadata?.sheetName?.includes("Summary"), true);
+    assert.equal(result?.metadata?.outputFormat?.includes("xlsx"), true);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "Summary"), true);
+  });
+});
+
 test("search rebuild indexes media.assets from workspace media records", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-media-"));
   const dataRoot = path.join(workspaceRoot, "data");

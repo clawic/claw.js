@@ -72,6 +72,7 @@ backfill jobs.
 | `images.derived` | `images` | image library, image media metadata, and stored OCR/vision-derived text projected into `search.sqlite` | implemented initial adapter |
 | `media.assets` | `media` | workspace media records projected into `search.sqlite` | implemented initial adapter |
 | `slides.decks` | `slides` | workspace slide deck manifests and per-slide text projected into `search.sqlite` | implemented initial adapter |
+| `sheets.workbooks` | `sheets` | local workbook manifests and per-sheet table/cell text projected into `search.sqlite` | implemented initial adapter |
 | `generations.artifacts` | `generations` | generated artifact records projected into `search.sqlite` | implemented initial adapter |
 | `code.symbols` | `code` | bounded project file/symbol/docs projection into `search.sqlite` | implemented initial adapter |
 | `skills.registry` | `skills` | framework skill records projected from `core.sqlite` without secret refs | implemented initial adapter |
@@ -407,6 +408,13 @@ steps, metrics, tables, image captions, and notes already stored in the
 manifest. It does not parse rendered PPTX/PDF output; generated files remain
 media or generated-artifact records when those surfaces register them.
 
+`sheets.workbooks` projects local workbook manifests from
+`.claw/sheets/workbooks` or an explicit sheets root. It indexes workbook title,
+author/output metadata, sheet names, columns, rows, cells, tables, charts, and
+notes as workbook items with per-sheet fragments. It does not parse binary XLSX
+files directly; imported or generated files remain media/file records until a
+workbook manifest or extractor-owned projection exists.
+
 `generations.artifacts` projects generated artifact records. It indexes prompts,
 titles, kind, status, backend/model metadata, command provenance, output
 references, and generation metadata so generated outputs remain searchable even
@@ -526,7 +534,7 @@ signed host shortcut broker validates it.
 - Build `SearchStore` over `search.sqlite`.
 - Index `commands`, `sessions.chats`, `database.records`, `documents.blocks`,
   `notes.pages`, `knowledge.graph`, `images.derived`, `media.assets`,
-  `slides.decks`, `generations.artifacts`, `skills.registry`, `providers.routing`,
+  `slides.decks`, `sheets.workbooks`, `generations.artifacts`, `skills.registry`, `providers.routing`,
   `snippets.library`, `agents.catalog`, `marketplace.choices`, `content.items`,
   `business.records`, `social.posts`, `iot.config`, and the first bounded
   `code.symbols` adapter with per-file event refresh.

@@ -101,6 +101,7 @@ export async function runSearchQueryCli(input: {
     const shouldRefreshImages = domains?.includes("images") || sources?.includes("images.derived");
     const shouldRefreshMedia = domains?.includes("media") || sources?.includes("media.assets");
     const shouldRefreshSlides = domains?.includes("slides") || sources?.includes("slides.decks");
+    const shouldRefreshSheets = domains?.includes("sheets") || sources?.includes("sheets.workbooks");
     const shouldRefreshGenerations = domains?.includes("generations") || sources?.includes("generations.artifacts");
     const shouldRefreshCode = domains?.includes("code") || sources?.includes("code.symbols");
     const shouldRefreshSkills = domains?.includes("skills") || sources?.includes("skills.registry");
@@ -132,6 +133,7 @@ export async function runSearchQueryCli(input: {
     const indexedImages = shouldRefreshImages && sourceCanIndex(store, "images.derived") ? ensureImagesDerivedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedMedia = shouldRefreshMedia && sourceCanIndex(store, "media.assets") ? ensureMediaAssetsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedSlides = shouldRefreshSlides && sourceCanIndex(store, "slides.decks") ? ensureSlidesDecksSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const indexedSheets = shouldRefreshSheets && sourceCanIndex(store, "sheets.workbooks") ? ensureSheetsWorkbooksSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedGenerations = shouldRefreshGenerations && sourceCanIndex(store, "generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedCode = shouldRefreshCode && sourceCanIndex(store, "code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedSkills = shouldRefreshSkills && sourceCanIndex(store, "skills.registry") ? ensureSkillsRegistrySourceIndexed(store, input.flags) : 0;
@@ -230,6 +232,7 @@ export async function runSearchQueryCli(input: {
         ...(shouldRefreshImages ? { "images.derived": indexedImages } : {}),
         ...(shouldRefreshMedia ? { "media.assets": indexedMedia } : {}),
         ...(shouldRefreshSlides ? { "slides.decks": indexedSlides } : {}),
+        ...(shouldRefreshSheets ? { "sheets.workbooks": indexedSheets } : {}),
         ...(shouldRefreshGenerations ? { "generations.artifacts": indexedGenerations } : {}),
         ...(shouldRefreshCode ? { "code.symbols": indexedCode } : {}),
         ...(shouldRefreshSkills ? { "skills.registry": indexedSkills } : {}),
@@ -369,6 +372,7 @@ export async function runSearchRebuildCli(input: {
     const imagesIndexed = rebuildsSource("images.derived") ? ensureImagesDerivedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const mediaIndexed = rebuildsSource("media.assets") ? ensureMediaAssetsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const slidesIndexed = rebuildsSource("slides.decks") ? ensureSlidesDecksSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const sheetsIndexed = rebuildsSource("sheets.workbooks") ? ensureSheetsWorkbooksSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const generationsIndexed = rebuildsSource("generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const codeIndexed = rebuildsSource("code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const skillsIndexed = rebuildsSource("skills.registry") ? ensureSkillsRegistrySourceIndexed(store, input.flags) : 0;
@@ -403,6 +407,7 @@ export async function runSearchRebuildCli(input: {
       ...(imagesIndexed > 0 ? ["images.derived"] : []),
       ...(mediaIndexed > 0 ? ["media.assets"] : []),
       ...(slidesIndexed > 0 ? ["slides.decks"] : []),
+      ...(sheetsIndexed > 0 ? ["sheets.workbooks"] : []),
       ...(generationsIndexed > 0 ? ["generations.artifacts"] : []),
       ...(codeIndexed > 0 ? ["code.symbols"] : []),
       ...(skillsIndexed > 0 ? ["skills.registry"] : []),
@@ -433,7 +438,7 @@ export async function runSearchRebuildCli(input: {
       mode: selectedSources && selectedShards ? "shard_scoped" : selectedSources ? "scoped" : "full",
       selectedSources: selectedSources ?? null,
       selectedShards: selectedShards ?? null,
-      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + workIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + elnIndexed + imagesIndexed + mediaIndexed + slidesIndexed + generationsIndexed + codeIndexed + skillsIndexed + providersIndexed + snippetsIndexed + agentsIndexed + marketplaceIndexed + contentIndexed + businessIndexed + socialIndexed + iotIndexed + connectorsIndexed + mcpIndexed + appsIndexed + designIndexed + runtimeIndexed + localFilesIndexed + webIndexed + externalIndexed,
+      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + workIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + elnIndexed + imagesIndexed + mediaIndexed + slidesIndexed + sheetsIndexed + generationsIndexed + codeIndexed + skillsIndexed + providersIndexed + snippetsIndexed + agentsIndexed + marketplaceIndexed + contentIndexed + businessIndexed + socialIndexed + iotIndexed + connectorsIndexed + mcpIndexed + appsIndexed + designIndexed + runtimeIndexed + localFilesIndexed + webIndexed + externalIndexed,
       embeddings: 0,
       profile: input.flags.profile === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
@@ -453,6 +458,7 @@ export async function runSearchRebuildCli(input: {
         "images.derived": imagesIndexed,
         "media.assets": mediaIndexed,
         "slides.decks": slidesIndexed,
+        "sheets.workbooks": sheetsIndexed,
         "generations.artifacts": generationsIndexed,
         "code.symbols": codeIndexed,
         "skills.registry": skillsIndexed,
@@ -1157,6 +1163,8 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
       return ensureMediaAssetsSourceIndexed(store, flags, cwd);
     case "slides.decks":
       return ensureSlidesDecksSourceIndexed(store, flags, cwd);
+    case "sheets.workbooks":
+      return ensureSheetsWorkbooksSourceIndexed(store, flags, cwd);
     case "generations.artifacts":
       return ensureGenerationsArtifactsSourceIndexed(store, flags, cwd);
     case "code.symbols":
@@ -4004,6 +4012,41 @@ function ensureSlidesDecksSourceIndexed(store: SearchStore, flags: Record<string
   return indexed;
 }
 
+function ensureSheetsWorkbooksSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {
+  const root = resolveSheetsWorkbooksRoot(flags, cwd);
+  if (!fs.existsSync(root)) {
+    store.setSourceState("sheets.workbooks", "enabled", {
+      backlog: 0,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 0;
+  }
+  const maxWorkbooks = boundedNumberFlag(flags["sheets-limit"] ?? flags["workbook-limit"], 500, 1, 10000);
+  const files = fs.readdirSync(root)
+    .filter((entry) => entry.endsWith(".json"))
+    .map((entry) => path.join(root, entry))
+    .sort()
+    .slice(0, maxWorkbooks);
+  let indexed = 0;
+  for (const file of files) {
+    const document = sheetsWorkbookSearchDocument(file);
+    if (!document) continue;
+    store.upsertDocument(document);
+    indexed += 1;
+  }
+  store.setCursor({
+    source: "sheets.workbooks",
+    cursor: `root:${stableSearchId(root)}:workbooks:${indexed}`,
+    metadata: { root, maxWorkbooks },
+  });
+  store.setSourceState("sheets.workbooks", "enabled", {
+    backlog: 0,
+    error: null,
+    lastIndexedAt: new Date().toISOString(),
+  });
+  return indexed;
+}
+
 function ensureWebIngestedSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {
   const root = resolveWebIngestedRoot(flags, cwd);
   if (!fs.existsSync(root)) {
@@ -4093,6 +4136,12 @@ function resolveSlidesDecksRoot(flags: Record<string, string>, cwd: string): str
   if (configured) return path.resolve(configured);
   const workspaceRoot = path.resolve(flags.workspace ?? cwd);
   return resolveClawPersistentSurfacePath("claw.workspace.slides", workspaceRoot, "decks");
+}
+
+function resolveSheetsWorkbooksRoot(flags: Record<string, string>, cwd: string): string {
+  const configured = flags["sheets-root"] ?? flags["sheets-workbooks-root"] ?? flags["workbooks-root"];
+  if (configured) return path.resolve(configured);
+  return path.join(path.resolve(flags.workspace ?? cwd), ".claw", "sheets", "workbooks");
 }
 
 function resolveWebIngestedRoot(flags: Record<string, string>, cwd: string): string {
@@ -4391,6 +4440,85 @@ function slideDeckSearchDocument(filePath: string): SearchDocumentInput | null {
   };
 }
 
+function sheetsWorkbookSearchDocument(filePath: string): SearchDocumentInput | null {
+  const raw = readLocalTextFile(filePath);
+  if (!raw) return null;
+  const workbook = parseJsonRecord(raw) as SheetsWorkbookSearchManifest;
+  const workbookId = stringValue(workbook.id) ?? path.basename(filePath, ".json");
+  const title = stringValue(workbook.title) ?? stringValue(workbook.name) ?? `Workbook ${workbookId}`;
+  const author = isPlainRecord(workbook.author) ? workbook.author : {};
+  const outputs = Array.isArray(workbook.outputs) ? workbook.outputs.filter(isPlainRecord) : [];
+  const sheetsValue = Array.isArray(workbook.sheets) ? workbook.sheets : Array.isArray(workbook.worksheets) ? workbook.worksheets : [];
+  const sheets = sheetsValue.filter(isPlainRecord);
+  const sheetTexts = sheets.map(sheetTextForSearch).filter((text) => text.length > 0);
+  const metadataText = manifestStructuredText(workbook.metadata);
+  const outputFormats = outputs.map((output) => stringValue(output.format)).filter((format): format is string => !!format);
+  const sheetNames = sheets.map((sheet, index) => stringValue(sheet.name) ?? stringValue(sheet.title) ?? `Sheet ${index + 1}`);
+  let updatedAt = stringValue(workbook.updatedAt);
+  if (!updatedAt) {
+    try {
+      updatedAt = fs.statSync(filePath).mtime.toISOString();
+    } catch {
+      updatedAt = new Date().toISOString();
+    }
+  }
+  const body = [
+    title,
+    stringValue(author.name),
+    stringValue(author.agentId),
+    metadataText,
+    ...sheetTexts,
+  ].filter(Boolean).join("\n");
+  return {
+    id: `sheets.workbooks:${stableSearchId(filePath)}`,
+    source: "sheets.workbooks",
+    domain: "sheets",
+    type: "workbook",
+    resourceId: workbookId,
+    title,
+    subtitle: `${sheets.length} sheets`,
+    snippet: firstMeaningfulLine(sheetTexts.join("\n")) ?? title,
+    body,
+    path: filePath,
+    updatedAt,
+    metadata: {
+      workbookId,
+      sheetCount: sheets.length,
+      sheetName: sheetNames,
+      authorAgentId: stringValue(author.agentId),
+      authorName: stringValue(author.name),
+      outputFormat: Array.from(new Set(outputFormats)),
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: {
+      fastPath: 1,
+      sheets: 1,
+      sheetCount: Math.min(sheets.length, 50) / 50,
+    },
+    fragments: sheets.slice(0, 80).map((sheet, index) => {
+      const sheetId = stringValue(sheet.id) ?? `sheet-${index + 1}`;
+      const sheetName = stringValue(sheet.name) ?? stringValue(sheet.title) ?? `Sheet ${index + 1}`;
+      const text = sheetTextForSearch(sheet);
+      return {
+        id: `sheets.workbooks:${stableSearchId(filePath)}:sheet:${sheetId}`,
+        title: sheetName,
+        body: text,
+        snippet: firstMeaningfulLine(text) ?? sheetName,
+        sortOrder: index,
+        metadata: {
+          sheetId,
+          sheetIndex: index,
+          sheetName,
+        },
+      };
+    }),
+    actions: [
+      { id: "open", kind: "open", label: "Open workbook", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy workbook reference", requiresApproval: false },
+    ],
+  };
+}
+
 function webIngestedSearchDocument(root: string, file: WebIngestedCandidate, maxBytes: number): SearchDocumentInput | null {
   const raw = readLocalTextFile(file.absolutePath).slice(0, maxBytes);
   if (!raw) return null;
@@ -4660,22 +4788,35 @@ function slideTextForSearch(slide: Record<string, unknown>): string {
     if (value) parts.push(value);
   }
   for (const key of ["bullets", "steps", "metrics", "rows", "image"]) {
-    const text = slideStructuredText(slide[key]);
+    const text = manifestStructuredText(slide[key]);
     if (text) parts.push(text);
   }
   return parts.join("\n").trim();
 }
 
-function slideStructuredText(value: unknown): string | undefined {
+function sheetTextForSearch(sheet: Record<string, unknown>): string {
+  const parts: string[] = [];
+  for (const key of ["name", "title", "description", "notes"]) {
+    const value = stringValue(sheet[key]);
+    if (value) parts.push(value);
+  }
+  for (const key of ["columns", "rows", "cells", "tables", "charts", "metadata"]) {
+    const text = manifestStructuredText(sheet[key]);
+    if (text) parts.push(text);
+  }
+  return parts.join("\n").trim();
+}
+
+function manifestStructuredText(value: unknown): string | undefined {
   const direct = textFromStructuredContent(value);
   if (direct) return direct;
   const parts: string[] = [];
-  collectSlideStructuredText(value, parts, 0);
+  collectManifestStructuredText(value, parts, 0);
   const text = parts.join(" ").replace(/\s+/g, " ").trim();
   return text || undefined;
 }
 
-function collectSlideStructuredText(value: unknown, parts: string[], depth: number): void {
+function collectManifestStructuredText(value: unknown, parts: string[], depth: number): void {
   if (parts.join(" ").length > 8192 || depth > 4 || value === null || value === undefined) return;
   if (typeof value === "string") {
     if (value.trim()) parts.push(value.trim());
@@ -4686,13 +4827,13 @@ function collectSlideStructuredText(value: unknown, parts: string[], depth: numb
     return;
   }
   if (Array.isArray(value)) {
-    for (const item of value) collectSlideStructuredText(item, parts, depth + 1);
+    for (const item of value) collectManifestStructuredText(item, parts, depth + 1);
     return;
   }
   if (!isPlainRecord(value)) return;
   for (const [key, nested] of Object.entries(value)) {
     if (["src", "path", "url"].includes(key)) continue;
-    collectSlideStructuredText(nested, parts, depth + 1);
+    collectManifestStructuredText(nested, parts, depth + 1);
   }
 }
 
@@ -6642,6 +6783,18 @@ interface SlideDeckSearchManifest {
   theme?: unknown;
   author?: unknown;
   slides?: unknown;
+  metadata?: unknown;
+  outputs?: unknown;
+  updatedAt?: unknown;
+}
+
+interface SheetsWorkbookSearchManifest {
+  id?: unknown;
+  title?: unknown;
+  name?: unknown;
+  author?: unknown;
+  sheets?: unknown;
+  worksheets?: unknown;
   metadata?: unknown;
   outputs?: unknown;
   updatedAt?: unknown;
