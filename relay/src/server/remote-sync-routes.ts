@@ -1,6 +1,9 @@
 import {
   buildRemoteConformanceReport,
   buildRemoteExternalPendingRegister,
+  buildRemoteExternalValidationChecklist,
+  buildRemoteExternalValidationReport,
+  buildRemoteGoalClosureGate,
   buildRemoteProviderDeviceE2EValidationPlan,
   buildRemoteRouteContractCatalog,
   buildSyncPlan,
@@ -24,6 +27,7 @@ import {
   syncDriverSchema,
   syncObjectSnapshotSchema,
   type MeshShareAction,
+  type RemoteExternalValidationEvidence,
   type RemoteCompatibilityClientKind,
   type SyncAuthority,
   type SyncDriver,
@@ -45,6 +49,23 @@ function remoteConformancePayload() {
 
 function remoteExternalPendingPayload() {
   return buildRemoteExternalPendingRegister();
+}
+
+function remoteExternalValidationChecklistPayload() {
+  return buildRemoteExternalValidationChecklist();
+}
+
+function remoteExternalValidationReportPayload(input: Record<string, unknown> = {}) {
+  return buildRemoteExternalValidationReport({
+    evidence: Array.isArray(input.evidence) ? input.evidence as RemoteExternalValidationEvidence[] : [],
+  });
+}
+
+function remoteGoalClosureGatePayload(input: Record<string, unknown> = {}) {
+  return buildRemoteGoalClosureGate({
+    reviewedSourceQaIds: Array.isArray(input.reviewedSourceQaIds) ? input.reviewedSourceQaIds.filter((entry): entry is string => typeof entry === "string") : [],
+    evidence: Array.isArray(input.evidence) ? input.evidence as RemoteExternalValidationEvidence[] : [],
+  });
 }
 
 function remoteRouteContractsPayload() {
@@ -355,6 +376,16 @@ export function registerRemoteSyncRoutes(app: FastifyInstance): void {
   app.get(clawApiPath("remote/conformance"), async () => remoteConformancePayload());
 
   app.get(clawApiPath("remote/external-pending"), async () => remoteExternalPendingPayload());
+
+  app.get(clawApiPath("remote/external-validation-checklist"), async () => remoteExternalValidationChecklistPayload());
+
+  app.get(clawApiPath("remote/external-validation-report"), async () => remoteExternalValidationReportPayload());
+
+  app.post(clawApiPath("remote/external-validation-report"), async (request) => remoteExternalValidationReportPayload(readBody(request)));
+
+  app.get(clawApiPath("remote/closure-gate"), async () => remoteGoalClosureGatePayload());
+
+  app.post(clawApiPath("remote/closure-gate"), async (request) => remoteGoalClosureGatePayload(readBody(request)));
 
   app.get(clawApiPath("remote/route-contracts"), async () => remoteRouteContractsPayload());
 

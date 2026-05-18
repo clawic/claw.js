@@ -5,6 +5,9 @@ import { fileURLToPath } from "node:url";
 import {
   buildRemoteConformanceReport,
   buildRemoteExternalPendingRegister,
+  buildRemoteExternalValidationChecklist,
+  buildRemoteExternalValidationReport,
+  buildRemoteGoalClosureGate,
   buildRemoteOfflineCommandResult,
   buildRemoteProviderDeviceE2EValidationPlan,
   buildRemoteRouteContractCatalog,
@@ -40,6 +43,7 @@ import {
   remoteExternalPendingRegisterSchema,
   remoteGatewayAuditReceiptSchema,
   remoteProviderDeviceE2EValidationPlanSchema,
+  remoteGoalClosureRequiredSourceQaIds,
   remoteRouteContractCatalogSchema,
   remoteSecretLeaseSchema,
   remoteSurfaceClassificationReceiptSchema,
@@ -85,6 +89,9 @@ const requiredServiceApiRoutes = [
   "remote/classifications/receipts",
   "remote/conformance",
   "remote/external-pending",
+  "remote/external-validation-checklist",
+  "remote/external-validation-report",
+  "remote/closure-gate",
   "remote/route-contracts",
   "remote/provider-device-e2e-plan",
   "remote/compatibility/adapters",
@@ -130,6 +137,15 @@ const requiredDocSnippets = [
   "/v1/remote/classifications/receipts",
   "RemoteExternalPendingRegister",
   "/v1/remote/external-pending",
+  "external validation checklist",
+  "/v1/remote/external-validation-checklist",
+  "claw remote validation-checklist",
+  "external validation report",
+  "/v1/remote/external-validation-report",
+  "claw remote validation-report",
+  "remote closure gate",
+  "/v1/remote/closure-gate",
+  "claw remote closure-gate",
   "remote route contracts",
   "/v1/remote/route-contracts",
   "RemoteProviderDeviceE2EValidationPlan",
@@ -343,6 +359,92 @@ if (!externalPending.requirements.some((entry) => entry.requirementId === "provi
   fail("provider_device_e2e must be backed by RemoteProviderDeviceE2EValidationPlan");
 }
 
+const externalValidationChecklist = buildRemoteExternalValidationChecklist({
+  generatedAt: "2026-05-17T10:13:15.000Z",
+});
+if (externalValidationChecklist.status !== "external_pending") fail("remote external validation checklist must remain external_pending");
+if (externalValidationChecklist.writes !== false) fail("remote external validation checklist must be no-write");
+if (externalValidationChecklist.coverage.requirementCount !== externalPending.requirements.length) fail("remote external validation checklist must count every pending requirement");
+if (externalValidationChecklist.coverage.coveredRequirementCount !== externalPending.requirements.length) fail("remote external validation checklist must cover every pending requirement");
+if (externalValidationChecklist.coverage.missingRequirementIds.length !== 0) fail("remote external validation checklist must have no missing requirement IDs");
+for (const requirement of externalPending.requirements) {
+  const item = externalValidationChecklist.items.find((entry) => entry.requirementId === requirement.requirementId);
+  if (!item) fail(`remote external validation checklist missing ${requirement.requirementId}`);
+  if (item && item.sourceReceipt !== requirement.sourceReceipt) fail(`remote external validation checklist source receipt mismatch for ${requirement.requirementId}`);
+  if (item && (!item.approvedRunRequired || !item.physicalEvidenceRequired || item.plaintextMaterialIncluded !== false || item.writes !== false)) {
+    fail(`remote external validation checklist invariants failed for ${requirement.requirementId}`);
+  }
+}
+for (const requirementId of ["physical_iroh_handshake", "provider_secret_retrieval", "provider_device_e2e"]) {
+  const item = externalValidationChecklist.items.find((entry) => entry.requirementId === requirementId);
+  if (!item?.requiredCommand || item.requiredArtifacts.length === 0 || item.acceptanceCriteria.length === 0) {
+    fail(`remote external validation checklist must include command, artifacts, and criteria for ${requirementId}`);
+  }
+}
+
+const emptyExternalValidationReport = buildRemoteExternalValidationReport({
+  generatedAt: "2026-05-17T10:13:20.000Z",
+});
+if (emptyExternalValidationReport.status !== "external_pending") fail("empty remote external validation report must remain external_pending");
+if (emptyExternalValidationReport.writes !== false) fail("remote external validation report must be no-write");
+if (emptyExternalValidationReport.evidenceCount !== 0) fail("empty remote external validation report must have zero evidence");
+if (emptyExternalValidationReport.blockedRequirementIds.length !== externalPending.requirements.length) fail("empty remote external validation report must block every requirement");
+if (emptyExternalValidationReport.clearableRequirementIds.length !== 0) fail("empty remote external validation report must not clear requirements");
+
+const completeExternalValidationReport = buildRemoteExternalValidationReport({
+  generatedAt: "2026-05-17T10:13:25.000Z",
+  evidence: externalValidationChecklist.items.map((entry) => ({
+    schemaVersion: 1,
+    requirementId: entry.requirementId,
+    approvedRun: true,
+    physicalEvidenceRef: `evidence://${entry.requirementId}`,
+    artifactRefs: entry.requiredArtifacts,
+    acceptedCriteria: entry.acceptanceCriteria,
+    plaintextMaterialIncluded: false,
+    executedAt: "2026-05-17T10:13:24.000Z",
+    writes: false,
+  })),
+});
+if (completeExternalValidationReport.status !== "clearable") fail("complete remote external validation report must be clearable");
+if (completeExternalValidationReport.clearableRequirementIds.length !== externalPending.requirements.length) fail("complete remote external validation report must clear every requirement");
+if (completeExternalValidationReport.blockedRequirementIds.length !== 0) fail("complete remote external validation report must have no blocked requirements");
+if (!completeExternalValidationReport.items.every((entry) => entry.clearable && entry.writes === false && entry.plaintextMaterialIncluded === false)) {
+  fail("complete remote external validation report must preserve no-write/no-plaintext invariants");
+}
+
+const blockedClosureGate = buildRemoteGoalClosureGate({
+  generatedAt: "2026-05-17T10:13:26.000Z",
+});
+if (blockedClosureGate.status !== "blocked") fail("default remote closure gate must be blocked");
+if (blockedClosureGate.writes !== false) fail("remote closure gate must be no-write");
+if (blockedClosureGate.requiredSourceQaIds.length !== 23) fail("remote closure gate must require 23 source Q/A ids");
+if (blockedClosureGate.missingSourceQaIds.length !== 23) fail("default remote closure gate must miss all source Q/A ids");
+if (!blockedClosureGate.blockers.includes("source_qa_review") || !blockedClosureGate.blockers.includes("external_validation")) {
+  fail("default remote closure gate must block on source Q/A review and external validation");
+}
+if (blockedClosureGate.blockedExternalRequirementIds.length !== externalPending.requirements.length) fail("default remote closure gate must block every external pending requirement");
+
+const clearableClosureGate = buildRemoteGoalClosureGate({
+  generatedAt: "2026-05-17T10:13:27.000Z",
+  reviewedSourceQaIds: remoteGoalClosureRequiredSourceQaIds,
+  evidence: externalValidationChecklist.items.map((entry) => ({
+    schemaVersion: 1,
+    requirementId: entry.requirementId,
+    approvedRun: true,
+    physicalEvidenceRef: `evidence://${entry.requirementId}`,
+    artifactRefs: entry.requiredArtifacts,
+    acceptedCriteria: entry.acceptanceCriteria,
+    plaintextMaterialIncluded: false,
+    executedAt: "2026-05-17T10:13:24.000Z",
+    writes: false,
+  })),
+});
+if (clearableClosureGate.status !== "clearable") fail("remote closure gate must become clearable only after source Q/A review and external validation clear");
+if (clearableClosureGate.missingSourceQaIds.length !== 0) fail("clearable remote closure gate must have no missing source Q/A ids");
+if (clearableClosureGate.blockedExternalRequirementIds.length !== 0) fail("clearable remote closure gate must have no blocked external requirements");
+if (clearableClosureGate.clearableExternalRequirementIds.length !== externalPending.requirements.length) fail("clearable remote closure gate must clear every external requirement");
+if (clearableClosureGate.blockers.length !== 0) fail("clearable remote closure gate must have no blockers");
+
 const providerDeviceE2EPlan = buildRemoteProviderDeviceE2EValidationPlan({
   createdAt: "2026-05-17T10:13:30.000Z",
 });
@@ -402,6 +504,12 @@ for (const snippet of [
   "buildRemoteRouteContractCatalog",
   "remoteSyncRequiredRouteIds",
   "expectedExternalPending.requirements.map",
+  "buildRemoteExternalValidationChecklist",
+  "/v1/remote/external-validation-checklist",
+  "buildRemoteExternalValidationReport",
+  "/v1/remote/external-validation-report",
+  "buildRemoteGoalClosureGate",
+  "/v1/remote/closure-gate",
   "expectedRouteContracts.contracts.map",
   "buildRemoteProviderDeviceE2EValidationPlan",
   "/v1/remote/provider-device-e2e-plan",

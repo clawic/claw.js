@@ -17,7 +17,11 @@ import {
   buildRemoteOfflineCommandResult,
   buildRemoteConformanceReport,
   buildRemoteExternalPendingRegister,
+  buildRemoteExternalValidationChecklist,
+  buildRemoteExternalValidationReport,
+  buildRemoteGoalClosureGate,
   buildRemoteProviderDeviceE2EValidationPlan,
+  remoteGoalClosureRequiredSourceQaIds,
   buildRemoteRouteContractCatalog,
   buildSyncQueueEntries,
   buildSyncPlan,
@@ -563,6 +567,80 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(externalPending.requirements.some((entry) => entry.requirementId === "physical_authority_handoff" && entry.decisionId === "sync_authority_model" && entry.sourceReceipt === "SyncAuthorityHandoffReceipt"), true);
   assert.equal(externalPending.requirements.some((entry) => entry.requirementId === "provider_device_e2e" && entry.sourceReceipt === "RemoteProviderDeviceE2EValidationPlan"), true);
   assert.equal(externalPending.requirements.every((entry) => entry.status === "external_pending" && entry.writes === false), true);
+
+  const externalValidationChecklist = buildRemoteExternalValidationChecklist({ generatedAt: "2026-05-17T10:13:15.000Z" });
+  assert.equal(externalValidationChecklist.status, "external_pending");
+  assert.equal(externalValidationChecklist.writes, false);
+  assert.deepEqual(externalValidationChecklist.requirementIds, externalPending.requirements.map((entry) => entry.requirementId));
+  assert.equal(externalValidationChecklist.coverage.requirementCount, externalPending.requirements.length);
+  assert.equal(externalValidationChecklist.coverage.coveredRequirementCount, externalPending.requirements.length);
+  assert.deepEqual(externalValidationChecklist.coverage.missingRequirementIds, []);
+  assert.equal(externalValidationChecklist.items.every((entry) => entry.approvedRunRequired && entry.physicalEvidenceRequired && !entry.writes), true);
+  assert.equal(externalValidationChecklist.items.every((entry) => entry.plaintextMaterialIncluded === false), true);
+  assert.equal(externalValidationChecklist.items.some((entry) => entry.requirementId === "physical_iroh_handshake" && entry.requiredCommand.includes("claw nodes heartbeat")), true);
+  assert.equal(externalValidationChecklist.items.some((entry) => entry.requirementId === "provider_secret_retrieval" && entry.requiredArtifacts.includes("RemoteSecretProviderReceipt")), true);
+  assert.equal(externalValidationChecklist.items.some((entry) => entry.requirementId === "provider_device_e2e" && entry.requiredArtifacts.includes("RemoteProviderDeviceE2EValidationPlan")), true);
+
+  const emptyExternalValidationReport = buildRemoteExternalValidationReport({ generatedAt: "2026-05-17T10:13:20.000Z" });
+  assert.equal(emptyExternalValidationReport.status, "external_pending");
+  assert.equal(emptyExternalValidationReport.writes, false);
+  assert.equal(emptyExternalValidationReport.evidenceCount, 0);
+  assert.equal(emptyExternalValidationReport.blockedRequirementIds.length, externalPending.requirements.length);
+  assert.equal(emptyExternalValidationReport.clearableRequirementIds.length, 0);
+  assert.equal(emptyExternalValidationReport.items.every((entry) => !entry.clearable && entry.status === "external_pending"), true);
+  assert.equal(emptyExternalValidationReport.items.some((entry) => entry.requirementId === "physical_iroh_handshake" && entry.missingArtifacts.includes("RemoteTransportHandshakeReceipt")), true);
+
+  const completeExternalValidationReport = buildRemoteExternalValidationReport({
+    generatedAt: "2026-05-17T10:13:25.000Z",
+    evidence: externalValidationChecklist.items.map((entry) => ({
+      schemaVersion: 1,
+      requirementId: entry.requirementId,
+      approvedRun: true,
+      physicalEvidenceRef: `evidence://${entry.requirementId}`,
+      artifactRefs: entry.requiredArtifacts,
+      acceptedCriteria: entry.acceptanceCriteria,
+      plaintextMaterialIncluded: false,
+      executedAt: "2026-05-17T10:13:24.000Z",
+      writes: false,
+    })),
+  });
+  assert.equal(completeExternalValidationReport.status, "clearable");
+  assert.equal(completeExternalValidationReport.writes, false);
+  assert.equal(completeExternalValidationReport.evidenceCount, externalPending.requirements.length);
+  assert.equal(completeExternalValidationReport.clearableRequirementIds.length, externalPending.requirements.length);
+  assert.deepEqual(completeExternalValidationReport.blockedRequirementIds, []);
+  assert.equal(completeExternalValidationReport.items.every((entry) => entry.clearable && entry.status === "clearable" && !entry.writes), true);
+
+  const blockedClosureGate = buildRemoteGoalClosureGate({ generatedAt: "2026-05-17T10:13:26.000Z" });
+  assert.equal(blockedClosureGate.status, "blocked");
+  assert.equal(blockedClosureGate.writes, false);
+  assert.equal(blockedClosureGate.requiredSourceQaIds.length, 23);
+  assert.equal(blockedClosureGate.missingSourceQaIds.length, 23);
+  assert.equal(blockedClosureGate.blockers.includes("source_qa_review"), true);
+  assert.equal(blockedClosureGate.blockers.includes("external_validation"), true);
+  assert.equal(blockedClosureGate.blockedExternalRequirementIds.length, externalPending.requirements.length);
+
+  const clearableClosureGate = buildRemoteGoalClosureGate({
+    generatedAt: "2026-05-17T10:13:27.000Z",
+    reviewedSourceQaIds: remoteGoalClosureRequiredSourceQaIds,
+    evidence: externalValidationChecklist.items.map((entry) => ({
+      schemaVersion: 1,
+      requirementId: entry.requirementId,
+      approvedRun: true,
+      physicalEvidenceRef: `evidence://${entry.requirementId}`,
+      artifactRefs: entry.requiredArtifacts,
+      acceptedCriteria: entry.acceptanceCriteria,
+      plaintextMaterialIncluded: false,
+      executedAt: "2026-05-17T10:13:24.000Z",
+      writes: false,
+    })),
+  });
+  assert.equal(clearableClosureGate.status, "clearable");
+  assert.equal(clearableClosureGate.writes, false);
+  assert.deepEqual(clearableClosureGate.missingSourceQaIds, []);
+  assert.deepEqual(clearableClosureGate.blockedExternalRequirementIds, []);
+  assert.equal(clearableClosureGate.clearableExternalRequirementIds.length, externalPending.requirements.length);
+  assert.deepEqual(clearableClosureGate.blockers, []);
 
   const providerDeviceE2EPlan = buildRemoteProviderDeviceE2EValidationPlan({
     createdAt: "2026-05-17T10:13:30.000Z",

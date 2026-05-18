@@ -6,9 +6,13 @@ import { test } from "vitest";
 
 import {
   buildRemoteExternalPendingRegister,
+  buildRemoteExternalValidationChecklist,
+  buildRemoteExternalValidationReport,
+  buildRemoteGoalClosureGate,
   buildRemoteProviderDeviceE2EValidationPlan,
   buildRemoteRouteContractCatalog,
   clawPersistentSurfaceRegistry,
+  remoteGoalClosureRequiredSourceQaIds,
   remoteSyncRequiredRouteIds,
 } from "@clawjs/core";
 
@@ -57,6 +61,95 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(externalPendingPayload.requirements.some((entry) => entry.requirementId === "physical_iroh_handshake" && entry.sourceReceipt === "RemoteTransportHandshakeReceipt"), true);
     assert.equal(externalPendingPayload.requirements.some((entry) => entry.requirementId === "hosted_deployment"), true);
     assert.equal(externalPendingPayload.requirements.every((entry) => entry.status === "external_pending" && entry.writes === false), true);
+
+    const externalValidationChecklist = await built.app.inject({ method: "GET", url: "/v1/remote/external-validation-checklist" });
+    assert.equal(externalValidationChecklist.statusCode, 200);
+    const externalValidationChecklistPayload = externalValidationChecklist.json() as { status: string; writes: boolean; requirementIds: string[]; coverage: { requirementCount: number; coveredRequirementCount: number; missingRequirementIds: string[] }; items: Array<{ requirementId: string; sourceReceipt: string; requiredCommand: string; requiredArtifacts: string[]; approvedRunRequired: boolean; physicalEvidenceRequired: boolean; plaintextMaterialIncluded: boolean; writes: boolean }> };
+    const expectedExternalValidationChecklist = buildRemoteExternalValidationChecklist();
+    assert.equal(externalValidationChecklistPayload.status, "external_pending");
+    assert.equal(externalValidationChecklistPayload.writes, false);
+    assert.deepEqual(externalValidationChecklistPayload.requirementIds, expectedExternalPending.requirements.map((entry) => entry.requirementId));
+    assert.deepEqual(externalValidationChecklistPayload.requirementIds, expectedExternalValidationChecklist.requirementIds);
+    assert.equal(externalValidationChecklistPayload.coverage.requirementCount, expectedExternalPending.requirements.length);
+    assert.equal(externalValidationChecklistPayload.coverage.coveredRequirementCount, expectedExternalPending.requirements.length);
+    assert.deepEqual(externalValidationChecklistPayload.coverage.missingRequirementIds, []);
+    assert.deepEqual(
+      externalValidationChecklistPayload.items.map((entry) => entry.requirementId),
+      expectedExternalValidationChecklist.items.map((entry) => entry.requirementId),
+    );
+    assert.equal(externalValidationChecklistPayload.items.some((entry) => entry.requirementId === "physical_iroh_handshake" && entry.requiredCommand.includes("claw nodes heartbeat")), true);
+    assert.equal(externalValidationChecklistPayload.items.some((entry) => entry.requirementId === "provider_device_e2e" && entry.requiredArtifacts.includes("RemoteProviderDeviceE2EValidationPlan")), true);
+    assert.equal(externalValidationChecklistPayload.items.every((entry) => entry.approvedRunRequired && entry.physicalEvidenceRequired && entry.plaintextMaterialIncluded === false && !entry.writes), true);
+
+    const externalValidationReport = await built.app.inject({ method: "GET", url: "/v1/remote/external-validation-report" });
+    assert.equal(externalValidationReport.statusCode, 200);
+    const externalValidationReportPayload = externalValidationReport.json() as { status: string; writes: boolean; requirementCount: number; evidenceCount: number; clearableRequirementIds: string[]; blockedRequirementIds: string[]; items: Array<{ requirementId: string; clearable: boolean; status: string; writes: boolean; missingArtifacts: string[] }> };
+    const expectedExternalValidationReport = buildRemoteExternalValidationReport();
+    assert.equal(externalValidationReportPayload.status, "external_pending");
+    assert.equal(externalValidationReportPayload.writes, false);
+    assert.equal(externalValidationReportPayload.requirementCount, expectedExternalPending.requirements.length);
+    assert.equal(externalValidationReportPayload.evidenceCount, 0);
+    assert.deepEqual(externalValidationReportPayload.clearableRequirementIds, []);
+    assert.deepEqual(externalValidationReportPayload.blockedRequirementIds, expectedExternalValidationReport.blockedRequirementIds);
+    assert.equal(externalValidationReportPayload.items.some((entry) => entry.requirementId === "physical_iroh_handshake" && entry.missingArtifacts.includes("RemoteTransportHandshakeReceipt")), true);
+    assert.equal(externalValidationReportPayload.items.every((entry) => !entry.clearable && entry.status === "external_pending" && !entry.writes), true);
+
+    const completeEvidence = expectedExternalValidationChecklist.items.map((entry) => ({
+      schemaVersion: 1,
+      requirementId: entry.requirementId,
+      approvedRun: true,
+      physicalEvidenceRef: `evidence://${entry.requirementId}`,
+      artifactRefs: entry.requiredArtifacts,
+      acceptedCriteria: entry.acceptanceCriteria,
+      plaintextMaterialIncluded: false,
+      executedAt: "2026-05-17T10:13:24.000Z",
+      writes: false,
+    }));
+    const completeExternalValidationReport = await built.app.inject({
+      method: "POST",
+      url: "/v1/remote/external-validation-report",
+      headers: { "content-type": "application/json" },
+      payload: { evidence: completeEvidence },
+    });
+    assert.equal(completeExternalValidationReport.statusCode, 200);
+    const completeExternalValidationReportPayload = completeExternalValidationReport.json() as { status: string; writes: boolean; clearableRequirementIds: string[]; blockedRequirementIds: string[]; items: Array<{ clearable: boolean; writes: boolean }> };
+    assert.equal(completeExternalValidationReportPayload.status, "clearable");
+    assert.equal(completeExternalValidationReportPayload.writes, false);
+    assert.equal(completeExternalValidationReportPayload.clearableRequirementIds.length, expectedExternalPending.requirements.length);
+    assert.deepEqual(completeExternalValidationReportPayload.blockedRequirementIds, []);
+    assert.equal(completeExternalValidationReportPayload.items.every((entry) => entry.clearable && !entry.writes), true);
+
+    const closureGate = await built.app.inject({ method: "GET", url: "/v1/remote/closure-gate" });
+    assert.equal(closureGate.statusCode, 200);
+    const closureGatePayload = closureGate.json() as { status: string; writes: boolean; requiredSourceQaIds: string[]; reviewedSourceQaIds: string[]; missingSourceQaIds: string[]; blockedExternalRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockers: string[] };
+    const expectedClosureGate = buildRemoteGoalClosureGate();
+    assert.equal(closureGatePayload.status, "blocked");
+    assert.equal(closureGatePayload.writes, false);
+    assert.deepEqual(closureGatePayload.requiredSourceQaIds, expectedClosureGate.requiredSourceQaIds);
+    assert.deepEqual(closureGatePayload.reviewedSourceQaIds, []);
+    assert.equal(closureGatePayload.missingSourceQaIds.length, 23);
+    assert.equal(closureGatePayload.blockedExternalRequirementIds.length, expectedExternalPending.requirements.length);
+    assert.deepEqual(closureGatePayload.clearableExternalRequirementIds, []);
+    assert.equal(closureGatePayload.blockers.includes("source_qa_review"), true);
+    assert.equal(closureGatePayload.blockers.includes("external_validation"), true);
+
+    const clearableClosureGate = await built.app.inject({
+      method: "POST",
+      url: "/v1/remote/closure-gate",
+      headers: { "content-type": "application/json" },
+      payload: {
+        reviewedSourceQaIds: remoteGoalClosureRequiredSourceQaIds,
+        evidence: completeEvidence,
+      },
+    });
+    assert.equal(clearableClosureGate.statusCode, 200);
+    const clearableClosureGatePayload = clearableClosureGate.json() as { status: string; writes: boolean; missingSourceQaIds: string[]; blockedExternalRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockers: string[] };
+    assert.equal(clearableClosureGatePayload.status, "clearable");
+    assert.equal(clearableClosureGatePayload.writes, false);
+    assert.deepEqual(clearableClosureGatePayload.missingSourceQaIds, []);
+    assert.deepEqual(clearableClosureGatePayload.blockedExternalRequirementIds, []);
+    assert.equal(clearableClosureGatePayload.clearableExternalRequirementIds.length, expectedExternalPending.requirements.length);
+    assert.deepEqual(clearableClosureGatePayload.blockers, []);
 
     const routeContracts = await built.app.inject({ method: "GET", url: "/v1/remote/route-contracts" });
     assert.equal(routeContracts.statusCode, 200);

@@ -58,7 +58,7 @@ is implemented, validated, or explicitly blocked as `EXTERNAL PENDING`.
 | --- | --- |
 | Goal verifier | `npm run test:remote-sync-goal` |
 | Focused core/CLI tests | `npx vitest run --config vitest.config.ts packages/clawjs-core/src/index.test.ts packages/clawjs/src/inspect-cli.test.ts` |
-| Relay HTTP routes | `npx vitest run --config vitest.config.ts relay/src/server/remote-sync-routes.test.ts`; this must compare `/v1/remote/external-pending`, `/v1/remote/route-contracts`, `/v1/remote/provider-device-e2e-plan`, and `/v1/remote/conformance` against the same core contracts used by CLI inspection. |
+| Relay HTTP routes | `npx vitest run --config vitest.config.ts relay/src/server/remote-sync-routes.test.ts`; this must compare `/v1/remote/external-pending`, `/v1/remote/external-validation-checklist`, `/v1/remote/external-validation-report`, `/v1/remote/closure-gate`, `/v1/remote/route-contracts`, `/v1/remote/provider-device-e2e-plan`, and `/v1/remote/conformance` against the same core contracts used by CLI inspection. |
 | CLI/router parity | `node --import tsx ./scripts/verify-cli-registry-router-parity.mjs` |
 | Public executable inspection | `node packages/clawjs/bin/claw.mjs inspect remote --json` after building the CLI package |
 | Public docs hygiene | `npm run code-hygiene:check` and `git diff --check` |
@@ -74,9 +74,14 @@ The goal may be closed only after a final pass confirms:
    answer at a time.
 3. `RemoteExternalPendingRegister` contains every remaining physical/provider
    blocker and none of those rows is reported as a software bug.
-4. `claw inspect remote`, `claw remote pending`, `claw remote contracts`,
-   `claw remote e2e-plan`, Relay `/v1/remote/external-pending`, Relay
-   `/v1/remote/route-contracts`, and Relay
+4. `claw inspect remote`, `claw remote pending`,
+   `claw remote validation-checklist`, `claw remote validation-report`,
+   `claw remote closure-gate`, `claw remote contracts`,
+   `claw remote e2e-plan`, Relay
+   `/v1/remote/external-pending`, Relay
+   `/v1/remote/external-validation-checklist`, Relay
+   `/v1/remote/external-validation-report`, Relay `/v1/remote/closure-gate`,
+   Relay `/v1/remote/route-contracts`, and Relay
    `/v1/remote/provider-device-e2e-plan` are verified against the same
    contracts.
 5. The registry contains no `pending` Relay classification for a stable surfaced

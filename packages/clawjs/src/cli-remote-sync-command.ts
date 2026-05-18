@@ -1,6 +1,9 @@
 import {
   buildRemoteConformanceReport,
   buildRemoteExternalPendingRegister,
+  buildRemoteExternalValidationChecklist,
+  buildRemoteExternalValidationReport,
+  buildRemoteGoalClosureGate,
   buildRemoteProviderDeviceE2EValidationPlan,
   buildRemoteRouteContractCatalog,
   buildSyncPlan,
@@ -26,6 +29,7 @@ import {
   remoteSyncRequiredRouteIds,
   syncObjectSnapshotSchema,
   type MeshShareAction,
+  type RemoteExternalValidationEvidence,
   type RemoteCompatibilityClientKind,
   type SyncAuthority,
   type SyncDriver,
@@ -245,6 +249,16 @@ function listFlag(value: string | undefined, fallback: string[]): string[] {
   return entries.length ? entries : fallback;
 }
 
+function parseExternalValidationEvidence(value: string | undefined): RemoteExternalValidationEvidence[] {
+  if (!value) return [];
+  const parsed = JSON.parse(value) as unknown;
+  return Array.isArray(parsed) ? parsed as RemoteExternalValidationEvidence[] : [parsed as RemoteExternalValidationEvidence];
+}
+
+function parseReviewedSourceQaIds(value: string | undefined): string[] {
+  return listFlag(value, []);
+}
+
 function meshActionFlags(value: string | undefined, fallback: MeshShareAction[]): MeshShareAction[] {
   const allowed = new Set<MeshShareAction>(["read", "sync", "search", "execute", "lease_secret"]);
   const parsed = listFlag(value, fallback).filter((entry): entry is MeshShareAction => allowed.has(entry as MeshShareAction));
@@ -462,6 +476,25 @@ export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
     const register = buildRemoteExternalPendingRegister({ generatedAt: input.flags.now });
     return writeOutput(input, "remote", register, `${register.status} requirements=${register.requirements.length}`, command);
   }
+  if (command === "validation-checklist" || command === "external-validation-checklist") {
+    const checklist = buildRemoteExternalValidationChecklist({ generatedAt: input.flags.now });
+    return writeOutput(input, "remote", checklist, `${checklist.status} covered=${checklist.coverage.coveredRequirementCount}/${checklist.coverage.requirementCount}`, command);
+  }
+  if (command === "validation-report" || command === "external-validation-report") {
+    const report = buildRemoteExternalValidationReport({
+      generatedAt: input.flags.now,
+      evidence: parseExternalValidationEvidence(input.flags["evidence-json"]),
+    });
+    return writeOutput(input, "remote", report, `${report.status} clearable=${report.clearableRequirementIds.length}/${report.requirementCount}`, command);
+  }
+  if (command === "closure-gate" || command === "goal-closure-gate") {
+    const gate = buildRemoteGoalClosureGate({
+      generatedAt: input.flags.now,
+      reviewedSourceQaIds: parseReviewedSourceQaIds(input.flags["reviewed-source-qa-ids"] ?? input.flags["source-qa-ids"]),
+      evidence: parseExternalValidationEvidence(input.flags["evidence-json"]),
+    });
+    return writeOutput(input, "remote", gate, `${gate.status} blockers=${gate.blockers.length}`, command);
+  }
   if (command === "contracts") {
     const catalog = buildRemoteRouteContractCatalog({ generatedAt: input.flags.now, registeredRouteIds: routeIds() });
     return writeOutput(input, "remote", catalog, `${catalog.status} contracts=${catalog.contracts.length}`, command);
@@ -491,7 +524,7 @@ export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
       ...(state ? { state } : {}),
     }, `compat: ${status}`, command);
   }
-  return missing(input, "remote classify|check|routes|conformance|pending|contracts|e2e-plan|compat");
+  return missing(input, "remote classify|check|routes|conformance|pending|validation-checklist|validation-report|closure-gate|contracts|e2e-plan|compat");
 }
 
 export async function runSyncCli(input: RemoteSyncCliInput): Promise<number> {

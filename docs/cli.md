@@ -198,6 +198,9 @@ claw remote check --json
 claw remote routes --json
 claw remote conformance --json
 claw remote pending --json
+claw remote validation-checklist --json
+claw remote validation-report --json
+claw remote closure-gate --json
 claw remote contracts --json
 claw remote e2e-plan --json
 claw remote compat --legacy-surface relay.mobile.chat --canonical-route remote.chatGateway --client-kind ios --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
@@ -254,6 +257,17 @@ id, policy reference, and test evidence before anything is written.
 single audit list of hardware, provider, hosted rollout, client storage,
 runtime, billing, and end-to-end validations that cannot be claimed complete
 until explicitly run.
+`remote validation-checklist` returns the no-write external validation
+checklist: one command, artifact set, and acceptance-criteria set for every
+`RemoteExternalPendingRegister` row, so `EXTERNAL PENDING` has explicit proof
+requirements before any row can clear.
+`remote validation-report` evaluates supplied external evidence, if any, against
+that checklist. With no approved physical evidence it stays `external_pending`;
+only rows with approved run evidence, physical evidence, all required artifacts,
+all acceptance criteria, and no plaintext material become `clearable`.
+`remote closure-gate` combines the external validation report with the required
+source Q/A review. It remains `blocked` until all 23 source Q/A rows are
+reviewed and every external validation row is `clearable`.
 The final provider/device end-to-end row is not a loose note: it is backed by
 `RemoteProviderDeviceE2EValidationPlan`, which requires chat, search, Sync,
 secret-reference, and hosted-agent validation to pass together against the same

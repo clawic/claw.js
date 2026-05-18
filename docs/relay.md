@@ -150,6 +150,21 @@ audit register for physical Iroh, device trust, peer trust, physical Sync
 drivers, physical Sync authority handoff, signed host audit persistence, client
 storage, provider retrieval, self-hosted and hosted deployment, runtime
 execution, billing meters, and provider/device end-to-end validation.
+The Relay `/v1/remote/external-validation-checklist` endpoint and
+`claw remote validation-checklist` expose the matching no-write external
+validation checklist: every `RemoteExternalPendingRegister` row must have an
+approved command, required artifacts, and acceptance criteria before it can be
+cleared from `EXTERNAL PENDING`.
+The Relay `/v1/remote/external-validation-report` endpoint and
+`claw remote validation-report` evaluate external validation evidence against
+that checklist. A row is only `clearable` when the report includes approved-run
+evidence, physical evidence, all required artifacts, all acceptance criteria,
+and `plaintextMaterialIncluded: false`; otherwise it remains
+`external_pending`.
+The remote closure gate is exposed by Relay `/v1/remote/closure-gate` and
+`claw remote closure-gate`. It combines that evidence report with the source
+Q/A review gate. The result stays `blocked` until all 23 source Q/A rows are
+reviewed and every external validation row is `clearable`.
 The provider/device end-to-end blocker is backed by
 `RemoteProviderDeviceE2EValidationPlan`: a no-write plan that requires chat,
 search, Sync, secret-reference, and hosted-agent coverage to be validated
