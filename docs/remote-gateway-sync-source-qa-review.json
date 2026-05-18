@@ -142,6 +142,10 @@
       "disposition": "external_pending",
       "evidenceRefs": [
         "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "remoteActorContextSchema",
+        "claw gateway audit",
+        "relay /v1/gateway/audit/receipts",
+        "claw remote contracts:remote.chatGateway,remote.secretBrokeredOperation,gateway.multiTenantAgentService",
         "claw remote pending:signed_host_audit_persistence"
       ],
       "reviewedAt": "2026-05-18T11:20:00.000Z",
@@ -216,6 +220,9 @@
       "disposition": "external_pending",
       "evidenceRefs": [
         "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "RemoteClientCacheSnapshot",
+        "claw sync cache",
+        "claw remote e2e-plan:sync",
         "claw remote pending:physical_client_storage"
       ],
       "reviewedAt": "2026-05-18T11:20:00.000Z",

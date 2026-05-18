@@ -446,6 +446,16 @@ for (const ref of [
 ]) {
   if (!syncSubstrateSourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-013 must cite ${ref}`);
 }
+const actorModelSourceQaReview = sourceQaReviewReport.items.find((item) => item.qaId === "QA-010");
+for (const ref of [
+  "remoteActorContextSchema",
+  "claw gateway audit",
+  "relay /v1/gateway/audit/receipts",
+  "claw remote contracts:remote.chatGateway,remote.secretBrokeredOperation,gateway.multiTenantAgentService",
+  "claw remote pending:signed_host_audit_persistence",
+]) {
+  if (!actorModelSourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-010 must cite ${ref}`);
+}
 const reviewedClosureGate = buildRemoteGoalClosureGate({
   generatedAt: "2026-05-18T11:20:01.000Z",
   sourceQaReviews: sourceQaReviewReport.items,
