@@ -184,6 +184,58 @@ export const clawEvolutionReceiptSchema = z.object({
   errors: z.array(z.string()),
 });
 
+export const clawEvolutionFixtureSurfaceSchema = z.object({
+  id: z.string().min(1),
+  kind: z.enum([
+    "database",
+    "workspace_file",
+    "global_file",
+    "protocol",
+    "cli_json",
+    "package_export",
+    "agent_instruction",
+    "skill",
+    "route",
+    "schema",
+    "backup",
+    "search_index",
+    "permission",
+    "audit",
+    "rescue",
+  ]),
+  owner: z.string().min(1),
+  backupStrategy: clawEvolutionBackupPolicySchema.shape.strategy,
+  payload: z.record(z.string(), z.unknown()),
+  expectedCurrent: z.record(z.string(), z.unknown()),
+});
+
+export const clawEvolutionVersionFixtureSchema = z.object({
+  schemaVersion: z.literal(1),
+  fixtureId: z.string().regex(/^evo_fixture_[a-z0-9_]+$/),
+  publicVersion: z.string().min(1),
+  createdAt: z.string(),
+  phase: z.enum(["pre_v1_foundation", "public_release"]),
+  rescueCore: z.literal("launch_chat_repair"),
+  surfaces: z.array(clawEvolutionFixtureSurfaceSchema).min(1),
+  notes: z.array(z.string()),
+});
+
+export const clawEvolutionMigratorLabResultSchema = z.object({
+  schemaVersion: z.literal(1),
+  status: z.enum(["pass", "fail", "blocked"]),
+  fromVersion: z.string(),
+  toVersion: z.string(),
+  fixtureIds: z.array(z.string()),
+  fixtureCount: z.number(),
+  checkedSurfaces: z.array(z.string()),
+  checks: z.array(z.object({
+    id: z.string().min(1),
+    status: z.enum(["pass", "fail", "blocked"]),
+    notes: z.array(z.string()),
+  })),
+  receipts: z.array(clawEvolutionReceiptSchema),
+});
+
 export type ClawEvolutionPolicy = typeof clawEvolutionPolicy;
 export type ClawEvolutionRecord = z.infer<typeof clawEvolutionRecordSchema>;
 export type ClawEvolutionLedger = z.infer<typeof clawEvolutionLedgerSchema>;
@@ -196,6 +248,9 @@ export type ClawEvolutionBackupPolicy = z.infer<typeof clawEvolutionBackupPolicy
 export type ClawEvolutionOperatorStep = z.infer<typeof clawEvolutionOperatorStepSchema>;
 export type ClawEvolutionOperatorPlan = z.infer<typeof clawEvolutionOperatorPlanSchema>;
 export type ClawEvolutionReceipt = z.infer<typeof clawEvolutionReceiptSchema>;
+export type ClawEvolutionFixtureSurface = z.infer<typeof clawEvolutionFixtureSurfaceSchema>;
+export type ClawEvolutionVersionFixture = z.infer<typeof clawEvolutionVersionFixtureSchema>;
+export type ClawEvolutionMigratorLabResult = z.infer<typeof clawEvolutionMigratorLabResultSchema>;
 
 export function createEvolutionPublicSurfaceBaseline(input: {
   generatedAt: string;
@@ -409,11 +464,91 @@ export function createEvolutionReceipt(input: {
   });
 }
 
+export function runEvolutionMigratorLab(input: {
+  fixtures: ClawEvolutionVersionFixture[];
+  ledger: ClawEvolutionLedger;
+  fromVersion?: string;
+  toVersion?: string;
+  createdAt?: string;
+}): ClawEvolutionMigratorLabResult {
+  const fixtures = input.fixtures.map((fixture) => clawEvolutionVersionFixtureSchema.parse(fixture));
+  const fromVersion = input.fromVersion ?? fixtures[0]?.publicVersion ?? "unknown";
+  const toVersion = input.toVersion ?? "current";
+  const checkedSurfaces = [...new Set(fixtures.flatMap((fixture) => fixture.surfaces.map((surface) => surface.id)))].sort();
+  const plan = createEvolutionOperatorPlan({
+    action: "dry-run",
+    ledger: input.ledger,
+    changes: checkedSurfaces.map((surface) => ({
+      area: "surface",
+      change: "changed",
+      id: surface,
+      coveredByRecord: true,
+      recordIds: [],
+    })),
+    fromVersion,
+    toVersion,
+  });
+  const checks = [
+    checkEvolutionLab(fixtures.length > 0, "fixtures_present", "At least one version fixture must be available."),
+    checkEvolutionLab(fixtures.every((fixture) => fixture.rescueCore === "launch_chat_repair"), "rescue_core_fixture", "Fixtures preserve launch/chat/repair as survival core."),
+    checkEvolutionLab(hasRequiredFixtureKinds(fixtures), "required_surface_kinds", "Foundation fixtures cover DB, workspace, protocol, CLI JSON, package export, skills, search, permissions, audit, backup, and rescue."),
+    checkEvolutionLab(input.ledger.policy.sourceOfTruth === "clawjs", "ledger_source_of_truth", "Migration lab must use the ClawJS ledger as canon."),
+    checkEvolutionLab(input.ledger.policy.postV1Migration === "step_by_step_all_public_versions", "step_by_step_policy", "Post-V1 migrations must chain through public versions."),
+  ];
+  const status = checks.some((check) => check.status === "fail")
+    ? "fail"
+    : checks.some((check) => check.status === "blocked")
+      ? "blocked"
+      : "pass";
+  return clawEvolutionMigratorLabResultSchema.parse({
+    schemaVersion: 1,
+    status,
+    fromVersion,
+    toVersion,
+    fixtureIds: fixtures.map((fixture) => fixture.fixtureId),
+    fixtureCount: fixtures.length,
+    checkedSurfaces,
+    checks,
+    receipts: [createEvolutionReceipt({
+      action: "dry-run",
+      plan,
+      status: status === "pass" ? "completed" : "failed",
+      createdAt: input.createdAt,
+      notes: [`migration lab ${status} for ${fromVersion} to ${toVersion}`],
+    })],
+  });
+}
+
 export function redactEvolutionReceiptText(text: string): string {
   return text
     .replace(/\/Users\/[^\s"'`]+/g, "[redacted_path]")
     .replace(/\b(?:sk|pk|rk|ghp|github_pat|xox[baprs])-[A-Za-z0-9_\-]{8,}\b/g, "[redacted_secret]")
     .replace(/\b(prompt|input|message)\s*[:=]\s*("[^"]*"|'[^']*'|[^\n\r;]+)/gi, "$1: [redacted_prompt]");
+}
+
+function checkEvolutionLab(condition: boolean, id: string, note: string): ClawEvolutionMigratorLabResult["checks"][number] {
+  return { id, status: condition ? "pass" : "fail", notes: [note] };
+}
+
+function hasRequiredFixtureKinds(fixtures: ClawEvolutionVersionFixture[]): boolean {
+  const kinds = new Set(fixtures.flatMap((fixture) => fixture.surfaces.map((surface) => surface.kind)));
+  return [
+    "database",
+    "workspace_file",
+    "global_file",
+    "protocol",
+    "cli_json",
+    "package_export",
+    "agent_instruction",
+    "skill",
+    "route",
+    "schema",
+    "backup",
+    "search_index",
+    "permission",
+    "audit",
+    "rescue",
+  ].every((kind) => kinds.has(kind as ClawEvolutionFixtureSurface["kind"]));
 }
 
 function toEvolutionBaselineSurface(node: ClawPersistentSurfaceNode): ClawEvolutionBaselineSurface {
