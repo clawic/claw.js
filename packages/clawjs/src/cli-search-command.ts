@@ -617,6 +617,7 @@ export async function runSearchAdminCli(input: {
   if (command === "status") {
     const store = openCliSearchStore(input.flags);
     let sources: Array<{ source: string; domain: string; state: string; backlog: number; fastPath: boolean; lastIndexedAt?: string; error?: string }>;
+    let cursors: ReturnType<SearchStore["listCursors"]>;
     try {
       registerCliSearchSources(store, input.flags);
       const manifestById = new Map(BUILTIN_SEARCH_SOURCES.map((source) => [source.id, source]));
@@ -624,6 +625,7 @@ export async function runSearchAdminCli(input: {
         ...status,
         fastPath: manifestById.get(status.source)?.capabilities.fastPath ?? false,
       }));
+      cursors = store.listCursors(input.flags.source);
     } finally {
       store.close();
     }
@@ -632,6 +634,7 @@ export async function runSearchAdminCli(input: {
       profile,
       budgets: DEFAULT_SEARCH_BUDGETS,
       sources,
+      cursors,
       storage: searchStorageMetadata(input.flags),
     };
     if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "status" });

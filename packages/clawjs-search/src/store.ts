@@ -78,6 +78,8 @@ export interface SearchSourceCursor {
   source: string;
   shard: string;
   cursor: string;
+  watermark: string;
+  checksum: string;
   updatedAt: string;
   metadata: Record<string, unknown>;
 }
@@ -772,26 +774,34 @@ export class SearchStore {
     };
   }
 
-  setCursor(input: { source: string; shard?: string; cursor: string; metadata?: Record<string, unknown>; updatedAt?: string }): SearchSourceCursor {
+  setCursor(input: { source: string; shard?: string; cursor: string; watermark?: string; checksum?: string; metadata?: Record<string, unknown>; updatedAt?: string }): SearchSourceCursor {
     const updatedAt = input.updatedAt ?? new Date().toISOString();
     const shard = input.shard ?? "default";
+    const metadata = input.metadata ?? {};
+    const watermark = input.watermark ?? input.cursor;
+    const checksum = input.checksum ?? searchCursorChecksum({ source: input.source, shard, cursor: input.cursor, watermark, metadata });
     this.db.prepare(`
-      INSERT INTO search_cursors (source, shard, cursor, updated_at, metadata_json)
-      VALUES (?, ?, ?, ?, ?)
-      ON CONFLICT(source, shard) DO UPDATE SET cursor = excluded.cursor, updated_at = excluded.updated_at, metadata_json = excluded.metadata_json
-    `).run(input.source, shard, input.cursor, updatedAt, JSON.stringify(input.metadata ?? {}));
-    return { source: input.source, shard, cursor: input.cursor, updatedAt, metadata: input.metadata ?? {} };
+      INSERT INTO search_cursors (source, shard, cursor, watermark, checksum, updated_at, metadata_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(source, shard) DO UPDATE SET
+        cursor = excluded.cursor,
+        watermark = excluded.watermark,
+        checksum = excluded.checksum,
+        updated_at = excluded.updated_at,
+        metadata_json = excluded.metadata_json
+    `).run(input.source, shard, input.cursor, watermark, checksum, updatedAt, JSON.stringify(metadata));
+    return { source: input.source, shard, cursor: input.cursor, watermark, checksum, updatedAt, metadata };
   }
 
   getCursor(source: string, shard = "default"): SearchSourceCursor | null {
-    const row = this.db.prepare("SELECT source, shard, cursor, updated_at, metadata_json FROM search_cursors WHERE source = ? AND shard = ?").get(source, shard) as SearchCursorRow | undefined;
+    const row = this.db.prepare("SELECT source, shard, cursor, watermark, checksum, updated_at, metadata_json FROM search_cursors WHERE source = ? AND shard = ?").get(source, shard) as SearchCursorRow | undefined;
     return row ? searchCursorFromRow(row) : null;
   }
 
   listCursors(source?: string): SearchSourceCursor[] {
     const rows = source
-      ? this.db.prepare("SELECT source, shard, cursor, updated_at, metadata_json FROM search_cursors WHERE source = ? ORDER BY shard ASC").all(source) as SearchCursorRow[]
-      : this.db.prepare("SELECT source, shard, cursor, updated_at, metadata_json FROM search_cursors ORDER BY source ASC, shard ASC").all() as SearchCursorRow[];
+      ? this.db.prepare("SELECT source, shard, cursor, watermark, checksum, updated_at, metadata_json FROM search_cursors WHERE source = ? ORDER BY shard ASC").all(source) as SearchCursorRow[]
+      : this.db.prepare("SELECT source, shard, cursor, watermark, checksum, updated_at, metadata_json FROM search_cursors ORDER BY source ASC, shard ASC").all() as SearchCursorRow[];
     return rows.map(searchCursorFromRow);
   }
 
@@ -1131,6 +1141,8 @@ export class SearchStore {
       this.db.exec(SEARCH_SCHEMA_SQL);
       if (
         !this.tableHasColumn("search_cursors", "shard")
+        || !this.tableHasColumn("search_cursors", "watermark")
+        || !this.tableHasColumn("search_cursors", "checksum")
         || !this.tableHasColumn("search_documents", "shard")
         || !this.tableHasColumn("search_fragments", "shard")
         || !this.tableHasColumn("search_fts", "shard")
@@ -1641,6 +1653,8 @@ interface SearchCursorRow {
   source: string;
   shard: string;
   cursor: string;
+  watermark: string;
+  checksum: string;
   updated_at: string;
   metadata_json: string;
 }
@@ -1798,7 +1812,15 @@ function existingSearchDocumentShardRows(db: Database.Database, ids: string[]): 
 }
 
 function searchCursorFromRow(row: SearchCursorRow): SearchSourceCursor {
-  return { source: row.source, shard: row.shard, cursor: row.cursor, updatedAt: row.updated_at, metadata: parseJson(row.metadata_json) };
+  return {
+    source: row.source,
+    shard: row.shard,
+    cursor: row.cursor,
+    watermark: row.watermark,
+    checksum: row.checksum,
+    updatedAt: row.updated_at,
+    metadata: parseJson(row.metadata_json),
+  };
 }
 
 function searchShardFromRow(row: SearchShardRow): SearchShardStatus {
@@ -1862,6 +1884,10 @@ function stableJobIdPart(value: string): string {
   if (safe === value && safe.length > 0 && safe.length <= 120) return safe;
   const hash = createHash("sha256").update(value).digest("hex").slice(0, 16);
   return `${safe.slice(0, 100) || "resource"}-${hash}`;
+}
+
+function searchCursorChecksum(input: { source: string; shard: string; cursor: string; watermark: string; metadata: Record<string, unknown> }): string {
+  return createHash("sha256").update(stableJson(input)).digest("hex");
 }
 
 function ftsPartitionTableName(source: string, shard: string): string {
@@ -2441,6 +2467,8 @@ CREATE TABLE IF NOT EXISTS search_cursors (
   source TEXT NOT NULL REFERENCES search_sources(id) ON DELETE CASCADE,
   shard TEXT NOT NULL DEFAULT 'default',
   cursor TEXT NOT NULL,
+  watermark TEXT NOT NULL,
+  checksum TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   metadata_json TEXT NOT NULL DEFAULT '{}',
   PRIMARY KEY (source, shard)

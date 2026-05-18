@@ -184,17 +184,20 @@ excluded sources are skipped by `search query` lazy indexing and by
 `search rebuild`, survive a rebuildable `search.sqlite` reset, and Root Search
 reports omitted sources as partial metadata instead of blocking fast paths.
 
-Search documents and sync cursors are tracked per source and shard. The default
-shard preserves the simple source contract; hot/cold or extractor-specific
-shards can be indexed and queried independently during backfill and event-driven
-indexing. `search.sqlite` maintains a physical `search_shards` catalog table
-with per-source/per-shard document and fragment counts, plus source/shard FTS
-partition tables for shard-scoped lexical queries, so hosts can inspect shard
-health without scanning every document and hot shard queries do not need to scan
-the global FTS table. Shard-scoped queries use that catalog to skip empty
-requested shards before touching FTS when the catalog has coverage for the
-requested scope. Source/shard rebuilds clear only the selected cursor, document
-rows, global FTS rows, and FTS partitions for that shard.
+Search documents and sync checkpoints are tracked per source and shard. Each
+checkpoint stores the adapter cursor, a separate high-watermark value, a
+deterministic checksum, update time, and adapter metadata; `claw search status`
+exposes those checkpoints for admin/debug flows. The default shard preserves the
+simple source contract; hot/cold or extractor-specific shards can be indexed and
+queried independently during backfill and event-driven indexing. `search.sqlite`
+maintains a physical `search_shards` catalog table with per-source/per-shard
+document and fragment counts, plus source/shard FTS partition tables for
+shard-scoped lexical queries, so hosts can inspect shard health without scanning
+every document and hot shard queries do not need to scan the global FTS table.
+Shard-scoped queries use that catalog to skip empty requested shards before
+touching FTS when the catalog has coverage for the requested scope.
+Source/shard rebuilds clear only the selected cursor, document rows, global FTS
+rows, and FTS partitions for that shard.
 
 `search.sqlite` also owns a local indexing job queue. Sources can enqueue
 upsert, delete, backfill, or rebuild work with source, shard, priority,

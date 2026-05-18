@@ -97,6 +97,27 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     const defaultShardPayload = JSON.parse(defaultShardQuery.stdout) as { data: { results: Array<{ source: string; title: string; shard?: string }> } };
     assert.equal(defaultShardPayload.data.results.some((result) => result.source === "commands" && result.title === "system" && result.shard === undefined), true);
 
+    const cursorStore = new SearchStore(path.join(dataRoot, "search.sqlite"));
+    try {
+      cursorStore.setCursor({
+        source: "commands",
+        shard: "hot",
+        cursor: "commands-cursor-1",
+        watermark: "2026-05-18T10:00:00.000Z",
+        metadata: { registryVersion: 1 },
+      });
+    } finally {
+      cursorStore.close();
+    }
+    const cursorStatus = await runCliCapture(["search", "status", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(cursorStatus.code, CLI_EXIT_OK);
+    const cursorStatusPayload = JSON.parse(cursorStatus.stdout) as { data: { cursors: Array<{ source: string; shard: string; cursor: string; watermark: string; checksum: string; metadata: Record<string, unknown> }> } };
+    const commandsCursor = cursorStatusPayload.data.cursors.find((cursor) => cursor.source === "commands" && cursor.shard === "hot");
+    assert.equal(commandsCursor?.cursor, "commands-cursor-1");
+    assert.equal(commandsCursor?.watermark, "2026-05-18T10:00:00.000Z");
+    assert.equal(commandsCursor?.checksum.length, 64);
+    assert.deepEqual(commandsCursor?.metadata, { registryVersion: 1 });
+
     const budgetedQuery = await runCliCapture(["search", "query", "search", "--domains", "commands", "--data-dir", dataRoot, "--json", "--limit", "5", "--agent-result-limit", "1"], workspaceRoot);
     assert.equal(budgetedQuery.code, CLI_EXIT_OK);
     const budgetedPayload = JSON.parse(budgetedQuery.stdout) as { data: { agentBudget: { maxResults: number }; results: unknown[] } };
@@ -566,7 +587,7 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.ok(serviceStartPayload.data.service.startedAt);
     assert.equal(fs.existsSync(path.join(dataRoot, "search-service.json")), true);
 
-    const serviceJob = await runCliCapture(["search", "jobs", "enqueue", "rebuild", "--source", "commands", "--id", "job:service:commands", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    const serviceJob = await runCliCapture(["search", "jobs", "enqueue", "rebuild", "--source", "commands", "--id", "job:service:commands", "--priority", "90", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(serviceJob.code, CLI_EXIT_OK);
 
     const serviceRun = await runCliCapture(["search", "service", "run-once", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);

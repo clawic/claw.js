@@ -581,13 +581,19 @@ test("SearchStore persists sources, fragments, FTS documents, actions, cursors, 
     const filteredOut = store.query({ query: "timeouts", domains: ["sessions"], filters: { "metadata.projectId": "project-beta" } });
     assert.equal(filteredOut.results.length, 0);
 
-    const cursor = store.setCursor({ source: "sessions.chats", cursor: "watermark-1", metadata: { shard: "default" } });
-    assert.equal(cursor.cursor, "watermark-1");
+    const cursor = store.setCursor({ source: "sessions.chats", cursor: "cursor-1", watermark: "watermark-1", metadata: { shard: "default", version: 1 } });
+    assert.equal(cursor.cursor, "cursor-1");
+    assert.equal(cursor.watermark, "watermark-1");
+    assert.equal(cursor.checksum.length, 64);
     assert.equal(cursor.shard, "default");
-    assert.deepEqual(store.getCursor("sessions.chats")?.metadata, { shard: "default" });
-    store.setCursor({ source: "sessions.chats", shard: "hot", cursor: "hot-watermark", metadata: { shard: "hot" } });
+    assert.deepEqual(store.getCursor("sessions.chats")?.metadata, { shard: "default", version: 1 });
+    const stableChecksum = store.setCursor({ source: "sessions.chats", cursor: "cursor-1", watermark: "watermark-1", metadata: { version: 1, shard: "default" } }).checksum;
+    assert.equal(stableChecksum, cursor.checksum);
+    store.setCursor({ source: "sessions.chats", shard: "hot", cursor: "hot-cursor", watermark: "hot-watermark", metadata: { shard: "hot" } });
     store.setCursor({ source: "sessions.chats", shard: "cold", cursor: "cold-watermark", metadata: { shard: "cold" } });
-    assert.equal(store.getCursor("sessions.chats", "hot")?.cursor, "hot-watermark");
+    assert.equal(store.getCursor("sessions.chats", "hot")?.cursor, "hot-cursor");
+    assert.equal(store.getCursor("sessions.chats", "hot")?.watermark, "hot-watermark");
+    assert.equal(store.getCursor("sessions.chats", "cold")?.watermark, "cold-watermark");
     assert.deepEqual(store.listCursors("sessions.chats").map((entry) => entry.shard), ["cold", "default", "hot"]);
 
     store.saveSearch({ id: "saved_1", name: "Chats about Search", query: { query: "search", domains: ["sessions"] } });
