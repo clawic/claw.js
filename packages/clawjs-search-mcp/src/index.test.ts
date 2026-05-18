@@ -691,6 +691,24 @@ test("Search MCP action execution returns brokered plans and audit records", () 
       body: "system help",
       actions: [{ id: "help", kind: "run", label: "Show help", requiresApproval: true, risk: "system", grant: "search.commands.run" }],
     });
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "finance.records",
+      domain: "finance",
+      name: "Finance",
+      resultTypes: ["transaction"],
+    }));
+    store.upsertDocument({
+      id: "finance.records:1",
+      source: "finance.records",
+      domain: "finance",
+      type: "transaction",
+      title: "transaction 1",
+      body: "redacted finance record",
+      metadata: {
+        legalOutputLabels: ["not_professional_advice", "human_review_required", "regulated_domain:finance"],
+      },
+      actions: [{ id: "copy-reference", kind: "copy", label: "Copy finance reference", requiresApproval: false }],
+    });
 
     const tools = createSearchMcpTools(store);
     const executeTool = tools.find((tool) => tool.name === "search.actions.execute");
@@ -715,6 +733,16 @@ test("Search MCP action execution returns brokered plans and audit records", () 
     assert.equal(blocked.plan.requiresApproval, true);
     assert.equal(blocked.blocked, true);
 
+    const regulatedBlocked = executeTool.handler({ resultId: "finance.records:1", actionId: "copy-reference", actor: "agent:test", surface: "mcp" }) as {
+      plan: { status: string; requiresApproval: boolean; legalOutputLabels?: string[]; reasons: string[] };
+      blocked: boolean;
+    };
+    assert.equal(regulatedBlocked.plan.status, "blocked");
+    assert.equal(regulatedBlocked.plan.requiresApproval, true);
+    assert.equal(regulatedBlocked.plan.reasons.includes("regulated_result_review_required"), true);
+    assert.equal(regulatedBlocked.plan.legalOutputLabels?.includes("regulated_domain:finance"), true);
+    assert.equal(regulatedBlocked.blocked, true);
+
     const brokered = executeTool.handler({ resultId: "commands:system", actionId: "help", hostApprovalId: "approval_search_help" }) as {
       plan: { status: string; hostApprovalId?: string; broker: { sideEffects: string } };
       brokered: boolean;
@@ -728,6 +756,7 @@ test("Search MCP action execution returns brokered plans and audit records", () 
     assert.equal(audit.some((item) => item.resultId === "commands:system" && item.actionId === "help" && item.status === "planned"), true);
     assert.equal(audit.some((item) => item.resultId === "commands:system" && item.actionId === "help" && item.status === "blocked"), true);
     assert.equal(audit.some((item) => item.resultId === "commands:system" && item.actionId === "help" && item.status === "brokered" && item.metadata?.hostApprovalId === "approval_search_help"), true);
+    assert.equal(audit.some((item) => item.resultId === "finance.records:1" && item.status === "blocked" && item.reason?.includes("regulated_result_review_required") && Array.isArray(item.metadata?.legalOutputLabels)), true);
   } finally {
     store.close();
     fs.rmSync(dir, { recursive: true, force: true });

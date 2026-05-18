@@ -314,7 +314,12 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
           risk: plan.risk,
           grant: plan.grant,
           reason: plan.reasons.join(","),
-          metadata: { dryRun, requiresApproval: plan.requiresApproval, hostApprovalId: hostApprovalId ?? null },
+          metadata: {
+            dryRun,
+            requiresApproval: plan.requiresApproval,
+            hostApprovalId: hostApprovalId ?? null,
+            legalOutputLabels: plan.legalOutputLabels ?? [],
+          },
         });
         if (!dryRun && plan.status !== "blocked") {
           store.recordInteraction({
@@ -323,7 +328,12 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
             surface,
             actionId,
             kind: action.kind === "open" || action.kind === "copy" ? action.kind : "action",
-            metadata: { status: plan.status, risk: plan.risk, grant: plan.grant },
+            metadata: {
+              status: plan.status,
+              risk: plan.risk,
+              grant: plan.grant,
+              legalOutputLabels: plan.legalOutputLabels ?? [],
+            },
           });
         }
         return {

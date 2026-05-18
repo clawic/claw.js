@@ -88,6 +88,31 @@ test("Search action execution plans are brokered and fail closed without host ap
   assert.equal(brokered.broker.sideEffects, "host_brokered");
 });
 
+test("Search action execution requires review and labels for regulated results", () => {
+  const result = {
+    id: "finance.records:1",
+    source: "finance.records",
+    domain: "finance",
+    type: "transaction",
+    title: "transaction 1",
+    score: 1,
+    metadata: {
+      legalOutputLabels: ["not_professional_advice", "human_review_required", "regulated_domain:finance"],
+    },
+  };
+  const action = { id: "copy-reference", kind: "copy" as const, label: "Copy finance reference" };
+
+  const blocked = createSearchActionExecutionPlan({ result, action, dryRun: false, actor: "agent:test", surface: "mcp" });
+  assert.equal(blocked.status, "blocked");
+  assert.equal(blocked.requiresApproval, true);
+  assert.equal(blocked.reasons.includes("regulated_result_review_required"), true);
+  assert.equal(blocked.legalOutputLabels?.includes("regulated_domain:finance"), true);
+
+  const brokered = createSearchActionExecutionPlan({ result, action, dryRun: false, hostApprovalId: "approval_finance_copy" });
+  assert.equal(brokered.status, "brokered");
+  assert.equal(brokered.legalOutputLabels?.includes("not_professional_advice"), true);
+});
+
 test("SearchStore reports the default Search engine descriptor", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-engine-"));
   const store = new SearchStore(path.join(dir, "search.sqlite"));

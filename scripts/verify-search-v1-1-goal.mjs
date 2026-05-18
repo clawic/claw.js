@@ -1029,6 +1029,7 @@ for (const snippet of [
   "web.ingested",
   "external.cache",
   "EXTERNAL PENDING",
+  "claw knowledge delete ID --kind fact|entity",
   "50 ms",
   "200 ms",
   "10000000",
@@ -1125,6 +1126,7 @@ for (const snippet of [
   "search.profiles.list",
   "search.cursors.list",
   "value === \"external_pending\"",
+  "legalOutputLabels: plan.legalOutputLabels ?? []",
 ]) {
   requireSnippet("packages/clawjs-search-mcp/src/index.ts", snippet);
 }
@@ -1139,11 +1141,14 @@ for (const snippet of [
   "search rebuild indexes surface route graph contracts",
   "Search MCP package publishes only the public Search binary",
   "docs.pages event jobs refresh and tombstone individual docs",
+  "knowledge\", \"delete\", \"fact-search-preference\"",
   "\"not_professional_advice\", \"human_review_required\", \"regulated_domain:finance\"",
   "\"not_professional_advice\", \"human_review_required\", \"regulated_domain:labs_research\"",
 ]) {
   requireSnippet("packages/clawjs/src/cli-search-index.test.ts", snippet);
 }
+requireSnippet("packages/clawjs/src/v1-data.ts", "knowledge: new Set([\"entity\", \"fact\", \"list\", \"search\", \"promote\", \"delete\", \"help\"])");
+requireSnippet("packages/clawjs/src/v1-data.ts", "Usage: claw knowledge delete ID [--kind fact|entity] [--json]");
 requireSnippet("packages/clawjs/src/cli-work-search-events.test.ts", "productivity database writes schedule work search events for create update and delete");
 requireSnippet("packages/clawjs/src/cli-work-search-events.test.ts", "operation === \"upsert\"");
 requireSnippet("packages/clawjs/src/cli-work-search-events.test.ts", "operation === \"delete\"");
@@ -1152,6 +1157,11 @@ requireSnippet("packages/clawjs/src/cli-search-query-embedding-gate.test.ts", "s
 requireSnippet("packages/clawjs/src/cli-search-command.ts", "localSearchEmbeddingModel(model)");
 requireSnippet("packages/clawjs-search-mcp/src/index.test.ts", "provider semantic query");
 requireSnippet("packages/clawjs-search-mcp/src/index.test.ts", "saved-provider-semantic");
+requireSnippet("packages/clawjs-search/src/index.ts", "regulated_result_review_required");
+requireSnippet("packages/clawjs-search/src/index.ts", "legalOutputLabelsFromSearchResult");
+requireSnippet("packages/clawjs-search/src/index.test.ts", "Search action execution requires review and labels for regulated results");
+requireSnippet("packages/clawjs-search-mcp/src/index.test.ts", "regulated_result_review_required");
+requireSnippet("packages/clawjs-search-mcp/src/index.test.ts", "regulated_domain:finance");
 requireSnippet("packages/clawjs/src/cli-search-monitor-audit.test.ts", "search monitor run records sensitive query audit events");
 requireSnippet("packages/clawjs/src/cli-search-monitor-agent-budget.test.ts", "search monitor run preserves saved search agent budgets");
 requireSnippet("packages/clawjs-search-mcp/src/monitor-agent-budget.test.ts", "Search MCP monitor evaluation preserves saved search agent budgets");

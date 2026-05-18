@@ -191,6 +191,7 @@ export interface SearchActionExecutionPlan {
   risk: SearchActionRisk;
   requiresApproval: boolean;
   hostApprovalId?: string;
+  legalOutputLabels?: string[];
   dryRun: boolean;
   status: "planned" | "blocked" | "brokered";
   reasons: string[];
@@ -578,7 +579,8 @@ export function createSearchActionExecutionPlan(input: {
 }): SearchActionExecutionPlan {
   const grant = input.action.grant ?? `search.${input.result.domain}.${input.action.kind}`;
   const risk = input.action.risk ?? (input.action.kind === "open" || input.action.kind === "copy" ? "read" : "system");
-  const requiresApproval = input.action.requiresApproval ?? input.action.kind !== "copy";
+  const legalOutputLabels = legalOutputLabelsFromSearchResult(input.result);
+  const requiresApproval = (input.action.requiresApproval ?? input.action.kind !== "copy") || legalOutputLabels.length > 0;
   const status = input.dryRun
     ? "planned"
     : requiresApproval && !input.hostApprovalId
@@ -586,6 +588,7 @@ export function createSearchActionExecutionPlan(input: {
       : "brokered";
   const reasons = [
     ...(requiresApproval ? ["host_approval_required"] : []),
+    ...(legalOutputLabels.length > 0 ? ["regulated_result_review_required"] : []),
     ...(status === "brokered" ? ["host_broker_receipt_only"] : []),
   ];
   return {
@@ -602,6 +605,7 @@ export function createSearchActionExecutionPlan(input: {
     risk,
     requiresApproval,
     ...(input.hostApprovalId ? { hostApprovalId: input.hostApprovalId } : {}),
+    ...(legalOutputLabels.length > 0 ? { legalOutputLabels } : {}),
     dryRun: input.dryRun,
     status,
     reasons,
@@ -611,6 +615,12 @@ export function createSearchActionExecutionPlan(input: {
       sideEffects: input.dryRun ? "none" : "host_brokered",
     },
   };
+}
+
+function legalOutputLabelsFromSearchResult(result: SearchResult): string[] {
+  const labels = result.metadata?.legalOutputLabels;
+  if (!Array.isArray(labels)) return [];
+  return labels.filter((label): label is string => typeof label === "string" && label.trim().length > 0);
 }
 
 export function createFrameworkSearchSourceManifest(input: {
