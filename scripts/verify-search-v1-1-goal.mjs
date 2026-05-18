@@ -900,6 +900,11 @@ function requireCliSearchAcceptanceSmoke() {
 for (const file of requiredPublicFiles) read(file);
 
 requirePackageScript("search:scale-lab", "node --import tsx ./scripts/search-scale-lab.ts");
+requireSnippet("scripts/search-scale-lab.ts", "insufficient_disk");
+requireSnippet("scripts/search-scale-lab.ts", "availableBytes >= estimatedRequiredBytes");
+requireSnippet("scripts/search-scale-lab.test.mjs", "Search scale lab disk preflight blocks oversized runs and writes report");
+requireSnippet("scripts/search-scale-lab.test.mjs", "insufficient_disk");
+requireSnippet("scripts/search-scale-lab.test.mjs", "fs.existsSync(dbPath), false");
 requirePackageScript("test:search-goal", "node ./scripts/verify-search-v1-1-goal.mjs");
 const cliPackageJson = readJson("packages/clawjs/package.json");
 if (cliPackageJson.dependencies?.["@clawjs/index"] !== undefined) {
