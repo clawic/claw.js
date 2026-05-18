@@ -4612,9 +4612,14 @@ function documentBlocksSearchDocument(row: DatabaseRecordRow, blockRows: Databas
   if (payload.archivedAt || payload.archived_at || payload.deletedAt || payload.deleted_at) return null;
   const sensitive = isSensitiveRecord(payload) || String(payload.accessLevel ?? "").toUpperCase() === "PRIVATE";
   const title = typeof payload.title === "string" && payload.title.trim() ? payload.title.trim() : `Document ${row.id}`;
+  const contentDataText = payload.contentData == null
+    ? undefined
+    : isPlainRecord(payload.contentData)
+      ? redactedStructuredText(payload.contentData)
+      : redactedStructuredText({ contentData: payload.contentData });
   const content = [
     typeof payload.content === "string" ? payload.content : undefined,
-    textFromStructuredContent(payload.contentData),
+    contentDataText,
   ].filter(Boolean).join("\n");
   const blocks = blockRows
     .map((block) => ({ row: block, payload: parseJsonRecord(block.data_json) }))
@@ -4653,22 +4658,32 @@ function documentBlocksSearchDocument(row: DatabaseRecordRow, blockRows: Databas
       structuredDocument: 1,
       blockCount: Math.min(blocks.length, 50) / 50,
     },
-    fragments: sensitive ? [] : blocks.slice(0, 50).map((block, index) => {
-      const blockType = String(block.payload.type ?? "block");
-      const text = textFromStructuredContent(block.payload.content) ?? "";
-      return {
-        id: `documents.blocks:${row.namespace_id}:${row.id}:block:${block.row.id}`,
-        title: blockType,
-        body: text,
-        snippet: text.slice(0, 180),
-        sortOrder: Number(block.payload.position ?? index),
-        metadata: {
-          blockId: block.row.id,
-          type: blockType,
-          parentBlockId: block.payload.parentBlockId ?? null,
-        },
-      };
-    }),
+    fragments: sensitive ? [] : [
+      ...(contentDataText ? [{
+        id: `documents.blocks:${row.namespace_id}:${row.id}:content-data`,
+        title: "content data",
+        body: contentDataText,
+        snippet: contentDataText.slice(0, 180),
+        sortOrder: -1,
+        metadata: { redactedValues: true },
+      }] : []),
+      ...blocks.slice(0, 50).map((block, index) => {
+        const blockType = String(block.payload.type ?? "block");
+        const text = textFromStructuredContent(block.payload.content) ?? "";
+        return {
+          id: `documents.blocks:${row.namespace_id}:${row.id}:block:${block.row.id}`,
+          title: blockType,
+          body: text,
+          snippet: text.slice(0, 180),
+          sortOrder: Number(block.payload.position ?? index),
+          metadata: {
+            blockId: block.row.id,
+            type: blockType,
+            parentBlockId: block.payload.parentBlockId ?? null,
+          },
+        };
+      }),
+    ],
     actions: [
       { id: "open", kind: "open", label: "Open document", requiresApproval: false },
       { id: "copy-reference", kind: "copy", label: "Copy document reference", requiresApproval: false },
@@ -4684,7 +4699,7 @@ function notesPageSearchDocument(row: NotesPageRow, blockRows: NotesPageBlockRow
     .filter((block) => block.page_id === row.id)
     .sort((left, right) => left.sort_order - right.sort_order || left.created_at.localeCompare(right.created_at));
   const blockTexts = blocks.map((block) => block.text || textFromStructuredContent(parseJsonRecord(block.content_json))).filter(Boolean);
-  const propertiesText = textFromStructuredContent(properties);
+  const propertiesText = redactedStructuredText(properties);
   const body = [row.title, row.space, row.surface, tags.join(" "), propertiesText, ...blockTexts].filter(Boolean).join("\n");
   const snippet = sensitive ? "[redacted]" : firstMeaningfulLine(blockTexts.join("\n")) ?? row.title;
   const blockTypes = Array.from(new Set(blocks.map((block) => block.kind || "block")));
@@ -4720,21 +4735,31 @@ function notesPageSearchDocument(row: NotesPageRow, blockRows: NotesPageBlockRow
       note: 1,
       blockCount: Math.min(blocks.length, 50) / 50,
     },
-    fragments: sensitive ? [] : blocks.slice(0, 50).map((block) => {
-      const text = block.text || textFromStructuredContent(parseJsonRecord(block.content_json)) || "";
-      return {
-        id: `notes.pages:${row.id}:block:${block.id}`,
-        title: block.kind || "block",
-        body: text,
-        snippet: text.slice(0, 180),
-        sortOrder: block.sort_order,
-        metadata: {
-          blockId: block.id,
-          type: block.kind,
-          parentBlockId: block.parent_block_id,
-        },
-      };
-    }),
+    fragments: sensitive ? [] : [
+      ...(propertiesText ? [{
+        id: `notes.pages:${row.id}:properties`,
+        title: "properties",
+        body: propertiesText,
+        snippet: propertiesText.slice(0, 180),
+        sortOrder: -1,
+        metadata: { redactedValues: true },
+      }] : []),
+      ...blocks.slice(0, 50).map((block) => {
+        const text = block.text || textFromStructuredContent(parseJsonRecord(block.content_json)) || "";
+        return {
+          id: `notes.pages:${row.id}:block:${block.id}`,
+          title: block.kind || "block",
+          body: text,
+          snippet: text.slice(0, 180),
+          sortOrder: block.sort_order,
+          metadata: {
+            blockId: block.id,
+            type: block.kind,
+            parentBlockId: block.parent_block_id,
+          },
+        };
+      }),
+    ],
     actions: [
       { id: "open", kind: "open", label: "Open note", requiresApproval: false },
       { id: "copy-reference", kind: "copy", label: "Copy note reference", requiresApproval: false },
@@ -5399,7 +5424,7 @@ function skillRegistrySearchDocument(row: SkillRegistryRow): SearchDocumentInput
   const scope = parseJsonRecord(row.scope_json);
   const metadata = parseJsonRecord(row.metadata_json);
   const secretRefs = parseJsonArray(row.secret_refs_json);
-  const metadataText = textFromStructuredContent(metadata);
+  const metadataText = redactedStructuredText(metadata);
   const body = [
     row.name,
     row.slug,
@@ -5435,14 +5460,24 @@ function skillRegistrySearchDocument(row: SkillRegistryRow): SearchDocumentInput
       skill: 1,
       requiresProtectedRefs: secretRefs.length > 0 ? -0.1 : 0,
     },
-    fragments: row.body ? [{
-      id: `skills.registry:${row.slug}:body`,
-      title: "body",
-      body: row.body,
-      snippet: row.body.slice(0, 180),
-      sortOrder: 0,
-      metadata: { kind: "body" },
-    }] : [],
+    fragments: [
+      ...(row.body ? [{
+        id: `skills.registry:${row.slug}:body`,
+        title: "body",
+        body: row.body,
+        snippet: row.body.slice(0, 180),
+        sortOrder: 0,
+        metadata: { kind: "body" },
+      }] : []),
+      ...(metadataText ? [{
+        id: `skills.registry:${row.slug}:metadata`,
+        title: "metadata",
+        body: metadataText,
+        snippet: metadataText.slice(0, 180),
+        sortOrder: 1,
+        metadata: { kind: "metadata", redactedValues: true },
+      }] : []),
+    ],
     actions: [
       { id: "open", kind: "open", label: "Open skill", requiresApproval: false },
       { id: "copy-reference", kind: "copy", label: "Copy skill reference", requiresApproval: false },
@@ -6212,6 +6247,7 @@ function connectorCatalogSearchDocument(row: ConnectorOperationRow, capabilities
   ].filter(Boolean).join(" ")).join("\n");
   const providerName = row.provider_display_name || row.provider_id;
   const nativeName = row.native_name || row.id;
+  const metadataText = redactedStructuredText(metadata);
   const body = [
     providerName,
     row.provider_id,
@@ -6222,7 +6258,7 @@ function connectorCatalogSearchDocument(row: ConnectorOperationRow, capabilities
     row.cost_risk,
     row.network_policy_id,
     capabilityText,
-    textFromStructuredContent(metadata),
+    metadataText,
   ].filter(Boolean).join("\n");
   const capabilityDomains = Array.from(new Set(capabilities.map((capability) => capability.domain)));
   const capabilityActions = Array.from(new Set(capabilities.map((capability) => capability.action)));
@@ -6262,19 +6298,29 @@ function connectorCatalogSearchDocument(row: ConnectorOperationRow, capabilities
       connectorOperation: 1,
       supported: row.support === "supported" ? 0.2 : 0,
     },
-    fragments: capabilities.slice(0, 20).map((capability, index) => ({
-      id: `connectors.catalog:${row.id}:capability:${capability.id}`,
-      title: capability.id,
-      body: [capability.domain, capability.action, capability.facet, capability.summary].filter(Boolean).join("\n"),
-      snippet: capability.summary.slice(0, 180),
-      sortOrder: index,
-      metadata: {
-        kind: "capability",
-        domain: capability.domain,
-        action: capability.action,
-        facet: capability.facet,
-      },
-    })),
+    fragments: [
+      ...(metadataText ? [{
+        id: `connectors.catalog:${row.id}:metadata`,
+        title: "metadata",
+        body: metadataText,
+        snippet: metadataText.slice(0, 180),
+        sortOrder: -1,
+        metadata: { kind: "metadata", redactedValues: true },
+      }] : []),
+      ...capabilities.slice(0, 20).map((capability, index) => ({
+        id: `connectors.catalog:${row.id}:capability:${capability.id}`,
+        title: capability.id,
+        body: [capability.domain, capability.action, capability.facet, capability.summary].filter(Boolean).join("\n"),
+        snippet: capability.summary.slice(0, 180),
+        sortOrder: index,
+        metadata: {
+          kind: "capability",
+          domain: capability.domain,
+          action: capability.action,
+          facet: capability.facet,
+        },
+      })),
+    ],
     actions: [
       { id: "open", kind: "open", label: "Open connector operation", requiresApproval: false },
       { id: "copy-reference", kind: "copy", label: "Copy connector reference", requiresApproval: false },

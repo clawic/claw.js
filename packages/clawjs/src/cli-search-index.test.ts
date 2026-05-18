@@ -1587,6 +1587,8 @@ test("search rebuild indexes skills.registry from core.sqlite without secret ref
       "Use deployment APIs by reference",
       "--secret-refs",
       "vault://skills/deploy-token",
+      "--metadata",
+      JSON.stringify({ workflow: "skills-metadata-fragment-needle", credentials: { token: "skills-metadata-secret-never-index" } }),
       "--json",
     ], workspaceRoot);
     assert.equal(upsert.code, CLI_EXIT_OK);
@@ -1614,7 +1616,7 @@ test("search rebuild indexes skills.registry from core.sqlite without secret ref
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
         indexedFastPaths: { "skills.registry": number };
-        results: Array<{ source: string; domain: string; type: string; title: string; body?: string; metadata?: { requiresProtectedRefs?: boolean }; fragments?: Array<{ snippet?: string }> }>;
+        results: Array<{ source: string; domain: string; type: string; title: string; body?: string; metadata?: { requiresProtectedRefs?: boolean }; fragments?: Array<{ title?: string; snippet?: string }> }>;
       };
     };
     assert.equal(queryPayload.data.indexedFastPaths["skills.registry"], 1);
@@ -1625,6 +1627,17 @@ test("search rebuild indexes skills.registry from core.sqlite without secret ref
     assert.equal(result?.metadata?.requiresProtectedRefs, true);
     assert.equal(JSON.stringify(result).includes("vault://skills/deploy-token"), false);
     assert.equal(result?.fragments?.some((fragment) => fragment.snippet?.includes("deployment APIs")), true);
+    const metadataQuery = await runCliCapture(["search", "query", "skills-metadata-fragment-needle", "--sources", "skills.registry", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(metadataQuery.code, CLI_EXIT_OK, metadataQuery.stderr || metadataQuery.stdout);
+    const metadataQueryPayload = JSON.parse(metadataQuery.stdout) as {
+      data: { results: Array<{ source: string; title: string; fragments?: Array<{ title?: string; snippet?: string }> }> };
+    };
+    const metadataResult = metadataQueryPayload.data.results.find((entry) => entry.source === "skills.registry" && entry.title === "Deploy");
+    assert.equal(metadataResult?.fragments?.some((fragment) => fragment.title === "metadata" && fragment.snippet?.includes("skills-metadata-fragment-needle")), true);
+    const metadataSecretQuery = await runCliCapture(["search", "query", "skills-metadata-secret-never-index", "--sources", "skills.registry", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(metadataSecretQuery.code, CLI_EXIT_DEGRADED, metadataSecretQuery.stderr || metadataSecretQuery.stdout);
+    const metadataSecretQueryPayload = JSON.parse(metadataSecretQuery.stdout) as { data: { results: Array<{ source: string; title: string }> } };
+    assert.equal(metadataSecretQueryPayload.data.results.some((entry) => entry.source === "skills.registry" && entry.title === "Deploy"), false);
     const deleted = await runCliCapture(["skills", "delete", "deploy", "--json"], workspaceRoot);
     assert.equal(deleted.code, CLI_EXIT_OK, deleted.stderr || deleted.stdout);
     const deleteJobs = await runCliCapture(["search", "jobs", "--source", "skills.registry", "--data-dir", dataRoot, "--json"], workspaceRoot);
@@ -1687,7 +1700,7 @@ test("search rebuild indexes connectors.catalog from control-plane operations wi
         VALUES (
           'openai.images.edit', 'openai', 'api', 'supported', 'images.edit',
           '["image.edit.background"]', '["cost"]', 1, 'cost', 1,
-          'openai-egress', '{"notes":"background replacement connector operation"}', ?, ?
+          'openai-egress', '{"notes":"background replacement connector operation","workflow":"connectors-metadata-fragment-needle","credentials":{"token":"connectors-metadata-secret-never-index"}}', ?, ?
         )
       `).run(now, now);
       sqlite.prepare(`
@@ -1733,7 +1746,19 @@ test("search rebuild indexes connectors.catalog from control-plane operations wi
     assert.deepEqual(result?.metadata?.capabilityId, ["image.edit.background"]);
     assert.equal(result?.actions?.some((action) => action.id === "execute" && action.kind === "custom" && action.requiresApproval === true && action.grant === "search.connectors.execute"), true);
     assert.equal(result?.fragments?.some((fragment) => fragment.title === "image.edit.background" && fragment.snippet?.includes("brokered connector")), true);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "metadata" && fragment.snippet?.includes("connectors-metadata-fragment-needle")), true);
     assert.equal(JSON.stringify(result).includes("vault://connectors/openai/admin"), false);
+    const metadataQuery = await runCliCapture(["search", "query", "connectors-metadata-fragment-needle", "--sources", "connectors.catalog", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(metadataQuery.code, CLI_EXIT_OK, metadataQuery.stderr || metadataQuery.stdout);
+    const metadataQueryPayload = JSON.parse(metadataQuery.stdout) as {
+      data: { results: Array<{ source: string; title: string; fragments?: Array<{ title?: string; snippet?: string }> }> };
+    };
+    const metadataResult = metadataQueryPayload.data.results.find((entry) => entry.source === "connectors.catalog" && entry.title === "OpenAI images.edit");
+    assert.equal(metadataResult?.fragments?.some((fragment) => fragment.title === "metadata" && fragment.snippet?.includes("connectors-metadata-fragment-needle")), true);
+    const metadataSecretQuery = await runCliCapture(["search", "query", "connectors-metadata-secret-never-index", "--sources", "connectors.catalog", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(metadataSecretQuery.code, CLI_EXIT_DEGRADED, metadataSecretQuery.stderr || metadataSecretQuery.stdout);
+    const metadataSecretQueryPayload = JSON.parse(metadataSecretQuery.stdout) as { data: { results: Array<{ source: string; title: string }> } };
+    assert.equal(metadataSecretQueryPayload.data.results.some((entry) => entry.source === "connectors.catalog" && entry.title === "OpenAI images.edit"), false);
   });
 });
 test("search service resource jobs refresh only the targeted connector operation", async () => {
@@ -1914,9 +1939,14 @@ test("search rebuild indexes mcp.servers without secret values", async () => {
     assert.equal(result?.metadata?.envKey, "[REDACTED]");
     assert.equal(result?.metadata?.headerKey, "[REDACTED]");
     assert.equal(result?.metadata?.headersFromEnvKey, "[REDACTED]");
+    const redactedConfigFragment = result?.fragments?.find((fragment) => fragment.title === "redacted config");
+    assert.ok(redactedConfigFragment);
+    assert.equal(redactedConfigFragment?.snippet?.includes("API_TOKEN"), true);
+    assert.equal(redactedConfigFragment?.snippet?.includes("X_API_KEY"), true);
     const serialized = JSON.stringify(result);
     assert.equal(serialized.includes("super-secret-env-value"), false);
     assert.equal(serialized.includes("super-secret-header-value"), false);
+    assert.equal(serialized.includes("Bearer super-secret-header-value"), false);
     assert.equal(serialized.includes("secret-arg-value"), false);
   });
 });
@@ -2391,6 +2421,10 @@ test("search rebuild indexes documents.blocks from document records", async () =
         companyId: "company-demo",
         title: "Implementation Blueprint",
         content: "Search sections need independent document fast paths.",
+        contentData: {
+          summary: "documents-content-data-fragment-needle",
+          metadata: { secretToken: "documents-content-data-secret-never-index" },
+        },
         scopeKind: "project",
         scopeId: "project-search",
         accessLevel: "PUBLIC",
@@ -2502,6 +2536,39 @@ test("search rebuild indexes documents.blocks from document records", async () =
     assert.equal(result?.fragments?.some((fragment) => fragment.title === "paragraph" && fragment.snippet?.includes("scoped block search")), true);
     assert.ok(result?.explanation?.matchedBy?.length);
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "scopeKind"), true);
+    const contentDataQuery = await runCliCapture([
+      "search",
+      "query",
+      "documents-content-data-fragment-needle",
+      "--sources",
+      "documents.blocks",
+      "--data-dir",
+      dataRoot,
+      "--json",
+      "--limit",
+      "5",
+    ], workspaceRoot);
+    assert.equal(contentDataQuery.code, CLI_EXIT_OK, contentDataQuery.stderr || contentDataQuery.stdout);
+    const contentDataQueryPayload = JSON.parse(contentDataQuery.stdout) as {
+      data: { results: Array<{ source: string; title: string; fragments?: Array<{ title?: string; snippet?: string }> }> };
+    };
+    const contentDataResult = contentDataQueryPayload.data.results.find((entry) => entry.source === "documents.blocks" && entry.title === "Implementation Blueprint");
+    assert.equal(contentDataResult?.fragments?.some((fragment) => fragment.title === "content data" && fragment.snippet?.includes("documents-content-data-fragment-needle")), true);
+    const contentDataSecretQuery = await runCliCapture([
+      "search",
+      "query",
+      "documents-content-data-secret-never-index",
+      "--sources",
+      "documents.blocks",
+      "--data-dir",
+      dataRoot,
+      "--json",
+      "--limit",
+      "5",
+    ], workspaceRoot);
+    assert.equal(contentDataSecretQuery.code, CLI_EXIT_DEGRADED, contentDataSecretQuery.stderr || contentDataSecretQuery.stdout);
+    const contentDataSecretQueryPayload = JSON.parse(contentDataSecretQuery.stdout) as { data: { results: Array<{ source: string; title: string }> } };
+    assert.equal(contentDataSecretQueryPayload.data.results.some((entry) => entry.source === "documents.blocks" && entry.title === "Implementation Blueprint"), false);
 
     const embeddingsIndex = await runCliCapture(["search", "embeddings", "index", "--source", "documents.blocks", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(embeddingsIndex.code, CLI_EXIT_OK);
@@ -2697,6 +2764,15 @@ test("search rebuild indexes notes.pages from pages and blocks", async () => {
     assert.equal(created.code, CLI_EXIT_OK);
     const createdPayload = JSON.parse(created.stdout) as { data: { id: string; title: string } };
     assert.ok(createdPayload.data.id);
+    const mainDb = new Database(resolveClawjsMainDbPath());
+    try {
+      mainDb.prepare("UPDATE pages SET properties_json = ?, updated_at = ? WHERE id = ?").run(JSON.stringify({
+        workflow: "notes-properties-fragment-needle",
+        metadata: { apiKey: "notes-properties-secret-never-index" },
+      }), new Date().toISOString(), createdPayload.data.id);
+    } finally {
+      mainDb.close();
+    }
     const jobs = await runCliCapture(["search", "jobs", "--source", "notes.pages", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(jobs.code, CLI_EXIT_OK);
     const jobsPayload = JSON.parse(jobs.stdout) as {
@@ -2763,6 +2839,39 @@ test("search rebuild indexes notes.pages from pages and blocks", async () => {
     assert.equal(result?.actions?.some((action) => action.id === "open" && action.kind === "open"), true);
     assert.ok(result?.explanation?.matchedBy?.length);
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "space"), true);
+    const propertiesQuery = await runCliCapture([
+      "search",
+      "query",
+      "notes-properties-fragment-needle",
+      "--sources",
+      "notes.pages",
+      "--data-dir",
+      dataRoot,
+      "--json",
+      "--limit",
+      "5",
+    ], workspaceRoot);
+    assert.equal(propertiesQuery.code, CLI_EXIT_OK, propertiesQuery.stderr || propertiesQuery.stdout);
+    const propertiesQueryPayload = JSON.parse(propertiesQuery.stdout) as {
+      data: { results: Array<{ source: string; title: string; fragments?: Array<{ title?: string; snippet?: string }> }> };
+    };
+    const propertiesResult = propertiesQueryPayload.data.results.find((entry) => entry.source === "notes.pages" && entry.title === "Quarterly planning");
+    assert.equal(propertiesResult?.fragments?.some((fragment) => fragment.title === "properties" && fragment.snippet?.includes("notes-properties-fragment-needle")), true);
+    const secretQuery = await runCliCapture([
+      "search",
+      "query",
+      "notes-properties-secret-never-index",
+      "--sources",
+      "notes.pages",
+      "--data-dir",
+      dataRoot,
+      "--json",
+      "--limit",
+      "5",
+    ], workspaceRoot);
+    assert.equal(secretQuery.code, CLI_EXIT_DEGRADED, secretQuery.stderr || secretQuery.stdout);
+    const secretQueryPayload = JSON.parse(secretQuery.stdout) as { data: { results: Array<{ source: string; title: string }> } };
+    assert.equal(secretQueryPayload.data.results.some((entry) => entry.source === "notes.pages" && entry.title === "Quarterly planning"), false);
     const deleted = await runCliCapture(["notes", "delete", createdPayload.data.id, "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(deleted.code, CLI_EXIT_OK);
     const deleteJobs = await runCliCapture(["search", "jobs", "--source", "notes.pages", "--data-dir", dataRoot, "--json"], workspaceRoot);
@@ -3751,6 +3860,10 @@ test("search rebuild indexes images.derived from image library records", async (
         caption: "Blue launch badge on a clean product surface",
         objects: [{ name: "badge" }, { label: "wordmark" }],
       },
+      metadata: {
+        campaign: "images-metadata-fragment-needle",
+        credentials: { token: "images-metadata-secret-never-index" },
+      },
     }, null, 2));
     const rebuild = await runCliCapture(["search", "rebuild", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(rebuild.code, CLI_EXIT_OK);
@@ -3815,8 +3928,46 @@ test("search rebuild indexes images.derived from image library records", async (
     assert.equal(result?.fragments?.some((fragment) => fragment.title === "prompt" && fragment.snippet?.includes("product mark")), true);
     assert.equal(result?.fragments?.some((fragment) => fragment.title === "ocr text" && fragment.snippet?.includes("LAUNCH SYSTEM MARK")), true);
     assert.equal(result?.fragments?.some((fragment) => fragment.title === "vision labels" && fragment.snippet?.includes("blue badge")), true);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "metadata" && fragment.snippet?.includes("images-metadata-fragment-needle")), true);
     assert.ok(result?.explanation?.matchedBy?.length);
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "imageType"), true);
+    const metadataQuery = await runCliCapture([
+      "search",
+      "query",
+      "images-metadata-fragment-needle",
+      "--sources",
+      "images.derived",
+      "--workspace",
+      workspaceRoot,
+      "--data-dir",
+      dataRoot,
+      "--json",
+      "--limit",
+      "5",
+    ], workspaceRoot);
+    assert.equal(metadataQuery.code, CLI_EXIT_OK, metadataQuery.stderr || metadataQuery.stdout);
+    const metadataQueryPayload = JSON.parse(metadataQuery.stdout) as {
+      data: { results: Array<{ source: string; title: string; fragments?: Array<{ title?: string; snippet?: string }> }> };
+    };
+    const metadataResult = metadataQueryPayload.data.results.find((entry) => entry.source === "images.derived" && entry.title === "Launch Badge");
+    assert.equal(metadataResult?.fragments?.some((fragment) => fragment.title === "metadata" && fragment.snippet?.includes("images-metadata-fragment-needle")), true);
+    const metadataSecretQuery = await runCliCapture([
+      "search",
+      "query",
+      "images-metadata-secret-never-index",
+      "--sources",
+      "images.derived",
+      "--workspace",
+      workspaceRoot,
+      "--data-dir",
+      dataRoot,
+      "--json",
+      "--limit",
+      "5",
+    ], workspaceRoot);
+    assert.equal(metadataSecretQuery.code, CLI_EXIT_DEGRADED, metadataSecretQuery.stderr || metadataSecretQuery.stdout);
+    const metadataSecretQueryPayload = JSON.parse(metadataSecretQuery.stdout) as { data: { results: Array<{ source: string; title: string }> } };
+    assert.equal(metadataSecretQueryPayload.data.results.some((entry) => entry.source === "images.derived" && entry.title === "Launch Badge"), false);
   });
 });
 test("search rebuild indexes media.assets from workspace media records", async () => {
@@ -3838,6 +3989,8 @@ test("search rebuild indexes media.assets from workspace media records", async (
     sourceText: "Requirements brief covering media indexing and retrieval.",
     metadata: {
       description: "Signed PDF with launch requirements",
+      workflow: "media-metadata-fragment-needle",
+      credentials: { token: "media-metadata-secret-never-index" },
     },
     createdAt: "2026-05-17T10:00:00.000Z",
     updatedAt: "2026-05-17T10:00:00.000Z",
@@ -3929,8 +4082,46 @@ test("search rebuild indexes media.assets from workspace media records", async (
     assert.equal(result?.metadata?.sessionId, "session-media");
     assert.equal(result?.actions?.some((action) => action.id === "open" && action.requiresApproval === true && action.grant === "search.media.open"), true);
     assert.equal(result?.fragments?.some((fragment) => fragment.title === "source text" && fragment.snippet?.includes("media indexing")), true);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "metadata" && fragment.snippet?.includes("media-metadata-fragment-needle")), true);
     assert.ok(result?.explanation?.matchedBy?.length);
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "kind"), true);
+    const metadataQuery = await runCliCapture([
+      "search",
+      "query",
+      "media-metadata-fragment-needle",
+      "--sources",
+      "media.assets",
+      "--workspace",
+      workspaceRoot,
+      "--data-dir",
+      dataRoot,
+      "--json",
+      "--limit",
+      "5",
+    ], workspaceRoot);
+    assert.equal(metadataQuery.code, CLI_EXIT_OK, metadataQuery.stderr || metadataQuery.stdout);
+    const metadataQueryPayload = JSON.parse(metadataQuery.stdout) as {
+      data: { results: Array<{ source: string; title: string; fragments?: Array<{ title?: string; snippet?: string }> }> };
+    };
+    const metadataResult = metadataQueryPayload.data.results.find((entry) => entry.source === "media.assets" && entry.title === "Requirements Brief.pdf");
+    assert.equal(metadataResult?.fragments?.some((fragment) => fragment.title === "metadata" && fragment.snippet?.includes("media-metadata-fragment-needle")), true);
+    const metadataSecretQuery = await runCliCapture([
+      "search",
+      "query",
+      "media-metadata-secret-never-index",
+      "--sources",
+      "media.assets",
+      "--workspace",
+      workspaceRoot,
+      "--data-dir",
+      dataRoot,
+      "--json",
+      "--limit",
+      "5",
+    ], workspaceRoot);
+    assert.equal(metadataSecretQuery.code, CLI_EXIT_DEGRADED, metadataSecretQuery.stderr || metadataSecretQuery.stdout);
+    const metadataSecretQueryPayload = JSON.parse(metadataSecretQuery.stdout) as { data: { results: Array<{ source: string; title: string }> } };
+    assert.equal(metadataSecretQueryPayload.data.results.some((entry) => entry.source === "media.assets" && entry.title === "Requirements Brief.pdf"), false);
     const transcriptQuery = await runCliCapture([
       "search",
       "query",
@@ -3986,6 +4177,8 @@ test("search rebuild indexes generations.artifacts from workspace generation rec
     metadata: {
       style: "product",
       brief: "Search generated artifact indexing",
+      workflow: "generations-metadata-fragment-needle",
+      credentials: { token: "generations-metadata-secret-never-index" },
     },
     command: {
       command: "node",
@@ -4059,8 +4252,46 @@ test("search rebuild indexes generations.artifacts from workspace generation rec
     assert.equal(result?.metadata?.hasOutput, true);
     assert.equal(result?.actions?.some((action) => action.id === "open" && action.requiresApproval === true && action.grant === "search.generations.open"), true);
     assert.equal(result?.fragments?.some((fragment) => fragment.title === "prompt" && fragment.snippet?.includes("analytics cards")), true);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "metadata" && fragment.snippet?.includes("generations-metadata-fragment-needle")), true);
     assert.ok(result?.explanation?.matchedBy?.length);
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "backendId"), true);
+    const metadataQuery = await runCliCapture([
+      "search",
+      "query",
+      "generations-metadata-fragment-needle",
+      "--sources",
+      "generations.artifacts",
+      "--workspace",
+      workspaceRoot,
+      "--data-dir",
+      dataRoot,
+      "--json",
+      "--limit",
+      "5",
+    ], workspaceRoot);
+    assert.equal(metadataQuery.code, CLI_EXIT_OK, metadataQuery.stderr || metadataQuery.stdout);
+    const metadataQueryPayload = JSON.parse(metadataQuery.stdout) as {
+      data: { results: Array<{ source: string; title: string; fragments?: Array<{ title?: string; snippet?: string }> }> };
+    };
+    const metadataResult = metadataQueryPayload.data.results.find((entry) => entry.source === "generations.artifacts" && entry.title === "Launch Dashboard Hero");
+    assert.equal(metadataResult?.fragments?.some((fragment) => fragment.title === "metadata" && fragment.snippet?.includes("generations-metadata-fragment-needle")), true);
+    const metadataSecretQuery = await runCliCapture([
+      "search",
+      "query",
+      "generations-metadata-secret-never-index",
+      "--sources",
+      "generations.artifacts",
+      "--workspace",
+      workspaceRoot,
+      "--data-dir",
+      dataRoot,
+      "--json",
+      "--limit",
+      "5",
+    ], workspaceRoot);
+    assert.equal(metadataSecretQuery.code, CLI_EXIT_DEGRADED, metadataSecretQuery.stderr || metadataSecretQuery.stdout);
+    const metadataSecretQueryPayload = JSON.parse(metadataSecretQuery.stdout) as { data: { results: Array<{ source: string; title: string }> } };
+    assert.equal(metadataSecretQueryPayload.data.results.some((entry) => entry.source === "generations.artifacts" && entry.title === "Launch Dashboard Hero"), false);
   });
 });
 test("generations create and delete schedule Search artifact events", async () => {

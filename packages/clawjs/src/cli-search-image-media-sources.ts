@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { SearchStore, type SearchDocumentInput } from "@clawjs/search";
+import { redactedStructuredText } from "./cli-search-web-external-source.ts";
 
 export function ensureImagesDerivedSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {
   const workspaceRoot = path.resolve(flags.workspace ?? cwd);
@@ -156,6 +157,8 @@ function imageRecordSearchDocument(record: Record<string, unknown>, imageRoot: s
   const tags = stringArrayField(record, "tags");
   const collections = stringArrayField(record, "collections");
   const derivedText = imageDerivedTextFields(record);
+  const metadata = isPlainRecord(record.metadata) ? record.metadata : {};
+  const metadataText = redactedStructuredText(metadata);
   const pathValue = outputRelativePath ? path.join(imageRoot, ".claw", "data", "assets", outputRelativePath) : undefined;
   const body = [
     title,
@@ -177,7 +180,7 @@ function imageRecordSearchDocument(record: Record<string, unknown>, imageRoot: s
     derivedText.caption,
     ...derivedText.labels,
     ...derivedText.objects,
-    textFromStructuredContent(record.metadata),
+    metadataText,
   ].filter(Boolean).join("\n");
   return {
     id: `images.derived:image:${id}`,
@@ -263,6 +266,14 @@ function imageRecordSearchDocument(record: Record<string, unknown>, imageRoot: s
         sortOrder: 4,
         metadata: { kind: "visionLabels" },
       }] : []),
+      ...(metadataText ? [{
+        id: `images.derived:image:${id}:metadata`,
+        title: "metadata",
+        body: metadataText,
+        snippet: metadataText.slice(0, 180),
+        sortOrder: 5,
+        metadata: { kind: "metadata", redactedValues: true },
+      }] : []),
     ],
     actions: [
       { id: "open", kind: "open", label: "Open image", requiresApproval: true, risk: "read", grant: "search.images.open" },
@@ -280,6 +291,8 @@ function imageMediaSearchDocument(record: Record<string, unknown>, workspaceRoot
   const storage = isPlainRecord(record.storage) ? record.storage : {};
   const storageKey = stringField(storage, "key");
   const derivedText = imageDerivedTextFields(record);
+  const metadata = isPlainRecord(record.metadata) ? record.metadata : {};
+  const metadataText = redactedStructuredText(metadata);
   const body = [
     name,
     stringField(record, "mimeType"),
@@ -295,7 +308,7 @@ function imageMediaSearchDocument(record: Record<string, unknown>, workspaceRoot
     derivedText.caption,
     ...derivedText.labels,
     ...derivedText.objects,
-    textFromStructuredContent(record.metadata),
+    metadataText,
   ].filter(Boolean).join("\n");
   return {
     id: `images.derived:media:${mediaId}`,
@@ -356,6 +369,14 @@ function imageMediaSearchDocument(record: Record<string, unknown>, workspaceRoot
         sortOrder: 2,
         metadata: { kind: "visionLabels" },
       }] : []),
+      ...(metadataText ? [{
+        id: `images.derived:media:${mediaId}:metadata`,
+        title: "metadata",
+        body: metadataText,
+        snippet: metadataText.slice(0, 180),
+        sortOrder: 3,
+        metadata: { kind: "metadata", redactedValues: true },
+      }] : []),
     ],
     actions: [
       { id: "open", kind: "open", label: "Open image media", requiresApproval: true, risk: "read", grant: "search.images.open" },
@@ -379,6 +400,8 @@ function mediaAssetSearchDocument(record: Record<string, unknown>, workspaceRoot
   const storageKey = stringField(storage, "key");
   const provider = stringField(channel, "provider");
   const transcription = mediaTranscriptionFields(record);
+  const metadata = isPlainRecord(record.metadata) ? record.metadata : {};
+  const metadataText = redactedStructuredText(metadata);
   const body = [
     name,
     kind,
@@ -396,7 +419,7 @@ function mediaAssetSearchDocument(record: Record<string, unknown>, workspaceRoot
     stringField(channel, "targetId"),
     stringField(channel, "threadId"),
     stringField(external, "value"),
-    textFromStructuredContent(record.metadata),
+    metadataText,
   ].filter(Boolean).join("\n");
   return {
     id: `media.assets:${mediaId}`,
@@ -457,6 +480,14 @@ function mediaAssetSearchDocument(record: Record<string, unknown>, workspaceRoot
           ...(transcription.language ? { language: transcription.language } : {}),
           segmentCount: transcription.segmentCount,
         },
+      }] : []),
+      ...(metadataText ? [{
+        id: `media.assets:${mediaId}:metadata`,
+        title: "metadata",
+        body: metadataText,
+        snippet: metadataText.slice(0, 180),
+        sortOrder: 2,
+        metadata: { kind: "metadata", redactedValues: true },
       }] : []),
     ],
     actions: [
@@ -535,33 +566,6 @@ function mediaTranscriptionFields(record: Record<string, unknown>): {
     ...(language ? { language } : {}),
     segmentCount: segments.length,
   };
-}
-
-function textFromStructuredContent(value: unknown): string | undefined {
-  const parts: string[] = [];
-  collectStructuredText(value, parts, 0);
-  const text = parts.join(" ").replace(/\s+/g, " ").trim();
-  return text || undefined;
-}
-
-function collectStructuredText(value: unknown, parts: string[], depth: number): void {
-  if (parts.join(" ").length > 8192 || depth > 4 || value === null || value === undefined) return;
-  if (typeof value === "string") {
-    if (value.trim()) parts.push(value.trim());
-    return;
-  }
-  if (typeof value === "number" || typeof value === "boolean") {
-    parts.push(String(value));
-    return;
-  }
-  if (Array.isArray(value)) {
-    for (const item of value) collectStructuredText(item, parts, depth + 1);
-    return;
-  }
-  if (!isPlainRecord(value)) return;
-  for (const key of ["text", "plainText", "title", "heading", "caption", "alt", "code", "content", "children"]) {
-    if (key in value) collectStructuredText(value[key], parts, depth + 1);
-  }
 }
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {

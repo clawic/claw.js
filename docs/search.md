@@ -404,15 +404,15 @@ producers can schedule resource-scoped refresh jobs keyed by the path under
 `--external-root`; paths outside that root are rejected before a job is written.
 
 `documents.blocks` projects framework document records from `core.sqlite`.
-Documents are returned as scoped section results, while document blocks are
-attached as fragments so a documents UI can search within block content without
-asking Root Search to scan unrelated domains.
+Documents are returned as scoped section results, while redacted structured
+content-data and document blocks are attached as fragments so a documents UI can
+search within block content without asking Root Search to scan unrelated domains.
 
 `notes.pages` projects framework page records and page blocks from `core.sqlite`.
 Notes are returned as scoped section results with block fragments, space/surface
-facets, tags, visibility, sensitivity, and source-record metadata. Sensitive
-notes can still match indexed text, but returned previews are redacted and block
-fragments are omitted.
+facets, tags, visibility, sensitivity, source-record metadata, and redacted
+properties fragments. Sensitive notes can still match indexed text, but returned
+previews are redacted and block/property fragments are omitted.
 
 `knowledge.graph` projects framework knowledge entities and facts from
 `core.sqlite`. Entities index labels, descriptions, properties, provenance, type,
@@ -429,16 +429,17 @@ facts and entities without waiting for a full rebuild.
 The initial adapter indexes prompts, revised prompts, tags, collections, type,
 provider/model, provenance, output metadata, and any stored OCR text, captions,
 alt text, vision labels, or detected object labels already present on the
-framework record. It does not call vision/OCR providers; extractor scheduling
-remains source-owned.
+framework record. Image metadata is exposed through redacted metadata fragments.
+It does not call vision/OCR providers; extractor scheduling remains source-owned.
 
 `media.assets` projects workspace media records for documents, images, audio,
 video, animations, and other persisted assets. It indexes names, source text,
 origin/direction, workspace/project/session linkage, channel metadata, and MIME
 metadata so generic media views can search without invoking image-specific
 extractors. Stored transcript, caption, or segment text is indexed as a
-transcription fragment when already present on the media record; Search does not
-run speech-to-text providers from this adapter.
+transcription fragment when already present on the media record, and media
+metadata is exposed through redacted metadata fragments. Search does not run
+speech-to-text providers from this adapter.
 
 `slides.decks` projects workspace slide deck manifests from the local slides
 surface. It indexes the deck title, theme, author metadata, output formats, and
@@ -460,8 +461,8 @@ workbooks through the Search event scheduler.
 
 `generations.artifacts` projects generated artifact records. It indexes prompts,
 titles, kind, status, backend/model metadata, command provenance, output
-references, and generation metadata so generated outputs remain searchable even
-when they are not also registered as media.
+references, and redacted generation metadata fragments so generated outputs
+remain searchable even when they are not also registered as media.
 
 `signals.observations` projects signal verticals, variables, and observations
 from `core.sqlite`. It indexes vertical descriptions, variable definitions,
@@ -476,10 +477,10 @@ Calendar event metadata is exposed as a separate redacted fragment, with
 secret-like nested metadata keys redacted before fallback JSON text is indexed.
 
 `skills.registry` projects framework skill records from `core.sqlite`. It
-indexes the skill slug, name, kind, body, scope metadata, and export path, but
-does not index `secret_refs_json`; Search only exposes a
-`requiresProtectedRefs` facet so skill search stays useful without leaking local
-secret references.
+indexes the skill slug, name, kind, body, scope metadata, export path, and
+redacted skill metadata fragments, but does not index `secret_refs_json`; Search
+only exposes a `requiresProtectedRefs` facet so skill search stays useful
+without leaking local secret references.
 
 `providers.routing` projects provider routing rules and provider settings from
 `core.sqlite`. It indexes feature, capability, provider, model, enabled state,
@@ -549,10 +550,16 @@ before fallback JSON text is indexed.
 `connectors.catalog` projects connector control-plane operations from
 `core.sqlite`. It indexes provider names, runtime/support state, operation ids,
 native operation names, cost/approval metadata, network policy references, and
-declared capability summaries. It does not index credential bindings, secret
-references, or raw traces; connector execution remains host-brokered and
-approval-gated. A resource-scoped scheduling helper exists for connector
-operation changes; automatic control-plane write emitters remain source-owned.
+declared capability summaries. Operation metadata is exposed through redacted
+metadata fragments. It does not index credential bindings, secret references, or
+raw traces; connector execution remains host-brokered and approval-gated. A
+resource-scoped scheduling helper exists for connector operation changes;
+automatic control-plane write emitters remain source-owned.
+
+`mcp.servers` projects local MCP server configuration. It indexes server ids,
+transport kind, enabled state, command names, URL hosts, config paths, and
+redacted config fragments that expose env/header key names without indexing env,
+header, bearer token, or command-argument secret values.
 
 `runtime.events` projects technical runtime jobs, runtime events, and
 monitor/infra/ops operational events from local sidecars. It indexes job status,

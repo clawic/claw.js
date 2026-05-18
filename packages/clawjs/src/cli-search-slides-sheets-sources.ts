@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 
 import { SearchStore, type SearchDocumentInput } from "@clawjs/search";
 import { resolveClawPersistentSurfacePath } from "@clawjs/core";
+import { redactedStructuredText } from "./cli-search-web-external-source.ts";
 
 export function ensureSlidesDecksSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {
   const root = resolveSlidesDecksRoot(flags, cwd);
@@ -143,7 +144,7 @@ function slideDeckSearchDocument(filePath: string): SearchDocumentInput | null {
   const outputs = Array.isArray(deck.outputs) ? deck.outputs.filter(isPlainRecord) : [];
   const slides = Array.isArray(deck.slides) ? deck.slides.filter(isPlainRecord) : [];
   const slideTexts = slides.map(slideTextForSearch).filter((text) => text.length > 0);
-  const metadataText = manifestStructuredText(deck.metadata);
+  const metadataText = manifestRedactedText(deck.metadata);
   const outputFormats = outputs.map((output) => stringValue(output.format)).filter((format): format is string => !!format);
   const layouts = Array.from(new Set(slides.map((slide) => stringValue(slide.layout) ?? "slide")));
   const updatedAt = stringValue(deck.updatedAt) ?? fileUpdatedAt(filePath);
@@ -182,22 +183,32 @@ function slideDeckSearchDocument(filePath: string): SearchDocumentInput | null {
       slides: 1,
       slideCount: Math.min(slides.length, 50) / 50,
     },
-    fragments: slides.slice(0, 80).map((slide, index) => {
-      const slideId = stringValue(slide.id) ?? `slide-${index + 1}`;
-      const text = slideTextForSearch(slide);
-      return {
-        id: `slides.decks:${stableSearchId(filePath)}:slide:${slideId}`,
-        title: stringValue(slide.heading) ?? stringValue(slide.title) ?? `Slide ${index + 1}`,
-        body: text,
-        snippet: firstMeaningfulLine(text) ?? stringValue(slide.layout) ?? "slide",
-        sortOrder: index,
-        metadata: {
-          slideId,
-          slideIndex: index,
-          layout: stringValue(slide.layout) ?? "slide",
-        },
-      };
-    }),
+    fragments: [
+      ...(metadataText ? [{
+        id: `slides.decks:${stableSearchId(filePath)}:metadata`,
+        title: "metadata",
+        body: metadataText,
+        snippet: metadataText.slice(0, 180),
+        sortOrder: -1,
+        metadata: { kind: "metadata", redactedValues: true },
+      }] : []),
+      ...slides.slice(0, 80).map((slide, index) => {
+        const slideId = stringValue(slide.id) ?? `slide-${index + 1}`;
+        const text = slideTextForSearch(slide);
+        return {
+          id: `slides.decks:${stableSearchId(filePath)}:slide:${slideId}`,
+          title: stringValue(slide.heading) ?? stringValue(slide.title) ?? `Slide ${index + 1}`,
+          body: text,
+          snippet: firstMeaningfulLine(text) ?? stringValue(slide.layout) ?? "slide",
+          sortOrder: index,
+          metadata: {
+            slideId,
+            slideIndex: index,
+            layout: stringValue(slide.layout) ?? "slide",
+          },
+        };
+      }),
+    ],
     actions: [
       { id: "open", kind: "open", label: "Open slide deck", requiresApproval: false },
       { id: "copy-reference", kind: "copy", label: "Copy slide deck reference", requiresApproval: false },
@@ -216,7 +227,7 @@ function sheetsWorkbookSearchDocument(filePath: string): SearchDocumentInput | n
   const sheetsValue = Array.isArray(workbook.sheets) ? workbook.sheets : Array.isArray(workbook.worksheets) ? workbook.worksheets : [];
   const sheets = sheetsValue.filter(isPlainRecord);
   const sheetTexts = sheets.map(sheetTextForSearch).filter((text) => text.length > 0);
-  const metadataText = manifestStructuredText(workbook.metadata);
+  const metadataText = manifestRedactedText(workbook.metadata);
   const outputFormats = outputs.map((output) => stringValue(output.format)).filter((format): format is string => !!format);
   const sheetNames = sheets.map((sheet, index) => stringValue(sheet.name) ?? stringValue(sheet.title) ?? `Sheet ${index + 1}`);
   const updatedAt = stringValue(workbook.updatedAt) ?? fileUpdatedAt(filePath);
@@ -253,23 +264,33 @@ function sheetsWorkbookSearchDocument(filePath: string): SearchDocumentInput | n
       sheets: 1,
       sheetCount: Math.min(sheets.length, 50) / 50,
     },
-    fragments: sheets.slice(0, 80).map((sheet, index) => {
-      const sheetId = stringValue(sheet.id) ?? `sheet-${index + 1}`;
-      const sheetName = stringValue(sheet.name) ?? stringValue(sheet.title) ?? `Sheet ${index + 1}`;
-      const text = sheetTextForSearch(sheet);
-      return {
-        id: `sheets.workbooks:${stableSearchId(filePath)}:sheet:${sheetId}`,
-        title: sheetName,
-        body: text,
-        snippet: firstMeaningfulLine(text) ?? sheetName,
-        sortOrder: index,
-        metadata: {
-          sheetId,
-          sheetIndex: index,
-          sheetName,
-        },
-      };
-    }),
+    fragments: [
+      ...(metadataText ? [{
+        id: `sheets.workbooks:${stableSearchId(filePath)}:metadata`,
+        title: "metadata",
+        body: metadataText,
+        snippet: metadataText.slice(0, 180),
+        sortOrder: -1,
+        metadata: { kind: "metadata", redactedValues: true },
+      }] : []),
+      ...sheets.slice(0, 80).map((sheet, index) => {
+        const sheetId = stringValue(sheet.id) ?? `sheet-${index + 1}`;
+        const sheetName = stringValue(sheet.name) ?? stringValue(sheet.title) ?? `Sheet ${index + 1}`;
+        const text = sheetTextForSearch(sheet);
+        return {
+          id: `sheets.workbooks:${stableSearchId(filePath)}:sheet:${sheetId}`,
+          title: sheetName,
+          body: text,
+          snippet: firstMeaningfulLine(text) ?? sheetName,
+          sortOrder: index,
+          metadata: {
+            sheetId,
+            sheetIndex: index,
+            sheetName,
+          },
+        };
+      }),
+    ],
     actions: [
       { id: "open", kind: "open", label: "Open workbook", requiresApproval: false },
       { id: "copy-reference", kind: "copy", label: "Copy workbook reference", requiresApproval: false },
@@ -310,6 +331,11 @@ function manifestStructuredText(value: unknown): string | undefined {
   collectManifestStructuredText(value, parts, 0);
   const text = parts.join(" ").replace(/\s+/g, " ").trim();
   return text || undefined;
+}
+
+function manifestRedactedText(value: unknown): string | undefined {
+  if (value === null || value === undefined) return undefined;
+  return isPlainRecord(value) ? redactedStructuredText(value) : redactedStructuredText({ value });
 }
 
 function collectManifestStructuredText(value: unknown, parts: string[], depth: number): void {

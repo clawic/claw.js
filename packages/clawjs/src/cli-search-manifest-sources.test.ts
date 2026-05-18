@@ -19,7 +19,11 @@ test("search rebuild indexes slides.decks from slide manifests", async () => {
     title: "Quarterly Revenue Plan",
     theme: "executive",
     author: { agentId: "agent:slides", name: "Slides agent" },
-    metadata: { team: "finance" },
+    metadata: {
+      team: "finance",
+      workflow: "slides-metadata-fragment-needle",
+      credentials: { token: "slides-metadata-secret-never-index" },
+    },
     outputs: [{ format: "pptx", path: "outputs/deck-quarterly/deck.pptx" }],
     slides: [
       {
@@ -72,7 +76,19 @@ test("search rebuild indexes slides.decks from slide manifests", async () => {
     assert.equal(result?.metadata?.theme, "executive");
     assert.equal(result?.metadata?.layout?.includes("metric-grid"), true);
     assert.equal(result?.metadata?.outputFormat?.includes("pptx"), true);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "metadata" && fragment.snippet?.includes("slides-metadata-fragment-needle")), true);
     assert.equal(result?.fragments?.some((fragment) => fragment.title === "Forecast metrics"), true);
+    const metadataQuery = await runCliCapture(["search", "query", "slides-metadata-fragment-needle", "--sources", "slides.decks", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(metadataQuery.code, CLI_EXIT_OK, metadataQuery.stderr || metadataQuery.stdout);
+    const metadataQueryPayload = JSON.parse(metadataQuery.stdout) as {
+      data: { results: Array<{ source: string; title: string; fragments?: Array<{ title?: string; snippet?: string }> }> };
+    };
+    const metadataResult = metadataQueryPayload.data.results.find((entry) => entry.source === "slides.decks" && entry.title === "Quarterly Revenue Plan");
+    assert.equal(metadataResult?.fragments?.some((fragment) => fragment.title === "metadata" && fragment.snippet?.includes("slides-metadata-fragment-needle")), true);
+    const metadataSecretQuery = await runCliCapture(["search", "query", "slides-metadata-secret-never-index", "--sources", "slides.decks", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(metadataSecretQuery.code, CLI_EXIT_DEGRADED, metadataSecretQuery.stderr || metadataSecretQuery.stdout);
+    const metadataSecretQueryPayload = JSON.parse(metadataSecretQuery.stdout) as { data: { results: Array<{ source: string; title: string }> } };
+    assert.equal(metadataSecretQueryPayload.data.results.some((entry) => entry.source === "slides.decks" && entry.title === "Quarterly Revenue Plan"), false);
   });
 });
 
@@ -178,7 +194,11 @@ test("search rebuild indexes sheets.workbooks from workbook manifests", async ()
     id: "workbook-forecast",
     title: "Revenue Forecast Workbook",
     author: { agentId: "agent:sheets", name: "Sheets agent" },
-    metadata: { team: "finance" },
+    metadata: {
+      team: "finance",
+      workflow: "sheets-metadata-fragment-needle",
+      credentials: { token: "sheets-metadata-secret-never-index" },
+    },
     outputs: [{ format: "xlsx", path: "outputs/workbook-forecast/forecast.xlsx" }],
     sheets: [
       {
@@ -233,7 +253,19 @@ test("search rebuild indexes sheets.workbooks from workbook manifests", async ()
     assert.equal(result?.title, "Revenue Forecast Workbook");
     assert.equal(result?.metadata?.sheetName?.includes("Summary"), true);
     assert.equal(result?.metadata?.outputFormat?.includes("xlsx"), true);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "metadata" && fragment.snippet?.includes("sheets-metadata-fragment-needle")), true);
     assert.equal(result?.fragments?.some((fragment) => fragment.title === "Summary"), true);
+    const metadataQuery = await runCliCapture(["search", "query", "sheets-metadata-fragment-needle", "--sources", "sheets.workbooks", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(metadataQuery.code, CLI_EXIT_OK, metadataQuery.stderr || metadataQuery.stdout);
+    const metadataQueryPayload = JSON.parse(metadataQuery.stdout) as {
+      data: { results: Array<{ source: string; title: string; fragments?: Array<{ title?: string; snippet?: string }> }> };
+    };
+    const metadataResult = metadataQueryPayload.data.results.find((entry) => entry.source === "sheets.workbooks" && entry.title === "Revenue Forecast Workbook");
+    assert.equal(metadataResult?.fragments?.some((fragment) => fragment.title === "metadata" && fragment.snippet?.includes("sheets-metadata-fragment-needle")), true);
+    const metadataSecretQuery = await runCliCapture(["search", "query", "sheets-metadata-secret-never-index", "--sources", "sheets.workbooks", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(metadataSecretQuery.code, CLI_EXIT_DEGRADED, metadataSecretQuery.stderr || metadataSecretQuery.stdout);
+    const metadataSecretQueryPayload = JSON.parse(metadataSecretQuery.stdout) as { data: { results: Array<{ source: string; title: string }> } };
+    assert.equal(metadataSecretQueryPayload.data.results.some((entry) => entry.source === "sheets.workbooks" && entry.title === "Revenue Forecast Workbook"), false);
   });
 });
 

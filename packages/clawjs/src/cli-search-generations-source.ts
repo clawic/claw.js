@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { SearchStore, type SearchDocumentInput } from "@clawjs/search";
+import { redactedStructuredText } from "./cli-search-web-external-source.ts";
 
 export function ensureGenerationsArtifactsSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {
   const workspaceRoot = path.resolve(flags.workspace ?? cwd);
@@ -55,7 +56,8 @@ function generationArtifactSearchDocument(record: Record<string, unknown>, works
   const prompt = stringField(record, "prompt");
   const command = isPlainRecord(record.command) ? record.command : {};
   const outputRelativePath = stringField(record, "outputRelativePath");
-  const metadataText = textFromStructuredContent(record.metadata);
+  const metadata = isPlainRecord(record.metadata) ? record.metadata : {};
+  const metadataText = redactedStructuredText(metadata);
   const body = [
     title,
     kind,
@@ -158,33 +160,6 @@ function readWorkspaceCollectionRecords(root: string, collection: string): Array
       }
     })
     .filter((record): record is Record<string, unknown> => record !== null);
-}
-
-function textFromStructuredContent(value: unknown): string | undefined {
-  const parts: string[] = [];
-  collectStructuredText(value, parts, 0);
-  const text = parts.join(" ").replace(/\s+/g, " ").trim();
-  return text || undefined;
-}
-
-function collectStructuredText(value: unknown, parts: string[], depth: number): void {
-  if (parts.join(" ").length > 8192 || depth > 4 || value === null || value === undefined) return;
-  if (typeof value === "string") {
-    if (value.trim()) parts.push(value.trim());
-    return;
-  }
-  if (typeof value === "number" || typeof value === "boolean") {
-    parts.push(String(value));
-    return;
-  }
-  if (Array.isArray(value)) {
-    for (const item of value) collectStructuredText(item, parts, depth + 1);
-    return;
-  }
-  if (!isPlainRecord(value)) return;
-  for (const key of ["text", "plainText", "title", "heading", "caption", "alt", "code", "content", "children"]) {
-    if (key in value) collectStructuredText(value[key], parts, depth + 1);
-  }
 }
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
