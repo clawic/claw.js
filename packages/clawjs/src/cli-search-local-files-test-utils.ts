@@ -1,0 +1,91 @@
+import assert from "node:assert/strict";
+import fs from "fs";
+import os from "os";
+import path from "path";
+
+import { CLI_EXIT_DEGRADED, CLI_EXIT_OK } from "./index.ts";
+import { scheduleLocalFileSearchEvent } from "./cli-search-events.ts";
+import { runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
+
+export async function runSearchLocalFilesEventScenario(): Promise<void> {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-local-file-events-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  const fileRoot = path.join(workspaceRoot, "local-files");
+  const filePath = path.join(fileRoot, "docs", "event-file.txt");
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, "A local-file-event-refresh-needle proves file event refresh.");
+
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const enabled = await runCliCapture(["search", "sources", "enable", "local.files", "--profile", "full", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(enabled.code, CLI_EXIT_OK);
+
+    const scheduled = scheduleLocalFileSearchEvent({
+      operation: "upsert",
+      root: fileRoot,
+      filePath,
+      dataDir: dataRoot,
+      flags: { "file-root": fileRoot },
+    });
+    assert.equal(scheduled.ok, true, scheduled.error);
+    assert.equal(scheduled.job?.source, "local.files");
+    assert.equal(scheduled.job?.operation, "upsert");
+    assert.equal(scheduled.job?.resourceId, "docs/event-file.txt");
+    assert.equal(scheduled.job?.shard, "hot");
+    assert.equal(scheduled.job?.payload.eventDriven, true);
+    assert.equal(scheduled.job?.payload.relativePath, "docs/event-file.txt");
+
+    const outsideRoot = scheduleLocalFileSearchEvent({
+      operation: "upsert",
+      root: fileRoot,
+      filePath: path.join(workspaceRoot, "outside.txt"),
+      dataDir: dataRoot,
+    });
+    assert.equal(outsideRoot.ok, false);
+    assert.match(outsideRoot.error ?? "", /outside root/);
+
+    const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "local.files", "--profile", "full", "--file-root", fileRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(serviceRun.code, CLI_EXIT_OK);
+    const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
+      data: { worker?: { items: Array<{ id: string; source: string; status: string; indexed?: number }> } };
+    };
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.id, scheduled.job?.id);
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.source, "local.files");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
+
+    const query = await runCliCapture(["search", "query", "local-file-event-refresh-needle", "--profile", "full", "--file-root", fileRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: { results: Array<{ source: string; domain: string; resourceId?: string; metadata?: { indexedContent?: boolean } }> };
+    };
+    const result = queryPayload.data.results.find((entry) => entry.resourceId === "docs/event-file.txt");
+    assert.equal(result?.source, "local.files");
+    assert.equal(result?.domain, "files");
+    assert.equal(result?.metadata?.indexedContent, true);
+
+    fs.rmSync(filePath);
+    const deleted = scheduleLocalFileSearchEvent({
+      operation: "delete",
+      root: fileRoot,
+      filePath,
+      dataDir: dataRoot,
+      flags: { "file-root": fileRoot },
+    });
+    assert.equal(deleted.ok, true, deleted.error);
+    assert.equal(deleted.job?.operation, "delete");
+
+    const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "local.files", "--profile", "full", "--file-root", fileRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(deleteRun.code, CLI_EXIT_OK);
+
+    const afterDelete = await runCliCapture(["search", "query", "local-file-event-refresh-needle", "--profile", "full", "--file-root", fileRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterDelete.code, CLI_EXIT_DEGRADED);
+    const afterDeletePayload = JSON.parse(afterDelete.stdout) as { data: { results: unknown[] } };
+    assert.deepEqual(afterDeletePayload.data.results, []);
+  });
+}
