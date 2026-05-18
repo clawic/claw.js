@@ -7,7 +7,7 @@
   "reportOnlyFindings": 24,
   "baselinedFindings": 5,
   "lastAuditSummary": {
-    "scannedFiles": 7103,
+    "scannedFiles": 7104,
     "todoFindings": 0,
     "duplicateAssetGroups": 24,
     "duplicateAssetFiles": 65,
@@ -21,7 +21,169 @@
       "exports": 509,
       "owners": 55,
       "duplicates": 1
-    }
+    },
+    "topFiles": [
+      {
+        "file": "packages/clawjs-core/src/builtins/finance/index.ts",
+        "totalIssues": 24,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 23
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/reading_media/index.ts",
+        "totalIssues": 23,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 22
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/billing/index.ts",
+        "totalIssues": 22,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 21
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/analytics/index.ts",
+        "totalIssues": 20,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 19
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/fitness/index.ts",
+        "totalIssues": 20,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 19
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/health/index.ts",
+        "totalIssues": 20,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 19
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/cooking/index.ts",
+        "totalIssues": 19,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 18
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/crm/index.ts",
+        "totalIssues": 19,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 18
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/agents/index.ts",
+        "totalIssues": 17,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 16
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/identity/index.ts",
+        "totalIssues": 16,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 15
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/hr/index.ts",
+        "totalIssues": 14,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 13
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/luxury_and_collecting/index.ts",
+        "totalIssues": 14,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 13
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/support/index.ts",
+        "totalIssues": 12,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 11
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/travel/index.ts",
+        "totalIssues": 12,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 11
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/career/index.ts",
+        "totalIssues": 11,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 10
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/infra/index.ts",
+        "totalIssues": 11,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 10
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/learning/index.ts",
+        "totalIssues": 11,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 10
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/mental_health_recovery/index.ts",
+        "totalIssues": 11,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 10
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/observability/index.ts",
+        "totalIssues": 11,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 10
+        }
+      },
+      {
+        "file": "packages/clawjs-core/src/builtins/education_school/index.ts",
+        "totalIssues": 10,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 9
+        }
+      }
+    ]
   },
   "peripherySummary": {
     "status": "external-pending",
