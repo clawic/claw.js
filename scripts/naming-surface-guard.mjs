@@ -209,7 +209,7 @@ for (const relativePath of [
 }
 forbidSnippet("packages/clawjs/src/inspect-cli.test.ts", '"clawix.protocol.bridge"');
 requireSnippet("packages/clawjs/src/inspect-cli.test.ts", "clawix.protocol.bridge.v1");
-requireSnippet("docs/interface-matrix.md", "| Apps and openable surfaces | Clawix Apps catalog and app surface | app/resource registry APIs | `claw apps list|upsert` |");
+requireSnippet("docs/interface-matrix.md", "| Apps and openable surfaces | Clawix Apps catalog and app surface | app/resource registry APIs | `claw apps list|upsert|delete` |");
 requireSnippet("docs/interface-matrix.md", "| Design resources | Clawix Design styles, templates, references, and editor | design/resource registry APIs | `claw design list|upsert` |");
 requireSnippet("docs/interface-matrix.md", "| Provider routing set / list / delete | framework provider routing config | `claw providers routing list|set|delete` |");
 requireSnippet("docs/interface-matrix.md", "| Provider enabled settings | framework provider settings config | `claw providers settings list|set` |");

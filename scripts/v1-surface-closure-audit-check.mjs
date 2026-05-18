@@ -278,7 +278,7 @@ for (const snippet of [
   "claw.sessions.*",
   "claw sessions",
   "claw audio index|transcript|artifact list|get|delete",
-  "claw apps list|upsert",
+  "claw apps list|upsert|delete",
   "claw design list|upsert",
   "providers routing list|set|delete",
   "providers settings list|set",

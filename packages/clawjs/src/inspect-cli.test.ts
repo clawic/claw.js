@@ -568,7 +568,7 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
     "--json",
   ], process.cwd());
   assert.equal(reviewedRemoteClosureGate.code, CLI_EXIT_OK);
-  const reviewedRemoteClosureGatePayload = parseCliJson<{ status: string; reviewedSourceQaIds: string[]; missingSourceQaIds: string[]; invalidSourceQaIds: string[]; duplicateSourceQaIds: string[]; invalidExternalPendingDispositionQaIds: string[]; sourceQaReviewStatus: string; sourceQaReviewItems: unknown[]; blockedExternalRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockers: string[] }>(reviewedRemoteClosureGate.stdout).data;
+  const reviewedRemoteClosureGatePayload = parseCliJson<{ status: string; reviewedSourceQaIds: string[]; missingSourceQaIds: string[]; invalidSourceQaIds: string[]; duplicateSourceQaIds: string[]; invalidExternalPendingDispositionQaIds: string[]; sourceQaReviewStatus: string; sourceQaReviewItems: Array<{ qaId: string; decisionKey: string }>; blockedExternalRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockers: string[] }>(reviewedRemoteClosureGate.stdout).data;
   assert.equal(reviewedRemoteClosureGatePayload.status, "blocked");
   assert.equal(reviewedRemoteClosureGatePayload.reviewedSourceQaIds.length, 23);
   assert.equal(reviewedRemoteClosureGatePayload.missingSourceQaIds.length, 0);
@@ -577,6 +577,7 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.equal(reviewedRemoteClosureGatePayload.invalidExternalPendingDispositionQaIds.length, 0);
   assert.equal(reviewedRemoteClosureGatePayload.sourceQaReviewStatus, "complete");
   assert.equal(reviewedRemoteClosureGatePayload.sourceQaReviewItems.length, 23);
+  assert.equal(reviewedRemoteClosureGatePayload.sourceQaReviewItems.some((entry) => entry.qaId === "QA-006" && entry.decisionKey === "remote_secrets_model"), true);
   assert.equal(reviewedRemoteClosureGatePayload.blockedExternalRequirementIds.length, remotePendingPayload.requirements.length);
   assert.equal(reviewedRemoteClosureGatePayload.clearableExternalRequirementIds.length, 0);
   assert.equal(reviewedRemoteClosureGatePayload.blockers.includes("source_qa_review"), false);
