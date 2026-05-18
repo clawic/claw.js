@@ -1001,11 +1001,12 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(externalPending.requirements.some((entry) => entry.requirementId === "physical_authority_handoff" && entry.decisionId === "sync_authority_model" && entry.sourceReceipt === "SyncAuthorityHandoffReceipt"), true);
   assert.equal(externalPending.requirements.some((entry) => entry.requirementId === "provider_device_e2e" && entry.sourceReceipt === "RemoteProviderDeviceE2EValidationPlan"), true);
   assert.equal(externalPending.requirements.every((entry) => entry.status === "external_pending" && entry.writes === false), true);
+  const externalPendingRequirementIds = externalPending.requirements.map((entry) => entry.requirementId);
 
   const externalValidationChecklist = buildRemoteExternalValidationChecklist({ generatedAt: "2026-05-17T10:13:15.000Z" });
   assert.equal(externalValidationChecklist.status, "external_pending");
   assert.equal(externalValidationChecklist.writes, false);
-  assert.deepEqual(externalValidationChecklist.requirementIds, externalPending.requirements.map((entry) => entry.requirementId));
+  assert.deepEqual(externalValidationChecklist.requirementIds, externalPendingRequirementIds);
   assert.equal(externalValidationChecklist.coverage.requirementCount, externalPending.requirements.length);
   assert.equal(externalValidationChecklist.coverage.coveredRequirementCount, externalPending.requirements.length);
   assert.deepEqual(externalValidationChecklist.coverage.missingRequirementIds, []);
@@ -1021,6 +1022,8 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(externalValidationEvidenceTemplate.requirementCount, externalPending.requirements.length);
   assert.equal(externalValidationEvidenceTemplate.checklistItems.length, externalPending.requirements.length);
   assert.equal(externalValidationEvidenceTemplate.evidence.length, externalPending.requirements.length);
+  assert.deepEqual(externalValidationEvidenceTemplate.checklistItems.map((entry) => entry.requirementId), externalPendingRequirementIds);
+  assert.deepEqual(externalValidationEvidenceTemplate.evidence.map((entry) => entry.requirementId), externalPendingRequirementIds);
   assert.equal(externalValidationEvidenceTemplate.evidence.every((entry) => entry.approvedRun === false && entry.approvedRunRef === undefined && entry.artifactRefs.length === 0 && entry.acceptedCriteria.length === 0 && entry.plaintextMaterialIncluded === false && !entry.writes), true);
   assert.equal(externalValidationEvidenceTemplate.evidence.some((entry) => entry.requirementId === "provider_device_e2e"), true);
   assert.equal(externalValidationEvidenceTemplate.submissionCommand.includes("claw remote validation-report"), true);
@@ -1046,7 +1049,7 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(generatedExternalValidationEvidenceArtifact.status, "external_pending");
   assert.equal(generatedExternalValidationEvidenceArtifact.writes, false);
   assert.deepEqual(generatedExternalValidationEvidenceArtifact.evidence, externalValidationEvidenceTemplate.evidence);
-  assert.equal(parseRemoteExternalValidationEvidenceInput(generatedExternalValidationEvidenceArtifact).length, externalPending.requirements.length);
+  assert.deepEqual(parseRemoteExternalValidationEvidenceInput(generatedExternalValidationEvidenceArtifact).map((entry) => entry.requirementId), externalPendingRequirementIds);
   assert.throws(() => parseRemoteExternalValidationEvidenceInput({
     ...generatedExternalValidationEvidenceArtifact,
     sourcePlanId: "wrong-source-plan",
@@ -1058,6 +1061,7 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(externalValidationRunbook.validationStepCount, 5);
   assert.equal(externalValidationRunbook.externalRequirementCount, externalPending.requirements.length);
   assert.deepEqual(externalValidationRunbook.e2ePlan.validationSteps.map((entry) => entry.domain), ["chat", "search", "sync", "secret_refs", "hosted_agents"]);
+  assert.deepEqual(externalValidationRunbook.evidenceArtifact.evidence.map((entry) => entry.requirementId), externalPending.requirements.map((entry) => entry.requirementId));
   assert.deepEqual(externalValidationRunbook.e2ePlan.requiredTopologyTargets, [
     "mac_host",
     "linux_host",
@@ -1069,7 +1073,6 @@ test("remote gateway sync contracts register required layers, routes, and safe d
     "self_hosted_gateway",
     "hosted_gateway",
   ]);
-  assert.equal(externalValidationRunbook.evidenceArtifact.evidence.length, externalPending.requirements.length);
   assert.equal(externalValidationRunbook.reportCommand.includes("validation-report"), true);
   assert.equal(externalValidationRunbook.closureGateCommand.includes("closure-gate"), true);
   assert.equal(externalValidationRunbook.requiredCommands.some((entry) => entry.includes("validation-artifact")), true);
@@ -1084,7 +1087,7 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(emptyExternalValidationReport.status, "external_pending");
   assert.equal(emptyExternalValidationReport.writes, false);
   assert.equal(emptyExternalValidationReport.evidenceCount, 0);
-  assert.equal(emptyExternalValidationReport.blockedRequirementIds.length, externalPending.requirements.length);
+  assert.deepEqual(emptyExternalValidationReport.blockedRequirementIds, externalPendingRequirementIds);
   assert.equal(emptyExternalValidationReport.clearableRequirementIds.length, 0);
   assert.deepEqual(emptyExternalValidationReport.invalidEvidenceRequirementIds, []);
   assert.deepEqual(emptyExternalValidationReport.duplicateEvidenceRequirementIds, []);
@@ -1107,7 +1110,7 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(completeExternalValidationReport.status, "clearable");
   assert.equal(completeExternalValidationReport.writes, false);
   assert.equal(completeExternalValidationReport.evidenceCount, externalPending.requirements.length);
-  assert.equal(completeExternalValidationReport.clearableRequirementIds.length, externalPending.requirements.length);
+  assert.deepEqual(completeExternalValidationReport.clearableRequirementIds, externalPendingRequirementIds);
   assert.deepEqual(completeExternalValidationReport.blockedRequirementIds, []);
   assert.deepEqual(completeExternalValidationReport.invalidEvidenceRequirementIds, []);
   assert.deepEqual(completeExternalValidationReport.duplicateEvidenceRequirementIds, []);
@@ -1145,6 +1148,7 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   });
   assert.equal(missingApprovedRunRefReport.status, "external_pending");
   assert.equal(missingApprovedRunRefReport.clearableRequirementIds.length, 0);
+  assert.deepEqual(missingApprovedRunRefReport.blockedRequirementIds, externalPendingRequirementIds);
   assert.equal(missingApprovedRunRefReport.items.every((entry) => !entry.clearable && !entry.approvedRunRefPresent), true);
 
   const emptySourceQaReviewReport = buildRemoteSourceQaReviewReport({ generatedAt: "2026-05-17T10:13:26.000Z" });
@@ -1162,6 +1166,7 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(sourceQaReviewTemplate.sourcePlanId, "019e3732-c90e-7491-9217-37020c43217e-plan");
   assert.equal(sourceQaReviewTemplate.reviewCount, 23);
   assert.deepEqual(sourceQaReviewTemplate.requiredSourceQaIds, remoteGoalClosureRequiredSourceQaIds);
+  assert.deepEqual(sourceQaReviewTemplate.externalPendingRequiredSourceQaIds, ["QA-002", "QA-004", "QA-005", "QA-006", "QA-007", "QA-010", "QA-012", "QA-013", "QA-015", "QA-018", "QA-020", "QA-021"]);
   assert.equal(sourceQaReviewTemplate.items.every((entry) => !entry.reviewed && entry.disposition === null && entry.evidenceRefs.length === 0 && entry.reviewedAt === null && !entry.writes), true);
   assert.equal(sourceQaReviewTemplate.items.some((entry) => entry.qaId === "QA-023" && entry.decisionKey === "goal_closure_gate" && entry.requirementId === "Completion audit"), true);
   assert.equal(sourceQaReviewTemplate.submissionCommand.includes("claw remote closure-gate"), true);
@@ -1171,6 +1176,7 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   });
   assert.equal(scopedSourceQaReviewTemplate.reviewCount, 2);
   assert.deepEqual(scopedSourceQaReviewTemplate.items.map((entry) => entry.qaId), ["QA-001", "QA-023"]);
+  assert.deepEqual(scopedSourceQaReviewTemplate.externalPendingRequiredSourceQaIds, []);
 
   const externalPendingSourceQaIds = new Set(["QA-002", "QA-004", "QA-005", "QA-006", "QA-007", "QA-010", "QA-012", "QA-013", "QA-015", "QA-018", "QA-020", "QA-021"]);
   const completeSourceQaReviewReport = buildRemoteSourceQaReviewReport({
@@ -1248,6 +1254,8 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(readyForApprovedRun.evidenceCount, externalPending.requirements.length);
   assert.equal(readyForApprovedRun.requiredEvidenceCount, externalPending.requirements.length);
   assert.deepEqual(readyForApprovedRun.missingEvidenceRequirementIds, []);
+  assert.deepEqual(readyForApprovedRun.blockedExternalRequirementIds, externalPendingRequirementIds);
+  assert.deepEqual(readyForApprovedRun.clearableExternalRequirementIds, []);
   assert.deepEqual(readyForApprovedRun.closureGateBlockers, ["external_validation"]);
   assert.equal(readyForApprovedRun.nextAction.includes("approved physical/provider validation"), true);
   const approvalRequest = buildRemoteExternalValidationApprovalRequest({
@@ -1259,7 +1267,7 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(approvalRequest.approvalRequired, true);
   assert.equal(approvalRequest.approved, false);
   assert.equal(approvalRequest.readinessStatus, "ready_for_approved_run");
-  assert.equal(approvalRequest.requirementIds.length, externalPending.requirements.length);
+  assert.deepEqual(approvalRequest.requirementIds, externalPending.requirements.map((entry) => entry.requirementId));
   assert.deepEqual(approvalRequest.validationDomains, ["chat", "search", "sync", "secret_refs", "hosted_agents"]);
   assert.equal(approvalRequest.prohibitedActions.some((entry) => entry.includes("plaintext secrets")), true);
   assert.equal(approvalRequest.writes, false);
@@ -1271,7 +1279,7 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   });
   assert.equal(incompleteApprovedEvidenceReadiness.status, "not_ready");
   assert.equal(incompleteApprovedEvidenceReadiness.externalEvidenceReady, false);
-  assert.equal(incompleteApprovedEvidenceReadiness.blockedExternalRequirementIds.length, externalPending.requirements.length);
+  assert.deepEqual(incompleteApprovedEvidenceReadiness.blockedExternalRequirementIds, externalPendingRequirementIds);
   assert.deepEqual(incompleteApprovedEvidenceReadiness.closureGateBlockers, ["external_validation"]);
 
   const invalidSourceQaReviews = [{
@@ -1314,12 +1322,11 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(blockedClosureGate.missingSourceQaIds.length, 23);
   assert.deepEqual(blockedClosureGate.invalidSourceQaIds, []);
   assert.deepEqual(blockedClosureGate.duplicateSourceQaIds, []);
-  assert.equal(blockedClosureGate.externalPendingRequiredSourceQaIds.includes("QA-004"), true);
-  assert.equal(blockedClosureGate.externalPendingRequiredSourceQaIds.includes("QA-007"), true);
+  assert.deepEqual(blockedClosureGate.externalPendingRequiredSourceQaIds, sourceQaReviewTemplate.externalPendingRequiredSourceQaIds);
   assert.deepEqual(blockedClosureGate.invalidExternalPendingDispositionQaIds, []);
   assert.equal(blockedClosureGate.blockers.includes("source_qa_review"), true);
   assert.equal(blockedClosureGate.blockers.includes("external_validation"), true);
-  assert.equal(blockedClosureGate.blockedExternalRequirementIds.length, externalPending.requirements.length);
+  assert.deepEqual(blockedClosureGate.blockedExternalRequirementIds, externalPending.requirements.map((entry) => entry.requirementId));
 
   const clearableClosureGate = buildRemoteGoalClosureGate({
     generatedAt: "2026-05-17T10:13:27.000Z",
@@ -1344,7 +1351,7 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.deepEqual(clearableClosureGate.duplicateSourceQaIds, []);
   assert.deepEqual(clearableClosureGate.invalidExternalPendingDispositionQaIds, []);
   assert.deepEqual(clearableClosureGate.blockedExternalRequirementIds, []);
-  assert.equal(clearableClosureGate.clearableExternalRequirementIds.length, externalPending.requirements.length);
+  assert.deepEqual(clearableClosureGate.clearableExternalRequirementIds, externalPendingRequirementIds);
   assert.deepEqual(clearableClosureGate.blockers, []);
 
   const readyForGoalClosure = buildRemoteExternalValidationReadiness({
@@ -1355,7 +1362,7 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(readyForGoalClosure.status, "ready_for_goal_closure");
   assert.equal(readyForGoalClosure.closureGateStatus, "clearable");
   assert.deepEqual(readyForGoalClosure.blockedExternalRequirementIds, []);
-  assert.equal(readyForGoalClosure.clearableExternalRequirementIds.length, externalPending.requirements.length);
+  assert.deepEqual(readyForGoalClosure.clearableExternalRequirementIds, externalPendingRequirementIds);
 
   const providerDeviceE2EPlan = buildRemoteProviderDeviceE2EValidationPlan({
     createdAt: "2026-05-17T10:13:30.000Z",
@@ -1364,7 +1371,15 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(providerDeviceE2EPlan.status, "external_pending");
   assert.deepEqual(providerDeviceE2EPlan.requiredDomains, ["chat", "search", "sync", "secret_refs", "hosted_agents"]);
   assert.deepEqual(providerDeviceE2EPlan.requiredTopologyTargets, ["mac_host", "linux_host", "windows_host", "headless_server", "vps_host", "mobile_client", "browser_client", "self_hosted_gateway", "hosted_gateway"]);
+  assert.deepEqual(providerDeviceE2EPlan.requiredRouteIds, remoteSyncRequiredRouteIds);
   assert.deepEqual(providerDeviceE2EPlan.validationSteps.map((entry) => entry.domain), providerDeviceE2EPlan.requiredDomains);
+  assert.deepEqual(providerDeviceE2EPlan.validationSteps.map((entry) => entry.requiredRouteIds), [
+    ["remote.chatGateway"],
+    ["remote.searchGateway"],
+    ["sync.skills", "sync.memoryUserModel", "sync.sessions", "sync.driveFiles", "sync.blobs", "sync.searchIndex", "sync.sqliteResources", "sync.sidecars", "sync.agentConfig", "sync.workspaceState", "mesh.resourceShare"],
+    ["remote.secretBrokeredOperation"],
+    ["gateway.headlessAgentHost", "gateway.multiTenantAgentService"],
+  ]);
   assert.equal(providerDeviceE2EPlan.validationSteps.every((entry) => entry.status === "external_pending" && entry.writes === false), true);
   assert.equal(providerDeviceE2EPlan.validationSteps.some((entry) => entry.domain === "chat" && entry.requiredRouteIds.includes("remote.chatGateway") && entry.requiredExternalPendingIds.includes("physical_iroh_handshake")), true);
   assert.equal(providerDeviceE2EPlan.validationSteps.some((entry) => entry.domain === "sync" && entry.requiredRouteIds.includes("sync.skills") && entry.requiredRouteIds.includes("mesh.resourceShare") && entry.requiredExternalPendingIds.includes("physical_sync_driver_application")), true);
@@ -1390,6 +1405,25 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.deepEqual(routeContracts.missingRouteIds, []);
   assert.equal(routeContracts.writes, false);
   assert.equal(routeContracts.contracts.length, remoteSyncRequiredRouteIds.length);
+  assert.deepEqual(routeContracts.contracts.map((entry) => entry.routeId), remoteSyncRequiredRouteIds);
+  assert.deepEqual(routeContracts.contracts.map((entry) => entry.layer), [
+    "gateway",
+    "gateway",
+    "connector",
+    "sync",
+    "sync",
+    "sync",
+    "sync",
+    "sync",
+    "sync",
+    "sync",
+    "sync",
+    "sync",
+    "sync",
+    "gateway",
+    "gateway",
+    "mesh",
+  ]);
   assert.equal(routeContracts.contracts.some((entry) => entry.routeId === "remote.searchGateway" && entry.localContractRefs.includes("claw search")), true);
   assert.equal(routeContracts.contracts.some((entry) => entry.routeId === "sync.sessions" && entry.localContractRefs.includes("claw sync manifest --driver sessions")), true);
   assert.equal(routeContracts.contracts.some((entry) => entry.routeId === "sync.searchIndex" && entry.localContractRefs.includes("claw sync manifest --driver search_index")), true);
@@ -1415,14 +1449,29 @@ test("remote gateway sync contracts register required layers, routes, and safe d
     generatedAt: "2026-05-17T10:14:30.000Z",
     registeredRouteIds: remoteSyncRequiredRouteIds,
   });
+  const expectedSyncDrivers = ["skills", "memory_user_model", "sessions", "drive_files", "blobs", "sqlite_tables", "sqlite_partial", "sidecar", "search_index", "agent_config", "workspace_state"];
+  const expectedSyncDriverRouteIds = ["sync.skills", "sync.memoryUserModel", "sync.sessions", "sync.driveFiles", "sync.blobs", "sync.sqliteResources", "sync.sqliteResources", "sync.sidecars", "sync.searchIndex", "sync.agentConfig", "sync.workspaceState"];
+  const expectedSyncDriverRequiredRouteIds = ["sync.agentConfig", "sync.blobs", "sync.driveFiles", "sync.memoryUserModel", "sync.searchIndex", "sync.sessions", "sync.sidecars", "sync.skills", "sync.sqliteResources", "sync.workspaceState"];
+  const expectedSyncDriverLateralDomains = [["skills"], ["memory", "user_model", "profile"], ["sessions"], ["drive", "files"], ["blobs", "files"], ["database", "records"], ["database", "partial_database"], ["sidecars", "runtime"], ["search", "indexes"], ["agents", "config"], ["workspace", "projects"]];
   assert.equal(syncDriverCatalog.status, "complete");
   assert.equal(syncDriverCatalog.writes, false);
   assert.equal(syncDriverCatalog.authorityModel, "per_resource");
   assert.equal(syncDriverCatalog.conflictDefault, "detect_and_elevate");
   assert.equal(syncDriverCatalog.physicalApplicationStatus, "external_pending");
+  assert.deepEqual(syncDriverCatalog.requiredDrivers, expectedSyncDrivers);
+  assert.deepEqual(syncDriverCatalog.coveredDrivers, expectedSyncDrivers);
+  assert.deepEqual(syncDriverCatalog.requiredRouteIds, expectedSyncDriverRequiredRouteIds);
   assert.deepEqual(syncDriverCatalog.missingDrivers, []);
   assert.deepEqual(syncDriverCatalog.missingRouteIds, []);
   assert.equal(syncDriverCatalog.driverCount, 11);
+  assert.deepEqual(syncDriverCatalog.entries.map((entry) => entry.driver), expectedSyncDrivers);
+  assert.deepEqual(syncDriverCatalog.entries.map((entry) => entry.routeId), expectedSyncDriverRouteIds);
+  assert.deepEqual(syncDriverCatalog.entries.map((entry) => entry.lateralDomains), expectedSyncDriverLateralDomains);
+  assert.deepEqual(syncDriverCatalog.entries.map((entry) => entry.commands), expectedSyncDrivers.map((driver) => [
+    `claw sync manifest --driver ${driver} --json`,
+    `claw sync plan --driver ${driver} --json`,
+    `claw sync apply --driver ${driver} --record true --json`,
+  ]));
   assert.equal(syncDriverCatalog.entries.every((entry) => entry.manifestBacked && entry.changelogBacked && entry.authorityScoped && entry.physicalDriverRequired && !entry.writes), true);
   assert.equal(syncDriverCatalog.entries.every((entry) => entry.conflictPolicy === "detect_and_elevate" && entry.secretPolicy.plaintextReplication === false && entry.secretPolicy.secretRefsOnly === true), true);
   assert.equal(syncDriverCatalog.entries.some((entry) => entry.driver === "skills" && entry.routeId === "sync.skills" && entry.lateralDomains.includes("skills")), true);

@@ -224,8 +224,9 @@ and `writes: false` before the closure gate accepts it.
 Versioned source Q/A review artifacts submitted to `/v1/remote/closure-gate`
 are source-bound the same way and are rejected when their conversation or plan
 IDs do not match this goal.
-Rows tied to `RemoteExternalPendingRegister` physical/provider requirements
-must use `external_pending` disposition until those requirements are cleared;
+The template exposes `externalPendingRequiredSourceQaIds`, and rows tied to
+`RemoteExternalPendingRegister` physical/provider requirements must use
+`external_pending` disposition until those requirements are cleared;
 duplicate rows are exposed as `duplicateSourceQaIds`, and disposition mismatches
 are exposed as `invalidExternalPendingDispositionQaIds`.
 The remote closure gate is exposed by Relay `/v1/remote/closure-gate` and

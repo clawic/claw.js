@@ -44,6 +44,24 @@ is implemented, validated, or explicitly blocked as `EXTERNAL PENDING`.
 | RQ-021 | `agent_service_model` | external_pending | Multi-tenant agent service receipts cover assignment, budget, billing account, isolation, audit, and runtime intent. | Real runtime execution and billing meter persistence remain `agent_runtime_execution` and `billing_meter_persistence` `EXTERNAL PENDING`. |
 | RQ-022 | `sync_lateral_domains` | implemented | Sync drivers and route contracts cover skills, memory/user model, sessions, drive/files, blobs, search indexes, SQLite, sidecars, agent config, and workspace state; sessions, blobs, sidecars, search indexes, agent config, and workspace state have explicit Sync routes. | Physical driver execution remains tracked by `RQ-013`, not as a lateral taxonomy blocker. |
 
+## External-Pending Closure Lists
+
+The closure gate must expose this exact source Q/A list as requiring
+`external_pending` until physical/provider evidence clears:
+
+`QA-002`, `QA-004`, `QA-005`, `QA-006`, `QA-007`, `QA-010`, `QA-012`,
+`QA-013`, `QA-015`, `QA-018`, `QA-020`, and `QA-021`.
+
+The external-pending register and default closure gate must expose this exact
+external requirement list as blocked until approved evidence clears:
+
+`physical_iroh_handshake`, `device_trust_acceptance`, `physical_peer_trust`,
+`physical_sync_driver_application`, `physical_authority_handoff`,
+`signed_host_audit_persistence`, `physical_client_storage`,
+`provider_secret_retrieval`, `self_hosted_deployment`, `hosted_deployment`,
+`agent_runtime_execution`, `billing_meter_persistence`, and
+`provider_device_e2e`.
+
 ## Hard Blockers
 
 | ID | Status | Evidence | Required next action |

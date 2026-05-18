@@ -193,11 +193,17 @@ const requiredDocSnippets = [
   "claw remote validation-report",
   "source Q/A review report",
   "duplicateSourceQaIds",
+  "externalPendingRequiredSourceQaIds",
   "invalidExternalPendingDispositionQaIds",
   "source Q/A review template",
   "/v1/remote/source-qa-template",
   "claw remote source-qa-template",
   "remote closure gate",
+  "External-Pending Closure Lists",
+  "QA-002`, `QA-004`, `QA-005`, `QA-006`, `QA-007`, `QA-010`, `QA-012`",
+  "QA-013`, `QA-015`, `QA-018`, `QA-020`, and `QA-021",
+  "physical_iroh_handshake`, `device_trust_acceptance`, `physical_peer_trust`",
+  "agent_runtime_execution`, `billing_meter_persistence`, and",
   "/v1/remote/closure-gate",
   "claw remote closure-gate",
   "remote route contracts",
@@ -427,6 +433,31 @@ const expectedExternalPendingRequirementIds = [
   "agent_runtime_execution",
   "billing_meter_persistence",
   "provider_device_e2e",
+];
+const expectedRemoteRouteContractLayers = [
+  "gateway",
+  "gateway",
+  "connector",
+  "sync",
+  "sync",
+  "sync",
+  "sync",
+  "sync",
+  "sync",
+  "sync",
+  "sync",
+  "sync",
+  "sync",
+  "gateway",
+  "gateway",
+  "mesh",
+];
+const expectedProviderDeviceE2EStepRoutes = [
+  ["remote.chatGateway"],
+  ["remote.searchGateway"],
+  ["sync.skills", "sync.memoryUserModel", "sync.sessions", "sync.driveFiles", "sync.blobs", "sync.searchIndex", "sync.sqliteResources", "sync.sidecars", "sync.agentConfig", "sync.workspaceState", "mesh.resourceShare"],
+  ["remote.secretBrokeredOperation"],
+  ["gateway.headlessAgentHost", "gateway.multiTenantAgentService"],
 ];
 for (const item of sourceQaReviewReport.items) {
   if (!sourceQaIds.has(item.qaId)) fail(`source Q/A review artifact includes unknown ${item.qaId}`);
@@ -765,6 +796,12 @@ for (const requirementId of [
 if (!externalPending.requirements.some((entry) => entry.requirementId === "provider_device_e2e" && entry.sourceReceipt === "RemoteProviderDeviceE2EValidationPlan")) {
   fail("provider_device_e2e must be backed by RemoteProviderDeviceE2EValidationPlan");
 }
+const externalPendingRequirementIds = externalPending.requirements.map((entry) => entry.requirementId);
+requireSameOrderedList(
+  "remote external-pending register requirement ids",
+  externalPendingRequirementIds,
+  expectedExternalPendingRequirementIds,
+);
 
 const externalValidationChecklist = buildRemoteExternalValidationChecklist({
   generatedAt: "2026-05-17T10:13:15.000Z",
@@ -774,6 +811,16 @@ if (externalValidationChecklist.writes !== false) fail("remote external validati
 if (externalValidationChecklist.coverage.requirementCount !== externalPending.requirements.length) fail("remote external validation checklist must count every pending requirement");
 if (externalValidationChecklist.coverage.coveredRequirementCount !== externalPending.requirements.length) fail("remote external validation checklist must cover every pending requirement");
 if (externalValidationChecklist.coverage.missingRequirementIds.length !== 0) fail("remote external validation checklist must have no missing requirement IDs");
+requireSameOrderedList(
+  "remote external validation checklist requirement ids",
+  externalValidationChecklist.requirementIds,
+  expectedExternalPendingRequirementIds,
+);
+requireSameOrderedList(
+  "remote external validation checklist item ids",
+  externalValidationChecklist.items.map((entry) => entry.requirementId),
+  expectedExternalPendingRequirementIds,
+);
 for (const requirement of externalPending.requirements) {
   const item = externalValidationChecklist.items.find((entry) => entry.requirementId === requirement.requirementId);
   if (!item) fail(`remote external validation checklist missing ${requirement.requirementId}`);
@@ -798,6 +845,16 @@ if (externalValidationEvidenceTemplate.writes !== false) fail("remote external v
 if (externalValidationEvidenceTemplate.requirementCount !== externalPending.requirements.length) fail("remote external validation evidence template must count every pending requirement");
 if (externalValidationEvidenceTemplate.checklistItems.length !== externalPending.requirements.length) fail("remote external validation evidence template must include every checklist item");
 if (externalValidationEvidenceTemplate.evidence.length !== externalPending.requirements.length) fail("remote external validation evidence template must include one evidence row per requirement");
+requireSameOrderedList(
+  "remote external validation evidence template checklist item ids",
+  externalValidationEvidenceTemplate.checklistItems.map((entry) => entry.requirementId),
+  expectedExternalPendingRequirementIds,
+);
+requireSameOrderedList(
+  "remote external validation evidence template evidence ids",
+  externalValidationEvidenceTemplate.evidence.map((entry) => entry.requirementId),
+  expectedExternalPendingRequirementIds,
+);
 if (!externalValidationEvidenceTemplate.submissionCommand.includes("claw remote validation-report")) fail("remote external validation evidence template must point to validation-report submission");
 if (!externalValidationEvidenceTemplate.submissionCommand.includes("--evidence-file")) fail("remote external validation evidence template must prefer versioned evidence-file submission");
 if (!externalValidationEvidenceTemplate.evidence.some((entry) => entry.requirementId === "provider_device_e2e")) fail("remote external validation evidence template must include provider_device_e2e");
@@ -833,6 +890,11 @@ if (generatedExternalValidationEvidenceArtifact.writes !== false) fail("generate
 if (generatedExternalValidationEvidenceArtifact.evidence.length !== externalPending.requirements.length) {
   fail("generated external validation evidence artifact must include one row per pending requirement");
 }
+requireSameOrderedList(
+  "generated external validation evidence artifact ids",
+  generatedExternalValidationEvidenceArtifact.evidence.map((entry) => entry.requirementId),
+  expectedExternalPendingRequirementIds,
+);
 const externalValidationRunbook = buildRemoteExternalValidationRunbook({
   generatedAt: "2026-05-18T11:41:00.000Z",
 });
@@ -849,6 +911,11 @@ if (!externalValidationRunbook.requiredCommands.some((entry) => entry.includes("
 if (externalValidationRunbook.e2ePlan.validationSteps.map((entry) => entry.domain).join(",") !== "chat,search,sync,secret_refs,hosted_agents") {
   fail("remote external validation runbook must carry the provider/device E2E domain steps");
 }
+requireSameOrderedList(
+  "remote external validation runbook evidence artifact ids",
+  externalValidationRunbook.evidenceArtifact.evidence.map((entry) => entry.requirementId),
+  expectedExternalPendingRequirementIds,
+);
 for (const target of ["mac_host", "linux_host", "windows_host", "headless_server", "vps_host", "mobile_client", "browser_client", "self_hosted_gateway", "hosted_gateway"]) {
   if (!externalValidationRunbook.e2ePlan.requiredTopologyTargets.includes(target)) fail(`remote external validation runbook must include topology target ${target}`);
 }
@@ -880,12 +947,6 @@ try {
 if (externalValidationEvidenceArtifactRows.length !== externalPending.requirements.length) {
   fail("external validation evidence artifact must include one row per external pending requirement");
 }
-const externalPendingRequirementIds = externalPending.requirements.map((entry) => entry.requirementId);
-requireSameOrderedList(
-  "remote external-pending register requirement ids",
-  externalPendingRequirementIds,
-  expectedExternalPendingRequirementIds,
-);
 const externalValidationEvidenceArtifactIds = externalValidationEvidenceArtifactRows.map((entry) => entry.requirementId);
 if (externalValidationEvidenceArtifactIds.join(",") !== externalPendingRequirementIds.join(",")) {
   fail("external validation evidence artifact rows must match external pending requirements in order");
@@ -907,7 +968,11 @@ const artifactExternalValidationReport = buildRemoteExternalValidationReport({
 if (artifactExternalValidationReport.status !== "external_pending") fail("external validation evidence artifact must not clear external validation");
 if (artifactExternalValidationReport.evidenceCount !== externalPending.requirements.length) fail("external validation evidence artifact report must count every row");
 if (artifactExternalValidationReport.clearableRequirementIds.length !== 0) fail("external validation evidence artifact must not make any row clearable");
-if (artifactExternalValidationReport.blockedRequirementIds.length !== externalPending.requirements.length) fail("external validation evidence artifact must leave every row blocked");
+requireSameOrderedList(
+  "external validation evidence artifact blocked requirement ids",
+  artifactExternalValidationReport.blockedRequirementIds,
+  expectedExternalPendingRequirementIds,
+);
 if (artifactExternalValidationReport.invalidEvidenceRequirementIds.length !== 0) fail("external validation evidence artifact must not include unknown evidence IDs");
 if (artifactExternalValidationReport.duplicateEvidenceRequirementIds.length !== 0) fail("external validation evidence artifact must not include duplicate evidence IDs");
 const artifactExternalValidationReadiness = buildRemoteExternalValidationReadiness({
@@ -921,6 +986,14 @@ if (artifactExternalValidationReadiness.status !== "ready_for_approved_run") {
 if (artifactExternalValidationReadiness.sourceQaReady !== true) fail("external validation readiness must mark source Q/A ready");
 if (artifactExternalValidationReadiness.externalEvidenceReady !== true) fail("external validation readiness must mark pending evidence artifact ready");
 if (artifactExternalValidationReadiness.missingEvidenceRequirementIds.length !== 0) fail("external validation readiness must not miss evidence requirement IDs");
+requireSameOrderedList(
+  "external validation readiness blocked requirement ids before approved run",
+  artifactExternalValidationReadiness.blockedExternalRequirementIds,
+  expectedExternalPendingRequirementIds,
+);
+if (artifactExternalValidationReadiness.clearableExternalRequirementIds.length !== 0) {
+  fail("external validation readiness must not expose clearable requirements before approved run evidence");
+}
 if (artifactExternalValidationReadiness.closureGateBlockers.join(",") !== "external_validation") {
   fail("external validation readiness must leave only external_validation blocked before physical/provider runs");
 }
@@ -937,7 +1010,11 @@ if (artifactExternalValidationApprovalRequest.approvalRequired !== true || artif
 if (artifactExternalValidationApprovalRequest.readinessStatus !== "ready_for_approved_run") {
   fail("external validation approval request must expose ready_for_approved_run readiness for current artifacts");
 }
-if (artifactExternalValidationApprovalRequest.requirementIds.length !== externalPending.requirements.length) fail("external validation approval request must include every external requirement");
+requireSameOrderedList(
+  "external validation approval request requirement ids",
+  artifactExternalValidationApprovalRequest.requirementIds,
+  expectedExternalPendingRequirementIds,
+);
 if (artifactExternalValidationApprovalRequest.validationDomains.join(",") !== "chat,search,sync,secret_refs,hosted_agents") fail("external validation approval request must cover all E2E domains");
 if (!artifactExternalValidationApprovalRequest.requiredCommands.some((entry) => entry.includes("validation-readiness"))) fail("external validation approval request must include readiness command");
 if (!artifactExternalValidationApprovalRequest.prohibitedActions.some((entry) => entry.includes("plaintext secrets"))) fail("external validation approval request must prohibit plaintext secrets");
@@ -949,7 +1026,11 @@ const emptyExternalValidationReport = buildRemoteExternalValidationReport({
 if (emptyExternalValidationReport.status !== "external_pending") fail("empty remote external validation report must remain external_pending");
 if (emptyExternalValidationReport.writes !== false) fail("remote external validation report must be no-write");
 if (emptyExternalValidationReport.evidenceCount !== 0) fail("empty remote external validation report must have zero evidence");
-if (emptyExternalValidationReport.blockedRequirementIds.length !== externalPending.requirements.length) fail("empty remote external validation report must block every requirement");
+requireSameOrderedList(
+  "empty remote external validation report blocked requirement ids",
+  emptyExternalValidationReport.blockedRequirementIds,
+  expectedExternalPendingRequirementIds,
+);
 if (emptyExternalValidationReport.clearableRequirementIds.length !== 0) fail("empty remote external validation report must not clear requirements");
 if (emptyExternalValidationReport.invalidEvidenceRequirementIds.length !== 0) fail("empty remote external validation report must not have invalid evidence IDs");
 if (emptyExternalValidationReport.duplicateEvidenceRequirementIds.length !== 0) fail("empty remote external validation report must not have duplicate evidence IDs");
@@ -970,7 +1051,11 @@ const completeExternalValidationReport = buildRemoteExternalValidationReport({
   })),
 });
 if (completeExternalValidationReport.status !== "clearable") fail("complete remote external validation report must be clearable");
-if (completeExternalValidationReport.clearableRequirementIds.length !== externalPending.requirements.length) fail("complete remote external validation report must clear every requirement");
+requireSameOrderedList(
+  "complete remote external validation report clearable requirement ids",
+  completeExternalValidationReport.clearableRequirementIds,
+  expectedExternalPendingRequirementIds,
+);
 if (completeExternalValidationReport.blockedRequirementIds.length !== 0) fail("complete remote external validation report must have no blocked requirements");
 if (completeExternalValidationReport.invalidEvidenceRequirementIds.length !== 0) fail("complete remote external validation report must have no invalid evidence IDs");
 if (completeExternalValidationReport.duplicateEvidenceRequirementIds.length !== 0) fail("complete remote external validation report must have no duplicate evidence IDs");
@@ -1087,6 +1172,11 @@ if (incompleteApprovedEvidenceReadiness.status !== "not_ready") {
 if (incompleteApprovedEvidenceReadiness.externalEvidenceReady !== false) {
   fail("external validation readiness must not mark incomplete approved evidence as ready");
 }
+requireSameOrderedList(
+  "incomplete approved evidence readiness blocked requirement ids",
+  incompleteApprovedEvidenceReadiness.blockedExternalRequirementIds,
+  expectedExternalPendingRequirementIds,
+);
 
 const blockedClosureGate = buildRemoteGoalClosureGate({
   generatedAt: "2026-05-17T10:13:26.000Z",
@@ -1106,7 +1196,6 @@ if (blockedClosureGate.invalidExternalPendingDispositionQaIds.length !== 0) fail
 if (!blockedClosureGate.blockers.includes("source_qa_review") || !blockedClosureGate.blockers.includes("external_validation")) {
   fail("default remote closure gate must block on source Q/A review and external validation");
 }
-if (blockedClosureGate.blockedExternalRequirementIds.length !== externalPending.requirements.length) fail("default remote closure gate must block every external pending requirement");
 requireSameOrderedList(
   "default remote closure gate blocked external requirement ids",
   blockedClosureGate.blockedExternalRequirementIds,
@@ -1188,6 +1277,11 @@ if (sourceQaReviewTemplate.sourceConversationId !== sourceConversationId) fail("
 if (sourceQaReviewTemplate.sourcePlanId !== sourcePlanId) fail("remote source Q/A review template must bind the source plan ID");
 if (sourceQaReviewTemplate.reviewCount !== 23) fail("remote source Q/A review template must include all 23 source Q/A rows");
 if (sourceQaReviewTemplate.requiredSourceQaIds.length !== 23) fail("remote source Q/A review template must expose all required source Q/A ids");
+requireSameOrderedList(
+  "remote source Q/A review template external-pending source Q/A ids",
+  sourceQaReviewTemplate.externalPendingRequiredSourceQaIds,
+  expectedExternalPendingQaIdList,
+);
 if (!sourceQaReviewTemplate.submissionCommand.includes("claw remote closure-gate")) fail("remote source Q/A review template must point to closure-gate submission");
 if (!sourceQaReviewTemplate.items.some((entry) => entry.qaId === "QA-023" && entry.decisionKey === "goal_closure_gate" && entry.requirementId === "Completion audit")) {
   fail("remote source Q/A review template must include QA-023 goal closure gate");
@@ -1208,6 +1302,9 @@ const scopedSourceQaReviewTemplate = buildRemoteSourceQaReviewTemplate({
 if (scopedSourceQaReviewTemplate.reviewCount !== 2) fail("scoped remote source Q/A review template must include exactly requested known Q/A rows");
 if (scopedSourceQaReviewTemplate.items.map((entry) => entry.qaId).join(",") !== "QA-001,QA-023") {
   fail("scoped remote source Q/A review template must preserve requested known Q/A order");
+}
+if (scopedSourceQaReviewTemplate.externalPendingRequiredSourceQaIds.length !== 0) {
+  fail("scoped remote source Q/A review template must expose only in-scope external-pending Q/A ids");
 }
 
 const clearableClosureGate = buildRemoteGoalClosureGate({
@@ -1230,7 +1327,11 @@ if (clearableClosureGate.status !== "clearable") fail("remote closure gate must 
 if (clearableClosureGate.missingSourceQaIds.length !== 0) fail("clearable remote closure gate must have no missing source Q/A ids");
 if (clearableClosureGate.sourceQaReviewStatus !== "complete" || clearableClosureGate.sourceQaReviewItems.length !== 23) fail("clearable remote closure gate must include complete source Q/A review evidence");
 if (clearableClosureGate.blockedExternalRequirementIds.length !== 0) fail("clearable remote closure gate must have no blocked external requirements");
-if (clearableClosureGate.clearableExternalRequirementIds.length !== externalPending.requirements.length) fail("clearable remote closure gate must clear every external requirement");
+requireSameOrderedList(
+  "clearable remote closure gate clearable external requirement ids",
+  clearableClosureGate.clearableExternalRequirementIds,
+  expectedExternalPendingRequirementIds,
+);
 if (clearableClosureGate.blockers.length !== 0) fail("clearable remote closure gate must have no blockers");
 const goalClosureReadiness = buildRemoteExternalValidationReadiness({
   generatedAt: "2026-05-17T10:13:27.100Z",
@@ -1251,6 +1352,11 @@ const goalClosureReadiness = buildRemoteExternalValidationReadiness({
 if (goalClosureReadiness.status !== "ready_for_goal_closure") fail("external validation readiness must report ready_for_goal_closure after complete approved evidence");
 if (goalClosureReadiness.closureGateStatus !== "clearable") fail("goal-closure readiness must expose clearable closure gate");
 if (goalClosureReadiness.blockedExternalRequirementIds.length !== 0) fail("goal-closure readiness must have no blocked external rows");
+requireSameOrderedList(
+  "goal-closure readiness clearable external requirement ids",
+  goalClosureReadiness.clearableExternalRequirementIds,
+  expectedExternalPendingRequirementIds,
+);
 
 const providerDeviceE2EPlan = buildRemoteProviderDeviceE2EValidationPlan({
   createdAt: "2026-05-17T10:13:30.000Z",
@@ -1265,8 +1371,20 @@ for (const domain of ["chat", "search", "sync", "secret_refs", "hosted_agents"])
 for (const target of ["mac_host", "linux_host", "windows_host", "headless_server", "vps_host", "mobile_client", "browser_client", "self_hosted_gateway", "hosted_gateway"]) {
   if (!providerDeviceE2EPlan.requiredTopologyTargets.includes(target)) fail(`provider/device E2E plan must include topology target ${target}`);
 }
+requireSameOrderedList(
+  "provider/device E2E plan required route ids",
+  providerDeviceE2EPlan.requiredRouteIds,
+  remoteSyncRequiredRouteIds,
+);
 if (providerDeviceE2EPlan.validationSteps.map((entry) => entry.domain).join(",") !== providerDeviceE2EPlan.requiredDomains.join(",")) {
   fail("provider/device E2E plan must include one validation step per required domain in order");
+}
+for (const [index, expectedRouteIds] of expectedProviderDeviceE2EStepRoutes.entries()) {
+  requireSameOrderedList(
+    `provider/device E2E step ${providerDeviceE2EPlan.validationSteps[index]?.domain ?? index} route ids`,
+    providerDeviceE2EPlan.validationSteps[index]?.requiredRouteIds,
+    expectedRouteIds,
+  );
 }
 for (const step of providerDeviceE2EPlan.validationSteps) {
   if (step.status !== "external_pending" || step.writes !== false) fail(`provider/device E2E step ${step.domain} must remain external_pending and no-write`);
@@ -1286,9 +1404,11 @@ if (!providerDeviceE2EPlan.validationSteps.some((entry) => entry.domain === "hos
 for (const routeId of ["remote.chatGateway", "remote.searchGateway", "remote.secretBrokeredOperation", "gateway.multiTenantAgentService"]) {
   if (!providerDeviceE2EPlan.requiredRouteIds.includes(routeId)) fail(`provider/device E2E plan must include route ${routeId}`);
 }
-for (const requirementId of externalPending.requirements.map((entry) => entry.requirementId)) {
-  if (!providerDeviceE2EPlan.requiredExternalPendingIds.includes(requirementId)) fail(`provider/device E2E plan must include pending gate ${requirementId}`);
-}
+requireSameOrderedList(
+  "provider/device E2E plan required external pending ids",
+  providerDeviceE2EPlan.requiredExternalPendingIds,
+  expectedExternalPendingRequirementIds,
+);
 if (!providerDeviceE2EPlan.approvedPhysicalValidationRequired) fail("provider/device E2E plan must require approved physical validation");
 if (!providerDeviceE2EPlan.noPlaintextSecrets) fail("provider/device E2E plan must forbid plaintext secrets");
 if (providerDeviceE2EPlan.plaintextMaterialIncluded !== false) fail("provider/device E2E plan must expose that plaintext material is absent");
@@ -1303,6 +1423,16 @@ if (!remoteRouteContractCatalogSchema.safeParse(routeContracts).success) fail("r
 if (routeContracts.status !== "complete") fail("remote route contract catalog must be complete");
 if (routeContracts.missingRouteIds.length !== 0) fail(`remote route contract catalog missing routes: ${routeContracts.missingRouteIds.join(", ")}`);
 if (routeContracts.contracts.length !== remoteSyncRequiredRouteIds.length) fail("remote route contract catalog must cover every required route");
+requireSameOrderedList(
+  "remote route contract catalog route ids",
+  routeContracts.contracts.map((entry) => entry.routeId),
+  remoteSyncRequiredRouteIds,
+);
+requireSameOrderedList(
+  "remote route contract catalog layers",
+  routeContracts.contracts.map((entry) => entry.layer),
+  expectedRemoteRouteContractLayers,
+);
 const requiredRouteIdSet = new Set(remoteSyncRequiredRouteIds);
 for (const contract of routeContracts.contracts) {
   if (!requiredRouteIdSet.has(contract.routeId)) fail(`remote route contract catalog includes unexpected route ${contract.routeId}`);

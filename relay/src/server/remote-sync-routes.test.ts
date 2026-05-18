@@ -59,11 +59,12 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(externalPending.statusCode, 200);
     const externalPendingPayload = externalPending.json() as { status: string; writes: boolean; requirements: Array<{ requirementId: string; sourceReceipt: string; status: string; writes: boolean }> };
     const expectedExternalPending = buildRemoteExternalPendingRegister();
+    const expectedExternalPendingRequirementIds = expectedExternalPending.requirements.map((entry) => entry.requirementId);
     assert.equal(externalPendingPayload.status, "external_pending");
     assert.equal(externalPendingPayload.writes, false);
     assert.deepEqual(
       externalPendingPayload.requirements.map((entry) => entry.requirementId),
-      expectedExternalPending.requirements.map((entry) => entry.requirementId),
+      expectedExternalPendingRequirementIds,
     );
     assert.equal(externalPendingPayload.requirements.some((entry) => entry.requirementId === "physical_iroh_handshake" && entry.sourceReceipt === "RemoteTransportHandshakeReceipt"), true);
     assert.equal(externalPendingPayload.requirements.some((entry) => entry.requirementId === "hosted_deployment"), true);
@@ -75,7 +76,7 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     const expectedExternalValidationChecklist = buildRemoteExternalValidationChecklist();
     assert.equal(externalValidationChecklistPayload.status, "external_pending");
     assert.equal(externalValidationChecklistPayload.writes, false);
-    assert.deepEqual(externalValidationChecklistPayload.requirementIds, expectedExternalPending.requirements.map((entry) => entry.requirementId));
+    assert.deepEqual(externalValidationChecklistPayload.requirementIds, expectedExternalPendingRequirementIds);
     assert.deepEqual(externalValidationChecklistPayload.requirementIds, expectedExternalValidationChecklist.requirementIds);
     assert.equal(externalValidationChecklistPayload.coverage.requirementCount, expectedExternalPending.requirements.length);
     assert.equal(externalValidationChecklistPayload.coverage.coveredRequirementCount, expectedExternalPending.requirements.length);
@@ -90,13 +91,14 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
 
     const externalValidationTemplate = await built.app.inject({ method: "GET", url: "/v1/remote/external-validation-template" });
     assert.equal(externalValidationTemplate.statusCode, 200);
-    const externalValidationTemplatePayload = externalValidationTemplate.json() as { status: string; writes: boolean; requirementCount: number; checklistItems: unknown[]; evidence: Array<{ requirementId: string; approvedRun: boolean; approvedRunRef?: string; artifactRefs: string[]; acceptedCriteria: string[]; plaintextMaterialIncluded: boolean; writes: boolean }>; submissionCommand: string };
+    const externalValidationTemplatePayload = externalValidationTemplate.json() as { status: string; writes: boolean; requirementCount: number; checklistItems: Array<{ requirementId: string }>; evidence: Array<{ requirementId: string; approvedRun: boolean; approvedRunRef?: string; artifactRefs: string[]; acceptedCriteria: string[]; plaintextMaterialIncluded: boolean; writes: boolean }>; submissionCommand: string };
     const expectedExternalValidationTemplate = buildRemoteExternalValidationEvidenceTemplate();
     assert.equal(externalValidationTemplatePayload.status, "external_pending");
     assert.equal(externalValidationTemplatePayload.writes, false);
     assert.equal(externalValidationTemplatePayload.requirementCount, expectedExternalPending.requirements.length);
     assert.deepEqual(externalValidationTemplatePayload.evidence.map((entry) => entry.requirementId), expectedExternalValidationTemplate.evidence.map((entry) => entry.requirementId));
     assert.equal(externalValidationTemplatePayload.checklistItems.length, expectedExternalPending.requirements.length);
+    assert.deepEqual(externalValidationTemplatePayload.checklistItems.map((entry) => entry.requirementId), expectedExternalPendingRequirementIds);
     assert.equal(externalValidationTemplatePayload.evidence.every((entry) => !entry.approvedRun && entry.approvedRunRef === undefined && entry.artifactRefs.length === 0 && entry.acceptedCriteria.length === 0 && entry.plaintextMaterialIncluded === false && !entry.writes), true);
     assert.equal(externalValidationTemplatePayload.submissionCommand.includes("claw remote validation-report"), true);
     assert.equal(externalValidationTemplatePayload.submissionCommand.includes("--evidence-file"), true);
@@ -135,7 +137,7 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
 
     const externalValidationRunbook = await built.app.inject({ method: "GET", url: "/v1/remote/external-validation-runbook" });
     assert.equal(externalValidationRunbook.statusCode, 200);
-    const externalValidationRunbookPayload = externalValidationRunbook.json() as { status: string; writes: boolean; validationStepCount: number; externalRequirementCount: number; e2ePlan: { requiredTopologyTargets: string[]; validationSteps: Array<{ domain: string }> }; evidenceArtifact: { evidence: unknown[] }; reportCommand: string; closureGateCommand: string; requiredCommands: string[] };
+    const externalValidationRunbookPayload = externalValidationRunbook.json() as { status: string; writes: boolean; validationStepCount: number; externalRequirementCount: number; e2ePlan: { requiredTopologyTargets: string[]; validationSteps: Array<{ domain: string }> }; evidenceArtifact: { evidence: Array<{ requirementId: string }> }; reportCommand: string; closureGateCommand: string; requiredCommands: string[] };
     const expectedExternalValidationRunbook = buildRemoteExternalValidationRunbook();
     assert.equal(externalValidationRunbookPayload.status, "external_pending");
     assert.equal(externalValidationRunbookPayload.writes, false);
@@ -144,14 +146,14 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.deepEqual(externalValidationRunbookPayload.e2ePlan.validationSteps.map((entry) => entry.domain), ["chat", "search", "sync", "secret_refs", "hosted_agents"]);
     assert.equal(externalValidationRunbookPayload.e2ePlan.requiredTopologyTargets.includes("windows_host"), true);
     assert.equal(externalValidationRunbookPayload.e2ePlan.requiredTopologyTargets.includes("mobile_client"), true);
-    assert.equal(externalValidationRunbookPayload.evidenceArtifact.evidence.length, expectedExternalPending.requirements.length);
+    assert.deepEqual(externalValidationRunbookPayload.evidenceArtifact.evidence.map((entry) => entry.requirementId), expectedExternalPendingRequirementIds);
     assert.equal(externalValidationRunbookPayload.reportCommand.includes("validation-report"), true);
     assert.equal(externalValidationRunbookPayload.closureGateCommand.includes("closure-gate"), true);
     assert.equal(externalValidationRunbookPayload.requiredCommands.some((entry) => entry.includes("validation-artifact")), true);
 
     const externalValidationReadiness = await built.app.inject({ method: "GET", url: "/v1/remote/external-validation-readiness" });
     assert.equal(externalValidationReadiness.statusCode, 200);
-    const externalValidationReadinessPayload = externalValidationReadiness.json() as { status: string; writes: boolean; sourceQaReady: boolean; externalEvidenceReady: boolean; evidenceCount: number; requiredEvidenceCount: number; missingEvidenceRequirementIds: string[]; closureGateBlockers: string[] };
+    const externalValidationReadinessPayload = externalValidationReadiness.json() as { status: string; writes: boolean; sourceQaReady: boolean; externalEvidenceReady: boolean; evidenceCount: number; requiredEvidenceCount: number; missingEvidenceRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockedExternalRequirementIds: string[]; closureGateBlockers: string[] };
     const expectedExternalValidationReadiness = buildRemoteExternalValidationReadiness();
     assert.equal(externalValidationReadinessPayload.status, "not_ready");
     assert.equal(externalValidationReadinessPayload.writes, false);
@@ -159,7 +161,9 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(externalValidationReadinessPayload.externalEvidenceReady, false);
     assert.equal(externalValidationReadinessPayload.evidenceCount, 0);
     assert.equal(externalValidationReadinessPayload.requiredEvidenceCount, expectedExternalValidationReadiness.requiredEvidenceCount);
-    assert.equal(externalValidationReadinessPayload.missingEvidenceRequirementIds.length, expectedExternalPending.requirements.length);
+    assert.deepEqual(externalValidationReadinessPayload.missingEvidenceRequirementIds, expectedExternalPendingRequirementIds);
+    assert.deepEqual(externalValidationReadinessPayload.clearableExternalRequirementIds, []);
+    assert.deepEqual(externalValidationReadinessPayload.blockedExternalRequirementIds, expectedExternalPendingRequirementIds);
     assert.equal(externalValidationReadinessPayload.closureGateBlockers.includes("source_qa_review"), true);
 
     const externalValidationApprovalRequest = await built.app.inject({ method: "GET", url: "/v1/remote/external-validation-approval-request" });
@@ -171,7 +175,7 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(externalValidationApprovalRequestPayload.approved, false);
     assert.equal(externalValidationApprovalRequestPayload.readinessStatus, expectedExternalValidationApprovalRequest.readinessStatus);
     assert.equal(externalValidationApprovalRequestPayload.writes, false);
-    assert.equal(externalValidationApprovalRequestPayload.requirementIds.length, expectedExternalPending.requirements.length);
+    assert.deepEqual(externalValidationApprovalRequestPayload.requirementIds, expectedExternalPendingRequirementIds);
     assert.deepEqual(externalValidationApprovalRequestPayload.validationDomains, ["chat", "search", "sync", "secret_refs", "hosted_agents"]);
     assert.equal(externalValidationApprovalRequestPayload.prohibitedActions.some((entry) => entry.includes("plaintext secrets")), true);
 
@@ -203,7 +207,7 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(artifactExternalValidationReportPayload.writes, false);
     assert.equal(artifactExternalValidationReportPayload.evidenceCount, expectedExternalPending.requirements.length);
     assert.deepEqual(artifactExternalValidationReportPayload.clearableRequirementIds, []);
-    assert.equal(artifactExternalValidationReportPayload.blockedRequirementIds.length, expectedExternalPending.requirements.length);
+    assert.deepEqual(artifactExternalValidationReportPayload.blockedRequirementIds, expectedExternalPendingRequirementIds);
     assert.deepEqual(artifactExternalValidationReportPayload.invalidEvidenceRequirementIds, []);
     assert.deepEqual(artifactExternalValidationReportPayload.duplicateEvidenceRequirementIds, []);
 
@@ -229,7 +233,7 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     const completeExternalValidationReportPayload = completeExternalValidationReport.json() as { status: string; writes: boolean; clearableRequirementIds: string[]; blockedRequirementIds: string[]; invalidEvidenceRequirementIds: string[]; duplicateEvidenceRequirementIds: string[]; items: Array<{ clearable: boolean; writes: boolean; approvedRunRefPresent: boolean }> };
     assert.equal(completeExternalValidationReportPayload.status, "clearable");
     assert.equal(completeExternalValidationReportPayload.writes, false);
-    assert.equal(completeExternalValidationReportPayload.clearableRequirementIds.length, expectedExternalPending.requirements.length);
+    assert.deepEqual(completeExternalValidationReportPayload.clearableRequirementIds, expectedExternalPendingRequirementIds);
     assert.deepEqual(completeExternalValidationReportPayload.blockedRequirementIds, []);
     assert.deepEqual(completeExternalValidationReportPayload.invalidEvidenceRequirementIds, []);
     assert.deepEqual(completeExternalValidationReportPayload.duplicateEvidenceRequirementIds, []);
@@ -261,17 +265,18 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     const invalidExternalValidationReportPayload = invalidExternalValidationReport.json() as { status: string; invalidEvidenceRequirementIds: string[]; clearableRequirementIds: string[] };
     assert.equal(invalidExternalValidationReportPayload.status, "external_pending");
     assert.deepEqual(invalidExternalValidationReportPayload.invalidEvidenceRequirementIds, ["unknown_external_requirement"]);
-    assert.equal(invalidExternalValidationReportPayload.clearableRequirementIds.length, expectedExternalPending.requirements.length);
+    assert.deepEqual(invalidExternalValidationReportPayload.clearableRequirementIds, expectedExternalPendingRequirementIds);
 
     const sourceQaTemplate = await built.app.inject({ method: "GET", url: "/v1/remote/source-qa-template" });
     assert.equal(sourceQaTemplate.statusCode, 200);
-    const sourceQaTemplatePayload = sourceQaTemplate.json() as { status: string; writes: boolean; sourceConversationId: string; sourcePlanId: string; requiredSourceQaIds: string[]; reviewCount: number; submissionCommand: string; items: Array<{ qaId: string; decisionKey: string; reviewed: boolean; disposition: null; evidenceRefs: string[]; reviewedAt: null; writes: boolean }> };
+    const sourceQaTemplatePayload = sourceQaTemplate.json() as { status: string; writes: boolean; sourceConversationId: string; sourcePlanId: string; requiredSourceQaIds: string[]; externalPendingRequiredSourceQaIds: string[]; reviewCount: number; submissionCommand: string; items: Array<{ qaId: string; decisionKey: string; reviewed: boolean; disposition: null; evidenceRefs: string[]; reviewedAt: null; writes: boolean }> };
     const expectedSourceQaTemplate = buildRemoteSourceQaReviewTemplate();
     assert.equal(sourceQaTemplatePayload.status, "incomplete");
     assert.equal(sourceQaTemplatePayload.writes, false);
     assert.equal(sourceQaTemplatePayload.sourceConversationId, expectedSourceQaTemplate.sourceConversationId);
     assert.equal(sourceQaTemplatePayload.sourcePlanId, expectedSourceQaTemplate.sourcePlanId);
     assert.deepEqual(sourceQaTemplatePayload.requiredSourceQaIds, expectedSourceQaTemplate.requiredSourceQaIds);
+    assert.deepEqual(sourceQaTemplatePayload.externalPendingRequiredSourceQaIds, expectedSourceQaTemplate.externalPendingRequiredSourceQaIds);
     assert.equal(sourceQaTemplatePayload.reviewCount, 23);
     assert.equal(sourceQaTemplatePayload.items.every((entry) => !entry.reviewed && entry.disposition === null && entry.evidenceRefs.length === 0 && entry.reviewedAt === null && !entry.writes), true);
     assert.equal(sourceQaTemplatePayload.items.some((entry) => entry.qaId === "QA-023" && entry.decisionKey === "goal_closure_gate"), true);
@@ -284,8 +289,9 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
       payload: { sourceQaIds: ["QA-001", "QA-023"] },
     });
     assert.equal(scopedSourceQaTemplate.statusCode, 200);
-    const scopedSourceQaTemplatePayload = scopedSourceQaTemplate.json() as { reviewCount: number; items: Array<{ qaId: string }> };
+    const scopedSourceQaTemplatePayload = scopedSourceQaTemplate.json() as { reviewCount: number; externalPendingRequiredSourceQaIds: string[]; items: Array<{ qaId: string }> };
     assert.equal(scopedSourceQaTemplatePayload.reviewCount, 2);
+    assert.deepEqual(scopedSourceQaTemplatePayload.externalPendingRequiredSourceQaIds, []);
     assert.deepEqual(scopedSourceQaTemplatePayload.items.map((entry) => entry.qaId), ["QA-001", "QA-023"]);
 
     const closureGate = await built.app.inject({ method: "GET", url: "/v1/remote/closure-gate" });
@@ -299,12 +305,11 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(closureGatePayload.missingSourceQaIds.length, 23);
     assert.deepEqual(closureGatePayload.invalidSourceQaIds, []);
     assert.deepEqual(closureGatePayload.duplicateSourceQaIds, []);
-    assert.equal(closureGatePayload.externalPendingRequiredSourceQaIds.includes("QA-004"), true);
-    assert.equal(closureGatePayload.externalPendingRequiredSourceQaIds.includes("QA-007"), true);
+    assert.deepEqual(closureGatePayload.externalPendingRequiredSourceQaIds, expectedClosureGate.externalPendingRequiredSourceQaIds);
     assert.deepEqual(closureGatePayload.invalidExternalPendingDispositionQaIds, []);
     assert.equal(closureGatePayload.sourceQaReviewStatus, "incomplete");
     assert.equal(closureGatePayload.sourceQaReviewItems.length, 0);
-    assert.equal(closureGatePayload.blockedExternalRequirementIds.length, expectedExternalPending.requirements.length);
+    assert.deepEqual(closureGatePayload.blockedExternalRequirementIds, expectedExternalPendingRequirementIds);
     assert.deepEqual(closureGatePayload.clearableExternalRequirementIds, []);
     assert.equal(closureGatePayload.blockers.includes("source_qa_review"), true);
     assert.equal(closureGatePayload.blockers.includes("external_validation"), true);
@@ -328,7 +333,7 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.deepEqual(reviewedPendingClosureGatePayload.duplicateSourceQaIds, []);
     assert.deepEqual(reviewedPendingClosureGatePayload.invalidExternalPendingDispositionQaIds, []);
     assert.equal(reviewedPendingClosureGatePayload.sourceQaReviewStatus, "complete");
-    assert.equal(reviewedPendingClosureGatePayload.blockedExternalRequirementIds.length, expectedExternalPending.requirements.length);
+    assert.deepEqual(reviewedPendingClosureGatePayload.blockedExternalRequirementIds, expectedExternalPendingRequirementIds);
     assert.deepEqual(reviewedPendingClosureGatePayload.clearableExternalRequirementIds, []);
     assert.deepEqual(reviewedPendingClosureGatePayload.blockers, ["external_validation"]);
 
@@ -365,7 +370,7 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
       },
     });
     assert.equal(readyForApprovedRun.statusCode, 200);
-    const readyForApprovedRunPayload = readyForApprovedRun.json() as { status: string; writes: boolean; sourceQaReady: boolean; externalEvidenceReady: boolean; sourceQaReviewStatus: string; evidenceCount: number; requiredEvidenceCount: number; missingEvidenceRequirementIds: string[]; closureGateBlockers: string[]; nextAction: string };
+    const readyForApprovedRunPayload = readyForApprovedRun.json() as { status: string; writes: boolean; sourceQaReady: boolean; externalEvidenceReady: boolean; sourceQaReviewStatus: string; evidenceCount: number; requiredEvidenceCount: number; missingEvidenceRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockedExternalRequirementIds: string[]; closureGateBlockers: string[]; nextAction: string };
     assert.equal(readyForApprovedRunPayload.status, "ready_for_approved_run");
     assert.equal(readyForApprovedRunPayload.writes, false);
     assert.equal(readyForApprovedRunPayload.sourceQaReady, true);
@@ -374,6 +379,8 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(readyForApprovedRunPayload.evidenceCount, expectedExternalPending.requirements.length);
     assert.equal(readyForApprovedRunPayload.requiredEvidenceCount, expectedExternalPending.requirements.length);
     assert.deepEqual(readyForApprovedRunPayload.missingEvidenceRequirementIds, []);
+    assert.deepEqual(readyForApprovedRunPayload.clearableExternalRequirementIds, []);
+    assert.deepEqual(readyForApprovedRunPayload.blockedExternalRequirementIds, expectedExternalPendingRequirementIds);
     assert.deepEqual(readyForApprovedRunPayload.closureGateBlockers, ["external_validation"]);
     assert.equal(readyForApprovedRunPayload.nextAction.includes("approved physical/provider validation"), true);
 
@@ -387,11 +394,12 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
       },
     });
     assert.equal(approvalRequestReady.statusCode, 200);
-    const approvalRequestReadyPayload = approvalRequestReady.json() as { status: string; approvalRequired: boolean; approved: boolean; readinessStatus: string; requiredCommands: string[]; writes: boolean };
+    const approvalRequestReadyPayload = approvalRequestReady.json() as { status: string; approvalRequired: boolean; approved: boolean; readinessStatus: string; requirementIds: string[]; requiredCommands: string[]; writes: boolean };
     assert.equal(approvalRequestReadyPayload.status, "approval_required");
     assert.equal(approvalRequestReadyPayload.approvalRequired, true);
     assert.equal(approvalRequestReadyPayload.approved, false);
     assert.equal(approvalRequestReadyPayload.readinessStatus, "ready_for_approved_run");
+    assert.deepEqual(approvalRequestReadyPayload.requirementIds, expectedExternalPendingRequirementIds);
     assert.equal(approvalRequestReadyPayload.requiredCommands.some((entry) => entry.includes("validation-readiness")), true);
     assert.equal(approvalRequestReadyPayload.writes, false);
 
@@ -414,12 +422,12 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(clearableClosureGatePayload.sourceQaReviewStatus, "complete");
     assert.equal(clearableClosureGatePayload.sourceQaReviewItems.length, 23);
     assert.deepEqual(clearableClosureGatePayload.blockedExternalRequirementIds, []);
-    assert.equal(clearableClosureGatePayload.clearableExternalRequirementIds.length, expectedExternalPending.requirements.length);
+    assert.deepEqual(clearableClosureGatePayload.clearableExternalRequirementIds, expectedExternalPendingRequirementIds);
     assert.deepEqual(clearableClosureGatePayload.blockers, []);
 
     const routeContracts = await built.app.inject({ method: "GET", url: "/v1/remote/route-contracts" });
     assert.equal(routeContracts.statusCode, 200);
-    const routeContractsPayload = routeContracts.json() as { status: string; writes: boolean; missingRouteIds: string[]; contracts: Array<{ routeId: string; localContractRefs: string[]; remoteEntryPoints: string[]; parityRequired: boolean; parallelApiAllowed: boolean; writes: boolean }> };
+    const routeContractsPayload = routeContracts.json() as { status: string; writes: boolean; missingRouteIds: string[]; contracts: Array<{ routeId: string; layer: string; localContractRefs: string[]; remoteEntryPoints: string[]; parityRequired: boolean; parallelApiAllowed: boolean; writes: boolean }> };
     const expectedRouteContracts = buildRemoteRouteContractCatalog({ registeredRouteIds: registeredRouteIds() });
     assert.equal(routeContractsPayload.status, "complete");
     assert.equal(routeContractsPayload.writes, false);
@@ -429,6 +437,7 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
       expectedRouteContracts.contracts.map((entry) => entry.routeId),
     );
     assert.deepEqual(routeContractsPayload.contracts.map((entry) => entry.routeId), remoteSyncRequiredRouteIds);
+    assert.deepEqual(routeContractsPayload.contracts.map((entry) => entry.layer), expectedRouteContracts.contracts.map((entry) => entry.layer));
     assert.equal(routeContractsPayload.contracts.some((entry) => entry.routeId === "remote.searchGateway" && entry.localContractRefs.includes("claw search")), true);
     assert.equal(routeContractsPayload.contracts.some((entry) => entry.routeId === "gateway.multiTenantAgentService" && entry.remoteEntryPoints.includes("POST /v1/gateway/agent-service/evaluate")), true);
     assert.equal(routeContractsPayload.contracts.every((entry) => entry.parityRequired && !entry.parallelApiAllowed && entry.writes === false), true);
@@ -442,6 +451,7 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.deepEqual(providerDeviceE2EPlanPayload.requiredDomains, expectedProviderDeviceE2EPlan.requiredDomains);
     assert.deepEqual(providerDeviceE2EPlanPayload.requiredTopologyTargets, expectedProviderDeviceE2EPlan.requiredTopologyTargets);
     assert.deepEqual(providerDeviceE2EPlanPayload.requiredRouteIds, expectedProviderDeviceE2EPlan.requiredRouteIds);
+    assert.deepEqual(providerDeviceE2EPlanPayload.validationSteps.map((entry) => entry.requiredRouteIds), expectedProviderDeviceE2EPlan.validationSteps.map((entry) => entry.requiredRouteIds));
     assert.deepEqual(providerDeviceE2EPlanPayload.requiredExternalPendingIds, expectedProviderDeviceE2EPlan.requiredExternalPendingIds);
     assert.deepEqual(providerDeviceE2EPlanPayload.validationSteps.map((entry) => entry.domain), expectedProviderDeviceE2EPlan.requiredDomains);
     assert.equal(providerDeviceE2EPlanPayload.validationSteps.some((entry) => entry.domain === "secret_refs" && entry.requiredRouteIds.includes("remote.secretBrokeredOperation") && entry.requiredExternalPendingIds.includes("provider_secret_retrieval")), true);
@@ -509,16 +519,23 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
 
     const syncDrivers = await built.app.inject({ method: "GET", url: "/v1/sync/drivers" });
     assert.equal(syncDrivers.statusCode, 200);
-    const syncDriversPayload = syncDrivers.json() as { status: string; writes: boolean; driverCount: number; missingDrivers: string[]; missingRouteIds: string[]; authorityModel: string; conflictDefault: string; physicalApplicationStatus: string; entries: Array<{ driver: string; routeId: string; lateralDomains: string[]; manifestBacked: boolean; changelogBacked: boolean; authorityScoped: boolean; partialResourceSupported: boolean; physicalDriverRequired: boolean; commands: string[]; writes: boolean }> };
+    const syncDriversPayload = syncDrivers.json() as { status: string; writes: boolean; driverCount: number; requiredDrivers: string[]; coveredDrivers: string[]; requiredRouteIds: string[]; missingDrivers: string[]; missingRouteIds: string[]; authorityModel: string; conflictDefault: string; physicalApplicationStatus: string; entries: Array<{ driver: string; routeId: string; lateralDomains: string[]; manifestBacked: boolean; changelogBacked: boolean; authorityScoped: boolean; partialResourceSupported: boolean; physicalDriverRequired: boolean; commands: string[]; writes: boolean }> };
     const expectedSyncDrivers = buildSyncDriverCatalog({ registeredRouteIds: registeredRouteIds() });
     assert.equal(syncDriversPayload.status, "complete");
     assert.equal(syncDriversPayload.writes, false);
     assert.equal(syncDriversPayload.driverCount, expectedSyncDrivers.driverCount);
+    assert.deepEqual(syncDriversPayload.requiredDrivers, expectedSyncDrivers.requiredDrivers);
+    assert.deepEqual(syncDriversPayload.coveredDrivers, expectedSyncDrivers.coveredDrivers);
+    assert.deepEqual(syncDriversPayload.requiredRouteIds, expectedSyncDrivers.requiredRouteIds);
     assert.deepEqual(syncDriversPayload.missingDrivers, []);
     assert.deepEqual(syncDriversPayload.missingRouteIds, []);
     assert.equal(syncDriversPayload.authorityModel, "per_resource");
     assert.equal(syncDriversPayload.conflictDefault, "detect_and_elevate");
     assert.equal(syncDriversPayload.physicalApplicationStatus, "external_pending");
+    assert.deepEqual(syncDriversPayload.entries.map((entry) => entry.driver), expectedSyncDrivers.entries.map((entry) => entry.driver));
+    assert.deepEqual(syncDriversPayload.entries.map((entry) => entry.routeId), expectedSyncDrivers.entries.map((entry) => entry.routeId));
+    assert.deepEqual(syncDriversPayload.entries.map((entry) => entry.lateralDomains), expectedSyncDrivers.entries.map((entry) => entry.lateralDomains));
+    assert.deepEqual(syncDriversPayload.entries.map((entry) => entry.commands), expectedSyncDrivers.entries.map((entry) => entry.commands));
     assert.equal(syncDriversPayload.entries.some((entry) => entry.driver === "skills" && entry.routeId === "sync.skills" && entry.lateralDomains.includes("skills")), true);
     assert.equal(syncDriversPayload.entries.some((entry) => entry.driver === "memory_user_model" && entry.routeId === "sync.memoryUserModel" && entry.lateralDomains.includes("memory")), true);
     assert.equal(syncDriversPayload.entries.some((entry) => entry.driver === "drive_files" && entry.routeId === "sync.driveFiles" && entry.lateralDomains.includes("drive")), true);

@@ -297,6 +297,7 @@ export const remoteSourceQaReviewTemplateSchema = z.object({
   generatedAt: z.string().datetime(),
   status: z.literal("incomplete"),
   requiredSourceQaIds: z.array(z.string().min(1)).min(1),
+  externalPendingRequiredSourceQaIds: z.array(z.string().min(1)),
   reviewCount: z.number().int().nonnegative(),
   submissionCommand: z.string().min(1),
   items: z.array(remoteSourceQaReviewTemplateItemSchema).min(1),
@@ -1151,6 +1152,7 @@ export function buildRemoteSourceQaReviewTemplate(input: {
   const generatedAt = input.generatedAt ?? new Date().toISOString();
   const requestedIds = input.sourceQaIds?.length ? input.sourceQaIds : remoteGoalClosureRequiredSourceQaIds;
   const sourceQaIds = requestedIds.filter((qaId) => remoteGoalClosureRequiredSourceQaIds.includes(qaId));
+  const externalPendingQaIds = externalPendingRequiredSourceQaIds(generatedAt).filter((qaId) => sourceQaIds.includes(qaId));
   const items = sourceQaIds.map((qaId) => {
     const catalogEntry = remoteSourceQaCatalog[qaId];
     return remoteSourceQaReviewTemplateItemSchema.parse({
@@ -1173,13 +1175,14 @@ export function buildRemoteSourceQaReviewTemplate(input: {
     generatedAt,
     status: "incomplete",
     requiredSourceQaIds: sourceQaIds,
+    externalPendingRequiredSourceQaIds: externalPendingQaIds,
     reviewCount: items.length,
     submissionCommand: "claw remote closure-gate --source-qa-review-json '<completed RemoteSourceQaReviewItem[]>' --json",
     items,
     instructions: [
       "Review each source Q/A row against the current implementation before filling this template.",
       "Convert each completed row into a RemoteSourceQaReviewItem with disposition, non-empty evidenceRefs, reviewedAt, and writes false.",
-      "Use disposition external_pending only for physical/provider rows that cannot be completed locally.",
+      "Use disposition external_pending only for the externalPendingRequiredSourceQaIds rows until physical/provider evidence clears.",
       "Do not submit this template directly; incomplete rows are intentionally rejected by the closure gate.",
     ],
     writes: false,

@@ -332,8 +332,10 @@ the original Relay/Gateway/Coordinator/Connector/Sync source conversation and
 plan. It is intentionally incomplete: every row must be reviewed one by one and
 converted into a `RemoteSourceQaReviewItem` with disposition, evidence refs,
 review timestamp, and `writes: false` before submission to `remote closure-gate`.
-Rows tied to physical/provider requirements in `RemoteExternalPendingRegister`
-must use `external_pending` disposition until those requirements are cleared;
+The template exposes `externalPendingRequiredSourceQaIds` so operators can see
+the exact source Q/A rows tied to physical/provider requirements in
+`RemoteExternalPendingRegister`; those rows must use `external_pending`
+disposition until those requirements are cleared;
 the report exposes duplicate rows as `duplicateSourceQaIds` and disposition
 mismatches as `invalidExternalPendingDispositionQaIds`. The closure command can
 consume either `--source-qa-review-json` or a versioned artifact with
