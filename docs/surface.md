@@ -1120,20 +1120,32 @@ The docs check script validates that every current export from
     actorTrustSourceSchema
     AGENCY_MODES
     AgencyMode
+    AGENT_ASSIGNMENT_KINDS
+    AGENT_ASSIGNMENT_STATUSES
+    AGENT_RESOURCE_ACTIONS
     AgentAccessRequest
-    AgentRegulatedSafetyDeclaration
+    AgentActionSeverity
+    AgentActionSeverityRequest
+    AgentActionSeverityResult
     AgentActivityFeed
     AgentActivityFeedInput
     AgentActivityFeedItem
     AgentActivityFeedItemKind
-    AGENT_ASSIGNMENT_KINDS
     AgentAssignmentKind
     AgentAssignmentPrivacyPolicy
     AgentAssignmentRoute
     AgentAssignmentRouteRequest
     AgentAssignmentRouteResult
+    AgentAssignmentStatus
+    AgentAuditCoverageInput
+    AgentAuditCoverageInvalidEvent
+    AgentAuditCoverageReport
     AgentAuditEvent
     AgentAuditEventKind
+    AgentAutonomyDispatchMode
+    AgentAutonomyPolicyInput
+    AgentAutonomyPolicyResult
+    AgentAutonomyProfile
     AgentBlueprint
     AgentBlueprintInput
     AgentBlueprintStatus
@@ -1143,23 +1155,9 @@ The docs check script validates that every current export from
     AgentBudgetLimit
     AgentBudgetPolicy
     AgentBudgetRequest
-    AGENT_ASSIGNMENT_STATUSES
-    AgentAssignmentStatus
-    AgentActionSeverity
-    AgentActionSeverityRequest
-    AgentActionSeverityResult
-    AgentAuditCoverageInput
-    AgentAuditCoverageInvalidEvent
-    AgentAuditCoverageReport
-    AgentAutonomyDispatchMode
-    AgentAutonomyPolicyInput
-    AgentAutonomyPolicyResult
-    AgentAutonomyProfile
     AgentConfigRevision
     AgentConfigRevisionInput
     AgentConfigRevisionStatus
-    AgentControlPanel
-    AgentControlPanelInput
     AgentContextPack
     AgentContextPackDeniedItem
     AgentContextPackEntry
@@ -1167,6 +1165,8 @@ The docs check script validates that every current export from
     AgentContextPackItem
     AgentContextScope
     AgentContextViewPolicy
+    AgentControlPanel
+    AgentControlPanelInput
     AgentCreationReview
     AgentCreationReviewInput
     AgentDelegationAccessInput
@@ -1208,22 +1208,23 @@ The docs check script validates that every current export from
     AgentPrivacyLifecycleOperation
     AgentPrivacyLifecyclePlan
     AgentPrivacyLifecycleSubject
-    AgentResolvedExternalIdentity
-    AgentRetirementInput
-    AgentRetirementPlan
     AgentRecord
     agentRecordSchema
-    AGENT_RESOURCE_ACTIONS
+    AgentRegulatedSafetyDeclaration
+    AgentResolvedExternalIdentity
     AgentResourceAction
     AgentResourceGrant
+    AgentRetirementInput
+    AgentRetirementPlan
+    AGENTS_FAMILY
     AgentSafeExportInput
     AgentSafePackageExport
     AgentSafeSurfaceKind
     AgentSafeSurfaceProjection
     AgentSafeSurfaceProjectionInput
-    AgentServiceApiOperation
     AgentServiceApiHttpRequest
     AgentServiceApiHttpResponse
+    AgentServiceApiOperation
     AgentServiceApiRequest
     AgentServiceApiResponse
     AgentSkillBinding
@@ -1235,9 +1236,8 @@ The docs check script validates that every current export from
     AgentSupervisorAuthorityResult
     AgentSupportInboxProjection
     AgentSupportInboxProjectionInput
-    AGENTS_FAMILY
-    AgentToolCatalogBlockedItem
     AgentToolCatalog
+    AgentToolCatalogBlockedItem
     AgentToolCatalogProjection
     AgentToolCatalogProjectionInput
     AgentToolCatalogProjectionItem
@@ -1247,6 +1247,8 @@ The docs check script validates that every current export from
     AgentToolInvocationResult
     AgentToolParameters
     AgentToolRiskLevel
+    AllowedRegulatedUse
+    allowedRegulatedUses
     ANALYTICS_FAMILY
     ApprovalRecord
     approvalRecordSchema
@@ -1256,7 +1258,12 @@ The docs check script validates that every current export from
     areaRecordSchema
     ArtifactRecord
     artifactRecordSchema
+    assertClawDenseDataOsRegistryComplete
+    assertClawDomainSurfaceRegistryComplete
     assertCodexReadOnlyPath
+    assertMacControlPlaneRegistryComplete
+    assertRegulatedDomainSafetyComplete
+    assertSafeClawProjectHandoff
     AssignmentRecord
     assignmentRecordSchema
     Attachment
@@ -1265,17 +1272,45 @@ The docs check script validates that every current export from
     AUDIT_FAMILY
     AuditEvent
     auditEventSchema
+    AuditPolicy
     AuthProfileSummary
     AuthState
     AutomationRecord
     automationRecordSchema
     BILLING_FAMILY
-    BIOLOGY_FAMILY
     BindingDefinition
     bindingDefinitionSchema
+    BIOLOGY_FAMILY
+    BlockedRegulatedUse
+    blockedRegulatedUses
     BlockerRecord
     blockerRecordSchema
     BOOKMARKS_MISC_FAMILY
+    buildConnectorContextDoctorReport
+    buildMacActionAuditEvent
+    BuildMacActionAuditEventInput
+    buildMacActionPlan
+    BuildMacActionPlanInput
+    buildMacActionReceipt
+    BuildMacActionReceiptInput
+    buildRemoteConformanceReport
+    buildRemoteExternalPendingRegister
+    buildRemoteExternalValidationApprovalRequest
+    buildRemoteExternalValidationChecklist
+    buildRemoteExternalValidationEvidenceArtifact
+    buildRemoteExternalValidationEvidenceTemplate
+    buildRemoteExternalValidationReadiness
+    buildRemoteExternalValidationReport
+    buildRemoteExternalValidationRunbook
+    buildRemoteGoalClosureGate
+    buildRemoteOfflineCommandResult
+    buildRemoteProviderDeviceE2EValidationPlan
+    buildRemoteRouteContractCatalog
+    buildRemoteSourceQaReviewReport
+    buildRemoteSourceQaReviewTemplate
+    buildSyncDriverCatalog
+    buildSyncPlan
+    buildSyncQueueEntries
     BUILTIN_COLLECTIONS
     BUILTIN_COLLECTIONS_BY_ALIAS
     BUILTIN_COLLECTIONS_BY_NAME
@@ -1310,13 +1345,13 @@ The docs check script validates that every current export from
     CATALOG_COVERAGE_WAVES
     CatalogAuditBatchStatus
     CatalogAuditConfidence
-    CatalogAuditStructuralChange
     CatalogAuditedArchetype
     CatalogAuditedBatch
     CatalogAuditedBatchReport
     CatalogAuditedFieldMapping
     CatalogAuditedNeed
     CatalogAuditedRelationMapping
+    CatalogAuditStructuralChange
     CatalogCoverageMapping
     CatalogCoverageNeed
     CatalogCoverageRelationNeed
@@ -1336,8 +1371,12 @@ The docs check script validates that every current export from
     ChannelsStateSnapshot
     channelsStateSnapshotSchema
     ChannelTargetDescriptor
+    classifyEvolutionBackupPolicy
     CLAW_CANONICAL_HIERARCHY
     CLAW_CANONICAL_TERMS
+    CLAW_CLI_COMMAND_INTENT_STATUSES
+    CLAW_EVOLUTION_CHANGE_CLASSES
+    CLAW_EVOLUTION_RECORD_STATUSES
     CLAW_NON_SYNONYMS
     clawApiPath
     clawAppPorts
@@ -1355,19 +1394,12 @@ The docs check script validates that every current export from
     clawCapabilitySchema
     clawChannelEvents
     clawChatAppStorageKeys
-    CLAW_CLI_COMMAND_INTENT_STATUSES
-    clawCliCommandRegistry
     ClawCliCommandIntentEntry
-    clawProjectAttachmentStateSchema
-    clawProjectFolderRefSchema
-    clawProjectFolderRoleSchema
-    ClawProjectManifest
-    clawProjectManifestSchema
-    clawProjectTypeSchema
     ClawCliCommandIntentResolution
     ClawCliCommandIntentRisk
     ClawCliCommandIntentSource
     ClawCliCommandIntentStatus
+    clawCliCommandRegistry
     ClawCliCommandRegistry
     ClawCliCommandRegistryEntry
     clawCliCommandRegistryVersion
@@ -1379,29 +1411,25 @@ The docs check script validates that every current export from
     ClawCliSupportDeclaration
     ClawCliSupportState
     ClawCliSurfaceKind
-    GOVERNANCE_CAPABILITIES
-    GOVERNANCE_ENTITY_KINDS
-    GOVERNANCE_PRINCIPAL_KINDS
-    GOVERNANCE_SCOPE_KINDS
-    GovernanceAccessInput
-    GovernanceAccessRequest
-    GovernanceAuthorityEdge
-    GovernanceBinding
-    GovernanceCapability
-    GovernanceDelegationInput
-    GovernanceEffectiveAccess
-    GovernanceEntity
-    GovernanceEntityKind
-    GovernanceGrant
-    GovernancePrincipal
-    GovernancePrincipalKind
-    GovernanceResourceRef
-    GovernanceRestriction
-    GovernanceScopeHierarchyEdge
-    GovernanceScopeKind
-    GovernanceScopeRef
-    GovernanceSubjectRef
-    assertClawDenseDataOsRegistryComplete
+    clawCodexExternalEventSamples
+    clawCommandErrorSchema
+    ClawCommandRequest
+    clawCommandRequestFixtureV1
+    clawCommandRequestSchema
+    ClawCommandResponse
+    clawCommandResponseFixtureV1
+    clawCommandResponseSchema
+    clawContractFixturesV1
+    clawContractFixtureTimestamp
+    clawContractSchemasV1
+    clawContractVersionV1
+    clawCorePorts
+    clawDatabaseApiRoutePatterns
+    clawDatabaseApiRoutes
+    clawDatabaseRecordEvents
+    clawDeepLinkSchemes
+    clawDefaultBindAddress
+    clawDenseDataAcceptanceFixture
     ClawDenseDataAcceptanceFixture
     ClawDenseDataCenter
     ClawDenseDataExistingSurfaceDisposition
@@ -1413,7 +1441,9 @@ The docs check script validates that every current export from
     ClawDenseDataIntentEntry
     ClawDenseDataIntentResolution
     ClawDenseDataIntentStatus
+    clawDenseDataIntentStatuses
     ClawDenseDataOperation
+    clawDenseDataOsRegistry
     ClawDenseDataOsRegistry
     ClawDenseDataSemanticView
     ClawDenseDataSemanticViewEntry
@@ -1421,38 +1451,6 @@ The docs check script validates that every current export from
     ClawDenseDataStoragePolicy
     ClawDenseDataSystem
     ClawDenseDataWave
-    clawDenseDataAcceptanceFixture
-    clawDenseDataIntentStatuses
-    clawDenseDataOsRegistry
-    DATA_FOUNDATION_FAMILY
-    findClawDenseDataSystem
-    listClawDenseDataAcceptanceFixtureRecords
-    listClawDenseDataGapRegistryEntries
-    listClawDenseDataRegistryFixtureRecords
-    listClawDenseDataIntentEntries
-    listClawDenseDataSemanticViewEntries
-    listClawDenseDataSystems
-    resolveClawDenseDataIntent
-    clawCodexExternalEventSamples
-    clawCommandErrorSchema
-    ClawCommandRequest
-    clawCommandRequestFixtureV1
-    clawCommandRequestSchema
-    ClawCommandResponse
-    clawCommandResponseFixtureV1
-    clawCommandResponseSchema
-    clawSharedJsonFields
-    clawContractFixturesV1
-    clawContractFixtureTimestamp
-    clawContractSchemasV1
-    clawContractVersionV1
-    clawCorePorts
-    clawDatabaseApiRoutePatterns
-    clawDatabaseApiRoutes
-    clawDatabaseRecordEvents
-    clawStorageFiles
-    clawDeepLinkSchemes
-    clawDefaultBindAddress
     ClawDomain
     ClawDomainMigrationStatus
     ClawDomainMinimumContract
@@ -1463,23 +1461,46 @@ The docs check script validates that every current export from
     ClawDomainSurfaceEntry
     ClawDomainSurfaceKind
     ClawDomainSurfaceOwner
+    clawDomainSurfaceRegistry
     ClawDomainSurfaceRegistry
+    clawDomainSurfaceRegistryVersion
     ClawDomainSurfaceSource
     ClawDomainSurfaceStatus
-    assertClawDomainSurfaceRegistryComplete
-    clawDomainSurfaceRegistry
-    clawDomainSurfaceRegistryVersion
-    findClawDomainSurfaceEntry
-    listClawDomainSurfaceEntries
-    findClawSurfaceRoute
-    listClawSurfaceEdges
-    listClawSurfaceRoutes
-    clawV1ClosureMinimumContractDomains
     clawDriveApiRoutePatterns
     clawDriveApiRoutes
     ClawError
     ClawErrorCode
     clawEventsPath
+    ClawEvolutionBackupPolicy
+    clawEvolutionBackupPolicySchema
+    ClawEvolutionBaselineChange
+    clawEvolutionBaselineChangeSchema
+    ClawEvolutionBaselineCliCommand
+    clawEvolutionBaselineCliCommandSchema
+    ClawEvolutionBaselineSurface
+    clawEvolutionBaselineSurfaceSchema
+    ClawEvolutionFixtureSurface
+    clawEvolutionFixtureSurfaceSchema
+    ClawEvolutionLedger
+    clawEvolutionLedgerSchema
+    ClawEvolutionMigratorLabResult
+    clawEvolutionMigratorLabResultSchema
+    ClawEvolutionOperatorAction
+    clawEvolutionOperatorActionSchema
+    ClawEvolutionOperatorPlan
+    clawEvolutionOperatorPlanSchema
+    ClawEvolutionOperatorStep
+    clawEvolutionOperatorStepSchema
+    clawEvolutionPolicy
+    ClawEvolutionPolicy
+    ClawEvolutionPublicSurfaceBaseline
+    clawEvolutionPublicSurfaceBaselineSchema
+    ClawEvolutionReceipt
+    clawEvolutionReceiptSchema
+    ClawEvolutionRecord
+    clawEvolutionRecordSchema
+    ClawEvolutionVersionFixture
+    clawEvolutionVersionFixtureSchema
     clawExportExtensions
     clawExternalWebhookEventSamples
     clawGlobalHomeLayout
@@ -1506,6 +1527,8 @@ The docs check script validates that every current export from
     ClawjsSkillsConfig
     clawjsSkillsConfigSchema
     clawLocalHostnames
+    clawMacControlPlaneRegistry
+    clawMacControlPlaneRegistryVersion
     ClawManifest
     clawNotifyApiRoutes
     clawNotifyEventTypes
@@ -1520,16 +1543,22 @@ The docs check script validates that every current export from
     ClawPersistentSurfaceRegistry
     ClawPersistentSurfaceSource
     ClawPersistentSurfaceStorageClass
-    clawPreV1VersionGovernancePolicy
-    ClawPreV1VersionGovernancePolicy
-    clawSurfaceGraphEdges
-    clawSurfaceGraphRoutes
-    ClawSurfaceConnectionVisibility
-    ClawSurfaceEdge
-    ClawSurfaceEdgeType
     clawPortRange
     clawPortSubranges
+    clawPreV1VersionGovernancePolicy
+    ClawPreV1VersionGovernancePolicy
     clawPrivateAppApiPrefix
+    clawProjectAttachmentStateSchema
+    clawProjectFolderAccessPolicySchema
+    clawProjectFolderReadAccessSchema
+    clawProjectFolderRefSchema
+    clawProjectFolderRoleSchema
+    clawProjectFolderSyncModeSchema
+    clawProjectFolderSyncPolicySchema
+    clawProjectFolderWriteAccessSchema
+    ClawProjectManifest
+    clawProjectManifestSchema
+    clawProjectTypeSchema
     clawPublicApiPrefix
     clawRegisteredDdlSources
     clawRiskLevelSchema
@@ -1538,6 +1567,7 @@ The docs check script validates that every current export from
     clawServiceSocketPath
     clawServiceWindowsPipe
     clawSessionEvents
+    clawSharedJsonFields
     clawStableSurface
     ClawStableSurfaceClass
     ClawStableSurfaceDirection
@@ -1546,26 +1576,32 @@ The docs check script validates that every current export from
     ClawStableSurfaceRegistry
     ClawStableSurfaceStability
     clawStorageApiRoutes
+    clawStorageFiles
     ClawStoragePlatform
     ClawStorageRootsInput
+    ClawSurfaceConnectionVisibility
+    ClawSurfaceEdge
+    ClawSurfaceEdgeType
+    clawSurfaceGraphEdges
+    clawSurfaceGraphRoutes
     ClawSurfaceParityGap
     ClawSurfaceParityStatus
     ClawSurfaceParitySurface
+    clawSurfaceRegistryVersion
     ClawSurfaceRoute
     ClawSurfaceRouteStep
-    clawSurfaceRegistryVersion
     clawTemporalEvents
     clawTimeApiRoutes
+    clawV1ClosureMinimumContractDomains
     clawValidationModeSchema
     clawWorkspaceAuditEvents
     clawWorkspaceLayout
     CodexPathOperation
     COLLABORATION_FAMILY
+    commandIntentToNeedOpportunity
     CommentRecord
     commentRecordSchema
     COMMERCE_FAMILY
-    COMPLIANCE_FAMILY
-    CONTENT_FAMILY
     CommitmentAddInput
     CommitmentCaptureInput
     CommitmentCaptureResult
@@ -1590,23 +1626,23 @@ The docs check script validates that every current export from
     commitmentStateSchema
     CommitmentStatus
     commitmentStatusSchema
-    CONSTRUCTION_FAMILY
     COMMUNITIES_SPIRITUALITY_FAMILY
     CompatSnapshot
     compatSnapshotSchema
-    connectorApprovalGrantMatches
+    COMPLIANCE_FAMILY
+    CONNECTOR_CONTEXT_KINDS
+    CONNECTOR_CONTEXT_SCOPE_KINDS
+    CONNECTOR_CONTEXT_SENSITIVITIES
+    CONNECTOR_GOVERNED_CONTEXT_PROVIDER_ORDER
+    CONNECTOR_GOVERNED_CONTEXT_PROVIDER_SCHEMAS
+    CONNECTOR_GOVERNED_STATES
     ConnectorApprovalGrant
+    connectorApprovalGrantMatches
     ConnectorAuditDeclaration
     ConnectorBudget
     ConnectorBudgetUnknownCostBehavior
     ConnectorBudgetWindow
     ConnectorCapability
-    connectorControlPlaneVersion
-    ConnectorControlPlaneDecision
-    ConnectorControlPlaneDecisionReason
-    connectorGovernedContextVersion
-    ConnectorDescriptor
-    connectorDescriptorSchema
     ConnectorContextChoice
     ConnectorContextChoiceInput
     ConnectorContextDecisionReason
@@ -1619,7 +1655,6 @@ The docs check script validates that every current export from
     ConnectorContextFieldSchema
     ConnectorContextGuidance
     ConnectorContextKind
-    CONNECTOR_CONTEXT_KINDS
     ConnectorContextKindSchema
     ConnectorContextPolicy
     ConnectorContextPolicyEffect
@@ -1628,17 +1663,18 @@ The docs check script validates that every current export from
     ConnectorContextRecordField
     ConnectorContextRequirement
     ConnectorContextScope
-    CONNECTOR_CONTEXT_SCOPE_KINDS
     ConnectorContextScopeKind
-    CONNECTOR_CONTEXT_SENSITIVITIES
     ConnectorContextSensitivity
-    ConnectorExecutionPipelineStage
+    ConnectorControlPlaneDecision
+    ConnectorControlPlaneDecisionReason
+    connectorControlPlaneVersion
+    ConnectorDescriptor
+    connectorDescriptorSchema
     connectorExecutionPipeline
+    ConnectorExecutionPipelineStage
     ConnectorExecutionRequest
     ConnectorGovernedContextRecord
-    CONNECTOR_GOVERNED_CONTEXT_PROVIDER_ORDER
-    CONNECTOR_GOVERNED_CONTEXT_PROVIDER_SCHEMAS
-    CONNECTOR_GOVERNED_STATES
+    connectorGovernedContextVersion
     ConnectorGovernedState
     ConnectorNetworkPolicy
     ConnectorNetworkProof
@@ -1652,12 +1688,8 @@ The docs check script validates that every current export from
     ConnectorSupportState
     ConnectorTraceMode
     ConnectorTrustTier
-    allowedRegulatedUses
-    AllowedRegulatedUse
-    assertRegulatedDomainSafetyComplete
-    AuditPolicy
-    blockedRegulatedUses
-    BlockedRegulatedUse
+    CONSTRUCTION_FAMILY
+    CONTENT_FAMILY
     ContextChip
     ContextPackBudget
     contextPackBudgetSchema
@@ -1678,44 +1710,6 @@ The docs check script validates that every current export from
     ContextPackStatus
     contextPackStatusSchema
     COOKING_FAMILY
-    createCodexReadOnlySourceDescriptor
-    createAgentPermissionEscalationRequest
-    buildConnectorContextDoctorReport
-    createConnectorCapability
-    createManifest
-    createRegulatedOutputLabels
-    createTtsPlaybackPlan
-    CREATIVITY_FAMILY
-    CredentialBinding
-    CredentialSource
-    CRM_FAMILY
-    CUSTOMER_INTAKE_FAMILY
-    DisclaimerPolicy
-    CustomFieldRecord
-    customFieldRecordSchema
-    CycleRecord
-    cycleRecordSchema
-    DeadlineRecord
-    deadlineRecordSchema
-    DecisionRecord
-    decisionRecordSchema
-    DefaultModelRef
-    DeliveryState
-    DesiredSkillRecord
-    DeviceInstallation
-    DocumentIndexStatus
-    DocumentOrigin
-    DocumentRecord
-    DocumentRef
-    DocumentSearchResult
-    DocumentStorageDescriptor
-    EDUCATION_FAMILY
-    EDUCATION_SCHOOL_FAMILY
-    ELN_FAMILY
-    EffectiveAccessPolicy
-    EffectPreview
-    effectPreviewSchema
-    explainConnectorContextChoice
     createAgentActivityFeed
     createAgentAuditCoverageReport
     createAgentAuditEvent
@@ -1729,6 +1723,7 @@ The docs check script validates that every current export from
     createAgentIncident
     createAgentOperationalSnapshot
     createAgentPaperclipImportPlan
+    createAgentPermissionEscalationRequest
     createAgentPrivacyLifecyclePlan
     createAgentRetirementPlan
     createAgentSafePackageExport
@@ -1738,26 +1733,93 @@ The docs check script validates that every current export from
     createAgentStorageAudit
     createAgentSupportInboxProjection
     createAgentToolCatalogProjection
+    createClawProjectId
+    createCodexReadOnlySourceDescriptor
+    createConnectorCapability
+    createEvolutionOperatorPlan
+    createEvolutionPublicSurfaceBaseline
+    createEvolutionReceipt
+    createExampleSyncResourceManifest
+    createGatewayDeploymentManifest
+    createManifest
+    createMeshInvitation
+    createMeshInvitationAcceptance
+    createMeshResourceShare
+    createMeshRevocation
+    createNodeTrustDecision
+    createRegulatedOutputLabels
+    createRemoteAgentServiceExecutionReceipt
+    createRemoteClientCacheSnapshot
+    createRemoteCompatibilityAdapterReceipt
+    createRemoteGatewayAuditReceipt
+    createRemoteSecretProviderReceipt
+    createRemoteSurfaceClassificationReceipt
+    createSyncAuthorityHandoffReceipt
+    createSyncDriverApplicationReceipt
+    createSyncResourceManifest
+    createTransportHandshakeReceipt
+    createTtsPlaybackPlan
+    CREATIVITY_FAMILY
+    CredentialBinding
+    CredentialSource
+    CRM_FAMILY
+    CUSTOMER_INTAKE_FAMILY
+    CustomFieldRecord
+    customFieldRecordSchema
+    CycleRecord
+    cycleRecordSchema
+    DATA_FOUNDATION_FAMILY
+    DeadlineRecord
+    deadlineRecordSchema
+    DecisionRecord
+    decisionRecordSchema
+    dedupeNeedOpportunities
+    DefaultModelRef
+    DeliveryState
+    DesiredSkillRecord
+    detachGovernanceResourceScopeBinding
+    DeviceInstallation
+    diffEvolutionPublicSurfaceBaseline
+    DisclaimerPolicy
+    DocumentIndexStatus
+    DocumentOrigin
+    DocumentRecord
+    DocumentRef
+    DocumentSearchResult
+    DocumentStorageDescriptor
+    EDUCATION_FAMILY
+    EDUCATION_SCHOOL_FAMILY
+    EffectiveAccessPolicy
+    EffectPreview
+    effectPreviewSchema
+    ELN_FAMILY
+    EpicRecord
+    epicRecordSchema
     evaluateAgentActionSeverity
-    evaluateAgentAutonomyPolicy
     evaluateAgentAssignmentRoute
+    evaluateAgentAutonomyPolicy
     evaluateAgentBudget
     evaluateAgentDelegationAccess
     evaluateAgentEffectiveAccess
     evaluateAgentMemoryAccess
     evaluateAgentSupervisorAuthority
     evaluateConnectorControlPlaneRequest
+    evaluateGovernanceAccess
+    evaluateGovernanceDelegation
+    evaluateMacActionBroker
+    EvaluateMacActionBrokerInput
+    evaluateNeedRoute
+    evaluateNeedRoutes
     evaluateRegulatedAction
-    EpicRecord
-    epicRecordSchema
+    evaluateRemoteAccess
+    evaluateRemoteAgentServiceAccess
     EventRecord
     eventRecordSchema
     EventReminder
     eventReminderSchema
     EVENTS_MEMORIES_FAMILY
+    explainConnectorContextChoice
     ExternalPrincipal
-    redactAgentBoundaryValue
-    resolveAgentExternalIdentity
     ExternalPrincipalKind
     FAMILY_CARE_FAMILY
     FeatureOwnership
@@ -1769,17 +1831,50 @@ The docs check script validates that every current export from
     FileMutationMode
     FilesIntentState
     FINANCE_FAMILY
+    findClawDenseDataSystem
+    findClawDomainSurfaceEntry
     findClawPersistentSurfaceNode
+    findClawProjectManifestPortabilityViolations
+    findClawSurfaceRoute
+    findMacAtlasCapability
     FITNESS_FAMILY
     FLOW_FAMILY
+    forkGovernanceResourceScopeBinding
     FREELANCE_CONSUMER_FAMILY
     GARDEN_FAMILY
-    GOVERNMENT_FAMILY
+    GatewayDeploymentManifest
+    gatewayDeploymentManifestSchema
+    generateNeedRoutes
     getBuiltinCollection
     getConnectorGovernedContextProviderSchema
     getRegulatedDomainPolicy
     GoalRecord
     goalRecordSchema
+    GOVERNANCE_CAPABILITIES
+    GOVERNANCE_ENTITY_KINDS
+    GOVERNANCE_PRINCIPAL_KINDS
+    GOVERNANCE_SCOPE_KINDS
+    GovernanceAccessInput
+    GovernanceAccessRequest
+    GovernanceAuthorityEdge
+    GovernanceBinding
+    GovernanceCapability
+    GovernanceDelegationInput
+    GovernanceEffectiveAccess
+    GovernanceEntity
+    GovernanceEntityKind
+    GovernanceGrant
+    GovernancePrincipal
+    GovernancePrincipalKind
+    GovernanceResourceRef
+    GovernanceResourceScopeBinding
+    GovernanceResourceSharingSummary
+    GovernanceRestriction
+    GovernanceScopeHierarchyEdge
+    GovernanceScopeKind
+    GovernanceScopeRef
+    GovernanceSubjectRef
+    GOVERNMENT_FAMILY
     GuidanceHint
     GuidanceInput
     GuidanceMatchCondition
@@ -1813,15 +1908,17 @@ The docs check script validates that every current export from
     incidentRecordSchema
     INFRA_FAMILY
     INTEGRATIONS_FAMILY
-    IOT_FAMILY
     Intent
     IntentDomain
     intentDomainSchema
     intentSchema
+    IOT_FAMILY
     IoTActionRequest
     iotActionRequestSchema
     IoTActionResult
     iotActionResultSchema
+    IoTDeviceDescriptor
+    IoTDeviceKind
     IoTEventRecord
     iotEventRecordSchema
     IoTPolicyEvaluation
@@ -1829,7 +1926,6 @@ The docs check script validates that every current export from
     IoTRiskLevel
     IoTStateSnapshot
     iotStateSnapshotSchema
-    IoTDeviceKind
     isConnectorCapabilityId
     isInsideCodexHome
     isRegulatedDomain
@@ -1853,6 +1949,7 @@ The docs check script validates that every current export from
     JudgmentStatus
     judgmentStatusSchema
     KnownRuntimeAdapterId
+    LABS_FAMILY
     LEARNING_FAMILY
     LearningAddInput
     LearningEvidence
@@ -1877,6 +1974,7 @@ The docs check script validates that every current export from
     learningStatusSchema
     LearningTarget
     learningTargetSchema
+    LEGAL_FAMILY
     LibraryAsset
     LibraryAssetKind
     libraryAssetSchema
@@ -1902,13 +2000,85 @@ The docs check script validates that every current export from
     listCatalogAuditedNeeds
     listCatalogCoverageNeeds
     listClawCliAliases
+    listClawCliCommandIntentRegistry
     listClawCliCommands
+    listClawDenseDataAcceptanceFixtureRecords
+    listClawDenseDataGapRegistryEntries
+    listClawDenseDataIntentEntries
+    listClawDenseDataRegistryFixtureRecords
+    listClawDenseDataSemanticViewEntries
+    listClawDenseDataSystems
+    listClawDomainSurfaceEntries
     listClawPersistentSurfaceNodes
+    listClawSurfaceEdges
+    listClawSurfaceRoutes
+    listMacAtlasCapabilities
+    listMacCommandRoots
+    listMacProgrammaticSurfaces
+    listMacRelatedSurfaces
+    listNeedCapabilityGraph
+    listNeedDimensions
+    listNeedRoutePilotPacks
     ListRecord
     listRecordSchema
+    listSystemTelemetryMetrics
+    listSystemTelemetryWidgets
     LUXURY_AND_COLLECTING_FAMILY
-    LABS_FAMILY
-    LEGAL_FAMILY
+    MAC_CAPABILITY_ATLAS
+    MAC_CONTROL_COMMAND_ROOTS
+    MAC_PERMISSION_CATALOG
+    MAC_PERMISSION_PACKS
+    MAC_PROGRAMMATIC_SURFACES
+    MacActionAuditEvent
+    macActionAuditEventSchema
+    MacActionBrokerDecision
+    macActionBrokerDecisionSchema
+    MacActionBrokerEvaluation
+    macActionBrokerEvaluationSchema
+    MacActionPlan
+    macActionPlanSchema
+    MacActionReceipt
+    macActionReceiptSchema
+    MacActionRequest
+    macActionRequestSchema
+    MacActionResult
+    macActionResultSchema
+    macActionTargetSchema
+    macActorKindSchema
+    macActorSchema
+    MacApprovalRequest
+    macApprovalRequestSchema
+    macApprovalStatusSchema
+    MacAtlasCapability
+    macAtlasCapabilitySchema
+    MacControlCommandRoot
+    MacCoverageState
+    macCoverageStateSchema
+    macFrameworkGrantStateSchema
+    macHostIdentitySchema
+    MacPermissionCatalogEntry
+    macPermissionOsStateSchema
+    MacPermissionPack
+    macPermissionRequirementSchema
+    MacPermissionState
+    macPermissionStateSchema
+    MacPolicyGrant
+    macPolicyGrantSchema
+    MacProgrammaticLifecycleAction
+    macProgrammaticLifecycleActionSchema
+    MacProgrammaticSurface
+    MacProgrammaticSurfaceKind
+    macProgrammaticSurfaceKindSchema
+    macProgrammaticSurfaceSchema
+    macRequiredApprovalSchema
+    macRevertLevelSchema
+    MacRiskTier
+    macRiskTierSchema
+    MacRoleAssignment
+    macRoleAssignmentSchema
+    macRoleSchema
+    macRollbackPlanSchema
+    macSourceConfidenceSchema
     manifestSchema
     MANUFACTURING_FAMILY
     MARKETING_FAMILY
@@ -1932,6 +2102,17 @@ The docs check script validates that every current export from
     MemoryStateSnapshot
     memoryStateSnapshotSchema
     MENTAL_HEALTH_RECOVERY_FAMILY
+    mergeClawCliCommandIntentEntries
+    MeshInvitation
+    MeshInvitationAcceptance
+    meshInvitationAcceptanceSchema
+    meshInvitationSchema
+    MeshResourceShare
+    meshResourceShareSchema
+    MeshRevocation
+    meshRevocationSchema
+    MeshShareAction
+    meshShareActionSchema
     Message
     MilestoneRecord
     milestoneRecordSchema
@@ -1940,14 +2121,17 @@ The docs check script validates that every current export from
     ModelsIntentState
     ModelsObservedState
     ModelSummary
+    NEED_OPPORTUNITY_KINDS
     NEED_ROUTE_CAPABILITY_GRAPH
+    NEED_ROUTE_DIMENSIONS
+    NEED_ROUTE_MATURITY_STATES
+    NEED_ROUTE_PILOT_PACKS
     NEED_SCENARIO_GENERATION_MODES
     NeedCapabilityEdge
     NeedCapabilityGraph
     NeedCapabilityNode
     NeedDimension
     NeedDimensionValue
-    NEED_OPPORTUNITY_KINDS
     NeedOpportunity
     NeedOpportunityDedupeResult
     NeedOpportunityKind
@@ -1955,23 +2139,17 @@ The docs check script validates that every current export from
     NeedOpportunityRelationKind
     NeedOpportunityScore
     NeedRoute
-    NEED_ROUTE_DIMENSIONS
     NeedRouteEvaluation
     NeedRouteGenerationPlan
     NeedRouteMaturityState
-    NEED_ROUTE_MATURITY_STATES
-    NEED_ROUTE_PILOT_PACKS
     NeedScenarioGenerationMode
-    dedupeNeedOpportunities
-    evaluateNeedRoute
-    evaluateNeedRoutes
-    generateNeedRoutes
-    listNeedCapabilityGraph
-    listNeedDimensions
-    listNeedRoutePilotPacks
-    planNeedRouteGeneration
-    RoutePilotPack
-    scoreNeedOpportunity
+    NodeIdentity
+    nodeIdentitySchema
+    NodeTrustDecision
+    nodeTrustDecisionSchema
+    normalizeClawCliCommandIntentPhrase
+    normalizeClawProjectManifest
+    normalizeCommandIntentEntry
     NoteBlock
     noteBlockSchema
     NoteRecord
@@ -1983,13 +2161,12 @@ The docs check script validates that every current export from
     NotificationPriority
     NotificationReceiptPolicy
     OBSERVABILITY_FAMILY
-    OPS_FAMILY
     ObservedDomain
     observedDomainSchema
     OperationalCheckRecord
     operationalCheckRecordSchema
+    OPS_FAMILY
     OrchestrationReadiness
-    RESEARCH_FAMILY
     OutcomeAddInput
     OutcomeCaptureInput
     OutcomeCaptureResult
@@ -2005,6 +2182,9 @@ The docs check script validates that every current export from
     outcomeStateSchema
     OutcomeStatus
     outcomeStatusSchema
+    OutputLabelPolicy
+    parseRemoteExternalValidationEvidenceInput
+    parseRemoteSourceQaReviewInput
     PermissionRequirement
     permissionRequirementSchema
     PERSONAL_CARE_AESTHETICS_FAMILY
@@ -2014,10 +2194,11 @@ The docs check script validates that every current export from
     PersonRecord
     personRecordSchema
     PETS_FAMILY
+    PHARMA_FAMILY
+    planNeedRouteGeneration
     PluginCatalog
     PluginIntentConfig
     PluginsIntentState
-    PHARMA_FAMILY
     PluginsObservedState
     PolicyRecord
     policyRecordSchema
@@ -2043,6 +2224,8 @@ The docs check script validates that every current export from
     ProductivityTeamWork
     productivityTemplateRecordSchema
     ProgressEvent
+    ProhibitedRegulatedPractice
+    prohibitedRegulatedPractices
     Project
     ProjectAgentAssignment
     ProjectRecord
@@ -2062,85 +2245,166 @@ The docs check script validates that every current export from
     RawIoTInvocation
     rawIotInvocationSchema
     READING_MEDIA_FAMILY
+    RECIPES
+    reconcileSyncQueue
+    RecurrenceRecord
+    recurrenceRecordSchema
+    redactAgentBoundaryValue
     redactConnectorContextRecord
     redactConnectorContextValue
-    resolveConnectorContextDefaultRefs
     RedactedConnectorGovernedContextRecord
-    regulatedDecisionEffects
+    redactEvolutionReceiptText
     RegulatedActionDecision
     RegulatedActionDenialCode
     RegulatedActionRequest
     RegulatedDecisionEffect
+    regulatedDecisionEffects
     RegulatedDomain
     RegulatedDomainPolicy
     regulatedDomains
     regulatedDomainSafetyPolicies
     regulatedDomainSafetyVersion
-    RECIPES
-    RecurrenceRecord
-    recurrenceRecordSchema
     RELATIONSHIPS_FAMILY
     ReleaseRecord
     releaseRecordSchema
     ReminderRecord
     reminderRecordSchema
-    ReportDestination
-    reportDestinationSchema
-    reportDedupeCandidateSchema
-    reportBudgetStateSchema
-    reportCanonicalCandidateSchema
+    RemoteAccessDecision
+    remoteAccessDecisionSchema
+    RemoteAccessGrant
+    RemoteAccessGrantPlane
+    remoteAccessGrantPlaneSchema
+    remoteAccessGrantSchema
+    RemoteAccessRequest
+    remoteAccessRequestSchema
+    RemoteActorContext
+    remoteActorContextSchema
+    RemoteActorKind
+    remoteActorKindSchema
+    RemoteAgentServiceAssignment
+    remoteAgentServiceAssignmentSchema
+    RemoteAgentServiceBudget
+    remoteAgentServiceBudgetSchema
+    RemoteAgentServiceDecision
+    remoteAgentServiceDecisionSchema
+    RemoteAgentServiceExecutionReceipt
+    remoteAgentServiceExecutionReceiptSchema
+    RemoteAgentServiceRequest
+    remoteAgentServiceRequestSchema
+    RemoteClientCacheSnapshot
+    remoteClientCacheSnapshotSchema
+    RemoteCompatibilityAdapterReceipt
+    remoteCompatibilityAdapterReceiptSchema
+    RemoteCompatibilityClientKind
+    remoteCompatibilityClientKindSchema
+    RemoteExternalPendingRegister
+    remoteExternalPendingRegisterSchema
+    RemoteExternalPendingRequirement
+    remoteExternalPendingRequirementSchema
+    RemoteExternalValidationApprovalRequest
+    remoteExternalValidationApprovalRequestSchema
+    RemoteExternalValidationChecklist
+    RemoteExternalValidationChecklistItem
+    remoteExternalValidationChecklistItemSchema
+    remoteExternalValidationChecklistSchema
+    RemoteExternalValidationEvidence
+    RemoteExternalValidationEvidenceArtifact
+    remoteExternalValidationEvidenceArtifactSchema
+    RemoteExternalValidationEvidenceEnvelope
+    remoteExternalValidationEvidenceEnvelopeSchema
+    remoteExternalValidationEvidenceSchema
+    RemoteExternalValidationEvidenceTemplate
+    remoteExternalValidationEvidenceTemplateSchema
+    RemoteExternalValidationReadiness
+    remoteExternalValidationReadinessSchema
+    RemoteExternalValidationReport
+    RemoteExternalValidationReportItem
+    remoteExternalValidationReportItemSchema
+    remoteExternalValidationReportSchema
+    RemoteExternalValidationRunbook
+    remoteExternalValidationRunbookSchema
+    RemoteGatewayAuditReceipt
+    remoteGatewayAuditReceiptSchema
+    RemoteGoalClosureGate
+    remoteGoalClosureGateSchema
+    remoteGoalClosureRequiredSourceQaIds
+    RemoteOfflineCommandResult
+    remoteOfflineCommandResultSchema
+    RemoteProviderDeviceE2EDomain
+    remoteProviderDeviceE2EDomainSchema
+    RemoteProviderDeviceE2EValidationPlan
+    remoteProviderDeviceE2EValidationPlanSchema
+    RemoteProviderDeviceE2EValidationStep
+    remoteProviderDeviceE2EValidationStepSchema
+    RemoteRouteContract
+    RemoteRouteContractCatalog
+    remoteRouteContractCatalogSchema
+    remoteRouteContractSchema
+    RemoteSecretLease
+    remoteSecretLeaseSchema
+    RemoteSecretProviderReceipt
+    remoteSecretProviderReceiptSchema
+    remoteSourceConversationId
+    remoteSourcePlanId
+    RemoteSourceQaReviewArtifact
+    remoteSourceQaReviewArtifactSchema
+    RemoteSourceQaReviewDisposition
+    remoteSourceQaReviewDispositionSchema
+    RemoteSourceQaReviewItem
+    remoteSourceQaReviewItemSchema
+    RemoteSourceQaReviewReport
+    remoteSourceQaReviewReportSchema
+    RemoteSourceQaReviewTemplate
+    RemoteSourceQaReviewTemplateItem
+    remoteSourceQaReviewTemplateItemSchema
+    remoteSourceQaReviewTemplateSchema
+    RemoteSurfaceClassification
+    RemoteSurfaceClassificationReceipt
+    remoteSurfaceClassificationReceiptSchema
+    remoteSurfaceClassificationSchema
+    remoteSyncRequiredDecisionIds
+    remoteSyncRequiredRouteIds
+    RemoteTransportHandshakeReceipt
+    remoteTransportHandshakeReceiptSchema
+    RemoteTrustMode
+    remoteTrustModeSchema
     reportApprovalSchema
     reportAttachmentSchema
+    reportBudgetStateSchema
+    reportCanonicalCandidateSchema
+    reportDedupeCandidateSchema
+    ReportDestination
+    reportDestinationSchema
     reportEvidenceKindSchema
     reportEvidenceSchema
-    ReportGovernanceState
     reportGlobalDedupeSchema
+    ReportGovernanceState
     reportGovernanceStateSchema
     ReportKind
     reportKindSchema
-    reportPrProposalSchema
     reportPrivacyReviewSchema
+    reportPrProposalSchema
     reportQualityGateSchema
     ReportRecord
     reportRecordSchema
     reportRetentionSchema
-    reportSubmissionReceiptSchema
     ReportStatus
     reportStatusSchema
+    reportSubmissionReceiptSchema
     reportValidationPlanSchema
     REPRODUCTIVE_INTIMATE_FAMILY
-    commandIntentToNeedOpportunity
-    assertSafeClawProjectHandoff
-    clawProjectFolderAccessPolicySchema
-    clawProjectFolderReadAccessSchema
-    clawProjectFolderSyncModeSchema
-    clawProjectFolderSyncPolicySchema
-    clawProjectFolderWriteAccessSchema
-    createClawProjectId
-    evaluateGovernanceAccess
-    evaluateGovernanceDelegation
-    findClawProjectManifestPortabilityViolations
-    listClawCliCommandIntentRegistry
-    mergeClawCliCommandIntentEntries
-    normalizeClawProjectManifest
-    normalizeClawCliCommandIntentPhrase
-    normalizeCommandIntentEntry
+    RESEARCH_FAMILY
+    resolveAgentExternalIdentity
     resolveBuiltinCollectionName
     resolveClawCliCommand
     resolveClawCliCommandIntent
+    resolveClawDenseDataIntent
     resolveClawGlobalDataDir
     resolveClawHostRegistryPath
     resolveClawHostStateDir
     resolveClawPersistentSurfacePath
     resolveClawWorkspaceDir
-    detachGovernanceResourceScopeBinding
-    forkGovernanceResourceScopeBinding
-    summarizeGovernanceBindings
-    summarizeGovernanceResourceSharing
-    GovernanceResourceScopeBinding
-    GovernanceResourceSharingSummary
-    sensitiveDataClasses
-    SensitiveDataClass
+    resolveConnectorContextDefaultRefs
     ResourceKind
     resourceKindSchema
     ResourceLocator
@@ -2153,14 +2417,12 @@ The docs check script validates that every current export from
     ResourceStatus
     resourceStatusSchema
     ROMANCE_FAMILY
+    routeIdForSyncDriver
+    RoutePilotPack
     RuleApplyWhen
     ruleApplyWhenSchema
     RuleInput
     RuleKind
-    OutputLabelPolicy
-    ProhibitedRegulatedPractice
-    prohibitedRegulatedPractices
-    SubjectKind
     ruleKindSchema
     RuleRecord
     ruleRecordSchema
@@ -2179,6 +2441,7 @@ The docs check script validates that every current export from
     rulesStateSchema
     RuleStatus
     ruleStatusSchema
+    runEvolutionMigratorLab
     RuntimeAdapterId
     RuntimeAdapterStability
     RuntimeAdapterSupportLevel
@@ -2189,11 +2452,11 @@ The docs check script validates that every current export from
     runtimeCapabilityStrategySchema
     RuntimeCapabilitySupport
     runtimeCapabilitySupportSchema
+    RuntimeDescriptor
     RuntimeFeatureDescriptor
     runtimeFeatureDescriptorSchema
     RuntimeFileDescriptor
     RuntimeFileSeedPolicy
-    RuntimeDescriptor
     RuntimeIntentState
     RuntimeLocations
     RuntimeObservedState
@@ -2207,6 +2470,7 @@ The docs check script validates that every current export from
     SchedulerDescriptor
     SchedulerStateSnapshot
     schedulerStateSnapshotSchema
+    scoreNeedOpportunity
     searchClawCliRegistry
     SectionRecord
     sectionRecordSchema
@@ -2225,6 +2489,8 @@ The docs check script validates that every current export from
     semanticPlanSchema
     SemanticRiskLevel
     semanticRiskLevelSchema
+    SensitiveDataClass
+    sensitiveDataClasses
     SessionPolicy
     sessionPolicySchema
     SessionRecord
@@ -2344,13 +2610,65 @@ The docs check script validates that every current export from
     SoulVerbosity
     SoulVibeModule
     SpeechIntentState
+    splitConnectorCapabilityId
     StreamChunk
     stripMarkdownForTts
+    SubjectKind
     SubscriptionFilter
     summarizeCatalogAuditedBatch
+    summarizeEvolutionLedger
+    summarizeGovernanceBindings
+    summarizeGovernanceResourceSharing
     summarizeReadiness
     SUPPLY_CHAIN_FAMILY
     SUPPORT_FAMILY
+    SyncAuthority
+    SyncAuthorityHandoffReceipt
+    syncAuthorityHandoffReceiptSchema
+    syncAuthoritySchema
+    SyncCachePolicy
+    syncCachePolicySchema
+    SyncChange
+    syncChangeSchema
+    SyncConflict
+    SyncConflictPolicy
+    syncConflictPolicySchema
+    syncConflictSchema
+    SyncCursor
+    syncCursorSchema
+    SyncDriver
+    SyncDriverApplicationReceipt
+    syncDriverApplicationReceiptSchema
+    SyncDriverCatalog
+    SyncDriverCatalogEntry
+    syncDriverCatalogEntrySchema
+    syncDriverCatalogSchema
+    syncDriverSchema
+    SyncObjectSnapshot
+    syncObjectSnapshotSchema
+    SyncPlanAction
+    syncPlanActionSchema
+    SyncPlanResult
+    syncPlanResultSchema
+    SyncQueueEntry
+    syncQueueEntrySchema
+    SyncReconciliationResult
+    syncReconciliationResultSchema
+    SyncResourceManifest
+    syncResourceManifestSchema
+    SYSTEM_TELEMETRY_DEFAULT_WIDGETS
+    SYSTEM_TELEMETRY_METRICS
+    SystemTelemetryAvailability
+    SystemTelemetryMetricDefinition
+    SystemTelemetryMetricFamily
+    SystemTelemetryMetricSample
+    SystemTelemetryPrivacyTier
+    SystemTelemetryRuleDefinition
+    SystemTelemetrySampleSupport
+    SystemTelemetrySnapshot
+    SystemTelemetrySourceConfidence
+    SystemTelemetryUnit
+    SystemTelemetryWidgetDefinition
     TaskChecklistItem
     taskChecklistItemSchema
     TaskRecord
@@ -2405,7 +2723,6 @@ The docs check script validates that every current export from
     TemporalRuntimeState
     TemporalSchedule
     temporalScheduleSchema
-    IoTDeviceDescriptor
     thingDescriptorSchema
     toClawError
     TRANSPORT_FAMILY
@@ -2465,9 +2782,10 @@ The docs check script validates that every current export from
     userTombstoneSchema
     UserValidationIssue
     UserValidationResult
+    validateConnectorContextProviderSchema
     VEHICLES_FAMILY
-    WAREHOUSE_FAMILY
     WARDROBE_FAMILY
+    WAREHOUSE_FAMILY
     WhatsAppBotProfile
     whatsappBotProfileSchema
     WhatsAppStateSnapshot
