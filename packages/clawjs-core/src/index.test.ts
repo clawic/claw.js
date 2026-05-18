@@ -44,12 +44,15 @@ import {
   clawEvolutionRecordSchema,
   clawEvolutionOperatorPlanSchema,
   clawEvolutionReceiptSchema,
+  clawEvolutionMigratorLabResultSchema,
+  clawEvolutionVersionFixtureSchema,
   classifyEvolutionBackupPolicy,
   createEvolutionOperatorPlan,
   createEvolutionPublicSurfaceBaseline,
   createEvolutionReceipt,
   diffEvolutionPublicSurfaceBaseline,
   redactEvolutionReceiptText,
+  runEvolutionMigratorLab,
   clawApiPath,
   clawCorePorts,
   clawContractFixturesV1,
@@ -339,6 +342,85 @@ test("evolution receipts redact paths, prompts, and secrets", () => {
   assert.equal(receipt.notes[0].includes("/Users/"), false);
   assert.equal(receipt.errors[0].includes("/Users/"), false);
   assert.equal(redactEvolutionReceiptText("input: hello; path /Users/me/demo"), "input: [redacted_prompt]; path [redacted_path]");
+});
+
+test("evolution migrator lab validates foundation fixtures", () => {
+  const ledger = clawEvolutionLedgerSchema.parse({
+    schemaVersion: 1,
+    policy: {
+      sourceOfTruth: "clawjs",
+      postV1Migration: "step_by_step_all_public_versions",
+      rescueCore: "launch_chat_repair",
+    },
+    records: [{
+      id: "evo_test_lab",
+      title: "Test lab",
+      class: "migration_required",
+      status: "active",
+      owner: "claw",
+      surfaces: ["docs/evolution/fixtures", "@clawjs/core migration lab API"],
+      tests: ["packages/clawjs-core/src/index.test.ts"],
+      createdAt: "2026-05-18T00:00:00.000Z",
+    }],
+  });
+  const kinds = [
+    "database",
+    "workspace_file",
+    "global_file",
+    "protocol",
+    "cli_json",
+    "package_export",
+    "agent_instruction",
+    "skill",
+    "route",
+    "schema",
+    "backup",
+    "search_index",
+    "permission",
+    "audit",
+    "rescue",
+  ] as const;
+  const fixture = clawEvolutionVersionFixtureSchema.parse({
+    schemaVersion: 1,
+    fixtureId: "evo_fixture_test_foundation",
+    publicVersion: "v1",
+    createdAt: "2026-05-18T00:00:00.000Z",
+    phase: "pre_v1_foundation",
+    rescueCore: "launch_chat_repair",
+    surfaces: kinds.map((kind) => ({
+      id: `claw.fixture.${kind}.v1`,
+      kind,
+      owner: kind === "rescue" ? "clawix" : "clawjs",
+      backupStrategy: kind === "database" || kind === "schema" || kind === "permission"
+        ? "snapshot_before_mutation"
+        : kind === "search_index"
+          ? "rebuildable_no_canonical_backup"
+          : "touched_objects_metadata",
+      payload: { synthetic: true },
+      expectedCurrent: { preserved: true },
+    })),
+    notes: ["synthetic"],
+  });
+
+  const result = runEvolutionMigratorLab({
+    fixtures: [fixture],
+    ledger,
+    fromVersion: "v1",
+    toVersion: "current",
+    createdAt: "2026-05-18T00:00:00.000Z",
+  });
+  assert.equal(clawEvolutionMigratorLabResultSchema.safeParse(result).success, true);
+  assert.equal(result.status, "pass");
+  assert.equal(result.fixtureIds.includes("evo_fixture_test_foundation"), true);
+  assert.equal(result.checks.every((check) => check.status === "pass"), true);
+  assert.equal(result.receipts[0].redaction.promptsIncluded, false);
+
+  const incomplete = runEvolutionMigratorLab({
+    fixtures: [{ ...fixture, surfaces: fixture.surfaces.filter((surface) => surface.kind !== "rescue") }],
+    ledger,
+  });
+  assert.equal(incomplete.status, "fail");
+  assert.equal(incomplete.checks.find((check) => check.id === "required_surface_kinds")?.status, "fail");
 });
 
 test("maskCredential keeps only the tail", () => {

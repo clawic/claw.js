@@ -29,6 +29,7 @@ for (const file of [
   "docs/evolution/schema.json",
   "docs/evolution/baseline.json",
   "docs/evolution/public-surface-baseline.json",
+  "docs/evolution/fixtures/v1-foundation.json",
   "packages/clawjs-core/src/evolution.ts",
   "packages/clawjs/src/cli-evolution-command.ts",
   "skills/compatibility-evolution-work/SKILL.md",
@@ -45,6 +46,7 @@ for (const snippet of [
   "classifyEvolutionBackupPolicy",
   "createEvolutionReceipt",
   "redactEvolutionReceiptText",
+  "runEvolutionMigratorLab",
 ]) requireSnippet("packages/clawjs-core/src/evolution.ts", snippet);
 
 for (const snippet of [
@@ -61,6 +63,7 @@ for (const snippet of [
 
 const ledger = readJson("docs/evolution/baseline.json");
 const publicSurfaceBaseline = readJson("docs/evolution/public-surface-baseline.json");
+const v1FoundationFixture = readJson("docs/evolution/fixtures/v1-foundation.json");
 if (ledger.schemaVersion !== 1) errors.push("evolution ledger schemaVersion must be 1");
 if (ledger.policy?.sourceOfTruth !== "clawjs") errors.push("evolution ledger sourceOfTruth must be clawjs");
 if (ledger.policy?.postV1Migration !== "step_by_step_all_public_versions") errors.push("postV1Migration policy drifted");
@@ -81,6 +84,37 @@ if (!Array.isArray(publicSurfaceBaseline.surfaces) || publicSurfaceBaseline.surf
 if (!Array.isArray(publicSurfaceBaseline.cliCommands) || publicSurfaceBaseline.cliCommands.length < 1) errors.push("public surface baseline must include CLI commands");
 if (publicSurfaceBaseline.counts?.surfaces !== publicSurfaceBaseline.surfaces?.length) errors.push("public surface baseline surface count drifted internally");
 if (publicSurfaceBaseline.counts?.cliCommands !== publicSurfaceBaseline.cliCommands?.length) errors.push("public surface baseline CLI count drifted internally");
+
+if (v1FoundationFixture.schemaVersion !== 1) errors.push("v1 foundation fixture schemaVersion must be 1");
+if (v1FoundationFixture.fixtureId !== "evo_fixture_v1_foundation") errors.push("v1 foundation fixture id drifted");
+if (v1FoundationFixture.publicVersion !== "v1") errors.push("v1 foundation fixture must target v1");
+if (v1FoundationFixture.rescueCore !== "launch_chat_repair") errors.push("v1 foundation fixture must preserve launch_chat_repair");
+if (!Array.isArray(v1FoundationFixture.surfaces) || v1FoundationFixture.surfaces.length < 1) errors.push("v1 foundation fixture must include surfaces");
+const fixtureText = JSON.stringify(v1FoundationFixture);
+for (const forbidden of ["/Users/", "sk-", "ghp_", "github_pat_", "xoxb-"]) {
+  if (fixtureText.includes(forbidden)) errors.push(`v1 foundation fixture includes forbidden private/sensitive token ${forbidden}`);
+}
+for (const kind of [
+  "database",
+  "workspace_file",
+  "global_file",
+  "protocol",
+  "cli_json",
+  "package_export",
+  "agent_instruction",
+  "skill",
+  "route",
+  "schema",
+  "backup",
+  "search_index",
+  "permission",
+  "audit",
+  "rescue",
+]) {
+  if (!(v1FoundationFixture.surfaces ?? []).some((surface) => surface.kind === kind)) {
+    errors.push(`v1 foundation fixture missing required surface kind ${kind}`);
+  }
+}
 
 const diff = currentPublicSurfaceDiff();
 if (!diff) {

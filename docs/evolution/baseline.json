@@ -25,15 +25,18 @@
       "owner": "claw",
       "surfaces": [
         "docs/evolution",
+        "docs/evolution/fixtures",
         "claw evolution",
         "@clawjs/core evolution policy",
+        "@clawjs/core migration lab API",
         "Clawix rescue mirror"
       ],
       "tests": [
         "scripts/evolution-governance-check.mjs",
         "packages/clawjs-core/src/index.test.ts",
         "packages/clawjs/src/index.test.ts",
-        "docs/evolution/public-surface-baseline.json"
+        "docs/evolution/public-surface-baseline.json",
+        "docs/evolution/fixtures/v1-foundation.json"
       ],
       "adr": "docs/adr/0030-post-v1-evolution-rescue-backbone.md",
       "notes": "Initial additive backbone. Post-V1 registry diffs and migration labs build on this baseline.",

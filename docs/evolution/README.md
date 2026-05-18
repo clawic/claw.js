@@ -30,6 +30,10 @@ knowledge in migrators, adapters, receipts, repair tools, and fixtures.
   surfaces and CLI commands. `claw evolution diff --json` compares current
   registry state against this file and requires active evolution records for
   uncovered drift.
+- `fixtures/v1-foundation.json`: synthetic foundation fixture for the first
+  public migration lab. It covers DB/core, `.claw`, `~/.clawix`, protocol,
+  CLI JSON, package exports, agent instructions, skills, routes, schemas,
+  backup, search/index rebuild, permissions, audit, and rescue survival.
 - `claw evolution plan|dry-run|repair|rollback|backup|receipt --json`: safe
   operator contracts for migration planning, backup classification, rescue
   preservation, and redacted receipts. Mutating actions are approval-gated by
