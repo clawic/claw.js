@@ -7461,9 +7461,9 @@ function parseSearchEmbeddingFlag(value: string | undefined, model: string | und
 
 function localTextEmbeddingForQuery(query: string, strategy: SearchQueryInput["strategy"], flags: Record<string, string>): { model: string; vector: number[] } | undefined {
   const model = flags["embedding-model"] ?? flags.model;
-  const requested = model === LOCAL_TEXT_EMBEDDING_MODEL || flags["local-embedding"] === "true";
+  const requested = model !== undefined || flags["local-embedding"] === "true";
   if (!requested || strategy === "lexical") return undefined;
-  return createLocalTextEmbedding(query, { model: model ?? LOCAL_TEXT_EMBEDDING_MODEL });
+  return createLocalTextEmbedding(query, { model: localSearchEmbeddingModel(model) });
 }
 
 function searchQueryRequiresAudit(query: string, results: SearchResult[], filters: Record<string, unknown> | undefined): boolean {

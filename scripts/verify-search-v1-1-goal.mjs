@@ -1121,6 +1121,9 @@ for (const snippet of [
 requireSnippet("packages/clawjs/src/cli-work-search-events.test.ts", "productivity database writes schedule work search events for create update and delete");
 requireSnippet("packages/clawjs/src/cli-work-search-events.test.ts", "operation === \"upsert\"");
 requireSnippet("packages/clawjs/src/cli-work-search-events.test.ts", "operation === \"delete\"");
+requireSnippet("packages/clawjs/src/cli-search-query-embedding-gate.test.ts", "search query rejects provider embedding model derivation");
+requireSnippet("packages/clawjs/src/cli-search-command.ts", "localSearchEmbeddingModel(model)");
+requireSnippet("packages/clawjs-search-mcp/src/index.test.ts", "provider semantic query");
 
 for (const snippet of [
   "published CLI package does not depend on the retired Index package",

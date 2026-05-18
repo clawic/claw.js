@@ -692,9 +692,11 @@ function searchEmbeddingFromParams(params: Record<string, unknown>, query: strin
   const explicit = searchEmbedding(params.embedding);
   if (explicit) return explicit;
   const model = stringParam(params.embeddingModel);
-  const requested = model === LOCAL_TEXT_EMBEDDING_MODEL || params.localEmbedding === true;
+  const strategy = stringParam(params.strategy);
+  const requested = model !== undefined || params.localEmbedding === true;
   if (!requested) return undefined;
-  return createLocalTextEmbedding(query, { model: model ?? LOCAL_TEXT_EMBEDDING_MODEL });
+  if (strategy === "lexical") return undefined;
+  return createLocalTextEmbedding(query, { model: localEmbeddingModel(model) });
 }
 
 function searchAgentBudget(value: unknown): SearchQueryInput["agentBudget"] {

@@ -376,6 +376,15 @@ test("Search MCP derives local embeddings for semantic queries", () => {
       localEmbedding: true,
     }) as { results: Array<{ id: string }> };
     assert.equal(shorthand.results[0]?.id, "documents.blocks:beta");
+    assert.throws(
+      () => queryTool.handler({
+        query: "provider semantic query",
+        domains: ["documents"],
+        strategy: "semantic",
+        embeddingModel: "provider-text-v1",
+      }),
+      /provider-backed embedding workers are EXTERNAL PENDING/,
+    );
   } finally {
     store.close();
     fs.rmSync(dir, { recursive: true, force: true });
