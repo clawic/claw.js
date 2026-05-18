@@ -1315,32 +1315,22 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
 
 function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flags: Record<string, string>, cwd: string): number | null {
   switch (job.source) {
-    case "sessions.chats": {
-      const sessionId = resourceIdFromJobPayload(job, "sessionId") ?? job.resourceId;
-      return sessionId ? ensureSessionChatResourceIndexed(store, flags, sessionId) : 0;
-    }
+    case "sessions.chats":
+      return indexJobResource(job, "sessionId", (sessionId) => ensureSessionChatResourceIndexed(store, flags, sessionId));
     case "database.records":
       return ensureDatabaseRecordResourceIndexed(store, flags, job);
     case "work.items":
       return ensureWorkItemResourceIndexed(store, flags, job);
     case "documents.blocks":
       return ensureDocumentBlocksResourceIndexed(store, flags, job);
-    case "notes.pages": {
-      const resourceId = resourceIdFromJobPayload(job, "pageId") ?? job.resourceId;
-      return resourceId ? ensureNotesPageResourceIndexed(store, flags, resourceId) : 0;
-    }
-    case "knowledge.graph": {
-      const resourceId = resourceIdFromJobPayload(job, "knowledgeResourceId") ?? job.resourceId;
-      return resourceId ? ensureKnowledgeGraphResourceIndexed(store, flags, resourceId) : 0;
-    }
-    case "signals.observations": {
-      const resourceId = resourceIdFromJobPayload(job, "signalsResourceId") ?? job.resourceId;
-      return resourceId ? ensureSignalsObservationsResourceIndexed(store, flags, resourceId) : 0;
-    }
-    case "calendar.events": {
-      const resourceId = resourceIdFromJobPayload(job, "eventId") ?? job.resourceId;
-      return resourceId ? ensureCalendarEventResourceIndexed(store, flags, resourceId) : 0;
-    }
+    case "notes.pages":
+      return indexJobResource(job, "pageId", (resourceId) => ensureNotesPageResourceIndexed(store, flags, resourceId));
+    case "knowledge.graph":
+      return indexJobResource(job, "knowledgeResourceId", (resourceId) => ensureKnowledgeGraphResourceIndexed(store, flags, resourceId));
+    case "signals.observations":
+      return indexJobResource(job, "signalsResourceId", (resourceId) => ensureSignalsObservationsResourceIndexed(store, flags, resourceId));
+    case "calendar.events":
+      return indexJobResource(job, "eventId", (resourceId) => ensureCalendarEventResourceIndexed(store, flags, resourceId));
     case "finance.records": {
       const resourceId = job.payload.table === "finance_records" && job.resourceId
         ? job.resourceId
@@ -1349,14 +1339,10 @@ function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flag
     }
     case "eln.records":
       return ensureElnRecordResourceIndexed(store, flags, job);
-    case "images.derived": {
-      const resourceId = resourceIdFromJobPayload(job, "imageId") ?? job.resourceId;
-      return resourceId ? ensureImageDerivedResourceIndexed(store, flags, cwd, resourceId) : 0;
-    }
-    case "media.assets": {
-      const resourceId = resourceIdFromJobPayload(job, "mediaId") ?? job.resourceId;
-      return resourceId ? ensureMediaAssetResourceIndexed(store, flags, cwd, resourceId) : 0;
-    }
+    case "images.derived":
+      return indexJobResource(job, "imageId", (resourceId) => ensureImageDerivedResourceIndexed(store, flags, cwd, resourceId));
+    case "media.assets":
+      return indexJobResource(job, "mediaId", (resourceId) => ensureMediaAssetResourceIndexed(store, flags, cwd, resourceId));
     case "slides.decks": {
       const deckId = resourceIdFromJobPayload(job, "deckId") ?? job.resourceId;
       return deckId ? ensureSlidesDeckResourceIndexed(store, flags, cwd, deckId, resourceIdFromJobPayload(job, "workspaceRoot")) : 0;
@@ -1365,81 +1351,64 @@ function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flag
       const workbookId = resourceIdFromJobPayload(job, "workbookId") ?? job.resourceId;
       return workbookId ? ensureSheetsWorkbookResourceIndexed(store, flags, cwd, workbookId, resourceIdFromJobPayload(job, "workspaceRoot")) : 0;
     }
-    case "generations.artifacts": {
-      const resourceId = resourceIdFromJobPayload(job, "generationId") ?? job.resourceId;
-      return resourceId ? ensureGenerationArtifactResourceIndexed(store, flags, cwd, resourceId) : 0;
-    }
+    case "generations.artifacts":
+      return indexJobResource(job, "generationId", (resourceId) => ensureGenerationArtifactResourceIndexed(store, flags, cwd, resourceId));
     case "code.symbols": {
       const relativePath = resourceIdFromJobPayload(job, "relativePath") ?? job.resourceId;
       return relativePath ? ensureCodeSymbolResourceIndexed(store, flags, cwd, relativePath, resourceIdFromJobPayload(job, "root")) : 0;
     }
-    case "docs.pages": {
-      const relativePath = resourceIdFromJobPayload(job, "relativePath") ?? job.resourceId;
-      return relativePath ? ensureDocsPageResourceIndexed(store, cwd, relativePath) : 0;
-    }
-    case "skills.registry": {
-      const resourceId = resourceIdFromJobPayload(job, "slug") ?? job.resourceId;
-      return resourceId ? ensureSkillsRegistryResourceIndexed(store, flags, resourceId) : 0;
-    }
+    case "docs.pages":
+      return indexJobResource(job, "relativePath", (relativePath) => ensureDocsPageResourceIndexed(store, cwd, relativePath));
+    case "skills.registry":
+      return indexJobResource(job, "slug", (resourceId) => ensureSkillsRegistryResourceIndexed(store, flags, resourceId));
     case "providers.routing": {
       const resourceId = job.resourceId;
       return resourceId ? ensureProvidersRoutingResourceIndexed(store, flags, resourceId) : 0;
     }
-    case "snippets.library": {
-      const resourceId = resourceIdFromJobPayload(job, "slug") ?? job.resourceId;
-      return resourceId ? ensureSnippetsLibraryResourceIndexed(store, flags, resourceId) : 0;
-    }
+    case "snippets.library":
+      return indexJobResource(job, "slug", (resourceId) => ensureSnippetsLibraryResourceIndexed(store, flags, resourceId));
     case "agents.catalog": {
       const resourceId = job.resourceId;
       return resourceId ? ensureAgentsCatalogResourceIndexed(store, flags, resourceId) : 0;
     }
-    case "marketplace.choices": {
-      const choiceId = resourceIdFromJobPayload(job, "choiceId") ?? job.resourceId;
-      return choiceId ? ensureMarketplaceChoiceResourceIndexed(store, flags, choiceId) : 0;
-    }
-    case "content.items": {
-      const itemId = resourceIdFromJobPayload(job, "itemId") ?? job.resourceId;
-      return itemId ? ensureContentItemResourceIndexed(store, flags, itemId) : 0;
-    }
-    case "business.records": {
-      const recordId = resourceIdFromJobPayload(job, "recordId") ?? job.resourceId;
-      return recordId ? ensureBusinessRecordResourceIndexed(store, flags, recordId) : 0;
-    }
-    case "social.posts": {
-      const postId = resourceIdFromJobPayload(job, "postId") ?? job.resourceId;
-      return postId ? ensureSocialPostResourceIndexed(store, flags, postId) : 0;
-    }
-    case "iot.config": {
-      const configId = resourceIdFromJobPayload(job, "configId") ?? job.resourceId;
-      return configId ? ensureIotConfigResourceIndexed(store, flags, configId) : 0;
-    }
-    case "connectors.catalog": {
-      const resourceId = resourceIdFromJobPayload(job, "operationId") ?? job.resourceId;
-      return resourceId ? ensureConnectorCatalogResourceIndexed(store, flags, resourceId) : 0;
-    }
+    case "marketplace.choices":
+      return indexJobResource(job, "choiceId", (choiceId) => ensureMarketplaceChoiceResourceIndexed(store, flags, choiceId));
+    case "content.items":
+      return indexJobResource(job, "itemId", (itemId) => ensureContentItemResourceIndexed(store, flags, itemId));
+    case "business.records":
+      return indexJobResource(job, "recordId", (recordId) => ensureBusinessRecordResourceIndexed(store, flags, recordId));
+    case "social.posts":
+      return indexJobResource(job, "postId", (postId) => ensureSocialPostResourceIndexed(store, flags, postId));
+    case "iot.config":
+      return indexJobResource(job, "configId", (configId) => ensureIotConfigResourceIndexed(store, flags, configId));
+    case "connectors.catalog":
+      return indexJobResource(job, "operationId", (resourceId) => ensureConnectorCatalogResourceIndexed(store, flags, resourceId));
     case "mcp.servers": {
       const serverId = resourceIdFromJobPayload(job, "serverId") ?? job.resourceId;
       return serverId ? ensureMcpServerResourceIndexed(store, flags, serverId, cwd, resourceIdFromJobPayload(job, "configPath")) : 0;
     }
-    case "apps.catalog": {
-      const appId = resourceIdFromJobPayload(job, "appId") ?? job.resourceId;
-      return appId ? ensureAppCatalogResourceIndexed(store, flags, appId) : 0;
-    }
+    case "apps.catalog":
+      return indexJobResource(job, "appId", (appId) => ensureAppCatalogResourceIndexed(store, flags, appId));
     case "design.resources": {
       const resourceId = resourceIdFromJobPayload(job, "resourceId") ?? job.resourceId;
       return resourceId ? ensureDesignResourceIndexed(store, flags, resourceId, cwd, resourceIdFromJobPayload(job, "workspaceRoot")) : 0;
     }
-    case "runtime.events": {
-      const resourceId = resourceIdFromJobPayload(job, "runtimeResourceId") ?? job.resourceId;
-      return resourceId ? ensureRuntimeEventsResourceIndexed(store, flags, resourceId) : 0;
-    }
-    case "surfaces.routes": {
-      const routeId = resourceIdFromJobPayload(job, "routeId") ?? job.resourceId;
-      return routeId ? ensureSurfaceRouteResourceIndexed(store, routeId) : 0;
+    case "runtime.events":
+      return indexJobResource(job, "runtimeResourceId", (resourceId) => ensureRuntimeEventsResourceIndexed(store, flags, resourceId));
+    case "surfaces.routes":
+      return indexJobResource(job, "routeId", (routeId) => ensureSurfaceRouteResourceIndexed(store, routeId));
+    case "local.files": {
+      const relativePath = resourceIdFromJobPayload(job, "relativePath") ?? job.resourceId;
+      return relativePath ? ensureLocalFileResourceIndexed(store, flags, cwd, relativePath, resourceIdFromJobPayload(job, "root")) : 0;
     }
     default:
       return null;
   }
+}
+
+function indexJobResource(job: SearchIndexJob, payloadKey: string, indexResource: (resourceId: string) => number): number {
+  const resourceId = resourceIdFromJobPayload(job, payloadKey) ?? job.resourceId;
+  return resourceId ? indexResource(resourceId) : 0;
 }
 
 function databaseRecordTargetFromJob(job: SearchIndexJob): { namespaceId: string; collectionName: string; recordId: string; resourceId: string } | null {
@@ -4249,6 +4218,47 @@ function ensureLocalFilesSourceIndexed(store: SearchStore, flags: Record<string,
     lastIndexedAt: new Date().toISOString(),
   });
   return indexed;
+}
+
+function ensureLocalFileResourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string, relativePath: string, rootOverride?: string): number {
+  const root = path.resolve(rootOverride ?? resolveLocalFilesSearchRoot(flags, cwd));
+  const absolutePath = path.resolve(root, relativePath);
+  const relativeFromRoot = normalizeRelativePath(path.relative(root, absolutePath));
+  if (relativeFromRoot === ".." || relativeFromRoot.startsWith("../") || path.isAbsolute(relativeFromRoot)) {
+    store.tombstone({ source: "local.files", resourceId: relativePath, reason: "local file outside root during Search event refresh" });
+    return 1;
+  }
+  let stat: fs.Stats;
+  try {
+    stat = fs.statSync(absolutePath);
+  } catch {
+    store.tombstone({ source: "local.files", resourceId: relativeFromRoot, reason: "local file missing during Search event refresh" });
+    return 1;
+  }
+  if (!stat.isFile() || stat.size <= 0) {
+    store.tombstone({ source: "local.files", resourceId: relativeFromRoot, reason: "local file skipped during Search event refresh" });
+    return 1;
+  }
+  const maxBytes = boundedNumberFlag(flags["file-max-bytes"] ?? flags["local-files-max-bytes"], 256 * 1024, 1024, 2 * 1024 * 1024);
+  const extension = path.extname(absolutePath).toLowerCase();
+  const document = localFileSearchDocument(root, {
+    absolutePath,
+    extension,
+    kind: localFileKind(extension),
+    size: stat.size,
+    updatedAt: stat.mtime.toISOString(),
+  }, maxBytes);
+  if (!document) {
+    store.tombstone({ source: "local.files", resourceId: relativeFromRoot, reason: "local file skipped during Search event refresh" });
+    return 1;
+  }
+  store.upsertDocument(document);
+  store.setSourceState("local.files", "enabled", {
+    backlog: 0,
+    error: null,
+    lastIndexedAt: new Date().toISOString(),
+  });
+  return 1;
 }
 
 function ensureWebIngestedSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {
