@@ -157,6 +157,20 @@ function assertPackageReadmeDisclaimers() {
   }
 }
 
+function assertReleaseScriptsRunLegalGate() {
+  const packageJson = JSON.parse(read("package.json"));
+  for (const scriptName of ["publish:dry-run", "publish:packages"]) {
+    const script = packageJson.scripts?.[scriptName];
+    if (typeof script !== "string") {
+      errors.push(`package.json: missing release script ${scriptName}`);
+      continue;
+    }
+    if (!script.includes("verify-regulated-domain-safety-goal.mjs")) {
+      errors.push(`package.json: ${scriptName} must run verify-regulated-domain-safety-goal.mjs before npm publish`);
+    }
+  }
+}
+
 try {
   assertRegulatedDomainSafetyComplete();
 } catch (error) {
@@ -389,6 +403,7 @@ for (const snippet of [
 }
 assertNoBannedPublicClaims();
 assertPackageReadmeDisclaimers();
+assertReleaseScriptsRunLegalGate();
 
 if (errors.length > 0) {
   console.error(`Regulated domain safety guard failed with ${errors.length} issue(s):`);
