@@ -165,6 +165,10 @@
       "blockGrowth": true,
       "reason": "Emergency search index integration coverage after local semantic embedding, shard, design-resource, and indexing workflow expansion; future growth is blocked except for extraction, deletion, or compatibility-preserving split work."
     },
+    "packages/clawjs/src/index-data.test.ts": {
+      "lines": 2043,
+      "reason": "Dense Data and persistent surface integration coverage after remote/source QA evidence expansion; split new data route scenarios into focused test files before expanding further."
+    },
     "packages/clawjs-core/src/index.test.ts": {
       "lines": 2038,
       "reason": "Remote Gateway/Sync contract integration coverage awaiting extraction into focused remote contract test files; future growth should move scenarios out of the core barrel test."
