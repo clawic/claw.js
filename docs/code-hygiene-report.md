@@ -1,17 +1,38 @@
-# Code Hygiene Report
+# Code Hygiene Audit
 
-Status: ACTIVE.
+Mode: report-only.
 
-- Blocking findings: 0 after initial cleanup.
-- Report-only findings: 24 in the latest local audit summary.
-- Baselined findings: 5 baseline entries covering reviewed ClawJS built-in family barrel, stable surface alias, dynamic-runtime findings, and the memory server dynamic entrypoint.
-- Initial cleanup completed: actionable TODO/FIXME/HACK/XXX findings and unreferenced asset candidates are zero; remaining duplicate assets are report-only.
-- Report-only audit command: `node scripts/code-hygiene-audit.mjs`.
-- Report-only Knip command: `node scripts/code-hygiene-knip.mjs`.
-- Report-only Periphery command: `node scripts/code-hygiene-periphery.mjs`.
-- Completion audit: `docs/code-hygiene-completion-audit.md` records the one-by-one decision review.
-- Latest audit summary: 6,973 files scanned; 0 TODO/FIXME/HACK/XXX findings; 24 duplicate asset groups covering 65 files; 0 unreferenced asset candidates.
-- Latest Knip summary: 58 files with issues; 567 total findings after removing clear unused workspace dependencies, normalizing root VitePress/Vue/tsx ownership, calibrating entry/project ownership for templates/public CSS/website assets/generated fixtures, removing reviewed dead one-line stubs and retired CLI bin shims, reducing Discord test catalog, Secrets crypto/shared DTOs, secrets plugin helper types/session cache store/server helpers, Notify auth/subscription/surface helpers, Wiki auth/access-policy helpers, Bridge server/platform/job-handler helpers, Bridge Iroh remote endpoint type exposure, ClawJS node Telegram state filename alias, built-in catalog helper type aliases, session title alias duplication, package default-export aliases, session stream compatibility aliases, Memory CLI/workspace/type helpers, ERP shared contract/db helper internals, provider-local integration runtime/source aliases, Publishing CLI/config/db/id/app helpers, Execution shared DTOs/security/worker helpers, IoT tool registry/adapter helpers, Monitor config/schema helpers, Drive CLI/auth/realtime helpers, Feed auth helpers, Content form helper types, ClawJS node runtime/OpenClaw/secrets/Telegram/rules/schema helpers, Claw CLI/domain/open/reference/style/template/data helpers, Workspace/delegation/runtime helper internals, Drive/browser/relay/plugin helpers, Bridge/Relay shutdown and pairing follow-up, Publishing schema/channel helpers, Apps store helpers, private shared DTO aliases, integration runtime helper exports, CLI JSON helper wrappers, runtime plugin bridge helpers, CLI runtime metadata helpers, project scaffold helpers, chat CLI helpers, report-governance helpers, memory CLI helpers, audio catalog legacy naming, database CLI/store-helper, v1 data wrapper/core, slides, database magic, style schema, agent plan, time logic, and Relay protocol helper exports to externally imported APIs only, reducing dependency/devDependency/file findings to zero, and keeping reviewed dynamic runtime findings baselined.
-- Latest Periphery summary: external pending; 2 Swift packages discovered; Periphery 3.7.4 binary not installed on PATH.
+- Scanned files: 7105
+- TODO/FIXME/HACK/XXX findings: 0
+- Duplicate asset groups: 24
+- Duplicate asset files: 65
+- Unreferenced asset candidates: 0
 
-This report is the human-readable pair for `docs/code-hygiene-report.json`.
+This audit is advisory until the cleanup campaign classifies or removes findings.
+
+## Duplicate Asset Groups
+
+- 3 files, 1235074 bytes: apps/chat/ios/ClawJS/Assets.xcassets/AppIcon.appiconset/AppIcon.png, apps/chat/macos/ClawJSMac/Assets.xcassets/AppIcon.appiconset/AppIcon.png, docs/assets/clawjs-logo.png
+- 2 files, 498 bytes: apps/chat/ios/ClawJS/Assets.xcassets/EditIcon.imageset/edit.svg, apps/chat/macos/ClawJSMac/Assets.xcassets/EditIcon.imageset/edit.svg
+- 2 files, 284 bytes: apps/chat/ios/ClawJS/Assets.xcassets/MenuIcon.imageset/menu.svg, apps/chat/macos/ClawJSMac/Assets.xcassets/MenuIcon.imageset/menu.svg
+- 2 files, 24911 bytes: apps/host/assets/AppIcon.iconset/icon_128x128@2x.png, apps/host/assets/AppIcon.iconset/icon_256x256.png
+- 2 files, 1219 bytes: apps/host/assets/AppIcon.iconset/icon_16x16@2x.png, apps/host/assets/AppIcon.iconset/icon_32x32.png
+- 2 files, 82238 bytes: apps/host/assets/AppIcon.iconset/icon_256x256@2x.png, apps/host/assets/AppIcon.iconset/icon_512x512.png
+- 2 files, 1009163 bytes: apps/host/assets/AppIcon.iconset/icon_512x512@2x.png, apps/host/assets/AppIcon.png
+- 3 files, 20064 bytes: assets/apple-touch-icon.png, examples/showcase/public/apple-touch-icon.png, packages/clawjs-database/public/brand/apple-touch-icon.png
+- 3 files, 5430 bytes: assets/favicon.ico, examples/showcase/src/app/favicon.ico, packages/clawjs-database/public/brand/favicon.ico
+- 2 files, 22082 bytes: assets/icon-192.png, packages/clawjs-database/public/brand/icon-192.png
+- 6 files, 124237 bytes: assets/icon-512.png, assets/logo.png, examples/showcase/public/logo-512.png, monitor/ui/public/logo.png, packages/clawjs-database/public/brand/icon-512.png, packages/clawjs-database/public/brand/logo.png
+- 3 files, 414174 bytes: assets/og-image.png, examples/showcase/public/og-image.png, packages/clawjs-database/public/brand/og-image.png
+- 3 files, 12201 bytes: assets/runtimes/hermes.png, examples/showcase/public/runtimes/hermes.png, packages/clawjs-database/public/brand/runtimes/hermes.png
+- 3 files, 3040 bytes: assets/runtimes/ironclaw.png, examples/showcase/public/runtimes/ironclaw.png, packages/clawjs-database/public/brand/runtimes/ironclaw.png
+- 3 files, 5233 bytes: assets/runtimes/nanobot.png, examples/showcase/public/runtimes/nanobot.png, packages/clawjs-database/public/brand/runtimes/nanobot.png
+- 3 files, 4557 bytes: assets/runtimes/nanoclaw.png, examples/showcase/public/runtimes/nanoclaw.png, packages/clawjs-database/public/brand/runtimes/nanoclaw.png
+- 3 files, 5288 bytes: assets/runtimes/nemoclaw.png, examples/showcase/public/runtimes/nemoclaw.png, packages/clawjs-database/public/brand/runtimes/nemoclaw.png
+- 3 files, 1493 bytes: assets/runtimes/nullclaw.png, examples/showcase/public/runtimes/nullclaw.png, packages/clawjs-database/public/brand/runtimes/nullclaw.png
+- 3 files, 4526 bytes: assets/runtimes/openclaw.png, examples/showcase/public/runtimes/openclaw.png, packages/clawjs-database/public/brand/runtimes/openclaw.png
+- 3 files, 2555 bytes: assets/runtimes/picoclaw.png, examples/showcase/public/runtimes/picoclaw.png, packages/clawjs-database/public/brand/runtimes/picoclaw.png
+- 3 files, 5478 bytes: assets/runtimes/zeroclaw.png, examples/showcase/public/runtimes/zeroclaw.png, packages/clawjs-database/public/brand/runtimes/zeroclaw.png
+- 2 files, 819829 bytes: assets/sponsors/landscape-ai.png, packages/clawjs-database/public/brand/sponsors/landscape-ai.png
+- 2 files, 5685 bytes: examples/showcase/public/chat-icon.png, examples/showcase/public/header-chat-icon.png
+- 2 files, 411 bytes: packages/clawjs/templates/app/src/app/icon.svg, packages/create-claw-app/template/src/app/icon.svg

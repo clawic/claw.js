@@ -1,275 +1,228 @@
 {
   "schemaVersion": 1,
   "program": "code-hygiene",
-  "generatedAt": "2026-05-17",
-  "status": "active",
-  "blockingFindings": 0,
-  "reportOnlyFindings": 24,
-  "baselinedFindings": 5,
-  "lastAuditSummary": {
-    "scannedFiles": 7104,
+  "generatedAt": "2026-05-18T09:01:20.951Z",
+  "mode": "report-only",
+  "summary": {
+    "scannedFiles": 7105,
     "todoFindings": 0,
     "duplicateAssetGroups": 24,
     "duplicateAssetFiles": 65,
     "unreferencedAssetCandidates": 0
   },
-  "knipSummary": {
-    "filesWithIssues": 58,
-    "totalIssues": 567,
-    "issueTypes": {
-      "unlisted": 2,
-      "exports": 509,
-      "owners": 55,
-      "duplicates": 1
-    },
-    "topFiles": [
+  "findings": {
+    "todos": [],
+    "duplicateAssets": [
       {
-        "file": "packages/clawjs-core/src/builtins/finance/index.ts",
-        "totalIssues": 24,
-        "issueCounts": {
-          "owners": 1,
-          "exports": 23
-        }
+        "hash": "f360afd976479b2e1002112d96225e00466a0a2e4ecc4a738745613c6b6cc707",
+        "size": 1235074,
+        "files": [
+          "apps/chat/ios/ClawJS/Assets.xcassets/AppIcon.appiconset/AppIcon.png",
+          "apps/chat/macos/ClawJSMac/Assets.xcassets/AppIcon.appiconset/AppIcon.png",
+          "docs/assets/clawjs-logo.png"
+        ]
       },
       {
-        "file": "packages/clawjs-core/src/builtins/reading_media/index.ts",
-        "totalIssues": 23,
-        "issueCounts": {
-          "owners": 1,
-          "exports": 22
-        }
+        "hash": "854db1ffa0b517c9e6776485ee8a6e472cd4f83b2576545e33fdf357ad57318a",
+        "size": 498,
+        "files": [
+          "apps/chat/ios/ClawJS/Assets.xcassets/EditIcon.imageset/edit.svg",
+          "apps/chat/macos/ClawJSMac/Assets.xcassets/EditIcon.imageset/edit.svg"
+        ]
       },
       {
-        "file": "packages/clawjs-core/src/builtins/billing/index.ts",
-        "totalIssues": 22,
-        "issueCounts": {
-          "owners": 1,
-          "exports": 21
-        }
+        "hash": "876a637bb3195d6e31911df9630b5235124119e6498e33f03674ec5f12b09aaf",
+        "size": 284,
+        "files": [
+          "apps/chat/ios/ClawJS/Assets.xcassets/MenuIcon.imageset/menu.svg",
+          "apps/chat/macos/ClawJSMac/Assets.xcassets/MenuIcon.imageset/menu.svg"
+        ]
       },
       {
-        "file": "packages/clawjs-core/src/builtins/analytics/index.ts",
-        "totalIssues": 20,
-        "issueCounts": {
-          "owners": 1,
-          "exports": 19
-        }
+        "hash": "12a43913cdb137ec2b538a4fd2ff4c372001914cab991d2821ad917a23ead8c3",
+        "size": 24911,
+        "files": [
+          "apps/host/assets/AppIcon.iconset/icon_128x128@2x.png",
+          "apps/host/assets/AppIcon.iconset/icon_256x256.png"
+        ]
       },
       {
-        "file": "packages/clawjs-core/src/builtins/fitness/index.ts",
-        "totalIssues": 20,
-        "issueCounts": {
-          "owners": 1,
-          "exports": 19
-        }
+        "hash": "f86f586a80cddcf755d3de7230a461640774d9fb5aed99e94ec593e3d9c3f5eb",
+        "size": 1219,
+        "files": [
+          "apps/host/assets/AppIcon.iconset/icon_16x16@2x.png",
+          "apps/host/assets/AppIcon.iconset/icon_32x32.png"
+        ]
       },
       {
-        "file": "packages/clawjs-core/src/builtins/health/index.ts",
-        "totalIssues": 20,
-        "issueCounts": {
-          "owners": 1,
-          "exports": 19
-        }
+        "hash": "518172897399c137ecab65fd2ee05ccc625b2d88e6ad7a54237718940a852ff9",
+        "size": 82238,
+        "files": [
+          "apps/host/assets/AppIcon.iconset/icon_256x256@2x.png",
+          "apps/host/assets/AppIcon.iconset/icon_512x512.png"
+        ]
       },
       {
-        "file": "packages/clawjs-core/src/builtins/cooking/index.ts",
-        "totalIssues": 19,
-        "issueCounts": {
-          "owners": 1,
-          "exports": 18
-        }
+        "hash": "7ffbcf2122a59665a7b96acc68bf6bdff98fb61f93c3310b05617754594ad52a",
+        "size": 1009163,
+        "files": [
+          "apps/host/assets/AppIcon.iconset/icon_512x512@2x.png",
+          "apps/host/assets/AppIcon.png"
+        ]
       },
       {
-        "file": "packages/clawjs-core/src/builtins/crm/index.ts",
-        "totalIssues": 19,
-        "issueCounts": {
-          "owners": 1,
-          "exports": 18
-        }
+        "hash": "05476543b5b2eed0fa0b9a7907ca4df1c3a3ac7f3ac4a12a5875d7dc1cc46141",
+        "size": 20064,
+        "files": [
+          "assets/apple-touch-icon.png",
+          "examples/showcase/public/apple-touch-icon.png",
+          "packages/clawjs-database/public/brand/apple-touch-icon.png"
+        ]
       },
       {
-        "file": "packages/clawjs-core/src/builtins/agents/index.ts",
-        "totalIssues": 17,
-        "issueCounts": {
-          "owners": 1,
-          "exports": 16
-        }
+        "hash": "749c8072e433c8131a8341af626262084fee9bb4ff652bd0c29c8302235f4990",
+        "size": 5430,
+        "files": [
+          "assets/favicon.ico",
+          "examples/showcase/src/app/favicon.ico",
+          "packages/clawjs-database/public/brand/favicon.ico"
+        ]
       },
       {
-        "file": "packages/clawjs-core/src/builtins/identity/index.ts",
-        "totalIssues": 16,
-        "issueCounts": {
-          "owners": 1,
-          "exports": 15
-        }
+        "hash": "8cb11b1f1a2b312ec05446eb5ef8e1c9d07f411aa6e3a826853cb76ced91bdd1",
+        "size": 22082,
+        "files": [
+          "assets/icon-192.png",
+          "packages/clawjs-database/public/brand/icon-192.png"
+        ]
       },
       {
-        "file": "packages/clawjs-core/src/builtins/hr/index.ts",
-        "totalIssues": 14,
-        "issueCounts": {
-          "owners": 1,
-          "exports": 13
-        }
+        "hash": "cc46c05668645c824fb533f6a24a3872e6013adaba117122aa6b76054421432c",
+        "size": 124237,
+        "files": [
+          "assets/icon-512.png",
+          "assets/logo.png",
+          "examples/showcase/public/logo-512.png",
+          "monitor/ui/public/logo.png",
+          "packages/clawjs-database/public/brand/icon-512.png",
+          "packages/clawjs-database/public/brand/logo.png"
+        ]
       },
       {
-        "file": "packages/clawjs-core/src/builtins/luxury_and_collecting/index.ts",
-        "totalIssues": 14,
-        "issueCounts": {
-          "owners": 1,
-          "exports": 13
-        }
+        "hash": "5ddc2bf3631579d5dd88df0bc7b7a3ec9a11adb3428ecbc4d97cdcb58f2448fc",
+        "size": 414174,
+        "files": [
+          "assets/og-image.png",
+          "examples/showcase/public/og-image.png",
+          "packages/clawjs-database/public/brand/og-image.png"
+        ]
       },
       {
-        "file": "packages/clawjs-core/src/builtins/support/index.ts",
-        "totalIssues": 12,
-        "issueCounts": {
-          "owners": 1,
-          "exports": 11
-        }
+        "hash": "b42424d719d393d1483d7c2be67308f999fbbb8d4941302293c36e336b1db435",
+        "size": 12201,
+        "files": [
+          "assets/runtimes/hermes.png",
+          "examples/showcase/public/runtimes/hermes.png",
+          "packages/clawjs-database/public/brand/runtimes/hermes.png"
+        ]
       },
       {
-        "file": "packages/clawjs-core/src/builtins/travel/index.ts",
-        "totalIssues": 12,
-        "issueCounts": {
-          "owners": 1,
-          "exports": 11
-        }
+        "hash": "3bc9217238e09f58a50639e9c285b0815765c81bbcba49b0ab50219330fc48f6",
+        "size": 3040,
+        "files": [
+          "assets/runtimes/ironclaw.png",
+          "examples/showcase/public/runtimes/ironclaw.png",
+          "packages/clawjs-database/public/brand/runtimes/ironclaw.png"
+        ]
       },
       {
-        "file": "packages/clawjs-core/src/builtins/career/index.ts",
-        "totalIssues": 11,
-        "issueCounts": {
-          "owners": 1,
-          "exports": 10
-        }
+        "hash": "a0b634b2a94a28b97e810a61e96e93b69a758de1aaaa11be02bbf78aeabdd19b",
+        "size": 5233,
+        "files": [
+          "assets/runtimes/nanobot.png",
+          "examples/showcase/public/runtimes/nanobot.png",
+          "packages/clawjs-database/public/brand/runtimes/nanobot.png"
+        ]
       },
       {
-        "file": "packages/clawjs-core/src/builtins/infra/index.ts",
-        "totalIssues": 11,
-        "issueCounts": {
-          "owners": 1,
-          "exports": 10
-        }
+        "hash": "da547e3be672fda7f2d8eeddaa13525f690ff49416509b680f38552ac45eb575",
+        "size": 4557,
+        "files": [
+          "assets/runtimes/nanoclaw.png",
+          "examples/showcase/public/runtimes/nanoclaw.png",
+          "packages/clawjs-database/public/brand/runtimes/nanoclaw.png"
+        ]
       },
       {
-        "file": "packages/clawjs-core/src/builtins/learning/index.ts",
-        "totalIssues": 11,
-        "issueCounts": {
-          "owners": 1,
-          "exports": 10
-        }
+        "hash": "2477abc8272f54e115c0d62b0b8d850c9b31bb1d2cd0f4fcdc1f61775953e544",
+        "size": 5288,
+        "files": [
+          "assets/runtimes/nemoclaw.png",
+          "examples/showcase/public/runtimes/nemoclaw.png",
+          "packages/clawjs-database/public/brand/runtimes/nemoclaw.png"
+        ]
       },
       {
-        "file": "packages/clawjs-core/src/builtins/mental_health_recovery/index.ts",
-        "totalIssues": 11,
-        "issueCounts": {
-          "owners": 1,
-          "exports": 10
-        }
+        "hash": "81d54dfbb30f94d837bb60a16cb410fbc2789fa7a1c6cd8756173ccce8f43ce7",
+        "size": 1493,
+        "files": [
+          "assets/runtimes/nullclaw.png",
+          "examples/showcase/public/runtimes/nullclaw.png",
+          "packages/clawjs-database/public/brand/runtimes/nullclaw.png"
+        ]
       },
       {
-        "file": "packages/clawjs-core/src/builtins/observability/index.ts",
-        "totalIssues": 11,
-        "issueCounts": {
-          "owners": 1,
-          "exports": 10
-        }
+        "hash": "06f2051cd3b540b35c118c06d9f91ad31406de3ff0d1e8e9e34c8da8570813b7",
+        "size": 4526,
+        "files": [
+          "assets/runtimes/openclaw.png",
+          "examples/showcase/public/runtimes/openclaw.png",
+          "packages/clawjs-database/public/brand/runtimes/openclaw.png"
+        ]
       },
       {
-        "file": "packages/clawjs-core/src/builtins/education_school/index.ts",
-        "totalIssues": 10,
-        "issueCounts": {
-          "owners": 1,
-          "exports": 9
-        }
+        "hash": "8c25195eda46ae916a6071fa78361b0c751468a3e3102eb199a0cd7009108c16",
+        "size": 2555,
+        "files": [
+          "assets/runtimes/picoclaw.png",
+          "examples/showcase/public/runtimes/picoclaw.png",
+          "packages/clawjs-database/public/brand/runtimes/picoclaw.png"
+        ]
+      },
+      {
+        "hash": "f8910a9c27b60ae360ac099665501abb0a457c72792413bb6f7371b8dfe90bae",
+        "size": 5478,
+        "files": [
+          "assets/runtimes/zeroclaw.png",
+          "examples/showcase/public/runtimes/zeroclaw.png",
+          "packages/clawjs-database/public/brand/runtimes/zeroclaw.png"
+        ]
+      },
+      {
+        "hash": "c4f5d4b111df659a05625a9cb501f8ebe7fbf568338aa96858b3a5bf71153a14",
+        "size": 819829,
+        "files": [
+          "assets/sponsors/landscape-ai.png",
+          "packages/clawjs-database/public/brand/sponsors/landscape-ai.png"
+        ]
+      },
+      {
+        "hash": "b8caae67d48e9a285de2e2efbe487309c9c583a640ef89aa8ecf0a1830a677c6",
+        "size": 5685,
+        "files": [
+          "examples/showcase/public/chat-icon.png",
+          "examples/showcase/public/header-chat-icon.png"
+        ]
+      },
+      {
+        "hash": "b2a93171152e332715079c5f9f7a79e1bacc0dd8e8dc89472d9c527a7eee4af3",
+        "size": 411,
+        "files": [
+          "packages/clawjs/templates/app/src/app/icon.svg",
+          "packages/create-claw-app/template/src/app/icon.svg"
+        ]
       }
-    ]
-  },
-  "peripherySummary": {
-    "status": "external-pending",
-    "packageCount": 2,
-    "scannedPackages": 0,
-    "failedPackages": 0,
-    "totalFindings": 0
-  },
-  "externalPending": [
-    {
-      "id": "periphery-binary-unavailable",
-      "tool": "periphery",
-      "message": "Periphery 3.7.4 is pinned and report-only, but the binary is not installed on PATH for the calibration scan."
-    }
-  ],
-  "notes": [
-    "Initial cleanup completed: blocking findings are zero, actionable TODO/FIXME/HACK/XXX findings are zero, and unreferenced asset candidates are zero after worktree/generated/public asset calibration and removal of the iOS all-projects placeholder.",
-    "Use scripts/code-hygiene-audit.mjs for report-only TODO, duplicate asset, and unreferenced asset candidate findings.",
-    "Use scripts/code-hygiene-periphery.mjs for report-only Swift package calibration once the pinned binary is available.",
-    "Initial ClawJS dependency cleanup removed chokidar from sessions and @noble/hashes from profile.",
-    "Knip entrypoint calibration now includes tool configs, local scripts, seed files, and public JS assets.",
-    "ClawJS built-in family barrel findings plus two reviewed dynamic-runtime findings are covered by expiring baseline entries.",
-    "Root dependency normalization moved VitePress/Vue ownership to website, declared direct root tsx usage, and calibrated the Vitest coverage provider dependency.",
-    "Knip workspace calibration now maps top-level app/module workspaces to their own package manifests with explicit entry/project shapes, drops reviewed direct app/database dependencies now provided by actual imports, and baselines two reviewed dynamic runtime findings.",
-    "Workspace dependency cleanup removed reviewed unused direct dependencies from top-level app/module package manifests, updated their package locks, expanded report-only Knip entry ownership for memory/modules service entrypoints, and reduced dependency/devDependency findings to zero.",
-    "Discord test catalog cleanup made file-local operation field constants private while preserving the test helpers imported across Discord request/executor tests.",
-    "Secrets crypto cleanup made module-private constants and helper functions private while preserving the server crypto API used by stores, resolver, app, scripts, and smoke tests.",
-    "Knip calibration now treats templates, public CSS, website CSS/HTML, generated fixtures, and reviewed cross-repo e2e imports as report-only owned surfaces.",
-    "Unused file cleanup removed reviewed legacy CLI sidecar command files, private server re-export wrappers, placeholder clients, and unreferenced configs; Knip file findings are now zero.",
-    "Dead-file cleanup removed reviewed one-line server stubs, retired CLI bin shims, stale generated configs, and unreferenced helper modules while keeping package surface bins explicitly allowlisted.",
-    "Database store-helper cleanup made clearly internal parser, normalizer, regex, and constraint helpers private while keeping the database package contract unchanged.",
-    "V1 data core cleanup made session indexing, sidecar schema, TOML rendering, SQL identifier, and text utility helpers private while preserving the v1 data package re-export contract.",
-    "Slides cleanup made manifest helper types, layout/theme constants, and local validation helpers private while preserving the `claw slides` command contract.",
-    "Database magic and style schema cleanup removed retired productivity alias helpers and made style-only structural types private while preserving CLI style/template behavior.",
-    "Agent plan cleanup made local risk/policy evaluation helpers private while keeping the plan CLI and delegation graph test surface unchanged.",
-    "Time logic cleanup made local temporal helper aliases and parsing helpers private while keeping exported temporal input/status contracts unchanged.",
-    "Execution and Relay protocol cleanup made nested payload/envelope helpers private where only the union or public request/response envelopes are externally consumed.",
-    "Secrets shared type cleanup kept exported only the role/principal types imported by auth and made the unused local DTO descriptors private.",
-    "Execution shared type cleanup made local status aliases and unused helper DTOs private while preserving imported records and protocol types.",
-    "IoT tool registry cleanup made local descriptor and invocation helpers private while keeping server route registration exported.",
-    "Publishing schema cleanup made nested Zod schema helpers private and removed unused inferred type aliases while preserving route-imported validators.",
-    "Apps store cleanup made local record/input helpers private and removed an unused root-dir helper while preserving `createAppsStore`.",
-    "Runtime plugin bridge cleanup made low-level OpenClaw plugin command helpers private while preserving the public bridge facades.",
-    "CLI runtime metadata cleanup made actor/guidance helper exports private while preserving the CLI metadata provider entrypoint.",
-    "Project scaffold cleanup made local project file, package JSON, config writer, config factory, and resource-entry helpers private while preserving CLI project generate/add/info flows.",
-    "Chat CLI cleanup made local context and exit-code helpers private while preserving chat/provider CLI entrypoints.",
-    "Report governance cleanup made local budget, search, similarity, and age parser helpers private while preserving exported governance functions.",
-    "Audio catalog cleanup renamed the local legacy import helper to catalog terminology and removed legacy transcript provider metadata.",
-    "Memory CLI cleanup made local exit-code and usage helpers private while preserving the `runMemoryCli` entrypoint.",
-    "References storage cleanup made local path and Markdown serialization helpers private while preserving generated reference IDs and CLI storage flows.",
-    "Secrets plugin type cleanup made nested field, governance, context, action, resource, and sync helper interfaces private while preserving plugin manifest contracts.",
-    "Bridge platform cleanup removed unused platform predicate and TCC capability helper exports while preserving `detectPlatform`.",
-    "Template surface cleanup stopped re-exporting unused builtin counters and CLI option types, and removed unused render DTO aliases while preserving `claw template` behavior.",
-    "Private shared-type cleanup made unused publishing/content/drive/ERP helper aliases private or removed them while preserving imported record contracts.",
-    "V1 data cleanup removed duplicate exit-code/schema re-exports from the CLI wrapper while preserving the consumed data-root/storage helpers.",
-    "Integration runtime cleanup kept catalog helper metadata public through the package entrypoint and made provider-local Slack/GitHub/Stripe/Airtable helper constants private.",
-    "CLI JSON cleanup made unused low-level writer wrappers private and removed a dead error writer alias while preserving command JSON envelopes.",
-    "Style surface cleanup stopped re-exporting unused builtin manifest and CLI option types while preserving `claw style` behavior.",
-    "Publishing channel contract cleanup made adapter lifecycle helper result types private while preserving the exported adapter interface.",
-    "Bridge server cleanup removed private-package duplicate bridge-frame re-exports and made SSH runtime options private.",
-    "Bridge job-handler cleanup made internal Zod schemas, inferred request types, logger defaults, JSON-RPC helper types, and command abort errors private while preserving bridge runtime behavior.",
-    "Memory cleanup made workspace path, scalar/type-kind/frontmatter aliases, and server option/result helper types private while preserving the dynamically loaded `startMemoryServer` entrypoint.",
-    "ERP cleanup removed unused frontend contract list/filter helper interfaces and made form-field, event-type, SQL table, and rewrite helpers private inside the private ERP module.",
-    "Integrations provider cleanup made provider-local runtime/source operation aliases private, removed redundant runner type re-exports, and kept public connector and Telegram event contracts available through the package entrypoint.",
-    "Publishing cleanup made CLI parser/token helpers, default port, prefixed database class, AppServices, and raw ULID helper private while preserving exported command context, database alias, and prefixed ID APIs.",
-    "Secrets cleanup made resolver field/output DTOs and actor helpers private, removed an unused governance re-export, and deleted the unreferenced session cache store class while keeping schema/backup compatibility.",
-    "Wiki cleanup made admin JWT claim helpers private and removed unused token/access-policy helper surfaces while preserving auth principal and wiki operation contracts.",
-    "Secrets server cleanup made remaining local app/backup/database helpers private, removed stale capability/governance helpers, and deleted the unused session-cache row DTO after the store removal.",
-    "Notify cleanup made admin JWT claims, subscription matching, schema surface node construction, and local delivery-state alias private while preserving exported notification contracts through the core surface.",
-    "IoT adapter cleanup made provider id constants and local discovery helper types private while preserving adapter classes and runtime connector behavior.",
-    "Monitor/execution cleanup made local monitor mode/schema helpers and password-hash implementation helpers private while preserving exported config, schema SQL, and verification APIs.",
-    "Drive cleanup narrowed the CLI test barrel to the used client API and made auth/realtime helper types private while preserving SDK, server, and realtime behavior.",
-    "Feed cleanup replaced the stale missing-test script with a real auth smoke test, made admin JWT claim helpers private, and removed an unused opaque-token helper.",
-    "Content/database/execution cleanup made local form-field and worker option types private and narrowed the database CLI barrel while preserving service and worker behavior.",
-    "ClawJS node cleanup made implementation-only runtime, OpenClaw, secrets, Telegram, rules, demo, and schema surface helpers private while preserving the package entrypoint and generated declaration build.",
-    "Claw CLI cleanup removed or privatized implementation-only CLI/domain/open/reference/style/template/data helpers while preserving the published CLI entrypoint exports and generated declaration build.",
-    "Workspace/delegation/runtime cleanup made local SQLite and provider helpers private and removed the unused command delegation adapter while preserving deterministic delegation behavior.",
-    "Drive/browser/relay/plugin cleanup made local error/location/envelope helpers private and removed unused browser audit and plugin session-key wrappers.",
-    "Bridge/Relay follow-up made the screenshot region type private, wired Relay mDNS cleanup into server shutdown, and fixed bridge pairing to send the current platform contract.",
-    "Bridge Iroh cleanup made the remote endpoint descriptor private while preserving the exported node and stream bridge contract.",
-    "ClawJS node state cleanup removed the unused Telegram state filename alias while preserving the public Telegram state path resolver.",
-    "Built-in catalog type cleanup made field-kind and collection-rule helper aliases private while preserving exported catalog definition interfaces.",
-    "Session title cleanup replaced the legacy title alias with a compatibility wrapper while preserving both title-generation entrypoints.",
-    "Package default-export cleanup replaced duplicate aliases in search MCP and ESLint config packages with compatibility-preserving default surfaces.",
-    "Session stream cleanup replaced OpenClaw compatibility aliases with wrappers while preserving Runtime and OpenClaw streaming entrypoints.",
-    "Memory server dynamic entrypoint is baselined with expiry because the Claw CLI launcher imports startMemoryServer dynamically across bundled, packed, and development layouts.",
-    "Stable surface builder alias is baselined with expiry because ADR 0004 documents clawStableSurface as a public stable-contract alias for persistent surface builders."
-  ]
+    ],
+    "unreferencedAssets": []
+  }
 }
