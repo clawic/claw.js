@@ -77,6 +77,42 @@ test("runCli exposes the generated stable surface inspection CLI", async () => {
   assert.match(mermaid.stdout, /claw_relay/);
 });
 
+test("runCli exposes pre-v1 version governance through inspect", async () => {
+  const governance = await runCliCapture(["inspect", "version-governance", "--json"], process.cwd());
+  assert.equal(governance.code, CLI_EXIT_OK);
+  const payload = parseCliJson<{
+    phase: string;
+    branchPolicy: string;
+    sourceOfTruth: string;
+    freezeTrigger: { kind: string; examples: string[] };
+    approvalGate: { requiredForOwnedPublicContracts: boolean; blockedWithoutApproval: string[] };
+    changesets: { mode: string; existingBaseline: string; ordinaryWorkCreatesChangesets: boolean };
+    ownedVersionPolicy: { normalizeAggressively: boolean; blockedPatterns: string[] };
+    externalAllowlist: string[];
+    surface: { id: string; stability: string } | null;
+  }>(governance.stdout).data;
+  assert.equal(payload.phase, "pre_v1_mutable");
+  assert.equal(payload.branchPolicy, "main_mutable");
+  assert.equal(payload.sourceOfTruth, "clawjs");
+  assert.equal(payload.freezeTrigger.kind, "explicit_user_instruction");
+  assert.equal(payload.freezeTrigger.examples.includes("congela V1"), true);
+  assert.equal(payload.approvalGate.requiredForOwnedPublicContracts, true);
+  assert.equal(payload.approvalGate.blockedWithoutApproval.includes("new_changeset_bump"), true);
+  assert.equal(payload.changesets.mode, "frozen_until_freeze");
+  assert.equal(payload.changesets.ordinaryWorkCreatesChangesets, false);
+  assert.equal(payload.ownedVersionPolicy.normalizeAggressively, true);
+  assert.equal(payload.externalAllowlist.includes("third_party_api_versions"), true);
+  assert.equal(payload.surface?.id, "claw.versionGovernance.preV1");
+  assert.equal(payload.surface?.stability, "preV1Reset");
+
+  const why = await runCliCapture(["inspect", "why", "claw.versionGovernance.preV1", "--json"], process.cwd());
+  assert.equal(why.code, CLI_EXIT_OK);
+  const whyPayload = parseCliJson<{ type: string; id: string; notes: string }>(why.stdout).data;
+  assert.equal(whyPayload.type, "surfaceNode");
+  assert.equal(whyPayload.id, "claw.versionGovernance.preV1");
+  assert.match(whyPayload.notes, /Owned version bumps require explicit user approval/);
+});
+
 test("runCli exposes surface graph routes and neighbors through inspect", async () => {
   const relay = await runCliCapture(["inspect", "why", "relay", "--json"], process.cwd());
   assert.equal(relay.code, CLI_EXIT_OK);

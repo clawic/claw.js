@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "program": "pre-v1-version-governance",
+  "phase": "pre_v1_mutable",
+  "sourceConversationId": "019e2b82-6118-7d52-9237-71a3e9ba4e41",
+  "policySurfaceId": "claw.versionGovernance.preV1",
+  "changesets": {
+    "mode": "frozen_until_v1_freeze",
+    "count": 357,
+    "filenameSha256": "015c66454c65d7fa36d2c249067ea3a7ebd2710acab42e09759b0229054c3a60",
+    "contentSha256": "4ee9967b9a949960857ae24a3e3d8f9f57fc93d5fa74d6d72835a55e1c8c8641",
+    "excludedFiles": ["README.md"],
+    "notes": "Existing changesets are frozen pre-release ledger input, not approval to bump packages. Update this ledger only with explicit user approval to freeze/release."
+  },
+  "packageVersions": {
+    "mode": "frozen_until_v1_freeze",
+    "packageFileCount": 37,
+    "nameVersionSha256": "95312f2c0ea13434e87d204723b38525ecd236aa1e2243b776b8393f1d427b9e",
+    "notes": "Package manifest versions are pinned while phase is pre_v1_mutable. Dependency lockfile versions are external/dependency metadata and are not covered by this digest."
+  },
+  "externalAllowlist": [
+    "third_party_api_versions",
+    "os_sdk_platform_versions",
+    "dependency_lockfiles",
+    "upstream_release_tags",
+    "provider_model_version_names"
+  ]
+}

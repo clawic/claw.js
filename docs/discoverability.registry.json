@@ -4,148 +4,490 @@
   "description": "Machine-readable discovery routes for durable ClawJS/Clawix meta-code. Routers route, ADR/docs decide, skills/playbooks execute, and checks enforce.",
   "artifacts": [
     {
-      "id": "discoverability-contract",
+      "id": "adr-docs-adr-0001-claw-framework-host-boundary",
       "kind": "adr",
       "owner": "claw",
-      "canonicalSource": "docs/adr/0017-discoverability-and-meta-code-routing.md",
+      "canonicalSource": "docs/adr/0001-claw-framework-host-boundary.md",
       "requiredEntrypoints": [
         "AGENTS.md",
         "CLAUDE.md",
-        "docs/decision-map.md",
-        "skills/adr-to-guardrail/SKILL.md",
-        "skills/docs-alignment-update/SKILL.md",
-        "skills/decision-map-maintenance/SKILL.md"
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
       ],
       "discoveryTerms": [
-        "discoverability",
-        "meta-code routing",
-        "discovery route"
+        "ADR 0001: Claw framework and host boundary",
+        "0001-claw-framework-host-boundary",
+        "ADR 0001"
       ],
       "searchQueries": [
         {
-          "query": "discoverability",
-          "expectPath": "docs/adr/0017-discoverability-and-meta-code-routing.md"
-        },
-        {
-          "query": "meta-code routing",
-          "expectPath": "docs/adr/0017-discoverability-and-meta-code-routing.md"
-        }
-      ],
-      "inspect": [
-        {
-          "command": "claw inspect why search --json",
-          "expectPath": "docs/adr/0017-discoverability-and-meta-code-routing.md"
+          "query": "ADR 0001: Claw framework and host boundary",
+          "expectPath": "docs/adr/0001-claw-framework-host-boundary.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-17"
+      "reviewDate": "2026-08-18"
     },
     {
-      "id": "surface-route-graph",
-      "kind": "surface-route",
-      "owner": "claw",
-      "canonicalSource": "docs/adr/0012-surface-route-graph.md",
-      "requiredEntrypoints": [
-        "AGENTS.md",
-        "CLAUDE.md",
-        "docs/decision-map.md",
-        "skills/surface-route-work/SKILL.md"
-      ],
-      "discoveryTerms": [
-        "surface route graph",
-        "route-first",
-        "surface-first"
-      ],
-      "searchQueries": [
-        {
-          "query": "surface route graph",
-          "expectPath": "docs/adr/0012-surface-route-graph.md"
-        }
-      ],
-      "inspect": [
-        {
-          "command": "claw inspect routes --json",
-          "expectRoute": "chat.localDesktop"
-        }
-      ],
-      "guard": "scripts/surface-route-graph-guard.mjs",
-      "status": "enforced",
-      "reviewDate": "2026-08-17"
-    },
-    {
-      "id": "cli-action-intent-registry",
+      "id": "adr-docs-adr-0001-naming-and-stability-surfaces",
       "kind": "adr",
       "owner": "claw",
-      "canonicalSource": "docs/adr/0018-cli-action-intent-registry.md",
+      "canonicalSource": "docs/adr/0001-naming-and-stability-surfaces.md",
       "requiredEntrypoints": [
         "AGENTS.md",
         "CLAUDE.md",
-        "docs/decision-map.md",
-        "docs/cli.md",
-        "skills/cli-agent-surface-work/SKILL.md"
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
       ],
       "discoveryTerms": [
-        "command intent",
-        "CLI action vocabulary",
-        "claw commands"
+        "ADR 0001: Naming and stability surfaces",
+        "0001-naming-and-stability-surfaces",
+        "ADR 0001"
       ],
       "searchQueries": [
         {
-          "query": "command intent",
-          "expectPath": "docs/adr/0018-cli-action-intent-registry.md"
-        },
-        {
-          "query": "CLI action vocabulary",
-          "expectPath": "docs/adr/0018-cli-action-intent-registry.md"
-        }
-      ],
-      "inspect": [
-        {
-          "command": "claw inspect command-intents --json",
-          "expectRoute": "cli.commandIntentResolution"
+          "query": "ADR 0001: Naming and stability surfaces",
+          "expectPath": "docs/adr/0001-naming-and-stability-surfaces.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-17"
+      "reviewDate": "2026-08-18"
     },
     {
-      "id": "search-v1-1-architecture",
+      "id": "adr-docs-adr-0002-testing-architecture",
       "kind": "adr",
       "owner": "claw",
-      "canonicalSource": "docs/adr/0019-search-v1-1-architecture.md",
+      "canonicalSource": "docs/adr/0002-testing-architecture.md",
       "requiredEntrypoints": [
         "AGENTS.md",
         "CLAUDE.md",
-        "docs/decision-map.md",
-        "docs/search.md"
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
       ],
       "discoveryTerms": [
-        "Search V1.1",
-        "Root Search",
-        "Search Source Registry",
-        "Search Index"
+        "ADR 0002: Testing architecture",
+        "0002-testing-architecture",
+        "ADR 0002"
       ],
       "searchQueries": [
         {
-          "query": "Search V1.1",
-          "expectPath": "docs/adr/0019-search-v1-1-architecture.md"
-        },
-        {
-          "query": "Root Search",
-          "expectPath": "docs/search.md"
-        }
-      ],
-      "inspect": [
-        {
-          "command": "claw search sources --json",
-          "expectPath": "docs/search.md"
+          "query": "ADR 0002: Testing architecture",
+          "expectPath": "docs/adr/0002-testing-architecture.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-17"
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "adr-docs-adr-0003-source-file-boundaries",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0003-source-file-boundaries.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0003: Source file boundaries",
+        "0003-source-file-boundaries",
+        "ADR 0003"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0003: Source file boundaries",
+          "expectPath": "docs/adr/0003-source-file-boundaries.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "adr-docs-adr-0004-persistent-surface-registry-and-inspection",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0004: Stable surface registry and inspection",
+        "0004-persistent-surface-registry-and-inspection",
+        "ADR 0004"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0004: Stable surface registry and inspection",
+          "expectPath": "docs/adr/0004-persistent-surface-registry-and-inspection.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "adr-docs-adr-0005-canonical-data-catalog",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0005-canonical-data-catalog.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0005: Canonical data catalog",
+        "0005-canonical-data-catalog",
+        "ADR 0005"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0005: Canonical data catalog",
+          "expectPath": "docs/adr/0005-canonical-data-catalog.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "adr-docs-adr-0006-integration-qa-lab",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0006-integration-qa-lab.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0006: Integration QA Lab",
+        "0006-integration-qa-lab",
+        "ADR 0006"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0006: Integration QA Lab",
+          "expectPath": "docs/adr/0006-integration-qa-lab.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "adr-docs-adr-0007-cli-agent-interface",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0007-cli-agent-interface.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0007: CLI agent interface",
+        "0007-cli-agent-interface",
+        "ADR 0007"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0007: CLI agent interface",
+          "expectPath": "docs/adr/0007-cli-agent-interface.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "adr-docs-adr-0008-secrets-security-v1",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0008-secrets-security-v1.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0008: Secrets Security V1",
+        "0008-secrets-security-v1",
+        "ADR 0008"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0008: Secrets Security V1",
+          "expectPath": "docs/adr/0008-secrets-security-v1.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "adr-docs-adr-0009-dual-human-programmatic-surfaces",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0009-dual-human-programmatic-surfaces.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0009: Dual human and programmatic surfaces",
+        "0009-dual-human-programmatic-surfaces",
+        "ADR 0009"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0009: Dual human and programmatic surfaces",
+          "expectPath": "docs/adr/0009-dual-human-programmatic-surfaces.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "adr-docs-adr-0010-cli-jit-guidance-actor-assertions-resource-registry",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0010-cli-jit-guidance-actor-assertions-resource-registry.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0010: CLI just-in-time guidance, actor assertions, and resource registry",
+        "0010-cli-jit-guidance-actor-assertions-resource-registry",
+        "ADR 0010"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0010: CLI just-in-time guidance, actor assertions, and resource registry",
+          "expectPath": "docs/adr/0010-cli-jit-guidance-actor-assertions-resource-registry.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "adr-docs-adr-0011-report-governance-v1",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0011-report-governance-v1.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0011: Report Governance V1",
+        "0011-report-governance-v1",
+        "ADR 0011"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0011: Report Governance V1",
+          "expectPath": "docs/adr/0011-report-governance-v1.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "adr-docs-adr-0012-domain-surface-registry-db-to-cli",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0012-domain-surface-registry-db-to-cli.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0012: Domain surface registry from database to CLI",
+        "0012-domain-surface-registry-db-to-cli",
+        "ADR 0012"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0012: Domain surface registry from database to CLI",
+          "expectPath": "docs/adr/0012-domain-surface-registry-db-to-cli.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "adr-docs-adr-0013-agentic-naming-and-code-structure",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0013-agentic-naming-and-code-structure.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0013: Agentic naming and code structure",
+        "0013-agentic-naming-and-code-structure",
+        "ADR 0013"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0013: Agentic naming and code structure",
+          "expectPath": "docs/adr/0013-agentic-naming-and-code-structure.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "adr-docs-adr-0014-need-route-lab-v1",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0014-need-route-lab-v1.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0014: Need Route Lab V1",
+        "0014-need-route-lab-v1",
+        "ADR 0014"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0014: Need Route Lab V1",
+          "expectPath": "docs/adr/0014-need-route-lab-v1.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "adr-docs-adr-0015-connector-control-plane-v1",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0015-connector-control-plane-v1.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0015: Connector Control Plane V1",
+        "0015-connector-control-plane-v1",
+        "ADR 0015"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0015: Connector Control Plane V1",
+          "expectPath": "docs/adr/0015-connector-control-plane-v1.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "adr-docs-adr-0016-code-hygiene-program",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0016-code-hygiene-program.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0016: Code hygiene program",
+        "0016-code-hygiene-program",
+        "ADR 0016"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0016: Code hygiene program",
+          "expectPath": "docs/adr/0016-code-hygiene-program.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "adr-docs-adr-0025-pre-v1-version-governance",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0025-pre-v1-version-governance.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0025: Pre-V1 version governance",
+        "0025-pre-v1-version-governance",
+        "version governance",
+        "pre-v1 version governance"
+      ],
+      "searchQueries": [
+        {
+          "query": "pre v1 version governance",
+          "expectPath": "docs/adr/0025-pre-v1-version-governance.md"
+        }
+      ],
+      "guard": "packages/clawjs/src/inspect-cli.test.ts",
+      "status": "enforced",
+      "reviewDate": "2026-05-18"
     },
     {
       "id": "agents-v1-refactor",
@@ -155,11 +497,16 @@
       "requiredEntrypoints": [
         "AGENTS.md",
         "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
         "docs/decision-map.md",
         "docs/cli.md",
         "skills/surface-route-work/SKILL.md"
       ],
       "discoveryTerms": [
+        "ADR 0020: Agents V1 refactor",
+        "0020-agents-v1-refactor",
+        "ADR 0020",
         "Agents V1",
         "agent assignments",
         "agent resource grants",
@@ -175,52 +522,82 @@
           "expectPath": "docs/adr/0020-agents-v1-refactor.md"
         }
       ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-17",
       "inspect": [
         {
           "command": "claw inspect routes --json",
           "expectRoute": "agents.internalMacAssignment"
         }
-      ],
-      "guard": "scripts/discoverability-check.mjs",
-      "status": "enforced",
-      "reviewDate": "2026-08-17"
+      ]
     },
     {
-      "id": "remote-gateway-sync-redesign",
+      "id": "cli-action-intent-registry",
       "kind": "adr",
       "owner": "claw",
-      "canonicalSource": "docs/adr/0022-remote-gateway-sync-redesign.md",
+      "canonicalSource": "docs/adr/0018-cli-action-intent-registry.md",
       "requiredEntrypoints": [
         "AGENTS.md",
         "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
         "docs/decision-map.md",
-        "docs/relay.md",
-        "docs/interface-matrix.md",
-        "skills/surface-route-work/SKILL.md"
+        "docs/cli.md",
+        "skills/cli-agent-surface-work/SKILL.md"
       ],
       "discoveryTerms": [
-        "Coordinator Gateway Connector Sync",
-        "remote gateway sync",
-        "Iroh transport adapter",
-        "remote surface classification"
+        "ADR 0018: CLI action intent registry",
+        "0018-cli-action-intent-registry",
+        "ADR 0018",
+        "command intent",
+        "CLI action vocabulary",
+        "claw commands"
       ],
       "searchQueries": [
         {
-          "query": "remote gateway sync",
-          "expectPath": "docs/adr/0022-remote-gateway-sync-redesign.md"
+          "query": "command intent",
+          "expectPath": "docs/adr/0018-cli-action-intent-registry.md"
         },
         {
-          "query": "Coordinator Gateway Connector Sync",
-          "expectPath": "docs/adr/0022-remote-gateway-sync-redesign.md"
+          "query": "CLI action vocabulary",
+          "expectPath": "docs/adr/0018-cli-action-intent-registry.md"
         }
       ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-17",
       "inspect": [
         {
-          "command": "claw inspect routes --json",
-          "expectRoute": "remote.chatGateway"
+          "command": "claw inspect command-intents --json",
+          "expectRoute": "cli.commandIntentResolution"
+        }
+      ]
+    },
+    {
+      "id": "decision-map-maintenance",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/decision-map-maintenance/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "decision-map-maintenance",
+        "Keep decision maps as concise routers from decisions to canonical documents and validation guardrails.",
+        "decision map maintenance",
+        "decision-map routing"
+      ],
+      "searchQueries": [
+        {
+          "query": "decision map maintenance",
+          "expectPath": "skills/decision-map-maintenance/SKILL.md"
         }
       ],
-      "guard": "scripts/surface-route-graph-guard.mjs",
+      "guard": "scripts/skills-check.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-17"
     },
@@ -232,10 +609,15 @@
       "requiredEntrypoints": [
         "AGENTS.md",
         "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
         "docs/decision-map.md",
         "docs/canonical-data-catalog.md"
       ],
       "discoveryTerms": [
+        "ADR 0021: Dense data operating system",
+        "0021-dense-data-operating-system",
+        "ADR 0021",
         "dense data operating system",
         "dense data",
         "professional domains"
@@ -246,15 +628,937 @@
           "expectPath": "docs/adr/0021-dense-data-operating-system.md"
         }
       ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-17",
       "inspect": [
         {
           "command": "claw inspect why search --json",
           "expectPath": "docs/decision-map.md"
         }
+      ]
+    },
+    {
+      "id": "discoverability-contract",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0017-discoverability-and-meta-code-routing.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md",
+        "skills/adr-to-guardrail/SKILL.md",
+        "skills/docs-alignment-update/SKILL.md",
+        "skills/decision-map-maintenance/SKILL.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0017: Discoverability and meta-code routing",
+        "0017-discoverability-and-meta-code-routing",
+        "ADR 0017",
+        "discoverability",
+        "meta-code routing",
+        "discovery route"
+      ],
+      "searchQueries": [
+        {
+          "query": "discoverability",
+          "expectPath": "docs/adr/0017-discoverability-and-meta-code-routing.md"
+        },
+        {
+          "query": "meta-code routing",
+          "expectPath": "docs/adr/0017-discoverability-and-meta-code-routing.md"
+        }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
+      "reviewDate": "2026-08-17",
+      "inspect": [
+        {
+          "command": "claw inspect why search --json",
+          "expectPath": "docs/adr/0017-discoverability-and-meta-code-routing.md"
+        }
+      ]
+    },
+    {
+      "id": "docs-alignment-routing",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "skills/docs-alignment-update/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "skills/adr-to-guardrail/SKILL.md"
+      ],
+      "discoveryTerms": [
+        "docs-alignment-update",
+        "Update docs, playbooks, shims, generated docs, and alignment checks so public instructions route to the right canonical sources.",
+        "docs alignment",
+        "documentation routing",
+        "decision map"
+      ],
+      "searchQueries": [
+        {
+          "query": "docs alignment",
+          "expectPath": "skills/docs-alignment-update/SKILL.md"
+        }
+      ],
+      "guard": "scripts/docs-alignment-check.mjs",
+      "status": "enforced",
       "reviewDate": "2026-08-17"
+    },
+    {
+      "id": "guard-scripts-code-hygiene-check",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/code-hygiene-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "code-hygiene-check",
+        "Code Hygiene Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "code-hygiene-check",
+          "expectPath": "scripts/code-hygiene-check.mjs"
+        }
+      ],
+      "guard": "scripts/code-hygiene-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-discoverability-check",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/discoverability-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "discoverability-check",
+        "Discoverability Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "discoverability-check",
+          "expectPath": "scripts/discoverability-check.mjs"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-docs-alignment-check",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/docs-alignment-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "docs-alignment-check",
+        "Docs Alignment Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "docs-alignment-check",
+          "expectPath": "scripts/docs-alignment-check.mjs"
+        }
+      ],
+      "guard": "scripts/docs-alignment-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-docs-rendered-link-check",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/docs-rendered-link-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "docs-rendered-link-check",
+        "Docs Rendered Link Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "docs-rendered-link-check",
+          "expectPath": "scripts/docs-rendered-link-check.mjs"
+        }
+      ],
+      "guard": "scripts/docs-rendered-link-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-docs-surface-check",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/docs-surface-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "docs-surface-check",
+        "Docs Surface Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "docs-surface-check",
+          "expectPath": "scripts/docs-surface-check.mjs"
+        }
+      ],
+      "guard": "scripts/docs-surface-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-domain-surface-registry-guard",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/domain-surface-registry-guard.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "domain-surface-registry-guard",
+        "Domain Surface Registry Guard"
+      ],
+      "searchQueries": [
+        {
+          "query": "domain-surface-registry-guard",
+          "expectPath": "scripts/domain-surface-registry-guard.mjs"
+        }
+      ],
+      "guard": "scripts/domain-surface-registry-guard.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-naming-shape-check",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/naming-shape-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "naming-shape-check",
+        "Naming Shape Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "naming-shape-check",
+          "expectPath": "scripts/naming-shape-check.mjs"
+        }
+      ],
+      "guard": "scripts/naming-shape-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-naming-surface-guard",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/naming-surface-guard.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "naming-surface-guard",
+        "Naming Surface Guard"
+      ],
+      "searchQueries": [
+        {
+          "query": "naming-surface-guard",
+          "expectPath": "scripts/naming-surface-guard.mjs"
+        }
+      ],
+      "guard": "scripts/naming-surface-guard.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-package-surface-guard",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/package-surface-guard.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "package-surface-guard",
+        "Package Surface Guard"
+      ],
+      "searchQueries": [
+        {
+          "query": "package-surface-guard",
+          "expectPath": "scripts/package-surface-guard.mjs"
+        }
+      ],
+      "guard": "scripts/package-surface-guard.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-persistent-surface-doc-check",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/persistent-surface-doc-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "persistent-surface-doc-check",
+        "Persistent Surface Doc Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "persistent-surface-doc-check",
+          "expectPath": "scripts/persistent-surface-doc-check.mjs"
+        }
+      ],
+      "guard": "scripts/persistent-surface-doc-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-persistent-surface-guard",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/persistent-surface-guard.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "persistent-surface-guard",
+        "Persistent Surface Guard"
+      ],
+      "searchQueries": [
+        {
+          "query": "persistent-surface-guard",
+          "expectPath": "scripts/persistent-surface-guard.mjs"
+        }
+      ],
+      "guard": "scripts/persistent-surface-guard.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-privacy-check",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/privacy-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "privacy-check",
+        "Privacy Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "privacy-check",
+          "expectPath": "scripts/privacy-check.mjs"
+        }
+      ],
+      "guard": "scripts/privacy-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-privacy-check-test",
+      "kind": "test-harness",
+      "owner": "claw",
+      "canonicalSource": "scripts/privacy-check.test.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "privacy-check.test",
+        "Privacy Check.Test"
+      ],
+      "searchQueries": [
+        {
+          "query": "privacy-check.test",
+          "expectPath": "scripts/privacy-check.test.mjs"
+        }
+      ],
+      "guard": "scripts/privacy-check.test.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-skills-check",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/skills-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "skills-check",
+        "Skills Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "skills-check",
+          "expectPath": "scripts/skills-check.mjs"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-source-size-check",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/source-size-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "source-size-check",
+        "Source Size Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "source-size-check",
+          "expectPath": "scripts/source-size-check.mjs"
+        }
+      ],
+      "guard": "scripts/source-size-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-surface-route-graph-guard",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/surface-route-graph-guard.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "surface-route-graph-guard",
+        "Surface Route Graph Guard"
+      ],
+      "searchQueries": [
+        {
+          "query": "surface-route-graph-guard",
+          "expectPath": "scripts/surface-route-graph-guard.mjs"
+        }
+      ],
+      "guard": "scripts/surface-route-graph-guard.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-tracked-ignored-check",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/tracked-ignored-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "tracked-ignored-check",
+        "Tracked Ignored Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "tracked-ignored-check",
+          "expectPath": "scripts/tracked-ignored-check.mjs"
+        }
+      ],
+      "guard": "scripts/tracked-ignored-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-v1-surface-closure-audit-check",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/v1-surface-closure-audit-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "v1-surface-closure-audit-check",
+        "V1 Surface Closure Audit Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "v1-surface-closure-audit-check",
+          "expectPath": "scripts/v1-surface-closure-audit-check.mjs"
+        }
+      ],
+      "guard": "scripts/v1-surface-closure-audit-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-verify-cli-json-envelope-debt",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/verify-cli-json-envelope-debt.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "verify-cli-json-envelope-debt",
+        "Verify Cli Json Envelope Debt"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-cli-json-envelope-debt",
+          "expectPath": "scripts/verify-cli-json-envelope-debt.mjs"
+        }
+      ],
+      "guard": "scripts/verify-cli-json-envelope-debt.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-verify-cli-registry-router-parity",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/verify-cli-registry-router-parity.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "verify-cli-registry-router-parity",
+        "Verify Cli Registry Router Parity"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-cli-registry-router-parity",
+          "expectPath": "scripts/verify-cli-registry-router-parity.mjs"
+        }
+      ],
+      "guard": "scripts/verify-cli-registry-router-parity.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-verify-component-catalog",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/verify-component-catalog.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "verify-component-catalog",
+        "Verify Component Catalog"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-component-catalog",
+          "expectPath": "scripts/verify-component-catalog.mjs"
+        }
+      ],
+      "guard": "scripts/verify-component-catalog.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-verify-connector-control-plane-guard",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/verify-connector-control-plane-guard.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "verify-connector-control-plane-guard",
+        "Verify Connector Control Plane Guard"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-connector-control-plane-guard",
+          "expectPath": "scripts/verify-connector-control-plane-guard.mjs"
+        }
+      ],
+      "guard": "scripts/verify-connector-control-plane-guard.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-verify-connector-runtime-coverage",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/verify-connector-runtime-coverage.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "verify-connector-runtime-coverage",
+        "Verify Connector Runtime Coverage"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-connector-runtime-coverage",
+          "expectPath": "scripts/verify-connector-runtime-coverage.mjs"
+        }
+      ],
+      "guard": "scripts/verify-connector-runtime-coverage.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-verify-dense-data-goal",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/verify-dense-data-goal.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "verify-dense-data-goal",
+        "Verify Dense Data Goal"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-dense-data-goal",
+          "expectPath": "scripts/verify-dense-data-goal.mjs"
+        }
+      ],
+      "guard": "scripts/verify-dense-data-goal.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-verify-domain-surface-decision-matrix",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/verify-domain-surface-decision-matrix.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "verify-domain-surface-decision-matrix",
+        "Verify Domain Surface Decision Matrix"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-domain-surface-decision-matrix",
+          "expectPath": "scripts/verify-domain-surface-decision-matrix.mjs"
+        }
+      ],
+      "guard": "scripts/verify-domain-surface-decision-matrix.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-verify-host-permission-contract",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/verify-host-permission-contract.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "verify-host-permission-contract",
+        "Verify Host Permission Contract"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-host-permission-contract",
+          "expectPath": "scripts/verify-host-permission-contract.mjs"
+        }
+      ],
+      "guard": "scripts/verify-host-permission-contract.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-verify-integration-package-live-harness",
+      "kind": "test-harness",
+      "owner": "claw",
+      "canonicalSource": "scripts/verify-integration-package-live-harness.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "verify-integration-package-live-harness",
+        "Verify Integration Package Live Harness"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-integration-package-live-harness",
+          "expectPath": "scripts/verify-integration-package-live-harness.mjs"
+        }
+      ],
+      "guard": "scripts/verify-integration-package-live-harness.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-verify-integration-package-live-harness-test",
+      "kind": "test-harness",
+      "owner": "claw",
+      "canonicalSource": "scripts/verify-integration-package-live-harness.test.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "verify-integration-package-live-harness.test",
+        "Verify Integration Package Live Harness.Test"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-integration-package-live-harness.test",
+          "expectPath": "scripts/verify-integration-package-live-harness.test.mjs"
+        }
+      ],
+      "guard": "scripts/verify-integration-package-live-harness.test.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-verify-integration-qa-scenarios",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/verify-integration-qa-scenarios.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "verify-integration-qa-scenarios",
+        "Verify Integration Qa Scenarios"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-integration-qa-scenarios",
+          "expectPath": "scripts/verify-integration-qa-scenarios.mjs"
+        }
+      ],
+      "guard": "scripts/verify-integration-qa-scenarios.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-verify-mac-control-plane-goal",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/verify-mac-control-plane-goal.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "verify-mac-control-plane-goal",
+        "Verify Mac Control Plane Goal"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-mac-control-plane-goal",
+          "expectPath": "scripts/verify-mac-control-plane-goal.mjs"
+        }
+      ],
+      "guard": "scripts/verify-mac-control-plane-goal.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-verify-openapi-runtime-coverage",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/verify-openapi-runtime-coverage.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "verify-openapi-runtime-coverage",
+        "Verify Openapi Runtime Coverage"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-openapi-runtime-coverage",
+          "expectPath": "scripts/verify-openapi-runtime-coverage.mjs"
+        }
+      ],
+      "guard": "scripts/verify-openapi-runtime-coverage.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-verify-remote-sync-goal",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/verify-remote-sync-goal.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "verify-remote-sync-goal",
+        "Verify Remote Sync Goal"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-remote-sync-goal",
+          "expectPath": "scripts/verify-remote-sync-goal.mjs"
+        }
+      ],
+      "guard": "scripts/verify-remote-sync-goal.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-verify-testing-policy",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/verify-testing-policy.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "verify-testing-policy",
+        "Verify Testing Policy"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-testing-policy",
+          "expectPath": "scripts/verify-testing-policy.mjs"
+        }
+      ],
+      "guard": "scripts/verify-testing-policy.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-version-governance-check",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/version-governance-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "version-governance-check",
+        "Version Governance Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "version-governance-check",
+          "expectPath": "scripts/version-governance-check.mjs"
+        }
+      ],
+      "guard": "scripts/version-governance-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
     },
     {
       "id": "mac-control-plane-v1",
@@ -264,12 +1568,17 @@
       "requiredEntrypoints": [
         "AGENTS.md",
         "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
         "docs/decision-map.md",
         "docs/cli.md",
         "docs/mac-control-plane.md",
         "skills/mac-control-plane-work/SKILL.md"
       ],
       "discoveryTerms": [
+        "ADR 0023: Mac Control Plane V1",
+        "0023-mac-control-plane-v1",
+        "ADR 0023",
         "Mac Control Plane",
         "Mac Action Broker",
         "macOS action atlas",
@@ -286,54 +1595,15 @@
           "expectPath": "docs/adr/0023-mac-control-plane-v1.md"
         }
       ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-17",
       "inspect": [
         {
           "command": "claw inspect commands --json",
           "expectPath": "docs/mac-control-plane.md"
         }
-      ],
-      "guard": "scripts/discoverability-check.mjs",
-      "status": "enforced",
-      "reviewDate": "2026-08-17"
-    },
-    {
-      "id": "mac-permission-broker-v1",
-      "kind": "adr",
-      "owner": "claw",
-      "canonicalSource": "docs/adr/0024-mac-permission-broker-v1.md",
-      "requiredEntrypoints": [
-        "AGENTS.md",
-        "CLAUDE.md",
-        "docs/decision-map.md",
-        "docs/cli.md",
-        "docs/mac-control-plane.md",
-        "skills/mac-control-plane-work/SKILL.md"
-      ],
-      "discoveryTerms": [
-        "Mac Permission Broker",
-        "claw permissions",
-        "macOS TCC",
-        "permission packs"
-      ],
-      "searchQueries": [
-        {
-          "query": "Mac Permission Broker",
-          "expectPath": "docs/adr/0024-mac-permission-broker-v1.md"
-        },
-        {
-          "query": "claw permissions",
-          "expectPath": "docs/mac-control-plane.md"
-        }
-      ],
-      "inspect": [
-        {
-          "command": "claw inspect commands --json",
-          "expectPath": "docs/mac-control-plane.md"
-        }
-      ],
-      "guard": "scripts/discoverability-check.mjs",
-      "status": "enforced",
-      "reviewDate": "2026-08-17"
+      ]
     },
     {
       "id": "mac-control-plane-work",
@@ -342,10 +1612,14 @@
       "canonicalSource": "skills/mac-control-plane-work/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
         "docs/mac-control-plane.md",
         "docs/decision-map.md"
       ],
       "discoveryTerms": [
+        "mac-control-plane-work",
+        "Work on macOS control, permissions, native execution, audit, or Clawix host integration through the Mac Control Plane contracts.",
         "mac control plane work",
         "Mac Action Broker workflow",
         "Mac Permission Broker workflow"
@@ -361,78 +1635,891 @@
       "reviewDate": "2026-08-17"
     },
     {
-      "id": "docs-alignment-routing",
-      "kind": "guardrail",
+      "id": "mac-permission-broker-v1",
+      "kind": "adr",
       "owner": "claw",
-      "canonicalSource": "skills/docs-alignment-update/SKILL.md",
+      "canonicalSource": "docs/adr/0024-mac-permission-broker-v1.md",
       "requiredEntrypoints": [
         "AGENTS.md",
         "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
         "docs/decision-map.md",
-        "skills/adr-to-guardrail/SKILL.md"
+        "docs/cli.md",
+        "docs/mac-control-plane.md",
+        "skills/mac-control-plane-work/SKILL.md"
       ],
       "discoveryTerms": [
-        "docs alignment",
-        "documentation routing",
-        "decision map"
+        "ADR 0024: Mac Permission Broker V1",
+        "0024-mac-permission-broker-v1",
+        "ADR 0024",
+        "Mac Permission Broker",
+        "claw permissions",
+        "macOS TCC",
+        "permission packs"
       ],
       "searchQueries": [
         {
-          "query": "docs alignment",
-          "expectPath": "skills/docs-alignment-update/SKILL.md"
-        }
-      ],
-      "guard": "scripts/docs-alignment-check.mjs",
-      "status": "enforced",
-      "reviewDate": "2026-08-17"
-    },
-    {
-      "id": "decision-map-maintenance",
-      "kind": "skill",
-      "owner": "claw",
-      "canonicalSource": "skills/decision-map-maintenance/SKILL.md",
-      "requiredEntrypoints": [
-        "AGENTS.md",
-        "CLAUDE.md",
-        "docs/decision-map.md"
-      ],
-      "discoveryTerms": [
-        "decision map maintenance",
-        "decision-map routing"
-      ],
-      "searchQueries": [
+          "query": "Mac Permission Broker",
+          "expectPath": "docs/adr/0024-mac-permission-broker-v1.md"
+        },
         {
-          "query": "decision map maintenance",
-          "expectPath": "skills/decision-map-maintenance/SKILL.md"
-        }
-      ],
-      "guard": "scripts/skills-check.mjs",
-      "status": "enforced",
-      "reviewDate": "2026-08-17"
-    },
-    {
-      "id": "comment-policy",
-      "kind": "code-comment-policy",
-      "owner": "claw",
-      "canonicalSource": "docs/adr/0017-discoverability-and-meta-code-routing.md",
-      "requiredEntrypoints": [
-        "AGENTS.md",
-        "CLAUDE.md",
-        "docs/decision-map.md"
-      ],
-      "discoveryTerms": [
-        "comments non-canonical",
-        "decision-like comments"
-      ],
-      "searchQueries": [
-        {
-          "query": "comments non-canonical",
-          "expectPath": "docs/adr/0017-discoverability-and-meta-code-routing.md"
+          "query": "claw permissions",
+          "expectPath": "docs/mac-control-plane.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-17"
+      "reviewDate": "2026-08-17",
+      "inspect": [
+        {
+          "command": "claw inspect commands --json",
+          "expectPath": "docs/mac-control-plane.md"
+        }
+      ]
+    },
+    {
+      "id": "remote-gateway-sync-redesign",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0022-remote-gateway-sync-redesign.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md",
+        "docs/relay.md",
+        "docs/interface-matrix.md",
+        "skills/surface-route-work/SKILL.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0022: Remote Gateway and Sync Redesign",
+        "0022-remote-gateway-sync-redesign",
+        "ADR 0022",
+        "Coordinator Gateway Connector Sync",
+        "remote gateway sync",
+        "Iroh transport adapter",
+        "remote surface classification"
+      ],
+      "searchQueries": [
+        {
+          "query": "remote gateway sync",
+          "expectPath": "docs/adr/0022-remote-gateway-sync-redesign.md"
+        },
+        {
+          "query": "Coordinator Gateway Connector Sync",
+          "expectPath": "docs/adr/0022-remote-gateway-sync-redesign.md"
+        }
+      ],
+      "guard": "scripts/surface-route-graph-guard.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-17",
+      "inspect": [
+        {
+          "command": "claw inspect routes --json",
+          "expectRoute": "remote.chatGateway"
+        }
+      ]
+    },
+    {
+      "id": "search-v1-1-architecture",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0019-search-v1-1-architecture.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md",
+        "docs/search.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0019: Search V1.1 architecture",
+        "0019-search-v1-1-architecture",
+        "ADR 0019",
+        "Search V1.1",
+        "Root Search",
+        "Search Source Registry",
+        "Search Index"
+      ],
+      "searchQueries": [
+        {
+          "query": "Search V1.1",
+          "expectPath": "docs/adr/0019-search-v1-1-architecture.md"
+        },
+        {
+          "query": "Root Search",
+          "expectPath": "docs/search.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-17",
+      "inspect": [
+        {
+          "command": "claw search sources --json",
+          "expectPath": "docs/search.md"
+        }
+      ]
+    },
+    {
+      "id": "skill-skills-adr-to-guardrail",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/adr-to-guardrail/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "adr-to-guardrail",
+        "Turn a new or changed ADR into implemented behavior, routing docs, tests, and guardrails rather than leaving it as standalone prose."
+      ],
+      "searchQueries": [
+        {
+          "query": "adr-to-guardrail",
+          "expectPath": "skills/adr-to-guardrail/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-architecture-drift-repair",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/architecture-drift-repair/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "architecture-drift-repair",
+        "Repair confirmed architecture drift in small batches while preserving public canon and avoiding broad opportunistic refactors."
+      ],
+      "searchQueries": [
+        {
+          "query": "architecture-drift-repair",
+          "expectPath": "skills/architecture-drift-repair/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-brand-guidelines",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/brand-guidelines/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "brand-guidelines",
+        "Given an existing Style, generate a human-readable brand guidelines document covering colors, typography, voice, do/don't, imagery rules, and usage examples. Use when the user asks for a brand book, brand guide, or design system document."
+      ],
+      "searchQueries": [
+        {
+          "query": "brand-guidelines",
+          "expectPath": "skills/brand-guidelines/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-canonical-catalog-expansion",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/canonical-catalog-expansion/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "canonical-catalog-expansion",
+        "Add or improve canonical data catalog collections, fields, aliases, relations, evidence tags, docs, and tests."
+      ],
+      "searchQueries": [
+        {
+          "query": "canonical-catalog-expansion",
+          "expectPath": "skills/canonical-catalog-expansion/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-canvas-design",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/canvas-design/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "canvas-design",
+        "Apply the 90/10 visual-to-text rule when composing a piece on a canvas (poster, card, social post). Use when the deliverable lives on a single fixed surface where each element competes for attention."
+      ],
+      "searchQueries": [
+        {
+          "query": "canvas-design",
+          "expectPath": "skills/canvas-design/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-cli-agent-surface-work",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/cli-agent-surface-work/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "cli-agent-surface-work",
+        "Change the public agent-facing CLI surface while preserving registry-backed discovery, JSON envelopes, aliases, docs, and tests."
+      ],
+      "searchQueries": [
+        {
+          "query": "cli-agent-surface-work",
+          "expectPath": "skills/cli-agent-surface-work/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-code-hygiene-audit",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/code-hygiene-audit/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "code-hygiene-audit",
+        "Audit ClawJS/Clawix code hygiene without editing code, producing categorized findings, baseline status, and validation evidence."
+      ],
+      "searchQueries": [
+        {
+          "query": "code-hygiene-audit",
+          "expectPath": "skills/code-hygiene-audit/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-code-hygiene-cleanup",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/code-hygiene-cleanup/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "code-hygiene-cleanup",
+        "Execute a bounded ClawJS/Clawix code hygiene cleanup campaign from an audit report, one category and repo at a time."
+      ],
+      "searchQueries": [
+        {
+          "query": "code-hygiene-cleanup",
+          "expectPath": "skills/code-hygiene-cleanup/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-code-review-risk",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/code-review-risk/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "code-review-risk",
+        "Review changes for bugs, regressions, missing tests, safety gaps, public/private leaks, and architecture drift before stylistic comments."
+      ],
+      "searchQueries": [
+        {
+          "query": "code-review-risk",
+          "expectPath": "skills/code-review-risk/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-commit-hygiene-public",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/commit-hygiene-public/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "commit-hygiene-public",
+        "Apply public, contributor-safe commit hygiene without maintainer-private automation, timestamps, ledger rules, or push policy."
+      ],
+      "searchQueries": [
+        {
+          "query": "commit-hygiene-public",
+          "expectPath": "skills/commit-hygiene-public/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-constitution-drift-audit",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/constitution-drift-audit/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "constitution-drift-audit",
+        "Audit code, docs, tests, and registries against the Constitution, ADRs, and decision map without making broad repairs. Use when checking whether the repository is drifting away from accepted architecture."
+      ],
+      "searchQueries": [
+        {
+          "query": "constitution-drift-audit",
+          "expectPath": "skills/constitution-drift-audit/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-data-storage-boundary-review",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/data-storage-boundary-review/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "data-storage-boundary-review",
+        "Review storage placement across framework global data, workspace data, host state, sidecars, caches, vaults, and external sources."
+      ],
+      "searchQueries": [
+        {
+          "query": "data-storage-boundary-review",
+          "expectPath": "skills/data-storage-boundary-review/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-host-boundary-review",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/host-boundary-review/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "host-boundary-review",
+        "Review framework vs host ownership for permissions, approvals, grants, native execution, storage, daemons, and Clawix integration."
+      ],
+      "searchQueries": [
+        {
+          "query": "host-boundary-review",
+          "expectPath": "skills/host-boundary-review/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-host-dependent-validation",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/host-dependent-validation/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "host-dependent-validation",
+        "Validate bugs and features that depend on local hosts, localhost, filesystem home state, auth, polling, installed apps, or signed native helpers."
+      ],
+      "searchQueries": [
+        {
+          "query": "host-dependent-validation",
+          "expectPath": "skills/host-dependent-validation/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-integration-qa-lab",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/integration-qa-lab/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "integration-qa-lab",
+        "Build or review an external integration QA lab with official surface snapshots, coverage matrices, fixtures, opt-in live lanes, and safe credential handling."
+      ],
+      "searchQueries": [
+        {
+          "query": "integration-qa-lab",
+          "expectPath": "skills/integration-qa-lab/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-naming-surface-audit",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/naming-surface-audit/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "naming-surface-audit",
+        "Audit and improve stable names, aliases, vocabulary, field casing, routes, ports, packages, and agent-search discoverability."
+      ],
+      "searchQueries": [
+        {
+          "query": "naming-surface-audit",
+          "expectPath": "skills/naming-surface-audit/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-need-coverage-auditor",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/need-coverage-auditor/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "need-coverage-auditor",
+        "Evaluate Need Route Lab routes against CLI, framework, storage, UI, docs, tests, validation, permission, and data coverage."
+      ],
+      "searchQueries": [
+        {
+          "query": "need-coverage-auditor",
+          "expectPath": "skills/need-coverage-auditor/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-need-opportunity-triager",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/need-opportunity-triager/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "need-opportunity-triager",
+        "Dedupe, score, relate, and prioritize Need Route Lab opportunities before backlog or report promotion."
+      ],
+      "searchQueries": [
+        {
+          "query": "need-opportunity-triager",
+          "expectPath": "skills/need-opportunity-triager/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-need-publication-preparer",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/need-publication-preparer/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "need-publication-preparer",
+        "Prepare approval-gated Need Route Lab opportunities for docs, report, backlog, or issue promotion without publishing directly."
+      ],
+      "searchQueries": [
+        {
+          "query": "need-publication-preparer",
+          "expectPath": "skills/need-publication-preparer/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-need-scenario-generator",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/need-scenario-generator/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "need-scenario-generator",
+        "Generate composable Need Route Lab scenarios from human needs, domains, target surfaces, autonomy preferences, and validation constraints."
+      ],
+      "searchQueries": [
+        {
+          "query": "need-scenario-generator",
+          "expectPath": "skills/need-scenario-generator/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-performance-investigation",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/performance-investigation/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "performance-investigation",
+        "Investigate latency, freezes, memory growth, hitches, dropped frames, or perceived slowness with reproduction and instrumentation before optimizing."
+      ],
+      "searchQueries": [
+        {
+          "query": "performance-investigation",
+          "expectPath": "skills/performance-investigation/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-public-hygiene-review",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/public-hygiene-review/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "public-hygiene-review",
+        "Review public repository changes for secrets, private paths, signing identities, bundle IDs, generated artifacts, local logs, and private workflow leaks."
+      ],
+      "searchQueries": [
+        {
+          "query": "public-hygiene-review",
+          "expectPath": "skills/public-hygiene-review/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-secrets-boundary-review",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/secrets-boundary-review/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "secrets-boundary-review",
+        "Review secret handling, brokered execution, redaction, vault boundaries, host approval, and public hygiene."
+      ],
+      "searchQueries": [
+        {
+          "query": "secrets-boundary-review",
+          "expectPath": "skills/secrets-boundary-review/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-source-file-boundary-refactor",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/source-file-boundary-refactor/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "source-file-boundary-refactor",
+        "Split or contain large source files according to the source-file boundary ADR without changing behavior opportunistically."
+      ],
+      "searchQueries": [
+        {
+          "query": "source-file-boundary-refactor",
+          "expectPath": "skills/source-file-boundary-refactor/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-style-apply",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/style-apply/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "style-apply",
+        "Apply a Style to any artifact in the workspace (presentation, card, poster, social post, web page). Use when the user says \"apply style X\", \"render this with style X\", or wants to reuse a saved style on a new piece."
+      ],
+      "searchQueries": [
+        {
+          "query": "style-apply",
+          "expectPath": "skills/style-apply/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-style-extract",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/style-extract/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "style-extract",
+        "Inspect a reference (web URL, image, PDF, screenshot) and propose a candidate Style for the workspace. Use when the user says \"save this style\", \"guarda este estilo\", or shares a reference and wants to reapply it later."
+      ],
+      "searchQueries": [
+        {
+          "query": "style-extract",
+          "expectPath": "skills/style-extract/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-surface-registry-alignment",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/surface-registry-alignment/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "surface-registry-alignment",
+        "Align stable paths, APIs, CLI commands, schemas, events, IDs, storage keys, and UI/programmatic parity with the surface registries."
+      ],
+      "searchQueries": [
+        {
+          "query": "surface-registry-alignment",
+          "expectPath": "skills/surface-registry-alignment/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-surface-route-work",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/surface-route-work/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "surface-route-work",
+        "Work from a registered surface or transverse route by inspecting nodes, neighbors, edges, contracts, owners, tests, and gaps before editing."
+      ],
+      "searchQueries": [
+        {
+          "query": "surface-route-work",
+          "expectPath": "skills/surface-route-work/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-template-render",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/template-render/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "template-render",
+        "Render a Template + data + Style into a final artifact in one of HTML, PDF, PNG, SVG or PPTX. Use whenever the user asks for a concrete deliverable like \"make me a poster\", \"render a card\", \"give me a one-pager\"."
+      ],
+      "searchQueries": [
+        {
+          "query": "template-render",
+          "expectPath": "skills/template-render/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "skill-skills-theme-factory",
+      "kind": "skill",
+      "owner": "claw",
+      "canonicalSource": "skills/theme-factory/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "theme-factory",
+        "Produce variants of an existing Style by shifting tone (light/dark), density (compact/relaxed), or accent (palette rotation) while preserving the brand identity. Use when the user wants alternate themes derived from one brand."
+      ],
+      "searchQueries": [
+        {
+          "query": "theme-factory",
+          "expectPath": "skills/theme-factory/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "surface-route-graph",
+      "kind": "surface-route",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0012-surface-route-graph.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md",
+        "skills/surface-route-work/SKILL.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0012: Surface route graph",
+        "0012-surface-route-graph",
+        "ADR 0012",
+        "surface route graph",
+        "route-first",
+        "surface-first"
+      ],
+      "searchQueries": [
+        {
+          "query": "surface route graph",
+          "expectPath": "docs/adr/0012-surface-route-graph.md"
+        }
+      ],
+      "guard": "scripts/surface-route-graph-guard.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-17",
+      "inspect": [
+        {
+          "command": "claw inspect routes --json",
+          "expectRoute": "chat.localDesktop"
+        }
+      ]
     }
   ]
 }

@@ -4,7 +4,7 @@ import path from "path";
 
 import Database from "better-sqlite3";
 import { AgentStoreFS, type Agent } from "@clawjs/agents";
-import { CLAW_CLI_COMMAND_INTENT_STATUSES, buildRemoteConformanceReport, buildRemoteExternalPendingRegister, buildRemoteRouteContractCatalog, clawDenseDataAcceptanceFixture, clawDenseDataOsRegistry, clawPersistentSurfaceRegistry, connectorExecutionPipeline, createAgentControlPanel, createAgentPrivacyLifecyclePlan, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, listClawDenseDataGapRegistryEntries, listClawDenseDataIntentEntries, listClawDenseDataSemanticViewEntries, resolveClawCliCommand, resolveClawPersistentSurfacePath, searchClawCliRegistry, syncDriverSchema, withSurfaceChildren } from "@clawjs/core";
+import { CLAW_CLI_COMMAND_INTENT_STATUSES, buildRemoteConformanceReport, buildRemoteExternalPendingRegister, buildRemoteRouteContractCatalog, clawDenseDataAcceptanceFixture, clawDenseDataOsRegistry, clawPersistentSurfaceRegistry, clawPreV1VersionGovernancePolicy, connectorExecutionPipeline, createAgentControlPanel, createAgentPrivacyLifecyclePlan, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, listClawDenseDataGapRegistryEntries, listClawDenseDataIntentEntries, listClawDenseDataSemanticViewEntries, resolveClawCliCommand, resolveClawPersistentSurfacePath, searchClawCliRegistry, syncDriverSchema, withSurfaceChildren } from "@clawjs/core";
 import type { AgentAuditEvent, ClawPersistentSurfaceNode, ClawPersistentSurfaceRegistry, ClawSurfaceEdge, ClawSurfaceRoute } from "@clawjs/core";
 import { v1MainSchemaSurfaceNodes } from "./v1-data-surface.ts";
 import { normalizeDbRow, resolveClawjsMainDbPath, type JsonRecord } from "./v1-data-core.ts";
@@ -1014,6 +1014,25 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     ].join("\n") + "\n");
     return CLI_EXIT_OK;
   }
+  if (command === "version-governance" || command === "versioning") {
+    const policyNode = nodes.find((node) => node.id === clawPreV1VersionGovernancePolicy.inspections.surfaceId);
+    const payload = {
+      ...clawPreV1VersionGovernancePolicy,
+      surface: policyNode ?? null,
+    };
+    if (input.wantsJson) writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command));
+    else {
+      input.context.stdout.write([
+        `phase\t${payload.phase}`,
+        `branchPolicy\t${payload.branchPolicy}`,
+        `sourceOfTruth\t${payload.sourceOfTruth}`,
+        `freezeTrigger\t${payload.freezeTrigger.kind}`,
+        `approvalGate\t${payload.approvalGate.decisionAuthority}`,
+        `changesets\t${payload.changesets.mode}`,
+      ].join("\n") + "\n");
+    }
+    return CLI_EXIT_OK;
+  }
   if (command === "commands") {
     const includeAdvanced = "all" in input.flags || input.flags.all === "true";
     const commands = listClawCliCommands({ includeAdvanced });
@@ -1185,7 +1204,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     }
     throw new InspectCliError("usage_error", `Unsupported inspect render format: ${format}`, CLI_EXIT_USAGE);
   }
-  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|neighbors|routes|route|agent|edges|why|commands|command-intents|remote|remote-sync|dense-data|dense-gaps|dense-intents|dense-views|dense-fixtures|codebase|connectors|aliases|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
+  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|neighbors|routes|route|agent|edges|why|commands|command-intents|remote|remote-sync|version-governance|dense-data|dense-gaps|dense-intents|dense-views|dense-fixtures|codebase|connectors|aliases|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
 }
 
 export async function runInspectCli(input: InspectCliInput): Promise<number> {

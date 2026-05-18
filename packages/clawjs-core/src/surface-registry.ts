@@ -954,6 +954,7 @@ const stableSurfaceRoots = [
   ["claw.contracts.native", "Native identities", "native", ["humanUi", "serviceApi"]],
   ["claw.contracts.formats", "Import/export formats", "format", ["cli", "persistence"]],
   ["claw.contracts.external", "External dependencies and owned mappings", "external", ["sdk", "serviceApi", "mcp"]],
+  ["claw.contracts.versionGovernance", "Pre-V1 version governance", "schema", ["cli", "sdk"]],
 ] as const;
 
 const runtimeCriticalNodes = [
@@ -1398,7 +1399,7 @@ export const clawSurfaceGraphEdges: ClawSurfaceEdge[] = [
   { id: "claw.edge.remote.consumes.coordinator", type: "consumes", fromId: "claw.remote.client", toId: "claw.coordinator", owner: "claw", visibility: "external", contractId: "claw.api.nodes", transport: "HTTPS/WebSocket/Iroh rendezvous metadata", validation: "remote sync inspect tests", source: surfaceRouteGraphSource },
   { id: "claw.edge.coordinator.brokers.gateway", type: "brokers", fromId: "claw.coordinator", toId: "claw.gateway", owner: "claw", visibility: "external", contractId: "claw.api.remote.conformance", transport: "governed gateway admission", validation: "remote conformance inspect tests", source: surfaceRouteGraphSource },
   { id: "claw.edge.gateway.brokers.connector", type: "brokers", fromId: "claw.gateway", toId: "claw.connector", owner: "claw", visibility: "external", contractId: "claw.api.remote.classifications", transport: "projected registered API contract", validation: "gateway conformance inspect tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.connector.brokers.runtime.v2", type: "brokers", fromId: "claw.connector", toId: "claw.runtime.agent", owner: "claw", visibility: "internal", contractId: "claw.protocol.hostCommand.v1", transport: "host-side runtime adapter", validation: "connector runtime conformance tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.connector.brokers.runtime.hostAdapter", type: "brokers", fromId: "claw.connector", toId: "claw.runtime.agent", owner: "claw", visibility: "internal", contractId: "claw.protocol.hostCommand.v1", transport: "host-side runtime adapter", validation: "connector runtime conformance tests", source: surfaceRouteGraphSource },
   { id: "claw.edge.connector.brokers.search", type: "brokers", fromId: "claw.connector", toId: "claw.search", owner: "claw", visibility: "external", contractId: "claw.api.search.searches", transport: "remote-safe projected search route", validation: "remote search conformance tests", source: surfaceRouteGraphSource },
   { id: "claw.edge.connector.brokers.secrets", type: "brokers", fromId: "claw.connector", toId: "claw.secrets.broker", owner: "claw", visibility: "external", contractId: "claw.api.secrets", transport: "secret refs plus brokered lease", validation: "secret lease rejection/acceptance tests", source: surfaceRouteGraphSource },
   { id: "claw.edge.connector.brokers.sync", type: "brokers", fromId: "claw.connector", toId: "claw.sync", owner: "claw", visibility: "external", contractId: "claw.api.sync.manifests", transport: "sync manifest/changelog/cursor route", validation: "sync manifest conformance tests", source: surfaceRouteGraphSource },
@@ -1654,7 +1655,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
       routeStep("claw.edge.remote.consumes.coordinator"),
       routeStep("claw.edge.coordinator.brokers.gateway"),
       routeStep("claw.edge.gateway.brokers.connector"),
-      routeStep("claw.edge.connector.brokers.runtime.v2"),
+      routeStep("claw.edge.connector.brokers.runtime.hostAdapter"),
       routeStep("claw.edge.runtime.owns.sessions"),
     ],
     tests: ["packages/clawjs-core/src/index.test.ts", "packages/clawjs/src/inspect-cli.test.ts"],
@@ -1874,7 +1875,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     visibility: "public",
     transport: "Gateway conformance API plus headless host runtime",
     validation: "Headless host conformance tests",
-    steps: [routeStep("claw.edge.gateway.exposes.headlessHost"), routeStep("claw.edge.connector.brokers.runtime.v2")],
+    steps: [routeStep("claw.edge.gateway.exposes.headlessHost"), routeStep("claw.edge.connector.brokers.runtime.hostAdapter")],
     tests: ["packages/clawjs-core/src/index.test.ts", "packages/clawjs/src/inspect-cli.test.ts"],
     docs: ["docs/host-ownership.md", "docs/relay.md", "docs/adr/0022-remote-gateway-sync-redesign.md"],
     adrs: ["docs/adr/0001-claw-framework-host-boundary.md", "docs/adr/0022-remote-gateway-sync-redesign.md"],
@@ -2274,6 +2275,18 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       surfaceClass: "schema",
       direction: "bidirectional",
       notes: "Stable V1 JSON shape for actionable CLI intent registry entries, local ledger entries, and unknown-command resolution metadata.",
+    }),
+    clawPersistentSurface.contract({
+      ...contractDefaults,
+      id: "claw.versionGovernance.preV1",
+      kind: "jsonSchema",
+      name: "Pre-V1 version governance policy",
+      value: "claw.versionGovernance.pre_v1_mutable",
+      parentId: "claw.contracts.versionGovernance",
+      surfaceClass: "schema",
+      stability: "preV1Reset",
+      direction: "bidirectional",
+      notes: "Machine-readable policy for pre-public mutable work. Owned version bumps require explicit user approval until V1 is frozen.",
     }),
     ...["--json", "--dry-run", "--workspace", "--runtime", "--help", "--guidance", "--actor-assertion"].map((flag) => clawPersistentSurface.contract({
       ...contractDefaults,
