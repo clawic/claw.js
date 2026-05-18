@@ -45,6 +45,21 @@ The initial typed catalog includes:
 - `slack.bot_token`
 - `revenuecat.api_key`
 
+## Governed Connector Context
+
+Connector account and resource selection belongs to
+`claw accounts` / `claw connectors context`, not to the Secrets vault. That
+surface stores provider context such as Apple teams, Bundle IDs, SKUs, signing
+identities, Google Play package names, RevenueCat API-version defaults, and
+fallback rules in `core.sqlite`. It stores credential-bearing fields only as
+`secret_ref` bindings to Secrets.
+
+Both systems must pass before an agent can act. Governed context decides which
+provider object is allowed; Secrets decides whether the referenced credential
+may be used for the exact brokered action. `accounts export` is redacted by
+default. Private governed-context envelopes may include private non-secret IDs,
+but never plaintext secret values.
+
 ## Local workflow
 
 ```bash

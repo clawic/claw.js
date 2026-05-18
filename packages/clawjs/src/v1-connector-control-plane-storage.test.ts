@@ -15,6 +15,9 @@ import {
 
 const connectorTables = [
   "connector_providers",
+  "connector_context_records",
+  "connector_context_defaults",
+  "connector_context_audit_events",
   "connector_external_principals",
   "connector_credential_bindings",
   "connector_capabilities",

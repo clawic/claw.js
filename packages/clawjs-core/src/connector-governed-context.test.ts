@@ -65,6 +65,7 @@ test("Apple context fails closed when Team ID or Bundle ID context is blocked or
   assert.equal(decision.allowed, false);
   assert.equal(decision.reasons.some((reason) => reason.code === "context_object_blocked"), true);
   assert.equal(decision.reasons.some((reason) => reason.code === "context_field_missing" && reason.field === "sku"), true);
+  assert.equal(decision.reasons.every((reason) => typeof reason.remedy === "string" && reason.remedy.length > 0), true);
 });
 
 test("RevenueCat API v2 is the default and v1 is a traced fallback", () => {

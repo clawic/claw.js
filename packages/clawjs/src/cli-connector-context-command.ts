@@ -10,6 +10,8 @@ import {
 
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { formatCliTable } from "./cli-flag-parsers.ts";
+import { parseSetFlags } from "./cli-value-utils.ts";
+import { openConnectorContextStore } from "./cli-connector-context-store.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
 
 interface ConnectorContextCliInput {
@@ -18,6 +20,7 @@ interface ConnectorContextCliInput {
   subcommand: string | undefined;
   positionals: string[];
   flags: Record<string, string>;
+  argv: string[];
   context: {
     stdout: NodeJS.WritableStream;
     stderr: NodeJS.WritableStream;
@@ -34,17 +37,28 @@ export async function runConnectorContextCli(input: ConnectorContextCliInput): P
   const canonicalCommand = invoked === "connectors" ? "connectors" : "accounts";
   const action = invoked === "connectors" ? input.positionals[2] ?? "list" : input.positionals[1] ?? "list";
   const subject = invoked === "connectors" ? input.positionals[3] : input.positionals[2];
+  const store = openConnectorContextStore();
 
   try {
     if (action === "list") {
+      const records = store.listRecords({
+        providerId: input.flags.provider,
+        kind: input.flags.kind,
+        state: parseOptionalState(input.flags.state),
+      });
       return writeConnectorContextResult(input, canonicalCommand, action, {
         providers: listProviders(input.flags.provider),
+        records: records.map((record) => redactConnectorContextRecord(record)),
       });
     }
 
     if (action === "schema" || action === "show" || action === "inspect") {
       const providerId = input.flags.provider || subject;
-      if (!providerId) throw new CliHandledError("missing_provider", `Usage: ${usagePrefix(input)} ${action} <provider> --json`, CLI_EXIT_USAGE);
+      if (action === "show" && subject) {
+        const record = store.getRecord(subject);
+        if (record) return writeConnectorContextResult(input, canonicalCommand, action, { record: redactConnectorContextRecord(record) });
+      }
+      if (!providerId) throw new CliHandledError("missing_provider", `Usage: ${usagePrefix(input)} ${action} <provider|context-id> --json`, CLI_EXIT_USAGE);
       const schema = getConnectorGovernedContextProviderSchema(providerId);
       if (!schema) throw new CliHandledError("unknown_provider", `Unknown connector provider: ${providerId}`, CLI_EXIT_USAGE);
       return writeConnectorContextResult(input, canonicalCommand, action, { schema });
@@ -56,6 +70,63 @@ export async function runConnectorContextCli(input: ConnectorContextCliInput): P
         : CONNECTOR_GOVERNED_CONTEXT_PROVIDER_SCHEMAS;
       return writeConnectorContextResult(input, canonicalCommand, action, {
         report: buildConnectorContextDoctorReport(schemas),
+        storage: {
+          records: store.listRecords({ providerId: input.flags.provider }).length,
+          defaults: store.listDefaults({ providerId: input.flags.provider }).length,
+        },
+      });
+    }
+
+    if (action === "export") {
+      const records = store.listRecords({
+        providerId: input.flags.provider,
+        kind: input.flags.kind,
+        state: parseOptionalState(input.flags.state),
+      });
+      const mode = parseExportMode(input.flags.mode || (input.flags["private-envelope"] === "true" ? "private-envelope" : undefined));
+      const includePrivate = mode === "private-envelope";
+      const exportedAt = new Date().toISOString();
+      const providers = Array.from(new Set(records.map((record) => record.providerId))).sort();
+      for (const providerId of providers) {
+        store.audit({
+          eventType: "context.export",
+          providerId,
+          actorId: input.flags["actor-id"] || input.flags.agent,
+          decision: "recorded",
+          contextRefs: records.filter((record) => record.providerId === providerId).map((record) => record.id),
+          secretRefs: records
+            .filter((record) => record.providerId === providerId)
+            .flatMap((record) => Object.values(record.fields).flatMap((field) => field.secretRef ? [field.secretRef] : [])),
+          metadata: {
+            mode,
+            protectedEnvelope: includePrivate,
+            plaintextSecretsIncluded: false,
+            privateFieldsIncluded: includePrivate,
+          },
+        });
+      }
+      return writeConnectorContextResult(input, canonicalCommand, action, {
+        export: {
+          schemaVersion: 1,
+          exportedAt,
+          mode,
+          store: "core.sqlite",
+          filters: {
+            ...(input.flags.provider ? { providerId: input.flags.provider } : {}),
+            ...(input.flags.kind ? { kind: input.flags.kind } : {}),
+            ...(input.flags.state ? { state: input.flags.state } : {}),
+          },
+          policy: {
+            protectedHandlingRequired: includePrivate,
+            privateFieldsIncluded: includePrivate,
+            plaintextSecretsIncluded: false,
+            secretMaterialIncluded: false,
+            secretRefsIncluded: false,
+            secretBindingMetadataIncluded: true,
+          },
+          records: records.map((record) => exportConnectorContextRecord(record, { includePrivate })),
+          defaults: store.listDefaults({ providerId: input.flags.provider }),
+        },
       });
     }
 
@@ -63,14 +134,28 @@ export async function runConnectorContextCli(input: ConnectorContextCliInput): P
       const providerId = input.flags.provider || subject;
       if (!providerId) throw new CliHandledError("missing_provider", `Usage: ${usagePrefix(input)} explain <provider> [--operation OP] --json`, CLI_EXIT_USAGE);
       const schema = getRequiredSchema(providerId);
+      const storedRecords = store.listRecords({ providerId });
+      const storedDefaults = store.listDefaults({ providerId }).map((entry) => entry.contextRef);
       const decision = explainConnectorContextChoice({
         providerId,
         operationId: input.flags.operation || input.flags["operation-id"],
         environment: input.flags.environment || input.flags.env,
         requirements: requirementsForProvider(providerId, input.flags.operation || input.flags["operation-id"]),
-        defaultRefs: schema.defaults?.map((entry) => entry.contextRef),
+        defaultRefs: storedDefaults.length > 0 ? storedDefaults : schema.defaults?.map((entry) => entry.contextRef),
         fallbackRules: schema.fallbacks,
-        candidates: fixtureCandidatesForExplain(providerId, input.flags),
+        candidates: storedRecords.length > 0 ? storedRecords : fixtureCandidatesForExplain(providerId, input.flags),
+      });
+      store.audit({
+        eventType: "context.explain",
+        providerId,
+        operationId: input.flags.operation || input.flags["operation-id"],
+        actorId: input.flags["actor-id"] || input.flags.agent,
+        decision: decision.allowed ? "allow" : "deny",
+        reasonCodes: decision.reasons.map((reason) => reason.code),
+        contextRefs: decision.selected.map((record) => record.id),
+        secretRefs: decision.selected.flatMap((record) => Object.values(record.fields).flatMap((field) => field.secretRef ? [field.secretRef] : [])),
+        appliedRules: decision.trace.fallbackRuleIds,
+        metadata: { rejected: decision.rejected.map((entry) => entry.recordId), source: storedRecords.length > 0 ? "core.sqlite" : "fixture" },
       });
       return writeConnectorContextResult(input, canonicalCommand, action, {
         providerId,
@@ -81,26 +166,86 @@ export async function runConnectorContextCli(input: ConnectorContextCliInput): P
       });
     }
 
-    if (["activate", "pause", "block", "retire", "edit", "set-policy"].includes(action)) {
+    if (action === "upsert" || action === "create" || action === "edit") {
       const recordId = subject || input.flags.id || input.flags.record;
-      if (!recordId) throw new CliHandledError("missing_context_record", `Usage: ${usagePrefix(input)} ${action} <context-id> --dry-run --json`, CLI_EXIT_USAGE);
+      const providerId = input.flags.provider;
+      const kind = input.flags.kind;
+      if (!providerId || !kind) throw new CliHandledError("missing_context_shape", `Usage: ${usagePrefix(input)} ${action} <id> --provider PROVIDER --kind KIND --set field=value --json`, CLI_EXIT_USAGE);
+      const record = store.upsertRecord({
+        id: recordId,
+        providerId,
+        kind,
+        displayName: input.flags.name || input.flags.label,
+        state: parseOptionalState(input.flags.state),
+        parentId: input.flags.parent || input.flags["parent-id"],
+        resourceId: input.flags.resource || input.flags["resource-id"],
+        principalId: input.flags.principal || input.flags["principal-id"],
+        externalId: input.flags.external || input.flags["external-id"],
+        scopes: parseScopes(input.flags.scope || input.flags.scopes),
+        fields: parseSetFlags(input.argv),
+        guidance: input.flags.guidance ? { summary: input.flags.guidance } : undefined,
+        policy: input.flags.policy ? parsePolicy(input.flags.policy, input.flags.reason) : undefined,
+        desired: parseJsonObjectFlag(input.flags.desired),
+        observed: parseJsonObjectFlag(input.flags.observed),
+        source: parseSource(input.flags.source),
+        verification: parseJsonObjectFlag(input.flags.verification),
+        actorId: input.flags["actor-id"] || input.flags.agent,
+      });
+      return writeConnectorContextResult(input, canonicalCommand, action, { record: redactConnectorContextRecord(record), durable: true, store: "core.sqlite" });
+    }
+
+    if (action === "link-secret") {
+      const recordId = subject || input.flags.id || input.flags.record;
+      const field = input.flags.field;
+      const secretRef = input.flags["secret-ref"] || input.flags.secret;
+      if (!recordId || !field || !secretRef) throw new CliHandledError("missing_secret_link", `Usage: ${usagePrefix(input)} link-secret <context-id> --field api_key --secret-ref secret://... --json`, CLI_EXIT_USAGE);
+      const record = store.linkSecret({ id: recordId, field, secretRef, actorId: input.flags["actor-id"] || input.flags.agent, operationId: input.flags.operation });
+      return writeConnectorContextResult(input, canonicalCommand, action, { record: redactConnectorContextRecord(record), durable: true, store: "core.sqlite" });
+    }
+
+    if (action === "defaults") {
+      if (subject === "set") {
+        const contextRef = input.flags.context || input.flags["context-ref"];
+        if (!contextRef) throw new CliHandledError("missing_default_context", `Usage: ${usagePrefix(input)} defaults set --context <context-id> --scope provider:apple --json`, CLI_EXIT_USAGE);
+        const rule = store.setDefault({
+          id: input.flags.id,
+          scope: parseScope(input.flags.scope || "global"),
+          providerId: input.flags.provider,
+          operationIds: input.flags.operation ? input.flags.operation.split(",").map((entry) => entry.trim()).filter(Boolean) : undefined,
+          contextRef,
+          priority: input.flags.priority ? Number(input.flags.priority) : undefined,
+          condition: input.flags.condition,
+        });
+        return writeConnectorContextResult(input, canonicalCommand, action, { default: rule, durable: true, store: "core.sqlite" });
+      }
       return writeConnectorContextResult(input, canonicalCommand, action, {
-        mutationSupported: false,
-        externalPending: true,
-        plan: {
-          action,
-          recordId,
-          providerId: input.flags.provider ?? null,
-          state: action === "activate" ? "active" : action === "pause" ? "paused" : action === "block" ? "blocked" : action === "retire" ? "retired" : undefined,
-          policy: input.flags.policy ?? input.flags.reason ?? null,
-        },
-        message: "Local governed-context storage mutation is intentionally not wired in this first slice; this command returns an auditable plan only.",
+        defaults: store.listDefaults({ providerId: input.flags.provider }),
+        providerDefaults: input.flags.provider ? getRequiredSchema(input.flags.provider).defaults ?? [] : CONNECTOR_GOVERNED_CONTEXT_PROVIDER_SCHEMAS.flatMap((schema) => schema.defaults ?? []),
+      });
+    }
+
+    if (action === "audit") {
+      const rows = store.sqlite.prepare("SELECT * FROM connector_context_audit_events ORDER BY created_at DESC LIMIT ?").all(Number(input.flags.limit ?? 50));
+      return writeConnectorContextResult(input, canonicalCommand, action, { events: rows });
+    }
+
+    if (["activate", "pause", "block", "retire"].includes(action)) {
+      const recordId = subject || input.flags.id || input.flags.record;
+      if (!recordId) throw new CliHandledError("missing_context_record", `Usage: ${usagePrefix(input)} ${action} <context-id> --json`, CLI_EXIT_USAGE);
+      const state = action === "activate" ? "active" : action === "pause" ? "paused" : action === "block" ? "blocked" : "retired";
+      const record = store.setState({ id: recordId, state, reason: input.flags.reason, actorId: input.flags["actor-id"] || input.flags.agent });
+      return writeConnectorContextResult(input, canonicalCommand, action, {
+        record: redactConnectorContextRecord(record),
+        durable: true,
+        store: "core.sqlite",
       });
     }
 
     return writeConnectorContextUsage(input);
   } catch (error) {
     throw error;
+  } finally {
+    store.close();
   }
 }
 
@@ -110,13 +255,17 @@ function usagePrefix(input: ConnectorContextCliInput): string {
 
 function writeConnectorContextUsage(input: ConnectorContextCliInput): number {
   input.context.stderr.write([
-    `Usage: ${usagePrefix(input)} list|schema|doctor|validate|explain|activate|pause|block|retire|edit [options]`,
+    `Usage: ${usagePrefix(input)} list|show|schema|upsert|edit|link-secret|defaults|doctor|validate|explain|export|activate|pause|block|retire|audit [options]`,
     "",
     "Examples:",
     `  ${usagePrefix(input)} list --json`,
     `  ${usagePrefix(input)} schema apple --json`,
+    `  ${usagePrefix(input)} upsert apple_app_main --provider apple --kind app --set bundle_id=com.example.app --set sku=SKU123 --json`,
+    `  ${usagePrefix(input)} link-secret revenuecat_api_v2 --field api_key --secret-ref secret://revenuecat/v2 --json`,
+    `  ${usagePrefix(input)} defaults set --context revenuecat_api_v2 --provider revenuecat --scope provider:revenuecat --json`,
     `  ${usagePrefix(input)} doctor --json`,
     `  ${usagePrefix(input)} explain apple --operation apple.upload --env production --json`,
+    `  ${usagePrefix(input)} export --provider apple --mode redacted --json`,
   ].join("\n") + "\n");
   return CLI_EXIT_USAGE;
 }
@@ -131,6 +280,16 @@ function writeConnectorContextResult(input: ConnectorContextCliInput, canonicalC
     return CLI_EXIT_OK;
   }
   if (isProviderListPayload(data)) {
+    if (data.records.length > 0) {
+      input.context.stdout.write(`${formatCliTable(data.records.map((record) => ({
+        id: record.id,
+        provider: record.providerId,
+        kind: String(record.kind),
+        state: record.state,
+        name: record.displayName,
+      })))}\n`);
+      return CLI_EXIT_OK;
+    }
     input.context.stdout.write(`${formatCliTable(data.providers.map((provider) => ({
       provider: provider.providerId,
       contexts: String(provider.contextKinds.length),
@@ -156,6 +315,38 @@ function listProviders(providerId?: string): Array<{ providerId: string; display
     contextKinds: schema.contextKinds.map((entry) => entry.kind),
     subprofiles: schema.subprofiles?.map((entry) => entry.id) ?? [],
   }));
+}
+
+function exportConnectorContextRecord(record: ConnectorGovernedContextRecord, options: { includePrivate: boolean }) {
+  const redacted = redactConnectorContextRecord(record, { includePrivate: options.includePrivate });
+  return {
+    id: redacted.id,
+    providerId: redacted.providerId,
+    kind: redacted.kind,
+    displayName: redacted.displayName,
+    state: redacted.state,
+    ...(redacted.parentId ? { parentId: redacted.parentId } : {}),
+    ...(redacted.resourceId ? { resourceId: redacted.resourceId } : {}),
+    ...(redacted.principalId ? { principalId: redacted.principalId } : {}),
+    ...(redacted.externalId ? { externalId: redacted.externalId } : {}),
+    ...(redacted.scopes ? { scopes: redacted.scopes } : {}),
+    ...(redacted.guidance ? { guidance: redacted.guidance } : {}),
+    ...(redacted.policy ? { policy: redacted.policy } : {}),
+    ...(redacted.desired ? { desired: redacted.desired } : {}),
+    ...(redacted.observed ? { observed: redacted.observed } : {}),
+    ...(redacted.verification ? { verification: redacted.verification } : {}),
+    ...(redacted.source ? { source: redacted.source } : {}),
+    ...(redacted.updatedAt ? { updatedAt: redacted.updatedAt } : {}),
+    fieldEntries: Object.entries(redacted.fields).map(([name, field]) => ({
+      name,
+      sensitivity: field.sensitivity,
+      ...(field.value !== undefined ? { value: field.value } : {}),
+      ...(field.redacted ? { redacted: true } : {}),
+      ...(field.secretRef ? { binding: { present: true, scheme: field.secretRef.startsWith("vault://") ? "vault" : "secret" } } : {}),
+      ...(field.guidance ? { guidance: field.guidance } : {}),
+      ...(field.policy ? { policy: field.policy } : {}),
+    })),
+  };
 }
 
 function getRequiredSchema(providerId: string) {
@@ -276,10 +467,56 @@ function parseState(value?: string): ConnectorGovernedContextRecord["state"] {
   return "active";
 }
 
-function isProviderListPayload(value: unknown): value is { providers: ReturnType<typeof listProviders> } {
-  return typeof value === "object" && value !== null && "providers" in value;
+function isProviderListPayload(value: unknown): value is { providers: ReturnType<typeof listProviders>; records: Array<ReturnType<typeof redactConnectorContextRecord>> } {
+  return typeof value === "object" && value !== null && "providers" in value && "records" in value;
 }
 
 function isDoctorPayload(value: unknown): value is { report: ReturnType<typeof buildConnectorContextDoctorReport> } {
   return typeof value === "object" && value !== null && "report" in value;
+}
+
+function parseOptionalState(value: string | undefined): ConnectorGovernedContextRecord["state"] | undefined {
+  if (!value) return undefined;
+  if (value === "active" || value === "paused" || value === "blocked" || value === "retired") return value;
+  throw new CliHandledError("invalid_context_state", "Use one of: active, paused, blocked, retired.", CLI_EXIT_USAGE);
+}
+
+function parseScopes(value: string | undefined) {
+  if (!value) return undefined;
+  return value.split(",").map(parseScope);
+}
+
+function parseScope(value: string) {
+  const [kind, id] = value.split(":", 2);
+  const allowed = new Set(["global", "workspace", "project", "app", "environment", "provider", "operation", "agent", "role"]);
+  if (!allowed.has(kind)) throw new CliHandledError("invalid_context_scope", `Invalid scope ${value}.`, CLI_EXIT_USAGE);
+  return { kind: kind as never, ...(id ? { id } : {}) };
+}
+
+function parsePolicy(effect: string, reason: string | undefined) {
+  if (effect !== "allow" && effect !== "deny" && effect !== "requires_approval") {
+    throw new CliHandledError("invalid_context_policy", "Use policy allow, deny, or requires_approval.", CLI_EXIT_USAGE);
+  }
+  return { effect, reason: reason || `Policy ${effect}` } as const;
+}
+
+function parseJsonObjectFlag(value: string | undefined): Record<string, unknown> | undefined {
+  if (!value) return undefined;
+  const parsed = JSON.parse(value) as unknown;
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw new CliHandledError("invalid_json_object", "Expected a JSON object.", CLI_EXIT_USAGE);
+  }
+  return parsed as Record<string, unknown>;
+}
+
+function parseSource(value: string | undefined): ConnectorGovernedContextRecord["source"] | undefined {
+  if (!value) return undefined;
+  if (value === "manual" || value === "imported" || value === "provider_readonly" || value === "fixture") return value;
+  throw new CliHandledError("invalid_context_source", "Use source manual, imported, provider_readonly, or fixture.", CLI_EXIT_USAGE);
+}
+
+function parseExportMode(value: string | undefined): "redacted" | "private-envelope" {
+  if (!value || value === "redacted") return "redacted";
+  if (value === "private-envelope" || value === "private_envelope") return "private-envelope";
+  throw new CliHandledError("invalid_export_mode", "Use export mode redacted or private-envelope.", CLI_EXIT_USAGE);
 }

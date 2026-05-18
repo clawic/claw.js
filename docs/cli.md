@@ -1005,18 +1005,27 @@ claw finance --help
 claw location --help
 claw accounts --help
 claw accounts list --json
+claw accounts upsert apple_app_main --provider apple --kind app --set bundle_id=com.example.app --set sku=SKU123 --json
+claw accounts link-secret revenuecat_api_v2 --field api_key --secret-ref secret://revenuecat/v2 --json
+claw accounts defaults set --context revenuecat_api_v2 --provider revenuecat --scope provider:revenuecat --json
 claw accounts schema apple --json
 claw accounts doctor --json
 claw accounts explain apple --operation apple.upload --env production --json
+claw accounts export --provider apple --mode redacted --json
+claw accounts export --mode private-envelope --json
 claw connectors context explain revenuecat --operation revenuecat.project_configuration.read --json
 ```
 
 `accounts` is the human-facing governed connector context surface. It lists and
 explains provider accounts, apps, environments, products, signing identities,
 defaults, and fallbacks without exposing plaintext secrets. `connectors context`
-is the same surface under the connector control-plane umbrella. Mutation-shaped
-commands such as `pause`, `block`, `retire`, and `edit` return no-write plans in
-this first slice.
+is the same surface under the connector control-plane umbrella. Local
+configuration commands persist non-secret records, state, defaults, policy,
+guidance, and `secret_ref` links in `core.sqlite`; real provider import or
+mutation remains explicit-approval work. `accounts export` is redacted by
+default. `--mode private-envelope` includes private non-secret fields for a
+protected handoff, but still omits plaintext secrets and exports only binding
+metadata for secret fields.
 
 ## Agent Runtime
 

@@ -42,6 +42,16 @@ records may store opaque references such as `secret_ref`; they must not store
 plaintext tokens, API keys, private keys, recovery phrases, or secret field
 values in `core.sqlite` or other non-vault data stores.
 
+Governed connector context follows the same boundary. Accounts, provider
+resources, apps, products, signing identities, defaults, policies, guidance,
+and fallback rules may live in `core.sqlite`; resolved credentials may not.
+Fields that need credentials are classified as `secret_ref` and linked to the
+vault or broker by reference only. Exported governed-context envelopes default
+to redacted values. Private envelopes may include private non-secret IDs such
+as Bundle IDs, Team IDs, SKUs, package names, or project IDs only when the
+payload declares protected handling, and they still omit plaintext secret
+values.
+
 Clawix and other hosts may store host UI state, approval state, and native
 protected-key handles under their own host roots. They must not become a second
 canonical plaintext or encrypted secret database. If a host needs a projection,
@@ -164,6 +174,12 @@ store opaque `secretRef` values, but they must not store reversible local auth
 files. Pre-v1 `auth.encrypted` files are treated as unsafe retired
 artifacts: readers ignore/remove them, and writers fail closed instead of
 creating new plaintext-equivalent storage.
+
+Connector governed context shares the Secrets vocabulary for active/paused,
+blocked/retired state, default selection, fallback selection, guidance,
+requires-approval policy, denial policy, and audit. A connector executor must
+combine both gates: the selected governed context must be allowed, and any
+referenced secret must still pass broker policy for the exact action.
 
 Hosts that previously owned connection auth must migrate it one way into the
 encrypted Secrets vault. A bounded migration reader may decrypt

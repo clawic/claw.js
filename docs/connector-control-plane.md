@@ -72,6 +72,9 @@ logical domain:
 - `connector_policies`
 - `connector_budgets`
 - `connector_network_policies`
+- `connector_context_records`
+- `connector_context_defaults`
+- `connector_context_audit_events`
 - `connector_audit_events`
 
 Credential material is never stored in these tables. Credential bindings store

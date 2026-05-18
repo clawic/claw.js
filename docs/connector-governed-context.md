@@ -13,24 +13,43 @@ with a traced API v1 fallback.
 
 ```bash
 claw accounts list --json
+claw accounts upsert apple_app_main --provider apple --kind app --set bundle_id=com.example.app --set sku=SKU123 --json
+claw accounts link-secret revenuecat_api_v2 --field api_key --secret-ref secret://revenuecat/v2 --json
+claw accounts defaults set --context revenuecat_api_v2 --provider revenuecat --scope provider:revenuecat --json
 claw accounts schema apple --json
 claw accounts doctor --json
 claw accounts explain apple --operation apple.upload --env production --json
+claw accounts export --provider apple --mode redacted --json
+claw accounts export --mode private-envelope --json
 claw connectors context explain revenuecat --operation revenuecat.project_configuration.read --json
 ```
 
-Mutation-shaped commands are plan-only in this first slice:
+Local configuration commands persist governed non-secret context to
+`core.sqlite`:
 
 ```bash
-claw accounts pause apple_team_default --dry-run --json
-claw connectors context block revenuecat_api_v1 --provider revenuecat --dry-run --json
+claw accounts pause apple_team_default --json
+claw connectors context block revenuecat_api_v1 --provider revenuecat --json
 ```
+
+These commands do not mutate real providers. They update local desired context,
+defaults, state, guidance, policy, and `secret_ref` links. Live provider import
+or mutation remains explicit-approval work through the connector control plane.
+
+`accounts export` emits a portable governed-context envelope. The default mode
+is `redacted`: private field values are replaced and no secret material is
+included. `--mode private-envelope` includes private non-secret fields for
+handoff/import workflows, marks the payload as protected handling, and still
+omits plaintext secrets. Secret fields export only binding metadata, not the
+secret reference value or resolved credential.
 
 ## Invariants
 
 - Context fields are classified as `public`, `private`, or `secret_ref`.
 - Secret material is represented only by secret references.
 - Private values are redacted by default in CLI explanation output.
+- Exports default to redacted envelopes; private envelopes must declare
+  protected handling and must not contain plaintext secret values.
 - Blocked, paused, retired, missing, and wrong-environment context fails closed.
 - Defaults and fallbacks are included in decision traces.
 - Provider schemas cite source documentation and are checked by the doctor
@@ -40,6 +59,9 @@ claw connectors context block revenuecat_api_v1 --provider revenuecat --dry-run 
   aliases only.
 - Durable IDs for resources remain opaque `res_*` references when context needs
   to point at files, instructions, projects, or secret bindings.
+- Stored context uses `connector_context_records`,
+  `connector_context_defaults`, and `connector_context_audit_events` in
+  `core.sqlite`. Credential material remains outside these tables.
 
 ## Provider Baseline
 
@@ -67,6 +89,7 @@ The protected surface is:
 - `packages/clawjs-core/src/connector-governed-context.test.ts`
 - `packages/clawjs-core/src/connector-control-plane.test.ts`
 - `packages/clawjs/src/cli-connector-context.test.ts`
+- `packages/clawjs/src/v1-connector-control-plane-storage.test.ts`
 - `node ./scripts/docs-surface-check.mjs`
 - `node ./scripts/code-hygiene-check.mjs`
 

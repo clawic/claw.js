@@ -41,10 +41,11 @@ V1 ships a local catalog for Discord, GitLab, GitHub, Google with a Google Play
 subprofile, Airtable, Salesforce, HubSpot, Stripe, Notion, Slack, Telegram Bot
 API, WhatsApp, Apple App Store Connect, Amazon Appstore, and RevenueCat.
 
-In this first implementation slice, read, schema, doctor, validate, and explain
-commands are executable. Mutation-shaped commands such as activate, pause,
-block, retire, edit, and set-policy return auditable no-write plans until the
-durable local storage mutation path is wired.
+V1 persists local governed context in `core.sqlite` tables for records,
+defaults, and context audit events. Read, schema, doctor, validate, explain,
+upsert, edit, link-secret, defaults, activate, pause, block, and retire commands
+are executable against local framework state. These commands do not mutate real
+providers.
 
 ## Consequences
 
@@ -57,6 +58,8 @@ durable local storage mutation path is wired.
   before credentials, signing, publishing, or external mutation.
 - RevenueCat API v2 can be the preferred default while API v1 remains a traced
   fallback for unsupported v2 use cases.
+- `secret_ref` fields can be linked locally, but plaintext secret values are
+  rejected from governed context records.
 - Live provider import remains explicit approval work. If a provider cannot be
   physically or manually checked in a test environment, the validation status is
   `EXTERNAL PENDING`, not silently accepted.
@@ -66,6 +69,7 @@ durable local storage mutation path is wired.
 - `packages/clawjs-core/src/connector-governed-context.test.ts`
 - `packages/clawjs-core/src/connector-control-plane.test.ts`
 - `packages/clawjs/src/cli-connector-context.test.ts`
+- `packages/clawjs/src/v1-connector-control-plane-storage.test.ts`
 - `claw accounts doctor --json`
 - `claw connectors context explain revenuecat --json`
 - `node ./scripts/discoverability-check.mjs`

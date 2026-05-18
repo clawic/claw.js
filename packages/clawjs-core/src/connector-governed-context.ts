@@ -141,6 +141,9 @@ export interface ConnectorGovernedContextRecord {
   fields: Record<string, ConnectorContextRecordField>;
   guidance?: ConnectorContextGuidance;
   policy?: ConnectorContextPolicy;
+  desired?: Record<string, unknown>;
+  observed?: Record<string, unknown>;
+  verification?: Record<string, unknown>;
   source?: "manual" | "imported" | "provider_readonly" | "fixture";
   updatedAt?: string;
 }
@@ -167,6 +170,7 @@ export type ConnectorContextDecisionReasonCode =
 export interface ConnectorContextDecisionReason {
   code: ConnectorContextDecisionReasonCode;
   message: string;
+  remedy?: string;
   recordId?: string;
   kind?: ConnectorContextKind;
   field?: string;
@@ -336,6 +340,7 @@ export function explainConnectorContextChoice(input: ConnectorContextChoiceInput
     if (candidates.length === 0) {
       if (!requirement.optional) {
         reasons.push({ code: "context_record_missing", kind: requirement.kind, message: `Missing ${requirement.kind} context for ${input.providerId}.` });
+        reasons[reasons.length - 1]!.remedy = `Create or import an active ${requirement.kind} context for ${input.providerId}, then rerun explain.`;
       }
       continue;
     }
@@ -367,6 +372,7 @@ export function explainConnectorContextChoice(input: ConnectorContextChoiceInput
         code: "context_required",
         kind: requirement.kind,
         message: `No eligible ${requirement.kind} context matched the request.`,
+        remedy: `Activate an eligible ${requirement.kind} context, fix missing fields, or choose an approved fallback.`,
       }]));
       continue;
     }
@@ -399,28 +405,28 @@ function scoreCandidate(candidate: ConnectorGovernedContextRecord, defaultRefs: 
 
 function evaluateCandidate(input: ConnectorContextChoiceInput, requirement: ConnectorContextRequirement, candidate: ConnectorGovernedContextRecord): ConnectorContextDecisionReason[] {
   const reasons: ConnectorContextDecisionReason[] = [];
-  if (candidate.state === "blocked") reasons.push({ code: "context_object_blocked", recordId: candidate.id, kind: candidate.kind, message: `${candidate.id} is blocked.` });
-  if (candidate.state === "paused") reasons.push({ code: "context_object_paused", recordId: candidate.id, kind: candidate.kind, message: `${candidate.id} is paused.` });
-  if (candidate.state === "retired") reasons.push({ code: "context_object_retired", recordId: candidate.id, kind: candidate.kind, message: `${candidate.id} is retired.` });
+  if (candidate.state === "blocked") reasons.push({ code: "context_object_blocked", recordId: candidate.id, kind: candidate.kind, message: `${candidate.id} is blocked.`, remedy: "Use an allowed alternative context or explicitly unblock it after approval." });
+  if (candidate.state === "paused") reasons.push({ code: "context_object_paused", recordId: candidate.id, kind: candidate.kind, message: `${candidate.id} is paused.`, remedy: "Use an active alternative context or reactivate this context after review." });
+  if (candidate.state === "retired") reasons.push({ code: "context_object_retired", recordId: candidate.id, kind: candidate.kind, message: `${candidate.id} is retired.`, remedy: "Use a replacement context; retired records should not be selected." });
   if (input.environment) {
     const fieldValue = candidate.fields.environment?.value ?? candidate.fields.environment_id?.value;
     if (fieldValue && fieldValue !== input.environment) {
-      reasons.push({ code: "wrong_environment", recordId: candidate.id, kind: candidate.kind, field: "environment", message: `${candidate.id} is scoped to ${String(fieldValue)}, not ${input.environment}.` });
+      reasons.push({ code: "wrong_environment", recordId: candidate.id, kind: candidate.kind, field: "environment", message: `${candidate.id} is scoped to ${String(fieldValue)}, not ${input.environment}.`, remedy: `Select context for ${input.environment} or change the requested environment.` });
     }
   }
-  if (candidate.policy?.effect === "deny") reasons.push({ code: "policy_denied", recordId: candidate.id, kind: candidate.kind, message: candidate.policy.reason });
-  if (candidate.policy?.effect === "requires_approval") reasons.push({ code: "policy_requires_approval", recordId: candidate.id, kind: candidate.kind, message: candidate.policy.reason });
+  if (candidate.policy?.effect === "deny") reasons.push({ code: "policy_denied", recordId: candidate.id, kind: candidate.kind, message: candidate.policy.reason, remedy: "Use a policy-allowed context or change the policy through an approved flow." });
+  if (candidate.policy?.effect === "requires_approval") reasons.push({ code: "policy_requires_approval", recordId: candidate.id, kind: candidate.kind, message: candidate.policy.reason, remedy: "Request scoped approval for this context or choose an already approved alternative." });
 
   for (const fieldName of requirement.fields) {
     const fieldValue = candidate.fields[fieldName];
     if (!fieldValue) {
-      reasons.push({ code: "context_field_missing", recordId: candidate.id, kind: candidate.kind, field: fieldName, message: `${candidate.id} is missing ${fieldName}.` });
+      reasons.push({ code: "context_field_missing", recordId: candidate.id, kind: candidate.kind, field: fieldName, message: `${candidate.id} is missing ${fieldName}.`, remedy: `Set ${fieldName} on ${candidate.id} or choose another active ${candidate.kind} context.` });
       continue;
     }
-    if (fieldValue.policy?.effect === "deny") reasons.push({ code: "context_field_blocked", recordId: candidate.id, kind: candidate.kind, field: fieldName, message: fieldValue.policy.reason });
-    if (fieldValue.policy?.effect === "requires_approval") reasons.push({ code: "policy_requires_approval", recordId: candidate.id, kind: candidate.kind, field: fieldName, message: fieldValue.policy.reason });
+    if (fieldValue.policy?.effect === "deny") reasons.push({ code: "context_field_blocked", recordId: candidate.id, kind: candidate.kind, field: fieldName, message: fieldValue.policy.reason, remedy: `Use a different ${fieldName} value/context or update field policy through an approved flow.` });
+    if (fieldValue.policy?.effect === "requires_approval") reasons.push({ code: "policy_requires_approval", recordId: candidate.id, kind: candidate.kind, field: fieldName, message: fieldValue.policy.reason, remedy: `Request scoped approval for ${candidate.id}.${fieldName}.` });
     if (fieldValue.sensitivity === "secret_ref" && !fieldValue.secretRef) {
-      reasons.push({ code: "context_secret_binding_missing", recordId: candidate.id, kind: candidate.kind, field: fieldName, message: `${candidate.id}.${fieldName} requires a secret_ref binding.` });
+      reasons.push({ code: "context_secret_binding_missing", recordId: candidate.id, kind: candidate.kind, field: fieldName, message: `${candidate.id}.${fieldName} requires a secret_ref binding.`, remedy: `Run accounts link-secret ${candidate.id} --field ${fieldName} --secret-ref secret://...` });
     }
   }
   return reasons;
