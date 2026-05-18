@@ -1010,7 +1010,8 @@ for (const [source, scheduler] of Object.entries(requiredEventSchedulers)) {
   requireSnippet("packages/clawjs/src/cli-search-events.ts", scheduler);
   requireSnippet("packages/clawjs/src/cli-search-events.ts", `source: "${source}"`);
 }
-requireSnippet("packages/clawjs/src/cli-search-events.test.ts", "Search event schedulers create hot event-driven jobs for every framework source");
+requireSnippet("packages/clawjs/src/cli-search-events.test.ts", "Search event schedulers create hot event-driven upsert and delete jobs for every framework source");
+requireSnippet("packages/clawjs/src/cli-search-events.test.ts", "operation === \"delete\" ? 80 : 60");
 for (const source of Object.keys(requiredEventSchedulers)) {
   requireSnippet("packages/clawjs/src/cli-search-events.test.ts", `source: "${source}"`);
 }
