@@ -26,6 +26,14 @@ knowledge in migrators, adapters, receipts, repair tools, and fixtures.
 
 - `schema.json`: machine-readable record schema.
 - `baseline.json`: current public ledger metadata and records.
+- `public-surface-baseline.json`: generated snapshot of registered public
+  surfaces and CLI commands. `claw evolution diff --json` compares current
+  registry state against this file and requires active evolution records for
+  uncovered drift.
+- `claw evolution plan|dry-run|repair|rollback|backup|receipt --json`: safe
+  operator contracts for migration planning, backup classification, rescue
+  preservation, and redacted receipts. Mutating actions are approval-gated by
+  default.
 
 ## Rescue Rule
 

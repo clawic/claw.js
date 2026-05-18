@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const errors = [];
@@ -27,6 +28,7 @@ for (const file of [
   "docs/evolution/README.md",
   "docs/evolution/schema.json",
   "docs/evolution/baseline.json",
+  "docs/evolution/public-surface-baseline.json",
   "packages/clawjs-core/src/evolution.ts",
   "packages/clawjs/src/cli-evolution-command.ts",
   "skills/compatibility-evolution-work/SKILL.md",
@@ -37,6 +39,12 @@ for (const snippet of [
   "rescueCore: \"launch_chat_repair\"",
   "legacyLocation: \"boundary_migrators_adapters_receipts\"",
   "externalSubmission: \"explicit_approval_only\"",
+  "createEvolutionPublicSurfaceBaseline",
+  "diffEvolutionPublicSurfaceBaseline",
+  "createEvolutionOperatorPlan",
+  "classifyEvolutionBackupPolicy",
+  "createEvolutionReceipt",
+  "redactEvolutionReceiptText",
 ]) requireSnippet("packages/clawjs-core/src/evolution.ts", snippet);
 
 for (const snippet of [
@@ -52,6 +60,7 @@ for (const snippet of [
 ]) requireSnippet("docs/decision-map.md", snippet);
 
 const ledger = readJson("docs/evolution/baseline.json");
+const publicSurfaceBaseline = readJson("docs/evolution/public-surface-baseline.json");
 if (ledger.schemaVersion !== 1) errors.push("evolution ledger schemaVersion must be 1");
 if (ledger.policy?.sourceOfTruth !== "clawjs") errors.push("evolution ledger sourceOfTruth must be clawjs");
 if (ledger.policy?.postV1Migration !== "step_by_step_all_public_versions") errors.push("postV1Migration policy drifted");
@@ -65,9 +74,30 @@ for (const record of ledger.records ?? []) {
   if (!Array.isArray(record.tests)) errors.push(`evolution record ${record.id} needs tests`);
 }
 
+if (publicSurfaceBaseline.schemaVersion !== 1) errors.push("public surface baseline schemaVersion must be 1");
+if (publicSurfaceBaseline.sources?.surfaces !== "packages/clawjs-core/src/surface-registry.ts") errors.push("public surface baseline must cite surface registry");
+if (publicSurfaceBaseline.sources?.cliCommands !== "packages/clawjs-core/src/cli-command-registry.ts") errors.push("public surface baseline must cite CLI registry");
+if (!Array.isArray(publicSurfaceBaseline.surfaces) || publicSurfaceBaseline.surfaces.length < 1) errors.push("public surface baseline must include surfaces");
+if (!Array.isArray(publicSurfaceBaseline.cliCommands) || publicSurfaceBaseline.cliCommands.length < 1) errors.push("public surface baseline must include CLI commands");
+if (publicSurfaceBaseline.counts?.surfaces !== publicSurfaceBaseline.surfaces?.length) errors.push("public surface baseline surface count drifted internally");
+if (publicSurfaceBaseline.counts?.cliCommands !== publicSurfaceBaseline.cliCommands?.length) errors.push("public surface baseline CLI count drifted internally");
+
+const diff = currentPublicSurfaceDiff();
+if (!diff) {
+  errors.push("public surface baseline diff must run successfully");
+} else if (diff.uncoveredChanges?.length > 0) {
+  for (const change of diff.uncoveredChanges) {
+    errors.push(`public surface baseline drift is not covered by an active evolution record: ${change.area}:${change.change}:${change.id}`);
+  }
+}
+
 if (process.argv.includes("--self-test")) {
   const invalid = { schemaVersion: 1, policy: { sourceOfTruth: "other" }, records: [] };
   if (invalid.policy.sourceOfTruth === "clawjs") errors.push("self-test fixture unexpectedly passed");
+  const simulated = currentPublicSurfaceDiff({ simulateMissingCliCommand: true });
+  if (!simulated || simulated.uncoveredChanges.length < 1) {
+    errors.push("self-test must detect uncovered CLI baseline drift");
+  }
 }
 
 if (errors.length > 0) {
@@ -77,3 +107,42 @@ if (errors.length > 0) {
 }
 
 console.log("evolution governance check passed");
+
+function currentPublicSurfaceDiff(options = {}) {
+  const code = `
+    import fs from "node:fs";
+    import {
+      clawCliCommandRegistry,
+      clawEvolutionLedgerSchema,
+      clawEvolutionPublicSurfaceBaselineSchema,
+      clawPersistentSurfaceRegistry,
+      createEvolutionPublicSurfaceBaseline,
+      diffEvolutionPublicSurfaceBaseline,
+    } from "./packages/clawjs-core/src/index.ts";
+    const baseline = clawEvolutionPublicSurfaceBaselineSchema.parse(JSON.parse(fs.readFileSync("docs/evolution/public-surface-baseline.json", "utf8")));
+    const ledger = clawEvolutionLedgerSchema.parse(JSON.parse(fs.readFileSync("docs/evolution/baseline.json", "utf8")));
+    const cliCommands = ${options.simulateMissingCliCommand ? "clawCliCommandRegistry.commands.slice(1)" : "clawCliCommandRegistry.commands"};
+    const current = createEvolutionPublicSurfaceBaseline({
+      generatedAt: baseline.generatedAt,
+      surfaces: clawPersistentSurfaceRegistry.nodes,
+      cliCommands,
+    });
+    process.stdout.write(JSON.stringify(diffEvolutionPublicSurfaceBaseline({ baseline, current, ledger })));
+  `;
+  const result = spawnSync(process.execPath, ["--import", "tsx", "-e", code], {
+    cwd: rootDir,
+    encoding: "utf8",
+    maxBuffer: 20 * 1024 * 1024,
+  });
+  if (result.status !== 0) {
+    const output = `${result.stdout || ""}${result.stderr || ""}`.trim();
+    errors.push(`public surface baseline diff failed${output ? `:\n${output}` : ""}`);
+    return null;
+  }
+  try {
+    return JSON.parse(result.stdout);
+  } catch {
+    errors.push("public surface baseline diff output must be valid JSON");
+    return null;
+  }
+}

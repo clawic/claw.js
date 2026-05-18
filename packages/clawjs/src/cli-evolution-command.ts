@@ -1,8 +1,19 @@
 import fs from "fs";
 import path from "path";
 
-import { clawEvolutionLedgerSchema, clawEvolutionPolicy, summarizeEvolutionLedger } from "@clawjs/core";
-import type { ClawEvolutionLedger } from "@clawjs/core";
+import {
+  clawCliCommandRegistry,
+  clawEvolutionLedgerSchema,
+  clawEvolutionPolicy,
+  clawEvolutionPublicSurfaceBaselineSchema,
+  clawPersistentSurfaceRegistry,
+  createEvolutionOperatorPlan,
+  createEvolutionPublicSurfaceBaseline,
+  createEvolutionReceipt,
+  diffEvolutionPublicSurfaceBaseline,
+  summarizeEvolutionLedger,
+} from "@clawjs/core";
+import type { ClawEvolutionLedger, ClawEvolutionOperatorAction, ClawEvolutionPublicSurfaceBaseline } from "@clawjs/core";
 
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { formatCliTable } from "./cli-flag-parsers.ts";
@@ -24,6 +35,7 @@ export async function runEvolutionCli(input: EvolutionCliInput): Promise<number>
   const action = input.positionals[1] || "list";
   const root = findEvolutionRoot(input.context.cwd);
   const ledgerPath = path.join(root, clawEvolutionPolicy.ledger.baseline);
+  const publicSurfaceBaselinePath = path.join(root, clawEvolutionPolicy.ledger.publicSurfaceBaseline);
   const ledger = readEvolutionLedger(ledgerPath);
 
   if (action === "list") {
@@ -38,33 +50,88 @@ export async function runEvolutionCli(input: EvolutionCliInput): Promise<number>
     return writeEvolutionResult(input, action, payload);
   }
   if (action === "verify" || action === "doctor") {
+    const baseline = readPublicSurfaceBaseline(publicSurfaceBaselinePath);
+    const current = createCurrentPublicSurfaceBaseline();
+    const diff = baseline ? diffEvolutionPublicSurfaceBaseline({ baseline, current, ledger }) : null;
     return writeEvolutionResult(input, action, {
-      status: "ok",
+      status: !diff || diff.uncoveredChanges.length === 0 ? "ok" : "needs_evolution_record",
       ledgerPath,
+      publicSurfaceBaselinePath,
       policy: {
         sourceOfTruth: clawEvolutionPolicy.sourceOfTruth,
         postV1Migration: clawEvolutionPolicy.postV1Migration,
         rescueCore: clawEvolutionPolicy.rescueCore,
       },
       summary: summarizeEvolutionLedger(ledger),
+      surfaceBaseline: diff
+        ? { status: diff.status, changed: diff.summary.changed, uncovered: diff.summary.uncovered }
+        : { status: "missing", changed: null, uncovered: null },
       checks: [
         "ledger_schema_valid",
         "records_have_owner_surfaces_tests",
         "receipts_redacted_by_policy",
         "rescue_core_declared",
+        diff && diff.uncoveredChanges.length === 0 ? "public_surface_baseline_covered" : "public_surface_baseline_needs_attention",
       ],
     });
   }
   if (action === "diff") {
+    const baseline = readPublicSurfaceBaseline(publicSurfaceBaselinePath);
+    if (!baseline) {
+      return writeEvolutionResult(input, action, {
+        status: "baseline_missing",
+        publicSurfaceBaselinePath,
+        requiredRecord: true,
+        next: "Create docs/evolution/public-surface-baseline.json from the current registry before relying on evolution diff gates.",
+      });
+    }
+    const current = createCurrentPublicSurfaceBaseline();
+    const diff = diffEvolutionPublicSurfaceBaseline({ baseline, current, ledger });
     return writeEvolutionResult(input, action, {
-      status: "baseline_ready",
-      changedSurfaces: [],
-      requiredRecord: false,
-      next: "When registry/baseline drift is detected, add or update a docs/evolution record before merging.",
+      status: diff.status,
+      publicSurfaceBaselinePath,
+      changedSurfaces: diff.changes.map((change) => change.id),
+      uncoveredChanges: diff.uncoveredChanges,
+      requiredRecord: diff.uncoveredChanges.length > 0,
+      summary: diff.summary,
+      next: diff.uncoveredChanges.length > 0
+        ? "Add or update a docs/evolution record covering every changed surface before merging."
+        : "No uncovered public surface drift detected.",
     });
   }
   if (["plan", "dry-run", "apply", "repair", "rollback", "backup", "receipt", "report"].includes(action)) {
-    return writeEvolutionResult(input, action, buildSafeOperatorPlan(action, ledgerPath));
+    const baseline = readPublicSurfaceBaseline(publicSurfaceBaselinePath);
+    const current = createCurrentPublicSurfaceBaseline();
+    const diff = baseline ? diffEvolutionPublicSurfaceBaseline({ baseline, current, ledger }) : null;
+    const plan = createEvolutionOperatorPlan({
+      action: action as ClawEvolutionOperatorAction,
+      ledger,
+      ledgerPath,
+      changes: diff?.changes,
+      fromVersion: input.flags.from,
+      toVersion: input.flags.to,
+    });
+    if (action === "receipt") {
+      return writeEvolutionResult(input, action, {
+        plan,
+        receipt: createEvolutionReceipt({
+          action: "receipt",
+          plan,
+          notes: ["receipt created without prompts, secrets, or full local paths"],
+        }),
+      });
+    }
+    return writeEvolutionResult(input, action, {
+      ...plan,
+      surfaceBaseline: diff
+        ? { status: diff.status, changed: diff.summary.changed, uncovered: diff.summary.uncovered }
+        : { status: "missing", changed: null, uncovered: null },
+      receiptPreview: createEvolutionReceipt({
+        action: action as ClawEvolutionOperatorAction,
+        plan,
+        notes: ["planned operator action; mutation requires explicit approval when gated"],
+      }),
+    });
   }
 
   return writeEvolutionUsage(input);
@@ -111,28 +178,17 @@ function readEvolutionLedger(file: string): ClawEvolutionLedger {
   return clawEvolutionLedgerSchema.parse(JSON.parse(fs.readFileSync(file, "utf8")));
 }
 
-function buildSafeOperatorPlan(action: string, ledgerPath: string): {
-  action: string;
-  status: string;
-  mutates: boolean;
-  requiresApproval: boolean;
-  ledgerPath: string;
-  steps: string[];
-} {
-  const risky = ["apply", "repair", "rollback", "backup", "report"].includes(action);
-  return {
-    action,
-    status: risky ? "approval_gated_plan" : "dry_run_ready",
-    mutates: false,
-    requiresApproval: risky,
-    ledgerPath,
-    steps: [
-      "read evolution ledger",
-      "classify touched surfaces",
-      "build redacted receipt",
-      "keep launch/chat/repair available before non-critical work",
-    ],
-  };
+function readPublicSurfaceBaseline(file: string): ClawEvolutionPublicSurfaceBaseline | null {
+  if (!fs.existsSync(file)) return null;
+  return clawEvolutionPublicSurfaceBaselineSchema.parse(JSON.parse(fs.readFileSync(file, "utf8")));
+}
+
+function createCurrentPublicSurfaceBaseline(): ClawEvolutionPublicSurfaceBaseline {
+  return createEvolutionPublicSurfaceBaseline({
+    generatedAt: "CURRENT",
+    surfaces: clawPersistentSurfaceRegistry.nodes,
+    cliCommands: clawCliCommandRegistry.commands,
+  });
 }
 
 function isRecordList(value: unknown): value is { records: ClawEvolutionLedger["records"] } {
