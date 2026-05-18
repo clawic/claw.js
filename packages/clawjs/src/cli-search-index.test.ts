@@ -3006,7 +3006,6 @@ test("search rebuild indexes documents.blocks from document records", async () =
     assert.equal(embeddingsIndexPayload.data.documents, 1);
     assert.equal(embeddingsIndexPayload.data.indexed, 1);
     assert.deepEqual(embeddingsIndexPayload.data.selectedSources, ["documents.blocks"]);
-
     const providerEmbeddingCreate = await runCliCapture([
       "search",
       "embeddings",
@@ -3024,7 +3023,6 @@ test("search rebuild indexes documents.blocks from document records", async () =
     };
     assert.equal(providerEmbeddingCreatePayload.error.code, "SEARCH_EMBEDDING_PROVIDER_PENDING");
     assert.match(providerEmbeddingCreatePayload.error.message, /EXTERNAL PENDING/);
-
     const providerEmbeddingIndex = await runCliCapture([
       "search",
       "embeddings",
@@ -3043,14 +3041,12 @@ test("search rebuild indexes documents.blocks from document records", async () =
     };
     assert.equal(providerEmbeddingIndexPayload.error.code, "SEARCH_EMBEDDING_PROVIDER_PENDING");
     assert.match(providerEmbeddingIndexPayload.error.message, /EXTERNAL PENDING/);
-
     const embeddingsStatus = await runCliCapture(["search", "embeddings", "status", "--source", "documents.blocks", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(embeddingsStatus.code, CLI_EXIT_OK);
     const embeddingsStatusPayload = JSON.parse(embeddingsStatus.stdout) as {
       data: { items: Array<{ source: string; shard: string; model: string; documents: number; vectors: number }> };
     };
     assert.equal(embeddingsStatusPayload.data.items.some((item) => item.source === "documents.blocks" && item.model === "local-text-v1" && item.documents === 1 && item.vectors === 1), true);
-
     const semanticQuery = await runCliCapture([
       "search",
       "query",
@@ -3076,7 +3072,6 @@ test("search rebuild indexes documents.blocks from document records", async () =
     const semanticResult = semanticQueryPayload.data.results.find((candidate) => candidate.title === "Implementation Blueprint");
     assert.equal(semanticResult?.source, "documents.blocks");
     assert.equal(semanticResult?.explanation?.matchedBy?.includes("semantic"), true);
-
     const embeddingsJob = await runCliCapture([
       "search",
       "jobs",
@@ -3096,7 +3091,6 @@ test("search rebuild indexes documents.blocks from document records", async () =
     const embeddingsJobPayload = JSON.parse(embeddingsJob.stdout) as { data: { item: { id: string; operation: string } } };
     assert.equal(embeddingsJobPayload.data.item.id, "job:documents:embed");
     assert.equal(embeddingsJobPayload.data.item.operation, "embed");
-
     const embeddingsServiceRun = await runCliCapture(["search", "service", "run-once", "--source", "documents.blocks", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(embeddingsServiceRun.code, CLI_EXIT_OK);
     const embeddingsServiceRunPayload = JSON.parse(embeddingsServiceRun.stdout) as {
@@ -3107,7 +3101,6 @@ test("search rebuild indexes documents.blocks from document records", async () =
     assert.equal(embeddingsServiceRunPayload.data.worker?.items[0]?.operation, "embed");
     assert.equal(embeddingsServiceRunPayload.data.worker?.items[0]?.status, "done");
     assert.equal(embeddingsServiceRunPayload.data.worker?.items[0]?.indexed, 1);
-
     const deleteBlock = await runCliCapture(["db", "document_blocks", "delete", createBlockPayload.data.id, "--json"], workspaceRoot);
     assert.equal(deleteBlock.code, CLI_EXIT_OK);
     const deletedBlockJobs = await runCliCapture(["search", "jobs", "--source", "documents.blocks", "--data-dir", dataRoot, "--json"], workspaceRoot);
@@ -3123,7 +3116,6 @@ test("search rebuild indexes documents.blocks from document records", async () =
     assert.equal(deletedBlockJob?.payload.recordId, createBlockPayload.data.id);
   });
 });
-
 test("search rebuild indexes notes.pages from pages and blocks", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-notes-"));
   const dataRoot = path.join(workspaceRoot, "data");
@@ -3147,7 +3139,6 @@ test("search rebuild indexes notes.pages from pages and blocks", async () => {
     assert.equal(created.code, CLI_EXIT_OK);
     const createdPayload = JSON.parse(created.stdout) as { data: { id: string; title: string } };
     assert.ok(createdPayload.data.id);
-
     const jobs = await runCliCapture(["search", "jobs", "--source", "notes.pages", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(jobs.code, CLI_EXIT_OK);
     const jobsPayload = JSON.parse(jobs.stdout) as {
@@ -3159,7 +3150,6 @@ test("search rebuild indexes notes.pages from pages and blocks", async () => {
     assert.equal(noteJob?.shard, "hot");
     assert.equal(noteJob?.payload.eventDriven, true);
     assert.equal(noteJob?.payload.pageId, createdPayload.data.id);
-
     const rebuild = await runCliCapture(["search", "rebuild", "--source", "notes.pages", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(rebuild.code, CLI_EXIT_OK);
     const rebuildPayload = JSON.parse(rebuild.stdout) as {
@@ -3168,7 +3158,6 @@ test("search rebuild indexes notes.pages from pages and blocks", async () => {
     assert.equal(rebuildPayload.data.sources.includes("notes.pages"), true);
     assert.equal(rebuildPayload.data.pendingSources.includes("notes.pages"), false);
     assert.equal(rebuildPayload.data.indexedBySource["notes.pages"], 1);
-
     const query = await runCliCapture([
       "search",
       "query",
@@ -3216,7 +3205,6 @@ test("search rebuild indexes notes.pages from pages and blocks", async () => {
     assert.equal(result?.actions?.some((action) => action.id === "open" && action.kind === "open"), true);
     assert.ok(result?.explanation?.matchedBy?.length);
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "space"), true);
-
     const deleted = await runCliCapture(["notes", "delete", createdPayload.data.id, "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(deleted.code, CLI_EXIT_OK);
     const deleteJobs = await runCliCapture(["search", "jobs", "--source", "notes.pages", "--data-dir", dataRoot, "--json"], workspaceRoot);
@@ -3249,7 +3237,6 @@ test("search rebuild indexes notes.pages from pages and blocks", async () => {
     assert.equal(afterNotesDeletePayload.data.results.some((entry: any) => entry.source === "notes.pages" && entry.title === "Quarterly planning"), false);
   });
 });
-
 test("search rebuild indexes knowledge.graph from entities and facts", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-knowledge-"));
   const dataRoot = path.join(workspaceRoot, "data");
@@ -3277,7 +3264,6 @@ test("search rebuild indexes knowledge.graph from entities and facts", async () 
     assert.equal(entity.code, CLI_EXIT_OK);
     const entityPayload = JSON.parse(entity.stdout) as { data: { id: string } };
     assert.equal(entityPayload.data.id, "entity-search-system");
-
     const fact = await runCliCapture([
       "knowledge",
       "fact",
@@ -3296,7 +3282,6 @@ test("search rebuild indexes knowledge.graph from entities and facts", async () 
     assert.equal(fact.code, CLI_EXIT_OK);
     const factPayload = JSON.parse(fact.stdout) as { data: { id: string } };
     assert.equal(factPayload.data.id, "fact-search-preference");
-
     const jobs = await runCliCapture(["search", "jobs", "--source", "knowledge.graph", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(jobs.code, CLI_EXIT_OK);
     const jobsPayload = JSON.parse(jobs.stdout) as {
@@ -3311,7 +3296,6 @@ test("search rebuild indexes knowledge.graph from entities and facts", async () 
     assert.equal(factJob?.operation, "upsert");
     assert.equal(factJob?.payload.kind, "fact");
     assert.equal(factJob?.payload.factId, "fact-search-preference");
-
     const rebuild = await runCliCapture(["search", "rebuild", "--source", "knowledge.graph", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(rebuild.code, CLI_EXIT_OK);
     const rebuildPayload = JSON.parse(rebuild.stdout) as {
@@ -3320,7 +3304,6 @@ test("search rebuild indexes knowledge.graph from entities and facts", async () 
     assert.equal(rebuildPayload.data.sources.includes("knowledge.graph"), true);
     assert.equal(rebuildPayload.data.pendingSources.includes("knowledge.graph"), false);
     assert.equal(rebuildPayload.data.indexedBySource["knowledge.graph"], 2);
-
     const query = await runCliCapture([
       "search",
       "query",
@@ -3367,7 +3350,6 @@ test("search rebuild indexes knowledge.graph from entities and facts", async () 
     assert.equal(result?.actions?.some((action) => action.id === "open" && action.kind === "open"), true);
     assert.ok(result?.explanation?.matchedBy?.length);
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "predicate"), true);
-
     const deletedFact = await runCliCapture(["knowledge", "delete", "fact-search-preference", "--kind", "fact", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(deletedFact.code, CLI_EXIT_OK);
     const deletedEntity = await runCliCapture(["knowledge", "delete", "entity-search-system", "--kind", "entity", "--data-dir", dataRoot, "--json"], workspaceRoot);
@@ -3425,7 +3407,6 @@ test("search rebuild indexes knowledge.graph from entities and facts", async () 
     assert.equal(afterKnowledgeEntityDeletePayload.data.results.some((entry: any) => entry.source === "knowledge.graph" && entry.metadata?.entityId === "entity-search-system"), false);
   });
 });
-
 test("search rebuild indexes signals.observations from signal catalog and observations", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-signals-"));
   const dataRoot = path.join(workspaceRoot, "data");
@@ -3455,7 +3436,6 @@ test("search rebuild indexes signals.observations from signal catalog and observ
         },
       ],
     }));
-
     const seeded = await runCliCapture([
       "signals",
       "seed-catalog",
@@ -3468,7 +3448,6 @@ test("search rebuild indexes signals.observations from signal catalog and observ
       "--json",
     ], workspaceRoot);
     assert.equal(seeded.code, CLI_EXIT_OK);
-
     const observation = await runCliCapture([
       "signals",
       "observe",
