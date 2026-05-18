@@ -683,7 +683,10 @@ export class SearchStore {
   }
 
   listEmbeddingStatus(input: SearchEmbeddingStatusInput = {}): SearchEmbeddingStatus[] {
-    const clauses = ["d.deleted_at IS NULL"];
+    const clauses = [
+      "d.deleted_at IS NULL",
+      "s.state NOT IN ('disabled', 'paused', 'excluded', 'external_pending')",
+    ];
     const params: unknown[] = [];
     addInClause(clauses, params, "d.source", input.sources);
     addInClause(clauses, params, "d.domain", input.domains);
@@ -697,6 +700,7 @@ export class SearchStore {
         COUNT(*) AS vectors, MAX(v.updated_at) AS updated_at
       FROM search_vectors v
       JOIN search_documents d ON d.id = v.document_id
+      JOIN search_sources s ON s.id = d.source
       WHERE ${clauses.join(" AND ")}
       GROUP BY d.source, d.domain, d.shard, v.model
       ORDER BY d.source ASC, d.shard ASC, v.model ASC
@@ -1107,7 +1111,16 @@ export class SearchStore {
   }
 
   actionsForResult(resultId: string): SearchAction[] {
-    return (this.db.prepare("SELECT action_json FROM search_actions WHERE document_id = ? ORDER BY action_id ASC").all(resultId) as Array<{ action_json: string }>)
+    return (this.db.prepare(`
+      SELECT a.action_json
+      FROM search_actions a
+      JOIN search_documents d ON d.id = a.document_id
+      JOIN search_sources s ON s.id = d.source
+      WHERE a.document_id = ?
+        AND d.deleted_at IS NULL
+        AND s.state NOT IN ('disabled', 'paused', 'excluded', 'external_pending')
+      ORDER BY a.action_id ASC
+    `).all(resultId) as Array<{ action_json: string }>)
       .map((action) => parseJson<SearchAction>(action.action_json));
   }
 

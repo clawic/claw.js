@@ -1566,6 +1566,49 @@ test("SearchStore preserves source controls and omits disabled sources", () => {
   }
 });
 
+test("SearchStore omits external-pending sources from query, actions and embeddings", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-external-pending-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    const manifest = createFullSearchSourceManifest({
+      id: "native.system",
+      domain: "native",
+      name: "Native system",
+      resultTypes: ["preference"],
+      capabilities: { semantic: "optional" },
+    });
+    store.registerSource(manifest, { state: "external_pending", error: "requires signed host adapter" });
+    store.upsertDocument({
+      id: "native.system:settings",
+      source: "native.system",
+      domain: "native",
+      type: "preference",
+      title: "System Settings",
+      body: "Native settings panel",
+      actions: [{ id: "open", kind: "open", label: "Open settings" }],
+    });
+    store.upsertVector({
+      documentId: "native.system:settings",
+      model: LOCAL_TEXT_EMBEDDING_MODEL,
+      embedding: createLocalTextEmbedding("native settings panel").vector,
+    });
+
+    const output = store.query({ query: "settings", profile: "full", sources: ["native.system"] });
+    assert.equal(output.results.length, 0);
+    assert.equal(output.partial, true);
+    assert.equal(output.omittedSources[0]?.source, "native.system");
+    assert.equal(output.omittedSources[0]?.reason, "disabled");
+    assert.match(output.omittedSources[0]?.message ?? "", /external_pending/);
+    assert.equal(store.resultForId("native.system:settings"), null);
+    assert.deepEqual(store.actionsForResult("native.system:settings"), []);
+    assert.equal(store.indexLocalEmbeddings({ sources: ["native.system"] }).indexed, 0);
+    assert.deepEqual(store.listEmbeddingStatus({ sources: ["native.system"] }), []);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 function percentile(values: number[], rank: number): number {
   assert.ok(values.length > 0);
   const sorted = [...values].sort((left, right) => left - right);
