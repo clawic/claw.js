@@ -25,6 +25,60 @@ test("Search MCP package publishes only the public Search binary", () => {
   assert.equal(fs.existsSync(path.resolve(process.cwd(), "packages/clawjs-search-mcp/bin/claw-search-mcp.mjs")), true);
   assert.equal(fs.existsSync(path.resolve(process.cwd(), "packages/clawjs-search-mcp/bin", ["clawjs", "index", "mcp"].join("-") + ".mjs")), false);
 });
+
+test("search actions honor actor and scope ACLs", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-actions-acl-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  const store = new SearchStore(path.join(dataRoot, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "documents.blocks",
+      domain: "documents",
+      name: "Documents",
+      resultTypes: ["document"],
+    }));
+    store.upsertDocument({
+      id: "documents.blocks:restricted",
+      source: "documents.blocks",
+      domain: "documents",
+      type: "document",
+      title: "Restricted launch notes",
+      body: "Restricted launch notes for scoped action checks.",
+      permissions: { allowedActors: ["agent:codex"], requiredScopes: ["project-alpha"] },
+      actions: [{ id: "open", kind: "open", label: "Open restricted note", grant: "search.documents.open", requiresApproval: false }],
+    });
+  } finally {
+    store.close();
+  }
+
+  const hidden = await runCliCapture(["search", "actions", "documents.blocks:restricted", "--data-dir", dataRoot, "--json"], workspaceRoot);
+  assert.equal(hidden.code, CLI_EXIT_OK);
+  const hiddenPayload = JSON.parse(hidden.stdout) as { data: { actions: unknown[] } };
+  assert.deepEqual(hiddenPayload.data.actions, []);
+
+  const wrongScope = await runCliCapture(["search", "actions", "documents.blocks:restricted", "--actor", "agent:codex", "--filter", "scopeId=project-beta", "--data-dir", dataRoot, "--json"], workspaceRoot);
+  assert.equal(wrongScope.code, CLI_EXIT_OK);
+  const wrongScopePayload = JSON.parse(wrongScope.stdout) as { data: { actions: unknown[] } };
+  assert.deepEqual(wrongScopePayload.data.actions, []);
+
+  const visible = await runCliCapture(["search", "actions", "documents.blocks:restricted", "--actor", "agent:codex", "--filter", "scopeId=project-alpha", "--data-dir", dataRoot, "--json"], workspaceRoot);
+  assert.equal(visible.code, CLI_EXIT_OK);
+  const visiblePayload = JSON.parse(visible.stdout) as { data: { actions: Array<{ id: string }> } };
+  assert.deepEqual(visiblePayload.data.actions.map((action) => action.id), ["open"]);
+
+  const blockedExecute = await runCliCapture(["search", "actions", "execute", "documents.blocks:restricted", "open", "--actor", "agent:codex", "--filter", "scopeId=project-beta", "--dry-run", "--data-dir", dataRoot, "--json"], workspaceRoot);
+  assert.equal(blockedExecute.code, CLI_EXIT_FAILURE);
+  const blockedExecutePayload = JSON.parse(blockedExecute.stdout) as { error: { code: string } };
+  assert.equal(blockedExecutePayload.error.code, "search_action_not_found");
+
+  const allowedExecute = await runCliCapture(["search", "actions", "execute", "documents.blocks:restricted", "open", "--actor", "agent:codex", "--filter", "scopeId=project-alpha", "--dry-run", "--data-dir", dataRoot, "--json"], workspaceRoot);
+  assert.equal(allowedExecute.code, CLI_EXIT_OK);
+  const allowedExecutePayload = JSON.parse(allowedExecute.stdout) as { data: { plan: { status: string; resultId: string; actionId: string } } };
+  assert.equal(allowedExecutePayload.data.plan.status, "planned");
+  assert.equal(allowedExecutePayload.data.plan.resultId, "documents.blocks:restricted");
+  assert.equal(allowedExecutePayload.data.plan.actionId, "open");
+});
+
 test("search rebuild indexes surface route graph contracts", runSearchSurfaceRouteGraphContractsScenario);
 
 test("search rebuild indexes docs pages and refreshes resource jobs", runSearchDocsPagesScenario);

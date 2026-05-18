@@ -1437,6 +1437,7 @@ test("SearchStore filters result ACLs by actor and scope", () => {
         allowedActors: ["agent:codex"],
         requiredScopes: ["project-alpha"],
       },
+      actions: [{ id: "open", kind: "open", label: "Open restricted note", grant: "search.documents.open" }],
     });
 
     assert.equal(store.query({ query: "launch", domains: ["documents"] }).results.length, 0);
@@ -1445,6 +1446,18 @@ test("SearchStore filters result ACLs by actor and scope", () => {
     assert.deepEqual(
       store.query({ query: "launch", domains: ["documents"], actor: "agent:codex", filters: { scopeId: "project-alpha" } }).results.map((result) => result.id),
       ["documents.blocks:restricted"],
+    );
+    assert.equal(store.resultForId("documents.blocks:restricted"), null);
+    assert.deepEqual(store.actionsForResult("documents.blocks:restricted"), []);
+    assert.equal(store.resultForId("documents.blocks:restricted", { actor: "agent:other", filters: { scopeId: "project-alpha" } }), null);
+    assert.deepEqual(store.actionsForResult("documents.blocks:restricted", { actor: "agent:codex", filters: { scopeId: "project-beta" } }), []);
+    assert.equal(
+      store.resultForId("documents.blocks:restricted", { actor: "agent:codex", filters: { scopeId: "project-alpha" } })?.id,
+      "documents.blocks:restricted",
+    );
+    assert.deepEqual(
+      store.actionsForResult("documents.blocks:restricted", { actor: "agent:codex", filters: { scopeId: "project-alpha" } }).map((action) => action.id),
+      ["open"],
     );
   } finally {
     store.close();

@@ -36,6 +36,8 @@ export interface SearchDocumentFragmentInput {
   metadata?: Record<string, unknown>;
 }
 
+export type SearchResultAccessInput = Pick<SearchQueryInput, "actor" | "surface" | "filters">;
+
 export interface SearchDocumentInput {
   id: string;
   source: string;
@@ -1110,9 +1112,9 @@ export class SearchStore {
     return searchInteractionFromRow(stored);
   }
 
-  actionsForResult(resultId: string): SearchAction[] {
+  actionsForResult(resultId: string, access: SearchResultAccessInput = {}): SearchAction[] {
     return (this.db.prepare(`
-      SELECT a.action_json
+      SELECT a.action_json, d.permissions_json
       FROM search_actions a
       JOIN search_documents d ON d.id = a.document_id
       JOIN search_sources s ON s.id = d.source
@@ -1120,11 +1122,12 @@ export class SearchStore {
         AND d.deleted_at IS NULL
         AND s.state NOT IN ('disabled', 'paused', 'excluded', 'external_pending')
       ORDER BY a.action_id ASC
-    `).all(resultId) as Array<{ action_json: string }>)
+    `).all(resultId) as Array<{ action_json: string; permissions_json: string }>)
+      .filter((action) => searchAclAllows(action.permissions_json, { query: "", ...access }))
       .map((action) => parseJson<SearchAction>(action.action_json));
   }
 
-  resultForId(resultId: string): SearchResult | null {
+  resultForId(resultId: string, access: SearchResultAccessInput = {}): SearchResult | null {
     const row = this.db.prepare(`
       SELECT d.*, 0 AS rank
       FROM search_documents d
@@ -1132,7 +1135,8 @@ export class SearchStore {
       WHERE d.id = ? AND d.deleted_at IS NULL AND s.state NOT IN ('disabled', 'paused', 'excluded', 'external_pending')
       LIMIT 1
     `).get(resultId) as SearchDocumentRow | undefined;
-    return row ? this.resultFromRow(row, { query: "" }) : null;
+    if (!row || !searchAclAllows(row.permissions_json, { query: "", ...access })) return null;
+    return this.resultFromRow(row, { query: "", ...access });
   }
 
   private indexJob(id: string): SearchIndexJob | null {

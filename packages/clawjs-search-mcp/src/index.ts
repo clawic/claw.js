@@ -248,7 +248,21 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
         ranking: ["central score", "source hints", "local frecency", "scope", "actor", "surface"],
       }),
     },
-    { name: "search.actions.list", description: "List actions attached to one Search result.", inputSchema: { type: "object", required: ["resultId"], properties: { resultId: { type: "string" } } }, handler: (p) => store.actionsForResult(requiredString(p, "resultId")) },
+    {
+      name: "search.actions.list",
+      description: "List actions attached to one Search result.",
+      inputSchema: {
+        type: "object",
+        required: ["resultId"],
+        properties: {
+          resultId: { type: "string" },
+          actor: { type: "string" },
+          surface: { type: "string" },
+          filters: { type: "object" },
+        },
+      },
+      handler: (p) => store.actionsForResult(requiredString(p, "resultId"), searchAccessFromParams(p)),
+    },
     {
       name: "search.actions.execute",
       description: "Plan or record a brokered Search result action execution through host grants/approvals.",
@@ -262,13 +276,15 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
           hostApprovalId: { type: "string" },
           actor: { type: "string" },
           surface: { type: "string" },
+          filters: { type: "object" },
         },
       },
       handler: (p) => {
         const resultId = requiredString(p, "resultId");
         const actionId = requiredString(p, "actionId");
-        const result = store.resultForId(resultId);
-        const action = store.actionsForResult(resultId).find((candidate) => candidate.id === actionId);
+        const access = searchAccessFromParams(p);
+        const result = store.resultForId(resultId, access);
+        const action = store.actionsForResult(resultId, access).find((candidate) => candidate.id === actionId);
         const actor = stringParam(p.actor);
         const surface = stringParam(p.surface);
         if (!result || !action) {
@@ -548,6 +564,14 @@ function searchQueryFromParams(params: Record<string, unknown>): SearchQueryInpu
     limit: numberParam(params.limit),
     agentBudget: searchAgentBudget(params.agentBudget),
     explain: typeof params.explain === "boolean" ? params.explain : undefined,
+    actor: stringParam(params.actor),
+    surface: stringParam(params.surface),
+    filters: recordParam(params.filters),
+  };
+}
+
+function searchAccessFromParams(params: Record<string, unknown>): Pick<SearchQueryInput, "actor" | "surface" | "filters"> {
+  return {
     actor: stringParam(params.actor),
     surface: stringParam(params.surface),
     filters: recordParam(params.filters),

@@ -965,6 +965,9 @@ for (const snippet of [
   "saved_searches",
   "search_monitors",
   "search_audit_events",
+  "actionsForResult(resultId: string, access",
+  "resultForId(resultId: string, access",
+  "searchAclAllows(action.permissions_json",
 ]) {
   requireSnippet("packages/clawjs-search/src/store.ts", snippet);
 }
@@ -979,6 +982,7 @@ for (const snippet of [
   "command === \"saved\"",
   "command === \"monitors\"",
   "command === \"actions\"",
+  "searchActionAccessInput",
   "command === \"profiles\"",
   "command === \"explain\"",
 ]) {
@@ -1004,6 +1008,7 @@ for (const snippet of [
   "search.saved.create",
   "search.monitors.evaluate",
   "search.actions.execute",
+  "searchAccessFromParams",
   "search.profiles.list",
   "search.cursors.list",
   "value === \"external_pending\"",

@@ -981,7 +981,7 @@ export async function runSearchAdminCli(input: {
     let indexedActions: SearchAction[] | null = resultId ? [] : null;
     try {
       registerCliSearchSources(store, input.flags);
-      indexedActions = resultId ? store.actionsForResult(resultId) : null;
+      indexedActions = resultId ? store.actionsForResult(resultId, searchActionAccessInput(input.flags)) : null;
     } finally {
       store.close();
     }
@@ -1208,6 +1208,18 @@ function localSearchEmbeddingModel(model: string | undefined): string {
     `Search local embedding indexing only supports ${LOCAL_TEXT_EMBEDDING_MODEL}; provider-backed embedding workers are EXTERNAL PENDING.`,
     CLI_EXIT_USAGE,
   );
+}
+
+function searchActionAccessInput(flags: Record<string, string>): Pick<SearchQueryInput, "actor" | "surface" | "filters"> {
+  const parsedFilters = parseSearchFiltersFlag(flags.filters ?? flags.filter);
+  const filters = { ...(parsedFilters ?? {}) };
+  if (flags.scope) filters.scope = flags.scope;
+  if (flags["scope-id"] || flags.scopeId) filters.scopeId = flags["scope-id"] ?? flags.scopeId;
+  return {
+    actor: flags.actor,
+    surface: flags.surface,
+    ...(Object.keys(filters).length ? { filters } : {}),
+  };
 }
 
 function stringPayloadValue(payload: Record<string, unknown>, key: string): string | undefined {
@@ -1540,8 +1552,9 @@ function runSearchActionExecuteCli(input: {
   let plan: SearchActionExecutionPlan | undefined;
   try {
     registerCliSearchSources(store, input.flags);
-    const result = store.resultForId(resultId);
-    const action = store.actionsForResult(resultId).find((candidate) => candidate.id === actionId);
+    const access = searchActionAccessInput(input.flags);
+    const result = store.resultForId(resultId, access);
+    const action = store.actionsForResult(resultId, access).find((candidate) => candidate.id === actionId);
     if (!result || !action) {
       store.recordAuditEvent({
         type: "action",
