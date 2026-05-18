@@ -2816,7 +2816,9 @@ test("search rebuild indexes knowledge.graph from entities and facts", async () 
       "--description",
       "Stores framework knowledge for launcher ranking and entity lookup.",
       "--properties",
-      JSON.stringify({ owner: "search", stage: "initial" }),
+      JSON.stringify({ marker: "knowledge-properties-fragment-needle", owner: "search", stage: "initial", credentials: { token: "knowledge-properties-secret-never-index" } }),
+      "--provenance",
+      JSON.stringify({ marker: "knowledge-entity-provenance-fragment-needle", source: "fixture", credentials: { apiKey: "knowledge-entity-provenance-secret-never-index" } }),
       "--json",
     ], workspaceRoot);
     assert.equal(entity.code, CLI_EXIT_OK);
@@ -2833,6 +2835,10 @@ test("search rebuild indexes knowledge.graph from entities and facts", async () 
       "prefers",
       "--value",
       "fast scoped Search results",
+      "--scope",
+      JSON.stringify({ marker: "knowledge-scope-fragment-needle", workspace: "search", credentials: { token: "knowledge-scope-secret-never-index" } }),
+      "--provenance",
+      JSON.stringify({ marker: "knowledge-fact-provenance-fragment-needle", source: "fixture", credentials: { apiKey: "knowledge-fact-provenance-secret-never-index" } }),
       "--confidence",
       "0.91",
       "--json",
@@ -2908,6 +2914,38 @@ test("search rebuild indexes knowledge.graph from entities and facts", async () 
     assert.equal(result?.actions?.some((action) => action.id === "open" && action.kind === "open"), true);
     assert.ok(result?.explanation?.matchedBy?.length);
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "predicate"), true);
+    const propertiesQuery = await runCliCapture(["search", "query", "knowledge-properties-fragment-needle", "--sources", "knowledge.graph", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(propertiesQuery.code, CLI_EXIT_OK);
+    const propertiesPayload = JSON.parse(propertiesQuery.stdout) as {
+      data: { results: Array<{ title: string; fragments?: Array<{ title?: string; snippet?: string }> }> };
+    };
+    const propertiesResult = propertiesPayload.data.results.find((entry) => entry.title === "Search System");
+    assert.equal(propertiesResult?.fragments?.some((fragment) => fragment.title === "properties" && fragment.snippet?.includes("knowledge-properties-fragment-needle")), true);
+    assert.equal(JSON.stringify(propertiesPayload.data.results).includes("knowledge-properties-secret-never-index"), false);
+    const entityProvenanceQuery = await runCliCapture(["search", "query", "knowledge-entity-provenance-fragment-needle", "--sources", "knowledge.graph", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(entityProvenanceQuery.code, CLI_EXIT_OK);
+    const entityProvenancePayload = JSON.parse(entityProvenanceQuery.stdout) as {
+      data: { results: Array<{ title: string; fragments?: Array<{ title?: string; snippet?: string }> }> };
+    };
+    const entityProvenanceResult = entityProvenancePayload.data.results.find((entry) => entry.title === "Search System");
+    assert.equal(entityProvenanceResult?.fragments?.some((fragment) => fragment.title === "provenance" && fragment.snippet?.includes("knowledge-entity-provenance-fragment-needle")), true);
+    assert.equal(JSON.stringify(entityProvenancePayload.data.results).includes("knowledge-entity-provenance-secret-never-index"), false);
+    const scopeQuery = await runCliCapture(["search", "query", "knowledge-scope-fragment-needle", "--sources", "knowledge.graph", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(scopeQuery.code, CLI_EXIT_OK);
+    const scopePayload = JSON.parse(scopeQuery.stdout) as {
+      data: { results: Array<{ title: string; fragments?: Array<{ title?: string; snippet?: string }> }> };
+    };
+    const scopeResult = scopePayload.data.results.find((entry) => entry.title.includes("prefers"));
+    assert.equal(scopeResult?.fragments?.some((fragment) => fragment.title === "scope" && fragment.snippet?.includes("knowledge-scope-fragment-needle")), true);
+    assert.equal(JSON.stringify(scopePayload.data.results).includes("knowledge-scope-secret-never-index"), false);
+    const factProvenanceQuery = await runCliCapture(["search", "query", "knowledge-fact-provenance-fragment-needle", "--sources", "knowledge.graph", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(factProvenanceQuery.code, CLI_EXIT_OK);
+    const factProvenancePayload = JSON.parse(factProvenanceQuery.stdout) as {
+      data: { results: Array<{ title: string; fragments?: Array<{ title?: string; snippet?: string }> }> };
+    };
+    const factProvenanceResult = factProvenancePayload.data.results.find((entry) => entry.title.includes("prefers"));
+    assert.equal(factProvenanceResult?.fragments?.some((fragment) => fragment.title === "provenance" && fragment.snippet?.includes("knowledge-fact-provenance-fragment-needle")), true);
+    assert.equal(JSON.stringify(factProvenancePayload.data.results).includes("knowledge-fact-provenance-secret-never-index"), false);
     const deletedFact = await runCliCapture(["knowledge", "delete", "fact-search-preference", "--kind", "fact", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(deletedFact.code, CLI_EXIT_OK);
     const deletedEntity = await runCliCapture(["knowledge", "delete", "entity-search-system", "--kind", "entity", "--data-dir", dataRoot, "--json"], workspaceRoot);
