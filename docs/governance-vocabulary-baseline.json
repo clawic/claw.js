@@ -237,6 +237,8 @@
       "database/public/app.js": 1,
       "examples/mock/seed.mjs": 4,
       "packages/clawjs-core/src/domain-surface-registry.ts": 28,
+      "packages/clawjs-core/src/evolution.ts": 4,
+      "packages/clawjs-core/src/index.test.ts": 5,
       "packages/clawjs-core/src/schemas.ts": 1,
       "packages/clawjs-core/src/surface-registry.ts": 148,
       "packages/clawjs-core/src/types-library-rules.ts": 1,
@@ -253,6 +255,7 @@
       "packages/clawjs-search/src/index.ts": 4,
       "packages/clawjs/src/cli-dense-data-command.ts": 6,
       "packages/clawjs/src/cli-discovery.test.ts": 2,
+      "packages/clawjs/src/cli-evolution-command.ts": 1,
       "packages/clawjs/src/cli-report.test.ts": 1,
       "packages/clawjs/src/cli-search-index.test.ts": 1,
       "packages/clawjs/src/cli-search-surface-routes-source.ts": 1,
@@ -409,6 +412,7 @@
       "docs/demo-terminology-note.md": 2,
       "docs/dense-data-completion-audit.md": 2,
       "docs/dense-data-existing-catalog-audit.md": 1,
+      "docs/evolution/public-surface-baseline.json": 18,
       "docs/governance-workspace-project-completion-audit.md": 1,
       "docs/governance-workspace-project-source-decision-audit.md": 2,
       "docs/index.md": 3,
@@ -474,6 +478,7 @@
       "packages/clawjs-core/src/dense-data-os.ts": 5,
       "packages/clawjs-core/src/domain-ownership.ts": 1,
       "packages/clawjs-core/src/index.test.ts": 1,
+      "packages/clawjs-core/src/remote-sync.ts": 2,
       "packages/clawjs-core/src/schemas.ts": 2,
       "packages/clawjs-core/src/surface-registry.ts": 6,
       "packages/clawjs-core/src/terminology.ts": 1,
@@ -522,7 +527,7 @@
       "packages/clawjs-profile/tests/e2e.test.ts": 3,
       "packages/clawjs-profile/tests/profile.test.ts": 11,
       "packages/clawjs-search-mcp/src/index.test.ts": 5,
-      "packages/clawjs-search-mcp/src/index.ts": 11,
+      "packages/clawjs-search-mcp/src/index.ts": 13,
       "packages/clawjs-search/src/index.test.ts": 4,
       "packages/clawjs-search/src/index.ts": 17,
       "packages/clawjs-search/src/store.ts": 60,
@@ -531,7 +536,7 @@
       "packages/clawjs/src/cli-discovery.test.ts": 4,
       "packages/clawjs/src/cli-media-utils.ts": 1,
       "packages/clawjs/src/cli-public-portal-routes.ts": 1,
-      "packages/clawjs/src/cli-search-command.ts": 33,
+      "packages/clawjs/src/cli-search-command.ts": 35,
       "packages/clawjs/src/cli-search-index.test.ts": 24,
       "packages/clawjs/src/cli-search-local-files-test-utils.ts": 5,
       "packages/clawjs/src/cli-search-web-external-test-utils.ts": 10,
@@ -916,7 +921,7 @@
       "secrets/src/server/stores.ts": 28
     }
   },
-  "generatedAt": "2026-05-18T13:25:07.274Z",
+  "generatedAt": "2026-05-18T15:53:59.085Z",
   "policy": "Current governance vocabulary debt may shrink without review. Any increase in a tracked path or any new tracked path fails scripts/governance-scope-guard.mjs unless the occurrence is removed or this baseline is deliberately updated with rationale.",
   "schemaVersion": 1,
   "summary": {
@@ -937,8 +942,8 @@
       "occurrences": 6
     },
     "owner_field": {
-      "files": 32,
-      "occurrences": 248
+      "files": 35,
+      "occurrences": 258
     },
     "owner_id": {
       "files": 16,
@@ -949,8 +954,8 @@
       "occurrences": 210
     },
     "profile": {
-      "files": 209,
-      "occurrences": 1054
+      "files": 211,
+      "occurrences": 1078
     },
     "profileId": {
       "files": 21,
