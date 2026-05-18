@@ -1315,6 +1315,10 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
 
 function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flags: Record<string, string>, cwd: string): number | null {
   switch (job.source) {
+    case "sessions.chats": {
+      const sessionId = resourceIdFromJobPayload(job, "sessionId") ?? job.resourceId;
+      return sessionId ? ensureSessionChatResourceIndexed(store, flags, sessionId) : 0;
+    }
     case "database.records":
       return ensureDatabaseRecordResourceIndexed(store, flags, job);
     case "work.items":
@@ -2003,6 +2007,43 @@ function ensureSessionsChatsSourceIndexed(store: SearchStore, flags: Record<stri
       lastIndexedAt: new Date().toISOString(),
     });
     return sessions.length;
+  } finally {
+    db.close();
+  }
+}
+
+function ensureSessionChatResourceIndexed(store: SearchStore, flags: Record<string, string>, sessionId: string): number {
+  const dbPath = resolveSessionsDbPath(flags);
+  if (!fs.existsSync(dbPath)) return 0;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!hasTable(db, "conversation_sessions")) return 0;
+    const session = db.prepare(`
+      SELECT session_id, source, artifact_path, title, cwd, updated_at, snippet, metadata_json, archived, pinned
+      FROM conversation_sessions
+      WHERE session_id = ?
+      LIMIT 1
+    `).get(sessionId) as ConversationSessionRow | undefined;
+    if (!session || session.archived === 1) {
+      store.tombstone({ source: "sessions.chats", resourceId: sessionId, reason: "session chat missing during Search event refresh" });
+      return 1;
+    }
+    const messages = hasTable(db, "conversation_messages")
+      ? db.prepare(`
+          SELECT id, role, text, turn_index, created_at, metadata_json
+          FROM conversation_messages
+          WHERE session_id = ?
+          ORDER BY turn_index ASC, id ASC
+          LIMIT 50
+        `).all(sessionId) as ConversationMessageRow[]
+      : [];
+    store.upsertDocument(sessionSearchDocument(session, messages));
+    store.setSourceState("sessions.chats", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 1;
   } finally {
     db.close();
   }
