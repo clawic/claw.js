@@ -108,7 +108,7 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
 
     const externalValidationReport = await built.app.inject({ method: "GET", url: "/v1/remote/external-validation-report" });
     assert.equal(externalValidationReport.statusCode, 200);
-    const externalValidationReportPayload = externalValidationReport.json() as { status: string; writes: boolean; requirementCount: number; evidenceCount: number; clearableRequirementIds: string[]; blockedRequirementIds: string[]; items: Array<{ requirementId: string; clearable: boolean; status: string; writes: boolean; missingArtifacts: string[]; approvedRunRefPresent: boolean }> };
+    const externalValidationReportPayload = externalValidationReport.json() as { status: string; writes: boolean; requirementCount: number; evidenceCount: number; clearableRequirementIds: string[]; blockedRequirementIds: string[]; invalidEvidenceRequirementIds: string[]; duplicateEvidenceRequirementIds: string[]; items: Array<{ requirementId: string; clearable: boolean; status: string; writes: boolean; missingArtifacts: string[]; approvedRunRefPresent: boolean }> };
     const expectedExternalValidationReport = buildRemoteExternalValidationReport();
     assert.equal(externalValidationReportPayload.status, "external_pending");
     assert.equal(externalValidationReportPayload.writes, false);
@@ -116,6 +116,8 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(externalValidationReportPayload.evidenceCount, 0);
     assert.deepEqual(externalValidationReportPayload.clearableRequirementIds, []);
     assert.deepEqual(externalValidationReportPayload.blockedRequirementIds, expectedExternalValidationReport.blockedRequirementIds);
+    assert.deepEqual(externalValidationReportPayload.invalidEvidenceRequirementIds, []);
+    assert.deepEqual(externalValidationReportPayload.duplicateEvidenceRequirementIds, []);
     assert.equal(externalValidationReportPayload.items.some((entry) => entry.requirementId === "physical_iroh_handshake" && entry.missingArtifacts.includes("RemoteTransportHandshakeReceipt")), true);
     assert.equal(externalValidationReportPayload.items.every((entry) => !entry.clearable && entry.status === "external_pending" && !entry.approvedRunRefPresent && !entry.writes), true);
 
@@ -138,12 +140,42 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
       payload: { evidence: completeEvidence },
     });
     assert.equal(completeExternalValidationReport.statusCode, 200);
-    const completeExternalValidationReportPayload = completeExternalValidationReport.json() as { status: string; writes: boolean; clearableRequirementIds: string[]; blockedRequirementIds: string[]; items: Array<{ clearable: boolean; writes: boolean; approvedRunRefPresent: boolean }> };
+    const completeExternalValidationReportPayload = completeExternalValidationReport.json() as { status: string; writes: boolean; clearableRequirementIds: string[]; blockedRequirementIds: string[]; invalidEvidenceRequirementIds: string[]; duplicateEvidenceRequirementIds: string[]; items: Array<{ clearable: boolean; writes: boolean; approvedRunRefPresent: boolean }> };
     assert.equal(completeExternalValidationReportPayload.status, "clearable");
     assert.equal(completeExternalValidationReportPayload.writes, false);
     assert.equal(completeExternalValidationReportPayload.clearableRequirementIds.length, expectedExternalPending.requirements.length);
     assert.deepEqual(completeExternalValidationReportPayload.blockedRequirementIds, []);
+    assert.deepEqual(completeExternalValidationReportPayload.invalidEvidenceRequirementIds, []);
+    assert.deepEqual(completeExternalValidationReportPayload.duplicateEvidenceRequirementIds, []);
     assert.equal(completeExternalValidationReportPayload.items.every((entry) => entry.clearable && entry.approvedRunRefPresent && !entry.writes), true);
+
+    const invalidExternalValidationReport = await built.app.inject({
+      method: "POST",
+      url: "/v1/remote/external-validation-report",
+      headers: { "content-type": "application/json" },
+      payload: {
+        evidence: [
+          ...completeEvidence,
+          {
+            schemaVersion: 1,
+            requirementId: "unknown_external_requirement",
+            approvedRun: true,
+            approvedRunRef: "approval://unknown",
+            physicalEvidenceRef: "evidence://unknown",
+            artifactRefs: ["UnknownArtifact"],
+            acceptedCriteria: ["unknown criterion"],
+            plaintextMaterialIncluded: false,
+            executedAt: "2026-05-17T10:13:24.000Z",
+            writes: false,
+          },
+        ],
+      },
+    });
+    assert.equal(invalidExternalValidationReport.statusCode, 200);
+    const invalidExternalValidationReportPayload = invalidExternalValidationReport.json() as { status: string; invalidEvidenceRequirementIds: string[]; clearableRequirementIds: string[] };
+    assert.equal(invalidExternalValidationReportPayload.status, "external_pending");
+    assert.deepEqual(invalidExternalValidationReportPayload.invalidEvidenceRequirementIds, ["unknown_external_requirement"]);
+    assert.equal(invalidExternalValidationReportPayload.clearableRequirementIds.length, expectedExternalPending.requirements.length);
 
     const sourceQaTemplate = await built.app.inject({ method: "GET", url: "/v1/remote/source-qa-template" });
     assert.equal(sourceQaTemplate.statusCode, 200);

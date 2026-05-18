@@ -103,6 +103,8 @@ export const remoteExternalValidationReportSchema = z.object({
   evidenceCount: z.number().int().nonnegative(),
   clearableRequirementIds: z.array(z.string()),
   blockedRequirementIds: z.array(z.string()),
+  invalidEvidenceRequirementIds: z.array(z.string()),
+  duplicateEvidenceRequirementIds: z.array(z.string()),
   items: z.array(remoteExternalValidationReportItemSchema),
   writes: z.literal(false),
 });
@@ -475,11 +477,27 @@ export function buildRemoteExternalValidationReport(input: {
 } = {}): RemoteExternalValidationReport {
   const generatedAt = input.generatedAt ?? new Date().toISOString();
   const checklist = buildRemoteExternalValidationChecklist({ generatedAt });
+  const checklistRequirementIds = new Set(checklist.requirementIds);
+  const parsedEvidence = (input.evidence ?? []).map((entry) => remoteExternalValidationEvidenceSchema.parse(entry));
+  const seenEvidenceRequirementIds = new Set<string>();
+  const invalidEvidenceRequirementIds = [...new Set(
+    parsedEvidence
+      .map((entry) => entry.requirementId)
+      .filter((requirementId) => !checklistRequirementIds.has(requirementId)),
+  )];
+  const duplicateEvidenceRequirementIds = [...new Set(
+    parsedEvidence
+      .map((entry) => entry.requirementId)
+      .filter((requirementId) => {
+        if (seenEvidenceRequirementIds.has(requirementId)) return true;
+        seenEvidenceRequirementIds.add(requirementId);
+        return false;
+      }),
+  )];
   const evidenceByRequirement = new Map(
-    (input.evidence ?? []).map((entry) => {
-      const evidence = remoteExternalValidationEvidenceSchema.parse(entry);
-      return [evidence.requirementId, evidence] as const;
-    }),
+    parsedEvidence
+      .filter((entry) => checklistRequirementIds.has(entry.requirementId))
+      .map((evidence) => [evidence.requirementId, evidence] as const),
   );
   const items = checklist.items.map((checklistItem) => {
     const evidence = evidenceByRequirement.get(checklistItem.requirementId);
@@ -519,11 +537,13 @@ export function buildRemoteExternalValidationReport(input: {
     schemaVersion: 1,
     reportId: externalValidationReportId(["report", generatedAt]),
     generatedAt,
-    status: blockedRequirementIds.length === 0 ? "clearable" : "external_pending",
+    status: blockedRequirementIds.length === 0 && invalidEvidenceRequirementIds.length === 0 && duplicateEvidenceRequirementIds.length === 0 ? "clearable" : "external_pending",
     requirementCount: checklist.requirementIds.length,
-    evidenceCount: evidenceByRequirement.size,
+    evidenceCount: parsedEvidence.length,
     clearableRequirementIds,
     blockedRequirementIds,
+    invalidEvidenceRequirementIds,
+    duplicateEvidenceRequirementIds,
     items,
     writes: false,
   });

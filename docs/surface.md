@@ -1576,11 +1576,41 @@ The docs check script validates that every current export from
     connectorControlPlaneVersion
     ConnectorControlPlaneDecision
     ConnectorControlPlaneDecisionReason
+    connectorGovernedContextVersion
     ConnectorDescriptor
     connectorDescriptorSchema
+    ConnectorContextChoice
+    ConnectorContextChoiceInput
+    ConnectorContextDecisionReason
+    ConnectorContextDecisionReasonCode
+    ConnectorContextDefaultRule
+    ConnectorContextDoctorGap
+    ConnectorContextDoctorReport
+    ConnectorContextFallbackRule
+    ConnectorContextFieldSchema
+    ConnectorContextGuidance
+    ConnectorContextKind
+    CONNECTOR_CONTEXT_KINDS
+    ConnectorContextKindSchema
+    ConnectorContextPolicy
+    ConnectorContextPolicyEffect
+    ConnectorContextProviderSchema
+    ConnectorContextProviderSubprofile
+    ConnectorContextRecordField
+    ConnectorContextRequirement
+    ConnectorContextScope
+    CONNECTOR_CONTEXT_SCOPE_KINDS
+    ConnectorContextScopeKind
+    CONNECTOR_CONTEXT_SENSITIVITIES
+    ConnectorContextSensitivity
     ConnectorExecutionPipelineStage
     connectorExecutionPipeline
     ConnectorExecutionRequest
+    ConnectorGovernedContextRecord
+    CONNECTOR_GOVERNED_CONTEXT_PROVIDER_ORDER
+    CONNECTOR_GOVERNED_CONTEXT_PROVIDER_SCHEMAS
+    CONNECTOR_GOVERNED_STATES
+    ConnectorGovernedState
     ConnectorNetworkPolicy
     ConnectorNetworkProof
     ConnectorOperation
@@ -1621,6 +1651,7 @@ The docs check script validates that every current export from
     COOKING_FAMILY
     createCodexReadOnlySourceDescriptor
     createAgentPermissionEscalationRequest
+    buildConnectorContextDoctorReport
     createConnectorCapability
     createManifest
     createRegulatedOutputLabels
@@ -1655,6 +1686,7 @@ The docs check script validates that every current export from
     EffectiveAccessPolicy
     EffectPreview
     effectPreviewSchema
+    explainConnectorContextChoice
     createAgentActivityFeed
     createAgentAuditCoverageReport
     createAgentAuditEvent
@@ -1715,6 +1747,7 @@ The docs check script validates that every current export from
     GARDEN_FAMILY
     GOVERNMENT_FAMILY
     getBuiltinCollection
+    getConnectorGovernedContextProviderSchema
     getRegulatedDomainPolicy
     GoalRecord
     goalRecordSchema
@@ -2000,6 +2033,9 @@ The docs check script validates that every current export from
     RawIoTInvocation
     rawIotInvocationSchema
     READING_MEDIA_FAMILY
+    redactConnectorContextRecord
+    redactConnectorContextValue
+    RedactedConnectorGovernedContextRecord
     regulatedDecisionEffects
     RegulatedActionDecision
     RegulatedActionDenialCode
@@ -2735,4 +2771,5 @@ The docs check script validates that every current export from
     listClawSurfaceEdges
     listClawSurfaceRoutes
     resolveClawPersistentSurfacePath
+    validateConnectorContextProviderSchema
     withSurfaceChildren

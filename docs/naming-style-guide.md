@@ -94,6 +94,25 @@ Use `sessionId`, not stable `chatId`, in protocol contracts.
 Pairing QR codes use a JSON payload with `v`, `host`, `port`, `token`, and
 related metadata; pair-token deep links are not stable v1 routes.
 
+## Governance words
+
+Use the Principal + Entity model from
+`docs/adr/0027-governance-identity-scope-model.md` for authority-sensitive
+work.
+
+- Use `principal` for actors that can receive authority.
+- Use `entity` for real-world/domain objects such as companies, brands,
+  families, departments, customers, assets, or provider objects.
+- Use `scope`, `steward`, `grant`, `authorityEdge`, and `restriction` for
+  governance.
+- Do not add generic `ownerId`, `ownerKind`, or `tenantId` authority fields.
+- Use `tenant` only for technical hosted/provider isolation, never as the public
+  word for a person, company, workspace, project, or customer.
+- Treat `companyId` as business data. It does not grant access without an
+  explicit authority edge.
+- Avoid bare `profile` for identity or authority. Prefer precise names such as
+  `userProfile`, `domainProfile`, `providerProfile`, or `profileProjection`.
+
 ## Statuses, timestamps, and deletion
 
 - Persist `completed`, not `done`.

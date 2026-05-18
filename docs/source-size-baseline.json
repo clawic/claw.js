@@ -156,14 +156,18 @@
       "reason": "Extended productivity CLI groups extracted from the public CLI router; split by capability family before expanding."
     },
     "packages/clawjs/src/cli-search-command.ts": {
-      "lines": 7662,
+      "lines": 7675,
       "blockGrowth": true,
       "reason": "Emergency search CLI debt after dense-source indexing and entrypoint contract expansion; immediate follow-up should extract source adapters, event refresh, and admin subcommands, and future growth is blocked except for extraction, deletion, or compatibility-preserving split work."
     },
     "packages/clawjs/src/cli-search-index.test.ts": {
-      "lines": 5062,
+      "lines": 5204,
       "blockGrowth": true,
       "reason": "Emergency search index integration coverage after local semantic embedding, shard, design-resource, and indexing workflow expansion; future growth is blocked except for extraction, deletion, or compatibility-preserving split work."
+    },
+    "packages/clawjs-core/src/index.test.ts": {
+      "lines": 2038,
+      "reason": "Remote Gateway/Sync contract integration coverage awaiting extraction into focused remote contract test files; future growth should move scenarios out of the core barrel test."
     },
     "packages/clawjs/src/index.test.ts": {
       "lines": 1580,

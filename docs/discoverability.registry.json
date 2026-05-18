@@ -859,6 +859,87 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "adr-docs-adr-0027-governance-identity-scope-model",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0027-governance-identity-scope-model.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0027: Governance Identity And Scope Model",
+        "0027-governance-identity-scope-model",
+        "ADR 0027"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0027: Governance Identity And Scope Model",
+          "expectPath": "docs/adr/0027-governance-identity-scope-model.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "adr-docs-adr-0028-workspace-project-folder-manifest",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0028-workspace-project-folder-manifest.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0028: Workspace, Project, Folder, And Manifest Boundary",
+        "0028-workspace-project-folder-manifest",
+        "ADR 0028"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0028: Workspace, Project, Folder, And Manifest Boundary",
+          "expectPath": "docs/adr/0028-workspace-project-folder-manifest.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "adr-docs-adr-0029-connector-governed-context-v1",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0029-connector-governed-context-v1.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0029: Connector Governed Context V1",
+        "0029-connector-governed-context-v1",
+        "ADR 0029"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0029: Connector Governed Context V1",
+          "expectPath": "docs/adr/0029-connector-governed-context-v1.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "surface-route-graph",
       "kind": "surface-route",
       "owner": "claw",
@@ -1818,6 +1899,31 @@
         }
       ],
       "guard": "scripts/domain-surface-registry-guard.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-governance-scope-guard",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/governance-scope-guard.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "governance-scope-guard",
+        "Governance Scope Guard"
+      ],
+      "searchQueries": [
+        {
+          "query": "governance-scope-guard",
+          "expectPath": "scripts/governance-scope-guard.mjs"
+        }
+      ],
+      "guard": "scripts/governance-scope-guard.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-18"
     },

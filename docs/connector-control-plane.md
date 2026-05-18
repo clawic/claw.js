@@ -31,6 +31,15 @@ The V1 contract only evaluates whether a request is allowed. It does not call
 providers, spend budget, lease credentials, mutate external data, or bypass the
 host-owned approval path.
 
+Connector operations may also declare governed context requirements. When they
+do, the control plane requires a successful context decision before execution.
+This covers provider-specific operational identifiers such as Apple Team IDs,
+Bundle IDs, SKUs and signing identities, Google Play package names and signing
+certificates, Amazon Appstore package/listing identifiers, RevenueCat project
+and app ids, products, entitlements, API key versions, endpoints, and webhooks.
+See [Connector Governed Context](./connector-governed-context.md) and
+[ADR 0029](./adr/0029-connector-governed-context-v1.md).
+
 `@clawjs/integrations` enforces the decision at the runner boundary.
 `runConnectorOperation` and `runConnectorSource` require `controlPlane` options
 for real execution (`dryRun: false`) before they create or call a runtime
@@ -84,7 +93,9 @@ references, expiry, and metadata.
 Supported block reasons include missing context, disabled providers,
 unsupported operations, credential scope mismatch, policy denial, missing or
 exceeded budgets, unknown-cost blocking, approval requirements, network proof
-requirements, and disallowed hosts.
+requirements, disallowed hosts, and governed-context failures such as blocked
+records, missing fields, missing secret bindings, wrong environment, or
+authorization-required context.
 
 See [ADR 0015](./adr/0015-connector-control-plane-v1.md) for the accepted
 architecture.

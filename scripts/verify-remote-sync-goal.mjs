@@ -152,6 +152,8 @@ const requiredDocSnippets = [
   "claw remote validation-template",
   "external validation report",
   "approvedRunRef",
+  "invalidEvidenceRequirementIds",
+  "duplicateEvidenceRequirementIds",
   "/v1/remote/external-validation-report",
   "claw remote validation-report",
   "source Q/A review report",
@@ -437,6 +439,8 @@ if (emptyExternalValidationReport.writes !== false) fail("remote external valida
 if (emptyExternalValidationReport.evidenceCount !== 0) fail("empty remote external validation report must have zero evidence");
 if (emptyExternalValidationReport.blockedRequirementIds.length !== externalPending.requirements.length) fail("empty remote external validation report must block every requirement");
 if (emptyExternalValidationReport.clearableRequirementIds.length !== 0) fail("empty remote external validation report must not clear requirements");
+if (emptyExternalValidationReport.invalidEvidenceRequirementIds.length !== 0) fail("empty remote external validation report must not have invalid evidence IDs");
+if (emptyExternalValidationReport.duplicateEvidenceRequirementIds.length !== 0) fail("empty remote external validation report must not have duplicate evidence IDs");
 
 const completeExternalValidationReport = buildRemoteExternalValidationReport({
   generatedAt: "2026-05-17T10:13:25.000Z",
@@ -456,8 +460,78 @@ const completeExternalValidationReport = buildRemoteExternalValidationReport({
 if (completeExternalValidationReport.status !== "clearable") fail("complete remote external validation report must be clearable");
 if (completeExternalValidationReport.clearableRequirementIds.length !== externalPending.requirements.length) fail("complete remote external validation report must clear every requirement");
 if (completeExternalValidationReport.blockedRequirementIds.length !== 0) fail("complete remote external validation report must have no blocked requirements");
+if (completeExternalValidationReport.invalidEvidenceRequirementIds.length !== 0) fail("complete remote external validation report must have no invalid evidence IDs");
+if (completeExternalValidationReport.duplicateEvidenceRequirementIds.length !== 0) fail("complete remote external validation report must have no duplicate evidence IDs");
 if (!completeExternalValidationReport.items.every((entry) => entry.clearable && entry.approvedRunRefPresent === true && entry.writes === false && entry.plaintextMaterialIncluded === false)) {
   fail("complete remote external validation report must preserve approved-run-ref/no-write/no-plaintext invariants");
+}
+
+const invalidExternalValidationReport = buildRemoteExternalValidationReport({
+  generatedAt: "2026-05-17T10:13:25.250Z",
+  evidence: [
+    ...externalValidationChecklist.items.map((entry) => ({
+      schemaVersion: 1,
+      requirementId: entry.requirementId,
+      approvedRun: true,
+      approvedRunRef: `approval://${entry.requirementId}`,
+      physicalEvidenceRef: `evidence://${entry.requirementId}`,
+      artifactRefs: entry.requiredArtifacts,
+      acceptedCriteria: entry.acceptanceCriteria,
+      plaintextMaterialIncluded: false,
+      executedAt: "2026-05-17T10:13:24.000Z",
+      writes: false,
+    })),
+    {
+      schemaVersion: 1,
+      requirementId: "unknown_external_requirement",
+      approvedRun: true,
+      approvedRunRef: "approval://unknown",
+      physicalEvidenceRef: "evidence://unknown",
+      artifactRefs: ["UnknownArtifact"],
+      acceptedCriteria: ["unknown criterion"],
+      plaintextMaterialIncluded: false,
+      executedAt: "2026-05-17T10:13:24.000Z",
+      writes: false,
+    },
+  ],
+});
+if (invalidExternalValidationReport.status !== "external_pending") fail("remote external validation report must reject unknown evidence requirement IDs");
+if (invalidExternalValidationReport.invalidEvidenceRequirementIds.join(",") !== "unknown_external_requirement") {
+  fail("remote external validation report must expose unknown evidence requirement IDs");
+}
+
+const duplicateExternalValidationReport = buildRemoteExternalValidationReport({
+  generatedAt: "2026-05-17T10:13:25.375Z",
+  evidence: [
+    {
+      schemaVersion: 1,
+      requirementId: "physical_iroh_handshake",
+      approvedRun: true,
+      approvedRunRef: "approval://physical_iroh_handshake/1",
+      physicalEvidenceRef: "evidence://physical_iroh_handshake/1",
+      artifactRefs: externalValidationChecklist.items[0].requiredArtifacts,
+      acceptedCriteria: externalValidationChecklist.items[0].acceptanceCriteria,
+      plaintextMaterialIncluded: false,
+      executedAt: "2026-05-17T10:13:24.000Z",
+      writes: false,
+    },
+    {
+      schemaVersion: 1,
+      requirementId: "physical_iroh_handshake",
+      approvedRun: true,
+      approvedRunRef: "approval://physical_iroh_handshake/2",
+      physicalEvidenceRef: "evidence://physical_iroh_handshake/2",
+      artifactRefs: externalValidationChecklist.items[0].requiredArtifacts,
+      acceptedCriteria: externalValidationChecklist.items[0].acceptanceCriteria,
+      plaintextMaterialIncluded: false,
+      executedAt: "2026-05-17T10:13:24.000Z",
+      writes: false,
+    },
+  ],
+});
+if (duplicateExternalValidationReport.status !== "external_pending") fail("remote external validation report must reject duplicate evidence requirement IDs");
+if (duplicateExternalValidationReport.duplicateEvidenceRequirementIds.join(",") !== "physical_iroh_handshake") {
+  fail("remote external validation report must expose duplicate evidence requirement IDs");
 }
 
 const missingApprovedRunRefExternalValidationReport = buildRemoteExternalValidationReport({

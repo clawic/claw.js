@@ -45,6 +45,11 @@ The main database owns:
   principals/accounts, credential bindings by `secret_ref`, capabilities,
   operations, policies, budgets, network/VPN/proxy declarations, and redacted
   audit events.
+- Governance bindings: principals, entities, scopes, stewards, authority edges,
+  grants, restrictions, data-class declarations, resource bindings, workspace
+  bindings, project bindings, and projection metadata. Ordinary domain
+  collections do not add mandatory `ownerId` or `tenantId` fields only to be
+  future-proof.
 - Dense-data foundation records: domain systems/packs, domain roles/profiles,
   evidence sources, provenance events, quality gaps, canonical operations,
   semantic views, domain intents, vocabularies, concepts, concept mappings,
@@ -107,6 +112,12 @@ owns the native permission identity and approval UI.
 `state/desired/`, `state/observed/`, `projections/`, `sessions/`, `audit/`,
 `locks/`, `backups/`, `browser/`, design/style/template/reference assets, and
 other source-like files that should travel with a workspace.
+
+Workspace roots own the full `.claw/` directory. Project folders carry
+`claw.project.json`, managed `AGENTS.md`, and `CLAUDE.md` shims instead of a
+full `.claw/` copy. The project manifest is a portable identity and handoff
+anchor; canonical grants, secrets, sensitive memory, sessions, pins, archives,
+and resource bindings remain in the framework database or approved sidecars.
 
 Do not add new workspace-local SQLite databases for canonical framework data.
 Do not add `.clawjs/` readers or migrations for pre-public workspace databases

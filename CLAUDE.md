@@ -25,6 +25,10 @@ Read and follow:
     before adding durable ADRs, skills, guardrails, harnesses, docs routers, or route work
 15. `docs/adr/0022-remote-gateway-sync-redesign.md` before changing remote
     Gateway, Connector, Sync, Iroh, node trust, or remote parity surfaces
+16. `docs/adr/0027-governance-identity-scope-model.md` and
+    `docs/adr/0028-workspace-project-folder-manifest.md` before changing
+    principals, entities, scopes, stewards, grants, restrictions, workspaces,
+    projects, project folders, manifests, sharing, or ownership-like fields
 
 Critical guardrail for prompt-based tests:
 

@@ -27,6 +27,10 @@ Read the relevant canonical docs before changing their surfaces:
 - Framework and host ownership: `docs/host-ownership.md`,
   `docs/adr/0001-claw-framework-host-boundary.md`
 - Storage and data placement: `docs/data-storage-boundary.md`
+- Governance identity, scopes, workspaces, projects, and project folder
+  manifests: `docs/adr/0027-governance-identity-scope-model.md`,
+  `docs/adr/0028-workspace-project-folder-manifest.md`,
+  `docs/workspace.md`
 - Naming and stable surfaces: `docs/naming-style-guide.md`,
   `docs/agentic-naming-guide.md`, `docs/vocabulary.md`,
   `docs/adr/0001-naming-and-stability-surfaces.md`,
@@ -135,6 +139,14 @@ Run `node ./scripts/skills-check.mjs` after adding or changing skills.
 - `@clawjs/claw` is the official SDK; `@clawjs/node` is compatibility.
 - Framework global data belongs under `~/.claw/`; workspace framework data
   belongs under `.claw/`; `.clawjs/` is a retired pre-public path.
+- Governance uses principals, entities, scopes, stewards, grants, authority
+  edges, and restrictions. Do not add generic `ownerId`, `ownerKind`, or
+  `tenantId` authority fields; `tenant` is technical isolation only and
+  `companyId` is business data only.
+- Workspaces are isolated contexts. Projects are collaborable scopes with
+  stable ids and mutable folder locators. Full `.claw/` directories belong to
+  workspace roots; project primary folders carry `claw.project.json`, managed
+  `AGENTS.md`, and `CLAUDE.md` shims.
 - User-facing structured framework records belong in `core.sqlite`; sidecars
   require explicit technical reasons such as churn, blobs, search indexes,
   sessions, logs, caches, or encrypted vault state.

@@ -67,6 +67,27 @@ The intended model is:
 - `workspaceId` identifies the isolated workspace context
 - `agentId` identifies the agent identity used in that context
 
+## Workspace, Project, And Folder Boundary
+
+A workspace is the isolated context. Switching workspace starts from separate
+memory, sessions, pinned items, archives, project lists, resource bindings, and
+defaults unless a later explicit share or import says otherwise.
+
+A project is the collaborable human work scope inside a workspace. A project
+has a stable project id, a display name, one primary folder, optional referenced
+folders, and resource bindings. A project may be shared directly without an
+organization.
+
+A folder is only a filesystem locator. A project primary folder is not a
+workspace root. It should contain a small project handoff footprint:
+`claw.project.json`, a managed `AGENTS.md`, and a `CLAUDE.md` shim. It should
+not contain a full `.claw/` directory unless the folder is itself a workspace
+root.
+
+Folder names and paths are mutable. Moving, renaming, or copying a project
+folder must not change project identity or grant authority. Copied folders start
+detached in another workspace until the user chooses attach, fork, or replace.
+
 ## Productivity Layer With `@clawjs/workspace`
 
 `@clawjs/workspace` extends the base SDK when you want a local-first

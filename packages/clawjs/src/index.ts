@@ -82,6 +82,7 @@ import { isSearchAdminCommand, runCliDiscoverySearch, runSearchAdminCli, runSear
 import { runNeedsCli } from "./cli-needs-command.ts";
 import { runCommandsCli } from "./cli-commands-command.ts";
 import { runSafetyCli } from "./cli-safety-command.ts";
+import { runConnectorContextCli } from "./cli-connector-context-command.ts";
 import { runDenseDataCli } from "./cli-dense-data-command.ts";
 import { runGatewayCli, runNodesCli, runRemoteCli, runSyncCli } from "./cli-remote-sync-command.ts";
 import { isMacControlCliRoot, runMacControlCli } from "./cli-mac-control-command.ts";
@@ -592,6 +593,8 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   if (group === "needs") return await runNeedsCli({ positionals, flags, argv, context, wantsJson, binName, workspaceRoot: flags.workspace || context.cwd });
   if (group === "commands") return await runCommandsCli({ positionals, flags, argv, context, wantsJson, binName, workspaceRoot: flags.workspace || context.cwd });
   if (group === "safety") return await runSafetyCli({ positionals, flags, context, wantsJson, binName });
+  const connectorContextExit = await runConnectorContextCli({ group, command, subcommand, positionals, flags, context, wantsJson, binName });
+  if (connectorContextExit !== null) return connectorContextExit;
   if (group === "remote") return await runRemoteCli({ positionals, flags, context, wantsJson, binName });
   if (group === "sync") return await runSyncCli({ positionals, flags, context, wantsJson, binName });
   if (group === "nodes") return await runNodesCli({ positionals, flags, context, wantsJson, binName });

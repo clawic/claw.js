@@ -1,4 +1,5 @@
 import type { RegulatedDecisionEffect, RegulatedDomain, SensitiveDataClass } from "./regulated-domain-safety.ts";
+import type { ConnectorContextChoice, ConnectorContextDecisionReasonCode, ConnectorContextRequirement } from "./connector-governed-context.ts";
 
 export const connectorControlPlaneVersion = 1;
 
@@ -34,9 +35,14 @@ export type ExternalPrincipalKind =
   | "tenant"
   | "project"
   | "app"
+  | "team"
+  | "product"
+  | "entitlement"
   | "bot"
   | "user"
-  | "endpoint";
+  | "endpoint"
+  | "environment"
+  | "signing_identity";
 
 export type ConnectorRuntimeKind =
   | "api"
@@ -119,6 +125,7 @@ export interface ConnectorOperation {
   requiresSensitiveExportReview?: boolean;
   thirdPartyDisclosure?: boolean;
   networkPolicyId?: string;
+  contextRequirements?: ConnectorContextRequirement[];
 }
 
 export interface ConnectorPolicyRule {
@@ -193,6 +200,7 @@ export interface ConnectorExecutionRequest {
     workspaceId?: string;
     requestId?: string;
   };
+  governedContext?: ConnectorContextChoice;
   credentialBinding?: CredentialBinding;
   expectedCost?: number;
   requestedHost?: string;
@@ -223,7 +231,8 @@ export interface ConnectorControlPlaneDecisionReason {
     | "approval_expired"
     | "network_proof_required"
     | "network_proof_mismatch"
-    | "host_not_allowed";
+    | "host_not_allowed"
+    | ConnectorContextDecisionReasonCode;
   message: string;
 }
 
@@ -309,6 +318,7 @@ export function evaluateConnectorControlPlaneRequest(input: {
   }
 
   evaluateCredentialBinding(request, policy, reasons);
+  evaluateGovernedContext(request, reasons);
   evaluatePolicyRules(request, policy, reasons);
   evaluateBudgets(request, budgets, matchingGrant, reasons);
   evaluateNetworkPolicy(request, networkPolicies, networkProof, matchingGrant, reasons);
@@ -333,10 +343,35 @@ export function evaluateConnectorControlPlaneRequest(input: {
     reasons,
     audit: {
       traceMode: policy.traceMode,
-      fields: ["requestId", "actorId", "purpose", "providerId", "operationId", "capabilityId", "credentialBindingId", "decision"],
+      fields: ["requestId", "actorId", "purpose", "providerId", "operationId", "capabilityId", "credentialBindingId", "governedContext", "decision"],
       rawTraceRequiresOptIn: policy.traceMode === "raw_encrypted_opt_in",
     },
   };
+}
+
+function evaluateGovernedContext(
+  request: ConnectorExecutionRequest,
+  reasons: ConnectorControlPlaneDecisionReason[],
+): void {
+  if (!request.operation.contextRequirements?.length) {
+    return;
+  }
+  if (!request.governedContext) {
+    reasons.push({
+      code: "context_required",
+      message: `Operation ${request.operation.id} requires governed connector context.`,
+    });
+    return;
+  }
+  if (request.governedContext.allowed) {
+    return;
+  }
+  for (const reason of request.governedContext.reasons) {
+    reasons.push({
+      code: reason.code,
+      message: reason.message,
+    });
+  }
 }
 
 function evaluateCredentialBinding(

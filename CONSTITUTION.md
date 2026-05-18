@@ -152,6 +152,15 @@ government, emergency, safety, or other regulated decisions. Sensitive outputs
 carry review labels and external sensitive actions require explicit human
 review.
 
+**I.9 Operational context is governed, not guessed.** Agents must not infer or
+freestyle external provider accounts, app identifiers, Team IDs, Bundle IDs,
+SKUs, package names, product identifiers, entitlements, API key versions,
+webhook targets, endpoints, environments, or signing identities. These values
+belong to governed context records with explicit state, policy, defaults,
+fallbacks, guidance, redaction, and secret references. Missing, paused,
+blocked, retired, wrong-environment, or unauthorized context fails closed before
+signing, publishing, spending, credential leasing, or external mutation.
+
 ### II. Sovereignty
 
 **II.1 Local-first by construction.** The user's data lives on the user's

@@ -166,7 +166,9 @@ The Relay `/v1/remote/external-validation-report` endpoint and
 that checklist. A row is only `clearable` when the report includes approved-run
 evidence with `approvedRunRef`, physical evidence, all required artifacts, all
 acceptance criteria, and `plaintextMaterialIncluded: false`; otherwise it remains
-`external_pending`.
+`external_pending`. Evidence rows for unknown or duplicate requirement IDs are
+reported as `invalidEvidenceRequirementIds` or `duplicateEvidenceRequirementIds`
+and keep the report fail-closed.
 The Relay `/v1/remote/source-qa-template` endpoint and
 `claw remote source-qa-template` expose the matching no-write source Q/A review
 template for the source conversation and plan. The template is not a review by

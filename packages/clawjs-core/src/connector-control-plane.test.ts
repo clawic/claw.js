@@ -6,6 +6,7 @@ import {
   connectorExecutionPipeline,
   createConnectorCapability,
   evaluateConnectorControlPlaneRequest,
+  explainConnectorContextChoice,
   isConnectorCapabilityId,
   resolveClawCliCommand,
   splitConnectorCapabilityId,
@@ -223,4 +224,43 @@ test("unknown cost blocks unless a scoped approval grant allows it", () => {
     },
   });
   assert.equal(allowed.allowed, true);
+});
+
+test("connector control plane fails closed when governed context is required but not approved", () => {
+  const operation: ConnectorExecutionRequest["operation"] = {
+    ...baseRequest.operation,
+    id: "apple.upload",
+    providerId: "apple",
+    contextRequirements: [
+      { kind: "team", fields: ["team_id"] },
+      { kind: "app", fields: ["bundle_id", "sku"] },
+    ],
+  };
+  const request: ConnectorExecutionRequest = {
+    ...baseRequest,
+    provider: { id: "apple", displayName: "Apple App Store Connect", trustTier: "third_party", enabled: true },
+    operation,
+    governedContext: explainConnectorContextChoice({
+      providerId: "apple",
+      operationId: "apple.upload",
+      requirements: operation.contextRequirements ?? [],
+      candidates: [{
+        id: "apple_team_wrong",
+        providerId: "apple",
+        kind: "team",
+        displayName: "Wrong team",
+        state: "blocked",
+        fields: { team_id: { value: "TEAM-WRONG", sensitivity: "private" } },
+      }],
+    }),
+  };
+
+  const decision = evaluateConnectorControlPlaneRequest({
+    request,
+    policy: basePolicy,
+  });
+
+  assert.equal(decision.allowed, false);
+  assert.equal(decision.reasons.some((reason) => reason.code === "context_object_blocked"), true);
+  assert.equal(decision.reasons.some((reason) => reason.code === "context_record_missing"), true);
 });

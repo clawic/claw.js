@@ -1380,6 +1380,8 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_location
   claw_cli_command_accounts["accounts\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_accounts
+  claw_cli_command_acct["acct\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_acct
   claw_cli_command_business["business\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_business
   claw_cli_command_social["social\ncliCommand"]
@@ -2819,6 +2821,7 @@ flowchart TD
 | `claw.cli.command.finance` | cliCommand | cli | claw |  |  |  | `finance` |
 | `claw.cli.command.location` | cliCommand | cli | claw |  |  |  | `location` |
 | `claw.cli.command.accounts` | cliCommand | cli | claw |  |  |  | `accounts` |
+| `claw.cli.command.acct` | cliCommand | cli | claw |  |  |  | `acct` |
 | `claw.cli.command.business` | cliCommand | cli | claw |  |  |  | `business` |
 | `claw.cli.command.social` | cliCommand | cli | claw |  |  |  | `social` |
 | `claw.cli.command.runtime` | cliCommand | cli | claw |  |  |  | `runtime` |

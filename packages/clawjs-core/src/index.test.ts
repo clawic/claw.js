@@ -607,44 +607,62 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(emptyExternalValidationReport.evidenceCount, 0);
   assert.equal(emptyExternalValidationReport.blockedRequirementIds.length, externalPending.requirements.length);
   assert.equal(emptyExternalValidationReport.clearableRequirementIds.length, 0);
+  assert.deepEqual(emptyExternalValidationReport.invalidEvidenceRequirementIds, []);
+  assert.deepEqual(emptyExternalValidationReport.duplicateEvidenceRequirementIds, []);
   assert.equal(emptyExternalValidationReport.items.every((entry) => !entry.clearable && entry.status === "external_pending"), true);
   assert.equal(emptyExternalValidationReport.items.some((entry) => entry.requirementId === "physical_iroh_handshake" && entry.missingArtifacts.includes("RemoteTransportHandshakeReceipt")), true);
 
-  const completeExternalValidationReport = buildRemoteExternalValidationReport({
-    generatedAt: "2026-05-17T10:13:25.000Z",
-    evidence: externalValidationChecklist.items.map((entry) => ({
-      schemaVersion: 1,
-      requirementId: entry.requirementId,
-      approvedRun: true,
-      approvedRunRef: `approval://${entry.requirementId}`,
-      physicalEvidenceRef: `evidence://${entry.requirementId}`,
-      artifactRefs: entry.requiredArtifacts,
-      acceptedCriteria: entry.acceptanceCriteria,
-      plaintextMaterialIncluded: false,
-      executedAt: "2026-05-17T10:13:24.000Z",
-      writes: false,
-    })),
-  });
+  const completeExternalEvidence = externalValidationChecklist.items.map((entry) => ({
+    schemaVersion: 1 as const,
+    requirementId: entry.requirementId,
+    approvedRun: true,
+    approvedRunRef: `approval://${entry.requirementId}`,
+    physicalEvidenceRef: `evidence://${entry.requirementId}`,
+    artifactRefs: entry.requiredArtifacts,
+    acceptedCriteria: entry.acceptanceCriteria,
+    plaintextMaterialIncluded: false as const,
+    executedAt: "2026-05-17T10:13:24.000Z",
+    writes: false as const,
+  }));
+  const completeExternalValidationReport = buildRemoteExternalValidationReport({ generatedAt: "2026-05-17T10:13:25.000Z", evidence: completeExternalEvidence });
   assert.equal(completeExternalValidationReport.status, "clearable");
   assert.equal(completeExternalValidationReport.writes, false);
   assert.equal(completeExternalValidationReport.evidenceCount, externalPending.requirements.length);
   assert.equal(completeExternalValidationReport.clearableRequirementIds.length, externalPending.requirements.length);
   assert.deepEqual(completeExternalValidationReport.blockedRequirementIds, []);
+  assert.deepEqual(completeExternalValidationReport.invalidEvidenceRequirementIds, []);
+  assert.deepEqual(completeExternalValidationReport.duplicateEvidenceRequirementIds, []);
   assert.equal(completeExternalValidationReport.items.every((entry) => entry.clearable && entry.status === "clearable" && entry.approvedRunRefPresent && !entry.writes), true);
+
+  const invalidExternalValidationReport = buildRemoteExternalValidationReport({
+    generatedAt: "2026-05-17T10:13:25.250Z",
+    evidence: [
+      ...completeExternalEvidence,
+      {
+        schemaVersion: 1,
+        requirementId: "unknown_external_requirement",
+        approvedRun: true,
+        approvedRunRef: "approval://unknown",
+        physicalEvidenceRef: "evidence://unknown",
+        artifactRefs: ["UnknownArtifact"],
+        acceptedCriteria: ["unknown criterion"],
+        plaintextMaterialIncluded: false,
+        executedAt: "2026-05-17T10:13:24.000Z",
+        writes: false,
+      },
+    ],
+  });
+  assert.equal(invalidExternalValidationReport.status, "external_pending");
+  assert.deepEqual(invalidExternalValidationReport.invalidEvidenceRequirementIds, ["unknown_external_requirement"]);
+  assert.deepEqual(invalidExternalValidationReport.duplicateEvidenceRequirementIds, []);
+
+  const duplicateExternalValidationReport = buildRemoteExternalValidationReport({ generatedAt: "2026-05-17T10:13:25.375Z", evidence: [completeExternalEvidence[0], completeExternalEvidence[0]] });
+  assert.equal(duplicateExternalValidationReport.status, "external_pending");
+  assert.deepEqual(duplicateExternalValidationReport.duplicateEvidenceRequirementIds, ["physical_iroh_handshake"]);
 
   const missingApprovedRunRefReport = buildRemoteExternalValidationReport({
     generatedAt: "2026-05-17T10:13:25.500Z",
-    evidence: externalValidationChecklist.items.map((entry) => ({
-      schemaVersion: 1,
-      requirementId: entry.requirementId,
-      approvedRun: true,
-      physicalEvidenceRef: `evidence://${entry.requirementId}`,
-      artifactRefs: entry.requiredArtifacts,
-      acceptedCriteria: entry.acceptanceCriteria,
-      plaintextMaterialIncluded: false,
-      executedAt: "2026-05-17T10:13:24.000Z",
-      writes: false,
-    })),
+    evidence: completeExternalEvidence.map((entry) => ({ ...entry, approvedRunRef: undefined })),
   });
   assert.equal(missingApprovedRunRefReport.status, "external_pending");
   assert.equal(missingApprovedRunRefReport.clearableRequirementIds.length, 0);

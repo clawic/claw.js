@@ -27,6 +27,7 @@ export * from "./cli-guidance.ts";
 export * from "./cli-command-registry.ts";
 export * from "./cli-command-intents.ts";
 export * from "./connector-control-plane.ts";
+export * from "./connector-governed-context.ts";
 export * from "./terminology.ts";
 export * from "./tts.ts";
 export * from "./types.ts";

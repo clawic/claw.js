@@ -271,7 +271,9 @@ for each row, then submit that array to `remote validation-report`.
 that checklist. With no approved physical evidence it stays `external_pending`;
 only rows with `approvedRun: true`, an `approvedRunRef`, physical evidence, all
 required artifacts, all acceptance criteria, and no plaintext material become
-`clearable`.
+`clearable`. Unknown or duplicate evidence requirement IDs are fail-closed and
+reported through `invalidEvidenceRequirementIds` and
+`duplicateEvidenceRequirementIds`; they never silently clear the report.
 `remote source-qa-template` returns the no-write source Q/A review template for
 the original Relay/Gateway/Coordinator/Connector/Sync source conversation and
 plan. It is intentionally incomplete: every row must be reviewed one by one and
@@ -992,7 +994,19 @@ claw legal --help
 claw finance --help
 claw location --help
 claw accounts --help
+claw accounts list --json
+claw accounts schema apple --json
+claw accounts doctor --json
+claw accounts explain apple --operation apple.upload --env production --json
+claw connectors context explain revenuecat --operation revenuecat.project_configuration.read --json
 ```
+
+`accounts` is the human-facing governed connector context surface. It lists and
+explains provider accounts, apps, environments, products, signing identities,
+defaults, and fallbacks without exposing plaintext secrets. `connectors context`
+is the same surface under the connector control-plane umbrella. Mutation-shaped
+commands such as `pause`, `block`, `retire`, and `edit` return no-write plans in
+this first slice.
 
 ## Agent Runtime
 
