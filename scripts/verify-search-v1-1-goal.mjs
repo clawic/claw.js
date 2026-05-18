@@ -440,12 +440,32 @@ const cliFullSources = readCliSearchSources("full");
 const cliFrameworkSources = readCliSearchSources("framework");
 requireSameMembers("claw search sources full source list", cliFullSources.map((source) => source.id), requiredSources);
 requireSameMembers("claw search sources framework source list", cliFrameworkSources.map((source) => source.id), requiredFrameworkSources);
+for (const sourceId of requiredFrameworkSources) {
+  const source = cliFullSources.find((candidate) => candidate.id === sourceId);
+  if (!source) continue;
+  if (source[`${"pro"}${"file"}`] !== "framework") failures.push(`claw search sources full source list: ${sourceId} must use framework source tier`);
+  if (source.defaultState !== "on") failures.push(`claw search sources full source list: ${sourceId} must default on`);
+  if (source.state !== "enabled") failures.push(`claw search sources full source list: ${sourceId} must be enabled by default`);
+  if (source.fastPath !== true) failures.push(`claw search sources full source list: ${sourceId} must expose a framework fast path`);
+  if (typeof source.domain !== "string" || source.domain.length === 0) failures.push(`claw search sources full source list: ${sourceId} must expose a domain`);
+  if (typeof source.name !== "string" || source.name.length === 0) failures.push(`claw search sources full source list: ${sourceId} must expose a display name`);
+  if (!Array.isArray(source.resultTypes) || source.resultTypes.length === 0) failures.push(`claw search sources full source list: ${sourceId} must expose result types`);
+}
+for (const source of cliFrameworkSources) {
+  if (source[`${"pro"}${"file"}`] !== "framework") failures.push(`claw search sources framework source list: ${source.id} must use framework source tier`);
+  if (source.defaultState !== "on") failures.push(`claw search sources framework source list: ${source.id} must default on`);
+  if (source.state !== "enabled") failures.push(`claw search sources framework source list: ${source.id} must be enabled by default`);
+  if (source.fastPath !== true) failures.push(`claw search sources framework source list: ${source.id} must expose a fast path`);
+  if (!Array.isArray(source.resultTypes) || source.resultTypes.length === 0) failures.push(`claw search sources framework source list: ${source.id} must expose result types`);
+}
 for (const sourceId of optionalFullSources) {
   const source = cliFullSources.find((candidate) => candidate.id === sourceId);
   if (!source) continue;
   if (source[`${"pro"}${"file"}`] !== "full") failures.push(`claw search sources full source list: ${sourceId} must use full source tier`);
   if (source.defaultState !== "off") failures.push(`claw search sources full source list: ${sourceId} must default off`);
   if (source.state !== "disabled") failures.push(`claw search sources full source list: ${sourceId} must be disabled by default`);
+  if (source.fastPath !== false) failures.push(`claw search sources full source list: ${sourceId} must not expose a default fast path`);
+  if (!Array.isArray(source.resultTypes) || source.resultTypes.length === 0) failures.push(`claw search sources full source list: ${sourceId} must expose result types`);
 }
 const cliEntrypoints = readCliSearchEntrypoints();
 requireSameMembers("claw search entrypoints list", cliEntrypoints.map((entrypoint) => entrypoint.id), Object.keys(requiredEntrypoints));
