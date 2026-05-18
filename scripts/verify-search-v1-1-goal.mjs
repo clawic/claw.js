@@ -159,6 +159,7 @@ const requiredPublicFiles = [
   "docs/adr/0019-search-v1-1-architecture.md",
   "docs/search.md",
   "packages/clawjs-search/package.json",
+  "packages/clawjs-search/README.md",
   "packages/clawjs-search/src/index.ts",
   "packages/clawjs-search/src/store.ts",
   "packages/clawjs-search-mcp/package.json",
@@ -405,6 +406,18 @@ for (const snippet of [
   "10000000",
 ]) {
   requireSnippet("docs/search.md", snippet);
+}
+requireSnippet("docs/adr/0019-search-v1-1-architecture.md", "The public product and CLI name is **Search**");
+requireSnippet("docs/adr/0019-search-v1-1-architecture.md", "`Discovery` is not a public");
+requireSnippet("packages/clawjs-search/README.md", "Search is the public capability");
+
+for (const file of [
+  "docs/search.md",
+  "packages/clawjs-search/README.md",
+  "packages/clawjs-search/package.json",
+  "packages/clawjs-search-mcp/package.json",
+]) {
+  requireNoSnippet(file, "Discovery");
 }
 
 for (const snippet of [
