@@ -386,6 +386,39 @@ describe("MCP connector control plane", () => {
     }
   });
 
+  it("blocks regulated MCP tool calls before protocol invocation", async () => {
+    let toolCalled = false;
+    const { app, config } = buildFixtureApp(() => {
+      toolCalled = true;
+    });
+    try {
+      await registerAndRefreshFixtureServer(app, config.sharedSecret);
+      const response = await app.inject({
+        method: "POST",
+        url: "/v1/mcp/tools/call",
+        headers: { authorization: `Bearer ${config.sharedSecret}` },
+        payload: {
+          prefixedName: "mcp_fixture_echo",
+          args: { text: "submit this patient diagnosis" },
+          controlPlane: {
+            ...fixtureApprovedControlPlane(),
+            regulatedDomains: ["health"],
+            decisionEffects: ["final_decision"],
+            requiresSensitiveExportReview: true,
+            thirdPartyDisclosure: true,
+          },
+          agentPolicy: fixtureAgentPolicy(),
+        },
+      });
+
+      assert.equal(response.statusCode, 403);
+      assert.match(response.body, /regulated_safety_blocked/);
+      assert.equal(toolCalled, false);
+    } finally {
+      await app.close();
+    }
+  });
+
   it("allows MCP tool calls only through a scoped approval grant", async () => {
     const { app, config } = buildFixtureApp();
     try {

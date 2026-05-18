@@ -287,6 +287,18 @@ for (const [relativePath, snippets] of [
     "sensitive_export_review_required",
     "remote_or_provider_opt_in_required",
   ]],
+  ["packages/clawjs-mcp/src/control-plane.ts", [
+    "regulatedDomains?: RegulatedDomain[]",
+    "decisionEffects?: RegulatedDecisionEffect[]",
+    "requiresSensitiveExportReview?: boolean",
+    "thirdPartyDisclosure?: boolean",
+  ]],
+  ["packages/clawjs-mcp/src/control-plane.test.ts", [
+    "blocks regulated MCP tool calls before protocol invocation",
+    "regulatedDomains: [\"health\"]",
+    "decisionEffects: [\"final_decision\"]",
+    "regulated_safety_blocked",
+  ]],
   ["packages/clawjs-core/src/dense-data-os.ts", [
     "regulatedDomains: RegulatedDomain[]",
     "regulatedDomainsForDenseSystem",

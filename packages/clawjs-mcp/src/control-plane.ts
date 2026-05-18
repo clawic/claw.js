@@ -12,6 +12,8 @@ import {
   type ConnectorNetworkProof,
   type ConnectorPolicy,
   type ConnectorProvider,
+  type RegulatedDecisionEffect,
+  type RegulatedDomain,
 } from "@clawjs/core";
 
 import type { MCPAgentAssignmentPolicyInput, MCPServerRecord, MCPToolRecord } from "./types.ts";
@@ -25,6 +27,10 @@ export interface MCPConnectorControlPlaneInput {
   networkPolicies?: ConnectorNetworkPolicy[];
   networkProof?: ConnectorNetworkProof;
   approvalGrant?: ConnectorApprovalGrant;
+  regulatedDomains?: RegulatedDomain[];
+  decisionEffects?: RegulatedDecisionEffect[];
+  requiresSensitiveExportReview?: boolean;
+  thirdPartyDisclosure?: boolean;
   expectedCost?: number;
   requestedHost?: string;
   now?: string;
@@ -88,6 +94,10 @@ export function assertMCPToolControlPlane(input: {
         riskTiers: ["system"],
         credentialRequired: Boolean(server.envJson && Object.keys(server.envJson).length > 0),
         requiresApproval: true,
+        regulatedDomains: controlPlane.regulatedDomains,
+        decisionEffects: controlPlane.decisionEffects,
+        requiresSensitiveExportReview: controlPlane.requiresSensitiveExportReview,
+        thirdPartyDisclosure: controlPlane.thirdPartyDisclosure,
         networkPolicyId: controlPlane.networkPolicyId,
       },
       capabilityId,
