@@ -2,9 +2,14 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
+const {
+  SearchStore,
+  createFrameworkSearchSourceManifest,
+} = await import(pathToFileURL(path.join(rootDir, "packages/clawjs-search/dist/index.js")).href);
 const failures = [];
 
 const requiredSources = [
@@ -391,6 +396,30 @@ function readCliSearchErrorJson(args, label, dataRoot) {
   }
 }
 
+function seedRestrictedSearchAction(dataRoot) {
+  const store = new SearchStore(path.join(dataRoot, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "documents.blocks",
+      domain: "documents",
+      name: "Documents",
+      resultTypes: ["document"],
+    }));
+    store.upsertDocument({
+      id: "documents.blocks:goal-restricted",
+      source: "documents.blocks",
+      domain: "documents",
+      type: "document",
+      title: "Restricted Search action",
+      body: "Restricted Search action for actor and scope checks.",
+      permissions: { allowedActors: ["agent:goal-smoke"], requiredScopes: ["project-goal"] },
+      actions: [{ id: "open", kind: "open", label: "Open restricted Search action", grant: "search.documents.open", requiresApproval: false }],
+    });
+  } finally {
+    store.close();
+  }
+}
+
 function requireCliSearchAcceptanceSmoke() {
   const dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-search-smoke-"));
   const rebuild = readCliSearchJson(["rebuild", "--source", "commands"], "claw search rebuild --source commands --json", dataRoot);
@@ -637,6 +666,62 @@ function requireCliSearchAcceptanceSmoke() {
   const actionAuditItems = actionAudit.data?.items ?? [];
   if (!Array.isArray(actionAuditItems) || !actionAuditItems.some((item) => item.type === "action" && item.resultId === "commands:system" && item.actionId === "help" && item.status === "brokered" && item.risk === "system" && item.grant === "search.commands.run" && item.metadata?.hostApprovalId === "approval_search_help")) {
     failures.push("claw search audit --type action --json: must record brokered approved action audit");
+  }
+
+  seedRestrictedSearchAction(dataRoot);
+  const hiddenRestrictedActions = readCliSearchJson(["actions", "documents.blocks:goal-restricted"], "claw search actions restricted hidden --json", dataRoot);
+  if (!Array.isArray(hiddenRestrictedActions.data?.actions) || hiddenRestrictedActions.data.actions.length !== 0) {
+    failures.push("claw search actions restricted hidden --json: must hide actions without required actor/scope");
+  }
+  const wrongScopeRestrictedActions = readCliSearchJson([
+    "actions",
+    "documents.blocks:goal-restricted",
+    "--actor",
+    "agent:goal-smoke",
+    "--filter",
+    "scopeId=wrong-project",
+  ], "claw search actions restricted wrong scope --json", dataRoot);
+  if (!Array.isArray(wrongScopeRestrictedActions.data?.actions) || wrongScopeRestrictedActions.data.actions.length !== 0) {
+    failures.push("claw search actions restricted wrong scope --json: must hide actions when scope does not satisfy ACL");
+  }
+  const visibleRestrictedActions = readCliSearchJson([
+    "actions",
+    "documents.blocks:goal-restricted",
+    "--actor",
+    "agent:goal-smoke",
+    "--filter",
+    "scopeId=project-goal",
+  ], "claw search actions restricted visible --json", dataRoot);
+  if (!Array.isArray(visibleRestrictedActions.data?.actions) || !visibleRestrictedActions.data.actions.some((action) => action.id === "open")) {
+    failures.push("claw search actions restricted visible --json: must expose actions when actor/scope satisfy ACL");
+  }
+  const blockedRestrictedExecute = readCliSearchErrorJson([
+    "actions",
+    "execute",
+    "documents.blocks:goal-restricted",
+    "open",
+    "--actor",
+    "agent:goal-smoke",
+    "--filter",
+    "scopeId=wrong-project",
+    "--dry-run",
+  ], "claw search actions execute restricted wrong scope --json", dataRoot);
+  if (blockedRestrictedExecute.error?.code !== "search_action_not_found") {
+    failures.push("claw search actions execute restricted wrong scope --json: must treat unauthorized actions as not found");
+  }
+  const plannedRestrictedExecute = readCliSearchJson([
+    "actions",
+    "execute",
+    "documents.blocks:goal-restricted",
+    "open",
+    "--actor",
+    "agent:goal-smoke",
+    "--filter",
+    "scopeId=project-goal",
+    "--dry-run",
+  ], "claw search actions execute restricted allowed --json", dataRoot);
+  if (plannedRestrictedExecute.data?.plan?.status !== "planned" || plannedRestrictedExecute.data?.plan?.actionId !== "open") {
+    failures.push("claw search actions execute restricted allowed --json: must plan actions when actor/scope satisfy ACL");
   }
 
   const sensitiveQuery = readCliSearchJson([
