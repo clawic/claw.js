@@ -135,13 +135,15 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
 
     const externalValidationRunbook = await built.app.inject({ method: "GET", url: "/v1/remote/external-validation-runbook" });
     assert.equal(externalValidationRunbook.statusCode, 200);
-    const externalValidationRunbookPayload = externalValidationRunbook.json() as { status: string; writes: boolean; validationStepCount: number; externalRequirementCount: number; e2ePlan: { validationSteps: Array<{ domain: string }> }; evidenceArtifact: { evidence: unknown[] }; reportCommand: string; closureGateCommand: string; requiredCommands: string[] };
+    const externalValidationRunbookPayload = externalValidationRunbook.json() as { status: string; writes: boolean; validationStepCount: number; externalRequirementCount: number; e2ePlan: { requiredTopologyTargets: string[]; validationSteps: Array<{ domain: string }> }; evidenceArtifact: { evidence: unknown[] }; reportCommand: string; closureGateCommand: string; requiredCommands: string[] };
     const expectedExternalValidationRunbook = buildRemoteExternalValidationRunbook();
     assert.equal(externalValidationRunbookPayload.status, "external_pending");
     assert.equal(externalValidationRunbookPayload.writes, false);
     assert.equal(externalValidationRunbookPayload.validationStepCount, expectedExternalValidationRunbook.validationStepCount);
     assert.equal(externalValidationRunbookPayload.externalRequirementCount, expectedExternalPending.requirements.length);
     assert.deepEqual(externalValidationRunbookPayload.e2ePlan.validationSteps.map((entry) => entry.domain), ["chat", "search", "sync", "secret_refs", "hosted_agents"]);
+    assert.equal(externalValidationRunbookPayload.e2ePlan.requiredTopologyTargets.includes("windows_host"), true);
+    assert.equal(externalValidationRunbookPayload.e2ePlan.requiredTopologyTargets.includes("mobile_client"), true);
     assert.equal(externalValidationRunbookPayload.evidenceArtifact.evidence.length, expectedExternalPending.requirements.length);
     assert.equal(externalValidationRunbookPayload.reportCommand.includes("validation-report"), true);
     assert.equal(externalValidationRunbookPayload.closureGateCommand.includes("closure-gate"), true);
@@ -432,11 +434,12 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
 
     const providerDeviceE2EPlan = await built.app.inject({ method: "GET", url: "/v1/remote/provider-device-e2e-plan" });
     assert.equal(providerDeviceE2EPlan.statusCode, 200);
-    const providerDeviceE2EPlanPayload = providerDeviceE2EPlan.json() as { status: string; writes: boolean; requiredDomains: string[]; requiredRouteIds: string[]; requiredExternalPendingIds: string[]; validationSteps: Array<{ domain: string; requiredRouteIds: string[]; requiredExternalPendingIds: string[]; requiredArtifacts: string[]; acceptanceCriteria: string[]; writes: boolean }>; noPlaintextSecrets: boolean; plaintextMaterialIncluded: boolean; hostedSelfHostedParityRequired: boolean };
+    const providerDeviceE2EPlanPayload = providerDeviceE2EPlan.json() as { status: string; writes: boolean; requiredDomains: string[]; requiredTopologyTargets: string[]; requiredRouteIds: string[]; requiredExternalPendingIds: string[]; validationSteps: Array<{ domain: string; requiredRouteIds: string[]; requiredExternalPendingIds: string[]; requiredArtifacts: string[]; acceptanceCriteria: string[]; writes: boolean }>; noPlaintextSecrets: boolean; plaintextMaterialIncluded: boolean; hostedSelfHostedParityRequired: boolean };
     const expectedProviderDeviceE2EPlan = buildRemoteProviderDeviceE2EValidationPlan({ requiredRouteIds: remoteSyncRequiredRouteIds });
     assert.equal(providerDeviceE2EPlanPayload.status, "external_pending");
     assert.equal(providerDeviceE2EPlanPayload.writes, false);
     assert.deepEqual(providerDeviceE2EPlanPayload.requiredDomains, expectedProviderDeviceE2EPlan.requiredDomains);
+    assert.deepEqual(providerDeviceE2EPlanPayload.requiredTopologyTargets, expectedProviderDeviceE2EPlan.requiredTopologyTargets);
     assert.deepEqual(providerDeviceE2EPlanPayload.requiredRouteIds, expectedProviderDeviceE2EPlan.requiredRouteIds);
     assert.deepEqual(providerDeviceE2EPlanPayload.requiredExternalPendingIds, expectedProviderDeviceE2EPlan.requiredExternalPendingIds);
     assert.deepEqual(providerDeviceE2EPlanPayload.validationSteps.map((entry) => entry.domain), expectedProviderDeviceE2EPlan.requiredDomains);

@@ -44,11 +44,13 @@ import {
   clawEvolutionRecordSchema,
   clawEvolutionOperatorPlanSchema,
   clawEvolutionReceiptSchema,
+  clawEvolutionRepairReportSchema,
   clawEvolutionMigratorLabResultSchema,
   clawEvolutionVersionFixtureSchema,
   classifyEvolutionBackupPolicy,
   createEvolutionOperatorPlan,
   createEvolutionPublicSurfaceBaseline,
+  createEvolutionRepairReport,
   createEvolutionReceipt,
   diffEvolutionPublicSurfaceBaseline,
   redactEvolutionReceiptText,
@@ -415,6 +417,34 @@ test("evolution migrator lab validates foundation fixtures", () => {
   assert.equal(result.fixtureIds.includes("evo_fixture_test_foundation"), true);
   assert.equal(result.checks.every((check) => check.status === "pass"), true);
   assert.equal(result.receipts[0].redaction.promptsIncluded, false);
+
+  const repairPlan = createEvolutionOperatorPlan({ action: "repair", ledger, fromVersion: "v1", toVersion: "current" });
+  const repairReport = createEvolutionRepairReport({
+    action: "repair",
+    plan: repairPlan,
+    migrationLab: result,
+    surfaceBaseline: { status: "unchanged", changed: 0, uncovered: 0 },
+    createdAt: "2026-05-18T00:00:00.000Z",
+  });
+  assert.equal(clawEvolutionRepairReportSchema.safeParse(repairReport).success, true);
+  assert.equal(repairReport.status, "needs_approval");
+  assert.equal(repairReport.patch.format, "unified_diff");
+  assert.equal(repairReport.patch.redacted, true);
+  assert.equal(repairReport.safeActions.some((action) => action.command === "claw evolution doctor --json"), true);
+  assert.equal(repairReport.safeActions.some((action) => action.command?.startsWith("claw evolution dry-run")), true);
+  assert.equal(repairReport.approvalRequiredActions.some((action) => action.id === "mutate_local_state"), true);
+  assert.equal(repairReport.receipt.redaction.promptsIncluded, false);
+  assert.equal(repairReport.receipt.redaction.secretsIncluded, false);
+  assert.equal(repairReport.receipt.redaction.fullLocalPathsIncluded, false);
+
+  const externalReport = createEvolutionRepairReport({
+    action: "report",
+    plan: createEvolutionOperatorPlan({ action: "report", ledger }),
+    migrationLab: result,
+    createdAt: "2026-05-18T00:00:00.000Z",
+  });
+  assert.equal(externalReport.redaction.externalSubmission, "explicit_approval_only");
+  assert.equal(externalReport.approvalRequiredActions.some((action) => action.id === "submit_external_report"), true);
 
   const incomplete = runEvolutionMigratorLab({
     fixtures: [{ ...fixture, surfaces: fixture.surfaces.filter((surface) => surface.kind !== "rescue") }],
@@ -891,6 +921,17 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(externalValidationRunbook.validationStepCount, 5);
   assert.equal(externalValidationRunbook.externalRequirementCount, externalPending.requirements.length);
   assert.deepEqual(externalValidationRunbook.e2ePlan.validationSteps.map((entry) => entry.domain), ["chat", "search", "sync", "secret_refs", "hosted_agents"]);
+  assert.deepEqual(externalValidationRunbook.e2ePlan.requiredTopologyTargets, [
+    "mac_host",
+    "linux_host",
+    "windows_host",
+    "headless_server",
+    "vps_host",
+    "mobile_client",
+    "browser_client",
+    "self_hosted_gateway",
+    "hosted_gateway",
+  ]);
   assert.equal(externalValidationRunbook.evidenceArtifact.evidence.length, externalPending.requirements.length);
   assert.equal(externalValidationRunbook.reportCommand.includes("validation-report"), true);
   assert.equal(externalValidationRunbook.closureGateCommand.includes("closure-gate"), true);
@@ -1184,6 +1225,7 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(remoteProviderDeviceE2EValidationPlanSchema.safeParse(providerDeviceE2EPlan).success, true);
   assert.equal(providerDeviceE2EPlan.status, "external_pending");
   assert.deepEqual(providerDeviceE2EPlan.requiredDomains, ["chat", "search", "sync", "secret_refs", "hosted_agents"]);
+  assert.deepEqual(providerDeviceE2EPlan.requiredTopologyTargets, ["mac_host", "linux_host", "windows_host", "headless_server", "vps_host", "mobile_client", "browser_client", "self_hosted_gateway", "hosted_gateway"]);
   assert.deepEqual(providerDeviceE2EPlan.validationSteps.map((entry) => entry.domain), providerDeviceE2EPlan.requiredDomains);
   assert.equal(providerDeviceE2EPlan.validationSteps.every((entry) => entry.status === "external_pending" && entry.writes === false), true);
   assert.equal(providerDeviceE2EPlan.validationSteps.some((entry) => entry.domain === "chat" && entry.requiredRouteIds.includes("remote.chatGateway") && entry.requiredExternalPendingIds.includes("physical_iroh_handshake")), true);

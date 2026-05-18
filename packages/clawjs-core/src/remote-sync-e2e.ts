@@ -10,6 +10,18 @@ export const remoteProviderDeviceE2EDomainSchema = z.enum([
   "hosted_agents",
 ]);
 
+export const remoteProviderDeviceE2ETopologyTargetSchema = z.enum([
+  "mac_host",
+  "linux_host",
+  "windows_host",
+  "headless_server",
+  "vps_host",
+  "mobile_client",
+  "browser_client",
+  "self_hosted_gateway",
+  "hosted_gateway",
+]);
+
 export const remoteProviderDeviceE2EValidationStepSchema = z.object({
   schemaVersion: z.literal(1),
   domain: remoteProviderDeviceE2EDomainSchema,
@@ -25,6 +37,7 @@ export const remoteProviderDeviceE2EValidationPlanSchema = z.object({
   schemaVersion: z.literal(1),
   planId: z.string().min(1),
   requiredDomains: z.array(remoteProviderDeviceE2EDomainSchema).min(5),
+  requiredTopologyTargets: z.array(remoteProviderDeviceE2ETopologyTargetSchema).min(9),
   requiredRouteIds: z.array(z.string().min(1)).min(1),
   requiredExternalPendingIds: z.array(z.string().min(1)).min(1),
   validationSteps: z.array(remoteProviderDeviceE2EValidationStepSchema).min(5),
@@ -39,6 +52,7 @@ export const remoteProviderDeviceE2EValidationPlanSchema = z.object({
 });
 
 export type RemoteProviderDeviceE2EDomain = z.infer<typeof remoteProviderDeviceE2EDomainSchema>;
+export type RemoteProviderDeviceE2ETopologyTarget = z.infer<typeof remoteProviderDeviceE2ETopologyTargetSchema>;
 export type RemoteProviderDeviceE2EValidationStep = z.infer<typeof remoteProviderDeviceE2EValidationStepSchema>;
 export type RemoteProviderDeviceE2EValidationPlan = z.infer<typeof remoteProviderDeviceE2EValidationPlanSchema>;
 
@@ -348,6 +362,18 @@ const providerDeviceE2ERequiredExternalPendingIds = [
   "provider_device_e2e",
 ] as const;
 
+const providerDeviceE2ERequiredTopologyTargets = [
+  "mac_host",
+  "linux_host",
+  "windows_host",
+  "headless_server",
+  "vps_host",
+  "mobile_client",
+  "browser_client",
+  "self_hosted_gateway",
+  "hosted_gateway",
+] as const satisfies readonly RemoteProviderDeviceE2ETopologyTarget[];
+
 function providerDeviceE2EValidationSteps(requiredRouteIds: readonly string[]): RemoteProviderDeviceE2EValidationStep[] {
   const routeIds = new Set(requiredRouteIds);
   const step = (
@@ -386,6 +412,7 @@ export function buildRemoteProviderDeviceE2EValidationPlan(input: {
     schemaVersion: 1,
     planId: providerDeviceE2EPlanId(["plan", createdAt]),
     requiredDomains: ["chat", "search", "sync", "secret_refs", "hosted_agents"],
+    requiredTopologyTargets: providerDeviceE2ERequiredTopologyTargets,
     requiredRouteIds,
     requiredExternalPendingIds: providerDeviceE2ERequiredExternalPendingIds,
     validationSteps: providerDeviceE2EValidationSteps(requiredRouteIds),

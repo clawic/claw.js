@@ -260,7 +260,7 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
     externalValidationReport: { status: string; writes: boolean; requirementCount: number; evidenceCount: number; clearableRequirementIds: string[]; blockedRequirementIds: string[]; items: Array<{ requirementId: string; clearable: boolean; status: string; writes: boolean }> };
     sourceQaReviewTemplate: { status: string; writes: boolean; sourceConversationId: string; sourcePlanId: string; requiredSourceQaIds: string[]; reviewCount: number; submissionCommand: string; items: Array<{ qaId: string; decisionKey: string; requirementId: string; reviewed: boolean; disposition: null; evidenceRefs: string[]; reviewedAt: null; writes: boolean }> };
     closureGate: { status: string; writes: boolean; requiredSourceQaIds: string[]; reviewedSourceQaIds: string[]; missingSourceQaIds: string[]; sourceQaReviewStatus: string; sourceQaReviewItems: unknown[]; blockedExternalRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockers: string[] };
-    providerDeviceE2EPlan: { status: string; writes: boolean; requiredDomains: string[]; requiredRouteIds: string[]; requiredExternalPendingIds: string[]; validationSteps: Array<{ domain: string; requiredRouteIds: string[]; requiredExternalPendingIds: string[]; requiredArtifacts: string[]; acceptanceCriteria: string[]; writes: boolean }>; plaintextMaterialIncluded: boolean };
+    providerDeviceE2EPlan: { status: string; writes: boolean; requiredDomains: string[]; requiredTopologyTargets: string[]; requiredRouteIds: string[]; requiredExternalPendingIds: string[]; validationSteps: Array<{ domain: string; requiredRouteIds: string[]; requiredExternalPendingIds: string[]; requiredArtifacts: string[]; acceptanceCriteria: string[]; writes: boolean }>; plaintextMaterialIncluded: boolean };
     routeContracts: Array<{ routeId: string; parallelApiAllowed: boolean; writes: boolean }>;
     tests: string[];
   }>(remoteInspect.stdout).data;
@@ -369,6 +369,9 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   assert.equal(remoteInspectPayload.providerDeviceE2EPlan.status, "external_pending");
   assert.equal(remoteInspectPayload.providerDeviceE2EPlan.writes, false);
   assert.equal(remoteInspectPayload.providerDeviceE2EPlan.requiredDomains.includes("hosted_agents"), true);
+  assert.equal(remoteInspectPayload.providerDeviceE2EPlan.requiredTopologyTargets.includes("windows_host"), true);
+  assert.equal(remoteInspectPayload.providerDeviceE2EPlan.requiredTopologyTargets.includes("mobile_client"), true);
+  assert.equal(remoteInspectPayload.providerDeviceE2EPlan.requiredTopologyTargets.includes("hosted_gateway"), true);
   assert.deepEqual(remoteInspectPayload.providerDeviceE2EPlan.validationSteps.map((entry) => entry.domain), remoteInspectPayload.providerDeviceE2EPlan.requiredDomains);
   assert.equal(remoteInspectPayload.providerDeviceE2EPlan.validationSteps.some((entry) => entry.domain === "sync" && entry.requiredRouteIds.includes("sync.skills") && entry.requiredExternalPendingIds.includes("physical_sync_driver_application")), true);
   assert.equal(remoteInspectPayload.providerDeviceE2EPlan.validationSteps.every((entry) => entry.requiredArtifacts.length > 0 && entry.acceptanceCriteria.length > 0 && !entry.writes), true);
@@ -585,10 +588,11 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
 
   const remoteE2EPlan = await runCliCapture(["remote", "e2e-plan", "--now", "2026-05-17T10:13:30.000Z", "--json"], process.cwd());
   assert.equal(remoteE2EPlan.code, CLI_EXIT_OK);
-  const remoteE2EPlanPayload = parseCliJson<{ status: string; writes: boolean; requiredDomains: string[]; requiredRouteIds: string[]; requiredExternalPendingIds: string[]; validationSteps: Array<{ domain: string; requiredRouteIds: string[]; requiredExternalPendingIds: string[]; requiredArtifacts: string[]; acceptanceCriteria: string[]; writes: boolean }>; plaintextMaterialIncluded: boolean; hostedSelfHostedParityRequired: boolean }>(remoteE2EPlan.stdout).data;
+  const remoteE2EPlanPayload = parseCliJson<{ status: string; writes: boolean; requiredDomains: string[]; requiredTopologyTargets: string[]; requiredRouteIds: string[]; requiredExternalPendingIds: string[]; validationSteps: Array<{ domain: string; requiredRouteIds: string[]; requiredExternalPendingIds: string[]; requiredArtifacts: string[]; acceptanceCriteria: string[]; writes: boolean }>; plaintextMaterialIncluded: boolean; hostedSelfHostedParityRequired: boolean }>(remoteE2EPlan.stdout).data;
   assert.equal(remoteE2EPlanPayload.status, "external_pending");
   assert.equal(remoteE2EPlanPayload.writes, false);
   assert.deepEqual(remoteE2EPlanPayload.requiredDomains, ["chat", "search", "sync", "secret_refs", "hosted_agents"]);
+  assert.deepEqual(remoteE2EPlanPayload.requiredTopologyTargets, ["mac_host", "linux_host", "windows_host", "headless_server", "vps_host", "mobile_client", "browser_client", "self_hosted_gateway", "hosted_gateway"]);
   assert.deepEqual(remoteE2EPlanPayload.validationSteps.map((entry) => entry.domain), remoteE2EPlanPayload.requiredDomains);
   assert.equal(remoteE2EPlanPayload.validationSteps.some((entry) => entry.domain === "hosted_agents" && entry.requiredRouteIds.includes("gateway.multiTenantAgentService") && entry.requiredExternalPendingIds.includes("billing_meter_persistence")), true);
   assert.equal(remoteE2EPlanPayload.validationSteps.every((entry) => entry.requiredArtifacts.length > 0 && entry.acceptanceCriteria.length > 0 && !entry.writes), true);
