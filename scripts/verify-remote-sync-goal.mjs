@@ -426,6 +426,16 @@ for (const ref of [
 ]) {
   if (!firstSliceSourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-012 must cite ${ref}`);
 }
+const secretsSourceQaReview = sourceQaReviewReport.items.find((item) => item.qaId === "QA-006");
+for (const ref of [
+  "claw gateway secret-lease",
+  "claw gateway secret-provider",
+  "claw remote contracts:remote.secretBrokeredOperation",
+  "claw remote pending:signed_host_audit_persistence",
+  "claw remote pending:provider_secret_retrieval",
+]) {
+  if (!secretsSourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-006 must cite ${ref}`);
+}
 const reviewedClosureGate = buildRemoteGoalClosureGate({
   generatedAt: "2026-05-18T11:20:01.000Z",
   sourceQaReviews: sourceQaReviewReport.items,
