@@ -1638,6 +1638,14 @@ test("search rebuild indexes skills.registry from core.sqlite without secret ref
     assert.equal(deleteJob?.priority, 80);
     assert.equal(deleteJob?.payload.eventDriven, true);
     assert.equal(deleteJob?.payload.slug, "deploy");
+    const skillDeleteRun = await runCliCapture(["search", "service", "run-once", "--source", "skills.registry", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(skillDeleteRun.code, CLI_EXIT_OK);
+    const skillDeleteRunItem = (JSON.parse(skillDeleteRun.stdout) as any).data.service.worker?.items.find((entry: any) => entry.source === "skills.registry");
+    assert.deepEqual({ source: skillDeleteRunItem?.source, operation: skillDeleteRunItem?.operation, status: skillDeleteRunItem?.status, indexed: skillDeleteRunItem?.indexed }, { source: "skills.registry", operation: "delete", status: "done", indexed: 1 });
+    const afterSkillDelete = await runCliCapture(["search", "query", "deployment APIs", "--sources", "skills.registry", "--filters", "metadata.requiresProtectedRefs=true", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterSkillDelete.code, CLI_EXIT_DEGRADED, afterSkillDelete.stderr || afterSkillDelete.stdout);
+    const afterSkillDeletePayload = JSON.parse(afterSkillDelete.stdout) as any;
+    assert.equal(afterSkillDeletePayload.data.results.some((entry: any) => entry.source === "skills.registry" && entry.title === "Deploy"), false);
   });
 });
 

@@ -1227,6 +1227,8 @@ requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "afterIotDelete")
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "source: \"iot.config\", operation: \"delete\", status: \"done\", indexed: 1");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "afterBusinessDelete");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "source: \"business.records\", operation: \"delete\", status: \"done\", indexed: 1");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "afterSkillDelete");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "source: \"skills.registry\", operation: \"delete\", status: \"done\", indexed: 1");
 requireSnippet("packages/clawjs/src/cli-search-docs-pages-source.ts", "createLocalTextEmbedding");
 requireSnippet("packages/clawjs/src/cli-search-docs-pages-source.ts", "LOCAL_TEXT_EMBEDDING_MODEL");
 
