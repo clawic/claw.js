@@ -58,7 +58,7 @@ is implemented, validated, or explicitly blocked as `EXTERNAL PENDING`.
 | --- | --- |
 | Goal verifier | `npm run test:remote-sync-goal` |
 | Focused core/CLI tests | `npx vitest run --config vitest.config.ts packages/clawjs-core/src/index.test.ts packages/clawjs/src/inspect-cli.test.ts` |
-| Relay HTTP routes | `npx vitest run --config vitest.config.ts relay/src/server/remote-sync-routes.test.ts`; this must compare `/v1/remote/external-pending`, `/v1/remote/route-contracts`, and `/v1/remote/conformance` against the same core contracts used by CLI inspection. |
+| Relay HTTP routes | `npx vitest run --config vitest.config.ts relay/src/server/remote-sync-routes.test.ts`; this must compare `/v1/remote/external-pending`, `/v1/remote/route-contracts`, `/v1/remote/provider-device-e2e-plan`, and `/v1/remote/conformance` against the same core contracts used by CLI inspection. |
 | CLI/router parity | `node --import tsx ./scripts/verify-cli-registry-router-parity.mjs` |
 | Public executable inspection | `node packages/clawjs/bin/claw.mjs inspect remote --json` after building the CLI package |
 | Public docs hygiene | `npm run code-hygiene:check` and `git diff --check` |
@@ -75,8 +75,10 @@ The goal may be closed only after a final pass confirms:
 3. `RemoteExternalPendingRegister` contains every remaining physical/provider
    blocker and none of those rows is reported as a software bug.
 4. `claw inspect remote`, `claw remote pending`, `claw remote contracts`,
-   Relay `/v1/remote/external-pending`, and Relay `/v1/remote/route-contracts`
-   are verified against the same contracts.
+   `claw remote e2e-plan`, Relay `/v1/remote/external-pending`, Relay
+   `/v1/remote/route-contracts`, and Relay
+   `/v1/remote/provider-device-e2e-plan` are verified against the same
+   contracts.
 5. The registry contains no `pending` Relay classification for a stable surfaced
    node; each such node is directly `remote-safe` or explicitly `local-only` or
    `blocked`.
