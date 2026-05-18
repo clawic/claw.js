@@ -1491,6 +1491,8 @@ The docs check script validates that every current export from
     ClawPersistentSurfaceRegistry
     ClawPersistentSurfaceSource
     ClawPersistentSurfaceStorageClass
+    clawPreV1VersionGovernancePolicy
+    ClawPreV1VersionGovernancePolicy
     clawSurfaceGraphEdges
     clawSurfaceGraphRoutes
     ClawSurfaceConnectionVisibility
@@ -2521,6 +2523,7 @@ The docs check script validates that every current export from
     buildRemoteConformanceReport
     buildRemoteExternalPendingRegister
     buildRemoteOfflineCommandResult
+    buildRemoteProviderDeviceE2EValidationPlan
     buildRemoteRouteContractCatalog
     buildSyncPlan
     buildSyncQueueEntries
@@ -2583,6 +2586,10 @@ The docs check script validates that every current export from
     remoteAgentServiceRequestSchema
     RemoteOfflineCommandResult
     remoteOfflineCommandResultSchema
+    RemoteProviderDeviceE2EDomain
+    remoteProviderDeviceE2EDomainSchema
+    RemoteProviderDeviceE2EValidationPlan
+    remoteProviderDeviceE2EValidationPlanSchema
     RemoteClientCacheSnapshot
     remoteClientCacheSnapshotSchema
     RemoteCompatibilityAdapterReceipt

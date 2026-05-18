@@ -254,8 +254,22 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.equal(remotePendingPayload.status, "external_pending");
   assert.equal(remotePendingPayload.writes, false);
   assert.equal(remotePendingPayload.requirements.some((entry) => entry.requirementId === "physical_iroh_handshake" && entry.sourceReceipt === "RemoteTransportHandshakeReceipt"), true);
-  assert.equal(remotePendingPayload.requirements.some((entry) => entry.requirementId === "provider_device_e2e" && entry.decisionId === "first_vertical_slice"), true);
+  assert.equal(remotePendingPayload.requirements.some((entry) => entry.requirementId === "provider_device_e2e" && entry.decisionId === "first_vertical_slice" && entry.sourceReceipt === "RemoteProviderDeviceE2EValidationPlan"), true);
   assert.equal(remotePendingPayload.requirements.every((entry) => entry.status === "external_pending" && entry.writes === false), true);
+
+  const remoteE2EPlan = await runCliCapture(["remote", "e2e-plan", "--now", "2026-05-17T10:13:30.000Z", "--json"], process.cwd());
+  assert.equal(remoteE2EPlan.code, CLI_EXIT_OK);
+  const remoteE2EPlanPayload = parseCliJson<{ status: string; writes: boolean; requiredDomains: string[]; requiredRouteIds: string[]; requiredExternalPendingIds: string[]; noPlaintextSecrets: boolean; hostedSelfHostedParityRequired: boolean }>(remoteE2EPlan.stdout).data;
+  assert.equal(remoteE2EPlanPayload.status, "external_pending");
+  assert.equal(remoteE2EPlanPayload.writes, false);
+  assert.deepEqual(remoteE2EPlanPayload.requiredDomains, ["chat", "search", "sync", "secret_refs", "hosted_agents"]);
+  assert.equal(remoteE2EPlanPayload.requiredRouteIds.includes("remote.chatGateway"), true);
+  assert.equal(remoteE2EPlanPayload.requiredRouteIds.includes("remote.searchGateway"), true);
+  assert.equal(remoteE2EPlanPayload.requiredRouteIds.includes("remote.secretBrokeredOperation"), true);
+  assert.equal(remoteE2EPlanPayload.requiredRouteIds.includes("gateway.multiTenantAgentService"), true);
+  assert.equal(remoteE2EPlanPayload.requiredExternalPendingIds.includes("provider_device_e2e"), true);
+  assert.equal(remoteE2EPlanPayload.noPlaintextSecrets, true);
+  assert.equal(remoteE2EPlanPayload.hostedSelfHostedParityRequired, true);
 
   const remoteContracts = await runCliCapture(["remote", "contracts", "--now", "2026-05-17T10:14:00.000Z", "--json"], process.cwd());
   assert.equal(remoteContracts.code, CLI_EXIT_OK);

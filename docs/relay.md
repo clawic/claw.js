@@ -155,7 +155,9 @@ The provider/device end-to-end blocker is backed by
 search, Sync, secret-reference, and hosted-agent coverage to be validated
 together against the same route contracts, external-pending register, hosted
 parity rule, and no-plaintext-secret policy before `provider_device_e2e` can
-be cleared.
+be cleared. It is exposed as `claw remote e2e-plan` and
+`/v1/remote/provider-device-e2e-plan` so clients and operators inspect the same
+checklist.
 Remote API parity is represented by the remote route contracts catalog exposed
 at `/v1/remote/route-contracts` and `claw remote contracts`. Each required
 route binds canonical local contract references to remote entrypoints, keeps

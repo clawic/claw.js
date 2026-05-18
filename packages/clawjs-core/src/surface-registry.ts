@@ -797,6 +797,7 @@ const corePublicRoutes = [
   ["claw.api.relay.connector", "WS", "/v1/relay/connectors", "Relay workspace connector channel"],
   ["claw.api.remote.classifications", "GET", "/v1/remote/classifications", "Remote surface classification contract"],
   ["claw.api.remote.conformance", "GET", "/v1/remote/conformance", "Remote conformance report contract"],
+  ["claw.api.remote.providerDeviceE2EPlan", "GET", "/v1/remote/provider-device-e2e-plan", "Remote provider/device E2E validation plan contract"],
   ["claw.api.sync.manifests", "GET", "/v1/sync/manifests", "Sync resource manifest contract"],
   ["claw.api.sync.manifests.create", "POST", "/v1/sync/manifests", "Sync resource manifest dry-run creation contract"],
   ["claw.api.sync.changes", "GET", "/v1/sync/changes", "Sync changelog and cursor contract"],

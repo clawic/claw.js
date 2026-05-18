@@ -86,6 +86,7 @@ const requiredServiceApiRoutes = [
   "remote/conformance",
   "remote/external-pending",
   "remote/route-contracts",
+  "remote/provider-device-e2e-plan",
   "remote/compatibility/adapters",
   "gateway/conformance",
   "gateway/agent-service/evaluate",
@@ -131,6 +132,8 @@ const requiredDocSnippets = [
   "/v1/remote/external-pending",
   "remote route contracts",
   "/v1/remote/route-contracts",
+  "RemoteProviderDeviceE2EValidationPlan",
+  "/v1/remote/provider-device-e2e-plan",
   "/v1/gateway/agent-service/evaluate",
   "/v1/gateway/audit/receipts",
   "RemoteGatewayAuditReceipt",
@@ -150,6 +153,7 @@ const requiredDocSnippets = [
   "/v1/sync/authority-handoffs",
   "claw sync handoff",
   "claw remote conformance",
+  "claw remote e2e-plan",
   "claw remote compat",
   "claw inspect remote",
   "claw gateway conformance",
@@ -398,6 +402,8 @@ for (const snippet of [
   "remoteSyncRequiredRouteIds",
   "expectedExternalPending.requirements.map",
   "expectedRouteContracts.contracts.map",
+  "buildRemoteProviderDeviceE2EValidationPlan",
+  "/v1/remote/provider-device-e2e-plan",
 ]) {
   requireText("remote sync service route tests", remoteSyncRoutesTestSource, snippet);
 }

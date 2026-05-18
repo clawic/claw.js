@@ -1,6 +1,7 @@
 import {
   buildRemoteConformanceReport,
   buildRemoteExternalPendingRegister,
+  buildRemoteProviderDeviceE2EValidationPlan,
   buildRemoteRouteContractCatalog,
   buildSyncPlan,
   buildSyncQueueEntries,
@@ -48,6 +49,10 @@ function remoteExternalPendingPayload() {
 
 function remoteRouteContractsPayload() {
   return buildRemoteRouteContractCatalog({ registeredRouteIds: routeIds() });
+}
+
+function remoteProviderDeviceE2EPlanPayload() {
+  return buildRemoteProviderDeviceE2EValidationPlan({ requiredRouteIds: remoteSyncRequiredRouteIds });
 }
 
 function remoteClassificationsPayload() {
@@ -352,6 +357,8 @@ export function registerRemoteSyncRoutes(app: FastifyInstance): void {
   app.get(clawApiPath("remote/external-pending"), async () => remoteExternalPendingPayload());
 
   app.get(clawApiPath("remote/route-contracts"), async () => remoteRouteContractsPayload());
+
+  app.get(clawApiPath("remote/provider-device-e2e-plan"), async () => remoteProviderDeviceE2EPlanPayload());
 
   app.get(clawApiPath("remote/compatibility/adapters"), async () => ({
     adapters: [
