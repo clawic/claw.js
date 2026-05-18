@@ -218,6 +218,12 @@ accepted.
 the remaining physical/provider/deployment checks. It keeps those dependencies
 visible as `external_pending` instead of treating them as implementation bugs or
 silently counting them as complete.
+External validation is artifact-only clearable. `claw remote validation-report`
+and `/v1/remote/external-validation-report` may count raw evidence rows for
+reporting, but those rows remain non-clearable unless they are submitted inside
+a source-bound and approval-request-bound
+`RemoteExternalValidationEvidenceArtifact` with `approvedRunRef`, physical
+evidence, accepted criteria, required artifacts, and no plaintext material.
 The remote route contracts catalog, exposed by `claw remote contracts` and
 `/v1/remote/route-contracts`, binds every required remote route to canonical
 local contract references and remote entrypoints. Every row requires parity and

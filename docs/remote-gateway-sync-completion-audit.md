@@ -36,7 +36,7 @@ is implemented, validated, or explicitly blocked as `EXTERNAL PENDING`.
 | RQ-013 | `sync_substrate` | external_pending | Sync manifests, drivers, changelog/planner semantics, and driver application receipts cover the agreed substrates. | Physical driver execution remains `physical_sync_driver_application` `EXTERNAL PENDING`. |
 | RQ-014 | `conflict_default` | implemented | Sync plans detect conflicts and elevate instead of silently overwriting. | None beyond final source-session reread. |
 | RQ-015 | `client_cache_policy` | external_pending | `RemoteClientCacheSnapshot` enforces encrypted TTL cache, no secrets, no authoritative state, and no plaintext payload. | Real client storage validation remains `physical_client_storage` `EXTERNAL PENDING`. |
-| RQ-016 | `guardrail_strictness` | implemented | Conformance, external-pending register, external validation evidence template, source Q/A review template, route catalog, classification receipts, and `claw inspect remote` expose fail-closed state; the approval request carries required domains, topology targets, and route IDs while keeping `approved: false`; external validation rows require `approvedRunRef` plus physical evidence, artifacts, criteria, and no plaintext before they clear; `invalidEvidenceRequirementIds` and `duplicateEvidenceRequirementIds` keep unknown or repeated evidence rows from being silently accepted; versioned source Q/A and external evidence artifacts are rejected if their source conversation or plan IDs do not match this goal; source Q/A rows tied to physical/provider blockers must use `external_pending` until those rows clear, duplicate source Q/A rows are exposed as `duplicateSourceQaIds`, and disposition mismatches are exposed as `invalidExternalPendingDispositionQaIds`; the goal verifier fails on missing Relay classifications, missing required routes/nodes, missing validation-template/source-QA-template invariants, missing approval references, unknown/duplicate evidence IDs, duplicate source Q/A rows, invalid external-pending source dispositions, source-bound artifact mismatch, and any reintroduced `pending` Relay classification; Relay HTTP tests compare exact pending requirements, source Q/A template rows, and route contracts against core. | Physical/provider blockers remain explicit `EXTERNAL PENDING`, not hidden guardrail gaps. |
+| RQ-016 | `guardrail_strictness` | implemented | Conformance, external-pending register, external validation evidence template, source Q/A review template, route catalog, classification receipts, and `claw inspect remote` expose fail-closed state; the approval request carries required domains, topology targets, and route IDs while keeping `approved: false`; external validation is artifact-only clearable: raw evidence rows remain report-only, and rows can clear only when submitted inside a source-bound and approval-request-bound `RemoteExternalValidationEvidenceArtifact` with `approvedRunRef`, physical evidence, artifacts, criteria, and no plaintext; `invalidEvidenceRequirementIds` and `duplicateEvidenceRequirementIds` keep unknown or repeated evidence rows from being silently accepted; versioned source Q/A and external evidence artifacts are rejected if their source conversation or plan IDs do not match this goal; source Q/A rows tied to physical/provider blockers must use `external_pending` until those rows clear, duplicate source Q/A rows are exposed as `duplicateSourceQaIds`, and disposition mismatches are exposed as `invalidExternalPendingDispositionQaIds`; the goal verifier fails on missing Relay classifications, missing required routes/nodes, missing validation-template/source-QA-template invariants, missing approval references, unknown/duplicate evidence IDs, duplicate source Q/A rows, invalid external-pending source dispositions, source-bound artifact mismatch, raw-row clearability, and any reintroduced `pending` Relay classification; Relay HTTP tests compare exact pending requirements, source Q/A template rows, and route contracts against core. | Physical/provider blockers remain explicit `EXTERNAL PENDING`, not hidden guardrail gaps. |
 | RQ-017 | `compat_policy` | implemented | Compatibility adapter receipts map legacy Relay/mobile surfaces to canonical routes without parallel APIs. | Remove compatibility paths only after client migration. |
 | RQ-018 | `hosted_service_position` | external_pending | Gateway deployment manifests and conformance cover hosted and self-hosted modes through one contract. | Real hosted/self-hosted rollout validation remains `EXTERNAL PENDING`. |
 | RQ-019 | `layer_names` | implemented | Public canon consistently names Coordinator, Gateway, Connector, and Sync. | None beyond final source-session reread. |
@@ -67,7 +67,7 @@ external requirement list as blocked until approved evidence clears:
 | ID | Status | Evidence | Required next action |
 | --- | --- | --- | --- |
 | SOURCE-REREAD-001 | reviewed_current | Source decisions are enumerated as `RQ-001` through `RQ-022`, the source Q/A review map records `QA-001` through `QA-023`, `docs/remote-gateway-sync-source-qa-review.json` records the current one-by-one dispositions/evidence refs, and all are guarded by `scripts/verify-remote-sync-goal.mjs`. | Before final close, repeat the source-session review against current implementation state and keep any physical/provider rows explicitly `EXTERNAL PENDING`. |
-| PHYSICAL-001 | external_pending | `RemoteExternalPendingRegister` separates transport, device trust, peer trust, sync driver, authority handoff, client storage, provider, deployment, runtime, billing, and provider/device E2E blockers from bugs; `docs/remote-gateway-sync-external-validation-evidence.json` records the current no-write unapproved evidence rows for all 13 blockers and binds them to the matching `RemoteExternalValidationApprovalRequest` via `approvalRequestId`. | Run approved physical/provider validations, replace each placeholder row with approved evidence including `approvedRunRef` and physical evidence, or keep each row explicitly marked `EXTERNAL PENDING`. |
+| PHYSICAL-001 | external_pending | `RemoteExternalPendingRegister` separates transport, device trust, peer trust, sync driver, authority handoff, client storage, provider, deployment, runtime, billing, and provider/device E2E blockers from bugs; `docs/remote-gateway-sync-external-validation-evidence.json` records the current no-write unapproved evidence rows for all 13 blockers and binds the source-bound artifact to the matching `RemoteExternalValidationApprovalRequest` via `approvalRequestId`. | Run approved physical/provider validations, replace each placeholder row with approved evidence including `approvedRunRef` and physical evidence inside the same source-bound and approval-request-bound artifact, or keep each row explicitly marked `EXTERNAL PENDING`. |
 | DOMAIN-PARITY-001 | implemented | Registry-wide Relay classification exists for every surfaced node and the goal verifier rejects any reintroduced `pending` Relay classification. | Keep broad `local-only` classifications explicit until a policy, route, and test-backed `remote-safe` receipt exists. |
 
 ## Required Validation Map
@@ -82,6 +82,39 @@ external requirement list as blocked until approved evidence clears:
 | Public executable inspection | `node packages/clawjs/bin/claw.mjs inspect remote --json` after building the CLI package |
 | Clawix remote mirror | In the public Clawix repo, `bash scripts/test.sh fast`; this runs `scripts/remote_canon_alignment_check.mjs` and verifies the Clawix interface matrix/ADR mirror stays a consumer of ClawJS Coordinator/Gateway/Connector/Sync route anchors, not a second source of truth. |
 | Public docs hygiene | `npm run code-hygiene:check` and `git diff --check` |
+
+## Current Validation Evidence
+
+As of 2026-05-18, the public Clawix mirror validation has been rerun after the
+artifact-only external validation mirror update. `bash scripts/test.sh fast`
+completed successfully in the public Clawix repo, including
+`scripts/remote_canon_alignment_check.mjs`, `scripts/code-hygiene-check.mjs`,
+public hygiene, interface surface guard, doc alignment, source size, Swift
+package tests, and web Vitest tests. This proves the Clawix route/interface
+mirror is current with ClawJS Coordinator/Gateway/Connector/Sync canon while
+remaining a consumer of the framework graph, not a second remote API source of
+truth.
+
+The public ClawJS executable inspection was also rerun after
+`npm run build:packages`: `node packages/clawjs/bin/claw.mjs inspect remote
+--json` returned `baseline_registered` conformance, 16 remote route contracts,
+13 external-pending requirements, 57 Relay-classified surfaces, zero Relay
+`pending` classifications, zero Relay `blocked` classifications, an
+`external_pending` external validation report with 13 blocked requirements, and
+a `blocked` closure gate with `source_qa_review` and `external_validation`
+blockers. This keeps executable inspection aligned with the completion audit:
+software/source review can be checked locally, while physical/provider evidence
+still requires approved external validation.
+
+The focused core/CLI and Relay HTTP route tests were rerun as listed above.
+`npx vitest run --config vitest.config.ts packages/clawjs-core/src/index.test.ts
+packages/clawjs/src/inspect-cli.test.ts` passed with 2 files and 42 tests.
+`npx vitest run --config vitest.config.ts
+relay/src/server/remote-sync-routes.test.ts` passed with 1 file and 1 test.
+Together they cover the core remote contracts, inspect CLI payload, and Relay
+HTTP route parity for external-pending, validation checklist/template/artifact,
+runbook, readiness, approval request, report, source Q/A template, closure
+gate, route contracts, provider/device E2E plan, and conformance.
 
 ## Closure Rule
 
@@ -102,7 +135,11 @@ The goal may be closed only after a final pass confirms:
 3. `RemoteExternalPendingRegister` contains every remaining physical/provider
    blocker and none of those rows is reported as a software bug. The current
    `docs/remote-gateway-sync-external-validation-evidence.json` artifact must
-   remain non-clearable until real approved evidence is present.
+   remain non-clearable until real approved evidence is present. External
+   validation is artifact-only clearable: raw evidence rows may be counted for
+   reporting, but they must remain `external_pending` unless submitted through a
+   source-bound and approval-request-bound
+   `RemoteExternalValidationEvidenceArtifact`.
 4. `claw inspect remote`, `claw remote pending`,
    `claw remote validation-checklist`, `claw remote validation-template`,
    `claw remote validation-artifact`, `claw remote validation-runbook`,
@@ -124,7 +161,8 @@ The goal may be closed only after a final pass confirms:
    `/v1/remote/provider-device-e2e-plan` are verified against the same
    contracts. Relay external validation report POST must accept the versioned
    evidence artifact shape, and Relay closure-gate POST must accept the source
-   review artifact-native `items` array plus external `evidence`.
+   review artifact-native `items` array plus the source-bound and
+   approval-request-bound external evidence artifact.
 5. The registry contains no `pending` Relay classification for a stable surfaced
    node; each such node is directly `remote-safe` or explicitly `local-only` or
    `blocked`.

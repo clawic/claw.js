@@ -292,11 +292,13 @@ requirements before any row can clear.
 `remote validation-template` returns the matching no-write evidence JSON
 template. Operators fill its `evidence` array only after approved
 physical/provider runs, including an `approvedRunRef` approval/audit reference
-for each row, then submit that array to `remote validation-report`. The
+for each row, then submit the full artifact to `remote validation-report`.
+Raw evidence arrays are report-only and remain non-clearable. The
 `remote validation-artifact` command returns the matching versioned pending
-artifact shape with source conversation/plan metadata. The checked-in pending
-artifact is `docs/remote-gateway-sync-external-validation-evidence.json`; it
-intentionally contains unapproved no-write rows and can be submitted with
+artifact shape with source conversation/plan metadata and approval request
+binding. The checked-in pending artifact is
+`docs/remote-gateway-sync-external-validation-evidence.json`; it intentionally
+contains unapproved no-write rows and can be submitted with
 `--evidence-file docs/remote-gateway-sync-external-validation-evidence.json`
 or the alias `--external-validation-file`.
 `remote validation-runbook` returns the no-write operator bundle for the final
@@ -321,13 +323,16 @@ prohibited actions. It always reports `approvalRequired: true` and
 approval, not approval itself.
 `remote validation-report` evaluates supplied external evidence, if any, against
 that checklist. With no approved physical evidence it stays `external_pending`;
-only rows with `approvedRun: true`, an `approvedRunRef`, physical evidence, all
-required artifacts, all acceptance criteria, and no plaintext material become
+external validation is artifact-only clearable, so raw evidence rows may be
+counted for reporting but cannot clear. Only rows inside a source-bound and
+approval-request-bound `RemoteExternalValidationEvidenceArtifact` with
+`approvedRun: true`, an `approvedRunRef`, physical evidence, all required
+artifacts, all acceptance criteria, and no plaintext material become
 `clearable`. Unknown or duplicate evidence requirement IDs are fail-closed and
 reported through `invalidEvidenceRequirementIds` and
 `duplicateEvidenceRequirementIds`; they never silently clear the report. When
-files use the versioned artifact shape, the source conversation and plan IDs
-must match this goal before the rows are accepted.
+files use the versioned artifact shape, the source conversation, plan, and
+approval request IDs must match this goal before the rows are accepted.
 `remote source-qa-template` returns the no-write source Q/A review template for
 the original Relay/Gateway/Coordinator/Connector/Sync source conversation and
 plan. It is intentionally incomplete: every row must be reviewed one by one and
@@ -350,7 +355,8 @@ have a disposition, evidence refs, and every external validation row is
 `clearable`. The closure command can consume the same external validation
 artifact through `--evidence-file` or `--external-validation-file`; the current
 pending artifact keeps only the `external_validation` blocker after the source
-Q/A review file has cleared `source_qa_review`.
+Q/A review file has cleared `source_qa_review`. Supplying raw external evidence
+rows is not enough to clear the external validation blocker.
 The final provider/device end-to-end row is not a loose note: it is backed by
 `RemoteProviderDeviceE2EValidationPlan`, which requires chat, search, Sync,
 secret-reference, and hosted-agent validation to pass together against the same

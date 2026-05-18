@@ -827,7 +827,10 @@ policy instead of creating a parallel remote business API. Connector links a
 host to runtime, storage, services, policies, and audit. Sync governs resource
 authority, changelogs, cursors, conflict elevation, drivers, encrypted client
 cache, and audit. Iroh is the preferred v1 transport adapter, not the
-permanent contract.
+permanent contract. External physical/provider validation is explicit and
+artifact-bound: raw evidence rows are report-only, and closure can clear only
+from a source-bound and approval-request-bound evidence artifact that proves an
+approved run, physical evidence, accepted criteria, and no plaintext material.
 
 **X.5 Meshes can collaborate.** Two users' meshes can share a resource (a
 document, an agent, a calendar, a memory) under explicit, revocable

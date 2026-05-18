@@ -1,13 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-
 import {
   buildRemoteConformanceReport,
-  buildRemoteExternalPendingRegister,
-  buildRemoteExternalValidationEvidenceArtifact,
-  buildRemoteExternalValidationApprovalRequest,
-  buildRemoteExternalValidationChecklist,
+  buildRemoteExternalPendingRegister, buildRemoteExternalValidationEvidenceArtifact,
+  buildRemoteExternalValidationApprovalRequest, buildRemoteExternalValidationChecklist,
   buildRemoteExternalValidationEvidenceTemplate,
   buildRemoteExternalValidationReport,
   buildRemoteExternalValidationReadiness,
@@ -145,6 +142,7 @@ const requiredDocSnippets = [
   "approvedRunRef",
   "invalidEvidenceRequirementIds",
   "duplicateEvidenceRequirementIds",
+  "artifact-only clearable", "raw evidence rows remain report-only", "source-bound and approval-request-bound",
   "source-bound artifact mismatch",
   "/v1/remote/external-validation-report",
   "claw remote validation-report",
@@ -256,7 +254,7 @@ for (const [relativePath, text] of docTexts) {
     fail(`${relativePath} must not include private local session paths`);
   }
 }
-for (const snippet of ["Remote framework access is organized as Coordinator, Gateway, Connector, and", "Gateway projects registered local SDK/service/CLI contracts under", "Iroh is the preferred v1 transport adapter"]) requireText("constitution remote mesh principle", docTexts.get("CONSTITUTION.md") ?? "", snippet);
+for (const snippet of ["Remote framework access is organized as Coordinator, Gateway, Connector, and", "Gateway projects registered local SDK/service/CLI contracts under", "Iroh is the preferred v1 transport adapter", "External physical/provider validation is explicit", "artifact-bound", "source-bound and approval-request-bound evidence artifact"]) requireText("constitution remote mesh principle", docTexts.get("CONSTITUTION.md") ?? "", snippet);
 
 for (const snippet of [sourceConversationId, sourcePlanId]) {
   requireText("source decision audit", docTexts.get("docs/remote-gateway-sync-source-decision-audit.md") ?? "", snippet);
@@ -323,7 +321,9 @@ for (const snippet of [
   "claw remote validation-artifact",
   "claw remote source-qa-template",
   "claw remote contracts",
-  "Clawix remote mirror",
+  "Clawix remote mirror", "Current Validation Evidence", "completed successfully in the public Clawix repo", "scripts/code-hygiene-check.mjs",
+  "public ClawJS executable inspection", "16 remote route contracts", "57 Relay-classified surfaces", "zero Relay", "`pending` classifications", "source_qa_review` and `external_validation`",
+  "2 files and 42 tests", "1 file and 1 test", "HTTP route parity",
   "REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl> node scripts/verify-remote-sync-source-session.mjs",
   "remote_canon_alignment_check.mjs",
   "docs/remote-gateway-sync-external-validation-evidence.json",
