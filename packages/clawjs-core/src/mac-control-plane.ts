@@ -189,6 +189,7 @@ export const macPolicyGrantSchema = z.object({
     kind: z.enum(["role", "user", "agent", "assignment", "run", "mcp_client", "automation"]),
     id: z.string().min(1),
   }),
+  effect: z.enum(["allow", "block"]).default("allow"),
   capabilityIds: z.array(z.string().min(1)).default([]),
   permissionIds: z.array(z.string().min(1)).default([]),
   riskCeiling: macRiskTierSchema.default("read"),

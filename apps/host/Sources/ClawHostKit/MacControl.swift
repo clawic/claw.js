@@ -44,6 +44,144 @@ public enum MacControlPermissionStatus: String, Codable, Sendable {
     case notDetermined = "not_determined"
 }
 
+public struct MacControlPermissionLifecycleRecord: Codable, Equatable, Sendable {
+    public var permissionId: MacControlPermissionID
+    public var requestedBefore: Bool
+    public var canRequest: Bool
+    public var requiresRestart: Bool
+    public var source: String
+    public var firstUsedAt: String?
+    public var lastCheckedAt: String
+    public var lastRequestedAt: String?
+    public var lastRequestResult: MacControlPermissionStatus?
+    public var lastKnownStatus: MacControlPermissionStatus
+    public var revocationDetectedAt: String?
+}
+
+public enum MacControlPermissionLifecycleStore {
+    public static let filename = "mac-permission-lifecycle.json"
+    private static let source = "signed-host-mac-permission-broker"
+
+    private struct StoreFile: Codable {
+        var schemaVersion: Int
+        var permissions: [String: MacControlPermissionLifecycleRecord]
+    }
+
+    public static func fileURL(stateDirectory: URL) -> URL {
+        stateDirectory.appendingPathComponent(filename)
+    }
+
+    @discardableResult
+    public static func observeStatus(
+        permission: MacControlPermissionID,
+        status: MacControlPermissionStatus,
+        stateURL: URL,
+        now: Date = Date()
+    ) throws -> MacControlPermissionLifecycleRecord {
+        var store = try load(from: stateURL)
+        let timestamp = Self.timestamp(now)
+        var record = store.permissions[permission.rawValue] ?? initialRecord(
+            permission: permission,
+            status: status,
+            timestamp: timestamp
+        )
+        if record.lastKnownStatus == .granted && status != .granted && record.revocationDetectedAt == nil {
+            record.revocationDetectedAt = timestamp
+        }
+        record.lastKnownStatus = status
+        record.lastCheckedAt = timestamp
+        record.canRequest = canRequest(status)
+        record.requiresRestart = requiresRestart(permission)
+        store.permissions[permission.rawValue] = record
+        try save(store, to: stateURL)
+        return record
+    }
+
+    @discardableResult
+    public static func recordRequest(
+        permission: MacControlPermissionID,
+        result: MacControlPermissionStatus,
+        stateURL: URL,
+        now: Date = Date()
+    ) throws -> MacControlPermissionLifecycleRecord {
+        var store = try load(from: stateURL)
+        let timestamp = Self.timestamp(now)
+        var record = store.permissions[permission.rawValue] ?? initialRecord(
+            permission: permission,
+            status: result,
+            timestamp: timestamp
+        )
+        record.requestedBefore = true
+        record.canRequest = canRequest(result)
+        record.requiresRestart = requiresRestart(permission)
+        record.lastCheckedAt = timestamp
+        record.lastRequestedAt = timestamp
+        record.lastRequestResult = result
+        record.lastKnownStatus = result
+        store.permissions[permission.rawValue] = record
+        try save(store, to: stateURL)
+        return record
+    }
+
+    public static func record(permission: MacControlPermissionID, stateURL: URL) throws -> MacControlPermissionLifecycleRecord? {
+        try load(from: stateURL).permissions[permission.rawValue]
+    }
+
+    private static func initialRecord(
+        permission: MacControlPermissionID,
+        status: MacControlPermissionStatus,
+        timestamp: String
+    ) -> MacControlPermissionLifecycleRecord {
+        MacControlPermissionLifecycleRecord(
+            permissionId: permission,
+            requestedBefore: false,
+            canRequest: canRequest(status),
+            requiresRestart: requiresRestart(permission),
+            source: source,
+            firstUsedAt: timestamp,
+            lastCheckedAt: timestamp,
+            lastRequestedAt: nil,
+            lastRequestResult: nil,
+            lastKnownStatus: status,
+            revocationDetectedAt: nil
+        )
+    }
+
+    private static func load(from url: URL) throws -> StoreFile {
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            return StoreFile(schemaVersion: 1, permissions: [:])
+        }
+        let data = try Data(contentsOf: url)
+        return try JSONDecoder().decode(StoreFile.self, from: data)
+    }
+
+    private static func save(_ store: StoreFile, to url: URL) throws {
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        try encoder.encode(store).write(to: url, options: .atomic)
+    }
+
+    private static func canRequest(_ status: MacControlPermissionStatus) -> Bool {
+        status == .notDetermined
+    }
+
+    private static func requiresRestart(_ permission: MacControlPermissionID) -> Bool {
+        switch permission {
+        case .accessibility, .inputMonitoring, .automationAppleEvents:
+            return true
+        case .microphone, .speechRecognition, .camera, .contacts, .calendar, .reminders:
+            return false
+        }
+    }
+
+    private static func timestamp(_ date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: date)
+    }
+}
+
 @MainActor
 public enum MacControlPermissionBroker {
     public nonisolated static let accessibilityRequestedKey = "claw.host.mac.permission.accessibility.requested"
@@ -82,35 +220,45 @@ public enum MacControlPermissionBroker {
         }
     }
 
-    public static func request(_ permission: MacControlPermissionID) async -> Bool {
+    public static func request(_ permission: MacControlPermissionID, lifecycleURL: URL? = nil) async -> Bool {
+        let granted: Bool
         switch permission {
         case .microphone:
-            return await avRequest(for: .audio)
+            granted = await avRequest(for: .audio)
         case .speechRecognition:
-            return await withCheckedContinuation { continuation in
+            granted = await withCheckedContinuation { continuation in
                 SFSpeechRecognizer.requestAuthorization { status in
                     continuation.resume(returning: status == .authorized)
                 }
             }
         case .camera:
-            return await avRequest(for: .video)
+            granted = await avRequest(for: .video)
         case .accessibility:
             let key = "AXTrustedCheckOptionPrompt" as CFString
             let options: CFDictionary = [key: true] as CFDictionary
             let trusted = AXIsProcessTrustedWithOptions(options)
             UserDefaults.standard.set(true, forKey: accessibilityRequestedKey)
-            return trusted
+            granted = trusted
         case .inputMonitoring:
-            return IOHIDRequestAccess(kIOHIDRequestTypeListenEvent)
+            granted = IOHIDRequestAccess(kIOHIDRequestTypeListenEvent)
         case .automationAppleEvents:
-            return false
+            granted = false
         case .contacts:
-            return await requestContacts()
+            granted = await requestContacts()
         case .calendar:
-            return await requestEventKit(.event)
+            granted = await requestEventKit(.event)
         case .reminders:
-            return await requestEventKit(.reminder)
+            granted = await requestEventKit(.reminder)
         }
+        if let lifecycleURL {
+            let result: MacControlPermissionStatus = granted ? .granted : status(for: permission)
+            _ = try? MacControlPermissionLifecycleStore.recordRequest(
+                permission: permission,
+                result: result,
+                stateURL: lifecycleURL
+            )
+        }
+        return granted
     }
 
     public static func openSettings(for permission: MacControlPermissionID) {
@@ -216,6 +364,10 @@ public struct MacControlActionRequest: Codable, Equatable, Sendable {
     public var capabilityId: String
     public var actorId: String
     public var origin: MacControlOrigin
+    public var actorKind: String?
+    public var actorRole: String?
+    public var assignmentId: String?
+    public var runId: String?
     public var arguments: [String: String]
     public var dryRun: Bool
     public var approved: Bool
@@ -225,6 +377,10 @@ public struct MacControlActionRequest: Codable, Equatable, Sendable {
         capabilityId: String,
         actorId: String,
         origin: MacControlOrigin,
+        actorKind: String? = nil,
+        actorRole: String? = nil,
+        assignmentId: String? = nil,
+        runId: String? = nil,
         arguments: [String: String] = [:],
         dryRun: Bool = false,
         approved: Bool = false
@@ -233,6 +389,10 @@ public struct MacControlActionRequest: Codable, Equatable, Sendable {
         self.capabilityId = capabilityId
         self.actorId = actorId
         self.origin = origin
+        self.actorKind = actorKind
+        self.actorRole = actorRole
+        self.assignmentId = assignmentId
+        self.runId = runId
         self.arguments = arguments
         self.dryRun = dryRun
         self.approved = approved
@@ -299,6 +459,280 @@ public struct MacControlActionReceipt: Codable, Equatable, Sendable {
     public var outcome: Outcome
     public var outputs: [String]
     public var error: String?
+    public var beforeRef: String?
+    public var afterRef: String?
+}
+
+public enum MacControlContinuityRevertStepKind: String, Codable, Sendable {
+    case process
+}
+
+public enum MacControlContinuityRevertStatus: String, Codable, Sendable {
+    case pending
+    case reverted
+    case failed
+}
+
+public struct MacControlContinuityRevertStep: Codable, Equatable, Sendable {
+    public var kind: MacControlContinuityRevertStepKind
+    public var executable: String
+    public var arguments: [String]
+    public var preview: String
+    public var redacted: Bool
+}
+
+public struct MacControlContinuitySnapshot: Codable, Equatable, Sendable {
+    public var ref: String
+    public var capabilityId: String
+    public var device: String
+    public var beforePowerRaw: String
+    public var beforeNetworkRaw: String
+    public var beforeNetworkName: String?
+    public var capturedAt: String
+}
+
+public struct MacControlContinuityRecord: Codable, Equatable, Sendable {
+    public var receiptId: String
+    public var requestId: String
+    public var planId: String
+    public var capabilityId: String
+    public var snapshot: MacControlContinuitySnapshot
+    public var revertSteps: [MacControlContinuityRevertStep]
+    public var status: MacControlContinuityRevertStatus
+    public var createdAt: String
+    public var revertedAt: String?
+    public var error: String?
+}
+
+public enum MacControlContinuityStore {
+    public static let filename = "mac-control-continuity.json"
+
+    private struct StoreFile: Codable {
+        var schemaVersion: Int
+        var records: [String: MacControlContinuityRecord]
+    }
+
+    public static func fileURL(stateDirectory: URL) -> URL {
+        stateDirectory.appendingPathComponent(filename)
+    }
+
+    public static func record(receiptId: String, stateURL: URL) throws -> MacControlContinuityRecord? {
+        try load(from: stateURL).records[receiptId]
+    }
+
+    @discardableResult
+    public static func upsert(_ record: MacControlContinuityRecord, stateURL: URL) throws -> MacControlContinuityRecord {
+        var store = try load(from: stateURL)
+        store.records[record.receiptId] = record
+        try save(store, to: stateURL)
+        return record
+    }
+
+    @discardableResult
+    public static func markReverted(receiptId: String, stateURL: URL, now: Date = Date()) throws -> MacControlContinuityRecord? {
+        var store = try load(from: stateURL)
+        guard var record = store.records[receiptId] else { return nil }
+        record.status = .reverted
+        record.revertedAt = timestamp(now)
+        record.error = nil
+        store.records[receiptId] = record
+        try save(store, to: stateURL)
+        return record
+    }
+
+    @discardableResult
+    public static func markFailed(receiptId: String, error: String, stateURL: URL, now: Date = Date()) throws -> MacControlContinuityRecord? {
+        var store = try load(from: stateURL)
+        guard var record = store.records[receiptId] else { return nil }
+        record.status = .failed
+        record.revertedAt = timestamp(now)
+        record.error = error
+        store.records[receiptId] = record
+        try save(store, to: stateURL)
+        return record
+    }
+
+    private static func load(from url: URL) throws -> StoreFile {
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            return StoreFile(schemaVersion: 1, records: [:])
+        }
+        return try JSONDecoder().decode(StoreFile.self, from: Data(contentsOf: url))
+    }
+
+    private static func save(_ store: StoreFile, to url: URL) throws {
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        try encoder.encode(store).write(to: url, options: .atomic)
+    }
+
+    private static func timestamp(_ date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: date)
+    }
+}
+
+public enum MacControlPolicySubjectKind: String, Codable, CaseIterable, Sendable {
+    case role
+    case user
+    case agent
+    case assignment
+    case run
+    case mcpClient = "mcp_client"
+    case automation
+}
+
+public enum MacControlPolicyGrantEffect: String, Codable, CaseIterable, Sendable {
+    case allow
+    case block
+}
+
+public enum MacControlPolicyGrantStatus: String, Codable, CaseIterable, Sendable {
+    case active
+    case expired
+    case revoked
+}
+
+public enum MacControlPolicyGrantDurationKind: String, Codable, CaseIterable, Sendable {
+    case task
+    case session
+    case ttl
+    case permanent
+}
+
+public struct MacControlPolicySubject: Codable, Equatable, Sendable {
+    public var kind: MacControlPolicySubjectKind
+    public var id: String
+}
+
+public struct MacControlPolicyGrantDuration: Codable, Equatable, Sendable {
+    public var kind: MacControlPolicyGrantDurationKind
+    public var ttlSeconds: Int?
+}
+
+public struct MacControlPolicyGrant: Codable, Equatable, Sendable {
+    public var id: String
+    public var subject: MacControlPolicySubject
+    public var effect: MacControlPolicyGrantEffect
+    public var capabilityIds: [String]
+    public var permissionIds: [MacControlPermissionID]
+    public var riskCeiling: MacControlActionPlan.Risk
+    public var duration: MacControlPolicyGrantDuration
+    public var createdBy: MacControlWireActor
+    public var createdAt: String
+    public var expiresAt: String?
+    public var status: MacControlPolicyGrantStatus
+}
+
+public enum MacControlPolicyGrantStore {
+    public static let filename = "mac-control-policy-grants.json"
+
+    private struct StoreFile: Codable {
+        var schemaVersion: Int
+        var grants: [MacControlPolicyGrant]
+    }
+
+    public static func fileURL(stateDirectory: URL) -> URL {
+        stateDirectory.appendingPathComponent(filename)
+    }
+
+    public static func list(stateURL: URL) throws -> [MacControlPolicyGrant] {
+        try load(from: stateURL).grants
+    }
+
+    @discardableResult
+    public static func upsert(_ grant: MacControlPolicyGrant, stateURL: URL) throws -> MacControlPolicyGrant {
+        var store = try load(from: stateURL)
+        store.grants.removeAll { $0.id == grant.id }
+        store.grants.insert(grant, at: 0)
+        try save(store, to: stateURL)
+        return grant
+    }
+
+    @discardableResult
+    public static func revoke(id: String, stateURL: URL) throws -> MacControlPolicyGrant? {
+        var store = try load(from: stateURL)
+        guard let index = store.grants.firstIndex(where: { $0.id == id }) else { return nil }
+        store.grants[index].status = .revoked
+        try save(store, to: stateURL)
+        return store.grants[index]
+    }
+
+    public static func activeMatching(
+        request: MacControlActionRequest,
+        plan: MacControlActionPlan,
+        stateURL: URL,
+        now: Date = Date()
+    ) throws -> [MacControlPolicyGrant] {
+        try list(stateURL: stateURL).filter { grant in
+            isActive(grant, now: now) &&
+                subjectMatches(grant.subject, request: request) &&
+                scopeMatches(grant, request: request, plan: plan) &&
+                risk(plan.risk, isWithin: grant.riskCeiling)
+        }
+    }
+
+    private static func load(from url: URL) throws -> StoreFile {
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            return StoreFile(schemaVersion: 1, grants: [])
+        }
+        return try JSONDecoder().decode(StoreFile.self, from: Data(contentsOf: url))
+    }
+
+    private static func save(_ store: StoreFile, to url: URL) throws {
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        try encoder.encode(store).write(to: url, options: .atomic)
+    }
+
+    private static func isActive(_ grant: MacControlPolicyGrant, now: Date) -> Bool {
+        guard grant.status == .active else { return false }
+        guard let expiresAt = grant.expiresAt else { return true }
+        return (ISO8601DateFormatter().date(from: expiresAt) ?? .distantPast) > now
+    }
+
+    private static func subjectMatches(_ subject: MacControlPolicySubject, request: MacControlActionRequest) -> Bool {
+        switch subject.kind {
+        case .role:
+            return request.actorRole == subject.id
+        case .user:
+            return request.origin.isLocalHuman && request.actorId == subject.id
+        case .agent:
+            return (request.actorKind ?? request.origin.rawValue) == "agent" && request.actorId == subject.id
+        case .assignment:
+            return request.assignmentId == subject.id
+        case .run:
+            return request.runId == subject.id
+        case .mcpClient:
+            return (request.actorKind ?? request.origin.rawValue) == "mcp_client" && request.actorId == subject.id
+        case .automation:
+            return (request.actorKind ?? request.origin.rawValue) == "automation" && request.actorId == subject.id
+        }
+    }
+
+    private static func scopeMatches(_ grant: MacControlPolicyGrant, request: MacControlActionRequest, plan: MacControlActionPlan) -> Bool {
+        if grant.capabilityIds.isEmpty && grant.permissionIds.isEmpty { return true }
+        if grant.capabilityIds.contains(request.capabilityId) { return true }
+        return grant.permissionIds.contains { permissionId in
+            plan.requiredPermissionIds.contains(permissionId)
+        }
+    }
+
+    private static func risk(_ risk: MacControlActionPlan.Risk, isWithin ceiling: MacControlActionPlan.Risk) -> Bool {
+        rank(risk) <= rank(ceiling)
+    }
+
+    private static func rank(_ risk: MacControlActionPlan.Risk) -> Int {
+        switch risk {
+        case .read: return 0
+        case .low: return 1
+        case .medium: return 2
+        case .high: return 3
+        case .critical: return 4
+        }
+    }
 }
 
 public protocol MacControlCommandRunning {
@@ -382,6 +816,7 @@ public enum MacControlPolicy {
         public let allowed: Bool
         public let outcome: String
         public let reason: String?
+        public let grantId: String?
     }
 
     public struct AuditEvent: Codable, Equatable, Sendable {
@@ -391,6 +826,9 @@ public enum MacControlPolicy {
         public let approval: Approval
         public let outcome: String
         public let reason: String?
+        public let grantId: String?
+        public let actorId: String?
+        public let actorKind: String?
     }
 
     public static let approvalKey = "claw.host.macControl.approval"
@@ -411,21 +849,19 @@ public enum MacControlPolicy {
         defaults: UserDefaults = .standard,
         auditURL: URL? = nil,
         now: Date = Date(),
-        approvedOverride: Bool = false
+        approvedOverride: Bool = false,
+        request: MacControlActionRequest? = nil,
+        plan: MacControlActionPlan? = nil,
+        policyURL: URL? = nil
     ) -> Authorization {
         let policy = approval(defaults: defaults)
         let authorization: Authorization
         switch policy {
-        case .alwaysAllow:
-            authorization = Authorization(allowed: true, outcome: "allowed", reason: nil)
         case .alwaysBlock:
-            authorization = Authorization(allowed: false, outcome: "blocked", reason: "Mac Control policy blocks this action.")
-        case .alwaysAsk:
-            if approvedOverride || origin.isLocalHuman {
-                authorization = Authorization(allowed: true, outcome: approvedOverride ? "approved" : "allowed", reason: nil)
-            } else {
-                authorization = Authorization(allowed: false, outcome: "requires_approval", reason: "Requires explicit Mac Control approval.")
-            }
+            authorization = Authorization(allowed: false, outcome: "blocked", reason: "Mac Control policy blocks this action.", grantId: nil)
+        case .alwaysAllow, .alwaysAsk:
+            authorization = grantAuthorization(request: request, plan: plan, policyURL: policyURL, now: now)
+                ?? defaultAuthorization(policy: policy, origin: origin, approvedOverride: approvedOverride)
         }
 
         appendAudit(
@@ -435,11 +871,58 @@ public enum MacControlPolicy {
                 origin: origin,
                 approval: policy,
                 outcome: authorization.outcome,
-                reason: authorization.reason
+                reason: authorization.reason,
+                grantId: authorization.grantId,
+                actorId: request?.actorId,
+                actorKind: request?.actorKind
             ),
             to: auditURL ?? defaultAuditURL()
         )
         return authorization
+    }
+
+    private static func defaultAuthorization(policy: Approval, origin: MacControlOrigin, approvedOverride: Bool) -> Authorization {
+        switch policy {
+        case .alwaysAllow:
+            return Authorization(allowed: true, outcome: "allowed", reason: nil, grantId: nil)
+        case .alwaysBlock:
+            return Authorization(allowed: false, outcome: "blocked", reason: "Mac Control policy blocks this action.", grantId: nil)
+        case .alwaysAsk:
+            if approvedOverride || origin.isLocalHuman {
+                return Authorization(allowed: true, outcome: approvedOverride ? "approved" : "allowed", reason: nil, grantId: nil)
+            }
+            return Authorization(allowed: false, outcome: "requires_approval", reason: "Requires explicit Mac Control approval.", grantId: nil)
+        }
+    }
+
+    private static func grantAuthorization(
+        request: MacControlActionRequest?,
+        plan: MacControlActionPlan?,
+        policyURL: URL?,
+        now: Date
+    ) -> Authorization? {
+        guard let request, let plan, let policyURL else { return nil }
+        guard let grants = try? MacControlPolicyGrantStore.activeMatching(
+            request: request,
+            plan: plan,
+            stateURL: policyURL,
+            now: now
+        ) else { return nil }
+
+        if let block = grants.first(where: { $0.effect == .block }) {
+            return Authorization(
+                allowed: false,
+                outcome: "blocked",
+                reason: "Mac Control policy grant \(block.id) blocks this action.",
+                grantId: block.id
+            )
+        }
+
+        if let allow = grants.first(where: { $0.effect == .allow }) {
+            return Authorization(allowed: true, outcome: "granted", reason: nil, grantId: allow.id)
+        }
+
+        return nil
     }
 
     private static func defaultAuditURL() -> URL {
@@ -569,6 +1052,8 @@ public enum MacControlActionBroker {
         _ request: MacControlActionRequest,
         defaults: UserDefaults = .standard,
         auditURL: URL? = nil,
+        policyURL: URL? = nil,
+        continuityURL: URL? = nil,
         runner: MacControlCommandRunning = MacControlProcessRunner()
     ) -> MacControlActionReceipt {
         let plan: MacControlActionPlan
@@ -589,12 +1074,22 @@ public enum MacControlActionBroker {
                 origin: request.origin,
                 defaults: defaults,
                 auditURL: auditURL,
-                approvedOverride: request.approved
+                approvedOverride: request.approved,
+                request: request,
+                plan: plan,
+                policyURL: policyURL
             )
             guard authorization.allowed else {
                 let outcome: MacControlActionReceipt.Outcome = authorization.outcome == "blocked" ? .blocked : .approvalRequired
                 return receipt(for: request, plan: plan, outcome: outcome, error: authorization.reason)
             }
+        }
+
+        let snapshot: MacControlContinuitySnapshot?
+        do {
+            snapshot = try continuitySnapshot(for: request, plan: plan, runner: runner)
+        } catch {
+            return receipt(for: request, plan: plan, outcome: .failed, error: "Continuity snapshot failed: \(error.localizedDescription)")
         }
 
         do {
@@ -612,9 +1107,33 @@ public enum MacControlActionBroker {
                     outputs.append(try runner.runNative(action, arguments: step.arguments))
                 }
             }
-            return receipt(for: request, plan: plan, outcome: .executed, outputs: outputs)
+            let receipt = receipt(
+                for: request,
+                plan: plan,
+                outcome: .executed,
+                outputs: outputs,
+                beforeRef: snapshot?.ref
+            )
+            if let snapshot, let continuityURL {
+                _ = try? MacControlContinuityStore.upsert(
+                    MacControlContinuityRecord(
+                        receiptId: receipt.receiptId,
+                        requestId: receipt.requestId,
+                        planId: receipt.planId,
+                        capabilityId: receipt.capabilityId,
+                        snapshot: snapshot,
+                        revertSteps: continuityRevertSteps(for: snapshot),
+                        status: .pending,
+                        createdAt: snapshot.capturedAt,
+                        revertedAt: nil,
+                        error: nil
+                    ),
+                    stateURL: continuityURL
+                )
+            }
+            return receipt
         } catch {
-            return receipt(for: request, plan: plan, outcome: .failed, error: error.localizedDescription)
+            return receipt(for: request, plan: plan, outcome: .failed, error: error.localizedDescription, beforeRef: snapshot?.ref)
         }
     }
 
@@ -680,12 +1199,97 @@ public enum MacControlActionBroker {
         )
     }
 
-    private static func receipt(for request: MacControlActionRequest, plan: MacControlActionPlan, outcome: MacControlActionReceipt.Outcome, outputs: [String] = [], error: String? = nil) -> MacControlActionReceipt {
-        receipt(for: request, planId: plan.planId, outcome: outcome, outputs: outputs, error: error)
+    private static func receipt(
+        for request: MacControlActionRequest,
+        plan: MacControlActionPlan,
+        outcome: MacControlActionReceipt.Outcome,
+        outputs: [String] = [],
+        error: String? = nil,
+        beforeRef: String? = nil,
+        afterRef: String? = nil
+    ) -> MacControlActionReceipt {
+        receipt(for: request, planId: plan.planId, outcome: outcome, outputs: outputs, error: error, beforeRef: beforeRef, afterRef: afterRef)
     }
 
-    private static func receipt(for request: MacControlActionRequest, planId: String, outcome: MacControlActionReceipt.Outcome, outputs: [String] = [], error: String? = nil) -> MacControlActionReceipt {
-        MacControlActionReceipt(receiptId: "macact_\(UUID().uuidString)", requestId: request.requestId, planId: planId, capabilityId: request.capabilityId, outcome: outcome, outputs: outputs, error: error)
+    private static func receipt(
+        for request: MacControlActionRequest,
+        planId: String,
+        outcome: MacControlActionReceipt.Outcome,
+        outputs: [String] = [],
+        error: String? = nil,
+        beforeRef: String? = nil,
+        afterRef: String? = nil
+    ) -> MacControlActionReceipt {
+        MacControlActionReceipt(
+            receiptId: "macact_\(UUID().uuidString)",
+            requestId: request.requestId,
+            planId: planId,
+            capabilityId: request.capabilityId,
+            outcome: outcome,
+            outputs: outputs,
+            error: error,
+            beforeRef: beforeRef,
+            afterRef: afterRef
+        )
+    }
+
+    private static func continuitySnapshot(
+        for request: MacControlActionRequest,
+        plan: MacControlActionPlan,
+        runner: MacControlCommandRunning
+    ) throws -> MacControlContinuitySnapshot? {
+        guard plan.continuityBreaker, request.capabilityId.hasPrefix("mac.wifi.") else { return nil }
+        let device = wifiDevice(from: request)
+        let power = try runner.runProcess("/usr/sbin/networksetup", arguments: ["-getairportpower", device])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let network = try runner.runProcess("/usr/sbin/networksetup", arguments: ["-getairportnetwork", device])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let timestamp = timestamp()
+        return MacControlContinuitySnapshot(
+            ref: "macsnap_\(request.requestId.replacingOccurrences(of: "-", with: "_"))",
+            capabilityId: request.capabilityId,
+            device: device,
+            beforePowerRaw: power,
+            beforeNetworkRaw: network,
+            beforeNetworkName: wifiNetworkName(from: network),
+            capturedAt: timestamp
+        )
+    }
+
+    public static func continuityRevertSteps(for snapshot: MacControlContinuitySnapshot) -> [MacControlContinuityRevertStep] {
+        if wifiPowerWasOff(snapshot.beforePowerRaw) {
+            return [
+                MacControlContinuityRevertStep(
+                    kind: .process,
+                    executable: "/usr/sbin/networksetup",
+                    arguments: ["-setairportpower", snapshot.device, "off"],
+                    preview: "Restore Wi-Fi power off on \(snapshot.device)",
+                    redacted: false
+                ),
+            ]
+        }
+
+        var steps = [
+            MacControlContinuityRevertStep(
+                kind: .process,
+                executable: "/usr/sbin/networksetup",
+                arguments: ["-setairportpower", snapshot.device, "on"],
+                preview: "Restore Wi-Fi power on for \(snapshot.device)",
+                redacted: false
+            ),
+        ]
+        if let network = snapshot.beforeNetworkName {
+            steps.append(
+                MacControlContinuityRevertStep(
+                    kind: .process,
+                    executable: "/usr/sbin/networksetup",
+                    arguments: ["-setairportnetwork", snapshot.device, network],
+                    preview: "Reconnect Wi-Fi to previous saved network \(redactedName("ssid", network))",
+                    redacted: true
+                )
+            )
+        }
+        return steps
     }
 
     private static func wifiDevice(from request: MacControlActionRequest) -> String {
@@ -708,6 +1312,23 @@ public enum MacControlActionBroker {
 
     private static func redactedName(_ label: String, _ value: String) -> String {
         value.isEmpty ? "<\(label)>" : "<\(label):\(value.count) chars>"
+    }
+
+    private static func wifiPowerWasOff(_ raw: String) -> Bool {
+        raw.localizedCaseInsensitiveContains(": off") || raw.localizedCaseInsensitiveContains(" off")
+    }
+
+    private static func wifiNetworkName(from raw: String) -> String? {
+        let marker = "Current Wi-Fi Network:"
+        guard let range = raw.range(of: marker, options: [.caseInsensitive]) else { return nil }
+        let name = raw[range.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? nil : name
+    }
+
+    private static func timestamp(_ date: Date = Date()) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: date)
     }
 
     private static func appleScriptString(_ value: String) -> String {
@@ -1077,12 +1698,21 @@ public enum MacControlWire {
         for data: Data,
         defaults: UserDefaults = .standard,
         auditURL: URL? = nil,
+        policyURL: URL? = nil,
+        continuityURL: URL? = nil,
         runner: MacControlCommandRunning = MacControlProcessRunner(),
         encoder: JSONEncoder? = nil
     ) throws -> Data {
         let request = try decodeRequest(data)
         let nativePlan = try? MacControlActionBroker.plan(for: request.nativeRequest)
-        let receipt = MacControlActionBroker.evaluate(request.nativeRequest, defaults: defaults, auditURL: auditURL, runner: runner)
+        let receipt = MacControlActionBroker.evaluate(
+            request.nativeRequest,
+            defaults: defaults,
+            auditURL: auditURL,
+            policyURL: policyURL,
+            continuityURL: continuityURL,
+            runner: runner
+        )
         return try (encoder ?? wireEncoder()).encode(wireEvaluation(from: receipt, plan: nativePlan.map { wirePlan(from: $0, request: request) }, request: request))
     }
 
@@ -1143,8 +1773,8 @@ public enum MacControlWire {
             result: result,
             risk: risk,
             permissionSnapshotRefs: [],
-            beforeRef: nil,
-            afterRef: nil,
+            beforeRef: receipt.beforeRef,
+            afterRef: receipt.afterRef,
             auditId: auditId,
             revert: rollback,
             secretRefs: secretRefs(from: request.arguments),
@@ -1235,6 +1865,10 @@ private extension MacControlWireRequest {
             capabilityId: capabilityId,
             actorId: actor.id,
             origin: MacControlOrigin(rawValue: actor.kind) ?? .system,
+            actorKind: actor.kind,
+            actorRole: actor.role,
+            assignmentId: actor.assignmentId,
+            runId: actor.runId,
             arguments: arguments.compactMapValues(\.stringValue),
             dryRun: dryRun,
             approved: approved ?? false

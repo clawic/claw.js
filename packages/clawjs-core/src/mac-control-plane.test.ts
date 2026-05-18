@@ -1,5 +1,6 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 
 import {
   MAC_CAPABILITY_ATLAS,
@@ -25,6 +26,10 @@ import {
   macRoleAssignmentSchema,
   resolveClawCliCommand,
 } from "./index.ts";
+
+function renderSafeCli(text: string): string {
+  return text.replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
 
 test("Mac control plane registry captures the binding V1 governance defaults", () => {
   assert.equal(clawMacControlPlaneRegistry.version, 1);
@@ -199,6 +204,32 @@ test("Mac V1 executable slice is fully declared", () => {
   assert.equal(findMacAtlasCapability("mac.shortcut.run")?.risk, "high");
 });
 
+test("Mac atlas verbs have an explicit full-family review", () => {
+  const verbAudit = fs.readFileSync(new URL("../../../docs/mac-control-plane-verb-audit.md", import.meta.url), "utf8");
+  for (const capability of MAC_CAPABILITY_ATLAS) {
+    assert.ok(verbAudit.includes(`| \`${capability.id}\``), `missing verb audit row for ${capability.id}`);
+    assert.ok(
+      verbAudit.includes(capability.cli.canonicalUsage) || verbAudit.includes(renderSafeCli(capability.cli.canonicalUsage)),
+      `missing canonical CLI ${capability.cli.canonicalUsage}`,
+    );
+    assert.equal(capability.cli.root.length > 0, true);
+    assert.equal(capability.action.length > 0, true);
+  }
+});
+
+test("Mac atlas backends have explicit macOS version drift review", () => {
+  const versionDriftAudit = fs.readFileSync(new URL("../../../docs/mac-control-plane-version-drift-audit.md", import.meta.url), "utf8");
+  for (const snippet of ["MCQ-002", "MCQ-004", "macOS 14", "macOS 15", "macOS 26"]) {
+    assert.ok(versionDriftAudit.includes(snippet), `missing version drift marker ${snippet}`);
+  }
+
+  for (const capability of MAC_CAPABILITY_ATLAS) {
+    assert.ok(versionDriftAudit.includes(`| \`${capability.id}\``), `missing version drift row for ${capability.id}`);
+    assert.ok(versionDriftAudit.includes(`| \`${capability.backend.strategy}\``), `missing backend strategy ${capability.backend.strategy}`);
+    assert.ok(versionDriftAudit.includes(`| ${capability.coverageState} |`), `missing coverage state ${capability.coverageState}`);
+  }
+});
+
 test("Mac public schemas validate action, receipt, permission, grant and role contracts", () => {
   const host = {
     hostId: "host.local",
@@ -276,7 +307,20 @@ test("Mac public schemas validate action, receipt, permission, grant and role co
     createdBy: { kind: "owner_cli", id: "user.owner", role: "owner" },
     createdAt: "2026-05-17T00:00:00.000Z",
   });
+  assert.equal(grant.effect, "allow");
   assert.deepEqual(grant.duration, { kind: "task", ttlSeconds: 1800 });
+
+  const blockGrant = macPolicyGrantSchema.parse({
+    schemaVersion: clawContractVersionV1,
+    id: "grant_block_1",
+    subject: { kind: "role", id: "operator" },
+    effect: "block",
+    permissionIds: ["mac.permission.accessibility"],
+    riskCeiling: "critical",
+    createdBy: { kind: "owner_cli", id: "user.owner", role: "owner" },
+    createdAt: "2026-05-17T00:00:00.000Z",
+  });
+  assert.equal(blockGrant.effect, "block");
 
   const role = macRoleAssignmentSchema.parse({
     schemaVersion: clawContractVersionV1,

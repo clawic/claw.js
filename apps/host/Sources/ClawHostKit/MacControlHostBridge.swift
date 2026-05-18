@@ -20,11 +20,13 @@ public enum MacControlHostBridge {
         case "execute":
             return try executeResponse(arguments: arguments, environment: environment, runner: runner)
         case "permissions":
-            return permissionsResponse(environment: environment)
+            return try permissionsResponse(environment: environment)
+        case "policy":
+            return try policyResponse(arguments: arguments, environment: environment)
         case "audit":
             return try auditResponse(environment: environment)
         case "revert":
-            return try revertResponse(arguments: arguments, environment: environment)
+            return try revertResponse(arguments: arguments, environment: environment, runner: runner)
         default:
             throw CommanderError.invalidCommand("Unknown Mac Control host bridge action \(action).")
         }
@@ -55,7 +57,16 @@ public enum MacControlHostBridge {
         let requestData = try requestData(from: arguments, environment: environment, defaultDryRun: false)
         let auditURL = try StatePaths.ensureStateDirectory(environment: environment)
             .appendingPathComponent(MacControlPolicy.auditFilename)
-        let data = try MacControlWire.evaluateJSON(for: requestData, auditURL: auditURL, runner: runner)
+        let stateDirectory = auditURL.deletingLastPathComponent()
+        let policyURL = MacControlPolicyGrantStore.fileURL(stateDirectory: stateDirectory)
+        let continuityURL = MacControlContinuityStore.fileURL(stateDirectory: stateDirectory)
+        let data = try MacControlWire.evaluateJSON(
+            for: requestData,
+            auditURL: auditURL,
+            policyURL: policyURL,
+            continuityURL: continuityURL,
+            runner: runner
+        )
         let json = try decodeJSONValue(data)
         let request = try MacControlWire.decodeRequest(requestData)
         let risk = json.objectValue?["receipt"]?.objectValue?["risk"]?.stringValue ?? "high"
@@ -70,18 +81,42 @@ public enum MacControlHostBridge {
         )
     }
 
-    private static func permissionsResponse(environment: [String: String]) -> CommandResponse {
+    private static func permissionsResponse(environment: [String: String]) throws -> CommandResponse {
+        let stateDirectory = try StatePaths.ensureStateDirectory(environment: environment)
+        let lifecycleURL = MacControlPermissionLifecycleStore.fileURL(stateDirectory: stateDirectory)
         let permissions = MacControlPermissionID.allCases.map { permission in
-            JSONValue.object([
+            let status = MacControlPermissionBroker.status(for: permission)
+            let lifecycle = try? MacControlPermissionLifecycleStore.observeStatus(
+                permission: permission,
+                status: status,
+                stateURL: lifecycleURL
+            )
+            let firstUsedAt: JSONValue = lifecycle.flatMap(\.firstUsedAt).map { .string($0) } ?? .null
+            let lastCheckedAt: JSONValue = lifecycle.map { .string($0.lastCheckedAt) } ?? .null
+            let lastRequestedAt: JSONValue = lifecycle.flatMap(\.lastRequestedAt).map { .string($0) } ?? .null
+            let lastRequestResult: JSONValue = lifecycle.flatMap(\.lastRequestResult).map { .string($0.rawValue) } ?? .null
+            let revocationDetectedAt: JSONValue = lifecycle.flatMap(\.revocationDetectedAt).map { .string($0) } ?? .null
+            let payload: [String: JSONValue] = [
                 "id": .string(permission.rawValue),
-                "status": .string(MacControlPermissionBroker.status(for: permission).rawValue),
-            ])
+                "status": .string(status.rawValue),
+                "requestedBefore": .bool(lifecycle?.requestedBefore ?? false),
+                "canRequest": .bool((lifecycle?.canRequest) ?? (status == .notDetermined)),
+                "requiresRestart": .bool(lifecycle?.requiresRestart ?? false),
+                "source": .string(lifecycle?.source ?? "signed-host-mac-permission-broker"),
+                "firstUsedAt": firstUsedAt,
+                "lastCheckedAt": lastCheckedAt,
+                "lastRequestedAt": lastRequestedAt,
+                "lastRequestResult": lastRequestResult,
+                "revocationDetectedAt": revocationDetectedAt,
+            ]
+            return JSONValue.object(payload)
         }
         return commandResponse(
             requestId: "macperm_\(UUID().uuidString)",
             ok: true,
             data: .object([
                 "schemaVersion": .integer(MacControlWire.schemaVersion),
+                "lifecyclePath": .string(lifecycleURL.path),
                 "permissions": .array(permissions),
             ]),
             adapter: "mac-permission-broker",
@@ -89,6 +124,66 @@ public enum MacControlHostBridge {
             capabilityId: "mac.permissions.status",
             riskLevel: "read"
         )
+    }
+
+    private static func policyResponse(arguments: [String: String], environment: [String: String]) throws -> CommandResponse {
+        let stateDirectory = try StatePaths.ensureStateDirectory(environment: environment)
+        let policyURL = MacControlPolicyGrantStore.fileURL(stateDirectory: stateDirectory)
+        let command = arguments["command"] ?? arguments["policy-command"] ?? arguments["policy_command"] ?? "list"
+
+        switch command {
+        case "list":
+            let grants = try MacControlPolicyGrantStore.list(stateURL: policyURL)
+            return commandResponse(
+                requestId: "macpolicy_\(UUID().uuidString)",
+                ok: true,
+                data: .object([
+                    "schemaVersion": .integer(MacControlWire.schemaVersion),
+                    "policyPath": .string(policyURL.path),
+                    "grants": try decodeGrantList(grants),
+                ]),
+                adapter: "mac-control-policy",
+                environment: environment,
+                capabilityId: "mac.policy.list",
+                riskLevel: "read"
+            )
+        case "upsert", "grant":
+            let grant = try policyGrant(from: arguments)
+            let saved = try MacControlPolicyGrantStore.upsert(grant, stateURL: policyURL)
+            return commandResponse(
+                requestId: "macpolicy_\(UUID().uuidString)",
+                ok: true,
+                data: .object([
+                    "schemaVersion": .integer(MacControlWire.schemaVersion),
+                    "policyPath": .string(policyURL.path),
+                    "grant": try decodeGrant(saved),
+                ]),
+                adapter: "mac-control-policy",
+                environment: environment,
+                capabilityId: "mac.policy.upsert",
+                riskLevel: "medium"
+            )
+        case "revoke":
+            guard let id = arguments["id"] ?? arguments["grant-id"] ?? arguments["grant_id"], !id.isEmpty else {
+                throw CommanderError.invalidArguments("Mac Control policy revoke requires --id.")
+            }
+            let revoked = try MacControlPolicyGrantStore.revoke(id: id, stateURL: policyURL)
+            return commandResponse(
+                requestId: "macpolicy_\(UUID().uuidString)",
+                ok: revoked != nil,
+                data: .object([
+                    "schemaVersion": .integer(MacControlWire.schemaVersion),
+                    "policyPath": .string(policyURL.path),
+                    "grant": try revoked.map(decodeGrant) ?? .null,
+                ]),
+                adapter: "mac-control-policy",
+                environment: environment,
+                capabilityId: "mac.policy.revoke",
+                riskLevel: "medium"
+            )
+        default:
+            throw CommanderError.invalidCommand("Unknown Mac Control policy command \(command).")
+        }
     }
 
     private static func auditResponse(environment: [String: String]) throws -> CommandResponse {
@@ -120,26 +215,102 @@ public enum MacControlHostBridge {
         )
     }
 
-    private static func revertResponse(arguments: [String: String], environment: [String: String]) throws -> CommandResponse {
+    private static func revertResponse(
+        arguments: [String: String],
+        environment: [String: String],
+        runner: MacControlCommandRunning
+    ) throws -> CommandResponse {
         guard let receiptId = arguments["receipt-id"] ?? arguments["receipt_id"], !receiptId.isEmpty else {
             throw CommanderError.invalidArguments("Mac Control revert requires --receipt-id.")
         }
+        let stateDirectory = try StatePaths.ensureStateDirectory(environment: environment)
+        let continuityURL = MacControlContinuityStore.fileURL(stateDirectory: stateDirectory)
+        guard let record = try MacControlContinuityStore.record(receiptId: receiptId, stateURL: continuityURL) else {
+            return commandResponse(
+                requestId: "macrev_\(UUID().uuidString)",
+                ok: false,
+                data: .object([
+                    "schemaVersion": .integer(MacControlWire.schemaVersion),
+                    "receiptId": .string(receiptId),
+                    "continuityPath": .string(continuityURL.path),
+                    "status": .string("missing_snapshot"),
+                    "reason": .string("No continuity snapshot is available for this receipt."),
+                ]),
+                error: CommanderError.notFound("Mac Control continuity snapshot was not found for \(receiptId).").payload,
+                adapter: "mac-control-revert",
+                environment: environment,
+                capabilityId: "mac.revert",
+                riskLevel: "high"
+            )
+        }
 
-        return commandResponse(
-            requestId: "macrev_\(UUID().uuidString)",
-            ok: false,
-            data: .object([
-                "schemaVersion": .integer(MacControlWire.schemaVersion),
-                "receiptId": .string(receiptId),
-                "status": .string("plan_required"),
-                "reason": .string("Mac Control revert is broker-owned; submit a revert plan before execution."),
-            ]),
-            error: CommanderError.permissionDenied("Mac Control revert requires an explicit broker revert plan.").payload,
-            adapter: "mac-control",
-            environment: environment,
-            capabilityId: "mac.revert",
-            riskLevel: "high"
-        )
+        let confirm = boolArgument(arguments["confirm"] ?? arguments["approved"]) ?? false
+        guard confirm else {
+            return commandResponse(
+                requestId: "macrev_\(UUID().uuidString)",
+                ok: true,
+                data: .object([
+                    "schemaVersion": .integer(MacControlWire.schemaVersion),
+                    "receiptId": .string(receiptId),
+                    "continuityPath": .string(continuityURL.path),
+                    "status": .string("confirmation_required"),
+                    "snapshotRef": .string(record.snapshot.ref),
+                    "capabilityId": .string(record.capabilityId),
+                    "revertSteps": try decodeRevertSteps(record.revertSteps),
+                    "reason": .string("Mac Control revert is broker-owned and requires explicit confirmation before execution."),
+                ]),
+                adapter: "mac-control-revert",
+                environment: environment,
+                capabilityId: "mac.revert",
+                riskLevel: "high"
+            )
+        }
+
+        do {
+            var outputs: [JSONValue] = []
+            for step in record.revertSteps {
+                switch step.kind {
+                case .process:
+                    let output = try runner.runProcess(step.executable, arguments: step.arguments)
+                    outputs.append(.string(output))
+                }
+            }
+            let updated = try MacControlContinuityStore.markReverted(receiptId: receiptId, stateURL: continuityURL) ?? record
+            return commandResponse(
+                requestId: "macrev_\(UUID().uuidString)",
+                ok: true,
+                data: .object([
+                    "schemaVersion": .integer(MacControlWire.schemaVersion),
+                    "receiptId": .string(receiptId),
+                    "continuityPath": .string(continuityURL.path),
+                    "status": .string(updated.status.rawValue),
+                    "snapshotRef": .string(record.snapshot.ref),
+                    "outputs": .array(outputs),
+                ]),
+                adapter: "mac-control-revert",
+                environment: environment,
+                capabilityId: "mac.revert",
+                riskLevel: "high"
+            )
+        } catch {
+            _ = try? MacControlContinuityStore.markFailed(receiptId: receiptId, error: error.localizedDescription, stateURL: continuityURL)
+            return commandResponse(
+                requestId: "macrev_\(UUID().uuidString)",
+                ok: false,
+                data: .object([
+                    "schemaVersion": .integer(MacControlWire.schemaVersion),
+                    "receiptId": .string(receiptId),
+                    "continuityPath": .string(continuityURL.path),
+                    "status": .string("failed"),
+                    "reason": .string(error.localizedDescription),
+                ]),
+                error: CommanderError.internalFailure("Mac Control revert failed: \(error.localizedDescription)").payload,
+                adapter: "mac-control-revert",
+                environment: environment,
+                capabilityId: "mac.revert",
+                riskLevel: "high"
+            )
+        }
     }
 
     private static func requestData(
@@ -210,6 +381,68 @@ public enum MacControlHostBridge {
             }
         }
         return values
+    }
+
+    private static func policyGrant(from arguments: [String: String]) throws -> MacControlPolicyGrant {
+        guard let subjectKindRaw = arguments["subject-kind"] ?? arguments["subject_kind"],
+              let subjectKind = MacControlPolicySubjectKind(rawValue: subjectKindRaw) else {
+            throw CommanderError.invalidArguments("Mac Control policy grant requires --subject-kind.")
+        }
+        guard let subjectId = arguments["subject-id"] ?? arguments["subject_id"], !subjectId.isEmpty else {
+            throw CommanderError.invalidArguments("Mac Control policy grant requires --subject-id.")
+        }
+
+        let effect = (arguments["effect"].flatMap(MacControlPolicyGrantEffect.init(rawValue:))) ?? .allow
+        let riskCeiling = (arguments["risk-ceiling"] ?? arguments["risk_ceiling"])
+            .flatMap(MacControlActionPlan.Risk.init(rawValue:)) ?? .read
+        let permissionIds = try csv(arguments["permission-ids"] ?? arguments["permission_ids"]).map { raw in
+            guard let permission = MacControlPermissionID(rawValue: raw) else {
+                throw CommanderError.invalidArguments("Unknown Mac permission id \(raw).")
+            }
+            return permission
+        }
+        let durationKind = (arguments["duration-kind"] ?? arguments["duration_kind"])
+            .flatMap(MacControlPolicyGrantDurationKind.init(rawValue:)) ?? .task
+        let status = arguments["status"].flatMap(MacControlPolicyGrantStatus.init(rawValue:)) ?? .active
+        let createdByKind = arguments["created-by-kind"] ?? arguments["created_by_kind"] ?? MacControlOrigin.ownerCLI.rawValue
+        let createdById = arguments["created-by-id"] ?? arguments["created_by_id"] ?? "claw-host"
+        let createdByRole = arguments["created-by-role"] ?? arguments["created_by_role"] ?? "owner"
+
+        return MacControlPolicyGrant(
+            id: arguments["id"] ?? arguments["grant-id"] ?? arguments["grant_id"] ?? "macgrant_\(UUID().uuidString)",
+            subject: MacControlPolicySubject(kind: subjectKind, id: subjectId),
+            effect: effect,
+            capabilityIds: csv(arguments["capability-ids"] ?? arguments["capability_ids"]),
+            permissionIds: permissionIds,
+            riskCeiling: riskCeiling,
+            duration: MacControlPolicyGrantDuration(
+                kind: durationKind,
+                ttlSeconds: (arguments["ttl-seconds"] ?? arguments["ttl_seconds"]).flatMap(Int.init)
+            ),
+            createdBy: MacControlWireActor(kind: createdByKind, id: createdById, role: createdByRole),
+            createdAt: arguments["created-at"] ?? arguments["created_at"] ?? ISO8601DateFormatter().string(from: Date()),
+            expiresAt: arguments["expires-at"] ?? arguments["expires_at"],
+            status: status
+        )
+    }
+
+    private static func decodeGrantList(_ grants: [MacControlPolicyGrant]) throws -> JSONValue {
+        try decodeJSONValue(JSONEncoder().encode(grants))
+    }
+
+    private static func decodeGrant(_ grant: MacControlPolicyGrant) throws -> JSONValue {
+        try decodeJSONValue(JSONEncoder().encode(grant))
+    }
+
+    private static func decodeRevertSteps(_ steps: [MacControlContinuityRevertStep]) throws -> JSONValue {
+        try decodeJSONValue(JSONEncoder().encode(steps))
+    }
+
+    private static func csv(_ raw: String?) -> [String] {
+        raw?
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty } ?? []
     }
 
     private static func boolArgument(_ raw: String?) -> Bool? {

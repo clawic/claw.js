@@ -88,7 +88,16 @@ direct roots such as `claw wifi`, `claw window`, `claw shortcut`, `claw app`,
 `mac` prefix to act on the current Mac. `claw mac` is the control-plane portal
 for atlas, coverage, doctor, audit, planning, permission overview, and revert.
 `claw permissions` is the central root for OS permission state and framework
-grants.
+grants. The signed host keeps permission lifecycle evidence in
+`mac-permission-lifecycle.json`, including `requestedBefore`,
+`lastRequestedAt`, `lastCheckedAt`, and `revocationDetectedAt`.
+Granular Mac Control policy grants are persisted by the signed host in
+`mac-control-policy-grants.json`; host-side policy edits support `list`,
+`upsert`, and `revoke` for role, user, agent, assignment, run, MCP client, and
+automation subjects.
+Connectivity-changing Wi-Fi actions persist broker-owned continuity snapshots
+in `mac-control-continuity.json`; `claw mac revert macact_...` remains
+plan-first and signed-host execution requires explicit confirmation.
 
 The Mac Control Plane is plan-first and signed-host brokered. CLI surfaces may
 be visible while a family is atlas-only; they report coverage, gaps, or dry-run

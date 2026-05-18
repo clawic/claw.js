@@ -18,6 +18,8 @@ const sourceConversationId = "019e366f-8e14-7e51-8817-9820d2914dc4";
 
 const requiredDocs = [
   "docs/mac-control-plane.md",
+  "docs/mac-control-plane-verb-audit.md",
+  "docs/mac-control-plane-version-drift-audit.md",
   "docs/mac-control-plane-source-decision-audit.md",
   "docs/mac-control-plane-closure-audit.md",
   "docs/mac-control-plane-decision-matrix.md",
@@ -175,6 +177,10 @@ function requireNormalizedText(label, text, snippet) {
   if (!normalizedText.includes(normalizedSnippet)) fail(`${label} is missing ${snippet}`);
 }
 
+function renderSafeCli(text) {
+  return text.replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
+
 for (const doc of requiredDocs) readRequired(doc);
 
 const sourceAudit = readRequired("docs/mac-control-plane-source-decision-audit.md");
@@ -213,8 +219,48 @@ for (const snippet of ["Mac Action Broker", "Mac Permission Broker", "Related su
 }
 
 const macDocs = readRequired("docs/mac-control-plane.md");
-for (const snippet of ["Related surfaces", "mac.directCliAction", "mac.permissionLifecycle", "claw permissions", "MAC_PROGRAMMATIC_SURFACES", "mac.execute", "/v1/mac/execute", "claw.mac.execute", "docs/mac-native-legacy-audit.md", "stt", "tts", "voice-notes"]) {
+for (const snippet of ["Related surfaces", "mac.directCliAction", "mac.permissionLifecycle", "claw permissions", "MAC_PROGRAMMATIC_SURFACES", "mac.execute", "/v1/mac/execute", "claw.mac.execute", "docs/mac-native-legacy-audit.md", "Mac Control Plane Verb Audit", "Mac Control Plane Version Drift Audit", "stt", "tts", "voice-notes", "mac-permission-lifecycle.json", "requestedBefore", "revocationDetectedAt", "mac-control-policy-grants.json", "most-restrictive-wins", "role", "mcp_client", "mac-control-continuity.json", "confirmation_required", "macsnap_"]) {
   requireNormalizedText("Mac Control Plane docs", macDocs, snippet);
+}
+
+const verbAudit = readRequired("docs/mac-control-plane-verb-audit.md");
+for (const snippet of [sourceConversationId, "MCQ-011", "Capability id", "Canonical CLI", "Verb decision"]) {
+  requireNormalizedText("Mac verb audit", verbAudit, snippet);
+}
+for (const capability of MAC_CAPABILITY_ATLAS) {
+  requireText("Mac verb audit capability ids", verbAudit, capability.id);
+  if (!verbAudit.includes(capability.cli.canonicalUsage) && !verbAudit.includes(renderSafeCli(capability.cli.canonicalUsage))) {
+    fail(`Mac verb audit canonical CLI is missing ${capability.cli.canonicalUsage}`);
+  }
+}
+
+const versionDriftAudit = readRequired("docs/mac-control-plane-version-drift-audit.md");
+for (const snippet of [
+  sourceConversationId,
+  "MCQ-002",
+  "MCQ-004",
+  "macOS 14",
+  "macOS 15",
+  "macOS 26",
+  "https://developer.apple.com/documentation/macos-release-notes/macos-14-release-notes",
+  "https://developer.apple.com/documentation/macos-release-notes/macos-15-release-notes",
+  "https://developer.apple.com/go/?id=macos-26-rn",
+  "https://developer.apple.com/documentation/bundleresources/protected-resources",
+  "https://developer.apple.com/documentation/corewlan/cwinterface",
+  "https://developer.apple.com/documentation/applicationservices/axuielement_h",
+  "https://support.apple.com/guide/shortcuts-mac/apd455c82f02/mac",
+]) {
+  requireNormalizedText("Mac version drift audit", versionDriftAudit, snippet);
+}
+for (const capability of MAC_CAPABILITY_ATLAS) {
+  requireText("Mac version drift audit capability ids", versionDriftAudit, capability.id);
+  requireText("Mac version drift audit backend strategies", versionDriftAudit, capability.backend.strategy);
+  requireText("Mac version drift audit coverage states", versionDriftAudit, capability.coverageState);
+}
+
+const cliDocs = readRequired("docs/cli.md");
+for (const snippet of ["mac-permission-lifecycle.json", "requestedBefore", "lastRequestedAt", "revocationDetectedAt", "mac-control-policy-grants.json", "upsert", "revoke", "mac-control-continuity.json"]) {
+  requireNormalizedText("CLI docs", cliDocs, snippet);
 }
 
 const legacyAudit = readRequired("docs/mac-native-legacy-audit.md");
@@ -237,6 +283,26 @@ for (const snippet of [
 const apiDocs = readRequired("docs/api.md");
 for (const snippet of ["claw.mac", "/v1/mac/plan", "mac.plan"]) {
   requireNormalizedText("API docs", apiDocs, snippet);
+}
+
+const hostMacControl = readRequired("apps/host/Sources/ClawHostKit/MacControl.swift");
+for (const snippet of ["MacControlPermissionLifecycleStore", "mac-permission-lifecycle.json", "requestedBefore", "lastRequestedAt", "revocationDetectedAt", "MacControlPolicyGrantStore", "mac-control-policy-grants.json", "MacControlPolicySubjectKind", "mcpClient", "grantAuthorization", "MacControlContinuityStore", "mac-control-continuity.json", "continuitySnapshot", "continuityRevertSteps", "beforeRef"]) {
+  requireText("Host Mac Control lifecycle store", hostMacControl, snippet);
+}
+
+const hostMacBridge = readRequired("apps/host/Sources/ClawHostKit/MacControlHostBridge.swift");
+for (const snippet of ["lifecyclePath", "requestedBefore", "lastCheckedAt", "revocationDetectedAt", "policyPath", "policyResponse", "policyGrant(from:", "continuityPath", "confirmation_required", "decodeRevertSteps"]){
+  requireText("Host Mac Control bridge lifecycle projection", hostMacBridge, snippet);
+}
+
+const hostMacTests = readRequired("apps/host/Tests/CommanderE2ETests/MacControlTests.swift");
+for (const snippet of ["testPermissionLifecycleStorePersistsRequestsAndDetectsRevocation", "mac-permission-lifecycle", "requestedBefore", "revocationDetectedAt", "testPolicyGrantStoreMatchesEveryActorScope", "testHostBridgePersistsPolicyGrantEditsAndUsesThemForExecution", "grant_role_operator_block", "testHostBridgeCapturesContinuitySnapshotAndExecutesConfirmedWifiRevert", "mac-control-continuity", "confirmation_required"]) {
+  requireText("Host Mac Control lifecycle tests", hostMacTests, snippet);
+}
+
+const macCore = readRequired("packages/clawjs-core/src/mac-control-plane.ts");
+for (const snippet of ["macPolicyGrantSchema", "effect: z.enum([\"allow\", \"block\"])", "\"mcp_client\"", "\"automation\""]) {
+  requireText("Mac policy grant schema", macCore, snippet);
 }
 
 const nativeUsageAllowlist = JSON.parse(readRequired("docs/mac-native-usage-allowlist.json"));

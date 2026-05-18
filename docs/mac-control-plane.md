@@ -9,6 +9,10 @@ The architecture decision is [ADR 0023: Mac Control Plane V1](./adr/0023-mac-con
 The permission decision is [ADR 0024: Mac Permission Broker V1](./adr/0024-mac-permission-broker-v1.md).
 Source decisions are tracked in [Mac Control Plane Source Decision Audit](./mac-control-plane-source-decision-audit.md)
 and [Mac Control Plane Decision Matrix](./mac-control-plane-decision-matrix.md).
+Verb choices for executable and atlas-only capabilities are reviewed in
+[Mac Control Plane Verb Audit](./mac-control-plane-verb-audit.md).
+Version drift for macOS 14+ is tracked in
+[Mac Control Plane Version Drift Audit](./mac-control-plane-version-drift-audit.md).
 Agents working on this surface should use
 `skills/mac-control-plane-work/SKILL.md`.
 Native legacy debt is tracked in
@@ -46,6 +50,9 @@ Native legacy debt is tracked in
   explicit grants or approvals.
 - Every mutation creates a receipt and durable redacted audit event.
 - Critical reversible actions use snapshot and rollback timers when possible.
+- Connectivity-changing Wi-Fi actions capture a signed-host continuity snapshot
+  before mutation and can be reverted only through the broker-owned revert
+  path with explicit confirmation.
 
 ## V1 Executable Slice
 
@@ -84,6 +91,41 @@ registers these names in `MAC_PROGRAMMATIC_SURFACES`:
 
 `plan` is non-mutating. `execute` and `revert` require signed-host routing and
 approval evaluation before any native action can run.
+
+## Permission Lifecycle
+
+The signed host owns durable permission lifecycle state in
+`mac-permission-lifecycle.json` under the host state directory. Permission
+checks update `lastCheckedAt`, `canRequest`, and restart guidance without
+triggering prompts. Native request execution records `requestedBefore`,
+`lastRequestedAt`, and `lastRequestResult`. When a permission previously known
+as granted is later observed as denied or not determined, the broker records
+`revocationDetectedAt` so CLI, API, MCP, and Clawix surfaces can explain the
+state change instead of treating it as a fresh unknown permission.
+
+## Policy Grants
+
+The signed host owns granular allow/block policy grants in
+`mac-control-policy-grants.json` under the host state directory. Grants target
+the V1 subject scopes `role`, `user`, `agent`, `assignment`, `run`,
+`mcp_client`, and `automation`; each grant can scope to capability ids,
+permission ids, and a risk ceiling. Block grants override allow grants and
+explicit approvals, preserving the most-restrictive-wins rule. The host bridge
+exposes policy `list`, `upsert`, and `revoke` actions so persisted edits are
+made through the broker-owned host path rather than through ad hoc Node state.
+
+## Continuity And Revert
+
+The signed host owns Wi-Fi continuity snapshots in
+`mac-control-continuity.json` under the host state directory. For continuity
+breaker actions such as Wi-Fi disconnect, connect, and power-off, the Mac
+Action Broker reads the current Wi-Fi power and network state before executing
+the mutation and stores a `macsnap_...` reference on the resulting `macact_...`
+receipt. `system mac revert --receipt-id macact_...` first returns the planned
+revert steps and `confirmation_required`; execution requires
+`--confirm true`. Revert steps are best-effort and broker-owned, using
+`networksetup` to restore Wi-Fi power and reconnect to the previous saved
+network when the snapshot contains one.
 
 ## Route Graph
 
