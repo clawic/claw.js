@@ -68,8 +68,9 @@ Search V1.1 is built from these layers:
   vector, tombstone, or source-state changes.
 - **Semantic retrieval**: vectors live in `search.sqlite` and are queried only
   when a caller provides a local embedding. `semantic` and `hybrid` modes are
-  available without provider calls; embedding generation stays with throttled
-  source/extractor work.
+  available without provider calls; source adapters, `claw search embeddings
+  index`, and bounded `embed` jobs can generate deterministic `local-text-v1`
+  vectors for already indexed semantic-capable documents.
 - **Per-source limits**: source manifests declare body, fragment-count, and
   per-fragment byte limits. The store applies those limits before FTS writes so
   heavy extractors cannot broaden unrelated fast paths.
@@ -89,8 +90,8 @@ Search V1.1 is built from these layers:
   persistent process.
 - **Semantic candidates**: local embedding vectors can be stored beside Search
   documents and combined with lexical matches through semantic or hybrid query
-  strategies. Model choice and embedding generation remain adapter-owned; the
-  sidecar only stores vectors and applies deterministic similarity scoring.
+  strategies. The sidecar owns deterministic local backfill for already indexed
+  documents; provider-backed models remain external worker responsibilities.
 - **Actions and permissions**: results can expose actions, but execution remains
   brokered by grants/approvals. Sensitive previews are redacted before they
   reach generic Search output.

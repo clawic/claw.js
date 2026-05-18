@@ -253,7 +253,11 @@ the caller provides an embedding model and vector. `@clawjs/search` includes a
 deterministic local text embedding helper (`local-text-v1`) so adapters can
 generate reproducible vectors without calling providers; Root Search stores
 vectors and applies deterministic cosine similarity scoring alongside the
-existing ranking hints and context boosts.
+existing ranking hints and context boosts. Admin callers can also run
+`claw search embeddings index --source <source-id>` to backfill local vectors for
+already indexed documents on semantic-capable sources, or enqueue
+`claw search jobs enqueue embed --source <source-id>` so the bounded Search
+worker performs the same local-only embedding pass.
 
 Queries support structured filters through `SearchQueryInput.filters` and the
 CLI `--filters` flag. Filters may target built-in fields such as `domain`,
@@ -330,14 +334,16 @@ Semantic retrieval is opt-in per query and per source capability. Search stores
 local vectors in `search.sqlite` and can run `semantic` or `hybrid` ranking when
 the caller supplies a local embedding vector and model. The CLI can derive a
 query vector with `--embedding-model local-text-v1` or `--local-embedding true`
-for sources that have local vectors, such as `code.symbols`. The Search MCP
-surface mirrors this local-only path: `search.query` accepts
+for sources that have local vectors. Source adapters may write those vectors
+directly, and Search Index admins can backfill deterministic local vectors with
+`claw search embeddings index --source <source-id>` or throttled `embed` jobs.
+The Search MCP surface mirrors this local-only path: `search.query` accepts
 `embeddingModel: local-text-v1` or `localEmbedding: true`, and
 `search.embeddings.create` returns the deterministic local vector for callers
 that need to inspect or cache it.
 Search does not call external embedding providers from the sidecar;
-provider-backed generation and heavier extractor scheduling remain
-source/extractor responsibilities and can be throttled as background work.
+provider-backed generation remains `EXTERNAL PENDING` until an explicit
+provider worker owns credentials, billing, and throttling.
 
 Each source manifest declares indexing limits. `SearchStore` enforces body,
 fragment-count, and per-fragment byte budgets before writing to FTS, so a large

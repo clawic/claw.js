@@ -2903,6 +2903,80 @@ test("search rebuild indexes documents.blocks from document records", async () =
     assert.ok(result?.explanation?.matchedBy?.length);
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "scopeKind"), true);
 
+    const embeddingsIndex = await runCliCapture(["search", "embeddings", "index", "--source", "documents.blocks", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(embeddingsIndex.code, CLI_EXIT_OK);
+    const embeddingsIndexPayload = JSON.parse(embeddingsIndex.stdout) as {
+      data: { model: string; documents: number; indexed: number; selectedSources: string[] };
+    };
+    assert.equal(embeddingsIndexPayload.data.model, "local-text-v1");
+    assert.equal(embeddingsIndexPayload.data.documents, 1);
+    assert.equal(embeddingsIndexPayload.data.indexed, 1);
+    assert.deepEqual(embeddingsIndexPayload.data.selectedSources, ["documents.blocks"]);
+
+    const embeddingsStatus = await runCliCapture(["search", "embeddings", "status", "--source", "documents.blocks", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(embeddingsStatus.code, CLI_EXIT_OK);
+    const embeddingsStatusPayload = JSON.parse(embeddingsStatus.stdout) as {
+      data: { items: Array<{ source: string; shard: string; model: string; documents: number; vectors: number }> };
+    };
+    assert.equal(embeddingsStatusPayload.data.items.some((item) => item.source === "documents.blocks" && item.model === "local-text-v1" && item.documents === 1 && item.vectors === 1), true);
+
+    const semanticQuery = await runCliCapture([
+      "search",
+      "query",
+      "scoped block search",
+      "--domains",
+      "documents",
+      "--strategy",
+      "semantic",
+      "--embedding-model",
+      "local-text-v1",
+      "--data-dir",
+      dataRoot,
+      "--json",
+      "--limit",
+      "5",
+      "--explain",
+      "true",
+    ], workspaceRoot);
+    assert.equal(semanticQuery.code, CLI_EXIT_OK);
+    const semanticQueryPayload = JSON.parse(semanticQuery.stdout) as {
+      data: { results: Array<{ source: string; title: string; explanation?: { matchedBy?: string[] } }> };
+    };
+    const semanticResult = semanticQueryPayload.data.results.find((candidate) => candidate.title === "Implementation Blueprint");
+    assert.equal(semanticResult?.source, "documents.blocks");
+    assert.equal(semanticResult?.explanation?.matchedBy?.includes("semantic"), true);
+
+    const embeddingsJob = await runCliCapture([
+      "search",
+      "jobs",
+      "enqueue",
+      "embed",
+      "--source",
+      "documents.blocks",
+      "--id",
+      "job:documents:embed",
+      "--payload",
+      JSON.stringify({ limit: 10 }),
+      "--data-dir",
+      dataRoot,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(embeddingsJob.code, CLI_EXIT_OK);
+    const embeddingsJobPayload = JSON.parse(embeddingsJob.stdout) as { data: { item: { id: string; operation: string } } };
+    assert.equal(embeddingsJobPayload.data.item.id, "job:documents:embed");
+    assert.equal(embeddingsJobPayload.data.item.operation, "embed");
+
+    const embeddingsServiceRun = await runCliCapture(["search", "service", "run-once", "--source", "documents.blocks", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(embeddingsServiceRun.code, CLI_EXIT_OK);
+    const embeddingsServiceRunPayload = JSON.parse(embeddingsServiceRun.stdout) as {
+      data: { worker?: { items: Array<{ id: string; source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    assert.equal(embeddingsServiceRunPayload.data.worker?.items[0]?.id, "job:documents:embed");
+    assert.equal(embeddingsServiceRunPayload.data.worker?.items[0]?.source, "documents.blocks");
+    assert.equal(embeddingsServiceRunPayload.data.worker?.items[0]?.operation, "embed");
+    assert.equal(embeddingsServiceRunPayload.data.worker?.items[0]?.status, "done");
+    assert.equal(embeddingsServiceRunPayload.data.worker?.items[0]?.indexed, 1);
+
     const deleteBlock = await runCliCapture(["db", "document_blocks", "delete", createBlockPayload.data.id, "--json"], workspaceRoot);
     assert.equal(deleteBlock.code, CLI_EXIT_OK);
     const deletedBlockJobs = await runCliCapture(["search", "jobs", "--source", "documents.blocks", "--data-dir", dataRoot, "--json"], workspaceRoot);

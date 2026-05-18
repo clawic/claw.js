@@ -100,7 +100,7 @@ export interface SearchTombstone {
   reason?: string;
 }
 
-export type SearchIndexJobOperation = "upsert" | "delete" | "backfill" | "rebuild";
+export type SearchIndexJobOperation = "upsert" | "delete" | "backfill" | "rebuild" | "embed";
 
 export type SearchIndexJobStatus = "queued" | "leased" | "done" | "failed";
 

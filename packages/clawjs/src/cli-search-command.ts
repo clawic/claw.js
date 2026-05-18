@@ -780,6 +780,55 @@ export async function runSearchAdminCli(input: {
     return CLI_EXIT_OK;
   }
 
+  if (command === "embeddings") {
+    const action = input.positionals[2] ?? "status";
+    if (action === "create") {
+      const text = input.positionals.slice(3).join(" ") || input.flags.text;
+      if (!text) {
+        input.context.stderr.write(`Usage: ${input.binName} search embeddings create <text> [--json]\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const embedding = createLocalTextEmbedding(text, { model: LOCAL_TEXT_EMBEDDING_MODEL });
+      const data = { state: "ready", model: embedding.model, dimensions: embedding.vector.length, vector: embedding.vector };
+      if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "embeddings" });
+      else input.context.stdout.write(`model=${data.model} dimensions=${data.dimensions}\n`);
+      return CLI_EXIT_OK;
+    }
+    const store = openCliSearchStore(input.flags);
+    try {
+      registerCliSearchSources(store, input.flags);
+      if (action === "index") {
+        const summary = indexLocalSearchEmbeddings(store, {
+          sources: parseListFlag(input.flags.sources ?? input.flags.source),
+          domains: parseListFlag(input.flags.domains ?? input.flags.domain),
+          shards: parseListFlag(input.flags.shards ?? input.flags.shard),
+          limit: input.flags.limit ? Number(input.flags.limit) : undefined,
+          model: input.flags.model ?? input.flags["embedding-model"],
+        });
+        const data = { state: "ready", ...summary, storage: searchStorageMetadata(input.flags) };
+        if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "embeddings" });
+        else input.context.stdout.write(`indexed=${data.indexed} documents=${data.documents} model=${data.model}\n`);
+        return CLI_EXIT_OK;
+      }
+      if (action !== "status" && action !== "list") {
+        input.context.stderr.write(`Usage: ${input.binName} search embeddings [status|index|create] [--source <source-id>] [--shard <shard>] [--limit <n>] [--json]\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const items = listLocalSearchEmbeddingStatus(store, {
+        sources: parseListFlag(input.flags.sources ?? input.flags.source),
+        domains: parseListFlag(input.flags.domains ?? input.flags.domain),
+        shards: parseListFlag(input.flags.shards ?? input.flags.shard),
+        model: input.flags.model ?? input.flags["embedding-model"],
+      });
+      const data = { state: items.length ? "ready" : "empty", model: input.flags.model ?? input.flags["embedding-model"] ?? null, items, storage: searchStorageMetadata(input.flags) };
+      if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "embeddings" });
+      else input.context.stdout.write(`${items.map((item) => `${item.source}\t${item.shard}\t${item.model}\tdocuments=${item.documents}\tvectors=${item.vectors}`).join("\n")}\n`);
+      return CLI_EXIT_OK;
+    } finally {
+      store.close();
+    }
+  }
+
   if (command === "jobs") {
     const action = input.positionals[2] ?? "list";
     const store = openCliSearchStore(input.flags);
@@ -795,7 +844,7 @@ export async function runSearchAdminCli(input: {
         const source = input.flags.source ?? input.positionals[4];
         const operation = parseSearchIndexJobOperation(input.flags.operation ?? input.flags.op ?? input.positionals[3]);
         if (!source || !operation) {
-          input.context.stderr.write(`Usage: ${input.binName} search jobs enqueue <operation> --source <source-id> [--id <id>] [--shard <shard>] [--resource-id <id>] [--json]\n`);
+          input.context.stderr.write(`Usage: ${input.binName} search jobs enqueue <upsert|delete|backfill|rebuild|embed> --source <source-id> [--id <id>] [--shard <shard>] [--resource-id <id>] [--json]\n`);
           return CLI_EXIT_USAGE;
         }
         const item = store.enqueueIndexJob({
@@ -937,7 +986,7 @@ export async function runSearchAdminCli(input: {
       profile,
       budgets: DEFAULT_SEARCH_BUDGETS,
       matching: ["exact", "prefix", "fuzzy", "fts"],
-      semantic: "optional per source with caller-supplied local embeddings",
+      semantic: "optional per source with local embeddings indexed by adapters, CLI, or embed jobs",
       partialResults: "slow sources are omitted instead of blocking fast paths",
       ranking: ["central score", "source hints", "local frecency", "scope", "actor", "surface"],
     };
@@ -1127,6 +1176,180 @@ function readSearchServiceWorkerBudgets(flags: Record<string, string>): SearchSe
   };
 }
 
+interface SearchEmbeddingDocumentRow {
+  id: string;
+  source: string;
+  shard: string;
+  domain: string;
+  title: string;
+  subtitle: string | null;
+  snippet: string | null;
+  body: string;
+  updated_at: string;
+}
+
+interface SearchEmbeddingFragmentRow {
+  title: string;
+  snippet: string | null;
+  body: string;
+}
+
+interface SearchEmbeddingIndexSummary {
+  model: string;
+  documents: number;
+  indexed: number;
+  selectedSources: string[] | null;
+  selectedDomains: string[] | null;
+  selectedShards: string[] | null;
+}
+
+interface SearchEmbeddingStatusRow {
+  source: string;
+  domain: string;
+  shard: string;
+  model: string;
+  documents: number;
+  vectors: number;
+  updatedAt?: string;
+}
+
+function indexLocalSearchEmbeddings(store: SearchStore, input: {
+  sources?: string[];
+  domains?: string[];
+  shards?: string[];
+  limit?: number;
+  model?: string;
+} = {}): SearchEmbeddingIndexSummary {
+  const model = localSearchEmbeddingModel(input.model);
+  const limit = Math.max(1, Math.min(10_000, Math.floor(Number.isFinite(input.limit) ? input.limit as number : 500)));
+  const clauses = [
+    "d.deleted_at IS NULL",
+    "s.state NOT IN ('disabled', 'paused', 'excluded')",
+    "json_extract(s.manifest_json, '$.capabilities.semantic') IN ('optional', 'required')",
+  ];
+  const params: unknown[] = [];
+  appendSqlInClause(clauses, params, "d.source", input.sources);
+  appendSqlInClause(clauses, params, "d.domain", input.domains);
+  appendSqlInClause(clauses, params, "d.shard", input.shards);
+  const rows = store.db.prepare(`
+    SELECT d.id, d.source, d.shard, d.domain, d.title, d.subtitle, d.snippet, d.body, d.updated_at
+    FROM search_documents d
+    JOIN search_sources s ON s.id = d.source
+    WHERE ${clauses.join(" AND ")}
+    ORDER BY d.updated_at DESC, d.id ASC
+    LIMIT ?
+  `).all(...params, limit) as SearchEmbeddingDocumentRow[];
+  const fragmentsForDocument = store.db.prepare(`
+    SELECT title, snippet, body
+    FROM search_fragments
+    WHERE document_id = ?
+    ORDER BY sort_order ASC, id ASC
+    LIMIT 20
+  `);
+  const updatedAt = new Date().toISOString();
+  let indexed = 0;
+  const transaction = store.db.transaction((documents: SearchEmbeddingDocumentRow[]) => {
+    for (const row of documents) {
+      const fragments = fragmentsForDocument.all(row.id) as SearchEmbeddingFragmentRow[];
+      const text = searchEmbeddingText(row, fragments);
+      if (!text) continue;
+      const embedding = createLocalTextEmbedding(text, { model });
+      store.upsertVector({
+        documentId: row.id,
+        model: embedding.model,
+        embedding: embedding.vector,
+        updatedAt,
+      });
+      indexed += 1;
+    }
+  });
+  transaction(rows);
+  return {
+    model,
+    documents: rows.length,
+    indexed,
+    selectedSources: input.sources ?? null,
+    selectedDomains: input.domains ?? null,
+    selectedShards: input.shards ?? null,
+  };
+}
+
+function listLocalSearchEmbeddingStatus(store: SearchStore, input: {
+  sources?: string[];
+  domains?: string[];
+  shards?: string[];
+  model?: string;
+} = {}): SearchEmbeddingStatusRow[] {
+  const clauses = ["d.deleted_at IS NULL"];
+  const params: unknown[] = [];
+  appendSqlInClause(clauses, params, "d.source", input.sources);
+  appendSqlInClause(clauses, params, "d.domain", input.domains);
+  appendSqlInClause(clauses, params, "d.shard", input.shards);
+  if (input.model) {
+    clauses.push("v.model = ?");
+    params.push(input.model);
+  }
+  const rows = store.db.prepare(`
+    SELECT d.source, d.domain, d.shard, v.model, COUNT(DISTINCT v.document_id) AS documents,
+      COUNT(*) AS vectors, MAX(v.updated_at) AS updated_at
+    FROM search_vectors v
+    JOIN search_documents d ON d.id = v.document_id
+    WHERE ${clauses.join(" AND ")}
+    GROUP BY d.source, d.domain, d.shard, v.model
+    ORDER BY d.source ASC, d.shard ASC, v.model ASC
+  `).all(...params) as Array<SearchEmbeddingStatusRow & { updated_at: string | null }>;
+  return rows.map((row) => ({
+    source: row.source,
+    domain: row.domain,
+    shard: row.shard,
+    model: row.model,
+    documents: row.documents,
+    vectors: row.vectors,
+    ...(row.updated_at ? { updatedAt: row.updated_at } : {}),
+  }));
+}
+
+function localSearchEmbeddingModel(model: string | undefined): string {
+  if (!model || model === LOCAL_TEXT_EMBEDDING_MODEL) return LOCAL_TEXT_EMBEDDING_MODEL;
+  throw new CliHandledError(
+    "SEARCH_EMBEDDING_PROVIDER_PENDING",
+    `Search local embedding indexing only supports ${LOCAL_TEXT_EMBEDDING_MODEL}; provider-backed embedding workers are EXTERNAL PENDING.`,
+    CLI_EXIT_USAGE,
+  );
+}
+
+function appendSqlInClause(clauses: string[], params: unknown[], column: string, values: string[] | undefined): void {
+  const normalized = values?.map((value) => value.trim()).filter(Boolean);
+  if (!normalized?.length) return;
+  clauses.push(`${column} IN (${normalized.map(() => "?").join(", ")})`);
+  params.push(...normalized);
+}
+
+function searchEmbeddingText(row: SearchEmbeddingDocumentRow, fragments: SearchEmbeddingFragmentRow[]): string {
+  const parts = [
+    row.title,
+    row.subtitle,
+    row.snippet,
+    row.body,
+    ...fragments.flatMap((fragment) => [fragment.title, fragment.snippet, fragment.body]),
+  ];
+  return parts
+    .map((part) => (part ?? "").trim())
+    .filter(Boolean)
+    .join("\n")
+    .slice(0, 128 * 1024);
+}
+
+function stringPayloadValue(payload: Record<string, unknown>, key: string): string | undefined {
+  const value = payload[key];
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function numericPayloadValue(payload: Record<string, unknown>, key: string): number | undefined {
+  const value = payload[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
 function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Record<string, string>, cwd: string): number {
   if (!sourceCanIndex(store, job.source)) return 0;
   if (job.operation === "delete") {
@@ -1137,6 +1360,14 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
   if (job.operation === "upsert" && job.resourceId) {
     const indexed = runSearchResourceIndexJob(store, job, flags, cwd);
     if (indexed !== null) return indexed;
+  }
+  if (job.operation === "embed") {
+    return indexLocalSearchEmbeddings(store, {
+      sources: [job.source],
+      shards: job.shard ? [job.shard] : undefined,
+      limit: numericPayloadValue(job.payload, "limit") ?? (flags.limit ? Number(flags.limit) : undefined),
+      model: stringPayloadValue(job.payload, "model") ?? flags.model ?? flags["embedding-model"],
+    }).indexed;
   }
   if (job.operation === "rebuild") {
     if (job.shard && job.shard !== "default") store.resetSourceShards({ sources: [job.source], shards: [job.shard] });
@@ -7351,8 +7582,8 @@ function parseOptionalBoundedInteger(value: string | undefined, min: number, max
   return Math.min(max, Math.max(min, Math.floor(parsed)));
 }
 
-function parseSearchIndexJobOperation(value: string | undefined): "upsert" | "delete" | "backfill" | "rebuild" | undefined {
-  return value === "upsert" || value === "delete" || value === "backfill" || value === "rebuild" ? value : undefined;
+function parseSearchIndexJobOperation(value: string | undefined): "upsert" | "delete" | "backfill" | "rebuild" | "embed" | undefined {
+  return value === "upsert" || value === "delete" || value === "backfill" || value === "rebuild" || value === "embed" ? value : undefined;
 }
 
 function parseSearchIndexJobStatus(value: string | undefined): "queued" | "leased" | "done" | "failed" | undefined {
