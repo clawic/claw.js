@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { createHash } from "node:crypto";
 import { createInterface } from "node:readline";
 import { Writable } from "node:stream";
 
@@ -494,6 +495,22 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
       },
       handler: (p) => scheduleChangedSourceEvent(store, p),
     },
+    {
+      name: "search.changes.scan",
+      description: "Scan a bounded file-backed source root and schedule typed Search refresh events for changed paths.",
+      inputSchema: {
+        type: "object",
+        required: ["source", "root"],
+        properties: {
+          source: { type: "string", enum: ["code.symbols", "local.files", "web.ingested", "external.cache"] },
+          root: { type: "string" },
+          limit: { type: "integer" },
+          maxDepth: { type: "integer" },
+          maxBytes: { type: "integer" },
+        },
+      },
+      handler: (p) => scanChangedSourceEvents(store, p),
+    },
     { name: "search.jobs.claim", description: "Claim Search indexing jobs with bounded leases.", inputSchema: { type: "object", properties: { limit: { type: "integer" }, now: { type: "string" }, leaseMs: { type: "integer" }, sources: { type: "array", items: { type: "string" } }, shards: { type: "array", items: { type: "string" } } } }, handler: (p) => store.claimIndexJobs({ limit: numberParam(p.limit), now: stringParam(p.now), leaseMs: numberParam(p.leaseMs), sources: stringArrayParam(p.sources), shards: stringArrayParam(p.shards) }) },
     { name: "search.jobs.complete", description: "Mark a Search indexing job done.", inputSchema: { type: "object", required: ["id"], properties: { id: { type: "string" } } }, handler: (p) => store.completeIndexJob(requiredString(p, "id")) },
     { name: "search.jobs.fail", description: "Fail or retry a Search indexing job.", inputSchema: { type: "object", required: ["id", "error"], properties: { id: { type: "string" }, error: { type: "string" }, retry: { type: "boolean" }, scheduledAt: { type: "string" } } }, handler: (p) => store.failIndexJob(requiredString(p, "id"), { error: requiredString(p, "error"), retry: typeof p.retry === "boolean" ? p.retry : false, scheduledAt: stringParam(p.scheduledAt) }) },
@@ -833,6 +850,146 @@ function scheduleChangedSourceEvent(store: SearchStore, params: Record<string, u
       absolutePath,
     },
   });
+}
+
+function scanChangedSourceEvents(store: SearchStore, params: Record<string, unknown>) {
+  const source = requiredString(params, "source");
+  if (source !== "code.symbols" && source !== "local.files" && source !== "web.ingested" && source !== "external.cache") {
+    throw new Error("source must be code.symbols, local.files, web.ingested, or external.cache");
+  }
+  const root = path.resolve(expandMcpPath(requiredString(params, "root")));
+  if (!fs.existsSync(root)) throw new Error(`Search changes scan root does not exist: ${root}`);
+  const limit = boundedIntegerParam(params.limit, 500, 1, 20000);
+  const maxDepth = boundedIntegerParam(params.maxDepth, 8, 1, 32);
+  const maxBytes = boundedIntegerParam(params.maxBytes, 256 * 1024, 1024, 2 * 1024 * 1024);
+  const files = discoverChangedSourceFiles(source, root, { limit, maxDepth, maxBytes });
+  const currentEntries = new Map(files.map((file) => [file.relativePath, file]));
+  const previousEntries = readChangedSourceSnapshot(store, source, root);
+  const jobs = [];
+  for (const file of currentEntries.values()) {
+    const previous = previousEntries.get(file.relativePath);
+    if (previous?.signature === file.signature) continue;
+    jobs.push(scheduleChangedSourceEvent(store, {
+      source,
+      operation: "upsert",
+      root,
+      path: file.absolutePath,
+    }));
+  }
+  for (const previous of previousEntries.values()) {
+    if (currentEntries.has(previous.relativePath)) continue;
+    jobs.push(scheduleChangedSourceEvent(store, {
+      source,
+      operation: "delete",
+      root,
+      path: path.join(root, previous.relativePath),
+    }));
+  }
+  store.setCursor({
+    source,
+    shard: "changes",
+    cursor: `root:${stableChangedSourceId(root)}:files:${files.length}`,
+    watermark: new Date().toISOString(),
+    metadata: {
+      root,
+      limit,
+      maxDepth,
+      maxBytes,
+      entries: files.map((file) => ({ relativePath: file.relativePath, signature: file.signature })),
+    },
+  });
+  return {
+    action: "scan",
+    source,
+    root,
+    scanned: files.length,
+    scheduledUpserts: jobs.filter((job) => job.operation === "upsert").length,
+    scheduledDeletes: jobs.filter((job) => job.operation === "delete").length,
+    jobs,
+    state: jobs.length ? "ready" : "empty",
+  };
+}
+
+function discoverChangedSourceFiles(source: string, root: string, limits: { limit: number; maxDepth: number; maxBytes: number }): ChangedSourceFileEntry[] {
+  const files: ChangedSourceFileEntry[] = [];
+  const visit = (directory: string, depth: number): void => {
+    if (files.length >= limits.limit || depth > limits.maxDepth) return;
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(directory, { withFileTypes: true }).sort((left, right) => left.name.localeCompare(right.name));
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (files.length >= limits.limit) break;
+      const absolutePath = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        if (!isIgnoredChangedSourceDirectory(entry.name)) visit(absolutePath, depth + 1);
+        continue;
+      }
+      if (!entry.isFile()) continue;
+      const extension = path.extname(entry.name).toLowerCase();
+      if (!changedSourceAcceptsExtension(source, extension)) continue;
+      let stat: fs.Stats;
+      try {
+        stat = fs.statSync(absolutePath);
+      } catch {
+        continue;
+      }
+      if (!stat.isFile() || stat.size <= 0) continue;
+      if ((source === "code.symbols" || source === "web.ingested" || source === "external.cache") && stat.size > limits.maxBytes) continue;
+      files.push({
+        absolutePath,
+        relativePath: path.relative(root, absolutePath).split(path.sep).join(path.posix.sep),
+        signature: `${Math.trunc(stat.mtimeMs)}:${stat.size}`,
+      });
+    }
+  };
+  visit(root, 0);
+  return files;
+}
+
+function readChangedSourceSnapshot(store: SearchStore, source: string, root: string): Map<string, ChangedSourceFileEntry> {
+  const cursor = store.getCursor(source, "changes");
+  if (cursor?.metadata.root !== root || !Array.isArray(cursor.metadata.entries)) return new Map();
+  const entries = new Map<string, ChangedSourceFileEntry>();
+  for (const entry of cursor.metadata.entries) {
+    if (!entry || typeof entry !== "object") continue;
+    const record = entry as { relativePath?: unknown; signature?: unknown };
+    if (typeof record.relativePath !== "string" || typeof record.signature !== "string") continue;
+    entries.set(record.relativePath, {
+      absolutePath: path.join(root, record.relativePath),
+      relativePath: record.relativePath,
+      signature: record.signature,
+    });
+  }
+  return entries;
+}
+
+function changedSourceAcceptsExtension(source: string, extension: string): boolean {
+  if (source === "code.symbols") return [".cjs", ".css", ".go", ".html", ".java", ".js", ".json", ".jsx", ".kt", ".md", ".mdx", ".mjs", ".py", ".rs", ".scss", ".swift", ".ts", ".tsx", ".yaml", ".yml"].includes(extension);
+  if (source === "web.ingested") return [".html", ".htm", ".json", ".md", ".txt"].includes(extension);
+  if (source === "external.cache") return [".json", ".jsonl", ".md", ".txt"].includes(extension);
+  return true;
+}
+
+function isIgnoredChangedSourceDirectory(name: string): boolean {
+  return [".git", ".hg", ".svn", ".codex", ".claw", ".next", ".nuxt", ".turbo", ".cache", ".dart_tool", ".build", "build", "coverage", "dist", "DerivedData", "node_modules", "target", "vendor", ".Spotlight-V100", ".TemporaryItems", ".Trashes"].includes(name);
+}
+
+function boundedIntegerParam(value: unknown, fallback: number, min: number, max: number): number {
+  const parsed = numberParam(value) ?? fallback;
+  return Math.max(min, Math.min(max, Math.floor(parsed)));
+}
+
+function stableChangedSourceId(value: string): string {
+  return createHash("sha256").update(value).digest("hex").slice(0, 20);
+}
+
+interface ChangedSourceFileEntry {
+  absolutePath: string;
+  relativePath: string;
+  signature: string;
 }
 
 function expandMcpPath(value: string): string {

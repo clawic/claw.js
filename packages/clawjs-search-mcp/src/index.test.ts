@@ -56,6 +56,7 @@ test("Search MCP exposes source-set, entrypoint, and explain tools", () => {
       "search.jobs.enqueue",
       "search.jobs.schedule",
       "search.changes.schedule",
+      "search.changes.scan",
     ]) {
       assert.equal(toolNames.has(name), true, `${name} should be exposed`);
     }
@@ -611,6 +612,58 @@ test("Search MCP schedules typed changed source events", () => {
       root,
       path: outsidePath,
     }), /outside root/);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("Search MCP scans changed source roots into event jobs", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-mcp-scan-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "code.symbols",
+      domain: "code",
+      name: "Code",
+      resultTypes: ["code"],
+    }));
+    const root = path.join(dir, "project");
+    const filePath = path.join(root, "src", "scan.ts");
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(filePath, "export function scanMcpNeedle() { return true; }\n");
+    const tools = createSearchMcpTools(store);
+    const scanTool = tools.find((tool) => tool.name === "search.changes.scan");
+    assert.ok(scanTool);
+    const first = scanTool.handler({ source: "code.symbols", root }) as {
+      source: string;
+      scanned: number;
+      scheduledUpserts: number;
+      scheduledDeletes: number;
+      jobs: Array<{ source: string; operation: string; resourceId?: string; payload?: Record<string, unknown> }>;
+      state: string;
+    };
+    assert.equal(first.source, "code.symbols");
+    assert.equal(first.scanned, 1);
+    assert.equal(first.scheduledUpserts, 1);
+    assert.equal(first.scheduledDeletes, 0);
+    assert.equal(first.jobs[0]?.resourceId, "src/scan.ts");
+    assert.equal(first.jobs[0]?.payload?.relativePath, "src/scan.ts");
+    const second = scanTool.handler({ source: "code.symbols", root }) as { scheduledUpserts: number; scheduledDeletes: number; state: string };
+    assert.equal(second.scheduledUpserts, 0);
+    assert.equal(second.scheduledDeletes, 0);
+    assert.equal(second.state, "empty");
+    fs.rmSync(filePath);
+    const deleted = scanTool.handler({ source: "code.symbols", root }) as {
+      scanned: number;
+      scheduledUpserts: number;
+      scheduledDeletes: number;
+      jobs: Array<{ source: string; operation: string; resourceId?: string }>;
+    };
+    assert.equal(deleted.scanned, 0);
+    assert.equal(deleted.scheduledUpserts, 0);
+    assert.equal(deleted.scheduledDeletes, 1);
+    assert.deepEqual({ source: deleted.jobs[0]?.source, operation: deleted.jobs[0]?.operation, resourceId: deleted.jobs[0]?.resourceId }, { source: "code.symbols", operation: "delete", resourceId: "src/scan.ts" });
   } finally {
     store.close();
     fs.rmSync(dir, { recursive: true, force: true });
