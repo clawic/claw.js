@@ -245,6 +245,63 @@ test("SearchStore bulk upserts documents in one cache-invalidating transaction",
   }
 });
 
+test("SearchStore keeps hot shard and Root Search first-batch latency within budgets", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-latency-gate-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "latency.items",
+      domain: "latency",
+      name: "Latency items",
+      resultTypes: ["latency-item"],
+    }));
+    store.upsertDocuments(Array.from({ length: 2500 }, (_value, index) => {
+      const shard = index < 500 ? "hot" : "cold";
+      const token = shard === "hot" ? `hotlatency${index % 10}` : `coldlatency${index % 100}`;
+      const rootToken = shard === "hot" ? "rootlatency" : "coldrootlatency";
+      return {
+        id: `latency.items:${index}`,
+        source: "latency.items",
+        shard,
+        domain: "latency",
+        type: "latency-item",
+        title: `Latency item ${index} ${token} ${rootToken}`,
+        body: `Search latency regression gate ${token} ${rootToken} ${shard} shard result ${index}`,
+        updatedAt: new Date(1_800_000_000_000 + index).toISOString(),
+        rankingHints: shard === "hot" ? { hot: 1, frecency: 1 } : { frecency: 0.1 },
+      };
+    }));
+
+    const hotDurations: number[] = [];
+    for (let i = 0; i < 10; i += 1) {
+      const output = store.query({ query: `hotlatency${i}`, domains: ["latency"], shards: ["hot"], limit: 10 });
+      assert.ok(output.results.length > 0);
+      assert.equal(output.partial, false);
+      assert.equal(output.results.every((result) => result.shard === "hot"), true);
+      hotDurations.push(output.elapsedMs);
+    }
+    assert.ok(percentile(hotDurations, 0.95) <= DEFAULT_SEARCH_BUDGETS.hotMs, `hot p95 exceeded ${DEFAULT_SEARCH_BUDGETS.hotMs}ms: ${hotDurations.join(", ")}`);
+
+    const federator = createRootSearchFederator();
+    federator.register({
+      manifest: createFrameworkSearchSourceManifest({
+        id: "latency.fast",
+        domain: "latency",
+        name: "Latency fast source",
+        resultTypes: ["latency-item"],
+      }),
+      query: (input) => store.query({ ...input, sources: ["latency.items"], shards: ["hot"], limit: 10 }).results,
+    });
+    const rootOutput = await federator.query({ query: "rootlatency", domains: ["latency"], limit: 10 });
+    assert.ok(rootOutput.results.length > 0);
+    assert.equal(rootOutput.partial, false);
+    assert.ok(rootOutput.elapsedMs <= DEFAULT_SEARCH_BUDGETS.globalFirstBatchMs, `Root Search first batch exceeded ${DEFAULT_SEARCH_BUDGETS.globalFirstBatchMs}ms: ${rootOutput.elapsedMs}ms`);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("SearchStore keeps shard-scoped ranking cache through unrelated cold backfill", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-cache-scopes-"));
   const store = new SearchStore(path.join(dir, "search.sqlite"));
@@ -1382,3 +1439,9 @@ test("SearchStore preserves source controls and omits disabled sources", () => {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+function percentile(values: number[], rank: number): number {
+  assert.ok(values.length > 0);
+  const sorted = [...values].sort((left, right) => left - right);
+  return sorted[Math.min(sorted.length - 1, Math.max(0, Math.ceil(sorted.length * rank) - 1))] ?? 0;
+}

@@ -582,7 +582,9 @@ signed host shortcut broker validates it.
 - Preserve scoped hot-shard ranking cache while unrelated cold backfill runs,
   so section-specific searches do not wait for universal indexing.
 - Enforce performance gates: hot searches target 50 ms; Root Search first batch
-  targets 200 ms; slow sources time out instead of blocking.
+  targets 200 ms; slow sources time out instead of blocking. The Search package
+  includes a synthetic latency regression gate for those hot/root budgets, while
+  million-row scale evidence remains in the scale lab.
 - Keep sensitive previews redacted and action execution brokered by grants and
   approvals.
 
@@ -596,7 +598,8 @@ Required validation for Search work:
 - CLI integration tests for `query`, `sources`, `status`, `rebuild`, `saved`,
   `monitors` create/run, `actions`, `audit`, `profiles`, and `explain`;
 - Clawix Search/`Command-G` conversations-only regression tests;
-- performance tests for 50 ms hot path and 200 ms Root Search first batch;
+- performance tests for 50 ms hot path and 200 ms Root Search first batch
+  (`packages/clawjs-search/src/index.test.ts`) plus the larger scale lab;
 - `npm run search:scale-lab -- --items 1000000 --json` and
   `npm run search:scale-lab -- --items 10000000 --json` before claiming scale
   completion. The default lab run is intentionally smaller so normal validation
