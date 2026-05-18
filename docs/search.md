@@ -528,16 +528,18 @@ audit rule as the CLI.
 `@clawjs/search-mcp` exposes the same Search sidecar directly through
 `@clawjs/search`; it does not depend on the legacy Index package and publishes
 the `claw-search-mcp` binary. Its tool surface includes query, source/status,
-source-state control, profiles, entrypoints, aliases, explain, action
-listing/execution with brokered host-approval plans, saved searches, monitor
-evaluation, monitor management, shard catalog inspection, audit, and
-indexing-job tools, including compacted event scheduling through
-`search.jobs.schedule`. MCP `search.saved.create` accepts the same structured
-query controls as `search.query`, so saved searches and monitors can preserve
+source-state control, source/shard checkpoint cursors, profiles, entrypoints,
+aliases, explain, action listing/execution with brokered host-approval plans,
+saved searches, monitor evaluation, monitor management, shard catalog
+inspection, audit, and indexing-job tools, including compacted event scheduling
+through `search.jobs.schedule`. `search.cursors.list` exposes the same
+cursor/watermark/checksum checkpoint rows as `claw search status` for agents and
+host admin flows. MCP `search.saved.create` accepts the same structured query
+controls as `search.query`, so saved searches and monitors can preserve
 domain/source/shard filters, strategy, limits, actor/surface context, and local
 embedding settings. MCP callers can pass `agentBudget.maxResults`,
-`agentBudget.maxResultsPerSource`, and `agentBudget.maxResultsPerDomain` on
-both direct queries and saved searches, matching the local Search result-budget
+`agentBudget.maxResultsPerSource`, and `agentBudget.maxResultsPerDomain` on both
+direct queries and saved searches, matching the local Search result-budget
 contract used by agent callers. `search.saved.delete` and
 `search.monitors.delete` expose the same lifecycle controls for MCP clients.
 

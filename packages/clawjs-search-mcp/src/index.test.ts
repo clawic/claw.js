@@ -35,6 +35,7 @@ test("Search MCP exposes profile, entrypoint, and explain tools", () => {
       "search.sources.list",
       "search.sources.set_state",
       "search.status",
+      "search.cursors.list",
       "search.shards.list",
       "search.profiles.list",
       "search.entrypoints.list",
@@ -129,6 +130,29 @@ test("Search MCP exposes profile, entrypoint, and explain tools", () => {
       shard: "hot",
       fragments: [{ id: "commands:search:usage", title: "usage", body: "search usage", sortOrder: 0 }],
     });
+    store.setCursor({
+      source: "commands",
+      shard: "hot",
+      cursor: "commands-mcp-cursor",
+      watermark: "2026-05-18T11:00:00.000Z",
+      metadata: { registryVersion: 2 },
+    });
+    const cursorsTool = tools.find((tool) => tool.name === "search.cursors.list");
+    const cursors = cursorsTool?.handler({ source: "commands", shard: "hot" }) as {
+      state: string;
+      cursors: Array<{ source: string; shard: string; cursor: string; watermark: string; checksum: string; metadata: Record<string, unknown> }>;
+    };
+    assert.equal(cursors.state, "ready");
+    assert.equal(cursors.cursors[0]?.source, "commands");
+    assert.equal(cursors.cursors[0]?.shard, "hot");
+    assert.equal(cursors.cursors[0]?.cursor, "commands-mcp-cursor");
+    assert.equal(cursors.cursors[0]?.watermark, "2026-05-18T11:00:00.000Z");
+    assert.equal(cursors.cursors[0]?.checksum.length, 64);
+    assert.deepEqual(cursors.cursors[0]?.metadata, { registryVersion: 2 });
+    const emptyCursors = cursorsTool?.handler({ source: "commands", shard: "cold" }) as { state: string; cursors: unknown[] };
+    assert.equal(emptyCursors.state, "empty");
+    assert.deepEqual(emptyCursors.cursors, []);
+
     const shardsTool = tools.find((tool) => tool.name === "search.shards.list");
     const shards = shardsTool?.handler({ source: "commands" }) as {
       state: string;

@@ -178,6 +178,17 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
     },
     { name: "search.status", description: "List Search source status rows.", inputSchema: { type: "object", properties: {} }, handler: () => store.sourceStatus() },
     {
+      name: "search.cursors.list",
+      description: "List Search source/shard checkpoint cursors, watermarks, checksums, and metadata.",
+      inputSchema: { type: "object", properties: { source: { type: "string" }, shard: { type: "string" } } },
+      handler: (p) => {
+        const source = stringParam(p.source);
+        const shard = stringParam(p.shard);
+        const cursors = store.listCursors(source).filter((cursor) => !shard || cursor.shard === shard);
+        return { state: cursors.length ? "ready" : "empty", cursors };
+      },
+    },
+    {
       name: "search.shards.list",
       description: "List Search shard catalog rows for Search Index administration.",
       inputSchema: { type: "object", properties: { source: { type: "string" }, domain: { type: "string" } } },
