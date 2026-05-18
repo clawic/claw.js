@@ -12,6 +12,7 @@ const ignoredDirs = new Set([
   ".next",
   ".next-e2e",
   ".tmp",
+  ".tmp-pack-smoke",
   ".data",
   "artifacts",
   "build",

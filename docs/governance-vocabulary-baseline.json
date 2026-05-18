@@ -170,7 +170,7 @@
       "packages/clawjs/src/cli-dense-data-command.ts": 53,
       "packages/clawjs/src/cli-discovery.test.ts": 57,
       "packages/clawjs/src/cli-productivity-primary-command.ts": 6,
-      "packages/clawjs/src/cli-search-index.test.ts": 5,
+      "packages/clawjs/src/cli-search-index.test.ts": 6,
       "packages/clawjs/src/index-data.test.ts": 3,
       "packages/clawjs/src/index-installed.test.ts": 1,
       "packages/clawjs/src/index-productivity.test.ts": 1,
@@ -237,8 +237,8 @@
       "database/public/app.js": 1,
       "examples/mock/seed.mjs": 4,
       "packages/clawjs-core/src/domain-surface-registry.ts": 28,
-      "packages/clawjs-core/src/evolution.ts": 4,
-      "packages/clawjs-core/src/index.test.ts": 6,
+      "packages/clawjs-core/src/evolution.ts": 5,
+      "packages/clawjs-core/src/index.test.ts": 9,
       "packages/clawjs-core/src/schemas.ts": 1,
       "packages/clawjs-core/src/surface-registry.ts": 148,
       "packages/clawjs-core/src/types-library-rules.ts": 1,
@@ -263,7 +263,7 @@
       "packages/clawjs/src/inspect-cli.ts": 1,
       "packages/marketplace-agent-policy/tests/policy.test.ts": 5,
       "scripts/discoverability-check.mjs": 2,
-      "scripts/package-surface-guard.mjs": 3,
+      "scripts/package-surface-guard.mjs": 4,
       "scripts/verify-search-v1-1-goal.mjs": 1,
       "secrets/src/plugins/builtin/executors/github.ts": 1
     },
@@ -386,8 +386,6 @@
       ".changeset/search-web-ingested-source.md": 1,
       ".changeset/signals-publishable-bridge.md": 1,
       ".changeset/user-model-package.md": 2,
-      ".tmp-pack-smoke/install-fr1PXq/generated-agent/USER.md": 1,
-      ".tmp-pack-smoke/install-fr1PXq/package.json": 3,
       "CONSTITUTION.md": 4,
       "apps/chat/ios/ClawJS/Services/ChatService.swift": 1,
       "apps/chat/macos/ClawJSMac/Services/ChatService.swift": 1,
@@ -477,7 +475,7 @@
       "packages/clawjs-core/src/dense-data-fixtures.ts": 6,
       "packages/clawjs-core/src/dense-data-os.ts": 5,
       "packages/clawjs-core/src/domain-ownership.ts": 1,
-      "packages/clawjs-core/src/index.test.ts": 1,
+      "packages/clawjs-core/src/index.test.ts": 2,
       "packages/clawjs-core/src/remote-sync.ts": 2,
       "packages/clawjs-core/src/schemas.ts": 2,
       "packages/clawjs-core/src/surface-registry.ts": 6,
@@ -545,7 +543,7 @@
       "packages/clawjs/src/index-data.test.ts": 13,
       "packages/clawjs/src/index-installed.test.ts": 3,
       "packages/clawjs/src/index.test.ts": 4,
-      "packages/clawjs/src/inspect-cli.test.ts": 3,
+      "packages/clawjs/src/inspect-cli.test.ts": 4,
       "packages/clawjs/src/templates/builtins.ts": 4,
       "packages/clawjs/src/v1-data-core.ts": 8,
       "packages/clawjs/src/v1-data.ts": 4,
@@ -569,6 +567,7 @@
       "scripts/build-packages.mjs": 1,
       "scripts/discoverability-check.mjs": 14,
       "scripts/pack-smoke.mjs": 1,
+      "scripts/verify-remote-sync-goal.mjs": 1,
       "scripts/verify-search-v1-1-goal.mjs": 16,
       "skills/brand-guidelines/SKILL.md": 1,
       "tests/e2e/README.md": 1,
@@ -616,7 +615,6 @@
     },
     "tenant": {
       ".changeset/mesh-ssh-secret-store.md": 1,
-      ".tmp-pack-smoke/install-fr1PXq/generated-plugin/src/config.ts": 1,
       "AGENTS.md": 1,
       "apps/chat/android/README.md": 2,
       "apps/chat/ios/ClawJS/Localization/L10n.swift": 3,
@@ -640,10 +638,10 @@
       "docs/decision-map.md": 1,
       "docs/governance-workspace-project-completion-audit.md": 1,
       "docs/governance-workspace-project-source-decision-audit.md": 2,
-      "docs/interface-matrix.md": 2,
+      "docs/interface-matrix.md": 3,
       "docs/naming-style-guide.md": 1,
       "docs/notify.md": 1,
-      "docs/persistent-surface.md": 6,
+      "docs/persistent-surface.md": 7,
       "docs/relay.md": 14,
       "docs/remote-gateway-sync-completion-audit.md": 2,
       "docs/remote-gateway-sync-decision-matrix.md": 2,
@@ -684,7 +682,7 @@
       "packages/clawjs-core/src/remote-sync-e2e.ts": 3,
       "packages/clawjs-core/src/remote-sync-route-contracts.ts": 1,
       "packages/clawjs-core/src/remote-sync.ts": 4,
-      "packages/clawjs-core/src/surface-registry.ts": 6,
+      "packages/clawjs-core/src/surface-registry.ts": 7,
       "packages/clawjs-node/src/notify/index.test.ts": 4,
       "packages/clawjs-node/src/secrets/index.test.ts": 9,
       "packages/clawjs/src/chat.ts": 4,
@@ -736,6 +734,7 @@
       "relay/ui/src/routes/Settings.tsx": 1,
       "scripts/verify-governance-workspace-project-goal.mjs": 1,
       "scripts/verify-remote-sync-goal.mjs": 27,
+      "scripts/verify-remote-sync-source-session.mjs": 1,
       "secrets/src/server/app.ts": 3,
       "secrets/src/server/audit.ts": 1,
       "secrets/src/server/db.ts": 1,
@@ -921,13 +920,13 @@
       "secrets/src/server/stores.ts": 28
     }
   },
-  "generatedAt": "2026-05-18T16:28:55.883Z",
+  "generatedAt": "2026-05-18T22:03:44.534Z",
   "policy": "Current governance vocabulary debt may shrink without review. Any increase in a tracked path or any new tracked path fails scripts/governance-scope-guard.mjs unless the occurrence is removed or this baseline is deliberately updated with rationale.",
   "schemaVersion": 1,
   "summary": {
     "companyId": {
       "files": 174,
-      "occurrences": 796
+      "occurrences": 797
     },
     "company_id": {
       "files": 4,
@@ -943,7 +942,7 @@
     },
     "owner_field": {
       "files": 35,
-      "occurrences": 259
+      "occurrences": 264
     },
     "owner_id": {
       "files": 16,
@@ -954,8 +953,8 @@
       "occurrences": 210
     },
     "profile": {
-      "files": 211,
-      "occurrences": 1078
+      "files": 210,
+      "occurrences": 1077
     },
     "profileId": {
       "files": 21,
@@ -967,7 +966,7 @@
     },
     "tenant": {
       "files": 136,
-      "occurrences": 650
+      "occurrences": 653
     },
     "tenantId": {
       "files": 141,
