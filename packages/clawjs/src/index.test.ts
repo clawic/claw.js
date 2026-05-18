@@ -186,23 +186,64 @@ test("runCli exposes the evolution operator surface", async () => {
   const payload = parseCliJsonPayload<{
     status: string;
     policy: { sourceOfTruth: string; postV1Migration: string; rescueCore: string };
+    surfaceBaseline: { status: string; changed: number; uncovered: number };
     checks: string[];
   }>(verify.stdout);
   assert.equal(payload.status, "ok");
   assert.equal(payload.policy.sourceOfTruth, "clawjs");
   assert.equal(payload.policy.postV1Migration, "step_by_step_all_public_versions");
   assert.equal(payload.policy.rescueCore, "launch_chat_repair");
+  assert.equal(payload.surfaceBaseline.status, "unchanged");
+  assert.equal(payload.surfaceBaseline.uncovered, 0);
   assert.equal(payload.checks.includes("rescue_core_declared"), true);
+  assert.equal(payload.checks.includes("public_surface_baseline_covered"), true);
+
+  const diff = await runCliCapture(["evolution", "diff", "--json"], process.cwd());
+  assert.equal(diff.code, CLI_EXIT_OK);
+  const diffPayload = parseCliJsonPayload<{ status: string; requiredRecord: boolean; summary: { changed: number; uncovered: number } }>(diff.stdout);
+  assert.equal(diffPayload.status, "unchanged");
+  assert.equal(diffPayload.requiredRecord, false);
+  assert.deepEqual(diffPayload.summary, { changed: 0, uncovered: 0 });
 
   const repair = await runCliCapture(["evolution", "repair", "--json"], process.cwd());
   assert.equal(repair.code, CLI_EXIT_OK);
-  const repairPayload = parseCliJsonPayload<{ status: string; requiresApproval: boolean; mutates: boolean }>(repair.stdout);
+  const repairPayload = parseCliJsonPayload<{
+    status: string;
+    requiresApproval: boolean;
+    mutates: boolean;
+    rescueCore: string;
+    steps: Array<{ id: string; status: string }>;
+    backupPolicies: Array<{ strategy: string; requiresApproval: boolean }>;
+    receiptPreview: { redaction: { promptsIncluded: boolean; secretsIncluded: boolean; fullLocalPathsIncluded: boolean } };
+  }>(repair.stdout);
   assert.equal(repairPayload.status, "approval_gated_plan");
   assert.equal(repairPayload.requiresApproval, true);
-  assert.equal(repairPayload.mutates, false);
+  assert.equal(repairPayload.mutates, true);
+  assert.equal(repairPayload.rescueCore, "launch_chat_repair");
+  assert.equal(repairPayload.steps.some((step) => step.id === "preserve_launch_chat_repair"), true);
+  assert.equal(repairPayload.steps.find((step) => step.id === "prepare_best_effort_backup")?.status, "approval_gated");
+  assert.equal(repairPayload.backupPolicies.every((policy) => policy.requiresApproval), true);
+  assert.equal(repairPayload.receiptPreview.redaction.promptsIncluded, false);
+  assert.equal(repairPayload.receiptPreview.redaction.secretsIncluded, false);
+  assert.equal(repairPayload.receiptPreview.redaction.fullLocalPathsIncluded, false);
+
+  const dryRun = await runCliCapture(["evolution", "dry-run", "--json"], process.cwd());
+  assert.equal(dryRun.code, CLI_EXIT_OK);
+  const dryRunPayload = parseCliJsonPayload<{ status: string; mutates: boolean; requiresApproval: boolean }>(dryRun.stdout);
+  assert.equal(dryRunPayload.status, "dry_run_ready");
+  assert.equal(dryRunPayload.mutates, false);
+  assert.equal(dryRunPayload.requiresApproval, false);
+
+  const receipt = await runCliCapture(["evolution", "receipt", "--json"], process.cwd());
+  assert.equal(receipt.code, CLI_EXIT_OK);
+  const receiptPayload = parseCliJsonPayload<{ receipt: { redaction: { externalSubmission: string }; notes: string[] } }>(receipt.stdout);
+  assert.equal(receiptPayload.receipt.redaction.externalSubmission, "explicit_approval_only");
+  assert.equal(receiptPayload.receipt.notes.some((note) => note.includes("/Users/") || note.includes("prompt:")), false);
 });
 
 test("runCli exposes system telemetry snapshot, metrics, history, rules and widgets", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-system-telemetry-cli-"));
+  const monitorDb = path.join(workspaceRoot, "monitor.sqlite");
   const snapshot = await runCliCapture(["system", "snapshot", "--json"], process.cwd());
   assert.equal(snapshot.code, CLI_EXIT_OK);
   const snapshotPayload = parseCliJsonPayload<{
@@ -221,13 +262,16 @@ test("runCli exposes system telemetry snapshot, metrics, history, rules and widg
   assert.equal(metricsPayload.metrics.some((metric) => metric.key === "system.sensor.fan_speed" && metric.family === "sensor"), true);
   assert.equal(metricsPayload.metrics.some((metric) => metric.family === "weather_context"), true);
 
-  const history = await runCliCapture(["system", "history", "system.cpu.load1", "--range", "1h", "--json"], process.cwd());
+  const history = await runCliCapture(["system", "history", "system.cpu.load1", "--range", "1h", "--monitor-db", monitorDb, "--json"], process.cwd());
   assert.equal(history.code, CLI_EXIT_OK);
-  const historyPayload = parseCliJsonPayload<{ retention: { store: string; rawPolicy: string; rollups: boolean }; samples: unknown[] }>(history.stdout);
+  const historyPayload = parseCliJsonPayload<{ retention: { store: string; dbPath: string; status: string; rawPolicy: string; rollups: boolean }; samples: unknown[] }>(history.stdout);
   assert.equal(historyPayload.retention.store, "monitor.sqlite");
+  assert.equal(historyPayload.retention.dbPath, monitorDb);
+  assert.equal(historyPayload.retention.status, "empty");
   assert.equal(historyPayload.retention.rawPolicy, "short_local");
   assert.equal(historyPayload.retention.rollups, true);
   assert.deepEqual(historyPayload.samples, []);
+  assert.equal(fs.existsSync(monitorDb), false);
 
   const rules = await runCliCapture(["system", "rules", "list", "--json"], process.cwd());
   assert.equal(rules.code, CLI_EXIT_OK);
@@ -238,6 +282,88 @@ test("runCli exposes system telemetry snapshot, metrics, history, rules and widg
   const widgetPayload = parseCliJsonPayload<{ widgets: Array<{ placement: string }> }>(widgets.stdout);
   assert.equal(widgetPayload.widgets.some((widget) => widget.placement === "menubar"), true);
   assert.equal(widgetPayload.widgets.some((widget) => widget.placement === "combined_panel" || widget.placement === "both"), true);
+});
+
+test("runCli records system telemetry snapshots into monitor metric history", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-system-telemetry-history-"));
+  const monitorDb = path.join(workspaceRoot, "monitor.sqlite");
+
+  const snapshot = await runCliCapture(["system", "snapshot", "--record", "true", "--monitor-db", monitorDb, "--json"], process.cwd());
+  assert.equal(snapshot.code, CLI_EXIT_OK);
+  const snapshotPayload = parseCliJsonPayload<{
+    recorded: { store: string; dbPath: string; sourceId: string; sampleCount: number; rollupCount: number };
+  }>(snapshot.stdout);
+  assert.equal(snapshotPayload.recorded.store, "monitor.sqlite");
+  assert.equal(snapshotPayload.recorded.dbPath, monitorDb);
+  assert.equal(snapshotPayload.recorded.sourceId, "system.telemetry.local");
+  assert.equal(snapshotPayload.recorded.sampleCount >= 3, true);
+  assert.equal(snapshotPayload.recorded.rollupCount >= 3, true);
+  assert.equal(fs.existsSync(monitorDb), true);
+
+  const history = await runCliCapture(["system", "history", "system.memory.used", "--range", "1h", "--monitor-db", monitorDb, "--json"], process.cwd());
+  assert.equal(history.code, CLI_EXIT_OK);
+  const historyPayload = parseCliJsonPayload<{
+    retention: { status: string; rollupBucketMs: number };
+    samples: Array<{ metricKey: string; sourceId: string; valueType: string; unit: string }>;
+    rollups: Array<{ metricKey: string; bucketMs: number; count: number }>;
+  }>(history.stdout);
+  assert.equal(historyPayload.retention.status, "recorded");
+  assert.equal(historyPayload.retention.rollupBucketMs, 60_000);
+  assert.equal(historyPayload.samples.some((sample) => sample.metricKey === "system.memory.used" && sample.sourceId === "system.telemetry.local" && sample.valueType === "number" && sample.unit === "bytes"), true);
+  assert.equal(historyPayload.rollups.some((rollup) => rollup.metricKey === "system.memory.used" && rollup.bucketMs === 60_000 && rollup.count >= 1), true);
+});
+
+test("runCli persists system telemetry rules and widgets in workspace state", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-system-telemetry-state-"));
+
+  const upsertRule = await runCliCapture([
+    "system", "rules", "upsert", "memory-high",
+    "--metric-key", "system.memory.used",
+    "--operator", "gt",
+    "--threshold", "1024",
+    "--severity", "critical",
+    "--workspace", workspaceRoot,
+    "--json",
+  ], process.cwd());
+  assert.equal(upsertRule.code, CLI_EXIT_OK);
+  const rulePayload = parseCliJsonPayload<{ rule: { id: string; metricKey: string; severity: string }; statePath: string; mutatesHardware: boolean }>(upsertRule.stdout);
+  assert.equal(rulePayload.rule.id, "memory-high");
+  assert.equal(rulePayload.rule.metricKey, "system.memory.used");
+  assert.equal(rulePayload.rule.severity, "critical");
+  assert.equal(rulePayload.mutatesHardware, false);
+  assert.equal(fs.existsSync(rulePayload.statePath), true);
+
+  const listRules = await runCliCapture(["system", "rules", "list", "--workspace", workspaceRoot, "--json"], process.cwd());
+  const rulesPayload = parseCliJsonPayload<{ rules: Array<{ id: string }> }>(listRules.stdout);
+  assert.equal(rulesPayload.rules.some((rule) => rule.id === "memory-high"), true);
+
+  const deleteRule = await runCliCapture(["system", "rules", "delete", "memory-high", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(deleteRule.code, CLI_EXIT_OK);
+  const deletedRulesPayload = parseCliJsonPayload<{ rules: Array<{ id: string }> }>(deleteRule.stdout);
+  assert.equal(deletedRulesPayload.rules.some((rule) => rule.id === "memory-high"), false);
+
+  const upsertWidget = await runCliCapture([
+    "system", "widgets", "upsert", "battery-text",
+    "--metric-key", "system.power.uptime",
+    "--title", "Uptime",
+    "--presentation", "text",
+    "--placement", "menubar",
+    "--enabled", "true",
+    "--workspace", workspaceRoot,
+    "--json",
+  ], process.cwd());
+  assert.equal(upsertWidget.code, CLI_EXIT_OK);
+  const widgetPayload = parseCliJsonPayload<{ widget: { id: string; placement: string; presentation: string }; statePath: string; hostSpecific: boolean }>(upsertWidget.stdout);
+  assert.equal(widgetPayload.widget.id, "battery-text");
+  assert.equal(widgetPayload.widget.placement, "menubar");
+  assert.equal(widgetPayload.widget.presentation, "text");
+  assert.equal(widgetPayload.hostSpecific, true);
+  assert.equal(fs.existsSync(widgetPayload.statePath), true);
+
+  const deleteWidget = await runCliCapture(["system", "widgets", "delete", "battery-text", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(deleteWidget.code, CLI_EXIT_OK);
+  const deletedWidgetPayload = parseCliJsonPayload<{ widgets: Array<{ id: string }> }>(deleteWidget.stdout);
+  assert.equal(deletedWidgetPayload.widgets.some((widget) => widget.id === "battery-text"), false);
 });
 
 test("runCli supports implicit db create, schema inspection, human output, and alias parity", async (t) => {
