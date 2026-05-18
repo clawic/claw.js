@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 
@@ -217,6 +218,10 @@ function readCliSearchSourceIds() {
     ], {
       cwd: rootDir,
       encoding: "utf8",
+      env: {
+        ...process.env,
+        CLAW_DATA_DIR: fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-search-goal-")),
+      },
       timeout: 10_000,
     });
     const parsed = JSON.parse(output);
