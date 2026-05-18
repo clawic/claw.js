@@ -268,6 +268,16 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
     },
     { name: "search.saved.list", description: "List saved searches.", inputSchema: { type: "object", properties: {} }, handler: () => store.listSavedSearches() },
     {
+      name: "search.saved.delete",
+      description: "Delete a saved search and any monitors attached to it.",
+      inputSchema: { type: "object", required: ["id"], properties: { id: { type: "string" } } },
+      handler: (p) => {
+        const id = requiredString(p, "id");
+        const deleted = store.deleteSavedSearch(id);
+        return { id, deleted, items: store.listSavedSearches(), state: deleted ? "ready" : "missing" };
+      },
+    },
+    {
       name: "search.saved.create",
       description: "Create or update a saved search.",
       inputSchema: {
@@ -314,6 +324,16 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
       },
     },
     { name: "search.monitors.list", description: "List Search monitors.", inputSchema: { type: "object", properties: {} }, handler: () => store.listMonitors() },
+    {
+      name: "search.monitors.delete",
+      description: "Delete a Search monitor.",
+      inputSchema: { type: "object", required: ["id"], properties: { id: { type: "string" } } },
+      handler: (p) => {
+        const id = requiredString(p, "id");
+        const deleted = store.deleteMonitor(id);
+        return { id, deleted, items: store.listMonitors(), state: deleted ? "ready" : "missing" };
+      },
+    },
     {
       name: "search.monitors.create",
       description: "Create or update a Search monitor for a saved search.",

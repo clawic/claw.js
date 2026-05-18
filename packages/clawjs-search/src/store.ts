@@ -832,6 +832,11 @@ export class SearchStore {
     }));
   }
 
+  deleteSavedSearch(id: string): boolean {
+    const result = this.db.prepare("DELETE FROM saved_searches WHERE id = ?").run(id);
+    return result.changes > 0;
+  }
+
   saveMonitor(input: SearchMonitorInput): void {
     const now = new Date().toISOString();
     this.db.prepare(`
@@ -856,6 +861,11 @@ export class SearchStore {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }));
+  }
+
+  deleteMonitor(id: string): boolean {
+    const result = this.db.prepare("DELETE FROM search_monitors WHERE id = ?").run(id);
+    return result.changes > 0;
   }
 
   recordAuditEvent(input: SearchAuditEventInput): SearchAuditEvent {

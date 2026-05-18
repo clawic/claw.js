@@ -715,6 +715,26 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.ok(monitorRunPayload.data.items[0]?.results.some((result) => result.source === "commands"));
     assert.ok(monitorRunPayload.data.items[0]?.evaluatedAt);
 
+    const monitorDelete = await runCliCapture(["search", "monitors", "delete", "monitor-system", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(monitorDelete.code, CLI_EXIT_OK);
+    const monitorDeletePayload = JSON.parse(monitorDelete.stdout) as { data: { id: string; deleted: boolean; items: Array<{ id: string }> } };
+    assert.equal(monitorDeletePayload.data.id, "monitor-system");
+    assert.equal(monitorDeletePayload.data.deleted, true);
+    assert.equal(monitorDeletePayload.data.items.some((item) => item.id === "monitor-system"), false);
+
+    const cascadeMonitor = await runCliCapture(["search", "monitors", "create", "monitor-system-cascade", "--saved-search", "recent-system", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(cascadeMonitor.code, CLI_EXIT_OK);
+    const savedDelete = await runCliCapture(["search", "saved", "delete", "recent-system", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(savedDelete.code, CLI_EXIT_OK);
+    const savedDeletePayload = JSON.parse(savedDelete.stdout) as { data: { id: string; deleted: boolean; items: Array<{ id: string }> } };
+    assert.equal(savedDeletePayload.data.id, "recent-system");
+    assert.equal(savedDeletePayload.data.deleted, true);
+    assert.equal(savedDeletePayload.data.items.some((item) => item.id === "recent-system"), false);
+    const monitorsAfterSavedDelete = await runCliCapture(["search", "monitors", "list", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(monitorsAfterSavedDelete.code, CLI_EXIT_OK);
+    const monitorsAfterSavedDeletePayload = JSON.parse(monitorsAfterSavedDelete.stdout) as { data: { items: Array<{ id: string }> } };
+    assert.equal(monitorsAfterSavedDeletePayload.data.items.some((item) => item.id === "monitor-system-cascade"), false);
+
     const paused = await runCliCapture(["search", "sources", "pause", "commands", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(paused.code, CLI_EXIT_OK);
     const pausedPayload = JSON.parse(paused.stdout) as {

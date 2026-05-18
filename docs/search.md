@@ -296,8 +296,10 @@ match the indexed text for authorized lookup, but returned snippets are
 Saved searches preserve structured query controls. `claw search saved create`
 accepts the same domain/source/shard filters, strategy, local embedding,
 structured filters, limit, explain mode, actor/surface context, and agent budget
-flags as `claw search query`; monitor evaluation runs that stored query and can
-override the result limit for a single run.
+flags as `claw search query`; `claw search saved delete` removes a saved search
+and its attached monitors. Monitor evaluation runs that stored query and can
+override the result limit for a single run, and `claw search monitors delete`
+removes an individual monitor.
 
 Ranking is centralized in `@clawjs/search`. The store reranks a bounded
 candidate batch with lexical score, source ranking hints, local frecency,
@@ -487,7 +489,8 @@ domain/source/shard filters, strategy, limits, actor/surface context, and local
 embedding settings. MCP callers can pass `agentBudget.maxResults`,
 `agentBudget.maxResultsPerSource`, and `agentBudget.maxResultsPerDomain` on
 both direct queries and saved searches, matching the local Search result-budget
-contract used by agent callers.
+contract used by agent callers. `search.saved.delete` and
+`search.monitors.delete` expose the same lifecycle controls for MCP clients.
 
 The showcase app exposes `/search-index` as the Search Index admin surface. It
 shows framework and full-profile sources separately, keeps optional native/web/

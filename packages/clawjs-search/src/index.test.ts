@@ -536,6 +536,12 @@ test("SearchStore persists sources, fragments, FTS documents, actions, cursors, 
     assert.equal(store.listSavedSearches().at(0)?.name, "Chats about Search");
     store.saveMonitor({ id: "monitor_1", savedSearchId: "saved_1", name: "Search monitor", cadence: "hourly" });
     assert.equal(store.listMonitors().at(0)?.enabled, true);
+    assert.equal(store.deleteMonitor("monitor_1"), true);
+    assert.equal(store.listMonitors().length, 0);
+    store.saveMonitor({ id: "monitor_1", savedSearchId: "saved_1", name: "Search monitor", cadence: "hourly" });
+    assert.equal(store.deleteSavedSearch("saved_1"), true);
+    assert.equal(store.listSavedSearches().length, 0);
+    assert.equal(store.listMonitors().length, 0);
 
     const sensitiveQuery = store.recordAuditEvent({
       type: "sensitive_query",

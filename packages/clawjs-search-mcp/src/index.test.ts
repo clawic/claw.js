@@ -41,8 +41,10 @@ test("Search MCP exposes profile, entrypoint, and explain tools", () => {
       "search.actions.list",
       "search.actions.execute",
       "search.saved.list",
+      "search.saved.delete",
       "search.saved.create",
       "search.monitors.list",
+      "search.monitors.delete",
       "search.monitors.create",
       "search.monitors.evaluate",
       "search.audit.list",
@@ -246,6 +248,22 @@ test("Search MCP exposes profile, entrypoint, and explain tools", () => {
     assert.equal(partial.items[0]?.resultCount, 0);
     assert.equal(partial.items[0]?.omittedSources[0]?.source, "commands");
     assert.equal(partial.items[0]?.omittedSources[0]?.reason, "disabled");
+
+    const monitorsDeleteTool = tools.find((tool) => tool.name === "search.monitors.delete");
+    assert.ok(monitorsDeleteTool);
+    const deletedMonitor = monitorsDeleteTool.handler({ id: "monitor-semantic" }) as { id: string; deleted: boolean; items: Array<{ id: string }> };
+    assert.equal(deletedMonitor.id, "monitor-semantic");
+    assert.equal(deletedMonitor.deleted, true);
+    assert.equal(deletedMonitor.items.some((item) => item.id === "monitor-semantic"), false);
+
+    const savedDeleteTool = tools.find((tool) => tool.name === "search.saved.delete");
+    assert.ok(savedDeleteTool);
+    const deletedSaved = savedDeleteTool.handler({ id: "saved-search" }) as { id: string; deleted: boolean; items: Array<{ id: string }> };
+    assert.equal(deletedSaved.id, "saved-search");
+    assert.equal(deletedSaved.deleted, true);
+    assert.equal(deletedSaved.items.some((item) => item.id === "saved-search"), false);
+    const remainingMonitors = (tools.find((tool) => tool.name === "search.monitors.list")?.handler({}) ?? []) as Array<{ id: string }>;
+    assert.equal(remainingMonitors.some((item) => item.id === "monitor-search"), false);
 
   } finally {
     store.close();

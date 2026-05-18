@@ -663,7 +663,7 @@ export async function runSearchAdminCli(input: {
   if (command === "saved" || command === "monitors") {
     const action = input.positionals[2] ?? "list";
     const store = openCliSearchStore(input.flags);
-    let data: { action: string; item?: unknown; items: unknown[]; state: string };
+    let data: { action: string; id?: string; deleted?: boolean; item?: unknown; items: unknown[]; state: string };
     try {
       registerCliSearchSources(store, input.flags);
       if (command === "saved" && (action === "create" || action === "upsert")) {
@@ -696,6 +696,14 @@ export async function runSearchAdminCli(input: {
         };
         store.saveSearch(item);
         data = { action, item, items: store.listSavedSearches(), state: "ready" };
+      } else if (command === "saved" && (action === "delete" || action === "remove")) {
+        const id = input.positionals[3] ?? input.flags.id;
+        if (!id) {
+          input.context.stderr.write(`Usage: ${input.binName} search saved delete <id> [--json]\n`);
+          return CLI_EXIT_USAGE;
+        }
+        const deleted = store.deleteSavedSearch(id);
+        data = { action, id, deleted, items: store.listSavedSearches(), state: deleted ? "ready" : "missing" };
       } else if (command === "monitors" && (action === "create" || action === "upsert")) {
         const id = input.positionals[3] ?? input.flags.id;
         const savedSearchId = input.flags["saved-search"] ?? input.flags["saved-search-id"] ?? input.positionals[4];
@@ -712,6 +720,14 @@ export async function runSearchAdminCli(input: {
         };
         store.saveMonitor(item);
         data = { action, item, items: store.listMonitors(), state: "ready" };
+      } else if (command === "monitors" && (action === "delete" || action === "remove")) {
+        const id = input.positionals[3] ?? input.flags.id;
+        if (!id) {
+          input.context.stderr.write(`Usage: ${input.binName} search monitors delete <id> [--json]\n`);
+          return CLI_EXIT_USAGE;
+        }
+        const deleted = store.deleteMonitor(id);
+        data = { action, id, deleted, items: store.listMonitors(), state: deleted ? "ready" : "missing" };
       } else if (command === "monitors" && (action === "run" || action === "evaluate")) {
         data = runSearchMonitorEvaluations(store, input, action);
       } else {
