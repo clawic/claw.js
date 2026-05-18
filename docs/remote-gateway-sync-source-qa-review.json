@@ -71,6 +71,11 @@
       "disposition": "external_pending",
       "evidenceRefs": [
         "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "SyncResourceManifest",
+        "SyncAuthorityHandoffReceipt",
+        "claw sync manifest",
+        "claw sync handoff",
+        "relay /v1/sync/authority-handoffs",
         "claw remote pending:physical_authority_handoff"
       ],
       "reviewedAt": "2026-05-18T11:20:00.000Z",

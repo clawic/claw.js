@@ -465,6 +465,17 @@ for (const ref of [
 ]) {
   if (!clientCacheSourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-015 must cite ${ref}`);
 }
+const syncAuthoritySourceQaReview = sourceQaReviewReport.items.find((item) => item.qaId === "QA-005");
+for (const ref of [
+  "SyncResourceManifest",
+  "SyncAuthorityHandoffReceipt",
+  "claw sync manifest",
+  "claw sync handoff",
+  "relay /v1/sync/authority-handoffs",
+  "claw remote pending:physical_authority_handoff",
+]) {
+  if (!syncAuthoritySourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-005 must cite ${ref}`);
+}
 const reviewedClosureGate = buildRemoteGoalClosureGate({
   generatedAt: "2026-05-18T11:20:01.000Z",
   sourceQaReviews: sourceQaReviewReport.items,
