@@ -49,7 +49,6 @@ test("search actions honor actor and scope ACLs", async () => {
   } finally {
     store.close();
   }
-
   const hidden = await runCliCapture(["search", "actions", "documents.blocks:restricted", "--data-dir", dataRoot, "--json"], workspaceRoot);
   assert.equal(hidden.code, CLI_EXIT_OK);
   const hiddenPayload = JSON.parse(hidden.stdout) as { data: { actions: unknown[] } };
@@ -62,7 +61,6 @@ test("search actions honor actor and scope ACLs", async () => {
   assert.equal(visible.code, CLI_EXIT_OK);
   const visiblePayload = JSON.parse(visible.stdout) as { data: { actions: Array<{ id: string }> } };
   assert.deepEqual(visiblePayload.data.actions.map((action) => action.id), ["open"]);
-
   const blockedExecute = await runCliCapture(["search", "actions", "execute", "documents.blocks:restricted", "open", "--actor", "agent:codex", "--filter", "scopeId=project-beta", "--dry-run", "--data-dir", dataRoot, "--json"], workspaceRoot);
   assert.equal(blockedExecute.code, CLI_EXIT_FAILURE);
   const blockedExecutePayload = JSON.parse(blockedExecute.stdout) as { error: { code: string } };
@@ -113,7 +111,6 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(rebuildPayload.data.sources.includes("commands"), true);
     assert.equal(rebuildPayload.data.pendingSources.includes("sessions.chats"), true);
     assert.ok(rebuildPayload.data.reindexed > 0);
-
     const query = await runCliCapture(["search", "query", "system capabilities", "--data-dir", dataRoot, "--json", "--limit", "5", "--explain", "true"], workspaceRoot);
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
@@ -146,12 +143,10 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(systemResult?.domain, "commands");
     assert.equal(systemResult?.actions?.some((action) => action.id === "help" && action.kind === "run"), true);
     assert.ok(systemResult?.explanation?.matchedBy?.length);
-
     const defaultShardQuery = await runCliCapture(["search", "query", "system capabilities", "--data-dir", dataRoot, "--json", "--limit", "5", "--shards", "default"], workspaceRoot);
     assert.equal(defaultShardQuery.code, CLI_EXIT_OK);
     const defaultShardPayload = JSON.parse(defaultShardQuery.stdout) as { data: { results: Array<{ source: string; title: string; shard?: string }> } };
     assert.equal(defaultShardPayload.data.results.some((result) => result.source === "commands" && result.title === "system" && result.shard === undefined), true);
-
     const cursorStore = new SearchStore(path.join(dataRoot, "search.sqlite"));
     try {
       cursorStore.setCursor({
@@ -172,7 +167,6 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(commandsCursor?.watermark, "2026-05-18T10:00:00.000Z");
     assert.equal(commandsCursor?.checksum.length, 64);
     assert.deepEqual(commandsCursor?.metadata, { registryVersion: 1 });
-
     const budgetedQuery = await runCliCapture(["search", "query", "search", "--domains", "commands", "--data-dir", dataRoot, "--json", "--limit", "5", "--agent-result-limit", "1"], workspaceRoot);
     assert.equal(budgetedQuery.code, CLI_EXIT_OK);
     const budgetedPayload = JSON.parse(budgetedQuery.stdout) as { data: { agentBudget: { maxResults: number }; results: unknown[] } };
@@ -219,12 +213,10 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(scheduledEventPayload.data.item.payload.eventDriven, true);
     assert.equal(scheduledEventPayload.data.item.payload.reason, "registry_changed");
     assert.equal(scheduledEventPayload.data.item.payload.observedAt, "2026-05-17T10:00:00.000Z");
-
     const claimJob = await runCliCapture(["search", "jobs", "claim", "--source", "commands", "--shard", "default", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(claimJob.code, CLI_EXIT_OK);
     const claimPayload = JSON.parse(claimJob.stdout) as { data: { items: Array<{ id: string; status: string }> } };
     assert.deepEqual(claimPayload.data.items.map((item) => [item.id, item.status]), [["job:commands", "leased"]]);
-
     const hybridQuery = await runCliCapture(["search", "query", "system capabilities", "--data-dir", dataRoot, "--json", "--limit", "5", "--strategy", "hybrid", "--embedding-model", "local-test", "--embedding", "[1,0,0]"], workspaceRoot);
     assert.equal(hybridQuery.code, CLI_EXIT_OK);
     const hybridPayload = JSON.parse(hybridQuery.stdout) as {
