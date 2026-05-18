@@ -458,6 +458,7 @@ claw system rules delete cpu-load-high --json
 claw system widgets list --json
 claw system widgets upsert cpu-menu --metric-key system.cpu.load1 --presentation sparkline --placement menubar --json
 claw system widgets delete cpu-menu --json
+claw system providers list --json
 ```
 
 Snapshots expose safe aggregate values by default and mark deeper hardware,
@@ -471,8 +472,12 @@ defaults to `~/.claw/data/monitor.sqlite` and can be overridden with
 `--monitor-db`, `CLAW_MONITOR_DB_PATH`, `CLAW_MONITOR_DATA_DIR`,
 `CLAW_DATA_DIR`, or `CLAW_HOME`. Rule and widget upserts mutate only local
 configuration under `.claw/data/system-telemetry-state.json`; they do not
-control hardware. Physical controls, sensitive detail, precise location,
-calendar detail, network identifiers, and process detail remain grant/audit
+control hardware. `system providers list` exposes mock/offline provider slots
+for weather, build status, local services, agent runs, reminders, calendar, and
+custom context metrics; live providers remain disabled or external-pending until
+configured with explicit grants and credential references. Physical controls,
+sensitive detail, precise location, calendar detail, network identifiers, and
+process detail remain grant/audit
 gated and signed-host brokered.
 
 Local agent records are managed through the agent-facing data commands. These

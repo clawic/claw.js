@@ -20,6 +20,7 @@ import { MCPServiceStore } from "./store.ts";
 import {
   collectMcpSystemTelemetrySnapshot,
   mcpSystemTelemetryMetricsPayload,
+  mcpSystemTelemetryProvidersPayload,
   mcpSystemTelemetryWidgetsPayload,
   readMcpSystemTelemetryHistory,
 } from "./system-telemetry.ts";
@@ -117,6 +118,11 @@ export function buildMCPApp(options: BuildMCPAppOptions = {}) {
   app.get(clawApiPath("system/widgets"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     return mcpSystemTelemetryWidgetsPayload();
+  });
+
+  app.get(clawApiPath("system/providers"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    return mcpSystemTelemetryProvidersPayload();
   });
 
   app.get(clawApiPath("system/history/:metricKey"), async (request, reply) => {

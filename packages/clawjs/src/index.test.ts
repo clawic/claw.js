@@ -374,10 +374,10 @@ test("runCli exposes system telemetry snapshot, metrics, history, rules, widgets
 
   const providers = await runCliCapture(["system", "providers", "list", "--json"], process.cwd());
   assert.equal(providers.code, CLI_EXIT_OK);
-  const providerPayload = parseCliJsonPayload<{ providers: Array<{ kind: string; mode: string; status: string; metricKeys: string[] }> }>(providers.stdout);
+  const providerPayload = parseCliJsonPayload<{ providers: Array<{ id: string; kind: string; mode: string; status: string }> }>(providers.stdout);
   assert.equal(providerPayload.providers.some((provider) => provider.kind === "weather" && provider.mode === "mock" && provider.status === "ready"), true);
   assert.equal(providerPayload.providers.some((provider) => provider.kind === "weather" && provider.mode === "live" && provider.status === "external_pending"), true);
-  assert.equal(providerPayload.providers.some((provider) => provider.kind === "agent_run" && provider.metricKeys.includes("context.agent_runs.active")), true);
+  assert.equal(providerPayload.providers.some((provider) => provider.kind === "agent_run" && provider.id === "context.agent-runs.offline"), true);
 
   const watch = await runCliCapture(["system", "watch", "--interval", "1", "--count", "2", "--json"], process.cwd());
   assert.equal(watch.code, CLI_EXIT_OK);

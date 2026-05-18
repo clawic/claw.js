@@ -972,7 +972,12 @@ export async function runSystemCli(input: {
 
   if (command === "providers") {
     if (subcommand && subcommand !== "list") throw new CliHandledError("usage_error", `Usage: ${input.binName} system providers list`, CLI_EXIT_USAGE);
-    const payload = { providers: listSystemTelemetryProviders() };
+    const payload = {
+      providers: listSystemTelemetryProviders().map((provider) => ({
+        ...provider,
+        metrics: [...provider.metricKeys],
+      })),
+    };
     if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "system", payload, { subcommand: "providers list" });
     else writeHuman(input.context, payload);
     return CLI_EXIT_OK;

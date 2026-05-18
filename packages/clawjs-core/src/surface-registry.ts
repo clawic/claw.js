@@ -789,6 +789,7 @@ const corePublicRoutes = [
   ["claw.api.system.snapshot", "GET", "/v1/system/snapshot", "System telemetry snapshot contract"],
   ["claw.api.system.metrics", "GET", "/v1/system/metrics", "System telemetry metric catalog contract"],
   ["claw.api.system.widgets", "GET", "/v1/system/widgets", "System context widget catalog contract"],
+  ["claw.api.system.providers", "GET", "/v1/system/providers", "System telemetry provider catalog contract"],
   ["claw.api.system.history", "GET", "/v1/system/history/{metricKey}", "System telemetry Monitor history contract"],
   ["claw.api.time.items", "GET", clawTimeApiRoutes.items, "Time item list"],
   ["claw.api.time.executions", "GET", clawTimeApiRoutes.executions, "Time execution list"],

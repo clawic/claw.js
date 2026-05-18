@@ -99,6 +99,7 @@ describe("MCP connector control plane", () => {
       assert.equal(toolNames.includes("system.snapshot"), true);
       assert.equal(toolNames.includes("system.metrics"), true);
       assert.equal(toolNames.includes("system.widgets"), true);
+      assert.equal(toolNames.includes("system.providers"), true);
       assert.equal(toolNames.includes("system.history"), true);
 
       const snapshot = await app.inject({
@@ -127,6 +128,19 @@ describe("MCP connector control plane", () => {
       });
       assert.equal(widgets.statusCode, 200);
       assert.equal(widgets.json().result.content.widgets.some((entry: { id: string }) => entry.id === "cpu-load"), true);
+
+      const providers = await app.inject({
+        method: "POST",
+        url: "/v1/mcp/expose/rpc",
+        payload: {
+          jsonrpc: "2.0",
+          id: 4,
+          method: "tools/call",
+          params: { name: "system.providers", arguments: {} },
+        },
+      });
+      assert.equal(providers.statusCode, 200);
+      assert.equal(providers.json().result.content.providers.some((entry: { kind: string; mode: string }) => entry.kind === "weather" && entry.mode === "mock"), true);
     } finally {
       await app.close();
     }
@@ -160,6 +174,14 @@ describe("MCP connector control plane", () => {
       });
       assert.equal(widgets.statusCode, 200);
       assert.equal(widgets.json().widgets.some((entry: { placement: string }) => entry.placement === "menu_bar" || entry.placement === "both"), true);
+
+      const providers = await app.inject({
+        method: "GET",
+        url: "/v1/system/providers",
+        headers: { authorization: `Bearer ${config.sharedSecret}` },
+      });
+      assert.equal(providers.statusCode, 200);
+      assert.equal(providers.json().providers.some((entry: { kind: string; status: string }) => entry.kind === "custom_metric" && entry.status === "ready"), true);
 
       const history = await app.inject({
         method: "GET",
