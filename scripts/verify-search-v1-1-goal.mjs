@@ -500,6 +500,48 @@ function requireCliSearchAcceptanceSmoke() {
   if (!Array.isArray(actions.data?.actions) || !actions.data.actions.some((action) => action.id === "open")) {
     failures.push("claw search actions --json: must include the open action");
   }
+  const actionPreview = readCliSearchJson([
+    "actions",
+    "execute",
+    "commands:system",
+    "help",
+    "--dry-run",
+  ], "claw search actions execute --dry-run --json", dataRoot);
+  const previewPlan = actionPreview.data?.plan ?? {};
+  if (actionPreview.meta?.subcommand !== "actions.execute") {
+    failures.push("claw search actions execute --dry-run --json: must report actions.execute metadata");
+  }
+  if (previewPlan.status !== "planned" || previewPlan.dryRun !== true) {
+    failures.push("claw search actions execute --dry-run --json: must return a planned dry-run action");
+  }
+  if (previewPlan.grant !== "search.commands.run" || previewPlan.risk !== "system" || previewPlan.requiresApproval !== true) {
+    failures.push("claw search actions execute --dry-run --json: must require the command grant and host approval");
+  }
+  if (previewPlan.broker?.operation !== "search.action.execute" || previewPlan.broker?.sideEffects !== "none") {
+    failures.push("claw search actions execute --dry-run --json: must be a no-side-effect broker preview");
+  }
+
+  const actionApproved = readCliSearchJson([
+    "actions",
+    "execute",
+    "commands:system",
+    "help",
+    "--host-approval-id",
+    "approval_search_help",
+  ], "claw search actions execute --host-approval-id --json", dataRoot);
+  const approvedPlan = actionApproved.data?.plan ?? {};
+  if (approvedPlan.status !== "brokered" || approvedPlan.hostApprovalId !== "approval_search_help") {
+    failures.push("claw search actions execute --host-approval-id --json: must return a brokered approved plan");
+  }
+  if (approvedPlan.broker?.sideEffects !== "host_brokered") {
+    failures.push("claw search actions execute --host-approval-id --json: must report host-brokered side effects");
+  }
+
+  const actionAudit = readCliSearchJson(["audit", "--type", "action"], "claw search audit --type action --json", dataRoot);
+  const actionAuditItems = actionAudit.data?.items ?? [];
+  if (!Array.isArray(actionAuditItems) || !actionAuditItems.some((item) => item.type === "action" && item.resultId === "commands:system" && item.actionId === "help" && item.status === "brokered" && item.risk === "system" && item.grant === "search.commands.run" && item.metadata?.hostApprovalId === "approval_search_help")) {
+    failures.push("claw search audit --type action --json: must record brokered approved action audit");
+  }
 
   const explain = readCliSearchJson(["explain", "system"], "claw search explain system --json", dataRoot);
   if (explain.meta?.subcommand !== "explain") failures.push("claw search explain system --json: missing explain subcommand metadata");
