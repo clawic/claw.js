@@ -979,7 +979,6 @@ test("search service upsert jobs refresh only the targeted database resource", a
     ], workspaceRoot);
     assert.equal(first.code, CLI_EXIT_OK);
     const firstPayload = JSON.parse(first.stdout) as { data: { id: string } };
-
     const second = await runCliCapture([
       "db",
       "contacts",
@@ -996,7 +995,6 @@ test("search service upsert jobs refresh only the targeted database resource", a
     ], workspaceRoot);
     assert.equal(second.code, CLI_EXIT_OK);
     const secondPayload = JSON.parse(second.stdout) as { data: { id: string } };
-
     const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "database.records", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(serviceRun.code, CLI_EXIT_OK);
     const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
@@ -1004,7 +1002,6 @@ test("search service upsert jobs refresh only the targeted database resource", a
     };
     assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
     assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
-
     const jobs = await runCliCapture(["search", "jobs", "--source", "database.records", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(jobs.code, CLI_EXIT_OK);
     const jobsPayload = JSON.parse(jobs.stdout) as { data: { items: Array<{ status: string; resourceId: string }> } };
