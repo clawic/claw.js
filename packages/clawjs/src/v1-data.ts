@@ -436,13 +436,14 @@ function runAppStateCommand(input: V1DataCliInput, store: DatabaseServiceStore):
           const threadId = String(item.threadId || "");
           if (!threadId) continue;
           store.sqlite.prepare(`
-            INSERT INTO app_sidebar_snapshots (thread_id, chat_uuid, title, cwd, project_path, updated_at, archived, pinned, captured_at, metadata_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO app_sidebar_snapshots (thread_id, chat_uuid, title, cwd, project_id, project_path, updated_at, archived, pinned, captured_at, metadata_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `).run(
             threadId,
             String(item.chatUuid || ""),
             String(item.title || threadId),
             typeof item.cwd === "string" && item.cwd ? item.cwd : null,
+            typeof item.projectId === "string" && item.projectId ? item.projectId : null,
             typeof item.projectPath === "string" && item.projectPath ? item.projectPath : null,
             typeof item.updatedAt === "string" ? item.updatedAt : now,
             truthy(item.archived) ? 1 : 0,
@@ -465,11 +466,12 @@ function runAppStateCommand(input: V1DataCliInput, store: DatabaseServiceStore):
     }
     if (action === "upsert" || action === "set") {
       const now = nowIso();
+      const projectId = input.flags["project-id"] || input.flags.projectId || null;
       store.sqlite.prepare(`
-        INSERT INTO app_sidebar_snapshots (thread_id, chat_uuid, title, cwd, project_path, updated_at, archived, pinned, captured_at, metadata_json)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO app_sidebar_snapshots (thread_id, chat_uuid, title, cwd, project_id, project_path, updated_at, archived, pinned, captured_at, metadata_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(thread_id) DO UPDATE SET chat_uuid = excluded.chat_uuid, title = excluded.title,
-          cwd = excluded.cwd, project_path = excluded.project_path, updated_at = excluded.updated_at,
+          cwd = excluded.cwd, project_id = excluded.project_id, project_path = excluded.project_path, updated_at = excluded.updated_at,
           archived = excluded.archived, pinned = excluded.pinned, captured_at = excluded.captured_at,
           metadata_json = excluded.metadata_json
       `).run(
@@ -477,6 +479,7 @@ function runAppStateCommand(input: V1DataCliInput, store: DatabaseServiceStore):
         input.flags["chat-uuid"] || null,
         input.flags.title || threadId,
         input.flags.cwd || null,
+        projectId,
         input.flags["project-path"] || null,
         input.flags["updated-at"] || now,
         truthy(input.flags.archived) ? 1 : 0,

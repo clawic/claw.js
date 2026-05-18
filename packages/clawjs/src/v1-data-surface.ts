@@ -343,6 +343,13 @@ export const v1MainSchemaSurfaceNodes = [
     databaseId: v1MainDatabaseId,
     source: v1MainSchemaSource,
   }),
+  clawPersistentSurface.index({
+    id: `claw.database.core.index.app_sidebar_snapshots_project_id_idx`,
+    name: "app_sidebar_snapshots_project_id_idx",
+    parentId: v1MainDatabaseId,
+    databaseId: v1MainDatabaseId,
+    source: v1MainSchemaSource,
+  }),
   ...connectorControlPlaneMainIndexes.map((name) => clawPersistentSurface.index({
     id: `claw.database.core.index.${name}`,
     name,
@@ -907,6 +914,7 @@ export const V1_MAIN_SCHEMA_SQL = String.raw`
       chat_uuid TEXT,
       title TEXT NOT NULL,
       cwd TEXT,
+      project_id TEXT,
       project_path TEXT,
       updated_at TEXT NOT NULL,
       archived INTEGER NOT NULL DEFAULT 0,
@@ -916,6 +924,8 @@ export const V1_MAIN_SCHEMA_SQL = String.raw`
     );
     CREATE INDEX IF NOT EXISTS app_sidebar_snapshots_order_idx
       ON app_sidebar_snapshots(pinned DESC, updated_at DESC);
+    CREATE INDEX IF NOT EXISTS app_sidebar_snapshots_project_id_idx
+      ON app_sidebar_snapshots(project_id, updated_at DESC);
     CREATE TABLE IF NOT EXISTS app_terminal_tabs (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,

@@ -844,6 +844,64 @@ test("app-state projects persist opaque resource ids alongside paths", async () 
   }
 });
 
+test("app-state sidebar persists stable project ids alongside path locators", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-app-state-sidebar-project-id-"));
+  let restoreEnv: (() => void) | undefined;
+  const dataRoot = useIsolatedClawDataRoot({ after: (fn) => { restoreEnv = fn; } }, workspaceRoot);
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-app-state-sidebar-project-id-cwd-"));
+  const projectPath = path.join(cwd, "project");
+  const upsertStdout = captureStream();
+  assert.equal(await runInternalV1Cli([
+    "app-state", "sidebar", "upsert", "thread-1",
+    "--chat-uuid", "chat-1",
+    "--title", "Project chat",
+    "--cwd", cwd,
+    "--project-id", "proj-stable",
+    "--project-path", projectPath,
+    "--updated-at", "2026-05-18T10:00:00.000Z",
+    "--json",
+  ], {
+    stdout: upsertStdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+  const upserted = parseCliJsonPayload(upsertStdout.getOutput()) as { projectId: string; projectPath: string };
+  assert.equal(upserted.projectId, "proj-stable");
+  assert.equal(upserted.projectPath, projectPath);
+
+  const replaceStdout = captureStream();
+  assert.equal(await runInternalV1Cli([
+    "app-state", "sidebar", "replace",
+    "--items", JSON.stringify([{
+      threadId: "thread-2",
+      chatUuid: "chat-2",
+      title: "Synced chat",
+      cwd,
+      projectId: "proj-synced",
+      projectPath,
+      updatedAt: "2026-05-18T10:01:00.000Z",
+    }]),
+    "--json",
+  ], {
+    stdout: replaceStdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+
+  const sqlitePath = path.join(dataRoot, clawStorageFiles.mainDatabase);
+  const sqlite = new Database(sqlitePath);
+  try {
+    assert.deepEqual(sqlite.prepare("SELECT project_id, project_path FROM app_sidebar_snapshots WHERE thread_id = ?").get("thread-2"), {
+      project_id: "proj-synced",
+      project_path: projectPath,
+    });
+  } finally {
+    sqlite.close();
+    restoreEnv?.();
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test("V2 main schema upgrades app project resource ids before indexing them", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-schema-upgrade-"));
   await withPatchedEnv({ CLAW_DATA_DIR: tempRoot }, async () => {
@@ -866,6 +924,10 @@ test("V2 main schema upgrades app project resource ids before indexing them", as
       assert.equal(columns.some((column) => column.name === "resource_id"), true);
       const indexes = sqlite.prepare("PRAGMA index_list(app_projects)").all() as Array<{ name: string }>;
       assert.equal(indexes.some((index) => index.name === "app_projects_resource_id_idx"), true);
+      const sidebarColumns = sqlite.prepare("PRAGMA table_info(app_sidebar_snapshots)").all() as Array<{ name: string }>;
+      assert.equal(sidebarColumns.some((column) => column.name === "project_id"), true);
+      const sidebarIndexes = sqlite.prepare("PRAGMA index_list(app_sidebar_snapshots)").all() as Array<{ name: string }>;
+      assert.equal(sidebarIndexes.some((index) => index.name === "app_sidebar_snapshots_project_id_idx"), true);
       const incidentColumns = sqlite.prepare("PRAGMA table_info(agent_incidents)").all() as Array<{ name: string; dflt_value: string | null; notnull: number }>;
       assert.equal(incidentColumns.some((column) => column.name === "run_id"), true);
       assert.equal(incidentColumns.some((column) => column.name === "session_id"), true);

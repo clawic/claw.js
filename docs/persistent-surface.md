@@ -1838,6 +1838,8 @@ flowchart TD
   claw_database_core --> claw_database_core_index_app_projects_resource_id_idx
   claw_database_core_index_app_sidebar_snapshots_order_idx["app_sidebar_snapshots_order_idx\nindex"]
   claw_database_core --> claw_database_core_index_app_sidebar_snapshots_order_idx
+  claw_database_core_index_app_sidebar_snapshots_project_id_idx["app_sidebar_snapshots_project_id_idx\nindex"]
+  claw_database_core --> claw_database_core_index_app_sidebar_snapshots_project_id_idx
   claw_database_core_index_connector_external_principals_provider_idx["connector_external_principals_provider_idx\nindex"]
   claw_database_core --> claw_database_core_index_connector_external_principals_provider_idx
   claw_database_core_index_connector_credential_bindings_provider_idx["connector_credential_bindings_provider_idx\nindex"]
@@ -3054,6 +3056,7 @@ flowchart TD
 | `claw.database.core.index.app_projects_path_idx` | index | persistent | claw |  |  |  | `` |
 | `claw.database.core.index.app_projects_resource_id_idx` | index | persistent | claw |  |  |  | `` |
 | `claw.database.core.index.app_sidebar_snapshots_order_idx` | index | persistent | claw |  |  |  | `` |
+| `claw.database.core.index.app_sidebar_snapshots_project_id_idx` | index | persistent | claw |  |  |  | `` |
 | `claw.database.core.index.connector_external_principals_provider_idx` | index | persistent | claw |  |  |  | `` |
 | `claw.database.core.index.connector_credential_bindings_provider_idx` | index | persistent | claw |  |  |  | `` |
 | `claw.database.core.index.connector_capabilities_domain_idx` | index | persistent | claw |  |  |  | `` |

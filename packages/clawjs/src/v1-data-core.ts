@@ -269,6 +269,8 @@ export function ensureV1MainSchema(sqlite: Database.Database, env: NodeJS.Proces
   migrateAgentIncidentsV1Schema(sqlite);
   ensureColumn(sqlite, "app_projects", "resource_id", "TEXT");
   sqlite.prepare("CREATE INDEX IF NOT EXISTS app_projects_resource_id_idx ON app_projects(resource_id) WHERE resource_id IS NOT NULL").run();
+  ensureColumn(sqlite, "app_sidebar_snapshots", "project_id", "TEXT");
+  sqlite.prepare("CREATE INDEX IF NOT EXISTS app_sidebar_snapshots_project_id_idx ON app_sidebar_snapshots(project_id, updated_at DESC)").run();
   ensureColumn(sqlite, "signals_observations", "page_id", "TEXT");
   ensureColumn(sqlite, "agents", "secret_ref", "TEXT");
   ensureColumn(sqlite, "agents", "status", "TEXT NOT NULL DEFAULT 'active'");
