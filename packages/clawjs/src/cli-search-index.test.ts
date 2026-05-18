@@ -2659,6 +2659,38 @@ test("apps and design writes enqueue and index section fast paths", async () => 
     assert.equal(appResult?.metadata?.slug, "canvas-lab");
     assert.equal(appResult?.metadata?.pinned, true);
 
+    const appDelete = await runInternalV1Cli([
+      "apps",
+      "delete",
+      "canvas-lab",
+      "--json",
+    ], { stdout: captureStream().stream, stderr: captureStream().stream, cwd: workspaceRoot });
+    assert.equal(appDelete, CLI_EXIT_OK);
+    const appDeleteJobs = await runCliCapture(["search", "jobs", "--source", "apps.catalog", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(appDeleteJobs.code, CLI_EXIT_OK);
+    const appDeleteJobsPayload = JSON.parse(appDeleteJobs.stdout) as {
+      data: { items: Array<{ operation: string; priority: number; resourceId: string; payload: { appId?: string; eventDriven?: boolean } }> };
+    };
+    const appDeleteJob = appDeleteJobsPayload.data.items.find((job) => job.resourceId === "app-canvas-lab" && job.operation === "delete");
+    assert.equal(appDeleteJob?.priority, 80);
+    assert.equal(appDeleteJob?.payload.appId, "app-canvas-lab");
+    assert.equal(appDeleteJob?.payload.eventDriven, true);
+    const appDeleteRun = await runCliCapture(["search", "service", "run-once", "--source", "apps.catalog", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(appDeleteRun.code, CLI_EXIT_OK);
+    const appDeleteRunPayload = JSON.parse(appDeleteRun.stdout) as {
+      data: { worker?: { items?: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    assert.equal(appDeleteRunPayload.data.worker?.items?.[0]?.source, "apps.catalog");
+    assert.equal(appDeleteRunPayload.data.worker?.items?.[0]?.operation, "delete");
+    assert.equal(appDeleteRunPayload.data.worker?.items?.[0]?.status, "done");
+    assert.equal(appDeleteRunPayload.data.worker?.items?.[0]?.indexed, 1);
+    const afterAppDelete = await runCliCapture(["search", "query", "canvas prototyping", "--sources", "apps.catalog", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterAppDelete.code, CLI_EXIT_DEGRADED, afterAppDelete.stderr || afterAppDelete.stdout);
+    const afterAppDeletePayload = JSON.parse(afterAppDelete.stdout) as {
+      data: { results: Array<{ source: string; title: string }> };
+    };
+    assert.equal(afterAppDeletePayload.data.results.some((entry) => entry.source === "apps.catalog" && entry.title === "Canvas Lab"), false);
+
     const designQuery = await runCliCapture(["search", "query", "launch deck", "--domains", "design", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(designQuery.code, CLI_EXIT_OK);
     const designQueryPayload = JSON.parse(designQuery.stdout) as {

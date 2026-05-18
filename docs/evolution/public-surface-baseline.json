@@ -7493,7 +7493,7 @@
     {
       "name": "apps",
       "kind": "canonical",
-      "usage": "apps list|upsert",
+      "usage": "apps list|upsert|delete",
       "family": "apps",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.apps.v1"
