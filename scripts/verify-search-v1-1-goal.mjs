@@ -184,6 +184,7 @@ for (const snippet of [
 for (const snippet of [
   "search rebuild indexes docs pages",
   "sessions.chats event jobs refresh and tombstone individual chats",
+  "local.files event jobs refresh and tombstone individual files",
   "search keeps optional full sources out of scoped domain queries",
   "search rebuild indexes surface route graph contracts",
   "Search MCP package publishes only the public Search binary",
@@ -197,6 +198,9 @@ requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"docs.pages
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleSessionChatSearchEvent");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"sessions.chats\"");
 requireSnippet("packages/clawjs/src/cli-search-command.ts", "ensureSessionChatResourceIndexed");
+requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleLocalFileSearchEvent");
+requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"local.files\"");
+requireSnippet("packages/clawjs/src/cli-search-command.ts", "ensureLocalFileResourceIndexed");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleSurfaceRouteSearchEvent");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"surfaces.routes\"");
 requireSnippet("packages/clawjs/src/cli-search-surface-routes-test-utils.ts", "scheduleSurfaceRouteSearchEvent");

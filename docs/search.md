@@ -92,7 +92,7 @@ backfill jobs.
 | `design.resources` | `design` | design resources from `core.sqlite` plus workspace style, template, and reference manifests projected into `search.sqlite` | implemented initial adapter |
 | `runtime.events` | `runtime` | runtime jobs/events and monitor/infra/ops operational sidecars projected into `search.sqlite` | implemented initial adapter |
 | `surfaces.routes` | `surfaces` | surface route graph contracts, steps, tests, docs, and ADR links projected from the framework registry | implemented initial adapter |
-| `local.files` | `files` | bounded local file metadata and text-content projection | implemented opt-in adapter, `full`, off by default |
+| `local.files` | `files` | bounded local file metadata and text-content projection with per-file refresh jobs | implemented opt-in adapter, `full`, off by default |
 | `native.system` | `native` | native app/system/contact adapters | EXTERNAL PENDING, `full`, off by default |
 | `web.ingested` | `web` | bounded explicit web cache ingestion | implemented opt-in adapter, `full`, off by default |
 | `external.cache` | `external` | bounded local provider cache ingestion | implemented opt-in adapter, `full`, off by default |
@@ -376,7 +376,9 @@ traversal and content reads. Text-like files are indexed with content; binary
 office/media files are indexed by metadata and path only. Dependency/build/
 cache/private control directories are skipped, and the source participates in
 scoped query refresh, rebuild accounting, and Search service `run-once` jobs
-only when selected.
+only when selected. Changed-file producers can schedule resource-scoped refresh
+jobs keyed by the path under `--file-root`; paths outside that root are rejected
+before a job is written.
 
 `web.ingested` is the first explicit web cache adapter. It does not crawl the
 network itself; it indexes bounded local exports under `--web-root` after the

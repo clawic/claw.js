@@ -58,6 +58,7 @@ import {
 import { ensureDocsPageResourceIndexed, ensureDocsPagesSourceIndexed } from "./cli-search-docs-pages-source.ts";
 import { ensureGenerationArtifactResourceIndexed, ensureGenerationsArtifactsSourceIndexed } from "./cli-search-generations-source.ts";
 import { ensureImageDerivedResourceIndexed, ensureImagesDerivedSourceIndexed, ensureMediaAssetResourceIndexed, ensureMediaAssetsSourceIndexed } from "./cli-search-image-media-sources.ts";
+import { ensureLocalFileResourceIndexed, ensureLocalFilesSourceIndexed } from "./cli-search-local-files-source.ts";
 import { ensureSheetsWorkbookResourceIndexed, ensureSheetsWorkbooksSourceIndexed, ensureSlidesDeckResourceIndexed, ensureSlidesDecksSourceIndexed } from "./cli-search-slides-sheets-sources.ts";
 import { ensureSurfaceRouteResourceIndexed, ensureSurfacesRoutesSourceIndexed } from "./cli-search-surface-routes-source.ts";
 import { pathSafeBasename, resolveRuntimeAdapterId } from "./cli-runtime-utils.ts";
@@ -4184,81 +4185,6 @@ function ensureCodeSymbolsSourceIndexed(store: SearchStore, flags: Record<string
     lastIndexedAt: new Date().toISOString(),
   });
   return indexed;
-}
-
-function ensureLocalFilesSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {
-  const root = resolveLocalFilesSearchRoot(flags, cwd);
-  if (!fs.existsSync(root)) {
-    store.setSourceState("local.files", "degraded", {
-      backlog: 0,
-      error: `local files root does not exist: ${root}`,
-      lastIndexedAt: new Date().toISOString(),
-    });
-    return 0;
-  }
-  const maxFiles = boundedNumberFlag(flags["file-limit"] ?? flags["local-files-limit"], 500, 1, 20000);
-  const maxDepth = boundedNumberFlag(flags["file-max-depth"] ?? flags["local-files-max-depth"], 8, 1, 32);
-  const maxBytes = boundedNumberFlag(flags["file-max-bytes"] ?? flags["local-files-max-bytes"], 256 * 1024, 1024, 2 * 1024 * 1024);
-  const files = discoverLocalSearchFiles(root, { maxFiles, maxDepth });
-  let indexed = 0;
-  for (const file of files) {
-    const document = localFileSearchDocument(root, file, maxBytes);
-    if (!document) continue;
-    store.upsertDocument(document);
-    indexed += 1;
-  }
-  store.setCursor({
-    source: "local.files",
-    cursor: `root:${stableSearchId(root)}:files:${indexed}`,
-    metadata: { root, maxFiles, maxDepth, maxBytes },
-  });
-  store.setSourceState("local.files", "enabled", {
-    backlog: 0,
-    error: null,
-    lastIndexedAt: new Date().toISOString(),
-  });
-  return indexed;
-}
-
-function ensureLocalFileResourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string, relativePath: string, rootOverride?: string): number {
-  const root = path.resolve(rootOverride ?? resolveLocalFilesSearchRoot(flags, cwd));
-  const absolutePath = path.resolve(root, relativePath);
-  const relativeFromRoot = normalizeRelativePath(path.relative(root, absolutePath));
-  if (relativeFromRoot === ".." || relativeFromRoot.startsWith("../") || path.isAbsolute(relativeFromRoot)) {
-    store.tombstone({ source: "local.files", resourceId: relativePath, reason: "local file outside root during Search event refresh" });
-    return 1;
-  }
-  let stat: fs.Stats;
-  try {
-    stat = fs.statSync(absolutePath);
-  } catch {
-    store.tombstone({ source: "local.files", resourceId: relativeFromRoot, reason: "local file missing during Search event refresh" });
-    return 1;
-  }
-  if (!stat.isFile() || stat.size <= 0) {
-    store.tombstone({ source: "local.files", resourceId: relativeFromRoot, reason: "local file skipped during Search event refresh" });
-    return 1;
-  }
-  const maxBytes = boundedNumberFlag(flags["file-max-bytes"] ?? flags["local-files-max-bytes"], 256 * 1024, 1024, 2 * 1024 * 1024);
-  const extension = path.extname(absolutePath).toLowerCase();
-  const document = localFileSearchDocument(root, {
-    absolutePath,
-    extension,
-    kind: localFileKind(extension),
-    size: stat.size,
-    updatedAt: stat.mtime.toISOString(),
-  }, maxBytes);
-  if (!document) {
-    store.tombstone({ source: "local.files", resourceId: relativeFromRoot, reason: "local file skipped during Search event refresh" });
-    return 1;
-  }
-  store.upsertDocument(document);
-  store.setSourceState("local.files", "enabled", {
-    backlog: 0,
-    error: null,
-    lastIndexedAt: new Date().toISOString(),
-  });
-  return 1;
 }
 
 function ensureWebIngestedSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {
