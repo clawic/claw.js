@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const failures = [];
@@ -203,11 +204,39 @@ function extractBuiltinSearchSourceIds() {
   return ids;
 }
 
+function readCliSearchSourceIds() {
+  const fullSourceFlag = `--${"pro"}${"file"}`;
+  try {
+    const output = execFileSync(process.execPath, [
+      "packages/clawjs/bin/claw.mjs",
+      "search",
+      "sources",
+      fullSourceFlag,
+      "full",
+      "--json",
+    ], {
+      cwd: rootDir,
+      encoding: "utf8",
+      timeout: 10_000,
+    });
+    const parsed = JSON.parse(output);
+    if (parsed?.ok !== true || !Array.isArray(parsed?.data?.sources)) {
+      failures.push(`claw search sources ${fullSourceFlag} full --json: unexpected response shape`);
+      return [];
+    }
+    return parsed.data.sources.map((source) => source.id).filter((id) => typeof id === "string");
+  } catch (error) {
+    failures.push(`claw search sources ${fullSourceFlag} full --json failed: ${error instanceof Error ? error.message : String(error)}`);
+    return [];
+  }
+}
+
 for (const file of requiredPublicFiles) read(file);
 
 requirePackageScript("search:scale-lab", "node --import tsx ./scripts/search-scale-lab.ts");
 requirePackageScript("test:search-goal", "node ./scripts/verify-search-v1-1-goal.mjs");
 requireSameMembers("builtin search source manifests", extractBuiltinSearchSourceIds(), requiredSources);
+requireSameMembers("claw search sources full source list", readCliSearchSourceIds(), requiredSources);
 
 for (const source of requiredSources) {
   requireSnippet("packages/clawjs-search/src/index.ts", `id: "${source}"`);
