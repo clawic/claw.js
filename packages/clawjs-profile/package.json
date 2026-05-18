@@ -65,7 +65,8 @@
   ],
   "scripts": {
     "build": "tsup src/index.ts src/types.ts src/blocks.ts src/groups.ts src/acl.ts src/capabilities.ts src/storage.ts src/custom-verticals.ts --format esm --dts --out-dir dist --clean --target node20",
-    "test": "vitest run --config vitest.config.ts"
+    "test": "vitest run --config vitest.config.ts",
+    "prepublishOnly": "node --import tsx ../../scripts/verify-regulated-domain-safety-goal.mjs && node ../../scripts/version-governance-check.mjs --release-gate"
   },
   "dependencies": {
     "@clawjs/marketplace": "*",

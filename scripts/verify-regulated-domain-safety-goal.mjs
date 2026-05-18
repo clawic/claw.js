@@ -62,7 +62,22 @@ function walk(dir, predicate, files = []) {
   for (const entry of fs.readdirSync(absoluteDir, { withFileTypes: true })) {
     const relativePath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (["node_modules", "dist", ".next", ".vitepress", "test-results", "artifacts"].includes(entry.name)) continue;
+      if ([
+        ".build",
+        ".git",
+        ".next",
+        ".tmp",
+        ".vitepress",
+        "artifacts",
+        "build",
+        "dist",
+        "node_modules",
+        "output",
+        "playwright-report",
+        "release-output",
+        "target",
+        "test-results",
+      ].includes(entry.name)) continue;
       walk(relativePath, predicate, files);
     } else if (predicate(relativePath)) {
       files.push(relativePath);
@@ -143,6 +158,12 @@ function assertPackageReadmeDisclaimers() {
   for (const packageJsonPath of packageJsons) {
     const packageJson = JSON.parse(read(packageJsonPath));
     if (packageJson.publishConfig?.access === "public") {
+      const prepublishOnly = packageJson.scripts?.prepublishOnly;
+      if (typeof prepublishOnly !== "string"
+        || !prepublishOnly.includes("verify-regulated-domain-safety-goal.mjs")
+        || !prepublishOnly.includes("version-governance-check.mjs --release-gate")) {
+        packageFileErrors.push(`${packageJsonPath}: public package must run legal and exact-approval release gates in prepublishOnly`);
+      }
       if (!Array.isArray(packageJson.files)) {
         packageFileErrors.push(`${packageJsonPath}: public package must declare package files including README.md`);
         continue;
@@ -188,6 +209,16 @@ function assertReleaseScriptsRunLegalGate() {
     }
     if (!script.includes("verify-regulated-domain-safety-goal.mjs")) {
       errors.push(`package.json: ${scriptName} must run verify-regulated-domain-safety-goal.mjs before release mutation or publishing`);
+    }
+  }
+  if (!packageJson.scripts?.["build:website"]?.includes("verify-regulated-domain-safety-goal.mjs")) {
+    errors.push("package.json: build:website must run verify-regulated-domain-safety-goal.mjs before building public website assets");
+  }
+  const websitePackageJson = JSON.parse(read("website/package.json"));
+  for (const scriptName of ["prebuild", "predocs:build"]) {
+    const script = websitePackageJson.scripts?.[scriptName];
+    if (typeof script !== "string" || !script.includes("verify-regulated-domain-safety-goal.mjs")) {
+      errors.push(`website/package.json: ${scriptName} must run verify-regulated-domain-safety-goal.mjs before direct website/docs builds`);
     }
   }
 }
@@ -378,6 +409,7 @@ for (const [relativePath, snippets] of [
     "explicit approval for that exact",
     "CLAW_RELEASE_APPROVED_FOR=release-version",
     "CLAW_RELEASE_APPROVED_FOR=release-publish",
+    "CLAW_RELEASE_APPROVED_FOR=direct-package-publish",
     "docs/legal-external-pending-validation.md",
   ]],
   ["package.json", [
@@ -395,6 +427,7 @@ for (const [relativePath, snippets] of [
     "\"release:version\": \"release-version\"",
     "\"release:publish\": \"release-publish\"",
     "\"publish:packages\": \"publish-packages\"",
+    "\"prepublishOnly\": \"direct-package-publish\"",
     "CLAW_RELEASE_APPROVED_FOR=${expectedApproval}",
   ]],
   ["scripts/pack-smoke.mjs", [
@@ -405,6 +438,13 @@ for (const [relativePath, snippets] of [
   ]],
   ["scripts/package-surface-guard.mjs", [
     "releaseCriticalPackages",
+    "releaseGateScripts",
+    "\"release:version\": \"release-version\"",
+    "\"release:publish\": \"release-publish\"",
+    "\"publish:packages\": \"publish-packages\"",
+    "version-governance-check.mjs --release-gate",
+    "verify-regulated-domain-safety-goal.mjs",
+    "CLAW_RELEASE_APPROVED_FOR=${approvalTarget}",
     "\"@clawjs/search-mcp\"",
     "scripts/build-packages.mjs must build release-critical package",
     "scripts/pack-smoke.mjs must pack local tarball for release-critical package",

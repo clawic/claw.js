@@ -37,7 +37,8 @@
   ],
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean --target node20",
-    "test": "cd ../.. && vitest run --config vitest.config.ts packages/clawjs-mcp/src/control-plane.test.ts"
+    "test": "cd ../.. && vitest run --config vitest.config.ts packages/clawjs-mcp/src/control-plane.test.ts",
+    "prepublishOnly": "node --import tsx ../../scripts/verify-regulated-domain-safety-goal.mjs && node ../../scripts/version-governance-check.mjs --release-gate"
   },
   "dependencies": {
     "@clawjs/core": "0.1.2",

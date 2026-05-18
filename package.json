@@ -41,7 +41,7 @@
     "build:monitor": "npm --prefix monitor run build",
     "build:memory": "npm --prefix memory run build",
     "build:user": "npm --prefix modules/user run build",
-    "build:website": "npm --prefix website run build",
+    "build:website": "node --import tsx ./scripts/verify-regulated-domain-safety-goal.mjs && npm --prefix website run build",
     "build": "npm run clean && npm run build:packages && npm run build:database && npm run build:audio && npm run build:sessions && npm run build:user-model && npm run build:runtime && npm run build:sandbox && npm run build:mcp && npm run build:voice && npm run build:agenda && npm run build:time && npm run build:erp && npm run build:content && npm run build:notify && npm run build:iot && npm run build:relay && npm run build:execution && npm run build:delegation && npm run build:monitor && npm run build:secrets && npm run build:bridge && npm run build:wiki && npm run build:drive && npm run build:memory && npm run build:user && npm run build:website",
     "test": "node ./scripts/test-lane.mjs fast",
     "test:types": "tsc -p tsconfig.type-tests.json --noEmit",

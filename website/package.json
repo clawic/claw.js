@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 3000",
+    "prebuild": "node --import tsx ../scripts/verify-regulated-domain-safety-goal.mjs",
     "build": "rm -rf dist && vite build",
     "preview": "vite preview",
     "docs:dev": "vitepress dev ../docs",
+    "predocs:build": "node --import tsx ../scripts/verify-regulated-domain-safety-goal.mjs",
     "docs:build": "vitepress build ../docs",
     "docs:preview": "vitepress preview ../docs"
   },

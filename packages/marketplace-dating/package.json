@@ -4,20 +4,40 @@
   "description": "Dating vertical plugin for the Clawix marketplace/* protocol: photos, prompts, age range, distance, looking_for, deal breakers, with mutual-match flow.",
   "type": "module",
   "license": "MIT",
-  "author": { "name": "Iván González Dávila", "url": "https://github.com/ivangdavila" },
+  "author": {
+    "name": "Iván González Dávila",
+    "url": "https://github.com/ivangdavila"
+  },
   "homepage": "https://github.com/clawic/clawjs",
-  "repository": { "type": "git", "url": "git+https://github.com/clawic/clawjs.git" },
-  "bugs": { "url": "https://github.com/clawic/clawjs/issues" },
-  "publishConfig": { "access": "public" },
-  "engines": { "node": ">=20" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/clawic/clawjs.git"
+  },
+  "bugs": {
+    "url": "https://github.com/clawic/clawjs/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
   },
-  "files": ["dist", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean --target node20"
+    "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean --target node20",
+    "prepublishOnly": "node --import tsx ../../scripts/verify-regulated-domain-safety-goal.mjs && node ../../scripts/version-governance-check.mjs --release-gate"
   },
   "dependencies": {
     "@clawjs/marketplace": "*"

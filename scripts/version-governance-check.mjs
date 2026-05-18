@@ -11,7 +11,9 @@ const releaseApprovalTargets = {
   "release:version": "release-version",
   "release:publish": "release-publish",
   "publish:packages": "publish-packages",
+  "prepublishOnly": "direct-package-publish",
 };
+const rootReleaseScripts = ["release:version", "release:publish", "publish:packages"];
 
 function fail(message) {
   errors.push(message);
@@ -125,7 +127,8 @@ function checkLedger() {
 
 function checkReleaseScripts() {
   const packageJson = readJson("package.json");
-  for (const [scriptName, approvalTarget] of Object.entries(releaseApprovalTargets)) {
+  for (const scriptName of rootReleaseScripts) {
+    const approvalTarget = releaseApprovalTargets[scriptName];
     const script = packageJson.scripts?.[scriptName] ?? "";
     if (!script.includes("version-governance-check.mjs --release-gate")) {
       fail(`${scriptName} must run the pre-v1 release approval gate`);

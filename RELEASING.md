@@ -154,3 +154,10 @@ Direct package publish, only for the same approved npm release action:
 ```bash
 CLAW_ALLOW_PRE_V1_RELEASE=1 CLAW_RELEASE_APPROVED_FOR=publish-packages npm run publish:packages
 ```
+
+Direct publish from inside an individual public package is intentionally a
+separate approval target:
+
+```bash
+CLAW_ALLOW_PRE_V1_RELEASE=1 CLAW_RELEASE_APPROVED_FOR=direct-package-publish npm publish
+```

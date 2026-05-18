@@ -122,6 +122,23 @@ if (owner === "clawjs") {
       "@clawjs/search-mcp",
       ...Object.keys(cliManifest?.dependencies ?? {}).filter((dependency) => dependency.startsWith("@clawjs/")),
     ]);
+    const releaseGateScripts = {
+      "release:version": "release-version",
+      "release:publish": "release-publish",
+      "publish:packages": "publish-packages",
+    };
+    for (const [scriptName, approvalTarget] of Object.entries(releaseGateScripts)) {
+      const script = rootPackageJson.scripts?.[scriptName] ?? "";
+      if (!script.includes("version-governance-check.mjs --release-gate")) {
+        violations.push(`package.json ${scriptName} must run the pre-v1 release approval gate`);
+      }
+      if (!script.includes("verify-regulated-domain-safety-goal.mjs")) {
+        violations.push(`package.json ${scriptName} must run the regulated-domain legal release gate`);
+      }
+      if (!fs.readFileSync(path.join(cwd, "RELEASING.md"), "utf8").includes(`CLAW_RELEASE_APPROVED_FOR=${approvalTarget}`)) {
+        violations.push(`RELEASING.md must document exact release approval ${approvalTarget}`);
+      }
+    }
 
     for (const packageName of releaseCriticalPackages) {
       const entry = packageEntriesByName.get(packageName);
@@ -141,6 +158,17 @@ if (owner === "clawjs") {
         if (!script.includes(`--workspace ${packageName}`)) {
           violations.push(`package.json ${scriptName} must include release-critical package ${packageName}`);
         }
+      }
+    }
+
+    for (const { file, manifest } of packageEntriesByName.values()) {
+      if (manifest.private || manifest.publishConfig?.access !== "public") continue;
+      const prepublishOnly = manifest.scripts?.prepublishOnly ?? "";
+      if (!prepublishOnly.includes("verify-regulated-domain-safety-goal.mjs")) {
+        violations.push(`${relative(file)} public package must run regulated-domain legal gate in prepublishOnly`);
+      }
+      if (!prepublishOnly.includes("version-governance-check.mjs --release-gate")) {
+        violations.push(`${relative(file)} public package must run exact release approval gate in prepublishOnly`);
       }
     }
   }
