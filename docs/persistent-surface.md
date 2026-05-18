@@ -1978,8 +1978,14 @@ flowchart TD
   claw_connector -- "brokers" --> claw_sync
   claw_sync -- "owns" --> claw_skills_library
   claw_sync -- "owns" --> claw_memory_userModel
+  claw_sync -- "owns" --> claw_sessions
   claw_sync -- "owns" --> claw_drive_files
+  claw_sync -- "owns" --> claw_drive_files
+  claw_sync -- "owns" --> claw_search
   claw_sync -- "owns" --> claw_database_core
+  claw_sync -- "owns" --> claw_database_runtime
+  claw_sync -- "owns" --> claw_agents
+  claw_sync -- "owns" --> claw_workspace
   claw_sync -- "owns" --> claw_remoteCache
   claw_gateway -- "exposes" --> claw_headlessHost
   claw_headlessHost -- "brokers" --> claw_agents_assignments
@@ -2005,8 +2011,14 @@ flowchart TD
 | `remote.secretBrokeredOperation` | `claw.remote.client` | `claw.secrets.broker` | external | Secret ref rejection and broker lease acceptance tests |
 | `sync.skills` | `claw.sync` | `claw.skills.library` | public | Skills two-host sync tests |
 | `sync.memoryUserModel` | `claw.sync` | `claw.memory.userModel` | public | Memory/user-model sync tests |
-| `sync.driveFiles` | `claw.sync` | `claw.drive.files` | public | Drive/file/blob sync tests |
+| `sync.sessions` | `claw.sync` | `claw.sessions` | public | Sessions sync route contract tests |
+| `sync.driveFiles` | `claw.sync` | `claw.drive.files` | public | Drive/file sync tests |
+| `sync.blobs` | `claw.sync` | `claw.drive.files` | public | Blob sync route contract tests |
 | `sync.sqliteResources` | `claw.sync` | `claw.database.core` | public | SQLite manifest and conflict tests |
+| `sync.sidecars` | `claw.sync` | `claw.database.runtime` | public | Sidecar sync route contract tests |
+| `sync.agentConfig` | `claw.sync` | `claw.agents` | public | Agent config sync route contract tests |
+| `sync.workspaceState` | `claw.sync` | `claw.workspace` | public | Workspace state sync route contract tests |
+| `sync.searchIndex` | `claw.sync` | `claw.search` | public | Search index sync route contract tests |
 | `gateway.headlessAgentHost` | `claw.gateway` | `claw.headlessHost` | public | Headless host conformance tests |
 | `gateway.multiTenantAgentService` | `claw.headlessHost` | `claw.agents.assignments` | public | Multi-tenant assignment isolation tests |
 | `mesh.resourceShare` | `claw.mesh.share` | `claw.sync` | external | Inter-mesh sharing primitive tests |
@@ -2063,8 +2075,14 @@ flowchart TD
 | `claw.edge.connector.brokers.sync` | brokers | `claw.connector` | `claw.sync` | `claw.api.sync.manifests` | sync manifest/changelog/cursor route |
 | `claw.edge.sync.owns.skills` | owns | `claw.sync` | `claw.skills.library` | `claw.api.sync.manifests` | skills sync driver |
 | `claw.edge.sync.owns.memory` | owns | `claw.sync` | `claw.memory.userModel` | `claw.api.sync.manifests` | memory/user-model sync driver |
-| `claw.edge.sync.owns.driveFiles` | owns | `claw.sync` | `claw.drive.files` | `claw.api.sync.manifests` | drive/files/blobs sync drivers |
+| `claw.edge.sync.owns.sessions` | owns | `claw.sync` | `claw.sessions` | `claw.api.sync.manifests` | sessions sync driver |
+| `claw.edge.sync.owns.driveFiles` | owns | `claw.sync` | `claw.drive.files` | `claw.api.sync.manifests` | drive/files sync driver |
+| `claw.edge.sync.owns.blobs` | owns | `claw.sync` | `claw.drive.files` | `claw.api.sync.manifests` | blob sync driver |
+| `claw.edge.sync.owns.searchIndex` | owns | `claw.sync` | `claw.search` | `claw.api.sync.manifests` | search-index sync driver |
 | `claw.edge.sync.owns.sqlite` | owns | `claw.sync` | `claw.database.core` | `claw.api.sync.changes` | SQLite full/partial table manifests |
+| `claw.edge.sync.owns.sidecars` | owns | `claw.sync` | `claw.database.runtime` | `claw.api.sync.manifests` | sidecar database manifests |
+| `claw.edge.sync.owns.agentConfig` | owns | `claw.sync` | `claw.agents` | `claw.api.sync.manifests` | agent config sync driver |
+| `claw.edge.sync.owns.workspaceState` | owns | `claw.sync` | `claw.workspace` | `claw.api.sync.manifests` | workspace state sync driver |
 | `claw.edge.sync.owns.remoteCache` | owns | `claw.sync` | `claw.remoteCache` | `claw.api.sync.manifests` | encrypted TTL cache and outbound queue |
 | `claw.edge.gateway.exposes.headlessHost` | exposes | `claw.gateway` | `claw.headlessHost` | `claw.api.gateway.conformance` | headless service projection |
 | `claw.edge.headlessHost.brokers.assignments` | brokers | `claw.headlessHost` | `claw.agents.assignments` | `claw.api.gateway.agentServiceEvaluate` | multi-tenant governed assignment routing |

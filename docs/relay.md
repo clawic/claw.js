@@ -81,6 +81,11 @@ authority class, owner node, residency, driver, conflict policy, cache policy,
 allowed peers, routes, and secret policy. Drivers cover skills,
 memory/user-model, sessions, drive/files, blobs, SQLite full or partial
 resources, sidecars, search indexes, agent config, and workspace state.
+Sessions, blobs, sidecars, search indexes, agent config, and workspace state
+use explicit Sync-plane route contracts (`sync.sessions`, `sync.blobs`,
+`sync.sidecars`, `sync.searchIndex`, `sync.agentConfig`, and
+`sync.workspaceState`) while query and chat execution remain Gateway-projected
+contracts.
 Client caches are metadata snapshots, not authority. `RemoteClientCacheSnapshot`
 records encrypted TTL-bound cache entries with content hashes only, no
 plaintext, no secrets, and no authoritative state. `SyncDriverApplicationReceipt`
@@ -142,9 +147,9 @@ silently widening the external surface.
 External dependencies are represented by `RemoteExternalPendingRegister` and
 the Relay `/v1/remote/external-pending` endpoint. It is a no-write completion
 audit register for physical Iroh, device trust, peer trust, physical Sync
-drivers, signed host audit persistence, client storage, provider retrieval,
-self-hosted and hosted deployment, runtime execution, billing meters, and
-provider/device end-to-end validation.
+drivers, physical Sync authority handoff, signed host audit persistence, client
+storage, provider retrieval, self-hosted and hosted deployment, runtime
+execution, billing meters, and provider/device end-to-end validation.
 Remote API parity is represented by the remote route contracts catalog exposed
 at `/v1/remote/route-contracts` and `claw remote contracts`. Each required
 route binds canonical local contract references to remote entrypoints, keeps

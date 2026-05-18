@@ -125,6 +125,7 @@ export const remoteExternalPendingRequirementSchema = z.object({
     "peer_trust",
     "host_audit",
     "sync_driver",
+    "authority_handoff",
     "client_storage",
     "provider",
     "deployment",
@@ -689,8 +690,14 @@ export const remoteSyncRequiredRouteIds = [
   "remote.secretBrokeredOperation",
   "sync.skills",
   "sync.memoryUserModel",
+  "sync.sessions",
   "sync.driveFiles",
+  "sync.blobs",
+  "sync.searchIndex",
   "sync.sqliteResources",
+  "sync.sidecars",
+  "sync.agentConfig",
+  "sync.workspaceState",
   "gateway.headlessAgentHost",
   "gateway.multiTenantAgentService",
   "mesh.resourceShare",
@@ -742,6 +749,17 @@ export function buildRemoteExternalPendingRegister(input: {
       sourceReceipt: "SyncDriverApplicationReceipt",
       evidenceRefs: ["claw sync apply --record true", "docs/relay.md"],
       unblockCriteria: "Run an approved signed-host sync driver and verify the physical write or merge.",
+      status: "external_pending" as const,
+      writes: false as const,
+    },
+    {
+      schemaVersion: 1 as const,
+      requirementId: "physical_authority_handoff",
+      decisionId: "sync_authority_model",
+      category: "authority_handoff" as const,
+      sourceReceipt: "SyncAuthorityHandoffReceipt",
+      evidenceRefs: ["claw sync handoff --record true", "docs/relay.md"],
+      unblockCriteria: "Validate the physical resource authority and residency transfer between approved nodes.",
       status: "external_pending" as const,
       writes: false as const,
     },
@@ -878,11 +896,14 @@ export function createExampleSyncResourceManifest(input: {
 export function routeIdForSyncDriver(driver: SyncDriver): string {
   if (driver === "skills") return "sync.skills";
   if (driver === "memory_user_model") return "sync.memoryUserModel";
-  if (driver === "drive_files" || driver === "blobs") return "sync.driveFiles";
+  if (driver === "sessions") return "sync.sessions";
+  if (driver === "drive_files") return "sync.driveFiles";
+  if (driver === "blobs") return "sync.blobs";
+  if (driver === "search_index") return "sync.searchIndex";
   if (driver === "sqlite_tables" || driver === "sqlite_partial") return "sync.sqliteResources";
-  if (driver === "sessions") return "remote.chatGateway";
-  if (driver === "search_index") return "remote.searchGateway";
-  return "sync.sqliteResources";
+  if (driver === "sidecar") return "sync.sidecars";
+  if (driver === "agent_config") return "sync.agentConfig";
+  return "sync.workspaceState";
 }
 
 export function createSyncResourceManifest(input: {

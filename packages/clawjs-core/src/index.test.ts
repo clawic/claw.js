@@ -417,10 +417,16 @@ test("surface graph registers critical chat routes and Relay", () => {
     "remote.chatGateway",
     "remote.searchGateway",
     "remote.secretBrokeredOperation",
+    "sync.agentConfig",
+    "sync.blobs",
     "sync.driveFiles",
     "sync.memoryUserModel",
+    "sync.searchIndex",
+    "sync.sessions",
+    "sync.sidecars",
     "sync.skills",
     "sync.sqliteResources",
+    "sync.workspaceState",
   ]);
   assert.equal(findClawSurfaceRoute("chat.remoteRelay")?.steps.some((step) => step.toId === "claw.relay"), true);
   assert.equal(findClawSurfaceRoute("cli.commandIntentResolution")?.steps.some((step) => step.toId === "claw.workspace.command_intents.ledger"), true);
@@ -552,6 +558,7 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(externalPending.writes, false);
   assert.equal(externalPending.requirements.some((entry) => entry.requirementId === "physical_iroh_handshake" && entry.sourceReceipt === "RemoteTransportHandshakeReceipt"), true);
   assert.equal(externalPending.requirements.some((entry) => entry.requirementId === "physical_sync_driver_application" && entry.decisionId === "sync_substrate"), true);
+  assert.equal(externalPending.requirements.some((entry) => entry.requirementId === "physical_authority_handoff" && entry.decisionId === "sync_authority_model" && entry.sourceReceipt === "SyncAuthorityHandoffReceipt"), true);
   assert.equal(externalPending.requirements.every((entry) => entry.status === "external_pending" && entry.writes === false), true);
 
   const routeContracts = buildRemoteRouteContractCatalog({
@@ -564,13 +571,25 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(routeContracts.writes, false);
   assert.equal(routeContracts.contracts.length, remoteSyncRequiredRouteIds.length);
   assert.equal(routeContracts.contracts.some((entry) => entry.routeId === "remote.searchGateway" && entry.localContractRefs.includes("claw search")), true);
+  assert.equal(routeContracts.contracts.some((entry) => entry.routeId === "sync.sessions" && entry.localContractRefs.includes("claw sync manifest --driver sessions")), true);
+  assert.equal(routeContracts.contracts.some((entry) => entry.routeId === "sync.searchIndex" && entry.localContractRefs.includes("claw sync manifest --driver search_index")), true);
+  assert.equal(routeContracts.contracts.some((entry) => entry.routeId === "sync.blobs" && entry.localContractRefs.includes("claw sync manifest --driver blobs")), true);
+  assert.equal(routeContracts.contracts.some((entry) => entry.routeId === "sync.sidecars" && entry.localContractRefs.includes("claw sync manifest --driver sidecar")), true);
+  assert.equal(routeContracts.contracts.some((entry) => entry.routeId === "sync.agentConfig" && entry.localContractRefs.includes("claw sync manifest --driver agent_config")), true);
+  assert.equal(routeContracts.contracts.some((entry) => entry.routeId === "sync.workspaceState" && entry.localContractRefs.includes("claw sync manifest --driver workspace_state")), true);
   assert.equal(routeContracts.contracts.some((entry) => entry.routeId === "gateway.multiTenantAgentService" && entry.remoteEntryPoints.includes("POST /v1/gateway/agent-service/evaluate")), true);
   assert.equal(routeContracts.contracts.every((entry) => entry.parityRequired && !entry.parallelApiAllowed && entry.writes === false), true);
 
   assert.equal(routeIdForSyncDriver("skills"), "sync.skills");
   assert.equal(routeIdForSyncDriver("memory_user_model"), "sync.memoryUserModel");
+  assert.equal(routeIdForSyncDriver("sessions"), "sync.sessions");
   assert.equal(routeIdForSyncDriver("drive_files"), "sync.driveFiles");
+  assert.equal(routeIdForSyncDriver("blobs"), "sync.blobs");
+  assert.equal(routeIdForSyncDriver("search_index"), "sync.searchIndex");
   assert.equal(routeIdForSyncDriver("sqlite_partial"), "sync.sqliteResources");
+  assert.equal(routeIdForSyncDriver("sidecar"), "sync.sidecars");
+  assert.equal(routeIdForSyncDriver("agent_config"), "sync.agentConfig");
+  assert.equal(routeIdForSyncDriver("workspace_state"), "sync.workspaceState");
 
   const plan = buildSyncPlan({
     manifest: createSyncResourceManifest({

@@ -179,8 +179,14 @@ The required routes are:
 - `remote.secretBrokeredOperation`
 - `sync.skills`
 - `sync.memoryUserModel`
+- `sync.sessions`
 - `sync.driveFiles`
+- `sync.blobs`
+- `sync.searchIndex`
 - `sync.sqliteResources`
+- `sync.sidecars`
+- `sync.agentConfig`
+- `sync.workspaceState`
 - `gateway.headlessAgentHost`
 - `gateway.multiTenantAgentService`
 - `mesh.resourceShare`

@@ -117,10 +117,16 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
     "remote.chatGateway",
     "remote.searchGateway",
     "remote.secretBrokeredOperation",
+    "sync.agentConfig",
+    "sync.blobs",
     "sync.driveFiles",
     "sync.memoryUserModel",
+    "sync.searchIndex",
+    "sync.sessions",
+    "sync.sidecars",
     "sync.skills",
     "sync.sqliteResources",
+    "sync.workspaceState",
   ]);
   assert.equal(routeList.find((route) => route.id === "chat.localDesktop")?.steps.every((step) => ["owns", "consumes", "exposes", "brokers"].includes(step.edgeType)), true);
   assert.equal(routeList.find((route) => route.id === "agents.externalSupportAssignment")?.steps.some((step) => step.toId === "claw.support.inbox"), true);
@@ -174,6 +180,12 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   assert.equal(remoteInspectPayload.sync.conflictDefault, "detect_and_elevate");
   assert.equal(remoteInspectPayload.sync.receiptContracts.includes("SyncAuthorityHandoffReceipt"), true);
   assert.equal(remoteInspectPayload.sync.routeIds.includes("sync.skills"), true);
+  assert.equal(remoteInspectPayload.sync.routeIds.includes("sync.sessions"), true);
+  assert.equal(remoteInspectPayload.sync.routeIds.includes("sync.searchIndex"), true);
+  assert.equal(remoteInspectPayload.sync.routeIds.includes("sync.blobs"), true);
+  assert.equal(remoteInspectPayload.sync.routeIds.includes("sync.sidecars"), true);
+  assert.equal(remoteInspectPayload.sync.routeIds.includes("sync.agentConfig"), true);
+  assert.equal(remoteInspectPayload.sync.routeIds.includes("sync.workspaceState"), true);
   assert.equal(remoteInspectPayload.sync.writes, false);
   assert.equal(remoteInspectPayload.transport.contract, "transport_agnostic_iroh_v1_adapter");
   assert.equal(remoteInspectPayload.transport.adapterNodeId, "claw.transport.iroh");
@@ -181,7 +193,14 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   assert.equal(remoteInspectPayload.transport.receiptContract, "RemoteTransportHandshakeReceipt");
   assert.equal(remoteInspectPayload.transport.writes, false);
   assert.equal(remoteInspectPayload.gaps.some((entry) => entry.requirementId === "physical_iroh_handshake" && entry.status === "external_pending" && entry.writes === false), true);
+  assert.equal(remoteInspectPayload.gaps.some((entry) => entry.requirementId === "physical_authority_handoff" && entry.status === "external_pending" && entry.writes === false), true);
   assert.equal(remoteInspectPayload.routeContracts.some((entry) => entry.routeId === "remote.chatGateway" && !entry.parallelApiAllowed && !entry.writes), true);
+  assert.equal(remoteInspectPayload.routeContracts.some((entry) => entry.routeId === "sync.sessions" && !entry.parallelApiAllowed && !entry.writes), true);
+  assert.equal(remoteInspectPayload.routeContracts.some((entry) => entry.routeId === "sync.searchIndex" && !entry.parallelApiAllowed && !entry.writes), true);
+  assert.equal(remoteInspectPayload.routeContracts.some((entry) => entry.routeId === "sync.blobs" && !entry.parallelApiAllowed && !entry.writes), true);
+  assert.equal(remoteInspectPayload.routeContracts.some((entry) => entry.routeId === "sync.sidecars" && !entry.parallelApiAllowed && !entry.writes), true);
+  assert.equal(remoteInspectPayload.routeContracts.some((entry) => entry.routeId === "sync.agentConfig" && !entry.parallelApiAllowed && !entry.writes), true);
+  assert.equal(remoteInspectPayload.routeContracts.some((entry) => entry.routeId === "sync.workspaceState" && !entry.parallelApiAllowed && !entry.writes), true);
   assert.equal(remoteInspectPayload.tests.includes("packages/clawjs/src/inspect-cli.test.ts"), true);
 });
 

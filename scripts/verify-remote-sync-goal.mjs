@@ -57,6 +57,7 @@ const sourcePlanId = "019e3732-c90e-7491-9217-37020c43217e-plan";
 const requiredDocs = [
   "docs/adr/0022-remote-gateway-sync-redesign.md",
   "docs/remote-gateway-sync-source-decision-audit.md",
+  "docs/remote-gateway-sync-completion-audit.md",
   "docs/remote-gateway-sync-decision-matrix.md",
   "docs/relay.md",
   "docs/decision-map.md",
@@ -155,15 +156,15 @@ const requiredDocSnippets = [
 const driverRouteExpectations = new Map([
   ["skills", "sync.skills"],
   ["memory_user_model", "sync.memoryUserModel"],
-  ["sessions", "remote.chatGateway"],
+  ["sessions", "sync.sessions"],
   ["drive_files", "sync.driveFiles"],
-  ["blobs", "sync.driveFiles"],
+  ["blobs", "sync.blobs"],
   ["sqlite_tables", "sync.sqliteResources"],
   ["sqlite_partial", "sync.sqliteResources"],
-  ["sidecar", "sync.sqliteResources"],
-  ["search_index", "remote.searchGateway"],
-  ["agent_config", "sync.sqliteResources"],
-  ["workspace_state", "sync.sqliteResources"],
+  ["sidecar", "sync.sidecars"],
+  ["search_index", "sync.searchIndex"],
+  ["agent_config", "sync.agentConfig"],
+  ["workspace_state", "sync.workspaceState"],
 ]);
 
 const failures = [];
@@ -200,22 +201,41 @@ for (const [relativePath, text] of docTexts) {
 
 for (const snippet of [sourceConversationId, sourcePlanId]) {
   requireText("source decision audit", docTexts.get("docs/remote-gateway-sync-source-decision-audit.md") ?? "", snippet);
+  requireText("completion audit", docTexts.get("docs/remote-gateway-sync-completion-audit.md") ?? "", snippet);
   requireText("decision matrix", docTexts.get("docs/remote-gateway-sync-decision-matrix.md") ?? "", snippet);
 }
 
 const sourceDecisionIds = extractTableIds(docTexts.get("docs/remote-gateway-sync-source-decision-audit.md") ?? "", "RQ");
+const completionDecisionIds = extractTableIds(docTexts.get("docs/remote-gateway-sync-completion-audit.md") ?? "", "RQ");
 const matrixDecisionIds = extractTableIds(docTexts.get("docs/remote-gateway-sync-decision-matrix.md") ?? "", "RG");
 for (let index = 1; index <= remoteSyncRequiredDecisionIds.length; index += 1) {
   const sourceId = `RQ-${String(index).padStart(3, "0")}`;
   const matrixId = `RG-${String(index).padStart(3, "0")}`;
   if (!sourceDecisionIds.has(sourceId)) fail(`source decision audit missing ${sourceId}`);
+  if (!completionDecisionIds.has(sourceId)) fail(`remote gateway sync completion audit missing ${sourceId}`);
   if (!matrixDecisionIds.has(matrixId)) fail(`remote gateway sync decision matrix missing ${matrixId}`);
 }
 
 for (const decisionId of remoteSyncRequiredDecisionIds) {
   requireText("source decision audit", docTexts.get("docs/remote-gateway-sync-source-decision-audit.md") ?? "", `\`${decisionId}\``);
+  requireText("completion audit", docTexts.get("docs/remote-gateway-sync-completion-audit.md") ?? "", `\`${decisionId}\``);
   requireText("decision matrix", docTexts.get("docs/remote-gateway-sync-decision-matrix.md") ?? "", `\`${decisionId}\``);
 }
+
+const completionAudit = docTexts.get("docs/remote-gateway-sync-completion-audit.md") ?? "";
+for (const snippet of [
+  "Closure state: `active_goal_not_complete`",
+  "SOURCE-REREAD-001",
+  "PHYSICAL-001",
+  "DOMAIN-PARITY-001",
+  "RemoteExternalPendingRegister",
+  "claw inspect remote",
+  "claw remote pending",
+  "claw remote contracts",
+]) {
+  requireText("completion audit", completionAudit, snippet);
+}
+if (/Closure state:\s*`complete`/.test(completionAudit)) fail("remote completion audit must not claim completion while external pending rows remain");
 
 for (const snippet of requiredDocSnippets) {
   requireText("remote gateway sync public docs", docCorpus, snippet);
@@ -230,6 +250,10 @@ for (const node of clawPersistentSurfaceRegistry.nodes) {
   if (!hasStableSurface) continue;
   const hasRelayClassification = node.programmaticSurfaces?.includes("relay") || node.surfaceGaps?.some((gap) => gap.surface === "relay");
   if (!hasRelayClassification) fail(`${node.id} must classify relay exposure as remote-safe, local-only, blocked, or pending`);
+  const relayGap = node.surfaceGaps?.find((gap) => gap.surface === "relay");
+  if (relayGap?.status === "pending") {
+    fail(`${node.id} must not keep a pending Relay classification before remote goal completion`);
+  }
 }
 
 for (const routeId of remoteSyncRequiredRouteIds) {
@@ -266,6 +290,7 @@ for (const requirementId of [
   "device_trust_acceptance",
   "physical_peer_trust",
   "physical_sync_driver_application",
+  "physical_authority_handoff",
   "signed_host_audit_persistence",
   "physical_client_storage",
   "provider_secret_retrieval",
