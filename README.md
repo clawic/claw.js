@@ -133,6 +133,11 @@ npx @clawjs/cli@latest --help
 - [Decision map](docs/decision-map.md)
 - [Host ownership](docs/host-ownership.md)
 - [Support matrix](docs/support-matrix.md)
+- [Terms](TERMS.md)
+- [Privacy](PRIVACY.md)
+- [Disclaimer](DISCLAIMER.md)
+- [Safety](SAFETY.md)
+- [Regulated domains](REGULATED_DOMAINS.md)
 
 ## V1 Support Boundary
 
@@ -148,6 +153,12 @@ npx @clawjs/cli@latest --help
 > Pre-public compatibility is not preserved unless an ADR grants a bounded
 > exception; obsolete beta, experimental, or legacy paths are removed or hidden
 > during the v1 surface closure.
+>
+> ClawJS may help with sensitive local records, summaries, searches, and
+> non-final drafts, but it does not replace regulated professionals or make
+> final medical, mental health, legal, financial, insurance, employment,
+> education, government, emergency, or physical-safety decisions. See
+> [SAFETY.md](SAFETY.md) and [REGULATED_DOMAINS.md](REGULATED_DOMAINS.md).
 
 ## Repository Development
 

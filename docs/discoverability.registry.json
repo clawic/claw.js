@@ -832,6 +832,33 @@
       "reviewDate": "2026-05-18"
     },
     {
+      "id": "adr-docs-adr-0026-regulated-domain-safety-liability-boundary",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0026-regulated-domain-safety-liability-boundary.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0026: Regulated domain safety and liability boundary",
+        "0026-regulated-domain-safety-liability-boundary",
+        "ADR 0026"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0026: Regulated domain safety and liability boundary",
+          "expectPath": "docs/adr/0026-regulated-domain-safety-liability-boundary.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "surface-route-graph",
       "kind": "surface-route",
       "owner": "claw",
@@ -2341,6 +2368,31 @@
         }
       ],
       "guard": "scripts/verify-openapi-runtime-coverage.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-verify-regulated-domain-safety-goal",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/verify-regulated-domain-safety-goal.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "verify-regulated-domain-safety-goal",
+        "Verify Regulated Domain Safety Goal"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-regulated-domain-safety-goal",
+          "expectPath": "scripts/verify-regulated-domain-safety-goal.mjs"
+        }
+      ],
+      "guard": "scripts/verify-regulated-domain-safety-goal.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-18"
     },

@@ -1,3 +1,5 @@
+import type { RegulatedDecisionEffect, RegulatedDomain, SensitiveDataClass } from "./regulated-domain-safety.ts";
+
 export const connectorControlPlaneVersion = 1;
 
 export const connectorExecutionPipeline = [
@@ -92,6 +94,12 @@ export interface ConnectorCapability {
   summary?: string;
   riskTiers: ConnectorRiskTier[];
   dataClasses?: string[];
+  regulatedDomains?: RegulatedDomain[];
+  sensitiveDataClasses?: SensitiveDataClass[];
+  decisionEffects?: RegulatedDecisionEffect[];
+  requiresProfessionalReview?: boolean;
+  requiresSensitiveExportReview?: boolean;
+  thirdPartyDisclosure?: boolean;
   requiredScopes?: string[];
 }
 
@@ -105,6 +113,11 @@ export interface ConnectorOperation {
   credentialRequired: boolean;
   costRisk?: boolean;
   requiresApproval?: boolean;
+  regulatedDomains?: RegulatedDomain[];
+  decisionEffects?: RegulatedDecisionEffect[];
+  requiresProfessionalReview?: boolean;
+  requiresSensitiveExportReview?: boolean;
+  thirdPartyDisclosure?: boolean;
   networkPolicyId?: string;
 }
 

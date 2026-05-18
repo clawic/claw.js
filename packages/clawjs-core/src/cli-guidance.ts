@@ -53,6 +53,9 @@ export const guidanceRiskClassSchema = z.enum([
   "cost",
   "native-permission",
   "secret",
+  "regulated-domain",
+  "sensitive-export",
+  "professional-review",
 ]);
 
 export type GuidanceSeverity = z.infer<typeof guidanceSeveritySchema>;

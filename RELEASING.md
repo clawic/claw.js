@@ -33,14 +33,16 @@ For preview builds from `next`, run prereleases with the npm dist-tag `next` ins
 1. Run `npm ci`, `npm --prefix examples/demo ci`, and `npm --prefix website ci`.
 2. Run `npx playwright install --with-deps chromium`.
 3. Run `npm run ci`.
-4. Run `npm run publish:dry-run`.
-5. Verify adapter support/stability metadata and docs support matrix are current.
-6. Review the pending release PR created from changesets.
-7. Update [CHANGELOG.md](CHANGELOG.md) in that release PR if the top-level note needs curation.
-8. Merge the release PR into `main`.
-9. Publish packages manually only after confirming the dry run and authentication state.
-10. Tag the release as `v<semver>` manually after publishing.
-11. Copy the changelog entry into the GitHub release notes if you want a manually curated GitHub release body.
+4. Confirm [TERMS.md](TERMS.md), [PRIVACY.md](PRIVACY.md), [DISCLAIMER.md](DISCLAIMER.md), [SAFETY.md](SAFETY.md), [REGULATED_DOMAINS.md](REGULATED_DOMAINS.md), and `docs/regulated-domain-safety.md` are current.
+5. Confirm public README, package docs, CLI help, examples, demos, and website copy do not make unqualified autonomy, professional-advice, or compliance-ready claims.
+6. Run `npm run publish:dry-run`.
+7. Verify adapter support/stability metadata and docs support matrix are current.
+8. Review the pending release PR created from changesets.
+9. Update [CHANGELOG.md](CHANGELOG.md) in that release PR if the top-level note needs curation.
+10. Merge the release PR into `main`.
+11. Publish packages manually only after confirming the dry run and authentication state.
+12. Tag the release as `v<semver>` manually after publishing.
+13. Copy the changelog entry into the GitHub release notes if you want a manually curated GitHub release body.
 
 ## Package map
 

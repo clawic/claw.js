@@ -1,5 +1,6 @@
 import type { AgentToolDescriptor, AgentToolRiskLevel } from "./agent_tools.ts";
 import type { BuiltinCollectionDefinition, BuiltinFieldDefinition } from "./builtins/index.ts";
+import type { RegulatedDecisionEffect, RegulatedDomain, SensitiveDataClass } from "./regulated-domain-safety.ts";
 import { AGENTS_FAMILY } from "./builtins/index.ts";
 
 export const AGENT_ASSIGNMENT_STATUSES = [
@@ -89,6 +90,18 @@ export interface AgentAccessRequest {
   action: AgentResourceAction;
   scopeType?: string;
   scopeId?: string;
+  regulatedSafety?: AgentRegulatedSafetyDeclaration;
+}
+
+export interface AgentRegulatedSafetyDeclaration {
+  regulatedDomains: RegulatedDomain[];
+  sensitiveDataClasses?: SensitiveDataClass[];
+  decisionEffect: RegulatedDecisionEffect;
+  professionalReviewRequired?: boolean;
+  outputLabelsRequired?: boolean;
+  externalAction?: boolean;
+  sensitiveExport?: boolean;
+  remoteOrProviderUse?: boolean;
 }
 
 export interface AgentEffectiveAccessInput {

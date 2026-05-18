@@ -15,6 +15,7 @@ export * from "./remote-sync.ts";
 export * from "./remote-sync-authority.ts";
 export * from "./remote-sync-e2e.ts";
 export * from "./remote-sync-route-contracts.ts";
+export * from "./regulated-domain-safety.ts";
 export * from "./schemas.ts";
 export * from "./semantic.ts";
 export * from "./storage.ts";
