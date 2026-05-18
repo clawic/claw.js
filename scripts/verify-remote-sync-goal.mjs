@@ -9,6 +9,7 @@ import {
   buildRemoteExternalValidationChecklist,
   buildRemoteExternalValidationEvidenceTemplate,
   buildRemoteExternalValidationReport,
+  buildRemoteExternalValidationRunbook,
   buildRemoteGoalClosureGate,
   buildRemoteOfflineCommandResult,
   buildRemoteProviderDeviceE2EValidationPlan,
@@ -46,6 +47,7 @@ import {
   remoteCompatibilityAdapterReceiptSchema,
   parseRemoteExternalValidationEvidenceInput,
   remoteExternalValidationEvidenceArtifactSchema,
+  remoteExternalValidationRunbookSchema,
   remoteExternalValidationEvidenceSchema,
   remoteExternalValidationEvidenceTemplateSchema,
   remoteExternalPendingRegisterSchema,
@@ -103,6 +105,7 @@ const requiredServiceApiRoutes = [
   "remote/external-validation-checklist",
   "remote/external-validation-template",
   "remote/external-validation-artifact",
+  "remote/external-validation-runbook",
   "remote/external-validation-report",
   "remote/source-qa-template",
   "remote/closure-gate",
@@ -157,8 +160,10 @@ const requiredDocSnippets = [
   "external validation evidence template",
   "/v1/remote/external-validation-template",
   "/v1/remote/external-validation-artifact",
+  "/v1/remote/external-validation-runbook",
   "claw remote validation-template",
   "claw remote validation-artifact",
+  "claw remote validation-runbook",
   "external validation report",
   "approvedRunRef",
   "invalidEvidenceRequirementIds",
@@ -520,6 +525,22 @@ if (generatedExternalValidationEvidenceArtifact.status !== "external_pending") f
 if (generatedExternalValidationEvidenceArtifact.writes !== false) fail("generated external validation evidence artifact must be no-write");
 if (generatedExternalValidationEvidenceArtifact.evidence.length !== externalPending.requirements.length) {
   fail("generated external validation evidence artifact must include one row per pending requirement");
+}
+const externalValidationRunbook = buildRemoteExternalValidationRunbook({
+  generatedAt: "2026-05-18T11:41:00.000Z",
+});
+if (!remoteExternalValidationRunbookSchema.safeParse(externalValidationRunbook).success) {
+  fail("remote external validation runbook must satisfy the core runbook schema");
+}
+if (externalValidationRunbook.status !== "external_pending") fail("remote external validation runbook must remain external_pending");
+if (externalValidationRunbook.writes !== false) fail("remote external validation runbook must be no-write");
+if (externalValidationRunbook.validationStepCount !== 5) fail("remote external validation runbook must include five validation steps");
+if (externalValidationRunbook.externalRequirementCount !== externalPending.requirements.length) fail("remote external validation runbook must count every external requirement");
+if (!externalValidationRunbook.reportCommand.includes("validation-report")) fail("remote external validation runbook must include report command");
+if (!externalValidationRunbook.closureGateCommand.includes("closure-gate")) fail("remote external validation runbook must include closure gate command");
+if (!externalValidationRunbook.requiredCommands.some((entry) => entry.includes("validation-artifact"))) fail("remote external validation runbook must include validation-artifact command");
+if (externalValidationRunbook.e2ePlan.validationSteps.map((entry) => entry.domain).join(",") !== "chat,search,sync,secret_refs,hosted_agents") {
+  fail("remote external validation runbook must carry the provider/device E2E domain steps");
 }
 
 const externalValidationEvidenceArtifact = readRequiredJson("docs/remote-gateway-sync-external-validation-evidence.json");
@@ -907,6 +928,8 @@ for (const snippet of [
   "/v1/remote/external-validation-template",
   "buildRemoteExternalValidationEvidenceArtifact",
   "/v1/remote/external-validation-artifact",
+  "buildRemoteExternalValidationRunbook",
+  "/v1/remote/external-validation-runbook",
   "buildRemoteExternalValidationReport",
   "/v1/remote/external-validation-report",
   "buildRemoteSourceQaReviewTemplate",
