@@ -341,7 +341,10 @@ function renderRouter(registry, profile) {
     const source = artifact.canonicalSource;
     const terms = (artifact.discoveryTerms ?? []).join(", ");
     const guard = artifact.guard ?? "";
-    return `| \`${artifact.id}\` | ${artifact.kind} | [${source}](${source}) | ${terms} | \`${guard}\` |`;
+    const sourceCell = source.startsWith("docs/")
+      ? `[${source}](${source.slice("docs/".length)})`
+      : `\`${source}\``;
+    return `| \`${artifact.id}\` | ${artifact.kind} | ${sourceCell} | ${terms} | \`${guard}\` |`;
   }).join("\n");
   return `# ${title}
 
