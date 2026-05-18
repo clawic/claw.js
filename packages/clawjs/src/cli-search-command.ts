@@ -1916,6 +1916,27 @@ function runSearchMonitorEvaluations(
       ...(limit === undefined ? {} : { limit }),
     };
     const output = store.query(query);
+    if (searchQueryRequiresAudit(query.query, output.results, query.filters)) {
+      store.recordAuditEvent({
+        type: "sensitive_query",
+        actor: query.actor,
+        surface: query.surface,
+        query: query.query,
+        reason: "sensitive_query_or_redacted_result",
+        metadata: {
+          profile: query.profile ?? "framework",
+          domains: query.domains ?? [],
+          sources: query.sources ?? [],
+          shards: query.shards ?? [],
+          strategy: query.strategy ?? "lexical",
+          embeddingModel: query.embedding?.model,
+          resultCount: output.results.length,
+          redactedResultCount: output.results.filter((result) => result.permissions?.redacted).length,
+          monitorId: monitor.id,
+          savedSearchId: monitor.savedSearchId,
+        },
+      });
+    }
     return {
       monitorId: monitor.id,
       savedSearchId: monitor.savedSearchId,
@@ -4942,6 +4963,22 @@ function workItemShard(payload: Record<string, unknown>): "hot" | "cold" {
   return "hot";
 }
 
+const FINANCE_SEARCH_LEGAL_OUTPUT_LABELS = [
+  "not_professional_advice",
+  "human_review_required",
+  "sources_and_gaps_required",
+  "regulated_domain:finance",
+  "decision_effect:summary",
+];
+
+const ELN_SEARCH_LEGAL_OUTPUT_LABELS = [
+  "not_professional_advice",
+  "human_review_required",
+  "sources_and_gaps_required",
+  "regulated_domain:labs_research",
+  "decision_effect:summary",
+];
+
 function elnRecordSearchDocument(row: DatabaseRecordRow): SearchDocumentInput | null {
   if (!ELN_SEARCH_COLLECTIONS.includes(row.collection_name as typeof ELN_SEARCH_COLLECTIONS[number])) return null;
   const payload = parseJsonRecord(row.data_json);
@@ -4976,6 +5013,7 @@ function elnRecordSearchDocument(row: DatabaseRecordRow): SearchDocumentInput | 
       sampleId: stringMetadata(payload.sampleId),
       assayId: stringMetadata(payload.assayId),
       sensitive,
+      legalOutputLabels: ELN_SEARCH_LEGAL_OUTPUT_LABELS,
     },
     permissions: { canOpen: true, canPreview: !sensitive, redacted: sensitive },
     rankingHints: {
@@ -5526,6 +5564,7 @@ function financeRecordSearchDocument(row: DatabaseRecordRow): SearchDocumentInpu
       category,
       occurredAt,
       sensitive: true,
+      legalOutputLabels: FINANCE_SEARCH_LEGAL_OUTPUT_LABELS,
       metadataKeys: Object.keys(metadata).sort(),
     },
     permissions: { canOpen: true, canPreview: false, redacted: true },
@@ -5576,6 +5615,7 @@ function financeRecordTableSearchDocument(row: FinanceRecordTableRow, pageBody?:
       category: row.category ?? null,
       occurredAt: row.occurred_at,
       sensitive: true,
+      legalOutputLabels: FINANCE_SEARCH_LEGAL_OUTPUT_LABELS,
       metadataKeys: Object.keys(metadata).sort(),
       hasLinkedPage: !!row.page_id,
     },

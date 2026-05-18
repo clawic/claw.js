@@ -622,6 +622,52 @@ test("Search MCP query records sensitive audit events", () => {
   }
 });
 
+test("Search MCP monitor evaluation records sensitive audit events", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-mcp-monitor-audit-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    const tools = createSearchMcpTools(store);
+    const savedCreateTool = tools.find((tool) => tool.name === "search.saved.create");
+    const monitorCreateTool = tools.find((tool) => tool.name === "search.monitors.create");
+    const evaluateTool = tools.find((tool) => tool.name === "search.monitors.evaluate");
+    const auditTool = tools.find((tool) => tool.name === "search.audit.list");
+    assert.ok(savedCreateTool);
+    assert.ok(monitorCreateTool);
+    assert.ok(evaluateTool);
+    assert.ok(auditTool);
+
+    savedCreateTool.handler({
+      id: "secret-monitor-query",
+      query: "secret token",
+      actor: "agent:test",
+      surface: "mcp",
+    });
+    monitorCreateTool.handler({
+      id: "secret-monitor",
+      savedSearchId: "secret-monitor-query",
+    });
+    evaluateTool.handler({ id: "secret-monitor" });
+
+    const audit = auditTool.handler({ type: "sensitive_query" }) as Array<{
+      type: string;
+      actor?: string;
+      surface?: string;
+      query?: string;
+      metadata?: { monitorId?: string; savedSearchId?: string; resultCount?: number };
+    }>;
+    const event = audit.find((item) => item.query === "secret token");
+    assert.equal(event?.type, "sensitive_query");
+    assert.equal(event?.actor, "agent:test");
+    assert.equal(event?.surface, "mcp");
+    assert.equal(event?.metadata?.monitorId, "secret-monitor");
+    assert.equal(event?.metadata?.savedSearchId, "secret-monitor-query");
+    assert.equal(event?.metadata?.resultCount, 0);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("Search MCP action execution returns brokered plans and audit records", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-mcp-actions-"));
   const store = new SearchStore(path.join(dir, "search.sqlite"));

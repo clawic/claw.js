@@ -653,6 +653,27 @@ function evaluateSearchMonitors(
     }
     const query = { ...saved.query, ...(input.limit === undefined ? {} : { limit: input.limit }) };
     const output = store.query(query);
+    if (searchQueryRequiresAudit(query.query, output.results, query.filters)) {
+      store.recordAuditEvent({
+        type: "sensitive_query",
+        actor: query.actor,
+        surface: query.surface,
+        query: query.query,
+        reason: "sensitive_query_or_redacted_result",
+        metadata: {
+          profile: query.profile ?? "framework",
+          domains: query.domains ?? [],
+          sources: query.sources ?? [],
+          shards: query.shards ?? [],
+          strategy: query.strategy ?? "lexical",
+          embeddingModel: query.embedding?.model,
+          resultCount: output.results.length,
+          redactedResultCount: output.results.filter((result) => result.permissions?.redacted).length,
+          monitorId: monitor.id,
+          savedSearchId: monitor.savedSearchId,
+        },
+      });
+    }
     return {
       monitorId: monitor.id,
       savedSearchId: monitor.savedSearchId,

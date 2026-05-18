@@ -1131,6 +1131,9 @@ requireSnippet("packages/clawjs/src/cli-search-query-embedding-gate.test.ts", "s
 requireSnippet("packages/clawjs/src/cli-search-command.ts", "localSearchEmbeddingModel(model)");
 requireSnippet("packages/clawjs-search-mcp/src/index.test.ts", "provider semantic query");
 requireSnippet("packages/clawjs-search-mcp/src/index.test.ts", "saved-provider-semantic");
+requireSnippet("packages/clawjs/src/cli-search-monitor-audit.test.ts", "search monitor run records sensitive query audit events");
+requireSnippet("packages/clawjs/src/cli-search-command.ts", "monitorId: monitor.id");
+requireSnippet("packages/clawjs-search-mcp/src/index.test.ts", "Search MCP monitor evaluation records sensitive audit events");
 
 for (const snippet of [
   "published CLI package does not depend on the retired Index package",
