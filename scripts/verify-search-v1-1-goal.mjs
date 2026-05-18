@@ -45,6 +45,84 @@ const requiredSources = [
   "external.cache",
 ];
 
+const requiredIndexJobSources = requiredSources.filter((source) => source !== "native.system");
+
+const requiredResourceHandlers = {
+  "sessions.chats": "ensureSessionChatResourceIndexed",
+  "database.records": "ensureDatabaseRecordResourceIndexed",
+  "work.items": "ensureWorkItemResourceIndexed",
+  "documents.blocks": "ensureDocumentBlocksResourceIndexed",
+  "notes.pages": "ensureNotesPageResourceIndexed",
+  "knowledge.graph": "ensureKnowledgeGraphResourceIndexed",
+  "signals.observations": "ensureSignalsObservationsResourceIndexed",
+  "calendar.events": "ensureCalendarEventResourceIndexed",
+  "finance.records": "ensureFinanceRecordResourceIndexed",
+  "eln.records": "ensureElnRecordResourceIndexed",
+  "images.derived": "ensureImageDerivedResourceIndexed",
+  "media.assets": "ensureMediaAssetResourceIndexed",
+  "slides.decks": "ensureSlidesDeckResourceIndexed",
+  "sheets.workbooks": "ensureSheetsWorkbookResourceIndexed",
+  "generations.artifacts": "ensureGenerationArtifactResourceIndexed",
+  "code.symbols": "ensureCodeSymbolResourceIndexed",
+  "docs.pages": "ensureDocsPageResourceIndexed",
+  "skills.registry": "ensureSkillsRegistryResourceIndexed",
+  "providers.routing": "ensureProvidersRoutingResourceIndexed",
+  "snippets.library": "ensureSnippetsLibraryResourceIndexed",
+  "agents.catalog": "ensureAgentsCatalogResourceIndexed",
+  "marketplace.choices": "ensureMarketplaceChoiceResourceIndexed",
+  "content.items": "ensureContentItemResourceIndexed",
+  "business.records": "ensureBusinessRecordResourceIndexed",
+  "social.posts": "ensureSocialPostResourceIndexed",
+  "iot.config": "ensureIotConfigResourceIndexed",
+  "connectors.catalog": "ensureConnectorCatalogResourceIndexed",
+  "mcp.servers": "ensureMcpServerResourceIndexed",
+  "apps.catalog": "ensureAppCatalogResourceIndexed",
+  "design.resources": "ensureDesignResourceIndexed",
+  "runtime.events": "ensureRuntimeEventsResourceIndexed",
+  "surfaces.routes": "ensureSurfaceRouteResourceIndexed",
+  "local.files": "ensureLocalFileResourceIndexed",
+  "web.ingested": "ensureWebIngestedResourceIndexed",
+  "external.cache": "ensureExternalCacheResourceIndexed",
+};
+
+const requiredEventSchedulers = {
+  "sessions.chats": "scheduleSessionChatSearchEvent",
+  "database.records": "scheduleDatabaseRecordSearchEvent",
+  "work.items": "scheduleWorkItemsSearchEvent",
+  "documents.blocks": "scheduleDocumentBlocksSearchEvent",
+  "notes.pages": "scheduleNotesPagesSearchEvent",
+  "knowledge.graph": "scheduleKnowledgeGraphSearchEvent",
+  "signals.observations": "scheduleSignalsObservationsSearchEvent",
+  "calendar.events": "scheduleCalendarEventsSearchEvent",
+  "finance.records": "scheduleFinanceRecordsSearchEvent",
+  "eln.records": "scheduleElnRecordsSearchEvent",
+  "images.derived": "scheduleImageDerivedSearchEvent",
+  "media.assets": "scheduleMediaAssetSearchEvent",
+  "slides.decks": "scheduleSlidesDeckSearchEvent",
+  "sheets.workbooks": "scheduleSheetsWorkbookSearchEvent",
+  "generations.artifacts": "scheduleGenerationArtifactSearchEvent",
+  "code.symbols": "scheduleCodeSymbolsSearchEvent",
+  "docs.pages": "scheduleDocsPagesSearchEvent",
+  "skills.registry": "scheduleSkillsRegistrySearchEvent",
+  "providers.routing": "scheduleProvidersRoutingSearchEvent",
+  "snippets.library": "scheduleSnippetsLibrarySearchEvent",
+  "agents.catalog": "scheduleAgentsCatalogSearchEvent",
+  "marketplace.choices": "scheduleMarketplaceChoicesSearchEvent",
+  "content.items": "scheduleContentItemsSearchEvent",
+  "business.records": "scheduleBusinessRecordsSearchEvent",
+  "social.posts": "scheduleSocialPostsSearchEvent",
+  "iot.config": "scheduleIotConfigSearchEvent",
+  "connectors.catalog": "scheduleConnectorCatalogSearchEvent",
+  "mcp.servers": "scheduleMcpServersSearchEvent",
+  "apps.catalog": "scheduleAppsCatalogSearchEvent",
+  "design.resources": "scheduleDesignResourcesSearchEvent",
+  "runtime.events": "scheduleRuntimeEventsSearchEvent",
+  "surfaces.routes": "scheduleSurfaceRouteSearchEvent",
+  "local.files": "scheduleLocalFileSearchEvent",
+  "web.ingested": "scheduleWebIngestedSearchEvent",
+  "external.cache": "scheduleExternalCacheSearchEvent",
+};
+
 const requiredPublicFiles = [
   "docs/adr/0019-search-v1-1-architecture.md",
   "docs/search.md",
@@ -93,6 +171,20 @@ requirePackageScript("test:search-goal", "node ./scripts/verify-search-v1-1-goal
 for (const source of requiredSources) {
   requireSnippet("packages/clawjs-search/src/index.ts", `id: "${source}"`);
   requireSnippet("docs/search.md", `\`${source}\``);
+}
+
+for (const source of requiredIndexJobSources) {
+  requireSnippet("packages/clawjs/src/cli-search-command.ts", `case "${source}":`);
+}
+
+for (const [source, handler] of Object.entries(requiredResourceHandlers)) {
+  requireSnippet("packages/clawjs/src/cli-search-command.ts", `case "${source}":`);
+  requireSnippet("packages/clawjs/src/cli-search-command.ts", handler);
+}
+
+for (const [source, scheduler] of Object.entries(requiredEventSchedulers)) {
+  requireSnippet("packages/clawjs/src/cli-search-events.ts", scheduler);
+  requireSnippet("packages/clawjs/src/cli-search-events.ts", `source: "${source}"`);
 }
 
 for (const snippet of [
