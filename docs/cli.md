@@ -266,8 +266,9 @@ that checklist. With no approved physical evidence it stays `external_pending`;
 only rows with approved run evidence, physical evidence, all required artifacts,
 all acceptance criteria, and no plaintext material become `clearable`.
 `remote closure-gate` combines the external validation report with the required
-source Q/A review. It remains `blocked` until all 23 source Q/A rows are
-reviewed and every external validation row is `clearable`.
+source Q/A review report. It remains `blocked` until all 23 source Q/A rows
+have a disposition, evidence refs, and every external validation row is
+`clearable`.
 The final provider/device end-to-end row is not a loose note: it is backed by
 `RemoteProviderDeviceE2EValidationPlan`, which requires chat, search, Sync,
 secret-reference, and hosted-agent validation to pass together against the same

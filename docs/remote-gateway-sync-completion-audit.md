@@ -71,7 +71,8 @@ The goal may be closed only after a final pass confirms:
    accepted as `EXTERNAL PENDING`.
 2. The source session for conversation
    `019e36a3-c2e6-73b3-a3fe-f3e7340e42c8` is re-read one decision-bearing
-   answer at a time.
+   answer at a time, and the source Q/A review report records disposition and
+   evidence refs for `QA-001` through `QA-023`.
 3. `RemoteExternalPendingRegister` contains every remaining physical/provider
    blocker and none of those rows is reported as a software bug.
 4. `claw inspect remote`, `claw remote pending`,

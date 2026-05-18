@@ -163,8 +163,8 @@ and `plaintextMaterialIncluded: false`; otherwise it remains
 `external_pending`.
 The remote closure gate is exposed by Relay `/v1/remote/closure-gate` and
 `claw remote closure-gate`. It combines that evidence report with the source
-Q/A review gate. The result stays `blocked` until all 23 source Q/A rows are
-reviewed and every external validation row is `clearable`.
+Q/A review report. The result stays `blocked` until all 23 source Q/A rows have
+a disposition, evidence refs, and every external validation row is `clearable`.
 The provider/device end-to-end blocker is backed by
 `RemoteProviderDeviceE2EValidationPlan`: a no-write plan that requires chat,
 search, Sync, secret-reference, and hosted-agent coverage to be validated

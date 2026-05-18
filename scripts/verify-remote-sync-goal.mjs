@@ -11,6 +11,7 @@ import {
   buildRemoteOfflineCommandResult,
   buildRemoteProviderDeviceE2EValidationPlan,
   buildRemoteRouteContractCatalog,
+  buildRemoteSourceQaReviewReport,
   buildSyncPlan,
   buildSyncQueueEntries,
   clawCliCommandRegistry,
@@ -143,6 +144,7 @@ const requiredDocSnippets = [
   "external validation report",
   "/v1/remote/external-validation-report",
   "claw remote validation-report",
+  "source Q/A review report",
   "remote closure gate",
   "/v1/remote/closure-gate",
   "claw remote closure-gate",
@@ -423,10 +425,24 @@ if (!blockedClosureGate.blockers.includes("source_qa_review") || !blockedClosure
   fail("default remote closure gate must block on source Q/A review and external validation");
 }
 if (blockedClosureGate.blockedExternalRequirementIds.length !== externalPending.requirements.length) fail("default remote closure gate must block every external pending requirement");
+if (blockedClosureGate.sourceQaReviewStatus !== "incomplete" || blockedClosureGate.sourceQaReviewItems.length !== 0) {
+  fail("default remote closure gate must expose an incomplete source Q/A review report");
+}
+
+const completeSourceQaReviewReport = buildRemoteSourceQaReviewReport({
+  generatedAt: "2026-05-17T10:13:26.500Z",
+  reviewedSourceQaIds: remoteGoalClosureRequiredSourceQaIds,
+});
+if (completeSourceQaReviewReport.status !== "complete") fail("complete source Q/A review report must be complete");
+if (completeSourceQaReviewReport.reviewedSourceQaIds.length !== 23) fail("complete source Q/A review report must review all 23 Q/A ids");
+if (completeSourceQaReviewReport.items.length !== 23) fail("complete source Q/A review report must include one item per Q/A id");
+if (!completeSourceQaReviewReport.items.every((entry) => entry.disposition && entry.evidenceRefs.length > 0 && entry.writes === false)) {
+  fail("complete source Q/A review report must include disposition, evidence refs, and no-write items");
+}
 
 const clearableClosureGate = buildRemoteGoalClosureGate({
   generatedAt: "2026-05-17T10:13:27.000Z",
-  reviewedSourceQaIds: remoteGoalClosureRequiredSourceQaIds,
+  sourceQaReviews: completeSourceQaReviewReport.items,
   evidence: externalValidationChecklist.items.map((entry) => ({
     schemaVersion: 1,
     requirementId: entry.requirementId,
@@ -441,6 +457,7 @@ const clearableClosureGate = buildRemoteGoalClosureGate({
 });
 if (clearableClosureGate.status !== "clearable") fail("remote closure gate must become clearable only after source Q/A review and external validation clear");
 if (clearableClosureGate.missingSourceQaIds.length !== 0) fail("clearable remote closure gate must have no missing source Q/A ids");
+if (clearableClosureGate.sourceQaReviewStatus !== "complete" || clearableClosureGate.sourceQaReviewItems.length !== 23) fail("clearable remote closure gate must include complete source Q/A review evidence");
 if (clearableClosureGate.blockedExternalRequirementIds.length !== 0) fail("clearable remote closure gate must have no blocked external requirements");
 if (clearableClosureGate.clearableExternalRequirementIds.length !== externalPending.requirements.length) fail("clearable remote closure gate must clear every external requirement");
 if (clearableClosureGate.blockers.length !== 0) fail("clearable remote closure gate must have no blockers");
@@ -509,6 +526,7 @@ for (const snippet of [
   "buildRemoteExternalValidationReport",
   "/v1/remote/external-validation-report",
   "buildRemoteGoalClosureGate",
+  "sourceQaReviewItems",
   "/v1/remote/closure-gate",
   "expectedRouteContracts.contracts.map",
   "buildRemoteProviderDeviceE2EValidationPlan",
