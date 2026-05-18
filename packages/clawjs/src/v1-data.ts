@@ -7,7 +7,7 @@ import type Database from "better-sqlite3";
 import { DatabaseServiceStore } from "@clawjs/database";
 import { runAgentsCommand, runConnectionsCommand, runPersonalitiesCommand, runSkillCollectionsCommand } from "./v1-data-agent-entities.ts";
 import { runProviderRoutingCommand, runSnippetsCommand } from "./v1-data-agent-config.ts";
-import { scheduleAppsCatalogSearchEvent, scheduleBusinessRecordsSearchEvent, scheduleCalendarEventsSearchEvent, scheduleContentItemsSearchEvent, scheduleDesignResourcesSearchEvent, scheduleFinanceRecordTableSearchEvent, scheduleIotConfigSearchEvent, scheduleKnowledgeGraphSearchEvent, scheduleMarketplaceChoicesSearchEvent, scheduleMcpServersSearchEvent, scheduleNotesPagesSearchEvent, scheduleRuntimeEventsSearchEvent, scheduleSignalsObservationsSearchEvent, scheduleSkillsRegistrySearchEvent, scheduleSocialPostsSearchEvent } from "./cli-search-events.ts";
+import { scheduleAppsCatalogSearchEvent, scheduleBusinessRecordsSearchEvent, scheduleCalendarEventsSearchEvent, scheduleConnectorCatalogSearchEvent, scheduleContentItemsSearchEvent, scheduleDesignResourcesSearchEvent, scheduleFinanceRecordTableSearchEvent, scheduleIotConfigSearchEvent, scheduleKnowledgeGraphSearchEvent, scheduleMarketplaceChoicesSearchEvent, scheduleMcpServersSearchEvent, scheduleNotesPagesSearchEvent, scheduleRuntimeEventsSearchEvent, scheduleSignalsObservationsSearchEvent, scheduleSkillsRegistrySearchEvent, scheduleSocialPostsSearchEvent } from "./cli-search-events.ts";
 export {
   openMainDataStore,
   resolveClawjsDataRoot,
@@ -155,6 +155,8 @@ export async function runV1DataCli(input: V1DataCliInput): Promise<number | null
         return runAppsCommand(input, store);
       case "design":
         return runDesignCommand(input, store);
+      case "connectors":
+        return runConnectorsCommand(input, store);
       case "agents":
         return runAgentsCommand(input, store);
       case "skills": return runSkillsCommand(input, store);
@@ -205,6 +207,7 @@ function shouldHandleV1DataCommand(group: string | undefined, command: string | 
     mcp: new Set(["list", "get", "upsert", "delete", "config-path", "help"]),
     apps: new Set(["list", "upsert", "delete", "help"]),
     design: new Set(["list", "upsert", "delete", "help"]),
+    connectors: new Set(["operation", "operations", "help"]),
     agents: new Set(["list", "get", "upsert", "delete", "schema", "evaluate-access", "delegation-check", "supervisor-check", "route-check", "resolve-external-identity", "project-support-inbox", "memory-check", "budget-check", "action-severity", "autonomy-check", "dispatch-plan", "context-pack", "tool-catalog", "creation-review", "storage-audit", "audit-coverage", "operational-snapshot", "control-panel", "privacy-plan", "paperclip-import", "surface-projection", "config-revision", "incident", "activity-feed", "blueprint", "evaluation", "retirement-plan", "help"]),
     skills: new Set(["get", "upsert", "delete", "help"]),
     personalities: new Set(["list", "get", "upsert", "delete", "help"]),
@@ -1902,6 +1905,136 @@ function runMcpCommand(input: V1DataCliInput): number {
     return items.length !== current.length ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
   return usageError(input, usage(input.binName, "mcp"));
+}
+
+function runConnectorsCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
+  const scope = input.positionals[1];
+  if (scope !== "operation" && scope !== "operations") return usageError(input, usage(input.binName, "connectors"));
+  const command = input.positionals[2] || "list";
+  if (command === "list") {
+    const where: string[] = [];
+    const params: string[] = [];
+    if (input.flags.provider) {
+      where.push("o.provider_id = ?");
+      params.push(input.flags.provider);
+    }
+    if (input.flags.support) {
+      where.push("o.support = ?");
+      params.push(input.flags.support);
+    }
+    const rows = store.sqlite.prepare(`
+      SELECT o.*, p.display_name AS provider_display_name, p.trust_tier AS provider_trust_tier, p.enabled AS provider_enabled
+      FROM connector_operations o
+      LEFT JOIN connector_providers p ON p.id = o.provider_id
+      ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+      ORDER BY o.provider_id, o.id
+      LIMIT ?
+    `).all(...params, Math.max(1, Number(input.flags.limit ?? 100)));
+    writeSuccess(input, { items: rows.map(normalizeDbRow) });
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "get") {
+    const id = input.flags.id || input.flags.operation || input.positionals[3];
+    if (!id) return usageError(input, "Usage: claw connectors operation get OPERATION_ID [--json]");
+    const row = store.sqlite.prepare(`
+      SELECT o.*, p.display_name AS provider_display_name, p.trust_tier AS provider_trust_tier, p.enabled AS provider_enabled
+      FROM connector_operations o
+      LEFT JOIN connector_providers p ON p.id = o.provider_id
+      WHERE o.id = ?
+      LIMIT 1
+    `).get(id);
+    writeSuccess(input, row ? normalizeDbRow(row) : null);
+    return row ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
+  }
+  if (command === "upsert" || command === "create" || command === "edit") {
+    const id = input.flags.id || input.flags.operation || input.positionals[3];
+    const providerId = input.flags.provider || input.flags["provider-id"];
+    if (!id || !providerId) return usageError(input, "Usage: claw connectors operation upsert OPERATION_ID --provider PROVIDER [--runtime-kind api|sdk|mcp|cli] [--json]");
+    const now = nowIso();
+    const providerDisplayName = input.flags["provider-name"] || input.flags["provider-display-name"] || providerId;
+    const providerTrustTier = input.flags["provider-trust-tier"] || input.flags["trust-tier"] || "external_saas";
+    const providerEnabled = input.flags["provider-enabled"] === undefined ? 1 : (truthy(input.flags["provider-enabled"]) ? 1 : 0);
+    const capabilityIds = parseConnectorStringList(input.flags.capabilities || input.flags.capability || input.flags["capability-ids"]);
+    const riskTiers = parseConnectorStringList(input.flags["risk-tiers"] || input.flags.risk);
+    const metadata = input.flags.metadata ? parseMaybeJson(input.flags.metadata) : {};
+    const metadataJson = JSON.stringify(isRecord(metadata) ? metadata : { value: metadata });
+    const existing = store.sqlite.prepare("SELECT created_at FROM connector_operations WHERE id = ?").get(id) as { created_at?: string } | undefined;
+    store.sqlite.prepare(`
+      INSERT INTO connector_providers (id, display_name, trust_tier, enabled, metadata_json, created_at, updated_at)
+      VALUES (?, ?, ?, ?, '{}', ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        display_name = excluded.display_name,
+        trust_tier = excluded.trust_tier,
+        enabled = excluded.enabled,
+        updated_at = excluded.updated_at
+    `).run(providerId, providerDisplayName, providerTrustTier, providerEnabled, now, now);
+    store.sqlite.prepare(`
+      INSERT INTO connector_operations (
+        id, provider_id, runtime_kind, support, native_name, capability_ids_json, risk_tiers_json,
+        credential_required, cost_risk, requires_approval, network_policy_id, metadata_json, created_at, updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        provider_id = excluded.provider_id,
+        runtime_kind = excluded.runtime_kind,
+        support = excluded.support,
+        native_name = excluded.native_name,
+        capability_ids_json = excluded.capability_ids_json,
+        risk_tiers_json = excluded.risk_tiers_json,
+        credential_required = excluded.credential_required,
+        cost_risk = excluded.cost_risk,
+        requires_approval = excluded.requires_approval,
+        network_policy_id = excluded.network_policy_id,
+        metadata_json = excluded.metadata_json,
+        updated_at = excluded.updated_at
+    `).run(
+      id,
+      providerId,
+      input.flags["runtime-kind"] || input.flags.runtime || "api",
+      input.flags.support || "external_pending",
+      input.flags["native-name"] || input.flags.native || null,
+      JSON.stringify(capabilityIds),
+      JSON.stringify(riskTiers),
+      input.flags["credential-required"] === undefined ? 1 : (truthy(input.flags["credential-required"]) ? 1 : 0),
+      input.flags["cost-risk"] || "unknown",
+      input.flags["requires-approval"] === undefined ? 1 : (truthy(input.flags["requires-approval"]) ? 1 : 0),
+      input.flags["network-policy"] || input.flags["network-policy-id"] || null,
+      metadataJson,
+      existing?.created_at ?? now,
+      now,
+    );
+    scheduleConnectorCatalogSearchEvent({
+      operation: "upsert",
+      operationId: id,
+      dataDir: resolveClawjsDataRoot(),
+      flags: input.flags,
+    });
+    const row = store.sqlite.prepare("SELECT * FROM connector_operations WHERE id = ?").get(id);
+    writeSuccess(input, { operation: row ? normalizeDbRow(row) : null, durable: true, store: "core.sqlite" });
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "delete") {
+    const id = input.flags.id || input.flags.operation || input.positionals[3];
+    if (!id) return usageError(input, "Usage: claw connectors operation delete OPERATION_ID [--json]");
+    const changes = store.sqlite.prepare("DELETE FROM connector_operations WHERE id = ?").run(id).changes;
+    if (changes > 0) {
+      scheduleConnectorCatalogSearchEvent({
+        operation: "delete",
+        operationId: id,
+        dataDir: resolveClawjsDataRoot(),
+        flags: input.flags,
+      });
+    }
+    writeSuccess(input, { deleted: changes > 0, id });
+    return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
+  }
+  return usageError(input, usage(input.binName, "connectors"));
+}
+
+function parseConnectorStringList(value: string | undefined): string[] {
+  const parsed = parseCsvOrJson(value);
+  const entries = Array.isArray(parsed) ? parsed : (parsed === undefined ? [] : [parsed]);
+  return entries.map((entry) => String(entry).trim()).filter(Boolean);
 }
 
 function runAppsCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {

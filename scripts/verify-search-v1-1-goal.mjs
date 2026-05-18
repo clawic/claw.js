@@ -1313,6 +1313,12 @@ requireSnippet("packages/clawjs/src/cli-search-command.ts", "id: `connectors.cat
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "connectors-metadata-fragment-needle");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "connectors-metadata-secret-never-index");
 requireSnippet("docs/search.md", "Operation metadata is exposed through redacted\nmetadata fragments");
+requireSnippet("packages/clawjs/src/v1-data.ts", "case \"connectors\"");
+requireSnippet("packages/clawjs/src/v1-data.ts", "scheduleConnectorCatalogSearchEvent({");
+requireSnippet("packages/clawjs-core/src/cli-command-registry.ts", "operation|operations|context|ctx");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "connector operation writes enqueue and tombstone connectors catalog search events");
+requireSnippet("docs/search.md", "`claw connectors operation upsert|delete` writes emit hot `connectors.catalog`");
+requireSnippet("docs/connector-control-plane.md", "claw connectors operation upsert openai.images.edit --provider openai");
 requireSnippet("packages/clawjs/src/cli-search-command.ts", "workspace_records");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "afterWorkDelete");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "source: \"work.items\", operation: \"delete\", status: \"done\", indexed: 1");

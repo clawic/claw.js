@@ -555,8 +555,9 @@ native operation names, cost/approval metadata, network policy references, and
 declared capability summaries. Operation metadata is exposed through redacted
 metadata fragments. It does not index credential bindings, secret references, or
 raw traces; connector execution remains host-brokered and approval-gated. A
-resource-scoped scheduling helper exists for connector operation changes;
-automatic control-plane write emitters remain source-owned.
+resource-scoped scheduling helper exists for connector operation changes, and
+`claw connectors operation upsert|delete` writes emit hot `connectors.catalog`
+refresh/delete jobs for the changed operation id.
 
 `mcp.servers` projects local MCP server configuration. It indexes server ids,
 transport kind, enabled state, command names, URL hosts, config paths, and

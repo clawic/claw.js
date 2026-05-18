@@ -1143,6 +1143,8 @@ claw accounts doctor --json
 claw accounts explain apple --operation apple.upload --env production --json
 claw accounts export --provider apple --mode redacted --json
 claw accounts export --mode private-envelope --json
+claw connectors operation upsert openai.images.edit --provider openai --runtime-kind api --support supported --json
+claw connectors operation delete openai.images.edit --json
 claw connectors context explain revenuecat --operation revenuecat.project_configuration.read --json
 ```
 
@@ -1156,6 +1158,11 @@ mutation remains explicit-approval work. `accounts export` is redacted by
 default. `--mode private-envelope` includes private non-secret fields for a
 protected handoff, but still omits plaintext secrets and exports only binding
 metadata for secret fields.
+
+`connectors operation upsert|delete` maintains local control-plane operation
+records and schedules `connectors.catalog` Search refresh/delete jobs for the
+changed operation id. It does not execute provider calls or store credential
+material.
 
 ## Agent Runtime
 

@@ -1879,6 +1879,82 @@ test("search service resource jobs refresh only the targeted connector operation
     assert.equal(afterConnectorDeletePayload.data.results.some((entry: any) => entry.source === "connectors.catalog" && entry.resourceId === "openai.images.edit"), false);
   });
 });
+test("connector operation writes enqueue and tombstone connectors catalog search events", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-connectors-writes-"));
+  const dataRoot = path.join(workspaceRoot, ".claw", "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    fs.mkdirSync(dataRoot, { recursive: true });
+    const upserted = await runCliCapture([
+      "connectors",
+      "operation",
+      "upsert",
+      "openai.images.edit",
+      "--provider",
+      "openai",
+      "--provider-name",
+      "OpenAI",
+      "--runtime-kind",
+      "api",
+      "--support",
+      "supported",
+      "--native-name",
+      "images.edit",
+      "--capabilities",
+      "image.edit.background",
+      "--cost-risk",
+      "cost",
+      "--requires-approval",
+      "true",
+      "--metadata",
+      JSON.stringify({ notes: "evented connector operation metadata needle" }),
+      "--json",
+    ], workspaceRoot);
+    assert.equal(upserted.code, CLI_EXIT_OK, upserted.stderr || upserted.stdout);
+    const upsertJobs = await runCliCapture(["search", "jobs", "--source", "connectors.catalog", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(upsertJobs.code, CLI_EXIT_OK);
+    const upsertJobsPayload = JSON.parse(upsertJobs.stdout) as {
+      data: { items: Array<{ source: string; operation: string; resourceId: string; shard: string; payload: { eventDriven?: boolean; operationId?: string } }> };
+    };
+    const upsertJob = upsertJobsPayload.data.items.find((job) => job.resourceId === "openai.images.edit" && job.operation === "upsert");
+    assert.equal(upsertJob?.source, "connectors.catalog");
+    assert.equal(upsertJob?.shard, "hot");
+    assert.equal(upsertJob?.payload.eventDriven, true);
+    assert.equal(upsertJob?.payload.operationId, "openai.images.edit");
+    const upsertRun = await runCliCapture(["search", "service", "run-once", "--source", "connectors.catalog", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(upsertRun.code, CLI_EXIT_OK);
+    const upsertRunItem = (JSON.parse(upsertRun.stdout) as any).data.service.worker?.items.find((entry: any) => entry.source === "connectors.catalog");
+    assert.deepEqual({ source: upsertRunItem?.source, operation: upsertRunItem?.operation, status: upsertRunItem?.status, indexed: upsertRunItem?.indexed }, { source: "connectors.catalog", operation: "upsert", status: "done", indexed: 1 });
+    const query = await runCliCapture(["search", "query", "evented connector operation metadata needle", "--sources", "connectors.catalog", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK, query.stderr || query.stdout);
+    const queryPayload = JSON.parse(query.stdout) as any;
+    assert.equal(queryPayload.data.results.some((entry: any) => entry.source === "connectors.catalog" && entry.resourceId === "openai.images.edit"), true);
+    const deleted = await runCliCapture(["connectors", "operation", "delete", "openai.images.edit", "--json"], workspaceRoot);
+    assert.equal(deleted.code, CLI_EXIT_OK, deleted.stderr || deleted.stdout);
+    const deleteJobs = await runCliCapture(["search", "jobs", "--source", "connectors.catalog", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleteJobs.code, CLI_EXIT_OK);
+    const deleteJobsPayload = JSON.parse(deleteJobs.stdout) as {
+      data: { items: Array<{ operation: string; priority: number; resourceId: string; payload: { eventDriven?: boolean; operationId?: string } }> };
+    };
+    const deleteJob = deleteJobsPayload.data.items.find((job) => job.resourceId === "openai.images.edit" && job.operation === "delete");
+    assert.equal(deleteJob?.priority, 80);
+    assert.equal(deleteJob?.payload.eventDriven, true);
+    assert.equal(deleteJob?.payload.operationId, "openai.images.edit");
+    const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "connectors.catalog", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(deleteRun.code, CLI_EXIT_OK);
+    const deleteRunItem = (JSON.parse(deleteRun.stdout) as any).data.service.worker?.items.find((entry: any) => entry.source === "connectors.catalog");
+    assert.deepEqual({ source: deleteRunItem?.source, operation: deleteRunItem?.operation, status: deleteRunItem?.status, indexed: deleteRunItem?.indexed }, { source: "connectors.catalog", operation: "delete", status: "done", indexed: 1 });
+    const afterDelete = await runCliCapture(["search", "query", "evented connector operation metadata needle", "--sources", "connectors.catalog", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterDelete.code, CLI_EXIT_DEGRADED, afterDelete.stderr || afterDelete.stdout);
+    const afterDeletePayload = JSON.parse(afterDelete.stdout) as any;
+    assert.equal(afterDeletePayload.data.results.some((entry: any) => entry.source === "connectors.catalog" && entry.resourceId === "openai.images.edit"), false);
+  });
+});
 test("search rebuild indexes mcp.servers without secret values", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-mcp-"));
   const dataRoot = path.join(workspaceRoot, ".claw", "data");

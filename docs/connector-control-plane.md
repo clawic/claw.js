@@ -84,6 +84,17 @@ audit event stores only `raw_trace_ref`, and `vault.sqlite` stores
 `connector_raw_trace_refs` entries with encrypted payload references, key
 references, expiry, and metadata.
 
+Control-plane operation records can be maintained locally with:
+
+```bash
+claw connectors operation upsert openai.images.edit --provider openai --runtime-kind api --support supported --json
+claw connectors operation delete openai.images.edit --json
+```
+
+These writes schedule hot `connectors.catalog` Search jobs for the changed
+operation id. The Search projection still excludes credential bindings, secret
+refs, and raw traces.
+
 ## Decisions
 
 `evaluateConnectorControlPlaneRequest` returns a decision with:
