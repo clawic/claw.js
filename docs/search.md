@@ -415,7 +415,9 @@ schedule best-effort hot upsert jobs for changed deck manifests.
 author/output metadata, sheet names, columns, rows, cells, tables, charts, and
 notes as workbook items with per-sheet fragments. It does not parse binary XLSX
 files directly; imported or generated files remain media/file records until a
-workbook manifest or extractor-owned projection exists.
+workbook manifest or extractor-owned projection exists. Producers that write
+workbook manifests can schedule best-effort hot upsert jobs for changed
+workbooks through the Search event scheduler.
 
 `generations.artifacts` projects generated artifact records. It indexes prompts,
 titles, kind, status, backend/model metadata, command provenance, output
@@ -540,7 +542,9 @@ signed host shortcut broker validates it.
   `snippets.library`, `agents.catalog`, `marketplace.choices`, `content.items`,
   `business.records`, `social.posts`, `iot.config`, and the first bounded
   `code.symbols` adapter with per-file event refresh. `slides.decks` also
-  supports changed-deck event refresh from local slide writes.
+  supports changed-deck event refresh from local slide writes, and
+  `sheets.workbooks` supports changed-workbook event refresh for manifest
+  producers.
 - Keep Clawix Mac Search and `Command-G` conversations-only.
 
 ### Phase 2: framework domains

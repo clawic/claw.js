@@ -1,0 +1,287 @@
+import { test } from "vitest";
+import assert from "node:assert/strict";
+import fs from "fs";
+import os from "os";
+import path from "path";
+
+import { CLI_EXIT_OK } from "./index.ts";
+import { scheduleSheetsWorkbookSearchEvent } from "./cli-search-events.ts";
+import { runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
+
+test("search rebuild indexes slides.decks from slide manifests", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-slides-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  const decksDir = path.join(workspaceRoot, ".claw", "slides", "decks");
+  fs.mkdirSync(decksDir, { recursive: true });
+  fs.writeFileSync(path.join(decksDir, "deck-quarterly.json"), `${JSON.stringify({
+    schemaVersion: 1,
+    id: "deck-quarterly",
+    title: "Quarterly Revenue Plan",
+    theme: "executive",
+    author: { agentId: "agent:slides", name: "Slides agent" },
+    metadata: { team: "finance" },
+    outputs: [{ format: "pptx", path: "outputs/deck-quarterly/deck.pptx" }],
+    slides: [
+      {
+        id: "slide-title",
+        layout: "title",
+        heading: "Quarterly revenue plan",
+        subtitle: "North star targets",
+        notes: "Presenter note for forecast review.",
+      },
+      {
+        id: "slide-metrics",
+        layout: "metric-grid",
+        heading: "Forecast metrics",
+        metrics: [{ label: "Expansion", value: "18%", detail: "net revenue retention" }],
+        bullets: ["Pipeline coverage", "Renewal risk"],
+      },
+    ],
+    createdAt: "2026-05-17T00:00:00.000Z",
+    updatedAt: "2026-05-17T00:10:00.000Z",
+  }, null, 2)}\n`, "utf8");
+
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const rebuild = await runCliCapture(["search", "rebuild", "--source", "slides.decks", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(rebuild.code, CLI_EXIT_OK);
+    const rebuildPayload = JSON.parse(rebuild.stdout) as {
+      data: { sources: string[]; pendingSources: string[]; indexedBySource: { "slides.decks": number } };
+    };
+    assert.equal(rebuildPayload.data.sources.includes("slides.decks"), true);
+    assert.equal(rebuildPayload.data.pendingSources.includes("slides.decks"), false);
+    assert.equal(rebuildPayload.data.indexedBySource["slides.decks"], 1);
+
+    const query = await runCliCapture(["search", "query", "forecast expansion revenue", "--domains", "slides", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: {
+        indexedFastPaths: { "slides.decks": number };
+        results: Array<{ source: string; domain: string; title: string; metadata?: { theme?: string; layout?: string[]; outputFormat?: string[] }; fragments?: Array<{ title?: string; snippet?: string }> }>;
+      };
+    };
+    assert.equal(queryPayload.data.indexedFastPaths["slides.decks"], 1);
+    const result = queryPayload.data.results.find((item) => item.source === "slides.decks");
+    assert.equal(result?.domain, "slides");
+    assert.equal(result?.title, "Quarterly Revenue Plan");
+    assert.equal(result?.metadata?.theme, "executive");
+    assert.equal(result?.metadata?.layout?.includes("metric-grid"), true);
+    assert.equal(result?.metadata?.outputFormat?.includes("pptx"), true);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "Forecast metrics"), true);
+  });
+});
+
+test("slides.decks event jobs refresh changed slide manifests", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-slides-events-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const created = await runCliCapture(["slides", "create", "Event Driven Deck", "--theme", "executive", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(created.code, CLI_EXIT_OK);
+    const createdPayload = JSON.parse(created.stdout) as { deck: { id: string }; path: string };
+    assert.equal(fs.existsSync(createdPayload.path), true);
+
+    const added = await runCliCapture([
+      "slides",
+      "add",
+      createdPayload.deck.id,
+      "--layout",
+      "title-bullets",
+      "--heading",
+      "Event refresh pipeline",
+      "--bullet",
+      "Slide deck Search queue",
+      "--workspace",
+      workspaceRoot,
+      "--data-dir",
+      dataRoot,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(added.code, CLI_EXIT_OK);
+
+    const jobs = await runCliCapture(["search", "jobs", "list", "--source", "slides.decks", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(jobs.code, CLI_EXIT_OK);
+    const jobsPayload = JSON.parse(jobs.stdout) as {
+      data: { items: Array<{ source: string; operation: string; resourceId?: string; shard?: string; payload?: Record<string, unknown> }> };
+    };
+    assert.equal(jobsPayload.data.items.length, 1);
+    assert.equal(jobsPayload.data.items[0]?.source, "slides.decks");
+    assert.equal(jobsPayload.data.items[0]?.operation, "upsert");
+    assert.equal(jobsPayload.data.items[0]?.resourceId, createdPayload.deck.id);
+    assert.equal(jobsPayload.data.items[0]?.shard, "hot");
+    assert.equal(jobsPayload.data.items[0]?.payload?.eventDriven, true);
+    assert.equal(jobsPayload.data.items[0]?.payload?.deckId, createdPayload.deck.id);
+    assert.equal(jobsPayload.data.items[0]?.payload?.workspaceRoot, path.resolve(workspaceRoot));
+
+    const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "slides.decks", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(serviceRun.code, CLI_EXIT_OK);
+    const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.source, "slides.decks");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.operation, "upsert");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
+
+    const query = await runCliCapture(["search", "query", "Slide deck Search queue", "--domains", "slides", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: { results: Array<{ source: string; domain: string; title: string; resourceId?: string; fragments?: Array<{ title?: string; snippet?: string }> }> };
+    };
+    const result = queryPayload.data.results.find((item) => item.source === "slides.decks");
+    assert.equal(result?.domain, "slides");
+    assert.equal(result?.title, "Event Driven Deck");
+    assert.equal(result?.resourceId, createdPayload.deck.id);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "Event refresh pipeline"), true);
+  });
+});
+
+test("search rebuild indexes sheets.workbooks from workbook manifests", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-sheets-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  const workbooksDir = path.join(workspaceRoot, ".claw", "sheets", "workbooks");
+  fs.mkdirSync(workbooksDir, { recursive: true });
+  fs.writeFileSync(path.join(workbooksDir, "workbook-forecast.json"), `${JSON.stringify({
+    id: "workbook-forecast",
+    title: "Revenue Forecast Workbook",
+    author: { agentId: "agent:sheets", name: "Sheets agent" },
+    metadata: { team: "finance" },
+    outputs: [{ format: "xlsx", path: "outputs/workbook-forecast/forecast.xlsx" }],
+    sheets: [
+      {
+        id: "sheet-summary",
+        name: "Summary",
+        columns: ["Region", "Revenue", "Formula"],
+        rows: [
+          ["EMEA", "1200", "=SUM(B2:B4)"],
+          ["AMER", "1800", "=SUM(B5:B7)"],
+        ],
+        notes: "Expansion forecast table.",
+      },
+      {
+        id: "sheet-risks",
+        name: "Renewal Risks",
+        cells: [
+          { address: "A1", value: "Customer", formula: "" },
+          { address: "B2", value: "Contoso", formula: "=IF(C2>0.5,\"watch\",\"ok\")" },
+        ],
+      },
+    ],
+    updatedAt: "2026-05-17T00:15:00.000Z",
+  }, null, 2)}\n`, "utf8");
+
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const rebuild = await runCliCapture(["search", "rebuild", "--source", "sheets.workbooks", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(rebuild.code, CLI_EXIT_OK);
+    const rebuildPayload = JSON.parse(rebuild.stdout) as {
+      data: { sources: string[]; pendingSources: string[]; indexedBySource: { "sheets.workbooks": number } };
+    };
+    assert.equal(rebuildPayload.data.sources.includes("sheets.workbooks"), true);
+    assert.equal(rebuildPayload.data.pendingSources.includes("sheets.workbooks"), false);
+    assert.equal(rebuildPayload.data.indexedBySource["sheets.workbooks"], 1);
+
+    const query = await runCliCapture(["search", "query", "emea expansion formula revenue", "--domains", "sheets", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: {
+        indexedFastPaths: { "sheets.workbooks": number };
+        results: Array<{ source: string; domain: string; title: string; metadata?: { sheetName?: string[]; outputFormat?: string[] }; fragments?: Array<{ title?: string; snippet?: string }> }>;
+      };
+    };
+    assert.equal(queryPayload.data.indexedFastPaths["sheets.workbooks"], 1);
+    const result = queryPayload.data.results.find((item) => item.source === "sheets.workbooks");
+    assert.equal(result?.domain, "sheets");
+    assert.equal(result?.title, "Revenue Forecast Workbook");
+    assert.equal(result?.metadata?.sheetName?.includes("Summary"), true);
+    assert.equal(result?.metadata?.outputFormat?.includes("xlsx"), true);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "Summary"), true);
+  });
+});
+
+test("sheets.workbooks event jobs refresh changed workbook manifests", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-sheets-events-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  const workbooksDir = path.join(workspaceRoot, ".claw", "sheets", "workbooks");
+  fs.mkdirSync(workbooksDir, { recursive: true });
+  const workbookId = "workbook-event-refresh";
+  fs.writeFileSync(path.join(workbooksDir, `${workbookId}.json`), `${JSON.stringify({
+    id: workbookId,
+    title: "Event Workbook",
+    author: { agentId: "agent:sheets", name: "Sheets agent" },
+    sheets: [
+      {
+        id: "sheet-pipeline",
+        name: "Pipeline",
+        columns: ["Account", "Weighted ARR", "Formula"],
+        rows: [
+          ["Globex", "4200", "=B2*0.8"],
+          ["Initech", "3100", "=B3*0.6"],
+        ],
+        notes: "Event-driven workbook refresh sentinel.",
+      },
+    ],
+    updatedAt: "2026-05-18T00:00:00.000Z",
+  }, null, 2)}\n`, "utf8");
+
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const scheduled = scheduleSheetsWorkbookSearchEvent({
+      operation: "upsert",
+      workbookId,
+      workspaceRoot,
+      dataDir: dataRoot,
+      flags: { workspace: workspaceRoot },
+    });
+    assert.equal(scheduled.ok, true, scheduled.error);
+    assert.equal(scheduled.job?.source, "sheets.workbooks");
+    assert.equal(scheduled.job?.operation, "upsert");
+    assert.equal(scheduled.job?.resourceId, workbookId);
+    assert.equal(scheduled.job?.shard, "hot");
+    assert.equal(scheduled.job?.payload.eventDriven, true);
+    assert.equal(scheduled.job?.payload.workbookId, workbookId);
+    assert.equal(scheduled.job?.payload.workspaceRoot, path.resolve(workspaceRoot));
+
+    const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "sheets.workbooks", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(serviceRun.code, CLI_EXIT_OK);
+    const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.source, "sheets.workbooks");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.operation, "upsert");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
+
+    const query = await runCliCapture(["search", "query", "weighted workbook sentinel", "--domains", "sheets", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: { results: Array<{ source: string; domain: string; title: string; resourceId?: string; fragments?: Array<{ title?: string }> }> };
+    };
+    const result = queryPayload.data.results.find((item) => item.source === "sheets.workbooks");
+    assert.equal(result?.domain, "sheets");
+    assert.equal(result?.title, "Event Workbook");
+    assert.equal(result?.resourceId, workbookId);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "Pipeline"), true);
+  });
+});

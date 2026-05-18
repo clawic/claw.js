@@ -175,6 +175,28 @@ export function scheduleSlidesDeckSearchEvent(input: {
   });
 }
 
+export function scheduleSheetsWorkbookSearchEvent(input: {
+  operation: "upsert" | "delete";
+  workbookId: string;
+  workspaceRoot: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  return scheduleSearchIndexEvent({
+    source: "sheets.workbooks",
+    operation: input.operation,
+    resourceId: input.workbookId,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      workbookId: input.workbookId,
+      workspaceRoot: path.resolve(input.workspaceRoot),
+    },
+  });
+}
+
 export function scheduleSkillsRegistrySearchEvent(input: {
   operation: "upsert" | "delete";
   slug: string;
