@@ -6,13 +6,13 @@
     "cliCommands": "packages/clawjs-core/src/cli-command-registry.ts"
   },
   "counts": {
-    "surfaces": 883,
+    "surfaces": 887,
     "cliCommands": 155
   },
   "fingerprints": {
-    "surfaces": "fnv1a32:02cd6514",
+    "surfaces": "fnv1a32:e2ad1286",
     "cliCommands": "fnv1a32:6ab32150",
-    "combined": "fnv1a32:f55285e2"
+    "combined": "fnv1a32:a4c578a8"
   },
   "surfaces": [
     {
@@ -672,6 +672,42 @@
       "kind": "apiRoute",
       "parentId": "claw.contracts.api",
       "value": "POST /v1/sync/plan",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.api.system.history",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /v1/system/history/{metricKey}",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.api.system.metrics",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /v1/system/metrics",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.api.system.snapshot",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /v1/system/snapshot",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.api.system.widgets",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /v1/system/widgets",
       "surfaceClass": "api",
       "stability": "v1"
     },

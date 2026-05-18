@@ -42,10 +42,15 @@ function buildPackages() {
   npmRun("build:packages");
 }
 
+function evolutionGate() {
+  npmRun("test:evolution");
+}
+
 function fast(args = []) {
   npmRun("privacy:check");
   npmRun("privacy:test");
   npmRun("test:policy");
+  evolutionGate();
   npmRun("code-hygiene:check");
   npmRun("code-hygiene:self-test");
   buildPackages();
@@ -64,6 +69,7 @@ function changed() {
     npmRun("privacy:check");
     npmRun("privacy:test");
     npmRun("test:policy");
+    evolutionGate();
     const packageScripts = new Set();
     const rootVitestFiles = [];
     for (const file of testFiles) {

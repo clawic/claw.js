@@ -22,6 +22,11 @@ knowledge in migrators, adapters, receipts, repair tools, and fixtures.
 5. Run `claw evolution verify --json` and the relevant tests.
 6. Keep receipts redacted and local unless the user approves sharing.
 
+`npm run test:evolution` is the shared changed/release gate for this backbone.
+It runs the governance check, self-test, and `claw evolution verify --json`.
+`npm run test:changed`, `npm run test:fast`, and release lanes must keep this
+gate in their path so stable surface drift fails before merge or publication.
+
 ## Files
 
 - `schema.json`: machine-readable record schema.

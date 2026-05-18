@@ -65,6 +65,27 @@
       "adr": "docs/adr/0030-post-v1-evolution-rescue-backbone.md",
       "notes": "Repair/report now return local, redacted, agent-readable diagnostics with safe actions, approval-gated actions, a suggested patch, and receipt context. The public surface baseline is refreshed with the current monitor incident table and design CLI metadata so drift remains explicit.",
       "createdAt": "2026-05-18T00:00:00.000Z"
+    },
+    {
+      "id": "evo_system_telemetry_api_surfaces",
+      "title": "System telemetry API surfaces",
+      "class": "additive",
+      "status": "active",
+      "owner": "claw",
+      "surfaces": [
+        "claw.api.system.snapshot",
+        "claw.api.system.metrics",
+        "claw.api.system.widgets",
+        "claw.api.system.history"
+      ],
+      "tests": [
+        "packages/clawjs/src/index.test.ts",
+        "docs/evolution/public-surface-baseline.json",
+        "scripts/evolution-governance-check.mjs"
+      ],
+      "adr": "docs/adr/0030-post-v1-evolution-rescue-backbone.md",
+      "notes": "Registers additive system telemetry HTTP contracts so public API surface drift remains covered by the evolution ledger and baseline.",
+      "createdAt": "2026-05-18T00:00:00.000Z"
     }
   ]
 }
