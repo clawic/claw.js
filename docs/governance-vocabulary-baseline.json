@@ -24,7 +24,7 @@
       "database/tests/e2e/backend.e2e.test.ts": 3,
       "docs/adr/0027-governance-identity-scope-model.md": 3,
       "docs/company-cockpit-frontend-spec.md": 11,
-      "docs/decision-map.md": 2,
+      "docs/decision-map.md": 1,
       "docs/examples/company-cockpit.fixture.json": 2,
       "docs/frontend-contracts.md": 11,
       "docs/naming-style-guide.md": 1,
@@ -405,10 +405,12 @@
       "docs/cli.md": 15,
       "docs/code-hygiene-decision-checklist.md": 1,
       "docs/data-storage-boundary.md": 1,
-      "docs/decision-map.md": 2,
+      "docs/decision-map.md": 1,
       "docs/demo-terminology-note.md": 2,
       "docs/dense-data-completion-audit.md": 2,
       "docs/dense-data-existing-catalog-audit.md": 1,
+      "docs/governance-workspace-project-completion-audit.md": 1,
+      "docs/governance-workspace-project-source-decision-audit.md": 2,
       "docs/index.md": 3,
       "docs/integration-qa-lab.md": 2,
       "docs/interface-matrix.md": 1,
@@ -630,7 +632,9 @@
       "docs/agents-v1-decision-matrix.md": 1,
       "docs/api.md": 1,
       "docs/cli.md": 6,
-      "docs/decision-map.md": 2,
+      "docs/decision-map.md": 1,
+      "docs/governance-workspace-project-completion-audit.md": 1,
+      "docs/governance-workspace-project-source-decision-audit.md": 2,
       "docs/interface-matrix.md": 2,
       "docs/naming-style-guide.md": 1,
       "docs/notify.md": 1,
@@ -725,7 +729,8 @@
       "relay/ui/src/routes/Login.tsx": 2,
       "relay/ui/src/routes/Members.tsx": 1,
       "relay/ui/src/routes/Settings.tsx": 1,
-      "scripts/verify-remote-sync-goal.mjs": 26,
+      "scripts/verify-governance-workspace-project-goal.mjs": 1,
+      "scripts/verify-remote-sync-goal.mjs": 27,
       "secrets/src/server/app.ts": 3,
       "secrets/src/server/audit.ts": 1,
       "secrets/src/server/db.ts": 1,
@@ -911,13 +916,13 @@
       "secrets/src/server/stores.ts": 28
     }
   },
-  "generatedAt": "2026-05-18T13:09:18.393Z",
+  "generatedAt": "2026-05-18T13:11:40.199Z",
   "policy": "Current governance vocabulary debt may shrink without review. Any increase in a tracked path or any new tracked path fails scripts/governance-scope-guard.mjs unless the occurrence is removed or this baseline is deliberately updated with rationale.",
   "schemaVersion": 1,
   "summary": {
     "companyId": {
       "files": 174,
-      "occurrences": 797
+      "occurrences": 796
     },
     "company_id": {
       "files": 4,
@@ -944,8 +949,8 @@
       "occurrences": 210
     },
     "profile": {
-      "files": 207,
-      "occurrences": 1044
+      "files": 209,
+      "occurrences": 1046
     },
     "profileId": {
       "files": 21,
@@ -956,8 +961,8 @@
       "occurrences": 7
     },
     "tenant": {
-      "files": 133,
-      "occurrences": 646
+      "files": 136,
+      "occurrences": 650
     },
     "tenantId": {
       "files": 141,

@@ -2403,6 +2403,31 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "guard-scripts-verify-governance-workspace-project-goal",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/verify-governance-workspace-project-goal.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "verify-governance-workspace-project-goal",
+        "Verify Governance Workspace Project Goal"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-governance-workspace-project-goal",
+          "expectPath": "scripts/verify-governance-workspace-project-goal.mjs"
+        }
+      ],
+      "guard": "scripts/verify-governance-workspace-project-goal.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "guard-scripts-verify-host-permission-contract",
       "kind": "guardrail",
       "owner": "claw",
