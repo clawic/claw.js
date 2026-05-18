@@ -1501,6 +1501,10 @@ The docs check script validates that every current export from
     clawEvolutionRepairPatchSchema
     ClawEvolutionRepairReport
     clawEvolutionRepairReportSchema
+    ClawEvolutionRestorePoint
+    clawEvolutionRestorePointSchema
+    ClawEvolutionRollbackReport
+    clawEvolutionRollbackReportSchema
     ClawEvolutionReceipt
     clawEvolutionReceiptSchema
     ClawEvolutionRecord
@@ -1746,6 +1750,8 @@ The docs check script validates that every current export from
     createEvolutionPublicSurfaceBaseline
     createEvolutionReceipt
     createEvolutionRepairReport
+    createEvolutionRestorePoint
+    createEvolutionRollbackReport
     createExampleSyncResourceManifest
     createGatewayDeploymentManifest
     createManifest
