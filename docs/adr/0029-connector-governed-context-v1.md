@@ -96,3 +96,6 @@ field values or plaintext credentials.
 - `claw connectors context explain revenuecat --json`
 - `node ./scripts/discoverability-check.mjs`
 - `node ./scripts/verify-cli-registry-router-parity.mjs`
+
+The one-by-one source decision audit lives in
+[Connector Governed Context Source Decision Audit](../connector-governed-context-source-decision-audit.md).

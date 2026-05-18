@@ -2303,6 +2303,31 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "guard-scripts-verify-connector-governed-context-goal",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/verify-connector-governed-context-goal.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "verify-connector-governed-context-goal",
+        "Verify Connector Governed Context Goal"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-connector-governed-context-goal",
+          "expectPath": "scripts/verify-connector-governed-context-goal.mjs"
+        }
+      ],
+      "guard": "scripts/verify-connector-governed-context-goal.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "guard-scripts-verify-connector-runtime-coverage",
       "kind": "guardrail",
       "owner": "claw",
