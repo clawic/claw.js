@@ -656,3 +656,7 @@ Required validation for Search work:
   completion. The default lab run is intentionally smaller so normal validation
   does not index millions of synthetic rows. The lab performs a disk preflight
   before large runs and can archive JSON evidence with `--report <path>`.
+- `npm run test:search-goal` for the public Search v1.1 goal guard: source
+  registry coverage, CLI/MCP/admin surface hooks, Search naming, storage
+  invariants, scale-lab presence, and forbidden public external-product
+  references.
