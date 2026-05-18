@@ -1464,6 +1464,71 @@ export const V1_MAIN_SCHEMA_SQL = String.raw`
     );
     CREATE INDEX IF NOT EXISTS connector_network_policies_egress_idx
       ON connector_network_policies(egress_profile_id, vpn_profile_id, proxy_profile_id);
+    CREATE TABLE IF NOT EXISTS connector_context_records (
+      id TEXT PRIMARY KEY,
+      provider_id TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      display_name TEXT NOT NULL,
+      state TEXT NOT NULL DEFAULT 'active',
+      parent_id TEXT,
+      resource_id TEXT,
+      principal_id TEXT,
+      external_id TEXT,
+      scopes_json TEXT NOT NULL DEFAULT '[]',
+      fields_json TEXT NOT NULL DEFAULT '{}',
+      guidance_json TEXT NOT NULL DEFAULT '{}',
+      policy_json TEXT NOT NULL DEFAULT '{}',
+      desired_json TEXT NOT NULL DEFAULT '{}',
+      observed_json TEXT NOT NULL DEFAULT '{}',
+      source_json TEXT NOT NULL DEFAULT '{}',
+      verification_json TEXT NOT NULL DEFAULT '{}',
+      source TEXT NOT NULL DEFAULT 'manual',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (provider_id) REFERENCES connector_providers(id) ON DELETE CASCADE,
+      FOREIGN KEY (parent_id) REFERENCES connector_context_records(id) ON DELETE SET NULL,
+      FOREIGN KEY (principal_id) REFERENCES connector_external_principals(id) ON DELETE SET NULL
+    );
+    CREATE INDEX IF NOT EXISTS connector_context_records_provider_idx
+      ON connector_context_records(provider_id, kind, state);
+    CREATE INDEX IF NOT EXISTS connector_context_records_parent_idx
+      ON connector_context_records(parent_id);
+    CREATE TABLE IF NOT EXISTS connector_context_defaults (
+      id TEXT PRIMARY KEY,
+      scope_kind TEXT NOT NULL,
+      scope_id TEXT,
+      provider_id TEXT,
+      operation_ids_json TEXT NOT NULL DEFAULT '[]',
+      context_ref TEXT NOT NULL,
+      priority INTEGER NOT NULL DEFAULT 100,
+      condition TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (provider_id) REFERENCES connector_providers(id) ON DELETE CASCADE,
+      FOREIGN KEY (context_ref) REFERENCES connector_context_records(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS connector_context_defaults_scope_idx
+      ON connector_context_defaults(scope_kind, scope_id, provider_id, priority DESC);
+    CREATE TABLE IF NOT EXISTS connector_context_audit_events (
+      id TEXT PRIMARY KEY,
+      event_type TEXT NOT NULL,
+      request_id TEXT,
+      actor_id TEXT,
+      provider_id TEXT NOT NULL,
+      operation_id TEXT,
+      context_record_id TEXT,
+      decision TEXT NOT NULL,
+      reason_codes_json TEXT NOT NULL DEFAULT '[]',
+      context_refs_json TEXT NOT NULL DEFAULT '[]',
+      secret_refs_json TEXT NOT NULL DEFAULT '[]',
+      applied_rules_json TEXT NOT NULL DEFAULT '[]',
+      metadata_json TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (provider_id) REFERENCES connector_providers(id) ON DELETE CASCADE,
+      FOREIGN KEY (context_record_id) REFERENCES connector_context_records(id) ON DELETE SET NULL
+    );
+    CREATE INDEX IF NOT EXISTS connector_context_audit_events_provider_idx
+      ON connector_context_audit_events(provider_id, operation_id, created_at DESC);
     CREATE TABLE IF NOT EXISTS connector_audit_events (
       id TEXT PRIMARY KEY,
       request_id TEXT NOT NULL,

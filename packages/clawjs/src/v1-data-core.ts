@@ -87,6 +87,9 @@ const AGENT_DOMAIN_TABLES = [
 const CONNECTOR_CONTROL_PLANE_DOMAIN_TABLES = [
   "connector_audit_events",
   "connector_budgets",
+  "connector_context_audit_events",
+  "connector_context_defaults",
+  "connector_context_records",
   "connector_credential_bindings",
   "connector_operations",
   "connector_external_principals",
