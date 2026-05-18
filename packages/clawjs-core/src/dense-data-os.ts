@@ -1,3 +1,5 @@
+import { regulatedDomains, type RegulatedDomain } from "./regulated-domain-safety.ts";
+
 export type ClawDenseDataWave = "foundation" | "first_wave" | "roadmap";
 
 export type ClawDenseDataSensitivityDefault = "normal" | "high";
@@ -66,6 +68,7 @@ export interface ClawDenseDataSystem {
   orchestrator: boolean;
   storagePolicy: ClawDenseDataStoragePolicy;
   sensitivityDefault: ClawDenseDataSensitivityDefault;
+  regulatedDomains: RegulatedDomain[];
   sharedEngines: string[];
   centers: ClawDenseDataCenter[];
   commandPatterns: string[];
@@ -1704,6 +1707,9 @@ export function assertClawDenseDataOsRegistryComplete(): void {
     if (!system.sharedEngines.every((engine) => clawDenseDataOsRegistry.sharedEngines.includes(engine))) {
       failures.push(`${system.id}: references an unknown shared engine`);
     }
+    if (!system.regulatedDomains.every((domain) => regulatedDomains.includes(domain))) {
+      failures.push(`${system.id}: references an unknown regulated domain`);
+    }
     for (const centerEntry of system.centers) {
       if (!centerEntry.commandNoun || !/^[a-z][a-z0-9-]*$/.test(centerEntry.commandNoun)) failures.push(`${system.id}.${centerEntry.id}: invalid command noun`);
       if (centerEntry.commandAliases.length === 0) failures.push(`${system.id}.${centerEntry.id}: missing command alias`);
@@ -1720,6 +1726,35 @@ export function assertClawDenseDataOsRegistryComplete(): void {
       if (operationEntry.routes.length === 0) failures.push(`${system.id}.${operationEntry.id}: operation missing routes`);
       if (!operationEntry.routes.every((route) => route.startsWith("claw "))) failures.push(`${system.id}.${operationEntry.id}: operation routes must be claw routes`);
       if (operationEntry.createsOrReads.length === 0) failures.push(`${system.id}.${operationEntry.id}: operation must declare data touched`);
+    }
+  }
+
+  const requiredRegulatedSystems = [
+    "health",
+    "research",
+    "biology",
+    "labs",
+    "legal",
+    "erp",
+    "finance",
+    "education",
+    "hr",
+    "real_estate",
+    "insurance",
+    "maintenance",
+    "compliance",
+    "government",
+    "iot",
+    "pharma",
+    "banking",
+    "public_safety",
+  ];
+  for (const systemId of requiredRegulatedSystems) {
+    const system = findClawDenseDataSystem(systemId);
+    if (!system) {
+      failures.push(`${systemId}: regulated dense-data system is missing`);
+    } else if (system.regulatedDomains.length === 0) {
+      failures.push(`${systemId}: regulated dense-data system must expose regulatedDomains`);
     }
   }
 
@@ -1821,6 +1856,7 @@ function denseSystem(input: {
   command: string;
   aliases: string[];
   sensitivityDefault: ClawDenseDataSensitivityDefault;
+  regulatedDomains?: RegulatedDomain[];
   sharedEngines: string[];
   centers: ClawDenseDataCenter[];
   commandPatterns: string[];
@@ -1839,6 +1875,7 @@ function denseSystem(input: {
     orchestrator: true,
     storagePolicy: "core_sqlite",
     sensitivityDefault: input.sensitivityDefault,
+    regulatedDomains: input.regulatedDomains ?? regulatedDomainsForDenseSystem(input.id),
     sharedEngines: input.sharedEngines,
     centers: input.centers,
     commandPatterns: input.commandPatterns,
@@ -1860,6 +1897,7 @@ function roadmapSystem(id: string, label: string, command: string, aliases: stri
     orchestrator: true,
     storagePolicy: "core_sqlite",
     sensitivityDefault: ["insurance", "government", "compliance", "hr"].includes(id) ? "high" : "normal",
+    regulatedDomains: regulatedDomainsForDenseSystem(id),
     sharedEngines: ["evidence_provenance", "quality_gap", "relation_graph", "semantic_view", "intent_coverage", "workflow_state"],
     centers: [center(centerCommand.replace(/-/g, "_"), centerCommand.replace(/-/g, " "), centerCommand, undefined, "Roadmap center of gravity; must be expanded before this system can graduate from roadmap.")],
     commandPatterns: [`claw ${command} overview|gaps|intents`, ...aliases.map((alias) => `claw ${alias} overview|gaps|intents`)],
@@ -1868,6 +1906,30 @@ function roadmapSystem(id: string, label: string, command: string, aliases: stri
     standards: [],
     notes: "Roadmap dense-data system visible for taxonomy and future pack graduation.",
   };
+}
+
+function regulatedDomainsForDenseSystem(id: string): RegulatedDomain[] {
+  const mapped: Record<string, RegulatedDomain[]> = {
+    health: ["health"],
+    research: ["labs_research"],
+    biology: ["labs_research"],
+    labs: ["labs_research"],
+    legal: ["legal"],
+    erp: ["finance", "billing_payments"],
+    finance: ["finance"],
+    education: ["education", "minors"],
+    hr: ["hr_employment"],
+    real_estate: ["housing_real_estate"],
+    insurance: ["insurance"],
+    maintenance: ["vehicles_transport"],
+    compliance: ["compliance_grc"],
+    government: ["government_public_services"],
+    iot: ["iot_physical_actions"],
+    pharma: ["pharma"],
+    banking: ["banking", "finance"],
+    public_safety: ["government_public_services"],
+  };
+  return mapped[id] ?? [];
 }
 
 function pluralizeCommandNoun(commandNoun: string): string {

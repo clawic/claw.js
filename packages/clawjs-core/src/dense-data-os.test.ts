@@ -15,6 +15,7 @@ import {
   listClawDenseDataSystems,
   resolveClawDenseDataIntent,
 } from "./index.ts";
+import { evaluateRegulatedAction } from "./regulated-domain-safety.ts";
 
 test("dense data OS keeps the source conversation and plan as binding metadata", () => {
   assert.equal(clawDenseDataOsRegistry.schemaVersion, 1);
@@ -80,6 +81,44 @@ test("dense data OS keeps legally sensitive domains visible with external gates"
       ),
       `${systemId} must gate regulated execution/export separately from local data organization`,
     );
+  }
+});
+
+test("dense data regulated systems are classified through the legal safety policy", () => {
+  const expected = new Map([
+    ["health", ["health"]],
+    ["research", ["labs_research"]],
+    ["biology", ["labs_research"]],
+    ["labs", ["labs_research"]],
+    ["legal", ["legal"]],
+    ["erp", ["finance", "billing_payments"]],
+    ["finance", ["finance"]],
+    ["education", ["education", "minors"]],
+    ["hr", ["hr_employment"]],
+    ["real_estate", ["housing_real_estate"]],
+    ["insurance", ["insurance"]],
+    ["maintenance", ["vehicles_transport"]],
+    ["compliance", ["compliance_grc"]],
+    ["government", ["government_public_services"]],
+    ["iot", ["iot_physical_actions"]],
+    ["pharma", ["pharma"]],
+    ["banking", ["banking", "finance"]],
+    ["public_safety", ["government_public_services"]],
+  ]);
+
+  for (const [systemId, domains] of expected) {
+    const system = findClawDenseDataSystem(systemId);
+    assert.ok(system, `${systemId} must exist`);
+    assert.deepEqual(system.regulatedDomains, domains, `${systemId} must expose regulated domains`);
+    for (const regulatedDomain of system.regulatedDomains) {
+      const decision = evaluateRegulatedAction({
+        regulatedDomain,
+        decisionEffect: "final_decision",
+      });
+      assert.equal(decision.allowed, false, `${systemId}/${regulatedDomain} final decisions must be blocked`);
+      assert.ok(decision.denialCodes.includes("final_decision_blocked"));
+      assert.ok(decision.outputLabels.includes(`regulated_domain:${regulatedDomain}`));
+    }
   }
 });
 
