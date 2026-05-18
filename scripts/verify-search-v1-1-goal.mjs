@@ -138,6 +138,7 @@ const requiredPublicFiles = [
   "packages/clawjs/src/cli-search-command.ts",
   "packages/clawjs/src/cli-search-docs-pages-source.ts",
   "packages/clawjs/src/cli-search-index.test.ts",
+  "packages/clawjs/src/index-installed.test.ts",
   "scripts/search-scale-lab.ts",
 ];
 
@@ -160,8 +161,17 @@ function requireNoSnippet(relativePath, snippet) {
   if (text.includes(snippet)) failures.push(`${relativePath}: contains forbidden ${JSON.stringify(snippet)}`);
 }
 
+function readJson(relativePath) {
+  try {
+    return JSON.parse(read(relativePath));
+  } catch (error) {
+    failures.push(`${relativePath}: invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
+    return {};
+  }
+}
+
 function requirePackageScript(name, expected) {
-  const packageJson = JSON.parse(read("package.json"));
+  const packageJson = readJson("package.json");
   if (packageJson.scripts?.[name] !== expected) {
     failures.push(`package.json: script ${name} must be ${JSON.stringify(expected)}`);
   }
@@ -243,6 +253,26 @@ for (const file of requiredPublicFiles) read(file);
 
 requirePackageScript("search:scale-lab", "node --import tsx ./scripts/search-scale-lab.ts");
 requirePackageScript("test:search-goal", "node ./scripts/verify-search-v1-1-goal.mjs");
+const cliPackageJson = readJson("packages/clawjs/package.json");
+if (cliPackageJson.dependencies?.["@clawjs/index"] !== undefined) {
+  failures.push("packages/clawjs/package.json: must not depend on retired @clawjs/index package");
+}
+if (cliPackageJson.dependencies?.["@clawjs/search"] !== "0.1.2") {
+  failures.push("packages/clawjs/package.json: must depend on @clawjs/search 0.1.2");
+}
+const searchMcpPackageJson = readJson("packages/clawjs-search-mcp/package.json");
+if (searchMcpPackageJson.name !== "@clawjs/search-mcp") {
+  failures.push("packages/clawjs-search-mcp/package.json: package name must remain @clawjs/search-mcp");
+}
+if (JSON.stringify(searchMcpPackageJson.bin ?? {}) !== JSON.stringify({ "claw-search-mcp": "bin/claw-search-mcp.mjs" })) {
+  failures.push("packages/clawjs-search-mcp/package.json: bin surface must publish only claw-search-mcp");
+}
+if (searchMcpPackageJson.dependencies?.["@clawjs/index"] !== undefined) {
+  failures.push("packages/clawjs-search-mcp/package.json: must not depend on retired @clawjs/index package");
+}
+if (searchMcpPackageJson.dependencies?.["@clawjs/search"] !== "0.1.2") {
+  failures.push("packages/clawjs-search-mcp/package.json: must depend on @clawjs/search 0.1.2");
+}
 requireSameMembers("builtin search source manifests", extractBuiltinSearchSourceIds(), requiredSources);
 
 const cliFullSources = readCliSearchSources("full");
@@ -374,6 +404,15 @@ for (const snippet of [
   "docs.pages event jobs refresh and tombstone individual docs",
 ]) {
   requireSnippet("packages/clawjs/src/cli-search-index.test.ts", snippet);
+}
+
+for (const snippet of [
+  "published CLI package does not depend on the retired Index package",
+  "cliPackageJson.dependencies?.[\"@clawjs/index\"]",
+  "cliPackageJson.dependencies?.[\"@clawjs/search\"]",
+  "indexLauncher.includes('import(\"@clawjs/index\")')",
+]) {
+  requireSnippet("packages/clawjs/src/index-installed.test.ts", snippet);
 }
 
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleDocsPagesSearchEvent");
