@@ -476,6 +476,24 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
         payload: recordParam(p.payload),
       }),
     },
+    {
+      name: "search.changes.schedule",
+      description: "Schedule typed changed-file or changed-route Search refresh events for producer integrations.",
+      inputSchema: {
+        type: "object",
+        required: ["source", "operation"],
+        properties: {
+          source: { type: "string", enum: ["code.symbols", "local.files", "web.ingested", "external.cache", "surfaces.routes"] },
+          operation: { type: "string", enum: ["upsert", "delete"] },
+          root: { type: "string" },
+          path: { type: "string" },
+          filePath: { type: "string" },
+          routeId: { type: "string" },
+          observedAt: { type: "string" },
+        },
+      },
+      handler: (p) => scheduleChangedSourceEvent(store, p),
+    },
     { name: "search.jobs.claim", description: "Claim Search indexing jobs with bounded leases.", inputSchema: { type: "object", properties: { limit: { type: "integer" }, now: { type: "string" }, leaseMs: { type: "integer" }, sources: { type: "array", items: { type: "string" } }, shards: { type: "array", items: { type: "string" } } } }, handler: (p) => store.claimIndexJobs({ limit: numberParam(p.limit), now: stringParam(p.now), leaseMs: numberParam(p.leaseMs), sources: stringArrayParam(p.sources), shards: stringArrayParam(p.shards) }) },
     { name: "search.jobs.complete", description: "Mark a Search indexing job done.", inputSchema: { type: "object", required: ["id"], properties: { id: { type: "string" } } }, handler: (p) => store.completeIndexJob(requiredString(p, "id")) },
     { name: "search.jobs.fail", description: "Fail or retry a Search indexing job.", inputSchema: { type: "object", required: ["id", "error"], properties: { id: { type: "string" }, error: { type: "string" }, retry: { type: "boolean" }, scheduledAt: { type: "string" } } }, handler: (p) => store.failIndexJob(requiredString(p, "id"), { error: requiredString(p, "error"), retry: typeof p.retry === "boolean" ? p.retry : false, scheduledAt: stringParam(p.scheduledAt) }) },
@@ -776,6 +794,49 @@ function requiredSearchJobOperation(value: unknown): "upsert" | "delete" | "back
 function requiredSearchEventOperation(value: unknown): "upsert" | "delete" {
   if (value === "upsert" || value === "delete") return value;
   throw new Error("operation must be upsert or delete");
+}
+
+function scheduleChangedSourceEvent(store: SearchStore, params: Record<string, unknown>) {
+  const source = requiredString(params, "source");
+  const operation = requiredSearchEventOperation(params.operation);
+  const observedAt = stringParam(params.observedAt);
+  if (source === "surfaces.routes") {
+    const routeId = requiredString(params, "routeId");
+    return store.scheduleIndexEvent({
+      source,
+      shard: "hot",
+      operation,
+      resourceId: routeId,
+      observedAt,
+      payload: { routeId },
+    });
+  }
+  if (source !== "code.symbols" && source !== "local.files" && source !== "web.ingested" && source !== "external.cache") {
+    throw new Error("source must be code.symbols, local.files, web.ingested, external.cache, or surfaces.routes");
+  }
+  const root = path.resolve(expandMcpPath(requiredString(params, "root")));
+  const absolutePath = path.resolve(expandMcpPath(stringParam(params.path) ?? requiredString(params, "filePath")));
+  const relativeFromRoot = path.relative(root, absolutePath);
+  if (relativeFromRoot === ".." || relativeFromRoot.startsWith(`..${path.sep}`) || path.isAbsolute(relativeFromRoot)) {
+    throw new Error(`${source} changed path is outside root: ${absolutePath}`);
+  }
+  const relativePath = relativeFromRoot.split(path.sep).join(path.posix.sep);
+  return store.scheduleIndexEvent({
+    source,
+    shard: "hot",
+    operation,
+    resourceId: relativePath,
+    observedAt,
+    payload: {
+      root,
+      relativePath,
+      absolutePath,
+    },
+  });
+}
+
+function expandMcpPath(value: string): string {
+  return value === "~" || value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
 }
 
 function localEmbeddingModel(value: unknown): string {
