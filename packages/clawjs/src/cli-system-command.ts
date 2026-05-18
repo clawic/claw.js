@@ -334,6 +334,19 @@ function parseThreshold(value: string | undefined): number | string | boolean {
   return Number.isFinite(numeric) ? numeric : value;
 }
 
+function parsePositiveInteger(value: string | undefined, fallback: number, label: string): number {
+  if (value === undefined) return fallback;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new CliHandledError("invalid_number", `${label} must be a positive integer.`, CLI_EXIT_USAGE);
+  }
+  return parsed;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function compareMetricValue(value: number | string | boolean | null, operator: SystemTelemetryRuleDefinition["operator"], threshold: number | string | boolean): boolean {
   if (value === null) return false;
   if (operator === "changed") return false;
@@ -875,9 +888,14 @@ export async function runSystemCli(input: {
   }
 
   if (command === "watch") {
-    const snapshot = collectSafeLocalSnapshot();
-    if (input.wantsJson) writeJsonLine(input.context.stdout, { ok: true, data: snapshot, meta: { schemaVersion: 1, canonicalCommand: "system", subcommand: "watch" } });
-    else writeHuman(input.context, snapshot);
+    const intervalMs = parsePositiveInteger(input.flags.interval, 1_000, "--interval");
+    const count = parsePositiveInteger(input.flags.count, Number.POSITIVE_INFINITY, "--count");
+    for (let emitted = 0; emitted < count; emitted += 1) {
+      const snapshot = collectSafeLocalSnapshot();
+      if (input.wantsJson) writeJsonLine(input.context.stdout, { ok: true, data: snapshot, meta: { schemaVersion: 1, canonicalCommand: "system", subcommand: "watch", intervalMs } });
+      else writeHuman(input.context, snapshot);
+      if (emitted + 1 < count) await sleep(intervalMs);
+    }
     return CLI_EXIT_OK;
   }
 
