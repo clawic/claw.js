@@ -461,6 +461,18 @@ titles, kind, status, backend/model metadata, command provenance, output
 references, and generation metadata so generated outputs remain searchable even
 when they are not also registered as media.
 
+`signals.observations` projects signal verticals, variables, and observations
+from `core.sqlite`. It indexes vertical descriptions, variable definitions,
+observed values, observation notes, and redacted source metadata. Signal vertical metadata, variable definitions,
+and observation source metadata are
+exposed as separate redacted fragments, with secret-like nested keys redacted
+before fallback JSON text is indexed.
+
+`calendar.events` projects local calendar events from `core.sqlite`. It indexes
+event titles, times, calendar/source identifiers, and redacted metadata.
+Calendar event metadata is exposed as a separate redacted fragment, with
+secret-like nested metadata keys redacted before fallback JSON text is indexed.
+
 `skills.registry` projects framework skill records from `core.sqlite`. It
 indexes the skill slug, name, kind, body, scope metadata, and export path, but
 does not index `secret_refs_json`; Search only exposes a
@@ -511,11 +523,26 @@ redacted before fallback JSON text is indexed.
 `social.posts` projects social publishing records from `core.sqlite`. It
 indexes title, status, redacted channel metadata, scheduling/publishing state,
 redacted metadata, and linked page block text without calling social providers.
+Social page text, channel data, and metadata are exposed as separate redacted
+fragments, with secret-like nested channel/metadata keys redacted before
+fallback JSON text is indexed.
 
 `iot.config` projects local IoT configuration records from `core.sqlite`. It
 indexes device/config names, kind, enabled/status state, parent id, and redacted
 config/metadata text. It deliberately does not index `secret_ref` values;
-Search only exposes a `hasProtectedRef` facet.
+Search only exposes a `hasProtectedRef` facet. IoT config and metadata are
+exposed as separate redacted fragments, with simple JSON config fields indexed
+through fallback JSON text after secret-like keys are redacted.
+
+`apps.catalog` projects framework app records from `core.sqlite`. It indexes
+app names, slugs, descriptions, root path basenames, and pinned/opened state.
+App manifests and permission metadata are exposed as separate redacted fragments,
+with secret-like nested keys redacted before fallback JSON text is indexed.
+
+`design.resources` projects local design resources from `core.sqlite` plus
+workspace style, template, and reference manifests. Design resource manifests
+are exposed as redacted fragments, with secret-like nested manifest keys redacted
+before fallback JSON text is indexed.
 
 `connectors.catalog` projects connector control-plane operations from
 `core.sqlite`. It indexes provider names, runtime/support state, operation ids,
@@ -529,7 +556,9 @@ operation changes; automatic control-plane write emitters remain source-owned.
 monitor/infra/ops operational events from local sidecars. It indexes job status,
 run timing, payload summaries, event kind/level/message, sidecar origin, and
 operational metadata so technical artifacts can be searched without mixing them
-into user-facing domain sections.
+into user-facing domain sections. Runtime job payloads and runtime/operational event metadata
+are exposed as separate redacted fragments, with secret-like nested keys
+redacted before fallback JSON text is indexed.
 
 `docs.pages` projects root public Markdown docs plus Markdown files under
 `docs/`, including ADRs under `docs/adr/`, into source-scoped docs results. It
