@@ -11,6 +11,7 @@ import { scheduleCodeSymbolsSearchEvent, scheduleSessionChatSearchEvent } from "
 import { runSearchDocsPagesEventScenario, runSearchDocsPagesScenario } from "./cli-search-docs-pages-test-utils.ts";
 import { runSearchLocalFilesEventScenario } from "./cli-search-local-files-test-utils.ts";
 import { runSearchSurfaceRouteGraphContractsScenario } from "./cli-search-surface-routes-test-utils.ts";
+import { runSearchExternalCacheEventScenario, runSearchWebIngestedEventScenario } from "./cli-search-web-external-test-utils.ts";
 import { ensureV1MainSchema, resolveClawjsMainDbPath } from "./v1-data-core.ts";
 
 test("Search MCP package publishes only the public Search binary", () => {
@@ -813,6 +814,10 @@ test("search rebuild and query use the Search sidecar without workspace state", 
 });
 
 test("local.files event jobs refresh and tombstone individual files", runSearchLocalFilesEventScenario);
+
+test("web.ingested event jobs refresh and tombstone individual cache files", runSearchWebIngestedEventScenario);
+
+test("external.cache event jobs refresh and tombstone individual cache files", runSearchExternalCacheEventScenario);
 
 test("search service run-once obeys worker resource budgets", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-worker-budgets-"));

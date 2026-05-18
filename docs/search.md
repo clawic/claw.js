@@ -94,8 +94,8 @@ backfill jobs.
 | `surfaces.routes` | `surfaces` | surface route graph contracts, steps, tests, docs, and ADR links projected from the framework registry | implemented initial adapter |
 | `local.files` | `files` | bounded local file metadata and text-content projection with per-file refresh jobs | implemented opt-in adapter, `full`, off by default |
 | `native.system` | `native` | native app/system/contact adapters | EXTERNAL PENDING, `full`, off by default |
-| `web.ingested` | `web` | bounded explicit web cache ingestion | implemented opt-in adapter, `full`, off by default |
-| `external.cache` | `external` | bounded local provider cache ingestion | implemented opt-in adapter, `full`, off by default |
+| `web.ingested` | `web` | bounded explicit web cache ingestion with per-cache-file refresh jobs | implemented opt-in adapter, `full`, off by default |
+| `external.cache` | `external` | bounded local provider cache ingestion with per-cache-file refresh jobs | implemented opt-in adapter, `full`, off by default |
 
 ## CLI
 
@@ -386,14 +386,18 @@ full-profile source is explicitly enabled. Supported cache files are HTML, text,
 Markdown, and JSON records with fields such as `url`, `title`, `description`,
 `text`, `html`, `crawlScope`, and `updatedAt`. `--web-limit`,
 `--web-max-depth`, and `--web-max-bytes` cap ingestion, and the adapter also
-participates in Search service `run-once` jobs.
+participates in Search service `run-once` jobs. Changed-cache producers can
+schedule resource-scoped refresh jobs keyed by the path under `--web-root`;
+paths outside that root are rejected before a job is written.
 
 `external.cache` follows the same local-only rule for provider exports. It
 indexes JSON, JSONL, Markdown, and text files under `--external-root` only after
 the full-profile source is explicitly enabled. JSON records can declare
 `provider`, `app`, `externalId`, `type`, `title`, `summary`, `text`, `syncMode`,
 and `updatedAt`; fallback JSON text is redacted for secret-like keys before it
-is indexed. Search never calls provider APIs from this adapter.
+is indexed. Search never calls provider APIs from this adapter. Changed-cache
+producers can schedule resource-scoped refresh jobs keyed by the path under
+`--external-root`; paths outside that root are rejected before a job is written.
 
 `documents.blocks` projects framework document records from `core.sqlite`.
 Documents are returned as scoped section results, while document blocks are
