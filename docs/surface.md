@@ -2035,6 +2035,7 @@ The docs check script validates that every current export from
     ListRecord
     listRecordSchema
     listSystemTelemetryMetrics
+    listSystemTelemetryProviders
     listSystemTelemetryWidgets
     LUXURY_AND_COLLECTING_FAMILY
     MAC_CAPABILITY_ATLAS
@@ -2673,11 +2674,16 @@ The docs check script validates that every current export from
     syncResourceManifestSchema
     SYSTEM_TELEMETRY_DEFAULT_WIDGETS
     SYSTEM_TELEMETRY_METRICS
+    SYSTEM_TELEMETRY_PROVIDERS
     SystemTelemetryAvailability
     SystemTelemetryMetricDefinition
     SystemTelemetryMetricFamily
     SystemTelemetryMetricSample
     SystemTelemetryPrivacyTier
+    SystemTelemetryProviderDefinition
+    SystemTelemetryProviderKind
+    SystemTelemetryProviderMode
+    SystemTelemetryProviderStatus
     SystemTelemetryRuleDefinition
     SystemTelemetrySampleSupport
     SystemTelemetrySnapshot
