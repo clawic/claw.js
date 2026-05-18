@@ -232,6 +232,50 @@ export const clawEvolutionRepairReportSchema = z.object({
   }),
 });
 
+export const clawEvolutionRestorePointSchema = z.object({
+  schemaVersion: z.literal(1),
+  restorePointId: z.string().min(1),
+  createdAt: z.string(),
+  action: clawEvolutionOperatorActionSchema,
+  retentionDays: z.number(),
+  maxBytesBeforeOverride: z.number(),
+  maxFilesBeforeOverride: z.number(),
+  rootOwner: z.literal("surface_owner"),
+  reversibility: z.literal("best_effort_forward_repair"),
+  universalRollbackPromised: z.literal(false),
+  surfaces: z.array(z.object({
+    surface: z.string().min(1),
+    backupStrategy: clawEvolutionBackupPolicySchema.shape.strategy,
+    requiresApproval: z.boolean(),
+    canonical: z.boolean(),
+  })),
+});
+
+export const clawEvolutionRollbackReportSchema = z.object({
+  schemaVersion: z.literal(1),
+  reportId: z.string().min(1),
+  createdAt: z.string(),
+  action: z.enum(["backup", "rollback"]),
+  status: z.enum(["ready", "needs_approval", "blocked"]),
+  plan: clawEvolutionOperatorPlanSchema,
+  restorePoint: clawEvolutionRestorePointSchema,
+  forwardRepair: z.object({
+    required: z.literal(true),
+    command: z.literal("claw evolution repair --json"),
+    rationale: z.literal("Downgrade/rollback is best effort; public data migrators stay forward-compatible."),
+  }),
+  safeActions: z.array(clawEvolutionRepairActionSchema),
+  approvalRequiredActions: z.array(clawEvolutionRepairActionSchema),
+  receipt: clawEvolutionReceiptSchema,
+  redaction: z.object({
+    privacy: z.literal("redacted"),
+    promptsIncluded: z.literal(false),
+    secretsIncluded: z.literal(false),
+    fullLocalPathsIncluded: z.literal(false),
+    externalSubmission: z.literal("explicit_approval_only"),
+  }),
+});
+
 export const clawEvolutionFixtureSurfaceSchema = z.object({
   id: z.string().min(1),
   kind: z.enum([
@@ -299,6 +343,8 @@ export type ClawEvolutionReceipt = z.infer<typeof clawEvolutionReceiptSchema>;
 export type ClawEvolutionRepairPatch = z.infer<typeof clawEvolutionRepairPatchSchema>;
 export type ClawEvolutionRepairAction = z.infer<typeof clawEvolutionRepairActionSchema>;
 export type ClawEvolutionRepairReport = z.infer<typeof clawEvolutionRepairReportSchema>;
+export type ClawEvolutionRestorePoint = z.infer<typeof clawEvolutionRestorePointSchema>;
+export type ClawEvolutionRollbackReport = z.infer<typeof clawEvolutionRollbackReportSchema>;
 export type ClawEvolutionFixtureSurface = z.infer<typeof clawEvolutionFixtureSurfaceSchema>;
 export type ClawEvolutionVersionFixture = z.infer<typeof clawEvolutionVersionFixtureSchema>;
 export type ClawEvolutionMigratorLabResult = z.infer<typeof clawEvolutionMigratorLabResultSchema>;
@@ -581,6 +627,97 @@ export function createEvolutionRepairReport(input: {
   });
 }
 
+export function createEvolutionRestorePoint(input: {
+  action: ClawEvolutionOperatorAction;
+  plan: ClawEvolutionOperatorPlan;
+  createdAt?: string;
+}): ClawEvolutionRestorePoint {
+  const createdAt = input.createdAt ?? "CURRENT";
+  const restorePointId = `evo_restore_point_${stableFingerprint({
+    action: input.action,
+    createdAt,
+    surfaces: input.plan.backupPolicies.map((policy) => [policy.surface, policy.strategy]),
+  }).replace(/[^a-z0-9]/g, "_")}`;
+  return clawEvolutionRestorePointSchema.parse({
+    schemaVersion: 1,
+    restorePointId,
+    createdAt,
+    action: input.action,
+    retentionDays: clawEvolutionPolicy.backup.retentionDays,
+    maxBytesBeforeOverride: clawEvolutionPolicy.backup.threshold.maxBytes,
+    maxFilesBeforeOverride: clawEvolutionPolicy.backup.threshold.maxFiles,
+    rootOwner: "surface_owner",
+    reversibility: "best_effort_forward_repair",
+    universalRollbackPromised: false,
+    surfaces: input.plan.backupPolicies.map((policy) => ({
+      surface: policy.surface,
+      backupStrategy: policy.strategy,
+      requiresApproval: policy.requiresApproval,
+      canonical: policy.strategy === "snapshot_before_mutation",
+    })),
+  });
+}
+
+export function createEvolutionRollbackReport(input: {
+  action: "backup" | "rollback";
+  plan: ClawEvolutionOperatorPlan;
+  createdAt?: string;
+}): ClawEvolutionRollbackReport {
+  const createdAt = input.createdAt ?? "CURRENT";
+  const restorePoint = createEvolutionRestorePoint({
+    action: input.action,
+    plan: input.plan,
+    createdAt,
+  });
+  const approvalRequiredActions = buildEvolutionApprovalRequiredActions(input.plan, input.action);
+  const status = input.plan.status === "blocked"
+    ? "blocked"
+    : approvalRequiredActions.length > 0
+      ? "needs_approval"
+      : "ready";
+  const receipt = createEvolutionReceipt({
+    action: input.action,
+    plan: input.plan,
+    status: status === "blocked" ? "blocked" : "planned",
+    createdAt,
+    notes: [
+      "restore point contract generated without prompts, secrets, or full local paths",
+      "rollback is best effort and must use forward repair when migration state diverges",
+    ],
+  });
+  const reportId = `evo_rollback_report_${stableFingerprint({
+    action: input.action,
+    createdAt,
+    restorePoint: restorePoint.restorePointId,
+    surfaces: input.plan.touchedSurfaces,
+    status,
+  }).replace(/[^a-z0-9]/g, "_")}`;
+  return clawEvolutionRollbackReportSchema.parse({
+    schemaVersion: 1,
+    reportId,
+    createdAt,
+    action: input.action,
+    status,
+    plan: input.plan,
+    restorePoint,
+    forwardRepair: {
+      required: true,
+      command: "claw evolution repair --json",
+      rationale: "Downgrade/rollback is best effort; public data migrators stay forward-compatible.",
+    },
+    safeActions: buildEvolutionSafeActions(input.plan),
+    approvalRequiredActions,
+    receipt,
+    redaction: {
+      privacy: "redacted",
+      promptsIncluded: false,
+      secretsIncluded: false,
+      fullLocalPathsIncluded: false,
+      externalSubmission: "explicit_approval_only",
+    },
+  });
+}
+
 export function runEvolutionMigratorLab(input: {
   fixtures: ClawEvolutionVersionFixture[];
   ledger: ClawEvolutionLedger;
@@ -744,6 +881,21 @@ function buildEvolutionApprovalRequiredActions(plan: ClawEvolutionOperatorPlan, 
       id: "external_provider_access",
       title: "Access external provider data",
       reason: "Provider surfaces are read-only by default and cannot be copied or mutated without approval.",
+    });
+  }
+  if (action === "backup" || action === "rollback") {
+    actions.push({
+      id: "create_restore_point",
+      title: "Create restore point",
+      reason: "Backup and rollback need an explicit restore point receipt before changing local state.",
+    });
+  }
+  if (action === "rollback") {
+    actions.push({
+      id: "forward_repair_after_rollback",
+      title: "Run forward repair after rollback",
+      command: "claw evolution repair --json",
+      reason: "Rollback is best effort; the supported recovery path is forward repair through public migrators.",
     });
   }
   if (action === "report") {
