@@ -148,6 +148,14 @@ flowchart TD
   claw_contracts_api --> claw_api_search_searches
   claw_api_search_monitors["Search monitor list\napiRoute"]
   claw_contracts_api --> claw_api_search_monitors
+  claw_api_system_snapshot["System telemetry snapshot contract\napiRoute"]
+  claw_contracts_api --> claw_api_system_snapshot
+  claw_api_system_metrics["System telemetry metric catalog contract\napiRoute"]
+  claw_contracts_api --> claw_api_system_metrics
+  claw_api_system_widgets["System context widget catalog contract\napiRoute"]
+  claw_contracts_api --> claw_api_system_widgets
+  claw_api_system_history["System telemetry Monitor history contract\napiRoute"]
+  claw_contracts_api --> claw_api_system_history
   claw_api_time_items["Time item list\napiRoute"]
   claw_contracts_api --> claw_api_time_items
   claw_api_time_executions["Time execution list\napiRoute"]
@@ -2237,6 +2245,10 @@ flowchart TD
 | `claw.api.search.entitiesUpsert` | apiRoute | api | claw |  |  |  | `/v1/entities/upsert` |
 | `claw.api.search.searches` | apiRoute | api | claw |  |  |  | `/v1/searches` |
 | `claw.api.search.monitors` | apiRoute | api | claw |  |  |  | `/v1/monitors` |
+| `claw.api.system.snapshot` | apiRoute | api | claw |  |  |  | `/v1/system/snapshot` |
+| `claw.api.system.metrics` | apiRoute | api | claw |  |  |  | `/v1/system/metrics` |
+| `claw.api.system.widgets` | apiRoute | api | claw |  |  |  | `/v1/system/widgets` |
+| `claw.api.system.history` | apiRoute | api | claw |  |  |  | `/v1/system/history/{metricKey}` |
 | `claw.api.time.items` | apiRoute | api | claw |  |  |  | `/v1/items` |
 | `claw.api.time.executions` | apiRoute | api | claw |  |  |  | `/v1/executions` |
 | `claw.api.time.calendar` | apiRoute | api | claw |  |  |  | `/v1/views/calendar` |
