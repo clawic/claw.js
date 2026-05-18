@@ -17,6 +17,7 @@ import { normalizeTemplateManifest } from "./serializer.ts";
 import type { TemplateAspect, TemplateManifest, TemplateOutputFormat } from "./schema.ts";
 import { readStyle } from "../styles/storage.ts";
 import { renderTemplate } from "./render/adapters.ts";
+import { scheduleDesignResourcesSearchEvent } from "../cli-search-events.ts";
 
 interface TemplateCliContext {
   stdout: NodeJS.WritableStream;
@@ -93,6 +94,7 @@ export async function runTemplateCli(options: TemplateCliOptions): Promise<numbe
       updatedAt: now,
     });
     const { path: filePath } = writeTemplate(workspaceRoot, manifest, seed ? `# ${manifest.name}\n\n${manifest.description ?? ""}` : "");
+    scheduleTemplateSearchEvent(options, "upsert", manifest.id);
     writeOutput(options, { template: manifest, path: filePath }, filePath);
     return T_OK;
   }
@@ -113,6 +115,7 @@ export async function runTemplateCli(options: TemplateCliOptions): Promise<numbe
       return T_FAILURE;
     }
     fs.rmSync(dir, { recursive: true, force: true });
+    scheduleTemplateSearchEvent(options, "delete", manifest.id);
     writeOutput(options, { deleted: target }, `Deleted ${target}`);
     return T_OK;
   }
@@ -177,6 +180,7 @@ export async function runTemplateCli(options: TemplateCliOptions): Promise<numbe
         continue;
       }
       writeTemplate(workspaceRoot, manifest, `# ${manifest.name}\n\n${manifest.description ?? ""}`);
+      scheduleTemplateSearchEvent(options, "upsert", manifest.id);
       installed.push(manifest.id);
     }
     writeOutput(options, { installed, skipped }, `Installed: ${installed.length}\nSkipped: ${skipped.length}`);
@@ -220,6 +224,20 @@ function writeOutput(options: TemplateCliOptions, payload: unknown, text: string
   } else if (text) {
     options.context.stdout.write(text.endsWith("\n") ? text : `${text}\n`);
   }
+}
+
+function scheduleTemplateSearchEvent(options: TemplateCliOptions, operation: "upsert" | "delete", templateId: string): void {
+  scheduleDesignResourcesSearchEvent({
+    operation,
+    resourceId: `template:${templateId}`,
+    workspaceRoot: options.workspaceRoot,
+    dataDir: searchEventDataDir(options),
+    flags: options.flags,
+  });
+}
+
+function searchEventDataDir(options: TemplateCliOptions): string {
+  return options.flags["data-dir"] ?? process.env.CLAW_DATA_DIR ?? path.join(options.workspaceRoot, ".claw", "data");
 }
 
 function writeUsage(context: TemplateCliContext): void {

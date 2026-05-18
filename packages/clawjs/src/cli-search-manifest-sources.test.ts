@@ -215,6 +215,153 @@ test("search rebuild indexes sheets.workbooks from workbook manifests", async ()
   });
 });
 
+test("search rebuild indexes design.resources from style template and reference manifests", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-design-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const style = await runCliCapture([
+      "style",
+      "create",
+      "Aurora Brand System",
+      "--description",
+      "Cerulean motion tokens for launch screens",
+      "--workspace",
+      workspaceRoot,
+      "--data-dir",
+      dataRoot,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(style.code, CLI_EXIT_OK);
+
+    const template = await runCliCapture([
+      "template",
+      "create",
+      "Aurora Launch Card",
+      "--category",
+      "card",
+      "--description",
+      "Launch card template with headline and metric slots",
+      "--workspace",
+      workspaceRoot,
+      "--data-dir",
+      dataRoot,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(template.code, CLI_EXIT_OK);
+
+    const reference = await runCliCapture([
+      "ref",
+      "add",
+      "--type",
+      "web",
+      "--source",
+      "https://example.invalid/aurora-reference",
+      "--name",
+      "Aurora Reference",
+      "--description",
+      "Benchmark visual reference for launch composition",
+      "--workspace",
+      workspaceRoot,
+      "--data-dir",
+      dataRoot,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(reference.code, CLI_EXIT_OK);
+
+    const rebuild = await runCliCapture(["search", "rebuild", "--source", "design.resources", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(rebuild.code, CLI_EXIT_OK);
+    const rebuildPayload = JSON.parse(rebuild.stdout) as {
+      data: { sources: string[]; pendingSources: string[]; indexedBySource: { "design.resources": number } };
+    };
+    assert.equal(rebuildPayload.data.sources.includes("design.resources"), true);
+    assert.equal(rebuildPayload.data.pendingSources.includes("design.resources"), false);
+    assert.equal(rebuildPayload.data.indexedBySource["design.resources"], 3);
+
+    const query = await runCliCapture(["search", "query", "aurora", "--domains", "design", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "10"], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: {
+        indexedFastPaths: { "design.resources": number };
+        results: Array<{ source: string; domain: string; type: string; title: string; resourceId?: string; metadata?: { kind?: string; builtin?: boolean } }>;
+      };
+    };
+    assert.equal(queryPayload.data.indexedFastPaths["design.resources"], 3);
+    const kinds = new Set(queryPayload.data.results.filter((item) => item.source === "design.resources").map((item) => item.metadata?.kind ?? item.type));
+    assert.equal(kinds.has("style"), true);
+    assert.equal(kinds.has("template"), true);
+    assert.equal(kinds.has("reference"), true);
+  });
+});
+
+test("design.resources event jobs refresh changed workspace design manifests", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-design-events-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const created = await runCliCapture([
+      "style",
+      "create",
+      "Event Token Style",
+      "--description",
+      "Hot refresh sentinel for design resource events",
+      "--workspace",
+      workspaceRoot,
+      "--data-dir",
+      dataRoot,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(created.code, CLI_EXIT_OK);
+    const createdPayload = JSON.parse(created.stdout) as { style: { id: string } };
+
+    const jobs = await runCliCapture(["search", "jobs", "list", "--source", "design.resources", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(jobs.code, CLI_EXIT_OK);
+    const jobsPayload = JSON.parse(jobs.stdout) as {
+      data: { items: Array<{ source: string; operation: string; resourceId?: string; shard?: string; payload?: Record<string, unknown> }> };
+    };
+    assert.equal(jobsPayload.data.items.length, 1);
+    assert.equal(jobsPayload.data.items[0]?.source, "design.resources");
+    assert.equal(jobsPayload.data.items[0]?.operation, "upsert");
+    assert.equal(jobsPayload.data.items[0]?.resourceId, `style:${createdPayload.style.id}`);
+    assert.equal(jobsPayload.data.items[0]?.shard, "hot");
+    assert.equal(jobsPayload.data.items[0]?.payload?.eventDriven, true);
+    assert.equal(jobsPayload.data.items[0]?.payload?.workspaceRoot, path.resolve(workspaceRoot));
+
+    const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "design.resources", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(serviceRun.code, CLI_EXIT_OK);
+    const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.source, "design.resources");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.operation, "upsert");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
+
+    const query = await runCliCapture(["search", "query", "event", "--domains", "design", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: { results: Array<{ source: string; domain: string; title: string; resourceId?: string; metadata?: { kind?: string } }> };
+    };
+    const result = queryPayload.data.results.find((item) => item.source === "design.resources");
+    assert.equal(result?.domain, "design");
+    assert.equal(result?.title, "Event Token Style");
+    assert.equal(result?.resourceId, `style:${createdPayload.style.id}`);
+    assert.equal(result?.metadata?.kind, "style");
+  });
+});
+
 test("sheets.workbooks event jobs refresh changed workbook manifests", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-sheets-events-"));
   const dataRoot = path.join(workspaceRoot, "data");

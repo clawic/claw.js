@@ -11,6 +11,7 @@ import {
   referenceDir,
   writeReference,
 } from "./storage.ts";
+import { scheduleDesignResourcesSearchEvent } from "../cli-search-events.ts";
 
 interface ReferenceCliContext {
   stdout: NodeJS.WritableStream;
@@ -96,6 +97,7 @@ export async function runReferenceCli(options: ReferenceCliOptions): Promise<num
       updatedAt: now,
     });
     const { path: filePath } = writeReference(workspaceRoot, manifest, flags.notes ?? "");
+    scheduleReferenceSearchEvent(options, "upsert", manifest.id);
     writeOutput(options, { reference: manifest, path: filePath }, filePath);
     return R_OK;
   }
@@ -111,6 +113,7 @@ export async function runReferenceCli(options: ReferenceCliOptions): Promise<num
       return R_FAILURE;
     }
     fs.rmSync(dir, { recursive: true, force: true });
+    scheduleReferenceSearchEvent(options, "delete", target);
     writeOutput(options, { deleted: target }, `Deleted ${target}`);
     return R_OK;
   }
@@ -126,6 +129,7 @@ export async function runReferenceCli(options: ReferenceCliOptions): Promise<num
     manifest.styleIds = [...set];
     manifest.updatedAt = new Date().toISOString();
     writeReference(workspaceRoot, manifest);
+    scheduleReferenceSearchEvent(options, "upsert", manifest.id);
     writeOutput(options, manifest, `linked ${target} -> ${flags.style}`);
     return R_OK;
   }
@@ -141,6 +145,20 @@ function writeOutput(options: ReferenceCliOptions, payload: unknown, text: strin
   } else if (text) {
     options.context.stdout.write(text.endsWith("\n") ? text : `${text}\n`);
   }
+}
+
+function scheduleReferenceSearchEvent(options: ReferenceCliOptions, operation: "upsert" | "delete", referenceId: string): void {
+  scheduleDesignResourcesSearchEvent({
+    operation,
+    resourceId: `reference:${referenceId}`,
+    workspaceRoot: options.workspaceRoot,
+    dataDir: searchEventDataDir(options),
+    flags: options.flags,
+  });
+}
+
+function searchEventDataDir(options: ReferenceCliOptions): string {
+  return options.flags["data-dir"] ?? process.env.CLAW_DATA_DIR ?? path.join(options.workspaceRoot, ".claw", "data");
 }
 
 function writeUsage(context: ReferenceCliContext): void {
