@@ -168,7 +168,7 @@ claw add workspace default
 claw info --json
 ```
 
-## Agent Discovery
+## Agent Navigation
 
 Agents should use `claw` as the project map before treating source files as the
 primary source for non-trivial framework questions:
