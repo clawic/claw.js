@@ -436,6 +436,38 @@ lease, provider id, credential binding, actor, and resource. It still never
 returns plaintext; without an approved live provider run it records
 `provider_secret_retrieval` as `external_pending`.
 
+## System Telemetry
+
+`claw system` is the read-only system state portal for agents and local tools.
+It preserves `claw system capabilities ...` for host capability management and
+adds telemetry, metric history, rules, and widget configuration:
+
+```bash
+claw system snapshot --json
+claw system snapshot --record true --json
+claw system metrics list --json
+claw system history system.cpu.load1 --range 1h --json
+claw system watch --interval 2000 --jsonl
+claw system rules list --json
+claw system rules upsert cpu-load-high --metric-key system.cpu.load1 --operator gte --threshold 8 --severity warning --json
+claw system rules delete cpu-load-high --json
+claw system widgets list --json
+claw system widgets upsert cpu-menu --metric-key system.cpu.load1 --presentation sparkline --placement menubar --json
+claw system widgets delete cpu-menu --json
+```
+
+Snapshots expose safe aggregate values by default and mark deeper hardware,
+permissioned, signed-host, or provider-backed metrics as unavailable until a
+validated provider supplies them. `--record true` stores the safe snapshot in
+the local metric store so `history` can return raw samples and minute rollups;
+the store defaults to `~/.claw/data/monitor.sqlite` and can be overridden with
+`--monitor-db`, `CLAW_MONITOR_DB_PATH`, `CLAW_MONITOR_DATA_DIR`,
+`CLAW_DATA_DIR`, or `CLAW_HOME`. Rule and widget upserts mutate only local
+configuration under `.claw/data/system-telemetry-state.json`; they do not
+control hardware. Physical controls, sensitive detail, precise location,
+calendar detail, network identifiers, and process detail remain grant/audit
+gated and signed-host brokered.
+
 Local agent records are managed through the agent-facing data commands. These
 commands write canonical files under `~/.claw/` and project searchable
 summaries into the main core database:

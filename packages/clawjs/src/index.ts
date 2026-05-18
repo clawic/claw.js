@@ -595,7 +595,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   }
 
   if (group === "system") {
-    return await runSystemCli({ argv, positionals, flags, context, wantsJson, binName });
+    return await runSystemCli({ argv, positionals, flags, context, wantsJson, binName, workspaceRoot: flags.workspace || context.cwd });
   }
 
   if (group === "collections") return await runCollectionsCli({ argv, positionals, flags, context, wantsJson, runCli: runCliUnsafe });
