@@ -2582,64 +2582,22 @@ test("apps and design writes enqueue and index section fast paths", async () => 
     DATABASE_DB_PATH: undefined,
     CLAW_SEARCH_DB_PATH: undefined,
   }, async () => {
-    const appsStdout = captureStream();
-    const appsStderr = captureStream();
-    const appUpsert = await runInternalV1Cli([
-      "apps",
-      "upsert",
-      "canvas-lab",
-      "--name",
-      "Canvas Lab",
-      "--description",
-      "Interactive canvas prototyping app",
-      "--path",
-      path.join(workspaceRoot, "apps", "canvas-lab"),
-      "--manifest",
-      JSON.stringify({ category: "design", entrypoint: "index.html" }),
-      "--pinned",
-      "true",
-      "--json",
-    ], { stdout: appsStdout.stream, stderr: appsStderr.stream, cwd: workspaceRoot });
+    const appUpsert = await runInternalV1Cli(["apps", "upsert", "canvas-lab", "--name", "Canvas Lab", "--description", "Interactive canvas prototyping app", "--path", path.join(workspaceRoot, "apps", "canvas-lab"), "--manifest", JSON.stringify({ category: "design", entrypoint: "index.html" }), "--pinned", "true", "--json"], { stdout: captureStream().stream, stderr: captureStream().stream, cwd: workspaceRoot });
     assert.equal(appUpsert, CLI_EXIT_OK);
-
-    const designStdout = captureStream();
-    const designStderr = captureStream();
-    const designUpsert = await runInternalV1Cli([
-      "design",
-      "upsert",
-      "template",
-      "deck-template",
-      "--name",
-      "Launch Deck Template",
-      "--manifest",
-      JSON.stringify({ tags: ["launch", "slides"], format: "pptx" }),
-      "--builtin",
-      "true",
-      "--json",
-    ], { stdout: designStdout.stream, stderr: designStderr.stream, cwd: workspaceRoot });
+    const designUpsert = await runInternalV1Cli(["design", "upsert", "template", "deck-template", "--name", "Launch Deck Template", "--manifest", JSON.stringify({ tags: ["launch", "slides"], format: "pptx" }), "--builtin", "true", "--json"], { stdout: captureStream().stream, stderr: captureStream().stream, cwd: workspaceRoot });
     assert.equal(designUpsert, CLI_EXIT_OK);
 
     const appJobs = await runCliCapture(["search", "jobs", "--source", "apps.catalog", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(appJobs.code, CLI_EXIT_OK);
-    const appJobsPayload = JSON.parse(appJobs.stdout) as {
-      data: { items: Array<{ source: string; operation: string; resourceId: string; payload: { appId?: string; eventDriven?: boolean } }> };
-    };
+    const appJobsPayload = JSON.parse(appJobs.stdout) as any;
     const appJob = appJobsPayload.data.items.find((job) => job.resourceId === "app-canvas-lab");
-    assert.equal(appJob?.source, "apps.catalog");
-    assert.equal(appJob?.operation, "upsert");
-    assert.equal(appJob?.payload.appId, "app-canvas-lab");
-    assert.equal(appJob?.payload.eventDriven, true);
+    assert.deepEqual({ source: appJob?.source, operation: appJob?.operation, appId: appJob?.payload.appId, eventDriven: appJob?.payload.eventDriven }, { source: "apps.catalog", operation: "upsert", appId: "app-canvas-lab", eventDriven: true });
 
     const designJobs = await runCliCapture(["search", "jobs", "--source", "design.resources", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(designJobs.code, CLI_EXIT_OK);
-    const designJobsPayload = JSON.parse(designJobs.stdout) as {
-      data: { items: Array<{ source: string; operation: string; resourceId: string; payload: { resourceId?: string; eventDriven?: boolean } }> };
-    };
+    const designJobsPayload = JSON.parse(designJobs.stdout) as any;
     const designJob = designJobsPayload.data.items.find((job) => job.resourceId === "deck-template");
-    assert.equal(designJob?.source, "design.resources");
-    assert.equal(designJob?.operation, "upsert");
-    assert.equal(designJob?.payload.resourceId, "deck-template");
-    assert.equal(designJob?.payload.eventDriven, true);
+    assert.deepEqual({ source: designJob?.source, operation: designJob?.operation, resourceId: designJob?.payload.resourceId, eventDriven: designJob?.payload.eventDriven }, { source: "design.resources", operation: "upsert", resourceId: "deck-template", eventDriven: true });
 
     const appRun = await runCliCapture(["search", "service", "run-once", "--source", "apps.catalog", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(appRun.code, CLI_EXIT_OK);
@@ -2648,61 +2606,33 @@ test("apps and design writes enqueue and index section fast paths", async () => 
 
     const appQuery = await runCliCapture(["search", "query", "canvas prototyping", "--domains", "apps", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(appQuery.code, CLI_EXIT_OK);
-    const appQueryPayload = JSON.parse(appQuery.stdout) as {
-      data: { indexedFastPaths: { "apps.catalog": number }; results: Array<{ source: string; domain: string; type: string; title: string; metadata?: { slug?: string; pinned?: boolean } }> };
-    };
+    const appQueryPayload = JSON.parse(appQuery.stdout) as any;
     assert.equal(appQueryPayload.data.indexedFastPaths["apps.catalog"], 1);
     const appResult = appQueryPayload.data.results.find((entry) => entry.title === "Canvas Lab");
-    assert.equal(appResult?.source, "apps.catalog");
-    assert.equal(appResult?.domain, "apps");
-    assert.equal(appResult?.type, "app");
-    assert.equal(appResult?.metadata?.slug, "canvas-lab");
-    assert.equal(appResult?.metadata?.pinned, true);
+    assert.deepEqual({ source: appResult?.source, domain: appResult?.domain, type: appResult?.type, slug: appResult?.metadata?.slug, pinned: appResult?.metadata?.pinned }, { source: "apps.catalog", domain: "apps", type: "app", slug: "canvas-lab", pinned: true });
 
-    const appDelete = await runInternalV1Cli([
-      "apps",
-      "delete",
-      "canvas-lab",
-      "--json",
-    ], { stdout: captureStream().stream, stderr: captureStream().stream, cwd: workspaceRoot });
+    const appDelete = await runInternalV1Cli(["apps", "delete", "canvas-lab", "--json"], { stdout: captureStream().stream, stderr: captureStream().stream, cwd: workspaceRoot });
     assert.equal(appDelete, CLI_EXIT_OK);
     const appDeleteJobs = await runCliCapture(["search", "jobs", "--source", "apps.catalog", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(appDeleteJobs.code, CLI_EXIT_OK);
-    const appDeleteJobsPayload = JSON.parse(appDeleteJobs.stdout) as {
-      data: { items: Array<{ operation: string; priority: number; resourceId: string; payload: { appId?: string; eventDriven?: boolean } }> };
-    };
+    const appDeleteJobsPayload = JSON.parse(appDeleteJobs.stdout) as any;
     const appDeleteJob = appDeleteJobsPayload.data.items.find((job) => job.resourceId === "app-canvas-lab" && job.operation === "delete");
-    assert.equal(appDeleteJob?.priority, 80);
-    assert.equal(appDeleteJob?.payload.appId, "app-canvas-lab");
-    assert.equal(appDeleteJob?.payload.eventDriven, true);
+    assert.deepEqual({ priority: appDeleteJob?.priority, appId: appDeleteJob?.payload.appId, eventDriven: appDeleteJob?.payload.eventDriven }, { priority: 80, appId: "app-canvas-lab", eventDriven: true });
     const appDeleteRun = await runCliCapture(["search", "service", "run-once", "--source", "apps.catalog", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(appDeleteRun.code, CLI_EXIT_OK);
-    const appDeleteRunPayload = JSON.parse(appDeleteRun.stdout) as {
-      data: { worker?: { items?: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
-    };
-    assert.equal(appDeleteRunPayload.data.worker?.items?.[0]?.source, "apps.catalog");
-    assert.equal(appDeleteRunPayload.data.worker?.items?.[0]?.operation, "delete");
-    assert.equal(appDeleteRunPayload.data.worker?.items?.[0]?.status, "done");
-    assert.equal(appDeleteRunPayload.data.worker?.items?.[0]?.indexed, 1);
+    const appDeleteRunItem = (JSON.parse(appDeleteRun.stdout) as any).data.worker?.items?.[0];
+    assert.deepEqual({ source: appDeleteRunItem?.source, operation: appDeleteRunItem?.operation, status: appDeleteRunItem?.status, indexed: appDeleteRunItem?.indexed }, { source: "apps.catalog", operation: "delete", status: "done", indexed: 1 });
     const afterAppDelete = await runCliCapture(["search", "query", "canvas prototyping", "--sources", "apps.catalog", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(afterAppDelete.code, CLI_EXIT_DEGRADED, afterAppDelete.stderr || afterAppDelete.stdout);
-    const afterAppDeletePayload = JSON.parse(afterAppDelete.stdout) as {
-      data: { results: Array<{ source: string; title: string }> };
-    };
+    const afterAppDeletePayload = JSON.parse(afterAppDelete.stdout) as any;
     assert.equal(afterAppDeletePayload.data.results.some((entry) => entry.source === "apps.catalog" && entry.title === "Canvas Lab"), false);
 
     const designQuery = await runCliCapture(["search", "query", "launch deck", "--domains", "design", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(designQuery.code, CLI_EXIT_OK);
-    const designQueryPayload = JSON.parse(designQuery.stdout) as {
-      data: { indexedFastPaths: { "design.resources": number }; results: Array<{ source: string; domain: string; type: string; title: string; metadata?: { kind?: string; builtin?: boolean } }> };
-    };
+    const designQueryPayload = JSON.parse(designQuery.stdout) as any;
     assert.equal(designQueryPayload.data.indexedFastPaths["design.resources"], 1);
     const designResult = designQueryPayload.data.results.find((entry) => entry.title === "Launch Deck Template");
-    assert.equal(designResult?.source, "design.resources");
-    assert.equal(designResult?.domain, "design");
-    assert.equal(designResult?.type, "template");
-    assert.equal(designResult?.metadata?.kind, "template");
-    assert.equal(designResult?.metadata?.builtin, true);
+    assert.deepEqual({ source: designResult?.source, domain: designResult?.domain, type: designResult?.type, kind: designResult?.metadata?.kind, builtin: designResult?.metadata?.builtin }, { source: "design.resources", domain: "design", type: "template", kind: "template", builtin: true });
 
     const designDelete = await runInternalV1Cli(["design", "delete", "deck-template", "--json"], { stdout: captureStream().stream, stderr: captureStream().stream, cwd: workspaceRoot });
     assert.equal(designDelete, CLI_EXIT_OK);
