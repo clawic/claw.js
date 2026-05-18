@@ -1149,6 +1149,11 @@ for (const snippet of [
 }
 requireSnippet("packages/clawjs/src/v1-data.ts", "knowledge: new Set([\"entity\", \"fact\", \"list\", \"search\", \"promote\", \"delete\", \"help\"])");
 requireSnippet("packages/clawjs/src/v1-data.ts", "Usage: claw knowledge delete ID [--kind fact|entity] [--json]");
+requireSnippet("packages/clawjs/src/v1-data.ts", "apps: new Set([\"list\", \"upsert\", \"delete\", \"help\"])");
+requireSnippet("packages/clawjs/src/v1-data.ts", "Usage: claw apps delete APP_ID [--json]");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "\"apps\",");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "\"delete\",");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "appDeleteRunPayload.data.worker?.items?.[0]?.operation, \"delete\"");
 requireSnippet("packages/clawjs/src/cli-work-search-events.test.ts", "productivity database writes schedule work search events for create update and delete");
 requireSnippet("packages/clawjs/src/cli-work-search-events.test.ts", "operation === \"upsert\"");
 requireSnippet("packages/clawjs/src/cli-work-search-events.test.ts", "operation === \"delete\"");
