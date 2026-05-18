@@ -12,8 +12,8 @@ Use this file as a router. Do not turn it into a long procedure manual.
 - Main router: `docs/decision-map.md`. It maps decision -> document ->
   validation, and should be the first public document agents use to choose the
   right source of truth.
-- Discovery contract: `docs/adr/0017-discoverability-and-meta-code-routing.md`
-  and `docs/discoverability.registry.json`. New durable ADRs, skills,
+- Discovery contract: `docs/adr/0017-discoverability-and-meta-code-routing.md`,
+  `docs/discoverability.md`, and `docs/discoverability.registry.json`. New durable ADRs, skills,
   guardrails, harnesses, docs routers, and route work must be reachable from
   `AGENTS.md`/`CLAUDE.md`, the relevant skill, and `claw search`/`claw inspect`
   within two hops, or be recorded as expiring baseline debt.

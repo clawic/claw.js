@@ -13,6 +13,10 @@ When an agent or contributor faces a decision, this document is the highest
 authority. Project-level CLAUDE.md / AGENTS.md files defer to it. When local
 documents conflict with the constitution, the constitution wins.
 
+Durable meta-code decisions, skills, guardrails, harnesses, and route work must
+also remain discoverable through the generated `docs/discoverability.md` router
+and the `docs/discoverability.registry.json` contract.
+
 ## Preamble
 
 We are building the canonical interface between humans and digital

@@ -2,33 +2,5 @@
   "version": 1,
   "createdAt": "2026-05-17",
   "description": "Expiring baseline for pre-existing meta-code that predates the discoverability registry. New durable meta-code must be registered instead of added here.",
-  "entries": [
-    {
-      "id": "pre-existing-adr-route-inventory",
-      "owner": "claw",
-      "reason": "Accepted ADRs created before ADR 0017 do not yet have per-artifact discovery route records.",
-      "reviewDate": "2026-08-17",
-      "frozenCount": 18,
-      "artifacts": [
-        "docs/adr/0001-claw-framework-host-boundary.md",
-        "docs/adr/0001-naming-and-stability-surfaces.md",
-        "docs/adr/0002-testing-architecture.md",
-        "docs/adr/0003-source-file-boundaries.md",
-        "docs/adr/0004-persistent-surface-registry-and-inspection.md",
-        "docs/adr/0005-canonical-data-catalog.md",
-        "docs/adr/0006-integration-qa-lab.md",
-        "docs/adr/0007-cli-agent-interface.md",
-        "docs/adr/0008-secrets-security-v1.md",
-        "docs/adr/0009-dual-human-programmatic-surfaces.md",
-        "docs/adr/0010-cli-jit-guidance-actor-assertions-resource-registry.md",
-        "docs/adr/0011-report-governance-v1.md",
-        "docs/adr/0012-domain-surface-registry-db-to-cli.md",
-        "docs/adr/0012-surface-route-graph.md",
-        "docs/adr/0013-agentic-naming-and-code-structure.md",
-        "docs/adr/0014-need-route-lab-v1.md",
-        "docs/adr/0015-connector-control-plane-v1.md",
-        "docs/adr/0016-code-hygiene-program.md"
-      ]
-    }
-  ]
+  "entries": []
 }

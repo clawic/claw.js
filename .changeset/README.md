@@ -2,6 +2,10 @@
 
 This repository versions all published npm packages in lockstep with one shared semver.
 
+Pre-V1 note: until the user explicitly freezes V1, changesets are frozen by
+ADR 0025 and `docs/pre-v1-release-ledger.json`. Do not add new changesets or
+apply package bumps for ordinary work during `pre_v1_mutable`.
+
 Use this flow for any PR that changes the public behavior, package surface, generated template output, or release notes of a published package:
 
 ```bash

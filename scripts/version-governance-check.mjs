@@ -1,0 +1,184 @@
+#!/usr/bin/env node
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+
+const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
+const args = new Set(process.argv.slice(2));
+const errors = [];
+
+function fail(message) {
+  errors.push(message);
+}
+
+function read(relativePath) {
+  return fs.readFileSync(path.join(rootDir, relativePath), "utf8");
+}
+
+function readJson(relativePath) {
+  return JSON.parse(read(relativePath));
+}
+
+function sha256(value) {
+  return crypto.createHash("sha256").update(value).digest("hex");
+}
+
+function stableJson(value) {
+  return JSON.stringify(value, Object.keys(value).sort());
+}
+
+function listChangesets() {
+  const changesetDir = path.join(rootDir, ".changeset");
+  return fs.readdirSync(changesetDir)
+    .filter((file) => file.endsWith(".md") && file !== "README.md")
+    .sort();
+}
+
+function changesetContentHash(files) {
+  const hash = crypto.createHash("sha256");
+  for (const file of files) {
+    hash.update(file);
+    hash.update("\0");
+    hash.update(fs.readFileSync(path.join(rootDir, ".changeset", file)));
+    hash.update("\0");
+  }
+  return hash.digest("hex");
+}
+
+function packageVersionEntries() {
+  const packageFiles = [
+    "package.json",
+    ...fs.readdirSync(path.join(rootDir, "packages"))
+      .map((name) => `packages/${name}/package.json`)
+      .filter((relativePath) => fs.existsSync(path.join(rootDir, relativePath))),
+  ].sort();
+  return packageFiles.map((relativePath) => {
+    const packageJson = readJson(relativePath);
+    return `${relativePath}:${packageJson.name ?? ""}:${packageJson.version ?? ""}`;
+  });
+}
+
+function hasOwnedVersionDrift(relativePath, text) {
+  const allowedSnippets = [
+    "no owned `/v2+`",
+    "skills-v2",
+    "data-v2-config",
+    "third_party_api_versions",
+    "os_sdk_platform_versions",
+    "dependency_lockfiles",
+    "provider_model_version_names",
+    "blockedPatterns",
+  ];
+  const lines = text.split(/\r?\n/);
+  return lines
+    .map((line, index) => ({ line, index: index + 1 }))
+    .filter(({ line }) => !allowedSnippets.some((snippet) => line.includes(snippet)))
+    .filter(({ line }) => {
+      if (/(?:schemaVersion|protocolVersion)\s*[:=]\s*[2-9]\d*/.test(line)) return true;
+      if (/["'`]\/v[2-9]\b/.test(line)) return true;
+      if (/(?:claw|clawix)[A-Za-z0-9._-]*\.v[2-9]\b/.test(line)) return true;
+      return false;
+    })
+    .map(({ line, index }) => `${relativePath}:${index}: ${line.trim()}`);
+}
+
+function checkPolicyExport() {
+  const policySource = read("packages/clawjs-core/src/version-governance.ts");
+  for (const snippet of [
+    "phase: \"pre_v1_mutable\"",
+    "branchPolicy: \"main_mutable\"",
+    "sourceOfTruth: \"clawjs\"",
+    "explicit_user_instruction",
+    "new_changeset_bump",
+    "owned_schema_version_bump",
+    "third_party_api_versions",
+  ]) {
+    if (!policySource.includes(snippet)) fail(`version-governance policy is missing ${JSON.stringify(snippet)}`);
+  }
+}
+
+function checkLedger() {
+  const ledger = readJson("docs/pre-v1-release-ledger.json");
+  const changesets = listChangesets();
+  if (ledger.phase !== "pre_v1_mutable") fail("pre-v1 release ledger phase must be pre_v1_mutable");
+  if (ledger.changesets?.count !== changesets.length) {
+    fail(`changeset baseline count drifted: expected ${ledger.changesets?.count}, found ${changesets.length}`);
+  }
+  const filenames = changesets.join("\n");
+  if (ledger.changesets?.filenameSha256 !== sha256(filenames)) fail("changeset filename baseline hash drifted");
+  if (ledger.changesets?.contentSha256 !== changesetContentHash(changesets)) fail("changeset content baseline hash drifted");
+
+  const packageEntries = packageVersionEntries();
+  if (ledger.packageVersions?.packageFileCount !== packageEntries.length) {
+    fail(`package version file count drifted: expected ${ledger.packageVersions?.packageFileCount}, found ${packageEntries.length}`);
+  }
+  if (ledger.packageVersions?.nameVersionSha256 !== sha256(packageEntries.join("\n"))) {
+    fail("package manifest version digest drifted");
+  }
+}
+
+function checkReleaseScripts() {
+  const packageJson = readJson("package.json");
+  for (const scriptName of ["release:version", "release:publish", "publish:packages"]) {
+    const script = packageJson.scripts?.[scriptName] ?? "";
+    if (!script.includes("version-governance-check.mjs --release-gate")) {
+      fail(`${scriptName} must run the pre-v1 release approval gate`);
+    }
+  }
+  const testDocs = packageJson.scripts?.["test:docs"] ?? "";
+  if (!testDocs.includes("version-governance-check.mjs")) fail("test:docs must include version-governance-check.mjs");
+}
+
+function checkOwnedVersionDrift() {
+  const scanned = [
+    "packages/clawjs-core/src/surface-registry.ts",
+    "packages/clawjs-core/src/version-governance.ts",
+    "packages/clawjs/src/inspect-cli.ts",
+    "packages/clawjs/src/inspect-cli.test.ts",
+    "docs/adr/0025-pre-v1-version-governance.md",
+    "docs/decision-map.md",
+    "docs/git-workflow.md",
+    "RELEASING.md",
+    "package.json",
+  ];
+  for (const relativePath of scanned) {
+    for (const hit of hasOwnedVersionDrift(relativePath, read(relativePath))) fail(`owned version drift: ${hit}`);
+  }
+}
+
+function selfTest() {
+  const cases = [
+    { text: "const x = { schemaVersion: 8 };", expected: true },
+    { text: "const x = { protocolVersion: 2 };", expected: true },
+    { text: "id: \"clawix.protocol.bridge.v8\"", expected: true },
+    { text: "route: \"/v2/messages\"", expected: true },
+    { text: "POST /v1/chat/completions third_party_api_versions", expected: false },
+    { text: "macOS 15 SDK os_sdk_platform_versions", expected: false },
+    { text: "package-lock dependency_lockfiles version 2", expected: false },
+    { text: "model gpt-4.1 provider_model_version_names", expected: false },
+  ];
+  for (const entry of cases) {
+    const actual = hasOwnedVersionDrift("self-test", entry.text).length > 0;
+    if (actual !== entry.expected) fail(`self-test mismatch for ${stableJson(entry)}: got ${actual}`);
+  }
+}
+
+if (args.has("--release-gate")) {
+  if (process.env.CLAW_ALLOW_PRE_V1_RELEASE !== "1") {
+    fail("pre_v1_mutable blocks release/version/publish flows without CLAW_ALLOW_PRE_V1_RELEASE=1 and explicit user approval");
+  }
+} else {
+  checkPolicyExport();
+  checkLedger();
+  checkReleaseScripts();
+  checkOwnedVersionDrift();
+  if (args.has("--self-test")) selfTest();
+}
+
+if (errors.length > 0) {
+  console.error("Version governance check failed:");
+  for (const error of errors) console.error(`- ${error}`);
+  process.exit(1);
+}
+
+console.log(args.has("--release-gate") ? "Version governance release gate passed." : "Version governance check passed.");

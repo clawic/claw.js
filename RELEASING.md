@@ -2,6 +2,12 @@
 
 ## Release policy
 
+- Until the user explicitly freezes V1, follow
+  [ADR 0025: Pre-V1 version governance](docs/adr/0025-pre-v1-version-governance.md):
+  `v1` labels are provisional, package/schema/protocol/API/file-format/surface
+  version bumps are blocked, existing changesets are frozen in
+  `docs/pre-v1-release-ledger.json`, and `release:version`, `release:publish`,
+  and direct package publish flows require the release approval gate.
 - Follow semver, but treat all `0.x` releases as potentially fast-moving.
 - Published npm packages move in lockstep under one shared version managed by Changesets.
 - Every PR that changes a published package, generated template output, or public package surface must include a `.changeset/*.md` entry unless it is docs-only, test-only, or internal-only.
@@ -70,7 +76,7 @@ npm run release:status
 Apply version bumps locally:
 
 ```bash
-npm run release:version
+CLAW_ALLOW_PRE_V1_RELEASE=1 npm run release:version
 ```
 
 ## Publish commands
@@ -84,5 +90,5 @@ npm run publish:dry-run
 Publish for real from the workspace root after authentication:
 
 ```bash
-npm run release:publish
+CLAW_ALLOW_PRE_V1_RELEASE=1 npm run release:publish
 ```

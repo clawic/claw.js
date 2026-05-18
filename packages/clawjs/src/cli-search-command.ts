@@ -192,7 +192,11 @@ export async function runSearchQueryCli(input: {
       actor: input.flags.actor,
       baseResults: results,
     });
-    const outputResults = commandFallback.output ?? results;
+    const outputResults = mergeQueryOutputWithLocalDiscovery(
+      commandFallback.output ?? results,
+      searchRegisteredLocalFiles(query, input.context.cwd),
+      limit ?? 20,
+    );
     if (searchQueryRequiresAudit(query, outputResults.results, filters)) {
       store.recordAuditEvent({
         type: "sensitive_query",
@@ -7282,6 +7286,56 @@ function searchQueryRequiresAudit(query: string, results: SearchResult[], filter
   if (results.some((result) => result.permissions?.redacted)) return true;
   if (filters?.redacted === true || filters?.canPreview === false) return true;
   return /\b(secret|private|restricted|sensitive|token|password|credential)\b/i.test(query);
+}
+
+function mergeQueryOutputWithLocalDiscovery(output: SearchQueryOutput, localResults: ClawCliSearchResult[], limit: number): SearchQueryOutput {
+  if (localResults.length === 0) return output;
+  const merged = new Map<string, SearchResult>();
+  for (const result of output.results) merged.set(`${result.source}:${result.id}`, result);
+  for (const result of localResults) {
+    const searchResult = localDiscoveryToSearchResult(result);
+    const key = `${searchResult.source}:${searchResult.id}`;
+    const previous = merged.get(key);
+    if (!previous || searchResult.score > previous.score) merged.set(key, searchResult);
+  }
+  return {
+    ...output,
+    results: [...merged.values()]
+      .sort((left, right) => right.score - left.score || left.title.localeCompare(right.title))
+      .slice(0, limit),
+  };
+}
+
+function localDiscoveryToSearchResult(result: ClawCliSearchResult): SearchResult {
+  return {
+    id: `local:${result.path}`,
+    source: "local.files",
+    domain: "files",
+    type: result.type,
+    title: result.name,
+    subtitle: result.canonicalName,
+    snippet: result.summary,
+    score: result.score,
+    updatedAt: "1970-01-01T00:00:00.000Z",
+    resourceId: result.path,
+    path: result.path,
+    fragments: [{
+      id: `local:${result.path}:match`,
+      title: "Local file",
+      snippet: result.summary,
+      score: result.score,
+    }],
+    actions: [],
+    permissions: {
+      canOpen: true,
+      canPreview: true,
+      redacted: false,
+    },
+    metadata: {
+      canonicalName: result.canonicalName,
+      relativePath: result.path,
+    },
+  };
 }
 
 function parseFilterValue(value: string): unknown {

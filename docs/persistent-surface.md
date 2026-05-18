@@ -31,6 +31,8 @@ flowchart TD
   claw_contracts --> claw_contracts_formats
   claw_contracts_external["External dependencies and owned mappings\nroot"]
   claw_contracts --> claw_contracts_external
+  claw_contracts_versionGovernance["Pre-V1 version governance\nroot"]
+  claw_contracts --> claw_contracts_versionGovernance
   claw_cli_public["Public claw CLI\nroot"]
   claw_cli_commandIntentRegistry["CLI command intent registry\nroot"]
   claw_mcp_surface["MCP model-native surface\nroot"]
@@ -1444,6 +1446,8 @@ flowchart TD
   claw_contracts_schemas --> claw_mac_policyGrant_v1
   claw_schema_commandIntents_v1["CLI command intent schema v1\njsonSchema"]
   claw_contracts_schemas --> claw_schema_commandIntents_v1
+  claw_versionGovernance_preV1["Pre-V1 version governance policy\njsonSchema"]
+  claw_contracts_versionGovernance --> claw_versionGovernance_preV1
   claw_cli_flag_json["--json\ncliFlag"]
   claw_contracts_cli --> claw_cli_flag_json
   claw_cli_flag_dry_run["--dry-run\ncliFlag"]
@@ -2069,7 +2073,7 @@ flowchart TD
 | `claw.edge.remote.consumes.coordinator` | consumes | `claw.remote.client` | `claw.coordinator` | `claw.api.nodes` | HTTPS/WebSocket/Iroh rendezvous metadata |
 | `claw.edge.coordinator.brokers.gateway` | brokers | `claw.coordinator` | `claw.gateway` | `claw.api.remote.conformance` | governed gateway admission |
 | `claw.edge.gateway.brokers.connector` | brokers | `claw.gateway` | `claw.connector` | `claw.api.remote.classifications` | projected registered API contract |
-| `claw.edge.connector.brokers.runtime.v2` | brokers | `claw.connector` | `claw.runtime.agent` | `claw.protocol.hostCommand.v1` | host-side runtime adapter |
+| `claw.edge.connector.brokers.runtime.hostAdapter` | brokers | `claw.connector` | `claw.runtime.agent` | `claw.protocol.hostCommand.v1` | host-side runtime adapter |
 | `claw.edge.connector.brokers.search` | brokers | `claw.connector` | `claw.search` | `claw.api.search.searches` | remote-safe projected search route |
 | `claw.edge.connector.brokers.secrets` | brokers | `claw.connector` | `claw.secrets.broker` | `claw.api.secrets` | secret refs plus brokered lease |
 | `claw.edge.connector.brokers.sync` | brokers | `claw.connector` | `claw.sync` | `claw.api.sync.manifests` | sync manifest/changelog/cursor route |
@@ -2105,6 +2109,7 @@ flowchart TD
 | `claw.contracts.native` | root | native | claw |  | humanUi, serviceApi | humanUi:optional<br>relay:local-only | `contracts/native` |
 | `claw.contracts.formats` | root | format | claw |  | cli, persistence | humanUi:optional<br>relay:local-only | `contracts/formats` |
 | `claw.contracts.external` | root | external | claw |  | sdk, serviceApi, mcp | humanUi:optional<br>relay:local-only | `contracts/external` |
+| `claw.contracts.versionGovernance` | root | schema | claw |  | cli, sdk | humanUi:optional<br>relay:local-only | `contracts/versionGovernance` |
 | `claw.cli.public` | root | protocol | claw | humanUi | cli | relay:local-only | `claw` |
 | `claw.cli.commandIntentRegistry` | root | protocol | claw | humanUi | cli, persistence | relay:local-only | `claw/commands` |
 | `claw.mcp.surface` | root | protocol | claw | humanUi | mcp, sdk, serviceApi | relay:local-only | `mcp` |
@@ -2833,6 +2838,7 @@ flowchart TD
 | `claw.mac.permissionState.v1` | jsonSchema | schema | claw |  |  |  | `claw.mac.permissionState.v1` |
 | `claw.mac.policyGrant.v1` | jsonSchema | schema | claw |  |  |  | `claw.mac.policyGrant.v1` |
 | `claw.schema.commandIntents.v1` | jsonSchema | schema | claw |  |  |  | `claw.cli.commandIntents.v1` |
+| `claw.versionGovernance.preV1` | jsonSchema | schema | claw |  |  |  | `claw.versionGovernance.pre_v1_mutable` |
 | `claw.cli.flag.json` | cliFlag | cli | claw |  |  |  | `--json` |
 | `claw.cli.flag.dry-run` | cliFlag | cli | claw |  |  |  | `--dry-run` |
 | `claw.cli.flag.workspace` | cliFlag | cli | claw |  |  |  | `--workspace` |

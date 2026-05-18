@@ -7,9 +7,23 @@ description: Branch, release, and merge workflow for the ClawJS repository.
 
 This repository should launch with a small set of long-lived branches and strict merge discipline.
 
+## Pre-V1 mutable phase
+
+Until the user explicitly freezes V1, this repository follows
+`pre_v1_mutable` / `main_mutable` from
+[ADR 0025: Pre-V1 version governance](./adr/0025-pre-v1-version-governance.md).
+Current `v1` and `schemaVersion: 1` labels are provisional coordination labels,
+not post-release compatibility promises.
+
+During this phase, do not create package bumps, new changesets, owned v2+
+schema/protocol/API/file-format/surface IDs, release tags, or publish/version
+flows without explicit user approval. Existing changesets are frozen as
+pre-release ledger input in `docs/pre-v1-release-ledger.json`.
+
 ## Long-lived branches
 
-- `main`: always releasable. Only reviewed pull requests land here.
+- `main`: mutable pre-release integration branch until V1 is explicitly frozen.
+  After freeze, it becomes the always-releasable default branch.
 - `next`: integration branch for work that is ready for wider validation but not yet queued for the next tag.
 - `release/0.x`: stabilization branch for the first public `0.x` line. Cut hotfixes here when you need to patch the latest release without pulling in everything from `next`.
 
