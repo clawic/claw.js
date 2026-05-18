@@ -102,6 +102,21 @@ function remoteExternalValidationEvidenceFromInput(input: Record<string, unknown
   return [];
 }
 
+function remoteExternalValidationEvidenceArtifactFromInput(input: Record<string, unknown>): unknown | undefined {
+  const candidate = input.evidence && typeof input.evidence === "object" && !Array.isArray(input.evidence)
+    ? input.evidence as Record<string, unknown>
+    : input;
+  if (
+    Array.isArray(candidate.evidence)
+    && "sourceConversationId" in candidate
+    && "sourcePlanId" in candidate
+    && "approvalRequestId" in candidate
+  ) {
+    return candidate;
+  }
+  return undefined;
+}
+
 function remoteExternalValidationEvidenceArtifactPayload(input: Record<string, unknown> = {}) {
   const evidence = remoteExternalValidationEvidenceFromInput(input);
   return buildRemoteExternalValidationEvidenceArtifact({
@@ -129,6 +144,7 @@ function remoteSourceQaReviewsFromInput(input: Record<string, unknown>): ReturnT
 
 function remoteExternalValidationReadinessPayload(input: Record<string, unknown> = {}) {
   const sourceQaReviews = remoteSourceQaReviewsFromInput(input);
+  const evidenceArtifact = remoteExternalValidationEvidenceArtifactFromInput(input);
   const evidence = input.evidence === undefined
     ? remoteExternalValidationEvidenceFromInput(input)
     : parseRemoteExternalValidationEvidenceInput(input.evidence);
@@ -136,11 +152,13 @@ function remoteExternalValidationReadinessPayload(input: Record<string, unknown>
     reviewedSourceQaIds: Array.isArray(input.reviewedSourceQaIds) ? input.reviewedSourceQaIds.filter((entry): entry is string => typeof entry === "string") : [],
     sourceQaReviews,
     evidence,
+    evidenceArtifact,
   });
 }
 
 function remoteExternalValidationApprovalRequestPayload(input: Record<string, unknown> = {}) {
   const sourceQaReviews = remoteSourceQaReviewsFromInput(input);
+  const evidenceArtifact = remoteExternalValidationEvidenceArtifactFromInput(input);
   const evidence = input.evidence === undefined
     ? remoteExternalValidationEvidenceFromInput(input)
     : parseRemoteExternalValidationEvidenceInput(input.evidence);
@@ -148,11 +166,13 @@ function remoteExternalValidationApprovalRequestPayload(input: Record<string, un
     reviewedSourceQaIds: Array.isArray(input.reviewedSourceQaIds) ? input.reviewedSourceQaIds.filter((entry): entry is string => typeof entry === "string") : [],
     sourceQaReviews,
     evidence,
+    evidenceArtifact,
   });
 }
 
 function remoteExternalValidationReportPayload(input: Record<string, unknown> = {}) {
   return buildRemoteExternalValidationReport({
+    evidenceArtifact: remoteExternalValidationEvidenceArtifactFromInput(input),
     evidence: remoteExternalValidationEvidenceFromInput(input),
   });
 }
@@ -165,6 +185,7 @@ function remoteGoalClosureGatePayload(input: Record<string, unknown> = {}) {
     evidence: input.evidence === undefined
       ? remoteExternalValidationEvidenceFromInput(input)
       : parseRemoteExternalValidationEvidenceInput(input.evidence),
+    evidenceArtifact: remoteExternalValidationEvidenceArtifactFromInput(input),
   });
 }
 

@@ -1153,6 +1153,7 @@ test("remote gateway sync contracts register required layers, routes, and safe d
     schemaVersion: 1,
     sourceConversationId: "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8",
     sourcePlanId: "019e3732-c90e-7491-9217-37020c43217e-plan",
+    approvalRequestId: "remote_external_validation_approval_request_request_2026_05_17t10_13_17_000z",
     generatedAt: "2026-05-17T10:13:17.000Z",
     status: "external_pending",
     writes: false,
@@ -1166,6 +1167,7 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(remoteExternalValidationEvidenceArtifactSchema.safeParse(generatedExternalValidationEvidenceArtifact).success, true);
   assert.equal(generatedExternalValidationEvidenceArtifact.sourceConversationId, "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8");
   assert.equal(generatedExternalValidationEvidenceArtifact.sourcePlanId, "019e3732-c90e-7491-9217-37020c43217e-plan");
+  assert.equal(generatedExternalValidationEvidenceArtifact.approvalRequestId, "remote_external_validation_approval_request_request_2026_05_17t10_13_17_000z");
   assert.equal(generatedExternalValidationEvidenceArtifact.status, "external_pending");
   assert.equal(generatedExternalValidationEvidenceArtifact.writes, false);
   assert.deepEqual(generatedExternalValidationEvidenceArtifact.evidence, externalValidationEvidenceTemplate.evidence);
@@ -1174,6 +1176,10 @@ test("remote gateway sync contracts register required layers, routes, and safe d
     ...generatedExternalValidationEvidenceArtifact,
     sourcePlanId: "wrong-source-plan",
   }), /sourcePlanId/);
+  assert.throws(() => parseRemoteExternalValidationEvidenceInput({
+    ...generatedExternalValidationEvidenceArtifact,
+    approvalRequestId: "remote_external_validation_approval_request_request_other",
+  }), /approvalRequestId/);
   const externalValidationRunbook = buildRemoteExternalValidationRunbook({ generatedAt: "2026-05-17T10:13:19.000Z" });
   assert.equal(remoteExternalValidationRunbookSchema.safeParse(externalValidationRunbook).success, true);
   assert.equal(externalValidationRunbook.status, "external_pending");
@@ -1228,9 +1234,22 @@ test("remote gateway sync contracts register required layers, routes, and safe d
     executedAt: "2026-05-17T10:13:24.000Z",
     writes: false as const,
   }));
-  const completeExternalValidationReport = buildRemoteExternalValidationReport({ generatedAt: "2026-05-17T10:13:25.000Z", evidence: completeExternalEvidence });
+  const rawCompleteExternalValidationReport = buildRemoteExternalValidationReport({ generatedAt: "2026-05-17T10:13:24.500Z", evidence: completeExternalEvidence });
+  assert.equal(rawCompleteExternalValidationReport.status, "external_pending");
+  assert.equal(rawCompleteExternalValidationReport.sourceBoundEvidencePresent, false);
+  assert.equal(rawCompleteExternalValidationReport.approvalRequestBoundEvidencePresent, false);
+  assert.deepEqual(rawCompleteExternalValidationReport.clearableRequirementIds, []);
+  assert.deepEqual(rawCompleteExternalValidationReport.blockedRequirementIds, externalPendingRequirementIds);
+
+  const completeExternalEvidenceArtifact = buildRemoteExternalValidationEvidenceArtifact({
+    generatedAt: "2026-05-17T10:13:25.000Z",
+    evidence: completeExternalEvidence,
+  });
+  const completeExternalValidationReport = buildRemoteExternalValidationReport({ generatedAt: "2026-05-17T10:13:25.000Z", evidenceArtifact: completeExternalEvidenceArtifact });
   assert.equal(completeExternalValidationReport.status, "clearable");
   assert.equal(completeExternalValidationReport.writes, false);
+  assert.equal(completeExternalValidationReport.sourceBoundEvidencePresent, true);
+  assert.equal(completeExternalValidationReport.approvalRequestBoundEvidencePresent, true);
   assert.equal(completeExternalValidationReport.evidenceCount, externalPending.requirements.length);
   assert.deepEqual(completeExternalValidationReport.clearableRequirementIds, externalPendingRequirementIds);
   assert.deepEqual(completeExternalValidationReport.blockedRequirementIds, []);
@@ -1368,6 +1387,10 @@ test("remote gateway sync contracts register required layers, routes, and safe d
     generatedAt: "2026-05-17T10:13:26.550Z",
     sourceQaReviews: completeSourceQaReviewReport.items,
     evidence: externalValidationEvidenceTemplate.evidence,
+    evidenceArtifact: buildRemoteExternalValidationEvidenceArtifact({
+      generatedAt: "2026-05-17T10:13:26.550Z",
+      evidence: externalValidationEvidenceTemplate.evidence,
+    }),
   });
   assert.equal(readyForApprovedRun.status, "ready_for_approved_run");
   assert.equal(readyForApprovedRun.writes, false);
@@ -1384,6 +1407,10 @@ test("remote gateway sync contracts register required layers, routes, and safe d
     generatedAt: "2026-05-17T10:13:26.560Z",
     sourceQaReviews: completeSourceQaReviewReport.items,
     evidence: externalValidationEvidenceTemplate.evidence,
+    evidenceArtifact: buildRemoteExternalValidationEvidenceArtifact({
+      generatedAt: "2026-05-17T10:13:26.560Z",
+      evidence: externalValidationEvidenceTemplate.evidence,
+    }),
   });
   assert.equal(approvalRequest.status, "approval_required");
   assert.equal(approvalRequest.approvalRequired, true);
@@ -1467,6 +1494,10 @@ test("remote gateway sync contracts register required layers, routes, and safe d
       executedAt: "2026-05-17T10:13:24.000Z",
       writes: false,
     })),
+    evidenceArtifact: buildRemoteExternalValidationEvidenceArtifact({
+      generatedAt: "2026-05-17T10:13:27.000Z",
+      evidence: completeExternalEvidence,
+    }),
   });
   assert.equal(clearableClosureGate.status, "clearable");
   assert.equal(clearableClosureGate.writes, false);
@@ -1482,6 +1513,10 @@ test("remote gateway sync contracts register required layers, routes, and safe d
     generatedAt: "2026-05-17T10:13:27.100Z",
     sourceQaReviews: completeSourceQaReviewReport.items,
     evidence: completeExternalEvidence,
+    evidenceArtifact: buildRemoteExternalValidationEvidenceArtifact({
+      generatedAt: "2026-05-17T10:13:27.100Z",
+      evidence: completeExternalEvidence,
+    }),
   });
   assert.equal(readyForGoalClosure.status, "ready_for_goal_closure");
   assert.equal(readyForGoalClosure.closureGateStatus, "clearable");

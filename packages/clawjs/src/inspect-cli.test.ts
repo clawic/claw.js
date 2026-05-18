@@ -549,11 +549,12 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
 
   const remoteValidationArtifact = await runCliCapture(["remote", "validation-artifact", "--now", "2026-05-17T10:13:17.000Z", "--json"], process.cwd());
   assert.equal(remoteValidationArtifact.code, CLI_EXIT_OK);
-  const remoteValidationArtifactPayload = parseCliJson<{ status: string; writes: boolean; sourceConversationId: string; sourcePlanId: string; evidence: Array<{ requirementId: string; approvedRun: boolean; artifactRefs: string[]; acceptedCriteria: string[]; plaintextMaterialIncluded: boolean; writes: boolean }> }>(remoteValidationArtifact.stdout).data;
+  const remoteValidationArtifactPayload = parseCliJson<{ status: string; writes: boolean; sourceConversationId: string; sourcePlanId: string; approvalRequestId: string; evidence: Array<{ requirementId: string; approvedRun: boolean; artifactRefs: string[]; acceptedCriteria: string[]; plaintextMaterialIncluded: boolean; writes: boolean }> }>(remoteValidationArtifact.stdout).data;
   assert.equal(remoteValidationArtifactPayload.status, "external_pending");
   assert.equal(remoteValidationArtifactPayload.writes, false);
   assert.equal(remoteValidationArtifactPayload.sourceConversationId, "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8");
   assert.equal(remoteValidationArtifactPayload.sourcePlanId, "019e3732-c90e-7491-9217-37020c43217e-plan");
+  assert.equal(remoteValidationArtifactPayload.approvalRequestId, "remote_external_validation_approval_request_request_2026_05_17t10_13_17_000z");
   assert.deepEqual(remoteValidationArtifactPayload.evidence.map((entry) => entry.requirementId), remotePendingRequirementIds);
   assert.equal(remoteValidationArtifactPayload.evidence.every((entry) => !entry.approvedRun && entry.artifactRefs.length === 0 && entry.acceptedCriteria.length === 0 && entry.plaintextMaterialIncluded === false && !entry.writes), true);
 

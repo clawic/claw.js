@@ -114,6 +114,7 @@ export const remoteExternalValidationEvidenceArtifactSchema = z.object({
   schemaVersion: z.literal(1),
   sourceConversationId: z.string().min(1),
   sourcePlanId: z.string().min(1),
+  approvalRequestId: z.string().min(1),
   generatedAt: z.string().datetime(),
   status: z.literal("external_pending"),
   writes: z.literal(false),
@@ -148,6 +149,8 @@ export const remoteExternalValidationReportSchema = z.object({
   blockedRequirementIds: z.array(z.string()),
   invalidEvidenceRequirementIds: z.array(z.string()),
   duplicateEvidenceRequirementIds: z.array(z.string()),
+  sourceBoundEvidencePresent: z.boolean(),
+  approvalRequestBoundEvidencePresent: z.boolean(),
   items: z.array(remoteExternalValidationReportItemSchema),
   writes: z.literal(false),
 });
@@ -609,6 +612,13 @@ function assertRemoteSourceBinding(kind: string, sourceConversationId: string, s
   }
 }
 
+function assertRemoteApprovalRequestBinding(kind: string, approvalRequestId: string, generatedAt: string): void {
+  const expectedApprovalRequestId = externalValidationApprovalRequestId(["request", generatedAt]);
+  if (approvalRequestId !== expectedApprovalRequestId) {
+    throw new Error(`${kind} approvalRequestId ${approvalRequestId} does not match ${expectedApprovalRequestId}`);
+  }
+}
+
 export function parseRemoteExternalValidationEvidenceInput(input: unknown): RemoteExternalValidationEvidence[] {
   if (input === undefined || input === null) return [];
   if (Array.isArray(input)) return input.map((entry) => remoteExternalValidationEvidenceSchema.parse(entry));
@@ -622,6 +632,7 @@ export function parseRemoteExternalValidationEvidenceInput(input: unknown): Remo
     ) {
       const envelope = remoteExternalValidationEvidenceArtifactSchema.parse(input);
       assertRemoteSourceBinding("external validation evidence artifact", envelope.sourceConversationId, envelope.sourcePlanId);
+      assertRemoteApprovalRequestBinding("external validation evidence artifact", envelope.approvalRequestId, envelope.generatedAt);
       return envelope.evidence;
     }
     const envelope = remoteExternalValidationEvidenceEnvelopeSchema.parse(input);
@@ -740,11 +751,23 @@ export function buildRemoteExternalValidationChecklist(input: {
 export function buildRemoteExternalValidationReport(input: {
   generatedAt?: string;
   evidence?: RemoteExternalValidationEvidence[];
+  evidenceArtifact?: unknown;
 } = {}): RemoteExternalValidationReport {
   const generatedAt = input.generatedAt ?? new Date().toISOString();
   const checklist = buildRemoteExternalValidationChecklist({ generatedAt });
   const checklistRequirementIds = new Set(checklist.requirementIds);
-  const parsedEvidence = (input.evidence ?? []).map((entry) => remoteExternalValidationEvidenceSchema.parse(entry));
+  const evidenceArtifact = input.evidenceArtifact === undefined
+    ? undefined
+    : remoteExternalValidationEvidenceArtifactSchema.parse(input.evidenceArtifact);
+  if (evidenceArtifact) {
+    assertRemoteSourceBinding("external validation evidence artifact", evidenceArtifact.sourceConversationId, evidenceArtifact.sourcePlanId);
+    assertRemoteApprovalRequestBinding("external validation evidence artifact", evidenceArtifact.approvalRequestId, evidenceArtifact.generatedAt);
+  }
+  const sourceBoundEvidencePresent = evidenceArtifact !== undefined;
+  const approvalRequestBoundEvidencePresent = evidenceArtifact !== undefined;
+  const parsedEvidence = evidenceArtifact
+    ? evidenceArtifact.evidence
+    : (input.evidence ?? []).map((entry) => remoteExternalValidationEvidenceSchema.parse(entry));
   const seenEvidenceRequirementIds = new Set<string>();
   const invalidEvidenceRequirementIds = [...new Set(
     parsedEvidence
@@ -775,6 +798,8 @@ export function buildRemoteExternalValidationReport(input: {
     const approvedRunRefPresent = !!evidence?.approvedRunRef;
     const physicalEvidencePresent = !!evidence?.physicalEvidenceRef;
     const clearable = approvedRun
+      && sourceBoundEvidencePresent
+      && approvalRequestBoundEvidencePresent
       && approvedRunRefPresent
       && physicalEvidencePresent
       && missingArtifacts.length === 0
@@ -810,6 +835,8 @@ export function buildRemoteExternalValidationReport(input: {
     blockedRequirementIds,
     invalidEvidenceRequirementIds,
     duplicateEvidenceRequirementIds,
+    sourceBoundEvidencePresent,
+    approvalRequestBoundEvidencePresent,
     items,
     writes: false,
   });
@@ -868,6 +895,7 @@ export function buildRemoteExternalValidationEvidenceArtifact(input: {
     schemaVersion: 1,
     sourceConversationId: remoteSourceConversationId,
     sourcePlanId: remoteSourcePlanId,
+    approvalRequestId: externalValidationApprovalRequestId(["request", generatedAt]),
     generatedAt,
     status: "external_pending",
     writes: false,
@@ -919,6 +947,7 @@ export function buildRemoteExternalValidationReadiness(input: {
   sourceQaReviews?: RemoteSourceQaReviewItem[];
   reviewedSourceQaIds?: string[];
   evidence?: RemoteExternalValidationEvidence[];
+  evidenceArtifact?: unknown;
 } = {}): RemoteExternalValidationReadiness {
   const generatedAt = input.generatedAt ?? new Date().toISOString();
   const sourceQaReport = buildRemoteSourceQaReviewReport({
@@ -926,14 +955,20 @@ export function buildRemoteExternalValidationReadiness(input: {
     reviews: input.sourceQaReviews,
     reviewedSourceQaIds: input.reviewedSourceQaIds,
   });
-  const evidence = (input.evidence ?? []).map((entry) => remoteExternalValidationEvidenceSchema.parse(entry));
+  const evidenceArtifact = input.evidenceArtifact === undefined
+    ? undefined
+    : remoteExternalValidationEvidenceArtifactSchema.parse(input.evidenceArtifact);
+  const evidence = evidenceArtifact
+    ? parseRemoteExternalValidationEvidenceInput(evidenceArtifact)
+    : (input.evidence ?? []).map((entry) => remoteExternalValidationEvidenceSchema.parse(entry));
   const checklist = buildRemoteExternalValidationChecklist({ generatedAt });
-  const report = buildRemoteExternalValidationReport({ generatedAt, evidence });
+  const report = buildRemoteExternalValidationReport({ generatedAt, evidence, evidenceArtifact });
   const runbook = buildRemoteExternalValidationRunbook({ generatedAt });
   const gate = buildRemoteGoalClosureGate({
     generatedAt,
     sourceQaReviews: sourceQaReport.items,
     evidence,
+    evidenceArtifact,
   });
   const evidenceIds = new Set(evidence.map((entry) => entry.requirementId));
   const missingEvidenceRequirementIds = checklist.requirementIds.filter((requirementId) => !evidenceIds.has(requirementId));
@@ -955,7 +990,10 @@ export function buildRemoteExternalValidationReadiness(input: {
   const clearableEvidenceReady = report.status === "clearable"
     && report.blockedRequirementIds.length === 0
     && report.clearableRequirementIds.length === checklist.requirementIds.length;
-  const externalEvidenceReady = evidenceIdsReady && (pendingEvidenceRowsReady || clearableEvidenceReady);
+  const externalEvidenceReady = evidenceIdsReady
+    && report.sourceBoundEvidencePresent
+    && report.approvalRequestBoundEvidencePresent
+    && (pendingEvidenceRowsReady || clearableEvidenceReady);
   const validationDomains = new Set(runbook.e2ePlan.validationSteps.map((entry) => entry.domain));
   const e2ePlanReady = runbook.e2ePlan.validationSteps.length === 5
     && ["chat", "search", "sync", "secret_refs", "hosted_agents"].every((domain) => validationDomains.has(domain as RemoteProviderDeviceE2EDomain))
@@ -1033,15 +1071,22 @@ export function buildRemoteExternalValidationApprovalRequest(input: {
   sourceQaReviews?: RemoteSourceQaReviewItem[];
   reviewedSourceQaIds?: string[];
   evidence?: RemoteExternalValidationEvidence[];
+  evidenceArtifact?: unknown;
 } = {}): RemoteExternalValidationApprovalRequest {
   const generatedAt = input.generatedAt ?? new Date().toISOString();
-  const evidence = (input.evidence ?? []).map((entry) => remoteExternalValidationEvidenceSchema.parse(entry));
+  const evidenceArtifact = input.evidenceArtifact === undefined
+    ? undefined
+    : remoteExternalValidationEvidenceArtifactSchema.parse(input.evidenceArtifact);
+  const evidence = evidenceArtifact
+    ? parseRemoteExternalValidationEvidenceInput(evidenceArtifact)
+    : (input.evidence ?? []).map((entry) => remoteExternalValidationEvidenceSchema.parse(entry));
   const runbook = buildRemoteExternalValidationRunbook({ generatedAt });
   const readiness = buildRemoteExternalValidationReadiness({
     generatedAt,
     sourceQaReviews: input.sourceQaReviews,
     reviewedSourceQaIds: input.reviewedSourceQaIds,
     evidence,
+    evidenceArtifact,
   });
   return remoteExternalValidationApprovalRequestSchema.parse({
     schemaVersion: 1,
@@ -1205,6 +1250,7 @@ export function buildRemoteGoalClosureGate(input: {
   reviewedSourceQaIds?: string[];
   sourceQaReviews?: RemoteSourceQaReviewItem[];
   evidence?: RemoteExternalValidationEvidence[];
+  evidenceArtifact?: unknown;
 } = {}): RemoteGoalClosureGate {
   const generatedAt = input.generatedAt ?? new Date().toISOString();
   const sourceQaReviewReport = buildRemoteSourceQaReviewReport({
@@ -1215,6 +1261,7 @@ export function buildRemoteGoalClosureGate(input: {
   const externalValidationReport = buildRemoteExternalValidationReport({
     generatedAt,
     evidence: input.evidence,
+    evidenceArtifact: input.evidenceArtifact,
   });
   const blockers: Array<"source_qa_review" | "external_validation"> = [];
   if (sourceQaReviewReport.status !== "complete") blockers.push("source_qa_review");

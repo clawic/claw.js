@@ -74,6 +74,7 @@
       "evidenceRefs": [
         "docs/remote-gateway-sync-completion-audit.md#requirement-status",
         "claw remote e2e-plan:requiredTopologyTargets",
+        "claw remote validation-approval-request:validationTopologyTargets",
         "claw remote pending:physical_iroh_handshake",
         "claw remote pending:device_trust_acceptance",
         "claw remote pending:self_hosted_deployment",
@@ -213,6 +214,8 @@
       "evidenceRefs": [
         "docs/remote-gateway-sync-completion-audit.md#requirement-status",
         "claw remote e2e-plan:chat,search,sync,secret_refs,hosted_agents",
+        "claw remote validation-approval-request:validationDomains",
+        "claw remote validation-approval-request:validationRouteIds",
         "claw remote contracts:remote.chatGateway,remote.searchGateway,remote.secretBrokeredOperation,gateway.multiTenantAgentService",
         "claw sync drivers",
         "claw remote pending:provider_device_e2e"
@@ -281,6 +284,7 @@
         "scripts/verify-remote-sync-goal.mjs",
         "claw remote closure-gate",
         "claw remote validation-readiness",
+        "claw remote validation-approval-request",
         "claw remote validation-template",
         "claw remote validation-artifact",
         "RemoteExternalPendingRegister"

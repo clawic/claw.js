@@ -77,6 +77,10 @@ const sourcePlanId = "019e3732-c90e-7491-9217-37020c43217e-plan";
 
 const requiredDocs = "CONSTITUTION.md docs/adr/0022-remote-gateway-sync-redesign.md docs/remote-gateway-sync-source-decision-audit.md docs/remote-gateway-sync-source-qa-review.json docs/remote-gateway-sync-external-validation-evidence.json docs/remote-gateway-sync-completion-audit.md docs/remote-gateway-sync-decision-matrix.md docs/relay.md docs/decision-map.md docs/interface-matrix.md docs/cli.md".split(" ");
 
+const requiredScripts = [
+  "scripts/verify-remote-sync-source-session.mjs",
+];
+
 const requiredNodes = [
   "claw.coordinator",
   "claw.gateway",
@@ -245,6 +249,7 @@ function extractTableIds(text, prefix) {
 
 const docTexts = new Map(requiredDocs.map((relativePath) => [relativePath, readRequired(relativePath)]));
 const docCorpus = [...docTexts.values()].join("\n\n");
+for (const relativePath of requiredScripts) readRequired(relativePath);
 
 for (const [relativePath, text] of docTexts) {
   if (/\/Users\/|rollout-\d{4}-\d{2}-\d{2}T/.test(text)) {
@@ -319,6 +324,7 @@ for (const snippet of [
   "claw remote source-qa-template",
   "claw remote contracts",
   "Clawix remote mirror",
+  "REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl> node scripts/verify-remote-sync-source-session.mjs",
   "remote_canon_alignment_check.mjs",
   "docs/remote-gateway-sync-external-validation-evidence.json",
   "artifact-native `items` array",
@@ -433,8 +439,11 @@ for (const ref of [
   if (!relayBoundarySourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-001 must cite ${ref}`);
 }
 const topologySourceQaReview = sourceQaReviewReport.items.find((item) => item.qaId === "QA-004");
-if (!topologySourceQaReview?.evidenceRefs.includes("claw remote e2e-plan:requiredTopologyTargets")) {
-  fail("source Q/A review artifact QA-004 must cite provider/device topology targets");
+for (const ref of [
+  "claw remote e2e-plan:requiredTopologyTargets",
+  "claw remote validation-approval-request:validationTopologyTargets",
+]) {
+  if (!topologySourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-004 must cite ${ref}`);
 }
 for (const ref of ["claw remote pending:physical_iroh_handshake", "claw remote pending:device_trust_acceptance", "claw remote pending:self_hosted_deployment", "claw remote pending:hosted_deployment"]) {
   if (!topologySourceQaReview.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-004 must cite ${ref}`);
@@ -442,6 +451,8 @@ for (const ref of ["claw remote pending:physical_iroh_handshake", "claw remote p
 const firstSliceSourceQaReview = sourceQaReviewReport.items.find((item) => item.qaId === "QA-012");
 for (const ref of [
   "claw remote e2e-plan:chat,search,sync,secret_refs,hosted_agents",
+  "claw remote validation-approval-request:validationDomains",
+  "claw remote validation-approval-request:validationRouteIds",
   "claw remote contracts:remote.chatGateway,remote.searchGateway,remote.secretBrokeredOperation,gateway.multiTenantAgentService",
   "claw sync drivers",
   "claw remote pending:provider_device_e2e",
@@ -613,6 +624,7 @@ const guardrailStrictnessSourceQaReview = sourceQaReviewReport.items.find((item)
 for (const ref of [
   "claw remote closure-gate",
   "claw remote validation-readiness",
+  "claw remote validation-approval-request",
   "claw remote validation-template",
   "claw remote validation-artifact",
   "RemoteExternalPendingRegister",
@@ -841,6 +853,9 @@ if (!remoteExternalValidationEvidenceArtifactSchema.safeParse(generatedExternalV
 }
 if (generatedExternalValidationEvidenceArtifact.sourceConversationId !== sourceConversationId) fail("generated external validation evidence artifact must bind the source conversation ID");
 if (generatedExternalValidationEvidenceArtifact.sourcePlanId !== sourcePlanId) fail("generated external validation evidence artifact must bind the source plan ID");
+if (generatedExternalValidationEvidenceArtifact.approvalRequestId !== "remote_external_validation_approval_request_request_2026_05_18t11_40_00_000z") {
+  fail("generated external validation evidence artifact must bind the approval request ID");
+}
 if (generatedExternalValidationEvidenceArtifact.status !== "external_pending") fail("generated external validation evidence artifact must remain external_pending");
 if (generatedExternalValidationEvidenceArtifact.writes !== false) fail("generated external validation evidence artifact must be no-write");
 if (generatedExternalValidationEvidenceArtifact.evidence.length !== externalPending.requirements.length) {
@@ -882,6 +897,9 @@ if (!remoteExternalValidationEvidenceArtifactSchema.safeParse(externalValidation
 }
 if (externalValidationEvidenceArtifact.sourceConversationId !== sourceConversationId) fail("external validation evidence artifact must bind the source conversation ID");
 if (externalValidationEvidenceArtifact.sourcePlanId !== sourcePlanId) fail("external validation evidence artifact must bind the source plan ID");
+if (externalValidationEvidenceArtifact.approvalRequestId !== "remote_external_validation_approval_request_request_2026_05_18t11_40_00_000z") {
+  fail("external validation evidence artifact must bind the matching approval request ID");
+}
 if (externalValidationEvidenceArtifact.status !== "external_pending") fail("external validation evidence artifact must remain external_pending until approved physical/provider runs");
 if (externalValidationEvidenceArtifact.writes !== false) fail("external validation evidence artifact must be no-write");
 const externalValidationEvidenceArtifactRows = Array.isArray(externalValidationEvidenceArtifact.evidence)
@@ -920,6 +938,7 @@ for (const evidence of externalValidationEvidenceArtifactRows) {
 const artifactExternalValidationReport = buildRemoteExternalValidationReport({
   generatedAt: externalValidationEvidenceArtifact.generatedAt ?? "2026-05-18T11:40:00.000Z",
   evidence: externalValidationEvidenceArtifactRows,
+  evidenceArtifact: externalValidationEvidenceArtifact,
 });
 if (artifactExternalValidationReport.status !== "external_pending") fail("external validation evidence artifact must not clear external validation");
 if (artifactExternalValidationReport.evidenceCount !== externalPending.requirements.length) fail("external validation evidence artifact report must count every row");
@@ -935,6 +954,7 @@ const artifactExternalValidationReadiness = buildRemoteExternalValidationReadine
   generatedAt: externalValidationEvidenceArtifact.generatedAt ?? "2026-05-18T11:40:00.000Z",
   sourceQaReviews: sourceQaReviewReport.items,
   evidence: externalValidationEvidenceArtifactRows,
+  evidenceArtifact: externalValidationEvidenceArtifact,
 });
 if (artifactExternalValidationReadiness.status !== "ready_for_approved_run") {
   fail("external validation readiness must report ready_for_approved_run for complete source Q/A plus pending evidence artifact");
@@ -958,6 +978,7 @@ const artifactExternalValidationApprovalRequest = buildRemoteExternalValidationA
   generatedAt: externalValidationEvidenceArtifact.generatedAt ?? "2026-05-18T11:40:00.000Z",
   sourceQaReviews: sourceQaReviewReport.items,
   evidence: externalValidationEvidenceArtifactRows,
+  evidenceArtifact: externalValidationEvidenceArtifact,
 });
 if (artifactExternalValidationApprovalRequest.status !== "approval_required") fail("external validation approval request must require approval");
 if (artifactExternalValidationApprovalRequest.approvalRequired !== true || artifactExternalValidationApprovalRequest.approved !== false) {
@@ -1001,9 +1022,7 @@ if (emptyExternalValidationReport.clearableRequirementIds.length !== 0) fail("em
 if (emptyExternalValidationReport.invalidEvidenceRequirementIds.length !== 0) fail("empty remote external validation report must not have invalid evidence IDs");
 if (emptyExternalValidationReport.duplicateEvidenceRequirementIds.length !== 0) fail("empty remote external validation report must not have duplicate evidence IDs");
 
-const completeExternalValidationReport = buildRemoteExternalValidationReport({
-  generatedAt: "2026-05-17T10:13:25.000Z",
-  evidence: externalValidationChecklist.items.map((entry) => ({
+const completeExternalEvidenceRows = externalValidationChecklist.items.map((entry) => ({
     schemaVersion: 1,
     requirementId: entry.requirementId,
     approvedRun: true,
@@ -1014,7 +1033,24 @@ const completeExternalValidationReport = buildRemoteExternalValidationReport({
     plaintextMaterialIncluded: false,
     executedAt: "2026-05-17T10:13:24.000Z",
     writes: false,
-  })),
+}));
+const rawCompleteExternalValidationReport = buildRemoteExternalValidationReport({
+  generatedAt: "2026-05-17T10:13:24.500Z",
+  evidence: completeExternalEvidenceRows,
+});
+if (rawCompleteExternalValidationReport.status !== "external_pending") {
+  fail("raw external validation evidence rows must not clear without a source/approval-bound artifact");
+}
+if (rawCompleteExternalValidationReport.sourceBoundEvidencePresent !== false || rawCompleteExternalValidationReport.approvalRequestBoundEvidencePresent !== false) {
+  fail("raw external validation evidence rows must not claim source/approval artifact binding");
+}
+const completeExternalValidationArtifact = buildRemoteExternalValidationEvidenceArtifact({
+  generatedAt: "2026-05-17T10:13:25.000Z",
+  evidence: completeExternalEvidenceRows,
+});
+const completeExternalValidationReport = buildRemoteExternalValidationReport({
+  generatedAt: "2026-05-17T10:13:25.000Z",
+  evidenceArtifact: completeExternalValidationArtifact,
 });
 if (completeExternalValidationReport.status !== "clearable") fail("complete remote external validation report must be clearable");
 requireSameOrderedList(
@@ -1276,18 +1312,11 @@ if (scopedSourceQaReviewTemplate.externalPendingRequiredSourceQaIds.length !== 0
 const clearableClosureGate = buildRemoteGoalClosureGate({
   generatedAt: "2026-05-17T10:13:27.000Z",
   sourceQaReviews: completeSourceQaReviewReport.items,
-  evidence: externalValidationChecklist.items.map((entry) => ({
-    schemaVersion: 1,
-    requirementId: entry.requirementId,
-    approvedRun: true,
-    approvedRunRef: `approval://${entry.requirementId}`,
-    physicalEvidenceRef: `evidence://${entry.requirementId}`,
-    artifactRefs: entry.requiredArtifacts,
-    acceptedCriteria: entry.acceptanceCriteria,
-    plaintextMaterialIncluded: false,
-    executedAt: "2026-05-17T10:13:24.000Z",
-    writes: false,
-  })),
+  evidence: completeExternalEvidenceRows,
+  evidenceArtifact: buildRemoteExternalValidationEvidenceArtifact({
+    generatedAt: "2026-05-17T10:13:27.000Z",
+    evidence: completeExternalEvidenceRows,
+  }),
 });
 if (clearableClosureGate.status !== "clearable") fail("remote closure gate must become clearable only after source Q/A review and external validation clear");
 if (clearableClosureGate.missingSourceQaIds.length !== 0) fail("clearable remote closure gate must have no missing source Q/A ids");
@@ -1302,18 +1331,11 @@ if (clearableClosureGate.blockers.length !== 0) fail("clearable remote closure g
 const goalClosureReadiness = buildRemoteExternalValidationReadiness({
   generatedAt: "2026-05-17T10:13:27.100Z",
   sourceQaReviews: completeSourceQaReviewReport.items,
-  evidence: externalValidationChecklist.items.map((entry) => ({
-    schemaVersion: 1,
-    requirementId: entry.requirementId,
-    approvedRun: true,
-    approvedRunRef: `approval://${entry.requirementId}`,
-    physicalEvidenceRef: `evidence://${entry.requirementId}`,
-    artifactRefs: entry.requiredArtifacts,
-    acceptedCriteria: entry.acceptanceCriteria,
-    plaintextMaterialIncluded: false,
-    executedAt: "2026-05-17T10:13:24.000Z",
-    writes: false,
-  })),
+  evidence: completeExternalEvidenceRows,
+  evidenceArtifact: buildRemoteExternalValidationEvidenceArtifact({
+    generatedAt: "2026-05-17T10:13:27.100Z",
+    evidence: completeExternalEvidenceRows,
+  }),
 });
 if (goalClosureReadiness.status !== "ready_for_goal_closure") fail("external validation readiness must report ready_for_goal_closure after complete approved evidence");
 if (goalClosureReadiness.closureGateStatus !== "clearable") fail("goal-closure readiness must expose clearable closure gate");
@@ -1959,6 +1981,9 @@ if (gatewayAuditReceipt.writes !== false) fail("Gateway audit receipts must be n
 const packageJson = JSON.parse(readRequired("package.json"));
 if (packageJson.scripts?.["test:remote-sync-goal"] !== "node --import tsx ./scripts/verify-remote-sync-goal.mjs") {
   fail("package.json must expose test:remote-sync-goal");
+}
+if (packageJson.scripts?.["test:remote-sync-source-session"] !== "node ./scripts/verify-remote-sync-source-session.mjs") {
+  fail("package.json must expose test:remote-sync-source-session");
 }
 if (!packageJson.scripts?.["test:docs"]?.includes("npm run test:remote-sync-goal")) {
   fail("test:docs must include test:remote-sync-goal");
