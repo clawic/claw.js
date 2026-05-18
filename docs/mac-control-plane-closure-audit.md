@@ -26,7 +26,7 @@ answers plus later free-form user corrections, consolidated in
 | MCQ-002 | implemented | The atlas, command roots, coverage states, and macOS 14+ drift matrix index the known V1 surface. Evidence: `MAC_CAPABILITY_ATLAS`, `docs/mac-control-plane-version-drift-audit.md`, source URLs for Apple release notes/protected resources/CoreWLAN/AX/Shortcuts, and verifier coverage requiring every atlas capability in the drift audit. |
 | MCQ-003 | implemented | Wrapper-friendly actions use stable broker strategies where macOS already provides reliable commands, including `networksetup` for Wi-Fi and `/usr/bin/shortcuts` for Shortcuts. Evidence: ADR 0023, atlas backend strategies, CLI/core tests, and host broker tests. |
 | MCQ-004 | implemented | Stable IDs, schemas, routes, model-facing CLI semantics, and major-version drift evidence exist. Evidence: strict schemas, route graph contracts, verb audit, version drift audit, and verifier checks for every atlas capability id, backend strategy, and canonical CLI shape. |
-| MCQ-005 | partial | Governance and audit paths exist through `mac.directCliAction`, `claw.mac.actionBroker`, receipts, host bridge tests, and the Clawix local timeline. Remaining blocker: final signed standalone host audit validation remains blocked. |
+| MCQ-005 | partial | Governance and audit paths exist through `mac.directCliAction`, `claw.mac.actionBroker`, receipts, host bridge tests, the Clawix local timeline, and direct `MacControlGlobalInboxProjector` coverage for approval, inbox thread, and inbox message creation plus cleanup on projection failure. Evidence: `MacControlCenterTests.testGlobalInboxProjectorCreatesApprovalThreadAndMessage` and `MacControlCenterTests.testGlobalInboxProjectorCleansUpApprovalWhenThreadCreationFails`. Remaining blocker: final signed standalone host audit validation remains blocked. |
 | MCQ-006 | implemented | Roles, packs, allow/block grants, risk tiers, Clawix policy panel state, pending approvals, and `global inbox` projection exist. End-to-end signed-host policy editing is persisted in `mac-control-policy-grants.json` with host bridge `list`/`upsert`/`revoke` actions for `role`, `user`, `agent`, `assignment`, `run`, `mcp_client`, and `automation` subjects; block grants override approvals under the most-restrictive-wins rule. Evidence: `MacControlPolicyGrantStore`, host bridge policy tests, and `MacControlTests.testPolicyGrantStoreMatchesEveryActorScope`. |
 | MCQ-007 | implemented | Critical Wi-Fi actions have `critical` risk, approval gates, 120-second rollback metadata, signed-host continuity snapshots, and a broker-owned revert executor. Evidence: `MacControlContinuityStore`, `mac-control-continuity.json`, `beforeRef` on receipts, host bridge revert `confirmation_required`, and `MacControlTests.testHostBridgeCapturesContinuitySnapshotAndExecutesConfirmedWifiRevert`. Final real-device signed validation remains covered by `SIGNED-001` and `VALIDATION-001`, not by this row. |
 | MCQ-008 | implemented | Commander is treated as prototype/private legacy, not public compatibility. Evidence: ADR 0023, `docs/mac-native-legacy-audit.md`, signed-host bridge, and MNL dispositions. |
@@ -47,7 +47,7 @@ answers plus later free-form user corrections, consolidated in
 | --- | --- | --- | --- |
 | SIGNED-001 | blocked | Standalone packaged validation for `Claw.app` failed because the local Apple Development identity is revoked: `CSSMERR_TP_CERT_REVOKED`. | Install or select a valid Apple Development signing identity, then rerun the signed packaged host validation without `--skip-sign`. |
 | AUDIT-001 | blocked | This audit still contains partial and blocked rows. | Close each MCQ row one by one, or explicitly mark unavoidable physical/provider work as `EXTERNAL PENDING` with evidence. |
-| VALIDATION-001 | partial | Fixture, core, CLI, MCP, and embedded Clawix paths have coverage, but not every real UI/API/MCP path has been validated against a signed standalone host. | Re-run final smoke checks against both `Clawix embedded` and standalone `Claw.app` signed-host modes. |
+| VALIDATION-001 | partial | Fixture, core, CLI, MCP, embedded Clawix Mac Control state, and Clawix global inbox projection paths have coverage, but not every real UI/API/MCP path has been validated against a signed standalone host. | Re-run final smoke checks against both `Clawix embedded` and standalone `Claw.app` signed-host modes. |
 
 ## Required Validation Map
 
@@ -57,6 +57,7 @@ closure, except for commands explicitly marked `EXTERNAL PENDING`.
 | Area | Command or check |
 | --- | --- |
 | Goal verifier | `node scripts/verify-mac-control-plane-goal.mjs` |
+| Goal verifier with private source and Clawix checkout | `CLAW_MAC_CONTROL_SOURCE_SESSION=<source-jsonl> CLAWIX_MACOS_PATH=<clawix/macos> node scripts/verify-mac-control-plane-goal.mjs` |
 | Docs alignment | `node scripts/docs-alignment-check.mjs` |
 | Host permission contract guard | `node scripts/verify-host-permission-contract.mjs --self-test` and `node scripts/verify-host-permission-contract.mjs` |
 | Native permission broker guard | `node scripts/native_permission_broker_check.mjs` |

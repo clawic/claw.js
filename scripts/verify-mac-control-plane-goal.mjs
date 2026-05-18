@@ -241,11 +241,71 @@ function verifySourceSessionIfProvided() {
   if (freeFormAnswers.length !== 17) fail(`source session must contain 17 free-form or non-recommended answers, found ${freeFormAnswers.length}`);
 }
 
+function readExternalRequired(rootPath, relativePath, label) {
+  const fullPath = path.join(rootPath, relativePath);
+  if (!fs.existsSync(fullPath)) fail(`${label} is missing ${relativePath}`);
+  return fs.readFileSync(fullPath, "utf8");
+}
+
+function verifyClawixMacosIfProvided() {
+  const clawixMacos = process.env.CLAWIX_MACOS_PATH;
+  if (!clawixMacos) return;
+
+  const clawixMacosPath = path.resolve(clawixMacos);
+  if (!fs.existsSync(clawixMacosPath)) fail(`Clawix macOS path does not exist: ${clawixMacosPath}`);
+
+  const projector = readExternalRequired(
+    clawixMacosPath,
+    "Sources/Clawix/HostActions/MacControlGlobalInboxProjector.swift",
+    "Clawix macOS",
+  );
+  for (const snippet of [
+    "protocol MacControlGlobalInboxWriting",
+    "extension DatabaseManager: MacControlGlobalInboxWriting",
+    "enum MacControlGlobalInboxProjector",
+    "createRecord(collection: \"approvals\"",
+    "createRecord(collection: \"inbox_threads\"",
+    "createRecord(collection: \"inbox_messages\"",
+    "deleteRecord(collection: \"approvals\"",
+  ]) {
+    requireText("Clawix global inbox projector", projector, snippet);
+  }
+
+  const settingsPage = readExternalRequired(
+    clawixMacosPath,
+    "Sources/Clawix/HostActions/MacControlSettingsPage.swift",
+    "Clawix macOS",
+  );
+  for (const snippet of [
+    "projectPendingApprovalsToGlobalInbox",
+    "MacControlGlobalInboxProjector.project(approval, using: databaseManager)",
+    "center.markPendingApprovalProjected",
+  ]) {
+    requireText("Clawix Mac Control settings page", settingsPage, snippet);
+  }
+
+  const centerTests = readExternalRequired(
+    clawixMacosPath,
+    "Tests/ClawixMeshTests/MacControlCenterTests.swift",
+    "Clawix macOS",
+  );
+  for (const snippet of [
+    "testGlobalInboxProjectorCreatesApprovalThreadAndMessage",
+    "testGlobalInboxProjectorCleansUpApprovalWhenThreadCreationFails",
+    "RecordingGlobalInboxWriter",
+    "inbox_threads",
+    "inbox_messages",
+  ]) {
+    requireText("Clawix Mac Control center tests", centerTests, snippet);
+  }
+}
+
 function renderSafeCli(text) {
   return text.replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }
 
 verifySourceSessionIfProvided();
+verifyClawixMacosIfProvided();
 
 for (const doc of requiredDocs) readRequired(doc);
 
@@ -277,6 +337,9 @@ for (const snippet of [
   "Clawix embedded",
   "global inbox",
   "MacControlGlobalInboxProjector",
+  "testGlobalInboxProjectorCreatesApprovalThreadAndMessage",
+  "testGlobalInboxProjectorCleansUpApprovalWhenThreadCreationFails",
+  "CLAWIX_MACOS_PATH",
   "| MCQ-015 | implemented |",
   "Host permission contract guard",
   "node scripts/verify-host-permission-contract.mjs --self-test",
