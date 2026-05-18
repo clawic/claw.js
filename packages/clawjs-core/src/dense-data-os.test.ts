@@ -39,16 +39,47 @@ test("dense data OS exposes the agreed intent status model", () => {
 test("dense data OS records external pending requirements separately from bugs", () => {
   const requirements = clawDenseDataOsRegistry.externalPendingRequirements;
   assert.ok(requirements.length >= 5);
-  assert.ok(requirements.some((entry) => entry.systemId === "health" && entry.requirementType === "regulated_export"));
-  assert.ok(requirements.some((entry) => entry.systemId === "labs" && entry.requirementType === "physical_device"));
-  assert.ok(requirements.some((entry) => entry.systemId === "erp" && entry.requirementType === "cost_bearing"));
-  assert.ok(requirements.some((entry) => entry.systemId === "iot" && entry.requirementType === "physical_device"));
-  assert.ok(requirements.some((entry) => entry.systemId === "pharma" && entry.requirementType === "regulated_export"));
-  assert.ok(requirements.some((entry) => entry.systemId === "content" && entry.requirementType === "provider"));
+  for (const [systemId, requirementType] of [
+    ["health", "regulated_export"],
+    ["labs", "physical_device"],
+    ["legal", "regulated_export"],
+    ["finance", "regulated_export"],
+    ["education", "regulated_export"],
+    ["hr", "regulated_export"],
+    ["real_estate", "regulated_export"],
+    ["insurance", "regulated_export"],
+    ["compliance", "regulated_export"],
+    ["government", "regulated_export"],
+    ["banking", "cost_bearing"],
+    ["public_safety", "provider"],
+    ["erp", "cost_bearing"],
+    ["iot", "physical_device"],
+    ["pharma", "regulated_export"],
+    ["content", "provider"],
+  ]) {
+    assert.ok(
+      requirements.some((entry) => entry.systemId === systemId && entry.requirementType === requirementType),
+      `${systemId}/${requirementType} must stay external_pending`,
+    );
+  }
   for (const requirement of requirements) {
     assert.equal(requirement.status, "external_pending");
     assert.ok(requirement.reason.length > 0);
     assert.ok(requirement.validationNeeded.length > 0);
+  }
+});
+
+test("dense data OS keeps legally sensitive domains visible with external gates", () => {
+  for (const systemId of ["health", "legal", "finance", "education", "hr", "real_estate", "insurance", "compliance", "government"]) {
+    const system = findClawDenseDataSystem(systemId);
+    assert.equal(system?.visiblePack, true, `${systemId} must stay visible`);
+    assert.equal(system?.sensitivityDefault, "high", `${systemId} must default to high sensitivity`);
+    assert.ok(
+      clawDenseDataOsRegistry.externalPendingRequirements.some(
+        (entry) => entry.systemId === systemId && entry.requirementType === "regulated_export" && entry.status === "external_pending",
+      ),
+      `${systemId} must gate regulated execution/export separately from local data organization`,
+    );
   }
 });
 

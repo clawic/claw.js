@@ -13,8 +13,8 @@ public enum SystemTelemetry {
                 "title": .string("CPU + Memory"),
                 "placement": .string("menu_bar"),
                 "metric_keys": .array([
-                    .string("system.cpu.load_1m"),
-                    .string("system.memory.used_bytes"),
+                    .string("system.cpu.load1"),
+                    .string("system.memory.used"),
                 ]),
                 "render_mode": .string("compact"),
                 "refresh_interval_ms": .integer(2000),
@@ -25,9 +25,9 @@ public enum SystemTelemetry {
                 "title": .string("Disk + Network"),
                 "placement": .string("menu_bar"),
                 "metric_keys": .array([
-                    .string("system.disk.root.free_bytes"),
-                    .string("system.network.primary.bytes_in_per_sec"),
-                    .string("system.network.primary.bytes_out_per_sec"),
+                    .string("system.disk.free"),
+                    .string("system.network.bytes_in"),
+                    .string("system.network.bytes_out"),
                 ]),
                 "render_mode": .string("compact"),
                 "refresh_interval_ms": .integer(3000),
@@ -59,7 +59,7 @@ public enum SystemTelemetry {
             .object([
                 "id": .string("system.disk.root.free.low"),
                 "title": .string("Low root disk space"),
-                "metric_key": .string("system.disk.root.free_bytes"),
+                "metric_key": .string("system.disk.free"),
                 "operator": .string("<"),
                 "threshold": .integer(20 * 1024 * 1024 * 1024),
                 "severity": .string("warning"),
@@ -123,21 +123,21 @@ public enum SystemTelemetry {
 
         let load = currentLoadAverage()
         samples.append(sample(
-            key: "system.cpu.load_1m",
+            key: "system.cpu.load1",
             value: load.oneMinute,
             unit: "load",
             timestamp: timestamp,
             confidence: "observed"
         ))
         samples.append(sample(
-            key: "system.cpu.load_5m",
+            key: "system.cpu.load5",
             value: load.fiveMinute,
             unit: "load",
             timestamp: timestamp,
             confidence: "observed"
         ))
         samples.append(sample(
-            key: "system.cpu.load_15m",
+            key: "system.cpu.load15",
             value: load.fifteenMinute,
             unit: "load",
             timestamp: timestamp,
@@ -146,14 +146,14 @@ public enum SystemTelemetry {
 
         if let memory = currentMemoryStats() {
             samples.append(sample(
-                key: "system.memory.used_bytes",
+                key: "system.memory.used",
                 value: Double(memory.usedBytes),
                 unit: "bytes",
                 timestamp: timestamp,
                 confidence: "observed"
             ))
             samples.append(sample(
-                key: "system.memory.free_bytes",
+                key: "system.memory.free",
                 value: Double(memory.freeBytes),
                 unit: "bytes",
                 timestamp: timestamp,
@@ -170,14 +170,14 @@ public enum SystemTelemetry {
 
         if let disk = diskStats(path: "/") {
             samples.append(sample(
-                key: "system.disk.root.used_bytes",
+                key: "system.disk.used",
                 value: Double(disk.usedBytes),
                 unit: "bytes",
                 timestamp: timestamp,
                 confidence: "observed"
             ))
             samples.append(sample(
-                key: "system.disk.root.free_bytes",
+                key: "system.disk.free",
                 value: Double(disk.freeBytes),
                 unit: "bytes",
                 timestamp: timestamp,
@@ -186,7 +186,7 @@ public enum SystemTelemetry {
         }
 
         samples.append(sample(
-            key: "system.power.uptime_seconds",
+            key: "system.power.uptime",
             value: ProcessInfo.processInfo.systemUptime,
             unit: "seconds",
             timestamp: timestamp,
@@ -312,31 +312,31 @@ private struct MetricDefinition: Sendable {
 }
 
 private let metricDefinitions: [MetricDefinition] = [
-    .init(key: "system.cpu.load_1m", family: "cpu", label: "CPU load 1m", unit: "load", sampleSupport: "snapshot_history", availability: "available", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: ""),
-    .init(key: "system.cpu.load_5m", family: "cpu", label: "CPU load 5m", unit: "load", sampleSupport: "snapshot_history", availability: "available", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: ""),
-    .init(key: "system.cpu.load_15m", family: "cpu", label: "CPU load 15m", unit: "load", sampleSupport: "snapshot_history", availability: "available", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: ""),
+    .init(key: "system.cpu.load1", family: "cpu", label: "CPU load 1m", unit: "load", sampleSupport: "snapshot_history", availability: "available", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: ""),
+    .init(key: "system.cpu.load5", family: "cpu", label: "CPU load 5m", unit: "load", sampleSupport: "snapshot_history", availability: "available", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: ""),
+    .init(key: "system.cpu.load15", family: "cpu", label: "CPU load 15m", unit: "load", sampleSupport: "snapshot_history", availability: "available", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: ""),
     .init(key: "system.cpu.frequency_hz", family: "cpu", label: "CPU frequency", unit: "hertz", sampleSupport: "snapshot_history", availability: "host_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: "Requires signed host broker or platform-specific provider."),
     .init(key: "system.gpu.utilization", family: "gpu", label: "GPU utilization", unit: "percent", sampleSupport: "snapshot_history", availability: "host_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: "Requires graphics provider integration."),
     .init(key: "system.gpu.memory_used_bytes", family: "gpu", label: "GPU memory used", unit: "bytes", sampleSupport: "snapshot_history", availability: "host_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: "Requires graphics provider integration."),
-    .init(key: "system.memory.used_bytes", family: "memory", label: "Memory used", unit: "bytes", sampleSupport: "snapshot_history", availability: "available", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: ""),
-    .init(key: "system.memory.free_bytes", family: "memory", label: "Memory free", unit: "bytes", sampleSupport: "snapshot_history", availability: "available", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: ""),
+    .init(key: "system.memory.used", family: "memory", label: "Memory used", unit: "bytes", sampleSupport: "snapshot_history", availability: "available", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: ""),
+    .init(key: "system.memory.free", family: "memory", label: "Memory free", unit: "bytes", sampleSupport: "snapshot_history", availability: "available", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: ""),
     .init(key: "system.memory.pressure", family: "memory", label: "Memory pressure", unit: "state", sampleSupport: "snapshot_history", availability: "available", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: ""),
-    .init(key: "system.disk.root.used_bytes", family: "disk", label: "Root disk used", unit: "bytes", sampleSupport: "snapshot_history", availability: "available", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: ""),
-    .init(key: "system.disk.root.free_bytes", family: "disk", label: "Root disk free", unit: "bytes", sampleSupport: "snapshot_history", availability: "available", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: ""),
-    .init(key: "system.disk.io.read_bytes_per_sec", family: "disk", label: "Disk read throughput", unit: "bytes_per_second", sampleSupport: "snapshot_history", availability: "host_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: "Requires disk I/O provider integration."),
-    .init(key: "system.disk.io.write_bytes_per_sec", family: "disk", label: "Disk write throughput", unit: "bytes_per_second", sampleSupport: "snapshot_history", availability: "host_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: "Requires disk I/O provider integration."),
-    .init(key: "system.network.primary.bytes_in_per_sec", family: "network", label: "Network in", unit: "bytes_per_second", sampleSupport: "snapshot_history", availability: "host_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: "Requires network interface sampler."),
-    .init(key: "system.network.primary.bytes_out_per_sec", family: "network", label: "Network out", unit: "bytes_per_second", sampleSupport: "snapshot_history", availability: "host_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: "Requires network interface sampler."),
+    .init(key: "system.disk.used", family: "disk", label: "Root disk used", unit: "bytes", sampleSupport: "snapshot_history", availability: "available", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: ""),
+    .init(key: "system.disk.free", family: "disk", label: "Root disk free", unit: "bytes", sampleSupport: "snapshot_history", availability: "available", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: ""),
+    .init(key: "system.disk.io_read", family: "disk", label: "Disk read throughput", unit: "bytes_per_second", sampleSupport: "snapshot_history", availability: "host_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: "Requires disk I/O provider integration."),
+    .init(key: "system.disk.io_write", family: "disk", label: "Disk write throughput", unit: "bytes_per_second", sampleSupport: "snapshot_history", availability: "host_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: "Requires disk I/O provider integration."),
+    .init(key: "system.network.bytes_in", family: "network", label: "Network in", unit: "bytes_per_second", sampleSupport: "snapshot_history", availability: "host_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: "Requires network interface sampler."),
+    .init(key: "system.network.bytes_out", family: "network", label: "Network out", unit: "bytes_per_second", sampleSupport: "snapshot_history", availability: "host_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: "Requires network interface sampler."),
     .init(key: "system.network.public_ip", family: "network", label: "Public IP", unit: "string", sampleSupport: "snapshot", availability: "provider_required", privacyTier: "sensitive", agentAccess: "restricted", retention: "latest_only", unavailableReason: "Requires explicit external network lookup."),
     .init(key: "system.sensor.temperature", family: "sensor", label: "Temperature", unit: "celsius", sampleSupport: "snapshot_history", availability: "host_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: "Requires signed hardware sensor provider."),
-    .init(key: "system.sensor.fan_speed_rpm", family: "sensor", label: "Fan speed", unit: "rpm", sampleSupport: "snapshot_history", availability: "host_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: "Requires signed hardware sensor provider."),
-    .init(key: "system.power.uptime_seconds", family: "power", label: "Uptime", unit: "seconds", sampleSupport: "snapshot_history", availability: "available", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: ""),
-    .init(key: "system.power.battery_percent", family: "power", label: "Battery", unit: "percent", sampleSupport: "snapshot_history", availability: "host_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: "Requires power source provider."),
+    .init(key: "system.sensor.fan_speed", family: "sensor", label: "Fan speed", unit: "rpm", sampleSupport: "snapshot_history", availability: "host_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: "Requires signed hardware sensor provider."),
+    .init(key: "system.power.uptime", family: "power", label: "Uptime", unit: "seconds", sampleSupport: "snapshot_history", availability: "available", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: ""),
+    .init(key: "system.power.battery", family: "power", label: "Battery", unit: "percent", sampleSupport: "snapshot_history", availability: "host_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: "Requires power source provider."),
     .init(key: "system.process.count", family: "process", label: "Process count", unit: "count", sampleSupport: "snapshot_history", availability: "host_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: "Requires process provider."),
-    .init(key: "system.display.brightness_percent", family: "display", label: "Display brightness", unit: "percent", sampleSupport: "snapshot_history", availability: "permission_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "latest_only", unavailableReason: "Requires display provider and local permission policy."),
-    .init(key: "system.audio.output_volume_percent", family: "audio", label: "Output volume", unit: "percent", sampleSupport: "snapshot_history", availability: "permission_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "latest_only", unavailableReason: "Requires audio provider and local permission policy."),
+    .init(key: "system.display.brightness", family: "display", label: "Display brightness", unit: "percent", sampleSupport: "snapshot_history", availability: "permission_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "latest_only", unavailableReason: "Requires display provider and local permission policy."),
+    .init(key: "system.audio.output_volume", family: "audio", label: "Output volume", unit: "percent", sampleSupport: "snapshot_history", availability: "permission_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "latest_only", unavailableReason: "Requires audio provider and local permission policy."),
     .init(key: "system.peripheral.connected_count", family: "peripheral", label: "Connected peripherals", unit: "count", sampleSupport: "snapshot_history", availability: "host_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: "Requires I/O registry provider."),
-    .init(key: "system.focus.active_mode", family: "focus", label: "Focus mode", unit: "string", sampleSupport: "snapshot", availability: "provider_required", privacyTier: "personal", agentAccess: "restricted", retention: "latest_only", unavailableReason: "Requires user-context provider."),
-    .init(key: "system.calendar.next_event_minutes", family: "calendar_time", label: "Next event", unit: "minutes", sampleSupport: "snapshot_history", availability: "permission_required", privacyTier: "personal", agentAccess: "restricted", retention: "latest_only", unavailableReason: "Requires calendar permission and user-context provider."),
-    .init(key: "system.weather.temperature", family: "weather_context", label: "Weather temperature", unit: "celsius", sampleSupport: "snapshot_history", availability: "provider_required", privacyTier: "contextual", agentAccess: "safe_read", retention: "timeseries", unavailableReason: "Requires configured weather provider."),
+    .init(key: "system.focus.mode", family: "focus", label: "Focus mode", unit: "string", sampleSupport: "snapshot", availability: "provider_required", privacyTier: "personal", agentAccess: "restricted", retention: "latest_only", unavailableReason: "Requires user-context provider."),
+    .init(key: "system.calendar.next_event_delta", family: "calendar_time", label: "Next event", unit: "minutes", sampleSupport: "snapshot_history", availability: "permission_required", privacyTier: "personal", agentAccess: "restricted", retention: "latest_only", unavailableReason: "Requires calendar permission and user-context provider."),
+    .init(key: "context.weather.temperature", family: "weather_context", label: "Weather temperature", unit: "celsius", sampleSupport: "snapshot_history", availability: "provider_required", privacyTier: "contextual", agentAccess: "safe_read", retention: "timeseries", unavailableReason: "Requires configured weather provider."),
 ]

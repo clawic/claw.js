@@ -180,10 +180,10 @@ final class CommanderE2ETests: XCTestCase {
         XCTAssertEqual(snapshot.data?.objectValue?["policy"]?.objectValue?["default_agent_access"]?.stringValue, "safe_read")
         XCTAssertEqual(snapshot.data?.objectValue?["policy"]?.objectValue?["retention_owner"]?.stringValue, "monitor")
         XCTAssertTrue(snapshot.data?.objectValue?["samples"]?.arrayValue?.contains(where: {
-            $0.objectValue?["metric_key"]?.stringValue == "system.cpu.load_1m"
+            $0.objectValue?["metric_key"]?.stringValue == "system.cpu.load1"
         }) == true)
         XCTAssertTrue(snapshot.data?.objectValue?["samples"]?.arrayValue?.contains(where: {
-            $0.objectValue?["metric_key"]?.stringValue == "system.memory.used_bytes"
+            $0.objectValue?["metric_key"]?.stringValue == "system.memory.used"
         }) == true)
         XCTAssertTrue(snapshot.data?.objectValue?["unavailable_metrics"]?.arrayValue?.contains(where: {
             $0.objectValue?["metric_key"]?.stringValue == "system.sensor.temperature"
@@ -204,7 +204,7 @@ final class CommanderE2ETests: XCTestCase {
 
         let history = try context.runCLI([
             "system", "history", "list",
-            "--metric-key", "system.cpu.load_1m",
+            "--metric-key", "system.cpu.load1",
             "--range", "1h",
             "--json",
         ])
