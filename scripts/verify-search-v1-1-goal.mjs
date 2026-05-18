@@ -1215,6 +1215,8 @@ requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "source: \"provid
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "setting:provider_alpha");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "snippetDeleteRunItem?.operation");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "source: \"snippets.library\", operation: \"delete\", status: \"done\", indexed: 1");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "afterConnectionDelete");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "source: \"agents.catalog\", operation: \"delete\", status: \"done\", indexed: 1");
 requireSnippet("packages/clawjs/src/cli-search-docs-pages-source.ts", "createLocalTextEmbedding");
 requireSnippet("packages/clawjs/src/cli-search-docs-pages-source.ts", "LOCAL_TEXT_EMBEDDING_MODEL");
 

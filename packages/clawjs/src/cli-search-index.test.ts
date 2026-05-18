@@ -1982,6 +1982,14 @@ test("agent entity writes enqueue and index agent catalog fast paths without sec
     assert.equal(deleteJob?.payload.eventDriven, true);
     assert.equal(deleteJob?.payload.kind, "connection");
     assert.equal(deleteJob?.payload.id, "github.ops");
+    const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "agents.catalog", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(deleteRun.code, CLI_EXIT_OK, deleteRun.stderr || deleteRun.stdout);
+    const deleteRunItem = (JSON.parse(deleteRun.stdout) as any).data.worker?.items?.[0];
+    assert.deepEqual({ source: deleteRunItem?.source, operation: deleteRunItem?.operation, status: deleteRunItem?.status, indexed: deleteRunItem?.indexed }, { source: "agents.catalog", operation: "delete", status: "done", indexed: 1 });
+    const afterConnectionDelete = await runCliCapture(["search", "query", "GitHub Ops pulls", "--sources", "agents.catalog", "--filters", "metadata.kind=connection", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterConnectionDelete.code, CLI_EXIT_DEGRADED, afterConnectionDelete.stderr || afterConnectionDelete.stdout);
+    const afterConnectionDeletePayload = JSON.parse(afterConnectionDelete.stdout) as any;
+    assert.equal(afterConnectionDeletePayload.data.results.some((entry) => entry.type === "connection" && entry.title === "GitHub Ops"), false);
   });
 });
 
