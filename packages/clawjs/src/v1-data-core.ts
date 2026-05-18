@@ -276,6 +276,10 @@ export function ensureV1MainSchema(sqlite: Database.Database, env: NodeJS.Proces
   ensureColumn(sqlite, "agents", "role", "TEXT NOT NULL DEFAULT ''");
   ensureColumn(sqlite, "agents", "title", "TEXT");
   ensureColumn(sqlite, "agents", "description", "TEXT");
+  ensureColumn(sqlite, "agents", "steward_kind", "TEXT");
+  ensureColumn(sqlite, "agents", "steward_id", "TEXT");
+  ensureColumn(sqlite, "agents", "scope_type", "TEXT");
+  ensureColumn(sqlite, "agents", "scope_id", "TEXT");
   ensureColumn(sqlite, "agents", "owner_kind", "TEXT");
   ensureColumn(sqlite, "agents", "owner_id", "TEXT");
   ensureColumn(sqlite, "agents", "workspace_id", "TEXT");
@@ -295,11 +299,18 @@ export function ensureV1MainSchema(sqlite: Database.Database, env: NodeJS.Proces
   ensureColumn(sqlite, "agent_incidents", "detected_at", "TEXT");
   ensureColumn(sqlite, "agent_sessions", "company_id", "TEXT");
   ensureColumn(sqlite, "agent_sessions", "initiator_actor_id", "TEXT");
+  ensureColumn(sqlite, "agent_sessions", "workspace_id", "TEXT");
+  ensureColumn(sqlite, "agent_sessions", "project_id", "TEXT");
+  ensureColumn(sqlite, "agent_sessions", "scope_type", "TEXT");
+  ensureColumn(sqlite, "agent_sessions", "scope_id", "TEXT");
   ensureColumn(sqlite, "agent_sessions", "linked_issue_id", "TEXT");
   ensureColumn(sqlite, "agent_sessions", "linked_task_id", "TEXT");
   ensureColumn(sqlite, "agent_sessions", "source_json", "TEXT NOT NULL DEFAULT '{}'");
   ensureColumn(sqlite, "agent_sessions", "links_json", "TEXT NOT NULL DEFAULT '{}'");
   sqlite.prepare("CREATE INDEX IF NOT EXISTS agent_sessions_company_idx ON agent_sessions(company_id)").run();
+  sqlite.prepare("CREATE INDEX IF NOT EXISTS agent_sessions_workspace_idx ON agent_sessions(workspace_id)").run();
+  sqlite.prepare("CREATE INDEX IF NOT EXISTS agent_sessions_project_idx ON agent_sessions(project_id)").run();
+  sqlite.prepare("CREATE INDEX IF NOT EXISTS agent_sessions_scope_idx ON agent_sessions(scope_type, scope_id)").run();
   sqlite.prepare("CREATE INDEX IF NOT EXISTS agent_sessions_status_idx ON agent_sessions(status)").run();
   ensureColumn(sqlite, "agent_blueprints", "skill_refs_json", "TEXT NOT NULL DEFAULT '[]'");
   ensureColumn(sqlite, "agent_blueprints", "skill_bindings_json", "TEXT NOT NULL DEFAULT '[]'");
@@ -319,6 +330,10 @@ function migrateAgentSessionsPreSchema(sqlite: Database.Database): void {
   const table = sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'agent_sessions'").get() as { name: string } | undefined;
   if (!table) return;
   ensureColumn(sqlite, "agent_sessions", "company_id", "TEXT");
+  ensureColumn(sqlite, "agent_sessions", "workspace_id", "TEXT");
+  ensureColumn(sqlite, "agent_sessions", "project_id", "TEXT");
+  ensureColumn(sqlite, "agent_sessions", "scope_type", "TEXT");
+  ensureColumn(sqlite, "agent_sessions", "scope_id", "TEXT");
 }
 
 function migrateAgentIncidentsV1Schema(sqlite: Database.Database): void {

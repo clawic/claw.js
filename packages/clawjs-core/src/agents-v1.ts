@@ -810,7 +810,7 @@ export interface AgentPaperclipImportInput {
     skills?: AgentSkillBinding[];
     metadata?: Record<string, unknown>;
   };
-  defaultOwnerId?: string;
+  defaultStewardId?: string;
   importedAt?: string;
   redaction?: "default" | "strict" | "custom";
 }
@@ -2195,7 +2195,7 @@ export function createAgentPaperclipImportPlan(input: AgentPaperclipImportInput)
     template: {
       sourceFormat: "paperclip",
       packageId,
-      ownerId: input.defaultOwnerId,
+      stewardId: input.defaultStewardId,
       role: agent.role,
       instructions: agent.instructions,
       metadata: input.package?.metadata,
@@ -2855,7 +2855,10 @@ function pickAgentSurfaceFields(agent: Record<string, unknown>, redaction: "defa
     "role",
     "agencyMode",
     "status",
-    "ownerId",
+    "stewardId",
+    "stewardKind",
+    "scopeType",
+    "scopeId",
     "teamId",
     "workspaceId",
     "version",

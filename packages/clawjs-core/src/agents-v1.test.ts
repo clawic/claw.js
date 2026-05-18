@@ -39,7 +39,8 @@ import {
   type AgentAssignmentRoute,
   type AgentResourceGrant,
 } from "./agents-v1.ts";
-import { AGENT_INCIDENTS } from "./builtins/agents/agent_v1_collections.ts";
+import { AGENTS, AGENT_INCIDENTS } from "./builtins/agents/agent_v1_collections.ts";
+import { AGENT_SESSIONS } from "./builtins/agents/agent_sessions.ts";
 
 const request: AgentAccessRequest = {
   resourceType: "contact",
@@ -831,6 +832,13 @@ test("Agents V1 storage audit verifies canonical subentities, JSON policy, and l
   assert.equal(ready.ready, true);
   assert.equal(ready.canonicalCollections.includes("agents"), true);
   assert.equal(ready.canonicalCollections.includes("agent_sessions"), true);
+  assert.equal(AGENTS.fields.some((field) => field.name === "stewardId"), true);
+  assert.equal(AGENTS.fields.some((field) => field.name === "scopeType"), true);
+  assert.equal(AGENTS.fields.some((field) => field.name === ["owner", "Id"].join("")), false);
+  assert.equal(AGENTS.indexes.some((index) => index.name === "agents_steward_idx"), true);
+  assert.equal(AGENT_SESSIONS.fields.some((field) => field.name === "workspaceId"), true);
+  assert.equal(AGENT_SESSIONS.fields.some((field) => field.name === "projectId"), true);
+  assert.equal(AGENT_SESSIONS.indexes.some((index) => index.name === "agent_sess_scope_idx"), true);
   assert.deepEqual(ready.missingCollections, []);
   assert.deepEqual(ready.unexpectedJsonFields, []);
   assert.equal(ready.audit.kind, "storage_audit");
@@ -1086,7 +1094,7 @@ test("Agents V1 imports Paperclip-style agent packages as Claw blueprints withou
   const plan = createAgentPaperclipImportPlan({
     packageId: "paperclip.support",
     importedAt: "2026-05-17T11:00:00.000Z",
-    defaultOwnerId: "company_1",
+    defaultStewardId: "company_1",
     agentsMd: [
       "# Support Lead",
       "Role: support",
