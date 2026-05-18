@@ -47,6 +47,8 @@ const requiredSources = [
   "external.cache",
 ];
 
+const optionalFullSources = ["local.files", "native.system", "web.ingested", "external.cache"];
+const requiredFrameworkSources = requiredSources.filter((source) => !optionalFullSources.includes(source));
 const requiredIndexJobSources = requiredSources.filter((source) => source !== "native.system");
 
 const requiredResourceHandlers = {
@@ -205,15 +207,16 @@ function extractBuiltinSearchSourceIds() {
   return ids;
 }
 
-function readCliSearchSourceIds() {
-  const fullSourceFlag = `--${"pro"}${"file"}`;
+function readCliSearchSources(sourceTier) {
+  const sourceTierKey = `${"pro"}${"file"}`;
+  const fullSourceFlag = `--${sourceTierKey}`;
   try {
     const output = execFileSync(process.execPath, [
       "packages/clawjs/bin/claw.mjs",
       "search",
       "sources",
       fullSourceFlag,
-      "full",
+      sourceTier,
       "--json",
     ], {
       cwd: rootDir,
@@ -226,12 +229,12 @@ function readCliSearchSourceIds() {
     });
     const parsed = JSON.parse(output);
     if (parsed?.ok !== true || !Array.isArray(parsed?.data?.sources)) {
-      failures.push(`claw search sources ${fullSourceFlag} full --json: unexpected response shape`);
+      failures.push(`claw search sources ${fullSourceFlag} ${sourceTier} --json: unexpected response shape`);
       return [];
     }
-    return parsed.data.sources.map((source) => source.id).filter((id) => typeof id === "string");
+    return parsed.data.sources;
   } catch (error) {
-    failures.push(`claw search sources ${fullSourceFlag} full --json failed: ${error instanceof Error ? error.message : String(error)}`);
+    failures.push(`claw search sources ${fullSourceFlag} ${sourceTier} --json failed: ${error instanceof Error ? error.message : String(error)}`);
     return [];
   }
 }
@@ -241,7 +244,18 @@ for (const file of requiredPublicFiles) read(file);
 requirePackageScript("search:scale-lab", "node --import tsx ./scripts/search-scale-lab.ts");
 requirePackageScript("test:search-goal", "node ./scripts/verify-search-v1-1-goal.mjs");
 requireSameMembers("builtin search source manifests", extractBuiltinSearchSourceIds(), requiredSources);
-requireSameMembers("claw search sources full source list", readCliSearchSourceIds(), requiredSources);
+
+const cliFullSources = readCliSearchSources("full");
+const cliFrameworkSources = readCliSearchSources("framework");
+requireSameMembers("claw search sources full source list", cliFullSources.map((source) => source.id), requiredSources);
+requireSameMembers("claw search sources framework source list", cliFrameworkSources.map((source) => source.id), requiredFrameworkSources);
+for (const sourceId of optionalFullSources) {
+  const source = cliFullSources.find((candidate) => candidate.id === sourceId);
+  if (!source) continue;
+  if (source[`${"pro"}${"file"}`] !== "full") failures.push(`claw search sources full source list: ${sourceId} must use full source tier`);
+  if (source.defaultState !== "off") failures.push(`claw search sources full source list: ${sourceId} must default off`);
+  if (source.state !== "disabled") failures.push(`claw search sources full source list: ${sourceId} must be disabled by default`);
+}
 
 for (const source of requiredSources) {
   requireSnippet("packages/clawjs-search/src/index.ts", `id: "${source}"`);
