@@ -3,12 +3,28 @@ import { z } from "zod";
 export const clawProjectTypeSchema = z.enum(["app", "agent", "server", "workspace", "skill", "plugin", "project"]);
 export const clawProjectAttachmentStateSchema = z.enum(["attached", "detached"]);
 export const clawProjectFolderRoleSchema = z.enum(["primary", "reference"]);
+export const clawProjectFolderReadAccessSchema = z.enum(["explicit"]);
+export const clawProjectFolderWriteAccessSchema = z.enum(["none", "grant_required"]);
+export const clawProjectFolderSyncModeSchema = z.enum(["manifest_explicit"]);
+
+export const clawProjectFolderAccessPolicySchema = z.object({
+  read: clawProjectFolderReadAccessSchema.default("explicit"),
+  write: clawProjectFolderWriteAccessSchema.default("grant_required"),
+  reason: z.string().min(1).optional(),
+}).default({ read: "explicit", write: "grant_required" });
+
+export const clawProjectFolderSyncPolicySchema = z.object({
+  include: z.boolean().default(false),
+  mode: clawProjectFolderSyncModeSchema.optional(),
+}).default({ include: false });
 
 export const clawProjectFolderRefSchema = z.object({
   id: z.string().min(1),
   path: z.string().min(1),
   role: clawProjectFolderRoleSchema.default("reference"),
   label: z.string().min(1).optional(),
+  access: clawProjectFolderAccessPolicySchema,
+  sync: clawProjectFolderSyncPolicySchema,
 });
 
 function isAbsoluteOrWorkspacePrivatePath(value: string): boolean {
@@ -88,6 +104,43 @@ export const clawProjectManifestSchema = z.object({
       message: "Project manifests must use relative paths and must not point at Workspace .claw state.",
     });
   }
+  if (manifest.primaryFolder.role !== "primary") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["primaryFolder", "role"],
+      message: "The project primary folder must use role \"primary\".",
+    });
+  }
+  if (manifest.primaryFolder.sync.include && manifest.primaryFolder.sync.mode !== "manifest_explicit") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["primaryFolder", "sync", "mode"],
+      message: "Folders included in sync must opt in with manifest_explicit mode.",
+    });
+  }
+  manifest.folderRefs.forEach((folder, index) => {
+    if (folder.role !== "reference") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["folderRefs", index, "role"],
+        message: "Referenced folders must use role \"reference\".",
+      });
+    }
+    if (folder.access.read !== "explicit") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["folderRefs", index, "access", "read"],
+        message: "Referenced folders require explicit read access.",
+      });
+    }
+    if (folder.sync.include && folder.sync.mode !== "manifest_explicit") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["folderRefs", index, "sync", "mode"],
+        message: "Referenced folders included in sync must opt in with manifest_explicit mode.",
+      });
+    }
+  });
 });
 
 export type ClawProjectManifest = z.infer<typeof clawProjectManifestSchema>;

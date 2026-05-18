@@ -47,6 +47,11 @@ detached/attached state, and a workspace binding by workspace id only. It does
 not contain secrets, sensitive memory, authority grants, local absolute
 private paths beyond the folder locator, or full workspace state.
 
+Referenced folders are locators plus policy, not authority. Each referenced
+folder requires explicit read access, write access requires a separate grant,
+and referenced folder contents are excluded from sync/share unless the
+manifest opts in with an explicit sync policy.
+
 A Finder copy of a project folder is usable but incomplete. On a different
 workspace, the copy starts detached until the user attaches it. Duplicate
 project ids are handled as one active project plus a detached copy that needs an

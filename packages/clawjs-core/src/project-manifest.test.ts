@@ -61,3 +61,80 @@ test("project manifest rejects absolute paths and workspace .claw state", () => 
     primaryFolder: { id: "primary", path: "/tmp/demo", role: "primary" },
   }), /relative paths/);
 });
+
+test("project manifest normalizes referenced folder access and sync policy", () => {
+  const manifest = normalizeClawProjectManifest({
+    schemaVersion: 1,
+    manifestKind: "claw.project",
+    projectId: "demo",
+    name: "demo",
+    title: "Demo",
+    folderRefs: [{
+      id: "design",
+      path: "../design",
+      role: "reference",
+    }],
+  }, "fallback", "2026-05-18T00:00:00.000Z");
+
+  assert.deepEqual(manifest.folderRefs[0]?.access, {
+    read: "explicit",
+    write: "grant_required",
+  });
+  assert.deepEqual(manifest.folderRefs[0]?.sync, {
+    include: false,
+  });
+});
+
+test("project manifest requires referenced folders to opt in before sync inclusion", () => {
+  assert.throws(() => clawProjectManifestSchema.parse({
+    schemaVersion: 1,
+    manifestKind: "claw.project",
+    projectId: "demo",
+    name: "demo",
+    title: "Demo",
+    folderRefs: [{
+      id: "design",
+      path: "../design",
+      role: "reference",
+      sync: { include: true },
+    }],
+  }), /manifest_explicit/);
+
+  const manifest = clawProjectManifestSchema.parse({
+    schemaVersion: 1,
+    manifestKind: "claw.project",
+    projectId: "demo",
+    name: "demo",
+    title: "Demo",
+    folderRefs: [{
+      id: "design",
+      path: "../design",
+      role: "reference",
+      sync: { include: true, mode: "manifest_explicit" },
+    }],
+  });
+  assert.deepEqual(manifest.folderRefs[0]?.sync, {
+    include: true,
+    mode: "manifest_explicit",
+  });
+});
+
+test("project manifest keeps primary and referenced folder roles distinct", () => {
+  assert.throws(() => clawProjectManifestSchema.parse({
+    schemaVersion: 1,
+    manifestKind: "claw.project",
+    projectId: "demo",
+    name: "demo",
+    title: "Demo",
+    primaryFolder: { id: "primary", path: ".", role: "reference" },
+  }), /primary folder/);
+
+  assert.throws(() => clawProjectManifestSchema.parse({
+    schemaVersion: 1,
+    manifestKind: "claw.project",
+    projectId: "demo",
+    name: "demo",
+    title: "Demo",
+    folderRefs: [{ id: "other-primary", path: "other", role: "primary" }],
+  }), /Referenced folders/);
+});

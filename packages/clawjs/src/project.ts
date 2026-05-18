@@ -24,6 +24,17 @@ interface ClawProjectResourceEntry {
   path: string;
 }
 
+interface ClawProjectFolderAccessPolicy {
+  read?: "explicit";
+  write?: "none" | "grant_required";
+  reason?: string;
+}
+
+interface ClawProjectFolderSyncPolicy {
+  include?: boolean;
+  mode?: "manifest_explicit";
+}
+
 export interface ClawProjectConfig {
   schemaVersion: number;
   manifestKind?: "claw.project";
@@ -36,12 +47,16 @@ export interface ClawProjectConfig {
     path: string;
     role: "primary";
     label?: string;
+    access?: ClawProjectFolderAccessPolicy;
+    sync?: ClawProjectFolderSyncPolicy;
   };
   folderRefs?: Array<{
     id: string;
     path: string;
     role?: "reference";
     label?: string;
+    access?: ClawProjectFolderAccessPolicy;
+    sync?: ClawProjectFolderSyncPolicy;
   }>;
   workspaceBinding?: {
     workspaceId: string;
