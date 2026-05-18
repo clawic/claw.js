@@ -5,6 +5,11 @@ import type {
   Heartbeat,
   Incident,
   LocalInstanceSnapshot,
+  MetricQuality,
+  MetricRollup,
+  MetricSample,
+  MetricSource,
+  MetricValueType,
   Monitor,
   MonitorConfig as MonitorCheckConfig,
   MonitorGroup,
@@ -15,6 +20,23 @@ import type {
 
 function now(): number {
   return Date.now();
+}
+
+function splitMetricValue(value: number | string | boolean | null): {
+  valueType: MetricValueType;
+  valueNumber: number | null;
+  valueText: string | null;
+  valueBool: number | null;
+} {
+  if (typeof value === "number") return { valueType: "number", valueNumber: value, valueText: null, valueBool: null };
+  if (typeof value === "boolean") return { valueType: "boolean", valueNumber: null, valueText: null, valueBool: value ? 1 : 0 };
+  return { valueType: "string", valueNumber: null, valueText: value, valueBool: null };
+}
+
+function joinMetricValue(row: { value_type: string; value_number?: number | null; value_text?: string | null; value_bool?: number | null }): number | string | boolean | null {
+  if (row.value_type === "number") return row.value_number ?? null;
+  if (row.value_type === "boolean") return row.value_bool === null || row.value_bool === undefined ? null : row.value_bool === 1;
+  return row.value_text ?? null;
 }
 
 export class MonitorDatabase {
@@ -329,6 +351,186 @@ export class MonitorDatabase {
   }
 
   /* -------------------------------------------------------
+     Generic metric samples and rollups
+     ------------------------------------------------------- */
+
+  upsertMetricSource(input: {
+    id: string;
+    kind: MetricSource["kind"];
+    adapter: string;
+    hostId: string;
+    metadata?: Record<string, unknown>;
+  }): void {
+    const timestamp = now();
+    this.sqlite.prepare(`
+      INSERT INTO metric_sources (id, kind, adapter, host_id, metadata, created_at, last_seen_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        kind = excluded.kind,
+        adapter = excluded.adapter,
+        host_id = excluded.host_id,
+        metadata = excluded.metadata,
+        last_seen_at = excluded.last_seen_at
+    `).run(input.id, input.kind, input.adapter, input.hostId, JSON.stringify(input.metadata ?? {}), timestamp, timestamp);
+  }
+
+  appendMetricSample(input: {
+    sourceId: string;
+    metricKey: string;
+    value: number | string | boolean | null;
+    unit: string;
+    tags?: Record<string, string>;
+    quality?: MetricQuality;
+    capturedAt?: number;
+  }): void {
+    const value = splitMetricValue(input.value);
+    this.sqlite.prepare(`
+      INSERT INTO metric_samples (source_id, metric_key, value_type, value_number, value_text, value_bool, unit, tags, quality, captured_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      input.sourceId,
+      input.metricKey,
+      value.valueType,
+      value.valueNumber,
+      value.valueText,
+      value.valueBool,
+      input.unit,
+      JSON.stringify(input.tags ?? {}),
+      input.quality ?? "ok",
+      input.capturedAt ?? now(),
+    );
+  }
+
+  getMetricSamples(metricKey: string, input: { sinceMs?: number; limit?: number } = {}): MetricSample[] {
+    const limit = input.limit ?? 300;
+    const sinceMs = input.sinceMs ?? 0;
+    const rows = this.sqlite.prepare(`
+      SELECT * FROM metric_samples
+      WHERE metric_key = ? AND captured_at >= ?
+      ORDER BY captured_at DESC
+      LIMIT ?
+    `).all(metricKey, sinceMs, limit) as Array<{
+      id: number;
+      source_id: string;
+      metric_key: string;
+      value_type: string;
+      value_number: number | null;
+      value_text: string | null;
+      value_bool: number | null;
+      unit: string;
+      tags: string;
+      quality: string;
+      captured_at: number;
+    }>;
+    return rows.map((r) => ({
+      id: r.id,
+      sourceId: r.source_id,
+      metricKey: r.metric_key,
+      valueType: r.value_type as MetricValueType,
+      value: joinMetricValue(r),
+      unit: r.unit,
+      tags: JSON.parse(r.tags) as Record<string, string>,
+      quality: r.quality as MetricQuality,
+      capturedAt: r.captured_at,
+    })).reverse();
+  }
+
+  upsertMetricRollup(input: {
+    sourceId: string;
+    metricKey: string;
+    bucketMs: number;
+    bucketStartAt: number;
+    count: number;
+    minValue?: number | null;
+    maxValue?: number | null;
+    avgValue?: number | null;
+    lastValue: number | string | boolean | null;
+    unit: string;
+    tags?: Record<string, string>;
+  }): void {
+    const value = splitMetricValue(input.lastValue);
+    const tags = JSON.stringify(input.tags ?? {});
+    this.sqlite.prepare(`
+      INSERT INTO metric_rollups (
+        source_id, metric_key, bucket_ms, bucket_start_at, count,
+        min_value, max_value, avg_value,
+        last_value_type, last_value_number, last_value_text, last_value_bool,
+        unit, tags
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(source_id, metric_key, bucket_ms, bucket_start_at, tags) DO UPDATE SET
+        count = excluded.count,
+        min_value = excluded.min_value,
+        max_value = excluded.max_value,
+        avg_value = excluded.avg_value,
+        last_value_type = excluded.last_value_type,
+        last_value_number = excluded.last_value_number,
+        last_value_text = excluded.last_value_text,
+        last_value_bool = excluded.last_value_bool,
+        unit = excluded.unit
+    `).run(
+      input.sourceId,
+      input.metricKey,
+      input.bucketMs,
+      input.bucketStartAt,
+      input.count,
+      input.minValue ?? null,
+      input.maxValue ?? null,
+      input.avgValue ?? null,
+      value.valueType,
+      value.valueNumber,
+      value.valueText,
+      value.valueBool,
+      input.unit,
+      tags,
+    );
+  }
+
+  getMetricRollups(metricKey: string, input: { bucketMs: number; sinceMs?: number; limit?: number }): MetricRollup[] {
+    const rows = this.sqlite.prepare(`
+      SELECT * FROM metric_rollups
+      WHERE metric_key = ? AND bucket_ms = ? AND bucket_start_at >= ?
+      ORDER BY bucket_start_at DESC
+      LIMIT ?
+    `).all(metricKey, input.bucketMs, input.sinceMs ?? 0, input.limit ?? 300) as Array<{
+      id: number;
+      source_id: string;
+      metric_key: string;
+      bucket_ms: number;
+      bucket_start_at: number;
+      count: number;
+      min_value: number | null;
+      max_value: number | null;
+      avg_value: number | null;
+      last_value_type: string;
+      last_value_number: number | null;
+      last_value_text: string | null;
+      last_value_bool: number | null;
+      unit: string;
+      tags: string;
+    }>;
+    return rows.map((r) => ({
+      id: r.id,
+      sourceId: r.source_id,
+      metricKey: r.metric_key,
+      bucketMs: r.bucket_ms,
+      bucketStartAt: r.bucket_start_at,
+      count: r.count,
+      minValue: r.min_value,
+      maxValue: r.max_value,
+      avgValue: r.avg_value,
+      lastValue: joinMetricValue({
+        value_type: r.last_value_type,
+        value_number: r.last_value_number,
+        value_text: r.last_value_text,
+        value_bool: r.last_value_bool,
+      }),
+      unit: r.unit,
+      tags: JSON.parse(r.tags) as Record<string, string>,
+    })).reverse();
+  }
+
+  /* -------------------------------------------------------
      Aggregation
      ------------------------------------------------------- */
 
@@ -358,6 +560,8 @@ export class MonitorDatabase {
     const cutoff = now() - olderThanMs;
     const result = this.sqlite.prepare("DELETE FROM heartbeats WHERE created_at < ?").run(cutoff);
     this.sqlite.prepare("DELETE FROM incidents WHERE resolved_at IS NOT NULL AND resolved_at < ?").run(cutoff);
+    this.sqlite.prepare("DELETE FROM metric_samples WHERE captured_at < ?").run(cutoff);
+    this.sqlite.prepare("DELETE FROM metric_rollups WHERE bucket_start_at < ?").run(cutoff);
     return result.changes;
   }
 }

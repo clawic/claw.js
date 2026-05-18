@@ -5,6 +5,8 @@
 export type MonitorStatus = "up" | "down" | "degraded" | "pending";
 export type MonitorGroup = "infrastructure" | "agents" | "workspaces" | "usage" | "channels" | "instances";
 export type MonitorType = "http" | "connector" | "workspace" | "usage" | "channel" | "instance" | "gateway";
+export type MetricValueType = "number" | "string" | "boolean";
+export type MetricQuality = "ok" | "degraded" | "unsupported";
 
 export interface MonitorConfig {
   /** Relay base URL to check (for http type). */
@@ -42,6 +44,43 @@ export interface Heartbeat {
   responseTimeMs: number | null;
   detail: string | null;
   createdAt: number;
+}
+
+export interface MetricSource {
+  id: string;
+  kind: "system" | "provider" | "custom";
+  adapter: string;
+  hostId: string;
+  metadata: Record<string, unknown>;
+  createdAt: number;
+  lastSeenAt: number;
+}
+
+export interface MetricSample {
+  id: number;
+  sourceId: string;
+  metricKey: string;
+  valueType: MetricValueType;
+  value: number | string | boolean | null;
+  unit: string;
+  tags: Record<string, string>;
+  quality: MetricQuality;
+  capturedAt: number;
+}
+
+export interface MetricRollup {
+  id: number;
+  sourceId: string;
+  metricKey: string;
+  bucketMs: number;
+  bucketStartAt: number;
+  count: number;
+  minValue: number | null;
+  maxValue: number | null;
+  avgValue: number | null;
+  lastValue: number | string | boolean | null;
+  unit: string;
+  tags: Record<string, string>;
 }
 
 export interface Incident {
