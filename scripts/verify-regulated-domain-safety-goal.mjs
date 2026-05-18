@@ -52,6 +52,7 @@ function assertNoBannedPublicClaims() {
     "DISCLAIMER.md",
     "SAFETY.md",
     "REGULATED_DOMAINS.md",
+    "EULA.md",
     "SECURITY.md",
     "RELEASING.md",
   ];
@@ -170,12 +171,21 @@ for (const [relativePath, snippets] of [
     "Covered domains",
     "health",
   ]],
+  ["EULA.md", [
+    "official apps and binaries",
+    "renewed acceptance",
+    "not directed to users under 18",
+    "Spain and applicable European Union law",
+    "not professional",
+  ]],
   ["README.md", [
     "Terms",
     "Regulated domains",
+    "Official app and binary EULA",
   ]],
   ["RELEASING.md", [
     "TERMS.md",
+    "EULA.md",
     "compliance-ready claims",
   ]],
   ["CONSTITUTION.md", [

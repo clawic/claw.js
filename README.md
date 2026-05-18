@@ -138,6 +138,7 @@ npx @clawjs/cli@latest --help
 - [Disclaimer](DISCLAIMER.md)
 - [Safety](SAFETY.md)
 - [Regulated domains](REGULATED_DOMAINS.md)
+- [Official app and binary EULA](EULA.md)
 
 ## V1 Support Boundary
 

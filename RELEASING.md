@@ -33,7 +33,7 @@ For preview builds from `next`, run prereleases with the npm dist-tag `next` ins
 1. Run `npm ci`, `npm --prefix examples/demo ci`, and `npm --prefix website ci`.
 2. Run `npx playwright install --with-deps chromium`.
 3. Run `npm run ci`.
-4. Confirm [TERMS.md](TERMS.md), [PRIVACY.md](PRIVACY.md), [DISCLAIMER.md](DISCLAIMER.md), [SAFETY.md](SAFETY.md), [REGULATED_DOMAINS.md](REGULATED_DOMAINS.md), and `docs/regulated-domain-safety.md` are current.
+4. Confirm [TERMS.md](TERMS.md), [PRIVACY.md](PRIVACY.md), [DISCLAIMER.md](DISCLAIMER.md), [SAFETY.md](SAFETY.md), [REGULATED_DOMAINS.md](REGULATED_DOMAINS.md), [EULA.md](EULA.md), and `docs/regulated-domain-safety.md` are current.
 5. Confirm public README, package docs, CLI help, examples, demos, and website copy do not make unqualified autonomy, professional-advice, or compliance-ready claims.
 6. Run `npm run publish:dry-run`.
 7. Verify adapter support/stability metadata and docs support matrix are current.
