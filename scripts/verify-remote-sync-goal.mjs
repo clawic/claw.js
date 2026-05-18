@@ -6,6 +6,7 @@ import {
   buildRemoteConformanceReport,
   buildRemoteExternalPendingRegister,
   buildRemoteOfflineCommandResult,
+  buildRemoteProviderDeviceE2EValidationPlan,
   buildRemoteRouteContractCatalog,
   buildSyncPlan,
   buildSyncQueueEntries,
@@ -38,6 +39,7 @@ import {
   remoteCompatibilityAdapterReceiptSchema,
   remoteExternalPendingRegisterSchema,
   remoteGatewayAuditReceiptSchema,
+  remoteProviderDeviceE2EValidationPlanSchema,
   remoteRouteContractCatalogSchema,
   remoteSecretLeaseSchema,
   remoteSurfaceClassificationReceiptSchema,
@@ -206,15 +208,19 @@ for (const snippet of [sourceConversationId, sourcePlanId]) {
 }
 
 const sourceDecisionIds = extractTableIds(docTexts.get("docs/remote-gateway-sync-source-decision-audit.md") ?? "", "RQ");
+const sourceQaIds = extractTableIds(docTexts.get("docs/remote-gateway-sync-source-decision-audit.md") ?? "", "QA");
 const completionDecisionIds = extractTableIds(docTexts.get("docs/remote-gateway-sync-completion-audit.md") ?? "", "RQ");
 const matrixDecisionIds = extractTableIds(docTexts.get("docs/remote-gateway-sync-decision-matrix.md") ?? "", "RG");
 for (let index = 1; index <= remoteSyncRequiredDecisionIds.length; index += 1) {
   const sourceId = `RQ-${String(index).padStart(3, "0")}`;
+  const qaId = `QA-${String(index).padStart(3, "0")}`;
   const matrixId = `RG-${String(index).padStart(3, "0")}`;
   if (!sourceDecisionIds.has(sourceId)) fail(`source decision audit missing ${sourceId}`);
+  if (!sourceQaIds.has(qaId)) fail(`source Q/A review map missing ${qaId}`);
   if (!completionDecisionIds.has(sourceId)) fail(`remote gateway sync completion audit missing ${sourceId}`);
   if (!matrixDecisionIds.has(matrixId)) fail(`remote gateway sync decision matrix missing ${matrixId}`);
 }
+if (!sourceQaIds.has("QA-023")) fail("source Q/A review map missing QA-023 goal closure gate");
 
 for (const decisionId of remoteSyncRequiredDecisionIds) {
   requireText("source decision audit", docTexts.get("docs/remote-gateway-sync-source-decision-audit.md") ?? "", `\`${decisionId}\``);
@@ -222,16 +228,41 @@ for (const decisionId of remoteSyncRequiredDecisionIds) {
   requireText("decision matrix", docTexts.get("docs/remote-gateway-sync-decision-matrix.md") ?? "", `\`${decisionId}\``);
 }
 
+const sourceAudit = docTexts.get("docs/remote-gateway-sync-source-decision-audit.md") ?? "";
+for (const snippet of [
+  "Source Q/A Review Map",
+  "Separar capas (Recommended)",
+  "Doble modo (Recommended)",
+  "Todo clasificable (Recommended)",
+  "Adaptador principal (Recommended)",
+  "Misma API proyectada (Recommended)",
+  "Separar comando/sync (Recommended)",
+  "Autoridad unificada (Recommended)",
+  "Host completo (Recommended)",
+  "Detectar y elevar (Recommended)",
+  "Cache cifrada",
+  "Fail cerrado (Recommended)",
+  "Compat con adaptadores (Recommended)",
+  "Paridad total",
+  "Coordinator/Gateway/Connector/Sync (Recommended)",
+  "Multi-tenant gobernado (Recommended)",
+  "goal_closure_gate",
+]) {
+  requireText("source Q/A review map", sourceAudit, snippet);
+}
+
 const completionAudit = docTexts.get("docs/remote-gateway-sync-completion-audit.md") ?? "";
 for (const snippet of [
   "Closure state: `active_goal_not_complete`",
   "SOURCE-REREAD-001",
+  "reviewed_current",
   "PHYSICAL-001",
   "DOMAIN-PARITY-001",
   "RemoteExternalPendingRegister",
   "claw inspect remote",
   "claw remote pending",
   "claw remote contracts",
+  "same core contracts used by CLI inspection",
 ]) {
   requireText("completion audit", completionAudit, snippet);
 }
@@ -304,6 +335,30 @@ for (const requirementId of [
     fail(`remote external pending register must include ${requirementId}`);
   }
 }
+if (!externalPending.requirements.some((entry) => entry.requirementId === "provider_device_e2e" && entry.sourceReceipt === "RemoteProviderDeviceE2EValidationPlan")) {
+  fail("provider_device_e2e must be backed by RemoteProviderDeviceE2EValidationPlan");
+}
+
+const providerDeviceE2EPlan = buildRemoteProviderDeviceE2EValidationPlan({
+  createdAt: "2026-05-17T10:13:30.000Z",
+});
+if (!remoteProviderDeviceE2EValidationPlanSchema.safeParse(providerDeviceE2EPlan).success) {
+  fail("remote provider/device E2E validation plan must validate");
+}
+if (providerDeviceE2EPlan.status !== "external_pending") fail("provider/device E2E plan must remain external_pending until approved real validation runs");
+for (const domain of ["chat", "search", "sync", "secret_refs", "hosted_agents"]) {
+  if (!providerDeviceE2EPlan.requiredDomains.includes(domain)) fail(`provider/device E2E plan must include ${domain}`);
+}
+for (const routeId of ["remote.chatGateway", "remote.searchGateway", "remote.secretBrokeredOperation", "gateway.multiTenantAgentService"]) {
+  if (!providerDeviceE2EPlan.requiredRouteIds.includes(routeId)) fail(`provider/device E2E plan must include route ${routeId}`);
+}
+for (const requirementId of externalPending.requirements.map((entry) => entry.requirementId)) {
+  if (!providerDeviceE2EPlan.requiredExternalPendingIds.includes(requirementId)) fail(`provider/device E2E plan must include pending gate ${requirementId}`);
+}
+if (!providerDeviceE2EPlan.approvedPhysicalValidationRequired) fail("provider/device E2E plan must require approved physical validation");
+if (!providerDeviceE2EPlan.noPlaintextSecrets) fail("provider/device E2E plan must forbid plaintext secrets");
+if (!providerDeviceE2EPlan.hostedSelfHostedParityRequired) fail("provider/device E2E plan must require hosted/self-hosted parity");
+if (providerDeviceE2EPlan.writes !== false) fail("provider/device E2E plan must be no-write");
 
 const routeContracts = buildRemoteRouteContractCatalog({
   generatedAt: "2026-05-17T10:14:00.000Z",
@@ -335,6 +390,16 @@ for (const commandName of requiredCliCommands) {
 const remoteSyncRoutesSource = readRequired("relay/src/server/remote-sync-routes.ts");
 for (const route of requiredServiceApiRoutes) {
   requireText("remote sync service routes", remoteSyncRoutesSource, `clawApiPath("${route}")`);
+}
+const remoteSyncRoutesTestSource = readRequired("relay/src/server/remote-sync-routes.test.ts");
+for (const snippet of [
+  "buildRemoteExternalPendingRegister",
+  "buildRemoteRouteContractCatalog",
+  "remoteSyncRequiredRouteIds",
+  "expectedExternalPending.requirements.map",
+  "expectedRouteContracts.contracts.map",
+]) {
+  requireText("remote sync service route tests", remoteSyncRoutesTestSource, snippet);
 }
 
 const inspectCliSource = readRequired("packages/clawjs/src/inspect-cli.ts");

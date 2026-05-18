@@ -7,166 +7,25 @@
   "longLineWarning": 240,
   "longLineCritical": 1600,
   "files": {
-    "packages/clawjs/src/index.ts": {
-      "lines": 1999,
-      "reason": "Public CLI routing after delegated domain, temporal, productivity, and knowledge-tail command extraction; keep under 2000 by splitting new domains into modules."
-    },
-    "packages/clawjs/src/cli-search-command.ts": {
-      "lines": 7580,
-      "blockGrowth": true,
-      "reason": "Emergency search CLI debt after dense-source indexing and entrypoint contract expansion; immediate follow-up should extract source adapters, event refresh, and admin subcommands, and future growth is blocked except for extraction, deletion, or compatibility-preserving split work."
-    },
-    "packages/clawjs-node/src/create-claw.ts": {
-      "lines": 1964,
-      "reason": "Claw runtime assembly after extracting runtime/workspace, intent, capability, session, data/watch, content/IoT, media/session, generation/image, skill/provider, and channel helpers; keep under 2000 by splitting new public facades before expanding."
-    },
-    "packages/clawjs/src/index.test.ts": {
-      "lines": 1580,
-      "reason": "Remaining CLI smoke and integration test surface after scenario split; add new scenario files instead of expanding broadly."
-    },
-    "packages/clawjs/src/cli-search-index.test.ts": {
-      "lines": 2084,
-      "reason": "Search index integration coverage after protected refs, ACL, action, facet, and ranking scenarios; split new search scenarios into focused test files before expanding further."
-    },
-    "packages/clawjs/src/cli-discovery.test.ts": {
-      "lines": 2055,
-      "reason": "Broad CLI discovery integration coverage after dense-domain direct noun graduation; split new domain route scenarios into focused test files before expanding further."
-    },
-    "packages/clawjs/src/cli-dense-data-command.ts": {
-      "lines": 2876,
-      "reason": "Dense-data CLI router after first-wave timeline and nested route graduation through government/public-case routes; split materialized timeline builders and route mapping tables before adding more dense domains."
-    },
-    "packages/clawjs-search/src/store.ts": {
-      "lines": 2185,
-      "reason": "Search SQLite store after shard-scoped reset support; split source, shard, cache, and query persistence helpers before expanding further."
-    },
-    "examples/showcase/src/lib/i18n/messages.ts": {
-      "lines": 1267,
-      "reason": "English locale, locale registry, and brand override assembly after locale table extraction; add new translations in locale-specific modules."
-    },
-    "packages/clawjs-workspace/src/index.ts": {
-      "lines": 1977,
-      "reason": "Workspace runtime shell after indexing, human activity, context, work session, productivity, and instance assembly extraction; split new domains before expanding."
-    },
-    "examples/showcase/src/app/settings/page.tsx": {
-      "lines": 1996,
-      "reason": "Settings page shell after extracting persona, profile, advanced, OpenClaw, integrations, and tools tabs; route-level state/wiring only, split new tabs before expanding."
-    },
-    "relay/src/server/app.ts": {
-      "lines": 1674,
-      "reason": "Relay application assembly and remaining auth/service/admin/browser routes after helper, monitor, and workspace route extraction."
-    },
-    "packages/clawjs/src/v1-data.ts": {
-      "lines": 1738,
-      "reason": "V1 data CLI routing and command handlers after data helper extraction; keep persistence helpers in v1-data-core before expanding."
-    },
-    "packages/clawjs-core/src/types.ts": {
-      "lines": 1348,
-      "reason": "Canonical type surface after workspace, human, and library/rules type extraction; split new contract domains into focused type modules before expanding."
-    },
-    "packages/clawjs-core/src/surface-registry.ts": {
-      "lines": 1589,
-      "reason": "Stable surface registry after cross-surface enforcement expansion for routes, events, app/browser storage keys, report governance state, stable package/native/format surfaces, and registered DDL sources; split route families and compatibility categories into focused modules before expanding further."
-    },
-    "packages/clawjs-core/src/agents-v1.ts": {
-      "lines": 2225,
-      "reason": "Agents V1 runtime model after autonomy, supervisor, memory, budget, access, routing, and projection gates; split new policy families into focused modules before expanding further."
-    },
-    "packages/clawjs-node/src/create-claw.test.ts": {
-      "lines": 1994,
-      "reason": "Remaining Claw SDK integration tests after helper and Telegram scenario split; add new scenario files instead of expanding broadly."
-    },
-    "memory/src/service.ts": {
-      "lines": 1886,
-      "reason": "Memory service orchestration after note validation extraction; split persistence, indexing, and active memory helpers before expanding."
-    },
-    "relay/tests/e2e/relay.e2e.test.ts": {
-      "lines": 1416,
-      "reason": "Relay E2E scenarios after fake connector utility extraction; split new scenario groups into separate tests before expanding."
-    },
-    "packages/clawjs-core/src/schemas.ts": {
-      "lines": 1500,
-      "reason": "Canonical schema surface after workspace schema extraction; split new contract domains into focused schema modules before expanding."
-    },
-    "examples/showcase/src/app/page.tsx": {
-      "lines": 2299,
-      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
-    },
-    "packages/clawjs-node/src/code/index.ts": {
-      "lines": 1704,
-      "reason": "Code ledger and global index implementation after public type extraction; keep type contracts in code-types before expanding."
-    },
-    "relay/src/server/db.ts": {
-      "lines": 1982,
-      "reason": "Relay database persistence class after schema and helper extraction; keep schema/migrations/helpers outside the class before expanding."
-    },
-    "packages/clawjs-integrations/src/discord-operation-executor.ts": {
-      "lines": 1870,
-      "reason": "Discord request planner switch after value helper extraction; split operation families before expanding."
-    },
-    "examples/showcase/src/lib/e2e.ts": {
-      "lines": 1953,
-      "reason": "Showcase E2E fixture runtime after type extraction; keep fixture types and large seed groups separate before expanding."
-    },
-    "modules/erp/src/server/db.ts": {
-      "lines": 1950,
-      "reason": "ERP database store after SQL prefix/helper extraction; keep database helpers outside the store before expanding."
-    },
-    "examples/showcase/src/app/tasks/page.tsx": {
-      "lines": 2029,
-      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
-    },
-    "packages/clawjs-integrations/src/openapi-runtime.test.ts": {
-      "lines": 1850,
-      "reason": "Existing broad test coverage; split by scenario before expanding."
-    },
-    "scripts/verify-component-catalog.mjs": {
-      "lines": 1777,
-      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
-    },
-    "examples/showcase/src/components/onboarding.tsx": {
-      "lines": 1768,
-      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
-    },
-    "packages/clawjs-integrations/src/runtime-coverage.test.ts": {
-      "lines": 1767,
-      "reason": "Existing broad test coverage; split by scenario before expanding."
-    },
-    "packages/clawjs-integrations/src/stripe-operation-executor.test.ts": {
-      "lines": 1738,
-      "reason": "Existing broad test coverage; split by scenario before expanding."
-    },
-    "notify/src/server/db.ts": {
-      "lines": 1707,
-      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
-    },
-    "packages/clawjs-workspace/src/workspace-contracts.ts": {
-      "lines": 1628,
-      "reason": "Extracted public workspace contract surface; keep as capped exception and split by domain before expanding."
-    },
-    "relay/src/connector/runtime.ts": {
-      "lines": 1614,
-      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
-    },
-    "packages/clawjs-integrations/src/runtime-registry.ts": {
-      "lines": 1606,
-      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
-    },
     "apps/host/Tests/CommanderE2ETests/CommanderE2ETests.swift": {
       "lines": 1583,
       "reason": "Existing broad test coverage; split by scenario before expanding."
     },
-    "drive/src/server/db.ts": {
-      "lines": 1568,
+    "content/src/server/db.ts": {
+      "lines": 1419,
       "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
     },
     "database/public/app.js": {
       "lines": 1557,
       "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
     },
-    "packages/clawjs/src/slides.ts": {
-      "lines": 1486,
-      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+    "drive/src/server/db.ts": {
+      "lines": 1568,
+      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
+    },
+    "examples/showcase/src/app/api/chat/route.ts": {
+      "lines": 1311,
+      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
     },
     "examples/showcase/src/app/api/tasks/route.ts": {
       "lines": 1477,
@@ -176,49 +35,194 @@
       "lines": 1428,
       "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
     },
-    "content/src/server/db.ts": {
-      "lines": 1419,
+    "examples/showcase/src/app/page.tsx": {
+      "lines": 2299,
+      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
+    },
+    "examples/showcase/src/app/settings/page.tsx": {
+      "lines": 1996,
+      "reason": "Settings page shell after extracting persona, profile, advanced, OpenClaw, integrations, and tools tabs; route-level state/wiring only, split new tabs before expanding."
+    },
+    "examples/showcase/src/app/settings/settings-integrations-tab.tsx": {
+      "lines": 1308,
+      "reason": "Integrations settings tab extracted from settings page; keep provider-specific modal flows split out before expanding further."
+    },
+    "examples/showcase/src/app/tasks/page.tsx": {
+      "lines": 2029,
+      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
+    },
+    "examples/showcase/src/components/onboarding.tsx": {
+      "lines": 1768,
+      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
+    },
+    "examples/showcase/src/lib/e2e.ts": {
+      "lines": 1953,
+      "reason": "Showcase E2E fixture runtime after type extraction; keep fixture types and large seed groups separate before expanding."
+    },
+    "examples/showcase/src/lib/i18n/messages.ts": {
+      "lines": 1267,
+      "reason": "English locale, locale registry, and brand override assembly after locale table extraction; add new translations in locale-specific modules."
+    },
+    "memory/src/service.ts": {
+      "lines": 1886,
+      "reason": "Memory service orchestration after note validation extraction; split persistence, indexing, and active memory helpers before expanding."
+    },
+    "modules/erp/src/server/db.ts": {
+      "lines": 1950,
+      "reason": "ERP database store after SQL prefix/helper extraction; keep database helpers outside the store before expanding."
+    },
+    "notify/src/server/db.ts": {
+      "lines": 1707,
       "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
     },
-    "tests/e2e/telegram-codex-bridge.spec.ts": {
-      "lines": 1325,
+    "packages/clawjs-core/src/agents-v1.ts": {
+      "lines": 2225,
+      "reason": "Agents V1 runtime model after autonomy, supervisor, memory, budget, access, routing, and projection gates; split new policy families into focused modules before expanding further."
+    },
+    "packages/clawjs-core/src/remote-sync.ts": {
+      "lines": 2062,
+      "reason": "Remote Gateway/Sync contract schemas and builders after provider/device E2E validation plan expansion; split validation-plan and receipt families before adding more remote contract domains."
+    },
+    "packages/clawjs-core/src/schemas.ts": {
+      "lines": 1500,
+      "reason": "Canonical schema surface after workspace schema extraction; split new contract domains into focused schema modules before expanding."
+    },
+    "packages/clawjs-core/src/surface-registry.ts": {
+      "lines": 1589,
+      "reason": "Stable surface registry after cross-surface enforcement expansion for routes, events, app/browser storage keys, report governance state, stable package/native/format surfaces, and registered DDL sources; split route families and compatibility categories into focused modules before expanding further."
+    },
+    "packages/clawjs-core/src/types.ts": {
+      "lines": 1348,
+      "reason": "Canonical type surface after workspace, human, and library/rules type extraction; split new contract domains into focused type modules before expanding."
+    },
+    "packages/clawjs-integrations/src/discord-operation-executor.ts": {
+      "lines": 1870,
+      "reason": "Discord request planner switch after value helper extraction; split operation families before expanding."
+    },
+    "packages/clawjs-integrations/src/openapi-runtime.test.ts": {
+      "lines": 1850,
+      "reason": "Existing broad test coverage; split by scenario before expanding."
+    },
+    "packages/clawjs-integrations/src/runtime-coverage.test.ts": {
+      "lines": 1767,
+      "reason": "Existing broad test coverage; split by scenario before expanding."
+    },
+    "packages/clawjs-integrations/src/runtime-registry.ts": {
+      "lines": 1606,
+      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
+    },
+    "packages/clawjs-integrations/src/stripe-operation-executor.test.ts": {
+      "lines": 1738,
+      "reason": "Existing broad test coverage; split by scenario before expanding."
+    },
+    "packages/clawjs-node/src/code/index.ts": {
+      "lines": 1704,
+      "reason": "Code ledger and global index implementation after public type extraction; keep type contracts in code-types before expanding."
+    },
+    "packages/clawjs-node/src/create-claw.test.ts": {
+      "lines": 1994,
+      "reason": "Remaining Claw SDK integration tests after helper and Telegram scenario split; add new scenario files instead of expanding broadly."
+    },
+    "packages/clawjs-node/src/create-claw.ts": {
+      "lines": 1964,
+      "reason": "Claw runtime assembly after extracting runtime/workspace, intent, capability, session, data/watch, content/IoT, media/session, generation/image, skill/provider, and channel helpers; keep under 2000 by splitting new public facades before expanding."
+    },
+    "packages/clawjs-search/src/store.ts": {
+      "lines": 2185,
+      "reason": "Search SQLite store after shard-scoped reset support; split source, shard, cache, and query persistence helpers before expanding further."
+    },
+    "packages/clawjs-workspace/src/index.ts": {
+      "lines": 1977,
+      "reason": "Workspace runtime shell after indexing, human activity, context, work session, productivity, and instance assembly extraction; split new domains before expanding."
+    },
+    "packages/clawjs-workspace/src/workspace-contracts.ts": {
+      "lines": 1628,
+      "reason": "Extracted public workspace contract surface; keep as capped exception and split by domain before expanding."
+    },
+    "packages/clawjs-workspace/src/workspace-core-productivity-facades.ts": {
+      "lines": 1389,
+      "reason": "Core productivity facade extracted from workspace index; grouped by tightly coupled task/project/list APIs pending further domain splits."
+    },
+    "packages/clawjs/src/cli-dense-data-command.ts": {
+      "lines": 2876,
+      "reason": "Dense-data CLI router after first-wave timeline and nested route graduation through government/public-case routes; split materialized timeline builders and route mapping tables before adding more dense domains."
+    },
+    "packages/clawjs/src/cli-discovery.test.ts": {
+      "lines": 2055,
+      "reason": "Broad CLI discovery integration coverage after dense-domain direct noun graduation; split new domain route scenarios into focused test files before expanding further."
+    },
+    "packages/clawjs/src/cli-productivity-extended-command.ts": {
+      "lines": 1583,
+      "reason": "Extended productivity CLI groups extracted from the public CLI router; split by capability family before expanding."
+    },
+    "packages/clawjs/src/cli-search-command.ts": {
+      "lines": 7580,
+      "blockGrowth": true,
+      "reason": "Emergency search CLI debt after dense-source indexing and entrypoint contract expansion; immediate follow-up should extract source adapters, event refresh, and admin subcommands, and future growth is blocked except for extraction, deletion, or compatibility-preserving split work."
+    },
+    "packages/clawjs/src/cli-search-index.test.ts": {
+      "lines": 2084,
+      "reason": "Search index integration coverage after protected refs, ACL, action, facet, and ranking scenarios; split new search scenarios into focused test files before expanding further."
+    },
+    "packages/clawjs/src/index.test.ts": {
+      "lines": 1580,
+      "reason": "Remaining CLI smoke and integration test surface after scenario split; add new scenario files instead of expanding broadly."
+    },
+    "packages/clawjs/src/index.ts": {
+      "lines": 1999,
+      "reason": "Public CLI routing after delegated domain, temporal, productivity, and knowledge-tail command extraction; keep under 2000 by splitting new domains into modules."
+    },
+    "packages/clawjs/src/slides.ts": {
+      "lines": 1486,
       "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+    },
+    "packages/clawjs/src/v1-data-core.ts": {
+      "lines": 1587,
+      "reason": "V1 data maintenance, sidecar, page, search, MCP, and formatting helpers extracted from CLI routing; split by helper domain before expanding."
     },
     "packages/clawjs/src/v1-data-surface.ts": {
       "lines": 1315,
       "reason": "Extracted canonical v1 data schema and persistent surface contract; split tables, codecs, and fixtures before expanding."
     },
-    "examples/showcase/src/app/api/chat/route.ts": {
-      "lines": 1311,
-      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
+    "packages/clawjs/src/v1-data.ts": {
+      "lines": 1738,
+      "reason": "V1 data CLI routing and command handlers after data helper extraction; keep persistence helpers in v1-data-core before expanding."
+    },
+    "relay/src/connector/runtime.ts": {
+      "lines": 1614,
+      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
+    },
+    "relay/src/server/app.ts": {
+      "lines": 1674,
+      "reason": "Relay application assembly and remaining auth/service/admin/browser routes after helper, monitor, and workspace route extraction."
+    },
+    "relay/src/server/db.ts": {
+      "lines": 1982,
+      "reason": "Relay database persistence class after schema and helper extraction; keep schema/migrations/helpers outside the class before expanding."
+    },
+    "relay/src/server/workspace-routes.ts": {
+      "lines": 1815,
+      "reason": "Workspace, chat, document, content, image, and skill route registration extracted from relay app; split by route domain before expanding."
+    },
+    "relay/tests/e2e/relay.e2e.test.ts": {
+      "lines": 1416,
+      "reason": "Relay E2E scenarios after fake connector utility extraction; split new scenario groups into separate tests before expanding."
     },
     "scripts/extract-component-catalog.mjs": {
       "lines": 1233,
+      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+    },
+    "scripts/verify-component-catalog.mjs": {
+      "lines": 1777,
       "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
     },
     "secrets/src/server/app.ts": {
       "lines": 1264,
       "reason": "Existing secrets server app after broker redirect handling; split routes, auth helpers, and response serializers before expanding."
     },
-    "packages/clawjs/src/v1-data-core.ts": {
-      "lines": 1587,
-      "reason": "V1 data maintenance, sidecar, page, search, MCP, and formatting helpers extracted from CLI routing; split by helper domain before expanding."
-    },
-    "relay/src/server/workspace-routes.ts": {
-      "lines": 1815,
-      "reason": "Workspace, chat, document, content, image, and skill route registration extracted from relay app; split by route domain before expanding."
-    },
-    "packages/clawjs/src/cli-productivity-extended-command.ts": {
-      "lines": 1583,
-      "reason": "Extended productivity CLI groups extracted from the public CLI router; split by capability family before expanding."
-    },
-    "packages/clawjs-workspace/src/workspace-core-productivity-facades.ts": {
-      "lines": 1389,
-      "reason": "Core productivity facade extracted from workspace index; grouped by tightly coupled task/project/list APIs pending further domain splits."
-    },
-    "examples/showcase/src/app/settings/settings-integrations-tab.tsx": {
-      "lines": 1308,
-      "reason": "Integrations settings tab extracted from settings page; keep provider-specific modal flows split out before expanding further."
+    "tests/e2e/telegram-codex-bridge.spec.ts": {
+      "lines": 1325,
+      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
     }
   }
 }
