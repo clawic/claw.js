@@ -1,6 +1,7 @@
 import type { AgentToolDescriptor, AgentToolRiskLevel } from "./agent_tools.ts";
 import type { BuiltinCollectionDefinition, BuiltinFieldDefinition } from "./builtins/index.ts";
 import type { RegulatedDecisionEffect, RegulatedDomain, SensitiveDataClass } from "./regulated-domain-safety.ts";
+import { evaluateRegulatedAction } from "./regulated-domain-safety.ts";
 import { AGENTS_FAMILY } from "./builtins/index.ts";
 
 export const AGENT_ASSIGNMENT_STATUSES = [
@@ -1181,6 +1182,28 @@ export function evaluateAgentEffectiveAccess(input: AgentEffectiveAccessInput): 
 
   if (isSecretResourceRequest(input.requested) && input.requested.action !== "lease_secret") {
     reasons.push("secret: direct access denied; use lease_secret broker flow");
+  }
+
+  const regulatedSafety = input.requested.regulatedSafety;
+  if (regulatedSafety) {
+    if (regulatedSafety.regulatedDomains.length === 0) {
+      reasons.push("regulated_safety: missing regulated domain");
+    }
+    for (const regulatedDomain of regulatedSafety.regulatedDomains) {
+      const decision = evaluateRegulatedAction({
+        regulatedDomain,
+        decisionEffect: regulatedSafety.decisionEffect,
+        externalAction: regulatedSafety.externalAction,
+        sensitiveExport: regulatedSafety.sensitiveExport,
+        remoteOrProviderUse: regulatedSafety.remoteOrProviderUse,
+      });
+      if (!decision.allowed) {
+        reasons.push(...decision.denialCodes.map((code) => `regulated_safety:${regulatedDomain}:${code}`));
+      }
+      if (regulatedSafety.outputLabelsRequired !== true) {
+        reasons.push(`regulated_safety:${regulatedDomain}:output_labels_required`);
+      }
+    }
   }
 
   for (const [planeName, key] of PLANES) {
