@@ -48,7 +48,7 @@ is implemented, validated, or explicitly blocked as `EXTERNAL PENDING`.
 
 | ID | Status | Evidence | Required next action |
 | --- | --- | --- | --- |
-| SOURCE-REREAD-001 | reviewed_current | Source decisions are enumerated as `RQ-001` through `RQ-022`, the source Q/A review map records `QA-001` through `QA-023`, and both are guarded by `scripts/verify-remote-sync-goal.mjs`. | Before final close, repeat the source-session review against current implementation state and keep any physical/provider rows explicitly `EXTERNAL PENDING`. |
+| SOURCE-REREAD-001 | reviewed_current | Source decisions are enumerated as `RQ-001` through `RQ-022`, the source Q/A review map records `QA-001` through `QA-023`, `docs/remote-gateway-sync-source-qa-review.json` records the current one-by-one dispositions/evidence refs, and all are guarded by `scripts/verify-remote-sync-goal.mjs`. | Before final close, repeat the source-session review against current implementation state and keep any physical/provider rows explicitly `EXTERNAL PENDING`. |
 | PHYSICAL-001 | external_pending | `RemoteExternalPendingRegister` separates transport, device trust, peer trust, sync driver, authority handoff, client storage, provider, deployment, runtime, billing, and provider/device E2E blockers from bugs. | Run approved physical/provider validations or keep each row explicitly marked `EXTERNAL PENDING` with evidence. |
 | DOMAIN-PARITY-001 | implemented | Registry-wide Relay classification exists for every surfaced node and the goal verifier rejects any reintroduced `pending` Relay classification. | Keep broad `local-only` classifications explicit until a policy, route, and test-backed `remote-safe` receipt exists. |
 
@@ -71,10 +71,13 @@ The goal may be closed only after a final pass confirms:
    accepted as `EXTERNAL PENDING`.
 2. The source session for conversation
    `019e36a3-c2e6-73b3-a3fe-f3e7340e42c8` is re-read one decision-bearing
-   answer at a time, and the source Q/A review report records disposition and
+   answer at a time, and
+   `docs/remote-gateway-sync-source-qa-review.json` records disposition and
    evidence refs for `QA-001` through `QA-023`; duplicate Q/A rows are rejected
    and rows tied to physical/provider blockers must remain `external_pending`
-   until those blockers clear.
+   until those blockers clear. The verifier must prove this artifact clears the
+   `source_qa_review` blocker while leaving physical/provider validation
+   blocked.
 3. `RemoteExternalPendingRegister` contains every remaining physical/provider
    blocker and none of those rows is reported as a software bug.
 4. `claw inspect remote`, `claw remote pending`,

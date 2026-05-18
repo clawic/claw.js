@@ -39,6 +39,7 @@ import {
   type SyncObjectSnapshot,
 } from "@clawjs/core";
 import fs from "fs";
+import path from "path";
 
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
@@ -272,10 +273,15 @@ function parseSourceQaIds(value: string | undefined): string[] | undefined {
   return entries.length ? entries : undefined;
 }
 
-function parseSourceQaReviews(value: string | undefined): RemoteSourceQaReviewItem[] {
-  if (!value) return [];
-  const parsed = JSON.parse(value) as unknown;
-  return Array.isArray(parsed) ? parsed as RemoteSourceQaReviewItem[] : [parsed as RemoteSourceQaReviewItem];
+function parseSourceQaReviews(value: string | undefined, filePath: string | undefined, cwd: string): RemoteSourceQaReviewItem[] {
+  const raw = value ?? (filePath ? fs.readFileSync(path.resolve(cwd, filePath), "utf8") : undefined);
+  if (!raw) return [];
+  const parsed = JSON.parse(raw) as unknown;
+  if (Array.isArray(parsed)) return parsed as RemoteSourceQaReviewItem[];
+  if (parsed && typeof parsed === "object" && Array.isArray((parsed as { items?: unknown }).items)) {
+    return (parsed as { items: RemoteSourceQaReviewItem[] }).items;
+  }
+  return [parsed as RemoteSourceQaReviewItem];
 }
 
 function meshActionFlags(value: string | undefined, fallback: MeshShareAction[]): MeshShareAction[] {
@@ -524,7 +530,7 @@ export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
     const gate = buildRemoteGoalClosureGate({
       generatedAt: input.flags.now,
       reviewedSourceQaIds: parseReviewedSourceQaIds(input.flags["reviewed-source-qa-ids"] ?? input.flags["source-qa-ids"]),
-      sourceQaReviews: parseSourceQaReviews(input.flags["source-qa-review-json"]),
+      sourceQaReviews: parseSourceQaReviews(input.flags["source-qa-review-json"], input.flags["source-qa-review-file"], input.context.cwd),
       evidence: parseExternalValidationEvidence(input.flags["evidence-json"]),
     });
     return writeOutput(input, "remote", gate, `${gate.status} blockers=${gate.blockers.length}`, command);

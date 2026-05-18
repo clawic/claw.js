@@ -283,7 +283,11 @@ review timestamp, and `writes: false` before submission to `remote closure-gate`
 Rows tied to physical/provider requirements in `RemoteExternalPendingRegister`
 must use `external_pending` disposition until those requirements are cleared;
 the report exposes duplicate rows as `duplicateSourceQaIds` and disposition
-mismatches as `invalidExternalPendingDispositionQaIds`.
+mismatches as `invalidExternalPendingDispositionQaIds`. The closure command can
+consume either `--source-qa-review-json` or a versioned artifact with
+`--source-qa-review-file docs/remote-gateway-sync-source-qa-review.json`; if
+the file is an object with an `items` array, those items are submitted as the
+review rows.
 `remote closure-gate` combines the external validation report with the required
 source Q/A review report. It remains `blocked` until all 23 source Q/A rows
 have a disposition, evidence refs, and every external validation row is

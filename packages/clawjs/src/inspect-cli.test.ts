@@ -403,6 +403,28 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.equal(remoteClosureGatePayload.blockers.includes("source_qa_review"), true);
   assert.equal(remoteClosureGatePayload.blockers.includes("external_validation"), true);
 
+  const reviewedRemoteClosureGate = await runCliCapture([
+    "remote",
+    "closure-gate",
+    "--now",
+    "2026-05-17T10:13:26.500Z",
+    "--source-qa-review-file",
+    "docs/remote-gateway-sync-source-qa-review.json",
+    "--json",
+  ], process.cwd());
+  assert.equal(reviewedRemoteClosureGate.code, CLI_EXIT_OK);
+  const reviewedRemoteClosureGatePayload = parseCliJson<{ status: string; reviewedSourceQaIds: string[]; missingSourceQaIds: string[]; invalidSourceQaIds: string[]; duplicateSourceQaIds: string[]; invalidExternalPendingDispositionQaIds: string[]; sourceQaReviewStatus: string; sourceQaReviewItems: unknown[]; blockers: string[] }>(reviewedRemoteClosureGate.stdout).data;
+  assert.equal(reviewedRemoteClosureGatePayload.status, "blocked");
+  assert.equal(reviewedRemoteClosureGatePayload.reviewedSourceQaIds.length, 23);
+  assert.equal(reviewedRemoteClosureGatePayload.missingSourceQaIds.length, 0);
+  assert.equal(reviewedRemoteClosureGatePayload.invalidSourceQaIds.length, 0);
+  assert.equal(reviewedRemoteClosureGatePayload.duplicateSourceQaIds.length, 0);
+  assert.equal(reviewedRemoteClosureGatePayload.invalidExternalPendingDispositionQaIds.length, 0);
+  assert.equal(reviewedRemoteClosureGatePayload.sourceQaReviewStatus, "complete");
+  assert.equal(reviewedRemoteClosureGatePayload.sourceQaReviewItems.length, 23);
+  assert.equal(reviewedRemoteClosureGatePayload.blockers.includes("source_qa_review"), false);
+  assert.equal(reviewedRemoteClosureGatePayload.blockers.includes("external_validation"), true);
+
   const remoteE2EPlan = await runCliCapture(["remote", "e2e-plan", "--now", "2026-05-17T10:13:30.000Z", "--json"], process.cwd());
   assert.equal(remoteE2EPlan.code, CLI_EXIT_OK);
   const remoteE2EPlanPayload = parseCliJson<{ status: string; writes: boolean; requiredDomains: string[]; requiredRouteIds: string[]; requiredExternalPendingIds: string[]; plaintextMaterialIncluded: boolean; hostedSelfHostedParityRequired: boolean }>(remoteE2EPlan.stdout).data;

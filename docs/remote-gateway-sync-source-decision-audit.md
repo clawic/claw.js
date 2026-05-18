@@ -6,9 +6,11 @@ Reference plan item: `019e3732-c90e-7491-9217-37020c43217e-plan`
 
 This audit is the privacy-safe public enumeration of the source decisions for
 ADR 0022. It intentionally records conversation and plan identifiers, not local
-session paths or maintainer-private goal files. Goal completion requires a
-fresh one-by-one review of these rows against the private source session before
-the maintainer-local goal can be closed.
+session paths or maintainer-private goal files.
+`docs/remote-gateway-sync-source-qa-review.json` records the current
+one-by-one review dispositions and evidence references for these rows. Goal
+completion still requires a fresh review of this map against the private source
+session before the maintainer-local goal can be closed.
 
 ## Source Q/A Review Map
 

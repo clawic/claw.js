@@ -68,6 +68,7 @@ const sourcePlanId = "019e3732-c90e-7491-9217-37020c43217e-plan";
 const requiredDocs = [
   "docs/adr/0022-remote-gateway-sync-redesign.md",
   "docs/remote-gateway-sync-source-decision-audit.md",
+  "docs/remote-gateway-sync-source-qa-review.json",
   "docs/remote-gateway-sync-completion-audit.md",
   "docs/remote-gateway-sync-decision-matrix.md",
   "docs/relay.md",
@@ -223,6 +224,17 @@ function readRequired(relativePath) {
   return fs.readFileSync(fullPath, "utf8");
 }
 
+function readRequiredJson(relativePath) {
+  const text = readRequired(relativePath);
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    fail(`${relativePath} must be valid JSON`);
+    return {};
+  }
+}
+
 function requireText(label, text, needle) {
   if (!text.includes(needle)) fail(`${label} must include ${needle}`);
 }
@@ -308,6 +320,57 @@ for (const snippet of [
   requireText("completion audit", completionAudit, snippet);
 }
 if (/Closure state:\s*`complete`/.test(completionAudit)) fail("remote completion audit must not claim completion while external pending rows remain");
+
+const sourceQaReviewArtifact = readRequiredJson("docs/remote-gateway-sync-source-qa-review.json");
+if (sourceQaReviewArtifact.sourceConversationId !== sourceConversationId) fail("source Q/A review artifact must bind the source conversation ID");
+if (sourceQaReviewArtifact.sourcePlanId !== sourcePlanId) fail("source Q/A review artifact must bind the source plan ID");
+if (sourceQaReviewArtifact.status !== "complete_with_external_pending") fail("source Q/A review artifact must be complete_with_external_pending");
+if (sourceQaReviewArtifact.writes !== false) fail("source Q/A review artifact must be no-write");
+const sourceQaReviewItems = Array.isArray(sourceQaReviewArtifact.items) ? sourceQaReviewArtifact.items : [];
+const sourceQaReviewReport = buildRemoteSourceQaReviewReport({
+  generatedAt: "2026-05-18T11:20:00.000Z",
+  reviews: sourceQaReviewItems,
+});
+if (sourceQaReviewReport.status !== "complete") fail("source Q/A review artifact must produce a complete report");
+if (sourceQaReviewReport.reviewedSourceQaIds.length !== 23) fail("source Q/A review artifact must review all 23 source Q/A rows");
+if (sourceQaReviewReport.items.length !== 23) fail("source Q/A review artifact must include one valid item per source Q/A row");
+if (sourceQaReviewReport.missingSourceQaIds.length !== 0) fail("source Q/A review artifact must have no missing source Q/A rows");
+if (sourceQaReviewReport.invalidSourceQaIds.length !== 0) fail("source Q/A review artifact must have no invalid source Q/A rows");
+if (sourceQaReviewReport.duplicateSourceQaIds.length !== 0) fail("source Q/A review artifact must have no duplicate source Q/A rows");
+if (sourceQaReviewReport.invalidExternalPendingDispositionQaIds.length !== 0) {
+  fail("source Q/A review artifact must mark physical/provider rows as external_pending");
+}
+const expectedExternalPendingQaIds = new Set([
+  "QA-002",
+  "QA-004",
+  "QA-005",
+  "QA-006",
+  "QA-007",
+  "QA-010",
+  "QA-012",
+  "QA-013",
+  "QA-015",
+  "QA-018",
+  "QA-020",
+  "QA-021",
+]);
+for (const item of sourceQaReviewReport.items) {
+  if (!sourceQaIds.has(item.qaId)) fail(`source Q/A review artifact includes unknown ${item.qaId}`);
+  const expectedDisposition = expectedExternalPendingQaIds.has(item.qaId) ? "external_pending" : "implemented";
+  if (item.disposition !== expectedDisposition) {
+    fail(`source Q/A review artifact ${item.qaId} must be ${expectedDisposition}`);
+  }
+  if (!item.evidenceRefs.some((ref) => ref.includes("remote-gateway-sync-completion-audit.md") || ref.includes("verify-remote-sync-goal.mjs"))) {
+    fail(`source Q/A review artifact ${item.qaId} must cite completion audit or verifier evidence`);
+  }
+}
+const reviewedClosureGate = buildRemoteGoalClosureGate({
+  generatedAt: "2026-05-18T11:20:01.000Z",
+  sourceQaReviews: sourceQaReviewReport.items,
+});
+if (reviewedClosureGate.sourceQaReviewStatus !== "complete") fail("reviewed closure gate must clear the source Q/A blocker");
+if (reviewedClosureGate.blockers.includes("source_qa_review")) fail("reviewed closure gate must not include source_qa_review blocker");
+if (!reviewedClosureGate.blockers.includes("external_validation")) fail("reviewed closure gate must still block on external validation");
 
 for (const snippet of requiredDocSnippets) {
   requireText("remote gateway sync public docs", docCorpus, snippet);

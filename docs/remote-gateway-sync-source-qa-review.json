@@ -1,0 +1,324 @@
+{
+  "schemaVersion": 1,
+  "sourceConversationId": "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8",
+  "sourcePlanId": "019e3732-c90e-7491-9217-37020c43217e-plan",
+  "reviewedAt": "2026-05-18T11:20:00.000Z",
+  "status": "complete_with_external_pending",
+  "items": [
+    {
+      "schemaVersion": 1,
+      "qaId": "QA-001",
+      "decisionKey": "relay_boundary",
+      "requirementId": "RQ-001",
+      "disposition": "implemented",
+      "evidenceRefs": [
+        "docs/adr/0022-remote-gateway-sync-redesign.md",
+        "docs/relay.md",
+        "docs/remote-gateway-sync-completion-audit.md#requirement-status"
+      ],
+      "reviewedAt": "2026-05-18T11:20:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "qaId": "QA-002",
+      "decisionKey": "server_trust_model",
+      "requirementId": "RQ-002",
+      "disposition": "external_pending",
+      "evidenceRefs": [
+        "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "claw remote pending:device_trust_acceptance"
+      ],
+      "reviewedAt": "2026-05-18T11:20:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "qaId": "QA-003",
+      "decisionKey": "remote_surface_parity",
+      "requirementId": "RQ-003",
+      "disposition": "implemented",
+      "evidenceRefs": [
+        "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "scripts/verify-remote-sync-goal.mjs",
+        "claw remote conformance"
+      ],
+      "reviewedAt": "2026-05-18T11:20:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "qaId": "QA-004",
+      "decisionKey": "topology_priority",
+      "requirementId": "RQ-004",
+      "disposition": "external_pending",
+      "evidenceRefs": [
+        "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "claw remote pending:self_hosted_deployment",
+        "claw remote pending:hosted_deployment"
+      ],
+      "reviewedAt": "2026-05-18T11:20:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "qaId": "QA-005",
+      "decisionKey": "sync_authority_model",
+      "requirementId": "RQ-005",
+      "disposition": "external_pending",
+      "evidenceRefs": [
+        "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "claw remote pending:physical_authority_handoff"
+      ],
+      "reviewedAt": "2026-05-18T11:20:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "qaId": "QA-006",
+      "decisionKey": "remote_secrets_model",
+      "requirementId": "RQ-006",
+      "disposition": "external_pending",
+      "evidenceRefs": [
+        "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "claw remote pending:provider_secret_retrieval"
+      ],
+      "reviewedAt": "2026-05-18T11:20:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "qaId": "QA-007",
+      "decisionKey": "transport_contract",
+      "requirementId": "RQ-007",
+      "disposition": "external_pending",
+      "evidenceRefs": [
+        "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "claw remote pending:physical_iroh_handshake"
+      ],
+      "reviewedAt": "2026-05-18T11:20:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "qaId": "QA-008",
+      "decisionKey": "remote_api_shape",
+      "requirementId": "RQ-008",
+      "disposition": "implemented",
+      "evidenceRefs": [
+        "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "claw remote contracts",
+        "relay /v1/remote/route-contracts"
+      ],
+      "reviewedAt": "2026-05-18T11:20:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "qaId": "QA-009",
+      "decisionKey": "offline_behavior",
+      "requirementId": "RQ-009",
+      "disposition": "implemented",
+      "evidenceRefs": [
+        "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "claw sync run --queue true",
+        "claw sync reconcile"
+      ],
+      "reviewedAt": "2026-05-18T11:20:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "qaId": "QA-010",
+      "decisionKey": "remote_actor_model",
+      "requirementId": "RQ-010",
+      "disposition": "external_pending",
+      "evidenceRefs": [
+        "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "claw remote pending:signed_host_audit_persistence"
+      ],
+      "reviewedAt": "2026-05-18T11:20:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "qaId": "QA-011",
+      "decisionKey": "headless_host_model",
+      "requirementId": "RQ-011",
+      "disposition": "implemented",
+      "evidenceRefs": [
+        "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "docs/relay.md",
+        "claw inspect remote"
+      ],
+      "reviewedAt": "2026-05-18T11:20:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "qaId": "QA-012",
+      "decisionKey": "first_vertical_slice",
+      "requirementId": "RQ-012",
+      "disposition": "external_pending",
+      "evidenceRefs": [
+        "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "claw remote e2e-plan",
+        "claw remote pending:provider_device_e2e"
+      ],
+      "reviewedAt": "2026-05-18T11:20:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "qaId": "QA-013",
+      "decisionKey": "sync_substrate",
+      "requirementId": "RQ-013",
+      "disposition": "external_pending",
+      "evidenceRefs": [
+        "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "claw remote pending:physical_sync_driver_application"
+      ],
+      "reviewedAt": "2026-05-18T11:20:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "qaId": "QA-014",
+      "decisionKey": "conflict_default",
+      "requirementId": "RQ-014",
+      "disposition": "implemented",
+      "evidenceRefs": [
+        "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "claw sync reconcile",
+        "scripts/verify-remote-sync-goal.mjs"
+      ],
+      "reviewedAt": "2026-05-18T11:20:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "qaId": "QA-015",
+      "decisionKey": "client_cache_policy",
+      "requirementId": "RQ-015",
+      "disposition": "external_pending",
+      "evidenceRefs": [
+        "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "claw remote pending:physical_client_storage"
+      ],
+      "reviewedAt": "2026-05-18T11:20:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "qaId": "QA-016",
+      "decisionKey": "guardrail_strictness",
+      "requirementId": "RQ-016",
+      "disposition": "implemented",
+      "evidenceRefs": [
+        "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "scripts/verify-remote-sync-goal.mjs",
+        "claw remote closure-gate"
+      ],
+      "reviewedAt": "2026-05-18T11:20:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "qaId": "QA-017",
+      "decisionKey": "compat_policy",
+      "requirementId": "RQ-017",
+      "disposition": "implemented",
+      "evidenceRefs": [
+        "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "claw remote compat",
+        "relay /v1/remote/compatibility/adapters"
+      ],
+      "reviewedAt": "2026-05-18T11:20:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "qaId": "QA-018",
+      "decisionKey": "hosted_service_position",
+      "requirementId": "RQ-018",
+      "disposition": "external_pending",
+      "evidenceRefs": [
+        "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "claw remote pending:self_hosted_deployment",
+        "claw remote pending:hosted_deployment"
+      ],
+      "reviewedAt": "2026-05-18T11:20:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "qaId": "QA-019",
+      "decisionKey": "layer_names",
+      "requirementId": "RQ-019",
+      "disposition": "implemented",
+      "evidenceRefs": [
+        "docs/adr/0022-remote-gateway-sync-redesign.md",
+        "docs/relay.md",
+        "docs/remote-gateway-sync-completion-audit.md#requirement-status"
+      ],
+      "reviewedAt": "2026-05-18T11:20:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "qaId": "QA-020",
+      "decisionKey": "mesh_collaboration_scope",
+      "requirementId": "RQ-020",
+      "disposition": "external_pending",
+      "evidenceRefs": [
+        "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "claw remote pending:physical_peer_trust"
+      ],
+      "reviewedAt": "2026-05-18T11:20:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "qaId": "QA-021",
+      "decisionKey": "agent_service_model",
+      "requirementId": "RQ-021",
+      "disposition": "external_pending",
+      "evidenceRefs": [
+        "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "claw remote pending:agent_runtime_execution",
+        "claw remote pending:billing_meter_persistence"
+      ],
+      "reviewedAt": "2026-05-18T11:20:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "qaId": "QA-022",
+      "decisionKey": "sync_lateral_domains",
+      "requirementId": "RQ-022",
+      "disposition": "implemented",
+      "evidenceRefs": [
+        "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "claw remote contracts",
+        "scripts/verify-remote-sync-goal.mjs"
+      ],
+      "reviewedAt": "2026-05-18T11:20:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "qaId": "QA-023",
+      "decisionKey": "goal_closure_gate",
+      "requirementId": "Completion audit",
+      "disposition": "implemented",
+      "evidenceRefs": [
+        "docs/remote-gateway-sync-source-qa-review.json",
+        "docs/remote-gateway-sync-completion-audit.md#closure-rule",
+        "scripts/verify-remote-sync-goal.mjs"
+      ],
+      "reviewedAt": "2026-05-18T11:20:00.000Z",
+      "writes": false
+    }
+  ],
+  "writes": false
+}
