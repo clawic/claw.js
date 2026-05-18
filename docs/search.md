@@ -60,7 +60,7 @@ backfill jobs.
 | Source | Domain | Storage | Status |
 | --- | --- | --- | --- |
 | `commands` | `commands` | command registry projected into `search.sqlite` | implemented |
-| `sessions.chats` | `sessions` | `sessions.sqlite` projected into `search.sqlite` | implemented |
+| `sessions.chats` | `sessions` | `sessions.sqlite` projected into `search.sqlite` with per-session refresh jobs | implemented |
 | `database.records` | `database` | `core.sqlite` records projected into `search.sqlite` | implemented |
 | `work.items` | `work` | tasks, projects, goals, people, inbox, events, decisions, assignments, handoffs, approvals, and related work records from `core.sqlite` | implemented initial adapter |
 | `documents.blocks` | `documents` | `core.sqlite` documents and document blocks projected into `search.sqlite` | implemented initial adapter |
@@ -588,7 +588,8 @@ signed host shortcut broker validates it.
   `slides.decks`, `sheets.workbooks`, `generations.artifacts`, `skills.registry`, `providers.routing`,
   `snippets.library`, `agents.catalog`, `marketplace.choices`, `content.items`,
   `business.records`, `social.posts`, `iot.config`, and the first bounded
-  `code.symbols` adapter with per-file event refresh. `docs.pages` indexes
+  `code.symbols` adapter with per-file event refresh. `sessions.chats` supports
+  resource-scoped refresh jobs keyed by session id. `docs.pages` indexes
   public root docs, docs, and ADR sections with resource-scoped refresh jobs and
   best-effort event scheduling for changed docs files. `surfaces.routes` indexes
   route graph contracts with resource-scoped refresh jobs keyed by route id.

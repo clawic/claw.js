@@ -7,7 +7,7 @@ import Database from "better-sqlite3";
 import { SearchStore, createFrameworkSearchSourceManifest } from "@clawjs/search";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./index.ts";
 import { captureStream, createFakeGenerationScript, runCliCapture, runInternalV1Cli, withPatchedEnv } from "./index-test-utils.ts";
-import { scheduleCodeSymbolsSearchEvent, scheduleDocsPagesSearchEvent } from "./cli-search-events.ts";
+import { scheduleCodeSymbolsSearchEvent, scheduleDocsPagesSearchEvent, scheduleSessionChatSearchEvent } from "./cli-search-events.ts";
 import { runSearchDocsPagesScenario } from "./cli-search-docs-pages-test-utils.ts";
 import { runSearchSurfaceRouteGraphContractsScenario } from "./cli-search-surface-routes-test-utils.ts";
 import { ensureV1MainSchema, resolveClawjsMainDbPath } from "./v1-data-core.ts";
@@ -1247,6 +1247,88 @@ test("search rebuild indexes sessions.chats from the sessions sidecar", async ()
     const sessionsStatus = statusPayload.data.sources.find((source) => source.source === "sessions.chats");
     assert.equal(sessionsStatus?.state, "enabled");
     assert.ok(sessionsStatus?.lastIndexedAt);
+  });
+});
+
+test("sessions.chats event jobs refresh and tombstone individual chats", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-session-events-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+    CLAW_SESSIONS_DB_PATH: undefined,
+  }, async () => {
+    const sessionsRoot = path.join(workspaceRoot, "codex-sessions");
+    const sessionsDbPath = path.join(dataRoot, "sessions.sqlite");
+    fs.mkdirSync(sessionsRoot, { recursive: true });
+    const sessionId = "33333333-4444-4555-8666-777777777777";
+    fs.writeFileSync(path.join(sessionsRoot, `rollout-${sessionId}.jsonl`), [
+      JSON.stringify({ type: "session_meta", payload: { id: sessionId, cwd: workspaceRoot, timestamp: "2026-05-13T10:00:00.000Z" } }),
+      JSON.stringify({ type: "event_msg", payload: { type: "user_message", message: "A session-event-refresh-needle proves chat event refresh" } }),
+      "",
+    ].join("\n"));
+
+    const index = await runCliCapture(["sessions", "index", "--root", sessionsRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(index.code, CLI_EXIT_OK);
+
+    const scheduled = scheduleSessionChatSearchEvent({
+      operation: "upsert",
+      sessionId,
+      dataDir: dataRoot,
+    });
+    assert.equal(scheduled.ok, true, scheduled.error);
+    assert.equal(scheduled.job?.source, "sessions.chats");
+    assert.equal(scheduled.job?.operation, "upsert");
+    assert.equal(scheduled.job?.resourceId, sessionId);
+    assert.equal(scheduled.job?.shard, "hot");
+    assert.equal(scheduled.job?.payload.eventDriven, true);
+    assert.equal(scheduled.job?.payload.sessionId, sessionId);
+
+    const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "sessions.chats", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(serviceRun.code, CLI_EXIT_OK);
+    const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
+      data: { worker?: { items: Array<{ id: string; source: string; status: string; indexed?: number }> } };
+    };
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.id, scheduled.job?.id);
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.source, "sessions.chats");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
+
+    const query = await runCliCapture(["search", "query", "session-event-refresh-needle", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: { results: Array<{ source: string; domain: string; resourceId?: string; fragments?: Array<{ snippet?: string }> }> };
+    };
+    const result = queryPayload.data.results.find((entry) => entry.resourceId === sessionId);
+    assert.equal(result?.source, "sessions.chats");
+    assert.equal(result?.domain, "sessions");
+    assert.equal(result?.fragments?.some((fragment) => fragment.snippet?.includes("session-event-refresh-needle")), true);
+
+    const sessionsDb = new Database(sessionsDbPath);
+    try {
+      sessionsDb.prepare("UPDATE conversation_sessions SET archived = 1 WHERE session_id = ?").run(sessionId);
+    } finally {
+      sessionsDb.close();
+    }
+
+    const deleted = scheduleSessionChatSearchEvent({
+      operation: "delete",
+      sessionId,
+      dataDir: dataRoot,
+    });
+    assert.equal(deleted.ok, true, deleted.error);
+    assert.equal(deleted.job?.operation, "delete");
+
+    const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "sessions.chats", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(deleteRun.code, CLI_EXIT_OK);
+
+    const afterDelete = await runCliCapture(["search", "query", "session-event-refresh-needle", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterDelete.code, CLI_EXIT_DEGRADED);
+    const afterDeletePayload = JSON.parse(afterDelete.stdout) as { data: { results: unknown[] } };
+    assert.deepEqual(afterDeletePayload.data.results, []);
   });
 });
 
