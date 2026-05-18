@@ -1079,6 +1079,12 @@ for (const snippet of [
   "searchActionAccessInput",
   "command === \"profiles\"",
   "command === \"explain\"",
+  "FINANCE_SEARCH_LEGAL_OUTPUT_LABELS",
+  "ELN_SEARCH_LEGAL_OUTPUT_LABELS",
+  "regulated_domain:finance",
+  "regulated_domain:labs_research",
+  "legalOutputLabels: FINANCE_SEARCH_LEGAL_OUTPUT_LABELS",
+  "legalOutputLabels: ELN_SEARCH_LEGAL_OUTPUT_LABELS",
 ]) {
   requireSnippet("packages/clawjs/src/cli-search-command.ts", snippet);
 }
@@ -1120,6 +1126,9 @@ for (const snippet of [
   "search rebuild indexes surface route graph contracts",
   "Search MCP package publishes only the public Search binary",
   "docs.pages event jobs refresh and tombstone individual docs",
+  "legalOutputLabels?.includes(\"not_professional_advice\")",
+  "legalOutputLabels?.includes(\"regulated_domain:finance\")",
+  "legalOutputLabels?.includes(\"regulated_domain:labs_research\")",
 ]) {
   requireSnippet("packages/clawjs/src/cli-search-index.test.ts", snippet);
 }
