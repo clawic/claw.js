@@ -54,7 +54,6 @@ test("search actions honor actor and scope ACLs", async () => {
   assert.equal(hidden.code, CLI_EXIT_OK);
   const hiddenPayload = JSON.parse(hidden.stdout) as { data: { actions: unknown[] } };
   assert.deepEqual(hiddenPayload.data.actions, []);
-
   const wrongScope = await runCliCapture(["search", "actions", "documents.blocks:restricted", "--actor", "agent:codex", "--filter", "scopeId=project-beta", "--data-dir", dataRoot, "--json"], workspaceRoot);
   assert.equal(wrongScope.code, CLI_EXIT_OK);
   const wrongScopePayload = JSON.parse(wrongScope.stdout) as { data: { actions: unknown[] } };
