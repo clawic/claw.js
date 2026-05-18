@@ -50,6 +50,34 @@ const requiredSources = [
 const optionalFullSources = ["local.files", "native.system", "web.ingested", "external.cache"];
 const requiredFrameworkSources = requiredSources.filter((source) => !optionalFullSources.includes(source));
 const requiredIndexJobSources = requiredSources.filter((source) => source !== "native.system");
+const requiredEntrypoints = {
+  "root-search": {
+    label: "Root Search",
+    scope: "root",
+    route: "/search",
+    command: "claw search query",
+    queryScope: "framework",
+    shortcutState: "external_pending",
+    shortcutOwner: "signed_host",
+  },
+  "search-index": {
+    label: "Search Index",
+    scope: "admin",
+    route: "/search-index",
+    command: "claw search sources",
+    queryScope: "technical_admin",
+    shortcutState: "not_applicable",
+    shortcutOwner: "framework",
+  },
+  "chat-search": {
+    label: "Chat Search",
+    scope: "chat",
+    queryScope: "conversations_only",
+    shortcutState: "ready",
+    shortcutOwner: "host_ui",
+    reservedChord: "Command-G",
+  },
+};
 
 const requiredResourceHandlers = {
   "sessions.chats": "ensureSessionChatResourceIndexed",
@@ -249,6 +277,40 @@ function readCliSearchSources(sourceTier) {
   }
 }
 
+function readCliSearchEntrypoints() {
+  try {
+    const output = execFileSync(process.execPath, [
+      "packages/clawjs/bin/claw.mjs",
+      "search",
+      "entrypoints",
+      "--json",
+    ], {
+      cwd: rootDir,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        CLAW_DATA_DIR: fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-search-goal-")),
+      },
+      timeout: 10_000,
+    });
+    const parsed = JSON.parse(output);
+    if (parsed?.ok !== true || !Array.isArray(parsed?.data?.entrypoints)) {
+      failures.push("claw search entrypoints --json: unexpected response shape");
+      return [];
+    }
+    if (parsed.data.rootSearchShortcutState !== "external_pending") {
+      failures.push("claw search entrypoints --json: Root Search shortcut must remain external pending");
+    }
+    if (parsed.data.chatSearchIsolation !== true) {
+      failures.push("claw search entrypoints --json: chat search isolation must remain true");
+    }
+    return parsed.data.entrypoints;
+  } catch (error) {
+    failures.push(`claw search entrypoints --json failed: ${error instanceof Error ? error.message : String(error)}`);
+    return [];
+  }
+}
+
 for (const file of requiredPublicFiles) read(file);
 
 requirePackageScript("search:scale-lab", "node --import tsx ./scripts/search-scale-lab.ts");
@@ -285,6 +347,25 @@ for (const sourceId of optionalFullSources) {
   if (source[`${"pro"}${"file"}`] !== "full") failures.push(`claw search sources full source list: ${sourceId} must use full source tier`);
   if (source.defaultState !== "off") failures.push(`claw search sources full source list: ${sourceId} must default off`);
   if (source.state !== "disabled") failures.push(`claw search sources full source list: ${sourceId} must be disabled by default`);
+}
+const cliEntrypoints = readCliSearchEntrypoints();
+requireSameMembers("claw search entrypoints list", cliEntrypoints.map((entrypoint) => entrypoint.id), Object.keys(requiredEntrypoints));
+for (const [entrypointId, expected] of Object.entries(requiredEntrypoints)) {
+  const entrypoint = cliEntrypoints.find((candidate) => candidate.id === entrypointId);
+  if (!entrypoint) continue;
+  for (const [field, value] of Object.entries(expected)) {
+    const actual = field === "shortcutState"
+      ? entrypoint.shortcut?.state
+      : field === "shortcutOwner"
+        ? entrypoint.shortcut?.owner
+        : field === "reservedChord"
+          ? entrypoint.shortcut?.reservedChord
+          : entrypoint[field];
+    if (actual !== value) failures.push(`claw search entrypoints ${entrypointId}: ${field} must be ${JSON.stringify(value)}`);
+  }
+  if (entrypoint.preservesConversationSearchIsolation !== true) {
+    failures.push(`claw search entrypoints ${entrypointId}: preservesConversationSearchIsolation must be true`);
+  }
 }
 
 for (const source of requiredSources) {
