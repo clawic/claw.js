@@ -434,24 +434,7 @@ const expectedExternalPendingRequirementIds = [
   "billing_meter_persistence",
   "provider_device_e2e",
 ];
-const expectedRemoteRouteContractLayers = [
-  "gateway",
-  "gateway",
-  "connector",
-  "sync",
-  "sync",
-  "sync",
-  "sync",
-  "sync",
-  "sync",
-  "sync",
-  "sync",
-  "sync",
-  "sync",
-  "gateway",
-  "gateway",
-  "mesh",
-];
+const expectedRemoteRouteContractLayers = ["gateway", "gateway", "connector", "sync", "sync", "sync", "sync", "sync", "sync", "sync", "sync", "sync", "sync", "gateway", "gateway", "mesh"];
 const expectedProviderDeviceE2EStepRoutes = [
   ["remote.chatGateway"],
   ["remote.searchGateway"],
@@ -463,11 +446,7 @@ const expectedSyncDrivers = ["skills", "memory_user_model", "sessions", "drive_f
 const expectedSyncDriverRouteIds = ["sync.skills", "sync.memoryUserModel", "sync.sessions", "sync.driveFiles", "sync.blobs", "sync.sqliteResources", "sync.sqliteResources", "sync.sidecars", "sync.searchIndex", "sync.agentConfig", "sync.workspaceState"];
 const expectedSyncDriverRequiredRouteIds = ["sync.agentConfig", "sync.blobs", "sync.driveFiles", "sync.memoryUserModel", "sync.searchIndex", "sync.sessions", "sync.sidecars", "sync.skills", "sync.sqliteResources", "sync.workspaceState"];
 const expectedSyncDriverLateralDomains = [["skills"], ["memory", "user_model", "profile"], ["sessions"], ["drive", "files"], ["blobs", "files"], ["database", "records"], ["database", "partial_database"], ["sidecars", "runtime"], ["search", "indexes"], ["agents", "config"], ["workspace", "projects"]];
-const expectedSyncDriverCommands = expectedSyncDrivers.map((driver) => [
-  `claw sync manifest --driver ${driver} --json`,
-  `claw sync plan --driver ${driver} --json`,
-  `claw sync apply --driver ${driver} --record true --json`,
-]);
+const expectedSyncDriverCommands = expectedSyncDrivers.map((driver) => [`claw sync manifest --driver ${driver} --json`, `claw sync plan --driver ${driver} --json`, `claw sync apply --driver ${driver} --record true --json`]);
 for (const item of sourceQaReviewReport.items) {
   if (!sourceQaIds.has(item.qaId)) fail(`source Q/A review artifact includes unknown ${item.qaId}`);
   const expectedDisposition = expectedExternalPendingQaIds.has(item.qaId) ? "external_pending" : "implemented";
