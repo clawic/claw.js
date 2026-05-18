@@ -261,6 +261,7 @@
       "packages/marketplace-agent-policy/tests/policy.test.ts": 5,
       "scripts/discoverability-check.mjs": 2,
       "scripts/package-surface-guard.mjs": 3,
+      "scripts/verify-search-v1-1-goal.mjs": 1,
       "secrets/src/plugins/builtin/executors/github.ts": 1
     },
     "owner_id": {
@@ -561,6 +562,7 @@
       "scripts/build-packages.mjs": 1,
       "scripts/discoverability-check.mjs": 14,
       "scripts/pack-smoke.mjs": 1,
+      "scripts/verify-search-v1-1-goal.mjs": 9,
       "skills/brand-guidelines/SKILL.md": 1,
       "tests/e2e/README.md": 1,
       "tests/e2e/demo-api-coverage.spec.ts": 2,
@@ -670,7 +672,7 @@
       "packages/clawjs-core/src/catalog-coverage.ts": 1,
       "packages/clawjs-core/src/connector-control-plane.ts": 1,
       "packages/clawjs-core/src/index.test.ts": 10,
-      "packages/clawjs-core/src/remote-sync-e2e.ts": 2,
+      "packages/clawjs-core/src/remote-sync-e2e.ts": 3,
       "packages/clawjs-core/src/remote-sync-route-contracts.ts": 1,
       "packages/clawjs-core/src/remote-sync.ts": 4,
       "packages/clawjs-core/src/surface-registry.ts": 6,
@@ -909,7 +911,7 @@
       "secrets/src/server/stores.ts": 28
     }
   },
-  "generatedAt": "2026-05-18T11:16:04.254Z",
+  "generatedAt": "2026-05-18T13:09:18.393Z",
   "policy": "Current governance vocabulary debt may shrink without review. Any increase in a tracked path or any new tracked path fails scripts/governance-scope-guard.mjs unless the occurrence is removed or this baseline is deliberately updated with rationale.",
   "schemaVersion": 1,
   "summary": {
@@ -930,8 +932,8 @@
       "occurrences": 6
     },
     "owner_field": {
-      "files": 31,
-      "occurrences": 247
+      "files": 32,
+      "occurrences": 248
     },
     "owner_id": {
       "files": 16,
@@ -942,8 +944,8 @@
       "occurrences": 210
     },
     "profile": {
-      "files": 206,
-      "occurrences": 1035
+      "files": 207,
+      "occurrences": 1044
     },
     "profileId": {
       "files": 21,
@@ -955,7 +957,7 @@
     },
     "tenant": {
       "files": 133,
-      "occurrences": 645
+      "occurrences": 646
     },
     "tenantId": {
       "files": 141,
