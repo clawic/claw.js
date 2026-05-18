@@ -392,6 +392,107 @@ function requireCliSearchAcceptanceSmoke() {
     failures.push("claw search monitors --json: must list monitors");
   }
 
+  const savedCreate = readCliSearchJson([
+    "saved",
+    "create",
+    "goal-smoke-system",
+    "--query",
+    "system capabilities",
+    "--name",
+    "Goal smoke system",
+    "--domains",
+    "commands",
+    "--sources",
+    "commands",
+    "--shards",
+    "default",
+    "--strategy",
+    "hybrid",
+    "--local-embedding",
+    "true",
+    "--filters",
+    "type=command",
+    "--actor",
+    "agent:goal-smoke",
+    "--surface",
+    "cli",
+    "--limit",
+    "4",
+    "--explain",
+    "true",
+  ], "claw search saved create --json", dataRoot);
+  if (savedCreate.meta?.subcommand !== "saved" || savedCreate.data?.action !== "create") {
+    failures.push("claw search saved create --json: must create a saved search");
+  }
+  const savedQuery = savedCreate.data?.item?.query ?? {};
+  if (savedCreate.data?.item?.id !== "goal-smoke-system") failures.push("claw search saved create --json: must preserve saved search id");
+  if (savedCreate.data?.item?.name !== "Goal smoke system") failures.push("claw search saved create --json: must preserve saved search name");
+  if (savedQuery.query !== "system capabilities") failures.push("claw search saved create --json: must preserve query text");
+  if (JSON.stringify(savedQuery.domains ?? []) !== JSON.stringify(["commands"])) failures.push("claw search saved create --json: must preserve domains");
+  if (JSON.stringify(savedQuery.sources ?? []) !== JSON.stringify(["commands"])) failures.push("claw search saved create --json: must preserve sources");
+  if (JSON.stringify(savedQuery.shards ?? []) !== JSON.stringify(["default"])) failures.push("claw search saved create --json: must preserve shards");
+  if (savedQuery.strategy !== "hybrid") failures.push("claw search saved create --json: must preserve hybrid strategy");
+  if (savedQuery.embedding?.model !== "local-text-v1" || !Array.isArray(savedQuery.embedding?.vector) || savedQuery.embedding.vector.length !== 64) {
+    failures.push("claw search saved create --json: must persist local embedding controls");
+  }
+  if (JSON.stringify(savedQuery.filters ?? {}) !== JSON.stringify({ type: "command" })) failures.push("claw search saved create --json: must preserve filters");
+  if (savedQuery.actor !== "agent:goal-smoke") failures.push("claw search saved create --json: must preserve actor");
+  if (savedQuery.surface !== "cli") failures.push("claw search saved create --json: must preserve surface");
+  if (savedQuery.limit !== 4) failures.push("claw search saved create --json: must preserve limit");
+  if (savedQuery.explain !== true) failures.push("claw search saved create --json: must preserve explain mode");
+
+  const monitorCreate = readCliSearchJson([
+    "monitors",
+    "create",
+    "goal-smoke-monitor",
+    "--saved-search",
+    "goal-smoke-system",
+    "--cadence",
+    "hourly",
+  ], "claw search monitors create --json", dataRoot);
+  if (monitorCreate.meta?.subcommand !== "monitors" || monitorCreate.data?.action !== "create") {
+    failures.push("claw search monitors create --json: must create a monitor");
+  }
+  if (monitorCreate.data?.item?.id !== "goal-smoke-monitor") failures.push("claw search monitors create --json: must preserve monitor id");
+  if (monitorCreate.data?.item?.savedSearchId !== "goal-smoke-system") failures.push("claw search monitors create --json: must link saved search");
+  if (monitorCreate.data?.item?.cadence !== "hourly") failures.push("claw search monitors create --json: must preserve cadence");
+
+  const monitorRun = readCliSearchJson([
+    "monitors",
+    "run",
+    "goal-smoke-monitor",
+    "--limit",
+    "3",
+  ], "claw search monitors run --json", dataRoot);
+  const monitorRunItem = monitorRun.data?.items?.[0];
+  if (monitorRun.meta?.subcommand !== "monitors" || monitorRun.data?.action !== "run") {
+    failures.push("claw search monitors run --json: must run monitors");
+  }
+  if (monitorRunItem?.monitorId !== "goal-smoke-monitor" || monitorRunItem?.savedSearchId !== "goal-smoke-system") {
+    failures.push("claw search monitors run --json: must return monitor and saved search ids");
+  }
+  if (monitorRunItem?.state !== "ready" || monitorRunItem?.partial !== false) {
+    failures.push("claw search monitors run --json: must return a ready non-partial result");
+  }
+  if (monitorRunItem?.query?.limit !== 3) failures.push("claw search monitors run --json: must apply runtime limit override");
+  if (!Array.isArray(monitorRunItem?.results) || !monitorRunItem.results.some((result) => result.source === "commands")) {
+    failures.push("claw search monitors run --json: must return command results");
+  }
+
+  const monitorDelete = readCliSearchJson(["monitors", "delete", "goal-smoke-monitor"], "claw search monitors delete --json", dataRoot);
+  if (monitorDelete.data?.id !== "goal-smoke-monitor" || monitorDelete.data?.deleted !== true) {
+    failures.push("claw search monitors delete --json: must delete monitor");
+  }
+  readCliSearchJson(["monitors", "create", "goal-smoke-monitor-cascade", "--saved-search", "goal-smoke-system"], "claw search monitors create cascade --json", dataRoot);
+  const savedDelete = readCliSearchJson(["saved", "delete", "goal-smoke-system"], "claw search saved delete --json", dataRoot);
+  if (savedDelete.data?.id !== "goal-smoke-system" || savedDelete.data?.deleted !== true) {
+    failures.push("claw search saved delete --json: must delete saved search");
+  }
+  const monitorsAfterCascade = readCliSearchJson(["monitors"], "claw search monitors after cascade --json", dataRoot);
+  if (monitorsAfterCascade.data?.items?.some((item) => item.id === "goal-smoke-monitor-cascade")) {
+    failures.push("claw search saved delete --json: must cascade monitor deletion");
+  }
+
   const actions = readCliSearchJson(["actions"], "claw search actions --json", dataRoot);
   if (actions.meta?.subcommand !== "actions" || actions.data?.brokered !== true || actions.data?.grantSystem !== "host grants/approvals") {
     failures.push("claw search actions --json: must expose brokered host grants/approvals actions");
