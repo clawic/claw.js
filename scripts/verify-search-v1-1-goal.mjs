@@ -543,6 +543,12 @@ function requireCliSearchAcceptanceSmoke() {
     "cli",
     "--limit",
     "4",
+    "--agent-result-limit",
+    "1",
+    "--agent-source-limit",
+    "1",
+    "--agent-domain-limit",
+    "1",
     "--explain",
     "true",
   ], "claw search saved create --json", dataRoot);
@@ -564,6 +570,9 @@ function requireCliSearchAcceptanceSmoke() {
   if (savedQuery.actor !== "agent:goal-smoke") failures.push("claw search saved create --json: must preserve actor");
   if (savedQuery.surface !== "cli") failures.push("claw search saved create --json: must preserve surface");
   if (savedQuery.limit !== 4) failures.push("claw search saved create --json: must preserve limit");
+  if (JSON.stringify(savedQuery.agentBudget ?? {}) !== JSON.stringify({ maxResults: 1, maxResultsPerSource: 1, maxResultsPerDomain: 1 })) {
+    failures.push("claw search saved create --json: must preserve agent result budgets");
+  }
   if (savedQuery.explain !== true) failures.push("claw search saved create --json: must preserve explain mode");
 
   const monitorCreate = readCliSearchJson([
@@ -600,6 +609,9 @@ function requireCliSearchAcceptanceSmoke() {
     failures.push("claw search monitors run --json: must return a ready non-partial result");
   }
   if (monitorRunItem?.query?.limit !== 3) failures.push("claw search monitors run --json: must apply runtime limit override");
+  if (JSON.stringify(monitorRunItem?.query?.agentBudget ?? {}) !== JSON.stringify({ maxResults: 1, maxResultsPerSource: 1, maxResultsPerDomain: 1 })) {
+    failures.push("claw search monitors run --json: must preserve saved search agent budgets");
+  }
   if (!Array.isArray(monitorRunItem?.results) || !monitorRunItem.results.some((result) => result.source === "commands")) {
     failures.push("claw search monitors run --json: must return command results");
   }
@@ -1140,6 +1152,8 @@ requireSnippet("packages/clawjs/src/cli-search-command.ts", "localSearchEmbeddin
 requireSnippet("packages/clawjs-search-mcp/src/index.test.ts", "provider semantic query");
 requireSnippet("packages/clawjs-search-mcp/src/index.test.ts", "saved-provider-semantic");
 requireSnippet("packages/clawjs/src/cli-search-monitor-audit.test.ts", "search monitor run records sensitive query audit events");
+requireSnippet("packages/clawjs/src/cli-search-monitor-agent-budget.test.ts", "search monitor run preserves saved search agent budgets");
+requireSnippet("packages/clawjs-search-mcp/src/monitor-agent-budget.test.ts", "Search MCP monitor evaluation preserves saved search agent budgets");
 requireSnippet("packages/clawjs/src/cli-search-command.ts", "monitorId: monitor.id");
 requireSnippet("packages/clawjs-search-mcp/src/index.test.ts", "Search MCP monitor evaluation records sensitive audit events");
 
