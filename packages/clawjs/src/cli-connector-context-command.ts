@@ -4,6 +4,7 @@ import {
   explainConnectorContextChoice,
   getConnectorGovernedContextProviderSchema,
   redactConnectorContextRecord,
+  resolveConnectorContextDefaultRefs,
   type ConnectorContextRequirement,
   type ConnectorGovernedContextRecord,
 } from "@clawjs/core";
@@ -55,7 +56,7 @@ export async function runConnectorContextCli(input: ConnectorContextCliInput): P
     if (action === "schema" || action === "show" || action === "inspect") {
       const providerId = input.flags.provider || subject;
       if (action === "show" && subject) {
-        const record = store.getRecord(subject);
+        const record = subject.startsWith("res_") ? store.getRecordByResourceId(subject) : store.getRecord(subject);
         if (record) return writeConnectorContextResult(input, canonicalCommand, action, { record: redactConnectorContextRecord(record) });
       }
       if (!providerId) throw new CliHandledError("missing_provider", `Usage: ${usagePrefix(input)} ${action} <provider|context-id> --json`, CLI_EXIT_USAGE);
@@ -135,13 +136,25 @@ export async function runConnectorContextCli(input: ConnectorContextCliInput): P
       if (!providerId) throw new CliHandledError("missing_provider", `Usage: ${usagePrefix(input)} explain <provider> [--operation OP] --json`, CLI_EXIT_USAGE);
       const schema = getRequiredSchema(providerId);
       const storedRecords = store.listRecords({ providerId });
-      const storedDefaults = store.listDefaults({ providerId }).map((entry) => entry.contextRef);
+      const defaultRefs = resolveConnectorContextDefaultRefs({
+        providerId,
+        operationId: input.flags.operation || input.flags["operation-id"],
+        workspaceId: input.flags.workspace || input.flags["workspace-id"],
+        projectId: input.flags.project || input.flags["project-id"],
+        appId: input.flags.app || input.flags["app-id"],
+        environment: input.flags.environment || input.flags.env,
+        agentId: input.flags["actor-id"] || input.flags.agent,
+        roleId: input.flags.role || input.flags["role-id"],
+        rules: [...(schema.defaults ?? []), ...store.listDefaults({ providerId })],
+      });
       const decision = explainConnectorContextChoice({
         providerId,
         operationId: input.flags.operation || input.flags["operation-id"],
         environment: input.flags.environment || input.flags.env,
+        actorId: input.flags["actor-id"] || input.flags.agent,
+        roleId: input.flags.role || input.flags["role-id"],
         requirements: requirementsForProvider(providerId, input.flags.operation || input.flags["operation-id"]),
-        defaultRefs: storedDefaults.length > 0 ? storedDefaults : schema.defaults?.map((entry) => entry.contextRef),
+        defaultRefs,
         fallbackRules: schema.fallbacks,
         candidates: storedRecords.length > 0 ? storedRecords : fixtureCandidatesForExplain(providerId, input.flags),
       });

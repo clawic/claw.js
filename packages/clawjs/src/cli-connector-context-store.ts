@@ -1,4 +1,5 @@
 import type Database from "better-sqlite3";
+import { createHash } from "node:crypto";
 
 import {
   getConnectorGovernedContextProviderSchema,
@@ -29,6 +30,7 @@ export interface ConnectorContextStore {
   close: () => void;
   listRecords: (input?: { providerId?: string; kind?: string; state?: ConnectorGovernedState }) => ConnectorGovernedContextRecord[];
   getRecord: (id: string) => ConnectorGovernedContextRecord | null;
+  getRecordByResourceId: (resourceId: string) => ConnectorGovernedContextRecord | null;
   upsertRecord: (input: ConnectorContextUpsertInput) => ConnectorGovernedContextRecord;
   linkSecret: (input: { id: string; field: string; secretRef: string; actorId?: string; operationId?: string }) => ConnectorGovernedContextRecord;
   setState: (input: { id: string; state: ConnectorGovernedState; reason?: string; actorId?: string }) => ConnectorGovernedContextRecord;
@@ -126,6 +128,7 @@ export function openConnectorContextStore(env: NodeJS.ProcessEnv = process.env):
     close: () => handle.close(),
     listRecords: (input = {}) => listRecords(sqlite, input),
     getRecord: (id) => getRecord(sqlite, id),
+    getRecordByResourceId: (resourceId) => getRecordByResourceId(sqlite, resourceId),
     upsertRecord: (input) => upsertRecord(sqlite, input),
     linkSecret: (input) => linkSecret(sqlite, input),
     setState: (input) => setState(sqlite, input),
@@ -163,6 +166,11 @@ function getRecord(sqlite: Database.Database, id: string): ConnectorGovernedCont
   return row ? recordFromRow(row) : null;
 }
 
+function getRecordByResourceId(sqlite: Database.Database, resourceId: string): ConnectorGovernedContextRecord | null {
+  const row = sqlite.prepare("SELECT * FROM connector_context_records WHERE resource_id = ?").get(resourceId) as ContextRecordRow | undefined;
+  return row ? recordFromRow(row) : null;
+}
+
 function upsertRecord(sqlite: Database.Database, input: ConnectorContextUpsertInput): ConnectorGovernedContextRecord {
   const providerSchema = getConnectorGovernedContextProviderSchema(input.providerId);
   if (!providerSchema) throw new CliHandledError("unknown_provider", `Unknown connector provider: ${input.providerId}`, CLI_EXIT_USAGE);
@@ -174,6 +182,8 @@ function upsertRecord(sqlite: Database.Database, input: ConnectorContextUpsertIn
     ...normalizeFields(input.fields ?? {}, providerSchema.fields, input.fieldPolicies ?? {}),
   };
   const displayName = input.displayName || existing?.displayName || id;
+  const resourceId = input.resourceId ?? existing?.resourceId ?? connectorContextResourceId(id);
+  validateResourceId(resourceId);
   const now = nowIso();
 
   sqlite.prepare(`
@@ -215,7 +225,7 @@ function upsertRecord(sqlite: Database.Database, input: ConnectorContextUpsertIn
     displayName,
     state,
     input.parentId ?? existing?.parentId ?? null,
-    input.resourceId ?? existing?.resourceId ?? null,
+    resourceId,
     input.principalId ?? existing?.principalId ?? null,
     input.externalId ?? existing?.externalId ?? null,
     JSON.stringify(input.scopes ?? existing?.scopes ?? []),
@@ -231,6 +241,7 @@ function upsertRecord(sqlite: Database.Database, input: ConnectorContextUpsertIn
     now,
   );
   const record = getRecord(sqlite, id)!;
+  upsertConnectorContextResource(sqlite, record, now);
   recordAudit(sqlite, {
     eventType: "context.upsert",
     providerId: input.providerId,
@@ -449,10 +460,47 @@ function secretRefsFromRecord(record: ConnectorGovernedContextRecord): string[] 
   return Object.values(record.fields).flatMap((field) => field.secretRef ? [field.secretRef] : []);
 }
 
+function upsertConnectorContextResource(sqlite: Database.Database, record: ConnectorGovernedContextRecord, now: string): void {
+  if (!record.resourceId) return;
+  sqlite.prepare(`
+    INSERT INTO resources (id, domain, kind, label, path, content_type, size_bytes, metadata_json, created_at, updated_at)
+    VALUES (?, 'connector_context', ?, ?, NULL, 'application/vnd.claw.connector-context+json', NULL, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      domain = excluded.domain,
+      kind = excluded.kind,
+      label = excluded.label,
+      content_type = excluded.content_type,
+      metadata_json = excluded.metadata_json,
+      updated_at = excluded.updated_at
+  `).run(
+    record.resourceId,
+    String(record.kind),
+    record.displayName,
+    JSON.stringify({
+      providerId: record.providerId,
+      contextId: record.id,
+      state: record.state,
+      source: record.source ?? "manual",
+    }),
+    record.updatedAt ?? now,
+    now,
+  );
+}
+
 function parseRecordJson(record: ConnectorGovernedContextRecord | null | undefined, key: "desired" | "observed" | "source" | "verification"): Record<string, unknown> | undefined {
   if (!record) return undefined;
   if (key === "source") return record.source ? { source: record.source } : undefined;
   return record[key];
+}
+
+function connectorContextResourceId(contextRecordId: string): string {
+  return `res_${createHash("sha256").update(`connector_context:${contextRecordId}`).digest("hex").slice(0, 24)}`;
+}
+
+function validateResourceId(resourceId: string): void {
+  if (!/^res_[a-z0-9]+$/.test(resourceId)) {
+    throw new CliHandledError("invalid_resource_id", "Resource ids must use the opaque res_* format.", CLI_EXIT_USAGE);
+  }
 }
 
 function contextId(providerId: string, kind: string, label: string): string {

@@ -168,6 +168,9 @@ test("accounts upsert, link-secret, defaults, and state changes persist in core 
       "--json",
     ], cwd);
     assert.equal(upsert.code, CLI_EXIT_OK, upsert.stderr || upsert.stdout);
+    const upsertPayload = JSON.parse(upsert.stdout) as { data: { record: { id: string; resourceId: string } } };
+    assert.equal(upsertPayload.data.record.id, "revenuecat_api_v2");
+    assert.match(upsertPayload.data.record.resourceId, /^res_[a-z0-9]+$/);
 
     const link = await runCliCapture([
       "accounts",
@@ -211,11 +214,21 @@ test("accounts upsert, link-secret, defaults, and state changes persist in core 
       const fields = JSON.parse(record.fields_json) as { api_key: { secretRef: string; value?: string } };
       assert.equal(fields.api_key.secretRef, "secret://revenuecat/v2");
       assert.equal("value" in fields.api_key, false);
+      const resource = sqlite.prepare("SELECT domain, kind, metadata_json FROM resources WHERE id = ?").get(upsertPayload.data.record.resourceId) as { domain: string; kind: string; metadata_json: string };
+      assert.equal(resource.domain, "connector_context");
+      assert.equal(resource.kind, "key");
+      assert.equal((JSON.parse(resource.metadata_json) as { contextId: string }).contextId, "revenuecat_api_v2");
       const auditCount = (sqlite.prepare("SELECT COUNT(*) AS count FROM connector_context_audit_events").get() as { count: number }).count;
       assert.equal(auditCount >= 4, true);
     } finally {
       sqlite.close();
     }
+
+    const showByResource = await runCliCapture(["accounts", "show", upsertPayload.data.record.resourceId, "--json"], cwd);
+    assert.equal(showByResource.code, CLI_EXIT_OK, showByResource.stderr || showByResource.stdout);
+    const showPayload = JSON.parse(showByResource.stdout) as { data: { record: { id: string; resourceId: string } } };
+    assert.equal(showPayload.data.record.id, "revenuecat_api_v2");
+    assert.equal(showPayload.data.record.resourceId, upsertPayload.data.record.resourceId);
   });
 });
 
