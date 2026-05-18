@@ -150,6 +150,12 @@ audit register for physical Iroh, device trust, peer trust, physical Sync
 drivers, physical Sync authority handoff, signed host audit persistence, client
 storage, provider retrieval, self-hosted and hosted deployment, runtime
 execution, billing meters, and provider/device end-to-end validation.
+The provider/device end-to-end blocker is backed by
+`RemoteProviderDeviceE2EValidationPlan`: a no-write plan that requires chat,
+search, Sync, secret-reference, and hosted-agent coverage to be validated
+together against the same route contracts, external-pending register, hosted
+parity rule, and no-plaintext-secret policy before `provider_device_e2e` can
+be cleared.
 Remote API parity is represented by the remote route contracts catalog exposed
 at `/v1/remote/route-contracts` and `claw remote contracts`. Each required
 route binds canonical local contract references to remote entrypoints, keeps

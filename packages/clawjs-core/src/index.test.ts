@@ -17,6 +17,7 @@ import {
   buildRemoteOfflineCommandResult,
   buildRemoteConformanceReport,
   buildRemoteExternalPendingRegister,
+  buildRemoteProviderDeviceE2EValidationPlan,
   buildRemoteRouteContractCatalog,
   buildSyncQueueEntries,
   buildSyncPlan,
@@ -110,6 +111,7 @@ import {
   remoteAgentServiceExecutionReceiptSchema,
   remoteCompatibilityAdapterReceiptSchema,
   remoteExternalPendingRegisterSchema,
+  remoteProviderDeviceE2EValidationPlanSchema,
   remoteRouteContractCatalogSchema,
   remoteSurfaceClassificationReceiptSchema,
   remoteGatewayAuditReceiptSchema,
@@ -559,7 +561,24 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(externalPending.requirements.some((entry) => entry.requirementId === "physical_iroh_handshake" && entry.sourceReceipt === "RemoteTransportHandshakeReceipt"), true);
   assert.equal(externalPending.requirements.some((entry) => entry.requirementId === "physical_sync_driver_application" && entry.decisionId === "sync_substrate"), true);
   assert.equal(externalPending.requirements.some((entry) => entry.requirementId === "physical_authority_handoff" && entry.decisionId === "sync_authority_model" && entry.sourceReceipt === "SyncAuthorityHandoffReceipt"), true);
+  assert.equal(externalPending.requirements.some((entry) => entry.requirementId === "provider_device_e2e" && entry.sourceReceipt === "RemoteProviderDeviceE2EValidationPlan"), true);
   assert.equal(externalPending.requirements.every((entry) => entry.status === "external_pending" && entry.writes === false), true);
+
+  const providerDeviceE2EPlan = buildRemoteProviderDeviceE2EValidationPlan({
+    createdAt: "2026-05-17T10:13:30.000Z",
+  });
+  assert.equal(remoteProviderDeviceE2EValidationPlanSchema.safeParse(providerDeviceE2EPlan).success, true);
+  assert.equal(providerDeviceE2EPlan.status, "external_pending");
+  assert.deepEqual(providerDeviceE2EPlan.requiredDomains, ["chat", "search", "sync", "secret_refs", "hosted_agents"]);
+  assert.equal(providerDeviceE2EPlan.requiredRouteIds.includes("remote.chatGateway"), true);
+  assert.equal(providerDeviceE2EPlan.requiredRouteIds.includes("remote.searchGateway"), true);
+  assert.equal(providerDeviceE2EPlan.requiredRouteIds.includes("remote.secretBrokeredOperation"), true);
+  assert.equal(providerDeviceE2EPlan.requiredRouteIds.includes("gateway.multiTenantAgentService"), true);
+  assert.equal(providerDeviceE2EPlan.requiredExternalPendingIds.includes("provider_device_e2e"), true);
+  assert.equal(providerDeviceE2EPlan.approvedPhysicalValidationRequired, true);
+  assert.equal(providerDeviceE2EPlan.noPlaintextSecrets, true);
+  assert.equal(providerDeviceE2EPlan.hostedSelfHostedParityRequired, true);
+  assert.equal(providerDeviceE2EPlan.writes, false);
 
   const routeContracts = buildRemoteRouteContractCatalog({
     generatedAt: "2026-05-17T10:14:00.000Z",

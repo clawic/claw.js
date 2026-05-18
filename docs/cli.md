@@ -243,6 +243,10 @@ id, policy reference, and test evidence before anything is written.
 single audit list of hardware, provider, hosted rollout, client storage,
 runtime, billing, and end-to-end validations that cannot be claimed complete
 until explicitly run.
+The final provider/device end-to-end row is not a loose note: it is backed by
+`RemoteProviderDeviceE2EValidationPlan`, which requires chat, search, Sync,
+secret-reference, and hosted-agent validation to pass together against the same
+remote contracts and pending register before `provider_device_e2e` can clear.
 `remote contracts` returns the no-write remote route contract catalog. Each
 required Gateway/Connector/Sync/Mesh route is bound to local CLI/service
 contract refs and remote entrypoints, requires parity, and keeps
