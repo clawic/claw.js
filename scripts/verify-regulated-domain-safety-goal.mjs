@@ -261,6 +261,36 @@ for (const [relativePath, snippets] of [
     "Agents V1 regulated safety blocks final decisions even when grants allow access",
     "Agents V1 regulated safety requires review for connector, remote, and export paths",
   ]],
+  ["packages/clawjs-core/src/connector-control-plane.ts", [
+    "evaluateRegulatedAction",
+    "evaluateRegulatedConnectorSafety",
+    "regulated_safety_blocked",
+    "requiresSensitiveExportReview",
+    "thirdPartyDisclosure",
+  ]],
+  ["packages/clawjs-core/src/connector-control-plane.test.ts", [
+    "connector control plane blocks regulated external actions through connector metadata",
+    "health.records.export",
+    "regulated_safety_blocked",
+    "sensitive_export_review_required",
+    "remote_or_provider_opt_in_required",
+  ]],
+  ["packages/clawjs-core/src/remote-sync.ts", [
+    "evaluateRegulatedAction",
+    "regulatedDomainsForRemoteManifest",
+    "Regulated remote shares require explicit review",
+    "lease_secret",
+    "remoteOrProviderUse: true",
+  ]],
+  ["packages/clawjs-core/src/index.test.ts", [
+    "health:patient:123",
+    "Regulated remote shares require explicit review",
+    "sensitive_export_review_required",
+  ]],
+  ["relay/src/server/remote-sync-routes.test.ts", [
+    "health:patient:123",
+    "Regulated remote shares require explicit review",
+  ]],
   ["docs/adr/0026-regulated-domain-safety-liability-boundary.md", [
     "Status",
     "Accepted",
