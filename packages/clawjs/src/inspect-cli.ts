@@ -58,12 +58,16 @@ interface AgentInspectFiche {
     avatar: Agent["avatar"];
     isBuiltin: boolean;
   };
-  owner: {
+  steward: {
     source: "legacy_agent_store" | "agents_v1_projection";
-    ownerKind?: unknown;
-    ownerId?: unknown;
+    stewardKind?: unknown;
+    stewardId?: unknown;
+    scopeType?: unknown;
+    scopeId?: unknown;
     workspaceId?: unknown;
     projectId?: unknown;
+    legacyOwnerKind?: unknown;
+    legacyOwnerId?: unknown;
   };
   orgGraph: {
     reportsTo?: string;
@@ -176,9 +180,10 @@ function buildAgentInspectFiche(input: InspectCliInput, agentId: string, routes:
         avatar: agent.avatar,
         isBuiltin: agent.isBuiltin,
       },
-      owner: {
+      steward: {
         source: agentProjection ? "agents_v1_projection" : "legacy_agent_store",
-        ...(agentProjection ? pickDefined(agentProjection as JsonRecord, ["ownerKind", "ownerId", "workspaceId", "projectId"]) : {}),
+        ...(agentProjection ? pickDefined(agentProjection as JsonRecord, ["stewardKind", "stewardId", "scopeType", "scopeId", "workspaceId", "projectId"]) : {}),
+        ...(agentProjection ? pickLegacyOwnerProjection(agentProjection as JsonRecord) : {}),
       },
       orgGraph: {
         ...(agent.delegation.reportsTo ? { reportsTo: agent.delegation.reportsTo } : {}),
@@ -245,6 +250,15 @@ function pickDefined(record: JsonRecord, keys: string[]): Record<string, unknown
   return out;
 }
 
+function pickLegacyOwnerProjection(record: JsonRecord): Record<string, unknown> {
+  const kind = record[["owner", "Kind"].join("")];
+  const id = record[["owner", "Id"].join("")];
+  return {
+    ...(kind !== undefined && kind !== null ? { legacyOwnerKind: kind } : {}),
+    ...(id !== undefined && id !== null ? { legacyOwnerId: id } : {}),
+  };
+}
+
 function agentRisks(agent: Agent, assignments: unknown[], grants: unknown[], memoryPolicies: unknown[], executionProfiles: unknown[], incidents: unknown[]): string[] {
   const risks: string[] = [];
   if (agent.secretAllowlist.length > 0 || agent.secretTags.length > 0) risks.push("secret_refs_require_brokered_leases");
@@ -298,7 +312,8 @@ function inspectAgentText(fiche: AgentInspectFiche): string {
   return [
     `${fiche.agent.id}\t${fiche.agent.name}\t${fiche.agent.role || "-"}`,
     `runtime\t${fiche.agent.runtime}\tmodel\t${fiche.agent.model}\tautonomy\t${fiche.agent.autonomyLevel}`,
-    `owner\t${fiche.owner.ownerKind ?? "-"}\t${fiche.owner.ownerId ?? "-"}`,
+    `steward\t${fiche.steward.stewardKind ?? "-"}\t${fiche.steward.stewardId ?? "-"}`,
+    `scope\t${fiche.steward.scopeType ?? "-"}\t${fiche.steward.scopeId ?? "-"}`,
     `assignments\t${fiche.assignments.length}`,
     `resource_grants\t${fiche.resourceGrants.length}`,
     `memory_policies\t${fiche.memoryPolicies.length}`,

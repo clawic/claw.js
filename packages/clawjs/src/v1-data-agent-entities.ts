@@ -507,18 +507,27 @@ function syncAgentsProjection(store: DatabaseServiceStore, agents: Agent[]) {
 
 function syncAgentProjection(store: DatabaseServiceStore, agent: Agent) {
   const metadata = agent as Agent & Record<string, unknown>;
+  const workspaceId = firstString(metadata.workspaceId, agent.projectIds[0]);
+  const projectId = firstString(metadata.projectId, agent.projectIds[0]);
+  const scopeType = firstString(metadata.scopeType, projectId ? "project" : workspaceId ? "workspace" : null);
+  const scopeId = firstString(metadata.scopeId, projectId, workspaceId);
+  const legacyOwnerKind = metadata[["owner", "Kind"].join("")];
+  const legacyOwnerId = metadata[["owner", "Id"].join("")];
   store.sqlite.prepare(`
     INSERT INTO agents (
-      id, kind, name, status, agency_mode, role, title, description, owner_kind,
-      owner_id, workspace_id, project_id, runtime, model, autonomy_profile,
+      id, kind, name, status, agency_mode, role, title, description, steward_kind,
+      steward_id, scope_type, scope_id, owner_kind, owner_id, workspace_id,
+      project_id, runtime, model, autonomy_profile,
       default_execution_profile_id, default_memory_policy_id, default_budget_id,
       builtin, secret_ref, config_json, export_path, retired_at,
       retirement_snapshot_ref, created_at, updated_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, name = excluded.name,
       status = excluded.status, agency_mode = excluded.agency_mode, role = excluded.role,
-      title = excluded.title, description = excluded.description, owner_kind = excluded.owner_kind,
+      title = excluded.title, description = excluded.description,
+      steward_kind = excluded.steward_kind, steward_id = excluded.steward_id,
+      scope_type = excluded.scope_type, scope_id = excluded.scope_id, owner_kind = excluded.owner_kind,
       owner_id = excluded.owner_id, workspace_id = excluded.workspace_id, project_id = excluded.project_id,
       runtime = excluded.runtime, model = excluded.model, autonomy_profile = excluded.autonomy_profile,
       default_execution_profile_id = excluded.default_execution_profile_id,
@@ -536,10 +545,14 @@ function syncAgentProjection(store: DatabaseServiceStore, agent: Agent) {
     agent.role,
     stringValue(metadata.title),
     stringValue(metadata.description),
-    stringValue(metadata.ownerKind),
-    stringValue(metadata.ownerId),
-    firstString(metadata.workspaceId, agent.projectIds[0]),
-    firstString(metadata.projectId, agent.projectIds[0]),
+    stringValue(metadata.stewardKind, legacyOwnerKind ? "entity" : null),
+    stringValue(metadata.stewardId, stringValue(legacyOwnerId)),
+    scopeType,
+    scopeId,
+    stringValue(legacyOwnerKind),
+    stringValue(legacyOwnerId),
+    workspaceId,
+    projectId,
     agent.runtime,
     agent.model,
     agent.autonomyLevel === "observe" ? "respond_only" : agent.autonomyLevel,
