@@ -51,7 +51,6 @@ import {
   discoverCodeSearchFiles,
   ensureCodeSymbolResourceIndexed,
   isIgnoredCodeSearchDirectory,
-  languageForCodeSearchExtension,
   resolveCodeSearchRoot,
   upsertCodeFileSearchDocument,
 } from "./cli-search-code-symbols-source.ts";
@@ -4267,10 +4266,6 @@ function resolveMainDbPath(flags: Record<string, string>): string {
   return resolveClawjsMainDbPath(env);
 }
 
-function resolveLocalFilesSearchRoot(flags: Record<string, string>, cwd: string): string {
-  return path.resolve(flags["file-root"] ?? flags["local-files-root"] ?? flags.workspace ?? cwd);
-}
-
 function resolveWebIngestedRoot(flags: Record<string, string>, cwd: string): string {
   return path.resolve(flags["web-root"] ?? flags["web-cache-root"] ?? flags.workspace ?? cwd);
 }
@@ -4304,39 +4299,6 @@ function boundedNumberFlag(value: string | undefined, fallback: number, min: num
   const number = value ? Number(value) : fallback;
   if (!Number.isFinite(number)) return fallback;
   return Math.max(min, Math.min(max, Math.floor(number)));
-}
-
-function discoverLocalSearchFiles(root: string, limits: { maxFiles: number; maxDepth: number }): LocalFileCandidate[] {
-  const files: LocalFileCandidate[] = [];
-  const visit = (directory: string, depth: number): void => {
-    if (files.length >= limits.maxFiles || depth > limits.maxDepth) return;
-    let entries: fs.Dirent[];
-    try {
-      entries = fs.readdirSync(directory, { withFileTypes: true }).sort((left, right) => left.name.localeCompare(right.name));
-    } catch {
-      return;
-    }
-    for (const entry of entries) {
-      if (files.length >= limits.maxFiles) break;
-      const absolutePath = path.join(directory, entry.name);
-      if (entry.isDirectory()) {
-        if (!isIgnoredLocalFilesDirectory(entry.name)) visit(absolutePath, depth + 1);
-        continue;
-      }
-      if (!entry.isFile()) continue;
-      let stat: fs.Stats;
-      try {
-        stat = fs.statSync(absolutePath);
-      } catch {
-        continue;
-      }
-      if (!stat.isFile() || stat.size <= 0) continue;
-      const extension = path.extname(entry.name).toLowerCase();
-      files.push({ absolutePath, extension, kind: localFileKind(extension), size: stat.size, updatedAt: stat.mtime.toISOString() });
-    }
-  };
-  visit(root, 0);
-  return files;
 }
 
 function discoverWebIngestedFiles(root: string, limits: { maxFiles: number; maxDepth: number; maxBytes: number }): WebIngestedCandidate[] {
@@ -4409,82 +4371,6 @@ function discoverExternalCacheFiles(root: string, limits: { maxFiles: number; ma
 
 function isIgnoredLocalFilesDirectory(name: string): boolean {
   return isIgnoredCodeSearchDirectory(name) || name === ".Spotlight-V100" || name === ".TemporaryItems" || name === ".Trashes";
-}
-
-function localFileKind(extension: string): string {
-  if ([".png", ".jpg", ".jpeg", ".gif", ".webp", ".heic", ".svg"].includes(extension)) return "image";
-  if ([".mp3", ".wav", ".m4a", ".aac", ".flac"].includes(extension)) return "audio";
-  if ([".mp4", ".mov", ".m4v", ".webm"].includes(extension)) return "video";
-  if ([".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".pages", ".numbers", ".key"].includes(extension)) return "document";
-  if (localFileTextExtension(extension)) return "text";
-  return "file";
-}
-
-function localFileTextExtension(extension: string): boolean {
-  return [
-    ".csv",
-    ".html",
-    ".json",
-    ".log",
-    ".md",
-    ".mdx",
-    ".rtf",
-    ".txt",
-    ".xml",
-    ".yaml",
-    ".yml",
-  ].includes(extension) || languageForCodeSearchExtension(extension) !== null;
-}
-
-function localFileSearchDocument(root: string, file: LocalFileCandidate, maxBytes: number): SearchDocumentInput | null {
-  const relativePath = normalizeRelativePath(path.relative(root, file.absolutePath));
-  const title = path.basename(file.absolutePath);
-  const canReadContent = localFileTextExtension(file.extension) && file.size <= maxBytes;
-  const content = canReadContent ? readLocalTextFile(file.absolutePath) : "";
-  const snippet = firstMeaningfulLine(content) ?? relativePath;
-  return {
-    id: `local.files:${stableSearchId(`${root}\0${relativePath}`)}`,
-    source: "local.files",
-    domain: "files",
-    type: "file",
-    resourceId: relativePath,
-    title,
-    subtitle: relativePath,
-    snippet,
-    body: [
-      title,
-      relativePath,
-      file.extension,
-      content,
-    ].filter(Boolean).join("\n").slice(0, maxBytes),
-    path: file.absolutePath,
-    updatedAt: file.updatedAt,
-    metadata: {
-      root,
-      relativePath,
-      extension: file.extension,
-      kind: file.kind,
-      size: file.size,
-      indexedContent: Boolean(content),
-    },
-    permissions: { canOpen: true, canPreview: Boolean(content), redacted: false },
-    rankingHints: {
-      localFile: 1,
-      fastPath: file.kind === "text" || file.kind === "document" ? 0.5 : 0.2,
-    },
-    fragments: content ? [{
-      id: `local.files:${stableSearchId(`${root}\0${relativePath}`)}:content`,
-      title: "Content",
-      body: content.slice(0, maxBytes),
-      snippet,
-      sortOrder: 0,
-      metadata: { kind: "content" },
-    }] : [],
-    actions: [
-      { id: "open", kind: "open", label: "Open file", requiresApproval: true, risk: "read", grant: "search.files.open" },
-      { id: "copy-reference", kind: "copy", label: "Copy file reference", requiresApproval: false },
-    ],
-  };
 }
 
 function webIngestedSearchDocument(root: string, file: WebIngestedCandidate, maxBytes: number): SearchDocumentInput | null {
@@ -7067,14 +6953,6 @@ interface ConnectorCapabilityRow {
   action: string;
   facet: string;
   summary: string;
-}
-
-interface LocalFileCandidate {
-  absolutePath: string;
-  extension: string;
-  kind: string;
-  size: number;
-  updatedAt: string;
 }
 
 interface WebIngestedCandidate {
