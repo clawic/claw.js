@@ -74,6 +74,85 @@ test("Agents V1 effective access is an intersection of every control plane", () 
   assert.deepEqual(result.matchedGrantIds, ["agent", "assignment", "execution", "connector", "host", "run"]);
 });
 
+test("Agents V1 regulated safety blocks final decisions even when grants allow access", () => {
+  const result = evaluateAgentEffectiveAccess({
+    requested: {
+      ...request,
+      regulatedSafety: {
+        regulatedDomains: ["finance"],
+        sensitiveDataClasses: ["financial_record"],
+        decisionEffect: "final_decision",
+        outputLabelsRequired: true,
+      },
+    },
+    agentGrants: [allow("agent")],
+    assignmentGrants: [allow("assignment")],
+    executionProfileGrants: [allow("execution")],
+    connectorGrants: [allow("connector")],
+    hostGrants: [allow("host")],
+    runScopeGrants: [allow("run")],
+    now: "2026-05-17T10:00:00.000Z",
+  });
+
+  assert.equal(result.allowed, false);
+  assert.equal(result.reasons.includes("regulated_safety:finance:final_decision_blocked"), true);
+  assert.deepEqual(result.matchedGrantIds, ["agent", "assignment", "execution", "connector", "host", "run"]);
+});
+
+test("Agents V1 regulated safety allows labeled summaries through existing control planes", () => {
+  const result = evaluateAgentEffectiveAccess({
+    requested: {
+      ...request,
+      regulatedSafety: {
+        regulatedDomains: ["health"],
+        sensitiveDataClasses: ["health_record"],
+        decisionEffect: "summary",
+        professionalReviewRequired: true,
+        outputLabelsRequired: true,
+      },
+    },
+    agentGrants: [allow("agent")],
+    assignmentGrants: [allow("assignment")],
+    executionProfileGrants: [allow("execution")],
+    connectorGrants: [allow("connector")],
+    hostGrants: [allow("host")],
+    runScopeGrants: [allow("run")],
+    now: "2026-05-17T10:00:00.000Z",
+  });
+
+  assert.equal(result.allowed, true);
+  assert.deepEqual(result.reasons, []);
+});
+
+test("Agents V1 regulated safety requires review for connector, remote, and export paths", () => {
+  const result = evaluateAgentEffectiveAccess({
+    requested: {
+      ...request,
+      regulatedSafety: {
+        regulatedDomains: ["legal"],
+        sensitiveDataClasses: ["legal_record"],
+        decisionEffect: "external_action",
+        externalAction: true,
+        sensitiveExport: true,
+        remoteOrProviderUse: true,
+        outputLabelsRequired: true,
+      },
+    },
+    agentGrants: [allow("agent")],
+    assignmentGrants: [allow("assignment")],
+    executionProfileGrants: [allow("execution")],
+    connectorGrants: [allow("connector")],
+    hostGrants: [allow("host")],
+    runScopeGrants: [allow("run")],
+    now: "2026-05-17T10:00:00.000Z",
+  });
+
+  assert.equal(result.allowed, false);
+  assert.equal(result.reasons.includes("regulated_safety:legal:external_review_required"), true);
+  assert.equal(result.reasons.includes("regulated_safety:legal:sensitive_export_review_required"), true);
+  assert.equal(result.reasons.includes("regulated_safety:legal:remote_or_provider_opt_in_required"), true);
+});
+
 test("Agents V1 defaults to an empty sandbox when any plane lacks an allow", () => {
   const result = evaluateAgentEffectiveAccess({
     requested: request,

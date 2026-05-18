@@ -253,6 +253,14 @@ for (const [relativePath, snippets] of [
     "The default safe envelope",
     "Every new sensitive collection, connector, agent, CLI route",
   ]],
+  ["packages/clawjs-core/src/agents-v1.ts", [
+    "evaluateRegulatedAction",
+    "regulated_safety:${regulatedDomain}:${code}",
+  ]],
+  ["packages/clawjs-core/src/agents-v1.test.ts", [
+    "Agents V1 regulated safety blocks final decisions even when grants allow access",
+    "Agents V1 regulated safety requires review for connector, remote, and export paths",
+  ]],
   ["docs/adr/0026-regulated-domain-safety-liability-boundary.md", [
     "Status",
     "Accepted",
