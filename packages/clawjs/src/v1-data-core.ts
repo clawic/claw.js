@@ -1657,7 +1657,7 @@ export function usage(binName: string, group: string): string {
     case "apps":
       return `Usage: ${binName} apps list|upsert|delete [--json]`;
     case "design":
-      return `Usage: ${binName} design list|upsert [--json]`;
+      return `Usage: ${binName} design list|upsert|delete [--json]`;
     case "agents": return `Usage: ${binName} agents list|get|upsert|delete|schema|evaluate-access|delegation-check|supervisor-check|route-check|resolve-external-identity|project-support-inbox|memory-check|budget-check|action-severity|autonomy-check|dispatch-plan|context-pack|tool-catalog|creation-review|storage-audit|audit-coverage|operational-snapshot|control-panel|privacy-plan|paperclip-import|surface-projection|config-revision|incident|activity-feed|blueprint|evaluation|retirement-plan [--json]`;
     case "skills": return `Usage: ${binName} skills get|upsert|delete [--json]`;
     case "personalities": return `Usage: ${binName} personalities list|get|upsert|delete [--json]`;

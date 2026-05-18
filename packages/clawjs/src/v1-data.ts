@@ -204,7 +204,7 @@ function shouldHandleV1DataCommand(group: string | undefined, command: string | 
     ops: new Set(["event", "metric", "list", "retention", "help"]),
     mcp: new Set(["list", "get", "upsert", "delete", "config-path", "help"]),
     apps: new Set(["list", "upsert", "delete", "help"]),
-    design: new Set(["list", "upsert", "help"]),
+    design: new Set(["list", "upsert", "delete", "help"]),
     agents: new Set(["list", "get", "upsert", "delete", "schema", "evaluate-access", "delegation-check", "supervisor-check", "route-check", "resolve-external-identity", "project-support-inbox", "memory-check", "budget-check", "action-severity", "autonomy-check", "dispatch-plan", "context-pack", "tool-catalog", "creation-review", "storage-audit", "audit-coverage", "operational-snapshot", "control-panel", "privacy-plan", "paperclip-import", "surface-projection", "config-revision", "incident", "activity-feed", "blueprint", "evaluation", "retirement-plan", "help"]),
     skills: new Set(["get", "upsert", "delete", "help"]),
     personalities: new Set(["list", "get", "upsert", "delete", "help"]),
@@ -1996,6 +1996,22 @@ function runDesignCommand(input: V1DataCliInput, store: DatabaseServiceStore): n
     });
     writeSuccess(input, { id, kind, name, updatedAt: now });
     return V1_DATA_EXIT_OK;
+  }
+  if (command === "delete") {
+    const resourceId = input.flags.id || input.positionals[2];
+    if (!resourceId) return usageError(input, "Usage: claw design delete RESOURCE_ID [--json]");
+    const row = store.sqlite.prepare("SELECT id, kind FROM design_resources WHERE id = ? LIMIT 1").get(resourceId) as { id: string; kind: string } | undefined;
+    const changes = row ? store.sqlite.prepare("DELETE FROM design_resources WHERE id = ?").run(row.id).changes : 0;
+    if (changes > 0) {
+      scheduleDesignResourcesSearchEvent({
+        operation: "delete",
+        resourceId: row?.id ?? resourceId,
+        dataDir: resolveClawjsDataRoot(),
+        flags: input.flags,
+      });
+    }
+    writeSuccess(input, { id: row?.id ?? resourceId, kind: row?.kind ?? null, deleted: changes > 0 });
+    return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
   return usageError(input, usage(input.binName, "design"));
 }
