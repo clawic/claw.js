@@ -13,7 +13,6 @@ import { runSearchLocalFilesEventScenario } from "./cli-search-local-files-test-
 import { runSearchSurfaceRouteGraphContractsScenario } from "./cli-search-surface-routes-test-utils.ts";
 import { runSearchExternalCacheEventScenario, runSearchWebIngestedEventScenario } from "./cli-search-web-external-test-utils.ts";
 import { ensureV1MainSchema, resolveClawjsMainDbPath } from "./v1-data-core.ts";
-
 test("Search MCP package publishes only the public Search binary", () => {
   const packageJson = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "packages/clawjs-search-mcp/package.json"), "utf8")) as {
     bin?: Record<string, string>;
@@ -24,7 +23,6 @@ test("Search MCP package publishes only the public Search binary", () => {
   assert.equal(fs.existsSync(path.resolve(process.cwd(), "packages/clawjs-search-mcp/bin/claw-search-mcp.mjs")), true);
   assert.equal(fs.existsSync(path.resolve(process.cwd(), "packages/clawjs-search-mcp/bin", ["clawjs", "index", "mcp"].join("-") + ".mjs")), false);
 });
-
 test("search actions honor actor and scope ACLs", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-actions-acl-"));
   const dataRoot = path.join(workspaceRoot, "data");
@@ -72,11 +70,9 @@ test("search actions honor actor and scope ACLs", async () => {
   assert.equal(allowedExecutePayload.data.plan.resultId, "documents.blocks:restricted");
   assert.equal(allowedExecutePayload.data.plan.actionId, "open");
 });
-
 test("search rebuild indexes surface route graph contracts", runSearchSurfaceRouteGraphContractsScenario);
 test("search rebuild indexes docs pages and refreshes resource jobs", runSearchDocsPagesScenario);
 test("docs.pages event jobs refresh and tombstone individual docs", runSearchDocsPagesEventScenario);
-
 test("search rebuild and query use the Search sidecar without workspace state", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-cli-"));
   const dataRoot = path.join(workspaceRoot, "data");
@@ -319,7 +315,6 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(webDefaultPayload.data.omittedSources.some((source) => source.source === "web.ingested" && source.reason === "profile"), true);
     const enableWeb = await runCliCapture(["search", "sources", "enable", "web.ingested", "--profile", "full", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(enableWeb.code, CLI_EXIT_OK);
-
     const webRebuild = await runCliCapture(["search", "rebuild", "--source", "web.ingested", "--profile", "full", "--web-root", webRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(webRebuild.code, CLI_EXIT_OK);
     const webRebuildPayload = JSON.parse(webRebuild.stdout) as {
@@ -328,7 +323,6 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(webRebuildPayload.data.sources.includes("web.ingested"), true);
     assert.equal(webRebuildPayload.data.indexedBySource["web.ingested"], 2);
     assert.equal(webRebuildPayload.data.pendingSources.includes("web.ingested"), false);
-
     const webQuery = await runCliCapture(["search", "query", "semantic crawler", "--domains", "web", "--profile", "full", "--web-root", webRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(webQuery.code, CLI_EXIT_OK);
     const webQueryPayload = JSON.parse(webQuery.stdout) as {
@@ -345,7 +339,6 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(webResult?.metadata?.crawlScope, "explicit_cache");
     assert.equal(webResult?.metadata?.contentType, "text/html");
     assert.equal(webResult?.actions?.some((action) => action.id === "open" && action.kind === "open"), true);
-
     const webServiceJob = await runCliCapture(["search", "jobs", "enqueue", "rebuild", "--source", "web.ingested", "--id", "job:service:web", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(webServiceJob.code, CLI_EXIT_OK);
     const webServiceRun = await runCliCapture(["search", "service", "run-once", "--source", "web.ingested", "--web-root", webRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
@@ -357,7 +350,6 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(webServiceRunPayload.data.worker?.items[0]?.source, "web.ingested");
     assert.equal(webServiceRunPayload.data.worker?.items[0]?.status, "done");
     assert.equal(webServiceRunPayload.data.worker?.items[0]?.indexed, 2);
-
     const externalRoot = path.join(workspaceRoot, "external-cache");
     fs.mkdirSync(externalRoot, { recursive: true });
     fs.writeFileSync(path.join(externalRoot, "slack-thread.json"), JSON.stringify({
@@ -373,7 +365,6 @@ test("search rebuild and query use the Search sidecar without workspace state", 
       apiToken: "should-not-be-indexed",
     }));
     fs.writeFileSync(path.join(externalRoot, "notes.txt"), "Provider export fallback mentions external cache invoices.");
-
     const externalDefaultQuery = await runCliCapture(["search", "query", "provider caches", "--domains", "external", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(externalDefaultQuery.code, CLI_EXIT_DEGRADED);
     const externalDefaultPayload = JSON.parse(externalDefaultQuery.stdout) as {
@@ -381,10 +372,8 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     };
     assert.deepEqual(externalDefaultPayload.data.results, []);
     assert.equal(externalDefaultPayload.data.omittedSources.some((source) => source.source === "external.cache" && source.reason === "profile"), true);
-
     const enableExternal = await runCliCapture(["search", "sources", "enable", "external.cache", "--profile", "full", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(enableExternal.code, CLI_EXIT_OK);
-
     const externalRebuild = await runCliCapture(["search", "rebuild", "--source", "external.cache", "--profile", "full", "--external-root", externalRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(externalRebuild.code, CLI_EXIT_OK);
     const externalRebuildPayload = JSON.parse(externalRebuild.stdout) as {
@@ -393,7 +382,6 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(externalRebuildPayload.data.sources.includes("external.cache"), true);
     assert.equal(externalRebuildPayload.data.indexedBySource["external.cache"], 2);
     assert.equal(externalRebuildPayload.data.pendingSources.includes("external.cache"), false);
-
     const externalQuery = await runCliCapture(["search", "query", "semantic search ingestion", "--domains", "external", "--profile", "full", "--external-root", externalRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(externalQuery.code, CLI_EXIT_OK);
     const externalQueryPayload = JSON.parse(externalQuery.stdout) as {
@@ -413,7 +401,6 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(externalResult?.metadata?.externalId, "thread-123");
     assert.equal(externalResult?.actions?.some((action) => action.id === "open" && action.kind === "open"), true);
     assert.equal(JSON.stringify(externalQueryPayload.data.results).includes("should-not-be-indexed"), false);
-
     const externalServiceJob = await runCliCapture(["search", "jobs", "enqueue", "rebuild", "--source", "external.cache", "--id", "job:service:external", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(externalServiceJob.code, CLI_EXIT_OK);
     const externalServiceRun = await runCliCapture(["search", "service", "run-once", "--source", "external.cache", "--external-root", externalRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
@@ -425,7 +412,6 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(externalServiceRunPayload.data.worker?.items[0]?.source, "external.cache");
     assert.equal(externalServiceRunPayload.data.worker?.items[0]?.status, "done");
     assert.equal(externalServiceRunPayload.data.worker?.items[0]?.indexed, 2);
-
     const sensitiveQuery = await runCliCapture(["search", "query", "password zqxj-token", "--data-dir", dataRoot, "--json", "--actor", "agent:codex", "--surface", "cli"], workspaceRoot);
     assert.ok([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(sensitiveQuery.code));
     const sensitiveAudit = await runCliCapture(["search", "audit", "--type", "sensitive_query", "--data-dir", dataRoot, "--json"], workspaceRoot);
@@ -438,7 +424,6 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(sensitiveAuditPayload.data.items[0]?.actor, "agent:codex");
     assert.equal(sensitiveAuditPayload.data.items[0]?.surface, "cli");
     assert.equal(sensitiveAuditPayload.data.items[0]?.reason, "sensitive_query_or_redacted_result");
-
     const actions = await runCliCapture(["search", "actions", "commands:system", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(actions.code, CLI_EXIT_OK);
     const actionsPayload = JSON.parse(actions.stdout) as {
@@ -451,7 +436,6 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(actionsPayload.data.resultId, "commands:system");
     assert.equal(actionsPayload.data.actions.some((action) => action.id === "help"), true);
     assert.equal(actionsPayload.data.brokered, true);
-
     const actionPreview = await runCliCapture(["search", "actions", "execute", "commands:system", "help", "--dry-run", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(actionPreview.code, CLI_EXIT_OK);
     const actionPreviewPayload = JSON.parse(actionPreview.stdout) as {
@@ -477,7 +461,6 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(actionPreviewPayload.data.plan.risk, "system");
     assert.equal(actionPreviewPayload.data.plan.broker.operation, "search.action.execute");
     assert.equal(actionPreviewPayload.data.plan.broker.sideEffects, "none");
-
     const actionBlocked = await runCliCapture(["search", "actions", "execute", "commands:system", "help", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(actionBlocked.code, CLI_EXIT_FAILURE);
     const actionBlockedPayload = JSON.parse(actionBlocked.stdout) as {
@@ -489,13 +472,11 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(actionBlockedPayload.error.code, "host_approval_required");
     assert.equal(actionBlockedPayload.meta.brokeredPlan?.status, "blocked");
     assert.equal(actionBlockedPayload.meta.brokeredPlan?.reasons.includes("host_approval_required"), true);
-
     const actionApproved = await runCliCapture(["search", "actions", "execute", "commands:system", "help", "--host-approval-id", "approval-search-1", "--actor", "agent:codex", "--surface", "cli", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(actionApproved.code, CLI_EXIT_OK);
     const actionApprovedPayload = JSON.parse(actionApproved.stdout) as { data: { plan: { status: string; hostApprovalId?: string } } };
     assert.equal(actionApprovedPayload.data.plan.status, "brokered");
     assert.equal(actionApprovedPayload.data.plan.hostApprovalId, "approval-search-1");
-
     const frecencyQuery = await runCliCapture(["search", "query", "system capabilities", "--domains", "commands", "--actor", "agent:codex", "--surface", "cli", "--data-dir", dataRoot, "--json", "--explain", "true"], workspaceRoot);
     assert.equal(frecencyQuery.code, CLI_EXIT_OK);
     const frecencyPayload = JSON.parse(frecencyQuery.stdout) as {
@@ -504,7 +485,6 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     const frecencyResult = frecencyPayload.data.results.find((result) => result.id === "commands:system");
     assert.ok((frecencyResult?.explanation?.rankingHints?.localFrecency ?? 0) > 0);
     assert.ok((frecencyResult?.explanation?.scoreBreakdown?.frecency ?? 0) > 0);
-
     const actionAudit = await runCliCapture(["search", "audit", "--type", "action", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(actionAudit.code, CLI_EXIT_OK);
     const actionAuditPayload = JSON.parse(actionAudit.stdout) as {
@@ -519,7 +499,6 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(blockedAudit?.risk, "system");
     assert.equal(brokeredAudit?.resultId, "commands:system");
     assert.equal(brokeredAudit?.actionId, "help");
-
     const actionBrokered = await runCliCapture(["search", "actions", "execute", "commands:system", "help", "--host-approval-id", "approval_search_help", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(actionBrokered.code, CLI_EXIT_OK);
     const actionBrokeredPayload = JSON.parse(actionBrokered.stdout) as {
@@ -528,10 +507,8 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(actionBrokeredPayload.data.plan.status, "brokered");
     assert.equal(actionBrokeredPayload.data.plan.hostApprovalId, "approval_search_help");
     assert.equal(actionBrokeredPayload.data.plan.broker.sideEffects, "host_brokered");
-
     const privateTokenQuery = await runCliCapture(["search", "query", "password qzx-private-token", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.ok([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(privateTokenQuery.code));
-
     const audit = await runCliCapture(["search", "audit", "--data-dir", dataRoot, "--json", "--limit", "10"], workspaceRoot);
     assert.equal(audit.code, CLI_EXIT_OK);
     const auditPayload = JSON.parse(audit.stdout) as {
@@ -550,7 +527,6 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     };
     assert.equal(auditPayload.data.items.some((item) => item.type === "sensitive_query" && item.query === "password qzx-private-token"), true);
     assert.equal(auditPayload.data.items.some((item) => item.type === "action" && item.resultId === "commands:system" && item.actionId === "help" && item.status === "brokered" && item.risk === "system" && item.grant === "search.commands.run" && item.metadata?.hostApprovalId === "approval_search_help"), true);
-
     const status = await runCliCapture(["search", "status", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(status.code, CLI_EXIT_OK);
     const statusPayload = JSON.parse(status.stdout) as {
@@ -564,7 +540,6 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(commandStatus?.state, "enabled");
     assert.equal(commandStatus?.fastPath, true);
     assert.ok(commandStatus?.lastIndexedAt);
-
     const serviceStatus = await runCliCapture(["search", "service", "status", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(serviceStatus.code, CLI_EXIT_OK);
     const serviceStatusPayload = JSON.parse(serviceStatus.stdout) as {
@@ -573,7 +548,6 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(serviceStatusPayload.data.service.state, "ready");
     assert.equal(serviceStatusPayload.data.service.mode, "embedded");
     assert.equal(serviceStatusPayload.data.sources.some((source) => source.source === "commands"), true);
-
     const entrypoints = await runCliCapture(["search", "entrypoints", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(entrypoints.code, CLI_EXIT_OK);
     const entrypointsPayload = JSON.parse(entrypoints.stdout) as {
@@ -589,7 +563,6 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(entrypointsPayload.data.entrypoints.find((entrypoint) => entrypoint.id === "root-search")?.shortcut.bindingId, "search.root.global");
     assert.equal(entrypointsPayload.data.entrypoints.find((entrypoint) => entrypoint.id === "chat-search")?.queryScope, "conversations_only");
     assert.equal(entrypointsPayload.data.entrypoints.find((entrypoint) => entrypoint.id === "chat-search")?.shortcut.reservedChord, "Command-G");
-
     const aliases = await runCliCapture(["search", "aliases", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(aliases.code, CLI_EXIT_OK);
     const aliasesPayload = JSON.parse(aliases.stdout) as {
@@ -611,7 +584,6 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     const imageAlias = aliasesPayload.data.aliases.find((alias) => alias.alias === "image");
     assert.equal(imageAlias?.canonicalName, "images");
     assert.equal(imageAlias?.resultId, "commands:images");
-
     const serviceStart = await runCliCapture(["search", "service", "start", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(serviceStart.code, CLI_EXIT_OK);
     const serviceStartPayload = JSON.parse(serviceStart.stdout) as { data: { service: { state: string; mode: string; startedAt?: string } } };
@@ -619,10 +591,8 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(serviceStartPayload.data.service.mode, "embedded");
     assert.ok(serviceStartPayload.data.service.startedAt);
     assert.equal(fs.existsSync(path.join(dataRoot, "search-service.json")), true);
-
     const serviceJob = await runCliCapture(["search", "jobs", "enqueue", "rebuild", "--source", "commands", "--id", "job:service:commands", "--priority", "90", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(serviceJob.code, CLI_EXIT_OK);
-
     const serviceRun = await runCliCapture(["search", "service", "run-once", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(serviceRun.code, CLI_EXIT_OK);
     const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
@@ -638,21 +608,18 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(serviceRunPayload.data.worker?.items[0]?.id, "job:service:commands");
     assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
     assert.ok((serviceRunPayload.data.worker?.items[0]?.indexed ?? 0) > 0);
-
     const serviceStop = await runCliCapture(["search", "service", "stop", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(serviceStop.code, CLI_EXIT_OK);
     const serviceStopPayload = JSON.parse(serviceStop.stdout) as { data: { service: { state: string; mode: string; stoppedAt?: string } } };
     assert.equal(serviceStopPayload.data.service.state, "stopped");
     assert.equal(serviceStopPayload.data.service.mode, "embedded");
     assert.ok(serviceStopPayload.data.service.stoppedAt);
-
     const daemonStart = await runCliCapture(["search", "service", "start", "--mode", "daemon", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(daemonStart.code, CLI_EXIT_DEGRADED);
     const daemonStartPayload = JSON.parse(daemonStart.stdout) as { data: { service: { state: string; mode: string; reason?: string } } };
     assert.equal(daemonStartPayload.data.service.state, "external_pending");
     assert.equal(daemonStartPayload.data.service.mode, "daemon");
     assert.equal(daemonStartPayload.data.service.reason?.includes("host supervisor"), true);
-
     const saved = await runCliCapture([
       "search",
       "saved",
@@ -724,7 +691,6 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(savedPayload.data.item.query.limit, 4);
     assert.equal(savedPayload.data.item.query.explain, true);
     assert.equal(savedPayload.data.items.some((item) => item.id === "recent-system"), true);
-
     const monitor = await runCliCapture(["search", "monitors", "create", "monitor-system", "--saved-search", "recent-system", "--cadence", "hourly", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(monitor.code, CLI_EXIT_OK);
     const monitorPayload = JSON.parse(monitor.stdout) as {
@@ -734,7 +700,6 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(monitorPayload.data.item.savedSearchId, "recent-system");
     assert.equal(monitorPayload.data.item.cadence, "hourly");
     assert.equal(monitorPayload.data.items.some((item) => item.id === "monitor-system" && item.enabled), true);
-
     const monitorRun = await runCliCapture(["search", "monitors", "run", "monitor-system", "--data-dir", dataRoot, "--json", "--limit", "3"], workspaceRoot);
     assert.equal(monitorRun.code, CLI_EXIT_OK);
     const monitorRunPayload = JSON.parse(monitorRun.stdout) as {
@@ -768,14 +733,12 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(monitorRunPayload.data.items[0]?.partial, false);
     assert.ok(monitorRunPayload.data.items[0]?.results.some((result) => result.source === "commands"));
     assert.ok(monitorRunPayload.data.items[0]?.evaluatedAt);
-
     const monitorDelete = await runCliCapture(["search", "monitors", "delete", "monitor-system", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(monitorDelete.code, CLI_EXIT_OK);
     const monitorDeletePayload = JSON.parse(monitorDelete.stdout) as { data: { id: string; deleted: boolean; items: Array<{ id: string }> } };
     assert.equal(monitorDeletePayload.data.id, "monitor-system");
     assert.equal(monitorDeletePayload.data.deleted, true);
     assert.equal(monitorDeletePayload.data.items.some((item) => item.id === "monitor-system"), false);
-
     const cascadeMonitor = await runCliCapture(["search", "monitors", "create", "monitor-system-cascade", "--saved-search", "recent-system", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(cascadeMonitor.code, CLI_EXIT_OK);
     const savedDelete = await runCliCapture(["search", "saved", "delete", "recent-system", "--data-dir", dataRoot, "--json"], workspaceRoot);
@@ -788,7 +751,6 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(monitorsAfterSavedDelete.code, CLI_EXIT_OK);
     const monitorsAfterSavedDeletePayload = JSON.parse(monitorsAfterSavedDelete.stdout) as { data: { items: Array<{ id: string }> } };
     assert.equal(monitorsAfterSavedDeletePayload.data.items.some((item) => item.id === "monitor-system-cascade"), false);
-
     const paused = await runCliCapture(["search", "sources", "pause", "commands", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(paused.code, CLI_EXIT_OK);
     const pausedPayload = JSON.parse(paused.stdout) as {
@@ -814,7 +776,6 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     } finally {
       configDb.close();
     }
-
     const pausedQuery = await runCliCapture(["search", "query", "system capabilities", "--sources", "commands", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(pausedQuery.code, CLI_EXIT_DEGRADED);
     const pausedQueryPayload = JSON.parse(pausedQuery.stdout) as {
@@ -823,7 +784,6 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.deepEqual(pausedQueryPayload.data.results, []);
     assert.equal(pausedQueryPayload.data.partial, true);
     assert.equal(pausedQueryPayload.data.omittedSources.some((source) => source.source === "commands" && source.reason === "disabled" && source.message?.includes("paused")), true);
-
     const pausedRebuild = await runCliCapture(["search", "rebuild", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(pausedRebuild.code, CLI_EXIT_OK);
     const pausedRebuildPayload = JSON.parse(pausedRebuild.stdout) as {
@@ -2206,6 +2166,22 @@ test("content social and iot writes enqueue and index framework domain fast path
     assert.equal(await runInternalV1Cli(["content", "delete", "content.launch", "--json"], { stdout: captureStream().stream, stderr: captureStream().stream, cwd: workspaceRoot }), CLI_EXIT_OK);
     assert.equal(await runInternalV1Cli(["social", "delete", "post.launch", "--json"], { stdout: captureStream().stream, stderr: captureStream().stream, cwd: workspaceRoot }), CLI_EXIT_OK);
     assert.equal(await runInternalV1Cli(["iot", "config", "delete", "thermostat.lab", "--json"], { stdout: captureStream().stream, stderr: captureStream().stream, cwd: workspaceRoot }), CLI_EXIT_OK);
+    const deleteContentJobs = await runCliCapture(["search", "jobs", "--source", "content.items", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleteContentJobs.code, CLI_EXIT_OK);
+    const deleteContentJobsPayload = JSON.parse(deleteContentJobs.stdout) as {
+      data: { items: Array<{ operation: string; resourceId: string; payload: { eventDriven?: boolean; itemId?: string } }> };
+    };
+    const deleteContentJob = deleteContentJobsPayload.data.items.find((entry) => entry.resourceId === "content.launch" && entry.operation === "delete");
+    assert.equal(deleteContentJob?.payload.eventDriven, true);
+    assert.equal(deleteContentJob?.payload.itemId, "content.launch");
+    const deleteSocialJobs = await runCliCapture(["search", "jobs", "--source", "social.posts", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleteSocialJobs.code, CLI_EXIT_OK);
+    const deleteSocialJobsPayload = JSON.parse(deleteSocialJobs.stdout) as {
+      data: { items: Array<{ operation: string; resourceId: string; payload: { eventDriven?: boolean; postId?: string } }> };
+    };
+    const deleteSocialJob = deleteSocialJobsPayload.data.items.find((entry) => entry.resourceId === "post.launch" && entry.operation === "delete");
+    assert.equal(deleteSocialJob?.payload.eventDriven, true);
+    assert.equal(deleteSocialJob?.payload.postId, "post.launch");
     const deleteIotJobs = await runCliCapture(["search", "jobs", "--source", "iot.config", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(deleteIotJobs.code, CLI_EXIT_OK);
     const deleteIotJobsPayload = JSON.parse(deleteIotJobs.stdout) as {
@@ -2214,6 +2190,30 @@ test("content social and iot writes enqueue and index framework domain fast path
     const deleteIotJob = deleteIotJobsPayload.data.items.find((entry) => entry.resourceId === "thermostat.lab" && entry.operation === "delete");
     assert.equal(deleteIotJob?.payload.eventDriven, true);
     assert.equal(deleteIotJob?.payload.configId, "thermostat.lab");
+    const contentDeleteRun = await runCliCapture(["search", "service", "run-once", "--source", "content.items", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(contentDeleteRun.code, CLI_EXIT_OK);
+    const contentDeleteRunItem = (JSON.parse(contentDeleteRun.stdout) as any).data.service.worker?.items.find((entry: any) => entry.source === "content.items");
+    assert.deepEqual({ source: contentDeleteRunItem?.source, operation: contentDeleteRunItem?.operation, status: contentDeleteRunItem?.status, indexed: contentDeleteRunItem?.indexed }, { source: "content.items", operation: "delete", status: "done", indexed: 1 });
+    const socialDeleteRun = await runCliCapture(["search", "service", "run-once", "--source", "social.posts", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(socialDeleteRun.code, CLI_EXIT_OK);
+    const socialDeleteRunItem = (JSON.parse(socialDeleteRun.stdout) as any).data.service.worker?.items.find((entry: any) => entry.source === "social.posts");
+    assert.deepEqual({ source: socialDeleteRunItem?.source, operation: socialDeleteRunItem?.operation, status: socialDeleteRunItem?.status, indexed: socialDeleteRunItem?.indexed }, { source: "social.posts", operation: "delete", status: "done", indexed: 1 });
+    const iotDeleteRun = await runCliCapture(["search", "service", "run-once", "--source", "iot.config", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(iotDeleteRun.code, CLI_EXIT_OK);
+    const iotDeleteRunItem = (JSON.parse(iotDeleteRun.stdout) as any).data.service.worker?.items.find((entry: any) => entry.source === "iot.config");
+    assert.deepEqual({ source: iotDeleteRunItem?.source, operation: iotDeleteRunItem?.operation, status: iotDeleteRunItem?.status, indexed: iotDeleteRunItem?.indexed }, { source: "iot.config", operation: "delete", status: "done", indexed: 1 });
+    const afterContentDelete = await runCliCapture(["search", "query", "product team", "--sources", "content.items", "--filters", "metadata.kind=campaign_item", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterContentDelete.code, CLI_EXIT_DEGRADED, afterContentDelete.stderr || afterContentDelete.stdout);
+    const afterContentDeletePayload = JSON.parse(afterContentDelete.stdout) as any;
+    assert.equal(afterContentDeletePayload.data.results.some((entry: any) => entry.source === "content.items" && entry.title === "Launch Narrative"), false);
+    const afterSocialDelete = await runCliCapture(["search", "query", "builder notes", "--sources", "social.posts", "--filters", "metadata.channel=linkedin", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterSocialDelete.code, CLI_EXIT_DEGRADED, afterSocialDelete.stderr || afterSocialDelete.stdout);
+    const afterSocialDeletePayload = JSON.parse(afterSocialDelete.stdout) as any;
+    assert.equal(afterSocialDeletePayload.data.results.some((entry: any) => entry.source === "social.posts" && entry.title === "Launch Social Draft"), false);
+    const afterIotDelete = await runCliCapture(["search", "query", "Lab Thermostat", "--sources", "iot.config", "--filters", "metadata.enabled=true", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterIotDelete.code, CLI_EXIT_DEGRADED, afterIotDelete.stderr || afterIotDelete.stdout);
+    const afterIotDeletePayload = JSON.parse(afterIotDelete.stdout) as any;
+    assert.equal(afterIotDeletePayload.data.results.some((entry: any) => entry.source === "iot.config" && entry.title === "Lab Thermostat"), false);
   });
 });
 
