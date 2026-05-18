@@ -415,7 +415,7 @@ export function createEvolutionOperatorPlan(input: {
 
 export function classifyEvolutionBackupPolicy(surface: string, options: { requiresApproval?: boolean } = {}): ClawEvolutionBackupPolicy {
   const normalized = surface.toLowerCase();
-  if (/\b(external|provider|remote|codex|api|webhook)\b/.test(normalized)) {
+  if (/\b(external|provider|remote|codex|webhook)\b/.test(normalized)) {
     return buildBackupPolicy(surface, "external_read_only", options.requiresApproval ?? false, "External/provider data must be inspected read-only and never copied wholesale.");
   }
   if (/\b(search|index|cache|logs?|telemetry)\b/.test(normalized)) {

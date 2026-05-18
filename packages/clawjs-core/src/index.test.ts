@@ -304,6 +304,7 @@ test("evolution operator plan gates mutations and classifies backups", () => {
   assert.equal(repair.steps.find((step) => step.id === "prepare_best_effort_backup")?.status, "approval_gated");
 
   assert.equal(classifyEvolutionBackupPolicy("claw.schema.v1").strategy, "snapshot_before_mutation");
+  assert.equal(classifyEvolutionBackupPolicy("@clawjs/core migration lab API").strategy, "touched_objects_metadata");
 });
 
 test("evolution receipts redact paths, prompts, and secrets", () => {
