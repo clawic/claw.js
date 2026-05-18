@@ -572,6 +572,9 @@ if (!externalValidationRunbook.requiredCommands.some((entry) => entry.includes("
 if (externalValidationRunbook.e2ePlan.validationSteps.map((entry) => entry.domain).join(",") !== "chat,search,sync,secret_refs,hosted_agents") {
   fail("remote external validation runbook must carry the provider/device E2E domain steps");
 }
+for (const target of ["mac_host", "linux_host", "windows_host", "headless_server", "vps_host", "mobile_client", "browser_client", "self_hosted_gateway", "hosted_gateway"]) {
+  if (!externalValidationRunbook.e2ePlan.requiredTopologyTargets.includes(target)) fail(`remote external validation runbook must include topology target ${target}`);
+}
 
 const externalValidationEvidenceArtifact = readRequiredJson("docs/remote-gateway-sync-external-validation-evidence.json");
 if (!remoteExternalValidationEvidenceArtifactSchema.safeParse(externalValidationEvidenceArtifact).success) {
@@ -965,6 +968,9 @@ if (!remoteProviderDeviceE2EValidationPlanSchema.safeParse(providerDeviceE2EPlan
 if (providerDeviceE2EPlan.status !== "external_pending") fail("provider/device E2E plan must remain external_pending until approved real validation runs");
 for (const domain of ["chat", "search", "sync", "secret_refs", "hosted_agents"]) {
   if (!providerDeviceE2EPlan.requiredDomains.includes(domain)) fail(`provider/device E2E plan must include ${domain}`);
+}
+for (const target of ["mac_host", "linux_host", "windows_host", "headless_server", "vps_host", "mobile_client", "browser_client", "self_hosted_gateway", "hosted_gateway"]) {
+  if (!providerDeviceE2EPlan.requiredTopologyTargets.includes(target)) fail(`provider/device E2E plan must include topology target ${target}`);
 }
 if (providerDeviceE2EPlan.validationSteps.map((entry) => entry.domain).join(",") !== providerDeviceE2EPlan.requiredDomains.join(",")) {
   fail("provider/device E2E plan must include one validation step per required domain in order");

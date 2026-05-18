@@ -248,6 +248,9 @@ checklist. The plan includes per-domain `validationSteps` for `chat`, `search`,
 `sync`, `secret_refs`, and `hosted_agents`; each step names the routes, external
 pending rows, required artifacts, and acceptance criteria needed for the final
 approved run.
+The plan also names the topology targets that must be represented by the
+approved run: Mac host, Linux host, Windows host, headless server, VPS host,
+mobile client, browser client, self-hosted Gateway, and hosted Gateway.
 Remote API parity is represented by the remote route contracts catalog exposed
 at `/v1/remote/route-contracts` and `claw remote contracts`. Each required
 route binds canonical local contract references to remote entrypoints, keeps

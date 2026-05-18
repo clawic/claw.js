@@ -362,6 +362,9 @@ final provider/device checklist without calling Relay directly. Its
 `validationSteps` split the final run into `chat`, `search`, `sync`,
 `secret_refs`, and `hosted_agents`, and each step binds required routes,
 external pending blockers, artifacts, and acceptance criteria.
+The plan also names required topology targets: Mac host, Linux host, Windows
+host, headless server, VPS host, mobile client, browser client, self-hosted
+Gateway, and hosted Gateway.
 `inspect remote` is the read-only inspection view that puts remote
 classification, Sync authority/drivers, transport, route contracts, tests,
 gaps, and conformance in one JSON payload.
