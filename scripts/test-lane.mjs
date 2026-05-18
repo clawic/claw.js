@@ -49,11 +49,11 @@ function evolutionGate() {
 function fast(args = []) {
   npmRun("privacy:check");
   npmRun("privacy:test");
+  buildPackages();
   npmRun("test:policy");
   evolutionGate();
   npmRun("code-hygiene:check");
   npmRun("code-hygiene:self-test");
-  buildPackages();
   vitest(args);
   npmRun("test:types");
 }
@@ -68,6 +68,7 @@ function changed() {
   if (testFiles.length > 0) {
     npmRun("privacy:check");
     npmRun("privacy:test");
+    buildPackages();
     npmRun("test:policy");
     evolutionGate();
     const packageScripts = new Set();
@@ -84,7 +85,6 @@ function changed() {
       }
     }
     if (rootVitestFiles.length > 0) {
-      buildPackages();
       vitest(rootVitestFiles);
     }
     for (const script of packageScripts) {

@@ -6,13 +6,13 @@
     "cliCommands": "packages/clawjs-core/src/cli-command-registry.ts"
   },
   "counts": {
-    "surfaces": 887,
+    "surfaces": 888,
     "cliCommands": 155
   },
   "fingerprints": {
-    "surfaces": "fnv1a32:e2ad1286",
+    "surfaces": "fnv1a32:3c55c4fa",
     "cliCommands": "fnv1a32:6ab32150",
-    "combined": "fnv1a32:a4c578a8"
+    "combined": "fnv1a32:0b458d6f"
   },
   "surfaces": [
     {
@@ -690,6 +690,15 @@
       "kind": "apiRoute",
       "parentId": "claw.contracts.api",
       "value": "GET /v1/system/metrics",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.api.system.providers",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /v1/system/providers",
       "surfaceClass": "api",
       "stability": "v1"
     },

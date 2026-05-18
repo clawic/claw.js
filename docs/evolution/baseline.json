@@ -76,7 +76,8 @@
         "claw.api.system.snapshot",
         "claw.api.system.metrics",
         "claw.api.system.widgets",
-        "claw.api.system.history"
+        "claw.api.system.history",
+        "claw.api.system.providers"
       ],
       "tests": [
         "packages/clawjs/src/index.test.ts",
