@@ -502,6 +502,27 @@ for (const ref of [
 ]) {
   if (!meshCollaborationSourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-020 must cite ${ref}`);
 }
+const transportSourceQaReview = sourceQaReviewReport.items.find((item) => item.qaId === "QA-007");
+for (const ref of [
+  "claw.transport.iroh",
+  "transport_agnostic_iroh_v1_adapter",
+  "RemoteTransportHandshakeReceipt",
+  "claw nodes heartbeat",
+  "claw remote pending:physical_iroh_handshake",
+]) {
+  if (!transportSourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-007 must cite ${ref}`);
+}
+const serverTrustSourceQaReview = sourceQaReviewReport.items.find((item) => item.qaId === "QA-002");
+for (const ref of [
+  "sovereign_e2e_tunnel",
+  "governed_gateway",
+  "MeshInvitationAcceptance",
+  "claw nodes trust",
+  "claw nodes accept",
+  "claw remote pending:device_trust_acceptance",
+]) {
+  if (!serverTrustSourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-002 must cite ${ref}`);
+}
 const reviewedClosureGate = buildRemoteGoalClosureGate({
   generatedAt: "2026-05-18T11:20:01.000Z",
   sourceQaReviews: sourceQaReviewReport.items,

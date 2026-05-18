@@ -27,6 +27,11 @@
       "disposition": "external_pending",
       "evidenceRefs": [
         "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "sovereign_e2e_tunnel",
+        "governed_gateway",
+        "MeshInvitationAcceptance",
+        "claw nodes trust",
+        "claw nodes accept",
         "claw remote pending:device_trust_acceptance"
       ],
       "reviewedAt": "2026-05-18T11:20:00.000Z",
@@ -106,6 +111,10 @@
       "disposition": "external_pending",
       "evidenceRefs": [
         "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "claw.transport.iroh",
+        "transport_agnostic_iroh_v1_adapter",
+        "RemoteTransportHandshakeReceipt",
+        "claw nodes heartbeat",
         "claw remote pending:physical_iroh_handshake"
       ],
       "reviewedAt": "2026-05-18T11:20:00.000Z",
