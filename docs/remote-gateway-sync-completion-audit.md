@@ -36,7 +36,7 @@ is implemented, validated, or explicitly blocked as `EXTERNAL PENDING`.
 | RQ-013 | `sync_substrate` | external_pending | Sync manifests, drivers, changelog/planner semantics, and driver application receipts cover the agreed substrates. | Physical driver execution remains `physical_sync_driver_application` `EXTERNAL PENDING`. |
 | RQ-014 | `conflict_default` | implemented | Sync plans detect conflicts and elevate instead of silently overwriting. | None beyond final source-session reread. |
 | RQ-015 | `client_cache_policy` | external_pending | `RemoteClientCacheSnapshot` enforces encrypted TTL cache, no secrets, no authoritative state, and no plaintext payload. | Real client storage validation remains `physical_client_storage` `EXTERNAL PENDING`. |
-| RQ-016 | `guardrail_strictness` | implemented | Conformance, external-pending register, route catalog, classification receipts, and `claw inspect remote` expose fail-closed state; the goal verifier fails on missing Relay classifications, missing required routes/nodes, and any reintroduced `pending` Relay classification; Relay HTTP tests compare exact pending requirements and route contracts against core. | Physical/provider blockers remain explicit `EXTERNAL PENDING`, not hidden guardrail gaps. |
+| RQ-016 | `guardrail_strictness` | implemented | Conformance, external-pending register, external validation evidence template, source Q/A review template, route catalog, classification receipts, and `claw inspect remote` expose fail-closed state; external validation rows require `approvedRunRef` plus physical evidence, artifacts, criteria, and no plaintext before they clear; the goal verifier fails on missing Relay classifications, missing required routes/nodes, missing validation-template/source-QA-template invariants, missing approval references, and any reintroduced `pending` Relay classification; Relay HTTP tests compare exact pending requirements, source Q/A template rows, and route contracts against core. | Physical/provider blockers remain explicit `EXTERNAL PENDING`, not hidden guardrail gaps. |
 | RQ-017 | `compat_policy` | implemented | Compatibility adapter receipts map legacy Relay/mobile surfaces to canonical routes without parallel APIs. | Remove compatibility paths only after client migration. |
 | RQ-018 | `hosted_service_position` | external_pending | Gateway deployment manifests and conformance cover hosted and self-hosted modes through one contract. | Real hosted/self-hosted rollout validation remains `EXTERNAL PENDING`. |
 | RQ-019 | `layer_names` | implemented | Public canon consistently names Coordinator, Gateway, Connector, and Sync. | None beyond final source-session reread. |
@@ -58,7 +58,7 @@ is implemented, validated, or explicitly blocked as `EXTERNAL PENDING`.
 | --- | --- |
 | Goal verifier | `npm run test:remote-sync-goal` |
 | Focused core/CLI tests | `npx vitest run --config vitest.config.ts packages/clawjs-core/src/index.test.ts packages/clawjs/src/inspect-cli.test.ts` |
-| Relay HTTP routes | `npx vitest run --config vitest.config.ts relay/src/server/remote-sync-routes.test.ts`; this must compare `/v1/remote/external-pending`, `/v1/remote/external-validation-checklist`, `/v1/remote/external-validation-report`, `/v1/remote/closure-gate`, `/v1/remote/route-contracts`, `/v1/remote/provider-device-e2e-plan`, and `/v1/remote/conformance` against the same core contracts used by CLI inspection. |
+| Relay HTTP routes | `npx vitest run --config vitest.config.ts relay/src/server/remote-sync-routes.test.ts`; this must compare `/v1/remote/external-pending`, `/v1/remote/external-validation-checklist`, `/v1/remote/external-validation-template`, `/v1/remote/external-validation-report`, `/v1/remote/source-qa-template`, `/v1/remote/closure-gate`, `/v1/remote/route-contracts`, `/v1/remote/provider-device-e2e-plan`, and `/v1/remote/conformance` against the same core contracts used by CLI inspection. |
 | CLI/router parity | `node --import tsx ./scripts/verify-cli-registry-router-parity.mjs` |
 | Public executable inspection | `node packages/clawjs/bin/claw.mjs inspect remote --json` after building the CLI package |
 | Public docs hygiene | `npm run code-hygiene:check` and `git diff --check` |
@@ -76,12 +76,15 @@ The goal may be closed only after a final pass confirms:
 3. `RemoteExternalPendingRegister` contains every remaining physical/provider
    blocker and none of those rows is reported as a software bug.
 4. `claw inspect remote`, `claw remote pending`,
-   `claw remote validation-checklist`, `claw remote validation-report`,
+   `claw remote validation-checklist`, `claw remote validation-template`,
+   `claw remote validation-report`, `claw remote source-qa-template`,
    `claw remote closure-gate`, `claw remote contracts`,
    `claw remote e2e-plan`, Relay
    `/v1/remote/external-pending`, Relay
    `/v1/remote/external-validation-checklist`, Relay
-   `/v1/remote/external-validation-report`, Relay `/v1/remote/closure-gate`,
+   `/v1/remote/external-validation-template`, Relay
+   `/v1/remote/external-validation-report`, Relay
+   `/v1/remote/source-qa-template`, Relay `/v1/remote/closure-gate`,
    Relay `/v1/remote/route-contracts`, and Relay
    `/v1/remote/provider-device-e2e-plan` are verified against the same
    contracts.

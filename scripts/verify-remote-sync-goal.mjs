@@ -6,12 +6,14 @@ import {
   buildRemoteConformanceReport,
   buildRemoteExternalPendingRegister,
   buildRemoteExternalValidationChecklist,
+  buildRemoteExternalValidationEvidenceTemplate,
   buildRemoteExternalValidationReport,
   buildRemoteGoalClosureGate,
   buildRemoteOfflineCommandResult,
   buildRemoteProviderDeviceE2EValidationPlan,
   buildRemoteRouteContractCatalog,
   buildRemoteSourceQaReviewReport,
+  buildRemoteSourceQaReviewTemplate,
   buildSyncPlan,
   buildSyncQueueEntries,
   clawCliCommandRegistry,
@@ -41,11 +43,13 @@ import {
   remoteAgentServiceDecisionSchema,
   remoteAgentServiceExecutionReceiptSchema,
   remoteCompatibilityAdapterReceiptSchema,
+  remoteExternalValidationEvidenceTemplateSchema,
   remoteExternalPendingRegisterSchema,
   remoteGatewayAuditReceiptSchema,
   remoteProviderDeviceE2EValidationPlanSchema,
   remoteGoalClosureRequiredSourceQaIds,
   remoteRouteContractCatalogSchema,
+  remoteSourceQaReviewTemplateSchema,
   remoteSecretLeaseSchema,
   remoteSurfaceClassificationReceiptSchema,
   remoteSyncRequiredDecisionIds,
@@ -91,7 +95,9 @@ const requiredServiceApiRoutes = [
   "remote/conformance",
   "remote/external-pending",
   "remote/external-validation-checklist",
+  "remote/external-validation-template",
   "remote/external-validation-report",
+  "remote/source-qa-template",
   "remote/closure-gate",
   "remote/route-contracts",
   "remote/provider-device-e2e-plan",
@@ -141,10 +147,17 @@ const requiredDocSnippets = [
   "external validation checklist",
   "/v1/remote/external-validation-checklist",
   "claw remote validation-checklist",
+  "external validation evidence template",
+  "/v1/remote/external-validation-template",
+  "claw remote validation-template",
   "external validation report",
+  "approvedRunRef",
   "/v1/remote/external-validation-report",
   "claw remote validation-report",
   "source Q/A review report",
+  "source Q/A review template",
+  "/v1/remote/source-qa-template",
+  "claw remote source-qa-template",
   "remote closure gate",
   "/v1/remote/closure-gate",
   "claw remote closure-gate",
@@ -283,6 +296,8 @@ for (const snippet of [
   "RemoteExternalPendingRegister",
   "claw inspect remote",
   "claw remote pending",
+  "claw remote validation-template",
+  "claw remote source-qa-template",
   "claw remote contracts",
   "same core contracts used by CLI inspection",
 ]) {
@@ -384,6 +399,36 @@ for (const requirementId of ["physical_iroh_handshake", "provider_secret_retriev
   }
 }
 
+const externalValidationEvidenceTemplate = buildRemoteExternalValidationEvidenceTemplate({
+  generatedAt: "2026-05-17T10:13:17.000Z",
+});
+if (!remoteExternalValidationEvidenceTemplateSchema.safeParse(externalValidationEvidenceTemplate).success) fail("remote external validation evidence template must validate");
+if (externalValidationEvidenceTemplate.status !== "external_pending") fail("remote external validation evidence template must remain external_pending");
+if (externalValidationEvidenceTemplate.writes !== false) fail("remote external validation evidence template must be no-write");
+if (externalValidationEvidenceTemplate.requirementCount !== externalPending.requirements.length) fail("remote external validation evidence template must count every pending requirement");
+if (externalValidationEvidenceTemplate.checklistItems.length !== externalPending.requirements.length) fail("remote external validation evidence template must include every checklist item");
+if (externalValidationEvidenceTemplate.evidence.length !== externalPending.requirements.length) fail("remote external validation evidence template must include one evidence row per requirement");
+if (!externalValidationEvidenceTemplate.submissionCommand.includes("claw remote validation-report")) fail("remote external validation evidence template must point to validation-report submission");
+if (!externalValidationEvidenceTemplate.evidence.some((entry) => entry.requirementId === "provider_device_e2e")) fail("remote external validation evidence template must include provider_device_e2e");
+if (!externalValidationEvidenceTemplate.evidence.every((entry) => (
+  entry.approvedRun === false
+  && entry.approvedRunRef === undefined
+  && entry.artifactRefs.length === 0
+  && entry.acceptedCriteria.length === 0
+  && entry.plaintextMaterialIncluded === false
+  && entry.writes === false
+))) {
+  fail("remote external validation evidence template must default to unapproved empty no-plaintext no-write evidence rows");
+}
+const scopedExternalValidationEvidenceTemplate = buildRemoteExternalValidationEvidenceTemplate({
+  generatedAt: "2026-05-17T10:13:18.000Z",
+  requirementIds: ["physical_iroh_handshake", "provider_device_e2e"],
+});
+if (scopedExternalValidationEvidenceTemplate.requirementCount !== 2) fail("scoped remote external validation evidence template must include exactly requested known requirements");
+if (scopedExternalValidationEvidenceTemplate.evidence.map((entry) => entry.requirementId).join(",") !== "physical_iroh_handshake,provider_device_e2e") {
+  fail("scoped remote external validation evidence template must preserve requested known requirement order");
+}
+
 const emptyExternalValidationReport = buildRemoteExternalValidationReport({
   generatedAt: "2026-05-17T10:13:20.000Z",
 });
@@ -399,6 +444,7 @@ const completeExternalValidationReport = buildRemoteExternalValidationReport({
     schemaVersion: 1,
     requirementId: entry.requirementId,
     approvedRun: true,
+    approvedRunRef: `approval://${entry.requirementId}`,
     physicalEvidenceRef: `evidence://${entry.requirementId}`,
     artifactRefs: entry.requiredArtifacts,
     acceptedCriteria: entry.acceptanceCriteria,
@@ -410,8 +456,29 @@ const completeExternalValidationReport = buildRemoteExternalValidationReport({
 if (completeExternalValidationReport.status !== "clearable") fail("complete remote external validation report must be clearable");
 if (completeExternalValidationReport.clearableRequirementIds.length !== externalPending.requirements.length) fail("complete remote external validation report must clear every requirement");
 if (completeExternalValidationReport.blockedRequirementIds.length !== 0) fail("complete remote external validation report must have no blocked requirements");
-if (!completeExternalValidationReport.items.every((entry) => entry.clearable && entry.writes === false && entry.plaintextMaterialIncluded === false)) {
-  fail("complete remote external validation report must preserve no-write/no-plaintext invariants");
+if (!completeExternalValidationReport.items.every((entry) => entry.clearable && entry.approvedRunRefPresent === true && entry.writes === false && entry.plaintextMaterialIncluded === false)) {
+  fail("complete remote external validation report must preserve approved-run-ref/no-write/no-plaintext invariants");
+}
+
+const missingApprovedRunRefExternalValidationReport = buildRemoteExternalValidationReport({
+  generatedAt: "2026-05-17T10:13:25.500Z",
+  evidence: externalValidationChecklist.items.map((entry) => ({
+    schemaVersion: 1,
+    requirementId: entry.requirementId,
+    approvedRun: true,
+    physicalEvidenceRef: `evidence://${entry.requirementId}`,
+    artifactRefs: entry.requiredArtifacts,
+    acceptedCriteria: entry.acceptanceCriteria,
+    plaintextMaterialIncluded: false,
+    executedAt: "2026-05-17T10:13:24.000Z",
+    writes: false,
+  })),
+});
+if (missingApprovedRunRefExternalValidationReport.status !== "external_pending") {
+  fail("remote external validation report must not clear evidence without approvedRunRef");
+}
+if (!missingApprovedRunRefExternalValidationReport.items.every((entry) => entry.approvedRunRefPresent === false && entry.clearable === false)) {
+  fail("remote external validation report must expose missing approvedRunRef on every otherwise complete row");
 }
 
 const blockedClosureGate = buildRemoteGoalClosureGate({
@@ -440,6 +507,38 @@ if (!completeSourceQaReviewReport.items.every((entry) => entry.disposition && en
   fail("complete source Q/A review report must include disposition, evidence refs, and no-write items");
 }
 
+const sourceQaReviewTemplate = buildRemoteSourceQaReviewTemplate({
+  generatedAt: "2026-05-17T10:13:26.750Z",
+});
+if (!remoteSourceQaReviewTemplateSchema.safeParse(sourceQaReviewTemplate).success) fail("remote source Q/A review template must validate");
+if (sourceQaReviewTemplate.status !== "incomplete") fail("remote source Q/A review template must remain incomplete");
+if (sourceQaReviewTemplate.writes !== false) fail("remote source Q/A review template must be no-write");
+if (sourceQaReviewTemplate.sourceConversationId !== sourceConversationId) fail("remote source Q/A review template must bind the source conversation ID");
+if (sourceQaReviewTemplate.sourcePlanId !== sourcePlanId) fail("remote source Q/A review template must bind the source plan ID");
+if (sourceQaReviewTemplate.reviewCount !== 23) fail("remote source Q/A review template must include all 23 source Q/A rows");
+if (sourceQaReviewTemplate.requiredSourceQaIds.length !== 23) fail("remote source Q/A review template must expose all required source Q/A ids");
+if (!sourceQaReviewTemplate.submissionCommand.includes("claw remote closure-gate")) fail("remote source Q/A review template must point to closure-gate submission");
+if (!sourceQaReviewTemplate.items.some((entry) => entry.qaId === "QA-023" && entry.decisionKey === "goal_closure_gate" && entry.requirementId === "Completion audit")) {
+  fail("remote source Q/A review template must include QA-023 goal closure gate");
+}
+if (!sourceQaReviewTemplate.items.every((entry) => (
+  entry.reviewed === false
+  && entry.disposition === null
+  && entry.evidenceRefs.length === 0
+  && entry.reviewedAt === null
+  && entry.writes === false
+))) {
+  fail("remote source Q/A review template must default to incomplete empty no-write rows");
+}
+const scopedSourceQaReviewTemplate = buildRemoteSourceQaReviewTemplate({
+  generatedAt: "2026-05-17T10:13:26.800Z",
+  sourceQaIds: ["QA-001", "QA-023"],
+});
+if (scopedSourceQaReviewTemplate.reviewCount !== 2) fail("scoped remote source Q/A review template must include exactly requested known Q/A rows");
+if (scopedSourceQaReviewTemplate.items.map((entry) => entry.qaId).join(",") !== "QA-001,QA-023") {
+  fail("scoped remote source Q/A review template must preserve requested known Q/A order");
+}
+
 const clearableClosureGate = buildRemoteGoalClosureGate({
   generatedAt: "2026-05-17T10:13:27.000Z",
   sourceQaReviews: completeSourceQaReviewReport.items,
@@ -447,6 +546,7 @@ const clearableClosureGate = buildRemoteGoalClosureGate({
     schemaVersion: 1,
     requirementId: entry.requirementId,
     approvedRun: true,
+    approvedRunRef: `approval://${entry.requirementId}`,
     physicalEvidenceRef: `evidence://${entry.requirementId}`,
     artifactRefs: entry.requiredArtifacts,
     acceptedCriteria: entry.acceptanceCriteria,
@@ -523,8 +623,12 @@ for (const snippet of [
   "expectedExternalPending.requirements.map",
   "buildRemoteExternalValidationChecklist",
   "/v1/remote/external-validation-checklist",
+  "buildRemoteExternalValidationEvidenceTemplate",
+  "/v1/remote/external-validation-template",
   "buildRemoteExternalValidationReport",
   "/v1/remote/external-validation-report",
+  "buildRemoteSourceQaReviewTemplate",
+  "/v1/remote/source-qa-template",
   "buildRemoteGoalClosureGate",
   "sourceQaReviewItems",
   "/v1/remote/closure-gate",
@@ -540,6 +644,8 @@ for (const snippet of [
   'command === "remote"',
   "buildRemoteConformanceReport",
   "buildRemoteExternalPendingRegister",
+  "buildRemoteExternalValidationEvidenceTemplate",
+  "buildRemoteSourceQaReviewTemplate",
   "buildRemoteRouteContractCatalog",
   "SyncAuthorityHandoffReceipt",
   "transport_agnostic_iroh_v1_adapter",

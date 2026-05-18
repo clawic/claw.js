@@ -2,10 +2,12 @@ import {
   buildRemoteConformanceReport,
   buildRemoteExternalPendingRegister,
   buildRemoteExternalValidationChecklist,
+  buildRemoteExternalValidationEvidenceTemplate,
   buildRemoteExternalValidationReport,
   buildRemoteGoalClosureGate,
   buildRemoteProviderDeviceE2EValidationPlan,
   buildRemoteRouteContractCatalog,
+  buildRemoteSourceQaReviewTemplate,
   buildSyncPlan,
   clawPersistentSurfaceRegistry,
   createGatewayDeploymentManifest,
@@ -256,8 +258,18 @@ function parseExternalValidationEvidence(value: string | undefined): RemoteExter
   return Array.isArray(parsed) ? parsed as RemoteExternalValidationEvidence[] : [parsed as RemoteExternalValidationEvidence];
 }
 
+function parseRequirementIds(value: string | undefined): string[] | undefined {
+  const entries = listFlag(value, []);
+  return entries.length ? entries : undefined;
+}
+
 function parseReviewedSourceQaIds(value: string | undefined): string[] {
   return listFlag(value, []);
+}
+
+function parseSourceQaIds(value: string | undefined): string[] | undefined {
+  const entries = listFlag(value, []);
+  return entries.length ? entries : undefined;
 }
 
 function parseSourceQaReviews(value: string | undefined): RemoteSourceQaReviewItem[] {
@@ -487,12 +499,26 @@ export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
     const checklist = buildRemoteExternalValidationChecklist({ generatedAt: input.flags.now });
     return writeOutput(input, "remote", checklist, `${checklist.status} covered=${checklist.coverage.coveredRequirementCount}/${checklist.coverage.requirementCount}`, command);
   }
+  if (command === "validation-template" || command === "evidence-template" || command === "external-validation-template") {
+    const template = buildRemoteExternalValidationEvidenceTemplate({
+      generatedAt: input.flags.now,
+      requirementIds: parseRequirementIds(input.flags["requirement-ids"] ?? input.flags.requirements),
+    });
+    return writeOutput(input, "remote", template, `${template.status} evidence=${template.evidence.length}/${template.requirementCount}`, command);
+  }
   if (command === "validation-report" || command === "external-validation-report") {
     const report = buildRemoteExternalValidationReport({
       generatedAt: input.flags.now,
       evidence: parseExternalValidationEvidence(input.flags["evidence-json"]),
     });
     return writeOutput(input, "remote", report, `${report.status} clearable=${report.clearableRequirementIds.length}/${report.requirementCount}`, command);
+  }
+  if (command === "source-qa-template" || command === "qa-template" || command === "source-review-template") {
+    const template = buildRemoteSourceQaReviewTemplate({
+      generatedAt: input.flags.now,
+      sourceQaIds: parseSourceQaIds(input.flags["source-qa-ids"] ?? input.flags["qa-ids"]),
+    });
+    return writeOutput(input, "remote", template, `${template.status} sourceQa=${template.reviewCount}/${template.requiredSourceQaIds.length}`, command);
   }
   if (command === "closure-gate" || command === "goal-closure-gate") {
     const gate = buildRemoteGoalClosureGate({
@@ -532,7 +558,7 @@ export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
       ...(state ? { state } : {}),
     }, `compat: ${status}`, command);
   }
-  return missing(input, "remote classify|check|routes|conformance|pending|validation-checklist|validation-report|closure-gate|contracts|e2e-plan|compat");
+  return missing(input, "remote classify|check|routes|conformance|pending|validation-checklist|validation-template|validation-report|source-qa-template|closure-gate|contracts|e2e-plan|compat");
 }
 
 export async function runSyncCli(input: RemoteSyncCliInput): Promise<number> {

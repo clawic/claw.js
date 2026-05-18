@@ -18,10 +18,12 @@ import {
   buildRemoteConformanceReport,
   buildRemoteExternalPendingRegister,
   buildRemoteExternalValidationChecklist,
+  buildRemoteExternalValidationEvidenceTemplate,
   buildRemoteExternalValidationReport,
   buildRemoteGoalClosureGate,
   buildRemoteProviderDeviceE2EValidationPlan,
   buildRemoteSourceQaReviewReport,
+  buildRemoteSourceQaReviewTemplate,
   remoteGoalClosureRequiredSourceQaIds,
   buildRemoteRouteContractCatalog,
   buildSyncQueueEntries,
@@ -117,6 +119,7 @@ import {
   remoteCompatibilityAdapterReceiptSchema,
   remoteExternalPendingRegisterSchema,
   remoteProviderDeviceE2EValidationPlanSchema,
+  remoteSourceQaReviewTemplateSchema,
   remoteRouteContractCatalogSchema,
   remoteSurfaceClassificationReceiptSchema,
   remoteGatewayAuditReceiptSchema,
@@ -582,6 +585,22 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(externalValidationChecklist.items.some((entry) => entry.requirementId === "provider_secret_retrieval" && entry.requiredArtifacts.includes("RemoteSecretProviderReceipt")), true);
   assert.equal(externalValidationChecklist.items.some((entry) => entry.requirementId === "provider_device_e2e" && entry.requiredArtifacts.includes("RemoteProviderDeviceE2EValidationPlan")), true);
 
+  const externalValidationEvidenceTemplate = buildRemoteExternalValidationEvidenceTemplate({ generatedAt: "2026-05-17T10:13:17.000Z" });
+  assert.equal(externalValidationEvidenceTemplate.status, "external_pending");
+  assert.equal(externalValidationEvidenceTemplate.writes, false);
+  assert.equal(externalValidationEvidenceTemplate.requirementCount, externalPending.requirements.length);
+  assert.equal(externalValidationEvidenceTemplate.checklistItems.length, externalPending.requirements.length);
+  assert.equal(externalValidationEvidenceTemplate.evidence.length, externalPending.requirements.length);
+  assert.equal(externalValidationEvidenceTemplate.evidence.every((entry) => entry.approvedRun === false && entry.approvedRunRef === undefined && entry.artifactRefs.length === 0 && entry.acceptedCriteria.length === 0 && entry.plaintextMaterialIncluded === false && !entry.writes), true);
+  assert.equal(externalValidationEvidenceTemplate.evidence.some((entry) => entry.requirementId === "provider_device_e2e"), true);
+  assert.equal(externalValidationEvidenceTemplate.submissionCommand.includes("claw remote validation-report"), true);
+
+  const scopedExternalValidationEvidenceTemplate = buildRemoteExternalValidationEvidenceTemplate({
+    generatedAt: "2026-05-17T10:13:18.000Z",
+    requirementIds: ["physical_iroh_handshake", "provider_device_e2e"],
+  });
+  assert.deepEqual(scopedExternalValidationEvidenceTemplate.evidence.map((entry) => entry.requirementId), ["physical_iroh_handshake", "provider_device_e2e"]);
+
   const emptyExternalValidationReport = buildRemoteExternalValidationReport({ generatedAt: "2026-05-17T10:13:20.000Z" });
   assert.equal(emptyExternalValidationReport.status, "external_pending");
   assert.equal(emptyExternalValidationReport.writes, false);
@@ -597,6 +616,7 @@ test("remote gateway sync contracts register required layers, routes, and safe d
       schemaVersion: 1,
       requirementId: entry.requirementId,
       approvedRun: true,
+      approvedRunRef: `approval://${entry.requirementId}`,
       physicalEvidenceRef: `evidence://${entry.requirementId}`,
       artifactRefs: entry.requiredArtifacts,
       acceptedCriteria: entry.acceptanceCriteria,
@@ -610,7 +630,25 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(completeExternalValidationReport.evidenceCount, externalPending.requirements.length);
   assert.equal(completeExternalValidationReport.clearableRequirementIds.length, externalPending.requirements.length);
   assert.deepEqual(completeExternalValidationReport.blockedRequirementIds, []);
-  assert.equal(completeExternalValidationReport.items.every((entry) => entry.clearable && entry.status === "clearable" && !entry.writes), true);
+  assert.equal(completeExternalValidationReport.items.every((entry) => entry.clearable && entry.status === "clearable" && entry.approvedRunRefPresent && !entry.writes), true);
+
+  const missingApprovedRunRefReport = buildRemoteExternalValidationReport({
+    generatedAt: "2026-05-17T10:13:25.500Z",
+    evidence: externalValidationChecklist.items.map((entry) => ({
+      schemaVersion: 1,
+      requirementId: entry.requirementId,
+      approvedRun: true,
+      physicalEvidenceRef: `evidence://${entry.requirementId}`,
+      artifactRefs: entry.requiredArtifacts,
+      acceptedCriteria: entry.acceptanceCriteria,
+      plaintextMaterialIncluded: false,
+      executedAt: "2026-05-17T10:13:24.000Z",
+      writes: false,
+    })),
+  });
+  assert.equal(missingApprovedRunRefReport.status, "external_pending");
+  assert.equal(missingApprovedRunRefReport.clearableRequirementIds.length, 0);
+  assert.equal(missingApprovedRunRefReport.items.every((entry) => !entry.clearable && !entry.approvedRunRefPresent), true);
 
   const emptySourceQaReviewReport = buildRemoteSourceQaReviewReport({ generatedAt: "2026-05-17T10:13:26.000Z" });
   assert.equal(emptySourceQaReviewReport.status, "incomplete");
@@ -618,6 +656,24 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(emptySourceQaReviewReport.requiredSourceQaIds.length, 23);
   assert.equal(emptySourceQaReviewReport.reviewedSourceQaIds.length, 0);
   assert.equal(emptySourceQaReviewReport.missingSourceQaIds.length, 23);
+
+  const sourceQaReviewTemplate = buildRemoteSourceQaReviewTemplate({ generatedAt: "2026-05-17T10:13:26.250Z" });
+  assert.equal(remoteSourceQaReviewTemplateSchema.safeParse(sourceQaReviewTemplate).success, true);
+  assert.equal(sourceQaReviewTemplate.status, "incomplete");
+  assert.equal(sourceQaReviewTemplate.writes, false);
+  assert.equal(sourceQaReviewTemplate.sourceConversationId, "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8");
+  assert.equal(sourceQaReviewTemplate.sourcePlanId, "019e3732-c90e-7491-9217-37020c43217e-plan");
+  assert.equal(sourceQaReviewTemplate.reviewCount, 23);
+  assert.deepEqual(sourceQaReviewTemplate.requiredSourceQaIds, remoteGoalClosureRequiredSourceQaIds);
+  assert.equal(sourceQaReviewTemplate.items.every((entry) => !entry.reviewed && entry.disposition === null && entry.evidenceRefs.length === 0 && entry.reviewedAt === null && !entry.writes), true);
+  assert.equal(sourceQaReviewTemplate.items.some((entry) => entry.qaId === "QA-023" && entry.decisionKey === "goal_closure_gate" && entry.requirementId === "Completion audit"), true);
+  assert.equal(sourceQaReviewTemplate.submissionCommand.includes("claw remote closure-gate"), true);
+  const scopedSourceQaReviewTemplate = buildRemoteSourceQaReviewTemplate({
+    generatedAt: "2026-05-17T10:13:26.300Z",
+    sourceQaIds: ["QA-001", "QA-023"],
+  });
+  assert.equal(scopedSourceQaReviewTemplate.reviewCount, 2);
+  assert.deepEqual(scopedSourceQaReviewTemplate.items.map((entry) => entry.qaId), ["QA-001", "QA-023"]);
 
   const completeSourceQaReviewReport = buildRemoteSourceQaReviewReport({
     generatedAt: "2026-05-17T10:13:26.500Z",
@@ -676,6 +732,7 @@ test("remote gateway sync contracts register required layers, routes, and safe d
       schemaVersion: 1,
       requirementId: entry.requirementId,
       approvedRun: true,
+      approvedRunRef: `approval://${entry.requirementId}`,
       physicalEvidenceRef: `evidence://${entry.requirementId}`,
       artifactRefs: entry.requiredArtifacts,
       acceptedCriteria: entry.acceptanceCriteria,

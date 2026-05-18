@@ -2,10 +2,12 @@ import {
   buildRemoteConformanceReport,
   buildRemoteExternalPendingRegister,
   buildRemoteExternalValidationChecklist,
+  buildRemoteExternalValidationEvidenceTemplate,
   buildRemoteExternalValidationReport,
   buildRemoteGoalClosureGate,
   buildRemoteProviderDeviceE2EValidationPlan,
   buildRemoteRouteContractCatalog,
+  buildRemoteSourceQaReviewTemplate,
   buildSyncPlan,
   buildSyncQueueEntries,
   clawApiPath,
@@ -56,6 +58,12 @@ function remoteExternalValidationChecklistPayload() {
   return buildRemoteExternalValidationChecklist();
 }
 
+function remoteExternalValidationEvidenceTemplatePayload(input: Record<string, unknown> = {}) {
+  return buildRemoteExternalValidationEvidenceTemplate({
+    requirementIds: arrayOfStrings(input.requirementIds ?? input["requirement-ids"], []),
+  });
+}
+
 function remoteExternalValidationReportPayload(input: Record<string, unknown> = {}) {
   return buildRemoteExternalValidationReport({
     evidence: Array.isArray(input.evidence) ? input.evidence as RemoteExternalValidationEvidence[] : [],
@@ -67,6 +75,12 @@ function remoteGoalClosureGatePayload(input: Record<string, unknown> = {}) {
     reviewedSourceQaIds: Array.isArray(input.reviewedSourceQaIds) ? input.reviewedSourceQaIds.filter((entry): entry is string => typeof entry === "string") : [],
     sourceQaReviews: Array.isArray(input.sourceQaReviews) ? input.sourceQaReviews as RemoteSourceQaReviewItem[] : [],
     evidence: Array.isArray(input.evidence) ? input.evidence as RemoteExternalValidationEvidence[] : [],
+  });
+}
+
+function remoteSourceQaReviewTemplatePayload(input: Record<string, unknown> = {}) {
+  return buildRemoteSourceQaReviewTemplate({
+    sourceQaIds: arrayOfStrings(input.sourceQaIds ?? input["source-qa-ids"] ?? input.qaIds ?? input["qa-ids"], []),
   });
 }
 
@@ -381,9 +395,17 @@ export function registerRemoteSyncRoutes(app: FastifyInstance): void {
 
   app.get(clawApiPath("remote/external-validation-checklist"), async () => remoteExternalValidationChecklistPayload());
 
+  app.get(clawApiPath("remote/external-validation-template"), async () => remoteExternalValidationEvidenceTemplatePayload());
+
+  app.post(clawApiPath("remote/external-validation-template"), async (request) => remoteExternalValidationEvidenceTemplatePayload(readBody(request)));
+
   app.get(clawApiPath("remote/external-validation-report"), async () => remoteExternalValidationReportPayload());
 
   app.post(clawApiPath("remote/external-validation-report"), async (request) => remoteExternalValidationReportPayload(readBody(request)));
+
+  app.get(clawApiPath("remote/source-qa-template"), async () => remoteSourceQaReviewTemplatePayload());
+
+  app.post(clawApiPath("remote/source-qa-template"), async (request) => remoteSourceQaReviewTemplatePayload(readBody(request)));
 
   app.get(clawApiPath("remote/closure-gate"), async () => remoteGoalClosureGatePayload());
 

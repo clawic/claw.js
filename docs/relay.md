@@ -155,12 +155,24 @@ The Relay `/v1/remote/external-validation-checklist` endpoint and
 validation checklist: every `RemoteExternalPendingRegister` row must have an
 approved command, required artifacts, and acceptance criteria before it can be
 cleared from `EXTERNAL PENDING`.
+The Relay `/v1/remote/external-validation-template` endpoint and
+`claw remote validation-template` expose the matching no-write evidence
+template. The template is not evidence by itself: operators fill its `evidence`
+array only after approved physical/provider runs, including an `approvedRunRef`
+approval/audit reference for each row, then submit that array to the validation
+report evaluator.
 The Relay `/v1/remote/external-validation-report` endpoint and
 `claw remote validation-report` evaluate external validation evidence against
 that checklist. A row is only `clearable` when the report includes approved-run
-evidence, physical evidence, all required artifacts, all acceptance criteria,
-and `plaintextMaterialIncluded: false`; otherwise it remains
+evidence with `approvedRunRef`, physical evidence, all required artifacts, all
+acceptance criteria, and `plaintextMaterialIncluded: false`; otherwise it remains
 `external_pending`.
+The Relay `/v1/remote/source-qa-template` endpoint and
+`claw remote source-qa-template` expose the matching no-write source Q/A review
+template for the source conversation and plan. The template is not a review by
+itself: every row starts incomplete and must be converted into a
+`RemoteSourceQaReviewItem` with disposition, evidence refs, review timestamp,
+and `writes: false` before the closure gate accepts it.
 The remote closure gate is exposed by Relay `/v1/remote/closure-gate` and
 `claw remote closure-gate`. It combines that evidence report with the source
 Q/A review report. The result stays `blocked` until all 23 source Q/A rows have

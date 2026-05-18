@@ -205,7 +205,9 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
     transport: { contract: string; adapterNodeId: string; trustModes: string[]; receiptContract: string; writes: boolean };
     gaps: Array<{ requirementId: string; status: string; writes: boolean }>;
     externalValidationChecklist: { status: string; writes: boolean; requirementIds: string[]; coverage: { requirementCount: number; coveredRequirementCount: number; missingRequirementIds: string[] }; items: Array<{ requirementId: string; requiredCommand: string; requiredArtifacts: string[]; approvedRunRequired: boolean; physicalEvidenceRequired: boolean; plaintextMaterialIncluded: boolean; writes: boolean }> };
+    externalValidationEvidenceTemplate: { status: string; writes: boolean; requirementCount: number; submissionCommand: string; checklistItems: unknown[]; evidence: Array<{ requirementId: string; approvedRun: boolean; artifactRefs: string[]; acceptedCriteria: string[]; plaintextMaterialIncluded: boolean; writes: boolean }> };
     externalValidationReport: { status: string; writes: boolean; requirementCount: number; evidenceCount: number; clearableRequirementIds: string[]; blockedRequirementIds: string[]; items: Array<{ requirementId: string; clearable: boolean; status: string; writes: boolean }> };
+    sourceQaReviewTemplate: { status: string; writes: boolean; sourceConversationId: string; sourcePlanId: string; requiredSourceQaIds: string[]; reviewCount: number; submissionCommand: string; items: Array<{ qaId: string; decisionKey: string; requirementId: string; reviewed: boolean; disposition: null; evidenceRefs: string[]; reviewedAt: null; writes: boolean }> };
     closureGate: { status: string; writes: boolean; requiredSourceQaIds: string[]; reviewedSourceQaIds: string[]; missingSourceQaIds: string[]; sourceQaReviewStatus: string; sourceQaReviewItems: unknown[]; blockedExternalRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockers: string[] };
     providerDeviceE2EPlan: { status: string; writes: boolean; requiredDomains: string[]; requiredRouteIds: string[]; requiredExternalPendingIds: string[]; plaintextMaterialIncluded: boolean };
     routeContracts: Array<{ routeId: string; parallelApiAllowed: boolean; writes: boolean }>;
@@ -243,6 +245,13 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   assert.equal(remoteInspectPayload.externalValidationChecklist.items.some((entry) => entry.requirementId === "physical_iroh_handshake" && entry.requiredCommand.includes("claw nodes heartbeat")), true);
   assert.equal(remoteInspectPayload.externalValidationChecklist.items.some((entry) => entry.requirementId === "provider_device_e2e" && entry.requiredArtifacts.includes("RemoteProviderDeviceE2EValidationPlan")), true);
   assert.equal(remoteInspectPayload.externalValidationChecklist.items.every((entry) => entry.approvedRunRequired && entry.physicalEvidenceRequired && entry.plaintextMaterialIncluded === false && !entry.writes), true);
+  assert.equal(remoteInspectPayload.externalValidationEvidenceTemplate.status, "external_pending");
+  assert.equal(remoteInspectPayload.externalValidationEvidenceTemplate.writes, false);
+  assert.equal(remoteInspectPayload.externalValidationEvidenceTemplate.requirementCount, remoteInspectPayload.gaps.length);
+  assert.equal(remoteInspectPayload.externalValidationEvidenceTemplate.checklistItems.length, remoteInspectPayload.gaps.length);
+  assert.equal(remoteInspectPayload.externalValidationEvidenceTemplate.evidence.length, remoteInspectPayload.gaps.length);
+  assert.equal(remoteInspectPayload.externalValidationEvidenceTemplate.evidence.every((entry) => !entry.approvedRun && entry.artifactRefs.length === 0 && entry.acceptedCriteria.length === 0 && entry.plaintextMaterialIncluded === false && !entry.writes), true);
+  assert.equal(remoteInspectPayload.externalValidationEvidenceTemplate.submissionCommand.includes("claw remote validation-report"), true);
   assert.equal(remoteInspectPayload.externalValidationReport.status, "external_pending");
   assert.equal(remoteInspectPayload.externalValidationReport.writes, false);
   assert.equal(remoteInspectPayload.externalValidationReport.requirementCount, remoteInspectPayload.gaps.length);
@@ -250,6 +259,15 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   assert.equal(remoteInspectPayload.externalValidationReport.clearableRequirementIds.length, 0);
   assert.equal(remoteInspectPayload.externalValidationReport.blockedRequirementIds.length, remoteInspectPayload.gaps.length);
   assert.equal(remoteInspectPayload.externalValidationReport.items.every((entry) => !entry.clearable && entry.status === "external_pending" && !entry.writes), true);
+  assert.equal(remoteInspectPayload.sourceQaReviewTemplate.status, "incomplete");
+  assert.equal(remoteInspectPayload.sourceQaReviewTemplate.writes, false);
+  assert.equal(remoteInspectPayload.sourceQaReviewTemplate.sourceConversationId, "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8");
+  assert.equal(remoteInspectPayload.sourceQaReviewTemplate.sourcePlanId, "019e3732-c90e-7491-9217-37020c43217e-plan");
+  assert.equal(remoteInspectPayload.sourceQaReviewTemplate.reviewCount, 23);
+  assert.equal(remoteInspectPayload.sourceQaReviewTemplate.requiredSourceQaIds.length, 23);
+  assert.equal(remoteInspectPayload.sourceQaReviewTemplate.items.every((entry) => !entry.reviewed && entry.disposition === null && entry.evidenceRefs.length === 0 && entry.reviewedAt === null && !entry.writes), true);
+  assert.equal(remoteInspectPayload.sourceQaReviewTemplate.items.some((entry) => entry.qaId === "QA-023" && entry.decisionKey === "goal_closure_gate"), true);
+  assert.equal(remoteInspectPayload.sourceQaReviewTemplate.submissionCommand.includes("claw remote closure-gate"), true);
   assert.equal(remoteInspectPayload.closureGate.status, "blocked");
   assert.equal(remoteInspectPayload.closureGate.writes, false);
   assert.equal(remoteInspectPayload.closureGate.requiredSourceQaIds.length, 23);
@@ -306,6 +324,31 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.equal(remoteValidationChecklistPayload.items.some((entry) => entry.requirementId === "physical_iroh_handshake" && entry.requiredCommand.includes("claw nodes heartbeat")), true);
   assert.equal(remoteValidationChecklistPayload.items.some((entry) => entry.requirementId === "provider_device_e2e" && entry.requiredArtifacts.includes("RemoteProviderDeviceE2EValidationPlan")), true);
   assert.equal(remoteValidationChecklistPayload.items.every((entry) => entry.approvedRunRequired && entry.physicalEvidenceRequired && entry.plaintextMaterialIncluded === false && !entry.writes), true);
+
+  const remoteValidationTemplate = await runCliCapture(["remote", "validation-template", "--now", "2026-05-17T10:13:17.000Z", "--json"], process.cwd());
+  assert.equal(remoteValidationTemplate.code, CLI_EXIT_OK);
+  const remoteValidationTemplatePayload = parseCliJson<{ status: string; writes: boolean; requirementCount: number; submissionCommand: string; checklistItems: unknown[]; evidence: Array<{ requirementId: string; approvedRun: boolean; artifactRefs: string[]; acceptedCriteria: string[]; plaintextMaterialIncluded: boolean; writes: boolean }> }>(remoteValidationTemplate.stdout).data;
+  assert.equal(remoteValidationTemplatePayload.status, "external_pending");
+  assert.equal(remoteValidationTemplatePayload.writes, false);
+  assert.equal(remoteValidationTemplatePayload.requirementCount, remotePendingPayload.requirements.length);
+  assert.equal(remoteValidationTemplatePayload.checklistItems.length, remotePendingPayload.requirements.length);
+  assert.equal(remoteValidationTemplatePayload.evidence.length, remotePendingPayload.requirements.length);
+  assert.equal(remoteValidationTemplatePayload.evidence.some((entry) => entry.requirementId === "provider_device_e2e"), true);
+  assert.equal(remoteValidationTemplatePayload.evidence.every((entry) => !entry.approvedRun && entry.artifactRefs.length === 0 && entry.acceptedCriteria.length === 0 && entry.plaintextMaterialIncluded === false && !entry.writes), true);
+  assert.equal(remoteValidationTemplatePayload.submissionCommand.includes("claw remote validation-report"), true);
+
+  const remoteSourceQaTemplate = await runCliCapture(["remote", "source-qa-template", "--now", "2026-05-17T10:13:26.250Z", "--json"], process.cwd());
+  assert.equal(remoteSourceQaTemplate.code, CLI_EXIT_OK);
+  const remoteSourceQaTemplatePayload = parseCliJson<{ status: string; writes: boolean; sourceConversationId: string; sourcePlanId: string; requiredSourceQaIds: string[]; reviewCount: number; submissionCommand: string; items: Array<{ qaId: string; decisionKey: string; requirementId: string; reviewed: boolean; disposition: null; evidenceRefs: string[]; reviewedAt: null; writes: boolean }> }>(remoteSourceQaTemplate.stdout).data;
+  assert.equal(remoteSourceQaTemplatePayload.status, "incomplete");
+  assert.equal(remoteSourceQaTemplatePayload.writes, false);
+  assert.equal(remoteSourceQaTemplatePayload.sourceConversationId, "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8");
+  assert.equal(remoteSourceQaTemplatePayload.sourcePlanId, "019e3732-c90e-7491-9217-37020c43217e-plan");
+  assert.equal(remoteSourceQaTemplatePayload.reviewCount, 23);
+  assert.equal(remoteSourceQaTemplatePayload.requiredSourceQaIds.length, 23);
+  assert.equal(remoteSourceQaTemplatePayload.items.every((entry) => !entry.reviewed && entry.disposition === null && entry.evidenceRefs.length === 0 && entry.reviewedAt === null && !entry.writes), true);
+  assert.equal(remoteSourceQaTemplatePayload.items.some((entry) => entry.qaId === "QA-023" && entry.decisionKey === "goal_closure_gate"), true);
+  assert.equal(remoteSourceQaTemplatePayload.submissionCommand.includes("claw remote closure-gate"), true);
 
   const remoteValidationReport = await runCliCapture(["remote", "validation-report", "--now", "2026-05-17T10:13:20.000Z", "--json"], process.cwd());
   assert.equal(remoteValidationReport.code, CLI_EXIT_OK);

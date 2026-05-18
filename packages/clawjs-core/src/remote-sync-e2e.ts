@@ -67,6 +67,7 @@ export const remoteExternalValidationEvidenceSchema = z.object({
   schemaVersion: z.literal(1),
   requirementId: z.string().min(1),
   approvedRun: z.boolean(),
+  approvedRunRef: z.string().min(1).optional(),
   physicalEvidenceRef: z.string().min(1).optional(),
   artifactRefs: z.array(z.string().min(1)),
   acceptedCriteria: z.array(z.string().min(1)),
@@ -84,6 +85,7 @@ export const remoteExternalValidationReportItemSchema = z.object({
   sourceReceipt: z.string().min(1),
   status: z.enum(["external_pending", "clearable"]),
   approvedRun: z.boolean(),
+  approvedRunRefPresent: z.boolean(),
   physicalEvidencePresent: z.boolean(),
   missingArtifacts: z.array(z.string()),
   missingAcceptanceCriteria: z.array(z.string()),
@@ -102,6 +104,19 @@ export const remoteExternalValidationReportSchema = z.object({
   clearableRequirementIds: z.array(z.string()),
   blockedRequirementIds: z.array(z.string()),
   items: z.array(remoteExternalValidationReportItemSchema),
+  writes: z.literal(false),
+});
+
+export const remoteExternalValidationEvidenceTemplateSchema = z.object({
+  schemaVersion: z.literal(1),
+  templateId: z.string().min(1),
+  generatedAt: z.string().datetime(),
+  status: z.literal("external_pending"),
+  requirementCount: z.number().int().nonnegative(),
+  submissionCommand: z.string().min(1),
+  checklistItems: z.array(remoteExternalValidationChecklistItemSchema).min(1),
+  evidence: z.array(remoteExternalValidationEvidenceSchema).min(1),
+  instructions: z.array(z.string().min(1)).min(1),
   writes: z.literal(false),
 });
 
@@ -131,6 +146,33 @@ export const remoteSourceQaReviewReportSchema = z.object({
   writes: z.literal(false),
 });
 
+export const remoteSourceQaReviewTemplateItemSchema = z.object({
+  schemaVersion: z.literal(1),
+  qaId: z.string().min(1),
+  decisionKey: z.string().min(1),
+  requirementId: z.string().min(1),
+  reviewed: z.literal(false),
+  disposition: z.null(),
+  evidenceRefs: z.array(z.string()).length(0),
+  reviewedAt: z.null(),
+  writes: z.literal(false),
+});
+
+export const remoteSourceQaReviewTemplateSchema = z.object({
+  schemaVersion: z.literal(1),
+  templateId: z.string().min(1),
+  sourceConversationId: z.string().min(1),
+  sourcePlanId: z.string().min(1),
+  generatedAt: z.string().datetime(),
+  status: z.literal("incomplete"),
+  requiredSourceQaIds: z.array(z.string().min(1)).min(1),
+  reviewCount: z.number().int().nonnegative(),
+  submissionCommand: z.string().min(1),
+  items: z.array(remoteSourceQaReviewTemplateItemSchema).min(1),
+  instructions: z.array(z.string().min(1)).min(1),
+  writes: z.literal(false),
+});
+
 export const remoteGoalClosureGateSchema = z.object({
   schemaVersion: z.literal(1),
   gateId: z.string().min(1),
@@ -151,9 +193,12 @@ export const remoteGoalClosureGateSchema = z.object({
 export type RemoteExternalValidationEvidence = z.infer<typeof remoteExternalValidationEvidenceSchema>;
 export type RemoteExternalValidationReportItem = z.infer<typeof remoteExternalValidationReportItemSchema>;
 export type RemoteExternalValidationReport = z.infer<typeof remoteExternalValidationReportSchema>;
+export type RemoteExternalValidationEvidenceTemplate = z.infer<typeof remoteExternalValidationEvidenceTemplateSchema>;
 export type RemoteSourceQaReviewDisposition = z.infer<typeof remoteSourceQaReviewDispositionSchema>;
 export type RemoteSourceQaReviewItem = z.infer<typeof remoteSourceQaReviewItemSchema>;
 export type RemoteSourceQaReviewReport = z.infer<typeof remoteSourceQaReviewReportSchema>;
+export type RemoteSourceQaReviewTemplateItem = z.infer<typeof remoteSourceQaReviewTemplateItemSchema>;
+export type RemoteSourceQaReviewTemplate = z.infer<typeof remoteSourceQaReviewTemplateSchema>;
 export type RemoteGoalClosureGate = z.infer<typeof remoteGoalClosureGateSchema>;
 
 function providerDeviceE2EPlanId(parts: string[]): string {
@@ -334,10 +379,20 @@ function externalValidationReportId(parts: string[]): string {
   return `remote_external_validation_report_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
 }
 
+function externalValidationEvidenceTemplateId(parts: string[]): string {
+  return `remote_external_validation_evidence_template_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
+}
+
+function sourceQaReviewTemplateId(parts: string[]): string {
+  return `remote_source_qa_review_template_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
+}
+
 function remoteGoalClosureGateId(parts: string[]): string {
   return `remote_goal_closure_gate_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
 }
 
+export const remoteSourceConversationId = "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8";
+export const remoteSourcePlanId = "019e3732-c90e-7491-9217-37020c43217e-plan";
 export const remoteGoalClosureRequiredSourceQaIds = Array.from({ length: 23 }, (_, index) => `QA-${String(index + 1).padStart(3, "0")}`);
 
 const remoteSourceQaCatalog: Record<string, { decisionKey: string; requirementId: string }> = {
@@ -433,8 +488,10 @@ export function buildRemoteExternalValidationReport(input: {
     const missingArtifacts = checklistItem.requiredArtifacts.filter((artifact) => !artifactRefs.has(artifact));
     const missingAcceptanceCriteria = checklistItem.acceptanceCriteria.filter((criterion) => !acceptedCriteria.has(criterion));
     const approvedRun = evidence?.approvedRun === true;
+    const approvedRunRefPresent = !!evidence?.approvedRunRef;
     const physicalEvidencePresent = !!evidence?.physicalEvidenceRef;
     const clearable = approvedRun
+      && approvedRunRefPresent
       && physicalEvidencePresent
       && missingArtifacts.length === 0
       && missingAcceptanceCriteria.length === 0
@@ -447,6 +504,7 @@ export function buildRemoteExternalValidationReport(input: {
       sourceReceipt: checklistItem.sourceReceipt,
       status: clearable ? "clearable" : "external_pending",
       approvedRun,
+      approvedRunRefPresent,
       physicalEvidencePresent,
       missingArtifacts,
       missingAcceptanceCriteria,
@@ -467,6 +525,46 @@ export function buildRemoteExternalValidationReport(input: {
     clearableRequirementIds,
     blockedRequirementIds,
     items,
+    writes: false,
+  });
+}
+
+export function buildRemoteExternalValidationEvidenceTemplate(input: {
+  generatedAt?: string;
+  requirementIds?: string[];
+} = {}): RemoteExternalValidationEvidenceTemplate {
+  const generatedAt = input.generatedAt ?? new Date().toISOString();
+  const checklist = buildRemoteExternalValidationChecklist({ generatedAt });
+  const requestedIds = input.requirementIds?.length ? new Set(input.requirementIds) : null;
+  const checklistItems = requestedIds
+    ? checklist.items.filter((entry) => requestedIds.has(entry.requirementId))
+    : checklist.items;
+  const evidence = checklistItems.map((entry) => remoteExternalValidationEvidenceSchema.parse({
+    schemaVersion: 1,
+    requirementId: entry.requirementId,
+    approvedRun: false,
+    artifactRefs: [],
+    acceptedCriteria: [],
+    plaintextMaterialIncluded: false,
+    executedAt: generatedAt,
+    writes: false,
+  }));
+  return remoteExternalValidationEvidenceTemplateSchema.parse({
+    schemaVersion: 1,
+    templateId: externalValidationEvidenceTemplateId(["template", generatedAt]),
+    generatedAt,
+    status: "external_pending",
+    requirementCount: checklistItems.length,
+    submissionCommand: "claw remote validation-report --evidence-json '<template.evidence>' --json",
+    checklistItems,
+    evidence,
+    instructions: [
+      "Fill one evidence row per requirement after an explicitly approved physical/provider validation run.",
+      "Set approvedRun true only for approved runs and set approvedRunRef to the approval/audit record for that run.",
+      "Copy every required artifact name into artifactRefs only when that artifact exists.",
+      "Copy every acceptance criterion into acceptedCriteria only when the run proves it.",
+      "Keep plaintextMaterialIncluded false; never attach plaintext secrets or raw credential material.",
+    ],
     writes: false,
   });
 }
@@ -516,6 +614,48 @@ export function buildRemoteSourceQaReviewReport(input: {
     missingSourceQaIds,
     invalidSourceQaIds,
     items: validItems,
+    writes: false,
+  });
+}
+
+export function buildRemoteSourceQaReviewTemplate(input: {
+  generatedAt?: string;
+  sourceQaIds?: string[];
+} = {}): RemoteSourceQaReviewTemplate {
+  const generatedAt = input.generatedAt ?? new Date().toISOString();
+  const requestedIds = input.sourceQaIds?.length ? input.sourceQaIds : remoteGoalClosureRequiredSourceQaIds;
+  const sourceQaIds = requestedIds.filter((qaId) => remoteGoalClosureRequiredSourceQaIds.includes(qaId));
+  const items = sourceQaIds.map((qaId) => {
+    const catalogEntry = remoteSourceQaCatalog[qaId];
+    return remoteSourceQaReviewTemplateItemSchema.parse({
+      schemaVersion: 1,
+      qaId,
+      decisionKey: catalogEntry.decisionKey,
+      requirementId: catalogEntry.requirementId,
+      reviewed: false,
+      disposition: null,
+      evidenceRefs: [],
+      reviewedAt: null,
+      writes: false,
+    });
+  });
+  return remoteSourceQaReviewTemplateSchema.parse({
+    schemaVersion: 1,
+    templateId: sourceQaReviewTemplateId(["template", generatedAt]),
+    sourceConversationId: remoteSourceConversationId,
+    sourcePlanId: remoteSourcePlanId,
+    generatedAt,
+    status: "incomplete",
+    requiredSourceQaIds: sourceQaIds,
+    reviewCount: items.length,
+    submissionCommand: "claw remote closure-gate --source-qa-review-json '<completed RemoteSourceQaReviewItem[]>' --json",
+    items,
+    instructions: [
+      "Review each source Q/A row against the current implementation before filling this template.",
+      "Convert each completed row into a RemoteSourceQaReviewItem with disposition, non-empty evidenceRefs, reviewedAt, and writes false.",
+      "Use disposition external_pending only for physical/provider rows that cannot be completed locally.",
+      "Do not submit this template directly; incomplete rows are intentionally rejected by the closure gate.",
+    ],
     writes: false,
   });
 }
