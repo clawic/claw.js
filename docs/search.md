@@ -415,7 +415,9 @@ fragments are omitted.
 source, and sensitivity. Facts index subject, predicate, object value, scope,
 confidence, validity window, source, and provenance. Sensitive knowledge can
 still match indexed text, but returned previews are redacted and fragments are
-omitted.
+omitted. `claw knowledge delete ID --kind fact|entity` schedules the matching
+hot `knowledge.graph` delete job so Search tombstones facts and entities without
+waiting for a full rebuild.
 
 `images.derived` projects local image-library records and image media metadata.
 The initial adapter indexes prompts, revised prompts, tags, collections, type,

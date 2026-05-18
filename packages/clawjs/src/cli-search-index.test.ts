@@ -3423,6 +3423,22 @@ test("search rebuild indexes knowledge.graph from entities and facts", async () 
     assert.equal(result?.actions?.some((action) => action.id === "open" && action.kind === "open"), true);
     assert.ok(result?.explanation?.matchedBy?.length);
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "predicate"), true);
+
+    const deletedFact = await runCliCapture(["knowledge", "delete", "fact-search-preference", "--kind", "fact", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deletedFact.code, CLI_EXIT_OK);
+    const deletedEntity = await runCliCapture(["knowledge", "delete", "entity-search-system", "--kind", "entity", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deletedEntity.code, CLI_EXIT_OK);
+    const deleteJobs = await runCliCapture(["search", "jobs", "--source", "knowledge.graph", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleteJobs.code, CLI_EXIT_OK);
+    const deleteJobsPayload = JSON.parse(deleteJobs.stdout) as {
+      data: { items: Array<{ operation: string; resourceId: string; payload: { kind?: string; factId?: string; entityId?: string } }> };
+    };
+    const deletedFactJob = deleteJobsPayload.data.items.find((job) => job.operation === "delete" && job.resourceId === "fact:fact-search-preference");
+    assert.equal(deletedFactJob?.payload.kind, "fact");
+    assert.equal(deletedFactJob?.payload.factId, "fact-search-preference");
+    const deletedEntityJob = deleteJobsPayload.data.items.find((job) => job.operation === "delete" && job.resourceId === "entity:entity-search-system");
+    assert.equal(deletedEntityJob?.payload.kind, "entity");
+    assert.equal(deletedEntityJob?.payload.entityId, "entity-search-system");
   });
 });
 

@@ -182,7 +182,7 @@ function shouldHandleV1DataCommand(group: string | undefined, command: string | 
     "app-state": new Set(["get", "set", "snapshot", "project", "pin", "title", "archive", "sidebar", "terminal", "help"]),
     signals: new Set(["catalog", "seed-catalog", "observe", "list", "delete", "help"]),
     life: new Set(["catalog", "seed-catalog", "observe", "list", "delete", "help"]),
-    knowledge: new Set(["entity", "fact", "list", "search", "promote", "help"]),
+    knowledge: new Set(["entity", "fact", "list", "search", "promote", "delete", "help"]),
     notes: new Set(["create", "list", "get", "update", "delete", "search", "export", "import", "link", "record-note", "help"]),
     wiki: new Set(["create", "list", "get", "update", "delete", "search", "export", "import", "link", "help"]),
     profile: new Set(["get", "refresh", "list", "help"]),
@@ -768,6 +768,24 @@ function runKnowledgeCommand(input: V1DataCliInput, store: DatabaseServiceStore)
     });
     writeSuccess(input, normalizeDbRow(store.sqlite.prepare("SELECT * FROM knowledge_facts WHERE id = ?").get(id) as JsonRecord));
     return V1_DATA_EXIT_OK;
+  }
+  if (command === "delete") {
+    const id = input.flags.id || input.positionals[2];
+    const kind = input.flags.kind === "entity" ? "entity" : "fact";
+    if (!id) return usageError(input, "Usage: claw knowledge delete ID [--kind fact|entity] [--json]");
+    const table = kind === "entity" ? "knowledge_entities" : "knowledge_facts";
+    const changes = store.sqlite.prepare(`DELETE FROM ${table} WHERE id = ?`).run(id).changes;
+    if (changes > 0) {
+      scheduleKnowledgeGraphSearchEvent({
+        operation: "delete",
+        kind,
+        id,
+        dataDir: resolveClawjsDataRoot(),
+        flags: input.flags,
+      });
+    }
+    writeSuccess(input, { deleted: changes > 0, id, kind });
+    return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
   if (command === "list") {
     const kind = input.flags.kind || "facts";
