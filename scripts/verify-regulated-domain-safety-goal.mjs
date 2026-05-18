@@ -180,14 +180,14 @@ function assertPackageReadmeDisclaimers() {
 
 function assertReleaseScriptsRunLegalGate() {
   const packageJson = JSON.parse(read("package.json"));
-  for (const scriptName of ["publish:dry-run", "publish:packages"]) {
+  for (const scriptName of ["publish:dry-run", "publish:packages", "release:publish"]) {
     const script = packageJson.scripts?.[scriptName];
     if (typeof script !== "string") {
       errors.push(`package.json: missing release script ${scriptName}`);
       continue;
     }
     if (!script.includes("verify-regulated-domain-safety-goal.mjs")) {
-      errors.push(`package.json: ${scriptName} must run verify-regulated-domain-safety-goal.mjs before npm publish`);
+      errors.push(`package.json: ${scriptName} must run verify-regulated-domain-safety-goal.mjs before publishing`);
     }
   }
 }
@@ -232,6 +232,56 @@ function assertDemoDataIsSynthetic() {
     const domain = match[1].toLowerCase();
     if (!allowedEmailDomains.has(domain)) {
       errors.push(`${seedPath}: public mock data must use reserved email domains, found ${match[0]}`);
+    }
+  }
+}
+
+function assertNoCredentialLikePublicSecrets() {
+  const roots = [
+    "README.md",
+    "TERMS.md",
+    "PRIVACY.md",
+    "DISCLAIMER.md",
+    "SAFETY.md",
+    "REGULATED_DOMAINS.md",
+    "EULA.md",
+    "SECURITY.md",
+    "RELEASING.md",
+  ];
+  const extensions = new Set([".md", ".html", ".json", ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".yml", ".yaml"]);
+  const scanned = [
+    ...roots,
+    ...walk("docs", (file) => extensions.has(path.extname(file))),
+    ...walk("website", (file) => extensions.has(path.extname(file))),
+    ...walk("examples", (file) => extensions.has(path.extname(file))),
+    ...walk("packages", (file) => extensions.has(path.extname(file))),
+    ...walk("tests", (file) => extensions.has(path.extname(file))),
+  ]
+    .filter((file, index, all) => all.indexOf(file) === index)
+    .filter((file) => fs.existsSync(path.join(rootDir, file)));
+  const patterns = [
+    ["github-token", /(?<![A-Za-z0-9])gh[pousr]_[A-Za-z0-9_]{20,}/g],
+    ["openai-token", /(?<![A-Za-z0-9])sk-[A-Za-z0-9_-]{20,}/g],
+    ["slack-token", /(?<![A-Za-z0-9])xox[baprs]-[A-Za-z0-9-]{20,}/g],
+    ["aws-access-key", /(?<![A-Za-z0-9])AKIA[0-9A-Z]{16}(?![A-Za-z0-9])/g],
+    ["google-api-key", /(?<![A-Za-z0-9])AIza[0-9A-Za-z_-]{20,}/g],
+    ["personal-email-domain", /\b[A-Za-z0-9._%+-]+@(gmail|yahoo|hotmail|outlook|icloud|me|live)\.(com|net|org)\b/gi],
+  ];
+  const allowedCredentialFixtures = new Set([
+    "packages/clawjs/src/cli-report.test.ts",
+  ]);
+  for (const relativePath of scanned) {
+    const lines = read(relativePath).split(/\r?\n/);
+    for (const [index, line] of lines.entries()) {
+      if (allowedCredentialFixtures.has(relativePath) && /redact|redacted|token|TEAM_ID|internal\.example/.test(line)) {
+        continue;
+      }
+      for (const [id, pattern] of patterns) {
+        pattern.lastIndex = 0;
+        if (pattern.test(line)) {
+          errors.push(`${relativePath}:${index + 1}: contains credential-like or personal fixture value (${id}); use synthetic placeholders or a redaction test allowlist`);
+        }
+      }
     }
   }
 }
@@ -344,6 +394,13 @@ for (const [relativePath, snippets] of [
     "await import(\"@clawjs/search\")",
     "await import(\"@clawjs/search-mcp\")",
   ]],
+  ["scripts/package-surface-guard.mjs", [
+    "releaseCriticalPackages",
+    "\"@clawjs/search-mcp\"",
+    "scripts/build-packages.mjs must build release-critical package",
+    "scripts/pack-smoke.mjs must pack local tarball for release-critical package",
+    "package.json ${scriptName} must include release-critical package",
+  ]],
   ["CONSTITUTION.md", [
     "Regulated domains are assistive",
     "other regulated decisions",
@@ -369,6 +426,9 @@ for (const [relativePath, snippets] of [
     "Source conversation: `019e3a44-1175-7930-b45c-252f342b5ec2`",
     "Status: `active_goal_not_complete`",
     "LEGAL-EXT-001",
+    "0.1.2",
+    "already exists",
+    "Release PR/version bump for an unpublished version",
     "LEGAL-EXT-006",
     "EXTERNAL PENDING",
     "not passes",
@@ -510,6 +570,7 @@ assertReleaseScriptsRunLegalGate();
 assertLegalDocsAreBilingual();
 assertLegalDocVersionsAreAligned();
 assertDemoDataIsSynthetic();
+assertNoCredentialLikePublicSecrets();
 
 if (errors.length > 0) {
   console.error(`Regulated domain safety guard failed with ${errors.length} issue(s):`);

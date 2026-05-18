@@ -57,7 +57,10 @@ validation must be recorded in `docs/legal-external-pending-validation.md` as
 ### npm Package Channel Checklist
 
 1. Run `node --import tsx ./scripts/verify-regulated-domain-safety-goal.mjs`.
-2. Run `npm run publish:dry-run` and review the package file lists.
+2. Run `npm run publish:dry-run` after the release PR/version bump targets an
+   unpublished package version, then review the package file lists. If the
+   current version already exists in npm, record the lane as `EXTERNAL PENDING`
+   rather than treating it as passed.
 3. Confirm every public package ships `README.md` with regulated-domain
    disclaimers and links to Terms, Privacy, Disclaimer, Safety, Regulated
    Domains, and EULA where applicable.

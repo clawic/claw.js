@@ -14,7 +14,7 @@ must not be used to approve a release.
 
 | ID | Requirement | Local evidence | Missing prerequisite | Status |
 | --- | --- | --- | --- | --- |
-| LEGAL-EXT-001 | npm package publication path | `publish:dry-run`, package file checks, README checks, and regulated-domain verifier cover local package readiness. | Fresh explicit approval and registry publication credentials for the exact npm action. | EXTERNAL PENDING |
+| LEGAL-EXT-001 | npm package publication path | Local package readiness is covered by `build:packages`, `test:pack`, package file checks, README checks, and regulated-domain verifier; `publish:dry-run` currently reaches npm registry and is blocked because the current `0.1.2` package version already exists. | Release PR/version bump for an unpublished version, fresh explicit approval, and registry credentials for the exact npm action. | EXTERNAL PENDING |
 | LEGAL-EXT-002 | GitHub release or tag path | Release checklist requires legal docs, conservative claims, and exact-action approval. | Fresh explicit approval and GitHub release/tag action for the exact channel. | EXTERNAL PENDING |
 | LEGAL-EXT-003 | Website deployment path | Website/demo claim scans and release checklist cover local copy and fixture safety. | Fresh explicit approval and the exact website deployment target. | EXTERNAL PENDING |
 | LEGAL-EXT-004 | App/binary distribution path | EULA, release checklist, and Clawix app-side gates cover app/binary legal requirements. | Signed candidate, installer/upload target, or store lane for the exact binary channel. | EXTERNAL PENDING |

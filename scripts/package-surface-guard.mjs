@@ -97,11 +97,53 @@ function binViolations(bin, file) {
 
 const packageFiles = targets.flatMap((target) => listPackageFiles(path.resolve(cwd, target)));
 const violations = [];
+const packageEntriesByName = new Map();
 for (const file of packageFiles) {
   const parsed = JSON.parse(fs.readFileSync(file, "utf8"));
+  if (typeof parsed.name === "string") {
+    packageEntriesByName.set(parsed.name, { file, manifest: parsed });
+  }
   const nameViolation = packageNameViolation(parsed.name, file);
   if (nameViolation) violations.push(nameViolation);
   violations.push(...binViolations(parsed.bin, file));
+}
+
+if (owner === "clawjs") {
+  const rootPackageJsonPath = path.join(cwd, "package.json");
+  const buildPackagesPath = path.join(cwd, "scripts", "build-packages.mjs");
+  const packSmokePath = path.join(cwd, "scripts", "pack-smoke.mjs");
+  if (fs.existsSync(rootPackageJsonPath) && fs.existsSync(buildPackagesPath) && fs.existsSync(packSmokePath)) {
+    const rootPackageJson = JSON.parse(fs.readFileSync(rootPackageJsonPath, "utf8"));
+    const buildPackages = fs.readFileSync(buildPackagesPath, "utf8");
+    const packSmoke = fs.readFileSync(packSmokePath, "utf8");
+    const cliManifest = packageEntriesByName.get("@clawjs/cli")?.manifest;
+    const releaseCriticalPackages = new Set([
+      "@clawjs/cli",
+      "@clawjs/search-mcp",
+      ...Object.keys(cliManifest?.dependencies ?? {}).filter((dependency) => dependency.startsWith("@clawjs/")),
+    ]);
+
+    for (const packageName of releaseCriticalPackages) {
+      const entry = packageEntriesByName.get(packageName);
+      if (!entry) {
+        violations.push(`release-critical package ${packageName} is missing from workspace package scan`);
+        continue;
+      }
+      const packageDir = path.basename(path.dirname(entry.file));
+      if (!buildPackages.includes(`"${packageName}"`)) {
+        violations.push(`scripts/build-packages.mjs must build release-critical package ${packageName}`);
+      }
+      if (!packSmoke.includes(`"packages", "${packageDir}"`)) {
+        violations.push(`scripts/pack-smoke.mjs must pack local tarball for release-critical package ${packageName}`);
+      }
+      for (const scriptName of ["publish:dry-run", "publish:packages"]) {
+        const script = rootPackageJson.scripts?.[scriptName] ?? "";
+        if (!script.includes(`--workspace ${packageName}`)) {
+          violations.push(`package.json ${scriptName} must include release-critical package ${packageName}`);
+        }
+      }
+    }
+  }
 }
 
 if (violations.length > 0) {
