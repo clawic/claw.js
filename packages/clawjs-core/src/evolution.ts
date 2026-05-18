@@ -184,6 +184,54 @@ export const clawEvolutionReceiptSchema = z.object({
   errors: z.array(z.string()),
 });
 
+export const clawEvolutionRepairPatchSchema = z.object({
+  format: z.literal("unified_diff"),
+  status: z.enum(["suggested", "not_needed", "blocked"]),
+  redacted: z.literal(true),
+  files: z.array(z.object({
+    path: z.string().min(1),
+    intent: z.string().min(1),
+  })),
+  diff: z.string(),
+  notes: z.array(z.string()),
+});
+
+export const clawEvolutionRepairActionSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  command: z.string().optional(),
+  reason: z.string().min(1),
+});
+
+export const clawEvolutionRepairReportSchema = z.object({
+  schemaVersion: z.literal(1),
+  reportId: z.string().min(1),
+  createdAt: z.string(),
+  status: z.enum(["ready", "needs_approval", "blocked"]),
+  action: clawEvolutionOperatorActionSchema,
+  plan: clawEvolutionOperatorPlanSchema,
+  migrationLab: z.lazy(() => clawEvolutionMigratorLabResultSchema),
+  diagnostics: z.object({
+    ledgerSourceOfTruth: z.literal("clawjs"),
+    rescueCore: z.literal("launch_chat_repair"),
+    surfaceBaselineStatus: z.enum(["unchanged", "changed", "missing", "unknown"]),
+    uncoveredSurfaceChanges: z.number().nullable(),
+    migrationLabStatus: z.enum(["pass", "fail", "blocked"]),
+    touchedSurfacesCount: z.number(),
+  }),
+  safeActions: z.array(clawEvolutionRepairActionSchema),
+  approvalRequiredActions: z.array(clawEvolutionRepairActionSchema),
+  patch: clawEvolutionRepairPatchSchema,
+  receipt: clawEvolutionReceiptSchema,
+  redaction: z.object({
+    privacy: z.literal("redacted"),
+    promptsIncluded: z.literal(false),
+    secretsIncluded: z.literal(false),
+    fullLocalPathsIncluded: z.literal(false),
+    externalSubmission: z.literal("explicit_approval_only"),
+  }),
+});
+
 export const clawEvolutionFixtureSurfaceSchema = z.object({
   id: z.string().min(1),
   kind: z.enum([
@@ -248,6 +296,9 @@ export type ClawEvolutionBackupPolicy = z.infer<typeof clawEvolutionBackupPolicy
 export type ClawEvolutionOperatorStep = z.infer<typeof clawEvolutionOperatorStepSchema>;
 export type ClawEvolutionOperatorPlan = z.infer<typeof clawEvolutionOperatorPlanSchema>;
 export type ClawEvolutionReceipt = z.infer<typeof clawEvolutionReceiptSchema>;
+export type ClawEvolutionRepairPatch = z.infer<typeof clawEvolutionRepairPatchSchema>;
+export type ClawEvolutionRepairAction = z.infer<typeof clawEvolutionRepairActionSchema>;
+export type ClawEvolutionRepairReport = z.infer<typeof clawEvolutionRepairReportSchema>;
 export type ClawEvolutionFixtureSurface = z.infer<typeof clawEvolutionFixtureSurfaceSchema>;
 export type ClawEvolutionVersionFixture = z.infer<typeof clawEvolutionVersionFixtureSchema>;
 export type ClawEvolutionMigratorLabResult = z.infer<typeof clawEvolutionMigratorLabResultSchema>;
@@ -464,6 +515,72 @@ export function createEvolutionReceipt(input: {
   });
 }
 
+export function createEvolutionRepairReport(input: {
+  action: ClawEvolutionOperatorAction;
+  plan: ClawEvolutionOperatorPlan;
+  migrationLab: ClawEvolutionMigratorLabResult;
+  surfaceBaseline?: {
+    status: "unchanged" | "changed" | "missing";
+    changed: number | null;
+    uncovered: number | null;
+  };
+  createdAt?: string;
+}): ClawEvolutionRepairReport {
+  const createdAt = input.createdAt ?? "CURRENT";
+  const patch = createEvolutionRepairPatch(input);
+  const receipt = createEvolutionReceipt({
+    action: input.action,
+    plan: input.plan,
+    status: input.migrationLab.status === "blocked" ? "blocked" : "planned",
+    createdAt,
+    notes: [
+      "repair report generated without prompts, secrets, or full local paths",
+      `migration lab status ${input.migrationLab.status}`,
+    ],
+  });
+  const approvalRequiredActions = buildEvolutionApprovalRequiredActions(input.plan, input.action);
+  const status = input.plan.status === "blocked" || input.migrationLab.status === "blocked" || patch.status === "blocked"
+    ? "blocked"
+    : approvalRequiredActions.length > 0 || patch.status === "suggested"
+      ? "needs_approval"
+      : "ready";
+  const reportId = `evo_repair_report_${stableFingerprint({
+    action: input.action,
+    createdAt,
+    migrationLab: input.migrationLab.status,
+    patch: patch.status,
+    surfaces: input.plan.touchedSurfaces,
+  }).replace(/[^a-z0-9]/g, "_")}`;
+  return clawEvolutionRepairReportSchema.parse({
+    schemaVersion: 1,
+    reportId,
+    createdAt,
+    status,
+    action: input.action,
+    plan: input.plan,
+    migrationLab: input.migrationLab,
+    diagnostics: {
+      ledgerSourceOfTruth: "clawjs",
+      rescueCore: "launch_chat_repair",
+      surfaceBaselineStatus: input.surfaceBaseline?.status ?? "unknown",
+      uncoveredSurfaceChanges: input.surfaceBaseline?.uncovered ?? null,
+      migrationLabStatus: input.migrationLab.status,
+      touchedSurfacesCount: input.plan.touchedSurfaces.length,
+    },
+    safeActions: buildEvolutionSafeActions(input.plan),
+    approvalRequiredActions,
+    patch,
+    receipt,
+    redaction: {
+      privacy: "redacted",
+      promptsIncluded: false,
+      secretsIncluded: false,
+      fullLocalPathsIncluded: false,
+      externalSubmission: "explicit_approval_only",
+    },
+  });
+}
+
 export function runEvolutionMigratorLab(input: {
   fixtures: ClawEvolutionVersionFixture[];
   ledger: ClawEvolutionLedger;
@@ -528,6 +645,115 @@ export function redactEvolutionReceiptText(text: string): string {
 
 function checkEvolutionLab(condition: boolean, id: string, note: string): ClawEvolutionMigratorLabResult["checks"][number] {
   return { id, status: condition ? "pass" : "fail", notes: [note] };
+}
+
+function createEvolutionRepairPatch(input: {
+  action: ClawEvolutionOperatorAction;
+  plan: ClawEvolutionOperatorPlan;
+  migrationLab: ClawEvolutionMigratorLabResult;
+  surfaceBaseline?: {
+    status: "unchanged" | "changed" | "missing";
+    changed: number | null;
+    uncovered: number | null;
+  };
+}): ClawEvolutionRepairPatch {
+  const needsPatch = input.action === "repair"
+    || input.action === "report"
+    || input.migrationLab.status !== "pass"
+    || (input.surfaceBaseline?.uncovered ?? 0) > 0
+    || input.surfaceBaseline?.status === "missing";
+  const status = input.migrationLab.status === "blocked" ? "blocked" : needsPatch ? "suggested" : "not_needed";
+  const lines = [
+    "diff --git a/docs/evolution/REPAIR_REPORT.md b/docs/evolution/REPAIR_REPORT.md",
+    "new file mode 100644",
+    "--- /dev/null",
+    "+++ b/docs/evolution/REPAIR_REPORT.md",
+    "@@",
+    "+# Evolution Repair Report",
+    `+Action: ${input.action}`,
+    `+Status: ${status}`,
+    `+Migration lab: ${input.migrationLab.status}`,
+    `+Surface baseline: ${input.surfaceBaseline?.status ?? "unknown"}`,
+    `+Uncovered surface changes: ${input.surfaceBaseline?.uncovered ?? "unknown"}`,
+    "+",
+    "+Safe first step: keep launch, chat, and repair available before optional UI or data cleanup.",
+    "+Approval rule: do not mutate files, databases, external services, or submit reports without explicit user approval.",
+  ];
+  return clawEvolutionRepairPatchSchema.parse({
+    format: "unified_diff",
+    status,
+    redacted: true,
+    files: [{
+      path: "docs/evolution/REPAIR_REPORT.md",
+      intent: "Agent-readable repair summary; suggested only, never applied automatically.",
+    }],
+    diff: status === "not_needed" ? "" : lines.join("\n"),
+    notes: [
+      "Patch is a redacted suggestion for agent handoff.",
+      "It does not include prompts, secrets, or full local paths.",
+    ],
+  });
+}
+
+function buildEvolutionSafeActions(plan: ClawEvolutionOperatorPlan): ClawEvolutionRepairAction[] {
+  return [
+    {
+      id: "run_doctor",
+      title: "Run evolution doctor",
+      command: "claw evolution doctor --json",
+      reason: "Collect a current compatibility snapshot without mutating state.",
+    },
+    {
+      id: "run_dry_run",
+      title: "Run migration dry-run",
+      command: `claw evolution dry-run --from ${plan.fromVersion} --to ${plan.toVersion} --json`,
+      reason: "Exercise migrator fixtures before touching user data.",
+    },
+    {
+      id: "inspect_receipts",
+      title: "Inspect redacted receipts",
+      command: "claw evolution receipt --json",
+      reason: "Use receipts as repair context while keeping prompts, secrets, and full local paths out.",
+    },
+    {
+      id: "preserve_rescue_core",
+      title: "Preserve launch, chat, and repair",
+      reason: "Degrade optional surfaces before blocking the user from talking to the agent.",
+    },
+  ];
+}
+
+function buildEvolutionApprovalRequiredActions(plan: ClawEvolutionOperatorPlan, action: ClawEvolutionOperatorAction): ClawEvolutionRepairAction[] {
+  const actions: ClawEvolutionRepairAction[] = [];
+  if (plan.mutates) {
+    actions.push({
+      id: "mutate_local_state",
+      title: "Mutate local state",
+      reason: "Repair, apply, rollback, and backup actions can change files or databases and need explicit approval.",
+    });
+  }
+  if (plan.backupPolicies.some((policy) => policy.strategy === "snapshot_before_mutation")) {
+    actions.push({
+      id: "snapshot_canonical_data",
+      title: "Snapshot canonical data",
+      reason: "Canonical databases or schemas must be backed up before mutation.",
+    });
+  }
+  if (plan.backupPolicies.some((policy) => policy.strategy === "external_read_only")) {
+    actions.push({
+      id: "external_provider_access",
+      title: "Access external provider data",
+      reason: "Provider surfaces are read-only by default and cannot be copied or mutated without approval.",
+    });
+  }
+  if (action === "report") {
+    actions.push({
+      id: "submit_external_report",
+      title: "Submit report externally",
+      reason: "Reports stay local unless the user explicitly approves external submission.",
+    });
+  }
+  return actions;
 }
 
 function hasRequiredFixtureKinds(fixtures: ClawEvolutionVersionFixture[]): boolean {
