@@ -304,6 +304,14 @@ for (const [relativePath, snippets] of [
     "claw safety domains --json",
     "claw safety check --domain finance --effect final_decision",
   ]],
+  ["packages/clawjs/src/cli-safety-command.ts", [
+    "disclaimer\\t${data.decision.disclaimerPolicy}",
+    "labels\\t${data.decision.outputLabels.join(\",\")}",
+  ]],
+  ["packages/clawjs/src/cli-safety.test.ts", [
+    "safety check human output preserves disclaimer and labels",
+    "regulated_domain:legal",
+  ]],
   ["packages/clawjs-core/src/cli-command-registry.ts", [
     "name: \"safety\"",
     "docs/adr/0026-regulated-domain-safety-liability-boundary.md",

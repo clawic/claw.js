@@ -146,7 +146,11 @@ function writeSafetyResult(input: SafetyCliInput, data: unknown): number {
   }
 
   if (isDecisionPayload(data)) {
-    input.context.stdout.write(`${data.decision.allowed ? "allowed" : "blocked"}\t${data.decision.denialCodes.join(",") || "none"}\n`);
+    input.context.stdout.write([
+      `${data.decision.allowed ? "allowed" : "blocked"}\t${data.decision.denialCodes.join(",") || "none"}`,
+      `disclaimer\t${data.decision.disclaimerPolicy}`,
+      `labels\t${data.decision.outputLabels.join(",")}`,
+    ].join("\n") + "\n");
     return CLI_EXIT_OK;
   }
 

@@ -41,6 +41,26 @@ test("safety check blocks final regulated decisions", async () => {
   assert.equal(payload.data.decision.outputLabels.includes("regulated_domain:finance"), true);
 });
 
+test("safety check human output preserves disclaimer and labels", async () => {
+  const result = await runCliCapture([
+    "safety",
+    "check",
+    "--domain",
+    "legal",
+    "--effect",
+    "external_action",
+    "--export",
+    "true",
+  ], process.cwd());
+  assert.equal(result.code, CLI_EXIT_OK, result.stderr || result.stdout);
+  assert.match(result.stdout, /^blocked\t/m);
+  assert.match(result.stdout, /disclaimer\tcontextual_remembered/);
+  assert.match(result.stdout, /labels\t/);
+  assert.match(result.stdout, /not_professional_advice/);
+  assert.match(result.stdout, /human_review_required/);
+  assert.match(result.stdout, /regulated_domain:legal/);
+});
+
 test("safety disclaimers returns persistent labels for sensitive outputs", async () => {
   const result = await runCliCapture(["safety", "disclaimers", "mental_health", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK, result.stderr || result.stdout);
