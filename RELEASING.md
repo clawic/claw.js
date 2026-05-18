@@ -148,3 +148,9 @@ Publish for real from the workspace root after authentication:
 ```bash
 CLAW_ALLOW_PRE_V1_RELEASE=1 CLAW_RELEASE_APPROVED_FOR=release-publish npm run release:publish
 ```
+
+Direct package publish, only for the same approved npm release action:
+
+```bash
+CLAW_ALLOW_PRE_V1_RELEASE=1 CLAW_RELEASE_APPROVED_FOR=publish-packages npm run publish:packages
+```

@@ -125,14 +125,24 @@ function checkLedger() {
 
 function checkReleaseScripts() {
   const packageJson = readJson("package.json");
-  for (const scriptName of ["release:version", "release:publish", "publish:packages"]) {
+  for (const [scriptName, approvalTarget] of Object.entries(releaseApprovalTargets)) {
     const script = packageJson.scripts?.[scriptName] ?? "";
     if (!script.includes("version-governance-check.mjs --release-gate")) {
       fail(`${scriptName} must run the pre-v1 release approval gate`);
     }
+    if (!approvalTarget) fail(`${scriptName} must have an exact approval target`);
+    if (!script.includes("verify-regulated-domain-safety-goal.mjs")) {
+      fail(`${scriptName} must run the regulated-domain legal release gate before release mutation or publish`);
+    }
   }
   if (!packageJson.scripts?.["publish:dry-run"]?.includes("verify-regulated-domain-safety-goal.mjs")) {
     fail("publish:dry-run must run the regulated-domain legal release gate");
+  }
+  const releasing = read("RELEASING.md");
+  for (const approvalTarget of Object.values(releaseApprovalTargets)) {
+    if (!releasing.includes(`CLAW_RELEASE_APPROVED_FOR=${approvalTarget}`)) {
+      fail(`RELEASING.md must document exact approval target ${approvalTarget}`);
+    }
   }
   const testDocs = packageJson.scripts?.["test:docs"] ?? "";
   if (!testDocs.includes("version-governance-check.mjs")) fail("test:docs must include version-governance-check.mjs");
