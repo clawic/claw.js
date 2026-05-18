@@ -1194,6 +1194,10 @@ requireSnippet("packages/clawjs/src/cli-search-command.ts", "ensureExternalCache
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleSurfaceRouteSearchEvent");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"surfaces.routes\"");
 requireSnippet("packages/clawjs/src/cli-search-surface-routes-test-utils.ts", "scheduleSurfaceRouteSearchEvent");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "providers and snippets writes enqueue and index framework configuration fast paths");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "providerDeleteRunPayload.data.service.worker?.claimed, 1");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "providerDeleteRunPayload.data.worker?.items?.[0]?.operation, \"delete\"");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "routing:quickask:chat");
 requireSnippet("packages/clawjs/src/cli-search-docs-pages-source.ts", "createLocalTextEmbedding");
 requireSnippet("packages/clawjs/src/cli-search-docs-pages-source.ts", "LOCAL_TEXT_EMBEDDING_MODEL");
 
