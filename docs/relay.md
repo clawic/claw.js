@@ -160,7 +160,13 @@ The Relay `/v1/remote/external-validation-template` endpoint and
 template. The template is not evidence by itself: operators fill its `evidence`
 array only after approved physical/provider runs, including an `approvedRunRef`
 approval/audit reference for each row, then submit that array to the validation
-report evaluator.
+report evaluator. Relay `/v1/remote/external-validation-artifact` and
+`claw remote validation-artifact` generate the versioned pending artifact shape
+with source conversation and plan metadata. The checked-in artifact
+`docs/remote-gateway-sync-external-validation-evidence.json` records the current
+unapproved no-write rows for submission with `--evidence-file` or
+`--external-validation-file`; it is valid input, but cannot clear any row until
+approved physical/provider evidence is added.
 The Relay `/v1/remote/external-validation-report` endpoint and
 `claw remote validation-report` evaluate external validation evidence against
 that checklist. A row is only `clearable` when the report includes approved-run
@@ -168,7 +174,8 @@ evidence with `approvedRunRef`, physical evidence, all required artifacts, all
 acceptance criteria, and `plaintextMaterialIncluded: false`; otherwise it remains
 `external_pending`. Evidence rows for unknown or duplicate requirement IDs are
 reported as `invalidEvidenceRequirementIds` or `duplicateEvidenceRequirementIds`
-and keep the report fail-closed.
+and keep the report fail-closed. The POST body accepts the same artifact shape
+as the versioned file, with an `evidence` array and optional audit metadata.
 The Relay `/v1/remote/source-qa-template` endpoint and
 `claw remote source-qa-template` expose the matching no-write source Q/A review
 template for the source conversation and plan. The template is not a review by
@@ -183,6 +190,11 @@ The remote closure gate is exposed by Relay `/v1/remote/closure-gate` and
 `claw remote closure-gate`. It combines that evidence report with the source
 Q/A review report. The result stays `blocked` until all 23 source Q/A rows have
 a disposition, evidence refs, and every external validation row is `clearable`.
+With `docs/remote-gateway-sync-source-qa-review.json` plus the current external
+validation evidence artifact, the gate clears only the source Q/A blocker and
+keeps `external_validation` blocked. Relay POST accepts `sourceQaReviews` or the
+artifact-native `items` array for the source Q/A rows, plus the external
+`evidence` array.
 The provider/device end-to-end blocker is backed by
 `RemoteProviderDeviceE2EValidationPlan`: a no-write plan that requires chat,
 search, Sync, secret-reference, and hosted-agent coverage to be validated

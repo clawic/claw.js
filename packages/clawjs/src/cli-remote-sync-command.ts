@@ -1,6 +1,7 @@
 import {
   buildRemoteConformanceReport,
   buildRemoteExternalPendingRegister,
+  buildRemoteExternalValidationEvidenceArtifact,
   buildRemoteExternalValidationChecklist,
   buildRemoteExternalValidationEvidenceTemplate,
   buildRemoteExternalValidationReport,
@@ -27,6 +28,7 @@ import {
   createSyncResourceManifest,
   createTransportHandshakeReceipt,
   evaluateRemoteAgentServiceAccess,
+  parseRemoteExternalValidationEvidenceInput,
   remoteSyncRequiredDecisionIds,
   remoteSyncRequiredRouteIds,
   syncObjectSnapshotSchema,
@@ -253,10 +255,15 @@ function listFlag(value: string | undefined, fallback: string[]): string[] {
   return entries.length ? entries : fallback;
 }
 
-function parseExternalValidationEvidence(value: string | undefined): RemoteExternalValidationEvidence[] {
-  if (!value) return [];
-  const parsed = JSON.parse(value) as unknown;
-  return Array.isArray(parsed) ? parsed as RemoteExternalValidationEvidence[] : [parsed as RemoteExternalValidationEvidence];
+function readJsonFlagValue(value: string | undefined, filePath: string | undefined, cwd: string): string | undefined {
+  return value ?? (filePath ? fs.readFileSync(path.resolve(cwd, filePath), "utf8") : undefined);
+}
+
+function parseExternalValidationEvidence(value: string | undefined, filePath: string | undefined, cwd: string): RemoteExternalValidationEvidence[] {
+  const raw = readJsonFlagValue(value, filePath, cwd);
+  if (!raw) return [];
+  const parsed = JSON.parse(raw) as unknown;
+  return parseRemoteExternalValidationEvidenceInput(parsed);
 }
 
 function parseRequirementIds(value: string | undefined): string[] | undefined {
@@ -274,7 +281,7 @@ function parseSourceQaIds(value: string | undefined): string[] | undefined {
 }
 
 function parseSourceQaReviews(value: string | undefined, filePath: string | undefined, cwd: string): RemoteSourceQaReviewItem[] {
-  const raw = value ?? (filePath ? fs.readFileSync(path.resolve(cwd, filePath), "utf8") : undefined);
+  const raw = readJsonFlagValue(value, filePath, cwd);
   if (!raw) return [];
   const parsed = JSON.parse(raw) as unknown;
   if (Array.isArray(parsed)) return parsed as RemoteSourceQaReviewItem[];
@@ -512,10 +519,21 @@ export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
     });
     return writeOutput(input, "remote", template, `${template.status} evidence=${template.evidence.length}/${template.requirementCount}`, command);
   }
+  if (command === "validation-artifact" || command === "evidence-artifact" || command === "external-validation-artifact") {
+    const evidenceFile = input.flags["evidence-file"] ?? input.flags["external-validation-file"];
+    const artifact = buildRemoteExternalValidationEvidenceArtifact({
+      generatedAt: input.flags.now,
+      requirementIds: parseRequirementIds(input.flags["requirement-ids"] ?? input.flags.requirements),
+      evidence: input.flags["evidence-json"] || evidenceFile
+        ? parseExternalValidationEvidence(input.flags["evidence-json"], evidenceFile, input.context.cwd)
+        : undefined,
+    });
+    return writeOutput(input, "remote", artifact, `${artifact.status} evidence=${artifact.evidence.length}`, command);
+  }
   if (command === "validation-report" || command === "external-validation-report") {
     const report = buildRemoteExternalValidationReport({
       generatedAt: input.flags.now,
-      evidence: parseExternalValidationEvidence(input.flags["evidence-json"]),
+      evidence: parseExternalValidationEvidence(input.flags["evidence-json"], input.flags["evidence-file"] ?? input.flags["external-validation-file"], input.context.cwd),
     });
     return writeOutput(input, "remote", report, `${report.status} clearable=${report.clearableRequirementIds.length}/${report.requirementCount}`, command);
   }
@@ -531,7 +549,7 @@ export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
       generatedAt: input.flags.now,
       reviewedSourceQaIds: parseReviewedSourceQaIds(input.flags["reviewed-source-qa-ids"] ?? input.flags["source-qa-ids"]),
       sourceQaReviews: parseSourceQaReviews(input.flags["source-qa-review-json"], input.flags["source-qa-review-file"], input.context.cwd),
-      evidence: parseExternalValidationEvidence(input.flags["evidence-json"]),
+      evidence: parseExternalValidationEvidence(input.flags["evidence-json"], input.flags["evidence-file"] ?? input.flags["external-validation-file"], input.context.cwd),
     });
     return writeOutput(input, "remote", gate, `${gate.status} blockers=${gate.blockers.length}`, command);
   }
@@ -564,7 +582,7 @@ export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
       ...(state ? { state } : {}),
     }, `compat: ${status}`, command);
   }
-  return missing(input, "remote classify|check|routes|conformance|pending|validation-checklist|validation-template|validation-report|source-qa-template|closure-gate|contracts|e2e-plan|compat");
+  return missing(input, "remote classify|check|routes|conformance|pending|validation-checklist|validation-template|validation-artifact|validation-report|source-qa-template|closure-gate|contracts|e2e-plan|compat");
 }
 
 export async function runSyncCli(input: RemoteSyncCliInput): Promise<number> {

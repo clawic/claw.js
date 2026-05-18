@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import {
   buildRemoteConformanceReport,
   buildRemoteExternalPendingRegister,
+  buildRemoteExternalValidationEvidenceArtifact,
   buildRemoteExternalValidationChecklist,
   buildRemoteExternalValidationEvidenceTemplate,
   buildRemoteExternalValidationReport,
@@ -43,6 +44,9 @@ import {
   remoteAgentServiceDecisionSchema,
   remoteAgentServiceExecutionReceiptSchema,
   remoteCompatibilityAdapterReceiptSchema,
+  parseRemoteExternalValidationEvidenceInput,
+  remoteExternalValidationEvidenceArtifactSchema,
+  remoteExternalValidationEvidenceSchema,
   remoteExternalValidationEvidenceTemplateSchema,
   remoteExternalPendingRegisterSchema,
   remoteGatewayAuditReceiptSchema,
@@ -69,6 +73,7 @@ const requiredDocs = [
   "docs/adr/0022-remote-gateway-sync-redesign.md",
   "docs/remote-gateway-sync-source-decision-audit.md",
   "docs/remote-gateway-sync-source-qa-review.json",
+  "docs/remote-gateway-sync-external-validation-evidence.json",
   "docs/remote-gateway-sync-completion-audit.md",
   "docs/remote-gateway-sync-decision-matrix.md",
   "docs/relay.md",
@@ -97,6 +102,7 @@ const requiredServiceApiRoutes = [
   "remote/external-pending",
   "remote/external-validation-checklist",
   "remote/external-validation-template",
+  "remote/external-validation-artifact",
   "remote/external-validation-report",
   "remote/source-qa-template",
   "remote/closure-gate",
@@ -150,7 +156,9 @@ const requiredDocSnippets = [
   "claw remote validation-checklist",
   "external validation evidence template",
   "/v1/remote/external-validation-template",
+  "/v1/remote/external-validation-artifact",
   "claw remote validation-template",
+  "claw remote validation-artifact",
   "external validation report",
   "approvedRunRef",
   "invalidEvidenceRequirementIds",
@@ -313,8 +321,11 @@ for (const snippet of [
   "claw inspect remote",
   "claw remote pending",
   "claw remote validation-template",
+  "claw remote validation-artifact",
   "claw remote source-qa-template",
   "claw remote contracts",
+  "docs/remote-gateway-sync-external-validation-evidence.json",
+  "artifact-native `items` array",
   "same core contracts used by CLI inspection",
 ]) {
   requireText("completion audit", completionAudit, snippet);
@@ -476,6 +487,7 @@ if (externalValidationEvidenceTemplate.requirementCount !== externalPending.requ
 if (externalValidationEvidenceTemplate.checklistItems.length !== externalPending.requirements.length) fail("remote external validation evidence template must include every checklist item");
 if (externalValidationEvidenceTemplate.evidence.length !== externalPending.requirements.length) fail("remote external validation evidence template must include one evidence row per requirement");
 if (!externalValidationEvidenceTemplate.submissionCommand.includes("claw remote validation-report")) fail("remote external validation evidence template must point to validation-report submission");
+if (!externalValidationEvidenceTemplate.submissionCommand.includes("--evidence-file")) fail("remote external validation evidence template must prefer versioned evidence-file submission");
 if (!externalValidationEvidenceTemplate.evidence.some((entry) => entry.requirementId === "provider_device_e2e")) fail("remote external validation evidence template must include provider_device_e2e");
 if (!externalValidationEvidenceTemplate.evidence.every((entry) => (
   entry.approvedRun === false
@@ -495,6 +507,64 @@ if (scopedExternalValidationEvidenceTemplate.requirementCount !== 2) fail("scope
 if (scopedExternalValidationEvidenceTemplate.evidence.map((entry) => entry.requirementId).join(",") !== "physical_iroh_handshake,provider_device_e2e") {
   fail("scoped remote external validation evidence template must preserve requested known requirement order");
 }
+
+const generatedExternalValidationEvidenceArtifact = buildRemoteExternalValidationEvidenceArtifact({
+  generatedAt: "2026-05-18T11:40:00.000Z",
+});
+if (!remoteExternalValidationEvidenceArtifactSchema.safeParse(generatedExternalValidationEvidenceArtifact).success) {
+  fail("generated remote external validation evidence artifact must satisfy the core artifact schema");
+}
+if (generatedExternalValidationEvidenceArtifact.sourceConversationId !== sourceConversationId) fail("generated external validation evidence artifact must bind the source conversation ID");
+if (generatedExternalValidationEvidenceArtifact.sourcePlanId !== sourcePlanId) fail("generated external validation evidence artifact must bind the source plan ID");
+if (generatedExternalValidationEvidenceArtifact.status !== "external_pending") fail("generated external validation evidence artifact must remain external_pending");
+if (generatedExternalValidationEvidenceArtifact.writes !== false) fail("generated external validation evidence artifact must be no-write");
+if (generatedExternalValidationEvidenceArtifact.evidence.length !== externalPending.requirements.length) {
+  fail("generated external validation evidence artifact must include one row per pending requirement");
+}
+
+const externalValidationEvidenceArtifact = readRequiredJson("docs/remote-gateway-sync-external-validation-evidence.json");
+if (!remoteExternalValidationEvidenceArtifactSchema.safeParse(externalValidationEvidenceArtifact).success) {
+  fail("external validation evidence artifact must satisfy the core artifact schema");
+}
+if (externalValidationEvidenceArtifact.sourceConversationId !== sourceConversationId) fail("external validation evidence artifact must bind the source conversation ID");
+if (externalValidationEvidenceArtifact.sourcePlanId !== sourcePlanId) fail("external validation evidence artifact must bind the source plan ID");
+if (externalValidationEvidenceArtifact.status !== "external_pending") fail("external validation evidence artifact must remain external_pending until approved physical/provider runs");
+if (externalValidationEvidenceArtifact.writes !== false) fail("external validation evidence artifact must be no-write");
+const externalValidationEvidenceArtifactRows = Array.isArray(externalValidationEvidenceArtifact.evidence)
+  ? externalValidationEvidenceArtifact.evidence
+  : [];
+const parsedExternalValidationEvidenceArtifactRows = parseRemoteExternalValidationEvidenceInput(externalValidationEvidenceArtifact);
+if (parsedExternalValidationEvidenceArtifactRows.length !== externalValidationEvidenceArtifactRows.length) {
+  fail("external validation evidence artifact parser must return every artifact evidence row");
+}
+if (externalValidationEvidenceArtifactRows.length !== externalPending.requirements.length) {
+  fail("external validation evidence artifact must include one row per external pending requirement");
+}
+const externalPendingRequirementIds = externalPending.requirements.map((entry) => entry.requirementId);
+const externalValidationEvidenceArtifactIds = externalValidationEvidenceArtifactRows.map((entry) => entry.requirementId);
+if (externalValidationEvidenceArtifactIds.join(",") !== externalPendingRequirementIds.join(",")) {
+  fail("external validation evidence artifact rows must match external pending requirements in order");
+}
+for (const evidence of externalValidationEvidenceArtifactRows) {
+  if (!remoteExternalValidationEvidenceSchema.safeParse(evidence).success) fail(`external validation evidence artifact row ${evidence?.requirementId ?? "unknown"} must validate`);
+  if (evidence.approvedRun !== false) fail(`external validation evidence artifact row ${evidence.requirementId} must not claim an approved run`);
+  if (evidence.approvedRunRef !== undefined) fail(`external validation evidence artifact row ${evidence.requirementId} must not include approvedRunRef before approved validation`);
+  if (evidence.physicalEvidenceRef !== undefined) fail(`external validation evidence artifact row ${evidence.requirementId} must not include physicalEvidenceRef before approved validation`);
+  if (evidence.artifactRefs?.length !== 0) fail(`external validation evidence artifact row ${evidence.requirementId} must not include artifacts before approved validation`);
+  if (evidence.acceptedCriteria?.length !== 0) fail(`external validation evidence artifact row ${evidence.requirementId} must not include accepted criteria before approved validation`);
+  if (evidence.plaintextMaterialIncluded !== false) fail(`external validation evidence artifact row ${evidence.requirementId} must exclude plaintext material`);
+  if (evidence.writes !== false) fail(`external validation evidence artifact row ${evidence.requirementId} must be no-write`);
+}
+const artifactExternalValidationReport = buildRemoteExternalValidationReport({
+  generatedAt: externalValidationEvidenceArtifact.generatedAt ?? "2026-05-18T11:40:00.000Z",
+  evidence: externalValidationEvidenceArtifactRows,
+});
+if (artifactExternalValidationReport.status !== "external_pending") fail("external validation evidence artifact must not clear external validation");
+if (artifactExternalValidationReport.evidenceCount !== externalPending.requirements.length) fail("external validation evidence artifact report must count every row");
+if (artifactExternalValidationReport.clearableRequirementIds.length !== 0) fail("external validation evidence artifact must not make any row clearable");
+if (artifactExternalValidationReport.blockedRequirementIds.length !== externalPending.requirements.length) fail("external validation evidence artifact must leave every row blocked");
+if (artifactExternalValidationReport.invalidEvidenceRequirementIds.length !== 0) fail("external validation evidence artifact must not include unknown evidence IDs");
+if (artifactExternalValidationReport.duplicateEvidenceRequirementIds.length !== 0) fail("external validation evidence artifact must not include duplicate evidence IDs");
 
 const emptyExternalValidationReport = buildRemoteExternalValidationReport({
   generatedAt: "2026-05-17T10:13:20.000Z",
@@ -817,12 +887,18 @@ for (const snippet of [
   "/v1/remote/external-validation-checklist",
   "buildRemoteExternalValidationEvidenceTemplate",
   "/v1/remote/external-validation-template",
+  "buildRemoteExternalValidationEvidenceArtifact",
+  "/v1/remote/external-validation-artifact",
   "buildRemoteExternalValidationReport",
   "/v1/remote/external-validation-report",
   "buildRemoteSourceQaReviewTemplate",
   "/v1/remote/source-qa-template",
   "buildRemoteGoalClosureGate",
   "sourceQaReviewItems",
+  "docs/remote-gateway-sync-external-validation-evidence.json",
+  "artifactExternalValidationReport",
+  "sourceQaReviewArtifact",
+  "reviewedPendingClosureGate",
   "/v1/remote/closure-gate",
   "expectedRouteContracts.contracts.map",
   "buildRemoteProviderDeviceE2EValidationPlan",

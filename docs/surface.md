@@ -2624,6 +2624,7 @@ The docs check script validates that every current export from
     buildRemoteConformanceReport
     buildRemoteExternalPendingRegister
     buildRemoteExternalValidationChecklist
+    buildRemoteExternalValidationEvidenceArtifact
     buildRemoteExternalValidationEvidenceTemplate
     buildRemoteExternalValidationReport
     buildRemoteGoalClosureGate
@@ -2712,9 +2713,14 @@ The docs check script validates that every current export from
     RemoteExternalValidationChecklistItem
     remoteExternalValidationChecklistSchema
     RemoteExternalValidationEvidence
+    RemoteExternalValidationEvidenceArtifact
+    remoteExternalValidationEvidenceArtifactSchema
+    RemoteExternalValidationEvidenceEnvelope
+    remoteExternalValidationEvidenceEnvelopeSchema
     RemoteExternalValidationEvidenceTemplate
     remoteExternalValidationEvidenceSchema
     remoteExternalValidationEvidenceTemplateSchema
+    parseRemoteExternalValidationEvidenceInput
     RemoteExternalValidationReport
     remoteExternalValidationReportItemSchema
     RemoteExternalValidationReportItem

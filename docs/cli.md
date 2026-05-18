@@ -201,6 +201,7 @@ claw remote conformance --json
 claw remote pending --json
 claw remote validation-checklist --json
 claw remote validation-template --json
+claw remote validation-artifact --json
 claw remote validation-report --json
 claw remote source-qa-template --json
 claw remote closure-gate --json
@@ -267,7 +268,13 @@ requirements before any row can clear.
 `remote validation-template` returns the matching no-write evidence JSON
 template. Operators fill its `evidence` array only after approved
 physical/provider runs, including an `approvedRunRef` approval/audit reference
-for each row, then submit that array to `remote validation-report`.
+for each row, then submit that array to `remote validation-report`. The
+`remote validation-artifact` command returns the matching versioned pending
+artifact shape with source conversation/plan metadata. The checked-in pending
+artifact is `docs/remote-gateway-sync-external-validation-evidence.json`; it
+intentionally contains unapproved no-write rows and can be submitted with
+`--evidence-file docs/remote-gateway-sync-external-validation-evidence.json`
+or the alias `--external-validation-file`.
 `remote validation-report` evaluates supplied external evidence, if any, against
 that checklist. With no approved physical evidence it stays `external_pending`;
 only rows with `approvedRun: true`, an `approvedRunRef`, physical evidence, all
@@ -291,7 +298,10 @@ review rows.
 `remote closure-gate` combines the external validation report with the required
 source Q/A review report. It remains `blocked` until all 23 source Q/A rows
 have a disposition, evidence refs, and every external validation row is
-`clearable`.
+`clearable`. The closure command can consume the same external validation
+artifact through `--evidence-file` or `--external-validation-file`; the current
+pending artifact keeps only the `external_validation` blocker after the source
+Q/A review file has cleared `source_qa_review`.
 The final provider/device end-to-end row is not a loose note: it is backed by
 `RemoteProviderDeviceE2EValidationPlan`, which requires chat, search, Sync,
 secret-reference, and hosted-agent validation to pass together against the same

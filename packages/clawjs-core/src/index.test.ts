@@ -18,12 +18,14 @@ import {
   buildRemoteConformanceReport,
   buildRemoteExternalPendingRegister,
   buildRemoteExternalValidationChecklist,
+  buildRemoteExternalValidationEvidenceArtifact,
   buildRemoteExternalValidationEvidenceTemplate,
   buildRemoteExternalValidationReport,
   buildRemoteGoalClosureGate,
   buildRemoteProviderDeviceE2EValidationPlan,
   buildRemoteSourceQaReviewReport,
   buildRemoteSourceQaReviewTemplate,
+  parseRemoteExternalValidationEvidenceInput,
   remoteGoalClosureRequiredSourceQaIds,
   buildRemoteRouteContractCatalog,
   buildSyncQueueEntries,
@@ -117,6 +119,7 @@ import {
   remoteAgentServiceDecisionSchema,
   remoteAgentServiceExecutionReceiptSchema,
   remoteCompatibilityAdapterReceiptSchema,
+  remoteExternalValidationEvidenceArtifactSchema,
   remoteExternalPendingRegisterSchema,
   remoteProviderDeviceE2EValidationPlanSchema,
   remoteSourceQaReviewTemplateSchema,
@@ -594,6 +597,28 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(externalValidationEvidenceTemplate.evidence.every((entry) => entry.approvedRun === false && entry.approvedRunRef === undefined && entry.artifactRefs.length === 0 && entry.acceptedCriteria.length === 0 && entry.plaintextMaterialIncluded === false && !entry.writes), true);
   assert.equal(externalValidationEvidenceTemplate.evidence.some((entry) => entry.requirementId === "provider_device_e2e"), true);
   assert.equal(externalValidationEvidenceTemplate.submissionCommand.includes("claw remote validation-report"), true);
+  assert.equal(externalValidationEvidenceTemplate.submissionCommand.includes("--evidence-file"), true);
+
+  const externalValidationEvidenceArtifact = {
+    schemaVersion: 1,
+    sourceConversationId: "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8",
+    sourcePlanId: "019e3732-c90e-7491-9217-37020c43217e-plan",
+    generatedAt: "2026-05-17T10:13:17.000Z",
+    status: "external_pending",
+    writes: false,
+    evidence: externalValidationEvidenceTemplate.evidence,
+  };
+  assert.equal(remoteExternalValidationEvidenceArtifactSchema.safeParse(externalValidationEvidenceArtifact).success, true);
+  assert.deepEqual(parseRemoteExternalValidationEvidenceInput(externalValidationEvidenceTemplate.evidence), externalValidationEvidenceTemplate.evidence);
+  assert.deepEqual(parseRemoteExternalValidationEvidenceInput({ evidence: externalValidationEvidenceTemplate.evidence }), externalValidationEvidenceTemplate.evidence);
+  assert.deepEqual(parseRemoteExternalValidationEvidenceInput(externalValidationEvidenceArtifact), externalValidationEvidenceTemplate.evidence);
+  const generatedExternalValidationEvidenceArtifact = buildRemoteExternalValidationEvidenceArtifact({ generatedAt: "2026-05-17T10:13:17.000Z" });
+  assert.equal(remoteExternalValidationEvidenceArtifactSchema.safeParse(generatedExternalValidationEvidenceArtifact).success, true);
+  assert.equal(generatedExternalValidationEvidenceArtifact.sourceConversationId, "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8");
+  assert.equal(generatedExternalValidationEvidenceArtifact.sourcePlanId, "019e3732-c90e-7491-9217-37020c43217e-plan");
+  assert.equal(generatedExternalValidationEvidenceArtifact.status, "external_pending");
+  assert.equal(generatedExternalValidationEvidenceArtifact.writes, false);
+  assert.deepEqual(generatedExternalValidationEvidenceArtifact.evidence, externalValidationEvidenceTemplate.evidence);
 
   const scopedExternalValidationEvidenceTemplate = buildRemoteExternalValidationEvidenceTemplate({
     generatedAt: "2026-05-17T10:13:18.000Z",

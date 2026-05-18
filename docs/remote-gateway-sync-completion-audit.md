@@ -49,7 +49,7 @@ is implemented, validated, or explicitly blocked as `EXTERNAL PENDING`.
 | ID | Status | Evidence | Required next action |
 | --- | --- | --- | --- |
 | SOURCE-REREAD-001 | reviewed_current | Source decisions are enumerated as `RQ-001` through `RQ-022`, the source Q/A review map records `QA-001` through `QA-023`, `docs/remote-gateway-sync-source-qa-review.json` records the current one-by-one dispositions/evidence refs, and all are guarded by `scripts/verify-remote-sync-goal.mjs`. | Before final close, repeat the source-session review against current implementation state and keep any physical/provider rows explicitly `EXTERNAL PENDING`. |
-| PHYSICAL-001 | external_pending | `RemoteExternalPendingRegister` separates transport, device trust, peer trust, sync driver, authority handoff, client storage, provider, deployment, runtime, billing, and provider/device E2E blockers from bugs. | Run approved physical/provider validations or keep each row explicitly marked `EXTERNAL PENDING` with evidence. |
+| PHYSICAL-001 | external_pending | `RemoteExternalPendingRegister` separates transport, device trust, peer trust, sync driver, authority handoff, client storage, provider, deployment, runtime, billing, and provider/device E2E blockers from bugs; `docs/remote-gateway-sync-external-validation-evidence.json` records the current no-write unapproved evidence rows for all 13 blockers. | Run approved physical/provider validations, replace each placeholder row with approved evidence including `approvedRunRef` and physical evidence, or keep each row explicitly marked `EXTERNAL PENDING`. |
 | DOMAIN-PARITY-001 | implemented | Registry-wide Relay classification exists for every surfaced node and the goal verifier rejects any reintroduced `pending` Relay classification. | Keep broad `local-only` classifications explicit until a policy, route, and test-backed `remote-safe` receipt exists. |
 
 ## Required Validation Map
@@ -58,7 +58,7 @@ is implemented, validated, or explicitly blocked as `EXTERNAL PENDING`.
 | --- | --- |
 | Goal verifier | `npm run test:remote-sync-goal` |
 | Focused core/CLI tests | `npx vitest run --config vitest.config.ts packages/clawjs-core/src/index.test.ts packages/clawjs/src/inspect-cli.test.ts` |
-| Relay HTTP routes | `npx vitest run --config vitest.config.ts relay/src/server/remote-sync-routes.test.ts`; this must compare `/v1/remote/external-pending`, `/v1/remote/external-validation-checklist`, `/v1/remote/external-validation-template`, `/v1/remote/external-validation-report`, `/v1/remote/source-qa-template`, `/v1/remote/closure-gate`, `/v1/remote/route-contracts`, `/v1/remote/provider-device-e2e-plan`, and `/v1/remote/conformance` against the same core contracts used by CLI inspection. |
+| Relay HTTP routes | `npx vitest run --config vitest.config.ts relay/src/server/remote-sync-routes.test.ts`; this must compare `/v1/remote/external-pending`, `/v1/remote/external-validation-checklist`, `/v1/remote/external-validation-template`, `/v1/remote/external-validation-artifact`, `/v1/remote/external-validation-report`, `/v1/remote/source-qa-template`, `/v1/remote/closure-gate`, `/v1/remote/route-contracts`, `/v1/remote/provider-device-e2e-plan`, and `/v1/remote/conformance` against the same core contracts used by CLI inspection. |
 | CLI/router parity | `node --import tsx ./scripts/verify-cli-registry-router-parity.mjs` |
 | Public executable inspection | `node packages/clawjs/bin/claw.mjs inspect remote --json` after building the CLI package |
 | Public docs hygiene | `npm run code-hygiene:check` and `git diff --check` |
@@ -79,20 +79,25 @@ The goal may be closed only after a final pass confirms:
    `source_qa_review` blocker while leaving physical/provider validation
    blocked.
 3. `RemoteExternalPendingRegister` contains every remaining physical/provider
-   blocker and none of those rows is reported as a software bug.
+   blocker and none of those rows is reported as a software bug. The current
+   `docs/remote-gateway-sync-external-validation-evidence.json` artifact must
+   remain non-clearable until real approved evidence is present.
 4. `claw inspect remote`, `claw remote pending`,
    `claw remote validation-checklist`, `claw remote validation-template`,
-   `claw remote validation-report`, `claw remote source-qa-template`,
-   `claw remote closure-gate`, `claw remote contracts`,
+   `claw remote validation-artifact`, `claw remote validation-report`,
+   `claw remote source-qa-template`, `claw remote closure-gate`, `claw remote contracts`,
    `claw remote e2e-plan`, Relay
    `/v1/remote/external-pending`, Relay
    `/v1/remote/external-validation-checklist`, Relay
    `/v1/remote/external-validation-template`, Relay
+   `/v1/remote/external-validation-artifact`, Relay
    `/v1/remote/external-validation-report`, Relay
    `/v1/remote/source-qa-template`, Relay `/v1/remote/closure-gate`,
    Relay `/v1/remote/route-contracts`, and Relay
    `/v1/remote/provider-device-e2e-plan` are verified against the same
-   contracts.
+   contracts. Relay external validation report POST must accept the versioned
+   evidence artifact shape, and Relay closure-gate POST must accept the source
+   review artifact-native `items` array plus external `evidence`.
 5. The registry contains no `pending` Relay classification for a stable surfaced
    node; each such node is directly `remote-safe` or explicitly `local-only` or
    `blocked`.

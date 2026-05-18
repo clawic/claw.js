@@ -10,12 +10,24 @@ export const remoteProviderDeviceE2EDomainSchema = z.enum([
   "hosted_agents",
 ]);
 
+export const remoteProviderDeviceE2EValidationStepSchema = z.object({
+  schemaVersion: z.literal(1),
+  domain: remoteProviderDeviceE2EDomainSchema,
+  requiredRouteIds: z.array(z.string().min(1)).min(1),
+  requiredExternalPendingIds: z.array(z.string().min(1)).min(1),
+  requiredArtifacts: z.array(z.string().min(1)).min(1),
+  acceptanceCriteria: z.array(z.string().min(1)).min(1),
+  status: z.literal("external_pending"),
+  writes: z.literal(false),
+});
+
 export const remoteProviderDeviceE2EValidationPlanSchema = z.object({
   schemaVersion: z.literal(1),
   planId: z.string().min(1),
   requiredDomains: z.array(remoteProviderDeviceE2EDomainSchema).min(5),
   requiredRouteIds: z.array(z.string().min(1)).min(1),
   requiredExternalPendingIds: z.array(z.string().min(1)).min(1),
+  validationSteps: z.array(remoteProviderDeviceE2EValidationStepSchema).min(5),
   evidenceRefs: z.array(z.string().min(1)).min(1),
   status: z.literal("external_pending"),
   approvedPhysicalValidationRequired: z.literal(true),
@@ -27,6 +39,7 @@ export const remoteProviderDeviceE2EValidationPlanSchema = z.object({
 });
 
 export type RemoteProviderDeviceE2EDomain = z.infer<typeof remoteProviderDeviceE2EDomainSchema>;
+export type RemoteProviderDeviceE2EValidationStep = z.infer<typeof remoteProviderDeviceE2EValidationStepSchema>;
 export type RemoteProviderDeviceE2EValidationPlan = z.infer<typeof remoteProviderDeviceE2EValidationPlanSchema>;
 
 export const remoteExternalValidationChecklistItemSchema = z.object({
@@ -75,6 +88,20 @@ export const remoteExternalValidationEvidenceSchema = z.object({
   executedAt: z.string().datetime().optional(),
   operatorId: z.string().min(1).optional(),
   writes: z.literal(false),
+});
+
+export const remoteExternalValidationEvidenceEnvelopeSchema = z.object({
+  evidence: z.array(remoteExternalValidationEvidenceSchema),
+});
+
+export const remoteExternalValidationEvidenceArtifactSchema = z.object({
+  schemaVersion: z.literal(1),
+  sourceConversationId: z.string().min(1),
+  sourcePlanId: z.string().min(1),
+  generatedAt: z.string().datetime(),
+  status: z.literal("external_pending"),
+  writes: z.literal(false),
+  evidence: z.array(remoteExternalValidationEvidenceSchema).min(1),
 });
 
 export const remoteExternalValidationReportItemSchema = z.object({
@@ -200,6 +227,8 @@ export const remoteGoalClosureGateSchema = z.object({
 });
 
 export type RemoteExternalValidationEvidence = z.infer<typeof remoteExternalValidationEvidenceSchema>;
+export type RemoteExternalValidationEvidenceEnvelope = z.infer<typeof remoteExternalValidationEvidenceEnvelopeSchema>;
+export type RemoteExternalValidationEvidenceArtifact = z.infer<typeof remoteExternalValidationEvidenceArtifactSchema>;
 export type RemoteExternalValidationReportItem = z.infer<typeof remoteExternalValidationReportItemSchema>;
 export type RemoteExternalValidationReport = z.infer<typeof remoteExternalValidationReportSchema>;
 export type RemoteExternalValidationEvidenceTemplate = z.infer<typeof remoteExternalValidationEvidenceTemplateSchema>;
@@ -214,32 +243,63 @@ function providerDeviceE2EPlanId(parts: string[]): string {
   return `provider_device_e2e_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
 }
 
+const providerDeviceE2ERequiredExternalPendingIds = [
+  "physical_iroh_handshake",
+  "device_trust_acceptance",
+  "physical_peer_trust",
+  "physical_sync_driver_application",
+  "physical_authority_handoff",
+  "signed_host_audit_persistence",
+  "physical_client_storage",
+  "provider_secret_retrieval",
+  "self_hosted_deployment",
+  "hosted_deployment",
+  "agent_runtime_execution",
+  "billing_meter_persistence",
+  "provider_device_e2e",
+] as const;
+
+function providerDeviceE2EValidationSteps(requiredRouteIds: readonly string[]): RemoteProviderDeviceE2EValidationStep[] {
+  const routeIds = new Set(requiredRouteIds);
+  const step = (
+    domain: RemoteProviderDeviceE2EDomain,
+    routes: string[],
+    externalPendingIds: string[],
+    requiredArtifacts: string[],
+    acceptanceCriteria: string[],
+  ) => remoteProviderDeviceE2EValidationStepSchema.parse({
+    schemaVersion: 1,
+    domain,
+    requiredRouteIds: routes.filter((routeId) => routeIds.has(routeId)),
+    requiredExternalPendingIds: externalPendingIds,
+    requiredArtifacts,
+    acceptanceCriteria,
+    status: "external_pending",
+    writes: false,
+  });
+  return [
+    step("chat", ["remote.chatGateway"], ["physical_iroh_handshake", "device_trust_acceptance", "provider_device_e2e"], ["remote chat gateway transcript", "RemoteTransportHandshakeReceipt", "remote conformance output"], ["chat uses registered Gateway route", "transport handshake and device trust are physically verified", "no parallel chat API is introduced"]),
+    step("search", ["remote.searchGateway"], ["physical_iroh_handshake", "provider_device_e2e"], ["remote search result trace", "route contract output", "remote conformance output"], ["search uses the registered local search contract through Gateway", "results are returned without a parallel API", "provider/device run includes search together with other domains"]),
+    step("sync", ["sync.skills", "sync.memoryUserModel", "sync.sessions", "sync.driveFiles", "sync.blobs", "sync.searchIndex", "sync.sqliteResources", "sync.sidecars", "sync.agentConfig", "sync.workspaceState", "mesh.resourceShare"], ["physical_peer_trust", "physical_sync_driver_application", "physical_authority_handoff", "physical_client_storage", "provider_device_e2e"], ["SyncDriverApplicationReceipt", "SyncAuthorityHandoffReceipt", "RemoteClientCacheSnapshot", "mesh share/revocation trace"], ["every required Sync driver route is covered", "conflicts are detected and elevated", "authority handoff and client cache behavior are physically verified"]),
+    step("secret_refs", ["remote.secretBrokeredOperation"], ["provider_secret_retrieval", "signed_host_audit_persistence", "provider_device_e2e"], ["RemoteSecretProviderReceipt", "broker lease audit", "provider request trace"], ["secret material stays reference-only", "provider retrieval uses broker leases", "lease use and Gateway decision are audited"]),
+    step("hosted_agents", ["gateway.headlessAgentHost", "gateway.multiTenantAgentService"], ["self_hosted_deployment", "hosted_deployment", "agent_runtime_execution", "billing_meter_persistence", "provider_device_e2e"], ["RemoteAgentServiceExecutionReceipt", "GatewayDeploymentManifest", "billing meter event", "tenant isolation evidence"], ["headless ClawJS acts as a full host", "hosted and self-hosted modes pass the same route contracts", "assignments, budgets, billing, isolation, and audit are present"]),
+  ];
+}
+
 export function buildRemoteProviderDeviceE2EValidationPlan(input: {
   createdAt?: string;
   requiredRouteIds?: readonly string[];
   evidenceRefs?: string[];
 } = {}): RemoteProviderDeviceE2EValidationPlan {
   const createdAt = input.createdAt ?? new Date().toISOString();
+  const requiredRouteIds = input.requiredRouteIds?.length ? [...input.requiredRouteIds] : remoteSyncRequiredRouteIds.slice();
   return remoteProviderDeviceE2EValidationPlanSchema.parse({
     schemaVersion: 1,
     planId: providerDeviceE2EPlanId(["plan", createdAt]),
     requiredDomains: ["chat", "search", "sync", "secret_refs", "hosted_agents"],
-    requiredRouteIds: input.requiredRouteIds?.length ? [...input.requiredRouteIds] : remoteSyncRequiredRouteIds.slice(),
-    requiredExternalPendingIds: [
-      "physical_iroh_handshake",
-      "device_trust_acceptance",
-      "physical_peer_trust",
-      "physical_sync_driver_application",
-      "physical_authority_handoff",
-      "signed_host_audit_persistence",
-      "physical_client_storage",
-      "provider_secret_retrieval",
-      "self_hosted_deployment",
-      "hosted_deployment",
-      "agent_runtime_execution",
-      "billing_meter_persistence",
-      "provider_device_e2e",
-    ],
+    requiredRouteIds,
+    requiredExternalPendingIds: providerDeviceE2ERequiredExternalPendingIds,
+    validationSteps: providerDeviceE2EValidationSteps(requiredRouteIds),
     evidenceRefs: input.evidenceRefs?.length ? input.evidenceRefs : [
       "claw inspect remote --json",
       "claw remote contracts --json",
@@ -403,6 +463,24 @@ function remoteGoalClosureGateId(parts: string[]): string {
 export const remoteSourceConversationId = "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8";
 export const remoteSourcePlanId = "019e3732-c90e-7491-9217-37020c43217e-plan";
 export const remoteGoalClosureRequiredSourceQaIds = Array.from({ length: 23 }, (_, index) => `QA-${String(index + 1).padStart(3, "0")}`);
+
+export function parseRemoteExternalValidationEvidenceInput(input: unknown): RemoteExternalValidationEvidence[] {
+  if (input === undefined || input === null) return [];
+  if (Array.isArray(input)) return input.map((entry) => remoteExternalValidationEvidenceSchema.parse(entry));
+  if (input && typeof input === "object" && Array.isArray((input as { evidence?: unknown }).evidence)) {
+    const envelope = (
+      "sourceConversationId" in input
+      || "sourcePlanId" in input
+      || "generatedAt" in input
+      || "status" in input
+      || "writes" in input
+    )
+      ? remoteExternalValidationEvidenceArtifactSchema.parse(input)
+      : remoteExternalValidationEvidenceEnvelopeSchema.parse(input);
+    return envelope.evidence;
+  }
+  return [remoteExternalValidationEvidenceSchema.parse(input)];
+}
 
 const remoteSourceQaCatalog: Record<string, { decisionKey: string; requirementId: string }> = {
   "QA-001": { decisionKey: "relay_boundary", requirementId: "RQ-001" },
@@ -594,7 +672,7 @@ export function buildRemoteExternalValidationEvidenceTemplate(input: {
     generatedAt,
     status: "external_pending",
     requirementCount: checklistItems.length,
-    submissionCommand: "claw remote validation-report --evidence-json '<template.evidence>' --json",
+    submissionCommand: "claw remote validation-report --evidence-file docs/remote-gateway-sync-external-validation-evidence.json --json",
     checklistItems,
     evidence,
     instructions: [
@@ -605,6 +683,26 @@ export function buildRemoteExternalValidationEvidenceTemplate(input: {
       "Keep plaintextMaterialIncluded false; never attach plaintext secrets or raw credential material.",
     ],
     writes: false,
+  });
+}
+
+export function buildRemoteExternalValidationEvidenceArtifact(input: {
+  generatedAt?: string;
+  requirementIds?: string[];
+  evidence?: RemoteExternalValidationEvidence[] | RemoteExternalValidationEvidenceEnvelope | RemoteExternalValidationEvidenceArtifact;
+} = {}): RemoteExternalValidationEvidenceArtifact {
+  const generatedAt = input.generatedAt ?? new Date().toISOString();
+  const evidence = input.evidence === undefined
+    ? buildRemoteExternalValidationEvidenceTemplate({ generatedAt, requirementIds: input.requirementIds }).evidence
+    : parseRemoteExternalValidationEvidenceInput(input.evidence);
+  return remoteExternalValidationEvidenceArtifactSchema.parse({
+    schemaVersion: 1,
+    sourceConversationId: remoteSourceConversationId,
+    sourcePlanId: remoteSourcePlanId,
+    generatedAt,
+    status: "external_pending",
+    writes: false,
+    evidence,
   });
 }
 

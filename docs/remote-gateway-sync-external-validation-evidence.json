@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "sourceConversationId": "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8",
+  "sourcePlanId": "019e3732-c90e-7491-9217-37020c43217e-plan",
+  "generatedAt": "2026-05-18T11:40:00.000Z",
+  "status": "external_pending",
+  "writes": false,
+  "evidence": [
+    {
+      "schemaVersion": 1,
+      "requirementId": "physical_iroh_handshake",
+      "approvedRun": false,
+      "artifactRefs": [],
+      "acceptedCriteria": [],
+      "plaintextMaterialIncluded": false,
+      "executedAt": "2026-05-18T11:40:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "requirementId": "device_trust_acceptance",
+      "approvedRun": false,
+      "artifactRefs": [],
+      "acceptedCriteria": [],
+      "plaintextMaterialIncluded": false,
+      "executedAt": "2026-05-18T11:40:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "requirementId": "physical_peer_trust",
+      "approvedRun": false,
+      "artifactRefs": [],
+      "acceptedCriteria": [],
+      "plaintextMaterialIncluded": false,
+      "executedAt": "2026-05-18T11:40:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "requirementId": "physical_sync_driver_application",
+      "approvedRun": false,
+      "artifactRefs": [],
+      "acceptedCriteria": [],
+      "plaintextMaterialIncluded": false,
+      "executedAt": "2026-05-18T11:40:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "requirementId": "physical_authority_handoff",
+      "approvedRun": false,
+      "artifactRefs": [],
+      "acceptedCriteria": [],
+      "plaintextMaterialIncluded": false,
+      "executedAt": "2026-05-18T11:40:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "requirementId": "signed_host_audit_persistence",
+      "approvedRun": false,
+      "artifactRefs": [],
+      "acceptedCriteria": [],
+      "plaintextMaterialIncluded": false,
+      "executedAt": "2026-05-18T11:40:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "requirementId": "physical_client_storage",
+      "approvedRun": false,
+      "artifactRefs": [],
+      "acceptedCriteria": [],
+      "plaintextMaterialIncluded": false,
+      "executedAt": "2026-05-18T11:40:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "requirementId": "provider_secret_retrieval",
+      "approvedRun": false,
+      "artifactRefs": [],
+      "acceptedCriteria": [],
+      "plaintextMaterialIncluded": false,
+      "executedAt": "2026-05-18T11:40:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "requirementId": "self_hosted_deployment",
+      "approvedRun": false,
+      "artifactRefs": [],
+      "acceptedCriteria": [],
+      "plaintextMaterialIncluded": false,
+      "executedAt": "2026-05-18T11:40:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "requirementId": "hosted_deployment",
+      "approvedRun": false,
+      "artifactRefs": [],
+      "acceptedCriteria": [],
+      "plaintextMaterialIncluded": false,
+      "executedAt": "2026-05-18T11:40:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "requirementId": "agent_runtime_execution",
+      "approvedRun": false,
+      "artifactRefs": [],
+      "acceptedCriteria": [],
+      "plaintextMaterialIncluded": false,
+      "executedAt": "2026-05-18T11:40:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "requirementId": "billing_meter_persistence",
+      "approvedRun": false,
+      "artifactRefs": [],
+      "acceptedCriteria": [],
+      "plaintextMaterialIncluded": false,
+      "executedAt": "2026-05-18T11:40:00.000Z",
+      "writes": false
+    },
+    {
+      "schemaVersion": 1,
+      "requirementId": "provider_device_e2e",
+      "approvedRun": false,
+      "artifactRefs": [],
+      "acceptedCriteria": [],
+      "plaintextMaterialIncluded": false,
+      "executedAt": "2026-05-18T11:40:00.000Z",
+      "writes": false
+    }
+  ]
+}
