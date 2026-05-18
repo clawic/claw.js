@@ -1,8 +1,10 @@
 import type { BuiltinCollectionDefinition, BuiltinFieldDefinition } from "../_types.ts";
 
-const workspaceScopeFields: BuiltinFieldDefinition[] = [
-  { name: "ownerKind", type: "select", options: ["user", "org", "company", "workspace", "project", "system"] },
-  { name: "ownerId", type: "text" },
+const governanceScopeFields: BuiltinFieldDefinition[] = [
+  { name: "stewardKind", type: "select", options: ["principal", "entity"] },
+  { name: "stewardId", type: "text" },
+  { name: "scopeType", type: "text" },
+  { name: "scopeId", type: "text" },
   { name: "workspaceId", type: "text" },
   { name: "projectId", type: "text" },
 ];
@@ -34,7 +36,7 @@ export const AGENTS: BuiltinCollectionDefinition = {
     { name: "logoRef", type: "text" },
     { name: "managerAgentId", type: "relation", relation: { collectionName: "agents", kind: "dependency" } },
     { name: "teamId", type: "text" },
-    ...workspaceScopeFields,
+    ...governanceScopeFields,
     { name: "instructions", type: "markdown" },
     { name: "modelTier", type: "select", options: ["fast", "balanced", "smart", "max"] },
     { name: "speedTier", type: "select", options: ["background", "normal", "interactive", "realtime"] },
@@ -52,7 +54,8 @@ export const AGENTS: BuiltinCollectionDefinition = {
   indexes: [
     { name: "agents_status_idx", fields: ["status"] },
     { name: "agents_mode_idx", fields: ["agencyMode"] },
-    { name: "agents_owner_idx", fields: ["ownerKind", "ownerId"] },
+    { name: "agents_steward_idx", fields: ["stewardKind", "stewardId"] },
+    { name: "agents_scope_idx", fields: ["scopeType", "scopeId"] },
     { name: "agents_workspace_idx", fields: ["workspaceId"] },
   ],
 };
