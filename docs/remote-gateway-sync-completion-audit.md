@@ -116,6 +116,12 @@ HTTP route parity for external-pending, validation checklist/template/artifact,
 runbook, readiness, approval request, report, source Q/A template, closure
 gate, route contracts, provider/device E2E plan, and conformance.
 
+CLI/router parity was rerun with
+`node --import tsx ./scripts/verify-cli-registry-router-parity.mjs` and passed
+with `cli registry/router parity passed (155 commands)`. This keeps the public
+`claw` command registry aligned with router-dispatched command surfaces before
+final remote close.
+
 ## Closure Rule
 
 The goal may be closed only after a final pass confirms:
