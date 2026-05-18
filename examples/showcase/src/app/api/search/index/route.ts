@@ -16,6 +16,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type SearchIndexAction = "enable" | "pause" | "exclude" | "resume" | "rebuild" | "onboard";
+type SearchSourceSetupKind = "ready" | "local_root" | "web_cache" | "provider_cache" | "signed_host";
 
 interface SearchIndexSourceView {
   id: string;
@@ -31,10 +32,21 @@ interface SearchIndexSourceView {
   resultTypes: string[];
   facets: string[];
   permissionDefault: SearchSourceManifest["permissions"]["default"];
+  setupKind: SearchSourceSetupKind;
+  setupLabel: string;
+  setupReady: boolean;
   backlog: number;
   lastIndexedAt?: string;
   error?: string;
   externalPending: boolean;
+}
+
+interface SearchIndexOnboarding {
+  firstRun: boolean;
+  defaultSelectedSourceIds: string[];
+  readySourceIds: string[];
+  setupRequiredSourceIds: string[];
+  externalPendingSourceIds: string[];
 }
 
 interface SearchIndexSnapshot {
@@ -46,11 +58,17 @@ interface SearchIndexSnapshot {
     queuedJobs: number;
     externalPending: number;
   };
+  onboarding: SearchIndexOnboarding;
   sources: SearchIndexSourceView[];
   jobs: SearchIndexJob[];
 }
 
-const FULL_PROFILE_SOURCE_IDS = new Set(["local.files", "native.system", "web.ingested", "external.cache"]);
+const SOURCE_SETUP: Record<string, { kind: SearchSourceSetupKind; label: string }> = {
+  "local.files": { kind: "local_root", label: "Choose local root" },
+  "native.system": { kind: "signed_host", label: "Signed host required" },
+  "web.ingested": { kind: "web_cache", label: "Choose web cache" },
+  "external.cache": { kind: "provider_cache", label: "Choose provider cache" },
+};
 
 export async function GET(request: Request) {
   const profile = readProfile(new URL(request.url).searchParams.get("profile"));
@@ -167,12 +185,14 @@ function buildSnapshot(
       queuedJobs,
       externalPending: sources.filter((source) => source.externalPending).length,
     },
+    onboarding: onboardingView(sources, jobs),
     sources,
     jobs,
   };
 }
 
 function sourceView(manifest: SearchSourceManifest, status?: SearchSourceStatus): SearchIndexSourceView {
+  const setup = SOURCE_SETUP[manifest.id] ?? { kind: "ready" as const, label: "Ready" };
   return {
     id: manifest.id,
     name: manifest.name,
@@ -187,10 +207,27 @@ function sourceView(manifest: SearchSourceManifest, status?: SearchSourceStatus)
     resultTypes: manifest.resultTypes,
     facets: manifest.facets?.map((facet) => facet.id) ?? [],
     permissionDefault: manifest.permissions.default,
+    setupKind: setup.kind,
+    setupLabel: setup.label,
+    setupReady: setup.kind === "ready",
     backlog: status?.backlog ?? 0,
     ...(status?.lastIndexedAt ? { lastIndexedAt: status.lastIndexedAt } : {}),
     ...(status?.error ? { error: status.error } : {}),
-    externalPending: FULL_PROFILE_SOURCE_IDS.has(manifest.id),
+    externalPending: setup.kind === "signed_host",
+  };
+}
+
+function onboardingView(sources: SearchIndexSourceView[], jobs: SearchIndexJob[]): SearchIndexOnboarding {
+  const candidates = sources.filter((source) => source.state !== "enabled" && source.state !== "backfilling");
+  const ready = candidates.filter((source) => source.setupReady);
+  const setupRequired = candidates.filter((source) => !source.setupReady && !source.externalPending);
+  const externalPending = candidates.filter((source) => source.externalPending);
+  return {
+    firstRun: !sources.some((source) => source.lastIndexedAt) && !jobs.some((job) => job.status === "done"),
+    defaultSelectedSourceIds: ready.map((source) => source.id),
+    readySourceIds: ready.map((source) => source.id),
+    setupRequiredSourceIds: setupRequired.map((source) => source.id),
+    externalPendingSourceIds: externalPending.map((source) => source.id),
   };
 }
 

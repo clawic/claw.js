@@ -17,6 +17,7 @@ import {
 type SearchProfileId = "framework" | "full";
 type SearchSourceState = "enabled" | "disabled" | "paused" | "excluded" | "backfilling" | "degraded" | "error";
 type SearchIndexAction = "enable" | "pause" | "exclude" | "resume" | "rebuild" | "onboard";
+type SearchSourceSetupKind = "ready" | "local_root" | "web_cache" | "provider_cache" | "signed_host";
 
 interface SearchIndexSourceView {
   id: string;
@@ -32,6 +33,9 @@ interface SearchIndexSourceView {
   resultTypes: string[];
   facets: string[];
   permissionDefault: string;
+  setupKind: SearchSourceSetupKind;
+  setupLabel: string;
+  setupReady: boolean;
   backlog: number;
   lastIndexedAt?: string;
   error?: string;
@@ -58,6 +62,13 @@ interface SearchIndexSnapshot {
     enabled: number;
     queuedJobs: number;
     externalPending: number;
+  };
+  onboarding: {
+    firstRun: boolean;
+    defaultSelectedSourceIds: string[];
+    readySourceIds: string[];
+    setupRequiredSourceIds: string[];
+    externalPendingSourceIds: string[];
   };
   sources: SearchIndexSourceView[];
   jobs: SearchIndexJobView[];
@@ -103,9 +114,7 @@ export default function SearchIndexPage() {
 
   useEffect(() => {
     if (!snapshot) return;
-    setSelectedSources(snapshot.sources
-      .filter((source) => source.state === "disabled" || source.state === "paused" || source.state === "excluded")
-      .map((source) => source.id));
+    setSelectedSources(snapshot.onboarding.defaultSelectedSourceIds);
   }, [snapshot?.profile, snapshot?.sources]);
 
   const runAction = async (source: string, action: SearchIndexAction) => {
@@ -245,13 +254,19 @@ export default function SearchIndexPage() {
                 </button>
               </div>
             </div>
+            <div className="grid gap-3 border-b border-border px-4 py-3 text-sm sm:grid-cols-3">
+              <OnboardingMetric label="Ready" value={snapshot.onboarding.readySourceIds.length} />
+              <OnboardingMetric label="Needs setup" value={snapshot.onboarding.setupRequiredSourceIds.length} />
+              <OnboardingMetric label="Host pending" value={snapshot.onboarding.externalPendingSourceIds.length} />
+            </div>
             {onboardingSources.length ? (
               <div className="divide-y divide-border overflow-x-auto">
                 {onboardingSources.map((source) => (
-                  <label key={source.id} className="grid min-w-[620px] cursor-pointer grid-cols-[24px_minmax(180px,1fr)_110px_110px_120px] items-center gap-3 px-4 py-3 text-sm">
+                  <label key={source.id} className={`grid min-w-[720px] grid-cols-[24px_minmax(180px,1fr)_110px_110px_160px] items-center gap-3 px-4 py-3 text-sm ${source.externalPending ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}>
                     <input
                       type="checkbox"
                       checked={selectedSources.includes(source.id)}
+                      disabled={source.externalPending}
                       onChange={() => toggleSource(source.id)}
                       className="h-4 w-4 accent-foreground"
                       data-testid={`search-source-onboard-${source.id}`}
@@ -262,7 +277,7 @@ export default function SearchIndexPage() {
                     </span>
                     <span className={`w-fit rounded px-2 py-1 text-xs font-medium ${STATE_STYLES[source.state]}`}>{source.state}</span>
                     <span className="truncate text-muted-foreground">{source.profile}</span>
-                    <span className="truncate text-muted-foreground">{source.externalPending ? "external pending" : source.freshness}</span>
+                    <span className="truncate text-muted-foreground">{source.setupLabel}</span>
                   </label>
                 ))}
               </div>
@@ -369,6 +384,15 @@ function Metric({ icon, label, value }: { icon: React.ReactNode; label: string; 
         {label}
       </div>
       <div className="mt-2 text-2xl font-semibold text-foreground">{value}</div>
+    </div>
+  );
+}
+
+function OnboardingMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex items-center justify-between rounded-md border border-border bg-background px-3 py-2">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-mono text-sm text-foreground">{value}</span>
     </div>
   );
 }

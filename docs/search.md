@@ -543,7 +543,11 @@ shows framework and full-profile sources separately, keeps optional native/web/
 provider/file sources off by default, and can pause, exclude, resume, or enqueue
 source rebuild jobs without changing the normal chat search scope. Its source
 onboarding control requires explicit source selection before enabling optional
-or paused sources, with rebuild queueing as a separate checkbox.
+or paused sources, with rebuild queueing as a separate checkbox. The Search
+Index snapshot also exposes first-run onboarding guidance: sources are grouped
+as ready, local setup required, or signed-host pending, and the UI does not
+preselect sources that need a local root, cache, provider export, or signed host
+before they can produce useful index rows.
 
 The showcase app also exposes `/search` as the first Root Search entrypoint.
 It is separate from chat search, uses the `framework` profile by default, and
@@ -596,7 +600,8 @@ signed host shortcut broker validates it.
   Search Index, and chat-search shortcut contracts before binding native
   shortcuts.
 - Keep `/search-index` as the technical/admin Search Index surface for source
-  state, opt-in profile checks, source onboarding, and rebuild queue control.
+  state, opt-in profile checks, first-run source onboarding, setup readiness,
+  and rebuild queue control.
 - Keep `framework` as default and use `full` for optional native, web, provider,
   and local-file sources.
 - Mark physical/native validation as `EXTERNAL PENDING` until a signed host and

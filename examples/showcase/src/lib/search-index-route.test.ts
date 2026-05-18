@@ -50,6 +50,20 @@ test("Search Index route onboards selected full-profile sources and queues optio
   assert.equal(payload.jobs.filter((job: { source: string; operation: string }) => job.operation === "rebuild" && job.source === "web.ingested").length, 1);
 });
 
+test("Search Index route exposes first-run onboarding guidance", async () => {
+  const payload = await responseJson(await GET(new Request("http://localhost/api/search/index?profile=full")));
+
+  assert.equal(sourceSetupKind(payload, "local.files"), "local_root");
+  assert.equal(sourceExternalPending(payload, "local.files"), false);
+  assert.equal(sourceSetupKind(payload, "native.system"), "signed_host");
+  assert.equal(sourceExternalPending(payload, "native.system"), true);
+  assert.ok(payload.onboarding.setupRequiredSourceIds.includes("local.files"));
+  assert.ok(payload.onboarding.setupRequiredSourceIds.includes("web.ingested"));
+  assert.ok(payload.onboarding.setupRequiredSourceIds.includes("external.cache"));
+  assert.ok(payload.onboarding.externalPendingSourceIds.includes("native.system"));
+  assert.ok(!payload.onboarding.defaultSelectedSourceIds.includes("native.system"));
+});
+
 test("Search Index route rejects onboard requests for unknown sources", async () => {
   const response = await POST(new Request("http://localhost/api/search/index", {
     method: "POST",
@@ -64,7 +78,12 @@ test("Search Index route rejects onboard requests for unknown sources", async ()
 
 async function responseJson(response: Response): Promise<{
   error?: string;
-  sources: Array<{ id: string; state: string; backlog: number }>;
+  onboarding: {
+    defaultSelectedSourceIds: string[];
+    setupRequiredSourceIds: string[];
+    externalPendingSourceIds: string[];
+  };
+  sources: Array<{ id: string; state: string; backlog: number; setupKind: string; externalPending: boolean }>;
   jobs: Array<{ source: string; operation: string }>;
 }> {
   return await response.json();
@@ -76,4 +95,12 @@ function sourceState(payload: { sources: Array<{ id: string; state: string }> },
 
 function sourceBacklog(payload: { sources: Array<{ id: string; backlog: number }> }, id: string): number | undefined {
   return payload.sources.find((source) => source.id === id)?.backlog;
+}
+
+function sourceSetupKind(payload: { sources: Array<{ id: string; setupKind: string }> }, id: string): string | undefined {
+  return payload.sources.find((source) => source.id === id)?.setupKind;
+}
+
+function sourceExternalPending(payload: { sources: Array<{ id: string; externalPending: boolean }> }, id: string): boolean | undefined {
+  return payload.sources.find((source) => source.id === id)?.externalPending;
 }
