@@ -882,6 +882,18 @@ export function createBuiltinSearchSourceManifests(): SearchSourceManifest[] {
       ],
     }),
     createFrameworkSearchSourceManifest({
+      id: "slides.decks",
+      domain: "slides",
+      name: "Slide decks",
+      resultTypes: ["deck", "slide"],
+      facets: [
+        { id: "theme", label: "Theme", type: "string" },
+        { id: "layout", label: "Slide layout", type: "string" },
+        { id: "authorAgentId", label: "Author agent", type: "string" },
+        { id: "outputFormat", label: "Output format", type: "string" },
+      ],
+    }),
+    createFrameworkSearchSourceManifest({
       id: "generations.artifacts",
       domain: "generations",
       name: "Generated artifacts",

@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 
 import Database from "better-sqlite3";
 
-import { clawCliCommandRegistry, listClawCliAliases, type ClawCliCommandRegistryEntry, type ClawCliSearchResult } from "@clawjs/core";
+import { clawCliCommandRegistry, listClawCliAliases, resolveClawPersistentSurfacePath, type ClawCliCommandRegistryEntry, type ClawCliSearchResult } from "@clawjs/core";
 import {
   DEFAULT_SEARCH_BUDGETS,
   LOCAL_TEXT_EMBEDDING_MODEL,
@@ -100,6 +100,7 @@ export async function runSearchQueryCli(input: {
     const shouldRefreshEln = domains?.includes("eln") || sources?.includes("eln.records");
     const shouldRefreshImages = domains?.includes("images") || sources?.includes("images.derived");
     const shouldRefreshMedia = domains?.includes("media") || sources?.includes("media.assets");
+    const shouldRefreshSlides = domains?.includes("slides") || sources?.includes("slides.decks");
     const shouldRefreshGenerations = domains?.includes("generations") || sources?.includes("generations.artifacts");
     const shouldRefreshCode = domains?.includes("code") || sources?.includes("code.symbols");
     const shouldRefreshSkills = domains?.includes("skills") || sources?.includes("skills.registry");
@@ -130,6 +131,7 @@ export async function runSearchQueryCli(input: {
     const indexedEln = shouldRefreshEln && sourceCanIndex(store, "eln.records") ? ensureElnRecordsSourceIndexed(store, input.flags) : 0;
     const indexedImages = shouldRefreshImages && sourceCanIndex(store, "images.derived") ? ensureImagesDerivedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedMedia = shouldRefreshMedia && sourceCanIndex(store, "media.assets") ? ensureMediaAssetsSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const indexedSlides = shouldRefreshSlides && sourceCanIndex(store, "slides.decks") ? ensureSlidesDecksSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedGenerations = shouldRefreshGenerations && sourceCanIndex(store, "generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedCode = shouldRefreshCode && sourceCanIndex(store, "code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedSkills = shouldRefreshSkills && sourceCanIndex(store, "skills.registry") ? ensureSkillsRegistrySourceIndexed(store, input.flags) : 0;
@@ -227,6 +229,7 @@ export async function runSearchQueryCli(input: {
         ...(shouldRefreshEln ? { "eln.records": indexedEln } : {}),
         ...(shouldRefreshImages ? { "images.derived": indexedImages } : {}),
         ...(shouldRefreshMedia ? { "media.assets": indexedMedia } : {}),
+        ...(shouldRefreshSlides ? { "slides.decks": indexedSlides } : {}),
         ...(shouldRefreshGenerations ? { "generations.artifacts": indexedGenerations } : {}),
         ...(shouldRefreshCode ? { "code.symbols": indexedCode } : {}),
         ...(shouldRefreshSkills ? { "skills.registry": indexedSkills } : {}),
@@ -365,6 +368,7 @@ export async function runSearchRebuildCli(input: {
     const elnIndexed = rebuildsSource("eln.records") ? ensureElnRecordsSourceIndexed(store, input.flags) : 0;
     const imagesIndexed = rebuildsSource("images.derived") ? ensureImagesDerivedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const mediaIndexed = rebuildsSource("media.assets") ? ensureMediaAssetsSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const slidesIndexed = rebuildsSource("slides.decks") ? ensureSlidesDecksSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const generationsIndexed = rebuildsSource("generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const codeIndexed = rebuildsSource("code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const skillsIndexed = rebuildsSource("skills.registry") ? ensureSkillsRegistrySourceIndexed(store, input.flags) : 0;
@@ -398,6 +402,7 @@ export async function runSearchRebuildCli(input: {
       ...(elnIndexed > 0 ? ["eln.records"] : []),
       ...(imagesIndexed > 0 ? ["images.derived"] : []),
       ...(mediaIndexed > 0 ? ["media.assets"] : []),
+      ...(slidesIndexed > 0 ? ["slides.decks"] : []),
       ...(generationsIndexed > 0 ? ["generations.artifacts"] : []),
       ...(codeIndexed > 0 ? ["code.symbols"] : []),
       ...(skillsIndexed > 0 ? ["skills.registry"] : []),
@@ -428,7 +433,7 @@ export async function runSearchRebuildCli(input: {
       mode: selectedSources && selectedShards ? "shard_scoped" : selectedSources ? "scoped" : "full",
       selectedSources: selectedSources ?? null,
       selectedShards: selectedShards ?? null,
-      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + workIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + elnIndexed + imagesIndexed + mediaIndexed + generationsIndexed + codeIndexed + skillsIndexed + providersIndexed + snippetsIndexed + agentsIndexed + marketplaceIndexed + contentIndexed + businessIndexed + socialIndexed + iotIndexed + connectorsIndexed + mcpIndexed + appsIndexed + designIndexed + runtimeIndexed + localFilesIndexed + webIndexed + externalIndexed,
+      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + workIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + elnIndexed + imagesIndexed + mediaIndexed + slidesIndexed + generationsIndexed + codeIndexed + skillsIndexed + providersIndexed + snippetsIndexed + agentsIndexed + marketplaceIndexed + contentIndexed + businessIndexed + socialIndexed + iotIndexed + connectorsIndexed + mcpIndexed + appsIndexed + designIndexed + runtimeIndexed + localFilesIndexed + webIndexed + externalIndexed,
       embeddings: 0,
       profile: input.flags.profile === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
@@ -447,6 +452,7 @@ export async function runSearchRebuildCli(input: {
         "eln.records": elnIndexed,
         "images.derived": imagesIndexed,
         "media.assets": mediaIndexed,
+        "slides.decks": slidesIndexed,
         "generations.artifacts": generationsIndexed,
         "code.symbols": codeIndexed,
         "skills.registry": skillsIndexed,
@@ -1149,6 +1155,8 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
       return ensureImagesDerivedSourceIndexed(store, flags, cwd);
     case "media.assets":
       return ensureMediaAssetsSourceIndexed(store, flags, cwd);
+    case "slides.decks":
+      return ensureSlidesDecksSourceIndexed(store, flags, cwd);
     case "generations.artifacts":
       return ensureGenerationsArtifactsSourceIndexed(store, flags, cwd);
     case "code.symbols":
@@ -3961,6 +3969,41 @@ function ensureLocalFilesSourceIndexed(store: SearchStore, flags: Record<string,
   return indexed;
 }
 
+function ensureSlidesDecksSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {
+  const root = resolveSlidesDecksRoot(flags, cwd);
+  if (!fs.existsSync(root)) {
+    store.setSourceState("slides.decks", "enabled", {
+      backlog: 0,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 0;
+  }
+  const maxDecks = boundedNumberFlag(flags["slides-limit"] ?? flags["slide-deck-limit"], 500, 1, 10000);
+  const files = fs.readdirSync(root)
+    .filter((entry) => entry.endsWith(".json"))
+    .map((entry) => path.join(root, entry))
+    .sort()
+    .slice(0, maxDecks);
+  let indexed = 0;
+  for (const file of files) {
+    const document = slideDeckSearchDocument(file);
+    if (!document) continue;
+    store.upsertDocument(document);
+    indexed += 1;
+  }
+  store.setCursor({
+    source: "slides.decks",
+    cursor: `root:${stableSearchId(root)}:decks:${indexed}`,
+    metadata: { root, maxDecks },
+  });
+  store.setSourceState("slides.decks", "enabled", {
+    backlog: 0,
+    error: null,
+    lastIndexedAt: new Date().toISOString(),
+  });
+  return indexed;
+}
+
 function ensureWebIngestedSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {
   const root = resolveWebIngestedRoot(flags, cwd);
   if (!fs.existsSync(root)) {
@@ -4043,6 +4086,13 @@ function resolveMainDbPath(flags: Record<string, string>): string {
 
 function resolveLocalFilesSearchRoot(flags: Record<string, string>, cwd: string): string {
   return path.resolve(flags["file-root"] ?? flags["local-files-root"] ?? flags.workspace ?? cwd);
+}
+
+function resolveSlidesDecksRoot(flags: Record<string, string>, cwd: string): string {
+  const configured = flags["slides-root"] ?? flags["slides-decks-root"];
+  if (configured) return path.resolve(configured);
+  const workspaceRoot = path.resolve(flags.workspace ?? cwd);
+  return resolveClawPersistentSurfacePath("claw.workspace.slides", workspaceRoot, "decks");
 }
 
 function resolveWebIngestedRoot(flags: Record<string, string>, cwd: string): string {
@@ -4257,6 +4307,86 @@ function localFileSearchDocument(root: string, file: LocalFileCandidate, maxByte
     actions: [
       { id: "open", kind: "open", label: "Open file", requiresApproval: true, risk: "read", grant: "search.files.open" },
       { id: "copy-reference", kind: "copy", label: "Copy file reference", requiresApproval: false },
+    ],
+  };
+}
+
+function slideDeckSearchDocument(filePath: string): SearchDocumentInput | null {
+  const raw = readLocalTextFile(filePath);
+  if (!raw) return null;
+  const deck = parseJsonRecord(raw) as SlideDeckSearchManifest;
+  const deckId = stringValue(deck.id) ?? path.basename(filePath, ".json");
+  const title = stringValue(deck.title) ?? `Slide deck ${deckId}`;
+  const theme = stringValue(deck.theme);
+  const author = isPlainRecord(deck.author) ? deck.author : {};
+  const outputs = Array.isArray(deck.outputs) ? deck.outputs.filter(isPlainRecord) : [];
+  const slides = Array.isArray(deck.slides) ? deck.slides.filter(isPlainRecord) : [];
+  const slideTexts = slides.map(slideTextForSearch).filter((text) => text.length > 0);
+  const metadataText = textFromStructuredContent(deck.metadata);
+  const outputFormats = outputs.map((output) => stringValue(output.format)).filter((format): format is string => !!format);
+  const layouts = Array.from(new Set(slides.map((slide) => stringValue(slide.layout) ?? "slide")));
+  let updatedAt = stringValue(deck.updatedAt);
+  if (!updatedAt) {
+    try {
+      updatedAt = fs.statSync(filePath).mtime.toISOString();
+    } catch {
+      updatedAt = new Date().toISOString();
+    }
+  }
+  const body = [
+    title,
+    theme,
+    stringValue(author.name),
+    stringValue(author.agentId),
+    metadataText,
+    ...slideTexts,
+  ].filter(Boolean).join("\n");
+  return {
+    id: `slides.decks:${stableSearchId(filePath)}`,
+    source: "slides.decks",
+    domain: "slides",
+    type: "deck",
+    resourceId: deckId,
+    title,
+    subtitle: [theme, `${slides.length} slides`].filter(Boolean).join(" · "),
+    snippet: firstMeaningfulLine(slideTexts.join("\n")) ?? title,
+    body,
+    path: filePath,
+    updatedAt,
+    metadata: {
+      deckId,
+      theme,
+      slideCount: slides.length,
+      layout: layouts,
+      authorAgentId: stringValue(author.agentId),
+      authorName: stringValue(author.name),
+      outputFormat: Array.from(new Set(outputFormats)),
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: {
+      fastPath: 1,
+      slides: 1,
+      slideCount: Math.min(slides.length, 50) / 50,
+    },
+    fragments: slides.slice(0, 80).map((slide, index) => {
+      const slideId = stringValue(slide.id) ?? `slide-${index + 1}`;
+      const text = slideTextForSearch(slide);
+      return {
+        id: `slides.decks:${stableSearchId(filePath)}:slide:${slideId}`,
+        title: stringValue(slide.heading) ?? stringValue(slide.title) ?? `Slide ${index + 1}`,
+        body: text,
+        snippet: firstMeaningfulLine(text) ?? stringValue(slide.layout) ?? "slide",
+        sortOrder: index,
+        metadata: {
+          slideId,
+          slideIndex: index,
+          layout: stringValue(slide.layout) ?? "slide",
+        },
+      };
+    }),
+    actions: [
+      { id: "open", kind: "open", label: "Open slide deck", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy slide deck reference", requiresApproval: false },
     ],
   };
 }
@@ -4521,6 +4651,49 @@ function contentTypeForWebCacheExtension(extension: string): string {
   if (extension === ".json") return "application/json";
   if (extension === ".md") return "text/markdown";
   return "text/plain";
+}
+
+function slideTextForSearch(slide: Record<string, unknown>): string {
+  const parts: string[] = [];
+  for (const key of ["title", "heading", "subtitle", "body", "quote", "attribution", "left", "right", "notes"]) {
+    const value = stringValue(slide[key]);
+    if (value) parts.push(value);
+  }
+  for (const key of ["bullets", "steps", "metrics", "rows", "image"]) {
+    const text = slideStructuredText(slide[key]);
+    if (text) parts.push(text);
+  }
+  return parts.join("\n").trim();
+}
+
+function slideStructuredText(value: unknown): string | undefined {
+  const direct = textFromStructuredContent(value);
+  if (direct) return direct;
+  const parts: string[] = [];
+  collectSlideStructuredText(value, parts, 0);
+  const text = parts.join(" ").replace(/\s+/g, " ").trim();
+  return text || undefined;
+}
+
+function collectSlideStructuredText(value: unknown, parts: string[], depth: number): void {
+  if (parts.join(" ").length > 8192 || depth > 4 || value === null || value === undefined) return;
+  if (typeof value === "string") {
+    if (value.trim()) parts.push(value.trim());
+    return;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    parts.push(String(value));
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) collectSlideStructuredText(item, parts, depth + 1);
+    return;
+  }
+  if (!isPlainRecord(value)) return;
+  for (const [key, nested] of Object.entries(value)) {
+    if (["src", "path", "url"].includes(key)) continue;
+    collectSlideStructuredText(nested, parts, depth + 1);
+  }
 }
 
 function stringValue(value: unknown): string | undefined {
@@ -6461,6 +6634,17 @@ interface DatabaseRecordRow {
   data_json: string;
   created_at: string;
   updated_at: string;
+}
+
+interface SlideDeckSearchManifest {
+  id?: unknown;
+  title?: unknown;
+  theme?: unknown;
+  author?: unknown;
+  slides?: unknown;
+  metadata?: unknown;
+  outputs?: unknown;
+  updatedAt?: unknown;
 }
 
 interface FinanceRecordTableRow {

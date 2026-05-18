@@ -3879,6 +3879,74 @@ test("search rebuild indexes images.derived from image library records", async (
   });
 });
 
+test("search rebuild indexes slides.decks from slide manifests", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-slides-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  const decksDir = path.join(workspaceRoot, ".claw", "slides", "decks");
+  fs.mkdirSync(decksDir, { recursive: true });
+  fs.writeFileSync(path.join(decksDir, "deck-quarterly.json"), `${JSON.stringify({
+    schemaVersion: 1,
+    id: "deck-quarterly",
+    title: "Quarterly Revenue Plan",
+    theme: "executive",
+    author: { agentId: "agent:slides", name: "Slides agent" },
+    metadata: { team: "finance" },
+    outputs: [{ format: "pptx", path: "outputs/deck-quarterly/deck.pptx" }],
+    slides: [
+      {
+        id: "slide-title",
+        layout: "title",
+        heading: "Quarterly revenue plan",
+        subtitle: "North star targets",
+        notes: "Presenter note for forecast review.",
+      },
+      {
+        id: "slide-metrics",
+        layout: "metric-grid",
+        heading: "Forecast metrics",
+        metrics: [{ label: "Expansion", value: "18%", detail: "net revenue retention" }],
+        bullets: ["Pipeline coverage", "Renewal risk"],
+      },
+    ],
+    createdAt: "2026-05-17T00:00:00.000Z",
+    updatedAt: "2026-05-17T00:10:00.000Z",
+  }, null, 2)}\n`, "utf8");
+
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const rebuild = await runCliCapture(["search", "rebuild", "--source", "slides.decks", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(rebuild.code, CLI_EXIT_OK);
+    const rebuildPayload = JSON.parse(rebuild.stdout) as {
+      data: { sources: string[]; pendingSources: string[]; indexedBySource: { "slides.decks": number } };
+    };
+    assert.equal(rebuildPayload.data.sources.includes("slides.decks"), true);
+    assert.equal(rebuildPayload.data.pendingSources.includes("slides.decks"), false);
+    assert.equal(rebuildPayload.data.indexedBySource["slides.decks"], 1);
+
+    const query = await runCliCapture(["search", "query", "forecast expansion revenue", "--domains", "slides", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: {
+        indexedFastPaths: { "slides.decks": number };
+        results: Array<{ source: string; domain: string; title: string; metadata?: { theme?: string; layout?: string[]; outputFormat?: string[] }; fragments?: Array<{ title?: string; snippet?: string }> }>;
+      };
+    };
+    assert.equal(queryPayload.data.indexedFastPaths["slides.decks"], 1);
+    const result = queryPayload.data.results.find((item) => item.source === "slides.decks");
+    assert.equal(result?.domain, "slides");
+    assert.equal(result?.title, "Quarterly Revenue Plan");
+    assert.equal(result?.metadata?.theme, "executive");
+    assert.equal(result?.metadata?.layout?.includes("metric-grid"), true);
+    assert.equal(result?.metadata?.outputFormat?.includes("pptx"), true);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "Forecast metrics"), true);
+  });
+});
+
 test("search rebuild indexes media.assets from workspace media records", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-media-"));
   const dataRoot = path.join(workspaceRoot, "data");

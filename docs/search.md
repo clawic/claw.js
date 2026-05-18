@@ -71,6 +71,7 @@ backfill jobs.
 | `eln.records` | `eln` | `core.sqlite` ELN notebooks, entries, protocol runs, and observations projected into `search.sqlite` | implemented initial adapter |
 | `images.derived` | `images` | image library, image media metadata, and stored OCR/vision-derived text projected into `search.sqlite` | implemented initial adapter |
 | `media.assets` | `media` | workspace media records projected into `search.sqlite` | implemented initial adapter |
+| `slides.decks` | `slides` | workspace slide deck manifests and per-slide text projected into `search.sqlite` | implemented initial adapter |
 | `generations.artifacts` | `generations` | generated artifact records projected into `search.sqlite` | implemented initial adapter |
 | `code.symbols` | `code` | bounded project file/symbol/docs projection into `search.sqlite` | implemented initial adapter |
 | `skills.registry` | `skills` | framework skill records projected from `core.sqlite` without secret refs | implemented initial adapter |
@@ -399,6 +400,13 @@ extractors. Stored transcript, caption, or segment text is indexed as a
 transcription fragment when already present on the media record; Search does not
 run speech-to-text providers from this adapter.
 
+`slides.decks` projects workspace slide deck manifests from the local slides
+surface. It indexes the deck title, theme, author metadata, output formats, and
+each slide as a Search fragment using headings, subtitles, body text, bullets,
+steps, metrics, tables, image captions, and notes already stored in the
+manifest. It does not parse rendered PPTX/PDF output; generated files remain
+media or generated-artifact records when those surfaces register them.
+
 `generations.artifacts` projects generated artifact records. It indexes prompts,
 titles, kind, status, backend/model metadata, command provenance, output
 references, and generation metadata so generated outputs remain searchable even
@@ -518,7 +526,7 @@ signed host shortcut broker validates it.
 - Build `SearchStore` over `search.sqlite`.
 - Index `commands`, `sessions.chats`, `database.records`, `documents.blocks`,
   `notes.pages`, `knowledge.graph`, `images.derived`, `media.assets`,
-  `generations.artifacts`, `skills.registry`, `providers.routing`,
+  `slides.decks`, `generations.artifacts`, `skills.registry`, `providers.routing`,
   `snippets.library`, `agents.catalog`, `marketplace.choices`, `content.items`,
   `business.records`, `social.posts`, `iot.config`, and the first bounded
   `code.symbols` adapter with per-file event refresh.
