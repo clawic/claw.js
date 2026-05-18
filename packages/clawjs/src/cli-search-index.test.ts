@@ -1207,6 +1207,11 @@ test("sessions.chats event jobs refresh and tombstone individual chats", async (
     assert.equal(deleted.job?.operation, "delete");
     const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "sessions.chats", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(deleteRun.code, CLI_EXIT_OK);
+    const deleteRunPayload = JSON.parse(deleteRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    const sessionDeleteRunItem = deleteRunPayload.data.worker?.items.find((entry) => entry.source === "sessions.chats");
+    assert.deepEqual({ source: sessionDeleteRunItem?.source, operation: sessionDeleteRunItem?.operation, status: sessionDeleteRunItem?.status, indexed: sessionDeleteRunItem?.indexed }, { source: "sessions.chats", operation: "delete", status: "done", indexed: 1 });
     const afterDelete = await runCliCapture(["search", "query", "session-event-refresh-needle", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(afterDelete.code, CLI_EXIT_DEGRADED);
     const afterDeletePayload = JSON.parse(afterDelete.stdout) as { data: { results: unknown[] } };
@@ -1530,6 +1535,29 @@ test("database writes enqueue work.items refresh jobs", async () => {
     assert.equal(job?.payload.eventDriven, true);
     assert.equal(job?.payload.collection, "tasks");
     assert.equal(job?.payload.recordId, createdPayload.data.id);
+    const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "work.items", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(serviceRun.code, CLI_EXIT_OK);
+    const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    assert.deepEqual({ source: serviceRunPayload.data.worker?.items[0]?.source, operation: serviceRunPayload.data.worker?.items[0]?.operation, status: serviceRunPayload.data.worker?.items[0]?.status, indexed: serviceRunPayload.data.worker?.items[0]?.indexed }, { source: "work.items", operation: "upsert", status: "done", indexed: 1 });
+    const query = await runCliCapture(["search", "query", "Emit work search event", "--sources", "work.items", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as any;
+    assert.equal(queryPayload.data.results.some((entry: any) => entry.source === "work.items" && entry.resourceId === `main:tasks:${createdPayload.data.id}`), true);
+    const deleted = await runCliCapture(["db", "tasks", "delete", createdPayload.data.id, "--json"], workspaceRoot);
+    assert.equal(deleted.code, CLI_EXIT_OK, deleted.stderr || deleted.stdout);
+    const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "work.items", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(deleteRun.code, CLI_EXIT_OK);
+    const deleteRunPayload = JSON.parse(deleteRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    const workDeleteRunItem = deleteRunPayload.data.worker?.items.find((entry) => entry.source === "work.items");
+    assert.deepEqual({ source: workDeleteRunItem?.source, operation: workDeleteRunItem?.operation, status: workDeleteRunItem?.status, indexed: workDeleteRunItem?.indexed }, { source: "work.items", operation: "delete", status: "done", indexed: 1 });
+    const afterWorkDelete = await runCliCapture(["search", "query", "Emit work search event", "--sources", "work.items", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterWorkDelete.code, CLI_EXIT_DEGRADED, afterWorkDelete.stderr || afterWorkDelete.stdout);
+    const afterWorkDeletePayload = JSON.parse(afterWorkDelete.stdout) as any;
+    assert.equal(afterWorkDeletePayload.data.results.some((entry: any) => entry.source === "work.items" && entry.resourceId === `main:tasks:${createdPayload.data.id}`), false);
   });
 });
 test("search rebuild indexes skills.registry from core.sqlite without secret refs", async () => {
@@ -2555,6 +2583,21 @@ test("mcp writes enqueue and refresh mcp.servers jobs", async () => {
     assert.equal(result?.type, "server");
     assert.equal(result?.metadata?.envKey, "[REDACTED]");
     assert.equal(JSON.stringify(result).includes("hidden-token"), false);
+    const deleteStdout = captureStream();
+    const deleteStderr = captureStream();
+    const deleted = await runInternalV1Cli(["mcp", "delete", "localdocs", "--config", configPath, "--json"], { stdout: deleteStdout.stream, stderr: deleteStderr.stream, cwd: workspaceRoot });
+    assert.equal(deleted, CLI_EXIT_OK);
+    const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "mcp.servers", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(deleteRun.code, CLI_EXIT_OK);
+    const deleteRunPayload = JSON.parse(deleteRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    const mcpDeleteRunItem = deleteRunPayload.data.worker?.items.find((entry) => entry.source === "mcp.servers");
+    assert.deepEqual({ source: mcpDeleteRunItem?.source, operation: mcpDeleteRunItem?.operation, status: mcpDeleteRunItem?.status, indexed: mcpDeleteRunItem?.indexed }, { source: "mcp.servers", operation: "delete", status: "done", indexed: 1 });
+    const afterMcpDelete = await runCliCapture(["search", "query", "localdocs DOCS_TOKEN", "--domains", "mcp", "--mcp-config", configPath, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterMcpDelete.code, CLI_EXIT_DEGRADED, afterMcpDelete.stderr || afterMcpDelete.stdout);
+    const afterMcpDeletePayload = JSON.parse(afterMcpDelete.stdout) as any;
+    assert.equal(afterMcpDeletePayload.data.results.some((entry: any) => entry.source === "mcp.servers" && entry.title === "localdocs"), false);
   });
 });
 test("apps and design writes enqueue and index section fast paths", async () => {
@@ -2865,6 +2908,42 @@ test("operational writes enqueue and refresh runtime.events jobs", async () => {
     assert.equal(result?.metadata?.sidecar, "monitor.sqlite");
     assert.equal(result?.metadata?.operationalDomain, "monitor");
     assert.equal(result?.metadata?.level, "warn");
+    const queuedStdout = captureStream();
+    const queuedStderr = captureStream();
+    const queued = await runInternalV1Cli([
+      "runtime",
+      "queue",
+      "Search runtime tombstone job",
+      "--id",
+      "runtime-search-tombstone",
+      "--kind",
+      "search-worker",
+      "--payload",
+      JSON.stringify({ source: "runtime.events" }),
+      "--json",
+    ], { stdout: queuedStdout.stream, stderr: queuedStderr.stream, cwd: workspaceRoot });
+    assert.equal(queued, CLI_EXIT_OK);
+    const runtimeJobRun = await runCliCapture(["search", "service", "run-once", "--source", "runtime.events", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(runtimeJobRun.code, CLI_EXIT_OK);
+    const runtimeJobQuery = await runCliCapture(["search", "query", "runtime tombstone", "--sources", "runtime.events", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(runtimeJobQuery.code, CLI_EXIT_OK, runtimeJobQuery.stderr || runtimeJobQuery.stdout);
+    const runtimeJobQueryPayload = JSON.parse(runtimeJobQuery.stdout) as any;
+    assert.equal(runtimeJobQueryPayload.data.results.some((entry: any) => entry.source === "runtime.events" && entry.resourceId === "job:runtime-search-tombstone"), true);
+    const deletedStdout = captureStream();
+    const deletedStderr = captureStream();
+    const deleted = await runInternalV1Cli(["runtime", "job", "delete", "runtime-search-tombstone", "--json"], { stdout: deletedStdout.stream, stderr: deletedStderr.stream, cwd: workspaceRoot });
+    assert.equal(deleted, CLI_EXIT_OK);
+    const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "runtime.events", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(deleteRun.code, CLI_EXIT_OK);
+    const deleteRunPayload = JSON.parse(deleteRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    const runtimeDeleteRunItem = deleteRunPayload.data.worker?.items.find((entry) => entry.source === "runtime.events");
+    assert.deepEqual({ source: runtimeDeleteRunItem?.source, operation: runtimeDeleteRunItem?.operation, status: runtimeDeleteRunItem?.status, indexed: runtimeDeleteRunItem?.indexed }, { source: "runtime.events", operation: "delete", status: "done", indexed: 1 });
+    const afterRuntimeDelete = await runCliCapture(["search", "query", "runtime tombstone", "--sources", "runtime.events", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(afterRuntimeDelete.code), true, afterRuntimeDelete.stderr || afterRuntimeDelete.stdout);
+    const afterRuntimeDeletePayload = JSON.parse(afterRuntimeDelete.stdout) as any;
+    assert.equal(afterRuntimeDeletePayload.data.results.some((entry: any) => entry.source === "runtime.events" && entry.resourceId === "job:runtime-search-tombstone"), false);
   });
 });
 test("search rebuild indexes documents.blocks from document records", async () => {
@@ -3115,6 +3194,58 @@ test("search rebuild indexes documents.blocks from document records", async () =
     assert.equal(deletedBlockJob?.payload.collection, "document_blocks");
     assert.equal(deletedBlockJob?.payload.documentId, createDocumentPayload.data.id);
     assert.equal(deletedBlockJob?.payload.recordId, createBlockPayload.data.id);
+  });
+});
+test("document writes enqueue and tombstone documents.blocks jobs", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-document-delete-"));
+  const dataRoot = path.join(workspaceRoot, ".claw", "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const createDocument = await runCliCapture([
+      "db",
+      "documents",
+      "create",
+      "--data",
+      JSON.stringify({
+        companyId: "company-delete",
+        title: "Delete Me Document",
+        content: "Document block delete sentinel",
+        scopeKind: "project",
+        scopeId: "project-delete",
+        accessLevel: "PUBLIC",
+      }),
+      "--json",
+    ], workspaceRoot);
+    assert.equal(createDocument.code, CLI_EXIT_OK, createDocument.stderr || createDocument.stdout);
+    const createDocumentPayload = JSON.parse(createDocument.stdout) as { data: { id: string } };
+    const upsertRun = await runCliCapture(["search", "service", "run-once", "--source", "documents.blocks", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(upsertRun.code, CLI_EXIT_OK);
+    const upsertRunPayload = JSON.parse(upsertRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    assert.deepEqual({ source: upsertRunPayload.data.worker?.items[0]?.source, operation: upsertRunPayload.data.worker?.items[0]?.operation, status: upsertRunPayload.data.worker?.items[0]?.status, indexed: upsertRunPayload.data.worker?.items[0]?.indexed }, { source: "documents.blocks", operation: "upsert", status: "done", indexed: 1 });
+    const query = await runCliCapture(["search", "query", "delete sentinel", "--sources", "documents.blocks", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK, query.stderr || query.stdout);
+    const queryPayload = JSON.parse(query.stdout) as any;
+    assert.equal(queryPayload.data.results.some((entry: any) => entry.source === "documents.blocks" && entry.resourceId === `main:documents:${createDocumentPayload.data.id}`), true);
+    const deleted = await runCliCapture(["db", "documents", "delete", createDocumentPayload.data.id, "--json"], workspaceRoot);
+    assert.equal(deleted.code, CLI_EXIT_OK, deleted.stderr || deleted.stdout);
+    const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "documents.blocks", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(deleteRun.code, CLI_EXIT_OK);
+    const deleteRunPayload = JSON.parse(deleteRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    const documentDeleteRunItem = deleteRunPayload.data.worker?.items.find((entry) => entry.source === "documents.blocks");
+    assert.deepEqual({ source: documentDeleteRunItem?.source, operation: documentDeleteRunItem?.operation, status: documentDeleteRunItem?.status, indexed: documentDeleteRunItem?.indexed }, { source: "documents.blocks", operation: "delete", status: "done", indexed: 1 });
+    const afterDocumentDelete = await runCliCapture(["search", "query", "delete sentinel", "--sources", "documents.blocks", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterDocumentDelete.code, CLI_EXIT_DEGRADED, afterDocumentDelete.stderr || afterDocumentDelete.stdout);
+    const afterDocumentDeletePayload = JSON.parse(afterDocumentDelete.stdout) as any;
+    assert.equal(afterDocumentDeletePayload.data.results.some((entry: any) => entry.source === "documents.blocks" && entry.resourceId === `main:documents:${createDocumentPayload.data.id}`), false);
   });
 });
 test("search rebuild indexes notes.pages from pages and blocks", async () => {
@@ -5006,6 +5137,16 @@ test("search indexes scoped code.symbols without broadening other domains", asyn
     "  return config.enabled ? \"needle-ready\" : \"needle-off\";",
     "}",
     "",
+    "export default function SearchPanelView() {",
+    "  return makeNeedleSymbol({ enabled: true });",
+    "}",
+    "",
+    "export const searchConfig = { enabled: true };",
+    "",
+    "test(\"renders local result\", () => {",
+    "  makeNeedleSymbol(searchConfig);",
+    "});",
+    "",
   ].join("\n"));
   await withPatchedEnv({
     CLAW_DATA_DIR: dataRoot,
@@ -5069,10 +5210,13 @@ test("search indexes scoped code.symbols without broadening other domains", asyn
     assert.equal(result?.type, "file");
     assert.equal(result?.metadata?.language, "typescript");
     assert.equal(result?.metadata?.relativePath, "src/feature-search.ts");
-    assert.equal(result?.metadata?.symbolCount, 2);
+    assert.equal(result?.metadata?.symbolCount, 5);
     assert.equal(result?.path, path.join(sourceRoot, "src", "feature-search.ts"));
     assert.equal(result?.actions?.some((action) => action.id === "open" && action.requiresApproval === true && action.grant === "search.code.open"), true);
     assert.equal(result?.fragments?.some((fragment) => fragment.title === "function makeNeedleSymbol" && fragment.snippet?.includes("makeNeedleSymbol")), true);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "function SearchPanelView"), true);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "constant searchConfig"), true);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "test renders local result"), true);
     assert.ok(result?.explanation?.matchedBy?.length);
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "language"), true);
     const semanticQuery = await runCliCapture([
@@ -5168,6 +5312,11 @@ test("code.symbols event jobs refresh and tombstone individual files", async () 
     assert.equal(deleted.ok, true, deleted.error);
     const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "code.symbols", "--data-dir", dataRoot, "--code-root", sourceRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(deleteRun.code, CLI_EXIT_OK);
+    const deleteRunPayload = JSON.parse(deleteRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    const codeDeleteRunItem = deleteRunPayload.data.worker?.items.find((entry) => entry.source === "code.symbols");
+    assert.deepEqual({ source: codeDeleteRunItem?.source, operation: codeDeleteRunItem?.operation, status: codeDeleteRunItem?.status, indexed: codeDeleteRunItem?.indexed }, { source: "code.symbols", operation: "delete", status: "done", indexed: 1 });
     const afterDelete = await runCliCapture(["search", "query", "eventDrivenNeedle", "--domains", "code", "--data-dir", dataRoot, "--code-root", sourceRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(afterDelete.code, CLI_EXIT_DEGRADED);
     const afterDeletePayload = JSON.parse(afterDelete.stdout) as { data: { results: unknown[] } };

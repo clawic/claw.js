@@ -87,6 +87,11 @@ export async function runSearchWebIngestedEventScenario(): Promise<void> {
 
     const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "web.ingested", "--profile", "full", "--web-root", webRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(deleteRun.code, CLI_EXIT_OK);
+    const deleteRunPayload = JSON.parse(deleteRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    const webDeleteRunItem = deleteRunPayload.data.worker?.items.find((entry) => entry.source === "web.ingested");
+    assert.deepEqual({ source: webDeleteRunItem?.source, operation: webDeleteRunItem?.operation, status: webDeleteRunItem?.status, indexed: webDeleteRunItem?.indexed }, { source: "web.ingested", operation: "delete", status: "done", indexed: 1 });
 
     const afterDelete = await runCliCapture(["search", "query", "web-ingested-event-refresh-needle", "--profile", "full", "--web-root", webRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(afterDelete.code, CLI_EXIT_DEGRADED);
@@ -180,6 +185,11 @@ export async function runSearchExternalCacheEventScenario(): Promise<void> {
 
     const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "external.cache", "--profile", "full", "--external-root", externalRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(deleteRun.code, CLI_EXIT_OK);
+    const deleteRunPayload = JSON.parse(deleteRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    const externalDeleteRunItem = deleteRunPayload.data.worker?.items.find((entry) => entry.source === "external.cache");
+    assert.deepEqual({ source: externalDeleteRunItem?.source, operation: externalDeleteRunItem?.operation, status: externalDeleteRunItem?.status, indexed: externalDeleteRunItem?.indexed }, { source: "external.cache", operation: "delete", status: "done", indexed: 1 });
 
     const afterDelete = await runCliCapture(["search", "query", "external-cache-event-refresh-needle", "--profile", "full", "--external-root", externalRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(afterDelete.code, CLI_EXIT_DEGRADED);

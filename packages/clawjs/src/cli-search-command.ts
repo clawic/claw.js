@@ -2158,21 +2158,40 @@ function ensureWorkItemsSourceIndexed(store: SearchStore, flags: Record<string, 
   }
   const db = new Database(dbPath, { readonly: true, fileMustExist: true });
   try {
-    if (!hasTable(db, "records")) {
+    const hasRecords = hasTable(db, "records");
+    const hasWorkspaceRecords = hasTable(db, "workspace_records");
+    if (!hasRecords && !hasWorkspaceRecords) {
       store.setSourceState("work.items", "degraded", {
         backlog: 0,
-        error: "core database does not contain records",
+        error: "core database does not contain records/workspace_records",
         lastIndexedAt: new Date().toISOString(),
       });
       return 0;
     }
-    const rows = db.prepare(`
-      SELECT namespace_id, collection_name, id, data_json, created_at, updated_at
-      FROM records
-      WHERE collection_name IN (${Array.from(WORK_SEARCH_COLLECTIONS).map(() => "?").join(", ")})
-      ORDER BY updated_at DESC
-    `).all(...Array.from(WORK_SEARCH_COLLECTIONS)) as DatabaseRecordRow[];
     let indexed = 0;
+    const rows: DatabaseRecordRow[] = [];
+    if (hasRecords) {
+      rows.push(...db.prepare(`
+        SELECT namespace_id, collection_name, id, data_json, created_at, updated_at
+        FROM records
+        WHERE collection_name IN (${Array.from(WORK_SEARCH_COLLECTIONS).map(() => "?").join(", ")})
+        ORDER BY updated_at DESC
+      `).all(...Array.from(WORK_SEARCH_COLLECTIONS)) as DatabaseRecordRow[]);
+    }
+    if (hasWorkspaceRecords) {
+      rows.push(...db.prepare(`
+        SELECT
+          'main' AS namespace_id,
+          collection_name,
+          record_id AS id,
+          payload_json AS data_json,
+          COALESCE(updated_at, '1970-01-01T00:00:00.000Z') AS created_at,
+          COALESCE(updated_at, '1970-01-01T00:00:00.000Z') AS updated_at
+        FROM workspace_records
+        WHERE collection_name IN (${Array.from(WORK_SEARCH_COLLECTIONS).map(() => "?").join(", ")})
+        ORDER BY updated_at DESC
+      `).all(...Array.from(WORK_SEARCH_COLLECTIONS)) as DatabaseRecordRow[]);
+    }
     for (const row of rows) {
       const document = workItemSearchDocument(row);
       if (!document) continue;
@@ -2182,7 +2201,7 @@ function ensureWorkItemsSourceIndexed(store: SearchStore, flags: Record<string, 
     store.setCursor({
       source: "work.items",
       cursor: `records:${indexed}`,
-      metadata: { store: "core.sqlite", collections: Array.from(WORK_SEARCH_COLLECTIONS).sort() },
+      metadata: { store: "core.sqlite", collections: Array.from(WORK_SEARCH_COLLECTIONS).sort(), tables: ["records", "workspace_records"] },
     });
     store.setSourceState("work.items", "enabled", {
       backlog: 0,
@@ -2202,13 +2221,7 @@ function ensureWorkItemResourceIndexed(store: SearchStore, flags: Record<string,
   if (!fs.existsSync(dbPath)) return 0;
   const db = new Database(dbPath, { readonly: true, fileMustExist: true });
   try {
-    if (!hasTable(db, "records")) return 0;
-    const row = db.prepare(`
-      SELECT namespace_id, collection_name, id, data_json, created_at, updated_at
-      FROM records
-      WHERE namespace_id = ? AND collection_name = ? AND id = ?
-      LIMIT 1
-    `).get(target.namespaceId, target.collectionName, target.recordId) as DatabaseRecordRow | undefined;
+    const row = findWorkItemRecordRow(db, target);
     if (!row) {
       store.tombstone({ source: "work.items", resourceId: target.resourceId, reason: "work item missing during Search event refresh" });
       return 1;
@@ -2228,6 +2241,31 @@ function ensureWorkItemResourceIndexed(store: SearchStore, flags: Record<string,
   } finally {
     db.close();
   }
+}
+
+function findWorkItemRecordRow(db: Database.Database, target: { namespaceId: string; collectionName: string; recordId: string }): DatabaseRecordRow | undefined {
+  if (hasTable(db, "records")) {
+    const row = db.prepare(`
+      SELECT namespace_id, collection_name, id, data_json, created_at, updated_at
+      FROM records
+      WHERE namespace_id = ? AND collection_name = ? AND id = ?
+      LIMIT 1
+    `).get(target.namespaceId, target.collectionName, target.recordId) as DatabaseRecordRow | undefined;
+    if (row) return row;
+  }
+  if (!hasTable(db, "workspace_records")) return undefined;
+  return db.prepare(`
+    SELECT
+      ? AS namespace_id,
+      collection_name,
+      record_id AS id,
+      payload_json AS data_json,
+      COALESCE(updated_at, '1970-01-01T00:00:00.000Z') AS created_at,
+      COALESCE(updated_at, '1970-01-01T00:00:00.000Z') AS updated_at
+    FROM workspace_records
+    WHERE collection_name = ? AND record_id = ?
+    LIMIT 1
+  `).get(target.namespaceId, target.collectionName, target.recordId) as DatabaseRecordRow | undefined;
 }
 
 function ensureDocumentsBlocksSourceIndexed(store: SearchStore, flags: Record<string, string>): number {

@@ -3,7 +3,9 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
-import { CLI_EXIT_OK } from "./index.ts";
+import { SearchStore } from "@clawjs/search";
+
+import { CLI_EXIT_DEGRADED, CLI_EXIT_OK } from "./index.ts";
 import { runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
 import { scheduleSurfaceRouteSearchEvent } from "./cli-search-events.ts";
 
@@ -68,5 +70,39 @@ export async function runSearchSurfaceRouteGraphContractsScenario(): Promise<voi
     assert.equal(serviceRunPayload.data.worker?.items[0]?.source, "surfaces.routes");
     assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
     assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
+
+    const staleRouteId = "missing.surfaceRoute";
+    const store = new SearchStore(path.join(dataRoot, "search.sqlite"));
+    try {
+      store.upsertDocument({
+        id: `surfaces.routes:${staleRouteId}`,
+        source: "surfaces.routes",
+        domain: "surfaces",
+        type: "route",
+        title: "Stale Surface Route",
+        body: "stale surface route tombstone sentinel",
+        resourceId: staleRouteId,
+      });
+    } finally {
+      store.close();
+    }
+    const deleted = scheduleSurfaceRouteSearchEvent({
+      operation: "delete",
+      routeId: staleRouteId,
+      dataDir: dataRoot,
+    });
+    assert.equal(deleted.ok, true, deleted.error);
+    assert.equal(deleted.job?.operation, "delete");
+    const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "surfaces.routes", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(deleteRun.code, CLI_EXIT_OK);
+    const deleteRunPayload = JSON.parse(deleteRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    const routeDeleteRunItem = deleteRunPayload.data.worker?.items.find((entry) => entry.source === "surfaces.routes");
+    assert.deepEqual({ source: routeDeleteRunItem?.source, operation: routeDeleteRunItem?.operation, status: routeDeleteRunItem?.status, indexed: routeDeleteRunItem?.indexed }, { source: "surfaces.routes", operation: "delete", status: "done", indexed: 1 });
+    const afterRouteDelete = await runCliCapture(["search", "query", "stale surface route tombstone sentinel", "--domains", "surfaces", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(afterRouteDelete.code), true, afterRouteDelete.stderr || afterRouteDelete.stdout);
+    const afterRouteDeletePayload = JSON.parse(afterRouteDelete.stdout) as { data: { results: Array<{ source: string; resourceId?: string }> } };
+    assert.equal(afterRouteDeletePayload.data.results.some((entry) => entry.source === "surfaces.routes" && entry.resourceId === staleRouteId), false);
   });
 }
