@@ -203,7 +203,7 @@ function shouldHandleV1DataCommand(group: string | undefined, command: string | 
     infra: new Set(["event", "list", "retention", "help"]),
     ops: new Set(["event", "metric", "list", "retention", "help"]),
     mcp: new Set(["list", "get", "upsert", "delete", "config-path", "help"]),
-    apps: new Set(["list", "upsert", "help"]),
+    apps: new Set(["list", "upsert", "delete", "help"]),
     design: new Set(["list", "upsert", "help"]),
     agents: new Set(["list", "get", "upsert", "delete", "schema", "evaluate-access", "delegation-check", "supervisor-check", "route-check", "resolve-external-identity", "project-support-inbox", "memory-check", "budget-check", "action-severity", "autonomy-check", "dispatch-plan", "context-pack", "tool-catalog", "creation-review", "storage-audit", "audit-coverage", "operational-snapshot", "control-panel", "privacy-plan", "paperclip-import", "surface-projection", "config-revision", "incident", "activity-feed", "blueprint", "evaluation", "retirement-plan", "help"]),
     skills: new Set(["get", "upsert", "delete", "help"]),
@@ -1946,6 +1946,22 @@ function runAppsCommand(input: V1DataCliInput, store: DatabaseServiceStore): num
     });
     writeSuccess(input, { slug, name, rootPath: path.resolve(input.cwd, expandHome(rootPath)), updatedAt: now });
     return V1_DATA_EXIT_OK;
+  }
+  if (command === "delete") {
+    const appId = input.flags.id || input.positionals[2];
+    if (!appId) return usageError(input, "Usage: claw apps delete APP_ID [--json]");
+    const row = store.sqlite.prepare("SELECT id, slug FROM apps WHERE id = ? OR slug = ? LIMIT 1").get(appId, appId) as { id: string; slug: string } | undefined;
+    const changes = row ? store.sqlite.prepare("DELETE FROM apps WHERE id = ?").run(row.id).changes : 0;
+    if (changes > 0) {
+      scheduleAppsCatalogSearchEvent({
+        operation: "delete",
+        appId: row?.id ?? appId,
+        dataDir: resolveClawjsDataRoot(),
+        flags: input.flags,
+      });
+    }
+    writeSuccess(input, { id: row?.id ?? appId, slug: row?.slug ?? null, deleted: changes > 0 });
+    return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
   return usageError(input, usage(input.binName, "apps"));
 }
