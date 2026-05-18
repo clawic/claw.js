@@ -9,6 +9,12 @@ import {
 
 import type { MCPExposedTool } from "./types.ts";
 import type { MacSignedHostBridge } from "./mac-signed-host-bridge.ts";
+import {
+  collectMcpSystemTelemetrySnapshot,
+  mcpSystemTelemetryMetricsPayload,
+  mcpSystemTelemetryWidgetsPayload,
+  readMcpSystemTelemetryHistory,
+} from "./system-telemetry.ts";
 
 /**
  * Default ClawJS surface exposed as MCP tools. Real implementations would route to
@@ -153,6 +159,43 @@ export function defaultExposedTools(options: DefaultExposedToolsOptions = {}): M
           }, {}),
         };
       },
+    },
+    {
+      name: "system.snapshot",
+      description: "Returns a read-only system telemetry snapshot for safe agent context.",
+      inputSchema: { type: "object", properties: {}, additionalProperties: false },
+      handler: async () => collectMcpSystemTelemetrySnapshot(),
+    },
+    {
+      name: "system.metrics",
+      description: "Lists the portable system telemetry metric catalog.",
+      inputSchema: { type: "object", properties: {}, additionalProperties: false },
+      handler: async () => mcpSystemTelemetryMetricsPayload(),
+    },
+    {
+      name: "system.widgets",
+      description: "Lists the portable context widget catalog for menu bar and panel indicators.",
+      inputSchema: { type: "object", properties: {}, additionalProperties: false },
+      handler: async () => mcpSystemTelemetryWidgetsPayload(),
+    },
+    {
+      name: "system.history",
+      description: "Reads retained system telemetry samples, rollups, and incidents from the local Monitor store.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          metricKey: { type: "string" },
+          range: { type: "string" },
+          monitorDb: { type: "string" },
+        },
+        required: ["metricKey"],
+        additionalProperties: false,
+      },
+      handler: async (args) => readMcpSystemTelemetryHistory({
+        metricKey: String(args.metricKey ?? ""),
+        range: typeof args.range === "string" ? args.range : undefined,
+        monitorDb: typeof args.monitorDb === "string" ? args.monitorDb : undefined,
+      }),
     },
   ];
 }
