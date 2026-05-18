@@ -4,7 +4,7 @@ Mode: report-only.
 
 JSON pair: `docs/code-hygiene-report.json`.
 
-- Scanned files: 7195
+- Scanned files: 7200
 - TODO/FIXME/HACK/XXX findings: 0
 - Duplicate asset groups: 24
 - Duplicate asset files: 65
