@@ -535,6 +535,114 @@ for (const ref of [
 ]) {
   if (!hostedServiceSourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-018 must cite ${ref}`);
 }
+const remoteSurfaceParitySourceQaReview = sourceQaReviewReport.items.find((item) => item.qaId === "QA-003");
+for (const ref of [
+  "claw remote classify",
+  "claw remote check",
+  "claw remote routes",
+  "claw remote contracts",
+  "claw remote conformance",
+  "relay /v1/remote/route-contracts",
+]) {
+  if (!remoteSurfaceParitySourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-003 must cite ${ref}`);
+}
+const remoteApiShapeSourceQaReview = sourceQaReviewReport.items.find((item) => item.qaId === "QA-008");
+for (const ref of [
+  "RemoteRouteContractCatalog",
+  "localApiRouteProjection",
+  "parallelApiAllowed:false",
+  "claw remote contracts",
+  "relay /v1/remote/route-contracts",
+  "claw gateway conformance",
+]) {
+  if (!remoteApiShapeSourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-008 must cite ${ref}`);
+}
+const offlineBehaviorSourceQaReview = sourceQaReviewReport.items.find((item) => item.qaId === "QA-009");
+for (const ref of [
+  "SyncQueueEntry",
+  "SyncReconciliationResult",
+  "claw sync run --queue true",
+  "claw sync status",
+  "claw sync reconcile",
+  "claw sync conflicts",
+]) {
+  if (!offlineBehaviorSourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-009 must cite ${ref}`);
+}
+const headlessHostSourceQaReview = sourceQaReviewReport.items.find((item) => item.qaId === "QA-011");
+for (const ref of [
+  "docs/relay.md",
+  "gateway.headlessAgentHost",
+  "claw inspect remote",
+  "claw gateway conformance",
+  "relay /v1/gateway/conformance",
+]) {
+  if (!headlessHostSourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-011 must cite ${ref}`);
+}
+const conflictDefaultSourceQaReview = sourceQaReviewReport.items.find((item) => item.qaId === "QA-014");
+for (const ref of [
+  "detect_and_elevate",
+  "SyncReconciliationResult",
+  "claw sync conflicts",
+  "claw sync reconcile",
+]) {
+  if (!conflictDefaultSourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-014 must cite ${ref}`);
+}
+const guardrailStrictnessSourceQaReview = sourceQaReviewReport.items.find((item) => item.qaId === "QA-016");
+for (const ref of [
+  "claw remote closure-gate",
+  "claw remote validation-readiness",
+  "claw remote validation-template",
+  "claw remote validation-artifact",
+  "RemoteExternalPendingRegister",
+]) {
+  if (!guardrailStrictnessSourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-016 must cite ${ref}`);
+}
+const compatPolicySourceQaReview = sourceQaReviewReport.items.find((item) => item.qaId === "QA-017");
+for (const ref of [
+  "RemoteCompatibilityAdapterReceipt",
+  "claw remote compat",
+  "relay /v1/remote/compatibility/adapters",
+  "parallelApiAllowed:false",
+]) {
+  if (!compatPolicySourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-017 must cite ${ref}`);
+}
+const layerNamesSourceQaReview = sourceQaReviewReport.items.find((item) => item.qaId === "QA-019");
+for (const ref of [
+  "docs/adr/0022-remote-gateway-sync-redesign.md",
+  "docs/relay.md",
+  "Coordinator",
+  "Gateway",
+  "Connector",
+  "Sync",
+  "claw inspect remote",
+  "claw remote routes",
+]) {
+  if (!layerNamesSourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-019 must cite ${ref}`);
+}
+const syncLateralDomainsSourceQaReview = sourceQaReviewReport.items.find((item) => item.qaId === "QA-022");
+for (const ref of [
+  "claw remote contracts:sync.skills,sync.memoryUserModel,sync.sessions,sync.driveFiles,sync.blobs,sync.searchIndex,sync.sqliteResources,sync.sidecars,sync.agentConfig,sync.workspaceState",
+  "claw remote contracts",
+  "claw sync drivers",
+  "claw sync apply",
+  "claw sync manifest",
+  "claw sync cache",
+]) {
+  if (!syncLateralDomainsSourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-022 must cite ${ref}`);
+}
+const goalClosureGateSourceQaReview = sourceQaReviewReport.items.find((item) => item.qaId === "QA-023");
+for (const ref of [
+  "docs/remote-gateway-sync-source-qa-review.json",
+  "docs/remote-gateway-sync-completion-audit.md#closure-rule",
+  "scripts/verify-remote-sync-goal.mjs",
+  `sourceConversationId:${sourceConversationId}`,
+  `sourcePlanId:${sourcePlanId}`,
+  "claw remote closure-gate",
+  "docs/remote-gateway-sync-external-validation-evidence.json",
+  "EXTERNAL PENDING",
+]) {
+  if (!goalClosureGateSourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-023 must cite ${ref}`);
+}
 const reviewedClosureGate = buildRemoteGoalClosureGate({
   generatedAt: "2026-05-18T11:20:01.000Z",
   sourceQaReviews: sourceQaReviewReport.items,
