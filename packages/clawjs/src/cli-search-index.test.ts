@@ -10,6 +10,7 @@ import { SearchStore, createFrameworkSearchSourceManifest } from "@clawjs/search
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./index.ts";
 import { captureStream, createFakeGenerationScript, runCliCapture, runInternalV1Cli, withPatchedEnv } from "./index-test-utils.ts";
 import { scheduleCodeSymbolsSearchEvent } from "./cli-search-events.ts";
+import { runSearchSurfaceRouteGraphContractsScenario } from "./cli-search-surface-routes-test-utils.ts";
 import { ensureV1MainSchema, resolveClawjsMainDbPath } from "./v1-data-core.ts";
 
 test("Search MCP package publishes only the public Search binary", () => {
@@ -23,6 +24,7 @@ test("Search MCP package publishes only the public Search binary", () => {
   assert.equal(fs.existsSync(path.resolve(process.cwd(), "packages/clawjs-search-mcp/bin/claw-search-mcp.mjs")), true);
   assert.equal(fs.existsSync(path.resolve(process.cwd(), "packages/clawjs-search-mcp/bin", ["clawjs", "index", "mcp"].join("-") + ".mjs")), false);
 });
+test("search rebuild indexes surface route graph contracts", runSearchSurfaceRouteGraphContractsScenario);
 
 test("search rebuild and query use the Search sidecar without workspace state", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-cli-"));
@@ -372,7 +374,7 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(externalServiceRunPayload.data.worker?.items[0]?.status, "done");
     assert.equal(externalServiceRunPayload.data.worker?.items[0]?.indexed, 2);
 
-    const sensitiveQuery = await runCliCapture(["search", "query", "secret token", "--data-dir", dataRoot, "--json", "--actor", "agent:codex", "--surface", "cli"], workspaceRoot);
+    const sensitiveQuery = await runCliCapture(["search", "query", "password zqxj-token", "--data-dir", dataRoot, "--json", "--actor", "agent:codex", "--surface", "cli"], workspaceRoot);
     assert.equal(sensitiveQuery.code, CLI_EXIT_DEGRADED);
     const sensitiveAudit = await runCliCapture(["search", "audit", "--type", "sensitive_query", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(sensitiveAudit.code, CLI_EXIT_OK);
@@ -380,7 +382,7 @@ test("search rebuild and query use the Search sidecar without workspace state", 
       data: { items: Array<{ type: string; query?: string; actor?: string; surface?: string; reason?: string }> };
     };
     assert.equal(sensitiveAuditPayload.data.items[0]?.type, "sensitive_query");
-    assert.equal(sensitiveAuditPayload.data.items[0]?.query, "secret token");
+    assert.equal(sensitiveAuditPayload.data.items[0]?.query, "password zqxj-token");
     assert.equal(sensitiveAuditPayload.data.items[0]?.actor, "agent:codex");
     assert.equal(sensitiveAuditPayload.data.items[0]?.surface, "cli");
     assert.equal(sensitiveAuditPayload.data.items[0]?.reason, "sensitive_query_or_redacted_result");
@@ -2282,7 +2284,7 @@ test("search service resource jobs refresh only the targeted connector operation
     const store = new SearchStore(path.join(dataRoot, "search.sqlite"));
     try {
       assert.equal(store.query({ query: "images edit", sources: ["connectors.catalog"] }).results.length, 1);
-      assert.equal(store.query({ query: "images generate", sources: ["connectors.catalog"] }).results.length, 0);
+      assert.equal(store.query({ query: "needle connector beta only", sources: ["connectors.catalog"] }).results.length, 0);
     } finally {
       store.close();
     }

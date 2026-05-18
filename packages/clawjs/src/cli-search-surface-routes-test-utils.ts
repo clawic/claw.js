@@ -1,4 +1,3 @@
-import { test } from "vitest";
 import assert from "node:assert/strict";
 import fs from "fs";
 import os from "os";
@@ -7,7 +6,7 @@ import path from "path";
 import { CLI_EXIT_OK } from "./index.ts";
 import { runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
 
-test("search rebuild indexes surface route graph contracts", async () => {
+export async function runSearchSurfaceRouteGraphContractsScenario(): Promise<void> {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-surfaces-"));
   const dataRoot = path.join(workspaceRoot, "data");
   await withPatchedEnv({
@@ -31,7 +30,7 @@ test("search rebuild indexes surface route graph contracts", async () => {
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
         indexedFastPaths: { "surfaces.routes": number };
-        results: Array<{ source: string; domain: string; type: string; title: string; subtitle?: string; metadata?: { fromId?: string; toId?: string; stepCount?: number }; fragments?: Array<{ title?: string; body?: string; snippet?: string }>; actions?: Array<{ id: string; kind: string }> }>;
+        results: Array<{ source: string; domain: string; type: string; title: string; subtitle?: string; metadata?: { fromId?: string; toId?: string; stepCount?: number }; fragments?: Array<unknown>; actions?: Array<{ id: string; kind: string }> }>;
       };
     };
     assert.ok(queryPayload.data.indexedFastPaths["surfaces.routes"] > 0);
@@ -58,4 +57,4 @@ test("search rebuild indexes surface route graph contracts", async () => {
     assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
     assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
   });
-});
+}

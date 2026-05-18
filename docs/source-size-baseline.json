@@ -161,7 +161,7 @@
       "reason": "Emergency search CLI debt after dense-source indexing and entrypoint contract expansion; immediate follow-up should extract source adapters, event refresh, and admin subcommands, and future growth is blocked except for extraction, deletion, or compatibility-preserving split work."
     },
     "packages/clawjs/src/cli-search-index.test.ts": {
-      "lines": 5040,
+      "lines": 5042,
       "blockGrowth": true,
       "reason": "Emergency search index integration coverage after local semantic embedding, shard, design-resource, and indexing workflow expansion; future growth is blocked except for extraction, deletion, or compatibility-preserving split work."
     },
