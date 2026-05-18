@@ -35,6 +35,7 @@ test("redactSecrets preserves public catalog keys while still masking secret-loo
   assert.equal(redacted.operationKey, "patient.timeline");
   assert.equal(redacted.apiKey, "*******5678");
   assert.equal((redacted.unsafe as { key: string }).key.includes("secret-token"), false);
+  assert.equal(redactSecrets({ decisionKey: "remote_secrets_model" }).decisionKey, "remote_secrets_model");
 });
 
 test("redactSecrets masks inline secrets inside error and message strings", () => {
