@@ -751,6 +751,7 @@ claw project inspect --project .
 claw project attach . --workspace-id ops-main --accept
 claw project detach . --reason copied-to-new-workspace
 claw project export . --output project-handoff.clawexport
+claw project import project-handoff.clawexport . --workspace-id ops-main --accept
 claw project sync-handoff .
 
 claw projects list
