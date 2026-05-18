@@ -46,7 +46,12 @@
       "evidenceRefs": [
         "docs/remote-gateway-sync-completion-audit.md#requirement-status",
         "scripts/verify-remote-sync-goal.mjs",
-        "claw remote conformance"
+        "claw remote classify",
+        "claw remote check",
+        "claw remote routes",
+        "claw remote contracts",
+        "claw remote conformance",
+        "relay /v1/remote/route-contracts"
       ],
       "reviewedAt": "2026-05-18T11:20:00.000Z",
       "writes": false
@@ -128,8 +133,12 @@
       "disposition": "implemented",
       "evidenceRefs": [
         "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "RemoteRouteContractCatalog",
+        "localApiRouteProjection",
+        "parallelApiAllowed:false",
         "claw remote contracts",
-        "relay /v1/remote/route-contracts"
+        "relay /v1/remote/route-contracts",
+        "claw gateway conformance"
       ],
       "reviewedAt": "2026-05-18T11:20:00.000Z",
       "writes": false
@@ -142,8 +151,12 @@
       "disposition": "implemented",
       "evidenceRefs": [
         "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "SyncQueueEntry",
+        "SyncReconciliationResult",
         "claw sync run --queue true",
-        "claw sync reconcile"
+        "claw sync status",
+        "claw sync reconcile",
+        "claw sync conflicts"
       ],
       "reviewedAt": "2026-05-18T11:20:00.000Z",
       "writes": false
@@ -174,7 +187,10 @@
       "evidenceRefs": [
         "docs/remote-gateway-sync-completion-audit.md#requirement-status",
         "docs/relay.md",
-        "claw inspect remote"
+        "gateway.headlessAgentHost",
+        "claw inspect remote",
+        "claw gateway conformance",
+        "relay /v1/gateway/conformance"
       ],
       "reviewedAt": "2026-05-18T11:20:00.000Z",
       "writes": false
@@ -220,6 +236,9 @@
       "disposition": "implemented",
       "evidenceRefs": [
         "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "detect_and_elevate",
+        "SyncReconciliationResult",
+        "claw sync conflicts",
         "claw sync reconcile",
         "scripts/verify-remote-sync-goal.mjs"
       ],
@@ -251,7 +270,11 @@
       "evidenceRefs": [
         "docs/remote-gateway-sync-completion-audit.md#requirement-status",
         "scripts/verify-remote-sync-goal.mjs",
-        "claw remote closure-gate"
+        "claw remote closure-gate",
+        "claw remote validation-readiness",
+        "claw remote validation-template",
+        "claw remote validation-artifact",
+        "RemoteExternalPendingRegister"
       ],
       "reviewedAt": "2026-05-18T11:20:00.000Z",
       "writes": false
@@ -264,8 +287,10 @@
       "disposition": "implemented",
       "evidenceRefs": [
         "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "RemoteCompatibilityAdapterReceipt",
         "claw remote compat",
-        "relay /v1/remote/compatibility/adapters"
+        "relay /v1/remote/compatibility/adapters",
+        "parallelApiAllowed:false"
       ],
       "reviewedAt": "2026-05-18T11:20:00.000Z",
       "writes": false
@@ -298,7 +323,13 @@
       "evidenceRefs": [
         "docs/adr/0022-remote-gateway-sync-redesign.md",
         "docs/relay.md",
-        "docs/remote-gateway-sync-completion-audit.md#requirement-status"
+        "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "Coordinator",
+        "Gateway",
+        "Connector",
+        "Sync",
+        "claw inspect remote",
+        "claw remote routes"
       ],
       "reviewedAt": "2026-05-18T11:20:00.000Z",
       "writes": false
@@ -351,7 +382,12 @@
       "disposition": "implemented",
       "evidenceRefs": [
         "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "claw remote contracts:sync.skills,sync.memoryUserModel,sync.sessions,sync.driveFiles,sync.blobs,sync.searchIndex,sync.sqliteResources,sync.sidecars,sync.agentConfig,sync.workspaceState",
         "claw remote contracts",
+        "claw sync drivers",
+        "claw sync apply",
+        "claw sync manifest",
+        "claw sync cache",
         "scripts/verify-remote-sync-goal.mjs"
       ],
       "reviewedAt": "2026-05-18T11:20:00.000Z",
@@ -366,7 +402,12 @@
       "evidenceRefs": [
         "docs/remote-gateway-sync-source-qa-review.json",
         "docs/remote-gateway-sync-completion-audit.md#closure-rule",
-        "scripts/verify-remote-sync-goal.mjs"
+        "scripts/verify-remote-sync-goal.mjs",
+        "sourceConversationId:019e36a3-c2e6-73b3-a3fe-f3e7340e42c8",
+        "sourcePlanId:019e3732-c90e-7491-9217-37020c43217e-plan",
+        "claw remote closure-gate",
+        "docs/remote-gateway-sync-external-validation-evidence.json",
+        "EXTERNAL PENDING"
       ],
       "reviewedAt": "2026-05-18T11:20:00.000Z",
       "writes": false
