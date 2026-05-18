@@ -1202,10 +1202,10 @@ function readSearchServiceWorkerBudgets(flags: Record<string, string>): SearchSe
   };
 }
 
-function localSearchEmbeddingModel(model: string | undefined): string { if (!model || model === LOCAL_TEXT_EMBEDDING_MODEL) return LOCAL_TEXT_EMBEDDING_MODEL;
+function localSearchEmbeddingModel(model: string | undefined): string {
+  if (!model || model === LOCAL_TEXT_EMBEDDING_MODEL) return LOCAL_TEXT_EMBEDDING_MODEL;
   throw new CliHandledError("SEARCH_EMBEDDING_PROVIDER_PENDING", `Search local embedding indexing only supports ${LOCAL_TEXT_EMBEDDING_MODEL}; provider-backed embedding workers are EXTERNAL PENDING.`, CLI_EXIT_USAGE);
 }
-
 function searchActionAccessInput(flags: Record<string, string>): Pick<SearchQueryInput, "actor" | "surface" | "filters"> {
   const parsedFilters = parseSearchFiltersFlag(flags.filters ?? flags.filter);
   const filters = { ...(parsedFilters ?? {}) };
