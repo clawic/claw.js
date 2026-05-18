@@ -342,7 +342,7 @@ function renderRouter(registry, profile) {
     const terms = (artifact.discoveryTerms ?? []).join(", ");
     const guard = artifact.guard ?? "";
     const sourceCell = source.startsWith("docs/")
-      ? `[${source}](${source.slice("docs/".length)})`
+      ? `[${source}](/${source.slice("docs/".length).replace(/\.md$/, "")})`
       : `\`${source}\``;
     return `| \`${artifact.id}\` | ${artifact.kind} | ${sourceCell} | ${terms} | \`${guard}\` |`;
   }).join("\n");
