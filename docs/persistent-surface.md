@@ -154,6 +154,8 @@ flowchart TD
   claw_contracts_api --> claw_api_system_metrics
   claw_api_system_widgets["System context widget catalog contract\napiRoute"]
   claw_contracts_api --> claw_api_system_widgets
+  claw_api_system_providers["System telemetry provider catalog contract\napiRoute"]
+  claw_contracts_api --> claw_api_system_providers
   claw_api_system_history["System telemetry Monitor history contract\napiRoute"]
   claw_contracts_api --> claw_api_system_history
   claw_api_time_items["Time item list\napiRoute"]
@@ -176,30 +178,56 @@ flowchart TD
   claw_contracts_api --> claw_api_relay_connector
   claw_api_remote_classifications["Remote surface classification contract\napiRoute"]
   claw_contracts_api --> claw_api_remote_classifications
+  claw_api_remote_classificationReceipts["Remote surface classification receipt contract\napiRoute"]
+  claw_contracts_api --> claw_api_remote_classificationReceipts
   claw_api_remote_conformance["Remote conformance report contract\napiRoute"]
   claw_contracts_api --> claw_api_remote_conformance
+  claw_api_remote_offlineCommandInspect["Remote interactive command fail-fast inspection contract\napiRoute"]
+  claw_contracts_api --> claw_api_remote_offlineCommandInspect
   claw_api_remote_offlineCommand["Remote interactive command fail-fast contract\napiRoute"]
   claw_contracts_api --> claw_api_remote_offlineCommand
+  claw_api_remote_externalPending["Remote external pending requirement register contract\napiRoute"]
+  claw_contracts_api --> claw_api_remote_externalPending
   claw_api_remote_externalValidationChecklist["Remote physical/provider validation checklist contract\napiRoute"]
   claw_contracts_api --> claw_api_remote_externalValidationChecklist
+  claw_api_remote_externalValidationTemplateRead["Remote physical/provider validation evidence template read contract\napiRoute"]
+  claw_contracts_api --> claw_api_remote_externalValidationTemplateRead
   claw_api_remote_externalValidationTemplate["Remote physical/provider validation evidence template contract\napiRoute"]
   claw_contracts_api --> claw_api_remote_externalValidationTemplate
+  claw_api_remote_externalValidationArtifactRead["Remote physical/provider validation evidence artifact read contract\napiRoute"]
+  claw_contracts_api --> claw_api_remote_externalValidationArtifactRead
   claw_api_remote_externalValidationArtifact["Remote physical/provider validation evidence artifact contract\napiRoute"]
   claw_contracts_api --> claw_api_remote_externalValidationArtifact
   claw_api_remote_externalValidationRunbook["Remote physical/provider validation runbook contract\napiRoute"]
   claw_contracts_api --> claw_api_remote_externalValidationRunbook
+  claw_api_remote_externalValidationReadinessRead["Remote physical/provider validation readiness read contract\napiRoute"]
+  claw_contracts_api --> claw_api_remote_externalValidationReadinessRead
   claw_api_remote_externalValidationReadiness["Remote physical/provider validation readiness contract\napiRoute"]
   claw_contracts_api --> claw_api_remote_externalValidationReadiness
+  claw_api_remote_externalValidationApprovalRequestRead["Remote physical/provider validation approval request read contract\napiRoute"]
+  claw_contracts_api --> claw_api_remote_externalValidationApprovalRequestRead
   claw_api_remote_externalValidationApprovalRequest["Remote physical/provider validation approval request contract\napiRoute"]
   claw_contracts_api --> claw_api_remote_externalValidationApprovalRequest
+  claw_api_remote_externalValidationReportRead["Remote physical/provider validation evidence report read contract\napiRoute"]
+  claw_contracts_api --> claw_api_remote_externalValidationReportRead
   claw_api_remote_externalValidationReport["Remote physical/provider validation evidence report contract\napiRoute"]
   claw_contracts_api --> claw_api_remote_externalValidationReport
+  claw_api_remote_sourceQaTemplateRead["Remote source Q/A review template read contract\napiRoute"]
+  claw_contracts_api --> claw_api_remote_sourceQaTemplateRead
   claw_api_remote_sourceQaTemplate["Remote source Q/A review template contract\napiRoute"]
   claw_contracts_api --> claw_api_remote_sourceQaTemplate
+  claw_api_remote_closureGateRead["Remote goal closure gate read contract\napiRoute"]
+  claw_contracts_api --> claw_api_remote_closureGateRead
   claw_api_remote_closureGate["Remote goal closure gate contract\napiRoute"]
   claw_contracts_api --> claw_api_remote_closureGate
+  claw_api_remote_routeContracts["Remote route contract catalog contract\napiRoute"]
+  claw_contracts_api --> claw_api_remote_routeContracts
   claw_api_remote_providerDeviceE2EPlan["Remote provider/device E2E validation plan contract\napiRoute"]
   claw_contracts_api --> claw_api_remote_providerDeviceE2EPlan
+  claw_api_remote_compatibilityAdapters["Remote compatibility adapter catalog contract\napiRoute"]
+  claw_contracts_api --> claw_api_remote_compatibilityAdapters
+  claw_api_remote_compatibilityAdaptersCreate["Remote compatibility adapter receipt dry-run contract\napiRoute"]
+  claw_contracts_api --> claw_api_remote_compatibilityAdaptersCreate
   claw_api_sync_drivers["Sync driver catalog contract\napiRoute"]
   claw_contracts_api --> claw_api_sync_drivers
   claw_api_sync_manifests["Sync resource manifest contract\napiRoute"]
@@ -214,6 +242,8 @@ flowchart TD
   claw_contracts_api --> claw_api_sync_conflicts
   claw_api_sync_applications["Sync driver application receipt contract\napiRoute"]
   claw_contracts_api --> claw_api_sync_applications
+  claw_api_sync_authorityHandoffs["Sync authority handoff receipt contract\napiRoute"]
+  claw_contracts_api --> claw_api_sync_authorityHandoffs
   claw_api_nodes["Node identity and trust contract\napiRoute"]
   claw_contracts_api --> claw_api_nodes
   claw_api_nodes_pair["Node pairing dry-run contract\napiRoute"]
@@ -224,6 +254,8 @@ flowchart TD
   claw_contracts_api --> claw_api_nodes_revoke
   claw_api_mesh_invitations["Inter-mesh invitation dry-run contract\napiRoute"]
   claw_contracts_api --> claw_api_mesh_invitations
+  claw_api_mesh_invitationsAccept["Inter-mesh invitation acceptance dry-run contract\napiRoute"]
+  claw_contracts_api --> claw_api_mesh_invitationsAccept
   claw_api_mesh_shares["Inter-mesh scoped resource share dry-run contract\napiRoute"]
   claw_contracts_api --> claw_api_mesh_shares
   claw_api_mesh_revocations["Inter-mesh share/invitation revocation dry-run contract\napiRoute"]
@@ -232,6 +264,10 @@ flowchart TD
   claw_contracts_api --> claw_api_gateway_conformance
   claw_api_gateway_agentServiceEvaluate["Gateway multi-tenant agent service evaluation contract\napiRoute"]
   claw_contracts_api --> claw_api_gateway_agentServiceEvaluate
+  claw_api_gateway_agentServiceExecutions["Gateway multi-tenant agent service execution receipt contract\napiRoute"]
+  claw_contracts_api --> claw_api_gateway_agentServiceExecutions
+  claw_api_gateway_auditReceipts["Gateway signed host audit receipt contract\napiRoute"]
+  claw_contracts_api --> claw_api_gateway_auditReceipts
   claw_privateApi_attachments["/api/attachments private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_attachments
   claw_privateApi_authToken["/api/auth/token private API route\nprivateApiRoute"]
@@ -1356,6 +1392,8 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_integrations
   claw_cli_command_media["media\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_media
+  claw_cli_command_docs["docs\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_docs
   claw_cli_command_documents["documents\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_documents
   claw_cli_command_files["files\ncliCommand"]
@@ -1368,6 +1406,8 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_video
   claw_cli_command_slides["slides\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_slides
+  claw_cli_command_sheets["sheets\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_sheets
   claw_cli_command_generations["generations\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_generations
   claw_cli_command_templates["templates\ncliCommand"]
@@ -2248,6 +2288,7 @@ flowchart TD
 | `claw.api.system.snapshot` | apiRoute | api | claw |  |  |  | `/v1/system/snapshot` |
 | `claw.api.system.metrics` | apiRoute | api | claw |  |  |  | `/v1/system/metrics` |
 | `claw.api.system.widgets` | apiRoute | api | claw |  |  |  | `/v1/system/widgets` |
+| `claw.api.system.providers` | apiRoute | api | claw |  |  |  | `/v1/system/providers` |
 | `claw.api.system.history` | apiRoute | api | claw |  |  |  | `/v1/system/history/{metricKey}` |
 | `claw.api.time.items` | apiRoute | api | claw |  |  |  | `/v1/items` |
 | `claw.api.time.executions` | apiRoute | api | claw |  |  |  | `/v1/executions` |
@@ -2259,18 +2300,31 @@ flowchart TD
 | `claw.api.relay.remote` | apiRoute | api | claw |  |  |  | `/v1/relay/remote` |
 | `claw.api.relay.connector` | apiRoute | api | claw |  |  |  | `/v1/relay/connectors` |
 | `claw.api.remote.classifications` | apiRoute | api | claw |  |  |  | `/v1/remote/classifications` |
+| `claw.api.remote.classificationReceipts` | apiRoute | api | claw |  |  |  | `/v1/remote/classifications/receipts` |
 | `claw.api.remote.conformance` | apiRoute | api | claw |  |  |  | `/v1/remote/conformance` |
+| `claw.api.remote.offlineCommandInspect` | apiRoute | api | claw |  |  |  | `/v1/remote/offline-command` |
 | `claw.api.remote.offlineCommand` | apiRoute | api | claw |  |  |  | `/v1/remote/offline-command` |
+| `claw.api.remote.externalPending` | apiRoute | api | claw |  |  |  | `/v1/remote/external-pending` |
 | `claw.api.remote.externalValidationChecklist` | apiRoute | api | claw |  |  |  | `/v1/remote/external-validation-checklist` |
+| `claw.api.remote.externalValidationTemplateRead` | apiRoute | api | claw |  |  |  | `/v1/remote/external-validation-template` |
 | `claw.api.remote.externalValidationTemplate` | apiRoute | api | claw |  |  |  | `/v1/remote/external-validation-template` |
+| `claw.api.remote.externalValidationArtifactRead` | apiRoute | api | claw |  |  |  | `/v1/remote/external-validation-artifact` |
 | `claw.api.remote.externalValidationArtifact` | apiRoute | api | claw |  |  |  | `/v1/remote/external-validation-artifact` |
 | `claw.api.remote.externalValidationRunbook` | apiRoute | api | claw |  |  |  | `/v1/remote/external-validation-runbook` |
+| `claw.api.remote.externalValidationReadinessRead` | apiRoute | api | claw |  |  |  | `/v1/remote/external-validation-readiness` |
 | `claw.api.remote.externalValidationReadiness` | apiRoute | api | claw |  |  |  | `/v1/remote/external-validation-readiness` |
+| `claw.api.remote.externalValidationApprovalRequestRead` | apiRoute | api | claw |  |  |  | `/v1/remote/external-validation-approval-request` |
 | `claw.api.remote.externalValidationApprovalRequest` | apiRoute | api | claw |  |  |  | `/v1/remote/external-validation-approval-request` |
+| `claw.api.remote.externalValidationReportRead` | apiRoute | api | claw |  |  |  | `/v1/remote/external-validation-report` |
 | `claw.api.remote.externalValidationReport` | apiRoute | api | claw |  |  |  | `/v1/remote/external-validation-report` |
+| `claw.api.remote.sourceQaTemplateRead` | apiRoute | api | claw |  |  |  | `/v1/remote/source-qa-template` |
 | `claw.api.remote.sourceQaTemplate` | apiRoute | api | claw |  |  |  | `/v1/remote/source-qa-template` |
+| `claw.api.remote.closureGateRead` | apiRoute | api | claw |  |  |  | `/v1/remote/closure-gate` |
 | `claw.api.remote.closureGate` | apiRoute | api | claw |  |  |  | `/v1/remote/closure-gate` |
+| `claw.api.remote.routeContracts` | apiRoute | api | claw |  |  |  | `/v1/remote/route-contracts` |
 | `claw.api.remote.providerDeviceE2EPlan` | apiRoute | api | claw |  |  |  | `/v1/remote/provider-device-e2e-plan` |
+| `claw.api.remote.compatibilityAdapters` | apiRoute | api | claw |  |  |  | `/v1/remote/compatibility/adapters` |
+| `claw.api.remote.compatibilityAdaptersCreate` | apiRoute | api | claw |  |  |  | `/v1/remote/compatibility/adapters` |
 | `claw.api.sync.drivers` | apiRoute | api | claw |  |  |  | `/v1/sync/drivers` |
 | `claw.api.sync.manifests` | apiRoute | api | claw |  |  |  | `/v1/sync/manifests` |
 | `claw.api.sync.manifests.create` | apiRoute | api | claw |  |  |  | `/v1/sync/manifests` |
@@ -2278,15 +2332,19 @@ flowchart TD
 | `claw.api.sync.plan` | apiRoute | api | claw |  |  |  | `/v1/sync/plan` |
 | `claw.api.sync.conflicts` | apiRoute | api | claw |  |  |  | `/v1/sync/conflicts` |
 | `claw.api.sync.applications` | apiRoute | api | claw |  |  |  | `/v1/sync/applications` |
+| `claw.api.sync.authorityHandoffs` | apiRoute | api | claw |  |  |  | `/v1/sync/authority-handoffs` |
 | `claw.api.nodes` | apiRoute | api | claw |  |  |  | `/v1/nodes` |
 | `claw.api.nodes.pair` | apiRoute | api | claw |  |  |  | `/v1/nodes/pair` |
 | `claw.api.nodes.trust` | apiRoute | api | claw |  |  |  | `/v1/nodes/trust` |
 | `claw.api.nodes.revoke` | apiRoute | api | claw |  |  |  | `/v1/nodes/revoke` |
 | `claw.api.mesh.invitations` | apiRoute | api | claw |  |  |  | `/v1/mesh/invitations` |
+| `claw.api.mesh.invitationsAccept` | apiRoute | api | claw |  |  |  | `/v1/mesh/invitations/accept` |
 | `claw.api.mesh.shares` | apiRoute | api | claw |  |  |  | `/v1/mesh/shares` |
 | `claw.api.mesh.revocations` | apiRoute | api | claw |  |  |  | `/v1/mesh/revocations` |
 | `claw.api.gateway.conformance` | apiRoute | api | claw |  |  |  | `/v1/gateway/conformance` |
 | `claw.api.gateway.agentServiceEvaluate` | apiRoute | api | claw |  |  |  | `/v1/gateway/agent-service/evaluate` |
+| `claw.api.gateway.agentServiceExecutions` | apiRoute | api | claw |  |  |  | `/v1/gateway/agent-service/executions` |
+| `claw.api.gateway.auditReceipts` | apiRoute | api | claw |  |  |  | `/v1/gateway/audit/receipts` |
 | `claw.privateApi.attachments` | privateApiRoute | api | claw |  |  |  | `/api/attachments` |
 | `claw.privateApi.authToken` | privateApiRoute | api | claw |  |  |  | `/api/auth/token` |
 | `claw.privateApi.capture` | privateApiRoute | api | claw |  |  |  | `/api/capture` |
@@ -2849,12 +2907,14 @@ flowchart TD
 | `claw.cli.command.connectors` | cliCommand | cli | claw |  |  |  | `connectors` |
 | `claw.cli.command.integrations` | cliCommand | cli | claw |  |  |  | `integrations` |
 | `claw.cli.command.media` | cliCommand | cli | claw |  |  |  | `media` |
+| `claw.cli.command.docs` | cliCommand | cli | claw |  |  |  | `docs` |
 | `claw.cli.command.documents` | cliCommand | cli | claw |  |  |  | `documents` |
 | `claw.cli.command.files` | cliCommand | cli | claw |  |  |  | `files` |
 | `claw.cli.command.images` | cliCommand | cli | claw |  |  |  | `images` |
 | `claw.cli.command.audio` | cliCommand | cli | claw |  |  |  | `audio` |
 | `claw.cli.command.video` | cliCommand | cli | claw |  |  |  | `video` |
 | `claw.cli.command.slides` | cliCommand | cli | claw |  |  |  | `slides` |
+| `claw.cli.command.sheets` | cliCommand | cli | claw |  |  |  | `sheets` |
 | `claw.cli.command.generations` | cliCommand | cli | claw |  |  |  | `generations` |
 | `claw.cli.command.templates` | cliCommand | cli | claw |  |  |  | `templates` |
 | `claw.cli.command.styles` | cliCommand | cli | claw |  |  |  | `styles` |

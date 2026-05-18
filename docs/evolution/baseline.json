@@ -147,6 +147,28 @@
       "adr": "docs/adr/0030-post-v1-evolution-rescue-backbone.md",
       "notes": "Registers additive remote validation, closure, offline command, and compatibility adapter API contracts so public surface drift remains explicit and sealed.",
       "createdAt": "2026-05-18T00:00:00.000Z"
+    },
+    {
+      "id": "evo_media_docs_sheets_cli_surfaces",
+      "title": "Media docs and sheets CLI surfaces",
+      "class": "additive",
+      "status": "active",
+      "owner": "claw",
+      "surfaces": [
+        "claw.cli.command.connectors",
+        "claw.cli.command.docs",
+        "claw.cli.command.search",
+        "claw.cli.command.sheets"
+      ],
+      "tests": [
+        "packages/clawjs/src/cli-search-index.test.ts",
+        "packages/clawjs/src/cli-search-manifest-sources.test.ts",
+        "scripts/evolution-governance-check.mjs",
+        "docs/evolution/public-surface-baseline.json"
+      ],
+      "adr": "docs/adr/0030-post-v1-evolution-rescue-backbone.md",
+      "notes": "Registers additive docs and sheets CLI surfaces, the hot Search changes subcommand, and the compatible connectors usage/help update so public surface drift is covered by the evolution ledger and refreshed baseline.",
+      "createdAt": "2026-05-18T00:00:00.000Z"
     }
   ]
 }

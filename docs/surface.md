@@ -1471,6 +1471,7 @@ The docs check script validates that every current export from
     ClawError
     ClawErrorCode
     clawEventsPath
+    CLAW_EVOLUTION_STABLE_SURFACE_STRATEGIES
     ClawEvolutionBackupPolicy
     clawEvolutionBackupPolicySchema
     ClawEvolutionBaselineChange

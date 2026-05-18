@@ -6,13 +6,13 @@
     "cliCommands": "packages/clawjs-core/src/cli-command-registry.ts"
   },
   "counts": {
-    "surfaces": 905,
-    "cliCommands": 155
+    "surfaces": 907,
+    "cliCommands": 157
   },
   "fingerprints": {
-    "surfaces": "fnv1a32:6c78b514",
-    "cliCommands": "fnv1a32:6ab32150",
-    "combined": "fnv1a32:ec0b1049"
+    "surfaces": "fnv1a32:7562231e",
+    "cliCommands": "fnv1a32:8679dea4",
+    "combined": "fnv1a32:af9973fc"
   },
   "surfaces": [
     {
@@ -1451,6 +1451,15 @@
       "stability": "v1"
     },
     {
+      "id": "claw.cli.command.docs",
+      "owner": "claw",
+      "kind": "cliCommand",
+      "parentId": "claw.contracts.cli",
+      "value": "docs",
+      "surfaceClass": "cli",
+      "stability": "v1"
+    },
+    {
       "id": "claw.cli.command.doctor",
       "owner": "claw",
       "kind": "cliCommand",
@@ -2176,6 +2185,15 @@
       "kind": "cliCommand",
       "parentId": "claw.contracts.cli",
       "value": "sessions",
+      "surfaceClass": "cli",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.cli.command.sheets",
+      "owner": "claw",
+      "kind": "cliCommand",
+      "parentId": "claw.contracts.cli",
+      "value": "sheets",
       "surfaceClass": "cli",
       "stability": "v1"
     },
@@ -7866,7 +7884,7 @@
     {
       "name": "connectors",
       "kind": "canonical",
-      "usage": "connectors list|inspect|capabilities|policy|budgets|audit|context|ctx",
+      "usage": "connectors list|inspect|capabilities|policy|budgets|audit|operation|operations|context|ctx",
       "family": "runtime",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.connectors.v1"
@@ -7989,6 +8007,14 @@
       "family": "mac-control",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.dock.v1"
+    },
+    {
+      "name": "docs",
+      "kind": "canonical",
+      "usage": "docs page list|get|upsert|delete",
+      "family": "media",
+      "schemaVersion": 1,
+      "jsonSchemaId": "claw.cli.docs.v1"
     },
     {
       "name": "doctor",
@@ -8589,7 +8615,7 @@
     {
       "name": "search",
       "kind": "canonical",
-      "usage": "search query|sources|status|service|rebuild|saved|monitors|actions|audit|profiles|explain",
+      "usage": "search query|sources|status|service|rebuild|changes|saved|monitors|actions|audit|profiles|explain",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.search.v1"
     },
@@ -8607,6 +8633,14 @@
       "family": "runtime",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.sessions.v1"
+    },
+    {
+      "name": "sheets",
+      "kind": "canonical",
+      "usage": "sheets workbook list|get|upsert|delete",
+      "family": "media",
+      "schemaVersion": 1,
+      "jsonSchemaId": "claw.cli.sheets.v1"
     },
     {
       "name": "shortcut",
