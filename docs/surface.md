@@ -2522,6 +2522,9 @@ The docs check script validates that every current export from
 
     buildRemoteConformanceReport
     buildRemoteExternalPendingRegister
+    buildRemoteExternalValidationChecklist
+    buildRemoteExternalValidationReport
+    buildRemoteGoalClosureGate
     buildRemoteOfflineCommandResult
     buildRemoteProviderDeviceE2EValidationPlan
     buildRemoteRouteContractCatalog
@@ -2600,8 +2603,21 @@ The docs check script validates that every current export from
     remoteExternalPendingRegisterSchema
     RemoteExternalPendingRequirement
     remoteExternalPendingRequirementSchema
+    RemoteExternalValidationChecklist
+    remoteExternalValidationChecklistItemSchema
+    RemoteExternalValidationChecklistItem
+    remoteExternalValidationChecklistSchema
+    RemoteExternalValidationEvidence
+    remoteExternalValidationEvidenceSchema
+    RemoteExternalValidationReport
+    remoteExternalValidationReportItemSchema
+    RemoteExternalValidationReportItem
+    remoteExternalValidationReportSchema
     RemoteGatewayAuditReceipt
     remoteGatewayAuditReceiptSchema
+    RemoteGoalClosureGate
+    remoteGoalClosureGateSchema
+    remoteGoalClosureRequiredSourceQaIds
     RemoteRouteContract
     remoteRouteContractCatalogSchema
     RemoteRouteContractCatalog
