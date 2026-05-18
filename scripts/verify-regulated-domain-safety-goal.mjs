@@ -180,14 +180,14 @@ function assertPackageReadmeDisclaimers() {
 
 function assertReleaseScriptsRunLegalGate() {
   const packageJson = JSON.parse(read("package.json"));
-  for (const scriptName of ["publish:dry-run", "publish:packages", "release:publish"]) {
+  for (const scriptName of ["publish:dry-run", "publish:packages", "release:version", "release:publish"]) {
     const script = packageJson.scripts?.[scriptName];
     if (typeof script !== "string") {
       errors.push(`package.json: missing release script ${scriptName}`);
       continue;
     }
     if (!script.includes("verify-regulated-domain-safety-goal.mjs")) {
-      errors.push(`package.json: ${scriptName} must run verify-regulated-domain-safety-goal.mjs before publishing`);
+      errors.push(`package.json: ${scriptName} must run verify-regulated-domain-safety-goal.mjs before release mutation or publishing`);
     }
   }
 }
