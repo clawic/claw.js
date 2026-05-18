@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 
 import Database from "better-sqlite3";
 
-import { clawCliCommandRegistry, listClawCliAliases, type ClawCliCommandRegistryEntry, type ClawCliSearchResult } from "@clawjs/core";
+import { clawCliCommandRegistry, listClawCliAliases, listClawSurfaceRoutes, type ClawCliCommandRegistryEntry, type ClawCliSearchResult, type ClawSurfaceRoute } from "@clawjs/core";
 import {
   DEFAULT_SEARCH_BUDGETS,
   LOCAL_TEXT_EMBEDDING_MODEL,
@@ -122,6 +122,7 @@ export async function runSearchQueryCli(input: {
     const shouldRefreshApps = domains?.includes("apps") || sources?.includes("apps.catalog");
     const shouldRefreshDesign = domains?.includes("design") || sources?.includes("design.resources");
     const shouldRefreshRuntime = domains?.includes("runtime") || sources?.includes("runtime.events");
+    const shouldRefreshSurfaces = domains?.includes("surfaces") || sources?.includes("surfaces.routes");
     const shouldRefreshLocalFiles = domains?.includes("files") || sources?.includes("local.files");
     const shouldRefreshWeb = domains?.includes("web") || sources?.includes("web.ingested");
     const shouldRefreshExternal = domains?.includes("external") || sources?.includes("external.cache");
@@ -154,6 +155,7 @@ export async function runSearchQueryCli(input: {
     const indexedApps = shouldRefreshApps && sourceCanIndex(store, "apps.catalog") ? ensureAppsCatalogSourceIndexed(store, input.flags) : 0;
     const indexedDesign = shouldRefreshDesign && sourceCanIndex(store, "design.resources") ? ensureDesignResourcesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedRuntime = shouldRefreshRuntime && sourceCanIndex(store, "runtime.events") ? ensureRuntimeEventsSourceIndexed(store, input.flags) : 0;
+    const indexedSurfaces = shouldRefreshSurfaces && sourceCanIndex(store, "surfaces.routes") ? ensureSurfacesRoutesSourceIndexed(store) : 0;
     const indexedLocalFiles = shouldRefreshLocalFiles && sourceCanIndex(store, "local.files") ? ensureLocalFilesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedWeb = shouldRefreshWeb && sourceCanIndex(store, "web.ingested") ? ensureWebIngestedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedExternal = shouldRefreshExternal && sourceCanIndex(store, "external.cache") ? ensureExternalCacheSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -257,6 +259,7 @@ export async function runSearchQueryCli(input: {
         ...(shouldRefreshApps ? { "apps.catalog": indexedApps } : {}),
         ...(shouldRefreshDesign ? { "design.resources": indexedDesign } : {}),
         ...(shouldRefreshRuntime ? { "runtime.events": indexedRuntime } : {}),
+        ...(shouldRefreshSurfaces ? { "surfaces.routes": indexedSurfaces } : {}),
         ...(shouldRefreshLocalFiles ? { "local.files": indexedLocalFiles } : {}),
         ...(shouldRefreshWeb ? { "web.ingested": indexedWeb } : {}),
         ...(shouldRefreshExternal ? { "external.cache": indexedExternal } : {}),
@@ -397,6 +400,7 @@ export async function runSearchRebuildCli(input: {
     const appsIndexed = rebuildsSource("apps.catalog") ? ensureAppsCatalogSourceIndexed(store, input.flags) : 0;
     const designIndexed = rebuildsSource("design.resources") ? ensureDesignResourcesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const runtimeIndexed = rebuildsSource("runtime.events") ? ensureRuntimeEventsSourceIndexed(store, input.flags) : 0;
+    const surfacesIndexed = rebuildsSource("surfaces.routes") ? ensureSurfacesRoutesSourceIndexed(store) : 0;
     const localFilesIndexed = rebuildsSource("local.files") ? ensureLocalFilesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const webIndexed = rebuildsSource("web.ingested") ? ensureWebIngestedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const externalIndexed = rebuildsSource("external.cache") ? ensureExternalCacheSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -432,6 +436,7 @@ export async function runSearchRebuildCli(input: {
       ...(appsIndexed > 0 ? ["apps.catalog"] : []),
       ...(designIndexed > 0 ? ["design.resources"] : []),
       ...(runtimeIndexed > 0 ? ["runtime.events"] : []),
+      ...(surfacesIndexed > 0 ? ["surfaces.routes"] : []),
       ...(localFilesIndexed > 0 ? ["local.files"] : []),
       ...(webIndexed > 0 ? ["web.ingested"] : []),
       ...(externalIndexed > 0 ? ["external.cache"] : []),
@@ -446,7 +451,7 @@ export async function runSearchRebuildCli(input: {
       mode: selectedSources && selectedShards ? "shard_scoped" : selectedSources ? "scoped" : "full",
       selectedSources: selectedSources ?? null,
       selectedShards: selectedShards ?? null,
-      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + workIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + elnIndexed + imagesIndexed + mediaIndexed + slidesIndexed + sheetsIndexed + generationsIndexed + codeIndexed + skillsIndexed + providersIndexed + snippetsIndexed + agentsIndexed + marketplaceIndexed + contentIndexed + businessIndexed + socialIndexed + iotIndexed + connectorsIndexed + mcpIndexed + appsIndexed + designIndexed + runtimeIndexed + localFilesIndexed + webIndexed + externalIndexed,
+      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + workIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + elnIndexed + imagesIndexed + mediaIndexed + slidesIndexed + sheetsIndexed + generationsIndexed + codeIndexed + skillsIndexed + providersIndexed + snippetsIndexed + agentsIndexed + marketplaceIndexed + contentIndexed + businessIndexed + socialIndexed + iotIndexed + connectorsIndexed + mcpIndexed + appsIndexed + designIndexed + runtimeIndexed + surfacesIndexed + localFilesIndexed + webIndexed + externalIndexed,
       embeddings: 0,
       profile: input.flags.profile === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
@@ -483,6 +488,7 @@ export async function runSearchRebuildCli(input: {
         "apps.catalog": appsIndexed,
         "design.resources": designIndexed,
         "runtime.events": runtimeIndexed,
+        "surfaces.routes": surfacesIndexed,
         "local.files": localFilesIndexed,
         "web.ingested": webIndexed,
         "external.cache": externalIndexed,
@@ -1281,6 +1287,8 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
       return ensureDesignResourcesSourceIndexed(store, flags, cwd);
     case "runtime.events":
       return ensureRuntimeEventsSourceIndexed(store, flags);
+    case "surfaces.routes":
+      return ensureSurfacesRoutesSourceIndexed(store);
     case "local.files":
       return ensureLocalFilesSourceIndexed(store, flags, cwd);
     case "web.ingested":
@@ -1403,6 +1411,10 @@ function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flag
     case "runtime.events": {
       const resourceId = resourceIdFromJobPayload(job, "runtimeResourceId") ?? job.resourceId;
       return resourceId ? ensureRuntimeEventsResourceIndexed(store, flags, resourceId) : 0;
+    }
+    case "surfaces.routes": {
+      const routeId = resourceIdFromJobPayload(job, "routeId") ?? job.resourceId;
+      return routeId ? ensureSurfaceRouteResourceIndexed(store, routeId) : 0;
     }
     default:
       return null;
@@ -4111,6 +4123,136 @@ function setRuntimeEventsResourceState(store: SearchStore): void {
     error: null,
     lastIndexedAt: new Date().toISOString(),
   });
+}
+
+function ensureSurfacesRoutesSourceIndexed(store: SearchStore): number {
+  const routes = listClawSurfaceRoutes();
+  for (const route of routes) {
+    store.upsertDocument(surfaceRouteSearchDocument(route));
+  }
+  store.setCursor({
+    source: "surfaces.routes",
+    cursor: `routes:${routes.length}`,
+    metadata: {
+      registry: "surface-route-graph",
+      source: "packages/clawjs-core/src/surface-registry.ts",
+    },
+  });
+  store.setSourceState("surfaces.routes", "enabled", {
+    backlog: 0,
+    error: null,
+    lastIndexedAt: new Date().toISOString(),
+  });
+  return routes.length;
+}
+
+function ensureSurfaceRouteResourceIndexed(store: SearchStore, routeId: string): number {
+  const route = listClawSurfaceRoutes().find((candidate) => candidate.id === routeId);
+  if (!route) {
+    store.tombstone({ source: "surfaces.routes", resourceId: routeId, reason: "surface route missing during Search event refresh" });
+    return 1;
+  }
+  store.upsertDocument(surfaceRouteSearchDocument(route));
+  store.setSourceState("surfaces.routes", "enabled", {
+    backlog: 0,
+    error: null,
+    lastIndexedAt: new Date().toISOString(),
+  });
+  return 1;
+}
+
+function surfaceRouteSearchDocument(route: ClawSurfaceRoute): SearchDocumentInput {
+  const stepLines = route.steps.map((step, index) => [
+    `${index + 1}. ${step.edgeType} ${step.fromId} -> ${step.toId}`,
+    step.contractId,
+    step.transport,
+    step.validation,
+    ...(step.gaps ?? []),
+  ].filter(Boolean).join(" "));
+  const docs = route.docs ?? [];
+  const tests = route.tests ?? [];
+  const adrs = route.adrs ?? [];
+  const gaps = route.gaps ?? [];
+  const sourcePath = route.source?.file ?? "packages/clawjs-core/src/surface-registry.ts";
+  return {
+    id: `surfaces.routes:${route.id}`,
+    source: "surfaces.routes",
+    domain: "surfaces",
+    type: "route",
+    title: route.name,
+    subtitle: `${route.fromId} -> ${route.toId}`,
+    snippet: route.summary,
+    body: [
+      route.id,
+      route.name,
+      route.summary,
+      route.transport,
+      route.validation,
+      route.owner,
+      route.visibility,
+      ...stepLines,
+      ...docs,
+      ...tests,
+      ...adrs,
+      ...gaps,
+      route.notes,
+    ].filter(Boolean).join("\n"),
+    resourceId: route.id,
+    path: sourcePath,
+    metadata: {
+      owner: route.owner,
+      visibility: route.visibility,
+      fromId: route.fromId,
+      toId: route.toId,
+      transport: route.transport,
+      validation: route.validation,
+      hasGaps: gaps.length > 0 || route.steps.some((step) => (step.gaps ?? []).length > 0),
+      stepCount: route.steps.length,
+      testCount: tests.length,
+      docCount: docs.length,
+      adrCount: adrs.length,
+    },
+    rankingHints: {
+      route: 2,
+      technical: 1,
+    },
+    fragments: [
+      ...route.steps.map((step, index) => ({
+        id: `${route.id}:step:${index + 1}`,
+        title: `${step.edgeType} ${step.fromId} -> ${step.toId}`,
+        body: [
+          step.edgeId,
+          step.contractId,
+          step.owner,
+          step.visibility,
+          step.transport,
+          step.validation,
+          ...(step.gaps ?? []),
+        ].filter(Boolean).join("\n"),
+        snippet: step.validation ?? step.transport,
+        sortOrder: index,
+        metadata: {
+          kind: "step",
+          edgeType: step.edgeType,
+          fromId: step.fromId,
+          toId: step.toId,
+          contractId: step.contractId,
+        },
+      })),
+      ...(docs.length || tests.length || adrs.length ? [{
+        id: `${route.id}:evidence`,
+        title: "Evidence",
+        body: [...docs, ...tests, ...adrs].join("\n"),
+        snippet: [...docs, ...tests, ...adrs].slice(0, 3).join("; "),
+        sortOrder: route.steps.length,
+        metadata: { kind: "evidence" },
+      }] : []),
+    ],
+    actions: [
+      { id: "open", kind: "open", label: "Open route source", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy route reference", requiresApproval: false },
+    ],
+  };
 }
 
 function ensureCodeSymbolsSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {

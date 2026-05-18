@@ -1096,6 +1096,19 @@ export function createBuiltinSearchSourceManifests(): SearchSourceManifest[] {
         { id: "sidecar", label: "Sidecar", type: "string" },
       ],
     }),
+    createFrameworkSearchSourceManifest({
+      id: "surfaces.routes",
+      domain: "surfaces",
+      name: "Surface routes",
+      resultTypes: ["route", "step", "contract"],
+      facets: [
+        { id: "owner", label: "Owner", type: "string" },
+        { id: "visibility", label: "Visibility", type: "string" },
+        { id: "fromId", label: "From", type: "string" },
+        { id: "toId", label: "To", type: "string" },
+        { id: "hasGaps", label: "Has gaps", type: "boolean" },
+      ],
+    }),
     createFullSearchSourceManifest({
       id: "local.files",
       domain: "files",
