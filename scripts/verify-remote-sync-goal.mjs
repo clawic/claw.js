@@ -417,6 +417,15 @@ if (!topologySourceQaReview?.evidenceRefs.includes("claw remote e2e-plan:require
 for (const ref of ["claw remote pending:physical_iroh_handshake", "claw remote pending:device_trust_acceptance", "claw remote pending:self_hosted_deployment", "claw remote pending:hosted_deployment"]) {
   if (!topologySourceQaReview.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-004 must cite ${ref}`);
 }
+const firstSliceSourceQaReview = sourceQaReviewReport.items.find((item) => item.qaId === "QA-012");
+for (const ref of [
+  "claw remote e2e-plan:chat,search,sync,secret_refs,hosted_agents",
+  "claw remote contracts:remote.chatGateway,remote.searchGateway,remote.secretBrokeredOperation,gateway.multiTenantAgentService",
+  "claw sync drivers",
+  "claw remote pending:provider_device_e2e",
+]) {
+  if (!firstSliceSourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-012 must cite ${ref}`);
+}
 const reviewedClosureGate = buildRemoteGoalClosureGate({
   generatedAt: "2026-05-18T11:20:01.000Z",
   sourceQaReviews: sourceQaReviewReport.items,
