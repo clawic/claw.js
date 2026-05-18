@@ -20,6 +20,7 @@ test("redactSecrets masks sensitive keys recursively", () => {
 test("redactSecrets preserves public catalog keys while still masking secret-looking values", () => {
   const redacted = redactSecrets({
     key: "health",
+    decisionKey: "goal_closure_gate",
     domainSystemKey: "health",
     domainRoleKey: "health.patient",
     operationKey: "patient.timeline",
@@ -28,6 +29,7 @@ test("redactSecrets preserves public catalog keys while still masking secret-loo
   });
 
   assert.equal(redacted.key, "health");
+  assert.equal(redacted.decisionKey, "goal_closure_gate");
   assert.equal(redacted.domainSystemKey, "health");
   assert.equal(redacted.domainRoleKey, "health.patient");
   assert.equal(redacted.operationKey, "patient.timeline");
