@@ -2128,7 +2128,12 @@ The docs check script validates that every current export from
     resolveClawHostStateDir
     resolveClawPersistentSurfacePath
     resolveClawWorkspaceDir
+    detachGovernanceResourceScopeBinding
+    forkGovernanceResourceScopeBinding
     summarizeGovernanceBindings
+    summarizeGovernanceResourceSharing
+    GovernanceResourceScopeBinding
+    GovernanceResourceSharingSummary
     sensitiveDataClasses
     SensitiveDataClass
     ResourceKind
