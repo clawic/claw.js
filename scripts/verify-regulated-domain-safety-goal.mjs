@@ -212,7 +212,7 @@ for (const [relativePath, snippets] of [
     "LC-033",
     "EXTERNAL PENDING",
     "Required Evidence Spine",
-    "no final legal certification",
+    "legal certification is made here",
   ]],
   ["docs/regulated-domain-safety.md", [
     "The default safe envelope",

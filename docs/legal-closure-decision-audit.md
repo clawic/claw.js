@@ -9,8 +9,9 @@ decisions. It records the 33 structured source decisions without private
 session paths, local device details, credentials, signing identities, bundle
 IDs, SKUs, or maintainer-private release data.
 
-The rows below are evidence routing, not a final legal certification and no final legal certification. The
-thread goal can close only after the private source session is re-read again
+The rows below are evidence routing, not a final legal certification. No final
+legal certification is made here. The thread goal can close only after the
+private source session is re-read again
 and every row is proven against current ClawJS, Clawix, website, examples,
 packages, CLI, agents, connectors, search, Dense Data, docs, app surfaces,
 official binaries, and release gates.
