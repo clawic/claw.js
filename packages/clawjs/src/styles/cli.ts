@@ -14,6 +14,7 @@ import {
 } from "./storage.ts";
 import { normalizeStyleManifest } from "./serializer.ts";
 import type { StyleManifest } from "./schema.ts";
+import { scheduleDesignResourcesSearchEvent } from "../cli-search-events.ts";
 
 interface StyleCliContext {
   stdout: NodeJS.WritableStream;
@@ -85,6 +86,7 @@ export async function runStyleCli(options: StyleCliOptions): Promise<number> {
       examples: [],
     });
     const { path: filePath } = writeStyle(workspaceRoot, manifest);
+    scheduleStyleSearchEvent(options, "upsert", manifest.id);
     writeOutput(options, { style: manifest, path: filePath }, filePath);
     return STYLE_OK;
   }
@@ -105,6 +107,7 @@ export async function runStyleCli(options: StyleCliOptions): Promise<number> {
       return STYLE_FAILURE;
     }
     fs.rmSync(dir, { recursive: true, force: true });
+    scheduleStyleSearchEvent(options, "delete", manifest.id);
     writeOutput(options, { deleted: target }, `Deleted ${target}`);
     return STYLE_OK;
   }
@@ -127,6 +130,7 @@ export async function runStyleCli(options: StyleCliOptions): Promise<number> {
     }
     const overwrite = flags.overwrite === "true" || options.argv.includes("--overwrite");
     const result = importStyle(workspaceRoot, path.resolve(context.cwd, source), { overwrite });
+    scheduleStyleSearchEvent(options, "upsert", result.id);
     writeOutput(options, { imported: result.id, path: result.path }, result.path);
     return STYLE_OK;
   }
@@ -142,6 +146,7 @@ export async function runStyleCli(options: StyleCliOptions): Promise<number> {
         continue;
       }
       writeStyle(workspaceRoot, manifest);
+      scheduleStyleSearchEvent(options, "upsert", manifest.id);
       installed.push(manifest.id);
     }
     writeOutput(
@@ -173,6 +178,20 @@ function writeOutput(options: StyleCliOptions, payload: unknown, text: string): 
   } else {
     options.context.stdout.write(text.endsWith("\n") ? text : `${text}\n`);
   }
+}
+
+function scheduleStyleSearchEvent(options: StyleCliOptions, operation: "upsert" | "delete", styleId: string): void {
+  scheduleDesignResourcesSearchEvent({
+    operation,
+    resourceId: `style:${styleId}`,
+    workspaceRoot: options.workspaceRoot,
+    dataDir: searchEventDataDir(options),
+    flags: options.flags,
+  });
+}
+
+function searchEventDataDir(options: StyleCliOptions): string {
+  return options.flags["data-dir"] ?? process.env.CLAW_DATA_DIR ?? path.join(options.workspaceRoot, ".claw", "data");
 }
 
 function writeUsage(context: StyleCliContext): void {

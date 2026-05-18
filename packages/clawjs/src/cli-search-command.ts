@@ -59,6 +59,9 @@ import { ensureGenerationArtifactResourceIndexed, ensureGenerationsArtifactsSour
 import { ensureImageDerivedResourceIndexed, ensureImagesDerivedSourceIndexed, ensureMediaAssetResourceIndexed, ensureMediaAssetsSourceIndexed } from "./cli-search-image-media-sources.ts";
 import { ensureSheetsWorkbookResourceIndexed, ensureSheetsWorkbooksSourceIndexed, ensureSlidesDeckResourceIndexed, ensureSlidesDecksSourceIndexed } from "./cli-search-slides-sheets-sources.ts";
 import { pathSafeBasename, resolveRuntimeAdapterId } from "./cli-runtime-utils.ts";
+import { listReferences, readReference, referenceDir } from "./references/storage.ts";
+import { listStyles, readStyle, styleManifestPath } from "./styles/storage.ts";
+import { listTemplates, readTemplate, templateManifestPath } from "./templates/storage.ts";
 import { resolveClawjsDataRoot, resolveClawjsMainDbPath } from "./v1-data.ts";
 import { ensureV1MainSchema, readMcpServers, type JsonRecord } from "./v1-data-core.ts";
 
@@ -149,7 +152,7 @@ export async function runSearchQueryCli(input: {
     const indexedConnectors = shouldRefreshConnectors && sourceCanIndex(store, "connectors.catalog") ? ensureConnectorsCatalogSourceIndexed(store, input.flags) : 0;
     const indexedMcp = shouldRefreshMcp && sourceCanIndex(store, "mcp.servers") ? ensureMcpServersSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedApps = shouldRefreshApps && sourceCanIndex(store, "apps.catalog") ? ensureAppsCatalogSourceIndexed(store, input.flags) : 0;
-    const indexedDesign = shouldRefreshDesign && sourceCanIndex(store, "design.resources") ? ensureDesignResourcesSourceIndexed(store, input.flags) : 0;
+    const indexedDesign = shouldRefreshDesign && sourceCanIndex(store, "design.resources") ? ensureDesignResourcesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedRuntime = shouldRefreshRuntime && sourceCanIndex(store, "runtime.events") ? ensureRuntimeEventsSourceIndexed(store, input.flags) : 0;
     const indexedLocalFiles = shouldRefreshLocalFiles && sourceCanIndex(store, "local.files") ? ensureLocalFilesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedWeb = shouldRefreshWeb && sourceCanIndex(store, "web.ingested") ? ensureWebIngestedSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -392,7 +395,7 @@ export async function runSearchRebuildCli(input: {
     const connectorsIndexed = rebuildsSource("connectors.catalog") ? ensureConnectorsCatalogSourceIndexed(store, input.flags) : 0;
     const mcpIndexed = rebuildsSource("mcp.servers") ? ensureMcpServersSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const appsIndexed = rebuildsSource("apps.catalog") ? ensureAppsCatalogSourceIndexed(store, input.flags) : 0;
-    const designIndexed = rebuildsSource("design.resources") ? ensureDesignResourcesSourceIndexed(store, input.flags) : 0;
+    const designIndexed = rebuildsSource("design.resources") ? ensureDesignResourcesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const runtimeIndexed = rebuildsSource("runtime.events") ? ensureRuntimeEventsSourceIndexed(store, input.flags) : 0;
     const localFilesIndexed = rebuildsSource("local.files") ? ensureLocalFilesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const webIndexed = rebuildsSource("web.ingested") ? ensureWebIngestedSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -1199,7 +1202,7 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
     case "apps.catalog":
       return ensureAppsCatalogSourceIndexed(store, flags);
     case "design.resources":
-      return ensureDesignResourcesSourceIndexed(store, flags);
+      return ensureDesignResourcesSourceIndexed(store, flags, cwd);
     case "runtime.events":
       return ensureRuntimeEventsSourceIndexed(store, flags);
     case "local.files":
@@ -1319,7 +1322,7 @@ function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flag
     }
     case "design.resources": {
       const resourceId = resourceIdFromJobPayload(job, "resourceId") ?? job.resourceId;
-      return resourceId ? ensureDesignResourceIndexed(store, flags, resourceId) : 0;
+      return resourceId ? ensureDesignResourceIndexed(store, flags, resourceId, cwd, resourceIdFromJobPayload(job, "workspaceRoot")) : 0;
     }
     case "runtime.events": {
       const resourceId = resourceIdFromJobPayload(job, "runtimeResourceId") ?? job.resourceId;
@@ -3694,60 +3697,172 @@ function ensureAppCatalogResourceIndexed(store: SearchStore, flags: Record<strin
   }
 }
 
-function ensureDesignResourcesSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
+function ensureDesignResourcesSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {
+  const workspaceRoot = resolveDesignWorkspaceRoot(flags, cwd);
+  let indexed = ensureFileBackedDesignResourcesIndexed(store, workspaceRoot);
   const dbPath = resolveMainDbPath(flags);
-  if (!fs.existsSync(dbPath)) return 0;
+  if (!fs.existsSync(dbPath)) {
+    store.setCursor({
+      source: "design.resources",
+      cursor: `workspace:${stableSearchId(workspaceRoot)}:resources:${indexed}`,
+      metadata: { workspaceRoot, fileBacked: true },
+    });
+    store.setSourceState("design.resources", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return indexed;
+  }
   const db = new Database(dbPath, { readonly: true, fileMustExist: true });
   try {
-    if (!hasTable(db, "design_resources")) return 0;
+    if (!hasTable(db, "design_resources")) {
+      store.setCursor({
+        source: "design.resources",
+        cursor: `workspace:${stableSearchId(workspaceRoot)}:resources:${indexed}`,
+        metadata: { workspaceRoot, fileBacked: true },
+      });
+      store.setSourceState("design.resources", "enabled", {
+        backlog: 0,
+        error: null,
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return indexed;
+    }
     const rows = db.prepare(`
       SELECT id, kind, name, root_path, manifest_json, builtin, created_at, updated_at
       FROM design_resources
       ORDER BY kind, updated_at DESC
     `).all() as DesignResourceRow[];
     for (const row of rows) store.upsertDocument(designResourceSearchDocument(row));
+    indexed += rows.length;
     store.setCursor({
       source: "design.resources",
-      cursor: `resources:${rows.length}`,
-      metadata: { store: "core.sqlite", table: "design_resources" },
+      cursor: `resources:${rows.length}:workspace:${stableSearchId(workspaceRoot)}:${indexed}`,
+      metadata: { store: "core.sqlite", table: "design_resources", workspaceRoot, fileBacked: true },
     });
     store.setSourceState("design.resources", "enabled", {
       backlog: 0,
       error: null,
       lastIndexedAt: new Date().toISOString(),
     });
-    return rows.length;
+    return indexed;
   } finally {
     db.close();
   }
 }
 
-function ensureDesignResourceIndexed(store: SearchStore, flags: Record<string, string>, resourceId: string): number {
+function ensureDesignResourceIndexed(store: SearchStore, flags: Record<string, string>, resourceId: string, cwd: string, workspaceRootOverride?: string): number {
   const dbPath = resolveMainDbPath(flags);
-  if (!fs.existsSync(dbPath)) return 0;
-  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
-  try {
-    if (!hasTable(db, "design_resources")) return 0;
-    const row = db.prepare(`
+  if (fs.existsSync(dbPath)) {
+    const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+    try {
+      if (hasTable(db, "design_resources")) {
+        const row = db.prepare(`
       SELECT id, kind, name, root_path, manifest_json, builtin, created_at, updated_at
       FROM design_resources
       WHERE id = ?
       LIMIT 1
     `).get(resourceId) as DesignResourceRow | undefined;
-    if (!row) {
-      store.tombstone({ source: "design.resources", resourceId, reason: "design resource missing during Search event refresh" });
-      return 1;
+        if (row) {
+          store.upsertDocument(designResourceSearchDocument(row));
+          store.setSourceState("design.resources", "enabled", {
+            backlog: 0,
+            error: null,
+            lastIndexedAt: new Date().toISOString(),
+          });
+          return 1;
+        }
+      }
+    } finally {
+      db.close();
     }
-    store.upsertDocument(designResourceSearchDocument(row));
-    store.setSourceState("design.resources", "enabled", {
-      backlog: 0,
-      error: null,
-      lastIndexedAt: new Date().toISOString(),
-    });
-    return 1;
-  } finally {
-    db.close();
   }
+  const workspaceRoot = workspaceRootOverride ? path.resolve(workspaceRootOverride) : resolveDesignWorkspaceRoot(flags, cwd);
+  const fileBacked = fileBackedDesignResourceSearchDocument(workspaceRoot, resourceId);
+  if (fileBacked) {
+    store.upsertDocument(fileBacked);
+  } else {
+    store.tombstone({ source: "design.resources", resourceId, reason: "design resource missing during Search event refresh" });
+  }
+  store.setSourceState("design.resources", "enabled", {
+    backlog: 0,
+    error: null,
+    lastIndexedAt: new Date().toISOString(),
+  });
+  return 1;
+}
+
+function resolveDesignWorkspaceRoot(flags: Record<string, string>, cwd: string): string {
+  return path.resolve(flags.workspace ?? cwd);
+}
+
+function ensureFileBackedDesignResourcesIndexed(store: SearchStore, workspaceRoot: string): number {
+  const documents = [
+    ...listStyles(workspaceRoot).map((summary) => fileBackedDesignResourceSearchDocument(workspaceRoot, `style:${summary.id}`)),
+    ...listTemplates(workspaceRoot).map((summary) => fileBackedDesignResourceSearchDocument(workspaceRoot, `template:${summary.id}`)),
+    ...listReferences(workspaceRoot).map((summary) => fileBackedDesignResourceSearchDocument(workspaceRoot, `reference:${summary.id}`)),
+  ].filter((document): document is SearchDocumentInput => !!document);
+  for (const document of documents) store.upsertDocument(document);
+  return documents.length;
+}
+
+function fileBackedDesignResourceSearchDocument(workspaceRoot: string, resourceId: string): SearchDocumentInput | null {
+  const [kind, id] = parseDesignResourceId(resourceId);
+  try {
+    if (kind === "style") {
+      const manifest = readStyle(workspaceRoot, id);
+      return designResourceSearchDocument({
+        id: `style:${manifest.id}`,
+        kind: "style",
+        name: manifest.name,
+        root_path: styleManifestPath(workspaceRoot, manifest.id),
+        manifest_json: JSON.stringify(manifest),
+        builtin: manifest.builtin ? 1 : 0,
+        created_at: manifest.createdAt,
+        updated_at: manifest.updatedAt,
+      });
+    }
+    if (kind === "template") {
+      const manifest = readTemplate(workspaceRoot, id);
+      return designResourceSearchDocument({
+        id: `template:${manifest.id}`,
+        kind: "template",
+        name: manifest.name,
+        root_path: templateManifestPath(workspaceRoot, manifest.id),
+        manifest_json: JSON.stringify(manifest),
+        builtin: manifest.builtin ? 1 : 0,
+        created_at: manifest.createdAt,
+        updated_at: manifest.updatedAt,
+      });
+    }
+    if (kind === "reference") {
+      const manifest = readReference(workspaceRoot, id);
+      return designResourceSearchDocument({
+        id: `reference:${manifest.id}`,
+        kind: "reference",
+        name: manifest.name,
+        root_path: path.join(referenceDir(workspaceRoot, manifest.id), "REFERENCE.md"),
+        manifest_json: JSON.stringify(manifest),
+        builtin: 0,
+        created_at: manifest.createdAt,
+        updated_at: manifest.updatedAt,
+      });
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function parseDesignResourceId(resourceId: string): ["style" | "template" | "reference", string] {
+  const separator = resourceId.indexOf(":");
+  if (separator > 0) {
+    const kind = resourceId.slice(0, separator);
+    const id = resourceId.slice(separator + 1);
+    if ((kind === "style" || kind === "template" || kind === "reference") && id) return [kind, id];
+  }
+  return ["style", resourceId];
 }
 
 function ensureRuntimeEventsSourceIndexed(store: SearchStore, flags: Record<string, string>): number {

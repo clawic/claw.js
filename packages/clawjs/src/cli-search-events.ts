@@ -634,6 +634,7 @@ export function scheduleAppsCatalogSearchEvent(input: {
 export function scheduleDesignResourcesSearchEvent(input: {
   operation: "upsert" | "delete";
   resourceId: string;
+  workspaceRoot?: string;
   dataDir: string;
   flags?: Record<string, string>;
   observedAt?: string;
@@ -647,6 +648,7 @@ export function scheduleDesignResourcesSearchEvent(input: {
     observedAt: input.observedAt,
     payload: {
       resourceId: input.resourceId,
+      ...(input.workspaceRoot ? { workspaceRoot: path.resolve(input.workspaceRoot) } : {}),
     },
   });
 }
