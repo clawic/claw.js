@@ -312,10 +312,11 @@ function readCliSearchEntrypoints() {
   }
 }
 
-function readCliSearchJson(args, label, dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-search-goal-"))) {
+function readCliSearchJson(args, label, dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-search-goal-")), options = {}) {
   const hasJson = args.includes("--json");
+  let output;
   try {
-    const output = execFileSync(process.execPath, [
+    output = execFileSync(process.execPath, [
       "packages/clawjs/bin/claw.mjs",
       "search",
       ...args,
@@ -329,6 +330,17 @@ function readCliSearchJson(args, label, dataRoot = fs.mkdtempSync(path.join(os.t
       },
       timeout: 15_000,
     });
+  } catch (error) {
+    const stdout = error && typeof error === "object" && "stdout" in error ? error.stdout : "";
+    if (options.allowNonZero && stdout) {
+      output = Buffer.isBuffer(stdout) ? stdout.toString("utf8") : String(stdout);
+    } else {
+      failures.push(`${label} failed: ${error instanceof Error ? error.message : String(error)}`);
+      return {};
+    }
+  }
+
+  try {
     const parsed = JSON.parse(output);
     if (parsed?.ok !== true || parsed?.meta?.canonicalCommand !== "search") {
       failures.push(`${label}: unexpected response shape`);
@@ -336,7 +348,7 @@ function readCliSearchJson(args, label, dataRoot = fs.mkdtempSync(path.join(os.t
     }
     return parsed;
   } catch (error) {
-    failures.push(`${label} failed: ${error instanceof Error ? error.message : String(error)}`);
+    failures.push(`${label}: invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
     return {};
   }
 }
@@ -601,6 +613,83 @@ function requireCliSearchAcceptanceSmoke() {
   const resumedQuery = readCliSearchJson(["query", "system", "--sources", "commands", "--limit", "3"], "claw search query resumed source --json", dataRoot);
   if (!resumedQuery.data?.results?.some((result) => result.source === "commands" && result.title === "system")) {
     failures.push("claw search query resumed source --json: must return resumed command results");
+  }
+
+  const serviceStatus = readCliSearchJson(["service", "status"], "claw search service status --json", dataRoot);
+  if (serviceStatus.meta?.subcommand !== "service" || serviceStatus.data?.action !== "status") {
+    failures.push("claw search service status --json: must report service status metadata");
+  }
+  if (serviceStatus.data?.service?.state !== "stopped" || serviceStatus.data?.service?.mode !== "embedded") {
+    failures.push("claw search service status --json: fresh isolated service must start stopped in embedded mode");
+  }
+  if (serviceStatus.data?.service?.budgets?.hotMs !== 50 || serviceStatus.data?.service?.budgets?.globalFirstBatchMs !== 200 || serviceStatus.data?.service?.budgets?.sourceTimeoutMs !== 75) {
+    failures.push("claw search service status --json: must report accepted Search budgets");
+  }
+  if (!Array.isArray(serviceStatus.data?.sources) || !serviceStatus.data.sources.some((source) => source.source === "commands")) {
+    failures.push("claw search service status --json: must expose command source status");
+  }
+
+  const serviceStart = readCliSearchJson(["service", "start"], "claw search service start --json", dataRoot);
+  if (serviceStart.data?.action !== "start" || serviceStart.data?.service?.state !== "ready" || serviceStart.data?.service?.mode !== "embedded") {
+    failures.push("claw search service start --json: must start the embedded service");
+  }
+  if (typeof serviceStart.data?.service?.startedAt !== "string") {
+    failures.push("claw search service start --json: must record startedAt");
+  }
+
+  const serviceJob = readCliSearchJson([
+    "jobs",
+    "enqueue",
+    "rebuild",
+    "--source",
+    "commands",
+    "--id",
+    "job:service:commands",
+    "--priority",
+    "90",
+  ], "claw search jobs enqueue rebuild --source commands --json", dataRoot);
+  if (serviceJob.meta?.subcommand !== "jobs" || serviceJob.data?.action !== "enqueue") {
+    failures.push("claw search jobs enqueue rebuild --source commands --json: must report jobs enqueue metadata");
+  }
+  if (serviceJob.data?.item?.id !== "job:service:commands" || serviceJob.data?.item?.source !== "commands" || serviceJob.data?.item?.operation !== "rebuild") {
+    failures.push("claw search jobs enqueue rebuild --source commands --json: must preserve queued rebuild job identity");
+  }
+  if (serviceJob.data?.item?.status !== "queued" || serviceJob.data?.item?.priority !== 90) {
+    failures.push("claw search jobs enqueue rebuild --source commands --json: must queue the rebuild job with priority");
+  }
+
+  const serviceRun = readCliSearchJson(["service", "run-once", "--limit", "1"], "claw search service run-once --limit 1 --json", dataRoot);
+  const serviceRunItem = serviceRun.data?.worker?.items?.[0];
+  if (serviceRun.data?.action !== "run-once" || serviceRun.data?.service?.state !== "ready") {
+    failures.push("claw search service run-once --limit 1 --json: must run the embedded worker");
+  }
+  if (serviceRun.data?.worker?.claimed !== 1 || serviceRun.data?.worker?.completed !== 1 || serviceRun.data?.worker?.failed !== 0) {
+    failures.push("claw search service run-once --limit 1 --json: must claim and complete exactly one job");
+  }
+  if (serviceRun.data?.worker?.stoppedReason !== "job_limit" || serviceRun.data?.worker?.budgets?.maxJobs !== 1) {
+    failures.push("claw search service run-once --limit 1 --json: must honor the job limit budget");
+  }
+  if (serviceRunItem?.id !== "job:service:commands" || serviceRunItem?.source !== "commands" || serviceRunItem?.operation !== "rebuild" || serviceRunItem?.status !== "done") {
+    failures.push("claw search service run-once --limit 1 --json: must complete the queued command rebuild job");
+  }
+  if (typeof serviceRunItem?.indexed !== "number" || serviceRunItem.indexed <= 0) {
+    failures.push("claw search service run-once --limit 1 --json: must report indexed command documents");
+  }
+
+  const serviceStop = readCliSearchJson(["service", "stop"], "claw search service stop --json", dataRoot);
+  if (serviceStop.data?.action !== "stop" || serviceStop.data?.service?.state !== "stopped" || serviceStop.data?.service?.mode !== "embedded") {
+    failures.push("claw search service stop --json: must stop the embedded service");
+  }
+  if (typeof serviceStop.data?.service?.stoppedAt !== "string") {
+    failures.push("claw search service stop --json: must record stoppedAt");
+  }
+
+  const daemonStart = readCliSearchJson(["service", "start", "--mode", "daemon"], "claw search service start --mode daemon --json", dataRoot, { allowNonZero: true });
+  if (daemonStart.data?.action !== "start" || daemonStart.data?.service?.state !== "external_pending" || daemonStart.data?.service?.mode !== "daemon") {
+    failures.push("claw search service start --mode daemon --json: must report daemon service as external pending");
+  }
+  if (!String(daemonStart.data?.service?.reason ?? "").includes("host supervisor")) {
+    failures.push("claw search service start --mode daemon --json: must explain the signed host supervisor dependency");
   }
 }
 
