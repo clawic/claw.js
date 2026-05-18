@@ -193,6 +193,8 @@ for (const snippet of [
 
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleDocsPagesSearchEvent");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"docs.pages\"");
+requireSnippet("packages/clawjs/src/cli-search-docs-pages-source.ts", "createLocalTextEmbedding");
+requireSnippet("packages/clawjs/src/cli-search-docs-pages-source.ts", "LOCAL_TEXT_EMBEDDING_MODEL");
 
 const publicScanRoots = ["docs", "packages", "examples"];
 const forbiddenExternalReference = String.fromCharCode(82, 97, 121, 99, 97, 115, 116);

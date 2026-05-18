@@ -511,7 +511,8 @@ into user-facing domain sections.
 `docs/`, including ADRs under `docs/adr/`, into source-scoped docs results. It
 indexes document titles, section headings, section snippets, kind/category/path
 metadata, and supports resource-scoped refresh jobs keyed by repository-relative
-docs paths.
+docs paths. It also writes deterministic local `local-text-v1` vectors for
+provider-free semantic and hybrid docs queries.
 
 `surfaces.routes` projects the framework surface route graph from
 `packages/clawjs-core/src/surface-registry.ts`. It indexes each route's source

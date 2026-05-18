@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
 
-import type { SearchDocumentInput, SearchStore } from "@clawjs/search";
+import { LOCAL_TEXT_EMBEDDING_MODEL, createLocalTextEmbedding, type SearchDocumentInput, type SearchStore } from "@clawjs/search";
 
 export function ensureDocsPagesSourceIndexed(store: SearchStore, cwd: string): number {
   const files = discoverDocsPageFiles(cwd);
@@ -11,7 +11,7 @@ export function ensureDocsPagesSourceIndexed(store: SearchStore, cwd: string): n
   for (const filePath of files) {
     const document = docsPageSearchDocument(cwd, filePath);
     if (!document) continue;
-    store.upsertDocument(document);
+    upsertDocsPageSearchDocument(store, document);
     indexed += 1;
     const updatedAt = document.updatedAt ?? "";
     if (updatedAt > watermark) watermark = updatedAt;
@@ -51,13 +51,29 @@ export function ensureDocsPageResourceIndexed(store: SearchStore, cwd: string, r
     });
     return 1;
   }
-  store.upsertDocument(document);
+  upsertDocsPageSearchDocument(store, document);
   store.setSourceState("docs.pages", "enabled", {
     backlog: 0,
     error: null,
     lastIndexedAt: new Date().toISOString(),
   });
   return 1;
+}
+
+function upsertDocsPageSearchDocument(store: SearchStore, document: SearchDocumentInput): void {
+  store.upsertDocument(document);
+  const embedding = createLocalTextEmbedding([
+    document.title,
+    document.subtitle,
+    document.snippet,
+    document.body,
+  ].filter((value): value is string => typeof value === "string" && value.trim().length > 0).join("\n"));
+  store.upsertVector({
+    documentId: document.id,
+    model: LOCAL_TEXT_EMBEDDING_MODEL,
+    embedding: embedding.vector,
+    updatedAt: document.updatedAt,
+  });
 }
 
 function discoverDocsPageFiles(cwd: string): string[] {

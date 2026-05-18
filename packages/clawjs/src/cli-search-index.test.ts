@@ -133,6 +133,33 @@ test("search rebuild indexes docs pages and refreshes resource jobs", async () =
     assert.equal(adrResult?.metadata?.kind, "adr");
     assert.equal(adrResult?.metadata?.category, "adr");
 
+    const semanticQuery = await runCliCapture([
+      "search",
+      "query",
+      "runtime contract extraction",
+      "--domains",
+      "docs",
+      "--strategy",
+      "semantic",
+      "--embedding-model",
+      "local-text-v1",
+      "--data-dir",
+      dataRoot,
+      "--json",
+      "--limit",
+      "5",
+      "--explain",
+      "true",
+    ], workspaceRoot);
+    assert.equal(semanticQuery.code, CLI_EXIT_OK);
+    const semanticPayload = JSON.parse(semanticQuery.stdout) as {
+      data: { results: Array<{ source: string; resourceId?: string; explanation?: { matchedBy?: string[]; scoreBreakdown?: { semantic?: number } } }> };
+    };
+    const semanticResult = semanticPayload.data.results.find((entry) => entry.resourceId === "docs/search-fixture.md");
+    assert.equal(semanticResult?.source, "docs.pages");
+    assert.equal(semanticResult?.explanation?.matchedBy?.includes("semantic"), true);
+    assert.ok((semanticResult?.explanation?.scoreBreakdown?.semantic ?? 0) > 0);
+
     fs.writeFileSync(path.join(docsRoot, "search-fixture.md"), [
       "# Search Fixture",
       "",
