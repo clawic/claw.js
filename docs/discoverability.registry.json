@@ -2528,6 +2528,31 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "guard-scripts-verify-search-v1-1-goal",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/verify-search-v1-1-goal.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "verify-search-v1-1-goal",
+        "Verify Search V1 1 Goal"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-search-v1-1-goal",
+          "expectPath": "scripts/verify-search-v1-1-goal.mjs"
+        }
+      ],
+      "guard": "scripts/verify-search-v1-1-goal.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "guard-scripts-verify-testing-policy",
       "kind": "guardrail",
       "owner": "claw",
