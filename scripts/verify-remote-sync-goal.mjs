@@ -157,6 +157,7 @@ const requiredDocSnippets = [
   "/v1/remote/external-validation-report",
   "claw remote validation-report",
   "source Q/A review report",
+  "duplicateSourceQaIds",
   "invalidExternalPendingDispositionQaIds",
   "source Q/A review template",
   "/v1/remote/source-qa-template",
@@ -564,6 +565,7 @@ if (blockedClosureGate.writes !== false) fail("remote closure gate must be no-wr
 if (blockedClosureGate.requiredSourceQaIds.length !== 23) fail("remote closure gate must require 23 source Q/A ids");
 if (blockedClosureGate.missingSourceQaIds.length !== 23) fail("default remote closure gate must miss all source Q/A ids");
 if (blockedClosureGate.invalidSourceQaIds.length !== 0) fail("default remote closure gate must expose no invalid source Q/A ids");
+if (blockedClosureGate.duplicateSourceQaIds.length !== 0) fail("default remote closure gate must expose no duplicate source Q/A ids");
 if (!blockedClosureGate.externalPendingRequiredSourceQaIds.includes("QA-007")) fail("remote closure gate must expose physical/provider source Q/A ids requiring external_pending disposition");
 if (blockedClosureGate.invalidExternalPendingDispositionQaIds.length !== 0) fail("default remote closure gate must expose no invalid external-pending dispositions");
 if (!blockedClosureGate.blockers.includes("source_qa_review") || !blockedClosureGate.blockers.includes("external_validation")) {
@@ -580,6 +582,7 @@ const completeSourceQaReviewReport = buildRemoteSourceQaReviewReport({
 });
 if (completeSourceQaReviewReport.status !== "complete") fail("complete source Q/A review report must be complete");
 if (completeSourceQaReviewReport.reviewedSourceQaIds.length !== 23) fail("complete source Q/A review report must review all 23 Q/A ids");
+if (completeSourceQaReviewReport.duplicateSourceQaIds.length !== 0) fail("complete source Q/A review report must not have duplicate source Q/A ids");
 if (completeSourceQaReviewReport.items.length !== 23) fail("complete source Q/A review report must include one item per Q/A id");
 if (!completeSourceQaReviewReport.items.every((entry) => entry.disposition && entry.evidenceRefs.length > 0 && entry.writes === false)) {
   fail("complete source Q/A review report must include disposition, evidence refs, and no-write items");
@@ -615,6 +618,22 @@ const invalidSourceQaClosureGate = buildRemoteGoalClosureGate({
 });
 if (invalidSourceQaClosureGate.invalidExternalPendingDispositionQaIds.join(",") !== "QA-007") {
   fail("remote closure gate must expose invalid external-pending source Q/A dispositions");
+}
+
+const duplicateSourceQaReviewReport = buildRemoteSourceQaReviewReport({
+  generatedAt: "2026-05-17T10:13:26.700Z",
+  reviews: [completeSourceQaReviewReport.items[0], completeSourceQaReviewReport.items[0]],
+});
+if (duplicateSourceQaReviewReport.status !== "incomplete") fail("source Q/A report must reject duplicate source Q/A rows");
+if (duplicateSourceQaReviewReport.duplicateSourceQaIds.join(",") !== "QA-001") {
+  fail("source Q/A report must expose duplicate source Q/A ids");
+}
+const duplicateSourceQaClosureGate = buildRemoteGoalClosureGate({
+  generatedAt: "2026-05-17T10:13:26.710Z",
+  sourceQaReviews: [completeSourceQaReviewReport.items[0], completeSourceQaReviewReport.items[0]],
+});
+if (duplicateSourceQaClosureGate.duplicateSourceQaIds.join(",") !== "QA-001") {
+  fail("remote closure gate must expose duplicate source Q/A ids");
 }
 
 const sourceQaReviewTemplate = buildRemoteSourceQaReviewTemplate({

@@ -204,7 +204,7 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
 
     const closureGate = await built.app.inject({ method: "GET", url: "/v1/remote/closure-gate" });
     assert.equal(closureGate.statusCode, 200);
-    const closureGatePayload = closureGate.json() as { status: string; writes: boolean; requiredSourceQaIds: string[]; reviewedSourceQaIds: string[]; missingSourceQaIds: string[]; invalidSourceQaIds: string[]; externalPendingRequiredSourceQaIds: string[]; invalidExternalPendingDispositionQaIds: string[]; sourceQaReviewStatus: string; sourceQaReviewItems: unknown[]; blockedExternalRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockers: string[] };
+    const closureGatePayload = closureGate.json() as { status: string; writes: boolean; requiredSourceQaIds: string[]; reviewedSourceQaIds: string[]; missingSourceQaIds: string[]; invalidSourceQaIds: string[]; duplicateSourceQaIds: string[]; externalPendingRequiredSourceQaIds: string[]; invalidExternalPendingDispositionQaIds: string[]; sourceQaReviewStatus: string; sourceQaReviewItems: unknown[]; blockedExternalRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockers: string[] };
     const expectedClosureGate = buildRemoteGoalClosureGate();
     assert.equal(closureGatePayload.status, "blocked");
     assert.equal(closureGatePayload.writes, false);
@@ -212,6 +212,7 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.deepEqual(closureGatePayload.reviewedSourceQaIds, []);
     assert.equal(closureGatePayload.missingSourceQaIds.length, 23);
     assert.deepEqual(closureGatePayload.invalidSourceQaIds, []);
+    assert.deepEqual(closureGatePayload.duplicateSourceQaIds, []);
     assert.equal(closureGatePayload.externalPendingRequiredSourceQaIds.includes("QA-007"), true);
     assert.deepEqual(closureGatePayload.invalidExternalPendingDispositionQaIds, []);
     assert.equal(closureGatePayload.sourceQaReviewStatus, "incomplete");
@@ -231,10 +232,11 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
       },
     });
     assert.equal(clearableClosureGate.statusCode, 200);
-    const clearableClosureGatePayload = clearableClosureGate.json() as { status: string; writes: boolean; missingSourceQaIds: string[]; invalidExternalPendingDispositionQaIds: string[]; sourceQaReviewStatus: string; sourceQaReviewItems: unknown[]; blockedExternalRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockers: string[] };
+    const clearableClosureGatePayload = clearableClosureGate.json() as { status: string; writes: boolean; missingSourceQaIds: string[]; duplicateSourceQaIds: string[]; invalidExternalPendingDispositionQaIds: string[]; sourceQaReviewStatus: string; sourceQaReviewItems: unknown[]; blockedExternalRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockers: string[] };
     assert.equal(clearableClosureGatePayload.status, "clearable");
     assert.equal(clearableClosureGatePayload.writes, false);
     assert.deepEqual(clearableClosureGatePayload.missingSourceQaIds, []);
+    assert.deepEqual(clearableClosureGatePayload.duplicateSourceQaIds, []);
     assert.deepEqual(clearableClosureGatePayload.invalidExternalPendingDispositionQaIds, []);
     assert.equal(clearableClosureGatePayload.sourceQaReviewStatus, "complete");
     assert.equal(clearableClosureGatePayload.sourceQaReviewItems.length, 23);
