@@ -1213,6 +1213,8 @@ requireSnippet("packages/clawjs/src/v1-data-agent-config.ts", "Usage: claw provi
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "settingDeleteRunItem?.operation");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "source: \"providers.routing\", operation: \"delete\", status: \"done\", indexed: 1");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "setting:provider_alpha");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "snippetDeleteRunItem?.operation");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "source: \"snippets.library\", operation: \"delete\", status: \"done\", indexed: 1");
 requireSnippet("packages/clawjs/src/cli-search-docs-pages-source.ts", "createLocalTextEmbedding");
 requireSnippet("packages/clawjs/src/cli-search-docs-pages-source.ts", "LOCAL_TEXT_EMBEDDING_MODEL");
 
