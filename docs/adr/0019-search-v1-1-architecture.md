@@ -52,9 +52,9 @@ Search V1.1 is built from these layers:
   optional vector data.
 - **Domain fast paths**: `sessions.chats`, `database.records`,
   `documents.blocks`, `images.derived`, `media.assets`,
-  `generations.artifacts`, `code.symbols`, and `commands` are initial framework
-  sources. More framework domains are added source by source; global Search must
-  never replace a section-specific fast path.
+  `generations.artifacts`, `code.symbols`, `docs.pages`, and `commands` are
+  initial framework sources. More framework domains are added source by source;
+  global Search must never replace a section-specific fast path.
 - **Profiles**: `framework` is default. `full` is opt-in and is where native,
   external, web, or broad local sources can be enabled later. `local.files`,
   `web.ingested`, and `external.cache` have bounded, explicit local adapters but
@@ -171,6 +171,9 @@ The initial code source is bounded to an explicit project root, dependency/build
 directories are skipped, and query-time refresh happens only for code-scoped
 queries. This keeps project/code search available without putting file scanning
 on the hot path for chats, database records, commands, or other sections.
+The initial docs source projects root public Markdown docs, Markdown docs under
+`docs/`, and ADRs under `docs/adr/`, including section fragments and docs-path
+metadata, with resource-scoped refresh jobs for changed repository docs files.
 The initial document source projects `documents` and `document_blocks` records
 from `core.sqlite`, returning documents as section results and blocks as
 fragments.

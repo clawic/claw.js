@@ -76,6 +76,7 @@ backfill jobs.
 | `sheets.workbooks` | `sheets` | local workbook manifests and per-sheet table/cell text projected into `search.sqlite` | implemented initial adapter |
 | `generations.artifacts` | `generations` | generated artifact records projected into `search.sqlite` | implemented initial adapter |
 | `code.symbols` | `code` | bounded project file/symbol/docs projection into `search.sqlite` | implemented initial adapter |
+| `docs.pages` | `docs` | root public Markdown docs plus `docs/` and ADR sections projected into `search.sqlite` | implemented initial adapter |
 | `skills.registry` | `skills` | framework skill records projected from `core.sqlite` without secret refs | implemented initial adapter |
 | `providers.routing` | `providers` | provider routing rules and provider settings projected from `core.sqlite` without account refs | implemented initial adapter |
 | `snippets.library` | `snippets` | prompt/template/slash snippets projected from `core.sqlite` | implemented initial adapter |
@@ -133,6 +134,7 @@ claw search sources enable external.cache --profile full --json
 claw search rebuild --source external.cache --profile full --external-root /path/to/provider-cache --json
 claw search query "provider thread" --domains external --profile full --external-root /path/to/provider-cache --json
 claw search query "diagram" --domains images --shards hot --json
+claw search query "Search V1.1 architecture" --domains docs --json
 claw search query "related concept" --domains documents --strategy hybrid --embedding-model local --embedding '[0.1,0.2,0.3]' --json
 claw search sources --json
 claw search sources pause commands --json
@@ -505,6 +507,12 @@ run timing, payload summaries, event kind/level/message, sidecar origin, and
 operational metadata so technical artifacts can be searched without mixing them
 into user-facing domain sections.
 
+`docs.pages` projects root public Markdown docs plus Markdown files under
+`docs/`, including ADRs under `docs/adr/`, into source-scoped docs results. It
+indexes document titles, section headings, section snippets, kind/category/path
+metadata, and supports resource-scoped refresh jobs keyed by repository-relative
+docs paths.
+
 `surfaces.routes` projects the framework surface route graph from
 `packages/clawjs-core/src/surface-registry.ts`. It indexes each route's source
 and destination nodes, owner, visibility, transport, validation text, route
@@ -577,7 +585,8 @@ signed host shortcut broker validates it.
   `slides.decks`, `sheets.workbooks`, `generations.artifacts`, `skills.registry`, `providers.routing`,
   `snippets.library`, `agents.catalog`, `marketplace.choices`, `content.items`,
   `business.records`, `social.posts`, `iot.config`, and the first bounded
-  `code.symbols` adapter with per-file event refresh. `slides.decks` also
+  `code.symbols` adapter with per-file event refresh. `docs.pages` indexes
+  public root docs, docs, and ADR sections with resource-scoped refresh jobs. `slides.decks` also
   supports changed-deck event refresh from local slide writes,
   `sheets.workbooks` supports changed-workbook event refresh for manifest
   producers, and `design.resources` refreshes workspace style, template, and

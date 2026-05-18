@@ -933,6 +933,17 @@ export function createBuiltinSearchSourceManifests(): SearchSourceManifest[] {
       ],
     }),
     createFrameworkSearchSourceManifest({
+      id: "docs.pages",
+      domain: "docs",
+      name: "Docs",
+      resultTypes: ["doc", "adr", "section"],
+      facets: [
+        { id: "kind", label: "Kind", type: "string" },
+        { id: "category", label: "Category", type: "string" },
+        { id: "path", label: "Path", type: "string" },
+      ],
+    }),
+    createFrameworkSearchSourceManifest({
       id: "skills.registry",
       domain: "skills",
       name: "Skills",

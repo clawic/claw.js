@@ -55,6 +55,7 @@ import {
   resolveCodeSearchRoot,
   upsertCodeFileSearchDocument,
 } from "./cli-search-code-symbols-source.ts";
+import { ensureDocsPageResourceIndexed, ensureDocsPagesSourceIndexed } from "./cli-search-docs-pages-source.ts";
 import { ensureGenerationArtifactResourceIndexed, ensureGenerationsArtifactsSourceIndexed } from "./cli-search-generations-source.ts";
 import { ensureImageDerivedResourceIndexed, ensureImagesDerivedSourceIndexed, ensureMediaAssetResourceIndexed, ensureMediaAssetsSourceIndexed } from "./cli-search-image-media-sources.ts";
 import { ensureSheetsWorkbookResourceIndexed, ensureSheetsWorkbooksSourceIndexed, ensureSlidesDeckResourceIndexed, ensureSlidesDecksSourceIndexed } from "./cli-search-slides-sheets-sources.ts";
@@ -109,6 +110,7 @@ export async function runSearchQueryCli(input: {
     const shouldRefreshSheets = domains?.includes("sheets") || sources?.includes("sheets.workbooks");
     const shouldRefreshGenerations = domains?.includes("generations") || sources?.includes("generations.artifacts");
     const shouldRefreshCode = domains?.includes("code") || sources?.includes("code.symbols");
+    const shouldRefreshDocs = domains?.includes("docs") || sources?.includes("docs.pages");
     const shouldRefreshSkills = domains?.includes("skills") || sources?.includes("skills.registry");
     const shouldRefreshProviders = domains?.includes("providers") || sources?.includes("providers.routing");
     const shouldRefreshSnippets = domains?.includes("snippets") || sources?.includes("snippets.library");
@@ -142,6 +144,7 @@ export async function runSearchQueryCli(input: {
     const indexedSheets = shouldRefreshSheets && sourceCanIndex(store, "sheets.workbooks") ? ensureSheetsWorkbooksSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedGenerations = shouldRefreshGenerations && sourceCanIndex(store, "generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedCode = shouldRefreshCode && sourceCanIndex(store, "code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const indexedDocs = shouldRefreshDocs && sourceCanIndex(store, "docs.pages") ? ensureDocsPagesSourceIndexed(store, input.context.cwd) : 0;
     const indexedSkills = shouldRefreshSkills && sourceCanIndex(store, "skills.registry") ? ensureSkillsRegistrySourceIndexed(store, input.flags) : 0;
     const indexedProviders = shouldRefreshProviders && sourceCanIndex(store, "providers.routing") ? ensureProvidersRoutingSourceIndexed(store, input.flags) : 0;
     const indexedSnippets = shouldRefreshSnippets && sourceCanIndex(store, "snippets.library") ? ensureSnippetsLibrarySourceIndexed(store, input.flags) : 0;
@@ -246,6 +249,7 @@ export async function runSearchQueryCli(input: {
         ...(shouldRefreshSheets ? { "sheets.workbooks": indexedSheets } : {}),
         ...(shouldRefreshGenerations ? { "generations.artifacts": indexedGenerations } : {}),
         ...(shouldRefreshCode ? { "code.symbols": indexedCode } : {}),
+        ...(shouldRefreshDocs ? { "docs.pages": indexedDocs } : {}),
         ...(shouldRefreshSkills ? { "skills.registry": indexedSkills } : {}),
         ...(shouldRefreshProviders ? { "providers.routing": indexedProviders } : {}),
         ...(shouldRefreshSnippets ? { "snippets.library": indexedSnippets } : {}),
@@ -387,6 +391,7 @@ export async function runSearchRebuildCli(input: {
     const sheetsIndexed = rebuildsSource("sheets.workbooks") ? ensureSheetsWorkbooksSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const generationsIndexed = rebuildsSource("generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const codeIndexed = rebuildsSource("code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const docsIndexed = rebuildsSource("docs.pages") ? ensureDocsPagesSourceIndexed(store, input.context.cwd) : 0;
     const skillsIndexed = rebuildsSource("skills.registry") ? ensureSkillsRegistrySourceIndexed(store, input.flags) : 0;
     const providersIndexed = rebuildsSource("providers.routing") ? ensureProvidersRoutingSourceIndexed(store, input.flags) : 0;
     const snippetsIndexed = rebuildsSource("snippets.library") ? ensureSnippetsLibrarySourceIndexed(store, input.flags) : 0;
@@ -423,6 +428,7 @@ export async function runSearchRebuildCli(input: {
       ...(sheetsIndexed > 0 ? ["sheets.workbooks"] : []),
       ...(generationsIndexed > 0 ? ["generations.artifacts"] : []),
       ...(codeIndexed > 0 ? ["code.symbols"] : []),
+      ...(docsIndexed > 0 ? ["docs.pages"] : []),
       ...(skillsIndexed > 0 ? ["skills.registry"] : []),
       ...(providersIndexed > 0 ? ["providers.routing"] : []),
       ...(snippetsIndexed > 0 ? ["snippets.library"] : []),
@@ -452,7 +458,7 @@ export async function runSearchRebuildCli(input: {
       mode: selectedSources && selectedShards ? "shard_scoped" : selectedSources ? "scoped" : "full",
       selectedSources: selectedSources ?? null,
       selectedShards: selectedShards ?? null,
-      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + workIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + elnIndexed + imagesIndexed + mediaIndexed + slidesIndexed + sheetsIndexed + generationsIndexed + codeIndexed + skillsIndexed + providersIndexed + snippetsIndexed + agentsIndexed + marketplaceIndexed + contentIndexed + businessIndexed + socialIndexed + iotIndexed + connectorsIndexed + mcpIndexed + appsIndexed + designIndexed + runtimeIndexed + surfacesIndexed + localFilesIndexed + webIndexed + externalIndexed,
+      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + workIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + elnIndexed + imagesIndexed + mediaIndexed + slidesIndexed + sheetsIndexed + generationsIndexed + codeIndexed + docsIndexed + skillsIndexed + providersIndexed + snippetsIndexed + agentsIndexed + marketplaceIndexed + contentIndexed + businessIndexed + socialIndexed + iotIndexed + connectorsIndexed + mcpIndexed + appsIndexed + designIndexed + runtimeIndexed + surfacesIndexed + localFilesIndexed + webIndexed + externalIndexed,
       embeddings: 0,
       profile: input.flags.profile === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
@@ -475,6 +481,7 @@ export async function runSearchRebuildCli(input: {
         "sheets.workbooks": sheetsIndexed,
         "generations.artifacts": generationsIndexed,
         "code.symbols": codeIndexed,
+        "docs.pages": docsIndexed,
         "skills.registry": skillsIndexed,
         "providers.routing": providersIndexed,
         "snippets.library": snippetsIndexed,
@@ -1263,6 +1270,8 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
       return ensureGenerationsArtifactsSourceIndexed(store, flags, cwd);
     case "code.symbols":
       return ensureCodeSymbolsSourceIndexed(store, flags, cwd);
+    case "docs.pages":
+      return ensureDocsPagesSourceIndexed(store, cwd);
     case "skills.registry":
       return ensureSkillsRegistrySourceIndexed(store, flags);
     case "providers.routing":
@@ -1359,6 +1368,10 @@ function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flag
     case "code.symbols": {
       const relativePath = resourceIdFromJobPayload(job, "relativePath") ?? job.resourceId;
       return relativePath ? ensureCodeSymbolResourceIndexed(store, flags, cwd, relativePath, resourceIdFromJobPayload(job, "root")) : 0;
+    }
+    case "docs.pages": {
+      const relativePath = resourceIdFromJobPayload(job, "relativePath") ?? job.resourceId;
+      return relativePath ? ensureDocsPageResourceIndexed(store, cwd, relativePath) : 0;
     }
     case "skills.registry": {
       const resourceId = resourceIdFromJobPayload(job, "slug") ?? job.resourceId;
