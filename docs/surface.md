@@ -1495,6 +1495,12 @@ The docs check script validates that every current export from
     ClawEvolutionPolicy
     ClawEvolutionPublicSurfaceBaseline
     clawEvolutionPublicSurfaceBaselineSchema
+    ClawEvolutionRepairAction
+    clawEvolutionRepairActionSchema
+    ClawEvolutionRepairPatch
+    clawEvolutionRepairPatchSchema
+    ClawEvolutionRepairReport
+    clawEvolutionRepairReportSchema
     ClawEvolutionReceipt
     clawEvolutionReceiptSchema
     ClawEvolutionRecord
@@ -1739,6 +1745,7 @@ The docs check script validates that every current export from
     createEvolutionOperatorPlan
     createEvolutionPublicSurfaceBaseline
     createEvolutionReceipt
+    createEvolutionRepairReport
     createExampleSyncResourceManifest
     createGatewayDeploymentManifest
     createManifest
@@ -2332,6 +2339,8 @@ The docs check script validates that every current export from
     remoteOfflineCommandResultSchema
     RemoteProviderDeviceE2EDomain
     remoteProviderDeviceE2EDomainSchema
+    RemoteProviderDeviceE2ETopologyTarget
+    remoteProviderDeviceE2ETopologyTargetSchema
     RemoteProviderDeviceE2EValidationPlan
     remoteProviderDeviceE2EValidationPlanSchema
     RemoteProviderDeviceE2EValidationStep
