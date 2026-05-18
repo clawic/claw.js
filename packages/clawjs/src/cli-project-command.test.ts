@@ -113,6 +113,80 @@ test("claw project detach and export keep folder data while producing safe hando
   assert.doesNotMatch(fs.readFileSync(output, "utf8"), /token|password|credential/i);
 });
 
+test("claw project import previews and restores safe handoff into a new workspace", async () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-project-import-"));
+  const source = path.join(cwd, "source-project");
+  const target = path.join(cwd, "target-project");
+  fs.mkdirSync(source, { recursive: true });
+  fs.mkdirSync(target, { recursive: true });
+
+  assert.equal(await runCli([
+    "project",
+    "attach",
+    source,
+    "--workspace-id",
+    "workspace-main",
+    "--project-id",
+    "portable-project",
+    "--accept",
+    "--json",
+  ], {
+    stdout: captureStream().stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+
+  const output = path.join(cwd, "portable-project.clawexport");
+  assert.equal(await runCli(["project", "export", source, "--output", output, "--json"], {
+    stdout: captureStream().stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+
+  const previewStdout = captureStream();
+  assert.equal(await runCli([
+    "project",
+    "import",
+    output,
+    target,
+    "--workspace-id",
+    "workspace-other",
+    "--json",
+  ], {
+    stdout: previewStdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+  const preview = parseCliJsonPayload<{ accepted: boolean; handoffKind: string; manifest: { projectId: string } }>(previewStdout.getOutput());
+  assert.equal(preview.accepted, false);
+  assert.equal(preview.handoffKind, "claw.project.handoff");
+  assert.equal(preview.manifest.projectId, "portable-project");
+  assert.equal(fs.existsSync(path.join(target, "claw.project.json")), false);
+
+  const importStdout = captureStream();
+  assert.equal(await runCli([
+    "project",
+    "import",
+    output,
+    target,
+    "--workspace-id",
+    "workspace-other",
+    "--accept",
+    "--json",
+  ], {
+    stdout: importStdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+  const imported = parseCliJsonPayload<{ accepted: boolean; manifest: { projectId: string; attachment: { state: string; workspaceId: string }; workspaceBinding: { workspaceId: string } } }>(importStdout.getOutput());
+  assert.equal(imported.accepted, true);
+  assert.equal(imported.manifest.projectId, "portable-project");
+  assert.deepEqual(imported.manifest.attachment, { state: "attached", workspaceId: "workspace-other" });
+  assert.deepEqual(imported.manifest.workspaceBinding, { workspaceId: "workspace-other" });
+  assert.match(fs.readFileSync(path.join(target, "AGENTS.md"), "utf8"), /folder is a Claw Project primary folder/);
+  assert.equal(fs.existsSync(path.join(target, ".claw")), false);
+});
+
 test("claw project copy into another workspace stays detached until explicitly replaced", async () => {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-project-copy-"));
   const folder = path.join(cwd, "copied-project");

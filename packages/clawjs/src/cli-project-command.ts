@@ -8,6 +8,7 @@ import {
   attachProjectFolder,
   detachProjectFolder,
   exportProjectHandoff,
+  importProjectHandoff,
   inspectProjectFolder,
   syncProjectHandoff,
 } from "./project.ts";
@@ -23,9 +24,35 @@ export async function runProjectManifestCli(input: {
   const [group, command] = input.positionals;
   if (group !== "project") return null;
   const action = command ?? "inspect";
+  const meta = { invokedCommand: "project", subcommand: action };
+
+  if (action === "import") {
+    const handoffTarget = input.flags.input || input.positionals[2];
+    const folderTarget = input.flags.project || input.flags.folder || input.positionals[3] || ".";
+    const workspaceId = input.flags["workspace-id"] || input.flags.workspaceId;
+    if (!handoffTarget || !workspaceId) {
+      input.context.stderr.write(`Usage: ${input.binName} project import <handoff.clawexport> <folder> --workspace-id ID [--accept]\n`);
+      return CLI_EXIT_USAGE;
+    }
+    const projectRoot = path.resolve(input.context.cwd, folderTarget);
+    const handoffPath = path.resolve(input.context.cwd, handoffTarget);
+    const preview = await importProjectHandoff({
+      handoffPath,
+      projectRoot,
+      workspaceId,
+      accept: readBooleanFlag(input.argv, input.flags, "accept", false),
+      replaceDuplicate: readBooleanFlag(input.argv, input.flags, "replace", false),
+    });
+    if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "project", preview, meta);
+    else {
+      input.context.stdout.write(`${preview.accepted ? "imported" : "preview"} ${preview.projectId}\n`);
+      input.context.stdout.write(`${preview.writes.map((entry) => `${entry.action} ${entry.path}`).join("\n")}\n`);
+    }
+    return CLI_EXIT_OK;
+  }
+
   const target = input.flags.project || input.flags.folder || input.positionals[2] || ".";
   const projectRoot = path.resolve(input.context.cwd, target);
-  const meta = { invokedCommand: "project", subcommand: action };
 
   if (action === "inspect" || action === "status") {
     const inspection = inspectProjectFolder(projectRoot, { workspaceId: input.flags["workspace-id"] || input.flags.workspaceId });
@@ -80,6 +107,6 @@ export async function runProjectManifestCli(input: {
     return CLI_EXIT_OK;
   }
 
-  input.context.stderr.write(`Usage: ${input.binName} project inspect|attach|detach|export|sync-handoff [folder] [--json]\n`);
+  input.context.stderr.write(`Usage: ${input.binName} project inspect|attach|detach|export|import|sync-handoff [folder] [--json]\n`);
   return CLI_EXIT_USAGE;
 }
