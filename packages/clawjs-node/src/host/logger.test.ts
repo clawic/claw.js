@@ -57,6 +57,18 @@ test("redactSecrets preserves safe secret metadata containers", () => {
   assert.equal((redacted.secretValue as string).includes("secret-token"), false);
 });
 
+test("redactSecrets preserves primitive secret-shaped compliance fields", () => {
+  const redacted = redactSecrets({
+    noPlaintextSecrets: true,
+    secretCount: 0,
+    nestedSecretConfig: { value: "unsafe" },
+  });
+
+  assert.equal(redacted.noPlaintextSecrets, true);
+  assert.equal(redacted.secretCount, 0);
+  assert.equal(redacted.nestedSecretConfig, "[REDACTED]");
+});
+
 test("StructuredLogger writes sanitized structured entries", () => {
   const sink = new MemoryStructuredLogSink();
   const logger = new StructuredLogger(sink).child({ workspaceId: "demo" });

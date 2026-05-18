@@ -54,12 +54,16 @@ export function redactSecrets<TValue>(value: TValue): TValue {
       Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
         key,
           SENSITIVE_KEY_PATTERN.test(key) && !SAFE_SECRET_METADATA_KEYS.has(key) && !isSafePublicCatalogKey(key, entry)
-          ? (typeof entry === "string" ? redactString(entry) : "[REDACTED]")
+          ? (typeof entry === "string" ? redactString(entry) : isPrimitiveSafeValue(entry) ? entry : "[REDACTED]")
           : redactSecrets(entry),
       ]),
     ) as TValue;
   }
   return value;
+}
+
+function isPrimitiveSafeValue(value: unknown): boolean {
+  return value === null || typeof value === "boolean" || typeof value === "number";
 }
 
 function isSafePublicCatalogKey(key: string, value: unknown): boolean {
