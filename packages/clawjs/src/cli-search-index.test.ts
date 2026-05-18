@@ -2286,6 +2286,14 @@ test("business writes enqueue and index business record fast paths", async () =>
     const deleteJob = deleteJobsPayload.data.items.find((entry) => entry.resourceId === "biz.customer.alpha" && entry.operation === "delete");
     assert.equal(deleteJob?.payload.eventDriven, true);
     assert.equal(deleteJob?.payload.recordId, "biz.customer.alpha");
+    const businessDeleteRun = await runCliCapture(["search", "service", "run-once", "--source", "business.records", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(businessDeleteRun.code, CLI_EXIT_OK);
+    const businessDeleteRunItem = (JSON.parse(businessDeleteRun.stdout) as any).data.service.worker?.items.find((entry: any) => entry.source === "business.records");
+    assert.deepEqual({ source: businessDeleteRunItem?.source, operation: businessDeleteRunItem?.operation, status: businessDeleteRunItem?.status, indexed: businessDeleteRunItem?.indexed }, { source: "business.records", operation: "delete", status: "done", indexed: 1 });
+    const afterBusinessDelete = await runCliCapture(["search", "query", "renewal evidence", "--sources", "business.records", "--filters", "metadata.kind=customer", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterBusinessDelete.code, CLI_EXIT_DEGRADED, afterBusinessDelete.stderr || afterBusinessDelete.stdout);
+    const afterBusinessDeletePayload = JSON.parse(afterBusinessDelete.stdout) as any;
+    assert.equal(afterBusinessDeletePayload.data.results.some((entry: any) => entry.source === "business.records" && entry.title === "Alpha Customer"), false);
   });
 });
 
