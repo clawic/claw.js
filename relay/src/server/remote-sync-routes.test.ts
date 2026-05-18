@@ -7,6 +7,7 @@ import { test } from "vitest";
 import {
   buildRemoteExternalPendingRegister,
   buildRemoteExternalValidationChecklist,
+  buildRemoteExternalValidationApprovalRequest,
   buildRemoteExternalValidationEvidenceArtifact,
   buildRemoteExternalValidationEvidenceTemplate,
   buildRemoteExternalValidationReport,
@@ -157,6 +158,19 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(externalValidationReadinessPayload.requiredEvidenceCount, expectedExternalValidationReadiness.requiredEvidenceCount);
     assert.equal(externalValidationReadinessPayload.missingEvidenceRequirementIds.length, expectedExternalPending.requirements.length);
     assert.equal(externalValidationReadinessPayload.closureGateBlockers.includes("source_qa_review"), true);
+
+    const externalValidationApprovalRequest = await built.app.inject({ method: "GET", url: "/v1/remote/external-validation-approval-request" });
+    assert.equal(externalValidationApprovalRequest.statusCode, 200);
+    const externalValidationApprovalRequestPayload = externalValidationApprovalRequest.json() as { status: string; approvalRequired: boolean; approved: boolean; readinessStatus: string; writes: boolean; requirementIds: string[]; validationDomains: string[]; prohibitedActions: string[] };
+    const expectedExternalValidationApprovalRequest = buildRemoteExternalValidationApprovalRequest();
+    assert.equal(externalValidationApprovalRequestPayload.status, "approval_required");
+    assert.equal(externalValidationApprovalRequestPayload.approvalRequired, true);
+    assert.equal(externalValidationApprovalRequestPayload.approved, false);
+    assert.equal(externalValidationApprovalRequestPayload.readinessStatus, expectedExternalValidationApprovalRequest.readinessStatus);
+    assert.equal(externalValidationApprovalRequestPayload.writes, false);
+    assert.equal(externalValidationApprovalRequestPayload.requirementIds.length, expectedExternalPending.requirements.length);
+    assert.deepEqual(externalValidationApprovalRequestPayload.validationDomains, ["chat", "search", "sync", "secret_refs", "hosted_agents"]);
+    assert.equal(externalValidationApprovalRequestPayload.prohibitedActions.some((entry) => entry.includes("plaintext secrets")), true);
 
     const externalValidationReport = await built.app.inject({ method: "GET", url: "/v1/remote/external-validation-report" });
     assert.equal(externalValidationReport.statusCode, 200);
@@ -314,6 +328,29 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.deepEqual(reviewedPendingClosureGatePayload.clearableExternalRequirementIds, []);
     assert.deepEqual(reviewedPendingClosureGatePayload.blockers, ["external_validation"]);
 
+    const wrongSourceClosureGate = await built.app.inject({
+      method: "POST",
+      url: "/v1/remote/closure-gate",
+      headers: { "content-type": "application/json" },
+      payload: {
+        ...sourceQaReviewArtifact,
+        sourceConversationId: "wrong-source-conversation",
+        evidence: externalValidationArtifact.evidence,
+      },
+    });
+    assert.notEqual(wrongSourceClosureGate.statusCode, 200);
+
+    const wrongSourceValidationReport = await built.app.inject({
+      method: "POST",
+      url: "/v1/remote/external-validation-report",
+      headers: { "content-type": "application/json" },
+      payload: {
+        ...externalValidationArtifact,
+        sourcePlanId: "wrong-source-plan",
+      },
+    });
+    assert.notEqual(wrongSourceValidationReport.statusCode, 200);
+
     const readyForApprovedRun = await built.app.inject({
       method: "POST",
       url: "/v1/remote/external-validation-readiness",
@@ -335,6 +372,24 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.deepEqual(readyForApprovedRunPayload.missingEvidenceRequirementIds, []);
     assert.deepEqual(readyForApprovedRunPayload.closureGateBlockers, ["external_validation"]);
     assert.equal(readyForApprovedRunPayload.nextAction.includes("approved physical/provider validation"), true);
+
+    const approvalRequestReady = await built.app.inject({
+      method: "POST",
+      url: "/v1/remote/external-validation-approval-request",
+      headers: { "content-type": "application/json" },
+      payload: {
+        ...sourceQaReviewArtifact,
+        evidence: externalValidationArtifact.evidence,
+      },
+    });
+    assert.equal(approvalRequestReady.statusCode, 200);
+    const approvalRequestReadyPayload = approvalRequestReady.json() as { status: string; approvalRequired: boolean; approved: boolean; readinessStatus: string; requiredCommands: string[]; writes: boolean };
+    assert.equal(approvalRequestReadyPayload.status, "approval_required");
+    assert.equal(approvalRequestReadyPayload.approvalRequired, true);
+    assert.equal(approvalRequestReadyPayload.approved, false);
+    assert.equal(approvalRequestReadyPayload.readinessStatus, "ready_for_approved_run");
+    assert.equal(approvalRequestReadyPayload.requiredCommands.some((entry) => entry.includes("validation-readiness")), true);
+    assert.equal(approvalRequestReadyPayload.writes, false);
 
     const clearableClosureGate = await built.app.inject({
       method: "POST",

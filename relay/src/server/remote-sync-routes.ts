@@ -2,6 +2,7 @@ import {
   buildRemoteConformanceReport,
   buildRemoteExternalPendingRegister,
   buildRemoteExternalValidationEvidenceArtifact,
+  buildRemoteExternalValidationApprovalRequest,
   buildRemoteExternalValidationChecklist,
   buildRemoteExternalValidationEvidenceTemplate,
   buildRemoteExternalValidationReport,
@@ -28,13 +29,13 @@ import {
   createSyncResourceManifest,
   evaluateRemoteAgentServiceAccess,
   parseRemoteExternalValidationEvidenceInput,
+  parseRemoteSourceQaReviewInput,
   reconcileSyncQueue,
   remoteSyncRequiredRouteIds,
   syncDriverSchema,
   syncObjectSnapshotSchema,
   type MeshShareAction,
   type RemoteExternalValidationEvidence,
-  type RemoteSourceQaReviewItem,
   type RemoteCompatibilityClientKind,
   type SyncAuthority,
   type SyncDriver,
@@ -93,16 +94,39 @@ function remoteExternalValidationRunbookPayload() {
   return buildRemoteExternalValidationRunbook();
 }
 
+function remoteSourceQaReviewsFromInput(input: Record<string, unknown>): ReturnType<typeof parseRemoteSourceQaReviewInput> {
+  if (input.sourceQaReviews !== undefined) return parseRemoteSourceQaReviewInput(input.sourceQaReviews);
+  if (
+    Array.isArray(input.items)
+    || "sourceConversationId" in input
+    || "sourcePlanId" in input
+    || "reviewedAt" in input
+  ) {
+    return parseRemoteSourceQaReviewInput(input);
+  }
+  return [];
+}
+
 function remoteExternalValidationReadinessPayload(input: Record<string, unknown> = {}) {
-  const sourceQaReviews = Array.isArray(input.sourceQaReviews)
-    ? input.sourceQaReviews
-    : Array.isArray(input.items) ? input.items : [];
+  const sourceQaReviews = remoteSourceQaReviewsFromInput(input);
   const evidence = input.evidence === undefined
     ? remoteExternalValidationEvidenceFromInput(input)
     : parseRemoteExternalValidationEvidenceInput(input.evidence);
   return buildRemoteExternalValidationReadiness({
     reviewedSourceQaIds: Array.isArray(input.reviewedSourceQaIds) ? input.reviewedSourceQaIds.filter((entry): entry is string => typeof entry === "string") : [],
-    sourceQaReviews: sourceQaReviews as RemoteSourceQaReviewItem[],
+    sourceQaReviews,
+    evidence,
+  });
+}
+
+function remoteExternalValidationApprovalRequestPayload(input: Record<string, unknown> = {}) {
+  const sourceQaReviews = remoteSourceQaReviewsFromInput(input);
+  const evidence = input.evidence === undefined
+    ? remoteExternalValidationEvidenceFromInput(input)
+    : parseRemoteExternalValidationEvidenceInput(input.evidence);
+  return buildRemoteExternalValidationApprovalRequest({
+    reviewedSourceQaIds: Array.isArray(input.reviewedSourceQaIds) ? input.reviewedSourceQaIds.filter((entry): entry is string => typeof entry === "string") : [],
+    sourceQaReviews,
     evidence,
   });
 }
@@ -114,12 +138,10 @@ function remoteExternalValidationReportPayload(input: Record<string, unknown> = 
 }
 
 function remoteGoalClosureGatePayload(input: Record<string, unknown> = {}) {
-  const sourceQaReviews = Array.isArray(input.sourceQaReviews)
-    ? input.sourceQaReviews
-    : Array.isArray(input.items) ? input.items : [];
+  const sourceQaReviews = remoteSourceQaReviewsFromInput(input);
   return buildRemoteGoalClosureGate({
     reviewedSourceQaIds: Array.isArray(input.reviewedSourceQaIds) ? input.reviewedSourceQaIds.filter((entry): entry is string => typeof entry === "string") : [],
-    sourceQaReviews: sourceQaReviews as RemoteSourceQaReviewItem[],
+    sourceQaReviews,
     evidence: input.evidence === undefined
       ? remoteExternalValidationEvidenceFromInput(input)
       : parseRemoteExternalValidationEvidenceInput(input.evidence),
@@ -456,6 +478,10 @@ export function registerRemoteSyncRoutes(app: FastifyInstance): void {
   app.get(clawApiPath("remote/external-validation-readiness"), async () => remoteExternalValidationReadinessPayload());
 
   app.post(clawApiPath("remote/external-validation-readiness"), async (request) => remoteExternalValidationReadinessPayload(readBody(request)));
+
+  app.get(clawApiPath("remote/external-validation-approval-request"), async () => remoteExternalValidationApprovalRequestPayload());
+
+  app.post(clawApiPath("remote/external-validation-approval-request"), async (request) => remoteExternalValidationApprovalRequestPayload(readBody(request)));
 
   app.get(clawApiPath("remote/external-validation-report"), async () => remoteExternalValidationReportPayload());
 

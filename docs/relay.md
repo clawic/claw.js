@@ -177,10 +177,18 @@ physical/provider run. They combine the source Q/A review, external evidence
 artifact, checklist, runbook, E2E plan, and closure gate. With the current
 versioned source Q/A and pending evidence artifacts, the readiness status is
 `ready_for_approved_run`: source review is complete, evidence rows are present
-for all 13 external requirements, and the only remaining closure blocker is
-`external_validation`. This status is not approval to run physical/provider
-validation; it only proves the software-side package is ready for an explicitly
-approved run.
+for all 13 external requirements as clean pending rows, and the only remaining
+closure blocker is `external_validation`. Partially approved evidence, such as
+rows missing `approvedRunRef`, remains `not_ready`; after a real approved run,
+the same gate advances only when the evidence is fully clearable. This status is
+not approval to run physical/provider validation; it only proves the
+software-side package is ready for an explicitly approved run.
+Relay `/v1/remote/external-validation-approval-request` and
+`claw remote validation-approval-request` expose the no-write approval packet
+for that real run. The packet is source-bound to this goal, lists all 13
+requirements and the five E2E domains, carries the required commands and
+prohibited actions, and always keeps `approvalRequired: true` with
+`approved: false` and status `approval_required`.
 The Relay `/v1/remote/external-validation-report` endpoint and
 `claw remote validation-report` evaluate external validation evidence against
 that checklist. A row is only `clearable` when the report includes approved-run
@@ -189,13 +197,18 @@ acceptance criteria, and `plaintextMaterialIncluded: false`; otherwise it remain
 `external_pending`. Evidence rows for unknown or duplicate requirement IDs are
 reported as `invalidEvidenceRequirementIds` or `duplicateEvidenceRequirementIds`
 and keep the report fail-closed. The POST body accepts the same artifact shape
-as the versioned file, with an `evidence` array and optional audit metadata.
+as the versioned file, with an `evidence` array and optional audit metadata;
+versioned artifacts are accepted only when their source conversation and plan
+IDs match this goal.
 The Relay `/v1/remote/source-qa-template` endpoint and
 `claw remote source-qa-template` expose the matching no-write source Q/A review
 template for the source conversation and plan. The template is not a review by
 itself: every row starts incomplete and must be converted into a
 `RemoteSourceQaReviewItem` with disposition, evidence refs, review timestamp,
 and `writes: false` before the closure gate accepts it.
+Versioned source Q/A review artifacts submitted to `/v1/remote/closure-gate`
+are source-bound the same way and are rejected when their conversation or plan
+IDs do not match this goal.
 Rows tied to `RemoteExternalPendingRegister` physical/provider requirements
 must use `external_pending` disposition until those requirements are cleared;
 duplicate rows are exposed as `duplicateSourceQaIds`, and disposition mismatches

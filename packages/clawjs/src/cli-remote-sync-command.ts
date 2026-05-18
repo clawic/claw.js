@@ -4,6 +4,7 @@ import {
   buildRemoteExternalValidationEvidenceArtifact,
   buildRemoteExternalValidationChecklist,
   buildRemoteExternalValidationEvidenceTemplate,
+  buildRemoteExternalValidationApprovalRequest,
   buildRemoteExternalValidationReport,
   buildRemoteExternalValidationReadiness,
   buildRemoteExternalValidationRunbook,
@@ -31,6 +32,7 @@ import {
   createTransportHandshakeReceipt,
   evaluateRemoteAgentServiceAccess,
   parseRemoteExternalValidationEvidenceInput,
+  parseRemoteSourceQaReviewInput,
   remoteSyncRequiredDecisionIds,
   remoteSyncRequiredRouteIds,
   syncObjectSnapshotSchema,
@@ -286,11 +288,7 @@ function parseSourceQaReviews(value: string | undefined, filePath: string | unde
   const raw = readJsonFlagValue(value, filePath, cwd);
   if (!raw) return [];
   const parsed = JSON.parse(raw) as unknown;
-  if (Array.isArray(parsed)) return parsed as RemoteSourceQaReviewItem[];
-  if (parsed && typeof parsed === "object" && Array.isArray((parsed as { items?: unknown }).items)) {
-    return (parsed as { items: RemoteSourceQaReviewItem[] }).items;
-  }
-  return [parsed as RemoteSourceQaReviewItem];
+  return parseRemoteSourceQaReviewInput(parsed);
 }
 
 function meshActionFlags(value: string | undefined, fallback: MeshShareAction[]): MeshShareAction[] {
@@ -545,6 +543,15 @@ export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
     });
     return writeOutput(input, "remote", readiness, `${readiness.status} sourceQa=${readiness.sourceQaReviewStatus} evidence=${readiness.evidenceCount}/${readiness.requiredEvidenceCount}`, command);
   }
+  if (command === "validation-approval-request" || command === "external-validation-approval-request" || command === "approval-request") {
+    const request = buildRemoteExternalValidationApprovalRequest({
+      generatedAt: input.flags.now,
+      reviewedSourceQaIds: parseReviewedSourceQaIds(input.flags["reviewed-source-qa-ids"] ?? input.flags["source-qa-ids"]),
+      sourceQaReviews: parseSourceQaReviews(input.flags["source-qa-review-json"], input.flags["source-qa-review-file"], input.context.cwd),
+      evidence: parseExternalValidationEvidence(input.flags["evidence-json"], input.flags["evidence-file"] ?? input.flags["external-validation-file"], input.context.cwd),
+    });
+    return writeOutput(input, "remote", request, `${request.status} readiness=${request.readinessStatus} requirements=${request.requirementIds.length}`, command);
+  }
   if (command === "validation-report" || command === "external-validation-report") {
     const report = buildRemoteExternalValidationReport({
       generatedAt: input.flags.now,
@@ -597,7 +604,7 @@ export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
       ...(state ? { state } : {}),
     }, `compat: ${status}`, command);
   }
-  return missing(input, "remote classify|check|routes|conformance|pending|validation-checklist|validation-template|validation-artifact|validation-runbook|validation-readiness|validation-report|source-qa-template|closure-gate|contracts|e2e-plan|compat");
+  return missing(input, "remote classify|check|routes|conformance|pending|validation-checklist|validation-template|validation-artifact|validation-runbook|validation-readiness|validation-approval-request|validation-report|source-qa-template|closure-gate|contracts|e2e-plan|compat");
 }
 
 export async function runSyncCli(input: RemoteSyncCliInput): Promise<number> {

@@ -6,6 +6,7 @@ import {
   buildRemoteConformanceReport,
   buildRemoteExternalPendingRegister,
   buildRemoteExternalValidationEvidenceArtifact,
+  buildRemoteExternalValidationApprovalRequest,
   buildRemoteExternalValidationChecklist,
   buildRemoteExternalValidationEvidenceTemplate,
   buildRemoteExternalValidationReport,
@@ -47,6 +48,7 @@ import {
   remoteAgentServiceExecutionReceiptSchema,
   remoteCompatibilityAdapterReceiptSchema,
   parseRemoteExternalValidationEvidenceInput,
+  parseRemoteSourceQaReviewInput,
   remoteExternalValidationEvidenceArtifactSchema,
   remoteExternalValidationRunbookSchema,
   remoteExternalValidationEvidenceSchema,
@@ -108,6 +110,7 @@ const requiredServiceApiRoutes = [
   "remote/external-validation-artifact",
   "remote/external-validation-runbook",
   "remote/external-validation-readiness",
+  "remote/external-validation-approval-request",
   "remote/external-validation-report",
   "remote/source-qa-template",
   "remote/closure-gate",
@@ -164,15 +167,19 @@ const requiredDocSnippets = [
   "/v1/remote/external-validation-artifact",
   "/v1/remote/external-validation-runbook",
   "/v1/remote/external-validation-readiness",
+  "/v1/remote/external-validation-approval-request",
   "claw remote validation-template",
   "claw remote validation-artifact",
   "claw remote validation-runbook",
   "claw remote validation-readiness",
+  "claw remote validation-approval-request",
   "ready_for_approved_run",
+  "approval_required",
   "external validation report",
   "approvedRunRef",
   "invalidEvidenceRequirementIds",
   "duplicateEvidenceRequirementIds",
+  "source-bound artifact mismatch",
   "/v1/remote/external-validation-report",
   "claw remote validation-report",
   "source Q/A review report",
@@ -347,7 +354,16 @@ if (sourceQaReviewArtifact.sourceConversationId !== sourceConversationId) fail("
 if (sourceQaReviewArtifact.sourcePlanId !== sourcePlanId) fail("source Q/A review artifact must bind the source plan ID");
 if (sourceQaReviewArtifact.status !== "complete_with_external_pending") fail("source Q/A review artifact must be complete_with_external_pending");
 if (sourceQaReviewArtifact.writes !== false) fail("source Q/A review artifact must be no-write");
-const sourceQaReviewItems = Array.isArray(sourceQaReviewArtifact.items) ? sourceQaReviewArtifact.items : [];
+const sourceQaReviewItems = parseRemoteSourceQaReviewInput(sourceQaReviewArtifact);
+try {
+  parseRemoteSourceQaReviewInput({
+    ...sourceQaReviewArtifact,
+    sourceConversationId: "wrong-source-conversation",
+  });
+  fail("source Q/A review parser must reject artifacts for another source conversation");
+} catch (error) {
+  if (!(error instanceof Error) || !error.message.includes("sourceConversationId")) throw error;
+}
 const sourceQaReviewReport = buildRemoteSourceQaReviewReport({
   generatedAt: "2026-05-18T11:20:00.000Z",
   reviews: sourceQaReviewItems,
@@ -563,6 +579,15 @@ const parsedExternalValidationEvidenceArtifactRows = parseRemoteExternalValidati
 if (parsedExternalValidationEvidenceArtifactRows.length !== externalValidationEvidenceArtifactRows.length) {
   fail("external validation evidence artifact parser must return every artifact evidence row");
 }
+try {
+  parseRemoteExternalValidationEvidenceInput({
+    ...externalValidationEvidenceArtifact,
+    sourcePlanId: "wrong-source-plan",
+  });
+  fail("external validation evidence parser must reject artifacts for another source plan");
+} catch (error) {
+  if (!(error instanceof Error) || !error.message.includes("sourcePlanId")) throw error;
+}
 if (externalValidationEvidenceArtifactRows.length !== externalPending.requirements.length) {
   fail("external validation evidence artifact must include one row per external pending requirement");
 }
@@ -606,6 +631,23 @@ if (artifactExternalValidationReadiness.closureGateBlockers.join(",") !== "exter
   fail("external validation readiness must leave only external_validation blocked before physical/provider runs");
 }
 if (artifactExternalValidationReadiness.writes !== false) fail("external validation readiness must be no-write");
+const artifactExternalValidationApprovalRequest = buildRemoteExternalValidationApprovalRequest({
+  generatedAt: externalValidationEvidenceArtifact.generatedAt ?? "2026-05-18T11:40:00.000Z",
+  sourceQaReviews: sourceQaReviewReport.items,
+  evidence: externalValidationEvidenceArtifactRows,
+});
+if (artifactExternalValidationApprovalRequest.status !== "approval_required") fail("external validation approval request must require approval");
+if (artifactExternalValidationApprovalRequest.approvalRequired !== true || artifactExternalValidationApprovalRequest.approved !== false) {
+  fail("external validation approval request must not approve the physical/provider run");
+}
+if (artifactExternalValidationApprovalRequest.readinessStatus !== "ready_for_approved_run") {
+  fail("external validation approval request must expose ready_for_approved_run readiness for current artifacts");
+}
+if (artifactExternalValidationApprovalRequest.requirementIds.length !== externalPending.requirements.length) fail("external validation approval request must include every external requirement");
+if (artifactExternalValidationApprovalRequest.validationDomains.join(",") !== "chat,search,sync,secret_refs,hosted_agents") fail("external validation approval request must cover all E2E domains");
+if (!artifactExternalValidationApprovalRequest.requiredCommands.some((entry) => entry.includes("validation-readiness"))) fail("external validation approval request must include readiness command");
+if (!artifactExternalValidationApprovalRequest.prohibitedActions.some((entry) => entry.includes("plaintext secrets"))) fail("external validation approval request must prohibit plaintext secrets");
+if (artifactExternalValidationApprovalRequest.writes !== false) fail("external validation approval request must be no-write");
 
 const emptyExternalValidationReport = buildRemoteExternalValidationReport({
   generatedAt: "2026-05-17T10:13:20.000Z",
@@ -729,6 +771,27 @@ if (missingApprovedRunRefExternalValidationReport.status !== "external_pending")
 }
 if (!missingApprovedRunRefExternalValidationReport.items.every((entry) => entry.approvedRunRefPresent === false && entry.clearable === false)) {
   fail("remote external validation report must expose missing approvedRunRef on every otherwise complete row");
+}
+const incompleteApprovedEvidenceReadiness = buildRemoteExternalValidationReadiness({
+  generatedAt: "2026-05-17T10:13:25.525Z",
+  sourceQaReviews: sourceQaReviewReport.items,
+  evidence: externalValidationChecklist.items.map((entry) => ({
+    schemaVersion: 1,
+    requirementId: entry.requirementId,
+    approvedRun: true,
+    physicalEvidenceRef: `evidence://${entry.requirementId}`,
+    artifactRefs: entry.requiredArtifacts,
+    acceptedCriteria: entry.acceptanceCriteria,
+    plaintextMaterialIncluded: false,
+    executedAt: "2026-05-17T10:13:24.000Z",
+    writes: false,
+  })),
+});
+if (incompleteApprovedEvidenceReadiness.status !== "not_ready") {
+  fail("external validation readiness must reject partially approved evidence that is missing approvedRunRef");
+}
+if (incompleteApprovedEvidenceReadiness.externalEvidenceReady !== false) {
+  fail("external validation readiness must not mark incomplete approved evidence as ready");
 }
 
 const blockedClosureGate = buildRemoteGoalClosureGate({
@@ -971,6 +1034,8 @@ for (const snippet of [
   "/v1/remote/external-validation-runbook",
   "buildRemoteExternalValidationReadiness",
   "/v1/remote/external-validation-readiness",
+  "buildRemoteExternalValidationApprovalRequest",
+  "/v1/remote/external-validation-approval-request",
   "buildRemoteExternalValidationReport",
   "/v1/remote/external-validation-report",
   "buildRemoteSourceQaReviewTemplate",
@@ -997,6 +1062,7 @@ for (const snippet of [
   "buildRemoteExternalPendingRegister",
   "buildRemoteExternalValidationEvidenceTemplate",
   "buildRemoteExternalValidationReadiness",
+  "buildRemoteExternalValidationApprovalRequest",
   "buildRemoteSourceQaReviewTemplate",
   "buildRemoteRouteContractCatalog",
   "SyncAuthorityHandoffReceipt",
