@@ -436,6 +436,16 @@ for (const ref of [
 ]) {
   if (!secretsSourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-006 must cite ${ref}`);
 }
+const syncSubstrateSourceQaReview = sourceQaReviewReport.items.find((item) => item.qaId === "QA-013");
+for (const ref of [
+  "claw sync drivers",
+  "claw sync apply",
+  "claw remote e2e-plan:sync",
+  "claw remote contracts:sync.skills,sync.memoryUserModel,sync.sessions,sync.driveFiles,sync.blobs,sync.searchIndex,sync.sqliteResources,sync.sidecars,sync.agentConfig,sync.workspaceState",
+  "claw remote pending:physical_sync_driver_application",
+]) {
+  if (!syncSubstrateSourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-013 must cite ${ref}`);
+}
 const reviewedClosureGate = buildRemoteGoalClosureGate({
   generatedAt: "2026-05-18T11:20:01.000Z",
   sourceQaReviews: sourceQaReviewReport.items,
