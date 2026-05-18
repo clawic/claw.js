@@ -993,6 +993,10 @@ for (const [source, scheduler] of Object.entries(requiredEventSchedulers)) {
   requireSnippet("packages/clawjs/src/cli-search-events.ts", scheduler);
   requireSnippet("packages/clawjs/src/cli-search-events.ts", `source: "${source}"`);
 }
+requireSnippet("packages/clawjs/src/cli-search-events.test.ts", "Search event schedulers create hot event-driven jobs for every framework source");
+for (const source of Object.keys(requiredEventSchedulers)) {
+  requireSnippet("packages/clawjs/src/cli-search-events.test.ts", `source: "${source}"`);
+}
 
 for (const snippet of [
   "Search Source Registry",
