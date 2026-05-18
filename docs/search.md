@@ -87,7 +87,7 @@ backfill jobs.
 | `connectors.catalog` | `connectors` | connector control-plane operations projected from `core.sqlite` without credential bindings, secret refs, or raw traces | implemented initial adapter |
 | `mcp.servers` | `mcp` | MCP server configuration projected from local config with env/header values redacted | implemented initial adapter |
 | `apps.catalog` | `apps` | framework app records projected from `core.sqlite` | implemented initial adapter |
-| `design.resources` | `design` | design resources, templates, styles, and references projected from `core.sqlite` | implemented initial adapter |
+| `design.resources` | `design` | design resources from `core.sqlite` plus workspace style, template, and reference manifests projected into `search.sqlite` | implemented initial adapter |
 | `runtime.events` | `runtime` | runtime jobs/events and monitor/infra/ops operational sidecars projected into `search.sqlite` | implemented initial adapter |
 | `local.files` | `files` | bounded local file metadata and text-content projection | implemented opt-in adapter, `full`, off by default |
 | `native.system` | `native` | native app/system/contact adapters | EXTERNAL PENDING, `full`, off by default |
@@ -548,9 +548,10 @@ signed host shortcut broker validates it.
   `snippets.library`, `agents.catalog`, `marketplace.choices`, `content.items`,
   `business.records`, `social.posts`, `iot.config`, and the first bounded
   `code.symbols` adapter with per-file event refresh. `slides.decks` also
-  supports changed-deck event refresh from local slide writes, and
+  supports changed-deck event refresh from local slide writes,
   `sheets.workbooks` supports changed-workbook event refresh for manifest
-  producers.
+  producers, and `design.resources` refreshes workspace style, template, and
+  reference manifests from local design commands.
 - Keep Clawix Mac Search and `Command-G` conversations-only.
 
 ### Phase 2: framework domains
