@@ -954,6 +954,7 @@ requireNoSnippet("packages/clawjs-search-mcp/package.json", "clawjs-index-mcp");
 for (const snippet of [
   "search.query",
   "search.sources.list",
+  "search.sources.set_state",
   "search.status",
   "search.jobs.schedule",
   "search.saved.create",
@@ -961,6 +962,7 @@ for (const snippet of [
   "search.actions.execute",
   "search.profiles.list",
   "search.cursors.list",
+  "value === \"external_pending\"",
 ]) {
   requireSnippet("packages/clawjs-search-mcp/src/index.ts", snippet);
 }

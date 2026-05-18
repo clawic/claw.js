@@ -9,6 +9,7 @@ import {
   LOCAL_TEXT_EMBEDDING_MODEL,
   SearchStore,
   createFrameworkSearchSourceManifest,
+  createFullSearchSourceManifest,
   createLocalTextEmbedding,
 } from "@clawjs/search";
 
@@ -411,6 +412,76 @@ test("Search MCP query applies agent result budgets", () => {
       agentBudget: { maxResults: 1 },
     }) as { results: Array<{ id: string }> };
     assert.equal(output.results.length, 1);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("Search MCP source state can mark signed-host sources external pending", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-mcp-external-pending-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFullSearchSourceManifest({
+      id: "native.system",
+      domain: "system",
+      name: "Native System",
+      resultTypes: ["system-item"],
+      capabilities: { actions: true, semantic: "optional" },
+    }));
+    store.upsertDocument({
+      id: "native.system:settings",
+      source: "native.system",
+      domain: "system",
+      type: "system-item",
+      title: "Native settings",
+      body: "native settings panel",
+      actions: [{ id: "open", kind: "open", label: "Open settings", risk: "system", grant: "native.system.open" }],
+    });
+    store.upsertVector({
+      documentId: "native.system:settings",
+      model: LOCAL_TEXT_EMBEDDING_MODEL,
+      embedding: createLocalTextEmbedding("native settings panel").vector,
+    });
+
+    const tools = createSearchMcpTools(store);
+    const setStateTool = tools.find((tool) => tool.name === "search.sources.set_state");
+    assert.ok(setStateTool);
+    const pending = setStateTool.handler({
+      source: "native.system",
+      state: "external_pending",
+      error: "requires signed host adapter",
+    }) as { source: string; state: string; error?: string };
+    assert.equal(pending.source, "native.system");
+    assert.equal(pending.state, "external_pending");
+    assert.equal(pending.error, "requires signed host adapter");
+
+    const queryTool = tools.find((tool) => tool.name === "search.query");
+    assert.ok(queryTool);
+    const output = queryTool.handler({
+      query: "settings",
+      profile: "full",
+      sources: ["native.system"],
+      localEmbedding: true,
+    }) as { partial: boolean; results: unknown[]; omittedSources: Array<{ source: string; reason: string; message?: string }> };
+    assert.equal(output.partial, true);
+    assert.deepEqual(output.results, []);
+    assert.equal(output.omittedSources[0]?.source, "native.system");
+    assert.equal(output.omittedSources[0]?.reason, "disabled");
+    assert.match(output.omittedSources[0]?.message ?? "", /external_pending/);
+
+    const actionsTool = tools.find((tool) => tool.name === "search.actions.list");
+    assert.ok(actionsTool);
+    assert.deepEqual(actionsTool.handler({ resultId: "native.system:settings" }), []);
+
+    const embeddingsIndexTool = tools.find((tool) => tool.name === "search.embeddings.index");
+    assert.ok(embeddingsIndexTool);
+    const indexed = embeddingsIndexTool.handler({ sources: ["native.system"] }) as { indexed: number };
+    assert.equal(indexed.indexed, 0);
+
+    const embeddingsStatusTool = tools.find((tool) => tool.name === "search.embeddings.status");
+    assert.ok(embeddingsStatusTool);
+    assert.deepEqual(embeddingsStatusTool.handler({ sources: ["native.system"] }), []);
   } finally {
     store.close();
     fs.rmSync(dir, { recursive: true, force: true });

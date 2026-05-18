@@ -156,7 +156,7 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
         required: ["source", "state"],
         properties: {
           source: { type: "string" },
-          state: { type: "string", enum: ["enabled", "disabled", "paused", "excluded", "backfilling", "degraded", "error"] },
+          state: { type: "string", enum: ["enabled", "disabled", "paused", "excluded", "backfilling", "degraded", "external_pending", "error"] },
           backlog: { type: "integer" },
           error: { type: "string" },
           lastIndexedAt: { type: "string" },
@@ -703,6 +703,7 @@ function requiredSearchSourceState(value: unknown): SearchSourceState {
     value === "excluded" ||
     value === "backfilling" ||
     value === "degraded" ||
+    value === "external_pending" ||
     value === "error"
   ) {
     return value;
