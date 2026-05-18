@@ -45,6 +45,8 @@ for (const snippet of [
   "createEvolutionOperatorPlan",
   "classifyEvolutionBackupPolicy",
   "createEvolutionReceipt",
+  "createEvolutionRepairReport",
+  "clawEvolutionRepairReportSchema",
   "redactEvolutionReceiptText",
   "runEvolutionMigratorLab",
 ]) requireSnippet("packages/clawjs-core/src/evolution.ts", snippet);

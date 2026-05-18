@@ -220,7 +220,14 @@ test("runCli exposes the evolution operator surface", async () => {
     steps: Array<{ id: string; status: string }>;
     backupPolicies: Array<{ strategy: string; requiresApproval: boolean }>;
     migrationLab: { status: string; fixtureIds: string[] };
-    receiptPreview: { redaction: { promptsIncluded: boolean; secretsIncluded: boolean; fullLocalPathsIncluded: boolean } };
+    repairReport: {
+      status: string;
+      patch: { format: string; status: string; redacted: boolean; diff: string };
+      safeActions: Array<{ id: string; command?: string }>;
+      approvalRequiredActions: Array<{ id: string }>;
+      receipt: { redaction: { promptsIncluded: boolean; secretsIncluded: boolean; fullLocalPathsIncluded: boolean } };
+      redaction: { externalSubmission: string };
+    };
   }>(repair.stdout);
   assert.equal(repairPayload.status, "approval_gated_plan");
   assert.equal(repairPayload.requiresApproval, true);
@@ -231,9 +238,29 @@ test("runCli exposes the evolution operator surface", async () => {
   assert.equal(repairPayload.backupPolicies.every((policy) => policy.requiresApproval), true);
   assert.equal(repairPayload.migrationLab.status, "pass");
   assert.equal(repairPayload.migrationLab.fixtureIds.includes("evo_fixture_v1_foundation"), true);
-  assert.equal(repairPayload.receiptPreview.redaction.promptsIncluded, false);
-  assert.equal(repairPayload.receiptPreview.redaction.secretsIncluded, false);
-  assert.equal(repairPayload.receiptPreview.redaction.fullLocalPathsIncluded, false);
+  assert.equal(repairPayload.repairReport.status, "needs_approval");
+  assert.equal(repairPayload.repairReport.patch.format, "unified_diff");
+  assert.equal(repairPayload.repairReport.patch.redacted, true);
+  assert.match(repairPayload.repairReport.patch.diff, /Evolution Repair Report/);
+  assert.equal(repairPayload.repairReport.safeActions.some((action) => action.command === "claw evolution doctor --json"), true);
+  assert.equal(repairPayload.repairReport.approvalRequiredActions.some((action) => action.id === "mutate_local_state"), true);
+  assert.equal(repairPayload.repairReport.receipt.redaction.promptsIncluded, false);
+  assert.equal(repairPayload.repairReport.receipt.redaction.secretsIncluded, false);
+  assert.equal(repairPayload.repairReport.receipt.redaction.fullLocalPathsIncluded, false);
+  assert.equal(repairPayload.repairReport.redaction.externalSubmission, "explicit_approval_only");
+
+  const report = await runCliCapture(["evolution", "report", "--json"], process.cwd());
+  assert.equal(report.code, CLI_EXIT_OK);
+  const reportPayload = parseCliJsonPayload<{
+    repairReport: {
+      status: string;
+      approvalRequiredActions: Array<{ id: string }>;
+      redaction: { externalSubmission: string };
+    };
+  }>(report.stdout);
+  assert.equal(reportPayload.repairReport.status, "needs_approval");
+  assert.equal(reportPayload.repairReport.approvalRequiredActions.some((action) => action.id === "submit_external_report"), true);
+  assert.equal(reportPayload.repairReport.redaction.externalSubmission, "explicit_approval_only");
 
   const dryRun = await runCliCapture(["evolution", "dry-run", "--json"], process.cwd());
   assert.equal(dryRun.code, CLI_EXIT_OK);
