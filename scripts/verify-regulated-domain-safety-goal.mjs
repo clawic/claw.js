@@ -29,6 +29,12 @@ function requireNoSnippet(relativePath, snippet) {
   }
 }
 
+function extractTableIds(text, prefix) {
+  return new Set(text.split(/\r?\n/)
+    .map((line) => line.match(new RegExp(`^\\|\\s*(${prefix}-\\d{3})\\s*\\|`))?.[1])
+    .filter(Boolean));
+}
+
 function walk(dir, predicate, files = []) {
   const absoluteDir = path.join(rootDir, dir);
   if (!fs.existsSync(absoluteDir)) return files;
@@ -194,7 +200,19 @@ for (const [relativePath, snippets] of [
   ]],
   ["docs/decision-map.md", [
     "Regulated domains are assistive",
+    "Legal Closure Decision Audit",
+    "scripts/verify-regulated-domain-safety-goal.mjs",
     "packages/clawjs-core/src/regulated-domain-safety.test.ts",
+  ]],
+  ["docs/legal-closure-decision-audit.md", [
+    "Source conversation: `019e3a44-1175-7930-b45c-252f342b5ec2`",
+    "Closure state: `active_goal_not_complete`",
+    "33 structured decisions",
+    "LC-001",
+    "LC-033",
+    "EXTERNAL PENDING",
+    "Required Evidence Spine",
+    "no final legal certification",
   ]],
   ["docs/regulated-domain-safety.md", [
     "The default safe envelope",
@@ -215,6 +233,16 @@ for (const [relativePath, snippets] of [
   ]],
 ]) {
   for (const snippet of snippets) requireSnippet(relativePath, snippet);
+}
+
+const legalClosureAudit = read("docs/legal-closure-decision-audit.md");
+const legalClosureIds = extractTableIds(legalClosureAudit, "LC");
+if (legalClosureIds.size !== 33) {
+  errors.push(`docs/legal-closure-decision-audit.md: expected 33 LC rows, found ${legalClosureIds.size}`);
+}
+for (let index = 1; index <= 33; index += 1) {
+  const id = `LC-${String(index).padStart(3, "0")}`;
+  if (!legalClosureIds.has(id)) errors.push(`docs/legal-closure-decision-audit.md: missing ${id}`);
 }
 
 for (const snippet of [
