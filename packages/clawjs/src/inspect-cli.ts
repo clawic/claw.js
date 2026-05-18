@@ -1072,9 +1072,9 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
         capabilities: GOVERNANCE_CAPABILITIES,
       },
       invariants: [
-        "tenant is technical isolation only",
+        "technical isolation identifiers are not authority",
         "owner is not authority",
-        "companyId is business data, not access control",
+        "business data identifiers are not access control",
         "membership and hierarchy do not imply read access",
         "restrictions inherit down scope hierarchy",
         "control does not imply read",
