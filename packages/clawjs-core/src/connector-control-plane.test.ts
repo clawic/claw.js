@@ -263,4 +263,93 @@ test("connector control plane fails closed when governed context is required but
   assert.equal(decision.allowed, false);
   assert.equal(decision.reasons.some((reason) => reason.code === "context_object_blocked"), true);
   assert.equal(decision.reasons.some((reason) => reason.code === "context_record_missing"), true);
+  assert.equal(decision.audit.providerId, "apple");
+  assert.equal(decision.audit.operationId, "apple.upload");
+  assert.equal(decision.audit.reasonCodes?.includes("context_object_blocked"), true);
+});
+
+test("connector control plane audit declares governed context refs, secret refs, defaults, fallback rules, and approvals", () => {
+  const operation: ConnectorExecutionRequest["operation"] = {
+    ...baseRequest.operation,
+    id: "revenuecat.project_configuration.read",
+    providerId: "revenuecat",
+    credentialRequired: true,
+    requiresApproval: true,
+    contextRequirements: [{ kind: "key", fields: ["api_version", "api_key"] }],
+  };
+  const request: ConnectorExecutionRequest = {
+    ...baseRequest,
+    provider: { id: "revenuecat", displayName: "RevenueCat", trustTier: "third_party", enabled: true },
+    operation,
+    capabilityId: "project.read.configuration",
+    now: "2026-05-18T10:00:00.000Z",
+    credentialBinding: {
+      id: "cred-revenuecat-v1",
+      providerId: "revenuecat",
+      secretRef: "secret://revenuecat/v1",
+      credentialKind: "api_key",
+      operationIds: ["revenuecat.project_configuration.read"],
+      capabilityIds: ["project.read.configuration"],
+      enabled: true,
+    },
+    governedContext: explainConnectorContextChoice({
+      providerId: "revenuecat",
+      operationId: "revenuecat.project_configuration.read",
+      requirements: operation.contextRequirements ?? [],
+      defaultRefs: ["revenuecat_api_v2"],
+      fallbackRules: [{
+        id: "revenuecat_v2_to_v1",
+        fromRef: "revenuecat_api_v2",
+        toRef: "revenuecat_api_v1",
+        condition: "v2 paused",
+        guidance: "Use v1 only while v2 is paused.",
+      }],
+      candidates: [
+        {
+          id: "revenuecat_api_v2",
+          providerId: "revenuecat",
+          kind: "key",
+          displayName: "RevenueCat API v2",
+          state: "paused",
+          fields: {
+            api_version: { value: "v2", sensitivity: "public" },
+            api_key: { sensitivity: "secret_ref", secretRef: "secret://revenuecat/v2" },
+          },
+        },
+        {
+          id: "revenuecat_api_v1",
+          providerId: "revenuecat",
+          kind: "key",
+          displayName: "RevenueCat API v1",
+          state: "active",
+          fields: {
+            api_version: { value: "v1", sensitivity: "public" },
+            api_key: { sensitivity: "secret_ref", secretRef: "secret://revenuecat/v1" },
+          },
+        },
+      ],
+    }),
+  };
+
+  const decision = evaluateConnectorControlPlaneRequest({
+    request,
+    policy: basePolicy,
+    approvalGrant: {
+      id: "approval-release-read",
+      expiresAt: "2026-05-18T10:10:00.000Z",
+      providerIds: ["revenuecat"],
+      operationIds: ["revenuecat.project_configuration.read"],
+      capabilityIds: ["project.read.configuration"],
+      riskTiers: ["write"],
+    },
+  });
+
+  assert.equal(decision.allowed, true);
+  assert.deepEqual(decision.audit.contextRefs, ["revenuecat_api_v1"]);
+  assert.deepEqual(decision.audit.contextFieldRefs, ["revenuecat_api_v1.api_version", "revenuecat_api_v1.api_key"]);
+  assert.deepEqual(decision.audit.secretRefs, ["secret://revenuecat/v1"]);
+  assert.deepEqual(decision.audit.defaultContextRefs, ["revenuecat_api_v2"]);
+  assert.deepEqual(decision.audit.appliedRuleIds, ["revenuecat_v2_to_v1"]);
+  assert.equal(decision.audit.approvalGrantId, "approval-release-read");
+  assert.deepEqual(decision.audit.reasonCodes, []);
 });

@@ -107,6 +107,65 @@ test("RevenueCat API v2 is the default and v1 is a traced fallback", () => {
   assert.deepEqual(decision.trace.fallbackRuleIds, ["revenuecat_v2_to_v1"]);
 });
 
+test("context choice fails closed for field policy, missing secret binding, approval, and wrong environment", () => {
+  const decision = explainConnectorContextChoice({
+    providerId: "apple",
+    operationId: "apple.upload",
+    environment: "production",
+    requirements: [
+      { kind: "team", fields: ["team_id"] },
+      { kind: "key", fields: ["app_store_connect_api_key"] },
+      { kind: "app", fields: ["bundle_id", "sku"] },
+    ],
+    candidates: [
+      {
+        id: "apple_team_approval",
+        providerId: "apple",
+        kind: "team",
+        displayName: "Apple team requiring approval",
+        state: "active",
+        policy: { effect: "requires_approval", reason: "Release signing requires explicit approval." },
+        fields: {
+          team_id: { value: "TEAM-APPROVAL", sensitivity: "private" },
+        },
+      },
+      {
+        id: "apple_key_missing_secret",
+        providerId: "apple",
+        kind: "key",
+        displayName: "App Store Connect key",
+        state: "active",
+        fields: {
+          app_store_connect_api_key: { sensitivity: "secret_ref" },
+        },
+      },
+      {
+        id: "apple_app_wrong_env",
+        providerId: "apple",
+        kind: "app",
+        displayName: "Wrong environment app",
+        state: "active",
+        fields: {
+          environment: { value: "staging", sensitivity: "public" },
+          bundle_id: {
+            value: "com.example.app",
+            sensitivity: "private",
+            policy: { effect: "deny", reason: "This Bundle ID is blocked for release." },
+          },
+          sku: { value: "SKU123", sensitivity: "private" },
+        },
+      },
+    ],
+  });
+
+  assert.equal(decision.allowed, false);
+  assert.equal(decision.reasons.some((reason) => reason.code === "policy_requires_approval" && reason.recordId === "apple_team_approval"), true);
+  assert.equal(decision.reasons.some((reason) => reason.code === "context_secret_binding_missing" && reason.field === "app_store_connect_api_key"), true);
+  assert.equal(decision.reasons.some((reason) => reason.code === "wrong_environment" && reason.recordId === "apple_app_wrong_env"), true);
+  assert.equal(decision.reasons.some((reason) => reason.code === "context_field_blocked" && reason.field === "bundle_id"), true);
+  assert.equal(decision.reasons.every((reason) => typeof reason.remedy === "string" && reason.remedy.length > 0), true);
+});
+
 test("redaction keeps public values and never exposes private or secret material by default", () => {
   const redacted = redactConnectorContextRecord({
     id: "apple_app_main",

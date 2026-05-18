@@ -211,6 +211,18 @@ export interface ConnectorAuditDeclaration {
   traceMode: ConnectorTraceMode;
   fields: string[];
   rawTraceRequiresOptIn: boolean;
+  providerId?: string;
+  operationId?: string;
+  capabilityId?: string;
+  actorId?: string;
+  requestId?: string;
+  contextRefs?: string[];
+  contextFieldRefs?: string[];
+  secretRefs?: string[];
+  defaultContextRefs?: string[];
+  appliedRuleIds?: string[];
+  approvalGrantId?: string;
+  reasonCodes?: ConnectorControlPlaneDecisionReason["code"][];
 }
 
 export interface ConnectorControlPlaneDecisionReason {
@@ -345,7 +357,31 @@ export function evaluateConnectorControlPlaneRequest(input: {
       traceMode: policy.traceMode,
       fields: ["requestId", "actorId", "purpose", "providerId", "operationId", "capabilityId", "credentialBindingId", "governedContext", "decision"],
       rawTraceRequiresOptIn: policy.traceMode === "raw_encrypted_opt_in",
+      providerId: request.provider.id,
+      operationId: request.operation.id,
+      capabilityId: request.capabilityId,
+      ...(request.context?.actorId ? { actorId: request.context.actorId } : {}),
+      ...(request.context?.requestId ? { requestId: request.context.requestId } : {}),
+      ...auditGovernedContext(request),
+      ...(matchingGrant ? { approvalGrantId: matchingGrant.id } : {}),
+      reasonCodes: reasons.map((reason) => reason.code),
     },
+  };
+}
+
+function auditGovernedContext(request: ConnectorExecutionRequest): Pick<ConnectorAuditDeclaration, "contextRefs" | "contextFieldRefs" | "secretRefs" | "defaultContextRefs" | "appliedRuleIds"> {
+  const selected = request.governedContext?.selected ?? [];
+  const contextRefs = selected.map((record) => record.id);
+  const contextFieldRefs = selected.flatMap((record) => Object.keys(record.fields).map((fieldName) => `${record.id}.${fieldName}`));
+  const secretRefs = selected.flatMap((record) => Object.values(record.fields).flatMap((field) => field.secretRef ? [field.secretRef] : []));
+  const defaultContextRefs = request.governedContext?.trace.defaultRefs ?? [];
+  const appliedRuleIds = request.governedContext?.trace.fallbackRuleIds ?? [];
+  return {
+    ...(contextRefs.length > 0 ? { contextRefs } : {}),
+    ...(contextFieldRefs.length > 0 ? { contextFieldRefs } : {}),
+    ...(secretRefs.length > 0 ? { secretRefs } : {}),
+    ...(defaultContextRefs.length > 0 ? { defaultContextRefs } : {}),
+    ...(appliedRuleIds.length > 0 ? { appliedRuleIds } : {}),
   };
 }
 
