@@ -17,6 +17,7 @@ const ignoredDirectories = new Set([
   ".yarn",
   "artifacts",
   "build",
+  "claw.global.root",
   "coverage",
   "dist",
   "node_modules",

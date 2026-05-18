@@ -4,9 +4,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import Database from "better-sqlite3";
-
 import { SearchStore, createFrameworkSearchSourceManifest } from "@clawjs/search";
-
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./index.ts";
 import { captureStream, createFakeGenerationScript, runCliCapture, runInternalV1Cli, withPatchedEnv } from "./index-test-utils.ts";
 import { scheduleCodeSymbolsSearchEvent } from "./cli-search-events.ts";
@@ -477,7 +475,7 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(actionBrokeredPayload.data.plan.hostApprovalId, "approval_search_help");
     assert.equal(actionBrokeredPayload.data.plan.broker.sideEffects, "host_brokered");
 
-    const privateTokenQuery = await runCliCapture(["search", "query", "private token", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    const privateTokenQuery = await runCliCapture(["search", "query", "password qzx-private-token", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(privateTokenQuery.code, CLI_EXIT_DEGRADED);
 
     const audit = await runCliCapture(["search", "audit", "--data-dir", dataRoot, "--json", "--limit", "10"], workspaceRoot);
@@ -496,7 +494,7 @@ test("search rebuild and query use the Search sidecar without workspace state", 
         }>;
       };
     };
-    assert.equal(auditPayload.data.items.some((item) => item.type === "sensitive_query" && item.query === "private token"), true);
+    assert.equal(auditPayload.data.items.some((item) => item.type === "sensitive_query" && item.query === "password qzx-private-token"), true);
     assert.equal(auditPayload.data.items.some((item) => item.type === "action" && item.resultId === "commands:system" && item.actionId === "help" && item.status === "brokered" && item.risk === "system" && item.grant === "search.commands.run" && item.metadata?.hostApprovalId === "approval_search_help"), true);
 
     const status = await runCliCapture(["search", "status", "--data-dir", dataRoot, "--json"], workspaceRoot);
@@ -763,7 +761,7 @@ test("search rebuild and query use the Search sidecar without workspace state", 
       configDb.close();
     }
 
-    const pausedQuery = await runCliCapture(["search", "query", "system capabilities", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    const pausedQuery = await runCliCapture(["search", "query", "system capabilities", "--sources", "commands", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(pausedQuery.code, CLI_EXIT_DEGRADED);
     const pausedQueryPayload = JSON.parse(pausedQuery.stdout) as {
       data: { results: unknown[]; partial: boolean; omittedSources: Array<{ source: string; reason: string; message?: string }> };
@@ -2284,7 +2282,8 @@ test("search service resource jobs refresh only the targeted connector operation
     const store = new SearchStore(path.join(dataRoot, "search.sqlite"));
     try {
       assert.equal(store.query({ query: "images edit", sources: ["connectors.catalog"] }).results.length, 1);
-      assert.equal(store.query({ query: "needle connector beta only", sources: ["connectors.catalog"] }).results.length, 0);
+      const generatedRow = store.db.prepare("SELECT id FROM search_documents WHERE source = ? AND resource_id = ? AND deleted_at IS NULL").get("connectors.catalog", "openai.images.generate");
+      assert.equal(generatedRow, undefined);
     } finally {
       store.close();
     }

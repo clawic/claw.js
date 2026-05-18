@@ -17,6 +17,7 @@ dist/
 !.codex/skills/*/SKILL.md
 examples/demo/.claude/
 .clawjs/
+claw.global.root/
 .claw/.skills-v2.migrated
 .claw/observed/
 .claw/state/observed/

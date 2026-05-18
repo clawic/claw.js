@@ -29,6 +29,7 @@ const IGNORED_PATH_PARTS = [
   "/.data/",
   "/output/playwright/",
   "/playwright-report/",
+  "/docs/.vitepress/.temp/",
 ];
 const GENERATED_MARKERS = [
   "@generated",
