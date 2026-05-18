@@ -53,6 +53,7 @@ test("runCli exposes the generated stable surface inspection CLI", async () => {
   assert.equal(treePayload.version, 1);
   assert.equal(treePayload.nodes.some((node: { id: string }) => node.id === "claw.database.core"), true);
   assert.equal(treePayload.nodes.some((node: { id: string }) => node.id === "claw.database.monitor.table.metric_samples"), true);
+  assert.equal(treePayload.nodes.some((node: { id: string }) => node.id === "claw.database.monitor.table.metric_incidents"), true);
   assert.equal(treePayload.nodes.some((node: { id: string }) => node.id === "claw.contracts"), true);
 
   const show = await runCliCapture(["inspect", "show", "/database/core", "--json"], process.cwd());

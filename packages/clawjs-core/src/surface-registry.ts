@@ -2522,6 +2522,15 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       source: registrySource,
       notes: "Longer-lived aggregate buckets for metric history without retaining exhaustive raw samples.",
     }),
+    clawPersistentSurface.table({
+      id: "claw.database.monitor.table.metric_incidents",
+      name: "metric_incidents",
+      parentId: "claw.database.monitor",
+      databaseId: "claw.database.monitor",
+      storageClass: "sidecar",
+      source: registrySource,
+      notes: "Rule-triggered metric incidents reused by system telemetry, context providers and local charts.",
+    }),
     clawPersistentSurface.path({
       id: "claw.workspace.manifest",
       kind: "file",

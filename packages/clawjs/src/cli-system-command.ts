@@ -61,6 +61,24 @@ type MonitorMetricRollupRow = {
   tags: string;
 };
 
+type MonitorMetricIncidentRow = {
+  id: string;
+  rule_id: string;
+  metric_key: string;
+  severity: SystemTelemetryRuleDefinition["severity"];
+  status: "open" | "resolved";
+  operator: SystemTelemetryRuleDefinition["operator"];
+  threshold_json: string;
+  sample_value_type: MetricValueType;
+  sample_value_number: number | null;
+  sample_value_text: string | null;
+  sample_value_bool: number | null;
+  unit: string;
+  message: string;
+  opened_at: number;
+  last_seen_at: number;
+};
+
 const SYSTEM_DEFAULT_RULES: SystemTelemetryRuleDefinition[] = [
   {
     id: "cpu-load-high",
@@ -125,6 +143,27 @@ const MONITOR_METRIC_SCHEMA_SQL = String.raw`
   );
   CREATE INDEX IF NOT EXISTS idx_metric_rollups_key_bucket
     ON metric_rollups(metric_key, bucket_ms, bucket_start_at DESC);
+
+  CREATE TABLE IF NOT EXISTS metric_incidents (
+    id TEXT PRIMARY KEY,
+    rule_id TEXT NOT NULL,
+    source_id TEXT NOT NULL REFERENCES metric_sources(id) ON DELETE CASCADE,
+    metric_key TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    status TEXT NOT NULL,
+    operator TEXT NOT NULL,
+    threshold_json TEXT NOT NULL,
+    sample_value_type TEXT NOT NULL,
+    sample_value_number REAL,
+    sample_value_text TEXT,
+    sample_value_bool INTEGER,
+    unit TEXT NOT NULL,
+    message TEXT NOT NULL,
+    opened_at INTEGER NOT NULL,
+    last_seen_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_metric_incidents_key_time
+    ON metric_incidents(metric_key, last_seen_at DESC);
 `;
 
 function nowIso(): string {
@@ -163,7 +202,7 @@ function openMonitorDatabase(flags: Record<string, string>): { db: Database.Data
 }
 
 function emptyMonitorHistory(dbPath: string): ReturnType<typeof readMonitorHistory> {
-  return { store: "monitor.sqlite", dbPath, samples: [], rollups: [] };
+  return { store: "monitor.sqlite", dbPath, samples: [], rollups: [], incidents: [] };
 }
 
 function splitMetricValue(value: number | string | boolean | null): {
@@ -293,6 +332,62 @@ function parseThreshold(value: string | undefined): number | string | boolean {
   if (["true", "false"].includes(value.toLowerCase())) return value.toLowerCase() === "true";
   const numeric = Number(value);
   return Number.isFinite(numeric) ? numeric : value;
+}
+
+function compareMetricValue(value: number | string | boolean | null, operator: SystemTelemetryRuleDefinition["operator"], threshold: number | string | boolean): boolean {
+  if (value === null) return false;
+  if (operator === "changed") return false;
+  if (operator === "eq") return value === threshold;
+  if (typeof value === "number" && typeof threshold === "number") {
+    if (operator === "gt") return value > threshold;
+    if (operator === "gte") return value >= threshold;
+    if (operator === "lt") return value < threshold;
+    if (operator === "lte") return value <= threshold;
+  }
+  if (typeof value === "string" && typeof threshold === "string") {
+    if (operator === "gt") return value > threshold;
+    if (operator === "gte") return value >= threshold;
+    if (operator === "lt") return value < threshold;
+    if (operator === "lte") return value <= threshold;
+  }
+  return false;
+}
+
+function metricIncidentId(rule: SystemTelemetryRuleDefinition, sample: SystemTelemetryMetricSample, bucketStartAt: number): string {
+  const safeRuleId = rule.id.replace(/[^a-zA-Z0-9._-]+/g, "_");
+  const safeMetricKey = sample.key.replace(/[^a-zA-Z0-9._-]+/g, "_");
+  return `metric_incident_${safeRuleId}_${safeMetricKey}_${bucketStartAt}`;
+}
+
+function evaluateRulesForSnapshot(snapshot: SystemTelemetrySnapshot, rules: SystemTelemetryRuleDefinition[], capturedAt: number): Array<{
+  id: string;
+  rule: SystemTelemetryRuleDefinition;
+  sample: SystemTelemetryMetricSample;
+  value: ReturnType<typeof splitMetricValue>;
+  message: string;
+}> {
+  const enabledRules = rules.filter((rule) => rule.enabled);
+  const samplesByKey = new Map(snapshot.samples.map((entry) => [entry.key, entry]));
+  const bucketStartAt = Math.floor(capturedAt / MONITOR_ROLLUP_BUCKET_MS) * MONITOR_ROLLUP_BUCKET_MS;
+  const incidents: Array<{
+    id: string;
+    rule: SystemTelemetryRuleDefinition;
+    sample: SystemTelemetryMetricSample;
+    value: ReturnType<typeof splitMetricValue>;
+    message: string;
+  }> = [];
+  for (const rule of enabledRules) {
+    const entry = samplesByKey.get(rule.metricKey);
+    if (!entry || !compareMetricValue(entry.value, rule.operator, rule.threshold)) continue;
+    incidents.push({
+      id: metricIncidentId(rule, entry, bucketStartAt),
+      rule,
+      sample: entry,
+      value: splitMetricValue(entry.value),
+      message: `${rule.metricKey} ${rule.operator} ${String(rule.threshold)}`,
+    });
+  }
+  return incidents;
 }
 
 function upsertRule(state: SystemTelemetryState, input: { id: string; flags: Record<string, string> }): SystemTelemetryState {
@@ -429,12 +524,28 @@ function parseRangeMs(value: string | undefined): number {
   return amount * 86_400_000;
 }
 
-function recordSnapshotToMonitor(snapshot: SystemTelemetrySnapshot, flags: Record<string, string>): {
+function purgeMonitorRetention(db: Database.Database, now: number, flags: Record<string, string>): { samples: number; rollups: number; incidents: number } {
+  const rawRetentionMs = parseRangeMs(flags["raw-retention"] ?? flags["sample-retention"] ?? "6h");
+  const rollupRetentionMs = parseRangeMs(flags["rollup-retention"] ?? "7d");
+  const incidentRetentionMs = parseRangeMs(flags["incident-retention"] ?? "7d");
+  const sampleResult = db.prepare("DELETE FROM metric_samples WHERE captured_at < ?").run(now - rawRetentionMs);
+  const rollupResult = db.prepare("DELETE FROM metric_rollups WHERE bucket_start_at < ?").run(now - rollupRetentionMs);
+  const incidentResult = db.prepare("DELETE FROM metric_incidents WHERE last_seen_at < ?").run(now - incidentRetentionMs);
+  return {
+    samples: sampleResult.changes,
+    rollups: rollupResult.changes,
+    incidents: incidentResult.changes,
+  };
+}
+
+function recordSnapshotToMonitor(snapshot: SystemTelemetrySnapshot, flags: Record<string, string>, state: SystemTelemetryState): {
   store: "monitor.sqlite";
   dbPath: string;
   sourceId: string;
   sampleCount: number;
   rollupCount: number;
+  incidentCount: number;
+  purged: { samples: number; rollups: number; incidents: number };
 } {
   const { db, dbPath } = openMonitorDatabase(flags);
   try {
@@ -472,6 +583,25 @@ function recordSnapshotToMonitor(snapshot: SystemTelemetrySnapshot, flags: Recor
         last_value_text = excluded.last_value_text,
         last_value_bool = excluded.last_value_bool,
         unit = excluded.unit
+    `);
+    const upsertIncident = db.prepare(`
+      INSERT INTO metric_incidents (
+        id, rule_id, source_id, metric_key, severity, status, operator, threshold_json,
+        sample_value_type, sample_value_number, sample_value_text, sample_value_bool,
+        unit, message, opened_at, last_seen_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        severity = excluded.severity,
+        status = 'open',
+        threshold_json = excluded.threshold_json,
+        sample_value_type = excluded.sample_value_type,
+        sample_value_number = excluded.sample_value_number,
+        sample_value_text = excluded.sample_value_text,
+        sample_value_bool = excluded.sample_value_bool,
+        unit = excluded.unit,
+        message = excluded.message,
+        last_seen_at = excluded.last_seen_at
     `);
     const transaction = db.transaction(() => {
       upsertSource.run(
@@ -520,7 +650,30 @@ function recordSnapshotToMonitor(snapshot: SystemTelemetrySnapshot, flags: Recor
         );
         rollupCount += 1;
       }
-      return { sampleCount, rollupCount };
+      let incidentCount = 0;
+      for (const incident of evaluateRulesForSnapshot(snapshot, mergedRules(state), capturedAt)) {
+        upsertIncident.run(
+          incident.id,
+          incident.rule.id,
+          MONITOR_SOURCE_ID,
+          incident.sample.key,
+          incident.rule.severity,
+          "open",
+          incident.rule.operator,
+          JSON.stringify(incident.rule.threshold),
+          incident.value.valueType,
+          incident.value.valueNumber,
+          incident.value.valueText,
+          incident.value.valueBool,
+          incident.sample.unit,
+          incident.message,
+          capturedAt,
+          capturedAt,
+        );
+        incidentCount += 1;
+      }
+      const purged = purgeMonitorRetention(db, Date.now(), flags);
+      return { sampleCount, rollupCount, incidentCount, purged };
     });
     const recorded = transaction();
     return {
@@ -561,6 +714,20 @@ function readMonitorHistory(metricKey: string, rangeMs: number, flags: Record<st
     lastValue: number | string | boolean | null;
     unit: string;
     tags: Record<string, string>;
+  }>;
+  incidents: Array<{
+    id: string;
+    ruleId: string;
+    metricKey: string;
+    severity: SystemTelemetryRuleDefinition["severity"];
+    status: "open" | "resolved";
+    operator: SystemTelemetryRuleDefinition["operator"];
+    threshold: number | string | boolean | null;
+    sampleValue: number | string | boolean | null;
+    unit: string;
+    message: string;
+    openedAt: number;
+    lastSeenAt: number;
   }>;
 } {
   const sinceMs = Date.now() - rangeMs;
@@ -608,7 +775,31 @@ function readMonitorHistory(metricKey: string, rangeMs: number, flags: Record<st
       unit: row.unit,
       tags: safeJsonObject(row.tags),
     })).reverse();
-    return { store: "monitor.sqlite", dbPath, samples, rollups };
+    const incidents = (db.prepare(`
+      SELECT * FROM metric_incidents
+      WHERE metric_key = ? AND last_seen_at >= ?
+      ORDER BY last_seen_at DESC
+      LIMIT ?
+    `).all(metricKey, sinceMs, 100) as MonitorMetricIncidentRow[]).map((row) => ({
+      id: row.id,
+      ruleId: row.rule_id,
+      metricKey: row.metric_key,
+      severity: row.severity,
+      status: row.status,
+      operator: row.operator,
+      threshold: JSON.parse(row.threshold_json) as number | string | boolean | null,
+      sampleValue: joinMetricValue({
+        value_type: row.sample_value_type,
+        value_number: row.sample_value_number,
+        value_text: row.sample_value_text,
+        value_bool: row.sample_value_bool,
+      }),
+      unit: row.unit,
+      message: row.message,
+      openedAt: row.opened_at,
+      lastSeenAt: row.last_seen_at,
+    })).reverse();
+    return { store: "monitor.sqlite", dbPath, samples, rollups, incidents };
   } catch (error) {
     if (error instanceof Error && /no such table/i.test(error.message)) return emptyMonitorHistory(dbPath);
     throw error;
@@ -641,7 +832,7 @@ export async function runSystemCli(input: {
     const record = parseBoolean(input.flags.record, false);
     const payload = record ? {
       ...snapshot,
-      recorded: recordSnapshotToMonitor(snapshot, input.flags),
+      recorded: recordSnapshotToMonitor(snapshot, input.flags, readSystemTelemetryState(input.workspaceRoot)),
     } : snapshot;
     if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "system", payload, { subcommand: "snapshot" });
     else writeHuman(input.context, payload);
@@ -676,6 +867,7 @@ export async function runSystemCli(input: {
       },
       samples: history.samples,
       rollups: history.rollups,
+      incidents: history.incidents,
     };
     if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "system", payload, { subcommand: "history" });
     else writeHuman(input.context, payload);

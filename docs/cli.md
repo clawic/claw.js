@@ -445,6 +445,7 @@ adds telemetry, metric history, rules, and widget configuration:
 ```bash
 claw system snapshot --json
 claw system snapshot --record true --json
+claw system snapshot --record true --raw-retention 6h --rollup-retention 7d --json
 claw system metrics list --json
 claw system history system.cpu.load1 --range 1h --json
 claw system watch --interval 2000 --jsonl
@@ -459,8 +460,11 @@ claw system widgets delete cpu-menu --json
 Snapshots expose safe aggregate values by default and mark deeper hardware,
 permissioned, signed-host, or provider-backed metrics as unavailable until a
 validated provider supplies them. `--record true` stores the safe snapshot in
-the local metric store so `history` can return raw samples and minute rollups;
-the store defaults to `~/.claw/data/monitor.sqlite` and can be overridden with
+the local metric store so `history` can return raw samples, minute rollups, and
+rule incidents. Raw sample retention is short by default (`6h`); rollups and
+incidents default to `7d` and can be adjusted per write with
+`--raw-retention`, `--rollup-retention`, and `--incident-retention`. The store
+defaults to `~/.claw/data/monitor.sqlite` and can be overridden with
 `--monitor-db`, `CLAW_MONITOR_DB_PATH`, `CLAW_MONITOR_DATA_DIR`,
 `CLAW_DATA_DIR`, or `CLAW_HOME`. Rule and widget upserts mutate only local
 configuration under `.claw/data/system-telemetry-state.json`; they do not

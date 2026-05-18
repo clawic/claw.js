@@ -298,16 +298,29 @@ test("runCli records system telemetry snapshots into monitor metric history", as
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-system-telemetry-history-"));
   const monitorDb = path.join(workspaceRoot, "monitor.sqlite");
 
-  const snapshot = await runCliCapture(["system", "snapshot", "--record", "true", "--monitor-db", monitorDb, "--json"], process.cwd());
+  const upsertRule = await runCliCapture([
+    "system", "rules", "upsert", "memory-any",
+    "--metric-key", "system.memory.used",
+    "--operator", "gt",
+    "--threshold", "0",
+    "--severity", "warning",
+    "--workspace", workspaceRoot,
+    "--json",
+  ], process.cwd());
+  assert.equal(upsertRule.code, CLI_EXIT_OK);
+
+  const snapshot = await runCliCapture(["system", "snapshot", "--record", "true", "--workspace", workspaceRoot, "--monitor-db", monitorDb, "--json"], process.cwd());
   assert.equal(snapshot.code, CLI_EXIT_OK);
   const snapshotPayload = parseCliJsonPayload<{
-    recorded: { store: string; dbPath: string; sourceId: string; sampleCount: number; rollupCount: number };
+    recorded: { store: string; dbPath: string; sourceId: string; sampleCount: number; rollupCount: number; incidentCount: number; purged: { samples: number; rollups: number; incidents: number } };
   }>(snapshot.stdout);
   assert.equal(snapshotPayload.recorded.store, "monitor.sqlite");
   assert.equal(snapshotPayload.recorded.dbPath, monitorDb);
   assert.equal(snapshotPayload.recorded.sourceId, "system.telemetry.local");
   assert.equal(snapshotPayload.recorded.sampleCount >= 3, true);
   assert.equal(snapshotPayload.recorded.rollupCount >= 3, true);
+  assert.equal(snapshotPayload.recorded.incidentCount >= 1, true);
+  assert.deepEqual(snapshotPayload.recorded.purged, { samples: 0, rollups: 0, incidents: 0 });
   assert.equal(fs.existsSync(monitorDb), true);
 
   const history = await runCliCapture(["system", "history", "system.memory.used", "--range", "1h", "--monitor-db", monitorDb, "--json"], process.cwd());
@@ -316,11 +329,33 @@ test("runCli records system telemetry snapshots into monitor metric history", as
     retention: { status: string; rollupBucketMs: number };
     samples: Array<{ metricKey: string; sourceId: string; valueType: string; unit: string }>;
     rollups: Array<{ metricKey: string; bucketMs: number; count: number }>;
+    incidents: Array<{ ruleId: string; metricKey: string; severity: string; status: string; sampleValue: number }>;
   }>(history.stdout);
   assert.equal(historyPayload.retention.status, "recorded");
   assert.equal(historyPayload.retention.rollupBucketMs, 60_000);
   assert.equal(historyPayload.samples.some((sample) => sample.metricKey === "system.memory.used" && sample.sourceId === "system.telemetry.local" && sample.valueType === "number" && sample.unit === "bytes"), true);
   assert.equal(historyPayload.rollups.some((rollup) => rollup.metricKey === "system.memory.used" && rollup.bucketMs === 60_000 && rollup.count >= 1), true);
+  assert.equal(historyPayload.incidents.some((incident) => incident.ruleId === "memory-any" && incident.metricKey === "system.memory.used" && incident.severity === "warning" && incident.status === "open"), true);
+});
+
+test("runCli applies short local retention to system telemetry samples", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-system-telemetry-retention-"));
+  const monitorDb = path.join(workspaceRoot, "monitor.sqlite");
+
+  const snapshot = await runCliCapture(["system", "snapshot", "--record", "true", "--raw-retention", "0m", "--monitor-db", monitorDb, "--json"], process.cwd());
+  assert.equal(snapshot.code, CLI_EXIT_OK);
+  const snapshotPayload = parseCliJsonPayload<{
+    recorded: { sampleCount: number; purged: { samples: number; rollups: number; incidents: number } };
+  }>(snapshot.stdout);
+  assert.equal(snapshotPayload.recorded.sampleCount >= 3, true);
+  assert.equal(snapshotPayload.recorded.purged.samples >= 1, true);
+
+  const history = await runCliCapture(["system", "history", "system.memory.used", "--range", "1h", "--monitor-db", monitorDb, "--json"], process.cwd());
+  assert.equal(history.code, CLI_EXIT_OK);
+  const historyPayload = parseCliJsonPayload<{ retention: { status: string }; samples: unknown[]; rollups: Array<{ metricKey: string }> }>(history.stdout);
+  assert.equal(historyPayload.retention.status, "empty");
+  assert.deepEqual(historyPayload.samples, []);
+  assert.equal(historyPayload.rollups.some((rollup) => rollup.metricKey === "system.memory.used"), true);
 });
 
 test("runCli persists system telemetry rules and widgets in workspace state", async () => {
