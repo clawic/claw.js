@@ -15,7 +15,7 @@ import {
 
 import { createSearchMcpTools } from "./index.ts";
 
-test("Search MCP exposes profile, entrypoint, and explain tools", () => {
+test("Search MCP exposes source-set, entrypoint, and explain tools", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-mcp-tools-"));
   const store = new SearchStore(path.join(dir, "search.sqlite"));
   try {
