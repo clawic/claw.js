@@ -36,7 +36,9 @@ signing identity. Fields are classified as `public`, `private`, or
 Objects and fields may be active, paused, blocked, or retired. Policy can allow,
 deny, or require authorization by operation, provider, agent, role, workspace,
 project, app, or environment. Defaults and fallback rules are explicit and
-included in explanation traces.
+included in explanation traces. Defaults resolve by matching scope and priority;
+object and field policies scoped to agents, roles, or operations apply only
+when that actor, role, or operation is in the request.
 
 V1 ships a local catalog for Discord, GitLab, GitHub, Google with a Google Play
 subprofile, Airtable, Salesforce, HubSpot, Stripe, Notion, Slack, Telegram Bot

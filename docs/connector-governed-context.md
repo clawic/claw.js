@@ -51,6 +51,10 @@ secret reference value or resolved credential.
 - Exports default to redacted envelopes; private envelopes must declare
   protected handling and must not contain plaintext secret values.
 - Blocked, paused, retired, missing, and wrong-environment context fails closed.
+- Defaults resolve by matching scope and priority across global, workspace,
+  project, app, environment, provider, operation, agent, and role scopes.
+- Object and field policies may be scoped to operations, agents, and roles;
+  non-matching scoped policies do not block unrelated actors.
 - Defaults and fallbacks are included in decision traces.
 - Control-plane audit declarations preserve selected context refs, field refs,
   secret refs, default refs, fallback rule ids, approval grant id, and reason
