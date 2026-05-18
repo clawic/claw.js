@@ -1297,8 +1297,16 @@ requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "media-metadata-s
 requireSnippet("packages/clawjs/src/cli-search-image-media-sources.ts", "sourceType === \"generation\"");
 requireSnippet("packages/clawjs/src/cli-search-manifest-sources.test.ts", "afterSlideDelete");
 requireSnippet("packages/clawjs/src/cli-search-manifest-sources.test.ts", "source: \"slides.decks\", operation: \"delete\", status: \"done\", indexed: 1");
+requireSnippet("packages/clawjs/src/cli-search-slides-sheets-sources.ts", "id: `slides.decks:${stableSearchId(filePath)}:metadata`");
+requireSnippet("packages/clawjs/src/cli-search-manifest-sources.test.ts", "slides-metadata-fragment-needle");
+requireSnippet("packages/clawjs/src/cli-search-manifest-sources.test.ts", "slides-metadata-secret-never-index");
+requireSnippet("docs/search.md", "redacted deck metadata fragments");
 requireSnippet("packages/clawjs/src/cli-search-manifest-sources.test.ts", "afterSheetDelete");
 requireSnippet("packages/clawjs/src/cli-search-manifest-sources.test.ts", "source: \"sheets.workbooks\", operation: \"delete\", status: \"done\", indexed: 1");
+requireSnippet("packages/clawjs/src/cli-search-slides-sheets-sources.ts", "id: `sheets.workbooks:${stableSearchId(filePath)}:metadata`");
+requireSnippet("packages/clawjs/src/cli-search-manifest-sources.test.ts", "sheets-metadata-fragment-needle");
+requireSnippet("packages/clawjs/src/cli-search-manifest-sources.test.ts", "sheets-metadata-secret-never-index");
+requireSnippet("docs/search.md", "redacted workbook metadata fragments");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "afterConnectorDelete");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "source: \"connectors.catalog\", operation: \"delete\", status: \"done\", indexed: 1");
 requireSnippet("packages/clawjs/src/cli-search-command.ts", "id: `connectors.catalog:${row.id}:metadata`");

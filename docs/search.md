@@ -442,22 +442,24 @@ metadata is exposed through redacted metadata fragments. Search does not run
 speech-to-text providers from this adapter.
 
 `slides.decks` projects workspace slide deck manifests from the local slides
-surface. It indexes the deck title, theme, author metadata, output formats, and
-each slide as a Search fragment using headings, subtitles, body text, bullets,
-steps, metrics, tables, image captions, and notes already stored in the
-manifest. It does not parse rendered PPTX/PDF output; generated files remain
-media or generated-artifact records when those surfaces register them. Local
-`slides create`, `slides add`, `slides render`, and `slides share` writes
-schedule best-effort hot upsert jobs for changed deck manifests.
+surface. It indexes the deck title, theme, author metadata, output formats,
+redacted deck metadata fragments, and each slide as a Search fragment using
+headings, subtitles, body text, bullets, steps, metrics, tables, image captions,
+and notes already stored in the manifest. It does not parse rendered PPTX/PDF
+output; generated files remain media or generated-artifact records when those
+surfaces register them. Local `slides create`, `slides add`, `slides render`,
+and `slides share` writes schedule best-effort hot upsert jobs for changed deck
+manifests.
 
 `sheets.workbooks` projects local workbook manifests from
 `.claw/sheets/workbooks` or an explicit sheets root. It indexes workbook title,
-author/output metadata, sheet names, columns, rows, cells, tables, charts, and
-notes as workbook items with per-sheet fragments. It does not parse binary XLSX
-files directly; imported or generated files remain media/file records until a
-workbook manifest or extractor-owned projection exists. Producers that write
-workbook manifests can schedule best-effort hot upsert jobs for changed
-workbooks through the Search event scheduler.
+author/output metadata, redacted workbook metadata fragments, sheet names,
+columns, rows, cells, tables, charts, and notes as workbook items with per-sheet
+fragments. It does not parse binary XLSX files directly; imported or generated
+files remain media/file records until a workbook manifest or extractor-owned
+projection exists. Producers that write workbook manifests can schedule
+best-effort hot upsert jobs for changed workbooks through the Search event
+scheduler.
 
 `generations.artifacts` projects generated artifact records. It indexes prompts,
 titles, kind, status, backend/model metadata, command provenance, output
