@@ -2111,6 +2111,11 @@ The docs check script validates that every current export from
     REPRODUCTIVE_INTIMATE_FAMILY
     commandIntentToNeedOpportunity
     assertSafeClawProjectHandoff
+    clawProjectFolderAccessPolicySchema
+    clawProjectFolderReadAccessSchema
+    clawProjectFolderSyncModeSchema
+    clawProjectFolderSyncPolicySchema
+    clawProjectFolderWriteAccessSchema
     createClawProjectId
     evaluateGovernanceAccess
     evaluateGovernanceDelegation
