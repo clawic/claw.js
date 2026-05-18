@@ -187,6 +187,7 @@ test("runCli exposes the evolution operator surface", async () => {
     status: string;
     policy: { sourceOfTruth: string; postV1Migration: string; rescueCore: string };
     surfaceBaseline: { status: string; changed: number; uncovered: number };
+    migrationLab: { status: string; fixtureCount: number; checks: Array<{ id: string; status: string }> };
     checks: string[];
   }>(verify.stdout);
   assert.equal(payload.status, "ok");
@@ -195,8 +196,12 @@ test("runCli exposes the evolution operator surface", async () => {
   assert.equal(payload.policy.rescueCore, "launch_chat_repair");
   assert.equal(payload.surfaceBaseline.status, "unchanged");
   assert.equal(payload.surfaceBaseline.uncovered, 0);
+  assert.equal(payload.migrationLab.status, "pass");
+  assert.equal(payload.migrationLab.fixtureCount >= 1, true);
+  assert.equal(payload.migrationLab.checks.some((check) => check.id === "required_surface_kinds" && check.status === "pass"), true);
   assert.equal(payload.checks.includes("rescue_core_declared"), true);
   assert.equal(payload.checks.includes("public_surface_baseline_covered"), true);
+  assert.equal(payload.checks.includes("migration_lab_foundation_fixture_passed"), true);
 
   const diff = await runCliCapture(["evolution", "diff", "--json"], process.cwd());
   assert.equal(diff.code, CLI_EXIT_OK);
@@ -214,6 +219,7 @@ test("runCli exposes the evolution operator surface", async () => {
     rescueCore: string;
     steps: Array<{ id: string; status: string }>;
     backupPolicies: Array<{ strategy: string; requiresApproval: boolean }>;
+    migrationLab: { status: string; fixtureIds: string[] };
     receiptPreview: { redaction: { promptsIncluded: boolean; secretsIncluded: boolean; fullLocalPathsIncluded: boolean } };
   }>(repair.stdout);
   assert.equal(repairPayload.status, "approval_gated_plan");
@@ -223,20 +229,24 @@ test("runCli exposes the evolution operator surface", async () => {
   assert.equal(repairPayload.steps.some((step) => step.id === "preserve_launch_chat_repair"), true);
   assert.equal(repairPayload.steps.find((step) => step.id === "prepare_best_effort_backup")?.status, "approval_gated");
   assert.equal(repairPayload.backupPolicies.every((policy) => policy.requiresApproval), true);
+  assert.equal(repairPayload.migrationLab.status, "pass");
+  assert.equal(repairPayload.migrationLab.fixtureIds.includes("evo_fixture_v1_foundation"), true);
   assert.equal(repairPayload.receiptPreview.redaction.promptsIncluded, false);
   assert.equal(repairPayload.receiptPreview.redaction.secretsIncluded, false);
   assert.equal(repairPayload.receiptPreview.redaction.fullLocalPathsIncluded, false);
 
   const dryRun = await runCliCapture(["evolution", "dry-run", "--json"], process.cwd());
   assert.equal(dryRun.code, CLI_EXIT_OK);
-  const dryRunPayload = parseCliJsonPayload<{ status: string; mutates: boolean; requiresApproval: boolean }>(dryRun.stdout);
+  const dryRunPayload = parseCliJsonPayload<{ status: string; mutates: boolean; requiresApproval: boolean; migrationLab: { status: string } }>(dryRun.stdout);
   assert.equal(dryRunPayload.status, "dry_run_ready");
   assert.equal(dryRunPayload.mutates, false);
   assert.equal(dryRunPayload.requiresApproval, false);
+  assert.equal(dryRunPayload.migrationLab.status, "pass");
 
   const receipt = await runCliCapture(["evolution", "receipt", "--json"], process.cwd());
   assert.equal(receipt.code, CLI_EXIT_OK);
-  const receiptPayload = parseCliJsonPayload<{ receipt: { redaction: { externalSubmission: string }; notes: string[] } }>(receipt.stdout);
+  const receiptPayload = parseCliJsonPayload<{ migrationLab: { status: string }; receipt: { redaction: { externalSubmission: string }; notes: string[] } }>(receipt.stdout);
+  assert.equal(receiptPayload.migrationLab.status, "pass");
   assert.equal(receiptPayload.receipt.redaction.externalSubmission, "explicit_approval_only");
   assert.equal(receiptPayload.receipt.notes.some((note) => note.includes("/Users/") || note.includes("prompt:")), false);
 });
