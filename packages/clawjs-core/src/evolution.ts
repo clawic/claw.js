@@ -305,6 +305,7 @@ export const clawEvolutionVersionFixtureSchema = z.object({
   schemaVersion: z.literal(1),
   fixtureId: z.string().regex(/^evo_fixture_[a-z0-9_]+$/),
   publicVersion: z.string().min(1),
+  previousPublicVersion: z.string().min(1).optional(),
   createdAt: z.string(),
   phase: z.enum(["pre_v1_foundation", "public_release"]),
   rescueCore: z.literal("launch_chat_repair"),
@@ -320,6 +321,13 @@ export const clawEvolutionMigratorLabResultSchema = z.object({
   fixtureIds: z.array(z.string()),
   fixtureCount: z.number(),
   checkedSurfaces: z.array(z.string()),
+  versionChain: z.array(z.object({
+    fixtureId: z.string().min(1),
+    fromVersion: z.string().min(1),
+    toVersion: z.string().min(1),
+    status: z.enum(["pass", "fail", "blocked"]),
+    notes: z.array(z.string()),
+  })),
   checks: z.array(z.object({
     id: z.string().min(1),
     status: z.enum(["pass", "fail", "blocked"]),
@@ -729,6 +737,7 @@ export function runEvolutionMigratorLab(input: {
   const fromVersion = input.fromVersion ?? fixtures[0]?.publicVersion ?? "unknown";
   const toVersion = input.toVersion ?? "current";
   const checkedSurfaces = [...new Set(fixtures.flatMap((fixture) => fixture.surfaces.map((surface) => surface.id)))].sort();
+  const versionChain = buildEvolutionVersionChain(fixtures, fromVersion);
   const plan = createEvolutionOperatorPlan({
     action: "dry-run",
     ledger: input.ledger,
@@ -748,6 +757,7 @@ export function runEvolutionMigratorLab(input: {
     checkEvolutionLab(hasRequiredFixtureKinds(fixtures), "required_surface_kinds", "Foundation fixtures cover DB, workspace, protocol, CLI JSON, package export, skills, search, permissions, audit, backup, and rescue."),
     checkEvolutionLab(input.ledger.policy.sourceOfTruth === "clawjs", "ledger_source_of_truth", "Migration lab must use the ClawJS ledger as canon."),
     checkEvolutionLab(input.ledger.policy.postV1Migration === "step_by_step_all_public_versions", "step_by_step_policy", "Post-V1 migrations must chain through public versions."),
+    checkEvolutionLab(versionChain.length > 0 && versionChain.every((entry) => entry.status === "pass"), "version_chain_complete", "Public fixtures must form an explicit forward migration chain."),
   ];
   const status = checks.some((check) => check.status === "fail")
     ? "fail"
@@ -762,6 +772,7 @@ export function runEvolutionMigratorLab(input: {
     fixtureIds: fixtures.map((fixture) => fixture.fixtureId),
     fixtureCount: fixtures.length,
     checkedSurfaces,
+    versionChain,
     checks,
     receipts: [createEvolutionReceipt({
       action: "dry-run",
@@ -782,6 +793,43 @@ export function redactEvolutionReceiptText(text: string): string {
 
 function checkEvolutionLab(condition: boolean, id: string, note: string): ClawEvolutionMigratorLabResult["checks"][number] {
   return { id, status: condition ? "pass" : "fail", notes: [note] };
+}
+
+function buildEvolutionVersionChain(fixtures: ClawEvolutionVersionFixture[], fromVersion: string): ClawEvolutionMigratorLabResult["versionChain"] {
+  const sortedFixtures = [...fixtures].sort((left, right) => comparePublicVersions(left.publicVersion, right.publicVersion));
+  const knownVersions = new Set<string>();
+  let lastVersion = fromVersion === "unknown" ? "foundation" : fromVersion;
+  return sortedFixtures.map((fixture) => {
+    const expectedFrom = fixture.phase === "pre_v1_foundation"
+      ? "foundation"
+      : fixture.previousPublicVersion ?? lastVersion;
+    const hasPrevious = expectedFrom === "foundation" || expectedFrom === fromVersion || knownVersions.has(expectedFrom);
+    const isExplicitPublicStep = fixture.phase !== "public_release" || !!fixture.previousPublicVersion;
+    const isFoundation = fixture.phase !== "pre_v1_foundation" || fixture.publicVersion === "v1";
+    const status = hasPrevious && isExplicitPublicStep && isFoundation ? "pass" : "fail";
+    knownVersions.add(fixture.publicVersion);
+    lastVersion = fixture.publicVersion;
+    return {
+      fixtureId: fixture.fixtureId,
+      fromVersion: expectedFrom,
+      toVersion: fixture.publicVersion,
+      status,
+      notes: [
+        status === "pass"
+          ? "fixture is connected to the forward migration chain"
+          : "fixture must declare an existing previousPublicVersion, or be the v1 foundation fixture",
+      ],
+    };
+  });
+}
+
+function comparePublicVersions(left: string, right: string): number {
+  const leftNumber = parseInt(left.replace(/^v/i, ""), 10);
+  const rightNumber = parseInt(right.replace(/^v/i, ""), 10);
+  if (Number.isFinite(leftNumber) && Number.isFinite(rightNumber) && leftNumber !== rightNumber) {
+    return leftNumber - rightNumber;
+  }
+  return left.localeCompare(right);
 }
 
 function createEvolutionRepairPatch(input: {

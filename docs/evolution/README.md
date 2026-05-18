@@ -41,6 +41,9 @@ The gate requires both an active evolution record and a refreshed
   public migration lab. It covers DB/core, `.claw`, `~/.clawix`, protocol,
   CLI JSON, package exports, agent instructions, skills, routes, schemas,
   backup, search/index rebuild, permissions, audit, and rescue survival.
+  Future public fixtures declare `previousPublicVersion`; the migrator lab
+  emits a `versionChain` and fails if public fixtures do not form an explicit
+  forward chain.
 - `claw evolution plan|dry-run|repair|rollback|backup|receipt|report --json`:
   safe operator contracts for migration planning, backup classification, rescue
   preservation, and redacted receipts. `repair` and `report` also emit an

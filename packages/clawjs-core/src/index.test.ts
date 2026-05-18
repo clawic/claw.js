@@ -468,8 +468,43 @@ test("evolution migrator lab validates foundation fixtures", () => {
   assert.equal(clawEvolutionMigratorLabResultSchema.safeParse(result).success, true);
   assert.equal(result.status, "pass");
   assert.equal(result.fixtureIds.includes("evo_fixture_test_foundation"), true);
+  assert.equal(result.versionChain.length, 1);
+  assert.equal(result.versionChain[0]?.fromVersion, "foundation");
+  assert.equal(result.versionChain[0]?.toVersion, "v1");
+  assert.equal(result.versionChain[0]?.status, "pass");
   assert.equal(result.checks.every((check) => check.status === "pass"), true);
+  assert.equal(result.checks.find((check) => check.id === "version_chain_complete")?.status, "pass");
   assert.equal(result.receipts[0].redaction.promptsIncluded, false);
+
+  const v2Fixture = clawEvolutionVersionFixtureSchema.parse({
+    ...fixture,
+    fixtureId: "evo_fixture_test_v2",
+    publicVersion: "v2",
+    previousPublicVersion: "v1",
+    phase: "public_release",
+    notes: ["synthetic v2"],
+  });
+  const chained = runEvolutionMigratorLab({
+    fixtures: [fixture, v2Fixture],
+    ledger,
+    fromVersion: "v1",
+    toVersion: "v2",
+    createdAt: "2026-05-18T00:00:00.000Z",
+  });
+  assert.equal(chained.status, "pass");
+  assert.equal(chained.versionChain.some((entry) => entry.fromVersion === "v1" && entry.toVersion === "v2" && entry.status === "pass"), true);
+
+  const brokenV2Fixture = clawEvolutionVersionFixtureSchema.parse({
+    ...v2Fixture,
+    fixtureId: "evo_fixture_test_v2_broken",
+    previousPublicVersion: undefined,
+  });
+  const brokenChain = runEvolutionMigratorLab({
+    fixtures: [fixture, brokenV2Fixture],
+    ledger,
+  });
+  assert.equal(brokenChain.status, "fail");
+  assert.equal(brokenChain.checks.find((check) => check.id === "version_chain_complete")?.status, "fail");
 
   const repairPlan = createEvolutionOperatorPlan({ action: "repair", ledger, fromVersion: "v1", toVersion: "current" });
   const repairReport = createEvolutionRepairReport({

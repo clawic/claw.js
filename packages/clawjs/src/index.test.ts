@@ -187,7 +187,7 @@ test("runCli exposes the evolution operator surface", async () => {
     status: string;
     policy: { sourceOfTruth: string; postV1Migration: string; rescueCore: string };
     surfaceBaseline: { status: string; changed: number; uncovered: number };
-    migrationLab: { status: string; fixtureCount: number; checks: Array<{ id: string; status: string }> };
+    migrationLab: { status: string; fixtureCount: number; versionChain: Array<{ fromVersion: string; toVersion: string; status: string }>; checks: Array<{ id: string; status: string }> };
     checks: string[];
   }>(verify.stdout);
   assert.equal(payload.status, "ok");
@@ -198,7 +198,9 @@ test("runCli exposes the evolution operator surface", async () => {
   assert.equal(payload.surfaceBaseline.uncovered, 0);
   assert.equal(payload.migrationLab.status, "pass");
   assert.equal(payload.migrationLab.fixtureCount >= 1, true);
+  assert.equal(payload.migrationLab.versionChain.some((entry) => entry.fromVersion === "foundation" && entry.toVersion === "v1" && entry.status === "pass"), true);
   assert.equal(payload.migrationLab.checks.some((check) => check.id === "required_surface_kinds" && check.status === "pass"), true);
+  assert.equal(payload.migrationLab.checks.some((check) => check.id === "version_chain_complete" && check.status === "pass"), true);
   assert.equal(payload.checks.includes("rescue_core_declared"), true);
   assert.equal(payload.checks.includes("public_surface_baseline_covered"), true);
   assert.equal(payload.checks.includes("migration_lab_foundation_fixture_passed"), true);
