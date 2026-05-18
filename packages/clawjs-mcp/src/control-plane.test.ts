@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, it } from "vitest";
@@ -80,6 +81,96 @@ describe("MCP connector control plane", () => {
       });
       assert.equal(execute.statusCode, 200);
       assert.equal(execute.json().result.content.status, "signed_host_required");
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("exposes system telemetry MCP tools as read-only agent context", async () => {
+    const { app } = buildFixtureApp();
+    try {
+      const tools = await app.inject({
+        method: "POST",
+        url: "/v1/mcp/expose/rpc",
+        payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      });
+      assert.equal(tools.statusCode, 200);
+      const toolNames = tools.json().result.tools.map((entry: { name: string }) => entry.name);
+      assert.equal(toolNames.includes("system.snapshot"), true);
+      assert.equal(toolNames.includes("system.metrics"), true);
+      assert.equal(toolNames.includes("system.widgets"), true);
+      assert.equal(toolNames.includes("system.history"), true);
+
+      const snapshot = await app.inject({
+        method: "POST",
+        url: "/v1/mcp/expose/rpc",
+        payload: {
+          jsonrpc: "2.0",
+          id: 2,
+          method: "tools/call",
+          params: { name: "system.snapshot", arguments: {} },
+        },
+      });
+      assert.equal(snapshot.statusCode, 200);
+      assert.equal(snapshot.json().result.content.policy.defaultAgentAccess, "safe_read");
+      assert.equal(snapshot.json().result.content.samples.some((entry: { key: string }) => entry.key === "system.memory.used"), true);
+
+      const widgets = await app.inject({
+        method: "POST",
+        url: "/v1/mcp/expose/rpc",
+        payload: {
+          jsonrpc: "2.0",
+          id: 3,
+          method: "tools/call",
+          params: { name: "system.widgets", arguments: {} },
+        },
+      });
+      assert.equal(widgets.statusCode, 200);
+      assert.equal(widgets.json().result.content.widgets.some((entry: { id: string }) => entry.id === "cpu-load"), true);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("serves system telemetry HTTP routes from catalog and Monitor history without creating stores", async () => {
+    const { app, config } = buildFixtureApp();
+    const monitorDb = path.join(os.tmpdir(), `clawjs-mcp-system-history-${Date.now()}-${Math.random()}`, "monitor.sqlite");
+    try {
+      const metrics = await app.inject({
+        method: "GET",
+        url: "/v1/system/metrics",
+        headers: { authorization: `Bearer ${config.sharedSecret}` },
+      });
+      assert.equal(metrics.statusCode, 200);
+      assert.equal(metrics.json().metrics.some((entry: { key: string }) => entry.key === "system.cpu.load1"), true);
+      assert.equal(metrics.json().metrics.some((entry: { key: string }) => entry.key === "context.weather.temperature"), true);
+
+      const snapshot = await app.inject({
+        method: "GET",
+        url: "/v1/system/snapshot",
+        headers: { authorization: `Bearer ${config.sharedSecret}` },
+      });
+      assert.equal(snapshot.statusCode, 200);
+      assert.equal(snapshot.json().policy.controlsRequireSignedHostBroker, true);
+
+      const widgets = await app.inject({
+        method: "GET",
+        url: "/v1/system/widgets",
+        headers: { authorization: `Bearer ${config.sharedSecret}` },
+      });
+      assert.equal(widgets.statusCode, 200);
+      assert.equal(widgets.json().widgets.some((entry: { placement: string }) => entry.placement === "menu_bar" || entry.placement === "both"), true);
+
+      const history = await app.inject({
+        method: "GET",
+        url: `/v1/system/history/system.memory.used?range=1h&monitorDb=${encodeURIComponent(monitorDb)}`,
+        headers: { authorization: `Bearer ${config.sharedSecret}` },
+      });
+      assert.equal(history.statusCode, 200);
+      assert.equal(history.json().metric.key, "system.memory.used");
+      assert.equal(history.json().retention.status, "empty");
+      assert.equal(history.json().samples.length, 0);
+      assert.equal(fs.existsSync(monitorDb), false);
     } finally {
       await app.close();
     }

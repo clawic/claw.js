@@ -90,9 +90,18 @@ function sample(input: Omit<SystemTelemetryMetricSample, "capturedAt" | "source"
   };
 }
 
+function safeUptimeSeconds(): number | null {
+  try {
+    return Math.round(os.uptime());
+  } catch {
+    return null;
+  }
+}
+
 export function collectMcpSystemTelemetrySnapshot(): SystemTelemetrySnapshot {
   const totalMemory = os.totalmem();
   const freeMemory = os.freemem();
+  const uptime = safeUptimeSeconds();
   const samples: SystemTelemetryMetricSample[] = [
     sample({
       key: "system.cpu.load1",
@@ -114,9 +123,9 @@ export function collectMcpSystemTelemetrySnapshot(): SystemTelemetrySnapshot {
     }),
     sample({
       key: "system.power.uptime",
-      value: Math.round(os.uptime()),
+      value: uptime,
       unit: "seconds",
-      availability: "available",
+      availability: uptime === null ? "unavailable" : "available",
     }),
   ];
   const sampledKeys = new Set(samples.map((entry) => entry.key));
