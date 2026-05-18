@@ -5,6 +5,7 @@ import path from "path";
 
 import { CLI_EXIT_OK } from "./index.ts";
 import { runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
+import { scheduleSurfaceRouteSearchEvent } from "./cli-search-events.ts";
 
 export async function runSearchSurfaceRouteGraphContractsScenario(): Promise<void> {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-surfaces-"));
@@ -45,14 +46,25 @@ export async function runSearchSurfaceRouteGraphContractsScenario(): Promise<voi
     assert.ok((result?.fragments?.length ?? 0) > 0);
     assert.equal(result?.actions?.some((action) => action.id === "open" && action.kind === "open"), true);
 
-    const event = await runCliCapture(["search", "jobs", "enqueue", "upsert", "--source", "surfaces.routes", "--resource-id", "sync.searchIndex", "--id", "job:surface-route", "--data-dir", dataRoot, "--json"], workspaceRoot);
-    assert.equal(event.code, CLI_EXIT_OK);
+    const event = scheduleSurfaceRouteSearchEvent({
+      operation: "upsert",
+      routeId: "sync.searchIndex",
+      dataDir: dataRoot,
+    });
+    assert.equal(event.ok, true, event.error);
+    assert.equal(event.job?.source, "surfaces.routes");
+    assert.equal(event.job?.operation, "upsert");
+    assert.equal(event.job?.resourceId, "sync.searchIndex");
+    assert.equal(event.job?.shard, "hot");
+    assert.equal(event.job?.payload.eventDriven, true);
+    assert.equal(event.job?.payload.routeId, "sync.searchIndex");
+
     const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "surfaces.routes", "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(serviceRun.code, CLI_EXIT_OK);
     const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
       data: { worker?: { items: Array<{ id: string; source: string; status: string; indexed?: number }> } };
     };
-    assert.equal(serviceRunPayload.data.worker?.items[0]?.id, "job:surface-route");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.id, event.job?.id);
     assert.equal(serviceRunPayload.data.worker?.items[0]?.source, "surfaces.routes");
     assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
     assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);

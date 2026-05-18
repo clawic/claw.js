@@ -517,9 +517,11 @@ provider-free semantic and hybrid docs queries.
 `surfaces.routes` projects the framework surface route graph from
 `packages/clawjs-core/src/surface-registry.ts`. It indexes each route's source
 and destination nodes, owner, visibility, transport, validation text, route
-steps, tests, docs, ADRs, and explicit gaps as technical Search documents. This
-keeps route/debug queries source-scoped while giving Search and Search Index a
-fast path over the same registry used by `claw inspect routes`.
+steps, tests, docs, ADRs, and explicit gaps as technical Search documents. It
+supports resource-scoped refresh jobs keyed by route id, so route graph producers
+can refresh `surfaces.routes` without rebuilding the full source. This keeps
+route/debug queries source-scoped while giving Search and Search Index a fast
+path over the same registry used by `claw inspect routes`.
 
 Search result actions are brokered. `search actions execute` produces a
 host-grants execution plan in `--dry-run` mode, fails closed when an approval is
@@ -588,7 +590,9 @@ signed host shortcut broker validates it.
   `business.records`, `social.posts`, `iot.config`, and the first bounded
   `code.symbols` adapter with per-file event refresh. `docs.pages` indexes
   public root docs, docs, and ADR sections with resource-scoped refresh jobs and
-  best-effort event scheduling for changed docs files. `slides.decks` also
+  best-effort event scheduling for changed docs files. `surfaces.routes` indexes
+  route graph contracts with resource-scoped refresh jobs keyed by route id.
+  `slides.decks` also
   supports changed-deck event refresh from local slide writes,
   `sheets.workbooks` supports changed-workbook event refresh for manifest
   producers, and `design.resources` refreshes workspace style, template, and

@@ -193,6 +193,9 @@ for (const snippet of [
 
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleDocsPagesSearchEvent");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"docs.pages\"");
+requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleSurfaceRouteSearchEvent");
+requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"surfaces.routes\"");
+requireSnippet("packages/clawjs/src/cli-search-surface-routes-test-utils.ts", "scheduleSurfaceRouteSearchEvent");
 requireSnippet("packages/clawjs/src/cli-search-docs-pages-source.ts", "createLocalTextEmbedding");
 requireSnippet("packages/clawjs/src/cli-search-docs-pages-source.ts", "LOCAL_TEXT_EMBEDDING_MODEL");
 

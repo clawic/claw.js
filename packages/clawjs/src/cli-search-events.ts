@@ -146,6 +146,26 @@ export function scheduleDocsPagesSearchEvent(input: {
   });
 }
 
+export function scheduleSurfaceRouteSearchEvent(input: {
+  operation: "upsert" | "delete";
+  routeId: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  return scheduleSearchIndexEvent({
+    source: "surfaces.routes",
+    operation: input.operation,
+    resourceId: input.routeId,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      routeId: input.routeId,
+    },
+  });
+}
+
 export function scheduleImageDerivedSearchEvent(input: {
   operation: "upsert" | "delete";
   imageId: string;
