@@ -508,3 +508,100 @@ test("sheets.workbooks event jobs refresh changed workbook manifests", async () 
     assert.equal(afterSheetDeletePayload.data.results.some((entry: any) => entry.source === "sheets.workbooks" && entry.resourceId === workbookId), false);
   });
 });
+
+test("sheets workbook writes enqueue and tombstone workbook search events", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-sheets-writes-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  const workbookId = "workbook-cli-refresh";
+
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const created = await runCliCapture([
+      "sheets",
+      "workbook",
+      "upsert",
+      workbookId,
+      "--title",
+      "CLI Event Workbook",
+      "--sheet",
+      "Pipeline",
+      "--columns",
+      "Account,Weighted ARR,Formula",
+      "--rows-json",
+      JSON.stringify([["Globex", "4200", "=B2*0.8"]]),
+      "--notes",
+      "CLI workbook Search queue sentinel",
+      "--metadata",
+      JSON.stringify({ workflow: "sheets-cli-metadata-fragment-needle", credentials: { token: "sheets-cli-metadata-secret-never-index" } }),
+      "--workspace",
+      workspaceRoot,
+      "--data-dir",
+      dataRoot,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(created.code, CLI_EXIT_OK, created.stderr || created.stdout);
+
+    const jobs = await runCliCapture(["search", "jobs", "list", "--source", "sheets.workbooks", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(jobs.code, CLI_EXIT_OK);
+    const jobsPayload = JSON.parse(jobs.stdout) as {
+      data: { items: Array<{ source: string; operation: string; resourceId?: string; shard?: string; payload?: Record<string, unknown> }> };
+    };
+    const upsertJob = jobsPayload.data.items.find((job) => job.resourceId === workbookId && job.operation === "upsert");
+    assert.equal(upsertJob?.source, "sheets.workbooks");
+    assert.equal(upsertJob?.shard, "hot");
+    assert.equal(upsertJob?.payload?.eventDriven, true);
+    assert.equal(upsertJob?.payload?.workbookId, workbookId);
+    assert.equal(upsertJob?.payload?.workspaceRoot, path.resolve(workspaceRoot));
+
+    const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "sheets.workbooks", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(serviceRun.code, CLI_EXIT_OK);
+    const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.source, "sheets.workbooks");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.operation, "upsert");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
+
+    const query = await runCliCapture(["search", "query", "CLI workbook Search queue sentinel", "--sources", "sheets.workbooks", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK, query.stderr || query.stdout);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: { results: Array<{ source: string; domain: string; title: string; resourceId?: string; fragments?: Array<{ title?: string; snippet?: string }> }> };
+    };
+    const result = queryPayload.data.results.find((item) => item.source === "sheets.workbooks");
+    assert.equal(result?.domain, "sheets");
+    assert.equal(result?.title, "CLI Event Workbook");
+    assert.equal(result?.resourceId, workbookId);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "Pipeline"), true);
+
+    const metadataQuery = await runCliCapture(["search", "query", "sheets-cli-metadata-fragment-needle", "--sources", "sheets.workbooks", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(metadataQuery.code, CLI_EXIT_OK, metadataQuery.stderr || metadataQuery.stdout);
+    assert.equal(metadataQuery.stdout.includes("sheets-cli-metadata-secret-never-index"), false);
+
+    const deleted = await runCliCapture(["sheets", "workbook", "delete", workbookId, "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleted.code, CLI_EXIT_OK, deleted.stderr || deleted.stdout);
+    const deleteJobs = await runCliCapture(["search", "jobs", "list", "--source", "sheets.workbooks", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleteJobs.code, CLI_EXIT_OK);
+    const deleteJobsPayload = JSON.parse(deleteJobs.stdout) as {
+      data: { items: Array<{ operation: string; priority: number; resourceId?: string; payload?: Record<string, unknown> }> };
+    };
+    const deleteJob = deleteJobsPayload.data.items.find((job) => job.resourceId === workbookId && job.operation === "delete");
+    assert.equal(deleteJob?.priority, 80);
+    assert.equal(deleteJob?.payload?.eventDriven, true);
+    assert.equal(deleteJob?.payload?.workbookId, workbookId);
+
+    const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "sheets.workbooks", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(deleteRun.code, CLI_EXIT_OK);
+    const deleteRunItem = (JSON.parse(deleteRun.stdout) as any).data.service.worker?.items.find((entry: any) => entry.source === "sheets.workbooks");
+    assert.deepEqual({ source: deleteRunItem?.source, operation: deleteRunItem?.operation, status: deleteRunItem?.status, indexed: deleteRunItem?.indexed }, { source: "sheets.workbooks", operation: "delete", status: "done", indexed: 1 });
+    const afterDelete = await runCliCapture(["search", "query", "CLI workbook Search queue sentinel", "--sources", "sheets.workbooks", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterDelete.code, CLI_EXIT_DEGRADED, afterDelete.stderr || afterDelete.stdout);
+    const afterDeletePayload = JSON.parse(afterDelete.stdout) as any;
+    assert.equal(afterDeletePayload.data.results.some((entry: any) => entry.source === "sheets.workbooks" && entry.resourceId === workbookId), false);
+  });
+});

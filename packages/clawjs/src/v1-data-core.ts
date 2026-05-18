@@ -1656,6 +1656,8 @@ export function usage(binName: string, group: string): string {
       return `Usage: ${binName} mcp list|get|upsert|delete|config-path [--json]`;
     case "connectors":
       return `Usage: ${binName} connectors operation list|get|upsert|delete [--json]`;
+    case "sheets":
+      return `Usage: ${binName} sheets workbook list|get|upsert|delete [--json]`;
     case "apps":
       return `Usage: ${binName} apps list|upsert|delete [--json]`;
     case "design":

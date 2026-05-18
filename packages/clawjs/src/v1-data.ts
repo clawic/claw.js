@@ -7,7 +7,7 @@ import type Database from "better-sqlite3";
 import { DatabaseServiceStore } from "@clawjs/database";
 import { runAgentsCommand, runConnectionsCommand, runPersonalitiesCommand, runSkillCollectionsCommand } from "./v1-data-agent-entities.ts";
 import { runProviderRoutingCommand, runSnippetsCommand } from "./v1-data-agent-config.ts";
-import { scheduleAppsCatalogSearchEvent, scheduleBusinessRecordsSearchEvent, scheduleCalendarEventsSearchEvent, scheduleConnectorCatalogSearchEvent, scheduleContentItemsSearchEvent, scheduleDesignResourcesSearchEvent, scheduleFinanceRecordTableSearchEvent, scheduleIotConfigSearchEvent, scheduleKnowledgeGraphSearchEvent, scheduleMarketplaceChoicesSearchEvent, scheduleMcpServersSearchEvent, scheduleNotesPagesSearchEvent, scheduleRuntimeEventsSearchEvent, scheduleSignalsObservationsSearchEvent, scheduleSkillsRegistrySearchEvent, scheduleSocialPostsSearchEvent } from "./cli-search-events.ts";
+import { scheduleAppsCatalogSearchEvent, scheduleBusinessRecordsSearchEvent, scheduleCalendarEventsSearchEvent, scheduleConnectorCatalogSearchEvent, scheduleContentItemsSearchEvent, scheduleDesignResourcesSearchEvent, scheduleFinanceRecordTableSearchEvent, scheduleIotConfigSearchEvent, scheduleKnowledgeGraphSearchEvent, scheduleMarketplaceChoicesSearchEvent, scheduleMcpServersSearchEvent, scheduleNotesPagesSearchEvent, scheduleRuntimeEventsSearchEvent, scheduleSheetsWorkbookSearchEvent, scheduleSignalsObservationsSearchEvent, scheduleSkillsRegistrySearchEvent, scheduleSocialPostsSearchEvent } from "./cli-search-events.ts";
 export {
   openMainDataStore,
   resolveClawjsDataRoot,
@@ -157,6 +157,8 @@ export async function runV1DataCli(input: V1DataCliInput): Promise<number | null
         return runDesignCommand(input, store);
       case "connectors":
         return runConnectorsCommand(input, store);
+      case "sheets":
+        return runSheetsCommand(input);
       case "agents":
         return runAgentsCommand(input, store);
       case "skills": return runSkillsCommand(input, store);
@@ -208,6 +210,7 @@ function shouldHandleV1DataCommand(group: string | undefined, command: string | 
     apps: new Set(["list", "upsert", "delete", "help"]),
     design: new Set(["list", "upsert", "delete", "help"]),
     connectors: new Set(["operation", "operations", "help"]),
+    sheets: new Set(["workbook", "workbooks", "help"]),
     agents: new Set(["list", "get", "upsert", "delete", "schema", "evaluate-access", "delegation-check", "supervisor-check", "route-check", "resolve-external-identity", "project-support-inbox", "memory-check", "budget-check", "action-severity", "autonomy-check", "dispatch-plan", "context-pack", "tool-catalog", "creation-review", "storage-audit", "audit-coverage", "operational-snapshot", "control-panel", "privacy-plan", "paperclip-import", "surface-projection", "config-revision", "incident", "activity-feed", "blueprint", "evaluation", "retirement-plan", "help"]),
     skills: new Set(["get", "upsert", "delete", "help"]),
     personalities: new Set(["list", "get", "upsert", "delete", "help"]),
@@ -2035,6 +2038,156 @@ function parseConnectorStringList(value: string | undefined): string[] {
   const parsed = parseCsvOrJson(value);
   const entries = Array.isArray(parsed) ? parsed : (parsed === undefined ? [] : [parsed]);
   return entries.map((entry) => String(entry).trim()).filter(Boolean);
+}
+
+function runSheetsCommand(input: V1DataCliInput): number {
+  const scope = input.positionals[1];
+  if (scope !== "workbook" && scope !== "workbooks") return usageError(input, usage(input.binName, "sheets"));
+  const command = input.positionals[2] || "list";
+  const workspaceRoot = path.resolve(input.cwd, expandHome(input.flags.workspace || input.cwd));
+  const root = resolveSheetsWorkbooksCliRoot(input);
+  if (command === "list") {
+    const items = fs.existsSync(root)
+      ? fs.readdirSync(root)
+        .filter((entry) => entry.endsWith(".json"))
+        .sort()
+        .slice(0, Math.max(1, Number(input.flags.limit ?? 100)))
+        .map((entry) => normalizeWorkbookManifest(readWorkbookManifest(path.join(root, entry)), path.basename(entry, ".json")))
+      : [];
+    writeSuccess(input, { root, items });
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "get") {
+    const workbookId = input.flags.id || input.flags.workbook || input.positionals[3];
+    if (!workbookId) return usageError(input, "Usage: claw sheets workbook get WORKBOOK_ID [--json]");
+    const filePath = path.join(root, `${workbookId}.json`);
+    const manifest = fs.existsSync(filePath) ? normalizeWorkbookManifest(readWorkbookManifest(filePath), workbookId) : null;
+    writeSuccess(input, manifest);
+    return manifest ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
+  }
+  if (command === "upsert" || command === "create" || command === "edit") {
+    const workbookId = input.flags.id || input.flags.workbook || input.positionals[3];
+    if (!workbookId) return usageError(input, "Usage: claw sheets workbook upsert WORKBOOK_ID [--title TITLE] [--sheet NAME] [--json]");
+    const filePath = path.join(root, `${workbookId}.json`);
+    const existing = fs.existsSync(filePath) ? normalizeWorkbookManifest(readWorkbookManifest(filePath), workbookId) : {};
+    const base = workbookManifestFromInput(input);
+    const now = nowIso();
+    const manifest = normalizeWorkbookManifest({
+      ...existing,
+      ...base,
+      id: workbookId,
+      title: input.flags.title || stringFlag(base.title) || stringFlag(existing.title) || `Workbook ${workbookId}`,
+      author: workbookAuthorFromFlags(input, base.author, existing.author),
+      sheets: workbookSheetsFromFlags(input, base.sheets, existing.sheets),
+      metadata: input.flags.metadata ? normalizeWorkbookMetadata(input.flags.metadata) : (isRecord(base.metadata) ? base.metadata : isRecord(existing.metadata) ? existing.metadata : {}),
+      outputs: Array.isArray(base.outputs) ? base.outputs : Array.isArray(existing.outputs) ? existing.outputs : [],
+      createdAt: stringFlag(existing.createdAt) || stringFlag(base.createdAt) || now,
+      updatedAt: now,
+    }, workbookId);
+    fs.mkdirSync(root, { recursive: true });
+    fs.writeFileSync(filePath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+    scheduleSheetsWorkbookSearchEvent({
+      operation: "upsert",
+      workbookId,
+      workspaceRoot,
+      dataDir: resolveClawjsDataRoot(),
+      flags: { ...input.flags, workspace: workspaceRoot },
+    });
+    writeSuccess(input, { workbook: manifest, path: filePath, durable: true, store: "workspace" });
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "delete") {
+    const workbookId = input.flags.id || input.flags.workbook || input.positionals[3];
+    if (!workbookId) return usageError(input, "Usage: claw sheets workbook delete WORKBOOK_ID [--json]");
+    const filePath = path.join(root, `${workbookId}.json`);
+    const existed = fs.existsSync(filePath);
+    if (existed) {
+      fs.rmSync(filePath, { force: true });
+      scheduleSheetsWorkbookSearchEvent({
+        operation: "delete",
+        workbookId,
+        workspaceRoot,
+        dataDir: resolveClawjsDataRoot(),
+        flags: { ...input.flags, workspace: workspaceRoot },
+      });
+    }
+    writeSuccess(input, { id: workbookId, deleted: existed, path: filePath });
+    return existed ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
+  }
+  return usageError(input, usage(input.binName, "sheets"));
+}
+
+function resolveSheetsWorkbooksCliRoot(input: V1DataCliInput): string {
+  const configured = input.flags["sheets-root"] || input.flags["sheets-workbooks-root"] || input.flags["workbooks-root"];
+  if (configured) return path.resolve(input.cwd, expandHome(configured));
+  const workspaceRoot = path.resolve(input.cwd, expandHome(input.flags.workspace || input.cwd));
+  return path.join(workspaceRoot, ".claw", "sheets", "workbooks");
+}
+
+function workbookManifestFromInput(input: V1DataCliInput): Record<string, unknown> {
+  if (input.flags.file) return readWorkbookManifest(path.resolve(input.cwd, expandHome(input.flags.file)));
+  if (input.flags.manifest) {
+    const parsed = parseMaybeJson(input.flags.manifest);
+    return isRecord(parsed) ? parsed : {};
+  }
+  return {};
+}
+
+function readWorkbookManifest(filePath: string): Record<string, unknown> {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, "utf8")) as unknown;
+    return isRecord(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function normalizeWorkbookManifest(value: Record<string, unknown>, fallbackId: string): Record<string, unknown> {
+  return {
+    ...value,
+    schemaVersion: value.schemaVersion ?? 1,
+    id: stringFlag(value.id) || fallbackId,
+  };
+}
+
+function workbookAuthorFromFlags(input: V1DataCliInput, base: unknown, existing: unknown): Record<string, unknown> {
+  const current = isRecord(base) ? base : isRecord(existing) ? existing : {};
+  return {
+    ...current,
+    ...(input.flags["agent-id"] ? { agentId: input.flags["agent-id"] } : {}),
+    ...(input.flags.author ? { name: input.flags.author } : {}),
+  };
+}
+
+function workbookSheetsFromFlags(input: V1DataCliInput, base: unknown, existing: unknown): unknown[] {
+  if (!input.flags.sheet && !input.flags["sheet-name"] && !input.flags.columns && !input.flags["rows-json"] && !input.flags.notes) {
+    if (Array.isArray(base)) return base;
+    if (Array.isArray(existing)) return existing;
+    return [];
+  }
+  const sheetName = input.flags.sheet || input.flags["sheet-name"] || "Sheet 1";
+  const parsedRows = parseMaybeJson(input.flags["rows-json"]);
+  return [{
+    id: input.flags["sheet-id"] || slugifySheetId(sheetName),
+    name: sheetName,
+    columns: parseCsvOrJson(input.flags.columns) ?? [],
+    rows: Array.isArray(parsedRows) ? parsedRows : [],
+    ...(input.flags.notes ? { notes: input.flags.notes } : {}),
+  }];
+}
+
+function normalizeWorkbookMetadata(value: string): Record<string, unknown> {
+  const parsed = parseMaybeJson(value);
+  return isRecord(parsed) ? parsed : { value: parsed };
+}
+
+function stringFlag(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function slugifySheetId(value: string): string {
+  const slug = value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return slug || "sheet-1";
 }
 
 function runAppsCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {

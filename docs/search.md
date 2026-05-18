@@ -463,7 +463,8 @@ fragments. It does not parse binary XLSX files directly; imported or generated
 files remain media/file records until a workbook manifest or extractor-owned
 projection exists. Producers that write workbook manifests can schedule
 best-effort hot upsert jobs for changed workbooks through the Search event
-scheduler.
+scheduler; `claw sheets workbook upsert|delete` writes local workbook manifests
+and emits hot `sheets.workbooks` refresh/delete jobs for the changed workbook id.
 
 `generations.artifacts` projects generated artifact records. It indexes prompts,
 titles, kind, status, backend/model metadata, command provenance, output

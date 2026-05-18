@@ -936,6 +936,8 @@ claw image create "product shot"
 claw audio generate --text "hello"
 claw video generate --prompt "demo"
 claw slides create --title "Roadmap"
+claw sheets workbook upsert forecast-q2 --title "Q2 Forecast" --sheet Summary --json
+claw sheets workbook delete forecast-q2 --json
 claw generations list
 claw templates list
 claw styles list
@@ -944,6 +946,10 @@ claw design --help
 claw drive --help
 claw apps --help
 ```
+
+`sheets workbook upsert|delete` maintains local workbook manifests in the
+workspace and schedules `sheets.workbooks` Search refresh/delete jobs for the
+changed workbook id. Binary spreadsheet parsing remains extractor-owned.
 
 ## Apps And Profile
 

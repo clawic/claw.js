@@ -1320,6 +1320,10 @@ requireSnippet("packages/clawjs/src/cli-search-slides-sheets-sources.ts", "id: `
 requireSnippet("packages/clawjs/src/cli-search-manifest-sources.test.ts", "sheets-metadata-fragment-needle");
 requireSnippet("packages/clawjs/src/cli-search-manifest-sources.test.ts", "sheets-metadata-secret-never-index");
 requireSnippet("docs/search.md", "redacted workbook metadata fragments");
+requireSnippet("packages/clawjs/src/v1-data.ts", "case \"sheets\"");
+requireSnippet("packages/clawjs/src/v1-data.ts", "scheduleSheetsWorkbookSearchEvent({");
+requireSnippet("packages/clawjs/src/cli-search-manifest-sources.test.ts", "sheets workbook writes enqueue and tombstone workbook search events");
+requireSnippet("docs/search.md", "`claw sheets workbook upsert|delete` writes local workbook manifests");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "afterConnectorDelete");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "source: \"connectors.catalog\", operation: \"delete\", status: \"done\", indexed: 1");
 requireSnippet("packages/clawjs/src/cli-search-command.ts", "id: `connectors.catalog:${row.id}:metadata`");
