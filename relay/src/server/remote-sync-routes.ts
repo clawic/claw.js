@@ -28,6 +28,7 @@ import {
   syncObjectSnapshotSchema,
   type MeshShareAction,
   type RemoteExternalValidationEvidence,
+  type RemoteSourceQaReviewItem,
   type RemoteCompatibilityClientKind,
   type SyncAuthority,
   type SyncDriver,
@@ -64,6 +65,7 @@ function remoteExternalValidationReportPayload(input: Record<string, unknown> = 
 function remoteGoalClosureGatePayload(input: Record<string, unknown> = {}) {
   return buildRemoteGoalClosureGate({
     reviewedSourceQaIds: Array.isArray(input.reviewedSourceQaIds) ? input.reviewedSourceQaIds.filter((entry): entry is string => typeof entry === "string") : [],
+    sourceQaReviews: Array.isArray(input.sourceQaReviews) ? input.sourceQaReviews as RemoteSourceQaReviewItem[] : [],
     evidence: Array.isArray(input.evidence) ? input.evidence as RemoteExternalValidationEvidence[] : [],
   });
 }

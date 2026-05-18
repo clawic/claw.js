@@ -21,6 +21,7 @@ import {
   buildRemoteExternalValidationReport,
   buildRemoteGoalClosureGate,
   buildRemoteProviderDeviceE2EValidationPlan,
+  buildRemoteSourceQaReviewReport,
   remoteGoalClosureRequiredSourceQaIds,
   buildRemoteRouteContractCatalog,
   buildSyncQueueEntries,
@@ -611,6 +612,54 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.deepEqual(completeExternalValidationReport.blockedRequirementIds, []);
   assert.equal(completeExternalValidationReport.items.every((entry) => entry.clearable && entry.status === "clearable" && !entry.writes), true);
 
+  const emptySourceQaReviewReport = buildRemoteSourceQaReviewReport({ generatedAt: "2026-05-17T10:13:26.000Z" });
+  assert.equal(emptySourceQaReviewReport.status, "incomplete");
+  assert.equal(emptySourceQaReviewReport.writes, false);
+  assert.equal(emptySourceQaReviewReport.requiredSourceQaIds.length, 23);
+  assert.equal(emptySourceQaReviewReport.reviewedSourceQaIds.length, 0);
+  assert.equal(emptySourceQaReviewReport.missingSourceQaIds.length, 23);
+
+  const completeSourceQaReviewReport = buildRemoteSourceQaReviewReport({
+    generatedAt: "2026-05-17T10:13:26.500Z",
+    reviews: remoteGoalClosureRequiredSourceQaIds.map((qaId, index) => ({
+      schemaVersion: 1,
+      qaId,
+      decisionKey: qaId === "QA-023" ? "goal_closure_gate" : [
+        "relay_boundary",
+        "server_trust_model",
+        "remote_surface_parity",
+        "topology_priority",
+        "sync_authority_model",
+        "remote_secrets_model",
+        "transport_contract",
+        "remote_api_shape",
+        "offline_behavior",
+        "remote_actor_model",
+        "headless_host_model",
+        "first_vertical_slice",
+        "sync_substrate",
+        "conflict_default",
+        "client_cache_policy",
+        "guardrail_strictness",
+        "compat_policy",
+        "hosted_service_position",
+        "layer_names",
+        "mesh_collaboration_scope",
+        "agent_service_model",
+        "sync_lateral_domains",
+      ][index],
+      requirementId: qaId === "QA-023" ? "Completion audit" : `RQ-${String(index + 1).padStart(3, "0")}`,
+      disposition: "validated",
+      evidenceRefs: ["docs/remote-gateway-sync-source-decision-audit.md", "docs/remote-gateway-sync-completion-audit.md"],
+      reviewedAt: "2026-05-17T10:13:26.500Z",
+      writes: false,
+    })),
+  });
+  assert.equal(completeSourceQaReviewReport.status, "complete");
+  assert.equal(completeSourceQaReviewReport.reviewedSourceQaIds.length, 23);
+  assert.deepEqual(completeSourceQaReviewReport.missingSourceQaIds, []);
+  assert.equal(completeSourceQaReviewReport.items.every((entry) => entry.evidenceRefs.length >= 2 && !entry.writes), true);
+
   const blockedClosureGate = buildRemoteGoalClosureGate({ generatedAt: "2026-05-17T10:13:26.000Z" });
   assert.equal(blockedClosureGate.status, "blocked");
   assert.equal(blockedClosureGate.writes, false);
@@ -622,7 +671,7 @@ test("remote gateway sync contracts register required layers, routes, and safe d
 
   const clearableClosureGate = buildRemoteGoalClosureGate({
     generatedAt: "2026-05-17T10:13:27.000Z",
-    reviewedSourceQaIds: remoteGoalClosureRequiredSourceQaIds,
+    sourceQaReviews: completeSourceQaReviewReport.items,
     evidence: externalValidationChecklist.items.map((entry) => ({
       schemaVersion: 1,
       requirementId: entry.requirementId,

@@ -2528,6 +2528,7 @@ The docs check script validates that every current export from
     buildRemoteOfflineCommandResult
     buildRemoteProviderDeviceE2EValidationPlan
     buildRemoteRouteContractCatalog
+    buildRemoteSourceQaReviewReport
     buildSyncPlan
     buildSyncQueueEntries
     createExampleSyncResourceManifest
@@ -2626,6 +2627,12 @@ The docs check script validates that every current export from
     remoteSecretLeaseSchema
     RemoteSecretProviderReceipt
     remoteSecretProviderReceiptSchema
+    RemoteSourceQaReviewDisposition
+    remoteSourceQaReviewDispositionSchema
+    RemoteSourceQaReviewItem
+    remoteSourceQaReviewItemSchema
+    RemoteSourceQaReviewReport
+    remoteSourceQaReviewReportSchema
     RemoteSurfaceClassification
     RemoteSurfaceClassificationReceipt
     remoteSurfaceClassificationReceiptSchema

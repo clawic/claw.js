@@ -105,6 +105,32 @@ export const remoteExternalValidationReportSchema = z.object({
   writes: z.literal(false),
 });
 
+export const remoteSourceQaReviewDispositionSchema = z.enum(["implemented", "validated", "external_pending"]);
+
+export const remoteSourceQaReviewItemSchema = z.object({
+  schemaVersion: z.literal(1),
+  qaId: z.string().min(1),
+  decisionKey: z.string().min(1),
+  requirementId: z.string().min(1),
+  disposition: remoteSourceQaReviewDispositionSchema,
+  evidenceRefs: z.array(z.string().min(1)).min(1),
+  reviewedAt: z.string().datetime(),
+  writes: z.literal(false),
+});
+
+export const remoteSourceQaReviewReportSchema = z.object({
+  schemaVersion: z.literal(1),
+  reportId: z.string().min(1),
+  generatedAt: z.string().datetime(),
+  status: z.enum(["incomplete", "complete"]),
+  requiredSourceQaIds: z.array(z.string().min(1)).min(1),
+  reviewedSourceQaIds: z.array(z.string().min(1)),
+  missingSourceQaIds: z.array(z.string().min(1)),
+  invalidSourceQaIds: z.array(z.string().min(1)),
+  items: z.array(remoteSourceQaReviewItemSchema),
+  writes: z.literal(false),
+});
+
 export const remoteGoalClosureGateSchema = z.object({
   schemaVersion: z.literal(1),
   gateId: z.string().min(1),
@@ -113,6 +139,8 @@ export const remoteGoalClosureGateSchema = z.object({
   requiredSourceQaIds: z.array(z.string().min(1)).min(1),
   reviewedSourceQaIds: z.array(z.string().min(1)),
   missingSourceQaIds: z.array(z.string().min(1)),
+  sourceQaReviewStatus: z.enum(["incomplete", "complete"]),
+  sourceQaReviewItems: z.array(remoteSourceQaReviewItemSchema),
   externalValidationStatus: z.enum(["external_pending", "clearable"]),
   blockedExternalRequirementIds: z.array(z.string().min(1)),
   clearableExternalRequirementIds: z.array(z.string().min(1)),
@@ -123,6 +151,9 @@ export const remoteGoalClosureGateSchema = z.object({
 export type RemoteExternalValidationEvidence = z.infer<typeof remoteExternalValidationEvidenceSchema>;
 export type RemoteExternalValidationReportItem = z.infer<typeof remoteExternalValidationReportItemSchema>;
 export type RemoteExternalValidationReport = z.infer<typeof remoteExternalValidationReportSchema>;
+export type RemoteSourceQaReviewDisposition = z.infer<typeof remoteSourceQaReviewDispositionSchema>;
+export type RemoteSourceQaReviewItem = z.infer<typeof remoteSourceQaReviewItemSchema>;
+export type RemoteSourceQaReviewReport = z.infer<typeof remoteSourceQaReviewReportSchema>;
 export type RemoteGoalClosureGate = z.infer<typeof remoteGoalClosureGateSchema>;
 
 function providerDeviceE2EPlanId(parts: string[]): string {
@@ -309,6 +340,36 @@ function remoteGoalClosureGateId(parts: string[]): string {
 
 export const remoteGoalClosureRequiredSourceQaIds = Array.from({ length: 23 }, (_, index) => `QA-${String(index + 1).padStart(3, "0")}`);
 
+const remoteSourceQaCatalog: Record<string, { decisionKey: string; requirementId: string }> = {
+  "QA-001": { decisionKey: "relay_boundary", requirementId: "RQ-001" },
+  "QA-002": { decisionKey: "server_trust_model", requirementId: "RQ-002" },
+  "QA-003": { decisionKey: "remote_surface_parity", requirementId: "RQ-003" },
+  "QA-004": { decisionKey: "topology_priority", requirementId: "RQ-004" },
+  "QA-005": { decisionKey: "sync_authority_model", requirementId: "RQ-005" },
+  "QA-006": { decisionKey: "remote_secrets_model", requirementId: "RQ-006" },
+  "QA-007": { decisionKey: "transport_contract", requirementId: "RQ-007" },
+  "QA-008": { decisionKey: "remote_api_shape", requirementId: "RQ-008" },
+  "QA-009": { decisionKey: "offline_behavior", requirementId: "RQ-009" },
+  "QA-010": { decisionKey: "remote_actor_model", requirementId: "RQ-010" },
+  "QA-011": { decisionKey: "headless_host_model", requirementId: "RQ-011" },
+  "QA-012": { decisionKey: "first_vertical_slice", requirementId: "RQ-012" },
+  "QA-013": { decisionKey: "sync_substrate", requirementId: "RQ-013" },
+  "QA-014": { decisionKey: "conflict_default", requirementId: "RQ-014" },
+  "QA-015": { decisionKey: "client_cache_policy", requirementId: "RQ-015" },
+  "QA-016": { decisionKey: "guardrail_strictness", requirementId: "RQ-016" },
+  "QA-017": { decisionKey: "compat_policy", requirementId: "RQ-017" },
+  "QA-018": { decisionKey: "hosted_service_position", requirementId: "RQ-018" },
+  "QA-019": { decisionKey: "layer_names", requirementId: "RQ-019" },
+  "QA-020": { decisionKey: "mesh_collaboration_scope", requirementId: "RQ-020" },
+  "QA-021": { decisionKey: "agent_service_model", requirementId: "RQ-021" },
+  "QA-022": { decisionKey: "sync_lateral_domains", requirementId: "RQ-022" },
+  "QA-023": { decisionKey: "goal_closure_gate", requirementId: "Completion audit" },
+};
+
+function sourceQaReviewReportId(parts: string[]): string {
+  return `remote_source_qa_review_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
+}
+
 export function buildRemoteExternalValidationChecklist(input: {
   generatedAt?: string;
 } = {}): RemoteExternalValidationChecklist {
@@ -410,20 +471,73 @@ export function buildRemoteExternalValidationReport(input: {
   });
 }
 
+export function buildRemoteSourceQaReviewReport(input: {
+  generatedAt?: string;
+  reviewedSourceQaIds?: string[];
+  reviews?: RemoteSourceQaReviewItem[];
+} = {}): RemoteSourceQaReviewReport {
+  const generatedAt = input.generatedAt ?? new Date().toISOString();
+  const explicitReviews = (input.reviews ?? []).map((entry) => remoteSourceQaReviewItemSchema.parse(entry));
+  const explicitQaIds = new Set(explicitReviews.map((entry) => entry.qaId));
+  const idOnlyReviews = [...new Set(input.reviewedSourceQaIds ?? [])]
+    .filter((qaId) => remoteGoalClosureRequiredSourceQaIds.includes(qaId) && !explicitQaIds.has(qaId))
+    .map((qaId) => {
+      const catalogEntry = remoteSourceQaCatalog[qaId];
+      return remoteSourceQaReviewItemSchema.parse({
+        schemaVersion: 1,
+        qaId,
+        decisionKey: catalogEntry.decisionKey,
+        requirementId: catalogEntry.requirementId,
+        disposition: "validated",
+        evidenceRefs: ["claw remote closure-gate --reviewed-source-qa-ids"],
+        reviewedAt: generatedAt,
+        writes: false,
+      });
+    });
+  const validItems = [...explicitReviews, ...idOnlyReviews].filter((entry) => {
+    const catalogEntry = remoteSourceQaCatalog[entry.qaId];
+    return catalogEntry
+      && catalogEntry.decisionKey === entry.decisionKey
+      && catalogEntry.requirementId === entry.requirementId
+      && entry.evidenceRefs.length > 0
+      && entry.writes === false;
+  });
+  const reviewedSourceQaIds = [...new Set(validItems.map((entry) => entry.qaId))].filter((qaId) => remoteGoalClosureRequiredSourceQaIds.includes(qaId));
+  const missingSourceQaIds = remoteGoalClosureRequiredSourceQaIds.filter((qaId) => !reviewedSourceQaIds.includes(qaId));
+  const invalidSourceQaIds = [...new Set([...explicitReviews, ...idOnlyReviews].map((entry) => entry.qaId))]
+    .filter((qaId) => !reviewedSourceQaIds.includes(qaId));
+  return remoteSourceQaReviewReportSchema.parse({
+    schemaVersion: 1,
+    reportId: sourceQaReviewReportId(["report", generatedAt]),
+    generatedAt,
+    status: missingSourceQaIds.length === 0 && invalidSourceQaIds.length === 0 ? "complete" : "incomplete",
+    requiredSourceQaIds: remoteGoalClosureRequiredSourceQaIds,
+    reviewedSourceQaIds,
+    missingSourceQaIds,
+    invalidSourceQaIds,
+    items: validItems,
+    writes: false,
+  });
+}
+
 export function buildRemoteGoalClosureGate(input: {
   generatedAt?: string;
   reviewedSourceQaIds?: string[];
+  sourceQaReviews?: RemoteSourceQaReviewItem[];
   evidence?: RemoteExternalValidationEvidence[];
 } = {}): RemoteGoalClosureGate {
   const generatedAt = input.generatedAt ?? new Date().toISOString();
-  const reviewedSourceQaIds = [...new Set(input.reviewedSourceQaIds ?? [])].filter((id) => remoteGoalClosureRequiredSourceQaIds.includes(id));
-  const missingSourceQaIds = remoteGoalClosureRequiredSourceQaIds.filter((id) => !reviewedSourceQaIds.includes(id));
+  const sourceQaReviewReport = buildRemoteSourceQaReviewReport({
+    generatedAt,
+    reviewedSourceQaIds: input.reviewedSourceQaIds,
+    reviews: input.sourceQaReviews,
+  });
   const externalValidationReport = buildRemoteExternalValidationReport({
     generatedAt,
     evidence: input.evidence,
   });
   const blockers: Array<"source_qa_review" | "external_validation"> = [];
-  if (missingSourceQaIds.length > 0) blockers.push("source_qa_review");
+  if (sourceQaReviewReport.status !== "complete") blockers.push("source_qa_review");
   if (externalValidationReport.status !== "clearable") blockers.push("external_validation");
   return remoteGoalClosureGateSchema.parse({
     schemaVersion: 1,
@@ -431,8 +545,10 @@ export function buildRemoteGoalClosureGate(input: {
     generatedAt,
     status: blockers.length === 0 ? "clearable" : "blocked",
     requiredSourceQaIds: remoteGoalClosureRequiredSourceQaIds,
-    reviewedSourceQaIds,
-    missingSourceQaIds,
+    reviewedSourceQaIds: sourceQaReviewReport.reviewedSourceQaIds,
+    missingSourceQaIds: sourceQaReviewReport.missingSourceQaIds,
+    sourceQaReviewStatus: sourceQaReviewReport.status,
+    sourceQaReviewItems: sourceQaReviewReport.items,
     externalValidationStatus: externalValidationReport.status,
     blockedExternalRequirementIds: externalValidationReport.blockedRequirementIds,
     clearableExternalRequirementIds: externalValidationReport.clearableRequirementIds,

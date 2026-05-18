@@ -206,7 +206,7 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
     gaps: Array<{ requirementId: string; status: string; writes: boolean }>;
     externalValidationChecklist: { status: string; writes: boolean; requirementIds: string[]; coverage: { requirementCount: number; coveredRequirementCount: number; missingRequirementIds: string[] }; items: Array<{ requirementId: string; requiredCommand: string; requiredArtifacts: string[]; approvedRunRequired: boolean; physicalEvidenceRequired: boolean; plaintextMaterialIncluded: boolean; writes: boolean }> };
     externalValidationReport: { status: string; writes: boolean; requirementCount: number; evidenceCount: number; clearableRequirementIds: string[]; blockedRequirementIds: string[]; items: Array<{ requirementId: string; clearable: boolean; status: string; writes: boolean }> };
-    closureGate: { status: string; writes: boolean; requiredSourceQaIds: string[]; reviewedSourceQaIds: string[]; missingSourceQaIds: string[]; blockedExternalRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockers: string[] };
+    closureGate: { status: string; writes: boolean; requiredSourceQaIds: string[]; reviewedSourceQaIds: string[]; missingSourceQaIds: string[]; sourceQaReviewStatus: string; sourceQaReviewItems: unknown[]; blockedExternalRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockers: string[] };
     providerDeviceE2EPlan: { status: string; writes: boolean; requiredDomains: string[]; requiredRouteIds: string[]; requiredExternalPendingIds: string[]; plaintextMaterialIncluded: boolean };
     routeContracts: Array<{ routeId: string; parallelApiAllowed: boolean; writes: boolean }>;
     tests: string[];
@@ -255,6 +255,8 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   assert.equal(remoteInspectPayload.closureGate.requiredSourceQaIds.length, 23);
   assert.equal(remoteInspectPayload.closureGate.reviewedSourceQaIds.length, 0);
   assert.equal(remoteInspectPayload.closureGate.missingSourceQaIds.length, 23);
+  assert.equal(remoteInspectPayload.closureGate.sourceQaReviewStatus, "incomplete");
+  assert.equal(remoteInspectPayload.closureGate.sourceQaReviewItems.length, 0);
   assert.equal(remoteInspectPayload.closureGate.blockedExternalRequirementIds.length, remoteInspectPayload.gaps.length);
   assert.equal(remoteInspectPayload.closureGate.clearableExternalRequirementIds.length, 0);
   assert.equal(remoteInspectPayload.closureGate.blockers.includes("source_qa_review"), true);
@@ -319,12 +321,14 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
 
   const remoteClosureGate = await runCliCapture(["remote", "closure-gate", "--now", "2026-05-17T10:13:26.000Z", "--json"], process.cwd());
   assert.equal(remoteClosureGate.code, CLI_EXIT_OK);
-  const remoteClosureGatePayload = parseCliJson<{ status: string; writes: boolean; requiredSourceQaIds: string[]; reviewedSourceQaIds: string[]; missingSourceQaIds: string[]; blockedExternalRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockers: string[] }>(remoteClosureGate.stdout).data;
+  const remoteClosureGatePayload = parseCliJson<{ status: string; writes: boolean; requiredSourceQaIds: string[]; reviewedSourceQaIds: string[]; missingSourceQaIds: string[]; sourceQaReviewStatus: string; sourceQaReviewItems: unknown[]; blockedExternalRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockers: string[] }>(remoteClosureGate.stdout).data;
   assert.equal(remoteClosureGatePayload.status, "blocked");
   assert.equal(remoteClosureGatePayload.writes, false);
   assert.equal(remoteClosureGatePayload.requiredSourceQaIds.length, 23);
   assert.equal(remoteClosureGatePayload.reviewedSourceQaIds.length, 0);
   assert.equal(remoteClosureGatePayload.missingSourceQaIds.length, 23);
+  assert.equal(remoteClosureGatePayload.sourceQaReviewStatus, "incomplete");
+  assert.equal(remoteClosureGatePayload.sourceQaReviewItems.length, 0);
   assert.equal(remoteClosureGatePayload.blockedExternalRequirementIds.length, remotePendingPayload.requirements.length);
   assert.equal(remoteClosureGatePayload.clearableExternalRequirementIds.length, 0);
   assert.equal(remoteClosureGatePayload.blockers.includes("source_qa_review"), true);

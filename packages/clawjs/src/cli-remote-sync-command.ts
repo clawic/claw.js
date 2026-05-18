@@ -30,6 +30,7 @@ import {
   syncObjectSnapshotSchema,
   type MeshShareAction,
   type RemoteExternalValidationEvidence,
+  type RemoteSourceQaReviewItem,
   type RemoteCompatibilityClientKind,
   type SyncAuthority,
   type SyncDriver,
@@ -257,6 +258,12 @@ function parseExternalValidationEvidence(value: string | undefined): RemoteExter
 
 function parseReviewedSourceQaIds(value: string | undefined): string[] {
   return listFlag(value, []);
+}
+
+function parseSourceQaReviews(value: string | undefined): RemoteSourceQaReviewItem[] {
+  if (!value) return [];
+  const parsed = JSON.parse(value) as unknown;
+  return Array.isArray(parsed) ? parsed as RemoteSourceQaReviewItem[] : [parsed as RemoteSourceQaReviewItem];
 }
 
 function meshActionFlags(value: string | undefined, fallback: MeshShareAction[]): MeshShareAction[] {
@@ -491,6 +498,7 @@ export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
     const gate = buildRemoteGoalClosureGate({
       generatedAt: input.flags.now,
       reviewedSourceQaIds: parseReviewedSourceQaIds(input.flags["reviewed-source-qa-ids"] ?? input.flags["source-qa-ids"]),
+      sourceQaReviews: parseSourceQaReviews(input.flags["source-qa-review-json"]),
       evidence: parseExternalValidationEvidence(input.flags["evidence-json"]),
     });
     return writeOutput(input, "remote", gate, `${gate.status} blockers=${gate.blockers.length}`, command);
