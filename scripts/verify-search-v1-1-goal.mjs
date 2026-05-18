@@ -1119,6 +1119,7 @@ for (const snippet of [
   "search.sources.set_state",
   "search.status",
   "search.jobs.schedule",
+  "search.changes.schedule",
   "search.saved.create",
   "search.monitors.evaluate",
   "search.actions.execute",
@@ -1226,6 +1227,8 @@ requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleSurfaceRoute
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"surfaces.routes\"");
 requireSnippet("packages/clawjs/src/cli-search-command.ts", "scheduleSurfaceRouteSearchEvent({");
 requireSnippet("packages/clawjs/src/cli-search-surface-routes-test-utils.ts", "scheduleSurfaceRouteSearchEvent");
+requireSnippet("packages/clawjs-search-mcp/src/index.ts", "search.changes.schedule");
+requireSnippet("packages/clawjs-search-mcp/src/index.test.ts", "Search MCP schedules typed changed source events");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "providers and snippets writes enqueue and index framework configuration fast paths");
 requireSnippet("packages/clawjs/src/cli-search-framework-fast-path-test-utils.ts", "providerDeleteRunPayload.data.service.worker?.claimed");
 requireSnippet("packages/clawjs/src/cli-search-framework-fast-path-test-utils.ts", "operation: \"delete\"");

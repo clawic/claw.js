@@ -55,6 +55,7 @@ test("Search MCP exposes source-set, entrypoint, and explain tools", () => {
       "search.jobs.list",
       "search.jobs.enqueue",
       "search.jobs.schedule",
+      "search.changes.schedule",
     ]) {
       assert.equal(toolNames.has(name), true, `${name} should be exposed`);
     }
@@ -564,6 +565,52 @@ test("Search MCP schedules compacted event-driven indexing jobs", () => {
     assert.equal(deletion.operation, "delete");
     assert.equal(deletion.priority, 80);
     assert.throws(() => scheduleTool.handler({ source: "documents.blocks", operation: "rebuild", resourceId: "doc-alpha" }), /operation must be upsert or delete/);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("Search MCP schedules typed changed source events", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-mcp-changes-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "code.symbols",
+      domain: "code",
+      name: "Code",
+      resultTypes: ["code"],
+    }));
+    const root = path.join(dir, "project");
+    const filePath = path.join(root, "src", "app.ts");
+    const outsidePath = path.join(dir, "outside.ts");
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(filePath, "export function changedMcpNeedle() { return true; }\n");
+    const tools = createSearchMcpTools(store);
+    const changedTool = tools.find((tool) => tool.name === "search.changes.schedule");
+    assert.ok(changedTool);
+    const job = changedTool.handler({
+      source: "code.symbols",
+      operation: "upsert",
+      root,
+      path: filePath,
+      observedAt: "2026-05-18T10:00:00.000Z",
+    }) as { source: string; shard: string; operation: string; resourceId?: string; payload?: Record<string, unknown>; priority: number };
+    assert.equal(job.source, "code.symbols");
+    assert.equal(job.shard, "hot");
+    assert.equal(job.operation, "upsert");
+    assert.equal(job.resourceId, "src/app.ts");
+    assert.equal(job.priority, 60);
+    assert.equal(job.payload?.eventDriven, true);
+    assert.equal(job.payload?.root, root);
+    assert.equal(job.payload?.relativePath, "src/app.ts");
+    assert.equal(job.payload?.absolutePath, filePath);
+    assert.throws(() => changedTool.handler({
+      source: "code.symbols",
+      operation: "upsert",
+      root,
+      path: outsidePath,
+    }), /outside root/);
   } finally {
     store.close();
     fs.rmSync(dir, { recursive: true, force: true });
