@@ -800,6 +800,7 @@ claw service service_123 timeline --json
 claw study create "Trial A" --json
 claw study study_123 participants add "Subject 001" --json
 claw study study_123 participants list --json
+claw study study_123 cohort list --json
 claw study study_123 timeline --json
 claw sample create "Tube A" --study-id study_123 --json
 claw assays list --json

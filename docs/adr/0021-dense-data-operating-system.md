@@ -198,10 +198,19 @@ timeline` now reads `patients`, `encounters`, `medications`, `symptom_logs`,
 `core.sqlite`, returns `implementationStatus: "materialized_semantic_view"`,
 and marks the view partial when quality gaps remain. This keeps the view useful
 without pretending that external clinical/provider validation has happened.
+`claw patient <id> medications list` also materializes the declared
+`patient.medications` view from the same `patients`, `medications`,
+`evidence_sources`, `quality_gaps`, and `provenance_events` collections, so the
+common medication-list intent stays queryable as structured clinical data
+rather than only a raw nested table read.
 The same pattern now applies to `claw case <id> timeline`, which materializes
 `legal_cases`, `legal_clients`, `case_evidence`, `evidence_sources`,
 `quality_gaps`, and `provenance_events` into a legal case timeline while keeping legal
 decisioning/advice outside the local acceptance claim.
+`claw case <id> evidence list` materializes the `case.evidence` view from
+`legal_cases`, `case_evidence`, evidence sources, quality gaps, and provenance
+so legal evidence, source/custody context, and gaps stay in one DB-backed
+shape.
 `claw service <id> timeline` also materializes `services`, `incidents`,
 `evidence_sources`, `quality_gaps`, and `provenance_events` so ops/ITSM can
 show service history and explicit missing SLO/check data without pretending to
@@ -217,6 +226,10 @@ second billing view model.
 Research uses `claw study <id> timeline` to materialize `studies`,
 `participants`, linked samples, evidence, gaps, and provenance, keeping CTMS
 sync as `external_pending` unless a real provider connector is validated.
+`claw study <id> cohort list` materializes `study.cohort` from `studies`,
+`participants`, shared identity/profile links, evidence, quality gaps, and
+provenance so cohort review and consent/eligibility gaps are first-class local
+data.
 Education/LMS uses `claw learner <id> timeline` to materialize `learners`,
 related `courses` through the shared `entity_relations` graph, evidence, gaps,
 and provenance. This keeps enrollment/progress-style links inside the universal

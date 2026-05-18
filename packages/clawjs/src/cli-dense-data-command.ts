@@ -82,13 +82,13 @@ export async function runDenseDataCli(input: DenseDataCliInput): Promise<number 
   const action = input.positionals[1];
   if (!group || !action) return null;
   if (DENSE_FIXTURE_COMMANDS.has(group)) return runDenseFixtureCli(input, action);
-  const directSemanticView = semanticTimelineViewForRoute(input);
+  const directSemanticView = semanticComposedViewForRoute(input) ?? semanticTimelineViewForRoute(input);
   if (directSemanticView) return writeDenseSemanticView(input, resolveClawDenseDataIntent(phrase), directSemanticView, group, action);
   if (!isDenseDataCommandGroup(group)) return null;
   if (group === "finance" && ["upsert", "list", "get", "delete"].includes(action)) return null;
 
   const intent = resolveClawDenseDataIntent(phrase);
-  const semanticView = intent.status === "data_gap" ? undefined : (semanticViewForIntent(intent) ?? semanticTimelineViewForRoute(input));
+  const semanticView = intent.status === "data_gap" ? undefined : (semanticViewForIntent(intent) ?? semanticComposedViewForRoute(input) ?? semanticTimelineViewForRoute(input));
   if (semanticView) return writeDenseSemanticView(input, intent, semanticView, group, action);
 
   const foundationCollectionName = collectionForFoundationRoute(group);
@@ -229,6 +229,18 @@ function semanticTimelineViewForRoute(input: DenseDataCliInput) {
   return listClawDenseDataSemanticViewEntries().find((entry) => entry.commandPattern === `claw ${group} <id> timeline`);
 }
 
+function semanticComposedViewForRoute(input: DenseDataCliInput) {
+  const [group, id, noun, action] = input.positionals;
+  if (!group || !id || action !== "list") return undefined;
+  const viewId =
+    group === "patient" && noun === "medications" ? "patient.medications"
+      : group === "study" && (noun === "cohort" || noun === "cohorts") ? "study.cohort"
+        : group === "case" && noun === "evidence" ? "case.evidence"
+          : undefined;
+  if (!viewId) return undefined;
+  return listClawDenseDataSemanticViewEntries().find((entry) => entry.id === viewId);
+}
+
 function writeDenseSemanticView(
   input: DenseDataCliInput,
   intent: ReturnType<typeof resolveClawDenseDataIntent>,
@@ -238,6 +250,7 @@ function writeDenseSemanticView(
 ): number {
   const materializedView = materializedSemanticViewForIntent(input, intent, semanticView);
   const recordsMaterialized = Boolean(materializedView);
+  const operation = intent.operation ?? intent.system?.operations.find((entry) => entry.id === semanticView.operationId);
   const payload = {
     intent,
     semanticView,
@@ -255,7 +268,7 @@ function writeDenseSemanticView(
       operationId: semanticView.operationId,
       requiredInputs: semanticView.requiredInputs,
       outputShape: semanticView.outputShape,
-      createsOrReads: intent.operation?.createsOrReads ?? [],
+      createsOrReads: operation?.createsOrReads ?? [],
     },
     materializedView,
     gap: recordsMaterialized ? null : {
@@ -286,9 +299,12 @@ function materializedSemanticViewForIntent(
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   if (semanticView.id === "patient.timeline") return materializedPatientTimeline(input, intent, semanticView);
+  if (semanticView.id === "patient.medications") return materializedPatientMedications(input, intent, semanticView);
   if (semanticView.id === "case.timeline") return materializedCaseTimeline(input, intent, semanticView);
+  if (semanticView.id === "case.evidence") return materializedCaseEvidence(input, intent, semanticView);
   if (semanticView.id === "service.timeline") return materializedServiceTimeline(input, intent, semanticView);
   if (semanticView.id === "study.timeline") return materializedStudyTimeline(input, intent, semanticView);
+  if (semanticView.id === "study.cohort") return materializedStudyCohort(input, intent, semanticView);
   if (semanticView.id === "sample.timeline") return materializedSampleTimeline(input, intent, semanticView);
   if (semanticView.id === "experiment.timeline") return materializedExperimentTimeline(input, intent, semanticView);
   if (semanticView.id === "lab_notebook.timeline") return materializedLabNotebookTimeline(input, intent, semanticView);
@@ -369,6 +385,71 @@ function materializedPatientTimeline(
   };
 }
 
+function materializedPatientMedications(
+  input: DenseDataCliInput,
+  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
+) {
+  const patientId = input.positionals[1];
+  if (input.positionals[0] !== "patient" || input.positionals[2] !== "medications" || input.positionals[3] !== "list" || !patientId) return undefined;
+  const namespaceId = input.flags.namespace ?? "main";
+  const store = openDenseDataStore(input.workspaceRoot);
+  store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
+  const patient = store.getRecord(namespaceId, "patients", patientId);
+  if (!patient) return undefined;
+
+  const medications = store.listRecords(namespaceId, "medications", { filter: { patientId } }).items;
+  const medicationEvidence = medications.flatMap((record) => store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "medications", recordId: record.id } }).items);
+  const patientEvidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "patients", recordId: patientId } }).items;
+  const evidence = uniqueRecordsById([...patientEvidence, ...medicationEvidence]);
+  const medicationGaps = medications.flatMap((record) => store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "medications", targetId: record.id } }).items);
+  const patientGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "patients", targetId: patientId } }).items;
+  const qualityGaps = uniqueRecordsById([...patientGaps, ...medicationGaps]);
+  const provenance = uniqueRecordsById([
+    ...store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "patients", targetId: patientId } }).items,
+    ...medications.flatMap((record) => store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "medications", targetId: record.id } }).items),
+  ]);
+  const activeMedications = medications.filter((record) => !["stopped", "inactive", "completed"].includes(String(record.status ?? "").toLowerCase())).length;
+  const historicalMedications = medications.length - activeMedications;
+  const items = [
+    ...medications.map((record) => timelineItem(record, "medication", record.id, record.name ?? record.id, record.startedAt ?? record.createdAt, record)),
+    ...evidence.map((record) => timelineItem(record, "evidence", record.id, record.label ?? record.id, record.capturedAt ?? record.createdAt, record)),
+    ...qualityGaps.map((record) => timelineItem(record, "quality_gap", record.id, record.label ?? record.id, record.createdAt, record)),
+    ...provenance.map((record) => timelineItem(record, "provenance", record.id, record.eventType ?? record.id, record.occurredAt ?? record.createdAt, record)),
+  ].sort((left, right) => String(left.occurredAt).localeCompare(String(right.occurredAt)));
+
+  return {
+    id: semanticView.id,
+    subject: { collectionName: "patients", id: patient.id, label: patient.displayName ?? patient.id },
+    summary: {
+      medications: medications.length,
+      activeMedications,
+      historicalMedications,
+      evidenceSources: evidence.length,
+      qualityGaps: qualityGaps.length,
+    },
+    itemCount: items.length,
+    items,
+    records: {
+      patient,
+      medications,
+      evidence,
+      provenance,
+    },
+    gaps: qualityGaps.map((record) => ({
+      id: record.id,
+      label: record.label,
+      status: record.status,
+      gapKind: record.gapKind,
+      severity: record.severity,
+      evidenceSourceId: record.evidenceSourceId,
+    })),
+    sourceCollections: ["patients", "medications", "evidence_sources", "quality_gaps", "provenance_events"],
+    partial: qualityGaps.length > 0,
+    intentStatus: intent.status,
+  };
+}
+
 function materializedCaseTimeline(
   input: DenseDataCliInput,
   intent: ReturnType<typeof resolveClawDenseDataIntent>,
@@ -410,6 +491,70 @@ function materializedCaseTimeline(
       evidenceSourceId: record.evidenceSourceId,
     })),
     sourceCollections: ["legal_cases", "legal_clients", "case_evidence", "evidence_sources", "quality_gaps", "provenance_events"],
+    partial: qualityGaps.length > 0,
+    intentStatus: intent.status,
+  };
+}
+
+function materializedCaseEvidence(
+  input: DenseDataCliInput,
+  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
+) {
+  const caseId = input.positionals[1];
+  if (input.positionals[0] !== "case" || input.positionals[2] !== "evidence" || input.positionals[3] !== "list" || !caseId) return undefined;
+  const namespaceId = input.flags.namespace ?? "main";
+  const store = openDenseDataStore(input.workspaceRoot);
+  store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
+  const legalCase = store.getRecord(namespaceId, "legal_cases", caseId);
+  if (!legalCase) return undefined;
+
+  const evidenceItems = store.listRecords(namespaceId, "case_evidence", { filter: { caseId } }).items;
+  const evidenceSources = uniqueRecordsById([
+    ...store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "legal_cases", recordId: caseId } }).items,
+    ...evidenceItems.flatMap((record) => store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "case_evidence", recordId: record.id } }).items),
+  ]);
+  const qualityGaps = uniqueRecordsById([
+    ...store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "legal_cases", targetId: caseId } }).items,
+    ...evidenceItems.flatMap((record) => store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "case_evidence", targetId: record.id } }).items),
+  ]);
+  const provenance = uniqueRecordsById([
+    ...store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "legal_cases", targetId: caseId } }).items,
+    ...evidenceItems.flatMap((record) => store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "case_evidence", targetId: record.id } }).items),
+  ]);
+  const items = [
+    ...evidenceItems.map((record) => timelineItem(record, "case_evidence", record.id, record.title ?? record.id, record.observedAt ?? record.createdAt, record)),
+    ...evidenceSources.map((record) => timelineItem(record, "evidence", record.id, record.label ?? record.id, record.capturedAt ?? record.createdAt, record)),
+    ...qualityGaps.map((record) => timelineItem(record, "quality_gap", record.id, record.label ?? record.id, record.createdAt, record)),
+    ...provenance.map((record) => timelineItem(record, "provenance", record.id, record.eventType ?? record.id, record.occurredAt ?? record.createdAt, record)),
+  ].sort((left, right) => String(left.occurredAt).localeCompare(String(right.occurredAt)));
+
+  return {
+    id: semanticView.id,
+    subject: { collectionName: "legal_cases", id: legalCase.id, label: legalCase.title ?? legalCase.id },
+    summary: {
+      evidenceItems: evidenceItems.length,
+      evidenceSources: evidenceSources.length,
+      qualityGaps: qualityGaps.length,
+      provenanceEvents: provenance.length,
+    },
+    itemCount: items.length,
+    items,
+    records: {
+      legalCase,
+      evidenceItems,
+      evidenceSources,
+      provenance,
+    },
+    gaps: qualityGaps.map((record) => ({
+      id: record.id,
+      label: record.label,
+      status: record.status,
+      gapKind: record.gapKind,
+      severity: record.severity,
+      evidenceSourceId: record.evidenceSourceId,
+    })),
+    sourceCollections: ["legal_cases", "case_evidence", "evidence_sources", "quality_gaps", "provenance_events"],
     partial: qualityGaps.length > 0,
     intentStatus: intent.status,
   };
@@ -544,6 +689,87 @@ function materializedStudyTimeline(
       evidenceSourceId: record.evidenceSourceId,
     })),
     sourceCollections: ["studies", "participants", "samples", "evidence_sources", "quality_gaps", "provenance_events"],
+    partial: qualityGaps.length > 0,
+    intentStatus: intent.status,
+  };
+}
+
+function materializedStudyCohort(
+  input: DenseDataCliInput,
+  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
+) {
+  const studyId = input.positionals[1];
+  const noun = input.positionals[2];
+  if (input.positionals[0] !== "study" || (noun !== "cohort" && noun !== "cohorts") || input.positionals[3] !== "list" || !studyId) return undefined;
+  const namespaceId = input.flags.namespace ?? "main";
+  const store = openDenseDataStore(input.workspaceRoot);
+  store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
+  const study = store.getRecord(namespaceId, "studies", studyId);
+  if (!study) return undefined;
+
+  const participants = store.listRecords(namespaceId, "participants", { filter: { studyId } }).items;
+  const participantProfiles = participants.flatMap((record): Array<Record<string, unknown>> => {
+    const profile = store.getRecord(namespaceId, "domain_profiles", `profile_participants_${record.id}`);
+    return profile ? [profile as Record<string, unknown>] : [];
+  });
+  const relations = participants.flatMap((record) => store.listRecords(namespaceId, "entity_relations", { filter: { toEntityKind: "participants", toEntityId: record.id } }).items);
+  const evidence = uniqueRecordsById([
+    ...store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "studies", recordId: studyId } }).items,
+    ...participants.flatMap((record) => store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "participants", recordId: record.id } }).items),
+  ]);
+  const qualityGaps = uniqueRecordsById([
+    ...store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "studies", targetId: studyId } }).items,
+    ...participants.flatMap((record) => store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "participants", targetId: record.id } }).items),
+  ]);
+  const provenance = uniqueRecordsById([
+    ...store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "studies", targetId: studyId } }).items,
+    ...participants.flatMap((record) => store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "participants", targetId: record.id } }).items),
+  ]);
+  const consentUnknown = participants.filter((record) => String(record.consentStatus ?? "").toLowerCase() === "unknown").length;
+  const enrolled = participants.filter((record) => String(record.status ?? "").toLowerCase() === "enrolled").length;
+  const screening = participants.filter((record) => String(record.status ?? "").toLowerCase() === "screening").length;
+  const items = [
+    ...participants.map((record) => timelineItem(record, "participant", record.id, record.displayName ?? record.subjectCode ?? record.id, record.enrolledAt ?? record.createdAt, record)),
+    ...participantProfiles.map((record) => timelineItem(record, "domain_profile", record.id, record.roleId ?? record.entityKind ?? record.id, record.createdAt, record)),
+    ...relations.map((record) => timelineItem(record, "relation", record.id, relationLabel(record), record.createdAt, record)),
+    ...evidence.map((record) => timelineItem(record, "evidence", record.id, record.label ?? record.id, record.capturedAt ?? record.createdAt, record)),
+    ...qualityGaps.map((record) => timelineItem(record, "quality_gap", record.id, record.label ?? record.id, record.createdAt, record)),
+    ...provenance.map((record) => timelineItem(record, "provenance", record.id, record.eventType ?? record.id, record.occurredAt ?? record.createdAt, record)),
+  ].sort((left, right) => String(left.occurredAt).localeCompare(String(right.occurredAt)));
+
+  return {
+    id: semanticView.id,
+    subject: { collectionName: "studies", id: study.id, label: study.title ?? study.id },
+    summary: {
+      participants: participants.length,
+      enrolled,
+      screening,
+      consentUnknown,
+      identityRelations: relations.length,
+      participantProfiles: participantProfiles.length,
+      evidenceSources: evidence.length,
+      qualityGaps: qualityGaps.length,
+    },
+    itemCount: items.length,
+    items,
+    records: {
+      study,
+      participants,
+      participantProfiles,
+      relations,
+      evidence,
+      provenance,
+    },
+    gaps: qualityGaps.map((record) => ({
+      id: record.id,
+      label: record.label,
+      status: record.status,
+      gapKind: record.gapKind,
+      severity: record.severity,
+      evidenceSourceId: record.evidenceSourceId,
+    })),
+    sourceCollections: ["studies", "participants", "domain_profiles", "entity_relations", "evidence_sources", "quality_gaps", "provenance_events"],
     partial: qualityGaps.length > 0,
     intentStatus: intent.status,
   };

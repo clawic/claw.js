@@ -399,6 +399,10 @@ for (const requiredPhrase of [
 requireText("CLI discovery test", cliDiscoveryTest, "every graduated dense-data noun and alias");
 requireText("CLI discovery test", cliDiscoveryTest, "must route through the shared database");
 requireText("CLI discovery test", cliDiscoveryTest, "must be a dense-data semantic route");
+requireText("CLI discovery test", cliDiscoveryTest, "high-value dense-data alternate routes");
+requireText("CLI discovery test", cliDiscoveryTest, "patient.medications");
+requireText("CLI discovery test", cliDiscoveryTest, "study.cohort");
+requireText("CLI discovery test", cliDiscoveryTest, "case.evidence");
 
 const sourceDecisionIds = extractTableIds(sourceAudit, "DQ");
 for (let index = 1; index <= 18; index += 1) {
@@ -503,6 +507,9 @@ for (const phrase of [
   "claw lab-notebook lab_notebook_123 protocol-runs add",
   "claw protocol-run protocol_run_123 observations add",
   "claw lab-notebook lab_notebook_123 timeline",
+  "claw patient <id> medications list",
+  "claw study <id> cohort list",
+  "claw case <id> evidence list",
   "claw company company_123 timeline",
   "claw asset asset_123 timeline",
   "claw work-order work_order_123 timeline",
@@ -707,11 +714,20 @@ if (multiRouteOperationCount < 20) {
 if (!semanticViews.some((entry) => entry.id === "patient.timeline" && entry.systemId === "health")) {
   fail("semantic views must include patient.timeline");
 }
+if (!semanticViews.some((entry) => entry.id === "patient.medications" && entry.systemId === "health")) {
+  fail("semantic views must include patient.medications");
+}
 if (!semanticViews.some((entry) => entry.id === "study.timeline" && entry.systemId === "research")) {
   fail("semantic views must include study.timeline");
 }
+if (!semanticViews.some((entry) => entry.id === "study.cohort" && entry.systemId === "research")) {
+  fail("semantic views must include study.cohort");
+}
 if (!semanticViews.some((entry) => entry.id === "case.timeline" && entry.systemId === "legal")) {
   fail("semantic views must include case.timeline");
+}
+if (!semanticViews.some((entry) => entry.id === "case.evidence" && entry.systemId === "legal")) {
+  fail("semantic views must include case.evidence");
 }
 if (!semanticViews.some((entry) => entry.id === "service.timeline" && entry.systemId === "ops")) {
   fail("semantic views must include service.timeline");

@@ -104,13 +104,31 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
 
   const patientMedications = await runCliCapture(["patient", createdPatient.data.id, "medications", "list", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(patientMedications.code, CLI_EXIT_OK);
-  const patientMedicationsPayload = JSON.parse(patientMedications.stdout) as { data: Array<{ name: string; patientId: string }>; meta: { collection: string; action: string; invokedCommand: string } };
-  assert.equal(patientMedicationsPayload.meta.invokedCommand, "patient");
-  assert.equal(patientMedicationsPayload.meta.collection, "medications");
-  assert.equal(patientMedicationsPayload.meta.action, "list");
-  assert.equal(patientMedicationsPayload.data.length, 1);
-  assert.equal(patientMedicationsPayload.data[0]?.name, "Atorvastatin");
-  assert.equal(patientMedicationsPayload.data[0]?.patientId, createdPatient.data.id);
+  const patientMedicationsPayload = JSON.parse(patientMedications.stdout) as {
+    data: {
+      coverage: { implementationStatus: string; recordsMaterialized: boolean };
+      semanticView: { id: string; systemId: string };
+      materializedView: {
+        subject: { id: string; label: string };
+        summary: { medications: number; activeMedications: number };
+        records: { medications: Array<{ name: string; patientId: string }> };
+        items: Array<{ kind: string; label: string }>;
+      };
+    };
+    meta: { denseData: boolean; semanticView: boolean };
+  };
+  assert.equal(patientMedicationsPayload.meta.denseData, true);
+  assert.equal(patientMedicationsPayload.meta.semanticView, true);
+  assert.equal(patientMedicationsPayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(patientMedicationsPayload.data.coverage.recordsMaterialized, true);
+  assert.equal(patientMedicationsPayload.data.semanticView.id, "patient.medications");
+  assert.equal(patientMedicationsPayload.data.semanticView.systemId, "health");
+  assert.equal(patientMedicationsPayload.data.materializedView.subject.id, createdPatient.data.id);
+  assert.equal(patientMedicationsPayload.data.materializedView.summary.medications, 1);
+  assert.equal(patientMedicationsPayload.data.materializedView.summary.activeMedications, 1);
+  assert.equal(patientMedicationsPayload.data.materializedView.records.medications[0]?.name, "Atorvastatin");
+  assert.equal(patientMedicationsPayload.data.materializedView.records.medications[0]?.patientId, createdPatient.data.id);
+  assert.equal(patientMedicationsPayload.data.materializedView.items.some((item) => item.kind === "medication" && item.label === "Atorvastatin"), true);
 
   const symptomCreate = await runCliCapture(["patient", createdPatient.data.id, "symptoms", "add", "Headache", "--severity", "4", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(symptomCreate.code, CLI_EXIT_OK);
@@ -1756,11 +1774,29 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
 
   const caseEvidenceList = await runCliCapture(["case", legalCasePayload.data.id, "evidence", "list", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(caseEvidenceList.code, CLI_EXIT_OK);
-  const caseEvidenceListPayload = JSON.parse(caseEvidenceList.stdout) as { data: Array<{ title: string; caseId: string }>; meta: { collection: string; action: string; invokedCommand: string } };
-  assert.equal(caseEvidenceListPayload.meta.invokedCommand, "case");
-  assert.equal(caseEvidenceListPayload.meta.collection, "case_evidence");
-  assert.equal(caseEvidenceListPayload.data.length, 1);
-  assert.equal(caseEvidenceListPayload.data[0]?.caseId, legalCasePayload.data.id);
+  const caseEvidenceListPayload = JSON.parse(caseEvidenceList.stdout) as {
+    data: {
+      coverage: { implementationStatus: string; recordsMaterialized: boolean };
+      semanticView: { id: string; systemId: string };
+      materializedView: {
+        subject: { id: string; label: string };
+        summary: { evidenceItems: number };
+        records: { evidenceItems: Array<{ title: string; caseId: string }> };
+        items: Array<{ kind: string; label: string }>;
+      };
+    };
+    meta: { denseData: boolean; semanticView: boolean };
+  };
+  assert.equal(caseEvidenceListPayload.meta.denseData, true);
+  assert.equal(caseEvidenceListPayload.meta.semanticView, true);
+  assert.equal(caseEvidenceListPayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(caseEvidenceListPayload.data.coverage.recordsMaterialized, true);
+  assert.equal(caseEvidenceListPayload.data.semanticView.id, "case.evidence");
+  assert.equal(caseEvidenceListPayload.data.semanticView.systemId, "legal");
+  assert.equal(caseEvidenceListPayload.data.materializedView.subject.id, legalCasePayload.data.id);
+  assert.equal(caseEvidenceListPayload.data.materializedView.summary.evidenceItems, 1);
+  assert.equal(caseEvidenceListPayload.data.materializedView.records.evidenceItems[0]?.caseId, legalCasePayload.data.id);
+  assert.equal(caseEvidenceListPayload.data.materializedView.items.some((item) => item.kind === "case_evidence" && item.label === "Signed contract"), true);
 
   const caseClientCreate = await runCliCapture(["case", legalCasePayload.data.id, "client", "add", "Smith Client", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(caseClientCreate.code, CLI_EXIT_OK, caseClientCreate.stderr || caseClientCreate.stdout);
@@ -1906,6 +1942,34 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(studyParticipantsPayload.meta.collection, "participants");
   assert.equal(studyParticipantsPayload.data.length, 1);
   assert.equal(studyParticipantsPayload.data[0]?.studyId, studyPayload.data.id);
+
+  const studyCohort = await runCliCapture(["study", studyPayload.data.id, "cohort", "list", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(studyCohort.code, CLI_EXIT_OK);
+  const studyCohortPayload = JSON.parse(studyCohort.stdout) as {
+    data: {
+      coverage: { implementationStatus: string; recordsMaterialized: boolean };
+      semanticView: { id: string; systemId: string };
+      materializedView: {
+        subject: { id: string; label: string };
+        summary: { participants: number; screening: number; consentUnknown: number };
+        records: { participants: Array<{ displayName: string; studyId: string }> };
+        items: Array<{ kind: string; label: string }>;
+      };
+    };
+    meta: { denseData: boolean; semanticView: boolean };
+  };
+  assert.equal(studyCohortPayload.meta.denseData, true);
+  assert.equal(studyCohortPayload.meta.semanticView, true);
+  assert.equal(studyCohortPayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(studyCohortPayload.data.coverage.recordsMaterialized, true);
+  assert.equal(studyCohortPayload.data.semanticView.id, "study.cohort");
+  assert.equal(studyCohortPayload.data.semanticView.systemId, "research");
+  assert.equal(studyCohortPayload.data.materializedView.subject.id, studyPayload.data.id);
+  assert.equal(studyCohortPayload.data.materializedView.summary.participants, 1);
+  assert.equal(studyCohortPayload.data.materializedView.summary.screening, 1);
+  assert.equal(studyCohortPayload.data.materializedView.summary.consentUnknown, 1);
+  assert.equal(studyCohortPayload.data.materializedView.records.participants[0]?.studyId, studyPayload.data.id);
+  assert.equal(studyCohortPayload.data.materializedView.items.some((item) => item.kind === "participant" && item.label === "Subject 001"), true);
 
   const sampleCreate = await runCliCapture(["sample", "create", "Tube A", "--study-id", studyPayload.data.id, "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(sampleCreate.code, CLI_EXIT_OK);
@@ -2571,6 +2635,128 @@ test("runCli exposes every graduated dense-data noun and alias as a top-level sh
   }
 
   assert.ok(checkedRoutes.size >= 100, "dense-data top-level route coverage must include every graduated noun and alias");
+});
+
+test("runCli executes high-value dense-data alternate routes against one canonical operation shape", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-dense-alt-routes-"));
+  const seedResult = await runCliCapture(["dense-fixtures", "seed", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(seedResult.code, CLI_EXIT_OK, seedResult.stderr || seedResult.stdout);
+
+  const alternateRoutes = [
+    { operationId: "patient.encounter.add", args: ["patient", "fixture_patient_ada", "encounter", "add", "Alternate encounter"], collection: "encounters", field: "patientId", value: "fixture_patient_ada" },
+    { operationId: "patient.encounter.add", args: ["encounter", "add", "--patient", "fixture_patient_ada", "--title", "Direct encounter"], collection: "encounters", field: "patientId", value: "fixture_patient_ada" },
+    { operationId: "patient.medication.add", args: ["patient", "fixture_patient_ada", "medication", "add", "Nested medication"], collection: "medications", field: "patientId", value: "fixture_patient_ada" },
+    { operationId: "patient.medication.add", args: ["medication", "add", "--patient", "fixture_patient_ada", "--name", "Direct medication"], collection: "medications", field: "patientId", value: "fixture_patient_ada" },
+    { operationId: "patient.lab.add", args: ["patient", "fixture_patient_ada", "lab", "add", "Nested lab"], collection: "lab_results", field: "patientId", value: "fixture_patient_ada" },
+    { operationId: "patient.lab.add", args: ["lab", "add", "--patient", "fixture_patient_ada", "--title", "Direct lab"], collection: "lab_results", field: "patientId", value: "fixture_patient_ada" },
+    { operationId: "case.client.add", args: ["case", "fixture_legal_case_smith", "client", "add", "Nested client"], collection: "legal_clients", field: "caseId", value: "fixture_legal_case_smith" },
+    { operationId: "case.client.add", args: ["legal-client", "add", "--case", "fixture_legal_case_smith", "--display-name", "Direct client"], collection: "legal_clients", field: "caseId", value: "fixture_legal_case_smith" },
+    { operationId: "employee.time_off.add", args: ["employee", "fixture_employee_ada", "time-off", "add", "--kind", "vacation"], collection: "time_off_requests", field: "employeeId", value: "fixture_employee_ada" },
+    { operationId: "employee.time_off.add", args: ["time-off", "add", "--employee", "fixture_employee_ada", "--kind", "sick"], collection: "time_off_requests", field: "employeeId", value: "fixture_employee_ada" },
+    { operationId: "property.visit.add", args: ["property", "fixture_property_listing_main", "visit", "add", "--visitor-name", "Nested visitor"], collection: "property_visits", field: "propertyListingId", value: "fixture_property_listing_main" },
+    { operationId: "property.visit.add", args: ["property-visit", "add", "--property", "fixture_property_listing_main", "--visitor-name", "Direct visitor"], collection: "property_visits", field: "propertyListingId", value: "fixture_property_listing_main" },
+    { operationId: "property.offer.add", args: ["property", "fixture_property_listing_main", "offer", "add", "--buyer-name", "Nested buyer"], collection: "property_offers", field: "propertyListingId", value: "fixture_property_listing_main" },
+    { operationId: "property.offer.add", args: ["property-offer", "add", "--property", "fixture_property_listing_main", "--buyer-name", "Direct buyer"], collection: "property_offers", field: "propertyListingId", value: "fixture_property_listing_main" },
+    { operationId: "vehicle.maintenance.add", args: ["vehicle", "fixture_vehicle_ev", "maintenance", "add", "Nested vehicle service"], collection: "vehicle_maintenance", field: "vehicleId", value: "fixture_vehicle_ev" },
+    { operationId: "vehicle.maintenance.add", args: ["vehicle-maintenance", "add", "--vehicle", "fixture_vehicle_ev", "Direct vehicle service"], collection: "vehicle_maintenance", field: "vehicleId", value: "fixture_vehicle_ev" },
+    { operationId: "appliance.maintenance.add", args: ["appliance", "fixture_appliance_washer", "maintenance", "add", "Nested appliance service"], collection: "appliance_maintenance", field: "applianceId", value: "fixture_appliance_washer" },
+    { operationId: "appliance.maintenance.add", args: ["appliance-maintenance", "add", "--appliance", "fixture_appliance_washer", "Direct appliance service"], collection: "appliance_maintenance", field: "applianceId", value: "fixture_appliance_washer" },
+    { operationId: "supplier.purchase_order.add", args: ["supplier", "fixture_supplier_parts_co", "purchase-orders", "add", "Nested PO"], collection: "purchase_orders", field: "supplierId", value: "fixture_supplier_parts_co" },
+    { operationId: "supplier.purchase_order.add", args: ["purchase-order", "add", "--supplier", "fixture_supplier_parts_co", "Direct PO"], collection: "purchase_orders", field: "supplierId", value: "fixture_supplier_parts_co" },
+    { operationId: "purchase_order.line_item.add", args: ["purchase-order", "fixture_purchase_order_001", "line-items", "add", "Nested line"], collection: "purchase_order_line_items", field: "purchaseOrderId", value: "fixture_purchase_order_001" },
+    { operationId: "purchase_order.line_item.add", args: ["purchase-order-line-item", "add", "--purchase-order", "fixture_purchase_order_001", "Direct line"], collection: "purchase_order_line_items", field: "purchaseOrderId", value: "fixture_purchase_order_001" },
+    { operationId: "warehouse.inventory_item.add", args: ["warehouse", "fixture_warehouse_main", "inventory-items", "add", "Nested stock"], collection: "inventory_items", field: "warehouseId", value: "fixture_warehouse_main" },
+    { operationId: "warehouse.inventory_item.add", args: ["inventory-item", "add", "--warehouse", "fixture_warehouse_main", "Direct stock"], collection: "inventory_items", field: "warehouseId", value: "fixture_warehouse_main" },
+    { operationId: "inventory_item.stock_movement.add", args: ["inventory-item", "fixture_inventory_item_press", "stock-movements", "add", "Nested movement"], collection: "stock_movements", field: "inventoryItemId", value: "fixture_inventory_item_press" },
+    { operationId: "inventory_item.stock_movement.add", args: ["stock-movement", "add", "--inventory-item", "fixture_inventory_item_press", "Direct movement"], collection: "stock_movements", field: "inventoryItemId", value: "fixture_inventory_item_press" },
+    { operationId: "supply_plan.item.add", args: ["supply-plan", "fixture_supply_plan_q2", "items", "add", "Nested plan item"], collection: "supply_plan_items", field: "supplyPlanId", value: "fixture_supply_plan_q2" },
+    { operationId: "supply_plan.item.add", args: ["supply-plan-item", "add", "--supply-plan", "fixture_supply_plan_q2", "Direct plan item"], collection: "supply_plan_items", field: "supplyPlanId", value: "fixture_supply_plan_q2" },
+    { operationId: "supply_plan.risk.add", args: ["supply-plan", "fixture_supply_plan_q2", "risks", "add", "Nested plan risk"], collection: "supply_risks", field: "supplyPlanId", value: "fixture_supply_plan_q2" },
+    { operationId: "supply_plan.risk.add", args: ["supply-risk", "add", "--supply-plan", "fixture_supply_plan_q2", "Direct plan risk"], collection: "supply_risks", field: "supplyPlanId", value: "fixture_supply_plan_q2" },
+    { operationId: "supply_plan.risk.add", args: ["supplier", "fixture_supplier_parts_co", "supply-risks", "add", "Supplier risk"], collection: "supply_risks", field: "supplierId", value: "fixture_supplier_parts_co" },
+    { operationId: "shipment.leg.add", args: ["shipment", "fixture_shipment_po_001", "legs", "add", "Nested leg"], collection: "shipment_legs", field: "shipmentId", value: "fixture_shipment_po_001" },
+    { operationId: "shipment.leg.add", args: ["shipment-leg", "add", "--shipment", "fixture_shipment_po_001", "Direct leg"], collection: "shipment_legs", field: "shipmentId", value: "fixture_shipment_po_001" },
+    { operationId: "carrier.shipment.add", args: ["carrier", "fixture_carrier_fast_freight", "shipments", "add", "Nested shipment"], collection: "shipments", field: "carrierId", value: "fixture_carrier_fast_freight" },
+    { operationId: "carrier.shipment.add", args: ["shipment", "add", "--carrier", "fixture_carrier_fast_freight", "Direct shipment"], collection: "shipments", field: "carrierId", value: "fixture_carrier_fast_freight" },
+    { operationId: "carrier.freight_rate.add", args: ["carrier", "fixture_carrier_fast_freight", "freight-rates", "add", "Nested freight rate"], collection: "freight_rates", field: "carrierId", value: "fixture_carrier_fast_freight" },
+    { operationId: "carrier.freight_rate.add", args: ["freight-rate", "add", "--carrier", "fixture_carrier_fast_freight", "Direct freight rate"], collection: "freight_rates", field: "carrierId", value: "fixture_carrier_fast_freight" },
+    { operationId: "control.assessment.add", args: ["control", "fixture_compliance_control_access_review", "assessments", "add", "Nested assessment"], collection: "control_assessments", field: "controlId", value: "fixture_compliance_control_access_review" },
+    { operationId: "control.assessment.add", args: ["control-assessment", "add", "--control", "fixture_compliance_control_access_review", "Direct assessment"], collection: "control_assessments", field: "controlId", value: "fixture_compliance_control_access_review" },
+    { operationId: "control.finding.add", args: ["control", "fixture_compliance_control_access_review", "findings", "add", "Nested finding"], collection: "compliance_findings", field: "controlId", value: "fixture_compliance_control_access_review" },
+    { operationId: "control.finding.add", args: ["compliance-finding", "add", "--control", "fixture_compliance_control_access_review", "Direct finding"], collection: "compliance_findings", field: "controlId", value: "fixture_compliance_control_access_review" },
+    { operationId: "agency.public_case.add", args: ["agency", "fixture_agency_city", "public-cases", "add", "Nested public case"], collection: "public_cases", field: "agencyId", value: "fixture_agency_city" },
+    { operationId: "agency.public_case.add", args: ["public-case", "add", "--agency", "fixture_agency_city", "Direct public case"], collection: "public_cases", field: "agencyId", value: "fixture_agency_city" },
+    { operationId: "public_case.filing.add", args: ["public-case", "fixture_public_case_lab_permit", "filings", "add", "Nested filing"], collection: "public_filings", field: "publicCaseId", value: "fixture_public_case_lab_permit" },
+    { operationId: "public_case.filing.add", args: ["public-filing", "add", "--public-case", "fixture_public_case_lab_permit", "Direct filing"], collection: "public_filings", field: "publicCaseId", value: "fixture_public_case_lab_permit" },
+    { operationId: "public_case.filing.add", args: ["agency", "fixture_agency_city", "public-filings", "add", "Agency filing"], collection: "public_filings", field: "agencyId", value: "fixture_agency_city" },
+    { operationId: "public_case.permit.add", args: ["public-case", "fixture_public_case_lab_permit", "permits", "add", "Nested permit"], collection: "permits", field: "publicCaseId", value: "fixture_public_case_lab_permit" },
+    { operationId: "public_case.permit.add", args: ["permit", "add", "--public-case", "fixture_public_case_lab_permit", "Direct permit"], collection: "permits", field: "publicCaseId", value: "fixture_public_case_lab_permit" },
+    { operationId: "public_case.permit.add", args: ["agency", "fixture_agency_city", "permits", "add", "Agency permit"], collection: "permits", field: "agencyId", value: "fixture_agency_city" },
+    { operationId: "construction_project.site.add", args: ["construction-project", "fixture_construction_project_lab", "sites", "add", "Nested site"], collection: "construction_sites", field: "projectId", value: "fixture_construction_project_lab" },
+    { operationId: "construction_project.site.add", args: ["construction-site", "add", "--construction-project", "fixture_construction_project_lab", "Direct site"], collection: "construction_sites", field: "projectId", value: "fixture_construction_project_lab" },
+    { operationId: "construction_project.rfi.add", args: ["construction-project", "fixture_construction_project_lab", "rfis", "add", "Nested RFI"], collection: "construction_rfis", field: "projectId", value: "fixture_construction_project_lab" },
+    { operationId: "construction_project.rfi.add", args: ["construction-rfi", "add", "--construction-project", "fixture_construction_project_lab", "Direct RFI"], collection: "construction_rfis", field: "projectId", value: "fixture_construction_project_lab" },
+    { operationId: "construction_project.change_order.add", args: ["construction-project", "fixture_construction_project_lab", "change-orders", "add", "Nested change order"], collection: "construction_change_orders", field: "projectId", value: "fixture_construction_project_lab" },
+    { operationId: "construction_project.change_order.add", args: ["construction-change-order", "add", "--construction-project", "fixture_construction_project_lab", "Direct change order"], collection: "construction_change_orders", field: "projectId", value: "fixture_construction_project_lab" },
+    { operationId: "thing.device.add", args: ["thing", "fixture_iot_thing_press", "devices", "add", "Nested device"], collection: "iot_devices", field: "thingId", value: "fixture_iot_thing_press" },
+    { operationId: "thing.device.add", args: ["iot-device", "add", "--thing", "fixture_iot_thing_press", "Direct device"], collection: "iot_devices", field: "thingId", value: "fixture_iot_thing_press" },
+    { operationId: "device.reading.add", args: ["iot-device", "fixture_iot_device_press_sensor", "readings", "add", "Nested reading"], collection: "sensor_readings", field: "deviceId", value: "fixture_iot_device_press_sensor" },
+    { operationId: "device.reading.add", args: ["sensor-reading", "add", "--device", "fixture_iot_device_press_sensor", "Direct reading"], collection: "sensor_readings", field: "deviceId", value: "fixture_iot_device_press_sensor" },
+    { operationId: "device.command.add", args: ["iot-device", "fixture_iot_device_press_sensor", "commands", "add", "Nested command"], collection: "device_commands", field: "deviceId", value: "fixture_iot_device_press_sensor" },
+    { operationId: "device.command.add", args: ["device-command", "add", "--device", "fixture_iot_device_press_sensor", "Direct command"], collection: "device_commands", field: "deviceId", value: "fixture_iot_device_press_sensor" },
+    { operationId: "lab_notebook.entry.add", args: ["lab-notebook", "fixture_lab_notebook_trial_a", "entries", "add", "Nested entry"], collection: "notebook_entries", field: "notebookId", value: "fixture_lab_notebook_trial_a" },
+    { operationId: "lab_notebook.entry.add", args: ["notebook-entry", "add", "--lab-notebook", "fixture_lab_notebook_trial_a", "Direct entry"], collection: "notebook_entries", field: "notebookId", value: "fixture_lab_notebook_trial_a" },
+    { operationId: "lab_notebook.protocol_run.add", args: ["lab-notebook", "fixture_lab_notebook_trial_a", "protocol-runs", "add", "Nested protocol run"], collection: "protocol_runs", field: "notebookId", value: "fixture_lab_notebook_trial_a" },
+    { operationId: "lab_notebook.protocol_run.add", args: ["protocol-run", "add", "--lab-notebook", "fixture_lab_notebook_trial_a", "Direct protocol run"], collection: "protocol_runs", field: "notebookId", value: "fixture_lab_notebook_trial_a" },
+    { operationId: "protocol_run.observation.add", args: ["protocol-run", "fixture_protocol_run_trial_a", "observations", "add", "Nested observation"], collection: "experiment_observations", field: "protocolRunId", value: "fixture_protocol_run_trial_a" },
+    { operationId: "protocol_run.observation.add", args: ["experiment-observation", "add", "--protocol-run", "fixture_protocol_run_trial_a", "Direct observation"], collection: "experiment_observations", field: "protocolRunId", value: "fixture_protocol_run_trial_a" },
+    { operationId: "content_entry.revision.add", args: ["content-entry", "fixture_content_entry_launch_note", "revisions", "add", "Nested revision", "--revision-number", "2"], collection: "content_revisions", field: "contentEntryId", value: "fixture_content_entry_launch_note" },
+    { operationId: "content_entry.revision.add", args: ["content-revision", "add", "--content-entry", "fixture_content_entry_launch_note", "Direct revision", "--revision-number", "3"], collection: "content_revisions", field: "contentEntryId", value: "fixture_content_entry_launch_note" },
+    { operationId: "content_entry.variant.add", args: ["content-entry", "fixture_content_entry_launch_note", "variants", "add", "Nested variant", "--destination", "fixture_content_destination_blog"], collection: "content_variants", field: "contentEntryId", value: "fixture_content_entry_launch_note" },
+    { operationId: "content_entry.variant.add", args: ["content-variant", "add", "--content-entry", "fixture_content_entry_launch_note", "--destination", "fixture_content_destination_blog", "Direct variant"], collection: "content_variants", field: "contentEntryId", value: "fixture_content_entry_launch_note" },
+    { operationId: "content_entry.approval.add", args: ["content-entry", "fixture_content_entry_launch_note", "approvals", "add", "--variant", "fixture_content_variant_blog", "--destination", "fixture_content_destination_blog"], collection: "content_approvals", field: "contentEntryId", value: "fixture_content_entry_launch_note" },
+    { operationId: "content_entry.approval.add", args: ["content-approval", "add", "--content-entry", "fixture_content_entry_launch_note", "--variant", "fixture_content_variant_blog", "--destination", "fixture_content_destination_blog"], collection: "content_approvals", field: "contentEntryId", value: "fixture_content_entry_launch_note" },
+    { operationId: "content_entry.publication.add", args: ["content-entry", "fixture_content_entry_launch_note", "publications", "add", "--variant", "fixture_content_variant_blog", "--destination", "fixture_content_destination_blog"], collection: "content_publications", field: "contentEntryId", value: "fixture_content_entry_launch_note" },
+    { operationId: "content_entry.publication.add", args: ["content-publication", "add", "--content-entry", "fixture_content_entry_launch_note", "--variant", "fixture_content_variant_blog", "--destination", "fixture_content_destination_blog"], collection: "content_publications", field: "contentEntryId", value: "fixture_content_entry_launch_note" },
+    { operationId: "product_spec.revision.add", args: ["product-spec", "fixture_product_spec_press", "revisions", "add", "Nested product revision"], collection: "product_revisions", field: "productSpecId", value: "fixture_product_spec_press" },
+    { operationId: "product_spec.revision.add", args: ["product-revision", "add", "--product-spec", "fixture_product_spec_press", "Direct product revision"], collection: "product_revisions", field: "productSpecId", value: "fixture_product_spec_press" },
+    { operationId: "product_spec.requirement.add", args: ["product-spec", "fixture_product_spec_press", "requirements", "add", "Nested requirement"], collection: "product_requirements", field: "productSpecId", value: "fixture_product_spec_press" },
+    { operationId: "product_spec.requirement.add", args: ["product-requirement", "add", "--product-spec", "fixture_product_spec_press", "Direct requirement"], collection: "product_requirements", field: "productSpecId", value: "fixture_product_spec_press" },
+    { operationId: "product_spec.bom.add", args: ["product-spec", "fixture_product_spec_press", "boms", "add", "Nested BOM", "--component", "fixture_product_press_model"], collection: "product_boms", field: "productSpecId", value: "fixture_product_spec_press" },
+    { operationId: "product_spec.bom.add", args: ["product-bom", "add", "--product-spec", "fixture_product_spec_press", "--component", "fixture_product_press_model", "Direct BOM"], collection: "product_boms", field: "productSpecId", value: "fixture_product_spec_press" },
+    { operationId: "drug_product.batch.add", args: ["drug-product", "fixture_drug_product_trial_a", "batches", "add", "Nested batch"], collection: "batch_records", field: "drugProductId", value: "fixture_drug_product_trial_a" },
+    { operationId: "drug_product.batch.add", args: ["batch-record", "add", "--drug-product", "fixture_drug_product_trial_a", "Direct batch"], collection: "batch_records", field: "drugProductId", value: "fixture_drug_product_trial_a" },
+    { operationId: "drug_product.lot_release.add", args: ["drug-product", "fixture_drug_product_trial_a", "lot-releases", "add", "Nested lot release", "--batch", "fixture_batch_record_trial_a"], collection: "lot_releases", field: "drugProductId", value: "fixture_drug_product_trial_a" },
+    { operationId: "drug_product.lot_release.add", args: ["lot-release", "add", "--drug-product", "fixture_drug_product_trial_a", "--batch", "fixture_batch_record_trial_a", "Direct lot release"], collection: "lot_releases", field: "drugProductId", value: "fixture_drug_product_trial_a" },
+    { operationId: "drug_product.adverse_event.add", args: ["drug-product", "fixture_drug_product_trial_a", "adverse-events", "add", "Nested adverse event", "--patient", "fixture_patient_ada", "--study", "fixture_study_trial_a"], collection: "adverse_events", field: "drugProductId", value: "fixture_drug_product_trial_a" },
+    { operationId: "drug_product.adverse_event.add", args: ["adverse-event", "add", "--drug-product", "fixture_drug_product_trial_a", "--patient", "fixture_patient_ada", "--study", "fixture_study_trial_a", "Direct adverse event"], collection: "adverse_events", field: "drugProductId", value: "fixture_drug_product_trial_a" },
+  ] as const;
+
+  const coveredOperationIds = new Set<string>();
+  for (const route of alternateRoutes) {
+    coveredOperationIds.add(route.operationId);
+    const result = await runCliCapture([...route.args, "--workspace", workspaceRoot, "--json"], process.cwd());
+    assert.equal(result.code, CLI_EXIT_OK, `${route.operationId} route ${route.args.join(" ")} failed: ${result.stderr || result.stdout}`);
+    const payload = JSON.parse(result.stdout) as { data: Record<string, unknown>; meta: { collection: string; action: string } };
+    assert.equal(payload.meta.collection, route.collection, `${route.operationId} must use canonical collection ${route.collection}`);
+    assert.equal(payload.meta.action, "create", `${route.operationId} must create through the shared DB adapter`);
+    assert.equal(payload.data[route.field], route.value, `${route.operationId} must preserve relation ${route.field}`);
+  }
+
+  for (const operation of ["finance.entity.overview", "patient.encounter.add", "patient.medication.add", "patient.lab.add", "case.client.add", "employee.time_off.add", "property.visit.add", "property.offer.add", "supplier.purchase_order.add", "purchase_order.line_item.add", "warehouse.inventory_item.add", "inventory_item.stock_movement.add", "supply_plan.item.add", "supply_plan.risk.add", "shipment.leg.add", "carrier.shipment.add", "carrier.freight_rate.add", "control.assessment.add", "control.finding.add", "agency.public_case.add", "public_case.filing.add", "public_case.permit.add", "construction_project.site.add", "construction_project.rfi.add", "construction_project.change_order.add", "thing.device.add", "device.reading.add", "device.command.add", "lab_notebook.entry.add", "lab_notebook.protocol_run.add", "protocol_run.observation.add", "content_entry.revision.add", "content_entry.variant.add", "content_entry.approval.add", "content_entry.publication.add", "product_spec.revision.add", "product_spec.requirement.add", "product_spec.bom.add", "drug_product.batch.add", "drug_product.lot_release.add", "drug_product.adverse_event.add"]) {
+    if (operation === "finance.entity.overview") continue;
+    assert.equal(coveredOperationIds.has(operation), true, `alternate route smoke must cover ${operation}`);
+  }
+
+  for (const route of [["finance", "entity", "fixture_financial_account_ops", "overview"], ["accounting", "entity", "fixture_financial_account_ops", "overview"]] as const) {
+    const result = await runCliCapture([...route, "--workspace", workspaceRoot, "--json"], process.cwd());
+    assert.equal(result.code, CLI_EXIT_OK, result.stderr || result.stdout);
+    const payload = JSON.parse(result.stdout) as { data: { coverage: { implementationStatus: string }; semanticView: { id: string }; materializedView: { subject: { id: string } } }; meta: { semanticView: boolean } };
+    assert.equal(payload.meta.semanticView, true);
+    assert.equal(payload.data.coverage.implementationStatus, "materialized_semantic_view");
+    assert.equal(payload.data.semanticView.id, "finance.entity.overview");
+    assert.equal(payload.data.materializedView.subject.id, "fixture_financial_account_ops");
+  }
 });
 
 test("runCli seeds the dense-data acceptance fixture into the shared database", async () => {
