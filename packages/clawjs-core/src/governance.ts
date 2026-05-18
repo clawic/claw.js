@@ -130,8 +130,22 @@ function nowMs(now?: string | Date): number {
   return typeof now === "string" ? Date.parse(now) : now.getTime();
 }
 
-function subjectMatches(subject: GovernanceSubjectRef | undefined, principalId: string): boolean {
-  return !subject || (subject.kind === "principal" && subject.id === principalId);
+function subjectKey(subject: GovernanceSubjectRef): string {
+  return `${subject.kind}:${subject.id}`;
+}
+
+function authoritySubjectsFor(input: GovernanceAccessInput): Set<string> {
+  const subjects = new Set<string>([subjectKey({ kind: "principal", id: input.request.principalId })]);
+  for (const edge of input.authorityEdges ?? []) {
+    if (edge.scope && !scopeApplies(edge.scope, input.request.scope, input.scopeHierarchy)) continue;
+    if (edge.from.kind === "principal" && edge.from.id === input.request.principalId) subjects.add(subjectKey(edge.to));
+    if (edge.to.kind === "principal" && edge.to.id === input.request.principalId) subjects.add(subjectKey(edge.from));
+  }
+  return subjects;
+}
+
+function subjectMatches(subject: GovernanceSubjectRef | undefined, subjects: Set<string>): boolean {
+  return !subject || subjects.has(subjectKey(subject));
 }
 
 function capabilityMatches(ruleCapabilities: GovernanceCapability[], requested: GovernanceCapability): boolean {
@@ -181,23 +195,24 @@ function grantActive(grant: GovernanceGrant, now: number): boolean {
   return !grant.expiresAt || Date.parse(grant.expiresAt) > now;
 }
 
-function grantAllows(grant: GovernanceGrant, input: GovernanceAccessInput): boolean {
+function grantAllows(grant: GovernanceGrant, input: GovernanceAccessInput, subjects: Set<string>): boolean {
   return (grant.effect ?? "allow") === "allow"
     && grantActive(grant, nowMs(input.now))
-    && subjectMatches(grant.subject, input.request.principalId)
+    && subjectMatches(grant.subject, subjects)
     && capabilityMatches(grant.capabilities, input.request.capability)
     && scopeApplies(grant.scope, input.request.scope, input.scopeHierarchy)
     && resourceMatches(grant.resource, input.request.resource);
 }
 
-function restrictionBlocks(restriction: GovernanceRestriction, input: GovernanceAccessInput): boolean {
-  return subjectMatches(restriction.subject, input.request.principalId)
+function restrictionBlocks(restriction: GovernanceRestriction, input: GovernanceAccessInput, subjects: Set<string>): boolean {
+  return subjectMatches(restriction.subject, subjects)
     && capabilityMatches(restriction.capabilities, input.request.capability)
     && scopeApplies(restriction.scope, input.request.scope, input.scopeHierarchy)
     && resourceMatches(restriction.resource, input.request.resource);
 }
 
 export function evaluateGovernanceAccess(input: GovernanceAccessInput): GovernanceEffectiveAccess {
+  const subjects = authoritySubjectsFor(input);
   const grants = [
     ...(input.grants ?? []),
     ...(input.authorityEdges ?? []).flatMap((edge) => edge.grants ?? []),
@@ -206,7 +221,7 @@ export function evaluateGovernanceAccess(input: GovernanceAccessInput): Governan
     ...(input.restrictions ?? []),
     ...(input.authorityEdges ?? []).flatMap((edge) => edge.restrictions ?? []),
   ];
-  const matchedRestrictions = restrictions.filter((restriction) => restrictionBlocks(restriction, input));
+  const matchedRestrictions = restrictions.filter((restriction) => restrictionBlocks(restriction, input, subjects));
   if (matchedRestrictions.length > 0) {
     return {
       allowed: false,
@@ -217,7 +232,7 @@ export function evaluateGovernanceAccess(input: GovernanceAccessInput): Governan
     };
   }
 
-  const matchedGrants = grants.filter((grant) => grantAllows(grant, input));
+  const matchedGrants = grants.filter((grant) => grantAllows(grant, input, subjects));
   if (matchedGrants.length > 0) {
     return {
       allowed: true,

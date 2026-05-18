@@ -4,7 +4,7 @@ import path from "path";
 
 import Database from "better-sqlite3";
 import { AgentStoreFS, type Agent } from "@clawjs/agents";
-import { CLAW_CLI_COMMAND_INTENT_STATUSES, buildRemoteConformanceReport, buildRemoteExternalPendingRegister, buildRemoteExternalValidationChecklist, buildRemoteExternalValidationEvidenceTemplate, buildRemoteExternalValidationReport, buildRemoteGoalClosureGate, buildRemoteProviderDeviceE2EValidationPlan, buildRemoteRouteContractCatalog, buildRemoteSourceQaReviewTemplate, clawDenseDataAcceptanceFixture, clawDenseDataOsRegistry, clawPersistentSurfaceRegistry, clawPreV1VersionGovernancePolicy, connectorExecutionPipeline, createAgentControlPanel, createAgentPrivacyLifecyclePlan, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, listClawDenseDataGapRegistryEntries, listClawDenseDataIntentEntries, listClawDenseDataSemanticViewEntries, remoteSyncRequiredRouteIds, resolveClawCliCommand, resolveClawPersistentSurfacePath, searchClawCliRegistry, syncDriverSchema, withSurfaceChildren } from "@clawjs/core";
+import { CLAW_CLI_COMMAND_INTENT_STATUSES, GOVERNANCE_CAPABILITIES, GOVERNANCE_ENTITY_KINDS, GOVERNANCE_PRINCIPAL_KINDS, GOVERNANCE_SCOPE_KINDS, buildRemoteConformanceReport, buildRemoteExternalPendingRegister, buildRemoteExternalValidationChecklist, buildRemoteExternalValidationEvidenceTemplate, buildRemoteExternalValidationReport, buildRemoteGoalClosureGate, buildRemoteProviderDeviceE2EValidationPlan, buildRemoteRouteContractCatalog, buildRemoteSourceQaReviewTemplate, clawDenseDataAcceptanceFixture, clawDenseDataOsRegistry, clawPersistentSurfaceRegistry, clawPreV1VersionGovernancePolicy, connectorExecutionPipeline, createAgentControlPanel, createAgentPrivacyLifecyclePlan, evaluateGovernanceAccess, evaluateGovernanceDelegation, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, listClawDenseDataGapRegistryEntries, listClawDenseDataIntentEntries, listClawDenseDataSemanticViewEntries, remoteSyncRequiredRouteIds, resolveClawCliCommand, resolveClawPersistentSurfacePath, searchClawCliRegistry, summarizeGovernanceBindings, syncDriverSchema, withSurfaceChildren } from "@clawjs/core";
 import type { AgentAuditEvent, ClawPersistentSurfaceNode, ClawPersistentSurfaceRegistry, ClawSurfaceEdge, ClawSurfaceRoute } from "@clawjs/core";
 import { v1MainSchemaSurfaceNodes } from "./v1-data-surface.ts";
 import { normalizeDbRow, resolveClawjsMainDbPath, type JsonRecord } from "./v1-data-core.ts";
@@ -1039,6 +1039,59 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     }
     return CLI_EXIT_OK;
   }
+  if (command === "governance") {
+    const sample = {
+      hierarchyDoesNotGrantRead: evaluateGovernanceAccess({
+        request: { principalId: "user.demo", capability: "read", scope: { kind: "project", id: "project.demo" }, resource: { type: "memory", id: "project.demo" } },
+        authorityEdges: [{ id: "edge.member", from: { kind: "principal", id: "user.demo" }, to: { kind: "entity", id: "org.demo" }, relation: "member", scope: { kind: "entity", id: "org.demo" } }],
+        scopeHierarchy: [{ parent: { kind: "entity", id: "org.demo" }, child: { kind: "project", id: "project.demo" } }],
+      }),
+      controlWithoutRead: evaluateGovernanceAccess({
+        request: { principalId: "manager.demo", capability: "budget_control", scope: { kind: "project", id: "project.demo" }, resource: { type: "policy" } },
+        grants: [{ id: "grant.control", subject: { kind: "principal", id: "manager.demo" }, capabilities: ["control"], scope: { kind: "project", id: "project.demo" } }],
+      }),
+      delegationIntersection: evaluateGovernanceDelegation({
+        delegator: {
+          request: { principalId: "parent.agent", capability: "read", scope: { kind: "project", id: "project.demo" }, resource: { type: "memory", id: "project.demo" } },
+          grants: [{ id: "grant.parent", subject: { kind: "principal", id: "parent.agent" }, capabilities: ["read"], scope: { kind: "project", id: "project.demo" }, resource: { type: "memory", id: "project.demo" } }],
+        },
+        delegatee: {
+          request: { principalId: "child.agent", capability: "read", scope: { kind: "project", id: "project.demo" }, resource: { type: "memory", id: "project.demo" } },
+          grants: [{ id: "grant.child", subject: { kind: "principal", id: "child.agent" }, capabilities: ["read"], scope: { kind: "project", id: "project.demo" }, resource: { type: "memory", id: "project.demo" } }],
+        },
+      }),
+      bindingSummary: summarizeGovernanceBindings([
+        { id: "binding.project", resource: { type: "project", id: "project.demo" }, scope: { kind: "project", id: "project.demo" }, steward: { kind: "principal", id: "user.demo" }, dataClass: "private" },
+      ]),
+    };
+    const payload = {
+      model: {
+        principalKinds: GOVERNANCE_PRINCIPAL_KINDS,
+        entityKinds: GOVERNANCE_ENTITY_KINDS,
+        scopeKinds: GOVERNANCE_SCOPE_KINDS,
+        capabilities: GOVERNANCE_CAPABILITIES,
+      },
+      invariants: [
+        "tenant is technical isolation only",
+        "owner is not authority",
+        "companyId is business data, not access control",
+        "membership and hierarchy do not imply read access",
+        "restrictions inherit down scope hierarchy",
+        "control does not imply read",
+        "delegation is strict intersection",
+      ],
+      functions: [
+        "evaluateGovernanceAccess",
+        "evaluateGovernanceDelegation",
+        "summarizeGovernanceBindings",
+      ],
+      tests: ["packages/clawjs-core/src/governance.test.ts"],
+      sample,
+    };
+    if (input.wantsJson) writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command));
+    else input.context.stdout.write(`${payload.invariants.join("\n")}\n`);
+    return CLI_EXIT_OK;
+  }
   if (command === "commands") {
     const includeAdvanced = "all" in input.flags || input.flags.all === "true";
     const commands = listClawCliCommands({ includeAdvanced });
@@ -1210,7 +1263,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     }
     throw new InspectCliError("usage_error", `Unsupported inspect render format: ${format}`, CLI_EXIT_USAGE);
   }
-  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|neighbors|routes|route|agent|edges|why|commands|command-intents|remote|remote-sync|version-governance|dense-data|dense-gaps|dense-intents|dense-views|dense-fixtures|codebase|connectors|aliases|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
+  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|neighbors|routes|route|agent|edges|why|commands|command-intents|remote|remote-sync|version-governance|governance|dense-data|dense-gaps|dense-intents|dense-views|dense-fixtures|codebase|connectors|aliases|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
 }
 
 export async function runInspectCli(input: InspectCliInput): Promise<number> {

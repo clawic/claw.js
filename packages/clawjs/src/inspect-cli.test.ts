@@ -113,6 +113,32 @@ test("runCli exposes pre-v1 version governance through inspect", async () => {
   assert.match(whyPayload.notes, /Owned version bumps require explicit user approval/);
 });
 
+test("runCli exposes governance model invariants through inspect", async () => {
+  const governance = await runCliCapture(["inspect", "governance", "--json"], process.cwd());
+  assert.equal(governance.code, CLI_EXIT_OK);
+  const payload = parseCliJson<{
+    model: { principalKinds: string[]; entityKinds: string[]; scopeKinds: string[]; capabilities: string[] };
+    invariants: string[];
+    sample: {
+      hierarchyDoesNotGrantRead: { allowed: boolean; reasons: string[] };
+      controlWithoutRead: { allowed: boolean; matchedGrantIds: string[] };
+      delegationIntersection: { allowed: boolean; matchedGrantIds: string[] };
+    };
+    tests: string[];
+  }>(governance.stdout).data;
+  assert.equal(payload.model.principalKinds.includes("agent"), true);
+  assert.equal(payload.model.entityKinds.includes("organization"), true);
+  assert.equal(payload.model.scopeKinds.includes("project"), true);
+  assert.equal(payload.model.capabilities.includes("control"), true);
+  assert.equal(payload.invariants.includes("membership and hierarchy do not imply read access"), true);
+  assert.deepEqual(payload.sample.hierarchyDoesNotGrantRead, { allowed: false, reasons: ["no_explicit_grant"], matchedGrantIds: [], matchedRestrictionIds: [], implicitLocal: false });
+  assert.equal(payload.sample.controlWithoutRead.allowed, true);
+  assert.deepEqual(payload.sample.controlWithoutRead.matchedGrantIds, ["grant.control"]);
+  assert.equal(payload.sample.delegationIntersection.allowed, true);
+  assert.deepEqual(payload.sample.delegationIntersection.matchedGrantIds, ["grant.parent", "grant.child"]);
+  assert.equal(payload.tests.includes("packages/clawjs-core/src/governance.test.ts"), true);
+});
+
 test("runCli exposes surface graph routes and neighbors through inspect", async () => {
   const relay = await runCliCapture(["inspect", "why", "relay", "--json"], process.cwd());
   assert.equal(relay.code, CLI_EXIT_OK);

@@ -1379,6 +1379,28 @@ The docs check script validates that every current export from
     ClawCliSupportDeclaration
     ClawCliSupportState
     ClawCliSurfaceKind
+    GOVERNANCE_CAPABILITIES
+    GOVERNANCE_ENTITY_KINDS
+    GOVERNANCE_PRINCIPAL_KINDS
+    GOVERNANCE_SCOPE_KINDS
+    GovernanceAccessInput
+    GovernanceAccessRequest
+    GovernanceAuthorityEdge
+    GovernanceBinding
+    GovernanceCapability
+    GovernanceDelegationInput
+    GovernanceEffectiveAccess
+    GovernanceEntity
+    GovernanceEntityKind
+    GovernanceGrant
+    GovernancePrincipal
+    GovernancePrincipalKind
+    GovernanceResourceRef
+    GovernanceRestriction
+    GovernanceScopeHierarchyEdge
+    GovernanceScopeKind
+    GovernanceScopeRef
+    GovernanceSubjectRef
     assertClawDenseDataOsRegistryComplete
     ClawDenseDataAcceptanceFixture
     ClawDenseDataCenter
@@ -2088,6 +2110,8 @@ The docs check script validates that every current export from
     commandIntentToNeedOpportunity
     assertSafeClawProjectHandoff
     createClawProjectId
+    evaluateGovernanceAccess
+    evaluateGovernanceDelegation
     listClawCliCommandIntentRegistry
     mergeClawCliCommandIntentEntries
     normalizeClawProjectManifest
@@ -2101,6 +2125,7 @@ The docs check script validates that every current export from
     resolveClawHostStateDir
     resolveClawPersistentSurfacePath
     resolveClawWorkspaceDir
+    summarizeGovernanceBindings
     sensitiveDataClasses
     SensitiveDataClass
     ResourceKind

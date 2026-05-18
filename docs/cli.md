@@ -157,6 +157,7 @@ primary source for non-trivial framework questions:
 claw search "database" --json
 claw inspect commands --json
 claw inspect why database --json
+claw inspect governance --json
 claw inspect database --json
 claw inspect schemas --json
 claw inspect agent agent.ops --json

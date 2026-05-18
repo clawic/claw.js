@@ -67,6 +67,50 @@ test("governance restrictions inherit down scope hierarchy and beat grants", () 
   assert.deepEqual(result.matchedRestrictionIds, ["restriction.org.memory"]);
 });
 
+test("governance entity grants require both membership and explicit capability", () => {
+  const membership: GovernanceAuthorityEdge = {
+    id: "edge.org.member",
+    from: { kind: "principal", id: "user_1" },
+    to: { kind: "entity", id: "org_1" },
+    relation: "member",
+    scope: { kind: "entity", id: "org_1" },
+  };
+  const entityGrant: GovernanceGrant = {
+    id: "grant.org.project.read",
+    subject: { kind: "entity", id: "org_1" },
+    capabilities: ["read"],
+    scope: { kind: "project", id: "project_1" },
+    resource: { type: "memory", id: "project_memory" },
+  };
+
+  const allowed = evaluateGovernanceAccess({
+    request: {
+      principalId: "user_1",
+      capability: "read",
+      scope: { kind: "project", id: "project_1" },
+      resource: { type: "memory", id: "project_memory" },
+    },
+    grants: [entityGrant],
+    authorityEdges: [membership],
+    scopeHierarchy: [{ parent: { kind: "entity", id: "org_1" }, child: { kind: "project", id: "project_1" } }],
+  });
+  const deniedWithoutMembership = evaluateGovernanceAccess({
+    request: {
+      principalId: "user_2",
+      capability: "read",
+      scope: { kind: "project", id: "project_1" },
+      resource: { type: "memory", id: "project_memory" },
+    },
+    grants: [entityGrant],
+    authorityEdges: [membership],
+    scopeHierarchy: [{ parent: { kind: "entity", id: "org_1" }, child: { kind: "project", id: "project_1" } }],
+  });
+
+  assert.equal(allowed.allowed, true);
+  assert.deepEqual(allowed.matchedGrantIds, ["grant.org.project.read"]);
+  assert.equal(deniedWithoutMembership.allowed, false);
+});
+
 test("governance control does not imply read access", () => {
   const controlGrant: GovernanceGrant = {
     id: "grant.control",
