@@ -232,6 +232,7 @@ claw remote contracts --json
 claw remote e2e-plan --json
 claw remote compat --legacy-surface relay.mobile.chat --canonical-route remote.chatGateway --client-kind ios --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 claw inspect remote --json
+claw inspect remote --source-qa-review-file docs/remote-gateway-sync-source-qa-review.json --external-validation-file docs/remote-gateway-sync-external-validation-evidence.json --json
 
 claw sync drivers --json
 claw sync manifest --resource-id skills:default --kind skills --driver skills --json
@@ -321,6 +322,11 @@ targets, required route contract IDs, commands to run, approval scope, and
 prohibited actions. It always reports `approvalRequired: true` and
 `approved: false` with status `approval_required`; it is a request for explicit
 approval, not approval itself.
+When submitted with the current `--source-qa-review-file` and
+`--external-validation-file` artifacts, the approval packet reports
+`readinessStatus: ready_for_approved_run`; without those artifacts it remains
+`not_ready` because the source review and pending evidence rows are not bound to
+the request.
 `remote validation-report` evaluates supplied external evidence, if any, against
 that checklist. With no approved physical evidence it stays `external_pending`;
 external validation is artifact-only clearable, so raw evidence rows may be
@@ -376,7 +382,11 @@ host, headless server, VPS host, mobile client, browser client, self-hosted
 Gateway, and hosted Gateway.
 `inspect remote` is the read-only inspection view that puts remote
 classification, Sync authority/drivers, transport, route contracts, tests,
-gaps, and conformance in one JSON payload.
+gaps, and conformance in one JSON payload. By default it reports the fail-closed
+no-artifact closure state; with `--source-qa-review-file` and
+`--external-validation-file`, it overlays the same artifact-bound readiness,
+approval request, validation report, and closure gate used by `claw remote
+validation-readiness` and `claw remote closure-gate`.
 `remote offline-command` returns the no-write `RemoteOfflineCommandResult` for
 interactive remote calls when a Connector, node, or transport is unavailable.
 It always reports `failed_fast`, `enqueued: false`, `retryable: true`, and
@@ -1221,6 +1231,7 @@ claw search query "release notes" --domains web --profile full --web-root ./web-
 claw search sources enable external.cache --profile full --json
 claw search query "provider thread" --domains external --profile full --external-root ./provider-cache --json
 claw search changes schedule upsert --source code.symbols --root ./repo --path ./repo/src/app.ts --json
+claw search changes scan --source code.symbols --root ./repo --json
 claw search status --json
 claw search service status --json
 claw search service run-once --json

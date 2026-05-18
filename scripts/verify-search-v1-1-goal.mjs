@@ -1120,6 +1120,7 @@ for (const snippet of [
   "search.status",
   "search.jobs.schedule",
   "search.changes.schedule",
+  "search.changes.scan",
   "search.saved.create",
   "search.monitors.evaluate",
   "search.actions.execute",
@@ -1137,6 +1138,7 @@ for (const snippet of [
   "sessions index enqueues sessions.chats search refresh jobs",
   "sessions.chats event jobs refresh and tombstone individual chats",
   "search changes schedule enqueues typed code.symbols refresh jobs",
+  "search changes scan schedules upserts and deletes from a root snapshot",
   "local.files event jobs refresh and tombstone individual files",
   "web.ingested event jobs refresh and tombstone individual cache files",
   "external.cache event jobs refresh and tombstone individual cache files",
@@ -1209,7 +1211,10 @@ requireSnippet("packages/clawjs/src/v1-data.ts", "scheduleSessionChatSearchEvent
 requireSnippet("packages/clawjs/src/v1-data.ts", "indexSessionRoots(store.sqlite, roots");
 requireSnippet("packages/clawjs/src/cli-search-command.ts", "ensureSessionChatResourceIndexed");
 requireSnippet("packages/clawjs/src/cli-search-command.ts", "scheduleCodeSymbolsSearchEvent({");
+requireSnippet("packages/clawjs/src/cli-search-command.ts", "scanSearchChangedSourceFiles");
+requireSnippet("packages/clawjs/src/cli-search-changes-scan.ts", "shard: \"changes\"");
 requireSnippet("docs/search.md", "`claw search changes schedule` is the typed producer-facing wrapper");
+requireSnippet("docs/search.md", "`claw search changes scan` is a bounded local fallback producer");
 requireSnippet("docs/cli.md", "`claw sessions index` projects local session artifacts");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleLocalFileSearchEvent");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"local.files\"");
@@ -1228,7 +1233,9 @@ requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"surfaces.r
 requireSnippet("packages/clawjs/src/cli-search-command.ts", "scheduleSurfaceRouteSearchEvent({");
 requireSnippet("packages/clawjs/src/cli-search-surface-routes-test-utils.ts", "scheduleSurfaceRouteSearchEvent");
 requireSnippet("packages/clawjs-search-mcp/src/index.ts", "search.changes.schedule");
+requireSnippet("packages/clawjs-search-mcp/src/index.ts", "search.changes.scan");
 requireSnippet("packages/clawjs-search-mcp/src/index.test.ts", "Search MCP schedules typed changed source events");
+requireSnippet("packages/clawjs-search-mcp/src/index.test.ts", "Search MCP scans changed source roots into event jobs");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "providers and snippets writes enqueue and index framework configuration fast paths");
 requireSnippet("packages/clawjs/src/cli-search-framework-fast-path-test-utils.ts", "providerDeleteRunPayload.data.service.worker?.claimed");
 requireSnippet("packages/clawjs/src/cli-search-framework-fast-path-test-utils.ts", "operation: \"delete\"");
@@ -1377,11 +1384,16 @@ requireSnippet("docs/search.md", "redacted structured\ncontent-data");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "source: \"sessions.chats\", operation: \"delete\", status: \"done\", indexed: 1");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "source: \"code.symbols\", operation: \"delete\", status: \"done\", indexed: 1");
 requireSnippet("packages/clawjs/src/cli-search-code-symbols-source.ts", "default\\s+(?:async\\s+)?function");
+requireSnippet("packages/clawjs/src/cli-search-code-symbols-source.ts", "kind: \"method\"");
 requireSnippet("packages/clawjs/src/cli-search-code-symbols-source.ts", "kind: \"constant\"");
 requireSnippet("packages/clawjs/src/cli-search-code-symbols-source.ts", "kind: \"test\"");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "function SearchPanelView");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "type SearchNeedleConfig");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "method resolveNeedle");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "constant searchConfig");
+requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "constant typedSearchLimit");
 requireSnippet("packages/clawjs/src/cli-search-index.test.ts", "test renders local result");
+requireSnippet("docs/search.md", "TypeScript classes, interfaces, type aliases");
 requireSnippet("packages/clawjs/src/cli-search-docs-pages-test-utils.ts", "source: \"docs.pages\", operation: \"delete\", status: \"done\", indexed: 1");
 requireSnippet("packages/clawjs/src/v1-data.ts", "case \"docs\"");
 requireSnippet("packages/clawjs/src/v1-data.ts", "scheduleDocsPagesSearchEvent({");

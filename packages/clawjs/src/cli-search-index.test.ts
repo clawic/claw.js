@@ -4637,8 +4637,18 @@ test("search indexes scoped code.symbols without broadening other domains", asyn
     "  enabled: boolean;",
     "}",
     "",
+    "export type SearchNeedleMode = \"compact\" | \"expanded\";",
+    "",
     "export function makeNeedleSymbol(config: SearchNeedleConfig) {",
     "  return config.enabled ? \"needle-ready\" : \"needle-off\";",
+    "}",
+    "",
+    "export const makeTypedNeedle = (value: string): string => value;",
+    "",
+    "export class SearchNeedleController {",
+    "  public resolveNeedle(config: SearchNeedleConfig): string {",
+    "    return makeNeedleSymbol(config);",
+    "  }",
     "}",
     "",
     "export default function SearchPanelView() {",
@@ -4646,6 +4656,7 @@ test("search indexes scoped code.symbols without broadening other domains", asyn
     "}",
     "",
     "export const searchConfig = { enabled: true };",
+    "export const typedSearchLimit: number = 5;",
     "",
     "test(\"renders local result\", () => {",
     "  makeNeedleSymbol(searchConfig);",
@@ -4714,15 +4725,27 @@ test("search indexes scoped code.symbols without broadening other domains", asyn
     assert.equal(result?.type, "file");
     assert.equal(result?.metadata?.language, "typescript");
     assert.equal(result?.metadata?.relativePath, "src/feature-search.ts");
-    assert.equal(result?.metadata?.symbolCount, 5);
+    assert.equal(result?.metadata?.symbolCount, 10);
     assert.equal(result?.path, path.join(sourceRoot, "src", "feature-search.ts"));
     assert.equal(result?.actions?.some((action) => action.id === "open" && action.requiresApproval === true && action.grant === "search.code.open"), true);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "type SearchNeedleConfig"), true);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "type SearchNeedleMode"), true);
     assert.equal(result?.fragments?.some((fragment) => fragment.title === "function makeNeedleSymbol" && fragment.snippet?.includes("makeNeedleSymbol")), true);
-    assert.equal(result?.fragments?.some((fragment) => fragment.title === "function SearchPanelView"), true);
-    assert.equal(result?.fragments?.some((fragment) => fragment.title === "constant searchConfig"), true);
-    assert.equal(result?.fragments?.some((fragment) => fragment.title === "test renders local result"), true);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "function makeTypedNeedle"), true);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "type SearchNeedleController"), true);
     assert.ok(result?.explanation?.matchedBy?.length);
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "language"), true);
+    const db = new Database(path.join(dataRoot, "search.sqlite"), { readonly: true });
+    try {
+      const fragmentTitles = (db.prepare("SELECT title FROM search_fragments WHERE source = ? ORDER BY sort_order ASC").all("code.symbols") as Array<{ title: string }>).map((row) => row.title);
+      assert.equal(fragmentTitles.includes("method resolveNeedle"), true);
+      assert.equal(fragmentTitles.includes("function SearchPanelView"), true);
+      assert.equal(fragmentTitles.includes("constant searchConfig"), true);
+      assert.equal(fragmentTitles.includes("constant typedSearchLimit"), true);
+      assert.equal(fragmentTitles.includes("test renders local result"), true);
+    } finally {
+      db.close();
+    }
     const semanticQuery = await runCliCapture([
       "search",
       "query",
@@ -4875,6 +4898,53 @@ test("search changes schedule enqueues typed code.symbols refresh jobs", async (
     const result = queryPayload.data.results.find((entry) => entry.resourceId === "src/changed-refresh.ts");
     assert.equal(result?.source, "code.symbols");
     assert.equal(result?.fragments?.some((fragment) => fragment.title === "function changedScheduleNeedle"), true);
+  });
+});
+test("search changes scan schedules upserts and deletes from a root snapshot", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-code-scan-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  const sourceRoot = path.join(workspaceRoot, "project");
+  const filePath = path.join(sourceRoot, "src", "scan-refresh.ts");
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, [
+    "export function scanScheduleNeedle() {",
+    "  return \"code-symbol-scan-ready\";",
+    "}",
+    "",
+  ].join("\n"));
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const firstScan = await runCliCapture(["search", "changes", "scan", "--source", "code.symbols", "--root", sourceRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(firstScan.code, CLI_EXIT_OK);
+    const firstPayload = JSON.parse(firstScan.stdout) as {
+      data: { source: string; scanned: number; scheduledUpserts: number; scheduledDeletes: number; jobs: Array<{ source: string; operation: string; resourceId?: string }> };
+      meta: { subcommand?: string };
+    };
+    assert.equal(firstPayload.meta.subcommand, "changes");
+    assert.equal(firstPayload.data.source, "code.symbols");
+    assert.equal(firstPayload.data.scanned, 1);
+    assert.equal(firstPayload.data.scheduledUpserts, 1);
+    assert.equal(firstPayload.data.scheduledDeletes, 0);
+    assert.equal(firstPayload.data.jobs[0]?.resourceId, "src/scan-refresh.ts");
+    const secondScan = await runCliCapture(["search", "changes", "scan", "--source", "code.symbols", "--root", sourceRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(secondScan.code, CLI_EXIT_OK);
+    const secondPayload = JSON.parse(secondScan.stdout) as { data: { scheduledUpserts: number; scheduledDeletes: number; state: string } };
+    assert.equal(secondPayload.data.scheduledUpserts, 0);
+    assert.equal(secondPayload.data.scheduledDeletes, 0);
+    assert.equal(secondPayload.data.state, "empty");
+    fs.rmSync(filePath);
+    const deleteScan = await runCliCapture(["search", "changes", "scan", "--source", "code.symbols", "--root", sourceRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleteScan.code, CLI_EXIT_OK);
+    const deletePayload = JSON.parse(deleteScan.stdout) as { data: { scanned: number; scheduledUpserts: number; scheduledDeletes: number; jobs: Array<{ source: string; operation: string; resourceId?: string }> } };
+    assert.equal(deletePayload.data.scanned, 0);
+    assert.equal(deletePayload.data.scheduledUpserts, 0);
+    assert.equal(deletePayload.data.scheduledDeletes, 1);
+    assert.deepEqual({ source: deletePayload.data.jobs[0]?.source, operation: deletePayload.data.jobs[0]?.operation, resourceId: deletePayload.data.jobs[0]?.resourceId }, { source: "code.symbols", operation: "delete", resourceId: "src/scan-refresh.ts" });
   });
 });
 test("search keeps optional full sources out of scoped domain queries", async () => {

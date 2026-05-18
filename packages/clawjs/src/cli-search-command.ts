@@ -58,6 +58,7 @@ import {
   resolveCodeSearchRoot,
   upsertCodeFileSearchDocument,
 } from "./cli-search-code-symbols-source.ts";
+import { scanSearchChangedSourceFiles } from "./cli-search-changes-scan.ts";
 import { ensureDocsPageResourceIndexed, ensureDocsPagesSourceIndexed } from "./cli-search-docs-pages-source.ts";
 import { ensureGenerationArtifactResourceIndexed, ensureGenerationsArtifactsSourceIndexed } from "./cli-search-generations-source.ts";
 import { ensureImageDerivedResourceIndexed, ensureImagesDerivedSourceIndexed, ensureMediaAssetResourceIndexed, ensureMediaAssetsSourceIndexed } from "./cli-search-image-media-sources.ts";
@@ -958,6 +959,27 @@ export async function runSearchAdminCli(input: {
 
   if (command === "changes" || command === "changed") {
     const action = input.positionals[2] ?? "schedule";
+    if (action === "scan") {
+      const source = input.flags.source ?? input.positionals[3];
+      if (!source) {
+        input.context.stderr.write(`Usage: ${input.binName} search changes scan --source <source-id> --root <root> [--json]\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const data = scanSearchChangedSourceFiles({
+        source,
+        cwd: input.context.cwd,
+        flags: input.flags,
+        boundedNumberFlag,
+        expandSearchPath,
+        openStore: openCliSearchStore,
+        registerSources: registerCliSearchSources,
+        scheduleChangedEvent: scheduleSearchChangedSourceEvent,
+        stableSearchId,
+      });
+      if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "changes" });
+      else input.context.stdout.write(`source=${data.source} scanned=${data.scanned} upserts=${data.scheduledUpserts} deletes=${data.scheduledDeletes}\n`);
+      return CLI_EXIT_OK;
+    }
     const operation = parseSearchChangedOperation(input.flags.operation ?? input.flags.op ?? input.positionals[3]);
     const source = input.flags.source ?? input.positionals[4];
     if (action !== "schedule" || !operation || !source) {

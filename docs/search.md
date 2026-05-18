@@ -157,6 +157,7 @@ claw search jobs complete <job-id> --json
 claw search jobs fail <job-id> --error "temporary extractor throttle" --retry --json
 claw search jobs schedule upsert --source documents.blocks --resource-id doc_123 --json
 claw search changes schedule upsert --source code.symbols --root ./repo --path ./repo/src/app.ts --json
+claw search changes scan --source code.symbols --root ./repo --json
 claw search saved create recent --query "text" --json
 claw search monitors create monitor-recent --saved-search recent --json
 claw search monitors run monitor-recent --limit 10 --json
@@ -225,6 +226,10 @@ file or route events. It uses the source schedulers for `code.symbols`,
 `local.files`, `web.ingested`, `external.cache`, and `surfaces.routes`, so
 producer paths are checked against their selected root and the queued job
 contains the payload the embedded worker needs for resource-scoped refresh.
+`claw search changes scan` is a bounded local fallback producer for file-backed
+sources. It walks a selected root, stores a compact snapshot in the source
+cursor shard `changes`, and schedules hot upsert/delete jobs only for files
+whose signature changed or disappeared since the previous scan.
 
 The local framework database and artifact write paths now emit those compacted
 events for `database.records`, `documents.blocks`, `notes.pages`,
@@ -373,7 +378,9 @@ document or extractor output cannot silently expand every section search path.
 
 `code.symbols` is intentionally bounded. It indexes supported project files,
 Markdown docs, and lightweight symbol fragments under `--code-root` or the
-current workspace root. It skips dependency/build/cache/private control
+current workspace root, including TypeScript classes, interfaces, type aliases,
+enums, typed constants, arrow functions, methods, named tests, and Markdown
+headings. It skips dependency/build/cache/private control
 directories and respects `--code-limit`, `--code-max-depth`, and
 `--code-max-bytes`. Code indexing is refreshed lazily for code-scoped queries,
 explicitly during `search rebuild`, or incrementally through event-driven
@@ -381,6 +388,8 @@ file upsert/delete jobs keyed by the project root and relative file path.
 Source file producers can call `claw search changes schedule upsert|delete
 --source code.symbols --root <code-root> --path <file>` to enqueue the typed hot
 job; paths outside the root are rejected before a job is written.
+`claw search changes scan --source code.symbols --root <code-root>` provides a
+bounded snapshot-based producer when no file watcher is attached.
 
 `local.files` follows the same explicit-source rule. It stays in the `full`
 profile and is disabled until explicitly enabled with `claw search sources

@@ -262,8 +262,9 @@ function symbolPatternsForLanguage(language: string): Array<{ kind: string; rege
     { kind: "function", regex: /^(?:export\s+)?default\s+(?:async\s+)?function\s+([A-Za-z_$][A-Za-z0-9_$]*)/ },
     { kind: "type", regex: /^(?:export\s+)?(?:abstract\s+)?(?:class|interface|type|enum)\s+([A-Za-z_$][A-Za-z0-9_$]*)/ },
     { kind: "function", regex: /^(?:export\s+)?(?:async\s+)?function\s+([A-Za-z_$][A-Za-z0-9_$]*)/ },
-    { kind: "function", regex: /^(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][A-Za-z0-9_$]*)\s*=>/ },
-    { kind: "constant", regex: /^(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=/ },
+    { kind: "function", regex: /^(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*(?::[^=]+)?=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][A-Za-z0-9_$]*)\s*(?::[^=]+)?=>/ },
+    { kind: "method", regex: /^(?!(?:if|for|while|switch|catch|return)\b)(?:(?:public|private|protected|static|async|override|readonly)\s+)*([A-Za-z_$][A-Za-z0-9_$]*)\s*\([^)]*\)\s*(?::[^={]+)?\s*\{?$/ },
+    { kind: "constant", regex: /^(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*(?::[^=]+)?=/ },
     { kind: "test", regex: /^(?:test|it|describe)\s*\(\s*["'`]([^"'`]+)["'`]/ },
   ];
 }
