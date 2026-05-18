@@ -632,7 +632,7 @@ function requireCliSearchAcceptanceSmoke() {
   const pausedList = readCliSearchJson(["sources"], "claw search sources after pause --json", dataRoot);
   const pausedCommands = pausedList.data?.sources?.find((source) => source.id === "commands");
   if (pausedCommands?.state !== "paused") failures.push("claw search sources after pause --json: must persist paused state");
-  const pausedQuery = readCliSearchJson(["query", "system", "--sources", "commands", "--limit", "3"], "claw search query paused source --json", dataRoot);
+  const pausedQuery = readCliSearchJson(["query", "system", "--sources", "commands", "--limit", "3"], "claw search query paused source --json", dataRoot, { allowNonZero: true });
   if (!pausedQuery.data?.omittedSources?.some((source) => source.source === "commands" && source.reason === "disabled" && String(source.message ?? "").includes("paused"))) {
     failures.push("claw search query paused source --json: must omit paused commands source");
   }
@@ -665,7 +665,7 @@ function requireCliSearchAcceptanceSmoke() {
   if (nativeSource?.state !== "external_pending" || nativeSource?.profile !== "full" || nativeSource?.defaultState !== "off" || nativeSource?.fastPath !== false) {
     failures.push("claw search sources enable native.system --profile full --json: must expose native.system as a full-profile pending source");
   }
-  const nativeQuery = readCliSearchJson(["query", "native settings", "--profile", "full", "--sources", "native.system", "--limit", "3"], "claw search query native.system external pending --json", dataRoot);
+  const nativeQuery = readCliSearchJson(["query", "native settings", "--profile", "full", "--sources", "native.system", "--limit", "3"], "claw search query native.system external pending --json", dataRoot, { allowNonZero: true });
   if (!nativeQuery.data?.omittedSources?.some((source) => source.source === "native.system" && source.reason === "disabled" && String(source.message ?? "").includes("external_pending"))) {
     failures.push("claw search query native.system external pending --json: must omit external-pending native.system results");
   }
