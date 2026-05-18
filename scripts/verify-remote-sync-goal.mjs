@@ -456,6 +456,15 @@ for (const ref of [
 ]) {
   if (!actorModelSourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-010 must cite ${ref}`);
 }
+const clientCacheSourceQaReview = sourceQaReviewReport.items.find((item) => item.qaId === "QA-015");
+for (const ref of [
+  "RemoteClientCacheSnapshot",
+  "claw sync cache",
+  "claw remote e2e-plan:sync",
+  "claw remote pending:physical_client_storage",
+]) {
+  if (!clientCacheSourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-015 must cite ${ref}`);
+}
 const reviewedClosureGate = buildRemoteGoalClosureGate({
   generatedAt: "2026-05-18T11:20:01.000Z",
   sourceQaReviews: sourceQaReviewReport.items,
