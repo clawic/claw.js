@@ -107,6 +107,46 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
         dimensions: numberParam(p.dimensions) ?? LOCAL_TEXT_EMBEDDING_DIMENSIONS,
       }),
     },
+    {
+      name: "search.embeddings.index",
+      description: "Backfill deterministic local Search embedding vectors for already indexed semantic-capable sources.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          sources: { type: "array", items: { type: "string" } },
+          domains: { type: "array", items: { type: "string" } },
+          shards: { type: "array", items: { type: "string" } },
+          limit: { type: "integer" },
+          model: { type: "string" },
+        },
+      },
+      handler: (p) => store.indexLocalEmbeddings({
+        sources: stringArrayParam(p.sources),
+        domains: stringArrayParam(p.domains),
+        shards: stringArrayParam(p.shards),
+        limit: numberParam(p.limit),
+        model: localEmbeddingIndexModel(p.model),
+      }),
+    },
+    {
+      name: "search.embeddings.status",
+      description: "List deterministic local Search embedding vector coverage.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          sources: { type: "array", items: { type: "string" } },
+          domains: { type: "array", items: { type: "string" } },
+          shards: { type: "array", items: { type: "string" } },
+          model: { type: "string" },
+        },
+      },
+      handler: (p) => store.listEmbeddingStatus({
+        sources: stringArrayParam(p.sources),
+        domains: stringArrayParam(p.domains),
+        shards: stringArrayParam(p.shards),
+        model: stringParam(p.model),
+      }),
+    },
     { name: "search.sources.list", description: "List Search source manifests.", inputSchema: { type: "object", properties: { profile: { type: "string", enum: ["framework", "full"] } } }, handler: (p) => store.listSources(searchProfile(p.profile)) },
     {
       name: "search.sources.set_state",
@@ -368,7 +408,7 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
     {
       name: "search.jobs.enqueue",
       description: "Enqueue source/shard Search indexing work.",
-      inputSchema: { type: "object", required: ["source", "operation"], properties: { id: { type: "string" }, source: { type: "string" }, shard: { type: "string" }, operation: { type: "string", enum: ["upsert", "delete", "backfill", "rebuild"] }, resourceId: { type: "string" }, priority: { type: "integer" }, scheduledAt: { type: "string" }, payload: { type: "object" } } },
+      inputSchema: { type: "object", required: ["source", "operation"], properties: { id: { type: "string" }, source: { type: "string" }, shard: { type: "string" }, operation: { type: "string", enum: ["upsert", "delete", "backfill", "rebuild", "embed"] }, resourceId: { type: "string" }, priority: { type: "integer" }, scheduledAt: { type: "string" }, payload: { type: "object" } } },
       handler: (p) => store.enqueueIndexJob({ id: stringParam(p.id), source: requiredString(p, "source"), shard: stringParam(p.shard), operation: requiredSearchJobOperation(p.operation), resourceId: stringParam(p.resourceId), priority: numberParam(p.priority), scheduledAt: stringParam(p.scheduledAt), payload: recordParam(p.payload) }),
     },
     {
@@ -659,14 +699,20 @@ function requiredSearchSourceState(value: unknown): SearchSourceState {
   throw new Error("state is required");
 }
 
-function requiredSearchJobOperation(value: unknown): "upsert" | "delete" | "backfill" | "rebuild" {
-  if (value === "upsert" || value === "delete" || value === "backfill" || value === "rebuild") return value;
+function requiredSearchJobOperation(value: unknown): "upsert" | "delete" | "backfill" | "rebuild" | "embed" {
+  if (value === "upsert" || value === "delete" || value === "backfill" || value === "rebuild" || value === "embed") return value;
   throw new Error("operation is required");
 }
 
 function requiredSearchEventOperation(value: unknown): "upsert" | "delete" {
   if (value === "upsert" || value === "delete") return value;
   throw new Error("operation must be upsert or delete");
+}
+
+function localEmbeddingIndexModel(value: unknown): string {
+  const model = stringParam(value);
+  if (!model || model === LOCAL_TEXT_EMBEDDING_MODEL) return LOCAL_TEXT_EMBEDDING_MODEL;
+  throw new Error(`Search local embedding indexing only supports ${LOCAL_TEXT_EMBEDDING_MODEL}; provider-backed embedding workers are EXTERNAL PENDING.`);
 }
 
 function requiredString(params: Record<string, unknown>, key: string): string {

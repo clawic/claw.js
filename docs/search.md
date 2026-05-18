@@ -254,10 +254,12 @@ deterministic local text embedding helper (`local-text-v1`) so adapters can
 generate reproducible vectors without calling providers; Root Search stores
 vectors and applies deterministic cosine similarity scoring alongside the
 existing ranking hints and context boosts. Admin callers can also run
-`claw search embeddings index --source <source-id>` to backfill local vectors for
-already indexed documents on semantic-capable sources, or enqueue
-`claw search jobs enqueue embed --source <source-id>` so the bounded Search
-worker performs the same local-only embedding pass.
+`claw search embeddings index --source <source-id>` or MCP
+`search.embeddings.index` to backfill local vectors for already indexed
+documents on semantic-capable sources, or enqueue
+`claw search jobs enqueue embed --source <source-id>`/MCP `search.jobs.enqueue`
+with operation `embed` so bounded workers perform the same local-only embedding
+pass.
 
 Queries support structured filters through `SearchQueryInput.filters` and the
 CLI `--filters` flag. Filters may target built-in fields such as `domain`,
@@ -336,11 +338,13 @@ the caller supplies a local embedding vector and model. The CLI can derive a
 query vector with `--embedding-model local-text-v1` or `--local-embedding true`
 for sources that have local vectors. Source adapters may write those vectors
 directly, and Search Index admins can backfill deterministic local vectors with
-`claw search embeddings index --source <source-id>` or throttled `embed` jobs.
-The Search MCP surface mirrors this local-only path: `search.query` accepts
-`embeddingModel: local-text-v1` or `localEmbedding: true`, and
+`claw search embeddings index --source <source-id>`, MCP
+`search.embeddings.index`, or throttled `embed` jobs. The Search MCP surface
+mirrors this local-only path: `search.query` accepts
+`embeddingModel: local-text-v1` or `localEmbedding: true`,
 `search.embeddings.create` returns the deterministic local vector for callers
-that need to inspect or cache it.
+that need to inspect or cache it, and `search.embeddings.status` reports vector
+coverage.
 Search does not call external embedding providers from the sidecar;
 provider-backed generation remains `EXTERNAL PENDING` until an explicit
 provider worker owns credentials, billing, and throttling.

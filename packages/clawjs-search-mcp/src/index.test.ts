@@ -30,6 +30,8 @@ test("Search MCP exposes profile, entrypoint, and explain tools", () => {
     for (const name of [
       "search.query",
       "search.embeddings.create",
+      "search.embeddings.index",
+      "search.embeddings.status",
       "search.sources.list",
       "search.sources.set_state",
       "search.status",
@@ -49,6 +51,7 @@ test("Search MCP exposes profile, entrypoint, and explain tools", () => {
       "search.monitors.evaluate",
       "search.audit.list",
       "search.jobs.list",
+      "search.jobs.enqueue",
       "search.jobs.schedule",
     ]) {
       assert.equal(toolNames.has(name), true, `${name} should be exposed`);
@@ -298,16 +301,6 @@ test("Search MCP derives local embeddings for semantic queries", () => {
       title: "Release notes",
       body: "Changelog for packaging.",
     });
-    store.upsertVector({
-      documentId: "documents.blocks:alpha",
-      model: LOCAL_TEXT_EMBEDDING_MODEL,
-      embedding: createLocalTextEmbedding("quiet architecture interface").vector,
-    });
-    store.upsertVector({
-      documentId: "documents.blocks:beta",
-      model: LOCAL_TEXT_EMBEDDING_MODEL,
-      embedding: createLocalTextEmbedding("packaging changelog release").vector,
-    });
 
     const tools = createSearchMcpTools(store);
     const embeddingsTool = tools.find((tool) => tool.name === "search.embeddings.create");
@@ -316,6 +309,19 @@ test("Search MCP derives local embeddings for semantic queries", () => {
     assert.equal(embedding.model, LOCAL_TEXT_EMBEDDING_MODEL);
     assert.equal(embedding.vector.length, LOCAL_TEXT_EMBEDDING_DIMENSIONS);
     assert.deepEqual(embedding.vector, createLocalTextEmbedding("quiet architecture interface").vector);
+
+    const embeddingsIndexTool = tools.find((tool) => tool.name === "search.embeddings.index");
+    assert.ok(embeddingsIndexTool);
+    const indexed = embeddingsIndexTool.handler({ sources: ["documents.blocks"] }) as { model: string; documents: number; indexed: number; selectedSources: string[] };
+    assert.equal(indexed.model, LOCAL_TEXT_EMBEDDING_MODEL);
+    assert.equal(indexed.documents, 2);
+    assert.equal(indexed.indexed, 2);
+    assert.deepEqual(indexed.selectedSources, ["documents.blocks"]);
+
+    const embeddingsStatusTool = tools.find((tool) => tool.name === "search.embeddings.status");
+    assert.ok(embeddingsStatusTool);
+    const status = embeddingsStatusTool.handler({ sources: ["documents.blocks"], model: LOCAL_TEXT_EMBEDDING_MODEL }) as Array<{ source: string; model: string; documents: number; vectors: number }>;
+    assert.equal(status.some((item) => item.source === "documents.blocks" && item.model === LOCAL_TEXT_EMBEDDING_MODEL && item.documents === 2 && item.vectors === 2), true);
 
     const queryTool = tools.find((tool) => tool.name === "search.query");
     assert.ok(queryTool);

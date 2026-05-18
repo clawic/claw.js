@@ -69,8 +69,9 @@ Search V1.1 is built from these layers:
 - **Semantic retrieval**: vectors live in `search.sqlite` and are queried only
   when a caller provides a local embedding. `semantic` and `hybrid` modes are
   available without provider calls; source adapters, `claw search embeddings
-  index`, and bounded `embed` jobs can generate deterministic `local-text-v1`
-  vectors for already indexed semantic-capable documents.
+  index`, MCP `search.embeddings.index`, and bounded `embed` jobs can generate
+  deterministic `local-text-v1` vectors for already indexed semantic-capable
+  documents.
 - **Per-source limits**: source manifests declare body, fragment-count, and
   per-fragment byte limits. The store applies those limits before FTS writes so
   heavy extractors cannot broaden unrelated fast paths.
