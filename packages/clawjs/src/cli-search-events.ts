@@ -133,6 +133,36 @@ export function scheduleCodeSymbolsSearchEvent(input: {
   });
 }
 
+export function scheduleLocalFileSearchEvent(input: {
+  operation: "upsert" | "delete";
+  root: string;
+  filePath: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  const root = path.resolve(input.root);
+  const absolutePath = path.resolve(input.filePath);
+  const relativeFromRoot = path.relative(root, absolutePath);
+  if (relativeFromRoot === ".." || relativeFromRoot.startsWith(`..${path.sep}`) || path.isAbsolute(relativeFromRoot)) {
+    return { ok: false, error: `local file is outside root: ${input.filePath}` };
+  }
+  const relativePath = normalizeEventRelativePath(relativeFromRoot);
+  return scheduleSearchIndexEvent({
+    source: "local.files",
+    operation: input.operation,
+    resourceId: relativePath,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      root,
+      relativePath,
+      absolutePath,
+    },
+  });
+}
+
 export function scheduleDocsPagesSearchEvent(input: {
   operation: "upsert" | "delete";
   workspaceRoot: string;
