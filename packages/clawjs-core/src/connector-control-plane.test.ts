@@ -353,3 +353,69 @@ test("connector control plane audit declares governed context refs, secret refs,
   assert.equal(decision.audit.approvalGrantId, "approval-release-read");
   assert.deepEqual(decision.audit.reasonCodes, []);
 });
+
+test("connector control plane blocks regulated external actions through connector metadata", () => {
+  const operation: ConnectorExecutionRequest["operation"] = {
+    ...baseRequest.operation,
+    id: "health.records.export",
+    providerId: "ehr",
+    capabilityIds: ["health.export.records"],
+    riskTiers: ["write"],
+    regulatedDomains: ["health"],
+    decisionEffects: ["external_action"],
+    requiresSensitiveExportReview: true,
+    thirdPartyDisclosure: true,
+  };
+  const request: ConnectorExecutionRequest = {
+    ...baseRequest,
+    provider: {
+      id: "ehr",
+      displayName: "Example EHR",
+      trustTier: "third_party",
+      enabled: true,
+      capabilities: [
+        createConnectorCapability("health.export.records", {
+          riskTiers: ["write"],
+          regulatedDomains: ["health"],
+          decisionEffects: ["external_action"],
+          requiresSensitiveExportReview: true,
+          thirdPartyDisclosure: true,
+        }),
+      ],
+    },
+    operation,
+    capabilityId: "health.export.records",
+    now: "2026-05-18T10:00:00.000Z",
+    credentialBinding: {
+      id: "cred-ehr",
+      providerId: "ehr",
+      secretRef: "secret://ehr/token",
+      credentialKind: "oauth_token",
+      operationIds: ["health.records.export"],
+      capabilityIds: ["health.export.records"],
+      enabled: true,
+    },
+  };
+
+  const decision = evaluateConnectorControlPlaneRequest({
+    request,
+    policy: basePolicy,
+    approvalGrant: {
+      id: "host-approval",
+      expiresAt: "2026-05-18T10:10:00.000Z",
+      providerIds: ["ehr"],
+      operationIds: ["health.records.export"],
+      capabilityIds: ["health.export.records"],
+      riskTiers: ["write"],
+      allowsUnknownCost: true,
+      allowsNetworkPolicyBypass: true,
+    },
+  });
+
+  assert.equal(decision.allowed, false);
+  assert.equal(decision.reasons.some((reason) => reason.code === "regulated_safety_blocked"), true);
+  assert.equal(decision.reasons.some((reason) => reason.message.includes("external_review_required")), true);
+  assert.equal(decision.reasons.some((reason) => reason.message.includes("sensitive_export_review_required")), true);
+  assert.equal(decision.reasons.some((reason) => reason.message.includes("remote_or_provider_opt_in_required")), true);
+  assert.equal(decision.audit.reasonCodes?.includes("regulated_safety_blocked"), true);
+});

@@ -1,4 +1,9 @@
-import type { RegulatedDecisionEffect, RegulatedDomain, SensitiveDataClass } from "./regulated-domain-safety.ts";
+import {
+  evaluateRegulatedAction,
+  type RegulatedDecisionEffect,
+  type RegulatedDomain,
+  type SensitiveDataClass,
+} from "./regulated-domain-safety.ts";
 import type { ConnectorContextChoice, ConnectorContextDecisionReasonCode, ConnectorContextRequirement } from "./connector-governed-context.ts";
 
 export const connectorControlPlaneVersion = 1;
@@ -244,6 +249,7 @@ export interface ConnectorControlPlaneDecisionReason {
     | "network_proof_required"
     | "network_proof_mismatch"
     | "host_not_allowed"
+    | "regulated_safety_blocked"
     | ConnectorContextDecisionReasonCode;
   message: string;
 }
@@ -334,6 +340,7 @@ export function evaluateConnectorControlPlaneRequest(input: {
   evaluatePolicyRules(request, policy, reasons);
   evaluateBudgets(request, budgets, matchingGrant, reasons);
   evaluateNetworkPolicy(request, networkPolicies, networkProof, matchingGrant, reasons);
+  evaluateRegulatedConnectorSafety(request, reasons);
 
   if (request.operation.requiresApproval && !matchingGrant) {
     reasons.push({
@@ -367,6 +374,49 @@ export function evaluateConnectorControlPlaneRequest(input: {
       reasonCodes: reasons.map((reason) => reason.code),
     },
   };
+}
+
+function evaluateRegulatedConnectorSafety(
+  request: ConnectorExecutionRequest,
+  reasons: ConnectorControlPlaneDecisionReason[],
+): void {
+  const capability = request.provider.capabilities?.find((candidate) => candidate.id === request.capabilityId);
+  const regulatedDomains = uniqueValues([
+    ...(request.operation.regulatedDomains ?? []),
+    ...(capability?.regulatedDomains ?? []),
+  ]);
+  if (regulatedDomains.length === 0) {
+    return;
+  }
+  const decisionEffects = uniqueValues([
+    ...(request.operation.decisionEffects ?? []),
+    ...(capability?.decisionEffects ?? []),
+  ]);
+  const fallbackDecisionEffect: RegulatedDecisionEffect = request.operation.riskTiers.some((tier) => tier === "write" || tier === "destructive" || tier === "cost" || tier === "system")
+    ? "external_action"
+    : "recordkeeping";
+  const sensitiveExport = request.operation.requiresSensitiveExportReview === true || capability?.requiresSensitiveExportReview === true;
+  const remoteOrProviderUse = request.provider.trustTier === "third_party"
+    || request.provider.trustTier === "mesh"
+    || request.provider.trustTier === "self_hosted"
+    || request.operation.thirdPartyDisclosure === true
+    || capability?.thirdPartyDisclosure === true;
+
+  for (const regulatedDomain of regulatedDomains) {
+    const decision = evaluateRegulatedAction({
+      regulatedDomain,
+      decisionEffect: decisionEffects[0] ?? fallbackDecisionEffect,
+      externalAction: fallbackDecisionEffect === "external_action" || decisionEffects.includes("external_action"),
+      sensitiveExport,
+      remoteOrProviderUse,
+    });
+    if (!decision.allowed) {
+      reasons.push({
+        code: "regulated_safety_blocked",
+        message: `Connector operation ${request.operation.id} is blocked by regulated safety for ${regulatedDomain}: ${decision.denialCodes.join(", ")}`,
+      });
+    }
+  }
 }
 
 function auditGovernedContext(request: ConnectorExecutionRequest): Pick<ConnectorAuditDeclaration, "contextRefs" | "contextFieldRefs" | "secretRefs" | "defaultContextRefs" | "appliedRuleIds"> {
@@ -566,4 +616,8 @@ function matchesOptionalList<T extends string>(allowed: readonly T[] | undefined
 
 function matchesAnyOptionalList<T extends string>(allowed: readonly T[] | undefined, values: readonly T[]): boolean {
   return !allowed?.length || values.some((value) => allowed.includes(value));
+}
+
+function uniqueValues<T extends string>(values: readonly T[]): T[] {
+  return Array.from(new Set(values));
 }
