@@ -79,6 +79,7 @@ external requirement list as blocked until approved evidence clears:
 | Relay HTTP routes | `npx vitest run --config vitest.config.ts relay/src/server/remote-sync-routes.test.ts`; this must compare `/v1/remote/external-pending`, `/v1/remote/external-validation-checklist`, `/v1/remote/external-validation-template`, `/v1/remote/external-validation-artifact`, `/v1/remote/external-validation-runbook`, `/v1/remote/external-validation-readiness`, `/v1/remote/external-validation-approval-request`, `/v1/remote/external-validation-report`, `/v1/remote/source-qa-template`, `/v1/remote/closure-gate`, `/v1/remote/route-contracts`, `/v1/remote/provider-device-e2e-plan`, and `/v1/remote/conformance` against the same core contracts used by CLI inspection. |
 | CLI/router parity | `node --import tsx ./scripts/verify-cli-registry-router-parity.mjs` |
 | Public executable inspection | `node packages/clawjs/bin/claw.mjs inspect remote --json` after building the CLI package |
+| Clawix remote mirror | In the public Clawix repo, `bash scripts/test.sh fast`; this runs `scripts/remote_canon_alignment_check.mjs` and verifies the Clawix interface matrix/ADR mirror stays a consumer of ClawJS Coordinator/Gateway/Connector/Sync route anchors, not a second source of truth. |
 | Public docs hygiene | `npm run code-hygiene:check` and `git diff --check` |
 
 ## Closure Rule

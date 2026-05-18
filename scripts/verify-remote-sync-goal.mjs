@@ -318,6 +318,8 @@ for (const snippet of [
   "claw remote validation-artifact",
   "claw remote source-qa-template",
   "claw remote contracts",
+  "Clawix remote mirror",
+  "remote_canon_alignment_check.mjs",
   "docs/remote-gateway-sync-external-validation-evidence.json",
   "artifact-native `items` array",
   "same core contracts used by CLI inspection",

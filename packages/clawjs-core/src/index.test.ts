@@ -170,6 +170,55 @@ import {
   withSurfaceChildren,
 } from "./index.ts";
 
+const expectedRemoteRegistryMethodRoutes = [
+  "GET /v1/remote/classifications",
+  "POST /v1/remote/classifications/receipts",
+  "GET /v1/remote/conformance",
+  "GET /v1/remote/offline-command",
+  "POST /v1/remote/offline-command",
+  "GET /v1/remote/external-pending",
+  "GET /v1/remote/external-validation-checklist",
+  "GET /v1/remote/external-validation-template",
+  "POST /v1/remote/external-validation-template",
+  "GET /v1/remote/external-validation-artifact",
+  "POST /v1/remote/external-validation-artifact",
+  "GET /v1/remote/external-validation-runbook",
+  "GET /v1/remote/external-validation-readiness",
+  "POST /v1/remote/external-validation-readiness",
+  "GET /v1/remote/external-validation-approval-request",
+  "POST /v1/remote/external-validation-approval-request",
+  "GET /v1/remote/external-validation-report",
+  "POST /v1/remote/external-validation-report",
+  "GET /v1/remote/source-qa-template",
+  "POST /v1/remote/source-qa-template",
+  "GET /v1/remote/closure-gate",
+  "POST /v1/remote/closure-gate",
+  "GET /v1/remote/route-contracts",
+  "GET /v1/remote/provider-device-e2e-plan",
+  "GET /v1/remote/compatibility/adapters",
+  "POST /v1/remote/compatibility/adapters",
+  "GET /v1/sync/drivers",
+  "GET /v1/sync/manifests",
+  "POST /v1/sync/manifests",
+  "GET /v1/sync/changes",
+  "POST /v1/sync/plan",
+  "POST /v1/sync/conflicts",
+  "POST /v1/sync/applications",
+  "POST /v1/sync/authority-handoffs",
+  "GET /v1/nodes",
+  "POST /v1/nodes/pair",
+  "POST /v1/nodes/trust",
+  "POST /v1/nodes/revoke",
+  "POST /v1/mesh/invitations",
+  "POST /v1/mesh/invitations/accept",
+  "POST /v1/mesh/shares",
+  "POST /v1/mesh/revocations",
+  "GET /v1/gateway/conformance",
+  "POST /v1/gateway/agent-service/evaluate",
+  "POST /v1/gateway/agent-service/executions",
+  "POST /v1/gateway/audit/receipts",
+];
+
 test("createManifest returns a valid manifest", () => {
   const manifest = createManifest({
     appId: "demo-app",
@@ -872,6 +921,12 @@ test("persistent surface registry exposes framework and host storage nodes", () 
 
   const indexed = withSurfaceChildren(clawPersistentSurfaceRegistry.nodes);
   assert.deepEqual(indexed.find((node) => node.id === "claw.global")?.children?.includes("claw.database.core"), true);
+
+  const remoteApiMethodRoutes = clawPersistentSurfaceRegistry.nodes
+    .filter((node) => node.kind === "apiRoute")
+    .filter((node) => /^\/v1\/(remote|gateway|sync|nodes|mesh)\b/.test(node.route ?? ""))
+    .map((node) => `${node.method} ${node.route}`);
+  assert.deepEqual(remoteApiMethodRoutes, expectedRemoteRegistryMethodRoutes);
 });
 
 test("surface graph registers critical chat routes and Relay", () => {
