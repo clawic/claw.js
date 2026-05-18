@@ -221,6 +221,15 @@ test("Search MCP exposes source-set, entrypoint, and explain tools", () => {
     assert.equal(savedSemantic.query.explain, true);
     assert.equal(savedSemantic.query.actor, "agent:test");
     assert.equal(savedSemantic.query.surface, "mcp");
+    assert.throws(
+      () => savedCreateTool.handler({
+        id: "saved-provider-semantic",
+        query: "provider semantic query",
+        strategy: "semantic",
+        embeddingModel: "provider-text-v1",
+      }),
+      /provider-backed embedding workers are EXTERNAL PENDING/,
+    );
 
     const monitorsCreateTool = tools.find((tool) => tool.name === "search.monitors.create");
     assert.ok(monitorsCreateTool);

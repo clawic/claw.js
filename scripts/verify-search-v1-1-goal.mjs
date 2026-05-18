@@ -1127,8 +1127,10 @@ requireSnippet("packages/clawjs/src/cli-work-search-events.test.ts", "productivi
 requireSnippet("packages/clawjs/src/cli-work-search-events.test.ts", "operation === \"upsert\"");
 requireSnippet("packages/clawjs/src/cli-work-search-events.test.ts", "operation === \"delete\"");
 requireSnippet("packages/clawjs/src/cli-search-query-embedding-gate.test.ts", "search query rejects provider embedding model derivation");
+requireSnippet("packages/clawjs/src/cli-search-query-embedding-gate.test.ts", "search saved create rejects provider embedding model derivation");
 requireSnippet("packages/clawjs/src/cli-search-command.ts", "localSearchEmbeddingModel(model)");
 requireSnippet("packages/clawjs-search-mcp/src/index.test.ts", "provider semantic query");
+requireSnippet("packages/clawjs-search-mcp/src/index.test.ts", "saved-provider-semantic");
 
 for (const snippet of [
   "published CLI package does not depend on the retired Index package",

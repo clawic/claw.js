@@ -31,3 +31,31 @@ test("search query rejects provider embedding model derivation", async () => {
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 });
+
+test("search saved create rejects provider embedding model derivation", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-saved-embedding-gate-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  try {
+    const blocked = await runCliCapture([
+      "search",
+      "saved",
+      "create",
+      "provider-saved-query",
+      "--query",
+      "provider semantic query",
+      "--strategy",
+      "semantic",
+      "--embedding-model",
+      "provider-text-v1",
+      "--data-dir",
+      dataRoot,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(blocked.code, CLI_EXIT_USAGE);
+    const payload = JSON.parse(blocked.stdout) as { error: { code: string; message: string } };
+    assert.equal(payload.error.code, "SEARCH_EMBEDDING_PROVIDER_PENDING");
+    assert.match(payload.error.message, /EXTERNAL PENDING/);
+  } finally {
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
