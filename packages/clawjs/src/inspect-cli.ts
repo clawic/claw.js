@@ -4,7 +4,7 @@ import path from "path";
 
 import Database from "better-sqlite3";
 import { AgentStoreFS, type Agent } from "@clawjs/agents";
-import { CLAW_CLI_COMMAND_INTENT_STATUSES, GOVERNANCE_CAPABILITIES, GOVERNANCE_ENTITY_KINDS, GOVERNANCE_PRINCIPAL_KINDS, GOVERNANCE_SCOPE_KINDS, buildRemoteConformanceReport, buildRemoteExternalPendingRegister, buildRemoteExternalValidationApprovalRequest, buildRemoteExternalValidationChecklist, buildRemoteExternalValidationEvidenceTemplate, buildRemoteExternalValidationReadiness, buildRemoteExternalValidationReport, buildRemoteGoalClosureGate, buildRemoteOfflineCommandResult, buildRemoteProviderDeviceE2EValidationPlan, buildRemoteRouteContractCatalog, buildRemoteSourceQaReviewTemplate, buildSyncDriverCatalog, clawDenseDataAcceptanceFixture, clawDenseDataOsRegistry, clawEvolutionPolicy, clawPersistentSurfaceRegistry, clawPreV1VersionGovernancePolicy, connectorExecutionPipeline, createAgentControlPanel, createAgentPrivacyLifecyclePlan, evaluateGovernanceAccess, evaluateGovernanceDelegation, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, listClawDenseDataGapRegistryEntries, listClawDenseDataIntentEntries, listClawDenseDataSemanticViewEntries, remoteSyncRequiredRouteIds, resolveClawCliCommand, resolveClawPersistentSurfacePath, searchClawCliRegistry, summarizeGovernanceBindings, syncDriverSchema, withSurfaceChildren } from "@clawjs/core";
+import { CLAW_CLI_COMMAND_INTENT_STATUSES, GOVERNANCE_CAPABILITIES, GOVERNANCE_ENTITY_KINDS, GOVERNANCE_PRINCIPAL_KINDS, GOVERNANCE_SCOPE_KINDS, buildRemoteConformanceReport, buildRemoteExternalPendingRegister, buildRemoteExternalValidationApprovalRequest, buildRemoteExternalValidationChecklist, buildRemoteExternalValidationEvidenceTemplate, buildRemoteExternalValidationReadiness, buildRemoteExternalValidationReport, buildRemoteGoalClosureGate, buildRemoteOfflineCommandResult, buildRemoteProviderDeviceE2EValidationPlan, buildRemoteRouteContractCatalog, buildRemoteSourceQaReviewTemplate, buildSyncDriverCatalog, clawDenseDataAcceptanceFixture, clawDenseDataOsRegistry, clawEvolutionPolicy, clawPersistentSurfaceRegistry, clawPreV1VersionGovernancePolicy, connectorExecutionPipeline, createAgentControlPanel, createAgentPrivacyLifecyclePlan, evaluateGovernanceAccess, evaluateGovernanceDelegation, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, listClawDenseDataGapRegistryEntries, listClawDenseDataIntentEntries, listClawDenseDataSemanticViewEntries, parseRemoteExternalValidationEvidenceInput, parseRemoteSourceQaReviewInput, remoteSyncRequiredRouteIds, resolveClawCliCommand, resolveClawPersistentSurfacePath, searchClawCliRegistry, summarizeGovernanceBindings, syncDriverSchema, withSurfaceChildren, type RemoteExternalValidationEvidence, type RemoteSourceQaReviewItem } from "@clawjs/core";
 import type { AgentAuditEvent, ClawPersistentSurfaceNode, ClawPersistentSurfaceRegistry, ClawSurfaceEdge, ClawSurfaceRoute } from "@clawjs/core";
 import { v1MainSchemaSurfaceNodes } from "./v1-data-surface.ts";
 import { normalizeDbRow, resolveClawjsMainDbPath, type JsonRecord } from "./v1-data-core.ts";
@@ -790,12 +790,27 @@ function mermaidId(value: string): string {
   return value.replace(/[^a-zA-Z0-9_]/g, "_");
 }
 
-function buildRemoteInspectPayload(nodes: ClawPersistentSurfaceNode[], routes: ClawSurfaceRoute[]) {
+interface RemoteInspectEvidenceOptions {
+  generatedAt?: string;
+  reviewedSourceQaIds?: string[];
+  sourceQaReviews?: RemoteSourceQaReviewItem[];
+  evidence?: RemoteExternalValidationEvidence[];
+  evidenceArtifact?: unknown;
+}
+
+function buildRemoteInspectPayload(nodes: ClawPersistentSurfaceNode[], routes: ClawSurfaceRoute[], options: RemoteInspectEvidenceOptions = {}) {
   const routeIds = routes.map((route) => route.id);
   const nodeIds = nodes.map((node) => node.id);
   const remoteNodes = nodes.filter((node) => node.programmaticSurfaces?.includes("relay") || node.surfaceGaps?.some((gap) => gap.surface === "relay"));
   const remoteRoutes = routes.filter((route) => route.id.startsWith("remote.") || route.id.startsWith("sync.") || route.id.startsWith("gateway.") || route.id.startsWith("mesh."));
   const tests = [...new Set(remoteRoutes.flatMap((route) => route.tests ?? []))].sort();
+  const validationOptions = {
+    generatedAt: options.generatedAt,
+    reviewedSourceQaIds: options.reviewedSourceQaIds ?? [],
+    sourceQaReviews: options.sourceQaReviews ?? [],
+    evidence: options.evidence ?? [],
+    evidenceArtifact: options.evidenceArtifact,
+  };
   return {
     schemaVersion: 1,
     conformance: buildRemoteConformanceReport({ routeIds, nodeIds }),
@@ -841,17 +856,48 @@ function buildRemoteInspectPayload(nodes: ClawPersistentSurfaceNode[], routes: C
       evaluatedAt: "2026-05-17T10:06:00.000Z",
     }),
     gaps: buildRemoteExternalPendingRegister().requirements,
-    externalValidationChecklist: buildRemoteExternalValidationChecklist(),
-    externalValidationEvidenceTemplate: buildRemoteExternalValidationEvidenceTemplate(),
-    externalValidationReadiness: buildRemoteExternalValidationReadiness(),
-    externalValidationApprovalRequest: buildRemoteExternalValidationApprovalRequest(),
-    externalValidationReport: buildRemoteExternalValidationReport(),
-    sourceQaReviewTemplate: buildRemoteSourceQaReviewTemplate(),
-    closureGate: buildRemoteGoalClosureGate(),
+    externalValidationChecklist: buildRemoteExternalValidationChecklist({ generatedAt: options.generatedAt }),
+    externalValidationEvidenceTemplate: buildRemoteExternalValidationEvidenceTemplate({ generatedAt: options.generatedAt }),
+    externalValidationReadiness: buildRemoteExternalValidationReadiness(validationOptions),
+    externalValidationApprovalRequest: buildRemoteExternalValidationApprovalRequest(validationOptions),
+    externalValidationReport: buildRemoteExternalValidationReport({
+      generatedAt: options.generatedAt,
+      evidence: validationOptions.evidence,
+      evidenceArtifact: validationOptions.evidenceArtifact,
+    }),
+    sourceQaReviewTemplate: buildRemoteSourceQaReviewTemplate({ generatedAt: options.generatedAt }),
+    closureGate: buildRemoteGoalClosureGate(validationOptions),
     providerDeviceE2EPlan: buildRemoteProviderDeviceE2EValidationPlan({ requiredRouteIds: remoteSyncRequiredRouteIds }),
     routeContracts: buildRemoteRouteContractCatalog({ registeredRouteIds: routeIds }).contracts,
     tests,
   };
+}
+
+function readJsonFlagValue(value: string | undefined, filePath: string | undefined, cwd: string): string | undefined {
+  return value ?? (filePath ? fs.readFileSync(path.resolve(cwd, filePath), "utf8") : undefined);
+}
+
+function parseInspectExternalValidationEvidence(value: string | undefined, filePath: string | undefined, cwd: string): RemoteExternalValidationEvidence[] {
+  const raw = readJsonFlagValue(value, filePath, cwd);
+  return raw ? parseRemoteExternalValidationEvidenceInput(JSON.parse(raw) as unknown) : [];
+}
+
+function parseInspectExternalValidationEvidenceArtifact(value: string | undefined, filePath: string | undefined, cwd: string): unknown | undefined {
+  const raw = readJsonFlagValue(value, filePath, cwd);
+  if (!raw) return undefined;
+  const parsed = JSON.parse(raw) as unknown;
+  return parsed && typeof parsed === "object" && !Array.isArray(parsed) && Array.isArray((parsed as { evidence?: unknown }).evidence) && "sourceConversationId" in parsed && "sourcePlanId" in parsed && "approvalRequestId" in parsed
+    ? parsed
+    : undefined;
+}
+
+function parseInspectSourceQaReviews(value: string | undefined, filePath: string | undefined, cwd: string): RemoteSourceQaReviewItem[] {
+  const raw = readJsonFlagValue(value, filePath, cwd);
+  return raw ? parseRemoteSourceQaReviewInput(JSON.parse(raw) as unknown) : [];
+}
+
+function parseInspectListFlag(value: string | undefined): string[] {
+  return value?.split(",").map((entry) => entry.trim()).filter(Boolean) ?? [];
 }
 
 async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
@@ -1037,7 +1083,14 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     return CLI_EXIT_OK;
   }
   if (command === "remote" || command === "remote-sync") {
-    const payload = buildRemoteInspectPayload(nodes, routes);
+    const evidenceFile = input.flags["evidence-file"] ?? input.flags["external-validation-file"];
+    const payload = buildRemoteInspectPayload(nodes, routes, {
+      generatedAt: input.flags.now,
+      reviewedSourceQaIds: parseInspectListFlag(input.flags["reviewed-source-qa-ids"] ?? input.flags["source-qa-ids"]),
+      sourceQaReviews: parseInspectSourceQaReviews(input.flags["source-qa-review-json"], input.flags["source-qa-review-file"], input.context.cwd),
+      evidence: parseInspectExternalValidationEvidence(input.flags["evidence-json"], evidenceFile, input.context.cwd),
+      evidenceArtifact: parseInspectExternalValidationEvidenceArtifact(input.flags["evidence-json"], evidenceFile, input.context.cwd),
+    });
     if (input.wantsJson) writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command));
     else input.context.stdout.write([
       `conformance\t${payload.conformance.status}`,

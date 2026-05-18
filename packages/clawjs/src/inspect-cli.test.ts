@@ -477,6 +477,43 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   assert.equal(remoteInspectPayload.closureGate.clearableExternalRequirementIds.length, 0);
   assert.equal(remoteInspectPayload.closureGate.blockers.includes("source_qa_review"), true);
   assert.equal(remoteInspectPayload.closureGate.blockers.includes("external_validation"), true);
+  const remoteInspectWithArtifacts = await runCliCapture([
+    "inspect",
+    "remote",
+    "--source-qa-review-file",
+    "docs/remote-gateway-sync-source-qa-review.json",
+    "--external-validation-file",
+    "docs/remote-gateway-sync-external-validation-evidence.json",
+    "--json",
+  ], process.cwd());
+  assert.equal(remoteInspectWithArtifacts.code, CLI_EXIT_OK);
+  const remoteInspectWithArtifactsPayload = parseCliJson<{
+    externalValidationReadiness: { status: string; sourceQaReady: boolean; externalEvidenceReady: boolean; closureGateBlockers: string[]; blockedExternalRequirementIds: string[] };
+    externalValidationApprovalRequest: { status: string; approvalRequired: boolean; approved: boolean; readinessStatus: string; requirementIds: string[]; validationRouteIds: string[]; writes: boolean };
+    externalValidationReport: { status: string; clearableRequirementIds: string[]; blockedRequirementIds: string[]; writes: boolean };
+    closureGate: { sourceQaReviewStatus: string; missingSourceQaIds: string[]; blockers: string[]; blockedExternalRequirementIds: string[]; writes: boolean };
+  }>(remoteInspectWithArtifacts.stdout).data;
+  assert.equal(remoteInspectWithArtifactsPayload.externalValidationReadiness.status, "ready_for_approved_run");
+  assert.equal(remoteInspectWithArtifactsPayload.externalValidationReadiness.sourceQaReady, true);
+  assert.equal(remoteInspectWithArtifactsPayload.externalValidationReadiness.externalEvidenceReady, true);
+  assert.deepEqual(remoteInspectWithArtifactsPayload.externalValidationReadiness.closureGateBlockers, ["external_validation"]);
+  assert.deepEqual(remoteInspectWithArtifactsPayload.externalValidationReadiness.blockedExternalRequirementIds, remoteInspectPendingRequirementIds);
+  assert.equal(remoteInspectWithArtifactsPayload.externalValidationApprovalRequest.status, "approval_required");
+  assert.equal(remoteInspectWithArtifactsPayload.externalValidationApprovalRequest.approvalRequired, true);
+  assert.equal(remoteInspectWithArtifactsPayload.externalValidationApprovalRequest.approved, false);
+  assert.equal(remoteInspectWithArtifactsPayload.externalValidationApprovalRequest.readinessStatus, "ready_for_approved_run");
+  assert.deepEqual(remoteInspectWithArtifactsPayload.externalValidationApprovalRequest.requirementIds, remoteInspectPendingRequirementIds);
+  assert.deepEqual(remoteInspectWithArtifactsPayload.externalValidationApprovalRequest.validationRouteIds, remoteSyncRequiredRouteIds);
+  assert.equal(remoteInspectWithArtifactsPayload.externalValidationApprovalRequest.writes, false);
+  assert.equal(remoteInspectWithArtifactsPayload.externalValidationReport.status, "external_pending");
+  assert.deepEqual(remoteInspectWithArtifactsPayload.externalValidationReport.clearableRequirementIds, []);
+  assert.deepEqual(remoteInspectWithArtifactsPayload.externalValidationReport.blockedRequirementIds, remoteInspectPendingRequirementIds);
+  assert.equal(remoteInspectWithArtifactsPayload.externalValidationReport.writes, false);
+  assert.equal(remoteInspectWithArtifactsPayload.closureGate.sourceQaReviewStatus, "complete");
+  assert.deepEqual(remoteInspectWithArtifactsPayload.closureGate.missingSourceQaIds, []);
+  assert.deepEqual(remoteInspectWithArtifactsPayload.closureGate.blockers, ["external_validation"]);
+  assert.deepEqual(remoteInspectWithArtifactsPayload.closureGate.blockedExternalRequirementIds, remoteInspectPendingRequirementIds);
+  assert.equal(remoteInspectWithArtifactsPayload.closureGate.writes, false);
   assert.equal(remoteInspectPayload.providerDeviceE2EPlan.status, "external_pending");
   assert.equal(remoteInspectPayload.providerDeviceE2EPlan.writes, false);
   assert.equal(remoteInspectPayload.providerDeviceE2EPlan.requiredDomains.includes("hosted_agents"), true);
