@@ -76,7 +76,7 @@ backfill jobs.
 | `sheets.workbooks` | `sheets` | local workbook manifests and per-sheet table/cell text projected into `search.sqlite` | implemented initial adapter |
 | `generations.artifacts` | `generations` | generated artifact records projected into `search.sqlite` | implemented initial adapter |
 | `code.symbols` | `code` | bounded project file/symbol/docs projection into `search.sqlite` | implemented initial adapter |
-| `docs.pages` | `docs` | root public Markdown docs plus `docs/` and ADR sections projected into `search.sqlite` | implemented initial adapter |
+| `docs.pages` | `docs` | root public Markdown docs plus `docs/` and ADR sections projected into `search.sqlite`, including frontmatter title/description extraction | implemented initial adapter |
 | `skills.registry` | `skills` | framework skill records projected from `core.sqlite` without secret refs | implemented initial adapter |
 | `providers.routing` | `providers` | provider routing rules and provider settings projected from `core.sqlite` without account refs | implemented initial adapter |
 | `snippets.library` | `snippets` | prompt/template/slash snippets projected from `core.sqlite` | implemented initial adapter |
@@ -92,10 +92,10 @@ backfill jobs.
 | `design.resources` | `design` | design resources from `core.sqlite` plus workspace style, template, and reference manifests projected into `search.sqlite` | implemented initial adapter |
 | `runtime.events` | `runtime` | runtime jobs/events and monitor/infra/ops operational sidecars projected into `search.sqlite` | implemented initial adapter |
 | `surfaces.routes` | `surfaces` | surface route graph contracts, steps, tests, docs, and ADR links projected from the framework registry | implemented initial adapter |
-| `local.files` | `files` | bounded local file metadata and text-content projection with per-file refresh jobs | implemented opt-in adapter, `full`, off by default |
+| `local.files` | `files` | bounded local file metadata, text-content, and Markdown/MDX section projection with per-file refresh jobs | implemented opt-in adapter, `full`, off by default |
 | `native.system` | `native` | native app/system/contact adapters | EXTERNAL PENDING, `full`, off by default |
-| `web.ingested` | `web` | bounded explicit web cache ingestion with per-cache-file refresh jobs | implemented opt-in adapter, `full`, off by default |
-| `external.cache` | `external` | bounded local provider cache ingestion with per-cache-file refresh jobs | implemented opt-in adapter, `full`, off by default |
+| `web.ingested` | `web` | bounded explicit web cache ingestion with per-cache-file refresh jobs and text section fragments | implemented opt-in adapter, `full`, off by default |
+| `external.cache` | `external` | bounded local provider cache ingestion with per-cache-file refresh jobs and text section fragments | implemented opt-in adapter, `full`, off by default |
 
 ## CLI
 
@@ -373,12 +373,13 @@ profile and is disabled until explicitly enabled with `claw search sources
 enable local.files --profile full`. Once enabled, `--file-root` selects the
 local tree; `--file-limit`, `--file-max-depth`, and `--file-max-bytes` cap
 traversal and content reads. Text-like files are indexed with content; binary
-office/media files are indexed by metadata and path only. Dependency/build/
-cache/private control directories are skipped, and the source participates in
-scoped query refresh, rebuild accounting, and Search service `run-once` jobs
-only when selected. Changed-file producers can schedule resource-scoped refresh
-jobs keyed by the path under `--file-root`; paths outside that root are rejected
-before a job is written.
+office/media files are indexed by metadata and path only. Markdown and MDX files
+also expose bounded heading section fragments. Dependency/build/cache/private
+control directories are skipped, and the source participates in scoped query
+refresh, rebuild accounting, and Search service `run-once` jobs only when
+selected. Changed-file producers can schedule resource-scoped refresh jobs keyed
+by the path under `--file-root`; paths outside that root are rejected before a
+job is written.
 
 `web.ingested` is the first explicit web cache adapter. It does not crawl the
 network itself; it indexes bounded local exports under `--web-root` after the
@@ -386,16 +387,19 @@ full-profile source is explicitly enabled. Supported cache files are HTML, text,
 Markdown, and JSON records with fields such as `url`, `title`, `description`,
 `text`, `html`, `crawlScope`, and `updatedAt`. `--web-limit`,
 `--web-max-depth`, and `--web-max-bytes` cap ingestion, and the adapter also
-participates in Search service `run-once` jobs. Changed-cache producers can
-schedule resource-scoped refresh jobs keyed by the path under `--web-root`;
-paths outside that root are rejected before a job is written.
+participates in Search service `run-once` jobs. Markdown-shaped `text` payloads
+are split into bounded section fragments; this still never crawls the network.
+Changed-cache producers can schedule resource-scoped refresh jobs keyed by the
+path under `--web-root`; paths outside that root are rejected before a job is
+written.
 
 `external.cache` follows the same local-only rule for provider exports. It
 indexes JSON, JSONL, Markdown, and text files under `--external-root` only after
 the full-profile source is explicitly enabled. JSON records can declare
 `provider`, `app`, `externalId`, `type`, `title`, `summary`, `text`, `syncMode`,
 and `updatedAt`; fallback JSON text is redacted for secret-like keys before it
-is indexed. Search never calls provider APIs from this adapter. Changed-cache
+is indexed. Markdown-shaped exported text is split into bounded section
+fragments. Search never calls provider APIs from this adapter. Changed-cache
 producers can schedule resource-scoped refresh jobs keyed by the path under
 `--external-root`; paths outside that root are rejected before a job is written.
 
@@ -465,32 +469,44 @@ secret references.
 
 `providers.routing` projects provider routing rules and provider settings from
 `core.sqlite`. It indexes feature, capability, provider, model, enabled state,
-and redacted policy/metadata text. It deliberately does not index `account_ref`
-values; Search only exposes whether an account reference exists.
+and redacted policy/metadata fragments, including simple JSON policy fields that
+do not have prose keys. Secret-like nested keys are redacted before fallback JSON
+text is indexed. It deliberately does not index `account_ref` values; Search
+only exposes whether an account reference exists.
 
 `snippets.library` projects framework snippets from `core.sqlite`. It indexes
 slug, title, kind, shortcut, body, scope metadata, and skill references so
-prompt/template/slash-command sections can keep their own fast path.
+prompt/template/slash-command sections can keep their own fast path. Snippet body, scope, and metadata are exposed as separate redacted fragments so scoped
+snippet searches can match surface/audience hints without exposing secret-like
+metadata values.
 
 `agents.catalog` projects agent-facing framework entities from `core.sqlite`.
 It indexes agents, personalities, skill collections, and connections by their
 public labels, roles, runtimes, models, prompts, descriptions, tags, providers,
-and scopes. It deliberately excludes `secret_ref` values and raw connection
-config payloads; Search only exposes a `hasProtectedRef` facet for agents and
+and scopes. Agent configuration and connection scopes are exposed as redacted
+fragments so agent instructions and connection capabilities can match scoped
+queries. It deliberately excludes `secret_ref` values and raw connection config
+secrets; Search only exposes a `hasProtectedRef` facet for agents and
 connections.
 
 `marketplace.choices` projects local framework marketplace decisions from
 `core.sqlite`. It indexes target, choice, kind, status, rationale, and redacted
 metadata so provider/default selection views can search current choices without
-calling external marketplaces.
+calling external marketplaces. Marketplace rationale and metadata are exposed as
+separate redacted fragments, and secret-like nested metadata keys are redacted
+before fallback JSON text is indexed.
 
 `content.items` projects framework content records from `core.sqlite`. It
 indexes title, kind, status, brand/campaign ids, redacted metadata, and linked
-page block text when a content item owns an editable page.
+page block text when a content item owns an editable page. Content page text and
+metadata are exposed as separate redacted fragments, with secret-like nested
+metadata keys redacted before fallback JSON text is indexed.
 
 `business.records` projects local business records from `core.sqlite`. It
 indexes name, kind, status, redacted metadata, and linked page block text when
-the business record owns an editable note page.
+the business record owns an editable note page. Business page text and metadata
+are exposed as separate redacted fragments, with secret-like nested metadata keys
+redacted before fallback JSON text is indexed.
 
 `social.posts` projects social publishing records from `core.sqlite`. It
 indexes title, status, redacted channel metadata, scheduling/publishing state,
@@ -517,10 +533,11 @@ into user-facing domain sections.
 
 `docs.pages` projects root public Markdown docs plus Markdown files under
 `docs/`, including ADRs under `docs/adr/`, into source-scoped docs results. It
-indexes document titles, section headings, section snippets, kind/category/path
-metadata, and supports resource-scoped refresh jobs keyed by repository-relative
-docs paths. It also writes deterministic local `local-text-v1` vectors for
-provider-free semantic and hybrid docs queries.
+indexes document titles, simple frontmatter `title`/`description`, section
+headings, section snippets, kind/category/path metadata, and supports
+resource-scoped refresh jobs keyed by repository-relative docs paths. It also
+writes deterministic local `local-text-v1` vectors for provider-free semantic
+and hybrid docs queries.
 
 `surfaces.routes` projects the framework surface route graph from
 `packages/clawjs-core/src/surface-registry.ts`. It indexes each route's source

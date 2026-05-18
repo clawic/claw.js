@@ -1663,7 +1663,7 @@ test("providers and snippets writes enqueue and index framework configuration fa
       "--account-ref",
       "vault://providers/provider_alpha/main",
       "--policy",
-      JSON.stringify({ maxCost: "low", approval: "auto" }),
+      JSON.stringify({ maxCost: "low", approval: "auto", credentials: { apiKey: "provider-secret-never-index" } }),
       "--json",
     ], workspaceRoot);
     assert.equal(providerRoute.code, CLI_EXIT_OK, providerRoute.stderr || providerRoute.stdout);
@@ -1675,7 +1675,7 @@ test("providers and snippets writes enqueue and index framework configuration fa
       "--enabled",
       "true",
       "--policy",
-      JSON.stringify({ region: "local" }),
+      JSON.stringify({ region: "local", credentials: { apiKey: "setting-secret-never-index" } }),
       "--json",
     ], workspaceRoot);
     assert.equal(providerSetting.code, CLI_EXIT_OK, providerSetting.stderr || providerSetting.stdout);
@@ -1693,6 +1693,10 @@ test("providers and snippets writes enqueue and index framework configuration fa
       "qa-review",
       "--skill-refs",
       "skill:review",
+      "--scope",
+      JSON.stringify({ kind: "editor", surface: "selection-scope-fragment-needle", credentials: { apiKey: "snippet-scope-secret-never-index" } }),
+      "--metadata",
+      JSON.stringify({ audience: "snippet-metadata-fragment-needle", token: "snippet-token-never-index" }),
       "--json",
     ], workspaceRoot);
     assert.equal(snippet.code, CLI_EXIT_OK, snippet.stderr || snippet.stdout);
@@ -1724,12 +1728,16 @@ test("providers and snippets writes enqueue and index framework configuration fa
     assert.equal(providerQueryPayload.data.indexedFastPaths["providers.routing"], 2);
     const providerResult = providerQueryPayload.data.results.find((entry) => entry.type === "routing_rule");
     assert.deepEqual({ source: providerResult?.source, domain: providerResult?.domain, provider: providerResult?.metadata?.provider, hasAccountRef: providerResult?.metadata?.hasAccountRef }, { source: "providers.routing", domain: "providers", provider: "provider_alpha", hasAccountRef: true });
+    assert.equal(providerResult?.fragments?.some((fragment) => fragment.title === "policy" && fragment.snippet?.includes("approval")), true);
     assert.equal(JSON.stringify(providerQueryPayload.data.results).includes("vault://providers/provider_alpha/main"), false);
+    assert.equal(JSON.stringify(providerQueryPayload.data.results).includes("provider-secret-never-index"), false);
     const providerSettingQuery = await runCliCapture(["search", "query", "provider_alpha local", "--sources", "providers.routing", "--filters", "metadata.kind=setting", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(providerSettingQuery.code, CLI_EXIT_OK);
     const providerSettingPayload = JSON.parse(providerSettingQuery.stdout) as any;
     const providerSettingResult = providerSettingPayload.data.results.find((entry) => entry.type === "provider_setting");
     assert.deepEqual({ source: providerSettingResult?.source, provider: providerSettingResult?.metadata?.provider, enabled: providerSettingResult?.metadata?.enabled }, { source: "providers.routing", provider: "provider_alpha", enabled: true });
+    assert.equal(providerSettingResult?.fragments?.some((fragment) => fragment.title === "policy" && fragment.snippet?.includes("local")), true);
+    assert.equal(JSON.stringify(providerSettingPayload.data.results).includes("setting-secret-never-index"), false);
     const snippetQuery = await runCliCapture(["search", "query", "current selection", "--domains", "snippets", "--filters", "metadata.kind=prompt", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(snippetQuery.code, CLI_EXIT_OK);
     const snippetQueryPayload = JSON.parse(snippetQuery.stdout) as any;
@@ -1737,6 +1745,16 @@ test("providers and snippets writes enqueue and index framework configuration fa
     const snippetResult = snippetQueryPayload.data.results.find((entry) => entry.title === "QuickAsk Review");
     assert.deepEqual({ source: snippetResult?.source, domain: snippetResult?.domain, type: snippetResult?.type, shortcut: snippetResult?.metadata?.shortcut, skillRef: snippetResult?.metadata?.skillRef }, { source: "snippets.library", domain: "snippets", type: "prompt", shortcut: "qa-review", skillRef: ["skill:review"] });
     assert.equal(snippetResult?.fragments?.some((fragment) => fragment.snippet?.includes("current selection")), true);
+    assert.equal(snippetResult?.fragments?.some((fragment) => fragment.title === "scope" && fragment.snippet?.includes("selection-scope-fragment-needle")), true);
+    assert.equal(snippetResult?.fragments?.some((fragment) => fragment.title === "metadata" && fragment.snippet?.includes("snippet-metadata-fragment-needle")), true);
+    assert.equal(JSON.stringify(snippetQueryPayload.data.results).includes("snippet-scope-secret-never-index"), false);
+    assert.equal(JSON.stringify(snippetQueryPayload.data.results).includes("snippet-token-never-index"), false);
+    const snippetMetadataQuery = await runCliCapture(["search", "query", "snippet-metadata-fragment-needle", "--sources", "snippets.library", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(snippetMetadataQuery.code, CLI_EXIT_OK);
+    const snippetMetadataPayload = JSON.parse(snippetMetadataQuery.stdout) as any;
+    const snippetMetadataResult = snippetMetadataPayload.data.results.find((entry) => entry.title === "QuickAsk Review");
+    assert.equal(snippetMetadataResult?.fragments?.some((fragment) => fragment.title === "metadata" && fragment.snippet?.includes("snippet-metadata-fragment-needle")), true);
+    assert.equal(JSON.stringify(snippetMetadataPayload.data.results).includes("snippet-token-never-index"), false);
     const deletedSnippet = await runCliCapture(["snippets", "delete", "quickask-review", "--json"], workspaceRoot);
     assert.equal(deletedSnippet.code, CLI_EXIT_OK);
     const deletedRoute = await runCliCapture(["providers", "routing", "delete", "quickask", "--capability", "chat", "--json"], workspaceRoot);
@@ -1807,6 +1825,8 @@ test("agent entity writes enqueue and index agent catalog fast paths without sec
       "codex",
       "--model",
       "generic-agent",
+      "--instructions",
+      "Investigate ops-agent-config-fragment-needle before escalation",
       "--secret-ref",
       "vault://agents/ops",
       "--json",
@@ -1873,7 +1893,7 @@ test("agent entity writes enqueue and index agent catalog fast paths without sec
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
         indexedFastPaths: { "agents.catalog": number };
-        results: Array<{ source: string; domain: string; type: string; title: string; metadata?: { kind?: string; runtime?: string; model?: string; hasProtectedRef?: boolean } }>;
+        results: Array<{ source: string; domain: string; type: string; title: string; metadata?: { kind?: string; runtime?: string; model?: string; hasProtectedRef?: boolean }; fragments?: Array<{ title?: string; snippet?: string }> }>;
       };
     };
     assert.equal(queryPayload.data.indexedFastPaths["agents.catalog"], 4);
@@ -1884,17 +1904,28 @@ test("agent entity writes enqueue and index agent catalog fast paths without sec
     assert.equal(agentResult?.metadata?.runtime, "codex");
     assert.equal(agentResult?.metadata?.model, "generic-agent");
     assert.equal(agentResult?.metadata?.hasProtectedRef, true);
+    assert.equal(agentResult?.fragments?.some((fragment) => fragment.title === "configuration"), true);
     assert.equal(JSON.stringify(queryPayload.data.results).includes("vault://agents/ops"), false);
+    const agentConfigQuery = await runCliCapture(["search", "query", "ops-agent-config-fragment-needle", "--domains", "agents", "--filters", "metadata.kind=agent", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(agentConfigQuery.code, CLI_EXIT_OK);
+    const agentConfigPayload = JSON.parse(agentConfigQuery.stdout) as {
+      data: { results: Array<{ title: string; fragments?: Array<{ title?: string; snippet?: string }> }> };
+    };
+    const agentConfigResult = agentConfigPayload.data.results.find((entry) => entry.title === "Ops Sentinel");
+    assert.equal(agentConfigResult?.fragments?.some((fragment) => fragment.title === "configuration" && fragment.snippet?.includes("ops-agent-config-fragment-needle")), true);
+    assert.equal(JSON.stringify(agentConfigPayload.data.results).includes("vault://agents/ops"), false);
     const connectionQuery = await runCliCapture(["search", "query", "GitHub Ops pulls", "--domains", "agents", "--filters", "metadata.kind=connection", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(connectionQuery.code, CLI_EXIT_OK);
     const connectionPayload = JSON.parse(connectionQuery.stdout) as {
-      data: { results: Array<{ type: string; title: string; metadata?: { provider?: string; hasProtectedRef?: boolean; scopes?: string[] } }> };
+      data: { results: Array<{ type: string; title: string; metadata?: { provider?: string; hasProtectedRef?: boolean; scopes?: string[] }; fragments?: Array<{ title?: string; snippet?: string }> }> };
     };
     const connectionResult = connectionPayload.data.results.find((entry) => entry.title === "GitHub Ops");
     assert.equal(connectionResult?.type, "connection");
     assert.equal(connectionResult?.metadata?.provider, "github");
     assert.equal(connectionResult?.metadata?.hasProtectedRef, true);
     assert.deepEqual(connectionResult?.metadata?.scopes, ["issues", "pulls"]);
+    assert.equal(connectionResult?.fragments?.some((fragment) => fragment.title === "scopes" && fragment.snippet?.includes("pulls")), true);
+    assert.equal(connectionResult?.fragments?.some((fragment) => fragment.title === "configuration" && fragment.snippet?.includes("github")), true);
     assert.equal(JSON.stringify(connectionPayload.data.results).includes("vault://connections/github"), false);
     const deleted = await runCliCapture(["connections", "delete", "github.ops", "--json"], workspaceRoot);
     assert.equal(deleted.code, CLI_EXIT_OK);
@@ -1940,6 +1971,8 @@ test("marketplace choice writes enqueue and index marketplace fast paths", async
       "provider",
       "--rationale",
       "Use provider alpha for local low-cost routing",
+      "--metadata",
+      JSON.stringify({ market: "marketplace-metadata-fragment-needle", credentials: { apiKey: "marketplace-secret-never-index" } }),
       "--json",
     ], workspaceRoot);
     assert.equal(choice.code, CLI_EXIT_OK);
@@ -1960,7 +1993,7 @@ test("marketplace choice writes enqueue and index marketplace fast paths", async
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
         indexedFastPaths: { "marketplace.choices": number };
-        results: Array<{ source: string; domain: string; type: string; title: string; metadata?: { target?: string; choice?: string; status?: string }; fragments?: Array<{ snippet?: string }> }>;
+        results: Array<{ source: string; domain: string; type: string; title: string; metadata?: { target?: string; choice?: string; status?: string }; fragments?: Array<{ title?: string; snippet?: string }> }>;
       };
     };
     assert.equal(queryPayload.data.indexedFastPaths["marketplace.choices"], 1);
@@ -1972,6 +2005,16 @@ test("marketplace choice writes enqueue and index marketplace fast paths", async
     assert.equal(result?.metadata?.choice, "provider_alpha");
     assert.equal(result?.metadata?.status, "active");
     assert.equal(result?.fragments?.some((fragment) => fragment.snippet?.includes("low-cost routing")), true);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "metadata" && fragment.snippet?.includes("marketplace-metadata-fragment-needle")), true);
+    assert.equal(JSON.stringify(queryPayload.data.results).includes("marketplace-secret-never-index"), false);
+    const metadataQuery = await runCliCapture(["search", "query", "marketplace-metadata-fragment-needle", "--sources", "marketplace.choices", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(metadataQuery.code, CLI_EXIT_OK);
+    const metadataPayload = JSON.parse(metadataQuery.stdout) as {
+      data: { results: Array<{ title: string; fragments?: Array<{ title?: string; snippet?: string }> }> };
+    };
+    const metadataResult = metadataPayload.data.results.find((entry) => entry.title === "default-ai-provider: provider_alpha");
+    assert.equal(metadataResult?.fragments?.some((fragment) => fragment.title === "metadata" && fragment.snippet?.includes("marketplace-metadata-fragment-needle")), true);
+    assert.equal(JSON.stringify(metadataPayload.data.results).includes("marketplace-secret-never-index"), false);
     const deleted = await runCliCapture(["marketplace", "choice", "delete", "choice.provider.default", "--json"], workspaceRoot);
     assert.equal(deleted.code, CLI_EXIT_OK);
     const deleteJobs = await runCliCapture(["search", "jobs", "--source", "marketplace.choices", "--data-dir", dataRoot, "--json"], workspaceRoot);
@@ -2026,6 +2069,8 @@ test("content social and iot writes enqueue and index framework domain fast path
       "campaign.spring",
       "--body",
       "Publish the launch story with evidence from the product team",
+      "--metadata",
+      JSON.stringify({ audience: "content-metadata-fragment-needle", credentials: { apiKey: "content-secret-never-index" } }),
       "--json",
     ], { stdout: contentStdout.stream, stderr: contentStderr.stream, cwd: workspaceRoot });
     assert.equal(content, CLI_EXIT_OK);
@@ -2103,7 +2148,7 @@ test("content social and iot writes enqueue and index framework domain fast path
     const contentQuery = await runCliCapture(["search", "query", "product team", "--domains", "content", "--filters", "metadata.kind=campaign_item", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(contentQuery.code, CLI_EXIT_OK);
     const contentPayload = JSON.parse(contentQuery.stdout) as {
-      data: { indexedFastPaths: { "content.items": number }; results: Array<{ source: string; title: string; metadata?: { brandId?: string; campaignId?: string }; fragments?: Array<{ snippet?: string }> }> };
+      data: { indexedFastPaths: { "content.items": number }; results: Array<{ source: string; title: string; metadata?: { brandId?: string; campaignId?: string }; fragments?: Array<{ title?: string; snippet?: string }> }> };
     };
     assert.equal(contentPayload.data.indexedFastPaths["content.items"], 1);
     const contentResult = contentPayload.data.results.find((entry) => entry.title === "Launch Narrative");
@@ -2111,6 +2156,16 @@ test("content social and iot writes enqueue and index framework domain fast path
     assert.equal(contentResult?.metadata?.brandId, "brand.alpha");
     assert.equal(contentResult?.metadata?.campaignId, "campaign.spring");
     assert.equal(contentResult?.fragments?.some((fragment) => fragment.snippet?.includes("product team")), true);
+    assert.equal(contentResult?.fragments?.some((fragment) => fragment.title === "metadata" && fragment.snippet?.includes("content-metadata-fragment-needle")), true);
+    assert.equal(JSON.stringify(contentPayload.data.results).includes("content-secret-never-index"), false);
+    const contentMetadataQuery = await runCliCapture(["search", "query", "content-metadata-fragment-needle", "--sources", "content.items", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(contentMetadataQuery.code, CLI_EXIT_OK);
+    const contentMetadataPayload = JSON.parse(contentMetadataQuery.stdout) as {
+      data: { results: Array<{ title: string; fragments?: Array<{ title?: string; snippet?: string }> }> };
+    };
+    const contentMetadataResult = contentMetadataPayload.data.results.find((entry) => entry.title === "Launch Narrative");
+    assert.equal(contentMetadataResult?.fragments?.some((fragment) => fragment.title === "metadata" && fragment.snippet?.includes("content-metadata-fragment-needle")), true);
+    assert.equal(JSON.stringify(contentMetadataPayload.data.results).includes("content-secret-never-index"), false);
     const socialQuery = await runCliCapture(["search", "query", "builder notes", "--domains", "social", "--filters", "metadata.channel=linkedin", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(socialQuery.code, CLI_EXIT_OK);
     const socialPayload = JSON.parse(socialQuery.stdout) as {
@@ -2211,6 +2266,8 @@ test("business writes enqueue and index business record fast paths", async () =>
       "active",
       "--body",
       "Customer renewal evidence and account notes",
+      "--metadata",
+      JSON.stringify({ segment: "business-metadata-fragment-needle", credentials: { apiKey: "business-secret-never-index" } }),
       "--json",
     ], { stdout: stdout.stream, stderr: stderr.stream, cwd: workspaceRoot });
     assert.equal(upsert, CLI_EXIT_OK);
@@ -2231,7 +2288,7 @@ test("business writes enqueue and index business record fast paths", async () =>
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
         indexedFastPaths: { "business.records": number };
-        results: Array<{ source: string; domain: string; type: string; title: string; metadata?: { status?: string }; fragments?: Array<{ snippet?: string }> }>;
+        results: Array<{ source: string; domain: string; type: string; title: string; metadata?: { status?: string }; fragments?: Array<{ title?: string; snippet?: string }> }>;
       };
     };
     assert.equal(queryPayload.data.indexedFastPaths["business.records"], 1);
@@ -2241,6 +2298,16 @@ test("business writes enqueue and index business record fast paths", async () =>
     assert.equal(result?.type, "customer");
     assert.equal(result?.metadata?.status, "active");
     assert.equal(result?.fragments?.some((fragment) => fragment.snippet?.includes("account notes")), true);
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "metadata" && fragment.snippet?.includes("business-metadata-fragment-needle")), true);
+    assert.equal(JSON.stringify(queryPayload.data.results).includes("business-secret-never-index"), false);
+    const metadataQuery = await runCliCapture(["search", "query", "business-metadata-fragment-needle", "--sources", "business.records", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(metadataQuery.code, CLI_EXIT_OK);
+    const metadataPayload = JSON.parse(metadataQuery.stdout) as {
+      data: { results: Array<{ title: string; fragments?: Array<{ title?: string; snippet?: string }> }> };
+    };
+    const metadataResult = metadataPayload.data.results.find((entry) => entry.title === "Alpha Customer");
+    assert.equal(metadataResult?.fragments?.some((fragment) => fragment.title === "metadata" && fragment.snippet?.includes("business-metadata-fragment-needle")), true);
+    assert.equal(JSON.stringify(metadataPayload.data.results).includes("business-secret-never-index"), false);
     const deleted = await runInternalV1Cli(["business", "delete", "biz.customer.alpha", "--json"], { stdout: captureStream().stream, stderr: captureStream().stream, cwd: workspaceRoot });
     assert.equal(deleted, CLI_EXIT_OK);
     const deleteJobs = await runCliCapture(["search", "jobs", "--source", "business.records", "--data-dir", dataRoot, "--json"], workspaceRoot);

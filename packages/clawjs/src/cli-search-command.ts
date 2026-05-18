@@ -4564,8 +4564,9 @@ function webIngestedSearchDocument(root: string, file: WebIngestedCandidate, max
   const title = parsed.title ?? titleFromWebText(parsed.text) ?? path.basename(file.absolutePath);
   const text = parsed.text || title;
   const host = parsed.host ?? hostFromUrl(url);
+  const documentId = `web.ingested:${stableSearchId(`${root}\0${relativePath}`)}`;
   return {
-    id: `web.ingested:${stableSearchId(`${root}\0${relativePath}`)}`,
+    id: documentId,
     source: "web.ingested",
     domain: "web",
     type: "page",
@@ -4590,14 +4591,7 @@ function webIngestedSearchDocument(root: string, file: WebIngestedCandidate, max
       web: 1,
       explicitCache: 1,
     },
-    fragments: [{
-      id: `web.ingested:${stableSearchId(`${root}\0${relativePath}`)}:content`,
-      title: "Content",
-      body: text.slice(0, maxBytes),
-      snippet: firstMeaningfulLine(text) ?? title,
-      sortOrder: 0,
-      metadata: { kind: "content" },
-    }],
+    fragments: textSectionFragments(documentId, text, firstMeaningfulLine(text) ?? title, maxBytes),
     actions: [
       { id: "open", kind: "open", label: "Open cached page", requiresApproval: true, risk: "read", grant: "search.web.open" },
       { id: "copy-reference", kind: "copy", label: "Copy page reference", requiresApproval: false },
@@ -4619,8 +4613,9 @@ function externalCacheSearchDocument(root: string, file: ExternalCacheCandidate,
     record.app,
     record.externalId,
   ].filter(Boolean).join("\n").slice(0, maxBytes);
+  const documentId = `external.cache:${stableSearchId(`${root}\0${relativePath}\0${record.id ?? ""}`)}`;
   return {
-    id: `external.cache:${stableSearchId(`${root}\0${relativePath}\0${record.id ?? ""}`)}`,
+    id: documentId,
     source: "external.cache",
     domain: "external",
     type: record.type ?? "external_record",
@@ -4645,14 +4640,7 @@ function externalCacheSearchDocument(root: string, file: ExternalCacheCandidate,
       external: 1,
       explicitCache: 1,
     },
-    fragments: record.text ? [{
-      id: `external.cache:${stableSearchId(`${root}\0${relativePath}\0${record.id ?? ""}`)}:content`,
-      title: "Content",
-      body: record.text.slice(0, maxBytes),
-      snippet: firstMeaningfulLine(record.text) ?? title,
-      sortOrder: 0,
-      metadata: { kind: "content" },
-    }] : [],
+    fragments: record.text ? textSectionFragments(documentId, record.text, firstMeaningfulLine(record.text) ?? title, maxBytes) : [],
     actions: [
       { id: "open", kind: "open", label: "Open external record", requiresApproval: true, risk: "read", grant: "search.external.open" },
       { id: "copy-reference", kind: "copy", label: "Copy external reference", requiresApproval: false },
@@ -4698,6 +4686,51 @@ function parseExternalCacheRecord(raw: string, extension: string, relativePath: 
     syncMode: "cache",
   };
 }
+function textSectionFragments(documentId: string, text: string, fallbackSnippet: string, maxBytes: number): NonNullable<SearchDocumentInput["fragments"]> {
+  const sections = extractTextSections(text);
+  if (sections.length > 0) {
+    return sections.slice(0, 24).map((section, index) => ({
+      id: `${documentId}:section:${index}`,
+      title: section.title,
+      body: section.body.slice(0, Math.min(maxBytes, 4096)),
+      snippet: section.snippet,
+      sortOrder: index,
+      metadata: { kind: "section", level: section.level, line: section.line },
+    }));
+  }
+  return [{
+    id: `${documentId}:content`,
+    title: "Content",
+    body: text.slice(0, maxBytes),
+    snippet: fallbackSnippet,
+    sortOrder: 0,
+    metadata: { kind: "content" },
+  }];
+}
+function extractTextSections(text: string): Array<{ title: string; level: number; line: number; body: string; snippet: string }> {
+  const lines = text.split(/\r?\n/);
+  const sections: Array<{ title: string; level: number; line: number; body: string; snippet: string }> = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = /^(#{1,3})\s+(.+)$/.exec(lines[index]?.trim() ?? "");
+    if (!match) continue;
+    const bodyLines: string[] = [];
+    for (let bodyIndex = index + 1; bodyIndex < lines.length; bodyIndex += 1) {
+      if (/^#{1,3}\s+/.test(lines[bodyIndex]?.trim() ?? "")) break;
+      const line = lines[bodyIndex]?.trim();
+      if (line) bodyLines.push(line);
+      if (bodyLines.join("\n").length > 4096) break;
+    }
+    const body = bodyLines.join("\n");
+    sections.push({
+      title: match[2]?.trim() ?? "Section",
+      level: match[1]?.length ?? 1,
+      line: index + 1,
+      body,
+      snippet: firstMeaningfulLine(body) ?? match[2]?.trim() ?? "Section",
+    });
+  }
+  return sections;
+}
 function normalizeExternalCachePayload(payload: Record<string, unknown>, relativePath: string): ReturnType<typeof parseExternalCacheRecord> {
   const nested = typeof payload.record === "object" && payload.record !== null ? payload.record as Record<string, unknown> : payload;
   return {
@@ -4718,9 +4751,21 @@ function normalizeExternalCachePayload(payload: Record<string, unknown>, relativ
 function redactExternalCachePayload(payload: Record<string, unknown>): Record<string, unknown> {
   const redacted: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(payload)) {
-    redacted[key] = /token|secret|password|credential|api[_-]?key/i.test(key) ? "[redacted]" : value;
+    redacted[key] = /token|secret|password|credential|api[_-]?key/i.test(key) ? "[redacted]" : redactExternalCacheValue(value, 0);
   }
   return redacted;
+}
+function redactExternalCacheValue(value: unknown, depth: number): unknown {
+  if (depth > 4) return "[truncated]";
+  if (Array.isArray(value)) return value.map((item) => redactExternalCacheValue(item, depth + 1));
+  if (isPlainRecord(value)) {
+    const redacted: Record<string, unknown> = {};
+    for (const [key, nestedValue] of Object.entries(value)) {
+      redacted[key] = /token|secret|password|credential|api[_-]?key/i.test(key) ? "[redacted]" : redactExternalCacheValue(nestedValue, depth + 1);
+    }
+    return redacted;
+  }
+  return value;
 }
 function parseWebIngestedPayload(raw: string, extension: string): {
   url?: string;
@@ -5888,8 +5933,8 @@ function skillRegistrySearchDocument(row: SkillRegistryRow): SearchDocumentInput
 function providerRoutingSearchDocument(row: ProviderRoutingRow): SearchDocumentInput {
   const policy = parseJsonRecord(row.policy_json);
   const metadata = parseJsonRecord(row.metadata_json);
-  const policyText = textFromStructuredContent(redactExternalCachePayload(policy));
-  const metadataText = textFromStructuredContent(redactExternalCachePayload(metadata));
+  const policyText = redactedStructuredText(policy);
+  const metadataText = redactedStructuredText(metadata);
   const resourceId = `routing:${row.feature}:${row.capability}`;
   const body = [
     row.feature,
@@ -5927,14 +5972,24 @@ function providerRoutingSearchDocument(row: ProviderRoutingRow): SearchDocumentI
       providerRouting: 1,
       hasAccountRef: row.account_ref ? 0.1 : 0,
     },
-    fragments: policyText ? [{
-      id: `providers.routing:${resourceId}:policy`,
-      title: "policy",
-      body: policyText,
-      snippet: policyText.slice(0, 180),
-      sortOrder: 0,
-      metadata: { kind: "policy" },
-    }] : [],
+    fragments: [
+      ...(policyText ? [{
+        id: `providers.routing:${resourceId}:policy`,
+        title: "policy",
+        body: policyText,
+        snippet: policyText.slice(0, 180),
+        sortOrder: 0,
+        metadata: { kind: "policy" },
+      }] : []),
+      ...(metadataText ? [{
+        id: `providers.routing:${resourceId}:metadata`,
+        title: "metadata",
+        body: metadataText,
+        snippet: metadataText.slice(0, 180),
+        sortOrder: 1,
+        metadata: { kind: "metadata" },
+      }] : []),
+    ],
     actions: [
       { id: "open", kind: "open", label: "Open provider route", requiresApproval: false },
       { id: "copy-reference", kind: "copy", label: "Copy provider route reference", requiresApproval: false },
@@ -5944,8 +5999,8 @@ function providerRoutingSearchDocument(row: ProviderRoutingRow): SearchDocumentI
 function providerSettingSearchDocument(row: ProviderSettingRow): SearchDocumentInput {
   const policy = parseJsonRecord(row.policy_json);
   const metadata = parseJsonRecord(row.metadata_json);
-  const policyText = textFromStructuredContent(redactExternalCachePayload(policy));
-  const metadataText = textFromStructuredContent(redactExternalCachePayload(metadata));
+  const policyText = redactedStructuredText(policy);
+  const metadataText = redactedStructuredText(metadata);
   const resourceId = `setting:${row.provider}`;
   const body = [
     row.provider,
@@ -5978,6 +6033,24 @@ function providerSettingSearchDocument(row: ProviderSettingRow): SearchDocumentI
       providerSetting: 1,
       enabled: row.enabled === 1 ? 0.2 : -0.1,
     },
+    fragments: [
+      ...(policyText ? [{
+        id: `providers.routing:${resourceId}:policy`,
+        title: "policy",
+        body: policyText,
+        snippet: policyText.slice(0, 180),
+        sortOrder: 0,
+        metadata: { kind: "policy" },
+      }] : []),
+      ...(metadataText ? [{
+        id: `providers.routing:${resourceId}:metadata`,
+        title: "metadata",
+        body: metadataText,
+        snippet: metadataText.slice(0, 180),
+        sortOrder: 1,
+        metadata: { kind: "metadata" },
+      }] : []),
+    ],
     actions: [
       { id: "open", kind: "open", label: "Open provider setting", requiresApproval: false },
       { id: "copy-reference", kind: "copy", label: "Copy provider setting reference", requiresApproval: false },
@@ -5988,8 +6061,8 @@ function snippetLibrarySearchDocument(row: SnippetLibraryRow): SearchDocumentInp
   const scope = parseJsonRecord(row.scope_json);
   const metadata = parseJsonRecord(row.metadata_json);
   const skillRefs = parseJsonArray(row.skill_refs_json).filter((value): value is string => typeof value === "string" && value.trim().length > 0);
-  const metadataText = textFromStructuredContent(redactExternalCachePayload(metadata));
-  const scopeText = textFromStructuredContent(redactExternalCachePayload(scope));
+  const metadataText = redactedStructuredText(metadata);
+  const scopeText = redactedStructuredText(scope);
   const scopeKind = typeof scope.kind === "string" ? scope.kind : undefined;
   const body = [
     row.title,
@@ -6027,14 +6100,32 @@ function snippetLibrarySearchDocument(row: SnippetLibraryRow): SearchDocumentInp
       snippet: 1,
       shortcut: row.shortcut ? 0.3 : 0,
     },
-    fragments: row.body ? [{
-      id: `snippets.library:${row.slug}:body`,
-      title: "body",
-      body: row.body,
-      snippet: row.body.slice(0, 180),
-      sortOrder: 0,
-      metadata: { kind: "body" },
-    }] : [],
+    fragments: [
+      ...(row.body ? [{
+        id: `snippets.library:${row.slug}:body`,
+        title: "body",
+        body: row.body,
+        snippet: row.body.slice(0, 180),
+        sortOrder: 0,
+        metadata: { kind: "body" },
+      }] : []),
+      ...(scopeText ? [{
+        id: `snippets.library:${row.slug}:scope`,
+        title: "scope",
+        body: scopeText,
+        snippet: scopeText.slice(0, 180),
+        sortOrder: 1,
+        metadata: { kind: "scope" },
+      }] : []),
+      ...(metadataText ? [{
+        id: `snippets.library:${row.slug}:metadata`,
+        title: "metadata",
+        body: metadataText,
+        snippet: metadataText.slice(0, 180),
+        sortOrder: 2,
+        metadata: { kind: "metadata" },
+      }] : []),
+    ],
     actions: [
       { id: "open", kind: "open", label: "Open snippet", requiresApproval: false },
       { id: "copy-reference", kind: "copy", label: "Copy snippet reference", requiresApproval: false },
@@ -6043,6 +6134,8 @@ function snippetLibrarySearchDocument(row: SnippetLibraryRow): SearchDocumentInp
 }
 function agentCatalogAgentSearchDocument(row: AgentCatalogAgentRow): SearchDocumentInput {
   const config = parseJsonRecord(row.config_json);
+  const configText = redactedStructuredText(config);
+  const configSnippet = firstMeaningfulLine(stringValue(config.instructionsFreeText) ?? configText ?? "");
   const body = [
     row.name,
     row.kind,
@@ -6059,6 +6152,7 @@ function agentCatalogAgentSearchDocument(row: AgentCatalogAgentRow): SearchDocum
     row.model,
     row.autonomy_profile,
     row.export_path,
+    configText,
   ].filter(Boolean).join("\n");
   const resourceId = `agent:${row.id}`;
   return {
@@ -6095,6 +6189,24 @@ function agentCatalogAgentSearchDocument(row: AgentCatalogAgentRow): SearchDocum
       active: row.status === "active" ? 0.2 : 0,
       builtin: row.builtin === 1 ? 0.1 : 0,
     },
+    fragments: [
+      ...(row.description ? [{
+        id: `agents.catalog:${resourceId}:description`,
+        title: "description",
+        body: row.description,
+        snippet: row.description.slice(0, 180),
+        sortOrder: 0,
+        metadata: { kind: "description" },
+      }] : []),
+      ...(configText ? [{
+        id: `agents.catalog:${resourceId}:configuration`,
+        title: "configuration",
+        body: configText,
+        snippet: configSnippet ?? configText.slice(0, 180),
+        sortOrder: 1,
+        metadata: { kind: "configuration" },
+      }] : []),
+    ],
     actions: [
       { id: "open", kind: "open", label: "Open agent", requiresApproval: false },
       { id: "copy-reference", kind: "copy", label: "Copy agent reference", requiresApproval: false },
@@ -6181,16 +6293,21 @@ function agentCatalogSkillCollectionSearchDocument(row: AgentCatalogSkillCollect
   };
 }
 function agentCatalogConnectionSearchDocument(row: AgentCatalogConnectionRow): SearchDocumentInput {
+  const config = parseJsonRecord(row.config_json);
   const metadata = parseJsonRecord(row.metadata_json);
   const scopes = Array.isArray(metadata.scopes)
     ? metadata.scopes.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
     : [];
+  const configText = redactedStructuredText(config);
+  const metadataText = redactedStructuredText(metadata);
   const resourceId = `connection:${row.id}`;
   const body = [
     row.label,
     row.provider,
     scopes.join(" "),
     typeof metadata.lastSyncAt === "string" ? metadata.lastSyncAt : undefined,
+    configText,
+    metadataText,
   ].filter(Boolean).join("\n");
   return {
     id: `agents.catalog:${resourceId}`,
@@ -6217,6 +6334,24 @@ function agentCatalogConnectionSearchDocument(row: AgentCatalogConnectionRow): S
       connection: 1,
       hasProtectedRef: row.secret_ref ? 0.1 : 0,
     },
+    fragments: [
+      ...(scopes.length ? [{
+        id: `agents.catalog:${resourceId}:scopes`,
+        title: "scopes",
+        body: scopes.join("\n"),
+        snippet: scopes.join(", "),
+        sortOrder: 0,
+        metadata: { kind: "scopes" },
+      }] : []),
+      ...(configText ? [{
+        id: `agents.catalog:${resourceId}:configuration`,
+        title: "configuration",
+        body: configText,
+        snippet: configText.slice(0, 180),
+        sortOrder: 1,
+        metadata: { kind: "configuration" },
+      }] : []),
+    ],
     actions: [
       { id: "open", kind: "open", label: "Open connection", requiresApproval: false },
       { id: "copy-reference", kind: "copy", label: "Copy connection reference", requiresApproval: false },
@@ -6225,7 +6360,7 @@ function agentCatalogConnectionSearchDocument(row: AgentCatalogConnectionRow): S
 }
 function marketplaceChoiceSearchDocument(row: MarketplaceChoiceRow): SearchDocumentInput {
   const metadata = parseJsonRecord(row.metadata_json);
-  const metadataText = textFromStructuredContent(redactExternalCachePayload(metadata));
+  const metadataText = redactedStructuredText(metadata);
   const body = [
     row.kind,
     row.target,
@@ -6258,14 +6393,24 @@ function marketplaceChoiceSearchDocument(row: MarketplaceChoiceRow): SearchDocum
       marketplaceChoice: 1,
       active: row.status === "active" ? 0.2 : 0,
     },
-    fragments: row.rationale ? [{
-      id: `marketplace.choices:${row.id}:rationale`,
-      title: "rationale",
-      body: row.rationale,
-      snippet: row.rationale.slice(0, 180),
-      sortOrder: 0,
-      metadata: { kind: "rationale" },
-    }] : [],
+    fragments: [
+      ...(row.rationale ? [{
+        id: `marketplace.choices:${row.id}:rationale`,
+        title: "rationale",
+        body: row.rationale,
+        snippet: row.rationale.slice(0, 180),
+        sortOrder: 0,
+        metadata: { kind: "rationale" },
+      }] : []),
+      ...(metadataText ? [{
+        id: `marketplace.choices:${row.id}:metadata`,
+        title: "metadata",
+        body: metadataText,
+        snippet: metadataText.slice(0, 180),
+        sortOrder: 1,
+        metadata: { kind: "metadata" },
+      }] : []),
+    ],
     actions: [
       { id: "open", kind: "open", label: "Open marketplace choice", requiresApproval: false },
       { id: "copy-reference", kind: "copy", label: "Copy marketplace choice reference", requiresApproval: false },
@@ -6274,7 +6419,7 @@ function marketplaceChoiceSearchDocument(row: MarketplaceChoiceRow): SearchDocum
 }
 function contentItemSearchDocument(row: ContentItemRow, pageBody?: string): SearchDocumentInput {
   const metadata = parseJsonRecord(row.metadata_json);
-  const metadataText = textFromStructuredContent(redactExternalCachePayload(metadata));
+  const metadataText = redactedStructuredText(metadata);
   const body = [
     row.title,
     row.kind,
@@ -6309,14 +6454,24 @@ function contentItemSearchDocument(row: ContentItemRow, pageBody?: string): Sear
       content: 1,
       published: row.status === "published" ? 0.2 : 0,
     },
-    fragments: pageBody ? [{
-      id: `content.items:${row.id}:page`,
-      title: "page",
-      body: pageBody,
-      snippet: pageBody.slice(0, 180),
-      sortOrder: 0,
-      metadata: { kind: "page", pageId: row.page_id },
-    }] : [],
+    fragments: [
+      ...(pageBody ? [{
+        id: `content.items:${row.id}:page`,
+        title: "page",
+        body: pageBody,
+        snippet: pageBody.slice(0, 180),
+        sortOrder: 0,
+        metadata: { kind: "page", pageId: row.page_id },
+      }] : []),
+      ...(metadataText ? [{
+        id: `content.items:${row.id}:metadata`,
+        title: "metadata",
+        body: metadataText,
+        snippet: metadataText.slice(0, 180),
+        sortOrder: 1,
+        metadata: { kind: "metadata" },
+      }] : []),
+    ],
     actions: [
       { id: "open", kind: "open", label: "Open content item", requiresApproval: false },
       { id: "copy-reference", kind: "copy", label: "Copy content reference", requiresApproval: false },
@@ -6325,7 +6480,7 @@ function contentItemSearchDocument(row: ContentItemRow, pageBody?: string): Sear
 }
 function businessRecordSearchDocument(row: BusinessRecordRow, pageBody?: string): SearchDocumentInput {
   const metadata = parseJsonRecord(row.metadata_json);
-  const metadataText = textFromStructuredContent(redactExternalCachePayload(metadata));
+  const metadataText = redactedStructuredText(metadata);
   const body = [
     row.name,
     row.kind,
@@ -6356,14 +6511,24 @@ function businessRecordSearchDocument(row: BusinessRecordRow, pageBody?: string)
       businessRecord: 1,
       active: row.status === "active" ? 0.2 : 0,
     },
-    fragments: pageBody ? [{
-      id: `business.records:${row.id}:page`,
-      title: "page",
-      body: pageBody,
-      snippet: pageBody.slice(0, 180),
-      sortOrder: 0,
-      metadata: { kind: "page", pageId: row.page_id },
-    }] : [],
+    fragments: [
+      ...(pageBody ? [{
+        id: `business.records:${row.id}:page`,
+        title: "page",
+        body: pageBody,
+        snippet: pageBody.slice(0, 180),
+        sortOrder: 0,
+        metadata: { kind: "page", pageId: row.page_id },
+      }] : []),
+      ...(metadataText ? [{
+        id: `business.records:${row.id}:metadata`,
+        title: "metadata",
+        body: metadataText,
+        snippet: metadataText.slice(0, 180),
+        sortOrder: 1,
+        metadata: { kind: "metadata" },
+      }] : []),
+    ],
     actions: [
       { id: "open", kind: "open", label: "Open business record", requiresApproval: false },
       { id: "copy-reference", kind: "copy", label: "Copy business reference", requiresApproval: false },
@@ -7214,6 +7379,11 @@ function textFromStructuredContent(value: unknown): string | undefined {
   collectStructuredText(value, parts, 0);
   const text = parts.join(" ").replace(/\s+/g, " ").trim();
   return text || undefined;
+}
+
+function redactedStructuredText(payload: Record<string, unknown>): string | undefined {
+  const redacted = redactExternalCachePayload(payload);
+  return textFromStructuredContent(redacted) ?? (Object.keys(redacted).length ? JSON.stringify(redacted) : undefined);
 }
 
 function collectStructuredText(value: unknown, parts: string[], depth: number): void {

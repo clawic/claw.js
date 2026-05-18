@@ -16,7 +16,16 @@ export async function runSearchWebIngestedEventScenario(): Promise<void> {
   fs.writeFileSync(pagePath, JSON.stringify({
     url: "https://example.com/event-page",
     title: "Event Page",
-    text: "A web-ingested-event-refresh-needle proves web cache event refresh.",
+    text: [
+      "# Event Page",
+      "",
+      "Intro text for the web cache fixture.",
+      "",
+      "## Web Cache Section",
+      "",
+      "A web-ingested-event-refresh-needle proves web cache event refresh.",
+      "",
+    ].join("\n"),
     crawlScope: "explicit_cache",
   }));
 
@@ -67,12 +76,13 @@ export async function runSearchWebIngestedEventScenario(): Promise<void> {
     const query = await runCliCapture(["search", "query", "web-ingested-event-refresh-needle", "--profile", "full", "--web-root", webRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
-      data: { results: Array<{ source: string; domain: string; resourceId?: string; metadata?: { url?: string } }> };
+      data: { results: Array<{ source: string; domain: string; resourceId?: string; metadata?: { url?: string }; fragments?: Array<{ title?: string; snippet?: string }> }> };
     };
     const result = queryPayload.data.results.find((entry) => entry.resourceId === "pages/event-page.json");
     assert.equal(result?.source, "web.ingested");
     assert.equal(result?.domain, "web");
     assert.equal(result?.metadata?.url, "https://example.com/event-page");
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "Web Cache Section" && fragment.snippet?.includes("web-ingested-event-refresh-needle")), true);
 
     fs.rmSync(pagePath);
     const deleted = scheduleWebIngestedSearchEvent({
@@ -112,7 +122,16 @@ export async function runSearchExternalCacheEventScenario(): Promise<void> {
     externalId: "external-event-1",
     type: "note",
     title: "External Event Record",
-    text: "An external-cache-event-refresh-needle proves external cache event refresh.",
+    text: [
+      "# External Event Record",
+      "",
+      "Intro text for the external cache fixture.",
+      "",
+      "## External Cache Section",
+      "",
+      "An external-cache-event-refresh-needle proves external cache event refresh.",
+      "",
+    ].join("\n"),
     syncMode: "manual",
     apiToken: "should-not-be-indexed",
   }));
@@ -164,12 +183,13 @@ export async function runSearchExternalCacheEventScenario(): Promise<void> {
     const query = await runCliCapture(["search", "query", "external-cache-event-refresh-needle", "--profile", "full", "--external-root", externalRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
-      data: { results: Array<{ source: string; domain: string; resourceId?: string; metadata?: { externalId?: string } }> };
+      data: { results: Array<{ source: string; domain: string; resourceId?: string; metadata?: { externalId?: string }; fragments?: Array<{ title?: string; snippet?: string }> }> };
     };
     const result = queryPayload.data.results.find((entry) => entry.resourceId === "provider/event-record.json");
     assert.equal(result?.source, "external.cache");
     assert.equal(result?.domain, "external");
     assert.equal(result?.metadata?.externalId, "external-event-1");
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "External Cache Section" && fragment.snippet?.includes("external-cache-event-refresh-needle")), true);
     assert.equal(JSON.stringify(queryPayload.data.results).includes("should-not-be-indexed"), false);
 
     fs.rmSync(recordPath);
