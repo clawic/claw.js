@@ -189,6 +189,18 @@ export interface ConnectorContextChoiceInput {
   fallbackRules?: ConnectorContextFallbackRule[];
 }
 
+export interface ConnectorContextDefaultResolutionInput {
+  providerId: string;
+  operationId?: string;
+  workspaceId?: string;
+  projectId?: string;
+  appId?: string;
+  environment?: string;
+  agentId?: string;
+  roleId?: string;
+  rules: ConnectorContextDefaultRule[];
+}
+
 export interface ConnectorContextChoice {
   allowed: boolean;
   selected: ConnectorGovernedContextRecord[];
@@ -436,6 +448,17 @@ export function buildConnectorContextDoctorReport(schemas: ConnectorContextProvi
   };
 }
 
+export function resolveConnectorContextDefaultRefs(input: ConnectorContextDefaultResolutionInput): string[] {
+  const matches = input.rules
+    .filter((rule) => defaultRuleMatches(input, rule))
+    .sort((left, right) => {
+      const priority = right.priority - left.priority;
+      if (priority !== 0) return priority;
+      return defaultScopeRank(right.scope.kind) - defaultScopeRank(left.scope.kind);
+    });
+  return Array.from(new Set(matches.map((rule) => rule.contextRef)));
+}
+
 export function explainConnectorContextChoice(input: ConnectorContextChoiceInput): ConnectorContextChoice {
   const selected: ConnectorGovernedContextRecord[] = [];
   const rejected: Array<{ recordId: string; reasons: ConnectorContextDecisionReason[] }> = [];
@@ -510,7 +533,8 @@ export function explainConnectorContextChoice(input: ConnectorContextChoiceInput
 }
 
 function scoreCandidate(candidate: ConnectorGovernedContextRecord, defaultRefs: string[]): number {
-  const defaultBoost = defaultRefs.includes(candidate.id) ? 10_000 : 0;
+  const defaultIndex = defaultRefs.indexOf(candidate.id);
+  const defaultBoost = defaultIndex >= 0 ? 10_000 + (defaultRefs.length - defaultIndex) : 0;
   return defaultBoost + (candidate.priority ?? 0);
 }
 
@@ -525,8 +549,8 @@ function evaluateCandidate(input: ConnectorContextChoiceInput, requirement: Conn
       reasons.push({ code: "wrong_environment", recordId: candidate.id, kind: candidate.kind, field: "environment", message: `${candidate.id} is scoped to ${String(fieldValue)}, not ${input.environment}.`, remedy: `Select context for ${input.environment} or change the requested environment.` });
     }
   }
-  if (candidate.policy?.effect === "deny") reasons.push({ code: "policy_denied", recordId: candidate.id, kind: candidate.kind, message: candidate.policy.reason, remedy: "Use a policy-allowed context or change the policy through an approved flow." });
-  if (candidate.policy?.effect === "requires_approval") reasons.push({ code: "policy_requires_approval", recordId: candidate.id, kind: candidate.kind, message: candidate.policy.reason, remedy: "Request scoped approval for this context or choose an already approved alternative." });
+  if (candidate.policy?.effect === "deny" && contextPolicyApplies(candidate.policy, input)) reasons.push({ code: "policy_denied", recordId: candidate.id, kind: candidate.kind, message: candidate.policy.reason, remedy: "Use a policy-allowed context or change the policy through an approved flow." });
+  if (candidate.policy?.effect === "requires_approval" && contextPolicyApplies(candidate.policy, input)) reasons.push({ code: "policy_requires_approval", recordId: candidate.id, kind: candidate.kind, message: candidate.policy.reason, remedy: "Request scoped approval for this context or choose an already approved alternative." });
 
   for (const fieldName of requirement.fields) {
     const fieldValue = candidate.fields[fieldName];
@@ -534,13 +558,50 @@ function evaluateCandidate(input: ConnectorContextChoiceInput, requirement: Conn
       reasons.push({ code: "context_field_missing", recordId: candidate.id, kind: candidate.kind, field: fieldName, message: `${candidate.id} is missing ${fieldName}.`, remedy: `Set ${fieldName} on ${candidate.id} or choose another active ${candidate.kind} context.` });
       continue;
     }
-    if (fieldValue.policy?.effect === "deny") reasons.push({ code: "context_field_blocked", recordId: candidate.id, kind: candidate.kind, field: fieldName, message: fieldValue.policy.reason, remedy: `Use a different ${fieldName} value/context or update field policy through an approved flow.` });
-    if (fieldValue.policy?.effect === "requires_approval") reasons.push({ code: "policy_requires_approval", recordId: candidate.id, kind: candidate.kind, field: fieldName, message: fieldValue.policy.reason, remedy: `Request scoped approval for ${candidate.id}.${fieldName}.` });
+    if (fieldValue.policy?.effect === "deny" && contextPolicyApplies(fieldValue.policy, input)) reasons.push({ code: "context_field_blocked", recordId: candidate.id, kind: candidate.kind, field: fieldName, message: fieldValue.policy.reason, remedy: `Use a different ${fieldName} value/context or update field policy through an approved flow.` });
+    if (fieldValue.policy?.effect === "requires_approval" && contextPolicyApplies(fieldValue.policy, input)) reasons.push({ code: "policy_requires_approval", recordId: candidate.id, kind: candidate.kind, field: fieldName, message: fieldValue.policy.reason, remedy: `Request scoped approval for ${candidate.id}.${fieldName}.` });
     if (fieldValue.sensitivity === "secret_ref" && !fieldValue.secretRef) {
       reasons.push({ code: "context_secret_binding_missing", recordId: candidate.id, kind: candidate.kind, field: fieldName, message: `${candidate.id}.${fieldName} requires a secret_ref binding.`, remedy: `Run accounts link-secret ${candidate.id} --field ${fieldName} --secret-ref secret://...` });
     }
   }
   return reasons;
+}
+
+function defaultRuleMatches(input: ConnectorContextDefaultResolutionInput, rule: ConnectorContextDefaultRule): boolean {
+  if (rule.providerId && rule.providerId !== input.providerId) return false;
+  if (rule.operationIds?.length && (!input.operationId || !rule.operationIds.includes(input.operationId))) return false;
+  switch (rule.scope.kind) {
+    case "global": return true;
+    case "provider": return !rule.scope.id || rule.scope.id === input.providerId;
+    case "operation": return Boolean(input.operationId && rule.scope.id === input.operationId);
+    case "workspace": return Boolean(input.workspaceId && rule.scope.id === input.workspaceId);
+    case "project": return Boolean(input.projectId && rule.scope.id === input.projectId);
+    case "app": return Boolean(input.appId && rule.scope.id === input.appId);
+    case "environment": return Boolean(input.environment && rule.scope.id === input.environment);
+    case "agent": return Boolean(input.agentId && rule.scope.id === input.agentId);
+    case "role": return Boolean(input.roleId && rule.scope.id === input.roleId);
+  }
+}
+
+function defaultScopeRank(kind: ConnectorContextScopeKind): number {
+  switch (kind) {
+    case "agent": return 90;
+    case "role": return 85;
+    case "operation": return 80;
+    case "app": return 70;
+    case "environment": return 60;
+    case "project": return 50;
+    case "workspace": return 40;
+    case "provider": return 30;
+    case "global": return 10;
+  }
+}
+
+function contextPolicyApplies(policy: ConnectorContextPolicy, input: ConnectorContextChoiceInput): boolean {
+  if (policy.appliesToOperations?.length && (!input.operationId || !policy.appliesToOperations.includes(input.operationId))) return false;
+  if (policy.appliesToAgents?.length && (!input.actorId || !policy.appliesToAgents.includes(input.actorId))) return false;
+  if (policy.appliesToRoles?.length && (!input.roleId || !policy.appliesToRoles.includes(input.roleId))) return false;
+  return true;
 }
 
 export const CONNECTOR_GOVERNED_CONTEXT_PROVIDER_ORDER = [

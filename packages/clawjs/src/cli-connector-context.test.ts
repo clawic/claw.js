@@ -442,6 +442,81 @@ test("accounts explain uses persisted context before fixtures", async () => {
   });
 });
 
+test("accounts explain resolves defaults by scope and priority", async () => {
+  await withTempConnectorContext(async (cwd) => {
+    for (const [id, version] of [["revenuecat_api_v1", "v1"], ["revenuecat_api_v2", "v2"], ["revenuecat_release_agent", "v2"]] as const) {
+      const upsert = await runCliCapture([
+        "accounts",
+        "upsert",
+        id,
+        "--provider",
+        "revenuecat",
+        "--kind",
+        "key",
+        "--set",
+        `api_version=${version}`,
+        "--json",
+      ], cwd);
+      assert.equal(upsert.code, CLI_EXIT_OK, upsert.stderr || upsert.stdout);
+      const link = await runCliCapture([
+        "accounts",
+        "link-secret",
+        id,
+        "--field",
+        "api_key",
+        "--secret-ref",
+        `secret://revenuecat/${id}`,
+        "--json",
+      ], cwd);
+      assert.equal(link.code, CLI_EXIT_OK, link.stderr || link.stdout);
+    }
+
+    const providerDefault = await runCliCapture([
+      "accounts",
+      "defaults",
+      "set",
+      "--context",
+      "revenuecat_api_v1",
+      "--provider",
+      "revenuecat",
+      "--scope",
+      "provider:revenuecat",
+      "--priority",
+      "20",
+      "--json",
+    ], cwd);
+    assert.equal(providerDefault.code, CLI_EXIT_OK, providerDefault.stderr || providerDefault.stdout);
+
+    const agentDefault = await runCliCapture([
+      "accounts",
+      "defaults",
+      "set",
+      "--context",
+      "revenuecat_release_agent",
+      "--provider",
+      "revenuecat",
+      "--scope",
+      "agent:agent.release",
+      "--priority",
+      "100",
+      "--json",
+    ], cwd);
+    assert.equal(agentDefault.code, CLI_EXIT_OK, agentDefault.stderr || agentDefault.stdout);
+
+    const generic = await runCliCapture(["accounts", "explain", "revenuecat", "--json"], cwd);
+    assert.equal(generic.code, CLI_EXIT_OK, generic.stderr || generic.stdout);
+    const genericPayload = JSON.parse(generic.stdout) as { data: { decision: { selected: Array<{ id: string }>; trace: { defaultRefs: string[] } } } };
+    assert.equal(genericPayload.data.decision.selected[0]?.id, "revenuecat_api_v2");
+    assert.equal(genericPayload.data.decision.trace.defaultRefs.includes("revenuecat_api_v1"), true);
+
+    const release = await runCliCapture(["accounts", "explain", "revenuecat", "--agent", "agent.release", "--json"], cwd);
+    assert.equal(release.code, CLI_EXIT_OK, release.stderr || release.stdout);
+    const releasePayload = JSON.parse(release.stdout) as { data: { decision: { selected: Array<{ id: string }>; trace: { defaultRefs: string[] } } } };
+    assert.equal(releasePayload.data.decision.selected[0]?.id, "revenuecat_release_agent");
+    assert.deepEqual(releasePayload.data.decision.trace.defaultRefs.slice(0, 2), ["revenuecat_release_agent", "revenuecat_api_v2"]);
+  });
+});
+
 test("secret-ref fields reject plaintext set values", async () => {
   await withTempConnectorContext(async (cwd) => {
     const result = await runCliCapture([

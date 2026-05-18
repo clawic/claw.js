@@ -8,6 +8,7 @@ import {
   explainConnectorContextChoice,
   getConnectorGovernedContextProviderSchema,
   redactConnectorContextRecord,
+  resolveConnectorContextDefaultRefs,
   validateConnectorContextProviderSchema,
   type ConnectorGovernedContextRecord,
 } from "./index.ts";
@@ -132,6 +133,75 @@ test("RevenueCat API v2 is the default and v1 is a traced fallback", () => {
   assert.equal(decision.allowed, true);
   assert.deepEqual(decision.selected.map((record) => record.id), ["revenuecat_api_v1"]);
   assert.deepEqual(decision.trace.fallbackRuleIds, ["revenuecat_v2_to_v1"]);
+});
+
+test("scoped defaults resolve by matching scope and priority", () => {
+  const refs = resolveConnectorContextDefaultRefs({
+    providerId: "revenuecat",
+    operationId: "revenuecat.project_configuration.read",
+    environment: "production",
+    agentId: "agent.release",
+    roleId: "release",
+    rules: [
+      { id: "global", scope: { kind: "global" }, providerId: "revenuecat", contextRef: "revenuecat_api_v1", priority: 10 },
+      { id: "provider", scope: { kind: "provider", id: "revenuecat" }, providerId: "revenuecat", contextRef: "revenuecat_api_v2", priority: 20 },
+      { id: "staging", scope: { kind: "environment", id: "staging" }, providerId: "revenuecat", contextRef: "revenuecat_staging", priority: 500 },
+      { id: "agent", scope: { kind: "agent", id: "agent.release" }, providerId: "revenuecat", contextRef: "revenuecat_release_agent", priority: 100 },
+      { id: "operation", scope: { kind: "operation", id: "revenuecat.project_configuration.read" }, providerId: "revenuecat", contextRef: "revenuecat_read_key", priority: 80 },
+    ],
+  });
+
+  assert.deepEqual(refs, ["revenuecat_release_agent", "revenuecat_read_key", "revenuecat_api_v2", "revenuecat_api_v1"]);
+});
+
+test("object and field policies apply only to matching agent role and operation scopes", () => {
+  const candidate: ConnectorGovernedContextRecord = {
+    id: "apple_app_release",
+    providerId: "apple",
+    kind: "app",
+    displayName: "Release App",
+    state: "active",
+    policy: {
+      effect: "deny",
+      reason: "Only the release agent is blocked from this app.",
+      appliesToAgents: ["agent.release"],
+    },
+    fields: {
+      bundle_id: {
+        value: "com.example.app",
+        sensitivity: "private",
+        policy: {
+          effect: "requires_approval",
+          reason: "Release role needs approval for this Bundle ID.",
+          appliesToRoles: ["release"],
+          appliesToOperations: ["apple.upload"],
+        },
+      },
+      sku: { value: "SKU123", sensitivity: "private" },
+    },
+  };
+
+  const ordinary = explainConnectorContextChoice({
+    providerId: "apple",
+    operationId: "apple.upload",
+    actorId: "agent.docs",
+    roleId: "docs",
+    requirements: [{ kind: "app", fields: ["bundle_id", "sku"] }],
+    candidates: [candidate],
+  });
+  assert.equal(ordinary.allowed, true);
+
+  const release = explainConnectorContextChoice({
+    providerId: "apple",
+    operationId: "apple.upload",
+    actorId: "agent.release",
+    roleId: "release",
+    requirements: [{ kind: "app", fields: ["bundle_id", "sku"] }],
+    candidates: [candidate],
+  });
+  assert.equal(release.allowed, false);
+  assert.equal(release.reasons.some((reason) => reason.code === "policy_denied"), true);
+  assert.equal(release.reasons.some((reason) => reason.code === "policy_requires_approval" && reason.field === "bundle_id"), true);
 });
 
 test("context choice fails closed for field policy, missing secret binding, approval, and wrong environment", () => {
