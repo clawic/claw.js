@@ -5,6 +5,7 @@ import Database from "better-sqlite3";
 
 import {
   listSystemTelemetryMetrics,
+  listSystemTelemetryProviders,
   listSystemTelemetryWidgets,
   resolveClawPersistentSurfacePath,
   type SystemTelemetryMetricDefinition,
@@ -836,7 +837,7 @@ export async function runSystemCli(input: {
 }): Promise<number> {
   const [, command, subcommand] = input.positionals;
   if (!command || command === "help") {
-    input.context.stdout.write(`Usage: ${input.binName} system snapshot|metrics|history|watch|rules|widgets|capabilities [options]\n`);
+    input.context.stdout.write(`Usage: ${input.binName} system snapshot|metrics|history|watch|rules|widgets|providers|capabilities [options]\n`);
     return CLI_EXIT_OK;
   }
 
@@ -967,6 +968,14 @@ export async function runSystemCli(input: {
       return CLI_EXIT_OK;
     }
     throw new CliHandledError("usage_error", `Usage: ${input.binName} system widgets list|upsert|delete`, CLI_EXIT_USAGE);
+  }
+
+  if (command === "providers") {
+    if (subcommand && subcommand !== "list") throw new CliHandledError("usage_error", `Usage: ${input.binName} system providers list`, CLI_EXIT_USAGE);
+    const payload = { providers: listSystemTelemetryProviders() };
+    if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "system", payload, { subcommand: "providers list" });
+    else writeHuman(input.context, payload);
+    return CLI_EXIT_OK;
   }
 
   return CLI_EXIT_USAGE;

@@ -330,7 +330,7 @@ test("runCli exposes the evolution operator surface", async () => {
   assert.equal(receiptPayload.receipt.notes.some((note) => note.includes("/Users/") || note.includes("prompt:")), false);
 });
 
-test("runCli exposes system telemetry snapshot, metrics, history, rules and widgets", async () => {
+test("runCli exposes system telemetry snapshot, metrics, history, rules, widgets and providers", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-system-telemetry-cli-"));
   const monitorDb = path.join(workspaceRoot, "monitor.sqlite");
   const snapshot = await runCliCapture(["system", "snapshot", "--json"], process.cwd());
@@ -371,6 +371,13 @@ test("runCli exposes system telemetry snapshot, metrics, history, rules and widg
   const widgetPayload = parseCliJsonPayload<{ widgets: Array<{ placement: string }> }>(widgets.stdout);
   assert.equal(widgetPayload.widgets.some((widget) => widget.placement === "menubar"), true);
   assert.equal(widgetPayload.widgets.some((widget) => widget.placement === "combined_panel" || widget.placement === "both"), true);
+
+  const providers = await runCliCapture(["system", "providers", "list", "--json"], process.cwd());
+  assert.equal(providers.code, CLI_EXIT_OK);
+  const providerPayload = parseCliJsonPayload<{ providers: Array<{ kind: string; mode: string; status: string; metricKeys: string[] }> }>(providers.stdout);
+  assert.equal(providerPayload.providers.some((provider) => provider.kind === "weather" && provider.mode === "mock" && provider.status === "ready"), true);
+  assert.equal(providerPayload.providers.some((provider) => provider.kind === "weather" && provider.mode === "live" && provider.status === "external_pending"), true);
+  assert.equal(providerPayload.providers.some((provider) => provider.kind === "agent_run" && provider.metricKeys.includes("context.agent_runs.active")), true);
 
   const watch = await runCliCapture(["system", "watch", "--interval", "1", "--count", "2", "--json"], process.cwd());
   assert.equal(watch.code, CLI_EXIT_OK);

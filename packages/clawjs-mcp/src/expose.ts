@@ -12,6 +12,7 @@ import type { MacSignedHostBridge } from "./mac-signed-host-bridge.ts";
 import {
   collectMcpSystemTelemetrySnapshot,
   mcpSystemTelemetryMetricsPayload,
+  mcpSystemTelemetryProvidersPayload,
   mcpSystemTelemetryWidgetsPayload,
   readMcpSystemTelemetryHistory,
 } from "./system-telemetry.ts";
@@ -177,6 +178,12 @@ export function defaultExposedTools(options: DefaultExposedToolsOptions = {}): M
       description: "Lists the portable context widget catalog for menu bar and panel indicators.",
       inputSchema: { type: "object", properties: {}, additionalProperties: false },
       handler: async () => mcpSystemTelemetryWidgetsPayload(),
+    },
+    {
+      name: "system.providers",
+      description: "Lists mock, offline and live provider slots for system and context telemetry.",
+      inputSchema: { type: "object", properties: {}, additionalProperties: false },
+      handler: async () => mcpSystemTelemetryProvidersPayload(),
     },
     {
       name: "system.history",

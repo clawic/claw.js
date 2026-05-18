@@ -12,7 +12,8 @@ export type SystemTelemetryMetricFamily =
   | "peripheral"
   | "focus"
   | "calendar_time"
-  | "weather_context";
+  | "weather_context"
+  | "local_context";
 
 export type SystemTelemetryUnit =
   | "count"
@@ -101,6 +102,35 @@ export interface SystemTelemetryRuleDefinition {
   threshold: number | string | boolean;
   severity: "info" | "warning" | "critical";
   enabled: boolean;
+}
+
+export type SystemTelemetryProviderKind =
+  | "weather"
+  | "build_status"
+  | "local_service"
+  | "agent_run"
+  | "reminder"
+  | "calendar"
+  | "custom_metric";
+
+export type SystemTelemetryProviderMode = "mock" | "offline" | "live";
+export type SystemTelemetryProviderStatus = "ready" | "disabled" | "external_pending";
+
+export interface SystemTelemetryProviderDefinition {
+  id: string;
+  kind: SystemTelemetryProviderKind;
+  label: string;
+  mode: SystemTelemetryProviderMode;
+  status: SystemTelemetryProviderStatus;
+  metricKeys: string[];
+  widgetIds: string[];
+  capabilities: SystemTelemetrySampleSupport[];
+  defaultEnabled: boolean;
+  privacyTier: SystemTelemetryPrivacyTier;
+  requiresGrant?: string;
+  credentialRefRequired: boolean;
+  freshnessMs: number;
+  description: string;
 }
 
 export const SYSTEM_TELEMETRY_METRICS: SystemTelemetryMetricDefinition[] = [
@@ -505,6 +535,67 @@ export const SYSTEM_TELEMETRY_METRICS: SystemTelemetryMetricDefinition[] = [
     requiresGrant: "weather.location.read",
     description: "Weather temperature supplied by a configured context provider.",
   },
+  {
+    key: "context.build.status",
+    family: "local_context",
+    label: "Build status",
+    unit: "state",
+    privacyTier: "safe_aggregate",
+    sourceConfidence: "provider",
+    samplingCost: "low",
+    support: ["snapshot", "history"],
+    availability: "external_pending",
+    description: "Current build or CI status supplied by a local or connector-backed context provider.",
+  },
+  {
+    key: "context.service.health",
+    family: "local_context",
+    label: "Local service health",
+    unit: "state",
+    privacyTier: "safe_aggregate",
+    sourceConfidence: "provider",
+    samplingCost: "low",
+    support: ["snapshot", "stream", "history"],
+    availability: "external_pending",
+    description: "Local development service health supplied by an offline provider.",
+  },
+  {
+    key: "context.agent_runs.active",
+    family: "local_context",
+    label: "Active agent runs",
+    unit: "count",
+    privacyTier: "safe_aggregate",
+    sourceConfidence: "provider",
+    samplingCost: "low",
+    support: ["snapshot", "stream", "history"],
+    availability: "external_pending",
+    description: "Active local agent run count supplied by the agent runtime context provider.",
+  },
+  {
+    key: "context.reminders.due_count",
+    family: "local_context",
+    label: "Due reminders",
+    unit: "count",
+    privacyTier: "calendar_private",
+    sourceConfidence: "provider",
+    samplingCost: "low",
+    support: ["snapshot", "history"],
+    availability: "permission_required",
+    requiresGrant: "reminders.read",
+    description: "Due reminder count without exposing reminder titles.",
+  },
+  {
+    key: "context.custom.metric",
+    family: "local_context",
+    label: "Custom context metric",
+    unit: "string",
+    privacyTier: "safe_aggregate",
+    sourceConfidence: "provider",
+    samplingCost: "low",
+    support: ["snapshot", "history"],
+    availability: "external_pending",
+    description: "User-defined context metric supplied through the provider contract.",
+  },
 ];
 
 export const SYSTEM_TELEMETRY_DEFAULT_WIDGETS: SystemTelemetryWidgetDefinition[] = [
@@ -514,6 +605,139 @@ export const SYSTEM_TELEMETRY_DEFAULT_WIDGETS: SystemTelemetryWidgetDefinition[]
   { id: "network-in", metricKey: "system.network.bytes_in", title: "Network", presentation: "sparkline", placement: "menubar", enabledByDefault: false },
   { id: "power-uptime", metricKey: "system.power.uptime", title: "Uptime", presentation: "text", placement: "combined_panel", enabledByDefault: false },
   { id: "weather-temperature", metricKey: "context.weather.temperature", title: "Weather", presentation: "text", placement: "menubar", enabledByDefault: false },
+  { id: "build-status", metricKey: "context.build.status", title: "Build", presentation: "icon", placement: "menubar", enabledByDefault: false },
+  { id: "service-health", metricKey: "context.service.health", title: "Services", presentation: "threshold", placement: "combined_panel", enabledByDefault: false },
+  { id: "agent-runs-active", metricKey: "context.agent_runs.active", title: "Agents", presentation: "text", placement: "menubar", enabledByDefault: false },
+  { id: "reminders-due", metricKey: "context.reminders.due_count", title: "Reminders", presentation: "text", placement: "combined_panel", enabledByDefault: false },
+  { id: "calendar-next-event", metricKey: "system.calendar.next_event_delta", title: "Calendar", presentation: "text", placement: "combined_panel", enabledByDefault: false },
+  { id: "custom-context", metricKey: "context.custom.metric", title: "Context", presentation: "text", placement: "combined_panel", enabledByDefault: false },
+];
+
+export const SYSTEM_TELEMETRY_PROVIDERS: SystemTelemetryProviderDefinition[] = [
+  {
+    id: "context.weather.mock",
+    kind: "weather",
+    label: "Mock weather context",
+    mode: "mock",
+    status: "ready",
+    metricKeys: ["context.weather.temperature"],
+    widgetIds: ["weather-temperature"],
+    capabilities: ["snapshot", "history"],
+    defaultEnabled: false,
+    privacyTier: "precise_location",
+    requiresGrant: "weather.location.read",
+    credentialRefRequired: false,
+    freshnessMs: 15 * 60_000,
+    description: "Offline fixture provider for weather widgets and tests.",
+  },
+  {
+    id: "context.weather.live",
+    kind: "weather",
+    label: "Live weather context",
+    mode: "live",
+    status: "external_pending",
+    metricKeys: ["context.weather.temperature"],
+    widgetIds: ["weather-temperature"],
+    capabilities: ["snapshot", "history"],
+    defaultEnabled: false,
+    privacyTier: "precise_location",
+    requiresGrant: "weather.location.read",
+    credentialRefRequired: true,
+    freshnessMs: 15 * 60_000,
+    description: "Live provider slot for weather data; it remains disabled until a configured provider, grant, and credential reference exist.",
+  },
+  {
+    id: "context.build.offline",
+    kind: "build_status",
+    label: "Build status context",
+    mode: "offline",
+    status: "ready",
+    metricKeys: ["context.build.status"],
+    widgetIds: ["build-status"],
+    capabilities: ["snapshot", "history"],
+    defaultEnabled: false,
+    privacyTier: "safe_aggregate",
+    credentialRefRequired: false,
+    freshnessMs: 30_000,
+    description: "Offline provider contract for local build or CI status indicators.",
+  },
+  {
+    id: "context.services.offline",
+    kind: "local_service",
+    label: "Local service health context",
+    mode: "offline",
+    status: "ready",
+    metricKeys: ["context.service.health"],
+    widgetIds: ["service-health"],
+    capabilities: ["snapshot", "stream", "history"],
+    defaultEnabled: false,
+    privacyTier: "safe_aggregate",
+    credentialRefRequired: false,
+    freshnessMs: 10_000,
+    description: "Offline provider contract for local service status indicators.",
+  },
+  {
+    id: "context.agent-runs.offline",
+    kind: "agent_run",
+    label: "Agent run context",
+    mode: "offline",
+    status: "ready",
+    metricKeys: ["context.agent_runs.active"],
+    widgetIds: ["agent-runs-active"],
+    capabilities: ["snapshot", "stream", "history"],
+    defaultEnabled: false,
+    privacyTier: "safe_aggregate",
+    credentialRefRequired: false,
+    freshnessMs: 5_000,
+    description: "Offline provider contract for active local agent run indicators.",
+  },
+  {
+    id: "context.reminders.offline",
+    kind: "reminder",
+    label: "Reminder context",
+    mode: "offline",
+    status: "ready",
+    metricKeys: ["context.reminders.due_count"],
+    widgetIds: ["reminders-due"],
+    capabilities: ["snapshot", "history"],
+    defaultEnabled: false,
+    privacyTier: "calendar_private",
+    requiresGrant: "reminders.read",
+    credentialRefRequired: false,
+    freshnessMs: 60_000,
+    description: "Offline provider contract for reminder counts without exposing reminder content.",
+  },
+  {
+    id: "context.calendar.offline",
+    kind: "calendar",
+    label: "Calendar context",
+    mode: "offline",
+    status: "ready",
+    metricKeys: ["system.calendar.next_event_delta"],
+    widgetIds: ["calendar-next-event"],
+    capabilities: ["snapshot", "history"],
+    defaultEnabled: false,
+    privacyTier: "calendar_private",
+    requiresGrant: "calendar.read",
+    credentialRefRequired: false,
+    freshnessMs: 60_000,
+    description: "Offline provider contract for calendar timing indicators without event detail.",
+  },
+  {
+    id: "context.custom.offline",
+    kind: "custom_metric",
+    label: "Custom context metric",
+    mode: "offline",
+    status: "ready",
+    metricKeys: ["context.custom.metric"],
+    widgetIds: ["custom-context"],
+    capabilities: ["snapshot", "history"],
+    defaultEnabled: false,
+    privacyTier: "safe_aggregate",
+    credentialRefRequired: false,
+    freshnessMs: 60_000,
+    description: "Offline provider contract for user-defined context metrics.",
+  },
 ];
 
 export function listSystemTelemetryMetrics(): SystemTelemetryMetricDefinition[] {
@@ -522,4 +746,13 @@ export function listSystemTelemetryMetrics(): SystemTelemetryMetricDefinition[] 
 
 export function listSystemTelemetryWidgets(): SystemTelemetryWidgetDefinition[] {
   return SYSTEM_TELEMETRY_DEFAULT_WIDGETS.map((widget) => ({ ...widget }));
+}
+
+export function listSystemTelemetryProviders(): SystemTelemetryProviderDefinition[] {
+  return SYSTEM_TELEMETRY_PROVIDERS.map((provider) => ({
+    ...provider,
+    metricKeys: [...provider.metricKeys],
+    widgetIds: [...provider.widgetIds],
+    capabilities: [...provider.capabilities],
+  }));
 }

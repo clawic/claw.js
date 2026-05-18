@@ -5,6 +5,7 @@ import path from "node:path";
 import Database from "better-sqlite3";
 import {
   listSystemTelemetryMetrics,
+  listSystemTelemetryProviders,
   listSystemTelemetryWidgets,
   resolveClawPersistentSurfacePath,
   type SystemTelemetryMetricSample,
@@ -288,4 +289,8 @@ export function mcpSystemTelemetryMetricsPayload() {
 
 export function mcpSystemTelemetryWidgetsPayload() {
   return { widgets: listSystemTelemetryWidgets() };
+}
+
+export function mcpSystemTelemetryProvidersPayload() {
+  return { providers: listSystemTelemetryProviders() };
 }
