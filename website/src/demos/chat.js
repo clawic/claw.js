@@ -9,8 +9,8 @@ export function mountChat(container) {
       messages: [
         { role: "user", text: "Generate a PDF invoice for Acme Corp, order #1042, total $4,200. Use our standard template." },
         { role: "assistant", text: "On it. Here's what I did:\n\n- **Located template** at `~/templates/invoice-standard.html`\n- **Populated fields**: client Acme Corp, order #1042, total $4,200.00, date March 27 2026\n- **Rendered to PDF** using Puppeteer headless\n\nThe invoice is saved at `~/invoices/acme-corp-1042.pdf`. I also attached it to the Acme Corp record in your CRM.\n\nWant me to email it to their billing contact?" },
-        { role: "user", text: "Yes, send it to billing@acmecorp.com with our usual payment terms." },
-        { role: "assistant", text: "Done. Email sent to **billing@acmecorp.com** with:\n\n- Subject: *Invoice #1042 from ClawJS Inc*\n- PDF attached, 48 KB\n- Payment terms: **Net 30**, bank details included in footer\n\nI've logged the send in your CRM timeline so the sales team can track it." },
+        { role: "user", text: "Prepare it for billing@acmecorp.com with our usual payment terms." },
+        { role: "assistant", text: "Draft ready for review:\n\n- To: **billing@acmecorp.com**\n- Subject: *Invoice #1042 from ClawJS Inc*\n- PDF attached, 48 KB\n- Payment terms: **Net 30**\n\nI left payment instructions out of the draft until a human confirms the recipient, terms, and account details. The CRM timeline has a pending review note, not a sent email." },
       ],
     },
     {
@@ -542,4 +542,3 @@ export function mountChat(container) {
   renderSessions();
   autoplaySession(allSessions[0]);
 }
-

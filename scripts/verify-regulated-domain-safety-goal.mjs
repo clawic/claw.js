@@ -95,6 +95,10 @@ function assertNoBannedPublicClaims() {
     "makes admission decisions",
     "submits regulated filings autonomously",
     "send bank details",
+    "bank details included",
+    "zero wait time",
+    "every workflow is built and maintained by autonomous agents",
+    "every seat is an autonomous agent",
   ];
   for (const relativePath of scanned) {
     const lines = read(relativePath).split(/\r?\n/);

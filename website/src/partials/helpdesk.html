@@ -3,8 +3,8 @@
     <div class="container">
       <div class="section__header">
         <p class="section__label">Help Desk</p>
-        <h2 class="section__title">AI-Powered Support, Zero Wait Time</h2>
-        <p class="section__desc">Agents triage tickets, draft replies, escalate critical issues, and resolve conversations. A full Zendesk-class inbox where every seat is an autonomous agent.</p>
+        <h2 class="section__title">AI-Assisted Support Queue</h2>
+        <p class="section__desc">Agents sort tickets, draft replies, surface escalation candidates, and prepare resolution notes. Sending replies and closing conversations remain approval-gated.</p>
       </div>
       <div class="demo-stack demo-stack--wide">
         <div class="demo-stack__layer demo-stack__layer--front">
@@ -24,7 +24,7 @@
     <span class="property">status</span><span class="punctuation">:</span> <span class="string">"open"</span>
   <span class="punctuation">});</span>
 
-<span class="comment">// Auto-triage</span>
+<span class="comment">// Suggest triage</span>
 <span class="keyword">await</span> claw<span class="punctuation">.</span><span class="property">helpdesk</span>
   <span class="punctuation">.</span><span class="function">triage</span><span class="punctuation">(</span><span class="string">"T-1042"</span><span class="punctuation">);</span>
 
@@ -34,9 +34,9 @@
     <span class="string">"T-1042"</span>
   <span class="punctuation">);</span>
 
-<span class="comment">// Resolve</span>
+<span class="comment">// Prepare a resolution note</span>
 <span class="keyword">await</span> claw<span class="punctuation">.</span><span class="property">helpdesk</span>
-  <span class="punctuation">.</span><span class="function">resolve</span><span class="punctuation">(</span><span class="string">"T-1042"</span><span class="punctuation">);</span></code></pre>
+  <span class="punctuation">.</span><span class="function">prepareResolution</span><span class="punctuation">(</span><span class="string">"T-1042"</span><span class="punctuation">);</span></code></pre>
           </div>
         </div>
       </div>
