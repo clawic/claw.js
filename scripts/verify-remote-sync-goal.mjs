@@ -523,6 +523,18 @@ for (const ref of [
 ]) {
   if (!serverTrustSourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-002 must cite ${ref}`);
 }
+const hostedServiceSourceQaReview = sourceQaReviewReport.items.find((item) => item.qaId === "QA-018");
+for (const ref of [
+  "GatewayDeploymentManifest",
+  "claw gateway serve",
+  "claw gateway project",
+  "claw gateway conformance",
+  "hostedSelfHostedParity:required",
+  "claw remote pending:self_hosted_deployment",
+  "claw remote pending:hosted_deployment",
+]) {
+  if (!hostedServiceSourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-018 must cite ${ref}`);
+}
 const reviewedClosureGate = buildRemoteGoalClosureGate({
   generatedAt: "2026-05-18T11:20:01.000Z",
   sourceQaReviews: sourceQaReviewReport.items,
