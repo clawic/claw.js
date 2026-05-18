@@ -23,8 +23,9 @@ Search V1.1 has four layers:
    source can use its own store, `search.sqlite`, or both.
 3. **Root Search federator**: `createRootSearchFederator()` fans out across
    selected enabled sources, applies strict per-source timeouts and agent result
-   budgets, merges/ranks results, and reports partial results when slow or
-   disabled sources are omitted.
+   budgets, caps the first batch by the global latency budget, merges/ranks
+   results, and reports partial results when slow or disabled sources are
+   omitted.
 4. **Search store**: `search.sqlite` is rebuildable and stores FTS documents,
    fragments, actions, cursors, tombstones, saved searches, monitors, ranking
    cache, and optional vectors. Canonical records stay in `core.sqlite`; source
@@ -620,9 +621,12 @@ signed host shortcut broker validates it.
   use partitioned FTS for shard-scoped lexical queries, and keep
   section-specific searches independent from universal indexing.
 - Enforce performance gates: hot searches target 50 ms; Root Search first batch
-  targets 200 ms; slow sources time out instead of blocking. The Search package
-  includes a synthetic latency regression gate for those hot/root budgets, while
-  million-row scale evidence remains in the scale lab.
+  targets 200 ms; slow sources time out instead of blocking. Root Search
+  enforces both per-source timeout and global first-batch budgets, so a source
+  cannot consume a larger first-batch window just because its individual timeout
+  is higher. The Search package includes a synthetic latency regression gate for
+  those hot/root budgets, while million-row scale evidence remains in the scale
+  lab.
 - Keep sensitive previews redacted and action execution brokered by grants and
   approvals.
 

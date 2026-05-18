@@ -508,9 +508,17 @@ export function createRootSearchFederator(options: RootSearchFederatorOptions = 
       const omittedSources: SearchQueryOutput["omittedSources"] = [];
       const settled = await Promise.all(selected.map(async (source) => {
         try {
-          const status = source.status
-            ? await withTimeout(Promise.resolve(source.status()), budgets.sourceTimeoutMs)
-            : defaultSourceStatus(source.manifest);
+          const sourceBudgetMs = searchSourceDeadlineMs(budgets, startedAt);
+          const { status, results } = await withTimeout((async () => {
+            const currentStatus = source.status
+              ? await Promise.resolve(source.status())
+              : defaultSourceStatus(source.manifest);
+            if (currentStatus.state === "disabled" || currentStatus.state === "paused" || currentStatus.state === "excluded") {
+              return { status: currentStatus, results: [] };
+            }
+            const sourceResults = await Promise.resolve(source.query(input, { budgets, startedAt }));
+            return { status: currentStatus, results: sourceResults };
+          })(), sourceBudgetMs);
           if (status.state === "disabled" || status.state === "paused" || status.state === "excluded") {
             omittedSources.push({
               source: source.manifest.id,
@@ -519,10 +527,6 @@ export function createRootSearchFederator(options: RootSearchFederatorOptions = 
             });
             return { source, results: [] };
           }
-          const results = await withTimeout(
-            Promise.resolve(source.query(input, { budgets, startedAt })),
-            budgets.sourceTimeoutMs,
-          );
           return { source, results };
         } catch (error) {
           omittedSources.push({
@@ -1299,6 +1303,12 @@ class SearchTimeoutError extends Error {
     super(`search source timed out after ${timeoutMs}ms`);
     this.name = "SearchTimeoutError";
   }
+}
+
+function searchSourceDeadlineMs(budgets: SearchBudgets, startedAt: number): number {
+  const elapsed = Date.now() - startedAt;
+  const firstBatchRemaining = budgets.globalFirstBatchMs - elapsed;
+  return Math.max(1, Math.min(budgets.sourceTimeoutMs, firstBatchRemaining));
 }
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {

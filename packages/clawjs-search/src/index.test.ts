@@ -432,6 +432,36 @@ test("registry federates sources with strict source timeouts", async () => {
   assert.equal(registry.budgets.globalFirstBatchMs, DEFAULT_SEARCH_BUDGETS.globalFirstBatchMs);
 });
 
+test("registry caps first batch by global budget even when source timeout is larger", async () => {
+  const registry = createRootSearchFederator({ budgets: { sourceTimeoutMs: 200, globalFirstBatchMs: 15 } });
+  registry.register({
+    manifest: createFrameworkSearchSourceManifest({
+      id: "fast-docs",
+      domain: "documents",
+      name: "Fast docs",
+      resultTypes: ["document"],
+    }),
+    query: () => [{ id: "fast-docs:alpha", source: "fast-docs", domain: "documents", type: "document", title: "Alpha doc", score: 80 }],
+  });
+  registry.register({
+    manifest: createFrameworkSearchSourceManifest({
+      id: "slow-docs",
+      domain: "documents",
+      name: "Slow docs",
+      resultTypes: ["document"],
+    }),
+    query: () => new Promise((resolve) => setTimeout(() => resolve([{ id: "slow-docs:beta", source: "slow-docs", domain: "documents", type: "document", title: "Beta doc", score: 90 }]), 60)),
+  });
+
+  const output = await registry.query({ query: "doc", domains: ["documents"] });
+
+  assert.deepEqual(output.results.map((result) => result.id), ["fast-docs:alpha"]);
+  assert.equal(output.partial, true);
+  assert.equal(output.omittedSources[0]?.source, "slow-docs");
+  assert.equal(output.omittedSources[0]?.reason, "timeout");
+  assert.ok(output.elapsedMs < 80);
+});
+
 test("registry skips disabled sources and applies agent result budgets", async () => {
   const registry = createRootSearchFederator({ budgets: { sourceTimeoutMs: 20 } });
   registry.register({
