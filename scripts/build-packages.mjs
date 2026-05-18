@@ -7,6 +7,7 @@ const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const workspaces = [
   "@clawjs/core",
   "@clawjs/search",
+  "@clawjs/search-mcp",
   "@clawjs/claw",
   "@clawjs/node",
   "@clawjs/sessions",

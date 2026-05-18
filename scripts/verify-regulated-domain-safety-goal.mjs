@@ -328,6 +328,22 @@ for (const [relativePath, snippets] of [
     "explicit approval for that exact",
     "docs/legal-external-pending-validation.md",
   ]],
+  ["package.json", [
+    "npm publish --dry-run --access public --workspace @clawjs/search",
+    "npm publish --dry-run --access public --workspace @clawjs/search-mcp",
+    "npm publish --access public --workspace @clawjs/search",
+    "npm publish --access public --workspace @clawjs/search-mcp",
+  ]],
+  ["scripts/build-packages.mjs", [
+    "\"@clawjs/search\"",
+    "\"@clawjs/search-mcp\"",
+  ]],
+  ["scripts/pack-smoke.mjs", [
+    "packages\", \"clawjs-search\"",
+    "packages\", \"clawjs-search-mcp\"",
+    "await import(\"@clawjs/search\")",
+    "await import(\"@clawjs/search-mcp\")",
+  ]],
   ["CONSTITUTION.md", [
     "Regulated domains are assistive",
     "other regulated decisions",

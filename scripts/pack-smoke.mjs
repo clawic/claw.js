@@ -28,6 +28,8 @@ function packPackage(packageDir) {
 
 const packageDirs = [
   path.join(rootDir, "packages", "clawjs-core"),
+  path.join(rootDir, "packages", "clawjs-search"),
+  path.join(rootDir, "packages", "clawjs-search-mcp"),
   path.join(rootDir, "packages", "clawjs-node"),
   path.join(rootDir, "packages", "clawjs-workspace"),
   path.join(rootDir, "packages", "clawjs-node-compat"),
@@ -99,6 +101,14 @@ run("node", ["--input-type=module", "-e", `
   const cli = await import("@clawjs/cli");
   if (typeof cli.runCli !== "function") {
     throw new Error("@clawjs/cli helpers are missing");
+  }
+  const search = await import("@clawjs/search");
+  if (typeof search.SearchStore !== "function" || typeof search.createFrameworkSearchSourceManifest !== "function") {
+    throw new Error("@clawjs/search helpers are missing");
+  }
+  const searchMcp = await import("@clawjs/search-mcp");
+  if (typeof searchMcp.runSearchMcpServer !== "function") {
+    throw new Error("@clawjs/search-mcp helpers are missing");
   }
   const audio = await import("@clawjs/audio");
   if (typeof audio.AudioApiClient !== "function" || typeof audio.buildAudioApp !== "function") {
