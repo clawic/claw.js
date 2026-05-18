@@ -14,7 +14,16 @@
       "evidenceRefs": [
         "docs/adr/0022-remote-gateway-sync-redesign.md",
         "docs/relay.md",
-        "docs/remote-gateway-sync-completion-audit.md#requirement-status"
+        "docs/remote-gateway-sync-completion-audit.md#requirement-status",
+        "remoteSyncRequiredDecisionIds",
+        "remoteSyncRequiredRouteIds",
+        "Coordinator",
+        "Gateway",
+        "Connector",
+        "Sync",
+        "claw inspect remote",
+        "claw remote routes",
+        "claw remote conformance"
       ],
       "reviewedAt": "2026-05-18T11:20:00.000Z",
       "writes": false

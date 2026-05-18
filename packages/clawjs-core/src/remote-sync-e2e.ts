@@ -676,9 +676,12 @@ function sourceQaReviewReportId(parts: string[]): string {
 
 function externalPendingRequiredSourceQaIds(generatedAt: string): string[] {
   return [...new Set(
-    buildRemoteExternalPendingRegister({ generatedAt }).requirements
-      .map((entry) => remoteSourceQaIdsByDecisionKey.get(entry.decisionId))
-      .filter((qaId): qaId is string => !!qaId),
+    [
+      "QA-004",
+      ...buildRemoteExternalPendingRegister({ generatedAt }).requirements
+        .map((entry) => remoteSourceQaIdsByDecisionKey.get(entry.decisionId))
+        .filter((qaId): qaId is string => !!qaId),
+    ],
   )].sort();
 }
 

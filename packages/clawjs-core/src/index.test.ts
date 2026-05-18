@@ -1123,7 +1123,7 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(scopedSourceQaReviewTemplate.reviewCount, 2);
   assert.deepEqual(scopedSourceQaReviewTemplate.items.map((entry) => entry.qaId), ["QA-001", "QA-023"]);
 
-  const externalPendingSourceQaIds = new Set(["QA-002", "QA-005", "QA-006", "QA-007", "QA-010", "QA-012", "QA-013", "QA-015", "QA-018", "QA-020", "QA-021"]);
+  const externalPendingSourceQaIds = new Set(["QA-002", "QA-004", "QA-005", "QA-006", "QA-007", "QA-010", "QA-012", "QA-013", "QA-015", "QA-018", "QA-020", "QA-021"]);
   const completeSourceQaReviewReport = buildRemoteSourceQaReviewReport({
     generatedAt: "2026-05-17T10:13:26.500Z",
     reviews: remoteGoalClosureRequiredSourceQaIds.map((qaId, index) => ({
@@ -1265,6 +1265,7 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(blockedClosureGate.missingSourceQaIds.length, 23);
   assert.deepEqual(blockedClosureGate.invalidSourceQaIds, []);
   assert.deepEqual(blockedClosureGate.duplicateSourceQaIds, []);
+  assert.equal(blockedClosureGate.externalPendingRequiredSourceQaIds.includes("QA-004"), true);
   assert.equal(blockedClosureGate.externalPendingRequiredSourceQaIds.includes("QA-007"), true);
   assert.deepEqual(blockedClosureGate.invalidExternalPendingDispositionQaIds, []);
   assert.equal(blockedClosureGate.blockers.includes("source_qa_review"), true);

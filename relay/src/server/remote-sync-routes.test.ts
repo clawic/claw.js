@@ -299,6 +299,7 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(closureGatePayload.missingSourceQaIds.length, 23);
     assert.deepEqual(closureGatePayload.invalidSourceQaIds, []);
     assert.deepEqual(closureGatePayload.duplicateSourceQaIds, []);
+    assert.equal(closureGatePayload.externalPendingRequiredSourceQaIds.includes("QA-004"), true);
     assert.equal(closureGatePayload.externalPendingRequiredSourceQaIds.includes("QA-007"), true);
     assert.deepEqual(closureGatePayload.invalidExternalPendingDispositionQaIds, []);
     assert.equal(closureGatePayload.sourceQaReviewStatus, "incomplete");

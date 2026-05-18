@@ -410,6 +410,22 @@ for (const item of sourceQaReviewReport.items) {
     fail(`source Q/A review artifact ${item.qaId} must cite completion audit or verifier evidence`);
   }
 }
+const relayBoundarySourceQaReview = sourceQaReviewReport.items.find((item) => item.qaId === "QA-001");
+for (const ref of [
+  "docs/adr/0022-remote-gateway-sync-redesign.md",
+  "docs/relay.md",
+  "remoteSyncRequiredDecisionIds",
+  "remoteSyncRequiredRouteIds",
+  "Coordinator",
+  "Gateway",
+  "Connector",
+  "Sync",
+  "claw inspect remote",
+  "claw remote routes",
+  "claw remote conformance",
+]) {
+  if (!relayBoundarySourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-001 must cite ${ref}`);
+}
 const topologySourceQaReview = sourceQaReviewReport.items.find((item) => item.qaId === "QA-004");
 if (!topologySourceQaReview?.evidenceRefs.includes("claw remote e2e-plan:requiredTopologyTargets")) {
   fail("source Q/A review artifact QA-004 must cite provider/device topology targets");
@@ -1048,6 +1064,7 @@ if (blockedClosureGate.requiredSourceQaIds.length !== 23) fail("remote closure g
 if (blockedClosureGate.missingSourceQaIds.length !== 23) fail("default remote closure gate must miss all source Q/A ids");
 if (blockedClosureGate.invalidSourceQaIds.length !== 0) fail("default remote closure gate must expose no invalid source Q/A ids");
 if (blockedClosureGate.duplicateSourceQaIds.length !== 0) fail("default remote closure gate must expose no duplicate source Q/A ids");
+if (!blockedClosureGate.externalPendingRequiredSourceQaIds.includes("QA-004")) fail("remote closure gate must expose topology source Q/A as requiring external_pending disposition");
 if (!blockedClosureGate.externalPendingRequiredSourceQaIds.includes("QA-007")) fail("remote closure gate must expose physical/provider source Q/A ids requiring external_pending disposition");
 if (blockedClosureGate.invalidExternalPendingDispositionQaIds.length !== 0) fail("default remote closure gate must expose no invalid external-pending dispositions");
 if (!blockedClosureGate.blockers.includes("source_qa_review") || !blockedClosureGate.blockers.includes("external_validation")) {
@@ -1069,7 +1086,7 @@ if (completeSourceQaReviewReport.items.length !== 23) fail("complete source Q/A 
 if (!completeSourceQaReviewReport.items.every((entry) => entry.disposition && entry.evidenceRefs.length > 0 && entry.writes === false)) {
   fail("complete source Q/A review report must include disposition, evidence refs, and no-write items");
 }
-if (!completeSourceQaReviewReport.externalPendingRequiredSourceQaIds.includes("QA-007")) {
+if (!completeSourceQaReviewReport.externalPendingRequiredSourceQaIds.includes("QA-004") || !completeSourceQaReviewReport.externalPendingRequiredSourceQaIds.includes("QA-007")) {
   fail("complete source Q/A review report must identify source Q/A rows that still require external-pending disposition");
 }
 if (!completeSourceQaReviewReport.items.every((entry) => !completeSourceQaReviewReport.externalPendingRequiredSourceQaIds.includes(entry.qaId) || entry.disposition === "external_pending")) {
