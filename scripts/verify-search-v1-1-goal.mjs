@@ -1118,6 +1118,9 @@ for (const snippet of [
 ]) {
   requireSnippet("packages/clawjs/src/cli-search-index.test.ts", snippet);
 }
+requireSnippet("packages/clawjs/src/cli-work-search-events.test.ts", "productivity database writes schedule work search events for create update and delete");
+requireSnippet("packages/clawjs/src/cli-work-search-events.test.ts", "operation === \"upsert\"");
+requireSnippet("packages/clawjs/src/cli-work-search-events.test.ts", "operation === \"delete\"");
 
 for (const snippet of [
   "published CLI package does not depend on the retired Index package",
