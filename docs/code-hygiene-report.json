@@ -1,228 +1,207 @@
 {
   "schemaVersion": 1,
   "program": "code-hygiene",
-  "generatedAt": "2026-05-18T09:01:20.951Z",
-  "mode": "report-only",
-  "summary": {
+  "generatedAt": "2026-05-18",
+  "status": "active",
+  "blockingFindings": 0,
+  "reportOnlyFindings": 24,
+  "baselinedFindings": 5,
+  "lastAuditSummary": {
     "scannedFiles": 7105,
     "todoFindings": 0,
     "duplicateAssetGroups": 24,
     "duplicateAssetFiles": 65,
     "unreferencedAssetCandidates": 0
   },
-  "findings": {
-    "todos": [],
-    "duplicateAssets": [
+  "knipSummary": {
+    "filesWithIssues": 58,
+    "totalIssues": 567,
+    "issueTypes": {
+      "unlisted": 2,
+      "exports": 509,
+      "owners": 55,
+      "duplicates": 1
+    },
+    "topFiles": [
       {
-        "hash": "f360afd976479b2e1002112d96225e00466a0a2e4ecc4a738745613c6b6cc707",
-        "size": 1235074,
-        "files": [
-          "apps/chat/ios/ClawJS/Assets.xcassets/AppIcon.appiconset/AppIcon.png",
-          "apps/chat/macos/ClawJSMac/Assets.xcassets/AppIcon.appiconset/AppIcon.png",
-          "docs/assets/clawjs-logo.png"
-        ]
+        "file": "packages/clawjs-core/src/builtins/finance/index.ts",
+        "totalIssues": 24,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 23
+        }
       },
       {
-        "hash": "854db1ffa0b517c9e6776485ee8a6e472cd4f83b2576545e33fdf357ad57318a",
-        "size": 498,
-        "files": [
-          "apps/chat/ios/ClawJS/Assets.xcassets/EditIcon.imageset/edit.svg",
-          "apps/chat/macos/ClawJSMac/Assets.xcassets/EditIcon.imageset/edit.svg"
-        ]
+        "file": "packages/clawjs-core/src/builtins/reading_media/index.ts",
+        "totalIssues": 23,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 22
+        }
       },
       {
-        "hash": "876a637bb3195d6e31911df9630b5235124119e6498e33f03674ec5f12b09aaf",
-        "size": 284,
-        "files": [
-          "apps/chat/ios/ClawJS/Assets.xcassets/MenuIcon.imageset/menu.svg",
-          "apps/chat/macos/ClawJSMac/Assets.xcassets/MenuIcon.imageset/menu.svg"
-        ]
+        "file": "packages/clawjs-core/src/builtins/billing/index.ts",
+        "totalIssues": 22,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 21
+        }
       },
       {
-        "hash": "12a43913cdb137ec2b538a4fd2ff4c372001914cab991d2821ad917a23ead8c3",
-        "size": 24911,
-        "files": [
-          "apps/host/assets/AppIcon.iconset/icon_128x128@2x.png",
-          "apps/host/assets/AppIcon.iconset/icon_256x256.png"
-        ]
+        "file": "packages/clawjs-core/src/builtins/analytics/index.ts",
+        "totalIssues": 20,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 19
+        }
       },
       {
-        "hash": "f86f586a80cddcf755d3de7230a461640774d9fb5aed99e94ec593e3d9c3f5eb",
-        "size": 1219,
-        "files": [
-          "apps/host/assets/AppIcon.iconset/icon_16x16@2x.png",
-          "apps/host/assets/AppIcon.iconset/icon_32x32.png"
-        ]
+        "file": "packages/clawjs-core/src/builtins/fitness/index.ts",
+        "totalIssues": 20,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 19
+        }
       },
       {
-        "hash": "518172897399c137ecab65fd2ee05ccc625b2d88e6ad7a54237718940a852ff9",
-        "size": 82238,
-        "files": [
-          "apps/host/assets/AppIcon.iconset/icon_256x256@2x.png",
-          "apps/host/assets/AppIcon.iconset/icon_512x512.png"
-        ]
+        "file": "packages/clawjs-core/src/builtins/health/index.ts",
+        "totalIssues": 20,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 19
+        }
       },
       {
-        "hash": "7ffbcf2122a59665a7b96acc68bf6bdff98fb61f93c3310b05617754594ad52a",
-        "size": 1009163,
-        "files": [
-          "apps/host/assets/AppIcon.iconset/icon_512x512@2x.png",
-          "apps/host/assets/AppIcon.png"
-        ]
+        "file": "packages/clawjs-core/src/builtins/cooking/index.ts",
+        "totalIssues": 19,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 18
+        }
       },
       {
-        "hash": "05476543b5b2eed0fa0b9a7907ca4df1c3a3ac7f3ac4a12a5875d7dc1cc46141",
-        "size": 20064,
-        "files": [
-          "assets/apple-touch-icon.png",
-          "examples/showcase/public/apple-touch-icon.png",
-          "packages/clawjs-database/public/brand/apple-touch-icon.png"
-        ]
+        "file": "packages/clawjs-core/src/builtins/crm/index.ts",
+        "totalIssues": 19,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 18
+        }
       },
       {
-        "hash": "749c8072e433c8131a8341af626262084fee9bb4ff652bd0c29c8302235f4990",
-        "size": 5430,
-        "files": [
-          "assets/favicon.ico",
-          "examples/showcase/src/app/favicon.ico",
-          "packages/clawjs-database/public/brand/favicon.ico"
-        ]
+        "file": "packages/clawjs-core/src/builtins/agents/index.ts",
+        "totalIssues": 17,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 16
+        }
       },
       {
-        "hash": "8cb11b1f1a2b312ec05446eb5ef8e1c9d07f411aa6e3a826853cb76ced91bdd1",
-        "size": 22082,
-        "files": [
-          "assets/icon-192.png",
-          "packages/clawjs-database/public/brand/icon-192.png"
-        ]
+        "file": "packages/clawjs-core/src/builtins/identity/index.ts",
+        "totalIssues": 16,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 15
+        }
       },
       {
-        "hash": "cc46c05668645c824fb533f6a24a3872e6013adaba117122aa6b76054421432c",
-        "size": 124237,
-        "files": [
-          "assets/icon-512.png",
-          "assets/logo.png",
-          "examples/showcase/public/logo-512.png",
-          "monitor/ui/public/logo.png",
-          "packages/clawjs-database/public/brand/icon-512.png",
-          "packages/clawjs-database/public/brand/logo.png"
-        ]
+        "file": "packages/clawjs-core/src/builtins/hr/index.ts",
+        "totalIssues": 14,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 13
+        }
       },
       {
-        "hash": "5ddc2bf3631579d5dd88df0bc7b7a3ec9a11adb3428ecbc4d97cdcb58f2448fc",
-        "size": 414174,
-        "files": [
-          "assets/og-image.png",
-          "examples/showcase/public/og-image.png",
-          "packages/clawjs-database/public/brand/og-image.png"
-        ]
+        "file": "packages/clawjs-core/src/builtins/luxury_and_collecting/index.ts",
+        "totalIssues": 14,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 13
+        }
       },
       {
-        "hash": "b42424d719d393d1483d7c2be67308f999fbbb8d4941302293c36e336b1db435",
-        "size": 12201,
-        "files": [
-          "assets/runtimes/hermes.png",
-          "examples/showcase/public/runtimes/hermes.png",
-          "packages/clawjs-database/public/brand/runtimes/hermes.png"
-        ]
+        "file": "packages/clawjs-core/src/builtins/support/index.ts",
+        "totalIssues": 12,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 11
+        }
       },
       {
-        "hash": "3bc9217238e09f58a50639e9c285b0815765c81bbcba49b0ab50219330fc48f6",
-        "size": 3040,
-        "files": [
-          "assets/runtimes/ironclaw.png",
-          "examples/showcase/public/runtimes/ironclaw.png",
-          "packages/clawjs-database/public/brand/runtimes/ironclaw.png"
-        ]
+        "file": "packages/clawjs-core/src/builtins/travel/index.ts",
+        "totalIssues": 12,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 11
+        }
       },
       {
-        "hash": "a0b634b2a94a28b97e810a61e96e93b69a758de1aaaa11be02bbf78aeabdd19b",
-        "size": 5233,
-        "files": [
-          "assets/runtimes/nanobot.png",
-          "examples/showcase/public/runtimes/nanobot.png",
-          "packages/clawjs-database/public/brand/runtimes/nanobot.png"
-        ]
+        "file": "packages/clawjs-core/src/builtins/career/index.ts",
+        "totalIssues": 11,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 10
+        }
       },
       {
-        "hash": "da547e3be672fda7f2d8eeddaa13525f690ff49416509b680f38552ac45eb575",
-        "size": 4557,
-        "files": [
-          "assets/runtimes/nanoclaw.png",
-          "examples/showcase/public/runtimes/nanoclaw.png",
-          "packages/clawjs-database/public/brand/runtimes/nanoclaw.png"
-        ]
+        "file": "packages/clawjs-core/src/builtins/infra/index.ts",
+        "totalIssues": 11,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 10
+        }
       },
       {
-        "hash": "2477abc8272f54e115c0d62b0b8d850c9b31bb1d2cd0f4fcdc1f61775953e544",
-        "size": 5288,
-        "files": [
-          "assets/runtimes/nemoclaw.png",
-          "examples/showcase/public/runtimes/nemoclaw.png",
-          "packages/clawjs-database/public/brand/runtimes/nemoclaw.png"
-        ]
+        "file": "packages/clawjs-core/src/builtins/learning/index.ts",
+        "totalIssues": 11,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 10
+        }
       },
       {
-        "hash": "81d54dfbb30f94d837bb60a16cb410fbc2789fa7a1c6cd8756173ccce8f43ce7",
-        "size": 1493,
-        "files": [
-          "assets/runtimes/nullclaw.png",
-          "examples/showcase/public/runtimes/nullclaw.png",
-          "packages/clawjs-database/public/brand/runtimes/nullclaw.png"
-        ]
+        "file": "packages/clawjs-core/src/builtins/mental_health_recovery/index.ts",
+        "totalIssues": 11,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 10
+        }
       },
       {
-        "hash": "06f2051cd3b540b35c118c06d9f91ad31406de3ff0d1e8e9e34c8da8570813b7",
-        "size": 4526,
-        "files": [
-          "assets/runtimes/openclaw.png",
-          "examples/showcase/public/runtimes/openclaw.png",
-          "packages/clawjs-database/public/brand/runtimes/openclaw.png"
-        ]
+        "file": "packages/clawjs-core/src/builtins/observability/index.ts",
+        "totalIssues": 11,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 10
+        }
       },
       {
-        "hash": "8c25195eda46ae916a6071fa78361b0c751468a3e3102eb199a0cd7009108c16",
-        "size": 2555,
-        "files": [
-          "assets/runtimes/picoclaw.png",
-          "examples/showcase/public/runtimes/picoclaw.png",
-          "packages/clawjs-database/public/brand/runtimes/picoclaw.png"
-        ]
-      },
-      {
-        "hash": "f8910a9c27b60ae360ac099665501abb0a457c72792413bb6f7371b8dfe90bae",
-        "size": 5478,
-        "files": [
-          "assets/runtimes/zeroclaw.png",
-          "examples/showcase/public/runtimes/zeroclaw.png",
-          "packages/clawjs-database/public/brand/runtimes/zeroclaw.png"
-        ]
-      },
-      {
-        "hash": "c4f5d4b111df659a05625a9cb501f8ebe7fbf568338aa96858b3a5bf71153a14",
-        "size": 819829,
-        "files": [
-          "assets/sponsors/landscape-ai.png",
-          "packages/clawjs-database/public/brand/sponsors/landscape-ai.png"
-        ]
-      },
-      {
-        "hash": "b8caae67d48e9a285de2e2efbe487309c9c583a640ef89aa8ecf0a1830a677c6",
-        "size": 5685,
-        "files": [
-          "examples/showcase/public/chat-icon.png",
-          "examples/showcase/public/header-chat-icon.png"
-        ]
-      },
-      {
-        "hash": "b2a93171152e332715079c5f9f7a79e1bacc0dd8e8dc89472d9c527a7eee4af3",
-        "size": 411,
-        "files": [
-          "packages/clawjs/templates/app/src/app/icon.svg",
-          "packages/create-claw-app/template/src/app/icon.svg"
-        ]
+        "file": "packages/clawjs-core/src/builtins/education_school/index.ts",
+        "totalIssues": 10,
+        "issueCounts": {
+          "owners": 1,
+          "exports": 9
+        }
       }
-    ],
-    "unreferencedAssets": []
-  }
+    ]
+  },
+  "peripherySummary": {
+    "status": "external-pending",
+    "packageCount": 2,
+    "scannedPackages": 0,
+    "failedPackages": 0,
+    "totalFindings": 0
+  },
+  "externalPending": [
+    {
+      "id": "periphery-binary-unavailable",
+      "tool": "periphery",
+      "message": "Periphery 3.7.4 is pinned and report-only, but the binary is not installed on PATH for the calibration scan."
+    }
+  ],
+  "notes": [
+    "Initial cleanup completed: blocking findings are zero, actionable TODO/FIXME/HACK/XXX findings are zero, and unreferenced asset candidates are zero after worktree/generated/public asset calibration and removal of the iOS all-projects placeholder.",
+    "Use scripts/code-hygiene-audit.mjs for report-only TODO, duplicate asset, and unreferenced asset candidate findings.",
+    "Use scripts/code-hygiene-periphery.mjs for report-only Swift package calibration once the pinned binary is available."
+  ]
 }

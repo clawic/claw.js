@@ -2,6 +2,8 @@
 
 Mode: report-only.
 
+JSON pair: `docs/code-hygiene-report.json`.
+
 - Scanned files: 7105
 - TODO/FIXME/HACK/XXX findings: 0
 - Duplicate asset groups: 24
@@ -9,6 +11,7 @@ Mode: report-only.
 - Unreferenced asset candidates: 0
 
 This audit is advisory until the cleanup campaign classifies or removes findings.
+The unreferenced asset candidates category remains tracked explicitly.
 
 ## Duplicate Asset Groups
 
