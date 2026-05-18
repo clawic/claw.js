@@ -8,6 +8,7 @@ import {
   explainConnectorContextChoice,
   getConnectorGovernedContextProviderSchema,
   redactConnectorContextRecord,
+  validateConnectorContextProviderSchema,
   type ConnectorGovernedContextRecord,
 } from "./index.ts";
 
@@ -27,6 +28,32 @@ test("builtin governed connector context schemas pass doctor checks", () => {
   assert.equal(report.ok, true);
   assert.equal(report.providers, CONNECTOR_GOVERNED_CONTEXT_PROVIDER_SCHEMAS.length);
   assert.deepEqual(report.gaps, []);
+});
+
+test("provider schemas expose safe daily-use examples and secret-ref coverage", () => {
+  for (const schema of CONNECTOR_GOVERNED_CONTEXT_PROVIDER_SCHEMAS) {
+    assert.equal(Boolean(schema.guidance?.summary), true, schema.providerId);
+    assert.equal(schema.fields.some((field) => field.sensitivity === "secret_ref"), true, schema.providerId);
+    for (const contextKind of schema.contextKinds) {
+      const example = schema.examples?.find((entry) => entry.kind === contextKind.kind);
+      assert.ok(example, `${schema.providerId}:${contextKind.kind}`);
+      for (const requiredField of contextKind.requiredFields) {
+        assert.ok(example.fields[requiredField], `${example.id}:${requiredField}`);
+      }
+    }
+  }
+});
+
+test("provider doctor reports daily-use fixture and fallback gaps", () => {
+  const revenueCat = getConnectorGovernedContextProviderSchema("revenuecat");
+  assert.ok(revenueCat);
+
+  const gaps = validateConnectorContextProviderSchema({
+    ...revenueCat,
+    examples: revenueCat.examples?.filter((example) => example.id !== "revenuecat_api_v1"),
+  });
+
+  assert.equal(gaps.some((gap) => gap.code === "fallback_ref_missing"), true);
 });
 
 test("Apple context fails closed when Team ID or Bundle ID context is blocked or missing", () => {

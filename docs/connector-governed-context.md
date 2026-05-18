@@ -57,11 +57,19 @@ secret reference value or resolved credential.
   codes without private values or plaintext credentials.
 - Provider schemas cite source documentation and are checked by the doctor
   report.
+- Provider schemas include safe daily-use fixture examples for each declared
+  context kind. The doctor fails when examples are missing, when an example
+  lacks a required field, or when a default/fallback references a missing
+  context example.
 - `accounts` is the human surface; `connectors context` is the technical
   authority under the connector control plane; `acct` and `connectors ctx` are
   aliases only.
 - Durable IDs for resources remain opaque `res_*` references when context needs
   to point at files, instructions, projects, or secret bindings.
+- Governed context records are projected into the `resources` table as
+  `connector_context` resources with opaque `res_*` ids. `accounts show res_*`
+  resolves those refs back to redacted governed context without making
+  `resources` the main account/context management UX.
 - Stored context uses `connector_context_records`,
   `connector_context_defaults`, and `connector_context_audit_events` in
   `core.sqlite`. Credential material remains outside these tables.
