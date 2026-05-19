@@ -101,7 +101,7 @@ The public ClawJS executable inspection was also rerun after
 `node packages/clawjs/bin/claw.mjs inspect remote --json` returned
 `baseline_registered` conformance, 16 remote route contracts, an
 `external_pending` external validation report with 13 requirements and 13
-blocked requirements, 57 Relay-classified surfaces, zero Relay `pending` classifications,
+blocked requirements, 60 Relay-classified surfaces, zero Relay `pending` classifications,
 zero Relay `blocked` classifications, and a `blocked` closure
 gate with `source_qa_review` and `external_validation` blockers. This keeps
 executable inspection aligned with the completion audit: software/source review

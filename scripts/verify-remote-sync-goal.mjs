@@ -309,7 +309,7 @@ for (const snippet of [
   "claw remote source-qa-template",
   "claw remote contracts",
   "Clawix remote mirror", "Current Validation Evidence", "completed successfully in the public Clawix repo", "scripts/code-hygiene-check.mjs",
-  "public ClawJS executable inspection", "16 remote route contracts", "57 Relay-classified surfaces", "zero Relay", "`pending` classifications", "source_qa_review` and `external_validation`",
+  "public ClawJS executable inspection", "16 remote route contracts", "60 Relay-classified surfaces", "zero Relay", "`pending` classifications", "source_qa_review` and `external_validation`",
   "artifact-bound inspection path", "decisionReview", "claw remote decision-review", "Relay `/v1/remote/decision-review`", "23 required source Q/A rows", "11 implemented dispositions", "12 external-pending dispositions", "artifact-bound closure handoff", "ready_for_approved_run", "only the `external_validation`", "zero clearable requirements", "sourceQaReviewStatus: complete", "approval_required", "approvalRequired: true", "approved: false", "required topology targets", "required route contract IDs", "2 files and 42 tests", "1 file and 1 test", "HTTP route parity",
   "cli registry/router parity passed", "157 commands", "Full public docs lane", "npm run test:docs", "source-size", "code hygiene self-tests",
   "remote sync source session verification passed", "23 Q/A rows", "Public docs hygiene", "docs alignment check passed",
@@ -695,7 +695,7 @@ for (const node of clawPersistentSurfaceRegistry.nodes) {
   }
 }
 const relayClassifiedNodes = clawPersistentSurfaceRegistry.nodes.filter((node) => node.programmaticSurfaces?.includes("relay") || node.surfaceGaps?.some((gap) => gap.surface === "relay"));
-if (relayClassifiedNodes.length !== 57) fail(`remote Relay classification inventory must contain 57 entries, got ${relayClassifiedNodes.length}`);
+if (relayClassifiedNodes.length !== 60) fail(`remote Relay classification inventory must contain 60 entries, got ${relayClassifiedNodes.length}`);
 const remoteSafeClassificationIds = relayClassifiedNodes.filter((node) => node.programmaticSurfaces?.includes("relay")).map((node) => node.id);
 if (JSON.stringify(remoteSafeClassificationIds) !== JSON.stringify(expectedRemoteSafeClassificationIds)) fail("remote-safe Relay classification IDs changed without updating the goal proof");
 if (relayClassifiedNodes.some((node) => node.surfaceGaps?.find((gap) => gap.surface === "relay")?.status === "blocked")) fail("remote Relay classification inventory must not contain blocked entries for this goal");
