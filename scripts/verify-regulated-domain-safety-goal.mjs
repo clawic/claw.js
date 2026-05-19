@@ -646,7 +646,10 @@ for (const [relativePath, snippets] of [
     "planPayload.approval?.status, \"pending\"",
   ]],
   ["packages/clawjs-node/src/create-claw-channel-facades.ts", [
+    "evaluateRegulatedAction",
+    "policyDecision",
     "requires explicit approvalId before external send",
+    "External channel send - human reviewed",
     "telegram.sendMessage",
     "slack.sendMessage",
     "whatsapp.sendMessage",
@@ -655,15 +658,29 @@ for (const [relativePath, snippets] of [
   ["packages/clawjs-node/src/create-claw-telegram.test.ts", [
     "blocked external send",
     "approval_telegram_send_message",
+    "Telegram send - human reviewed",
     "approval_channels_message_send",
+    "Channel message send - human reviewed",
+    "policyReasonCodes",
     "requires explicit approvalId before external send",
+  ]],
+  ["packages/clawjs-node/src/telegram/index.ts", [
+    "legalLabel?: string",
+  ]],
+  ["packages/clawjs-node/src/slack/index.ts", [
+    "legalLabel?: string",
+  ]],
+  ["packages/clawjs-node/src/whatsapp/index.ts", [
+    "legalLabel?: string",
   ]],
   ["docs/api.md", [
     "approval-from-human-review",
+    "Telegram send - human reviewed",
   ]],
   ["docs/interface-matrix.md", [
-    "sendMessage({ approvalId })",
-    "sendMedia({ approvalId })",
+    "sendMessage({ approvalId, legalLabel })",
+    "sendMedia({ approvalId, legalLabel })",
+    "channel sends evaluate central regulated policy",
   ]],
   ["packages/clawjs-node/src/notify/index.ts", [
     "evaluateRegulatedAction",
