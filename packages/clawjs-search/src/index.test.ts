@@ -88,6 +88,60 @@ test("Search action execution plans are brokered and fail closed without host ap
   assert.equal(brokered.broker.sideEffects, "host_brokered");
 });
 
+test("Search action execution plans expose signed-host request templates for native brokers", () => {
+  const result = {
+    id: "native.system:shortcut:daily-plan",
+    source: "native.system",
+    domain: "native",
+    type: "shortcut",
+    title: "Daily Plan",
+    score: 1,
+    resourceId: "shortcut:Daily Plan",
+  };
+  const action = {
+    id: "run",
+    kind: "run" as const,
+    label: "Run Shortcut",
+    requiresApproval: true,
+    risk: "system" as const,
+    grant: "native.system.shortcut.run",
+    hostBroker: {
+      system: "mac-control" as const,
+      capabilityId: "mac.shortcut.run",
+      arguments: { name: "Daily Plan" },
+      target: { kind: "shortcut", name: "Daily Plan" },
+      reason: "Run native Shortcut from Search result",
+    },
+  };
+
+  const dryRun = createSearchActionExecutionPlan({ result, action, dryRun: true, actor: "agent:codex" });
+  assert.equal(dryRun.status, "planned");
+  assert.equal(dryRun.hostRequest?.system, "mac-control");
+  assert.equal(dryRun.hostRequest?.capabilityId, "mac.shortcut.run");
+  assert.equal(dryRun.hostRequest?.actor.kind, "agent");
+  assert.equal(dryRun.hostRequest?.actor.id, "agent:codex");
+  assert.equal(dryRun.hostRequest?.arguments.name, "Daily Plan");
+  assert.equal(dryRun.hostRequest?.arguments.resultId, "native.system:shortcut:daily-plan");
+  assert.equal(dryRun.hostRequest?.target?.kind, "shortcut");
+  assert.equal(dryRun.hostRequest?.dryRun, true);
+  assert.equal(dryRun.hostRequest?.approved, false);
+  assert.equal(dryRun.hostRequest?.command.action, "plan");
+
+  const brokered = createSearchActionExecutionPlan({
+    result,
+    action,
+    dryRun: false,
+    hostApprovalId: "approval_native_shortcut",
+    actor: "user:owner",
+  });
+  assert.equal(brokered.status, "brokered");
+  assert.equal(brokered.hostRequest?.dryRun, false);
+  assert.equal(brokered.hostRequest?.approved, true);
+  assert.equal(brokered.hostRequest?.hostApprovalId, "approval_native_shortcut");
+  assert.equal(brokered.hostRequest?.command.action, "execute");
+  assert.equal(brokered.hostRequest?.actor.kind, "user_ui");
+});
+
 test("Search action execution requires review and labels for regulated results", () => {
   const result = {
     id: "finance.records:1",

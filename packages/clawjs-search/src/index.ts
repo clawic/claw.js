@@ -183,6 +183,48 @@ export interface SearchAction {
   requiresApproval?: boolean;
   grant?: string;
   risk?: SearchActionRisk;
+  hostBroker?: SearchHostActionBroker;
+}
+
+export interface SearchHostActionBroker {
+  system: "mac-control";
+  capabilityId: string;
+  arguments?: Record<string, string>;
+  target?: {
+    kind: string;
+    id?: string;
+    name?: string;
+    selector?: Record<string, string>;
+  };
+  reason?: string;
+}
+
+export interface SearchHostActionRequestTemplate {
+  system: "mac-control";
+  schemaVersion: 1;
+  requestId: string;
+  capabilityId: string;
+  actor: {
+    kind: string;
+    id: string;
+    role?: string;
+  };
+  target?: {
+    kind: string;
+    id?: string;
+    name?: string;
+    selector?: Record<string, string>;
+  };
+  arguments: Record<string, string>;
+  dryRun: boolean;
+  reason?: string;
+  approved: boolean;
+  hostApprovalId?: string;
+  command: {
+    resource: "mac";
+    action: "plan" | "execute";
+    requestJsonFlag: "request-json";
+  };
 }
 
 export interface SearchActionExecutionPlan {
@@ -209,6 +251,7 @@ export interface SearchActionExecutionPlan {
     operation: "search.action.execute";
     sideEffects: "none" | "host_brokered";
   };
+  hostRequest?: SearchHostActionRequestTemplate;
 }
 
 export interface SearchInteractionInput {
@@ -649,7 +692,73 @@ export function createSearchActionExecutionPlan(input: {
       operation: "search.action.execute",
       sideEffects: input.dryRun ? "none" : "host_brokered",
     },
+    ...(input.action.hostBroker ? {
+      hostRequest: createSearchHostActionRequestTemplate({
+        planId: `search-action:${input.result.id}:${input.action.id}`,
+        result: input.result,
+        action: input.action,
+        dryRun: input.dryRun,
+        hostApprovalId: input.hostApprovalId,
+        actor: input.actor,
+      }),
+    } : {}),
   };
+}
+
+function createSearchHostActionRequestTemplate(input: {
+  planId: string;
+  result: SearchResult;
+  action: SearchAction;
+  dryRun: boolean;
+  hostApprovalId?: string;
+  actor?: string;
+}): SearchHostActionRequestTemplate {
+  const broker = input.action.hostBroker;
+  if (!broker) {
+    throw new Error("search action has no host broker");
+  }
+  const actor = searchHostActor(input.actor);
+  return {
+    system: broker.system,
+    schemaVersion: 1,
+    requestId: `searchreq_${stableSearchHostRequestId(input.planId)}`,
+    capabilityId: broker.capabilityId,
+    actor,
+    ...(broker.target ? { target: broker.target } : {}),
+    arguments: {
+      resultId: input.result.id,
+      actionId: input.action.id,
+      source: input.result.source,
+      domain: input.result.domain,
+      ...(input.result.resourceId ? { resourceId: input.result.resourceId } : {}),
+      ...broker.arguments,
+    },
+    dryRun: input.dryRun,
+    reason: broker.reason ?? `Search action ${input.action.id} for ${input.result.id}`,
+    approved: Boolean(input.hostApprovalId),
+    ...(input.hostApprovalId ? { hostApprovalId: input.hostApprovalId } : {}),
+    command: {
+      resource: "mac",
+      action: input.dryRun ? "plan" : "execute",
+      requestJsonFlag: "request-json",
+    },
+  };
+}
+
+function searchHostActor(actor?: string): SearchHostActionRequestTemplate["actor"] {
+  if (!actor) return { kind: "framework", id: "claw.search", role: "system" };
+  if (actor.startsWith("agent:")) return { kind: "agent", id: actor, role: "agent" };
+  if (actor.startsWith("user:")) return { kind: "user_ui", id: actor, role: "owner" };
+  return { kind: "framework", id: actor, role: "system" };
+}
+
+function stableSearchHostRequestId(value: string): string {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
 function legalOutputLabelsFromSearchResult(result: SearchResult): string[] {

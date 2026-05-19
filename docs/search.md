@@ -645,7 +645,10 @@ Search result actions are brokered. `search actions execute` produces a
 host-grants execution plan in `--dry-run` mode, fails closed when an approval is
 required but no `--host-approval-id` is provided, and returns a brokered receipt
 when the signed host supplies an approval id. The CLI does not perform native UI
-or provider side effects directly.
+or provider side effects directly. Native/system actions can attach a
+`hostRequest` template to the plan; the signed host fills its own host identity
+and evaluates that template through `MacControlWire`/host approvals before any
+macOS side effect runs.
 
 Search writes audit events into `search.sqlite` for action execution attempts
 and sensitive queries. A query is audited when it asks for sensitive material

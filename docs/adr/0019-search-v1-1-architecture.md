@@ -195,7 +195,9 @@ references.
 Search action execution is represented as a brokered host-grants plan. CLI
 dry-runs are safe previews; non-dry-run execution fails closed unless a signed
 host approval id is supplied. Native UI, provider, or system side effects remain
-host-owned.
+host-owned. Plans for native/system actions may include a `hostRequest`
+template that a signed host converts into `MacControlWire`; Search still does
+not supply host identity or execute native steps itself.
 
 External/native source indexing, OS-like file search, provider-backed semantic
 embeddings, and physical host validation remain `EXTERNAL PENDING` until the
