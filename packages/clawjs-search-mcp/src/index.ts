@@ -49,6 +49,65 @@ export interface SearchMcpServerOptions {
   dataDir?: string;
 }
 
+const TYPED_CHANGED_SOURCE_IDS = [
+  "sessions.chats",
+  "docs.pages",
+  "sheets.workbooks",
+  "code.symbols",
+  "local.files",
+  "web.ingested",
+  "external.cache",
+  "surfaces.routes",
+  "database.records",
+  "work.items",
+  "documents.blocks",
+  "knowledge.graph",
+  "signals.observations",
+  "finance.records",
+  "eln.records",
+  "providers.routing",
+  "agents.catalog",
+  "images.derived",
+  "media.assets",
+  "generations.artifacts",
+  "slides.decks",
+  "skills.registry",
+  "snippets.library",
+  "marketplace.choices",
+  "content.items",
+  "business.records",
+  "social.posts",
+  "iot.config",
+  "notes.pages",
+  "calendar.events",
+  "connectors.catalog",
+  "apps.catalog",
+  "design.resources",
+] as const;
+
+const SIMPLE_CHANGED_SOURCE_SPECS = new Map<string, {
+  paramNames: string[];
+  payloadKey: string;
+  workspaceRoot?: boolean;
+}>([
+  ["images.derived", { paramNames: ["imageId", "image"], payloadKey: "imageId" }],
+  ["media.assets", { paramNames: ["mediaId", "media"], payloadKey: "mediaId" }],
+  ["generations.artifacts", { paramNames: ["generationId", "generation"], payloadKey: "generationId" }],
+  ["slides.decks", { paramNames: ["deckId", "deck"], payloadKey: "deckId", workspaceRoot: true }],
+  ["skills.registry", { paramNames: ["slug", "skillSlug", "skill"], payloadKey: "slug" }],
+  ["snippets.library", { paramNames: ["slug", "snippetSlug", "snippet"], payloadKey: "slug" }],
+  ["marketplace.choices", { paramNames: ["choiceId", "choice"], payloadKey: "choiceId" }],
+  ["content.items", { paramNames: ["itemId", "item"], payloadKey: "itemId" }],
+  ["business.records", { paramNames: ["recordId", "record"], payloadKey: "recordId" }],
+  ["social.posts", { paramNames: ["postId", "post"], payloadKey: "postId" }],
+  ["iot.config", { paramNames: ["configId", "config"], payloadKey: "configId" }],
+  ["notes.pages", { paramNames: ["pageId", "page"], payloadKey: "pageId" }],
+  ["calendar.events", { paramNames: ["eventId", "event"], payloadKey: "eventId" }],
+  ["connectors.catalog", { paramNames: ["operationId", "operation"], payloadKey: "operationId" }],
+  ["apps.catalog", { paramNames: ["appId", "app"], payloadKey: "appId" }],
+  ["design.resources", { paramNames: ["resourceId", "resource"], payloadKey: "resourceId", workspaceRoot: true }],
+]);
+
 export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
   return [
     {
@@ -484,13 +543,50 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
         type: "object",
         required: ["source", "operation"],
         properties: {
-          source: { type: "string", enum: ["sessions.chats", "code.symbols", "local.files", "web.ingested", "external.cache", "surfaces.routes"] },
+          source: { type: "string", enum: TYPED_CHANGED_SOURCE_IDS },
           operation: { type: "string", enum: ["upsert", "delete"] },
           root: { type: "string" },
+          workspaceRoot: { type: "string" },
           path: { type: "string" },
           filePath: { type: "string" },
           routeId: { type: "string" },
           sessionId: { type: "string" },
+          workbookId: { type: "string" },
+          namespaceId: { type: "string" },
+          namespace: { type: "string" },
+          collectionName: { type: "string" },
+          collection: { type: "string" },
+          table: { type: "string" },
+          recordId: { type: "string" },
+          documentId: { type: "string" },
+          kind: { type: "string" },
+          id: { type: "string" },
+          entityId: { type: "string" },
+          factId: { type: "string" },
+          verticalId: { type: "string" },
+          variableId: { type: "string" },
+          observationId: { type: "string" },
+          provider: { type: "string" },
+          providerId: { type: "string" },
+          feature: { type: "string" },
+          capability: { type: "string" },
+          agentId: { type: "string" },
+          personalityId: { type: "string" },
+          skillCollectionId: { type: "string" },
+          connectionId: { type: "string" },
+          imageId: { type: "string" },
+          mediaId: { type: "string" },
+          generationId: { type: "string" },
+          deckId: { type: "string" },
+          slug: { type: "string" },
+          choiceId: { type: "string" },
+          itemId: { type: "string" },
+          postId: { type: "string" },
+          configId: { type: "string" },
+          pageId: { type: "string" },
+          eventId: { type: "string" },
+          operationId: { type: "string" },
+          appId: { type: "string" },
           resourceId: { type: "string" },
           observedAt: { type: "string" },
         },
@@ -830,8 +926,40 @@ function scheduleChangedSourceEvent(store: SearchStore, params: Record<string, u
       payload: { sessionId },
     });
   }
+  if (source === "docs.pages") {
+    const workspaceRoot = path.resolve(expandMcpPath(stringParam(params.workspaceRoot) ?? stringParam(params.root) ?? requiredString(params, "workspaceRoot")));
+    const absolutePath = path.resolve(expandMcpPath(stringParam(params.path) ?? requiredString(params, "filePath")));
+    const relativeFromWorkspace = path.relative(workspaceRoot, absolutePath);
+    if (relativeFromWorkspace === ".." || relativeFromWorkspace.startsWith(`..${path.sep}`) || path.isAbsolute(relativeFromWorkspace)) {
+      throw new Error(`docs.pages changed path is outside workspace root: ${absolutePath}`);
+    }
+    const relativePath = relativeFromWorkspace.split(path.sep).join(path.posix.sep);
+    if (!isDocsPageSearchResource(relativePath)) {
+      throw new Error(`docs.pages changed path is outside public docs scope: ${relativePath}`);
+    }
+    return store.scheduleIndexEvent({
+      source,
+      shard: "hot",
+      operation,
+      resourceId: relativePath,
+      observedAt,
+      payload: { workspaceRoot, relativePath, absolutePath },
+    });
+  }
+  if (source === "sheets.workbooks") {
+    const workbookId = stringParam(params.workbookId) ?? requiredString(params, "resourceId");
+    const workspaceRoot = path.resolve(expandMcpPath(stringParam(params.workspaceRoot) ?? stringParam(params.root) ?? "."));
+    return store.scheduleIndexEvent({
+      source,
+      shard: "hot",
+      operation,
+      resourceId: workbookId,
+      observedAt,
+      payload: { workbookId, workspaceRoot },
+    });
+  }
   if (source === "surfaces.routes") {
-    const routeId = requiredString(params, "routeId");
+    const routeId = stringParam(params.routeId) ?? requiredString(params, "resourceId");
     return store.scheduleIndexEvent({
       source,
       shard: "hot",
@@ -841,8 +969,182 @@ function scheduleChangedSourceEvent(store: SearchStore, params: Record<string, u
       payload: { routeId },
     });
   }
+  if (source === "database.records" || source === "work.items") {
+    const namespaceId = stringParam(params.namespaceId) ?? requiredString(params, "namespace");
+    const collectionName = stringParam(params.collectionName) ?? requiredString(params, "collection");
+    const recordId = stringParam(params.recordId) ?? requiredString(params, "resourceId");
+    return store.scheduleIndexEvent({
+      source,
+      shard: "hot",
+      operation,
+      resourceId: `${namespaceId}:${collectionName}:${recordId}`,
+      observedAt,
+      payload: { namespaceId, collection: collectionName, recordId },
+    });
+  }
+  if (source === "documents.blocks") {
+    const namespaceId = stringParam(params.namespaceId) ?? requiredString(params, "namespace");
+    const documentId = stringParam(params.documentId) ?? requiredString(params, "resourceId");
+    const collectionName = stringParam(params.collectionName) ?? stringParam(params.collection) ?? "documents";
+    if (collectionName !== "documents" && collectionName !== "document_blocks") {
+      throw new Error("documents.blocks collection must be documents or document_blocks");
+    }
+    const recordId = stringParam(params.recordId) ?? (collectionName === "documents" ? documentId : requiredString(params, "recordId"));
+    return store.scheduleIndexEvent({
+      source,
+      shard: "hot",
+      operation,
+      resourceId: `${namespaceId}:documents:${documentId}`,
+      observedAt,
+      payload: { namespaceId, collection: collectionName, recordId, documentId },
+    });
+  }
+  if (source === "knowledge.graph") {
+    const kind = requiredString(params, "kind");
+    if (kind !== "entity" && kind !== "fact") {
+      throw new Error("knowledge.graph kind must be entity or fact");
+    }
+    const id = stringParam(params.id)
+      ?? stringParam(params.resourceId)
+      ?? (kind === "entity" ? requiredString(params, "entityId") : requiredString(params, "factId"));
+    const knowledgeResourceId = `${kind}:${id}`;
+    return store.scheduleIndexEvent({
+      source,
+      shard: "hot",
+      operation,
+      resourceId: knowledgeResourceId,
+      observedAt,
+      payload: { kind, knowledgeResourceId, [`${kind}Id`]: id },
+    });
+  }
+  if (source === "signals.observations") {
+    const kind = requiredString(params, "kind");
+    if (kind !== "vertical" && kind !== "variable" && kind !== "observation") {
+      throw new Error("signals.observations kind must be vertical, variable, or observation");
+    }
+    const id = stringParam(params.id)
+      ?? stringParam(params.resourceId)
+      ?? (kind === "vertical" ? stringParam(params.verticalId) : kind === "variable" ? stringParam(params.variableId) : stringParam(params.observationId));
+    if (!id) throw new Error(`${kind}Id is required`);
+    const signalsResourceId = `${kind}:${id}`;
+    return store.scheduleIndexEvent({
+      source,
+      shard: "hot",
+      operation,
+      resourceId: signalsResourceId,
+      observedAt,
+      payload: { kind, signalsResourceId, [`${kind}Id`]: id },
+    });
+  }
+  if (source === "finance.records") {
+    const table = stringParam(params.table);
+    const recordId = stringParam(params.recordId) ?? requiredString(params, "resourceId");
+    if (table === "finance_records") {
+      return store.scheduleIndexEvent({
+        source,
+        shard: "hot",
+        operation,
+        resourceId: `finance_records:${recordId}`,
+        observedAt,
+        payload: { table: "finance_records", recordId },
+      });
+    }
+    const namespaceId = stringParam(params.namespaceId) ?? requiredString(params, "namespace");
+    const collectionName = stringParam(params.collectionName) ?? requiredString(params, "collection");
+    return store.scheduleIndexEvent({
+      source,
+      shard: "hot",
+      operation,
+      resourceId: `${namespaceId}:${collectionName}:${recordId}`,
+      observedAt,
+      payload: { namespaceId, collection: collectionName, recordId },
+    });
+  }
+  if (source === "eln.records") {
+    const namespaceId = stringParam(params.namespaceId) ?? requiredString(params, "namespace");
+    const collectionName = stringParam(params.collectionName) ?? requiredString(params, "collection");
+    const recordId = stringParam(params.recordId) ?? requiredString(params, "resourceId");
+    return store.scheduleIndexEvent({
+      source,
+      shard: "hot",
+      operation,
+      resourceId: `${namespaceId}:${collectionName}:${recordId}`,
+      observedAt,
+      payload: { namespaceId, collection: collectionName, recordId },
+    });
+  }
+  if (source === "providers.routing") {
+    const kind = requiredString(params, "kind");
+    if (kind !== "routing" && kind !== "setting") {
+      throw new Error("providers.routing kind must be routing or setting");
+    }
+    const provider = stringParam(params.provider) ?? stringParam(params.providerId);
+    const feature = stringParam(params.feature) ?? stringParam(params.resourceId);
+    const capability = stringParam(params.capability) ?? "chat";
+    if (kind === "routing") {
+      if (!feature || !capability) throw new Error("feature is required for providers.routing routing events");
+      return store.scheduleIndexEvent({
+        source,
+        shard: "hot",
+        operation,
+        resourceId: `routing:${feature}:${capability}`,
+        observedAt,
+        payload: { kind, ...(provider ? { provider } : {}), feature, capability },
+      });
+    }
+    if (!provider) throw new Error("provider is required for providers.routing setting events");
+    return store.scheduleIndexEvent({
+      source,
+      shard: "hot",
+      operation,
+      resourceId: `setting:${provider}`,
+      observedAt,
+      payload: { kind, provider },
+    });
+  }
+  if (source === "agents.catalog") {
+    const rawKind = requiredString(params, "kind");
+    const kind = rawKind === "skill-collection" ? "skill_collection" : rawKind;
+    if (kind !== "agent" && kind !== "personality" && kind !== "skill_collection" && kind !== "connection") {
+      throw new Error("agents.catalog kind must be agent, personality, skill_collection, or connection");
+    }
+    const id = stringParam(params.id)
+      ?? stringParam(params.resourceId)
+      ?? (kind === "agent"
+        ? stringParam(params.agentId)
+        : kind === "personality"
+          ? stringParam(params.personalityId)
+          : kind === "skill_collection"
+            ? stringParam(params.skillCollectionId)
+            : stringParam(params.connectionId));
+    if (!id) throw new Error("id is required for agents.catalog events");
+    return store.scheduleIndexEvent({
+      source,
+      shard: "hot",
+      operation,
+      resourceId: `${kind}:${id}`,
+      observedAt,
+      payload: { kind, id },
+    });
+  }
+  const simpleSpec = SIMPLE_CHANGED_SOURCE_SPECS.get(source);
+  if (simpleSpec) {
+    const resourceId = simpleChangedSourceResourceId(params, simpleSpec);
+    const payload: Record<string, unknown> = { [simpleSpec.payloadKey]: resourceId };
+    if (simpleSpec.workspaceRoot) {
+      payload.workspaceRoot = path.resolve(expandMcpPath(stringParam(params.workspaceRoot) ?? stringParam(params.root) ?? "."));
+    }
+    return store.scheduleIndexEvent({
+      source,
+      shard: "hot",
+      operation,
+      resourceId,
+      observedAt,
+      payload,
+    });
+  }
   if (source !== "code.symbols" && source !== "local.files" && source !== "web.ingested" && source !== "external.cache") {
-    throw new Error("source must be sessions.chats, code.symbols, local.files, web.ingested, external.cache, or surfaces.routes");
+    throw new Error(`source must be ${TYPED_CHANGED_SOURCE_IDS.join(", ")}`);
   }
   const root = path.resolve(expandMcpPath(requiredString(params, "root")));
   const absolutePath = path.resolve(expandMcpPath(stringParam(params.path) ?? requiredString(params, "filePath")));
@@ -864,6 +1166,31 @@ function scheduleChangedSourceEvent(store: SearchStore, params: Record<string, u
     },
   });
 }
+
+function simpleChangedSourceResourceId(params: Record<string, unknown>, spec: { paramNames: string[] }): string {
+  for (const paramName of spec.paramNames) {
+    const value = stringParam(params[paramName]);
+    if (value) return value;
+  }
+  return requiredString(params, "resourceId");
+}
+
+function isDocsPageSearchResource(relativePath: string): boolean {
+  return path.posix.extname(relativePath).toLowerCase() === ".md"
+    && (relativePath.startsWith("docs/") || ROOT_DOCS_PAGE_FILES.has(relativePath));
+}
+
+const ROOT_DOCS_PAGE_FILES = new Set([
+  "AGENTS.md",
+  "CONSTITUTION.md",
+  "DISCLAIMER.md",
+  "PRIVACY.md",
+  "README.md",
+  "REGULATED_DOMAINS.md",
+  "RELEASING.md",
+  "SAFETY.md",
+  "SECURITY.md",
+]);
 
 function scanChangedSourceEvents(store: SearchStore, params: Record<string, unknown>) {
   const source = requiredString(params, "source");

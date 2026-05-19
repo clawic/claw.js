@@ -3,8 +3,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
-import { CLI_EXIT_DEGRADED, CLI_EXIT_OK } from "./index.ts";
-import { scheduleExternalCacheSearchEvent, scheduleWebIngestedSearchEvent } from "./cli-search-events.ts";
+import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./index.ts";
 import { runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
 
 export async function runSearchWebIngestedEventScenario(): Promise<void> {
@@ -39,36 +38,30 @@ export async function runSearchWebIngestedEventScenario(): Promise<void> {
     const enabled = await runCliCapture(["search", "sources", "enable", "web.ingested", "--profile", "full", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(enabled.code, CLI_EXIT_OK);
 
-    const scheduled = scheduleWebIngestedSearchEvent({
-      operation: "upsert",
-      root: webRoot,
-      filePath: pagePath,
-      dataDir: dataRoot,
-      flags: { "web-root": webRoot },
-    });
-    assert.equal(scheduled.ok, true, scheduled.error);
-    assert.equal(scheduled.job?.source, "web.ingested");
-    assert.equal(scheduled.job?.operation, "upsert");
-    assert.equal(scheduled.job?.resourceId, "pages/event-page.json");
-    assert.equal(scheduled.job?.shard, "hot");
-    assert.equal(scheduled.job?.payload.eventDriven, true);
-    assert.equal(scheduled.job?.payload.relativePath, "pages/event-page.json");
+    const scheduled = await runCliCapture(["search", "changes", "schedule", "upsert", "--source", "web.ingested", "--root", webRoot, "--path", pagePath, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(scheduled.code, CLI_EXIT_OK, scheduled.stderr || scheduled.stdout);
+    const scheduledPayload = JSON.parse(scheduled.stdout) as {
+      data: { item?: { id: string; source: string; operation: string; resourceId?: string; shard?: string; payload?: { eventDriven?: boolean; relativePath?: string; root?: string } } };
+    };
+    assert.equal(scheduledPayload.data.item?.source, "web.ingested");
+    assert.equal(scheduledPayload.data.item?.operation, "upsert");
+    assert.equal(scheduledPayload.data.item?.resourceId, "pages/event-page.json");
+    assert.equal(scheduledPayload.data.item?.shard, "hot");
+    assert.equal(scheduledPayload.data.item?.payload?.eventDriven, true);
+    assert.equal(scheduledPayload.data.item?.payload?.relativePath, "pages/event-page.json");
+    assert.equal(scheduledPayload.data.item?.payload?.root, path.resolve(webRoot));
 
-    const outsideRoot = scheduleWebIngestedSearchEvent({
-      operation: "upsert",
-      root: webRoot,
-      filePath: path.join(workspaceRoot, "outside.json"),
-      dataDir: dataRoot,
-    });
-    assert.equal(outsideRoot.ok, false);
-    assert.match(outsideRoot.error ?? "", /outside root/);
+    const outsideRoot = await runCliCapture(["search", "changes", "schedule", "upsert", "--source", "web.ingested", "--root", webRoot, "--path", path.join(workspaceRoot, "outside.json"), "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(outsideRoot.code, CLI_EXIT_USAGE);
+    const outsideRootPayload = JSON.parse(outsideRoot.stdout) as { error: { message: string } };
+    assert.match(outsideRootPayload.error.message, /outside root/);
 
     const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "web.ingested", "--profile", "full", "--web-root", webRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(serviceRun.code, CLI_EXIT_OK);
     const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
       data: { worker?: { items: Array<{ id: string; source: string; status: string; indexed?: number }> } };
     };
-    assert.equal(serviceRunPayload.data.worker?.items[0]?.id, scheduled.job?.id);
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.id, scheduledPayload.data.item?.id);
     assert.equal(serviceRunPayload.data.worker?.items[0]?.source, "web.ingested");
     assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
     assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
@@ -85,15 +78,16 @@ export async function runSearchWebIngestedEventScenario(): Promise<void> {
     assert.equal(result?.fragments?.some((fragment) => fragment.title === "Web Cache Section" && fragment.snippet?.includes("web-ingested-event-refresh-needle")), true);
 
     fs.rmSync(pagePath);
-    const deleted = scheduleWebIngestedSearchEvent({
-      operation: "delete",
-      root: webRoot,
-      filePath: pagePath,
-      dataDir: dataRoot,
-      flags: { "web-root": webRoot },
-    });
-    assert.equal(deleted.ok, true, deleted.error);
-    assert.equal(deleted.job?.operation, "delete");
+    const deleted = await runCliCapture(["search", "changes", "schedule", "delete", "--source", "web.ingested", "--root", webRoot, "--path", pagePath, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleted.code, CLI_EXIT_OK, deleted.stderr || deleted.stdout);
+    const deletedPayload = JSON.parse(deleted.stdout) as {
+      data: { item?: { source: string; operation: string; resourceId?: string; payload?: { eventDriven?: boolean; relativePath?: string } } };
+    };
+    assert.equal(deletedPayload.data.item?.source, "web.ingested");
+    assert.equal(deletedPayload.data.item?.operation, "delete");
+    assert.equal(deletedPayload.data.item?.resourceId, "pages/event-page.json");
+    assert.equal(deletedPayload.data.item?.payload?.eventDriven, true);
+    assert.equal(deletedPayload.data.item?.payload?.relativePath, "pages/event-page.json");
 
     const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "web.ingested", "--profile", "full", "--web-root", webRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(deleteRun.code, CLI_EXIT_OK);
@@ -146,36 +140,30 @@ export async function runSearchExternalCacheEventScenario(): Promise<void> {
     const enabled = await runCliCapture(["search", "sources", "enable", "external.cache", "--profile", "full", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(enabled.code, CLI_EXIT_OK);
 
-    const scheduled = scheduleExternalCacheSearchEvent({
-      operation: "upsert",
-      root: externalRoot,
-      filePath: recordPath,
-      dataDir: dataRoot,
-      flags: { "external-root": externalRoot },
-    });
-    assert.equal(scheduled.ok, true, scheduled.error);
-    assert.equal(scheduled.job?.source, "external.cache");
-    assert.equal(scheduled.job?.operation, "upsert");
-    assert.equal(scheduled.job?.resourceId, "provider/event-record.json");
-    assert.equal(scheduled.job?.shard, "hot");
-    assert.equal(scheduled.job?.payload.eventDriven, true);
-    assert.equal(scheduled.job?.payload.relativePath, "provider/event-record.json");
+    const scheduled = await runCliCapture(["search", "changes", "schedule", "upsert", "--source", "external.cache", "--root", externalRoot, "--path", recordPath, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(scheduled.code, CLI_EXIT_OK, scheduled.stderr || scheduled.stdout);
+    const scheduledPayload = JSON.parse(scheduled.stdout) as {
+      data: { item?: { id: string; source: string; operation: string; resourceId?: string; shard?: string; payload?: { eventDriven?: boolean; relativePath?: string; root?: string } } };
+    };
+    assert.equal(scheduledPayload.data.item?.source, "external.cache");
+    assert.equal(scheduledPayload.data.item?.operation, "upsert");
+    assert.equal(scheduledPayload.data.item?.resourceId, "provider/event-record.json");
+    assert.equal(scheduledPayload.data.item?.shard, "hot");
+    assert.equal(scheduledPayload.data.item?.payload?.eventDriven, true);
+    assert.equal(scheduledPayload.data.item?.payload?.relativePath, "provider/event-record.json");
+    assert.equal(scheduledPayload.data.item?.payload?.root, path.resolve(externalRoot));
 
-    const outsideRoot = scheduleExternalCacheSearchEvent({
-      operation: "upsert",
-      root: externalRoot,
-      filePath: path.join(workspaceRoot, "outside.json"),
-      dataDir: dataRoot,
-    });
-    assert.equal(outsideRoot.ok, false);
-    assert.match(outsideRoot.error ?? "", /outside root/);
+    const outsideRoot = await runCliCapture(["search", "changes", "schedule", "upsert", "--source", "external.cache", "--root", externalRoot, "--path", path.join(workspaceRoot, "outside.json"), "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(outsideRoot.code, CLI_EXIT_USAGE);
+    const outsideRootPayload = JSON.parse(outsideRoot.stdout) as { error: { message: string } };
+    assert.match(outsideRootPayload.error.message, /outside root/);
 
     const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "external.cache", "--profile", "full", "--external-root", externalRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(serviceRun.code, CLI_EXIT_OK);
     const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
       data: { worker?: { items: Array<{ id: string; source: string; status: string; indexed?: number }> } };
     };
-    assert.equal(serviceRunPayload.data.worker?.items[0]?.id, scheduled.job?.id);
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.id, scheduledPayload.data.item?.id);
     assert.equal(serviceRunPayload.data.worker?.items[0]?.source, "external.cache");
     assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
     assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
@@ -193,15 +181,16 @@ export async function runSearchExternalCacheEventScenario(): Promise<void> {
     assert.equal(JSON.stringify(queryPayload.data.results).includes("should-not-be-indexed"), false);
 
     fs.rmSync(recordPath);
-    const deleted = scheduleExternalCacheSearchEvent({
-      operation: "delete",
-      root: externalRoot,
-      filePath: recordPath,
-      dataDir: dataRoot,
-      flags: { "external-root": externalRoot },
-    });
-    assert.equal(deleted.ok, true, deleted.error);
-    assert.equal(deleted.job?.operation, "delete");
+    const deleted = await runCliCapture(["search", "changes", "schedule", "delete", "--source", "external.cache", "--root", externalRoot, "--path", recordPath, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleted.code, CLI_EXIT_OK, deleted.stderr || deleted.stdout);
+    const deletedPayload = JSON.parse(deleted.stdout) as {
+      data: { item?: { source: string; operation: string; resourceId?: string; payload?: { eventDriven?: boolean; relativePath?: string } } };
+    };
+    assert.equal(deletedPayload.data.item?.source, "external.cache");
+    assert.equal(deletedPayload.data.item?.operation, "delete");
+    assert.equal(deletedPayload.data.item?.resourceId, "provider/event-record.json");
+    assert.equal(deletedPayload.data.item?.payload?.eventDriven, true);
+    assert.equal(deletedPayload.data.item?.payload?.relativePath, "provider/event-record.json");
 
     const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "external.cache", "--profile", "full", "--external-root", externalRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(deleteRun.code, CLI_EXIT_OK);

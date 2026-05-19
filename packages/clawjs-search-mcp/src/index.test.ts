@@ -588,11 +588,92 @@ test("Search MCP schedules typed changed source events", () => {
       name: "Sessions",
       resultTypes: ["conversation"],
     }));
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "docs.pages",
+      domain: "docs",
+      name: "Docs",
+      resultTypes: ["doc"],
+    }));
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "sheets.workbooks",
+      domain: "sheets",
+      name: "Sheets",
+      resultTypes: ["workbook"],
+    }));
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "local.files",
+      domain: "files",
+      name: "Files",
+      resultTypes: ["file"],
+    }));
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "web.ingested",
+      domain: "web",
+      name: "Web",
+      resultTypes: ["web"],
+    }));
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "external.cache",
+      domain: "external",
+      name: "External",
+      resultTypes: ["external"],
+    }));
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "surfaces.routes",
+      domain: "surfaces",
+      name: "Routes",
+      resultTypes: ["route"],
+    }));
+    for (const sourceId of ["database.records", "work.items", "documents.blocks", "knowledge.graph", "signals.observations", "finance.records", "eln.records", "providers.routing", "agents.catalog"]) {
+      store.registerSource(createFrameworkSearchSourceManifest({
+        id: sourceId,
+        domain: "framework",
+        name: sourceId,
+        resultTypes: ["item"],
+      }));
+    }
+    for (const sourceId of [
+      "images.derived",
+      "media.assets",
+      "generations.artifacts",
+      "slides.decks",
+      "skills.registry",
+      "snippets.library",
+      "marketplace.choices",
+      "content.items",
+      "business.records",
+      "social.posts",
+      "iot.config",
+      "notes.pages",
+      "calendar.events",
+      "connectors.catalog",
+      "apps.catalog",
+      "design.resources",
+    ]) {
+      store.registerSource(createFrameworkSearchSourceManifest({
+        id: sourceId,
+        domain: "framework",
+        name: sourceId,
+        resultTypes: ["item"],
+      }));
+    }
     const root = path.join(dir, "project");
     const filePath = path.join(root, "src", "app.ts");
     const outsidePath = path.join(dir, "outside.ts");
+    const docsPath = path.join(root, "docs", "guide.md");
+    const localFilePath = path.join(root, "files", "note.txt");
+    const webPath = path.join(root, "web", "page.json");
+    const externalPath = path.join(root, "external", "provider.json");
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.mkdirSync(path.dirname(docsPath), { recursive: true });
+    fs.mkdirSync(path.dirname(localFilePath), { recursive: true });
+    fs.mkdirSync(path.dirname(webPath), { recursive: true });
+    fs.mkdirSync(path.dirname(externalPath), { recursive: true });
     fs.writeFileSync(filePath, "export function changedMcpNeedle() { return true; }\n");
+    fs.writeFileSync(docsPath, "# Guide\n\nchanged docs page\n");
+    fs.writeFileSync(localFilePath, "changed local file\n");
+    fs.writeFileSync(webPath, "{\"title\":\"changed web page\"}\n");
+    fs.writeFileSync(externalPath, "{\"provider\":\"cache\"}\n");
     const tools = createSearchMcpTools(store);
     const changedTool = tools.find((tool) => tool.name === "search.changes.schedule");
     assert.ok(changedTool);
@@ -625,12 +706,350 @@ test("Search MCP schedules typed changed source events", () => {
     assert.equal(sessionJob.priority, 80);
     assert.equal(sessionJob.payload?.eventDriven, true);
     assert.equal(sessionJob.payload?.sessionId, "session-alpha");
+    const docsJob = changedTool.handler({
+      source: "docs.pages",
+      operation: "upsert",
+      workspaceRoot: root,
+      path: docsPath,
+      observedAt: "2026-05-18T10:10:00.000Z",
+    }) as { source: string; shard: string; operation: string; resourceId?: string; payload?: Record<string, unknown>; priority: number };
+    assert.equal(docsJob.source, "docs.pages");
+    assert.equal(docsJob.shard, "hot");
+    assert.equal(docsJob.operation, "upsert");
+    assert.equal(docsJob.resourceId, "docs/guide.md");
+    assert.equal(docsJob.priority, 60);
+    assert.equal(docsJob.payload?.eventDriven, true);
+    assert.equal(docsJob.payload?.workspaceRoot, root);
+    assert.equal(docsJob.payload?.relativePath, "docs/guide.md");
+    assert.equal(docsJob.payload?.absolutePath, docsPath);
+    const workbookJob = changedTool.handler({
+      source: "sheets.workbooks",
+      operation: "delete",
+      workbookId: "workbook-alpha",
+      workspaceRoot: root,
+      observedAt: "2026-05-18T10:12:00.000Z",
+    }) as { source: string; shard: string; operation: string; resourceId?: string; payload?: Record<string, unknown>; priority: number };
+    assert.equal(workbookJob.source, "sheets.workbooks");
+    assert.equal(workbookJob.shard, "hot");
+    assert.equal(workbookJob.operation, "delete");
+    assert.equal(workbookJob.resourceId, "workbook-alpha");
+    assert.equal(workbookJob.priority, 80);
+    assert.equal(workbookJob.payload?.eventDriven, true);
+    assert.equal(workbookJob.payload?.workbookId, "workbook-alpha");
+    assert.equal(workbookJob.payload?.workspaceRoot, root);
+    const localJob = changedTool.handler({
+      source: "local.files",
+      operation: "upsert",
+      root,
+      path: localFilePath,
+      observedAt: "2026-05-18T10:15:00.000Z",
+    }) as { source: string; shard: string; operation: string; resourceId?: string; payload?: Record<string, unknown>; priority: number };
+    assert.equal(localJob.source, "local.files");
+    assert.equal(localJob.shard, "hot");
+    assert.equal(localJob.operation, "upsert");
+    assert.equal(localJob.resourceId, "files/note.txt");
+    assert.equal(localJob.priority, 60);
+    assert.equal(localJob.payload?.eventDriven, true);
+    assert.equal(localJob.payload?.root, root);
+    assert.equal(localJob.payload?.relativePath, "files/note.txt");
+    assert.equal(localJob.payload?.absolutePath, localFilePath);
+    const webJob = changedTool.handler({
+      source: "web.ingested",
+      operation: "upsert",
+      root,
+      path: webPath,
+      observedAt: "2026-05-18T10:20:00.000Z",
+    }) as { source: string; shard: string; operation: string; resourceId?: string; payload?: Record<string, unknown>; priority: number };
+    assert.equal(webJob.source, "web.ingested");
+    assert.equal(webJob.shard, "hot");
+    assert.equal(webJob.operation, "upsert");
+    assert.equal(webJob.resourceId, "web/page.json");
+    assert.equal(webJob.priority, 60);
+    assert.equal(webJob.payload?.eventDriven, true);
+    assert.equal(webJob.payload?.root, root);
+    assert.equal(webJob.payload?.relativePath, "web/page.json");
+    assert.equal(webJob.payload?.absolutePath, webPath);
+    const externalJob = changedTool.handler({
+      source: "external.cache",
+      operation: "delete",
+      root,
+      path: externalPath,
+      observedAt: "2026-05-18T10:25:00.000Z",
+    }) as { source: string; shard: string; operation: string; resourceId?: string; payload?: Record<string, unknown>; priority: number };
+    assert.equal(externalJob.source, "external.cache");
+    assert.equal(externalJob.shard, "hot");
+    assert.equal(externalJob.operation, "delete");
+    assert.equal(externalJob.resourceId, "external/provider.json");
+    assert.equal(externalJob.priority, 80);
+    assert.equal(externalJob.payload?.eventDriven, true);
+    assert.equal(externalJob.payload?.root, root);
+    assert.equal(externalJob.payload?.relativePath, "external/provider.json");
+    assert.equal(externalJob.payload?.absolutePath, externalPath);
+    const routeJob = changedTool.handler({
+      source: "surfaces.routes",
+      operation: "upsert",
+      routeId: "sync.searchIndex",
+      observedAt: "2026-05-18T10:30:00.000Z",
+    }) as { source: string; shard: string; operation: string; resourceId?: string; payload?: Record<string, unknown>; priority: number };
+    assert.equal(routeJob.source, "surfaces.routes");
+    assert.equal(routeJob.shard, "hot");
+    assert.equal(routeJob.operation, "upsert");
+    assert.equal(routeJob.resourceId, "sync.searchIndex");
+    assert.equal(routeJob.priority, 60);
+    assert.equal(routeJob.payload?.eventDriven, true);
+    assert.equal(routeJob.payload?.routeId, "sync.searchIndex");
+    const databaseJob = changedTool.handler({
+      source: "database.records",
+      operation: "upsert",
+      namespace: "main",
+      collection: "contacts",
+      recordId: "ada",
+      observedAt: "2026-05-18T10:31:00.000Z",
+    }) as { source: string; shard: string; operation: string; resourceId?: string; payload?: Record<string, unknown>; priority: number };
+    assert.equal(databaseJob.source, "database.records");
+    assert.equal(databaseJob.shard, "hot");
+    assert.equal(databaseJob.operation, "upsert");
+    assert.equal(databaseJob.resourceId, "main:contacts:ada");
+    assert.equal(databaseJob.priority, 60);
+    assert.equal(databaseJob.payload?.eventDriven, true);
+    assert.equal(databaseJob.payload?.namespaceId, "main");
+    assert.equal(databaseJob.payload?.collection, "contacts");
+    assert.equal(databaseJob.payload?.recordId, "ada");
+    const workJob = changedTool.handler({
+      source: "work.items",
+      operation: "delete",
+      namespaceId: "main",
+      collectionName: "tasks",
+      recordId: "task-alpha",
+      observedAt: "2026-05-18T10:32:00.000Z",
+    }) as { source: string; shard: string; operation: string; resourceId?: string; payload?: Record<string, unknown>; priority: number };
+    assert.equal(workJob.source, "work.items");
+    assert.equal(workJob.shard, "hot");
+    assert.equal(workJob.operation, "delete");
+    assert.equal(workJob.resourceId, "main:tasks:task-alpha");
+    assert.equal(workJob.priority, 80);
+    assert.equal(workJob.payload?.eventDriven, true);
+    assert.equal(workJob.payload?.namespaceId, "main");
+    assert.equal(workJob.payload?.collection, "tasks");
+    assert.equal(workJob.payload?.recordId, "task-alpha");
+    const documentJob = changedTool.handler({
+      source: "documents.blocks",
+      operation: "upsert",
+      namespace: "main",
+      documentId: "doc-alpha",
+      collection: "document_blocks",
+      recordId: "block-alpha",
+      observedAt: "2026-05-18T10:33:00.000Z",
+    }) as { source: string; shard: string; operation: string; resourceId?: string; payload?: Record<string, unknown>; priority: number };
+    assert.equal(documentJob.source, "documents.blocks");
+    assert.equal(documentJob.shard, "hot");
+    assert.equal(documentJob.operation, "upsert");
+    assert.equal(documentJob.resourceId, "main:documents:doc-alpha");
+    assert.equal(documentJob.priority, 60);
+    assert.equal(documentJob.payload?.eventDriven, true);
+    assert.equal(documentJob.payload?.namespaceId, "main");
+    assert.equal(documentJob.payload?.collection, "document_blocks");
+    assert.equal(documentJob.payload?.recordId, "block-alpha");
+    assert.equal(documentJob.payload?.documentId, "doc-alpha");
+    const knowledgeJob = changedTool.handler({
+      source: "knowledge.graph",
+      operation: "upsert",
+      kind: "fact",
+      factId: "fact-alpha",
+      observedAt: "2026-05-18T10:34:00.000Z",
+    }) as { source: string; shard: string; operation: string; resourceId?: string; payload?: Record<string, unknown>; priority: number };
+    assert.equal(knowledgeJob.source, "knowledge.graph");
+    assert.equal(knowledgeJob.shard, "hot");
+    assert.equal(knowledgeJob.operation, "upsert");
+    assert.equal(knowledgeJob.resourceId, "fact:fact-alpha");
+    assert.equal(knowledgeJob.priority, 60);
+    assert.equal(knowledgeJob.payload?.eventDriven, true);
+    assert.equal(knowledgeJob.payload?.kind, "fact");
+    assert.equal(knowledgeJob.payload?.knowledgeResourceId, "fact:fact-alpha");
+    assert.equal(knowledgeJob.payload?.factId, "fact-alpha");
+    const signalsJob = changedTool.handler({
+      source: "signals.observations",
+      operation: "delete",
+      kind: "observation",
+      observationId: "observation-alpha",
+      observedAt: "2026-05-18T10:34:30.000Z",
+    }) as { source: string; shard: string; operation: string; resourceId?: string; payload?: Record<string, unknown>; priority: number };
+    assert.equal(signalsJob.source, "signals.observations");
+    assert.equal(signalsJob.shard, "hot");
+    assert.equal(signalsJob.operation, "delete");
+    assert.equal(signalsJob.resourceId, "observation:observation-alpha");
+    assert.equal(signalsJob.priority, 80);
+    assert.equal(signalsJob.payload?.eventDriven, true);
+    assert.equal(signalsJob.payload?.kind, "observation");
+    assert.equal(signalsJob.payload?.signalsResourceId, "observation:observation-alpha");
+    assert.equal(signalsJob.payload?.observationId, "observation-alpha");
+    const financeJob = changedTool.handler({
+      source: "finance.records",
+      operation: "upsert",
+      namespace: "main",
+      collection: "transactions",
+      recordId: "txn-alpha",
+      observedAt: "2026-05-18T10:34:40.000Z",
+    }) as { source: string; shard: string; operation: string; resourceId?: string; payload?: Record<string, unknown>; priority: number };
+    assert.equal(financeJob.source, "finance.records");
+    assert.equal(financeJob.shard, "hot");
+    assert.equal(financeJob.operation, "upsert");
+    assert.equal(financeJob.resourceId, "main:transactions:txn-alpha");
+    assert.equal(financeJob.priority, 60);
+    assert.equal(financeJob.payload?.eventDriven, true);
+    assert.equal(financeJob.payload?.namespaceId, "main");
+    assert.equal(financeJob.payload?.collection, "transactions");
+    assert.equal(financeJob.payload?.recordId, "txn-alpha");
+    const financeTableJob = changedTool.handler({
+      source: "finance.records",
+      operation: "delete",
+      table: "finance_records",
+      recordId: "finance-local-alpha",
+      observedAt: "2026-05-18T10:34:45.000Z",
+    }) as { source: string; shard: string; operation: string; resourceId?: string; payload?: Record<string, unknown>; priority: number };
+    assert.equal(financeTableJob.source, "finance.records");
+    assert.equal(financeTableJob.shard, "hot");
+    assert.equal(financeTableJob.operation, "delete");
+    assert.equal(financeTableJob.resourceId, "finance_records:finance-local-alpha");
+    assert.equal(financeTableJob.priority, 80);
+    assert.equal(financeTableJob.payload?.eventDriven, true);
+    assert.equal(financeTableJob.payload?.table, "finance_records");
+    assert.equal(financeTableJob.payload?.recordId, "finance-local-alpha");
+    const elnJob = changedTool.handler({
+      source: "eln.records",
+      operation: "upsert",
+      namespaceId: "main",
+      collectionName: "lab_notebooks",
+      recordId: "notebook-alpha",
+      observedAt: "2026-05-18T10:34:50.000Z",
+    }) as { source: string; shard: string; operation: string; resourceId?: string; payload?: Record<string, unknown>; priority: number };
+    assert.equal(elnJob.source, "eln.records");
+    assert.equal(elnJob.shard, "hot");
+    assert.equal(elnJob.operation, "upsert");
+    assert.equal(elnJob.resourceId, "main:lab_notebooks:notebook-alpha");
+    assert.equal(elnJob.priority, 60);
+    assert.equal(elnJob.payload?.eventDriven, true);
+    assert.equal(elnJob.payload?.namespaceId, "main");
+    assert.equal(elnJob.payload?.collection, "lab_notebooks");
+    assert.equal(elnJob.payload?.recordId, "notebook-alpha");
+    const providerRouteJob = changedTool.handler({
+      source: "providers.routing",
+      operation: "upsert",
+      kind: "routing",
+      provider: "provider-alpha",
+      feature: "chat",
+      capability: "llm",
+      observedAt: "2026-05-18T10:34:55.000Z",
+    }) as { source: string; shard: string; operation: string; resourceId?: string; payload?: Record<string, unknown>; priority: number };
+    assert.equal(providerRouteJob.source, "providers.routing");
+    assert.equal(providerRouteJob.shard, "hot");
+    assert.equal(providerRouteJob.operation, "upsert");
+    assert.equal(providerRouteJob.resourceId, "routing:chat:llm");
+    assert.equal(providerRouteJob.priority, 60);
+    assert.equal(providerRouteJob.payload?.eventDriven, true);
+    assert.equal(providerRouteJob.payload?.kind, "routing");
+    assert.equal(providerRouteJob.payload?.provider, "provider-alpha");
+    assert.equal(providerRouteJob.payload?.feature, "chat");
+    assert.equal(providerRouteJob.payload?.capability, "llm");
+    const providerSettingJob = changedTool.handler({
+      source: "providers.routing",
+      operation: "delete",
+      kind: "setting",
+      providerId: "provider-alpha",
+      observedAt: "2026-05-18T10:34:56.000Z",
+    }) as { source: string; shard: string; operation: string; resourceId?: string; payload?: Record<string, unknown>; priority: number };
+    assert.equal(providerSettingJob.source, "providers.routing");
+    assert.equal(providerSettingJob.shard, "hot");
+    assert.equal(providerSettingJob.operation, "delete");
+    assert.equal(providerSettingJob.resourceId, "setting:provider-alpha");
+    assert.equal(providerSettingJob.priority, 80);
+    assert.equal(providerSettingJob.payload?.eventDriven, true);
+    assert.equal(providerSettingJob.payload?.kind, "setting");
+    assert.equal(providerSettingJob.payload?.provider, "provider-alpha");
+    const agentJob = changedTool.handler({
+      source: "agents.catalog",
+      operation: "upsert",
+      kind: "agent",
+      agentId: "agent-alpha",
+      observedAt: "2026-05-18T10:34:57.000Z",
+    }) as { source: string; shard: string; operation: string; resourceId?: string; payload?: Record<string, unknown>; priority: number };
+    assert.equal(agentJob.source, "agents.catalog");
+    assert.equal(agentJob.shard, "hot");
+    assert.equal(agentJob.operation, "upsert");
+    assert.equal(agentJob.resourceId, "agent:agent-alpha");
+    assert.equal(agentJob.priority, 60);
+    assert.equal(agentJob.payload?.eventDriven, true);
+    assert.equal(agentJob.payload?.kind, "agent");
+    assert.equal(agentJob.payload?.id, "agent-alpha");
+    const skillCollectionJob = changedTool.handler({
+      source: "agents.catalog",
+      operation: "upsert",
+      kind: "skill-collection",
+      id: "collection-alpha",
+      observedAt: "2026-05-18T10:34:58.000Z",
+    }) as { source: string; shard: string; operation: string; resourceId?: string; payload?: Record<string, unknown>; priority: number };
+    assert.equal(skillCollectionJob.source, "agents.catalog");
+    assert.equal(skillCollectionJob.shard, "hot");
+    assert.equal(skillCollectionJob.operation, "upsert");
+    assert.equal(skillCollectionJob.resourceId, "skill_collection:collection-alpha");
+    assert.equal(skillCollectionJob.priority, 60);
+    assert.equal(skillCollectionJob.payload?.eventDriven, true);
+    assert.equal(skillCollectionJob.payload?.kind, "skill_collection");
+    assert.equal(skillCollectionJob.payload?.id, "collection-alpha");
+    const simpleCases: Array<{
+      source: string;
+      params: Record<string, unknown>;
+      resourceId: string;
+      payload: Record<string, string>;
+      workspace?: boolean;
+    }> = [
+      { source: "images.derived", params: { imageId: "image-alpha" }, resourceId: "image-alpha", payload: { imageId: "image-alpha" } },
+      { source: "media.assets", params: { mediaId: "media-alpha" }, resourceId: "media-alpha", payload: { mediaId: "media-alpha" } },
+      { source: "generations.artifacts", params: { generationId: "generation-alpha" }, resourceId: "generation-alpha", payload: { generationId: "generation-alpha" } },
+      { source: "slides.decks", params: { deckId: "deck-alpha", workspaceRoot: root }, resourceId: "deck-alpha", payload: { deckId: "deck-alpha" }, workspace: true },
+      { source: "skills.registry", params: { slug: "skill-alpha" }, resourceId: "skill-alpha", payload: { slug: "skill-alpha" } },
+      { source: "snippets.library", params: { slug: "snippet-alpha" }, resourceId: "snippet-alpha", payload: { slug: "snippet-alpha" } },
+      { source: "marketplace.choices", params: { choiceId: "choice-alpha" }, resourceId: "choice-alpha", payload: { choiceId: "choice-alpha" } },
+      { source: "content.items", params: { itemId: "item-alpha" }, resourceId: "item-alpha", payload: { itemId: "item-alpha" } },
+      { source: "business.records", params: { recordId: "business-alpha" }, resourceId: "business-alpha", payload: { recordId: "business-alpha" } },
+      { source: "social.posts", params: { postId: "post-alpha" }, resourceId: "post-alpha", payload: { postId: "post-alpha" } },
+      { source: "iot.config", params: { configId: "config-alpha" }, resourceId: "config-alpha", payload: { configId: "config-alpha" } },
+      { source: "notes.pages", params: { pageId: "note-alpha" }, resourceId: "note-alpha", payload: { pageId: "note-alpha" } },
+      { source: "calendar.events", params: { eventId: "event-alpha" }, resourceId: "event-alpha", payload: { eventId: "event-alpha" } },
+      { source: "connectors.catalog", params: { operationId: "connector.operation" }, resourceId: "connector.operation", payload: { operationId: "connector.operation" } },
+      { source: "apps.catalog", params: { appId: "app-alpha" }, resourceId: "app-alpha", payload: { appId: "app-alpha" } },
+      { source: "design.resources", params: { resourceId: "design-alpha", workspaceRoot: root }, resourceId: "design-alpha", payload: { resourceId: "design-alpha" }, workspace: true },
+    ];
+    for (const simpleCase of simpleCases) {
+      const simpleJob = changedTool.handler({
+        source: simpleCase.source,
+        operation: "upsert",
+        observedAt: "2026-05-18T10:35:00.000Z",
+        ...simpleCase.params,
+      }) as { source: string; shard: string; operation: string; resourceId?: string; payload?: Record<string, unknown>; priority: number };
+      assert.equal(simpleJob.source, simpleCase.source);
+      assert.equal(simpleJob.shard, "hot");
+      assert.equal(simpleJob.operation, "upsert");
+      assert.equal(simpleJob.resourceId, simpleCase.resourceId);
+      assert.equal(simpleJob.priority, 60);
+      assert.equal(simpleJob.payload?.eventDriven, true);
+      for (const [key, value] of Object.entries(simpleCase.payload)) {
+        assert.equal(simpleJob.payload?.[key], value);
+      }
+      if (simpleCase.workspace) assert.equal(simpleJob.payload?.workspaceRoot, root);
+    }
     assert.throws(() => changedTool.handler({
       source: "code.symbols",
       operation: "upsert",
       root,
       path: outsidePath,
     }), /outside root/);
+    assert.throws(() => changedTool.handler({
+      source: "docs.pages",
+      operation: "upsert",
+      workspaceRoot: root,
+      path: path.join(root, "private.md"),
+    }), /outside public docs scope/);
   } finally {
     store.close();
     fs.rmSync(dir, { recursive: true, force: true });

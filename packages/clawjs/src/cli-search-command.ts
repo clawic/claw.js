@@ -31,12 +31,40 @@ import { readBooleanFlag } from "./cli-flag-parsers.ts";
 import { writeCommandJsonError, writeCommandJsonOk, writeJsonOk } from "./cli-json.ts";
 import { buildCommandHelp, searchCliDiscovery } from "./cli-surface.ts";
 import {
+  scheduleAppsCatalogSearchEvent,
+  scheduleAgentsCatalogSearchEvent,
+  scheduleBusinessRecordsSearchEvent,
+  scheduleCalendarEventsSearchEvent,
   scheduleCodeSymbolsSearchEvent,
+  scheduleConnectorCatalogSearchEvent,
+  scheduleContentItemsSearchEvent,
+  scheduleDatabaseRecordSearchEvent,
+  scheduleDesignResourcesSearchEvent,
+  scheduleDocumentBlocksSearchEvent,
+  scheduleDocsPagesSearchEvent,
+  scheduleElnRecordsSearchEvent,
   scheduleExternalCacheSearchEvent,
+  scheduleFinanceRecordsSearchEvent,
+  scheduleFinanceRecordTableSearchEvent,
+  scheduleGenerationArtifactSearchEvent,
+  scheduleImageDerivedSearchEvent,
+  scheduleIotConfigSearchEvent,
+  scheduleKnowledgeGraphSearchEvent,
   scheduleLocalFileSearchEvent,
+  scheduleMarketplaceChoicesSearchEvent,
+  scheduleMediaAssetSearchEvent,
+  scheduleNotesPagesSearchEvent,
+  scheduleProvidersRoutingSearchEvent,
   scheduleSessionChatSearchEvent,
+  scheduleSheetsWorkbookSearchEvent,
+  scheduleSignalsObservationsSearchEvent,
+  scheduleSkillsRegistrySearchEvent,
+  scheduleSlidesDeckSearchEvent,
+  scheduleSnippetsLibrarySearchEvent,
+  scheduleSocialPostsSearchEvent,
   scheduleSurfaceRouteSearchEvent,
   scheduleWebIngestedSearchEvent,
+  scheduleWorkItemsSearchEvent,
   type SearchEventScheduleResult,
 } from "./cli-search-events.ts";
 import {
@@ -81,6 +109,39 @@ import { listTemplates, readTemplate, templateManifestPath } from "./templates/s
 import { resolveClawjsDataRoot, resolveClawjsMainDbPath } from "./v1-data.ts";
 import { ensureV1MainSchema, readMcpServers, type JsonRecord } from "./v1-data-core.ts";
 const BUILTIN_SEARCH_SOURCES: SearchSourceManifest[] = createBuiltinSearchSourceManifests();
+type SimpleChangedSourceScheduleInput = {
+  operation: "upsert" | "delete";
+  id: string;
+  dataDir: string;
+  flags: Record<string, string>;
+  observedAt?: string;
+  workspaceRoot?: string;
+};
+
+const SIMPLE_CHANGED_SOURCE_SCHEDULES = new Map<string, {
+  idFlagNames: string[];
+  idLabel: string;
+  workspaceRoot?: boolean;
+  schedule: (input: SimpleChangedSourceScheduleInput) => SearchEventScheduleResult;
+}>([
+  ["images.derived", { idFlagNames: ["image-id", "image"], idLabel: "image-id", schedule: (input) => scheduleImageDerivedSearchEvent({ operation: input.operation, imageId: input.id, dataDir: input.dataDir, flags: input.flags, observedAt: input.observedAt }) }],
+  ["media.assets", { idFlagNames: ["media-id", "media"], idLabel: "media-id", schedule: (input) => scheduleMediaAssetSearchEvent({ operation: input.operation, mediaId: input.id, dataDir: input.dataDir, flags: input.flags, observedAt: input.observedAt }) }],
+  ["generations.artifacts", { idFlagNames: ["generation-id", "generation"], idLabel: "generation-id", schedule: (input) => scheduleGenerationArtifactSearchEvent({ operation: input.operation, generationId: input.id, dataDir: input.dataDir, flags: input.flags, observedAt: input.observedAt }) }],
+  ["slides.decks", { idFlagNames: ["deck-id", "deck"], idLabel: "deck-id", workspaceRoot: true, schedule: (input) => scheduleSlidesDeckSearchEvent({ operation: input.operation, deckId: input.id, workspaceRoot: input.workspaceRoot ?? process.cwd(), dataDir: input.dataDir, flags: input.flags, observedAt: input.observedAt }) }],
+  ["skills.registry", { idFlagNames: ["slug", "skill-slug", "skill"], idLabel: "slug", schedule: (input) => scheduleSkillsRegistrySearchEvent({ operation: input.operation, slug: input.id, dataDir: input.dataDir, flags: input.flags, observedAt: input.observedAt }) }],
+  ["snippets.library", { idFlagNames: ["slug", "snippet-slug", "snippet"], idLabel: "slug", schedule: (input) => scheduleSnippetsLibrarySearchEvent({ operation: input.operation, slug: input.id, dataDir: input.dataDir, flags: input.flags, observedAt: input.observedAt }) }],
+  ["marketplace.choices", { idFlagNames: ["choice-id", "choice"], idLabel: "choice-id", schedule: (input) => scheduleMarketplaceChoicesSearchEvent({ operation: input.operation, id: input.id, dataDir: input.dataDir, flags: input.flags, observedAt: input.observedAt }) }],
+  ["content.items", { idFlagNames: ["item-id", "item"], idLabel: "item-id", schedule: (input) => scheduleContentItemsSearchEvent({ operation: input.operation, itemId: input.id, dataDir: input.dataDir, flags: input.flags, observedAt: input.observedAt }) }],
+  ["business.records", { idFlagNames: ["record-id", "record"], idLabel: "record-id", schedule: (input) => scheduleBusinessRecordsSearchEvent({ operation: input.operation, recordId: input.id, dataDir: input.dataDir, flags: input.flags, observedAt: input.observedAt }) }],
+  ["social.posts", { idFlagNames: ["post-id", "post"], idLabel: "post-id", schedule: (input) => scheduleSocialPostsSearchEvent({ operation: input.operation, postId: input.id, dataDir: input.dataDir, flags: input.flags, observedAt: input.observedAt }) }],
+  ["iot.config", { idFlagNames: ["config-id", "config"], idLabel: "config-id", schedule: (input) => scheduleIotConfigSearchEvent({ operation: input.operation, configId: input.id, dataDir: input.dataDir, flags: input.flags, observedAt: input.observedAt }) }],
+  ["notes.pages", { idFlagNames: ["page-id", "page"], idLabel: "page-id", schedule: (input) => scheduleNotesPagesSearchEvent({ operation: input.operation, pageId: input.id, dataDir: input.dataDir, flags: input.flags, observedAt: input.observedAt }) }],
+  ["calendar.events", { idFlagNames: ["event-id", "event"], idLabel: "event-id", schedule: (input) => scheduleCalendarEventsSearchEvent({ operation: input.operation, eventId: input.id, dataDir: input.dataDir, flags: input.flags, observedAt: input.observedAt }) }],
+  ["connectors.catalog", { idFlagNames: ["operation-id", "operation"], idLabel: "operation-id", schedule: (input) => scheduleConnectorCatalogSearchEvent({ operation: input.operation, operationId: input.id, dataDir: input.dataDir, flags: input.flags, observedAt: input.observedAt }) }],
+  ["apps.catalog", { idFlagNames: ["app-id", "app"], idLabel: "app-id", schedule: (input) => scheduleAppsCatalogSearchEvent({ operation: input.operation, appId: input.id, dataDir: input.dataDir, flags: input.flags, observedAt: input.observedAt }) }],
+  ["design.resources", { idFlagNames: ["resource-id", "resource"], idLabel: "resource-id", workspaceRoot: true, schedule: (input) => scheduleDesignResourcesSearchEvent({ operation: input.operation, resourceId: input.id, workspaceRoot: input.workspaceRoot, dataDir: input.dataDir, flags: input.flags, observedAt: input.observedAt }) }],
+]);
+
 export function isSearchAdminCommand(command: string | undefined): boolean {
   return !!command && SEARCH_ADMIN_COMMANDS.has(command);
 }
@@ -1328,9 +1389,342 @@ function scheduleSearchChangedSourceEvent(input: {
         observedAt,
       });
     }
+    case "docs.pages": {
+      const workspaceRoot = input.flags.workspace ?? root ?? input.cwd;
+      if (!filePath) return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source docs.pages --workspace <workspace-root> --path <file>" };
+      return scheduleDocsPagesSearchEvent({
+        operation: input.operation,
+        workspaceRoot: path.resolve(input.cwd, expandSearchPath(workspaceRoot)),
+        filePath: path.resolve(input.cwd, expandSearchPath(filePath)),
+        dataDir,
+        flags: input.flags,
+        observedAt,
+      });
+    }
+    case "sheets.workbooks": {
+      const workbookId = input.flags["workbook-id"] ?? input.flags["resource-id"] ?? input.flags.workbook ?? input.positionals[5];
+      const workspaceRoot = input.flags.workspace ?? root ?? input.cwd;
+      if (!workbookId) return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source sheets.workbooks --workbook-id <workbook-id> [--workspace <workspace-root>]" };
+      return scheduleSheetsWorkbookSearchEvent({
+        operation: input.operation,
+        workbookId,
+        workspaceRoot: path.resolve(input.cwd, expandSearchPath(workspaceRoot)),
+        dataDir,
+        flags: input.flags,
+        observedAt,
+      });
+    }
+    case "database.records":
+      return scheduleDatabaseOrWorkChangedSourceEvent(input, { dataDir, observedAt, source: "database.records" });
+    case "work.items":
+      return scheduleDatabaseOrWorkChangedSourceEvent(input, { dataDir, observedAt, source: "work.items" });
+    case "documents.blocks":
+      return scheduleDocumentBlocksChangedSourceEvent(input, { dataDir, observedAt });
+    case "knowledge.graph":
+      return scheduleKnowledgeGraphChangedSourceEvent(input, { dataDir, observedAt });
+    case "signals.observations":
+      return scheduleSignalsObservationsChangedSourceEvent(input, { dataDir, observedAt });
+    case "finance.records":
+      return scheduleFinanceRecordsChangedSourceEvent(input, { dataDir, observedAt });
+    case "eln.records":
+      return scheduleNamespaceRecordChangedSourceEvent(input, { dataDir, observedAt, source: "eln.records" });
+    case "providers.routing":
+      return scheduleProvidersRoutingChangedSourceEvent(input, { dataDir, observedAt });
+    case "agents.catalog":
+      return scheduleAgentsCatalogChangedSourceEvent(input, { dataDir, observedAt });
     default:
-      return { ok: false, error: `Search changed events are typed for sessions.chats, code.symbols, local.files, web.ingested, external.cache, and surfaces.routes; use search jobs schedule for ${input.source}.` };
+      return scheduleSimpleChangedSourceEvent(input, { dataDir, observedAt, root });
   }
+}
+
+function scheduleDatabaseOrWorkChangedSourceEvent(input: {
+  source: string;
+  operation: "upsert" | "delete";
+  flags: Record<string, string>;
+  positionals: string[];
+}, options: { dataDir: string; observedAt?: string; source: "database.records" | "work.items" }): SearchEventScheduleResult {
+  const namespaceId = input.flags["namespace-id"] ?? input.flags.namespace;
+  const collectionName = input.flags["collection-name"] ?? input.flags.collection;
+  const recordId = input.flags["record-id"] ?? input.flags["resource-id"] ?? input.flags.record ?? input.positionals[5];
+  if (!namespaceId || !collectionName || !recordId) {
+    return { ok: false, error: `Usage: claw search changes schedule <upsert|delete> --source ${options.source} --namespace <id> --collection <name> --record-id <id>` };
+  }
+  if (options.source === "database.records") {
+    return scheduleDatabaseRecordSearchEvent({
+      operation: input.operation,
+      namespaceId,
+      collectionName,
+      recordId,
+      dataDir: options.dataDir,
+      flags: input.flags,
+      observedAt: options.observedAt,
+    });
+  }
+  return scheduleWorkItemsSearchEvent({
+    operation: input.operation,
+    namespaceId,
+    collectionName,
+    recordId,
+    dataDir: options.dataDir,
+    flags: input.flags,
+    observedAt: options.observedAt,
+  });
+}
+
+function scheduleDocumentBlocksChangedSourceEvent(input: {
+  operation: "upsert" | "delete";
+  flags: Record<string, string>;
+  positionals: string[];
+}, options: { dataDir: string; observedAt?: string }): SearchEventScheduleResult {
+  const namespaceId = input.flags["namespace-id"] ?? input.flags.namespace;
+  const documentId = input.flags["document-id"] ?? input.flags.document ?? input.flags["resource-id"] ?? input.positionals[5];
+  const collectionName = input.flags["collection-name"] ?? input.flags.collection ?? "documents";
+  if (collectionName !== "documents" && collectionName !== "document_blocks") {
+    return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source documents.blocks --namespace <id> --document-id <id> [--collection documents|document_blocks --record-id <id>]" };
+  }
+  const recordId = input.flags["record-id"] ?? input.flags.record ?? (collectionName === "documents" ? documentId : undefined);
+  if (!namespaceId || !documentId || !recordId) {
+    return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source documents.blocks --namespace <id> --document-id <id> [--collection documents|document_blocks --record-id <id>]" };
+  }
+  return scheduleDocumentBlocksSearchEvent({
+    operation: input.operation,
+    namespaceId,
+    documentId,
+    collectionName,
+    recordId,
+    dataDir: options.dataDir,
+    flags: input.flags,
+    observedAt: options.observedAt,
+  });
+}
+
+function scheduleKnowledgeGraphChangedSourceEvent(input: {
+  operation: "upsert" | "delete";
+  flags: Record<string, string>;
+  positionals: string[];
+}, options: { dataDir: string; observedAt?: string }): SearchEventScheduleResult {
+  const kind = input.flags.kind ?? input.flags.type;
+  if (kind !== "entity" && kind !== "fact") {
+    return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source knowledge.graph --kind entity|fact --id <id>" };
+  }
+  const id = input.flags.id
+    ?? input.flags["resource-id"]
+    ?? (kind === "entity" ? input.flags["entity-id"] : input.flags["fact-id"])
+    ?? input.positionals[5];
+  if (!id) {
+    return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source knowledge.graph --kind entity|fact --id <id>" };
+  }
+  return scheduleKnowledgeGraphSearchEvent({
+    operation: input.operation,
+    kind,
+    id,
+    dataDir: options.dataDir,
+    flags: input.flags,
+    observedAt: options.observedAt,
+  });
+}
+
+function scheduleSignalsObservationsChangedSourceEvent(input: {
+  operation: "upsert" | "delete";
+  flags: Record<string, string>;
+  positionals: string[];
+}, options: { dataDir: string; observedAt?: string }): SearchEventScheduleResult {
+  const kind = input.flags.kind ?? input.flags.type;
+  if (kind !== "vertical" && kind !== "variable" && kind !== "observation") {
+    return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source signals.observations --kind vertical|variable|observation --id <id>" };
+  }
+  const id = input.flags.id
+    ?? input.flags["resource-id"]
+    ?? (kind === "vertical" ? input.flags["vertical-id"] : kind === "variable" ? input.flags["variable-id"] : input.flags["observation-id"])
+    ?? input.positionals[5];
+  if (!id) {
+    return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source signals.observations --kind vertical|variable|observation --id <id>" };
+  }
+  return scheduleSignalsObservationsSearchEvent({
+    operation: input.operation,
+    kind,
+    id,
+    dataDir: options.dataDir,
+    flags: input.flags,
+    observedAt: options.observedAt,
+  });
+}
+
+function scheduleNamespaceRecordChangedSourceEvent(input: {
+  operation: "upsert" | "delete";
+  flags: Record<string, string>;
+  positionals: string[];
+}, options: { dataDir: string; observedAt?: string; source: "eln.records" }): SearchEventScheduleResult {
+  const namespaceId = input.flags["namespace-id"] ?? input.flags.namespace;
+  const collectionName = input.flags["collection-name"] ?? input.flags.collection;
+  const recordId = input.flags["record-id"] ?? input.flags["resource-id"] ?? input.flags.record ?? input.positionals[5];
+  if (!namespaceId || !collectionName || !recordId) {
+    return { ok: false, error: `Usage: claw search changes schedule <upsert|delete> --source ${options.source} --namespace <id> --collection <name> --record-id <id>` };
+  }
+  return scheduleElnRecordsSearchEvent({
+    operation: input.operation,
+    namespaceId,
+    collectionName,
+    recordId,
+    dataDir: options.dataDir,
+    flags: input.flags,
+    observedAt: options.observedAt,
+  });
+}
+
+function scheduleFinanceRecordsChangedSourceEvent(input: {
+  operation: "upsert" | "delete";
+  flags: Record<string, string>;
+  positionals: string[];
+}, options: { dataDir: string; observedAt?: string }): SearchEventScheduleResult {
+  const table = input.flags.table;
+  const recordId = input.flags["record-id"] ?? input.flags["resource-id"] ?? input.flags.record ?? input.positionals[5];
+  if (table === "finance_records") {
+    if (!recordId) {
+      return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source finance.records --table finance_records --record-id <id>" };
+    }
+    return scheduleFinanceRecordTableSearchEvent({
+      operation: input.operation,
+      recordId,
+      dataDir: options.dataDir,
+      flags: input.flags,
+      observedAt: options.observedAt,
+    });
+  }
+  const namespaceId = input.flags["namespace-id"] ?? input.flags.namespace;
+  const collectionName = input.flags["collection-name"] ?? input.flags.collection;
+  if (!namespaceId || !collectionName || !recordId) {
+    return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source finance.records --namespace <id> --collection <name> --record-id <id> OR --table finance_records --record-id <id>" };
+  }
+  return scheduleFinanceRecordsSearchEvent({
+    operation: input.operation,
+    namespaceId,
+    collectionName,
+    recordId,
+    dataDir: options.dataDir,
+    flags: input.flags,
+    observedAt: options.observedAt,
+  });
+}
+
+function scheduleProvidersRoutingChangedSourceEvent(input: {
+  operation: "upsert" | "delete";
+  flags: Record<string, string>;
+  positionals: string[];
+}, options: { dataDir: string; observedAt?: string }): SearchEventScheduleResult {
+  const kind = input.flags.kind ?? input.flags.type;
+  if (kind !== "routing" && kind !== "setting") {
+    return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source providers.routing --kind routing --feature <feature> [--capability <capability>] OR --kind setting --provider <provider>" };
+  }
+  const provider = input.flags.provider ?? input.flags["provider-id"];
+  const feature = input.flags.feature ?? input.positionals[5];
+  const capability = input.flags.capability ?? "chat";
+  if (kind === "routing" && (!feature || !capability)) {
+    return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source providers.routing --kind routing --feature <feature> [--capability <capability>]" };
+  }
+  if (kind === "setting" && !provider) {
+    return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source providers.routing --kind setting --provider <provider>" };
+  }
+  return scheduleProvidersRoutingSearchEvent({
+    operation: input.operation,
+    kind,
+    provider,
+    feature,
+    capability,
+    dataDir: options.dataDir,
+    flags: input.flags,
+    observedAt: options.observedAt,
+  });
+}
+
+function scheduleAgentsCatalogChangedSourceEvent(input: {
+  operation: "upsert" | "delete";
+  flags: Record<string, string>;
+  positionals: string[];
+}, options: { dataDir: string; observedAt?: string }): SearchEventScheduleResult {
+  const rawKind = input.flags.kind ?? input.flags.type;
+  const kind = rawKind === "skill-collection" ? "skill_collection" : rawKind;
+  if (kind !== "agent" && kind !== "personality" && kind !== "skill_collection" && kind !== "connection") {
+    return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source agents.catalog --kind agent|personality|skill_collection|connection --id <id>" };
+  }
+  const id = input.flags.id
+    ?? input.flags["resource-id"]
+    ?? (kind === "agent"
+      ? input.flags["agent-id"]
+      : kind === "personality"
+        ? input.flags["personality-id"]
+        : kind === "skill_collection"
+          ? input.flags["skill-collection-id"]
+          : input.flags["connection-id"])
+    ?? input.positionals[5];
+  if (!id) {
+    return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source agents.catalog --kind agent|personality|skill_collection|connection --id <id>" };
+  }
+  return scheduleAgentsCatalogSearchEvent({
+    operation: input.operation,
+    kind,
+    id,
+    dataDir: options.dataDir,
+    flags: input.flags,
+    observedAt: options.observedAt,
+  });
+}
+
+function scheduleSimpleChangedSourceEvent(input: {
+  source: string;
+  operation: "upsert" | "delete";
+  cwd: string;
+  flags: Record<string, string>;
+  positionals: string[];
+}, options: { dataDir: string; observedAt?: string; root?: string }): SearchEventScheduleResult {
+  const spec = SIMPLE_CHANGED_SOURCE_SCHEDULES.get(input.source);
+  if (!spec) {
+    return { ok: false, error: `Search changed events are typed for ${typedChangedSourceList()}; use search jobs schedule for ${input.source}.` };
+  }
+  const id = changedScheduleResourceId(input, spec.idFlagNames);
+  if (!id) {
+    return { ok: false, error: `Usage: claw search changes schedule <upsert|delete> --source ${input.source} --${spec.idLabel} <id>` };
+  }
+  const workspaceRootFlag = input.flags.workspace ?? options.root ?? input.cwd;
+  return spec.schedule({
+    operation: input.operation,
+    id,
+    dataDir: options.dataDir,
+    flags: input.flags,
+    observedAt: options.observedAt,
+    workspaceRoot: spec.workspaceRoot ? path.resolve(input.cwd, expandSearchPath(workspaceRootFlag)) : undefined,
+  });
+}
+
+function changedScheduleResourceId(input: { flags: Record<string, string>; positionals: string[] }, flagNames: string[]): string | undefined {
+  for (const flagName of flagNames) {
+    const value = input.flags[flagName];
+    if (value) return value;
+  }
+  return input.flags["resource-id"] ?? input.flags.resource ?? input.positionals[5];
+}
+
+function typedChangedSourceList(): string {
+  return [
+    "sessions.chats",
+    "docs.pages",
+    "sheets.workbooks",
+    "code.symbols",
+    "local.files",
+    "web.ingested",
+    "external.cache",
+    "surfaces.routes",
+    "database.records",
+    "work.items",
+    "documents.blocks",
+    "knowledge.graph",
+    "signals.observations",
+    "finance.records",
+    "eln.records",
+    "providers.routing",
+    "agents.catalog",
+    ...SIMPLE_CHANGED_SOURCE_SCHEDULES.keys(),
+  ].join(", ");
 }
 
 function expandSearchPath(value: string): string {

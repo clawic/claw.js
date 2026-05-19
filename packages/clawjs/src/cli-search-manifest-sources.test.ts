@@ -5,7 +5,6 @@ import os from "os";
 import path from "path";
 
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK } from "./index.ts";
-import { scheduleSheetsWorkbookSearchEvent } from "./cli-search-events.ts";
 import { runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
 
 test("search rebuild indexes slides.decks from slide manifests", async () => {
@@ -454,21 +453,18 @@ test("sheets.workbooks event jobs refresh changed workbook manifests", async () 
     DATABASE_DB_PATH: undefined,
     CLAW_SEARCH_DB_PATH: undefined,
   }, async () => {
-    const scheduled = scheduleSheetsWorkbookSearchEvent({
-      operation: "upsert",
-      workbookId,
-      workspaceRoot,
-      dataDir: dataRoot,
-      flags: { workspace: workspaceRoot },
-    });
-    assert.equal(scheduled.ok, true, scheduled.error);
-    assert.equal(scheduled.job?.source, "sheets.workbooks");
-    assert.equal(scheduled.job?.operation, "upsert");
-    assert.equal(scheduled.job?.resourceId, workbookId);
-    assert.equal(scheduled.job?.shard, "hot");
-    assert.equal(scheduled.job?.payload.eventDriven, true);
-    assert.equal(scheduled.job?.payload.workbookId, workbookId);
-    assert.equal(scheduled.job?.payload.workspaceRoot, path.resolve(workspaceRoot));
+    const scheduled = await runCliCapture(["search", "changes", "schedule", "upsert", "--source", "sheets.workbooks", "--workbook-id", workbookId, "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(scheduled.code, CLI_EXIT_OK, scheduled.stderr || scheduled.stdout);
+    const scheduledPayload = JSON.parse(scheduled.stdout) as {
+      data: { item?: { source: string; operation: string; resourceId?: string; shard?: string; payload?: { eventDriven?: boolean; workbookId?: string; workspaceRoot?: string } } };
+    };
+    assert.equal(scheduledPayload.data.item?.source, "sheets.workbooks");
+    assert.equal(scheduledPayload.data.item?.operation, "upsert");
+    assert.equal(scheduledPayload.data.item?.resourceId, workbookId);
+    assert.equal(scheduledPayload.data.item?.shard, "hot");
+    assert.equal(scheduledPayload.data.item?.payload?.eventDriven, true);
+    assert.equal(scheduledPayload.data.item?.payload?.workbookId, workbookId);
+    assert.equal(scheduledPayload.data.item?.payload?.workspaceRoot, path.resolve(workspaceRoot));
 
     const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "sheets.workbooks", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(serviceRun.code, CLI_EXIT_OK);
@@ -492,18 +488,17 @@ test("sheets.workbooks event jobs refresh changed workbook manifests", async () 
     assert.equal(result?.fragments?.some((fragment) => fragment.title === "Pipeline"), true);
 
     fs.unlinkSync(path.join(workbooksDir, `${workbookId}.json`));
-    const deleted = scheduleSheetsWorkbookSearchEvent({
-      operation: "delete",
-      workbookId,
-      workspaceRoot,
-      dataDir: dataRoot,
-      flags: { workspace: workspaceRoot },
-    });
-    assert.equal(deleted.ok, true, deleted.error);
-    assert.equal(deleted.job?.source, "sheets.workbooks");
-    assert.equal(deleted.job?.operation, "delete");
-    assert.equal(deleted.job?.resourceId, workbookId);
-    assert.equal(deleted.job?.payload.workbookId, workbookId);
+    const deleted = await runCliCapture(["search", "changes", "schedule", "delete", "--source", "sheets.workbooks", "--workbook-id", workbookId, "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleted.code, CLI_EXIT_OK, deleted.stderr || deleted.stdout);
+    const deletedPayload = JSON.parse(deleted.stdout) as {
+      data: { item?: { source: string; operation: string; resourceId?: string; payload?: { eventDriven?: boolean; workbookId?: string; workspaceRoot?: string } } };
+    };
+    assert.equal(deletedPayload.data.item?.source, "sheets.workbooks");
+    assert.equal(deletedPayload.data.item?.operation, "delete");
+    assert.equal(deletedPayload.data.item?.resourceId, workbookId);
+    assert.equal(deletedPayload.data.item?.payload?.eventDriven, true);
+    assert.equal(deletedPayload.data.item?.payload?.workbookId, workbookId);
+    assert.equal(deletedPayload.data.item?.payload?.workspaceRoot, path.resolve(workspaceRoot));
     const sheetDeleteRun = await runCliCapture(["search", "service", "run-once", "--source", "sheets.workbooks", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(sheetDeleteRun.code, CLI_EXIT_OK);
     const sheetDeleteRunItem = (JSON.parse(sheetDeleteRun.stdout) as any).data.service.worker?.items.find((entry: any) => entry.source === "sheets.workbooks");

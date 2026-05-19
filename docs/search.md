@@ -157,6 +157,8 @@ claw search jobs complete <job-id> --json
 claw search jobs fail <job-id> --error "temporary extractor throttle" --retry --json
 claw search jobs schedule upsert --source documents.blocks --resource-id doc_123 --json
 claw search changes schedule upsert --source sessions.chats --session-id <session-id> --json
+claw search changes schedule upsert --source docs.pages --workspace . --path docs/guide.md --json
+claw search changes schedule upsert --source sheets.workbooks --workbook-id forecast-q2 --workspace . --json
 claw search changes schedule upsert --source code.symbols --root ./repo --path ./repo/src/app.ts --json
 claw search changes scan --source code.symbols --root ./repo --json
 claw search saved create recent --query "text" --json
@@ -224,10 +226,11 @@ unbounded duplicate backfill work.
 
 `claw search changes schedule` is the typed producer-facing wrapper for changed
 resource, file, or route events. It uses the source schedulers for
-`sessions.chats`, `code.symbols`, `local.files`, `web.ingested`,
-`external.cache`, and `surfaces.routes`, so producer ids/paths are checked
-against the selected source contract and the queued job contains the payload
-the embedded worker needs for resource-scoped refresh.
+`sessions.chats`, `docs.pages`, `sheets.workbooks`, `code.symbols`,
+`local.files`, `web.ingested`, `external.cache`, and `surfaces.routes`, so
+producer ids/paths are checked against the selected source contract and the
+queued job contains the payload the embedded worker needs for resource-scoped
+refresh.
 `claw search changes scan` is a bounded local fallback producer for file-backed
 sources. It walks a selected root, stores a compact snapshot in the source
 cursor shard `changes`, and schedules hot upsert/delete jobs only for files
@@ -492,6 +495,9 @@ projection exists. Producers that write workbook manifests can schedule
 best-effort hot upsert jobs for changed workbooks through the Search event
 scheduler; `claw sheets workbook upsert|delete` writes local workbook manifests
 and emits hot `sheets.workbooks` refresh/delete jobs for the changed workbook id.
+External workbook producers can use `claw search changes schedule upsert|delete
+--source sheets.workbooks --workbook-id <id> --workspace <workspace-root>` to
+enqueue the same hot resource refresh/tombstone job.
 
 `generations.artifacts` projects generated artifact records. It indexes prompts,
 titles, kind, status, backend/model metadata, command provenance, output
@@ -621,6 +627,10 @@ resource-scoped refresh jobs keyed by repository-relative docs paths.
 emits hot `docs.pages` refresh/delete jobs for the changed page. It also writes
 deterministic local `local-text-v1` vectors for provider-free semantic and
 hybrid docs queries.
+External doc producers can use `claw search changes schedule upsert|delete
+--source docs.pages --workspace <workspace-root> --path <docs-file>` for the
+same hot refresh path; files outside root public docs or `docs/` are rejected
+before a job is written.
 
 `surfaces.routes` projects the framework surface route graph from
 `packages/clawjs-core/src/surface-registry.ts`. It indexes each route's source
