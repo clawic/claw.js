@@ -308,6 +308,13 @@ function buildRequestShape(
     };
   }
 
+  if (capability.id === "mac.audio.volume" || capability.id === "mac.display.brightness") {
+    const numericPositionals = targetPositionals.filter((entry) => /^\d+$/.test(entry));
+    const value = flags.value ?? numericPositionals[numericPositionals.length - 1];
+    if (value) args.value = value;
+    return Object.keys(args).length > 0 ? { arguments: args } : {};
+  }
+
   return Object.keys(args).length > 0 ? { arguments: args } : {};
 }
 

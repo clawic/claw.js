@@ -2,9 +2,12 @@ import AppKit
 import ApplicationServices
 import AVFoundation
 import Contacts
+import CoreAudio
 import CoreWLAN
 import EventKit
 import Foundation
+import IOKit
+import IOKit.graphics
 import IOKit.hid
 import Speech
 
@@ -785,8 +788,106 @@ public struct MacControlProcessRunner: MacControlCommandRunning {
             }
             interface.disassociate()
             return "disconnected \(device)"
+        case "coreaudio.output_volume":
+            let value = try percentValue(from: arguments, label: "volume")
+            try setDefaultOutputVolume(Float32(value) / 100)
+            return "output volume set to \(value)%"
+        case "display.brightness":
+            let value = try percentValue(from: arguments, label: "brightness")
+            try setMainDisplayBrightness(Float(value) / 100)
+            return "display brightness set to \(value)%"
         default:
             throw MacControlError.commandFailed("Unsupported native Mac Control action \(action).")
+        }
+    }
+
+    private func percentValue(from arguments: [String], label: String) throws -> Int {
+        guard let raw = arguments.first, let value = Int(raw), value >= 0, value <= 100 else {
+            throw MacControlError.commandFailed("\(label) must be a number from 0 to 100.")
+        }
+        return value
+    }
+
+    private func setDefaultOutputVolume(_ volume: Float32) throws {
+        var deviceID = AudioDeviceID(0)
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        let deviceStatus = AudioObjectGetPropertyData(
+            AudioObjectID(kAudioObjectSystemObject),
+            &address,
+            0,
+            nil,
+            &size,
+            &deviceID
+        )
+        guard deviceStatus == noErr, deviceID != 0 else {
+            throw MacControlError.commandFailed("Default output device was not available.")
+        }
+
+        var outputVolume = volume
+        var volumeAddress = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyVolumeScalar,
+            mScope: kAudioDevicePropertyScopeOutput,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        if AudioObjectHasProperty(deviceID, &volumeAddress) {
+            let status = AudioObjectSetPropertyData(
+                deviceID,
+                &volumeAddress,
+                0,
+                nil,
+                UInt32(MemoryLayout<Float32>.size),
+                &outputVolume
+            )
+            if status == noErr { return }
+        }
+
+        var didSetChannel = false
+        for channel in UInt32(1)...UInt32(2) {
+            var channelVolume = volume
+            var channelAddress = AudioObjectPropertyAddress(
+                mSelector: kAudioDevicePropertyVolumeScalar,
+                mScope: kAudioDevicePropertyScopeOutput,
+                mElement: channel
+            )
+            guard AudioObjectHasProperty(deviceID, &channelAddress) else { continue }
+            let status = AudioObjectSetPropertyData(
+                deviceID,
+                &channelAddress,
+                0,
+                nil,
+                UInt32(MemoryLayout<Float32>.size),
+                &channelVolume
+            )
+            didSetChannel = didSetChannel || status == noErr
+        }
+        guard didSetChannel else {
+            throw MacControlError.commandFailed("Output volume is not writable on the current device.")
+        }
+    }
+
+    private func setMainDisplayBrightness(_ brightness: Float) throws {
+        var iterator: io_iterator_t = 0
+        let result = IOServiceGetMatchingServices(kIOMainPortDefault, IOServiceMatching("IODisplayConnect"), &iterator)
+        guard result == KERN_SUCCESS else {
+            throw MacControlError.commandFailed("Display brightness service was not available.")
+        }
+        defer { IOObjectRelease(iterator) }
+
+        var didSetDisplay = false
+        while true {
+            let service = IOIteratorNext(iterator)
+            if service == 0 { break }
+            defer { IOObjectRelease(service) }
+            let status = IODisplaySetFloatParameter(service, 0, kIODisplayBrightnessKey as CFString, brightness)
+            didSetDisplay = didSetDisplay || status == KERN_SUCCESS
+        }
+        guard didSetDisplay else {
+            throw MacControlError.commandFailed("Display brightness is not writable on the current display.")
         }
     }
 }
@@ -1043,6 +1144,32 @@ public enum MacControlActionBroker {
                 return blockedPlan(request, reason: "Shortcut run requires a shortcut name.")
             }
             return processPlan(request, risk: .high, permissions: [.automationAppleEvents], steps: [.process("/usr/bin/shortcuts", ["run", name], "Run Shortcut \(redactedName("shortcut", name))", redacted: true)], requiresApproval: true, revertLevel: .none, blockedReason: blockedReason)
+        case "mac.audio.volume":
+            guard let value = percentArgument("value", from: request) else {
+                return blockedPlan(request, reason: "Audio volume requires a numeric value from 0 to 100.")
+            }
+            return processPlan(
+                request,
+                risk: .low,
+                permissions: [],
+                steps: [.native("coreaudio.output_volume", [String(value)], "Set output volume to \(value)%")],
+                requiresApproval: true,
+                revertLevel: .none,
+                blockedReason: blockedReason
+            )
+        case "mac.display.brightness":
+            guard let value = percentArgument("value", from: request) else {
+                return blockedPlan(request, reason: "Display brightness requires a numeric value from 0 to 100.")
+            }
+            return processPlan(
+                request,
+                risk: .medium,
+                permissions: [],
+                steps: [.native("display.brightness", [String(value)], "Set display brightness to \(value)%")],
+                requiresApproval: true,
+                revertLevel: .none,
+                blockedReason: blockedReason
+            )
         default:
             throw MacControlError.unsupportedCapability(request.capabilityId)
         }
@@ -1307,6 +1434,11 @@ public enum MacControlActionBroker {
 
     private static func positiveIntegerArgument(_ name: String, from request: MacControlActionRequest) -> Int? {
         guard let value = integerArgument(name, from: request), value > 0 else { return nil }
+        return value
+    }
+
+    private static func percentArgument(_ name: String, from request: MacControlActionRequest) -> Int? {
+        guard let value = integerArgument(name, from: request), value >= 0, value <= 100 else { return nil }
         return value
     }
 

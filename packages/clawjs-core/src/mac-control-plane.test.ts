@@ -170,6 +170,8 @@ test("Mac V1 executable slice is fully declared", () => {
     "mac.shortcut.list",
     "mac.shortcut.show",
     "mac.shortcut.run",
+    "mac.audio.volume",
+    "mac.display.brightness",
   ]);
 
   for (const id of [
@@ -188,6 +190,8 @@ test("Mac V1 executable slice is fully declared", () => {
     "mac.shortcut.list",
     "mac.shortcut.show",
     "mac.shortcut.run",
+    "mac.audio.volume",
+    "mac.display.brightness",
   ]) {
     assert.ok(executableIds.includes(id), `missing executable ${id}`);
   }
@@ -202,6 +206,8 @@ test("Mac V1 executable slice is fully declared", () => {
   assert.equal(findMacAtlasCapability("mac.window.close")?.backend.strategy, "accessibility_ax");
   assert.equal(findMacAtlasCapability("mac.shortcut.run")?.backend.executablePath, "/usr/bin/shortcuts");
   assert.equal(findMacAtlasCapability("mac.shortcut.run")?.risk, "high");
+  assert.equal(findMacAtlasCapability("mac.audio.volume")?.portableFamily, "system.audio.set_output_volume");
+  assert.equal(findMacAtlasCapability("mac.display.brightness")?.portableFamily, "system.display.set_brightness");
 });
 
 test("Mac atlas verbs have an explicit full-family review", () => {

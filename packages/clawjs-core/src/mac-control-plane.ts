@@ -565,7 +565,9 @@ export const MAC_PROGRAMMATIC_SURFACES: MacProgrammaticSurface[] = [
 
 const appleProtectedResources = "https://developer.apple.com/documentation/bundleresources/protected-resources";
 const appleAx = "https://developer.apple.com/documentation/applicationservices/axuielement_h";
+const appleCoreAudio = "https://developer.apple.com/documentation/coreaudio";
 const appleCoreWlan = "https://developer.apple.com/documentation/corewlan/cwinterface";
+const appleDisplayServices = "https://developer.apple.com/documentation/iokit/graphics-acceleration";
 const appleShortcuts = "https://support.apple.com/guide/shortcuts-mac/apd455c82f02/mac";
 
 type MacAtlasCapabilityInput = z.input<typeof macAtlasCapabilitySchema>;
@@ -770,14 +772,52 @@ export const MAC_CAPABILITY_ATLAS: MacAtlasCapability[] = [
     uiPack: "privacy",
     testRefs: ["packages/clawjs-core/src/mac-control-plane.test.ts"],
   }),
+  capability({
+    id: "mac.audio.volume",
+    family: "audio",
+    action: "volume",
+    label: "Set output volume",
+    summary: "Set default output volume through CoreAudio inside the signed host broker.",
+    portableFamily: "system.audio.set_output_volume",
+    platforms: ["darwin"],
+    coverageState: "executable",
+    sourceConfidence: "official",
+    sources: [{ label: "CoreAudio default output device volume", url: appleCoreAudio }],
+    backend: { strategy: "mixed", notes: "The signed host validates 0-100 input, uses CoreAudio writable scalar volume, writes receipt and audit." },
+    permissions: [],
+    risk: "low",
+    mutatesState: true,
+    revert: "none",
+    cli: { root: "audio", canonicalUsage: "claw audio volume set <value>", relatedSurfaces: ["claw media audio", "claw system controls"] },
+    uiPack: "audio",
+    testRefs: ["packages/clawjs-core/src/mac-control-plane.test.ts", "apps/host/Tests/CommanderE2ETests/CommanderE2ETests.swift"],
+  }),
+  capability({
+    id: "mac.display.brightness",
+    family: "display",
+    action: "brightness",
+    label: "Set display brightness",
+    summary: "Set writable display brightness through IOKit inside the signed host broker.",
+    portableFamily: "system.display.set_brightness",
+    platforms: ["darwin"],
+    coverageState: "executable",
+    sourceConfidence: "official",
+    sources: [{ label: "IOKit display brightness parameter", url: appleDisplayServices }],
+    backend: { strategy: "mixed", notes: "The signed host validates 0-100 input, applies only writable local displays, writes receipt and audit." },
+    permissions: [],
+    risk: "medium",
+    mutatesState: true,
+    revert: "none",
+    cli: { root: "display", canonicalUsage: "claw display brightness set <value>", relatedSurfaces: ["claw system controls"] },
+    uiPack: "display",
+    testRefs: ["packages/clawjs-core/src/mac-control-plane.test.ts", "apps/host/Tests/CommanderE2ETests/CommanderE2ETests.swift"],
+  }),
   ...[
     ["app", "open", "claw app open <app>"],
     ["app", "quit", "claw app quit <app>"],
     ["process", "terminate", "claw process terminate --pid <pid>"],
     ["vpn", "connect", "claw vpn connect <name>"],
     ["bluetooth", "connect", "claw bluetooth connect <device>"],
-    ["audio", "volume", "claw audio volume set <value>"],
-    ["display", "brightness", "claw display brightness set <value>"],
     ["screen", "capture", "claw screen capture"],
     ["focus", "set", "claw focus set <mode>"],
     ["notification", "status", "claw notification status"],

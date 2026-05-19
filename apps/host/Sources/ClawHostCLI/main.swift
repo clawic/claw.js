@@ -62,7 +62,17 @@ struct CommanderCLI {
                 exit(response.ok ? 0 : 1)
             }
 
-            if parsed.domain == .system && ["telemetry", "metrics", "widgets", "rules", "history"].contains(parsed.resource) {
+            if parsed.domain == .system && parsed.resource == "controls" && parsed.action == "execute" {
+                let response = try SystemTelemetryControlHostBridge.response(
+                    action: parsed.action,
+                    arguments: parsed.arguments,
+                    environment: environment
+                )
+                try printJSON(response)
+                exit(response.ok ? 0 : 1)
+            }
+
+            if parsed.domain == .system && ["telemetry", "metrics", "widgets", "providers", "rules", "history", "controls"].contains(parsed.resource) {
                 var arguments = parsed.arguments
                 if environment["CLAW_HOST_SAFE"] == "1" {
                     arguments["__validation_mode"] = ValidationMode.hostIsolated.rawValue

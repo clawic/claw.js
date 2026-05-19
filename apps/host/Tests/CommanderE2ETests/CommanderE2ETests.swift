@@ -5,8 +5,26 @@ import XCTest
 
 @testable import CommanderAdapters
 @testable import CommanderCore
+@testable import ClawHostKit
 
 final class CommanderE2ETests: XCTestCase {
+    private final class RecordingMacControlRunner: MacControlCommandRunning {
+        var nativeCalls: [(action: String, arguments: [String])] = []
+
+        func runProcess(_ executable: String, arguments: [String]) throws -> String {
+            "process \(executable)"
+        }
+
+        func runAppleScript(_ source: String) throws -> String {
+            "applescript"
+        }
+
+        func runNative(_ action: String, arguments: [String]) throws -> String {
+            nativeCalls.append((action, arguments))
+            return "native \(action)"
+        }
+    }
+
     func testHostContractV1FixturesDecodeInSwift() throws {
         let decoder = JSONDecoder()
         let request = try decoder.decode(CommandRequest.self, from: Data("""
@@ -74,6 +92,95 @@ final class CommanderE2ETests: XCTestCase {
         XCTAssertEqual(host.kind, .embedded)
         XCTAssertEqual(host.capabilities.first?.domain, .models)
         XCTAssertEqual(host.capabilities.first?.brokerRequired, true)
+    }
+
+    @MainActor
+    func testSystemTelemetryControlExecuteUsesMacBrokerAuditAndReceipt() throws {
+        let stateDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("system-telemetry-control-\(UUID().uuidString)", isDirectory: true)
+        let runner = RecordingMacControlRunner()
+        let response = try SystemTelemetryControlHostBridge.response(
+            action: "execute",
+            arguments: [
+                "control-id": "system.audio.set_output_volume",
+                "target": "default",
+                "value": "35",
+                "reason": "test",
+                "actor-kind": "owner_cli",
+                "actor-id": "test-owner",
+                "actor-role": "owner",
+            ],
+            environment: [
+                "CLAW_HOST_HOME": stateDirectory.path,
+                "CLAW_HOST_ID": "test-host",
+                "CLAW_HOST_BUNDLE_ID": "com.example.test-host",
+            ],
+            runner: runner
+        )
+
+        XCTAssertTrue(response.ok)
+        XCTAssertEqual(response.meta.adapter, "system-telemetry-control")
+        XCTAssertEqual(response.meta.capabilityId, "system.audio.set_output_volume")
+        XCTAssertEqual(response.data?.objectValue?["status"]?.stringValue, "executed")
+        XCTAssertEqual(response.data?.objectValue?["will_execute"]?.boolValue, true)
+        XCTAssertEqual(response.data?.objectValue?["broker"]?.objectValue?["capability_id"]?.stringValue, "mac.audio.volume")
+        XCTAssertEqual(response.data?.objectValue?["receipt"]?.objectValue?["status"]?.stringValue, "issued")
+        XCTAssertEqual(response.data?.objectValue?["receipt"]?.objectValue?["result"]?.stringValue, "ok")
+        XCTAssertEqual(runner.nativeCalls.count, 1)
+        XCTAssertEqual(runner.nativeCalls.first?.action, "coreaudio.output_volume")
+        XCTAssertEqual(runner.nativeCalls.first?.arguments, ["35"])
+
+        let auditURL = stateDirectory.appendingPathComponent(MacControlPolicy.auditFilename)
+        let audit = try String(contentsOf: auditURL)
+        XCTAssertTrue(audit.contains("mac.audio.volume"))
+        XCTAssertTrue(audit.contains("test-owner"))
+    }
+
+    @MainActor
+    func testSystemTelemetryDangerousControlsFailClosedWithPolicyAndAuditPlan() throws {
+        let stateDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("system-telemetry-dangerous-control-\(UUID().uuidString)", isDirectory: true)
+        let runner = RecordingMacControlRunner()
+        let response = try SystemTelemetryControlHostBridge.response(
+            action: "execute",
+            arguments: [
+                "control-id": "system.fan.set_speed",
+                "target": "fan0",
+                "value": "45",
+                "reason": "validation",
+                "confirm": "true",
+            ],
+            environment: [
+                "CLAW_HOST_HOME": stateDirectory.path,
+                "CLAW_HOST_ID": "test-host",
+                "CLAW_HOST_BUNDLE_ID": "com.example.test-host",
+            ],
+            runner: runner
+        )
+
+        XCTAssertFalse(response.ok)
+        XCTAssertEqual(response.meta.adapter, "system-telemetry-control")
+        XCTAssertEqual(response.meta.capabilityId, "system.fan.set_speed")
+        XCTAssertEqual(response.data?.objectValue?["status"]?.stringValue, "blocked")
+        XCTAssertEqual(response.data?.objectValue?["will_execute"]?.boolValue, false)
+        XCTAssertEqual(response.data?.objectValue?["external_pending"]?.boolValue, true)
+        XCTAssertEqual(response.data?.objectValue?["action"]?.objectValue?["id"]?.stringValue, "system.fan.set_speed")
+        XCTAssertEqual(response.data?.objectValue?["action"]?.objectValue?["requires_confirmation"]?.boolValue, true)
+        XCTAssertTrue(response.data?.objectValue?["policy"]?.objectValue?["required_grants"]?.arrayValue?.contains(.string("system.hardware.control")) == true)
+        XCTAssertTrue(response.data?.objectValue?["policy"]?.objectValue?["required_grants"]?.arrayValue?.contains(.string("system.sensor.read")) == true)
+        XCTAssertEqual(response.data?.objectValue?["broker"]?.objectValue?["status"]?.stringValue, "external_pending")
+        XCTAssertEqual(response.data?.objectValue?["broker"]?.objectValue?["fail_closed"]?.boolValue, true)
+        XCTAssertTrue(response.data?.objectValue?["steps"]?.arrayValue?.contains(where: {
+            $0.objectValue?["id"]?.stringValue == "confirm_if_required"
+                && $0.objectValue?["status"]?.stringValue == "pending"
+        }) == true)
+        XCTAssertTrue(response.data?.objectValue?["steps"]?.arrayValue?.contains(where: {
+            $0.objectValue?["id"]?.stringValue == "execute_native_action"
+                && $0.objectValue?["status"]?.stringValue == "blocked"
+        }) == true)
+        XCTAssertEqual(response.data?.objectValue?["receipt"]?.objectValue?["status"]?.stringValue, "not_issued")
+        XCTAssertEqual(response.data?.objectValue?["receipt"]?.objectValue?["audit_event"]?.stringValue, "system.telemetry.control.fan.set_speed")
+        XCTAssertTrue(runner.nativeCalls.isEmpty)
     }
 
     func testCapabilityRevokeAndMetadata() throws {
@@ -185,10 +292,90 @@ final class CommanderE2ETests: XCTestCase {
         XCTAssertTrue(snapshot.data?.objectValue?["samples"]?.arrayValue?.contains(where: {
             $0.objectValue?["metric_key"]?.stringValue == "system.memory.used"
         }) == true)
-        XCTAssertTrue(snapshot.data?.objectValue?["unavailable_metrics"]?.arrayValue?.contains(where: {
-            $0.objectValue?["metric_key"]?.stringValue == "system.sensor.temperature"
+        XCTAssertTrue(snapshot.data?.objectValue?["samples"]?.arrayValue?.contains(where: {
+            $0.objectValue?["metric_key"]?.stringValue == "system.network.bytes_in"
+                && $0.objectValue?["unit"]?.stringValue == "bytes_per_second"
         }) == true)
-
+        XCTAssertTrue(snapshot.data?.objectValue?["samples"]?.arrayValue?.contains(where: {
+            $0.objectValue?["metric_key"]?.stringValue == "system.network.bytes_out"
+                && $0.objectValue?["unit"]?.stringValue == "bytes_per_second"
+        }) == true)
+        let snapshotSamples = snapshot.data?.objectValue?["samples"]?.arrayValue ?? []
+        let unavailableMetricKeys = Set((snapshot.data?.objectValue?["unavailable_metrics"]?.arrayValue ?? []).compactMap {
+            $0.objectValue?["metric_key"]?.stringValue
+        })
+        for optionalMetricKey in [
+            "system.gpu.utilization",
+            "system.gpu.memory_used_bytes",
+            "system.disk.io_read",
+            "system.disk.io_write",
+            "system.sensor.temperature",
+            "system.sensor.fan_speed",
+            "system.audio.output_volume",
+            "system.display.brightness",
+            "system.peripheral.connected_count",
+            "system.peripheral.bluetooth_count",
+            "system.process.count",
+        ] {
+            let sample = snapshotSamples.first { $0.objectValue?["metric_key"]?.stringValue == optionalMetricKey }
+            XCTAssertTrue(sample != nil || unavailableMetricKeys.contains(optionalMetricKey))
+        }
+        if let gpuUtilization = snapshotSamples.first(where: { $0.objectValue?["metric_key"]?.stringValue == "system.gpu.utilization" }) {
+            let value = gpuUtilization.objectValue?["value"]?.intValue ?? -1
+            XCTAssertEqual(gpuUtilization.objectValue?["unit"]?.stringValue, "percent")
+            XCTAssertEqual(gpuUtilization.objectValue?["confidence"]?.stringValue, "experimental")
+            XCTAssertGreaterThanOrEqual(value, 0)
+            XCTAssertLessThanOrEqual(value, 100)
+        }
+        if let gpuMemory = snapshotSamples.first(where: { $0.objectValue?["metric_key"]?.stringValue == "system.gpu.memory_used_bytes" }) {
+            XCTAssertEqual(gpuMemory.objectValue?["unit"]?.stringValue, "bytes")
+            XCTAssertEqual(gpuMemory.objectValue?["confidence"]?.stringValue, "experimental")
+            XCTAssertGreaterThanOrEqual(gpuMemory.objectValue?["value"]?.intValue ?? -1, 0)
+        }
+        if let temperature = snapshotSamples.first(where: { $0.objectValue?["metric_key"]?.stringValue == "system.sensor.temperature" }) {
+            XCTAssertEqual(temperature.objectValue?["unit"]?.stringValue, "celsius")
+            XCTAssertEqual(temperature.objectValue?["confidence"]?.stringValue, "experimental")
+            XCTAssertGreaterThan(temperature.objectValue?["value"]?.intValue ?? -1, 0)
+        }
+        if let fanSpeed = snapshotSamples.first(where: { $0.objectValue?["metric_key"]?.stringValue == "system.sensor.fan_speed" }) {
+            XCTAssertEqual(fanSpeed.objectValue?["unit"]?.stringValue, "rpm")
+            XCTAssertEqual(fanSpeed.objectValue?["confidence"]?.stringValue, "experimental")
+            XCTAssertGreaterThanOrEqual(fanSpeed.objectValue?["value"]?.intValue ?? -1, 0)
+        }
+        if let audio = snapshotSamples.first(where: { $0.objectValue?["metric_key"]?.stringValue == "system.audio.output_volume" }) {
+            let value = audio.objectValue?["value"]?.intValue ?? -1
+            XCTAssertEqual(audio.objectValue?["unit"]?.stringValue, "percent")
+            XCTAssertGreaterThanOrEqual(value, 0)
+            XCTAssertLessThanOrEqual(value, 100)
+        }
+        if let display = snapshotSamples.first(where: { $0.objectValue?["metric_key"]?.stringValue == "system.display.brightness" }) {
+            let value = display.objectValue?["value"]?.intValue ?? -1
+            XCTAssertEqual(display.objectValue?["unit"]?.stringValue, "percent")
+            XCTAssertGreaterThanOrEqual(value, 0)
+            XCTAssertLessThanOrEqual(value, 100)
+        }
+        for diskIOMetricKey in ["system.disk.io_read", "system.disk.io_write"] {
+            if let diskIO = snapshotSamples.first(where: { $0.objectValue?["metric_key"]?.stringValue == diskIOMetricKey }) {
+                XCTAssertEqual(diskIO.objectValue?["unit"]?.stringValue, "bytes_per_second")
+                XCTAssertGreaterThanOrEqual(diskIO.objectValue?["value"]?.intValue ?? -1, 0)
+            }
+        }
+        if let peripherals = snapshotSamples.first(where: { $0.objectValue?["metric_key"]?.stringValue == "system.peripheral.connected_count" }) {
+            XCTAssertEqual(peripherals.objectValue?["unit"]?.stringValue, "count")
+            XCTAssertGreaterThanOrEqual(peripherals.objectValue?["value"]?.intValue ?? -1, 0)
+        }
+        if let bluetoothPeripherals = snapshotSamples.first(where: { $0.objectValue?["metric_key"]?.stringValue == "system.peripheral.bluetooth_count" }) {
+            XCTAssertEqual(bluetoothPeripherals.objectValue?["unit"]?.stringValue, "count")
+            XCTAssertGreaterThanOrEqual(bluetoothPeripherals.objectValue?["value"]?.intValue ?? -1, 0)
+        }
+        if let notificationState = snapshotSamples.first(where: { $0.objectValue?["metric_key"]?.stringValue == "system.notifications.availability_state" }) {
+            let value = notificationState.objectValue?["value"]?.intValue ?? -1
+            XCTAssertEqual(notificationState.objectValue?["unit"]?.stringValue, "state")
+            XCTAssertGreaterThanOrEqual(value, 0)
+            XCTAssertLessThanOrEqual(value, 2)
+        } else {
+            XCTFail("Expected notification availability state sample")
+        }
         let metrics = try context.runCLI(["system", "metrics", "list", "--json"])
         XCTAssertTrue(metrics.ok)
         XCTAssertTrue(metrics.data?.arrayValue?.contains(where: {
@@ -201,6 +388,95 @@ final class CommanderE2ETests: XCTestCase {
         XCTAssertTrue(widgets.data?.arrayValue?.contains(where: {
             $0.objectValue?["id"]?.stringValue == "menu.cpu-memory"
         }) == true)
+        XCTAssertTrue(widgets.data?.arrayValue?.contains(where: {
+            $0.objectValue?["id"]?.stringValue == "agent-runs-active"
+                && $0.objectValue?["enabledByDefault"]?.boolValue == false
+        }) == true)
+        XCTAssertTrue(widgets.data?.arrayValue?.contains(where: {
+            $0.objectValue?["id"]?.stringValue == "notifications-status"
+                && $0.objectValue?["enabledByDefault"]?.boolValue == false
+        }) == true)
+
+        let providers = try context.runCLI(["system", "providers", "list", "--json"])
+        XCTAssertTrue(providers.ok)
+        XCTAssertTrue(providers.data?.arrayValue?.contains(where: {
+            $0.objectValue?["kind"]?.stringValue == "weather"
+                && $0.objectValue?["mode"]?.stringValue == "mock"
+                && $0.objectValue?["status"]?.stringValue == "ready"
+        }) == true)
+        XCTAssertTrue(providers.data?.arrayValue?.contains(where: {
+            $0.objectValue?["kind"]?.stringValue == "agent_run"
+                && $0.objectValue?["metrics"]?.arrayValue?.contains(.string("context.agent_runs.active")) == true
+        }) == true)
+        XCTAssertTrue(providers.data?.arrayValue?.contains(where: {
+            $0.objectValue?["id"]?.stringValue == "system.sensors.signed"
+                && $0.objectValue?["kind"]?.stringValue == "hardware_sensor"
+                && $0.objectValue?["status"]?.stringValue == "external_pending"
+                && $0.objectValue?["requiresGrant"]?.stringValue == "system.sensor.read"
+        }) == true)
+
+        let providerPlan = try context.runCLI([
+            "system", "providers", "plan",
+            "--provider-id", "context.weather.live",
+            "--reason", "test-plan",
+            "--json",
+        ])
+        XCTAssertTrue(providerPlan.ok)
+        XCTAssertEqual(providerPlan.data?.objectValue?["will_connect"]?.boolValue, false)
+        XCTAssertEqual(providerPlan.data?.objectValue?["broker"]?.objectValue?["status"]?.stringValue, "external_pending")
+        XCTAssertEqual(providerPlan.data?.objectValue?["broker"]?.objectValue?["fail_closed"]?.boolValue, true)
+        XCTAssertEqual(providerPlan.data?.objectValue?["policy"]?.objectValue?["credential_ref_required"]?.boolValue, true)
+        XCTAssertEqual(providerPlan.data?.objectValue?["policy"]?.objectValue?["network_access"]?.stringValue, "blocked_until_granted")
+        XCTAssertTrue(providerPlan.data?.objectValue?["steps"]?.arrayValue?.contains(where: {
+            $0.objectValue?["id"]?.stringValue == "resolve_credential_ref"
+                && $0.objectValue?["status"]?.stringValue == "blocked"
+        }) == true)
+        XCTAssertTrue(providerPlan.data?.objectValue?["steps"]?.arrayValue?.contains(where: {
+            $0.objectValue?["id"]?.stringValue == "connect_provider"
+                && $0.objectValue?["status"]?.stringValue == "blocked"
+        }) == true)
+
+        let sensorProviderPlan = try context.runCLI([
+            "system", "providers", "plan",
+            "--provider-id", "system.sensors.signed",
+            "--reason", "sensor-validation",
+            "--json",
+        ])
+        XCTAssertTrue(sensorProviderPlan.ok)
+        XCTAssertEqual(sensorProviderPlan.data?.objectValue?["will_connect"]?.boolValue, false)
+        XCTAssertEqual(sensorProviderPlan.data?.objectValue?["provider"]?.objectValue?["kind"]?.stringValue, "hardware_sensor")
+        XCTAssertEqual(sensorProviderPlan.data?.objectValue?["policy"]?.objectValue?["credential_ref_required"]?.boolValue, false)
+        XCTAssertTrue(sensorProviderPlan.data?.objectValue?["policy"]?.objectValue?["required_grants"]?.arrayValue?.contains(.string("system.sensor.read")) == true)
+        XCTAssertTrue(sensorProviderPlan.data?.objectValue?["steps"]?.arrayValue?.contains(where: {
+            $0.objectValue?["id"]?.stringValue == "resolve_credential_ref"
+                && $0.objectValue?["status"]?.stringValue == "skipped"
+        }) == true)
+        XCTAssertTrue(sensorProviderPlan.data?.objectValue?["steps"]?.arrayValue?.contains(where: {
+            $0.objectValue?["id"]?.stringValue == "connect_provider"
+                && $0.objectValue?["status"]?.stringValue == "blocked"
+        }) == true)
+        XCTAssertEqual(sensorProviderPlan.data?.objectValue?["receipt"]?.objectValue?["audit_event"]?.stringValue, "system.telemetry.provider.hardware_sensor.live")
+
+        let controls = try context.runCLI(["system", "controls", "list", "--json"])
+        XCTAssertTrue(controls.ok)
+        XCTAssertTrue(controls.data?.arrayValue?.contains(where: {
+            $0.objectValue?["id"]?.stringValue == "system.display.set_brightness"
+                && $0.objectValue?["requires_signed_host_broker"]?.boolValue == true
+                && $0.objectValue?["availability"]?.stringValue == "external_pending"
+        }) == true)
+
+        let controlPlan = try context.runCLI([
+            "system", "controls", "plan",
+            "--control-id", "system.audio.set_output_volume",
+            "--target", "default",
+            "--value", "35",
+            "--json",
+        ])
+        XCTAssertTrue(controlPlan.ok)
+        XCTAssertEqual(controlPlan.data?.objectValue?["will_execute"]?.boolValue, false)
+        XCTAssertEqual(controlPlan.data?.objectValue?["broker"]?.objectValue?["status"]?.stringValue, "external_pending")
+        XCTAssertEqual(controlPlan.data?.objectValue?["broker"]?.objectValue?["fail_closed"]?.boolValue, true)
+        XCTAssertEqual(controlPlan.data?.objectValue?["receipt"]?.objectValue?["audit_event"]?.stringValue, "system.telemetry.control.audio.set_output_volume")
 
         let history = try context.runCLI([
             "system", "history", "list",
@@ -211,6 +487,43 @@ final class CommanderE2ETests: XCTestCase {
         XCTAssertTrue(history.ok)
         XCTAssertEqual(history.data?.objectValue?["source"]?.stringValue, "monitor")
         XCTAssertEqual(history.data?.objectValue?["status"]?.stringValue, "not_recorded")
+    }
+
+    func testSystemTelemetryLocalContextProvidersFromEnvironmentAndFiles() throws {
+        let context = try TestContext()
+        defer { context.cleanup() }
+        let serviceFile = context.tmp.appendingPathComponent("service-health.json")
+        try Data(#"{"context.service.health":"degraded"}"#.utf8).write(to: serviceFile)
+
+        let snapshot = try context.runCLI(
+            ["system", "telemetry", "snapshot", "--json"],
+            environmentOverride: [
+                "CLAW_CONTEXT_BUILD_STATUS": "failed",
+                "CLAW_CONTEXT_SERVICE_HEALTH_FILE": serviceFile.path,
+                "CLAW_CONTEXT_AGENT_RUNS_ACTIVE": "3",
+                "CLAW_CONTEXT_WEATHER_TEMPERATURE": "21.5",
+                "CLAW_CONTEXT_FOCUS_MODE": "work",
+                "CLAW_CONTEXT_CUSTOM_METRIC": "deploying",
+            ]
+        )
+
+        XCTAssertTrue(snapshot.ok)
+        let samples = snapshot.data?.objectValue?["samples"]?.arrayValue ?? []
+        func sample(_ key: String) -> JSONValue? {
+            samples.first { $0.objectValue?["metric_key"]?.stringValue == key }
+        }
+
+        XCTAssertEqual(sample("context.build.status")?.objectValue?["unit"]?.stringValue, "state")
+        XCTAssertEqual(sample("context.build.status")?.objectValue?["value"]?.intValue, 2)
+        XCTAssertEqual(sample("context.service.health")?.objectValue?["value"]?.intValue, 1)
+        XCTAssertEqual(sample("context.agent_runs.active")?.objectValue?["value"]?.intValue, 3)
+        if case .number(let weather)? = sample("context.weather.temperature")?.objectValue?["value"] {
+            XCTAssertEqual(weather, 21.5, accuracy: 0.1)
+        } else {
+            XCTFail("Expected numeric weather context sample")
+        }
+        XCTAssertEqual(sample("system.focus.mode")?.objectValue?["value"]?.stringValue, "work")
+        XCTAssertEqual(sample("context.custom.metric")?.objectValue?["value"]?.stringValue, "deploying")
     }
 
     func testDaemonAutoStartHealthAndReconnect() throws {
