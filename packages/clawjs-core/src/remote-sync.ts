@@ -72,6 +72,8 @@ export const remoteClientCacheSnapshotSchema = z.object({
   storesSecrets: z.literal(false),
   storesAuthoritativeState: z.literal(false),
   plaintextIncluded: z.literal(false),
+  physicalClientStorageVerified: z.boolean().default(false),
+  externalPending: z.array(z.enum(["physical_client_storage"])).default(["physical_client_storage"]),
   auditEventId: z.string().min(1),
   writes: z.literal(false),
 });
@@ -1073,10 +1075,12 @@ export function createRemoteClientCacheSnapshot(input: {
   contentHash: string;
   cachedAt?: string;
   ttlSeconds?: number;
+  physicalClientStorageVerified?: boolean;
 }): RemoteClientCacheSnapshot {
   const manifest = syncResourceManifestSchema.parse(input.manifest);
   const cachedAt = input.cachedAt ?? new Date().toISOString();
   const ttlSeconds = input.ttlSeconds ?? manifest.cachePolicy.ttlSeconds;
+  const physicalClientStorageVerified = input.physicalClientStorageVerified ?? false;
   return remoteClientCacheSnapshotSchema.parse({
     schemaVersion: 1,
     cacheEntryId: remoteClientCacheEntryId([
@@ -1097,6 +1101,8 @@ export function createRemoteClientCacheSnapshot(input: {
     storesSecrets: false,
     storesAuthoritativeState: false,
     plaintextIncluded: false,
+    physicalClientStorageVerified,
+    externalPending: physicalClientStorageVerified ? [] : ["physical_client_storage"],
     auditEventId: remoteClientCacheEntryId(["audit", manifest.resourceId, input.objectRef, input.clientId, cachedAt]),
     writes: false,
   });

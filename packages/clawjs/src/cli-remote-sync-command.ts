@@ -166,6 +166,15 @@ function missing(input: RemoteSyncCliInput, usage: string): number {
   return CLI_EXIT_USAGE;
 }
 
+function approvedValidationFlag(input: RemoteSyncCliInput, flag: string, requirementId: string): boolean {
+  if (input.flags[flag] !== "true") return false;
+  return Boolean(
+    input.flags["approved-run-ref"]
+    && input.flags["physical-evidence-ref"]
+    && (!input.flags["requirement-id"] || input.flags["requirement-id"] === requirementId)
+  );
+}
+
 function conformancePayload() {
   return buildRemoteConformanceReport({ routeIds: routeIds(), nodeIds: nodeIds() });
 }
@@ -393,7 +402,7 @@ function meshInvitationAcceptanceFromFlags(input: RemoteSyncCliInput) {
       trustMode: "governed_gateway",
     },
     acceptedAt: input.flags.now ?? "2026-05-17T10:07:30.000Z",
-    physicalPeerTrustVerified: input.flags["physical-peer-trust"] === "true",
+    physicalPeerTrustVerified: approvedValidationFlag(input, "physical-peer-trust", "physical_peer_trust"),
   });
 }
 
@@ -410,7 +419,7 @@ function transportHandshakeFromFlags(input: RemoteSyncCliInput) {
     responseNonce: input.flags["response-nonce"] ?? "response-nonce-peer",
     createdAt: now,
     expiresAt: input.flags["expires-at"],
-    physicalTransportVerified: input.flags["physical-verified"] === "true",
+    physicalTransportVerified: approvedValidationFlag(input, "physical-verified", "physical_iroh_handshake"),
   });
 }
 
@@ -426,7 +435,7 @@ function nodeTrustDecisionFromFlags(input: RemoteSyncCliInput) {
     grantedRouteIds: listFlag(input.flags["route-ids"], remoteSyncRequiredRouteIds.slice()),
     createdAt: input.flags.now ?? new Date().toISOString(),
     expiresAt: input.flags["expires-at"],
-    physicalAcceptanceVerified: input.flags["physical-accepted"] === "true",
+    physicalAcceptanceVerified: approvedValidationFlag(input, "physical-accepted", "device_trust_acceptance"),
   });
 }
 
@@ -440,7 +449,7 @@ function gatewayDeploymentFromFlags(input: RemoteSyncCliInput, operation: "serve
     publicBaseUrl: input.flags["public-base-url"],
     contractRouteIds: listFlag(input.flags["route-ids"], remoteSyncRequiredRouteIds.slice()),
     createdAt: input.flags.now ?? new Date().toISOString(),
-    physicalDeploymentVerified: input.flags["physical-verified"] === "true",
+    physicalDeploymentVerified: approvedValidationFlag(input, "physical-verified", deploymentKind === "hosted" ? "hosted_deployment" : "self_hosted_deployment"),
   });
 }
 
@@ -742,7 +751,7 @@ export async function runSyncCli(input: RemoteSyncCliInput): Promise<number> {
       reconciliation: reconciliationState.reconciliation,
       actor: actorContextFromFlags(input),
       createdAt: now,
-      physicalDriverApplied: input.flags["physical-driver-applied"] === "true",
+      physicalDriverApplied: approvedValidationFlag(input, "physical-driver-applied", "physical_sync_driver_application"),
     });
     const state = store.recordSyncDriverApplicationReceipt(receipt, { now, signer });
     return writeOutput(input, "sync", {
@@ -764,7 +773,7 @@ export async function runSyncCli(input: RemoteSyncCliInput): Promise<number> {
       requestedAuthority: parseAuthority(input.flags["requested-authority"] ?? input.flags.authority),
       requestedResidency: listFlag(input.flags["requested-residency"], []),
       createdAt: now,
-      physicalAuthorityApplied: input.flags["physical-authority-applied"] === "true",
+      physicalAuthorityApplied: approvedValidationFlag(input, "physical-authority-applied", "physical_authority_handoff"),
       rejected: input.flags.rejected === "true",
     });
     const store = stateStoreFromFlags(input);
@@ -797,6 +806,7 @@ export async function runSyncCli(input: RemoteSyncCliInput): Promise<number> {
       contentHash: input.flags["content-hash"] ?? input.flags.hash ?? "hash-cache",
       cachedAt: input.flags.now,
       ttlSeconds: numberFlag(input.flags["ttl-seconds"], manifest.cachePolicy.ttlSeconds),
+      physicalClientStorageVerified: approvedValidationFlag(input, "physical-client", "physical_client_storage"),
     });
     const store = stateStoreFromFlags(input);
     const state = store && wantsDurableRecord(input) ? store.recordRemoteCacheSnapshot(snapshot, { now: input.flags.now, signer: coordinatorSignerFromFlags(input) }) : undefined;
@@ -962,8 +972,8 @@ export async function runGatewayCli(input: RemoteSyncCliInput): Promise<number> 
         budget,
         decision,
         createdAt: request.now,
-        runtimeExecutionVerified: input.flags["runtime-verified"] === "true",
-        billingMeterPersisted: input.flags["billing-meter-persisted"] === "true",
+        runtimeExecutionVerified: approvedValidationFlag(input, "runtime-verified", "agent_runtime_execution"),
+        billingMeterPersisted: approvedValidationFlag(input, "billing-meter-persisted", "billing_meter_persistence"),
       });
       const state = store.recordRemoteAgentServiceExecutionReceipt(receipt, { now: request.now, signer });
       return writeOutput(input, "gateway", {
@@ -998,7 +1008,7 @@ export async function runGatewayCli(input: RemoteSyncCliInput): Promise<number> 
       action,
       decision: input.flags.decision === "deny" ? "deny" : "allow",
       createdAt: now,
-      signedHostAuditPersisted: input.flags["host-audit-persisted"] === "true",
+      signedHostAuditPersisted: approvedValidationFlag(input, "host-audit-persisted", "signed_host_audit_persistence"),
     });
     const state = store.recordRemoteGatewayAuditReceipt(receipt, { now, signer });
     return writeOutput(input, "gateway", {
@@ -1043,7 +1053,7 @@ export async function runGatewayCli(input: RemoteSyncCliInput): Promise<number> 
         credentialBindingId,
         operationId: input.flags["operation-id"],
         createdAt: now,
-        providerAccessVerified: input.flags["provider-verified"] === "true",
+        providerAccessVerified: approvedValidationFlag(input, "provider-verified", "provider_secret_retrieval"),
       });
       const providerState = store.recordSecretProviderReceipt(receipt, { now, signer });
       return writeOutput(input, "gateway", {

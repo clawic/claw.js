@@ -23,6 +23,7 @@ import {
   createMeshResourceShare,
   createMeshRevocation,
   createRemoteAgentServiceExecutionReceipt,
+  createRemoteClientCacheSnapshot,
   createRemoteCompatibilityAdapterReceipt,
   createRemoteGatewayAuditReceipt,
   createRemoteSurfaceClassificationReceipt,
@@ -781,6 +782,9 @@ for (const requirement of externalPending.requirements) {
   if (item && item.sourceReceipt !== requirement.sourceReceipt) fail(`remote external validation checklist source receipt mismatch for ${requirement.requirementId}`);
   if (item && (!item.approvedRunRequired || !item.physicalEvidenceRequired || item.plaintextMaterialIncluded !== false || item.writes !== false)) {
     fail(`remote external validation checklist invariants failed for ${requirement.requirementId}`);
+  }
+  if (item?.requiredCommand.includes(" true") && (!item.requiredCommand.includes("--approved-run-ref") || !item.requiredCommand.includes("--physical-evidence-ref"))) {
+    fail(`remote external validation checklist verified command must require approved run and physical evidence refs for ${requirement.requirementId}`);
   }
 }
 for (const requirementId of ["physical_iroh_handshake", "provider_secret_retrieval", "provider_device_e2e"]) {
@@ -1549,6 +1553,27 @@ if (manifest.secretPolicy.brokerLeaseRequired !== true) fail("sync manifest must
 if (manifest.cachePolicy.encrypted !== true) fail("sync client cache must be encrypted");
 if (manifest.cachePolicy.storesSecrets !== false) fail("sync client cache must not store secrets");
 if (manifest.cachePolicy.storesAuthoritativeState !== false) fail("sync client cache must not store authoritative state");
+const clientCacheSnapshot = createRemoteClientCacheSnapshot({
+  manifest,
+  objectRef: "skill.review",
+  nodeId: "node.mac",
+  clientId: "iphone.local",
+  contentHash: "hash-cache",
+  cachedAt: "2026-05-17T10:12:00.000Z",
+});
+if (clientCacheSnapshot.physicalClientStorageVerified !== false) fail("sync client cache physical storage must default to unverified");
+if (!clientCacheSnapshot.externalPending.includes("physical_client_storage")) fail("sync client cache must keep physical_client_storage external pending by default");
+const verifiedClientCacheSnapshot = createRemoteClientCacheSnapshot({
+  manifest,
+  objectRef: "skill.review",
+  nodeId: "node.mac",
+  clientId: "iphone.local",
+  contentHash: "hash-cache",
+  cachedAt: "2026-05-17T10:12:00.000Z",
+  physicalClientStorageVerified: true,
+});
+if (verifiedClientCacheSnapshot.physicalClientStorageVerified !== true) fail("sync client cache must carry approved physical storage verification");
+if (verifiedClientCacheSnapshot.externalPending.length !== 0) fail("sync client cache must clear external pending after approved physical storage verification");
 
 const compatReceipt = createRemoteCompatibilityAdapterReceipt({
   legacySurface: "relay.mobile.chat",

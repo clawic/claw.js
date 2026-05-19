@@ -485,7 +485,7 @@ type ExternalValidationDefinition = Pick<RemoteExternalValidationChecklistItem, 
 
 const externalValidationDefinitions: Record<string, ExternalValidationDefinition> = {
   physical_iroh_handshake: {
-    requiredCommand: "claw nodes heartbeat --record true --transport iroh",
+    requiredCommand: "claw nodes heartbeat --record true --transport iroh --physical-verified true --approved-run-ref <approved-run-ref> --physical-evidence-ref <physical-evidence-ref>",
     requiredArtifacts: ["RemoteTransportHandshakeReceipt", "Coordinator signature", "physical node logs"],
     acceptanceCriteria: [
       "two approved nodes complete a real Iroh handshake",
@@ -494,7 +494,7 @@ const externalValidationDefinitions: Record<string, ExternalValidationDefinition
     ],
   },
   device_trust_acceptance: {
-    requiredCommand: "claw nodes trust --record true --physical-accepted true",
+    requiredCommand: "claw nodes trust --record true --physical-accepted true --approved-run-ref <approved-run-ref> --physical-evidence-ref <physical-evidence-ref>",
     requiredArtifacts: ["NodeTrustDecision", "device acceptance prompt/result", "Coordinator signature"],
     acceptanceCriteria: [
       "the subject device is physically accepted by an approved actor",
@@ -503,7 +503,7 @@ const externalValidationDefinitions: Record<string, ExternalValidationDefinition
     ],
   },
   physical_peer_trust: {
-    requiredCommand: "claw mesh accept --record true --physical-peer-trust true",
+    requiredCommand: "claw mesh accept --record true --physical-peer-trust true --approved-run-ref <approved-run-ref> --physical-evidence-ref <physical-evidence-ref>",
     requiredArtifacts: ["MeshInvitationAcceptance", "peer device evidence", "Coordinator signature"],
     acceptanceCriteria: [
       "the accepted mesh invitation is bound to the intended peer",
@@ -512,7 +512,7 @@ const externalValidationDefinitions: Record<string, ExternalValidationDefinition
     ],
   },
   physical_sync_driver_application: {
-    requiredCommand: "claw sync apply --record true",
+    requiredCommand: "claw sync apply --record true --physical-driver-applied true --approved-run-ref <approved-run-ref> --physical-evidence-ref <physical-evidence-ref>",
     requiredArtifacts: ["SyncDriverApplicationReceipt", "before/after resource evidence", "Coordinator signature"],
     acceptanceCriteria: [
       "an approved driver applies a real resource change or merge",
@@ -521,7 +521,7 @@ const externalValidationDefinitions: Record<string, ExternalValidationDefinition
     ],
   },
   physical_authority_handoff: {
-    requiredCommand: "claw sync handoff --record true --physical-verified true",
+    requiredCommand: "claw sync handoff --record true --physical-authority-applied true --approved-run-ref <approved-run-ref> --physical-evidence-ref <physical-evidence-ref>",
     requiredArtifacts: ["SyncAuthorityHandoffReceipt", "source node state", "target node state"],
     acceptanceCriteria: [
       "authority and residency transfer between approved nodes is physically observed",
@@ -530,7 +530,7 @@ const externalValidationDefinitions: Record<string, ExternalValidationDefinition
     ],
   },
   signed_host_audit_persistence: {
-    requiredCommand: "claw gateway audit --record true --host-audit-persisted true",
+    requiredCommand: "claw gateway audit --record true --host-audit-persisted true --approved-run-ref <approved-run-ref> --physical-evidence-ref <physical-evidence-ref>",
     requiredArtifacts: ["RemoteGatewayAuditReceipt", "signed host audit record", "audit store verification"],
     acceptanceCriteria: [
       "the Gateway decision is persisted in the signed host audit store",
@@ -539,7 +539,7 @@ const externalValidationDefinitions: Record<string, ExternalValidationDefinition
     ],
   },
   physical_client_storage: {
-    requiredCommand: "claw sync cache --record true --physical-client true",
+    requiredCommand: "claw sync cache --record true --physical-client true --approved-run-ref <approved-run-ref> --physical-evidence-ref <physical-evidence-ref>",
     requiredArtifacts: ["RemoteClientCacheSnapshot", "client storage inspection", "TTL expiration evidence"],
     acceptanceCriteria: [
       "real client cache storage is encrypted",
@@ -548,7 +548,7 @@ const externalValidationDefinitions: Record<string, ExternalValidationDefinition
     ],
   },
   provider_secret_retrieval: {
-    requiredCommand: "claw gateway secret-provider --record true",
+    requiredCommand: "claw gateway secret-provider --record true --provider-verified true --approved-run-ref <approved-run-ref> --physical-evidence-ref <physical-evidence-ref>",
     requiredArtifacts: ["RemoteSecretProviderReceipt", "broker lease audit", "provider request trace"],
     acceptanceCriteria: [
       "provider retrieval happens through a broker lease",
@@ -557,7 +557,7 @@ const externalValidationDefinitions: Record<string, ExternalValidationDefinition
     ],
   },
   self_hosted_deployment: {
-    requiredCommand: "claw gateway serve --record true --physical-verified true",
+    requiredCommand: "claw gateway serve --record true --physical-verified true --approved-run-ref <approved-run-ref> --physical-evidence-ref <physical-evidence-ref>",
     requiredArtifacts: ["GatewayDeploymentManifest", "self-hosted process health", "remote conformance output"],
     acceptanceCriteria: [
       "a real self-hosted Gateway binds and serves the registered contract",
@@ -566,7 +566,7 @@ const externalValidationDefinitions: Record<string, ExternalValidationDefinition
     ],
   },
   hosted_deployment: {
-    requiredCommand: "claw gateway project --record true --physical-verified true",
+    requiredCommand: "claw gateway project --record true --physical-verified true --approved-run-ref <approved-run-ref> --physical-evidence-ref <physical-evidence-ref>",
     requiredArtifacts: ["GatewayDeploymentManifest", "hosted rollout evidence", "remote conformance output"],
     acceptanceCriteria: [
       "a real hosted rollout serves the registered contract",
@@ -575,7 +575,7 @@ const externalValidationDefinitions: Record<string, ExternalValidationDefinition
     ],
   },
   agent_runtime_execution: {
-    requiredCommand: "claw gateway agent-service --record true --runtime-executed true",
+    requiredCommand: "claw gateway agent-service --record true --runtime-verified true --approved-run-ref <approved-run-ref> --physical-evidence-ref <physical-evidence-ref>",
     requiredArtifacts: ["RemoteAgentServiceExecutionReceipt", "runtime execution log", "tenant isolation evidence"],
     acceptanceCriteria: [
       "an approved remote agent-service run executes through governed control",
@@ -584,7 +584,7 @@ const externalValidationDefinitions: Record<string, ExternalValidationDefinition
     ],
   },
   billing_meter_persistence: {
-    requiredCommand: "claw gateway agent-service --record true --billing-meter-persisted true",
+    requiredCommand: "claw gateway agent-service --record true --billing-meter-persisted true --approved-run-ref <approved-run-ref> --physical-evidence-ref <physical-evidence-ref>",
     requiredArtifacts: ["RemoteAgentServiceExecutionReceipt", "billing meter event", "budget ledger evidence"],
     acceptanceCriteria: [
       "a real billing meter event is persisted for the agent-service run",

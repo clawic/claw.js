@@ -93,7 +93,10 @@ use explicit Sync-plane route contracts (`sync.sessions`, `sync.blobs`,
 contracts.
 Client caches are metadata snapshots, not authority. `RemoteClientCacheSnapshot`
 records encrypted TTL-bound cache entries with content hashes only, no
-plaintext, no secrets, and no authoritative state. `SyncDriverApplicationReceipt`
+plaintext, no secrets, no authoritative state, and a fail-closed
+`physicalClientStorageVerified` flag that keeps `physical_client_storage`
+external pending until an approved physical evidence reference is present.
+`SyncDriverApplicationReceipt`
 records signed intent to apply reconciled queue entries through a physical sync
 driver while keeping the Relay route dry-run and `writes: false` until the
 host/Coordinator driver proves execution.
@@ -305,6 +308,11 @@ checklist. The plan includes per-domain `validationSteps` for `chat`, `search`,
 `sync`, `secret_refs`, and `hosted_agents`; each step names the routes, external
 pending rows, required artifacts, and acceptance criteria needed for the final
 approved run.
+CLI and Relay receipt paths also fail closed on physical/provider booleans:
+fields or flags such as `physicalDriverApplied`, `physicalAuthorityApplied`,
+`signedHostAuditPersisted`, `runtimeExecutionVerified`, and
+`billingMeterPersisted` are accepted as clearing evidence only when paired with
+an `approvedRunRef` and `physicalEvidenceRef`.
 The plan also names the topology targets that must be represented by the
 approved run: Mac host, Linux host, Windows host, headless server, VPS host,
 mobile client, browser client, self-hosted Gateway, and hosted Gateway.

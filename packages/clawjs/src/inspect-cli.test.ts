@@ -639,6 +639,7 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.deepEqual(remoteValidationChecklistPayload.coverage.missingRequirementIds, []);
   assert.deepEqual(remoteValidationChecklistPayload.requirementIds, remotePendingRequirementIds);
   assert.equal(remoteValidationChecklistPayload.items.some((entry) => entry.requirementId === "physical_iroh_handshake" && entry.requiredCommand.includes("claw nodes heartbeat")), true);
+  assert.equal(remoteValidationChecklistPayload.items.filter((entry) => entry.requiredCommand.includes(" true")).every((entry) => entry.requiredCommand.includes("--approved-run-ref") && entry.requiredCommand.includes("--physical-evidence-ref")), true);
   assert.equal(remoteValidationChecklistPayload.items.some((entry) => entry.requirementId === "provider_device_e2e" && entry.requiredArtifacts.includes("RemoteProviderDeviceE2EValidationPlan")), true);
   assert.equal(remoteValidationChecklistPayload.items.every((entry) => entry.approvedRunRequired && entry.physicalEvidenceRequired && entry.plaintextMaterialIncluded === false && !entry.writes), true);
 
@@ -1162,12 +1163,12 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.equal(secretProviderPayload.receipt.writes, false);
   assert.equal(secretProviderPayload.state.providerReceipt.coordinatorSignature?.verified, true);
 
-  const remoteCache = await runCliCapture(["sync", "cache", "--resource-id", "skills:default", "--driver", "skills", "--object-ref", "skill.review", "--client-id", "iphone.local", "--content-hash", "hash-cache", "--ttl-seconds", "600", "--state-dir", stateDir, "--record", "true", ...coordinatorSigningFlags, "--json"], process.cwd());
+  const remoteCache = await runCliCapture(["sync", "cache", "--resource-id", "skills:default", "--driver", "skills", "--object-ref", "skill.review", "--client-id", "iphone.local", "--content-hash", "hash-cache", "--ttl-seconds", "600", "--physical-client", "true", "--state-dir", stateDir, "--record", "true", ...coordinatorSigningFlags, "--json"], process.cwd());
   assert.equal(remoteCache.code, CLI_EXIT_OK);
   const remoteCachePayload = parseCliJson<{
     status: string;
     writes: boolean;
-    snapshot: { encrypted: boolean; ttlSeconds: number; storesSecrets: string | boolean; storesAuthoritativeState: boolean; plaintextIncluded: boolean; writes: boolean };
+    snapshot: { encrypted: boolean; ttlSeconds: number; storesSecrets: string | boolean; storesAuthoritativeState: boolean; plaintextIncluded: boolean; physicalClientStorageVerified: boolean; externalPending: string[]; writes: boolean };
     state: { durable: boolean; coordinatorSignature?: { verified: boolean } };
   }>(remoteCache.stdout).data;
   assert.equal(remoteCachePayload.status, "signed_cache_snapshot_recorded");
@@ -1177,9 +1178,20 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.notEqual(remoteCachePayload.snapshot.storesSecrets, true);
   assert.equal(remoteCachePayload.snapshot.storesAuthoritativeState, false);
   assert.equal(remoteCachePayload.snapshot.plaintextIncluded, false);
+  assert.equal(remoteCachePayload.snapshot.physicalClientStorageVerified, false);
+  assert.equal(remoteCachePayload.snapshot.externalPending.includes("physical_client_storage"), true);
   assert.equal(remoteCachePayload.snapshot.writes, false);
   assert.equal(remoteCachePayload.state.durable, true);
   assert.equal(remoteCachePayload.state.coordinatorSignature?.verified, true);
+
+  const verifiedRemoteCache = await runCliCapture(["sync", "cache", "--resource-id", "skills:default", "--driver", "skills", "--object-ref", "skill.review", "--client-id", "iphone.local", "--content-hash", "hash-cache", "--ttl-seconds", "600", "--physical-client", "true", "--approved-run-ref", "approval://cache", "--physical-evidence-ref", "evidence://cache", "--json"], process.cwd());
+  assert.equal(verifiedRemoteCache.code, CLI_EXIT_OK);
+  const verifiedRemoteCachePayload = parseCliJson<{
+    snapshot: { physicalClientStorageVerified: boolean; externalPending: string[]; writes: boolean };
+  }>(verifiedRemoteCache.stdout).data;
+  assert.equal(verifiedRemoteCachePayload.snapshot.physicalClientStorageVerified, true);
+  assert.deepEqual(verifiedRemoteCachePayload.snapshot.externalPending, []);
+  assert.equal(verifiedRemoteCachePayload.snapshot.writes, false);
 
   const compatibility = await runCliCapture(["remote", "compat", "--legacy-surface", "relay.mobile.chat", "--canonical-route", "remote.chatGateway", "--client-kind", "ios", "--state-dir", stateDir, "--record", "true", ...coordinatorSigningFlags, "--json"], process.cwd());
   assert.equal(compatibility.code, CLI_EXIT_OK);
@@ -1243,7 +1255,7 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.equal(acceptedInvitationPayload.state.durable, true);
   assert.equal(acceptedInvitationPayload.state.coordinatorSignature?.verified, true);
 
-  const heartbeat = await runCliCapture(["nodes", "heartbeat", "--state-dir", stateDir, "--record", "true", "--transport", "iroh", "--owner-node", "mac.home", "--peer-node", "vps.server", "--coordinator-node", "coord.home", ...coordinatorSigningFlags, "--json"], process.cwd());
+  const heartbeat = await runCliCapture(["nodes", "heartbeat", "--state-dir", stateDir, "--record", "true", "--transport", "iroh", "--physical-verified", "true", "--owner-node", "mac.home", "--peer-node", "vps.server", "--coordinator-node", "coord.home", ...coordinatorSigningFlags, "--json"], process.cwd());
   assert.equal(heartbeat.code, CLI_EXIT_OK);
   const heartbeatPayload = parseCliJson<{
     status: string;

@@ -276,6 +276,19 @@ function stringValue(value: unknown, fallback: string): string {
   return typeof value === "string" && value.trim() ? value : fallback;
 }
 
+function approvedValidationBoolean(input: Record<string, unknown>, flag: string, requirementId: string): boolean {
+  const kebabFlag = flag.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
+  const value = input[flag] ?? input[kebabFlag];
+  const approvedRunRef = input.approvedRunRef ?? input["approved-run-ref"];
+  const physicalEvidenceRef = input.physicalEvidenceRef ?? input["physical-evidence-ref"];
+  if (value !== true) return false;
+  return typeof approvedRunRef === "string"
+    && approvedRunRef.trim().length > 0
+    && typeof physicalEvidenceRef === "string"
+    && physicalEvidenceRef.trim().length > 0
+    && (typeof input.requirementId !== "string" || input.requirementId === requirementId);
+}
+
 function numberValue(value: unknown, fallback: number): number {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) return Number(value);
@@ -408,7 +421,7 @@ function syncAuthorityHandoffFromInput(input: Record<string, unknown>) {
     requestedAuthority: parseAuthority(input.requestedAuthority ?? input["requested-authority"] ?? input.authority),
     requestedResidency: arrayOfStrings(input.requestedResidency ?? input["requested-residency"], []),
     createdAt: stringValue(input.createdAt ?? input.now, "2026-05-17T10:15:00.000Z"),
-    physicalAuthorityApplied: input.physicalAuthorityApplied === true || input["physical-authority-applied"] === true,
+    physicalAuthorityApplied: approvedValidationBoolean(input, "physicalAuthorityApplied", "physical_authority_handoff"),
     rejected: input.rejected === true,
   });
 }
@@ -453,7 +466,7 @@ function meshInvitationAcceptanceFromInput(input: Record<string, unknown>) {
     accepterMeshId: stringValue(input.accepterMeshId ?? input["accepter-mesh"] ?? input.recipientMeshId ?? input["recipient-mesh"], "mesh.peer"),
     actor: meshActorFromInput(input),
     acceptedAt: stringValue(input.acceptedAt ?? input.now, "2026-05-17T10:07:30.000Z"),
-    physicalPeerTrustVerified: input.physicalPeerTrustVerified === true,
+    physicalPeerTrustVerified: approvedValidationBoolean(input, "physicalPeerTrustVerified", "physical_peer_trust"),
   });
 }
 
@@ -502,7 +515,7 @@ function gatewayAuditReceiptFromInput(input: Record<string, unknown>) {
     action: stringValue(input.action, "read"),
     decision: input.decision === "deny" ? "deny" : "allow",
     createdAt: stringValue(input.createdAt ?? input.now, "2026-05-17T10:13:00.000Z"),
-    signedHostAuditPersisted: input.signedHostAuditPersisted === true || input["host-audit-persisted"] === true,
+    signedHostAuditPersisted: approvedValidationBoolean(input, "host-audit-persisted", "signed_host_audit_persistence"),
   });
 }
 
@@ -640,8 +653,8 @@ export function registerRemoteSyncRoutes(app: FastifyInstance): void {
         budget,
         decision,
         createdAt: agentRequest.now,
-        runtimeExecutionVerified: body.runtimeExecutionVerified === true,
-        billingMeterPersisted: body.billingMeterPersisted === true,
+        runtimeExecutionVerified: approvedValidationBoolean(body, "runtimeExecutionVerified", "agent_runtime_execution"),
+        billingMeterPersisted: approvedValidationBoolean(body, "billingMeterPersisted", "billing_meter_persistence"),
       }),
       writes: false,
     };
@@ -716,7 +729,7 @@ export function registerRemoteSyncRoutes(app: FastifyInstance): void {
         reconciliation,
         actor: meshActorFromInput(body),
         createdAt: queuedAt,
-        physicalDriverApplied: body.physicalDriverApplied === true,
+        physicalDriverApplied: approvedValidationBoolean(body, "physicalDriverApplied", "physical_sync_driver_application"),
       }),
       reconciliation,
       writes: false,

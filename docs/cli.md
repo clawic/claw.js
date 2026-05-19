@@ -431,6 +431,10 @@ The final provider/device end-to-end row is not a loose note: it is backed by
 `RemoteProviderDeviceE2EValidationPlan`, which requires chat, search, Sync,
 secret-reference, and hosted-agent validation to pass together against the same
 remote contracts and pending register before `provider_device_e2e` can clear.
+Individual physical/provider receipt commands fail closed too: verification
+flags such as `--physical-verified true`, `--provider-verified true`, or
+`--runtime-verified true` do not clear their pending row unless the command also
+names `--approved-run-ref` and `--physical-evidence-ref`.
 `remote contracts` returns the no-write remote route contract catalog. Each
 required Gateway/Connector/Sync/Mesh route is bound to local CLI/service
 contract refs and remote entrypoints, requires parity, and keeps
@@ -483,7 +487,10 @@ canonical route, requires `mapsToCanonical: true`, forbids parallel APIs with
 `parallelApiIntroduced: false`, and is a no-write migration record.
 `sync cache --record true` records a signed client cache snapshot with
 `encrypted: true`, a TTL, no plaintext payload, no secrets, and no
-authoritative state. It is cache metadata only, not a host write.
+authoritative state. It is cache metadata only, not a host write, and
+`physicalClientStorageVerified` remains false with
+`physical_client_storage` external pending unless `--physical-client true` is
+paired with `--approved-run-ref` and `--physical-evidence-ref`.
 `sync apply --record true` records a signed `SyncDriverApplicationReceipt`
 that binds a reconciled queue to one manifest driver. It records applied change
 ids and blocked conflicts, but keeps `physical_sync_driver_application` as

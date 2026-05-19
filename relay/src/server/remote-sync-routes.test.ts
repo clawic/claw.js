@@ -170,6 +170,7 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
       expectedExternalValidationChecklist.items.map((entry) => entry.requirementId),
     );
     assert.equal(externalValidationChecklistPayload.items.some((entry) => entry.requirementId === "physical_iroh_handshake" && entry.requiredCommand.includes("claw nodes heartbeat")), true);
+    assert.equal(externalValidationChecklistPayload.items.filter((entry) => entry.requiredCommand.includes(" true")).every((entry) => entry.requiredCommand.includes("--approved-run-ref") && entry.requiredCommand.includes("--physical-evidence-ref")), true);
     assert.equal(externalValidationChecklistPayload.items.some((entry) => entry.requirementId === "provider_device_e2e" && entry.requiredArtifacts.includes("RemoteProviderDeviceE2EValidationPlan")), true);
     assert.equal(externalValidationChecklistPayload.items.some((entry) => entry.requirementId === "provider_device_e2e" && entry.acceptanceCriteria.some((criterion) => criterion.includes("personal mesh") && criterion.includes("server host") && criterion.includes("hosted Gateway"))), true);
     assert.equal(externalValidationChecklistPayload.items.every((entry) => entry.approvedRunRequired && entry.physicalEvidenceRequired && entry.plaintextMaterialIncluded === false && !entry.writes), true);
@@ -725,6 +726,8 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
         agentId: "agent.support",
         assignmentId: "assignment.service",
         estimatedCostCents: 300,
+        runtimeExecutionVerified: true,
+        billingMeterPersisted: true,
       },
     });
     assert.equal(agentService.statusCode, 200);
@@ -849,6 +852,7 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
         localHash: "hash-a",
         peerSnapshot: [],
         actorId: "agent.sync",
+        physicalDriverApplied: true,
       },
     });
     assert.equal(syncApplication.statusCode, 200);

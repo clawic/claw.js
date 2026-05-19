@@ -88,6 +88,7 @@ import {
   createMeshResourceShare,
   createMeshRevocation,
   createRemoteAgentServiceExecutionReceipt,
+  createRemoteClientCacheSnapshot,
   createRemoteCompatibilityAdapterReceipt,
   createRemoteGatewayAuditReceipt,
   createRemoteSurfaceClassificationReceipt,
@@ -1039,6 +1040,31 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(manifest.cachePolicy.encrypted, true);
   assert.equal(manifest.cachePolicy.storesSecrets, false);
   assert.equal(manifest.secretPolicy.plaintextReplication, false);
+
+  const cacheSnapshot = createRemoteClientCacheSnapshot({
+    manifest,
+    objectRef: "skill.review",
+    nodeId: "node.mac",
+    clientId: "iphone.local",
+    contentHash: "hash-cache",
+    cachedAt: "2026-05-17T10:12:00.000Z",
+  });
+  assert.equal(cacheSnapshot.encrypted, true);
+  assert.equal(cacheSnapshot.plaintextIncluded, false);
+  assert.equal(cacheSnapshot.physicalClientStorageVerified, false);
+  assert.deepEqual(cacheSnapshot.externalPending, ["physical_client_storage"]);
+
+  const physicallyVerifiedCacheSnapshot = createRemoteClientCacheSnapshot({
+    manifest,
+    objectRef: "skill.review",
+    nodeId: "node.mac",
+    clientId: "iphone.local",
+    contentHash: "hash-cache",
+    cachedAt: "2026-05-17T10:12:00.000Z",
+    physicalClientStorageVerified: true,
+  });
+  assert.equal(physicallyVerifiedCacheSnapshot.physicalClientStorageVerified, true);
+  assert.deepEqual(physicallyVerifiedCacheSnapshot.externalPending, []);
 
   assert.equal(remoteActorContextSchema.safeParse({
     actorKind: "agent",

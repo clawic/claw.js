@@ -225,6 +225,10 @@
       "lines": 1777,
       "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
     },
+    "scripts/verify-remote-sync-goal.mjs": {
+      "lines": 2004,
+      "reason": "Remote Gateway/Sync closure verifier after source-session, artifact-bound approval, and fail-closed physical/provider gates; split source-QA, external-validation, and route-contract assertions before expanding further."
+    },
     "secrets/src/server/app.ts": {
       "lines": 1264,
       "reason": "Existing secrets server app after broker redirect handling; split routes, auth helpers, and response serializers before expanding."
