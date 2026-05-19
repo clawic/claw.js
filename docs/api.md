@@ -216,7 +216,8 @@ parallel store: `metric_sources` identifies the local/system/provider source,
 history buckets, and `metric_incidents` stores rule-triggered events for charts
 and agent context. History responses also include a chart-ready `chart` object
 with normalized line points sourced from `metric_samples` first and
-`metric_rollups` when raw samples have already expired.
+`metric_rollups` when raw samples have already expired, plus a portable ASCII
+`render` sparkline for CLI and lightweight clients.
 
 ## Workspace
 

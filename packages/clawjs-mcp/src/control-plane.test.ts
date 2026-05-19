@@ -323,6 +323,17 @@ describe("MCP connector control plane", () => {
         points: [],
         empty: true,
       });
+      assert.deepEqual(history.json().render, {
+        kind: "ascii_sparkline",
+        metricKey: "system.memory.used",
+        unit: "bytes",
+        source: "empty",
+        width: 24,
+        line: "",
+        min: null,
+        max: null,
+        empty: true,
+      });
       assert.equal(fs.existsSync(monitorDb), false);
     } finally {
       await app.close();

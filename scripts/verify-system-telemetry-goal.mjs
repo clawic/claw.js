@@ -111,7 +111,7 @@ function assertExternalPendingLedger() {
     "| SYS-TEL-EXT-003 | Dangerous hardware or system controls |",
     "| SYS-TEL-EXT-004 | Signed-host live recording loop |",
     "| SYS-TEL-EXT-005 | Strict native menu-bar visual and interaction validation |",
-    "| SYS-TEL-EXT-006 | Time-series graph rendering over retained telemetry |",
+    "| SYS-TEL-EXT-006 | Native time-series graph UI over retained telemetry |",
     "must not be downgraded to `EXTERNAL PENDING`",
   ]) {
     assert(text.includes(snippet), `docs/system-telemetry-external-pending-validation.md: missing ${JSON.stringify(snippet)}`);
@@ -140,12 +140,15 @@ function assertDocsAndRegistry() {
       "claw inspect route system.telemetryAgentContext --json",
       "system.sensor.fan_speed",
       "chart-ready",
+      "ASCII `render` sparkline",
     ]],
     ["docs/api.md", [
       "/v1/system/providers/plan",
       "/v1/system/controls/plan",
       "metric_samples",
       "chart-ready `chart` object",
+      "ASCII",
+      "`render` sparkline",
       "signed-host operation",
     ]],
     ["packages/clawjs-core/src/surface-registry.ts", [
@@ -340,6 +343,9 @@ function assertMonitorRetention() {
   assert(history.chart?.kind === "line", "history: missing chart-ready line payload");
   assert(history.chart?.source === "metric_samples", "history: chart must prefer raw metric samples when available");
   assert(history.chart?.points?.some((point) => point.sourceId === "system.telemetry.local" && typeof point.value === "number"), "history: chart must expose numeric points");
+  assert(history.render?.kind === "ascii_sparkline", "history: missing ASCII sparkline render");
+  assert(history.render?.source === "metric_samples", "history: render must use the same source as chart when raw samples are available");
+  assert(typeof history.render?.line === "string" && history.render.line.length > 0, "history: render must expose a non-empty line");
 }
 
 function assertInspectRoutes() {

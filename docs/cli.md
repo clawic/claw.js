@@ -574,9 +574,9 @@ host command (`--host-command`, `--signed-host-command`,
 `CLAW_SYSTEM_TELEMETRY_HOST_COMMAND`, or `CLAW_LIVE_BROKER_COMMAND`), normalizes
 the host snapshot into the same portable contract, and can be combined with
 `--record true`. Recording always writes to the local metric store so `history`
-can return raw samples, minute rollups, rule incidents, and a chart-ready
-`chart` projection from one retention path. Raw sample retention is short by
-default (`6h`); rollups and
+can return raw samples, minute rollups, rule incidents, a chart-ready `chart`
+projection, and a portable ASCII `render` sparkline from one retention path.
+Raw sample retention is short by default (`6h`); rollups and
 incidents default to `7d` and can be adjusted per write with
 `--raw-retention`, `--rollup-retention`, and `--incident-retention`. The store
 defaults to `~/.claw/data/monitor.sqlite` and can be overridden with

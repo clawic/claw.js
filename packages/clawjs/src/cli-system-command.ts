@@ -1038,6 +1038,62 @@ function historyChartPayload(input: {
   };
 }
 
+function historyAsciiRender(chart: ReturnType<typeof historyChartPayload>, width = 24): {
+  kind: "ascii_sparkline";
+  metricKey: string;
+  unit: string;
+  source: typeof chart.source;
+  width: number;
+  line: string;
+  min: number | null;
+  max: number | null;
+  empty: boolean;
+} {
+  const values = chart.points.map((point) => point.value).filter((value) => Number.isFinite(value));
+  if (values.length === 0) {
+    return {
+      kind: "ascii_sparkline",
+      metricKey: chart.metricKey,
+      unit: chart.unit,
+      source: chart.source,
+      width,
+      line: "",
+      min: null,
+      max: null,
+      empty: true,
+    };
+  }
+
+  const targetWidth = Math.max(1, Math.min(width, values.length));
+  const sampled = Array.from({ length: targetWidth }, (_, index) => {
+    const sourceIndex = targetWidth === 1
+      ? values.length - 1
+      : Math.round(index * (values.length - 1) / (targetWidth - 1));
+    return values[sourceIndex] ?? values[values.length - 1] ?? 0;
+  });
+  const min = Math.min(...sampled);
+  const max = Math.max(...sampled);
+  const ramp = "_.-:=+*#%@";
+  const line = sampled.map((value) => {
+    if (max === min) return ramp[Math.floor(ramp.length / 2)];
+    const ratio = (value - min) / (max - min);
+    const rampIndex = Math.max(0, Math.min(ramp.length - 1, Math.round(ratio * (ramp.length - 1))));
+    return ramp[rampIndex];
+  }).join("");
+
+  return {
+    kind: "ascii_sparkline",
+    metricKey: chart.metricKey,
+    unit: chart.unit,
+    source: chart.source,
+    width: targetWidth,
+    line,
+    min,
+    max,
+    empty: false,
+  };
+}
+
 function writeHuman(context: CliContext, value: unknown): void {
   context.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 }
@@ -1084,6 +1140,12 @@ export async function runSystemCli(input: {
     if (!metric) throw new CliHandledError("unknown_metric", `Unknown system metric: ${metricKey}`, CLI_EXIT_USAGE);
     const rangeMs = parseRangeMs(input.flags.range);
     const history = readMonitorHistory(metricKey, rangeMs, input.flags);
+    const chart = historyChartPayload({
+      metricKey,
+      unit: metric.unit,
+      samples: history.samples,
+      rollups: history.rollups,
+    });
     const payload = {
       metric,
       rangeMs,
@@ -1098,12 +1160,8 @@ export async function runSystemCli(input: {
       samples: history.samples,
       rollups: history.rollups,
       incidents: history.incidents,
-      chart: historyChartPayload({
-        metricKey,
-        unit: metric.unit,
-        samples: history.samples,
-        rollups: history.rollups,
-      }),
+      chart,
+      render: historyAsciiRender(chart),
     };
     if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "system", payload, { subcommand: "history" });
     else writeHuman(input.context, payload);

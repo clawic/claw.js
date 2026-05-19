@@ -201,8 +201,14 @@ export function readMcpSystemTelemetryHistory(input: { metricKey: string; range?
   const dbPath = systemTelemetryMonitorDbPath({ monitorDb: input.monitorDb });
   const metric = listSystemTelemetryMetrics().find((entry) => entry.key === input.metricKey) ?? null;
   const rangeMs = parseRangeMs(input.range);
-  if (!metric) return { metric, rangeMs, retention: { store: "monitor.sqlite", dbPath, status: "unknown_metric", rawPolicy: "short_local", rollups: true, rollupBucketMs: MONITOR_ROLLUP_BUCKET_MS }, samples: [], rollups: [], incidents: [], chart: historyChartPayload(input.metricKey, "", [], []) };
-  if (!fs.existsSync(dbPath)) return { metric, rangeMs, retention: { store: "monitor.sqlite", dbPath, status: "empty", rawPolicy: "short_local", rollups: true, rollupBucketMs: MONITOR_ROLLUP_BUCKET_MS }, samples: [], rollups: [], incidents: [], chart: historyChartPayload(input.metricKey, metric.unit, [], []) };
+  if (!metric) {
+    const chart = historyChartPayload(input.metricKey, "", [], []);
+    return { metric, rangeMs, retention: { store: "monitor.sqlite", dbPath, status: "unknown_metric", rawPolicy: "short_local", rollups: true, rollupBucketMs: MONITOR_ROLLUP_BUCKET_MS }, samples: [], rollups: [], incidents: [], chart, render: historyAsciiRender(chart) };
+  }
+  if (!fs.existsSync(dbPath)) {
+    const chart = historyChartPayload(input.metricKey, metric.unit, [], []);
+    return { metric, rangeMs, retention: { store: "monitor.sqlite", dbPath, status: "empty", rawPolicy: "short_local", rollups: true, rollupBucketMs: MONITOR_ROLLUP_BUCKET_MS }, samples: [], rollups: [], incidents: [], chart, render: historyAsciiRender(chart) };
+  }
   const sinceMs = Date.now() - rangeMs;
   const db = new Database(dbPath, { readonly: true, fileMustExist: true });
   try {
@@ -270,6 +276,7 @@ export function readMcpSystemTelemetryHistory(input: { metricKey: string; range?
       openedAt: row.opened_at,
       lastSeenAt: row.last_seen_at,
     })).reverse() : [];
+    const chart = historyChartPayload(input.metricKey, metric.unit, samples, rollups);
     return {
       metric,
       rangeMs,
@@ -277,11 +284,13 @@ export function readMcpSystemTelemetryHistory(input: { metricKey: string; range?
       samples,
       rollups,
       incidents,
-      chart: historyChartPayload(input.metricKey, metric.unit, samples, rollups),
+      chart,
+      render: historyAsciiRender(chart),
     };
   } catch (error) {
     if (error instanceof Error && /no such table/i.test(error.message)) {
-      return { metric, rangeMs, retention: { store: "monitor.sqlite", dbPath, status: "empty", rawPolicy: "short_local", rollups: true, rollupBucketMs: MONITOR_ROLLUP_BUCKET_MS }, samples: [], rollups: [], incidents: [], chart: historyChartPayload(input.metricKey, metric.unit, [], []) };
+      const chart = historyChartPayload(input.metricKey, metric.unit, [], []);
+      return { metric, rangeMs, retention: { store: "monitor.sqlite", dbPath, status: "empty", rawPolicy: "short_local", rollups: true, rollupBucketMs: MONITOR_ROLLUP_BUCKET_MS }, samples: [], rollups: [], incidents: [], chart, render: historyAsciiRender(chart) };
     }
     throw error;
   } finally {
@@ -313,6 +322,30 @@ function historyChartPayload(
   const source = samplePoints.length > 0 ? "metric_samples" : rollupPoints.length > 0 ? "metric_rollups" : "empty";
   const points = source === "metric_samples" ? samplePoints : source === "metric_rollups" ? rollupPoints : [];
   return { kind: "line", metricKey, unit, source, points, empty: points.length === 0 };
+}
+
+function historyAsciiRender(chart: ReturnType<typeof historyChartPayload>, width = 24) {
+  const values = chart.points.map((point) => point.value).filter((value) => Number.isFinite(value));
+  if (values.length === 0) {
+    return { kind: "ascii_sparkline", metricKey: chart.metricKey, unit: chart.unit, source: chart.source, width, line: "", min: null, max: null, empty: true };
+  }
+  const targetWidth = Math.max(1, Math.min(width, values.length));
+  const sampled = Array.from({ length: targetWidth }, (_, index) => {
+    const sourceIndex = targetWidth === 1
+      ? values.length - 1
+      : Math.round(index * (values.length - 1) / (targetWidth - 1));
+    return values[sourceIndex] ?? values[values.length - 1] ?? 0;
+  });
+  const min = Math.min(...sampled);
+  const max = Math.max(...sampled);
+  const ramp = "_.-:=+*#%@";
+  const line = sampled.map((value) => {
+    if (max === min) return ramp[Math.floor(ramp.length / 2)];
+    const ratio = (value - min) / (max - min);
+    const rampIndex = Math.max(0, Math.min(ramp.length - 1, Math.round(ratio * (ramp.length - 1))));
+    return ramp[rampIndex];
+  }).join("");
+  return { kind: "ascii_sparkline", metricKey: chart.metricKey, unit: chart.unit, source: chart.source, width: targetWidth, line, min, max, empty: false };
 }
 
 export function mcpSystemTelemetryMetricsPayload() {

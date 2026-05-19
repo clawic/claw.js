@@ -595,6 +595,7 @@ test("runCli records system telemetry snapshots into monitor metric history", as
     rollups: Array<{ metricKey: string; bucketMs: number; count: number }>;
     incidents: Array<{ ruleId: string; metricKey: string; severity: string; status: string; sampleValue: number }>;
     chart: { kind: string; source: string; empty: boolean; points: Array<{ value: number; sourceId: string }> };
+    render: { kind: string; source: string; empty: boolean; line: string; min: number | null; max: number | null };
   }>(history.stdout);
   assert.equal(historyPayload.retention.status, "recorded");
   assert.equal(historyPayload.retention.rollupBucketMs, 60_000);
@@ -605,6 +606,12 @@ test("runCli records system telemetry snapshots into monitor metric history", as
   assert.equal(historyPayload.chart.source, "metric_samples");
   assert.equal(historyPayload.chart.empty, false);
   assert.equal(historyPayload.chart.points.some((point) => point.sourceId === "system.telemetry.local" && typeof point.value === "number"), true);
+  assert.equal(historyPayload.render.kind, "ascii_sparkline");
+  assert.equal(historyPayload.render.source, "metric_samples");
+  assert.equal(historyPayload.render.empty, false);
+  assert.equal(historyPayload.render.line.length > 0, true);
+  assert.equal(typeof historyPayload.render.min, "number");
+  assert.equal(typeof historyPayload.render.max, "number");
 });
 
 test("runCli records signed host system telemetry snapshots into monitor metric history", async () => {
