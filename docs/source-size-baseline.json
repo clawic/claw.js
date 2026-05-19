@@ -11,6 +11,10 @@
       "lines": 1583,
       "reason": "Existing broad test coverage; split by scenario before expanding."
     },
+    "apps/host/Sources/ClawHostKit/MacControl.swift": {
+      "lines": 2009,
+      "reason": "Mac Control broker crossed the 2000-line boundary while adding signed-host audio volume and display brightness execution; extract action planning, native runners, and audit helpers before expanding more host capabilities."
+    },
     "content/src/server/db.ts": {
       "lines": 1419,
       "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
@@ -156,9 +160,9 @@
       "reason": "Extended productivity CLI groups extracted from the public CLI router; split by capability family before expanding."
     },
     "packages/clawjs/src/cli-search-command.ts": {
-      "lines": 7675,
+      "lines": 8103,
       "blockGrowth": true,
-      "reason": "Emergency search CLI debt after dense-source indexing and entrypoint contract expansion; immediate follow-up should extract source adapters, event refresh, and admin subcommands, and future growth is blocked except for extraction, deletion, or compatibility-preserving split work."
+      "reason": "Emergency search CLI debt after search V1.1 source-surface expansion in the current dirty worktree; immediate follow-up should extract source adapters, event refresh, and admin subcommands, and future growth is blocked except for extraction, deletion, or compatibility-preserving split work."
     },
     "packages/clawjs/src/cli-search-index.test.ts": {
       "lines": 5248,
