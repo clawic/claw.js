@@ -122,7 +122,7 @@ type CliMediaClaw = ClawInstance & {
     get(mediaId: string): { name: string } | null;
     download(mediaId: string): { media: { name: string }; buffer: Buffer } | null;
     share: {
-      create(input: { mediaId?: string; label?: string; filters?: MediaListInput; expiresAt?: string | null; ttlMs?: number }): Promise<CliMediaShare>;
+      create(input: { mediaId?: string; label?: string; legalLabel?: string; approvalId?: string; filters?: MediaListInput; expiresAt?: string | null; ttlMs?: number }): Promise<CliMediaShare>;
       list(): CliMediaShare[];
       revoke(id: string): Promise<boolean>;
       resolveGallery(id: string): { items: Array<{ mediaId: string; name: string }> } | null;

@@ -284,7 +284,7 @@ surfaces.
 | Upload document | `claw.documents.upload()` | `claw documents upload` | `POST WS/documents/upload` |
 | Register existing file path | `claw.documents.register()` | `claw documents register` | `POST WS/documents/register` |
 | Chunked upload primitives | `claw.documents.beginUpload()`, `appendUploadChunk()`, `commitUpload()` | `-` | used internally by `POST WS/documents/upload` |
-| Download document | `claw.documents.download()` | `claw documents download` | `GET WS/documents/:documentId/download` |
+| Download document | `claw.documents.download()` | `claw documents download --confirm --approval-id ... --legal-label ...` | `GET WS/documents/:documentId/download` |
 | Resolve document refs | `claw.documents.resolveRefs()` | `-` | indirect via session routes |
 | Delete one document | `-` | `-` | `-` |
 
@@ -339,7 +339,7 @@ These methods come from the `@clawjs/workspace` extension, not from the base
 | Register command backend | `claw.generations.registerCommandBackend()` | `claw generations register-command` | `-` |
 | Remove generation backend | `claw.generations.removeBackend()` | `claw generations remove-backend` | `-` |
 | Persistent media list/search | `claw.media.list()` / `claw.media.search()` | `claw media list` / `claw media search` | `-` |
-| Persistent media read/download | `claw.media.get()` / `claw.media.download()` | `claw media read` / `claw media download` | `-` |
+| Persistent media read/download | `claw.media.get()` / `claw.media.download()` | `claw media read` / `claw media download --confirm --approval-id ... --legal-label ...` | `-` |
 | Persistent media shares | `claw.media.share.*` | `claw media share ...` | `-` |
 | Image create | `claw.image.create()` / `claw.image.generate()` | `claw image create` / `claw image generate` | `POST WS/images` |
 | Image edit | `claw.image.edit()` | `claw image edit` | `-` |

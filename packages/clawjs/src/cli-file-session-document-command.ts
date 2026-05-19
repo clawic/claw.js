@@ -7,6 +7,7 @@ import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from
 import { readBooleanFlag } from "./cli-flag-parsers.ts";
 import { writeCommandJsonOk, writeJsonLine } from "./cli-json.ts";
 import { createCliClaw } from "./cli-claw-factory.ts";
+import { requireCliExportReview, writeCliLegalSidecar } from "./cli-export-review.ts";
 import { parseRuleHints } from "./cli-rule-utils.ts";
 import { inferMimeTypeFromPath, parseContextBlock } from "./cli-runtime-utils.ts";
 
@@ -392,8 +393,18 @@ if (group === "documents" && command === "download") {
     context.cwd,
     flags.out || flags.output || download.document.name,
   );
+  const review = requireCliExportReview({ argv, flags, operation: "documents download" });
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.writeFileSync(outputPath, download.buffer);
+  writeCliLegalSidecar({
+    outputPath,
+    review,
+    kind: "claw.documents.download.legal",
+    source: {
+      documentId,
+      name: download.document.name,
+    },
+  });
   if (wantsJson) {
     writeSurfaceJson({
       document: download.document,

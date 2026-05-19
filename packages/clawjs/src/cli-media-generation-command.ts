@@ -8,6 +8,7 @@ import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from
 import { parseCsvFlag, parseJsonFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
 import { createCliClaw } from "./cli-claw-factory.ts";
+import { requireCliExportReview, writeCliLegalSidecar } from "./cli-export-review.ts";
 import { scheduleGenerationArtifactSearchEvent, scheduleImageDerivedSearchEvent, scheduleMediaAssetSearchEvent } from "./cli-search-events.ts";
 import { parseRuleHints } from "./cli-rule-utils.ts";
 import { parseImageOperation, parseImageProvenance, parseImageType } from "./cli-image-parsers.ts";
@@ -24,7 +25,7 @@ type CliMediaClaw = ClawInstance & {
     get(mediaId: string): { name: string } | null;
     download(mediaId: string): { media: { name: string }; buffer: Buffer } | null;
     share: {
-      create(input: { mediaId?: string; label?: string; filters?: MediaListInput; expiresAt?: string | null; ttlMs?: number }): Promise<CliMediaShare>;
+      create(input: { mediaId?: string; label?: string; legalLabel?: string; approvalId?: string; filters?: MediaListInput; expiresAt?: string | null; ttlMs?: number }): Promise<CliMediaShare>;
       list(): CliMediaShare[];
       revoke(id: string): Promise<boolean>;
       resolveGallery(id: string): { items: Array<{ mediaId: string; name: string }> } | null;
@@ -194,8 +195,18 @@ if (group === "media" && command === "download") {
     return CLI_EXIT_FAILURE;
   }
   const outputPath = path.resolve(context.cwd, flags.out || flags.output || download.media.name);
+  const review = requireCliExportReview({ argv, flags, operation: "media download" });
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.writeFileSync(outputPath, download.buffer);
+  writeCliLegalSidecar({
+    outputPath,
+    review,
+    kind: "claw.media.download.legal",
+    source: {
+      mediaId,
+      name: download.media.name,
+    },
+  });
   if (wantsJson) {
     writeMediaJson({
       media: download.media,

@@ -953,6 +953,8 @@ claw docs page upsert search-notes --title "Search Notes" --body "Search doc tex
 claw docs page delete search-notes --json
 claw documents upload ./brief.md
 claw documents read document-123
+claw documents download --document-id document-123 --out brief.md --confirm --approval-id approval-from-human-review --legal-label "Document download - human reviewed"
+claw media download --media-id media-123 --out asset.bin --confirm --approval-id approval-from-human-review --legal-label "Media download - human reviewed"
 claw files read README.md
 claw files apply-template-pack --template-pack ./template-pack.json
 claw images create "product shot"

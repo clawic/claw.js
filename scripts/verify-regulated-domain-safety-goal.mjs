@@ -686,6 +686,20 @@ for (const [relativePath, snippets] of [
     "Work snapshot - human reviewed",
     "Work backup - human reviewed",
   ]],
+  ["packages/clawjs/src/cli-download-export-review.test.ts", [
+    "approval_document_download",
+    "approval_media_download",
+    "Document download - human reviewed",
+    "Media download - human reviewed",
+  ]],
+  ["packages/clawjs/src/cli-file-session-document-command.ts", [
+    "claw.documents.download.legal",
+    "documents download",
+  ]],
+  ["packages/clawjs/src/cli-media-generation-command.ts", [
+    "claw.media.download.legal",
+    "media download",
+  ]],
   ["packages/clawjs/src/cli-project-command.test.ts", [
     "approval_project_export",
     "Project handoff - human reviewed",
@@ -713,6 +727,8 @@ for (const [relativePath, snippets] of [
     "work backup backups/ --confirm --approval-id",
     "project export . --output project-handoff.clawexport --confirm --approval-id",
     "accounts export --provider apple --mode redacted --confirm --approval-id",
+    "documents download --document-id document-123",
+    "media download --media-id media-123",
   ]],
   ["docs/adr/0026-regulated-domain-safety-liability-boundary.md", [
     "Status",

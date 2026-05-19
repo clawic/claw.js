@@ -1180,6 +1180,9 @@ test("runCli can upload, search, read, and download documents", async () => {
     "--workspace", workspaceRoot,
     "--document-id", uploaded.documentId,
     "--out", downloadFile,
+    "--confirm",
+    "--approval-id", "approval_document_download_index",
+    "--legal-label", "Document download - human reviewed",
     "--json",
   ], {
     stdout: downloadStdout.stream,
@@ -1189,6 +1192,9 @@ test("runCli can upload, search, read, and download documents", async () => {
 
   assert.equal(downloadExitCode, CLI_EXIT_OK);
   assert.equal(fs.readFileSync(downloadFile, "utf8"), "alpha notes for document search");
+  const downloadLegal = JSON.parse(fs.readFileSync(`${downloadFile}.claw-legal.json`, "utf8")) as { approvalId: string; legalLabel: string };
+  assert.equal(downloadLegal.approvalId, "approval_document_download_index");
+  assert.equal(downloadLegal.legalLabel, "Document download - human reviewed");
 });
 
 test("runCli can generate text through the inference command", async () => {

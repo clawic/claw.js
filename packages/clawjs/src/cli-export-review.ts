@@ -1,3 +1,5 @@
+import fs from "fs";
+
 import { CliHandledError, CLI_EXIT_FAILURE } from "./cli-errors.ts";
 import { readBooleanFlag } from "./cli-flag-parsers.ts";
 
@@ -38,4 +40,21 @@ export function requireCliExportReview(input: {
     );
   }
   return { confirmed: true, approvalId, legalLabel };
+}
+
+export function writeCliLegalSidecar(input: {
+  outputPath: string;
+  review: CliExportReview;
+  kind: string;
+  source: Record<string, unknown>;
+}): void {
+  fs.writeFileSync(`${input.outputPath}.claw-legal.json`, JSON.stringify({
+    schemaVersion: 1,
+    kind: input.kind,
+    exportedAt: new Date().toISOString(),
+    approvalId: input.review.approvalId,
+    legalLabel: input.review.legalLabel,
+    confirmed: input.review.confirmed,
+    source: input.source,
+  }, null, 2));
 }
