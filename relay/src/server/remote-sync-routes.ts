@@ -1,5 +1,6 @@
 import {
   buildRemoteConformanceReport,
+  buildCustomAppSDKInspectionPayload,
   buildRemoteDecisionReview,
   buildRemoteExternalPendingRegister,
   buildRemoteExternalValidationEvidenceArtifact,
@@ -56,6 +57,17 @@ function nodeIds(): string[] {
 
 function remoteConformancePayload() {
   return buildRemoteConformanceReport({ routeIds: routeIds(), nodeIds: nodeIds() });
+}
+
+function remoteCustomAppSDKContractPayload() {
+  return {
+    relayRole: "remote_safe_contract_projection",
+    richUiRuntime: "sdk_host_bridge_not_relay_process",
+    remoteExecution: "not_enabled",
+    localWideReadsRemoteExecution: "not_exposed",
+    writes: false,
+    ...buildCustomAppSDKInspectionPayload(),
+  };
 }
 
 function remoteExternalPendingPayload() {
@@ -529,6 +541,8 @@ export function registerRemoteSyncRoutes(app: FastifyInstance): void {
   }));
 
   app.get(clawApiPath("remote/conformance"), async () => remoteConformancePayload());
+
+  app.get(clawApiPath("remote/custom-app-sdk"), async () => remoteCustomAppSDKContractPayload());
 
   app.get(clawApiPath("remote/offline-command"), async () => remoteOfflineCommandPayload());
 

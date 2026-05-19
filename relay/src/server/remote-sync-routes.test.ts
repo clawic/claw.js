@@ -44,6 +44,7 @@ const expectedRemoteHttpMethodRoutes = [
   "GET:/v1/remote/classifications",
   "POST:/v1/remote/classifications/receipts",
   "GET:/v1/remote/conformance",
+  "GET:/v1/remote/custom-app-sdk",
   "GET:/v1/remote/offline-command",
   "POST:/v1/remote/offline-command",
   "GET:/v1/remote/external-pending",
@@ -579,6 +580,37 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(routeContractsPayload.contracts.some((entry) => entry.routeId === "remote.searchGateway" && entry.localContractRefs.includes("claw search")), true);
     assert.equal(routeContractsPayload.contracts.some((entry) => entry.routeId === "gateway.multiTenantAgentService" && entry.remoteEntryPoints.includes("POST /v1/gateway/agent-service/evaluate")), true);
     assert.equal(routeContractsPayload.contracts.every((entry) => entry.parityRequired && !entry.parallelApiAllowed && entry.writes === false), true);
+
+    const customAppSdk = await built.app.inject({ method: "GET", url: "/v1/remote/custom-app-sdk" });
+    assert.equal(customAppSdk.statusCode, 200);
+    const customAppSdkPayload = customAppSdk.json() as {
+      relayRole: string;
+      richUiRuntime: string;
+      remoteExecution: string;
+      localWideReadsRemoteExecution: string;
+      writes: boolean;
+      schemaRefs: string[];
+      missingSchemaRefs: string[];
+      riskMap: { ordinaryAccess: string[]; approvalRequired: string[] };
+      capabilities: Array<{ id: string; outputSchemaRef?: string; surfaces: Array<{ surface: string; status: string }> }>;
+    };
+    assert.equal(customAppSdkPayload.relayRole, "remote_safe_contract_projection");
+    assert.equal(customAppSdkPayload.richUiRuntime, "sdk_host_bridge_not_relay_process");
+    assert.equal(customAppSdkPayload.remoteExecution, "not_enabled");
+    assert.equal(customAppSdkPayload.localWideReadsRemoteExecution, "not_exposed");
+    assert.equal(customAppSdkPayload.writes, false);
+    assert.deepEqual(customAppSdkPayload.missingSchemaRefs, []);
+    assert.equal(customAppSdkPayload.schemaRefs.includes("claw.search.results.v1"), true);
+    assert.equal(customAppSdkPayload.riskMap.ordinaryAccess.includes("db.query"), true);
+    assert.equal(customAppSdkPayload.riskMap.approvalRequired.includes("iot.device.action.invoke"), true);
+    assert.equal(
+      customAppSdkPayload.capabilities.find((capability) => capability.id === "resources.read")?.outputSchemaRef,
+      "claw.resources.payload.v1",
+    );
+    assert.equal(
+      customAppSdkPayload.capabilities.find((capability) => capability.id === "search.query")?.surfaces.some((surface) => surface.surface === "relay"),
+      true,
+    );
 
     const providerDeviceE2EPlan = await built.app.inject({ method: "GET", url: "/v1/remote/provider-device-e2e-plan" });
     assert.equal(providerDeviceE2EPlan.statusCode, 200);
