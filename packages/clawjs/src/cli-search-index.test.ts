@@ -7,7 +7,7 @@ import Database from "better-sqlite3";
 import { SearchStore, createFrameworkSearchSourceManifest } from "@clawjs/search";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./index.ts";
 import { captureStream, runCliCapture, runInternalV1Cli, withPatchedEnv } from "./index-test-utils.ts";
-import { scheduleCodeSymbolsSearchEvent, scheduleSessionChatSearchEvent } from "./cli-search-events.ts";
+import { scheduleCodeSymbolsSearchEvent } from "./cli-search-events.ts";
 import { runSearchDocsPagesCliWriteScenario, runSearchDocsPagesEventScenario, runSearchDocsPagesScenario } from "./cli-search-docs-pages-test-utils.ts";
 import { runSearchLocalFilesEventScenario } from "./cli-search-local-files-test-utils.ts";
 import { runSearchSurfaceRouteGraphContractsScenario } from "./cli-search-surface-routes-test-utils.ts";
@@ -1183,6 +1183,27 @@ test("sessions index enqueues sessions.chats search refresh jobs", async () => {
     const result = queryPayload.data.results.find((entry) => entry.resourceId === sessionId);
     assert.equal(result?.source, "sessions.chats");
     assert.equal(result?.fragments?.some((fragment) => fragment.snippet?.includes("sessions-index-emitter-needle")), true);
+    fs.rmSync(path.join(sessionsRoot, `rollout-${sessionId}.jsonl`));
+    const archivedRoot = path.join(sessionsRoot, "archived_sessions");
+    fs.mkdirSync(archivedRoot, { recursive: true });
+    fs.writeFileSync(path.join(archivedRoot, `rollout-${sessionId}.jsonl`), [
+      JSON.stringify({ type: "session_meta", payload: { id: sessionId, cwd: workspaceRoot, timestamp: "2026-05-14T10:00:00.000Z" } }),
+      JSON.stringify({ type: "event_msg", payload: { type: "user_message", message: "sessions-index-emitter-needle should be deleted from Search" } }),
+      "",
+    ].join("\n"));
+    const archiveIndex = await runCliCapture(["sessions", "index", "--root", sessionsRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(archiveIndex.code, CLI_EXIT_OK);
+    const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "sessions.chats", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(deleteRun.code, CLI_EXIT_OK);
+    const deleteRunPayload = JSON.parse(deleteRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    const sessionDeleteRunItem = deleteRunPayload.data.worker?.items.find((entry) => entry.source === "sessions.chats");
+    assert.deepEqual({ source: sessionDeleteRunItem?.source, operation: sessionDeleteRunItem?.operation, status: sessionDeleteRunItem?.status, indexed: sessionDeleteRunItem?.indexed }, { source: "sessions.chats", operation: "delete", status: "done", indexed: 1 });
+    const afterArchive = await runCliCapture(["search", "query", "sessions-index-emitter-needle", "--domains", "sessions", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterArchive.code, CLI_EXIT_DEGRADED);
+    const afterArchivePayload = JSON.parse(afterArchive.stdout) as { data: { results: unknown[] } };
+    assert.deepEqual(afterArchivePayload.data.results, []);
   });
 });
 test("sessions.chats event jobs refresh and tombstone individual chats", async () => {
@@ -1207,24 +1228,23 @@ test("sessions.chats event jobs refresh and tombstone individual chats", async (
     ].join("\n"));
     const index = await runCliCapture(["sessions", "index", "--root", sessionsRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(index.code, CLI_EXIT_OK);
-    const scheduled = scheduleSessionChatSearchEvent({
-      operation: "upsert",
-      sessionId,
-      dataDir: dataRoot,
-    });
-    assert.equal(scheduled.ok, true, scheduled.error);
-    assert.equal(scheduled.job?.source, "sessions.chats");
-    assert.equal(scheduled.job?.operation, "upsert");
-    assert.equal(scheduled.job?.resourceId, sessionId);
-    assert.equal(scheduled.job?.shard, "hot");
-    assert.equal(scheduled.job?.payload.eventDriven, true);
-    assert.equal(scheduled.job?.payload.sessionId, sessionId);
+    const scheduled = await runCliCapture(["search", "changes", "schedule", "upsert", "--source", "sessions.chats", "--session-id", sessionId, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(scheduled.code, CLI_EXIT_OK, scheduled.stderr || scheduled.stdout);
+    const scheduledPayload = JSON.parse(scheduled.stdout) as {
+      data: { item?: { id: string; source: string; operation: string; resourceId?: string; shard?: string; payload?: { eventDriven?: boolean; sessionId?: string } } };
+    };
+    assert.equal(scheduledPayload.data.item?.source, "sessions.chats");
+    assert.equal(scheduledPayload.data.item?.operation, "upsert");
+    assert.equal(scheduledPayload.data.item?.resourceId, sessionId);
+    assert.equal(scheduledPayload.data.item?.shard, "hot");
+    assert.equal(scheduledPayload.data.item?.payload?.eventDriven, true);
+    assert.equal(scheduledPayload.data.item?.payload?.sessionId, sessionId);
     const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "sessions.chats", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(serviceRun.code, CLI_EXIT_OK);
     const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
       data: { worker?: { items: Array<{ id: string; source: string; status: string; indexed?: number }> } };
     };
-    assert.equal(serviceRunPayload.data.worker?.items[0]?.id, scheduled.job?.id);
+    assert.equal(serviceRunPayload.data.worker?.items[0]?.id, scheduledPayload.data.item?.id);
     assert.equal(serviceRunPayload.data.worker?.items[0]?.source, "sessions.chats");
     assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
     assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
@@ -1243,13 +1263,16 @@ test("sessions.chats event jobs refresh and tombstone individual chats", async (
     } finally {
       sessionsDb.close();
     }
-    const deleted = scheduleSessionChatSearchEvent({
-      operation: "delete",
-      sessionId,
-      dataDir: dataRoot,
-    });
-    assert.equal(deleted.ok, true, deleted.error);
-    assert.equal(deleted.job?.operation, "delete");
+    const deleted = await runCliCapture(["search", "changes", "schedule", "delete", "--source", "sessions.chats", "--session-id", sessionId, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleted.code, CLI_EXIT_OK, deleted.stderr || deleted.stdout);
+    const deletedPayload = JSON.parse(deleted.stdout) as {
+      data: { item?: { source: string; operation: string; resourceId?: string; payload?: { eventDriven?: boolean; sessionId?: string } } };
+    };
+    assert.equal(deletedPayload.data.item?.source, "sessions.chats");
+    assert.equal(deletedPayload.data.item?.operation, "delete");
+    assert.equal(deletedPayload.data.item?.resourceId, sessionId);
+    assert.equal(deletedPayload.data.item?.payload?.eventDriven, true);
+    assert.equal(deletedPayload.data.item?.payload?.sessionId, sessionId);
     const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "sessions.chats", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(deleteRun.code, CLI_EXIT_OK);
     const deleteRunPayload = JSON.parse(deleteRun.stdout) as {

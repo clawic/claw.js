@@ -2462,13 +2462,13 @@ function runSessionsIndexCommand(input: V1DataCliInput, store: DatabaseServiceSt
   }
   if (command === "index") {
     const roots = sessionRoots(input);
-    const sessionIds = new Set<string>();
-    const indexed = indexSessionRoots(store.sqlite, roots, input.flags.source || "codex", (sessionId) => {
-      sessionIds.add(sessionId);
+    const sessionEvents = new Map<string, boolean>();
+    const indexed = indexSessionRoots(store.sqlite, roots, input.flags.source || "codex", (sessionId, archived) => {
+      sessionEvents.set(sessionId, archived);
     });
-    for (const sessionId of sessionIds) {
+    for (const [sessionId, archived] of sessionEvents) {
       scheduleSessionChatSearchEvent({
-        operation: "upsert",
+        operation: archived ? "delete" : "upsert",
         sessionId,
         dataDir: resolveClawjsDataRoot(),
         flags: input.flags,

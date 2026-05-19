@@ -34,6 +34,7 @@ import {
   scheduleCodeSymbolsSearchEvent,
   scheduleExternalCacheSearchEvent,
   scheduleLocalFileSearchEvent,
+  scheduleSessionChatSearchEvent,
   scheduleSurfaceRouteSearchEvent,
   scheduleWebIngestedSearchEvent,
   type SearchEventScheduleResult,
@@ -1316,8 +1317,19 @@ function scheduleSearchChangedSourceEvent(input: {
         observedAt,
       });
     }
+    case "sessions.chats": {
+      const sessionId = input.flags["session-id"] ?? input.flags["resource-id"] ?? input.flags.session ?? input.positionals[5];
+      if (!sessionId) return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source sessions.chats --session-id <session-id>" };
+      return scheduleSessionChatSearchEvent({
+        operation: input.operation,
+        sessionId,
+        dataDir,
+        flags: input.flags,
+        observedAt,
+      });
+    }
     default:
-      return { ok: false, error: `Search changed events are typed for code.symbols, local.files, web.ingested, external.cache, and surfaces.routes; use search jobs schedule for ${input.source}.` };
+      return { ok: false, error: `Search changed events are typed for sessions.chats, code.symbols, local.files, web.ingested, external.cache, and surfaces.routes; use search jobs schedule for ${input.source}.` };
   }
 }
 

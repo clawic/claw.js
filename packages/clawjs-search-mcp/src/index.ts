@@ -479,17 +479,19 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
     },
     {
       name: "search.changes.schedule",
-      description: "Schedule typed changed-file or changed-route Search refresh events for producer integrations.",
+      description: "Schedule typed changed-resource Search refresh events for producer integrations.",
       inputSchema: {
         type: "object",
         required: ["source", "operation"],
         properties: {
-          source: { type: "string", enum: ["code.symbols", "local.files", "web.ingested", "external.cache", "surfaces.routes"] },
+          source: { type: "string", enum: ["sessions.chats", "code.symbols", "local.files", "web.ingested", "external.cache", "surfaces.routes"] },
           operation: { type: "string", enum: ["upsert", "delete"] },
           root: { type: "string" },
           path: { type: "string" },
           filePath: { type: "string" },
           routeId: { type: "string" },
+          sessionId: { type: "string" },
+          resourceId: { type: "string" },
           observedAt: { type: "string" },
         },
       },
@@ -817,6 +819,17 @@ function scheduleChangedSourceEvent(store: SearchStore, params: Record<string, u
   const source = requiredString(params, "source");
   const operation = requiredSearchEventOperation(params.operation);
   const observedAt = stringParam(params.observedAt);
+  if (source === "sessions.chats") {
+    const sessionId = stringParam(params.sessionId) ?? requiredString(params, "resourceId");
+    return store.scheduleIndexEvent({
+      source,
+      shard: "hot",
+      operation,
+      resourceId: sessionId,
+      observedAt,
+      payload: { sessionId },
+    });
+  }
   if (source === "surfaces.routes") {
     const routeId = requiredString(params, "routeId");
     return store.scheduleIndexEvent({
@@ -829,7 +842,7 @@ function scheduleChangedSourceEvent(store: SearchStore, params: Record<string, u
     });
   }
   if (source !== "code.symbols" && source !== "local.files" && source !== "web.ingested" && source !== "external.cache") {
-    throw new Error("source must be code.symbols, local.files, web.ingested, external.cache, or surfaces.routes");
+    throw new Error("source must be sessions.chats, code.symbols, local.files, web.ingested, external.cache, or surfaces.routes");
   }
   const root = path.resolve(expandMcpPath(requiredString(params, "root")));
   const absolutePath = path.resolve(expandMcpPath(stringParam(params.path) ?? requiredString(params, "filePath")));

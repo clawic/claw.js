@@ -652,7 +652,7 @@ export function sessionRoots(input: V1DataCliInput): string[] {
   return resolved;
 }
 
-export function indexSessionRoots(sqlite: Database.Database, roots: string[], source: string, onIndexed?: (sessionId: string) => void): number {
+export function indexSessionRoots(sqlite: Database.Database, roots: string[], source: string, onIndexed?: (sessionId: string, archived: boolean) => void): number {
   const files = roots.flatMap((root) => findSessionArtifacts(root));
   const now = nowIso();
   const upsert = sqlite.prepare(`
@@ -665,7 +665,7 @@ export function indexSessionRoots(sqlite: Database.Database, roots: string[], so
   `);
   const replaceFts = sqlite.prepare("INSERT INTO session_index_fts (session_id, title, snippet, cwd) VALUES (?, ?, ?, ?)");
   const deleteFts = sqlite.prepare("DELETE FROM session_index_fts WHERE session_id = ?");
-  const indexedSessionIds: string[] = [];
+  const indexedSessions: Array<{ sessionId: string; archived: boolean }> = [];
   const tx = sqlite.transaction(() => {
     for (const file of files) {
       const stat = fs.statSync(file);
@@ -688,12 +688,12 @@ export function indexSessionRoots(sqlite: Database.Database, roots: string[], so
       );
       deleteFts.run(summary.sessionId);
       replaceFts.run(summary.sessionId, summary.title, summary.snippet, summary.cwd ?? "");
-      indexedSessionIds.push(summary.sessionId);
+      indexedSessions.push({ sessionId: summary.sessionId, archived: file.includes(`${path.sep}archived_sessions${path.sep}`) });
     }
   });
   tx();
   indexSessionSidecar(files, source, now);
-  for (const sessionId of indexedSessionIds) onIndexed?.(sessionId);
+  for (const session of indexedSessions) onIndexed?.(session.sessionId, session.archived);
   return files.length;
 }
 

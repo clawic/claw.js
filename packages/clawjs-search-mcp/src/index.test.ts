@@ -582,6 +582,12 @@ test("Search MCP schedules typed changed source events", () => {
       name: "Code",
       resultTypes: ["code"],
     }));
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "sessions.chats",
+      domain: "sessions",
+      name: "Sessions",
+      resultTypes: ["conversation"],
+    }));
     const root = path.join(dir, "project");
     const filePath = path.join(root, "src", "app.ts");
     const outsidePath = path.join(dir, "outside.ts");
@@ -606,6 +612,19 @@ test("Search MCP schedules typed changed source events", () => {
     assert.equal(job.payload?.root, root);
     assert.equal(job.payload?.relativePath, "src/app.ts");
     assert.equal(job.payload?.absolutePath, filePath);
+    const sessionJob = changedTool.handler({
+      source: "sessions.chats",
+      operation: "delete",
+      sessionId: "session-alpha",
+      observedAt: "2026-05-18T10:05:00.000Z",
+    }) as { source: string; shard: string; operation: string; resourceId?: string; payload?: Record<string, unknown>; priority: number };
+    assert.equal(sessionJob.source, "sessions.chats");
+    assert.equal(sessionJob.shard, "hot");
+    assert.equal(sessionJob.operation, "delete");
+    assert.equal(sessionJob.resourceId, "session-alpha");
+    assert.equal(sessionJob.priority, 80);
+    assert.equal(sessionJob.payload?.eventDriven, true);
+    assert.equal(sessionJob.payload?.sessionId, "session-alpha");
     assert.throws(() => changedTool.handler({
       source: "code.symbols",
       operation: "upsert",
