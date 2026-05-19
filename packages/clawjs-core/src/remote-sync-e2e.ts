@@ -327,13 +327,13 @@ export const remoteGoalClosureGateSchema = z.object({
   sourceQaReviewStatus: z.enum(["incomplete", "complete"]),
   sourceQaReviewItems: z.array(remoteSourceQaReviewItemSchema),
   externalValidationStatus: z.enum(["external_pending", "clearable"]),
-	  blockedExternalRequirementIds: z.array(z.string().min(1)),
-	  clearableExternalRequirementIds: z.array(z.string().min(1)),
-	  blockers: z.array(z.enum(["source_qa_review", "external_validation"])),
-	  finalSourceSessionRereadRequired: z.literal(true),
-	  sourceSessionRereadCommand: z.string().min(1),
-	  writes: z.literal(false),
-	});
+  blockedExternalRequirementIds: z.array(z.string().min(1)),
+  clearableExternalRequirementIds: z.array(z.string().min(1)),
+  blockers: z.array(z.enum(["source_qa_review", "external_validation"])),
+  finalSourceSessionRereadRequired: z.literal(true),
+  sourceSessionRereadCommand: z.string().min(1),
+  writes: z.literal(false),
+});
 
 export const remoteDecisionReviewItemSchema = z.object({
   schemaVersion: z.literal(1),
@@ -1328,12 +1328,12 @@ export function buildRemoteGoalClosureGate(input: {
     sourceQaReviewItems: sourceQaReviewReport.items,
     externalValidationStatus: externalValidationReport.status,
     blockedExternalRequirementIds: externalValidationReport.blockedRequirementIds,
-	    clearableExternalRequirementIds: externalValidationReport.clearableRequirementIds,
-	    blockers,
-	    finalSourceSessionRereadRequired: true,
-	    sourceSessionRereadCommand: remoteSourceSessionRereadCommand,
-	    writes: false,
-	  });
+    clearableExternalRequirementIds: externalValidationReport.clearableRequirementIds,
+    blockers,
+    finalSourceSessionRereadRequired: true,
+    sourceSessionRereadCommand: remoteSourceSessionRereadCommand,
+    writes: false,
+  });
 }
 
 export function buildRemoteDecisionReview(input: {
