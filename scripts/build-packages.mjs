@@ -27,6 +27,7 @@ const workspaces = [
   "@clawjs/database",
   "@clawjs/agents",
   "@clawjs/integrations",
+  "@clawjs/domain-pack-dense-data",
   "@clawjs/marketplace-agent-policy",
   "@clawjs/marketplace-dating",
   "@clawjs/marketplace-real-estate",

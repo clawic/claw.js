@@ -38,6 +38,7 @@ const packageDirs = [
   path.join(rootDir, "packages", "clawjs-audio"),
   path.join(rootDir, "packages", "clawjs-agents"),
   path.join(rootDir, "packages", "clawjs-integrations"),
+  path.join(rootDir, "packages", "clawjs-domain-pack-dense-data"),
   path.join(rootDir, "packages", "clawjs-index"),
   path.join(rootDir, "packages", "marketplace"),
   path.join(rootDir, "packages", "clawjs-profile"),
@@ -101,6 +102,10 @@ run("node", ["--input-type=module", "-e", `
   const cli = await import("@clawjs/cli");
   if (typeof cli.runCli !== "function") {
     throw new Error("@clawjs/cli helpers are missing");
+  }
+  const densePack = await import("@clawjs/domain-pack-dense-data");
+  if (typeof densePack.runDenseDataCli !== "function") {
+    throw new Error("@clawjs/domain-pack-dense-data helpers are missing");
   }
   const search = await import("@clawjs/search");
   if (typeof search.SearchStore !== "function" || typeof search.createFrameworkSearchSourceManifest !== "function") {

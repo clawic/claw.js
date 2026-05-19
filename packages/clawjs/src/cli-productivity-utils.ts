@@ -49,6 +49,7 @@ export function pickCoreTitle(collectionName: string, payload: Record<string, un
 
 const LOCAL_CLI_ALLOWED_FLAGS = new Set([
   "json",
+  "claw-home",
   "workspace",
   "workspace-id",
   "agent-id",
@@ -296,6 +297,7 @@ export function mergeCoreDbInput(
 ): { recordId?: string; payload: Record<string, unknown> } {
   const reservedFlags = new Set([
     "app-id",
+    "claw-home",
     "workspace",
     "workspace-id",
     "agent-id",

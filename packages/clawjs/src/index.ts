@@ -216,7 +216,7 @@ async function runOptionalDenseDataCli(input: {
 }): Promise<number | null> {
   const modulePath = [".", "cli-dense-data-command.ts"].join("/");
   try {
-    const optionalPack = await import("@clawjs/domain-pack-dense-data") as { runDenseDataCli?: (input: typeof input) => Promise<number | null> };
+    const optionalPack = await import("@clawjs/domain-pack-dense-data") as { runDenseDataCli?: (packInput: unknown) => Promise<number | null> };
     if (typeof optionalPack.runDenseDataCli === "function") {
       return await optionalPack.runDenseDataCli(input);
     }
