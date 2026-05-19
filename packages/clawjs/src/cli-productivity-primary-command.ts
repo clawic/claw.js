@@ -41,7 +41,11 @@ export async function runPrimaryProductivityCli(input: {
   const workCommand = group === "work" ? command : group;
   const workSubcommand = group === "work" ? subcommand : command;
   if (workCommand === "export" || workCommand === "import" || workCommand === "backup" || workCommand === "agenda" || workCommand === "review" || workCommand === "my-work" || workCommand === "team-work" || workCommand === "timeline") {
-    const claw = await createCliWorkspaceClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, context.cwd);
+    let clawPromise: ReturnType<typeof createCliWorkspaceClaw> | null = null;
+    const getClaw = () => {
+      clawPromise ??= createCliWorkspaceClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, context.cwd);
+      return clawPromise;
+    };
     if (workCommand === "export") {
       const targetPath = workSubcommand || flags.path;
       if (!targetPath) {
@@ -49,6 +53,7 @@ export async function runPrimaryProductivityCli(input: {
         return CLI_EXIT_USAGE;
       }
       const review = requireCliExportReview({ argv, flags, operation: "work export" });
+      const claw = await getClaw();
       const snapshot = await claw.productivity.exportSnapshot();
       const envelope = {
         ...snapshot,
@@ -74,6 +79,7 @@ export async function runPrimaryProductivityCli(input: {
       }
       const absolutePath = path.resolve(context.cwd, sourcePath);
       const payload = JSON.parse(fs.readFileSync(absolutePath, "utf8")) as Record<string, unknown>;
+      const claw = await getClaw();
       const imported = await claw.productivity.importSnapshot(payload, {
         replace: readBooleanFlag(argv, flags, "replace", false),
       });
@@ -84,15 +90,28 @@ export async function runPrimaryProductivityCli(input: {
     if (workCommand === "backup") {
       const targetDir = workSubcommand || flags.path;
       if (!targetDir) {
-        context.stderr.write(`Usage: ${binName} work backup <directory>\n`);
+        context.stderr.write(`Usage: ${binName} work backup <directory> --confirm --approval-id ID --legal-label LABEL\n`);
         return CLI_EXIT_USAGE;
       }
+      const review = requireCliExportReview({ argv, flags, operation: "work backup" });
+      const claw = await getClaw();
       const backup = await claw.productivity.backup(targetDir);
+      const absoluteTargetDir = path.resolve(workspaceRoot, targetDir);
+      fs.writeFileSync(path.join(absoluteTargetDir, "claw-legal-backup.json"), JSON.stringify({
+        schemaVersion: 1,
+        kind: "claw.work.backup.legal",
+        exportedAt: new Date().toISOString(),
+        approvalId: review.approvalId,
+        legalLabel: review.legalLabel,
+        confirmed: review.confirmed,
+        files: backup.files.map((file) => path.basename(file)),
+      }, null, 2));
       if (wantsJson) writePrimaryJson(backup);
       else context.stdout.write(`${backup.files.join("\n")}\n`);
       return backup.files.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
     if (workCommand === "agenda") {
+      const claw = await getClaw();
       const agenda = await claw.agenda.list({
         start: flags.start,
         end: flags.end,
@@ -109,6 +128,7 @@ export async function runPrimaryProductivityCli(input: {
         return CLI_EXIT_USAGE;
       }
       const range = timelineRange(mode, flags.start);
+      const claw = await getClaw();
       const timeline = await claw.productivity.timeline({
         ...range,
         ...(flags["project-id"] ? { projectId: flags["project-id"] } : {}),
@@ -130,12 +150,14 @@ export async function runPrimaryProductivityCli(input: {
         context.stderr.write(`Usage: ${binName} work review daily|weekly\n`);
         return CLI_EXIT_USAGE;
       }
+      const claw = await getClaw();
       const review = cadence === "weekly" ? await claw.review.weekly() : await claw.review.daily();
       if (wantsJson) writePrimaryJson(review);
       else context.stdout.write(`blocked=${review.summary.blockedTasks} overdue=${review.summary.overdueTasks} goals=${review.summary.activeGoals} projects=${review.summary.activeProjects}\n`);
       return CLI_EXIT_OK;
     }
     if (workCommand === "my-work") {
+      const claw = await getClaw();
       const myWork = await claw.productivity.myWork({
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
       });
@@ -144,6 +166,7 @@ export async function runPrimaryProductivityCli(input: {
       return CLI_EXIT_OK;
     }
     if (workCommand === "team-work") {
+      const claw = await getClaw();
       const teamWork = await claw.productivity.teamWork({
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
       });

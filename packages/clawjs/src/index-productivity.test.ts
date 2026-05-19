@@ -14,7 +14,7 @@ function parseCliJsonPayload<T>(text: string): T {
   return typeof payload === "object" && payload !== null && "data" in payload ? payload.data : payload;
 }
 
-test("runCli add workspace and workspace command groups operate on local productivity data", async (t) => {
+test.sequential("runCli add workspace and workspace command groups operate on local productivity data", async (t) => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-workspace-"));
   useIsolatedClawDataRoot(t, tempRoot);
 
@@ -95,7 +95,7 @@ test("runCli add workspace and workspace command groups operate on local product
   assert.equal(parseCliJsonPayload<{ title: string }>(getStdout.getOutput()).title, "Ship workspace");
 });
 
-test("runCli zero-config productivity commands bootstrap local sqlite in an empty directory", { concurrency: false }, async (t) => {
+test.sequential("runCli zero-config productivity commands bootstrap local sqlite in an empty directory", async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-productivity-zero-config-"));
   const dataRoot = useIsolatedClawDataRoot(t, workspaceRoot);
 
@@ -196,7 +196,8 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
   assert.equal(area.status, "active");
 
   const personStdout = captureStream();
-  assert.equal(await runCli([
+  const personStderr = captureStream();
+  const personExitCode = await runCli([
     "people",
     "upsert",
     "Alice Example",
@@ -204,9 +205,10 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     "--json",
   ], {
     stdout: personStdout.stream,
-    stderr: captureStream().stream,
+    stderr: personStderr.stream,
     cwd: workspaceRoot,
-  }), CLI_EXIT_OK);
+  });
+  assert.equal(personExitCode, CLI_EXIT_OK, `${personStdout.getOutput()}\n${personStderr.getOutput()}`);
   const person = parseCliJsonPayload<{ id: string }>(personStdout.getOutput());
 
   const projectStdout = captureStream();
@@ -754,6 +756,11 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     "export",
     "snapshot.json",
     "--workspace", workspaceRoot,
+    "--confirm",
+    "--approval-id",
+    "approval_productivity_export",
+    "--legal-label",
+    "Productivity snapshot - human reviewed",
     "--json",
   ], {
     stdout: exportStdout.stream,
@@ -770,6 +777,11 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     "backup",
     "backups",
     "--workspace", workspaceRoot,
+    "--confirm",
+    "--approval-id",
+    "approval_productivity_backup",
+    "--legal-label",
+    "Productivity backup - human reviewed",
     "--json",
   ], {
     stdout: backupStdout.stream,
