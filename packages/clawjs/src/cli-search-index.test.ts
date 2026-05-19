@@ -5075,6 +5075,24 @@ test("search changes schedule enqueues typed non-simple framework jobs", async (
       resourceId: "skill_collection:collection-alpha",
       payload: { kind: "skill_collection", id: "collection-alpha" },
     },
+    {
+      source: "mcp.servers",
+      args: ["--server-id", "docs-server", "--config-path", "mcp.json"],
+      resourceId: "docs-server",
+      payload: { serverId: "docs-server", configPath: path.join(workspaceRoot, "mcp.json") },
+    },
+    {
+      source: "runtime.events",
+      args: ["--kind", "job", "--job-id", "runtime-job-alpha"],
+      resourceId: "job:runtime-job-alpha",
+      payload: { runtimeKind: "job", runtimeResourceId: "job:runtime-job-alpha", id: "runtime-job-alpha" },
+    },
+    {
+      source: "runtime.events",
+      args: ["--kind", "operational", "--domain", "monitor", "--id", "operational-alpha"],
+      resourceId: "operational:monitor:operational-alpha",
+      payload: { runtimeKind: "operational", runtimeResourceId: "operational:monitor:operational-alpha", id: "operational-alpha", domain: "monitor" },
+    },
   ];
   await withPatchedEnv({
     CLAW_DATA_DIR: dataRoot,

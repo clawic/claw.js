@@ -624,7 +624,7 @@ test("Search MCP schedules typed changed source events", () => {
       name: "Routes",
       resultTypes: ["route"],
     }));
-    for (const sourceId of ["database.records", "work.items", "documents.blocks", "knowledge.graph", "signals.observations", "finance.records", "eln.records", "providers.routing", "agents.catalog"]) {
+    for (const sourceId of ["database.records", "work.items", "documents.blocks", "knowledge.graph", "signals.observations", "finance.records", "eln.records", "providers.routing", "agents.catalog", "mcp.servers", "runtime.events"]) {
       store.registerSource(createFrameworkSearchSourceManifest({
         id: sourceId,
         domain: "framework",
@@ -996,6 +996,55 @@ test("Search MCP schedules typed changed source events", () => {
     assert.equal(skillCollectionJob.payload?.eventDriven, true);
     assert.equal(skillCollectionJob.payload?.kind, "skill_collection");
     assert.equal(skillCollectionJob.payload?.id, "collection-alpha");
+    const mcpServerJob = changedTool.handler({
+      source: "mcp.servers",
+      operation: "upsert",
+      serverId: "docs-server",
+      configPath: path.join(root, "mcp.json"),
+      observedAt: "2026-05-18T10:34:59.000Z",
+    }) as { source: string; shard: string; operation: string; resourceId?: string; payload?: Record<string, unknown>; priority: number };
+    assert.equal(mcpServerJob.source, "mcp.servers");
+    assert.equal(mcpServerJob.shard, "hot");
+    assert.equal(mcpServerJob.operation, "upsert");
+    assert.equal(mcpServerJob.resourceId, "docs-server");
+    assert.equal(mcpServerJob.priority, 60);
+    assert.equal(mcpServerJob.payload?.eventDriven, true);
+    assert.equal(mcpServerJob.payload?.serverId, "docs-server");
+    assert.equal(mcpServerJob.payload?.configPath, path.join(root, "mcp.json"));
+    const runtimeJob = changedTool.handler({
+      source: "runtime.events",
+      operation: "upsert",
+      kind: "job",
+      jobId: "runtime-job-alpha",
+      observedAt: "2026-05-18T10:35:00.000Z",
+    }) as { source: string; shard: string; operation: string; resourceId?: string; payload?: Record<string, unknown>; priority: number };
+    assert.equal(runtimeJob.source, "runtime.events");
+    assert.equal(runtimeJob.shard, "hot");
+    assert.equal(runtimeJob.operation, "upsert");
+    assert.equal(runtimeJob.resourceId, "job:runtime-job-alpha");
+    assert.equal(runtimeJob.priority, 60);
+    assert.equal(runtimeJob.payload?.eventDriven, true);
+    assert.equal(runtimeJob.payload?.runtimeKind, "job");
+    assert.equal(runtimeJob.payload?.runtimeResourceId, "job:runtime-job-alpha");
+    assert.equal(runtimeJob.payload?.id, "runtime-job-alpha");
+    const runtimeOperationalJob = changedTool.handler({
+      source: "runtime.events",
+      operation: "delete",
+      runtimeKind: "operational",
+      domain: "monitor",
+      operationalId: "operational-alpha",
+      observedAt: "2026-05-18T10:35:01.000Z",
+    }) as { source: string; shard: string; operation: string; resourceId?: string; payload?: Record<string, unknown>; priority: number };
+    assert.equal(runtimeOperationalJob.source, "runtime.events");
+    assert.equal(runtimeOperationalJob.shard, "hot");
+    assert.equal(runtimeOperationalJob.operation, "delete");
+    assert.equal(runtimeOperationalJob.resourceId, "operational:monitor:operational-alpha");
+    assert.equal(runtimeOperationalJob.priority, 80);
+    assert.equal(runtimeOperationalJob.payload?.eventDriven, true);
+    assert.equal(runtimeOperationalJob.payload?.runtimeKind, "operational");
+    assert.equal(runtimeOperationalJob.payload?.runtimeResourceId, "operational:monitor:operational-alpha");
+    assert.equal(runtimeOperationalJob.payload?.id, "operational-alpha");
+    assert.equal(runtimeOperationalJob.payload?.domain, "monitor");
     const simpleCases: Array<{
       source: string;
       params: Record<string, unknown>;

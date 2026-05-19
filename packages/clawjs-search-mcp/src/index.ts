@@ -336,6 +336,10 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
           actionId: { type: "string" },
           dryRun: { type: "boolean" },
           hostApprovalId: { type: "string" },
+          policyMode: { type: "string", enum: ["strict", "normal", "authorized_automation"] },
+          automationAuthorized: { type: "boolean" },
+          auditOnly: { type: "boolean" },
+          confirm: { type: "boolean" },
           actor: { type: "string" },
           surface: { type: "string" },
           filters: { type: "object" },
@@ -363,7 +367,20 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
         }
         const dryRun = typeof p.dryRun === "boolean" ? p.dryRun : false;
         const hostApprovalId = stringParam(p.hostApprovalId);
-        const plan = createSearchActionExecutionPlan({ result, action, dryRun, hostApprovalId, actor, surface });
+        const plan = createSearchActionExecutionPlan({
+          result,
+          action,
+          dryRun,
+          hostApprovalId,
+          actor,
+          surface,
+          policyConfig: {
+            mode: stringParam(p.policyMode) as "strict" | "normal" | "authorized_automation" | undefined,
+            confirmed: p.confirm === true,
+            automationAuthorized: p.automationAuthorized === true,
+            auditOnly: p.auditOnly === true,
+          },
+        });
         store.recordAuditEvent({
           type: "action",
           actor,
@@ -381,6 +398,8 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
             requiresApproval: plan.requiresApproval,
             hostApprovalId: hostApprovalId ?? null,
             legalOutputLabels: plan.legalOutputLabels ?? [],
+            policyDecision: plan.policy?.policyDecision,
+            policyReasonCodes: plan.policy?.reasonCodes ?? [],
           },
         });
         if (!dryRun && plan.status !== "blocked") {
@@ -577,10 +596,13 @@ export function createSearchMcpTools(store: SearchStore): SearchMcpToolDef[] {
           skillCollectionId: { type: "string" },
           connectionId: { type: "string" },
           serverId: { type: "string" },
+          server: { type: "string" },
           configPath: { type: "string" },
+          config: { type: "string" },
           runtimeKind: { type: "string" },
           jobId: { type: "string" },
           operationalId: { type: "string" },
+          operationalDomain: { type: "string" },
           domain: { type: "string" },
           imageId: { type: "string" },
           mediaId: { type: "string" },
@@ -1133,6 +1155,39 @@ function scheduleChangedSourceEvent(store: SearchStore, params: Record<string, u
       resourceId: `${kind}:${id}`,
       observedAt,
       payload: { kind, id },
+    });
+  }
+  if (source === "mcp.servers") {
+    const serverId = stringParam(params.serverId) ?? stringParam(params.server) ?? requiredString(params, "resourceId");
+    const configPath = path.resolve(expandMcpPath(stringParam(params.configPath) ?? stringParam(params.config) ?? requiredString(params, "path")));
+    return store.scheduleIndexEvent({
+      source,
+      shard: "hot",
+      operation,
+      resourceId: serverId,
+      observedAt,
+      payload: { serverId, configPath },
+    });
+  }
+  if (source === "runtime.events") {
+    const rawKind = stringParam(params.kind) ?? requiredString(params, "runtimeKind");
+    const kind = rawKind === "operational-event" ? "operational" : rawKind;
+    if (kind !== "job" && kind !== "event" && kind !== "operational") {
+      throw new Error("runtime.events kind must be job, event, or operational");
+    }
+    const id = stringParam(params.id)
+      ?? stringParam(params.resourceId)
+      ?? (kind === "job" ? stringParam(params.jobId) : kind === "event" ? stringParam(params.eventId) : stringParam(params.operationalId));
+    if (!id) throw new Error("id is required for runtime.events events");
+    const domain = stringParam(params.domain) ?? stringParam(params.operationalDomain);
+    const runtimeResourceId = kind === "operational" ? `operational:${domain ?? "runtime"}:${id}` : `${kind}:${id}`;
+    return store.scheduleIndexEvent({
+      source,
+      shard: "hot",
+      operation,
+      resourceId: runtimeResourceId,
+      observedAt,
+      payload: { runtimeKind: kind, runtimeResourceId, id, ...(domain ? { domain } : {}) },
     });
   }
   const simpleSpec = SIMPLE_CHANGED_SOURCE_SPECS.get(source);
