@@ -466,12 +466,22 @@ async function runInteractiveSetupCli(input: {
   wantsJson: boolean;
 }): Promise<number> {
   const stdin = input.context.stdin ?? process.stdin;
-  const rl = createInterface({ input: stdin, output: input.context.stdout });
+  const scripted = !(stdin as NodeJS.ReadStream).isTTY;
+  const scriptedLines = scripted ? await readScriptedInput(stdin) : [];
+  let scriptedIndex = 0;
+  const rl = scripted ? null : createInterface({ input: stdin, output: input.context.stdout });
+  const ask = async (prompt: string): Promise<string> => {
+    if (scripted) {
+      input.context.stdout.write(prompt);
+      return scriptedLines[scriptedIndex++] ?? "";
+    }
+    return await rl!.question(prompt);
+  };
   try {
-    const modeAnswer = await rl.question(`Mode [minimal/normal/advanced] (${input.mode}): `);
+    const modeAnswer = await ask(`Mode [minimal/normal/advanced] (${input.mode}): `);
     const mode = parseMode(modeAnswer.trim() || input.mode);
-    const enableAnswer = await rl.question("Enable modules, comma-separated (blank for none): ");
-    const disableAnswer = await rl.question("Disable modules, comma-separated (blank for none): ");
+    const enableAnswer = await ask("Enable modules, comma-separated (blank for none): ");
+    const disableAnswer = await ask("Disable modules, comma-separated (blank for none): ");
     const adjustments = {
       enable: [...setupAdjustments(input.flags).enable, ...parseInteractiveModuleList(enableAnswer)],
       disable: [...setupAdjustments(input.flags).disable, ...parseInteractiveModuleList(disableAnswer)],
@@ -479,7 +489,7 @@ async function runInteractiveSetupCli(input: {
     const preview = applySetupAdjustments(setupPreview(mode, input.current), adjustments);
     const modules = effectiveModuleStates(preview, { includeAvailable: true });
     input.context.stdout.write(`\n${renderSetupText(preview, { details: true })}\n\n`);
-    const shouldApply = input.argv.includes("--yes") || yes(await rl.question(`Apply ${input.scope} module config? [y/N]: `));
+    const shouldApply = input.argv.includes("--yes") || yes(await ask(`Apply ${input.scope} module config? [y/N]: `));
     if (shouldApply) writeConfig(input.pathToWrite, preview);
     if (input.wantsJson) {
       writeCommandJsonOk(input.context.stdout, "setup", {
@@ -498,9 +508,15 @@ async function runInteractiveSetupCli(input: {
       input.context.stdout.write("No changes written.\n");
     }
   } finally {
-    rl.close();
+    rl?.close();
   }
   return CLI_EXIT_OK;
+}
+
+async function readScriptedInput(stdin: NodeJS.ReadableStream): Promise<string[]> {
+  let text = "";
+  for await (const chunk of stdin) text += String(chunk);
+  return text.split(/\r?\n/);
 }
 
 export async function runSetupCli(input: {
