@@ -3,7 +3,7 @@ import os from "os";
 import path from "path";
 
 import Database from "better-sqlite3";
-import { CLAW_CLI_COMMAND_INTENT_STATUSES, GOVERNANCE_CAPABILITIES, GOVERNANCE_ENTITY_KINDS, GOVERNANCE_PRINCIPAL_KINDS, GOVERNANCE_SCOPE_KINDS, buildRemoteConformanceReport, buildRemoteDecisionReview, buildRemoteExternalPendingRegister, buildRemoteExternalValidationApprovalRequest, buildRemoteExternalValidationChecklist, buildRemoteExternalValidationEvidenceTemplate, buildRemoteExternalValidationReadiness, buildRemoteExternalValidationReport, buildRemoteGoalClosureGate, buildRemoteOfflineCommandResult, buildRemoteProviderDeviceE2EValidationPlan, buildRemoteRouteContractCatalog, buildRemoteSourceQaReviewTemplate, buildSyncDriverCatalog, clawDenseDataAcceptanceFixture, clawDenseDataOsRegistry, clawEvolutionPolicy, clawPersistentSurfaceRegistry, clawPreV1VersionGovernancePolicy, connectorExecutionPipeline, createAgentControlPanel, createAgentPrivacyLifecyclePlan, evaluateGovernanceAccess, evaluateGovernanceDelegation, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, listClawDenseDataGapRegistryEntries, listClawDenseDataIntentEntries, listClawDenseDataSemanticViewEntries, parseRemoteExternalValidationEvidenceInput, parseRemoteSourceQaReviewInput, remoteSyncRequiredRouteIds, resolveClawCliCommand, resolveClawPersistentSurfacePath, searchClawCliRegistry, summarizeGovernanceBindings, syncDriverSchema, withSurfaceChildren, type RemoteExternalValidationEvidence, type RemoteSourceQaReviewItem } from "@clawjs/core";
+import { CLAW_CLI_COMMAND_INTENT_STATUSES, GOVERNANCE_CAPABILITIES, GOVERNANCE_ENTITY_KINDS, GOVERNANCE_PRINCIPAL_KINDS, GOVERNANCE_SCOPE_KINDS, buildCustomAppCapabilityRiskMap, buildRemoteConformanceReport, buildRemoteDecisionReview, buildRemoteExternalPendingRegister, buildRemoteExternalValidationApprovalRequest, buildRemoteExternalValidationChecklist, buildRemoteExternalValidationEvidenceTemplate, buildRemoteExternalValidationReadiness, buildRemoteExternalValidationReport, buildRemoteGoalClosureGate, buildRemoteOfflineCommandResult, buildRemoteProviderDeviceE2EValidationPlan, buildRemoteRouteContractCatalog, buildRemoteSourceQaReviewTemplate, buildSyncDriverCatalog, clawDenseDataAcceptanceFixture, clawDenseDataOsRegistry, clawEvolutionPolicy, clawPersistentSurfaceRegistry, clawPreV1VersionGovernancePolicy, connectorExecutionPipeline, createAgentControlPanel, createAgentPrivacyLifecyclePlan, evaluateGovernanceAccess, evaluateGovernanceDelegation, findClawPersistentSurfaceNode, getCustomAppSDKSchema, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, listClawCapabilities, listClawDenseDataGapRegistryEntries, listClawDenseDataIntentEntries, listClawDenseDataSemanticViewEntries, listCustomAppSDKSchemaRefs, parseRemoteExternalValidationEvidenceInput, parseRemoteSourceQaReviewInput, remoteSyncRequiredRouteIds, resolveClawCliCommand, resolveClawPersistentSurfacePath, sdkFirstCapabilityCatalogSource, searchClawCliRegistry, summarizeGovernanceBindings, syncDriverSchema, withSurfaceChildren, type RemoteExternalValidationEvidence, type RemoteSourceQaReviewItem } from "@clawjs/core";
 import type { AgentAuditEvent, ClawPersistentSurfaceNode, ClawPersistentSurfaceRegistry, ClawSurfaceEdge, ClawSurfaceRoute } from "@clawjs/core";
 import type { Agent } from "@clawjs/agents";
 import { v1MainSchemaSurfaceNodes } from "./v1-data-surface.ts";
@@ -906,6 +906,44 @@ function parseInspectListFlag(value: string | undefined): string[] {
   return value?.split(",").map((entry) => entry.trim()).filter(Boolean) ?? [];
 }
 
+function inspectCustomAppSdkPayload() {
+  const capabilities = listClawCapabilities();
+  const ordinaryReadCapabilities = capabilities.filter((capability) => capability.customAppAccess === "localWide");
+  const schemaRefs = listCustomAppSDKSchemaRefs();
+  const referencedSchemaRefs = [...new Set(ordinaryReadCapabilities.flatMap((capability) => [
+    capability.inputSchemaRef,
+    capability.outputSchemaRef,
+    capability.eventSchemaRefs?.cancel,
+    capability.eventSchemaRefs?.progress,
+    capability.eventSchemaRefs?.partial,
+  ].filter((ref): ref is string => Boolean(ref))))].sort();
+  const missingSchemaRefs = referencedSchemaRefs.filter((ref) => !getCustomAppSDKSchema(ref));
+  return {
+    schemaVersion: 1,
+    source: sdkFirstCapabilityCatalogSource(),
+    cliRole: "inspection_validation_fallback_json",
+    richUiRuntime: "sdk_host_bridge_not_cli_process",
+    riskMap: buildCustomAppCapabilityRiskMap(),
+    schemaRefs,
+    referencedSchemaRefs,
+    missingSchemaRefs,
+    capabilities: ordinaryReadCapabilities.map((capability) => ({
+      id: capability.id,
+      domain: capability.domain,
+      operation: capability.operation,
+      customAppAccess: capability.customAppAccess,
+      cancelable: capability.cancelable,
+      streamable: capability.streamable,
+      timeoutMs: capability.timeoutMs,
+      inputSchemaRef: capability.inputSchemaRef,
+      outputSchemaRef: capability.outputSchemaRef,
+      eventSchemaRefs: capability.eventSchemaRefs,
+      redactionPolicyRef: capability.redactionPolicyRef,
+      surfaces: capability.surfaces,
+    })),
+  };
+}
+
 async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
   const [, command = "tree", target] = input.positionals;
   const registry = inspectRegistry(input);
@@ -1002,6 +1040,14 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     const selected = nodes.filter((node) => node.kind === "preferenceKey" || node.kind === "appStorageKey" || node.kind === "browserStorageKey");
     if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
     else input.context.stdout.write(`${inspectText(selected)}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (command === "custom-app-sdk") {
+    const payload = inspectCustomAppSdkPayload();
+    if (input.wantsJson) writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command));
+    else {
+      input.context.stdout.write(`${payload.capabilities.map((capability) => `${capability.id}\t${capability.inputSchemaRef}\t${capability.outputSchemaRef}`).join("\n")}\n`);
+    }
     return CLI_EXIT_OK;
   }
   if (command === "contracts" || command === "stable" || command === "compat") {
@@ -1376,7 +1422,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     }
     throw new InspectCliError("usage_error", `Unsupported inspect render format: ${format}`, CLI_EXIT_USAGE);
   }
-  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|neighbors|routes|route|agent|edges|why|commands|command-intents|remote|remote-sync|version-governance|evolution|governance|dense-data|dense-gaps|dense-intents|dense-views|dense-fixtures|codebase|connectors|aliases|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
+  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|neighbors|routes|route|agent|edges|why|commands|command-intents|remote|remote-sync|version-governance|evolution|governance|dense-data|dense-gaps|dense-intents|dense-views|dense-fixtures|codebase|connectors|aliases|database|storage|prefs|custom-app-sdk|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
 }
 
 export async function runInspectCli(input: InspectCliInput): Promise<number> {

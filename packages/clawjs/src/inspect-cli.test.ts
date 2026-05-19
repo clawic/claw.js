@@ -254,6 +254,45 @@ test("runCli exposes governance model invariants through inspect", async () => {
   assert.equal(payload.tests.includes("packages/clawjs-core/src/governance.test.ts"), true);
 });
 
+test("runCli exposes custom app SDK read contracts through inspect", async () => {
+  const inspected = await runCliCapture(["inspect", "custom-app-sdk", "--json"], process.cwd());
+  assert.equal(inspected.code, CLI_EXIT_OK, inspected.stderr || inspected.stdout);
+  const payload = parseCliJson<{
+    cliRole: string;
+    richUiRuntime: string;
+    riskMap: { authorityModel: string; ordinaryAccess: string[]; approvalRequired: string[] };
+    schemaRefs: string[];
+    referencedSchemaRefs: string[];
+    missingSchemaRefs: string[];
+    capabilities: Array<{
+      id: string;
+      inputSchemaRef: string;
+      outputSchemaRef: string;
+      eventSchemaRefs: { cancel: string; progress: string; partial: string };
+      redactionPolicyRef: string;
+      surfaces: Array<{ surface: string; status: string; ref?: string }>;
+    }>;
+  }>(inspected.stdout).data;
+
+  assert.equal(payload.cliRole, "inspection_validation_fallback_json");
+  assert.equal(payload.richUiRuntime, "sdk_host_bridge_not_cli_process");
+  assert.equal(payload.riskMap.authorityModel, "localWideReadsHighRiskApproval");
+  assert.deepEqual(payload.missingSchemaRefs, []);
+  assert.equal(payload.schemaRefs.includes("claw.search.query.v1"), true);
+  assert.equal(payload.schemaRefs.includes("claw.customApp.request.partial.v1"), true);
+
+  const search = payload.capabilities.find((capability) => capability.id === "search.query");
+  const db = payload.capabilities.find((capability) => capability.id === "db.query");
+  const resources = payload.capabilities.find((capability) => capability.id === "resources.read");
+  assert.equal(search?.inputSchemaRef, "claw.search.query.v1");
+  assert.equal(search?.eventSchemaRefs.partial, "claw.customApp.request.partial.v1");
+  assert.equal(db?.outputSchemaRef, "claw.db.records.v1");
+  assert.equal(resources?.inputSchemaRef, "claw.resources.read.v1");
+  assert.equal(resources?.redactionPolicyRef, "claw.customApps.redaction.v1");
+  assert.equal(search?.surfaces.some((surface) => surface.surface === "cli" && surface.status === "available"), true);
+  assert.equal(payload.riskMap.approvalRequired.includes("actions.invoke"), true);
+});
+
 test("runCli exposes surface graph routes and neighbors through inspect", async () => {
   const relay = await runCliCapture(["inspect", "why", "relay", "--json"], process.cwd());
   assert.equal(relay.code, CLI_EXIT_OK);
