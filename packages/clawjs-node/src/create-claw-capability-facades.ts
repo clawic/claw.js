@@ -1,4 +1,11 @@
 // @ts-nocheck
+import {
+  buildCustomAppCapabilityRiskMap,
+  getClawCapability,
+  listClawCapabilities,
+  sdkFirstCapabilityCatalogSource,
+} from "@clawjs/core";
+
 export function createClawCapabilityFacades(locals: Record<string, any>): Record<string, any> {
   const {
     rulesStore,
@@ -85,6 +92,12 @@ export function createClawCapabilityFacades(locals: Record<string, any>): Record
   } = locals;
 
   return {
+    capabilities: {
+      list: () => listClawCapabilities(),
+      get: (id) => getClawCapability(id),
+      riskMap: (input = {}) => buildCustomAppCapabilityRiskMap(input.capabilityIds),
+      source: () => sdkFirstCapabilityCatalogSource(),
+    },
     rules: {
       status: () => rulesStore.status(),
       list: (input = {}) => rulesStore.list(input),

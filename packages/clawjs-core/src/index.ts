@@ -26,6 +26,7 @@ export * from "./surface-registry.ts";
 export * from "./system-telemetry.ts";
 export * from "./version-governance.ts";
 export * from "./catalog-coverage.ts";
+export * from "./capability-catalog.ts";
 export * from "./need-route-lab.ts";
 export * from "./cli-guidance.ts";
 export * from "./cli-command-registry.ts";

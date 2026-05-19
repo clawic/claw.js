@@ -98,6 +98,8 @@ export default {
           { text: "API Reference", link: "/api" },
           { text: "Interface Matrix", link: "/interface-matrix" },
           { text: "Public Surface", link: "/surface" },
+          { text: "Custom Surfaces Plan", link: "/sdk-first-custom-surfaces-plan" },
+          { text: "ADR 0032", link: "/adr/0032-sdk-first-custom-surfaces-and-nonblocking-shell" },
           { text: "Repository Map", link: "/repository-map" },
         ],
       },

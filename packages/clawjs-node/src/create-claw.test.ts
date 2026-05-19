@@ -414,6 +414,32 @@ test("createClaw exposes runtime context and workspace data helpers", async () =
   assert.deepEqual(claw.data.document("settings").read(), { locale: "es" });
 });
 
+test("createClaw exposes SDK-first capability catalog for custom surfaces", async () => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-instance-capabilities-"));
+  const dataRoot = path.join(workspaceDir, "claw-data");
+  await withPatchedEnv({ CLAW_DATA_DIR: dataRoot }, async () => {
+    const claw = await createClaw({
+      runtime: { adapter: "openclaw" },
+      workspace: {
+        appId: "demo",
+        workspaceId: "demo-main",
+        agentId: "demo-main",
+        rootDir: workspaceDir,
+      },
+    });
+
+    const ids = claw.capabilities.list().map((capability) => capability.id);
+    const riskMap = claw.capabilities.riskMap();
+
+    assert.ok(ids.includes("search.query"));
+    assert.ok(ids.includes("db.query"));
+    assert.ok(riskMap.ordinaryAccess.includes("search.query"));
+    assert.ok(riskMap.approvalRequired.includes("secrets.broker"));
+    assert.equal(claw.capabilities.get("iot.device.action.invoke")?.risk.touchesPhysicalWorld, true);
+    assert.match(claw.capabilities.source(), /sdk-first-custom-surfaces/);
+  });
+});
+
 test("createClaw exposes TTS playback helpers through the SDK facade", async () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-instance-tts-"));
   const claw = await createClaw({
