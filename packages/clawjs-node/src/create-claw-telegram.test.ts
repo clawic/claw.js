@@ -79,14 +79,37 @@ test("createClaw telegram API supports commands, chat inspection, sending, and u
     description: "Start the bot",
   }]);
   const fetchedCommands = await claw.telegram.getCommands();
+  await assert.rejects(
+    () => claw.telegram.sendMessage({
+      chatId: "1001",
+      text: "blocked external send",
+    }),
+    /requires explicit approvalId before external send/,
+  );
+  await assert.rejects(
+    async () => claw.slack.sendMessage({
+      channel: "C1001",
+      text: "blocked slack send",
+    }),
+    /requires explicit approvalId before external send/,
+  );
+  await assert.rejects(
+    async () => claw.whatsapp.sendMessage({
+      to: "15551234567",
+      text: "blocked whatsapp send",
+    }),
+    /requires explicit approvalId before external send/,
+  );
   const sentMessage = await claw.telegram.sendMessage({
     chatId: "1001",
     text: "hello",
+    approvalId: "approval_telegram_send_message",
   });
   const sentMedia = await claw.telegram.sendMedia({
     type: "photo",
     chatId: "1001",
     media: "file_123",
+    approvalId: "approval_telegram_send_media",
   });
   const chat = await claw.telegram.getChat("1001");
   const admins = await claw.telegram.getChatAdministrators("1001");
@@ -146,6 +169,16 @@ test("createClaw channels registry supports Telegram accounts, bindings, targets
     priority: 10,
   });
   const synced = await claw.channels.messages.sync({ accountId: "support", limit: 10 });
+  await assert.rejects(
+    () => claw.channels.messages.send({
+      provider: "telegram",
+      accountId: "support",
+      targetId: "1001",
+      text: "blocked registry send",
+      agentId: "support-agent",
+    }),
+    /requires explicit approvalId before external send/,
+  );
   const sent = await claw.channels.messages.send({
     provider: "telegram",
     accountId: "support",
@@ -153,6 +186,7 @@ test("createClaw channels registry supports Telegram accounts, bindings, targets
     text: "reply from registry",
     threadId: 42,
     agentId: "support-agent",
+    approvalId: "approval_channels_message_send",
   });
   const deniedMessages = claw.channels.messages.read({
     agentId: "blocked-agent",

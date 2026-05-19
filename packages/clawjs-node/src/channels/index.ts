@@ -58,6 +58,7 @@ export interface SendChannelMessageInput {
   threadId?: string | number;
   parseMode?: "HTML" | "Markdown" | "MarkdownV2";
   agentId?: string;
+  approvalId?: string;
   metadata?: Record<string, unknown>;
 }
 

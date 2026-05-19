@@ -1,4 +1,12 @@
 // @ts-nocheck
+function requireExternalSendApproval(input: Record<string, unknown>, operation: string): string {
+  const approvalId = typeof input?.approvalId === "string" ? input.approvalId.trim() : "";
+  if (!approvalId) {
+    throw new Error(`${operation} requires explicit approvalId before external send.`);
+  }
+  return approvalId;
+}
+
 export function createClawChannelFacades(locals: Record<string, any>): any {
   const { readChannels, persistChannelsState, channelsRegistry, patchTelegramChannelIntent, connectTelegramAccount, processHost, secretsEnv, ensureTelegramCodexBridgeCommands, refreshChannelSnapshots, appendAuditEvent, adapter, eventBus, refreshTelegramAccountStatus, runChannelListener, sendTelegramAccountMessage, registerOutboundChannelMedia, syncTelegramAccount, registerInboundTelegramMedia, ingestTelegramVoiceNote, setTelegramAccountCommands, getTelegramAccountCommands, ensureTelegramBotSecretReference, telegram, recordTelegramStatusInChannels, disableTelegramAccountWebhook, configureTelegramAccountWebhook, callTelegramApi, callTelegramAccountBooleanMethod, callTelegramAccountRecordMethod, downloadTelegramFile, getTelegramAccountChat, listTelegramAccountChats, telegramBanOrRestrictParams, telegramInviteLinkParams, slack, whatsapp } = locals;
   return {
@@ -101,6 +109,7 @@ export function createClawChannelFacades(locals: Record<string, any>): any {
       },
       messages: {
         send: async (input) => {
+          const approvalId = requireExternalSendApproval(input, "channels.messages.send");
           const provider = input.provider ?? "telegram";
           const accountId = input.accountId ?? "default";
           if (provider !== "telegram") {
@@ -128,6 +137,7 @@ export function createClawChannelFacades(locals: Record<string, any>): any {
               mediaType: input.mediaType,
               text: input.text,
               agentId: input.agentId,
+              approvalId,
               response: message.raw as Record<string, unknown> | undefined,
               command: "channels messages send",
             });
@@ -300,6 +310,7 @@ export function createClawChannelFacades(locals: Record<string, any>): any {
       },
       getCommands: () => telegram.getCommands(),
       sendMessage: async (input) => {
+        const approvalId = requireExternalSendApproval(input, "telegram.sendMessage");
         const response = await telegram.sendMessage(input);
         channelsRegistry.messages.recordTelegramOutbound({
           provider: "telegram",
@@ -307,10 +318,12 @@ export function createClawChannelFacades(locals: Record<string, any>): any {
           targetId: String(input.chatId),
           text: input.text,
           threadId: input.messageThreadId,
+          metadata: { approvalId },
         }, response);
         return response;
       },
       sendMedia: async (input) => {
+        const approvalId = requireExternalSendApproval(input, "telegram.sendMedia");
         const response = await telegram.sendMedia(input);
         channelsRegistry.messages.recordTelegramOutbound({
           provider: "telegram",
@@ -319,6 +332,7 @@ export function createClawChannelFacades(locals: Record<string, any>): any {
           text: input.caption,
           media: input.media,
           threadId: input.messageThreadId,
+          metadata: { approvalId },
         }, response);
         registerOutboundChannelMedia({
           provider: "telegram",
@@ -328,6 +342,7 @@ export function createClawChannelFacades(locals: Record<string, any>): any {
           media: input.media,
           mediaType: input.type,
           text: input.caption,
+          approvalId,
           response,
           command: "telegram send",
         });
@@ -386,7 +401,10 @@ export function createClawChannelFacades(locals: Record<string, any>): any {
         await refreshChannelSnapshots();
         return status;
       },
-      sendMessage: (input) => slack.sendMessage(input),
+      sendMessage: (input) => {
+        requireExternalSendApproval(input, "slack.sendMessage");
+        return slack.sendMessage(input);
+      },
       listChannels: (query) => slack.listChannels(query),
       getChannel: (channelId) => slack.getChannel(channelId),
     },
@@ -409,7 +427,10 @@ export function createClawChannelFacades(locals: Record<string, any>): any {
         await refreshChannelSnapshots();
         return status;
       },
-      sendMessage: (input) => whatsapp.sendMessage(input),
+      sendMessage: (input) => {
+        requireExternalSendApproval(input, "whatsapp.sendMessage");
+        return whatsapp.sendMessage(input);
+      },
       disconnect: async () => {
         const status = await whatsapp.disconnect();
         await refreshChannelSnapshots();

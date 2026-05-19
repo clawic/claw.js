@@ -37,6 +37,7 @@ export interface TelegramSendMessageInput {
   parseMode?: "MarkdownV2" | "HTML";
   replyToMessageId?: number;
   messageThreadId?: number;
+  approvalId?: string;
 }
 
 export interface TelegramSendMediaInput {
@@ -47,6 +48,7 @@ export interface TelegramSendMediaInput {
   parseMode?: "MarkdownV2" | "HTML";
   replyToMessageId?: number;
   messageThreadId?: number;
+  approvalId?: string;
 }
 
 export interface TelegramBanOrRestrictInput {
