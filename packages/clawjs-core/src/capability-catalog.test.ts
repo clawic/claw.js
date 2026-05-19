@@ -51,6 +51,30 @@ test("custom app authority is broad for ordinary reads and approval-gated for hi
   assert.deepEqual(new Set(riskMap.highRisk), new Set(riskMap.approvalRequired));
 });
 
+test("ordinary custom-app access cannot include high-risk behavior", () => {
+  for (const capability of listClawCapabilities()) {
+    if (capability.customAppAccess !== "localWide") continue;
+    assert.equal(capability.operation, "read", capability.id);
+    assert.equal(capability.risk.interruptiveApproval, false, capability.id);
+    assert.equal(capability.risk.writesUserData ?? false, false, capability.id);
+    assert.equal(capability.risk.mutatesExternalState ?? false, false, capability.id);
+    assert.equal(capability.risk.destructive ?? false, false, capability.id);
+    assert.equal(capability.risk.costBearing ?? false, false, capability.id);
+    assert.equal(capability.risk.touchesSecrets ?? false, false, capability.id);
+    assert.equal(capability.risk.touchesNativeHost ?? false, false, capability.id);
+    assert.equal(capability.risk.touchesPhysicalWorld ?? false, false, capability.id);
+    assert.equal(capability.risk.regulatedReview ?? false, false, capability.id);
+  }
+});
+
+test("approval-required custom-app access is interruptive high risk", () => {
+  for (const capability of listClawCapabilities()) {
+    if (capability.customAppAccess !== "approvalRequired") continue;
+    assert.equal(capability.risk.interruptiveApproval, true, capability.id);
+    assert.ok(["high", "critical"].includes(capability.risk.tier), capability.id);
+  }
+});
+
 test("custom apps do not receive direct SQLite or plaintext secret capabilities", () => {
   for (const capability of listClawCapabilities()) {
     const text = JSON.stringify(capability).toLowerCase();
