@@ -68,6 +68,14 @@ test("sdk content client can create content resources and execute a publish plan
   const plan = await claw.content.publish.createPlan({
     variantId: generated.variants[0]!.id,
   });
+  assert.equal(plan.approval?.status, "pending");
+  await assert.rejects(
+    () => claw.content.publish.runNow(plan.plan.id),
+    /approved approval request/,
+  );
+  await claw.content.approvals.approve(plan.approval!.id, {
+    comment: "Autopublish still requires explicit approval before publication.",
+  });
   const run = await claw.content.publish.runNow(plan.plan.id);
 
   assert.equal(run.run.status, "succeeded");

@@ -235,7 +235,24 @@ describe("relay e2e", () => {
       },
       body: JSON.stringify({ variantId }),
     });
-    const planId = (await planResponse.json() as { plan: { id: string } }).plan.id;
+    const planPayload = await planResponse.json() as {
+      plan: { id: string };
+      approval: { id: string; status: string } | null;
+    };
+    const planId = planPayload.plan.id;
+    assert.equal(planPayload.approval?.status, "pending");
+
+    const approveResponse = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/content-agent/workspaces/main/content/approvals/${planPayload.approval!.id}/approve`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${userTokens.accessToken}`,
+      },
+      body: JSON.stringify({ comment: "Relay content autopublish still requires explicit approval." }),
+    });
+    assert.equal(approveResponse.status, 200);
+    const approvePayload = await approveResponse.json() as { approval: { status: string } };
+    assert.equal(approvePayload.approval.status, "approved");
 
     const runResponse = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/content-agent/workspaces/main/content/plans/${planId}/run`, {
       method: "POST",

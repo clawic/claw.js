@@ -143,7 +143,62 @@ test("dedicated CLI and claw bridge hit the same content service", async () => {
       CLAW_PUBLISHING_DIR: process.cwd(),
     },
   });
-  const planId = parseClawJsonPayload<{ plan: { id: string } }>(plan.stdout).plan.id;
+  const planPayload = parseClawJsonPayload<{
+    plan: { id: string };
+    approval: { id: string; status: string } | null;
+  }>(plan.stdout);
+  assert.equal(planPayload.approval?.status, "pending");
+  const planId = planPayload.plan.id;
+
+  try {
+    await execFileAsync("node", [
+      clawBin,
+      "content",
+      "publish",
+      "run",
+      "--url",
+      server.baseUrl,
+      "--token",
+      token,
+      "--id",
+      planId,
+      "--json",
+    ], {
+      cwd: path.resolve(process.cwd(), ".."),
+      env: {
+        ...process.env,
+        CLAW_PUBLISHING_DIR: process.cwd(),
+      },
+    });
+    assert.fail("autopublish plan run should require approval before publication");
+  } catch (error) {
+    const stdout = (error as { stdout?: string }).stdout ?? "";
+    const payload = JSON.parse(stdout) as { ok: boolean; error: { message: string } };
+    assert.equal(payload.ok, false);
+    assert.match(payload.error.message, /approved approval request/);
+  }
+
+  await execFileAsync("node", [
+    clawBin,
+    "content",
+    "approval",
+    "approve",
+    "--url",
+    server.baseUrl,
+    "--token",
+    token,
+    "--id",
+    planPayload.approval!.id,
+    "--comment",
+    "Autopublish still requires explicit approval before publication.",
+    "--json",
+  ], {
+    cwd: path.resolve(process.cwd(), ".."),
+    env: {
+      ...process.env,
+      CLAW_PUBLISHING_DIR: process.cwd(),
+    },
+  });
 
   const run = await execFileAsync("node", [
     clawBin,

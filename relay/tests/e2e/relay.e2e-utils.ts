@@ -876,7 +876,7 @@ export function startFakeConnector(url: string, connectorToken: string, agentId 
         return;
       case "content.approvals.approve": {
         const index = state.contentApprovals.findIndex((approval) => approval.id === message.payload?.id);
-        if (index >= 0) state.contentApprovals[index] = { ...state.contentApprovals[index], status: "approved" };
+        if (index >= 0) state.contentApprovals[index] = { ...state.contentApprovals[index], status: "approved", comment: message.payload?.comment ?? null };
         respond({ approval: state.contentApprovals[index] });
         return;
       }
@@ -900,6 +900,15 @@ export function startFakeConnector(url: string, connectorToken: string, agentId 
         return;
       case "content.publish.createPlan": {
         const variant = state.contentVariants.find((entry) => entry.id === message.payload?.variantId);
+        const approval = {
+          id: randomId("approval"),
+          entryId: variant?.entryId,
+          variantId: variant?.id,
+          destinationId: variant?.destinationId,
+          status: "pending",
+          requestedAt: new Date().toISOString(),
+          comment: null,
+        };
         const plan = {
           id: randomId("plan"),
           entryId: variant?.entryId,
@@ -908,8 +917,9 @@ export function startFakeConnector(url: string, connectorToken: string, agentId 
           status: "queued",
           scheduledAt: message.payload?.scheduledAt ?? null,
         };
+        state.contentApprovals.push(approval);
         state.contentPlans.push(plan);
-        respond({ plan, approval: null });
+        respond({ plan, approval });
         return;
       }
       case "content.publish.cancelPlan": {
@@ -920,6 +930,16 @@ export function startFakeConnector(url: string, connectorToken: string, agentId 
       }
       case "content.publish.runNow": {
         const plan = state.contentPlans.find((entry) => entry.id === message.payload?.id);
+        const approval = state.contentApprovals.find((entry) => entry.variantId === plan?.variantId);
+        if (approval?.status !== "approved") {
+          socket.send(JSON.stringify({
+            type: "error",
+            requestId: message.requestId,
+            code: "approval_required",
+            message: "Plan requires an approved approval request before publication.",
+          }));
+          return;
+        }
         const run = {
           id: randomId("run"),
           planId: plan?.id,

@@ -164,7 +164,18 @@ test("content backend covers brands, destinations, approvals, scheduling, runs, 
     method: "POST",
     body: JSON.stringify({ variantId: autoVariantId }),
   });
-  assert.equal((autoPlan.payload as { approval: null }).approval, null);
+  const autoPlanPayload = autoPlan.payload as {
+    plan: { id: string };
+    approval: { id: string; status: string } | null;
+  };
+  assert.equal(autoPlanPayload.approval?.status, "pending");
+  const blockedAutoRun = await requestJson(server.baseUrl, token, clawApiPath(`plans/${autoPlanPayload.plan.id}/run`), { method: "POST" });
+  assert.equal(blockedAutoRun.response.status, 409);
+  assert.equal((blockedAutoRun.payload as { error: { code: string } }).error.code, "approval_required");
+  await requestJson(server.baseUrl, token, clawApiPath(`approvals/${autoPlanPayload.approval!.id}/approve`), {
+    method: "POST",
+    body: JSON.stringify({ comment: "Autopublish still requires explicit approval before publication." }),
+  });
   const autoRun = await requestJson(server.baseUrl, token, clawApiPath(`plans/${(autoPlan.payload as { plan: { id: string } }).plan.id}/run`), { method: "POST" });
   assert.equal((autoRun.payload as { run: { status: string } }).run.status, "succeeded");
 
@@ -177,7 +188,16 @@ test("content backend covers brands, destinations, approvals, scheduling, runs, 
     method: "POST",
     body: JSON.stringify({ variantId: failingVariantId }),
   });
-  const failingPlanId = (failingPlan.payload as { plan: { id: string } }).plan.id;
+  const failingPlanPayload = failingPlan.payload as {
+    plan: { id: string };
+    approval: { id: string; status: string } | null;
+  };
+  assert.equal(failingPlanPayload.approval?.status, "pending");
+  await requestJson(server.baseUrl, token, clawApiPath(`approvals/${failingPlanPayload.approval!.id}/approve`), {
+    method: "POST",
+    body: JSON.stringify({ comment: "Approved to verify provider failure handling." }),
+  });
+  const failingPlanId = failingPlanPayload.plan.id;
   const failingRun = await requestJson(server.baseUrl, token, clawApiPath(`plans/${failingPlanId}/run`), { method: "POST" });
   assert.equal(failingRun.response.status, 500);
 

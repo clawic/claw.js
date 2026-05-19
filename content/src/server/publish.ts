@@ -153,12 +153,14 @@ export function approvalRequired(input: {
   scheduledAt: string | null;
 }): boolean {
   const { destination, assets, scheduledAt } = input;
+  // Pre-public legal closure: publishPolicy describes operator intent, not permission.
+  // Every external publication remains approval-gated until an explicit later policy changes this.
   if (destination.publishPolicy === "manual") return true;
-  if (destination.publishPolicy === "autopublish") return false;
+  if (destination.publishPolicy === "autopublish") return true;
   if (destination.capabilityMap.requiresApprovalByDefault) return true;
   if (destination.conditionalRules.requireApprovalWithAssets && assets.length > 0) return true;
   if (destination.conditionalRules.requireApprovalWhenScheduled && Boolean(scheduledAt)) return true;
-  return false;
+  return true;
 }
 
 export async function publishVariant(input: {
