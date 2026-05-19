@@ -42,9 +42,11 @@ test("published CLI tarballs install with npm and manage local-first productivit
     index: path.resolve(process.cwd(), "packages/clawjs-index"),
     sessions: path.resolve(process.cwd(), "packages/clawjs-sessions"),
     cli: path.resolve(process.cwd(), "packages/clawjs"),
+    denseDataPack: path.resolve(process.cwd(), "packages/clawjs-domain-pack-dense-data"),
   };
 
   let tarballs: string[];
+  let denseDataPackTarball = "";
   try {
     tarballs = [
       packWorkspacePackage(packageRoots.core, packDir),
@@ -58,6 +60,7 @@ test("published CLI tarballs install with npm and manage local-first productivit
       packWorkspacePackage(packageRoots.sessions, packDir),
       packWorkspacePackage(packageRoots.cli, packDir),
     ];
+    denseDataPackTarball = packWorkspacePackage(packageRoots.denseDataPack, packDir);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       assertCliPackageBinSurface(packageRoots.cli);
@@ -76,7 +79,7 @@ test("published CLI tarballs install with npm and manage local-first productivit
   const installedCliDist = fs.readdirSync(path.join(installRoot, "node_modules", "@clawjs", "cli", "dist"));
   assert.equal(installedCliDist.some((fileName) => fileName.startsWith("cli-dense-data-command")), false);
 
-  const inactiveDenseCommand = spawnSync(process.execPath, [binPath, "health", "patients", "list", "--json"], {
+  const inactiveDenseCommand = spawnSync(process.execPath, [binPath, "patient", "list", "--json"], {
     cwd: installRoot,
     encoding: "utf8",
     env: process.env,
@@ -90,13 +93,24 @@ test("published CLI tarballs install with npm and manage local-first productivit
     "health",
     "--json",
   ]));
-  const missingDensePack = spawnSync(process.execPath, [binPath, "health", "patients", "list", "--json"], {
+  const missingDensePack = spawnSync(process.execPath, [binPath, "patient", "list", "--json"], {
     cwd: installRoot,
     encoding: "utf8",
     env: process.env,
   });
   assert.equal(missingDensePack.status, 64);
   assert.equal(JSON.parse(missingDensePack.stdout).error.code, "optional_pack_missing");
+
+  runCommand("npm", ["install", "--prefer-offline", denseDataPackTarball], { cwd: installRoot });
+  const densePackCommand = spawnSync(process.execPath, [binPath, "patient", "list", "--json"], {
+    cwd: installRoot,
+    encoding: "utf8",
+    env: process.env,
+  });
+  assert.equal(densePackCommand.status, 0, densePackCommand.stderr || densePackCommand.stdout);
+  const densePackPayload = JSON.parse(densePackCommand.stdout) as { ok: boolean; data: unknown[] };
+  assert.equal(densePackPayload.ok, true);
+  assert.equal(Array.isArray(densePackPayload.data), true);
 
   const magicDbTask = runInstalledClawProcess(binPath, installRoot, [
     "db",

@@ -68,7 +68,8 @@ claw modules list
 claw modules status --available
 claw modules enable basic-productivity
 claw modules disable erp
-claw modules install audio-voice
+claw modules install health
+npm install @clawjs/domain-pack-dense-data
 claw collections list
 claw collections list --available
 ```
@@ -81,7 +82,9 @@ enables basic mainstream productivity plus light local capabilities, and
 `advanced` exposes general system/API/diagnostic/developer surfaces on demand
 without activating all domain areas. `claw modules install` is reserved for
 explicit optional packs, assets, browsers, models, or other heavy materials; it
-does not silently install them.
+does not silently install them. Deep niche domains such as health, legal, ERP,
+labs/pharma, construction, and IoT use the optional
+`@clawjs/domain-pack-dense-data` pack for deep commands.
 
 Default collection/catalog lists show active safe areas only. Use explicit
 available discovery, such as `claw collections list --available`, to inspect
