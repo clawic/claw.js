@@ -77,6 +77,10 @@ export class RuntimeApiClient {
     return this.call("GET", clawApiPath("runtime/status"));
   }
 
+  customAppSDKContracts(): Promise<unknown> {
+    return this.call("GET", clawApiPath("contracts/custom-app-sdk"));
+  }
+
   distill(input: DistillInput): Promise<DistillationRecord> {
     return this.call("POST", clawApiPath("runtime/distill"), input);
   }

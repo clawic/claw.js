@@ -1,4 +1,4 @@
-import { clawApiPath } from "@clawjs/core";
+import { buildCustomAppSDKInspectionPayload, clawApiPath } from "@clawjs/core";
 import fs from "node:fs";
 
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
@@ -113,6 +113,15 @@ export function buildRuntimeApp(options: BuildRuntimeAppOptions = {}) {
       userModelRefreshes: store.listUserModelRefreshes(10),
     },
   }));
+
+  app.get(clawApiPath("contracts/custom-app-sdk"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    return {
+      serviceApiRole: "inspection_validation_contract_resource",
+      richUiRuntime: "sdk_host_bridge_not_service_api_process",
+      ...buildCustomAppSDKInspectionPayload(),
+    };
+  });
 
   app.post(clawApiPath("runtime/distill"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;

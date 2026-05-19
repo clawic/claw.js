@@ -181,6 +181,32 @@ test("distill produces SKILL.md with provenance=distilled and confidence > 0", a
   }
 });
 
+test("runtime service API exposes custom app SDK contracts as read-only metadata", async () => {
+  const ctx = await spinUp();
+  try {
+    const payload = await ctx.runtimeClient.customAppSDKContracts() as {
+      serviceApiRole: string;
+      richUiRuntime: string;
+      schemaRefs: string[];
+      missingSchemaRefs: string[];
+      riskMap: { ordinaryAccess: string[]; approvalRequired: string[] };
+      capabilities: Array<{ id: string; inputSchemaRef?: string }>;
+    };
+    assert.equal(payload.serviceApiRole, "inspection_validation_contract_resource");
+    assert.equal(payload.richUiRuntime, "sdk_host_bridge_not_service_api_process");
+    assert.deepEqual(payload.missingSchemaRefs, []);
+    assert.ok(payload.schemaRefs.includes("claw.resources.payload.v1"));
+    assert.ok(payload.riskMap.ordinaryAccess.includes("search.query"));
+    assert.ok(payload.riskMap.approvalRequired.includes("actions.invoke"));
+    assert.equal(
+      payload.capabilities.find((capability) => capability.id === "db.query")?.inputSchemaRef,
+      "claw.db.query.v1",
+    );
+  } finally {
+    await ctx.close();
+  }
+});
+
 test("distill skips when tool call count below threshold", async () => {
   const ctx = await spinUp();
   try {
