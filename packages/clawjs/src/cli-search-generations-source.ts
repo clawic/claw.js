@@ -58,6 +58,7 @@ function generationArtifactSearchDocument(record: Record<string, unknown>, works
   const outputRelativePath = stringField(record, "outputRelativePath");
   const metadata = isPlainRecord(record.metadata) ? record.metadata : {};
   const metadataText = redactedStructuredText(metadata);
+  const commandText = redactedGenerationCommandText(command);
   const body = [
     title,
     kind,
@@ -68,8 +69,7 @@ function generationArtifactSearchDocument(record: Record<string, unknown>, works
     stringField(record, "backendType"),
     stringField(record, "backendSource"),
     stringField(record, "model"),
-    stringField(command, "command"),
-    ...(Array.isArray(command.args) ? command.args.filter((entry): entry is string => typeof entry === "string") : []),
+    ...commandText,
     metadataText,
     stringField(record, "error"),
   ].filter(Boolean).join("\n");
@@ -169,4 +169,38 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
 function stringField(record: Record<string, unknown>, key: string): string | undefined {
   const value = record[key];
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function redactedGenerationCommandText(command: Record<string, unknown>): string[] {
+  const text: string[] = [];
+  const executable = stringField(command, "command");
+  if (executable) text.push(executable);
+  const args = Array.isArray(command.args)
+    ? command.args.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0).map((entry) => entry.trim())
+    : [];
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    const redacted = redactedGenerationCommandArg(arg);
+    if (redacted) {
+      text.push(redacted);
+      if (!arg.includes("=") && isSensitiveCommandArg(arg) && index + 1 < args.length) index += 1;
+      continue;
+    }
+    text.push(arg);
+  }
+  return text;
+}
+
+function redactedGenerationCommandArg(arg: string): string | null {
+  const equalsIndex = arg.indexOf("=");
+  if (equalsIndex >= 0) {
+    const key = arg.slice(0, equalsIndex);
+    return isSensitiveCommandArg(key) ? `${key}=[redacted]` : null;
+  }
+  if (!isSensitiveCommandArg(arg)) return null;
+  return arg.startsWith("-") ? `${arg} [redacted]` : "[redacted]";
+}
+
+function isSensitiveCommandArg(arg: string): boolean {
+  return /token|secret|password|credential|api[_-]?key/i.test(arg);
 }

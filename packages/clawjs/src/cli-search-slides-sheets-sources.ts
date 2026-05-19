@@ -325,10 +325,11 @@ function sheetTextForSearch(sheet: Record<string, unknown>): string {
 }
 
 function manifestStructuredText(value: unknown): string | undefined {
-  const direct = textFromStructuredContent(value);
+  const safeValue = redactManifestStructuredValue(value, 0);
+  const direct = textFromStructuredContent(safeValue);
   if (direct) return direct;
   const parts: string[] = [];
-  collectManifestStructuredText(value, parts, 0);
+  collectManifestStructuredText(safeValue, parts, 0);
   const text = parts.join(" ").replace(/\s+/g, " ").trim();
   return text || undefined;
 }
@@ -357,6 +358,18 @@ function collectManifestStructuredText(value: unknown, parts: string[], depth: n
     if (["src", "path", "url"].includes(key)) continue;
     collectManifestStructuredText(nested, parts, depth + 1);
   }
+}
+
+function redactManifestStructuredValue(value: unknown, depth: number): unknown {
+  if (depth > 4) return "[truncated]";
+  if (Array.isArray(value)) return value.map((item) => redactManifestStructuredValue(item, depth + 1));
+  if (!isPlainRecord(value)) return value;
+  const redacted: Record<string, unknown> = {};
+  for (const [key, nested] of Object.entries(value)) {
+    if (["src", "path", "url"].includes(key)) continue;
+    redacted[key] = /token|secret|password|credential|api[_-]?key/i.test(key) ? "[redacted]" : redactManifestStructuredValue(nested, depth + 1);
+  }
+  return redacted;
 }
 
 function boundedNumberFlag(raw: string | undefined, fallback: number, min: number, max: number): number {

@@ -5,7 +5,7 @@ import os from "os";
 import path from "path";
 
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK } from "./index.ts";
-import { scheduleSheetsWorkbookSearchEvent, scheduleSlidesDeckSearchEvent } from "./cli-search-events.ts";
+import { scheduleSheetsWorkbookSearchEvent } from "./cli-search-events.ts";
 import { runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
 
 test("search rebuild indexes slides.decks from slide manifests", async () => {
@@ -37,7 +37,7 @@ test("search rebuild indexes slides.decks from slide manifests", async () => {
         id: "slide-metrics",
         layout: "metric-grid",
         heading: "Forecast metrics",
-        metrics: [{ label: "Expansion", value: "18%", detail: "net revenue retention" }],
+        metrics: [{ label: "Expansion", value: "18%", detail: "net revenue retention", credentials: { token: "slides-content-secret-never-index" } }],
         bullets: ["Pipeline coverage", "Renewal risk"],
       },
     ],
@@ -89,6 +89,10 @@ test("search rebuild indexes slides.decks from slide manifests", async () => {
     assert.equal(metadataSecretQuery.code, CLI_EXIT_DEGRADED, metadataSecretQuery.stderr || metadataSecretQuery.stdout);
     const metadataSecretQueryPayload = JSON.parse(metadataSecretQuery.stdout) as { data: { results: Array<{ source: string; title: string }> } };
     assert.equal(metadataSecretQueryPayload.data.results.some((entry) => entry.source === "slides.decks" && entry.title === "Quarterly Revenue Plan"), false);
+    const contentSecretQuery = await runCliCapture(["search", "query", "slides-content-secret-never-index", "--sources", "slides.decks", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(contentSecretQuery.code, CLI_EXIT_DEGRADED, contentSecretQuery.stderr || contentSecretQuery.stdout);
+    const contentSecretQueryPayload = JSON.parse(contentSecretQuery.stdout) as { data: { results: Array<{ source: string; title: string }> } };
+    assert.equal(contentSecretQueryPayload.data.results.some((entry) => entry.source === "slides.decks" && entry.title === "Quarterly Revenue Plan"), false);
   });
 });
 
@@ -161,19 +165,17 @@ test("slides.decks event jobs refresh changed slide manifests", async () => {
     assert.equal(result?.resourceId, createdPayload.deck.id);
     assert.equal(result?.fragments?.some((fragment) => fragment.title === "Event refresh pipeline"), true);
 
-    fs.unlinkSync(createdPayload.path);
-    const deleted = scheduleSlidesDeckSearchEvent({
-      operation: "delete",
-      deckId: createdPayload.deck.id,
-      workspaceRoot,
-      dataDir: dataRoot,
-      flags: { workspace: workspaceRoot },
-    });
-    assert.equal(deleted.ok, true, deleted.error);
-    assert.equal(deleted.job?.source, "slides.decks");
-    assert.equal(deleted.job?.operation, "delete");
-    assert.equal(deleted.job?.resourceId, createdPayload.deck.id);
-    assert.equal(deleted.job?.payload.deckId, createdPayload.deck.id);
+    const deleted = await runCliCapture(["slides", "delete", createdPayload.deck.id, "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleted.code, CLI_EXIT_OK);
+    assert.equal(fs.existsSync(createdPayload.path), false);
+    const deleteJobs = await runCliCapture(["search", "jobs", "list", "--source", "slides.decks", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleteJobs.code, CLI_EXIT_OK);
+    const deleteJobsPayload = JSON.parse(deleteJobs.stdout) as {
+      data: { items: Array<{ source: string; operation: string; resourceId?: string; payload?: Record<string, unknown> }> };
+    };
+    const deleteJob = deleteJobsPayload.data.items.find((job) => job.resourceId === createdPayload.deck.id && job.operation === "delete");
+    assert.equal(deleteJob?.source, "slides.decks");
+    assert.equal(deleteJob?.payload?.deckId, createdPayload.deck.id);
     const slideDeleteRun = await runCliCapture(["search", "service", "run-once", "--source", "slides.decks", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(slideDeleteRun.code, CLI_EXIT_OK);
     const slideDeleteRunItem = (JSON.parse(slideDeleteRun.stdout) as any).data.service.worker?.items.find((entry: any) => entry.source === "slides.decks");
@@ -216,7 +218,7 @@ test("search rebuild indexes sheets.workbooks from workbook manifests", async ()
         name: "Renewal Risks",
         cells: [
           { address: "A1", value: "Customer", formula: "" },
-          { address: "B2", value: "Contoso", formula: "=IF(C2>0.5,\"watch\",\"ok\")" },
+          { address: "B2", value: "Contoso", formula: "=IF(C2>0.5,\"watch\",\"ok\")", credentials: { token: "sheets-content-secret-never-index" } },
         ],
       },
     ],
@@ -266,6 +268,10 @@ test("search rebuild indexes sheets.workbooks from workbook manifests", async ()
     assert.equal(metadataSecretQuery.code, CLI_EXIT_DEGRADED, metadataSecretQuery.stderr || metadataSecretQuery.stdout);
     const metadataSecretQueryPayload = JSON.parse(metadataSecretQuery.stdout) as { data: { results: Array<{ source: string; title: string }> } };
     assert.equal(metadataSecretQueryPayload.data.results.some((entry) => entry.source === "sheets.workbooks" && entry.title === "Revenue Forecast Workbook"), false);
+    const contentSecretQuery = await runCliCapture(["search", "query", "sheets-content-secret-never-index", "--sources", "sheets.workbooks", "--workspace", workspaceRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(contentSecretQuery.code, CLI_EXIT_DEGRADED, contentSecretQuery.stderr || contentSecretQuery.stdout);
+    const contentSecretQueryPayload = JSON.parse(contentSecretQuery.stdout) as { data: { results: Array<{ source: string; title: string }> } };
+    assert.equal(contentSecretQueryPayload.data.results.some((entry) => entry.source === "sheets.workbooks" && entry.title === "Revenue Forecast Workbook"), false);
   });
 });
 

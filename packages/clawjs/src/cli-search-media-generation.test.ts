@@ -32,7 +32,14 @@ test("search rebuild indexes generations.artifacts from workspace generation rec
     },
     command: {
       command: "node",
-      args: ["generate-image.js"],
+      args: [
+        "generate-image.js",
+        "--preset",
+        "launch-dashboard-preset",
+        "--api-key",
+        "generations-command-secret-never-index",
+        "--token=generations-inline-secret-never-index",
+      ],
     },
     outputRelativePath: "generations/image/gen-demo-image.png",
     outputMimeType: "image/png",
@@ -125,6 +132,25 @@ test("search rebuild indexes generations.artifacts from workspace generation rec
     };
     const metadataResult = metadataQueryPayload.data.results.find((entry) => entry.source === "generations.artifacts" && entry.title === "Launch Dashboard Hero");
     assert.equal(metadataResult?.fragments?.some((fragment) => fragment.title === "metadata" && fragment.snippet?.includes("generations-metadata-fragment-needle")), true);
+    const commandQuery = await runCliCapture([
+      "search",
+      "query",
+      "launch-dashboard-preset",
+      "--sources",
+      "generations.artifacts",
+      "--workspace",
+      workspaceRoot,
+      "--data-dir",
+      dataRoot,
+      "--json",
+      "--limit",
+      "5",
+    ], workspaceRoot);
+    assert.equal(commandQuery.code, CLI_EXIT_OK, commandQuery.stderr || commandQuery.stdout);
+    const commandQueryPayload = JSON.parse(commandQuery.stdout) as {
+      data: { results: Array<{ source: string; title: string }> };
+    };
+    assert.equal(commandQueryPayload.data.results.some((entry) => entry.source === "generations.artifacts" && entry.title === "Launch Dashboard Hero"), true);
     const metadataSecretQuery = await runCliCapture([
       "search",
       "query",
@@ -142,6 +168,25 @@ test("search rebuild indexes generations.artifacts from workspace generation rec
     assert.equal(metadataSecretQuery.code, CLI_EXIT_DEGRADED, metadataSecretQuery.stderr || metadataSecretQuery.stdout);
     const metadataSecretQueryPayload = JSON.parse(metadataSecretQuery.stdout) as { data: { results: Array<{ source: string; title: string }> } };
     assert.equal(metadataSecretQueryPayload.data.results.some((entry) => entry.source === "generations.artifacts" && entry.title === "Launch Dashboard Hero"), false);
+    for (const secretNeedle of ["generations-command-secret-never-index", "generations-inline-secret-never-index"]) {
+      const commandSecretQuery = await runCliCapture([
+        "search",
+        "query",
+        secretNeedle,
+        "--sources",
+        "generations.artifacts",
+        "--workspace",
+        workspaceRoot,
+        "--data-dir",
+        dataRoot,
+        "--json",
+        "--limit",
+        "5",
+      ], workspaceRoot);
+      assert.equal(commandSecretQuery.code, CLI_EXIT_DEGRADED, commandSecretQuery.stderr || commandSecretQuery.stdout);
+      const commandSecretQueryPayload = JSON.parse(commandSecretQuery.stdout) as { data: { results: Array<{ source: string; title: string }> } };
+      assert.equal(commandSecretQueryPayload.data.results.some((entry) => entry.source === "generations.artifacts" && entry.title === "Launch Dashboard Hero"), false);
+    }
   });
 });
 test("generations create and delete schedule Search artifact events", async () => {

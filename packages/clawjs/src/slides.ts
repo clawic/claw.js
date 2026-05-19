@@ -132,7 +132,7 @@ export interface SlidesCliOptions {
   wantsJson: boolean;
   context: SlidesCliContext;
   registerOutput?: (input: { filePath: string; name: string; mimeType: string; kind: "document" | "image"; sourceText: string }) => Promise<{ mediaId: string }>;
-  createMediaShare?: (input: { mediaId?: string; label?: string; ttlMs?: number; expiresAt?: string | null; filters?: { query?: string; kind?: "document" | "image"; workspaceId?: string; agentId?: string } }) => Promise<{ id: string; url: string }>;
+  createMediaShare?: (input: { mediaId?: string; label?: string; legalLabel?: string; approvalId?: string; ttlMs?: number; expiresAt?: string | null; filters?: { query?: string; kind?: "document" | "image"; workspaceId?: string; agentId?: string } }) => Promise<{ id: string; url: string }>;
 }
 
 const SLIDES_OK = 0;
@@ -245,6 +245,17 @@ export async function runSlidesCli(options: SlidesCliOptions): Promise<number> {
     writeOutput(options, report, formatValidationReport(report));
     return report.errorCount > 0 ? SLIDES_FAILURE : SLIDES_OK;
   }
+  if (command === "delete") {
+    if (!target) {
+      context.stderr.write(`Usage: ${context.binName} slides delete <deck>\n`);
+      return SLIDES_USAGE;
+    }
+    const resolved = readDeckByRef(options.workspaceRoot, context.cwd, target);
+    fs.rmSync(resolved.path, { force: true });
+    scheduleSlideDeckSearchDelete(options, resolved.deck.id);
+    writeOutput(options, { id: resolved.deck.id, deleted: true, path: resolved.path }, resolved.deck.id);
+    return SLIDES_OK;
+  }
   if (command === "render") {
     if (!target) {
       context.stderr.write(`Usage: ${context.binName} slides render <deck> --format pdf,pptx,html,png\n`);
@@ -338,6 +349,8 @@ export async function runSlidesCli(options: SlidesCliOptions): Promise<number> {
     }
     const shareInput = {
       label: flags.label || `${resolved.deck.title} ${format.toUpperCase()}`,
+      legalLabel: flags["legal-label"],
+      approvalId: flags["approval-id"] ?? flags["host-approval-id"],
       expiresAt: flags["expires-at"],
       ttlMs: parseDurationMs(flags.ttl || flags["ttl-ms"]),
     };
@@ -364,7 +377,7 @@ export async function runSlidesCli(options: SlidesCliOptions): Promise<number> {
     return SLIDES_OK;
   }
 
-  context.stderr.write(`Usage: ${context.binName} slides create|add|validate|render|share|themes|layouts\n`);
+  context.stderr.write(`Usage: ${context.binName} slides create|add|validate|delete|render|share|themes|layouts\n`);
   return SLIDES_USAGE;
 }
 
@@ -1219,6 +1232,16 @@ function writeDeck(filePath: string, deck: SlideDeckManifest): void {
 function scheduleSlideDeckSearchRefresh(options: SlidesCliOptions, deckId: string): void {
   scheduleSlidesDeckSearchEvent({
     operation: "upsert",
+    deckId,
+    workspaceRoot: options.workspaceRoot,
+    dataDir: searchEventDataDir(options.workspaceRoot, options.flags),
+    flags: options.flags,
+  });
+}
+
+function scheduleSlideDeckSearchDelete(options: SlidesCliOptions, deckId: string): void {
+  scheduleSlidesDeckSearchEvent({
+    operation: "delete",
     deckId,
     workspaceRoot: options.workspaceRoot,
     dataDir: searchEventDataDir(options.workspaceRoot, options.flags),
