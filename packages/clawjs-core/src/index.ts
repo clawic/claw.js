@@ -29,6 +29,7 @@ export * from "./catalog-coverage.ts";
 export * from "./capability-catalog.ts";
 export * from "./custom-app-redaction-policy.ts";
 export * from "./custom-app-sdk-contracts.ts";
+export * from "./custom-app-sdk-inspection.ts";
 export * from "./need-route-lab.ts";
 export * from "./cli-guidance.ts";
 export * from "./cli-command-registry.ts";

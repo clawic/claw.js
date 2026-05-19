@@ -2,6 +2,7 @@ import {
   MAC_PERMISSION_CATALOG,
   MAC_PERMISSION_PACKS,
   buildMacActionPlan,
+  buildCustomAppSDKInspectionPayload,
   clawMacControlPlaneRegistry,
   listMacAtlasCapabilities,
   macActionRequestSchema,
@@ -26,6 +27,14 @@ export interface DefaultExposedToolsOptions {
   macSignedHostBridge?: MacSignedHostBridge | null;
 }
 
+export function customAppSDKMCPContractPayload() {
+  return {
+    mcpRole: "inspection_validation_contract_resource",
+    richUiRuntime: "sdk_host_bridge_not_mcp_process",
+    ...buildCustomAppSDKInspectionPayload(),
+  };
+}
+
 export function defaultExposedTools(options: DefaultExposedToolsOptions = {}): MCPExposedTool[] {
   const macSignedHostBridge = options.macSignedHostBridge ?? null;
   return [
@@ -34,6 +43,12 @@ export function defaultExposedTools(options: DefaultExposedToolsOptions = {}): M
       description: "Health-check tool exposed by ClawJS MCP server.",
       inputSchema: { type: "object", properties: {}, additionalProperties: false },
       handler: async () => ({ ok: true, service: "clawjs-mcp", at: new Date().toISOString() }),
+    },
+    {
+      name: "clawjs.custom_app_sdk",
+      description: "Returns the custom app SDK contract catalog for SDK-first UI surfaces.",
+      inputSchema: { type: "object", properties: {}, additionalProperties: false },
+      handler: async () => customAppSDKMCPContractPayload(),
     },
     {
       name: "clawjs_echo",

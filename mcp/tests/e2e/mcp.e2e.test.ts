@@ -48,6 +48,30 @@ test("expose endpoint lists default ClawJS tools (clawjs_ping + clawjs_echo)", a
     const names = exposed.items.map((tool) => tool.name);
     assert.ok(names.includes("clawjs_ping"));
     assert.ok(names.includes("clawjs_echo"));
+    assert.ok(names.includes("clawjs.custom_app_sdk"));
+  } finally { await ctx.close(); }
+});
+
+test("custom app SDK endpoint exposes schema refs and risk map", async () => {
+  const ctx = await spinUp();
+  try {
+    const payload = await ctx.client.customAppSDK() as {
+      mcpRole: string;
+      richUiRuntime: string;
+      schemaRefs: string[];
+      missingSchemaRefs: string[];
+      riskMap: { approvalRequired: string[] };
+      capabilities: Array<{ id: string; redactionPolicyRef?: string }>;
+    };
+    assert.equal(payload.mcpRole, "inspection_validation_contract_resource");
+    assert.equal(payload.richUiRuntime, "sdk_host_bridge_not_mcp_process");
+    assert.deepEqual(payload.missingSchemaRefs, []);
+    assert.ok(payload.schemaRefs.includes("claw.db.query.v1"));
+    assert.ok(payload.riskMap.approvalRequired.includes("actions.invoke"));
+    assert.equal(
+      payload.capabilities.find((capability) => capability.id === "resources.read")?.redactionPolicyRef,
+      "claw.customApps.redaction.v1",
+    );
   } finally { await ctx.close(); }
 });
 
@@ -71,7 +95,12 @@ test("call tool via prefixed name returns echoed content", async () => {
   try {
     const server = await ctx.client.registerServer({ name: "playground", transport: "http", endpoint: ctx.externalEndpoint });
     await ctx.client.refreshServer(server.id);
-    const result = await ctx.client.callTool("mcp_playground_clawjs_echo", { message: "hola mcp" }, fixtureControlPlane(server.id));
+    const result = await ctx.client.callTool(
+      "mcp_playground_clawjs_echo",
+      { message: "hola mcp" },
+      fixtureControlPlane(server.id),
+      fixtureAgentPolicy(server.id),
+    );
     assert.equal(result.ok, true);
     assert.deepEqual(result.content, { echo: "hola mcp" });
     assert.ok(result.durationMs >= 0);
@@ -134,6 +163,44 @@ function fixtureControlPlane(serverId: string) {
       providerIds: [`mcp:${serverId}`],
       capabilityIds: ["mcp.tool.call"],
       riskTiers: ["system" as const],
+    },
+  };
+}
+
+function fixtureAgentPolicy(serverId: string) {
+  const assignment = {
+    id: "assignment.mcp.e2e",
+    agentId: "agent_mcp_e2e",
+    kind: "mcp_api" as const,
+    status: "active" as const,
+    channel: "mcp",
+    endpointRef: `mcp://${serverId}/clawjs_echo`,
+    externalDisclosure: "transparent_agent" as const,
+  };
+  const grant = {
+    resourceType: "mcp_tool",
+    resourceId: `${serverId}:clawjs_echo`,
+    action: "invoke" as const,
+    scopeType: "mcp_server",
+    scopeId: serverId,
+  };
+  return {
+    route: {
+      assignment,
+      kind: "mcp_api" as const,
+      channel: "mcp",
+      endpointRef: `mcp://${serverId}/clawjs_echo`,
+      now: "2026-05-15T12:00:00.000Z",
+    },
+    access: {
+      requested: grant,
+      agentGrants: [{ ...grant, id: "agent" }],
+      assignmentGrants: [{ ...grant, id: "assignment" }],
+      executionProfileGrants: [{ ...grant, id: "execution" }],
+      connectorGrants: [{ ...grant, id: "connector" }],
+      hostGrants: [{ ...grant, id: "host" }],
+      runScopeGrants: [{ ...grant, id: "run" }],
+      now: "2026-05-15T12:00:00.000Z",
     },
   };
 }

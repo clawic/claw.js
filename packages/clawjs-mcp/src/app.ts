@@ -14,7 +14,7 @@ import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
 import { MCPProtocolClient } from "./client.ts";
 import { loadMCPConfig, type MCPServiceConfig } from "./config.ts";
 import { assertMCPToolControlPlane } from "./control-plane.ts";
-import { defaultExposedTools } from "./expose.ts";
+import { customAppSDKMCPContractPayload, defaultExposedTools } from "./expose.ts";
 import { createMacSignedHostBridge, type MacSignedHostBridge } from "./mac-signed-host-bridge.ts";
 import { MCPServiceStore } from "./store.ts";
 import {
@@ -300,6 +300,11 @@ export function buildMCPApp(options: BuildMCPAppOptions = {}) {
   app.get(clawApiPath("mcp/expose/tools"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     return { items: exposed.map((tool) => ({ name: tool.name, description: tool.description, inputSchema: tool.inputSchema })) };
+  });
+
+  app.get(clawApiPath("mcp/expose/custom-app-sdk"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    return customAppSDKMCPContractPayload();
   });
 
   app.post(clawApiPath("mcp/expose/rpc"), async (request, reply) => {

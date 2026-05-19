@@ -44,8 +44,9 @@ if (argv.includes("--help") || !group) {
     "  mcp servers remove --id ID",
     "  mcp servers refresh --id ID",
     "  mcp tools list [--server ID]",
-    "  mcp tools call --name PREFIXED_NAME --args JSON",
+    "  mcp tools call --name PREFIXED_NAME --args JSON --control-plane JSON --agent-policy JSON",
     "  mcp exposed",
+    "  mcp custom-app-sdk",
   ].join("\n") + "\n");
   process.exit(0);
 }
@@ -77,10 +78,16 @@ async function main(): Promise<void> {
   if (group === "tools" && sub === "list") { write(await client.listTools(flags.server)); return; }
   if (group === "tools" && sub === "call") {
     if (!flags["control-plane"]) throw new Error("mcp tools call requires --control-plane JSON");
-    write(await client.callTool(flags.name, flags.args ? JSON.parse(flags.args) : {}, JSON.parse(flags["control-plane"])));
+    write(await client.callTool(
+      flags.name,
+      flags.args ? JSON.parse(flags.args) : {},
+      JSON.parse(flags["control-plane"]),
+      flags["agent-policy"] ? JSON.parse(flags["agent-policy"]) : undefined,
+    ));
     return;
   }
   if (group === "exposed") { write(await client.exposed()); return; }
+  if (group === "custom-app-sdk") { write(await client.customAppSDK()); return; }
   process.stderr.write(`Unknown command: ${group} ${sub ?? ""}\n`);
   process.exit(64);
 }

@@ -86,6 +86,49 @@ describe("MCP connector control plane", () => {
     }
   });
 
+  it("exposes custom app SDK contracts through HTTP and MCP tools", async () => {
+    const { app, config } = buildFixtureApp();
+    try {
+      const http = await app.inject({
+        method: "GET",
+        url: "/v1/mcp/expose/custom-app-sdk",
+        headers: { authorization: `Bearer ${config.sharedSecret}` },
+      });
+      assert.equal(http.statusCode, 200);
+      assert.equal(http.json().mcpRole, "inspection_validation_contract_resource");
+      assert.equal(http.json().richUiRuntime, "sdk_host_bridge_not_mcp_process");
+      assert.deepEqual(http.json().missingSchemaRefs, []);
+      assert.equal(http.json().schemaRefs.includes("claw.search.query.v1"), true);
+      assert.equal(http.json().schemaRefs.includes("claw.customApp.request.partial.v1"), true);
+      assert.equal(http.json().capabilities.some((capability: { id: string }) => capability.id === "search.query"), true);
+      assert.equal(http.json().riskMap.approvalRequired.includes("actions.invoke"), true);
+
+      const tools = await app.inject({
+        method: "POST",
+        url: "/v1/mcp/expose/rpc",
+        payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      });
+      assert.equal(tools.statusCode, 200);
+      assert.equal(tools.json().result.tools.some((entry: { name: string }) => entry.name === "clawjs.custom_app_sdk"), true);
+
+      const rpc = await app.inject({
+        method: "POST",
+        url: "/v1/mcp/expose/rpc",
+        payload: {
+          jsonrpc: "2.0",
+          id: 2,
+          method: "tools/call",
+          params: { name: "clawjs.custom_app_sdk", arguments: {} },
+        },
+      });
+      assert.equal(rpc.statusCode, 200);
+      assert.equal(rpc.json().result.content.missingSchemaRefs.length, 0);
+      assert.equal(rpc.json().result.content.capabilities.some((capability: { id: string }) => capability.id === "resources.read"), true);
+    } finally {
+      await app.close();
+    }
+  });
+
   it("exposes system telemetry MCP tools as read-only agent context", async () => {
     const { app } = buildFixtureApp();
     try {

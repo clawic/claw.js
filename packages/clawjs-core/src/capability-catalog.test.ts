@@ -16,6 +16,7 @@ import {
   CUSTOM_APP_SDK_SCHEMA_REFS,
   getCustomAppSDKSchema,
 } from "./custom-app-sdk-contracts.ts";
+import { buildCustomAppSDKInspectionPayload } from "./custom-app-sdk-inspection.ts";
 
 test("SDK-first capability catalog exposes baseline custom-app contracts", () => {
   const ids = listClawCapabilities().map((capability) => capability.id);
@@ -114,6 +115,17 @@ test("custom-app read capabilities point at resolvable SDK schemas and stream ev
     assert.equal(capability.eventSchemaRefs?.progress, CUSTOM_APP_SDK_SCHEMA_REFS.requestProgress, capability.id);
     assert.equal(capability.eventSchemaRefs?.partial, CUSTOM_APP_SDK_SCHEMA_REFS.requestPartial, capability.id);
   }
+});
+
+test("custom-app SDK inspection payload has no missing schema refs", () => {
+  const payload = buildCustomAppSDKInspectionPayload();
+
+  assert.equal(payload.schemaVersion, 1);
+  assert.deepEqual(payload.missingSchemaRefs, []);
+  assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.searchQuery));
+  assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.requestPartial));
+  assert.ok(payload.capabilities.some((capability) => capability.id === "resources.read"));
+  assert.ok(payload.riskMap.approvalRequired.includes("actions.invoke"));
 });
 
 test("custom-app SDK schemas validate current Search DB and resource bridge payloads", () => {
