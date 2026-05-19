@@ -51,6 +51,9 @@ flowchart TD
   claw_host_grants["Host grants\nroot"]
   claw_host_approvals["Host approvals\nroot"]
   claw_host_audit["Host audit\nroot"]
+  claw_systemTelemetry["System telemetry\nroot"]
+  claw_systemTelemetry_contextProviders["System context providers\nroot"]
+  clawix_menuBar_systemIndicators["System menu bar indicators\nroot"]
   claw_mac_controlPlane["Mac Control Plane\nroot"]
   claw_mac_capabilityAtlas["Mac capability atlas\nroot"]
   claw_mac_permissionBroker["Mac Permission Broker\nroot"]
@@ -156,6 +159,12 @@ flowchart TD
   claw_contracts_api --> claw_api_system_widgets
   claw_api_system_providers["System telemetry provider catalog contract\napiRoute"]
   claw_contracts_api --> claw_api_system_providers
+  claw_api_system_providersPlan["System telemetry fail-closed provider plan contract\napiRoute"]
+  claw_contracts_api --> claw_api_system_providersPlan
+  claw_api_system_controls["System telemetry plan-first control catalog contract\napiRoute"]
+  claw_contracts_api --> claw_api_system_controls
+  claw_api_system_controlsPlan["System telemetry fail-closed control plan contract\napiRoute"]
+  claw_contracts_api --> claw_api_system_controlsPlan
   claw_api_system_history["System telemetry Monitor history contract\napiRoute"]
   claw_contracts_api --> claw_api_system_history
   claw_api_time_items["Time item list\napiRoute"]
@@ -2061,6 +2070,14 @@ flowchart TD
   claw_mac_controlPlane -- "brokers" --> claw_mac_actionBroker
   claw_mac_actionBroker -- "brokers" --> claw_host_signed
   claw_mac_actionBroker -- "owns" --> claw_host_audit
+  claw_cli_command_system -- "exposes" --> claw_systemTelemetry
+  claw_mcp_surface -- "exposes" --> claw_systemTelemetry
+  claw_systemTelemetry -- "consumes" --> claw_systemTelemetry_contextProviders
+  claw_systemTelemetry -- "brokers" --> claw_host_signed
+  claw_systemTelemetry -- "owns" --> claw_database_monitor
+  claw_systemTelemetry -- "owns" --> claw_host_audit
+  clawix_menuBar_systemIndicators -- "consumes" --> claw_systemTelemetry
+  clawix_menuBar_systemIndicators -- "owns" --> claw_database_monitor
   clawix_ui_chat -- "consumes" --> claw_agents_assignments
   claw_relay -- "brokers" --> claw_agents_assignments
   clawix_ui_chat -- "consumes" --> clawix_bridge_local
@@ -2108,6 +2125,9 @@ flowchart TD
 | `cli.commandIntentResolution` | `claw.cli.command.commands` | `claw.cli.command.report` | public | Fixture tests for resolve, record, list, opportunities, promote, unknown fallback metadata, and inspect command-intents. |
 | `mac.directCliAction` | `claw.cli.command.wifi` | `claw.host.audit` | public | Mac CLI direct-root tests, atlas tests, host permission guard, and inspect route tests |
 | `mac.permissionLifecycle` | `claw.cli.command.permissions` | `claw.host.audit` | public | Mac permission tests, host permission guard, and inspect route tests |
+| `system.telemetryAgentContext` | `claw.cli.command.system` | `claw.database.monitor` | public | System telemetry CLI, MCP, Monitor and inspect route tests |
+| `system.telemetrySignedHostControl` | `claw.cli.command.system` | `claw.host.audit` | public | System telemetry signed-host control tests and audit receipt checks |
+| `clawix.menuBarSystemIndicators` | `clawix.menuBar.systemIndicators` | `claw.database.monitor` | public | Clawix system telemetry bridge tests and external UI validation |
 | `chat.localDesktop` | `clawix.ui.chat` | `claw.sessions` | internal | Fixture + hermetic E2E for local desktop chat |
 | `agents.internalMacAssignment` | `clawix.ui.chat` | `claw.sessions` | internal | Fixture + hermetic E2E for internal Mac assignment |
 | `agents.externalSupportAssignment` | `claw.remote.client` | `claw.support.inbox` | external | Fake external support assignment fixture |
@@ -2158,6 +2178,14 @@ flowchart TD
 | `claw.edge.mac.control.brokers.action` | brokers | `claw.mac.controlPlane` | `claw.mac.actionBroker` | `claw.mac.actionPlan.v1` | policy-gated action plan handoff |
 | `claw.edge.mac.action.brokers.host` | brokers | `claw.mac.actionBroker` | `claw.host.signed` | `claw.mac.actionReceipt.v1` | active signed-host native execution |
 | `claw.edge.mac.action.owns.audit` | owns | `claw.mac.actionBroker` | `claw.host.audit` | `claw.mac.actionReceipt.v1` | redacted action receipt and durable audit event |
+| `claw.edge.system.cli.exposes.telemetry` | exposes | `claw.cli.command.system` | `claw.systemTelemetry` | `claw.systemTelemetry.v1` | local CLI portal with JSON envelopes |
+| `claw.edge.system.mcp.exposes.telemetry` | exposes | `claw.mcp.surface` | `claw.systemTelemetry` | `claw.systemTelemetry.v1` | MCP tools/resources policy gate |
+| `claw.edge.system.telemetry.consumes.contextProviders` | consumes | `claw.systemTelemetry` | `claw.systemTelemetry.contextProviders` | `claw.systemTelemetry.providers.v1` | provider catalog, fail-closed provider plans, and local env/file provider values |
+| `claw.edge.system.telemetry.brokers.host` | brokers | `claw.systemTelemetry` | `claw.host.signed` | `claw.systemTelemetry.hostSnapshot.v1` | signed-host snapshot/control command |
+| `claw.edge.system.telemetry.owns.monitor` | owns | `claw.systemTelemetry` | `claw.database.monitor` | `claw.database.monitor` | Monitor metric_sources, metric_samples, metric_rollups and metric_incidents |
+| `claw.edge.system.telemetry.owns.audit` | owns | `claw.systemTelemetry` | `claw.host.audit` | `claw.systemTelemetry.controlAudit.v1` | signed-host control receipt and redacted audit event |
+| `claw.edge.clawix.menuBar.consumes.telemetry` | consumes | `clawix.menuBar.systemIndicators` | `claw.systemTelemetry` | `claw.systemTelemetry.widgets.v1` | Clawix host bridge plus portable widget definitions |
+| `claw.edge.clawix.menuBar.owns.monitorWrites` | owns | `clawix.menuBar.systemIndicators` | `claw.database.monitor` | `claw.database.monitor` | throttled menu bar snapshot recording |
 | `claw.edge.chat.ui.consumes.assignment` | consumes | `clawix.ui.chat` | `claw.agents.assignments` | `claw.agent_assignment.internal_mac.v1` | local assignment selection |
 | `claw.edge.relay.brokers.assignments` | brokers | `claw.relay` | `claw.agents.assignments` | `claw.agent_assignment.external.v1` | remote-safe assignment selection |
 | `claw.edge.chat.ui.consumes.bridge` | consumes | `clawix.ui.chat` | `clawix.bridge.local` | `clawix.protocol.bridge.v1` | local bridge RPC |
@@ -2231,6 +2259,9 @@ flowchart TD
 | `claw.host.grants` | root | protocol | claw | humanUi | cli, serviceApi | relay:local-only | `host/grants` |
 | `claw.host.approvals` | root | protocol | claw | humanUi | cli, serviceApi | relay:local-only | `host/approvals` |
 | `claw.host.audit` | root | protocol | claw | humanUi | cli, serviceApi, persistence | relay:local-only | `host/audit` |
+| `claw.systemTelemetry` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp, persistence | relay:local-only | `system` |
+| `claw.systemTelemetry.contextProviders` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp | relay:local-only | `system/providers` |
+| `clawix.menuBar.systemIndicators` | root | protocol | clawix | humanUi | cli, persistence | relay:local-only | `macos/menu-bar/system` |
 | `claw.mac.controlPlane` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp | relay:local-only | `mac` |
 | `claw.mac.capabilityAtlas` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp, persistence | relay:local-only | `mac/atlas` |
 | `claw.mac.permissionBroker` | root | protocol | claw | humanUi | sdk, cli, serviceApi, mcp, persistence | relay:local-only | `permissions` |
@@ -2297,6 +2328,9 @@ flowchart TD
 | `claw.api.system.metrics` | apiRoute | api | claw |  |  |  | `/v1/system/metrics` |
 | `claw.api.system.widgets` | apiRoute | api | claw |  |  |  | `/v1/system/widgets` |
 | `claw.api.system.providers` | apiRoute | api | claw |  |  |  | `/v1/system/providers` |
+| `claw.api.system.providersPlan` | apiRoute | api | claw |  |  |  | `/v1/system/providers/plan` |
+| `claw.api.system.controls` | apiRoute | api | claw |  |  |  | `/v1/system/controls` |
+| `claw.api.system.controlsPlan` | apiRoute | api | claw |  |  |  | `/v1/system/controls/plan` |
 | `claw.api.system.history` | apiRoute | api | claw |  |  |  | `/v1/system/history/{metricKey}` |
 | `claw.api.time.items` | apiRoute | api | claw |  |  |  | `/v1/items` |
 | `claw.api.time.executions` | apiRoute | api | claw |  |  |  | `/v1/executions` |

@@ -4,6 +4,11 @@ import path from "node:path";
 
 import Database from "better-sqlite3";
 import {
+  createSystemTelemetryControlPlan,
+  createSystemTelemetryProviderPlan,
+  findSystemTelemetryControlAction,
+  findSystemTelemetryProvider,
+  listSystemTelemetryControlActions,
   listSystemTelemetryMetrics,
   listSystemTelemetryProviders,
   listSystemTelemetryWidgets,
@@ -196,8 +201,8 @@ export function readMcpSystemTelemetryHistory(input: { metricKey: string; range?
   const dbPath = systemTelemetryMonitorDbPath({ monitorDb: input.monitorDb });
   const metric = listSystemTelemetryMetrics().find((entry) => entry.key === input.metricKey) ?? null;
   const rangeMs = parseRangeMs(input.range);
-  if (!metric) return { metric, rangeMs, retention: { store: "monitor.sqlite", dbPath, status: "unknown_metric", rawPolicy: "short_local", rollups: true, rollupBucketMs: MONITOR_ROLLUP_BUCKET_MS }, samples: [], rollups: [], incidents: [] };
-  if (!fs.existsSync(dbPath)) return { metric, rangeMs, retention: { store: "monitor.sqlite", dbPath, status: "empty", rawPolicy: "short_local", rollups: true, rollupBucketMs: MONITOR_ROLLUP_BUCKET_MS }, samples: [], rollups: [], incidents: [] };
+  if (!metric) return { metric, rangeMs, retention: { store: "monitor.sqlite", dbPath, status: "unknown_metric", rawPolicy: "short_local", rollups: true, rollupBucketMs: MONITOR_ROLLUP_BUCKET_MS }, samples: [], rollups: [], incidents: [], chart: historyChartPayload(input.metricKey, "", [], []) };
+  if (!fs.existsSync(dbPath)) return { metric, rangeMs, retention: { store: "monitor.sqlite", dbPath, status: "empty", rawPolicy: "short_local", rollups: true, rollupBucketMs: MONITOR_ROLLUP_BUCKET_MS }, samples: [], rollups: [], incidents: [], chart: historyChartPayload(input.metricKey, metric.unit, [], []) };
   const sinceMs = Date.now() - rangeMs;
   const db = new Database(dbPath, { readonly: true, fileMustExist: true });
   try {
@@ -272,15 +277,42 @@ export function readMcpSystemTelemetryHistory(input: { metricKey: string; range?
       samples,
       rollups,
       incidents,
+      chart: historyChartPayload(input.metricKey, metric.unit, samples, rollups),
     };
   } catch (error) {
     if (error instanceof Error && /no such table/i.test(error.message)) {
-      return { metric, rangeMs, retention: { store: "monitor.sqlite", dbPath, status: "empty", rawPolicy: "short_local", rollups: true, rollupBucketMs: MONITOR_ROLLUP_BUCKET_MS }, samples: [], rollups: [], incidents: [] };
+      return { metric, rangeMs, retention: { store: "monitor.sqlite", dbPath, status: "empty", rawPolicy: "short_local", rollups: true, rollupBucketMs: MONITOR_ROLLUP_BUCKET_MS }, samples: [], rollups: [], incidents: [], chart: historyChartPayload(input.metricKey, metric.unit, [], []) };
     }
     throw error;
   } finally {
     db.close();
   }
+}
+
+function historyChartPayload(
+  metricKey: string,
+  unit: string,
+  samples: Array<{ sourceId: string; value: unknown; capturedAt: number }>,
+  rollups: Array<{ sourceId: string; avgValue: number | null; bucketStartAt: number; count: number }>,
+) {
+  const samplePoints = samples
+    .filter((sample) => typeof sample.value === "number")
+    .map((sample) => ({
+      t: sample.capturedAt,
+      value: sample.value as number,
+      sourceId: sample.sourceId,
+    }));
+  const rollupPoints = rollups
+    .filter((rollup) => typeof rollup.avgValue === "number")
+    .map((rollup) => ({
+      t: rollup.bucketStartAt,
+      value: rollup.avgValue as number,
+      sourceId: rollup.sourceId,
+      count: rollup.count,
+    }));
+  const source = samplePoints.length > 0 ? "metric_samples" : rollupPoints.length > 0 ? "metric_rollups" : "empty";
+  const points = source === "metric_samples" ? samplePoints : source === "metric_rollups" ? rollupPoints : [];
+  return { kind: "line", metricKey, unit, source, points, empty: points.length === 0 };
 }
 
 export function mcpSystemTelemetryMetricsPayload() {
@@ -293,4 +325,41 @@ export function mcpSystemTelemetryWidgetsPayload() {
 
 export function mcpSystemTelemetryProvidersPayload() {
   return { providers: listSystemTelemetryProviders() };
+}
+
+export function mcpSystemTelemetryProviderPlanPayload(input: { providerId: string; credentialRef?: string; reason?: string }) {
+  const provider = findSystemTelemetryProvider(input.providerId);
+  if (!provider) {
+    return {
+      error: "unknown_provider",
+      providerId: input.providerId,
+      providers: listSystemTelemetryProviders().map((entry) => entry.id),
+    };
+  }
+  return createSystemTelemetryProviderPlan({
+    provider,
+    credentialRef: input.credentialRef,
+    reason: input.reason,
+  });
+}
+
+export function mcpSystemTelemetryControlsPayload() {
+  return { controls: listSystemTelemetryControlActions(), mutatesHardware: false, execution: "plan_first_signed_host_only" };
+}
+
+export function mcpSystemTelemetryControlPlanPayload(input: { controlId: string; target?: string; value?: string; reason?: string }) {
+  const action = findSystemTelemetryControlAction(input.controlId);
+  if (!action) {
+    return {
+      error: "unknown_control",
+      controlId: input.controlId,
+      controls: listSystemTelemetryControlActions().map((entry) => entry.id),
+    };
+  }
+  return createSystemTelemetryControlPlan({
+    action,
+    target: input.target,
+    value: input.value,
+    reason: input.reason,
+  });
 }

@@ -19,7 +19,10 @@ import { createMacSignedHostBridge, type MacSignedHostBridge } from "./mac-signe
 import { MCPServiceStore } from "./store.ts";
 import {
   collectMcpSystemTelemetrySnapshot,
+  mcpSystemTelemetryControlPlanPayload,
+  mcpSystemTelemetryControlsPayload,
   mcpSystemTelemetryMetricsPayload,
+  mcpSystemTelemetryProviderPlanPayload,
   mcpSystemTelemetryProvidersPayload,
   mcpSystemTelemetryWidgetsPayload,
   readMcpSystemTelemetryHistory,
@@ -123,6 +126,32 @@ export function buildMCPApp(options: BuildMCPAppOptions = {}) {
   app.get(clawApiPath("system/providers"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     return mcpSystemTelemetryProvidersPayload();
+  });
+
+  app.post(clawApiPath("system/providers/plan"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const body = readBody(request);
+    return mcpSystemTelemetryProviderPlanPayload({
+      providerId: asString(body.providerId) ?? "",
+      credentialRef: asString(body.credentialRef),
+      reason: asString(body.reason),
+    });
+  });
+
+  app.get(clawApiPath("system/controls"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    return mcpSystemTelemetryControlsPayload();
+  });
+
+  app.post(clawApiPath("system/controls/plan"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const body = readBody(request);
+    return mcpSystemTelemetryControlPlanPayload({
+      controlId: asString(body.controlId) ?? "",
+      target: asString(body.target),
+      value: asString(body.value),
+      reason: asString(body.reason),
+    });
   });
 
   app.get(clawApiPath("system/history/:metricKey"), async (request, reply) => {

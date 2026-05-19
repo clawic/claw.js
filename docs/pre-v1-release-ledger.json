@@ -14,8 +14,8 @@
   },
   "packageVersions": {
     "mode": "frozen_until_v1_freeze",
-    "packageFileCount": 37,
-    "nameVersionSha256": "95312f2c0ea13434e87d204723b38525ecd236aa1e2243b776b8393f1d427b9e",
+    "packageFileCount": 38,
+    "nameVersionSha256": "d60b3a26d0566a3eb775e9554bcb8f7668eda42bb2066887e3e2086fdc432265",
     "notes": "Package manifest versions are pinned while phase is pre_v1_mutable. Dependency lockfile versions are external/dependency metadata and are not covered by this digest."
   },
   "externalAllowlist": [

@@ -2,8 +2,15 @@ import os from "os";
 import fs from "fs";
 import path from "path";
 import Database from "better-sqlite3";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 
 import {
+  createSystemTelemetryControlPlan,
+  createSystemTelemetryProviderPlan,
+  findSystemTelemetryControlAction,
+  findSystemTelemetryProvider,
+  listSystemTelemetryControlActions,
   listSystemTelemetryMetrics,
   listSystemTelemetryProviders,
   listSystemTelemetryWidgets,
@@ -18,6 +25,8 @@ import {
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { writeCommandJsonOk, writeJsonLine } from "./cli-json.ts";
 import type { CliContext } from "./index.ts";
+
+const execFileAsync = promisify(execFile);
 
 type SystemTelemetryState = {
   schemaVersion: 1;
@@ -481,6 +490,173 @@ function safeOsUptime(): number | null {
   }
 }
 
+function requestedSnapshotSource(flags: Record<string, string>): "local" | "host" {
+  const source = flags.source ?? flags["snapshot-source"] ?? flags.adapter;
+  return source === "host" || source === "signed_host" || source === "signed-host" ? "host" : "local";
+}
+
+function splitHostCommand(command: string | undefined): string[] | null {
+  const trimmed = command?.trim();
+  if (!trimmed) return null;
+  return trimmed.split(/\s+/);
+}
+
+function hostTelemetryCommand(flags: Record<string, string>): string[] | null {
+  return splitHostCommand(
+    flags["host-command"] ??
+      flags["signed-host-command"] ??
+      process.env.CLAW_SYSTEM_TELEMETRY_HOST_COMMAND ??
+      process.env.CLAW_LIVE_BROKER_COMMAND,
+  );
+}
+
+function hostConfidence(value: unknown): SystemTelemetryMetricSample["source"]["confidence"] {
+  if (value === "experimental") return "experimental";
+  if (value === "estimated" || value === "derived") return "derived";
+  if (value === "provider") return "provider";
+  return "official";
+}
+
+function normalizeHostTelemetrySnapshot(raw: unknown): SystemTelemetrySnapshot {
+  const envelope = raw && typeof raw === "object" ? raw as { ok?: unknown; data?: unknown; error?: { message?: unknown } } : {};
+  if (envelope.ok === false) {
+    throw new CliHandledError("host_snapshot_failed", typeof envelope.error?.message === "string" ? envelope.error.message : "Signed host telemetry snapshot failed.", CLI_EXIT_USAGE);
+  }
+  const data = envelope.data && typeof envelope.data === "object" ? envelope.data as {
+    captured_at?: unknown;
+    host?: { platform?: unknown; hostname?: unknown; arch?: unknown };
+    samples?: unknown[];
+    unavailable_metrics?: unknown[];
+  } : raw as {
+    captured_at?: unknown;
+    host?: { platform?: unknown; hostname?: unknown; arch?: unknown };
+    samples?: unknown[];
+    unavailable_metrics?: unknown[];
+  };
+  const generatedAt = typeof data.captured_at === "string" ? data.captured_at : nowIso();
+  const samples = Array.isArray(data.samples) ? data.samples.flatMap((entry): SystemTelemetryMetricSample[] => {
+    if (!entry || typeof entry !== "object") return [];
+    const sampleEntry = entry as {
+      metric_key?: unknown;
+      value?: unknown;
+      unit?: unknown;
+      captured_at?: unknown;
+      confidence?: unknown;
+      source?: unknown;
+    };
+    if (typeof sampleEntry.metric_key !== "string" || typeof sampleEntry.unit !== "string") return [];
+    const value = sampleEntry.value;
+    if (value !== null && !["number", "string", "boolean"].includes(typeof value)) return [];
+    return [{
+      key: sampleEntry.metric_key,
+      value: value as number | string | boolean | null,
+      unit: sampleEntry.unit as SystemTelemetryMetricSample["unit"],
+      capturedAt: typeof sampleEntry.captured_at === "string" ? sampleEntry.captured_at : generatedAt,
+      availability: "available",
+      quality: "ok",
+      source: {
+        adapter: "signed_host",
+        confidence: hostConfidence(sampleEntry.confidence),
+        detail: typeof sampleEntry.source === "string" ? sampleEntry.source : undefined,
+      },
+    }];
+  }) : [];
+  const sampledKeys = new Set(samples.map((entry) => entry.key));
+  const unavailable = new Set<string>();
+  for (const entry of Array.isArray(data.unavailable_metrics) ? data.unavailable_metrics : []) {
+    if (typeof entry === "string") unavailable.add(entry);
+    else if (entry && typeof entry === "object" && typeof (entry as { metric_key?: unknown }).metric_key === "string") unavailable.add((entry as { metric_key: string }).metric_key);
+  }
+  for (const metric of listSystemTelemetryMetrics()) {
+    if (!sampledKeys.has(metric.key) && unavailable.size === 0) unavailable.add(metric.key);
+  }
+  return {
+    schemaVersion: 1,
+    generatedAt,
+    host: {
+      platform: typeof data.host?.platform === "string" ? data.host.platform : os.platform(),
+      arch: typeof data.host?.arch === "string" ? data.host.arch : os.arch(),
+      id: "local",
+    },
+    policy: {
+      defaultAgentAccess: "safe_read",
+      sensitiveRequiresGrant: true,
+      controlsRequireSignedHostBroker: true,
+    },
+    samples,
+    unavailableMetrics: [...unavailable],
+  };
+}
+
+async function collectHostSnapshot(flags: Record<string, string>): Promise<SystemTelemetrySnapshot> {
+  const command = hostTelemetryCommand(flags);
+  if (!command) {
+    throw new CliHandledError("host_snapshot_unavailable", "Missing --host-command or CLAW_SYSTEM_TELEMETRY_HOST_COMMAND for system snapshot --source host.", CLI_EXIT_USAGE);
+  }
+  const [executable, ...prefixArgs] = command;
+  try {
+    const { stdout } = await execFileAsync(executable, [...prefixArgs, "system", "telemetry", "snapshot", "--json"], {
+      env: process.env,
+      maxBuffer: 4 * 1024 * 1024,
+    });
+    return normalizeHostTelemetrySnapshot(JSON.parse(stdout));
+  } catch (error) {
+    if (error instanceof CliHandledError) throw error;
+    const stdout = typeof (error as { stdout?: unknown }).stdout === "string" ? (error as { stdout: string }).stdout : "";
+    if (stdout.trim()) return normalizeHostTelemetrySnapshot(JSON.parse(stdout));
+    const message = error instanceof Error ? error.message : String(error);
+    throw new CliHandledError("host_snapshot_failed", `Signed host telemetry snapshot failed: ${message}`, CLI_EXIT_USAGE);
+  }
+}
+
+async function executeHostSystemControl(input: {
+  id: string;
+  flags: Record<string, string>;
+}): Promise<unknown> {
+  const command = hostTelemetryCommand(input.flags);
+  if (!command) {
+    throw new CliHandledError("host_control_unavailable", "Missing --host-command or CLAW_SYSTEM_TELEMETRY_HOST_COMMAND for system controls execute.", CLI_EXIT_USAGE);
+  }
+  const [executable, ...prefixArgs] = command;
+  const args = [
+    ...prefixArgs,
+    "system",
+    "controls",
+    "execute",
+    "--control-id",
+    input.id,
+    "--json",
+  ];
+  for (const [flag, value] of [
+    ["target", input.flags.target],
+    ["value", input.flags.value],
+    ["reason", input.flags.reason],
+    ["actor-kind", input.flags["actor-kind"] ?? input.flags.actorKind],
+    ["actor-id", input.flags["actor-id"] ?? input.flags.actorId],
+    ["actor-role", input.flags["actor-role"] ?? input.flags.actorRole],
+    ["confirm", input.flags.confirm ?? input.flags.approved],
+    ["dry-run", input.flags["dry-run"] ?? input.flags.dryRun],
+  ] as Array<[string, string | undefined]>) {
+    if (value !== undefined) args.splice(args.length - 1, 0, `--${flag}`, value);
+  }
+  try {
+    const { stdout } = await execFileAsync(executable, args, {
+      env: process.env,
+      maxBuffer: 4 * 1024 * 1024,
+    });
+    return JSON.parse(stdout) as unknown;
+  } catch (error) {
+    const stdout = typeof (error as { stdout?: unknown }).stdout === "string" ? (error as { stdout: string }).stdout : "";
+    if (stdout.trim()) return JSON.parse(stdout) as unknown;
+    const message = error instanceof Error ? error.message : String(error);
+    throw new CliHandledError("host_control_failed", `Signed host system control failed: ${message}`, CLI_EXIT_USAGE);
+  }
+}
+
+async function collectSystemTelemetrySnapshot(flags: Record<string, string>): Promise<SystemTelemetrySnapshot> {
+  return requestedSnapshotSource(flags) === "host" ? await collectHostSnapshot(flags) : collectSafeLocalSnapshot();
+}
+
 function collectSafeLocalSnapshot(): SystemTelemetrySnapshot {
   const totalMemory = os.totalmem();
   const freeMemory = os.freemem();
@@ -822,6 +998,46 @@ function readMonitorHistory(metricKey: string, rangeMs: number, flags: Record<st
   }
 }
 
+function historyChartPayload(input: {
+  metricKey: string;
+  unit: string;
+  samples: ReturnType<typeof readMonitorHistory>["samples"];
+  rollups: ReturnType<typeof readMonitorHistory>["rollups"];
+}): {
+  kind: "line";
+  metricKey: string;
+  unit: string;
+  source: "metric_samples" | "metric_rollups" | "empty";
+  points: Array<{ t: number; value: number; sourceId: string; count?: number }>;
+  empty: boolean;
+} {
+  const samplePoints = input.samples
+    .filter((sample) => typeof sample.value === "number")
+    .map((sample) => ({
+      t: sample.capturedAt,
+      value: sample.value as number,
+      sourceId: sample.sourceId,
+    }));
+  const rollupPoints = input.rollups
+    .filter((rollup) => typeof rollup.avgValue === "number")
+    .map((rollup) => ({
+      t: rollup.bucketStartAt,
+      value: rollup.avgValue as number,
+      sourceId: rollup.sourceId,
+      count: rollup.count,
+    }));
+  const source = samplePoints.length > 0 ? "metric_samples" : rollupPoints.length > 0 ? "metric_rollups" : "empty";
+  const points = source === "metric_samples" ? samplePoints : source === "metric_rollups" ? rollupPoints : [];
+  return {
+    kind: "line",
+    metricKey: input.metricKey,
+    unit: input.unit,
+    source,
+    points,
+    empty: points.length === 0,
+  };
+}
+
 function writeHuman(context: CliContext, value: unknown): void {
   context.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 }
@@ -837,12 +1053,12 @@ export async function runSystemCli(input: {
 }): Promise<number> {
   const [, command, subcommand] = input.positionals;
   if (!command || command === "help") {
-    input.context.stdout.write(`Usage: ${input.binName} system snapshot|metrics|history|watch|rules|widgets|providers|capabilities [options]\n`);
+    input.context.stdout.write(`Usage: ${input.binName} system snapshot|metrics|history|watch|rules|widgets|providers|controls|capabilities [options]\n`);
     return CLI_EXIT_OK;
   }
 
   if (command === "snapshot") {
-    const snapshot = collectSafeLocalSnapshot();
+    const snapshot = await collectSystemTelemetrySnapshot(input.flags);
     const record = parseBoolean(input.flags.record, false);
     const payload = record ? {
       ...snapshot,
@@ -882,6 +1098,12 @@ export async function runSystemCli(input: {
       samples: history.samples,
       rollups: history.rollups,
       incidents: history.incidents,
+      chart: historyChartPayload({
+        metricKey,
+        unit: metric.unit,
+        samples: history.samples,
+        rollups: history.rollups,
+      }),
     };
     if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "system", payload, { subcommand: "history" });
     else writeHuman(input.context, payload);
@@ -892,7 +1114,7 @@ export async function runSystemCli(input: {
     const intervalMs = parsePositiveInteger(input.flags.interval, 1_000, "--interval");
     const count = parsePositiveInteger(input.flags.count, Number.POSITIVE_INFINITY, "--count");
     for (let emitted = 0; emitted < count; emitted += 1) {
-      const snapshot = collectSafeLocalSnapshot();
+      const snapshot = await collectSystemTelemetrySnapshot(input.flags);
       if (input.wantsJson) writeJsonLine(input.context.stdout, { ok: true, data: snapshot, meta: { schemaVersion: 1, canonicalCommand: "system", subcommand: "watch", intervalMs } });
       else writeHuman(input.context, snapshot);
       if (emitted + 1 < count) await sleep(intervalMs);
@@ -971,16 +1193,67 @@ export async function runSystemCli(input: {
   }
 
   if (command === "providers") {
-    if (subcommand && subcommand !== "list") throw new CliHandledError("usage_error", `Usage: ${input.binName} system providers list`, CLI_EXIT_USAGE);
-    const payload = {
-      providers: listSystemTelemetryProviders().map((provider) => ({
-        ...provider,
-        metrics: [...provider.metricKeys],
-      })),
-    };
-    if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "system", payload, { subcommand: "providers list" });
-    else writeHuman(input.context, payload);
-    return CLI_EXIT_OK;
+    if (!subcommand || subcommand === "list") {
+      const payload = {
+        providers: listSystemTelemetryProviders().map((provider) => ({
+          ...provider,
+          metrics: [...provider.metricKeys],
+        })),
+      };
+      if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "system", payload, { subcommand: "providers list" });
+      else writeHuman(input.context, payload);
+      return CLI_EXIT_OK;
+    }
+    if (subcommand === "plan") {
+      const id = input.positionals[3] ?? input.flags.id;
+      if (!id) throw new CliHandledError("usage_error", `Usage: ${input.binName} system providers plan <provider-id> [--credential-ref <ref>]`, CLI_EXIT_USAGE);
+      const provider = findSystemTelemetryProvider(id);
+      if (!provider) throw new CliHandledError("unknown_provider", `Unknown system provider: ${id}`, CLI_EXIT_USAGE);
+      const payload = createSystemTelemetryProviderPlan({
+        provider,
+        credentialRef: input.flags["credential-ref"] ?? input.flags.credentialRef,
+        reason: input.flags.reason,
+      });
+      if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "system", payload, { subcommand: "providers plan" });
+      else writeHuman(input.context, payload);
+      return CLI_EXIT_OK;
+    }
+    throw new CliHandledError("usage_error", `Usage: ${input.binName} system providers list|plan`, CLI_EXIT_USAGE);
+  }
+
+  if (command === "controls") {
+    if (!subcommand || subcommand === "list") {
+      const payload = { controls: listSystemTelemetryControlActions(), mutatesHardware: false, execution: "plan_first_signed_host_only" };
+      if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "system", payload, { subcommand: "controls list" });
+      else writeHuman(input.context, payload);
+      return CLI_EXIT_OK;
+    }
+    if (subcommand === "plan") {
+      const id = input.positionals[3] ?? input.flags.id;
+      if (!id) throw new CliHandledError("usage_error", `Usage: ${input.binName} system controls plan <control-id> [--target <id>] [--value <value>]`, CLI_EXIT_USAGE);
+      const action = findSystemTelemetryControlAction(id);
+      if (!action) throw new CliHandledError("unknown_control", `Unknown system control: ${id}`, CLI_EXIT_USAGE);
+      const payload = createSystemTelemetryControlPlan({
+        action,
+        target: input.flags.target,
+        value: input.flags.value,
+        reason: input.flags.reason,
+      });
+      if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "system", payload, { subcommand: "controls plan" });
+      else writeHuman(input.context, payload);
+      return CLI_EXIT_OK;
+    }
+    if (subcommand === "execute") {
+      const id = input.positionals[3] ?? input.flags.id;
+      if (!id) throw new CliHandledError("usage_error", `Usage: ${input.binName} system controls execute <control-id> --value <value> --host-command <path>`, CLI_EXIT_USAGE);
+      const action = findSystemTelemetryControlAction(id);
+      if (!action) throw new CliHandledError("unknown_control", `Unknown system control: ${id}`, CLI_EXIT_USAGE);
+      const response = await executeHostSystemControl({ id, flags: input.flags });
+      if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "system", { control: action, response }, { subcommand: "controls execute" });
+      else writeHuman(input.context, { control: action, response });
+      return CLI_EXIT_OK;
+    }
+    throw new CliHandledError("usage_error", `Usage: ${input.binName} system controls list|plan|execute`, CLI_EXIT_USAGE);
   }
 
   return CLI_EXIT_USAGE;

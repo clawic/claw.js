@@ -12,7 +12,10 @@ import type { MCPExposedTool } from "./types.ts";
 import type { MacSignedHostBridge } from "./mac-signed-host-bridge.ts";
 import {
   collectMcpSystemTelemetrySnapshot,
+  mcpSystemTelemetryControlPlanPayload,
+  mcpSystemTelemetryControlsPayload,
   mcpSystemTelemetryMetricsPayload,
+  mcpSystemTelemetryProviderPlanPayload,
   mcpSystemTelemetryProvidersPayload,
   mcpSystemTelemetryWidgetsPayload,
   readMcpSystemTelemetryHistory,
@@ -199,6 +202,52 @@ export function defaultExposedTools(options: DefaultExposedToolsOptions = {}): M
       description: "Lists mock, offline and live provider slots for system and context telemetry.",
       inputSchema: { type: "object", properties: {}, additionalProperties: false },
       handler: async () => mcpSystemTelemetryProvidersPayload(),
+    },
+    {
+      name: "system.provider_plan",
+      description: "Creates a fail-closed plan for connecting a live system context provider.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          providerId: { type: "string" },
+          credentialRef: { type: "string" },
+          reason: { type: "string" },
+        },
+        required: ["providerId"],
+        additionalProperties: false,
+      },
+      handler: async (args) => mcpSystemTelemetryProviderPlanPayload({
+        providerId: String(args.providerId ?? ""),
+        credentialRef: typeof args.credentialRef === "string" ? args.credentialRef : undefined,
+        reason: typeof args.reason === "string" ? args.reason : undefined,
+      }),
+    },
+    {
+      name: "system.controls",
+      description: "Lists plan-first system control contracts without executing hardware mutations.",
+      inputSchema: { type: "object", properties: {}, additionalProperties: false },
+      handler: async () => mcpSystemTelemetryControlsPayload(),
+    },
+    {
+      name: "system.control_plan",
+      description: "Creates a fail-closed signed-host plan for a system control action.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          controlId: { type: "string" },
+          target: { type: "string" },
+          value: { type: "string" },
+          reason: { type: "string" },
+        },
+        required: ["controlId"],
+        additionalProperties: false,
+      },
+      handler: async (args) => mcpSystemTelemetryControlPlanPayload({
+        controlId: String(args.controlId ?? ""),
+        target: typeof args.target === "string" ? args.target : undefined,
+        value: typeof args.value === "string" ? args.value : undefined,
+        reason: typeof args.reason === "string" ? args.reason : undefined,
+      }),
     },
     {
       name: "system.history",

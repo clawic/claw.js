@@ -143,6 +143,9 @@ describe("MCP connector control plane", () => {
       assert.equal(toolNames.includes("system.metrics"), true);
       assert.equal(toolNames.includes("system.widgets"), true);
       assert.equal(toolNames.includes("system.providers"), true);
+      assert.equal(toolNames.includes("system.provider_plan"), true);
+      assert.equal(toolNames.includes("system.controls"), true);
+      assert.equal(toolNames.includes("system.control_plan"), true);
       assert.equal(toolNames.includes("system.history"), true);
 
       const snapshot = await app.inject({
@@ -184,6 +187,51 @@ describe("MCP connector control plane", () => {
       });
       assert.equal(providers.statusCode, 200);
       assert.equal(providers.json().result.content.providers.some((entry: { kind: string; mode: string }) => entry.kind === "weather" && entry.mode === "mock"), true);
+
+      const providerPlan = await app.inject({
+        method: "POST",
+        url: "/v1/mcp/expose/rpc",
+        payload: {
+          jsonrpc: "2.0",
+          id: 45,
+          method: "tools/call",
+          params: { name: "system.provider_plan", arguments: { providerId: "context.weather.live", reason: "test-plan" } },
+        },
+      });
+      assert.equal(providerPlan.statusCode, 200);
+      assert.equal(providerPlan.json().result.content.provider.metrics.includes("context.weather.temperature"), true);
+      assert.equal(providerPlan.json().result.content.willConnect, false);
+      assert.equal(providerPlan.json().result.content.broker.failClosed, true);
+      assert.equal(providerPlan.json().result.content.steps.some((entry: { id: string; status: string }) => entry.id === "connect_provider" && entry.status === "blocked"), true);
+
+      const controls = await app.inject({
+        method: "POST",
+        url: "/v1/mcp/expose/rpc",
+        payload: {
+          jsonrpc: "2.0",
+          id: 5,
+          method: "tools/call",
+          params: { name: "system.controls", arguments: {} },
+        },
+      });
+      assert.equal(controls.statusCode, 200);
+      assert.equal(controls.json().result.content.mutatesHardware, false);
+      assert.equal(controls.json().result.content.controls.some((entry: { id: string; requiresSignedHostBroker: boolean }) => entry.id === "system.power.sleep" && entry.requiresSignedHostBroker), true);
+
+      const plan = await app.inject({
+        method: "POST",
+        url: "/v1/mcp/expose/rpc",
+        payload: {
+          jsonrpc: "2.0",
+          id: 6,
+          method: "tools/call",
+          params: { name: "system.control_plan", arguments: { controlId: "system.audio.set_output_volume", target: "default", value: "35" } },
+        },
+      });
+      assert.equal(plan.statusCode, 200);
+      assert.equal(plan.json().result.content.willExecute, false);
+      assert.equal(plan.json().result.content.broker.failClosed, true);
+      assert.equal(plan.json().result.content.receipt.auditEvent, "system.telemetry.control.audio.set_output_volume");
     } finally {
       await app.close();
     }
@@ -226,6 +274,38 @@ describe("MCP connector control plane", () => {
       assert.equal(providers.statusCode, 200);
       assert.equal(providers.json().providers.some((entry: { kind: string; status: string }) => entry.kind === "custom_metric" && entry.status === "ready"), true);
 
+      const providerPlan = await app.inject({
+        method: "POST",
+        url: "/v1/system/providers/plan",
+        headers: { authorization: `Bearer ${config.sharedSecret}` },
+        payload: { providerId: "context.weather.live", reason: "test-plan" },
+      });
+      assert.equal(providerPlan.statusCode, 200);
+      assert.equal(providerPlan.json().provider.metrics.includes("context.weather.temperature"), true);
+      assert.equal(providerPlan.json().request.reason, "test-plan");
+      assert.equal(providerPlan.json().willConnect, false);
+      assert.equal(providerPlan.json().steps.some((entry: { id: string; status: string }) => entry.id === "resolve_credential_ref" && entry.status === "blocked"), true);
+
+      const controls = await app.inject({
+        method: "GET",
+        url: "/v1/system/controls",
+        headers: { authorization: `Bearer ${config.sharedSecret}` },
+      });
+      assert.equal(controls.statusCode, 200);
+      assert.equal(controls.json().mutatesHardware, false);
+      assert.equal(controls.json().controls.some((entry: { family: string }) => entry.family === "display"), true);
+
+      const controlPlan = await app.inject({
+        method: "POST",
+        url: "/v1/system/controls/plan",
+        headers: { authorization: `Bearer ${config.sharedSecret}` },
+        payload: { controlId: "system.display.set_brightness", target: "main", value: "70", reason: "test-plan" },
+      });
+      assert.equal(controlPlan.statusCode, 200);
+      assert.equal(controlPlan.json().request.reason, "test-plan");
+      assert.equal(controlPlan.json().willExecute, false);
+      assert.equal(controlPlan.json().steps.some((entry: { id: string; status: string }) => entry.id === "execute_native_action" && entry.status === "blocked"), true);
+
       const history = await app.inject({
         method: "GET",
         url: `/v1/system/history/system.memory.used?range=1h&monitorDb=${encodeURIComponent(monitorDb)}`,
@@ -235,6 +315,14 @@ describe("MCP connector control plane", () => {
       assert.equal(history.json().metric.key, "system.memory.used");
       assert.equal(history.json().retention.status, "empty");
       assert.equal(history.json().samples.length, 0);
+      assert.deepEqual(history.json().chart, {
+        kind: "line",
+        metricKey: "system.memory.used",
+        unit: "bytes",
+        source: "empty",
+        points: [],
+        empty: true,
+      });
       assert.equal(fs.existsSync(monitorDb), false);
     } finally {
       await app.close();

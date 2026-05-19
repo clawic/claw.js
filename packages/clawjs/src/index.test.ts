@@ -332,7 +332,7 @@ test("runCli exposes the evolution operator surface", async () => {
   assert.equal(receiptPayload.receipt.notes.some((note) => note.includes("/Users/") || note.includes("prompt:")), false);
 });
 
-test("runCli exposes system telemetry snapshot, metrics, history, rules, widgets and providers", async () => {
+test("runCli exposes system telemetry snapshot, metrics, history, rules, widgets, providers and controls", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-system-telemetry-cli-"));
   const monitorDb = path.join(workspaceRoot, "monitor.sqlite");
   const snapshot = await runCliCapture(["system", "snapshot", "--json"], process.cwd());
@@ -355,13 +355,14 @@ test("runCli exposes system telemetry snapshot, metrics, history, rules, widgets
 
   const history = await runCliCapture(["system", "history", "system.cpu.load1", "--range", "1h", "--monitor-db", monitorDb, "--json"], process.cwd());
   assert.equal(history.code, CLI_EXIT_OK);
-  const historyPayload = parseCliJsonPayload<{ retention: { store: string; dbPath: string; status: string; rawPolicy: string; rollups: boolean }; samples: unknown[] }>(history.stdout);
+  const historyPayload = parseCliJsonPayload<{ retention: { store: string; dbPath: string; status: string; rawPolicy: string; rollups: boolean }; samples: unknown[]; chart: { kind: string; source: string; empty: boolean; points: unknown[] } }>(history.stdout);
   assert.equal(historyPayload.retention.store, "monitor.sqlite");
   assert.equal(historyPayload.retention.dbPath, monitorDb);
   assert.equal(historyPayload.retention.status, "empty");
   assert.equal(historyPayload.retention.rawPolicy, "short_local");
   assert.equal(historyPayload.retention.rollups, true);
   assert.deepEqual(historyPayload.samples, []);
+  assert.deepEqual(historyPayload.chart, { kind: "line", source: "empty", empty: true, points: [], metricKey: "system.cpu.load1", unit: "count" });
   assert.equal(fs.existsSync(monitorDb), false);
 
   const rules = await runCliCapture(["system", "rules", "list", "--json"], process.cwd());
@@ -376,10 +377,68 @@ test("runCli exposes system telemetry snapshot, metrics, history, rules, widgets
 
   const providers = await runCliCapture(["system", "providers", "list", "--json"], process.cwd());
   assert.equal(providers.code, CLI_EXIT_OK);
-  const providerPayload = parseCliJsonPayload<{ providers: Array<{ id: string; kind: string; mode: string; status: string }> }>(providers.stdout);
+  const providerPayload = parseCliJsonPayload<{ providers: Array<{ id: string; kind: string; mode: string; status: string; metrics?: string[] }> }>(providers.stdout);
   assert.equal(providerPayload.providers.some((provider) => provider.kind === "weather" && provider.mode === "mock" && provider.status === "ready"), true);
   assert.equal(providerPayload.providers.some((provider) => provider.kind === "weather" && provider.mode === "live" && provider.status === "external_pending"), true);
-  assert.equal(providerPayload.providers.some((provider) => provider.kind === "agent_run" && provider.id === "context.agent-runs.offline"), true);
+  assert.equal(providerPayload.providers.some((provider) => provider.kind === "hardware_sensor" && provider.id === "system.sensors.signed" && provider.status === "external_pending"), true);
+  assert.equal(providerPayload.providers.some((provider) => provider.kind === "agent_run" && provider.id === "context.agent-runs.offline" && provider.metrics?.includes("context.agent_runs.active")), true);
+
+  const providerPlan = await runCliCapture(["system", "providers", "plan", "context.weather.live", "--reason", "test-plan", "--json"], process.cwd());
+  assert.equal(providerPlan.code, CLI_EXIT_OK);
+  const providerPlanPayload = parseCliJsonPayload<{
+    status: string;
+    willConnect: boolean;
+    provider: { id: string; mode: string; metrics?: string[]; metricKeys?: unknown };
+    broker: { status: string; failClosed: boolean };
+    policy: { requiredGrants: string[]; credentialRefRequired: boolean; networkAccess: string };
+    steps: Array<{ id: string; status: string; owner: string }>;
+    receipt: { status: string; auditEvent: string };
+    externalPending: boolean;
+  }>(providerPlan.stdout);
+  assert.equal(providerPlanPayload.status, "planned");
+  assert.equal(providerPlanPayload.willConnect, false);
+  assert.equal(providerPlanPayload.provider.id, "context.weather.live");
+  assert.equal(providerPlanPayload.provider.mode, "live");
+  assert.equal(providerPlanPayload.provider.metrics?.includes("context.weather.temperature"), true);
+  assert.equal(Array.isArray(providerPlanPayload.provider.metricKeys), false);
+  assert.equal(providerPlanPayload.broker.status, "external_pending");
+  assert.equal(providerPlanPayload.broker.failClosed, true);
+  assert.equal(providerPlanPayload.policy.requiredGrants.includes("weather.location.read"), true);
+  assert.equal(providerPlanPayload.policy.credentialRefRequired, true);
+  assert.equal(providerPlanPayload.policy.networkAccess, "blocked_until_granted");
+  assert.equal(providerPlanPayload.steps.some((step) => step.id === "resolve_credential_ref" && step.status === "blocked" && step.owner === "provider_broker"), true);
+  assert.equal(providerPlanPayload.steps.some((step) => step.id === "connect_provider" && step.status === "blocked" && step.owner === "provider_broker"), true);
+  assert.equal(providerPlanPayload.receipt.status, "not_issued");
+  assert.equal(providerPlanPayload.receipt.auditEvent, "system.telemetry.provider.weather.live");
+  assert.equal(providerPlanPayload.externalPending, true);
+
+  const sensorProviderPlan = await runCliCapture(["system", "providers", "plan", "system.sensors.signed", "--reason", "sensor-validation", "--json"], process.cwd());
+  assert.equal(sensorProviderPlan.code, CLI_EXIT_OK);
+  const sensorProviderPlanPayload = parseCliJsonPayload<{
+    willConnect: boolean;
+    provider: { id: string; kind: string; metrics?: string[]; metricKeys?: unknown };
+    policy: { requiredGrants: string[]; credentialRefRequired: boolean };
+    steps: Array<{ id: string; status: string }>;
+    receipt: { auditEvent: string };
+  }>(sensorProviderPlan.stdout);
+  assert.equal(sensorProviderPlanPayload.willConnect, false);
+  assert.equal(sensorProviderPlanPayload.provider.id, "system.sensors.signed");
+  assert.equal(sensorProviderPlanPayload.provider.kind, "hardware_sensor");
+  assert.equal(sensorProviderPlanPayload.provider.metrics?.includes("system.sensor.temperature"), true);
+  assert.equal(sensorProviderPlanPayload.provider.metrics?.includes("system.sensor.fan_speed"), true);
+  assert.equal(Array.isArray(sensorProviderPlanPayload.provider.metricKeys), false);
+  assert.equal(sensorProviderPlanPayload.policy.requiredGrants.includes("system.sensor.read"), true);
+  assert.equal(sensorProviderPlanPayload.policy.credentialRefRequired, false);
+  assert.equal(sensorProviderPlanPayload.steps.some((step) => step.id === "resolve_credential_ref" && step.status === "skipped"), true);
+  assert.equal(sensorProviderPlanPayload.steps.some((step) => step.id === "connect_provider" && step.status === "blocked"), true);
+  assert.equal(sensorProviderPlanPayload.receipt.auditEvent, "system.telemetry.provider.hardware_sensor.live");
+
+  const controls = await runCliCapture(["system", "controls", "list", "--json"], process.cwd());
+  assert.equal(controls.code, CLI_EXIT_OK);
+  const controlsPayload = parseCliJsonPayload<{ controls: Array<{ id: string; family: string; requiresSignedHostBroker: boolean; requiredGrants: string[] }>; mutatesHardware: boolean }>(controls.stdout);
+  assert.equal(controlsPayload.mutatesHardware, false);
+  assert.equal(controlsPayload.controls.some((control) => control.id === "system.fan.set_speed" && control.requiresSignedHostBroker), true);
+  assert.equal(controlsPayload.controls.some((control) => control.family === "audio" && control.requiredGrants.includes("system.audio.control")), true);
 
   const watch = await runCliCapture(["system", "watch", "--interval", "1", "--count", "2", "--json"], process.cwd());
   assert.equal(watch.code, CLI_EXIT_OK);
@@ -387,6 +446,116 @@ test("runCli exposes system telemetry snapshot, metrics, history, rules, widgets
   assert.equal(watchLines.length, 2);
   assert.equal(watchLines.every((line) => line.ok && line.meta.intervalMs === 1), true);
   assert.equal(watchLines.every((line) => line.data.samples.some((sample) => sample.key === "system.memory.used")), true);
+});
+
+test("runCli plans system controls without executing hardware mutations", async () => {
+  const plan = await runCliCapture([
+    "system", "controls", "plan", "system.display.set_brightness",
+    "--target", "main",
+    "--value", "70",
+    "--reason", "test-plan",
+    "--json",
+  ], process.cwd());
+  assert.equal(plan.code, CLI_EXIT_OK);
+  const payload = parseCliJsonPayload<{
+    status: string;
+    willExecute: boolean;
+    action: { id: string; requiresSignedHostBroker: boolean; requiresConfirmation: boolean };
+    request: { target: string | null; value: string | null; reason: string };
+    broker: { required: boolean; status: string; failClosed: boolean };
+    policy: { requiredGrants: string[]; sensitiveDetailRedacted: boolean };
+    steps: Array<{ id: string; status: string; owner: string }>;
+    receipt: { required: boolean; status: string; auditEvent: string };
+    externalPending: boolean;
+  }>(plan.stdout);
+  assert.equal(payload.status, "planned");
+  assert.equal(payload.willExecute, false);
+  assert.equal(payload.action.id, "system.display.set_brightness");
+  assert.equal(payload.action.requiresSignedHostBroker, true);
+  assert.equal(payload.action.requiresConfirmation, false);
+  assert.deepEqual(payload.request, { target: "main", value: "70", reason: "test-plan" });
+  assert.equal(payload.broker.required, true);
+  assert.equal(payload.broker.status, "external_pending");
+  assert.equal(payload.broker.failClosed, true);
+  assert.equal(payload.policy.requiredGrants.includes("system.display.control"), true);
+  assert.equal(payload.policy.sensitiveDetailRedacted, true);
+  assert.equal(payload.steps.some((step) => step.id === "execute_native_action" && step.status === "blocked" && step.owner === "signed_host_broker"), true);
+  assert.equal(payload.receipt.required, true);
+  assert.equal(payload.receipt.status, "not_issued");
+  assert.equal(payload.receipt.auditEvent, "system.telemetry.control.display.set_brightness");
+  assert.equal(payload.externalPending, true);
+});
+
+test("runCli executes system controls through configured signed host", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-system-control-host-"));
+  const hostCommand = path.join(workspaceRoot, "host-control.js");
+  fs.writeFileSync(hostCommand, `#!/usr/bin/env node
+const args = process.argv.slice(2);
+const value = args[args.indexOf("--value") + 1];
+const controlId = args[args.indexOf("--control-id") + 1];
+const dryRun = args.includes("--dry-run") && args[args.indexOf("--dry-run") + 1] === "true";
+console.log(JSON.stringify({
+  ok: true,
+  data: {
+    schema_version: 1,
+    status: dryRun ? "planned" : "executed",
+    will_execute: !dryRun,
+    external_pending: false,
+    action: { id: controlId, family: "audio", audit_event: "system.telemetry.control.audio.set_output_volume" },
+    request: { target: "default", value, reason: "test-execute" },
+    broker: {
+      required: true,
+      status: dryRun ? "planned" : "executed",
+      mode: "signed_host_plan_first",
+      fail_closed: true,
+      capability_id: "mac.audio.volume"
+    },
+    receipt: {
+      required: true,
+      status: "issued",
+      audit_event: "system.telemetry.control.audio.set_output_volume",
+      mac_receipt_id: "macact_test",
+      mac_audit_id: "macaudit_test",
+      result: dryRun ? "planned" : "ok"
+    }
+  },
+  meta: { adapter: "system-telemetry-control", source: "local_cli", capabilityId: controlId, riskLevel: "low" }
+}));
+`);
+  fs.chmodSync(hostCommand, 0o755);
+
+  const executed = await runCliCapture([
+    "system", "controls", "execute", "system.audio.set_output_volume",
+    "--target", "default",
+    "--value", "35",
+    "--dry-run", "true",
+    "--reason", "test-execute",
+    "--host-command", hostCommand,
+    "--json",
+  ], process.cwd());
+  assert.equal(executed.code, CLI_EXIT_OK, executed.stderr);
+  const payload = parseCliJsonPayload<{
+    control: { id: string; requiresSignedHostBroker: boolean };
+    response: {
+      ok: boolean;
+      data: {
+        status: string;
+        will_execute: boolean;
+        broker: { capability_id: string; fail_closed: boolean };
+        receipt: { status: string; result: string; mac_receipt_id: string };
+      };
+    };
+  }>(executed.stdout);
+  assert.equal(payload.control.id, "system.audio.set_output_volume");
+  assert.equal(payload.control.requiresSignedHostBroker, true);
+  assert.equal(payload.response.ok, true);
+  assert.equal(payload.response.data.status, "planned");
+  assert.equal(payload.response.data.will_execute, false);
+  assert.equal(payload.response.data.broker.capability_id, "mac.audio.volume");
+  assert.equal(payload.response.data.broker.fail_closed, true);
+  assert.equal(payload.response.data.receipt.status, "issued");
+  assert.equal(payload.response.data.receipt.result, "planned");
+  assert.equal(payload.response.data.receipt.mac_receipt_id, "macact_test");
 });
 
 test("runCli records system telemetry snapshots into monitor metric history", async () => {
@@ -422,15 +591,101 @@ test("runCli records system telemetry snapshots into monitor metric history", as
   assert.equal(history.code, CLI_EXIT_OK);
   const historyPayload = parseCliJsonPayload<{
     retention: { status: string; rollupBucketMs: number };
-    samples: Array<{ metricKey: string; sourceId: string; valueType: string; unit: string }>;
+    samples: Array<{ metricKey: string; sourceId: string; valueType: string; unit: string; value: number }>;
     rollups: Array<{ metricKey: string; bucketMs: number; count: number }>;
     incidents: Array<{ ruleId: string; metricKey: string; severity: string; status: string; sampleValue: number }>;
+    chart: { kind: string; source: string; empty: boolean; points: Array<{ value: number; sourceId: string }> };
   }>(history.stdout);
   assert.equal(historyPayload.retention.status, "recorded");
   assert.equal(historyPayload.retention.rollupBucketMs, 60_000);
   assert.equal(historyPayload.samples.some((sample) => sample.metricKey === "system.memory.used" && sample.sourceId === "system.telemetry.local" && sample.valueType === "number" && sample.unit === "bytes"), true);
   assert.equal(historyPayload.rollups.some((rollup) => rollup.metricKey === "system.memory.used" && rollup.bucketMs === 60_000 && rollup.count >= 1), true);
   assert.equal(historyPayload.incidents.some((incident) => incident.ruleId === "memory-any" && incident.metricKey === "system.memory.used" && incident.severity === "warning" && incident.status === "open"), true);
+  assert.equal(historyPayload.chart.kind, "line");
+  assert.equal(historyPayload.chart.source, "metric_samples");
+  assert.equal(historyPayload.chart.empty, false);
+  assert.equal(historyPayload.chart.points.some((point) => point.sourceId === "system.telemetry.local" && typeof point.value === "number"), true);
+});
+
+test("runCli records signed host system telemetry snapshots into monitor metric history", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-system-telemetry-host-history-"));
+  const monitorDb = path.join(workspaceRoot, "monitor.sqlite");
+  const hostCommand = path.join(workspaceRoot, "host-snapshot.js");
+  fs.writeFileSync(hostCommand, `#!/usr/bin/env node
+const capturedAt = new Date().toISOString();
+console.log(JSON.stringify({
+  ok: true,
+  data: {
+    schema_version: 1,
+    captured_at: capturedAt,
+    host: { platform: "macos", hostname: "test-host", processor_count: 12 },
+    samples: [
+      { metric_key: "system.gpu.utilization", value: 42, unit: "percent", captured_at: capturedAt, source: "macos_host", confidence: "experimental" },
+      { metric_key: "system.memory.used", value: 2048, unit: "bytes", captured_at: capturedAt, source: "macos_host", confidence: "observed" },
+      { metric_key: "system.focus.mode", value: "work", unit: "string", captured_at: capturedAt, source: "context_provider", confidence: "provider" }
+    ],
+    unavailable_metrics: [{ metric_key: "system.sensor.temperature" }]
+  }
+}));
+`);
+  fs.chmodSync(hostCommand, 0o755);
+
+  const upsertRule = await runCliCapture([
+    "system", "rules", "upsert", "focus-work",
+    "--metric-key", "system.focus.mode",
+    "--operator", "eq",
+    "--threshold", "work",
+    "--severity", "info",
+    "--workspace", workspaceRoot,
+    "--json",
+  ], process.cwd());
+  assert.equal(upsertRule.code, CLI_EXIT_OK);
+
+  const snapshot = await runCliCapture([
+    "system", "snapshot",
+    "--source", "host",
+    "--host-command", hostCommand,
+    "--record", "true",
+    "--workspace", workspaceRoot,
+    "--monitor-db", monitorDb,
+    "--json",
+  ], process.cwd());
+  assert.equal(snapshot.code, CLI_EXIT_OK, snapshot.stderr);
+  const snapshotPayload = parseCliJsonPayload<{
+    samples: Array<{ key: string; value: number | string; source: { adapter: string; confidence: string } }>;
+    unavailableMetrics: string[];
+    recorded: { sampleCount: number; sourceId: string };
+  }>(snapshot.stdout);
+  assert.equal(snapshotPayload.samples.some((sample) => sample.key === "system.gpu.utilization" && sample.source.adapter === "signed_host" && sample.source.confidence === "experimental"), true);
+  assert.equal(snapshotPayload.samples.some((sample) => sample.key === "system.focus.mode" && sample.value === "work" && sample.source.adapter === "signed_host" && sample.source.confidence === "provider"), true);
+  assert.equal(snapshotPayload.unavailableMetrics.includes("system.sensor.temperature"), true);
+  assert.equal(snapshotPayload.recorded.sourceId, "system.telemetry.local");
+  assert.equal(snapshotPayload.recorded.sampleCount, 3);
+
+  const history = await runCliCapture(["system", "history", "system.gpu.utilization", "--range", "1h", "--monitor-db", monitorDb, "--json"], process.cwd());
+  assert.equal(history.code, CLI_EXIT_OK);
+  const historyPayload = parseCliJsonPayload<{
+    retention: { status: string };
+    samples: Array<{ metricKey: string; sourceId: string; valueType: string; unit: string; value: number }>;
+    chart: { source: string; points: Array<{ value: number }> };
+  }>(history.stdout);
+  assert.equal(historyPayload.retention.status, "recorded");
+  assert.equal(historyPayload.samples.some((sample) => sample.metricKey === "system.gpu.utilization" && sample.sourceId === "system.telemetry.local" && sample.valueType === "number" && sample.unit === "percent" && sample.value === 42), true);
+  assert.equal(historyPayload.chart.source, "metric_samples");
+  assert.equal(historyPayload.chart.points.some((point) => point.value === 42), true);
+
+  const focusHistory = await runCliCapture(["system", "history", "system.focus.mode", "--range", "1h", "--monitor-db", monitorDb, "--json"], process.cwd());
+  assert.equal(focusHistory.code, CLI_EXIT_OK);
+  const focusHistoryPayload = parseCliJsonPayload<{
+    retention: { status: string };
+    samples: Array<{ metricKey: string; sourceId: string; valueType: string; unit: string; value: string }>;
+    rollups: Array<{ metricKey: string; lastValue: string; minValue: number | null; maxValue: number | null; avgValue: number | null }>;
+    incidents: Array<{ ruleId: string; metricKey: string; severity: string; operator: string; threshold: string; sampleValue: string; unit: string }>;
+  }>(focusHistory.stdout);
+  assert.equal(focusHistoryPayload.retention.status, "recorded");
+  assert.equal(focusHistoryPayload.samples.some((sample) => sample.metricKey === "system.focus.mode" && sample.sourceId === "system.telemetry.local" && sample.valueType === "string" && sample.unit === "string" && sample.value === "work"), true);
+  assert.equal(focusHistoryPayload.rollups.some((rollup) => rollup.metricKey === "system.focus.mode" && rollup.lastValue === "work" && rollup.minValue === null && rollup.maxValue === null && rollup.avgValue === null), true);
+  assert.equal(focusHistoryPayload.incidents.some((incident) => incident.ruleId === "focus-work" && incident.metricKey === "system.focus.mode" && incident.severity === "info" && incident.operator === "eq" && incident.threshold === "work" && incident.sampleValue === "work" && incident.unit === "string"), true);
 });
 
 test("runCli applies short local retention to system telemetry samples", async () => {
@@ -447,10 +702,12 @@ test("runCli applies short local retention to system telemetry samples", async (
 
   const history = await runCliCapture(["system", "history", "system.memory.used", "--range", "1h", "--monitor-db", monitorDb, "--json"], process.cwd());
   assert.equal(history.code, CLI_EXIT_OK);
-  const historyPayload = parseCliJsonPayload<{ retention: { status: string }; samples: unknown[]; rollups: Array<{ metricKey: string }> }>(history.stdout);
+  const historyPayload = parseCliJsonPayload<{ retention: { status: string }; samples: unknown[]; rollups: Array<{ metricKey: string }>; chart: { source: string; points: Array<{ value: number; count: number }> } }>(history.stdout);
   assert.equal(historyPayload.retention.status, "empty");
   assert.deepEqual(historyPayload.samples, []);
   assert.equal(historyPayload.rollups.some((rollup) => rollup.metricKey === "system.memory.used"), true);
+  assert.equal(historyPayload.chart.source, "metric_rollups");
+  assert.equal(historyPayload.chart.points.some((point) => typeof point.value === "number" && point.count >= 1), true);
 });
 
 test("runCli persists system telemetry rules and widgets in workspace state", async () => {

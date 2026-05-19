@@ -546,6 +546,7 @@ adds telemetry, metric history, rules, and widget configuration:
 claw system snapshot --json
 claw system snapshot --record true --json
 claw system snapshot --record true --raw-retention 6h --rollup-retention 7d --json
+claw system snapshot --source host --host-command /path/to/claw-host --record true --json
 claw system metrics list --json
 claw system history system.cpu.load1 --range 1h --json
 claw system watch --interval 2000 --jsonl
@@ -556,13 +557,26 @@ claw system widgets list --json
 claw system widgets upsert cpu-menu --metric-key system.cpu.load1 --presentation sparkline --placement menubar --json
 claw system widgets delete cpu-menu --json
 claw system providers list --json
+claw system providers plan context.weather.live --credential-ref secret://weather/local --json
+claw system controls list --json
+claw system controls plan system.display.set_brightness --target main --value 70 --json
+claw system controls execute system.audio.set_output_volume --value 35 --host-command /path/to/claw-host --json
+claw inspect route system.telemetryAgentContext --json
+claw inspect route system.telemetrySignedHostControl --json
+claw inspect route clawix.menuBarSystemIndicators --json
+claw inspect neighbors claw.systemTelemetry --json
 ```
 
 Snapshots expose safe aggregate values by default and mark deeper hardware,
 permissioned, signed-host, or provider-backed metrics as unavailable until a
-validated provider supplies them. `--record true` stores the safe snapshot in
-the local metric store so `history` can return raw samples, minute rollups, and
-rule incidents. Raw sample retention is short by default (`6h`); rollups and
+validated provider supplies them. `--source host` executes a configured signed
+host command (`--host-command`, `--signed-host-command`,
+`CLAW_SYSTEM_TELEMETRY_HOST_COMMAND`, or `CLAW_LIVE_BROKER_COMMAND`), normalizes
+the host snapshot into the same portable contract, and can be combined with
+`--record true`. Recording always writes to the local metric store so `history`
+can return raw samples, minute rollups, rule incidents, and a chart-ready
+`chart` projection from one retention path. Raw sample retention is short by
+default (`6h`); rollups and
 incidents default to `7d` and can be adjusted per write with
 `--raw-retention`, `--rollup-retention`, and `--incident-retention`. The store
 defaults to `~/.claw/data/monitor.sqlite` and can be overridden with
@@ -571,11 +585,47 @@ defaults to `~/.claw/data/monitor.sqlite` and can be overridden with
 configuration under `.claw/data/system-telemetry-state.json`; they do not
 control hardware. `system providers list` exposes mock/offline provider slots
 for weather, build status, local services, agent runs, reminders, calendar, and
-custom context metrics; live providers remain disabled or external-pending until
-configured with explicit grants and credential references. Physical controls,
-sensitive detail, precise location, calendar detail, network identifiers, and
-process detail remain grant/audit
-gated and signed-host brokered.
+custom context metrics, plus the external-pending signed hardware sensor slot
+for `system.sensor.temperature` and `system.sensor.fan_speed`. Live providers remain disabled or
+external-pending until configured with explicit grants and credential
+references. `system providers
+plan <provider-id>` returns the fail-closed provider broker plan for a live
+provider, including required grants, credential reference status, blocked
+network connection, Monitor write step, audit event, and receipt status; it does
+not call the provider or read secret values. The signed hardware sensor slot
+uses `system.sensor.read`, has no credential reference, and remains blocked
+until compatible hardware access is validated by the host. The macOS host
+supplies calendar timing and reminder counts only when the relevant OS
+permission is already granted; it does not trigger permission prompts during
+snapshot collection. Local context providers can also be fed without a live
+service through environment variables or single-value/JSON files: build status
+(`CLAW_CONTEXT_BUILD_STATUS`, `CLAW_CONTEXT_BUILD_STATUS_FILE`), service health
+(`CLAW_CONTEXT_SERVICE_HEALTH`, `CLAW_CONTEXT_SERVICE_HEALTH_FILE`), active
+agent runs (`CLAW_CONTEXT_AGENT_RUNS_ACTIVE`, `CLAW_CONTEXT_AGENT_RUNS_FILE`),
+weather temperature (`CLAW_CONTEXT_WEATHER_TEMPERATURE`,
+`CLAW_CONTEXT_WEATHER_FILE`), focus mode (`CLAW_CONTEXT_FOCUS_MODE`,
+`CLAW_CONTEXT_FOCUS_FILE`), and a custom string metric
+(`CLAW_CONTEXT_CUSTOM_METRIC`, `CLAW_CONTEXT_CUSTOM_METRIC_FILE`). JSON files
+may either contain the metric key or a generic `value` field. `system controls`
+exposes plan-first contracts for fan, power, process, network, display, and
+audio changes. `controls plan` does not execute hardware mutations: it returns
+a signed-host broker plan with required grants, confirmation policy, receipt and
+audit event metadata, and fail-closed execution state. `controls execute`
+requires a configured signed host command. In the current macOS host, audio
+output volume and display brightness map to Mac Control capabilities, run
+through the Mac Action Broker, and issue broker receipts plus audit events;
+unsupported or higher-risk controls return a structured fail-closed host
+response with required grants, confirmation step, blocked native execution,
+receipt status and audit event, then remain external-pending until a dedicated
+provider, confirmation flow, and physical validation are available. Physical
+controls, sensitive detail, precise location, calendar detail, network
+identifiers, and process detail remain grant/audit gated and signed-host
+brokered.
+The surface graph exposes the implementation path through `inspect route`:
+`system.telemetryAgentContext` links `claw system`, MCP, context providers and
+Monitor retention; `system.telemetrySignedHostControl` links plan-first controls
+to the signed host and audit; `clawix.menuBarSystemIndicators` links the macOS
+menu bar indicators to portable widgets and Monitor writes.
 
 Local agent records are managed through the agent-facing data commands. These
 commands write canonical files under `~/.claw/` and project searchable

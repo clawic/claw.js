@@ -1,18 +1,18 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-18T00:00:00.000Z",
+  "generatedAt": "2026-05-19T20:49:04.830Z",
   "sources": {
     "surfaces": "packages/clawjs-core/src/surface-registry.ts",
     "cliCommands": "packages/clawjs-core/src/cli-command-registry.ts"
   },
   "counts": {
-    "surfaces": 911,
+    "surfaces": 917,
     "cliCommands": 159
   },
   "fingerprints": {
-    "surfaces": "fnv1a32:85c466c4",
-    "cliCommands": "fnv1a32:aefe633a",
-    "combined": "fnv1a32:886dbc82"
+    "surfaces": "fnv1a32:3efdd826",
+    "cliCommands": "fnv1a32:32e714a3",
+    "combined": "fnv1a32:83d151e5"
   },
   "surfaces": [
     {
@@ -847,6 +847,24 @@
       "stability": "v1"
     },
     {
+      "id": "claw.api.system.controls",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /v1/system/controls",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.api.system.controlsPlan",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "POST /v1/system/controls/plan",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
       "id": "claw.api.system.history",
       "owner": "claw",
       "kind": "apiRoute",
@@ -870,6 +888,15 @@
       "kind": "apiRoute",
       "parentId": "claw.contracts.api",
       "value": "GET /v1/system/providers",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.api.system.providersPlan",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "POST /v1/system/providers/plan",
       "surfaceClass": "api",
       "stability": "v1"
     },
@@ -7277,6 +7304,22 @@
       "stability": "v1"
     },
     {
+      "id": "claw.systemTelemetry",
+      "owner": "claw",
+      "kind": "root",
+      "path": "system",
+      "surfaceClass": "protocol",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.systemTelemetry.contextProviders",
+      "owner": "claw",
+      "kind": "root",
+      "path": "system/providers",
+      "surfaceClass": "protocol",
+      "stability": "v1"
+    },
+    {
       "id": "claw.transport.iroh",
       "owner": "claw",
       "kind": "root",
@@ -7628,6 +7671,14 @@
       "kind": "folder",
       "parentId": "clawix.home",
       "path": "~/.clawix/tmp"
+    },
+    {
+      "id": "clawix.menuBar.systemIndicators",
+      "owner": "clawix",
+      "kind": "root",
+      "path": "macos/menu-bar/system",
+      "surfaceClass": "protocol",
+      "stability": "v1"
     },
     {
       "id": "clawix.native.app.bundle",
@@ -8791,7 +8842,7 @@
     {
       "name": "system",
       "kind": "canonical",
-      "usage": "system snapshot|metrics list|history|watch|rules|widgets|capabilities",
+      "usage": "system snapshot [--source host]|metrics list|history|watch|rules|widgets|providers|controls|capabilities",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.system.v1"
     },

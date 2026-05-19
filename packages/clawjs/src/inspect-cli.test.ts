@@ -324,6 +324,7 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
     "chat.companionBridge",
     "chat.localDesktop",
     "chat.remoteRelay",
+    "clawix.menuBarSystemIndicators",
     "cli.commandIntentResolution",
     "gateway.headlessAgentHost",
     "gateway.multiTenantAgentService",
@@ -343,11 +344,15 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
     "sync.skills",
     "sync.sqliteResources",
     "sync.workspaceState",
+    "system.telemetryAgentContext",
+    "system.telemetrySignedHostControl",
   ]);
   assert.equal(routeList.find((route) => route.id === "chat.localDesktop")?.steps.every((step) => ["owns", "consumes", "exposes", "brokers"].includes(step.edgeType)), true);
   assert.equal(routeList.find((route) => route.id === "agents.externalSupportAssignment")?.steps.some((step) => step.toId === "claw.support.inbox"), true);
   assert.equal(routeList.find((route) => route.id === "cli.commandIntentResolution")?.steps.every((step) => ["owns", "consumes", "exposes", "brokers"].includes(step.edgeType)), true);
   assert.equal(routeList.find((route) => route.id === "mac.directCliAction")?.steps.some((step) => step.toId === "claw.mac.actionBroker"), true);
+  assert.equal(routeList.find((route) => route.id === "system.telemetryAgentContext")?.steps.some((step) => step.toId === "claw.database.monitor"), true);
+  assert.equal(routeList.find((route) => route.id === "clawix.menuBarSystemIndicators")?.steps.some((step) => step.fromId === "clawix.menuBar.systemIndicators"), true);
 
   const route = await runCliCapture(["inspect", "route", "chat.remoteRelay", "--json"], process.cwd());
   assert.equal(route.code, CLI_EXIT_OK);
@@ -362,6 +367,23 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   assert.equal(commandIntentPayload.id, "cli.commandIntentResolution");
   assert.equal(commandIntentPayload.edges.some((edge) => edge.id === "claw.edge.commands.owns.intentLedger" && edge.type === "owns"), true);
   assert.equal(commandIntentPayload.tests.includes("packages/clawjs/src/cli-commands.test.ts"), true);
+
+  const systemTelemetryRoute = await runCliCapture(["inspect", "route", "system.telemetryAgentContext", "--json"], process.cwd());
+  assert.equal(systemTelemetryRoute.code, CLI_EXIT_OK);
+  const systemTelemetryPayload = parseCliJson<{ id: string; edges: Array<{ id: string; type: string }>; tests: string[]; docs: string[] }>(systemTelemetryRoute.stdout).data;
+  assert.equal(systemTelemetryPayload.id, "system.telemetryAgentContext");
+  assert.equal(systemTelemetryPayload.edges.some((edge) => edge.id === "claw.edge.system.telemetry.owns.monitor" && edge.type === "owns"), true);
+  assert.equal(systemTelemetryPayload.edges.some((edge) => edge.id === "claw.edge.system.telemetry.consumes.contextProviders" && edge.type === "consumes"), true);
+  assert.equal(systemTelemetryPayload.tests.includes("packages/clawjs-mcp/src/control-plane.test.ts"), true);
+  assert.equal(systemTelemetryPayload.docs.includes("docs/api.md"), true);
+
+  const systemNeighbors = await runCliCapture(["inspect", "neighbors", "claw.systemTelemetry", "--json"], process.cwd());
+  assert.equal(systemNeighbors.code, CLI_EXIT_OK);
+  const systemNeighborPayload = parseCliJson<{ neighbors: Array<{ id: string }>; routes: Array<{ id: string }> }>(systemNeighbors.stdout).data;
+  assert.equal(systemNeighborPayload.neighbors.some((node) => node.id === "claw.cli.command.system"), true);
+  assert.equal(systemNeighborPayload.neighbors.some((node) => node.id === "claw.database.monitor"), true);
+  assert.equal(systemNeighborPayload.neighbors.some((node) => node.id === "claw.systemTelemetry.contextProviders"), true);
+  assert.equal(systemNeighborPayload.routes.some((entry) => entry.id === "system.telemetryAgentContext"), true);
 
   const neighbors = await runCliCapture(["inspect", "neighbors", "clawix.bridge.local", "--json"], process.cwd());
   assert.equal(neighbors.code, CLI_EXIT_OK);
@@ -424,7 +446,7 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   assert.equal(remoteInspectPayload.decisionReview.items.some((entry) => entry.qaId === "QA-003" && entry.decisionId === "remote_surface_parity" && entry.conformanceStatus === "must_verify_before_goal_completion"), true);
   assert.equal(remoteInspectPayload.decisionReview.items.some((entry) => entry.qaId === "QA-023" && entry.decisionId === "goal_closure_gate" && entry.conformanceStatus === null), true);
   const expectedRemoteClassifications = expectedRemoteClassificationEntries();
-  assert.equal(remoteInspectPayload.classifications.length, 57);
+  assert.equal(remoteInspectPayload.classifications.length, expectedRemoteClassifications.length);
   assert.deepEqual(
     remoteInspectPayload.classifications.map((entry) => ({ id: entry.id, classification: entry.classification })),
     expectedRemoteClassifications,

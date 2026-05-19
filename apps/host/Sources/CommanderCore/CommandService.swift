@@ -312,9 +312,42 @@ public actor CommandService {
                 adapter: "system-telemetry",
                 source: .framework
             )
+        case ("providers", "list"):
+            return success(
+                data: SystemTelemetry.providersCatalog(),
+                adapter: "system-telemetry",
+                source: .framework
+            )
+        case ("providers", "plan"):
+            return success(
+                data: SystemTelemetry.providerPlan(
+                    providerID: request.arguments["provider_id"] ?? request.arguments["provider-id"] ?? request.arguments["id"],
+                    credentialRef: request.arguments["credential_ref"] ?? request.arguments["credential-ref"],
+                    reason: request.arguments["reason"]
+                ),
+                adapter: "system-telemetry",
+                source: .framework
+            )
         case ("rules", "list"):
             return success(
                 data: SystemTelemetry.rulesCatalog(),
+                adapter: "system-telemetry",
+                source: .framework
+            )
+        case ("controls", "list"):
+            return success(
+                data: SystemTelemetry.controlsCatalog(),
+                adapter: "system-telemetry",
+                source: .framework
+            )
+        case ("controls", "plan"):
+            return success(
+                data: SystemTelemetry.controlPlan(
+                    controlID: request.arguments["control_id"] ?? request.arguments["control-id"] ?? request.arguments["id"],
+                    target: request.arguments["target"],
+                    value: request.arguments["value"],
+                    reason: request.arguments["reason"]
+                ),
                 adapter: "system-telemetry",
                 source: .framework
             )

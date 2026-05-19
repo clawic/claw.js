@@ -240,7 +240,8 @@
       "packages/clawjs-core/src/evolution.ts": 5,
       "packages/clawjs-core/src/index.test.ts": 9,
       "packages/clawjs-core/src/schemas.ts": 1,
-      "packages/clawjs-core/src/surface-registry.ts": 148,
+      "packages/clawjs-core/src/surface-registry.ts": 162,
+      "packages/clawjs-core/src/system-telemetry.ts": 13,
       "packages/clawjs-core/src/types-library-rules.ts": 1,
       "packages/clawjs-index/src/routes/feed.ts": 2,
       "packages/clawjs-index/src/schema/registry.ts": 1,
@@ -259,6 +260,7 @@
       "packages/clawjs/src/cli-report.test.ts": 1,
       "packages/clawjs/src/cli-search-index.test.ts": 1,
       "packages/clawjs/src/cli-search-surface-routes-source.ts": 1,
+      "packages/clawjs/src/index.test.ts": 5,
       "packages/clawjs/src/inspect-cli.test.ts": 3,
       "packages/clawjs/src/inspect-cli.ts": 1,
       "packages/marketplace-agent-policy/tests/policy.test.ts": 5,
@@ -299,6 +301,7 @@
       "docs/adr/0005-canonical-data-catalog.md": 2,
       "docs/adr/0012-domain-surface-registry-db-to-cli.md": 8,
       "docs/adr/0021-dense-data-operating-system.md": 2,
+      "docs/adr/0033-open-standard-official-trust.md": 1,
       "docs/api.md": 2,
       "docs/canonical-data-catalog.md": 2,
       "docs/code-hygiene-baseline.json": 1,
@@ -385,9 +388,9 @@
       ".changeset/search-package.md": 1,
       ".changeset/search-web-ingested-source.md": 1,
       ".changeset/signals-publishable-bridge.md": 1,
-      "RELEASING.md": 3,
       ".changeset/user-model-package.md": 2,
       "CONSTITUTION.md": 4,
+      "RELEASING.md": 3,
       "apps/chat/ios/ClawJS/Services/ChatService.swift": 1,
       "apps/chat/macos/ClawJSMac/Services/ChatService.swift": 1,
       "browser/host/session-manager.ts": 1,
@@ -407,7 +410,6 @@
       "docs/cli.md": 15,
       "docs/code-hygiene-decision-checklist.md": 1,
       "docs/data-storage-boundary.md": 1,
-      "docs/decision-map.md": 1,
       "docs/demo-terminology-note.md": 2,
       "docs/dense-data-completion-audit.md": 2,
       "docs/dense-data-existing-catalog-audit.md": 1,
@@ -921,7 +923,7 @@
       "secrets/src/server/stores.ts": 28
     }
   },
-  "generatedAt": "2026-05-18T22:03:44.534Z",
+  "generatedAt": "2026-05-19T20:49:06.605Z",
   "policy": "Current governance vocabulary debt may shrink without review. Any increase in a tracked path or any new tracked path fails scripts/governance-scope-guard.mjs unless the occurrence is removed or this baseline is deliberately updated with rationale.",
   "schemaVersion": 1,
   "summary": {
@@ -942,20 +944,20 @@
       "occurrences": 6
     },
     "owner_field": {
-      "files": 35,
-      "occurrences": 264
+      "files": 37,
+      "occurrences": 296
     },
     "owner_id": {
       "files": 16,
       "occurrences": 44
     },
     "ownership_relation": {
-      "files": 86,
-      "occurrences": 210
+      "files": 87,
+      "occurrences": 211
     },
     "profile": {
       "files": 210,
-      "occurrences": 1077
+      "occurrences": 1079
     },
     "profileId": {
       "files": 21,
@@ -967,11 +969,11 @@
     },
     "tenant": {
       "files": 136,
-      "occurrences": 653
+      "occurrences": 657
     },
     "tenantId": {
       "files": 141,
-      "occurrences": 2653
+      "occurrences": 2656
     },
     "tenant_id": {
       "files": 23,

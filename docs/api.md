@@ -191,6 +191,33 @@ Permission request calls are signed-host handoffs: without confirmation they
 return `confirmation_required`, and with confirmation the signed host owns the
 native just-in-time prompt and lifecycle recording.
 
+## System Telemetry
+
+System telemetry API routes expose the same safe-read and plan-first surface as
+`claw system`: `/v1/system/snapshot`, `/v1/system/metrics`,
+`/v1/system/widgets`, `/v1/system/providers`, and
+`/v1/system/history/{metricKey}` are read-only. `POST
+/v1/system/providers/plan` creates a fail-closed provider broker plan for live
+context providers; it records required grants, credential reference status,
+blocked network access, Monitor write, receipt, and audit metadata without
+calling the provider or reading secrets. `/v1/system/controls` returns the fan,
+power, process, network, display, and audio control catalog, and `POST
+/v1/system/controls/plan` creates a fail-closed signed-host plan. The plan does
+not execute hardware mutations; it records required grants, confirmation,
+receipt, and audit metadata for the host broker. Host-side execution remains a
+signed-host operation: the macOS broker currently supports audio output volume
+and display brightness through Mac Control, issuing receipts and audit events,
+while unsupported or higher-risk controls return a structured blocked response
+with required grants, confirmation step, blocked native execution, receipt
+status, and audit event before staying external-pending.
+Recorded snapshots and provider samples reuse the Monitor schema instead of a
+parallel store: `metric_sources` identifies the local/system/provider source,
+`metric_samples` stores raw typed values, `metric_rollups` stores compact
+history buckets, and `metric_incidents` stores rule-triggered events for charts
+and agent context. History responses also include a chart-ready `chart` object
+with normalized line points sourced from `metric_samples` first and
+`metric_rollups` when raw samples have already expired.
+
 ## Workspace
 
 ```ts

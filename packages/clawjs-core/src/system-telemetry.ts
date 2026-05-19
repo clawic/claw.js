@@ -11,6 +11,7 @@ export type SystemTelemetryMetricFamily =
   | "audio"
   | "peripheral"
   | "focus"
+  | "notification"
   | "calendar_time"
   | "weather_context"
   | "local_context";
@@ -106,6 +107,7 @@ export interface SystemTelemetryRuleDefinition {
 
 export type SystemTelemetryProviderKind =
   | "weather"
+  | "hardware_sensor"
   | "build_status"
   | "local_service"
   | "agent_run"
@@ -123,6 +125,7 @@ export interface SystemTelemetryProviderDefinition {
   mode: SystemTelemetryProviderMode;
   status: SystemTelemetryProviderStatus;
   metricKeys: string[];
+  metrics?: string[];
   widgetIds: string[];
   capabilities: SystemTelemetrySampleSupport[];
   defaultEnabled: boolean;
@@ -131,6 +134,101 @@ export interface SystemTelemetryProviderDefinition {
   credentialRefRequired: boolean;
   freshnessMs: number;
   description: string;
+}
+
+export interface SystemTelemetryProviderPlanStep {
+  id: string;
+  status: "pending" | "skipped" | "blocked";
+  owner: "provider_broker" | "monitor" | "audit";
+}
+
+export interface SystemTelemetryProviderPlan {
+  schemaVersion: 1;
+  id: string;
+  createdAt: string;
+  status: "planned";
+  willConnect: false;
+  provider: SystemTelemetryProviderDefinition;
+  request: {
+    credentialRef: string | null;
+    reason: string;
+  };
+  broker: {
+    required: true;
+    status: "external_pending";
+    mode: "provider_grant_plan_first";
+    failClosed: true;
+  };
+  policy: {
+    requiredGrants: string[];
+    credentialRefRequired: boolean;
+    privacyTier: SystemTelemetryPrivacyTier;
+    preciseLocationRedacted: true;
+    networkAccess: "blocked_until_granted";
+  };
+  steps: SystemTelemetryProviderPlanStep[];
+  receipt: {
+    required: true;
+    status: "not_issued";
+    auditEvent: string;
+  };
+  externalPending: true;
+}
+
+export type SystemTelemetryControlActionFamily = "fan" | "power" | "process" | "network" | "display" | "audio";
+export type SystemTelemetryControlRiskTier = "safe" | "disruptive" | "critical";
+
+export interface SystemTelemetryControlActionDefinition {
+  id: string;
+  family: SystemTelemetryControlActionFamily;
+  label: string;
+  targetMetricKeys: string[];
+  requiresSignedHostBroker: true;
+  requiresConfirmation: boolean;
+  requiredGrants: string[];
+  riskTier: SystemTelemetryControlRiskTier;
+  availability: SystemTelemetryAvailability;
+  auditEvent: string;
+  description: string;
+}
+
+export interface SystemTelemetryControlPlanStep {
+  id: string;
+  status: "pending" | "skipped" | "blocked";
+  owner: "signed_host_broker";
+}
+
+export interface SystemTelemetryControlPlan {
+  schemaVersion: 1;
+  id: string;
+  createdAt: string;
+  status: "planned";
+  willExecute: false;
+  action: SystemTelemetryControlActionDefinition;
+  request: {
+    target: string | null;
+    value: string | null;
+    reason: string;
+  };
+  broker: {
+    required: true;
+    status: "external_pending";
+    mode: "signed_host_plan_first";
+    failClosed: true;
+  };
+  policy: {
+    requiresConfirmation: boolean;
+    requiredGrants: string[];
+    riskTier: SystemTelemetryControlRiskTier;
+    sensitiveDetailRedacted: true;
+  };
+  steps: SystemTelemetryControlPlanStep[];
+  receipt: {
+    required: true;
+    status: "not_issued";
+    auditEvent: string;
+  };
+  externalPending: true;
 }
 
 export const SYSTEM_TELEMETRY_METRICS: SystemTelemetryMetricDefinition[] = [
@@ -476,13 +574,12 @@ export const SYSTEM_TELEMETRY_METRICS: SystemTelemetryMetricDefinition[] = [
     family: "peripheral",
     label: "Bluetooth peripheral count",
     unit: "count",
-    privacyTier: "sensitive_detail",
+    privacyTier: "safe_aggregate",
     sourceConfidence: "official",
     samplingCost: "medium",
     support: ["snapshot", "history"],
-    availability: "permission_required",
-    requiresGrant: "system.peripherals.read",
-    description: "Bluetooth/peripheral count. Device identities require an explicit grant.",
+    availability: "host_required",
+    description: "Aggregate Bluetooth peripheral count without exposing device identities by default.",
   },
   {
     key: "system.peripheral.connected_count",
@@ -508,6 +605,18 @@ export const SYSTEM_TELEMETRY_METRICS: SystemTelemetryMetricDefinition[] = [
     availability: "permission_required",
     requiresGrant: "system.focus.read",
     description: "Current focus/notification mode when granted.",
+  },
+  {
+    key: "system.notifications.availability_state",
+    family: "notification",
+    label: "Notification availability",
+    unit: "state",
+    privacyTier: "safe_aggregate",
+    sourceConfidence: "official",
+    samplingCost: "low",
+    support: ["snapshot", "history"],
+    availability: "host_required",
+    description: "Aggregate notification availability state without reading notification content.",
   },
   {
     key: "system.calendar.next_event_delta",
@@ -610,6 +719,7 @@ export const SYSTEM_TELEMETRY_DEFAULT_WIDGETS: SystemTelemetryWidgetDefinition[]
   { id: "agent-runs-active", metricKey: "context.agent_runs.active", title: "Agents", presentation: "text", placement: "menubar", enabledByDefault: false },
   { id: "reminders-due", metricKey: "context.reminders.due_count", title: "Reminders", presentation: "text", placement: "combined_panel", enabledByDefault: false },
   { id: "calendar-next-event", metricKey: "system.calendar.next_event_delta", title: "Calendar", presentation: "text", placement: "combined_panel", enabledByDefault: false },
+  { id: "notifications-status", metricKey: "system.notifications.availability_state", title: "Notifications", presentation: "icon", placement: "combined_panel", enabledByDefault: false },
   { id: "custom-context", metricKey: "context.custom.metric", title: "Context", presentation: "text", placement: "combined_panel", enabledByDefault: false },
 ];
 
@@ -645,6 +755,22 @@ export const SYSTEM_TELEMETRY_PROVIDERS: SystemTelemetryProviderDefinition[] = [
     credentialRefRequired: true,
     freshnessMs: 15 * 60_000,
     description: "Live provider slot for weather data; it remains disabled until a configured provider, grant, and credential reference exist.",
+  },
+  {
+    id: "system.sensors.signed",
+    kind: "hardware_sensor",
+    label: "Signed hardware sensor provider",
+    mode: "live",
+    status: "external_pending",
+    metricKeys: ["system.sensor.temperature", "system.sensor.fan_speed"],
+    widgetIds: [],
+    capabilities: ["snapshot", "history"],
+    defaultEnabled: false,
+    privacyTier: "safe_aggregate",
+    requiresGrant: "system.sensor.read",
+    credentialRefRequired: false,
+    freshnessMs: 5_000,
+    description: "Signed hardware sensor provider slot for temperature and fan speed readings when the host can validate compatible hardware access.",
   },
   {
     id: "context.build.offline",
@@ -740,6 +866,100 @@ export const SYSTEM_TELEMETRY_PROVIDERS: SystemTelemetryProviderDefinition[] = [
   },
 ];
 
+export const SYSTEM_TELEMETRY_CONTROL_ACTIONS: SystemTelemetryControlActionDefinition[] = [
+  {
+    id: "system.fan.set_speed",
+    family: "fan",
+    label: "Set fan speed",
+    targetMetricKeys: ["system.sensor.fan_speed", "system.sensor.temperature"],
+    requiresSignedHostBroker: true,
+    requiresConfirmation: true,
+    requiredGrants: ["system.hardware.control", "system.sensor.read"],
+    riskTier: "critical",
+    availability: "host_required",
+    auditEvent: "system.telemetry.control.fan.set_speed",
+    description: "Plan a fan speed change through the signed host. The framework contract never applies this directly.",
+  },
+  {
+    id: "system.power.set_mode",
+    family: "power",
+    label: "Set power mode",
+    targetMetricKeys: ["system.power.battery"],
+    requiresSignedHostBroker: true,
+    requiresConfirmation: true,
+    requiredGrants: ["system.power.control"],
+    riskTier: "disruptive",
+    availability: "host_required",
+    auditEvent: "system.telemetry.control.power.set_mode",
+    description: "Plan a power mode change through host policy, confirmation, receipt, and audit.",
+  },
+  {
+    id: "system.power.sleep",
+    family: "power",
+    label: "Sleep computer",
+    targetMetricKeys: ["system.power.uptime"],
+    requiresSignedHostBroker: true,
+    requiresConfirmation: true,
+    requiredGrants: ["system.power.control"],
+    riskTier: "critical",
+    availability: "host_required",
+    auditEvent: "system.telemetry.control.power.sleep",
+    description: "Plan a sleep request. Execution is fail-closed unless the signed host accepts the plan.",
+  },
+  {
+    id: "system.process.terminate",
+    family: "process",
+    label: "Terminate process",
+    targetMetricKeys: ["system.process.count"],
+    requiresSignedHostBroker: true,
+    requiresConfirmation: true,
+    requiredGrants: ["system.process.control"],
+    riskTier: "critical",
+    availability: "host_required",
+    auditEvent: "system.telemetry.control.process.terminate",
+    description: "Plan process termination with sensitive process detail gated behind grants and signed-host audit.",
+  },
+  {
+    id: "system.network.toggle_interface",
+    family: "network",
+    label: "Toggle network interface",
+    targetMetricKeys: ["system.network.bytes_in", "system.network.bytes_out"],
+    requiresSignedHostBroker: true,
+    requiresConfirmation: true,
+    requiredGrants: ["system.network.control"],
+    riskTier: "critical",
+    availability: "host_required",
+    auditEvent: "system.telemetry.control.network.toggle_interface",
+    description: "Plan a network interface mutation with continuity policy and signed-host execution only.",
+  },
+  {
+    id: "system.display.set_brightness",
+    family: "display",
+    label: "Set display brightness",
+    targetMetricKeys: ["system.display.brightness"],
+    requiresSignedHostBroker: true,
+    requiresConfirmation: false,
+    requiredGrants: ["system.display.control"],
+    riskTier: "disruptive",
+    availability: "host_required",
+    auditEvent: "system.telemetry.control.display.set_brightness",
+    description: "Plan a display brightness change through the native host broker.",
+  },
+  {
+    id: "system.audio.set_output_volume",
+    family: "audio",
+    label: "Set output volume",
+    targetMetricKeys: ["system.audio.output_volume"],
+    requiresSignedHostBroker: true,
+    requiresConfirmation: false,
+    requiredGrants: ["system.audio.control"],
+    riskTier: "safe",
+    availability: "host_required",
+    auditEvent: "system.telemetry.control.audio.set_output_volume",
+    description: "Plan an output volume change through host-owned audio policy and audit.",
+  },
+];
+
 export function listSystemTelemetryMetrics(): SystemTelemetryMetricDefinition[] {
   return SYSTEM_TELEMETRY_METRICS.map((metric) => ({ ...metric, support: [...metric.support] }));
 }
@@ -752,7 +972,136 @@ export function listSystemTelemetryProviders(): SystemTelemetryProviderDefinitio
   return SYSTEM_TELEMETRY_PROVIDERS.map((provider) => ({
     ...provider,
     metricKeys: [...provider.metricKeys],
+    metrics: [...provider.metricKeys],
     widgetIds: [...provider.widgetIds],
     capabilities: [...provider.capabilities],
   }));
+}
+
+export function findSystemTelemetryProvider(id: string): SystemTelemetryProviderDefinition | null {
+  return listSystemTelemetryProviders().find((provider) => provider.id === id) ?? null;
+}
+
+export function createSystemTelemetryProviderPlan(input: {
+  provider: SystemTelemetryProviderDefinition;
+  credentialRef?: string | null;
+  reason?: string | null;
+  now?: string;
+  idSuffix?: string;
+}): SystemTelemetryProviderPlan {
+  const createdAt = input.now ?? new Date().toISOString();
+  const idSuffix = input.idSuffix ?? String(Date.now());
+  const requiredGrants = input.provider.requiresGrant ? [input.provider.requiresGrant] : [];
+  const credentialProvided = Boolean(input.credentialRef);
+  return {
+    schemaVersion: 1,
+    id: `system-provider-plan-${input.provider.id.replaceAll(".", "-")}-${idSuffix}`,
+    createdAt,
+    status: "planned",
+    willConnect: false,
+    provider: {
+      ...input.provider,
+      metricKeys: [...input.provider.metricKeys],
+      metrics: [...input.provider.metricKeys],
+      widgetIds: [...input.provider.widgetIds],
+      capabilities: [...input.provider.capabilities],
+    },
+    request: {
+      credentialRef: input.credentialRef ?? null,
+      reason: input.reason || "not_provided",
+    },
+    broker: {
+      required: true,
+      status: "external_pending",
+      mode: "provider_grant_plan_first",
+      failClosed: true,
+    },
+    policy: {
+      requiredGrants,
+      credentialRefRequired: input.provider.credentialRefRequired,
+      privacyTier: input.provider.privacyTier,
+      preciseLocationRedacted: true,
+      networkAccess: "blocked_until_granted",
+    },
+    steps: [
+      { id: "validate_provider_config", status: "pending", owner: "provider_broker" },
+      { id: "validate_grants", status: requiredGrants.length > 0 ? "pending" : "skipped", owner: "provider_broker" },
+      { id: "resolve_credential_ref", status: input.provider.credentialRefRequired && !credentialProvided ? "blocked" : input.provider.credentialRefRequired ? "pending" : "skipped", owner: "provider_broker" },
+      { id: "connect_provider", status: "blocked", owner: "provider_broker" },
+      { id: "record_sample", status: "pending", owner: "monitor" },
+      { id: "append_audit_event", status: "pending", owner: "audit" },
+    ],
+    receipt: {
+      required: true,
+      status: "not_issued",
+      auditEvent: `system.telemetry.provider.${input.provider.kind}.${input.provider.mode}`,
+    },
+    externalPending: true,
+  };
+}
+
+export function listSystemTelemetryControlActions(): SystemTelemetryControlActionDefinition[] {
+  return SYSTEM_TELEMETRY_CONTROL_ACTIONS.map((action) => ({
+    ...action,
+    targetMetricKeys: [...action.targetMetricKeys],
+    requiredGrants: [...action.requiredGrants],
+  }));
+}
+
+export function findSystemTelemetryControlAction(id: string): SystemTelemetryControlActionDefinition | null {
+  return listSystemTelemetryControlActions().find((action) => action.id === id) ?? null;
+}
+
+export function createSystemTelemetryControlPlan(input: {
+  action: SystemTelemetryControlActionDefinition;
+  target?: string | null;
+  value?: string | null;
+  reason?: string | null;
+  now?: string;
+  idSuffix?: string;
+}): SystemTelemetryControlPlan {
+  const createdAt = input.now ?? new Date().toISOString();
+  const idSuffix = input.idSuffix ?? String(Date.now());
+  return {
+    schemaVersion: 1,
+    id: `system-control-plan-${input.action.id.replaceAll(".", "-")}-${idSuffix}`,
+    createdAt,
+    status: "planned",
+    willExecute: false,
+    action: {
+      ...input.action,
+      targetMetricKeys: [...input.action.targetMetricKeys],
+      requiredGrants: [...input.action.requiredGrants],
+    },
+    request: {
+      target: input.target ?? null,
+      value: input.value ?? null,
+      reason: input.reason || "not_provided",
+    },
+    broker: {
+      required: true,
+      status: "external_pending",
+      mode: "signed_host_plan_first",
+      failClosed: true,
+    },
+    policy: {
+      requiresConfirmation: input.action.requiresConfirmation,
+      requiredGrants: [...input.action.requiredGrants],
+      riskTier: input.action.riskTier,
+      sensitiveDetailRedacted: true,
+    },
+    steps: [
+      { id: "validate_grants", status: "pending", owner: "signed_host_broker" },
+      { id: "confirm_if_required", status: input.action.requiresConfirmation ? "pending" : "skipped", owner: "signed_host_broker" },
+      { id: "execute_native_action", status: "blocked", owner: "signed_host_broker" },
+      { id: "write_receipt", status: "pending", owner: "signed_host_broker" },
+      { id: "append_audit_event", status: "pending", owner: "signed_host_broker" },
+    ],
+    receipt: {
+      required: true,
+      status: "not_issued",
+      auditEvent: input.action.auditEvent,
+    },
+    externalPending: true,
+  };
 }
