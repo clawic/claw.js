@@ -220,7 +220,7 @@ test("createClaw channels registry supports Telegram accounts, bindings, targets
   assert.equal(targets.some((target) => target.targetId === "1001"), true);
   assert.equal(messages.some((message) => message.direction === "inbound"), true);
   assert.equal(messages.some((message) => message.direction === "outbound"), true);
-  const outbound = messages.find((message) => message.direction === "outbound") as { metadata?: { policyDecision?: string; policyReasonCodes?: string[]; legalLabel?: string } } | undefined;
+  const outbound = messages.find((message) => message.direction === "outbound" && message.text === "reply from registry") as { metadata?: { policyDecision?: string; policyReasonCodes?: string[]; legalLabel?: string } } | undefined;
   assert.equal(outbound?.metadata?.policyDecision, "allow");
   assert.equal(outbound?.metadata?.legalLabel, "Channel message send - human reviewed");
   assert.equal(outbound?.metadata?.policyReasonCodes?.includes("external_review_required"), true);
