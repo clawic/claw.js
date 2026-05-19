@@ -3,6 +3,7 @@ import path from "path";
 import type { CliContext } from "./index.ts";
 import { CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { readBooleanFlag } from "./cli-flag-parsers.ts";
+import { requireCliExportReview } from "./cli-export-review.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
 import {
   attachProjectFolder,
@@ -101,7 +102,11 @@ export async function runProjectManifestCli(input: {
   if (action === "export") {
     const output = input.flags.output || input.flags.path;
     const outputPath = output ? path.resolve(input.context.cwd, output) : undefined;
-    const handoff = await exportProjectHandoff(projectRoot, outputPath);
+    const review = requireCliExportReview({ argv: input.argv, flags: input.flags, operation: "project export" });
+    const handoff = await exportProjectHandoff(projectRoot, outputPath, {
+      approvalId: review.approvalId,
+      legalLabel: review.legalLabel,
+    });
     if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "project", { projectRoot, output: outputPath ?? null, handoff }, meta);
     else input.context.stdout.write(`${outputPath ?? JSON.stringify(handoff)}\n`);
     return CLI_EXIT_OK;

@@ -4,7 +4,7 @@ import os from "os";
 import path from "path";
 import { test } from "vitest";
 
-import { CLI_EXIT_OK, runCli } from "./index.ts";
+import { CLI_EXIT_FAILURE, CLI_EXIT_OK, runCli } from "./index.ts";
 import { captureStream, parseCliJsonPayload } from "./index-test-utils.ts";
 
 test("claw project attach previews then writes portable manifest and handoff shims", async () => {
@@ -96,8 +96,27 @@ test("claw project detach and export keep folder data while producing safe hando
   assert.equal(fs.existsSync(folder), true);
 
   const output = path.join(cwd, "handoff.clawexport");
+  const blockedExport = await runCli(["project", "export", folder, "--output", output, "--json"], {
+    stdout: captureStream().stream,
+    stderr: captureStream().stream,
+    cwd,
+  });
+  assert.equal(blockedExport, CLI_EXIT_FAILURE);
+
   const exportStdout = captureStream();
-  assert.equal(await runCli(["project", "export", folder, "--output", output, "--json"], {
+  assert.equal(await runCli([
+    "project",
+    "export",
+    folder,
+    "--output",
+    output,
+    "--confirm",
+    "--approval-id",
+    "approval_project_export",
+    "--legal-label",
+    "Project handoff - human reviewed",
+    "--json",
+  ], {
     stdout: exportStdout.stream,
     stderr: captureStream().stream,
     cwd,
@@ -108,6 +127,11 @@ test("claw project detach and export keep folder data while producing safe hando
     includesSecrets: false,
     includesSensitiveMemory: false,
     folderLocationGrantsAuthority: false,
+  });
+  assert.deepEqual(exported.handoff.legal, {
+    approvalId: "approval_project_export",
+    legalLabel: "Project handoff - human reviewed",
+    exportKind: "project.handoff",
   });
   assert.match(fs.readFileSync(output, "utf8"), /claw.project.handoff/);
   assert.doesNotMatch(fs.readFileSync(output, "utf8"), /token|password|credential/i);
@@ -137,7 +161,19 @@ test("claw project import previews and restores safe handoff into a new workspac
   }), CLI_EXIT_OK);
 
   const output = path.join(cwd, "portable-project.clawexport");
-  assert.equal(await runCli(["project", "export", source, "--output", output, "--json"], {
+  assert.equal(await runCli([
+    "project",
+    "export",
+    source,
+    "--output",
+    output,
+    "--confirm",
+    "--approval-id",
+    "approval_project_import_fixture",
+    "--legal-label",
+    "Project import fixture - human reviewed",
+    "--json",
+  ], {
     stdout: captureStream().stream,
     stderr: captureStream().stream,
     cwd,
@@ -282,7 +318,17 @@ test("claw project commands never create a workspace .claw directory in project 
     stderr: captureStream().stream,
     cwd,
   }), CLI_EXIT_OK);
-  assert.equal(await runCli(["project", "export", folder, "--json"], {
+  assert.equal(await runCli([
+    "project",
+    "export",
+    folder,
+    "--confirm",
+    "--approval-id",
+    "approval_project_no_claw",
+    "--legal-label",
+    "Project no-claw export - human reviewed",
+    "--json",
+  ], {
     stdout: captureStream().stream,
     stderr: captureStream().stream,
     cwd,

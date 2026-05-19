@@ -251,7 +251,22 @@ test("accounts export defaults to redacted records and audits the export", async
       "--json",
     ], cwd);
 
-    const result = await runCliCapture(["accounts", "export", "--provider", "apple", "--json"], cwd);
+    const blocked = await runCliCapture(["accounts", "export", "--provider", "apple", "--json"], cwd);
+    assert.equal(blocked.code, 1);
+    assert.match(blocked.stderr || blocked.stdout, /requires --confirm/);
+
+    const result = await runCliCapture([
+      "accounts",
+      "export",
+      "--provider",
+      "apple",
+      "--confirm",
+      "--approval-id",
+      "approval_accounts_redacted",
+      "--legal-label",
+      "Redacted connector export - human reviewed",
+      "--json",
+    ], cwd);
     assert.equal(result.code, CLI_EXIT_OK, result.stderr || result.stdout);
     assert.equal(result.stdout.includes("com.example.release"), false);
     assert.equal(result.stdout.includes("SKU123"), false);
@@ -259,12 +274,14 @@ test("accounts export defaults to redacted records and audits the export", async
       data: {
         export: {
           mode: string;
-          policy: { protectedHandlingRequired: boolean; privateFieldsIncluded: boolean; plaintextSecretsIncluded: boolean };
+          policy: { approvalId: string; legalLabel: string; protectedHandlingRequired: boolean; privateFieldsIncluded: boolean; plaintextSecretsIncluded: boolean };
           records: Array<{ fieldEntries: Array<{ name: string; value: unknown; redacted?: boolean }> }>;
         };
       };
     };
     assert.equal(payload.data.export.mode, "redacted");
+    assert.equal(payload.data.export.policy.approvalId, "approval_accounts_redacted");
+    assert.equal(payload.data.export.policy.legalLabel, "Redacted connector export - human reviewed");
     assert.equal(payload.data.export.policy.protectedHandlingRequired, false);
     assert.equal(payload.data.export.policy.privateFieldsIncluded, false);
     assert.equal(payload.data.export.policy.plaintextSecretsIncluded, false);
@@ -323,19 +340,32 @@ test("accounts export private envelope includes private context but never plaint
       "--json",
     ], cwd);
 
-    const result = await runCliCapture(["accounts", "export", "--mode", "private-envelope", "--json"], cwd);
+    const result = await runCliCapture([
+      "accounts",
+      "export",
+      "--mode",
+      "private-envelope",
+      "--confirm",
+      "--approval-id",
+      "approval_accounts_private",
+      "--legal-label",
+      "Private connector export - human reviewed",
+      "--json",
+    ], cwd);
     assert.equal(result.code, CLI_EXIT_OK, result.stderr || result.stdout);
     assert.equal(result.stdout.includes("plain-secret"), false);
     const payload = JSON.parse(result.stdout) as {
       data: {
         export: {
           mode: string;
-          policy: { protectedHandlingRequired: boolean; privateFieldsIncluded: boolean; plaintextSecretsIncluded: boolean; secretMaterialIncluded: boolean };
+          policy: { approvalId: string; legalLabel: string; protectedHandlingRequired: boolean; privateFieldsIncluded: boolean; plaintextSecretsIncluded: boolean; secretMaterialIncluded: boolean };
           records: Array<{ id: string; fieldEntries: Array<{ name: string; value?: unknown; binding?: { present: boolean; scheme: string } }> }>;
         };
       };
     };
     assert.equal(payload.data.export.mode, "private-envelope");
+    assert.equal(payload.data.export.policy.approvalId, "approval_accounts_private");
+    assert.equal(payload.data.export.policy.legalLabel, "Private connector export - human reviewed");
     assert.equal(payload.data.export.policy.protectedHandlingRequired, true);
     assert.equal(payload.data.export.policy.privateFieldsIncluded, true);
     assert.equal(payload.data.export.policy.plaintextSecretsIncluded, false);
@@ -384,7 +414,20 @@ test("accounts preserve desired observed and verification metadata across edits"
     ], cwd);
     assert.equal(edit.code, CLI_EXIT_OK, edit.stderr || edit.stdout);
 
-    const exported = await runCliCapture(["accounts", "export", "--provider", "google", "--mode", "private-envelope", "--json"], cwd);
+    const exported = await runCliCapture([
+      "accounts",
+      "export",
+      "--provider",
+      "google",
+      "--mode",
+      "private-envelope",
+      "--confirm",
+      "--approval-id",
+      "approval_accounts_metadata",
+      "--legal-label",
+      "Connector metadata export - human reviewed",
+      "--json",
+    ], cwd);
     assert.equal(exported.code, CLI_EXIT_OK, exported.stderr || exported.stdout);
     const payload = JSON.parse(exported.stdout) as {
       data: {

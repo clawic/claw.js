@@ -781,7 +781,9 @@ export async function syncProjectHandoff(projectRoot: string): Promise<{ project
   return { projectRoot: resolved, writes };
 }
 
-export async function exportProjectHandoff(projectRoot: string, outputPath?: string): Promise<Record<string, unknown>> {
+export async function exportProjectHandoff(projectRoot: string, outputPath?: string, review?: { approvalId: string; legalLabel: string }): Promise<Record<string, unknown>> {
+  if (!review?.approvalId?.trim()) throw new Error("Project export requires explicit approvalId before export/share.");
+  if (!review.legalLabel?.trim()) throw new Error("Project export requires a persistent legalLabel before export/share.");
   const resolved = path.resolve(projectRoot);
   const inspection = inspectProjectFolder(resolved);
   if (!inspection.manifest) throw new Error(`Missing or invalid ${PROJECT_CONFIG_FILE} at ${resolved}.`);
@@ -807,6 +809,11 @@ export async function exportProjectHandoff(projectRoot: string, outputPath?: str
       includesSecrets: false,
       includesSensitiveMemory: false,
       folderLocationGrantsAuthority: false,
+    },
+    legal: {
+      approvalId: review.approvalId.trim(),
+      legalLabel: review.legalLabel.trim(),
+      exportKind: "project.handoff",
     },
   };
   const safety = assertSafeClawProjectHandoff(handoff);

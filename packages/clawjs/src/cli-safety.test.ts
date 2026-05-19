@@ -55,6 +55,28 @@ test("safety check blocks final regulated decisions", async () => {
   assert.equal(payload.data.decision.outputLabels.includes("regulated_domain:finance"), true);
 });
 
+test("safety explain returns policy evidence for regulated domains", async () => {
+  const result = await runCliCapture(["safety", "explain", "legal", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_OK, result.stderr || result.stdout);
+  const payload = JSON.parse(result.stdout) as {
+    data: {
+      policy: { regulatedDomain: string; disclaimerPolicy: string; outputLabelPolicy: string };
+      allowedUses: string[];
+      blockedUses: string[];
+      prohibitedPractices: string[];
+    };
+    meta: { canonicalCommand: string; subcommand: string };
+  };
+  assert.equal(payload.meta.canonicalCommand, "safety");
+  assert.equal(payload.meta.subcommand, "explain");
+  assert.equal(payload.data.policy.regulatedDomain, "legal");
+  assert.equal(payload.data.policy.disclaimerPolicy, "contextual_remembered");
+  assert.equal(payload.data.policy.outputLabelPolicy, "required");
+  assert.equal(payload.data.allowedUses.includes("factual_summary"), true);
+  assert.equal(payload.data.blockedUses.includes("legal_strategy_as_final_advice"), true);
+  assert.equal(payload.data.prohibitedPractices.includes("legal_service_decision"), true);
+});
+
 test("safety check human output preserves disclaimer and labels", async () => {
   const result = await runCliCapture([
     "safety",

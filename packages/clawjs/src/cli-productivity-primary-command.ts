@@ -10,6 +10,7 @@ import { joinedPositionals, parseCsvFlag, parseJsonFlag, readBooleanFlag } from 
 import { writeCommandJsonOk } from "./cli-json.ts";
 import { timelineRange } from "./cli-runtime-utils.ts";
 import { archiveOrRemoveProductivityRecord, runCoreProductivityDbCli } from "./cli-productivity-command.ts";
+import { requireCliExportReview } from "./cli-export-review.ts";
 
 export async function runPrimaryProductivityCli(input: {
   argv: string[];
@@ -44,13 +45,23 @@ export async function runPrimaryProductivityCli(input: {
     if (workCommand === "export") {
       const targetPath = workSubcommand || flags.path;
       if (!targetPath) {
-        context.stderr.write(`Usage: ${binName} work export <file>\n`);
+        context.stderr.write(`Usage: ${binName} work export <file> --confirm --approval-id ID --legal-label LABEL\n`);
         return CLI_EXIT_USAGE;
       }
+      const review = requireCliExportReview({ argv, flags, operation: "work export" });
       const snapshot = await claw.productivity.exportSnapshot();
+      const envelope = {
+        ...snapshot,
+        legal: {
+          approvalId: review.approvalId,
+          legalLabel: review.legalLabel,
+          confirmed: review.confirmed,
+          exportKind: "work.snapshot",
+        },
+      };
       const absolutePath = path.resolve(context.cwd, targetPath);
       fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
-      fs.writeFileSync(absolutePath, JSON.stringify(snapshot, null, 2));
+      fs.writeFileSync(absolutePath, JSON.stringify(envelope, null, 2));
       if (wantsJson) writePrimaryJson({ path: absolutePath });
       else context.stdout.write(`${absolutePath}\n`);
       return CLI_EXIT_OK;

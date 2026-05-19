@@ -13,6 +13,7 @@ import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { formatCliTable } from "./cli-flag-parsers.ts";
 import { parseSetFlags } from "./cli-value-utils.ts";
 import { openConnectorContextStore } from "./cli-connector-context-store.ts";
+import { requireCliExportReview } from "./cli-export-review.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
 
 interface ConnectorContextCliInput {
@@ -79,6 +80,7 @@ export async function runConnectorContextCli(input: ConnectorContextCliInput): P
     }
 
     if (action === "export") {
+      const review = requireCliExportReview({ argv: input.argv, flags: input.flags, operation: "accounts export" });
       const records = store.listRecords({
         providerId: input.flags.provider,
         kind: input.flags.kind,
@@ -118,6 +120,9 @@ export async function runConnectorContextCli(input: ConnectorContextCliInput): P
             ...(input.flags.state ? { state: input.flags.state } : {}),
           },
           policy: {
+            approvalId: review.approvalId,
+            legalLabel: review.legalLabel,
+            confirmed: review.confirmed,
             protectedHandlingRequired: includePrivate,
             privateFieldsIncluded: includePrivate,
             plaintextSecretsIncluded: false,
