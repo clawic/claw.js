@@ -2,16 +2,18 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 
-import type {
-  MediaDirection,
-  MediaExternalRef,
-  MediaGalleryShare,
-  MediaKind,
-  MediaListInput,
-  MediaOrigin,
-  MediaRecord,
-  MediaSearchResult,
-  MediaStorageRef,
+import {
+  evaluateRegulatedAction,
+  type MediaDirection,
+  type MediaExternalRef,
+  type MediaGalleryShare,
+  type MediaKind,
+  type MediaListInput,
+  type MediaOrigin,
+  type MediaRecord,
+  type MediaSearchResult,
+  type MediaStorageRef,
+  type RegulatedActionDecision,
 } from "@clawjs/core";
 
 import type { WorkspaceStorage } from "../data/store.ts";
@@ -203,12 +205,30 @@ function shareExpired(share: MediaGalleryShare): boolean {
   return Boolean(share.expiresAt && Date.parse(share.expiresAt) <= Date.now());
 }
 
-function requireMediaShareReview(input: { approvalId?: string; legalLabel?: string }): { approvalId: string; legalLabel: string } {
+function requireMediaShareReview(input: { approvalId?: string; legalLabel?: string }): { approvalId: string; legalLabel: string; policy: RegulatedActionDecision } {
   const approvalId = input.approvalId?.trim() ?? "";
   const legalLabel = input.legalLabel?.trim() ?? "";
-  if (!approvalId) throw new Error("Media share creation requires explicit approvalId before export/share.");
-  if (!legalLabel) throw new Error("Media share creation requires a persistent legalLabel before export/share.");
-  return { approvalId, legalLabel };
+  const policy = evaluateRegulatedAction({
+    regulatedDomain: "identity",
+    decisionEffect: "external_action",
+    requestedUse: "non_final_draft",
+    externalAction: true,
+    sensitiveExport: true,
+    policyConfig: {
+      confirmed: Boolean(approvalId && legalLabel),
+      approvalId,
+      legalLabel,
+      materialConsent: Boolean(approvalId && legalLabel),
+      destinationAuthorized: Boolean(approvalId && legalLabel),
+    },
+  });
+  if (policy.policyDecision === "block") {
+    throw new Error(`Media share creation is blocked by regulated safety policy: ${policy.reasonCodes.join(", ") || "blocked"}.`);
+  }
+  if (!policy.allowed && !approvalId) throw new Error("Media share creation requires explicit approvalId before export/share.");
+  if (!policy.allowed && !legalLabel) throw new Error("Media share creation requires a persistent legalLabel before export/share.");
+  if (!policy.allowed) throw new Error(`Media share creation requires policy confirmation before export/share: ${policy.requirements.join(", ")}.`);
+  return { approvalId, legalLabel, policy };
 }
 
 export function createMediaStore(options: {

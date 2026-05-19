@@ -95,10 +95,15 @@ test("local storage shares through a configured adapter", async (t) => {
   const legalManifest = JSON.parse(fs.readFileSync(path.join(workspaceDir, "deliverable.txt.claw-legal.json"), "utf8")) as {
     approvalId: string;
     legalLabel: string;
+    policy: { decision: string; reasonCodes: string[]; requirements: string[]; outputLabels: string[] };
     source: { key: string };
   };
   assert.equal(legalManifest.approvalId, "approval_storage_export");
   assert.equal(legalManifest.legalLabel, "Exported content - human reviewed");
+  assert.equal(legalManifest.policy.decision, "allow");
+  assert.ok(legalManifest.policy.reasonCodes.includes("sensitive_export_review_required"));
+  assert.ok(legalManifest.policy.requirements.includes("human_review"));
+  assert.ok(legalManifest.policy.outputLabels.includes("regulated_domain:identity"));
   assert.equal(legalManifest.source.key, "agents/agent-a/deliverable.txt");
 
   await assert.rejects(

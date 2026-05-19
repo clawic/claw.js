@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { STORAGE_STORE_SCHEMA_SQL } from "./surface.ts";
 
+import { evaluateRegulatedAction, type RegulatedActionDecision } from "@clawjs/core";
 import Database from "better-sqlite3";
 
 import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
@@ -245,12 +246,30 @@ function normalizeExpiresAt(input: { expiresAt?: string | null; ttlMs?: number }
   return null;
 }
 
-function requireLegalShareInput(input: { approvalId?: string; legalLabel?: string }): { approvalId: string; legalLabel: string } {
+function requireLegalShareInput(input: { approvalId?: string; legalLabel?: string }): { approvalId: string; legalLabel: string; policy: RegulatedActionDecision } {
   const approvalId = input.approvalId?.trim() ?? "";
   const legalLabel = input.legalLabel?.trim() ?? "";
-  if (!approvalId) throw new Error("Storage share creation requires explicit approvalId before export/share.");
-  if (!legalLabel) throw new Error("Storage share creation requires a persistent legalLabel before export/share.");
-  return { approvalId, legalLabel };
+  const policy = evaluateRegulatedAction({
+    regulatedDomain: "identity",
+    decisionEffect: "external_action",
+    requestedUse: "non_final_draft",
+    externalAction: true,
+    sensitiveExport: true,
+    policyConfig: {
+      confirmed: Boolean(approvalId && legalLabel),
+      approvalId,
+      legalLabel,
+      materialConsent: Boolean(approvalId && legalLabel),
+      destinationAuthorized: Boolean(approvalId && legalLabel),
+    },
+  });
+  if (policy.policyDecision === "block") {
+    throw new Error(`Storage share creation is blocked by regulated safety policy: ${policy.reasonCodes.join(", ") || "blocked"}.`);
+  }
+  if (!policy.allowed && !approvalId) throw new Error("Storage share creation requires explicit approvalId before export/share.");
+  if (!policy.allowed && !legalLabel) throw new Error("Storage share creation requires a persistent legalLabel before export/share.");
+  if (!policy.allowed) throw new Error(`Storage share creation requires policy confirmation before export/share: ${policy.requirements.join(", ")}.`);
+  return { approvalId, legalLabel, policy };
 }
 
 function toBuffer(data: string | Uint8Array): Buffer {
@@ -570,6 +589,15 @@ export class LocalStorageStore {
       exportedAt: nowIso(),
       approvalId: legal.approvalId,
       legalLabel: legal.legalLabel,
+      policy: {
+        decision: legal.policy.policyDecision,
+        reasonCodes: legal.policy.reasonCodes,
+        requirements: legal.policy.requirements,
+        outputLabels: legal.policy.outputLabels,
+        disclaimerPolicy: legal.policy.disclaimerPolicy,
+        auditPolicy: legal.policy.auditPolicy,
+        policyApplied: legal.policy.policyApplied,
+      },
       source: {
         bucket: object.bucket,
         key: object.key,

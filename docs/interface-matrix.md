@@ -224,8 +224,8 @@ surfaces.
 | Content entries / variants / assets | `claw.content.entries.*`, `claw.content.variants.*` | `claw content entry ...`, `variant ...` | `GET/POST WS/content/entries`, `PUT WS/content/entries/:entryId`, `POST WS/content/entries/:entryId/assets`, `POST WS/content/entries/:entryId/variants:generate`, `GET/POST WS/content/variants` |
 | Content approvals / plans / publications | `claw.content.approvals.*`, `claw.content.publish.*` | `claw content approval ...`, `publish ...` | `GET/POST WS/content/approvals`, `POST WS/content/approvals/:approvalId/approve|reject|cancel`, `GET/POST WS/content/plans`, `POST WS/content/plans/:planId/run`, `GET WS/content/publications` |
 | Content frontend contracts and read models | `claw.content.app.*`, `claw.content.calendar.view()` | `-` | `GET WS/content/app/*`, `GET WS/content/calendar` |
-| Notify send / cancel | `claw.notify.send({ approvalId })`, `cancel()` | `claw notify send --approval-id ...`, `cancel` | standalone Notify service routes |
-| Reviewed exports | `storage.exportToFile({ approvalId, legalLabel })`, `storage.shares.create({ approvalId, legalLabel })` | `claw work export ... --confirm --approval-id ... --legal-label ...`, `claw project export ... --confirm --approval-id ... --legal-label ...`, `claw accounts export ... --confirm --approval-id ... --legal-label ...` | local storage export writes `.claw-legal.json`; CLI exports embed legal metadata |
+| Notify send / cancel | `claw.notify.send({ approvalId, legalLabel })`, `cancel()` | `claw notify send --approval-id ... --legal-label ...`, `cancel` | standalone Notify service routes evaluate central regulated policy before external delivery |
+| Reviewed exports | `storage.exportToFile({ approvalId, legalLabel })`, `storage.shares.create({ approvalId, legalLabel })` | `claw work export ... --confirm --approval-id ... --legal-label ...`, `claw project export ... --confirm --approval-id ... --legal-label ...`, `claw accounts export ... --confirm --approval-id ... --legal-label ...` | local storage export writes `.claw-legal.json`; CLI exports embed legal metadata and policy decision |
 | Notify feed / subscriptions | `claw.notify.feed()`, `subscriptions.*` | `claw notify subscriptions ...` | standalone Notify service routes |
 | Time items list / get | `claw.time.list()`, `get()` | `claw time list`, `get` | `GET WS/time`, `GET WS/time/:id` |
 | Time item create / update / delete | `claw.time.create()`, `update()`, `delete()` | `claw time create`, `update`, `delete` | `POST WS/time`, `PUT WS/time`, `DELETE WS/time` |
@@ -284,7 +284,7 @@ surfaces.
 | Upload document | `claw.documents.upload()` | `claw documents upload` | `POST WS/documents/upload` |
 | Register existing file path | `claw.documents.register()` | `claw documents register` | `POST WS/documents/register` |
 | Chunked upload primitives | `claw.documents.beginUpload()`, `appendUploadChunk()`, `commitUpload()` | `-` | used internally by `POST WS/documents/upload` |
-| Download document | `claw.documents.download()` | `claw documents download --confirm --approval-id ... --legal-label ...` | `GET WS/documents/:documentId/download` |
+| Download document | `claw.documents.download()` | `claw documents download --confirm --approval-id ... --legal-label ...` | `GET WS/documents/:documentId/download`; CLI download review passes through central regulated policy and writes a policy-bearing sidecar |
 | Resolve document refs | `claw.documents.resolveRefs()` | `-` | indirect via session routes |
 | Delete one document | `-` | `-` | `-` |
 
@@ -339,7 +339,7 @@ These methods come from the `@clawjs/workspace` extension, not from the base
 | Register command backend | `claw.generations.registerCommandBackend()` | `claw generations register-command` | `-` |
 | Remove generation backend | `claw.generations.removeBackend()` | `claw generations remove-backend` | `-` |
 | Persistent media list/search | `claw.media.list()` / `claw.media.search()` | `claw media list` / `claw media search` | `-` |
-| Persistent media read/download | `claw.media.get()` / `claw.media.download()` | `claw media read` / `claw media download --confirm --approval-id ... --legal-label ...` | `-` |
+| Persistent media read/download | `claw.media.get()` / `claw.media.download()` | `claw media read` / `claw media download --confirm --approval-id ... --legal-label ...` | `-`; CLI download review passes through central regulated policy and writes a policy-bearing sidecar |
 | Persistent media shares | `claw.media.share.*` | `claw media share ...` | `-` |
 | Image create | `claw.image.create()` / `claw.image.generate()` | `claw image create` / `claw image generate` | `POST WS/images` |
 | Image edit | `claw.image.edit()` | `claw image edit` | `-` |
