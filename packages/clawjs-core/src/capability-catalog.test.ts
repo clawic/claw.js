@@ -12,6 +12,10 @@ import {
   isCustomAppSensitiveField,
   redactCustomAppRecord,
 } from "./custom-app-redaction-policy.ts";
+import {
+  CUSTOM_APP_SDK_SCHEMA_REFS,
+  getCustomAppSDKSchema,
+} from "./custom-app-sdk-contracts.ts";
 
 test("SDK-first capability catalog exposes baseline custom-app contracts", () => {
   const ids = listClawCapabilities().map((capability) => capability.id);
@@ -97,6 +101,97 @@ test("ordinary custom-app read capabilities declare the shared redaction policy"
     if (capability.customAppAccess !== "localWide") continue;
     assert.equal(capability.redactionPolicyRef, CUSTOM_APP_REDACTION_POLICY_ID, capability.id);
   }
+});
+
+test("custom-app read capabilities point at resolvable SDK schemas and stream events", () => {
+  for (const capability of listClawCapabilities()) {
+    if (capability.customAppAccess !== "localWide") continue;
+    assert.ok(capability.inputSchemaRef, capability.id);
+    assert.ok(capability.outputSchemaRef, capability.id);
+    assert.ok(getCustomAppSDKSchema(capability.inputSchemaRef), `${capability.id}:input`);
+    assert.ok(getCustomAppSDKSchema(capability.outputSchemaRef), `${capability.id}:output`);
+    assert.equal(capability.eventSchemaRefs?.cancel, CUSTOM_APP_SDK_SCHEMA_REFS.requestCancel, capability.id);
+    assert.equal(capability.eventSchemaRefs?.progress, CUSTOM_APP_SDK_SCHEMA_REFS.requestProgress, capability.id);
+    assert.equal(capability.eventSchemaRefs?.partial, CUSTOM_APP_SDK_SCHEMA_REFS.requestPartial, capability.id);
+  }
+});
+
+test("custom-app SDK schemas validate current Search DB and resource bridge payloads", () => {
+  const record = {
+    id: "task-1",
+    collection: "tasks",
+    title: "Launch",
+    createdAt: "2026-05-19T00:00:00Z",
+    updatedAt: "2026-05-19T00:00:00Z",
+    data: { title: "Launch" },
+    redactedFields: ["apiKey"],
+    redactionPolicy: CUSTOM_APP_REDACTION_POLICY_ID,
+  };
+  const resource = {
+    schemaVersion: 1,
+    id: "res_instruction1",
+    kind: "instruction",
+    status: "active",
+    locator: { kind: "path", value: "/tmp/instruction.md" },
+    scope: {},
+    createdAt: "2026-05-19T00:00:00Z",
+    updatedAt: "2026-05-19T00:00:00Z",
+  };
+
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.searchQuery)?.safeParse({
+    query: "launch",
+    collections: ["tasks"],
+    limit: 25,
+    cursor: "b2Zmc2V0OjI1",
+    facets: ["status"],
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.searchResults)?.safeParse({
+    query: "launch",
+    collections: ["tasks"],
+    items: [record],
+    limit: 25,
+    offset: 0,
+    nextCursor: null,
+    facets: { status: [{ value: "todo", count: 1 }] },
+    source: "search.query",
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.dbQuery)?.safeParse({
+    collection: "tasks",
+    filter: { status: "todo", archivedAt: { isNull: true }, priority: { neq: "low" } },
+    search: "launch",
+    sort: "-updatedAt",
+    limit: 50,
+    offset: 0,
+    facets: ["status"],
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.dbRecords)?.safeParse({
+    collection: "tasks",
+    items: [record],
+    limit: 50,
+    offset: 0,
+    total: 1,
+    nextCursor: null,
+    facets: { status: [{ value: "todo", count: 1 }] },
+    source: "db.query",
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.resourcesRead)?.safeParse({
+    id: "res_instruction1",
+    maxBytes: 4096,
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.resourcesPayload)?.safeParse({
+    resource,
+    content: "read me",
+    truncated: false,
+    redactionPolicy: CUSTOM_APP_REDACTION_POLICY_ID,
+    source: "resources.read",
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.requestPartial)?.safeParse({
+    source: "search.query",
+    collection: "tasks",
+    items: [record],
+    partialCount: 1,
+    progress: 0.5,
+  }).success, true);
 });
 
 test("custom app redaction policy hides sensitive field names without removing provenance", () => {

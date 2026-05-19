@@ -1,4 +1,5 @@
 import { CUSTOM_APP_REDACTION_POLICY_ID } from "./custom-app-redaction-policy.ts";
+import { CUSTOM_APP_SDK_SCHEMA_REFS } from "./custom-app-sdk-contracts.ts";
 
 export type ClawCapabilitySurface = "sdk" | "cli" | "serviceApi" | "mcp" | "relay" | "hostBridge";
 export type ClawCapabilitySurfaceStatus = "available" | "pending" | "blocked" | "notApplicable";
@@ -43,6 +44,11 @@ export interface ClawCapabilityDescriptor {
   inputSchemaRef?: string;
   outputSchemaRef?: string;
   redactionPolicyRef?: string;
+  eventSchemaRefs?: {
+    cancel?: string;
+    progress?: string;
+    partial?: string;
+  };
 }
 
 export interface ClawCustomAppCapabilityRiskMap {
@@ -94,9 +100,14 @@ export const clawCapabilityCatalog: readonly ClawCapabilityDescriptor[] = [
       relay: "remote.searchGateway",
       hostBridge: "clawix.bridge.local",
     }),
-    inputSchemaRef: "claw.search.query.v1",
-    outputSchemaRef: "claw.search.results.v1",
+    inputSchemaRef: CUSTOM_APP_SDK_SCHEMA_REFS.searchQuery,
+    outputSchemaRef: CUSTOM_APP_SDK_SCHEMA_REFS.searchResults,
     redactionPolicyRef: CUSTOM_APP_REDACTION_POLICY_ID,
+    eventSchemaRefs: {
+      cancel: CUSTOM_APP_SDK_SCHEMA_REFS.requestCancel,
+      progress: CUSTOM_APP_SDK_SCHEMA_REFS.requestProgress,
+      partial: CUSTOM_APP_SDK_SCHEMA_REFS.requestPartial,
+    },
   },
   {
     id: "db.query",
@@ -118,9 +129,14 @@ export const clawCapabilityCatalog: readonly ClawCapabilityDescriptor[] = [
       relay: "sync.sqliteResources",
       hostBridge: "clawix.bridge.local",
     }),
-    inputSchemaRef: "claw.db.query.v1",
-    outputSchemaRef: "claw.db.records.v1",
+    inputSchemaRef: CUSTOM_APP_SDK_SCHEMA_REFS.dbQuery,
+    outputSchemaRef: CUSTOM_APP_SDK_SCHEMA_REFS.dbRecords,
     redactionPolicyRef: CUSTOM_APP_REDACTION_POLICY_ID,
+    eventSchemaRefs: {
+      cancel: CUSTOM_APP_SDK_SCHEMA_REFS.requestCancel,
+      progress: CUSTOM_APP_SDK_SCHEMA_REFS.requestProgress,
+      partial: CUSTOM_APP_SDK_SCHEMA_REFS.requestPartial,
+    },
   },
   {
     id: "resources.read",
@@ -142,9 +158,14 @@ export const clawCapabilityCatalog: readonly ClawCapabilityDescriptor[] = [
       relay: "remote-safe when classified",
       hostBridge: "clawix.bridge.local",
     }),
-    inputSchemaRef: "claw.resources.read.v1",
-    outputSchemaRef: "claw.resources.payload.v1",
+    inputSchemaRef: CUSTOM_APP_SDK_SCHEMA_REFS.resourcesRead,
+    outputSchemaRef: CUSTOM_APP_SDK_SCHEMA_REFS.resourcesPayload,
     redactionPolicyRef: CUSTOM_APP_REDACTION_POLICY_ID,
+    eventSchemaRefs: {
+      cancel: CUSTOM_APP_SDK_SCHEMA_REFS.requestCancel,
+      progress: CUSTOM_APP_SDK_SCHEMA_REFS.requestProgress,
+      partial: CUSTOM_APP_SDK_SCHEMA_REFS.requestPartial,
+    },
   },
   {
     id: "actions.invoke",
