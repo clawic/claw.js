@@ -8,11 +8,10 @@ import { buildCodexCommand, buildSetDefaultModelCommand, createClaw, createLocal
 import type { ClawInstance, TelegramSendMediaInput, TelegramSendMessageInput, VoiceNoteStatus } from "@clawjs/claw";
 import { createWorkspaceClaw } from "@clawjs/workspace";
 import type { WorkspaceClawInstance } from "@clawjs/workspace";
-import { resolveBuiltinCollectionName, resolveClawPersistentSurfacePath, semanticPlanSchema } from "@clawjs/core";
+import { clawDenseDataOsRegistry, resolveBuiltinCollectionName, resolveClawPersistentSurfacePath, semanticPlanSchema } from "@clawjs/core";
 import type { ClawDomain, CommitmentKind, CommitmentStatus, ContextPackPurpose, ContextPackStatus, JudgmentImpact, JudgmentStatus, LearningEvidenceSentiment, LearningKind, LearningPromotionTarget, LearningStatus, LearningTarget, MediaDirection, MediaKind, MediaListInput, MediaOrigin, OutcomeResult, OutcomeStatus, RuntimeAdapterId, SemanticPlan, UserCompileProfile, UserDomainId, UserEntityType, UserFactSensitivity, UserPackId, UserRecordType } from "@clawjs/core";
 import { runMagicDbCli } from "./database-magic.ts";
 import { runMemoryCli } from "./memory-local.ts";
-import { runDelegatedContentCli, runDelegatedDatabaseCli, runDelegatedErpCli, runDelegatedIotCli } from "./cli-delegated-domains.ts";
 import { runChatCli, runProviderCli } from "./chat.ts";
 import {
   addProjectIntegration,
@@ -84,9 +83,9 @@ import { runNeedsCli } from "./cli-needs-command.ts";
 import { runCommandsCli } from "./cli-commands-command.ts";
 import { runEvolutionCli } from "./cli-evolution-command.ts";
 import { runSafetyCli } from "./cli-safety-command.ts";
+import { enabledModuleIdsForConfig, hasModuleConfigForCli, readEffectiveModuleConfigForCli, requiredModuleForCliGroup, runModulesCli, runSetupCli } from "./cli-modules-command.ts";
 import { runConnectorContextCli } from "./cli-connector-context-command.ts";
 import { runProjectManifestCli } from "./cli-project-command.ts";
-import { runDenseDataCli } from "./cli-dense-data-command.ts";
 import { runGatewayCli, runNodesCli, runRemoteCli, runSyncCli } from "./cli-remote-sync-command.ts";
 import { isMacControlCliRoot, runMacControlCli } from "./cli-mac-control-command.ts";
 import { runPublicPortalShortcut, writeMissingSubcommandJsonHelp, writePublicPortalHelpOnly } from "./cli-public-portal-routes.ts";
@@ -131,6 +130,113 @@ type CliMediaClaw = ClawInstance & {
 };
 
 const REMOVED_CONTENT_PORTAL_COMMANDS = new Set(["posts", "campaigns", "publications"]);
+const DENSE_FOUNDATION_OPTIONAL_GROUPS = [
+  "dense-fixture",
+  "dense-fixtures",
+  "accounting",
+  "appliance-maintenance",
+  "batch-record",
+  "canonical-operation",
+  "canonical-operations",
+  "concept",
+  "concept-mapping",
+  "concept-mappings",
+  "construction",
+  "data-gap",
+  "data-gaps",
+  "domain-intent",
+  "domain-intents",
+  "domain-pack",
+  "domain-packs",
+  "domain-role",
+  "domain-roles",
+  "domain-system",
+  "domain-systems",
+  "encounter",
+  "evidence-source",
+  "evidence-sources",
+  "erp",
+  "health",
+  "instrument",
+  "instrument-item",
+  "instrument-items",
+  "instrument-response",
+  "instrument-responses",
+  "iot",
+  "lab",
+  "lab-result",
+  "lab-results",
+  "labs",
+  "legal",
+  "lot-release",
+  "medication",
+  "patient",
+  "patients",
+  "pharma",
+  "product-bom",
+  "property-offer",
+  "provenance-event",
+  "provenance-events",
+  "purchase-order-line-item",
+  "quality-gap",
+  "quality-gaps",
+  "relation",
+  "relations",
+  "semantic-view",
+  "semantic-views",
+  "symptom",
+  "thing",
+  "things",
+  "unit",
+  "units",
+  "universal-relation",
+  "universal-relations",
+  "vehicle-insurance-policy",
+  "vehicle-maintenance",
+  "vocabularies",
+  "vocabulary",
+];
+const DENSE_DATA_OPTIONAL_GROUPS = new Set([
+  ...DENSE_FOUNDATION_OPTIONAL_GROUPS,
+  ...clawDenseDataOsRegistry.systems.flatMap((system) => [
+    system.canonicalCommand,
+    ...system.aliases,
+    ...system.centers.flatMap((center) => [center.commandNoun, ...center.commandAliases]),
+  ]),
+]);
+
+async function runOptionalDenseDataCli(input: {
+  argv: string[];
+  positionals: string[];
+  flags: Record<string, string>;
+  context: CliContext;
+  wantsJson: boolean;
+  binName: string;
+  workspaceRoot: string;
+}): Promise<number | null> {
+  const modulePath = [".", "cli-dense-data-command.ts"].join("/");
+  try {
+    const optionalPack = await import("@clawjs/domain-pack-dense-data") as { runDenseDataCli?: (input: typeof input) => Promise<number | null> };
+    if (typeof optionalPack.runDenseDataCli === "function") {
+      return await optionalPack.runDenseDataCli(input);
+    }
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException & { code?: string }).code;
+    if (code !== "ERR_MODULE_NOT_FOUND" && code !== "MODULE_NOT_FOUND") throw error;
+  }
+  try {
+    const { runDenseDataCli } = await import(modulePath) as typeof import("./cli-dense-data-command.ts");
+    return await runDenseDataCli(input);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException & { code?: string }).code;
+    if (code !== "ERR_MODULE_NOT_FOUND" && code !== "MODULE_NOT_FOUND") throw error;
+    throw new CliHandledError(
+      "optional_pack_missing",
+      `This domain command needs an optional domain pack. Review it with \`${input.binName} modules install ${input.positionals[0] ?? "domain"}\` before using deep domain commands.`,
+      CLI_EXIT_USAGE,
+    );
+  }
+}
 
 function isClawDomainConfigured(flags: Record<string, string>): boolean {
   if (process.env.CLAW_DOMAINS_ACTIVE === "1") return true;
@@ -559,6 +665,14 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     return await runOpenServerCommand({ positionals, flags, context });
   }
 
+  if (group === "setup") {
+    return await runSetupCli({ positionals, flags, argv, context, wantsJson });
+  }
+
+  if (group === "modules") {
+    return await runModulesCli({ positionals, flags, argv, context, wantsJson });
+  }
+
   if (group === "open") {
     return await runOpenCli({ argv, positionals, flags, context, wantsJson, binName });
   }
@@ -617,8 +731,23 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   const portalShortcutExit = await runPublicPortalShortcut({ group, command, subcommand, argv, flags, context, runCli: runCliUnsafe });
   if (portalShortcutExit !== null) return portalShortcutExit;
 
-  const denseDataShortcutExit = await runDenseDataCli({ argv, positionals, flags, context, wantsJson, binName, workspaceRoot: flags.workspace || context.cwd });
-  if (denseDataShortcutExit !== null) return denseDataShortcutExit;
+  const gatedModule = requiredModuleForCliGroup(group);
+  if (gatedModule && command) {
+    const enabledModules = enabledModuleIdsForConfig(readEffectiveModuleConfigForCli(flags, context.cwd));
+    if (!enabledModules.has(gatedModule.id)) {
+      const installHint = gatedModule.requiresExplicitInstall ? ` If this area needs its optional pack, review it with \`${binName} modules install ${gatedModule.id}\`.` : "";
+      const message = `\`${binName} ${group}\` is available but not enabled. Enable it with \`${binName} modules enable ${gatedModule.id}\` before using this ${gatedModule.kind}.${installHint}`;
+      const error = new CliHandledError("module_not_enabled", message, CLI_EXIT_USAGE);
+      if (wantsJson) writeRootJsonError(error, group, { requiredModule: gatedModule.id });
+      else context.stderr.write(`${message}\n`);
+      return CLI_EXIT_USAGE;
+    }
+  }
+
+  if (group && command && DENSE_DATA_OPTIONAL_GROUPS.has(group)) {
+    const denseDataShortcutExit = await runOptionalDenseDataCli({ argv, positionals, flags, context, wantsJson, binName, workspaceRoot: flags.workspace || context.cwd });
+    if (denseDataShortcutExit !== null) return denseDataShortcutExit;
+  }
 
   if (["runtime", "monitor", "infra", "ops"].includes(group ?? "") && command) {
     const v1DataExitCode = await runV1DataCli({
@@ -651,6 +780,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
 
   if (group === "database" && wantsHelp) {
     try {
+      const { runDelegatedDatabaseCli } = await import("./cli-delegated-domains.ts");
       return await runDelegatedDatabaseCli(argv, flags, context);
     } catch (error) {
       const handled = cliErrorFromUnknown(error);
@@ -822,6 +952,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
 
   if (group === "database") {
     try {
+      const { runDelegatedDatabaseCli } = await import("./cli-delegated-domains.ts");
       return await runDelegatedDatabaseCli(argv, flags, context);
     } catch (error) {
       const handled = cliErrorFromUnknown(error);
@@ -863,6 +994,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
 
   if (group === "content") {
     try {
+      const { runDelegatedContentCli } = await import("./cli-delegated-domains.ts");
       return await runDelegatedContentCli(argv, flags, context);
     } catch (error) {
       context.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
@@ -872,6 +1004,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
 
   if (group === "erp") {
     try {
+      const { runDelegatedErpCli } = await import("./cli-delegated-domains.ts");
       return await runDelegatedErpCli(argv, flags, context);
     } catch (error) {
       context.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
@@ -881,6 +1014,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
 
   if (group === "iot") {
     try {
+      const { runDelegatedIotCli } = await import("./cli-delegated-domains.ts");
       return await runDelegatedIotCli(argv, flags, context);
     } catch (error) {
       context.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
@@ -893,6 +1027,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       const claw = await createCliClaw(resolveRuntimeAdapterId(flags), flags, context.cwd, "notify-cli", "notify-cli", "notify-cli");
       const input = {
         approvalId: flags["approval-id"] ?? flags["host-approval-id"] ?? "",
+        ...(flags["legal-label"] ? { legalLabel: flags["legal-label"] } : {}),
         ...(flags["idempotency-key"] ? { idempotencyKey: flags["idempotency-key"] } : {}),
         ...(flags.priority ? { priority: flags.priority as "passive" | "normal" | "time-sensitive" | "critical" } : {}),
         ...(parseJsonFlag<Record<string, unknown>>(flags["audience-json"], "--audience-json") ? { audience: parseJsonFlag<Record<string, unknown>>(flags["audience-json"], "--audience-json") } : {}),
@@ -1961,6 +2096,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   });
   if (temporalResult !== null) return temporalResult;
 
+  const hadModuleConfigBeforePrimaryUse = hasModuleConfigForCli(flags, context.cwd);
   const primaryProductivityResult = await runPrimaryProductivityCli({
     argv,
     group,
@@ -1977,7 +2113,12 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     workspaceId,
     agentId,
   });
-  if (primaryProductivityResult !== null) return primaryProductivityResult;
+  if (primaryProductivityResult !== null) {
+    if (primaryProductivityResult === CLI_EXIT_OK && !hadModuleConfigBeforePrimaryUse && group && ["tasks", "notes", "projects", "people", "goals", "reminders", "deadlines", "work"].includes(group)) {
+      context.stderr.write(`Tip: using minimal defaults. Run \`${binName} setup\` when you want to review capabilities and areas.\n`);
+    }
+    return primaryProductivityResult;
+  }
 
   const extendedProductivityResult = await runExtendedProductivityCli({
     argv,

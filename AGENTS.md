@@ -51,6 +51,8 @@ Read the relevant canonical docs before changing their surfaces:
 - CLI and agent discovery: `docs/adr/0007-cli-agent-interface.md`,
   `docs/adr/0010-cli-jit-guidance-actor-assertions-resource-registry.md`,
   `docs/adr/0017-discoverability-and-meta-code-routing.md`
+- Progressive modularity and zero-surprise install:
+  `docs/adr/0031-progressive-modularity-and-zero-surprise-install.md`
 - Security and releases: `SECURITY.md`, `RELEASING.md`, `docs/git-workflow.md`
 - OpenClaw host-dependent debugging: `agents/wiki/openclaw.md`
 
@@ -116,7 +118,7 @@ include:
   `decision-map-maintenance`
 - Stable surfaces: `naming-surface-audit`, `surface-registry-alignment`,
   `surface-route-work`, `cli-agent-surface-work`,
-  `source-file-boundary-refactor`
+  `source-file-boundary-refactor`, `progressive-modularity-review`
 - Data and storage: `canonical-catalog-expansion`,
   `data-storage-boundary-review`
 - Host, security, and validation: `host-boundary-review`,
@@ -169,6 +171,10 @@ Run `node ./scripts/skills-check.mjs` after adding or changing skills.
   code is removed after calibrated checks; public/canonical surfaces, enum
   states, Swift dynamic-use candidates, and duplicates are classified through
   the code hygiene baseline and report workflow.
+- Installing the base `claw` CLI must be zero-surprise: no implicit host
+  startup, OS permission prompt, app launch, model/browser download, provider
+  network call, or niche domain activation. New capability and area work must
+  route through progressive setup/modules state and ADR 0031.
 
 ## Validation
 

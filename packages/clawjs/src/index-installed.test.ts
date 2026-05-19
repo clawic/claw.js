@@ -1,5 +1,6 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -71,6 +72,31 @@ test("published CLI tarballs install with npm and manage local-first productivit
 
   const binPath = path.join(installRoot, "node_modules", "@clawjs", "cli", "bin", "claw.mjs");
   assert.equal(fs.existsSync(binPath), true);
+
+  const installedCliDist = fs.readdirSync(path.join(installRoot, "node_modules", "@clawjs", "cli", "dist"));
+  assert.equal(installedCliDist.some((fileName) => fileName.startsWith("cli-dense-data-command")), false);
+
+  const inactiveDenseCommand = spawnSync(process.execPath, [binPath, "health", "patients", "list", "--json"], {
+    cwd: installRoot,
+    encoding: "utf8",
+    env: process.env,
+  });
+  assert.equal(inactiveDenseCommand.status, 64);
+  assert.equal(JSON.parse(inactiveDenseCommand.stdout).error.code, "module_not_enabled");
+
+  JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "modules",
+    "enable",
+    "health",
+    "--json",
+  ]));
+  const missingDensePack = spawnSync(process.execPath, [binPath, "health", "patients", "list", "--json"], {
+    cwd: installRoot,
+    encoding: "utf8",
+    env: process.env,
+  });
+  assert.equal(missingDensePack.status, 64);
+  assert.equal(JSON.parse(missingDensePack.stdout).error.code, "optional_pack_missing");
 
   const magicDbTask = runInstalledClawProcess(binPath, installRoot, [
     "db",

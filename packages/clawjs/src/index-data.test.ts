@@ -1428,6 +1428,13 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
     assert.equal(deletedRouting.feature, "quickask");
     assert.equal(deletedRouting.deleted, true);
 
+    const iotModuleStdout = captureStream();
+    assert.equal(await runCli(["modules", "enable", "iot", "--json"], {
+      stdout: iotModuleStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+
     const iotStdout = captureStream();
     assert.equal(await runCli(["iot", "config", "set", "thermostat", "--name", "Hall thermostat", "--kind", "climate", "--secret-ref", "vault://iot/thermostat", "--json"], {
       stdout: iotStdout.stream,

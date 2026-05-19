@@ -5,7 +5,6 @@ import { randomUUID } from "crypto";
 
 import type Database from "better-sqlite3";
 import { DatabaseServiceStore } from "@clawjs/database";
-import { runAgentsCommand, runConnectionsCommand, runPersonalitiesCommand, runSkillCollectionsCommand } from "./v1-data-agent-entities.ts";
 import { runProviderRoutingCommand, runSnippetsCommand } from "./v1-data-agent-config.ts";
 import { scheduleAppsCatalogSearchEvent, scheduleBusinessRecordsSearchEvent, scheduleCalendarEventsSearchEvent, scheduleConnectorCatalogSearchEvent, scheduleContentItemsSearchEvent, scheduleDesignResourcesSearchEvent, scheduleDocsPagesSearchEvent, scheduleFinanceRecordTableSearchEvent, scheduleIotConfigSearchEvent, scheduleKnowledgeGraphSearchEvent, scheduleMarketplaceChoicesSearchEvent, scheduleMcpServersSearchEvent, scheduleNotesPagesSearchEvent, scheduleRuntimeEventsSearchEvent, scheduleSessionChatSearchEvent, scheduleSheetsWorkbookSearchEvent, scheduleSignalsObservationsSearchEvent, scheduleSkillsRegistrySearchEvent, scheduleSocialPostsSearchEvent } from "./cli-search-events.ts";
 export {
@@ -161,12 +160,23 @@ export async function runV1DataCli(input: V1DataCliInput): Promise<number | null
         return runConnectorsCommand(input, store);
       case "sheets":
         return runSheetsCommand(input);
-      case "agents":
+      case "agents": {
+        const { runAgentsCommand } = await import("./v1-data-agent-entities.ts");
         return runAgentsCommand(input, store);
+      }
       case "skills": return runSkillsCommand(input, store);
-      case "personalities": return runPersonalitiesCommand(input, store);
-      case "skill-collections": return runSkillCollectionsCommand(input, store);
-      case "connections": return runConnectionsCommand(input, store);
+      case "personalities": {
+        const { runPersonalitiesCommand } = await import("./v1-data-agent-entities.ts");
+        return runPersonalitiesCommand(input, store);
+      }
+      case "skill-collections": {
+        const { runSkillCollectionsCommand } = await import("./v1-data-agent-entities.ts");
+        return runSkillCollectionsCommand(input, store);
+      }
+      case "connections": {
+        const { runConnectionsCommand } = await import("./v1-data-agent-entities.ts");
+        return runConnectionsCommand(input, store);
+      }
       case "providers": return runProviderRoutingCommand(input, store);
       case "snippets": return runSnippetsCommand(input, store);
       case "sessions": return runSessionsIndexCommand(input, store);

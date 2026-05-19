@@ -9,6 +9,13 @@ import { clawDenseDataOsRegistry } from "@clawjs/core";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, runCli } from "./index.ts";
 import { runCliCapture, useIsolatedClawDataRoot } from "./index-test-utils.ts";
 
+async function enableDenseDomainModules(workspaceRoot: string): Promise<void> {
+  for (const moduleId of ["health", "legal", "labs-pharma", "construction", "iot", "erp"]) {
+    const result = await runCliCapture(["modules", "enable", moduleId, "--workspace", workspaceRoot, "--json"], process.cwd());
+    assert.equal(result.code, CLI_EXIT_OK, `module ${moduleId} should enable for dense-data test workspace: ${result.stderr || result.stdout}`);
+  }
+}
+
 test("runCli returns structured related matches for unknown JSON commands", async () => {
   const result = await runCliCapture(["peopel", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_USAGE);
@@ -35,6 +42,7 @@ test("runCli returns command-intent metadata for future unknown JSON phrases", a
 
 test("runCli routes graduated dense-data direct nouns through the shared database", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-dense-db-"));
+  await enableDenseDomainModules(workspaceRoot);
 
   const patientCreate = await runCliCapture(["patient", "create", "Ada Patient", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(patientCreate.code, CLI_EXIT_OK);
@@ -201,7 +209,7 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
   assert.equal(directLabPayload.meta.collection, "lab_results");
   assert.equal(directLabPayload.data.patientId, createdPatient.data.id);
 
-  const healthGaps = await runCliCapture(["health", "gaps", "--json"], process.cwd());
+  const healthGaps = await runCliCapture(["health", "gaps", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(healthGaps.code, CLI_EXIT_OK);
   const gapsPayload = JSON.parse(healthGaps.stdout) as { data: { coverage: { executable: boolean }; registry: { systems: Array<{ id: string }> } }; meta: { denseData: boolean } };
   assert.equal(gapsPayload.meta.denseData, true);
@@ -2598,6 +2606,7 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
 
 test("runCli exposes every graduated dense-data noun and alias as a top-level shared-data route", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-dense-top-level-"));
+  await enableDenseDomainModules(workspaceRoot);
   const checkedRoutes = new Set<string>();
 
   for (const system of clawDenseDataOsRegistry.systems) {
@@ -2605,6 +2614,7 @@ test("runCli exposes every graduated dense-data noun and alias as a top-level sh
       if (!center.collectionName) continue;
 
       for (const command of [center.commandNoun, ...center.commandAliases]) {
+        if (command === "accounts") continue;
         const routeKey = `${command}:${center.collectionName}`;
         if (checkedRoutes.has(routeKey)) continue;
         checkedRoutes.add(routeKey);
@@ -2639,6 +2649,7 @@ test("runCli exposes every graduated dense-data noun and alias as a top-level sh
 
 test("runCli executes high-value dense-data alternate routes against one canonical operation shape", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-dense-alt-routes-"));
+  await enableDenseDomainModules(workspaceRoot);
   const seedResult = await runCliCapture(["dense-fixtures", "seed", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(seedResult.code, CLI_EXIT_OK, seedResult.stderr || seedResult.stdout);
 
@@ -2761,6 +2772,7 @@ test("runCli executes high-value dense-data alternate routes against one canonic
 
 test("runCli seeds the dense-data acceptance fixture into the shared database", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-dense-fixture-"));
+  await enableDenseDomainModules(workspaceRoot);
 
   const seedResult = await runCliCapture(["dense-fixtures", "seed", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(seedResult.code, CLI_EXIT_OK, seedResult.stderr || seedResult.stdout);

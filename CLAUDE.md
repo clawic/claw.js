@@ -29,6 +29,10 @@ Read and follow:
     `docs/adr/0028-workspace-project-folder-manifest.md` before changing
     principals, entities, scopes, stewards, grants, restrictions, workspaces,
     projects, project folders, manifests, sharing, or ownership-like fields
+17. `docs/adr/0031-progressive-modularity-and-zero-surprise-install.md`
+    before changing CLI startup, package dependencies, setup, modules, host,
+    permissions, background processes, models, browsers, audio, integrations,
+    sync, or optional domain areas
 
 Critical guardrail for prompt-based tests:
 

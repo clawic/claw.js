@@ -665,6 +665,16 @@ layers (memory, skills, database, time, drive, vault, etc.) is progressive.
 The framework never forces a layer to function. Each layer must work in
 isolation and combine cleanly with the others.
 
+**VIII.2.1 Installation is zero-surprise.** Installing or invoking the base
+CLI must not open applications, start hosts or daemons, request native
+permissions, make network calls, download models or browsers, install heavy
+assets, activate niche domains, or expose large catalogs as if the user had
+chosen them. Cheap definitions may be present in the framework, and small
+local data state may be created when a command actually needs it, but
+surprising costs require explicit user action. Setup presets are reviewable
+templates, not opaque bundles: technical capabilities and human areas of use
+are configured separately, and "advanced" never means "activate every domain."
+
 **VIII.3 Modularity is the heart of openness.** Building blocks are
 independent, interchangeable, overridable. Anything connects to anything. A
 user using one runtime can add a skill from elsewhere, replace a sub-app,

@@ -41,20 +41,15 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean --target node20 --external better-sqlite3",
+    "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean --target node20 --external better-sqlite3 --external playwright --external @clawjs/agents --external @clawjs/audio --external @clawjs/integrations --external @clawjs/sessions",
     "prepublishOnly": "node --import tsx ../../scripts/verify-regulated-domain-safety-goal.mjs && node ../../scripts/version-governance-check.mjs --release-gate"
   },
   "dependencies": {
-    "@clawjs/agents": "0.1.2",
-    "@clawjs/audio": "0.1.0",
     "@clawjs/core": "0.1.2",
     "@clawjs/claw": "0.1.2",
     "@clawjs/database": "0.1.2",
-    "@clawjs/integrations": "0.1.2",
     "@clawjs/search": "0.1.2",
-    "@clawjs/sessions": "0.1.0",
     "@clawjs/workspace": "0.1.2",
-    "better-sqlite3": "^12.9.0",
-    "playwright": "^1.56.1"
+    "better-sqlite3": "^12.9.0"
   }
 }
