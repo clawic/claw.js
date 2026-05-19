@@ -81,8 +81,39 @@ test("local storage shares through a configured adapter", async (t) => {
   });
 
   storage.writeText({ key: "deliverable.txt", content: "done" });
-  const share = await storage.createShare({ key: "deliverable.txt", label: "Deliverable" });
+  assert.throws(
+    () => storage.exportToFile({ key: "deliverable.txt", filePath: path.join(workspaceDir, "deliverable.txt") }),
+    /requires explicit approvalId before export\/share/,
+  );
+  const exported = storage.exportToFile({
+    key: "deliverable.txt",
+    filePath: path.join(workspaceDir, "deliverable.txt"),
+    legalLabel: "Exported content - human reviewed",
+    approvalId: "approval_storage_export",
+  });
+  assert.equal(exported?.key, "agents/agent-a/deliverable.txt");
+  const legalManifest = JSON.parse(fs.readFileSync(path.join(workspaceDir, "deliverable.txt.claw-legal.json"), "utf8")) as {
+    approvalId: string;
+    legalLabel: string;
+    source: { key: string };
+  };
+  assert.equal(legalManifest.approvalId, "approval_storage_export");
+  assert.equal(legalManifest.legalLabel, "Exported content - human reviewed");
+  assert.equal(legalManifest.source.key, "agents/agent-a/deliverable.txt");
+
+  await assert.rejects(
+    () => storage.createShare({ key: "deliverable.txt", label: "Deliverable" }),
+    /requires explicit approvalId before export\/share/,
+  );
+  const share = await storage.createShare({
+    key: "deliverable.txt",
+    label: "Deliverable",
+    legalLabel: "Exported content - human reviewed",
+    approvalId: "approval_storage_share",
+  });
 
   assert.match(share.url, /share\.local/);
+  assert.equal(share.legalLabel, "Exported content - human reviewed");
+  assert.equal(share.approvalId, "approval_storage_share");
   assert.equal(await storage.revokeShare(share.id), true);
 });

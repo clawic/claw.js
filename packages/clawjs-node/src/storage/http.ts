@@ -196,6 +196,8 @@ export function createStorageHttpHandler(
             bucket?: string;
             key?: string;
             label?: string;
+            legalLabel?: string;
+            approvalId?: string;
             expiresAt?: string | null;
             ttlMs?: number;
           };
@@ -204,6 +206,8 @@ export function createStorageHttpHandler(
             bucket: body.bucket,
             key: body.key,
             label: body.label,
+            legalLabel: body.legalLabel,
+            approvalId: body.approvalId,
             expiresAt: body.expiresAt,
             ttlMs: body.ttlMs,
           });

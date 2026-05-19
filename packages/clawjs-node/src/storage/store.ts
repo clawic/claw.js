@@ -60,6 +60,8 @@ export interface StorageShare {
   bucket: string;
   key: string;
   label: string;
+  legalLabel: string;
+  approvalId: string;
   mode: "read";
   url: string;
   externalItemId?: string;
@@ -85,7 +87,7 @@ export interface StorageListInput {
 }
 
 export interface StorageShareAdapter {
-  create(input: StorageGetResult & { label: string; expiresAt?: string | null }): Promise<{
+  create(input: StorageGetResult & { label: string; legalLabel: string; approvalId: string; expiresAt?: string | null }): Promise<{
     url: string;
     externalItemId?: string;
     externalShareId?: string;
@@ -140,6 +142,8 @@ interface ShareRow {
   bucket: string;
   object_key: string;
   label: string;
+  legal_label: string;
+  approval_id: string;
   mode: "read";
   url: string;
   external_item_id: string | null;
@@ -241,6 +245,14 @@ function normalizeExpiresAt(input: { expiresAt?: string | null; ttlMs?: number }
   return null;
 }
 
+function requireLegalShareInput(input: { approvalId?: string; legalLabel?: string }): { approvalId: string; legalLabel: string } {
+  const approvalId = input.approvalId?.trim() ?? "";
+  const legalLabel = input.legalLabel?.trim() ?? "";
+  if (!approvalId) throw new Error("Storage share creation requires explicit approvalId before export/share.");
+  if (!legalLabel) throw new Error("Storage share creation requires a persistent legalLabel before export/share.");
+  return { approvalId, legalLabel };
+}
+
 function toBuffer(data: string | Uint8Array): Buffer {
   if (typeof data !== "string") return Buffer.from(data);
   return Buffer.from(data, "utf8");
@@ -292,6 +304,8 @@ function serializeShare(row: ShareRow): StorageShare {
     bucket: row.bucket,
     key: row.object_key,
     label: row.label,
+    legalLabel: row.legal_label,
+    approvalId: row.approval_id,
     mode: row.mode,
     url: row.url,
     ...(row.external_item_id ? { externalItemId: row.external_item_id } : {}),
@@ -376,6 +390,8 @@ export class LocalStorageStore {
     this.ensureColumn("storage_shares", "snapshot_content_type", "TEXT NOT NULL DEFAULT 'application/octet-stream'");
     this.ensureColumn("storage_shares", "snapshot_sha256", "TEXT NOT NULL DEFAULT ''");
     this.ensureColumn("storage_shares", "expires_at", "TEXT");
+    this.ensureColumn("storage_shares", "approval_id", "TEXT NOT NULL DEFAULT 'legacy-missing-approval'");
+    this.ensureColumn("storage_shares", "legal_label", "TEXT NOT NULL DEFAULT 'legacy-unlabeled-export'");
   }
 
   private ensureColumn(table: string, column: string, definition: string): void {
@@ -542,11 +558,25 @@ export class LocalStorageStore {
     });
   }
 
-  exportToFile(ref: Partial<StorageRef> & { key: string; filePath: string }): StorageObject | null {
+  exportToFile(ref: Partial<StorageRef> & { key: string; filePath: string; legalLabel?: string; approvalId?: string }): StorageObject | null {
+    const legal = requireLegalShareInput(ref);
     const object = this.get(ref);
     if (!object) return null;
     this.filesystem.ensureDir(path.dirname(ref.filePath));
     fs.writeFileSync(ref.filePath, object.buffer);
+    fs.writeFileSync(`${ref.filePath}.claw-legal.json`, JSON.stringify({
+      schemaVersion: 1,
+      kind: "claw.storage.export.legal",
+      exportedAt: nowIso(),
+      approvalId: legal.approvalId,
+      legalLabel: legal.legalLabel,
+      source: {
+        bucket: object.bucket,
+        key: object.key,
+        sha256: object.sha256,
+        contentType: object.contentType,
+      },
+    }, null, 2));
     return object;
   }
 
@@ -666,7 +696,8 @@ export class LocalStorageStore {
     `).run(nowIso(), id).changes > 0;
   }
 
-  async createShare(input: { bucket?: string; key: string; label?: string; expiresAt?: string | null; ttlMs?: number }): Promise<StorageShare> {
+  async createShare(input: { bucket?: string; key: string; label?: string; legalLabel?: string; approvalId?: string; expiresAt?: string | null; ttlMs?: number }): Promise<StorageShare> {
+    const legal = requireLegalShareInput(input);
     const bucket = normalizeBucket(input.bucket);
     const key = this.resolveKeyForRead(input.key);
     this.assertAllowed(bucket, key, "objects:read");
@@ -678,21 +709,23 @@ export class LocalStorageStore {
     if (!object) throw new Error(`Storage object not found: ${bucket}:${key}`);
     const label = input.label?.trim() || path.posix.basename(key) || "Shared object";
     const expiresAt = normalizeExpiresAt(input);
-    const created = await this.shareAdapter.create({ ...object, label, expiresAt });
+    const created = await this.shareAdapter.create({ ...object, label, ...legal, expiresAt });
     const id = crypto.randomUUID();
     const now = nowIso();
     try {
       this.sqlite.prepare(`
         INSERT INTO storage_shares (
-          id, bucket, object_key, label, mode, url, external_item_id, external_share_id,
+          id, bucket, object_key, label, legal_label, approval_id, mode, url, external_item_id, external_share_id,
           snapshot_blob_path, snapshot_size_bytes, snapshot_content_type, snapshot_sha256,
           created_at, expires_at, revoked_at
-        ) VALUES (?, ?, ?, ?, 'read', ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+        ) VALUES (?, ?, ?, ?, ?, ?, 'read', ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
       `).run(
         id,
         bucket,
         key,
         label,
+        legal.legalLabel,
+        legal.approvalId,
         created.url,
         created.externalItemId ?? null,
         created.externalShareId ?? null,
@@ -709,6 +742,8 @@ export class LocalStorageStore {
         bucket,
         key,
         label,
+        legalLabel: legal.legalLabel,
+        approvalId: legal.approvalId,
         mode: "read",
         url: created.url,
         ...(created.externalItemId ? { externalItemId: created.externalItemId } : {}),
@@ -736,6 +771,7 @@ export class LocalStorageStore {
   listShares(): StorageShare[] {
     return (this.sqlite.prepare(`
       SELECT id, bucket, object_key, label, mode, url, external_item_id, external_share_id,
+        legal_label, approval_id,
         snapshot_blob_path, snapshot_size_bytes, snapshot_content_type, snapshot_sha256,
         created_at, expires_at, revoked_at
       FROM storage_shares
@@ -746,6 +782,7 @@ export class LocalStorageStore {
   getShare(id: string): StorageShare | null {
     const row = this.sqlite.prepare(`
       SELECT id, bucket, object_key, label, mode, url, external_item_id, external_share_id,
+        legal_label, approval_id,
         snapshot_blob_path, snapshot_size_bytes, snapshot_content_type, snapshot_sha256,
         created_at, expires_at, revoked_at
       FROM storage_shares

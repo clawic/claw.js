@@ -213,6 +213,8 @@ if (group === "media" && command === "share" && subcommand === "create") {
   const share = await claw.media.share.create({
     mediaId: flags["media-id"] ?? flags.id,
     label: flags.label,
+    legalLabel: flags["legal-label"],
+    approvalId: flags["approval-id"] ?? flags["host-approval-id"],
     filters: flags["media-id"] || flags.id ? undefined : buildMediaListInput(flags),
     expiresAt: flags["expires-at"],
     ...(flags["ttl-ms"] ? { ttlMs: Number(flags["ttl-ms"]) } : {}),

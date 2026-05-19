@@ -1214,6 +1214,8 @@ export interface MediaSearchResult extends MediaRecord {
 export interface MediaGalleryShare {
   id: string;
   label: string;
+  legalLabel: string;
+  approvalId: string;
   url: string;
   filters: MediaListInput;
   createdAt: string;

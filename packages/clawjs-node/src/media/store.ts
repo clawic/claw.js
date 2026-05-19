@@ -47,8 +47,8 @@ export interface MediaStore {
   search(input: MediaListInput & { query: string }): MediaSearchResult[];
   get(mediaId: string): MediaRecord | null;
   download(mediaId: string): { media: MediaRecord; filePath: string; buffer: Buffer } | null;
-  createObjectShare(input: { mediaId: string; label?: string; expiresAt?: string | null; ttlMs?: number }): Promise<StorageShare>;
-  createGalleryShare(input?: { label?: string; filters?: MediaListInput; expiresAt?: string | null; ttlMs?: number }): MediaGalleryShare;
+  createObjectShare(input: { mediaId: string; label?: string; legalLabel?: string; approvalId?: string; expiresAt?: string | null; ttlMs?: number }): Promise<StorageShare>;
+  createGalleryShare(input: { label?: string; legalLabel?: string; approvalId?: string; filters?: MediaListInput; expiresAt?: string | null; ttlMs?: number }): MediaGalleryShare;
   revokeShare(id: string): Promise<boolean>;
   listShares(): Array<StorageShare | MediaGalleryShare>;
   resolveGalleryShare(id: string): { share: MediaGalleryShare; items: MediaRecord[] } | null;
@@ -201,6 +201,14 @@ function normalizeExpiresAt(input: { expiresAt?: string | null; ttlMs?: number }
 
 function shareExpired(share: MediaGalleryShare): boolean {
   return Boolean(share.expiresAt && Date.parse(share.expiresAt) <= Date.now());
+}
+
+function requireMediaShareReview(input: { approvalId?: string; legalLabel?: string }): { approvalId: string; legalLabel: string } {
+  const approvalId = input.approvalId?.trim() ?? "";
+  const legalLabel = input.legalLabel?.trim() ?? "";
+  if (!approvalId) throw new Error("Media share creation requires explicit approvalId before export/share.");
+  if (!legalLabel) throw new Error("Media share creation requires a persistent legalLabel before export/share.");
+  return { approvalId, legalLabel };
 }
 
 export function createMediaStore(options: {
@@ -356,12 +364,15 @@ export function createMediaStore(options: {
       return { media, filePath: object.filePath, buffer: object.buffer };
     },
     async createObjectShare(input) {
+      const legal = requireMediaShareReview(input);
       const media = this.get(input.mediaId);
       if (!media?.storage) throw new Error(`Media has no stored object: ${input.mediaId}`);
       const share = await options.storage.createShare({
         bucket: media.storage.bucket,
         key: media.storage.key,
         label: input.label ?? media.name,
+        legalLabel: legal.legalLabel,
+        approvalId: legal.approvalId,
         expiresAt: input.expiresAt,
         ttlMs: input.ttlMs,
       });
@@ -372,12 +383,15 @@ export function createMediaStore(options: {
       });
       return share;
     },
-    createGalleryShare(input = {}) {
+    createGalleryShare(input) {
+      const legal = requireMediaShareReview(input);
       const id = `media-share-${crypto.randomUUID()}`;
       const createdAt = nowIso();
       const share: MediaGalleryShare = {
         id,
         label: input.label?.trim() || "Media gallery",
+        legalLabel: legal.legalLabel,
+        approvalId: legal.approvalId,
         url: `claw://media-gallery/${id}`,
         filters: input.filters ?? {},
         createdAt,

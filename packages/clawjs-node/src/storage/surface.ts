@@ -44,6 +44,8 @@ export const STORAGE_STORE_SCHEMA_SQL = String.raw`
         bucket TEXT NOT NULL,
         object_key TEXT NOT NULL,
         label TEXT NOT NULL,
+        legal_label TEXT NOT NULL DEFAULT 'legacy-unlabeled-export',
+        approval_id TEXT NOT NULL DEFAULT 'legacy-missing-approval',
         mode TEXT NOT NULL,
         url TEXT NOT NULL,
         external_item_id TEXT,
