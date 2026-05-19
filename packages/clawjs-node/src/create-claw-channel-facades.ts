@@ -151,6 +151,13 @@ export function createClawChannelFacades(locals: Record<string, any>): any {
             ...input,
             provider,
             accountId,
+            metadata: {
+              ...(input.metadata ?? {}),
+              approvalId: review.approvalId,
+              legalLabel: review.legalLabel,
+              policyDecision: review.policy.policyDecision,
+              policyReasonCodes: review.policy.reasonCodes,
+            },
           });
           if (input.media) {
             registerOutboundChannelMedia({

@@ -2393,6 +2393,7 @@ The docs check script validates that every current export from
     RemoteSourceQaReviewTemplateItem
     remoteSourceQaReviewTemplateItemSchema
     remoteSourceQaReviewTemplateSchema
+    remoteSourceSessionRereadCommand
     RemoteSurfaceClassification
     RemoteSurfaceClassificationReceipt
     remoteSurfaceClassificationReceiptSchema
@@ -3136,6 +3137,7 @@ The docs check script validates that every current export from
     remoteSourceQaReviewTemplateSchema
     remoteSourceConversationId
     remoteSourcePlanId
+    remoteSourceSessionRereadCommand
     RemoteSurfaceClassification
     RemoteSurfaceClassificationReceipt
     remoteSurfaceClassificationReceiptSchema
