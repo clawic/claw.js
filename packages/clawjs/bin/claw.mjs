@@ -68,6 +68,7 @@ try {
 const exitCode = await runCli(args, {
   stdout: process.stdout,
   stderr: process.stderr,
+  stdin: process.stdin,
   cwd: process.cwd(),
   binName: publicBinName,
 });

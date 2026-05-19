@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { PassThrough } from "node:stream";
 import { test } from "vitest";
 
 import { CLI_EXIT_OK } from "./cli-errors.ts";
-import { runCliCapture } from "./index-test-utils.ts";
+import { runCli } from "./index.ts";
+import { captureStream, runCliCapture } from "./index-test-utils.ts";
 
 test("setup previews progressive mode without writing until apply", async () => {
   const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-modules-home-"));
@@ -69,6 +71,40 @@ test("setup details allow reviewing and adjusting modules before apply", async (
   const saved = JSON.parse(fs.readFileSync(path.join(tempHome, "config", "modules.json"), "utf8")) as { enabledModules: string[]; disabledModules: string[] };
   assert.equal(saved.enabledModules.includes("crm"), true);
   assert.equal(saved.disabledModules.includes("light-search"), true);
+});
+
+test("setup interactive asks for mode, adjustments, and confirmation before writing", async () => {
+  const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-modules-interactive-"));
+  const stdout = captureStream();
+  const stderr = captureStream();
+  const stdin = new PassThrough();
+  setImmediate(() => {
+    stdin.write("normal\n");
+    stdin.write("crm\n");
+    stdin.write("light-search\n");
+    stdin.write("y\n");
+    stdin.end();
+  });
+  const code = await runCli(["setup", "--interactive", "--claw-home", tempHome, "--json"], {
+    stdout: stdout.stream,
+    stderr: stderr.stream,
+    stdin,
+    cwd: process.cwd(),
+    binName: "claw",
+  });
+  assert.equal(code, CLI_EXIT_OK);
+  const jsonStart = stdout.getOutput().indexOf("{\n  \"ok\"");
+  assert.notEqual(jsonStart, -1);
+  const payload = JSON.parse(stdout.getOutput().slice(jsonStart)) as {
+    data: { interactive: boolean; applied: boolean; mode: string; adjustments: { enable: string[]; disable: string[] } };
+  };
+  assert.equal(payload.data.interactive, true);
+  assert.equal(payload.data.applied, true);
+  assert.equal(payload.data.mode, "normal");
+  assert.deepEqual(payload.data.adjustments.enable, ["crm"]);
+  assert.deepEqual(payload.data.adjustments.disable, ["light-search"]);
+  assert.equal(fs.existsSync(path.join(tempHome, "config", "modules.json")), true);
+  assert.equal(stderr.getOutput(), "");
 });
 
 test("modules enable and workspace overrides do not install dependencies", async () => {

@@ -108,6 +108,7 @@ export { CLI_USAGE, DEFAULT_CLI_BIN, buildCliUsage } from "./cli-surface.ts";
 export interface CliContext {
   stdout: NodeJS.WritableStream;
   stderr: NodeJS.WritableStream;
+  stdin?: NodeJS.ReadableStream;
   cwd: string;
   binName?: string;
   runCommand?: (command: string, args: string[], options: { cwd: string }) => Promise<void>;
