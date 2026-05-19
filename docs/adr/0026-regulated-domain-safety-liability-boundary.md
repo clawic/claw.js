@@ -28,7 +28,8 @@ The machine-readable policy lives in
 `packages/clawjs-core/src/regulated-domain-safety.ts`. It defines regulated
 domains, sensitive data classes, decision effects, allowed uses, blocked uses,
 prohibited practices, disclaimer policy, output label policy, professional
-review requirements, and local audit policy.
+review requirements, local audit policy, configurable policy mode, and compact
+action decisions: `allow`, `confirm`, `block`, or `log-only`.
 
 Allowed default uses are local recordkeeping, search, extraction, factual
 summary, questions to review, gaps and provenance, non-final drafts, and
@@ -49,6 +50,12 @@ Relay, exports, remote/sync, app surfaces, docs, examples, and release gates
 must consume the shared policy instead of maintaining separate local versions.
 Subagents, connectors, MCP, Relay, export/share, sync, remote providers, or
 external actions must not weaken or bypass the boundary.
+
+Sensitive and external surfaces pass a classified action context into
+`evaluateRegulatedAction(...)`. The returned decision includes reason codes,
+disclaimer policy, required output labels, audit requirements, and the applied
+config so callers can distinguish a confirmable action from a hard block
+without inventing local legal logic.
 
 Sensitive outputs must carry persistent labels equivalent to draft, not
 professional advice, human review required, sources and gaps required, regulated

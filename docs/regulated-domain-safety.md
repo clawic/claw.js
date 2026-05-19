@@ -7,7 +7,10 @@ services, or other regulated professionals.
 
 The executable policy is in
 `packages/clawjs-core/src/regulated-domain-safety.ts` and is accepted by
-[ADR 0026](./adr/0026-regulated-domain-safety-liability-boundary.md).
+[ADR 0026](./adr/0026-regulated-domain-safety-liability-boundary.md). Sensitive,
+external, export/share, remote/sync, connector, agent, CLI, and release
+surfaces must build a classified action context and evaluate it through this
+shared policy instead of adding command-local legal checks.
 
 ## Default allowed use
 
@@ -37,10 +40,20 @@ submissions.
 
 ## Required gates
 
+`evaluateRegulatedAction(...)` returns a compact policy decision:
+
+- `allow`: the action can continue with the returned labels, disclaimer, and
+  audit requirements.
+- `confirm`: the action is not blocked, but requires explicit review, consent,
+  destination authorization, labels, or opt-in before execution.
+- `block`: the action is outside the allowed product boundary.
+- `log-only`: the action is safe to continue and only needs configured local
+  audit handling.
+
 External sensitive actions, sensitive export/share, remote/sync, support data,
 third-party provider use, and professional contexts require explicit review or
-opt-in. Minors require a strong guard and the official product is 18+ by
-default.
+opt-in through the policy config. Minors require a strong guard and the official
+product is 18+ by default.
 
 Every new sensitive collection, connector, agent, CLI route, MCP tool, Relay
 route, app surface, demo, or docs claim must be classified against the shared

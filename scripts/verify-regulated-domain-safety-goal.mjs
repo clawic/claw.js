@@ -352,6 +352,9 @@ const finalFinance = evaluateRegulatedAction({
 if (finalFinance.allowed || !finalFinance.denialCodes.includes("final_decision_blocked")) {
   errors.push("finance final decision is not blocked");
 }
+if (finalFinance.policyDecision !== "block") {
+  errors.push("finance final decision must return policyDecision=block");
+}
 
 const legalExport = evaluateRegulatedAction({
   regulatedDomain: "legal",
@@ -361,6 +364,26 @@ const legalExport = evaluateRegulatedAction({
 });
 if (!legalExport.denialCodes.includes("sensitive_export_review_required")) {
   errors.push("legal sensitive export does not require review");
+}
+if (legalExport.policyDecision !== "confirm" || !legalExport.requirements.includes("human_review")) {
+  errors.push("legal sensitive export must return policyDecision=confirm with human review requirement");
+}
+
+const reviewedLegalExport = evaluateRegulatedAction({
+  regulatedDomain: "legal",
+  decisionEffect: "external_action",
+  sensitiveExport: true,
+  externalAction: true,
+  policyConfig: {
+    confirmed: true,
+    approvalId: "approval_legal_export",
+    legalLabel: "Legal export - human reviewed",
+    materialConsent: true,
+    destinationAuthorized: true,
+  },
+});
+if (!reviewedLegalExport.allowed || reviewedLegalExport.policyDecision !== "allow") {
+  errors.push("reviewed legal sensitive export must be allow after central policy config is satisfied");
 }
 
 for (const [relativePath, snippets] of [
@@ -660,13 +683,18 @@ for (const [relativePath, snippets] of [
     "--approval-id",
   ]],
   ["packages/clawjs-node/src/storage/store.ts", [
+    "evaluateRegulatedAction",
+    "policyDecision",
     "Storage share creation requires explicit approvalId before export/share.",
     "Storage share creation requires a persistent legalLabel before export/share.",
     "claw.storage.export.legal",
+    "policyApplied",
     "approval_id",
     "legal_label",
   ]],
   ["packages/clawjs-node/src/media/store.ts", [
+    "evaluateRegulatedAction",
+    "policyDecision",
     "Media share creation requires explicit approvalId before export/share.",
     "Media share creation requires a persistent legalLabel before export/share.",
   ]],
@@ -674,11 +702,16 @@ for (const [relativePath, snippets] of [
     "approval_storage_share",
     "approval_storage_export",
     "Exported content - human reviewed",
+    "legalManifest.policy.decision",
+    "regulated_domain:identity",
   ]],
   ["packages/clawjs/src/cli-export-review.ts", [
+    "evaluateRegulatedAction",
+    "policyDecision",
     "requires --confirm before exporting or sharing data",
     "requires --approval-id or --host-approval-id",
     "requires --legal-label",
+    "policyApplied",
   ]],
   ["packages/clawjs/src/cli-productivity-primary-command.test.ts", [
     "approval_work_export",
@@ -691,6 +724,8 @@ for (const [relativePath, snippets] of [
     "approval_media_download",
     "Document download - human reviewed",
     "Media download - human reviewed",
+    "policy.decision",
+    "regulated_domain:identity",
   ]],
   ["packages/clawjs/src/cli-file-session-document-command.ts", [
     "claw.documents.download.legal",
@@ -733,19 +768,35 @@ for (const [relativePath, snippets] of [
   ["docs/adr/0026-regulated-domain-safety-liability-boundary.md", [
     "Status",
     "Accepted",
+    "`allow`, `confirm`, `block`, or `log-only`",
+    "evaluateRegulatedAction(...)",
     "Subagents, connectors, MCP, Relay",
+  ]],
+  ["docs/regulated-domain-safety.md", [
+    "`allow`",
+    "`confirm`",
+    "`block`",
+    "`log-only`",
+    "shared policy instead of adding command-local legal checks",
   ]],
   ["docs/cli.md", [
     "claw safety domains --json",
     "claw safety check --domain finance --effect final_decision",
+    "--material-consent true --destination-authorized true",
+    "policy decision of `block` or `confirm`",
   ]],
   ["packages/clawjs/src/cli-safety-command.ts", [
+    "policyConfig",
+    "parsePolicyMode",
+    "${data.decision.policyDecision}",
     "disclaimer\\t${data.decision.disclaimerPolicy}",
     "labels\\t${data.decision.outputLabels.join(\",\")}",
   ]],
   ["packages/clawjs/src/cli-safety.test.ts", [
     "safety human domain surfaces preserve guard metadata",
     "\"outputLabelPolicy\": \"required\"",
+    "safety check can return confirm or allow through central policy config",
+    "policyDecision",
     "safety explain returns policy evidence for regulated domains",
     "legal_strategy_as_final_advice",
     "legal_service_decision",

@@ -70,6 +70,17 @@ export async function runSafetyCli(input: SafetyCliInput): Promise<number> {
       sensitiveExport: input.flags.export === "true" || input.flags["sensitive-export"] === "true",
       remoteOrProviderUse: input.flags.remote === "true" || input.flags.provider === "true",
       professionalContext: input.flags.professional === "true" || input.flags["professional-context"] === "true",
+      policyConfig: {
+        mode: parsePolicyMode(input.flags.mode || input.flags["policy-mode"]),
+        confirmed: input.flags.confirm === "true" || input.flags.approved === "true",
+        approvalId: input.flags["approval-id"] ?? input.flags["host-approval-id"],
+        legalLabel: input.flags["legal-label"],
+        globalConsent: input.flags["global-consent"] === "true",
+        materialConsent: input.flags["material-consent"] === "true",
+        destinationAuthorized: input.flags["destination-authorized"] === "true",
+        automationAuthorized: input.flags["automation-authorized"] === "true",
+        auditOnly: input.flags["audit-only"] === "true",
+      },
     });
     return writeSafetyResult(input, { decision });
   }
@@ -112,6 +123,13 @@ function parseDecisionEffect(value: string): RegulatedDecisionEffect {
   throw new CliHandledError("invalid_decision_effect", `Use one of: ${allowed.join(", ")}.`, CLI_EXIT_USAGE);
 }
 
+function parsePolicyMode(value: string | undefined): "strict" | "normal" | "authorized_automation" | undefined {
+  if (!value) return undefined;
+  const allowed = ["strict", "normal", "authorized_automation"];
+  if (allowed.includes(value)) return value as "strict" | "normal" | "authorized_automation";
+  throw new CliHandledError("invalid_policy_mode", `Use one of: ${allowed.join(", ")}.`, CLI_EXIT_USAGE);
+}
+
 function writeSafetyUsage(input: SafetyCliInput): number {
   input.context.stderr.write([
     `Usage: ${input.binName} safety domains|classify|check|explain|disclaimers [options]`,
@@ -147,7 +165,7 @@ function writeSafetyResult(input: SafetyCliInput, data: unknown): number {
 
   if (isDecisionPayload(data)) {
     input.context.stdout.write([
-      `${data.decision.allowed ? "allowed" : "blocked"}\t${data.decision.denialCodes.join(",") || "none"}`,
+      `${data.decision.policyDecision}\t${data.decision.denialCodes.join(",") || "none"}`,
       `disclaimer\t${data.decision.disclaimerPolicy}`,
       `labels\t${data.decision.outputLabels.join(",")}`,
     ].join("\n") + "\n");

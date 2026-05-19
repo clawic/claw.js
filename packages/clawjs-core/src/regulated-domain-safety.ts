@@ -111,6 +111,28 @@ export type SubjectKind = "self" | "third_party" | "professional_client" | "pati
 export type DisclaimerPolicy = "contextual_remembered" | "always_visible" | "first_use_only";
 export type OutputLabelPolicy = "required" | "ui_only" | "on_demand";
 export type AuditPolicy = "local_configurable_redacted" | "minimal" | "full";
+export type RegulatedPolicyDecisionKind = "allow" | "confirm" | "block" | "log-only";
+export type RegulatedPolicyMode = "strict" | "normal" | "authorized_automation";
+export type RegulatedPolicyRequirement =
+  | "human_review"
+  | "professional_review"
+  | "output_label"
+  | "local_audit"
+  | "remote_or_provider_opt_in"
+  | "authorized_destination"
+  | "material_consent";
+
+export interface RegulatedActionPolicyConfig {
+  mode?: RegulatedPolicyMode;
+  confirmed?: boolean;
+  approvalId?: string | null;
+  legalLabel?: string | null;
+  globalConsent?: boolean;
+  materialConsent?: boolean;
+  destinationAuthorized?: boolean;
+  automationAuthorized?: boolean;
+  auditOnly?: boolean;
+}
 
 export interface RegulatedDomainPolicy {
   regulatedDomain: RegulatedDomain;
@@ -134,6 +156,7 @@ export interface RegulatedActionRequest {
   sensitiveExport?: boolean;
   remoteOrProviderUse?: boolean;
   professionalContext?: boolean;
+  policyConfig?: RegulatedActionPolicyConfig;
 }
 
 export type RegulatedActionDenialCode =
@@ -148,13 +171,24 @@ export type RegulatedActionDenialCode =
   | "remote_or_provider_opt_in_required";
 
 export interface RegulatedActionDecision {
+  policyDecision: RegulatedPolicyDecisionKind;
   allowed: boolean;
   requiresHumanReview: boolean;
   requiresProfessionalReview: boolean;
   denialCodes: RegulatedActionDenialCode[];
+  reasonCodes: RegulatedActionDenialCode[];
+  requirements: RegulatedPolicyRequirement[];
   outputLabels: string[];
   disclaimerPolicy: DisclaimerPolicy;
   auditPolicy: AuditPolicy;
+  policyApplied: {
+    version: number;
+    mode: RegulatedPolicyMode;
+    globalConsent: boolean;
+    materialConsent: boolean;
+    destinationAuthorized: boolean;
+    automationAuthorized: boolean;
+  };
 }
 
 const baseAllowedUses = [...allowedRegulatedUses];
@@ -211,15 +245,21 @@ export function getRegulatedDomainPolicy(domain: RegulatedDomain): RegulatedDoma
 }
 
 export function evaluateRegulatedAction(request: RegulatedActionRequest): RegulatedActionDecision {
+  const policyConfig = normalizeRegulatedPolicyConfig(request.policyConfig);
   if (!isRegulatedDomain(request.regulatedDomain)) {
+    const requirements: RegulatedPolicyRequirement[] = ["human_review", "professional_review", "output_label", "local_audit"];
     return {
+      policyDecision: "block",
       allowed: false,
       requiresHumanReview: true,
       requiresProfessionalReview: true,
       denialCodes: ["unknown_regulated_domain"],
+      reasonCodes: ["unknown_regulated_domain"],
+      requirements,
       outputLabels: createRegulatedOutputLabels(request),
       disclaimerPolicy: "contextual_remembered",
       auditPolicy: "local_configurable_redacted",
+      policyApplied: createPolicyApplied(policyConfig),
     };
   }
 
@@ -250,16 +290,107 @@ export function evaluateRegulatedAction(request: RegulatedActionRequest): Regula
   if (request.remoteOrProviderUse === true) {
     denialCodes.push("remote_or_provider_opt_in_required");
   }
+  const requirements = createRegulatedPolicyRequirements(request, currentPolicy, denialCodes);
+  const policyDecision = decideRegulatedPolicy({ request, policyConfig, denialCodes, requirements });
+  const allowed = policyDecision === "allow" || policyDecision === "log-only";
 
   return {
-    allowed: denialCodes.length === 0,
-    requiresHumanReview: denialCodes.length > 0,
+    policyDecision,
+    allowed,
+    requiresHumanReview: denialCodes.length > 0 || requirements.includes("human_review"),
     requiresProfessionalReview: currentPolicy.professionalReviewRequired,
     denialCodes,
+    reasonCodes: denialCodes,
+    requirements,
     outputLabels: createRegulatedOutputLabels(request),
     disclaimerPolicy: currentPolicy.disclaimerPolicy,
     auditPolicy: currentPolicy.auditPolicy,
+    policyApplied: createPolicyApplied(policyConfig),
   };
+}
+
+function normalizeRegulatedPolicyConfig(config: RegulatedActionPolicyConfig | undefined): Required<Omit<RegulatedActionPolicyConfig, "approvalId" | "legalLabel">> & {
+  approvalId: string;
+  legalLabel: string;
+} {
+  return {
+    mode: config?.mode ?? "normal",
+    confirmed: config?.confirmed === true,
+    approvalId: config?.approvalId?.trim() ?? "",
+    legalLabel: config?.legalLabel?.trim() ?? "",
+    globalConsent: config?.globalConsent === true,
+    materialConsent: config?.materialConsent === true,
+    destinationAuthorized: config?.destinationAuthorized === true,
+    automationAuthorized: config?.automationAuthorized === true,
+    auditOnly: config?.auditOnly === true,
+  };
+}
+
+function createPolicyApplied(config: ReturnType<typeof normalizeRegulatedPolicyConfig>): RegulatedActionDecision["policyApplied"] {
+  return {
+    version: regulatedDomainSafetyVersion,
+    mode: config.mode,
+    globalConsent: config.globalConsent,
+    materialConsent: config.materialConsent,
+    destinationAuthorized: config.destinationAuthorized,
+    automationAuthorized: config.automationAuthorized,
+  };
+}
+
+function createRegulatedPolicyRequirements(
+  request: RegulatedActionRequest,
+  currentPolicy: RegulatedDomainPolicy,
+  denialCodes: RegulatedActionDenialCode[],
+): RegulatedPolicyRequirement[] {
+  const requirements = new Set<RegulatedPolicyRequirement>();
+  if (currentPolicy.professionalReviewRequired) requirements.add("professional_review");
+  if (currentPolicy.outputLabelPolicy === "required") requirements.add("output_label");
+  if (currentPolicy.auditPolicy === "local_configurable_redacted") requirements.add("local_audit");
+  if (denialCodes.includes("external_review_required") || denialCodes.includes("sensitive_export_review_required")) {
+    requirements.add("human_review");
+    requirements.add("authorized_destination");
+    requirements.add("material_consent");
+  }
+  if (denialCodes.includes("remote_or_provider_opt_in_required")) {
+    requirements.add("remote_or_provider_opt_in");
+    requirements.add("material_consent");
+  }
+  if (request.minorInvolved === true || request.subjectKind === "minor") {
+    requirements.add("human_review");
+  }
+  return [...requirements];
+}
+
+function decideRegulatedPolicy(input: {
+  request: RegulatedActionRequest;
+  policyConfig: ReturnType<typeof normalizeRegulatedPolicyConfig>;
+  denialCodes: RegulatedActionDenialCode[];
+  requirements: RegulatedPolicyRequirement[];
+}): RegulatedPolicyDecisionKind {
+  const hardBlockCodes: RegulatedActionDenialCode[] = [
+    "unknown_regulated_domain",
+    "blocked_regulated_use",
+    "prohibited_practice",
+    "final_decision_blocked",
+    "professional_context_blocked",
+    "minor_guard_required",
+  ];
+  if (input.denialCodes.some((code) => hardBlockCodes.includes(code))) return "block";
+  if (input.denialCodes.length === 0) return input.policyConfig.auditOnly ? "log-only" : "allow";
+
+  const reviewSatisfied = input.policyConfig.confirmed && input.policyConfig.approvalId.length > 0 && input.policyConfig.legalLabel.length > 0;
+  const remoteSatisfied = !input.requirements.includes("remote_or_provider_opt_in")
+    || input.policyConfig.globalConsent
+    || input.policyConfig.materialConsent
+    || (input.policyConfig.mode === "authorized_automation" && input.policyConfig.automationAuthorized);
+  const destinationSatisfied = !input.requirements.includes("authorized_destination")
+    || input.policyConfig.destinationAuthorized
+    || reviewSatisfied;
+  const materialConsentSatisfied = !input.requirements.includes("material_consent")
+    || input.policyConfig.materialConsent
+    || reviewSatisfied;
+
+  return reviewSatisfied && remoteSatisfied && destinationSatisfied && materialConsentSatisfied ? "allow" : "confirm";
 }
 
 export function createRegulatedOutputLabels(request: Pick<RegulatedActionRequest, "regulatedDomain" | "decisionEffect">): string[] {

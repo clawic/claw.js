@@ -39,8 +39,11 @@ test("regulated domain safety permits recordkeeping but blocks final regulated d
     requestedUse: "local_recordkeeping",
   });
   assert.equal(recordkeeping.allowed, true);
+  assert.equal(recordkeeping.policyDecision, "allow");
   assert.equal(recordkeeping.requiresProfessionalReview, true);
   assert.deepEqual(recordkeeping.denialCodes, []);
+  assert.ok(recordkeeping.requirements.includes("output_label"));
+  assert.equal(recordkeeping.policyApplied.mode, "normal");
 
   const finalDecision = evaluateRegulatedAction({
     regulatedDomain: "finance",
@@ -48,6 +51,7 @@ test("regulated domain safety permits recordkeeping but blocks final regulated d
     requestedUse: "investment_or_credit_decision",
   });
   assert.equal(finalDecision.allowed, false);
+  assert.equal(finalDecision.policyDecision, "block");
   assert.deepEqual(finalDecision.denialCodes.sort(), ["blocked_regulated_use", "final_decision_blocked"]);
   assert.ok(finalDecision.outputLabels.includes("not_professional_advice"));
   assert.ok(finalDecision.outputLabels.includes("regulated_domain:finance"));
@@ -64,11 +68,68 @@ test("regulated domain safety requires explicit review for exports, external act
   });
 
   assert.equal(decision.allowed, false);
+  assert.equal(decision.policyDecision, "confirm");
+  assert.deepEqual(decision.requirements.sort(), [
+    "authorized_destination",
+    "human_review",
+    "local_audit",
+    "material_consent",
+    "output_label",
+    "professional_review",
+    "remote_or_provider_opt_in",
+  ]);
   assert.deepEqual(decision.denialCodes.sort(), [
     "external_review_required",
     "remote_or_provider_opt_in_required",
     "sensitive_export_review_required",
   ]);
+});
+
+test("regulated domain safety allows confirmable actions when policy config satisfies review", () => {
+  const decision = evaluateRegulatedAction({
+    regulatedDomain: "legal",
+    decisionEffect: "external_action",
+    requestedUse: "non_final_draft",
+    externalAction: true,
+    sensitiveExport: true,
+    remoteOrProviderUse: true,
+    policyConfig: {
+      mode: "authorized_automation",
+      confirmed: true,
+      approvalId: "approval_legal_export",
+      legalLabel: "Legal draft export - human reviewed",
+      materialConsent: true,
+      destinationAuthorized: true,
+      automationAuthorized: true,
+    },
+  });
+
+  assert.equal(decision.allowed, true);
+  assert.equal(decision.policyDecision, "allow");
+  assert.deepEqual(decision.denialCodes.sort(), [
+    "external_review_required",
+    "remote_or_provider_opt_in_required",
+    "sensitive_export_review_required",
+  ]);
+  assert.equal(decision.policyApplied.mode, "authorized_automation");
+  assert.equal(decision.policyApplied.materialConsent, true);
+  assert.equal(decision.policyApplied.destinationAuthorized, true);
+});
+
+test("regulated domain safety supports log-only decisions for configured audit-only safe actions", () => {
+  const decision = evaluateRegulatedAction({
+    regulatedDomain: "education",
+    decisionEffect: "summary",
+    requestedUse: "factual_summary",
+    policyConfig: {
+      auditOnly: true,
+    },
+  });
+
+  assert.equal(decision.allowed, true);
+  assert.equal(decision.policyDecision, "log-only");
+  assert.deepEqual(decision.denialCodes, []);
+  assert.ok(decision.requirements.includes("local_audit"));
 });
 
 test("regulated domain labels persist domain and decision effect", () => {

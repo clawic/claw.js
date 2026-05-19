@@ -48,11 +48,62 @@ test("safety check blocks final regulated decisions", async () => {
   ], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK, result.stderr || result.stdout);
   const payload = JSON.parse(result.stdout) as {
-    data: { decision: { allowed: boolean; denialCodes: string[]; outputLabels: string[] } };
+    data: { decision: { allowed: boolean; policyDecision: string; denialCodes: string[]; outputLabels: string[] } };
   };
   assert.equal(payload.data.decision.allowed, false);
+  assert.equal(payload.data.decision.policyDecision, "block");
   assert.deepEqual(payload.data.decision.denialCodes.sort(), ["blocked_regulated_use", "final_decision_blocked"]);
   assert.equal(payload.data.decision.outputLabels.includes("regulated_domain:finance"), true);
+});
+
+test("safety check can return confirm or allow through central policy config", async () => {
+  const confirm = await runCliCapture([
+    "safety",
+    "check",
+    "--domain",
+    "legal",
+    "--effect",
+    "external_action",
+    "--export",
+    "true",
+    "--json",
+  ], process.cwd());
+  assert.equal(confirm.code, CLI_EXIT_OK, confirm.stderr || confirm.stdout);
+  const confirmPayload = JSON.parse(confirm.stdout) as {
+    data: { decision: { allowed: boolean; policyDecision: string; requirements: string[] } };
+  };
+  assert.equal(confirmPayload.data.decision.allowed, false);
+  assert.equal(confirmPayload.data.decision.policyDecision, "confirm");
+  assert.ok(confirmPayload.data.decision.requirements.includes("human_review"));
+
+  const allow = await runCliCapture([
+    "safety",
+    "check",
+    "--domain",
+    "legal",
+    "--effect",
+    "external_action",
+    "--export",
+    "true",
+    "--confirm",
+    "true",
+    "--approval-id",
+    "approval_cli_safety",
+    "--legal-label",
+    "Legal export - human reviewed",
+    "--material-consent",
+    "true",
+    "--destination-authorized",
+    "true",
+    "--json",
+  ], process.cwd());
+  assert.equal(allow.code, CLI_EXIT_OK, allow.stderr || allow.stdout);
+  const allowPayload = JSON.parse(allow.stdout) as {
+    data: { decision: { allowed: boolean; policyDecision: string; reasonCodes: string[] } };
+  };
+  assert.equal(allowPayload.data.decision.allowed, true);
+  assert.equal(allowPayload.data.decision.policyDecision, "allow");
+  assert.ok(allowPayload.data.decision.reasonCodes.includes("sensitive_export_review_required"));
 });
 
 test("safety explain returns policy evidence for regulated domains", async () => {
@@ -89,7 +140,7 @@ test("safety check human output preserves disclaimer and labels", async () => {
     "true",
   ], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK, result.stderr || result.stdout);
-  assert.match(result.stdout, /^blocked\t/m);
+  assert.match(result.stdout, /^confirm\t/m);
   assert.match(result.stdout, /disclaimer\tcontextual_remembered/);
   assert.match(result.stdout, /labels\t/);
   assert.match(result.stdout, /not_professional_advice/);
