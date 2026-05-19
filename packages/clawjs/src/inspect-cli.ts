@@ -4,7 +4,7 @@ import path from "path";
 
 import Database from "better-sqlite3";
 import { AgentStoreFS, type Agent } from "@clawjs/agents";
-import { CLAW_CLI_COMMAND_INTENT_STATUSES, GOVERNANCE_CAPABILITIES, GOVERNANCE_ENTITY_KINDS, GOVERNANCE_PRINCIPAL_KINDS, GOVERNANCE_SCOPE_KINDS, buildRemoteConformanceReport, buildRemoteExternalPendingRegister, buildRemoteExternalValidationApprovalRequest, buildRemoteExternalValidationChecklist, buildRemoteExternalValidationEvidenceTemplate, buildRemoteExternalValidationReadiness, buildRemoteExternalValidationReport, buildRemoteGoalClosureGate, buildRemoteOfflineCommandResult, buildRemoteProviderDeviceE2EValidationPlan, buildRemoteRouteContractCatalog, buildRemoteSourceQaReviewTemplate, buildSyncDriverCatalog, clawDenseDataAcceptanceFixture, clawDenseDataOsRegistry, clawEvolutionPolicy, clawPersistentSurfaceRegistry, clawPreV1VersionGovernancePolicy, connectorExecutionPipeline, createAgentControlPanel, createAgentPrivacyLifecyclePlan, evaluateGovernanceAccess, evaluateGovernanceDelegation, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, listClawDenseDataGapRegistryEntries, listClawDenseDataIntentEntries, listClawDenseDataSemanticViewEntries, parseRemoteExternalValidationEvidenceInput, parseRemoteSourceQaReviewInput, remoteSyncRequiredRouteIds, resolveClawCliCommand, resolveClawPersistentSurfacePath, searchClawCliRegistry, summarizeGovernanceBindings, syncDriverSchema, withSurfaceChildren, type RemoteExternalValidationEvidence, type RemoteSourceQaReviewItem } from "@clawjs/core";
+import { CLAW_CLI_COMMAND_INTENT_STATUSES, GOVERNANCE_CAPABILITIES, GOVERNANCE_ENTITY_KINDS, GOVERNANCE_PRINCIPAL_KINDS, GOVERNANCE_SCOPE_KINDS, buildRemoteConformanceReport, buildRemoteDecisionReview, buildRemoteExternalPendingRegister, buildRemoteExternalValidationApprovalRequest, buildRemoteExternalValidationChecklist, buildRemoteExternalValidationEvidenceTemplate, buildRemoteExternalValidationReadiness, buildRemoteExternalValidationReport, buildRemoteGoalClosureGate, buildRemoteOfflineCommandResult, buildRemoteProviderDeviceE2EValidationPlan, buildRemoteRouteContractCatalog, buildRemoteSourceQaReviewTemplate, buildSyncDriverCatalog, clawDenseDataAcceptanceFixture, clawDenseDataOsRegistry, clawEvolutionPolicy, clawPersistentSurfaceRegistry, clawPreV1VersionGovernancePolicy, connectorExecutionPipeline, createAgentControlPanel, createAgentPrivacyLifecyclePlan, evaluateGovernanceAccess, evaluateGovernanceDelegation, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, listClawDenseDataGapRegistryEntries, listClawDenseDataIntentEntries, listClawDenseDataSemanticViewEntries, parseRemoteExternalValidationEvidenceInput, parseRemoteSourceQaReviewInput, remoteSyncRequiredRouteIds, resolveClawCliCommand, resolveClawPersistentSurfacePath, searchClawCliRegistry, summarizeGovernanceBindings, syncDriverSchema, withSurfaceChildren, type RemoteExternalValidationEvidence, type RemoteSourceQaReviewItem } from "@clawjs/core";
 import type { AgentAuditEvent, ClawPersistentSurfaceNode, ClawPersistentSurfaceRegistry, ClawSurfaceEdge, ClawSurfaceRoute } from "@clawjs/core";
 import { v1MainSchemaSurfaceNodes } from "./v1-data-surface.ts";
 import { normalizeDbRow, resolveClawjsMainDbPath, type JsonRecord } from "./v1-data-core.ts";
@@ -811,9 +811,14 @@ function buildRemoteInspectPayload(nodes: ClawPersistentSurfaceNode[], routes: C
     evidence: options.evidence ?? [],
     evidenceArtifact: options.evidenceArtifact,
   };
+  const conformance = buildRemoteConformanceReport({ routeIds, nodeIds });
+  const sourceQaReviewTemplate = buildRemoteSourceQaReviewTemplate({ generatedAt: options.generatedAt });
+  const closureGate = buildRemoteGoalClosureGate(validationOptions);
+  const decisionReview = buildRemoteDecisionReview({ ...validationOptions, routeIds, nodeIds });
   return {
     schemaVersion: 1,
-    conformance: buildRemoteConformanceReport({ routeIds, nodeIds }),
+    conformance,
+    decisionReview,
     classifications: remoteNodes.map((node) => {
       const nodeRoutes = routes.filter((route) => route.fromId === node.id || route.toId === node.id || route.steps.some((step) => step.fromId === node.id || step.toId === node.id));
       return {
@@ -865,8 +870,8 @@ function buildRemoteInspectPayload(nodes: ClawPersistentSurfaceNode[], routes: C
       evidence: validationOptions.evidence,
       evidenceArtifact: validationOptions.evidenceArtifact,
     }),
-    sourceQaReviewTemplate: buildRemoteSourceQaReviewTemplate({ generatedAt: options.generatedAt }),
-    closureGate: buildRemoteGoalClosureGate(validationOptions),
+    sourceQaReviewTemplate,
+    closureGate,
     providerDeviceE2EPlan: buildRemoteProviderDeviceE2EValidationPlan({ requiredRouteIds: remoteSyncRequiredRouteIds }),
     routeContracts: buildRemoteRouteContractCatalog({ registeredRouteIds: routeIds }).contracts,
     tests,

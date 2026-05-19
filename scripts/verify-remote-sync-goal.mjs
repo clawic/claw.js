@@ -89,7 +89,7 @@ const requiredNodes = [
 
 const requiredCliCommands = ["remote", "sync", "nodes", "gateway"];
 
-const requiredServiceApiMethodRoutes = "GET:remote/classifications POST:remote/classifications/receipts GET:remote/conformance GET:remote/offline-command POST:remote/offline-command GET:remote/external-pending GET:remote/external-validation-checklist GET:remote/external-validation-template POST:remote/external-validation-template GET:remote/external-validation-artifact POST:remote/external-validation-artifact GET:remote/external-validation-runbook GET:remote/external-validation-readiness POST:remote/external-validation-readiness GET:remote/external-validation-approval-request POST:remote/external-validation-approval-request GET:remote/external-validation-report POST:remote/external-validation-report GET:remote/source-qa-template POST:remote/source-qa-template GET:remote/closure-gate POST:remote/closure-gate GET:remote/route-contracts GET:remote/provider-device-e2e-plan GET:remote/compatibility/adapters POST:remote/compatibility/adapters GET:gateway/conformance POST:gateway/agent-service/evaluate POST:gateway/agent-service/executions POST:gateway/audit/receipts GET:sync/drivers GET:sync/manifests POST:sync/manifests GET:sync/changes POST:sync/plan POST:sync/conflicts POST:sync/applications POST:sync/authority-handoffs GET:nodes POST:nodes/pair POST:nodes/trust POST:nodes/revoke POST:mesh/invitations POST:mesh/invitations/accept POST:mesh/shares POST:mesh/revocations".split(" ");
+const requiredServiceApiMethodRoutes = "GET:remote/classifications POST:remote/classifications/receipts GET:remote/conformance GET:remote/offline-command POST:remote/offline-command GET:remote/external-pending GET:remote/external-validation-checklist GET:remote/external-validation-template POST:remote/external-validation-template GET:remote/external-validation-artifact POST:remote/external-validation-artifact GET:remote/external-validation-runbook GET:remote/external-validation-readiness POST:remote/external-validation-readiness GET:remote/external-validation-approval-request POST:remote/external-validation-approval-request GET:remote/external-validation-report POST:remote/external-validation-report GET:remote/source-qa-template POST:remote/source-qa-template GET:remote/decision-review POST:remote/decision-review GET:remote/closure-gate POST:remote/closure-gate GET:remote/route-contracts GET:remote/provider-device-e2e-plan GET:remote/compatibility/adapters POST:remote/compatibility/adapters GET:gateway/conformance POST:gateway/agent-service/evaluate POST:gateway/agent-service/executions POST:gateway/audit/receipts GET:sync/drivers GET:sync/manifests POST:sync/manifests GET:sync/changes POST:sync/plan POST:sync/conflicts POST:sync/applications POST:sync/authority-handoffs GET:nodes POST:nodes/pair POST:nodes/trust POST:nodes/revoke POST:mesh/invitations POST:mesh/invitations/accept POST:mesh/shares POST:mesh/revocations".split(" ");
 const requiredServiceApiRoutes = [...new Set(requiredServiceApiMethodRoutes.map((entry) => entry.split(":")[1]))];
 
 const requiredDocSnippets = [
@@ -142,27 +142,14 @@ const requiredDocSnippets = [
   "duplicateEvidenceRequirementIds",
   "artifact-only clearable", "raw evidence rows remain report-only", "source-bound and approval-request-bound",
   "source-bound artifact mismatch",
-  "/v1/remote/external-validation-report",
-  "claw remote validation-report",
-  "source Q/A review report",
-  "duplicateSourceQaIds",
-  "externalPendingRequiredSourceQaIds",
-  "invalidExternalPendingDispositionQaIds",
-  "source Q/A review template",
-  "/v1/remote/source-qa-template",
-  "claw remote source-qa-template",
-  "remote closure gate",
+  "/v1/remote/external-validation-report", "claw remote validation-report", "source Q/A review report", "duplicateSourceQaIds", "externalPendingRequiredSourceQaIds", "invalidExternalPendingDispositionQaIds",
+  "source Q/A review template", "/v1/remote/source-qa-template", "claw remote source-qa-template", "/v1/remote/decision-review", "claw remote decision-review", "remote closure gate",
   "External-Pending Closure Lists",
   "QA-002`, `QA-004`, `QA-005`, `QA-006`, `QA-007`, `QA-010`, `QA-012`",
   "QA-013`, `QA-015`, `QA-018`, `QA-020`, and `QA-021",
   "physical_iroh_handshake`, `device_trust_acceptance`, `physical_peer_trust`",
   "agent_runtime_execution`, `billing_meter_persistence`, and",
-  "/v1/remote/closure-gate",
-  "claw remote closure-gate",
-  "remote route contracts",
-  "/v1/remote/route-contracts",
-  "RemoteProviderDeviceE2EValidationPlan",
-  "/v1/remote/provider-device-e2e-plan",
+  "/v1/remote/closure-gate", "claw remote closure-gate", "remote route contracts", "/v1/remote/route-contracts", "RemoteProviderDeviceE2EValidationPlan", "/v1/remote/provider-device-e2e-plan",
   "/v1/gateway/agent-service/evaluate",
   "/v1/gateway/audit/receipts",
   "RemoteGatewayAuditReceipt",
@@ -321,7 +308,7 @@ for (const snippet of [
   "claw remote contracts",
   "Clawix remote mirror", "Current Validation Evidence", "completed successfully in the public Clawix repo", "scripts/code-hygiene-check.mjs",
   "public ClawJS executable inspection", "16 remote route contracts", "57 Relay-classified surfaces", "zero Relay", "`pending` classifications", "source_qa_review` and `external_validation`",
-  "artifact-bound inspection path", "artifact-bound closure handoff", "ready_for_approved_run", "only the `external_validation`", "zero clearable requirements", "sourceQaReviewStatus: complete", "approval_required", "approvalRequired: true", "approved: false", "required topology targets", "required route contract IDs", "2 files and 42 tests", "1 file and 1 test", "HTTP route parity",
+  "artifact-bound inspection path", "decisionReview", "claw remote decision-review", "Relay `/v1/remote/decision-review`", "23 required source Q/A rows", "11 implemented dispositions", "12 external-pending dispositions", "artifact-bound closure handoff", "ready_for_approved_run", "only the `external_validation`", "zero clearable requirements", "sourceQaReviewStatus: complete", "approval_required", "approvalRequired: true", "approved: false", "required topology targets", "required route contract IDs", "2 files and 42 tests", "1 file and 1 test", "HTTP route parity",
   "cli registry/router parity passed", "157 commands", "Full public docs lane", "npm run test:docs", "source-size", "code hygiene self-tests",
   "remote sync source session verification passed", "23 Q/A rows", "Public docs hygiene", "docs alignment check passed",
   "REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl> node scripts/verify-remote-sync-source-session.mjs",
@@ -1464,27 +1451,11 @@ for (const snippet of [
   "/v1/remote/external-validation-template",
   "buildRemoteExternalValidationEvidenceArtifact",
   "/v1/remote/external-validation-artifact",
-  "buildRemoteExternalValidationRunbook",
-  "/v1/remote/external-validation-runbook",
-  "buildRemoteExternalValidationReadiness",
-  "/v1/remote/external-validation-readiness",
-  "buildRemoteExternalValidationApprovalRequest",
-  "/v1/remote/external-validation-approval-request",
-  "buildRemoteExternalValidationReport",
-  "/v1/remote/external-validation-report",
-  "buildRemoteSourceQaReviewTemplate",
-  "/v1/remote/source-qa-template",
-  "buildRemoteGoalClosureGate",
-  "sourceQaReviewItems",
-  "docs/remote-gateway-sync-external-validation-evidence.json",
-  "artifactExternalValidationReport",
-  "readyForApprovedRun",
-  "sourceQaReviewArtifact",
-  "reviewedPendingClosureGate",
-  "/v1/remote/closure-gate",
-  "expectedRouteContracts.contracts.map",
-  "buildRemoteProviderDeviceE2EValidationPlan",
-  "/v1/remote/provider-device-e2e-plan",
+  "buildRemoteExternalValidationRunbook", "/v1/remote/external-validation-runbook", "buildRemoteExternalValidationReadiness", "/v1/remote/external-validation-readiness",
+  "buildRemoteExternalValidationApprovalRequest", "/v1/remote/external-validation-approval-request", "buildRemoteExternalValidationReport", "/v1/remote/external-validation-report",
+  "buildRemoteSourceQaReviewTemplate", "/v1/remote/source-qa-template", "buildRemoteDecisionReview", "/v1/remote/decision-review", "buildRemoteGoalClosureGate",
+  "sourceQaReviewItems", "docs/remote-gateway-sync-external-validation-evidence.json", "artifactExternalValidationReport", "readyForApprovedRun", "sourceQaReviewArtifact", "reviewedPendingClosureGate",
+  "/v1/remote/closure-gate", "expectedRouteContracts.contracts.map", "buildRemoteProviderDeviceE2EValidationPlan", "/v1/remote/provider-device-e2e-plan",
 ]) {
   requireText("remote sync service route tests", remoteSyncRoutesTestSource, snippet);
 }
@@ -1498,16 +1469,18 @@ for (const snippet of [
   "buildRemoteExternalValidationEvidenceTemplate",
   "buildRemoteExternalValidationReadiness",
   "buildRemoteExternalValidationApprovalRequest",
-  "parseInspectSourceQaReviews",
-  "source-qa-review-file",
-  "external-validation-file",
-  "buildRemoteSourceQaReviewTemplate",
+  "parseInspectSourceQaReviews", "source-qa-review-file", "external-validation-file", "buildRemoteSourceQaReviewTemplate", "buildRemoteDecisionReview", "decisionReview",
   "buildRemoteRouteContractCatalog",
   "buildSyncDriverCatalog",
   "SyncAuthorityHandoffReceipt",
   "transport_agnostic_iroh_v1_adapter",
 ]) {
   requireText("inspect remote CLI", inspectCliSource, snippet);
+}
+
+const remoteSyncE2eSource = readRequired("packages/clawjs-core/src/remote-sync-e2e.ts");
+for (const snippet of ["buildRemoteDecisionReview", "remoteDecisionReviewSchema", "implementedCount", "externalPendingCount"]) {
+  requireText("remote sync E2E core", remoteSyncE2eSource, snippet);
 }
 
 for (const [driver, expectedRoute] of driverRouteExpectations) {

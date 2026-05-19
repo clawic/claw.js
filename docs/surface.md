@@ -1302,6 +1302,7 @@ The docs check script validates that every current export from
     buildRemoteExternalValidationReadiness
     buildRemoteExternalValidationReport
     buildRemoteExternalValidationRunbook
+    buildRemoteDecisionReview
     buildRemoteGoalClosureGate
     buildRemoteOfflineCommandResult
     buildRemoteProviderDeviceE2EValidationPlan
@@ -2361,6 +2362,10 @@ The docs check script validates that every current export from
     remoteSecretLeaseSchema
     RemoteSecretProviderReceipt
     remoteSecretProviderReceiptSchema
+    RemoteDecisionReview
+    RemoteDecisionReviewItem
+    remoteDecisionReviewItemSchema
+    remoteDecisionReviewSchema
     remoteSourceConversationId
     remoteSourcePlanId
     RemoteSourceQaReviewArtifact
@@ -2979,6 +2984,7 @@ The docs check script validates that every current export from
     buildRemoteExternalValidationReadiness
     buildRemoteExternalValidationReport
     buildRemoteExternalValidationRunbook
+    buildRemoteDecisionReview
     buildRemoteGoalClosureGate
     buildRemoteOfflineCommandResult
     buildRemoteProviderDeviceE2EValidationPlan
@@ -3096,6 +3102,10 @@ The docs check script validates that every current export from
     remoteSecretLeaseSchema
     RemoteSecretProviderReceipt
     remoteSecretProviderReceiptSchema
+    RemoteDecisionReview
+    RemoteDecisionReviewItem
+    remoteDecisionReviewItemSchema
+    remoteDecisionReviewSchema
     RemoteSourceQaReviewDisposition
     remoteSourceQaReviewDispositionSchema
     RemoteSourceQaReviewItem

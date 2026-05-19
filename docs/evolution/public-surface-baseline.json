@@ -6,13 +6,13 @@
     "cliCommands": "packages/clawjs-core/src/cli-command-registry.ts"
   },
   "counts": {
-    "surfaces": 907,
+    "surfaces": 909,
     "cliCommands": 157
   },
   "fingerprints": {
-    "surfaces": "fnv1a32:7562231e",
-    "cliCommands": "fnv1a32:8679dea4",
-    "combined": "fnv1a32:af9973fc"
+    "surfaces": "fnv1a32:66841836",
+    "cliCommands": "fnv1a32:6f627895",
+    "combined": "fnv1a32:44f9822e"
   },
   "surfaces": [
     {
@@ -456,6 +456,24 @@
       "kind": "apiRoute",
       "parentId": "claw.contracts.api",
       "value": "GET /v1/remote/conformance",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.api.remote.decisionReview",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "POST /v1/remote/decision-review",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.api.remote.decisionReviewRead",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /v1/remote/decision-review",
       "surfaceClass": "api",
       "stability": "v1"
     },
@@ -8539,7 +8557,7 @@
     {
       "name": "remote",
       "kind": "canonical",
-      "usage": "remote classify|check|routes|conformance|offline-command|pending|validation-checklist|validation-template|validation-artifact|validation-runbook|validation-readiness|validation-approval-request|validation-report|source-qa-template|closure-gate|contracts|e2e-plan|compat",
+      "usage": "remote classify|check|routes|conformance|offline-command|pending|validation-checklist|validation-template|validation-artifact|validation-runbook|validation-readiness|validation-approval-request|validation-report|source-qa-template|decision-review|closure-gate|contracts|e2e-plan|compat",
       "family": "runtime",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.remote.v1"

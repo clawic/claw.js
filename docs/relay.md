@@ -136,6 +136,8 @@ GET  /v1/remote/external-validation-report
 POST /v1/remote/external-validation-report
 GET  /v1/remote/source-qa-template
 POST /v1/remote/source-qa-template
+GET  /v1/remote/decision-review
+POST /v1/remote/decision-review
 GET  /v1/remote/closure-gate
 POST /v1/remote/closure-gate
 GET  /v1/remote/route-contracts
@@ -260,6 +262,13 @@ The template exposes `externalPendingRequiredSourceQaIds`, and rows tied to
 `external_pending` disposition until those requirements are cleared;
 duplicate rows are exposed as `duplicateSourceQaIds`, and disposition mismatches
 are exposed as `invalidExternalPendingDispositionQaIds`.
+Relay `/v1/remote/decision-review` and `claw remote decision-review` expose the
+same artifact-bound decision coverage as a first-class no-write contract. GET
+returns the fail-closed no-artifact review state. POST accepts `sourceQaReviews`
+or a source Q/A artifact-native `items` array, plus external validation evidence
+or an evidence artifact, and returns reviewed/missing/invalid rows,
+implemented vs external-pending disposition counts, per-decision conformance
+status, and remaining blockers.
 The remote closure gate is exposed by Relay `/v1/remote/closure-gate` and
 `claw remote closure-gate`. It combines that evidence report with the source
 Q/A review report. The result stays `blocked` until all 23 source Q/A rows have
@@ -293,7 +302,10 @@ tests, gaps, and conformance without mutating the Coordinator ledger. Its
 default view remains fail-closed with no submitted artifacts; when supplied the
 versioned source Q/A and external evidence files, it overlays the same
 artifact-bound readiness, approval request, validation report, and closure gate
-state used by the `claw remote` validation commands.
+state used by the `claw remote` validation commands. It also exposes
+`decisionReview`, a per-source-Q/A coverage table that keeps the baseline
+conformance decisions separate from the artifact-backed source review while
+showing the current disposition of every decision row.
 Existing Relay/mobile routes are represented by `RemoteCompatibilityAdapterReceipt`
 records and the Relay `/v1/remote/compatibility/adapters` endpoint. Each
 adapter must map one legacy surface to one canonical Gateway/Connector/Sync

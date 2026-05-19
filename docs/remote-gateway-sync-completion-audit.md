@@ -113,7 +113,14 @@ docs/remote-gateway-sync-external-validation-evidence.json --json`, overlays the
 current source Q/A and evidence artifacts and reports
 `ready_for_approved_run`, an approval request with `approved: false`,
 `sourceQaReviewStatus: complete`, and only the `external_validation` closure
-blocker.
+blocker. The same artifact-bound inspection payload includes `decisionReview`:
+23 required source Q/A rows, 23 reviewed rows, 11 implemented dispositions,
+12 external-pending dispositions, no missing rows, and the remaining
+`external_validation` blocker.
+`decisionReview` is also exposed as a first-class no-write contract through
+`claw remote decision-review` and Relay `/v1/remote/decision-review`, so agents
+and operators can verify the source decision coverage without parsing the full
+inspection payload.
 
 The artifact-bound closure handoff was also rerun with the current public
 source Q/A and external evidence artifacts. As of 2026-05-19, `claw remote

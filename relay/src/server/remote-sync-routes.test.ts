@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import {
+  buildRemoteDecisionReview,
   buildRemoteExternalPendingRegister,
   buildRemoteExternalValidationChecklist,
   buildRemoteExternalValidationApprovalRequest,
@@ -60,6 +61,8 @@ const expectedRemoteHttpMethodRoutes = [
   "POST:/v1/remote/external-validation-report",
   "GET:/v1/remote/source-qa-template",
   "POST:/v1/remote/source-qa-template",
+  "GET:/v1/remote/decision-review",
+  "POST:/v1/remote/decision-review",
   "GET:/v1/remote/closure-gate",
   "POST:/v1/remote/closure-gate",
   "GET:/v1/remote/route-contracts",
@@ -381,6 +384,44 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.deepEqual(scopedSourceQaTemplatePayload.externalPendingRequiredSourceQaIds, []);
     assert.deepEqual(scopedSourceQaTemplatePayload.items.map((entry) => entry.qaId), ["QA-001", "QA-023"]);
 
+    const decisionReview = await built.app.inject({ method: "GET", url: "/v1/remote/decision-review" });
+    assert.equal(decisionReview.statusCode, 200);
+    const decisionReviewPayload = decisionReview.json() as { status: string; writes: boolean; reviewedCount: number; requiredCount: number; missingSourceQaIds: string[]; blockers: string[]; items: Array<{ qaId: string; reviewStatus: string; disposition: string | null; writes: boolean }> };
+    const expectedDecisionReview = buildRemoteDecisionReview({ routeIds: registeredRouteIds(), nodeIds: clawPersistentSurfaceRegistry.nodes.map((node) => node.id) });
+    assert.equal(decisionReviewPayload.status, "incomplete");
+    assert.equal(decisionReviewPayload.writes, false);
+    assert.equal(decisionReviewPayload.reviewedCount, 0);
+    assert.equal(decisionReviewPayload.requiredCount, expectedDecisionReview.requiredCount);
+    assert.deepEqual(decisionReviewPayload.missingSourceQaIds, expectedDecisionReview.missingSourceQaIds);
+    assert.equal(decisionReviewPayload.blockers.includes("source_qa_review"), true);
+    assert.equal(decisionReviewPayload.blockers.includes("external_validation"), true);
+    assert.equal(decisionReviewPayload.items.every((entry) => entry.reviewStatus === "missing" && entry.disposition === null && !entry.writes), true);
+
+    const sourceQaReviewArtifact = JSON.parse(fs.readFileSync(path.resolve("docs/remote-gateway-sync-source-qa-review.json"), "utf8")) as { items: unknown[] };
+    const reviewedDecisionReview = await built.app.inject({
+      method: "POST",
+      url: "/v1/remote/decision-review",
+      headers: { "content-type": "application/json" },
+      payload: {
+        ...sourceQaReviewArtifact,
+        evidence: externalValidationArtifact,
+      },
+    });
+    assert.equal(reviewedDecisionReview.statusCode, 200);
+    const reviewedDecisionReviewPayload = reviewedDecisionReview.json() as { status: string; writes: boolean; reviewedCount: number; requiredCount: number; implementedCount: number; externalPendingCount: number; missingSourceQaIds: string[]; invalidSourceQaIds: string[]; duplicateSourceQaIds: string[]; blockers: string[]; items: Array<{ qaId: string; decisionId: string; reviewStatus: string; disposition: string | null; conformanceStatus: string | null; externalPendingRequired: boolean; writes: boolean }> };
+    assert.equal(reviewedDecisionReviewPayload.status, "complete");
+    assert.equal(reviewedDecisionReviewPayload.writes, false);
+    assert.equal(reviewedDecisionReviewPayload.reviewedCount, 23);
+    assert.equal(reviewedDecisionReviewPayload.requiredCount, 23);
+    assert.equal(reviewedDecisionReviewPayload.implementedCount, 11);
+    assert.equal(reviewedDecisionReviewPayload.externalPendingCount, 12);
+    assert.deepEqual(reviewedDecisionReviewPayload.missingSourceQaIds, []);
+    assert.deepEqual(reviewedDecisionReviewPayload.invalidSourceQaIds, []);
+    assert.deepEqual(reviewedDecisionReviewPayload.duplicateSourceQaIds, []);
+    assert.deepEqual(reviewedDecisionReviewPayload.blockers, ["external_validation"]);
+    assert.equal(reviewedDecisionReviewPayload.items.some((entry) => entry.qaId === "QA-006" && entry.decisionId === "remote_secrets_model" && entry.disposition === "external_pending" && entry.externalPendingRequired), true);
+    assert.equal(reviewedDecisionReviewPayload.items.some((entry) => entry.qaId === "QA-023" && entry.decisionId === "goal_closure_gate" && entry.disposition === "implemented" && entry.conformanceStatus === null), true);
+
     const closureGate = await built.app.inject({ method: "GET", url: "/v1/remote/closure-gate" });
     assert.equal(closureGate.statusCode, 200);
     const closureGatePayload = closureGate.json() as { status: string; writes: boolean; requiredSourceQaIds: string[]; reviewedSourceQaIds: string[]; missingSourceQaIds: string[]; invalidSourceQaIds: string[]; duplicateSourceQaIds: string[]; externalPendingRequiredSourceQaIds: string[]; invalidExternalPendingDispositionQaIds: string[]; sourceQaReviewStatus: string; sourceQaReviewItems: unknown[]; blockedExternalRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockers: string[] };
@@ -401,7 +442,6 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(closureGatePayload.blockers.includes("source_qa_review"), true);
     assert.equal(closureGatePayload.blockers.includes("external_validation"), true);
 
-    const sourceQaReviewArtifact = JSON.parse(fs.readFileSync(path.resolve("docs/remote-gateway-sync-source-qa-review.json"), "utf8")) as { items: unknown[] };
     const reviewedPendingClosureGate = await built.app.inject({
       method: "POST",
       url: "/v1/remote/closure-gate",

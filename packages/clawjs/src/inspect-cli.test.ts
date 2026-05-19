@@ -86,6 +86,8 @@ const expectedRemoteApiMethodRoutes = [
   "POST /v1/remote/external-validation-report",
   "GET /v1/remote/source-qa-template",
   "POST /v1/remote/source-qa-template",
+  "GET /v1/remote/decision-review",
+  "POST /v1/remote/decision-review",
   "GET /v1/remote/closure-gate",
   "POST /v1/remote/closure-gate",
   "GET /v1/remote/route-contracts",
@@ -339,6 +341,17 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   assert.equal(remoteInspect.code, CLI_EXIT_OK);
   const remoteInspectPayload = parseCliJson<{
     conformance: { status: string; missingRoutes: string[]; decisions: Array<{ decisionId: string }> };
+    decisionReview: {
+      status: string;
+      reviewedCount: number;
+      requiredCount: number;
+      implementedCount: number;
+      externalPendingCount: number;
+      missingSourceQaIds: string[];
+      blockers: string[];
+      writes: boolean;
+      items: Array<{ qaId: string; decisionId: string; reviewStatus: string; disposition: string | null; conformanceStatus: string | null; externalPendingRequired: boolean; writes: boolean }>;
+    };
     classifications: Array<{ id: string; classification: string; routeIds: string[] }>;
     sync: { authorityClasses: string[]; drivers: string[]; driverCatalog: { status: string; writes: boolean; driverCount: number; requiredDrivers: string[]; coveredDrivers: string[]; requiredRouteIds: string[]; missingDrivers: string[]; missingRouteIds: string[]; authorityModel: string; conflictDefault: string; physicalApplicationStatus: string; entries: Array<{ driver: string; routeId: string; lateralDomains: string[]; manifestBacked: boolean; changelogBacked: boolean; authorityScoped: boolean; partialResourceSupported: boolean; physicalDriverRequired: boolean; commands: string[]; writes: boolean }> }; conflictDefault: string; receiptContracts: string[]; routeIds: string[]; writes: boolean };
     transport: { contract: string; adapterNodeId: string; trustModes: string[]; receiptContract: string; writes: boolean };
@@ -358,6 +371,19 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   assert.equal(remoteInspectPayload.conformance.status, "baseline_registered");
   assert.deepEqual(remoteInspectPayload.conformance.missingRoutes, []);
   assert.equal(remoteInspectPayload.conformance.decisions.some((entry) => entry.decisionId === "remote_surface_parity"), true);
+  assert.equal(remoteInspectPayload.decisionReview.status, "incomplete");
+  assert.equal(remoteInspectPayload.decisionReview.reviewedCount, 0);
+  assert.equal(remoteInspectPayload.decisionReview.requiredCount, 23);
+  assert.equal(remoteInspectPayload.decisionReview.missingSourceQaIds.length, 23);
+  assert.equal(remoteInspectPayload.decisionReview.implementedCount, 0);
+  assert.equal(remoteInspectPayload.decisionReview.externalPendingCount, 0);
+  assert.equal(remoteInspectPayload.decisionReview.blockers.includes("source_qa_review"), true);
+  assert.equal(remoteInspectPayload.decisionReview.blockers.includes("external_validation"), true);
+  assert.equal(remoteInspectPayload.decisionReview.writes, false);
+  assert.equal(remoteInspectPayload.decisionReview.items.length, 23);
+  assert.equal(remoteInspectPayload.decisionReview.items.every((entry) => entry.reviewStatus === "missing" && entry.disposition === null && !entry.writes), true);
+  assert.equal(remoteInspectPayload.decisionReview.items.some((entry) => entry.qaId === "QA-003" && entry.decisionId === "remote_surface_parity" && entry.conformanceStatus === "must_verify_before_goal_completion"), true);
+  assert.equal(remoteInspectPayload.decisionReview.items.some((entry) => entry.qaId === "QA-023" && entry.decisionId === "goal_closure_gate" && entry.conformanceStatus === null), true);
   const expectedRemoteClassifications = expectedRemoteClassificationEntries();
   assert.equal(remoteInspectPayload.classifications.length, 57);
   assert.deepEqual(
@@ -488,11 +514,33 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   ], process.cwd());
   assert.equal(remoteInspectWithArtifacts.code, CLI_EXIT_OK);
   const remoteInspectWithArtifactsPayload = parseCliJson<{
+    decisionReview: {
+      status: string;
+      reviewedCount: number;
+      requiredCount: number;
+      implementedCount: number;
+      externalPendingCount: number;
+      missingSourceQaIds: string[];
+      blockers: string[];
+      writes: boolean;
+      items: Array<{ qaId: string; decisionId: string; reviewStatus: string; disposition: string | null; conformanceStatus: string | null; externalPendingRequired: boolean; writes: boolean }>;
+    };
     externalValidationReadiness: { status: string; sourceQaReady: boolean; externalEvidenceReady: boolean; closureGateBlockers: string[]; blockedExternalRequirementIds: string[] };
     externalValidationApprovalRequest: { status: string; approvalRequired: boolean; approved: boolean; readinessStatus: string; requirementIds: string[]; validationRouteIds: string[]; writes: boolean };
     externalValidationReport: { status: string; clearableRequirementIds: string[]; blockedRequirementIds: string[]; writes: boolean };
     closureGate: { sourceQaReviewStatus: string; missingSourceQaIds: string[]; blockers: string[]; blockedExternalRequirementIds: string[]; writes: boolean };
   }>(remoteInspectWithArtifacts.stdout).data;
+  assert.equal(remoteInspectWithArtifactsPayload.decisionReview.status, "complete");
+  assert.equal(remoteInspectWithArtifactsPayload.decisionReview.reviewedCount, 23);
+  assert.equal(remoteInspectWithArtifactsPayload.decisionReview.requiredCount, 23);
+  assert.deepEqual(remoteInspectWithArtifactsPayload.decisionReview.missingSourceQaIds, []);
+  assert.equal(remoteInspectWithArtifactsPayload.decisionReview.implementedCount, 11);
+  assert.equal(remoteInspectWithArtifactsPayload.decisionReview.externalPendingCount, 12);
+  assert.deepEqual(remoteInspectWithArtifactsPayload.decisionReview.blockers, ["external_validation"]);
+  assert.equal(remoteInspectWithArtifactsPayload.decisionReview.writes, false);
+  assert.equal(remoteInspectWithArtifactsPayload.decisionReview.items.every((entry) => entry.reviewStatus === "reviewed" && entry.disposition !== null && !entry.writes), true);
+  assert.equal(remoteInspectWithArtifactsPayload.decisionReview.items.some((entry) => entry.qaId === "QA-006" && entry.decisionId === "remote_secrets_model" && entry.disposition === "external_pending" && entry.externalPendingRequired), true);
+  assert.equal(remoteInspectWithArtifactsPayload.decisionReview.items.some((entry) => entry.qaId === "QA-023" && entry.decisionId === "goal_closure_gate" && entry.disposition === "implemented" && entry.conformanceStatus === null), true);
   assert.equal(remoteInspectWithArtifactsPayload.externalValidationReadiness.status, "ready_for_approved_run");
   assert.equal(remoteInspectWithArtifactsPayload.externalValidationReadiness.sourceQaReady, true);
   assert.equal(remoteInspectWithArtifactsPayload.externalValidationReadiness.externalEvidenceReady, true);
@@ -672,6 +720,33 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.equal(remoteSourceQaTemplatePayload.items.every((entry) => !entry.reviewed && entry.disposition === null && entry.evidenceRefs.length === 0 && entry.reviewedAt === null && !entry.writes), true);
   assert.equal(remoteSourceQaTemplatePayload.items.some((entry) => entry.qaId === "QA-023" && entry.decisionKey === "goal_closure_gate"), true);
   assert.equal(remoteSourceQaTemplatePayload.submissionCommand.includes("claw remote closure-gate"), true);
+
+  const remoteDecisionReview = await runCliCapture([
+    "remote",
+    "decision-review",
+    "--now",
+    "2026-05-18T11:55:00.000Z",
+    "--source-qa-review-file",
+    "docs/remote-gateway-sync-source-qa-review.json",
+    "--external-validation-file",
+    "docs/remote-gateway-sync-external-validation-evidence.json",
+    "--json",
+  ], process.cwd());
+  assert.equal(remoteDecisionReview.code, CLI_EXIT_OK);
+  const remoteDecisionReviewPayload = parseCliJson<{ status: string; writes: boolean; reviewedCount: number; requiredCount: number; implementedCount: number; externalPendingCount: number; missingSourceQaIds: string[]; invalidSourceQaIds: string[]; duplicateSourceQaIds: string[]; blockers: string[]; items: Array<{ qaId: string; decisionId: string; reviewStatus: string; disposition: string | null; conformanceStatus: string | null; externalPendingRequired: boolean; writes: boolean }> }>(remoteDecisionReview.stdout).data;
+  assert.equal(remoteDecisionReviewPayload.status, "complete");
+  assert.equal(remoteDecisionReviewPayload.writes, false);
+  assert.equal(remoteDecisionReviewPayload.reviewedCount, 23);
+  assert.equal(remoteDecisionReviewPayload.requiredCount, 23);
+  assert.equal(remoteDecisionReviewPayload.implementedCount, 11);
+  assert.equal(remoteDecisionReviewPayload.externalPendingCount, 12);
+  assert.deepEqual(remoteDecisionReviewPayload.missingSourceQaIds, []);
+  assert.deepEqual(remoteDecisionReviewPayload.invalidSourceQaIds, []);
+  assert.deepEqual(remoteDecisionReviewPayload.duplicateSourceQaIds, []);
+  assert.deepEqual(remoteDecisionReviewPayload.blockers, ["external_validation"]);
+  assert.equal(remoteDecisionReviewPayload.items.every((entry) => entry.reviewStatus === "reviewed" && entry.disposition !== null && !entry.writes), true);
+  assert.equal(remoteDecisionReviewPayload.items.some((entry) => entry.qaId === "QA-006" && entry.decisionId === "remote_secrets_model" && entry.disposition === "external_pending" && entry.externalPendingRequired), true);
+  assert.equal(remoteDecisionReviewPayload.items.some((entry) => entry.qaId === "QA-023" && entry.decisionId === "goal_closure_gate" && entry.disposition === "implemented" && entry.conformanceStatus === null), true);
 
   const remoteValidationReport = await runCliCapture(["remote", "validation-report", "--now", "2026-05-17T10:13:20.000Z", "--json"], process.cwd());
   assert.equal(remoteValidationReport.code, CLI_EXIT_OK);

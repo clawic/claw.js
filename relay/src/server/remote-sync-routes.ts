@@ -1,5 +1,6 @@
 import {
   buildRemoteConformanceReport,
+  buildRemoteDecisionReview,
   buildRemoteExternalPendingRegister,
   buildRemoteExternalValidationEvidenceArtifact,
   buildRemoteExternalValidationApprovalRequest,
@@ -180,6 +181,20 @@ function remoteExternalValidationReportPayload(input: Record<string, unknown> = 
 function remoteGoalClosureGatePayload(input: Record<string, unknown> = {}) {
   const sourceQaReviews = remoteSourceQaReviewsFromInput(input);
   return buildRemoteGoalClosureGate({
+    reviewedSourceQaIds: Array.isArray(input.reviewedSourceQaIds) ? input.reviewedSourceQaIds.filter((entry): entry is string => typeof entry === "string") : [],
+    sourceQaReviews,
+    evidence: input.evidence === undefined
+      ? remoteExternalValidationEvidenceFromInput(input)
+      : parseRemoteExternalValidationEvidenceInput(input.evidence),
+    evidenceArtifact: remoteExternalValidationEvidenceArtifactFromInput(input),
+  });
+}
+
+function remoteDecisionReviewPayload(input: Record<string, unknown> = {}) {
+  const sourceQaReviews = remoteSourceQaReviewsFromInput(input);
+  return buildRemoteDecisionReview({
+    routeIds: routeIds(),
+    nodeIds: nodeIds(),
     reviewedSourceQaIds: Array.isArray(input.reviewedSourceQaIds) ? input.reviewedSourceQaIds.filter((entry): entry is string => typeof entry === "string") : [],
     sourceQaReviews,
     evidence: input.evidence === undefined
@@ -535,6 +550,10 @@ export function registerRemoteSyncRoutes(app: FastifyInstance): void {
   app.get(clawApiPath("remote/source-qa-template"), async () => remoteSourceQaReviewTemplatePayload());
 
   app.post(clawApiPath("remote/source-qa-template"), async (request) => remoteSourceQaReviewTemplatePayload(readBody(request)));
+
+  app.get(clawApiPath("remote/decision-review"), async () => remoteDecisionReviewPayload());
+
+  app.post(clawApiPath("remote/decision-review"), async (request) => remoteDecisionReviewPayload(readBody(request)));
 
   app.get(clawApiPath("remote/closure-gate"), async () => remoteGoalClosureGatePayload());
 

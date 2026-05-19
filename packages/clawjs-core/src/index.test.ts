@@ -24,6 +24,7 @@ import {
   buildRemoteExternalValidationReport,
   buildRemoteExternalValidationReadiness,
   buildRemoteExternalValidationRunbook,
+  buildRemoteDecisionReview,
   buildRemoteGoalClosureGate,
   buildRemoteProviderDeviceE2EValidationPlan,
   buildRemoteSourceQaReviewReport,
@@ -143,6 +144,7 @@ import {
   remoteAgentServiceDecisionSchema,
   remoteAgentServiceExecutionReceiptSchema,
   remoteCompatibilityAdapterReceiptSchema,
+  remoteDecisionReviewSchema,
   remoteExternalValidationEvidenceArtifactSchema,
   remoteExternalValidationRunbookSchema,
   remoteExternalPendingRegisterSchema,
@@ -191,6 +193,8 @@ const expectedRemoteRegistryMethodRoutes = [
   "POST /v1/remote/external-validation-report",
   "GET /v1/remote/source-qa-template",
   "POST /v1/remote/source-qa-template",
+  "GET /v1/remote/decision-review",
+  "POST /v1/remote/decision-review",
   "GET /v1/remote/closure-gate",
   "POST /v1/remote/closure-gate",
   "GET /v1/remote/route-contracts",
@@ -1363,6 +1367,29 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.deepEqual(completeSourceQaReviewReport.invalidExternalPendingDispositionQaIds, []);
   assert.deepEqual(completeSourceQaReviewReport.externalPendingRequiredSourceQaIds, [...externalPendingSourceQaIds].sort());
   assert.equal(completeSourceQaReviewReport.items.every((entry) => entry.evidenceRefs.length >= 2 && !entry.writes), true);
+  const completeDecisionReview = buildRemoteDecisionReview({
+    generatedAt: "2026-05-17T10:13:26.525Z",
+    routeIds: remoteSyncRequiredRouteIds,
+    nodeIds: ["claw.coordinator", "claw.gateway", "claw.connector", "claw.sync", "claw.transport.iroh", "claw.headlessHost", "claw.remoteCache"],
+    sourceQaReviews: completeSourceQaReviewReport.items,
+    evidence: externalValidationEvidenceTemplate.evidence,
+    evidenceArtifact: buildRemoteExternalValidationEvidenceArtifact({
+      generatedAt: "2026-05-17T10:13:26.525Z",
+      evidence: externalValidationEvidenceTemplate.evidence,
+    }),
+  });
+  assert.equal(remoteDecisionReviewSchema.safeParse(completeDecisionReview).success, true);
+  assert.equal(completeDecisionReview.status, "complete");
+  assert.equal(completeDecisionReview.writes, false);
+  assert.equal(completeDecisionReview.reviewedCount, 23);
+  assert.equal(completeDecisionReview.requiredCount, 23);
+  assert.equal(completeDecisionReview.implementedCount, 0);
+  assert.equal(completeDecisionReview.externalPendingCount, 12);
+  assert.deepEqual(completeDecisionReview.missingSourceQaIds, []);
+  assert.deepEqual(completeDecisionReview.blockers, ["external_validation"]);
+  assert.equal(completeDecisionReview.items.every((entry) => entry.reviewStatus === "reviewed" && entry.disposition !== null && !entry.writes), true);
+  assert.equal(completeDecisionReview.items.some((entry) => entry.qaId === "QA-006" && entry.decisionId === "remote_secrets_model" && entry.disposition === "external_pending" && entry.externalPendingRequired), true);
+  assert.equal(completeDecisionReview.items.some((entry) => entry.qaId === "QA-023" && entry.decisionId === "goal_closure_gate" && entry.conformanceStatus === null), true);
   const parsedSourceQaReviewItems = parseRemoteSourceQaReviewInput({
     schemaVersion: 1,
     sourceConversationId: "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8",

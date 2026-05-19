@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { buildRemoteExternalPendingRegister, remoteSyncRequiredRouteIds } from "./remote-sync.ts";
+import { buildRemoteConformanceReport, buildRemoteExternalPendingRegister, remoteSyncRequiredRouteIds } from "./remote-sync.ts";
 
 export const remoteProviderDeviceE2EDomainSchema = z.enum([
   "chat",
@@ -333,6 +333,39 @@ export const remoteGoalClosureGateSchema = z.object({
   writes: z.literal(false),
 });
 
+export const remoteDecisionReviewItemSchema = z.object({
+  schemaVersion: z.literal(1),
+  qaId: z.string().min(1),
+  decisionId: z.string().min(1),
+  requirementId: z.string().min(1),
+  reviewStatus: z.enum(["missing", "invalid", "reviewed"]),
+  disposition: remoteSourceQaReviewDispositionSchema.nullable(),
+  evidenceRefs: z.array(z.string().min(1)),
+  conformanceStatus: z.enum(["must_verify_before_goal_completion"]).nullable(),
+  externalPendingRequired: z.boolean(),
+  writes: z.literal(false),
+});
+
+export const remoteDecisionReviewSchema = z.object({
+  schemaVersion: z.literal(1),
+  reviewId: z.string().min(1),
+  generatedAt: z.string().datetime(),
+  status: z.enum(["incomplete", "complete"]),
+  sourceConversationId: z.string().min(1),
+  sourcePlanId: z.string().min(1),
+  reviewedCount: z.number().int().nonnegative(),
+  requiredCount: z.number().int().nonnegative(),
+  implementedCount: z.number().int().nonnegative(),
+  externalPendingCount: z.number().int().nonnegative(),
+  missingSourceQaIds: z.array(z.string().min(1)),
+  invalidSourceQaIds: z.array(z.string().min(1)),
+  duplicateSourceQaIds: z.array(z.string().min(1)),
+  invalidExternalPendingDispositionQaIds: z.array(z.string().min(1)),
+  blockers: z.array(z.enum(["source_qa_review", "external_validation"])),
+  items: z.array(remoteDecisionReviewItemSchema).min(1),
+  writes: z.literal(false),
+});
+
 export type RemoteExternalValidationEvidence = z.infer<typeof remoteExternalValidationEvidenceSchema>;
 export type RemoteExternalValidationEvidenceEnvelope = z.infer<typeof remoteExternalValidationEvidenceEnvelopeSchema>;
 export type RemoteExternalValidationEvidenceArtifact = z.infer<typeof remoteExternalValidationEvidenceArtifactSchema>;
@@ -349,6 +382,8 @@ export type RemoteSourceQaReviewReport = z.infer<typeof remoteSourceQaReviewRepo
 export type RemoteSourceQaReviewTemplateItem = z.infer<typeof remoteSourceQaReviewTemplateItemSchema>;
 export type RemoteSourceQaReviewTemplate = z.infer<typeof remoteSourceQaReviewTemplateSchema>;
 export type RemoteGoalClosureGate = z.infer<typeof remoteGoalClosureGateSchema>;
+export type RemoteDecisionReviewItem = z.infer<typeof remoteDecisionReviewItemSchema>;
+export type RemoteDecisionReview = z.infer<typeof remoteDecisionReviewSchema>;
 
 function providerDeviceE2EPlanId(parts: string[]): string {
   return `provider_device_e2e_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
@@ -691,6 +726,10 @@ const remoteSourceQaIdsByDecisionKey = new Map(
 
 function sourceQaReviewReportId(parts: string[]): string {
   return `remote_source_qa_review_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
+}
+
+function remoteDecisionReviewId(parts: string[]): string {
+  return `remote_decision_review_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
 }
 
 function externalPendingRequiredSourceQaIds(generatedAt: string): string[] {
@@ -1284,6 +1323,68 @@ export function buildRemoteGoalClosureGate(input: {
     blockedExternalRequirementIds: externalValidationReport.blockedRequirementIds,
     clearableExternalRequirementIds: externalValidationReport.clearableRequirementIds,
     blockers,
+    writes: false,
+  });
+}
+
+export function buildRemoteDecisionReview(input: {
+  generatedAt?: string;
+  routeIds?: string[];
+  nodeIds?: string[];
+  reviewedSourceQaIds?: string[];
+  sourceQaReviews?: RemoteSourceQaReviewItem[];
+  evidence?: RemoteExternalValidationEvidence[];
+  evidenceArtifact?: unknown;
+} = {}): RemoteDecisionReview {
+  const generatedAt = input.generatedAt ?? new Date().toISOString();
+  const sourceQaReviewTemplate = buildRemoteSourceQaReviewTemplate({ generatedAt });
+  const closureGate = buildRemoteGoalClosureGate({
+    generatedAt,
+    reviewedSourceQaIds: input.reviewedSourceQaIds,
+    sourceQaReviews: input.sourceQaReviews,
+    evidence: input.evidence,
+    evidenceArtifact: input.evidenceArtifact,
+  });
+  const conformance = buildRemoteConformanceReport({
+    routeIds: input.routeIds ?? [],
+    nodeIds: input.nodeIds ?? [],
+  });
+  const reviewedSourceQaById = new Map(closureGate.sourceQaReviewItems.map((item) => [item.qaId, item]));
+  const conformanceDecisionStatusById = new Map(conformance.decisions.map((decision) => [decision.decisionId, decision.status]));
+  const items = sourceQaReviewTemplate.items.map((item) => {
+    const reviewed = reviewedSourceQaById.get(item.qaId);
+    const invalid = closureGate.invalidSourceQaIds.includes(item.qaId);
+    const missing = closureGate.missingSourceQaIds.includes(item.qaId);
+    return remoteDecisionReviewItemSchema.parse({
+      schemaVersion: 1,
+      qaId: item.qaId,
+      decisionId: item.decisionKey,
+      requirementId: item.requirementId,
+      reviewStatus: invalid ? "invalid" : missing ? "missing" : "reviewed",
+      disposition: reviewed?.disposition ?? null,
+      evidenceRefs: reviewed?.evidenceRefs ?? [],
+      conformanceStatus: conformanceDecisionStatusById.get(item.decisionKey) ?? null,
+      externalPendingRequired: sourceQaReviewTemplate.externalPendingRequiredSourceQaIds.includes(item.qaId),
+      writes: false,
+    });
+  });
+  return remoteDecisionReviewSchema.parse({
+    schemaVersion: 1,
+    reviewId: remoteDecisionReviewId(["review", generatedAt]),
+    generatedAt,
+    status: closureGate.sourceQaReviewStatus,
+    sourceConversationId: remoteSourceConversationId,
+    sourcePlanId: remoteSourcePlanId,
+    reviewedCount: closureGate.reviewedSourceQaIds.length,
+    requiredCount: closureGate.requiredSourceQaIds.length,
+    implementedCount: items.filter((item) => item.disposition === "implemented").length,
+    externalPendingCount: items.filter((item) => item.disposition === "external_pending").length,
+    missingSourceQaIds: closureGate.missingSourceQaIds,
+    invalidSourceQaIds: closureGate.invalidSourceQaIds,
+    duplicateSourceQaIds: closureGate.duplicateSourceQaIds,
+    invalidExternalPendingDispositionQaIds: closureGate.invalidExternalPendingDispositionQaIds,
+    blockers: closureGate.blockers,
+    items,
     writes: false,
   });
 }

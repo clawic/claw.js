@@ -820,6 +820,8 @@ const corePublicRoutes = [
   ["claw.api.remote.externalValidationReport", "POST", "/v1/remote/external-validation-report", "Remote physical/provider validation evidence report contract"],
   ["claw.api.remote.sourceQaTemplateRead", "GET", "/v1/remote/source-qa-template", "Remote source Q/A review template read contract"],
   ["claw.api.remote.sourceQaTemplate", "POST", "/v1/remote/source-qa-template", "Remote source Q/A review template contract"],
+  ["claw.api.remote.decisionReviewRead", "GET", "/v1/remote/decision-review", "Remote source Q/A decision review read contract"],
+  ["claw.api.remote.decisionReview", "POST", "/v1/remote/decision-review", "Remote source Q/A decision review contract"],
   ["claw.api.remote.closureGateRead", "GET", "/v1/remote/closure-gate", "Remote goal closure gate read contract"],
   ["claw.api.remote.closureGate", "POST", "/v1/remote/closure-gate", "Remote goal closure gate contract"],
   ["claw.api.remote.routeContracts", "GET", "/v1/remote/route-contracts", "Remote route contract catalog contract"],

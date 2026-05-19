@@ -130,13 +130,16 @@
       "surfaces": [
         "claw.api.remote.closureGateRead",
         "claw.api.remote.compatibilityAdaptersCreate",
+        "claw.api.remote.decisionReview",
+        "claw.api.remote.decisionReviewRead",
         "claw.api.remote.externalValidationApprovalRequestRead",
         "claw.api.remote.externalValidationArtifactRead",
         "claw.api.remote.externalValidationReadinessRead",
         "claw.api.remote.externalValidationReportRead",
         "claw.api.remote.externalValidationTemplateRead",
         "claw.api.remote.offlineCommandInspect",
-        "claw.api.remote.sourceQaTemplateRead"
+        "claw.api.remote.sourceQaTemplateRead",
+        "claw.cli.command.remote"
       ],
       "tests": [
         "packages/clawjs-core/src/index.test.ts",
@@ -145,7 +148,7 @@
         "docs/evolution/public-surface-baseline.json"
       ],
       "adr": "docs/adr/0030-post-v1-evolution-rescue-backbone.md",
-      "notes": "Registers additive remote validation, closure, offline command, and compatibility adapter API contracts so public surface drift remains explicit and sealed.",
+      "notes": "Registers additive remote validation, decision review, closure, offline command, and compatibility adapter API/CLI contracts so public surface drift remains explicit and sealed.",
       "createdAt": "2026-05-18T00:00:00.000Z"
     },
     {
