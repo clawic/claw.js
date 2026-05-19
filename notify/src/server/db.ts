@@ -85,6 +85,7 @@ interface NotificationRow {
   id: string;
   tenant_id: string;
   source_app_id: string;
+  approval_id: string;
   idempotency_key: string | null;
   priority: NotificationPriority;
   delivery_mode: NotificationDeliveryMode;
@@ -282,6 +283,7 @@ function serializeNotification(row: NotificationRow): NotificationRecord {
     id: row.id,
     tenantId: row.tenant_id,
     sourceAppId: row.source_app_id,
+    approvalId: row.approval_id,
     idempotencyKey: row.idempotency_key,
     priority: row.priority,
     deliveryMode: row.delivery_mode,
@@ -378,6 +380,13 @@ export class NotifyServiceStore {
 
   private setup(): void {
     this.sqlite.exec(NOTIFY_STORE_SCHEMA_SQL);
+    const notificationColumns = new Set(
+      this.sqlite.prepare("PRAGMA table_info(notifications)").all()
+        .map((row) => String((row as { name: string }).name)),
+    );
+    if (!notificationColumns.has("approval_id")) {
+      this.sqlite.prepare("ALTER TABLE notifications ADD COLUMN approval_id TEXT NOT NULL DEFAULT 'legacy-missing-approval'").run();
+    }
 
     const now = nowIso();
     this.sqlite.prepare(`
@@ -826,6 +835,7 @@ export class NotifyServiceStore {
   createNotification(input: {
     tenantId: string;
     sourceAppId: string;
+    approvalId: string;
     idempotencyKey?: string;
     priority: NotificationPriority;
     deliveryMode: NotificationDeliveryMode;
@@ -841,13 +851,14 @@ export class NotifyServiceStore {
     const id = randomUUID();
     this.sqlite.prepare(`
       INSERT INTO notifications (
-        id, tenant_id, source_app_id, idempotency_key, priority, delivery_mode, status, title, body,
+        id, tenant_id, source_app_id, approval_id, idempotency_key, priority, delivery_mode, status, title, body,
         data_json, context_json, deep_link_json, target_client_app_id, receipt_policy_json, created_at, updated_at, cancelled_at
-      ) VALUES (?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
     `).run(
       id,
       input.tenantId,
       input.sourceAppId,
+      input.approvalId,
       input.idempotencyKey ?? null,
       input.priority,
       input.deliveryMode,

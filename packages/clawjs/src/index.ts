@@ -892,6 +892,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     try {
       const claw = await createCliClaw(resolveRuntimeAdapterId(flags), flags, context.cwd, "notify-cli", "notify-cli", "notify-cli");
       const input = {
+        approvalId: flags["approval-id"] ?? flags["host-approval-id"] ?? "",
         ...(flags["idempotency-key"] ? { idempotencyKey: flags["idempotency-key"] } : {}),
         ...(flags.priority ? { priority: flags.priority as "passive" | "normal" | "time-sensitive" | "critical" } : {}),
         ...(parseJsonFlag<Record<string, unknown>>(flags["audience-json"], "--audience-json") ? { audience: parseJsonFlag<Record<string, unknown>>(flags["audience-json"], "--audience-json") } : {}),

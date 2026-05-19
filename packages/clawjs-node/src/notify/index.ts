@@ -28,6 +28,7 @@ export interface NotifyClientOptions {
 }
 
 export interface SendNotificationInput {
+  approvalId: string;
   idempotencyKey?: string;
   priority?: NotificationPriority;
   audience?: NotificationAudience;
@@ -155,9 +156,12 @@ export class NotifyClient {
   }
 
   async send(input: SendNotificationInput) {
+    if (!input.approvalId.trim()) {
+      throw new Error("notify.send requires explicit approvalId before external notification delivery.");
+    }
     return await this.request<{
       created: boolean;
-      notification: { id: string };
+      notification: { id: string; approvalId: string };
       deliveries: Array<{ id: string; installationId: string; state: string }>;
       receipt: { id: string; status: string } | null;
     }>(clawApiPath("notifications"), {

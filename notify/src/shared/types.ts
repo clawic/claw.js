@@ -113,6 +113,7 @@ export interface NotificationRecord {
   id: string;
   tenantId: string;
   sourceAppId: string;
+  approvalId: string;
   idempotencyKey?: string | null;
   priority: NotificationPriority;
   deliveryMode: NotificationDeliveryMode;

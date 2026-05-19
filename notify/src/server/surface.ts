@@ -107,6 +107,7 @@ export const NOTIFY_STORE_SCHEMA_SQL = String.raw`
         id TEXT PRIMARY KEY,
         tenant_id TEXT NOT NULL,
         source_app_id TEXT NOT NULL REFERENCES source_apps(id) ON DELETE CASCADE,
+        approval_id TEXT NOT NULL,
         idempotency_key TEXT,
         priority TEXT NOT NULL,
         delivery_mode TEXT NOT NULL,

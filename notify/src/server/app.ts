@@ -596,6 +596,10 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     const delivery = isRecord(body.delivery) ? body.delivery : {};
     const deliveryMode = delivery.mode === "silent" || delivery.mode === "glance" ? delivery.mode : "alert";
     const context = parseContext(body.context, principal.tenantId);
+    const approvalId = asString(body.approvalId);
+    if (!approvalId) {
+      return await reply.code(409).send({ error: "approval_required", message: "Notification delivery requires explicit approvalId." });
+    }
     if (context.tenantId !== principal.tenantId) {
       return await reply.code(403).send({ error: "tenant mismatch for source token" });
     }
@@ -614,6 +618,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     const notification = store.createNotification({
       tenantId: principal.tenantId,
       sourceAppId: principal.sourceAppId,
+      approvalId,
       idempotencyKey,
       priority,
       deliveryMode,

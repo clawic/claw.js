@@ -54,7 +54,41 @@ test("NotifyClient can send notifications and sync the client feed", async () =>
       minPriority: "normal",
     });
 
+    await assert.rejects(
+      () => sourceClient.send({
+        approvalId: "",
+        priority: "normal",
+        audience: { useSubscriptions: true },
+        context: {
+          tenantId: "tenant-sdk",
+          agentId: "sdk-agent",
+          eventType: clawNotifyEventTypes.sdkAlert,
+        },
+      }),
+      /requires explicit approvalId before external notification delivery/,
+    );
+
+    const blocked = await fetch(`${server.baseUrl}/v1/notifications`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${source.token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        priority: "normal",
+        audience: { useSubscriptions: true },
+        context: {
+          tenantId: "tenant-sdk",
+          agentId: "sdk-agent",
+          eventType: clawNotifyEventTypes.sdkAlert,
+        },
+      }),
+    });
+    assert.equal(blocked.status, 409);
+    assert.equal(((await blocked.json()) as { error: string }).error, "approval_required");
+
     const sent = await sourceClient.send({
+      approvalId: "approval_notify_send",
       priority: "normal",
       audience: { useSubscriptions: true },
       context: {
@@ -68,6 +102,7 @@ test("NotifyClient can send notifications and sync the client feed", async () =>
       },
     });
     assert.equal(sent.created, true);
+    assert.equal(sent.notification.approvalId, "approval_notify_send");
     assert.equal(sent.deliveries.length, 1);
 
     const feed = await installationClient.feed();

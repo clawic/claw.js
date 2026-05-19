@@ -96,6 +96,28 @@ test("runCli supports notify send and subscription commands", async () => {
 
     const sendStdout = captureStream();
     const sendStderr = captureStream();
+    const blockedSendExit = await runCli([
+      "notify",
+      "send",
+      "--runtime",
+      "demo",
+      "--notify-url",
+      server.baseUrl,
+      "--notify-source-token",
+      source.token,
+      "--context-json",
+      JSON.stringify({ tenantId: "tenant-cli", agentId: "cli-agent" }),
+      "--audience-json",
+      JSON.stringify({ useSubscriptions: true }),
+      "--delivery-json",
+      JSON.stringify({ mode: "alert", title: "CLI alert" }),
+    ], {
+      stdout: captureStream().stream,
+      stderr: captureStream().stream,
+      cwd,
+    });
+    assert.notEqual(blockedSendExit, CLI_EXIT_OK);
+
     const sendExit = await runCli([
       "notify",
       "send",
@@ -111,6 +133,8 @@ test("runCli supports notify send and subscription commands", async () => {
       JSON.stringify({ useSubscriptions: true }),
       "--delivery-json",
       JSON.stringify({ mode: "alert", title: "CLI alert" }),
+      "--approval-id",
+      "approval_notify_cli_send",
     ], {
       stdout: sendStdout.stream,
       stderr: sendStderr.stream,
