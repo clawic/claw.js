@@ -42,8 +42,9 @@ test("published CLI tarballs install with npm and manage local-first productivit
     index: path.resolve(process.cwd(), "packages/clawjs-index"),
     sessions: path.resolve(process.cwd(), "packages/clawjs-sessions"),
     cli: path.resolve(process.cwd(), "packages/clawjs"),
-    denseDataPack: path.resolve(process.cwd(), "packages/clawjs-domain-pack-dense-data"),
+    denseDataPack: path.resolve(process.cwd(), "packages/clawjs-domain-pack-dense-data"), // @clawjs/domain-pack-dense-data
   };
+  assert.equal(JSON.parse(fs.readFileSync(path.join(packageRoots.denseDataPack, "package.json"), "utf8")).name, "@clawjs/domain-pack-dense-data");
 
   let tarballs: string[];
   let denseDataPackTarball = "";

@@ -67,7 +67,8 @@ permission prompts unless they ask for those capabilities.
 - Deep niche domain commands are loaded on demand and are not part of the base
   CLI package path. If a domain is enabled but its optional pack is absent, the
   command stops with explicit install guidance instead of downloading or
-  starting anything implicitly.
+  starting anything implicitly. The dense domain V1 pack is
+  `@clawjs/domain-pack-dense-data`.
 - CI and non-interactive invocations default to `minimal`.
 - A safe direct command such as `claw tasks create` may run with minimal
   compatible defaults and suggest `claw setup` without blocking.
