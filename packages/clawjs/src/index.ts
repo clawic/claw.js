@@ -230,9 +230,10 @@ async function runOptionalDenseDataCli(input: {
   } catch (error) {
     const code = (error as NodeJS.ErrnoException & { code?: string }).code;
     if (code !== "ERR_MODULE_NOT_FOUND" && code !== "MODULE_NOT_FOUND") throw error;
+    const moduleId = requiredModuleForCliGroup(input.positionals[0])?.id ?? input.positionals[0] ?? "domain";
     throw new CliHandledError(
       "optional_pack_missing",
-      `This domain command needs an optional domain pack. Review it with \`${input.binName} modules install ${input.positionals[0] ?? "domain"}\` before using deep domain commands.`,
+      `This domain command needs optional pack @clawjs/domain-pack-dense-data. Review it with \`${input.binName} modules install ${moduleId}\` and install the pack explicitly before using deep domain commands.`,
       CLI_EXIT_USAGE,
     );
   }

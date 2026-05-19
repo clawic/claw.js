@@ -91,6 +91,16 @@ test("modules enable and workspace overrides do not install dependencies", async
   const installPayload = JSON.parse(install.stdout) as { data: { installed: boolean; message: string } };
   assert.equal(installPayload.data.installed, false);
   assert.match(installPayload.data.message, /explicit/i);
+
+  const densePackInstall = await runCliCapture(["modules", "install", "health", "--claw-home", tempHome, "--json"], process.cwd());
+  assert.equal(densePackInstall.code, CLI_EXIT_OK);
+  const densePackInstallPayload = JSON.parse(densePackInstall.stdout) as {
+    data: { installed: boolean; optionalPack: string; installCommand: string; next: string[] };
+  };
+  assert.equal(densePackInstallPayload.data.installed, false);
+  assert.equal(densePackInstallPayload.data.optionalPack, "@clawjs/domain-pack-dense-data");
+  assert.equal(densePackInstallPayload.data.installCommand, "npm install @clawjs/domain-pack-dense-data");
+  assert.equal(densePackInstallPayload.data.next.includes("claw modules enable health"), true);
 });
 
 test("collections list shows active safe catalog by default and full catalog only when requested", async () => {

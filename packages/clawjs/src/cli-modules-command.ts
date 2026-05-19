@@ -18,6 +18,7 @@ interface ClawModuleDefinition {
   defaultModes: SetupModeId[];
   niche?: boolean;
   requiresExplicitInstall?: boolean;
+  optionalPack?: string;
   impact: string[];
 }
 
@@ -135,6 +136,7 @@ const MODULE_DEFINITIONS: ClawModuleDefinition[] = [
     defaultModes: [],
     niche: true,
     requiresExplicitInstall: true,
+    optionalPack: "@clawjs/domain-pack-dense-data",
     impact: ["niche_area", "optional_pack"],
   },
   {
@@ -144,7 +146,9 @@ const MODULE_DEFINITIONS: ClawModuleDefinition[] = [
     summary: "Sensitive health and wellbeing records.",
     defaultModes: [],
     niche: true,
-    impact: ["sensitive_area", "requires_care"],
+    requiresExplicitInstall: true,
+    optionalPack: "@clawjs/domain-pack-dense-data",
+    impact: ["sensitive_area", "requires_care", "optional_pack"],
   },
   {
     id: "legal",
@@ -153,7 +157,9 @@ const MODULE_DEFINITIONS: ClawModuleDefinition[] = [
     summary: "Sensitive legal documents and case records.",
     defaultModes: [],
     niche: true,
-    impact: ["sensitive_area", "requires_care"],
+    requiresExplicitInstall: true,
+    optionalPack: "@clawjs/domain-pack-dense-data",
+    impact: ["sensitive_area", "requires_care", "optional_pack"],
   },
   {
     id: "labs-pharma",
@@ -163,6 +169,7 @@ const MODULE_DEFINITIONS: ClawModuleDefinition[] = [
     defaultModes: [],
     niche: true,
     requiresExplicitInstall: true,
+    optionalPack: "@clawjs/domain-pack-dense-data",
     impact: ["niche_area", "sensitive_area", "optional_pack"],
   },
   {
@@ -173,6 +180,7 @@ const MODULE_DEFINITIONS: ClawModuleDefinition[] = [
     defaultModes: [],
     niche: true,
     requiresExplicitInstall: true,
+    optionalPack: "@clawjs/domain-pack-dense-data",
     impact: ["niche_area", "optional_pack"],
   },
   {
@@ -183,6 +191,7 @@ const MODULE_DEFINITIONS: ClawModuleDefinition[] = [
     defaultModes: [],
     niche: true,
     requiresExplicitInstall: true,
+    optionalPack: "@clawjs/domain-pack-dense-data",
     impact: ["niche_area", "network_possible", "device_control_possible"],
   },
 ];
@@ -540,8 +549,20 @@ export async function runModulesCli(input: {
       throw new CliHandledError("unknown_module", "Usage: claw modules install <module-id>", CLI_EXIT_USAGE);
     }
     const module = MODULE_DEFINITIONS.find((entry) => entry.id === moduleId)!;
-    const message = `Module ${moduleId} is available, but installation is explicit and not performed by this command yet. Review requirements, then enable or install the relevant pack.`;
-    if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "modules", { installed: false, module, message, next: [`claw modules enable ${moduleId}`] }, { subcommand: "install" });
+    const installCommand = module.optionalPack ? `npm install ${module.optionalPack}` : null;
+    const message = module.optionalPack
+      ? `Module ${moduleId} uses optional pack ${module.optionalPack}. Install it explicitly with \`${installCommand}\`, then enable the module.`
+      : `Module ${moduleId} is available, but installation is explicit and this module has no automatic installer. Review requirements, then enable or install the relevant pack.`;
+    if (input.wantsJson) {
+      writeCommandJsonOk(input.context.stdout, "modules", {
+        installed: false,
+        module,
+        optionalPack: module.optionalPack ?? null,
+        installCommand,
+        message,
+        next: [installCommand, `claw modules enable ${moduleId}`].filter((entry): entry is string => Boolean(entry)),
+      }, { subcommand: "install" });
+    }
     else input.context.stdout.write(`${message}\n`);
     return CLI_EXIT_OK;
   }
