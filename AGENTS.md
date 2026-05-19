@@ -53,6 +53,10 @@ Read the relevant canonical docs before changing their surfaces:
   `docs/adr/0017-discoverability-and-meta-code-routing.md`
 - Progressive modularity and zero-surprise install:
   `docs/adr/0031-progressive-modularity-and-zero-surprise-install.md`
+- Open standard, official trust, forks, and compatibility:
+  `docs/adr/0033-open-standard-official-trust.md`,
+  `docs/official-trust-and-compatibility.md`, `FORKS.md`,
+  `TRADEMARKS.md`, `NOTICE`
 - Security and releases: `SECURITY.md`, `RELEASING.md`, `docs/git-workflow.md`
 - OpenClaw host-dependent debugging: `agents/wiki/openclaw.md`
 
@@ -139,6 +143,10 @@ Run `node ./scripts/skills-check.mjs` after adding or changing skills.
 - `claw` is the single public CLI. Do not introduce new public `clawjs`,
   `clawix`, or `commander` command surfaces.
 - `@clawjs/claw` is the official SDK; `@clawjs/node` is compatibility.
+- MIT-licensed forks, commercial use, source builds, and compatible
+  implementations are legitimate; `official` is reserved for upstream
+  artifacts and channels, while truthful `compatible` claims must not imply
+  endorsement.
 - Framework global data belongs under `~/.claw/`; workspace framework data
   belongs under `.claw/`; `.clawjs/` is a retired pre-public path.
 - Governance uses principals, entities, scopes, stewards, grants, authority

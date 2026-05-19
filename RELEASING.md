@@ -36,14 +36,17 @@ For preview builds from `next`, run prereleases with the npm dist-tag `next` ins
 4. Confirm [TERMS.md](TERMS.md), [PRIVACY.md](PRIVACY.md), [DISCLAIMER.md](DISCLAIMER.md), [SAFETY.md](SAFETY.md), [REGULATED_DOMAINS.md](REGULATED_DOMAINS.md), [EULA.md](EULA.md), and `docs/regulated-domain-safety.md` are current.
 5. Confirm public README, package docs, CLI help, examples, demos, and website copy do not make unqualified autonomy, professional-advice, or compliance-ready claims.
 6. Classify every new sensitive collection, connector, agent, CLI route, MCP tool, Relay route, app surface, demo, or docs claim against `docs/regulated-domain-safety.md` before treating the release candidate as complete.
-7. Run `npm run publish:dry-run`.
-8. Verify adapter support/stability metadata and docs support matrix are current.
-9. Review the pending release PR created from changesets.
-10. Update [CHANGELOG.md](CHANGELOG.md) in that release PR if the top-level note needs curation.
-11. Merge the release PR into `main`.
-12. Publish packages manually only after confirming the dry run and authentication state.
-13. Tag the release as `v<semver>` manually after publishing.
-14. Copy the changelog entry into the GitHub release notes if you want a manually curated GitHub release body.
+7. Confirm official/source/community/compatible wording remains aligned with
+   [ADR 0033](docs/adr/0033-open-standard-official-trust.md) and
+   [official trust and compatibility](docs/official-trust-and-compatibility.md).
+8. Run `npm run publish:dry-run`.
+9. Verify adapter support/stability metadata and docs support matrix are current.
+10. Review the pending release PR created from changesets.
+11. Update [CHANGELOG.md](CHANGELOG.md) in that release PR if the top-level note needs curation.
+12. Merge the release PR into `main`.
+13. Publish packages manually only after confirming the dry run and authentication state.
+14. Tag the release as `v<semver>` manually after publishing.
+15. Copy the changelog entry into the GitHub release notes if you want a manually curated GitHub release body.
 
 ## Channel-Specific Release Checklists
 
@@ -75,7 +78,9 @@ validation must be recorded in `docs/legal-external-pending-validation.md` as
    production user data, signing details, or unpublished store metadata.
 3. Link current legal docs and regulated-domain policy from the GitHub release
    notes when package, CLI, app, or binary artifacts are attached.
-4. Create tags or GitHub releases only after explicit approval for that exact
+4. Link current official trust and compatibility docs when artifacts could be
+   confused with source or community builds.
+5. Create tags or GitHub releases only after explicit approval for that exact
    GitHub action.
 
 ### Website Channel Checklist

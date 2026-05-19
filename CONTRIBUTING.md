@@ -10,6 +10,11 @@
   changeset decisions, start from [docs/decision-map.md](docs/decision-map.md).
   It points to the canonical source and the guardrail expected for each
   decision.
+- For forks, compatibility claims, official trust, trademarks, or upstream
+  channel identity, start from
+  [ADR 0033](docs/adr/0033-open-standard-official-trust.md),
+  [official trust and compatibility](docs/official-trust-and-compatibility.md),
+  [FORKS.md](FORKS.md), [NOTICE](NOTICE), and [TRADEMARKS.md](TRADEMARKS.md).
 
 ## Local setup
 
@@ -33,6 +38,9 @@ npm run ci
 
 - Include tests for behavior changes.
 - Update docs/examples if the change touches onboarding, installation, imports, CLI usage, or support tiers.
+- Add a `Signed-off-by: Name <email>` line to commits under the lightweight
+  [DCO](DCO). This certifies contribution provenance without adding a broad
+  Contributor License Agreement.
 - Keep commit messages in `type(scope): description` form.
 - Target `main` for releasable work, `next` for queued integration work, and `release/*` only for stabilization or hotfixes.
 - Keep branch names short and scoped, such as `feat/runtime-status` or `docs/release-policy`.

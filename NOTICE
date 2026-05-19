@@ -1,0 +1,40 @@
+ClawJS license notice
+=====================
+
+The source code and documentation in this repository are licensed under the
+MIT License, except where a file states otherwise.
+
+Reserved Materials
+------------------
+
+The MIT License does not grant trademark, service mark, trade name, trade
+dress, official-channel, or brand-identity rights.
+
+Reserved Materials include, without limitation:
+
+- the ClawJS, Claw, and `claw` project names when used as product, package,
+  service, channel, or official identity;
+- upstream logos, marks, icons, wordmarks, and visual identity;
+- official package, registry, release, download, documentation, website,
+  support, and update-channel identity;
+- screenshots, marketing assets, and product presentation that are identified
+  as official project materials.
+
+Limited repository use
+----------------------
+
+You may use Reserved Materials only as strictly necessary to view, build, test,
+and contribute to the unmodified upstream project in this repository.
+
+If you distribute a modified version, fork, derivative work, competing product,
+or independently branded build, use a distinct identity and do not imply
+official status, sponsorship, endorsement, or affiliation.
+Truthful compatibility statements are allowed when they do not imply official
+status, sponsorship, endorsement, or affiliation.
+
+Third-party materials
+---------------------
+
+Third-party dependencies, fonts, frameworks, and assets remain subject to their
+own licenses and notices. This notice does not expand, restrict, or replace any
+third-party license.

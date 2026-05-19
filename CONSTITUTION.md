@@ -271,6 +271,17 @@ or provider-side approval is missing. The user must be able to tell the
 difference between implemented, fixture-only, live-smoked, manual-only,
 policy-blocked, and deprecated provider behavior.
 
+**III.4 Compatibility is open; official trust is verifiable.** Anyone may fork,
+modify, redistribute, sell, or implement Claw-compatible software under the
+repository license, and truthful compatibility claims are welcome when they do
+not imply endorsement. Official status is a separate trust claim, reserved for
+upstream-maintained builds, packages, registries, docs, channels, and marks.
+Forks, commercial use, source builds, and compatible implementations are
+legitimate.
+The framework must make the difference between `official`, `source`,
+`community`, and `compatible` understandable and verifiable without locking
+users into upstream.
+
 ### IV. Security and integrity
 
 **IV.1 Security is a positive guarantee, not an absence.** The framework

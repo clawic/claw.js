@@ -1030,6 +1030,33 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "adr-docs-adr-0033-open-standard-official-trust",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0033-open-standard-official-trust.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0033: Open standard and official trust",
+        "0033-open-standard-official-trust",
+        "ADR 0033"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0033: Open standard and official trust",
+          "expectPath": "docs/adr/0033-open-standard-official-trust.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "surface-route-graph",
       "kind": "surface-route",
       "owner": "claw",
@@ -2147,6 +2174,31 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "guard-scripts-open-source-canonicity-check",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/open-source-canonicity-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "open-source-canonicity-check",
+        "Open Source Canonicity Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "open-source-canonicity-check",
+          "expectPath": "scripts/open-source-canonicity-check.mjs"
+        }
+      ],
+      "guard": "scripts/open-source-canonicity-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "guard-scripts-package-surface-guard",
       "kind": "guardrail",
       "owner": "claw",
@@ -2999,6 +3051,33 @@
         }
       ],
       "guard": "scripts/verify-integration-package-live-harness.test.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "docs-official-trust-and-compatibility",
+      "kind": "docs-page",
+      "owner": "claw",
+      "canonicalSource": "docs/official-trust-and-compatibility.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "official trust and compatibility",
+        "official builds",
+        "compatible implementations",
+        "source and community builds"
+      ],
+      "searchQueries": [
+        {
+          "query": "official trust compatibility",
+          "expectPath": "docs/official-trust-and-compatibility.md"
+        }
+      ],
+      "guard": "scripts/open-source-canonicity-check.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-18"
     }

@@ -44,6 +44,8 @@ relay. Naming and stability rules live in
 [ADR 0001](docs/adr/0001-naming-and-stability-surfaces.md).
 Long-lived architecture, storage, validation, release, privacy, and naming
 decisions are indexed in [docs/decision-map.md](docs/decision-map.md).
+Official trust and compatibility labels are explained in
+[docs/official-trust-and-compatibility.md](docs/official-trust-and-compatibility.md).
 
 ## Repository Map
 
@@ -133,11 +135,14 @@ npx @clawjs/cli@latest --help
 - [Decision map](docs/decision-map.md)
 - [Host ownership](docs/host-ownership.md)
 - [Support matrix](docs/support-matrix.md)
+- [Official trust and compatibility](docs/official-trust-and-compatibility.md)
+- [Forks and compatible projects](FORKS.md)
 - [Terms](TERMS.md)
 - [Privacy](PRIVACY.md)
 - [Disclaimer](DISCLAIMER.md)
 - [Safety](SAFETY.md)
 - [Regulated domains](REGULATED_DOMAINS.md)
+- [Trademarks](TRADEMARKS.md)
 - [Official app and binary EULA](EULA.md)
 
 ## V1 Support Boundary
