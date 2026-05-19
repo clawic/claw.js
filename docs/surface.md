@@ -1392,7 +1392,15 @@ The docs check script validates that every current export from
     ClawCanonicalTerm
     ClawCanonicalTermKey
     ClawCapability
+    ClawCapabilityCustomAppAccess
+    ClawCapabilityDescriptor
+    ClawCapabilityExecutionMode
+    ClawCapabilityRisk
+    ClawCapabilityRiskTier
     clawCapabilitySchema
+    ClawCapabilitySurface
+    ClawCapabilitySurfaceBinding
+    ClawCapabilitySurfaceStatus
     clawChannelEvents
     clawChatAppStorageKeys
     ClawCliCommandIntentEntry
@@ -1424,6 +1432,7 @@ The docs check script validates that every current export from
     clawContractFixtureTimestamp
     clawContractSchemasV1
     clawContractVersionV1
+    ClawCustomAppCapabilityRiskMap
     clawCorePorts
     clawDatabaseApiRoutePatterns
     clawDatabaseApiRoutes
@@ -1600,6 +1609,7 @@ The docs check script validates that every current export from
     ClawSurfaceParityStatus
     ClawSurfaceParitySurface
     clawSurfaceRegistryVersion
+    clawCapabilityCatalog
     ClawSurfaceRoute
     ClawSurfaceRouteStep
     clawTemporalEvents
@@ -1748,6 +1758,7 @@ The docs check script validates that every current export from
     createClawProjectId
     createCodexReadOnlySourceDescriptor
     createConnectorCapability
+    buildCustomAppCapabilityRiskMap
     createEvolutionOperatorPlan
     createEvolutionPublicSurfaceBaseline
     createEvolutionReceipt
@@ -1851,6 +1862,7 @@ The docs check script validates that every current export from
     findClawPersistentSurfaceNode
     findClawProjectManifestPortabilityViolations
     findClawSurfaceRoute
+    getClawCapability
     findMacAtlasCapability
     FITNESS_FAMILY
     FLOW_FAMILY
@@ -2032,6 +2044,7 @@ The docs check script validates that every current export from
     listMacProgrammaticSurfaces
     listMacRelatedSurfaces
     listNeedCapabilityGraph
+    listClawCapabilities
     listNeedDimensions
     listNeedRoutePilotPacks
     ListRecord
@@ -2440,7 +2453,12 @@ The docs check script validates that every current export from
     resourceStatusSchema
     ROMANCE_FAMILY
     routeIdForSyncDriver
+    RegulatedActionPolicyConfig
+    RegulatedPolicyDecisionKind
+    RegulatedPolicyMode
+    RegulatedPolicyRequirement
     RoutePilotPack
+    sdkFirstCapabilityCatalogSource
     RuleApplyWhen
     ruleApplyWhenSchema
     RuleInput

@@ -6,13 +6,13 @@
     "cliCommands": "packages/clawjs-core/src/cli-command-registry.ts"
   },
   "counts": {
-    "surfaces": 909,
-    "cliCommands": 157
+    "surfaces": 911,
+    "cliCommands": 159
   },
   "fingerprints": {
-    "surfaces": "fnv1a32:66841836",
-    "cliCommands": "fnv1a32:6f627895",
-    "combined": "fnv1a32:44f9822e"
+    "surfaces": "fnv1a32:85c466c4",
+    "cliCommands": "fnv1a32:aefe633a",
+    "combined": "fnv1a32:886dbc82"
   },
   "surfaces": [
     {
@@ -1847,6 +1847,15 @@
       "stability": "v1"
     },
     {
+      "id": "claw.cli.command.modules",
+      "owner": "claw",
+      "kind": "cliCommand",
+      "parentId": "claw.contracts.cli",
+      "value": "modules",
+      "surfaceClass": "cli",
+      "stability": "v1"
+    },
+    {
       "id": "claw.cli.command.monitor",
       "owner": "claw",
       "kind": "cliCommand",
@@ -2203,6 +2212,15 @@
       "kind": "cliCommand",
       "parentId": "claw.contracts.cli",
       "value": "sessions",
+      "surfaceClass": "cli",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.cli.command.setup",
+      "owner": "claw",
+      "kind": "cliCommand",
+      "parentId": "claw.contracts.cli",
+      "value": "setup",
       "surfaceClass": "cli",
       "stability": "v1"
     },
@@ -8345,6 +8363,14 @@
       "jsonSchemaId": "claw.cli.models.v1"
     },
     {
+      "name": "modules",
+      "kind": "canonical",
+      "usage": "modules list|status|enable|disable|install [module-id] [--available] [--workspace PATH]",
+      "family": "diagnostics",
+      "schemaVersion": 1,
+      "jsonSchemaId": "claw.cli.modules.v1"
+    },
+    {
       "name": "monitor",
       "kind": "canonical",
       "family": "diagnostics",
@@ -8651,6 +8677,14 @@
       "family": "runtime",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.sessions.v1"
+    },
+    {
+      "name": "setup",
+      "kind": "canonical",
+      "usage": "setup [minimal|normal|advanced] [--apply] [--workspace PATH]",
+      "family": "diagnostics",
+      "schemaVersion": 1,
+      "jsonSchemaId": "claw.cli.setup.v1"
     },
     {
       "name": "sheets",

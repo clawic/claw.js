@@ -334,7 +334,7 @@ function currentPublicSurfaceDiff(options = {}) {
     } from "./packages/clawjs-core/src/index.ts";
     const baseline = clawEvolutionPublicSurfaceBaselineSchema.parse(JSON.parse(fs.readFileSync("docs/evolution/public-surface-baseline.json", "utf8")));
     const ledger = clawEvolutionLedgerSchema.parse(JSON.parse(fs.readFileSync("docs/evolution/baseline.json", "utf8")));
-    const cliCommands = ${options.simulateMissingCliCommand ? "clawCliCommandRegistry.commands.slice(1)" : "clawCliCommandRegistry.commands"};
+    const cliCommands = ${options.simulateMissingCliCommand ? "clawCliCommandRegistry.commands.filter((command) => command.name !== \"host\")" : "clawCliCommandRegistry.commands"};
     const current = createEvolutionPublicSurfaceBaseline({
       generatedAt: baseline.generatedAt,
       surfaces: clawPersistentSurfaceRegistry.nodes,

@@ -172,6 +172,25 @@
       "adr": "docs/adr/0030-post-v1-evolution-rescue-backbone.md",
       "notes": "Registers additive docs and sheets CLI surfaces, the hot Search changes subcommand, and the compatible connectors usage/help update so public surface drift is covered by the evolution ledger and refreshed baseline.",
       "createdAt": "2026-05-18T00:00:00.000Z"
+    },
+    {
+      "id": "evo_progressive_modularity_cli_surfaces",
+      "title": "Progressive modularity CLI surfaces",
+      "class": "additive",
+      "status": "active",
+      "owner": "claw",
+      "surfaces": [
+        "claw.cli.command.setup",
+        "claw.cli.command.modules"
+      ],
+      "tests": [
+        "packages/clawjs/src/cli-modules-command.test.ts",
+        "scripts/progressive-modularity-guard.mjs",
+        "docs/evolution/public-surface-baseline.json"
+      ],
+      "adr": "docs/adr/0031-progressive-modularity-and-zero-surprise-install.md",
+      "notes": "Registers additive setup and modules CLI surfaces for zero-surprise progressive modularity, including explicit module enablement before niche areas can execute.",
+      "createdAt": "2026-05-19T00:00:00.000Z"
     }
   ]
 }
