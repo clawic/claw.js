@@ -201,10 +201,13 @@ The goal may be closed only after a final pass confirms:
    `docs/remote-gateway-sync-source-qa-review.json` records disposition and
    evidence refs for `QA-001` through `QA-023`; duplicate Q/A rows are rejected
    and rows tied to physical/provider blockers must remain `external_pending`
-   until those blockers clear. The verifier must prove this artifact clears the
-   `source_qa_review` blocker while leaving physical/provider validation
-   blocked. The opt-in source-session verifier must also pass locally when run
-   with `REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl>`.
+	   until those blockers clear. The verifier must prove this artifact clears the
+	   `source_qa_review` blocker while leaving physical/provider validation
+	   blocked. The closure gate must keep
+	   `finalSourceSessionRereadRequired: true` and expose
+	   `sourceSessionRereadCommand: "REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl> npm run test:remote-sync-source-session"`
+	   even when otherwise `clearable`; the opt-in source-session verifier must
+	   pass locally before final close.
 3. `RemoteExternalPendingRegister` contains every remaining physical/provider
    blocker and none of those rows is reported as a software bug. The current
    `docs/remote-gateway-sync-external-validation-evidence.json` artifact must

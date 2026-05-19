@@ -420,7 +420,11 @@ pending artifact keeps only the `external_validation` blocker after the source
 Q/A review file has cleared `source_qa_review`. Supplying raw external evidence
 rows is not enough to clear the external validation blocker.
 The text output names the blocker IDs and external blocked row count rather than
-only reporting the number of blockers.
+only reporting the number of blockers, and appends `finalReread=required`.
+Even when the gate becomes `clearable`, its JSON keeps
+`finalSourceSessionRereadRequired: true` and
+`sourceSessionRereadCommand: "REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl> npm run test:remote-sync-source-session"`
+so final closure cannot skip the maintainer-local source-session reread.
 The final provider/device end-to-end row is not a loose note: it is backed by
 `RemoteProviderDeviceE2EValidationPlan`, which requires chat, search, Sync,
 secret-reference, and hosted-agent validation to pass together against the same

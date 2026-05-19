@@ -288,7 +288,12 @@ validation evidence artifact, the gate clears only the source Q/A blocker and
 keeps `external_validation` blocked. Relay POST accepts `sourceQaReviews` or the
 artifact-native `items` array for the source Q/A rows, plus the external
 evidence artifact; raw external evidence rows remain non-clearable.
-CLI text output names the blocker IDs and external blocked row count.
+CLI text output names the blocker IDs and external blocked row count and appends
+`finalReread=required`. The Relay/CLI JSON gate also keeps
+`finalSourceSessionRereadRequired: true` plus
+`sourceSessionRereadCommand: "REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl> npm run test:remote-sync-source-session"`
+even when the gate is otherwise `clearable`, so final closure still has to rerun
+the maintainer-local source-session verifier.
 The provider/device end-to-end blocker is backed by
 `RemoteProviderDeviceE2EValidationPlan`: a no-write plan that requires chat,
 search, Sync, secret-reference, and hosted-agent coverage to be validated
