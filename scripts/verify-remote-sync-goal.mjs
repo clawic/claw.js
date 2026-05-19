@@ -54,6 +54,7 @@ import {
   remoteProviderDeviceE2EValidationPlanSchema,
   remoteGoalClosureRequiredSourceQaIds,
   remoteRouteContractCatalogSchema,
+  remoteSourceSessionRereadCommand,
   remoteSourceQaReviewTemplateSchema,
   remoteSecretLeaseSchema,
   remoteSurfaceClassificationReceiptSchema,
@@ -671,6 +672,8 @@ const reviewedClosureGate = buildRemoteGoalClosureGate({
 if (reviewedClosureGate.sourceQaReviewStatus !== "complete") fail("reviewed closure gate must clear the source Q/A blocker");
 if (reviewedClosureGate.blockers.includes("source_qa_review")) fail("reviewed closure gate must not include source_qa_review blocker");
 if (!reviewedClosureGate.blockers.includes("external_validation")) fail("reviewed closure gate must still block on external validation");
+if (reviewedClosureGate.finalSourceSessionRereadRequired !== true) fail("reviewed closure gate must require final source-session reread");
+if (reviewedClosureGate.sourceSessionRereadCommand !== remoteSourceSessionRereadCommand) fail("reviewed closure gate must expose final source-session reread command");
 
 for (const snippet of requiredDocSnippets) {
   requireText("remote gateway sync public docs", docCorpus, snippet);
@@ -1197,6 +1200,8 @@ requireSameOrderedList(
 if (blockedClosureGate.sourceQaReviewStatus !== "incomplete" || blockedClosureGate.sourceQaReviewItems.length !== 0) {
   fail("default remote closure gate must expose an incomplete source Q/A review report");
 }
+if (blockedClosureGate.finalSourceSessionRereadRequired !== true) fail("remote closure gate must require final source-session reread");
+if (blockedClosureGate.sourceSessionRereadCommand !== remoteSourceSessionRereadCommand) fail("remote closure gate must expose source-session reread command");
 
 const completeSourceQaReviewReport = buildRemoteSourceQaReviewReport({
   generatedAt: "2026-05-17T10:13:26.500Z",
@@ -1319,6 +1324,8 @@ requireSameOrderedList(
   expectedExternalPendingRequirementIds,
 );
 if (clearableClosureGate.blockers.length !== 0) fail("clearable remote closure gate must have no blockers");
+if (clearableClosureGate.finalSourceSessionRereadRequired !== true) fail("clearable remote closure gate must still require final source-session reread");
+if (clearableClosureGate.sourceSessionRereadCommand !== remoteSourceSessionRereadCommand) fail("clearable remote closure gate must expose source-session reread command");
 const goalClosureReadiness = buildRemoteExternalValidationReadiness({
   generatedAt: "2026-05-17T10:13:27.100Z",
   sourceQaReviews: completeSourceQaReviewReport.items,
@@ -1470,12 +1477,13 @@ for (const snippet of [
   "buildRemoteConformanceReport",
   "buildRemoteOfflineCommandResult",
   "buildRemoteExternalPendingRegister",
-	  "buildRemoteExternalValidationEvidenceTemplate",
-	  "buildRemoteExternalValidationReadiness",
-	  "buildRemoteExternalValidationApprovalRequest",
-	  "parseInspectSourceQaReviews", "source-qa-review-file", "external-validation-file", "buildRemoteSourceQaReviewTemplate", "buildRemoteDecisionReview", "decisionReview",
-	  "validationReadiness", "approvalRequest", "closureGate",
-	  "buildRemoteRouteContractCatalog",
+  "buildRemoteExternalValidationEvidenceTemplate",
+  "buildRemoteExternalValidationReadiness",
+  "buildRemoteExternalValidationApprovalRequest",
+  "parseInspectSourceQaReviews", "source-qa-review-file", "external-validation-file", "buildRemoteSourceQaReviewTemplate", "buildRemoteDecisionReview", "decisionReview",
+  "validationReadiness", "approvalRequest", "closureGate",
+  "finalReread=required",
+  "buildRemoteRouteContractCatalog",
   "buildSyncDriverCatalog",
   "SyncAuthorityHandoffReceipt",
   "transport_agnostic_iroh_v1_adapter",
@@ -1484,7 +1492,7 @@ for (const snippet of [
 }
 
 const remoteSyncE2eSource = readRequired("packages/clawjs-core/src/remote-sync-e2e.ts");
-for (const snippet of ["buildRemoteDecisionReview", "remoteDecisionReviewSchema", "implementedCount", "externalPendingCount"]) {
+for (const snippet of ["buildRemoteDecisionReview", "remoteDecisionReviewSchema", "implementedCount", "externalPendingCount", "finalSourceSessionRereadRequired", "sourceSessionRereadCommand", "remoteSourceSessionRereadCommand"]) {
   requireText("remote sync E2E core", remoteSyncE2eSource, snippet);
 }
 
@@ -1496,6 +1504,7 @@ for (const snippet of [
   "implemented=${review.implementedCount}",
   "external=${review.externalPendingCount}",
   "sourceQa=${gate.sourceQaReviewStatus}",
+  "finalReread=required",
 ]) {
   requireText("remote sync CLI text summaries", remoteSyncCliSource, snippet);
 }

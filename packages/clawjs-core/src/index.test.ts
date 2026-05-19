@@ -1506,9 +1506,9 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.deepEqual(blockedClosureGate.invalidExternalPendingDispositionQaIds, []);
   assert.equal(blockedClosureGate.blockers.includes("source_qa_review"), true);
   assert.equal(blockedClosureGate.blockers.includes("external_validation"), true);
-	  assert.deepEqual(blockedClosureGate.blockedExternalRequirementIds, externalPending.requirements.map((entry) => entry.requirementId));
-	  assert.equal(blockedClosureGate.finalSourceSessionRereadRequired, true);
-	  assert.equal(blockedClosureGate.sourceSessionRereadCommand, "REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl> npm run test:remote-sync-source-session");
+  assert.deepEqual(blockedClosureGate.blockedExternalRequirementIds, externalPending.requirements.map((entry) => entry.requirementId));
+  assert.equal(blockedClosureGate.finalSourceSessionRereadRequired, true);
+  assert.equal(blockedClosureGate.sourceSessionRereadCommand, "REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl> npm run test:remote-sync-source-session");
 
   const clearableClosureGate = buildRemoteGoalClosureGate({
     generatedAt: "2026-05-17T10:13:27.000Z",
@@ -1537,10 +1537,10 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.deepEqual(clearableClosureGate.duplicateSourceQaIds, []);
   assert.deepEqual(clearableClosureGate.invalidExternalPendingDispositionQaIds, []);
   assert.deepEqual(clearableClosureGate.blockedExternalRequirementIds, []);
-	  assert.deepEqual(clearableClosureGate.clearableExternalRequirementIds, externalPendingRequirementIds);
-	  assert.deepEqual(clearableClosureGate.blockers, []);
-	  assert.equal(clearableClosureGate.finalSourceSessionRereadRequired, true);
-	  assert.equal(clearableClosureGate.sourceSessionRereadCommand, "REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl> npm run test:remote-sync-source-session");
+  assert.deepEqual(clearableClosureGate.clearableExternalRequirementIds, externalPendingRequirementIds);
+  assert.deepEqual(clearableClosureGate.blockers, []);
+  assert.equal(clearableClosureGate.finalSourceSessionRereadRequired, true);
+  assert.equal(clearableClosureGate.sourceSessionRereadCommand, "REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl> npm run test:remote-sync-source-session");
 
   const readyForGoalClosure = buildRemoteExternalValidationReadiness({
     generatedAt: "2026-05-17T10:13:27.100Z",
