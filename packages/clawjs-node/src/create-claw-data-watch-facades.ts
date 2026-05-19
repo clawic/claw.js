@@ -93,11 +93,15 @@ export function createClawDataWatchFacades(locals: Record<string, any>): Record<
           ? await mediaStore.createObjectShare({
               mediaId: input.mediaId,
               label: input.label,
+              legalLabel: input.legalLabel,
+              approvalId: input.approvalId,
               expiresAt: input.expiresAt,
               ttlMs: input.ttlMs,
             })
           : mediaStore.createGalleryShare({
               label: input.label,
+              legalLabel: input.legalLabel,
+              approvalId: input.approvalId,
               filters: input.filters,
               expiresAt: input.expiresAt,
               ttlMs: input.ttlMs,

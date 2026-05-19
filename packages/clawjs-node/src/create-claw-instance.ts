@@ -762,7 +762,7 @@ export interface ClawInstance {
   notify: {
     send: (input: SendNotificationInput) => Promise<{
       created: boolean;
-      notification: { id: string };
+      notification: { id: string; approvalId: string };
       deliveries: Array<{ id: string; installationId: string; state: string }>;
       receipt: { id: string; status: string } | null;
     }>;
@@ -1074,7 +1074,7 @@ export interface ClawInstance {
     get: (mediaId: string) => MediaRecord | null;
     download: (mediaId: string) => { media: MediaRecord; filePath: string; buffer: Buffer } | null;
     share: {
-      create: (input: { mediaId?: string; label?: string; filters?: MediaListInput; expiresAt?: string | null; ttlMs?: number }) => Promise<StorageShare | MediaGalleryShare>;
+      create: (input: { mediaId?: string; label?: string; legalLabel?: string; approvalId?: string; filters?: MediaListInput; expiresAt?: string | null; ttlMs?: number }) => Promise<StorageShare | MediaGalleryShare>;
       revoke: (id: string) => Promise<boolean>;
       list: () => Array<StorageShare | MediaGalleryShare>;
       resolveGallery: (id: string) => { share: MediaGalleryShare; items: MediaRecord[] } | null;
@@ -1088,14 +1088,14 @@ export interface ClawInstance {
     delete: (ref: Partial<StorageRef> & { key: string }) => boolean;
     readText: (ref: Partial<StorageRef> & { key: string }) => string | null;
     writeText: (input: { bucket?: string; key: string; content: string; contentType?: string; metadata?: Record<string, unknown>; visibility?: StoragePutInput["visibility"] }) => StorageObject;
-    exportToFile: (ref: Partial<StorageRef> & { key: string; filePath: string }) => StorageObject | null;
+    exportToFile: (ref: Partial<StorageRef> & { key: string; filePath: string; legalLabel?: string; approvalId?: string }) => StorageObject | null;
     tokens: {
       issue: (input: { label?: string; grants: StorageGrant[] }) => { record: StorageScopedToken; token: string };
       list: () => StorageScopedToken[];
       revoke: (id: string) => boolean;
     };
     share: {
-      create: (input: { bucket?: string; key: string; label?: string; expiresAt?: string | null; ttlMs?: number }) => Promise<StorageShare>;
+      create: (input: { bucket?: string; key: string; label?: string; legalLabel?: string; approvalId?: string; expiresAt?: string | null; ttlMs?: number }) => Promise<StorageShare>;
       revoke: (id: string) => Promise<boolean>;
       list: () => StorageShare[];
     };
