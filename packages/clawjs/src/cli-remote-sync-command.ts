@@ -579,7 +579,7 @@ export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
       evidence: parseExternalValidationEvidence(input.flags["evidence-json"], evidenceFile, input.context.cwd),
       evidenceArtifact: parseExternalValidationEvidenceArtifact(input.flags["evidence-json"], evidenceFile, input.context.cwd),
     });
-    return writeOutput(input, "remote", readiness, `${readiness.status} sourceQa=${readiness.sourceQaReviewStatus} evidence=${readiness.evidenceCount}/${readiness.requiredEvidenceCount}`, command);
+    return writeOutput(input, "remote", readiness, `${readiness.status} sourceQa=${readiness.sourceQaReviewStatus} evidence=${readiness.evidenceCount}/${readiness.requiredEvidenceCount} blockers=${readiness.closureGateBlockers.join(",") || "-"} externalBlocked=${readiness.blockedExternalRequirementIds.length}`, command);
   }
   if (command === "validation-approval-request" || command === "external-validation-approval-request" || command === "approval-request") {
     const evidenceFile = input.flags["evidence-file"] ?? input.flags["external-validation-file"];
@@ -590,7 +590,7 @@ export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
       evidence: parseExternalValidationEvidence(input.flags["evidence-json"], evidenceFile, input.context.cwd),
       evidenceArtifact: parseExternalValidationEvidenceArtifact(input.flags["evidence-json"], evidenceFile, input.context.cwd),
     });
-    return writeOutput(input, "remote", request, `${request.status} readiness=${request.readinessStatus} requirements=${request.requirementIds.length}`, command);
+    return writeOutput(input, "remote", request, `${request.status} readiness=${request.readinessStatus} approved=${request.approved} requirements=${request.requirementIds.length} blockers=${request.readiness.closureGateBlockers.join(",") || "-"}`, command);
   }
   if (command === "validation-report" || command === "external-validation-report") {
     const evidenceFile = input.flags["evidence-file"] ?? input.flags["external-validation-file"];
@@ -619,7 +619,7 @@ export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
       evidence: parseExternalValidationEvidence(input.flags["evidence-json"], evidenceFile, input.context.cwd),
       evidenceArtifact: parseExternalValidationEvidenceArtifact(input.flags["evidence-json"], evidenceFile, input.context.cwd),
     });
-    return writeOutput(input, "remote", review, `${review.status} reviewed=${review.reviewedCount}/${review.requiredCount} blockers=${review.blockers.length}`, command);
+    return writeOutput(input, "remote", review, `${review.status} reviewed=${review.reviewedCount}/${review.requiredCount} implemented=${review.implementedCount} external=${review.externalPendingCount} blockers=${review.blockers.join(",") || "-"}`, command);
   }
   if (command === "closure-gate" || command === "goal-closure-gate") {
     const gate = buildRemoteGoalClosureGate({
@@ -629,7 +629,7 @@ export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
       evidence: parseExternalValidationEvidence(input.flags["evidence-json"], input.flags["evidence-file"] ?? input.flags["external-validation-file"], input.context.cwd),
       evidenceArtifact: parseExternalValidationEvidenceArtifact(input.flags["evidence-json"], input.flags["evidence-file"] ?? input.flags["external-validation-file"], input.context.cwd),
     });
-    return writeOutput(input, "remote", gate, `${gate.status} blockers=${gate.blockers.length}`, command);
+    return writeOutput(input, "remote", gate, `${gate.status} sourceQa=${gate.sourceQaReviewStatus} blockers=${gate.blockers.join(",") || "-"} externalBlocked=${gate.blockedExternalRequirementIds.length} finalReread=required`, command);
   }
   if (command === "contracts") {
     const catalog = buildRemoteRouteContractCatalog({ generatedAt: input.flags.now, registeredRouteIds: routeIds() });

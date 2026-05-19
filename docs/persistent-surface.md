@@ -216,6 +216,10 @@ flowchart TD
   claw_contracts_api --> claw_api_remote_sourceQaTemplateRead
   claw_api_remote_sourceQaTemplate["Remote source Q/A review template contract\napiRoute"]
   claw_contracts_api --> claw_api_remote_sourceQaTemplate
+  claw_api_remote_decisionReviewRead["Remote source Q/A decision review read contract\napiRoute"]
+  claw_contracts_api --> claw_api_remote_decisionReviewRead
+  claw_api_remote_decisionReview["Remote source Q/A decision review contract\napiRoute"]
+  claw_contracts_api --> claw_api_remote_decisionReview
   claw_api_remote_closureGateRead["Remote goal closure gate read contract\napiRoute"]
   claw_contracts_api --> claw_api_remote_closureGateRead
   claw_api_remote_closureGate["Remote goal closure gate contract\napiRoute"]
@@ -1192,6 +1196,10 @@ flowchart TD
   claw_contracts_api --> claw_port_channels
   claw_port_clawixBridge["clawixBridge\nport"]
   claw_contracts_api --> claw_port_clawixBridge
+  claw_cli_command_setup["setup\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_setup
+  claw_cli_command_modules["modules\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_modules
   claw_cli_command_host["host\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_host
   claw_cli_command_system["system\ncliCommand"]
@@ -2319,6 +2327,8 @@ flowchart TD
 | `claw.api.remote.externalValidationReport` | apiRoute | api | claw |  |  |  | `/v1/remote/external-validation-report` |
 | `claw.api.remote.sourceQaTemplateRead` | apiRoute | api | claw |  |  |  | `/v1/remote/source-qa-template` |
 | `claw.api.remote.sourceQaTemplate` | apiRoute | api | claw |  |  |  | `/v1/remote/source-qa-template` |
+| `claw.api.remote.decisionReviewRead` | apiRoute | api | claw |  |  |  | `/v1/remote/decision-review` |
+| `claw.api.remote.decisionReview` | apiRoute | api | claw |  |  |  | `/v1/remote/decision-review` |
 | `claw.api.remote.closureGateRead` | apiRoute | api | claw |  |  |  | `/v1/remote/closure-gate` |
 | `claw.api.remote.closureGate` | apiRoute | api | claw |  |  |  | `/v1/remote/closure-gate` |
 | `claw.api.remote.routeContracts` | apiRoute | api | claw |  |  |  | `/v1/remote/route-contracts` |
@@ -2807,6 +2817,8 @@ flowchart TD
 | `claw.port.board` | port | config | claw |  |  |  | `24122` |
 | `claw.port.channels` | port | config | claw |  |  |  | `24123` |
 | `claw.port.clawixBridge` | port | config | claw |  |  |  | `24080` |
+| `claw.cli.command.setup` | cliCommand | cli | claw |  |  |  | `setup` |
+| `claw.cli.command.modules` | cliCommand | cli | claw |  |  |  | `modules` |
 | `claw.cli.command.host` | cliCommand | cli | claw |  |  |  | `host` |
 | `claw.cli.command.system` | cliCommand | cli | claw |  |  |  | `system` |
 | `claw.cli.command.mac` | cliCommand | cli | claw |  |  |  | `mac` |

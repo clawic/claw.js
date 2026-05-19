@@ -3,9 +3,9 @@ import os from "os";
 import path from "path";
 
 import Database from "better-sqlite3";
-import { AgentStoreFS, type Agent } from "@clawjs/agents";
 import { CLAW_CLI_COMMAND_INTENT_STATUSES, GOVERNANCE_CAPABILITIES, GOVERNANCE_ENTITY_KINDS, GOVERNANCE_PRINCIPAL_KINDS, GOVERNANCE_SCOPE_KINDS, buildRemoteConformanceReport, buildRemoteDecisionReview, buildRemoteExternalPendingRegister, buildRemoteExternalValidationApprovalRequest, buildRemoteExternalValidationChecklist, buildRemoteExternalValidationEvidenceTemplate, buildRemoteExternalValidationReadiness, buildRemoteExternalValidationReport, buildRemoteGoalClosureGate, buildRemoteOfflineCommandResult, buildRemoteProviderDeviceE2EValidationPlan, buildRemoteRouteContractCatalog, buildRemoteSourceQaReviewTemplate, buildSyncDriverCatalog, clawDenseDataAcceptanceFixture, clawDenseDataOsRegistry, clawEvolutionPolicy, clawPersistentSurfaceRegistry, clawPreV1VersionGovernancePolicy, connectorExecutionPipeline, createAgentControlPanel, createAgentPrivacyLifecyclePlan, evaluateGovernanceAccess, evaluateGovernanceDelegation, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, listClawDenseDataGapRegistryEntries, listClawDenseDataIntentEntries, listClawDenseDataSemanticViewEntries, parseRemoteExternalValidationEvidenceInput, parseRemoteSourceQaReviewInput, remoteSyncRequiredRouteIds, resolveClawCliCommand, resolveClawPersistentSurfacePath, searchClawCliRegistry, summarizeGovernanceBindings, syncDriverSchema, withSurfaceChildren, type RemoteExternalValidationEvidence, type RemoteSourceQaReviewItem } from "@clawjs/core";
 import type { AgentAuditEvent, ClawPersistentSurfaceNode, ClawPersistentSurfaceRegistry, ClawSurfaceEdge, ClawSurfaceRoute } from "@clawjs/core";
+import type { Agent } from "@clawjs/agents";
 import { v1MainSchemaSurfaceNodes } from "./v1-data-surface.ts";
 import { normalizeDbRow, resolveClawjsMainDbPath, type JsonRecord } from "./v1-data-core.ts";
 import { writeJsonError, writeJsonOk, type CliJsonMeta } from "./cli-json.ts";
@@ -115,7 +115,8 @@ function inspectRegistry(input: InspectCliInput): ClawPersistentSurfaceRegistry 
   };
 }
 
-function buildAgentInspectFiche(input: InspectCliInput, agentId: string, routes: ClawSurfaceRoute[]): AgentInspectFiche {
+async function buildAgentInspectFiche(input: InspectCliInput, agentId: string, routes: ClawSurfaceRoute[]): Promise<AgentInspectFiche> {
+  const { AgentStoreFS } = await import("@clawjs/agents");
   const store = new AgentStoreFS({ home: input.flags.home || input.flags["claw-home"] || process.env.CLAW_HOME });
   const agent = store.readAgent(agentId);
   if (!agent) throw new InspectCliError("inspect_not_found", `No agent found for ${agentId}.`, CLI_EXIT_USAGE);
@@ -974,7 +975,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
   }
   if (command === "agent") {
     if (!target) throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect agent <agent-id> [--json]`, CLI_EXIT_USAGE);
-    const fiche = buildAgentInspectFiche(input, target, routes);
+    const fiche = await buildAgentInspectFiche(input, target, routes);
     if (input.wantsJson) writeJsonOk(input.context.stdout, fiche, inspectJsonMeta(command, { agentId: target }));
     else input.context.stdout.write(inspectAgentText(fiche));
     return CLI_EXIT_OK;
@@ -1096,12 +1097,16 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
       evidence: parseInspectExternalValidationEvidence(input.flags["evidence-json"], evidenceFile, input.context.cwd),
       evidenceArtifact: parseInspectExternalValidationEvidenceArtifact(input.flags["evidence-json"], evidenceFile, input.context.cwd),
     });
-    if (input.wantsJson) writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command));
-    else input.context.stdout.write([
-      `conformance\t${payload.conformance.status}`,
-      `classifications\t${payload.classifications.length}`,
-      `syncDrivers\t${payload.sync.drivers.length}`,
-      `transport\t${payload.transport.contract}`,
+	    if (input.wantsJson) writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command));
+	    else input.context.stdout.write([
+	      `conformance\t${payload.conformance.status}`,
+	      `decisionReview\t${payload.decisionReview.status} ${payload.decisionReview.reviewedCount}/${payload.decisionReview.requiredCount} implemented=${payload.decisionReview.implementedCount} external=${payload.decisionReview.externalPendingCount} blockers=${payload.decisionReview.blockers.join(",") || "-"}`,
+	      `validationReadiness\t${payload.externalValidationReadiness.status} sourceQa=${payload.externalValidationReadiness.sourceQaReviewStatus} evidence=${payload.externalValidationReadiness.externalValidationStatus} blockers=${payload.externalValidationReadiness.closureGateBlockers.join(",") || "-"}`,
+	      `approvalRequest\t${payload.externalValidationApprovalRequest.status} readiness=${payload.externalValidationApprovalRequest.readinessStatus} approved=${payload.externalValidationApprovalRequest.approved}`,
+	      `closureGate\t${payload.closureGate.status} sourceQa=${payload.closureGate.sourceQaReviewStatus} blockers=${payload.closureGate.blockers.join(",") || "-"} finalReread=required`,
+	      `classifications\t${payload.classifications.length}`,
+	      `syncDrivers\t${payload.sync.drivers.length}`,
+	      `transport\t${payload.transport.contract}`,
       `gaps\t${payload.gaps.length}`,
       `routeContracts\t${payload.routeContracts.length}`,
     ].join("\n") + "\n");

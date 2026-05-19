@@ -311,7 +311,7 @@ for (const snippet of [
   "artifact-bound inspection path", "decisionReview", "claw remote decision-review", "Relay `/v1/remote/decision-review`", "23 required source Q/A rows", "11 implemented dispositions", "12 external-pending dispositions", "artifact-bound closure handoff", "ready_for_approved_run", "only the `external_validation`", "zero clearable requirements", "sourceQaReviewStatus: complete", "approval_required", "approvalRequired: true", "approved: false", "required topology targets", "required route contract IDs", "2 files and 42 tests", "1 file and 1 test", "HTTP route parity",
   "cli registry/router parity passed", "157 commands", "Full public docs lane", "npm run test:docs", "source-size", "code hygiene self-tests",
   "remote sync source session verification passed", "23 Q/A rows", "Public docs hygiene", "docs alignment check passed",
-  "REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl> node scripts/verify-remote-sync-source-session.mjs",
+	  "REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl> npm run test:remote-sync-source-session",
   "remote_canon_alignment_check.mjs",
   "docs/remote-gateway-sync-external-validation-evidence.json",
   "artifact-native `items` array",
@@ -866,6 +866,8 @@ if (externalValidationRunbook.externalRequirementCount !== externalPending.requi
 if (!externalValidationRunbook.reportCommand.includes("validation-report")) fail("remote external validation runbook must include report command");
 if (!externalValidationRunbook.closureGateCommand.includes("closure-gate")) fail("remote external validation runbook must include closure gate command");
 if (!externalValidationRunbook.requiredCommands.some((entry) => entry.includes("validation-artifact"))) fail("remote external validation runbook must include validation-artifact command");
+if (!externalValidationRunbook.requiredCommands.some((entry) => entry.includes("decision-review"))) fail("remote external validation runbook must include decision-review command");
+if (!externalValidationRunbook.requiredCommands.some((entry) => entry.includes("test:remote-sync-source-session"))) fail("remote external validation runbook must include source-session reread command");
 if (externalValidationRunbook.e2ePlan.validationSteps.map((entry) => entry.domain).join(",") !== "chat,search,sync,secret_refs,hosted_agents") {
   fail("remote external validation runbook must carry the provider/device E2E domain steps");
 }
@@ -991,6 +993,8 @@ requireSameOrderedList(
   remoteSyncRequiredRouteIds,
 );
 if (!artifactExternalValidationApprovalRequest.requiredCommands.some((entry) => entry.includes("validation-readiness"))) fail("external validation approval request must include readiness command");
+if (!artifactExternalValidationApprovalRequest.requiredCommands.some((entry) => entry.includes("decision-review"))) fail("external validation approval request must include decision-review command");
+if (!artifactExternalValidationApprovalRequest.requiredCommands.some((entry) => entry.includes("test:remote-sync-source-session"))) fail("external validation approval request must include source-session reread command");
 if (!artifactExternalValidationApprovalRequest.prohibitedActions.some((entry) => entry.includes("plaintext secrets"))) fail("external validation approval request must prohibit plaintext secrets");
 if (artifactExternalValidationApprovalRequest.writes !== false) fail("external validation approval request must be no-write");
 
@@ -1466,11 +1470,12 @@ for (const snippet of [
   "buildRemoteConformanceReport",
   "buildRemoteOfflineCommandResult",
   "buildRemoteExternalPendingRegister",
-  "buildRemoteExternalValidationEvidenceTemplate",
-  "buildRemoteExternalValidationReadiness",
-  "buildRemoteExternalValidationApprovalRequest",
-  "parseInspectSourceQaReviews", "source-qa-review-file", "external-validation-file", "buildRemoteSourceQaReviewTemplate", "buildRemoteDecisionReview", "decisionReview",
-  "buildRemoteRouteContractCatalog",
+	  "buildRemoteExternalValidationEvidenceTemplate",
+	  "buildRemoteExternalValidationReadiness",
+	  "buildRemoteExternalValidationApprovalRequest",
+	  "parseInspectSourceQaReviews", "source-qa-review-file", "external-validation-file", "buildRemoteSourceQaReviewTemplate", "buildRemoteDecisionReview", "decisionReview",
+	  "validationReadiness", "approvalRequest", "closureGate",
+	  "buildRemoteRouteContractCatalog",
   "buildSyncDriverCatalog",
   "SyncAuthorityHandoffReceipt",
   "transport_agnostic_iroh_v1_adapter",
@@ -1481,6 +1486,18 @@ for (const snippet of [
 const remoteSyncE2eSource = readRequired("packages/clawjs-core/src/remote-sync-e2e.ts");
 for (const snippet of ["buildRemoteDecisionReview", "remoteDecisionReviewSchema", "implementedCount", "externalPendingCount"]) {
   requireText("remote sync E2E core", remoteSyncE2eSource, snippet);
+}
+
+const remoteSyncCliSource = readRequired("packages/clawjs/src/cli-remote-sync-command.ts");
+for (const snippet of [
+  "externalBlocked=",
+  "blockers=${readiness.closureGateBlockers.join",
+  "approved=${request.approved}",
+  "implemented=${review.implementedCount}",
+  "external=${review.externalPendingCount}",
+  "sourceQa=${gate.sourceQaReviewStatus}",
+]) {
+  requireText("remote sync CLI text summaries", remoteSyncCliSource, snippet);
 }
 
 for (const [driver, expectedRoute] of driverRouteExpectations) {

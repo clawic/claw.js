@@ -327,11 +327,13 @@ export const remoteGoalClosureGateSchema = z.object({
   sourceQaReviewStatus: z.enum(["incomplete", "complete"]),
   sourceQaReviewItems: z.array(remoteSourceQaReviewItemSchema),
   externalValidationStatus: z.enum(["external_pending", "clearable"]),
-  blockedExternalRequirementIds: z.array(z.string().min(1)),
-  clearableExternalRequirementIds: z.array(z.string().min(1)),
-  blockers: z.array(z.enum(["source_qa_review", "external_validation"])),
-  writes: z.literal(false),
-});
+	  blockedExternalRequirementIds: z.array(z.string().min(1)),
+	  clearableExternalRequirementIds: z.array(z.string().min(1)),
+	  blockers: z.array(z.enum(["source_qa_review", "external_validation"])),
+	  finalSourceSessionRereadRequired: z.literal(true),
+	  sourceSessionRereadCommand: z.string().min(1),
+	  writes: z.literal(false),
+	});
 
 export const remoteDecisionReviewItemSchema = z.object({
   schemaVersion: z.literal(1),
@@ -637,6 +639,7 @@ function remoteGoalClosureGateId(parts: string[]): string {
 export const remoteSourceConversationId = "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8";
 export const remoteSourcePlanId = "019e3732-c90e-7491-9217-37020c43217e-plan";
 export const remoteGoalClosureRequiredSourceQaIds = Array.from({ length: 23 }, (_, index) => `QA-${String(index + 1).padStart(3, "0")}`);
+export const remoteSourceSessionRereadCommand = "REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl> npm run test:remote-sync-source-session";
 
 function assertRemoteSourceBinding(kind: string, sourceConversationId: string, sourcePlanId: string): void {
   if (sourceConversationId !== remoteSourceConversationId) {
@@ -966,10 +969,12 @@ export function buildRemoteExternalValidationRunbook(input: {
     requiredCommands: [
       "claw remote e2e-plan --json",
       "claw remote validation-checklist --json",
-      "claw remote validation-artifact --json",
-      "claw remote validation-report --evidence-file docs/remote-gateway-sync-external-validation-evidence.json --json",
-      "claw remote closure-gate --source-qa-review-file docs/remote-gateway-sync-source-qa-review.json --external-validation-file docs/remote-gateway-sync-external-validation-evidence.json --json",
-    ],
+	      "claw remote validation-artifact --json",
+	      "claw remote validation-report --evidence-file docs/remote-gateway-sync-external-validation-evidence.json --json",
+	      "claw remote decision-review --source-qa-review-file docs/remote-gateway-sync-source-qa-review.json --external-validation-file docs/remote-gateway-sync-external-validation-evidence.json --json",
+	      remoteSourceSessionRereadCommand,
+	      "claw remote closure-gate --source-qa-review-file docs/remote-gateway-sync-source-qa-review.json --external-validation-file docs/remote-gateway-sync-external-validation-evidence.json --json",
+	    ],
     instructions: [
       "Run the approved physical/provider validation for every validationSteps domain before changing evidence rows.",
       "Keep approvedRun false until an approved run has an approval/audit reference and physical evidence.",
@@ -1044,9 +1049,11 @@ export function buildRemoteExternalValidationReadiness(input: {
   const runbookReady = runbook.writes === false
     && runbook.checklist.requirementIds.length === checklist.requirementIds.length
     && runbook.evidenceArtifact.evidence.length === checklist.requirementIds.length
-    && runbook.requiredCommands.some((entry) => entry.includes("validation-artifact"))
-    && runbook.requiredCommands.some((entry) => entry.includes("validation-report"))
-    && runbook.requiredCommands.some((entry) => entry.includes("closure-gate"));
+	    && runbook.requiredCommands.some((entry) => entry.includes("validation-artifact"))
+	    && runbook.requiredCommands.some((entry) => entry.includes("validation-report"))
+	    && runbook.requiredCommands.some((entry) => entry.includes("decision-review"))
+	    && runbook.requiredCommands.some((entry) => entry.includes("test:remote-sync-source-session"))
+	    && runbook.requiredCommands.some((entry) => entry.includes("closure-gate"));
   const readyForApprovedRun = sourceQaReady
     && externalEvidenceReady
     && pendingEvidenceRowsReady
@@ -1165,7 +1172,7 @@ export function buildRemoteExternalValidationApprovalRequest(input: {
     instructions: [
       "Use this no-write request as the approval packet for the real physical/provider validation run.",
       "A readinessStatus of ready_for_approved_run means the software-side packet is ready, not that approval has been granted.",
-      "After approval and execution, replace pending evidence rows and rerun validation-report, closure-gate, and readiness.",
+      "After approval and execution, replace pending evidence rows and rerun validation-report, decision-review, closure-gate, and readiness.",
     ],
     writes: false,
   });
@@ -1321,10 +1328,12 @@ export function buildRemoteGoalClosureGate(input: {
     sourceQaReviewItems: sourceQaReviewReport.items,
     externalValidationStatus: externalValidationReport.status,
     blockedExternalRequirementIds: externalValidationReport.blockedRequirementIds,
-    clearableExternalRequirementIds: externalValidationReport.clearableRequirementIds,
-    blockers,
-    writes: false,
-  });
+	    clearableExternalRequirementIds: externalValidationReport.clearableRequirementIds,
+	    blockers,
+	    finalSourceSessionRereadRequired: true,
+	    sourceSessionRereadCommand: remoteSourceSessionRereadCommand,
+	    writes: false,
+	  });
 }
 
 export function buildRemoteDecisionReview(input: {

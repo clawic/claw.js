@@ -75,7 +75,7 @@ external requirement list as blocked until approved evidence clears:
 | Area | Command or check |
 | --- | --- |
 | Goal verifier | `npm run test:remote-sync-goal` |
-| Source-session reread verifier | `REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl> node scripts/verify-remote-sync-source-session.mjs`; this is opt-in because the session path is maintainer-local and must not be committed. |
+| Source-session reread verifier | `REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl> npm run test:remote-sync-source-session`; this is opt-in because the session path is maintainer-local and must not be committed. The remote validation runbook and approval packet include this placeholder command before closure. |
 | Focused core/CLI tests | `npx vitest run --config vitest.config.ts packages/clawjs-core/src/index.test.ts packages/clawjs/src/inspect-cli.test.ts` |
 | Relay HTTP routes | `npx vitest run --config vitest.config.ts relay/src/server/remote-sync-routes.test.ts`; this must compare `/v1/remote/external-pending`, `/v1/remote/external-validation-checklist`, `/v1/remote/external-validation-template`, `/v1/remote/external-validation-artifact`, `/v1/remote/external-validation-runbook`, `/v1/remote/external-validation-readiness`, `/v1/remote/external-validation-approval-request`, `/v1/remote/external-validation-report`, `/v1/remote/source-qa-template`, `/v1/remote/closure-gate`, `/v1/remote/route-contracts`, `/v1/remote/provider-device-e2e-plan`, and `/v1/remote/conformance` against the same core contracts used by CLI inspection. |
 | CLI/router parity | `node --import tsx ./scripts/verify-cli-registry-router-parity.mjs` |

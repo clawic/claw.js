@@ -209,8 +209,11 @@ the current unapproved no-write rows for submission with `--evidence-file` or
 approved physical/provider evidence is added.
 Relay `/v1/remote/external-validation-runbook` and
 `claw remote validation-runbook` bundle the E2E plan, checklist, evidence
-artifact, report command, closure command, required commands, and operator
-instructions into one no-write external-pending payload.
+artifact, report command, decision-review command, source-session reread
+command, closure command, required commands, and operator instructions into one
+no-write external-pending payload. The source-session command uses a
+`<local-source-session-jsonl>` placeholder so public artifacts never reveal a
+maintainer-local path.
 Relay `/v1/remote/external-validation-readiness` and
 `claw remote validation-readiness` are the no-write handoff gate before a real
 physical/provider run. They combine the source Q/A review, external evidence
@@ -223,6 +226,9 @@ rows missing `approvedRunRef`, remains `not_ready`; after a real approved run,
 the same gate advances only when the evidence is fully clearable. This status is
 not approval to run physical/provider validation; it only proves the
 software-side package is ready for an explicitly approved run.
+CLI text output for this gate names closure blockers and the external blocked
+row count; it does not collapse `external_validation` to an opaque blocker
+number.
 Relay `/v1/remote/external-validation-approval-request` and
 `claw remote validation-approval-request` expose the no-write approval packet
 for that real run. The packet is source-bound to this goal, lists all 13
@@ -269,6 +275,10 @@ or a source Q/A artifact-native `items` array, plus external validation evidence
 or an evidence artifact, and returns reviewed/missing/invalid rows,
 implemented vs external-pending disposition counts, per-decision conformance
 status, and remaining blockers.
+The command is part of the runbook/readiness/approval command chain before the
+closure gate, so the final handoff rechecks source Q/A decisions alongside
+external validation evidence. CLI text output includes blocker IDs plus
+implemented and external-pending row counts.
 The remote closure gate is exposed by Relay `/v1/remote/closure-gate` and
 `claw remote closure-gate`. It combines that evidence report with the source
 Q/A review report. The result stays `blocked` until all 23 source Q/A rows have
@@ -278,6 +288,7 @@ validation evidence artifact, the gate clears only the source Q/A blocker and
 keeps `external_validation` blocked. Relay POST accepts `sourceQaReviews` or the
 artifact-native `items` array for the source Q/A rows, plus the external
 evidence artifact; raw external evidence rows remain non-clearable.
+CLI text output names the blocker IDs and external blocked row count.
 The provider/device end-to-end blocker is backed by
 `RemoteProviderDeviceE2EValidationPlan`: a no-write plan that requires chat,
 search, Sync, secret-reference, and hosted-agent coverage to be validated
@@ -298,8 +309,10 @@ route binds canonical local contract references to remote entrypoints, keeps
 `parityRequired: true`, and keeps `parallelApiAllowed: false`.
 `claw inspect remote` gives operators and agents the read-only inspection view
 for remote classification, Sync authority/drivers, transport, route contracts,
-tests, gaps, and conformance without mutating the Coordinator ledger. Its
-default view remains fail-closed with no submitted artifacts; when supplied the
+tests, gaps, decision-review status, validation readiness, approval-request
+readiness, closure blockers, and conformance without mutating the Coordinator
+ledger. Its text output includes those closure gates; its default view remains
+fail-closed with no submitted artifacts; when supplied the
 versioned source Q/A and external evidence files, it overlays the same
 artifact-bound readiness, approval request, validation report, and closure gate
 state used by the `claw remote` validation commands. It also exposes

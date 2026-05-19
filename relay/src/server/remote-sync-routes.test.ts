@@ -238,6 +238,8 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(externalValidationRunbookPayload.reportCommand.includes("validation-report"), true);
     assert.equal(externalValidationRunbookPayload.closureGateCommand.includes("closure-gate"), true);
     assert.equal(externalValidationRunbookPayload.requiredCommands.some((entry) => entry.includes("validation-artifact")), true);
+    assert.equal(externalValidationRunbookPayload.requiredCommands.some((entry) => entry.includes("decision-review")), true);
+    assert.equal(externalValidationRunbookPayload.requiredCommands.some((entry) => entry.includes("test:remote-sync-source-session")), true);
 
     const externalValidationReadiness = await built.app.inject({ method: "GET", url: "/v1/remote/external-validation-readiness" });
     assert.equal(externalValidationReadiness.statusCode, 200);
@@ -530,6 +532,8 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.deepEqual(approvalRequestReadyPayload.validationTopologyTargets, ["personal_mesh", "mac_host", "linux_host", "windows_host", "server_host", "headless_server", "vps_host", "mobile_client", "browser_client", "self_hosted_gateway", "hosted_gateway"]);
     assert.deepEqual(approvalRequestReadyPayload.validationRouteIds, remoteSyncRequiredRouteIds);
     assert.equal(approvalRequestReadyPayload.requiredCommands.some((entry) => entry.includes("validation-readiness")), true);
+    assert.equal(approvalRequestReadyPayload.requiredCommands.some((entry) => entry.includes("decision-review")), true);
+    assert.equal(approvalRequestReadyPayload.requiredCommands.some((entry) => entry.includes("test:remote-sync-source-session")), true);
     assert.equal(approvalRequestReadyPayload.writes, false);
 
     const clearableClosureGate = await built.app.inject({
