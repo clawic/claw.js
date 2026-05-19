@@ -76,6 +76,83 @@ test("search actions honor actor and scope ACLs", async () => {
   assert.equal(allowedExecutePayload.data.plan.resultId, "documents.blocks:restricted");
   assert.equal(allowedExecutePayload.data.plan.actionId, "open");
 });
+test("search indexes native.system only from signed host snapshots", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-native-system-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  const snapshotPath = path.join(workspaceRoot, "native-system-snapshot.json");
+  fs.writeFileSync(snapshotPath, JSON.stringify({
+    source: "native.system",
+    domain: "native",
+    state: "enabled",
+    updatedAt: "2026-05-19T10:00:00.000Z",
+    documents: [
+      {
+        id: "native.system:shortcut:daily-plan",
+        source: "native.system",
+        domain: "native",
+        type: "shortcut",
+        title: "Daily Plan",
+        subtitle: "Shortcut",
+        snippet: "Prepare the daily planning workspace.",
+        resourceId: "shortcut:Daily Plan",
+        metadata: { kind: "shortcut", name: "Daily Plan" },
+        actions: [
+          {
+            id: "run",
+            kind: "run",
+            label: "Run Shortcut",
+            requiresApproval: true,
+            grant: "native.system.shortcut.run",
+            risk: "system",
+            hostBroker: {
+              system: "mac-control",
+              capabilityId: "mac.shortcut.run",
+              arguments: { name: "Daily Plan" },
+              target: { kind: "shortcut", name: "Daily Plan" },
+              reason: "Run native Shortcut from Search result",
+            },
+          },
+        ],
+      },
+    ],
+  }));
+  const withoutSnapshot = await runCliCapture(["search", "sources", "enable", "native.system", "--profile", "full", "--data-dir", dataRoot, "--json"], workspaceRoot);
+  assert.equal(withoutSnapshot.code, CLI_EXIT_OK);
+  const withoutSnapshotPayload = JSON.parse(withoutSnapshot.stdout) as { data: { source: string; state: string } };
+  assert.equal(withoutSnapshotPayload.data.source, "native.system");
+  assert.equal(withoutSnapshotPayload.data.state, "external_pending");
+  const withSnapshot = await runCliCapture(["search", "sources", "enable", "native.system", "--profile", "full", "--native-system-snapshot", snapshotPath, "--data-dir", dataRoot, "--json"], workspaceRoot);
+  assert.equal(withSnapshot.code, CLI_EXIT_OK);
+  const withSnapshotPayload = JSON.parse(withSnapshot.stdout) as { data: { source: string; state: string } };
+  assert.equal(withSnapshotPayload.data.source, "native.system");
+  assert.equal(withSnapshotPayload.data.state, "enabled");
+  const rebuild = await runCliCapture(["search", "rebuild", "--source", "native.system", "--profile", "full", "--native-system-snapshot", snapshotPath, "--data-dir", dataRoot, "--json"], workspaceRoot);
+  assert.equal(rebuild.code, CLI_EXIT_OK);
+  const rebuildPayload = JSON.parse(rebuild.stdout) as { data: { sources: string[]; indexedBySource: Record<string, number>; pendingSources: string[] } };
+  assert.deepEqual(rebuildPayload.data.sources, ["native.system"]);
+  assert.equal(rebuildPayload.data.indexedBySource["native.system"], 1);
+  assert.equal(rebuildPayload.data.pendingSources.includes("native.system"), false);
+  const canonicalDb = new Database(path.join(dataRoot, "core.sqlite"));
+  try {
+    const rows = canonicalDb.prepare("SELECT source, state FROM search_source_config WHERE source = ?").all("native.system") as Array<{ source: string; state: string }>;
+    assert.deepEqual(rows, [{ source: "native.system", state: "enabled" }]);
+  } finally {
+    canonicalDb.close();
+  }
+  const query = await runCliCapture(["search", "query", "daily plan", "--profile", "full", "--sources", "native.system", "--data-dir", dataRoot, "--json"], workspaceRoot);
+  assert.equal(query.code, CLI_EXIT_OK, query.stdout);
+  const queryPayload = JSON.parse(query.stdout) as { data: { results: Array<{ id: string; source: string; domain: string; actions?: Array<{ id: string; hostBroker?: { capabilityId: string } }> }> } };
+  assert.equal(queryPayload.data.results[0]?.id, "native.system:shortcut:daily-plan");
+  assert.equal(queryPayload.data.results[0]?.source, "native.system");
+  assert.equal(queryPayload.data.results[0]?.domain, "native");
+  assert.equal(queryPayload.data.results[0]?.actions?.[0]?.hostBroker?.capabilityId, "mac.shortcut.run");
+  const dryRun = await runCliCapture(["search", "actions", "execute", "native.system:shortcut:daily-plan", "run", "--actor", "agent:codex", "--dry-run", "--data-dir", dataRoot, "--json"], workspaceRoot);
+  assert.equal(dryRun.code, CLI_EXIT_OK);
+  const dryRunPayload = JSON.parse(dryRun.stdout) as { data: { plan: { hostRequest?: { capabilityId: string; dryRun: boolean; command: { action: string } } } } };
+  assert.equal(dryRunPayload.data.plan.hostRequest?.capabilityId, "mac.shortcut.run");
+  assert.equal(dryRunPayload.data.plan.hostRequest?.dryRun, true);
+  assert.equal(dryRunPayload.data.plan.hostRequest?.command.action, "plan");
+});
 test("search rebuild indexes surface route graph contracts", runSearchSurfaceRouteGraphContractsScenario);
 test("search rebuild indexes docs pages and refreshes resource jobs", runSearchDocsPagesScenario);
 test("docs.pages event jobs refresh and tombstone individual docs", runSearchDocsPagesEventScenario);

@@ -93,7 +93,7 @@ backfill jobs.
 | `runtime.events` | `runtime` | runtime jobs/events and monitor/infra/ops operational sidecars projected into `search.sqlite` | implemented initial adapter |
 | `surfaces.routes` | `surfaces` | surface route graph contracts, steps, tests, docs, and ADR links projected from the framework registry | implemented initial adapter |
 | `local.files` | `files` | bounded local file metadata, text-content, and Markdown/MDX section projection with per-file refresh jobs | implemented opt-in adapter, `full`, off by default |
-| `native.system` | `native` | native app/system/contact adapters | EXTERNAL PENDING, `full`, off by default |
+| `native.system` | `native` | signed-host native app/system snapshots with brokered actions | implemented opt-in snapshot adapter, `full`, off by default; no direct native access from framework |
 | `web.ingested` | `web` | bounded explicit web cache ingestion with per-cache-file refresh jobs and text section fragments | implemented opt-in adapter, `full`, off by default |
 | `external.cache` | `external` | bounded local provider cache ingestion with per-cache-file refresh jobs and text section fragments | implemented opt-in adapter, `full`, off by default |
 
@@ -133,6 +133,8 @@ claw search query "release notes" --domains web --profile full --web-root /path/
 claw search sources enable external.cache --profile full --json
 claw search rebuild --source external.cache --profile full --external-root /path/to/provider-cache --json
 claw search query "provider thread" --domains external --profile full --external-root /path/to/provider-cache --json
+claw search rebuild --source native.system --profile full --native-system-snapshot /path/to/signed-host-snapshot.json --json
+claw search query "daily plan" --domains native --profile full --json
 claw search query "diagram" --domains images --shards hot --json
 claw search query "Search V1.1 architecture" --domains docs --json
 claw search query "related concept" --domains documents --strategy hybrid --embedding-model local --embedding '[0.1,0.2,0.3]' --json
@@ -409,6 +411,15 @@ selected. Changed-file producers can schedule resource-scoped refresh jobs keyed
 by the path under `--file-root`; paths outside that root are rejected before a
 job is written. The typed CLI form is `claw search changes schedule
 upsert|delete --source local.files --root <file-root> --path <file>`.
+
+`native.system` is host-owned. The framework never scans native apps, contacts,
+or system state directly; it only accepts a bounded JSON snapshot produced by
+the signed host with `--native-system-snapshot` or
+`--native-system-snapshot-json`. Without that snapshot, attempts to enable the
+source remain `external_pending`. Snapshot documents can include Search actions
+with `hostBroker` metadata; `claw search actions execute --dry-run` turns those
+into `hostRequest` templates for the signed host to evaluate through the
+Mac-control grant and approval boundary.
 
 `web.ingested` is the first explicit web cache adapter. It does not crawl the
 network itself; it indexes bounded local exports under `--web-root` after the

@@ -120,6 +120,34 @@ type SimpleChangedSourceScheduleInput = {
   workspaceRoot?: string;
 };
 
+type NativeSystemSearchSourceSnapshot = {
+  source: "native.system";
+  domain: "native";
+  state: "enabled" | "external_pending" | "disabled" | "paused" | "degraded";
+  updatedAt?: string;
+  error?: string;
+  documents?: NativeSystemSearchSourceSnapshotDocument[];
+};
+
+type NativeSystemSearchSourceSnapshotDocument = {
+  id: string;
+  source?: string;
+  domain?: string;
+  type: string;
+  title: string;
+  subtitle?: string;
+  snippet?: string;
+  body?: string;
+  resourceId?: string;
+  path?: string;
+  updatedAt?: string;
+  metadata?: Record<string, unknown>;
+  permissions?: SearchDocumentInput["permissions"];
+  rankingHints?: SearchDocumentInput["rankingHints"];
+  fragments?: SearchDocumentInput["fragments"];
+  actions?: SearchAction[];
+};
+
 const SIMPLE_CHANGED_SOURCE_SCHEDULES = new Map<string, {
   idFlagNames: string[];
   idLabel: string;
@@ -203,6 +231,9 @@ export async function runSearchQueryCli(input: {
     const shouldRefreshLocalFiles = domains?.includes("files") || sources?.includes("local.files");
     const shouldRefreshWeb = domains?.includes("web") || sources?.includes("web.ingested");
     const shouldRefreshExternal = domains?.includes("external") || sources?.includes("external.cache");
+    const shouldSearchNativeSystem = domains?.includes("native") || sources?.includes("native.system");
+    const shouldRefreshNativeSystem = shouldSearchNativeSystem && hasNativeSystemSnapshotFlag(input.flags);
+    enableNativeSystemSourceFromSnapshotFlag(store, input.flags, shouldRefreshNativeSystem ? ["native.system"] : sources);
     const indexedDatabase = shouldRefreshDatabase && sourceCanIndex(store, "database.records") ? ensureDatabaseRecordsSourceIndexed(store, input.flags) : 0;
     const indexedWork = shouldRefreshWork && sourceCanIndex(store, "work.items") ? ensureWorkItemsSourceIndexed(store, input.flags) : 0;
     const indexedDocuments = shouldRefreshDocuments && sourceCanIndex(store, "documents.blocks") ? ensureDocumentsBlocksSourceIndexed(store, input.flags) : 0;
@@ -237,6 +268,7 @@ export async function runSearchQueryCli(input: {
     const indexedLocalFiles = shouldRefreshLocalFiles && sourceCanIndex(store, "local.files") ? ensureLocalFilesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedWeb = shouldRefreshWeb && sourceCanIndex(store, "web.ingested") ? ensureWebIngestedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedExternal = shouldRefreshExternal && sourceCanIndex(store, "external.cache") ? ensureExternalCacheSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const indexedNativeSystem = shouldRefreshNativeSystem && sourceCanIndex(store, "native.system") ? ensureNativeSystemSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const filters = parseSearchFiltersFlag(input.flags.filters ?? input.flags.filter);
     const strategy = parseSearchStrategyFlag(input.flags.strategy);
     const embedding = parseSearchEmbeddingFlag(input.flags.embedding ?? input.flags["embedding-json"], input.flags["embedding-model"] ?? input.flags.model)
@@ -345,6 +377,7 @@ export async function runSearchQueryCli(input: {
         ...(shouldRefreshLocalFiles ? { "local.files": indexedLocalFiles } : {}),
         ...(shouldRefreshWeb ? { "web.ingested": indexedWeb } : {}),
         ...(shouldRefreshExternal ? { "external.cache": indexedExternal } : {}),
+        ...(shouldRefreshNativeSystem ? { "native.system": indexedNativeSystem } : {}),
       },
     };
     if (input.wantsJson) {
@@ -448,6 +481,7 @@ export async function runSearchRebuildCli(input: {
     else if (selectedSources) store.resetSources(selectedSources);
     else store.reset();
     registerCliSearchSources(store, input.flags, preservedStates);
+    enableNativeSystemSourceFromSnapshotFlag(store, input.flags, selectedSources);
     const rebuildsSource = (source: string) => (!selectedSources || selectedSources.includes(source)) && sourceCanIndex(store, source);
     const commandsIndexed = rebuildsSource("commands") ? ensureCommandSourceIndexed(store) : 0;
     const sessionsIndexed = rebuildsSource("sessions.chats") ? ensureSessionsChatsSourceIndexed(store, input.flags) : 0;
@@ -485,6 +519,7 @@ export async function runSearchRebuildCli(input: {
     const localFilesIndexed = rebuildsSource("local.files") ? ensureLocalFilesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const webIndexed = rebuildsSource("web.ingested") ? ensureWebIngestedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const externalIndexed = rebuildsSource("external.cache") ? ensureExternalCacheSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const nativeSystemIndexed = rebuildsSource("native.system") ? ensureNativeSystemSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedSourceIds = new Set([
       ...(commandsIndexed > 0 ? ["commands"] : []),
       ...(sessionsIndexed > 0 ? ["sessions.chats"] : []),
@@ -522,6 +557,7 @@ export async function runSearchRebuildCli(input: {
       ...(localFilesIndexed > 0 ? ["local.files"] : []),
       ...(webIndexed > 0 ? ["web.ingested"] : []),
       ...(externalIndexed > 0 ? ["external.cache"] : []),
+      ...(nativeSystemIndexed > 0 ? ["native.system"] : []),
     ]);
     const pendingScope = selectedSources ?? BUILTIN_SEARCH_SOURCES.map((source) => source.id);
     const pendingSources = BUILTIN_SEARCH_SOURCES
@@ -533,7 +569,7 @@ export async function runSearchRebuildCli(input: {
       mode: selectedSources && selectedShards ? "shard_scoped" : selectedSources ? "scoped" : "full",
       selectedSources: selectedSources ?? null,
       selectedShards: selectedShards ?? null,
-      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + workIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + elnIndexed + imagesIndexed + mediaIndexed + slidesIndexed + sheetsIndexed + generationsIndexed + codeIndexed + docsIndexed + skillsIndexed + providersIndexed + snippetsIndexed + agentsIndexed + marketplaceIndexed + contentIndexed + businessIndexed + socialIndexed + iotIndexed + connectorsIndexed + mcpIndexed + appsIndexed + designIndexed + runtimeIndexed + surfacesIndexed + localFilesIndexed + webIndexed + externalIndexed,
+      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + workIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + elnIndexed + imagesIndexed + mediaIndexed + slidesIndexed + sheetsIndexed + generationsIndexed + codeIndexed + docsIndexed + skillsIndexed + providersIndexed + snippetsIndexed + agentsIndexed + marketplaceIndexed + contentIndexed + businessIndexed + socialIndexed + iotIndexed + connectorsIndexed + mcpIndexed + appsIndexed + designIndexed + runtimeIndexed + surfacesIndexed + localFilesIndexed + webIndexed + externalIndexed + nativeSystemIndexed,
       embeddings: 0,
       profile: input.flags.profile === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
@@ -575,6 +611,7 @@ export async function runSearchRebuildCli(input: {
         "local.files": localFilesIndexed,
         "web.ingested": webIndexed,
         "external.cache": externalIndexed,
+        "native.system": nativeSystemIndexed,
       },
       pendingSources,
       note: "Framework domain sources keep independent fast paths; heavyweight extractors remain async or explicit.",
@@ -658,7 +695,7 @@ export async function runSearchAdminCli(input: {
           input.context.stderr.write(`Usage: ${input.binName} search sources ${action} <source-id> [--json]\n`);
           return CLI_EXIT_USAGE;
         }
-        const state = sourceStateForAction(action, sourceId);
+        const state = sourceStateForAction(action, sourceId, input.flags);
         const error = state === "external_pending"
           ? "native.system requires a signed host adapter before it can be indexed"
           : null;
@@ -1924,6 +1961,9 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
       return ensureWebIngestedSourceIndexed(store, flags, cwd);
     case "external.cache":
       return ensureExternalCacheSourceIndexed(store, flags, cwd);
+    case "native.system":
+      enableNativeSystemSourceFromSnapshotFlag(store, flags, ["native.system"]);
+      return ensureNativeSystemSourceIndexed(store, flags, cwd);
     default:
       throw new Error(`Search service cannot index source: ${job.source}`);
   }
@@ -2585,13 +2625,167 @@ function runSearchMonitorEvaluations(
   return { action, items, state };
 }
 
-function sourceStateForAction(action: string, sourceId?: string): SearchSourceState {
-  if ((action === "enable" || action === "resume") && sourceId === "native.system") return "external_pending";
+function sourceStateForAction(action: string, sourceId?: string, flags: Record<string, string> = {}): SearchSourceState {
+  if ((action === "enable" || action === "resume") && sourceId === "native.system") {
+    return hasNativeSystemSnapshotFlag(flags) ? "enabled" : "external_pending";
+  }
   if (action === "enable" || action === "resume") return "enabled";
   if (action === "disable") return "disabled";
   if (action === "pause") return "paused";
   if (action === "exclude") return "excluded";
   return "enabled";
+}
+
+function enableNativeSystemSourceFromSnapshotFlag(store: SearchStore, flags: Record<string, string>, selectedSources?: string[]): void {
+  if (!hasNativeSystemSnapshotFlag(flags)) return;
+  if (selectedSources && !selectedSources.includes("native.system")) return;
+  store.setSourceState("native.system", "enabled", {
+    error: null,
+  });
+  writeCanonicalSearchSourceState(flags, "native.system", "enabled", {
+    profile: "full",
+    actor: flags.actor,
+    surface: flags.surface ?? "claw.search.native_system.snapshot",
+  });
+}
+
+function hasNativeSystemSnapshotFlag(flags: Record<string, string>): boolean {
+  return Boolean(nativeSystemSnapshotFlag(flags));
+}
+
+function nativeSystemSnapshotFlag(flags: Record<string, string>): string | undefined {
+  return flags["native-system-snapshot"] ?? flags["native-system-snapshot-json"] ?? flags["host-native-system-snapshot"] ?? flags["host-native-system-snapshot-json"];
+}
+
+function nativeSystemSnapshotSource(flags: Record<string, string>): "path" | "json" | undefined {
+  if (flags["native-system-snapshot"] || flags["host-native-system-snapshot"]) return "path";
+  if (flags["native-system-snapshot-json"] || flags["host-native-system-snapshot-json"]) return "json";
+  return undefined;
+}
+
+function ensureNativeSystemSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {
+  const snapshotText = readNativeSystemSnapshotFlag(flags, cwd);
+  if (!snapshotText) {
+    store.setSourceState("native.system", "external_pending", {
+      backlog: 0,
+      error: "native.system requires --native-system-snapshot from the signed host",
+      lastIndexedAt: null,
+    });
+    return 0;
+  }
+  const snapshot = parseNativeSystemSnapshot(snapshotText);
+  if (snapshot.state !== "enabled") {
+    store.setSourceState("native.system", snapshot.state === "degraded" ? "degraded" : "external_pending", {
+      backlog: 0,
+      error: snapshot.error ?? `native.system snapshot state is ${snapshot.state}`,
+      lastIndexedAt: snapshot.updatedAt ?? null,
+    });
+    return 0;
+  }
+  const documents = (snapshot.documents ?? []).map(nativeSystemSnapshotSearchDocument);
+  for (const document of documents) store.upsertDocument(document);
+  const checksum = stableSearchId(snapshotText);
+  store.setCursor({
+    source: "native.system",
+    cursor: `host-snapshot:${checksum}:documents:${documents.length}`,
+    watermark: snapshot.updatedAt,
+    metadata: {
+      source: "signed_host_snapshot",
+      documents: documents.length,
+      checksum,
+    },
+  });
+  store.setSourceState("native.system", "enabled", {
+    backlog: 0,
+    error: null,
+    lastIndexedAt: snapshot.updatedAt ?? new Date().toISOString(),
+  });
+  writeCanonicalSearchSourceState(flags, "native.system", "enabled", {
+    profile: "full",
+    actor: flags.actor,
+    surface: flags.surface ?? "claw.search.native_system.snapshot",
+  });
+  return documents.length;
+}
+
+function readNativeSystemSnapshotFlag(flags: Record<string, string>, cwd: string): string | undefined {
+  const value = nativeSystemSnapshotFlag(flags);
+  if (!value) return undefined;
+  if (nativeSystemSnapshotSource(flags) === "json") return value;
+  const expanded = expandSearchHome(value);
+  const snapshotPath = path.isAbsolute(expanded) ? expanded : path.resolve(cwd, expanded);
+  return fs.readFileSync(snapshotPath, "utf8");
+}
+
+function parseNativeSystemSnapshot(value: string): NativeSystemSearchSourceSnapshot {
+  const parsed = JSON.parse(value) as unknown;
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new CliHandledError("invalid_native_system_snapshot", "Native system snapshot must be a JSON object.", CLI_EXIT_USAGE);
+  }
+  const snapshot = parsed as Partial<NativeSystemSearchSourceSnapshot>;
+  if (snapshot.source !== "native.system" || snapshot.domain !== "native") {
+    throw new CliHandledError("invalid_native_system_snapshot", "Native system snapshot must declare source native.system and domain native.", CLI_EXIT_USAGE);
+  }
+  const state = snapshot.state;
+  if (state !== "enabled" && state !== "external_pending" && state !== "disabled" && state !== "paused" && state !== "degraded") {
+    throw new CliHandledError("invalid_native_system_snapshot", "Native system snapshot state must be enabled, external_pending, disabled, paused, or degraded.", CLI_EXIT_USAGE);
+  }
+  if (snapshot.documents !== undefined && !Array.isArray(snapshot.documents)) {
+    throw new CliHandledError("invalid_native_system_snapshot", "Native system snapshot documents must be an array.", CLI_EXIT_USAGE);
+  }
+  return {
+    source: "native.system",
+    domain: "native",
+    state,
+    ...(typeof snapshot.updatedAt === "string" ? { updatedAt: snapshot.updatedAt } : {}),
+    ...(typeof snapshot.error === "string" ? { error: snapshot.error } : {}),
+    documents: (snapshot.documents ?? []).map(validateNativeSystemSnapshotDocument),
+  };
+}
+
+function validateNativeSystemSnapshotDocument(value: unknown): NativeSystemSearchSourceSnapshotDocument {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new CliHandledError("invalid_native_system_snapshot", "Native system snapshot document must be a JSON object.", CLI_EXIT_USAGE);
+  }
+  const document = value as Partial<NativeSystemSearchSourceSnapshotDocument>;
+  if (typeof document.id !== "string" || typeof document.type !== "string" || typeof document.title !== "string") {
+    throw new CliHandledError("invalid_native_system_snapshot", "Native system snapshot documents require id, type, and title.", CLI_EXIT_USAGE);
+  }
+  if (document.source && document.source !== "native.system") {
+    throw new CliHandledError("invalid_native_system_snapshot", "Native system snapshot document source must be native.system.", CLI_EXIT_USAGE);
+  }
+  if (document.domain && document.domain !== "native") {
+    throw new CliHandledError("invalid_native_system_snapshot", "Native system snapshot document domain must be native.", CLI_EXIT_USAGE);
+  }
+  return {
+    id: document.id,
+    source: "native.system",
+    domain: "native",
+    type: document.type,
+    title: document.title,
+    ...(typeof document.subtitle === "string" ? { subtitle: document.subtitle } : {}),
+    ...(typeof document.snippet === "string" ? { snippet: document.snippet } : {}),
+    ...(typeof document.body === "string" ? { body: document.body } : {}),
+    ...(typeof document.resourceId === "string" ? { resourceId: document.resourceId } : {}),
+    ...(typeof document.path === "string" ? { path: document.path } : {}),
+    ...(typeof document.updatedAt === "string" ? { updatedAt: document.updatedAt } : {}),
+    ...(document.metadata && typeof document.metadata === "object" && !Array.isArray(document.metadata) ? { metadata: document.metadata } : {}),
+    ...(document.permissions && typeof document.permissions === "object" && !Array.isArray(document.permissions) ? { permissions: document.permissions } : {}),
+    ...(document.rankingHints && typeof document.rankingHints === "object" && !Array.isArray(document.rankingHints) ? { rankingHints: document.rankingHints } : {}),
+    ...(Array.isArray(document.fragments) ? { fragments: document.fragments } : {}),
+    ...(Array.isArray(document.actions) ? { actions: document.actions } : {}),
+  };
+}
+
+function nativeSystemSnapshotSearchDocument(document: NativeSystemSearchSourceSnapshotDocument): SearchDocumentInput {
+  const metadataText = document.metadata ? Object.values(document.metadata).filter((value) => typeof value === "string" || typeof value === "number" || typeof value === "boolean").join(" ") : "";
+  const body = [document.body, document.title, document.subtitle, document.snippet, metadataText].filter(Boolean).join("\n");
+  return {
+    ...document,
+    source: "native.system",
+    domain: "native",
+    body,
+  };
 }
 
 function ensureCommandSourceIndexed(store: SearchStore): number {
