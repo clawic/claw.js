@@ -1,4 +1,4 @@
-import { clawApiPath } from "@clawjs/core";
+import { clawApiPath, evaluateRegulatedAction, type RegulatedActionDecision } from "@clawjs/core";
 export type {
   DeliveryState,
   DeviceInstallation,
@@ -29,6 +29,7 @@ export interface NotifyClientOptions {
 
 export interface SendNotificationInput {
   approvalId: string;
+  legalLabel?: string;
   idempotencyKey?: string;
   priority?: NotificationPriority;
   audience?: NotificationAudience;
@@ -156,14 +157,23 @@ export class NotifyClient {
   }
 
   async send(input: SendNotificationInput) {
-    if (!input.approvalId.trim()) {
+    const policy = evaluateNotificationDeliveryPolicy(input);
+    if (!policy.allowed && !input.approvalId.trim()) {
       throw new Error("notify.send requires explicit approvalId before external notification delivery.");
+    }
+    if (!policy.allowed) {
+      throw new Error(`notify.send requires policy confirmation before external notification delivery: ${policy.requirements.join(", ")}.`);
     }
     return await this.request<{
       created: boolean;
       notification: { id: string; approvalId: string };
       deliveries: Array<{ id: string; installationId: string; state: string }>;
       receipt: { id: string; status: string } | null;
+      policy?: {
+        decision: string;
+        reasonCodes: string[];
+        requirements: string[];
+      };
     }>(clawApiPath("notifications"), {
       method: "POST",
       body: JSON.stringify(input),
@@ -270,4 +280,22 @@ export class NotifyClient {
       body: JSON.stringify(input),
     });
   }
+}
+
+function evaluateNotificationDeliveryPolicy(input: Pick<SendNotificationInput, "approvalId" | "legalLabel">): RegulatedActionDecision {
+  const approvalId = input.approvalId?.trim() ?? "";
+  const legalLabel = input.legalLabel?.trim() || (approvalId ? "Notification delivery - human reviewed" : "");
+  return evaluateRegulatedAction({
+    regulatedDomain: "identity",
+    decisionEffect: "external_action",
+    requestedUse: "non_final_draft",
+    externalAction: true,
+    policyConfig: {
+      confirmed: Boolean(approvalId),
+      approvalId,
+      legalLabel,
+      materialConsent: Boolean(approvalId),
+      destinationAuthorized: Boolean(approvalId),
+    },
+  });
 }

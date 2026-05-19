@@ -666,21 +666,36 @@ for (const [relativePath, snippets] of [
     "sendMedia({ approvalId })",
   ]],
   ["packages/clawjs-node/src/notify/index.ts", [
+    "evaluateRegulatedAction",
+    "evaluateNotificationDeliveryPolicy",
     "approvalId: string",
+    "legalLabel?: string",
+    "policy?:",
     "notify.send requires explicit approvalId before external notification delivery.",
   ]],
   ["notify/src/server/app.ts", [
+    "evaluateRegulatedAction",
+    "evaluateNotificationDeliveryPolicy",
+    "serializePolicyDecision",
     "Notification delivery requires explicit approvalId.",
     "approval_required",
   ]],
   ["packages/clawjs-node/src/notify/index.test.ts", [
     "approval_notify_send",
+    "Notification delivery - human reviewed",
+    "sent.policy?.decision",
     "requires explicit approvalId before external notification delivery",
     "approval_required",
   ]],
   ["packages/clawjs/src/notify.test.ts", [
     "approval_notify_cli_send",
     "--approval-id",
+    "--legal-label",
+  ]],
+  ["notify/tests/e2e/backend.e2e.test.ts", [
+    "approval_notify_run_1",
+    "created.policy.decision",
+    "external_review_required",
   ]],
   ["packages/clawjs-node/src/storage/store.ts", [
     "evaluateRegulatedAction",

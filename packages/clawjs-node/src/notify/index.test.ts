@@ -89,6 +89,7 @@ test("NotifyClient can send notifications and sync the client feed", async () =>
 
     const sent = await sourceClient.send({
       approvalId: "approval_notify_send",
+      legalLabel: "Notification delivery - human reviewed",
       priority: "normal",
       audience: { useSubscriptions: true },
       context: {
@@ -103,6 +104,9 @@ test("NotifyClient can send notifications and sync the client feed", async () =>
     });
     assert.equal(sent.created, true);
     assert.equal(sent.notification.approvalId, "approval_notify_send");
+    assert.equal(sent.policy?.decision, "allow");
+    assert.ok(sent.policy?.reasonCodes.includes("external_review_required"));
+    assert.ok(sent.policy?.requirements.includes("human_review"));
     assert.equal(sent.deliveries.length, 1);
 
     const feed = await installationClient.feed();

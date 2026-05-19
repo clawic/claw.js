@@ -157,6 +157,8 @@ test("send fanout, multi-device feed, read flow, and critical ack work together"
       "content-type": "application/json",
     },
     body: JSON.stringify({
+      approvalId: "approval_notify_run_1",
+      legalLabel: "Notification delivery - human reviewed",
       idempotencyKey: "run-1",
       priority: "critical",
       receiptPolicy: { kind: "critical", retrySec: 30, expireSec: 300 },
@@ -190,8 +192,12 @@ test("send fanout, multi-device feed, read flow, and critical ack work together"
     notification: { id: string; targetClientAppId: string | null };
     deliveries: Array<{ provider: string; installationId: string }>;
     receipt: { id: string; status: string };
+    policy: { decision: string; reasonCodes: string[]; requirements: string[] };
   };
   assert.equal(created.created, true);
+  assert.equal(created.policy.decision, "allow");
+  assert.ok(created.policy.reasonCodes.includes("external_review_required"));
+  assert.ok(created.policy.requirements.includes("human_review"));
   assert.equal(created.deliveries.length, 2);
   assert.deepEqual(created.deliveries.map((delivery) => delivery.provider).sort(), ["apns", "fcm"]);
   assert.equal(created.receipt.status, "pending");
@@ -299,6 +305,8 @@ test("subscription resolution supports allow, mute, critical-only, unsubscribe, 
       "content-type": "application/json",
     },
     body: JSON.stringify({
+      approvalId: "approval_notify_non_critical",
+      legalLabel: "Notification delivery - human reviewed",
       priority: "normal",
       context: {
         tenantId: "tenant-a",
@@ -325,6 +333,8 @@ test("subscription resolution supports allow, mute, critical-only, unsubscribe, 
       "content-type": "application/json",
     },
     body: JSON.stringify({
+      approvalId: "approval_notify_critical",
+      legalLabel: "Notification delivery - human reviewed",
       priority: "critical",
       receiptPolicy: { kind: "critical", retrySec: 20, expireSec: 200 },
       context: {
@@ -358,6 +368,8 @@ test("subscription resolution supports allow, mute, critical-only, unsubscribe, 
       "content-type": "application/json",
     },
     body: JSON.stringify({
+      approvalId: "approval_notify_after_delete",
+      legalLabel: "Notification delivery - human reviewed",
       priority: "critical",
       receiptPolicy: { kind: "critical", retrySec: 20, expireSec: 200 },
       context: {
@@ -429,6 +441,8 @@ test("idempotency, cancelation, push-token rotation, glances, and tenant isolati
       "content-type": "application/json",
     },
     body: JSON.stringify({
+      approvalId: "approval_notify_first",
+      legalLabel: "Notification delivery - human reviewed",
       idempotencyKey: "job-42",
       priority: "normal",
       audience: { userIds: ["user-a"] },
@@ -448,6 +462,8 @@ test("idempotency, cancelation, push-token rotation, glances, and tenant isolati
       "content-type": "application/json",
     },
     body: JSON.stringify({
+      approvalId: "approval_notify_second",
+      legalLabel: "Notification delivery - human reviewed",
       idempotencyKey: "job-42",
       priority: "normal",
       audience: { userIds: ["user-a"] },
@@ -502,6 +518,8 @@ test("idempotency, cancelation, push-token rotation, glances, and tenant isolati
       "content-type": "application/json",
     },
     body: JSON.stringify({
+      approvalId: "approval_notify_cross_tenant",
+      legalLabel: "Notification delivery - human reviewed",
       priority: "normal",
       audience: { userIds: ["user-a"] },
       context: { tenantId: "tenant-a" },
@@ -580,6 +598,8 @@ test("admin dashboard routes expose prefs, devices, feed, and quiet-hours gating
       "content-type": "application/json",
     },
     body: JSON.stringify({
+      approvalId: "approval_notify_normal",
+      legalLabel: "Notification delivery - human reviewed",
       priority: "normal",
       audience: { userIds: ["ops-user"] },
       context: {
@@ -604,6 +624,8 @@ test("admin dashboard routes expose prefs, devices, feed, and quiet-hours gating
       "content-type": "application/json",
     },
     body: JSON.stringify({
+      approvalId: "approval_notify_critical_admin",
+      legalLabel: "Notification delivery - human reviewed",
       priority: "critical",
       receiptPolicy: { kind: "critical", retrySec: 30, expireSec: 300 },
       audience: { userIds: ["ops-user"] },

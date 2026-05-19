@@ -1,4 +1,4 @@
-import { clawApiPath } from "@clawjs/core";
+import { clawApiPath, evaluateRegulatedAction, type RegulatedActionDecision } from "@clawjs/core";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -56,6 +56,44 @@ function asInteger(value: unknown): number | undefined {
     if (Number.isInteger(parsed)) return parsed;
   }
   return undefined;
+}
+
+function evaluateNotificationDeliveryPolicy(input: { approvalId?: string; legalLabel?: string }): RegulatedActionDecision {
+  const approvalId = input.approvalId?.trim() ?? "";
+  const legalLabel = input.legalLabel?.trim() || (approvalId ? "Notification delivery - human reviewed" : "");
+  return evaluateRegulatedAction({
+    regulatedDomain: "identity",
+    decisionEffect: "external_action",
+    requestedUse: "non_final_draft",
+    externalAction: true,
+    policyConfig: {
+      confirmed: Boolean(approvalId),
+      approvalId,
+      legalLabel,
+      materialConsent: Boolean(approvalId),
+      destinationAuthorized: Boolean(approvalId),
+    },
+  });
+}
+
+function serializePolicyDecision(policy: RegulatedActionDecision): {
+  decision: string;
+  reasonCodes: string[];
+  requirements: string[];
+  outputLabels: string[];
+  disclaimerPolicy: string;
+  auditPolicy: string;
+  policyApplied: RegulatedActionDecision["policyApplied"];
+} {
+  return {
+    decision: policy.policyDecision,
+    reasonCodes: policy.reasonCodes,
+    requirements: policy.requirements,
+    outputLabels: policy.outputLabels,
+    disclaimerPolicy: policy.disclaimerPolicy,
+    auditPolicy: policy.auditPolicy,
+    policyApplied: policy.policyApplied,
+  };
 }
 
 function parsePriority(value: unknown): NotificationPriority {
@@ -597,8 +635,18 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     const deliveryMode = delivery.mode === "silent" || delivery.mode === "glance" ? delivery.mode : "alert";
     const context = parseContext(body.context, principal.tenantId);
     const approvalId = asString(body.approvalId);
-    if (!approvalId) {
+    const policy = evaluateNotificationDeliveryPolicy({
+      approvalId,
+      legalLabel: asString(body.legalLabel),
+    });
+    if (!policy.allowed && !approvalId) {
       return await reply.code(409).send({ error: "approval_required", message: "Notification delivery requires explicit approvalId." });
+    }
+    if (policy.policyDecision === "block") {
+      return await reply.code(409).send({ error: "regulated_safety_blocked", message: `Notification delivery is blocked by regulated safety policy: ${policy.reasonCodes.join(", ") || "blocked"}.` });
+    }
+    if (!policy.allowed) {
+      return await reply.code(409).send({ error: "policy_confirmation_required", message: `Notification delivery requires policy confirmation: ${policy.requirements.join(", ")}.` });
     }
     if (context.tenantId !== principal.tenantId) {
       return await reply.code(403).send({ error: "tenant mismatch for source token" });
@@ -612,6 +660,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
           notification: existing,
           deliveries: store.listDeliveriesForNotification(existing.id),
           receipt: store.getReceiptByNotification(existing.id),
+          policy: serializePolicyDecision(policy),
         };
       }
     }
@@ -660,6 +709,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
       notification,
       deliveries,
       receipt,
+      policy: serializePolicyDecision(policy),
     });
   });
 

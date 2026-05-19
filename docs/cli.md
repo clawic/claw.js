@@ -50,6 +50,43 @@ Pre-V1 raw JSON responses that predate the registry are migration debt. New or
 materially changed stable commands must use the envelope and include command
 schema/version metadata.
 
+## Progressive Setup
+
+The base CLI follows [ADR 0031](./adr/0031-progressive-modularity-and-zero-surprise-install.md):
+installation must stay quiet, and optional capabilities or areas become active
+only through explicit setup/module state. Safe commands may explain what is
+available, but they must not open apps, start host services, request native
+permissions, download models or browsers, call external providers, or activate
+niche domains by surprise.
+
+```bash
+claw setup
+claw setup normal
+claw setup normal --details --enable crm --disable light-search
+claw setup advanced --apply
+claw modules list
+claw modules status --available
+claw modules enable basic-productivity
+claw modules disable erp
+claw modules install audio-voice
+claw collections list
+claw collections list --available
+```
+
+`claw setup` previews by default and writes configuration only with `--apply`
+or `--yes`. Use `--details` to inspect capacidades and areas separately before
+confirmation, and use `--enable id1,id2` or `--disable id1,id2` to adjust the
+preview before applying. `minimal` is the non-interactive fallback, `normal`
+enables basic mainstream productivity plus light local capabilities, and
+`advanced` exposes general system/API/diagnostic/developer surfaces on demand
+without activating all domain areas. `claw modules install` is reserved for
+explicit optional packs, assets, browsers, models, or other heavy materials; it
+does not silently install them.
+
+Default collection/catalog lists show active safe areas only. Use explicit
+available discovery, such as `claw collections list --available`, to inspect
+the full catalog without making niche domains part of the active experience.
+
 ## Evolution
 
 `claw evolution` is the agent-facing operator surface for public surface
@@ -305,8 +342,11 @@ contains unapproved no-write rows and can be submitted with
 or the alias `--external-validation-file`.
 `remote validation-runbook` returns the no-write operator bundle for the final
 external validation: the provider/device E2E plan, checklist, evidence artifact,
-report command, closure-gate command, required commands, and step-by-step
-instructions in one payload.
+report command, decision-review command, source-session reread command,
+closure-gate command, required commands, and step-by-step instructions in one
+payload. The source-session command uses
+`REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl>` so public docs and
+artifacts never publish a maintainer-local session path.
 `remote validation-readiness` checks that the source Q/A artifact, external
 evidence artifact, checklist, runbook, E2E plan, and closure gate are all ready
 before an approved physical/provider validation run. With the current checked-in
@@ -316,6 +356,8 @@ evidence artifact has one clean pending row per external requirement, and only
 physical/provider run by itself. Partially approved evidence, for example rows
 missing `approvedRunRef`, is `not_ready`; after a real approved run the same
 gate advances only when the evidence is fully clearable.
+The text output names closure blockers and external blocked row counts so the
+handoff cannot hide `source_qa_review` or `external_validation` behind a count.
 `remote validation-approval-request` returns the no-write approval packet for
 that real run. It includes the source-bound conversation/plan IDs, readiness
 status, all 13 requirement IDs, required E2E domains, required topology
@@ -362,7 +404,10 @@ same source Q/A artifact. It accepts the same `--source-qa-review-file`,
 inputs as the closure gate, then reports reviewed/missing/invalid Q/A rows,
 implemented vs external-pending dispositions, conformance status per decision,
 and remaining blockers. This gives agents a focused command for proving the
-one-by-one decision audit without parsing the larger `inspect remote` payload.
+one-by-one decision audit without parsing the larger `inspect remote` payload,
+and it is included in the runbook/readiness/approval command chain before the
+closure gate. The text output names blocker IDs, implemented rows, and
+external-pending rows.
 `remote closure-gate` combines the external validation report with the required
 source Q/A review report. It remains `blocked` until all 23 source Q/A rows
 have a disposition, evidence refs, and every external validation row is
@@ -371,6 +416,8 @@ artifact through `--evidence-file` or `--external-validation-file`; the current
 pending artifact keeps only the `external_validation` blocker after the source
 Q/A review file has cleared `source_qa_review`. Supplying raw external evidence
 rows is not enough to clear the external validation blocker.
+The text output names the blocker IDs and external blocked row count rather than
+only reporting the number of blockers.
 The final provider/device end-to-end row is not a loose note: it is backed by
 `RemoteProviderDeviceE2EValidationPlan`, which requires chat, search, Sync,
 secret-reference, and hosted-agent validation to pass together against the same
@@ -390,8 +437,11 @@ host, headless server, VPS host, mobile client, browser client, self-hosted
 Gateway, and hosted Gateway.
 `inspect remote` is the read-only inspection view that puts remote
 classification, Sync authority/drivers, transport, route contracts, tests,
-gaps, and conformance in one JSON payload. By default it reports the fail-closed
-no-artifact closure state; with `--source-qa-review-file` and
+gaps, decision-review status, validation readiness, approval-request readiness,
+closure blockers, and conformance in one JSON payload. The default text output
+also surfaces those closure gates so operators do not need `--json` to see
+whether source Q/A or external validation still blocks closure. By default it
+reports the fail-closed no-artifact closure state; with `--source-qa-review-file` and
 `--external-validation-file`, it overlays the same artifact-bound readiness,
 approval request, validation report, and closure gate used by `claw remote
 validation-readiness` and `claw remote closure-gate`. The same payload also
@@ -774,6 +824,7 @@ executing sensitive work.
 claw safety domains --json
 claw safety classify health --json
 claw safety check --domain finance --effect final_decision --use investment_or_credit_decision --json
+claw safety check --domain legal --effect external_action --export true --confirm true --approval-id approval-from-human-review --legal-label "Legal export - human reviewed" --material-consent true --destination-authorized true --json
 claw safety explain legal --json
 claw safety disclaimers mental_health --json
 ```
@@ -782,8 +833,13 @@ The safe default is local recordkeeping, search, extraction, factual summary,
 questions to review, gaps/provenance, non-final drafts, and preparation for
 human or professional review. Final regulated decisions, diagnosis/treatment,
 professional advice as a final answer, emergency handling, and autonomous
-sensitive external actions are blocked or require explicit review under
+sensitive external actions return a policy decision of `block` or `confirm`
+under
 [ADR 0026](./adr/0026-regulated-domain-safety-liability-boundary.md).
+Confirmable actions can continue only when the central policy config supplies
+the required confirmation, approval id, legal label, consent, destination, or
+authorized automation metadata; callers must not add separate local legal
+decision logic.
 
 ## Guidance And Resources
 
@@ -940,7 +996,7 @@ claw telegram commands get
 claw telegram chats list
 claw telegram chats inspect 123
 claw telegram send --chat-id 123 --text "hello"
-claw notify send --title "Build finished" --body "Ready"
+claw notify send --title "Build finished" --body "Ready" --approval-id approval-from-human-review --legal-label "Notification delivery - human reviewed"
 claw notify subscriptions upsert --notify-url http://127.0.0.1:24102 --notify-client-token token --json
 claw notify subscriptions delete sub-123 --notify-url http://127.0.0.1:24102 --notify-client-token token
 ```
@@ -1250,6 +1306,8 @@ claw search query "release notes" --domains web --profile full --web-root ./web-
 claw search sources enable external.cache --profile full --json
 claw search query "provider thread" --domains external --profile full --external-root ./provider-cache --json
 claw search changes schedule upsert --source sessions.chats --session-id <session-id> --json
+claw search changes schedule upsert --source docs.pages --workspace . --path docs/guide.md --json
+claw search changes schedule upsert --source sheets.workbooks --workbook-id forecast-q2 --workspace . --json
 claw search changes schedule upsert --source code.symbols --root ./repo --path ./repo/src/app.ts --json
 claw search changes scan --source code.symbols --root ./repo --json
 claw search status --json

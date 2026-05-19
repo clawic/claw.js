@@ -135,6 +135,8 @@ test("runCli supports notify send and subscription commands", async () => {
       JSON.stringify({ mode: "alert", title: "CLI alert" }),
       "--approval-id",
       "approval_notify_cli_send",
+      "--legal-label",
+      "Notification delivery - human reviewed",
     ], {
       stdout: sendStdout.stream,
       stderr: sendStderr.stream,
