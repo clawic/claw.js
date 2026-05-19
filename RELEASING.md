@@ -100,9 +100,34 @@ validation must be recorded in `docs/legal-external-pending-validation.md` as
 
 ## Package map
 
+- `@clawjs/core`: scoped public low-level contracts package
+- `@clawjs/search`: scoped search index and query package
+- `@clawjs/search-mcp`: scoped search MCP server package
+- `@clawjs/marketplace`: scoped marketplace contracts and registry package
+- `@clawjs/profile`: scoped profile and consent metadata package
+- `@clawjs/index`: scoped local index service package
 - `@clawjs/claw`: scoped public SDK package and primary entrypoint
 - `@clawjs/workspace`: scoped local-first workspace layer
 - `@clawjs/node`: scoped compatibility wrapper that reexports the SDK
+- `@clawjs/database`: scoped database/storage package
+- `@clawjs/agents`: scoped agent contracts package
+- `@clawjs/integrations`: scoped integration contracts package
+- `@clawjs/marketplace-agent-policy`: scoped marketplace agent policy package
+- `@clawjs/marketplace-dating`: scoped marketplace dating vertical package
+- `@clawjs/marketplace-real-estate`: scoped marketplace real-estate vertical package
+- `@clawjs/marketplace-vehicle`: scoped marketplace vehicle vertical package
+- `@clawjs/audio`: scoped audio package
+- `@clawjs/sessions`: scoped sessions package
+- `@clawjs/user-model`: scoped user model package
+- `@clawjs/runtime`: scoped runtime package
+- `@clawjs/sandbox`: scoped sandbox package
+- `@clawjs/mcp`: scoped MCP package
+- `@clawjs/voice`: scoped voice package
+- `@clawjs/channel-base`: scoped channel base package
+- `@clawjs/mesh`: scoped mesh package
+- `@clawjs/signals-core`: scoped signals core package
+- `@clawjs/signals`: scoped signals package
+- `@clawjs/ssh-client`: scoped SSH client package
 - `@clawjs/cli`: scoped CLI package that exposes the `clawjs` binary
 - `@clawjs/openclaw-plugin`: scoped plugin package for the OpenClaw runtime
 - `@clawjs/openclaw-context-engine`: scoped context engine package for the OpenClaw runtime
@@ -111,9 +136,13 @@ validation must be recorded in `docs/legal-external-pending-validation.md` as
 - `create-claw-server`: unscoped scaffolder for headless server bootstrapping
 - `create-claw-plugin`: unscoped scaffolder for broader plugin package bootstrapping
 - `eslint-config-claw`: public shared ESLint preset
-- `@clawjs/core`: scoped public low-level contracts package
 
-The release order matters because `@clawjs/claw` depends on `@clawjs/core`, `@clawjs/workspace` depends on the SDK, the compatibility wrapper depends on `@clawjs/claw`, the CLI depends on `@clawjs/claw`, and the scaffolder templates depend on the published runtime packages.
+The release order matters because marketplace/profile packages feed the index
+and vertical packages, `@clawjs/claw` depends on `@clawjs/core`,
+`@clawjs/workspace` depends on the SDK, the compatibility wrapper depends on
+`@clawjs/claw`, `@clawjs/signals` depends on `@clawjs/signals-core`, the CLI
+depends on `@clawjs/claw`, and the scaffolder templates depend on the published
+runtime packages.
 
 ## Changeset commands
 

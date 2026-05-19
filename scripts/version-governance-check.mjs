@@ -14,6 +14,7 @@ const releaseApprovalTargets = {
   "prepublishOnly": "direct-package-publish",
 };
 const rootReleaseScripts = ["release:version", "release:publish", "publish:packages"];
+const publishScriptNames = ["publish:dry-run", "publish:packages"];
 
 function fail(message) {
   errors.push(message);
@@ -64,6 +65,35 @@ function packageVersionEntries() {
     const packageJson = readJson(relativePath);
     return `${relativePath}:${packageJson.name ?? ""}:${packageJson.version ?? ""}`;
   });
+}
+
+function publishablePackageEntries() {
+  return fs.readdirSync(path.join(rootDir, "packages"))
+    .map((name) => {
+      const relativePath = `packages/${name}/package.json`;
+      const manifestPath = path.join(rootDir, relativePath);
+      if (!fs.existsSync(manifestPath)) return undefined;
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+      if (manifest.private || typeof manifest.name !== "string" || manifest.name === "__APP_NAME__") return undefined;
+      return { name: manifest.name, relativePath, manifest };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function isWorkspacePublishPrepublish(env = process.env) {
+  if (env.npm_lifecycle_event !== "prepublishOnly") return false;
+  if (!env.npm_config_workspace) return false;
+  if (!env.INIT_CWD) return false;
+  return path.resolve(env.INIT_CWD) === rootDir;
+}
+
+function expectedReleaseApprovalTarget(env = process.env) {
+  const lifecycleEvent = env.npm_lifecycle_event ?? "";
+  if (lifecycleEvent === "prepublishOnly") {
+    return isWorkspacePublishPrepublish(env) ? "publish-packages" : "direct-package-publish";
+  }
+  return releaseApprovalTargets[lifecycleEvent] ?? "direct-release-gate";
 }
 
 function hasOwnedVersionDrift(relativePath, text) {
@@ -140,6 +170,29 @@ function checkReleaseScripts() {
   }
   if (!packageJson.scripts?.["publish:dry-run"]?.includes("verify-regulated-domain-safety-goal.mjs")) {
     fail("publish:dry-run must run the regulated-domain legal release gate");
+  }
+  if (!packageJson.scripts?.["publish:dry-run"]?.includes("build:packages")) {
+    fail("publish:dry-run must build all packages before dry-run package publishing");
+  }
+  const buildPackages = read("scripts/build-packages.mjs");
+  const publishablePackages = publishablePackageEntries();
+  for (const { name, relativePath, manifest } of publishablePackages) {
+    const prepublishOnly = manifest.scripts?.prepublishOnly ?? "";
+    if (!prepublishOnly.includes("verify-regulated-domain-safety-goal.mjs")) {
+      fail(`${relativePath} must run the regulated-domain legal gate in prepublishOnly`);
+    }
+    if (!prepublishOnly.includes("version-governance-check.mjs --release-gate")) {
+      fail(`${relativePath} must run the exact release approval gate in prepublishOnly`);
+    }
+    if (!buildPackages.includes(`"${name}"`)) {
+      fail(`scripts/build-packages.mjs must build publishable package ${name}`);
+    }
+    for (const scriptName of publishScriptNames) {
+      const script = packageJson.scripts?.[scriptName] ?? "";
+      if (!script.includes(`--workspace ${name}`)) {
+        fail(`package.json ${scriptName} must include publishable package ${name}`);
+      }
+    }
   }
   const releasing = read("RELEASING.md");
   for (const approvalTarget of Object.values(releaseApprovalTargets)) {
@@ -228,14 +281,47 @@ function selfTest() {
     const actual = hasOwnedVersionDrift("self-test", entry.text).length > 0;
     if (actual !== entry.expected) fail(`self-test mismatch for ${stableJson(entry)}: got ${actual}`);
   }
+  const releaseApprovalCases = [
+    {
+      env: { npm_lifecycle_event: "release:version" },
+      expected: "release-version",
+    },
+    {
+      env: { npm_lifecycle_event: "release:publish" },
+      expected: "release-publish",
+    },
+    {
+      env: { npm_lifecycle_event: "publish:packages" },
+      expected: "publish-packages",
+    },
+    {
+      env: { npm_lifecycle_event: "prepublishOnly", INIT_CWD: rootDir, npm_config_workspace: "@clawjs/core" },
+      expected: "publish-packages",
+    },
+    {
+      env: { npm_lifecycle_event: "prepublishOnly", INIT_CWD: path.join(rootDir, "packages", "clawjs-core") },
+      expected: "direct-package-publish",
+    },
+    {
+      env: { npm_lifecycle_event: "prepublishOnly", INIT_CWD: rootDir },
+      expected: "direct-package-publish",
+    },
+    {
+      env: {},
+      expected: "direct-release-gate",
+    },
+  ];
+  for (const entry of releaseApprovalCases) {
+    const actual = expectedReleaseApprovalTarget(entry.env);
+    if (actual !== entry.expected) fail(`release approval self-test mismatch for ${stableJson(entry)}: got ${actual}`);
+  }
 }
 
 if (args.has("--release-gate")) {
   if (process.env.CLAW_ALLOW_PRE_V1_RELEASE !== "1") {
     fail("pre_v1_mutable blocks release/version/publish flows without CLAW_ALLOW_PRE_V1_RELEASE=1 and explicit user approval");
   }
-  const lifecycleEvent = process.env.npm_lifecycle_event ?? "";
-  const expectedApproval = releaseApprovalTargets[lifecycleEvent] ?? "direct-release-gate";
+  const expectedApproval = expectedReleaseApprovalTarget();
   if (process.env.CLAW_RELEASE_APPROVED_FOR !== expectedApproval) {
     fail(`pre_v1_mutable requires exact release approval CLAW_RELEASE_APPROVED_FOR=${expectedApproval}`);
   }
