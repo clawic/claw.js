@@ -1,3 +1,5 @@
+import { CUSTOM_APP_REDACTION_POLICY_ID } from "./custom-app-redaction-policy.ts";
+
 export type ClawCapabilitySurface = "sdk" | "cli" | "serviceApi" | "mcp" | "relay" | "hostBridge";
 export type ClawCapabilitySurfaceStatus = "available" | "pending" | "blocked" | "notApplicable";
 export type ClawCapabilityRiskTier = "low" | "medium" | "high" | "critical";
@@ -40,6 +42,7 @@ export interface ClawCapabilityDescriptor {
   surfaces: ClawCapabilitySurfaceBinding[];
   inputSchemaRef?: string;
   outputSchemaRef?: string;
+  redactionPolicyRef?: string;
 }
 
 export interface ClawCustomAppCapabilityRiskMap {
@@ -93,6 +96,7 @@ export const clawCapabilityCatalog: readonly ClawCapabilityDescriptor[] = [
     }),
     inputSchemaRef: "claw.search.query.v1",
     outputSchemaRef: "claw.search.results.v1",
+    redactionPolicyRef: CUSTOM_APP_REDACTION_POLICY_ID,
   },
   {
     id: "db.query",
@@ -116,6 +120,7 @@ export const clawCapabilityCatalog: readonly ClawCapabilityDescriptor[] = [
     }),
     inputSchemaRef: "claw.db.query.v1",
     outputSchemaRef: "claw.db.records.v1",
+    redactionPolicyRef: CUSTOM_APP_REDACTION_POLICY_ID,
   },
   {
     id: "resources.read",
@@ -139,6 +144,7 @@ export const clawCapabilityCatalog: readonly ClawCapabilityDescriptor[] = [
     }),
     inputSchemaRef: "claw.resources.read.v1",
     outputSchemaRef: "claw.resources.payload.v1",
+    redactionPolicyRef: CUSTOM_APP_REDACTION_POLICY_ID,
   },
   {
     id: "actions.invoke",

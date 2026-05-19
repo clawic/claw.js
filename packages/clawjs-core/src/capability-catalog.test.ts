@@ -7,6 +7,11 @@ import {
   listClawCapabilities,
   sdkFirstCapabilityCatalogSource,
 } from "./capability-catalog.ts";
+import {
+  CUSTOM_APP_REDACTION_POLICY_ID,
+  isCustomAppSensitiveField,
+  redactCustomAppRecord,
+} from "./custom-app-redaction-policy.ts";
 
 test("SDK-first capability catalog exposes baseline custom-app contracts", () => {
   const ids = listClawCapabilities().map((capability) => capability.id);
@@ -85,6 +90,29 @@ test("custom apps do not receive direct SQLite or plaintext secret capabilities"
       assert.equal(text.includes("customappaccess\":\"localwide"), false);
     }
   }
+});
+
+test("ordinary custom-app read capabilities declare the shared redaction policy", () => {
+  for (const capability of listClawCapabilities()) {
+    if (capability.customAppAccess !== "localWide") continue;
+    assert.equal(capability.redactionPolicyRef, CUSTOM_APP_REDACTION_POLICY_ID, capability.id);
+  }
+});
+
+test("custom app redaction policy hides sensitive field names without removing provenance", () => {
+  assert.equal(isCustomAppSensitiveField("api_key"), true);
+  assert.equal(isCustomAppSensitiveField("refresh-token"), true);
+  assert.equal(isCustomAppSensitiveField("displayName"), false);
+
+  const redacted = redactCustomAppRecord({
+    title: "Launch",
+    apiKey: "secret-value",
+    password: "hidden",
+  });
+
+  assert.equal(redacted.policyId, CUSTOM_APP_REDACTION_POLICY_ID);
+  assert.deepEqual(redacted.data, { title: "Launch" });
+  assert.deepEqual(redacted.redactedFields, ["apiKey", "password"]);
 });
 
 test("capability lookup returns defensive copies", () => {
