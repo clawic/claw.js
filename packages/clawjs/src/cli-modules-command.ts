@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { createInterface } from "node:readline/promises";
 
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { formatCliTable } from "./cli-flag-parsers.ts";
@@ -38,6 +39,7 @@ interface SetupAdjustment {
 interface CliContextLike {
   stdout: NodeJS.WritableStream;
   stderr: NodeJS.WritableStream;
+  stdin?: NodeJS.ReadableStream;
   cwd: string;
 }
 
@@ -376,6 +378,14 @@ function setupAdjustments(flags: Record<string, string>): SetupAdjustment {
   };
 }
 
+function parseInteractiveModuleList(value: string): string[] {
+  return value.split(",").map((entry) => entry.trim()).filter(Boolean);
+}
+
+function yes(value: string): boolean {
+  return ["y", "yes", "s", "si", "sí"].includes(value.trim().toLowerCase());
+}
+
 function validateModuleIds(moduleIds: string[], usage: string): void {
   const known = new Set(MODULE_DEFINITIONS.map((module) => module.id));
   const unknown = moduleIds.find((moduleId) => !known.has(moduleId));
@@ -445,6 +455,54 @@ function targetConfigPath(scope: "global" | "workspace", flags: Record<string, s
   return scope === "workspace" ? workspaceConfigPath(flags, context.cwd) : globalConfigPath(flags);
 }
 
+async function runInteractiveSetupCli(input: {
+  mode: SetupModeId;
+  scope: "global" | "workspace";
+  pathToWrite: string;
+  current: ClawModulesConfig | null;
+  flags: Record<string, string>;
+  argv: string[];
+  context: CliContextLike;
+  wantsJson: boolean;
+}): Promise<number> {
+  const stdin = input.context.stdin ?? process.stdin;
+  const rl = createInterface({ input: stdin, output: input.context.stdout });
+  try {
+    const modeAnswer = await rl.question(`Mode [minimal/normal/advanced] (${input.mode}): `);
+    const mode = parseMode(modeAnswer.trim() || input.mode);
+    const enableAnswer = await rl.question("Enable modules, comma-separated (blank for none): ");
+    const disableAnswer = await rl.question("Disable modules, comma-separated (blank for none): ");
+    const adjustments = {
+      enable: [...setupAdjustments(input.flags).enable, ...parseInteractiveModuleList(enableAnswer)],
+      disable: [...setupAdjustments(input.flags).disable, ...parseInteractiveModuleList(disableAnswer)],
+    };
+    const preview = applySetupAdjustments(setupPreview(mode, input.current), adjustments);
+    const modules = effectiveModuleStates(preview, { includeAvailable: true });
+    input.context.stdout.write(`\n${renderSetupText(preview, { details: true })}\n\n`);
+    const shouldApply = input.argv.includes("--yes") || yes(await rl.question(`Apply ${input.scope} module config? [y/N]: `));
+    if (shouldApply) writeConfig(input.pathToWrite, preview);
+    if (input.wantsJson) {
+      writeCommandJsonOk(input.context.stdout, "setup", {
+        interactive: true,
+        applied: shouldApply,
+        mode: preview.mode,
+        scope: input.scope,
+        configPath: input.pathToWrite,
+        adjustments,
+        detail: groupedModules(preview, { includeAvailable: true }),
+        modules,
+      }, { subcommand: shouldApply ? "interactive_apply" : "interactive_preview" });
+    } else if (shouldApply) {
+      input.context.stdout.write(`Saved ${input.scope} module config: ${input.pathToWrite}\n`);
+    } else {
+      input.context.stdout.write("No changes written.\n");
+    }
+  } finally {
+    rl.close();
+  }
+  return CLI_EXIT_OK;
+}
+
 export async function runSetupCli(input: {
   positionals: string[];
   flags: Record<string, string>;
@@ -461,6 +519,11 @@ export async function runSetupCli(input: {
   const modules = effectiveModuleStates(preview, { includeAvailable: true });
   const apply = input.argv.includes("--apply") || input.argv.includes("--yes");
   const details = input.argv.includes("--details") || input.argv.includes("--detail") || input.flags.details === "true" || input.flags.detail === "true";
+  const interactive = input.argv.includes("--interactive") || input.flags.interactive === "true";
+
+  if (interactive) {
+    return await runInteractiveSetupCli({ mode, scope, pathToWrite, current, flags: input.flags, argv: input.argv, context: input.context, wantsJson: input.wantsJson });
+  }
 
   if (apply) writeConfig(pathToWrite, preview);
 
